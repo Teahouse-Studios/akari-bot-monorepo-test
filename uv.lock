@@ -229,7 +229,6 @@ dependencies = [
     { name = "emoji" },
     { name = "fastapi" },
     { name = "feedparser" },
-    { name = "ff3" },
     { name = "ffmpy" },
     { name = "filetype" },
     { name = "google-play-scraper" },
@@ -311,7 +310,6 @@ requires-dist = [
     { name = "emoji", specifier = ">=2.12.1,<3.0.0" },
     { name = "fastapi", specifier = ">=0.120.0,<1.0.0" },
     { name = "feedparser", specifier = ">=6.0.10,<7.0.0" },
-    { name = "ff3", specifier = ">=1.0.2,<2.0.0" },
     { name = "ffmpy", specifier = ">=1.0.0,<2.0.0" },
     { name = "filetype", specifier = ">=1.2.0,<2.0.0" },
     { name = "google-play-scraper", specifier = ">=1.2.2,<2.0.0" },
@@ -1224,18 +1222,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dc/79/db7edb5e77d6dfbc54d7d9df72828be4318275b2e580549ff45a962f6461/feedparser-6.0.12.tar.gz", hash = "sha256:64f76ce90ae3e8ef5d1ede0f8d3b50ce26bcce71dd8ae5e82b1cd2d4a5f94228", size = 286579, upload-time = "2025-09-10T13:33:59.486Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/eb/c96d64137e29ae17d83ad2552470bafe3a7a915e85434d9942077d7fd011/feedparser-6.0.12-py3-none-any.whl", hash = "sha256:6bbff10f5a52662c00a2e3f86a38928c37c48f77b3c511aedcd51de933549324", size = 81480, upload-time = "2025-09-10T13:33:58.022Z" },
-]
-
-[[package]]
-name = "ff3"
-version = "1.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pycryptodome" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/48/34d34f7b38ad7a56b475d5a32bf7f12e768a9b1ad582eb546df646c196cb/ff3-1.0.3.tar.gz", hash = "sha256:88e37be28d26fa498bb9dc0f911923f0f2f26c02a1a6d1efb84ac5ebd66ae4af", size = 22847, upload-time = "2026-01-26T01:14:07.746Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/9e/3bc5e61d624a9b81db3b7063370057abffa314970e9cba95eab4ce283375/ff3-1.0.3-py3-none-any.whl", hash = "sha256:e747e344e6da8a97400bba3a55acc0e54202225a23f95af0f0b5ffb4fc9ed26d", size = 20936, upload-time = "2026-01-26T01:14:06.358Z" },
 ]
 
 [[package]]
