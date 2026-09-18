@@ -36,6 +36,9 @@ async def load_modules():
 
     Logger.info("Attempting to load modules...")
 
+    # 不兼容 core API 的包先剔除，避免其导入期注册的模块进入索引。
+    PackageRegistry.reject_incompatible()
+
     for entry in PackageRegistry.modules().values():
         module_py_name = entry.import_path
         old_module_names = ModulesManager._module_names_for_py_module(module_py_name)
@@ -91,6 +94,9 @@ async def load_modules():
             open_loader_cache.write(err_prompt)
         else:
             open_loader_cache.write("")
+        # 不兼容包不参与加载，其成因在此与加载失败并列，供启动提示与 ~module list 展示。
+        for line in PackageRegistry.report_lines():
+            open_loader_cache.write(f"\n{line}")
 
     ModulesManager.refresh()
     for module_name in ModulesManager.modules:

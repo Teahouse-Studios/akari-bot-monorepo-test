@@ -143,6 +143,7 @@ class PackageRegistry:
     _entries: dict[str, PackageEntry] = {}
     _by_import_path: dict[str, PackageEntry] = {}
     _discovered: bool = False
+    _incompatible: dict[str, str] = {}
 
     @classmethod
     def discover(cls, *, force: bool = False) -> None:
@@ -201,6 +202,63 @@ class PackageRegistry:
     def _key(entry: PackageEntry) -> str:
         """条目在注册表中的唯一键。模块与适配器可能同名，需带种类区分。"""
         return f"{entry.kind}:{entry.name}"
+
+    @classmethod
+    def incompatible(cls) -> dict[str, str]:
+        """core 公共 API 不兼容的包。
+
+        仅收录已发现的包；被拒绝注册的包不进入 :meth:`modules` 与 :meth:`adapters`，
+        但在此可见，供启动提示与 ``~module list`` 展示。
+
+        :return: 包标识到原因的映射。
+        """
+        cls.discover()
+        return dict(cls._incompatible)
+
+    @staticmethod
+    def _package_label(entry: PackageEntry) -> str:
+        """包的展示名，优先用分发名。"""
+        return entry.dist_name or entry.name
+
+    @classmethod
+    def reject_incompatible(cls) -> dict[str, str]:
+        """剔除 requires_core_api 与当前 core API 版本不兼容的包。
+
+        在 ``load_modules()`` 之前调用：此时配置系统已就绪，可安全写日志。
+
+        :return: 包标识到原因的映射。
+        """
+        from packaging.specifiers import InvalidSpecifier, SpecifierSet
+        from packaging.version import InvalidVersion, Version
+
+        cls.discover()
+        rejected: dict[str, str] = {}
+        keep: dict[str, PackageEntry] = {}
+        for key, entry in cls._entries.items():
+            specifier = entry.manifest.requires_core_api
+            try:
+                satisfied = Version(str(CORE_API_VERSION)) in SpecifierSet(specifier)
+            except (InvalidSpecifier, InvalidVersion):
+                reason = f"declares an unparsable requires_core_api {specifier!r}"
+                satisfied = False
+            else:
+                reason = f"requires core API {specifier}, current is {CORE_API_VERSION}"
+            if satisfied:
+                keep[key] = entry
+                continue
+            rejected[cls._package_label(entry)] = reason
+            _logger().warning(f"Skipped {cls._package_label(entry)}: {reason}.")
+
+        if rejected:
+            cls._entries = keep
+            cls._by_import_path = {entry.import_path: entry for entry in keep.values()}
+        cls._incompatible = rejected
+        return dict(rejected)
+
+    @classmethod
+    def report_lines(cls) -> list[str]:
+        """不兼容包的一行式说明，供启动提示与 loader 缓存展示。"""
+        return [f"{name}: {reason}" for name, reason in sorted(cls.incompatible().items())]
 
     @classmethod
     def _load_frozen(cls) -> dict[str, PackageEntry] | None:

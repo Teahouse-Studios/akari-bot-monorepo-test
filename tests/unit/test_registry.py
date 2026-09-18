@@ -264,6 +264,60 @@ def _test_data_dir_is_per_kind_and_name():
     return directory == Path("/instance/data/module/sample")
 
 
+def _test_incompatible_packages_are_rejected():
+    """requires_core_api 不满足的包不注册，并可查询到成因。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        compatible = _entry("module", "compatible", "modules.compatible", root, requires_core_api=">=1")
+        incompatible = _entry("module", "incompatible", "modules.incompatible", root, requires_core_api=">=99")
+        original = PackageRegistry._incompatible
+        try:
+            with _isolated_registry({"module:compatible": compatible, "module:incompatible": incompatible}):
+                rejected = PackageRegistry.reject_incompatible()
+                remaining = PackageRegistry.modules()
+                unresolved = PackageRegistry.by_import_path("modules.incompatible.sub")
+                reported = PackageRegistry.report_lines()
+        finally:
+            PackageRegistry._incompatible = original
+    return (
+        list(rejected) == ["incompatible"]
+        and list(remaining) == ["compatible"]
+        and unresolved is None
+        and reported == [f"incompatible: {rejected['incompatible']}"]
+    )
+
+
+def _test_unparsable_api_specifier_is_rejected():
+    """描述符本身写错时同样拒绝注册，而不是抛异常中断发现。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        broken = _entry("module", "broken", "modules.broken", Path(tmp), requires_core_api="not a specifier")
+        original = PackageRegistry._incompatible
+        try:
+            with _isolated_registry({"module:broken": broken}):
+                rejected = PackageRegistry.reject_incompatible()
+        finally:
+            PackageRegistry._incompatible = original
+    return list(rejected) == ["broken"] and "unparsable" in rejected["broken"]
+
+
+def _test_compatible_packages_are_kept():
+    """区间覆盖当前版本时保留注册，且不留下不兼容记录。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        entries = {
+            "module:any": _entry("module", "any", "modules.any", root, requires_core_api=">=1,<2"),
+            "module:default": _entry("module", "default", "modules.default", root),
+        }
+        original = PackageRegistry._incompatible
+        try:
+            with _isolated_registry(entries):
+                rejected = PackageRegistry.reject_incompatible()
+                remaining = sorted(PackageRegistry.modules())
+        finally:
+            PackageRegistry._incompatible = original
+    return not rejected and remaining == ["any", "default"]
+
+
 @func_case
 async def test_registry(tester: Tester):
     """core.registry: 发现层测试"""
@@ -282,4 +336,7 @@ async def test_registry(tester: Tester):
     await tester.test(_test_core_api_version_is_declared, "公共 API 版本已声明")
     await tester.test(_test_frozen_registry_takes_precedence, "frozen registry 优先")
     await tester.test(_test_data_dir_is_per_kind_and_name, "数据目录按种类与包名分层")
+    await tester.test(_test_incompatible_packages_are_rejected, "API 不兼容的包被拒绝注册")
+    await tester.test(_test_unparsable_api_specifier_is_rejected, "描述符不可解析时拒绝注册")
+    await tester.test(_test_compatible_packages_are_kept, "API 兼容的包保留注册")
     return tester
