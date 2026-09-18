@@ -34,6 +34,28 @@ jobs:
         run: |
           uv sync --locked --all-extras --dev
 
+      - name: Lint comments
+        shell: bash
+        run: |
+          # PR 只检查相对 base 的新增与修改行，push 与手动触发检查全部文件。
+          BASE=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BASE="${{ github.event.before }}"
+          fi
+          if git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            uv run python tools/lint_comments.py --diff "$BASE"
+          else
+            uv run python tools/lint_comments.py
+          fi
+
+      - name: Lint with Ruff
+        shell: bash
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
       - name: Copy config files
         shell: bash
         run: |

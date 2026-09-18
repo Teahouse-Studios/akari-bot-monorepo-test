@@ -12,6 +12,16 @@ repos:
             args: [--fix]
           - id: ruff-format
 
+    - repo: local
+      hooks:
+          # 只检查暂存区新增与修改的行，规则见 generated_docs/monorepo_refactor_prep.md §8。
+          - id: comment-lint
+            name: Lint comments
+            entry: uv run python tools/lint_comments.py --diff HEAD
+            language: system
+            files: '\.py$'
+            pass_filenames: false
+
 #    - repo: local
 #      hooks:
 #          - id: auto-generate-config

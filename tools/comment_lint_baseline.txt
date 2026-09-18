@@ -1,0 +1,143 @@
+# 注释书面语检查的基线豁免清单。
+# 每行一条，格式：<路径>\t<规则编号>\t<注释文本>。不含行号，代码移动后豁免仍然有效。
+# 键由 tools/lint_comments.py --generate-baseline 生成，随清理逐步缩小。
+# 生成时的违规总数：138
+
+bots/discord/context.py	R7	if session_info.session_id not in cls.context:
+bots/matrix/bot.py	R7	Logger.info(f"Trying first sync")
+bots/matrix/bot.py	R7	is_direct = (room.member_count == 1 or room.member_count == 2) and room.join_rule == "invite"
+bots/matrix/context.py	R7	When the room does not follow MSC4291, ignore it silently
+bots/matrix/context.py	R7	if session_info.session_id not in cls.context:
+bots/onebot/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
+bots/qqbot/context.py	R7	ButtonFrame is shared by platforms with different keyboard limits. Split
+bots/qqbot/context.py	R7	QQ Bot inline keyboards accept at most five rows with ten buttons per row.
+bots/qqbot/context.py	R7	同一会话重复开启时先结束上一轮，否则其提示消息将失去撤回时机。
+bots/qqbot/navigation.py	R7	C2C 输入框上菜单
+bots/telegram/context.py	R7	if session_info.session_id not in cls.context:
+bots/web/api/api.py	R7	时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
+core/builtins/filter/protect.py	R7	---------------------------------------------------------
+core/builtins/message/chain.py	R7	使用正则表达式查找并包装用户 ID
+core/builtins/message/chain.py	R7	可作为消息发送的入参类型。仅用于约束参数，不存在输入与输出的类型绑定，
+core/builtins/message/chain.py	R7	指令操作是行内元素：它自身的产物、以及紧随其后的纯文本，
+core/builtins/parser/args.py	R6	无标志的可选参数暂时存储到 afters，后续处理
+core/builtins/parser/args.py	R6	暂时将其添加到 afters 列表，在剩余参数处理时再处理
+core/builtins/parser/args.py	R7	========== 步骤 1.5: 分离 `--` 之后的操作数 ==========
+core/builtins/parser/args.py	R7	使用正则表达式分割模板字符串，分离出各种模式：
+core/builtins/parser/command.py	R7	========== 构建命令模板字典 ==========
+core/builtins/parser/command.py	R7	========== 步骤 3: 分割命令字符串 ==========
+core/builtins/parser/command.py	R7	========== 步骤 5: 参数匹配 ==========
+core/builtins/parser/hooks/executor.py	R7	Continue carries optional stage metadata (for example, whether
+core/builtins/parser/message.py	R3	========== 步骤 4: 显示“正在输入……”状态 ==========
+core/builtins/parser/message.py	R3	显示“正在输入……”状态（如果用户启用）
+core/builtins/parser/message.py	R3	标记是否显示“正在输入……”
+core/builtins/parser/message.py	R3	标记是否显示“正在输入……”状态
+core/builtins/parser/message.py	R3	标记是否正在显示“正在输入……”状态
+core/builtins/parser/message.py	R3	结束“正在输入……”状态
+core/builtins/parser/message.py	R7	========== 步骤 2: 检查任务队列 ==========
+core/builtins/parser/message.py	R7	wait_* 的回复会话会共享根命令的 ExecutionState，但没有最终
+core/builtins/parser/message.py	R7	如果消息中有需要过滤的词，直接返回
+core/builtins/parser/message.py	R7	标记须在调用处理函数之前落下：处理函数为协程，其执行期间同一场景的
+core/builtins/parser/message.py	R7	等待期间管理员可能已停用模块、静音或改权限；仅模块表不是权威状态。
+core/builtins/session/features.py	R3	输入状态显示支持 - 会话是否支持显示“正在输入……”的状态
+core/builtins/session/info.py	R7	SessionInfo 在 bot 进程构造后才经队列抵达 server；这段时间内权限、静音、
+core/builtins/session/info.py	R7	assign() 已在平台进程为入站消息建立两侧映射。消息排队期间若管理员删除了
+core/builtins/session/internal.py	R7	仅存在于 Server 进程中的命令执行状态。通过 wait_* 取得的回复会话会共享
+core/builtins/session/lock.py	R7	SessionInfo 是入队时的快照；等待期间 merge／unbind 可能使其
+core/builtins/session/lock.py	R7	_current_keys() 的数据库查询会让出执行权；其间同一执行域的另一协程
+core/builtins/session/lock.py	R7	parser 的根 asyncio.Task 是 lease 的最终生命周期边界。正常路径仍由
+core/builtins/session/lock.py	R7	wait_anyone／wait_reply(all_=True) 取得的结果可能来自另一名用户。
+core/builtins/session/lock.py	R7	两个合并命令的扩展域只要有交集，后进入 reservation 的命令就必须
+core/builtins/session/tasks.py	R6	两次并发发送可能暂时拥有相同按钮 reply_id，若用别名作 key，后一次会
+core/builtins/session/tasks.py	R7	pending reply 的物理消息 ID 只有平台发送回包后才知道。先寻找已经 ready
+core/builtins/session/tasks.py	R7	存储待执行回调的字典。key 使用独立注册 token，而不是消息 ID 别名：
+core/builtins/session/tasks.py	R7	存储活跃任务的字典，索引只使用登记时不可变的物理场景／账号 ID。
+core/builtins/session/tasks.py	R7	检查当前物理平台场景是否有对此消息的回调需要执行。先选择真实／虚拟
+core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it is a key-value pair outside the table
+core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it"s a key-value pair outside the table
+core/config/__init__.py	R7	守护进程在 spawn 子进程之前置位，spawn 会继承环境。
+core/config/core.py	R7	密钥项写在 config.toml 的 [secret] 表内，故表名为 config、以 secret 标志区分，
+core/config/decorator.py	R7	只读进程不补写配置文件：生成统一在 bot.py 的 pre_init() 中完成，
+core/config/decorator.py	R7	声明字段必须从类命名空间中移除：类属性会先于元类的 __getattr__ 命中，
+core/config/decorator.py	R7	检查配置项是否已存在于目标表中，不存在时才补写
+core/config/decorator.py	R7	表名传 None：这类键不属于 [config]，也不属于任何其它表。
+core/config/update.py	R7	If config version not exists, regenerate the config file (assumed as
+core/constants/__init__.py	R7	Some definitions that should be hardcoded in the project for avoiding circular imports.
+core/constants/path.py	R7	配置只读模式的环境变量名。守护进程在 spawn bot 与 server 子进程前置位，
+core/constants/path.py	R7	配置目录的环境变量名。测试引导据此把整个进程指向一份临时配置，
+core/database/__init__.py	R7	Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
+core/database/__init__.py	R7	Tortoise.init() 在无当前 context 时会把初始化 context 写入当前任务。
+core/database/models.py	R7	Union 的绑定、合并、删除、标量与 JSON 更新属于同一 mutation 域。它们都是低频管理操作，
+core/database/models.py	R7	先建新组再改挂映射行，全程不出现「该场景没有映射行」的中间态：
+core/database/models.py	R7	先建新组再改挂映射行，全程不出现「该账号没有映射行」的中间态：
+core/database/models.py	R7	全仓 Union 事务统一先锁核心行、再锁映射行。若反过来，MySQL 下可与
+core/database/models.py	R7	自身一侧的通道号保持不变，并入方整体平移：双方均自 1 开始编号，
+core/database/models.py	R7	超过全局执行上限的活动任务已不可能合法完成。免回包任务直接删除；等待型任务先标成
+core/database/update.py	R7	轮询与区间统计所需的索引。job_queues 每 100 毫秒被每个进程轮询一次，analytics_data 则要
+core/exports.py	R3	Export some functions to be dynamically called by the core module to avoid circular imports...
+core/exports.py	R3	Only use them when resolving circular import hell...
+core/loader.py	R7	先排空 Queue handler，再进入 Scheduler 维护。反序会让正在执行
+core/loader.py	R7	子模块会按 sys.modules 的顺序重载，扩展另一个兄弟模块的装饰器可能
+core/loader.py	R7	恢复的是旧代际的注册，但 ModuleRuntimeManager 的 staging 仍是新代际；
+core/loader.py	R7	此处不能等待另一个重载释放锁：先进入数据库维护的重载会等待其它
+core/queue/base.py	R7	Current receivers send a complete diagnostic. Rebuild it with the
+core/queue/base.py	R7	Timeout rows created by stale-task cleanup may have an empty
+core/queue/base.py	R7	send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
+core/queue/errors.py	R7	Exception objects cross the RPC boundary as JSON, so retain the
+core/queue/websocket.py	R7	Extremely small limits can leave no room for the original message. Keep
+core/queue/websocket.py	R7	Preserve as much of the remote stack as the frame allows.  A binary
+core/server/init.py	R7	数据库后端中的旧 Client peer 在进程退出后可能仍保留一段有效租约。它虽然
+core/server/terminate.py	R7	for x in get_wait_list:
+core/server/terminate.py	R7	restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
+core/server/terminate.py	R7	注册项可能持有 MessageSession context，取消时会经 Queue 请求平台进程 release，
+core/tester/process.py	R7	Integration cases can start queue pollers, waiters, or platform tasks.
+core/utils/html2text/__init__.py	R3	<pre>stuff...
+core/utils/html2text/__init__.py	R3	Warning for the tempted!!!
+core/utils/html2text/__init__.py	R7	I cannot think of a better solution for now.
+core/utils/html2text/__init__.py	R7	This is a very dangerous call ... it could mess up
+core/utils/html2text/__init__.py	R7	Warning for the tempted!!!
+core/utils/html2text/__init__.py	R7	ref may be an empty string (e.g. for &lrm;/&rlm; markers that should
+core/utils/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
+core/utils/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
+core/utils/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
+core/utils/petal.py	R7	花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不再按客户端分桶，
+core/utils/retired.py	R7	``enqueue_notice`` 的判断与占位之间包含首次读取已发记录的 await。若没有互斥，两个并发消息会
+core/utils/retired.py	R7	退役实例上仍可执行的模块。命令路径与正则路径共用这一份判据，
+core/utils/union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
+modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
+modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
+modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
+modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
+modules/core/common_tools/bind.py	R7	同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对
+modules/core/common_tools/help.py	R7	fname = f"{random_cache_path()}.html"
+modules/core/common_tools/help.py	R7	每节为 (区隔行文案, [(种类, 首列, 次列), ...])；命令一节不带区隔行。
+modules/core/common_tools/merge.py	R7	命令字面量在解析器中按「位置无关的标志」匹配，再取尾随参数。
+modules/core/common_tools/setup.py	R7	不加 available_for：框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，
+modules/maimai/libraries/divingfish_oauth.py	R4	授权服务器根地址。各端点路径本应从发现文档读取，此处直接写死以简化实现。
+modules/mcv/__init__.py	R7	@m.command("mcev {{I18N:mcv.help.mcev}}")
+modules/mcv/mcv.py	R3	Probably...
+modules/mcv/mcv.py	R3	except Exception:  # Probably...
+modules/mcv/mcv.py	R7	async def mcev(msg: Bot.MessageSession):
+modules/mcv_rss/__init__.py	R7	mcv_jira_rss = module(
+modules/mkey/generator.py	R7	
+modules/nintendo_err/__init__.py	R7	Truncate input to 16 chars so as not to create a huge embed or do
+modules/nintendo_err/ctr_results.py	R7	This is largely a dummy module, but FBI errors often get passed through the bot
+modules/nintendo_err/ctr_support.py	R3	005-2008 is the same as 007-2920 and 009-2920...
+modules/nintendo_err/ctr_support.py	R3	There are way more than 0x1F descriptions, but this is how Nintendo does it...
+modules/nintendo_err/ctr_support.py	R3	in HTTP range...
+modules/nintendo_err/ctr_support.py	R3	in SOAP range...
+modules/nintendo_err/ctr_support.py	R7	We have some modules partially documented, those that aren't return None.
+modules/nintendo_err/switch.py	R7	TODO: How do I express INT32_MIN in pythonic terms?
+modules/phigros/libraries/PhiCloudActionAsync/CloudAction.py	R7	仅加固 follow_redirects：这是本库能正常工作的前提——存档下载走 CDN
+modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py	R7	if value == 0:
+modules/wiki/utils/summarize.py	R7	语义属性链接 [[属性::值]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
+modules/wiki/utils/user.py	R3	if one day LGBTers...
+modules/wiki/utils/wikilib.py	R7	摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
+modules/wiki/utils/wikilib.py	R7	模板文档页不走 TextExtracts：该扩展为条目而设，会把 documentation header、
+modules/wiki/wiki.py	R7	Let the runner enter its try/finally before handing it to detached lifecycle code.
+modules/wiki/wiki.py	R7	if lang in interwiki_list:
+tests/build_synthetic_fixtures.py	R7	稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会回落到真实网络，
+tests/unit/test_i18n_cmd_params.py	R7	以键名作为参数传入、由被调方统一补上 cmd 的调用点。
+tests/unit/test_jobqueue_websocket_backend.py	R7	wait_ready 只保证各 Peer 已注册；ready/welcome 握手仍可能在其它 Peer 的
+tests/unit/test_loader.py	R7	The full suite can delay task scheduling while other async tests are unwinding.
+tests/unit/test_loader.py	R7	每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），
+tests/unit/test_markdown_toggle.py	R7	平台能力集在导入时即依配置定型，qq_use_markdown 为假的部署上，markdown 相关能力全为假，
