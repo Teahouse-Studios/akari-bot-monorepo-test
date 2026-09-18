@@ -1,0 +1,26 @@
+"""模块的数据库模型。
+
+表名一律以 ``module_[@module_name@]_`` 作前缀，表名中不得出现 ``-``：模块名本身的
+连字符在目录名与表名中统一写作下划线。模型的导入由核心的 ``init_db()`` 自动完成，
+无需在此注册。
+"""
+
+from tortoise import fields
+
+from akaribot.core.api import DBModel
+
+table_prefix = "module_[@module_name@]_"
+
+
+class ExampleRecord(DBModel):
+    """示例记录。
+
+    :param union_id: 场景联合 ID，主键。
+    :param value: 记录内容。
+    """
+
+    union_id = fields.CharField(max_length=512, primary_key=True)
+    value = fields.CharField(max_length=512)
+
+    class Meta:
+        table = f"{table_prefix}example_record"

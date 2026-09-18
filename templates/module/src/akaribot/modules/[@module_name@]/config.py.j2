@@ -1,0 +1,24 @@
+from akaribot.core.api import on_module_config
+
+
+@on_module_config("[@module_name@]")
+class ModuleConfig:
+    """模块配置的字段声明。
+
+    字段名一律以模块名作前缀，默认值即配置文件首次生成时写入的值。字段注释取自
+    ``locales/zh_cn.json`` 的 ``config.comments.module_[@module_name@].<字段名>``，
+    缺少该键时配置文件中该字段没有注释。
+    """
+
+    # [@module_name@]_example: str = ""
+
+
+@on_module_config("[@module_name@]", secret=True)
+class ModuleSecretConfig:
+    """模块凭据的字段声明。
+
+    ``secret=True`` 的表写入 ``[module_[@module_name@]_secret]``，
+    且不会出现在 ``~config`` 的明文输出中。
+    """
+
+    # [@module_name@]_token: str = ""

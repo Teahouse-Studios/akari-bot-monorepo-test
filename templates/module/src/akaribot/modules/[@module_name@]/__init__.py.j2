@@ -1,0 +1,70 @@
+"""[@module_desc@]"""
+
+import re
+
+from akaribot.core.api import (
+    Bot,
+    I18NContext,
+    Image,
+    IntervalTrigger,
+    MessageChain,
+    Plain,
+    module,
+)
+
+mod = module(
+    "[@module_name@]",
+    alias=[],
+    developers=["[@author@]"],
+    desc="{I18N:[@module_name@].help.desc}",
+    doc=True,
+)
+
+
+@mod.command()
+async def _(msg: Bot.MessageSession):
+    await msg.finish(I18NContext("[@module_name@].message.hello"))
+
+
+@mod.command("echo <word> [<count>] &#123;&#123;I18N:[@module_name@].help.echo&#125;&#125;")
+async def _(msg: Bot.MessageSession, word: str, count: int = 1):
+    await msg.finish(I18NContext("[@module_name@].message.echo", word=word, count=count))
+
+
+@mod.command("chain")
+async def _(msg: Bot.MessageSession):
+    # 消息链同时承载文本与图片，不支持图片的适配器自行降级。
+    chain = MessageChain.assign(
+        [
+            Plain(I18NContext("[@module_name@].message.chain")),
+            Image("https://http.cat/200.jpg"),
+        ]
+    )
+    await msg.finish(chain)
+
+
+@mod.command("confirm")
+async def _(msg: Bot.MessageSession):
+    if await msg.wait_confirm(I18NContext("[@module_name@].message.confirm")):
+        await msg.send_message(I18NContext("[@module_name@].message.confirmed"))
+    else:
+        await msg.send_message(I18NContext("[@module_name@].message.cancelled"))
+
+
+@mod.regex(r"\{\{(.*?)}}", mode="M")
+async def _(msg: Bot.MessageSession):
+    # wait_reply 返回新会话，其输入取自被回复的消息。
+    session = await msg.wait_reply(I18NContext("[@module_name@].message.reply"))
+    await session.finish(msg.matched_msg.group(1))
+
+
+@mod.regex(re.compile(r"\[\[(.*?)]]"), mode="A")
+async def _(msg: Bot.MessageSession):
+    for matched in msg.matched_msg:
+        await msg.send_message(matched)
+
+
+@mod.schedule(IntervalTrigger(seconds=3600))
+async def _():
+    # 定时任务无会话上下文，投递目标须为已启用该模块的场景名。
+    await Bot.post_message("[@module_name@]", I18NContext("[@module_name@].message.scheduled"))
