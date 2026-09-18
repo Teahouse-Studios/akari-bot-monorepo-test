@@ -35,6 +35,9 @@ SAMPLE_CONTEXT = {
 # 文本占位符在渲染内容时替换。
 PLACEHOLDER_PATTERN = re.compile(r"\[@([a-z_]+)@\]")
 
+# 未替换占位符的识别比替换宽松：任何 [@ ... @] 都算残留，包括名字不合规的拼写错误。
+UNRESOLVED_PATTERN = re.compile(r"\[@[^\]]*@\]")
+
 VALIDATORS = {
     ".py": ("python", ast.parse),
     ".json": ("json", json.loads),
@@ -74,15 +77,43 @@ def template_names() -> list[str]:
 def describe_error(name: str, error: Exception) -> str:
     """把校验异常转成一行可读说明。
 
+    行号只认语法错误自带的 ``lineno``，不能用 ``getattr`` 的默认值兜底：
+    ``AssertionError`` 等异常继承 ``str.msg``，会把整段说明当成行号打印出来。
+
     :param name: 模板路径。
     :param error: 捕获到的异常。
     :return: 说明文本。
     """
-    detail = getattr(error, "msg", None) or str(error)
-    line = getattr(error, "lineno", None)
+    line = error.lineno if isinstance(error, SyntaxError) else None
+    detail = error.message if isinstance(error, RenderError) else str(error)
     if line:
         return f"{name}: 第 {line} 行：{detail}"
     return f"{name}: {detail}"
+
+
+class RenderError(Exception):
+    """渲染产物不合契约。
+
+    :param message: 说明文本。
+    :param lineno: 产物中的行号，不适用时为 ``None``。
+    """
+
+    def __init__(self, message: str, lineno: int | None = None):
+        super().__init__(message)
+        self.message = message
+        self.lineno = lineno
+
+
+def unresolved_placeholders(rendered: str) -> list[str]:
+    """列出产物中没有被替换掉的占位符。
+
+    语法校验不足以发现漏替换：一个拼错的占位符若落在字符串里，产物仍是合法的 Python，
+    会静默交付给模块作者。此处单独把它们找出来。
+
+    :param rendered: 渲染并还原后的文本。
+    :return: 去重并排序后的占位符原文。
+    """
+    return sorted({match.group(0) for match in UNRESOLVED_PATTERN.finditer(rendered)})
 
 
 def validate_render(name: str, rendered: str, label: str, check) -> None:
@@ -92,11 +123,14 @@ def validate_render(name: str, rendered: str, label: str, check) -> None:
     :param rendered: 渲染并还原后的文本。
     :param label: 产物类型的展示名。
     :param check: 校验函数，语法错误时抛异常。
-    :raises AssertionError: 产物缺失末尾换行，与仓库的 ruff format 结果不一致。
+    :raises RenderError: 产物残留占位符，或缺失末尾换行。
     """
     check(rendered)
+    leftover = unresolved_placeholders(rendered)
+    if leftover:
+        raise RenderError(f"产物残留未替换的占位符：{', '.join(leftover)}")
     if not rendered.endswith("\n"):
-        raise AssertionError("产物缺少末尾换行，检查 Environment 是否设置了 keep_trailing_newline")
+        raise RenderError("产物缺少末尾换行，检查 Environment 是否设置了 keep_trailing_newline")
 
 
 def main() -> int:
