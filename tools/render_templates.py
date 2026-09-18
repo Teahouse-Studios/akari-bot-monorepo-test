@@ -25,13 +25,14 @@ TEMPLATE_ROOT = PROJECT_ROOT / "templates"
 # 占位值。模块名取纯小写与下划线，与模板 README 所述的限制一致。
 SAMPLE_CONTEXT = {
     "module_name": "sample",
+    "module_class": "Sample",
     "module_desc": "渲染校验用的示例模块。",
     "author": "AkariBot",
     "license": "AGPL-3.0",
 }
 
 # 占位符形态：[@name@]。两处替换都要做——路径占位符在复制目录时替换，
-# 文本占位符在渲染内容时替换；命名与 templates/README.md 的说明一致。
+# 文本占位符在渲染内容时替换。
 PLACEHOLDER_PATTERN = re.compile(r"\[@([a-z_]+)@\]")
 
 VALIDATORS = {

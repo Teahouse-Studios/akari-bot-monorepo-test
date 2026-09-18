@@ -12,7 +12,7 @@ from akaribot.core.api import DBModel
 table_prefix = "module_[@module_name@]_"
 
 
-class ExampleRecord(DBModel):
+class [@module_class@]Data(DBModel):
     """示例记录。
 
     :param union_id: 场景联合 ID，主键。
@@ -23,4 +23,4 @@ class ExampleRecord(DBModel):
     value = fields.CharField(max_length=512)
 
     class Meta:
-        table = f"{table_prefix}example_record"
+        table = f"{table_prefix}[@module_name@]_data"

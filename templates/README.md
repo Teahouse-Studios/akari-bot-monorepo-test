@@ -22,6 +22,9 @@ T5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流
 ===============  ==========================================
 ``[@module_name@]``  模块名，须匹配 ``[a-z0-9_]+``。它同时用作 ``module()`` 注册名、
                      locale 键前缀、表名前缀、目录名与 entry point 名
+``[@module_class@]`` 模块名的大驼峰形式。生成器按 ``_`` 分段、逐段首字母大写后拼接，
+                     如 ``twenty_four`` → ``TwentyFour``。用于数据库模型的类名
+                     （``[@module_class@]Data``）
 ``[@module_desc@]``  模块的一句话说明，写入 ``module()`` 的 ``desc`` 与 zh_cn 的
                      ``[@module_name@].help.desc``
 ``[@author@]``       作者名，写入 ``module()`` 的 ``developers`` 与 pyproject 的
