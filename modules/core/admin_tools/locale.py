@@ -5,8 +5,8 @@ from core.builtins.bot import Bot
 from core.builtins.message.chain import MessageChain
 from core.builtins.message.internal import ActionText, I18NContext, Plain, Url
 from core.config.base import CoreConfig
-from core.constants import all_locales_path, lang_list, weblate_lang_codes
-from core.i18n import Locale, get_available_locales
+from core.constants import lang_list, weblate_lang_codes
+from core.i18n import Locale, collect_locale_paths, get_available_locales
 from core.utils.http import get_url
 from core.constants.path import cache_path
 from modules.core.common_tools.setup import setup
@@ -121,7 +121,7 @@ async def _(msg: Bot.MessageSession, lang: str):
 
 @setup.command("locale reload {{I18N:core.help.locale.reload}}", required_superuser=True)
 async def _(msg: Bot.MessageSession):
-    err = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+    err = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
     if len(err) == 0:
         await msg.finish(I18NContext("message.success"))
     else:

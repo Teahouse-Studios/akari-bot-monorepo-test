@@ -13,13 +13,14 @@ from typing import Callable
 
 from core.builtins.session.info import EventInfo
 from core.config import CFGManager
-from core.constants import PrivateAssets, all_locales_path, lang_list
+from core.constants import PrivateAssets, lang_list
 from core.database import activate_db_reload, close_prepared_db_reload, close_previous_db_context, prepare_db_reload
 from core.database.base import DBModel
 from core.database.models import ModuleStatus
-from core.i18n import build_locale_snapshot
+from core.i18n import build_locale_snapshot, collect_locale_paths
 from core.logger import Logger
 from core.module_runtime import ModuleRuntimeManager
+from core.registry import PackageRegistry
 from core.scheduler import SchedulerLifecycle
 from core.types import Module
 from core.types.module.component_meta import (
@@ -429,16 +430,44 @@ class ModulesManager:
 
     @classmethod
     def return_py_module(cls, module):
-        if module in cls.modules_origin:
-            return re.match(r"^modules(\.[a-zA-Z0-9_]*)?", cls.modules_origin[module]).group()
-        return None
+        """取模块所属的包导入路径。
+
+        :param module: 模块注册名。
+        :return: 包导入路径；该模块未注册或所属包未知时为 ``None``。
+        """
+        origin = cls.modules_origin.get(module)
+        if not origin:
+            return None
+        entry = PackageRegistry.by_import_path(origin)
+        if entry is None or entry.kind != "module":
+            return None
+        return entry.import_path
 
     @staticmethod
     def _normalize_package_name(module_name: str) -> str | None:
+        """把任意导入路径归一化为模块包的导入路径。
+
+        纯字符串归约，不校验该包是否已注册：调用方拿它建依赖图，图上的边会在
+        与已注册包取交集时被过滤。校验注册状态由 :meth:`return_py_module` 负责。
+
+        :param module_name: 导入路径。
+        :return: 模块包的导入路径；顶层不是模块包根时为 ``None``。
+        """
         parts = module_name.split(".")
-        if len(parts) >= 2 and parts[0] == "modules":
+        if len(parts) >= 2 and parts[0] in PackageRegistry.import_roots("module"):
             return ".".join(parts[:2])
         return None
+
+    @classmethod
+    def _import_roots(cls) -> set[str]:
+        """全部模块包导入路径的顶层段。
+
+        用于识别 ``from modules import x`` 这类裸包导入：其 AST 只给出 ``modules``，
+        子模块名在 ``node.names`` 中，需展开后才可能匹配到具体包。
+
+        :return: 顶层段集合。
+        """
+        return PackageRegistry.import_roots("module")
 
     @classmethod
     def _scan_package_dependencies(cls, package_name: str) -> set[str]:
@@ -469,8 +498,8 @@ class ModulesManager:
                     imported_names = tuple(alias.name for alias in node.names)
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     imported_names = (node.module,)
-                    if node.module == "modules":
-                        imported_names += tuple(f"modules.{alias.name}" for alias in node.names)
+                    if node.module in cls._import_roots():
+                        imported_names += tuple(f"{node.module}.{alias.name}" for alias in node.names)
                 elif isinstance(node, ast.Call):
                     function = node.func
                     function_name = (
@@ -923,7 +952,7 @@ class ModulesManager:
                 raise asyncio.CancelledError()
             if changed_locale_packages:
                 try:
-                    locale_errors = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+                    locale_errors = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
                     if locale_errors:
                         Logger.warning(
                             f"Failed to rebuild locale snapshot after reloading {reload_packages}: {locale_errors}"

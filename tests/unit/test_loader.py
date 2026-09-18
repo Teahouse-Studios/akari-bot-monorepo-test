@@ -1,6 +1,7 @@
 """core.loader 模块加载器单元测试。"""
 
 import asyncio
+import re
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -18,6 +19,7 @@ from core.database.models import ModuleStatus
 from core.loader import ModulesManager
 from core.module_runtime import ModuleRuntimeManager
 from core.queue.server import JobQueueServer
+from core.registry import PackageEntry, PackageManifest, PackageRegistry
 from core.scheduler import SchedulerLifecycle
 from core.tester import func_case, Tester
 from core.types import Module
@@ -343,6 +345,43 @@ async def _cancel_reload_task(task: asyncio.Task | None):
     if not task.done():
         task.cancel()
     await asyncio.gather(task, return_exceptions=True)
+
+
+# 用例以 `modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后这些名字
+# 不再解析得到包，故在用例入口统一给出合成条目；真实包名仍交回注册表本身解析。
+SYNTHETIC_PACKAGE_PREFIX = "modules.__test"
+SYNTHETIC_PACKAGE_PATTERN = re.compile(rf"^{re.escape(SYNTHETIC_PACKAGE_PREFIX)}[._]")
+_real_by_import_path = PackageRegistry.by_import_path
+
+
+def _synthetic_package_entry(package: str) -> PackageEntry:
+    """为一个合成包名造条目。
+
+    :param package: 形如 ``modules.__test_loader_x`` 的包名。
+    :return: 条目。
+    """
+    return PackageEntry(
+        kind="module",
+        name=package.split(".", 1)[1],
+        dist_name="",
+        version="0+local",
+        import_path=package,
+        root=Path("."),
+        manifest=PackageManifest(),
+    )
+
+
+def _fake_package_lookup(path: str):
+    """替合成包名给出条目，其余路径交回注册表本身。
+
+    合成包不会出现在注册表中，故直接匹配前缀即可。
+
+    :param path: 导入路径。
+    :return: 条目或 ``None``。
+    """
+    if SYNTHETIC_PACKAGE_PATTERN.match(path):
+        return _synthetic_package_entry(".".join(path.split(".")[:2]))
+    return _real_by_import_path(path)
 
 
 def _reload_test_module(name: str, alias: str, origin: str, hook_function, event_function, load: bool = True):
@@ -775,6 +814,19 @@ def _test_reload_defers_cross_module_bindings():
         return module.hooks_list.set == [meta] and not ModulesManager._deferred_bindings
     finally:
         _restore_module_manager(snapshot)
+
+
+def _test_all_registered_modules_resolve_to_a_package():
+    """全部已注册模块都须解析出所属包。
+
+    ``return_py_module()`` 返回 ``None`` 会让热重载、locale 指纹、依赖图与模块卸载
+    四处静默失效且不报错。这条断言是拆包之后「包装成 wheel 是否真的没坏」的哨兵，
+    必须常驻。
+    """
+    missing = [name for name in ModulesManager.modules if ModulesManager.return_py_module(name) is None]
+    if missing:
+        raise AssertionError(f"以下模块无法解析所属包：{missing}")
+    return True
 
 
 def _test_related_modules_respect_package_boundary():
@@ -1318,6 +1370,13 @@ async def _test_unload_drains_queue_before_stopping_runtime():
 @func_case
 async def test_loader(tester: Tester):
     """core.loader: 模块加载器测试"""
+    with patch.object(PackageRegistry, "by_import_path", side_effect=_fake_package_lookup):
+        return await _run_loader_cases(tester)
+
+
+async def _run_loader_cases(tester: Tester):
+    """执行全部用例。合成包名的替身由调用方统一挂载。"""
+    await tester.test(_test_all_registered_modules_resolve_to_a_package, "全部已注册模块都能解析出所属包")
     await tester.test(_test_add_module, "ModulesManager.add_module 测试")
     await tester.test(_test_add_module_duplicate, "ModulesManager.add_module 重复测试")
     await tester.test(_test_remove_modules, "ModulesManager.remove_modules 测试")

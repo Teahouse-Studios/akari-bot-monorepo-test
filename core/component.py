@@ -1,6 +1,5 @@
 import inspect
 import re
-from pathlib import Path
 from typing import overload
 
 from apscheduler.triggers.combining import AndTrigger, OrTrigger
@@ -13,6 +12,7 @@ from core.config.decorator import _process_class
 from core.constants.exceptions import InvalidTemplatePattern
 from core.loader import ModulesManager
 from core.module_runtime import ModuleRuntimeManager, RuntimeResource
+from core.registry import PackageRegistry
 from core.scheduler import IntervalTrigger
 from core.types import Module
 from core.types.module.component_meta import *
@@ -418,16 +418,12 @@ def module(
     """
 
     frame = inspect.currentframe().f_back
-    caller_file = frame.f_globals.get("__file__", None)
+    caller_module = frame.f_back.f_globals["__name__"]
 
-    py_module_name = ""
-    if caller_file:
-        path = Path(caller_file).resolve()
-        try:
-            modules_idx = path.parts.index("modules")
-            py_module_name = path.parts[modules_idx + 1]
-        except (ValueError, IndexError):
-            py_module_name = ""
+    # 包名由发现层解析，不再从调用方的文件路径推导：路径推导在目录布局变化时
+    # 会静默得到空串，连带使热重载、locale 指纹、依赖图与模块卸载失去依据。
+    entry = PackageRegistry.by_import_path(caller_module)
+    py_module_name = entry.stem if entry and entry.kind == "module" else ""
 
     module = Module.assign(
         module_name=module_name,

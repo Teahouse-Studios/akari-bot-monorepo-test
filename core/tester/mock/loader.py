@@ -1,8 +1,8 @@
 import importlib
 import pkgutil
 
-from core.constants import lang_list, all_locales_path
-from core.i18n import build_locale_snapshot, connect_locale_snapshot
+from core.constants import lang_list
+from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 from core.loader import ModulesManager
 from core.logger import Logger
 
@@ -26,7 +26,7 @@ async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None 
     set_default_peer(JobQueueServer)
 
     err_prompt = []
-    locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+    locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
     if locale_loaded_err:
         err_prompt.append("I18N loaded failed:")
         err_prompt.append("\n".join(locale_loaded_err))

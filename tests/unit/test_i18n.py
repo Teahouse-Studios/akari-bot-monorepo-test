@@ -68,9 +68,10 @@ def _test_locale_t_str_no_template():
 def _test_load_locale_file():
     """load_locale_file: 加载语言文件不报错"""
     try:
-        from core.constants import lang_list, all_locales_path
+        from core.constants import lang_list
+        from core.i18n import collect_locale_paths
 
-        errors = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+        errors = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
         connect_locale_snapshot("akari-bot")
         return isinstance(errors, list)
     except Exception:

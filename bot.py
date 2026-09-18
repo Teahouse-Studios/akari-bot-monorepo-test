@@ -115,15 +115,15 @@ def pre_init():
     Logger.info("Akaribot is launching...")
     from tortoise import run_async
 
-    from core.constants import all_locales_path, cache_path, lang_list
-    from core.i18n import build_locale_snapshot, connect_locale_snapshot
+    from core.constants import cache_path, lang_list
+    from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 
     if cache_path.exists():
         shutil.rmtree(cache_path)
     cache_path.mkdir(parents=True, exist_ok=True)
 
     Logger.info("Loading i18n...")
-    locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+    locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
     connect_locale_snapshot("akari-bot")
     if locale_loaded_err:
         Logger.warning(f"I18N loaded with errors: {locale_loaded_err}")

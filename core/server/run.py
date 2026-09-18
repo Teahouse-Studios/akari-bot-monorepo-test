@@ -10,14 +10,14 @@
 import asyncio
 import signal
 
-from core.constants import Info, lang_list, all_locales_path
+from core.constants import Info, lang_list
 from core.logger import Logger
 from core.queue.server import JobQueueServer
 from core.queue.rpc import set_default_peer
 from core.server.init import init_async, load_prompt
 from core.server.terminate import cleanup_sessions
 
-from core.i18n import build_locale_snapshot, connect_locale_snapshot
+from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 
 stop_event = asyncio.Event()
 
@@ -46,7 +46,7 @@ async def main(process_stop_event=None):
     set_default_peer(JobQueueServer)
     queue_task = None
     try:
-        locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), all_locales_path, "akari-bot")
+        locale_loaded_err = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
         connect_locale_snapshot("akari-bot")
         await init_async(send_prompt=False)
         queue_task = asyncio.create_task(JobQueueServer.check_job_queue(), name="server-queue-poller")

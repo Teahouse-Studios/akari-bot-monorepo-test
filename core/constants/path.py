@@ -1,4 +1,3 @@
-import glob
 import os
 from pathlib import Path
 
@@ -37,14 +36,6 @@ union_merge_logs_path = assets_path / "union_merge_logs"
 noto_sans_bold_path = fonts_path / "Noto Sans CJK Bold.otf"
 noto_sans_demilight_path = fonts_path / "Noto Sans CJK DemiLight.otf"
 noto_sans_symbol_path = fonts_path / "Noto Sans Symbols2 Regular.ttf"
-
-# 特殊路径
-bots_locales_path = bots_path / "*" / "locales"
-modules_locales_path = modules_path / "*" / "locales"
-
-all_locales_path = (
-    glob.glob(str(base_locales_path)) + glob.glob(str(bots_locales_path)) + glob.glob(str(modules_locales_path))
-)
 
 
 class PrivateAssets:
