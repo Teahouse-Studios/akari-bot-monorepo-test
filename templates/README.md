@@ -69,11 +69,16 @@ T5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流
       src/akaribot/modules/[@module_name@]/
         __init__.py.j2
         config.py.j2
+        database/__init__.py.j2
         database/models.py.j2
         migrations/0001_initial.py.j2
         locales/zh_cn.json.j2
-        assets/.gitkeep
+        assets/README.md
       tests/test_[@module_name@].py.j2
+
+`assets/README.md` 与 `database/__init__.py.j2` 的存在有两个作用：保证目录可被 git
+跟踪（空目录不会进版本库），并向模块作者说明该目录的用途。生成器不需要删除它们，
+`assets/README.md` 会随包分发。
 
 生成后的目录与 ``packages/modules/akari-bot-module-<实际模块名>/`` 同构，可直接
 ``akaribot module add -e .``。
