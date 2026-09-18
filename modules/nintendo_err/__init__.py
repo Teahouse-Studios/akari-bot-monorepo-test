@@ -1,6 +1,6 @@
 # ported from kurisu(https://github.com/nh-server/Kurisu/tree/main/cogs/results)
 from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
+from core.builtins.message.internal import Embed, EmbedField, I18NContext
 from core.component import module
 
 
@@ -90,10 +90,6 @@ e = module("nintendo-err", alias=["nintendo_err", "err"], developers=["OasisAkar
 
 @e.command("<err_code> {{I18N:nintendo_err.help}}")
 async def _(msg: Bot.MessageSession, err_code: str):
-    import discord
-
-    from core.utils.element import convert_discord_embed
-
     results = Results()
     err = results.fixup_input(err_code)
     if meme := results.check_meme(err):
@@ -104,11 +100,10 @@ async def _(msg: Bot.MessageSession, err_code: str):
         ret = None
 
     if ret:
-        embed = discord.Embed(title=ret.get_title())
+        embed = Embed(title=ret.get_title())
         if ret.extra_description:
             embed.description = ret.extra_description
-        for field in ret:
-            embed.add_field(name=field.field_name, value=field.message, inline=False)
-        await msg.finish(convert_discord_embed(embed))
+        embed.fields = [EmbedField(field.field_name, field.message, inline=False) for field in ret]
+        await msg.finish(embed)
     else:
         await msg.finish(I18NContext("nintendo_err.message.invalid"))
