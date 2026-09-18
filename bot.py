@@ -20,7 +20,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
-from core.constants import CONFIG_READONLY_ENV, ascii_art, bots_path, logs_path  # skipcq
+from core.constants import CONFIG_READONLY_ENV, ascii_art, logs_path  # skipcq
+from core.registry import PackageRegistry  # skipcq
 
 
 AKARI_BOT_I18N_CACHE_DIR = str(Path("./assets/i18n_cache/").resolve())
@@ -334,11 +335,15 @@ async def run_bot():
         p.start()
         processes.append(p)
 
-    bots_list = [p.name for p in bots_path.iterdir() if p.is_dir() and not p.name.startswith("_")]
+    bots_list = list(PackageRegistry.adapters())
     disabled_bots.clear()
 
+    configured = set()
     for t in CFGManager.values:
-        if t.startswith("bot_") and not t.endswith("_secret") and t[4:] in bots_list:
+        if t.startswith("bot_") and not t.endswith("_secret"):
+            configured.add(t[4:])
+            if t[4:] not in bots_list:
+                continue
             if "enable" in CFGManager.values[t][t]:
                 if not CFGManager.values[t][t]["enable"]:
                     disabled_bots.append(t[4:])
@@ -346,6 +351,10 @@ async def run_bot():
             else:
                 Logger.warning(f'Bot {t[4:]} cannot found config "enable".')
                 disabled_bots.append(t[4:])
+
+    # 配置留了但适配器未安装，多由卸载适配器或手改表名造成，提示后跳过而非中止启动。
+    for orphan in sorted(configured - set(bots_list)):
+        Logger.warning(f"Bot {orphan} has config but no adapter is installed, skip to launch.")
 
     for bl in bots_list:
         if bl in disabled_bots:

@@ -4,7 +4,6 @@ import asyncio
 import ast
 import hashlib
 import inspect
-import pkgutil
 import re
 import sys
 import traceback
@@ -33,14 +32,12 @@ from core.types.module.component_meta import (
 
 
 async def load_modules():
-    import modules
-
     err_prompt = []
 
     Logger.info("Attempting to load modules...")
 
-    for subm in pkgutil.iter_modules(modules.__path__):
-        module_py_name = f"{modules.__name__}.{subm.name}"
+    for entry in PackageRegistry.modules().values():
+        module_py_name = entry.import_path
         old_module_names = ModulesManager._module_names_for_py_module(module_py_name)
         old_modules = {name: ModulesManager.modules[name] for name in old_module_names}
         old_origins = {name: ModulesManager.modules_origin[name] for name in old_module_names}

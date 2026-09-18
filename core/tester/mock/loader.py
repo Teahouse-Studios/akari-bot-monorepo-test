@@ -1,10 +1,10 @@
 import importlib
-import pkgutil
 
 from core.constants import lang_list
 from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 from core.loader import ModulesManager
 from core.logger import Logger
+from core.registry import PackageRegistry
 
 
 def apply_monkey_patch(module, monkey_patches: dict[str, object] | None):
@@ -17,8 +17,6 @@ def apply_monkey_patch(module, monkey_patches: dict[str, object] | None):
 
 
 async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None = None, load_fixtures: bool = True):
-    import modules
-
     # 测试显式配置默认 RPC peer，与生产入口一致，避免依赖模块导入顺序。
     from core.queue.server import JobQueueServer
     from core.queue.rpc import set_default_peer
@@ -57,8 +55,9 @@ async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None 
     if show_logs:
         Logger.info("Attempting to load modules...")
 
-    for subm in pkgutil.iter_modules(modules.__path__):
-        module_py_name = f"{modules.__name__}.{subm.name}"
+    # 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。
+    for entry in PackageRegistry.modules().values():
+        module_py_name = entry.import_path
 
         try:
             if show_logs:

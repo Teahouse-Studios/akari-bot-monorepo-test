@@ -2,11 +2,12 @@
 
 import os
 from dataclasses import dataclass
-from types import SimpleNamespace
+from pathlib import Path
 from unittest.mock import patch
 
 import bot as daemon
 from core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
+from core.registry import PackageEntry, PackageManifest, PackageRegistry
 from core.tester import func_case, Tester
 
 
@@ -86,10 +87,22 @@ class _FakeContext:
         return process
 
 
-class _FakeBotsPath:
-    @staticmethod
-    def iterdir():
-        return iter((SimpleNamespace(name="test-platform", is_dir=lambda: True),))
+_TEST_PLATFORM = "test-platform"
+
+
+def _fake_adapters():
+    """只暴露一个合成适配器，使守护进程的编排路径可被完整断言。"""
+    return {
+        _TEST_PLATFORM: PackageEntry(
+            kind="adapter",
+            name=_TEST_PLATFORM,
+            dist_name="",
+            version="0+local",
+            import_path=f"bots.{_TEST_PLATFORM}",
+            root=Path("."),
+            manifest=PackageManifest(),
+        )
+    }
 
 
 async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
@@ -103,7 +116,7 @@ async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
     try:
         with (
             patch.object(daemon.multiprocessing, "get_context", return_value=context),
-            patch.object(daemon, "bots_path", _FakeBotsPath()),
+            patch.object(PackageRegistry, "adapters", side_effect=_fake_adapters),
             patch.object(JobQueueConfig, "jobqueue_backend", backend),
             patch.object(JobQueueConfig, "jobqueue_websocket_mode", mode),
             patch.object(JobQueueConfig, "jobqueue_websocket_url", "ws://127.0.0.1:8765/jobqueue"),

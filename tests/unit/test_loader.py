@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from apscheduler.triggers.interval import IntervalTrigger
@@ -1114,12 +1113,12 @@ async def _test_initial_load_rolls_back_partial_registration():
         with TemporaryDirectory() as temp_dir:
             with (
                 patch.object(
-                    loader_module.pkgutil,
-                    "iter_modules",
-                    return_value=[
-                        SimpleNamespace(name="__test_loader_initial_broken"),
-                        SimpleNamespace(name="__test_loader_initial_optional"),
-                    ],
+                    PackageRegistry,
+                    "modules",
+                    return_value={
+                        broken_package: _synthetic_package_entry(broken_package),
+                        optional_package: _synthetic_package_entry(optional_package),
+                    },
                 ),
                 patch.object(loader_module.importlib, "import_module", side_effect=import_module),
                 patch.object(ModuleStatus, "init_modules", new=AsyncMock()),

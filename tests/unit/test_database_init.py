@@ -1,7 +1,8 @@
 """数据库连接参数与初始化职责单元测试。"""
 
 import asyncio
-from types import SimpleNamespace
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs, parse_qsl, urlsplit
 from unittest.mock import AsyncMock, patch
 
@@ -10,6 +11,7 @@ import tortoise.context as tortoise_context
 from core.database.models import JobQueuesTable
 from core.database.link import prepare_db_link
 from core.queue.server import JobQueueServer
+from core.registry import PackageEntry, PackageManifest, PackageRegistry
 from core.queue.transport import PROTOCOL_VERSION
 from core.scheduler import Scheduler, SchedulerLifecycle
 from core.tester import Tester, func_case
@@ -52,27 +54,65 @@ def _test_non_sqlite_link_keeps_existing_behavior():
     return link == "mysql://user:pass@localhost/akari?charset=utf8mb4"
 
 
-def _test_module_database_discovery_distinguishes_missing_dependency():
-    """没有 models.py 可忽略，但 database 包内部缺依赖必须中止初始化。"""
-    module = SimpleNamespace(name="__test_database_discovery")
-    with (
-        patch.object(database.pkgutil, "iter_modules", return_value=[module]),
-        patch.object(database.importlib.util, "find_spec", return_value=None),
-    ):
-        missing_models_ignored = database.fetch_module_db() == []
+def _test_module_database_discovery_follows_file_existence():
+    """模型清单按 models.py 是否存在给出，不导入包。
 
+    清单为空只表示该包没有数据库模型；包内缺少依赖的失败改由 ``init_db()`` 在真正导入
+    模型时抛出（见下一条用例），不再由发现阶段承担。
+    """
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        with_models = root / "with_models"
+        (with_models / "database").mkdir(parents=True)
+        (with_models / "database" / "models.py").write_text("", encoding="utf-8")
+        without_models = root / "without_models"
+        (without_models / "database").mkdir(parents=True)
+        (without_models / "database" / "__init__.py").write_text("", encoding="utf-8")
+
+        entries = {
+            "with_models": PackageEntry(
+                kind="module",
+                name="with_models",
+                dist_name="",
+                version="0+local",
+                import_path="modules.with_models",
+                root=with_models,
+                manifest=PackageManifest(),
+            ),
+            "without_models": PackageEntry(
+                kind="module",
+                name="without_models",
+                dist_name="",
+                version="0+local",
+                import_path="modules.without_models",
+                root=without_models,
+                manifest=PackageManifest(),
+            ),
+        }
+        with patch.object(PackageRegistry, "modules", return_value=entries):
+            paths = database.fetch_module_db()
+    return paths == ["modules.with_models.database.models"]
+
+
+async def _test_missing_module_dependency_fails_initialization():
+    """database 包内部缺依赖时必须让 init_db() 失败，不得静默漏挂数据表。"""
     dependency_error = ModuleNotFoundError("No module named 'database_driver'", name="database_driver")
-    with (
-        patch.object(database.pkgutil, "iter_modules", return_value=[module]),
-        patch.object(database.importlib.util, "find_spec", side_effect=dependency_error),
-    ):
-        try:
-            database.fetch_module_db()
-        except ModuleNotFoundError as e:
-            dependency_propagated = e.name == "database_driver"
+    init = AsyncMock(side_effect=dependency_error)
+    old_database_list = database.Temp.data.get("modules_db_list")
+    try:
+        with (
+            patch.object(database, "fetch_module_db", return_value=["modules.__missing_dependency.database.models"]),
+            patch.object(database, "get_db_link", return_value="sqlite://database/save.db"),
+            patch.object(database.Tortoise, "init", new=init),
+            patch.object(database.Tortoise, "close_connections", new=AsyncMock()),
+        ):
+            result = await database.init_db()
+    finally:
+        if old_database_list is None:
+            database.Temp.data.pop("modules_db_list", None)
         else:
-            dependency_propagated = False
-    return missing_models_ignored and dependency_propagated
+            database.Temp.data["modules_db_list"] = old_database_list
+    return result is False and init.await_count == 1
 
 
 async def _test_runtime_init_does_not_generate_schemas():
@@ -527,10 +567,8 @@ async def test_database_init(tester: Tester):
     await tester.test(_test_sqlite_defaults_are_added, "SQLite 缺失参数自动补全")
     await tester.test(_test_sqlite_explicit_fields_are_preserved, "SQLite 显式参数保持不变")
     await tester.test(_test_non_sqlite_link_keeps_existing_behavior, "非 SQLite 连接保持现有行为")
-    await tester.test(
-        _test_module_database_discovery_distinguishes_missing_dependency,
-        "模块数据库发现区分缺失 models 与内部依赖",
-    )
+    await tester.test(_test_module_database_discovery_follows_file_existence, "模块数据库发现按 models.py 是否存在")
+    await tester.test(_test_missing_module_dependency_fails_initialization, "模块模型缺依赖时初始化失败")
     await tester.test(_test_runtime_init_does_not_generate_schemas, "运行期初始化不执行建表")
     await tester.test(_test_pre_init_mode_generates_all_schemas, "pre-init 建立核心、local 与模块表")
     await tester.test(_test_failed_init_closes_partial_connections, "数据库初始化失败清理部分连接")

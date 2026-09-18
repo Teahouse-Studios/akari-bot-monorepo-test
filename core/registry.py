@@ -455,19 +455,37 @@ class PackageRegistry:
     def config_template_paths(cls) -> list[str]:
         """全部配置模板的模块名，核心配置排在最前。
 
-        以文件是否存在判断模板有无，而非在导入时捕获 ``ModuleNotFoundError``：后者无法
-        区分「该包未提供 config.py」与「模板自身导入了不存在的依赖」，后一种会被静默跳过，
-        形成漏键。亦不使用 ``importlib.util.find_spec()``：该函数为取得 ``__path__`` 会
-        导入父包，使配置模板作为叶子模块的优势不复存在。
+        覆盖适配器与模块两类包。以文件是否存在判断模板有无，而非在导入时捕获
+        ``ModuleNotFoundError``：后者无法区分「该包未提供 config.py」与「模板自身导入了
+        不存在的依赖」，后一种会被静默跳过，形成漏键。亦不使用 ``importlib.util.find_spec()``：
+        该函数为取得 ``__path__`` 会导入父包，使配置模板作为叶子模块的优势不复存在。
 
         :return: 配置模板的模块名列表。
         """
         cls.discover()
         names = ["core.config.base"]
-        for entry in cls._entries.values():
-            if (entry.root / "config.py").is_file():
-                names.append(f"{entry.import_path}.config")
+        for kind in ("adapter", "module"):
+            for entry in cls._entries.values():
+                if entry.kind == kind and (entry.root / "config.py").is_file():
+                    names.append(f"{entry.import_path}.config")
         return names
+
+    @classmethod
+    def db_model_paths(cls) -> list[str]:
+        """全部模块的数据库模型模块名。
+
+        与配置模板同一条理由：以文件是否存在判断，不导入包。``models.py`` 内部缺少依赖
+        时，错误会在 ``init_db()`` 真正导入它时抛出，不会在此被静默跳过。
+
+        :return: 模型模块名列表，按包名排序。
+        """
+        cls.discover()
+        modules = cls.modules()
+        return [
+            f"{modules[name].import_path}.database.models"
+            for name in sorted(modules)
+            if (modules[name].root / "database" / "models.py").is_file()
+        ]
 
     @classmethod
     def data_dir(cls, name_or_entry: str | PackageEntry) -> Path:

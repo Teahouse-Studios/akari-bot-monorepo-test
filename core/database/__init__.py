@@ -1,8 +1,6 @@
 import asyncio
-import importlib.util
+import importlib
 import inspect
-import pkgutil
-import traceback
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,23 +30,9 @@ class PreparedDatabaseReload:
 
 
 def fetch_module_db():
-    import modules
+    from core.registry import PackageRegistry
 
-    database_list = []
-    for m in pkgutil.iter_modules(modules.__path__):
-        models_module = f"modules.{m.name}.database.models"
-        try:
-            spec = importlib.util.find_spec(models_module)
-            if spec is not None:
-                database_list.append(spec.name)
-        except ModuleNotFoundError as e:
-            # database 包或 models.py 本身不存在是正常情况；但其 __init__.py
-            # 内部缺少依赖时必须让 init_db() 失败，不能静默漏挂该模块的数据表。
-            if e.name not in {f"modules.{m.name}.database", models_module}:
-                raise
-        except Exception:
-            Logger.exception(traceback.format_exc())
-            raise
+    database_list = PackageRegistry.db_model_paths()
 
     Logger.debug(f"Database list: {database_list}")
     return database_list
