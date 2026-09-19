@@ -513,19 +513,35 @@ class PackageRegistry:
     def config_template_paths(cls) -> list[str]:
         """全部配置模板的模块名，核心配置排在最前。
 
-        覆盖适配器与模块两类包。以文件是否存在判断模板有无，而非在导入时捕获
-        ``ModuleNotFoundError``：后者无法区分「该包未提供 config.py」与「模板自身导入了
-        不存在的依赖」，后一种会被静默跳过，形成漏键。亦不使用 ``importlib.util.find_spec()``：
-        该函数为取得 ``__path__`` 会导入父包，使配置模板作为叶子模块的优势不复存在。
+        清单按包名排序，以固定生成顺序，避免同一批配置项在多次生成间换序而反复改写
+        配置文件。
+
+        以文件是否存在判断模板有无，而非在导入时捕获 ``ModuleNotFoundError``：后者无法
+        区分「该包未提供 config.py」与「模板自身导入了不存在的依赖」，后一种会被静默跳过，
+        形成漏键。亦不使用 ``importlib.util.find_spec()``：该函数为取得 ``__path__`` 会
+        导入父包，使配置模板作为叶子模块的优势不复存在。
 
         :return: 配置模板的模块名列表。
         """
         cls.discover()
         names = ["core.config.base"]
         for kind in ("adapter", "module"):
-            for entry in cls._entries.values():
-                if entry.kind == kind and (entry.root / "config.py").is_file():
-                    names.append(f"{entry.import_path}.config")
+            candidates = sorted(
+                (entry for entry in cls._entries.values() if entry.kind == kind),
+                key=lambda entry: entry.name,
+            )
+            for entry in candidates:
+                if not (entry.root / "config.py").is_file():
+                    continue
+                if not (entry.root / "__init__.py").is_file():
+                    # 目录形式的命名空间包仍可导入，配置照常补全；但其它按包枚举的代码
+                    # 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。
+                    _logger().warning(
+                        f"[Config] {entry.import_path} provides config.py without __init__.py; "
+                        "its configuration is generated, but an empty __init__.py is required for it "
+                        "to be visible to package-based enumeration."
+                    )
+                names.append(f"{entry.import_path}.config")
         return names
 
     @classmethod
