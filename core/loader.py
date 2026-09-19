@@ -87,6 +87,7 @@ async def load_modules():
 
     Logger.success("All modules loaded.")
 
+    PrivateData.ensure()
     loader_cache = PrivateData.path / ".cache_loader"
     with open(loader_cache, "w", encoding="utf-8") as open_loader_cache:
         if err_prompt:

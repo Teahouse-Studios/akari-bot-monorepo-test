@@ -116,9 +116,13 @@ def pre_init():
     Logger.info("Akaribot is launching...")
     from tortoise import run_async
 
-    from core.constants import cache_path, lang_list
+    from core.constants import PrivateData, cache_path, lang_list
     from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+    from core.paths import Paths
 
+    # 目录创建集中在此：导入 core.constants 不再产生副作用。
+    Paths.ensure("data", "cache", "logs", "database")
+    PrivateData.ensure()
     if cache_path.exists():
         shutil.rmtree(cache_path)
     cache_path.mkdir(parents=True, exist_ok=True)

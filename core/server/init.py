@@ -166,6 +166,7 @@ async def load_prompt(locale_load_error, timeout: float | None = None) -> None:
     :param locale_load_error: 语言文件加载过程中产生的错误信息
     :param timeout: 等待目标客户端上线的秒数上限，默认为 `RESTART_PROMPT_TIMEOUT`
     """
+    PrivateData.ensure()
     author_cache = PrivateData.path / ".cache_restart_author"
     loader_cache = PrivateData.path / ".cache_loader"
     if author_cache.exists():

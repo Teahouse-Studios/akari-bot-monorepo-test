@@ -1,11 +1,14 @@
+"""路径常量。
+
+取值一律由 :class:`core.paths.Paths` 提供 —— 那里是「实例目录在哪里」的唯一答案。
+本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动；
+新增代码应直接使用 :class:`core.paths.Paths`。
+"""
+
 import os
 from pathlib import Path
 
-# 配置目录的环境变量名。测试引导据此把整个进程指向一份临时配置，
-# 从而不依赖、也不改动开发者本机的 config/。
-# 该名称在 tester.py 中以字面量重复了一次：此处的取值发生在导入期，
-# 而导入 core.constants 本身就会触发取值，引导代码因而无从先行导入本模块取得它。
-CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"
+from core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
 
 # 配置只读模式的环境变量名。守护进程在 spawn bot 与 server 子进程前置位，
 # pre-init 进程则清除此标记，以保证配置迁移与缺失项补全只发生在该进程中。
@@ -20,19 +23,20 @@ CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
 # 基本路径
-assets_path = Path("./assets").resolve()
-bots_path = Path("./bots").resolve()
-cache_path = Path("./cache").resolve()
-config_path = Path(os.environ.get(CONFIG_PATH_ENV) or "./config").resolve()
-data_path = Path("./data").resolve()
-database_path = Path("./database").resolve()
-base_locales_path = Path("./core/locales").resolve()
-logs_path = Path("./logs").resolve()
-modules_path = Path("./modules").resolve()
-tests_path = Path("./tests").resolve()
+assets_path = Paths.assets
+bots_path = Paths.instance / "bots"
+cache_path = Paths.cache
+config_path = Paths.config
+data_path = Paths.data
+database_path = Paths.database
+base_locales_path = Paths.instance / "core" / "locales"
+logs_path = Paths.logs
+modules_path = Paths.instance / "modules"
+tests_path = Paths.tests
 
 # assets 与 data 的分工：assets 只放随仓库分发的只读内容，运行时或部署者产生的内容一律写进 data。
-data_path.mkdir(parents=True, exist_ok=True)
+# 目录创建不在此处发生：导入 core.constants 会触发本模块取值，若同时建目录，只读取版本号
+# 一类的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 或 PrivateData.ensure() 显式创建。
 
 # assets 子路径（只读）
 fonts_path = assets_path / "fonts"
@@ -52,10 +56,20 @@ noto_sans_symbol_path = fonts_path / "Noto Sans Symbols2 Regular.ttf"
 
 
 class PrivateData:
-    """客户端私有资源目录，存放需要跨重启保留的运行时文件。"""
+    """客户端私有资源目录，存放需要跨重启保留的运行时文件。
+
+    ``path`` 是普通类属性，首次使用前须调用 :meth:`ensure`；不设访问器属性是为了让
+    检测工具能从 ``path`` 的赋值处看到它是目录。使用方包括 ``bot.py`` 的
+    ``pre_init()``（启动时创建）与 :meth:`set`。
+    """
 
     path = data_path / "private" / "default"
-    path.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def ensure(cls) -> Path:
+        """创建私有目录并返回其路径。"""
+        cls.path.mkdir(parents=True, exist_ok=True)
+        return cls.path
 
     @classmethod
     def set(cls, path: str | Path):
