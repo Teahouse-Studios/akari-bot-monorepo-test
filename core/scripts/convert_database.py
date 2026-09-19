@@ -16,9 +16,11 @@
 - 自动处理格式差异和类型转换
 """
 
+import importlib
 import os
 import sys
 
+import orjson
 from tortoise import run_async, Tortoise
 from tortoise.models import Model
 
@@ -30,12 +32,25 @@ from core.database import fetch_module_db
 from core.database.link import get_db_link
 from core.database.models import *
 from core.logger import Logger
+from core.registry import PackageRegistry
 from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
-from modules.cytoid.database.models import *
-from modules.maimai.database.models import *
-from modules.phigros.database.models import *
-from modules.wiki.database.models import *
-from modules.wikilog.database.models import *
+
+
+def _load_module_models() -> None:
+    """把各模块包的数据库模型注入本模块命名空间。
+
+    转换逻辑要按新模型写入数据，但 core 不得静态依赖任何模块包：模块在拆包后是独立分发，
+    未安装时静态导入会让脚本直接导入失败。清单取自 PackageRegistry，未安装的包自然缺席，
+    其数据留在旧表里不动。
+    """
+    for path in PackageRegistry.db_model_paths():
+        module = importlib.import_module(path)
+        for name, value in vars(module).items():
+            if isinstance(value, type) and issubclass(value, DBModel):
+                globals().setdefault(name, value)
+
+
+_load_module_models()
 
 
 # ========== 旧数据库表定义（用于从旧表读取数据）==========

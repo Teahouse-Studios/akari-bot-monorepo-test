@@ -4,9 +4,6 @@ check_python_version()  # noqa
 
 from core.constants import config_path, config_filename  # skipcq
 
-if not (config_path / config_filename).exists():
-    import core.scripts.config_generate  # noqa
-
 import asyncio
 import importlib
 import multiprocessing
@@ -30,6 +27,54 @@ load_dotenv()
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
 os.environ.setdefault("PYTHONPATH", str(Path(".").resolve()))
 os.environ.setdefault("AKARI_BOT_I18N_CACHE_DIR", AKARI_BOT_I18N_CACHE_DIR)
+
+
+def _choose_first_run_locale() -> str:
+    """首次运行时询问默认语言。
+
+    完整交互式初始化并入 CLI（阶段 5），此处仅保留语言选择。无终端时（容器、CI）
+    直接采用默认语言，不阻塞在 input() 上。
+
+    :return: 语言代码。
+    """
+    from core.constants import default_locale, lang_list
+
+    if not sys.stdin.isatty():
+        return default_locale
+    print("Hi, it seems you are first time to run AkariBot, what language do you want to use by default?")
+    for index, language in enumerate(lang_list, 1):
+        print(f"{index}. {lang_list[language]}")
+    while True:
+        answer = input("Please input the number of the language you want to use: ").strip()
+        if answer.isdigit() and 1 <= int(answer) <= len(lang_list):
+            return list(lang_list)[int(answer) - 1]
+        print("Invalid input, please try again.")
+
+
+def _init_first_run_config() -> None:
+    """首次运行时写出配置骨架，其余配置项交给 pre_init() 的模板扫描补全。
+
+    骨架只含 default_locale 与 config_version：这两个顶层键不属于任何模板，扫描补不出来。
+    注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。
+    """
+    from core.constants import config_version
+
+    locale = _choose_first_run_locale()
+    config_path.mkdir(parents=True, exist_ok=True)
+    (config_path / config_filename).write_text(
+        "# {I18N:config.header.line.1}\n"
+        "# {I18N:config.header.line.2}\n"
+        "# {I18N:config.header.line.3}\n"
+        "\n"
+        f'default_locale = "{locale}" # {{I18N:config.comments.default_locale}}\n'
+        f"config_version = {config_version} # {{I18N:config.comments.config_version}}\n",
+        encoding="utf-8",
+    )
+    print(f'Config skeleton generated at "{config_path}", it will be completed on this startup.')
+
+
+if not (config_path / config_filename).exists():
+    _init_first_run_config()
 
 
 Logger = logger.bind(name="BotDaemon")

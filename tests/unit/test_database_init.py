@@ -145,12 +145,14 @@ async def _test_runtime_init_does_not_generate_schemas():
 async def _test_pre_init_mode_generates_all_schemas():
     init = AsyncMock()
     generate_schemas = AsyncMock()
+    run_migrations = AsyncMock()
     old_database_list = database.Temp.data.get("modules_db_list")
     try:
         with (
             patch.object(database, "fetch_module_db", return_value=["modules.example.database.models"]),
             patch.object(database.Tortoise, "init", new=init),
             patch.object(database.Tortoise, "generate_schemas", new=generate_schemas),
+            patch.object(database, "run_startup_migrations", new=run_migrations),
         ):
             result = await database.init_db(generate_schemas=True)
 
@@ -159,6 +161,7 @@ async def _test_pre_init_mode_generates_all_schemas():
             result
             and generate_schemas.await_count == 1
             and generate_schemas.await_args.kwargs == {"safe": True}
+            and run_migrations.await_count == 1
             and "modules.example.database.models" in config["apps"]["models"]["models"]
             and config["apps"]["local_models"]["models"] == ["core.database.local"]
         )

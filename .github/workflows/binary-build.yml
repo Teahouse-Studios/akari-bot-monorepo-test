@@ -36,7 +36,6 @@ jobs:
           uv export --no-hashes --output-file=requirements.txt
           uv pip sync requirements.txt --system
           uv run playwright install --with-deps chromium
-          uv run python core/scripts/config_generate.py
 
       - name: Build Wrapper Executable
         uses: Nuitka/Nuitka-Action@main

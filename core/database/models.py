@@ -1797,3 +1797,27 @@ class MaliciousLoginRecords(DBModel):
     @classmethod
     async def check_blocked(cls, ip_address: str) -> bool:
         return await cls.filter(ip_address=ip_address, blocked_until__gt=datetime.now(UTC)).exists()
+
+
+class SchemaMigration(DBModel):
+    """
+    已应用的数据库迁移记录。
+
+    每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动
+    提交，无法把「执行 DDL」与「写版本记录」放进同一事务，因此判断某条 revision 是否已应用
+    只看本表：迁移必须自行保证可重复执行。
+
+    :param package: 包名，``core`` 或分发包名。
+    :param revision: revision 标识符。
+    :param applied_at: 应用时间。
+    :param checksum: 迁移文件源码的 sha256，用于发现已应用的迁移被改写。
+    """
+
+    package = fields.CharField(max_length=255)
+    revision = fields.CharField(max_length=255)
+    applied_at = fields.DatetimeField(auto_now_add=True)
+    checksum = fields.CharField(max_length=64, null=True)
+
+    class Meta:
+        table = "schema_migrations"
+        unique_together = (("package", "revision"),)

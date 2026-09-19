@@ -562,6 +562,33 @@ class PackageRegistry:
         ]
 
     @classmethod
+    def migration_dirs(cls) -> list[tuple[str, Path]]:
+        """全部模块包的数据库迁移目录。
+
+        键取分发名而非包名：迁移记录按包长期存放，包名会在拆包前后变化，而分发名不变。
+        目录扫描兜底时 ``dist_name`` 为空串，此时按 ``akari-bot-module-<包名>`` 合成，与
+        拆包后的分发名一致；若改用裸包名，旧库登记过的 revision 会在拆包后重新变成待应用，
+        已应用记录与新键各存一份。
+
+        目录以 ``manifest.migrations`` 为准，未声明时回落到包内的 ``migrations/``：拆包前
+        没有任何包带 manifest，只认声明会导致迁移目录全部不可见。目录不存在即视为该包无迁移，
+        第三方包因此不必为了不提供迁移而额外声明。
+
+        :return: ``(包名, 目录)`` 列表，按包名排序。
+        """
+        cls.discover()
+        directories: list[tuple[str, Path]] = []
+        modules = cls.modules()
+        for name in sorted(modules):
+            entry = modules[name]
+            relative = entry.manifest.migrations or "migrations"
+            directory = entry.root / relative
+            if not directory.is_dir():
+                continue
+            directories.append((entry.dist_name or f"akari-bot-module-{entry.name}", directory))
+        return directories
+
+    @classmethod
     def package_data(cls, name_or_entry: str | PackageEntry) -> Path:
         """包在实例内的可写数据目录。
 

@@ -56,12 +56,6 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
-      - name: Copy config files
-        shell: bash
-        run: |
-          mkdir -p config
-          cp -r assets/config_store/zh_cn/* config/
-
       - name: Run tests
         timeout-minutes: 60
         env:

@@ -3,6 +3,16 @@
 取值一律由 :class:`core.paths.Paths` 提供 —— 那里是「实例目录在哪里」的唯一答案。
 本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动；
 新增代码应直接使用 :class:`core.paths.Paths`。
+
+**进程级引导的顺序约束**：本模块的取值在**导入期**完成，因此下列环境变量必须在任何
+``core.*`` 导入之前置位，否则取值会被固化为默认值且不报错：
+
+- ``AKARI_INSTANCE_DIR``（实例目录）
+- ``AKARI_CONFIG_PATH``（配置目录）
+- ``AKARI_UNION_MERGE_LOGS_PATH``（合并日志目录）
+
+引导代码因此不能依赖 ``core.constants`` 读取这些名称，只能以字面量重复；``tester.py``、
+``tests/run_one.py`` 与 ``conftest.py`` 的引导段落即受此约束。
 """
 
 import os

@@ -8,50 +8,48 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import tomlkit
+from loguru import logger
 
 # ========== 测试配置引导 ==========
 TEST_CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"  # 须与 core.constants.path.CONFIG_PATH_ENV 一致
-TEST_CONFIG_TEMPLATE_PATH = Path("assets/config_store/zh_cn")
 
 # union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 # 用例会真实走到合并流程，逐次写下的快照日志只在人工回溯真实合并时才有意义，
 # 留在 data/ 里只会随每次测试运行越积越多。
 TEST_UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
-# 测试所需的配置覆盖项，格式为 (文件名, 表名, 键名, 值)。
-TEST_CONFIG_OVERRIDES: list[tuple[str, str, str, object]] = [
-    ("config.toml", "config", "enable_petal", True),
+# 测试所需的配置覆盖项，格式为 (表名, 键名, 值)。文件名不再逐项硬编码：现行扁平布局下
+# 一个表名恰好对应一个配置文件，映射由 CFGManager 的写入路径完成（P4.4 后由 ConfigLayout 提供）。
+TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
+    ("config", "enable_petal", True),
     # 通用测试进程不启动守护进程所管理的 WebSocket Hub。数据库后端
     # 作为自包含测试基座；WebSocket 的真实连接行为由专项用例显式建立 Hub 验证。
-    ("jobqueue.toml", "jobqueue", "jobqueue_backend", "database"),
+    ("jobqueue", "jobqueue_backend", "database"),
 ]
 
 
-def _install_test_config() -> Path:
+def _write_minimal_config(path: Path, locale: str, version: int) -> None:
+    """写出仅含 default_locale 与 config_version 的配置骨架。
+
+    注释先以 i18n 标记落盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值：
+    core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。
+    本函数须在 ``AKARI_CONFIG_PATH`` 置位之后调用，其内的 core.constants 导入会固化配置目录。
+
+    :param path: 配置目录。
+    :param locale: 默认语言代码。
+    :param version: 当前配置版本号。
     """
-    铺好一份测试专用配置，并令其后的导入一律指向它。
+    from core.constants import config_filename
 
-    :return: 临时配置目录的路径。
-    """
-    path = Path(tempfile.mkdtemp(prefix="akari_test_config_"))
-    if TEST_CONFIG_TEMPLATE_PATH.is_dir():
-        shutil.copytree(TEST_CONFIG_TEMPLATE_PATH, path, dirs_exist_ok=True)
-
-    for filename, table, key, value in TEST_CONFIG_OVERRIDES:
-        file_path = path / filename
-        document = tomlkit.parse(file_path.read_text(encoding="utf-8")) if file_path.is_file() else tomlkit.document()
-        if table not in document:
-            document[table] = tomlkit.table()
-        document[table][key] = value
-        file_path.write_text(tomlkit.dumps(document), encoding="utf-8")
-
-    os.environ[TEST_CONFIG_PATH_ENV] = str(path)
-    atexit.register(lambda: shutil.rmtree(path, ignore_errors=True))
-    return path
-
-
-test_config_path = _install_test_config()
+    (path / config_filename).write_text(
+        "# {I18N:config.header.line.1}\n"
+        "# {I18N:config.header.line.2}\n"
+        "# {I18N:config.header.line.3}\n"
+        "\n"
+        f'default_locale = "{locale}" # {{I18N:config.comments.default_locale}}\n'
+        f"config_version = {version} # {{I18N:config.comments.config_version}}\n",
+        encoding="utf-8",
+    )
 
 
 def _install_test_union_merge_logs() -> Path:
@@ -74,7 +72,53 @@ def _install_test_union_merge_logs() -> Path:
     return path
 
 
+def _install_test_config() -> Path:
+    """
+    铺好一份测试专用配置，并令其后的导入一律指向它。
+
+    配置不再取自仓库内的配置快照：只写最小骨架，其余键由配置模板扫描补全，
+    因此仓库里不存在需要与代码同步维护的派生配置。
+
+    :return: 临时配置目录的路径。
+    """
+    path = Path(tempfile.mkdtemp(prefix="akari_test_config_"))
+
+    # 顺序约束：AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。
+    # 前者由 core.paths 在 core.constants 导入期固化为配置目录，后者同被固化为合并日志目录；
+    # core.config 导入期还会执行配置版本迁移。未置位时二者都会落到真实的 config/ 与 data/。
+    os.environ[TEST_CONFIG_PATH_ENV] = str(path)
+
+    from core.constants import default_locale
+    from core.constants.version import config_version
+
+    _write_minimal_config(path, default_locale, config_version)
+
+    from core.config import CFGManager
+    from core.config.scan import scan_config_templates
+    from core.constants import lang_list
+    from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+
+    # i18n 快照须先接上：模板生成的注释取自配置文件声明的语言，未接上时全部退化为 i18n 键名。
+    build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
+    connect_locale_snapshot("akari-bot")
+
+    failed_templates = scan_config_templates()
+    if failed_templates:
+        logger.warning(f"Failed to generate test config from templates: {failed_templates}")
+
+    # 覆盖项走配置管理器的写入路径，使磁盘与内存副本保持一致：直接改写文件时，
+    # 同一文件系统时间戳精度内的改动可能躲过 watch() 的重载判定。
+    for table, key, value in TEST_CONFIG_OVERRIDES:
+        CFGManager.write(key, value, table_name=table)
+
+    atexit.register(lambda: shutil.rmtree(path, ignore_errors=True))
+    return path
+
+
+# 两项引导都必须早于本模块后续的 core.* 导入。合并日志目录在前：它的取值只依赖环境变量，
+# 而配置引导内部会导入 core.constants，届时未置位的变量即被永久固化。
 test_union_merge_logs_path = _install_test_union_merge_logs()
+test_config_path = _install_test_config()
 
 import asyncio
 import glob

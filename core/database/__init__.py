@@ -12,6 +12,7 @@ from core.logger import Logger
 from .compat import install_tortoise_transaction_compat
 from .link import get_db_link, prepare_db_link
 from .local import DB_LINK
+from .migration import run_startup_migrations
 from .models import DBModel
 
 install_tortoise_transaction_compat()
@@ -102,6 +103,8 @@ async def init_db(
 
         if generate_schemas:
             await Tortoise.generate_schemas(safe=True)
+            # 迁移只在建表的写入进程中执行：读进程不建表，也不该改动库结构。
+            await run_startup_migrations()
 
         Temp.data["modules_db_list"] = database_list
         return True

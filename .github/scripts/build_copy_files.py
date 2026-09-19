@@ -4,8 +4,8 @@
 拆包后根目录不再有 ``core/`` ``modules/`` ``bots/`` ``assets/``，届时按 tasks T6.5
 改为按包安装，本脚本随之下线。逐条布局假设见 generated_docs/build_assumptions.md。
 
-``data/`` 与 ``modules/*/data/`` 是实例可写数据，不参与分发；此处仅保证输出目录存在，
-由首次启动生成内容。
+``data/``、``config/`` 与 ``modules/*/data/`` 是实例可写数据，不参与分发；此处仅保证输出
+目录存在，配置由首次启动写出骨架后补全。
 """
 
 import shutil
@@ -16,7 +16,6 @@ if __name__ == "__main__":
     output_dir.mkdir(exist_ok=True)
 
     shutil.copytree("assets", output_dir / "assets")
-    shutil.copytree("assets/config_store/zh_cn", output_dir / "config")
     (output_dir / "data").mkdir(exist_ok=True)
     shutil.copytree("bots", output_dir / "bots")
     shutil.copytree("core/locales", output_dir / "core" / "locales")

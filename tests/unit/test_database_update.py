@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
-import core.database.update as database_update
+import core.database.legacy as database_update
 from core.tester import Tester, func_case
 from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRuleError
 
