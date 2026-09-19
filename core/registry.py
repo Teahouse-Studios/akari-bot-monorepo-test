@@ -32,8 +32,9 @@ FROZEN_REGISTRY_MODULE = "core._frozen_registry"
 MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
 
-# core 公共 API 的版本。模块与适配器通过 manifest 的 requires_core_api 声明所需区间；
-# 该版本的正式发布与校验闸门在公共 API 契约阶段建立。
+# core 公共 API 的版本。模块与适配器通过 manifest 的 requires_core_api 声明所需区间，
+# 不满足者由 reject_incompatible() 拒绝注册。本常量是单一真源，core.api 的 __api_version__
+# 取自此处；发现层不得反过来导入 core.api，那会形成循环。
 CORE_API_VERSION = 1
 
 PackageKind = Literal["module", "adapter"]
