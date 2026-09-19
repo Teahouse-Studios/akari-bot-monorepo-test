@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
+import heapq
 import importlib
 import importlib.metadata
 import importlib.resources
 import sys
 import tomllib
+from collections import deque
+from collections.abc import Iterator
 from dataclasses import dataclass, fields as dataclass_fields
 from pathlib import Path
 from typing import Any, Literal
@@ -36,11 +39,26 @@ MANIFEST_SCHEMA = 1
 # reject_incompatible() 拒绝注册。本常量是单一真源，core.api 取其值；此处不得反向导入 core.api。
 CORE_API_VERSION = 1
 
+# 参与运行时依赖图的分发名前缀。其余 Requires-Dist 是普通 PyPI 依赖，由安装器负责解析。
+DEPENDENCY_PREFIXES = ("akari-bot-module-", "akari-bot-adapter-")
+
 PackageKind = Literal["module", "adapter"]
 
 
 class RegistryError(RuntimeError):
     """发现层无法产出可用清单时抛出。"""
+
+
+class CircularDependencyError(RegistryError):
+    """包声明依赖成环时抛出。
+
+    :param cycles: 每个环的完整路径，首尾为同一个包。
+    """
+
+    def __init__(self, cycles: tuple[tuple[str, ...], ...]):
+        self.cycles = cycles
+        detail = "; ".join(" -> ".join(cycle) for cycle in cycles)
+        super().__init__(f"Circular dependency detected: {detail}")
 
 
 def _logger():
@@ -53,6 +71,19 @@ def _logger():
     from core.logger import Logger
 
     return Logger
+
+
+def _canonicalize(name: str) -> str:
+    """分发名的规范化形式。
+
+    依赖声明的写法允许大小写与下划线差异，比较前统归一形式，等价名字才能命中同一个包。
+
+    :param name: 分发名或包名。
+    :return: 规范化后的名字。
+    """
+    from packaging.utils import canonicalize_name
+
+    return canonicalize_name(name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +165,22 @@ class PackageEntry:
         return self.name
 
 
+@dataclass(frozen=True, slots=True)
+class PackageDependency:
+    """一个包在分发 metadata 里声明的模块包依赖。
+
+    :param dist_name: 依赖的分发名，已规范化为小写连字符形式。
+    :param specifier: 版本描述符，如 ``>=1.0,<2.0``；未限定版本时为空串。
+    :param satisfied: 已装版本是否满足描述符。
+    :param installed_version: 已装版本；未安装时为 ``None``。
+    """
+
+    dist_name: str
+    specifier: str
+    satisfied: bool
+    installed_version: str | None
+
+
 class PackageRegistry:
     """模块与适配器的发现结果缓存。
 
@@ -144,10 +191,14 @@ class PackageRegistry:
     _by_import_path: dict[str, PackageEntry] = {}
     _discovered: bool = False
     _incompatible: dict[str, str] = {}
+    _dependency_rejected: dict[str, str] = {}
 
     @classmethod
     def discover(cls, *, force: bool = False) -> None:
         """建立发现结果。
+
+        收尾阶段校验包之间的声明依赖：依赖缺失、版本不满足或成环的包不进入注册表，
+        原因经 :meth:`incompatible` 与 :meth:`report_lines` 报出。
 
         :param force: 为真时忽略缓存并重新发现。
         """
@@ -165,7 +216,9 @@ class PackageRegistry:
             for entry in cls._from_directory_scan():
                 cls._insert(entries, entry, source="directory scan")
 
+        entries, rejected = cls._reject_unsatisfied_dependencies(entries)
         cls._entries = entries
+        cls._dependency_rejected = rejected
         cls._by_import_path = {}
         for entry in entries.values():
             current = cls._by_import_path.get(entry.import_path)
@@ -205,15 +258,16 @@ class PackageRegistry:
 
     @classmethod
     def incompatible(cls) -> dict[str, str]:
-        """core 公共 API 不兼容的包。
+        """不能注册的包及其原因。
 
-        仅收录已发现的包；被拒绝注册的包不进入 :meth:`modules` 与 :meth:`adapters`，
-        但在此可见，供启动提示与 ``~module list`` 展示。
+        收录两类：core 公共 API 不兼容的包，与声明依赖不满足的包。仅覆盖已发现的包；
+        被拒绝注册的包不进入 :meth:`modules` 与 :meth:`adapters`，但在此可见，供启动
+        提示与 ``~module list`` 展示。
 
         :return: 包标识到原因的映射。
         """
         cls.discover()
-        return dict(cls._incompatible)
+        return {**cls._dependency_rejected, **cls._incompatible}
 
     @staticmethod
     def _package_label(entry: PackageEntry) -> str:
@@ -643,3 +697,379 @@ class PackageRegistry:
             if entry.name == name_or_entry:
                 return entry
         raise KeyError(f"Unknown package {name_or_entry!r}")
+
+    @classmethod
+    def dependencies(cls, entry: PackageEntry) -> tuple[PackageDependency, ...]:
+        """包在分发 metadata 里声明的模块包依赖。
+
+        只收录 ``Requires-Dist`` 中名字以 ``akari-bot-module-`` 或 ``akari-bot-adapter-``
+        开头的条目；其余是普通 PyPI 依赖，由安装器负责，不进入运行时依赖图。
+
+        目录扫描兜底时 ``dist_name`` 为空串，此时不存在分发 metadata，一律返回空元组：
+        拆包之前所有包都走这条路径，依赖图因此为空，这是预期结果。
+
+        带 extra 标记的条目按「该 extra 已装」判断（见 :meth:`_installed_extras`）：
+        未装 extra 的依赖不会被安装，故不计入，也不会让该包因缺依赖被拒绝。
+
+        :param entry: 待查询的包。
+        :return: 依赖元组，按分发名排序。
+        """
+        if not entry.dist_name:
+            return ()
+        try:
+            distribution = importlib.metadata.distribution(entry.dist_name)
+        except importlib.metadata.PackageNotFoundError:
+            return ()
+        try:
+            requirements = cls._parsed_requirements(distribution, entry.dist_name)
+        except Exception:
+            _logger().exception(f"Failed to read dependency metadata of {entry.dist_name!r}.")
+            return ()
+        extras = cls._installed_extras(distribution, requirements)
+        found: dict[str, PackageDependency] = {}
+        for requirement in requirements:
+            name = _canonicalize(requirement.name)
+            if not name.startswith(DEPENDENCY_PREFIXES):
+                continue
+            if not cls._marker_applies(requirement.marker, extras):
+                continue
+            installed = cls._installed_version(name)
+            found[name] = PackageDependency(
+                dist_name=name,
+                specifier=str(requirement.specifier),
+                satisfied=cls._requirement_satisfied(installed, requirement, name),
+                installed_version=installed,
+            )
+        return tuple(found[key] for key in sorted(found))
+
+    @classmethod
+    def dependents(cls, entry: PackageEntry) -> tuple[PackageEntry, ...]:
+        """反向依赖：声明依赖 ``entry`` 的全部包，供卸载保护使用。
+
+        匹配按分发名的规范化形式进行；条目没有分发名时按 ``akari-bot-<种类>-<包名>``
+        合成，与 :meth:`migration_dirs` 同一约定，使依赖声明在拆包前后指向同一个包。
+
+        :param entry: 目标包。
+        :return: 依赖它的包，按注册表键排序。
+        """
+        cls.discover()
+        names = {_canonicalize(name) for name in cls._distribution_names(entry)}
+        own = cls._key(entry)
+        found = [
+            candidate
+            for key, candidate in cls._entries.items()
+            if key != own
+            and names & {_canonicalize(dependency.dist_name) for dependency in cls.dependencies(candidate)}
+        ]
+        return tuple(sorted(found, key=cls._key))
+
+    @classmethod
+    def resolved_dependencies(cls, entry: PackageEntry) -> tuple[PackageEntry, ...]:
+        """声明依赖中已注册为本进程包的那些。
+
+        依赖已装但未注册（例如装入的是普通 PyPI 包）时不出现在结果中。
+
+        :param entry: 待查询的包。
+        :return: 依赖条目，按注册表键排序。
+        """
+        cls.discover()
+        index = {
+            _canonicalize(name): key
+            for key, candidate in cls._entries.items()
+            for name in cls._distribution_names(candidate)
+        }
+        own = cls._key(entry)
+        found = set()
+        for dependency in cls.dependencies(entry):
+            target = index.get(_canonicalize(dependency.dist_name))
+            if target is not None and target != own:
+                found.add(target)
+        return tuple(cls._entries[key] for key in sorted(found))
+
+    @classmethod
+    def load_order(cls) -> list[PackageEntry]:
+        """全部包的拓扑序，被依赖者在前。
+
+        同层按注册表键排序，使同一批包在多次运行间的顺序一致。返回值覆盖全部已注册包，
+        与 :meth:`all` 等长，不遗漏任何包。
+
+        :return: 条目列表。
+        :raises CircularDependencyError: 声明依赖存在环。成环的包在 :meth:`discover`
+            阶段已被拒绝注册，此异常只在直接调用本方法时出现。
+        """
+        cls.discover()
+        edges = cls._dependency_edges()
+        cycles = cls._cycles(edges)
+        if cycles:
+            paths = tuple(cls._cycle_path(cycle, edges) for cycle in cycles)
+            raise CircularDependencyError(cls._cycle_labels(paths, cls._entries))
+        dependents: dict[str, set[str]] = {key: set() for key in edges}
+        degree = {key: len(dependencies) for key, dependencies in edges.items()}
+        for key, dependencies in edges.items():
+            for dependency in dependencies:
+                dependents[dependency].add(key)
+        ready = [key for key, count in degree.items() if not count]
+        heapq.heapify(ready)
+        ordered: list[str] = []
+        while ready:
+            key = heapq.heappop(ready)
+            ordered.append(key)
+            for dependent in sorted(dependents[key]):
+                degree[dependent] -= 1
+                if not degree[dependent]:
+                    heapq.heappush(ready, dependent)
+        if len(ordered) != len(edges):
+            # 环检测已在上方拦截，此处只作兜底：宁可报错，也不静默少加载包。
+            remaining = tuple(sorted(set(edges) - set(ordered)))
+            raise CircularDependencyError((cls._cycle_path(remaining, edges),))
+        return [cls._entries[key] for key in ordered]
+
+    @classmethod
+    def _reject_unsatisfied_dependencies(
+        cls, entries: dict[str, PackageEntry]
+    ) -> tuple[dict[str, PackageEntry], dict[str, str]]:
+        """剔除声明依赖缺失、版本不满足或成环的包。
+
+        :param entries: 本次发现的全部条目。
+        :return: 二元组——保留的条目；被拒绝包的标识到原因的映射。
+        """
+        kept: dict[str, PackageEntry] = {}
+        rejected: dict[str, str] = {}
+        for key, entry in entries.items():
+            reason = cls._dependency_reason(entry)
+            if reason is None:
+                kept[key] = entry
+                continue
+            rejected[cls._package_label(entry)] = reason
+            _logger().warning(f"Skipped {cls._package_label(entry)}: {reason}.")
+        edges = cls._edges_of(kept)
+        for cycle in cls._cycles(edges):
+            path = cls._cycle_path(cycle, edges)
+            labels = " -> ".join(cls._package_label(kept[key]) for key in path)
+            for key in cycle:
+                rejected[cls._package_label(kept[key])] = f"circular dependency {labels}"
+                del kept[key]
+            _logger().warning(f"Skipped {len(cycle)} package(s): circular dependency {labels}.")
+        return kept, rejected
+
+    @classmethod
+    def _dependency_reason(cls, entry: PackageEntry) -> str | None:
+        """声明依赖不满足时的原因；全部满足时为 ``None``。"""
+        reasons = []
+        for dependency in cls.dependencies(entry):
+            if dependency.installed_version is None:
+                reasons.append(f"missing dependency {dependency.dist_name}")
+            elif not dependency.satisfied:
+                reasons.append(
+                    f"{dependency.dist_name} {dependency.installed_version} does not satisfy {dependency.specifier}"
+                )
+        return "; ".join(reasons) or None
+
+    @staticmethod
+    def _distribution_names(entry: PackageEntry) -> tuple[str, ...]:
+        """条目可被依赖声明引用的分发名。
+
+        目录扫描的包没有分发名，按 ``akari-bot-<种类>-<包名>`` 合成：该名字与拆包后的
+        分发名一致，依赖声明因此不必区分包来自 entry point 还是目录扫描。
+
+        :param entry: 包。
+        :return: 分发名元组。
+        """
+        if entry.dist_name:
+            return (entry.dist_name,)
+        return (f"akari-bot-{entry.kind}-{entry.name}",)
+
+    @staticmethod
+    def _installed_version(dist_name: str) -> str | None:
+        """已装分发的版本；未安装时为 ``None``。"""
+        try:
+            return importlib.metadata.version(dist_name)
+        except importlib.metadata.PackageNotFoundError:
+            return None
+
+    @staticmethod
+    def _requirement_satisfied(installed: str | None, requirement: Any, dist_name: str) -> bool:
+        """已装版本是否满足依赖描述符。版本号不可解析时视为不满足。"""
+        from packaging.version import InvalidVersion, Version
+
+        if installed is None:
+            return False
+        try:
+            return Version(installed) in requirement.specifier
+        except InvalidVersion:
+            _logger().warning(f"Installed {dist_name} has unparsable version {installed!r}.")
+            return False
+
+    @staticmethod
+    def _parsed_requirements(distribution: Any, dist_name: str) -> tuple[Any, ...]:
+        """解析分发 metadata 的 ``Requires-Dist``。
+
+        单行不可解析时跳过该行：一条写错的依赖不应让整个包从注册表中消失。
+
+        :param distribution: ``importlib.metadata`` 的分发对象。
+        :param dist_name: 分发名，用于日志。
+        :return: ``Requirement`` 元组。
+        """
+        from packaging.requirements import InvalidRequirement, Requirement
+
+        parsed = []
+        for line in distribution.metadata.get_all("Requires-Dist") or []:
+            try:
+                parsed.append(Requirement(line))
+            except InvalidRequirement:
+                _logger().warning(f"Ignoring unparsable Requires-Dist {line!r} of {dist_name}.")
+        return tuple(parsed)
+
+    @classmethod
+    def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
+        """该分发声明且已装的 extra。
+
+        分发 metadata 只记录 ``Requires-Dist`` 与 ``Provides-Extra`` 两份清单，不记录
+        装包时选中了哪些 extra。此处以「该 extra 下属的依赖都能解析为已装分发」作为已装
+        判据：extra 未选中时其依赖不会被安装，判据随之不成立。
+
+        :param distribution: 分发对象。
+        :param requirements: 已解析的 ``Requires-Dist``。
+        :return: 已装 extra 的规范化名字集合。
+        """
+        declared = {_canonicalize(name) for name in distribution.metadata.get_all("Provides-Extra") or []}
+        installed = set()
+        for extra in declared:
+            guarded = [item for item in requirements if cls._marker_applies(item.marker, (extra,))]
+            if guarded and all(cls._installed_version(item.name) is not None for item in guarded):
+                installed.add(extra)
+        return frozenset(installed)
+
+    @classmethod
+    def _marker_applies(cls, marker: Any, extras: frozenset[str] | tuple[str, ...]) -> bool:
+        """环境标记是否成立。
+
+        extra 未指定时 packaging 代入空串，带 ``extra`` 子句的标记因此先判为假，再逐个
+        代入候选 extra 重判；只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
+        依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
+
+        :param marker: ``packaging.markers.Marker``；``None`` 表示无条件。
+        :param extras: 参与判定的已装 extra。
+        :return: 标记是否成立。
+        """
+        if marker is None:
+            return True
+        try:
+            if marker.evaluate():
+                return True
+            return any(marker.evaluate({"extra": extra}) for extra in extras)
+        except Exception:
+            _logger().exception(f"Failed to evaluate marker {marker!s}, treating it as applicable.")
+            return True
+
+    @classmethod
+    def _edges_of(cls, entries: dict[str, PackageEntry]) -> dict[str, tuple[str, ...]]:
+        """给定条目集合内的声明依赖边。
+
+        :param entries: 条目映射，键为注册表键。
+        :return: 注册表键到其依赖键的映射，值为排序后的元组。
+        """
+        index = {
+            _canonicalize(name): key
+            for key, candidate in entries.items()
+            for name in cls._distribution_names(candidate)
+        }
+        edges: dict[str, tuple[str, ...]] = {}
+        for key, entry in entries.items():
+            targets = set()
+            for dependency in cls.dependencies(entry):
+                target = index.get(_canonicalize(dependency.dist_name))
+                if target is not None and target != key:
+                    targets.add(target)
+            edges[key] = tuple(sorted(targets))
+        return edges
+
+    @classmethod
+    def _dependency_edges(cls) -> dict[str, tuple[str, ...]]:
+        """已注册包之间的声明依赖图。"""
+        cls.discover()
+        return cls._edges_of(cls._entries)
+
+    @classmethod
+    def _cycle_labels(
+        cls, cycles: tuple[tuple[str, ...], ...], entries: dict[str, PackageEntry]
+    ) -> tuple[tuple[str, ...], ...]:
+        """把环的注册表键路径换成展示名路径。"""
+        return tuple(tuple(cls._package_label(entries[key]) for key in cycle) for cycle in cycles)
+
+    @staticmethod
+    def _cycles(edges: dict[str, tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
+        """依赖图中的全部环。
+
+        以 Tarjan 算法求强连通分量：成员多于一个的分量即为环。返回的是分量成员而非
+        某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径；这样两个互不相交的环
+        都会被发现，不会被只找首个环的写法漏掉。
+
+        :param edges: 注册表键到其依赖键的映射。
+        :return: 每个环的成员键，按最小键排序。
+        """
+        index: dict[str, int] = {}
+        low: dict[str, int] = {}
+        stack: list[str] = []
+        on_stack: set[str] = set()
+        counter = 0
+        components: list[tuple[str, ...]] = []
+        for root in sorted(edges):
+            if root in index:
+                continue
+            index[root] = low[root] = counter
+            counter += 1
+            stack.append(root)
+            on_stack.add(root)
+            work: list[tuple[str, Iterator[str]]] = [(root, iter(edges[root]))]
+            while work:
+                node, successors = work[-1]
+                advanced = False
+                for successor in successors:
+                    if successor not in index:
+                        index[successor] = low[successor] = counter
+                        counter += 1
+                        stack.append(successor)
+                        on_stack.add(successor)
+                        work.append((successor, iter(edges.get(successor, ()))))
+                        advanced = True
+                        break
+                    if successor in on_stack:
+                        low[node] = min(low[node], index[successor])
+                if advanced:
+                    continue
+                work.pop()
+                if low[node] == index[node]:
+                    component = []
+                    while True:
+                        member = stack.pop()
+                        on_stack.discard(member)
+                        component.append(member)
+                        if member == node:
+                            break
+                    if len(component) > 1:
+                        components.append(tuple(sorted(component)))
+                if work:
+                    parent = work[-1][0]
+                    low[parent] = min(low[parent], low[node])
+        return tuple(sorted(components))
+
+    @staticmethod
+    def _cycle_path(component: tuple[str, ...], edges: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+        """从强连通分量中还原一条完整回路，首尾为同一个包。
+
+        :param component: 分量内的节点键。
+        :param edges: 依赖图。
+        :return: 回路路径，宽度优先取最短的一条。
+        """
+        members = set(component)
+        start = min(component)
+        queue: deque[tuple[str, ...]] = deque([(start,)])
+        while queue:
+            path = queue.popleft()
+            for successor in edges.get(path[-1], ()):
+                if successor == start:
+                    return (*path, start)
+                if successor in members and successor not in path:
+                    queue.append((*path, successor))
+        return (*component, start)

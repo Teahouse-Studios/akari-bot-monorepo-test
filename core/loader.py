@@ -39,7 +39,10 @@ async def load_modules():
     # 不兼容 core API 的包先剔除，避免其导入期注册的模块进入索引。
     PackageRegistry.reject_incompatible()
 
-    for entry in PackageRegistry.modules().values():
+    # 按声明依赖的拓扑序导入：被依赖的包先完成注册，依赖它的包才能在导入期取用其公共面。
+    for entry in PackageRegistry.load_order():
+        if entry.kind != "module":
+            continue
         module_py_name = entry.import_path
         old_module_names = ModulesManager._module_names_for_py_module(module_py_name)
         old_modules = {name: ModulesManager.modules[name] for name in old_module_names}
@@ -123,6 +126,8 @@ class ModulesManager:
     _reload_package: str | None = None
     _locale_fingerprints: dict[str, tuple[tuple[str, str], ...]] = {}
     _dependency_graph: dict[str, set[str]] = {}
+    # 已告警过的「包对」，避免每次重建依赖图都重复告警同一处未声明依赖。
+    _undeclared_dependency_warned: set[tuple[str, str]] = set()
 
     @classmethod
     def _locale_fingerprint(cls, py_module: str) -> tuple[tuple[str, str], ...]:
@@ -539,15 +544,62 @@ class ModulesManager:
         return dependencies
 
     @classmethod
+    def _declared_package_dependencies(cls, package_name: str) -> set[str]:
+        """包在分发 metadata 里声明的模块包依赖。
+
+        取已注册条目的声明依赖，而非 AST 扫描结果；目录扫描的包没有 metadata，
+        返回空集，其依赖全部落到 :meth:`_scan_package_dependencies` 补充探测。
+
+        :param package_name: 包导入路径。
+        :return: 依赖包的导入路径集合。
+        """
+        entry = PackageRegistry.by_import_path(package_name)
+        if entry is None:
+            return set()
+        return {dependency.import_path for dependency in PackageRegistry.resolved_dependencies(entry)}
+
+    @classmethod
     def _rebuild_dependency_graph(cls):
+        """重建依赖图，源为「声明的依赖图 ∪ AST 扫描结果」。
+
+        AST 扫出而 metadata 未声明的耦合仍然计入并告警：静默忽略会让 reload 漏掉该重载
+        的包，比多一条告警危险。
+        """
         packages = {py_module for m in cls.modules if (py_module := cls.return_py_module(m))}
-        cls._dependency_graph = {
-            package_name: cls._scan_package_dependencies(package_name) & packages for package_name in packages
-        }
+        graph: dict[str, set[str]] = {}
+        for package_name in packages:
+            declared = cls._declared_package_dependencies(package_name) & packages
+            scanned = cls._scan_package_dependencies(package_name) & packages
+            cls._warn_undeclared_dependencies(package_name, scanned - declared)
+            graph[package_name] = declared | scanned
+        cls._dependency_graph = graph
+
+    @classmethod
+    def _warn_undeclared_dependencies(cls, package_name: str, undeclared: set[str]) -> None:
+        """未声明依赖只告警一次。
+
+        热重载每次都会重建依赖图，逐次重复告警会淹没日志，故按「包对」在进程内去重。
+
+        :param package_name: 发起依赖的包导入路径。
+        :param undeclared: AST 扫出、metadata 未声明的依赖包导入路径集合。
+        """
+        for dependency in sorted(undeclared):
+            pair = (package_name, dependency)
+            if pair in cls._undeclared_dependency_warned:
+                continue
+            cls._undeclared_dependency_warned.add(pair)
+            Logger.warning(
+                f"{package_name} imports {dependency} without declaring it in its distribution metadata; "
+                "the dependency is kept in the reload closure."
+            )
 
     @classmethod
     def _reload_closure(cls, py_module: str) -> list[str]:
-        """Return the dependency-first package reload closure for ``py_module``."""
+        """该包的依赖优先重载闭包。
+
+        图源为「声明的依赖图 ∪ AST 扫描结果」。成环的包在 discover() 阶段已被拒绝注册，
+        能走到此处的图必然无环，闭包内的遇环跳过只作防御。
+        """
         cls._rebuild_dependency_graph()
         dependents: dict[str, set[str]] = {package_name: set() for package_name in cls._dependency_graph}
         for package_name, dependencies in cls._dependency_graph.items():

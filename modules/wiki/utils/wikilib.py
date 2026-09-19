@@ -468,7 +468,7 @@ class WikiLib:
         """
         await self.fixup_wiki_info()
         get_parse = await self.get_json(action="parse", page=page_name, prop="text")
-        h = html2text.HTML2Text()
+        h = html2text.HTML2Text(url_formatter=lambda u: str(Url(u)))
         h.ignore_links = True
         h.ignore_images = True
         h.ignore_tables = True

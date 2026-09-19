@@ -1,5 +1,6 @@
 import feedparser
 
+from core.builtins.message.internal import Url
 from core.utils.html2text import html2text
 from core.utils.http import get_url
 
@@ -19,5 +20,5 @@ async def get_rss():
         return ""
     feed = entries[-1]
     title = feed.get("title", "")
-    summary = html2text(feed.get("summary", ""), baseurl="https://lakeus.xyz")
+    summary = html2text(feed.get("summary", ""), baseurl="https://lakeus.xyz", url_formatter=lambda u: str(Url(u)))
     return title + "\n" + summary

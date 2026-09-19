@@ -22,3 +22,12 @@ repos:
             files: '\.py$'
             pass_filenames: false
 
+          # 分层检查：模块不得 import 平台适配器，core 不得 import 模块或适配器。
+          # 与 comment-lint 同理只查改动行，避免既有 B1 命中阻塞提交。
+          - id: boundary-lint
+            name: Lint import boundaries
+            entry: uv run python tools/lint_boundaries.py --diff HEAD
+            language: system
+            files: '\.py$'
+            pass_filenames: false
+

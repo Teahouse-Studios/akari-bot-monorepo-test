@@ -4,9 +4,9 @@ import html.entities
 import html.parser
 import re
 import urllib.parse as urlparse
+from collections.abc import Callable
 from textwrap import wrap
 
-from core.builtins.message.internal import Url
 from . import config
 from .elements import AnchorElement, ListElement
 from .typing import OutCallback
@@ -39,12 +39,17 @@ class HTML2Text(html.parser.HTMLParser):
         out: OutCallback | None = None,
         baseurl: str = "",
         bodywidth: int = config.BODY_WIDTH,
+        url_formatter: Callable[[str], str] = str,
     ) -> None:
         """
         Input parameters:
             out: possible custom replacement for self.outtextf (which
                  appends lines of text).
             baseurl: base URL of the document we process
+            url_formatter: callable applied to every URL emitted for links and
+                 images. The default, :func:`str`, leaves the URL untouched,
+                 which is upstream behaviour; embedders may inject their own
+                 formatter to post-process URLs.
         """
         super().__init__(convert_charrefs=False)
 
@@ -125,6 +130,7 @@ class HTML2Text(html.parser.HTMLParser):
         # Stack of abbreviations to write later
         self.abbr_list = {}  # type: dict[str, str]
         self.baseurl = baseurl
+        self.url_formatter = url_formatter
         self.stressed = False
         self.preceding_stressed = False
         self.preceding_data = ""
@@ -434,7 +440,7 @@ class HTML2Text(html.parser.HTMLParser):
             self.quote = not self.quote
 
         def link_url(self: HTML2Text, link: str) -> None:
-            url = str(Url(urlparse.urljoin(self.baseurl, link)))
+            url = self.url_formatter(urlparse.urljoin(self.baseurl, link))
             self.o(f"]({escape_md(url)})")
 
         if tag == "a" and not self.ignore_links:
@@ -510,10 +516,10 @@ class HTML2Text(html.parser.HTMLParser):
                 if self.images_to_alt:
                     self.o(escape_md(alt))
                 else:
-                    self.o("![" + str(Url(escape_md(alt))) + "]")
+                    self.o("![" + self.url_formatter(escape_md(alt)) + "]")
                     if self.inline_links:
                         href = attrs.get("href") or ""
-                        self.o("(" + str(Url(escape_md(urlparse.urljoin(self.baseurl, href)))) + ")")
+                        self.o("(" + self.url_formatter(escape_md(urlparse.urljoin(self.baseurl, href))) + ")")
                     else:
                         i = self.previousIndex(attrs)
                         if i is not None:
@@ -737,7 +743,7 @@ class HTML2Text(html.parser.HTMLParser):
                             "   ["
                             + str(link.count)
                             + "]: "
-                            + str(Url(urlparse.urljoin(self.baseurl, link.attrs["href"])))
+                            + self.url_formatter(urlparse.urljoin(self.baseurl, link.attrs["href"]))
                         )
                         if "title" in link.attrs:
                             self.out(" (" + link.attrs["title"] + ")")
@@ -894,9 +900,14 @@ class HTML2Text(html.parser.HTMLParser):
         return result
 
 
-def html2text(html: str, baseurl: str = "", bodywidth: int | None = None) -> str:
+def html2text(
+    html: str,
+    baseurl: str = "",
+    bodywidth: int | None = None,
+    url_formatter: Callable[[str], str] = str,
+) -> str:
     if bodywidth is None:
         bodywidth = config.BODY_WIDTH
-    h = HTML2Text(baseurl=baseurl, bodywidth=bodywidth)
+    h = HTML2Text(baseurl=baseurl, bodywidth=bodywidth, url_formatter=url_formatter)
 
     return h.handle(html)

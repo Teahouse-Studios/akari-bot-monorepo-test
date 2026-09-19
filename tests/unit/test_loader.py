@@ -1114,11 +1114,11 @@ async def _test_initial_load_rolls_back_partial_registration():
             with (
                 patch.object(
                     PackageRegistry,
-                    "modules",
-                    return_value={
-                        broken_package: _synthetic_package_entry(broken_package),
-                        optional_package: _synthetic_package_entry(optional_package),
-                    },
+                    "load_order",
+                    return_value=[
+                        _synthetic_package_entry(broken_package),
+                        _synthetic_package_entry(optional_package),
+                    ],
                 ),
                 patch.object(loader_module.importlib, "import_module", side_effect=import_module),
                 patch.object(ModuleStatus, "init_modules", new=AsyncMock()),
