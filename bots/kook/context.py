@@ -5,7 +5,8 @@ import httpx
 import orjson
 from khl import Message, MessageTypes, PublicChannel, User
 
-from core.builtins.message.chain import MessageChain, MessageNodes, match_atcode
+from core.builtins.message.mention import render_at_code
+from core.builtins.message.chain import MessageChain, MessageNodes
 from core.builtins.message.elements import PlainElement, ImageElement, AudioElement, VideoElement, MentionElement
 from core.builtins.session.context import ContextManager
 from core.builtins.session.bot_state import BotState
@@ -235,7 +236,7 @@ class KOOKContextManager(ContextManager):
         for x in message.as_sendable(session_info):
             if isinstance(x, PlainElement):
                 if x.allow_parse:
-                    x.text = match_atcode(x.text, client_name, "(met){uid}(met)")
+                    x.text = render_at_code(x.text, client_name, lambda at: f"(met){at.id}(met)")
                 if ctx:
                     send_ = await ctx.reply(
                         x.text,
@@ -380,7 +381,20 @@ class KOOKContextManager(ContextManager):
         permission_group_id: str | list[str],
         reason: str | None = None,
     ) -> None:
-        await cls._edit_permission_groups(session_info, user_id, permission_group_id, grant=True)
+        user_ids = [user_id] if isinstance(user_id, str) else user_id
+        group_ids = [permission_group_id] if isinstance(permission_group_id, str) else permission_group_id
+        if not isinstance(user_ids, list) or not isinstance(group_ids, list):
+            raise TypeError("User ID and permission group ID must be a list or str")
+
+        guild = await get_guild(session_info)
+        if guild is None:
+            return
+        for uid in user_ids:
+            member_id = str(uid).split("|")[-1]
+            for group_id in group_ids:
+                role_id = str(group_id).split("|")[-1]
+                await guild.grant_role(member_id, role_id)
+        Logger.info(f"Granted permission groups {group_ids} for members {user_ids} in guild {guild.id}")
 
     @classmethod
     async def revoke_permission_group(
@@ -389,15 +403,6 @@ class KOOKContextManager(ContextManager):
         user_id: str | list[str],
         permission_group_id: str | list[str],
         reason: str | None = None,
-    ) -> None:
-        await cls._edit_permission_groups(session_info, user_id, permission_group_id, grant=False)
-
-    @staticmethod
-    async def _edit_permission_groups(
-        session_info: SessionInfo,
-        user_id: str | list[str],
-        permission_group_id: str | list[str],
-        grant: bool,
     ) -> None:
         user_ids = [user_id] if isinstance(user_id, str) else user_id
         group_ids = [permission_group_id] if isinstance(permission_group_id, str) else permission_group_id
@@ -411,12 +416,8 @@ class KOOKContextManager(ContextManager):
             member_id = str(uid).split("|")[-1]
             for group_id in group_ids:
                 role_id = str(group_id).split("|")[-1]
-                if grant:
-                    await guild.grant_role(member_id, role_id)
-                else:
-                    await guild.revoke_role(member_id, role_id)
-        action = "Granted" if grant else "Revoked"
-        Logger.info(f"{action} permission groups {group_ids} for members {user_ids} in guild {guild.id}")
+                await guild.revoke_role(member_id, role_id)
+        Logger.info(f"Revoked permission groups {group_ids} for members {user_ids} in guild {guild.id}")
 
     @classmethod
     async def add_reaction(cls, session_info: SessionInfo, message_id: str | list[str], emoji: str) -> None:

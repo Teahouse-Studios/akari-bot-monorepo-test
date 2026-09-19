@@ -9,7 +9,7 @@ from core.constants.exceptions import InvalidHelpDocTypeError
 from core.database.models import ModuleStatus
 from core.loader import ModulesManager
 from core.logger import Logger
-from modules.core.common_tools.help import check_scene_admin, modules_list_help
+from modules.core.common_tools.help import check_context_admin, modules_list_help
 
 # 模块受限成因到提示文案的映射，键取自 Module.unsupported_reason() 的返回值。
 UNSUPPORTED_PROMPTS = {
@@ -65,10 +65,10 @@ m = module(
     required_superuser=True,
 )
 @m.command(
-    "list [--legacy] [--image] {{I18N:core.help.module.list}}",
+    "list [--legacy] [--img] {{I18N:core.help.module.list}}",
     options_desc={
         "--legacy": "{I18N:help.option.legacy}",
-        "--image": "{I18N:help.option.image}",
+        "--img": "{I18N:help.option.img}",
     },
 )
 @m.command(
@@ -80,9 +80,9 @@ m = module(
     ],
     required_admin=True,
 )
-async def _(msg: Bot.MessageSession, image: bool = False, legacy: bool = False):
+async def _(msg: Bot.MessageSession, img: bool = False, legacy: bool = False):
     if msg.parsed_msg.get("list", False):
-        force_image = image
+        force_image = img
         await modules_list_help(msg, legacy, force_image)
     await config_modules(msg)
 
@@ -183,7 +183,7 @@ async def config_modules(msg: Bot.MessageSession):
                         if msg.session_info.locale.locale not in support_lang:
                             msglist.append(I18NContext("core.message.module.unsupported_language", module=x))
         if recommend_modules_list:
-            is_admin = is_superuser or await check_scene_admin(msg)
+            is_admin = is_superuser or await check_context_admin(msg)
             for m in recommend_modules_list:
                 try:
                     recommend_modules_help_doc_list.append(I18NContext("core.message.module.recommends.help", module=m))

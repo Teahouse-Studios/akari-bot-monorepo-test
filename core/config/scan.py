@@ -15,9 +15,8 @@ from core.registry import PackageRegistry
 def iter_config_template_modules() -> list[str]:
     """列出全部配置模板的模块名。
 
-    清单由发现层给出（``PackageRegistry.config_template_paths()``）。该处以文件是否存在
-    判断模板有无，而非在导入时捕获 ModuleNotFoundError：后者无法区分「该包未提供 config.py」
-    与「模板自身导入了不存在的依赖」两种情形，后一种会被静默跳过，形成本设计所要杜绝的漏键。
+    清单由发现层给出（``PackageRegistry.config_template_paths()``），该处同样以文件是否
+    存在判断模板有无，不导入包。
 
     :return: 配置模板的模块名列表，核心配置排在最前。
     """

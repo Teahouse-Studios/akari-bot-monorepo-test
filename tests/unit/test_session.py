@@ -1470,6 +1470,26 @@ async def _test_virtual_reply_id_triggers_callback():
     return called and handled
 
 
+async def _test_public_button_callback_accepts_other_sender():
+    """公开按钮的 callback 不应受原发送者限制。"""
+    SessionTaskManager._callback_list.clear()
+    called = False
+
+    async def callback(_session):
+        nonlocal called
+        called = True
+
+    owner = MockMessageSession("public-button-owner")
+    await owner.async_init("public-button-owner")
+    SessionTaskManager.add_callback(owner, "public-reply", callback, allow_all_reply_ids={"public-reply"})
+    clicker = MockMessageSession("public-button-clicker")
+    await clicker.async_init("public-button-clicker")
+    clicker.session_info.reply_id = "public-reply"
+    handled = await SessionTaskManager.check(clicker)
+    SessionTaskManager._callback_list.clear()
+    return called and handled
+
+
 async def _test_callback_remains_active_across_aliases():
     """同一 callback 的真实／虚拟回复别名在有效期内均可重复命中。"""
     SessionTaskManager._callback_list.clear()
@@ -1947,6 +1967,131 @@ async def _test_parser_rejects_blocked_wait_responder_before_task_check():
         SessionTaskManager._task_list.clear()
 
 
+async def _test_wait_confirm_ignores_unrelated_message():
+    """确认等待只消费确认词，其他消息仍可进入普通 parser。"""
+    from core.builtins.message.chain import MessageChain
+    from core.builtins.session.internal import MessageSession, _is_confirmation_message
+
+    target_id = "TEST|Group|confirm-fallthrough"
+    sender_id = "TEST|confirm-fallthrough"
+    owner = MessageSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id=sender_id,
+            sender_from="TEST",
+        )
+    )
+    incoming = MessageSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id=sender_id,
+            sender_from="TEST",
+            messages=MessageChain.assign("~version"),
+        )
+    )
+    flag = asyncio.Event()
+    SessionTaskManager._task_list.clear()
+    SessionTaskManager.add_task(owner, flag, matcher=_is_confirmation_message, timeout=60)
+    try:
+        handled = await SessionTaskManager.check(incoming, allow_wait_fallthrough=True)
+        task_info = SessionTaskManager.get()[target_id][sender_id][owner]
+        return not handled and task_info["active"] and "result" not in task_info
+    finally:
+        SessionTaskManager._task_list.clear()
+
+
+async def _test_wait_next_message_allows_parser_fallthrough():
+    """wait_next_message 完成等待后，当前消息仍继续普通解析。"""
+    from core.builtins.message.chain import MessageChain
+    from core.builtins.session.internal import MessageSession
+
+    class IncomingSession(MessageSession):
+        async def hold(self):
+            return None
+
+    target_id = "TEST|Group|wait-next-fallthrough"
+    sender_id = "TEST|wait-next-fallthrough"
+    owner = MessageSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id=sender_id,
+            sender_from="TEST",
+        )
+    )
+    incoming = IncomingSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id=sender_id,
+            sender_from="TEST",
+            messages=MessageChain.assign("ordinary message"),
+        )
+    )
+    flag = asyncio.Event()
+    SessionTaskManager._task_list.clear()
+    SessionTaskManager.add_task(owner, flag, task_type="wait_next", timeout=60, allow_fallthrough=True)
+    try:
+        handled = await SessionTaskManager.check(incoming, allow_wait_fallthrough=True)
+        task_info = SessionTaskManager.get()[target_id][sender_id][owner]
+        return not handled and not task_info["active"] and task_info["result"] is incoming
+    finally:
+        SessionTaskManager._task_list.clear()
+
+
+async def _test_wait_anyone_allows_parser_fallthrough():
+    """wait_anyone 完成等待后，触发消息仍继续普通解析。"""
+    from core.builtins.message.chain import MessageChain
+    from core.builtins.session.internal import MessageSession
+
+    class IncomingSession(MessageSession):
+        async def hold(self):
+            return None
+
+    target_id = "TEST|Group|wait-anyone-fallthrough"
+    owner = MessageSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id="TEST|wait-anyone-owner",
+            sender_from="TEST",
+        )
+    )
+    incoming = IncomingSession(
+        await SessionInfo.assign(
+            target_id=target_id,
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id="TEST|wait-anyone-responder",
+            sender_from="TEST",
+            messages=MessageChain.assign("~version"),
+        )
+    )
+    flag = asyncio.Event()
+    SessionTaskManager._task_list.clear()
+    SessionTaskManager.add_task(
+        owner,
+        flag,
+        all_=True,
+        task_type="wait_anyone",
+        timeout=60,
+        allow_fallthrough=True,
+    )
+    try:
+        handled = await SessionTaskManager.check(incoming, allow_wait_fallthrough=True)
+        task_info = SessionTaskManager.get()[target_id]["all"][owner]
+        return not handled and not task_info["active"] and task_info["result"] is incoming
+    finally:
+        SessionTaskManager._task_list.clear()
+
+
 async def _test_parser_rejects_banned_callback_responder_before_task_check():
     """场景屏蔽用户不得继续触发封禁前登记的 callback。"""
     from core.builtins.message.chain import MessageChain
@@ -2172,6 +2317,49 @@ async def _test_wait_confirm_registers_before_reaction_roundtrip():
         return False
     finally:
         SessionTaskManager._task_list.clear()
+
+
+async def _test_wait_confirm_any_message_retracts_prompt():
+    """长消息确认的否按钮或普通消息都应结束等待并撤回提示。"""
+    from core.builtins.message.chain import MessageChain
+    from core.builtins.session.internal import MessageSession
+
+    class Sent:
+        message_id = ["long-regex-prompt"]
+
+        async def delete(self):
+            self.deleted = True
+
+    for response in ("否", "任意消息"):
+        sent = Sent()
+        sent.deleted = False
+
+        class FastCancelSession(MessageSession):
+            async def send_message(self, *args, **kwargs):
+                await SessionTaskManager.check(self)
+                return sent
+
+            async def end_typing(self):
+                return None
+
+        session_info = await SessionInfo.assign(
+            target_id=f"TEST|Group|long-regex-cancel-{response}",
+            target_from="TEST|Group",
+            client_name="TEST",
+            sender_id=f"TEST|long-regex-cancel-{response}",
+            sender_from="TEST",
+            messages=MessageChain.assign(response),
+        )
+        waiting = FastCancelSession(session_info)
+        SessionTaskManager._task_list.clear()
+        try:
+            with patch.object(PlatformAPI, "hold_context", new=AsyncMock(return_value=None)):
+                confirmed = await waiting.wait_confirm("prompt", timeout=0.05 * TIME_SCALE, consume_any_message=True)
+            if confirmed or not sent.deleted:
+                return False
+        finally:
+            SessionTaskManager._task_list.clear()
+    return True
 
 
 async def _test_wait_reply_registers_before_send_returns():
@@ -2963,7 +3151,7 @@ async def _test_wait_task_follows_target_rechannel_without_old_channel_takeover(
         SessionTaskManager._task_list.clear()
 
 
-async def _test_reply_wait_is_scoped_to_physical_platform_scene():
+async def _test_reply_wait_is_scoped_to_physical_platform_context():
     """同现实通道的另一平台即使 message_id 碰撞，也不得命中本平台 wait_reply。"""
     target_a = "WAITREPLYSA|Group|1"
     target_b = "WAITREPLYSB|Group|2"
@@ -3226,6 +3414,7 @@ async def test_session_task(tester: Tester):
     await tester.test(_test_button_callback_registered_before_send_returns, "按钮 callback 发送前登记测试")
     await tester.test(_test_send_failure_does_not_leave_callback, "callback 发送失败清理测试")
     await tester.test(_test_virtual_reply_id_triggers_callback, "虚拟 reply_id 复用 callback 匹配测试")
+    await tester.test(_test_public_button_callback_accepts_other_sender, "公开按钮 callback 允许其他用户测试")
     await tester.test(_test_callback_remains_active_across_aliases, "callback 别名有效期内重复触发测试")
     await tester.test(_test_callback_once_is_consumed_across_aliases, "一次性 callback 别名消费测试")
     await tester.test(_test_reused_callback_keeps_independent_registration, "callback 独立注册互不删除测试")
@@ -3246,6 +3435,9 @@ async def test_session_task(tester: Tester):
     await tester.test(_test_callback_ttl_checked_on_use, "callback 即时 TTL 测试")
     await tester.test(_test_repeatable_callback_is_serialized, "可重复 callback 串行执行测试")
     await tester.test(_test_parser_rejects_blocked_wait_responder_before_task_check, "全局屏蔽者不完成等待测试")
+    await tester.test(_test_wait_confirm_ignores_unrelated_message, "确认等待忽略非确认消息测试")
+    await tester.test(_test_wait_next_message_allows_parser_fallthrough, "下一条消息等待继续普通解析测试")
+    await tester.test(_test_wait_anyone_allows_parser_fallthrough, "任意用户等待继续普通解析测试")
     await tester.test(
         _test_parser_rejects_banned_callback_responder_before_task_check, "场景屏蔽者不执行 callback 测试"
     )
@@ -3269,7 +3461,7 @@ async def test_session_task(tester: Tester):
         "waiter 跟随场景 rechannel 并隔离旧通道测试",
     )
     await tester.test(
-        _test_reply_wait_is_scoped_to_physical_platform_scene,
+        _test_reply_wait_is_scoped_to_physical_platform_context,
         "wait_reply 物理平台场景隔离测试",
     )
     await tester.test(
@@ -3294,6 +3486,7 @@ async def test_message_session_lifecycle(tester: Tester):
     await tester.test(_test_wait_next_message_registers_before_fast_reply, "快速回复不丢失测试")
     await tester.test(_test_wait_next_message_preserves_choice_rows, "等待选项保留显式按钮行测试")
     await tester.test(_test_wait_confirm_registers_before_reaction_roundtrip, "确认反应期间快速回复不丢失测试")
+    await tester.test(_test_wait_confirm_any_message_retracts_prompt, "确认否定或任意消息撤回提示测试")
     await tester.test(_test_wait_reply_registers_before_send_returns, "引用回复发送前登记测试")
     await tester.test(_test_wait_reply_timeout_covers_pending_send, "reply 发送阶段受统一超时约束测试")
     await tester.test(_test_wait_reply_timeout_is_single_deadline, "reply 发送与回复共享 deadline 测试")

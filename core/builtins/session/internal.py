@@ -29,7 +29,7 @@ from core.config.base import BaseConfig, CoreConfig
 from core.constants import SessionContextUnavailable, SessionFinished, WaitCancelException
 from core.exports import add_export
 from core.logger import Logger
-from core.utils.button import bind_callback_reply_ids, build_button_rows
+from core.utils.button import bind_callback_reply_ids, build_button_rows, public_button_reply_ids
 from core.utils.func import is_int
 from core.utils.media import compress_media_chain
 from core.utils.random import Random
@@ -41,6 +41,12 @@ from core.queue.errors import RpcRemoteError
 default_locale = BaseConfig.default_locale
 # 快速确认模式 - 允许用户快速确认操作
 quick_confirm = CoreConfig.quick_confirm
+
+
+def _is_confirmation_message(msg: MessageSession) -> bool:
+    """判断消息是否为确认等待可消费的肯定或否定回答。"""
+    value = msg.as_display(text_only=True).strip()
+    return value in confirm_command
 
 
 def confirm_prompt_key(session_info: SessionInfo) -> str:
@@ -299,6 +305,7 @@ class MessageSession:
                 fallback_ids=self.session_info.bot_id,
                 timeout=callback_timeout,
                 once=callback_once,
+                allow_all_reply_ids=public_button_reply_ids(chain),
             )
 
         # ========== 步骤 3: 发送消息 ==========
@@ -341,6 +348,7 @@ class MessageSession:
                             fallback_ids=self.session_info.bot_id,
                             timeout=callback_timeout,
                             once=callback_once,
+                            allow_all_reply_ids=public_button_reply_ids(chain),
                         )
                 else:
                     # 空 ID 表示平台发送失败，不能只凭 bot_id 为不存在的消息留下 callback。
@@ -671,7 +679,7 @@ class MessageSession:
         return await PlatformAPI.check_native_permission(self.session_info)
 
     async def check_bot_state(self) -> BotState:
-        """Return the bot's scene membership and native permission state."""
+        """Return the bot's context membership and native permission state."""
         return await PlatformAPI.check_bot_state(self.session_info)
 
     async def handle_error_signal(self):
@@ -749,6 +757,7 @@ class MessageSession:
         append_instruction: bool = True,
         no_confirm_action: bool = True,
         release_execution_lock: bool = True,
+        consume_any_message: bool = False,
     ) -> bool:
         """
         一次性模板，用于等待触发对象确认。
@@ -772,6 +781,7 @@ class MessageSession:
         :param no_confirm_action: 在 `no_confirm` 配置项启用后的默认行为（默认为 True）
         :param release_execution_lock: 等待期间是否释放执行锁。Union 合并在建立
                                        双方 barrier 后须保持锁，避免冲突选择期间重新并发。
+        :param consume_any_message: 是否将下一条任意消息作为否定结果消费，而不是仅消费确认词。
         :return: 若对象发送确认指令返回 True，反之返回 False
 
         :raises WaitCancelException: 如果超时或用户未确认
@@ -792,7 +802,13 @@ class MessageSession:
             chain.append(Button(self.session_info.locale.t("message.button.no"), "confirm_no"))
         send = None
         flag = asyncio.Event()
-        SessionTaskManager.add_task(self, flag, timeout=timeout)
+        SessionTaskManager.add_task(
+            self,
+            flag,
+            timeout=timeout,
+            task_type="wait",
+            matcher=None if consume_any_message else _is_confirmation_message,
+        )
         task_info = None
         try:
             # 等待任务须在跨进程发送提示前登记；平台可能已展示消息并收到用户操作，
@@ -854,7 +870,7 @@ class MessageSession:
         released_lease = ExecutionLockList.remove(self)
         await self.end_typing()
         flag = asyncio.Event()
-        SessionTaskManager.add_task(self, flag, timeout=timeout)
+        SessionTaskManager.add_task(self, flag, timeout=timeout, task_type="wait_next", allow_fallthrough=True)
         task_info = None
         try:
             if message_chain:
@@ -946,7 +962,14 @@ class MessageSession:
         released_lease = ExecutionLockList.remove(self)
         await self.end_typing()
         flag = asyncio.Event()
-        SessionTaskManager.add_task(self, flag, all_=True, timeout=timeout)
+        SessionTaskManager.add_task(
+            self,
+            flag,
+            all_=True,
+            timeout=timeout,
+            task_type="wait_anyone",
+            allow_fallthrough=True,
+        )
         task_info = None
         try:
             if message_chain:
@@ -1012,7 +1035,7 @@ class MessageSession:
         await self.end_typing()
         chain = get_message_chain(self.session_info, message_chain)
         if append_instruction and isinstance(chain, MessageChain):
-            chain.append(I18NContext("message.reply.prompt"))
+            chain.append(I18NContext("message.wait.reply.prompt"))
         send = None
         flag = asyncio.Event()
         SessionTaskManager.add_task(self, flag, all_=all_, reply_pending=True, timeout=timeout)

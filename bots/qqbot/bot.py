@@ -14,13 +14,14 @@ from bots.qqbot.navigation import build_navigation
 from core.builtins.bot import Bot
 from core.builtins.message.chain import MessageChain
 from core.builtins.message.elements import ButtonPayload
-from core.builtins.message.internal import Plain, Image, Audio, Video
+from core.builtins.message.internal import Plain, Image, Audio, Video, Raw
 from core.builtins.session.info import EventInfo, SessionInfo
 from core.builtins.utils import command_prefix
 from core.client.init import client_cleanup, client_init
 from core.config.base import CoreConfig
 from core.constants.default import confirm_command_default
 from core.logger import Logger
+from core.utils.button_runtime import BUTTON_TOKEN_PREFIX, ButtonConsumeStatus, consume_button
 
 Bot.register_bot(client_name=client_name)
 Logger.rename(client_name)
@@ -33,15 +34,20 @@ qqbot_secret = QQBotSecretConfig.qq_bot_secret
 ignored_sender = CoreConfig.ignored_sender
 
 initialized = False
+_ignored_msg_startswith = [
+    re.compile(r"^\[.*?聊天记录]\n.*"),
+    re.compile(r"^\[卡片消息].*"),
+]  # 暂不解析这些消息，没有实际用途
 
 
 def _message_application_ids(message) -> tuple[str | None, str | None]:
     """读取消息场景中的当前消息 ID 和被引用消息 ID。"""
     application_id = None
     reply_id = None
-    message_scene = getattr(message, "message_scene", None)
-    if isinstance(message_scene, Mapping):
-        ext = message_scene.get("ext") or []
+    # QQ 官方 SDK 中该字段名为 message_scene。
+    message_context = getattr(message, "message_scene", None)
+    if isinstance(message_context, Mapping):
+        ext = message_context.get("ext") or []
         for item in ext:
             if not isinstance(item, str):
                 continue
@@ -67,6 +73,10 @@ def _record_message_ids(message) -> str | None:
 
 
 def _convert_message_content(message: BaseMessage | Message | DirectMessage) -> MessageChain:
+    for ig in _ignored_msg_startswith:
+        if ig.match(message.content):
+            return MessageChain.assign(Raw(message.content))
+
     msg_chain = MessageChain.assign(message.content)
 
     for attachment in message.attachments:
@@ -241,6 +251,7 @@ class MyClient(botpy.Client):
                     if not message.content:
                         message.content = f"{command_prefix[0]}help"
         message.content = re.sub(r"<@(.*?)>", rf"{sender_prefix}|\1", message.content)
+
         msg_chain = _convert_message_content(message)
         prefixes = [] if not match_atme else ["/"]
         session = await SessionInfo.assign(
@@ -401,7 +412,12 @@ class MyClient(botpy.Client):
             return
         # QQBot 的交互事件不会可靠返回按钮所属消息的 ID；发送阶段把框架生成的虚拟
         # reply_id 编进 button data，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
-        payload = ButtonPayload.parse(send_msg)
+        if send_msg.startswith(BUTTON_TOKEN_PREFIX):
+            result = consume_button(send_msg, sender_id)
+            if result.status is not ButtonConsumeStatus.SUCCESS:
+                Logger.debug(f"QQBot button click rejected: {result.status.name}")
+                return
+            payload = ButtonPayload.parse(result.payload or "", result.reply_id)
         send_msg = payload.value
         if send_msg == "confirm_yes":
             send_msg = confirm_command_default[0]
@@ -415,7 +431,10 @@ class MyClient(botpy.Client):
             is_private=target_from in (target_c2c_prefix, target_direct_prefix),
             sender_from=sender_from,
             client_name=client_name,
-            reply_id=payload.reply_id or interaction.data.resolved.message_id,
+            message_id=None,
+            reply_id=payload.reply_id
+            or str(getattr(getattr(interaction.data, "resolved", None), "message_id", ""))
+            or None,
             messages=MessageChain.assign([Plain(send_msg)]),
             ctx_slot=ctx_id,
             bot_id=qqbot_openid,

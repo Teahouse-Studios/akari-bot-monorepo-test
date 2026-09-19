@@ -11,8 +11,12 @@ renovate.json
 requirements.txt
 
 # Tests
+conftest.py
 tests/
 tester.py
+
+# Runtime cache (recreated on startup)
+cache/
 
 # Documentation
 SECURITY.md
