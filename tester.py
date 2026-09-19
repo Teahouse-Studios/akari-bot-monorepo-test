@@ -84,8 +84,7 @@ def _install_test_config() -> Path:
     path = Path(tempfile.mkdtemp(prefix="akari_test_config_"))
 
     # 顺序约束：AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。
-    # 前者由 core.paths 在 core.constants 导入期固化为配置目录，后者同被固化为合并日志目录；
-    # core.config 导入期还会执行配置版本迁移。未置位时二者都会落到真实的 config/ 与 data/。
+    # 二者分别固化为配置目录与合并日志目录，未置位时都会落到真实的 config/ 与 data/。
     os.environ[TEST_CONFIG_PATH_ENV] = str(path)
 
     from core.constants import default_locale

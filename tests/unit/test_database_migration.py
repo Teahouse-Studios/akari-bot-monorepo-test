@@ -169,6 +169,70 @@ async def _test_new_database_applies_all_revisions():
             )
 
 
+V1_SHAPED_TARGET = """
+CREATE TABLE "target_info" (
+    "target_id" VARCHAR(512) PRIMARY KEY,
+    "blocked" BOOLEAN NOT NULL,
+    "muted" BOOLEAN NOT NULL,
+    "locale" VARCHAR(32) NOT NULL,
+    "modules" JSON NOT NULL DEFAULT '[]',
+    "custom_admins" JSON NOT NULL DEFAULT '[]',
+    "target_data" JSON NOT NULL DEFAULT '{}'
+);
+"""
+
+V1_SHAPED_ANALYTICS = """
+CREATE TABLE "analytics_data" (
+    "id" INTEGER PRIMARY KEY,
+    "module_name" VARCHAR(512) NOT NULL,
+    "module_type" VARCHAR(512) NOT NULL,
+    "target_id" VARCHAR(512) NOT NULL,
+    "sender_id" VARCHAR(512) NOT NULL,
+    "command" TEXT,
+    "timestamp" DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
+async def _test_core_revisions_upgrade_v1_shaped_tables():
+    """core revision 要能在 v2 之前的结构上真正执行，而非仅在最新结构上空转"""
+    with TemporaryDirectory() as temp_dir:
+        async with _isolated_db(Path(temp_dir) / "v1_shaped.db"):
+            conn = Tortoise.get_connection("default")
+            await Tortoise.generate_schemas(safe=True)
+            await conn.execute_query('DROP TABLE IF EXISTS "target_info";')
+            await conn.execute_query(V1_SHAPED_TARGET)
+            await conn.execute_query(
+                'INSERT INTO "target_info" ("target_id","blocked","muted","locale") '
+                "VALUES ('target|9',0,0,'zh_cn');"
+            )
+            await conn.execute_query('DROP TABLE IF EXISTS "analytics_data";')
+            await conn.execute_query(V1_SHAPED_ANALYTICS)
+            await conn.execute_query(
+                'INSERT INTO "analytics_data" ("id","module_name","module_type","target_id","sender_id") '
+                "VALUES (1,'wiki','command','target|9','sender|9');"
+            )
+            applied = await MigrationRunner.upgrade(package="core")
+            targets = await conn.execute_query_dict('SELECT "union_id" FROM "target_union_info";')
+            analytics = await conn.execute_query_dict('SELECT "sender_id" FROM "analytics_data";')
+            columns = {
+                row["name"]: row["notnull"]
+                for row in await conn.execute_query_dict('PRAGMA table_info("analytics_data");')
+            }
+            return (
+                [revision for _, revision in applied]
+                == [
+                    "0001_initial",
+                    "0002_banned_users_and_nullable_sender",
+                    "0003_union_core",
+                    "0005_rebuild_job_queues",
+                ]
+                and [row["union_id"] for row in targets] == ["target|9"]
+                and [row["sender_id"] for row in analytics] == ["sender|9"]
+                and columns["sender_id"] == 0
+            )
+
+
 async def _test_legacy_fixtures_reach_latest_schema():
     """六条旧版本升级路径都要升到最新结构，且重跑为 no-op"""
     with TemporaryDirectory() as temp_dir:
@@ -283,14 +347,32 @@ async def _test_stamp_is_idempotent():
             return all(checks)
 
 
+async def _test_downgrade_requires_entry_and_known_target():
+    with TemporaryDirectory() as temp_dir:
+        async with _isolated_db(Path(temp_dir) / "downgrade.db"):
+            await Tortoise.generate_schemas(safe=True)
+            await MigrationRunner.stamp("core", ["0005_rebuild_job_queues"])
+            checks = []
+            for target in ("0003_union_core", "0009_missing"):
+                try:
+                    await MigrationRunner.downgrade("core", to=target)
+                except MigrationError:
+                    checks.append(True)
+                else:
+                    checks.append(False)
+            return all(checks)
+
+
 @func_case
 async def test_database_migration(tester: Tester):
     await tester.test(_test_discovery_covers_legacy_map, "迁移发现结果与旧版本号对照表一致")
     await tester.test(_test_revision_order_follows_dependencies, "迁移按依赖排序且拒绝重名、缺依赖与成环")
     await tester.test(_test_migration_context_ddl_helpers, "迁移上下文的探测与 DDL 在 SQLite 上自洽")
     await tester.test(_test_new_database_applies_all_revisions, "新库执行全部 revision 并留下完整登记")
+    await tester.test(_test_core_revisions_upgrade_v1_shaped_tables, "core revision 在 v2 之前的结构上实际生效")
     await tester.test(_test_legacy_fixtures_reach_latest_schema, "六个旧版本样本库均升到最新结构且重跑为 no-op")
     await tester.test(_test_missing_module_package_is_skipped, "模块包缺席时跳过其 revision 且不触碰其表")
     await tester.test(_test_checksum_mismatch_only_warns, "已应用迁移的 checksum 变化只告警不阻断")
     await tester.test(_test_stamp_is_idempotent, "stamp 可重复执行且允许登记未发现的 revision")
+    await tester.test(_test_downgrade_requires_entry_and_known_target, "回退要求 revision 声明入口且目标存在")
     return tester
