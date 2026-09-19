@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
 from core.logger import Logger
 from core.module_runtime import ModuleRuntimeManager
+from core.utils.platform_scope import platform_scope, scope_allows
 
 if TYPE_CHECKING:
     from core.types import Module
@@ -51,14 +52,20 @@ def subscription_sort_key(sub: HookSubscription) -> tuple[int, str, str]:
     return (sub.priority, sub.module_name, sub.subscription_id)
 
 
-def platform_allows(available_for, exclude_from, target_from: str | None, client_name: str | None) -> bool:
+def platform_allows(
+    available_for,
+    exclude_from,
+    target_from: str | None,
+    client_name: str | None,
+    platform_from: str | None = None,
+    platform_name: str | None = None,
+) -> bool:
+    """按四元组判据判分一组平台声明；语义与模块、命令的 ``available_for`` 一致。"""
     if not target_from:
         return True
-    if not client_name:
-        client_name = target_from.split("|", 1)[0] if "|" in target_from else target_from
-    if target_from in exclude_from or client_name in exclude_from:
-        return False
-    return "*" in available_for or target_from in available_for or client_name in available_for
+    return scope_allows(
+        platform_scope(target_from, client_name, platform_from, platform_name), available_for, exclude_from
+    )
 
 
 def current_generation(module_name: str) -> int | None:
@@ -113,9 +120,21 @@ class HookExecutor:
             return False, True
         if session_info is None and ("*" not in tuple(module.available_for) or "*" not in tuple(sub.available_for)):
             return False, False
-        if not platform_allows(tuple(module.available_for), tuple(module.exclude_from), target_from, client_name):
+        # 平台两段只存在于会话对象上；拿不到会话时（如 server_scope 的具名分发）退化为两段判据。
+        platform_from = getattr(session_info, "platform_from", None) if session_info is not None else None
+        platform_name = getattr(session_info, "platform_name", None) if session_info is not None else None
+        if not platform_allows(
+            tuple(module.available_for),
+            tuple(module.exclude_from),
+            target_from,
+            client_name,
+            platform_from,
+            platform_name,
+        ):
             return False, False
-        if not platform_allows(sub.available_for, sub.exclude_from, target_from, client_name):
+        if not platform_allows(
+            sub.available_for, sub.exclude_from, target_from, client_name, platform_from, platform_name
+        ):
             return False, False
         if check_context and session_info is not None and not sub.server_scope:
             if not _module_context_enabled(module, sub.module_name, session_info):

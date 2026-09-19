@@ -19,6 +19,7 @@ from core.utils.button import arrange_buttons
 from core.utils.cache import random_cache_path
 from core.utils.func import is_int
 from core.utils.image import cb64imglst
+from core.utils.platform_scope import platform_fields
 from core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 from core.utils.web_render import ElementScreenshotOptions, web_render
 
@@ -562,9 +563,7 @@ async def qqbot_permissions(msg: Bot.MessageSession, qq_group_id: str | None = N
 async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: bool = False):
     is_base_superuser = msg.session_info.sender_id in Bot.base_superuser_list
     is_superuser = msg.check_super_user()
-    module_list = ModulesManager.return_modules_list(
-        target_from=msg.session_info.target_from, client_name=msg.session_info.client_name
-    )
+    module_list = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
     alias = ModulesManager.modules_aliases
     force_image = img
     force_legacy = legacy and not force_image
@@ -606,7 +605,7 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
                 mdocs.append(help_.return_formatted_help_doc())
 
             regex_list = module_.regex_list.get(
-                msg.session_info.target_from,
+                *platform_fields(msg.session_info),
                 show_required_superuser=is_superuser,
                 show_required_base_superuser=is_base_superuser,
                 show_required_admin=is_admin,
@@ -799,9 +798,7 @@ async def help_overview(msg: Bot.MessageSession, img: bool = False, legacy: bool
     if legacy_help:
         is_base_superuser = msg.session_info.sender_id in Bot.base_superuser_list
         is_superuser = msg.check_super_user()
-        module_list = ModulesManager.return_modules_list(
-            target_from=msg.session_info.target_from, client_name=msg.session_info.client_name
-        )
+        module_list = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
         target_enabled_list = msg.session_info.enabled_modules or []
         if not msg.session_info.require_enable_modules:
             target_enabled_list = list(module_list)
@@ -949,9 +946,7 @@ async def modules_list_help(msg: Bot.MessageSession, legacy, force_image=False):
             await msg.finish(imgs + help_msg)
     if legacy_help:
         can_manage_modules = msg.session_info.client_name == "QQBot" and is_admin
-        module_list = ModulesManager.return_modules_list(
-            target_from=msg.session_info.target_from, client_name=msg.session_info.client_name
-        )
+        module_list = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
         target_enabled_list = msg.session_info.enabled_modules or []
         module_ = []
         for x in module_list:
@@ -1038,9 +1033,7 @@ async def help_generator(
     is_superuser = msg.check_super_user()
     if is_admin is None:
         is_admin = is_superuser or await check_context_admin(msg)
-    module_list = ModulesManager.return_modules_list(
-        target_from=msg.session_info.target_from, client_name=msg.session_info.client_name
-    )
+    module_list = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
     target_enabled_list = msg.session_info.enabled_modules
 
     dev_module_list = []

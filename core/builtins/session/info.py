@@ -23,6 +23,7 @@ from core.config.base import BaseConfig, CoreConfig
 from core.database.models import TargetUnionInfo, SenderUnionInfo
 from core.i18n import Locale
 from core.utils.func import parse_time_string
+from core.utils.platform_scope import resolve_platform_identity
 from core.utils.session import inject_features
 
 default_locale = BaseConfig.default_locale
@@ -50,6 +51,9 @@ class EventInfo:
     target_id: str | None = None
     target_from: str | None = None
     client_name: str | None = None
+    # 多实例的平台两段，语义同 SessionInfo；默认实例下分别等于 client_name 与 target_from。
+    platform_name: str = ""
+    platform_from: str = ""
     owner_peer_id: str | None = None
     sender_id: str | None = None
     sender_from: str | None = None
@@ -78,6 +82,7 @@ class EventInfo:
             client_name = Alive.determine_client(target_from)
         if sender_id and sender_from is None:
             sender_from = Alive.determine_sender_from(sender_id)
+        platform_name, platform_from = resolve_platform_identity(target_from, client_name)
 
         target_union_info, sender_union_info = await asyncio.gather(
             TargetUnionInfo.get_by_target_id(target_id, create) if target_id else _none(),
@@ -93,6 +98,8 @@ class EventInfo:
             target_id=target_id,
             target_from=target_from,
             client_name=client_name,
+            platform_name=platform_name,
+            platform_from=platform_from,
             owner_peer_id=owner_peer_id or _current_client_peer_id(),
             sender_id=sender_id,
             sender_from=sender_from,
@@ -133,6 +140,10 @@ class SessionInfo:
     target_id: str
     target_from: str
     client_name: str
+    # 多实例的平台两段（纯字符串以便跨进程序列化）：默认实例下分别等于 client_name 与
+    # target_from，四元组判据退化为改造前的两段；缺失时按同一规则补齐。
+    platform_name: str = ""
+    platform_from: str = ""
     # 与平台 SDK 上下文绑定的入站会话必须回到原始 Client 实例；
     # 主动会话留空以使用服务组 anycast。
     owner_peer_id: str | None = None
@@ -226,10 +237,14 @@ class SessionInfo:
         create: bool = True,
         features: Features | None = None,
         tmp: dict[str, str] | None = None,
+        platform_name: str | None = None,
+        platform_from: str | None = None,
     ) -> Self:
         """
         用于将参数传入 SessionInfo 对象中。
 
+        :param platform_name: 平台展示名；缺省时取当前进程的 Info.platform_name（平台进程内可用）。
+        :param platform_from: 平台场景前缀；缺省时由 target_from 的客户端段替换而来。
         :return: SessionInfo 对象。
         """
         if target_from is None:
@@ -246,6 +261,7 @@ class SessionInfo:
             sender_from = Alive.determine_sender_from(sender_id)
         if not client_name:
             client_name = Alive.determine_client(target_from)
+        platform_name, platform_from = resolve_platform_identity(target_from, client_name, platform_name, platform_from)
         timestamp = datetime.now().timestamp()
         session_id = str(uuid.uuid4())
         locale = Locale(target_union_info.locale)
@@ -265,6 +281,8 @@ class SessionInfo:
             target_id=target_id,
             target_from=target_from,
             client_name=client_name,
+            platform_name=platform_name,
+            platform_from=platform_from,
             owner_peer_id=owner_peer_id or (None if fetch else _current_client_peer_id()),
             sender_id=sender_id,
             sender_from=sender_from,
@@ -323,6 +341,13 @@ class SessionInfo:
                     get_params = routed_peer.metadata
             if get_params:
                 _c.ctx_slot = get_params.get("ctx_slot_index", 999)
+                routed_platform_name = get_params.get("platform_name")
+                if routed_platform_name:
+                    # 主动会话在 server 进程构造，本进程的 Info.platform_name 是 "Server"；
+                    # 平台名只能取自被路由到的客户端元数据，否则平台级声明落不到这个会话上。
+                    _c.platform_name, _c.platform_from = resolve_platform_identity(
+                        _c.target_from, _c.client_name, str(routed_platform_name)
+                    )
                 features = get_params.get("features", None)
                 if isinstance(features, dict):
                     from core.builtins.converter import converter
@@ -335,6 +360,11 @@ class SessionInfo:
 
     async def refresh_info(self):
         """从数据库同步会影响当前消息解析的 Union 状态。"""
+        # 跨进程反序列化的会话（含升级前入队的旧消息）可能缺少平台两段。此处按当前已知的
+        # client_name / target_from 补齐，缺字段时退化为改造前的两段判据，不会误判为别的实例。
+        self.platform_name, self.platform_from = resolve_platform_identity(
+            self.target_from, self.client_name, self.platform_name, self.platform_from
+        )
         # SessionInfo 在 bot 进程构造后才经队列抵达 server；这段时间内权限、静音、
         # 语言或命令前缀都可能被其它消息修改。只替换 ORM 对象而保留派生字段，会让
         # parser 继续按入队时的旧状态执行。

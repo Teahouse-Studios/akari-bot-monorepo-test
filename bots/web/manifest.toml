@@ -1,0 +1,7 @@
+# 适配器包清单。
+# config_table 为适配器 config.py 中 on_bot_config() 声明的配置表，
+# credential_fields 供守护进程在启动前检测「同一平台的两个实例配了同一账号」。
+
+config_table = "bot_web"
+# Web 控制台没有平台账号凭据，故不声明 credential_fields。
+credential_fields = []

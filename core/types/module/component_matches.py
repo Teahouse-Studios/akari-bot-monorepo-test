@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from attrs import define, field
 
+from core.utils.platform_scope import platform_scope, scope_allows
 from .component_meta import *
 
 
@@ -25,6 +26,9 @@ class CommandMatches(BaseMatches):
     def get(
         self,
         target_from: str | None = None,
+        client_name: str | None = None,
+        platform_from: str | None = None,
+        platform_name: str | None = None,
         show_required_superuser: bool = False,
         show_required_base_superuser: bool = False,
         show_required_admin: bool = True,
@@ -40,17 +44,13 @@ class CommandMatches(BaseMatches):
             if not meta.load:
                 continue
             if target_from:
-                if "|" in target_from:
-                    client_name = target_from.split("|")[0]
-                else:
-                    client_name = target_from
-
-                if target_from in meta.exclude_from or client_name in meta.exclude_from:
+                if not scope_allows(
+                    platform_scope(target_from, client_name, platform_from, platform_name),
+                    meta.available_for,
+                    meta.exclude_from,
+                ):
                     continue
-                if target_from in meta.available_for or client_name in meta.available_for or "*" in meta.available_for:
-                    metas.append(meta)
-            else:
-                metas.append(meta)
+            metas.append(meta)
         return metas
 
 
@@ -61,6 +61,9 @@ class RegexMatches(BaseMatches):
     def get(
         self,
         target_from: str | None = None,
+        client_name: str | None = None,
+        platform_from: str | None = None,
+        platform_name: str | None = None,
         show_required_superuser: bool = False,
         show_required_base_superuser: bool = False,
         show_required_admin: bool = True,
@@ -76,17 +79,13 @@ class RegexMatches(BaseMatches):
             if not meta.load:
                 continue
             if target_from:
-                if "|" in target_from:
-                    client_name = target_from.split("|")[0]
-                else:
-                    client_name = target_from
-
-                if target_from in meta.exclude_from or client_name in meta.exclude_from:
+                if not scope_allows(
+                    platform_scope(target_from, client_name, platform_from, platform_name),
+                    meta.available_for,
+                    meta.exclude_from,
+                ):
                     continue
-                if target_from in meta.available_for or client_name in meta.available_for or "*" in meta.available_for:
-                    metas.append(meta)
-            else:
-                metas.append(meta)
+            metas.append(meta)
         return metas
 
 
@@ -104,19 +103,22 @@ class HookMatches(BaseMatches):
 class EventMatches(BaseMatches):
     set: list[EventMeta] = field(factory=list)
 
-    def get(self, target_from: str | None = None) -> list[EventMeta]:
+    def get(
+        self,
+        target_from: str | None = None,
+        client_name: str | None = None,
+        platform_from: str | None = None,
+        platform_name: str | None = None,
+    ) -> list[EventMeta]:
         metas = []
         for meta in self.set:
             if not meta.load:
                 continue
             if target_from:
-                client_name = target_from.split("|")[0]
-                if target_from in meta.exclude_from or client_name in meta.exclude_from:
-                    continue
-                if (
-                    target_from not in meta.available_for
-                    and client_name not in meta.available_for
-                    and "*" not in meta.available_for
+                if not scope_allows(
+                    platform_scope(target_from, client_name, platform_from, platform_name),
+                    meta.available_for,
+                    meta.exclude_from,
                 ):
                     continue
             metas.append(meta)

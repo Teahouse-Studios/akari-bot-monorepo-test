@@ -117,6 +117,20 @@ async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
         with (
             patch.object(daemon.multiprocessing, "get_context", return_value=context),
             patch.object(PackageRegistry, "adapters", side_effect=_fake_adapters),
+            # 实例发现改由 bot_* 配置表驱动，而合成适配器没有配置表。本用例只验证守护进程
+            # 的编排顺序，直接给出一个已启用实例，不为它铺一份配置。
+            patch.object(
+                daemon,
+                "discover_adapter_instances",
+                return_value=[
+                    daemon.AdapterInstance(
+                        platform=_TEST_PLATFORM,
+                        instance_id="",
+                        client_name=_TEST_PLATFORM,
+                        table=f"bot_{_TEST_PLATFORM}",
+                    )
+                ],
+            ),
             patch.object(JobQueueConfig, "jobqueue_backend", backend),
             patch.object(JobQueueConfig, "jobqueue_websocket_mode", mode),
             patch.object(JobQueueConfig, "jobqueue_websocket_url", "ws://127.0.0.1:8765/jobqueue"),

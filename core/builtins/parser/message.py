@@ -48,6 +48,7 @@ from core.types import Module, Param
 from core.types.module.component_meta import CommandMeta
 from core.utils.container import ExpiringTempDict
 from core.utils.func import normalize_space
+from core.utils.platform_scope import platform_fields, platform_scope, scope_allows, scope_of
 
 if TYPE_CHECKING:
     from core.builtins.bot import Bot
@@ -177,9 +178,7 @@ async def _try_command_recovery(
             )
             if wait_confirm:
                 # 确认期间可能热重载/权限变化：从最新注册表取模块并重校验
-                fresh_modules = ModulesManager.return_modules_list(
-                    msg.session_info.target_from, msg.session_info.client_name, use_cache=False
-                )
+                fresh_modules = ModulesManager.return_modules_list(*platform_fields(msg.session_info), use_cache=False)
                 msg.trigger_msg = proposal.trigger_msg
                 new_word = proposal.command_first_word
                 # 等待期间管理员可能已停用模块、静音或改权限；仅模块表不是权威状态。
@@ -258,7 +257,7 @@ async def parser(msg: "Bot.MessageSession"):
                 return
 
         # 获取该平台和客户端的所有可用模块
-        modules = ModulesManager.return_modules_list(msg.session_info.target_from, msg.session_info.client_name)
+        modules = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
 
         # 将消息转换为易读的显示格式
         msg.trigger_msg = normalize_space(msg.as_display())
@@ -700,24 +699,38 @@ async def try_acquire_execution_lock(msg: "Bot.MessageSession") -> bool:
     return await ExecutionLockList.acquire(msg)
 
 
-def regex_func_available(rfunc, target_from: str, client_name: str) -> bool:
+def regex_func_available(
+    rfunc,
+    target_from: str | None = None,
+    client_name: str | None = None,
+    platform_from: str | None = None,
+    platform_name: str | None = None,
+    *,
+    scope: set[str] | None = None,
+) -> bool:
     """
     判断一条正则处理函数在当前平台上是否可用。
 
-    判据与 :meth:`RegexMatches.get` 一致。此前 :func:`_execute_regex` 直接遍历 ``regex_list.set``，
+    判据与 :meth:`RegexMatches.get` 一致：按 target_from / client_name / platform_from /
+    platform_name 的四元组判分，使 ``available_for="Telegram"`` 对全部 Telegram 实例有效。
+    此前 :func:`_execute_regex` 直接遍历 ``regex_list.set``，
     只校验模块级的 ``available_for``，正则级的平台声明因而从未生效——注册时写下的
     ``@module.regex(available_for=...)`` 形同虚设。
 
     :param rfunc: 正则处理函数的元数据。
     :param target_from: 当前场景的前缀。
     :param client_name: 当前客户端名称。
+    :param platform_from: 平台场景前缀。
+    :param platform_name: 平台展示名。
+    :param scope: 已取得的平台判据。调用方持有会话对象时经 :func:`scope_of` 传它，
+        以免逐字段读取会话——会话可能是只提供所需字段的替身。
     :return: 是否可用。
     """
     if not rfunc.load:
         return False
-    if target_from in rfunc.exclude_from or client_name in rfunc.exclude_from:
-        return False
-    return "*" in rfunc.available_for or target_from in rfunc.available_for or client_name in rfunc.available_for
+    if scope is None:
+        scope = platform_scope(target_from, client_name, platform_from, platform_name)
+    return scope_allows(scope, rfunc.available_for, rfunc.exclude_from)
 
 
 def _match_regex(rfunc, trigger_msg: str):
@@ -739,13 +752,7 @@ def _regex_module_available(msg: "Bot.MessageSession", module: Module, module_na
         return False
     if not module.load:
         return False
-    if msg.session_info.target_from in module.exclude_from or msg.session_info.client_name in module.exclude_from:
-        return False
-    return (
-        "*" in module.available_for
-        or msg.session_info.target_from in module.available_for
-        or msg.session_info.client_name in module.available_for
-    )
+    return scope_allows(scope_of(msg.session_info), module.available_for, module.exclude_from)
 
 
 def _regex_matches_message(msg: "Bot.MessageSession", modules) -> bool:
@@ -757,7 +764,7 @@ def _regex_matches_message(msg: "Bot.MessageSession", modules) -> bool:
         if not module._db_load or not module.regex_list.set or not _regex_module_available(msg, module, module_name):
             continue
         for index, rfunc in enumerate(module.regex_list.set):
-            if not regex_func_available(rfunc, msg.session_info.target_from, msg.session_info.client_name):
+            if not regex_func_available(rfunc, scope=scope_of(msg.session_info)):
                 continue
             if rfunc.trigger_once_startup and regex_once_triggered(module_name, index, msg.session_info.target_id):
                 continue
@@ -824,15 +831,10 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
                 regex_module: Module = modules[m]
 
                 # ========== 步骤 2: 检查模块可用性和平台限制 ==========
-                if (
-                    not regex_module.load  # 模块未加载
-                    or msg.session_info.target_from in regex_module.exclude_from  # 平台被排除
-                    or msg.session_info.client_name in regex_module.exclude_from  # 客户端被排除
-                    or (
-                        "*" not in regex_module.available_for  # 不是对所有平台可用
-                        and msg.session_info.target_from not in regex_module.available_for  # 且当前平台不在列表中
-                        and msg.session_info.client_name not in regex_module.available_for
-                    )
+                if not regex_module.load or not scope_allows(  # 模块未加载
+                    scope_of(msg.session_info),
+                    regex_module.available_for,  # 平台/客户端未被排除且在允许列表内
+                    regex_module.exclude_from,
                 ):
                     continue
 
@@ -851,7 +853,7 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
                 for index, rfunc in enumerate(regex_module.regex_list.set):
                     # 正则级的平台声明，与命令级的 available_for / exclude_from 对称。
                     # 步骤 3 校验的是模块级声明，两者互不覆盖。
-                    if not regex_func_available(rfunc, msg.session_info.target_from, msg.session_info.client_name):
+                    if not regex_func_available(rfunc, scope=scope_of(msg.session_info)):
                         continue
 
                     # 单次触发的正则在该场景跑过之后不再参与匹配，避免每条消息都付出

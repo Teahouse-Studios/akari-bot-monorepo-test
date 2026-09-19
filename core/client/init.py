@@ -72,6 +72,9 @@ async def _client_init_once(
                 "sender_prefix_list": sender_prefix_list or [],
                 "ctx_slot_index": Bot.fetched_session_ctx_slot,
                 "features": feature_data,
+                # 多实例下 client_name 带实例后缀，平台展示名只能由客户端在此声明：
+                # server 侧构造主动会话时本进程没有平台身份，须经被路由到的 peer 元数据取回。
+                "platform_name": Info.platform_name,
             },
         )
         if queue and _restart_finished_task(_queue_task, "Client queue poller"):

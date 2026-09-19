@@ -117,6 +117,34 @@ class CFGManager:
             cls._allow_write_depth -= 1
 
     @classmethod
+    def _resolve_table(cls, table_name: str | None, *, fallback: bool = True) -> str | None:
+        """把配置表名解析到当前实例的作用域。
+
+        ``Info.instance_id`` 为空（守护进程、pre_init、默认实例的子进程）时原样返回，
+        因此默认实例的全部读写路径与改造前逐字段一致。多实例下 ``bot_telegram`` 解析为
+        ``bot_telegram-alt``，从而复用同一份适配器配置模板，无需改动各适配器的 config.py。
+
+        ``module_*`` 与 ``config`` 表不参与实例作用域：模块配置属于场景数据而非适配器身份。
+
+        :param table_name: 已归一化的表名（``_secret`` 后缀已剥离）。
+        :param fallback: 实例表尚未出现时是否回退到基表。
+            读取路径取 True；写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
+        :return: 实际使用的表名。
+        """
+        from core.constants.info import Info
+
+        if not table_name or not Info.instance_id or not table_name.startswith("bot_"):
+            return table_name
+        suffix = f"-{Info.instance_id}"
+        if table_name.endswith(suffix):
+            # 调用方已指名实例表（实例发现、CLI），不再二次拼接。
+            return table_name
+        scoped = f"{table_name}{suffix}"
+        if fallback and scoped not in cls.values:
+            return table_name
+        return scoped
+
+    @classmethod
     def _ensure_writable(cls, q: str | None = None, table_name: str | None = None, secret: bool = False):
         """在只读进程中拒绝写入。
 
@@ -254,6 +282,7 @@ class CFGManager:
         if not table_name or table_name == "config":
             cfg_name, target = "config", "secret" if secret else "config"
         else:
+            table_name = cls._resolve_table(table_name)
             cfg_name = table_name
             target = f"{table_name}{'_secret' if secret else ''}"
 
@@ -317,6 +346,7 @@ class CFGManager:
         table_name: str | None = None,
         _global: bool = False,
         _generate: bool = False,
+        _fallback: bool = True,
         standalone_comment_keys: tuple[str, ...] = (),
     ) -> Any:
         """
@@ -329,6 +359,8 @@ class CFGManager:
         :param table_name: 配置项表名。
         :param _global: 内部变量，是否在所有表中查找配置项。（默认为False）
         :param _generate: 内部变量，生成配置文件时使用。（默认为False）
+        :param _fallback: 内部变量，实例表不存在时是否回退到基表。实例发现读 ``enable`` 时取 False：
+            回退会让「新建一个实例文件」等同于「立即上线一个机器人」。
         :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键
 
         :return: 配置文件中对应配置项的值。
@@ -384,6 +416,10 @@ class CFGManager:
                 table_name, secret = "config", True
             if table_name.endswith("_secret"):
                 table_name, secret = table_name.removesuffix("_secret"), True
+
+            # 实例作用域解析须在归一化之后、拼接 _secret 之前：实例表名为 bot_telegram-alt，
+            # 其密钥表为 bot_telegram-alt_secret。
+            table_name = cls._resolve_table(table_name, fallback=_fallback)
 
             # if table_name is provided, write the value to the specified table
             if table_name != "config":
@@ -544,6 +580,10 @@ class CFGManager:
                     table_name = table_name.removesuffix("_secret")
                     secret = True
 
+                # 写路径一律落实例表（fallback=False）：实例进程本就只读，此路径实际只有 CLI 会走，
+                # 而 CLI 明确知道自己在操作哪个实例。回退会把改动写进基表，串给另一个实例。
+                table_name = cls._resolve_table(table_name, fallback=False)
+
                 if table_name != "config":
                     target = f"{table_name}{'_secret' if secret else ''}"
                 else:
@@ -638,6 +678,8 @@ class CFGManager:
         cls._ensure_writable(q, table_name)
         found = False
         table_name = "config" if not table_name else table_name.lower()
+        # 与 write() 同向：删除是编辑的另一半，同样一律落实例表，避免误删基表里的键。
+        table_name = cls._resolve_table(table_name, fallback=False)
         try:
             for t in cls.values[table_name].keys():
                 if isinstance(cls.values[table_name][t], Table):

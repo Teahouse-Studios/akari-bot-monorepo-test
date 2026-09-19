@@ -56,6 +56,10 @@ def parse_retired_routes(entries: list) -> dict[str, str | None]:
     """
     把 ``"源 -> 目标"`` 形式的配置解析为映射。
 
+    两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类：``"Telegram -> QQBot"``
+    只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响；要退役某个实例就写
+    ``"Telegram-alt -> QQBot"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。
+
     只写源时目标为 None，表示该客户端退役但不提供迁移去处。格式错误的项一律跳过并记录警告，
     不使解析失败：退役是运营配置，一处笔误不应拖垮整个实例的启动。
 

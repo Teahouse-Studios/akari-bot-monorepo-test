@@ -9,6 +9,7 @@ from core.constants.exceptions import InvalidHelpDocTypeError
 from core.database.models import ModuleStatus
 from core.loader import ModulesManager
 from core.logger import Logger
+from core.utils.platform_scope import platform_fields
 from modules.core.common_tools.help import check_context_admin, modules_list_help
 
 # 模块受限成因到提示文案的映射，键取自 Module.unsupported_reason() 的返回值。
@@ -90,9 +91,7 @@ async def _(msg: Bot.MessageSession, img: bool = False, legacy: bool = False):
 async def config_modules(msg: Bot.MessageSession):
     is_superuser = msg.check_super_user()
     alias = ModulesManager.modules_aliases
-    modules_ = ModulesManager.return_modules_list(
-        target_from=msg.session_info.target_from, client_name=msg.session_info.client_name
-    )
+    modules_ = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
     enabled_modules_list = deepcopy(msg.session_info.enabled_modules or [])
     wait_config = [msg.parsed_msg.get("<module>")] + msg.parsed_msg.get("...", [])
     wait_config_list = []

@@ -190,15 +190,24 @@ class PackageRegistry:
     _entries: dict[str, PackageEntry] = {}
     _by_import_path: dict[str, PackageEntry] = {}
     _discovered: bool = False
+    # core API 不兼容的包：展示用标签到原因。
     _incompatible: dict[str, str] = {}
+    # 同一批包：规范化分发名到原因，供依赖校验把「依赖被 API 门槛拒绝的包」判为不可用。
+    _api_refused: dict[str, str] = {}
     _dependency_rejected: dict[str, str] = {}
 
     @classmethod
     def discover(cls, *, force: bool = False) -> None:
         """建立发现结果。
 
-        收尾阶段校验包之间的声明依赖：依赖缺失、版本不满足或成环的包不进入注册表，
-        原因经 :meth:`incompatible` 与 :meth:`report_lines` 报出。
+        收尾阶段依次校验两道门槛，两道都通过的包才进入注册表：
+
+        1. core API 兼容性（``manifest.requires_core_api``）；
+        2. 声明依赖：缺失、版本不满足、成环，以及**依赖了第 1 步被拒绝的包**。
+
+        顺序不可颠倒：依赖校验必须知道哪些包已被 API 门槛拒绝，否则依赖它们的包会以
+        「发行版已安装」为由留下，最终在导入期抛出与配置无关的导入错误。原因经
+        :meth:`incompatible` 与 :meth:`report_lines` 报出。
 
         :param force: 为真时忽略缓存并重新发现。
         """
@@ -216,8 +225,11 @@ class PackageRegistry:
             for entry in cls._from_directory_scan():
                 cls._insert(entries, entry, source="directory scan")
 
-        entries, rejected = cls._reject_unsatisfied_dependencies(entries)
+        entries, api_rejected, api_refused = cls._reject_core_api_incompatible(entries)
+        entries, rejected = cls._reject_unsatisfied_dependencies(entries, refused=api_refused)
         cls._entries = entries
+        cls._incompatible = api_rejected
+        cls._api_refused = api_refused
         cls._dependency_rejected = rejected
         cls._by_import_path = {}
         for entry in entries.values():
@@ -276,19 +288,45 @@ class PackageRegistry:
 
     @classmethod
     def reject_incompatible(cls) -> dict[str, str]:
-        """剔除 requires_core_api 与当前 core API 版本不兼容的包。
+        """``requires_core_api`` 与当前 core API 版本不兼容的包及其原因。
 
-        在 ``load_modules()`` 之前调用：此时配置系统已就绪，可安全写日志。
+        该检查已是 :meth:`discover` 的一环：依赖校验必须知道哪些包被它拒绝，才能级联剔除
+        依赖它们的包。本方法保留为公开入口，对直接注入注册表的条目（测试与工具）补做一次，
+        并返回同源的结果。
 
         :return: 包标识到原因的映射。
+        """
+        cls.discover()
+        kept, rejected, refused = cls._reject_core_api_incompatible(cls._entries)
+        if len(kept) == len(cls._entries):
+            # 发现阶段已闸过一遍，此时覆盖会丢掉已记录的原因（被拒的包已不在 _entries 里）
+            return dict(cls._incompatible)
+        cls._entries = kept
+        cls._by_import_path = {entry.import_path: entry for entry in kept.values()}
+        cls._incompatible = rejected
+        cls._api_refused = refused
+        return dict(rejected)
+
+    @classmethod
+    def _reject_core_api_incompatible(
+        cls, entries: dict[str, PackageEntry]
+    ) -> tuple[dict[str, PackageEntry], dict[str, str], dict[str, str]]:
+        """按 ``requires_core_api`` 分出与当前 core API 版本不兼容的包。
+
+        结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出；
+        规范化分发名到原因，供依赖校验把「依赖一个已被拒绝的包」判为不可用。本方法不改动
+        类状态，由调用方决定如何登记。
+
+        :param entries: 本次发现的全部条目。
+        :return: 三元组——保留的条目；标签到原因；规范化分发名到原因。
         """
         from packaging.specifiers import InvalidSpecifier, SpecifierSet
         from packaging.version import InvalidVersion, Version
 
-        cls.discover()
         rejected: dict[str, str] = {}
+        refused: dict[str, str] = {}
         keep: dict[str, PackageEntry] = {}
-        for key, entry in cls._entries.items():
+        for key, entry in entries.items():
             specifier = entry.manifest.requires_core_api
             try:
                 satisfied = Version(str(CORE_API_VERSION)) in SpecifierSet(specifier)
@@ -301,13 +339,10 @@ class PackageRegistry:
                 keep[key] = entry
                 continue
             rejected[cls._package_label(entry)] = reason
+            for dist_name in cls._distribution_names(entry):
+                refused[_canonicalize(dist_name)] = reason
             _logger().warning(f"Skipped {cls._package_label(entry)}: {reason}.")
-
-        if rejected:
-            cls._entries = keep
-            cls._by_import_path = {entry.import_path: entry for entry in keep.values()}
-        cls._incompatible = rejected
-        return dict(rejected)
+        return keep, rejected, refused
 
     @classmethod
     def report_lines(cls) -> list[str]:
@@ -825,39 +860,87 @@ class PackageRegistry:
         return [cls._entries[key] for key in ordered]
 
     @classmethod
-    def _reject_unsatisfied_dependencies(
-        cls, entries: dict[str, PackageEntry]
-    ) -> tuple[dict[str, PackageEntry], dict[str, str]]:
-        """剔除声明依赖缺失、版本不满足或成环的包。
+    def _record_rejection(
+        cls, entry: PackageEntry, reason: str, rejected: dict[str, str], refused: dict[str, str]
+    ) -> None:
+        """登记一次拒绝。
 
-        :param entries: 本次发现的全部条目。
+        :param entry: 被拒绝的包。
+        :param reason: 拒绝原因。
+        :param rejected: 展示用标签到原因的映射，就地写入。
+        :param refused: 规范化分发名到原因的映射，供依赖级联判分，就地写入。
+        """
+        label = cls._package_label(entry)
+        rejected[label] = reason
+        for dist_name in cls._distribution_names(entry):
+            refused[_canonicalize(dist_name)] = reason
+        _logger().warning(f"Skipped {label}: {reason}.")
+
+    @classmethod
+    def _reject_unsatisfied_dependencies(
+        cls, entries: dict[str, PackageEntry], *, refused: dict[str, str] | None = None
+    ) -> tuple[dict[str, PackageEntry], dict[str, str]]:
+        """剔除声明依赖缺失、版本不满足或成环的包，并级联剔除依赖它们的包。
+
+        :param entries: 本次发现中已通过 core API 校验的条目。
+        :param refused: 已确定不可用的依赖（规范化分发名到原因），由 core API 校验登记。
         :return: 二元组——保留的条目；被拒绝包的标识到原因的映射。
         """
+        refused = dict(refused or {})
         kept: dict[str, PackageEntry] = {}
         rejected: dict[str, str] = {}
         for key, entry in entries.items():
-            reason = cls._dependency_reason(entry)
+            reason = cls._dependency_reason(entry, refused)
             if reason is None:
                 kept[key] = entry
                 continue
-            rejected[cls._package_label(entry)] = reason
-            _logger().warning(f"Skipped {cls._package_label(entry)}: {reason}.")
+            cls._record_rejection(entry, reason, rejected, refused)
         edges = cls._edges_of(kept)
         for cycle in cls._cycles(edges):
             path = cls._cycle_path(cycle, edges)
             labels = " -> ".join(cls._package_label(kept[key]) for key in path)
             for key in cycle:
-                rejected[cls._package_label(kept[key])] = f"circular dependency {labels}"
+                cls._record_rejection(kept[key], f"circular dependency {labels}", rejected, refused)
                 del kept[key]
             _logger().warning(f"Skipped {len(cycle)} package(s): circular dependency {labels}.")
+
+        # 级联：依赖一个已被拒绝的包与依赖一个未安装的包同样注定失败，只按 metadata 判断会让
+        # 依赖方以「依赖已安装」为由留下，最终在导入期抛出与配置无关的错误。逐个剔除至不动点。
+        declared = {key: cls.dependencies(entry) for key, entry in kept.items()}
+        while True:
+            cascade: list[tuple[str, PackageEntry, str]] = []
+            for key, dependencies in declared.items():
+                reasons = [
+                    f"depends on {dependency.dist_name}, which was refused: "
+                    f"{refused[_canonicalize(dependency.dist_name)]}"
+                    for dependency in dependencies
+                    if _canonicalize(dependency.dist_name) in refused
+                ]
+                if reasons:
+                    cascade.append((key, kept[key], "; ".join(reasons)))
+            if not cascade:
+                break
+            for key, entry, reason in cascade:
+                del kept[key]
+                declared.pop(key, None)
+                cls._record_rejection(entry, reason, rejected, refused)
         return kept, rejected
 
     @classmethod
-    def _dependency_reason(cls, entry: PackageEntry) -> str | None:
-        """声明依赖不满足时的原因；全部满足时为 ``None``。"""
+    def _dependency_reason(cls, entry: PackageEntry, refused: dict[str, str] | None = None) -> str | None:
+        """声明依赖不满足时的原因；全部满足时为 ``None``。
+
+        :param entry: 待查询的包。
+        :param refused: 已被拒绝的依赖（规范化分发名到原因）。命中的依赖按不可用处理：
+            它可能仍装在环境里，但不会完成注册。
+        """
+        refused = refused or {}
         reasons = []
         for dependency in cls.dependencies(entry):
-            if dependency.installed_version is None:
+            refusal = refused.get(_canonicalize(dependency.dist_name))
+            if refusal is not None:
+                reasons.append(f"depends on {dependency.dist_name}, which was refused: {refusal}")
+            elif dependency.installed_version is None:
                 reasons.append(f"missing dependency {dependency.dist_name}")
             elif not dependency.satisfied:
                 reasons.append(

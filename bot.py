@@ -12,7 +12,9 @@ import shutil
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -155,6 +157,268 @@ def warn_if_database_jobqueue_uses_sqlite(jobqueue_backend: object, database_typ
     return True
 
 
+@dataclass(frozen=True)
+class AdapterInstance:
+    """一个待启动的适配器实例。
+
+    :param platform: 适配器名（entry point 名），如 ``telegram``。
+    :param instance_id: 实例 ID；空串表示默认实例。
+    :param client_name: 客户端名称，如 ``Telegram`` / ``Telegram-alt``。
+    :param table: 该实例的配置表名，如 ``bot_telegram-alt``。
+    :param replicas: 同一身份的副本数，供「同一身份多副本」使用；当前恒为 1。
+    """
+
+    platform: str
+    instance_id: str
+    client_name: str
+    table: str
+    replicas: int = 1
+
+
+def adapter_platform_name(platform: str) -> str:
+    """读取适配器声明的平台展示名。
+
+    ``bots/<platform>/info.py`` 的 ``platform_name`` 是唯一真源，不能从目录名推：``onebot``
+    的平台名是 ``QQ``。早于本功能发布的适配器没有该变量，回退到它当时使用的 ``client_name``
+    （默认实例下两者相同）；多实例能力则要求适配器同步升级。
+
+    :param platform: 适配器名。
+    :return: 平台展示名；无法确定时为空串，调用方应跳过该实例。
+    """
+    try:
+        info = importlib.import_module(f"bots.{platform}.info")
+    except Exception:
+        Logger.exception(f"Failed to import bots.{platform}.info, skip to launch.")
+        return ""
+    platform_name = getattr(info, "platform_name", "")
+    if platform_name:
+        return str(platform_name)
+    legacy_name = getattr(info, "client_name", "")
+    if legacy_name:
+        Logger.warning(
+            f"Adapter {platform} does not declare platform_name, falling back to client_name {legacy_name!r}. "
+            "Multi-instance support requires the adapter to be updated."
+        )
+        return str(legacy_name)
+    return ""
+
+
+def discover_adapter_instances() -> list[AdapterInstance]:
+    """枚举全部已启用的适配器实例。
+
+    以配置中的 ``bot_*`` 表为索引：表名去掉前缀后按第一个 ``-`` 拆成 ``(适配器, 实例 ID)``，
+    与已安装的适配器核对，再读该表自己的 ``enable``。孤立配置（适配器未安装）与非法实例 ID
+    都只告警并跳过，不中止启动。
+
+    ``enable`` 不回退到基表：实例配置必须显式写 ``enable``，否则视为未启用。回退会让
+    「新建一个实例文件」等同于「立即上线一个机器人」。
+
+    :return: 已启用的实例，按 ``(适配器, 实例 ID)`` 排序。
+    """
+    from core.config import CFGManager
+    from core.constants import Info
+
+    adapters = PackageRegistry.adapters()
+    enabled: list[AdapterInstance] = []
+    for table in sorted(CFGManager.values):
+        if not table.startswith("bot_") or table.endswith("_secret"):
+            continue
+        name = table[4:]
+        platform, _, instance_id = name.partition("-")
+        if not platform:
+            Logger.warning(f'Config table "{table}" has an empty adapter name, skip to launch.')
+            continue
+        if instance_id and not Info.INSTANCE_ID_PATTERN.fullmatch(instance_id):
+            Logger.warning(
+                f'Config table "{table}" has an invalid instance id "{instance_id}": '
+                "it must match [a-z0-9_]{1,24}, skip to launch."
+            )
+            continue
+        if platform not in adapters:
+            Logger.warning(f"Bot {name} has config but no adapter is installed, skip to launch.")
+            continue
+        platform_name = adapter_platform_name(platform)
+        if not platform_name:
+            Logger.warning(f"Adapter {platform} does not declare a platform name, skip to launch.")
+            continue
+        if not CFGManager.has("enable", table_name=table):
+            Logger.warning(f'Bot {name} cannot found config "enable".')
+            disabled_bots.append(name)
+            continue
+        if not CFGManager.get("enable", table_name=table, _fallback=False):
+            Logger.warning(f"Bot {name} is disabled in config, skip to launch.")
+            disabled_bots.append(name)
+            continue
+        enabled.append(
+            AdapterInstance(
+                platform=platform,
+                instance_id=instance_id,
+                client_name=Info.resolve_client_name(platform_name, instance_id),
+                table=table,
+            )
+        )
+    return enabled
+
+
+# 监听地址字段。web 的 web_port 与 onebot / milky 的 qq_host 最终都占用一个 TCP 端口，
+# 故统一解析出 (主机, 端口) 后比对：web 与 onebot 撞同一个端口同样是致命的。
+INSTANCE_LISTEN_FIELDS = ("web_port", "qq_host")
+
+# web_host 缺省时的绑定地址，与 WebConfig 声明的默认值一致。守护进程不能向 CFGManager.get
+# 传默认值：那会触发写入，而守护进程是只读的。
+DEFAULT_WEB_HOST = "127.0.0.1"
+
+
+def _split_host_port(value: object) -> tuple[str, int] | None:
+    """从监听配置中解析出 ``(主机, 端口)``。
+
+    :param value: 配置值，可能是 ``6485``、``"127.0.0.1:8080"`` 或 ``"http://127.0.0.1:8080"``。
+    :return: 主机（小写，可能为空串）与端口；解析不出或端口越界时返回 None。
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        host, port = "", value
+    elif isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        if "://" in text:
+            try:
+                parsed = urlsplit(text)
+                host, port = parsed.hostname or "", parsed.port
+            except ValueError:
+                return None
+        else:
+            host, _, tail = text.rpartition(":")
+            if not tail.isdigit():
+                return None
+            port = int(tail)
+    else:
+        return None
+    if port is None or not 0 < port < 65536:
+        return None
+    return host.lower(), port
+
+
+def _hosts_conflict(left: str, right: str) -> bool:
+    """判断两个监听主机是否会争用同一个端口。
+
+    通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同：
+    宁可漏报也不误报，误报会让本来可用的部署起不来。
+
+    :param left: 主机一。
+    :param right: 主机二。
+    :return: 是否争用。
+    """
+    wildcard = {"", "*", "0.0.0.0", "::", "[::]"}
+    return left in wildcard or right in wildcard or left == right
+
+
+def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
+    """收集实例占用的 ``(主机, 端口, 字段名)``。
+
+    ``qq_host`` 在 onebot 是反向 WS 的绑定地址、在 milky 是所连 Milky 服务的目标地址，
+    取值形式统一按 ``host:port`` 或 URL 解析；``web_port`` 的绑定主机取自 ``web_host``。
+
+    :param instance: 实例。
+    :return: 资源列表。
+    """
+    from core.config import CFGManager
+
+    resources: list[tuple[str, int, str]] = []
+    web = _split_host_port(CFGManager.get("web_port", table_name=instance.table))
+    if web is not None:
+        host, port = web
+        if not host:
+            host = str(CFGManager.get("web_host", table_name=instance.table) or DEFAULT_WEB_HOST).lower()
+        resources.append((host, port, "web_port"))
+    qq = _split_host_port(CFGManager.get("qq_host", table_name=instance.table))
+    if qq is not None:
+        host, port = qq
+        resources.append((host, port, "qq_host"))
+    return resources
+
+
+def _read_credential(instance: AdapterInstance, field: str) -> object:
+    """读取实例的某个凭据字段。
+
+    凭据多数落在密钥表，也有落在普通表的（如 ``qq_bot_appid``），两处都试一次。
+    未填写的占位符由 ``CFGManager.get`` 归一为 None，不会被误判为重复。
+
+    :param instance: 实例。
+    :param field: 凭据字段名。
+    :return: 凭据值；两处都没有时返回 None。
+    """
+    from core.config import CFGManager
+
+    for secret in (True, False):
+        value = CFGManager.get(field, secret=secret, table_name=instance.table)
+        if value:
+            return value
+    return None
+
+
+def check_instance_conflicts(instances: list[AdapterInstance]) -> None:
+    """spawn 之前拦截多实例误配。
+
+    端口冲突与同平台凭据重复的症状都是「两个进程抢同一份资源」：前者抢套接字，后者抢账号。
+    这类故障从日志几乎诊断不出来，故一律以 ``sys.exit(1)`` 中止启动，并指名道姓是哪两个实例。
+
+    :param instances: 已启用的实例。
+    """
+    listeners: dict[int, list[tuple[str, AdapterInstance, str]]] = {}
+    for instance in instances:
+        for host, port, field in _listen_resources(instance):
+            for other_host, other, other_field in listeners.get(port, []):
+                if not _hosts_conflict(host, other_host):
+                    continue
+                Logger.critical(
+                    f"Instances {other.client_name} ({other.table}.{other_field}) and {instance.client_name} "
+                    f"({instance.table}.{field}) are configured to use the same port {port}. "
+                    "Two processes cannot bind the same port, aborting."
+                )
+                sys.exit(1)
+            listeners.setdefault(port, []).append((host, instance, field))
+
+    by_platform: dict[str, list[AdapterInstance]] = {}
+    for instance in instances:
+        by_platform.setdefault(instance.platform, []).append(instance)
+    adapters = PackageRegistry.adapters()
+    for platform in sorted(by_platform):
+        group = by_platform[platform]
+        entry = adapters.get(platform)
+        if len(group) < 2 or entry is None:
+            continue
+        for field in entry.manifest.credential_fields:
+            owners: dict[str, AdapterInstance] = {}
+            for instance in group:
+                value = _read_credential(instance, field)
+                if not value:
+                    continue
+                key = str(value)
+                if key in owners:
+                    owner = owners[key]
+                    Logger.critical(
+                        f"Instances {owner.client_name} ({owner.table}) and {instance.client_name} "
+                        f"({instance.table}) are configured with the same {field!r}, which would make both "
+                        "processes log in as the same account. Aborting."
+                    )
+                    sys.exit(1)
+                owners[key] = instance
+
+    seen_client_names: dict[str, AdapterInstance] = {}
+    for instance in instances:
+        other = seen_client_names.setdefault(instance.client_name, instance)
+        if other is not instance:
+            # onebot 与 milky 都叫 "QQ"。这不是本功能引入的，但两者的 JobQueue 服务名与启动
+            # 失败计数会因此合并，必须留下痕迹。
+            Logger.warning(
+                f"Instances {other.table} and {instance.table} share client_name {instance.client_name!r}; "
+                "their JobQueue services and start-failure counters cannot be told apart."
+            )
+
+
 def pre_init():
     init_daemon_logger()
     Logger.info(ascii_art)
@@ -271,18 +535,28 @@ def multiprocess_run_until_complete(func):
         sys.exit(exitcode)
 
 
-def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False):
+def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, instance_id: str = ""):
     from core.constants import Info
     from core.logger import Logger
 
-    Logger.info(f"[{bot_name}] Here we go!")
+    # instance_id 必须在导入适配器之前置位：bots.<x>.info 在导入期依它派生 client_name。
+    Info.instance_id = instance_id
     Info.subprocess = subprocess
     Info.binary_mode = binary_mode
+
+    platform_name = adapter_platform_name(bot_name)
+    if not platform_name:
+        Logger.critical(f"[{bot_name}] ???, adapter info not found.")
+        sys.exit(1)
+    # 平台展示名供会话构造使用：多实例下 client_name 带实例后缀，平台名不带。
+    Info.platform_name = platform_name
+    client_name = Info.resolve_client_name(platform_name)
+    Logger.info(f"[{client_name}] Here we go!")
 
     try:
         importlib.import_module(f"bots.{bot_name}.bot")
     except ModuleNotFoundError:
-        Logger.exception(f"[{bot_name}] ???, entry not found.")
+        Logger.exception(f"[{client_name}] ???, entry not found.")
 
         sys.exit(1)
 
@@ -319,7 +593,6 @@ async def run_bot():
     os.environ["AKARI_BOT_I18N_CACHE_DIR"] = AKARI_BOT_I18N_CACHE_DIR
 
     # CONFIG_READONLY_ENV 必须先于 core.config 的首次导入置位；后者会在导入期执行配置版本迁移。
-    from core.config import CFGManager
     from core.config.jobqueue import JobQueueConfig
 
     mp = multiprocessing.get_context("spawn" if sys.platform in ["win32", "darwin"] else "forkserver")
@@ -356,59 +629,53 @@ async def run_bot():
         Logger.success("WebSocket JobQueue Hub is ready.")
         hub_pid = hub_process.pid
 
-    def restart_bot_process(bot_name: str):
+    def restart_bot_process(instance: AdapterInstance):
+        client_name = instance.client_name
         if (
-            bot_name not in failed_to_start_attempts
-            or time.time() - failed_to_start_attempts[bot_name]["timestamp"] > 60
+            client_name not in failed_to_start_attempts
+            or time.time() - failed_to_start_attempts[client_name]["timestamp"] > 60
         ):
-            failed_to_start_attempts[bot_name] = {}
-            failed_to_start_attempts[bot_name]["count"] = 0
-            failed_to_start_attempts[bot_name]["timestamp"] = time.time()
-        failed_to_start_attempts[bot_name]["count"] += 1
-        failed_to_start_attempts[bot_name]["timestamp"] = time.time()
-        if failed_to_start_attempts[bot_name]["count"] >= 3:
-            Logger.error(f"Bot {bot_name} failed to start 3 times, abort to restart, please check the log.")
+            failed_to_start_attempts[client_name] = {}
+            failed_to_start_attempts[client_name]["count"] = 0
+            failed_to_start_attempts[client_name]["timestamp"] = time.time()
+        failed_to_start_attempts[client_name]["count"] += 1
+        failed_to_start_attempts[client_name]["timestamp"] = time.time()
+        if failed_to_start_attempts[client_name]["count"] >= 3:
+            Logger.error(f"Bot {client_name} failed to start 3 times, abort to restart, please check the log.")
             return
 
-        Logger.warning(f"Restarting bot {bot_name}...")
+        Logger.warning(f"Restarting bot {client_name}...")
         p = mp.Process(
             target=go,
             args=(
-                bot_name,
+                instance.platform,
                 True,
                 binary_mode,
+                instance.instance_id,
             ),
-            name=bot_name,
+            name=client_name,
             daemon=True,
         )
+        p.akari_instance = instance
         p.start()
         processes.append(p)
 
-    bots_list = list(PackageRegistry.adapters())
     disabled_bots.clear()
+    instances = discover_adapter_instances()
+    # 误配的实例必须在任何适配器进程启动之前拦下：两个进程抢同一端口或同一账号之后，
+    # 症状是随机的消息丢失与重复，从日志无法回溯到配置。
+    check_instance_conflicts(instances)
 
-    configured = set()
-    for t in CFGManager.values:
-        if t.startswith("bot_") and not t.endswith("_secret"):
-            configured.add(t[4:])
-            if t[4:] not in bots_list:
-                continue
-            if "enable" in CFGManager.values[t][t]:
-                if not CFGManager.values[t][t]["enable"]:
-                    disabled_bots.append(t[4:])
-                    Logger.warning(f"Bot {t[4:]} is disabled in config, skip to launch.")
-            else:
-                Logger.warning(f'Bot {t[4:]} cannot found config "enable".')
-                disabled_bots.append(t[4:])
-
-    # 配置留了但适配器未安装，多由卸载适配器或手改表名造成，提示后跳过而非中止启动。
-    for orphan in sorted(configured - set(bots_list)):
-        Logger.warning(f"Bot {orphan} has config but no adapter is installed, skip to launch.")
-
-    for bl in bots_list:
-        if bl in disabled_bots:
-            continue
-        p = mp.Process(target=go, args=(bl, True, binary_mode), name=bl, daemon=True)
+    for instance in instances:
+        p = mp.Process(
+            target=go,
+            args=(instance.platform, True, binary_mode, instance.instance_id),
+            name=instance.client_name,
+            daemon=True,
+        )
+        # client_name 不保证跨适配器唯一（onebot 与 milky 同为 "QQ"），重启映射因此挂在进程
+        # 对象上而不按名字反查，免得重启时张冠李戴。
+        p.akari_instance = instance
         p.start()
         processes.append(p)
 
@@ -449,8 +716,13 @@ async def run_bot():
                 raise RestartBot
             Logger.critical(f"Process {p.pid} ({p.name}) exited with code {p.exitcode}, please check the log.")
             processes.remove(p)
+            # terminate_process() 会 close() 该进程对象，close 之后读取属性会抛错，故先取出实例记录。
+            instance = getattr(p, "akari_instance", None)
             terminate_process(p)
-            restart_bot_process(p.name)
+            if instance is None:
+                Logger.error(f"Process {p.pid} ({p.name}) has no adapter instance record, skip to restart.")
+                break
+            restart_bot_process(instance)
             break
         await asyncio.sleep(1)
     Logger.critical("All bots exited unexpectedly, please check the output.")

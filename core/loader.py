@@ -29,6 +29,7 @@ from core.types.module.component_meta import (
     HookMeta,
     EventMeta,
 )
+from core.utils.platform_scope import platform_scope
 
 
 async def load_modules():
@@ -36,8 +37,8 @@ async def load_modules():
 
     Logger.info("Attempting to load modules...")
 
-    # 不兼容 core API 的包先剔除，避免其导入期注册的模块进入索引。
-    PackageRegistry.reject_incompatible()
+    # 不兼容 core API 的包与依赖不满足的包都在发现阶段一并剔除（core.registry.PackageRegistry.discover）：
+    # 依赖校验必须与 API 校验同源，才能把「依赖被 API 门槛拒绝的包」一起剔除，避免其导入期注册的模块进入索引。
 
     # 按声明依赖的拓扑序导入：被依赖的包先完成注册，依赖它的包才能在导入期取用其公共面。
     for entry in PackageRegistry.load_order():
@@ -368,13 +369,24 @@ class ModulesManager:
 
         target_from = event_info.target_from
         target_union_info = event_info.target_union_info
-        available_modules = cls.return_modules_list(target_from, event_info.client_name) if target_from else cls.modules
+        available_modules = (
+            cls.return_modules_list(
+                target_from,
+                event_info.client_name,
+                platform_from=event_info.platform_from,
+                platform_name=event_info.platform_name,
+            )
+            if target_from
+            else cls.modules
+        )
         handler_functions = []
         for module_name, event_meta in cls.modules_events.get(event_info.event_name, []):
             module = cls.modules.get(module_name)
             if not module or not module._db_load or module_name not in available_modules:
                 continue
-            if event_meta not in module.events_list.get(target_from):
+            if event_meta not in module.events_list.get(
+                target_from, event_info.client_name, event_info.platform_from, event_info.platform_name
+            ):
                 continue
             if target_union_info and not module.base and module_name not in (target_union_info.modules or []):
                 continue
@@ -670,21 +682,31 @@ class ModulesManager:
 
     @classmethod
     def return_modules_list(
-        cls, target_from: str | None = None, client_name: str | None = None, use_cache: bool = True
+        cls,
+        target_from: str | None = None,
+        client_name: str | None = None,
+        platform_from: str | None = None,
+        platform_name: str | None = None,
+        use_cache: bool = True,
     ) -> dict[str, Module]:
-        # 过滤结果同时取决于 target_from 与 client_name，缓存键必须两者都带上：
-        # 只按 target_from 建键时，同一场景前缀配上不同的客户端名会取到上一次的结果。
-        cache_key = (target_from, client_name)
+        """按当前会话的平台判据筛选可用模块。
+
+        :param target_from: 场景前缀，如 ``Telegram|Group``。
+        :param client_name: 客户端身份，如 ``Telegram`` / ``Telegram-alt``。
+        :param platform_from: 平台场景前缀，如 ``Telegram|Group``；缺省时按 target_from 推导。
+        :param platform_name: 平台展示名，如 ``Telegram``；缺省时按 client_name 推导。
+        :param use_cache: 是否复用按四元组缓存的结果。
+        :return: 模块名到模块的映射。
+        """
+        # 过滤结果取决于四段判据，缓存键必须全部带上：只按 target_from 建键会让同一场景
+        # 配上不同客户端名时取到旧结果，漏掉平台两段则会让一个实例命中另一个实例的缓存。
+        cache_key = (target_from, client_name, platform_from, platform_name)
         if target_from and use_cache and cache_key in cls._return_cache:
             return cls._return_cache[cache_key]
         modules = {module_name: cls.modules[module_name] for module_name in sorted(cls.modules)}
 
         if target_from:
-            if not client_name:
-                if "|" in target_from:
-                    client_name = target_from.split("|")[0]
-                else:
-                    client_name = target_from
+            scope = platform_scope(target_from, client_name, platform_from, platform_name)
             returns = {}
             for m in modules:
                 if isinstance(modules[m], Module):
@@ -692,9 +714,9 @@ class ModulesManager:
                     exclude = modules[m].exclude_from
                     if not modules[m].load:
                         continue
-                    if target_from in exclude or client_name in exclude:
+                    if scope & set(exclude):
                         continue
-                    if target_from in available or client_name in available or "*" in available:
+                    if scope & set(available) or "*" in available:
                         returns.update({m: modules[m]})
             cls._return_cache[cache_key] = returns
             return returns

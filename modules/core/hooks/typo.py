@@ -18,6 +18,7 @@ from core.config.base import CoreConfig
 from core.exports import exports
 from core.loader import ModulesManager
 from core.logger import Logger
+from core.utils.platform_scope import platform_fields
 from core.types import Module
 from core.types.module.component_meta import CommandMeta
 
@@ -229,9 +230,7 @@ async def _(ctx: "Bot.ParserHookContext"):
         return None
     if not ctx.msg.session_info.sender_union_info.sender_data.get("typo_check", True):
         return None
-    modules = ModulesManager.return_modules_list(
-        ctx.msg.session_info.target_from, ctx.msg.session_info.client_name, use_cache=False
-    )
+    modules = ModulesManager.return_modules_list(*platform_fields(ctx.msg.session_info), use_cache=False)
     command_first_word = ctx.command_first_word or (ctx.msg.trigger_msg.split(" ", 1)[0] if ctx.msg.trigger_msg else "")
     if not command_first_word:
         return None

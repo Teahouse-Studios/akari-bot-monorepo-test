@@ -20,6 +20,7 @@ from core.database.models import SenderUnionInfo
 from core.loader import ModulesManager
 from core.logger import Logger
 from core.utils.container import ExpiringTempDict
+from core.utils.platform_scope import scope_allows, scope_of
 
 if TYPE_CHECKING:
     from core.builtins.bot import Bot
@@ -215,16 +216,7 @@ async def _command_authorize(ctx: "Bot.ParserHookContext"):
         return ctx.Stop(message=I18NContext("parser.superuser.permission.denied"))
     if command.required_admin and not await msg.check_permission():
         return ctx.Stop(message=I18NContext("parser.admin.permission.denied.command"))
-    if (
-        not command.load
-        or msg.session_info.target_from in command.exclude_from
-        or msg.session_info.client_name in command.exclude_from
-        or (
-            "*" not in command.available_for
-            and msg.session_info.target_from not in command.available_for
-            and msg.session_info.client_name not in command.available_for
-        )
-    ):
+    if not command.load or not scope_allows(scope_of(msg.session_info), command.available_for, command.exclude_from):
         return ctx.Stop()
     return None
 

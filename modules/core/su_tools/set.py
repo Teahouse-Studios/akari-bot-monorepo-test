@@ -9,6 +9,7 @@ from core.component import module
 from core.database.models import SenderUnionInfo, TargetUnionInfo
 from core.loader import ModulesManager
 from core.logger import Logger
+from core.utils.platform_scope import platform_fields
 
 set_ = module("set", required_superuser=True, base=True, doc=True)
 
@@ -31,10 +32,7 @@ async def _(msg: Bot.MessageSession, target: str):
         modules = [
             m
             for m in [msg.parsed_msg["<modules>"]] + msg.parsed_msg.get("...", [])
-            if m
-            in ModulesManager.return_modules_list(
-                msg.session_info.target_from, client_name=msg.session_info.client_name
-            )
+            if m in ModulesManager.return_modules_list(*platform_fields(msg.session_info))
         ]
         await target_union_info.config_module(modules, True)
         if modules:

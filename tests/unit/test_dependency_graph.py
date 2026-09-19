@@ -318,6 +318,40 @@ def _test_disjoint_cycles_are_all_rejected():
     )
 
 
+def _test_dependency_on_api_rejected_package_cascades():
+    """依赖被 core API 门槛拒绝的包，依赖方也必须一起拒绝，原因指名该依赖。
+
+    条目顺序刻意让依赖方先出现：初始判定时被依赖方尚未登记为拒绝，只有级联才能拦住它。
+    """
+    alpha = _entry("module", "alpha", "akari-bot-module-alpha")
+    beta = PackageEntry(
+        kind="module",
+        name="beta",
+        dist_name="akari-bot-module-beta",
+        version="1.0.0",
+        import_path="modules.beta",
+        root=Path("."),
+        manifest=PackageManifest(requires_core_api=">=99"),
+    )
+    distributions = {
+        "akari-bot-module-alpha": _FakeDistribution("akari-bot-module-alpha", "1.0.0", ("akari-bot-module-beta>=1.0",)),
+        "akari-bot-module-beta": _FakeDistribution("akari-bot-module-beta", "1.0.0"),
+    }
+    with _discovered_from([alpha, beta], distributions):
+        registered = PackageRegistry.modules()
+        rejected = PackageRegistry.incompatible()
+        reported = PackageRegistry.report_lines()
+    alpha_reason = rejected.get("akari-bot-module-alpha", "")
+    return (
+        not registered
+        and set(rejected) == {"akari-bot-module-alpha", "akari-bot-module-beta"}
+        and "akari-bot-module-beta" in alpha_reason
+        and "refused" in alpha_reason
+        and "requires core API" in rejected.get("akari-bot-module-beta", "")
+        and any("akari-bot-module-alpha" in line and "akari-bot-module-beta" in line for line in reported)
+    )
+
+
 def _test_load_order_reports_cycle():
     """直接调用 load_order() 时成环抛异常，异常里列出完整环。"""
     entries = {
