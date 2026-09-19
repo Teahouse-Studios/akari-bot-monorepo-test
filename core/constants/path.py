@@ -34,9 +34,8 @@ logs_path = Paths.logs
 modules_path = Paths.instance / "modules"
 tests_path = Paths.tests
 
-# assets 与 data 的分工：assets 只放随仓库分发的只读内容，运行时或部署者产生的内容一律写进 data。
-# 目录创建不在此处发生：导入 core.constants 会触发本模块取值，若同时建目录，只读取版本号
-# 一类的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 或 PrivateData.ensure() 显式创建。
+# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写进 data。目录创建不在
+# 此处发生，否则只读取版本号的调用也会在当前目录留下副作用；使用方经 Paths.ensure() 创建。
 
 # assets 子路径（只读）
 fonts_path = assets_path / "fonts"
