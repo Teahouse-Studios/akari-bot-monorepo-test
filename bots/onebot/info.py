@@ -1,4 +1,7 @@
-client_name = "QQ"
+from core.constants import Info
+
+platform_name = "QQ"
+client_name = Info.resolve_client_name(platform_name)
 
 sender_prefix = client_name
 sender_prefix_list = [sender_prefix]

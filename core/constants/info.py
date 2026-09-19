@@ -1,3 +1,4 @@
+import re
 from typing import Iterable
 
 
@@ -39,7 +40,9 @@ class Info:
     :param binary_mode: 是否为二进制模式。
     :param command_parsed: 已处理命令数量。
     :param message_parsed: 已处理消息数量。
-    :param client_name: 客户端名称。
+    :param platform_name: 平台展示名，如 ``Telegram``；同一平台的全部实例共用。
+    :param instance_id: 实例 ID，空串表示默认实例。
+    :param client_name: 客户端名称，由平台展示名与实例 ID 派生。
     :param peer_id: 当前 JobQueue 进程实例 ID。
     :param peer_role: 当前 JobQueue 进程角色。
     :param daemon_pid: 守护进程 PID，由守护进程显式传入，独立运行时为 None。
@@ -55,6 +58,9 @@ class Info:
     binary_mode = False
     command_parsed = 0
     message_parsed = 0
+    platform_name = ""
+    # 空串表示默认实例；非空时须匹配 INSTANCE_ID_PATTERN。
+    instance_id = ""
     client_name = ""
     # JobQueue 运行实例 ID 每次进程启动都不同；client_name 仍表示可竞争消费的服务组。
     peer_id = ""
@@ -70,3 +76,21 @@ class Info:
     # 启用后，mock 未命中的请求直接失败，而不是回落到真实网络。
     # 回落会带上重试与超时（默认 3 次 × 20 秒），足以让单个未录制的 URL 拖慢测试逾一分钟。
     http_mock_strict = False
+
+    # 实例 ID 的合法形式。限制字符集是为了让它能安全地拼进 target_id 前缀与配置文件名。
+    INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
+
+    @classmethod
+    def resolve_client_name(cls, platform_name: str) -> str:
+        """由平台展示名与当前实例 ID 派生客户端名称。
+
+        分隔符固定为 ``-``：``|`` 是 target_id 的段分隔符，``#`` 在 TOML 中是注释起始符。
+        默认实例（``instance_id`` 为空）必须逐字节保持历史取值 —— target_id 前缀已写入既有的
+        用户数据库，任何变动都会让现存部署的场景与用户数据失联。
+
+        :param platform_name: 平台展示名，如 ``Telegram``。
+        :return: 默认实例返回平台展示名本身，否则返回 ``<平台>-<实例 ID>``。
+        """
+        if not cls.instance_id:
+            return platform_name
+        return f"{platform_name}-{cls.instance_id}"

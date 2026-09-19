@@ -1,4 +1,7 @@
-client_name = "Discord"
+from core.constants import Info
+
+platform_name = "Discord"
+client_name = Info.resolve_client_name(platform_name)
 
 sender_prefix = f"{client_name}|Client"
 sender_prefix_list = [sender_prefix]

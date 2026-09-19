@@ -1,4 +1,7 @@
-client_name = "KOOK"
+from core.constants import Info
+
+platform_name = "KOOK"
+client_name = Info.resolve_client_name(platform_name)
 
 sender_prefix = f"{client_name}|User"
 sender_prefix_list = [sender_prefix]

@@ -1,4 +1,7 @@
-client_name = "QQBot"
+from core.constants import Info
+
+platform_name = "QQBot"
+client_name = Info.resolve_client_name(platform_name)
 
 sender_prefix = client_name
 sender_tiny_prefix = f"{client_name}|Tiny"
