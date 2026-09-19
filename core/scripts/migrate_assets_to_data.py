@@ -28,6 +28,9 @@ MOVES = [
     ("modules/ai/assets/instructions.txt", "modules/ai/data/instructions.txt"),
     ("modules/ai/assets/llm_api_list.yaml", "modules/ai/data/llm_api_list.yaml"),
     ("modules/ai/assets/llm_api_list.yml", "modules/ai/data/llm_api_list.yml"),
+    ("modules/phigros/assets/song_info.json", "modules/phigros/data/song_info.json"),
+    ("modules/phigros/assets/resource_version.txt", "modules/phigros/data/resource_version.txt"),
+    ("modules/phigros/assets/illustration", "modules/phigros/data/illustration"),
     ("modules/mkey/data", "modules/mkey/assets/data"),
     ("modules/threedsdb/data", "modules/threedsdb/assets/data"),
 ]

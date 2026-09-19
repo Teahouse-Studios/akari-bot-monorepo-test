@@ -78,13 +78,16 @@ class PrivateData:
 
 
 def module_data_path(module_dir: str | Path) -> Path:
-    """取模块的可写数据目录，并确保其存在。
+    """取模块的可写数据目录，不创建它。
 
     模块内的 ``assets`` 只放随仓库分发的只读内容；下载所得的资源、运行时生成的索引等
     应写入模块的 ``data`` 目录。
 
+    **不在此处建目录**：模块常在导入期调用本函数，而导入期建目录会使只读安装
+    （包目录 ``chmod a-w`` 或 wheel 安装）下 ``import`` 本身抛 ``PermissionError``，
+    模块连加载都失败。目录由写入方在使用时创建。
+
     :param module_dir: 模块根目录，例如 ``Path(__file__).parent``。
+    :return: 数据目录路径，可能尚不存在。
     """
-    path = Path(module_dir).resolve() / "data"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return Path(module_dir).resolve() / "data"

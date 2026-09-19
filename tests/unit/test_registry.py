@@ -255,13 +255,35 @@ def _test_frozen_registry_takes_precedence():
     return list(modules) == ["frozen"]
 
 
-def _test_data_dir_is_per_kind_and_name():
+def _test_package_data_is_per_kind_and_name():
     """数据目录按种类与包名分层。"""
     with tempfile.TemporaryDirectory() as tmp:
         entry = _entry("module", "sample", "modules.sample", Path(tmp))
         with patch.object(PackageRegistry, "_instance_data_root", return_value=Path("/instance/data")):
-            directory = PackageRegistry.data_dir(entry)
+            directory = PackageRegistry.package_data(entry)
     return directory == Path("/instance/data/module/sample")
+
+
+def _test_package_data_uses_instance_data_root():
+    """包数据目录取实例的可写 data 目录，而非只读的 assets。"""
+    from core.paths import Paths
+
+    with tempfile.TemporaryDirectory() as tmp:
+        entry = _entry("module", "sample", "modules.sample", Path(tmp))
+        directory = PackageRegistry.package_data(entry)
+    return directory == Paths.data / "module" / "sample" and Paths.data.name == "data"
+
+
+def _test_package_assets_follows_manifest():
+    """包内静态资源目录取 manifest.assets，未声明时退回包根。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        declared = _entry("module", "declared", "modules.declared", root, assets="assets")
+        undeclared = _entry("module", "undeclared", "modules.undeclared", root)
+        with _isolated_registry({"module:declared": declared, "module:undeclared": undeclared}):
+            with_manifest = PackageRegistry.package_assets("declared")
+            without_manifest = PackageRegistry.package_assets(undeclared)
+    return with_manifest == root / "assets" and without_manifest == root
 
 
 def _test_incompatible_packages_are_rejected():
@@ -335,7 +357,9 @@ async def test_registry(tester: Tester):
     await tester.test(_test_import_roots_cover_registered_packages, "顶层段覆盖已注册包")
     await tester.test(_test_core_api_version_is_declared, "公共 API 版本已声明")
     await tester.test(_test_frozen_registry_takes_precedence, "frozen registry 优先")
-    await tester.test(_test_data_dir_is_per_kind_and_name, "数据目录按种类与包名分层")
+    await tester.test(_test_package_data_is_per_kind_and_name, "包数据目录按种类与包名分层")
+    await tester.test(_test_package_data_uses_instance_data_root, "包数据目录取实例 data")
+    await tester.test(_test_package_assets_follows_manifest, "包静态资源目录取 manifest.assets")
     await tester.test(_test_incompatible_packages_are_rejected, "API 不兼容的包被拒绝注册")
     await tester.test(_test_unparsable_api_specifier_is_rejected, "描述符不可解析时拒绝注册")
     await tester.test(_test_compatible_packages_are_kept, "API 兼容的包保留注册")

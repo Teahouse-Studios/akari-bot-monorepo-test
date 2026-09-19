@@ -4,23 +4,22 @@ import orjson
 
 from core.builtins.bot import Bot
 from core.builtins.message.internal import I18NContext
-from core.constants.path import PrivateData
 from core.logger import Logger
 
 from .PhiCloudActionAsync.ActionLib import countRks, decryptSave, unzipFile
-from .assets import load_song_info, to_difficulty_table
+from .assets import load_song_info, pgr_data_path, to_difficulty_table
 from .client import phigros_cloud
 
 
 def cache_files(union_id: str) -> tuple[Path, Path]:
     """取指定用户的存档缓存路径与元数据路径。
 
-    存放于 PrivateData 而非 cache 目录：后者在每次启动时会被整体删除，
-    置于其下的回退副本仅在单次运行内有效。
+    与其余运行时资源同置于模块 data 目录；不放 cache 目录是因为后者每次启动会被
+    整体删除，置于其下的回退副本仅在单次运行内有效。
 
     :param union_id: 用户联合 ID。
     """
-    directory = PrivateData.path / "phigros" / "saves"
+    directory = pgr_data_path / "saves"
     directory.mkdir(parents=True, exist_ok=True)
     safe = union_id.replace("|", "_")
     return directory / f"{safe}.zip", directory / f"{safe}.json"

@@ -562,22 +562,44 @@ class PackageRegistry:
         ]
 
     @classmethod
-    def data_dir(cls, name_or_entry: str | PackageEntry) -> Path:
+    def package_data(cls, name_or_entry: str | PackageEntry) -> Path:
         """包在实例内的可写数据目录。
 
+        运行时下载、索引与用户配置写在此处，不写回包目录：包目录在只读挂载与 wheel
+        安装两种形态下都不可写。目录须由调用方经 :meth:`Paths.ensure` 创建。
+
         :param name_or_entry: 包名或条目。
-        :return: 数据目录路径；调用方负责创建。
+        :return: 数据目录路径。
         :raises KeyError: 该名称不是已发现的包。
         """
         entry = cls._resolve(name_or_entry)
         return cls._instance_data_root() / entry.kind / entry.name
 
+    @classmethod
+    def package_assets(cls, name_or_entry: str | PackageEntry) -> Path:
+        """包内只读静态资源目录。
+
+        安装为 wheel 后该目录位于 site-packages 内，只可读取。声明了 ``manifest.assets``
+        时取该相对路径，否则取包根目录。
+
+        :param name_or_entry: 包名或条目。
+        :return: 资源目录路径。
+        :raises KeyError: 该名称不是已发现的包。
+        """
+        entry = cls._resolve(name_or_entry)
+        relative = entry.manifest.assets
+        return entry.root / relative if relative else entry.root
+
     @staticmethod
     def _instance_data_root() -> Path:
-        """实例数据根目录。"""
-        from core.constants.path import assets_path
+        """实例数据根目录。
 
-        return assets_path / "data"
+        取实例的可写 data 目录，而非顶层只读的 assets：包的可写数据不属于随仓库分发的
+        内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
+        """
+        from core.paths import Paths
+
+        return Paths.data
 
     @classmethod
     def _resolve(cls, name_or_entry: str | PackageEntry) -> PackageEntry:

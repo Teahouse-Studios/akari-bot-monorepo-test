@@ -1,14 +1,18 @@
 from pathlib import Path
 
+from core.constants.path import module_data_path
+
 SONGS_PER_PAGE = 30
 SONGS_NEED_IMG = 10
 
 mai_module_path = Path(__file__).parent.parent
 mai_assets_path = mai_module_path / "assets"
-mai_cover_path = mai_assets_path / "static" / "mai" / "cover"
-mai_alias_path = mai_assets_path / "mai_song_alias.json"
+# 下载所得索引与封面写入模块 data 目录：包目录在只读部署下不可写，静态资料仍随仓库分发。
+mai_data_path = module_data_path(mai_module_path)
+mai_cover_path = mai_data_path / "static" / "mai" / "cover"
+mai_alias_path = mai_data_path / "mai_song_alias.json"
+mai_song_info_path = mai_data_path / "mai_song_info.json"
 mai_grade_info_path = mai_assets_path / "mai_grade_info.json"
-mai_song_info_path = mai_assets_path / "mai_song_info.json"
 mai_utage_info_path = mai_assets_path / "mai_utage_info.json"
 
 achievement_list = [

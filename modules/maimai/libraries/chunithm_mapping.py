@@ -1,9 +1,9 @@
-from .maimaidx_mapping import mai_assets_path
+from .maimaidx_mapping import mai_data_path
 
 SONGS_PER_PAGE = 30
 
-chu_cover_path = mai_assets_path / "static" / "chu" / "cover"
-chu_song_info_path = mai_assets_path / "chu_song_info.json"
+chu_cover_path = mai_data_path / "static" / "chu" / "cover"
+chu_song_info_path = mai_data_path / "chu_song_info.json"
 
 score_to_rate = {
     (0, 499999): "D",

@@ -9,10 +9,15 @@ from core.logger import Logger
 from core.utils.cache import random_cache_path
 from core.utils.http import get_url, download
 
-pgr_assets_path = Path(__file__).parent.parent / "assets"
-song_info_path = pgr_assets_path / "song_info.json"
-illustration_dir = pgr_assets_path / "illustration"
-version_path = pgr_assets_path / "resource_version.txt"
+pgr_module_path = Path(__file__).parent.parent
+# assets 只放随仓库分发的静态资源，下载所得的曲目信息、版本号与曲绘写入 data。目录创建留到
+# 写入时进行，导入模块或仅读取路径的调用不在包内留下副作用。
+pgr_assets_path = pgr_module_path / "assets"
+pgr_data_path = pgr_module_path / "data"
+
+song_info_path = pgr_data_path / "song_info.json"
+illustration_dir = pgr_data_path / "illustration"
+version_path = pgr_data_path / "resource_version.txt"
 
 RESOURCE_BASE = "https://raw.githubusercontent.com/7aGiven/Phigros_Resource"
 INFO_TSV_URL = f"{RESOURCE_BASE}/refs/heads/info/info.tsv"
@@ -252,7 +257,8 @@ async def update_assets(update_illustration: bool = True) -> bool:
             Logger.error("Fetched empty song info from remote resource.")
             return False
 
-        pgr_assets_path.mkdir(parents=True, exist_ok=True)
+        # 曲绘目录由下载流程自行创建，元数据写入前须单独确保数据目录存在。
+        pgr_data_path.mkdir(parents=True, exist_ok=True)
         temp_path = f"{random_cache_path()}.json"
         with open(temp_path, "wb") as f:
             f.write(orjson.dumps(song_info, option=orjson.OPT_INDENT_2))

@@ -87,14 +87,6 @@ CLAUDE.md
 modules/*/data/*
 !modules/ai/data/instructions.txt
 
-# Module Assets (Manually set)
-modules/maimai/assets/chu_song_info.json
-modules/maimai/assets/mai_song_alias.json
-modules/maimai/assets/mai_song_info.json
-modules/phigros/assets/resource_version.txt
-modules/phigros/assets/illustration/*
-modules/phigros/assets/song_info.json
-
 # Retired Client Data
 /data/retired/*
 

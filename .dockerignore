@@ -18,6 +18,12 @@ tester.py
 # Runtime cache (recreated on startup)
 cache/
 
+# 实例可写数据（部署时挂载或首次启动重建）。打进镜像会把开发机的运行数据带进容器，
+# 且与 assets/ 只读、data/ 可写的分工相反。
+data/
+database/
+logs/
+
 # Documentation
 SECURITY.md
 CODE_OF_CONDUCT.md

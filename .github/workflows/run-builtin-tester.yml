@@ -70,6 +70,21 @@ jobs:
         run: |
           uv run python tester.py
 
+      - name: Run tests with read-only package directories
+        timeout-minutes: 60
+        env:
+          CI: "1"
+          AKARI_TEST_TIME_SCALE: "10"
+        run: |
+          # 包目录在只读挂载与 wheel 安装下都不可写，此处以权限位复现该约束。
+          # 只覆盖测试触及的代码路径；未被测试执行的下载路径另由人工复核守住，
+          # 见 generated_docs/monorepo_refactor_prep.md 的 P2 记录。
+          # 目录名在此硬编码：拆包后 core modules 不再存在，该门禁会静默通过而失去作用，
+          # 故 T4.1 之后须改为从包清单取路径，或改为对 packages/ 整树置只读。
+          chmod -R a-w core modules
+          trap 'chmod -R u+w core modules' EXIT
+          uv run python tester.py
+
       - name: Generate test report
         uses: dorny/test-reporter@v3
         if: always()
