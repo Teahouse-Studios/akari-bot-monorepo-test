@@ -203,9 +203,9 @@ def _test_fresh_process_generates_bot_adapter_config():
                 sys.executable,
                 "-c",
                 (
-                    "from core.constants import all_locales_path, lang_list; "
-                    "from core.i18n import build_locale_snapshot, connect_locale_snapshot; "
-                    "build_locale_snapshot(list(lang_list.keys()), all_locales_path, 'akari-bot'); "
+                    "from core.constants import lang_list; "
+                    "from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
+                    "build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), 'akari-bot'); "
                     "connect_locale_snapshot('akari-bot'); "
                     "from core.config.scan import scan_config_templates; "
                     "failed = scan_config_templates(); "
