@@ -81,16 +81,19 @@ class Info:
     INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 
     @classmethod
-    def resolve_client_name(cls, platform_name: str) -> str:
-        """由平台展示名与当前实例 ID 派生客户端名称。
+    def resolve_client_name(cls, platform_name: str, instance_id: str | None = None) -> str:
+        """由平台展示名与实例 ID 派生客户端名称。
 
         分隔符固定为 ``-``：``|`` 是 target_id 的段分隔符，``#`` 在 TOML 中是注释起始符。
-        默认实例（``instance_id`` 为空）必须逐字节保持历史取值 —— target_id 前缀已写入既有的
-        用户数据库，任何变动都会让现存部署的场景与用户数据失联。
+        默认实例（实例 ID 为空）必须逐字节保持历史取值 —— target_id 前缀已写入既有的用户
+        数据库，任何变动都会让现存部署的场景与用户数据失联。
 
         :param platform_name: 平台展示名，如 ``Telegram``。
+        :param instance_id: 实例 ID；省略时取 ``cls.instance_id``。守护进程枚举各实例身份时
+            须显式传入：它自己不是任何实例，其 ``cls.instance_id`` 恒为空。
         :return: 默认实例返回平台展示名本身，否则返回 ``<平台>-<实例 ID>``。
         """
-        if not cls.instance_id:
+        resolved = cls.instance_id if instance_id is None else instance_id
+        if not resolved:
             return platform_name
-        return f"{platform_name}-{cls.instance_id}"
+        return f"{platform_name}-{resolved}"
