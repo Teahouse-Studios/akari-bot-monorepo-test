@@ -85,7 +85,6 @@ CLAUDE.md
 
 # Module Data
 modules/*/data/*
-!modules/ai/data/instructions.txt
 
 # Retired Client Data
 /data/retired/*

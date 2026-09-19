@@ -9,7 +9,8 @@ from core.constants.path import module_data_path
 ai_module_path = Path(__file__).parent
 ai_data_path = module_data_path(ai_module_path)
 
-instructions_path = ai_data_path / "instructions.txt"
+# 默认提示词随仓库分发，属只读资源；用户可编辑的接口清单才写进可写的 data 目录。
+instructions_path = ai_module_path / "assets" / "instructions.txt"
 if instructions_path.exists():
     with open(instructions_path, "r", encoding="utf-8") as f:
         INSTRUCTIONS = f.read()
