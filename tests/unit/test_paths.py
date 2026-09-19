@@ -39,9 +39,9 @@ def _probe(env_overrides: dict[str, str]) -> dict[str, str]:
         text=True,
         encoding="utf-8",
         timeout=60,
-        check=True,
+        check=False,
     )
-    parsed = {}
+    parsed = {"_returncode": str(result.returncode), "_stderr": result.stderr[-400:]}
     for line in result.stdout.splitlines():
         if line.startswith(("INSTANCE ", "CONFIG ", "DATA ", "TESTS ")):
             key, _, value = line.partition(" ")
@@ -58,15 +58,21 @@ def _test_defaults_to_process_cwd():
 
 
 def _test_instance_dir_env_selects_instance():
-    """AKARI_INSTANCE_DIR 指向的目录即实例根，各子目录由其派生。"""
+    """AKARI_INSTANCE_DIR 指向的目录即实例根，data 等子目录由其派生。
+
+    config 的断言只在未设置 AKARI_CONFIG_PATH 时成立：测试基座会为该变量指向一份临时
+    配置，此处显式清空它，避免用例结论取决于外层环境。
+    """
     with tempfile.TemporaryDirectory() as tmp:
         instance = Path(tmp) / "inst"
-        values = _probe({INSTANCE_DIR_ENV: str(instance)})
-        return (
+        values = _probe({INSTANCE_DIR_ENV: str(instance), "AKARI_CONFIG_PATH": ""})
+        if (
             values.get("INSTANCE") == str(instance.resolve())
             and values.get("CONFIG") == str(instance.resolve() / "config")
             and values.get("DATA") == str(instance.resolve() / "data")
-        )
+        ):
+            return True
+        raise AssertionError(f"probe returned {values}")
 
 
 def _test_config_path_env_wins_over_instance():
