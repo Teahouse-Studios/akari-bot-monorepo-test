@@ -802,7 +802,11 @@ def main():
         except RestartBot:
             clear_import_cache()
             continue
-        except (KeyboardInterrupt, SystemExit):
+        except SystemExit as exit_signal:
+            # 重新抛出而非 break：run_bot() 跑在守护进程自身而非子进程，其 sys.exit(code) 若在此
+            # 被吞掉，进程会以 0 退出，把「配置冲突中止」报成正常结束，守护工具因而不会告警。
+            raise exit_signal
+        except KeyboardInterrupt:
             break
 
 
