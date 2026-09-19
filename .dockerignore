@@ -23,6 +23,7 @@ cache/
 data/
 database/
 logs/
+modules/*/data/
 
 # Documentation
 SECURITY.md

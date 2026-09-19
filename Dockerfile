@@ -17,6 +17,9 @@ WORKDIR /akari-bot
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+# 实例目录显式声明：未声明时由进程 cwd 决定，改动 WORKDIR 或在别处启动会静默改变
+# 配置、日志与数据库的落点。
+ENV AKARI_INSTANCE_DIR=/akari-bot
 
 RUN apt-get update && apt-get install -y \
     fonts-noto-cjk \
