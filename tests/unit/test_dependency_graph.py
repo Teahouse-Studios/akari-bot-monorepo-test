@@ -440,6 +440,7 @@ async def test_dependency_graph(tester: Tester):
     await tester.test(_test_circular_dependencies_are_rejected, "成环的包全部被拒绝注册")
     await tester.test(_test_disjoint_cycles_are_all_rejected, "互不相交的环各自报出路径")
     await tester.test(_test_load_order_reports_cycle, "load_order 遇环抛异常并列出环")
+    await tester.test(_test_dependency_on_api_rejected_package_cascades, "依赖被 API 拒绝的包级联拒绝")
     await tester.test(_test_extra_marked_dependencies_follow_installed_extras, "extra 未装的依赖被忽略")
     await tester.test(
         _test_undeclared_ast_dependency_warns_and_stays_in_closure,

@@ -55,7 +55,8 @@ async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None 
     if show_logs:
         Logger.info("Attempting to load modules...")
 
-    # 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。
+    # 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。刻意不走
+    # load_order()：测试不校验跨包依赖声明，按包名字典序枚举即可，测试基座不必依赖依赖图机制。
     for entry in PackageRegistry.modules().values():
         module_py_name = entry.import_path
 

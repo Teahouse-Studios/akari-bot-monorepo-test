@@ -1007,9 +1007,11 @@ class PackageRegistry:
     def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
         """该分发声明且已装的 extra。
 
-        分发 metadata 只记录 ``Requires-Dist`` 与 ``Provides-Extra`` 两份清单，不记录
-        装包时选中了哪些 extra。此处以「该 extra 下属的依赖都能解析为已装分发」作为已装
-        判据：extra 未选中时其依赖不会被安装，判据随之不成立。
+        分发 metadata 只记录 ``Requires-Dist`` 与 ``Provides-Extra`` 两份清单，不记录装包
+        时选中了哪些 extra，因此任何实现都只能是启发式，读到此处的代码须知道本处用的是哪
+        一种：以「该 extra 下属的依赖都能解析为已装分发」作为已装判据——extra 未选中时其依
+        赖不会被安装，判据随之不成立。已知边界：环境里恰好手工装齐了某个未选中 extra 的全部
+        依赖时，该 extra 会被误判为已装，代价是多记一条依赖边。既有测试固化的是这套判据。
 
         :param distribution: 分发对象。
         :param requirements: 已解析的 ``Requires-Dist``。
