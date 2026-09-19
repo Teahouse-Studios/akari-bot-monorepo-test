@@ -89,6 +89,7 @@ __all__ = [
     "MessageChain",
     "MessageNodes",
     "MessageSession",
+    "MigrationContext",
     "Module",
     "ModuleRuntimeManager",
     "ModuleStatus",
@@ -335,9 +336,10 @@ try:
     from core.config.base import BaseConfig, CoreConfig, CoreSecretConfig
     from core.config.decorator import on_bot_config, on_module_config
 
-    # 数据库：定义模块模型与使用核心数据表。
+    # 数据库：定义模块模型、声明包内迁移与使用核心数据表。
     from core.database import fetch_module_db, get_model_fields, get_model_names
     from core.database.base import DBModel
+    from core.database.migration import MigrationContext
     from core.database.models import (
         UNION_SCOPE_SENDER,
         UNION_SCOPE_TARGET,
@@ -508,6 +510,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "core.constants.info": ("Info", "Secret"),
     "core.database": ("fetch_module_db", "get_model_fields", "get_model_names"),
     "core.database.base": ("DBModel",),
+    "core.database.migration": ("MigrationContext",),
     "core.database.models": (
         "AnalyticsData",
         "JobQueuesTable",

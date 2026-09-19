@@ -12,7 +12,8 @@ from core.database.models import (
     TargetUnionInfo,
 )
 from core.utils.retired import RETIRED_SOURCES, RETIRED_TARGETS, enqueue_notice, is_merge_route_allowed
-from core.utils.union_merge import (
+from core.utils.container import ExpiringTempDict
+from modules.core.common_tools._union_merge import (
     BIND_CODE_EXPIRED,
     apply_sender_merge,
     apply_target_merge,
@@ -26,7 +27,6 @@ from core.utils.union_merge import (
     take_code,
     target_lines,
 )
-from core.utils.container import ExpiringTempDict
 from modules.core.common_tools.bind import b
 
 # 迁移码与 bind 的绑定码分开存放，两者不可互相消费：

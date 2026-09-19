@@ -15,7 +15,7 @@ from core.logger import Logger
 from core.module_runtime import ModuleRuntimeManager
 from core.utils.container import ExpiringTempDict
 from core.utils.random import SecureRandom
-from core.utils.union_merge import (
+from modules.core.common_tools._union_merge import (
     BIND_CODE_EXPIRED,
     apply_sender_merge,
     apply_target_merge,

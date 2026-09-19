@@ -1,0 +1,14 @@
+# import 分层检查（tools/lint_boundaries.py）的基线豁免清单。
+# 每行一条，格式：<路径>\t<规则编号>\t<被 import 的点分路径>。不含行号，代码移动后豁免仍然有效。
+# 键由 tools/lint_boundaries.py --generate-baseline 生成，随清理逐步缩小。
+# 生成时的违规总数：9（B1 warn 9，B2 error 0，B3 error 0，B4 error 0，B5 error 0）。
+
+modules/weekly/__init__.py	B1	modules.wiki.utils.screenshot_image.generate_screenshot_v2
+modules/weekly/__init__.py	B1	modules.wiki.utils.wikilib.WikiLib
+modules/weekly_rss/__init__.py	B1	modules.weekly.get_teahouse_rss
+modules/weekly_rss/__init__.py	B1	modules.weekly.get_weekly
+modules/wikilog/__init__.py	B1	modules.wiki.config.WikiConfig
+modules/wikilog/__init__.py	B1	modules.wiki.utils.ab.convert_ab_to_detailed_format
+modules/wikilog/__init__.py	B1	modules.wiki.utils.rc.convert_rc_to_detailed_format
+modules/wikilog/__init__.py	B1	modules.wiki.utils.wikilib.BlockedWikiError
+modules/wikilog/__init__.py	B1	modules.wiki.utils.wikilib.WikiLib

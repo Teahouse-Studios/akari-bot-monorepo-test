@@ -250,8 +250,8 @@ def on_base_config():
     def wrap(cls: type[T]):
         # 表名传 None：这类键不属于 [config]，也不属于任何其它表。
         # 补写路径不支持在表外新建键，键不存在时将被写入 [config] 表。该情形不会出现：
-        # 这些键由 core/scripts/config_generate.py 在建立配置文件时写入，
-        # 并由 core/config/update.py 的版本迁移保证存在，二者均先于模板的处理执行。
+        # 这些键由 bot.py 首次运行写出的骨架建立，并由 core/config/update.py 的版本迁移保证
+        # 存在，二者均先于模板的处理执行。
         return _process_class(cls, None, False)
 
     return wrap

@@ -5,7 +5,7 @@ from core.constants.default import default_locale as default_locale_default
 from core.constants.version import config_version as config_version_default
 
 
-# 位于 config.toml 中任何表之外的顶层键值对。它们在配置文件建立时由 config_generate.py 写入，
+# 位于 config.toml 中任何表之外的顶层键值对。它们在首次运行时由 bot.py 写出骨架，
 # 并由 core/config/update.py 的版本迁移维护，声明在此仅为提供一个带类型的读取入口。
 @on_base_config()
 class BaseConfig:

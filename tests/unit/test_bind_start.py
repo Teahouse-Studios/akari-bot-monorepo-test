@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import modules.core.common_tools.bind as bind
-from core.utils.union_merge import generate_code
+from modules.core.common_tools._union_merge import generate_code
 from core.builtins.session.info import SessionInfo
 from core.builtins.session.internal import MessageSession
 from core.constants.exceptions import SessionFinished

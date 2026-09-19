@@ -1,4 +1,4 @@
-"""core.utils.bud 单元测试 - 花苞（拼手气红包）系统。"""
+"""modules.core.common_tools._bud 单元测试 - 花苞（拼手气红包）系统。"""
 
 from core.builtins.message.chain import MessageChain
 from core.builtins.session.info import SessionInfo
@@ -10,7 +10,7 @@ from core.tester.mock.session import MockMessageSession
 async def _test_split_amount_conservation():
     """split_amount - 总额守恒且份数正确"""
     try:
-        from core.utils.bud import split_amount
+        from modules.core.common_tools._bud import split_amount
 
         for total, count in [(100, 5), (10, 10), (1, 1), (999, 3)]:
             shares = split_amount(total, count)
@@ -26,7 +26,7 @@ async def _test_split_amount_conservation():
 async def _test_split_amount_minimum():
     """split_amount - 每份至少 1 片"""
     try:
-        from core.utils.bud import split_amount
+        from modules.core.common_tools._bud import split_amount
 
         for _ in range(200):
             shares = split_amount(50, 8)
@@ -40,7 +40,7 @@ async def _test_split_amount_minimum():
 async def _test_split_amount_avoids_extreme_small_shares():
     """split_amount - 余量充足时避免拆出 1 片"""
     try:
-        from core.utils.bud import split_amount
+        from modules.core.common_tools._bud import split_amount
 
         for _ in range(200):
             shares = split_amount(50, 8)
@@ -54,7 +54,7 @@ async def _test_split_amount_avoids_extreme_small_shares():
 async def _test_split_amount_invalid():
     """split_amount - 非法参数抛异常"""
     try:
-        from core.utils.bud import split_amount
+        from modules.core.common_tools._bud import split_amount
 
         for total, count in [(0, 1), (5, 6), (3, 0)]:
             try:
@@ -70,7 +70,7 @@ async def _test_split_amount_invalid():
 async def _test_generate_bud_id():
     """generate_bud_id - 非空且不与已有 ID 冲突"""
     try:
-        from core.utils.bud import generate_bud_id
+        from modules.core.common_tools._bud import generate_bud_id
 
         existing = {"abc12345", "xyz98765"}
         bud_id = generate_bud_id(existing)
@@ -82,7 +82,7 @@ async def _test_generate_bud_id():
 async def _test_bud_ttl_24h():
     """BUD_TTL_SECONDS - 花苞有效期为 24 小时"""
     try:
-        from core.utils.bud import BUD_TTL_SECONDS
+        from modules.core.common_tools._bud import BUD_TTL_SECONDS
 
         return BUD_TTL_SECONDS == 24 * 60 * 60
     except Exception:
@@ -93,7 +93,7 @@ async def _test_bud_refund_on_expiry():
     """过期花苞未领取部分退回发送者"""
     try:
         from core.database.models import SenderUnionInfo
-        from core.utils.bud import BUD_STORE_KEY, BUD_STORE_SCOPE, claim_bud, create_bud, find_bud
+        from modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, claim_bud, create_bud, find_bud
         from core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|0", petal=0)
@@ -140,7 +140,7 @@ async def _test_release_buds():
     """release_buds - 清理空花苞并退款清理过期花苞"""
     try:
         from core.database.models import SenderUnionInfo
-        from core.utils.bud import BUD_STORE_KEY, BUD_STORE_SCOPE, create_bud, release_buds
+        from modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, create_bud, release_buds
         from core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|release", petal=0)
@@ -167,7 +167,7 @@ async def _test_release_buds():
 
 @func_case
 async def test_bud(tester: Tester):
-    """core.utils.bud: 花苞系统测试"""
+    """modules.core.common_tools._bud: 花苞系统测试"""
     await tester.test(_test_split_amount_conservation, "split_amount 总额守恒测试")
     await tester.test(_test_split_amount_minimum, "split_amount 每份至少 1 片测试")
     await tester.test(_test_split_amount_avoids_extreme_small_shares, "split_amount 避免极端小额测试")

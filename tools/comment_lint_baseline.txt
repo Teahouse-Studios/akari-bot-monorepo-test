@@ -103,11 +103,11 @@ core/utils/html2text/utils.py	R7	If the text begins with a single -, *, or +, fo
 core/utils/petal.py	R7	花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不再按客户端分桶，
 core/utils/retired.py	R7	``enqueue_notice`` 的判断与占位之间包含首次读取已发记录的 await。若没有互斥，两个并发消息会
 core/utils/retired.py	R7	退役实例上仍可执行的模块。命令路径与正则路径共用这一份判据，
-core/utils/union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
 modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
 modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
 modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
 modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
+modules/core/common_tools/_union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
 modules/core/common_tools/bind.py	R7	同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对
 modules/core/common_tools/help.py	R7	fname = f"{random_cache_path()}.html"
 modules/core/common_tools/help.py	R7	每节为 (区隔行文案, [(种类, 首列, 次列), ...])；命令一节不带区隔行。

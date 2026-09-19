@@ -507,7 +507,7 @@ def _test_union_merge_logs_stay_out_of_repo_data():
     """合并日志须写进测试隔离的目录，合成记录不得落进 data/。"""
     from core.constants.path import data_path, union_merge_logs_path
     from core.database.models import UNION_SCOPE_SENDER
-    from core.utils.union_merge import write_merge_log
+    from modules.core.common_tools._union_merge import write_merge_log
 
     repo_logs_dir = data_path / "union_merge_logs"
     before = set(repo_logs_dir.glob("*.json")) if repo_logs_dir.is_dir() else set()
