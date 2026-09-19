@@ -162,9 +162,15 @@ def _test_private_data_is_lazy():
     return not before and created == root / "private" / "default" and is_directory
 
 
-def _test_private_data_follows_instance_data():
-    """默认私有目录派生于实例 data 目录。"""
-    return PrivateData.path.parent.parent == Paths.data and PrivateData.path.name == "default"
+def _test_private_data_lives_under_data():
+    """私有目录位于实例 data/private 之下。
+
+    末级目录名取决于当前客户端（default 或 client_name 的小写），不在此断言其取值。
+    """
+    path = PrivateData.path
+    if not isinstance(path, Path) or Paths.data / "private" not in path.parents:
+        raise AssertionError(f"PrivateData.path={path!r} type={type(path).__name__}")
+    return True
 
 
 @func_case
@@ -179,5 +185,5 @@ async def test_paths(tester: Tester):
     await tester.test(_test_ensure_rejects_non_directory_names, "ensure 拒绝非目录属性名")
     await tester.test(_test_as_dict_lists_every_instance_directory, "as_dict 覆盖全部子目录")
     await tester.test(_test_private_data_is_lazy, "私有目录惰性创建")
-    await tester.test(_test_private_data_follows_instance_data, "私有目录派生于实例 data")
+    await tester.test(_test_private_data_lives_under_data, "私有目录位于 data/private 之下")
     return tester
