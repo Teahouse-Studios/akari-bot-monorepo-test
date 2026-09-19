@@ -1,13 +1,14 @@
 # 注释书面语检查的基线豁免清单。
 # 每行一条，格式：<路径>\t<规则编号>\t<注释文本>。不含行号，代码移动后豁免仍然有效。
 # 键由 tools/lint_comments.py --generate-baseline 生成，随清理逐步缩小。
-# 生成时的违规总数：138
+# 生成时的违规总数：140
 
 bots/discord/context.py	R7	if session_info.session_id not in cls.context:
 bots/matrix/bot.py	R7	Logger.info(f"Trying first sync")
 bots/matrix/bot.py	R7	is_direct = (room.member_count == 1 or room.member_count == 2) and room.join_rule == "invite"
 bots/matrix/context.py	R7	When the room does not follow MSC4291, ignore it silently
 bots/matrix/context.py	R7	if session_info.session_id not in cls.context:
+bots/milky/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
 bots/onebot/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
 bots/qqbot/context.py	R7	ButtonFrame is shared by platforms with different keyboard limits. Split
 bots/qqbot/context.py	R7	QQ Bot inline keyboards accept at most five rows with ten buttons per row.
@@ -16,9 +17,9 @@ bots/qqbot/navigation.py	R7	C2C 输入框上菜单
 bots/telegram/context.py	R7	if session_info.session_id not in cls.context:
 bots/web/api/api.py	R7	时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
 core/builtins/filter/protect.py	R7	---------------------------------------------------------
-core/builtins/message/chain.py	R7	使用正则表达式查找并包装用户 ID
 core/builtins/message/chain.py	R7	可作为消息发送的入参类型。仅用于约束参数，不存在输入与输出的类型绑定，
 core/builtins/message/chain.py	R7	指令操作是行内元素：它自身的产物、以及紧随其后的纯文本，
+core/builtins/message/mention.py	R7	AT 码格式：<AT:client|userid> / <@:client|userid>，client 与 userid 之间允许存在额外字段。
 core/builtins/parser/args.py	R6	无标志的可选参数暂时存储到 afters，后续处理
 core/builtins/parser/args.py	R6	暂时将其添加到 afters 列表，在剩余参数处理时再处理
 core/builtins/parser/args.py	R7	========== 步骤 1.5: 分离 `--` 之后的操作数 ==========
@@ -54,7 +55,6 @@ core/builtins/session/tasks.py	R7	存储活跃任务的字典，索引只使用�
 core/builtins/session/tasks.py	R7	检查当前物理平台场景是否有对此消息的回调需要执行。先选择真实／虚拟
 core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it is a key-value pair outside the table
 core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it"s a key-value pair outside the table
-core/config/__init__.py	R7	守护进程在 spawn 子进程之前置位，spawn 会继承环境。
 core/config/core.py	R7	密钥项写在 config.toml 的 [secret] 表内，故表名为 config、以 secret 标志区分，
 core/config/decorator.py	R7	只读进程不补写配置文件：生成统一在 bot.py 的 pre_init() 中完成，
 core/config/decorator.py	R7	声明字段必须从类命名空间中移除：类属性会先于元类的 __getattr__ 命中，
@@ -62,6 +62,7 @@ core/config/decorator.py	R7	检查配置项是否已存在于目标表中，不�
 core/config/decorator.py	R7	表名传 None：这类键不属于 [config]，也不属于任何其它表。
 core/config/update.py	R7	If config version not exists, regenerate the config file (assumed as
 core/constants/__init__.py	R7	Some definitions that should be hardcoded in the project for avoiding circular imports.
+core/constants/path.py	R7	union 合并日志目录的环境变量名。测试引导据此把测试合成的合并记录写进临时目录，
 core/constants/path.py	R7	配置只读模式的环境变量名。守护进程在 spawn bot 与 server 子进程前置位，
 core/constants/path.py	R7	配置目录的环境变量名。测试引导据此把整个进程指向一份临时配置，
 core/database/__init__.py	R7	Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
@@ -132,10 +133,11 @@ modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py	R7	if value 
 modules/wiki/utils/summarize.py	R7	语义属性链接 [[属性::值]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
 modules/wiki/utils/user.py	R3	if one day LGBTers...
 modules/wiki/utils/wikilib.py	R7	摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
-modules/wiki/utils/wikilib.py	R7	模板文档页不走 TextExtracts：该扩展为条目而设，会把 documentation header、
 modules/wiki/wiki.py	R7	Let the runner enter its try/finally before handing it to detached lifecycle code.
 modules/wiki/wiki.py	R7	if lang in interwiki_list:
+tester.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 tests/build_synthetic_fixtures.py	R7	稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会回落到真实网络，
+tests/run_one.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 tests/unit/test_i18n_cmd_params.py	R7	以键名作为参数传入、由被调方统一补上 cmd 的调用点。
 tests/unit/test_jobqueue_websocket_backend.py	R7	wait_ready 只保证各 Peer 已注册；ready/welcome 握手仍可能在其它 Peer 的
 tests/unit/test_loader.py	R7	The full suite can delay task scheduling while other async tests are unwinding.
