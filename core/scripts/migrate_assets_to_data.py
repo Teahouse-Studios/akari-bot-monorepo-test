@@ -20,7 +20,7 @@ MOVES = [
     ("assets/i18n_cache", "data/i18n_cache"),
     ("assets/private", "data/private"),
     ("assets/union_merge_logs", "data/union_merge_logs"),
-    ("assets/bad_words", "data/bad_words"),
+    ("assets/bad_words", "data/filter_words"),
     ("assets/retired", "data/retired"),
     ("assets/url_audit/allowlist/user.txt", "data/url_audit/allowlist/user.txt"),
     ("assets/url_audit/blocklist/user.txt", "data/url_audit/blocklist/user.txt"),

@@ -554,9 +554,9 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     try:
         importlib.import_module(f"bots.{bot_name}.bot")
     except ModuleNotFoundError:
-        Logger.exception(f"[{client_name}] ???, entry not found.")
-
-        sys.exit(1)
+        # 退出码 78（EX_CONFIG）表示无需重启：入口缺失是部署问题，重试无济于事。
+        Logger.error(f"[{client_name}] ???, entry not found.")
+        sys.exit(78)
 
 
 def server_go(
@@ -696,8 +696,8 @@ async def run_bot():
             if p.name == "server":
                 if p.exitcode == 0:
                     sys.exit(0)
-                if p.exitcode == 233:
-                    Logger.warning(f"Process {p.pid} (server) exited with code 233, restart all bots.")
+                if p.exitcode == 33:
+                    Logger.warning(f"Process {p.pid} (server) exited with code {p.exitcode}, restart all bots.")
                     raise RestartBot
                 Logger.critical(f"Process {p.pid} (server) exited with code {p.exitcode}, please check the log.")
                 sys.exit(p.exitcode)
@@ -709,9 +709,13 @@ async def run_bot():
                 processes.remove(p)
                 terminate_process(p)
                 break
-            if p.exitcode == 233:
-                Logger.warning(f"Process {p.pid} ({p.name}) exited with code 233, restart all bots.")
+            if p.exitcode == 33:
+                Logger.warning(f"Process {p.pid} ({p.name}) exited with code {p.exitcode}, restart all bots.")
                 raise RestartBot
+            if p.exitcode == 78:  # 已明确没有必要重启的进程异常退出码
+                processes.remove(p)
+                terminate_process(p)
+                break
             Logger.critical(f"Process {p.pid} ({p.name}) exited with code {p.exitcode}, please check the log.")
             processes.remove(p)
             # terminate_process() 会 close() 该进程对象，close 之后读取属性会抛错，故先取出实例记录。

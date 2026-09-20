@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import time
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Mapping
@@ -10,10 +11,18 @@ import botpy
 import httpx
 from botpy.interaction import Interaction
 from botpy.message import BaseMessage, C2CMessage, DirectMessage, GroupMessage, Message
-from botpy.protocol import ApiError, MediaFileType, MediaSendResult, MessageType, ReplyTarget, TransportError
+from botpy.protocol import (
+    ApiError,
+    ChunkedMediaUploader,
+    MediaFileType,
+    MediaSendResult,
+    MessageType,
+    ReplyTarget,
+    TransportError,
+)
 from botpy.types.group import SetMemberMuteState
-from botpy.types.message import Reference, KeyboardPayload
-from botpy.types.inline import Keyboard, Button, KeyboardRow, RenderData, Action, Permission
+from botpy.types.message import Reference
+from botpy.types.inline import Keyboard, Button, KeyboardRow, RenderData, Action, Permission, KeyboardContent
 
 from bots.qqbot.config import QQBotConfig
 from bots.qqbot.features import features as qqbot_features
@@ -65,7 +74,7 @@ ACTION_TEXT_MAX_LENGTH = 100
 # at this adapter boundary before handing the payload to botpy.
 QQBOT_MAX_KEYBOARD_ROWS = 5
 QQBOT_MAX_KEYBOARD_COLUMNS = 10
-PASSIVE_REPLY_FALLBACK_ERROR_CODES = frozenset({"40034005", "40034128"})
+PASSIVE_REPLY_FALLBACK_ERROR_CODES = frozenset({"40034005", "40034128", "40054005"})
 PROACTIVE_PERMISSION_DENIED_ERROR_CODES = frozenset({"304046", "40034102", "40034105"})
 SILENT_SEND_ABORT_ERROR_CODES = frozenset({"40034101", "40054002", "40054003"})
 PERMISSION_CACHE_TTL = 3600
@@ -116,6 +125,40 @@ async def _upload_media(
     return {"file_info": file_info}
 
 
+async def _upload_markdown_image(client: botpy.Client, target: ReplyTarget, *, local_path: str) -> str | None:
+    """使用 QQ 分片接口取得可嵌入 Markdown 的临时图片直链。"""
+    if target.scope not in ("group", "c2c"):
+        return None
+    api = getattr(client, "api", None)
+    if api is None:
+        return None
+
+    uploader = getattr(client, "_markdown_chunked_media_uploader", None)
+    if uploader is None:
+        uploader = ChunkedMediaUploader(
+            api,
+            # botpy 的上传缓存只保存 file_info，不保存 raw_url。
+            upload_cache=None,
+        )
+        client._markdown_chunked_media_uploader = uploader
+
+    response = await uploader.upload(
+        target.scope,
+        target.target_id,
+        MediaFileType.IMAGE,
+        local_path=local_path,
+    )
+    raw_url = response.get("raw_url") if isinstance(response, Mapping) else None
+    if not isinstance(raw_url, str) or not raw_url:
+        return None
+
+    mime_type = mimetypes.guess_type(local_path)[0] or "image/jpeg"
+    if not mime_type.startswith("image/"):
+        mime_type = "image/jpeg"
+    separator = "&" if "?" in raw_url else "?"
+    return f"{raw_url}{separator}response-content-type={quote(mime_type, safe='')}"
+
+
 def _truncate_action_text(value: str, field: str) -> str:
     """
     按平台上限截断指令操作的文本。
@@ -154,17 +197,11 @@ def _render_action_text(element: ActionTextElement) -> str:
     return f"<qqbot-cmd-input {' '.join(attrs)} />"
 
 
-def _build_qqbot_keyboard(
-    rows: list[ButtonRows], session_info: SessionInfo, target: ReplyTarget
-) -> KeyboardPayload | None:
+def _build_qqbot_keyboard(rows: list[ButtonRows], session_info: SessionInfo, target: ReplyTarget) -> Keyboard | None:
     """将 ButtonFrame 的按钮行转换为 QQBot 键盘。"""
     if not rows:
         return None
 
-    # ButtonFrame is shared by platforms with different keyboard limits. Split
-    # only oversized rows so normal row grouping remains intact. A keyboard
-    # cannot represent more than 50 buttons; keep the earliest buttons, matching
-    # the existing truncation policy elsewhere.
     keyboard_rows_data = [
         row.buttons[start : start + QQBOT_MAX_KEYBOARD_COLUMNS]
         for row in rows
@@ -220,11 +257,10 @@ def _build_qqbot_keyboard(
             keyboard_rows.append(KeyboardRow(buttons=buttons))
     if not keyboard_rows:
         return None
-    return KeyboardPayload(content=Keyboard(rows=keyboard_rows))
+    return Keyboard(content=KeyboardContent(rows=keyboard_rows))
 
 
-# 节点表格的高度上限，按「编号行 + 内容行」计对。过宽的表格平台会渲染失败，故此值宜小不宜大：
-# 每多一对，列数减半、单行长度随之减半。帮助的表格另有自己的上限，两者不共用。
+# 节点表格的高度上限，每多一对，列数减半、单行长度随之减半。
 MESSAGE_NODES_MAX_ROWS = 2
 MARKDOWN_IMAGE_MAX_WIDTH = 128
 MARKDOWN_IMAGE_LIST_MAX_TOTAL_HEIGHT = 768
@@ -396,7 +432,7 @@ def _api_error_messages(error: ApiError) -> set[str]:
 
 
 def _is_passive_reply_fallback_error(error: ApiError) -> bool:
-    """判断被动回复是否因消息过期或回复次数超限而可改发主动消息。"""
+    """判断被动回复是否因过期、超限或消息去重而可改发主动消息。"""
     return bool(_api_error_codes(error) & PASSIVE_REPLY_FALLBACK_ERROR_CODES)
 
 
@@ -700,8 +736,8 @@ class QQBotContextManager(ContextManager):
                     raise
 
                 Logger.warning(
-                    f"Passive reply {send_target.message_id} is no longer available when sending to "
-                    f"{send_target.scope}|{send_target.target_id}; retrying as a proactive message."
+                    f"Passive reply {send_target.message_id} failed with codes {sorted(_api_error_codes(error))} "
+                    f"when sending to {send_target.scope}|{send_target.target_id}; retrying as a proactive message."
                 )
                 send_target = ReplyTarget(scope=send_target.scope, target_id=send_target.target_id)
                 try:
@@ -913,8 +949,6 @@ class QQBotContextManager(ContextManager):
             markdown_images: list[tuple[ImageElement, str, int, int]] = []
             markdown_image_positions: list[int] = []
             s3_storage = None
-            if any(isinstance(element, ImageElement) for element in converted_message):
-                s3_storage = await asyncio.to_thread(_load_s3_storage)
 
             for x in converted_message:
                 if isinstance(x, PlainElement):
@@ -928,17 +962,36 @@ class QQBotContextManager(ContextManager):
                 elif isinstance(x, ImageElement):
                     # 图片不可读（本地文件缺失或下载失败）时跳过该元素
                     image_path = await resolve_media_path(x)
-                    if image_path is not None and s3_storage is not None:
+                    if image_path is not None:
                         try:
-                            upload = await s3_storage.upload_temp(image_path)
-                            if upload and "public_url" in upload:
+                            try:
+                                markdown_url = await _upload_markdown_image(client, target, local_path=image_path)
+                            except Exception:
+                                markdown_url = None
+                                Logger.exception(
+                                    f"QQBot temporary markdown image upload failed for {session_info.session_id}; "
+                                    "trying S3 fallback."
+                                )
+                            if markdown_url is None:
+                                if s3_storage is None:
+                                    s3_storage = await asyncio.to_thread(_load_s3_storage)
+                                if s3_storage is not None:
+                                    try:
+                                        upload = await s3_storage.upload_temp(image_path)
+                                        markdown_url = upload.get("public_url") if upload else None
+                                    except Exception:
+                                        Logger.exception(
+                                            f"Failed to upload a QQBot markdown image to S3 for "
+                                            f"{session_info.session_id}; "
+                                        )
+                            if markdown_url:
                                 w, h = await x.get_wh()
-                                markdown_images.append((x, upload["public_url"], w, h))
+                                markdown_images.append((x, markdown_url, w, h))
                                 texts.append("")
                                 markdown_image_positions.append(len(texts) - 1)
                         except Exception:
                             Logger.exception(
-                                f"Failed to upload a QQBot markdown image to S3 for {session_info.session_id}; "
+                                f"Failed to upload a QQBot markdown image for {session_info.session_id}; "
                                 "the remaining message will still be sent: "
                             )
                     inline_pending = False
@@ -989,9 +1042,7 @@ class QQBotContextManager(ContextManager):
             if not texts and not prepared_media:
                 return _PreparedMessage(target, empty_send, has_payload=False)
 
-            # Markdown 路径不像普通文本路径那样整体 strip，以免破坏正文末尾的 Markdown 语义；
-            # 但开头的换行没有有效语义，还会在首个 at 标签前渲染出空行。
-            msg = "\n".join(texts).lstrip("\r\n")
+            msg = "\n".join(texts)
 
             async def send_markdown_message() -> list[str]:
                 msg_ids = []
@@ -1026,8 +1077,6 @@ class QQBotContextManager(ContextManager):
                 if queued.future.cancelled():
                     continue
 
-                # typing 出队后再让出一次执行权，允许同一时刻准备完成的普通回复
-                # 先置位 sending；随后仍会在真正调用平台消息接口前作最后检查。
                 await asyncio.sleep(0)
                 state = queued.typing_state
                 try:
@@ -1388,8 +1437,6 @@ class QQBotContextManager(ContextManager):
             state_waiter.cancel()
             await asyncio.gather(state_waiter, return_exceptions=True)
 
-            # 延时从 start_typing 信号开始计算；图片读取与 upload_media 不会额外
-            # 把提示发送时间向后推，从而避免资源准备慢于普通回复时 typing 后发。
             remaining_delay = max(0.0, cls.TYPING_PROMPT_DELAY - (time.monotonic() - prepare_started_at))
             if await cls._wait_typing_over(state, remaining_delay):
                 return
@@ -1415,8 +1462,7 @@ class QQBotContextManager(ContextManager):
             if prepare_task and not prepare_task.done():
                 prepare_task.cancel()
                 await asyncio.gather(prepare_task, return_exceptions=True)
-            # 撤回置于 finally：异常与任务取消同样不得使提示消息滞留于群中。
-            # 撤回自身再失败也只作记录，不使本轮任务带着异常收场。
+
             if typing_msg:
                 try:
                     await cls.delete_message(session_info, typing_msg)
@@ -1460,8 +1506,6 @@ class QQBotContextManager(ContextManager):
         Logger.debug(f"Start typing in session: {session_info.session_id}")
 
         # 同一会话重复开启时先结束上一轮，否则其提示消息将失去撤回时机。
-        # 不可直接取消任务：平台可能已接受发送请求但尚未返回消息 ID；取消后提示仍会
-        # 留在群聊中，且无法取得用于撤回的 ID。
         previous = cls.typing_states.pop(session_info.session_id, None)
         if previous:
             previous.finished.set()
@@ -1479,14 +1523,12 @@ class QQBotContextManager(ContextManager):
     @classmethod
     async def end_typing(cls, session_info: SessionInfo) -> None:
         # 结束输入状态属于清理动作，须幂等且容错：此时上下文可能已被回收，
-        # 若在此抛错，提示消息将连撤回的机会都没有。
         state = cls.typing_states.pop(session_info.session_id, None)
         if state:
             state.finished.set()
         task = cls.typing_tasks.pop(session_info.session_id, None)
         if task:
-            # 让正在发送的提示取得消息 ID 后自行进入 finally 撤回。直接取消可能造成
-            # 「平台已发出、SDK 未返回 ID」的孤儿提示消息。
+            # 让正在发送的提示取得消息 ID 后自行进入 finally 撤回。
             await asyncio.shield(asyncio.gather(task, return_exceptions=True))
         Logger.debug(f"End typing in session: {session_info.session_id}")
 
@@ -1620,8 +1662,6 @@ class QQBotFetchedContextManager(QQBotContextManager):
         _typing_prompt: bool = False,
         _force_plain: bool = False,
     ) -> list[str]:
-        # 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本跳是否送达，
-        # 因此入队的是「任务 + future」，待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
         append_tsk = _tasks_high_priority if high_priority else _tasks
