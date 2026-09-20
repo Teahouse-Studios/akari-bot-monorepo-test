@@ -303,13 +303,12 @@ async def update_database_to_v5(conn):
 async def update_database_to_v6(conn):
     """将数据库升级至 v6：为绑定表调整 OAuth 授权所需的列。
 
-    水鱼分发给用户各自部署的应用属于公开客户端，换票接口对它不可用，只能为每位用户各自保存一把
-    refresh token；落雪侧则改为保存用户的授权令牌。Developer-Token 时代无需保存任何用户凭据，
-    表内因而没有这些列。表若由 ``generate_schemas()`` 新建，列已存在，跳过即可。旧行没有
-    refresh token，仅在用户重新完成一次绑定之前不可用。
+    水鱼的应用属公开客户端，换票接口不可用，只能逐用户保存 refresh token；落雪侧改存授权令牌。
+    由 ``generate_schemas()`` 新建的表已有这些列，跳过即可；旧行没有 refresh token，在用户重新
+    绑定前不可用。
 
-    同一批变更里还要删掉落雪的旧好友码列：该字段已彻底退出模型，旧表上却是 NOT NULL 且无默认值，
-    不删除会让新绑定写入直接失败。两段都是先探测再执行，可重复运行。
+    同时删掉落雪的旧好友码列：该字段已退出模型，旧表上却是 NOT NULL 且无默认值，不删会让新绑定
+    直接写入失败。两段都先探测再执行，可重复运行。
 
     :param conn: 数据库连接。
     """
@@ -334,10 +333,9 @@ async def drop_indexes_on_missing_columns(conn) -> None:
     """
     删除指向不存在列的索引。
 
-    ``generate_schemas(safe=True)`` 会为已存在的旧表补建按当前模型声明的索引，而旧表可能尚未
-    改列名，于是库里出现指向不存在列的索引。SQLite 在改动任何表结构时都会重新解析整个库结构，
-    这类索引会让升级的第一条 ALTER 直接失败。删掉的索引随后由 ``generate_schemas`` 依模型
-    重建，那时列已经存在。
+    ``generate_schemas(safe=True)`` 会为已存在的旧表补建按当前模型声明的索引，而旧表可能尚未改
+    列名，于是出现指向不存在列的索引。SQLite 改动任何表结构时都会重新解析整个库结构，这类索引会
+    让升级的第一条 ALTER 失败。删掉的索引随后由 ``generate_schemas`` 依模型重建。
 
     :param conn: 数据库连接。
     """
