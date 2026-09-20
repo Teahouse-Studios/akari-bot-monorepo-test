@@ -4,15 +4,9 @@
 本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动；
 新增代码应直接使用 :class:`core.paths.Paths`。
 
-**进程级引导的顺序约束**：本模块的取值在**导入期**完成，因此下列环境变量必须在任何
-``core.*`` 导入之前置位，否则取值会被固化为默认值且不报错：
-
-- ``AKARI_INSTANCE_DIR``（实例目录）
-- ``AKARI_CONFIG_PATH``（配置目录）
-- ``AKARI_UNION_MERGE_LOGS_PATH``（合并日志目录）
-
-引导代码因此不能依赖 ``core.constants`` 读取这些名称，只能以字面量重复；``tester.py``、
-``tests/run_one.py`` 与 ``conftest.py`` 的引导段落即受此约束。
+取值在**导入期**完成，故 ``AKARI_INSTANCE_DIR``、``AKARI_CONFIG_PATH``、
+``AKARI_UNION_MERGE_LOGS_PATH`` 须在任何 ``core.*`` 导入之前置位，否则被固化为默认值且不报错。
+引导代码只能以字面量重复这些名称，``tester.py`` / ``tests/run_one.py`` / ``conftest.py`` 即如此。
 """
 
 import os
@@ -90,12 +84,10 @@ class PrivateData:
 def module_data_path(module_dir: str | Path) -> Path:
     """取模块的可写数据目录，不创建它。
 
-    模块内的 ``assets`` 只放随仓库分发的只读内容；下载所得的资源、运行时生成的索引等
-    应写入模块的 ``data`` 目录。
+    模块的 ``assets`` 只放随仓库分发的只读内容，下载所得资源与运行时索引写入 ``data``。
 
-    **不在此处建目录**：模块常在导入期调用本函数，而导入期建目录会使只读安装
-    （包目录 ``chmod a-w`` 或 wheel 安装）下 ``import`` 本身抛 ``PermissionError``，
-    模块连加载都失败。目录由写入方在使用时创建。
+    不在此处建目录：模块常在导入期调用本函数，而导入期建目录会让只读安装（``chmod a-w`` 或
+    wheel）下的 ``import`` 本身抛 ``PermissionError``。目录由写入方在使用时创建。
 
     :param module_dir: 模块根目录，例如 ``Path(__file__).parent``。
     :return: 数据目录路径，可能尚不存在。

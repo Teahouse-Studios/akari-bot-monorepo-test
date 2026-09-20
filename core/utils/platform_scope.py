@@ -1,19 +1,11 @@
 """平台匹配的四元组判据。
 
-模块、命令、正则与 hook 的 ``available_for`` / ``exclude_from`` 都按当前会话判分。
-判据集合由四段组成：
+模块、命令、正则与 hook 的 ``available_for`` / ``exclude_from`` 按四段判据判分：
+``target_from``（场景前缀）、``client_name``（客户端身份，含实例后缀）、``platform_from``
+（平台级场景前缀）、``platform_name``（平台展示名）。
 
-- ``target_from``：具体场景前缀，如 ``Telegram|Group``；
-- ``client_name``：客户端身份，如 ``Telegram``（默认实例）或 ``Telegram-alt``（多实例）；
-- ``platform_from``：把 ``target_from`` 的客户端段换成平台名的场景前缀，如 ``Telegram|Group``；
-- ``platform_name``：平台展示名，同一平台的全部实例共用，如 ``Telegram``。
-
-默认实例下 ``client_name`` 与 ``platform_name`` 相同、``target_from`` 与 ``platform_from``
-相同，四元组退化为 ``{target_from, client_name}``，与多实例改造前的两段判据逐字节一致。
-
-``target_from`` 为空表示平台未知（测试替身、仅在进程内使用的会话），此时一律判为允许：
-改造前的实现整段跳过平台判分，多实例改造须保持该语义，否则未知平台会被判为「不匹配任何
-平台」而被全部拒绝。
+默认实例下后两段分别等于前两段，判据退化为改造前的两段。``target_from`` 为空表示平台未知，
+判为允许——改造前整段跳过平台判分，此语义须保持。
 """
 
 from typing import Iterable

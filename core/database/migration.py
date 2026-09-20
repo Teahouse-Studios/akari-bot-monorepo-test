@@ -1,14 +1,12 @@
 """按包登记的数据库迁移。
 
-每个包在自己的 ``migrations/`` 目录下声明 revision，core 不再集中登记模块表结构。Runner
-固定先执行 core 的全部待应用 revision，再按包名依次执行各模块包：core 的步骤需要先完成
-改名与回填，模块包的列改名随后进行，这条跨包顺序无法用 ``DEPENDS_ON`` 表达，故写死在
-Runner 的执行顺序里。
+每个包在 ``migrations/`` 下声明 revision。Runner 固定先执行 core 的全部待应用 revision，再按
+包名依次执行各模块包——core 的改名与回填须先完成，模块包的列改名随后进行，这条跨包顺序无法用
+``DEPENDS_ON`` 表达，故写死在执行顺序里。
 
-硬规则是幂等。MySQL 的 DDL 自动提交，无法把「执行 DDL」与「写 schema_migrations」放进
-同一事务；一旦中途失败重跑，非幂等的迁移会报错或重复施加变更。因此每条 revision 的每一步
-都要先探测再执行（``has_table`` / ``has_column`` / ``has_index``）。SQLite 支持事务性
-DDL，Runner 在此额外把单条 revision 连同版本记录包进一个事务。
+硬规则是幂等：MySQL 的 DDL 自动提交，无法把「执行 DDL」与「写 schema_migrations」放进同一事务，
+中途失败重跑时非幂等的迁移会重复施加变更。每条 revision 的每一步都要先探测再执行。SQLite 支持
+事务性 DDL，Runner 在此额外把单条 revision 连同版本记录包进一个事务。
 """
 
 from __future__ import annotations

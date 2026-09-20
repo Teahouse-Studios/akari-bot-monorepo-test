@@ -1,31 +1,26 @@
 """import 分层检查。
 
-按 generated_docs/monorepo_refactor_prep.md 的 P5.5 与 monorepo_refactor_tasks.md 的 T4.6，
-对当前的扁平布局（core/、modules/、bots/）做 AST 静态检查。规则如下：
+对当前扁平布局（core/、modules/、bots/）做 AST 静态检查，规格见
+generated_docs/monorepo_refactor_tasks.md 的 T4.6：
 
-    B1  warn   模块包（modules/<x>/**）import 其它模块包的非 .api 内部路径
-    B2  error  模块包 import bots.*（平台能力只能经 SessionInfo / Features 声明式获取）
-    B3  error  模块包 import core.api.adapters（该面面只供适配器使用）
+    B1  warn   模块包 import 其它模块包的非 .api 内部路径
+    B2  error  模块包 import bots.*（平台能力应经 SessionInfo / Features 声明式获取）
+    B3  error  模块包 import core.api.adapters（该面只供适配器使用）
     B4  error  core/** import modules.* 或 bots.*（core 不得依赖可能缺席的包）
-    B5  error  适配器包（bots/**）import modules.*（适配器不得依赖具体模块）
+    B5  error  适配器包 import modules.*（适配器不得依赖具体模块）
 
-模块公开面取 modules.<x>.api：T4.6 规则 2 把内部路径定义为「非 .api 的路径」，模块的
-api.py 在拆包后由 manifest 的 public_api 承诺兼容性。当前没有任何模块提供 api.py，因此
-B1 的全部命中都是既有的内部调用；wiki 家族（wiki / wikilog / weekly / weekly_rss）在
-拆分时合并为同一个包，其中一部分调用届时会变成包内调用。
+模块公开面取 modules.<x>.api，由拆包后 manifest 的 public_api 承诺兼容性。当前没有模块提供
+api.py，故 B1 的命中都是既有内部调用；wiki 家族拆分时合并为一个包，部分命中会转为包内调用。
 
-拆包后才成立的检查不在本工具内：pyproject 依赖声明与官方包互不依赖（T4.6 规则 1、7）、
-entry point 命名（T4.6 规则 6）、命名空间包污染（T4.6 规则 4）、模块只经 core.api 取 core
-设施（T4.6 规则 5）、跨包版本约束（T4.8）。importlib 与 __import__ 的动态 import 不产生
-ast.Import 节点，同样不检查。
-
-既有违规记录在 tools/boundary_lint_baseline.txt 中豁免，检查只对新增与修改的行生效。
+动态 import（importlib / __import__）不产生 ast.Import 节点，不检查；依赖声明、entry point
+命名、命名空间包污染与跨包版本约束属拆包后事项，见 T4.6 / T4.8。既有违规由
+tools/boundary_lint_baseline.txt 豁免，检查只对新增与修改的行生效。
 
 用法：
-    uv run python tools/lint_boundaries.py                      # 检查全部文件，仅报基线外违规
-    uv run python tools/lint_boundaries.py --diff HEAD~1        # 只检查该基准之后的新增/修改行
-    uv run python tools/lint_boundaries.py --generate-baseline  # 重建基线豁免文件
-    uv run python tools/lint_boundaries.py --show-baseline      # 同时打印基线内的违规
+    uv run python tools/lint_boundaries.py                      # 全量，仅报基线外违规
+    uv run python tools/lint_boundaries.py --diff HEAD~1        # 只查该基准之后的新增/修改行
+    uv run python tools/lint_boundaries.py --generate-baseline  # 重建基线
+    uv run python tools/lint_boundaries.py --show-baseline      # 同时打印基线内违规
 """
 
 from __future__ import annotations

@@ -120,11 +120,9 @@ class CFGManager:
     def _resolve_table(cls, table_name: str | None, *, fallback: bool = True) -> str | None:
         """把配置表名解析到当前实例的作用域。
 
-        ``Info.instance_id`` 为空（守护进程、pre_init、默认实例的子进程）时原样返回，
-        因此默认实例的全部读写路径与改造前逐字段一致。多实例下 ``bot_telegram`` 解析为
-        ``bot_telegram-alt``，从而复用同一份适配器配置模板，无需改动各适配器的 config.py。
-
-        ``module_*`` 与 ``config`` 表不参与实例作用域：模块配置属于场景数据而非适配器身份。
+        ``Info.instance_id`` 为空时原样返回，故默认实例的读写路径与改造前一致。多实例下
+        ``bot_telegram`` 解析为 ``bot_telegram-alt``，复用同一份适配器配置模板。``module_*`` 与
+        ``config`` 表不参与作用域：模块配置属场景数据，不是适配器身份。
 
         :param table_name: 已归一化的表名（``_secret`` 后缀已剥离）。
         :param fallback: 实例表尚未出现时是否回退到基表。

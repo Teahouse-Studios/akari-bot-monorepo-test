@@ -1,15 +1,13 @@
 """模块与适配器的统一发现层。
 
-本模块回答「系统里有哪些模块与适配器」，是全仓唯一的答案来源。发现结果按
-「entry point 优先、目录扫描兜底」的顺序合成：
+「系统里有哪些模块与适配器」的唯一答案来源，按下列顺序合成：
 
-1. 存在 ``core/_frozen_registry.py`` 时直接使用，不再继续（二进制构建产物，尚未生成）；
-2. ``importlib.metadata.entry_points()`` 枚举已安装分发的 entry point；
-3. 兜底扫描仓库内的 ``modules/`` 与 ``bots/`` 目录，合成 ``dist_name`` 为空的条目；
-4. 两者按条目名去重，entry point 胜出，冲突时记录警告。
+1. 存在 ``core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）；
+2. 枚举已安装分发的 entry point；
+3. 兜底扫描仓库内的 ``modules/`` 与 ``bots/``，合成 ``dist_name`` 为空的条目；
+4. 按条目名去重，entry point 胜出，冲突时记录警告。
 
-拆包之前第 3 条是主路径；拆包之后各包以 wheel 安装，第 2 条接管，本模块之外的
-代码不需要改动。
+拆包前以第 3 条为主，拆包后各包以 wheel 安装，第 2 条接管，本模块之外的代码无需改动。
 """
 
 from __future__ import annotations
@@ -200,14 +198,10 @@ class PackageRegistry:
     def discover(cls, *, force: bool = False) -> None:
         """建立发现结果。
 
-        收尾阶段依次校验两道门槛，两道都通过的包才进入注册表：
-
-        1. core API 兼容性（``manifest.requires_core_api``）；
-        2. 声明依赖：缺失、版本不满足、成环，以及**依赖了第 1 步被拒绝的包**。
-
-        顺序不可颠倒：依赖校验必须知道哪些包已被 API 门槛拒绝，否则依赖它们的包会以
-        「发行版已安装」为由留下，最终在导入期抛出与配置无关的导入错误。原因经
-        :meth:`incompatible` 与 :meth:`report_lines` 报出。
+        收尾依次校验 core API 兼容性与声明依赖（缺失、版本不满足、成环、依赖了被 API 门槛拒绝的
+        包），两道都通过的包才注册。顺序不可颠倒：依赖校验须知道哪些包已被 API 门槛拒绝，否则
+        依赖它们的包会以「发行版已安装」为由留下，直到导入期才失败。原因经 :meth:`incompatible`
+        与 :meth:`report_lines` 报出。
 
         :param force: 为真时忽略缓存并重新发现。
         """
@@ -602,13 +596,9 @@ class PackageRegistry:
     def config_template_paths(cls) -> list[str]:
         """全部配置模板的模块名，核心配置排在最前。
 
-        清单按包名排序，以固定生成顺序，避免同一批配置项在多次生成间换序而反复改写
-        配置文件。
-
-        以文件是否存在判断模板有无，而非在导入时捕获 ``ModuleNotFoundError``：后者无法
-        区分「该包未提供 config.py」与「模板自身导入了不存在的依赖」，后一种会被静默跳过，
-        形成漏键。亦不使用 ``importlib.util.find_spec()``：该函数为取得 ``__path__`` 会
-        导入父包，使配置模板作为叶子模块的优势不复存在。
+        按包名排序以固定生成顺序，避免同一批配置项反复改写配置文件。以文件是否存在判断模板有无，
+        不导入包：捕获 ``ModuleNotFoundError`` 无法区分「未提供 config.py」与「模板自身缺依赖」，
+        后者会被静默跳过形成漏键；``find_spec()`` 为取 ``__path__`` 会导入父包，失去叶子模块的优势。
 
         :return: 配置模板的模块名列表。
         """
@@ -637,8 +627,8 @@ class PackageRegistry:
     def db_model_paths(cls) -> list[str]:
         """全部模块的数据库模型模块名。
 
-        与配置模板同一条理由：以文件是否存在判断，不导入包。``models.py`` 内部缺少依赖
-        时，错误会在 ``init_db()`` 真正导入它时抛出，不会在此被静默跳过。
+        与配置模板同理，以文件是否存在判断而不导入包。``models.py`` 内部缺依赖时，错误在
+        ``init_db()`` 真正导入它时抛出，不会在此被静默跳过。
 
         :return: 模型模块名列表，按包名排序。
         """
@@ -654,14 +644,9 @@ class PackageRegistry:
     def migration_dirs(cls) -> list[tuple[str, Path]]:
         """全部模块包的数据库迁移目录。
 
-        键取分发名而非包名：迁移记录按包长期存放，包名会在拆包前后变化，而分发名不变。
-        目录扫描兜底时 ``dist_name`` 为空串，此时按 ``akari-bot-module-<包名>`` 合成，与
-        拆包后的分发名一致；若改用裸包名，旧库登记过的 revision 会在拆包后重新变成待应用，
-        已应用记录与新键各存一份。
-
-        目录以 ``manifest.migrations`` 为准，未声明时回落到包内的 ``migrations/``：拆包前
-        没有任何包带 manifest，只认声明会导致迁移目录全部不可见。目录不存在即视为该包无迁移，
-        第三方包因此不必为了不提供迁移而额外声明。
+        键取分发名：迁移记录长期存放，包名在拆包前后会变化而分发名不变，用裸包名会让旧库已登记的
+        revision 在拆包后重新变为待应用。目录以 ``manifest.migrations`` 为准，未声明时回落包内
+        ``migrations/``，否则拆包前没有任何包带 manifest，迁移目录会全部不可见。
 
         :return: ``(包名, 目录)`` 列表，按包名排序。
         """
@@ -737,14 +722,9 @@ class PackageRegistry:
     def dependencies(cls, entry: PackageEntry) -> tuple[PackageDependency, ...]:
         """包在分发 metadata 里声明的模块包依赖。
 
-        只收录 ``Requires-Dist`` 中名字以 ``akari-bot-module-`` 或 ``akari-bot-adapter-``
-        开头的条目；其余是普通 PyPI 依赖，由安装器负责，不进入运行时依赖图。
-
-        目录扫描兜底时 ``dist_name`` 为空串，此时不存在分发 metadata，一律返回空元组：
-        拆包之前所有包都走这条路径，依赖图因此为空，这是预期结果。
-
-        带 extra 标记的条目按「该 extra 已装」判断（见 :meth:`_installed_extras`）：
-        未装 extra 的依赖不会被安装，故不计入，也不会让该包因缺依赖被拒绝。
+        只收录 ``akari-bot-module-`` 与 ``akari-bot-adapter-`` 前缀的 ``Requires-Dist``；其余是
+        普通 PyPI 依赖，由安装器负责。目录扫描兜底时无分发 metadata，返回空元组。带 extra 标记的
+        条目按「该 extra 已装」判断（见 :meth:`_installed_extras`），未装 extra 的依赖不计入。
 
         :param entry: 待查询的包。
         :return: 依赖元组，按分发名排序。
@@ -1007,11 +987,9 @@ class PackageRegistry:
     def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
         """该分发声明且已装的 extra。
 
-        分发 metadata 只记录 ``Requires-Dist`` 与 ``Provides-Extra`` 两份清单，不记录装包
-        时选中了哪些 extra，因此任何实现都只能是启发式，读到此处的代码须知道本处用的是哪
-        一种：以「该 extra 下属的依赖都能解析为已装分发」作为已装判据——extra 未选中时其依
-        赖不会被安装，判据随之不成立。已知边界：环境里恰好手工装齐了某个未选中 extra 的全部
-        依赖时，该 extra 会被误判为已装，代价是多记一条依赖边。既有测试固化的是这套判据。
+        分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取「该 extra 下属
+        的依赖都能解析为已装分发」为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
+        误判为已装，代价是多记一条依赖边。既有测试固化此判据。
 
         :param distribution: 分发对象。
         :param requirements: 已解析的 ``Requires-Dist``。
