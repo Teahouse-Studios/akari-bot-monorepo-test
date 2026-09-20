@@ -4,4 +4,7 @@ from .inline import *
 from .search import *
 from .set import *
 from .utils import *
+from .weekly import *
+from .weekly_rss import *
 from .wiki import *
+from .wikilog import *

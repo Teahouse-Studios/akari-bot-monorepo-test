@@ -998,7 +998,7 @@ async def _test_delete_target_union_cleans_current_state():
     from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
     from modules.captcha.service import verification_id
     from modules.wiki.database.models import WikiTargetInfo
-    from modules.wikilog.database.models import WikiLogTargetSetInfo
+    from modules.wiki.database.models import WikiLogTargetSetInfo
 
     sender_id = "UNIONTEST|delete|target-sender"
     target_id = "UNIONTEST|Group|delete-target"
@@ -1386,7 +1386,7 @@ async def _test_wiki_mutations_use_fresh_row():
 
 async def _test_wikilog_mutations_use_fresh_nested_data():
     """Wikilog 的旧实例修改不同 Wiki 和嵌套字段时不得互相覆盖，删除后不得复活。"""
-    from modules.wikilog.database.models import WikiLogTargetSetInfo
+    from modules.wiki.database.models import WikiLogTargetSetInfo
 
     target_id = "UNIONTEST|Group|wikilog-stale-mutation"
     target = await TargetUnionInfo.resolve_union(target_id)

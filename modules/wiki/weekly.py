@@ -16,7 +16,7 @@ from core.utils.http import get_url
 async def get_weekly(with_img=False, zh_tw=False):
     from bs4 import BeautifulSoup
 
-    from modules.wiki.utils.wikilib import WikiLib
+    from .utils.wikilib import WikiLib
 
     locale = Locale("zh_cn" if not zh_tw else "zh_tw")
     result = orjson.loads(
@@ -73,7 +73,7 @@ async def get_weekly(with_img=False, zh_tw=False):
 
 
 async def get_weekly_img(with_img=False, zh_tw=False):
-    from modules.wiki.utils.screenshot_image import generate_screenshot_v2
+    from .utils.screenshot_image import generate_screenshot_v2
 
     # locale = Locale("zh_cn" if not zh_tw else "zh_tw")
     img = await generate_screenshot_v2(
@@ -101,7 +101,7 @@ async def get_weekly_img(with_img=False, zh_tw=False):
 
 async def get_teahouse_rss(*args, **kwargs):
     """兼容 weekly-rss 的公开入口，同时延迟加载 RSS 解析依赖。"""
-    from .teahouse import get_rss
+    from .utils.teahouse import get_rss
 
     try:
         content = await get_rss(*args, **kwargs)

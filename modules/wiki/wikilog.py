@@ -7,15 +7,16 @@ from core.builtins.bot import Bot
 from core.builtins.message.internal import I18NContext
 from core.builtins.session.internal import FetchedMessageSession
 from core.component import module
-from modules.wiki.config import WikiConfig
 from core.logger import Logger
 from core.scheduler import IntervalTrigger
 from core.types import Param
-from modules.wiki.utils.ab import convert_ab_to_detailed_format
-from modules.wiki.utils.rc import convert_rc_to_detailed_format
-from modules.wiki.utils.wikilib import BlockedWikiError, WikiLib
+
+from .config import WikiConfig
 from .database.models import WikiLogTargetSetInfo
-from .utils import convert_data_to_text
+from .utils.ab import convert_ab_to_detailed_format
+from .utils.rc import convert_rc_to_detailed_format
+from .utils.wikilib import BlockedWikiError, WikiLib
+from .utils.wikilog import convert_data_to_text
 
 wiki_allowlist_url = WikiConfig.wiki_allowlist_url
 
