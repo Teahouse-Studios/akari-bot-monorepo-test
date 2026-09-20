@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from core.constants.path import module_data_path
+from core.registry import PackageRegistry
 
 SONGS_PER_PAGE = 30
 SONGS_NEED_IMG = 10
 
 mai_module_path = Path(__file__).parent.parent
 mai_assets_path = mai_module_path / "assets"
-# 下载所得索引与封面写入模块 data 目录：包目录在只读部署下不可写，静态资料仍随仓库分发。
-mai_data_path = module_data_path(mai_module_path)
+# 下载所得索引与封面写入实例 data 目录：包目录在只读部署与 wheel 安装下均不可写，静态资料仍随包分发。
+mai_data_path = PackageRegistry.package_data("maimai")
 mai_cover_path = mai_data_path / "static" / "mai" / "cover"
 mai_alias_path = mai_data_path / "mai_song_alias.json"
 mai_song_info_path = mai_data_path / "mai_song_info.json"

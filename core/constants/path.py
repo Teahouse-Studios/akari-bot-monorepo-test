@@ -79,9 +79,10 @@ class PrivateData:
 def module_data_path(module_dir: str | Path) -> Path:
     """取模块的可写数据目录，不创建它。
 
-    模块的 ``assets`` 只放随仓库分发的只读内容，下载所得资源与运行时索引写入 ``data``。
+    已弃用：模块包的可写数据一律经 :meth:`core.registry.PackageRegistry.package_data` 取实例
+    ``data`` 目录；包内 ``data`` 在只读部署与 wheel 安装下均不可写。本函数仅为兼容既有调用保留。
 
-    不在此处建目录：模块常在导入期调用本函数，而导入期建目录会让只读安装（``chmod a-w`` 或
+    不在此处建目录：调用方常在导入期取路径，而导入期建目录会让只读安装（``chmod a-w`` 或
     wheel）下的 ``import`` 本身抛 ``PermissionError``。目录由写入方在使用时创建。
 
     :param module_dir: 模块根目录，例如 ``Path(__file__).parent``。

@@ -6,14 +6,15 @@ from pathlib import Path
 import orjson
 
 from core.logger import Logger
+from core.registry import PackageRegistry
 from core.utils.cache import random_cache_path
 from core.utils.http import get_url, download
 
 pgr_module_path = Path(__file__).parent.parent
-# assets 只放随仓库分发的静态资源，下载所得的曲目信息、版本号与曲绘写入 data。目录创建留到
+# assets 只放随包分发的静态资源，下载所得的曲目信息、版本号与曲绘写入实例 data。目录创建留到
 # 写入时进行，导入模块或仅读取路径的调用不在包内留下副作用。
 pgr_assets_path = pgr_module_path / "assets"
-pgr_data_path = pgr_module_path / "data"
+pgr_data_path = PackageRegistry.package_data("phigros")
 
 song_info_path = pgr_data_path / "song_info.json"
 illustration_dir = pgr_data_path / "illustration"
