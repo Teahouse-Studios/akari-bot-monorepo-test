@@ -259,7 +259,6 @@ class PackageRegistry:
 
     @staticmethod
     def _key(entry: PackageEntry) -> str:
-        """条目在注册表中的唯一键。模块与适配器可能同名，需带种类区分。"""
         return f"{entry.kind}:{entry.name}"
 
     @classmethod
@@ -277,7 +276,6 @@ class PackageRegistry:
 
     @staticmethod
     def _package_label(entry: PackageEntry) -> str:
-        """包的展示名，优先用分发名。"""
         return entry.dist_name or entry.name
 
     @classmethod
@@ -345,7 +343,6 @@ class PackageRegistry:
 
     @classmethod
     def _load_frozen(cls) -> dict[str, PackageEntry] | None:
-        """读取二进制构建产物中的清单；不存在时返回 ``None``。"""
         try:
             module = importlib.import_module(FROZEN_REGISTRY_MODULE)
         except ModuleNotFoundError:
@@ -458,7 +455,6 @@ class PackageRegistry:
 
     @staticmethod
     def _import_optional(name: str) -> Any | None:
-        """导入包；不存在时返回 ``None``。"""
         try:
             return importlib.import_module(name)
         except ImportError:
@@ -581,7 +577,6 @@ class PackageRegistry:
 
     @staticmethod
     def _core_locales_dir() -> Path | None:
-        """core 自身的 locale 目录。"""
         try:
             core = importlib.import_module("core")
         except ImportError:
@@ -843,7 +838,8 @@ class PackageRegistry:
     def _record_rejection(
         cls, entry: PackageEntry, reason: str, rejected: dict[str, str], refused: dict[str, str]
     ) -> None:
-        """登记一次拒绝。
+        """
+        登记一次拒绝。
 
         :param entry: 被拒绝的包。
         :param reason: 拒绝原因。
@@ -944,7 +940,6 @@ class PackageRegistry:
 
     @staticmethod
     def _installed_version(dist_name: str) -> str | None:
-        """已装分发的版本；未安装时为 ``None``。"""
         try:
             return importlib.metadata.version(dist_name)
         except importlib.metadata.PackageNotFoundError:
@@ -1049,7 +1044,6 @@ class PackageRegistry:
 
     @classmethod
     def _dependency_edges(cls) -> dict[str, tuple[str, ...]]:
-        """已注册包之间的声明依赖图。"""
         cls.discover()
         return cls._edges_of(cls._entries)
 

@@ -253,7 +253,6 @@ class MigrationContext:
         await self.execute(f"CREATE INDEX {self.quote(name)} ON {self.quote(table)} ({column_sql});")
 
     async def generate_schemas(self) -> None:
-        """按当前模型补建缺失的表与索引。"""
         await Tortoise.generate_schemas(safe=True)
 
 
@@ -281,7 +280,6 @@ class MigrationModule:
 
 
 def core_migrations_dir() -> Path:
-    """core 自身的迁移目录。"""
     return Path(__file__).resolve().parent / MIGRATIONS_DIRNAME
 
 
