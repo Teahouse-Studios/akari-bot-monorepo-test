@@ -822,7 +822,6 @@ def parse_argv(argv: list[str], templates: list["Template"]) -> MatchedResult:
                 else:
                     new_priority_result[new_priority].append(p)
 
-            # 取最高优先级的第一个匹配
             max_ = max(new_priority_result.keys())
             return new_priority_result[max_][0]
 

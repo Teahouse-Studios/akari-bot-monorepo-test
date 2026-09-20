@@ -534,7 +534,6 @@ class AnyOutput(Expectation):
     如果输出包含错误信息（如"执行命令时发生错误"），则匹配失败。
     """
 
-    # 错误信息关键词列表
     ERROR_KEYWORDS = ["执行命令时发生错误"]
 
     async def match(self, result):
@@ -649,7 +648,6 @@ class NoException(Expectation):
     3. 输出中不包含错误信息关键词
     """
 
-    # 错误信息关键词列表
     ERROR_KEYWORDS = ["执行命令时发生错误"]
 
     async def match(self, result):
