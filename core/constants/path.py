@@ -14,16 +14,12 @@ from pathlib import Path
 
 from core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
 
-# 配置只读模式的环境变量名。守护进程在 spawn bot 与 server 子进程前置位，
-# pre-init 进程则清除此标记，以保证配置迁移与缺失项补全只发生在该进程中。
-# 该常量必须位于不依赖 core.config 的模块：若为取得常量而提前导入 core.config，
-# 其导入期版本迁移会在 i18n 快照初始化之前执行。
+# 配置只读模式的环境变量名：守护进程 spawn 子进程前置位，pre-init 进程清除。
+# 该常量须位于不依赖 core.config 的模块，以免提前触发导入期版本迁移。
 CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 
-# union 合并日志目录的环境变量名。测试引导据此把测试合成的合并记录写进临时目录，
-# 不让它们随着每次测试运行堆积在开发者的 data/ 中。
-# 与 CONFIG_PATH_ENV 同理，此处的取值发生在导入期，引导代码须先于 core 导入置位，
-# 故该名称在 tester.py 与 tests/run_one.py 中各以字面量重复了一次。
+# union 合并日志目录的环境变量名，测试引导据此写入临时目录。
+# 取值发生在导入期，引导代码须以字面量重复该名称。
 UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
 # 基本路径

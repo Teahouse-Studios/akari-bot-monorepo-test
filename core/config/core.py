@@ -97,9 +97,8 @@ class CoreConfig:
     repo_url: str = repo_url_default
 
 
-# 密钥项写在 config.toml 的 [secret] 表内，故表名为 config、以 secret 标志区分，
-# 而非另立一张名为 secret 的表。原先写作 on_config("secret") 时，CFGManager.get() 会去查找
-# 并不存在的 secret.toml，一律回退至默认值而读不到实际配置。
+# 密钥项写在 config.toml 的 [secret] 表内，故表名为 config、以 secret 标志区分。
+# 不可写作 on_config("secret")：那会去查找并不存在的 secret.toml。
 @on_config("config", secret=True)
 class CoreSecretConfig:
     db_path: str = db_path_default

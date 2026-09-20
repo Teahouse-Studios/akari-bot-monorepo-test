@@ -967,9 +967,8 @@ class MessageNodes:
         return all(chain.is_safe for chain in self.values)
 
 
-# 可作为消息发送的入参类型。仅用于约束参数，不存在输入与输出的类型绑定，
-# 故取联合类型而非 TypeVar：后者是取值受限的类型变量，会拒绝 MessageChain | MessageNodes
-# 这类联合，使 get_message_chain() 的结果无法回传给 send_message()。
+# 可作为消息发送的入参类型。取联合类型而非 TypeVar：
+# 后者会拒绝 MessageChain | MessageNodes 这类联合。
 Chainable = (
     MessageChain
     | I18NMessageChain

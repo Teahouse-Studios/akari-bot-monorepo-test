@@ -181,9 +181,8 @@ async def _try_command_recovery(
                 fresh_modules = ModulesManager.return_modules_list(*platform_fields(msg.session_info), use_cache=False)
                 msg.trigger_msg = proposal.trigger_msg
                 new_word = proposal.command_first_word
-                # 等待期间管理员可能已停用模块、静音或改权限；仅模块表不是权威状态。
-                # 刷新 Union 派生状态（enabled_modules/muted/权限等），同时保留本次消息
-                # 已生效的前缀与 hook 草稿修改，避免直接 refresh 丢掉入口覆盖值。
+                # 等待期间模块状态可能已变，刷新 Union 派生状态，
+                # 同时保留本次消息已生效的前缀与 hook 草稿修改。
                 try:
                     await msg.session_info.refresh_info()
                 except Exception:
@@ -353,9 +352,8 @@ async def parser(msg: "Bot.MessageSession"):
         try:
             await msg.release_execution_resources()
         finally:
-            # wait_* 的回复会话会共享根命令的 ExecutionState，但没有最终
-            # 清理所有权。它仍可在 continuation 内主动 sleep／wait，从而
-            # 释放和重获同一 lease；这里只能由原始 parser 释放最终 lease，
+            # wait_* 的回复会话共享根命令的 ExecutionState，但无最终清理所有权；
+            # 最终 lease 只能由原始 parser 释放。
             if getattr(msg, "_execution_state_owner", True):
                 ExecutionLockList.remove(msg)
             await _dispatch_stage(HookPoint.FINISHED, msg)
@@ -939,9 +937,8 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
                             if not await try_acquire_execution_lock(msg):
                                 continue
 
-                            # 标记须在调用处理函数之前落下：处理函数为协程，其执行期间同一场景的
-                            # 下条消息若到达，标记尚未设置便会重复触发。抛异常时同样保留标记——
-                            # 下游链路本就有问题，再次触发只是白费开销。
+                            # 标记须在处理函数执行前落下，否则同场景下条消息会重复触发。
+                            # 抛异常时同样保留标记。
                             if rfunc.trigger_once_startup:
                                 mark_regex_once(m, index, msg.session_info.target_id)
 

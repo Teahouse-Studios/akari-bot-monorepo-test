@@ -33,9 +33,8 @@ UNION_ID_PREFIXES = {
     UNION_SCOPE_TARGET: "UTID",
 }
 
-# Union 的绑定、合并、删除、标量与 JSON 更新属于同一 mutation 域。它们都是低频管理操作，
-# 使用一把进程内锁可避免 SQLite 下无效的 SELECT ... FOR UPDATE，以及不同局部锁之间的交错。
-# MySQL 路径仍在事务内锁住核心行，覆盖 Web 与 Server 分属不同进程的情况。
+# Union 的绑定、合并、删除与更新属同一 mutation 域，共用一把进程内锁。
+# MySQL 路径仍在事务内锁住核心行，覆盖 Web 与 Server 分属进程的情况。
 _union_mutation_lock = asyncio.Lock()
 
 
@@ -777,9 +776,8 @@ class SenderUnionInfo(UnionInfo):
                     blocked=current.blocked,
                     warns=current.warns,
                 )
-                # 先建新组再改挂映射行，全程不出现「该账号没有映射行」的中间态：
-                # 该状态下若中断，下次解析会将账号视为新账号并创建新的 union，
-                # 从而丢失封禁与警告次数。union_id 不是主键，可通过单条 UPDATE 改挂。
+                # 先建新组再改挂映射行，全程不出现「账号没有映射行」的中间态。
+                # union_id 不是主键，可通过单条 UPDATE 改挂。
                 await SenderUnionBind.filter(sender_id=sender_id, union_id=self.union_id).update(
                     union_id=union.union_id
                 )
@@ -993,9 +991,8 @@ class TargetUnionInfo(UnionInfo):
         :return: 实际通道号；场景或所属 Union 已不存在时为 ``None``。
         """
         async with union_mutation():
-            # 全仓 Union 事务统一先锁核心行、再锁映射行。若反过来，MySQL 下可与
-            # bind/unbind/merge 形成「持 bind 等 union／持 union 等 bind」的死锁环。
-            # 候选 union_id 只作锁顺序提示；锁住核心行后必须重读映射并验证它未改挂。
+            # Union 事务统一先锁核心行、再锁映射行，反序会在 MySQL 下形成死锁环。
+            # 锁住核心行后必须重读映射并验证它未改挂。
             for _attempt in range(2):
                 candidate = await TargetUnionBind.get_or_none(target_id=target_id)
                 if not candidate:
@@ -1145,9 +1142,8 @@ class TargetUnionInfo(UnionInfo):
                     locale=current.locale,
                     using_db=connection,
                 )
-                # 先建新组再改挂映射行，全程不出现「该场景没有映射行」的中间态：
-                # 该状态下若中断，下次解析会将场景视为新场景并创建新的 union，
-                # 从而丢失封禁状态。新组仅含该场景，通道号复位为 1。
+                # 先建新组再改挂映射行，全程不出现「场景没有映射行」的中间态。
+                # 新组仅含该场景，通道号复位为 1。
                 moved = await (
                     TargetUnionBind.filter(target_id=target_id, union_id=self.union_id)
                     .using_db(connection)
@@ -1230,10 +1226,8 @@ class TargetUnionInfo(UnionInfo):
                 for old_union in (fresh_self.union_id, fresh_other.union_id):
                     await migrate_union_references(UNION_SCOPE_TARGET, old_union, merged.union_id)
 
-                # 自身一侧的通道号保持不变，并入方整体平移：双方均自 1 开始编号，
-                # 直接合表会使两个互不相关的场景同为 1 号，进而被误判为同一条消息通道。
-                # 平移须按原通道号建立映射，不能逐条分配新号——并入方内部原本同号的场景必须保持同号，
-                # 否则已配对的场景会在合并时被拆开。
+                # 自身一侧通道号不变，并入方整体平移，不得逐条分配新号。
+                # 平移须按原通道号建立映射，以保持并入方内部原本同号的场景同号。
                 await (
                     TargetUnionBind.filter(union_id=fresh_self.union_id)
                     .using_db(connection)
@@ -1746,9 +1740,8 @@ class JobQueuesTable(DBModel):
         # 若沿用无条件删除，它们会在等待方和执行方自己的超时机制生效前一小时就消失。
         await cls.filter(timestamp__lt=timestamp, status__in=["done", "failed", "timeout"]).delete()
 
-        # 超过全局执行上限的活动任务已不可能合法完成。免回包任务直接删除；等待型任务先标成
-        # timeout 供调用方轮询取得终态。终态删除必须发生在这一步之前，否则刚标记的行会在
-        # 同一轮立即被删掉。
+        # 超过全局执行上限的活动任务已不可能合法完成：免回包任务直接删除，
+        # 等待型任务先标 timeout 供轮询取得终态。终态删除须在本步之前完成。
         active_timeout = now - timedelta(seconds=cls.ACTIVE_TIMEOUT_SECONDS)
         stale_active = cls.filter(timestamp__lt=active_timeout, status__in=["pending", "processing"])
         await stale_active.filter(expects_response=False).delete()

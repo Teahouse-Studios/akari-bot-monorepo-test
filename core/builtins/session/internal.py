@@ -136,9 +136,8 @@ class MessageSession:
     # （如 merge 现为 bind 的别名），退役策略解析后仍需据此判断放行与否。
     command_original_word: str = field(default="", repr=False, eq=False)
 
-    # 仅存在于 Server 进程中的命令执行状态。通过 wait_* 取得的回复会话会共享
-    # 同一个对象，使嵌套等待可以释放／重获同一 lease，并由原始 parser 统一
-    # 释放等待结果所持有的平台 context。
+    # 仅存在于 Server 进程的命令执行状态。wait_* 取得的回复会话共享同一对象，
+    # 嵌套等待据此释放／重获同一 lease，并由原始 parser 统一释放平台 context。
     _execution_state: ExecutionState = field(factory=ExecutionState, repr=False, eq=False)
     _execution_state_owner: bool = field(default=True, repr=False, eq=False)
 

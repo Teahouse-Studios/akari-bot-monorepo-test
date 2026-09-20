@@ -27,9 +27,8 @@ RETIRED_NOTIFY_DELAY_MAX = 86400
 pending_notices: set[str] = set()
 _notice_tasks: set[asyncio.Task] = globals().get("_notice_tasks", set())
 
-# ``enqueue_notice`` 的判断与占位之间包含首次读取已发记录的 await。若没有互斥，两个并发消息会
-# 同时在等待前观察到「未排队」，随后各自创建一项投递任务。锁只覆盖判断与 set 占位，真正的
-# 延时投递不在临界区内，不会阻塞其它场景排队。
+# ``enqueue_notice`` 的判断与 set 占位之间含 await，须以互斥覆盖。
+# 锁只覆盖判断与占位，真正的延时投递不在临界区内。
 _notice_enqueue_lock = asyncio.Lock()
 
 # 内存态是唯一真相源：判断与写入均走内存，落库时全量覆盖。
@@ -44,11 +43,8 @@ _MISSING_NOTIFIED = object()
 # 迁移关系的分隔符，配置形如 "QQ -> QQBot"。
 RETIRED_ROUTE_SEPARATOR = "->"
 
-# 退役实例上仍可执行的模块。命令路径与正则路径共用这一份判据，
-# 白名单中加入一项，两条路径同时放行。
-# 白名单按用户输入的首词匹配：模块别名可能把某项命令并入其它模块
-# （如 merge 现解析为 bind 的 merge 子命令），此时解析出的模块名不属于
-# 白名单，退役策略会回退到改写前的首词继续判定。
+# 退役实例上仍可执行的模块，命令路径与正则路径共用这一份判据。
+# 白名单按用户输入的首词匹配；解析出的模块名不在白名单时回退到改写前的首词。
 RETIRED_ALLOWED_MODULES = {"merge"}
 
 

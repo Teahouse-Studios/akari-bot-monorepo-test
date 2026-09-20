@@ -673,9 +673,8 @@ class ModulesManager:
             elif isinstance(meta, EventMeta):
                 cls.modules[module_name].events_list.add(meta)
         elif cls._reload_package:
-            # 子模块会按 sys.modules 的顺序重载，扩展另一个兄弟模块的装饰器可能
-            # 先于目标模块本身执行。等目标 module() 重新注册后再绑定，避免命令、
-            # Hook 或 Event 在一次“成功”的热重载后静默消失。
+            # 子模块按 sys.modules 顺序重载，扩展兄弟模块的装饰器可能先于目标模块执行。
+            # 等目标 module() 重新注册后再绑定，避免命令、Hook 或 Event 静默消失。
             cls._deferred_bindings.append((module_name, meta))
 
     _return_cache = {}
@@ -791,18 +790,15 @@ class ModulesManager:
         """
         重载该机器人模块（以及该模块所在文件的其它模块）
         """
-        # 此处不能等待另一个重载释放锁：先进入数据库维护的重载会等待其它
-        # JobQueue action 收尾，而第二个 action 若阻塞在本锁上，双方会形成死锁。
-        # 忙碌时直接失败也能保证第二次请求尚未改动模块注册表。
+        # 此处不能等待另一个重载释放锁，双方会形成死锁。
+        # 忙碌时直接失败，保证第二次请求尚未改动模块注册表。
         if cls._reload_lock.locked():
             Logger.warning(f"Another module reload is already in progress, skipped {module_name}.")
             return False, 0
 
         async with cls._reload_lock:
-            # 先排空 Queue handler，再进入 Scheduler 维护。反序会让正在执行
-            # load/unload 的 handler 卡在 Scheduler 锁上，而 reload 又在等该
-            # handler 收尾，形成永久互锁。Scheduler 窗口仍须覆盖 importlib.reload()：
-            # 旧函数的 __globals__ 指向会被原地更新的模块字典。
+            # 先排空 Queue handler，再进入 Scheduler 维护，反序会形成永久互锁。
+            # Scheduler 窗口仍须覆盖 importlib.reload()。
             from core.queue.server import JobQueueServer
 
             # 长时间保持非独占窗口：停止领取新 action，但让轮询器继续回收
@@ -850,10 +846,8 @@ class ModulesManager:
         def restore_registrations():
             for package_name in reversed(reload_packages):
                 cls._restore_module_registrations(package_name, old_modules, old_origins)
-            # 恢复的是旧代际的注册，但 ModuleRuntimeManager 的 staging 仍是新代际；
-            # 若不重建索引，build_subscription 会把旧函数标记成 staging 的新
-            # generation，abort 之后旧 runtime 与订阅代际不符，旧订阅全部失效。
-            # 此处重建时 staging 尚未撤销，需在 abort_reload 之后再次重建。
+            # 恢复旧代际注册后必须重建订阅索引，否则旧订阅全部失效。
+            # 重建时 staging 尚未撤销，需在 abort_reload 之后再次重建。
             cls.refresh_modules_hooks()
 
         def restore_python_modules():

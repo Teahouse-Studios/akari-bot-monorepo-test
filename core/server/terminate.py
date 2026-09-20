@@ -57,9 +57,8 @@ async def cleanup_sessions():
     except Exception:
         Logger.exception("Failed to stop background initialization cleanly.")
     await ModuleRuntimeManager.shutdown()
-    # 注册项可能持有 MessageSession context，取消时会经 Queue 请求平台进程 release，
-    # 因此必须在停止 poller 之前执行。只有实际导入过的组件会注册，不会在关闭阶段
-    # 为清理而额外导入未加载模块。
+    # 注册项可能持有 MessageSession context，须在停止 poller 之前取消。
+    # 只有实际导入过的组件会注册，关闭阶段不为清理额外导入模块。
     await BackgroundTaskLifecycle.run_cleanup()
     # restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
     # 必须先阻止它继续领取任务，再取消其它 handler，并在独占轮询锁时关闭资源。

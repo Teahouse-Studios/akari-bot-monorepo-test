@@ -29,11 +29,8 @@ class SessionTaskManager:
     _task_list = {}
     _task_sequence = 0
 
-    # 存储待执行回调的字典。key 使用独立注册 token，而不是消息 ID 别名：
-    # 两次并发发送可能暂时拥有相同按钮 reply_id，若用别名作 key，后一次会
-    # 覆盖前一次，并在发送回包时把 callback 串到错误的物理消息 ID 上。
-    # Telegram 等平台的 message_id 只在单个会话内唯一；channel_key 又会把同一现实
-    # 场景的多个平台入口合并，二者都不能作为物理消息 ID 的唯一作用域。
+    # 存储待执行回调的字典。key 用独立注册 token，不用消息 ID 别名：
+    # message_id 只在单会话内唯一，channel_key 又会合并多个平台入口。
     _callback_list = {}
     CALLBACK_TTL = 1800
 
@@ -395,9 +392,8 @@ class SessionTaskManager:
         """
         handled = False
 
-        # pending reply 的物理消息 ID 只有平台发送回包后才知道。先寻找已经 ready
-        # 的精确引用目标；若没有，再同时等待所有 pending 任务中的任意一个就绪，
-        # 避免较早登记但发送卡住的任务阻塞本可命中的后续 ready 任务。
+        # 先找已 ready 的精确引用目标；没有则同时等待所有 pending 任务中的任意一个。
+        # 避免登记早但发送卡住的任务阻塞后续 ready 任务。
         while True:
             active_tasks = await cls._active_tasks(session)
             if not active_tasks:
@@ -457,9 +453,8 @@ class SessionTaskManager:
         if session.session_info.reply_id is None:
             return False
 
-        # 检查当前物理平台场景是否有对此消息的回调需要执行。先选择真实／虚拟
-        # 消息 ID 的精确匹配；bot_id fallback 只有在当前作用域和发送者下唯一时
-        # 才能使用，否则无法判断用户引用的是哪一次发送，不能按注册顺序猜测。
+        # 先按真实／虚拟消息 ID 精确匹配；bot_id fallback 仅在当前作用域与发送者下唯一时可用，
+        # 否则不能按注册顺序猜测用户引用的是哪一次发送。
         exact_matches = []
         fallback_matches = []
         for callback_key, callback_info in list(cls._callback_list.items()):

@@ -186,9 +186,8 @@ async def load_prompt(locale_load_error, timeout: float | None = None) -> None:
             Logger.exception("Failed to decode restart prompt author cache, skipped restart prompt.")
             return
 
-        # 数据库后端中的旧 Client peer 在进程退出后可能仍保留一段有效租约。它虽然
-        # 已无法消费任务，却仍会被普通服务路由视为 ready，因此须明确排除缓存中的旧实例，
-        # 并把提示固定投递给本轮重启后实际注册的新实例。
+        # 数据库中的旧 Client peer 退出后仍可能保有有效租约，须明确排除。
+        # 提示固定投递给本轮重启后实际注册的新实例。
         previous_peer_id = author_session.owner_peer_id
 
         try:

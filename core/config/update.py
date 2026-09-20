@@ -131,9 +131,7 @@ class ConfigReorganizer:
 with open(cfg_file_path, "r", encoding="utf-8") as cfg_file:
     config = toml_parser(cfg_file.read())
 
-# If config version not exists, regenerate the config file (assumed as
-# version 0 to convert old to new format since this is the first time to
-# generate the config file for everyone)
+# 配置文件无版本号时重新生成（按版本 0 处理），以完成首次格式转换。
 if "config_version" not in config:
     old_config = config
     logger.info("Config version not found, regenerating the config file...")

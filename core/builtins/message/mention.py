@@ -16,9 +16,8 @@ from collections.abc import Callable, Iterator
 
 from attrs import define
 
-# AT 码格式：<AT:client|userid> / <@:client|userid>，client 与 userid 之间允许存在额外字段。
-# 注意：中间字段使用惰性 `.*?`，因此同一行内的多个 AT 码会被合并为一次匹配（取最后一个 ID）；
-# 这是重构前各适配器共用的既有语义，保持原样以免改变线上输出。
+# AT 码格式：<AT:client|userid> / <@:client|userid>，中间可含额外字段。
+# 中间字段为惰性匹配，同行多个 AT 码会合并为一次（取最后一个 ID），此语义须保持。
 _AT_CODE_PATTERN = re.compile(r"<(?:AT|@):([^\|]+)\|(?:.*?\|)?([^\|>]+)>")
 
 # 受保护区间专用：不允许跨标签吞掉中间文本，保证相邻 AT 码之间的正文不被豁免。

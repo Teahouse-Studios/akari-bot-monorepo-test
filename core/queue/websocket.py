@@ -406,11 +406,8 @@ def _fit_error_response(response: RpcResponse, max_bytes: int) -> RpcResponse:
     compact_response = RpcResponse(response.task_id, response.status, compact_envelope)
     diagnostic = error.get("traceback")
     if isinstance(diagnostic, str) and _response_frame_fits(compact_response, max_bytes):
-        # Preserve as much of the remote stack as the frame allows.  A binary
-        # search avoids repeated oversized frames for long exception messages.
-        # Receiver-side diagnostics already contain request context; remove
-        # that suffix before trimming so the caller can rebuild complete local
-        # context from its original request rather than receive a torn marker.
+        # 保留帧能容纳的尽量多远端栈，用二分查找避免长消息反复超帧。
+        # 裁剪前先去掉接收侧已含的请求上下文后缀，以便调用方重建本地上下文。
         if _RPC_CONTEXT_MARKER in diagnostic:
             diagnostic = diagnostic.split(_RPC_CONTEXT_MARKER, 1)[0].rstrip()
         low, high = 0, len(diagnostic.encode("utf-8"))
@@ -428,9 +425,8 @@ def _fit_error_response(response: RpcResponse, max_bytes: int) -> RpcResponse:
     if _response_frame_fits(compact_response, max_bytes):
         return compact_response
 
-    # Extremely small limits can leave no room for the original message. Keep
-    # the protocol shape valid with a short fallback before letting the caller
-    # handle a genuinely impossible frame limit.
+    # 极小上限可能容不下原始消息。
+    # 先以短回退保持协议形状合法，再交由调用方处理不可能满足的帧上限。
     minimal_error = {
         "code": error.get("code", "rpc_error"),
         "type": error.get("type", "RpcError"),

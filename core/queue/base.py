@@ -456,9 +456,8 @@ class JobQueueBase:
             caller_traceback = request.caller_traceback
         caller_traceback = caller_traceback if isinstance(caller_traceback, str) else ""
         if remote_traceback and cls._has_request_context(request, remote_traceback):
-            # Current receivers send a complete diagnostic. Rebuild it with the
-            # locally captured caller stack so a small intermediary cannot
-            # replace the authoritative origin with a truncated copy.
+            # 当前接收方发送完整诊断，须用本地捕获的调用栈重建，
+            # 以免中间环节以截断副本覆盖权威来源。
             remote_part = cls._remote_traceback_part(request, remote_traceback)
             if caller_traceback:
                 return cls._format_error_details(request, remote_part, caller_traceback=caller_traceback)

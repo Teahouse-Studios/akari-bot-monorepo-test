@@ -365,9 +365,8 @@ class SessionInfo:
         self.platform_name, self.platform_from = resolve_platform_identity(
             self.target_from, self.client_name, self.platform_name, self.platform_from
         )
-        # SessionInfo 在 bot 进程构造后才经队列抵达 server；这段时间内权限、静音、
-        # 语言或命令前缀都可能被其它消息修改。只替换 ORM 对象而保留派生字段，会让
-        # parser 继续按入队时的旧状态执行。
+        # SessionInfo 是入队时快照，其间权限、静音、语言与前缀可能已被改动。
+        # 只替换 ORM 对象而保留派生字段，会让 parser 按入队时的旧状态执行。
         sender_union_info, target_union_info = await asyncio.gather(
             SenderUnionInfo.get_by_sender_id(self.sender_id, create=False) if self.sender_id else _none(),
             TargetUnionInfo.get_by_target_id(self.target_id, create=False) if self.target_id else _none(),

@@ -11,9 +11,8 @@ from core.config.base import CoreConfig
 from core.database.models import SenderUnionInfo, StoredData
 from core.utils.random import Random
 
-# 花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不再按客户端分桶，
-# 桶内亦按 union 而非平台账号索引；否则一个人绑几个平台就能领几倍的每日上限。
-# 花瓣属于用户而非场景，不涉及消息通道维度。
+# 花瓣余额与日额度挂在 union 上，跨平台共享；存储不按客户端分桶。
+# 桶内按 union 而非平台账号索引，避免多绑平台重复领取。
 PETAL_STORE_SCOPE = "Union"
 _petal_mutation_lock = asyncio.Lock()
 

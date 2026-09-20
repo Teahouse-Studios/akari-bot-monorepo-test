@@ -27,14 +27,12 @@ class ExecutionState:
 
     def __init__(self) -> None:
         self.lock_token: str | None = None
-        # parser 的根 asyncio.Task 是 lease 的最终生命周期边界。正常路径仍由
-        # parser finally 主动释放；若调用链遭遇取消、意外 BaseException 或其它
-        # 未覆盖的退出路径，任务完成回调会回收遗留 lease，避免用户永久卡锁。
+        # parser 的根 asyncio.Task 是 lease 的最终生命周期边界。
+        # 未覆盖的退出路径由任务完成回调回收遗留 lease。
         self.lock_owner_task: asyncio.Task | None = None
         self.held_contexts: list[MessageSession] = []
-        # wait_anyone／wait_reply(all_=True) 取得的结果可能来自另一名用户。
-        # continuation 在结果会话上继续 sleep／wait 时，执行锁仍须按最初发起
-        # 命令的用户计算，不能把锁主体偷换成回复者。
+        # wait_anyone／wait_reply(all_=True) 的结果可能来自另一名用户，
+        # 执行锁仍须按最初发起命令的用户计算。
         self.lock_subject: MessageSession | None = None
 
 
@@ -91,9 +89,8 @@ class ExecutionLockList:
         keys = {sender_id} if sender_id else set()
         union_info = getattr(msg.session_info, "sender_union_info", None)
         if union_info is not None and sender_id:
-            # SessionInfo 是入队时的快照；等待期间 merge／unbind 可能使其
-            # sender_union_info 变成已删除的旧行。必须按物理 ID 重新解析，
-            # 否则会漏掉新组成员，或在解绑后误锁已分离的账号。
+            # SessionInfo 是入队时快照，等待期间 merge／unbind 可能使其 union 行失效，
+            # 必须按物理 ID 重新解析，以免漏掉新组成员或误锁已分离账号。
             current_union = await type(union_info).get_by_sender_id(sender_id, create=False)
             if current_union is not None:
                 keys.add(current_union.union_id)
@@ -212,9 +209,8 @@ class ExecutionLockList:
             return False
         cls._reservations.intersection_update(cls._list)
         reservation = frozenset(set(cls._list[token]).union(keys))
-        # 两个合并命令的扩展域只要有交集，后进入 reservation 的命令就必须
-        # 主动让出。只检查“完整覆盖”挡不住 A+B 与 B+C 这类部分重叠：双方
-        # 扩展后双方将相互等待，且不存在可释放的 lease。
+        # 两个合并命令的扩展域只要相交，后进入 reservation 的命令必须让出。
+        # 只检查「完整覆盖」挡不住 A+B 与 B+C 这类部分重叠，双方将相互等待。
         if any(
             other_token != token
             and other_token in cls._reservations

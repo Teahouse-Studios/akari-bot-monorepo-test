@@ -136,15 +136,13 @@ def _process_class(
                     "standalone_comment_keys": standalone_comments.get(attr_name, ()),
                 }
 
-                # 只读进程不补写配置文件：生成统一在 bot.py 的 pre_init() 中完成，
-                # 以免每个子进程重新导入模板时重复补写同一批配置项。
+                # 只读进程不补写配置文件，生成统一在 bot.py 的 pre_init() 中完成。
                 # 字段登记仍须执行，否则模板类属性无法读取。
                 if CFGManager.readonly:
                     continue
 
-                # 检查配置项是否已存在于目标表中，不存在时才补写
-                # 注意不可用 attr_name 与 CFGManager.values 比较：后者的键为配置文件名而非配置项键名，
-                # 二者不存在交集，该判据将恒为真，使每个属性都触发一次全量重写
+                # 检查配置项是否已存在于目标表中，不存在时才补写。
+                # 不可用 attr_name 与 CFGManager.values 比较：其键为配置文件名，判据恒真。
                 if not CFGManager.has(attr_name, secret, table_name):
                     # 创建新的配置项
                     CFGManager.get(
@@ -168,9 +166,8 @@ def _process_class(
     namespace = {
         k: v
         for k, v in vars(cls).items()
-        # 声明字段必须从类命名空间中移除：类属性会先于元类的 __getattr__ 命中，
-        # 保留下来读到的将是静态默认值而非配置文件中的当前值。
-        # __dict__ 与 __weakref__ 是新建类时自动生成的描述符，一并复制将导致类创建失败。
+        # 声明字段必须从类命名空间中移除，否则读到的是静态默认值而非配置值。
+        # __dict__ 与 __weakref__ 一并复制会导致类创建失败。
         if k not in config_fields and k not in ("__dict__", "__weakref__")
     }
     namespace.update({"__config_fields__": config_fields, "__init__": __init__, "__repr__": __repr__})
@@ -248,10 +245,8 @@ def on_base_config():
     """
 
     def wrap(cls: type[T]):
-        # 表名传 None：这类键不属于 [config]，也不属于任何其它表。
-        # 补写路径不支持在表外新建键，键不存在时将被写入 [config] 表。该情形不会出现：
-        # 这些键由 bot.py 首次运行写出的骨架建立，并由 core/config/update.py 的版本迁移保证
-        # 存在，二者均先于模板的处理执行。
+        # 表名传 None：这类键不属于任何表，由 bot.py 首次运行的骨架与版本迁移保证存在。
+        # 补写路径不支持在表外新建键，键不存在时会被写入 [config] 表。
         return _process_class(cls, None, False)
 
     return wrap

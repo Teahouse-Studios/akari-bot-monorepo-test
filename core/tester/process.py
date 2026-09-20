@@ -113,9 +113,8 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
             pass
         return [result]
     finally:
-        # Integration cases can start queue pollers, waiters, or platform tasks.
-        # They share the event loop and in-memory database with later cases, so a
-        # detached task must not survive the database context it captured.
+        # 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存库。
+        # 游离任务不得越过其捕获的数据库上下文存活。
         if not await _cancel_orphan_tasks(baseline_tasks):
             message = "Registry test left a task that did not finish cancellation cleanup."
             Logger.error(message)

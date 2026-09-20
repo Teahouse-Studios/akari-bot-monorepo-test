@@ -1,6 +1,4 @@
-# Some definitions that should be hardcoded in the project for avoiding circular imports.
-# We define the necessary constants here, and then import them into the corresponding module.
-# In this meantime, avoid to import something from somewhere else here if it's not necessary.
+# 为避免循环导入而硬编码的常量，供各模块导入；此处不要引入不必要的依赖。
 
 import os
 

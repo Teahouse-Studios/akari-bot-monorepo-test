@@ -144,9 +144,8 @@ def match_regex_rules(url: str, patterns: list[str] | tuple[str, ...]) -> bool:
 
 
 class _GlobalURLRuleList:
-    # 主仓规则（global.txt）随仓库分发，由项目维护者提交，位于 data/url_audit/<名单>；
-    # 部署者规则（user.txt）由命令与 WebUI 读写，与之同目录但被 Git 忽略。
-    # 测试可整体替换这几个路径。
+    # 主仓规则 global.txt 随仓库分发，位于 data/url_audit/<名单>。
+    # 部署者规则 user.txt 与之同目录但被 Git 忽略；测试可整体替换这几个路径。
     directory: Path
     builtin_path: Path
     user_path: Path
