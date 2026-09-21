@@ -539,6 +539,7 @@ def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> li
 SYS_EXECUTABLE_ALLOWED = (
     "akaribot/cli/tui/",  # 各页的 cli_argv 构造
     "akaribot/cli/commands/new.py",  # 脚手架末尾自调用 CLI
+    "akaribot/cli/instance.py",  # system_python()：非冻结时它就是可用解释器，冻结时才改搜索
 )
 
 

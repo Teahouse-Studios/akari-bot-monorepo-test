@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import shutil
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -176,11 +177,15 @@ def system_python() -> Path:
         if candidate.is_file():
             return candidate
         raise CliError(f"{PYTHON_ENV} 指向的解释器不存在：{candidate}")
-    for name in ("python3", "python"):
+    # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致；冻结后 sys.executable 指向
+    # CLI 二进制自身，才需要回退到系统搜索。回退时优先带版本号的名字，避免拿到过旧的 python3。
+    if not (getattr(sys, "frozen", False) or hasattr(sys, "__compiled__")):
+        return Path(sys.executable)
+    for name in ("python3.13", "python3.12", "python3", "python"):
         found = shutil.which(name)
         if found:
             return Path(found)
-    raise CliError(f"找不到系统 Python；请设置 {PYTHON_ENV} 指向实例要使用的解释器。")
+    raise CliError(f"找不到可用的系统 Python；请设置 {PYTHON_ENV} 指向实例要使用的解释器。")
 
 
 def venv_python_path(venv_dir: Path) -> Path:
