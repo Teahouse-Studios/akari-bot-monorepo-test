@@ -27,6 +27,7 @@
   - [提交规范](#提交规范)
   - [PR 描述](#pr-描述)
   - [代码风格](#代码风格)
+  - [新增模块包](#新增模块包)
 - [文字排版](#文字排版)
 
 ## 提出问题
@@ -176,12 +177,27 @@ ruff check .
 
 ```
 akaribot new module <名>          # 交互问卷；也可用 --non-interactive 配合逐项参数
-akaribot module add -e .          # 把生成出来的包以可编辑方式装进实例
+akaribot module add -e .          # 在生成的包目录内执行；脚手架 --add 默认已代跑
 ```
 
-脚手架会按问卷产出 `pyproject.toml`、`manifest.toml`、`README.md`、`src/akaribot/modules/<名>/`
-（含 `config.py`、`database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与
-`tests/test_<名>.py`。生成后请核对几条硬性约定：
+脚手架产出 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 同构：
+`pyproject.toml`、`manifest.toml`、`README.md`、`src/akaribot/modules/<名>/`（含 `config.py`、
+`database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
+`--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`；若要手工执行，先进入包目录。
+
+`manifest.toml` 放在导入包目录内，字段与 `akaribot/core/registry.py` 的 `PackageManifest` 一一对应，
+未启用的能力整行省略：
+
+| 字段 | 用途 |
+| --- | --- |
+| `schema` | 清单版本，当前为 `1` |
+| `requires_core_api` | 兼容的 core 公共 API 区间，当前写 `">=1"` |
+| `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根的路径，没有的能力省略 |
+| `config_table` / `config_schema_version` | `config.py` 中 `on_module_config("<名>")` 登记的表名与配置版本 |
+| `provides_modules` | 本包 `module()` 注册的全部模块名 |
+| `owned_tables` | 本包拥有的数据库表，供 `akaribot module remove --purge-data` 使用 |
+
+清单里**不写版本号与依赖清单**：两者的真源是 distribution metadata。生成后请核对几条硬性约定：
 
 - 代码一律 `from akaribot.core.api import ...`，不要写 `akaribot.core.builtins.*` 这类深路径。
 - `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate；键名前缀须与模块名一致。
@@ -256,6 +272,7 @@ Before starting to contribute, please make sure to read the relevant sections. T
   - [Commit Message Convention](#commit-message-convention)
   - [Pull Request Description](#pull-request-description)
   - [Code Style](#code-style)
+  - [Adding a Module Package](#adding-a-module-package)
 - [Text Typography (for Chinese)](#text-typography-for-chinese)
 
 ## Asking Questions
@@ -402,6 +419,53 @@ ruff check .
 ```
 
 If you're using VS Code, installing the Ruff extension is recommended.
+
+### Adding a Module Package
+
+The repository is split into packages, and every official module is its own workspace member
+(`packages/modules/akari-bot-module-<name>/`). Generate a new module with the scaffold, then adapt it:
+
+```bash
+akaribot new module <name>        # interactive questionnaire; --non-interactive plus per-item options for scripts
+akaribot module add -e .          # run inside the generated package; the scaffold's --add already does this
+```
+
+The scaffold writes `<--dir>/akari-bot-module-<name>/`, mirroring `packages/modules/akari-bot-module-<name>/`:
+`pyproject.toml`, `manifest.toml`, `README.md`, `src/akaribot/modules/<name>/` (with `config.py`,
+`database/models.py`, `migrations/`, `locales/zh_cn.json`, `assets/`) and `tests/test_<name>.py`.
+
+`manifest.toml` lives inside the import package. Its fields map one-to-one to `PackageManifest` in
+`akaribot/core/registry.py`, and capabilities that are not used are omitted entirely:
+
+| Field | Purpose |
+| --- | --- |
+| `schema` | Manifest version, currently `1` |
+| `requires_core_api` | Compatible core public API range, currently `">=1"` |
+| `locales` / `assets` / `migrations` / `config_migrations` | Directory paths relative to the package root; omitted when absent |
+| `config_table` / `config_schema_version` | Table registered by `on_module_config("<name>")` in `config.py`, and its config version |
+| `provides_modules` | Every module name registered by `module()` in this package |
+| `owned_tables` | Database tables owned by this package, used by `akaribot module remove --purge-data` |
+
+The manifest deliberately carries **no version and no dependency list**: distribution metadata is the single
+source of truth for both. After generating, check the hard requirements:
+
+- Import from the facade only: `from akaribot.core.api import ...`, never deep paths such as `akaribot.core.builtins.*`.
+- Only `locales/zh_cn.json` is committed; other languages come from Weblate. Locale keys are prefixed with the module name.
+- Declare the core constraint as `akari-bot-core>=0.1.0,<1.0`. This string must be **byte-for-byte identical**
+  across all first-party packages; `python tools/lint_versions.py` checks it.
+- Official module packages must not depend on each other (`tools/lint_boundaries.py`, rule B10).
+- Database migrations live in `migrations/` and must be repeatable; whether a revision has been applied is
+  decided solely by the `schema_migrations` table.
+- Never add `akaribot/__init__.py`: `akaribot` is a namespace package (rule B7).
+
+Run all gates before committing:
+
+```bash
+uv run ruff check . && uv run ruff format --check .
+uv run python tools/lint_comments.py      # comment style and block length
+uv run python tools/lint_boundaries.py    # layering, namespaces, dependency declarations
+uv run python tools/lint_versions.py      # internal version constraint consistency
+```
 
 ## Text Typography (for Chinese)
 

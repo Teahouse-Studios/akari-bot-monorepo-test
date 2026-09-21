@@ -73,6 +73,22 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 
    需要交互界面时用 `akaribot tui`（无图形终端的环境请用命令行子命令）。
 
+## 同一个平台跑多个账号
+
+迁移一律生成**默认实例**，它的 `client_name` 与旧项目逐字节相同，因此历史场景数据（`target_id`
+前缀）原样可用。需要再挂一个同平台账号时新建实例：
+
+```
+akaribot adapter list                          # 按平台列出全部实例
+akaribot adapter instance add telegram work    # 新实例：写 config/bot_telegram.toml 的 [bot_telegram-work]
+akaribot doctor                                # 检测监听端口冲突与两个实例配了同一账号
+```
+
+新实例的 `client_name` 带 `-<实例 ID>` 后缀（如 `Telegram-work`），`target_id` / `sender_id` 因此
+带新的前缀，与默认实例的历史数据互相独立。实例 ID 一经使用**不可改名**：改名要跨多张核心表与模块表
+迁移前缀，需要换 ID 时按「新建实例 + 迁移数据」处理。`add` 生成的配置里 `enable` 显式为 `false`，
+填完凭据再开启。
+
 ## 旧版 `~update` 的行为变化
 
 机器人内的 `~update` 不再执行 `git pull` 与 `uv sync`——实例里没有仓库，依赖也装在实例 venv 而非
