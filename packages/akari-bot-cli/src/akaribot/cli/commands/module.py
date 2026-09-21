@@ -515,9 +515,8 @@ def update(
         ok(f"已更新 {len(updated)} 个包" + ("；运行中的实例已收到热装载通知" if updated else ""))
 
 
-# 三级「启用」语义（附录 B）：安装看 venv 里有没有这个分发，全局装载看 ModuleStatus.load，
-# 场景启用看 target_union_info.modules。本命令只管第二级，故动词用 load/unload 而非 enable/disable
-# ——后者在机器人内是场景级命令，撞词会让用户以为改了全局。
+# 三级「启用」语义（附录 B）：安装看 venv、全局装载看 ModuleStatus.load、场景启用看
+# target_union_info.modules。本命令只管第二级，故用 load/unload 而非场景级的 enable/disable。
 @app.command("load")
 def load_module(
     name: str,

@@ -79,9 +79,7 @@ def collect() -> tuple[list[dict], str]:
     status = asyncio.run(_status())
     # 下划线开头的是框架内部注册（解析器策略、错误处理等），不是用户可装载的模块，列出只会成为噪声。
     names = sorted(name for name in set(declared) | set(status) if not name.startswith("_"))
-    items = [
-        {"name": name, "loaded": status.get(name), "installed_dist": declared.get(name, "")} for name in names
-    ]
+    items = [{"name": name, "loaded": status.get(name), "installed_dist": declared.get(name, "")} for name in names]
     note = "" if status else "状态表暂无记录：实例尚未完成过一次启动，下次启动按默认装载。"
     return items, note
 
@@ -176,7 +174,10 @@ def _load_or_unload(module: str, action: str) -> int:
     known, status_seen = _known_modules()
     if module not in known:
         hedge = "" if status_seen else "；若该模块由未声明 provides_modules 的包在运行期注册，请先启动一次实例再试"
-        print(f"未知模块 {module!r}：状态表与已装包都没有它。用 `akaribot module list` 核对已装包{hedge}。", file=sys.stderr)
+        print(
+            f"未知模块 {module!r}：状态表与已装包都没有它。用 `akaribot module list` 核对已装包{hedge}。",
+            file=sys.stderr,
+        )
         return 2
 
     from akaribot.core.queue.errors import RpcError, RpcTimeoutError
