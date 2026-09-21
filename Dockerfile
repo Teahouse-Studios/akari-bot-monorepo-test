@@ -29,8 +29,10 @@ RUN apt-get update && apt-get install -y \
 
 # 源码与全部成员 pyproject 一并入镜像后按 workspace 安装：members 以 .pth editable 落地，
 # python bot.py 因此能解析 akaribot.*。依赖缓存由 BuildKit 的 uv cache mount 承担。
+# --all-extras：镜像原本就带 s3 / mysql / image 三项依赖（旧根项目把它们列为必需），
+# 迁到 per-package extra 后须显式安装才能保持同样的开箱可用面。
 COPY . .
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --all-extras
 
 ENV PATH="/akari-bot/.venv/bin:$PATH"
 CMD ["python", "./bot.py"]

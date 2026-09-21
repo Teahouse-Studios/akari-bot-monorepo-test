@@ -1,4 +1,7 @@
-"""modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版。"""
+"""modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版与缺依赖降级。"""
+
+import subprocess
+import sys
 
 import matplotlib
 
@@ -6,6 +9,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 
+from akaribot.core.i18n import Locale
 from akaribot.testing import func_case, Tester
 from akaribot.modules.core.su_tools.analytics import annotate_points
 
@@ -29,7 +33,7 @@ def _max_overflow(data_y: list[int], figsize: tuple[float, float]) -> float:
         plt.plot(data_x[-1], data_y[-1], "-ro")
         plt.tick_params(axis="x", labelrotation=45, which="major", labelsize=10)
         plt.gca().yaxis.get_major_locator().set_params(integer=True)
-        annotate_points(data_x, data_y)
+        annotate_points(plt, data_x, data_y)
 
         ax = plt.gca()
         figure.canvas.draw()
@@ -48,9 +52,35 @@ def _test_annotation_stays_inside_axes():
         return False
 
 
+def _test_module_imports_without_matplotlib():
+    """未安装 matplotlib 时 analytics 仍可导入，绘图入口据 _pyplot() 降级。
+
+    子进程里把 matplotlib 置为缺席：核心包不得因可选依赖缺席而在导入期失败，
+    否则整个 bundled 模块会随之一并消失。
+    """
+    code = (
+        "import sys; sys.modules['matplotlib'] = None; sys.modules['matplotlib.pyplot'] = None; "
+        "import akaribot.modules.core.su_tools.analytics as analytics; "
+        "assert analytics._pyplot() is None, 'pyplot 未被判定为缺席'"
+    )
+    try:
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=90, check=False)
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _test_missing_dependency_message_resolves():
+    """降级提示的文案键必须可解析，否则用户看到的是键名本身。"""
+    key = "core.message.analytics.missing_matplotlib"
+    return Locale("zh_cn").t(key) != key
+
+
 @func_case
 async def test_analytics_plot(tester: Tester):
-    """modules.core.su_tools.analytics: 折线图标注排版测试"""
+    """modules.core.su_tools.analytics: 折线图标注排版与缺依赖降级测试"""
     await tester.test(_test_annotation_stays_inside_axes, "数值标注不超出坐标区测试")
+    await tester.test(_test_module_imports_without_matplotlib, "缺 matplotlib 时仍可导入测试")
+    await tester.test(_test_missing_dependency_message_resolves, "缺依赖提示文案可解析测试")
 
     return tester

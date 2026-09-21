@@ -8,7 +8,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
-    # langconv 只有 git 直链形态；发布前须先在 PyPI 提供常规版本（T4.5/T6）。
+    # langconv 上游停更，本仓库的修复版 fork 尚未发版，故暂用 git 直链；发布前须改为常规分发。
     "langconv @ git+https://github.com/Teahouse-Studios/langconv.py.git",
 ]
 

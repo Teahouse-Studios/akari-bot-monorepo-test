@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, UTC
 
-import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from tortoise.exceptions import DoesNotExist
 
@@ -39,7 +38,21 @@ def local_midnight() -> datetime:
     return datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def annotate_points(data_x: list[str], data_y: list[int]) -> None:
+def _pyplot():
+    """惰性导入 ``matplotlib.pyplot``。
+
+    matplotlib 是 core 体积最大的可选依赖（extra ``image``），默认安装不引入，绘图命令据此降级。
+
+    :return: ``matplotlib.pyplot`` 模块；未安装时为 ``None``。
+    """
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+    return plt
+
+
+def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
     """
     在折线的各数据点上方标注数值，并按需抬高 y 轴上限。
 
@@ -47,6 +60,7 @@ def annotate_points(data_x: list[str], data_y: list[int]) -> None:
     放不下最高点的标注，标注会顶出坐标区。故在绘制后量出标注实际向上占用的像素高度，
     再据此反推 y 轴上限应抬到何处，这样与数据量级、图幅大小均无关。
 
+    :param plt: ``matplotlib.pyplot`` 模块。
     :param data_x: 横轴刻度。
     :param data_y: 纵轴数值。
     """
@@ -105,6 +119,9 @@ async def _(msg: Bot.MessageSession):
 @ana.command("days [<module>] {{I18N:core.help.analytics.days}}")
 async def _(msg: Bot.MessageSession, module: str | None = None):
     if enable_analytics:
+        plt = _pyplot()
+        if plt is None:
+            await msg.finish(I18NContext("core.message.analytics.missing_matplotlib"))
         first_record = await get_first_record()
         if not first_record:
             await msg.finish(I18NContext("core.message.analytics.none"))
@@ -136,7 +153,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
         plt.tick_params(axis="x", labelrotation=45, which="major", labelsize=10)
 
         plt.gca().yaxis.get_major_locator().set_params(integer=True)
-        annotate_points(data_x, data_y)
+        annotate_points(plt, data_x, data_y)
         path = f"{random_cache_path()}.png"
         plt.savefig(path)
         plt.close()
@@ -148,6 +165,9 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
 @ana.command("year [<module>] {{I18N:core.help.analytics.year}}")
 async def _(msg: Bot.MessageSession, module: str | None = None):
     if enable_analytics:
+        plt = _pyplot()
+        if plt is None:
+            await msg.finish(I18NContext("core.message.analytics.missing_matplotlib"))
         first_record = await get_first_record()
 
         if not first_record:
@@ -180,7 +200,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
         plt.tick_params(axis="x", labelrotation=45, which="major", labelsize=10)
 
         plt.gca().yaxis.get_major_locator().set_params(integer=True)
-        annotate_points(data_x, data_y)
+        annotate_points(plt, data_x, data_y)
         path = f"{random_cache_path()}.png"
         plt.savefig(path)
         plt.close()
@@ -193,6 +213,9 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
 async def _(msg: Bot.MessageSession, rank: int | None = None):
     rank = rank if rank and rank > 0 else 30
     if enable_analytics:
+        plt = _pyplot()
+        if plt is None:
+            await msg.finish(I18NContext("core.message.analytics.missing_matplotlib"))
         try:
             module_counts = await AnalyticsData.get_modules_count()
             top_modules = sorted(module_counts.items(), key=lambda x: x[1], reverse=True)[:rank]
