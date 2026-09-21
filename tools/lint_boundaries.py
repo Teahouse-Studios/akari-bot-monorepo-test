@@ -534,9 +534,8 @@ def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> li
     return []
 
 
-# 允许 sys.executable 的位置：**冻结感知的 CLI 自调用**——那里要的正是「CLI 自己」，冻结时它是
-# 二进制、非冻结时是解释器（补 -m 模块名），两种形态都对。反之把它当解释器启动实例进程
-# （Instance.python 的回退、uv venv --python 等）在冻结后会重新调起 CLI，必须经 system_python()。
+# 允许的位置是**冻结感知的 CLI 自调用**（冻结时它是二进制、非冻结时是解释器加 -m 模块名）；
+# 反之把它当解释器启动实例进程，冻结后会重新调起 CLI，必须经 system_python()。
 SYS_EXECUTABLE_ALLOWED = (
     "akaribot/cli/tui/",  # 各页的 cli_argv 构造
     "akaribot/cli/commands/new.py",  # 脚手架末尾自调用 CLI
