@@ -57,6 +57,7 @@ __all__ = [
     "EventInfo",
     "ExecutionLockList",
     "ExpiringTempDict",
+    "Features",
     "ExternalException",
     "FetchedMessageSession",
     "FinishedSession",
@@ -260,6 +261,7 @@ try:
     # 机器人与会话：模块函数的入参与运行环境。
     from akaribot.core.alive import Alive
     from akaribot.core.builtins.bot import Bot
+    from akaribot.core.builtins.session.features import Features
     from akaribot.core.builtins.session.info import EventInfo, SessionInfo
     from akaribot.core.builtins.session.internal import (
         FetchedMessageSession,
@@ -480,6 +482,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.builtins.parser.args": ("ArgumentPattern", "Template", "templates_to_str"),
     "akaribot.core.builtins.parser.command": ("CommandParser",),
     "akaribot.core.builtins.parser.hooks": ("Handled", "HookPoint", "RecoveryProposal", "Stop", "StopScope"),
+    "akaribot.core.builtins.session.features": ("Features",),
     "akaribot.core.builtins.session.info": ("EventInfo", "SessionInfo"),
     "akaribot.core.builtins.session.internal": (
         "FetchedMessageSession",

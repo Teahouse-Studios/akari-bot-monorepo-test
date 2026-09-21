@@ -28,6 +28,7 @@ __all__ = [
     "PlatformAPI",
     "RegisteredButton",
     "S3Storage",
+    "S3StorageAPI",
     "Temp",
     "check_queue",
     "client_cleanup",
@@ -78,8 +79,9 @@ try:
         resolve_media_path,
     )
 
-    # 对象存储依赖可选的 boto3，放在导入块末尾：缺失时只影响这一个名字。
-    from akaribot.core.utils.s3 import S3Storage
+    # 对象存储依赖可选的 boto3，放在导入块末尾：缺失时只影响这两个名字。
+    # S3Storage 是 core 配置构造好的单例，S3StorageAPI 供适配器自建客户端（构造缺依赖时给出安装指引）。
+    from akaribot.core.utils.s3 import S3Storage, S3StorageAPI
 except (ConfigFileNotFound, ImportError):
     # 配置或可选依赖缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。
     pass
@@ -110,7 +112,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "resolve_media_base64",
         "resolve_media_path",
     ),
-    "akaribot.core.utils.s3": ("S3Storage",),
+    "akaribot.core.utils.s3": ("S3Storage", "S3StorageAPI"),
 }
 
 _LAZY_INDEX: dict[str, str] = {name: path for path, names in LAZY_MODULES.items() for name in names}
