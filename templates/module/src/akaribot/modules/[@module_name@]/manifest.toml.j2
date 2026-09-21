@@ -1,0 +1,14 @@
+# akari-bot-module-[@module_name@] 的包清单。
+# 字段与 core/registry.py 的 PackageManifest 一一对应，未启用的能力整行省略。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+{% if has_assets | default(false) %}assets = "assets"
+{% endif %}{% if has_database | default(false) %}migrations = "migrations"
+{% endif %}{% if has_config | default(false) %}# config.py 的 on_module_config("[@module_name@]") 登记的表。
+config_table = "module_[@module_name@]"
+config_schema_version = 1
+{% endif %}provides_modules = ["[@module_name@]"]
+{% if has_database | default(false) %}# 供 --purge-data 使用，须与 database/models.py 的 Meta.table 一致。
+owned_tables = ["module_[@module_name@]_data"]
+{% endif %}

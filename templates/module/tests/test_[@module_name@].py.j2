@@ -1,22 +1,19 @@
-"""[@module_name@] 模块的测试。
+"""[@module_name@] 模块的集成测试。
 
-测试入口由项目的自研框架执行，不是 pytest。集成用例的前提是测试发送者具有超级用户
-身份、模块处于已加载状态，且该模块的 ``config.py`` 已被扫描。
+测试入口由项目的自研框架执行，不是 pytest。集成用例的前提是测试发送者具有超级用户身份、
+模块处于已加载状态，且该模块的 ``config.py`` 已被扫描。
 """
 
 from akaribot.testing import Contains, Tester, func_case
-
-
-@func_case
-async def test_[@module_name@]_hello(tester: Tester):
-    """默认命令返回问候语。"""
-    await tester.integrate("~[@module_name@]", Contains("Hello World!"), "[@module_name@] 应返回问候语")
-    return tester
-
+{% for case in test_cases | default([]) %}
 
 @func_case
-async def test_[@module_name@]_echo(tester: Tester):
-    """echo 命令回显参数。"""
-    await tester.integrate("~[@module_name@] echo hi", Contains("hi"), "echo 应回显参数")
-    await tester.integrate("~[@module_name@] echo hi 3", Contains("3"), "echo 应回显次数")
+async def test_[@module_name@]_{{ case.token }}(tester: Tester):
+    """{{ case.doc }}"""
+    await tester.integrate(
+        {{ case.input_literal }},
+        Contains({{ case.expected_literal }}),
+        {{ case.note_literal }},
+    )
     return tester
+{% endfor -%}

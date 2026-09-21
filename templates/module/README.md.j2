@@ -1,0 +1,93 @@
+# akari-bot-module-[@module_name@]
+
+[@module_desc@]
+
+作者：[@author@]；许可证：[@license@]。
+
+## 安装
+
+```bash
+akaribot module add akari-bot-module-[@module_name@]
+```
+
+在源码目录内开发时改走可编辑安装，改完代码重启即生效：
+
+```bash
+akaribot module add -e .
+```
+
+## 命令
+
+{% for command in commands | default([]) -%}
+- `~[@module_name@]{% if command.suffix %} {{ command.suffix }}{% endif %}`：{{ command.doc }}
+{% endfor %}
+帮助文本与回复文案都在 `src/akaribot/modules/[@module_name@]/locales/zh_cn.json`。本文件只写
+`zh_cn`，其余语言由 Weblate 在包发布后收集，不要手工添加其它语言的键。
+
+## 结构
+
+```
+pyproject.toml                 # 分发元数据与 akaribot.modules entry point
+src/akaribot/modules/[@module_name@]/
+  __init__.py                  # module() 注册与命令、组件骨架
+  config.py                    # 模块配置字段声明（可选）
+  database/models.py           # 数据库模型（可选）
+  migrations/0001_initial.py   # 迁移链起点（可选）
+  locales/zh_cn.json           # 文案
+  assets/                      # 包内只读资源（可选）
+tests/test_[@module_name@].py  # 集成测试（可选）
+.github/workflows/publish.yml  # 发布工作流
+```
+
+`manifest.toml` 位于导入包目录内，由 core 的发现层按包根读取，声明 locale、资源、迁移与
+配置表等包级能力。
+{% if has_config | default(false) %}
+
+## 配置
+
+`config.py` 里以 `on_module_config` 声明的字段会成为实例配置文件中的
+`[module_[@module_name@]]` 表。字段名一律以模块名作前缀，字段注释取
+`locales/zh_cn.json` 的 `config.comments.module_[@module_name@].<字段名>`。凭据字段另起一个
+类并把 `secret=True` 传给装饰器，该表不进入 `~config` 的明文输出。
+{% endif %}
+{% if has_database | default(false) %}
+
+## 数据库
+
+`database/models.py` 里的模型继承 `DBModel`，表名以 `module_[@module_name@]_` 作前缀。
+初始建表由 core 的 `generate_schemas()` 完成，`migrations/0001_initial.py` 只是迁移链的起点；
+改动既有表结构时新增 `0002_*.py`，在 `upgrade(ctx)` 中书写幂等的 DDL。新增模型后把表名补进
+`manifest.toml` 的 `owned_tables`，`akaribot module remove --purge-data` 才会清理它。
+{% endif %}
+{% if has_assets | default(false) %}
+
+## 包内资源
+
+`assets/` 随 wheel 分发，只读。读取用 `__init__.py` 里的 `read_asset()`，它以
+`importlib.resources` 定位包内文件，二进制分发与 wheel 安装下都成立。
+{% endif %}
+{% if has_data_dir | default(false) %}
+
+## 运行时数据
+
+需要跨重启保留、或运行期下载的文件写进 `__init__.py` 的 `data_dir()`，它指向实例的
+`data/module/[@module_name@]/`。包目录在 wheel 安装与只读挂载下都不可写，不要写回包内。
+{% endif %}
+{% if with_tests | default(false) %}
+
+## 测试
+
+```bash
+uv sync --extra test
+uv run pytest
+```
+
+集成用例经 `tester.integrate()` 发送真实命令并断言回复，前提是测试环境已加载本模块且发送者
+具有超级用户身份。断言文案与 locale 中的文案一致，改文案时两处一起改。
+{% endif %}
+
+## 发布
+
+推送 `v*` 标签触发 `.github/workflows/publish.yml`，构建 wheel 与 sdist 后经 PyPI Trusted
+Publishing 发布。首次发布前需在 PyPI 登记本仓库与该工作流，并把 `pyproject.toml` 的
+`version` 递增。

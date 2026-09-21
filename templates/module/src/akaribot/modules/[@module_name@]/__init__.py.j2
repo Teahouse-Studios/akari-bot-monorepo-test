@@ -1,70 +1,77 @@
 """[@module_desc@]"""
-
-import re
-
+{% if has_data_dir | default(false) or has_assets | default(false) %}
+{% if has_data_dir | default(false) %}import os
+{% endif %}{% if has_assets | default(false) %}from importlib.resources import files
+{% endif %}{% if has_data_dir | default(false) %}from pathlib import Path
+{% endif %}{% endif %}
 from akaribot.core.api import (
-    Bot,
-    I18NContext,
-    Image,
-    IntervalTrigger,
-    MessageChain,
-    Plain,
-    module,
-)
+{% for api_name in api_names | default(["module"]) %}    {{ api_name }},
+{% endfor %})
 
 mod = module(
     "[@module_name@]",
-    alias=[],
-    developers=["[@author@]"],
+{% if aliases | default([]) %}    alias={{ aliases | default([]) | tojson }},
+{% endif %}    developers={{ [author | default("")] | tojson }},
     desc="{I18N:[@module_name@].help.desc}",
     doc=True,
-)
+{% if available_for | default([]) %}    available_for={{ available_for | default([]) | tojson }},
+{% endif %}{% if exclude_from | default([]) %}    exclude_from={{ exclude_from | default([]) | tojson }},
+{% endif %}{% if has_regex | default(false) %}    regex=True,
+{% endif %}{% if has_event | default(false) %}    event=True,
+{% endif %})
+{% for command in commands | default([]) %}
 
-
-@mod.command()
-async def _(msg: Bot.MessageSession):
-    await msg.finish(I18NContext("[@module_name@].message.hello"))
-
-
-@mod.command("echo <word> [<count>] &#123;&#123;I18N:[@module_name@].help.echo&#125;&#125;")
-async def _(msg: Bot.MessageSession, word: str, count: int = 1):
-    await msg.finish(I18NContext("[@module_name@].message.echo", word=word, count=count))
-
-
-@mod.command("chain")
-async def _(msg: Bot.MessageSession):
-    # 消息链同时承载文本与图片，不支持图片的适配器自行降级。
-    chain = MessageChain.assign(
-        [
-            Plain(I18NContext("[@module_name@].message.chain")),
-            Image("https://http.cat/200.jpg"),
-        ]
-    )
-    await msg.finish(chain)
-
-
-@mod.command("confirm")
-async def _(msg: Bot.MessageSession):
-    if await msg.wait_confirm(I18NContext("[@module_name@].message.confirm")):
-        await msg.send_message(I18NContext("[@module_name@].message.confirmed"))
-    else:
-        await msg.send_message(I18NContext("[@module_name@].message.cancelled"))
-
+@mod.command({{ command.declaration }})
+async def _({{ command.signature }}):
+    await msg.finish(I18NContext({{ command.message_literal }}))
+{% endfor -%}
+{% if has_regex | default(false) %}
 
 @mod.regex(r"\{\{(.*?)}}", mode="M")
 async def _(msg: Bot.MessageSession):
     # wait_reply 返回新会话，其输入取自被回复的消息。
     session = await msg.wait_reply(I18NContext("[@module_name@].message.reply"))
     await session.finish(msg.matched_msg.group(1))
-
-
-@mod.regex(re.compile(r"\[\[(.*?)]]"), mode="A")
-async def _(msg: Bot.MessageSession):
-    for matched in msg.matched_msg:
-        await msg.send_message(matched)
-
+{% endif -%}
+{% if has_schedule | default(false) %}
 
 @mod.schedule(IntervalTrigger(seconds=3600))
 async def _():
     # 定时任务无会话上下文，投递目标须为已启用该模块的场景名。
     await Bot.post_message("[@module_name@]", I18NContext("[@module_name@].message.scheduled"))
+{% endif -%}
+{% if has_hook | default(false) %}
+
+@mod.hook(point=HookPoint.MESSAGE_NORMALIZED)
+async def _(ctx: Bot.ModuleHookContext):
+    # 返回 None 表示不干预；需要截断或改写消息时返回 HookResult 类型化结果。
+    return None
+{% endif -%}
+{% if has_event | default(false) %}
+
+@mod.event("member_joined")
+async def _(event: EventInfo):
+    # 事件名由平台适配器定义，不同平台可用的名称不同。
+    return None
+{% endif -%}
+{% if has_assets | default(false) %}
+
+def read_asset(name: str) -> str:
+    """读取包内只读资源。
+
+    :param name: ``assets/`` 下的相对路径。
+    :return: 文件内容。
+    """
+    return (files(__package__) / "assets" / name).read_text(encoding="utf-8")
+{% endif -%}
+{% if has_data_dir | default(false) %}
+
+def data_dir() -> Path:
+    """本模块在实例内的可写数据目录。
+
+    目录不在这里创建，写入方以 ``mkdir(parents=True, exist_ok=True)`` 建目录。路径取自实例
+    布局：``AKARI_INSTANCE_DIR`` 未设置时与 core 一致地取进程工作目录。
+    """
+    root = Path(os.environ.get("AKARI_INSTANCE_DIR") or ".").resolve()
+    return root / "data" / "module" / "[@module_name@]"
+{% endif -%}

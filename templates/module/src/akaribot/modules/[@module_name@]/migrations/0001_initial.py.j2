@@ -1,15 +1,19 @@
 """建表迁移。
 
-新模块的初始结构无需手写 DDL：``db upgrade`` 在全部 revision 执行完毕后调用
-``generate_schemas()``，本文件只作为该包迁移链的起点存在。仅在需要修改既有表的
-结构时，才在 ``upgrade()`` 中书写幂等的 DDL。
+新模块的初始表结构无需手写 DDL：``db upgrade`` 在全部 revision 执行完毕后调用
+``generate_schemas()``，本文件只作为该包迁移链的起点存在。仅在需要修改既有表的结构时，
+才在 ``upgrade()`` 中书写幂等的 DDL。
 """
+
+from __future__ import annotations
+
+from akaribot.core.api import MigrationContext
 
 REVISION = "0001_initial"
 DEPENDS_ON: str | None = None
 
 
-async def upgrade(ctx) -> None:
+async def upgrade(ctx: MigrationContext) -> None:
     """建表由 core 的 ``generate_schemas()`` 完成，此处无需额外操作。
 
     :param ctx: 迁移上下文。

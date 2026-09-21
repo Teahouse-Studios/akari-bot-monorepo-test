@@ -1,9 +1,10 @@
 """模块的数据库模型。
 
-表名一律以 ``module_[@module_name@]_`` 作前缀，表名中不得出现 ``-``：模块名本身的
-连字符在目录名与表名中统一写作下划线。模型的导入由核心的 ``init_db()`` 自动完成，
-无需在此注册。
+表名一律以 ``module_[@module_name@]_`` 作前缀，表名中不得出现 ``-``：模块名本身的连字符
+在目录名与表名中统一写作下划线。模型的导入由核心的 ``init_db()`` 自动完成，无需在此注册。
 """
+
+from __future__ import annotations
 
 from tortoise import fields
 
@@ -23,4 +24,4 @@ class [@module_class@]Data(DBModel):
     value = fields.CharField(max_length=512)
 
     class Meta:
-        table = f"{table_prefix}[@module_name@]_data"
+        table = f"{table_prefix}data"

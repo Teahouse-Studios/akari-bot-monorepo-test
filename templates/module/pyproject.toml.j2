@@ -11,18 +11,24 @@ requires-python = ">=3.12,<4.0"
 license = "[@license@]"
 authors = [{ name = "[@author@]" }]
 dependencies = [
-    "akari-bot-core>=1.0,<2.0",
-]
-
+    # 与仓库内其它包写法一致，core 升大版本时全仓一次改动。
+    "akari-bot-core>=0.1.0,<1.0",
+{% if has_database | default(false) %}    # database/models.py 直接 import tortoise，故显式声明。
+    "tortoise-orm>=1.1.2,<1.2.0",
+{% endif %}]
+{% if with_tests | default(false) %}
+[project.optional-dependencies]
+test = ["akari-bot-testing>=0.1.0,<1.0"]
+{% endif %}
 [project.entry-points."akaribot.modules"]
 "[@module_name@]" = "akaribot.modules.[@module_name@]"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/akaribot"]
 
-# locales / assets / migrations 是包内数据，默认会被 wheel 收录；
-# force-include 在此显式声明，避免后续调整 packages 时漏包。
+# locales 与 assets / migrations 位于导入包目录内，随 wheel 一并分发。
 [tool.hatch.build.targets.wheel.force-include]
 "src/akaribot/modules/[@module_name@]/locales" = "akaribot/modules/[@module_name@]/locales"
-"src/akaribot/modules/[@module_name@]/assets" = "akaribot/modules/[@module_name@]/assets"
-"src/akaribot/modules/[@module_name@]/migrations" = "akaribot/modules/[@module_name@]/migrations"
+{% if has_assets | default(false) %}"src/akaribot/modules/[@module_name@]/assets" = "akaribot/modules/[@module_name@]/assets"
+{% endif %}{% if has_database | default(false) %}"src/akaribot/modules/[@module_name@]/migrations" = "akaribot/modules/[@module_name@]/migrations"
+{% endif %}
