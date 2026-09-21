@@ -22,6 +22,7 @@
 - [提交代码更改](#提交代码更改)
   - [快速开始](#快速开始)
   - [开发环境](#开发环境)
+    - [依赖冲突与联合求解](#依赖冲突与联合求解)
   - [分支命名](#分支命名)
   - [提交规范](#提交规范)
   - [PR 描述](#pr-描述)
@@ -116,6 +117,23 @@ uv add <包名>
 ```
 uv lock
 ```
+
+### 依赖冲突与联合求解
+本项目已拆分为 uv workspace，全部官方包共用根目录下的单一 `uv.lock`。该文件对全部成员包做一次**联合求解**，因而各包声明的第三方依赖若互相排斥，`uv lock` 会立即失败，例如两个包对 `packaging` 的可接受区间没有交集：
+```
+  × No solution found when resolving dependencies:
+  ╰─▶ Because pkg-a depends on packaging>=24,<25 and pkg-b depends
+      on packaging>=25,<26, we can conclude that pkg-a and pkg-b are
+      incompatible.
+      And because your workspace requires pkg-a and pkg-b, we can conclude
+      that your workspace's requirements are unsatisfiable.
+```
+
+CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不再等到用户安装时；多仓库布局下不存在任何一处会做这样的联合求解，这是采用 monorepo 最实在的收益。
+
+该防线有两处边界：仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移（例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布出的 wheel），后者由 `uv run python tools/lint_versions.py` 负责；也不覆盖第三方模块，它们不在 workspace 内，依赖互斥只能靠净室验证与 `akaribot module add` 的安装前预检拦截。
+
+遇到 `uv lock` 变红时应回到 `pyproject.toml` 调整约束，使相关包的区间重新相容并说明原因。不要用 `--no-verify` 绕过检查，不要手工编辑 `uv.lock`，也不要为了通过检查而降低或放宽约束；这些做法只会把冲突推迟到用户安装现场才暴露。
 
 本项目已配置 Pre-commit Hook，使用以下命令安装：
 ```
