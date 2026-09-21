@@ -237,7 +237,22 @@ def main(argv: list[str] | None = None) -> int:
         if entry is None:
             print(f"未安装分发包 {args.package!r}。", file=sys.stderr)
             return 2
-        importlib.import_module(f"{entry.import_path}.config")
+        module_name = f"{entry.import_path}.config"
+        try:
+            importlib.import_module(module_name)
+        except ModuleNotFoundError as exc:
+            # 包没有模块配置模板（bundled core 即如此，其配置由首次运行扫描生成），不是失败。
+            if exc.name != module_name:
+                raise
+            print(f"{args.package} 没有模块配置模板，无需补写。", file=sys.stderr)
+            if args.json:
+                json.dump(
+                    {"package": args.package, "table": None, "keys": 0, "placeholders": []},
+                    sys.stdout,
+                    ensure_ascii=False,
+                )
+                sys.stdout.write("\n")
+            return 0
         table = entry.manifest.config_table
         items = _schema(table) if table else []
         placeholders = [item["key"] for item in items if item["is_placeholder"]]

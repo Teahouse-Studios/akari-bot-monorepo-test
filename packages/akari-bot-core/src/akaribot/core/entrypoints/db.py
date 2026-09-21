@@ -11,6 +11,22 @@ import json
 import sys
 
 
+def _is_installed(dist: str) -> bool:
+    """判断某个分发包是否已装入当前实例。
+
+    :param dist: 分发名，如 ``akari-bot-module-dice``。
+    :return: 已安装为 ``True``。
+    """
+    from akaribot.core.registry import PackageRegistry
+
+    PackageRegistry.discover()
+    for entries in (PackageRegistry.modules(), PackageRegistry.adapters()):
+        for entry in entries.values():
+            if entry.dist_name == dist:
+                return True
+    return False
+
+
 async def _status() -> dict:
     """读取各包的迁移状态。
 
@@ -57,11 +73,23 @@ async def _upgrade(package: str | None) -> dict:
 
     await init_db(generate_schemas=False)
     try:
+        # 迁移登记表由模型建表负责：写进程的启动路径同样是「先 generate_schemas 再迁移」，
+        # 否则全新实例上第一条迁移就会因 schema_migrations 不存在而失败。
+        from tortoise import Tortoise
+
+        await Tortoise.generate_schemas(safe=True)
         if package is not None:
             discovered = await MigrationRunner.discover()
+            # 迁移按包名登记：core 的迁移登记为 "core"，而 CLI 传的是分发名 akari-bot-core。
+            if package not in discovered and package == "akari-bot-core" and "core" in discovered:
+                package = "core"
             if package not in discovered:
-                print(f"未发现包 {package!r} 的迁移目录。", file=sys.stderr)
-                raise SystemExit(2)
+                # 没有迁移目录是合法状态：本仓库 39 个模块包不建表。只有包根本没装才算用户错误。
+                if not _is_installed(package):
+                    print(f"未安装分发包 {package!r}。", file=sys.stderr)
+                    raise SystemExit(2)
+                print(f"{package} 没有数据库迁移，无需执行。", file=sys.stderr)
+                return {"applied": []}
         # 旧版本号转换与逐包 revision 一并执行：旧库升到某版本后其 revision 视为已应用。
         await convert_legacy_version()
         applied = await MigrationRunner.upgrade(package)
