@@ -473,20 +473,27 @@ class PackageRegistry:
     def _entry_from_directory(cls, kind: str, package_name: str, root: Path) -> PackageEntry:
         """由目录扫描结果构造条目。
 
+        条目根取**导入包目录**而非分发包目录：manifest、locales、assets、migrations 都相对它
+        解析，entry point 路径下两者同为导入包目录，此处对齐。源码布局为 ``src`` 时按导入路径
+        下推；不是该布局时退回传入目录。
+
         :param kind: 包种类。
         :param package_name: 命名空间前缀，``akaribot.modules`` 或 ``akaribot.adapters``。
-        :param root: 包目录。
+        :param root: 分发包目录。
         :return: 条目。
         """
         import_path = f"{package_name}.{root.name}"
+        package_root = root / "src" / Path(*import_path.split("."))
+        if not package_root.is_dir():
+            package_root = root
         return PackageEntry(
             kind=kind,
             name=root.name,
             dist_name="",
             version="0+local",
             import_path=import_path,
-            root=root.resolve(),
-            manifest=cls._read_manifest(import_path, root),
+            root=package_root.resolve(),
+            manifest=cls._read_manifest(import_path, package_root),
         )
 
     @classmethod

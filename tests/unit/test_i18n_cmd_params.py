@@ -10,6 +10,7 @@
 
 import glob
 import json
+import pathlib
 import re
 
 from akaribot.core.logger import Logger
@@ -74,9 +75,11 @@ def _collect_cmd_keys() -> set[str]:
 
 
 def _collect_sources() -> dict[str, str]:
-    """读取各包与核心的全部源码。"""
+    """读取各包与核心的全部源码，测试文件自身的构造串不算调用点。"""
     sources = {}
     for path in glob.glob("packages/**/*.py", recursive=True):
+        if "tests" in pathlib.PurePath(path).parts:
+            continue
         with open(path, encoding="utf-8") as f:
             sources[path.replace("\\", "/")] = f.read()
     return sources

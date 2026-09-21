@@ -1,0 +1,9 @@
+# akari-bot-module-phigros 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+assets = "assets"
+migrations = "migrations"
+provides_modules = ["phigros"]
+# 供 --purge-data 使用；取自 database/models.py 的 Meta.table。
+owned_tables = ["module_phigros_bind_info"]

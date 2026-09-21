@@ -11,7 +11,7 @@
 *.db-shm
 *.db-wal
 # 旧库升级用例的样本库：二进制且不可由当前代码生成，须随仓库分发
-!tests/fixtures/db/*.db
+!packages/akari-bot-core/fixtures/db/*.db
 
 # Python
 __pycache__/

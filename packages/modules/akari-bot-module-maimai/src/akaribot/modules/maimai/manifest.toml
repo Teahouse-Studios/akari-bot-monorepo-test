@@ -1,0 +1,15 @@
+# akari-bot-module-maimai 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+assets = "assets"
+migrations = "migrations"
+# config.py 的 on_module_config("maimai") 登记的表。
+config_table = "module_maimai"
+config_schema_version = 1
+# 本包 module() 注册的全部模块名。
+provides_modules = ["chunithm", "maimai", "maimai-regex"]
+# 供 --purge-data 使用；取自 database/models.py 的 Meta.table。
+owned_tables = ["module_maimai_diving_prober_bind_info", "module_maimai_lxns_prober_bind_info"]
+# 重复凭据检查字段：舞萌查分服务密钥与令牌。
+credential_fields = ["diving_fish_client_secret", "lxns_client_secret", "lxns_developer_token"]

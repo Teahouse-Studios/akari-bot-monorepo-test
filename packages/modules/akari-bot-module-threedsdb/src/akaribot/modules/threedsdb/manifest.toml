@@ -1,0 +1,6 @@
+# akari-bot-module-threedsdb 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+assets = "assets"
+provides_modules = ["3dsdb"]

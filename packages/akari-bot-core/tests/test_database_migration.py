@@ -23,7 +23,8 @@ from akaribot.core.registry import PackageRegistry
 from akaribot.testing import Tester, func_case
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "db"
+# 样本库随 core 包分发，与本用例同属一个分发包，按测试文件位置定位即可。
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "db"
 
 MAIMAI_PACKAGE = "akari-bot-module-maimai"
 DIVING_TABLE = "module_maimai_diving_prober_bind_info"

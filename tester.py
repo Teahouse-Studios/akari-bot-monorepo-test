@@ -220,6 +220,47 @@ class FuncTestResult(TypedDict):
     res: dict
 
 
+def _test_roots() -> list[Path]:
+    """测试文件根目录。
+
+    仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。
+
+    :return: 存在的目录列表，包内目录按路径排序。
+    """
+    repo_root = Path(__file__).resolve().parent
+    roots = [Path(tests_path)]
+    for pattern in ("packages/*/tests", "packages/*/*/tests"):
+        roots.extend(root for root in sorted(repo_root.glob(pattern)) if root.is_dir())
+    return [root for root in roots if root.is_dir()]
+
+
+def _test_module_key(path: str) -> str:
+    """测试文件的合成模块名。
+
+    按仓库根相对路径生成：不同包里可以存在同名测试文件，仅取文件名会互相覆盖。
+
+    :param path: 测试文件路径。
+    :return: ``sys.modules`` 中使用的模块名。
+    """
+    repo_root = Path(__file__).resolve().parent
+    try:
+        relative = Path(path).resolve().relative_to(repo_root)
+    except ValueError:
+        relative = Path(path)
+    return "tests_" + "_".join(part.replace("-", "_") for part in relative.with_suffix("").parts)
+
+
+def _collect_test_files() -> list[str]:
+    """收集全部待运行的测试文件。
+
+    :return: 文件路径列表，按路径排序且去重。
+    """
+    files: list[str] = []
+    for root in _test_roots():
+        files.extend(glob.glob(os.path.join(root, "**", "*.py"), recursive=True))
+    return sorted(set(files))
+
+
 async def _run_func_test(fn: FunctionType, path: str) -> FuncTestResult:
     Logger.trace(f"_run_func_test START: {fn.__name__} ({path})")
     res = await run_function_entry(fn, IS_CI)
@@ -402,15 +443,14 @@ async def main(inspect_module=inspect):
         Logger.info("-" * 60)
 
     Logger.trace("main() starting func tests discovery")
-    if os.path.isdir(tests_path):
-        pyfiles = sorted(glob.glob(os.path.join(tests_path, "**", "*.py"), recursive=True))
+    pyfiles = _collect_test_files()
+    if pyfiles:
         Logger.trace(f"main() found {len(pyfiles)} test files")
         func_tasks: list[tuple[FunctionType, str]] = []
 
         for path in pyfiles:
-            name = os.path.splitext(os.path.basename(path))[0]
             Logger.trace(f"main() importing {path}")
-            spec = importlib.util.spec_from_file_location(f"tests_{name}", path)
+            spec = importlib.util.spec_from_file_location(_test_module_key(path), path)
             if not spec or not spec.loader:
                 message = f"Failed resolving tests file {path}."
                 Logger.error(message)

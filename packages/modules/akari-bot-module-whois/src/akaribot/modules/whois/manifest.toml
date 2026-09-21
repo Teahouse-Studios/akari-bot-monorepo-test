@@ -1,0 +1,5 @@
+# akari-bot-module-whois 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+provides_modules = ["whois"]

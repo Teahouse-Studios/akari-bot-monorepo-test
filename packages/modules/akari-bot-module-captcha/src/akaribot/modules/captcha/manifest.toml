@@ -1,0 +1,8 @@
+# akari-bot-module-captcha 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+# 本包 module() 注册的全部模块名。
+provides_modules = ["captcha", "token"]
+# 供 --purge-data 使用；取自 database/models.py 的 Meta.table。
+owned_tables = ["module_captcha_challenge", "module_captcha_trust"]

@@ -5,11 +5,14 @@ import sys
 import tempfile
 from pathlib import Path
 
+import akaribot.core
 from akaribot.core.constants.path import PrivateData
 from akaribot.core.paths import INSTANCE_DIR_ENV, Paths
 from akaribot.testing import Tester, func_case
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# 仓库根从 core 包的位置推算（<仓库根>/packages/akari-bot-core/src/akaribot/core/），
+# 既不依赖测试文件所处位置，也不取自 Paths.tests——后者正是本用例要断言的取值。
+PROJECT_ROOT = Path(akaribot.core.__file__).resolve().parents[5]
 
 # 子进程脚本：取出实例目录相关取值并打印，用于验证环境变量在导入期生效。
 PROBE = (

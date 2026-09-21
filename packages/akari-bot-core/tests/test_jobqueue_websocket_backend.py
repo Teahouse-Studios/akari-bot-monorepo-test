@@ -5,11 +5,11 @@ import os
 import sys
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
 from akaribot.core.config.jobqueue import JobQueueConfig
+from akaribot.core.paths import Paths
 from akaribot.core.queue.base import current_peer, JobQueueBase
 from akaribot.core.queue.errors import RpcProtocolError, RpcUnavailableError
 from akaribot.core.queue.peer import PeerSelector, SignalContext
@@ -359,7 +359,7 @@ async def _test_websocket_independent_process_roundtrip():
         )
     )
     await hub.start()
-    worker = Path(__file__).resolve().parents[1] / "helpers" / "websocket_rpc_worker.py"
+    worker = Paths.tests / "helpers" / "websocket_rpc_worker.py"
     environment = {**os.environ, "CI": "1", "PYTHONIOENCODING": "UTF-8"}
     processes = []
     try:

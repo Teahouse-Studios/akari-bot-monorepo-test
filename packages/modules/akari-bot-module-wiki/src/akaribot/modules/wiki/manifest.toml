@@ -1,0 +1,30 @@
+# akari-bot-module-wiki 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+migrations = "migrations"
+# config.py 的 on_module_config("wiki") 登记的表。
+config_table = "module_wiki"
+config_schema_version = 1
+# 本包 module() 注册的全部模块名。
+provides_modules = [
+    "ab",
+    "newbie",
+    "rc",
+    "teahouse-weekly-rss",
+    "user",
+    "weekly",
+    "weekly-rss",
+    "wiki",
+    "wiki-audit",
+    "wiki-bot",
+    "wiki-inline",
+    "wikilog",
+]
+# 供 --purge-data 使用；取自 database/models.py 的 Meta.table。
+owned_tables = [
+    "module_wiki_bot_account_list",
+    "module_wiki_site_info",
+    "module_wiki_target_set_info",
+    "module_wikilog_target_set_info",
+]

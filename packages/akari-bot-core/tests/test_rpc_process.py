@@ -6,11 +6,12 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from akaribot.core.paths import Paths
 from akaribot.testing import Tester, func_case
 
 
 async def _test_bidirectional_process_rpc():
-    worker = Path(__file__).resolve().parents[1] / "helpers" / "rpc_worker.py"
+    worker = Paths.tests / "helpers" / "rpc_worker.py"
     processes = []
     with TemporaryDirectory(prefix="akari-rpc-") as directory:
         database = str(Path(directory) / "queue.sqlite3")

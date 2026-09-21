@@ -12,9 +12,11 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
 
+import akaribot.core
 from akaribot.core.config import CFGManager
 from akaribot.core.config.scan import scan_config_templates
 from akaribot.core.constants.version import config_version
+from akaribot.core.paths import Paths
 from akaribot.testing import func_case, Tester
 
 MINIMAL_CONFIG = """# {I18N:config.header.line.1}
@@ -127,7 +129,7 @@ def _test_fresh_process_generates_all_grouped_core_templates():
                     "raise SystemExit(bool(failed))"
                 ),
             ],
-            cwd=Path(__file__).resolve().parents[2],
+            cwd=Paths.tests.parent,
             env=env,
             capture_output=True,
             text=True,
@@ -144,16 +146,8 @@ def _test_fresh_process_generates_all_grouped_core_templates():
         with (tmp / "webrender.toml").open("rb") as webrender_file:
             webrender_values = tomllib.load(webrender_file)
         jobqueue_text = (tmp / "jobqueue.toml").read_text(encoding="utf-8")
-        locale_path = (
-            Path(__file__).resolve().parents[2]
-            / "packages"
-            / "akari-bot-core"
-            / "src"
-            / "akaribot"
-            / "core"
-            / "locales"
-            / "zh_cn.json"
-        )
+        # core 自带的语言文件以包位置定位：本用例随包发布，按测试文件上溯会在包布局下失准。
+        locale_path = Path(akaribot.core.__file__).resolve().parent / "locales" / "zh_cn.json"
         locale = json.loads(locale_path.read_text(encoding="utf-8"))
         comment_keys = JobQueueConfig.__config_fields__["jobqueue_backend"]["standalone_comment_keys"]
         jobqueue_lines = jobqueue_text.splitlines()
@@ -227,7 +221,7 @@ def _test_fresh_process_generates_bot_adapter_config():
                     "repr(MilkySecretConfig.qq_access_token))"
                 ),
             ],
-            cwd=Path(__file__).resolve().parents[2],
+            cwd=Paths.tests.parent,
             env=env,
             capture_output=True,
             text=True,
@@ -361,7 +355,7 @@ def _test_importing_daemon_does_not_load_config():
     env = os.environ.copy()
     result = subprocess.run(
         [sys.executable, "-c", "import sys; import bot; print('akaribot.core.config' in sys.modules)"],
-        cwd=Path(__file__).resolve().parents[2],
+        cwd=Paths.tests.parent,
         env=env,
         capture_output=True,
         text=True,
@@ -397,7 +391,7 @@ def _test_legacy_slower_schedule_migrates_to_multiplier():
                     "print('slower_schedule' in CFGManager.values['config']['config'])"
                 ),
             ],
-            cwd=Path(__file__).resolve().parents[2],
+            cwd=Paths.tests.parent,
             env=env,
             capture_output=True,
             text=True,

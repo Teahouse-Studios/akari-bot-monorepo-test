@@ -1,0 +1,10 @@
+# akari-bot-module-github 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+# config.py 的 on_module_config("github") 登记的表。
+config_table = "module_github"
+config_schema_version = 1
+provides_modules = ["github"]
+# 重复凭据检查字段：GitHub 个人访问令牌。
+credential_fields = ["github_pat"]

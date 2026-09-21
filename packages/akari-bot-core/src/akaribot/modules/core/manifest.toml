@@ -1,0 +1,61 @@
+# akari-bot-core 的包清单。
+schema = 1
+requires_core_api = ">=1"
+locales = "locales"
+# bundled 于 core 的模块注册名，取自包内全部 module() 调用。
+provides_modules = [
+    "_parser_errors",
+    "_parser_policies",
+    "_parser_routing",
+    "_retired_policy",
+    "_telemetry",
+    "_tos",
+    "_typo",
+    "about",
+    "abuse",
+    "admin",
+    "analytics",
+    "auth",
+    "bind",
+    "config",
+    "database",
+    "echo",
+    "eval",
+    "features",
+    "help",
+    "jobqueue",
+    "merge",
+    "module",
+    "mute",
+    "petal",
+    "post",
+    "post-whitelist",
+    "purge",
+    "raise",
+    "restart",
+    "say",
+    "set",
+    "setup",
+    "superuser",
+    "update",
+    "update&restart",
+    "url-audit",
+    "webrender",
+]
+# 核心分发拥有的数据表，取自 akaribot/core/database/models.py 的 Meta.table；
+# bundled 模块目录内没有 database/models.py。
+owned_tables = [
+    "analytics_data",
+    "database_version",
+    "job_queue_peers",
+    "job_queues",
+    "malicious_login",
+    "module_status",
+    "schema_migrations",
+    "sender_union_bind",
+    "sender_union_info",
+    "stored_data",
+    "target_union_bind",
+    "target_union_info",
+    "unfriendly_actions",
+]

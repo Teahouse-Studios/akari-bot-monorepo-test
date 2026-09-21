@@ -18,7 +18,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# packages 下只有各包自带的 tests/ 含 test_*.py，收集器按文件名筛选，故整树纳入即可。
+testpaths = ["tests", "packages"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = ["ignore:cannot collect test class:pytest.PytestCollectionWarning"]

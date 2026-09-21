@@ -10,7 +10,8 @@ from pathlib import Path
 from akaribot.testing import func_case, Tester
 from akaribot.modules.wiki.utils.summarize import extract_summary, truncate_summary
 
-_FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "wikitext" / "mcwiki_stone.wikitext"
+# 语料随包分发，与本用例同属一个分发包，按测试文件位置定位即可。
+_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "wikitext" / "mcwiki_stone.wikitext"
 
 
 async def _test_lead_skips_infobox_and_hatnote():
