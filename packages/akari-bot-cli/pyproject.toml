@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-cli"
+version = "0.1.0"
+description = "AkariBot 实例管理 CLI 与 TUI"
+requires-python = ">=3.12,<4.0"
+# 不依赖 core：全部实例操作经子进程调用 `python -m akaribot.core.entrypoints.*`，
+# 使 CLI 能在实例 venv 之外运行（系统解释器、pipx 安装）。
+dependencies = [
+    "httpx>=0.28.1,<1.0.0",
+    # 脚手架渲染（T5.5）：core 也依赖它，但 CLI 不依赖 core，故自带
+    "jinja2>=3.1.6,<4.0.0",
+    "packaging>=26.0",
+    "rich>=13.0.0,<15.0.0",
+    # 紧钉：Textual 跨大版本有 API 变动史，全部调用经 akaribot.cli.tui._compat 收口
+    "textual==8.2.8",
+    "tomlkit>=0.14.0,<1.0.0",
+    "typer>=0.21.0,<1.0.0",
+]
+
+[project.scripts]
+akaribot = "akaribot.cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]
