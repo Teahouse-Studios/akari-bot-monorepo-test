@@ -144,9 +144,23 @@ from akaribot.testing.process import run_case_entry, run_function_entry
 Logger = TestLoggingLogger("TEST")
 
 
+def _source_import_roots() -> list[Path]:
+    """源码检出下提供 ``akaribot`` 命名空间的目录。
+
+    各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
+    判据只用目录是否存在，不依赖已安装分发的 metadata：安装形态下这些目录不存在，结果为空列表。
+    仓库根一并保留，使 ``tester`` 等根级脚本对子进程仍可导入。
+
+    :return: 参与 PYTHONPATH 的目录列表，按路径排序。
+    """
+    root = Path(__file__).resolve().parent
+    candidates = [root, *sorted(root.glob("packages/*/src")), *sorted(root.glob("packages/*/*/src"))]
+    return [path for path in candidates if path.is_dir()]
+
+
 load_dotenv()
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-os.environ.setdefault("PYTHONPATH", str(Path(".").resolve()))
+os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in _source_import_roots()))
 
 IS_CI = os.environ.get("CI", "0") == "1"
 ENABLE_COVERAGE = os.environ.get("COVERAGE", "0") == "1"
@@ -159,7 +173,7 @@ if ENABLE_COVERAGE:
         import coverage
 
         _coverage_instance = coverage.Coverage(
-            source=["core", "modules"],
+            source=["akaribot"],
             omit=[
                 "*/tests/*",
                 "*/test_*",
@@ -658,7 +672,9 @@ async def main(inspect_module=inspect):
         Logger.info(f"TIME COST: {total_test_cost:.06f}s")
         Logger.info("=" * 60)
     else:
-        Logger.warning("No tests registered. Use `core.tester.case` or `core.tester.test_case` to register tests.")
+        Logger.warning(
+            "No tests registered. Use `akaribot.testing.case` or `akaribot.testing.test_case` to register tests."
+        )
 
     if IS_CI:
         try:

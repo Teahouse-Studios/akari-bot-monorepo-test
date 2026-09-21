@@ -116,12 +116,12 @@ def _test_fresh_process_generates_all_grouped_core_templates():
                 sys.executable,
                 "-c",
                 (
-                    "from core.constants import lang_list; "
-                    "from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
+                    "from akaribot.core.constants import lang_list; "
+                    "from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
                     "build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), 'akari-bot'); "
                     "connect_locale_snapshot('akari-bot'); "
-                    "from core.config.scan import scan_config_templates; "
-                    "from core.config.jobqueue import bootstrap_jobqueue_config; "
+                    "from akaribot.core.config.scan import scan_config_templates; "
+                    "from akaribot.core.config.jobqueue import bootstrap_jobqueue_config; "
                     "failed = scan_config_templates(); "
                     "bootstrap_jobqueue_config() if not failed else None; "
                     "raise SystemExit(bool(failed))"
@@ -144,7 +144,16 @@ def _test_fresh_process_generates_all_grouped_core_templates():
         with (tmp / "webrender.toml").open("rb") as webrender_file:
             webrender_values = tomllib.load(webrender_file)
         jobqueue_text = (tmp / "jobqueue.toml").read_text(encoding="utf-8")
-        locale_path = Path(__file__).resolve().parents[2] / "core" / "locales" / "zh_cn.json"
+        locale_path = (
+            Path(__file__).resolve().parents[2]
+            / "packages"
+            / "akari-bot-core"
+            / "src"
+            / "akaribot"
+            / "core"
+            / "locales"
+            / "zh_cn.json"
+        )
         locale = json.loads(locale_path.read_text(encoding="utf-8"))
         comment_keys = JobQueueConfig.__config_fields__["jobqueue_backend"]["standalone_comment_keys"]
         jobqueue_lines = jobqueue_text.splitlines()
@@ -174,18 +183,19 @@ def _test_fresh_process_generates_all_grouped_core_templates():
 
 def _test_scan_covers_all_directories_with_config_templates():
     """模板枚举须覆盖所有含 config.py 的目录，与守护进程按目录挑选平台的依据一致。"""
-    import bots
-    import modules
+    import akaribot.adapters
+    import akaribot.modules
     from akaribot.core.config.scan import iter_config_template_modules
 
     listed = set(iter_config_template_modules())
     expected = set()
-    for package in (bots, modules):
-        package_path = Path(package.__path__[0])
-        for entry in package_path.iterdir():
-            if entry.is_dir() and not entry.name.startswith((".", "_")) and (entry / "config.py").is_file():
-                expected.add(f"{package.__name__}.{entry.name}.config")
-    # bots/milky 曾因缺少 __init__.py 而不被 pkgutil.iter_modules 收录，配置因而从未生成
+    for package in (akaribot.adapters, akaribot.modules):
+        # 命名空间包横跨多个 distribution，__path__ 的每一项都要遍历，只看首项会漏包
+        for root in package.__path__:
+            for entry in Path(root).iterdir():
+                if entry.is_dir() and not entry.name.startswith((".", "_")) and (entry / "config.py").is_file():
+                    expected.add(f"{package.__name__}.{entry.name}.config")
+    # akaribot/adapters/milky 曾因缺少 __init__.py 而不被按包枚举的代码收录，配置因而从未生成
     return bool(expected) and expected <= listed and "akaribot.adapters.milky.config" in listed
 
 
@@ -203,16 +213,16 @@ def _test_fresh_process_generates_bot_adapter_config():
                 sys.executable,
                 "-c",
                 (
-                    "from core.constants import lang_list; "
-                    "from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
+                    "from akaribot.core.constants import lang_list; "
+                    "from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
                     "build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), 'akari-bot'); "
                     "connect_locale_snapshot('akari-bot'); "
-                    "from core.config.scan import scan_config_templates; "
+                    "from akaribot.core.config.scan import scan_config_templates; "
                     "failed = scan_config_templates(); "
                     # 与守护进程 spawn 出的平台进程一致：模板导入完毕后一律只读
-                    "from core.config import CFGManager; "
+                    "from akaribot.core.config import CFGManager; "
                     "CFGManager.readonly = True; "
-                    "from bots.milky.config import MilkyConfig, MilkySecretConfig; "
+                    "from akaribot.adapters.milky.config import MilkyConfig, MilkySecretConfig; "
                     "print('MILKY', failed, MilkyConfig.enable, MilkyConfig.qq_host, "
                     "repr(MilkySecretConfig.qq_access_token))"
                 ),
@@ -347,10 +357,10 @@ def _test_scan_repairs_raw_i18n_comments():
 
 
 def _test_importing_daemon_does_not_load_config():
-    """守护进程模块的顶层导入不得提前触发 core.config 的导入期迁移"""
+    """守护进程模块的顶层导入不得提前触发 akaribot.core.config 的导入期迁移"""
     env = os.environ.copy()
     result = subprocess.run(
-        [sys.executable, "-c", "import sys; import bot; print('core.config' in sys.modules)"],
+        [sys.executable, "-c", "import sys; import bot; print('akaribot.core.config' in sys.modules)"],
         cwd=Path(__file__).resolve().parents[2],
         env=env,
         capture_output=True,
@@ -381,7 +391,7 @@ def _test_legacy_slower_schedule_migrates_to_multiplier():
                     # 迁移后的 3 秒提示停顿不属于持久化行为；仅在隔离进程中跳过。
                     "from unittest.mock import patch\n"
                     "with patch('time.sleep'):\n"
-                    "    from core.config import CFGManager\n"
+                    "    from akaribot.core.config import CFGManager\n"
                     "print(CFGManager.values['config']['config_version']); "
                     "print(CFGManager.values['config']['config']['schedule_interval_multiplier']); "
                     "print('slower_schedule' in CFGManager.values['config']['config'])"

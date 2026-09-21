@@ -6,7 +6,7 @@
 提示却只说「发送是」。各途径须依各自的能力标志分别判定。
 
 按钮不受 quick_confirm 管辖：该配置控制的是表情反应的补加与戳一戳的响应，
-而按钮在 bots/qqbot/context.py 中只看 wait_type，配置关闭时照样下发。
+而按钮在 akaribot/adapters/qqbot/context.py 中只看 wait_type，配置关闭时照样下发。
 """
 
 from types import SimpleNamespace

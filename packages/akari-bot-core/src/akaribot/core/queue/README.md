@@ -162,7 +162,7 @@ Hub 在握手阶段将连接绑定至唯一 `peer_id`，此后不信任请求载
 身份覆盖该字段。重复连接同一 `peer_id`、身份越权修改、非目标 Peer 回包及畸形协议帧均会被拒绝。
 
 使用外部 Hub 时，应将 `jobqueue_websocket_mode` 设置为 `external`，并确保所有 Peer 配置相同的连接 URL
-与访问令牌。项目所附 Hub 可通过 `uv run python -m core.queue.websocket` 独立启动；此时应在 Hub 主机上
+与访问令牌。项目所附 Hub 可通过 `uv run python -m akaribot.core.queue.websocket` 独立启动；此时应在 Hub 主机上
 提供适用于其监听端点的独立配置。该进程不负责自动发现其它 Hub，也不提供多 Hub 状态复制；同一逻辑集群
 在任一时刻必须连接至同一个权威 Hub。
 
@@ -175,7 +175,7 @@ WebSocket 后端属于实时、非持久化传输。Hub 对每个 Peer 设置有
 ## RPC 调用
 
 ```python
-from core.queue.contracts import PlatformAPI, ServerAPI
+from akaribot.core.queue.contracts import PlatformAPI, ServerAPI
 
 # 等待远端执行完成。成功时返回签名声明的值，失败时抛出 RpcError 子类。
 message_ids = await PlatformAPI.send_message(session_info, message, quote=False)
@@ -212,8 +212,8 @@ modules = await ServerAPI.get_modules_list.with_timeout(10)()
 接收或确认同一信号。
 
 ```python
-from core.queue.peer import PeerSelector
-from core.queue.rpc import signal
+from akaribot.core.queue.peer import PeerSelector
+from akaribot.core.queue.rpc import signal
 
 
 @signal("cache.invalidate", timeout=30)

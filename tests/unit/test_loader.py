@@ -346,9 +346,9 @@ async def _cancel_reload_task(task: asyncio.Task | None):
     await asyncio.gather(task, return_exceptions=True)
 
 
-# 用例以 `modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后这些名字
-# 不再解析得到包，故在用例入口统一给出合成条目；真实包名仍交回注册表本身解析。
-SYNTHETIC_PACKAGE_PREFIX = "modules.__test"
+# 用例以 `akaribot.modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后这些
+# 名字不再解析得到包，故在用例入口统一给出合成条目；真实包名仍交回注册表本身解析。
+SYNTHETIC_PACKAGE_PREFIX = "akaribot.modules.__test"
 SYNTHETIC_PACKAGE_PATTERN = re.compile(rf"^{re.escape(SYNTHETIC_PACKAGE_PREFIX)}[._]")
 _real_by_import_path = PackageRegistry.by_import_path
 
@@ -356,12 +356,12 @@ _real_by_import_path = PackageRegistry.by_import_path
 def _synthetic_package_entry(package: str) -> PackageEntry:
     """为一个合成包名造条目。
 
-    :param package: 形如 ``modules.__test_loader_x`` 的包名。
+    :param package: 形如 ``akaribot.modules.__test_loader_x`` 的包名。
     :return: 条目。
     """
     return PackageEntry(
         kind="module",
-        name=package.split(".", 1)[1],
+        name=package.split(".")[-1],
         dist_name="",
         version="0+local",
         import_path=package,
@@ -379,7 +379,7 @@ def _fake_package_lookup(path: str):
     :return: 条目或 ``None``。
     """
     if SYNTHETIC_PACKAGE_PATTERN.match(path):
-        return _synthetic_package_entry(".".join(path.split(".")[:2]))
+        return _synthetic_package_entry(".".join(path.split(".")[:3]))
     return _real_by_import_path(path)
 
 
@@ -399,7 +399,7 @@ def _reload_test_module(name: str, alias: str, origin: str, hook_function, event
 
 async def _test_reload_preserves_mixed_status_and_rebuilds_registries():
     """同包模块重载后须分别保留启用状态，并重建 origin、别名、Hook 与 Event。"""
-    package = "modules.__test_loader_reload_success"
+    package = "akaribot.modules.__test_loader_reload_success"
     first_name = "__test_loader_reload_success_first"
     second_name = "__test_loader_reload_success_second"
     test_names = [first_name, second_name]
@@ -475,7 +475,7 @@ async def _test_reload_preserves_mixed_status_and_rebuilds_registries():
 
 async def _test_reload_accepts_new_aliasless_module():
     """无旧状态且 alias=None 的模块不能因读取空别名而让整次重载失败。"""
-    package = "modules.__test_loader_reload_aliasless"
+    package = "akaribot.modules.__test_loader_reload_aliasless"
     module_name = "__test_loader_reload_aliasless"
     snapshot = _snapshot_module_manager()
 
@@ -547,7 +547,7 @@ async def _test_reload_drains_queue_before_scheduler_maintenance():
 
 async def _test_reload_python_failure_restores_all_registries():
     """Python 重载中途失败时，部分新注册不能污染旧模块、别名、Hook 或 Event。"""
-    package = "modules.__test_loader_reload_python_failure"
+    package = "akaribot.modules.__test_loader_reload_python_failure"
     module_name = "__test_loader_reload_python_failure"
     partial_name = "__test_loader_reload_partial"
     test_names = [module_name, partial_name]
@@ -609,7 +609,7 @@ async def _test_reload_python_failure_restores_all_registries():
 
 async def _test_reload_reports_database_reinitialization_failure():
     """新数据库模型失败时须恢复旧模块注册和原 ModuleStatus，而不是只返回失败。"""
-    package = "modules.__test_loader_reload_database_failure"
+    package = "akaribot.modules.__test_loader_reload_database_failure"
     module_name = "__test_loader_reload_database_failure"
     snapshot = _snapshot_module_manager()
 
@@ -681,7 +681,7 @@ async def _test_reload_reports_database_reinitialization_failure():
 
 async def _test_reload_failure_restores_entire_python_module_tree():
     """Python 已导入、数据库或其他后置校验失败时也必须恢复旧 sys.modules。"""
-    package = "modules.__test_loader_reload_module_tree_rollback"
+    package = "akaribot.modules.__test_loader_reload_module_tree_rollback"
     module_name = "__test_loader_reload_module_tree_rollback"
     snapshot = _snapshot_module_manager()
     old_python_module = ModuleType(package)
@@ -730,7 +730,7 @@ async def _test_reload_failure_restores_entire_python_module_tree():
 
 async def _test_reload_stops_runtime_before_database_swap():
     """旧 runtime 必须先用旧数据库 context 清理，之后才能切换数据库。"""
-    package = "modules.__test_loader_reload_db_order"
+    package = "akaribot.modules.__test_loader_reload_db_order"
     module_name = "__test_loader_reload_db_order"
     snapshot = _snapshot_module_manager()
     order = []
@@ -794,7 +794,7 @@ async def _test_reload_stops_runtime_before_database_swap():
 
 def _test_reload_defers_cross_module_bindings():
     """兄弟文件先执行的装饰器须等目标模块重新注册后再绑定。"""
-    package = "modules.__test_loader_reload_deferred"
+    package = "akaribot.modules.__test_loader_reload_deferred"
     module_name = "__test_loader_reload_deferred"
     snapshot = _snapshot_module_manager()
 
@@ -836,8 +836,8 @@ def _test_related_modules_respect_package_boundary():
     try:
         first = Module.assign(module_name=first_name, alias=None, recommend_modules=None, developers=None)
         second = Module.assign(module_name=second_name, alias=None, recommend_modules=None, developers=None)
-        ModulesManager.add_module(first, "modules.__test_loader_package.entry")
-        ModulesManager.add_module(second, "modules.__test_loader_package_extra.entry")
+        ModulesManager.add_module(first, "akaribot.modules.__test_loader_package.entry")
+        ModulesManager.add_module(second, "akaribot.modules.__test_loader_package_extra.entry")
         return ModulesManager.search_related_module(first_name) == [first_name]
     finally:
         _restore_module_manager(snapshot)
@@ -851,28 +851,28 @@ def _test_reload_dependency_closure_is_dependency_first():
             ModulesManager._dependency_graph,
             {
                 "akaribot.modules.wiki": set(),
-                "modules.wikilog": {"akaribot.modules.wiki"},
-                "modules.wiki-audit": {"akaribot.modules.wiki"},
+                "akaribot.modules.wikilog": {"akaribot.modules.wiki"},
+                "akaribot.modules.wiki-audit": {"akaribot.modules.wiki"},
             },
             clear=True,
         ),
     ):
         closure = ModulesManager._reload_closure("akaribot.modules.wiki")
-    return closure == ["akaribot.modules.wiki", "modules.wiki-audit", "modules.wikilog"]
+    return closure == ["akaribot.modules.wiki", "akaribot.modules.wiki-audit", "akaribot.modules.wikilog"]
 
 
 def _test_dependency_scan_covers_from_import_and_dynamic_import():
-    """依赖图须识别 from modules import 与常量 import_module 调用。"""
-    package = "modules.__test_loader_dependency_scan"
+    """依赖图须识别 from akaribot.modules import 与常量 import_module 调用。"""
+    package = "akaribot.modules.__test_loader_dependency_scan"
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         (root / "entry.py").write_text(
             "\n".join(
                 (
-                    "from modules import alpha",
+                    "from akaribot.modules import alpha",
                     "import importlib",
-                    'importlib.import_module("modules.beta.child")',
-                    'importlib.import_module(name="modules.gamma")',
+                    'importlib.import_module("akaribot.modules.beta.child")',
+                    'importlib.import_module(name="akaribot.modules.gamma")',
                 )
             ),
             encoding="utf-8",
@@ -882,12 +882,12 @@ def _test_dependency_scan_covers_from_import_and_dynamic_import():
         module.__file__ = str(root / "__init__.py")
         with patch.dict(sys.modules, {package: module}):
             dependencies = ModulesManager._scan_package_dependencies(package)
-    return dependencies == {"modules.alpha", "modules.beta", "modules.gamma"}
+    return dependencies == {"akaribot.modules.alpha", "akaribot.modules.beta", "akaribot.modules.gamma"}
 
 
 def _test_locale_fingerprint_detects_removed_files():
     """删除模块全部 Locale 文件时也必须产生不同指纹。"""
-    package = "modules.__test_loader_locale_removal"
+    package = "akaribot.modules.__test_loader_locale_removal"
     with TemporaryDirectory() as temp_dir:
         module_file = Path(temp_dir) / "__init__.py"
         module_file.write_text("", encoding="utf-8")
@@ -905,7 +905,7 @@ def _test_locale_fingerprint_detects_removed_files():
 
 def _test_reload_syncs_missing_module_config_fields():
     """reload 后新增的模块配置字段应通过授权接口补写。"""
-    package = "modules.__test_loader_config_sync"
+    package = "akaribot.modules.__test_loader_config_sync"
     config_module_name = f"{package}.config"
 
     class ProbeConfig:
@@ -1037,7 +1037,7 @@ def _test_reload_py_module_uses_fresh_namespace():
 async def _test_concurrent_reload_fails_before_mutation():
     """第二个模块重载必须立即失败，不能等待锁后与数据库维护流程互锁。"""
 
-    package = "modules.__test_loader_reload_concurrent"
+    package = "akaribot.modules.__test_loader_reload_concurrent"
     module_name = "__test_loader_reload_concurrent"
     snapshot = _snapshot_module_manager()
     entered_database_reload = asyncio.Event()
@@ -1086,8 +1086,8 @@ async def _test_concurrent_reload_fails_before_mutation():
 
 async def _test_initial_load_rolls_back_partial_registration():
     """启动导入失败时不能留下半注册模块；仅配置模块本身缺失才可忽略。"""
-    broken_package = "modules.__test_loader_initial_broken"
-    optional_package = "modules.__test_loader_initial_optional"
+    broken_package = "akaribot.modules.__test_loader_initial_broken"
+    optional_package = "akaribot.modules.__test_loader_initial_optional"
     broken_name = "__test_loader_initial_broken"
     optional_name = "__test_loader_initial_optional"
     snapshot = _snapshot_module_manager()
@@ -1140,7 +1140,7 @@ async def _test_initial_load_rolls_back_partial_registration():
 
 async def _test_cancelled_reload_restores_registry_and_status():
     """取消已修改状态的热重载时，须恢复旧注册表与持久化启用状态。"""
-    package = "modules.__test_loader_reload_cancelled"
+    package = "akaribot.modules.__test_loader_reload_cancelled"
     module_name = "__test_loader_reload_cancelled"
     snapshot = _snapshot_module_manager()
     entered_database_reload = asyncio.Event()
@@ -1208,7 +1208,7 @@ async def _test_cancelled_reload_restores_registry_and_status():
 
 async def _test_cancelled_commit_keeps_committed_generation():
     """取消发生在 commit 中时，必须等待 commit 完成且不得回滚新代。"""
-    package = "modules.__test_loader_reload_commit_cancel"
+    package = "akaribot.modules.__test_loader_reload_commit_cancel"
     module_name = "__test_loader_reload_commit_cancel"
     snapshot = _snapshot_module_manager()
     entered_commit = asyncio.Event()
@@ -1291,7 +1291,7 @@ async def _test_load_state_changes_only_after_persistence():
     try:
         module = Module.assign(module_name=module_name, alias=None, recommend_modules=None, developers=None)
         module._db_load = False
-        ModulesManager.add_module(module, "modules.__test_loader_persisted_state")
+        ModulesManager.add_module(module, "akaribot.modules.__test_loader_persisted_state")
         with patch.object(
             ModuleStatus,
             "set_module_loaded",
@@ -1346,7 +1346,7 @@ async def _test_unload_drains_queue_before_stopping_runtime():
     try:
         module = Module.assign(module_name=module_name, alias=None, recommend_modules=None, developers=None)
         module._db_load = True
-        ModulesManager.add_module(module, f"modules.{module_name}")
+        ModulesManager.add_module(module, f"akaribot.modules.{module_name}")
         with (
             patch.object(JobQueueServer, "maintenance_window", new=queue_window),
             patch.object(SchedulerLifecycle, "maintenance_window", new=scheduler_window),

@@ -93,7 +93,7 @@ def _entry(kind: str, name: str, dist_name: str = "") -> PackageEntry:
     :param dist_name: 分发名；为空串表示目录扫描兜底的包。
     :return: 条目。
     """
-    root = "modules" if kind == "module" else "bots"
+    root = "akaribot.modules" if kind == "module" else "akaribot.adapters"
     return PackageEntry(
         kind=kind,
         name=name,
@@ -235,7 +235,7 @@ def _test_missing_dependency_is_rejected():
     with _discovered_from(entries, distributions):
         registered = sorted(PackageRegistry.modules())
         rejected = PackageRegistry.incompatible()
-        unresolved = PackageRegistry.by_import_path("modules.consumer")
+        unresolved = PackageRegistry.by_import_path("akaribot.modules.consumer")
         reported = PackageRegistry.report_lines()
     return (
         registered == ["plain"]
@@ -329,7 +329,7 @@ def _test_dependency_on_api_rejected_package_cascades():
         name="beta",
         dist_name="akari-bot-module-beta",
         version="1.0.0",
-        import_path="modules.beta",
+        import_path="akaribot.modules.beta",
         root=Path("."),
         manifest=PackageManifest(requires_core_api=">=99"),
     )
@@ -405,7 +405,7 @@ def _test_extra_marked_dependencies_follow_installed_extras():
 
 def _test_undeclared_ast_dependency_warns_and_stays_in_closure():
     """AST 扫出而 metadata 未声明的依赖告警一次，且仍进入 reload 闭包。"""
-    scanned = {"modules.alpha": {"modules.beta"}, "modules.beta": set()}
+    scanned = {"akaribot.modules.alpha": {"akaribot.modules.beta"}, "akaribot.modules.beta": set()}
     entry = _entry("module", "alpha")
     with (
         patch.object(ModulesManager, "modules", {name: object() for name in scanned}),
@@ -418,15 +418,15 @@ def _test_undeclared_ast_dependency_warns_and_stays_in_closure():
     ):
         ModulesManager._rebuild_dependency_graph()
         graph = {name: set(dependencies) for name, dependencies in ModulesManager._dependency_graph.items()}
-        closure = ModulesManager._reload_closure("modules.beta")
+        closure = ModulesManager._reload_closure("akaribot.modules.beta")
         ModulesManager._rebuild_dependency_graph()
     message = warned.call_args.args[0]
     return (
         graph == scanned
-        and closure == ["modules.beta", "modules.alpha"]
+        and closure == ["akaribot.modules.beta", "akaribot.modules.alpha"]
         and warned.call_count == 1
-        and "modules.alpha" in message
-        and "modules.beta" in message
+        and "akaribot.modules.alpha" in message
+        and "akaribot.modules.beta" in message
     )
 
 

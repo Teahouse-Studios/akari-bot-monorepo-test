@@ -218,7 +218,7 @@ def _test_every_row_gets_an_inline_entry() -> bool:
 def _qqbot_lines(msg: MessageSession, elements: list) -> list[str]:
     """按 QQ 适配器的规则把元素列表折成行。
 
-    复刻 ``bots/qqbot/context.py`` 中 send_msg_markdown() 的组装：指令操作并入上一项，
+    复刻 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的组装：指令操作并入上一项，
     且其后紧随的文本同样并入上一项（``inline_pending``），最后以换行连接各项。该函数绑在
     平台 SDK 上，模块侧无从直接调用，故此处按同样的规则建模——面板塌成一行正是栽在这里，
     而通用的 to_str() 不复现这条规则，光看它测不出来。

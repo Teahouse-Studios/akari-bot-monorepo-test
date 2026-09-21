@@ -1,4 +1,4 @@
-"""modules/core 核心模块集成测试。"""
+"""akaribot/modules/core 核心模块集成测试。"""
 
 from akaribot.testing import (
     func_case,

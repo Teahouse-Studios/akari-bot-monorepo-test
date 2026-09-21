@@ -189,12 +189,12 @@ def end_inline_run(chain: MessageChain) -> None:
     终止行内连排，使其后追加的元素能各自成行。
 
     可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行
-    （见 ``bots/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。
+    （见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。
     该规则本是为「文字 + 标签 + 收尾文字」这类同出一句话的场合而设，跨消息元素时却会
     把调用方随后追加的提示语粘在最后一个模块名之后。补一个纯文本片段即可断开连排。
 
     片段取一个空格而非空串：消息链会把空文本换成错误提示（见
-    ``core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后
+    ``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后
     仍会按元素补一次换行，两者叠加会多出一个空行。
 
     本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 把关。
@@ -214,7 +214,7 @@ def build_module_table(
     把若干组模块名排成一张 markdown 表。
 
     各组同处一张表，组与组之间以一行只填组名的区隔行分开；首组的组名即表头。表格至多
-    :data:`~core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~core.utils.table.TABLE_MIN_COLUMNS` 列，
+    :data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，
     模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。
 
     ``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。
@@ -222,7 +222,7 @@ def build_module_table(
 
     模块名做成指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能落在单元格
     中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
-    ``bots/qqbot/context.py`` 的 ``inline_pending``）：整张表因此累积成一个文本块，
+    ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``）：整张表因此累积成一个文本块，
     竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**
     —— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被劈成两半。
     区隔行因此与上一组的收尾同处一个元素。

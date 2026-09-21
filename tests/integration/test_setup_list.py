@@ -1,6 +1,6 @@
 """setup list 设置面板集成测试。
 
-集成测试走的是 core/tester/mock/parser.py 的简化解析器，其发送者为超级用户，
+集成测试走的是 akaribot/testing/mock/parser.py 的简化解析器，其发送者为超级用户，
 故此处只验证三条模板各自匹配到位、面板照常发出；权限分支与按钮排布由
 tests/unit/test_setup_panel.py 覆盖。
 """

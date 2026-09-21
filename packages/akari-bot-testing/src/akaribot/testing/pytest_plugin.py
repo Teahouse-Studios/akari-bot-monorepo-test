@@ -1,6 +1,6 @@
 """把自研测试框架的 ``@func_case`` 入口接入 pytest 的适配层。
 
-pytest 在这里只负责收集与报告，用例依旧由 :func:`core.tester.process.run_function_entry`
+pytest 在这里只负责收集与报告，用例依旧由 :func:`akaribot.testing.process.run_function_entry`
 执行，因此条目级隔离（重建数据库、重新加载模块、watchdog 超时）与 ``tester.py`` 完全一致。
 
 三条设计约束：
@@ -116,7 +116,7 @@ def evaluate_result(fn_name: str, res: dict[str, Any]) -> tuple[str, str] | None
     复核一次条目级运行结果，判定语义与 tester.py 保持一致。
 
     :param fn_name: 条目函数名，仅用于提示。
-    :param res: :func:`core.tester.process.run_function_entry` 的返回值。
+    :param res: :func:`akaribot.testing.process.run_function_entry` 的返回值。
     :return: (类别, 详情)，类别为 ``error``/``failure``/``skip``；全部通过时为 None。
     """
     if res.get("error"):

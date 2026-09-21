@@ -148,7 +148,7 @@ def _test_default_instance_names_are_byte_identical():
     try:
         Info.instance_id = ""
         for platform, expected in PLATFORM_NAMES.items():
-            info = importlib.import_module(f"bots.{platform}.info")
+            info = importlib.import_module(f"akaribot.adapters.{platform}.info")
             if info.platform_name != expected or info.client_name != expected:
                 return False
             if Info.resolve_client_name(expected) != expected:
@@ -280,8 +280,8 @@ def _fake_adapter_entry(name: str, credential_fields: tuple[str, ...] = ()) -> P
         name=name,
         dist_name="",
         version="0+local",
-        import_path=f"bots.{name}",
-        root=Path("bots") / name,
+        import_path=f"akaribot.adapters.{name}",
+        root=Path("akaribot/adapters") / name,
         manifest=PackageManifest(config_table=f"bot_{name}", credential_fields=credential_fields),
     )
 

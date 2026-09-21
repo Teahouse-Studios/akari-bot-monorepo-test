@@ -2,7 +2,7 @@
 
 mcserver 不在此列：它经 ``mcstatus`` 走 Minecraft 的原生协议（TCP/UDP）而非 HTTP，
 ``tests/fixtures/http/`` 的录制回放覆盖不到，结果只取决于目标服务器与本机网络，长期不稳定。
-要重新纳入，须先为 ``modules.mcserver.server`` 的 ``query_java_server`` 一类入口备好替身。
+要重新纳入，须先为 ``akaribot.modules.mcserver.server`` 的 ``query_java_server`` 一类入口备好替身。
 """
 
 from akaribot.testing import (

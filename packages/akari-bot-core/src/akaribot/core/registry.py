@@ -2,9 +2,9 @@
 
 「系统里有哪些模块与适配器」的唯一答案来源，按下列顺序合成：
 
-1. 存在 ``core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）；
+1. 存在 ``akaribot/core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）；
 2. 枚举已安装分发的 entry point；
-3. 兜底扫描仓库内的 ``modules/`` 与 ``bots/``，合成 ``dist_name`` 为空的条目；
+3. 兜底扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``，合成 ``dist_name`` 为空的条目；
 4. 按条目名去重，entry point 胜出，冲突时记录警告。
 
 拆包前以第 3 条为主，拆包后各包以 wheel 安装，第 2 条接管，本模块之外的代码无需改动。
@@ -16,6 +16,7 @@ import heapq
 import importlib
 import importlib.metadata
 import importlib.resources
+import importlib.util
 import sys
 import tomllib
 from collections import deque
@@ -27,7 +28,7 @@ from typing import Any, Literal
 ENTRY_POINT_GROUPS: dict[str, str] = {"module": "akaribot.modules", "adapter": "akaribot.adapters"}
 
 # 二进制构建产物。存在时 discover() 直接采用其中记录的清单，跳过 entry point 与目录扫描。
-FROZEN_REGISTRY_MODULE = "core._frozen_registry"
+FROZEN_REGISTRY_MODULE = "akaribot.core._frozen_registry"
 
 # 包内 manifest 的文件名与版本。
 MANIFEST_FILENAME = "manifest.toml"
@@ -142,7 +143,7 @@ class PackageEntry:
     :param name: 包名，取自 entry point 名或目录名，如 ``wiki`` / ``qqbot``。
     :param dist_name: 分发名，如 ``akari-bot-module-wiki``；目录扫描兜底时为空串。
     :param version: 已安装分发的版本；目录扫描兜底时为 ``0+local``。
-    :param import_path: 导入路径，如 ``modules.wiki``；拆包后为 ``akaribot.modules.wiki``。
+    :param import_path: 导入路径，如 ``akaribot.modules.wiki``。
     :param root: 包根目录。
     :param manifest: 包元数据。
     :param editable: 是否为可编辑安装。
@@ -216,7 +217,11 @@ class PackageRegistry:
             for kind, group in ENTRY_POINT_GROUPS.items():
                 for entry in cls._from_entry_points(kind, group):
                     cls._insert(entries, entry, source="entry point")
+            known = {entry.import_path for entry in entries.values()}
             for entry in cls._from_directory_scan():
+                # 目录扫描是兜底：entry point 已提供的包不再重复登记，也不产生冲突告警。
+                if entry.import_path in known:
+                    continue
                 cls._insert(entries, entry, source="directory scan")
 
         entries, api_rejected, api_refused = cls._reject_core_api_incompatible(entries)
@@ -376,42 +381,46 @@ class PackageRegistry:
     def _entry_from_entry_point(cls, kind: str, entry_point: Any) -> PackageEntry:
         """把单个 entry point 解析为条目。
 
+        只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n
+        快照接上之前写盘，新实例生成的配置注释全部退化为空。
+
         :param kind: 包种类。
         :param entry_point: ``importlib.metadata.EntryPoint`` 实例。
         :return: 条目。
         :raises RegistryError: entry point 指向的不是包，或无法定位其目录。
         """
-        module = importlib.import_module(entry_point.value)
-        root = cls._root_of(module, entry_point.value)
+        import_path = entry_point.value
+        root = cls._root_of(import_path)
         distribution = importlib.metadata.distribution(entry_point.dist.name) if entry_point.dist else None
         version = distribution.version if distribution else "0+local"
-        manifest = cls._read_manifest(module.__name__, root)
+        manifest = cls._read_manifest(import_path, root)
         return PackageEntry(
             kind=kind,
             name=entry_point.name,
             dist_name=distribution.metadata["Name"] if distribution else "",
             version=version,
-            import_path=module.__name__,
+            import_path=import_path,
             root=root,
             manifest=manifest,
             editable=cls._is_editable(distribution),
         )
 
     @staticmethod
-    def _root_of(module: Any, import_path: str) -> Path:
-        """定位包根目录。
+    def _root_of(import_path: str) -> Path:
+        """按导入路径定位包根目录，不导入该包。
 
-        :param module: 已导入的包。
-        :param import_path: 包导入路径，用于报错。
+        :param import_path: 包导入路径，如 ``akaribot.modules.wiki``。
         :return: 包根目录。
-        :raises RegistryError: 该模块不是包。
+        :raises RegistryError: 该路径无法定位，或不是包。
         """
-        paths = list(getattr(module, "__path__", ()))
-        if paths:
-            return Path(paths[0]).resolve()
-        module_file = getattr(module, "__file__", None)
-        if module_file:
-            return Path(module_file).resolve().parent
+        spec = importlib.util.find_spec(import_path)
+        if spec is None:
+            raise RegistryError(f"{import_path} cannot be located")
+        locations = list(spec.submodule_search_locations or ())
+        if locations:
+            return Path(locations[0]).resolve()
+        if spec.origin:
+            return Path(spec.origin).resolve().parent
         raise RegistryError(f"{import_path} is not a package")
 
     @staticmethod
@@ -432,14 +441,14 @@ class PackageRegistry:
 
     @classmethod
     def _from_directory_scan(cls) -> list[PackageEntry]:
-        """扫描仓库内的 ``modules/`` 与 ``bots/``。
+        """扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``。
 
-        拆包之前这是主路径，因此扫描对象是真实存在的包目录，而非硬编码的路径常量。
+        未安装分发的源码检出依赖这条路径，因此扫描对象是真实存在的包目录，而非硬编码的路径常量。
 
         :return: 条目列表，按 ``(kind, name)`` 排序。
         """
         entries: list[PackageEntry] = []
-        for kind, package_name in (("module", "modules"), ("adapter", "bots")):
+        for kind, package_name in (("module", "akaribot.modules"), ("adapter", "akaribot.adapters")):
             package = sys.modules.get(package_name) or cls._import_optional(package_name)
             if package is None:
                 _logger().warning(f"Package {package_name!r} not importable, skip {kind} discovery.")
@@ -465,7 +474,7 @@ class PackageRegistry:
         """由目录扫描结果构造条目。
 
         :param kind: 包种类。
-        :param package_name: 顶层包名，``modules`` 或 ``bots``。
+        :param package_name: 命名空间前缀，``akaribot.modules`` 或 ``akaribot.adapters``。
         :param root: 包目录。
         :return: 条目。
         """
@@ -534,7 +543,7 @@ class PackageRegistry:
     def by_import_path(cls, path: str) -> PackageEntry | None:
         """按导入路径查包，取最长前缀匹配。
 
-        ``'modules.wiki.utils.wikilib'`` 解析为 ``wiki`` 包的条目。
+        ``'akaribot.modules.wiki.utils.wikilib'`` 解析为 ``wiki`` 包的条目。
 
         :param path: 导入路径。
         :return: 条目；无任何包的导入路径是其前缀时为 ``None``。
@@ -550,13 +559,20 @@ class PackageRegistry:
 
     @classmethod
     def import_roots(cls, kind: PackageKind) -> set[str]:
-        """某一类包导入路径的顶层段。
+        """某一类包所属的命名空间前缀。
+
+        包导入路径形如 ``akaribot.modules.wiki``，命名空间是去掉包名那一段。该前缀是 loader
+        归约导入路径的界：取「命名空间 + 包名」三段。2 段布局时代的顶层段语义不再成立。
 
         :param kind: 包种类。
-        :return: 顶层段集合；该类无包时为空集。
+        :return: 命名空间前缀集合；该类无包时为空集。
         """
         cls.discover()
-        return {entry.import_path.split(".")[0] for entry in cls._entries.values() if entry.kind == kind}
+        # 命名空间与 entry point 组同名（见 ENTRY_POINT_GROUPS），但取值仍由条目导出：
+        # 该类无包时返回空集，调用方据此判断是否存在可依赖的包。
+        roots = {entry.import_path.rpartition(".")[0] for entry in cls._entries.values() if entry.kind == kind}
+        roots.discard("")
+        return roots
 
     @classmethod
     def locales_paths(cls) -> list[str]:
@@ -578,7 +594,7 @@ class PackageRegistry:
     @staticmethod
     def _core_locales_dir() -> Path | None:
         try:
-            core = importlib.import_module("core")
+            core = importlib.import_module("akaribot.core")
         except ImportError:
             return None
         paths = list(getattr(core, "__path__", ()))

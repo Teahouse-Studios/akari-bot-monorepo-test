@@ -86,7 +86,7 @@ CLAUDE.md
 /data/url_audit/blocklist/user.txt
 
 # Module Data
-modules/*/data/*
+packages/modules/*/src/akaribot/modules/*/data/*
 
 # Retired Client Data
 /data/retired/*
@@ -99,8 +99,8 @@ webui/*
 # ==========
 
 # Test Adapters & Modules
-bots/test/*
-modules/test/*
+packages/adapters/*/src/akaribot/adapters/test/*
+packages/modules/*/src/akaribot/modules/test/*
 
 # Test Files
 /test*.*

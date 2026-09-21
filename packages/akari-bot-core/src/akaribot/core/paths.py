@@ -31,6 +31,16 @@ def _env_path(name: str) -> Path | None:
     return Path(value).expanduser().resolve()
 
 
+def _repository_root() -> Path:
+    """源码检出形态下的仓库根。
+
+    本文件位于 <仓库根>/packages/akari-bot-core/src/akaribot/core/，向上五级即仓库根。打包形态
+    的路径层级不再对应仓库，此时退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
+    """
+    current = Path(__file__).resolve()
+    return current.parents[5] if len(current.parents) > 5 else current.parent
+
+
 class Paths:
     """实例目录及其子目录。"""
 
@@ -55,7 +65,7 @@ class Paths:
     logs: Path = instance / "logs"
     """日志目录。"""
 
-    tests: Path = _env_path(TESTS_PATH_ENV) or Path(__file__).resolve().parent.parent / "tests"
+    tests: Path = _env_path(TESTS_PATH_ENV) or _repository_root() / "tests"
     """测试用例目录，属源码仓库而非实例。"""
 
     @classmethod

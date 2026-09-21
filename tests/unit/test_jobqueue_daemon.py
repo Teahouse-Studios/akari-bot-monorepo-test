@@ -98,7 +98,7 @@ def _fake_adapters():
             name=_TEST_PLATFORM,
             dist_name="",
             version="0+local",
-            import_path=f"bots.{_TEST_PLATFORM}",
+            import_path=f"akaribot.adapters.{_TEST_PLATFORM}",
             root=Path("."),
             manifest=PackageManifest(),
         )

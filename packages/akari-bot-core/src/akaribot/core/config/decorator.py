@@ -259,7 +259,7 @@ def on_bot_config(
 ):
     """平台配置装饰器工厂函数。
 
-    等价于 ``on_config(bot_name, table_type="bot", secret=secret)``，供 ``bots/`` 下的配置模板使用。
+    等价于 ``on_config(bot_name, table_type="bot", secret=secret)``，供适配器包的 ``config.py`` 配置模板使用。
 
     示例:
     ```
@@ -268,7 +268,7 @@ def on_bot_config(
             qq_typing_emoji: int = 181
     ```
 
-    :param bot_name: 平台名称，须与 `bots/` 下的目录名一致：守护进程以 ``bot_<目录名>``
+    :param bot_name: 平台名称，须与 ``akaribot/adapters/<名称>/`` 的末级目录名一致：守护进程以 ``bot_<目录名>``
                  的表名查找该平台的 `enable` 配置。最终的表名为 "bot_平台名"
     :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
@@ -285,7 +285,7 @@ def on_module_config(
 ):
     """模块配置装饰器工厂函数。
 
-    等价于 ``on_config(module_name, table_type="module", secret=secret)``，供 ``modules/`` 下的配置模板使用。
+    等价于 ``on_config(module_name, table_type="module", secret=secret)``，供模块包的 ``config.py`` 配置模板使用。
 
     示例:
     ```

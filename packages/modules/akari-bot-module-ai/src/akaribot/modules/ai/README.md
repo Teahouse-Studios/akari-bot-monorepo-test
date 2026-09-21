@@ -1,4 +1,4 @@
-在使用本模块前，请确保在 `modules/ai/data/` 目录下创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。
+在使用本模块前，请确保在实例目录下的 `data/module/ai/` 目录中创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。实例目录由环境变量 `AKARI_INSTANCE_DIR` 指定，未设置时取进程的当前工作目录。
 
 ---
 
@@ -358,7 +358,7 @@ billing:
 
 ---
 
-Before using this module, please make sure to create the `llm_api_list.yaml` configuration file in the `modules/ai/data/` directory. Otherwise, the module will not function properly.
+Before using this module, please make sure to create the `llm_api_list.yaml` configuration file in the `data/module/ai/` directory under the instance directory. The instance directory is set by the `AKARI_INSTANCE_DIR` environment variable and defaults to the process working directory. Otherwise, the module will not function properly.
 
 ---
 

@@ -1,6 +1,6 @@
 """按包管理的配置版本与配置迁移。
 
-core 只维护 ``config.toml`` 的版本（见 core/config/update.py）；其余配置文件的版本随包走：包把
+core 只维护 ``config.toml`` 的版本（见 akaribot/core/config/update.py）；其余配置文件的版本随包走：包把
 迁移脚本放在 ``config_migrations/`` 下，脚本文件名以四位号段开头，负责把文件从 ``N-1`` 号升到
 ``N`` 号，已应用到哪一号记在文件自身的 ``config_version`` 里。
 
@@ -97,7 +97,7 @@ def _config_table(entry: "PackageEntry") -> str:
 def iter_config_tables() -> list[tuple["PackageEntry", str]]:
     """列出声明了配置模板的包及其配置表名。
 
-    核心配置不出现在结果中：它由 core/config/update.py 单独维护版本。清单的判定与
+    核心配置不出现在结果中：它由 akaribot/core/config/update.py 单独维护版本。清单的判定与
     ``PackageRegistry.config_template_paths()`` 同源，均以 ``config.py`` 是否存在为准。
 
     :return: (包条目, 配置表名) 列表，按包名排序。
@@ -373,7 +373,7 @@ def stamp_config_versions() -> list[str]:
     """把包清单声明的表结构版本写入各自的配置文件。
 
     生成阶段在模板扫描之后调用：先由扫描建立缺失的配置文件，再写入版本号，迁移运行器才能
-    判断某个文件已走到哪一号段。核心配置不出现在结果中，其版本由 core/config/update.py 维护。
+    判断某个文件已走到哪一号段。核心配置不出现在结果中，其版本由 akaribot/core/config/update.py 维护。
 
     :return: 被写入或更新的配置表名列表。
     """

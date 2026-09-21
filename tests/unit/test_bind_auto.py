@@ -208,7 +208,7 @@ async def _test_unbind_forgets_peer_bots():
 async def _test_rebind_after_unbind():
     """测试 bind auto - 解绑后重新执行握手仍能成立
 
-    仅覆盖流程本身。「因屏蔽而无法重新绑定」实际发生在 core/builtins/parser/message.py，
+    仅覆盖流程本身。「因屏蔽而无法重新绑定」实际发生在 akaribot/core/builtins/parser/message.py，
     而测试使用的是不执行该屏蔽的 mock parser，该判定条件由上面的清除用例覆盖。
     """
     try:

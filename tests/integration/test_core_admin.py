@@ -1,4 +1,4 @@
-"""modules/core 管理员命令集成测试。"""
+"""akaribot/modules/core 管理员命令集成测试。"""
 
 from akaribot.testing import (
     func_case,

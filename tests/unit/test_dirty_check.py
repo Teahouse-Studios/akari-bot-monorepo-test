@@ -35,7 +35,7 @@ def _test_parse_data_protects_at_code():
         from akaribot.core.utils.dirty_check import parse_data
 
         dirty = {"RiskLevel": "high", "Result": [{"Confidence": 100, "RiskWords": "BADWORD", "Label": "mock"}]}
-        # AT 码的合法形式是 <AT:client|id>（见 core/builtins/message/mention.py），
+        # AT 码的合法形式是 <AT:client|id>（见 akaribot/core/builtins/message/mention.py），
         # 中间的额外字段为展示名，与 client、id 一并豁免。
         code = "<AT:TEST|123|BADWORD>"
 

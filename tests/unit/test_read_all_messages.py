@@ -138,7 +138,7 @@ async def _enable_prompt(
 ) -> str | tuple[str, SessionInfo]:
     """在 QQ 官方机器人的提及消息场景中跑一遍启用流程，取回渲染后的提示。
 
-    该场景的会话特性直接取自 bots/qqbot/features.py，故本用例同时守住了那份声明。
+    该场景的会话特性直接取自 akaribot/adapters/qqbot/features.py，故本用例同时守住了那份声明。
 
     :param module_name: 待启用的模块名。
     :return: 提示文案，多条以竖线相接。

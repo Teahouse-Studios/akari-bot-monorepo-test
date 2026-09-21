@@ -214,7 +214,7 @@ async def _test_module_load_unload_synchronizes_jobs():
     old_module = ModulesManager.modules.get(module_name)
     old_origin = ModulesManager.modules_origin.get(module_name)
     ModulesManager.modules[module_name] = module
-    ModulesManager.modules_origin[module_name] = "modules.__test_scheduler_toggle"
+    ModulesManager.modules_origin[module_name] = "akaribot.modules.__test_scheduler_toggle"
     try:
         SchedulerLifecycle.prepare()
         with patch.object(ModuleStatus, "set_module_loaded", new=AsyncMock()):

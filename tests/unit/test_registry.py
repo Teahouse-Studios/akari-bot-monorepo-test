@@ -66,12 +66,12 @@ def _test_by_import_path_uses_longest_prefix():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         short = _entry("module", "wiki", "akaribot.modules.wiki", root)
-        long = _entry("module", "wikilog", "modules.wiki.log", root)
+        long = _entry("module", "wikilog", "akaribot.modules.wiki.log", root)
         with _isolated_registry({"module:wiki": short, "module:wikilog": long}):
             exact = PackageRegistry.by_import_path("akaribot.modules.wiki")
-            child = PackageRegistry.by_import_path("modules.wiki.log.entry")
-            unrelated = PackageRegistry.by_import_path("modules.other.child")
-            boundary = PackageRegistry.by_import_path("modules.wikilog")
+            child = PackageRegistry.by_import_path("akaribot.modules.wiki.log.entry")
+            unrelated = PackageRegistry.by_import_path("akaribot.modules.other.child")
+            boundary = PackageRegistry.by_import_path("akaribot.modules.wikilog")
         return exact is short and child is long and unrelated is None and boundary is None
 
 
@@ -91,13 +91,13 @@ def _test_modules_and_adapters_are_separated():
     """同名包按种类区分，互不覆盖。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        as_module = _entry("module", "web", "modules.web", root)
+        as_module = _entry("module", "web", "akaribot.modules.web", root)
         as_adapter = _entry("adapter", "web", "akaribot.adapters.web", root)
         with _isolated_registry({"module:web": as_module, "adapter:web": as_adapter}):
             modules = PackageRegistry.modules()
             adapters = PackageRegistry.adapters()
             by_adapter_path = PackageRegistry.by_import_path("akaribot.adapters.web.api")
-            by_module_path = PackageRegistry.by_import_path("modules.web")
+            by_module_path = PackageRegistry.by_import_path("akaribot.modules.web")
         return (
             list(modules) == ["web"]
             and list(adapters) == ["web"]
@@ -107,10 +107,18 @@ def _test_modules_and_adapters_are_separated():
 
 
 def _test_directory_scan_finds_repository_packages():
-    """目录扫描兜底须找出仓库内的全部模块与适配器，且键与包名一致。"""
-    PackageRegistry.discover(force=True)
-    modules = PackageRegistry.modules()
-    adapters = PackageRegistry.adapters()
+    """目录扫描兜底须找出仓库内的全部模块与适配器，且键与包名一致。
+
+    已安装分发的 entry point 会先于兜底收录条目，故须显式屏蔽该路径：本用例断言的是
+    兜底本身，结论不应取决于当前环境装没装包。
+    """
+    try:
+        with patch.object(PackageRegistry, "_from_entry_points", return_value=[]):
+            PackageRegistry.discover(force=True)
+            modules = PackageRegistry.modules()
+            adapters = PackageRegistry.adapters()
+    finally:
+        PackageRegistry.discover(force=True)
     keys_match = all(entry.name == key for key, entry in modules.items()) and all(
         entry.name == key for key, entry in adapters.items()
     )
@@ -144,7 +152,7 @@ def _test_entry_points_take_precedence_over_directory_scan():
 def _test_manifest_defaults_when_missing():
     """包内无 manifest 时取全默认值，与拆包前的现状等价。"""
     with tempfile.TemporaryDirectory() as tmp:
-        manifest = PackageRegistry._read_manifest("modules.sample", Path(tmp))
+        manifest = PackageRegistry._read_manifest("akaribot.modules.sample", Path(tmp))
     return (
         manifest.schema == 1
         and manifest.requires_core_api == ">=1"
@@ -162,7 +170,7 @@ def _test_manifest_is_read_from_package_root():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "manifest.toml").write_text(MANIFEST_SAMPLE, encoding="utf-8")
-        manifest = PackageRegistry._read_manifest("modules.sample", root)
+        manifest = PackageRegistry._read_manifest("akaribot.modules.sample", root)
     return (
         manifest.config_table == "module_sample"
         and manifest.config_schema_version == 3
@@ -183,7 +191,7 @@ def _test_manifest_with_unknown_schema_falls_back_to_defaults():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "manifest.toml").write_text('schema = 99\nconfig_table = "module_x"\n', encoding="utf-8")
-        manifest = PackageRegistry._read_manifest("modules.sample", root)
+        manifest = PackageRegistry._read_manifest("akaribot.modules.sample", root)
     return manifest.config_table == "module_x"
 
 
@@ -192,9 +200,9 @@ def _test_locales_paths_skip_packages_without_locale_dir():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "locales").mkdir()
-        present = _entry("module", "with_locales", "modules.with_locales", root)
-        absent = _entry("module", "without_locales", "modules.without_locales", Path(tmp) / "missing")
-        undeclared = _entry("module", "no_locales_field", "modules.no_locales", root, locales=None)
+        present = _entry("module", "with_locales", "akaribot.modules.with_locales", root)
+        absent = _entry("module", "without_locales", "akaribot.modules.without_locales", Path(tmp) / "missing")
+        undeclared = _entry("module", "no_locales_field", "akaribot.modules.no_locales", root, locales=None)
         with (
             patch.object(PackageRegistry, "_core_locales_dir", return_value=None),
             _isolated_registry(
@@ -214,11 +222,11 @@ def _test_config_template_paths_follow_file_existence():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "config.py").write_text("", encoding="utf-8")
-        has_template = _entry("module", "has_template", "modules.has_template", root)
-        no_template = _entry("module", "no_template", "modules.no_template", Path(tmp) / "other")
+        has_template = _entry("module", "has_template", "akaribot.modules.has_template", root)
+        no_template = _entry("module", "no_template", "akaribot.modules.no_template", Path(tmp) / "other")
         with _isolated_registry({"module:has_template": has_template, "module:no_template": no_template}):
             names = PackageRegistry.config_template_paths()
-    return names == ["akaribot.core.config.base", "modules.has_template.config"]
+    return names == ["akaribot.core.config.base", "akaribot.modules.has_template.config"]
 
 
 def _test_import_roots_cover_registered_packages():
@@ -227,7 +235,7 @@ def _test_import_roots_cover_registered_packages():
     module_roots = PackageRegistry.import_roots("module")
     adapter_roots = PackageRegistry.import_roots("adapter")
     entry_groups_match = set(ENTRY_POINT_GROUPS.values()) == {"akaribot.modules", "akaribot.adapters"}
-    return module_roots == {"modules"} and adapter_roots == {"bots"} and entry_groups_match
+    return module_roots == {"akaribot.modules"} and adapter_roots == {"akaribot.adapters"} and entry_groups_match
 
 
 def _test_core_api_version_is_declared():
@@ -258,7 +266,7 @@ def _test_frozen_registry_takes_precedence():
 def _test_package_data_is_per_kind_and_name():
     """数据目录按种类与包名分层。"""
     with tempfile.TemporaryDirectory() as tmp:
-        entry = _entry("module", "sample", "modules.sample", Path(tmp))
+        entry = _entry("module", "sample", "akaribot.modules.sample", Path(tmp))
         with patch.object(PackageRegistry, "_instance_data_root", return_value=Path("/instance/data")):
             directory = PackageRegistry.package_data(entry)
     return directory == Path("/instance/data/module/sample")
@@ -269,7 +277,7 @@ def _test_package_data_uses_instance_data_root():
     from akaribot.core.paths import Paths
 
     with tempfile.TemporaryDirectory() as tmp:
-        entry = _entry("module", "sample", "modules.sample", Path(tmp))
+        entry = _entry("module", "sample", "akaribot.modules.sample", Path(tmp))
         directory = PackageRegistry.package_data(entry)
     return directory == Paths.data / "module" / "sample" and Paths.data.name == "data"
 
@@ -278,8 +286,8 @@ def _test_package_assets_follows_manifest():
     """包内静态资源目录取 manifest.assets，未声明时退回包根。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        declared = _entry("module", "declared", "modules.declared", root, assets="assets")
-        undeclared = _entry("module", "undeclared", "modules.undeclared", root)
+        declared = _entry("module", "declared", "akaribot.modules.declared", root, assets="assets")
+        undeclared = _entry("module", "undeclared", "akaribot.modules.undeclared", root)
         with _isolated_registry({"module:declared": declared, "module:undeclared": undeclared}):
             with_manifest = PackageRegistry.package_assets("declared")
             without_manifest = PackageRegistry.package_assets(undeclared)
@@ -290,14 +298,14 @@ def _test_incompatible_packages_are_rejected():
     """requires_core_api 不满足的包不注册，并可查询到成因。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        compatible = _entry("module", "compatible", "modules.compatible", root, requires_core_api=">=1")
-        incompatible = _entry("module", "incompatible", "modules.incompatible", root, requires_core_api=">=99")
+        compatible = _entry("module", "compatible", "akaribot.modules.compatible", root, requires_core_api=">=1")
+        incompatible = _entry("module", "incompatible", "akaribot.modules.incompatible", root, requires_core_api=">=99")
         original = PackageRegistry._incompatible
         try:
             with _isolated_registry({"module:compatible": compatible, "module:incompatible": incompatible}):
                 rejected = PackageRegistry.reject_incompatible()
                 remaining = PackageRegistry.modules()
-                unresolved = PackageRegistry.by_import_path("modules.incompatible.sub")
+                unresolved = PackageRegistry.by_import_path("akaribot.modules.incompatible.sub")
                 reported = PackageRegistry.report_lines()
         finally:
             PackageRegistry._incompatible = original
@@ -312,7 +320,7 @@ def _test_incompatible_packages_are_rejected():
 def _test_unparsable_api_specifier_is_rejected():
     """描述符本身写错时同样拒绝注册，而不是抛异常中断发现。"""
     with tempfile.TemporaryDirectory() as tmp:
-        broken = _entry("module", "broken", "modules.broken", Path(tmp), requires_core_api="not a specifier")
+        broken = _entry("module", "broken", "akaribot.modules.broken", Path(tmp), requires_core_api="not a specifier")
         original = PackageRegistry._incompatible
         try:
             with _isolated_registry({"module:broken": broken}):
@@ -327,8 +335,8 @@ def _test_compatible_packages_are_kept():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         entries = {
-            "module:any": _entry("module", "any", "modules.any", root, requires_core_api=">=1,<2"),
-            "module:default": _entry("module", "default", "modules.default", root),
+            "module:any": _entry("module", "any", "akaribot.modules.any", root, requires_core_api=">=1,<2"),
+            "module:default": _entry("module", "default", "akaribot.modules.default", root),
         }
         original = PackageRegistry._incompatible
         try:

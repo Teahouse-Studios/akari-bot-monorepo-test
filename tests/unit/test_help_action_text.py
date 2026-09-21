@@ -55,7 +55,7 @@ def _test_help_about_button_replaces_donate():
 def _render_lines(session_info, parts) -> list[str]:
     """把元素列表按适配器的规则折成行。
 
-    复刻 ``bots/qqbot/context.py`` 中 send_msg_markdown() 的拼接：指令操作并入上一项，
+    复刻 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的拼接：指令操作并入上一项，
     且其后紧随的文本同样并入上一项，最后以换行连接各项。该函数绑在平台 SDK 上，
     测试无从直接调用，故按同样的规则建模。
 
@@ -226,7 +226,7 @@ async def _test_image_flag_overrides_markdown_table():
         with patch(
             "akaribot.modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)
         ) as generator:
-            # 关键字须与命令模板 [--img] 解出的参数名一致，见 core/builtins/parser/message.py
+            # 关键字须与命令模板 [--img] 解出的参数名一致，见 akaribot/core/builtins/parser/message.py
             await help_overview(msg, img=True)
     except SessionFinished:
         pass

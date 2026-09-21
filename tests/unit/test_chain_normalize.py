@@ -5,7 +5,7 @@ values 的声明类型是 list[MessageElement]，而 append 一类原地修改�
 mapping」暴露——彼时调用栈已深入 cattrs 内部，难以追溯是哪一处放进去的。
 
 assign() 一向会把字符串转作文本元素，原地修改的方法却不会。两者行为不一致，正是
-modules/wiki/wiki.py 与 modules/idlist 等处踩坑的由来：那些地方以
+akaribot/modules/wiki/wiki.py 与 akaribot/modules/idlist 等处踩坑的由来：那些地方以
 MessageChain.create() 起手，其后 append 的却是裸字符串。
 """
 

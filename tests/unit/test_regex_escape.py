@@ -77,7 +77,7 @@ async def _test_production_parser_allows_empty_marker_config():
 
 @func_case
 async def test_regex_escape(tester: Tester):
-    await tester.test(_test_default_from_constants, "默认前缀由 core.constants 提供并绑定至 CoreConfig")
+    await tester.test(_test_default_from_constants, "默认前缀由 akaribot.core.constants 提供并绑定至 CoreConfig")
     await tester.test(_test_mock_parser_skips_halfwidth_marker, "测试解析器跳过半角句号消息")
     await tester.test(_test_mock_parser_skips_fullwidth_marker, "测试解析器跳过全角句号消息")
     await tester.test(_test_mock_parser_keeps_normal_regex_parsing, "普通消息继续执行正则解析")

@@ -1,4 +1,4 @@
-"""bots/*/features 单元测试 - 平台能力开关的传递（需要数据库）。"""
+"""akaribot/adapters/*/features 单元测试 - 平台能力开关的传递（需要数据库）。"""
 
 from datetime import UTC, datetime, timedelta
 

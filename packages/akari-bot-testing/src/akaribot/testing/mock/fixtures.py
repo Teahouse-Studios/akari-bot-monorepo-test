@@ -25,9 +25,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+from akaribot.core.paths import Paths
 from akaribot.testing.mock.http import HTTPMock, MockHTTPResponse, digest_request_body
 
-FIXTURE_DIR = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "http"
+# 语料目录属源码仓库，与 Paths.tests 同源；按本文件深度推算会在包布局调整后失准。
+FIXTURE_DIR = Paths.tests / "fixtures" / "http"
 
 
 def _url_to_filename(url: str, method: str | None = None, body_digest: str | None = None) -> str:

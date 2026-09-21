@@ -1,4 +1,4 @@
-"""ToS 管理系统单元测试（实现位于 modules/core/hooks/tos.py）。"""
+"""ToS 管理系统单元测试（实现位于 akaribot/modules/core/hooks/tos.py）。"""
 
 import asyncio
 import time
@@ -98,7 +98,7 @@ async def _test_tos_report_no_targets():
 
 
 async def _test_tos_report_delegates_to_send_report():
-    """tos_report: 上报统一经 core.smtp.send_report，并透传上报场景与邮件主题"""
+    """tos_report: 上报统一经 akaribot.core.smtp.send_report，并透传上报场景与邮件主题"""
     from akaribot.core.builtins.message.chain import MessageChain
     from akaribot.core.builtins.message.elements import I18NContextElement
     from akaribot.modules.core.hooks.tos import tos_report

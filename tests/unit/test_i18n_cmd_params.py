@@ -10,7 +10,6 @@
 
 import glob
 import json
-import os
 import re
 
 from akaribot.core.logger import Logger
@@ -27,7 +26,7 @@ KNOWN_INDIRECT_KEYS = {
 }
 
 # 上述键的 cmd 实际由该文件中的 issue_code() 补上
-INDIRECT_PROVIDER = "modules/core/common_tools/_union_merge.py"
+INDIRECT_PROVIDER = "packages/akari-bot-core/src/akaribot/modules/core/common_tools/_union_merge.py"
 
 
 def _iter_call_args(source: str, key: str):
@@ -66,7 +65,7 @@ def _iter_call_args(source: str, key: str):
 def _collect_cmd_keys() -> set[str]:
     """收集所有文案中含 ${cmd} 的键名。"""
     keys = set()
-    for path in glob.glob("modules/*/locales/zh_cn.json") + [os.path.join("core", "locales", "zh_cn.json")]:
+    for path in glob.glob("packages/**/locales/zh_cn.json", recursive=True):
         with open(path, encoding="utf-8") as f:
             for key, value in json.load(f).items():
                 if "${cmd}" in value:
@@ -75,9 +74,9 @@ def _collect_cmd_keys() -> set[str]:
 
 
 def _collect_sources() -> dict[str, str]:
-    """读取模块与核心的全部源码。"""
+    """读取各包与核心的全部源码。"""
     sources = {}
-    for path in glob.glob("modules/**/*.py", recursive=True) + glob.glob("core/**/*.py", recursive=True):
+    for path in glob.glob("packages/**/*.py", recursive=True):
         with open(path, encoding="utf-8") as f:
             sources[path.replace("\\", "/")] = f.read()
     return sources

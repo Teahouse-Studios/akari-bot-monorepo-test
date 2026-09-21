@@ -80,8 +80,8 @@ def get_union_module_name(model: type[Model]) -> str:
     获取模块表所属的模块名，用于向用户展示，无法判断时退回表名。
     """
     parts = model.__module__.split(".")
-    if len(parts) > 1 and parts[0] == "modules":
-        return parts[1]
+    if len(parts) > 2 and parts[:2] == ["akaribot", "modules"]:
+        return parts[2]
     return get_table_name(model)
 
 

@@ -877,7 +877,7 @@ async def restart():
     except BaseException:
         # 重启请求已经被接受，清理失败不能把进程留在半关闭状态；记录后仍交给守护进程重启。
         Logger.exception("Failed to clean up Web client before restart: ")
-    # 33 与 core/server/terminate.py 一致，守护进程据此重启全部 bot；旧值 233 已不被识别。
+    # 33 与 akaribot/core/server/terminate.py 一致，守护进程据此重启全部 bot；旧值 233 已不被识别。
     os._exit(33)
 
 

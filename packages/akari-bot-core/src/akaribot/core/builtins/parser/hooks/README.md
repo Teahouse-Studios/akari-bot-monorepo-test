@@ -19,11 +19,11 @@
 ```python
 from typing import TYPE_CHECKING
 
-from core.builtins.parser.hooks import HookPoint
-from core.component import module
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.component import module
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 ext = module("example-ext", hidden=True)
 
@@ -118,12 +118,12 @@ hook 不得：
 
 ## 内置订阅方
 
-- `modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、出站静音和默认命令反馈
-- `modules/core/hooks/errors.py`：异常反馈与错误详情格式化
-- `modules/core/hooks/retired.py`：退役客户端路由和通道让位
-- `modules/core/admin_tools/alias.py`：自定义别名改写
-- `modules/core/hooks/routing.py`：同通道消息认领
-- `modules/core/hooks/tos.py`：临封、令牌桶、上报；四个强制检查不限时且检查故障按消息级 `Stop` 处理，
+- `akaribot/modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、出站静音和默认命令反馈
+- `akaribot/modules/core/hooks/errors.py`：异常反馈与错误详情格式化
+- `akaribot/modules/core/hooks/retired.py`：退役客户端路由和通道让位
+- `akaribot/modules/core/admin_tools/alias.py`：自定义别名改写
+- `akaribot/modules/core/hooks/routing.py`：同通道消息认领
+- `akaribot/modules/core/hooks/tos.py`：临封、令牌桶、上报；四个强制检查不限时且检查故障按消息级 `Stop` 处理，
   避免失败放行；具名能力 `tos.check_temp_ban` / `tos.remove_temp_ban` / `tos.report`
-- `modules/core/hooks/telemetry.py`：AnalyticsData 与 Info 计数
-- `modules/core/hooks/typo.py`：纠错 RecoveryProposal
+- `akaribot/modules/core/hooks/telemetry.py`：AnalyticsData 与 Info 计数
+- `akaribot/modules/core/hooks/typo.py`：纠错 RecoveryProposal

@@ -31,7 +31,7 @@ def case(
 
     示例：
     ```
-    from core.tester import case, Match
+    from akaribot.testing import case, Match
 
     @case("~test say Hello", Match("Hello is Hello"))
     @test.command("say <word>")

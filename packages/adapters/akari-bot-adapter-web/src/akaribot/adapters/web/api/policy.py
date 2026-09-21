@@ -36,6 +36,7 @@ from akaribot.core.builtins.filter import (
 )
 from akaribot.core.constants.path import filter_words_path
 from akaribot.core.logger import Logger
+from akaribot.core.paths import Paths
 from akaribot.core.queue.contracts import ServerAPI
 from akaribot.core.utils.url_audit import (
     MAX_FILE_BYTES,
@@ -53,7 +54,9 @@ from akaribot.core.utils.url_audit import (
 )
 from .auth import verify_jwt
 
-ROOT_DIR = Path(__file__).parent.parent.parent.parent
+# 展示路径的基准根，取实例目录：策略文件都在实例的 data 之下，实例根始终是其可解析的祖先。
+# 源码检出下实例根即仓库根，展示形态与按文件深度反推仓库根时一致。
+ROOT_DIR = Paths.instance
 
 # 名单名与核心实现的对应关系，同时用作接口路径参数取值。
 URL_AUDIT_LISTS = {
@@ -85,7 +88,10 @@ def _file_meta(path: Path) -> dict:
 
 
 def _display_path(path: Path) -> str:
-    """把绝对路径转成相对仓库根的展示路径，便于前端提示文件位置。"""
+    """把绝对路径转成相对实例根的展示路径，便于前端提示文件位置。
+
+    源码检出下实例根即仓库根；路径不在实例内时退回绝对路径，调用方无需另行判断。
+    """
     try:
         return f"./{path.resolve().relative_to(ROOT_DIR).as_posix()}"
     except ValueError:

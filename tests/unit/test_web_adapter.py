@@ -257,7 +257,7 @@ async def _test_restart_cleans_client_before_exit() -> bool:
         patch.object(web_api.os, "_exit", new=exit_process),
     ):
         await web_api.restart()
-    # 33 是守护进程识别的「重启全部 bot」退出码，与 core/server/terminate.py 一致；
+    # 33 是守护进程识别的「重启全部 bot」退出码，与 akaribot/core/server/terminate.py 一致；
     # 旧值 233 已不被 bot.py 识别，重启会退化为仅重启 web 进程。
     return order == ["delay", "cleanup", "exit:33"]
 

@@ -89,10 +89,10 @@ jobs:
           # 包目录在只读挂载与 wheel 安装下都不可写，此处以权限位复现该约束。
           # 只覆盖测试触及的代码路径；未被测试执行的下载路径另由人工复核守住，
           # 见 generated_docs/monorepo_refactor_prep.md 的 P2 记录。
-          # 目录名在此硬编码：拆包后 core modules 不再存在，该门禁会静默通过而失去作用，
-          # 故 T4.1 之后须改为从包清单取路径，或改为对 packages/ 整树置只读。
-          chmod -R a-w core modules
-          trap 'chmod -R u+w core modules' EXIT
+          # 门禁以 packages/ 整树为扫描根：旧写法逐个硬编码 core modules，包一旦再次拆分或
+          # 改名即静默失去覆盖；单根不随包增减变化，代价是适配器目录也一并纳入只读。
+          chmod -R a-w packages
+          trap 'chmod -R u+w packages' EXIT
           uv run python tester.py
 
       - name: Generate test report

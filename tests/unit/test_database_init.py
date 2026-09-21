@@ -75,7 +75,7 @@ def _test_module_database_discovery_follows_file_existence():
                 name="with_models",
                 dist_name="",
                 version="0+local",
-                import_path="modules.with_models",
+                import_path="akaribot.modules.with_models",
                 root=with_models,
                 manifest=PackageManifest(),
             ),
@@ -84,14 +84,14 @@ def _test_module_database_discovery_follows_file_existence():
                 name="without_models",
                 dist_name="",
                 version="0+local",
-                import_path="modules.without_models",
+                import_path="akaribot.modules.without_models",
                 root=without_models,
                 manifest=PackageManifest(),
             ),
         }
         with patch.object(PackageRegistry, "modules", return_value=entries):
             paths = database.fetch_module_db()
-    return paths == ["modules.with_models.database.models"]
+    return paths == ["akaribot.modules.with_models.database.models"]
 
 
 async def _test_missing_module_dependency_fails_initialization():
@@ -101,7 +101,9 @@ async def _test_missing_module_dependency_fails_initialization():
     old_database_list = database.Temp.data.get("modules_db_list")
     try:
         with (
-            patch.object(database, "fetch_module_db", return_value=["modules.__missing_dependency.database.models"]),
+            patch.object(
+                database, "fetch_module_db", return_value=["akaribot.modules.__missing_dependency.database.models"]
+            ),
             patch.object(database, "get_db_link", return_value="sqlite://database/save.db"),
             patch.object(database.Tortoise, "init", new=init),
             patch.object(database.Tortoise, "close_connections", new=AsyncMock()),
@@ -121,7 +123,7 @@ async def _test_runtime_init_does_not_generate_schemas():
     old_database_list = database.Temp.data.get("modules_db_list")
     try:
         with (
-            patch.object(database, "fetch_module_db", return_value=["modules.example.database.models"]),
+            patch.object(database, "fetch_module_db", return_value=["akaribot.modules.example.database.models"]),
             patch.object(database, "get_db_link", return_value="sqlite://database/save.db"),
             patch.object(database.Tortoise, "init", new=init),
             patch.object(database.Tortoise, "generate_schemas", new=generate_schemas),
@@ -133,7 +135,7 @@ async def _test_runtime_init_does_not_generate_schemas():
             result
             and generate_schemas.await_count == 0
             and config["apps"]["models"]["models"]
-            == ["akaribot.core.database.models", "modules.example.database.models"]
+            == ["akaribot.core.database.models", "akaribot.modules.example.database.models"]
             and _query_fields(config["connections"]["local"]).get("busy_timeout") == ["30000"]
         )
     finally:
@@ -150,7 +152,7 @@ async def _test_pre_init_mode_generates_all_schemas():
     old_database_list = database.Temp.data.get("modules_db_list")
     try:
         with (
-            patch.object(database, "fetch_module_db", return_value=["modules.example.database.models"]),
+            patch.object(database, "fetch_module_db", return_value=["akaribot.modules.example.database.models"]),
             patch.object(database.Tortoise, "init", new=init),
             patch.object(database.Tortoise, "generate_schemas", new=generate_schemas),
             patch.object(database, "run_startup_migrations", new=run_migrations),
@@ -163,7 +165,7 @@ async def _test_pre_init_mode_generates_all_schemas():
             and generate_schemas.await_count == 1
             and generate_schemas.await_args.kwargs == {"safe": True}
             and run_migrations.await_count == 1
-            and "modules.example.database.models" in config["apps"]["models"]["models"]
+            and "akaribot.modules.example.database.models" in config["apps"]["models"]["models"]
             and config["apps"]["local_models"]["models"] == ["akaribot.core.database.local"]
         )
     finally:
@@ -319,9 +321,9 @@ async def _test_reload_activates_prepared_context_before_closing_previous():
             patch.object(database, "activate_db_reload", new=activate),
             patch.object(database, "close_previous_db_context", new=close_previous),
         ):
-            result = await database.reload_db(db_models=["modules.example.database.models"])
+            result = await database.reload_db(db_models=["akaribot.modules.example.database.models"])
         return result is True and calls == [
-            ("prepare", ["modules.example.database.models"]),
+            ("prepare", ["akaribot.modules.example.database.models"]),
             ("activate", prepared),
             ("close_previous", prepared),
         ]
@@ -353,9 +355,9 @@ async def _test_reload_failure_does_not_activate_partial_context():
             patch.object(database, "activate_db_reload", new=activate),
             patch.object(database, "close_previous_db_context", new=close_previous),
         ):
-            result = await database.reload_db(db_models=["modules.broken.database.models"])
+            result = await database.reload_db(db_models=["akaribot.modules.broken.database.models"])
         return result is False and calls == [
-            ("prepare", ["modules.broken.database.models"]),
+            ("prepare", ["akaribot.modules.broken.database.models"]),
         ]
     finally:
         if old_modules_db_list is None:
@@ -540,7 +542,7 @@ async def _test_cancelled_reload_does_not_publish_partial_context():
             patch.object(database, "activate_db_reload", new=activate),
             patch.object(database, "close_previous_db_context", new=close_previous),
         ):
-            task = asyncio.create_task(database.reload_db(db_models=["modules.cancelled.database.models"]))
+            task = asyncio.create_task(database.reload_db(db_models=["akaribot.modules.cancelled.database.models"]))
             await asyncio.wait_for(entered.wait(), timeout=1)
             task.cancel()
             try:
@@ -554,7 +556,7 @@ async def _test_cancelled_reload_does_not_publish_partial_context():
             cancelled
             and calls
             == [
-                ("prepare", ["modules.cancelled.database.models"]),
+                ("prepare", ["akaribot.modules.cancelled.database.models"]),
             ]
             and JobQueueServer.pause_event.is_set()
         )

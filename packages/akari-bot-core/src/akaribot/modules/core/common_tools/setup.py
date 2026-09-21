@@ -108,7 +108,7 @@ class SettingRow:
 
     各字段均为已翻译的字符串：模块运行于服务端进程，会话语言在此已经确定，就地翻译
     可使渲染阶段只关心排版。取值若留作消息元素，还会在充当 :class:`I18NContext` 的
-    参数时被强制转为字符串字面量（见 ``core/builtins/message/chain.py`` 的参数翻译一段）。
+    参数时被强制转为字符串字面量（见 ``akaribot/core/builtins/message/chain.py`` 的参数翻译一段）。
 
     :param label: 设置名。
     :param value: 当前取值。
@@ -282,7 +282,7 @@ def render_rows(
     模块侧无须再分支。
 
     换行的写法随平台而分：指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把
-    紧随其后的文本一并并入上一行（见 ``bots/qqbot/context.py`` 的 ``inline_pending``），
+    紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），
     换行若交由适配器按元素处理，整个面板会塌成一行，故此路径下须把换行写进文本自身。
     降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒
     会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。

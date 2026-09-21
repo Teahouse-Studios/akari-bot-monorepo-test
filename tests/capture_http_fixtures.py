@@ -6,7 +6,7 @@
 
 脚本会：
     1. 启动测试环境；
-    2. 包裹 `core.utils.http.request_url`，记录途经的全部请求与响应；
+    2. 包裹 `akaribot.core.utils.http.request_url`，记录途经的全部请求与响应；
     3. 运行集成测试用例，触发真实网络请求；
     4. 将捕获结果写入 tests/fixtures/http/。
 

@@ -66,7 +66,7 @@ def _test_telegram_imports_stay_in_platform_process() -> bool:
         [
             sys.executable,
             "-c",
-            "import sys; import bots.telegram.config; "
+            "import sys; import akaribot.adapters.telegram.config; "
             "assert not any(name == 'aiogram' or name.startswith('aiogram.') for name in sys.modules)",
         ],
         capture_output=True,
@@ -77,7 +77,8 @@ def _test_telegram_imports_stay_in_platform_process() -> bool:
         [
             sys.executable,
             "-c",
-            "import sys; import bots.telegram.message_builder; assert 'core.utils.web_render' not in sys.modules",
+            "import sys; import akaribot.adapters.telegram.message_builder; "
+            "assert 'akaribot.core.utils.web_render' not in sys.modules",
         ],
         capture_output=True,
         timeout=30,

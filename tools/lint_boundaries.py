@@ -1,16 +1,16 @@
 """import 分层检查。
 
-对当前扁平布局（core/、modules/、bots/）做 AST 静态检查，规格见
-generated_docs/monorepo_refactor_tasks.md 的 T4.6：
+对 monorepo 布局（packages[/<group>]/<dist>/src/akaribot/{core,modules,adapters}）做 AST
+静态检查，规格见 generated_docs/monorepo_refactor_tasks.md 的 T4.6：
 
     B1  warn   模块包 import 其它模块包的非 .api 内部路径
-    B2  error  模块包 import bots.*（平台能力应经 SessionInfo / Features 声明式获取）
-    B3  error  模块包 import core.api.adapters（该面只供适配器使用）
-    B4  error  core/** import modules.* 或 bots.*（core 不得依赖可能缺席的包）
-    B5  error  适配器包 import modules.*（适配器不得依赖具体模块）
+    B2  error  模块包 import akaribot.adapters.*（平台能力应经 SessionInfo / Features 声明式获取）
+    B3  error  模块包 import akaribot.core.api.adapters（该面只供适配器使用）
+    B4  error  akaribot.core.* import akaribot.modules.* 或 akaribot.adapters.*（core 不得依赖可能缺席的包）
+    B5  error  适配器包 import akaribot.modules.*（适配器不得依赖具体模块）
 
-模块公开面取 modules.<x>.api，由拆包后 manifest 的 public_api 承诺兼容性。当前没有模块提供
-api.py，故 B1 的命中都是既有内部调用；wiki 家族拆分时合并为一个包，部分命中会转为包内调用。
+模块公开面取 akaribot.modules.<x>.api，由拆包后 manifest 的 public_api 承诺兼容性。当前没有模块
+提供 api.py，故 B1 的命中都是既有内部调用；wiki 家族拆分时合并为一个包，部分命中会转为包内调用。
 
 动态 import（importlib / __import__）不产生 ast.Import 节点，不检查；依赖声明、entry point
 命名、命名空间包污染与跨包版本约束属拆包后事项，见 T4.6 / T4.8。既有违规由
@@ -37,13 +37,20 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = PROJECT_ROOT / "tools" / "boundary_lint_baseline.txt"
 
-# 收录范围：受分层约束的三个顶层包。tests/ 与 tools/ 依赖全部层，不在约束内。
-SCAN_DIRS = ("core", "modules", "bots")
+# 收录范围：packages/ 下的全部分发源码。tests/ 与 tools/ 依赖全部层，不在约束内。
+SCAN_DIRS = ("packages",)
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
 
-MODULES_ROOT = "modules"
-ADAPTERS_ROOT = "bots"
-# 模块包对外承诺的路径只有 modules.<x>.api，包根与其余子路径都算内部实现。
+# 命名空间根标志：源码位于 <dist>/src/akaribot/<layer>/…，据此定位分层与包路径。
+NAMESPACE_ROOT = "akaribot"
+# 分层取命名空间根之后的第一段目录名；akaribot.testing 不在受约束的三层内，规则不适用。
+LAYER_CORE = "core"
+LAYER_MODULES = "modules"
+LAYER_ADAPTERS = "adapters"
+
+MODULES_ROOT = "akaribot.modules"
+ADAPTERS_ROOT = "akaribot.adapters"
+# 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根与其余子路径都算内部实现。
 MODULE_PUBLIC_SEGMENT = "api"
 # 适配器专用门面：模块 import 它，多半是在做本应交给适配器的事（T4.7(d)）。
 ADAPTERS_FACADE = "akaribot.core.api.adapters"
@@ -76,8 +83,8 @@ class Location:
 
     :param relative: 仓库根相对 POSIX 路径。路径一律相对仓库根计算，绝对路径中的
         `.worktrees/` 等目录名不参与判断。
-    :param layer: 顶层包名，取值为 SCAN_DIRS 之一。
-    :param owner: modules/<x> 或 bots/<x> 的 <x>；文件不在平台或模块包内时为 None。
+    :param layer: 分层名，取 LAYER_CORE / LAYER_MODULES / LAYER_ADAPTERS；不在命名空间内为空串。
+    :param owner: akaribot.modules.<x> 或 akaribot.adapters.<x> 的 <x>；不属这两层时为 None。
     :param package: 文件所属的点分包路径，用于解析相对 import。
     """
 
@@ -125,12 +132,19 @@ def iter_source_files() -> list[Path]:
 
 
 def locate(path: Path) -> Location:
-    """计算文件的分层归属。"""
+    """计算文件的分层归属。
+
+    以路径中的 NAMESPACE_ROOT 段定位源码根：其后第一段是分层名，第二段是模块包或适配器包名。
+    package 一律取点分导入路径，供相对 import 折算使用。
+    """
     relative = path.relative_to(PROJECT_ROOT).as_posix()
     parts = relative.split("/")
-    layer = parts[0]
-    owner = parts[1] if len(parts) > 2 and layer in (MODULES_ROOT, ADAPTERS_ROOT) else None
-    return Location(relative=relative, layer=layer, owner=owner, package=".".join(parts[:-1]))
+    if NAMESPACE_ROOT not in parts:
+        return Location(relative=relative, layer="", owner=None, package="")
+    namespace = parts[parts.index(NAMESPACE_ROOT) :]
+    layer = namespace[1] if len(namespace) > 2 else ""
+    owner = namespace[2] if layer in (LAYER_MODULES, LAYER_ADAPTERS) and len(namespace) > 3 else None
+    return Location(relative=relative, layer=layer, owner=owner, package=".".join(namespace[:-1]))
 
 
 def resolve_relative(node: ast.ImportFrom, package: str) -> str:
@@ -188,9 +202,9 @@ def check_module_import(location: Location, line: int, target: str) -> list[Viol
     if under(target, ADAPTERS_FACADE):
         found.append(Violation(location.relative, line, "B3", target))
     if under(target, MODULES_ROOT):
-        segments = target.split(".")
-        owner = segments[1] if len(segments) > 1 else None
-        public = len(segments) > 2 and segments[2] == MODULE_PUBLIC_SEGMENT
+        tail = target[len(MODULES_ROOT) + 1 :].split(".")
+        owner = tail[0]
+        public = len(tail) > 1 and tail[1] == MODULE_PUBLIC_SEGMENT
         if owner and owner != location.owner and not public:
             found.append(Violation(location.relative, line, "B1", target))
     return found
@@ -199,12 +213,12 @@ def check_module_import(location: Location, line: int, target: str) -> list[Viol
 def check_import(location: Location, line: int, target: str) -> list[Violation]:
     """对单个 import 施加全部规则。"""
     found: list[Violation] = []
-    if location.layer == MODULES_ROOT:
+    if location.layer == LAYER_MODULES:
         found.extend(check_module_import(location, line, target))
-    elif location.layer == "core":
+    elif location.layer == LAYER_CORE:
         if under(target, MODULES_ROOT) or under(target, ADAPTERS_ROOT):
             found.append(Violation(location.relative, line, "B4", target))
-    elif location.layer == ADAPTERS_ROOT and under(target, MODULES_ROOT):
+    elif location.layer == LAYER_ADAPTERS and under(target, MODULES_ROOT):
         found.append(Violation(location.relative, line, "B5", target))
     return found
 

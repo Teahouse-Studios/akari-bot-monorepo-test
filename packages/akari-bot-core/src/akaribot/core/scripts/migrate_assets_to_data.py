@@ -7,7 +7,7 @@ assets / data 布局迁移脚本。
 
 升级既有部署时，从仓库根目录执行一次：
 
-    python core/scripts/migrate_assets_to_data.py [--dry-run]
+    python -m akaribot.core.scripts.migrate_assets_to_data [--dry-run]
 
 实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根，未设置时取当前目录。
 
@@ -46,7 +46,7 @@ INSTANCE_MOVES = [
 
 
 def instance_root() -> Path:
-    """实例根目录，取值口径与 :class:`core.paths.Paths` 一致。
+    """实例根目录，取值口径与 :class:`akaribot.core.paths.Paths` 一致。
 
     :return: ``AKARI_INSTANCE_DIR`` 指向的目录；未设置时为当前目录。
     """

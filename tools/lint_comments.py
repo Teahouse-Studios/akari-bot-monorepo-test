@@ -23,8 +23,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = PROJECT_ROOT / "tools" / "comment_lint_baseline.txt"
 
-# 收录范围：本仓库自有 Python 源码。第三方内嵌库与迁移产物不在约束内。
-SCAN_DIRS = ("core", "modules", "bots", "tests", "templates", "tools")
+# 收录范围：本仓库自有 Python 源码，即 packages/ 下的分发源码与 tests/、templates/、tools/。
+# 第三方内嵌库与迁移产物不在约束内。
+SCAN_DIRS = ("packages", "tests", "templates", "tools")
 SCAN_ROOT_FILES = ("bot.py", "tester.py", "conftest.py")
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
 

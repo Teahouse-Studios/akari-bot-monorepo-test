@@ -79,7 +79,7 @@ async def _test_button_data_shape():
 async def _test_button_rows_are_split():
     """测试按钮数据 - 条目数超过单行上限时按可读性上限分行并均分
 
-    分行已收归 core.utils.button，此处只验证 wiki 侧确实经由该工具产出，
+    分行已收归 akaribot.core.utils.button，此处只验证 wiki 侧确实经由该工具产出，
     具体的均分规则由 tests/unit/test_button_arrange.py 把关。
     """
     try:
@@ -97,7 +97,7 @@ async def _test_button_rows_are_split():
 async def _test_button_prefix_reachable_from_interaction():
     """测试按钮回流 - 按钮命令的前缀在 interaction 所建会话中可被识别"""
     try:
-        # 与 bots/qqbot/bot.py 的 on_interaction_create 一致：不指定前缀，
+        # 与 akaribot/adapters/qqbot/bot.py 的 on_interaction_create 一致：不指定前缀，
         # 故会话取到的是全局配置的前缀，而非常规消息入口所用的斜杠前缀。
         session_info = await SessionInfo.assign(
             target_id="QQBot|Group|recommend_interaction",

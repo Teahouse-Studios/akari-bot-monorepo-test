@@ -469,29 +469,55 @@ class ModulesManager:
             return None
         return entry.import_path
 
-    @staticmethod
-    def _normalize_package_name(module_name: str) -> str | None:
+    @classmethod
+    def _namespace_prefix(cls, module_name: str) -> str | None:
+        """匹配导入路径所属的模块包命名空间，取最长者。
+
+        按段比较而非字符串前缀：``akaribot.modules_extra`` 与 ``akaribot.modules`` 仅首段相同，
+        前者不是后者的成员包，不该被归约进来。命名空间本身也在此命中，由调用方判断它是否成包。
+
+        :param module_name: 导入路径。
+        :return: 命名空间前缀，如 ``akaribot.modules``；不属于任何命名空间时为 ``None``。
+        """
+        parts = module_name.split(".")
+        matched: str | None = None
+        for root in cls._import_roots():
+            root_parts = root.split(".")
+            if parts[: len(root_parts)] != root_parts:
+                continue
+            if matched is None or len(root_parts) > len(matched.split(".")):
+                matched = root
+        return matched
+
+    @classmethod
+    def _normalize_package_name(cls, module_name: str) -> str | None:
         """把任意导入路径归一化为模块包的导入路径。
 
         纯字符串归约，不校验该包是否已注册：调用方拿它建依赖图，图上的边会在
         与已注册包取交集时被过滤。校验注册状态由 :meth:`return_py_module` 负责。
 
         :param module_name: 导入路径。
-        :return: 模块包的导入路径；顶层不是模块包根时为 ``None``。
+        :return: 模块包的导入路径，即「命名空间 + 包名」；命名空间本身或不在其内时为 ``None``。
         """
+        prefix = cls._namespace_prefix(module_name)
+        if prefix is None:
+            return None
+        depth = len(prefix.split("."))
         parts = module_name.split(".")
-        if len(parts) >= 2 and parts[0] in PackageRegistry.import_roots("module"):
-            return ".".join(parts[:2])
-        return None
+        if len(parts) <= depth:
+            # 命名空间只是容器（akaribot.modules 无 __init__.py），不是可注册的包。
+            return None
+        return ".".join(parts[: depth + 1])
 
     @classmethod
     def _import_roots(cls) -> set[str]:
-        """全部模块包导入路径的顶层段。
+        """全部模块包的命名空间前缀。
 
-        用于识别 ``from modules import x`` 这类裸包导入：其 AST 只给出 ``modules``，
-        子模块名在 ``node.names`` 中，需展开后才可能匹配到具体包。
+        用于识别 ``from akaribot.modules import x`` 这类裸包导入：其 AST 只给出
+        ``akaribot.modules``，子模块名在 ``node.names`` 中，需展开成 ``akaribot.modules.x``
+        后才可能匹配到具体包。
 
-        :return: 顶层段集合。
+        :return: 命名空间前缀集合。
         """
         return PackageRegistry.import_roots("module")
 
@@ -524,7 +550,8 @@ class ModulesManager:
                     imported_names = tuple(alias.name for alias in node.names)
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     imported_names = (node.module,)
-                    if node.module in cls._import_roots():
+                    if cls._namespace_prefix(node.module) is not None:
+                        # 裸包导入：AST 只给出命名空间或其子路径，子模块名在 node.names 中。
                         imported_names += tuple(f"{node.module}.{alias.name}" for alias in node.names)
                 elif isinstance(node, ast.Call):
                     function = node.func

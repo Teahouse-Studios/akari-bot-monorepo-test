@@ -22,7 +22,7 @@ from akaribot.testing import func_case, Tester
 
 
 async def _write_restart_cache(client: str) -> None:
-    """写入重启缓存，等同于 `modules.core.su_tools.restart.write_restart_cache`。"""
+    """写入重启缓存，等同于 `akaribot.modules.core.su_tools.restart.write_restart_cache`。"""
     session_info = await SessionInfo.assign(
         target_id=f"{client}|Group|1",
         target_from=f"{client}|Group",

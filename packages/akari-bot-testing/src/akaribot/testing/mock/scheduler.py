@@ -137,7 +137,7 @@ def reset_startup_mute(module_path: str) -> bool:
     多个 RSS 模块以模块级 ``startup_mute`` 抑制启动后的第一轮推送，
     以免机器人重启时重复刷屏。测试需要立刻观察到推送行为，故直接置为关闭。
 
-    :param module_path: 模块的导入路径，如 ``modules.mcv_rss``。
+    :param module_path: 模块的导入路径，如 ``akaribot.modules.mcv_rss``。
     :return: 是否确实存在并重置了该开关。
     """
     import importlib

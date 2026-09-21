@@ -25,9 +25,24 @@ from akaribot.core.registry import PackageRegistry  # skipcq
 
 AKARI_BOT_I18N_CACHE_DIR = str(Path("./data/i18n_cache/").resolve())
 
+
+def _source_import_roots() -> list[Path]:
+    """源码检出下提供 ``akaribot`` 命名空间的目录。
+
+    各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
+    判据只用目录是否存在，不依赖已安装分发的 metadata：安装形态下这些目录不存在，结果为空列表。
+    仓库根一并保留，使 ``tester`` 等根级脚本对子进程仍可导入。
+
+    :return: 参与 PYTHONPATH 的目录列表，按路径排序。
+    """
+    root = Path(__file__).resolve().parent
+    candidates = [root, *sorted(root.glob("packages/*/src")), *sorted(root.glob("packages/*/*/src"))]
+    return [path for path in candidates if path.is_dir()]
+
+
 load_dotenv()
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-os.environ.setdefault("PYTHONPATH", str(Path(".").resolve()))
+os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in _source_import_roots()))
 os.environ.setdefault("AKARI_BOT_I18N_CACHE_DIR", AKARI_BOT_I18N_CACHE_DIR)
 
 
@@ -178,7 +193,7 @@ class AdapterInstance:
 def adapter_platform_name(platform: str) -> str:
     """读取适配器声明的平台展示名。
 
-    ``bots/<platform>/info.py`` 的 ``platform_name`` 是唯一真源，不能从目录名推：``onebot``
+    ``akaribot/adapters/<platform>/info.py`` 的 ``platform_name`` 是唯一真源，不能从目录名推：``onebot``
     的平台名是 ``QQ``。早于本功能发布的适配器没有该变量，回退到它当时使用的 ``client_name``
     （默认实例下两者相同）；多实例能力则要求适配器同步升级。
 
@@ -186,9 +201,9 @@ def adapter_platform_name(platform: str) -> str:
     :return: 平台展示名；无法确定时为空串，调用方应跳过该实例。
     """
     try:
-        info = importlib.import_module(f"bots.{platform}.info")
+        info = importlib.import_module(f"akaribot.adapters.{platform}.info")
     except Exception:
-        Logger.exception(f"Failed to import bots.{platform}.info, skip to launch.")
+        Logger.exception(f"Failed to import akaribot.adapters.{platform}.info, skip to launch.")
         return ""
     platform_name = getattr(info, "platform_name", "")
     if platform_name:
@@ -537,7 +552,7 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     from akaribot.core.constants import Info
     from akaribot.core.logger import Logger
 
-    # instance_id 必须在导入适配器之前置位：bots.<x>.info 在导入期依它派生 client_name。
+    # instance_id 必须在导入适配器之前置位：akaribot.adapters.<x>.info 在导入期依它派生 client_name。
     Info.instance_id = instance_id
     Info.subprocess = subprocess
     Info.binary_mode = binary_mode
@@ -552,7 +567,7 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     Logger.info(f"[{client_name}] Here we go!")
 
     try:
-        importlib.import_module(f"bots.{bot_name}.bot")
+        importlib.import_module(f"akaribot.adapters.{bot_name}.bot")
     except ModuleNotFoundError:
         # 退出码 78（EX_CONFIG）表示无需重启：入口缺失是部署问题，重试无济于事。
         Logger.error(f"[{client_name}] ???, entry not found.")

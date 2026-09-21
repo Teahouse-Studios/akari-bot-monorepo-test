@@ -1,4 +1,4 @@
-"""modules/core 更多核心模块集成测试 - locale、petal、analytics、say。"""
+"""akaribot/modules/core 更多核心模块集成测试 - locale、petal、analytics、say。"""
 
 from akaribot.testing import (
     func_case,

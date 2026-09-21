@@ -45,8 +45,8 @@ jobs:
           mode: onefile
           output-dir: wrapper-build
           include-plugin-directory: |
-            modules
-            bots
+            packages/modules
+            packages/adapters
           include-package-data: |
             langconv
             emoji

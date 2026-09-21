@@ -32,7 +32,8 @@ def _cleanup_test_union_merge_logs() -> None:
 
 atexit.register(_cleanup_test_union_merge_logs)
 
-# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上才能 import core
+# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上项目根；akaribot 本身
+# 由 editable 安装解析，此处仅为与 tester.py 保持一致的导入环境。
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from akaribot.testing.mock.database import init_db, close_db

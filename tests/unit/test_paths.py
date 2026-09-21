@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # 子进程脚本：取出实例目录相关取值并打印，用于验证环境变量在导入期生效。
 PROBE = (
-    "from core.paths import Paths; "
+    "from akaribot.core.paths import Paths; "
     "print('INSTANCE', Paths.instance); "
     "print('CONFIG', Paths.config); "
     "print('DATA', Paths.data); "
@@ -93,14 +93,14 @@ def _test_tests_dir_is_not_instance_relative():
 
 
 def _test_import_does_not_create_directories():
-    """导入 core.constants 不得在任何目录产生副作用。"""
+    """导入 akaribot.core.constants 不得在任何目录产生副作用。"""
     with tempfile.TemporaryDirectory() as tmp:
         cwd = Path(tmp)
         subprocess.run(
             [
                 sys.executable,
                 "-c",
-                "import sys; sys.path.insert(0, sys.argv[1]); import core.constants",
+                "import sys; sys.path.insert(0, sys.argv[1]); import akaribot.core.constants",
                 str(PROJECT_ROOT),
             ],
             cwd=cwd,
@@ -180,7 +180,7 @@ async def test_paths(tester: Tester):
     await tester.test(_test_instance_dir_env_selects_instance, "AKARI_INSTANCE_DIR 指定实例目录")
     await tester.test(_test_config_path_env_wins_over_instance, "AKARI_CONFIG_PATH 优先于实例目录")
     await tester.test(_test_tests_dir_is_not_instance_relative, "测试目录不随实例目录变化")
-    await tester.test(_test_import_does_not_create_directories, "导入 core.constants 无副作用")
+    await tester.test(_test_import_does_not_create_directories, "导入 akaribot.core.constants 无副作用")
     await tester.test(_test_ensure_creates_only_named_directories, "ensure 只创建指定子目录")
     await tester.test(_test_ensure_rejects_non_directory_names, "ensure 拒绝非目录属性名")
     await tester.test(_test_as_dict_lists_every_instance_directory, "as_dict 覆盖全部子目录")

@@ -23,8 +23,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from akaribot.core.logger import Logger
+from akaribot.core.paths import Paths
 
-FIXTURE_DIR = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "webrender"
+# 语料目录属源码仓库，与 Paths.tests 同源；按本文件深度推算会在包布局调整后失准。
+FIXTURE_DIR = Paths.tests / "fixtures" / "webrender"
 
 # 1x1 透明 PNG 的 base64 文本。截图类方法返回的是 base64 字符串而非二进制，
 # 调用方（如 cb64imglst）会直接对其解码，故占位值必须保持同一形态。

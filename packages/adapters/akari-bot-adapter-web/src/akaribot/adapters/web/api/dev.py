@@ -15,9 +15,12 @@ from akaribot.adapters.web.client import app, limiter, get_client_ip
 from akaribot.core.constants import dev_mode
 from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
 from akaribot.core.logger import Logger
+from akaribot.core.paths import Paths
 from .auth import verify_jwt
 
-ROOT_DIR = Path(__file__).parent.parent.parent.parent
+# 开发模式文件浏览器的沙箱根，取实例目录：源码检出下即仓库根，独立部署下即部署者维护的实例树。
+# 按本文件深度反推仓库根，在 wheel 形态下会落到 site-packages 之外（典型 venv 下为文件系统根）。
+ROOT_DIR = Paths.instance
 
 
 @app.get("/api/dev")
