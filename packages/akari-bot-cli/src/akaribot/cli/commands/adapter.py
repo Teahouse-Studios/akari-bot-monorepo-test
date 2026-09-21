@@ -30,7 +30,6 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 from typing import Any, NoReturn, Protocol
 
 import tomlkit
@@ -151,7 +150,7 @@ class LocalInstance:
         venv_setting = meta_get(meta_get(self.meta, "runtime"), "venv")
         venv_dir = DEFAULT_VENV_DIR if venv_setting is None else str(venv_setting).strip()
         if not venv_dir:
-            return Path(sys.executable)
+            return system_python()
         candidate = Path(venv_dir).expanduser()
         if not candidate.is_absolute():
             candidate = self.root / candidate
@@ -182,7 +181,7 @@ def venv_python(venv_dir: Path) -> Path:
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    return Path(sys.executable)
+    return system_python()
 
 
 def read_instance_meta(root: Path) -> dict[str, Any]:
@@ -221,6 +220,27 @@ def instance_module() -> Any | None:
         return __import__("akaribot.cli.instance", fromlist=["Instance"])
     except ImportError:
         return None
+
+
+def system_python() -> Path:
+    """解析非托管模式要用的系统 Python。
+
+    不得用 ``sys.executable``：Nuitka onefile 冻结后它指向 CLI 二进制自身。优先复用
+    ``akaribot.cli.instance.system_python``，该模块不可用时退回本模块的等价实现。
+
+    :return: 解释器绝对路径。
+    """
+    module = instance_module()
+    resolver = getattr(module, "system_python", None) if module is not None else None
+    if callable(resolver):
+        return Path(resolver())
+    import shutil as _shutil
+
+    for name in ("python3", "python"):
+        found = _shutil.which(name)
+        if found:
+            return Path(found)
+    raise RuntimeError("找不到系统 Python；请设置 AKARIBOT_PYTHON 指向实例要使用的解释器。")
 
 
 def find_instance_root(start: Path | None = None) -> Path | None:
@@ -322,8 +342,8 @@ def instance_python(instance: InstanceLike) -> Path:
     try:
         candidate = Path(instance.python)
     except (AttributeError, TypeError, ValueError, OSError):
-        candidate = Path(sys.executable)
-    return candidate if candidate.exists() else Path(sys.executable)
+        candidate = system_python()
+    return candidate if candidate.exists() else system_python()
 
 
 @dataclass(frozen=True)

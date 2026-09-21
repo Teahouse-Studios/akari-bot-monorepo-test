@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import sys
+import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -73,6 +73,8 @@ class PassthroughCommandGroup(FlatCommandGroup):
 
 
 INSTANCE_META_FILENAME = "akaribot.toml"
+# 非托管模式要用的解释器路径；冻结产物下没有可用的 sys.executable。
+PYTHON_ENV = "AKARIBOT_PYTHON"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 CORE_ENTRYPOINT_PREFIX = "akaribot.core.entrypoints"
 LOCK_FILENAME = ".bot.lock"
@@ -160,6 +162,25 @@ def split_names(values: Sequence[str] | None) -> list[str]:
 def is_windows() -> bool:
     """当前平台是否为 Windows。"""
     return os.name == "nt"
+
+
+def system_python() -> Path:
+    """解析非托管模式要用的系统 Python。
+
+    :return: 解释器绝对路径。
+    :raises CliError: 找不到可用解释器。
+    """
+    override = os.environ.get(PYTHON_ENV)
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_file():
+            return candidate
+        raise CliError(f"{PYTHON_ENV} 指向的解释器不存在：{candidate}")
+    for name in ("python3", "python"):
+        found = shutil.which(name)
+        if found:
+            return Path(found)
+    raise CliError(f"找不到系统 Python；请设置 {PYTHON_ENV} 指向实例要使用的解释器。")
 
 
 def venv_python_path(venv_dir: Path) -> Path:
@@ -592,12 +613,17 @@ class Instance:
 
     @property
     def python(self) -> Path:
-        """实例解释器：托管模式取 venv 内的解释器，非托管模式取当前解释器。"""
+        """实例解释器：托管模式取 venv 内的解释器，非托管模式取系统 Python。
+
+        非托管模式**不得**用 ``sys.executable``：Nuitka onefile 冻结后它指向 CLI 二进制自身，
+        拿它启动实例进程会重新调起 CLI 而不是 Python。改为按 ``AKARIBOT_PYTHON`` → 系统
+        ``python3`` / ``python`` 的顺序解析，解析不到时抛出带指引的错误。
+        """
         if self._python_override is not None:
             return self._python_override
         if self.managed:
             return venv_python_path(self.venv_dir)
-        return Path(sys.executable)
+        return system_python()
 
     @property
     def python_exists(self) -> bool:

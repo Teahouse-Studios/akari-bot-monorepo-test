@@ -10,7 +10,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +21,7 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.version import InvalidVersion, Version
 
 from akaribot.cli.instance import (
+    system_python,
     DEFAULT_REGISTRY_SOURCE,
     CliError,
     Instance,
@@ -956,7 +956,7 @@ def adopt(
     :return: 结果报告。
     """
     runner = runner or CommandRunner()
-    source_python = Path(host_python or sys.executable)
+    source_python = Path(host_python) if host_python else system_python()
     target_python = venv_python_path(instance.venv_dir)
     _check_distinct(source_python, target_python)
 
@@ -1035,7 +1035,7 @@ def release(
     if not instance.managed:
         raise CliError("当前实例未托管 venv（runtime.venv 为空），无需 release。")
     source_python = venv_python_path(instance.venv_dir)
-    target_python = Path(host_python or sys.executable)
+    target_python = Path(host_python) if host_python else system_python()
     _check_distinct(source_python, target_python)
     if not source_python.is_file():
         raise CliError(f"实例 venv 的解释器不存在：{source_python}。可用 `akaribot venv recreate` 重建。")
@@ -1113,7 +1113,7 @@ def recreate(
         if not force:
             raise CliError(f"{staging} 已存在。确认可覆盖后加 --force，或手动删除该目录。")
         shutil.rmtree(staging)
-    interpreter = python or sys.executable
+    interpreter = Path(python) if python else system_python()
     console.print(f"  新环境解释器：{interpreter}")
     runner.run_checked(create_venv_argv(staging, python=interpreter), what="创建新 venv")
     specs = [info.requirement() for info in source_dists.values()]

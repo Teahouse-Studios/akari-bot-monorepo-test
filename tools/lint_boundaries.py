@@ -97,6 +97,7 @@ RULE_DESCRIPTIONS = {
     "B8": f"模块包的 {CORE_ROOT} 深路径 import 取了未收录进 {CORE_API_ROOT} 的符号（T4.6 #5）",
     "B9": "适配器 entry point 名含 '-'，与多实例分隔符冲突（T4.6 #6）",
     "B10": "官方模块包（packages/modules/*）import 了其它模块包（T4.6 #7）",
+    "B11": "CLI 包内用 sys.executable 启动实例进程（T6.5：冻结后它指向二进制自身）",
 }
 
 # B1 的基础级别为 warn：第三方包跨模块取内部路径可能确有需要。包归属为官方（OFFICIAL_MODULES_PREFIX）
@@ -112,6 +113,7 @@ RULE_LEVELS = {
     "B8": LEVEL_WARN,
     "B9": LEVEL_ERROR,
     "B10": LEVEL_ERROR,
+    "B11": LEVEL_ERROR,
 }
 
 
@@ -532,6 +534,48 @@ def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> li
     return []
 
 
+# 允许 sys.executable 的位置：**冻结感知的 CLI 自调用**——那里要的正是「CLI 自己」，冻结时它是
+# 二进制、非冻结时是解释器（补 -m 模块名），两种形态都对。反之把它当解释器启动实例进程
+# （Instance.python 的回退、uv venv --python 等）在冻结后会重新调起 CLI，必须经 system_python()。
+SYS_EXECUTABLE_ALLOWED = (
+    "akaribot/cli/tui/",  # 各页的 cli_argv 构造
+    "akaribot/cli/commands/new.py",  # 脚手架末尾自调用 CLI
+)
+
+
+def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violation]:
+    """规则 B11：CLI 包内不得用 sys.executable 启动实例进程。
+
+    Nuitka onefile 冻结后 sys.executable 指向 CLI 二进制自身，用它启动实例进程会重新调起 CLI
+    而不是 Python；启动实例一律经 ``Instance.python``（实例 venv 解释器或系统 Python）。
+
+    :param location: 文件位置。
+    :param tree: 已解析的语法树。
+    :return: 违规列表。
+    """
+    if not location.relative.startswith("packages/akari-bot-cli/"):
+        return []
+    if any(prefix in location.relative for prefix in SYS_EXECUTABLE_ALLOWED):
+        return []
+    found: list[Violation] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Attribute) or node.attr != "executable":
+            continue
+        value = node.value
+        if isinstance(value, ast.Name) and value.id == "sys":
+            found.append(
+                Violation(
+                    path=location.relative,
+                    line=node.lineno,
+                    rule="B11",
+                    target="sys.executable",
+                    level=LEVEL_ERROR,
+                    detail="请经 Instance.python 解析解释器",
+                )
+            )
+    return found
+
+
 def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool, int]:
     """检查单个文件。
 
@@ -545,7 +589,7 @@ def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool,
         print(f"无法解析，跳过 {location.relative}：{error}", file=sys.stderr)
         return [], False, 0
 
-    found: list[Violation] = []
+    found: list[Violation] = check_cli_sys_executable(location, tree)
     deep_core = 0
     for ref in resolve_imports(tree, location.package):
         found.extend(check_import(location, ref, workspace))

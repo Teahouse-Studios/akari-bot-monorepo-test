@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +10,7 @@ from rich.table import Table
 
 from akaribot.cli import venv as engine
 from akaribot.cli.instance import (
+    system_python,
     DEFAULT_LOCALE,
     DEFAULT_VENV,
     INSTANCE_META_FILENAME,
@@ -235,11 +235,11 @@ def init(
     if managed:
         step(3, 5, "创建实例 venv 并安装包")
         if dry_run:
-            runner.run(engine.create_venv_argv(instance.venv_dir, python=python or sys.executable, clear=force))
+            runner.run(engine.create_venv_argv(instance.venv_dir, python=python or str(system_python()), clear=force))
         else:
             try:
                 runner.run_checked(
-                    engine.create_venv_argv(instance.venv_dir, python=python or sys.executable, clear=force),
+                    engine.create_venv_argv(instance.venv_dir, python=python or str(system_python()), clear=force),
                     what="创建实例 venv",
                 )
             except CliError as exc:
