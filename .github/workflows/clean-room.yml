@@ -1,0 +1,54 @@
+name: Clean room install check
+
+# T6.6：用发布形态的 wheel 验证用户侧安装体验。workspace 的开发期覆盖会丢弃内部版本约束，
+# 只有从 wheel 装才会真正走解析器，故发布前必须跑这一道。
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/**/pyproject.toml"
+      - "uv.lock"
+      - "tools/clean_room_check.py"
+      - ".github/workflows/clean-room.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/**/pyproject.toml"
+      - "uv.lock"
+
+permissions:
+  contents: read
+
+jobs:
+  clean-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        shell: bash
+        run: |
+          uv sync --locked --all-extras --dev
+
+      - name: Clean room install check
+        shell: bash
+        run: |
+          # langconv 目前只有 git 直链（上游停更、自建 fork 未发版），带 URL 依赖的包无法从
+          # wheel 安装；这三个包在改为常规分发前先排除，其余组合必须全绿。见 T4.5/T6.6 记录。
+          uv run python tools/clean_room_check.py \
+            --exclude akari-bot-module-langconv \
+            --exclude akari-bot-module-hitokoto \
+            --exclude akari-bot-module-maimai
