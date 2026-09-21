@@ -10,7 +10,9 @@ config sync → db upgrade → 热装载 RPC → 报告占位符。第 4 步必�
 
 from __future__ import annotations
 
+import contextlib
 import json
+import sys
 from pathlib import Path
 from typing import Annotated, Sequence
 
@@ -26,6 +28,7 @@ from akaribot.cli.instance import (
     InstancePathOption,
     PackageInfo,
     console,
+    err_console,
     fail,
     ok,
     require_instance,
@@ -407,25 +410,69 @@ def remove(
         console.print("配置与数据默认保留；要一并清理请加 --purge-data。")
 
 
-@app.command("update")
-def update(
-    name: Annotated[list[str] | None, typer.Argument(help="要更新的包名，可给多个；缺省配合 --all")] = None,
-    all_packages: Annotated[bool, typer.Option("--all", help="更新全部已装包（含 core）")] = False,
-    offline: OfflineOption = False,
-    force: Annotated[bool, typer.Option("--force", help="已是最新版本时也重装")] = False,
-    yes: YesOption = False,
-    dry_run: DryRunOption = False,
-    verbose: VerboseOption = False,
-    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON，便于脚本消费")] = False,
-    instance: InstancePathOption = None,
-) -> None:
-    """更新已安装的包；工作区模式下等价于按本地源码重装。"""
-    target_instance = require_instance(instance)
+def _update_payload(
+    *,
+    updated: Sequence[str],
+    plans: Sequence[engine.InstallTarget],
+    failed: Sequence[tuple[str, str]],
+    skipped: Sequence[tuple[str, str]],
+    notified: Sequence[tuple[str, str, bool]],
+    dry_run: bool,
+) -> dict:
+    """整理更新结果的 JSON 载荷。
+
+    ``updated`` / ``failed`` / ``skipped`` 保持纯名字列表以兼容既有消费者，明细另置
+    ``*_details``；``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update``
+    判断要不要提示 ``~restart``。
+
+    :param updated: 更新成功的分发名。
+    :param plans: 本次计划更新的目标。
+    :param failed: 分发名与失败原因的二元组。
+    :param skipped: 分发名与跳过原因的二元组。
+    :param notified: 分发名、通知详情、是否送达的三元组。
+    :param dry_run: 是否为演练模式。
+    :return: JSON 可序列化的载荷。
+    """
+    delivered = {dist: ok_ for dist, _, ok_ in notified}
+    reload_pending = [dist for dist in updated if not delivered.get(dist, False)]
+    return {
+        "updated": list(updated),
+        "failed": [dist for dist, _ in failed],
+        "skipped": [dist for dist, _ in skipped],
+        "planned": [plan.dist for plan in plans],
+        "failed_details": [{"dist": dist, "reason": reason} for dist, reason in failed],
+        "skipped_details": [{"dist": dist, "reason": reason} for dist, reason in skipped],
+        "notified": [{"dist": dist, "detail": detail, "delivered": ok_} for dist, detail, ok_ in notified],
+        "reload_pending": reload_pending,
+        "restart_required": bool(reload_pending),
+        "dry_run": dry_run,
+    }
+
+
+def _perform_update(
+    instance_path: Path | None,
+    requested: Sequence[str],
+    *,
+    all_packages: bool,
+    offline: bool,
+    force: bool,
+    assume_yes: bool,
+    dry_run: bool,
+    verbose: bool,
+    json_mode: bool,
+) -> tuple[int, dict]:
+    """执行更新主体，返回退出码与 JSON 载荷。
+
+    ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout；
+    ``json_mode`` 只影响整体失败时报错还是回传载荷。
+
+    :return: 二元组——退出码（1 表示有包失败）；结果载荷。
+    """
+    target_instance = require_instance(instance_path)
     try:
         installed = target_instance.installed()
     except CliError as exc:
         fail(str(exc))
-    requested = split_names(name)
     if not requested and not all_packages:
         fail("请给出要更新的包名，或用 `akaribot module update --all` 更新全部。")
     selected: list[PackageInfo] = []
@@ -464,55 +511,110 @@ def update(
     if not plans:
         for dist, reason in skipped:
             console.print(f"  跳过 {dist}：{reason}")
-        if as_json:
-            console.print_json(
-                json.dumps({"updated": [], "skipped": [dist for dist, _ in skipped]}, ensure_ascii=False)
-            )
-        else:
-            ok("没有需要更新的包")
-        return
+        ok("没有需要更新的包")
+        return 0, _update_payload(updated=[], plans=[], failed=[], skipped=skipped, notified=[], dry_run=dry_run)
 
+    argv = engine.install_argv(target_instance.python, [spec for plan in plans for spec in plan.specs], upgrade=True)
     console.print("将更新：" + "、".join(f"{plan.dist}→{plan.version or '本地源码'}" for plan in plans))
-    if not dry_run and not yes:
-        typer.confirm(f"更新 {len(plans)} 个包", abort=True)
-    runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
-    failed: list[str] = []
-    try:
-        runner.run_checked(
-            engine.install_argv(target_instance.python, [spec for plan in plans for spec in plan.specs], upgrade=True),
-            what="更新包",
-        )
-    except CliError as exc:
-        fail(str(exc))
     if dry_run:
+        console.print(f"[dim]$ {' '.join(argv)}[/dim]")
         console.print("[dim]dry-run：跳过 config sync、db upgrade 与热装载通知[/dim]")
-        return
+        return 0, _update_payload(updated=[], plans=plans, failed=[], skipped=skipped, notified=[], dry_run=True)
+    if not assume_yes:
+        typer.confirm(f"更新 {len(plans)} 个包", abort=True)
+
+    completed = engine.CommandRunner(verbose=verbose).run(argv)
+    if completed.returncode != 0:
+        detail = f"更新包失败：{engine.summarize_uv_error(completed.stderr or completed.stdout or '')}"
+        failures = [(plan.dist, detail) for plan in plans]
+        payload = _update_payload(updated=[], plans=plans, failed=failures, skipped=skipped, notified=[], dry_run=False)
+        if not json_mode:
+            fail(detail)
+        warn(detail)
+        return 1, payload
+    ok("更新包完成")
     target_instance.invalidate()
+
+    failed: list[tuple[str, str]] = []
+    notified: list[tuple[str, str, bool]] = []
     for plan in plans:
         try:
             engine.config_sync(target_instance, plan.dist)
             engine.db_upgrade(target_instance, plan.dist)
         except CliError as exc:
-            failed.append(plan.dist)
+            failed.append((plan.dist, str(exc)))
             warn(str(exc))
         notify = target_instance.notify_package_change("install", plan.dist)
+        notified.append((plan.dist, notify.detail, notify.delivered))
         if notify.attempted and not notify.delivered:
             warn(notify.detail)
     for dist, reason in skipped:
         console.print(f"  跳过 {dist}：{reason}")
+    failed_names = [dist for dist, _ in failed]
+    updated = [plan.dist for plan in plans if plan.dist not in failed_names]
+    payload = _update_payload(
+        updated=updated, plans=plans, failed=failed, skipped=skipped, notified=notified, dry_run=False
+    )
     if failed:
-        warn(f"以下包更新后处理失败，需手动重试：{'、'.join(failed)}")
-    updated = [plan.dist for plan in plans if plan.dist not in failed]
-    if as_json:
-        console.print_json(
-            json.dumps(
-                {"updated": updated, "failed": failed, "skipped": [dist for dist, _ in skipped]}, ensure_ascii=False
-            )
-        )
-    elif failed:
         warn(f"仅 {len(updated)} 个包更新成功；请检查上面的错误后重试。")
-    else:
-        ok(f"已更新 {len(updated)} 个包" + ("；运行中的实例已收到热装载通知" if updated else ""))
+        return 1, payload
+    ok(f"已更新 {len(updated)} 个包" + ("；运行中的实例已收到热装载通知" if updated else ""))
+    return 0, payload
+
+
+@app.command("update")
+def update(
+    name: Annotated[list[str] | None, typer.Argument(help="要更新的包名，可给多个；缺省配合 --all")] = None,
+    all_packages: Annotated[bool, typer.Option("--all", help="更新全部已装包（含 core）")] = False,
+    offline: OfflineOption = False,
+    force: Annotated[bool, typer.Option("--force", help="已是最新版本时也重装")] = False,
+    yes: YesOption = False,
+    non_interactive: Annotated[
+        bool, typer.Option("--non-interactive", help="不提问，等同 --yes；供机器人内的 ~update 委托调用")
+    ] = False,
+    dry_run: DryRunOption = False,
+    verbose: VerboseOption = False,
+    as_json: Annotated[bool, typer.Option("--json", help="stdout 只输出一行结果 JSON，进度与警告走 stderr")] = False,
+    instance: InstancePathOption = None,
+) -> None:
+    """更新已安装的包；工作区模式下等价于按本地源码重装。
+
+    ``--json`` 的契约：stdout 只出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /
+    ``failed_details`` / ``skipped_details`` / ``reload_pending`` / ``restart_required``），
+    进度与警告一律走 stderr，退出码 1 表示有包未更新成功。
+    """
+    if as_json:
+        if verbose:
+            err_console.print("[dim]--json 下忽略 --verbose：stdout 只允许出现结果 JSON。[/dim]")
+        # 结果 JSON 之外的一切输出先改道 stderr，改道块结束后才写出唯一的那一行。
+        stream = sys.stdout
+        with contextlib.redirect_stdout(sys.stderr):
+            code, payload = _perform_update(
+                instance,
+                split_names(name),
+                all_packages=all_packages,
+                offline=offline,
+                force=force,
+                assume_yes=yes or non_interactive,
+                dry_run=dry_run,
+                verbose=False,
+                json_mode=True,
+            )
+        print(json.dumps(payload, ensure_ascii=False), file=stream)
+        raise typer.Exit(code)
+    code, _ = _perform_update(
+        instance,
+        split_names(name),
+        all_packages=all_packages,
+        offline=offline,
+        force=force,
+        assume_yes=yes or non_interactive,
+        dry_run=dry_run,
+        verbose=verbose,
+        json_mode=False,
+    )
+    if code != 0:
+        raise typer.Exit(code)
 
 
 # 三级「启用」语义（附录 B）：安装看 venv、全局装载看 ModuleStatus.load、场景启用看
