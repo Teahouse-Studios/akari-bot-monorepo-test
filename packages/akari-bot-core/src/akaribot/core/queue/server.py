@@ -6,6 +6,8 @@ import time
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
 
+from packaging.utils import canonicalize_name
+
 from akaribot.core.alive import Alive
 from akaribot.core.builtins.filter import reload_filter_words as reload_badword_rules
 from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
@@ -21,6 +23,7 @@ from akaribot.core.exports import exports, add_export
 from akaribot.core.i18n import Locale
 from akaribot.core.loader import ModulesManager
 from akaribot.core.logger import Logger
+from akaribot.core.registry import PackageEntry, PackageRegistry
 from akaribot.core.smtp import send_report
 from akaribot.core.utils.bash import run_sys_command
 from akaribot.core.utils.web_render import (
@@ -479,6 +482,46 @@ async def post_module_action(module: str, action: Literal["load", "unload", "rel
         case _:
             status = False
     return status
+
+
+def _module_package(dist: str) -> PackageEntry | None:
+    """按分发名定位已安装的模块包。
+
+    :param dist: 分发名，如 ``akari-bot-module-wiki``。
+    :return: 包条目；未安装或被发现层拒绝时为 ``None``。
+    """
+    PackageRegistry.discover(force=True)
+    wanted = canonicalize_name(dist)
+    for entry in PackageRegistry.modules().values():
+        name = entry.dist_name or f"akari-bot-{entry.kind}-{entry.name}"
+        if canonicalize_name(name) == wanted:
+            return entry
+    return None
+
+
+def _explain_missing_package(dist: str) -> str:
+    """给出包不在发现结果里的原因，供热装载日志定位。"""
+    return PackageRegistry.incompatible().get(canonicalize_name(dist), "the package registry did not register it")
+
+
+@ServerAPI.post_package_install.bind(JobQueueServer)
+async def post_package_install(dist: str) -> bool:
+    """热装载刚安装好的模块包；未装或被发现层拒绝时返回 False。"""
+    entry = _module_package(dist)
+    if entry is None:
+        Logger.warning(f"Cannot hot install {dist}: {_explain_missing_package(dist)}.")
+        return False
+    return await ModulesManager.install_package(entry)
+
+
+@ServerAPI.post_package_remove.bind(JobQueueServer)
+async def post_package_remove(dist: str) -> bool:
+    """在 uv pip uninstall 之前把模块包从运行中的服务端拆下来。"""
+    entry = _module_package(dist)
+    if entry is None:
+        Logger.warning(f"Cannot hot remove {dist}: {_explain_missing_package(dist)}.")
+        return False
+    return await ModulesManager.remove_package(entry)
 
 
 @ProcessAPI.resource_usage.bind(JobQueueServer)

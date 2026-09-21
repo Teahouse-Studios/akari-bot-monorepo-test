@@ -181,6 +181,18 @@ class ServerAPI:
     async def post_module_action(module: str, action: Literal["load", "unload", "reload"]) -> bool: ...
 
     @staticmethod
+    @remote("server.post_package_install", timeout=7200)
+    async def post_package_install(dist: str) -> bool:
+        """把刚安装的模块包热装载进运行中的服务端。"""
+        ...
+
+    @staticmethod
+    @remote("server.post_package_remove", timeout=7200)
+    async def post_package_remove(dist: str) -> bool:
+        """在卸载分发之前，把该模块包从运行中的服务端拆下来。"""
+        ...
+
+    @staticmethod
     @remote("server.post_next_hop")
     async def post_next_hop(
         next_hops: list[str], message: MessageChain | MessageNodes, module_name: str = ""
