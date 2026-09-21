@@ -612,7 +612,7 @@ class RunPage(compat.Vertical):
         self._set_status(self.last_result or self._summary())
 
     def _on_tick(self) -> None:
-        """定时回调：重新轮询状态表；页面被隐藏时跳过，避免白白轮询。"""
+        """定时回调：重新轮询状态表；页面被隐藏时跳过，避免无谓轮询。"""
         if not self.display:
             return
         self.refresh_status()

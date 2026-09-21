@@ -530,7 +530,7 @@ class DashboardPage(compat.Vertical):
         return value
 
     def _on_tick(self) -> None:
-        """定时回调：只做廉价的锁文件探测；页面被隐藏时跳过，避免白白轮询。"""
+        """定时回调：只做廉价的锁文件探测；页面被隐藏时跳过，避免无谓轮询。"""
         if not self.display:
             return
         self.refresh_running()

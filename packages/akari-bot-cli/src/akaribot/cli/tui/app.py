@@ -166,6 +166,11 @@ class TuiApp(compat.App[int]):
         for page_key, _, _ in PAGES:
             self.query_one(f"#page-{page_key}").display = page_key == key
         self.active_page = key
+        # 焦点须随页面转移：焦点留在侧栏或上一页时，页级键位（r/space/c/d/s/x）不会触发，
+        # 反而被 App 级同键接管。页面未提供 focus_primary 时保持现状。
+        focus_primary = getattr(self.query_one(f"#page-{key}"), "focus_primary", None)
+        if callable(focus_primary):
+            focus_primary()
 
     @compat.on(compat.ListView.Selected, "#nav")
     def _on_nav_selected(self, event: compat.ListView.Selected) -> None:

@@ -35,6 +35,10 @@ Run / Adapters / Dev）遵循。
 | 无头测试经 `_compat.app_test(app, size=...)` | `run_test` 的 `headless` / `size` 均为关键字，`size` 是较新版本才加的 |
 | `App[ReturnType]` 泛型、`ComposeResult`、各 widget 一律从 `_compat` 取 | 这些名字的导出位置（`textual.app` / `textual.widgets` / `textual.containers`）在版本间搬过家 |
 | 数据源走注入接口，绝不在渲染路径取数 | `installed()` 是子进程（实测 90–170 ms，core 未就绪时更久）；每帧调用会直接拖垮界面 |
+| **自有属性与方法名不得占用 Textual 基类名**（`_render` / `offset` / `refresh` / `display` / `styles` 等），如渲染辅助改叫 `_render_fields`、读取游标改叫 `read_offset` | 覆盖 `Widget._render()` 会让容器 visual 为 `None`，headless 下必崩（`AttributeError: 'NoneType' object has no attribute 'render_strips'`）；`Widget.offset` 是控件位置，语义完全不同 |
+| 定时轮询前先判 `self.display`，隐藏页直接跳过 | 七页同挂载，隐藏页仍按周期取数会白白起子进程；实测隐藏页取数次数完全不变 |
+| 切页后把焦点交给该页（各页提供 `focus_primary()`，`app.show_page()` 统一调用） | 焦点留在侧栏或上一页时，页级键位（`r`/`space`/`c`/`d`/`s`/`x`）不触发，反而被 App 级同键接管 |
+| 页面只经 `_compat` 使用 Textual，页面内零 `import textual` / `import rich` | 升级 Textual 时改动面收敛到一个文件；已 grep 验证七页均无直接导入 |
 
 ## 二、中文宽字符（本项目默认中文，最关键的一条）
 
