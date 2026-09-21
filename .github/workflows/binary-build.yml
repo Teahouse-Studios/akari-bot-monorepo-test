@@ -41,7 +41,9 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
-          script-name: bot.py
+          # 入口已迁入 core 包：python -m akaribot.core.entrypoints.run 的脚本形态即此路径
+          # （Nuitka-Action 的 script-name 只接受文件路径，不接受 -m 模块名）。
+          script-name: packages/akari-bot-core/src/akaribot/core/entrypoints/run.py
           mode: onefile
           output-dir: wrapper-build
           include-plugin-directory: |

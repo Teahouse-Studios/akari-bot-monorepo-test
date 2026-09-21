@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 # 源码树下可导入的包在 packages/*/src 与 packages/*/*/src；已按 workspace 安装时该设置无副作用。
 export PYTHONPATH="$PYTHONPATH:$(ls -d "$PWD"/packages/*/src "$PWD"/packages/*/*/src 2>/dev/null | tr '\n' ':')"
-uv run python bot.py
+uv run python -m akaribot.core.entrypoints.run

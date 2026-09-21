@@ -1,8 +1,19 @@
+"""机器人守护进程入口：原仓库根 ``bot.py``。
+
+``python -m akaribot.core.entrypoints.run`` 与迁移前的 ``python bot.py`` 等价：安装 BotDaemon
+日志、取单实例锁、以 ``pre_init`` 子进程完成配置与数据库准备，再按配置启动各适配器进程与 Server
+进程。仓库根的 ``bot.py`` 只是转发到本模块的兼容层。
+
+实例根由 ``AKARI_INSTANCE_DIR`` 决定，未设置时取进程 cwd（:class:`akaribot.core.paths.Paths`
+的定义）；锁文件、i18n 缓存与 ``.env`` 因此都随实例走，进程可从任意目录启动。CLI 以子进程方式
+调用本模块，见 ``akaribot.cli.instance.Instance.run_core``。
+"""
+
 from akaribot.core.version import check_python_version  # skipcq
 
 check_python_version()  # noqa
 
-from akaribot.core.constants import config_path, config_filename  # skipcq
+from akaribot.core.constants import config_path, config_filename, tests_path  # skipcq
 
 import asyncio
 import importlib
@@ -20,29 +31,59 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from akaribot.core.constants import CONFIG_READONLY_ENV, ascii_art, logs_path  # skipcq
+from akaribot.core.paths import Paths  # skipcq
 from akaribot.core.registry import PackageRegistry  # skipcq
 
 
-AKARI_BOT_I18N_CACHE_DIR = str(Path("./data/i18n_cache/").resolve())
+# 仓库根环境变量。取值须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，根目录的 tester.py 会置位它。
+REPO_ROOT_ENV = "AKARI_REPO_ROOT"
+
+# 单实例锁文件名。须与 akaribot.cli.instance.LOCK_FILENAME 一致：CLI 的 is_running() 据此探测。
+LOCK_FILENAME = Paths.lock.name
+
+AKARI_BOT_I18N_CACHE_DIR = str(Paths.data / "i18n_cache")
+
+
+def _repository_root() -> Path | None:
+    """定位源码检出的仓库根，安装形态下返回 None。
+
+    本模块位于包内，按自身位置回推仓库根只会落到 site-packages，故取与
+    :mod:`akaribot.testing.runner` 相同的判据：优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``
+    的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
+
+    :return: 仓库根；无法确定时为 None。
+    """
+    explicit = os.environ.get(REPO_ROOT_ENV)
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    candidate = Path(tests_path).parent
+    return candidate if (candidate / "packages").is_dir() else None
 
 
 def _source_import_roots() -> list[Path]:
     """源码检出下提供 ``akaribot`` 命名空间的目录。
 
     各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
-    判据只用目录是否存在，不依赖已安装分发的 metadata：安装形态下这些目录不存在，结果为空列表。
-    仓库根一并保留，使 ``tester`` 等根级脚本对子进程仍可导入。
+    判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根一并保留，使 ``tester`` 等根级
+    脚本对子进程仍可导入。仓库根不可知时返回空列表：此时 ``akaribot`` 由已安装分发提供，
+    无须也不应改写 ``PYTHONPATH``。
 
     :return: 参与 PYTHONPATH 的目录列表，按路径排序。
     """
-    root = Path(__file__).resolve().parent
+    root = _repository_root()
+    if root is None:
+        return []
     candidates = [root, *sorted(root.glob("packages/*/src")), *sorted(root.glob("packages/*/*/src"))]
     return [path for path in candidates if path.is_dir()]
 
 
-load_dotenv()
+# 显式传入实例根下的 .env：不给路径时 python-dotenv 从本模块所在目录向上查找，包内位置与
+# 仓库根、实例根都不对应。AKARI_INSTANCE_DIR 未设置时实例根即进程 cwd，与迁移前一致。
+load_dotenv(Paths.instance / ".env")
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in _source_import_roots()))
+# 空列表时不置位：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
+if source_import_roots := _source_import_roots():
+    os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in source_import_roots))
 os.environ.setdefault("AKARI_BOT_I18N_CACHE_DIR", AKARI_BOT_I18N_CACHE_DIR)
 
 
@@ -155,6 +196,8 @@ disabled_bots = []
 processes: list[multiprocessing.Process] = []
 server_stop_event = None
 jobqueue_hub_stop_event = None
+# 实例锁文件句柄。锁随文件对象关闭而释放，句柄须在进程存活期间一直被引用。
+_lock_file = None
 
 
 def warn_if_database_jobqueue_uses_sqlite(jobqueue_backend: object, database_type: object) -> bool:
@@ -594,6 +637,8 @@ def jobqueue_hub_go(stop_event, ready_event):
     run_websocket_hub_process(stop_event, ready_event)
 
 
+# 二进制封装下 argv[0] 是可执行文件自身；python bot.py 与 python -m akaribot.core.entrypoints.run
+# 两种解释器形态的 argv[0] 都是脚本文件路径，故判据不变。
 binary_mode = not sys.argv[0].endswith(".py")
 
 
@@ -805,6 +850,36 @@ async def main_async():
 
 
 def main():
+    """进程入口：安装守护日志、取实例锁，然后进入重启循环。
+
+    锁文件为 ``<实例根>/.bot.lock``（``AKARI_INSTANCE_DIR`` 未设置时即进程 cwd），与
+    ``akaribot.cli.instance`` 的运行探测同源；同实例已有进程持锁时以退出码 1 中止。锁在进程
+    存活期间一直持有，句柄存入模块级 ``_lock_file``。
+    """
+    global _lock_file
+
+    init_daemon_logger()
+    # Detect if the program is already running
+    lock_file_path = Paths.lock
+    if sys.platform == "win32":
+        import msvcrt
+
+        _lock_file = open(lock_file_path, "w")  # skipcq
+        try:
+            msvcrt.locking(_lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            Logger.critical("Another instance is already running. Aborting.")
+            sys.exit(1)
+    else:
+        import fcntl
+
+        _lock_file = open(lock_file_path, "w")  # skipcq
+        try:
+            fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            Logger.critical("Another instance is already running. Aborting.")
+            sys.exit(1)
+
     # Capture the base import lists to avoid clearing essential modules when restarting
     def clear_import_cache():
         for m in list(sys.modules):
@@ -828,26 +903,4 @@ def main():
 
 
 if __name__ == "__main__":
-    init_daemon_logger()
-    # Detect if the program is already running
-    lock_file_path = Path("./.bot.lock").resolve()
-    if sys.platform == "win32":
-        import msvcrt
-
-        lock_file = open(lock_file_path, "w")  # skipcq
-        try:
-            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError:
-            Logger.critical("Another instance is already running. Aborting.")
-            sys.exit(1)
-    else:
-        import fcntl
-
-        lock_file = open(lock_file_path, "w")  # skipcq
-        try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            Logger.critical("Another instance is already running. Aborting.")
-            sys.exit(1)
-
     main()

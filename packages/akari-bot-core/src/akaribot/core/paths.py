@@ -65,6 +65,9 @@ class Paths:
     logs: Path = instance / "logs"
     """日志目录。"""
 
+    lock: Path = instance / ".bot.lock"
+    """单实例锁文件，供入口进程互斥与 CLI 探测运行状态。"""
+
     tests: Path = _env_path(TESTS_PATH_ENV) or _repository_root() / "tests"
     """测试用例目录，属源码仓库而非实例。"""
 

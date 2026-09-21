@@ -8,4 +8,4 @@ for /d %%d in ("%~dp0packages\*") do (
     for /d %%e in ("%%d\*") do if exist "%%e\src" set "PYTHONPATH=!PYTHONPATH!;%%e\src"
 )
 
-uv run python bot.py
+uv run python -m akaribot.core.entrypoints.run

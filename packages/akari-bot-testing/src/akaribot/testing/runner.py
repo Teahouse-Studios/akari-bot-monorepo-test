@@ -1,3 +1,10 @@
+"""自研测试框架的运行器，原根目录 ``tester.py`` 的主体。
+
+入口有两个：``python -m akaribot.testing`` 与根目录的兼容层 ``tester.py``。测试配置的铺设
+发生在本模块导入期，且必须早于任何 ``akaribot.core`` 导入，故本模块的导入顺序不可调整。
+迁入包内后不再按自身位置回推仓库根，改由 ``AKARI_REPO_ROOT`` 或 :func:`_resolve_repo_root` 确定。
+"""
+
 from akaribot.core.version import check_python_version  # skipcq
 
 check_python_version()  # noqa
@@ -143,24 +150,56 @@ from akaribot.testing.process import run_case_entry, run_function_entry
 
 Logger = TestLoggingLogger("TEST")
 
+# 源码检出形态下的仓库根：根目录兼容层 tester.py 在导入本模块前置位，取值须与它一致。
+REPO_ROOT_ENV = "AKARI_REPO_ROOT"
+
+
+def _resolve_repo_root() -> Path | None:
+    """定位源码检出的仓库根，安装形态下返回 None。
+
+    不按本文件位置回推：本模块已在包内，回推只会落到 site-packages。优先取 ``AKARI_REPO_ROOT``；
+    否则取 ``Paths.tests`` 的父目录——源码检出下 ``tests/`` 位于仓库根，再以 ``packages/``
+    是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
+
+    :return: 仓库根；无法确定时为 None，调用方据此退化为只跑 ``Paths.tests``。
+    """
+    explicit = os.environ.get(REPO_ROOT_ENV)
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    candidate = Path(tests_path).parent
+    return candidate if (candidate / "packages").is_dir() else None
+
+
+REPO_ROOT = _resolve_repo_root()
+
+# 报告落点与用例发现同源：源码检出下固定在仓库根，安装形态下退回调用目录。
+OUTPUT_ROOT = REPO_ROOT if REPO_ROOT is not None else Path.cwd()
+
 
 def _source_import_roots() -> list[Path]:
     """源码检出下提供 ``akaribot`` 命名空间的目录。
 
     各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
-    判据只用目录是否存在，不依赖已安装分发的 metadata：安装形态下这些目录不存在，结果为空列表。
-    仓库根一并保留，使 ``tester`` 等根级脚本对子进程仍可导入。
+    判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根不可知时返回空列表：此时
+    ``akaribot`` 由已安装分发提供，无须也不应改写 ``PYTHONPATH``。
 
     :return: 参与 PYTHONPATH 的目录列表，按路径排序。
     """
-    root = Path(__file__).resolve().parent
-    candidates = [root, *sorted(root.glob("packages/*/src")), *sorted(root.glob("packages/*/*/src"))]
+    if REPO_ROOT is None:
+        return []
+    candidates = [
+        REPO_ROOT,
+        *sorted(REPO_ROOT.glob("packages/*/src")),
+        *sorted(REPO_ROOT.glob("packages/*/*/src")),
+    ]
     return [path for path in candidates if path.is_dir()]
 
 
 load_dotenv()
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in _source_import_roots()))
+# 空列表时不置位：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
+if source_import_roots := _source_import_roots():
+    os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in source_import_roots))
 
 IS_CI = os.environ.get("CI", "0") == "1"
 ENABLE_COVERAGE = os.environ.get("COVERAGE", "0") == "1"
@@ -223,30 +262,33 @@ class FuncTestResult(TypedDict):
 def _test_roots() -> list[Path]:
     """测试文件根目录。
 
-    仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。
+    仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。后者只在
+    源码检出下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。
 
     :return: 存在的目录列表，包内目录按路径排序。
     """
-    repo_root = Path(__file__).resolve().parent
     roots = [Path(tests_path)]
-    for pattern in ("packages/*/tests", "packages/*/*/tests"):
-        roots.extend(root for root in sorted(repo_root.glob(pattern)) if root.is_dir())
+    if REPO_ROOT is not None:
+        for pattern in ("packages/*/tests", "packages/*/*/tests"):
+            roots.extend(root for root in sorted(REPO_ROOT.glob(pattern)) if root.is_dir())
     return [root for root in roots if root.is_dir()]
 
 
 def _test_module_key(path: str) -> str:
     """测试文件的合成模块名。
 
-    按仓库根相对路径生成：不同包里可以存在同名测试文件，仅取文件名会互相覆盖。
+    按仓库根相对路径生成：不同包里可以存在同名测试文件，仅取文件名会互相覆盖。仓库根不可知时
+    退回原路径，模块名的唯一性由绝对路径本身保证。
 
     :param path: 测试文件路径。
     :return: ``sys.modules`` 中使用的模块名。
     """
-    repo_root = Path(__file__).resolve().parent
-    try:
-        relative = Path(path).resolve().relative_to(repo_root)
-    except ValueError:
-        relative = Path(path)
+    relative = Path(path)
+    if REPO_ROOT is not None:
+        try:
+            relative = Path(path).resolve().relative_to(REPO_ROOT)
+        except ValueError:
+            pass
     return "tests_" + "_".join(part.replace("-", "_") for part in relative.with_suffix("").parts)
 
 
@@ -722,7 +764,7 @@ async def main(inspect_module=inspect):
             if junit_func_suite.test_cases:
                 junit_report.add_testsuite(junit_func_suite)
 
-            junit_output_path = Path("junit.xml")
+            junit_output_path = OUTPUT_ROOT / "junit.xml"
             junit_report.write_to_file(junit_output_path)
             Logger.success(f"JUnit XML report generated: {junit_output_path}")
         except Exception as e:
@@ -748,14 +790,15 @@ async def main(inspect_module=inspect):
             _coverage_instance.report(show_missing=True)
 
             # 生成 HTML 报告
-            html_dir = Path("htmlcov")
+            html_dir = OUTPUT_ROOT / "htmlcov"
             _coverage_instance.html_report(directory=str(html_dir))
             Logger.success(f"HTML coverage report generated: {html_dir}/index.html")
 
             # 生成 XML 报告（可选，用于 CI 集成）
             if IS_CI:
-                _coverage_instance.xml_report(outfile="coverage.xml")
-                Logger.success("XML coverage report generated: coverage.xml")
+                coverage_xml = OUTPUT_ROOT / "coverage.xml"
+                _coverage_instance.xml_report(outfile=str(coverage_xml))
+                Logger.success(f"XML coverage report generated: {coverage_xml}")
         except Exception as e:
             Logger.error(f"Failed to generate coverage report: {e}")
 
@@ -766,5 +809,6 @@ async def main(inspect_module=inspect):
     return 1 if IS_CI and (failed > 0 or total == 0) else 0
 
 
-if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+def run() -> int:
+    """同步入口：跑完全部用例并返回进程退出码。"""
+    return asyncio.run(main())
