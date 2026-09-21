@@ -38,6 +38,8 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
+from akaribot.cli import i18n
+
 INSTANCE_ENV = "AKARI_INSTANCE_DIR"
 CONFIG_ENV = "AKARI_CONFIG_PATH"
 INSTANCE_META_FILE = "akaribot.toml"
@@ -74,17 +76,9 @@ LISTEN_FIELD_EXACT = ("host", "port", "listen", "listen_host", "listen_port", "b
 WILDCARD_HOSTS = frozenset({"", "*", "0.0.0.0", "::", "[::]", "::0"})
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
-RENAME_NOTE = (
-    "不提供 instance rename：实例 ID 是 target_id 前缀的一部分，改名要跨 5 张核心表与 N 张模块表"
-    "迁移 target_id / sender_id 前缀，收益与风险严重不成比例。实例 ID 一旦使用请勿更改。"
-)
+RENAME_NOTE = i18n.t("cli.adapter.instance.rename_note")
 
-NOT_AN_INSTANCE_HINT = (
-    "可执行的操作：\n"
-    "  akaribot init <目录>              新建实例\n"
-    "  akaribot migrate legacy <目录>    迁移既有部署\n"
-    "  或在实例目录内执行，或设置 AKARI_INSTANCE_DIR=<实例根>"
-)
+NOT_AN_INSTANCE_HINT = i18n.t("cli.adapter.not_instance_hint")
 
 
 class NotAnInstanceError(RuntimeError):
@@ -102,7 +96,7 @@ def fail(message: str, *, hint: str | None = None, code: int = EXIT_FAILURE) -> 
     :param hint: 可选的可执行提示。
     :param code: 进程退出码。
     """
-    typer.secho(f"错误：{message}", fg=typer.colors.RED, err=True)
+    typer.secho(i18n.t("cli.adapter.fail_prefix", message=message), fg=typer.colors.RED, err=True)
     if hint:
         typer.secho(hint, fg=typer.colors.YELLOW, err=True)
     raise typer.Exit(code)
@@ -113,7 +107,7 @@ def warn(message: str) -> None:
 
     :param message: 警告描述。
     """
-    typer.secho(f"警告：{message}", fg=typer.colors.YELLOW, err=True)
+    typer.secho(i18n.t("cli.adapter.warn_prefix", message=message), fg=typer.colors.YELLOW, err=True)
 
 
 class InstanceLike(Protocol):
@@ -240,7 +234,7 @@ def system_python() -> Path:
         found = _shutil.which(name)
         if found:
             return Path(found)
-    raise RuntimeError("找不到系统 Python；请设置 AKARIBOT_PYTHON 指向实例要使用的解释器。")
+    raise RuntimeError(i18n.t("cli.adapter.system_python_missing"))
 
 
 def find_instance_root(start: Path | None = None) -> Path | None:
@@ -315,7 +309,7 @@ def load_instance(start: Path | None = None) -> InstanceLike:
     """
     root = find_instance_root(start)
     if root is None:
-        raise NotAnInstanceError(f"未找到实例：自 {start or Path.cwd()} 起未发现 {INSTANCE_META_FILE}。")
+        raise NotAnInstanceError(i18n.t("cli.adapter.not_instance", start=start or Path.cwd(), meta=INSTANCE_META_FILE))
     colleague = _colleague_instance(root)
     if colleague is not None:
         return colleague
@@ -1166,12 +1160,18 @@ def _client_name_summary(config: AdapterInstanceConfig, registry: AdapterRegistr
     :return: 形如 ``telegram/beta（Telegram-beta，enable=true）`` 的文本。
     """
     client_name, _ = client_name_for(config, registry)
-    return f"{config.platform}/{config.instance_id or '默认'}（{client_name}，enable={str(config.enabled).lower()}）"
+    return i18n.t(
+        "cli.adapter.instance.summary",
+        platform=config.platform,
+        instance=config.instance_id or i18n.t("cli.adapter.instance.default_id"),
+        client_name=client_name,
+        enabled=str(config.enabled).lower(),
+    )
 
 
-app = typer.Typer(help="适配器与实例管理", no_args_is_help=True)
+app = typer.Typer(help=i18n.t("cli.adapter.help"), no_args_is_help=True)
 instance_app = typer.Typer(
-    help=f"适配器实例的增删。每个实例是 config/adapters/<平台>[-<实例 ID>].toml 中的一张表。{RENAME_NOTE}",
+    help=i18n.t("cli.adapter.instance.help", rename_note=RENAME_NOTE),
     no_args_is_help=True,
 )
 
@@ -1182,9 +1182,10 @@ def _print_registry_note(registry: AdapterRegistry) -> None:
     :param registry: 已装适配器清单。
     """
     if not registry.available:
-        warn(f"无法获取已安装适配器清单：{registry.note}")
-        warn("client_name 与安装状态均按平台名推断，可能与适配器实际声明不符。")
+        warn(i18n.t("cli.adapter.registry_unavailable", note=registry.note))
+        warn(i18n.t("cli.adapter.registry_inferred"))
     elif registry.note:
+        # registry.note 同时进入 --json 的 registry_note 字段，属机器可读契约，保持原文。
         warn(registry.note)
 
 
@@ -1226,9 +1227,27 @@ def _instance_rows(scan: AdapterScan, registry: AdapterRegistry) -> list[dict[st
     return rows
 
 
-@app.command("list")
+def _issue_labels(row: Mapping[str, Any], registry: AdapterRegistry) -> list[str]:
+    """按行内字段重算本地化的问题说明，供表格展示（JSON 里的 issues 保持原文）。
+
+    :param row: :func:`_instance_rows` 生成的一行。
+    :param registry: 已装适配器清单。
+    :return: 本地化的问题说明列表。
+    """
+    labels: list[str] = []
+    if registry.available and not row["installed"]:
+        labels.append(i18n.t("cli.adapter.list.issue_orphan"))
+    instance_id = str(row["instance_id"] or "")
+    if instance_id and not INSTANCE_ID_PATTERN.fullmatch(instance_id):
+        labels.append(i18n.t("cli.adapter.list.issue_instance_id"))
+    if row["enable"] is None:
+        labels.append(i18n.t("cli.adapter.list.issue_enable_missing"))
+    return labels
+
+
+@app.command("list", help=i18n.t("cli.adapter.list.help"))
 def list_instances(
-    json_output: bool = typer.Option(False, "--json", help="以 JSON 输出，供 TUI 与脚本使用。"),
+    json_output: bool = typer.Option(False, "--json", help=i18n.t("cli.adapter.list.option_json")),
 ) -> None:
     """按平台分组列出全部适配器实例。
 
@@ -1255,12 +1274,12 @@ def list_instances(
 
     console = Console()
     # 路径、平台名与注释里可能出现方括号（IPv6 地址、TOML 表名），故先 escape 再进入 rich 标记解析
-    console.print(f"实例根：{escape(str(instance.root))}")
+    console.print(i18n.t("cli.adapter.list.instance_root", path=escape(str(instance.root))))
     for error in scan.errors:
         console.print(f"[red]{escape(error)}[/red]")
     if not scan.instances:
-        console.print("未发现任何适配器实例配置。")
-        console.print("可用 `akaribot adapter instance add <平台> [实例 ID]` 新建实例配置。")
+        console.print(i18n.t("cli.adapter.list.empty"))
+        console.print(i18n.t("cli.adapter.list.empty_hint"))
         _print_registry_note(registry)
         return
 
@@ -1272,40 +1291,50 @@ def list_instances(
     for platform in sorted(grouped):
         adapter = registry.adapters.get(platform)
         if adapter is not None:
-            suffix = f"（{adapter.display_name}）"
+            suffix = i18n.t("cli.adapter.list.platform_suffix", name=adapter.display_name)
         else:
             # 清单不可用时无从判断平台是否已安装，不能标成「未安装」
-            suffix = "（适配器未安装）" if registry.available else "（已装清单不可用）"
+            suffix = (
+                i18n.t("cli.adapter.list.not_installed")
+                if registry.available
+                else i18n.t("cli.adapter.list.registry_unavailable")
+            )
         title = escape(f"{platform}{suffix}")
         table = Table(title=title, title_justify="left", box=None, pad_edge=False)
-        for column in ("实例 ID", "client_name", "enable", "监听地址", "备注"):
+        for column in (
+            i18n.t("cli.adapter.list.column_instance_id"),
+            "client_name",
+            "enable",
+            i18n.t("cli.adapter.list.column_listen"),
+            i18n.t("cli.adapter.list.column_notes"),
+        ):
             table.add_column(column, overflow="fold")
         for row in grouped[platform]:
             if row["enable"] is None:
-                enable_text = "[yellow]缺 enable[/yellow]"
+                enable_text = i18n.t("cli.adapter.list.enable_missing")
             elif row["enabled"]:
                 enable_text = "[green]true[/green]"
             else:
                 enable_text = "false"
             table.add_row(
-                escape(row["instance_id"] or "（默认）"),
+                escape(row["instance_id"] or i18n.t("cli.adapter.instance.default_id")),
                 escape(row["client_name"]),
                 enable_text,
-                escape("、".join(row["listen"]) or "—"),
-                escape("；".join(row["issues"])),
+                escape(i18n.t("cli.common.list_separator").join(row["listen"]) or "—"),
+                escape(i18n.t("cli.common.clause_separator").join(_issue_labels(row, registry))),
             )
         console.print(table)
     if scan.legacy_layout:
-        console.print("注：以上含扁平布局配置（config/bot_*.toml），分层布局迁移后将移至 config/adapters/。")
+        console.print(i18n.t("cli.adapter.list.legacy_note"))
     if inferred_any:
-        console.print("注：registry 未提供 platform_name，client_name 按平台名推断；以适配器实际声明的展示名为准。")
+        console.print(i18n.t("cli.adapter.list.inferred_note"))
     _print_registry_note(registry)
 
 
-@instance_app.command("add")
+@instance_app.command("add", help=i18n.t("cli.adapter.instance.add.help"))
 def instance_add(
-    platform: str = typer.Argument(..., help="平台名（适配器 entry point 名），如 telegram。"),
-    instance_id: str | None = typer.Argument(None, help="实例 ID，须匹配 [a-z0-9_]{1,24}；省略表示默认实例。"),
+    platform: str = typer.Argument(..., help=i18n.t("cli.adapter.instance.arg_platform")),
+    instance_id: str | None = typer.Argument(None, help=i18n.t("cli.adapter.instance.add.arg_instance_id")),
 ) -> None:
     """新建适配器实例配置。
 
@@ -1317,21 +1346,25 @@ def instance_add(
     instance_id = (instance_id or "").strip()
     if instance_id and not INSTANCE_ID_PATTERN.fullmatch(instance_id):
         fail(
-            f"实例 ID {instance_id!r} 不合法。",
-            hint="实例 ID 须匹配 [a-z0-9_]{1,24}：只允许小写字母、数字与下划线，长度 1 到 24。",
+            i18n.t("cli.adapter.instance.add.invalid_id", instance_id=repr(instance_id)),
+            hint=i18n.t("cli.adapter.instance.add.invalid_id_hint"),
         )
 
     registry = fetch_adapters(instance)
     if not registry.available:
-        fail(f"无法获取已安装适配器清单，无法确认平台是否已安装：{registry.note}")
+        fail(i18n.t("cli.adapter.instance.registry_unavailable", note=registry.note))
     adapter = registry.adapters.get(platform)
     if adapter is None:
-        installed = "、".join(sorted(registry.adapters)) or "（无）"
-        fail(f"平台 {platform} 未安装到本实例。", hint=f"已安装的适配器：{installed}")
+        installed = i18n.t("cli.common.list_separator").join(sorted(registry.adapters))
+        installed = installed or i18n.t("cli.adapter.instance.none")
+        fail(
+            i18n.t("cli.adapter.instance.add.not_installed", platform=platform),
+            hint=i18n.t("cli.adapter.instance.add.not_installed_hint", installed=installed),
+        )
 
     base_table = adapter.base_table
     if not base_table.startswith(BOT_TABLE_PREFIX):
-        fail(f"适配器 {platform} 的配置表名 {base_table} 不符合 bot_* 约定。")
+        fail(i18n.t("cli.adapter.instance.add.bad_table", platform=platform, table=base_table))
     table = base_table if not instance_id else f"{base_table}-{instance_id}"
     target = base_config_path(instance, table)
     client_name = resolve_client_name(adapter.display_name, instance_id)
@@ -1340,20 +1373,23 @@ def instance_add(
     for existing in scan.instances:
         if existing.platform == platform and existing.instance_id == instance_id:
             fail(
-                f"实例已存在：{existing.table}（{existing.path}）",
-                hint="如需新增同平台的另一个实例，请换一个实例 ID。",
+                i18n.t("cli.adapter.instance.add.exists", table=existing.table, path=existing.path),
+                hint=i18n.t("cli.adapter.instance.add.exists_hint"),
             )
     if target.exists():
-        fail(f"目标文件已存在：{target}", hint="请换一个实例 ID，或先移除既有实例配置。")
+        fail(
+            i18n.t("cli.adapter.instance.add.target_exists", target=target),
+            hint=i18n.t("cli.adapter.instance.add.target_exists_hint"),
+        )
 
     try:
         fields = fetch_schema(instance, base_table)
     except CoreCallError as error:
-        fail(f"无法获取 {base_table} 的配置模板：{error}")
+        fail(i18n.t("cli.adapter.instance.add.template_unavailable", table=base_table, error=error))
     if not fields:
         fail(
-            f"适配器 {platform} 的配置模板为空，无法生成实例配置。",
-            hint="请确认该适配器包声明了 config.py 模板（on_bot_config）。",
+            i18n.t("cli.adapter.instance.add.template_empty", platform=platform),
+            hint=i18n.t("cli.adapter.instance.add.template_empty_hint"),
         )
 
     content = render_instance_config(
@@ -1362,40 +1398,48 @@ def instance_add(
     try:
         tomlkit.parse(content)
     except ValueError as error:
-        fail(f"生成的配置内容不是合法 TOML：{error}")
+        fail(i18n.t("cli.adapter.instance.add.invalid_toml", error=error))
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         target.write_text(content, encoding="utf-8")
     except OSError as error:
-        fail(f"无法写入 {target}：{error}")
+        fail(i18n.t("cli.adapter.instance.add.write_failed", target=target, error=error))
 
     console = Console()
-    console.print(f"已创建 {escape(str(target))}")
-    console.print(escape(f"  表名：{table}（密钥表 {table}{SECRET_TABLE_SUFFIX}）"))
-    console.print(escape(f"  client_name：{client_name}"))
-    console.print("  enable：false（已显式写入，填完凭据后自行开启）")
+    secret_table = f"{table}{SECRET_TABLE_SUFFIX}"
+    console.print(i18n.t("cli.adapter.instance.add.created", target=escape(str(target))))
+    console.print(escape(i18n.t("cli.adapter.instance.add.table_line", table=table, secret_table=secret_table)))
+    console.print(escape(i18n.t("cli.adapter.instance.add.client_name_line", client_name=client_name)))
+    console.print(i18n.t("cli.adapter.instance.add.enable_line"))
     if adapter.inferred_platform_name:
-        console.print("  注：registry 未提供 platform_name，client_name 按平台名推断。")
+        console.print(i18n.t("cli.adapter.instance.add.inferred_note"))
 
     pending = [item for item in fields if item.needs_filling()]
     if pending:
-        checklist = Table(title="需要填写的字段", title_justify="left", box=None, pad_edge=False)
-        for column in ("表名", "键", "类型", "说明"):
+        checklist = Table(
+            title=i18n.t("cli.adapter.instance.add.checklist_title"), title_justify="left", box=None, pad_edge=False
+        )
+        for column in (
+            i18n.t("cli.adapter.instance.add.column_table"),
+            i18n.t("cli.adapter.instance.add.column_key"),
+            i18n.t("cli.adapter.instance.add.column_type"),
+            i18n.t("cli.adapter.instance.add.column_comment"),
+        ):
             checklist.add_column(column, overflow="fold")
         for item in pending:
-            section = f"{table}{SECRET_TABLE_SUFFIX}" if item.secret else table
+            section = secret_table if item.secret else table
             checklist.add_row(
                 escape(section), escape(item.key), escape(item.type_name or "?"), escape(item.comment or "—")
             )
         console.print(checklist)
-        console.print("下一步：")
+        console.print(i18n.t("cli.adapter.instance.add.next_steps"))
         for item in pending:
-            console.print(escape(f"  akaribot config set {item.key} <值> --table {table}"))
-        console.print(escape(f"  akaribot config set enable true --table {table}    # 确认凭据无误后再开启"))
+            console.print(escape(i18n.t("cli.adapter.instance.add.set_hint", field=item.key, table=table)))
+        console.print(escape(i18n.t("cli.adapter.instance.add.enable_hint", table=table)))
     else:
-        console.print("模板没有待填写字段；确认监听地址与凭据后执行：")
+        console.print(i18n.t("cli.adapter.instance.add.no_pending"))
         console.print(escape(f"  akaribot config set enable true --table {table}"))
-    console.print("同一平台的两个实例不得配置相同凭据，`akaribot doctor` 会检查。")
+    console.print(i18n.t("cli.adapter.instance.add.doctor_note"))
 
 
 def remove_instance_config(config: AdapterInstanceConfig) -> bool:
@@ -1427,25 +1471,25 @@ def _purge_scope_lines(client_name: str) -> list[str]:
     :param client_name: 目标实例的 ``client_name``。
     :return: 逐行说明。
     """
+    tables = i18n.t("cli.common.list_separator").join(PURGE_SCOPE_CORE_TABLES)
     return [
-        f"将以 {client_name}| 前缀清理该实例的场景与用户数据：",
-        f"  核心表：{'、'.join(PURGE_SCOPE_CORE_TABLES)}",
-        "    （按 union_id / target_id / sender_id 列上的 client_name 前缀定位）",
-        "  模块表：各包 manifest 的 owned_tables 与 id_columns 声明（v1 均为空）",
-        "影响行数：无法取得。core 尚未提供按 client_name 统计行数的入口，删除前给不出数字；"
-        "配置文件删除后数据行会保留。",
+        i18n.t("cli.adapter.instance.purge.scope_intro", client_name=client_name),
+        i18n.t("cli.adapter.instance.purge.core_tables", tables=tables),
+        i18n.t("cli.adapter.instance.purge.core_tables_hint"),
+        i18n.t("cli.adapter.instance.purge.module_tables"),
+        i18n.t("cli.adapter.instance.purge.row_count"),
     ]
 
 
-@instance_app.command("remove")
+@instance_app.command("remove", help=i18n.t("cli.adapter.instance.remove.help"))
 def instance_remove(
-    platform: str = typer.Argument(..., help="平台名（适配器 entry point 名），如 telegram。"),
-    instance_id: str | None = typer.Argument(None, help="实例 ID；省略表示默认实例。"),
+    platform: str = typer.Argument(..., help=i18n.t("cli.adapter.instance.arg_platform")),
+    instance_id: str | None = typer.Argument(None, help=i18n.t("cli.adapter.instance.remove.arg_instance_id")),
     purge_data: bool = typer.Option(
-        False, "--purge-data", help="同时清理该 client_name 前缀下的场景与用户数据（需二次确认）。"
+        False, "--purge-data", help=i18n.t("cli.adapter.instance.remove.option_purge_data")
     ),
-    yes: bool = typer.Option(False, "--yes", "-y", help="跳过二次确认，供脚本与测试使用。"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="只打印将执行的操作，不做任何改动。"),
+    yes: bool = typer.Option(False, "--yes", "-y", help=i18n.t("cli.common.yes_option")),
+    dry_run: bool = typer.Option(False, "--dry-run", help=i18n.t("cli.adapter.instance.remove.option_dry_run")),
 ) -> None:
     """移除适配器实例配置。
 
@@ -1461,42 +1505,47 @@ def instance_remove(
         (item for item in scan.instances if item.platform == platform and item.instance_id == instance_id), None
     )
     if match is None:
-        available = "、".join(_client_name_summary(item, registry) for item in scan.instances) or "（无）"
-        fail(f"未找到实例 {platform}/{instance_id or '默认'}。", hint=f"现有实例：{available}")
+        available = i18n.t("cli.common.list_separator").join(
+            _client_name_summary(item, registry) for item in scan.instances
+        )
+        available = available or i18n.t("cli.adapter.instance.none")
+        target_name = instance_id or i18n.t("cli.adapter.instance.default_id")
+        fail(
+            i18n.t("cli.adapter.instance.remove.not_found", platform=platform, instance=target_name),
+            hint=i18n.t("cli.adapter.instance.remove.not_found_hint", available=available),
+        )
 
     client_name, _ = client_name_for(match, registry)
     console = Console()
-    console.print(escape(f"目标实例：{_client_name_summary(match, registry)}"))
-    console.print(escape(f"配置文件：{match.path}"))
+    console.print(escape(i18n.t("cli.adapter.instance.remove.target", summary=_client_name_summary(match, registry))))
+    console.print(escape(i18n.t("cli.adapter.instance.remove.config_file", path=match.path)))
     if match.enabled:
-        warn("该实例当前 enable=true；配置文件删除后，已在运行的守护进程仍会继续运行该实例，请重启使其生效。")
+        warn(i18n.t("cli.adapter.instance.remove.enabled_warning"))
 
     if purge_data:
         for line in _purge_scope_lines(client_name):
             console.print(escape(line))
     if dry_run:
-        console.print("--dry-run：未做任何改动。")
+        console.print(i18n.t("cli.adapter.instance.remove.dry_run"))
         return
     if purge_data and not yes:
-        typer.confirm("确认删除配置并继续清理上述数据？", abort=True)
+        typer.confirm(i18n.t("cli.adapter.instance.remove.confirm"), abort=True)
 
     try:
         removed_file = remove_instance_config(match)
     except (OSError, ValueError) as error:
-        fail(f"无法移除 {match.path}：{error}")
+        fail(i18n.t("cli.adapter.instance.remove.failed", path=match.path, error=error))
     if removed_file:
-        console.print(escape(f"已删除配置文件 {match.path}"))
+        console.print(escape(i18n.t("cli.adapter.instance.remove.file_removed", path=match.path)))
     else:
-        console.print(escape(f"已从 {match.path} 中移除表 {match.table}（该文件还含其它表）。"))
+        console.print(escape(i18n.t("cli.adapter.instance.remove.table_removed", path=match.path, table=match.table)))
 
     if purge_data:
-        console.print("数据行未删除：core 尚未提供按 client_name 清理数据的入口。")
-        console.print(
-            escape(f"需要清理时，等 core 提供入口后执行：akaribot db purge-scope --client-name {client_name}")
-        )
+        console.print(i18n.t("cli.adapter.instance.remove.data_kept"))
+        console.print(escape(i18n.t("cli.adapter.instance.remove.purge_later", client_name=client_name)))
     else:
-        console.print(escape(f"数据保留。如需一并清理 {client_name} 前缀下的数据，请用 --purge-data 重新执行。"))
-    console.print("`akaribot adapter list` 可复核当前实例清单。")
+        console.print(escape(i18n.t("cli.adapter.instance.remove.keep_hint", client_name=client_name)))
+    console.print(i18n.t("cli.adapter.instance.remove.recheck"))
 
 
 app.add_typer(instance_app, name="instance")

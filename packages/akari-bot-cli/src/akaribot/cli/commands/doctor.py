@@ -33,6 +33,7 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 
+from akaribot.cli import i18n
 from akaribot.cli.commands.adapter import (
     AdapterInstanceConfig,
     AdapterRegistry,
@@ -69,6 +70,8 @@ class Conflict:
     :param platform: 相关平台名；跨平台时为多个平台。
     :param instances: 相关表名。
     :param detail: 结构化细节，供 ``--json`` 输出。
+    :param render_key: 报告展示用的文案键；空串表示直接用 ``message``（如 core 入口给的结论）。
+    :param render_params: 渲染 ``render_key`` 的插值参数。
     """
 
     kind: str
@@ -77,6 +80,12 @@ class Conflict:
     platform: str = ""
     instances: tuple[str, ...] = ()
     detail: Mapping[str, Any] = field(default_factory=dict)
+    render_key: str = ""
+    render_params: Mapping[str, Any] = field(default_factory=dict)
+
+    def render(self) -> str:
+        """报告展示文本：本地化文案，缺键时退回 ``message``。"""
+        return i18n.t(self.render_key, **self.render_params) if self.render_key else self.message
 
     def as_dict(self) -> dict[str, Any]:
         """转为可序列化的字典。"""
@@ -126,6 +135,7 @@ def _check_ports(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]
                 continue
             both_enabled = config.enabled and other.enabled
             note = "" if both_enabled else "（相关实例未全部启用，启用后即会冲突）"
+            first, second = _label(config, registry), _label(other, registry)
             conflicts.append(
                 Conflict(
                     kind="port",
@@ -133,13 +143,21 @@ def _check_ports(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]
                     platform=config.platform if config.platform == other.platform else "",
                     message=(
                         f"端口冲突：{endpoint.display()} 与 {other_endpoint.display()} 同时被 "
-                        f"{_label(config, registry)} 与 {_label(other, registry)} 声明{note}"
+                        f"{first} 与 {second} 声明{note}"
                     ),
                     instances=(config.table, other.table),
                     detail={
                         "address": endpoint.display(),
                         "other_address": other_endpoint.display(),
                         "port": endpoint.port,
+                    },
+                    render_key="cli.doctor.conflict.port",
+                    render_params={
+                        "address": endpoint.display(),
+                        "other_address": other_endpoint.display(),
+                        "first": first,
+                        "second": second,
+                        "note": "" if both_enabled else i18n.t("cli.doctor.conflict.not_all_enabled"),
                     },
                 )
             )
@@ -209,6 +227,13 @@ def _check_credentials(scan: AdapterScan, registry: AdapterRegistry) -> list[Con
                 ),
                 instances=tuple(member.table for member in members),
                 detail={"field": name, "length": len(normalized), "tables": [member.table for member in members]},
+                render_key="cli.doctor.conflict.credential",
+                render_params={
+                    "labels": labels,
+                    "field": name,
+                    "length": len(normalized),
+                    "note": "" if all_enabled else i18n.t("cli.doctor.conflict.not_all_enabled"),
+                },
             )
         )
     return conflicts
@@ -238,6 +263,8 @@ def _check_orphans(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflic
                 ),
                 instances=(config.table,),
                 detail={"config_file": str(config.path), "table": config.table},
+                render_key="cli.doctor.conflict.orphan",
+                render_params={"path": config.path, "table": config.table, "platform": config.platform},
             )
         )
     return conflicts
@@ -293,13 +320,13 @@ def fetch_core_conflicts(instance: InstanceLike) -> list[Conflict] | None:
     return conflicts
 
 
-app = typer.Typer(help="自检：多实例的端口冲突、凭据重复与孤立配置", no_args_is_help=False)
+app = typer.Typer(help=i18n.t("cli.doctor.help"), no_args_is_help=False)
 
 
 @app.callback(invoke_without_command=True)
 def run_checks(
-    json_output: bool = typer.Option(False, "--json", help="以 JSON 输出，供 CI 与脚本使用。"),
-    strict: bool = typer.Option(False, "--strict", help="告警也按失败处理。"),
+    json_output: bool = typer.Option(False, "--json", help=i18n.t("cli.doctor.option_json")),
+    strict: bool = typer.Option(False, "--strict", help=i18n.t("cli.doctor.option_strict")),
 ) -> None:
     """检查多实例部署的三类冲突：端口冲突、凭据重复、孤立配置。
 
@@ -319,6 +346,8 @@ def run_checks(
             level="error",
             message=f"配置文件无法解析：{error}",
             detail={"error": error},
+            render_key="cli.doctor.conflict.config",
+            render_params={"error": error},
         )
         for error in scan.errors
     )
@@ -384,19 +413,21 @@ def _print_report(
     console = Console()
     summary = _check_summary(scan, registry)
     # 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），故经 escape 再进入 rich 标记解析
-    console.print(f"实例根：{escape(str(instance.root))}")
-    console.print(f"配置根：{escape(str(config_root(instance)))}")
-    installed = "、".join(summary["installed_adapters"]) or "（无）"
-    console.print(f"实例 {summary['instances']} 个；已装适配器：{escape(installed)}")
+    console.print(i18n.t("cli.doctor.report.instance_root", path=escape(str(instance.root))))
+    console.print(i18n.t("cli.doctor.report.config_root", path=escape(str(config_root(instance)))))
+    installed = i18n.t("cli.common.list_separator").join(summary["installed_adapters"])
+    installed = installed or i18n.t("cli.doctor.report.none")
+    console.print(i18n.t("cli.doctor.report.instances", count=summary["instances"], adapters=escape(installed)))
     if summary["unconfigured_adapters"]:
-        console.print(f"已装但尚无配置的适配器：{escape('、'.join(summary['unconfigured_adapters']))}")
+        names = i18n.t("cli.common.list_separator").join(summary["unconfigured_adapters"])
+        console.print(i18n.t("cli.doctor.report.unconfigured", adapters=escape(names)))
     if not registry.available:
-        console.print(f"[yellow]已装包清单不可用：{escape(registry.note)}[/yellow]")
-        console.print("[yellow]孤立配置检查跳过；凭据检查退化为全部密钥字段。[/yellow]")
+        console.print(i18n.t("cli.doctor.report.registry_unavailable", note=escape(registry.note)))
+        console.print(i18n.t("cli.doctor.report.checks_degraded"))
     for item in conflicts:
         style = "red" if item.level == "error" else "yellow"
-        console.print(f"[{style}]{escape(item.message)}[/{style}]")
-    console.print(f"共 {len(conflicts)} 项：error {len(errors)}，warning {len(warnings)}")
-    console.print(f"冲突检查实现：{escape(implementation)}")
+        console.print(f"[{style}]{escape(item.render())}[/{style}]")
+    console.print(i18n.t("cli.doctor.report.summary", total=len(conflicts), errors=len(errors), warnings=len(warnings)))
+    console.print(i18n.t("cli.doctor.report.implementation", implementation=escape(implementation)))
     if implementation.startswith("CLI"):
-        console.print("注：core 提供 config conflicts 入口后，本命令与 daemon 前置检查将自动共用同一份判据。")
+        console.print(i18n.t("cli.doctor.report.note"))

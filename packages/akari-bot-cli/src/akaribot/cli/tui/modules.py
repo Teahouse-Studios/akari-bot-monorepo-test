@@ -212,7 +212,7 @@ def _text(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, (list, tuple, set)):
-        return "、".join(_text(item) for item in value if _text(item))
+        return i18n.t("cli.tui.common.list_separator").join(_text(item) for item in value if _text(item))
     return str(value)
 
 
@@ -327,17 +327,19 @@ class SubprocessModuleSource:
                 return strategy()
             except ModuleSourceError as error:
                 errors.append(str(error))
-        raise ModuleSourceError("；".join(errors))
+        raise ModuleSourceError(i18n.t("cli.tui.common.error_separator").join(errors))
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """见 :meth:`ModuleSource.install`。"""
         self.calls["install"] += 1
-        return self._run_cli(("module", "add", record.dist or record.name), f"安装 {record.dist or record.name}")
+        name = record.dist or record.name
+        return self._run_cli(("module", "add", name), i18n.t("cli.tui.modules.label_install", name=name))
 
     def uninstall(self, record: ModuleRecord) -> OperationResult:
         """见 :meth:`ModuleSource.uninstall`。"""
         self.calls["uninstall"] += 1
-        return self._run_cli(("module", "remove", record.dist or record.name), f"卸载 {record.dist or record.name}")
+        name = record.dist or record.name
+        return self._run_cli(("module", "remove", name), i18n.t("cli.tui.modules.label_uninstall", name=name))
 
     def cli_argv(self, *args: str) -> list[str]:
         """构造调用本 CLI 的 argv。
@@ -381,18 +383,27 @@ class SubprocessModuleSource:
                 env=self._env(),
             )
         except FileNotFoundError as error:
-            raise ModuleSourceError(f"找不到可执行文件：{argv[0]}（{error}）") from error
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_exe_missing", path=argv[0], error=error)) from error
         except subprocess.TimeoutExpired as error:
-            raise ModuleSourceError(f"`{' '.join(argv)}` 超过 {self.timeout:.0f} 秒未返回") from error
+            raise ModuleSourceError(
+                i18n.t("cli.tui.modules.src_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from error
         except OSError as error:
-            raise ModuleSourceError(f"`{' '.join(argv)}` 执行失败：{error}") from error
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _list_from_cli_json(self) -> list[ModuleRecord]:
         """经 ``akaribot module list --json`` 取数。"""
         argv = self.cli_argv("module", "list", "--json")
         completed = self._run(argv)
         if completed.returncode != 0:
-            raise ModuleSourceError(f"`{' '.join(argv)}` 退出码 {completed.returncode}：{self._tail(completed.stderr)}")
+            raise ModuleSourceError(
+                i18n.t(
+                    "cli.tui.modules.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
         return normalize_records(self._parse_json(completed.stdout, "module list --json"))
 
     def _list_from_instance(self) -> list[ModuleRecord]:
@@ -400,11 +411,13 @@ class SubprocessModuleSource:
         instance = self._instance()
         installed = getattr(instance, "installed", None)
         if not callable(installed):
-            raise ModuleSourceError("akaribot.cli.instance.Instance 未提供 installed()，无法取数")
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_no_installed"))
         try:
             payload = installed()
         except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的错误
-            raise ModuleSourceError(f"Instance.installed() 失败：{type(error).__name__}: {error}") from error
+            raise ModuleSourceError(
+                i18n.t("cli.tui.modules.src_installed_failed", kind=type(error).__name__, error=error)
+            ) from error
         return normalize_records(payload)
 
     def _instance(self) -> Any:
@@ -414,37 +427,40 @@ class SubprocessModuleSource:
         try:
             from akaribot.cli.instance import Instance, find_instance_root
         except ImportError as error:
-            raise ModuleSourceError("尚未提供 akaribot.cli.instance（T5.1），无法取数") from error
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_instance_missing")) from error
         try:
             root = find_instance_root(self.root)
             if root is None:
-                raise ModuleSourceError(
-                    f"{self.root} 不是 AkariBot 实例（未找到 akaribot.toml）；"
-                    "先运行 `akaribot init`，或用 AKARI_INSTANCE_DIR 指定实例根"
-                )
+                raise ModuleSourceError(i18n.t("cli.tui.modules.src_not_instance", root=self.root))
             return Instance(root)
         except ModuleSourceError:
             raise
         except Exception as error:  # noqa: BLE001 - 实例构造失败同样只作为降级原因上报
-            raise ModuleSourceError(f"构造 Instance 失败：{type(error).__name__}: {error}") from error
+            raise ModuleSourceError(
+                i18n.t("cli.tui.modules.src_instance_failed", kind=type(error).__name__, error=error)
+            ) from error
 
     def _run_cli(self, args: Sequence[str], label: str) -> OperationResult:
         """执行安装或卸载子命令并包装结果。"""
         argv = self.cli_argv(*args)
         completed = self._run(argv)
         if completed.returncode == 0:
-            return OperationResult(True, f"{label}成功", self._tail(completed.stdout))
-        return OperationResult(False, f"{label}失败（退出码 {completed.returncode}）", self._tail(completed.stderr))
+            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
+        return OperationResult(
+            False,
+            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
+            self._tail(completed.stderr),
+        )
 
     def _parse_json(self, stdout: str, label: str) -> Any:
         """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
-            raise ModuleSourceError(f"`{label}` 没有输出")
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_empty_output", label=label))
         try:
             return json.loads(text)
         except json.JSONDecodeError as error:
-            raise ModuleSourceError(f"`{label}` 输出不是 JSON：{error}") from error
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
         """截取子进程输出的尾部，供状态栏展示。"""
@@ -532,24 +548,24 @@ class ModulesPage(compat.Vertical):
         self._selected_key: str | None = None
         self._busy: bool = False
         self._detail_rendered: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._rendered_rows: tuple[str, ...] = ()
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树。"""
         with compat.Horizontal(id="search-row"):
-            yield compat.Input(placeholder="搜索模块名 / 发行包 / 简介，空格分词", id="search")
-            yield compat.Static("尚未读取", id="count")
+            yield compat.Input(placeholder=i18n.t("cli.tui.modules.search_placeholder"), id="search")
+            yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
         with compat.Horizontal(id="body"):
             yield compat.ListView(id="module-list")
             with compat.VerticalScroll(id="detail-pane"):
-                yield compat.Static("选择一个模块查看详情", id="detail", markup=False)
+                yield compat.Static(i18n.t("cli.tui.modules.detail_placeholder"), id="detail", markup=False)
         with compat.Horizontal(id="actions"):
-            yield compat.Button("安装", id="install", variant="primary")
-            yield compat.Button("卸载", id="uninstall", variant="error")
-            yield compat.Button("刷新", id="refresh")
+            yield compat.Button(i18n.t("cli.tui.modules.action_install"), id="install", variant="primary")
+            yield compat.Button(i18n.t("cli.tui.modules.action_uninstall"), id="uninstall", variant="error")
+            yield compat.Button(i18n.t("cli.tui.modules.action_refresh"), id="refresh")
         yield compat.ProgressBar(total=100.0, show_eta=False, id="progress")
-        yield compat.Static("就绪", id="status", markup=False)
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
@@ -619,9 +635,9 @@ class ModulesPage(compat.Vertical):
         if not force and self._records and self.cache_age() < self.cache_ttl:
             age = self.cache_age()
             self._render_list()
-            self._set_status(f"使用 {age:.1f} 秒前的缓存，共 {len(self._records)} 个模块")
+            self._set_status(i18n.t("cli.tui.modules.status_cached", age=f"{age:.1f}", count=len(self._records)))
             return
-        self._set_status("正在读取模块列表…")
+        self._set_status(i18n.t("cli.tui.modules.status_loading"))
         self.run_worker(self._load_records(), group="modules-load", exclusive=True)
 
     async def _load_records(self) -> bool:
@@ -633,19 +649,19 @@ class ModulesPage(compat.Vertical):
             self._loaded_at = time.monotonic()
             self.last_error = str(error)
             self._render_list()
-            self._set_status(f"读取失败：{error}")
+            self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=error))
             return False
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
             self._records = ()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._render_list()
-            self._set_status(f"读取失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
         self._records = tuple(sorted(records, key=sort_key))
         self._loaded_at = time.monotonic()
         self.last_error = ""
-        self.last_result = f"已读取 {len(self._records)} 个模块"
+        self.last_result = i18n.t("cli.tui.modules.status_loaded", count=len(self._records))
         self._render_list()
         self._set_status(self.last_result)
         return True
@@ -732,7 +748,12 @@ class ModulesPage(compat.Vertical):
     def _sync_count(self, records: Sequence[ModuleRecord]) -> None:
         """更新计数标签。"""
         installed = sum(1 for record in self._records if record.installed)
-        text = f"显示 {len(records)} / 共 {len(self._records)} 个模块，其中已安装 {installed} 个"
+        text = i18n.t(
+            "cli.tui.modules.count",
+            shown=len(records),
+            total=len(self._records),
+            installed=installed,
+        )
         self.query_one("#count", compat.Static).update(compat.plain_text(text))
 
     def _sync_detail(self) -> None:
@@ -740,31 +761,36 @@ class ModulesPage(compat.Vertical):
         record = self.selected_record
         if record is None:
             if not self._records:
-                hint = "列表为空：先按 r 重新读取，或用搜索框输入模块名后按 i 安装"
+                hint = i18n.t("cli.tui.modules.hint_empty")
             elif not self.visible_records:
-                hint = "没有匹配的模块：按 esc 清空搜索"
+                hint = i18n.t("cli.tui.modules.hint_no_match")
             else:
-                hint = "选择左侧模块查看详情"
+                hint = i18n.t("cli.tui.modules.hint_select")
             self._detail_rendered = hint
             self.query_one("#detail", compat.Static).update(compat.plain_text(hint))
             return
         self._selected_key = record.dist
         rows = [
-            ("名称", record.name),
-            ("发行包", record.dist),
-            ("类型", record.kind_label),
-            ("版本", record.version or "未知"),
-            ("状态", record.state_label),
-            ("核心 API", record.requires_core_api or "未声明"),
-            ("简介", record.summary or "无"),
+            (i18n.t("cli.tui.modules.field_name"), record.name),
+            (i18n.t("cli.tui.modules.field_dist"), record.dist),
+            (i18n.t("cli.tui.modules.field_kind"), record.kind_label),
+            (i18n.t("cli.tui.modules.field_version"), record.version or i18n.t("cli.tui.common.unknown")),
+            (i18n.t("cli.tui.modules.field_state"), record.state_label),
+            (i18n.t("cli.tui.modules.field_core_api"), record.requires_core_api or i18n.t("cli.tui.common.undeclared")),
+            (i18n.t("cli.tui.modules.field_summary"), record.summary or i18n.t("cli.tui.common.none")),
         ]
         if record.dependents:
-            rows.append(("被依赖", "、".join(record.dependents)))
+            rows.append(
+                (
+                    i18n.t("cli.tui.modules.field_dependents"),
+                    i18n.t("cli.tui.common.list_separator").join(record.dependents),
+                )
+            )
         if record.origin:
-            rows.append(("来源", record.origin))
+            rows.append((i18n.t("cli.tui.modules.field_origin"), record.origin))
         lines = compat.align_rows(rows, gap=2)
         lines.append("")
-        lines.append("Enter 选中；i 安装；u 卸载；r 刷新")
+        lines.append(i18n.t("cli.tui.modules.detail_keys"))
         text = "\n".join(lines)
         self._detail_rendered = text
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
@@ -857,17 +883,29 @@ class ModulesPage(compat.Vertical):
         """发起安装；无目标时给出提示而不动作。"""
         target = self._install_target()
         if target is None:
-            compat.notify(self.app, "先选中未安装的模块，或在搜索框输入模块名", severity="warning", title="安装")
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.pick_install"),
+                severity="warning",
+                title=i18n.t("cli.tui.modules.action_install"),
+            )
             return
-        self._start_operation("install", f"安装 {target.dist}", target, self.source.install)
+        label = i18n.t("cli.tui.modules.label_install", name=target.dist)
+        self._start_operation("install", label, target, self.source.install)
 
     def request_uninstall(self) -> None:
         """发起卸载；无目标时给出提示而不动作。"""
         target = self._uninstall_target()
         if target is None:
-            compat.notify(self.app, "先选中一个已安装的模块", severity="warning", title="卸载")
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.pick_uninstall"),
+                severity="warning",
+                title=i18n.t("cli.tui.modules.action_uninstall"),
+            )
             return
-        self._start_operation("uninstall", f"卸载 {target.dist}", target, self.source.uninstall)
+        label = i18n.t("cli.tui.modules.label_uninstall", name=target.dist)
+        self._start_operation("uninstall", label, target, self.source.uninstall)
 
     def _start_operation(
         self,
@@ -878,12 +916,17 @@ class ModulesPage(compat.Vertical):
     ) -> None:
         """在后台任务里执行安装或卸载，并按阶段推进进度。"""
         if self._busy:
-            compat.notify(self.app, "已有安装或卸载在进行", severity="warning", title="请稍候")
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.busy"),
+                severity="warning",
+                title=i18n.t("cli.tui.common.busy_title"),
+            )
             return
         self._busy = True
         self._sync_actions()
         compat.progress_phase(self.query_one("#progress", compat.ProgressBar), 1.0, _PROGRESS_PHASES)
-        self._set_status(f"{label}：调用子进程…")
+        self._set_status(i18n.t("cli.tui.modules.calling", label=label))
         self.run_worker(self._operate(kind, label, record, func), group="modules-op", exclusive=True)
 
     async def _operate(
@@ -898,21 +941,28 @@ class ModulesPage(compat.Vertical):
         try:
             result = await asyncio.to_thread(func, record)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
-            result = OperationResult(False, f"{label}失败", f"{type(error).__name__}: {error}")
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                f"{type(error).__name__}: {error}",
+            )
         compat.progress_phase(bar, 3.0, _PROGRESS_PHASES)
         self._selected_key = record.dist
         if result.ok:
-            self._set_status(f"{result.message}，正在刷新列表…")
+            self._set_status(i18n.t("cli.tui.modules.refreshing", message=result.message))
             self.invalidate_cache()
             await self._load_records()
             compat.progress_phase(bar, _PROGRESS_PHASES, _PROGRESS_PHASES)
-            detail = f"（{result.detail.splitlines()[-1]}）" if result.detail else ""
+            detail = (
+                i18n.t("cli.tui.modules.detail_wrap", detail=result.detail.splitlines()[-1]) if result.detail else ""
+            )
             self.last_result = f"{result.message}{detail}"
             self._set_status(self.last_result)
             compat.notify(self.app, result.message, severity="information", title=label)
         else:
             self.last_error = result.detail or result.message
-            self._set_status(f"{result.message}：{result.detail.splitlines()[-1] if result.detail else '无输出'}")
+            detail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
+            self._set_status(i18n.t("cli.tui.modules.failed_detail", message=result.message, detail=detail))
             compat.progress_reset(bar)
             compat.notify(self.app, result.message, severity="error", title=label)
         self._busy = False

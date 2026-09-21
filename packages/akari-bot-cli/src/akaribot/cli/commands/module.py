@@ -14,13 +14,14 @@ import contextlib
 import json
 import sys
 from pathlib import Path
-from typing import Annotated, Sequence
+from typing import Annotated, Iterable, Sequence
 
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from rich.table import Table
 
+from akaribot.cli import i18n
 from akaribot.cli import venv as engine
 from akaribot.cli.instance import (
     CliError,
@@ -37,20 +38,17 @@ from akaribot.cli.instance import (
     warn,
 )
 
-app = typer.Typer(
-    help=(
-        "模块安装与全局装载：list / add / remove / update / load / unload\n\n"
-        "三级「启用」语义：add/remove 决定代码是否装在本实例；load/unload 决定模块是否参与命令匹配"
-        "（等价于机器人内的 `~module load` / `~module unload`，超管）；某个群/频道能否使用是场景级"
-        "开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用"
-        " enable/disable 表示全局装载。"
-    )
-)
+app = typer.Typer(help=i18n.t("cli.module.help"))
 
-OfflineOption = Annotated[bool, typer.Option("--offline", help="registry 只用本地缓存，不联网")]
-DryRunOption = Annotated[bool, typer.Option("--dry-run", help="只打印将执行的命令，不修改任何文件")]
-VerboseOption = Annotated[bool, typer.Option("--verbose", "-v", help="回显 uv 的全部输出")]
-YesOption = Annotated[bool, typer.Option("--yes", "-y", help="不询问，直接执行")]
+OfflineOption = Annotated[bool, typer.Option("--offline", help=i18n.t("cli.module.option_offline"))]
+DryRunOption = Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.module.option_dry_run"))]
+VerboseOption = Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.module.option_verbose"))]
+YesOption = Annotated[bool, typer.Option("--yes", "-y", help=i18n.t("cli.common.yes_option"))]
+
+
+def _join_list(items: Iterable[str]) -> str:
+    """按当前语言的顿号或逗号拼接展示用列表。"""
+    return i18n.t("cli.common.list_separator").join(items)
 
 
 def _load_catalog(instance: Instance, *, offline: bool, needed: bool) -> engine.RegistryCatalog | None:
@@ -65,19 +63,20 @@ def _load_catalog(instance: Instance, *, offline: bool, needed: bool) -> engine.
 
 def _describe_installed(packages: Sequence[PackageInfo]) -> str:
     """把包列表拼成「名字 版本」的展示串。"""
-    return "、".join(f"{info.display_name} {info.version}".strip() for info in packages)
+    return _join_list(f"{info.display_name} {info.version}".strip() for info in packages)
 
 
 def _report_placeholders(instance: Instance, snapshot: engine.ConfigSnapshot) -> int:
     """第 7 步：报告新增配置项里的 ``<Replace me>`` 占位符数量。"""
     changed = snapshot.changed_paths(instance)
     if changed:
-        console.print("  配置文件变更：" + "、".join(str(path.relative_to(instance.root)) for path in changed[:10]))
+        paths = _join_list(str(path.relative_to(instance.root)) for path in changed[:10])
+        console.print(i18n.t("cli.module.install.config_changed", paths=paths))
     count = engine.count_placeholders(changed)
     if count:
-        console.print(f"[yellow]有 {count} 项仍是 <Replace me> 占位符，运行 `akaribot config edit` 填写。[/yellow]")
+        console.print(i18n.t("cli.module.install.placeholders_left", count=count))
     else:
-        ok("没有待填的占位符")
+        ok(i18n.t("cli.module.install.no_placeholders"))
     return count
 
 
@@ -86,16 +85,18 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
 
     第 5 步的数据库迁移不回滚：迁移是幂等且向前的，回滚风险大于收益，报告里如实告知用户表已建。
     """
-    warn("开始回滚安装")
+    warn(i18n.t("cli.module.install.rollback_start"))
     restored = snapshot.restore(instance)
     if restored:
-        console.print("  已恢复配置文件：" + "、".join(str(path.relative_to(instance.root)) for path in restored[:10]))
+        paths = _join_list(str(path.relative_to(instance.root)) for path in restored[:10])
+        console.print(i18n.t("cli.module.install.config_restored", paths=paths))
     try:
+        # what 会被 venv.py 拼成「{what}完成/失败」，该层不在本次范围内，保持原文以免中英混排。
         runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=f"卸载 {dist}")
     except CliError as exc:
         warn(str(exc))
     instance.invalidate()
-    warn("数据库迁移不回滚：已建的表保留，属幂等且向前的变更。")
+    warn(i18n.t("cli.module.install.rollback_migration_kept"))
 
 
 def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) -> None:
@@ -122,12 +123,19 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
         try:
             specifier = SpecifierSet(target.requires_core_api)
         except InvalidSpecifier:
-            warn(f"{target.dist} 的 requires_core_api 无法解析：{target.requires_core_api}")
+            warn(i18n.t("cli.module.precheck.unparsable_api", dist=target.dist, spec=target.requires_core_api))
         else:
             if not specifier.contains(str(api_version)):
-                problems.append(f"{target.dist} 要求 core API {target.requires_core_api}，当前为 {api_version}")
+                problems.append(
+                    i18n.t(
+                        "cli.module.precheck.api_mismatch",
+                        dist=target.dist,
+                        spec=target.requires_core_api,
+                        current=api_version,
+                    )
+                )
     elif target.requires_core_api and api_version is None:
-        warn("未能读到已装 core 的 API 版本，跳过 core API 兼容性检查。")
+        warn(i18n.t("cli.module.precheck.api_unknown"))
 
     problems.extend(engine.dependency_conflicts(target, installed_env))
     if problems:
@@ -135,12 +143,13 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
             console.print(f"[red]  × {problem}[/red]")
         related = engine.installed_api_requirements(target, installed_env)
         if related:
-            console.print("  已装包对它的要求：" + "；".join(related))
+            items = i18n.t("cli.common.clause_separator").join(related)
+            console.print(i18n.t("cli.module.precheck.installed_requirements", items=items))
         if not force:
-            fail("依赖冲突（见上）。修正版本约束后重试，或确认无碍后加 --force。")
-        warn("--force：忽略上述冲突继续安装，机器人可能无法启动。")
+            fail(i18n.t("cli.module.precheck.conflict"))
+        warn(i18n.t("cli.module.precheck.force"))
     else:
-        ok("兼容性预检通过")
+        ok(i18n.t("cli.module.precheck.ok"))
 
 
 def _resolve(
@@ -176,60 +185,61 @@ def _install(
 ) -> int:
     """执行安装流水线，返回占位符数量。"""
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
-    step(1, 7, f"解析 {target.dist}（来源：{target.source}）")
-    console.print("  安装参数：" + " ".join(target.specs))
-    step(2, 7, "兼容性预检")
+    step(1, 7, i18n.t("cli.module.install.step_resolve", dist=target.dist, source=target.source))
+    console.print(i18n.t("cli.module.install.specs_line", specs=" ".join(target.specs)))
+    step(2, 7, i18n.t("cli.module.install.step_precheck"))
     if dry_run:
-        console.print("[dim]dry-run：跳过预检[/dim]")
+        console.print(i18n.t("cli.module.dry_run_precheck"))
     else:
         _precheck(instance, target, force=force)
 
-    step(3, 7, f"下载并安装（{instance.python}）")
+    step(3, 7, i18n.t("cli.module.install.step_install", python=instance.python))
     try:
+        # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         runner.run_checked(
             engine.install_argv(instance.python, target.specs, upgrade=upgrade), what=f"安装 {target.dist}"
         )
     except CliError as exc:
         fail(str(exc))
     if dry_run:
-        console.print("[dim]dry-run：跳过 config sync、db upgrade 与热装载通知[/dim]")
+        console.print(i18n.t("cli.module.dry_run_skip_rest"))
         return 0
     instance.invalidate()
 
     snapshot = engine.ConfigSnapshot.take(instance)
-    step(4, 7, "补写配置（config sync）")
+    step(4, 7, i18n.t("cli.module.install.step_config_sync"))
     try:
         engine.config_sync(instance, target.dist)
     except CliError as exc:
         warn(str(exc))
         _rollback(instance, target.dist, snapshot, runner)
-        fail(f"{target.dist} 的配置补写失败，安装已回滚。")
+        fail(i18n.t("cli.module.install.config_sync_failed", dist=target.dist))
 
-    step(5, 7, "应用数据库迁移（db upgrade）")
+    step(5, 7, i18n.t("cli.module.install.step_db_upgrade"))
     try:
         engine.db_upgrade(instance, target.dist)
     except CliError as exc:
         warn(str(exc))
         _rollback(instance, target.dist, snapshot, runner)
-        fail(f"{target.dist} 的数据库迁移失败，安装已回滚。")
+        fail(i18n.t("cli.module.install.db_upgrade_failed", dist=target.dist))
 
-    step(6, 7, "通知运行中的实例")
+    step(6, 7, i18n.t("cli.module.install.step_notify"))
     notify = instance.notify_package_change("install", target.dist)
     if notify.attempted and not notify.delivered:
         warn(notify.detail)
-        warn("模块已装好，但需要 `~restart` 或重启进程后才会装载。")
+        warn(i18n.t("cli.module.install.restart_needed"))
     else:
         console.print("  " + notify.detail)
 
-    step(7, 7, "报告配置项")
+    step(7, 7, i18n.t("cli.module.install.step_report"))
     return _report_placeholders(instance, snapshot)
 
 
-@app.command("list")
+@app.command("list", help=i18n.t("cli.module.list.help"))
 def list_packages(
     instance: InstancePathOption = None,
-    kind: Annotated[str | None, typer.Option("--kind", help="只看 module 或 adapter")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON，便于脚本消费")] = False,
+    kind: Annotated[str | None, typer.Option("--kind", help=i18n.t("cli.module.list.option_kind"))] = None,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
 ) -> None:
     """列出已安装的模块与适配器。"""
     target = require_instance(instance)
@@ -255,34 +265,36 @@ def list_packages(
         ]
         console.print_json(json.dumps(payload, ensure_ascii=False))
         return
-    table = Table(title=f"已装 akaribot 包（{len(selected)}）")
-    table.add_column("种类")
-    table.add_column("名字")
-    table.add_column("版本")
-    table.add_column("分发名")
-    table.add_column("提供模块")
-    table.add_column("来源")
+    table = Table(title=i18n.t("cli.module.list.table_title", count=len(selected)))
+    table.add_column(i18n.t("cli.module.list.column_kind"))
+    table.add_column(i18n.t("cli.module.list.column_name"))
+    table.add_column(i18n.t("cli.module.list.column_version"))
+    table.add_column(i18n.t("cli.module.list.column_dist"))
+    table.add_column(i18n.t("cli.module.list.column_provides"))
+    table.add_column(i18n.t("cli.module.list.column_source"))
     for info in selected:
         table.add_row(
             info.kind,
             info.display_name,
             info.version,
             info.dist,
-            "、".join(info.provides_modules) or "-",
-            "可编辑" if info.editable else "发行版",
+            _join_list(info.provides_modules) or "-",
+            i18n.t("cli.module.list.source_editable") if info.editable else i18n.t("cli.module.list.source_dist"),
         )
     console.print(table)
 
 
-@app.command("add")
+@app.command("add", help=i18n.t("cli.module.add.help"))
 def add(
-    name: Annotated[str | None, typer.Argument(help="模块名、适配器名或分发名；用 -e 时可省略")] = None,
-    dist: Annotated[str | None, typer.Option("--dist", help="直接指定分发名，跳过 registry 查名")] = None,
-    version: Annotated[str | None, typer.Option("--version", help="版本或版本区间，如 1.2.3 或 '>=1,<2'")] = None,
-    editable: Annotated[Path | None, typer.Option("-e", "--editable", help="以可编辑方式安装该本地目录")] = None,
-    extra: Annotated[list[str] | None, typer.Option("--extra", help="要一并安装的 extra，可重复")] = None,
-    kind: Annotated[str | None, typer.Option("--kind", help="限定包种类：module 或 adapter")] = None,
-    force: Annotated[bool, typer.Option("--force", help="预检发现冲突时仍然继续安装")] = False,
+    name: Annotated[str | None, typer.Argument(help=i18n.t("cli.module.add.arg_name"))] = None,
+    dist: Annotated[str | None, typer.Option("--dist", help=i18n.t("cli.module.add.option_dist"))] = None,
+    version: Annotated[str | None, typer.Option("--version", help=i18n.t("cli.module.add.option_version"))] = None,
+    editable: Annotated[
+        Path | None, typer.Option("-e", "--editable", help=i18n.t("cli.module.add.option_editable"))
+    ] = None,
+    extra: Annotated[list[str] | None, typer.Option("--extra", help=i18n.t("cli.module.add.option_extra"))] = None,
+    kind: Annotated[str | None, typer.Option("--kind", help=i18n.t("cli.module.add.option_kind"))] = None,
+    force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.module.add.option_force"))] = False,
     offline: OfflineOption = False,
     dry_run: DryRunOption = False,
     verbose: VerboseOption = False,
@@ -306,13 +318,18 @@ def add(
         fail(str(exc))
     if current is not None and not force:
         fail(
-            f"{current.dist} 已安装（{current.version}）。升级请用 `akaribot module update {current.display_name}`，重装加 --force。"
+            i18n.t(
+                "cli.module.add.already_installed",
+                dist=current.dist,
+                version=current.version,
+                name=current.display_name,
+            )
         )
     if current is not None:
-        warn(f"{current.dist} 已安装（{current.version}），--force 将覆盖重装。")
+        warn(i18n.t("cli.module.add.force_reinstall", dist=current.dist, version=current.version))
     _install(target_instance, target, force=force, dry_run=dry_run, verbose=verbose)
     if not dry_run:
-        console.print("\n下一步：`akaribot config edit` 填写占位符，运行中可用 `~reload` 让改动生效。")
+        console.print(i18n.t("cli.module.add.next_steps"))
 
 
 def _cascade_order(instance: Instance, root: PackageInfo) -> list[PackageInfo]:
@@ -344,29 +361,34 @@ def _purge(instance: Instance, packages: Sequence[PackageInfo], *, yes: bool, dr
             candidate = instance.config_dir / subdir / f"{module_name}.toml"
             if candidate.exists():
                 files.append(candidate)
-    console.print("  将删除数据表：" + ("、".join(tables) if tables else "无（manifest 未声明 owned_tables）"))
-    console.print(
-        "  将删除配置文件：" + ("、".join(str(path.relative_to(instance.root)) for path in files) if files else "无")
-    )
+    tables_text = _join_list(tables) if tables else i18n.t("cli.module.purge.none_tables")
+    console.print(i18n.t("cli.module.purge.tables", tables=tables_text))
+    if files:
+        files_text = _join_list(str(path.relative_to(instance.root)) for path in files)
+    else:
+        files_text = i18n.t("cli.module.purge.none")
+    console.print(i18n.t("cli.module.purge.files", files=files_text))
     if dry_run:
         return
     if not yes:
-        typer.confirm("确认删除上述数据表与配置文件（不可恢复）", abort=True)
+        typer.confirm(i18n.t("cli.module.purge.confirm"), abort=True)
     for package in packages:
         if package.owned_tables:
             engine.db_purge(instance, package.dist)
     for path in files:
         path.unlink()
     if files:
-        ok(f"已删除 {len(files)} 个配置文件")
+        ok(i18n.t("cli.module.purge.removed_files", count=len(files)))
 
 
-@app.command("remove")
+@app.command("remove", help=i18n.t("cli.module.remove.help"))
 def remove(
-    name: Annotated[str, typer.Argument(help="已安装的模块名、适配器名或分发名")],
-    cascade: Annotated[bool, typer.Option("--cascade", help="连带卸载依赖它的包，先列清单再二次确认")] = False,
-    force: Annotated[bool, typer.Option("--force", help="无视反向依赖强行卸载并告警")] = False,
-    purge_data: Annotated[bool, typer.Option("--purge-data", help="同时删除该包的数据表与配置文件")] = False,
+    name: Annotated[str, typer.Argument(help=i18n.t("cli.module.remove.arg_name"))],
+    cascade: Annotated[bool, typer.Option("--cascade", help=i18n.t("cli.module.remove.option_cascade"))] = False,
+    force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.module.remove.option_force"))] = False,
+    purge_data: Annotated[
+        bool, typer.Option("--purge-data", help=i18n.t("cli.module.remove.option_purge_data"))
+    ] = False,
     yes: YesOption = False,
     dry_run: DryRunOption = False,
     verbose: VerboseOption = False,
@@ -379,27 +401,31 @@ def remove(
     except CliError as exc:
         fail(str(exc))
     if package is None:
-        fail(f"{name} 未安装。用 `akaribot module list` 查看已装包。")
+        fail(i18n.t("cli.module.not_installed", name=name))
     dependents = target.dependents_of(package.dist)
     if dependents and not (cascade or force):
         fail(
-            f"{package.display_name} 被以下包依赖：{_describe_installed(dependents)}。"
-            "默认拒绝卸载；确认连带卸载加 --cascade，确认破坏依赖加 --force。"
+            i18n.t(
+                "cli.module.remove.dependents",
+                name=package.display_name,
+                packages=_describe_installed(dependents),
+            )
         )
     order = _cascade_order(target, package) if cascade else [package]
     if cascade and dependents:
-        console.print("连带卸载清单：" + _describe_installed(order))
+        console.print(i18n.t("cli.module.remove.cascade_list", packages=_describe_installed(order)))
         if not dry_run and not yes:
-            typer.confirm(f"将卸载 {len(order)} 个包，继续", abort=True)
+            typer.confirm(i18n.t("cli.module.remove.cascade_confirm", count=len(order)), abort=True)
     if force and dependents:
-        warn(f"--force：{_describe_installed(dependents)} 将因缺依赖在 discover() 时不再注册（可恢复，不是数据损坏）。")
+        warn(i18n.t("cli.module.remove.force_warning", packages=_describe_installed(dependents)))
 
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
     for item in order:
         notify = target.notify_package_change("remove", item.dist) if not dry_run else None
         if notify is not None:
-            console.print(f"  {item.dist}：{notify.detail}")
+            console.print(i18n.t("cli.module.remove.notify_line", dist=item.dist, detail=notify.detail))
     try:
+        # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what="卸载")
     except CliError as exc:
         fail(str(exc))
@@ -407,7 +433,7 @@ def remove(
     if purge_data:
         _purge(target, order, yes=yes, dry_run=dry_run)
     else:
-        console.print("配置与数据默认保留；要一并清理请加 --purge-data。")
+        console.print(i18n.t("cli.module.remove.keep_data"))
 
 
 def _update_payload(
@@ -415,7 +441,7 @@ def _update_payload(
     updated: Sequence[str],
     plans: Sequence[engine.InstallTarget],
     failed: Sequence[tuple[str, str]],
-    skipped: Sequence[tuple[str, str]],
+    skipped: Sequence[tuple[str, str, str]],
     notified: Sequence[tuple[str, str, bool]],
     dry_run: bool,
 ) -> dict:
@@ -428,7 +454,7 @@ def _update_payload(
     :param updated: 更新成功的分发名。
     :param plans: 本次计划更新的目标。
     :param failed: 分发名与失败原因的二元组。
-    :param skipped: 分发名与跳过原因的二元组。
+    :param skipped: 分发名、跳过原因、人类可读跳过文案的三元组；前两项进 JSON 契约，末项只供打印。
     :param notified: 分发名、通知详情、是否送达的三元组。
     :param dry_run: 是否为演练模式。
     :return: JSON 可序列化的载荷。
@@ -438,10 +464,10 @@ def _update_payload(
     return {
         "updated": list(updated),
         "failed": [dist for dist, _ in failed],
-        "skipped": [dist for dist, _ in skipped],
+        "skipped": [dist for dist, _, _ in skipped],
         "planned": [plan.dist for plan in plans],
         "failed_details": [{"dist": dist, "reason": reason} for dist, reason in failed],
-        "skipped_details": [{"dist": dist, "reason": reason} for dist, reason in skipped],
+        "skipped_details": [{"dist": dist, "reason": reason} for dist, reason, _ in skipped],
         "notified": [{"dist": dist, "detail": detail, "delivered": ok_} for dist, detail, ok_ in notified],
         "reload_pending": reload_pending,
         "restart_required": bool(reload_pending),
@@ -474,12 +500,12 @@ def _perform_update(
     except CliError as exc:
         fail(str(exc))
     if not requested and not all_packages:
-        fail("请给出要更新的包名，或用 `akaribot module update --all` 更新全部。")
+        fail(i18n.t("cli.module.update.no_names"))
     selected: list[PackageInfo] = []
     for item in requested:
         found = target_instance.find_package(item)
         if found is None:
-            fail(f"{item} 未安装。用 `akaribot module list` 查看已装包。")
+            fail(i18n.t("cli.module.not_installed", name=item))
         selected.append(found)
     if all_packages:
         selected = [info for info in installed.values() if engine.canonical(info.dist) != engine.CLI_DIST]
@@ -488,51 +514,57 @@ def _perform_update(
     workspace_root = target_instance.workspace_root
     catalog = _load_catalog(target_instance, offline=offline, needed=workspace_root is None)
     plans: list[engine.InstallTarget] = []
-    skipped: list[tuple[str, str]] = []
+    skipped: list[tuple[str, str, str]] = []
     for info in selected:
         if workspace_root is not None:
             resolved = engine.workspace_target(workspace_root, info.dist)
             if resolved is None:
-                skipped.append((info.dist, "工作区里没有该包"))
+                # 三元组的第二项是 --json 载荷里的 reason，属机器可读契约，保持原文；第三项只供打印。
+                skipped.append((info.dist, "工作区里没有该包", i18n.t("cli.module.update.skip_no_workspace")))
                 continue
             plans.append(resolved)
             continue
         latest = catalog.latest(info.dist) if catalog else None
         if not latest:
-            skipped.append((info.dist, "registry 里没有该分发"))
+            skipped.append((info.dist, "registry 里没有该分发", i18n.t("cli.module.update.skip_no_registry")))
             continue
         if latest == info.version and not force:
-            skipped.append((info.dist, f"已是最新（{latest}）"))
+            skipped.append(
+                (info.dist, f"已是最新（{latest}）", i18n.t("cli.module.update.skip_up_to_date", version=latest))
+            )
             continue
         plans.append(
             engine.InstallTarget(dist=info.dist, version=latest, specs=(f"{info.dist}=={latest}",), source="registry")
         )
 
     if not plans:
-        for dist, reason in skipped:
-            console.print(f"  跳过 {dist}：{reason}")
-        ok("没有需要更新的包")
+        for dist, _, printable in skipped:
+            console.print(i18n.t("cli.module.update.skip_line", dist=dist, reason=printable))
+        ok(i18n.t("cli.module.update.nothing_to_do"))
         return 0, _update_payload(updated=[], plans=[], failed=[], skipped=skipped, notified=[], dry_run=dry_run)
 
     argv = engine.install_argv(target_instance.python, [spec for plan in plans for spec in plan.specs], upgrade=True)
-    console.print("将更新：" + "、".join(f"{plan.dist}→{plan.version or '本地源码'}" for plan in plans))
+    targets = _join_list(f"{plan.dist}→{plan.version or i18n.t('cli.module.update.local_source')}" for plan in plans)
+    console.print(i18n.t("cli.module.update.will_update", targets=targets))
     if dry_run:
         console.print(f"[dim]$ {' '.join(argv)}[/dim]")
-        console.print("[dim]dry-run：跳过 config sync、db upgrade 与热装载通知[/dim]")
+        console.print(i18n.t("cli.module.dry_run_skip_rest"))
         return 0, _update_payload(updated=[], plans=plans, failed=[], skipped=skipped, notified=[], dry_run=True)
     if not assume_yes:
-        typer.confirm(f"更新 {len(plans)} 个包", abort=True)
+        typer.confirm(i18n.t("cli.module.update.confirm", count=len(plans)), abort=True)
 
     completed = engine.CommandRunner(verbose=verbose).run(argv)
     if completed.returncode != 0:
-        detail = f"更新包失败：{engine.summarize_uv_error(completed.stderr or completed.stdout or '')}"
-        failures = [(plan.dist, detail) for plan in plans]
+        summary = engine.summarize_uv_error(completed.stderr or completed.stdout or "")
+        # failed_details[].reason 是 --json 契约的一部分，保持原文；人类可读提示另行本地化。
+        failures = [(plan.dist, f"更新包失败：{summary}") for plan in plans]
         payload = _update_payload(updated=[], plans=plans, failed=failures, skipped=skipped, notified=[], dry_run=False)
+        message = i18n.t("cli.module.update.failed", detail=summary)
         if not json_mode:
-            fail(detail)
-        warn(detail)
+            fail(message)
+        warn(message)
         return 1, payload
-    ok("更新包完成")
+    ok(i18n.t("cli.module.update.ok"))
     target_instance.invalidate()
 
     failed: list[tuple[str, str]] = []
@@ -548,33 +580,34 @@ def _perform_update(
         notified.append((plan.dist, notify.detail, notify.delivered))
         if notify.attempted and not notify.delivered:
             warn(notify.detail)
-    for dist, reason in skipped:
-        console.print(f"  跳过 {dist}：{reason}")
+    for dist, _, printable in skipped:
+        console.print(i18n.t("cli.module.update.skip_line", dist=dist, reason=printable))
     failed_names = [dist for dist, _ in failed]
     updated = [plan.dist for plan in plans if plan.dist not in failed_names]
     payload = _update_payload(
         updated=updated, plans=plans, failed=failed, skipped=skipped, notified=notified, dry_run=False
     )
     if failed:
-        warn(f"仅 {len(updated)} 个包更新成功；请检查上面的错误后重试。")
+        warn(i18n.t("cli.module.update.partial", count=len(updated)))
         return 1, payload
-    ok(f"已更新 {len(updated)} 个包" + ("；运行中的实例已收到热装载通知" if updated else ""))
+    suffix = i18n.t("cli.module.update.notified_suffix") if updated else ""
+    ok(i18n.t("cli.module.update.done", count=len(updated)) + suffix)
     return 0, payload
 
 
-@app.command("update")
+@app.command("update", help=i18n.t("cli.module.update.help"))
 def update(
-    name: Annotated[list[str] | None, typer.Argument(help="要更新的包名，可给多个；缺省配合 --all")] = None,
-    all_packages: Annotated[bool, typer.Option("--all", help="更新全部已装包（含 core）")] = False,
+    name: Annotated[list[str] | None, typer.Argument(help=i18n.t("cli.module.update.arg_name"))] = None,
+    all_packages: Annotated[bool, typer.Option("--all", help=i18n.t("cli.module.update.option_all"))] = False,
     offline: OfflineOption = False,
-    force: Annotated[bool, typer.Option("--force", help="已是最新版本时也重装")] = False,
+    force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.module.update.option_force"))] = False,
     yes: YesOption = False,
     non_interactive: Annotated[
-        bool, typer.Option("--non-interactive", help="不提问，等同 --yes；供机器人内的 ~update 委托调用")
+        bool, typer.Option("--non-interactive", help=i18n.t("cli.module.update.option_non_interactive"))
     ] = False,
     dry_run: DryRunOption = False,
     verbose: VerboseOption = False,
-    as_json: Annotated[bool, typer.Option("--json", help="stdout 只输出一行结果 JSON，进度与警告走 stderr")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.module.update.option_json"))] = False,
     instance: InstancePathOption = None,
 ) -> None:
     """更新已安装的包；工作区模式下等价于按本地源码重装。
@@ -585,7 +618,7 @@ def update(
     """
     if as_json:
         if verbose:
-            err_console.print("[dim]--json 下忽略 --verbose：stdout 只允许出现结果 JSON。[/dim]")
+            err_console.print(i18n.t("cli.module.update.verbose_ignored"))
         # 结果 JSON 之外的一切输出先改道 stderr，改道块结束后才写出唯一的那一行。
         stream = sys.stdout
         with contextlib.redirect_stdout(sys.stderr):
@@ -619,11 +652,11 @@ def update(
 
 # 三级「启用」语义（附录 B）：安装看 venv、全局装载看 ModuleStatus.load、场景启用看
 # target_union_info.modules。本命令只管第二级，故用 load/unload 而非场景级的 enable/disable。
-@app.command("load")
+@app.command("load", help=i18n.t("cli.module.load.help"))
 def load_module(
     name: str,
     instance_path: InstancePathOption = None,
-    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
 ) -> None:
     """全局装载模块：让它参与命令匹配（与安装、场景启用是两回事）。
 
@@ -633,21 +666,21 @@ def load_module(
     # 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才回报，故先用锁文件短路；
     # 为真时仍走子进程，由 core 判定 Server 是否在线。
     if not instance.is_running():
-        fail("实例未运行，无法热装载；下次启动会自动装载。要立即生效请先 `akaribot run`。")
+        fail(i18n.t("cli.warn.instance_not_running_load"))
     code = instance.run_core("modules", "load", name)
     if as_json:
         console.print_json(json.dumps({"module": name, "action": "load", "returncode": code}, ensure_ascii=False))
     elif code == 0:
-        ok(f"已装载 {name}")
+        ok(i18n.t("cli.ok.loaded", module=name))
     if code != 0:
         raise typer.Exit(code)
 
 
-@app.command("unload")
+@app.command("unload", help=i18n.t("cli.module.unload.help"))
 def unload_module(
     name: str,
     instance_path: InstancePathOption = None,
-    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
 ) -> None:
     """全局卸载模块：让它退出命令匹配；代码与配置都保留。
 
@@ -655,14 +688,11 @@ def unload_module(
     """
     instance = require_instance(instance_path)
     if not instance.is_running():
-        fail(
-            "实例未运行，无法热卸载；下次启动仍会按 module_status 的现有记录装载。"
-            "要让它保持卸载，请先 `akaribot run` 再执行本命令。"
-        )
+        fail(i18n.t("cli.warn.instance_not_running_unload"))
     code = instance.run_core("modules", "unload", name)
     if as_json:
         console.print_json(json.dumps({"module": name, "action": "unload", "returncode": code}, ensure_ascii=False))
     elif code == 0:
-        ok(f"已卸载 {name}")
+        ok(i18n.t("cli.ok.unloaded", module=name))
     if code != 0:
         raise typer.Exit(code)

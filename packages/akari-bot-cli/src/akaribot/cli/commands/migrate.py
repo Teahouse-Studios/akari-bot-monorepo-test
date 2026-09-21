@@ -18,6 +18,7 @@ import typer
 from rich.markdown import Markdown
 from rich.table import Table
 
+from akaribot.cli import i18n
 from akaribot.cli import venv as engine
 from akaribot.cli.commands.module import _install as install_package
 from akaribot.cli.instance import (
@@ -38,7 +39,7 @@ from akaribot.cli.instance import (
     warn,
 )
 
-app = typer.Typer(help="旧项目迁移：把旧版布局的项目搬进实例目录（migrate legacy）", no_args_is_help=True)
+app = typer.Typer(help=i18n.t("cli.migrate.help"), no_args_is_help=True)
 
 # 旧项目的判定条件：四者同时存在（monorepo_refactor_plan.md §3.5）。
 REQUIRED_ENTRIES = ("bot.py", "core", "modules")
@@ -153,16 +154,19 @@ def _inspect(root: Path) -> LegacyProject:
     :raises CliError: 目录不存在或缺少旧项目的判定文件。
     """
     if not root.exists():
-        raise CliError(f"旧项目目录不存在：{root}")
+        raise CliError(i18n.t("cli.migrate.error.project_missing", path=root))
     if not root.is_dir():
-        raise CliError(f"旧项目路径不是目录：{root}")
+        raise CliError(i18n.t("cli.migrate.error.project_not_dir", path=root))
     missing = [name for name in REQUIRED_ENTRIES if not (root / name).exists()]
     if not (root / OLD_CONFIG_FILE).is_file():
         missing.append(OLD_CONFIG_FILE)
     if missing:
         raise CliError(
-            f"{root} 不像是旧版 AkariBot 项目，缺少：{'、'.join(missing)}。"
-            "旧项目须同时含 bot.py、core/、modules/ 与 config/config.toml。"
+            i18n.t(
+                "cli.migrate.error.not_legacy",
+                path=root,
+                missing=i18n.t("cli.common.list_separator").join(missing),
+            )
         )
 
     library = _read_config_facts(root)
@@ -275,14 +279,12 @@ def _load_catalog(workspace_root: Path | None, *, offline: bool) -> engine.Regis
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise CliError(f"{path} 无法解析：{exc}") from exc
+            raise CliError(i18n.t("cli.migrate.error.registry_parse", path=path, error=exc)) from exc
         return engine.RegistryCatalog.from_payload(payload, source=str(path))
     try:
         return engine.RegistryCatalog.load(offline=offline)
     except CliError as exc:
-        raise CliError(
-            f"无法加载 registry（{exc}）。用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。"
-        ) from exc
+        raise CliError(i18n.t("cli.migrate.error.registry_load", error=exc)) from exc
 
 
 def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
@@ -311,9 +313,9 @@ def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engin
     for name in candidates:
         sources: list[str] = []
         if name in legacy.module_dirs:
-            sources.append("目录")
+            sources.append(i18n.t("cli.migrate.source.dir"))
         if name in legacy.enabled_modules:
-            sources.append("数据库")
+            sources.append(i18n.t("cli.migrate.source.database"))
         dist = index.get(_legacy_key(name))
         if dist:
             plan.modules.append((name, dist, "＋".join(sources)))
@@ -332,11 +334,11 @@ def _prepare_instance(
     if (root / INSTANCE_META_FILENAME).is_file():
         instance = Instance(root)
         if instance.is_running():
-            raise CliError(f"{root} 的机器人正在运行。先停机再迁移。")
-        console.print(f"  复用已有实例：{root}")
+            raise CliError(i18n.t("cli.migrate.error.running", path=root))
+        console.print(i18n.t("cli.migrate.reuse_instance", path=root))
         return instance
     if root.exists() and any(root.iterdir()) and not force:
-        raise CliError(f"{root} 非空且不是 AkariBot 实例。换一个空目录，或确认可写入后加 --force。")
+        raise CliError(i18n.t("cli.migrate.error.target_not_empty", path=root))
     created = Instance.create_dirs(root)
     meta = InstanceMeta.create(
         root,
@@ -346,7 +348,7 @@ def _prepare_instance(
         workspace_root=str(workspace_root) if workspace_root else "",
     )
     meta.save()
-    ok(f"已建实例 {root}（新建目录 {len(created)} 个，语言 {legacy.locale}）")
+    ok(i18n.t("cli.migrate.instance_created", root=root, count=len(created), locale=legacy.locale))
     return Instance(root)
 
 
@@ -397,7 +399,7 @@ def _copy_tree(source: Path, target: Path, *, force: bool, dry_run: bool, tally:
 
 def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry_run: bool, log: MigrationLog) -> None:
     """复制配置、数据库、旧 assets 与模块的部署者数据，并记录结果。"""
-    config = CopyTally("配置文件")
+    config = CopyTally(i18n.t("cli.migrate.tally.config"))
     log.tallies.append(config)
     for path in legacy.config_files:
         _copy_file(
@@ -409,7 +411,7 @@ def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry
             rel=f"config/{path.name}",
         )
 
-    database = CopyTally("数据库文件")
+    database = CopyTally(i18n.t("cli.migrate.tally.database"))
     log.tallies.append(database)
     for path in legacy.database_files:
         _copy_file(
@@ -422,7 +424,7 @@ def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry
             compare=False,
         )
 
-    runtime = CopyTally("运行期资源")
+    runtime = CopyTally(i18n.t("cli.migrate.tally.runtime"))
     log.tallies.append(runtime)
     for source_rel, target_rel in ASSET_MOVES:
         source = legacy.root / source_rel
@@ -447,7 +449,7 @@ def _resolve_target(name: str, *, kind: str, workspace_root: Path | None) -> eng
     try:
         return engine.resolve_target(name, workspace_root=workspace_root, dist=name, kind=kind)
     except CliError as exc:
-        raise CliError(f"无法解析 {name}：{exc}") from exc
+        raise CliError(i18n.t("cli.migrate.error.resolve", name=name, error=exc)) from exc
 
 
 def _install_packages(
@@ -466,12 +468,13 @@ def _install_packages(
             target = _resolve_target(dist, kind=kind, workspace_root=workspace_root)
         except CliError as exc:
             log.install_failed.append((dist, str(exc)))
-            warn(f"{dist} 解析失败：{exc}")
+            warn(i18n.t("cli.migrate.resolve_failed", dist=dist, error=exc))
             continue
         try:
             if not force and instance.find_package(target.dist) is not None:
+                # install_skipped 会写进迁移报告，属报告取值，保持原文。
                 log.install_skipped.append(f"{target.dist}（已安装）")
-                ok(f"{target.dist} 已安装，跳过")
+                ok(i18n.t("cli.migrate.already_installed", dist=target.dist))
                 continue
         except CliError:
             pass
@@ -481,7 +484,7 @@ def _install_packages(
         except typer.Exit as exc:
             # 安装流水线失败时自行回滚并以退出码结束；迁移继续，失败项交报告提示人工重试。
             log.install_failed.append((target.dist, f"安装流水线以退出码 {exc.exit_code} 结束"))
-            warn(f"{target.dist} 安装失败，已记入报告；可重跑本命令或手动 `akaribot module add {target.dist}`。")
+            warn(i18n.t("cli.migrate.install_failed", dist=target.dist))
 
 
 def _convert_database(instance: Instance, legacy: LegacyProject, *, log: MigrationLog) -> None:
@@ -528,94 +531,97 @@ def _render_report(
 ) -> str:
     """生成 Markdown 迁移报告全文。"""
     lines: list[str] = [
-        "# 旧项目迁移报告",
+        i18n.t("cli.migrate.report.title"),
         "",
-        f"- 生成时间：{now_iso()}",
-        f"- 旧项目：`{legacy.root}`（只读，迁移全程未修改）",
-        f"- 新实例：`{instance.root}`",
-        f"- 运行模式：{'dry-run（未写入任何文件）' if dry_run else '正式执行'}",
+        i18n.t("cli.migrate.report.generated_at", time=now_iso()),
+        i18n.t("cli.migrate.report.old_project", path=legacy.root),
+        i18n.t("cli.migrate.report.new_instance", path=instance.root),
+        i18n.t("cli.migrate.report.mode", mode=i18n.t(f"cli.migrate.report.mode_{'dry_run' if dry_run else 'real'}")),
         "",
-        "## 复制结果",
+        i18n.t("cli.migrate.report.copy_heading"),
         "",
-        "| 类别 | 复制 | 内容一致 | 保留现有 | 旧项目缺失 |",
-        "| --- | --- | --- | --- | --- |",
+        i18n.t("cli.migrate.report.copy_header"),
+        i18n.t("cli.migrate.report.copy_sep"),
     ]
     for tally in log.tallies:
         lines.append(
-            f"| {tally.name} | {len(tally.copied)} | {len(tally.unchanged)} | {len(tally.kept)} | {len(tally.missing)} |"
+            i18n.t(
+                "cli.migrate.report.copy_row",
+                name=tally.name,
+                copied=len(tally.copied),
+                unchanged=len(tally.unchanged),
+                kept=len(tally.kept),
+                missing=len(tally.missing),
+            )
         )
-    lines += ["", "## 模块映射", ""]
+    lines += ["", i18n.t("cli.migrate.report.modules_heading"), ""]
     if plan.modules:
-        lines += ["| 旧模块名 | 新分发名 | 名字来源 |", "| --- | --- | --- |"]
+        lines += [i18n.t("cli.migrate.report.modules_header"), i18n.t("cli.migrate.report.modules_sep")]
         for name, dist, source in plan.modules:
-            lines.append(f"| `{name}` | `{dist}` | {source} |")
-        lines += ["", "映射取 registry 的 `legacy_module_map`；多个旧模块名可指向同一分发（如 wiki 家族）。"]
+            lines.append(i18n.t("cli.migrate.report.modules_row", name=name, dist=dist, source=source))
+        lines += ["", i18n.t("cli.migrate.report.modules_note")]
     else:
-        lines.append("旧项目里没有可映射的模块。")
-    lines += ["", "## 适配器", ""]
+        lines.append(i18n.t("cli.migrate.report.no_modules"))
+    lines += ["", i18n.t("cli.migrate.report.adapters_heading"), ""]
     if plan.adapters:
         for dist in plan.adapters:
-            note = "（registry 中无此适配器包）" if dist in plan.missing_adapters else ""
-            lines.append(f"- `{dist}`{note}")
+            note = i18n.t("cli.migrate.report.adapter_missing") if dist in plan.missing_adapters else ""
+            lines.append(i18n.t("cli.migrate.report.adapter_item", dist=dist, note=note))
     else:
-        lines.append("旧配置里没有 `enable = true` 的适配器基表。")
-    lines += ["", "## 安装结果", ""]
+        lines.append(i18n.t("cli.migrate.report.no_adapters"))
+    lines += ["", i18n.t("cli.migrate.report.install_heading"), ""]
     if log.installed:
-        lines.append("- 本次安装：" + "、".join(f"`{dist}`" for dist in log.installed))
+        items = i18n.t("cli.common.list_separator").join(f"`{dist}`" for dist in log.installed)
+        lines.append(i18n.t("cli.migrate.report.installed", items=items))
     if log.install_skipped:
-        lines.append("- 已装跳过：" + "、".join(f"`{item}`" for item in log.install_skipped))
+        items = i18n.t("cli.common.list_separator").join(f"`{item}`" for item in log.install_skipped)
+        lines.append(i18n.t("cli.migrate.report.install_skipped", items=items))
     if log.install_failed:
         for dist, reason in log.install_failed:
-            lines.append(f"- 安装失败：`{dist}`——{reason}")
+            lines.append(i18n.t("cli.migrate.report.install_failed_item", dist=dist, reason=reason))
     if not (log.installed or log.install_skipped or log.install_failed):
-        lines.append("- 未安装任何包（`--skip-install` 或 dry-run）。")
-    lines += ["", f"- 数据库版本转换：{log.db_result}", "", "## 需人工处理", ""]
-    manual: list[str] = []
-    if plan.unmapped:
-        manual.append(
-            "无法映射的旧模块："
-            + "、".join(f"`{name}`" for name in plan.unmapped)
-            + "。多为自写模块，打包后用 `akaribot module add -e <模块目录>` 安装。"
-        )
-    if plan.missing_adapters:
-        manual.append(
-            "registry 中没有对应条目，需先发布或改用 `akaribot module add -e`："
-            + "、".join(f"`{dist}`" for dist in plan.missing_adapters)
-        )
-    if log.install_failed:
-        manual.append(
-            "安装失败的包："
-            + "、".join(f"`{dist}`" for dist, _ in log.install_failed)
-            + "。重跑本命令可续装，或逐个执行 `akaribot module add`。"
-        )
-    if log.credential_files:
-        manual.append(
-            "缺凭据的适配器（配置里仍是占位符）："
-            + "、".join(f"`config/{name}`" for name in log.credential_files)
-            + "。运行 `akaribot config edit` 填写。"
-        )
-    if log.placeholders:
-        total = sum(count for _, count in log.placeholders)
-        manual.append(f"未填占位符共 {total} 项，分布在：" + "、".join(f"`{path}`" for path, _ in log.placeholders))
-    if legacy.config_failures:
-        manual.append(
-            "以下旧配置无法解析，需人工检查并手工复制：" + "、".join(f"`{name}`" for name in legacy.config_failures)
-        )
-    if log.database_note:
-        manual.append(log.database_note)
-    if log.db_result.startswith(("失败", "跳过")):
-        manual.append(f"数据库版本转换：{log.db_result}")
-    if manual:
-        lines += [f"- [ ] {item}" for item in manual]
-    else:
-        lines.append("无需人工处理。")
+        lines.append(i18n.t("cli.migrate.report.nothing_installed"))
     lines += [
         "",
-        "## 多实例",
+        i18n.t("cli.migrate.report.db_result", result=log.db_result),
         "",
-        "迁移一律生成默认实例（实例 ID 为空，`client_name` 与旧项目相同），因此 `target_id` 前缀不变，",
-        "全部场景数据原样可用，无需改写数据库。如需第二个账号，用",
-        "`akaribot adapter instance add <平台> <实例 ID>` 新建实例后再填其凭据。",
+        i18n.t("cli.migrate.report.manual_heading"),
+        "",
+    ]
+    manual: list[str] = []
+    if plan.unmapped:
+        items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in plan.unmapped)
+        manual.append(i18n.t("cli.migrate.report.manual_unmapped", items=items))
+    if plan.missing_adapters:
+        items = i18n.t("cli.common.list_separator").join(f"`{dist}`" for dist in plan.missing_adapters)
+        manual.append(i18n.t("cli.migrate.report.manual_missing_adapters", items=items))
+    if log.install_failed:
+        items = i18n.t("cli.common.list_separator").join(f"`{dist}`" for dist, _ in log.install_failed)
+        manual.append(i18n.t("cli.migrate.report.manual_install_failed", items=items))
+    if log.credential_files:
+        items = i18n.t("cli.common.list_separator").join(f"`config/{name}`" for name in log.credential_files)
+        manual.append(i18n.t("cli.migrate.report.manual_credentials", items=items))
+    if log.placeholders:
+        total = sum(count for _, count in log.placeholders)
+        items = i18n.t("cli.common.list_separator").join(f"`{path}`" for path, _ in log.placeholders)
+        manual.append(i18n.t("cli.migrate.report.manual_placeholders", total=total, items=items))
+    if legacy.config_failures:
+        items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in legacy.config_failures)
+        manual.append(i18n.t("cli.migrate.report.manual_config_failures", items=items))
+    if log.database_note:
+        manual.append(log.database_note)
+    # db_result 是报告里的取值（且被 startswith 用作状态判断），保持原文；此处只判断状态。
+    if log.db_result.startswith(("失败", "跳过")):
+        manual.append(i18n.t("cli.migrate.report.manual_db_result", result=log.db_result))
+    if manual:
+        lines += [i18n.t("cli.migrate.report.manual_item", item=item) for item in manual]
+    else:
+        lines.append(i18n.t("cli.migrate.report.manual_none"))
+    lines += [
+        "",
+        i18n.t("cli.migrate.report.multi_heading"),
+        "",
+        i18n.t("cli.migrate.report.multi_note"),
         "",
     ]
     return "\n".join(lines)
@@ -623,75 +629,81 @@ def _render_report(
 
 def _print_plan(legacy: LegacyProject, target: Path, plan: MigrationPlan) -> None:
     """打印迁移计划，供执行前确认。"""
-    table = Table(title="迁移计划", show_header=False, padding=(0, 2))
-    table.add_row("旧项目", str(legacy.root))
-    table.add_row("新实例", str(target))
-    table.add_row("适配器", "、".join(plan.adapters) or "无")
-    table.add_row("模块", "、".join(plan.module_dists) or "无")
-    table.add_row("无法映射", "、".join(plan.unmapped) or "无")
+    table = Table(title=i18n.t("cli.migrate.plan.title"), show_header=False, padding=(0, 2))
+    table.add_row(i18n.t("cli.migrate.plan.old"), str(legacy.root))
+    table.add_row(i18n.t("cli.migrate.plan.new"), str(target))
+    separator = i18n.t("cli.common.list_separator")
+    none = i18n.t("cli.migrate.none")
+    table.add_row(i18n.t("cli.migrate.plan.adapters"), separator.join(plan.adapters) or none)
+    table.add_row(i18n.t("cli.migrate.plan.modules"), separator.join(plan.module_dists) or none)
+    table.add_row(i18n.t("cli.migrate.plan.unmapped"), separator.join(plan.unmapped) or none)
     console.print(table)
 
 
-@app.command("legacy")
+@app.command("legacy", help=i18n.t("cli.migrate.legacy.help"))
 def legacy(
-    project: Annotated[Path, typer.Argument(help="旧项目根目录：须含 bot.py、core/、modules/、config/config.toml")],
+    project: Annotated[Path, typer.Argument(help=i18n.t("cli.migrate.legacy.arg_project"))],
     instance: Annotated[
         Path | None,
-        typer.Option("--instance", "-I", help="新实例根目录；缺省为旧项目同级的 <旧项目名>-instance"),
+        typer.Option("--instance", "-I", help=i18n.t("cli.migrate.legacy.option_instance")),
     ] = None,
     workspace_root: Annotated[
         Path | None,
-        typer.Option(
-            "--workspace-root", "--dev", help="monorepo 工作区根：从本地源码安装，并读其中的 registry.json 做映射"
-        ),
+        typer.Option("--workspace-root", "--dev", help=i18n.t("cli.migrate.legacy.option_workspace_root")),
     ] = None,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="只输出迁移报告，不写任何文件")] = False,
-    skip_install: Annotated[bool, typer.Option("--skip-install", help="不安装 core、适配器与模块，只搬文件")] = False,
-    no_venv: Annotated[bool, typer.Option("--no-venv", help="不托管 venv，装到当前环境")] = False,
-    force: Annotated[bool, typer.Option("--force", help="覆盖目标已存在的同名文件，并允许写入非空目录")] = False,
-    offline: Annotated[bool, typer.Option("--offline", help="registry 只用本地缓存，不联网")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="回显 uv 的全部输出")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.migrate.legacy.option_dry_run"))] = False,
+    skip_install: Annotated[
+        bool, typer.Option("--skip-install", help=i18n.t("cli.migrate.legacy.option_skip_install"))
+    ] = False,
+    no_venv: Annotated[bool, typer.Option("--no-venv", help=i18n.t("cli.migrate.legacy.option_no_venv"))] = False,
+    force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.migrate.legacy.option_force"))] = False,
+    offline: Annotated[bool, typer.Option("--offline", help=i18n.t("cli.migrate.legacy.option_offline"))] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.migrate.legacy.option_verbose"))] = False,
 ) -> None:
     """把旧版项目迁移为新实例：搬配置与数据、装映射到的适配器与模块、转换数据库版本。
 
     旧目录只读；迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。
     """
     root = project.expanduser().resolve()
-    step(1, 6, "校验旧项目")
+    step(1, 6, i18n.t("cli.migrate.step.inspect"))
     try:
         legacy_project = _inspect(root)
     except CliError as exc:
         fail(str(exc))
     ok(
-        f"旧项目 {root}：配置 {len(legacy_project.config_files)} 个、数据库 {len(legacy_project.database_files)} 个、"
-        f"模块目录 {len(legacy_project.module_dirs)} 个、启用模块记录 {len(legacy_project.enabled_modules)} 条"
+        i18n.t(
+            "cli.migrate.inspected",
+            root=root,
+            configs=len(legacy_project.config_files),
+            databases=len(legacy_project.database_files),
+            modules=len(legacy_project.module_dirs),
+            enabled=len(legacy_project.enabled_modules),
+        )
     )
     for failure in legacy_project.config_failures:
-        warn(f"旧配置无法解析：{failure}")
+        warn(i18n.t("cli.migrate.config_failure", error=failure))
 
     target = _target_root(root, instance)
     if target == root or target.is_relative_to(root):
-        fail(f"新实例根不能位于旧项目目录内：{target}。迁移期间旧项目只读。")
+        fail(i18n.t("cli.migrate.error.target_inside", path=target))
     if workspace_root is not None:
         workspace_root = workspace_root.expanduser().resolve()
         if not (workspace_root / "packages").is_dir():
-            fail(f"{workspace_root} 下没有 packages 目录，不像是 monorepo 工作区根。")
+            fail(i18n.t("cli.migrate.error.not_workspace", path=workspace_root))
 
-    step(2, 6, "解析模块映射")
+    step(2, 6, i18n.t("cli.migrate.step.mapping"))
     try:
         catalog = _load_catalog(workspace_root, offline=offline)
     except CliError as exc:
         fail(str(exc))
     index = _legacy_index(catalog)
     if not index:
-        fail(
-            "registry 里没有任何 legacy_module_map，无法确定旧模块名到新分发包的映射。"
-            "用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。"
-        )
+        fail(i18n.t("cli.migrate.error.no_mapping"))
     plan = _plan_migration(legacy_project, index, catalog)
     _print_plan(legacy_project, target, plan)
     if plan.unmapped:
-        warn("无法映射的模块（记入报告的人工清单）：" + "、".join(plan.unmapped))
+        unmapped = i18n.t("cli.common.list_separator").join(plan.unmapped)
+        warn(i18n.t("cli.migrate.unmapped", modules=unmapped))
 
     managed = not no_venv
     log = MigrationLog()
@@ -703,9 +715,9 @@ def legacy(
             workspace_root=str(workspace_root) if workspace_root else "",
             mode="workspace" if workspace_root else "installed",
         )
-        console.print(f"[dim]dry-run：将创建实例 {target}[/dim]")
+        console.print(i18n.t("cli.migrate.dry_run_create", path=target))
     else:
-        step(3, 6, "创建新实例")
+        step(3, 6, i18n.t("cli.migrate.step.create"))
         try:
             instance = _prepare_instance(
                 target, legacy_project, workspace_root=workspace_root, managed=managed, force=force
@@ -713,29 +725,38 @@ def legacy(
         except CliError as exc:
             fail(str(exc))
 
-    step(4, 6, "复制配置与数据")
+    step(4, 6, i18n.t("cli.migrate.step.copy"))
     _copy_payload(legacy_project, instance, force=force, dry_run=dry_run, log=log)
     for tally in log.tallies:
-        console.print(f"  {tally.name}：复制 {len(tally.copied)}、一致 {len(tally.unchanged)}、保留 {len(tally.kept)}")
+        console.print(
+            i18n.t(
+                "cli.migrate.copy_line",
+                name=tally.name,
+                copied=len(tally.copied),
+                unchanged=len(tally.unchanged),
+                kept=len(tally.kept),
+            )
+        )
 
-    step(5, 6, "安装适配器与模块")
+    step(5, 6, i18n.t("cli.migrate.step.install"))
     targets: list[tuple[str, str]] = [("core", "akari-bot-core")]
     targets.extend(("adapter", dist) for dist in plan.adapters)
     targets.extend(("module", dist) for dist in plan.module_dists)
     if dry_run or skip_install:
         reason = "dry-run" if dry_run else "--skip-install"
-        console.print(f"[dim]{reason}：跳过 {len(targets)} 个包的安装[/dim]")
+        console.print(i18n.t("cli.migrate.skip_install", reason=reason, count=len(targets)))
         log.install_skipped.extend(dist for _, dist in targets)
     else:
         if managed and not instance.venv_dir.exists():
             runner = engine.CommandRunner(dry_run=False, verbose=verbose)
             try:
+                # what 会被 venv.py 拼成「{what}完成/失败」，该层不在本次范围内，保持原文。
                 runner.run_checked(
                     engine.create_venv_argv(instance.venv_dir, python=str(system_python())),
                     what="创建实例 venv",
                 )
             except CliError as exc:
-                fail(f"{exc}。本机没有 uv 时可装好后重跑，或用 --no-venv 装到当前环境。")
+                fail(i18n.t("cli.migrate.venv_failed", error=exc))
         _install_packages(
             instance,
             targets,
@@ -753,15 +774,15 @@ def legacy(
         _scan_placeholders(instance, log)
 
     report = _render_report(legacy_project, instance, plan, log, dry_run=dry_run)
-    step(6, 6, "写出迁移报告")
+    step(6, 6, i18n.t("cli.migrate.step.report"))
     if dry_run:
         console.print(Markdown(report))
-        console.print("[dim]dry-run：未写入任何文件[/dim]")
+        console.print(i18n.t("cli.migrate.dry_run_no_write"))
         return
     report_path = instance.root / "migration-report.md"
     report_path.write_text(report, encoding="utf-8")
-    ok(f"已写出 {report_path}")
+    ok(i18n.t("cli.migrate.report_written", path=report_path))
     if log.install_failed or plan.unmapped:
-        console.print("下一步：查看报告的「需人工处理」小节，处理完再运行 `akaribot run`。")
+        console.print(i18n.t("cli.migrate.next_steps_manual"))
     else:
-        console.print(f"下一步：cd {instance.root} && akaribot run")
+        console.print(i18n.t("cli.migrate.next_steps", path=instance.root))

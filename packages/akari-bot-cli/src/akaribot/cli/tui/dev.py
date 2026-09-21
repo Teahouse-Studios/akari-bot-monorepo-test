@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 
 SOURCE_WORKSPACE = "workspace"
@@ -26,15 +27,20 @@ SOURCE_EDITABLE = "editable"
 SOURCE_REGISTRY = "registry"
 SOURCE_UNKNOWN = "unknown"
 
-SOURCE_LABELS = {
-    SOURCE_WORKSPACE: "本地工作区",
-    SOURCE_EDITABLE: "本地 editable",
-    SOURCE_REGISTRY: "远端 registry",
-    SOURCE_UNKNOWN: "来源未知",
+# 来源、包类型与模式取自对端 JSON，界面按当前语言取标签，故这里只存文案键。
+_SOURCE_KEYS = {
+    SOURCE_WORKSPACE: "cli.tui.dev.source_workspace",
+    SOURCE_EDITABLE: "cli.tui.dev.source_editable",
+    SOURCE_REGISTRY: "cli.tui.dev.source_registry",
+    SOURCE_UNKNOWN: "cli.tui.dev.source_unknown",
 }
-KIND_LABELS = {"module": "模块", "adapter": "适配器", "core": "核心", "testing": "测试"}
-
-MODE_LABELS = {"workspace": "workspace（本地源码）", "installed": "installed（发行版）"}
+_KIND_KEYS = {
+    "module": "cli.tui.dev.kind_module",
+    "adapter": "cli.tui.dev.kind_adapter",
+    "core": "cli.tui.dev.kind_core",
+    "testing": "cli.tui.dev.kind_testing",
+}
+_MODE_KEYS = {"workspace": "cli.tui.dev.mode_workspace", "installed": "cli.tui.dev.mode_installed"}
 
 CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 INSTANCE_ENV = "AKARI_INSTANCE_DIR"
@@ -49,7 +55,20 @@ MIN_PATH_WIDTH = 10
 COLUMN_GAP = 2
 ROW_INDENT = 2
 
-COLUMN_TITLES = ("包", "类型", "版本", "editable", "来源", "本地路径")
+# 列标题在渲染时按当前语言取；editable 是数据字段名，两种语言写法一致，故不入键表。
+_COLUMN_KEYS: tuple[str | None, ...] = (
+    "cli.tui.dev.col_package",
+    "cli.tui.dev.col_kind",
+    "cli.tui.dev.col_version",
+    None,
+    "cli.tui.dev.col_source",
+    "cli.tui.dev.col_path",
+)
+
+
+def _column_titles() -> tuple[str, ...]:
+    """给出列标题行各列的展示文案。"""
+    return tuple(i18n.t(key) if key else "editable" for key in _COLUMN_KEYS)
 
 
 def _canonical_dist(name: str) -> str:
@@ -64,7 +83,7 @@ def _text(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, (list, tuple, set)):
-        return "、".join(item for item in (_text(entry) for entry in value) if item)
+        return i18n.t("cli.tui.common.list_separator").join(item for item in (_text(entry) for entry in value) if item)
     return str(value)
 
 
@@ -127,22 +146,23 @@ class DevPackage:
     @property
     def display_name(self) -> str:
         """包名列的展示文本。"""
-        return self.name or self.dist or "未命名"
+        return self.name or self.dist or i18n.t("cli.tui.dev.unnamed")
 
     @property
     def kind_label(self) -> str:
         """类型列的展示文本。"""
-        return KIND_LABELS.get(self.kind, self.kind or "未声明")
+        key = _KIND_KEYS.get(self.kind)
+        return i18n.t(key) if key else self.kind or i18n.t("cli.tui.common.undeclared")
 
     @property
     def editable_label(self) -> str:
         """editable 列的展示文本。"""
-        return "是" if self.editable else "否"
+        return i18n.t("cli.tui.dev.yes") if self.editable else i18n.t("cli.tui.dev.no")
 
     @property
     def source_label(self) -> str:
         """来源列的展示文本。"""
-        return SOURCE_LABELS.get(self.source, SOURCE_LABELS[SOURCE_UNKNOWN])
+        return i18n.t(_SOURCE_KEYS.get(self.source, _SOURCE_KEYS[SOURCE_UNKNOWN]))
 
     @property
     def path_text(self) -> str:
@@ -183,14 +203,16 @@ class DevSnapshot:
     @property
     def mode_label(self) -> str:
         """模式列的展示文本。"""
-        return MODE_LABELS.get(self.mode, self.mode or "未读到 akaribot.toml")
+        key = _MODE_KEYS.get(self.mode)
+        return i18n.t(key) if key else self.mode or i18n.t("cli.tui.dev.mode_unknown")
 
     @property
     def workspace_label(self) -> str:
         """工作区路径的展示文本。"""
         if not self.workspace_root:
-            return "未配置（[dev] workspace_root 为空）"
-        return f"{self.workspace_root}（{'存在' if self.workspace_exists else '目录不存在'}）"
+            return i18n.t("cli.tui.dev.workspace_unset")
+        key = "cli.tui.dev.workspace_exists" if self.workspace_exists else "cli.tui.dev.workspace_missing"
+        return i18n.t(key, path=self.workspace_root)
 
     def source_counts(self) -> dict[str, int]:
         """按来源统计包数。"""
@@ -325,7 +347,7 @@ class SubprocessDevSource:
             members, member_errors = self._workspace_members(workspace_root)
             errors.extend(member_errors)
         else:
-            notes.append("[dev] workspace_root 为空，安装一律取远端 registry")
+            notes.append(i18n.t("cli.tui.dev.note_no_workspace"))
         packages: tuple[DevPackage, ...] = ()
         payload, list_error = self._list_packages()
         if list_error:
@@ -350,18 +372,20 @@ class SubprocessDevSource:
             try:
                 return dict(self._meta_reader()), []
             except Exception as error:  # noqa: BLE001 - 替身读取失败只作为错误上报
-                return {}, [f"读取实例元数据失败：{type(error).__name__}: {error}"]
+                return {}, [i18n.t("cli.tui.dev.meta_read_failed", kind=type(error).__name__, error=error)]
         try:
             from akaribot.cli.instance import InstanceMeta, find_instance_root
         except ImportError as error:
-            return {}, [f"akaribot.cli.instance 不可用：{error}"]
+            return {}, [i18n.t("cli.tui.dev.meta_module_missing", error=error)]
         root = find_instance_root(self.root)
         if root is None:
-            return {}, [f"{self.root} 不是 AkariBot 实例（未找到 akaribot.toml）"]
+            return {}, [i18n.t("cli.tui.dev.not_instance", root=self.root)]
         try:
             meta = InstanceMeta.load(root)
         except Exception as error:  # noqa: BLE001 - 元数据损坏不应中断页面
-            return {"instance_root": str(root)}, [f"读取 akaribot.toml 失败：{type(error).__name__}: {error}"]
+            return {"instance_root": str(root)}, [
+                i18n.t("cli.tui.dev.meta_parse_failed", kind=type(error).__name__, error=error)
+            ]
         return {
             "instance_root": str(root),
             "meta_path": str(meta.path),
@@ -374,15 +398,15 @@ class SubprocessDevSource:
         """扫描工作区成员，返回规范化分发名到本地路径的映射。"""
         path = Path(workspace_root).expanduser()
         if not path.is_dir():
-            return {}, [f"[dev] workspace_root 指向的目录不存在：{path}"]
+            return {}, [i18n.t("cli.tui.dev.workspace_dir_missing", path=path)]
         try:
             from akaribot.cli.venv import workspace_index
         except ImportError as error:
-            return {}, [f"akaribot.cli.venv 不可用，无法扫描工作区成员：{error}"]
+            return {}, [i18n.t("cli.tui.dev.venv_module_missing", error=error)]
         try:
             index = workspace_index(path)
         except Exception as error:  # noqa: BLE001 - 工作区扫描失败只降级来源判定
-            return {}, [f"扫描工作区成员失败：{type(error).__name__}: {error}"]
+            return {}, [i18n.t("cli.tui.dev.scan_failed", kind=type(error).__name__, error=error)]
         return {_canonical_dist(dist): str(member.path) for dist, member in index.items()}, []
 
     def _list_packages(self) -> tuple[Any, str]:
@@ -393,7 +417,12 @@ class SubprocessDevSource:
         except DevSourceError as error:
             return None, str(error)
         if completed.returncode != 0:
-            return None, f"`{' '.join(argv)}` 退出码 {completed.returncode}：{self._tail(completed.stderr)}"
+            return None, i18n.t(
+                "cli.tui.dev.src_exit_code",
+                cmd=" ".join(argv),
+                code=completed.returncode,
+                tail=self._tail(completed.stderr),
+            )
         try:
             return self._parse_json(completed.stdout, "module list --json"), ""
         except DevSourceError as error:
@@ -434,21 +463,23 @@ class SubprocessDevSource:
                 env=self._env(),
             )
         except FileNotFoundError as error:
-            raise DevSourceError(f"找不到可执行文件：{argv[0]}（{error}）") from error
+            raise DevSourceError(i18n.t("cli.tui.dev.src_exe_missing", path=argv[0], error=error)) from error
         except subprocess.TimeoutExpired as error:
-            raise DevSourceError(f"`{' '.join(argv)}` 超过 {self.timeout:.0f} 秒未返回") from error
+            raise DevSourceError(
+                i18n.t("cli.tui.dev.src_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from error
         except OSError as error:
-            raise DevSourceError(f"`{' '.join(argv)}` 执行失败：{error}") from error
+            raise DevSourceError(i18n.t("cli.tui.dev.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
         """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
-            raise DevSourceError(f"`{label}` 没有输出")
+            raise DevSourceError(i18n.t("cli.tui.dev.src_empty_output", label=label))
         try:
             return json.loads(text)
         except json.JSONDecodeError as error:
-            raise DevSourceError(f"`{label}` 输出不是 JSON：{error}") from error
+            raise DevSourceError(i18n.t("cli.tui.dev.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
         """截取子进程输出的尾部，供状态栏展示。"""
@@ -493,7 +524,7 @@ class DevPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数；超期后按 ``r`` 重新取数。
     """
 
-    BINDINGS = compat.bindings(("r", "refresh", "刷新"))
+    BINDINGS = compat.bindings(("r", "refresh", i18n.t("cli.tui.dev.action_refresh")))
 
     DEFAULT_CSS = """
     DevPage {
@@ -564,19 +595,19 @@ class DevPage(compat.Vertical):
         self._row_texts: tuple[str, ...] = ()
         self._package_rows: tuple[tuple[str, ...], ...] = ()
         self._header_text: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._workspace_rendered: str = ""
         self._detail_rendered: str = ""
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树；只读页面，唯一的动作是刷新。"""
-        yield compat.Static("尚未读取 workspace 配置", id="workspace", markup=False)
+        yield compat.Static(i18n.t("cli.tui.dev.workspace_pending"), id="workspace", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="package-list")
         with compat.Horizontal(id="actions"):
-            yield compat.Button("刷新", id="refresh")
-        yield compat.Static("选择一行查看来源细节", id="detail", markup=False)
-        yield compat.Static("就绪", id="status", markup=False)
+            yield compat.Button(i18n.t("cli.tui.dev.action_refresh"), id="refresh")
+        yield compat.Static(i18n.t("cli.tui.dev.detail_placeholder"), id="detail", markup=False)
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
@@ -656,9 +687,15 @@ class DevPage(compat.Vertical):
         """
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_all()
-            self._set_status(f"使用 {self.cache_age():.1f} 秒前的缓存，共 {len(self._snapshot.packages)} 个包")
+            self._set_status(
+                i18n.t(
+                    "cli.tui.dev.status_cached",
+                    age=f"{self.cache_age():.1f}",
+                    total=len(self._snapshot.packages),
+                )
+            )
             return
-        self._set_status("正在读取 workspace 配置与包清单…")
+        self._set_status(i18n.t("cli.tui.dev.status_loading"))
         self.run_worker(self._load(), group="dev-load", exclusive=True)
 
     async def _load(self) -> bool:
@@ -670,25 +707,30 @@ class DevPage(compat.Vertical):
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._render_all()
-            self._set_status(f"读取失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.dev.status_load_failed", error=self.last_error))
             return False
         self._snapshot = snapshot
         self._loaded_at = time.monotonic()
-        self.last_error = "；".join(snapshot.errors)
+        self.last_error = i18n.t("cli.tui.common.error_separator").join(snapshot.errors)
         self.last_result = self._result_line(len(snapshot.packages))
         self._render_all()
-        self._set_status(self.last_result if not snapshot.errors else f"{self.last_result}；{self.last_error}")
+        if snapshot.errors:
+            self._set_status(i18n.t("cli.tui.common.error_separator").join((self.last_result, self.last_error)))
+        else:
+            self._set_status(self.last_result)
         return True
 
     def _result_line(self, count: int) -> str:
         """给出取数结论：包总数与按来源的分布。"""
         counts = self._snapshot.source_counts()
-        detail = "，".join(
-            f"{SOURCE_LABELS[key]} {counts[key]} 个"
+        detail = i18n.t("cli.tui.dev.status_separator").join(
+            i18n.t("cli.tui.dev.source_count", label=i18n.t(_SOURCE_KEYS[key]), count=counts[key])
             for key in (SOURCE_WORKSPACE, SOURCE_EDITABLE, SOURCE_REGISTRY)
             if counts.get(key)
         )
-        return f"已读取 {count} 个包" + (f"（{detail}）" if detail else "")
+        if not detail:
+            return i18n.t("cli.tui.dev.status_loaded", total=count)
+        return i18n.t("cli.tui.dev.status_loaded_detail", total=count, detail=detail)
 
     def invalidate_cache(self) -> None:
         """使缓存立即失效，下一次读取必定走数据源。"""
@@ -704,7 +746,7 @@ class DevPage(compat.Vertical):
         list_view = self.query_one("#package-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
         layout = self._build_layout(inner_width)
-        self._header_text = self._compose_row(COLUMN_TITLES, layout)
+        self._header_text = self._compose_row(_column_titles(), layout)
         self.query_one("#columns", compat.Static).update(compat.plain_text(self._header_text))
         cells = [self._row_cells(package) for package in self._snapshot.packages]
         self._package_rows = tuple(cells)
@@ -729,34 +771,41 @@ class DevPage(compat.Vertical):
     def _build_layout(self, inner_width: int) -> PackageLayout:
         """按可用宽度分配列宽；宽度不足时依次收起本地路径列、来源列，再压缩包名与版本。"""
         packages = self._snapshot.packages
-        name_width = min(max(compat.column_width(package.display_name for package in packages), 10), NAME_MAX_WIDTH)
-        version_width = min(
-            max(compat.column_width(package.version or "-" for package in packages), 6), VERSION_MAX_WIDTH
+        titles = _column_titles()
+        name_width = min(
+            max(compat.column_width([package.display_name for package in packages] + [titles[0]]), 10),
+            NAME_MAX_WIDTH,
         )
+        version_width = min(
+            max(compat.column_width([package.version or "-" for package in packages] + [titles[2]]), 6),
+            VERSION_MAX_WIDTH,
+        )
+        kind_width = max(KIND_WIDTH, compat.display_width(titles[1]))
+        editable_width = max(EDITABLE_WIDTH, compat.display_width(titles[3]))
         source_width = min(
-            max(compat.column_width(package.source_label for package in packages), 6),
+            max(compat.column_width([package.source_label for package in packages] + [titles[4]]), 6),
             SOURCE_MAX_WIDTH,
         )
         for keep_source, keep_path in ((True, True), (True, False), (False, False)):
-            widths = [name_width, KIND_WIDTH, version_width, EDITABLE_WIDTH]
+            widths = [name_width, kind_width, version_width, editable_width]
             if keep_source:
                 widths.append(source_width)
             remaining = inner_width - ROW_INDENT - sum(widths) - COLUMN_GAP * len(widths)
             if keep_path and remaining >= MIN_PATH_WIDTH:
-                return PackageLayout(name_width, KIND_WIDTH, version_width, EDITABLE_WIDTH, source_width, remaining)
+                return PackageLayout(name_width, kind_width, version_width, editable_width, source_width, remaining)
             if not keep_path and remaining >= 0:
                 return PackageLayout(
                     name_width,
-                    KIND_WIDTH,
+                    kind_width,
                     version_width,
-                    EDITABLE_WIDTH,
+                    editable_width,
                     source_width if keep_source else 0,
                     0,
                 )
-        budget = max(inner_width - ROW_INDENT - KIND_WIDTH - EDITABLE_WIDTH - COLUMN_GAP * 3, 8)
+        budget = max(inner_width - ROW_INDENT - kind_width - editable_width - COLUMN_GAP * 3, 8)
         version_width = min(version_width, 4)
         name_width = max(budget - version_width, 4)
-        return PackageLayout(name_width, KIND_WIDTH, version_width, EDITABLE_WIDTH, 0, 0)
+        return PackageLayout(name_width, kind_width, version_width, editable_width, 0, 0)
 
     def _row_cells(self, package: DevPackage) -> tuple[str, ...]:
         """按列序给出包行的各列取值。"""
@@ -785,14 +834,25 @@ class DevPage(compat.Vertical):
     def _sync_workspace(self) -> None:
         """更新顶部 workspace 面板：实例、模式、工作区与远端源。"""
         snapshot = self._snapshot
-        sources = "、".join(snapshot.registry_sources) or "未配置"
+        sources = i18n.t("cli.tui.common.list_separator").join(snapshot.registry_sources) or i18n.t(
+            "cli.tui.dev.sources_unset"
+        )
         lines = [
-            f"实例：{snapshot.instance_root or '未知'}（mode={snapshot.mode_label}）",
-            f"工作区：[dev] workspace_root = {snapshot.workspace_label}",
-            f"远端源：{sources}",
+            i18n.t(
+                "cli.tui.dev.instance_line",
+                root=snapshot.instance_root or i18n.t("cli.tui.common.unknown"),
+                mode=snapshot.mode_label,
+            ),
+            i18n.t("cli.tui.dev.workspace_line", workspace=snapshot.workspace_label),
+            i18n.t("cli.tui.dev.sources_line", sources=sources),
         ]
         notes = [*snapshot.notes, *snapshot.errors]
-        lines.append("说明：" + ("；".join(notes) if notes else f"已装 {len(snapshot.packages)} 个包"))
+        summary = (
+            i18n.t("cli.tui.common.error_separator").join(notes)
+            if notes
+            else i18n.t("cli.tui.dev.packages_installed", total=len(snapshot.packages))
+        )
+        lines.append(i18n.t("cli.tui.dev.notes_line", notes=summary))
         text = "\n".join(self._fit_page_width(line) for line in lines)
         self._workspace_rendered = text
         self.query_one("#workspace", compat.Static).update(compat.plain_text(text))
@@ -809,16 +869,27 @@ class DevPage(compat.Vertical):
         """按当前选中项更新详情栏：来源、版本与依赖声明。"""
         package = self.selected_package
         if package is None:
-            text = "选择一个包查看来源细节" if self._snapshot.packages else "没有已装包记录"
+            key = "cli.tui.dev.detail_hint_select" if self._snapshot.packages else "cli.tui.dev.detail_empty"
+            text = i18n.t(key)
             self._detail_rendered = text
             self.query_one("#detail", compat.Static).update(compat.plain_text(text))
             return
         self._selected_key = package.key
-        first = f"分发名：{package.dist}  来源：{package.source_label}  {package.path or '（非工作区路径）'}"
-        provides = "、".join(package.provides_modules) or "无"
-        second = (
-            f"版本：{package.version or '未知'}；editable：{package.editable_label}；"
-            f"requires_core_api：{package.requires_core_api or '未声明'}；提供：{provides}"
+        first = i18n.t(
+            "cli.tui.dev.detail_first",
+            dist=package.dist,
+            source=package.source_label,
+            path=package.path or i18n.t("cli.tui.dev.path_outside_workspace"),
+        )
+        provides = i18n.t("cli.tui.common.list_separator").join(package.provides_modules) or i18n.t(
+            "cli.tui.common.none"
+        )
+        second = i18n.t(
+            "cli.tui.dev.detail_second",
+            version=package.version or i18n.t("cli.tui.common.unknown"),
+            editable=package.editable_label,
+            core_api=package.requires_core_api or i18n.t("cli.tui.common.undeclared"),
+            provides=provides,
         )
         text = f"{self._fit_page_width(first)}\n{self._fit_page_width(second)}"
         self._detail_rendered = text

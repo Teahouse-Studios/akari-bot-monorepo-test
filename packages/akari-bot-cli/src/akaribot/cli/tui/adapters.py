@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.modules import OperationResult
 
@@ -30,14 +31,15 @@ PEER_READY_STATE = "ready"
 CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 INSTANCE_ENV = "AKARI_INSTANCE_DIR"
 
-ONLINE_LABEL = "在线"
-OFFLINE_LABEL = "离线"
-UNKNOWN_LABEL = "未知"
+# 展示文案按当前语言取值，故常量只存文案键；列宽也据这些文案推导（英文比中文宽）。
+_ALIVE_KEYS = {True: "cli.tui.adapters.online", False: "cli.tui.adapters.offline"}
+_ENABLE_KEYS = {True: "cli.tui.adapters.enable_on", False: "cli.tui.adapters.enable_off"}
+_ENABLE_MISSING_KEY = "cli.tui.adapters.enable_missing"
+
+# 该字面量来自对端 ``adapter list --json``（数据侧），只用于归一化比对；展示走 default_id 文案键。
 DEFAULT_ID_LABEL = "（默认）"
 EMPTY_CELL = "—"
 
-ENABLE_COLUMN_WIDTH = 6
-STATUS_COLUMN_WIDTH = 4
 MIN_FLEX_COLUMN_WIDTH = 8
 ID_MAX_WIDTH = 14
 CLIENT_MAX_WIDTH = 18
@@ -45,7 +47,29 @@ LISTEN_MAX_WIDTH = 24
 COLUMN_GAP = 2
 ROW_INDENT = 2
 
-COLUMN_TITLES = ("实例", "client_name", "enable", "连接", "监听地址", "最近错误")
+
+def _column_titles() -> tuple[str, ...]:
+    """按列序返回当前语言的列标题；``client_name`` 与 ``enable`` 是配置字段名，原样保留。"""
+    return (
+        i18n.t("cli.tui.adapters.column_instance"),
+        "client_name",
+        "enable",
+        i18n.t("cli.tui.adapters.column_status"),
+        i18n.t("cli.tui.adapters.column_listen"),
+        i18n.t("cli.tui.adapters.column_error"),
+    )
+
+
+def _enable_column_width() -> int:
+    """enable 列宽度：取字段名表头与三种标签的最大显示宽度。"""
+    labels = (i18n.t(_ENABLE_MISSING_KEY), *(i18n.t(key) for key in _ENABLE_KEYS.values()))
+    return compat.column_width((_column_titles()[2], *labels))
+
+
+def _status_column_width() -> int:
+    """连接列宽度：取表头与三种状态标签的最大显示宽度。"""
+    labels = (i18n.t("cli.tui.common.unknown"), *(i18n.t(key) for key in _ALIVE_KEYS.values()))
+    return compat.column_width((_column_titles()[3], *labels))
 
 
 @dataclass(frozen=True)
@@ -87,24 +111,24 @@ class AdapterRecord:
     @property
     def display_id(self) -> str:
         """实例列的展示文本。"""
-        return self.instance_id or DEFAULT_ID_LABEL
+        return self.instance_id or i18n.t("cli.tui.adapters.default_id")
 
     @property
     def enable_label(self) -> str:
         """enable 列的展示文本。"""
         if self.enable is None:
-            return "缺"
-        return "开" if self.enabled else "关"
+            return i18n.t(_ENABLE_MISSING_KEY)
+        return i18n.t(_ENABLE_KEYS[self.enabled])
 
     @property
     def listen_text(self) -> str:
         """监听地址列的展示文本。"""
-        return "、".join(self.listen) or EMPTY_CELL
+        return i18n.t("cli.tui.common.list_separator").join(self.listen) or EMPTY_CELL
 
     @property
     def issue_text(self) -> str:
         """备注列的展示文本。"""
-        return "；".join(self.issues) or EMPTY_CELL
+        return i18n.t("cli.tui.common.error_separator").join(self.issues) or EMPTY_CELL
 
 
 @dataclass(frozen=True)
@@ -128,8 +152,8 @@ class PeerStatus:
     def label(self) -> str:
         """连接列的展示文本。"""
         if self.alive is None:
-            return UNKNOWN_LABEL
-        return ONLINE_LABEL if self.alive else OFFLINE_LABEL
+            return i18n.t("cli.tui.common.unknown")
+        return i18n.t(_ALIVE_KEYS[self.alive])
 
 
 @dataclass(frozen=True)
@@ -178,8 +202,10 @@ class PeerSnapshot:
         if found is not None:
             return found
         if self.available:
-            return PeerStatus(client_name=client_name, alive=None, detail="peer 快照里没有该实例")
-        return PeerStatus(client_name=client_name, alive=None, detail=self.note or "peer 快照不可用")
+            return PeerStatus(client_name=client_name, alive=None, detail=i18n.t("cli.tui.adapters.peer_missing"))
+        return PeerStatus(
+            client_name=client_name, alive=None, detail=self.note or i18n.t("cli.tui.adapters.peer_unavailable")
+        )
 
 
 class AdapterSourceError(RuntimeError):
@@ -202,8 +228,8 @@ class StaticAdapterSource:
         toggle_result: OperationResult | None = None,
     ) -> None:
         self._snapshot = snapshot or AdapterSnapshot()
-        self._peers = peers or PeerSnapshot(note="替身数据源未提供 peer 快照")
-        self._toggle_result = toggle_result or OperationResult(True, "已切换 enable", "stub")
+        self._peers = peers or PeerSnapshot(note=i18n.t("cli.tui.adapters.stub_no_peers"))
+        self._toggle_result = toggle_result or OperationResult(True, i18n.t("cli.tui.adapters.stub_toggle_ok"), "stub")
         self.calls = {"list": 0, "peers": 0, "set_enable": 0}
         self.toggles: list[tuple[str, bool]] = []
 
@@ -250,7 +276,7 @@ def _text(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, (list, tuple, set)):
-        return "、".join(_text(item) for item in value if _text(item))
+        return i18n.t("cli.tui.common.list_separator").join(_text(item) for item in value if _text(item))
     return str(value)
 
 
@@ -406,16 +432,16 @@ def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnaps
         expired = _lease_expired(_pick(entry, "lease_until", "lease"), moment)
         if not state:
             alive: bool | None = None
-            detail = "peer 记录缺 state"
+            detail = i18n.t("cli.tui.adapters.peer_no_state")
         elif state != PEER_READY_STATE:
             alive = False
-            detail = f"peer 状态 {state}"
+            detail = i18n.t("cli.tui.adapters.peer_state", state=state)
         elif expired is None:
             alive = None
-            detail = "peer 记录缺 lease_until，无法判定是否在线"
+            detail = i18n.t("cli.tui.adapters.peer_no_lease")
         elif expired:
             alive = False
-            detail = "peer 租约已过期"
+            detail = i18n.t("cli.tui.adapters.peer_lease_expired")
         else:
             alive = True
             detail = ""
@@ -441,7 +467,11 @@ def group_display(records: Sequence[AdapterRecord], registry_available: bool) ->
             return record.client_name[: -len(suffix)]
         if not suffix and record.client_name:
             return record.client_name
-    return "适配器未安装" if registry_available else "已装清单不可用"
+    return (
+        i18n.t("cli.tui.adapters.group_not_installed")
+        if registry_available
+        else i18n.t("cli.tui.adapters.group_registry_unavailable")
+    )
 
 
 class SubprocessAdapterSource:
@@ -474,7 +504,12 @@ class SubprocessAdapterSource:
         completed = self._run(argv)
         if completed.returncode != 0:
             raise AdapterSourceError(
-                f"`{' '.join(argv)}` 退出码 {completed.returncode}：{self._tail(completed.stderr)}"
+                i18n.t(
+                    "cli.tui.adapters.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
             )
         return normalize_snapshot(self._parse_json(completed.stdout, "adapter list --json"))
 
@@ -490,10 +525,16 @@ class SubprocessAdapterSource:
         except AdapterSourceError as error:
             return PeerSnapshot(available=False, note=str(error))
         if completed.returncode != 0:
-            tail = self._tail(completed.stderr) or "无输出"
+            tail = self._tail(completed.stderr) or i18n.t("cli.tui.common.no_output")
             return PeerSnapshot(
                 available=False,
-                note=f"core 的 {PEER_ENTRYPOINT} 入口不可用（`{' '.join(argv)}` 退出码 {completed.returncode}：{tail}）",
+                note=i18n.t(
+                    "cli.tui.adapters.peer_entrypoint_unavailable",
+                    entry=PEER_ENTRYPOINT,
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=tail,
+                ),
             )
         try:
             payload = self._parse_json(completed.stdout, f"core {PEER_ENTRYPOINT} --json")
@@ -505,12 +546,19 @@ class SubprocessAdapterSource:
         """见 :meth:`AdapterSource.set_enable`；经 ``akaribot config set`` 写入。"""
         self.calls["set_enable"] += 1
         table = record.table or f"bot_{record.platform}" + (f"-{record.instance_id}" if record.instance_id else "")
-        label = f"{'启用' if enabled else '停用'} {record.client_name or table}"
+        label = i18n.t(
+            "cli.tui.adapters.label_enable" if enabled else "cli.tui.adapters.label_disable",
+            name=record.client_name or table,
+        )
         argv = self.cli_argv("config", "set", "enable", "true" if enabled else "false", "--table", table)
         completed = self._run(argv)
         if completed.returncode == 0:
-            return OperationResult(True, f"{label}成功", self._tail(completed.stdout))
-        return OperationResult(False, f"{label}失败（退出码 {completed.returncode}）", self._tail(completed.stderr))
+            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
+        return OperationResult(
+            False,
+            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
+            self._tail(completed.stderr),
+        )
 
     def cli_argv(self, *args: str) -> list[str]:
         """构造调用本 CLI 的 argv。
@@ -549,10 +597,10 @@ class SubprocessAdapterSource:
         try:
             from akaribot.cli.instance import Instance, find_instance_root
         except ImportError as error:
-            raise AdapterSourceError("akaribot.cli.instance 不可用，无法定位实例解释器") from error
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_instance_missing")) from error
         root = find_instance_root(self.root)
         if root is None:
-            raise AdapterSourceError(f"{self.root} 不是 AkariBot 实例（未找到 akaribot.toml）")
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_not_instance", root=self.root))
         return Instance(root)
 
     def _env(self) -> dict[str, str]:
@@ -576,21 +624,23 @@ class SubprocessAdapterSource:
                 env=self._env(),
             )
         except FileNotFoundError as error:
-            raise AdapterSourceError(f"找不到可执行文件：{argv[0]}（{error}）") from error
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_exe_missing", path=argv[0], error=error)) from error
         except subprocess.TimeoutExpired as error:
-            raise AdapterSourceError(f"`{' '.join(argv)}` 超过 {self.timeout:.0f} 秒未返回") from error
+            raise AdapterSourceError(
+                i18n.t("cli.tui.adapters.src_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from error
         except OSError as error:
-            raise AdapterSourceError(f"`{' '.join(argv)}` 执行失败：{error}") from error
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
         """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
-            raise AdapterSourceError(f"`{label}` 没有输出")
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_empty_output", label=label))
         try:
             return json.loads(text)
         except json.JSONDecodeError as error:
-            raise AdapterSourceError(f"`{label}` 输出不是 JSON：{error}") from error
+            raise AdapterSourceError(i18n.t("cli.tui.adapters.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
         """截取子进程输出的尾部，供状态栏展示。"""
@@ -636,8 +686,8 @@ class AdaptersPage(compat.Vertical):
     """
 
     BINDINGS = compat.bindings(
-        ("r", "refresh", "刷新"),
-        ("e", "toggle_enable", "启用/停用"),
+        ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
+        ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable")),
     )
 
     DEFAULT_CSS = """
@@ -710,26 +760,26 @@ class AdaptersPage(compat.Vertical):
         self._loaded_at: float = 0.0
         self._selected_key: str | None = None
         self._busy: bool = False
-        self._layout = ColumnLayout(6, 8, ENABLE_COLUMN_WIDTH, STATUS_COLUMN_WIDTH, MIN_FLEX_COLUMN_WIDTH, 0)
+        self._layout = ColumnLayout(6, 8, _enable_column_width(), _status_column_width(), MIN_FLEX_COLUMN_WIDTH, 0)
         self._row_texts: tuple[str, ...] = ()
         self._row_kinds: tuple[str, ...] = ()
         self._instance_rows: tuple[tuple[str, ...], ...] = ()
         self._group_titles: tuple[str, ...] = ()
         self._header_text: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._summary_rendered: str = ""
         self._detail_rendered: str = ""
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树。"""
-        yield compat.Static("尚未读取适配器实例", id="summary", markup=False)
+        yield compat.Static(i18n.t("cli.tui.adapters.summary_pending"), id="summary", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="adapter-list")
         with compat.Horizontal(id="actions"):
-            yield compat.Button("切换 enable", id="toggle", variant="primary")
-            yield compat.Button("刷新", id="refresh")
-        yield compat.Static("选择一行查看配置与状态细节", id="detail", markup=False)
-        yield compat.Static("就绪", id="status", markup=False)
+            yield compat.Button(i18n.t("cli.tui.adapters.action_toggle"), id="toggle", variant="primary")
+            yield compat.Button(i18n.t("cli.tui.adapters.action_refresh"), id="refresh")
+        yield compat.Static(i18n.t("cli.tui.adapters.detail_placeholder"), id="detail", markup=False)
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
@@ -827,9 +877,15 @@ class AdaptersPage(compat.Vertical):
         """
         if not force and self._snapshot.instances and self.cache_age() < self.cache_ttl:
             self._render_all()
-            self._set_status(f"使用 {self.cache_age():.1f} 秒前的缓存，共 {len(self._snapshot.instances)} 个实例")
+            self._set_status(
+                i18n.t(
+                    "cli.tui.adapters.status_cached",
+                    age=f"{self.cache_age():.1f}",
+                    count=len(self._snapshot.instances),
+                )
+            )
             return
-        self._set_status("正在读取适配器实例…")
+        self._set_status(i18n.t("cli.tui.adapters.status_loading"))
         self.run_worker(self._load(), group="adapters-load", exclusive=True)
 
     async def _load(self) -> bool:
@@ -842,7 +898,7 @@ class AdaptersPage(compat.Vertical):
             self._loaded_at = time.monotonic()
             self.last_error = str(error)
             self._render_all()
-            self._set_status(f"读取失败：{error}")
+            self._set_status(i18n.t("cli.tui.adapters.status_load_failed", error=error))
             return False
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
             self._snapshot = AdapterSnapshot()
@@ -850,13 +906,13 @@ class AdaptersPage(compat.Vertical):
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._render_all()
-            self._set_status(f"读取失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.adapters.status_load_failed", error=self.last_error))
             return False
         self._peers = await self._load_peers()
         self._snapshot = snapshot
         self._loaded_at = time.monotonic()
         self.last_error = ""
-        self.last_result = f"已读取 {len(snapshot.instances)} 个实例"
+        self.last_result = i18n.t("cli.tui.adapters.status_loaded", count=len(snapshot.instances))
         self._render_all()
         self._set_status(self.last_result)
         return True
@@ -933,14 +989,20 @@ class AdaptersPage(compat.Vertical):
     def _build_layout(self, inner_width: int) -> ColumnLayout:
         """按可用宽度分配列宽；宽度不足时依次收起最近错误列与监听地址列。"""
         records = self._snapshot.instances
-        id_width = min(max(compat.column_width(record.display_id for record in records), 6), ID_MAX_WIDTH)
+        titles = _column_titles()
+        id_width = min(
+            max(compat.column_width(record.display_id for record in records), compat.display_width(titles[0]), 6),
+            ID_MAX_WIDTH,
+        )
         client_width = min(
             max(compat.column_width(record.client_name or "-" for record in records), 8), CLIENT_MAX_WIDTH
         )
-        fixed = ROW_INDENT + id_width + client_width + ENABLE_COLUMN_WIDTH + STATUS_COLUMN_WIDTH + COLUMN_GAP * 3
+        enable_width = _enable_column_width()
+        status_width = _status_column_width()
+        fixed = ROW_INDENT + id_width + client_width + enable_width + status_width + COLUMN_GAP * 3
         remaining = inner_width - fixed - COLUMN_GAP * 2
         if remaining < 0:
-            budget = max(inner_width - ROW_INDENT - ENABLE_COLUMN_WIDTH - STATUS_COLUMN_WIDTH - COLUMN_GAP * 3, 8)
+            budget = max(inner_width - ROW_INDENT - enable_width - status_width - COLUMN_GAP * 3, 8)
             id_width = max(budget // 2, 4)
             client_width = max(budget - id_width, 4)
             remaining = 0
@@ -958,15 +1020,15 @@ class AdaptersPage(compat.Vertical):
         return ColumnLayout(
             id_width=id_width,
             client_width=client_width,
-            enable_width=ENABLE_COLUMN_WIDTH,
-            status_width=STATUS_COLUMN_WIDTH,
+            enable_width=enable_width,
+            status_width=status_width,
             listen_width=listen_width,
             error_width=error_width,
         )
 
     def _header_row(self, layout: ColumnLayout) -> str:
         """渲染列标题行，列宽与实例行一致。"""
-        return self._compose_row(COLUMN_TITLES, layout)
+        return self._compose_row(_column_titles(), layout)
 
     def _record_cells(self, record: AdapterRecord) -> tuple[str, ...]:
         """按列序给出实例行的各列取值。"""
@@ -991,7 +1053,9 @@ class AdaptersPage(compat.Vertical):
     def _group_row(self, platform: str, group: Sequence[AdapterRecord], inner_width: int) -> str:
         """渲染平台分组标题行。"""
         suffix = group_display(group, self._snapshot.registry_available)
-        return compat.truncate_cells(f"▾ {platform}（{suffix}）", inner_width)
+        return compat.truncate_cells(
+            i18n.t("cli.tui.adapters.group_row", platform=platform, suffix=suffix), inner_width
+        )
 
     def _index_for_key(self) -> int:
         """定位要恢复的高亮项，找不到时回到首个实例行。"""
@@ -1015,24 +1079,42 @@ class AdaptersPage(compat.Vertical):
         snapshot = self._snapshot
         enabled = sum(1 for record in snapshot.instances if record.enabled)
         parts = [
-            f"实例根：{snapshot.instance_root or '未知'}",
-            f"共 {len(snapshot.instances)} 个实例，其中已启用 {enabled} 个，分 {len(snapshot.grouped())} 个平台",
+            i18n.t(
+                "cli.tui.adapters.summary_root",
+                root=snapshot.instance_root or i18n.t("cli.tui.common.unknown"),
+            ),
+            i18n.t(
+                "cli.tui.adapters.summary_counts",
+                total=len(snapshot.instances),
+                enabled=enabled,
+                platforms=len(snapshot.grouped()),
+            ),
         ]
         if not snapshot.registry_available:
-            parts.append(f"已装清单不可用：{snapshot.registry_note or '原因未知'}")
+            parts.append(
+                i18n.t(
+                    "cli.tui.adapters.summary_registry_unavailable",
+                    note=snapshot.registry_note or i18n.t("cli.tui.adapters.reason_unknown"),
+                )
+            )
         elif snapshot.registry_note:
             parts.append(snapshot.registry_note)
         if snapshot.legacy_layout:
-            parts.append("含扁平布局配置 config/bot_*.toml")
+            parts.append(i18n.t("cli.tui.adapters.summary_legacy_layout"))
         if any(record.installed and record.client_name_inferred for record in snapshot.instances):
-            parts.append("registry 未提供 platform_name，client_name 按平台名推断")
+            parts.append(i18n.t("cli.tui.adapters.summary_inferred_client_name"))
         if self._peers.available:
-            parts.append(f"peer 记录 {len(self._peers.statuses)} 条")
+            parts.append(i18n.t("cli.tui.adapters.peer_count", count=len(self._peers.statuses)))
         else:
-            parts.append(f"连接状态未知：{self._peers.note or 'peer 快照不可用'}")
+            parts.append(
+                i18n.t(
+                    "cli.tui.adapters.peer_status_unknown",
+                    note=self._peers.note or i18n.t("cli.tui.adapters.peer_unavailable"),
+                )
+            )
         for error in snapshot.errors:
             parts.append(error)
-        text = "；".join(parts)
+        text = i18n.t("cli.tui.common.error_separator").join(parts)
         self._summary_rendered = text
         self.query_one("#summary", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
 
@@ -1048,7 +1130,11 @@ class AdaptersPage(compat.Vertical):
         """按当前选中项更新详情栏：配置文件、表名与 peer 状态说明。"""
         record = self.selected_record
         if record is None:
-            text = "选择一个实例查看配置与状态细节" if self._snapshot.instances else "暂无实例配置"
+            text = (
+                i18n.t("cli.tui.adapters.detail_hint")
+                if self._snapshot.instances
+                else i18n.t("cli.tui.adapters.detail_empty")
+            )
             self._detail_rendered = text
             self.query_one("#detail", compat.Static).update(compat.plain_text(text))
             return
@@ -1056,13 +1142,25 @@ class AdaptersPage(compat.Vertical):
         status = self._peers.status_for(record.client_name)
         notes = [item for item in (status.detail, status.error) if item]
         if record.enable is None:
-            notes.append("配置缺 enable 键，按未启用处理")
-        first = f"配置：{record.table or '未知'}  {record.config_file or '路径未知'}"
-        second = f"状态：{status.label}（peer {status.state or '无记录'}）" + (f"；{'；'.join(notes)}" if notes else "")
+            notes.append(i18n.t("cli.tui.adapters.note_enable_missing"))
+        first = i18n.t(
+            "cli.tui.adapters.detail_config",
+            table=record.table or i18n.t("cli.tui.common.unknown"),
+            file=record.config_file or i18n.t("cli.tui.adapters.path_unknown"),
+        )
+        parts = [
+            i18n.t(
+                "cli.tui.adapters.detail_status",
+                label=status.label,
+                state=status.state or i18n.t("cli.tui.adapters.peer_no_record"),
+            ),
+            *notes,
+        ]
         if record.legacy_layout:
-            second += "；扁平布局，迁移后移至 config/adapters/"
+            parts.append(i18n.t("cli.tui.adapters.detail_legacy_layout"))
         if record.client_name_inferred:
-            second += "；client_name 为推断值"
+            parts.append(i18n.t("cli.tui.adapters.detail_client_name_inferred"))
+        second = i18n.t("cli.tui.common.error_separator").join(parts)
         text = f"{self._fit_page_width(first)}\n{self._fit_page_width(second)}"
         self._detail_rendered = text
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
@@ -1072,7 +1170,11 @@ class AdaptersPage(compat.Vertical):
         toggle = self.query_one("#toggle", compat.Button)
         toggle.disabled = self._busy or self.selected_record is None
         record = self.selected_record
-        toggle.label = "切换 enable" if record is None else ("停用" if record.enabled else "启用")
+        toggle.label = (
+            i18n.t("cli.tui.adapters.action_toggle")
+            if record is None
+            else i18n.t("cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable")
+        )
 
     def _set_status(self, text: str) -> None:
         """更新状态栏。"""
@@ -1113,20 +1215,33 @@ class AdaptersPage(compat.Vertical):
         """切换选中实例的 ``enable``；无选中项时给出提示而不动作。"""
         record = self.selected_record
         if record is None:
-            compat.notify(self.app, "先选中一个适配器实例（分组标题不可选中）", severity="warning", title="enable")
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.pick_toggle"),
+                severity="warning",
+                title="enable",
+            )
             return
         self._start_toggle(record, not record.enabled)
 
     def _start_toggle(self, record: AdapterRecord, enabled: bool) -> None:
         """在后台任务里执行 enable 切换。"""
         if self._busy:
-            compat.notify(self.app, "已有 enable 切换在进行", severity="warning", title="请稍候")
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.busy"),
+                severity="warning",
+                title=i18n.t("cli.tui.common.busy_title"),
+            )
             return
         self._busy = True
         self._selected_key = record.key
         self._sync_actions()
-        label = f"{'启用' if enabled else '停用'} {record.client_name or record.table}"
-        self._set_status(f"{label}：调用 CLI 命令层…")
+        label = i18n.t(
+            "cli.tui.adapters.label_enable" if enabled else "cli.tui.adapters.label_disable",
+            name=record.client_name or record.table,
+        )
+        self._set_status(i18n.t("cli.tui.adapters.calling", label=label))
         self.run_worker(self._toggle(record, enabled, label), group="adapters-toggle", exclusive=True)
 
     async def _toggle(self, record: AdapterRecord, enabled: bool, label: str) -> None:
@@ -1134,19 +1249,25 @@ class AdaptersPage(compat.Vertical):
         try:
             result = await asyncio.to_thread(self.source.set_enable, record, enabled)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
-            result = OperationResult(False, f"{label}失败", f"{type(error).__name__}: {error}")
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                f"{type(error).__name__}: {error}",
+            )
         if result.ok:
-            self._set_status(f"{result.message}，正在刷新…")
+            self._set_status(i18n.t("cli.tui.adapters.refreshing", message=result.message))
             self.invalidate_cache()
             await self._load()
-            detail = f"（{result.detail.splitlines()[-1]}）" if result.detail else ""
+            detail = (
+                i18n.t("cli.tui.adapters.detail_wrap", detail=result.detail.splitlines()[-1]) if result.detail else ""
+            )
             self.last_result = f"{result.message}{detail}"
             self._set_status(self.last_result)
             compat.notify(self.app, result.message, severity="information", title=label)
         else:
             self.last_error = result.detail or result.message
-            tail = result.detail.splitlines()[-1] if result.detail else "无输出"
-            self._set_status(f"{result.message}：{tail}")
+            tail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
+            self._set_status(i18n.t("cli.tui.adapters.failed_detail", message=result.message, detail=tail))
             compat.notify(self.app, result.message, severity="error", title=label)
         self._busy = False
         self._sync_actions()

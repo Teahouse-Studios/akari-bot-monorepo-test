@@ -27,6 +27,7 @@ import tomlkit
 from tomlkit.exceptions import ParseError
 from tomlkit.items import Table
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 
 KIND_BOOL = "bool"
@@ -39,13 +40,14 @@ KIND_OTHER = "other"
 MODE_FORM = "form"
 MODE_RAW = "raw"
 
-_KIND_LABELS = {
-    KIND_BOOL: "布尔",
-    KIND_INT: "整数",
-    KIND_FLOAT: "数值",
-    KIND_STR: "文本",
-    KIND_LIST: "列表",
-    KIND_OTHER: "类型未知",
+# 类型标签随当前语言取值，故这里只存文案键。
+_KIND_KEYS = {
+    KIND_BOOL: "cli.tui.config.kind_bool",
+    KIND_INT: "cli.tui.config.kind_int",
+    KIND_FLOAT: "cli.tui.config.kind_float",
+    KIND_STR: "cli.tui.config.kind_str",
+    KIND_LIST: "cli.tui.config.kind_list",
+    KIND_OTHER: "cli.tui.config.kind_other",
 }
 # 类型名归一化：schema 的 type 取自运行期值的 __name__，会随模板写法变化，故按子串匹配。
 _KIND_MARKERS = (
@@ -68,8 +70,6 @@ _ERROR_TAIL_PATTERN = re.compile(r"\s*at line \d+ col \d+\s*$")
 _FILE_BY_TABLE = {"config": "config.toml", "secret": "config.toml"}
 _CONFIG_SUBDIRS = ("", "modules", "adapters", "core")
 _CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
-
-_HELP_HINT = "帮助文本取自配置模板的 i18n 注释；保存经 `akaribot config set`，不直接改文件。"
 
 
 # region 字段模型与值文本
@@ -169,7 +169,7 @@ def _split_list(text: str) -> list[str]:
 def _short(text: str, limit: int = 24) -> str:
     """截断错误信息里的用户输入，避免状态栏被长值挤爆。"""
     shown = compat.truncate_cells(text.strip(), limit)
-    return shown or "空"
+    return shown or i18n.t("cli.tui.config.empty_value")
 
 
 @dataclass(frozen=True)
@@ -199,10 +199,11 @@ class ConfigField:
 
     @property
     def kind_label(self) -> str:
-        """返回类型的中文标签，未知类型带上对端给出的原始类型名。"""
+        """返回类型的本地化标签，未知类型带上对端给出的原始类型名。"""
+        label = i18n.t(_KIND_KEYS.get(self.kind, _KIND_KEYS[KIND_OTHER]))
         if self.kind == KIND_OTHER and self.type_name:
-            return f"{_KIND_LABELS[KIND_OTHER]}({_short(self.type_name, 12)})"
-        return _KIND_LABELS.get(self.kind, _KIND_LABELS[KIND_OTHER])
+            return i18n.t("cli.tui.config.kind_with_type", label=label, name=_short(self.type_name, 12))
+        return label
 
     @property
     def section(self) -> str:
@@ -226,17 +227,17 @@ class ConfigField:
         """返回帮助文本：注释优先，值为空时补一句默认值。"""
         parts = [self.comment.strip()] if self.comment.strip() else []
         if self.value in (None, "") and self.default not in (None, ""):
-            parts.append(f"默认值：{_short(edit_text(self.default), 40)}")
-        return "；".join(parts)
+            parts.append(i18n.t("cli.tui.config.default_value", value=_short(edit_text(self.default), 40)))
+        return i18n.t("cli.tui.common.error_separator").join(parts)
 
     @property
     def marks(self) -> str:
-        """返回表头里的中文徽标：密钥与待填写。"""
+        """返回表头里的本地化徽标：密钥与待填写。"""
         marks = []
         if self.secret:
-            marks.append("（密钥）")
+            marks.append(i18n.t("cli.tui.config.mark_secret"))
         if self.is_placeholder:
-            marks.append("（待填写）")
+            marks.append(i18n.t("cli.tui.config.mark_placeholder"))
         return "".join(marks)
 
 
@@ -254,28 +255,28 @@ def parse_field(field: ConfigField, text: str) -> tuple[bool, str, str]:
             return True, "true", ""
         if lowered in _FALSE_WORDS:
             return True, "false", ""
-        return False, "", f"布尔值只能填 true 或 false，当前为 {_short(text)!r}"
+        return False, "", i18n.t("cli.tui.config.err_boolean", value=repr(_short(text)))
     if field.kind == KIND_INT:
         try:
             return True, write_text(int(raw), KIND_INT), ""
         except ValueError:
-            return False, "", f"整数格式无效：{_short(text)!r}"
+            return False, "", i18n.t("cli.tui.config.err_integer", value=repr(_short(text)))
     if field.kind == KIND_FLOAT:
         try:
             return True, write_text(float(raw), KIND_FLOAT), ""
         except ValueError:
-            return False, "", f"数值格式无效：{_short(text)!r}"
+            return False, "", i18n.t("cli.tui.config.err_number", value=repr(_short(text)))
     if field.kind == KIND_LIST:
         return True, write_text(_split_list(raw), KIND_LIST), ""
     if isinstance(field.value, Mapping):
-        return False, "", "该键是嵌套结构，表单模式无法安全写入，请用 `akaribot config open` 编辑"
+        return False, "", i18n.t("cli.tui.config.err_nested_field")
     return True, text, ""
 
 
 def aligned_headers(fields: Sequence[ConfigField]) -> dict[str, str]:
     """为每个字段生成按显示宽度对齐的表头行。
 
-    键列宽度取最长键，类型列宽度取最宽中文标签（如「类型未知」），故中英混排仍逐列对齐。
+    键列宽度取最长键，类型列宽度取最宽的本地化标签，故中英混排仍逐列对齐。
 
     :param fields: 字段序列。
     :return: 键名到表头文本的映射。
@@ -430,12 +431,27 @@ def parse_toml_text(text: str) -> RawParseResult:
         return RawParseResult(True, tomlkit.parse(text))
     except ParseError as error:
         line, column = _error_position(error, text)
-        where = f"第 {line} 行第 {column} 列" if line is not None and column is not None else "行列未知"
+        where = (
+            i18n.t("cli.tui.config.error_position", line=line, column=column)
+            if line is not None and column is not None
+            else i18n.t("cli.tui.config.error_position_unknown")
+        )
         lines = text.splitlines()
-        snippet = f"，该行内容为 {lines[line - 1].strip()!r}" if line is not None and 0 < line <= len(lines) else ""
-        return RawParseResult(False, None, f"TOML 解析失败（{where}）：{_error_reason(error)}{snippet}", line)
+        snippet = (
+            i18n.t("cli.tui.config.error_snippet", content=repr(lines[line - 1].strip()))
+            if line is not None and 0 < line <= len(lines)
+            else ""
+        )
+        return RawParseResult(
+            False,
+            None,
+            i18n.t("cli.tui.config.error_toml", where=where, reason=_error_reason(error), snippet=snippet),
+            line,
+        )
     except Exception as error:  # noqa: BLE001 - 解析器的其它异常同样只用于展示，不应中断界面
-        return RawParseResult(False, None, f"TOML 解析失败：{type(error).__name__}: {error}")
+        return RawParseResult(
+            False, None, i18n.t("cli.tui.config.error_toml_generic", kind=type(error).__name__, error=error)
+        )
 
 
 def _unwrap(item: Any) -> Any:
@@ -465,19 +481,19 @@ def flatten_document(document: Any, table: str) -> tuple[list[RawEntry], list[st
         section = str(name)
         if isinstance(value, Table):
             if not _section_matches(section, table):
-                skipped.append(f"[{section}] 不属于表 {table}")
+                skipped.append(i18n.t("cli.tui.config.skipped_section", section=section, table=table))
                 continue
             for key, item in value.items():
                 if isinstance(item, Table):
-                    skipped.append(f"{section}.{key} 是嵌套表")
+                    skipped.append(i18n.t("cli.tui.config.skipped_nested_table", section=section, name=key))
                     continue
                 unwrapped = _unwrap(item)
                 if _is_nested(unwrapped):
-                    skipped.append(f"{section}.{key} 是嵌套结构")
+                    skipped.append(i18n.t("cli.tui.config.skipped_nested_value", section=section, name=key))
                     continue
                 entries.append(RawEntry(section=section, key=str(key), text=write_text(unwrapped)))
             continue
-        skipped.append(f"{section} 是顶层键（不属于 [{table}] 段）")
+        skipped.append(i18n.t("cli.tui.config.skipped_top_level", section=section, table=table))
     return entries, skipped
 
 
@@ -554,7 +570,7 @@ class StaticConfigSource:
         self._tables = tuple(tables)
         self._fields = {name: tuple(items) for name, items in (fields or {}).items()}
         self._raw = dict(raw or {})
-        self._set_result = set_result or SetResult(True, "写入成功", "stub")
+        self._set_result = set_result or SetResult(True, i18n.t("cli.tui.config.stub_write_ok"), "stub")
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
         self.applied: list[tuple[str, str, str]] = []
 
@@ -636,7 +652,7 @@ class SubprocessConfigSource:
                 return strategy()
             except ConfigSourceError as error:
                 errors.append(str(error))
-        raise ConfigSourceError("；".join(errors))
+        raise ConfigSourceError(i18n.t("cli.tui.common.error_separator").join(errors))
 
     def schema(self, table: str) -> Sequence[ConfigField]:
         """见 :meth:`ConfigSource.schema`。"""
@@ -651,10 +667,10 @@ class SubprocessConfigSource:
             try:
                 text = path.read_text(encoding="utf-8")
             except OSError as error:
-                raise ConfigSourceError(f"读取 {path} 失败：{error}") from error
-            self.last_raw_origin = f"文件 {path}"
+                raise ConfigSourceError(i18n.t("cli.tui.config.err_read_file", path=path, error=error)) from error
+            self.last_raw_origin = i18n.t("cli.tui.config.raw_origin_file", path=path)
             return text
-        self.last_raw_origin = f"由 config schema 重建（未找到 {table} 的配置文件）"
+        self.last_raw_origin = i18n.t("cli.tui.config.raw_origin_rebuilt", table=table)
         return rebuild_raw_text(self.schema(table))
 
     def set_value(self, section: str, key: str, value: str) -> SetResult:
@@ -664,12 +680,24 @@ class SubprocessConfigSource:
         try:
             completed = instance.run_core_capture("config", "set", key, value, "--table", section)
         except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的结果
-            raise ConfigSourceError(f"调用 core 写入 {section}.{key} 失败：{type(error).__name__}: {error}") from error
+            raise ConfigSourceError(
+                i18n.t(
+                    "cli.tui.config.err_core_write",
+                    section=section,
+                    name=key,
+                    kind=type(error).__name__,
+                    error=error,
+                )
+            ) from error
         if completed.returncode == 0:
-            return SetResult(True, f"已写入 {section}.{key}", self._tail(completed.stdout))
+            return SetResult(
+                True,
+                i18n.t("cli.tui.config.result_write_ok", section=section, name=key),
+                self._tail(completed.stdout),
+            )
         return SetResult(
             False,
-            f"写入 {section}.{key} 失败（退出码 {completed.returncode}）",
+            i18n.t("cli.tui.config.err_write_exit", section=section, name=key, code=completed.returncode),
             self._tail(completed.stderr),
         )
 
@@ -705,17 +733,24 @@ class SubprocessConfigSource:
         argv = self.cli_argv("config", "list", "--json")
         completed = self._run(argv)
         if completed.returncode != 0:
-            raise ConfigSourceError(f"`{' '.join(argv)}` 退出码 {completed.returncode}：{self._tail(completed.stderr)}")
+            raise ConfigSourceError(
+                i18n.t(
+                    "cli.tui.config.err_cmd_exit",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
         return normalize_tables(self._parse_json(completed.stdout, "config list --json"))
 
     def _tables_from_directory(self) -> list[str]:
         """退回实例目录枚举：``<实例>/config`` 下的 ``*.toml`` 文件名即表名。"""
         root = self._instance_root()
         if root is None:
-            raise ConfigSourceError(f"{self.root} 不是 AkariBot 实例（未找到 akaribot.toml）")
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_not_instance", root=self.root))
         base = root / "config"
         if not base.is_dir():
-            raise ConfigSourceError(f"{base} 不存在，无法枚举配置表")
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_no_config_dir", path=base))
         return normalize_tables(sorted(path.stem for path in base.rglob("*.toml")))
 
     def _core_json(self, *args: str, label: str) -> Any:
@@ -724,9 +759,18 @@ class SubprocessConfigSource:
         try:
             completed = instance.run_core_capture("config", *args, "--json")
         except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的错误
-            raise ConfigSourceError(f"调用 core 的 `{label}` 失败：{type(error).__name__}: {error}") from error
+            raise ConfigSourceError(
+                i18n.t("cli.tui.config.err_core_call", label=label, kind=type(error).__name__, error=error)
+            ) from error
         if completed.returncode != 0:
-            raise ConfigSourceError(f"`{label}` 退出码 {completed.returncode}：{self._tail(completed.stderr)}")
+            raise ConfigSourceError(
+                i18n.t(
+                    "cli.tui.config.err_cmd_exit",
+                    cmd=label,
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
         return self._parse_json(completed.stdout, label)
 
     def _instance_root(self) -> Path | None:
@@ -750,17 +794,16 @@ class SubprocessConfigSource:
         try:
             from akaribot.cli.instance import Instance
         except ImportError as error:
-            raise ConfigSourceError("尚未提供 akaribot.cli.instance，无法调用 core 配置入口") from error
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_instance_module")) from error
         root = self._instance_root()
         if root is None:
-            raise ConfigSourceError(
-                f"{self.root} 不是 AkariBot 实例（未找到 akaribot.toml）；"
-                "先运行 `akaribot init`，或用 AKARI_INSTANCE_DIR 指定实例根"
-            )
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_no_instance_hint", root=self.root))
         try:
             self._instance_cache = Instance(root)
         except Exception as error:  # noqa: BLE001 - 实例构造失败同样只作为降级原因上报
-            raise ConfigSourceError(f"构造 Instance 失败：{type(error).__name__}: {error}") from error
+            raise ConfigSourceError(
+                i18n.t("cli.tui.config.err_instance_failed", kind=type(error).__name__, error=error)
+            ) from error
         return self._instance_cache
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
@@ -779,21 +822,25 @@ class SubprocessConfigSource:
                 env=env,
             )
         except FileNotFoundError as error:
-            raise ConfigSourceError(f"找不到可执行文件：{argv[0]}（{error}）") from error
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_exe_missing", path=argv[0], error=error)) from error
         except subprocess.TimeoutExpired as error:
-            raise ConfigSourceError(f"`{' '.join(argv)}` 超过 {self.timeout:.0f} 秒未返回") from error
+            raise ConfigSourceError(
+                i18n.t("cli.tui.config.err_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from error
         except OSError as error:
-            raise ConfigSourceError(f"`{' '.join(argv)}` 执行失败：{error}") from error
+            raise ConfigSourceError(
+                i18n.t("cli.tui.config.err_exec_failed", cmd=" ".join(argv), error=error)
+            ) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
         """解析子进程 JSON 输出。"""
         text = (stdout or "").strip()
         if not text:
-            raise ConfigSourceError(f"`{label}` 没有输出")
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_empty_output", label=label))
         try:
             return json.loads(text)
         except json.JSONDecodeError as error:
-            raise ConfigSourceError(f"`{label}` 输出不是 JSON：{error}") from error
+            raise ConfigSourceError(i18n.t("cli.tui.config.err_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
         """截取子进程输出的尾部，供状态栏展示。"""
@@ -884,7 +931,7 @@ class BoolToggle(compat.Horizontal):
     def compose(self) -> compat.ComposeResult:
         """装配开关按钮与状态说明。"""
         yield compat.Button(self.label_text(), classes="bool-button")
-        yield compat.Static(compat.plain_text("（点击按钮或按 s 保存前先切换；写入 true / false）"), markup=False)
+        yield compat.Static(compat.plain_text(i18n.t("cli.tui.config.bool_hint")), markup=False)
 
     @property
     def value(self) -> bool:
@@ -892,8 +939,8 @@ class BoolToggle(compat.Horizontal):
         return self._value
 
     def label_text(self) -> str:
-        """返回按钮文字，开与关用中文并配符号。"""
-        return "✓ 开" if self._value else "✗ 关"
+        """返回按钮文字，开与关配符号区分。"""
+        return i18n.t("cli.tui.config.bool_on") if self._value else i18n.t("cli.tui.config.bool_off")
 
     def set_value(self, value: bool) -> None:
         """设置值并刷新按钮外观。"""
@@ -929,7 +976,9 @@ class FieldRow(compat.Vertical):
         self.header = header
         self.help_text = field.help_text
         self.placeholder_notice = (
-            f"待填写：模板占位符 {_short(field.edit_value, 40)}，请替换为真实值" if field.is_placeholder else ""
+            i18n.t("cli.tui.config.placeholder_notice", value=_short(field.edit_value, 40))
+            if field.is_placeholder
+            else ""
         )
         self.error_text = ""
 
@@ -954,7 +1003,7 @@ class FieldRow(compat.Vertical):
             if switch is not None:
                 return switch(value=bool(self.field.value), classes="field-control")
             return BoolToggle(bool(self.field.value))
-        placeholder = "逗号分隔，例如：a, b, c" if self.field.kind == KIND_LIST else ""
+        placeholder = i18n.t("cli.tui.config.list_placeholder") if self.field.kind == KIND_LIST else ""
         return compat.Input(
             self.field.edit_value,
             password=self.field.secret,
@@ -1033,10 +1082,10 @@ class RawTextEditor(compat.VerticalScroll):
             yield self._textarea_cls("\n".join(self._lines), language="toml", id="raw-textarea")
             return
         with compat.Horizontal(id="raw-actions"):
-            yield compat.Button("追加行", id="raw-add")
-            yield compat.Button("删除末行", id="raw-del")
+            yield compat.Button(i18n.t("cli.tui.config.raw_add_line"), id="raw-add")
+            yield compat.Button(i18n.t("cli.tui.config.raw_del_line"), id="raw-del")
             yield compat.Static(
-                compat.plain_text("逐行编辑（_compat 尚未导出 TextArea）：每行一个输入框，保存前做 TOML 校验"),
+                compat.plain_text(i18n.t("cli.tui.config.raw_hint")),
                 id="raw-hint",
                 markup=False,
             )
@@ -1206,12 +1255,13 @@ class ConfigPage(compat.Vertical):
     }
     """
 
+    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
     BINDINGS = compat.bindings(
-        ("s", "save", "保存"),
-        ("f", "mode_form", "表单模式"),
-        ("t", "mode_raw", "原始文本"),
-        ("ctrl+r", "reload", "重读"),
-        ("escape", "focus_tables", "表清单"),
+        ("s", "save", i18n.t("cli.tui.config.action_save")),
+        ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form")),
+        ("t", "mode_raw", i18n.t("cli.tui.config.action_mode_raw")),
+        ("ctrl+r", "reload", i18n.t("cli.tui.config.action_reload")),
+        ("escape", "focus_tables", i18n.t("cli.tui.config.action_focus_tables")),
     )
 
     def __init__(
@@ -1225,7 +1275,7 @@ class ConfigPage(compat.Vertical):
         self.source: ConfigSource = source if source is not None else SubprocessConfigSource()
         self.cache_ttl = cache_ttl
         self.last_error: str = ""
-        self.last_result: str = "就绪"
+        self.last_result: str = i18n.t("cli.tui.common.status_ready")
         self._tables: tuple[str, ...] = ()
         self._fields: tuple[ConfigField, ...] = ()
         self._schemas: dict[str, tuple[ConfigField, ...]] = {}
@@ -1237,23 +1287,27 @@ class ConfigPage(compat.Vertical):
         self._skipped: tuple[str, ...] = ()
         self._rendered_tables: tuple[str, ...] = ()
         self._caption_rendered: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树：工具条、表清单、表单区、文本区、状态栏。"""
         with compat.Horizontal(id="config-toolbar"):
-            yield compat.Button("表单模式", id="mode-form", variant="primary")
-            yield compat.Button("原始文本", id="mode-raw")
-            yield compat.Static(compat.plain_text("尚未读取配置表"), id="config-caption", markup=False)
-            yield compat.Button("保存", id="save", variant="success")
-            yield compat.Button("重读", id="reload")
+            yield compat.Button(i18n.t("cli.tui.config.action_mode_form"), id="mode-form", variant="primary")
+            yield compat.Button(i18n.t("cli.tui.config.action_mode_raw"), id="mode-raw")
+            yield compat.Static(
+                compat.plain_text(i18n.t("cli.tui.config.caption_unloaded")), id="config-caption", markup=False
+            )
+            yield compat.Button(i18n.t("cli.tui.config.action_save"), id="save", variant="success")
+            yield compat.Button(i18n.t("cli.tui.config.action_reload"), id="reload")
         with compat.Horizontal(id="config-body"):
             yield compat.ListView(id="table-list")
             with compat.VerticalScroll(id="form-pane"):
-                yield compat.Static(compat.plain_text("正在读取配置表…"), id="form-hint", markup=False)
+                yield compat.Static(
+                    compat.plain_text(i18n.t("cli.tui.config.form_hint_loading")), id="form-hint", markup=False
+                )
             with compat.VerticalScroll(id="raw-pane", classes="hidden"):
                 yield RawTextEditor("", id="raw-editor")
-        yield compat.Static(compat.plain_text("就绪"), id="config-status", markup=False)
+        yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后读取一次表清单，并把焦点交给表清单使键位立即可用。"""
@@ -1355,9 +1409,11 @@ class ConfigPage(compat.Vertical):
         """
         if not force and self._tables and self.cache_age() < self.cache_ttl:
             self._render_tables()
-            self._set_status(f"使用 {self.cache_age():.1f} 秒前的缓存，共 {len(self._tables)} 张配置表")
+            self._set_status(
+                i18n.t("cli.tui.config.status_cached", age=f"{self.cache_age():.1f}", count=len(self._tables))
+            )
             return
-        self._set_status("正在读取配置表清单…")
+        self._set_status(i18n.t("cli.tui.config.status_loading_tables"))
         self.run_worker(self.reload_tables(), group="config-tables", exclusive=True)
 
     async def reload_tables(self) -> bool:
@@ -1369,21 +1425,21 @@ class ConfigPage(compat.Vertical):
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._render_tables()
-            await self._show_form_hint(f"读取配置表失败：{error}")
-            self._set_status(f"读取失败：{error}")
+            await self._show_form_hint(i18n.t("cli.tui.config.hint_load_tables_failed", error=error))
+            self._set_status(i18n.t("cli.tui.config.status_load_failed", error=error))
             return False
         self._tables = tuple(normalize_tables(list(tables)))
         self._loaded_at = time.monotonic()
         self.last_error = ""
-        self.last_result = f"已读取 {len(self._tables)} 张配置表"
+        self.last_result = i18n.t("cli.tui.config.result_tables_loaded", count=len(self._tables))
         self._render_tables()
         target = self._selected if self._selected in self._tables else (self._tables[0] if self._tables else None)
         if target is None:
-            await self._show_form_hint("实例里没有任何配置表：先运行 `akaribot init` 或安装模块")
+            await self._show_form_hint(i18n.t("cli.tui.config.hint_no_tables"))
             self._selected = None
             self._fields = ()
             self._sync_caption()
-            self._set_status("没有可编辑的配置表")
+            self._set_status(i18n.t("cli.tui.config.status_no_tables"))
             return True
         await self.select_table(target)
         return True
@@ -1401,7 +1457,7 @@ class ConfigPage(compat.Vertical):
             self._raw_table = None
             await self._rebuild_form(())
             self._sync_caption()
-            self._set_status("没有可编辑的配置表")
+            self._set_status(i18n.t("cli.tui.config.status_no_tables"))
             return False
         self._selected = table
         try:
@@ -1410,15 +1466,15 @@ class ConfigPage(compat.Vertical):
             self._fields = ()
             self.last_error = f"{type(error).__name__}: {error}"
             self._sync_caption()
-            await self._show_form_hint(f"读取表 {table} 的字段失败：{error}")
-            self._set_status(f"读取表 {table} 失败：{error}")
+            await self._show_form_hint(i18n.t("cli.tui.config.hint_table_fields_failed", table=table, error=error))
+            self._set_status(i18n.t("cli.tui.config.status_table_failed", table=table, error=error))
             return False
         self.last_error = ""
         await self._rebuild_form(self._fields)
         if self._mode == MODE_RAW:
             await self.load_raw(table, force=force)
         self._sync_caption()
-        self._set_status(f"已载入表 {table}：{len(self._fields)} 项")
+        self._set_status(i18n.t("cli.tui.config.result_table_loaded", table=table, count=len(self._fields)))
         return True
 
     async def load_raw(self, table: str | None = None, *, force: bool = False) -> bool:
@@ -1437,7 +1493,7 @@ class ConfigPage(compat.Vertical):
             text = await asyncio.to_thread(self.source.read_raw, table)
         except Exception as error:  # noqa: BLE001 - 读文件失败同样只影响展示
             self.last_error = f"{type(error).__name__}: {error}"
-            self._set_status(f"读取 {table} 的原始文本失败：{error}")
+            self._set_status(i18n.t("cli.tui.config.status_raw_failed", table=table, error=error))
             return False
         await self.raw_editor().load_text(text)
         self._raw_table = table
@@ -1460,7 +1516,8 @@ class ConfigPage(compat.Vertical):
         if mode == MODE_RAW and self._selected is not None:
             await self.load_raw(self._selected)
         self._sync_caption()
-        self._set_status(f"已切换到{'原始文本' if mode == MODE_RAW else '表单'}模式")
+        mode_key = "cli.tui.config.mode_raw" if mode == MODE_RAW else "cli.tui.config.mode_form"
+        self._set_status(i18n.t("cli.tui.config.status_mode_switched", mode=i18n.t(mode_key)))
 
     async def _load_fields(self, table: str, *, force: bool = False) -> tuple[ConfigField, ...]:
         """读取字段，命中缓存时不取数。"""
@@ -1495,11 +1552,8 @@ class ConfigPage(compat.Vertical):
         if rows:
             await pane.mount(*rows)
             return
-        await pane.mount(
-            compat.Static(
-                compat.plain_text("该表没有配置项" if self._selected else "未选中配置表"), id="form-hint", markup=False
-            )
-        )
+        hint_key = "cli.tui.config.hint_table_empty" if self._selected else "cli.tui.config.hint_no_selection"
+        await pane.mount(compat.Static(compat.plain_text(i18n.t(hint_key)), id="form-hint", markup=False))
 
     async def _show_form_hint(self, text: str) -> None:
         """在表单区显示一条提示，替代字段列表。"""
@@ -1536,14 +1590,18 @@ class ConfigPage(compat.Vertical):
     def _sync_caption(self) -> None:
         """更新摘要栏：表名、项数、密钥与占位符数量、当前模式。"""
         if self._selected is None:
-            text = f"共 {len(self._tables)} 张配置表，未选中任何表"
+            text = i18n.t("cli.tui.config.caption_no_selection", total=len(self._tables))
         else:
             secrets = sum(1 for field in self._fields if field.secret)
             placeholders = sum(1 for field in self._fields if field.is_placeholder)
-            mode_label = "表单" if self._mode == MODE_FORM else "原始文本"
-            text = (
-                f"表 {self._selected}：共 {len(self._fields)} 项，密钥 {secrets} 项，"
-                f"待填写 {placeholders} 项；模式：{mode_label}"
+            mode_key = "cli.tui.config.mode_form" if self._mode == MODE_FORM else "cli.tui.config.mode_raw"
+            text = i18n.t(
+                "cli.tui.config.caption_table",
+                table=self._selected,
+                total=len(self._fields),
+                secrets=secrets,
+                placeholders=placeholders,
+                mode=i18n.t(mode_key),
             )
         self._caption_rendered = text
         self.query_one("#config-caption", compat.Static).update(compat.plain_text(text))
@@ -1570,10 +1628,10 @@ class ConfigPage(compat.Vertical):
         校验全文，解析失败直接拒绝保存并给出出错行，不发出任何写入调用。
         """
         if self._selected is None:
-            self._set_status("没有选中的配置表，无法保存")
+            self._set_status(i18n.t("cli.tui.config.status_no_selection_save"))
             return False
         if not self._fields:
-            self._set_status("尚未读到字段，无法保存；先按 ctrl+r 重读")
+            self._set_status(i18n.t("cli.tui.config.status_no_fields_save"))
             return False
         self._skipped = ()
         if self._mode == MODE_RAW:
@@ -1583,13 +1641,24 @@ class ConfigPage(compat.Vertical):
         else:
             plan, errors = self._plan_form_save()
             if errors:
-                self.last_error = "；".join(errors)
-                self._set_status(f"校验未通过，未写入任何配置：{self.last_error}")
-                compat.notify(self.app, self.last_error, severity="error", title="配置未保存")
+                self.last_error = i18n.t("cli.tui.common.error_separator").join(errors)
+                self._set_status(i18n.t("cli.tui.config.status_validation_failed", error=self.last_error))
+                compat.notify(
+                    self.app,
+                    self.last_error,
+                    severity="error",
+                    title=i18n.t("cli.tui.config.notify_unsaved_title"),
+                )
                 return False
         if not plan:
-            self.last_result = "没有需要写入的改动"
-            self._set_status(f"表 {self._selected} 没有需要写入的改动；{_HELP_HINT}")
+            self.last_result = i18n.t("cli.tui.config.result_no_changes")
+            self._set_status(
+                i18n.t(
+                    "cli.tui.config.status_no_changes",
+                    table=self._selected,
+                    hint=i18n.t("cli.tui.config.help_hint"),
+                )
+            )
             return True
         return await self._apply(plan)
 
@@ -1609,7 +1678,7 @@ class ConfigPage(compat.Vertical):
             ok, text, message = parse_field(field, row.text)
             if not ok:
                 row.show_error(message)
-                errors.append(f"{field.key}：{message}")
+                errors.append(i18n.t("cli.tui.config.err_field", name=field.key, message=message))
                 continue
             plan.append(RawEntry(section=field.section, key=field.key, text=text))
         return plan, errors
@@ -1619,40 +1688,75 @@ class ConfigPage(compat.Vertical):
         parsed = parse_toml_text(self.raw_editor().text)
         if not parsed.ok:
             self.last_error = parsed.message
-            self._set_status(f"拒绝保存：{parsed.message}")
-            compat.notify(self.app, parsed.message, severity="error", title="TOML 校验失败")
+            self._set_status(i18n.t("cli.tui.config.status_save_rejected", message=parsed.message))
+            compat.notify(
+                self.app,
+                parsed.message,
+                severity="error",
+                title=i18n.t("cli.tui.config.notify_toml_title"),
+            )
             return None
         assert self._selected is not None
         changes, skipped, unchanged = diff_document(parsed.document, self._fields, self._selected)
         self._skipped = tuple(skipped)
-        self.last_result = f"改动 {len(changes)} 项，未改动 {len(unchanged)} 项"
+        self.last_result = i18n.t("cli.tui.config.result_diff", changed=len(changes), unchanged=len(unchanged))
         return changes
 
     async def _apply(self, plan: Sequence[RawEntry]) -> bool:
         """逐项经数据源写入，成功后重读当前表。"""
         assert self._selected is not None
-        self._set_status(f"正在写入 {len(plan)} 项…")
+        self._set_status(i18n.t("cli.tui.config.status_writing", count=len(plan)))
         written: list[str] = []
         failures: list[str] = []
         for entry in plan:
             try:
                 result = await asyncio.to_thread(self.source.set_value, entry.section, entry.key, entry.text)
             except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成失败项展示
-                result = SetResult(False, f"写入 {entry.label} 失败", f"{type(error).__name__}: {error}")
+                result = SetResult(
+                    False,
+                    i18n.t("cli.tui.config.err_write_failed", label=entry.label),
+                    f"{type(error).__name__}: {error}",
+                )
             if result.ok:
                 written.append(entry.label)
                 continue
-            failures.append(f"{entry.label}：{result.detail or result.message}")
+            failures.append(
+                i18n.t("cli.tui.config.err_entry", label=entry.label, detail=result.detail or result.message)
+            )
         self._saved = tuple(written)
         if failures:
-            self.last_error = "；".join(failures)
-            self._set_status(f"写入完成：成功 {len(written)} 项，失败 {len(failures)} 项——{failures[0]}")
-            compat.notify(self.app, failures[0], severity="error", title="配置写入失败")
+            self.last_error = i18n.t("cli.tui.common.error_separator").join(failures)
+            self._set_status(
+                i18n.t(
+                    "cli.tui.config.status_write_summary",
+                    ok=len(written),
+                    failed=len(failures),
+                    first=failures[0],
+                )
+            )
+            compat.notify(
+                self.app,
+                failures[0],
+                severity="error",
+                title=i18n.t("cli.tui.config.notify_write_failed_title"),
+            )
             return False
         self.invalidate_cache(self._selected)
         await self.select_table(self._selected, force=True)
-        self._set_status(f"已写入 {len(written)} 项：{'、'.join(written)}；{_HELP_HINT}")
-        compat.notify(self.app, f"已写入 {len(written)} 项配置", severity="information", title=self._selected)
+        self._set_status(
+            i18n.t(
+                "cli.tui.config.status_written",
+                count=len(written),
+                entries=i18n.t("cli.tui.common.list_separator").join(written),
+                hint=i18n.t("cli.tui.config.help_hint"),
+            )
+        )
+        compat.notify(
+            self.app,
+            i18n.t("cli.tui.config.notify_written", count=len(written)),
+            severity="information",
+            title=self._selected,
+        )
         return True
 
     # endregion

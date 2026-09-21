@@ -4,8 +4,11 @@
 配置与数据库骨架、可选的测试，以及第三方作者用的发布工作流。问卷每一项都对应一个命令行选项，
 `--non-interactive` 下只取选项值与默认值，全程不提问。
 
-模板取自仓库内的 `templates/module/`，渲染契约见该目录的 README：路径与正文中的 `[@name@]`
-占位符在 Jinja2 渲染之后替换。
+`akaribot new adapter <name>` 用同一套问卷与渲染机制生成平台适配器包：info / features / context /
+bot 四个骨架文件，加可选的配置模板，对照 `packages/adapters/` 下既有适配器的文件构成。
+
+模板取自仓库内的 `templates/module/` 与 `templates/adapter/`，渲染契约见 `templates/README.md`：
+路径与正文中的 `[@name@]` 占位符在 Jinja2 渲染之后替换。
 """
 
 from __future__ import annotations
@@ -18,13 +21,35 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import typer
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from akaribot.cli import i18n
+
 app = typer.Typer(help="脚手架")
+
+
+def apply_argv_locale() -> None:
+    """让帮助文本也跟随 ``--lang``。
+
+    选项帮助在命令树物化时即已固化，早于根回调解析 ``--lang``；故导入本模块时先从 ``sys.argv``
+    取一次语言，未给出时不改动当前语言。
+    """
+    argv = sys.argv[1:]
+    for index, item in enumerate(argv):
+        if item == "--lang" and index + 1 < len(argv):
+            i18n.set_locale(argv[index + 1])
+            return
+        if item.startswith("--lang="):
+            i18n.set_locale(item.partition("=")[2])
+            return
+
+
+apply_argv_locale()
 
 # 模板目录的定位顺序：显式参数、环境变量、当前目录向上的 templates/module、CLI 源码目录。
 TEMPLATE_DIR_ENV = "AKARIBOT_TEMPLATE_DIR"
@@ -54,6 +79,26 @@ OPTIONAL_TEMPLATES: dict[str, str] = {
 
 # 门面导入的书写顺序，按实际用到的组件裁剪，避免生成未使用的 import。
 API_IMPORT_ORDER = ("Bot", "EventInfo", "HookPoint", "I18NContext", "IntervalTrigger", "module")
+
+# 适配器模板的定位顺序与模块一致，只是相对目录与 README 里的取值含义不同。
+ADAPTER_TEMPLATE_RELATIVE = ("templates", "adapter")
+ADAPTER_TEMPLATE_MARKER = "pyproject.toml.j2"
+# 模板维护说明与自检脚本留在仓库内，不随生成物分发。
+ADAPTER_TEMPLATE_SKIP = frozenset({"TEMPLATE.md", "selfcheck.py"})
+
+# 问卷选项控制的适配器模板文件：未启用时该文件不渲染。
+ADAPTER_OPTIONAL_TEMPLATES: dict[str, str] = {
+    "src/akaribot/adapters/[@module_name@]/config.py.j2": "has_config",
+}
+
+PLATFORM_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,47}$")
+FEATURE_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?:=(true|false))?$")
+FIELD_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?::([a-z]+))?(?:=(.*))?$", re.DOTALL)
+FIELD_TYPES = ("str", "bool", "int", "float", "list")
+# 默认能力集是聊天平台的常见能力；未实现的由作者在 features.py 中改回 False。
+ADAPTER_DEFAULT_FEATURES = ("support_image", "support_mention", "support_quote", "support_delete")
+CREDENTIAL_DEFAULT_SUFFIX = "_token"
+TRUTHY_VALUES = ("true", "1", "yes")
 
 FLAG_WITH_ARG_PATTERN = re.compile(r"\[-{1,2}([A-Za-z][A-Za-z0-9_-]*)\s+<([A-Za-z_][A-Za-z0-9_]*)>\]")
 OPTIONAL_ARG_PATTERN = re.compile(r"\[\s*<([A-Za-z_][A-Za-z0-9_]*)>\s*\]")
@@ -134,6 +179,46 @@ class ModulePlan:
     has_assets: bool = False
     has_data_dir: bool = False
     with_tests: bool = False
+
+
+@dataclass(frozen=True)
+class ConfigField:
+    """一条平台配置字段声明。
+
+    :param name: 字段名，同时用作配置表的键与 locale 注释键的后半段。
+    :param annotation: 类型标注，取值来自 ``FIELD_TYPES``。
+    :param default: 默认值字面量，直接写进 config.py。
+    """
+
+    name: str
+    annotation: str
+    default: str
+
+
+@dataclass
+class AdapterPlan:
+    """一次适配器生成的问卷答案。
+
+    :param name: 适配器名，同时用作目录名、entry point 名、配置表后缀与 locale 键前缀。
+    :param platform_name: 平台显示名，写入 info.py 并经 ``Info.resolve_client_name()`` 派生前缀。
+    :param desc: 适配器的一句话说明。
+    :param author: 作者名。
+    :param license: 许可证标识。
+    :param features: 平台能力开关，按录入顺序排列。
+    :param has_config: 是否生成 config.py 与 manifest 的配置表声明。
+    :param config_fields: 非机密的配置字段。
+    :param credential_fields: 凭据字段，写入 secret 表与 manifest 的 credential_fields。
+    """
+
+    name: str
+    platform_name: str
+    desc: str
+    author: str
+    license: str
+    features: list[tuple[str, bool]] = field(default_factory=list)
+    has_config: bool = False
+    config_fields: list[ConfigField] = field(default_factory=list)
+    credential_fields: list[ConfigField] = field(default_factory=list)
 
 
 def snake_case(name: str) -> str:
@@ -224,13 +309,21 @@ def placeholder_values(plan: ModulePlan) -> dict[str, str]:
     }
 
 
-def template_root(override: Path | None = None) -> Path:
-    """定位模块模板目录。
+def template_root(
+    override: Path | None = None,
+    relative: tuple[str, ...] = TEMPLATE_RELATIVE,
+    marker: str = TEMPLATE_MARKER,
+    missing_message: str | None = None,
+) -> Path:
+    """定位模板目录。
 
-    顺序：命令行参数、``AKARIBOT_TEMPLATE_DIR``、当前目录逐级向上的 ``templates/module``、
-    CLI 源码目录逐级向上。前两条服务于打包分发与本地调试，后两条服务于源码检出。
+    顺序：命令行参数、``AKARIBOT_TEMPLATE_DIR``、当前目录逐级向上的相对目录、CLI 源码目录逐级
+    向上。前两条服务于打包分发与本地调试，后两条服务于源码检出。
 
     :param override: 命令行给出的模板目录，未给出时为 ``None``。
+    :param relative: 相对仓库根的模板目录，模块与适配器各一套。
+    :param marker: 用于判定候选目录是否为目标模板目录的文件名。
+    :param missing_message: 全部候选位置都不存在时的报错文本。
     :return: 模板目录的绝对路径。
     :raises typer.BadParameter: 全部候选位置都没有模板。
     """
@@ -240,15 +333,15 @@ def template_root(override: Path | None = None) -> Path:
     if configured := os.environ.get(TEMPLATE_DIR_ENV):
         candidates.append(Path(configured))
     for base in (Path.cwd(), *Path.cwd().parents):
-        candidates.append(base.joinpath(*TEMPLATE_RELATIVE))
+        candidates.append(base.joinpath(*relative))
     for base in Path(__file__).resolve().parents[:8]:
-        candidates.append(base.joinpath(*TEMPLATE_RELATIVE))
+        candidates.append(base.joinpath(*relative))
     for candidate in candidates:
-        if (candidate / TEMPLATE_MARKER).is_file():
+        if (candidate / marker).is_file():
             return candidate.resolve()
-    raise typer.BadParameter(
-        f"未找到模块模板目录（应包含 {TEMPLATE_MARKER}），请用 --template-dir 或 {TEMPLATE_DIR_ENV} 指定。"
-    )
+    if missing_message is not None:
+        raise typer.BadParameter(missing_message)
+    raise typer.BadParameter(f"未找到模块模板目录（应包含 {marker}），请用 --template-dir 或 {TEMPLATE_DIR_ENV} 指定。")
 
 
 def split_entries(answer: str) -> list[str]:
@@ -663,31 +756,43 @@ def template_enabled(relative: str, plan: ModulePlan) -> bool:
     return attribute is None or bool(getattr(plan, attribute))
 
 
-def write_package(plan: ModulePlan, root: Path, target: Path, force: bool) -> list[Path]:
-    """渲染模板树并写出包目录。
+def render_tree(
+    *,
+    root: Path,
+    target: Path,
+    values: dict[str, str],
+    context: dict[str, object],
+    enabled: Callable[[str], bool] | None = None,
+    skip: frozenset[str] = frozenset(),
+    force: bool = False,
+    conflict_message: str = "",
+) -> list[Path]:
+    """渲染模板树并写出包目录，模块与适配器共用同一套渲染机制。
 
-    :param plan: 问卷答案。
     :param root: 模板目录。
     :param target: 包目录。
+    :param values: 占位符取值，用于路径与正文的明文替换。
+    :param context: Jinja2 渲染上下文。
+    :param enabled: 相对路径到「是否生成」的判定，``None`` 表示全部生成。
+    :param skip: 只留在模板仓库内、不随生成物分发的相对路径。
     :param force: 目标目录非空时是否覆盖。
+    :param conflict_message: 目标目录非空且未加 ``--force`` 时的报错文本，空串表示用默认文本。
     :return: 写出的文件列表。
     :raises typer.BadParameter: 目标目录非空且未加 ``--force``。
     """
-    values = placeholder_values(plan)
-    context = template_context(plan)
     environment = Environment(
         loader=FileSystemLoader(str(root)),
         undefined=StrictUndefined,
         keep_trailing_newline=True,
     )
     if target.exists() and any(target.iterdir()) and not force:
-        raise typer.BadParameter(f"目标目录非空：{target}；确认覆盖请加 --force。")
+        raise typer.BadParameter(conflict_message or f"目标目录非空：{target}；确认覆盖请加 --force。")
     written: list[Path] = []
     for source in sorted(root.rglob("*")):
         if not source.is_file():
             continue
         relative = source.relative_to(root).as_posix()
-        if not template_enabled(relative, plan):
+        if relative in skip or (enabled is not None and not enabled(relative)):
             continue
         output_relative = fill_placeholders(relative[: -len(".j2")] if relative.endswith(".j2") else relative, values)
         destination = target / output_relative
@@ -701,16 +806,37 @@ def write_package(plan: ModulePlan, root: Path, target: Path, force: bool) -> li
     return written
 
 
+def write_package(plan: ModulePlan, root: Path, target: Path, force: bool) -> list[Path]:
+    """按模块问卷答案渲染模板树并写出包目录。
+
+    :param plan: 问卷答案。
+    :param root: 模板目录。
+    :param target: 包目录。
+    :param force: 目标目录非空时是否覆盖。
+    :return: 写出的文件列表。
+    """
+    return render_tree(
+        root=root,
+        target=target,
+        values=placeholder_values(plan),
+        context=template_context(plan),
+        enabled=lambda relative: template_enabled(relative, plan),
+        force=force,
+        conflict_message=f"目标目录非空：{target}；确认覆盖请加 --force。",
+    )
+
+
 def cli_command() -> list[str]:
     """定位 CLI 入口：优先 PATH 上的 akaribot，否则用当前解释器执行模块入口。"""
     found = shutil.which("akaribot")
     return [found] if found else [sys.executable, "-m", "akaribot.cli.main"]
 
 
-def run_module_add(target: Path) -> bool:
+def run_module_add(target: Path, failure_message: str | None = None) -> bool:
     """尝试执行一次 ``akaribot module add -e .``。
 
     :param target: 包目录。
+    :param failure_message: 未成功时的完整提示，含手动命令；空表示沿用模块脚手架的既有文本。
     :return: 成功返回 ``True``；该子命令尚未实现或执行失败时返回 ``False``。
     """
     command = [*cli_command(), "module", "add", "-e", "."]
@@ -728,12 +854,358 @@ def run_module_add(target: Path) -> bool:
         typer.echo(f"跳过 akaribot module add（{error}）。")
         return False
     if result.returncode != 0:
+        if failure_message is not None:
+            typer.echo(failure_message)
+            return False
         typer.echo("akaribot module add 未成功，该子命令可能尚未实现；请稍后手动执行：")
         typer.echo(f"  cd {target} && akaribot module add -e .")
         return False
     if result.stdout.strip():
         typer.echo(result.stdout.strip())
     return True
+
+
+def adapter_class_name(platform_name: str) -> str:
+    """取类名前缀：已是大写开头的标识符原样保留，其余按 ``_`` 分段转大驼峰。"""
+    if platform_name[:1].isupper() and platform_name.isidentifier():
+        return platform_name
+    return camel_case(platform_name)
+
+
+def adapter_placeholder_values(plan: AdapterPlan) -> dict[str, str]:
+    """适配器占位符取值，名字沿用 ``templates/module/`` 的五项。
+
+    :param plan: 问卷答案。
+    :return: 占位符到取值的映射。
+    """
+    return {
+        "module_name": plan.name,
+        "module_class": adapter_class_name(plan.platform_name),
+        "module_desc": plan.desc,
+        "author": plan.author,
+        "license": plan.license,
+    }
+
+
+def validate_adapter_name(name: str) -> None:
+    """校验适配器名可用作包名、entry point 名与 TOML 裸键。
+
+    :param name: 适配器名。
+    :raises typer.BadParameter: 名字不合规。
+    """
+    if not MODULE_NAME_PATTERN.match(name) or keyword.iskeyword(name):
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_name"))
+
+
+def validate_platform_name(name: str) -> None:
+    """校验平台显示名：字母开头，其后只允许字母、数字与下划线。
+
+    :param name: 平台显示名。
+    :raises typer.BadParameter: 名字不合规。
+    """
+    if not PLATFORM_NAME_PATTERN.match(name):
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_platform_name"))
+
+
+def parse_feature(value: str) -> tuple[str, bool]:
+    """解析一个 ``--feature`` 取值，形如 ``support_image`` 或 ``support_image=false``。
+
+    :param value: 命令行取值。
+    :return: 能力名与开关。
+    :raises typer.BadParameter: 取值不合规。
+    """
+    match = FEATURE_PATTERN.match(value.strip())
+    if match is None:
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_feature", value=value))
+    return match.group(1), match.group(2) != "false"
+
+
+def field_default(annotation: str, raw: str) -> str:
+    """把默认值原文转成该类型的 Python 字面量。
+
+    :param annotation: 类型名，取值来自 ``FIELD_TYPES``。
+    :param raw: 默认值原文，空串表示取该类型的零值。
+    :return: 可直接写进 config.py 的字面量。
+    :raises ValueError: 原文无法按该类型解析。
+    """
+    text = raw.strip()
+    if annotation == "bool":
+        return "True" if text.lower() in TRUTHY_VALUES else "False"
+    if annotation == "int":
+        return str(int(text)) if text else "0"
+    if annotation == "float":
+        return repr(float(text)) if text else "0.0"
+    if annotation == "list":
+        return "[" + ", ".join(python_literal(item.strip()) for item in raw.split(",") if item.strip()) + "]"
+    return python_literal(raw)
+
+
+def parse_field(value: str) -> ConfigField:
+    """解析一个 ``--field`` 取值，形如 ``字段名[:类型][=默认值]``。
+
+    :param value: 命令行取值。
+    :return: 配置字段声明。
+    :raises typer.BadParameter: 取值不合规。
+    """
+    match = FIELD_PATTERN.match(value.strip())
+    annotation = match.group(2) if match else None
+    if match is None or (annotation is not None and annotation not in FIELD_TYPES):
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_field", value=value))
+    annotation = annotation or "str"
+    try:
+        default = field_default(annotation, match.group(3) or "")
+    except ValueError as error:
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_field", value=value)) from error
+    return ConfigField(match.group(1), annotation, default)
+
+
+def parse_credential_field(value: str) -> ConfigField:
+    """解析一个 ``--credential-field`` 取值，只接受字段名。
+
+    :param value: 命令行取值。
+    :return: 凭据字段声明，类型固定为 ``str``，默认空串。
+    :raises typer.BadParameter: 字段名不合规。
+    """
+    name = value.strip()
+    if not MODULE_NAME_PATTERN.match(name):
+        raise typer.BadParameter(i18n.t("cli.new.adapter.invalid_credential", value=value))
+    return ConfigField(name, "str", python_literal(""))
+
+
+def resolve_adapter_features(values: list[str]) -> list[tuple[str, bool]]:
+    """解析能力勾选：同名取最后一条，结果为空时回落到默认能力集。
+
+    :param values: ``--feature`` 取值或问卷作答拆出的条目。
+    :return: 能力名与开关，按首次出现顺序排列。
+    """
+    resolved: dict[str, bool] = {}
+    for value in values:
+        feature_name, enabled = parse_feature(value)
+        resolved[feature_name] = enabled
+    if not resolved:
+        return [(feature_name, True) for feature_name in ADAPTER_DEFAULT_FEATURES]
+    return list(resolved.items())
+
+
+def ask_entries(confirm_question: str, question: str, default: str = "") -> list[str]:
+    """逐条录入取值，直到作者表示不再添加。
+
+    :param confirm_question: 是否继续添加的提问文本。
+    :param question: 单条取值的提问文本。
+    :param default: 单条取值的默认值。
+    :return: 录入的取值列表。
+    """
+    entries: list[str] = []
+    while typer.confirm(confirm_question, default=not entries):
+        entry = typer.prompt(question, default=default).strip()
+        if entry:
+            entries.append(entry)
+    return entries
+
+
+def collect_adapter_plan(
+    *,
+    name: str | None,
+    platform_name: str | None,
+    desc: str | None,
+    author: str | None,
+    license: str | None,
+    features: list[str],
+    has_config: bool | None,
+    fields: list[str],
+    credential_fields: list[str],
+    non_interactive: bool,
+) -> AdapterPlan:
+    """按问卷顺序收集适配器答案，交互模式逐项提问，非交互模式取选项与默认值。
+
+    :return: 问卷答案。
+    """
+    if name is None:
+        if non_interactive:
+            raise typer.BadParameter(i18n.t("cli.new.adapter.name_required"))
+        name = typer.prompt(i18n.t("cli.new.adapter.prompt_name"))
+    validate_adapter_name(name)
+
+    platform_name = prompt_text(
+        platform_name,
+        i18n.t("cli.new.adapter.prompt_platform_name"),
+        camel_case(name),
+        non_interactive,
+    )
+    validate_platform_name(platform_name)
+    desc = prompt_text(
+        desc,
+        i18n.t("cli.new.adapter.prompt_desc"),
+        i18n.t("cli.new.adapter.desc_default", name=platform_name),
+        non_interactive,
+    )
+    author = prompt_text(author, i18n.t("cli.new.adapter.prompt_author"), detect_author(), non_interactive)
+    license = prompt_text(license, i18n.t("cli.new.adapter.prompt_license"), DEFAULT_LICENSE, non_interactive)
+
+    selected = prompt_list(
+        features,
+        i18n.t("cli.new.adapter.prompt_features"),
+        list(ADAPTER_DEFAULT_FEATURES),
+        non_interactive,
+    )
+    # 给出字段即隐含启用配置，避免 --field / --credential-field 被静默丢弃。
+    with_fields = bool(fields or credential_fields)
+    has_config = prompt_flag(has_config, i18n.t("cli.new.adapter.prompt_config"), with_fields, non_interactive)
+    if with_fields and not has_config:
+        raise typer.BadParameter(i18n.t("cli.new.adapter.config_required"))
+    if has_config and not fields and not non_interactive:
+        fields = ask_entries(i18n.t("cli.new.adapter.prompt_add_field"), i18n.t("cli.new.adapter.prompt_field"))
+    if has_config and not credential_fields and not non_interactive:
+        credential_fields = ask_entries(
+            i18n.t("cli.new.adapter.prompt_add_credential"),
+            i18n.t("cli.new.adapter.prompt_credential"),
+            default=f"{name}{CREDENTIAL_DEFAULT_SUFFIX}",
+        )
+
+    return AdapterPlan(
+        name=name,
+        platform_name=platform_name,
+        desc=desc,
+        author=author,
+        license=license,
+        features=resolve_adapter_features(selected),
+        has_config=has_config,
+        config_fields=[parse_field(value) for value in fields],
+        credential_fields=[parse_credential_field(value) for value in credential_fields],
+    )
+
+
+def config_field_entries(fields: list[ConfigField]) -> list[dict[str, str]]:
+    """把配置字段装配成模板可直接拼进源码的结构。
+
+    :param fields: 普通字段或凭据字段。
+    :return: 每项的字段名、类型标注与默认值字面量。
+    """
+    return [{"name": item.name, "annotation": item.annotation, "default": item.default} for item in fields]
+
+
+def adapter_locale_entries(plan: AdapterPlan) -> dict[str, str]:
+    """装配 ``locales/zh_cn.json`` 的全部键值，只含简体中文。
+
+    普通字段的注释键落在基表上，凭据字段的表名由 ``CFGManager`` 加 ``_secret`` 后缀派生。
+
+    :param plan: 问卷答案。
+    :return: 键到文案的映射，键按字面序排列后写入文件。
+    """
+    entries: dict[str, str] = {}
+    for item in plan.config_fields:
+        entries[f"config.comments.bot_{plan.name}.{item.name}"] = f"{plan.platform_name} 平台的 {item.name} 配置项。"
+    for item in plan.credential_fields:
+        entries[f"config.comments.bot_{plan.name}_secret.{item.name}"] = f"{plan.platform_name} 平台的凭据。"
+    return dict(sorted(entries.items()))
+
+
+def adapter_template_context(plan: AdapterPlan) -> dict[str, object]:
+    """适配器模板的渲染上下文。
+
+    :param plan: 问卷答案。
+    :return: 模板变量。
+    """
+    context: dict[str, object] = dict(adapter_placeholder_values(plan))
+    context.update(
+        {
+            "platform_name": plan.platform_name,
+            "features": [{"name": feature_name, "value": str(enabled)} for feature_name, enabled in plan.features],
+            "config_fields": config_field_entries(plan.config_fields),
+            "credential_fields": config_field_entries(plan.credential_fields),
+            "credential_fields_toml": json.dumps([item.name for item in plan.credential_fields]),
+            "has_config": plan.has_config,
+            "locale_json": json.dumps(adapter_locale_entries(plan), ensure_ascii=False, indent=4),
+        }
+    )
+    return context
+
+
+def adapter_template_enabled(relative: str, plan: AdapterPlan) -> bool:
+    """判断一个适配器模板文件是否属于本次生成范围。
+
+    :param relative: 模板相对路径。
+    :param plan: 问卷答案。
+    :return: 需要生成时返回 ``True``。
+    """
+    attribute = ADAPTER_OPTIONAL_TEMPLATES.get(relative)
+    return attribute is None or bool(getattr(plan, attribute))
+
+
+def write_adapter_package(plan: AdapterPlan, root: Path, target: Path, force: bool) -> list[Path]:
+    """按适配器问卷答案渲染模板树并写出包目录。
+
+    :param plan: 问卷答案。
+    :param root: 模板目录。
+    :param target: 包目录。
+    :param force: 目标目录非空时是否覆盖。
+    :return: 写出的文件列表。
+    """
+    return render_tree(
+        root=root,
+        target=target,
+        values=adapter_placeholder_values(plan),
+        context=adapter_template_context(plan),
+        enabled=lambda relative: adapter_template_enabled(relative, plan),
+        skip=ADAPTER_TEMPLATE_SKIP,
+        force=force,
+        conflict_message=i18n.t("cli.new.adapter.target_not_empty", target=target),
+    )
+
+
+@app.command("adapter", help=i18n.t("cli.new.adapter.help"))
+def new_adapter(
+    name: str | None = typer.Argument(None, help=i18n.t("cli.new.adapter.name_argument")),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=i18n.t("cli.new.adapter.dir_option")),
+    template_dir: Path | None = typer.Option(
+        None, "--template-dir", help=i18n.t("cli.new.adapter.template_dir_option")
+    ),
+    platform_name: str | None = typer.Option(
+        None, "--platform-name", help=i18n.t("cli.new.adapter.platform_name_option")
+    ),
+    desc: str | None = typer.Option(None, "--desc", help=i18n.t("cli.new.adapter.desc_option")),
+    author: str | None = typer.Option(None, "--author", help=i18n.t("cli.new.adapter.author_option")),
+    license: str | None = typer.Option(None, "--license", help=i18n.t("cli.new.adapter.license_option")),
+    feature: list[str] = typer.Option([], "--feature", help=i18n.t("cli.new.adapter.feature_option")),
+    with_config: bool | None = typer.Option(None, "--config/--no-config", help=i18n.t("cli.new.adapter.config_option")),
+    field: list[str] = typer.Option([], "--field", help=i18n.t("cli.new.adapter.field_option")),
+    credential_field: list[str] = typer.Option(
+        [], "--credential-field", help=i18n.t("cli.new.adapter.credential_option")
+    ),
+    non_interactive: bool = typer.Option(
+        False, "--non-interactive", help=i18n.t("cli.new.adapter.non_interactive_option")
+    ),
+    add: bool = typer.Option(True, "--add/--no-add", help=i18n.t("cli.new.adapter.add_option")),
+    force: bool = typer.Option(False, "--force", help=i18n.t("cli.new.adapter.force_option")),
+) -> None:
+    """生成适配器包。"""
+    plan = collect_adapter_plan(
+        name=name,
+        platform_name=platform_name,
+        desc=desc,
+        author=author,
+        license=license,
+        features=feature,
+        has_config=with_config,
+        fields=field,
+        credential_fields=credential_field,
+        non_interactive=non_interactive,
+    )
+    root = template_root(
+        template_dir,
+        ADAPTER_TEMPLATE_RELATIVE,
+        ADAPTER_TEMPLATE_MARKER,
+        i18n.t("cli.new.adapter.template_missing", marker=ADAPTER_TEMPLATE_MARKER, env=TEMPLATE_DIR_ENV),
+    )
+    target = (directory / f"akari-bot-adapter-{plan.name}").resolve()
+    written = write_adapter_package(plan, root, target, force)
+    typer.echo(i18n.t("cli.new.adapter.generated", count=len(written), target=target))
+    for path in written:
+        typer.echo(f"  {path.relative_to(target)}")
+    if add:
+        # 失败提示（含手动命令）由 run_module_add 打印，此处不再补一行命令。
+        run_module_add(target, i18n.t("cli.new.adapter.add_failed", target=target))
+    typer.echo(i18n.t("cli.new.adapter.next_steps"))
 
 
 @app.command("module")

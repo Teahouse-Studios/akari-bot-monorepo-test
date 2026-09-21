@@ -12,10 +12,11 @@ import os
 import subprocess
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 
 STATE_RUNNING = "running"
@@ -26,17 +27,24 @@ INSTANCE_META_FILENAME = "akaribot.toml"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 LOCK_FILENAME = ".bot.lock"
 
-_STATE_LABELS = {STATE_RUNNING: "运行中", STATE_STOPPED: "已停止", STATE_UNKNOWN: "状态未知"}
+# 状态取值来自锁文件探测，界面按当前语言取标签，故这里只存文案键。
+_STATE_KEYS = {
+    STATE_RUNNING: "cli.tui.dashboard.state_running",
+    STATE_STOPPED: "cli.tui.dashboard.state_stopped",
+    STATE_UNKNOWN: "cli.tui.dashboard.state_unknown",
+}
 _STATE_MARKS = {STATE_RUNNING: "●", STATE_STOPPED: "○", STATE_UNKNOWN: "?"}
 
 CORE_DIST_CANDIDATES = ("akari-bot-core", "akaribot-core", "akaribot", "core")
 """``module list --json`` 中 core 的候选分发名与模块名，比较时大小写不敏感。"""
 
-UPDATE_SOURCE_PENDING = "更新检查尚未接入：预留 registry 版本比对，取不到时该行留空"
-"""更新提示的占位来源说明。
+UPDATE_SOURCE_PENDING_KEY = "cli.tui.dashboard.update_source_pending"
+"""更新提示的占位来源说明文案键：探测回调未注入时该行留空并显示本说明。"""
 
-本任务不编造远端更新接口：提示内容只来自注入的探测回调，未注入时该行留空并显示本说明。
-"""
+
+def _pending_update_source() -> str:
+    """返回更新检查未接入时的来源说明，按当前语言取值。"""
+    return i18n.t(UPDATE_SOURCE_PENDING_KEY)
 
 
 @dataclass(frozen=True)
@@ -65,7 +73,7 @@ class DashboardSnapshot:
     running: bool | None = None
     running_detail: str = ""
     update_hint: str = ""
-    update_source: str = UPDATE_SOURCE_PENDING
+    update_source: str = field(default_factory=_pending_update_source)
     error: str = ""
 
     @property
@@ -77,8 +85,9 @@ class DashboardSnapshot:
 
     @property
     def state_label(self) -> str:
-        """返回运行状态的中文标签，带状态标记。"""
-        return f"{_STATE_MARKS[self.state]} {_STATE_LABELS[self.state]}"
+        """返回运行状态的本地化标签，带状态标记。"""
+        key = _STATE_KEYS.get(self.state)
+        return f"{_STATE_MARKS[self.state]} {i18n.t(key) if key else self.state}"
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
@@ -234,7 +243,11 @@ class LocalDashboardSource:
         self.calls["snapshot"] += 1
         root = self._root()
         if root is None:
-            self.last_error = f"未找到实例：{self._origin_text()} 及其父目录下没有 {INSTANCE_META_FILENAME}"
+            self.last_error = i18n.t(
+                "cli.tui.dashboard.src_no_instance",
+                path=self._origin_text(),
+                meta=INSTANCE_META_FILENAME,
+            )
             return DashboardSnapshot(instance_root=self._origin_text(), error=self.last_error)
         fields, meta_error = self._read_meta(root)
         version = fields.pop("core_version", "")
@@ -263,14 +276,16 @@ class LocalDashboardSource:
         self.last_probe_error = ""
         root = self._root()
         if root is None:
-            self.last_probe_error = "实例根未知，无法定位锁文件"
+            self.last_probe_error = i18n.t("cli.tui.dashboard.src_root_unknown")
             return None
         instance = self._instance(root)
         if instance is not None:
             try:
                 return bool(instance.is_running())
             except Exception as error:  # noqa: BLE001 - 降级到本地锁探测，不中断界面
-                self.last_probe_error = f"Instance.is_running() 失败：{type(error).__name__}: {error}"
+                self.last_probe_error = i18n.t(
+                    "cli.tui.dashboard.src_probe_failed", kind=type(error).__name__, error=error
+                )
         return lock_held(root / LOCK_FILENAME)
 
     def _root(self) -> Path | None:
@@ -289,17 +304,21 @@ class LocalDashboardSource:
             try:
                 return self._instance_factory(root)
             except Exception as error:  # noqa: BLE001 - 替身失败同样只降级
-                self.last_probe_error = f"Instance 替身失败：{type(error).__name__}: {error}"
+                self.last_probe_error = i18n.t(
+                    "cli.tui.dashboard.src_stub_failed", kind=type(error).__name__, error=error
+                )
                 return None
         try:
             from akaribot.cli.instance import Instance
         except ImportError as error:
-            self.last_probe_error = f"akaribot.cli.instance 不可用：{error}"
+            self.last_probe_error = i18n.t("cli.tui.dashboard.src_instance_unavailable", error=error)
             return None
         try:
             return Instance(root)
         except Exception as error:  # noqa: BLE001 - 实例构造失败只作为降级原因
-            self.last_probe_error = f"构造 Instance 失败：{type(error).__name__}: {error}"
+            self.last_probe_error = i18n.t(
+                "cli.tui.dashboard.src_instance_failed", kind=type(error).__name__, error=error
+            )
             return None
 
     def _read_meta(self, root: Path) -> tuple[dict[str, str], str]:
@@ -307,11 +326,16 @@ class LocalDashboardSource:
         try:
             from akaribot.cli.instance import InstanceMeta
         except ImportError as error:
-            return {}, f"akaribot.cli.instance 不可用：{error}"
+            return {}, i18n.t("cli.tui.dashboard.src_instance_unavailable", error=error)
         try:
             meta = InstanceMeta.load(root)
         except Exception as error:  # noqa: BLE001 - 元数据失败不应让整页空白
-            return {}, f"{INSTANCE_META_FILENAME} 读取失败：{type(error).__name__}: {error}"
+            return {}, i18n.t(
+                "cli.tui.dashboard.src_meta_read_failed",
+                file=INSTANCE_META_FILENAME,
+                kind=type(error).__name__,
+                error=error,
+            )
         return {
             "name": meta.name,
             "mode": meta.mode,
@@ -323,17 +347,17 @@ class LocalDashboardSource:
         """经模块数据源取 core 版本，返回版本号与来源说明。"""
         source = self._resolve_module_source(root)
         if source is None:
-            return "", "akaribot.cli.tui.modules 不可用"
+            return "", i18n.t("cli.tui.dashboard.src_modules_unavailable")
         try:
             records = source.list_modules()
         except Exception as error:  # noqa: BLE001 - 失败只写入来源说明
-            return "", f"module list --json 取数失败：{type(error).__name__}: {error}"
+            return "", i18n.t("cli.tui.dashboard.src_list_failed", kind=type(error).__name__, error=error)
         candidates = {name.casefold() for name in CORE_DIST_CANDIDATES}
         for record in records:
             names = {record.name.casefold(), record.dist.casefold()}
             if names & candidates:
                 return record.version or "", "module list --json"
-        return "", "module list --json 中未见 core 记录"
+        return "", i18n.t("cli.tui.dashboard.src_no_core_record")
 
     def _resolve_module_source(self, root: Path) -> Any | None:
         """取得模块数据源：优先注入者，否则复用 Modules 页的子进程实现。"""
@@ -353,20 +377,20 @@ class LocalDashboardSource:
     def _update_hint(self) -> tuple[str, str]:
         """取更新提示；未注入探测回调时留空并说明来源待接。"""
         if self._update_probe is None:
-            return "", UPDATE_SOURCE_PENDING
+            return "", _pending_update_source()
         try:
             hint = str(self._update_probe() or "").strip()
         except Exception as error:  # noqa: BLE001 - 探测失败不影响其余字段
-            return "", f"更新探测回调失败：{type(error).__name__}: {error}"
+            return "", i18n.t("cli.tui.dashboard.src_probe_callback_failed", kind=type(error).__name__, error=error)
         if not hint:
-            return "", f"已接入探测回调，本次无更新提示（{UPDATE_SOURCE_PENDING}）"
-        return hint, "注入的更新探测回调"
+            return "", i18n.t("cli.tui.dashboard.update_source_probe_no_hint", source=_pending_update_source())
+        return hint, i18n.t("cli.tui.dashboard.update_source_probe")
 
     def _running_detail(self, root: Path) -> str:
         """运行状态的判据说明：锁文件路径与探测过程中的降级原因。"""
-        text = f"锁文件 {root / LOCK_FILENAME}"
+        text = i18n.t("cli.tui.dashboard.running_detail_lock", path=str(root / LOCK_FILENAME))
         if self.last_probe_error:
-            text = f"{text}；{self.last_probe_error}"
+            text = f"{text}{i18n.t('cli.tui.common.error_separator')}{self.last_probe_error}"
         return text
 
 
@@ -404,7 +428,8 @@ class DashboardPage(compat.Vertical):
     }
     """
 
-    BINDINGS = compat.bindings(("r", "refresh", "刷新快照"))
+    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    BINDINGS = compat.bindings(("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")))
 
     can_focus = True
 
@@ -425,15 +450,15 @@ class DashboardPage(compat.Vertical):
         self._loaded_at: float = 0.0
         self._rows: tuple[tuple[str, str], ...] = ()
         self._fields_rendered: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树。"""
         with compat.VerticalScroll(id="fields-pane"):
-            yield compat.Static("正在读取实例信息", id="fields", markup=False)
+            yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
         with compat.Horizontal(id="actions"):
-            yield compat.Button("刷新", id="refresh", variant="primary")
-        yield compat.Static("就绪", id="status", markup=False)
+            yield compat.Button(i18n.t("cli.tui.dashboard.action_refresh"), id="refresh", variant="primary")
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后读取一次快照，并按周期探测锁文件。"""
@@ -485,9 +510,9 @@ class DashboardPage(compat.Vertical):
         """
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_fields()
-            self._set_status(f"使用 {self.cache_age():.1f} 秒前的快照")
+            self._set_status(i18n.t("cli.tui.dashboard.status_cached", age=f"{self.cache_age():.1f}"))
             return
-        self._set_status("正在读取实例信息…")
+        self._set_status(i18n.t("cli.tui.dashboard.status_loading"))
         self.run_worker(self._load_snapshot(), group="dashboard-load", exclusive=True)
 
     async def _load_snapshot(self) -> bool:
@@ -499,16 +524,16 @@ class DashboardPage(compat.Vertical):
             self.last_error = f"{type(error).__name__}: {error}"
             self._snapshot = DashboardSnapshot(error=self.last_error)
             self._render_fields()
-            self._set_status(f"读取失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.dashboard.status_load_failed", error=self.last_error))
             return False
         self._snapshot = snapshot
         self._loaded_at = time.monotonic()
         self.last_error = snapshot.error
         self._render_fields()
         if snapshot.error:
-            self._set_status(f"部分字段读取失败：{snapshot.error}")
+            self._set_status(i18n.t("cli.tui.dashboard.status_partial_failed", error=snapshot.error))
         else:
-            self._set_status(f"快照更新于 {time.strftime('%H:%M:%S')}")
+            self._set_status(i18n.t("cli.tui.dashboard.status_updated", time=time.strftime("%H:%M:%S")))
         return True
 
     def refresh_running(self) -> bool | None:
@@ -521,12 +546,13 @@ class DashboardPage(compat.Vertical):
             value = self.source.probe_running()
         except Exception as error:  # noqa: BLE001 - 探测失败按未知展示
             self.last_error = f"{type(error).__name__}: {error}"
-            self._set_status(f"运行状态探测失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.dashboard.status_probe_failed", error=self.last_error))
             return None
         if value != self._snapshot.running:
             self._snapshot = replace(self._snapshot, running=value)
             self._render_fields()
-        self._set_status(f"运行状态：{self._snapshot.state_label}（{self._snapshot.running_detail or '锁文件探测'}）")
+        detail = self._snapshot.running_detail or i18n.t("cli.tui.dashboard.running_detail_fallback")
+        self._set_status(i18n.t("cli.tui.dashboard.status_running", state=self._snapshot.state_label, detail=detail))
         return value
 
     def _on_tick(self) -> None:
@@ -543,22 +569,42 @@ class DashboardPage(compat.Vertical):
         """按缓存快照重绘信息面板，列宽按终端列数计算。"""
         snapshot = self._snapshot
         rows = [
-            ("实例路径", snapshot.instance_root or "未知"),
-            ("实例名", snapshot.instance_name or "未知"),
-            ("模式", _mode_text(snapshot)),
-            ("core 版本", snapshot.core_version or "未取到"),
-            ("版本来源", snapshot.core_origin or "未知"),
-            ("运行状态", snapshot.state_label),
-            ("状态判据", snapshot.running_detail or "未知"),
-            ("更新提示", snapshot.update_hint or "（无）"),
+            (
+                i18n.t("cli.tui.dashboard.field_instance_root"),
+                snapshot.instance_root or i18n.t("cli.tui.common.unknown"),
+            ),
+            (
+                i18n.t("cli.tui.dashboard.field_instance_name"),
+                snapshot.instance_name or i18n.t("cli.tui.common.unknown"),
+            ),
+            (i18n.t("cli.tui.dashboard.field_mode"), _mode_text(snapshot)),
+            (
+                i18n.t("cli.tui.dashboard.field_core_version"),
+                snapshot.core_version or i18n.t("cli.tui.dashboard.value_version_missing"),
+            ),
+            (i18n.t("cli.tui.dashboard.field_core_origin"), snapshot.core_origin or i18n.t("cli.tui.common.unknown")),
+            (i18n.t("cli.tui.dashboard.field_state"), snapshot.state_label),
+            (
+                i18n.t("cli.tui.dashboard.field_running_detail"),
+                snapshot.running_detail or i18n.t("cli.tui.common.unknown"),
+            ),
+            (
+                i18n.t("cli.tui.dashboard.field_update_hint"),
+                snapshot.update_hint or i18n.t("cli.tui.dashboard.value_no_hint"),
+            ),
         ]
         self._rows = tuple(rows)
         lines = compat.align_rows(rows, gap=2)
         lines.append("")
-        lines.append(f"更新提示来源：{snapshot.update_source}")
+        lines.append(i18n.t("cli.tui.dashboard.update_source_line", source=snapshot.update_source))
         if snapshot.error:
-            lines.append(f"读取告警：{snapshot.error}")
-        lines.append("r 刷新快照；运行状态按周期探测锁文件")
+            lines.append(i18n.t("cli.tui.dashboard.warning_line", error=snapshot.error))
+        lines.append(
+            i18n.t(
+                "cli.tui.dashboard.fields_hint",
+                refresh=i18n.t("cli.tui.dashboard.bind_refresh"),
+            )
+        )
         width = self._inner_width()
         if width > 0:
             lines = [compat.truncate_cells(line, width) for line in lines]
@@ -606,7 +652,7 @@ class DashboardPage(compat.Vertical):
 
 def _mode_text(snapshot: DashboardSnapshot) -> str:
     """把模式与语言合成一行展示文本。"""
-    parts = [snapshot.instance_mode or "未知"]
-    if snapshot.locale:
-        parts.append(f"语言 {snapshot.locale}")
-    return "，".join(parts)
+    mode = snapshot.instance_mode or i18n.t("cli.tui.common.unknown")
+    if not snapshot.locale:
+        return mode
+    return i18n.t("cli.tui.dashboard.mode_with_locale", mode=mode, locale=snapshot.locale)

@@ -7,10 +7,11 @@ from typing import Annotated
 
 import typer
 
+from akaribot.cli import i18n
 from akaribot.cli.instance import InstancePathOption, PassthroughCommandGroup, require_instance
 
 app = typer.Typer(
-    help="运行测试（等价于 python -m akaribot.testing）",
+    help=i18n.t("cli.test.help"),
     cls=PassthroughCommandGroup,
     invoke_without_command=True,
     no_args_is_help=False,
@@ -20,10 +21,10 @@ app = typer.Typer(
 @app.callback(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def test(
     ctx: typer.Context,
-    path: Annotated[Path | None, typer.Argument(help="要跑的测试路径；缺省跑全部")] = None,
-    ci: Annotated[bool, typer.Option("--ci", help="CI 模式：非交互、失败即退出")] = False,
-    coverage: Annotated[bool, typer.Option("--coverage", help="统计覆盖率")] = False,
-    case: Annotated[list[str] | None, typer.Option("--case", help="只跑指定用例，可重复")] = None,
+    path: Annotated[Path | None, typer.Argument(help=i18n.t("cli.test.arg_path"))] = None,
+    ci: Annotated[bool, typer.Option("--ci", help=i18n.t("cli.test.option_ci"))] = False,
+    coverage: Annotated[bool, typer.Option("--coverage", help=i18n.t("cli.test.option_coverage"))] = False,
+    case: Annotated[list[str] | None, typer.Option("--case", help=i18n.t("cli.test.option_case"))] = None,
     instance: InstancePathOption = None,
 ) -> None:
     """在实例环境里运行测试；未知参数原样透传给 akaribot.testing。"""

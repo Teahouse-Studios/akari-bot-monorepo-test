@@ -16,10 +16,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 
-ALL_PROCESSES = "全部进程"
-"""进程过滤里的「不过滤」项。"""
+ALL_PROCESSES = "all"
+"""进程过滤里的「不过滤」项；取值只作内部标识，展示文案在用到时按当前语言取。"""
 
 READ_CHUNK_BYTES = 64 * 1024
 """单次增量读取的字节上限，限制每次跟随的代价。"""
@@ -37,9 +38,21 @@ DEFAULT_RESCAN_SECONDS = 15.0
 """重新枚举日志目录的周期（秒），用于跨日轮转时切换文件。"""
 
 DEBUG_MODES = ("auto", "info", "debug")
-_DEBUG_MODE_LABELS = {"auto": "自动", "info": "仅 INFO", "debug": "仅 debug"}
+# debug 偏好是对端取值，界面按当前语言取标签，故这里只存文案键。
+_DEBUG_MODE_KEYS = {
+    "auto": "cli.tui.logs.debug_auto",
+    "info": "cli.tui.logs.debug_info",
+    "debug": "cli.tui.logs.debug_debug",
+}
 
 _LOG_NAME_PATTERN = re.compile(r"^(?P<process>.+?)(?P<debug>_debug)?_(?P<date>\d{4}-\d{2}-\d{2})\.log$")
+
+
+def _filter_name(process: str | None) -> str:
+    """返回过滤项的展示名：空值与 :data:`ALL_PROCESSES` 都表示不过滤。"""
+    if not process or process == ALL_PROCESSES:
+        return i18n.t("cli.tui.logs.all_processes")
+    return process
 
 
 class LogSourceError(RuntimeError):
@@ -202,7 +215,7 @@ class StaticLogSource:
         self.calls["read"] += 1
         self.read_offsets.append((name, offset))
         if self.fail_on_read == name:
-            raise LogSourceError(f"替身数据源按配置拒绝读取 {name}")
+            raise LogSourceError(i18n.t("cli.tui.logs.src_stub_refused", name=name))
         lines = self._lines.get(name, [])
         if offset > len(lines):
             return LogChunk(lines=tuple(lines), offset=len(lines), reset=True, path=name)
@@ -238,7 +251,7 @@ class FileLogSource:
 
         root = self.root if self.root is not None else resolve_instance_root()
         if root is None:
-            raise LogSourceError("未找到实例（缺少 akaribot.toml），无法定位日志目录")
+            raise LogSourceError(i18n.t("cli.tui.logs.src_no_instance"))
         return root / "logs"
 
     def list_processes(self) -> Sequence[str]:
@@ -252,11 +265,11 @@ class FileLogSource:
         """见 :meth:`LogSource.list_files`；目录不存在时抛出 :class:`LogSourceError`。"""
         directory = self.logs_path()
         if not directory.is_dir():
-            raise LogSourceError(f"日志目录不存在：{directory}")
+            raise LogSourceError(i18n.t("cli.tui.logs.src_dir_missing", path=directory))
         try:
             entries = list(directory.iterdir())
         except OSError as error:
-            raise LogSourceError(f"日志目录不可读：{directory}（{error}）") from error
+            raise LogSourceError(i18n.t("cli.tui.logs.src_dir_unreadable", path=directory, error=error)) from error
         infos: list[LogFileInfo] = []
         for entry in entries:
             parsed = parse_log_name(entry.name)
@@ -321,7 +334,7 @@ class FileLogSource:
         try:
             return target.stat().st_size
         except OSError as error:
-            raise LogSourceError(f"日志文件不可读：{target}（{error}）") from error
+            raise LogSourceError(i18n.t("cli.tui.logs.src_file_unreadable", path=target, error=error)) from error
 
     @staticmethod
     def _read_at(target: Path, start: int, max_bytes: int) -> bytes:
@@ -331,7 +344,7 @@ class FileLogSource:
                 handle.seek(start)
                 return handle.read(max_bytes)
         except OSError as error:
-            raise LogSourceError(f"日志文件读取失败：{target}（{error}）") from error
+            raise LogSourceError(i18n.t("cli.tui.logs.src_file_read_failed", path=target, error=error)) from error
 
 
 class LogsPage(compat.Vertical):
@@ -394,10 +407,10 @@ class LogsPage(compat.Vertical):
     """
 
     BINDINGS = compat.bindings(
-        ("space", "toggle_pause", "暂停/恢复"),
-        ("c", "clear", "清屏"),
-        ("d", "cycle_debug", "切换 debug"),
-        ("r", "rescan", "重新扫描"),
+        ("space", "toggle_pause", i18n.t("cli.tui.logs.bind_toggle_pause")),
+        ("c", "clear", i18n.t("cli.tui.logs.bind_clear")),
+        ("d", "cycle_debug", i18n.t("cli.tui.logs.bind_cycle_debug")),
+        ("r", "rescan", i18n.t("cli.tui.logs.bind_rescan")),
     )
 
     can_focus = True
@@ -432,21 +445,21 @@ class LogsPage(compat.Vertical):
         self._last_chunk: LogChunk | None = None
         self._scanned_at: float = 0.0
         self._rendered: str = ""
-        self._status_rendered: str = "就绪"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树：左侧进程过滤，右侧日志正文。"""
-        yield compat.Static("跟随：未选择", id="target", markup=False)
+        yield compat.Static(i18n.t("cli.tui.logs.target_none"), id="target", markup=False)
         with compat.Horizontal(id="body"):
             yield compat.ListView(id="process-list")
             with compat.VerticalScroll(id="log-pane"):
-                yield compat.Static("正在读取日志目录", id="log-view", markup=False)
+                yield compat.Static(i18n.t("cli.tui.logs.reading"), id="log-view", markup=False)
         with compat.Horizontal(id="actions"):
-            yield compat.Button("暂停", id="pause")
-            yield compat.Button("清屏", id="clear")
-            yield compat.Button(f"debug：{self.debug_label}", id="debug")
-            yield compat.Button("重新扫描", id="refresh")
-        yield compat.Static("就绪", id="status", markup=False)
+            yield compat.Button(i18n.t("cli.tui.logs.action_pause"), id="pause")
+            yield compat.Button(i18n.t("cli.tui.logs.action_clear"), id="clear")
+            yield compat.Button(i18n.t("cli.tui.logs.debug_button", label=self.debug_label), id="debug")
+            yield compat.Button(i18n.t("cli.tui.logs.action_rescan"), id="refresh")
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后枚举一次日志目录，并按周期跟随。"""
@@ -502,8 +515,9 @@ class LogsPage(compat.Vertical):
 
     @property
     def debug_label(self) -> str:
-        """返回 debug 偏好的中文标签。"""
-        return _DEBUG_MODE_LABELS.get(self._prefer_debug, self._prefer_debug)
+        """返回 debug 偏好的本地化标签。"""
+        key = _DEBUG_MODE_KEYS.get(self._prefer_debug)
+        return i18n.t(key) if key else self._prefer_debug
 
     @property
     def last_chunk(self) -> LogChunk | None:
@@ -545,7 +559,7 @@ class LogsPage(compat.Vertical):
             self._render_process_list()
             self._render_target()
             self._render_log()
-            self._set_status(f"枚举日志目录失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.logs.status_scan_failed", error=self.last_error))
             return
         self._processes = processes
         self._files = files
@@ -559,7 +573,7 @@ class LogsPage(compat.Vertical):
             self._render_process_list()
             self._render_target()
             self._render_log()
-            self._set_status(f"没有日志文件（过滤：{self._selected or ALL_PROCESSES}）")
+            self._set_status(i18n.t("cli.tui.logs.status_no_files", filter_name=_filter_name(self._selected)))
             return
         if self._followed is None or chosen.name != self._followed.name:
             self._switch_to(chosen)
@@ -591,7 +605,7 @@ class LogsPage(compat.Vertical):
             self._followed = info
             self._offset = 0
             self.last_error = f"{type(error).__name__}: {error}"
-            self._set_status(f"读取日志尾部失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.logs.status_tail_failed", error=self.last_error))
             return
         self._followed = info
         self._last_chunk = chunk
@@ -624,7 +638,7 @@ class LogsPage(compat.Vertical):
             chunk = self.source.read_since(followed.path, self._offset, max_bytes=self.chunk_bytes)
         except Exception as error:  # noqa: BLE001 - 读取失败只更新状态栏
             self.last_error = f"{type(error).__name__}: {error}"
-            self._set_status(f"跟随失败：{self.last_error}")
+            self._set_status(i18n.t("cli.tui.logs.status_follow_failed", error=self.last_error))
             return None
         self._last_chunk = chunk
         self._offset = chunk.offset
@@ -680,14 +694,14 @@ class LogsPage(compat.Vertical):
         self._buffer.clear()
         self._dropped = 0
         self._render_log()
-        self._set_status(f"已清屏；仍从 offset {self._offset} 继续跟随")
+        self._set_status(i18n.t("cli.tui.logs.status_cleared", offset=self._offset))
 
     def cycle_debug_preference(self) -> None:
         """在「自动 → 仅 INFO → 仅 debug」之间循环切换。"""
         index = DEBUG_MODES.index(self._prefer_debug)
         self._prefer_debug = DEBUG_MODES[(index + 1) % len(DEBUG_MODES)]
         button = self.query_one("#debug", compat.Button)
-        button.label = f"debug：{self.debug_label}"
+        button.label = i18n.t("cli.tui.logs.debug_button", label=self.debug_label)
         self.refresh_files()
 
     @compat.on(compat.ListView.Highlighted)
@@ -749,19 +763,22 @@ class LogsPage(compat.Vertical):
 
     def _process_label(self, process: str | None) -> str:
         """构造进程项的显示文本，附文件数。"""
-        name = process or ALL_PROCESSES
         count = sum(1 for info in self._files if process is None or info.process == process)
-        return f"{name}（{count}）"
+        return i18n.t("cli.tui.logs.process_item", name=_filter_name(process), count=count)
 
     def _render_target(self) -> None:
         """重绘顶部「跟随目标」行，按控件宽度截断。"""
         followed = self._followed
         if followed is None:
-            text = f"跟随：未选择（过滤：{self._selected or ALL_PROCESSES}）"
+            text = i18n.t("cli.tui.logs.target_none_filtered", filter_name=_filter_name(self._selected))
         else:
-            text = (
-                f"跟随：{followed.name}（进程 {followed.process}，{followed.level_label}，"
-                f"offset {self._offset} 字节，{self._paused_text()}）"
+            text = i18n.t(
+                "cli.tui.logs.target_following",
+                name=followed.name,
+                process=followed.process,
+                level=followed.level_label,
+                offset=self._offset,
+                state=self._paused_text(),
             )
         self.query_one("#target", compat.Static).update(compat.plain_text(self._clip(text)))
 
@@ -770,7 +787,7 @@ class LogsPage(compat.Vertical):
         if self._buffer:
             text = "\n".join(self._buffer)
         else:
-            text = "（暂无日志行：等待新内容，或按 r 重新扫描）"
+            text = i18n.t("cli.tui.logs.log_empty")
         self._rendered = text
         self.query_one("#log-view", compat.Static).update(compat.plain_text(text))
         self._scroll_to_end()
@@ -791,7 +808,7 @@ class LogsPage(compat.Vertical):
 
     def _paused_text(self) -> str:
         """返回跟随状态的短标签。"""
-        return "已暂停" if self._paused else "跟随中"
+        return i18n.t("cli.tui.logs.paused" if self._paused else "cli.tui.logs.following")
 
     def _status_line(self, *, reset: bool = False) -> str:
         """构造状态栏文本，按重要性排序以便窄屏截断时先丢次要信息。
@@ -803,15 +820,15 @@ class LogsPage(compat.Vertical):
         if followed is not None:
             parts.append(followed.name)
         parts.append(f"offset {self._offset}")
-        parts.append(f"缓冲 {len(self._buffer)}/{self.buffer_limit} 行")
+        parts.append(i18n.t("cli.tui.logs.status_buffer", buffered=len(self._buffer), limit=self.buffer_limit))
         if self._dropped:
-            parts.append(f"丢弃 {self._dropped} 行")
+            parts.append(i18n.t("cli.tui.logs.status_dropped", dropped=self._dropped))
         if reset:
-            parts.append("文件被截断或轮转，已从头读取")
+            parts.append(i18n.t("cli.tui.logs.status_reset"))
         pending = self._last_chunk is not None and self._last_chunk.pending
         if pending and not self._paused:
-            parts.append("末尾有未写完的行，等待后续字节")
-        return self._clip("｜".join(parts))
+            parts.append(i18n.t("cli.tui.logs.status_pending"))
+        return self._clip(i18n.t("cli.tui.logs.status_separator").join(parts))
 
     def _clip(self, text: str) -> str:
         """按控件宽度截断单行文本，避免撑破 80 列终端。"""
@@ -828,7 +845,8 @@ class LogsPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         """按暂停状态更新按钮文字。"""
-        self.query_one("#pause", compat.Button).label = "恢复" if self._paused else "暂停"
+        key = "cli.tui.logs.action_resume" if self._paused else "cli.tui.logs.action_pause"
+        self.query_one("#pause", compat.Button).label = i18n.t(key)
 
     def _set_status(self, text: str) -> None:
         """更新状态栏。"""

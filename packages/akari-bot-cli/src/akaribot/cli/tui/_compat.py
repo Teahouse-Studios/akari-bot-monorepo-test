@@ -32,6 +32,8 @@ from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Button, Footer, Header, Input, Label, ListItem, ListView, ProgressBar, Static
 
+from akaribot.cli import i18n
+
 __all__ = [
     "App",
     "Binding",
@@ -120,7 +122,7 @@ def check_textual_version(pin: str = TEXTUAL_PIN) -> tuple[bool, str]:
     :return: 二元组——是否符合紧钉；可直接打印的说明文本。
     """
     found = textual_version()
-    return found == pin, f"textual 版本：期望 {pin}，实际 {found}"
+    return found == pin, i18n.t("cli.tui.selfcheck.textual_version", pin=pin, found=found)
 
 
 # region 宽度计算（中文宽字符对齐）
@@ -451,32 +453,48 @@ class TerminalCapability:
         self.detail = detail
 
     def __str__(self) -> str:
-        state = "可用" if self.available else "不可用"
-        return f"{self.name}：{state}（{self.detail}）"
+        state = i18n.t("cli.tui.selfcheck.available" if self.available else "cli.tui.selfcheck.unavailable")
+        return i18n.t("cli.tui.selfcheck.capability", name=self.name, state=state, detail=self.detail)
 
 
 def terminal_capabilities() -> Iterator[TerminalCapability]:
     """逐条报告终端能力，不猜测，只报告本机实际可观测到的事实。"""
     yield TerminalCapability(
-        "交互终端",
+        i18n.t("cli.tui.selfcheck.cap_interactive"),
         is_interactive_terminal(),
         f"stdin.isatty={sys.stdin.isatty()} stdout.isatty={sys.stdout.isatty()}",
     )
-    yield TerminalCapability("操作系统", True, f"{sys.platform} {os.environ.get('TERM', 'TERM 未设置')}")
     yield TerminalCapability(
-        "TERM_PROGRAM",
-        bool(os.environ.get("TERM_PROGRAM")),
-        os.environ.get("TERM_PROGRAM", "未设置，无法判定 Terminal.app 或 iTerm2"),
+        i18n.t("cli.tui.selfcheck.cap_os"),
+        True,
+        f"{sys.platform} {os.environ.get('TERM') or i18n.t('cli.tui.selfcheck.term_unset')}",
     )
-    yield TerminalCapability("COLORTERM", bool(os.environ.get("COLORTERM")), os.environ.get("COLORTERM", "未设置"))
-    yield TerminalCapability("tmux", bool(os.environ.get("TMUX")), os.environ.get("TMUX", "不在 tmux 内"))
     yield TerminalCapability(
-        "SSH",
+        i18n.t("cli.tui.selfcheck.cap_term_program"),
+        bool(os.environ.get("TERM_PROGRAM")),
+        os.environ.get("TERM_PROGRAM") or i18n.t("cli.tui.selfcheck.term_program_unset"),
+    )
+    yield TerminalCapability(
+        i18n.t("cli.tui.selfcheck.cap_colorterm"),
+        bool(os.environ.get("COLORTERM")),
+        os.environ.get("COLORTERM") or i18n.t("cli.tui.selfcheck.not_set"),
+    )
+    yield TerminalCapability(
+        i18n.t("cli.tui.selfcheck.cap_tmux"),
+        bool(os.environ.get("TMUX")),
+        os.environ.get("TMUX") or i18n.t("cli.tui.selfcheck.not_in_tmux"),
+    )
+    yield TerminalCapability(
+        i18n.t("cli.tui.selfcheck.cap_ssh"),
         bool(os.environ.get("SSH_CONNECTION")),
-        os.environ.get("SSH_CONNECTION", "非 SSH 会话"),
+        os.environ.get("SSH_CONNECTION") or i18n.t("cli.tui.selfcheck.not_ssh"),
     )
     frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-    yield TerminalCapability("冻结产物", frozen, "Nuitka 编译标志存在" if frozen else "以源码方式运行")
+    yield TerminalCapability(
+        i18n.t("cli.tui.selfcheck.cap_frozen"),
+        frozen,
+        i18n.t("cli.tui.selfcheck.frozen_flag" if frozen else "cli.tui.selfcheck.source_run"),
+    )
 
 
 # endregion

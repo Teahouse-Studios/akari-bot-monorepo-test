@@ -16,8 +16,10 @@ from dataclasses import dataclass
 
 import typer
 
+from akaribot.cli import i18n
+
 app = typer.Typer(
-    help="交互界面",
+    help=i18n.t("cli.tui_cmd.help"),
     no_args_is_help=False,
 )
 
@@ -41,14 +43,14 @@ class CheckResult:
 
     def render(self) -> str:
         """返回单行输出文本。"""
-        return f"[{self.level:>4}] {self.name}：{self.detail}"
+        return i18n.t("cli.tui_cmd.result_line", level=f"{self.level:>4}", name=self.name, detail=self.detail)
 
 
 @app.callback(invoke_without_command=True)
 def tui(
-    self_check: bool = typer.Option(False, "--self-check", help="无头自检：加载包内资源与样式表并启动一次后退出"),
-    headless: bool = typer.Option(False, "--headless", help="无头冒烟运行：启动、读取一次、立即退出并打印耗时"),
-    no_mouse: bool = typer.Option(False, "--no-mouse", help="不请求鼠标追踪，供哑终端或 tmux 使用"),
+    self_check: bool = typer.Option(False, "--self-check", help=i18n.t("cli.tui_cmd.option_self_check")),
+    headless: bool = typer.Option(False, "--headless", help=i18n.t("cli.tui_cmd.option_headless")),
+    no_mouse: bool = typer.Option(False, "--no-mouse", help=i18n.t("cli.tui_cmd.option_no_mouse")),
 ) -> None:
     """启动 AkariBot 交互界面。"""
     if self_check:
@@ -66,11 +68,7 @@ def run_interactive(*, mouse: bool = True) -> None:
     from akaribot.cli.tui import _compat as compat
 
     if not compat.is_interactive_terminal():
-        typer.echo(
-            "当前标准输入输出不是终端，交互界面无法启动；"
-            "请在真实终端中运行，或改用 `akaribot tui --self-check` / `akaribot tui --headless`。",
-            err=True,
-        )
+        typer.echo(i18n.t("cli.tui_cmd.not_terminal"), err=True)
         raise typer.Exit(code=2)
 
     from akaribot.cli.tui.app import run_tui
@@ -105,17 +103,27 @@ def run_headless(*, mouse: bool = False) -> int:
     try:
         rows = asyncio.run(smoke())
     except Exception as error:  # noqa: BLE001 - 冒烟失败必须转成非零退出码
-        typer.echo(f"无头冒烟失败：{type(error).__name__}: {error}", err=True)
+        typer.echo(i18n.t("cli.tui_cmd.headless_failed", error=f"{type(error).__name__}: {error}"), err=True)
         return 1
     elapsed_ms = (time.monotonic() - started) * 1000.0
     sheet = stylesheet_summary()
     typer.echo(
-        f"无头冒烟通过：80×24 下渲染 {rows} 行模块记录，{elapsed_ms:.0f} ms 内退出；"
-        f"样式表来源 {sheet['origin']}，{sheet['lines']} 行，sha256 {sheet['sha256']}"
+        i18n.t(
+            "cli.tui_cmd.headless_ok",
+            rows=rows,
+            ms=f"{elapsed_ms:.0f}",
+            origin=sheet["origin"],
+            lines=sheet["lines"],
+            sha256=sheet["sha256"],
+        )
     )
     typer.echo(
-        f"启动 {app_instance.startup_ms:.0f} ms，首帧 {app_instance.first_paint_ms:.0f} ms，"
-        f"模块数据源调用 {_source_calls(app_instance)} 次"
+        i18n.t(
+            "cli.tui_cmd.headless_timing",
+            startup=f"{app_instance.startup_ms:.0f}",
+            first_paint=f"{app_instance.first_paint_ms:.0f}",
+            calls=_source_calls(app_instance),
+        )
     )
     return 0
 
@@ -147,9 +155,9 @@ def run_self_check() -> int:
     failures = [result for result in results if result.level == LEVEL_FAIL]
     warnings = [result for result in results if result.level == LEVEL_WARN]
     if failures:
-        typer.echo(f"自检失败：{len(failures)} 项失败，{len(warnings)} 项警告", err=True)
+        typer.echo(i18n.t("cli.tui_cmd.self_check_failed", failures=len(failures), warnings=len(warnings)), err=True)
         return 1
-    typer.echo(f"自检通过：{len(results) - len(warnings)} 项通过，{len(warnings)} 项警告")
+    typer.echo(i18n.t("cli.tui_cmd.self_check_ok", passed=len(results) - len(warnings), warnings=len(warnings)))
     return 0
 
 
@@ -159,8 +167,15 @@ def _check_environment() -> list[CheckResult]:
 
     results: list[CheckResult] = []
     pinned, message = compat.check_textual_version()
+    name = i18n.t("cli.tui_cmd.check_textual_version")
+    # compat 给的消息自带一次「<检查项名>：」前缀，去掉它以免与检查项名重复。
+    detail = message.removeprefix(f"{name}：").removeprefix(f"{name}: ")
     results.append(
-        CheckResult(LEVEL_OK if pinned else LEVEL_FAIL, "textual 版本", f"{message}；紧钉值 {compat.TEXTUAL_PIN}")
+        CheckResult(
+            LEVEL_OK if pinned else LEVEL_FAIL,
+            name,
+            i18n.t("cli.tui_cmd.check_textual_version_detail", message=detail, pin=compat.TEXTUAL_PIN),
+        )
     )
     for capability in compat.terminal_capabilities():
         results.append(
@@ -178,16 +193,30 @@ def _check_stylesheet() -> list[CheckResult]:
     results = [
         CheckResult(
             LEVEL_OK,
-            "样式表来源",
-            f"{sheet['origin']}，{sheet['lines']} 行，{sheet['bytes']} 字节，sha256 {sheet['sha256']}",
+            i18n.t("cli.tui_cmd.check_stylesheet_source"),
+            i18n.t(
+                "cli.tui_cmd.check_stylesheet_source_detail",
+                origin=sheet["origin"],
+                lines=sheet["lines"],
+                size=sheet["bytes"],
+                sha256=sheet["sha256"],
+            ),
         )
     ]
     try:
         compat.parse_stylesheet(STYLESHEET, "<akaribot-tui>", app=compat.App())
     except Exception as error:  # noqa: BLE001 - 解析失败即硬失败，需报出原文
-        results.append(CheckResult(LEVEL_FAIL, "样式表解析", f"{type(error).__name__}: {error}"))
+        results.append(
+            CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_stylesheet_parse"), f"{type(error).__name__}: {error}")
+        )
     else:
-        results.append(CheckResult(LEVEL_OK, "样式表解析", "Textual 解析通过"))
+        results.append(
+            CheckResult(
+                LEVEL_OK,
+                i18n.t("cli.tui_cmd.check_stylesheet_parse"),
+                i18n.t("cli.tui_cmd.check_stylesheet_parse_ok"),
+            )
+        )
     return results
 
 
@@ -199,22 +228,30 @@ def _check_resources() -> list[CheckResult]:
     package = "akaribot.cli.tui"
     inventory = compat.resource_inventory(package)
     if inventory:
-        results.append(CheckResult(LEVEL_OK, "包内资源枚举", f"{package}：{'、'.join(inventory)}"))
+        items = i18n.t("cli.common.list_separator").join(inventory)
+        results.append(
+            CheckResult(
+                LEVEL_OK,
+                i18n.t("cli.tui_cmd.check_resources"),
+                i18n.t("cli.tui_cmd.check_resources_detail", package=package, items=items),
+            )
+        )
     else:
         results.append(
             CheckResult(
                 LEVEL_WARN,
-                "包内资源枚举",
-                f"{package} 未枚举到可读资源；冻结产物以编译形式存放模块时属预期，"
-                "需靠 --include-package-data 带上数据文件",
+                i18n.t("cli.tui_cmd.check_resources"),
+                i18n.t("cli.tui_cmd.check_resources_missing", package=package),
             )
         )
     probe = compat.read_resource_text(package, "app.tcss")
     results.append(
         CheckResult(
             LEVEL_OK if probe is not None else LEVEL_WARN,
-            "样式表资源 app.tcss",
-            f"读到 {len(probe)} 字符" if probe is not None else "不存在，样式表由内联常量提供（见 tui/README.md）",
+            i18n.t("cli.tui_cmd.check_stylesheet_resource"),
+            i18n.t("cli.tui_cmd.check_stylesheet_read", count=len(probe))
+            if probe is not None
+            else i18n.t("cli.tui_cmd.check_stylesheet_absent"),
         )
     )
     return results
@@ -227,12 +264,16 @@ def _check_width() -> list[CheckResult]:
     sample = "安装骰子"
     computed = compat.display_width(sample)
     truncated = compat.truncate_cells("安装骰子模块", 7)
-    detail = (
-        f"display_width({sample!r})={computed}（期望 8，len={len(sample)}）；"
-        f"截断到 7 列得到 {truncated!r}，宽度 {compat.display_width(truncated)}"
+    detail = i18n.t(
+        "cli.tui_cmd.check_cjk_width_detail",
+        sample=repr(sample),
+        computed=computed,
+        length=len(sample),
+        truncated=repr(truncated),
+        width=compat.display_width(truncated),
     )
     level = LEVEL_OK if computed == 8 and compat.display_width(truncated) <= 7 else LEVEL_FAIL
-    return [CheckResult(level, "中文宽度计算", detail)]
+    return [CheckResult(level, i18n.t("cli.tui_cmd.check_cjk_width"), detail)]
 
 
 def _check_boot() -> CheckResult:
@@ -264,10 +305,17 @@ def _check_boot() -> CheckResult:
     try:
         rows, detail, size, first_paint = asyncio.run(boot())
     except Exception as error:  # noqa: BLE001 - 启动失败即硬失败，需报出原文
-        return CheckResult(LEVEL_FAIL, "界面启动 80×24", f"{type(error).__name__}: {error}")
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_boot"), f"{type(error).__name__}: {error}")
     return CheckResult(
         LEVEL_OK,
-        "界面启动 80×24",
-        f"列表 {rows} 行，详情首行 {detail!r}，页面尺寸 {size[0]}×{size[1]}，"
-        f"启动 {app_instance.startup_ms:.0f} ms、首帧 {first_paint:.0f} ms",
+        i18n.t("cli.tui_cmd.check_boot"),
+        i18n.t(
+            "cli.tui_cmd.check_boot_detail",
+            rows=rows,
+            detail=repr(detail),
+            width=size[0],
+            height=size[1],
+            startup=f"{app_instance.startup_ms:.0f}",
+            first_paint=f"{first_paint:.0f}",
+        ),
     )

@@ -18,6 +18,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
+from akaribot.cli import i18n
 from akaribot.cli.instance import (
     CliError,
     Instance,
@@ -28,10 +29,10 @@ from akaribot.cli.instance import (
     require_instance,
 )
 
-app = typer.Typer(help="配置读写：list / schema / get / set / open")
+app = typer.Typer(help=i18n.t("cli.config.help"))
 
-TableOption = Annotated[str, typer.Option("--table", "-t", help="配置表名，如 module_wiki、bot_telegram")]
-JsonOption = Annotated[bool, typer.Option("--json", help="以 JSON 输出，供脚本消费")]
+TableOption = Annotated[str, typer.Option("--table", "-t", help=i18n.t("cli.common.table_option"))]
+JsonOption = Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))]
 
 # 表名与配置文件一一对应（扁平布局）：config -> config.toml，secret -> secret.toml，其余为 <表名>.toml。
 FILE_BY_TABLE = {"config": "config.toml", "secret": "secret.toml"}
@@ -47,11 +48,11 @@ def _entrypoint_json(instance: Instance, *args: str) -> object:
     result = instance.run_core_capture("config", *args, "--json")
     if result.returncode != 0:
         detail = [line for line in (result.stderr or "").strip().splitlines() if line]
-        fail(detail[-1] if detail else f"配置入口以退出码 {result.returncode} 结束。")
+        fail(detail[-1] if detail else i18n.t("cli.config.entry_failed", code=result.returncode))
     try:
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        raise CliError(f"配置入口返回的不是 JSON：{exc}") from exc
+        raise CliError(i18n.t("cli.config.entry_not_json", error=exc)) from exc
 
 
 def _config_file(instance: Instance, table: str) -> Path:
@@ -69,7 +70,7 @@ def _config_file(instance: Instance, table: str) -> Path:
     return base / name
 
 
-@app.command("list")
+@app.command("list", help=i18n.t("cli.config.list.help"))
 def list_tables(
     instance_path: InstancePathOption = None,
     json_out: JsonOption = False,
@@ -84,7 +85,7 @@ def list_tables(
         console.print(table)
 
 
-@app.command("schema")
+@app.command("schema", help=i18n.t("cli.config.schema.help"))
 def show_schema(
     table: TableOption,
     instance_path: InstancePathOption = None,
@@ -98,22 +99,22 @@ def show_schema(
         return
     assert isinstance(items, list)
     if not items:
-        console.print(f"表 {table} 没有配置项。")
+        console.print(i18n.t("cli.config.schema.no_items", table=table))
         return
-    grid = Table(title=f"{table}（{len(items)} 项）")
-    grid.add_column("键")
-    grid.add_column("类型")
-    grid.add_column("当前值")
-    grid.add_column("注释")
+    grid = Table(title=i18n.t("cli.config.schema.table_title", table=table, count=len(items)))
+    grid.add_column(i18n.t("cli.config.schema.column_key"))
+    grid.add_column(i18n.t("cli.config.schema.column_type"))
+    grid.add_column(i18n.t("cli.config.schema.column_value"))
+    grid.add_column(i18n.t("cli.config.schema.column_comment"))
     for item in items:
         shown = "******" if item.get("secret") else str(item.get("value"))
         if item.get("is_placeholder"):
-            shown = "[yellow]<待填写>[/yellow]"
+            shown = i18n.t("cli.config.schema.placeholder")
         grid.add_row(str(item["key"]), str(item["type"]), shown, str(item.get("comment") or "-"))
     console.print(grid)
 
 
-@app.command("get")
+@app.command("get", help=i18n.t("cli.config.get.help"))
 def get_value(
     key: str,
     table: TableOption,
@@ -130,7 +131,7 @@ def get_value(
     console.print(data.get("value"))
 
 
-@app.command("set")
+@app.command("set", help=i18n.t("cli.config.set.help"))
 def set_value(
     key: str,
     value: str,
@@ -142,10 +143,10 @@ def set_value(
     code = instance.run_core("config", "set", key, value, "--table", table)
     if code != 0:
         raise typer.Exit(code)
-    ok(f"已写入 {table}.{key}")
+    ok(i18n.t("cli.ok.written", table=table, name=key))
 
 
-@app.command("open")
+@app.command("open", help=i18n.t("cli.config.open.help"))
 def open_in_editor(
     table: TableOption = "config",
     instance_path: InstancePathOption = None,
@@ -154,26 +155,26 @@ def open_in_editor(
     instance = require_instance(instance_path)
     target = _config_file(instance, table)
     if not target.is_file():
-        fail(f"配置文件不存在：{target}")
+        fail(i18n.t("cli.config.open.missing", target=target))
     editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
     if not editor:
         editor = "notepad" if sys.platform.startswith("win") else ("open" if sys.platform == "darwin" else "xdg-open")
     if shutil.which(editor.split()[0]) is None:
-        fail(f"找不到编辑器 {editor!r}，请设置 $EDITOR 或 $VISUAL。")
-    console.print(f"打开 {target}")
+        fail(i18n.t("cli.config.open.no_editor", editor=repr(editor)))
+    console.print(i18n.t("cli.config.open.opening", target=target))
     completed = subprocess.run([*editor.split(), str(target)], check=False)
     if completed.returncode != 0:
-        fail(f"编辑器以退出码 {completed.returncode} 结束。")
+        fail(i18n.t("cli.config.open.editor_failed", code=completed.returncode))
 
 
-@app.command("edit")
+@app.command("edit", help=i18n.t("cli.config.edit.help"))
 def edit_hint(
     table: TableOption = "config",
     instance_path: InstancePathOption = None,
 ) -> None:
     """提示三种编辑方式（表单与文本模式在 TUI 里）。"""
     instance = require_instance(instance_path)
-    console.print(f"配置文件：{_config_file(instance, table)}")
-    console.print("表单模式与原始文本模式：akaribot tui → Config 页")
-    console.print("外部编辑器：akaribot config open")
-    console.print("脚本写入：akaribot config set <键> <值> --table <表名>")
+    console.print(i18n.t("cli.config.edit.config_file", path=_config_file(instance, table)))
+    console.print(i18n.t("cli.config.edit.tui"))
+    console.print(i18n.t("cli.config.edit.external"))
+    console.print(i18n.t("cli.config.edit.script"))
