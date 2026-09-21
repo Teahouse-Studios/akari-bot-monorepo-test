@@ -124,3 +124,6 @@ assets/modules_list.json
 assets/schedulers_list.json
 
 matrix_store
+
+# registry.json 由 tools/build_registry.py 生成，发布流程推送到 gh-pages，不入库
+registry.json

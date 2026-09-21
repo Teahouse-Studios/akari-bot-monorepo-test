@@ -157,9 +157,12 @@ def resolve_base(base: str, head: str) -> str:
 
 
 def changed_files(base: str, head: str) -> list[str]:
-    """取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。"""
-    output = git_text(["diff", "--name-only", "--no-color", f"{base}..{head}"])
-    return [line.strip() for line in output.splitlines() if line.strip()]
+    """取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。
+
+    用 NUL 分隔输出，含空格或换行的路径不会被切断。
+    """
+    output = git_text(["diff", "--name-only", "-z", "--no-color", f"{base}..{head}"])
+    return [path for path in output.split("\0") if path.strip()]
 
 
 def skip_commits(base: str, head: str, marker: str) -> list[str]:

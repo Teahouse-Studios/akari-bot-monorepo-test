@@ -125,14 +125,15 @@ def discover_members() -> list[Member]:
     return sorted(found.values(), key=lambda member: member.directory)
 
 
-def git_output(arguments: list[str]) -> list[str]:
-    """运行 git 并返回输出行。
+def git_output(arguments: list[str], *, nul: bool = False) -> list[str]:
+    """运行 git 并返回输出项；nul 为真时按 NUL 分隔。
 
-    统一关闭 core.quotePath，含中文的路径不会变成八进制转义。
+    统一关闭 core.quotePath，含中文的路径不会变成八进制转义；NUL 分隔使含空格的路径不被切断。
     """
     command = ["git", "-c", "core.quotePath=false", *arguments]
     result = subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)
-    return [line for line in result.stdout.splitlines() if line.strip()]
+    separator = "\0" if nul else "\n"
+    return [item for item in result.stdout.split(separator) if item.strip()]
 
 
 def resolve_commit(ref: str) -> str | None:
@@ -155,7 +156,7 @@ def resolve_base(base: str, head: str) -> str:
 
 def changed_files(base: str, head: str) -> list[str]:
     """取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。"""
-    return git_output(["diff", "--name-only", "--no-color", f"{base}..{head}"])
+    return git_output(["diff", "--name-only", "-z", "--no-color", f"{base}..{head}"], nul=True)
 
 
 def package_directory(path: str) -> str | None:
@@ -250,6 +251,7 @@ def print_matrix(matrix: Matrix) -> None:
             print(f"  {reason}")
         if len(matrix.reasons) > MAX_REASONS:
             print(f"  ……另有 {len(matrix.reasons) - MAX_REASONS} 项")
+        print("全量矩阵包含全部成员：")
     else:
         print(f"构建矩阵：定向（full=false），共 {len(matrix.packages)} 个包。")
     for name in matrix.packages:
