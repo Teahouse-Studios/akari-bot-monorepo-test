@@ -4,7 +4,7 @@
 
     pyproject.toml       分发名、版本、简介（[project].description）、entry point 名与导入路径
     manifest.toml        requires_core_api、locales 路径、provides_modules，以及可选的平台与分类声明
-    locales/<code>.json  ``<entry point 名>.help.desc``，逐语言的模块简介
+    locales/<code>.json  ``<entry point 名>.help.desc``，缺失时退回 ``<entry point 名>.help``
     core/registry.py     CORE_API_VERSION，registry 顶层 core.api_version 的取值来源
 
 成员清单与分发名口径与 tools/lint_versions.py 一致：根 pyproject 的 [tool.uv.workspace].members glob
@@ -58,8 +58,8 @@ DEFAULT_LOCALES_DIR = "locales"
 
 REGISTRY_SCHEMA = 1
 DEFAULT_LOCALE = "zh_cn"
-# 模块简介的 locale 键：module() 的 desc= 指向它，逐语言文件各有一份。
-SUMMARY_KEY_TEMPLATE = "{name}.help.desc"
+# 模块简介的 locale 键，按序取首个命中：desc 是 module() 的 desc= 指向，help 是模块级帮助首行。
+SUMMARY_KEY_TEMPLATES = ("{name}.help.desc", "{name}.help")
 
 # manifest 未进 PackageManifest 的字段：清单里写了就照读，没写则留空。
 OPTIONAL_MANIFEST_SEQUENCE_FIELDS = ("available_for", "exclude_from", "categories")
@@ -170,6 +170,21 @@ def package_root(pyproject: Path, import_path: str) -> Path:
     return root
 
 
+def read_manifest(package_path: str, root: Path) -> dict[str, Any]:
+    """读包内 manifest.toml；缺文件时按运行期口径取全默认值。
+
+    schema 不认识时直接失败：运行期会退回默认值，生成期必须报出来，否则清单字段会被静默忽略。
+    """
+    manifest_path = root / MANIFEST_FILENAME
+    if not manifest_path.is_file():
+        return {}
+    manifest = load_toml(manifest_path)
+    declared = manifest.get("schema", MANIFEST_SCHEMA)
+    if declared != MANIFEST_SCHEMA:
+        raise ConfigError(f"{package_path} 的 manifest schema 为 {declared}，本工具只认识 {MANIFEST_SCHEMA}")
+    return manifest
+
+
 def discover_packages() -> tuple[list[Package], list[str]]:
     """遍历全部成员，按 entry point 分组归类为模块包与适配器包。
 
@@ -195,7 +210,6 @@ def discover_packages() -> tuple[list[Package], list[str]]:
         kind: PackageKind = "module" if modules else "adapter"
         name, import_path = next(iter((modules or adapters).items()))
         root = package_root(pyproject, import_path)
-        manifest_path = root / MANIFEST_FILENAME
         packages.append(
             Package(
                 kind=kind,
@@ -206,7 +220,7 @@ def discover_packages() -> tuple[list[Package], list[str]]:
                 import_path=import_path,
                 path=relative,
                 root=root,
-                manifest=load_toml(manifest_path) if manifest_path.is_file() else {},
+                manifest=read_manifest(relative, root),
             )
         )
     packages.sort(key=lambda item: canonicalize_name(item.dist))
@@ -226,22 +240,35 @@ def provides(package: Package) -> list[str]:
 def locale_summaries(package: Package) -> dict[str, str]:
     """读包内 locales 的逐语言简介。
 
-    键取 entry point 名而非分发名：``module()`` 的 desc= 指向 ``<名字>.help.desc``。
+    键取 entry point 名而非分发名：``module()`` 的 desc= 指向 ``<名字>.help.desc``，
+    无该键的模块退回 ``<名字>.help``（模块级帮助首行）。
     """
     directory = package.root / str(package.manifest.get("locales") or DEFAULT_LOCALES_DIR)
     if not directory.is_dir():
         return {}
-    key = SUMMARY_KEY_TEMPLATE.format(name=package.name)
+    keys = [template.format(name=package.name) for template in SUMMARY_KEY_TEMPLATES]
     summaries: dict[str, str] = {}
     for path in sorted(directory.glob("*.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as error:
             raise ConfigError(f"{package.dist} 的 locale 文件无法解析：{path.name}：{error}") from error
-        text = payload.get(key) if isinstance(payload, dict) else None
-        if isinstance(text, str) and text.strip():
-            summaries[path.stem] = text.strip()
+        if not isinstance(payload, dict):
+            continue
+        for key in keys:
+            text = payload.get(key)
+            if isinstance(text, str) and text.strip():
+                summaries[path.stem] = text.strip()
+                break
     return summaries
+
+
+def order_summaries(summaries: dict[str, str]) -> dict[str, str]:
+    """简介按语言代码排序，默认 locale 置首，保证同一输入产出同一字节序列。"""
+    ordered = {key: summaries[key] for key in sorted(summaries)}
+    if DEFAULT_LOCALE in ordered:
+        ordered = {DEFAULT_LOCALE: ordered[DEFAULT_LOCALE], **ordered}
+    return ordered
 
 
 def entry_summary(package: Package) -> dict[str, str]:
@@ -252,7 +279,7 @@ def entry_summary(package: Package) -> dict[str, str]:
     """
     declared = package.manifest.get("summary")
     if isinstance(declared, dict) and declared:
-        return {str(key): str(value) for key, value in declared.items()}
+        return order_summaries({str(key): str(value) for key, value in declared.items()})
     single = package.manifest.get("description")
     if isinstance(single, str) and single.strip():
         return {DEFAULT_LOCALE: single.strip()}
@@ -260,10 +287,7 @@ def entry_summary(package: Package) -> dict[str, str]:
     summaries = locale_summaries(package)
     if DEFAULT_LOCALE not in summaries and package.description:
         summaries[DEFAULT_LOCALE] = package.description
-    ordered = {key: summaries[key] for key in sorted(summaries)}
-    if DEFAULT_LOCALE in ordered:
-        ordered = {DEFAULT_LOCALE: ordered[DEFAULT_LOCALE], **ordered}
-    return ordered
+    return order_summaries(summaries)
 
 
 def legacy_module_map(package: Package) -> list[str]:
@@ -394,7 +418,10 @@ def build_registry(
 
 
 def source_module_names(package: Package) -> set[str]:
-    """AST 扫描包源码里 ``module()`` 注册的名字，支持位置参数与 ``module_name=`` 两种写法。"""
+    """AST 扫描包源码里 ``module()`` 注册的名字，支持位置参数与 ``module_name=`` 两种写法。
+
+    名字写成非常量表达式时扫不到，此时会报成「清单声明但源码未注册」，须改为字面量。
+    """
     found: set[str] = set()
     for path in sorted(package.root.rglob("*.py")):
         try:
@@ -430,7 +457,7 @@ def check_manifest_sources(packages: list[Package]) -> list[str]:
 
 
 def self_check(registry: dict[str, Any]) -> list[str]:
-    """结构自证：顶层键、条目必填字段、名字与提供的模块一致、分发名唯一。"""
+    """结构自证：顶层键与 core 段键序、条目必填字段、提供的名字非空、分发名唯一。"""
     problems: list[str] = []
     if tuple(registry) != TOP_LEVEL_FIELDS:
         problems.append(f"顶层键序与 A.3 不符：{tuple(registry)}")
