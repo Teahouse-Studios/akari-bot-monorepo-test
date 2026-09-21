@@ -16,6 +16,10 @@
 # Python
 __pycache__/
 
+# 本地环境：venv 与 uv 缓存都落在工作区内自持，不入库
+.venv/
+.uvcache/
+
 # ==========
 # Bot Core
 # ==========
