@@ -1,0 +1,15 @@
+{
+  "cli.app.help": "AkariBot instance manager.",
+  "cli.app.version": "Print the version and exit",
+  "cli.common.instance_option": "Instance root; defaults to searching upward for akaribot.toml, or the AKARI_INSTANCE_DIR variable",
+  "cli.common.lang_option": "UI language, e.g. zh_cn / en_us; defaults to AKARIBOT_LANG, the instance config, then the system locale",
+  "cli.common.json_option": "Emit JSON for scripts",
+  "cli.common.table_option": "Config table name, e.g. module_wiki, bot_telegram",
+  "cli.common.yes_option": "Do not ask for confirmation",
+  "cli.error.not_instance": "Not an AkariBot instance (akaribot.toml not found). Run `akaribot init` first, or pass `--instance <root>` / set AKARI_INSTANCE_DIR.",
+  "cli.ok.written": "Wrote ${table}.${name}",
+  "cli.ok.loaded": "Loaded ${module}",
+  "cli.ok.unloaded": "Unloaded ${module}",
+  "cli.warn.instance_not_running_load": "The instance is not running, so it cannot be loaded now; it will load on the next start. Run `akaribot run` first to apply immediately.",
+  "cli.warn.instance_not_running_unload": "The instance is not running, so it cannot be unloaded now; the next start will still load it per module_status. Run `akaribot run` first to keep it unloaded."
+}

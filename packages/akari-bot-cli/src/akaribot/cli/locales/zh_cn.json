@@ -1,0 +1,15 @@
+{
+  "cli.app.help": "AkariBot 实例管理工具。",
+  "cli.app.version": "打印版本后退出",
+  "cli.common.instance_option": "实例根目录；缺省时自当前目录向上查找 akaribot.toml，或读环境变量 AKARI_INSTANCE_DIR",
+  "cli.common.lang_option": "界面语言，如 zh_cn / en_us；缺省读 AKARIBOT_LANG、实例配置与系统语言",
+  "cli.common.json_option": "以 JSON 输出，供脚本消费",
+  "cli.common.table_option": "配置表名，如 module_wiki、bot_telegram",
+  "cli.common.yes_option": "不询问，直接执行",
+  "cli.error.not_instance": "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
+  "cli.ok.written": "已写入 ${table}.${name}",
+  "cli.ok.loaded": "已装载 ${module}",
+  "cli.ok.unloaded": "已卸载 ${module}",
+  "cli.warn.instance_not_running_load": "实例未运行，无法热装载；下次启动会自动装载。要立即生效请先 `akaribot run`。",
+  "cli.warn.instance_not_running_unload": "实例未运行，无法热卸载；下次启动仍会按 module_status 的现有记录装载。要让它保持卸载，请先 `akaribot run` 再执行本命令。"
+}

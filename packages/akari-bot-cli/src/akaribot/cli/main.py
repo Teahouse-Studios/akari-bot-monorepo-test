@@ -6,7 +6,7 @@
 
 import typer
 
-from akaribot.cli import __version__
+from akaribot.cli import __version__, i18n
 from akaribot.cli.commands import adapter, config, doctor, init, migrate, module, new, run, test, tui, venv
 
 app = typer.Typer(
@@ -21,8 +21,12 @@ for sub in (init, run, test, module, config, adapter, venv, doctor, new, tui, mi
 
 
 @app.callback()
-def main(version: bool = typer.Option(False, "--version", help="打印版本后退出")) -> None:
+def main(
+    version: bool = typer.Option(False, "--version", help="打印版本后退出"),
+    lang: str | None = typer.Option(None, "--lang", help="界面语言，如 zh_cn / en_us"),
+) -> None:
     """AkariBot 实例管理工具。"""
+    i18n.set_locale(lang)
     if version:
         typer.echo(__version__)
         raise typer.Exit()
