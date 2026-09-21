@@ -9,10 +9,10 @@ import asyncio
 import uuid
 from typing import TYPE_CHECKING
 
-from core.exports import add_export
+from akaribot.core.exports import add_export
 
 if TYPE_CHECKING:
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
 
 class ExecutionState:

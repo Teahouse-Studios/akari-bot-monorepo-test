@@ -15,7 +15,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from core.builtins.hooks import (
+from akaribot.core.builtins.hooks import (
     DEFAULT_HOOK_TIMEOUT,
     HookExecutor,
     HookSubscription,
@@ -23,10 +23,10 @@ from core.builtins.hooks import (
     invoke_subscription,
     subscription_sort_key,
 )
-from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
-from core.logger import Logger
+from akaribot.core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.logger import Logger
 
-from core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.chain import MessageChain
 
 from .context import OutgoingPayload, ParserHookContext
 from .draft import SessionDraft, build_session_draft
@@ -43,7 +43,7 @@ from .results import (
 )
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 _CONTROL_RESULTS = (Stop, RecoveryProposal, Handled)
 _PROTOCOL_EXCEPTIONS = (SessionFinished, WaitCancelException, SendMessageFailed)

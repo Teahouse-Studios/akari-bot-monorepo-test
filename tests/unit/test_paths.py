@@ -5,9 +5,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from core.constants.path import PrivateData
-from core.paths import INSTANCE_DIR_ENV, Paths
-from core.tester import Tester, func_case
+from akaribot.core.constants.path import PrivateData
+from akaribot.core.paths import INSTANCE_DIR_ENV, Paths
+from akaribot.testing import Tester, func_case
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 

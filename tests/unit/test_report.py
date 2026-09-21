@@ -3,10 +3,10 @@
 from email.utils import parsedate_to_datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
-from core.i18n import Locale
-from core.smtp import send_email, send_report
-from core.tester import Tester, func_case
+from akaribot.core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
+from akaribot.core.i18n import Locale
+from akaribot.core.smtp import send_email, send_report
+from akaribot.testing import Tester, func_case
 
 
 async def _test_email_takes_priority_over_targets():
@@ -16,7 +16,7 @@ async def _test_email_takes_priority_over_targets():
         patch.object(SMTPConfig, "enable_email_report", True),
         patch.object(SMTPConfig, "smtp_host", "smtp.example.com"),
         patch.object(SMTPConfig, "smtp_recipients", ["ops@example.com"]),
-        patch("core.smtp.send_email") as send_email,
+        patch("akaribot.core.smtp.send_email") as send_email,
     ):
         await send_report("message", "subject", "body", direct_sender=direct_sender, targets=["target"])
 
@@ -31,7 +31,7 @@ async def _test_targets_are_used_without_email():
     bot.pick_channel_heads = AsyncMock(return_value=["target-a"])
     with (
         patch.object(SMTPConfig, "enable_email_report", False),
-        patch("core.smtp.exports", {"Bot": bot}),
+        patch("akaribot.core.smtp.exports", {"Bot": bot}),
     ):
         await send_report("message", "subject", "body", direct_sender=direct_sender, targets=["report"])
 
@@ -66,7 +66,7 @@ async def _test_external_smtp_client_uses_starttls_and_login():
         patch.object(SMTPConfig, "smtp_ssl", False),
         patch.object(SMTPSecretConfig, "smtp_password", "app-password"),
         patch.object(SMTPConfig, "smtp_recipients", ["ops@example.com", "backup@example.com"]),
-        patch("core.smtp.smtplib.SMTP", return_value=smtp) as smtp_constructor,
+        patch("akaribot.core.smtp.smtplib.SMTP", return_value=smtp) as smtp_constructor,
     ):
         send_email("subject", "body")
 

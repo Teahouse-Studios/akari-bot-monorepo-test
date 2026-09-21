@@ -14,8 +14,8 @@ import orjson
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 
-from core.logger import Logger
-from core.config.s3 import S3Config, S3SecretConfig
+from akaribot.core.logger import Logger
+from akaribot.core.config.s3 import S3Config, S3SecretConfig
 
 
 s3_access_key = S3SecretConfig.s3_access_key

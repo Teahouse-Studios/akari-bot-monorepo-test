@@ -14,7 +14,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-from core.constants.exceptions import ConfigFileNotFound
+from akaribot.core.constants.exceptions import ConfigFileNotFound
 
 # 本面对外承诺的全部名字。新增导出须同时更新 __all__ 与 LAZY_MODULES。
 __all__ = [
@@ -45,21 +45,21 @@ __all__ = [
 
 try:
     # 不依赖配置系统的名字：能力声明、机器人状态与进程内临时存储。
-    from core.builtins.session.bot_state import BotState
-    from core.builtins.session.features import Features
-    from core.builtins.temp import Temp
+    from akaribot.core.builtins.session.bot_state import BotState
+    from akaribot.core.builtins.session.features import Features
+    from akaribot.core.builtins.temp import Temp
 
     # 会话契约：适配器实现 ContextManager，并据此注册自身能力。
-    from core.builtins.session.context import ContextManager
+    from akaribot.core.builtins.session.context import ContextManager
 
     # 客户端生命周期：适配器启动与退出时初始化、清理平台资源。
-    from core.client.init import check_queue, client_cleanup, client_init
+    from akaribot.core.client.init import check_queue, client_cleanup, client_init
 
     # 队列契约：适配器实现 PlatformAPI，供服务端跨进程调用平台动作。
-    from core.queue.contracts import PlatformAPI
+    from akaribot.core.queue.contracts import PlatformAPI
 
     # 按钮与媒体：平台侧按钮注册、媒体压缩与长图分片。
-    from core.utils.button_runtime import (
+    from akaribot.core.utils.button_runtime import (
         BUTTON_TOKEN_PREFIX,
         ButtonConsumeResult,
         ButtonConsumeStatus,
@@ -69,8 +69,8 @@ try:
         normalize_button_payload,
         register_button_rows,
     )
-    from core.utils.image_split import image_split
-    from core.utils.media import (
+    from akaribot.core.utils.image_split import image_split
+    from akaribot.core.utils.media import (
         compress_audio_video,
         compress_image,
         compress_media_chain,
@@ -79,20 +79,20 @@ try:
     )
 
     # 对象存储依赖可选的 boto3，放在导入块末尾：缺失时只影响这一个名字。
-    from core.utils.s3 import S3Storage
+    from akaribot.core.utils.s3 import S3Storage
 except (ConfigFileNotFound, ImportError):
     # 配置或可选依赖缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。
     pass
 
 # 名称到来源模块的映射。仅在导入块中断时使用。
 LAZY_MODULES: dict[str, tuple[str, ...]] = {
-    "core.builtins.session.bot_state": ("BotState",),
-    "core.builtins.session.context": ("ContextManager",),
-    "core.builtins.session.features": ("Features",),
-    "core.builtins.temp": ("Temp",),
-    "core.client.init": ("check_queue", "client_cleanup", "client_init"),
-    "core.queue.contracts": ("PlatformAPI",),
-    "core.utils.button_runtime": (
+    "akaribot.core.builtins.session.bot_state": ("BotState",),
+    "akaribot.core.builtins.session.context": ("ContextManager",),
+    "akaribot.core.builtins.session.features": ("Features",),
+    "akaribot.core.builtins.temp": ("Temp",),
+    "akaribot.core.client.init": ("check_queue", "client_cleanup", "client_init"),
+    "akaribot.core.queue.contracts": ("PlatformAPI",),
+    "akaribot.core.utils.button_runtime": (
         "BUTTON_TOKEN_PREFIX",
         "ButtonConsumeResult",
         "ButtonConsumeStatus",
@@ -102,15 +102,15 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "normalize_button_payload",
         "register_button_rows",
     ),
-    "core.utils.image_split": ("image_split",),
-    "core.utils.media": (
+    "akaribot.core.utils.image_split": ("image_split",),
+    "akaribot.core.utils.media": (
         "compress_audio_video",
         "compress_image",
         "compress_media_chain",
         "resolve_media_base64",
         "resolve_media_path",
     ),
-    "core.utils.s3": ("S3Storage",),
+    "akaribot.core.utils.s3": ("S3Storage",),
 }
 
 _LAZY_INDEX: dict[str, str] = {name: path for path, names in LAZY_MODULES.items() for name in names}

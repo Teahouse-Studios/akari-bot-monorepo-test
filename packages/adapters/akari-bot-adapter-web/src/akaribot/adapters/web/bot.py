@@ -3,17 +3,17 @@ import uuid
 
 import uvicorn
 
-from bots.web.api import *
-from bots.web.client import web_host, available_web_port, forwarded_allow_ips
-from bots.web.config import WebConfig
-from bots.web.context import WebContextManager
-from bots.web.info import *
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.utils.button_runtime import normalize_button_payload
+from akaribot.adapters.web.api import *
+from akaribot.adapters.web.client import web_host, available_web_port, forwarded_allow_ips
+from akaribot.adapters.web.config import WebConfig
+from akaribot.adapters.web.context import WebContextManager
+from akaribot.adapters.web.info import *
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.utils.button_runtime import normalize_button_payload
 
 Bot.register_bot(client_name=client_name)
 

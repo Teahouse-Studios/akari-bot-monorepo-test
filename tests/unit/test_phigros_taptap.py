@@ -4,8 +4,8 @@ from urllib.parse import parse_qs
 
 import httpx
 
-from core.tester import func_case, Tester
-from modules.phigros.libraries.taptap import (
+from akaribot.testing import func_case, Tester
+from akaribot.modules.phigros.libraries.taptap import (
     TapTapLogin,
     TapTapLoginError,
     TapTapQRCode,

@@ -24,6 +24,6 @@ def collect_locale_paths() -> list[str]:
 
     :return: locale 目录路径列表，核心的目录排在最前。
     """
-    from core.registry import PackageRegistry
+    from akaribot.core.registry import PackageRegistry
 
     return PackageRegistry.locales_paths()

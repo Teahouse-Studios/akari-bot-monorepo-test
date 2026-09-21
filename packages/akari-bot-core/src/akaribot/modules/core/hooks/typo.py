@@ -11,19 +11,19 @@ from typing import TYPE_CHECKING
 
 from rapidfuzz import process
 
-from core.builtins.parser.args import ArgumentPattern, Template as argsTemplate, templates_to_str
-from core.builtins.parser.hooks import HookPoint, RecoveryProposal
-from core.component import module
-from core.config.base import CoreConfig
-from core.exports import exports
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.utils.platform_scope import platform_fields
-from core.types import Module
-from core.types.module.component_meta import CommandMeta
+from akaribot.core.builtins.parser.args import ArgumentPattern, Template as argsTemplate, templates_to_str
+from akaribot.core.builtins.parser.hooks import HookPoint, RecoveryProposal
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.exports import exports
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.utils.platform_scope import platform_fields
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 typo_check_module_score = CoreConfig.typo_check_module_score
 typo_check_command_score = CoreConfig.typo_check_command_score

@@ -1,7 +1,7 @@
 """core.builtins.parser.message 单元测试 - 正则单次触发标记。"""
 
-from core.builtins.parser.message import mark_regex_once, regex_once_cache, regex_once_triggered
-from core.tester import func_case, Tester
+from akaribot.core.builtins.parser.message import mark_regex_once, regex_once_cache, regex_once_triggered
+from akaribot.testing import func_case, Tester
 
 
 async def _test_not_triggered_before_mark():

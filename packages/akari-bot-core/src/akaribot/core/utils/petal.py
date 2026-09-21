@@ -4,12 +4,12 @@ from datetime import datetime, timedelta
 from tortoise.expressions import F
 from tortoise.transactions import in_transaction
 
-from core.builtins.bot import Bot
-from core.builtins.message.elements import I18NContextElement
-from core.builtins.message.internal import I18NContext
-from core.config.base import CoreConfig
-from core.database.models import SenderUnionInfo, StoredData
-from core.utils.random import Random
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.elements import I18NContextElement
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import SenderUnionInfo, StoredData
+from akaribot.core.utils.random import Random
 
 # 花瓣余额与日额度挂在 union 上，跨平台共享；存储不按客户端分桶。
 # 桶内按 union 而非平台账号索引，避免多绑平台重复领取。

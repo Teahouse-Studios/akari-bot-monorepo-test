@@ -7,11 +7,11 @@ from pathlib import Path
 
 
 async def main(url: str, role: str, token: str) -> None:
-    from core.queue.base import JobQueueBase
-    from core.queue.errors import RpcRemoteError
-    from core.queue.peer import PeerSelector
-    from core.queue.rpc import remote
-    from core.queue.websocket import WebSocketJobQueueBackend, WebSocketSettings
+    from akaribot.core.queue.base import JobQueueBase
+    from akaribot.core.queue.errors import RpcRemoteError
+    from akaribot.core.queue.peer import PeerSelector
+    from akaribot.core.queue.rpc import remote
+    from akaribot.core.queue.websocket import WebSocketJobQueueBackend, WebSocketSettings
 
     settings = WebSocketSettings(url=url, token=token, command_timeout=5, heartbeat_seconds=2)
 

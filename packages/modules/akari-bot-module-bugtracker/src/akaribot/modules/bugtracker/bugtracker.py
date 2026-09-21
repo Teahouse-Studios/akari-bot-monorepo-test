@@ -1,11 +1,11 @@
 import orjson
 
-from core.builtins.message.internal import I18NContext, Plain
-from core.constants.exceptions import ExternalException
-from core.logger import Logger
-from core.utils.http import post_url, get_url
-from core.utils.image import cb64imglst
-from core.utils.web_render import web_render, ElementScreenshotOptions
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.constants.exceptions import ExternalException
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import post_url, get_url
+from akaribot.core.utils.image import cb64imglst
+from akaribot.core.utils.web_render import web_render, ElementScreenshotOptions
 
 elements = ["div[class^='MuiContainer-root']"]
 

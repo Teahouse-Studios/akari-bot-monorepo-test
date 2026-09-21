@@ -8,8 +8,8 @@ import importlib
 
 from loguru import logger
 
-from core.config import CFGManager
-from core.registry import PackageRegistry
+from akaribot.core.config import CFGManager
+from akaribot.core.registry import PackageRegistry
 
 
 def iter_config_template_modules() -> list[str]:

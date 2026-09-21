@@ -1,7 +1,7 @@
 """core.utils.storedata 单元测试 - 存储工具（需要数据库）。"""
 
-from core.tester import func_case, Tester
-from core.utils.storedata import get_stored_list, update_stored_list
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
 
 async def _test_get_stored_list_empty():

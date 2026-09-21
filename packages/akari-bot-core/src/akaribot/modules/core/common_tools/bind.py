@@ -1,21 +1,21 @@
 import asyncio
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.config.base import CoreConfig
-from core.component import module
-from core.database.models import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.component import module
+from akaribot.core.database.models import (
     UNION_SCOPE_SENDER,
     UNION_SCOPE_TARGET,
     SenderUnionInfo,
     TargetUnionInfo,
     TargetUnionBind,
 )
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.utils.container import ExpiringTempDict
-from core.utils.random import SecureRandom
-from modules.core.common_tools._union_merge import (
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.utils.container import ExpiringTempDict
+from akaribot.core.utils.random import SecureRandom
+from akaribot.modules.core.common_tools._union_merge import (
     BIND_CODE_EXPIRED,
     apply_sender_merge,
     apply_target_merge,

@@ -1,13 +1,13 @@
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext
-from core.component import module
-from core.config.base import CoreConfig
-from core.database.models import SenderUnionInfo
-from core.scheduler import CronTrigger
-from core.utils.petal import sign_get_petal, cost_petal
-from core.utils.petal import settle_petals
-from modules.core.common_tools._bud import claim_bud, create_bud, find_bud, release_buds
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.core.scheduler import CronTrigger
+from akaribot.core.utils.petal import sign_get_petal, cost_petal
+from akaribot.core.utils.petal import settle_petals
+from akaribot.modules.core.common_tools._bud import claim_bud, create_bud, find_bud, release_buds
 
 
 petal_ = module(

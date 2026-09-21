@@ -4,9 +4,9 @@ from datetime import datetime, UTC
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.tester import func_case, Tester
-from core.utils.url_audit import URLPolicyDecision
-from modules.wiki.utils.wikilib import BlockedWikiError, WikiInfo, WikiLib
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.url_audit import URLPolicyDecision
+from akaribot.modules.wiki.utils.wikilib import BlockedWikiError, WikiInfo, WikiLib
 
 API_LINK = "https://example.com/api.php"
 PAGE_LINK = "https://example.com/wiki/Example_Page"
@@ -40,12 +40,12 @@ async def _test_page_url_resolves_edituri_api():
     get_url = AsyncMock(return_value=page_html)
     get_json = AsyncMock(return_value=VALID_SITEINFO)
     with (
-        patch("modules.wiki.utils.wikilib.get_url", new=get_url),
-        patch("modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=None)),
-        patch("modules.wiki.utils.wikilib.WikiSiteInfo.create", new=AsyncMock(return_value=cache)),
+        patch("akaribot.modules.wiki.utils.wikilib.get_url", new=get_url),
+        patch("akaribot.modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=None)),
+        patch("akaribot.modules.wiki.utils.wikilib.WikiSiteInfo.create", new=AsyncMock(return_value=cache)),
         patch.object(WikiLib, "get_json_from_api", new=get_json),
         patch(
-            "modules.wiki.utils.wikilib.evaluate_url_policy",
+            "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
             return_value=URLPolicyDecision(allowed=False, blocked=False),
         ),
     ):
@@ -63,10 +63,10 @@ async def _test_page_url_resolves_edituri_api():
 async def _test_invalid_cache_is_refetched():
     cache = _cache(ERROR_SITEINFO)
     with (
-        patch("modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=cache)),
+        patch("akaribot.modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=cache)),
         patch.object(WikiLib, "get_json_from_api", new=AsyncMock(return_value=VALID_SITEINFO)) as get_json,
         patch(
-            "modules.wiki.utils.wikilib.evaluate_url_policy",
+            "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
             return_value=URLPolicyDecision(allowed=False, blocked=False),
         ),
     ):
@@ -84,10 +84,10 @@ async def _test_invalid_cache_is_refetched():
 async def _test_invalid_response_is_not_cached():
     cache = _cache({})
     with (
-        patch("modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=cache)),
+        patch("akaribot.modules.wiki.utils.wikilib.WikiSiteInfo.get_or_none", new=AsyncMock(return_value=cache)),
         patch.object(WikiLib, "get_json_from_api", new=AsyncMock(return_value=ERROR_SITEINFO)),
         patch(
-            "modules.wiki.utils.wikilib.evaluate_url_policy",
+            "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
             return_value=URLPolicyDecision(allowed=False, blocked=False),
         ),
     ):
@@ -98,7 +98,7 @@ async def _test_invalid_response_is_not_cached():
 
 async def _test_siteinfo_uses_global_url_policy():
     with patch(
-        "modules.wiki.utils.wikilib.evaluate_url_policy",
+        "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
         return_value=URLPolicyDecision(allowed=True, blocked=False),
     ) as evaluate:
         result = await WikiLib(API_LINK).rearrange_siteinfo(VALID_SITEINFO, API_LINK)
@@ -116,10 +116,10 @@ async def _test_blocklisted_wiki_skips_network_requests():
     get_json = AsyncMock()
     with (
         patch(
-            "modules.wiki.utils.wikilib.evaluate_url_policy",
+            "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
             return_value=URLPolicyDecision(allowed=False, blocked=True),
         ),
-        patch("modules.wiki.utils.wikilib.get_url", new=get_url),
+        patch("akaribot.modules.wiki.utils.wikilib.get_url", new=get_url),
         patch.object(WikiLib, "get_json_from_api", new=get_json),
     ):
         try:
@@ -137,7 +137,7 @@ async def _test_bound_wiki_is_rechecked_before_content_request():
     get_json = AsyncMock()
     with (
         patch(
-            "modules.wiki.utils.wikilib.evaluate_url_policy",
+            "akaribot.modules.wiki.utils.wikilib.evaluate_url_policy",
             return_value=URLPolicyDecision(allowed=False, blocked=True),
         ),
         patch.object(WikiLib, "get_json_from_api", new=get_json),

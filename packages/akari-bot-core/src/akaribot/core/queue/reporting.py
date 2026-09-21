@@ -1,8 +1,8 @@
 """Submit configured error reports without waiting on a reverse RPC."""
 
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.smtp import email_report_enabled
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.smtp import email_report_enabled
 
 
 async def report_rpc_error(peer, method: str, details: str) -> None:

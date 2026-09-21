@@ -5,8 +5,8 @@ import orjson
 from ddgs import DDGS
 from filetype import filetype
 
-from core.config.base import CoreSecretConfig
-from core.utils.http import get_url
+from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.utils.http import get_url
 
 proxy = CoreSecretConfig.proxy
 

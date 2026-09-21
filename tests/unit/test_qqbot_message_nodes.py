@@ -13,15 +13,15 @@ from unittest.mock import patch
 
 from botpy.message import GroupMessage
 
-import bots.qqbot.context as qqbot_context
-from bots.qqbot.context import MESSAGE_NODES_MAX_ROWS, QQBotContextManager, nodes_to_table
-from bots.qqbot.features import guild_features
-from bots.qqbot.info import target_group_prefix
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.internal import Markdown, Plain
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
+import akaribot.adapters.qqbot.context as qqbot_context
+from akaribot.adapters.qqbot.context import MESSAGE_NODES_MAX_ROWS, QQBotContextManager, nodes_to_table
+from akaribot.adapters.qqbot.features import guild_features
+from akaribot.adapters.qqbot.info import target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.internal import Markdown, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 BACKSLASH = chr(92)
 

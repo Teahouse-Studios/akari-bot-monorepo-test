@@ -6,7 +6,7 @@ v1 时代的表由 ``generate_schemas`` 依模型直接建立，没有需要单�
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
+from akaribot.core.database.migration import MigrationContext
 
 REVISION = "0001_initial"
 DEPENDS_ON = None

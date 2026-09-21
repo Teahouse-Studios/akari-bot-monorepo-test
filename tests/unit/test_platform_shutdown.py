@@ -8,19 +8,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import botpy
 import discord
-import bots.discord.client as discord_client
-import bots.discord.context as discord_context
-import bots.discord.slash_context as discord_slash_context
-import bots.onebot.context as onebot_context
-import bots.web.client as web_client
-from bots.qqbot.context import _MessageSendQueue, _PreparedMessage, _QueuedMessage, _TypingState
-from core.queue.contracts import ServerAPI
-from core.tester import Tester, func_case
-from core.tester.timing import TIME_SCALE
-from bots.matrix.config import MatrixConfig
-from bots.onebot.config import AiocqhttpConfig
-from bots.qqbot.config import QQBotConfig
-from bots.telegram.config import AiogramConfig
+import akaribot.adapters.discord.client as discord_client
+import akaribot.adapters.discord.context as discord_context
+import akaribot.adapters.discord.slash_context as discord_slash_context
+import akaribot.adapters.onebot.context as onebot_context
+import akaribot.adapters.web.client as web_client
+from akaribot.adapters.qqbot.context import _MessageSendQueue, _PreparedMessage, _QueuedMessage, _TypingState
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.testing import Tester, func_case
+from akaribot.testing.timing import TIME_SCALE
+from akaribot.adapters.matrix.config import MatrixConfig
+from akaribot.adapters.onebot.config import AiocqhttpConfig
+from akaribot.adapters.qqbot.config import QQBotConfig
+from akaribot.adapters.telegram.config import AiogramConfig
 
 # Adapter modules register handlers on import; local enabled credentials must
 # never turn an isolated lifecycle test into a live platform connection.
@@ -29,9 +29,9 @@ with (
     patch.object(AiocqhttpConfig, "enable", False),
     patch.object(QQBotConfig, "enable", False),
 ):
-    import bots.matrix.bot as matrix_bot_module
-    import bots.onebot.bot as onebot_bot_module
-    import bots.qqbot.bot as qqbot_bot_module
+    import akaribot.adapters.matrix.bot as matrix_bot_module
+    import akaribot.adapters.onebot.bot as onebot_bot_module
+    import akaribot.adapters.qqbot.bot as qqbot_bot_module
 
 
 async def _run_web_lifespan(raise_inside: bool) -> bool:
@@ -161,7 +161,7 @@ async def _test_telegram_shutdown_cleans_core_client():
         patch("aiogram.client.bot.validate_token", return_value=None),
         patch.object(AiogramConfig, "enable", False),
     ):
-        telegram_bot_module = importlib.import_module("bots.telegram.bot")
+        telegram_bot_module = importlib.import_module("akaribot.adapters.telegram.bot")
     try:
         if not hasattr(telegram_bot_module, "on_shutdown") or not hasattr(telegram_bot_module, "client_cleanup"):
             return False
@@ -407,7 +407,7 @@ async def _test_qqbot_close_releases_adapter_tasks_and_waiters():
 
 async def _test_kook_shutdown_cleans_core_and_http_session():
     try:
-        kook_lifecycle = importlib.import_module("bots.kook.lifecycle")
+        kook_lifecycle = importlib.import_module("akaribot.adapters.kook.lifecycle")
     except ModuleNotFoundError:
         return False
 
@@ -422,7 +422,7 @@ async def _test_kook_shutdown_cleans_core_and_http_session():
 
 async def _test_kook_runner_closes_event_loop():
     try:
-        kook_lifecycle = importlib.import_module("bots.kook.lifecycle")
+        kook_lifecycle = importlib.import_module("akaribot.adapters.kook.lifecycle")
     except ModuleNotFoundError:
         return False
 

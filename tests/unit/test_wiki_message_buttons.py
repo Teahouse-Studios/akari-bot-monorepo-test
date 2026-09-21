@@ -8,17 +8,17 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.bot import Bot
-from core.builtins.message.elements import ButtonFrameElement, I18NContextElement, URLElement
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.builtins.utils import confirm_command
-from core.constants.exceptions import SessionFinished
-from core.i18n import Locale
-from core.tester import func_case, Tester
-from modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib
-from modules.wiki.wiki import query_pages
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.elements import ButtonFrameElement, I18NContextElement, URLElement
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.utils import confirm_command
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.i18n import Locale
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib
+from akaribot.modules.wiki.wiki import query_pages
 
 
 API = "https://example.com/api.php"
@@ -77,9 +77,9 @@ async def _run_query(page: PageInfo, session: MessageSession) -> tuple[list, lis
     with (
         patch.object(Bot.Info, "web_render_status", True),
         patch.object(WikiLib, "parse_page_info", new=AsyncMock(return_value=page)),
-        patch("modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=_target())),
-        patch("modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
-        patch("modules.wiki.wiki._start_background_with_release", new=_run_background),
+        patch("akaribot.modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=_target())),
+        patch("akaribot.modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
+        patch("akaribot.modules.wiki.wiki._start_background_with_release", new=_run_background),
         patch.object(MessageSession, "hold", new=AsyncMock()),
         patch.object(MessageSession, "release", new=AsyncMock()),
         patch.object(MessageSession, "send_message", new=_send_message),

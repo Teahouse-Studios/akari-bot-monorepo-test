@@ -1,5 +1,5 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
 from .chunithm_mapping import *
 from .divingfish_oauth import diving_fish_bind_usable
 from ..database.models import DivingProberBindInfo, LxnsProberBindInfo

@@ -6,9 +6,9 @@ from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from bots.web.client import app
-from core.constants.path import logs_path
-from core.logger import Logger
+from akaribot.adapters.web.client import app
+from akaribot.core.constants.path import logs_path
+from akaribot.core.logger import Logger
 
 INIT_READ_BYTES = 200 * 1024
 INITIAL_MAX_LINES = 100

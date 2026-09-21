@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
-from core.database.models import TargetUnionBind, TargetUnionInfo, backfill_union_binds
+from akaribot.core.database.migration import MigrationContext
+from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo, backfill_union_binds
 
 REVISION = "0003_union_core"
 DEPENDS_ON = "0002_banned_users_and_nullable_sender"

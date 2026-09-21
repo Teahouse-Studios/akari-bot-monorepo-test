@@ -1,9 +1,9 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.component import module
-from modules.coin.config import CoinConfig
-from core.constants.exceptions import ConfigValueError
-from core.utils.random import Random
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.component import module
+from akaribot.modules.coin.config import CoinConfig
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.utils.random import Random
 
 MAX_COIN_NUM = CoinConfig.coin_limit
 FACE_UP_WEIGHT = CoinConfig.coin_faceup_weight

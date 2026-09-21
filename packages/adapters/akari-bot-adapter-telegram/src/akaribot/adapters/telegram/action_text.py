@@ -5,8 +5,8 @@ import hashlib
 from aiogram import types
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 
-from core.config.base import BaseConfig
-from core.i18n import Locale
+from akaribot.core.config.base import BaseConfig
+from akaribot.core.i18n import Locale
 
 
 def is_own_inline_message(message: types.Message, bot_id: int) -> bool:

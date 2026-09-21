@@ -19,11 +19,11 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger as APSchedulerIntervalTrigger
 
-from core.config.base import CoreConfig
-from core.module_runtime import ModuleRuntimeManager
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.module_runtime import ModuleRuntimeManager
 
 if TYPE_CHECKING:
-    from core.types import Module
+    from akaribot.core.types import Module
 
 
 Scheduler = AsyncIOScheduler()

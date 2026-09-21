@@ -1,6 +1,6 @@
 """modules/core 更多核心模块集成测试 - locale、petal、analytics、say。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

@@ -4,9 +4,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
-import core.database.legacy as database_update
-from core.tester import Tester, func_case
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRuleError
+import akaribot.core.database.legacy as database_update
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRuleError
 
 
 def _patch_rule_paths(root: Path):

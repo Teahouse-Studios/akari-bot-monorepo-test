@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 
-import bots.web.api.policy as policy
-import core.builtins.filter as filter_words_module
-from core.tester import Tester, func_case
+import akaribot.adapters.web.api.policy as policy
+import akaribot.core.builtins.filter as filter_words_module
+from akaribot.testing import Tester, func_case
 
 
 class FakeRequest:

@@ -9,14 +9,14 @@ from datetime import timedelta
 
 from cattrs import Converter
 
-import core.builtins.message.elements as elements
-from core.builtins.message.elements import I18NContextElement
-from core.builtins.session.event_types import EventName
-from core.builtins.types import MessageElement
-from core.database.models import TargetUnionInfo, SenderUnionInfo
-from core.i18n import Locale
-from core.logger import Logger
-from core.exports import exports
+import akaribot.core.builtins.message.elements as elements
+from akaribot.core.builtins.message.elements import I18NContextElement
+from akaribot.core.builtins.session.event_types import EventName
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.database.models import TargetUnionInfo, SenderUnionInfo
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.exports import exports
 
 # 创建类型转换器实例
 converter = Converter()

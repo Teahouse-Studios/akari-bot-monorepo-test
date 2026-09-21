@@ -10,7 +10,7 @@ import random as pyrandom
 import secrets
 from typing import MutableSequence, Sequence, TypeVar
 
-from core.config.base import CoreConfig
+from akaribot.core.config.base import CoreConfig
 
 INF = 2**53
 T = TypeVar("T")

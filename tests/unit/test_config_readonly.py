@@ -9,9 +9,9 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from core.config import CFGManager
-from core.constants.exceptions import ConfigOperationError
-from core.tester import func_case, Tester
+from akaribot.core.config import CFGManager
+from akaribot.core.constants.exceptions import ConfigOperationError
+from akaribot.testing import func_case, Tester
 
 # 最小可用的配置文件内容，含表外顶层键、普通表与密钥表各一
 MINIMAL_CONFIG = """default_locale = "zh_cn"
@@ -145,7 +145,7 @@ def _test_writable_process_can_write():
 
 def _test_readonly_template_registers_without_writing():
     """只读时导入配置模板应完成字段登记，且不产生任何写入"""
-    from core.config.decorator import on_config
+    from akaribot.core.config.decorator import on_config
 
     with _temp_config(readonly=True) as tmp:
         before = (tmp / "config.toml").read_text(encoding="utf-8")

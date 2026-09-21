@@ -10,14 +10,14 @@ query_pages 另有一条 QueryInfo 入口，但现无调用方，且其在取 lo
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.elements import PlainElement
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants.exceptions import SessionFinished
-from core.tester import func_case, Tester
-from modules.wiki.utils.wikilib import InvalidWikiError, WikiLib
-from modules.wiki.wiki import query_pages
+from akaribot.core.builtins.message.elements import PlainElement
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.wikilib import InvalidWikiError, WikiLib
+from akaribot.modules.wiki.wiki import query_pages
 
 INVALID_IW_MESSAGE = "站点设置的 Interwiki 无效，请联系站点管理员解决此问题。"
 
@@ -54,7 +54,7 @@ async def _query_with_invalid_wiki(inline_mode: bool) -> dict:
 
     with (
         patch.object(WikiLib, "parse_page_info", new=AsyncMock(side_effect=InvalidWikiError(INVALID_IW_MESSAGE))),
-        patch("modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target_stub)),
+        patch("akaribot.modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target_stub)),
         patch.object(MessageSession, "hold", new=AsyncMock()),
         patch.object(MessageSession, "release", new=AsyncMock()),
         patch.object(MessageSession, "send_message", new=_send_message),

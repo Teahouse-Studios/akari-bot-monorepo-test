@@ -6,7 +6,7 @@
 
 import os
 
-from core.queue.diagnostics import (
+from akaribot.core.queue.diagnostics import (
     build_usage,
     collect_external_usage,
     collect_self_usage,
@@ -16,7 +16,7 @@ from core.queue.diagnostics import (
     summarize_process_usage,
     usage_payload,
 )
-from core.tester import func_case, Tester
+from akaribot.testing import func_case, Tester
 
 
 def _test_build_usage_prefers_uss():

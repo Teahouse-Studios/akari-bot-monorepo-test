@@ -24,9 +24,9 @@ from botpy.types.group import SetMemberMuteState
 from botpy.types.message import Reference
 from botpy.types.inline import Keyboard, Button, KeyboardRow, RenderData, Action, Permission, KeyboardContent
 
-from bots.qqbot.config import QQBotConfig
-from bots.qqbot.features import features as qqbot_features
-from bots.qqbot.info import (
+from akaribot.adapters.qqbot.config import QQBotConfig
+from akaribot.adapters.qqbot.features import features as qqbot_features
+from akaribot.adapters.qqbot.info import (
     client_name,
     sender_tiny_prefix,
     target_group_prefix,
@@ -34,10 +34,10 @@ from bots.qqbot.info import (
     target_guild_prefix,
     target_c2c_prefix,
 )
-from bots.qqbot.utils import url_filter
-from core.builtins.message.mention import render_at_code
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import (
+from akaribot.adapters.qqbot.utils import url_filter
+from akaribot.core.builtins.message.mention import render_at_code
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
     ActionTextElement,
     ButtonPermission,
     ButtonFrameElement,
@@ -50,18 +50,18 @@ from core.builtins.message.elements import (
     MentionElement,
     URLElement,
 )
-from core.builtins.message.internal import I18NContext, Image
-from core.builtins.session.context import ContextManager
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.config.base import CoreConfig
-from core.constants.path import assets_path
-from core.logger import Logger
-from core.utils.button_runtime import register_button_rows
-from core.utils.media import resolve_media_path
-from core.utils.random import Random
-from core.utils.table import escape_table_cell, resolve_table_columns
+from akaribot.core.builtins.message.internal import I18NContext, Image
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import assets_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.button_runtime import register_button_rows
+from akaribot.core.utils.media import resolve_media_path
+from akaribot.core.utils.random import Random
+from akaribot.core.utils.table import escape_table_cell, resolve_table_columns
 
 qq_typing_emoji = str(QQBotConfig.qq_typing_emoji)
 qq_limited_emoji = str(QQBotConfig.qq_limited_emoji)
@@ -90,7 +90,7 @@ TYPING_EMOTES = tuple(sorted(TYPING_EMOTE_DIR.glob("*.gif")))
 
 
 def _load_s3_storage():
-    from core.utils.s3 import S3Storage
+    from akaribot.core.utils.s3 import S3Storage
 
     return S3Storage
 

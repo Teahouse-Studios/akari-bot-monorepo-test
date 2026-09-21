@@ -1,8 +1,8 @@
-from core.builtins.bot import Bot
-from core.component import module
-from modules.github.config import GithubConfig
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.component import module
+from akaribot.modules.github.config import GithubConfig
 
-from modules.github import repo, user, search
+from akaribot.modules.github import repo, user, search
 
 pat = GithubConfig.github_pat
 

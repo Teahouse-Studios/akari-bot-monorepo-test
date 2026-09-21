@@ -1,7 +1,7 @@
 import httpx
 
-from core.logger import Logger
-from modules.wiki.database.models import WikiBotAccountList
+from akaribot.core.logger import Logger
+from akaribot.modules.wiki.database.models import WikiBotAccountList
 
 
 class LoginFailed(Exception):

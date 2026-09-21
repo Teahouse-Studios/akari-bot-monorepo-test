@@ -7,9 +7,9 @@
 import inspect
 from unittest.mock import AsyncMock, patch
 
-import bots.web.api.api as web_api
-from core.queue.diagnostics import DAEMON_LABEL, ProcessUsage, usage_payload
-from core.tester import Tester, func_case
+import akaribot.adapters.web.api.api as web_api
+from akaribot.core.queue.diagnostics import DAEMON_LABEL, ProcessUsage, usage_payload
+from akaribot.testing import Tester, func_case
 
 PROCESSES = usage_payload([ProcessUsage(name=DAEMON_LABEL, pid=7, memory=1024, metric="RSS", threads=2)], [])
 PROCESSES["error"] = None

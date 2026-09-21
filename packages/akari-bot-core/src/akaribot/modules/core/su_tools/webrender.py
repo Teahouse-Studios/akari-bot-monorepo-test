@@ -1,9 +1,9 @@
 from akari_bot_webrender.functions.options import StatusOptions
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.utils.web_render import check_web_render_status, close_web_render, init_web_render, web_render
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.utils.web_render import check_web_render_status, close_web_render, init_web_render, web_render
 
 wr = module("webrender", required_superuser=True, base=True, doc=True)
 

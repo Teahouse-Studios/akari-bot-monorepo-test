@@ -9,18 +9,18 @@ from unittest.mock import AsyncMock, patch
 from PIL import Image as PILImage
 from milky.models import ImageSubType
 
-import bots.milky.context as milky_context
-from bots.milky.context import MilkyContextManager, qq_limited_emoji
-from bots.milky.features import features as milky_features
-from bots.milky.info import client_name, sender_prefix, target_group_prefix
-from bots.milky.utils import convert_chain_to_segments
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ImageElement, MentionElement, VideoElement
-from core.builtins.message.internal import Audio, Image, Plain
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
-from core.utils.session import inject_features
+import akaribot.adapters.milky.context as milky_context
+from akaribot.adapters.milky.context import MilkyContextManager, qq_limited_emoji
+from akaribot.adapters.milky.features import features as milky_features
+from akaribot.adapters.milky.info import client_name, sender_prefix, target_group_prefix
+from akaribot.adapters.milky.utils import convert_chain_to_segments
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ImageElement, MentionElement, VideoElement
+from akaribot.core.builtins.message.internal import Audio, Image, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.session import inject_features
 
 
 def _png_file() -> str:
@@ -209,7 +209,7 @@ def _group_message_event(segments: list[dict], sender_id: int = 10001) -> dict:
 
 async def _test_message_dispatch_builds_session() -> bool:
     """消息事件被解析为会话，并剥离指向机器人的提及。"""
-    import bots.milky.bot as bot_module
+    import akaribot.adapters.milky.bot as bot_module
 
     captured = {}
 
@@ -247,7 +247,7 @@ async def _test_message_dispatch_builds_session() -> bool:
 
 async def _test_group_message_ignored_when_not_addressed() -> bool:
     """群聊未 @ 机器人时按 mention_required 忽略，自身消息默认忽略。"""
-    import bots.milky.bot as bot_module
+    import akaribot.adapters.milky.bot as bot_module
 
     process = AsyncMock()
     plain_event = _group_message_event([{"type": "text", "data": {"text": "hi"}}])
@@ -269,7 +269,7 @@ async def _test_group_message_ignored_when_not_addressed() -> bool:
 
 async def _test_sdk_message_model_is_supported() -> bool:
     """入站消息兼容 SDK 模型形态（SSE 事件为字典，模型路径亦须可用）。"""
-    from bots.milky.utils import to_message_chain
+    from akaribot.adapters.milky.utils import to_message_chain
     from milky.models import parse_incoming_message
 
     message = parse_incoming_message(

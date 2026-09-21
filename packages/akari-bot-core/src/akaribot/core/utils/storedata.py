@@ -2,11 +2,11 @@ from typing import TYPE_CHECKING
 
 from tortoise.exceptions import DoesNotExist
 
-from core.database.models import StoredData
-from core.exports import exports
+from akaribot.core.database.models import StoredData
+from akaribot.core.exports import exports
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 async def get_stored_list(bot: type["Bot"] | str, name: str) -> list:

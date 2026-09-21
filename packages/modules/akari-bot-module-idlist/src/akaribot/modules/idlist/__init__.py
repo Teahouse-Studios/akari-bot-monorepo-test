@@ -1,11 +1,11 @@
 # https://github.com/XeroAlpha/caidlist/blob/master/backend/API.md
 import urllib.parse
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.component import module
-from core.utils.http import get_url
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.component import module
+from akaribot.core.utils.http import get_url
 
 API = "https://idlist.projectxero.top/search"
 SEARCH_LIMIT = 5

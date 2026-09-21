@@ -19,9 +19,9 @@ from __future__ import annotations
 import asyncio
 from typing import Callable
 
-from core.constants.info import Info
-from core.loader import ModulesManager
-from core.module_runtime import ModuleRuntimeManager
+from akaribot.core.constants.info import Info
+from akaribot.core.loader import ModulesManager
+from akaribot.core.module_runtime import ModuleRuntimeManager
 
 
 def get_scheduled_tasks(module_name: str | None = None) -> list[dict]:
@@ -175,8 +175,8 @@ async def force_run_schedule(
     :param timeout: 单个任务的超时时间（秒）。
     :return: 每个任务的执行结果列表。
     """
-    from core.builtins.bot import Bot
-    from core.utils.storedata import update_stored_list
+    from akaribot.core.builtins.bot import Bot
+    from akaribot.core.utils.storedata import update_stored_list
 
     if module_path:
         reset_startup_mute(module_path)
@@ -219,7 +219,7 @@ async def run_hook(hook_name: str, args: dict | None = None, session_info=None, 
     :param timeout: 超时时间（秒）。
     :returns: {"success": bool, "error": str | None, "result": Any}
     """
-    from core.builtins.hooks import dispatch_module_hook
+    from akaribot.core.builtins.hooks import dispatch_module_hook
 
     try:
         result = await dispatch_module_hook(

@@ -5,11 +5,11 @@ import asyncio
 import discord
 from attrs import define, field
 
-from bots.discord.info import client_name, target_channel_prefix
-from bots.discord.utils import convert_embed
-from core.builtins.message.mention import render_at_code
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import (
+from akaribot.adapters.discord.info import client_name, target_channel_prefix
+from akaribot.adapters.discord.utils import convert_embed
+from akaribot.core.builtins.message.mention import render_at_code
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import (
     ActionTextElement,
     ButtonFrameElement,
     ButtonRows,
@@ -20,9 +20,9 @@ from core.builtins.message.elements import (
     AudioElement,
     VideoElement,
 )
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.utils.media import resolve_media_path
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.core.utils.media import resolve_media_path
 
 
 @define

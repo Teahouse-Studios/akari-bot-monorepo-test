@@ -4,10 +4,10 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import EmbedElement, URLElement
-from core.builtins.message.internal import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import EmbedElement, URLElement
+from akaribot.core.builtins.message.internal import (
     ActionText,
     Button,
     ButtonFrame,
@@ -17,13 +17,13 @@ from core.builtins.message.internal import (
     Plain,
     Raw,
 )
-from core.builtins.parser.hooks import ParserHookExecutor
-from core.builtins.parser.hooks import dispatch as hook_dispatch
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants import Secret
-from core.queue.contracts import PlatformAPI
-from core.tester import Tester, func_case
+from akaribot.core.builtins.parser.hooks import ParserHookExecutor
+from akaribot.core.builtins.parser.hooks import dispatch as hook_dispatch
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants import Secret
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import Tester, func_case
 
 SECRET = "TEST-SECRET-9F3A"
 UNSAFE_KECODE = MessageChain.assign(I18NContext("error.message.chain.unsafe")).to_kecode()
@@ -136,7 +136,7 @@ async def _test_post_message_replaces_leaking_chains():
                 )
                 with (
                     patch.object(Bot, "pick_channel_heads", AsyncMock(return_value=[session_info])),
-                    patch("core.builtins.bot.enable_analytics", False),
+                    patch("akaribot.core.builtins.bot.enable_analytics", False),
                     patch.object(PlatformAPI, "post_message", platform),
                 ):
                     await Bot.post_message("test", chain, session_list=[session_info])

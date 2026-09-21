@@ -8,16 +8,16 @@ from types import ModuleType
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, call, patch
 
-import bots.discord.context as discord_context
-import bots.discord.bot as discord_bot_module
-import bots.onebot.bot as onebot_bot_module
-import bots.onebot.context as onebot_context
-from bots.kook.features import features as kook_features
-from bots.discord.info import sender_prefix, target_channel_prefix, target_dm_channel_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Image, Mention, Plain, Audio
-from core.builtins.session.info import SessionInfo
-from core.tester import Tester, func_case
+import akaribot.adapters.discord.context as discord_context
+import akaribot.adapters.discord.bot as discord_bot_module
+import akaribot.adapters.onebot.bot as onebot_bot_module
+import akaribot.adapters.onebot.context as onebot_context
+from akaribot.adapters.kook.features import features as kook_features
+from akaribot.adapters.discord.info import sender_prefix, target_channel_prefix, target_dm_channel_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Image, Mention, Plain, Audio
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import Tester, func_case
 
 
 async def _test_discord_management_uses_requested_user():
@@ -346,12 +346,12 @@ def _test_kook_does_not_advertise_unimplemented_typing():
 
 
 async def _test_kook_call_api_rejects_business_error():
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace()
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
 
     class FakeHTTPClient:
         async def __aenter__(self):
@@ -364,7 +364,7 @@ async def _test_kook_call_api_rejects_business_error():
             return SimpleNamespace(status_code=200, text='{"code": 40000, "message": "denied"}')
 
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         with patch.object(kook_context.httpx, "AsyncClient", new=FakeHTTPClient):
             try:
                 await kook_context.call_api("message/delete", msg_id="1")
@@ -372,24 +372,24 @@ async def _test_kook_call_api_rejects_business_error():
                 return exc.args == ({"code": 40000, "message": "denied"},)
         return False
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_missing_channel_returns_empty():
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(client=SimpleNamespace(fetch_public_channel=AsyncMock(return_value=None)))
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         session = SessionInfo(
             target_id="KOOK|Group|missing",
             target_from="KOOK|Group",
@@ -404,13 +404,13 @@ async def _test_kook_missing_channel_returns_empty():
             return False
         return result == []
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_media_upload_closes_files():
@@ -421,17 +421,17 @@ async def _test_kook_media_upload_closes_files():
         return "https://asset"
 
     channel = SimpleNamespace(send=AsyncMock(side_effect=[{"msg_id": "image"}, {"msg_id": "audio"}]))
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(
         client=SimpleNamespace(fetch_public_channel=AsyncMock(return_value=channel)),
         create_asset=create_asset,
     )
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         with TemporaryDirectory() as directory:
             image_path = Path(directory) / "image.png"
             audio_path = Path(directory) / "audio.ogg"
@@ -463,25 +463,25 @@ async def _test_kook_media_upload_closes_files():
         for file in opened_files:
             if not file.closed:
                 file.close()
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_send_failure_returns_empty():
     channel = SimpleNamespace(send=AsyncMock(side_effect=RuntimeError("send failed")))
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(client=SimpleNamespace(fetch_public_channel=AsyncMock(return_value=channel)))
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         session = SessionInfo(
             target_id="KOOK|Group|1",
             target_from="KOOK|Group",
@@ -500,25 +500,25 @@ async def _test_kook_send_failure_returns_empty():
             return False
         return result == []
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_reaction_event_uses_fetched_channel():
     channel = SimpleNamespace(send=AsyncMock(return_value={"msg_id": "sent"}))
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(client=SimpleNamespace(fetch_public_channel=AsyncMock(return_value=channel)))
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         session = SessionInfo(
             target_id="KOOK|Group|1",
             target_from="KOOK|Group",
@@ -564,13 +564,13 @@ async def _test_kook_reaction_event_uses_fetched_channel():
             ]
         )
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_reaction_entry_preserves_event_and_origin_ids():
@@ -600,15 +600,15 @@ async def _test_kook_reaction_entry_preserves_event_and_origin_ids():
         on_event=register_handler,
         on_startup=register_handler,
     )
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = adapter_bot
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    previous_bot_module = sys.modules.pop("bots.kook.bot", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    previous_bot_module = sys.modules.pop("akaribot.adapters.kook.bot", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_bot_module = importlib.import_module("bots.kook.bot")
+        kook_bot_module = importlib.import_module("akaribot.adapters.kook.bot")
         with (
             patch.object(kook_bot_module, "ignored_sender", new=[]),
             patch.object(kook_bot_module.SessionInfo, "assign", new=assign),
@@ -635,28 +635,28 @@ async def _test_kook_reaction_entry_preserves_event_and_origin_ids():
             and context.user_id == "42"
         )
     finally:
-        sys.modules.pop("bots.kook.bot", None)
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.bot", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_bot_module is not None:
-            sys.modules["bots.kook.bot"] = previous_bot_module
+            sys.modules["akaribot.adapters.kook.bot"] = previous_bot_module
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_private_reaction_uses_direct_message_api():
     channel = SimpleNamespace(send=AsyncMock(return_value={"msg_id": "sent"}))
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(client=SimpleNamespace(fetch_user=AsyncMock(return_value=channel)))
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         session = SessionInfo(
             target_id="KOOK|Person|42",
             target_from="KOOK|Person",
@@ -703,25 +703,25 @@ async def _test_kook_private_reaction_uses_direct_message_api():
             ]
         )
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 async def _test_kook_preserves_ids_before_send_failure():
     channel = SimpleNamespace(send=AsyncMock(side_effect=[{"msg_id": "first"}, RuntimeError("send failed")]))
-    fake_client = ModuleType("bots.kook.client")
+    fake_client = ModuleType("akaribot.adapters.kook.client")
     fake_client.bot = SimpleNamespace(client=SimpleNamespace(fetch_public_channel=AsyncMock(return_value=channel)))
     fake_client.token = "test"
-    previous_client = sys.modules.get("bots.kook.client")
-    previous_context = sys.modules.pop("bots.kook.context", None)
-    sys.modules["bots.kook.client"] = fake_client
+    previous_client = sys.modules.get("akaribot.adapters.kook.client")
+    previous_context = sys.modules.pop("akaribot.adapters.kook.context", None)
+    sys.modules["akaribot.adapters.kook.client"] = fake_client
     try:
-        kook_context = importlib.import_module("bots.kook.context")
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
         session = SessionInfo(
             target_id="KOOK|Group|1",
             target_from="KOOK|Group",
@@ -738,13 +738,13 @@ async def _test_kook_preserves_ids_before_send_failure():
         )
         return result == ["first"] and channel.send.await_count == 2
     finally:
-        sys.modules.pop("bots.kook.context", None)
+        sys.modules.pop("akaribot.adapters.kook.context", None)
         if previous_context is not None:
-            sys.modules["bots.kook.context"] = previous_context
+            sys.modules["akaribot.adapters.kook.context"] = previous_context
         if previous_client is None:
-            sys.modules.pop("bots.kook.client", None)
+            sys.modules.pop("akaribot.adapters.kook.client", None)
         else:
-            sys.modules["bots.kook.client"] = previous_client
+            sys.modules["akaribot.adapters.kook.client"] = previous_client
 
 
 @func_case

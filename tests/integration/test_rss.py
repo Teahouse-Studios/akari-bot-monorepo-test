@@ -5,8 +5,8 @@
 模块存在、被标记为 RSS、注册了定时任务且未注册命令。
 """
 
-from core.loader import ModulesManager
-from core.tester import func_case, Tester
+from akaribot.core.loader import ModulesManager
+from akaribot.testing import func_case, Tester
 
 RSS_MODULES = ("minecraft-news", "feedback-news")
 

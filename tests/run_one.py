@@ -35,10 +35,10 @@ atexit.register(_cleanup_test_union_merge_logs)
 # 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上才能 import core
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.tester.mock.database import init_db, close_db
-from core.tester.mock.loader import load_modules
-from core.tester.mock.random import Random
-from core.tester.process import run_function_entry
+from akaribot.testing.mock.database import init_db, close_db
+from akaribot.testing.mock.loader import load_modules
+from akaribot.testing.mock.random import Random
+from akaribot.testing.process import run_function_entry
 
 
 async def main(path: str, entry: str) -> int:

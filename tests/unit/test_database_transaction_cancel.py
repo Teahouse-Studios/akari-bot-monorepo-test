@@ -8,8 +8,8 @@ from tortoise.backends.base.client import TransactionContextPooled
 from tortoise.connection import get_connections
 from tortoise.transactions import in_transaction
 
-from core.database.models import JobQueuesTable
-from core.tester import Tester, func_case
+from akaribot.core.database.models import JobQueuesTable
+from akaribot.testing import Tester, func_case
 
 try:
     from tortoise.backends.mysql.client import MySQLClient

@@ -7,13 +7,13 @@
 
 from unittest.mock import patch
 
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants.exceptions import SessionFinished
-from core.tester import func_case, Tester
-from modules.phigros import _require_song_info
-from modules.phigros.libraries.assets import (
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.testing import func_case, Tester
+from akaribot.modules.phigros import _require_song_info
+from akaribot.modules.phigros.libraries.assets import (
     is_legacy_song_info,
     parse_difficulty_tsv,
     to_difficulty_table,
@@ -103,8 +103,8 @@ async def _prompt_key_of(song_info: dict) -> str | None:
         raise SessionFinished
 
     with (
-        patch("modules.phigros.song_info_exists", return_value=True),
-        patch("modules.phigros.load_song_info", return_value=song_info),
+        patch("akaribot.modules.phigros.song_info_exists", return_value=True),
+        patch("akaribot.modules.phigros.load_song_info", return_value=song_info),
         patch.object(MessageSession, "finish", new=_finish),
     ):
         try:

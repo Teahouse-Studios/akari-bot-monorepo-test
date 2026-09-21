@@ -1,6 +1,6 @@
 """工具模块高级集成测试 - dice 复杂表达式。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

@@ -7,7 +7,7 @@ JobQueue 记录仅表示进程间的在途任务，不属于需要跨版本保�
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
+from akaribot.core.database.migration import MigrationContext
 
 REVISION = "0005_rebuild_job_queues"
 DEPENDS_ON = "0003_union_core"

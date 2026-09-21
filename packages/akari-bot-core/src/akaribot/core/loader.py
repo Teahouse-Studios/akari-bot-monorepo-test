@@ -10,26 +10,31 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
-from core.builtins.session.info import EventInfo
-from core.config import CFGManager
-from core.constants import PrivateData, lang_list
-from core.database import activate_db_reload, close_prepared_db_reload, close_previous_db_context, prepare_db_reload
-from core.database.base import DBModel
-from core.database.models import ModuleStatus
-from core.i18n import build_locale_snapshot, collect_locale_paths
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.registry import PackageRegistry
-from core.scheduler import SchedulerLifecycle
-from core.types import Module
-from core.types.module.component_meta import (
+from akaribot.core.builtins.session.info import EventInfo
+from akaribot.core.config import CFGManager
+from akaribot.core.constants import PrivateData, lang_list
+from akaribot.core.database import (
+    activate_db_reload,
+    close_prepared_db_reload,
+    close_previous_db_context,
+    prepare_db_reload,
+)
+from akaribot.core.database.base import DBModel
+from akaribot.core.database.models import ModuleStatus
+from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.registry import PackageRegistry
+from akaribot.core.scheduler import SchedulerLifecycle
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import (
     CommandMeta,
     RegexMeta,
     ScheduleMeta,
     HookMeta,
     EventMeta,
 )
-from core.utils.platform_scope import platform_scope
+from akaribot.core.utils.platform_scope import platform_scope
 
 
 async def load_modules():
@@ -317,7 +322,7 @@ class ModulesManager:
 
     @classmethod
     def refresh_modules_hooks(cls):
-        from core.builtins.parser.hooks import HookPoint, build_subscription
+        from akaribot.core.builtins.parser.hooks import HookPoint, build_subscription
 
         cls.modules_hooks.clear()
         cls.modules_hook_modules.clear()
@@ -757,7 +762,7 @@ class ModulesManager:
         全域卸载该机器人模块。
         """
         if module_name in cls.modules:
-            from core.queue.server import JobQueueServer
+            from akaribot.core.queue.server import JobQueueServer
 
             module = cls.modules[module_name]
             old_load = module._db_load
@@ -799,7 +804,7 @@ class ModulesManager:
         async with cls._reload_lock:
             # 先排空 Queue handler，再进入 Scheduler 维护，反序会形成永久互锁。
             # Scheduler 窗口仍须覆盖 importlib.reload()。
-            from core.queue.server import JobQueueServer
+            from akaribot.core.queue.server import JobQueueServer
 
             # 长时间保持非独占窗口：停止领取新 action，但让轮询器继续回收
             # 响应、续租与执行模块清理 RPC。数据库替换会在内部再嵌套独占窗口。
@@ -981,7 +986,7 @@ class ModulesManager:
             }
             # commit 是代际切换的不可逆边界。取消可以中断构建阶段，但不能在
             # runtime 已切换、旧 generation 已停止后再回滚注册表和数据库。
-            from core.queue.server import JobQueueServer
+            from akaribot.core.queue.server import JobQueueServer
 
             commit_task = asyncio.create_task(
                 ModuleRuntimeManager.commit_reload(

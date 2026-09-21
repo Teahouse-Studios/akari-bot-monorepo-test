@@ -10,19 +10,19 @@ import time
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext
-from core.builtins.parser.hooks import Handled, HookPoint, Stop, StopScope
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.exceptions import AbuseWarning, SendMessageFailed, SessionFinished, WaitCancelException
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.smtp import send_report
-from core.utils.container import ExpiringTempDict, TokenBucket
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.parser.hooks import Handled, HookPoint, Stop, StopScope
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.exceptions import AbuseWarning, SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.smtp import send_report
+from akaribot.core.utils.container import ExpiringTempDict, TokenBucket
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 _I18N_KEY_RE = re.compile(r"^\{I18N:([^}]+)}$")
 

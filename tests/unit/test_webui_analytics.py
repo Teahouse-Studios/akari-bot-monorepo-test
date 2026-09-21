@@ -4,9 +4,9 @@ import inspect
 from datetime import datetime, timedelta, UTC
 from unittest.mock import patch
 
-import bots.web.api.api as web_api
-from core.database.models import AnalyticsData
-from core.tester import func_case, Tester
+import akaribot.adapters.web.api.api as web_api
+from akaribot.core.database.models import AnalyticsData
+from akaribot.testing import func_case, Tester
 
 MARKER = "webui_analytics_probe"
 

@@ -11,10 +11,10 @@ from fastapi.responses import Response, FileResponse, PlainTextResponse
 from tortoise import Tortoise
 from tortoise.exceptions import OperationalError
 
-from bots.web.client import app, limiter, get_client_ip
-from core.constants import dev_mode
-from core.database import fetch_module_db, get_model_fields, get_model_names
-from core.logger import Logger
+from akaribot.adapters.web.client import app, limiter, get_client_ip
+from akaribot.core.constants import dev_mode
+from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
+from akaribot.core.logger import Logger
 from .auth import verify_jwt
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
@@ -35,7 +35,7 @@ if dev_mode:
         try:
             verify_jwt(request)
 
-            models_path = ["core.database.models"] + fetch_module_db()
+            models_path = ["akaribot.core.database.models"] + fetch_module_db()
             table_lst = sorted(get_model_names(models_path))
             return {"model_list": table_lst}
         except HTTPException as e:
@@ -50,7 +50,7 @@ if dev_mode:
         try:
             verify_jwt(request)
 
-            models_path = ["core.database.models"] + fetch_module_db()
+            models_path = ["akaribot.core.database.models"] + fetch_module_db()
             result = get_model_fields(models_path, model)
             return {"model_fields": result}
         except HTTPException as e:

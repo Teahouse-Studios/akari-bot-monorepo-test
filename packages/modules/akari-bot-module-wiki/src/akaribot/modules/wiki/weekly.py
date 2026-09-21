@@ -5,12 +5,12 @@ from urllib import parse
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image, Url, I18NContext
-from core.component import module
-from core.i18n import Locale
-from core.utils.http import get_url
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image, Url, I18NContext
+from akaribot.core.component import module
+from akaribot.core.i18n import Locale
+from akaribot.core.utils.http import get_url
 
 
 async def get_weekly(with_img=False, zh_tw=False):
@@ -138,7 +138,7 @@ async def _(msg: Bot.MessageSession):
 
 @wky.command("teahouse image {{I18N:weekly.help.teahouse}}")
 async def _(msg: Bot.MessageSession):
-    from core.utils.image import msgchain2image
+    from akaribot.core.utils.image import msgchain2image
 
     weekly = await get_teahouse_rss()
     img = await msgchain2image(Plain(weekly), msg)

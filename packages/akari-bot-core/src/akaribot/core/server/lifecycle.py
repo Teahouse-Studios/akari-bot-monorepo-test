@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from core.logger import Logger
+from akaribot.core.logger import Logger
 
 
 @dataclass(frozen=True, slots=True)

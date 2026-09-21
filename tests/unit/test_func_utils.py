@@ -2,8 +2,8 @@
 
 from datetime import timedelta
 
-from core.tester import func_case, Tester
-from core.utils.func import (
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.func import (
     convert_list,
     is_iterable,
     is_json_serializable,

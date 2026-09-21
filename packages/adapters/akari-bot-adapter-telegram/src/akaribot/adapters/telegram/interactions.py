@@ -2,17 +2,17 @@
 
 from aiogram import types
 
-from bots.telegram.buttons import remove_selected_button
-from bots.telegram.context_snapshot import TelegramContextSnapshot
-from bots.telegram.info import client_name, sender_prefix, target_prefix
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain
-from core.builtins.session.info import SessionInfo
-from core.config.base import BaseConfig
-from core.i18n import Locale
-from core.logger import Logger
-from core.utils.button_runtime import (
+from akaribot.adapters.telegram.buttons import remove_selected_button
+from akaribot.adapters.telegram.context_snapshot import TelegramContextSnapshot
+from akaribot.adapters.telegram.info import client_name, sender_prefix, target_prefix
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.config.base import BaseConfig
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.utils.button_runtime import (
     BUTTON_TOKEN_PREFIX,
     ButtonConsumeStatus,
     consume_button,
@@ -28,7 +28,7 @@ _BUTTON_ERROR_KEYS = {
 
 
 def _get_bot_id() -> str:
-    from bots.telegram.client import aiogram_bot
+    from akaribot.adapters.telegram.client import aiogram_bot
 
     return str(aiogram_bot.id)
 

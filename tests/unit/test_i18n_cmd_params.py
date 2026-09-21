@@ -13,8 +13,8 @@ import json
 import os
 import re
 
-from core.logger import Logger
-from core.tester import func_case, Tester
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 # 以键名作为参数传入、由被调方统一补上 cmd 的调用点。
 # issue_code() 接收 prompt_key 后在内部构造 ActionText，调用侧只写键名，

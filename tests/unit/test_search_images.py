@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 from PIL import Image as PILImage
 
-from core.tester import Tester, func_case
-from modules.ai.tools.search_images import search_images
+from akaribot.testing import Tester, func_case
+from akaribot.modules.ai.tools.search_images import search_images
 
 
 def _png_bytes() -> bytes:
@@ -53,8 +53,8 @@ def _patched_search(results: list[dict], responses: dict[str, object]):
         return response
 
     return (
-        patch("modules.ai.tools.search_images.DDGS", return_value=_FakeDDGS(results)),
-        patch("modules.ai.tools.search_images.get_url", new=AsyncMock(side_effect=fake_get_url)),
+        patch("akaribot.modules.ai.tools.search_images.DDGS", return_value=_FakeDDGS(results)),
+        patch("akaribot.modules.ai.tools.search_images.get_url", new=AsyncMock(side_effect=fake_get_url)),
     )
 
 

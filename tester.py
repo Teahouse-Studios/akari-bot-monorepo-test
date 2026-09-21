@@ -1,4 +1,4 @@
-from core.version import check_python_version  # skipcq
+from akaribot.core.version import check_python_version  # skipcq
 
 check_python_version()  # noqa
 
@@ -39,7 +39,7 @@ def _write_minimal_config(path: Path, locale: str, version: int) -> None:
     :param locale: 默认语言代码。
     :param version: 当前配置版本号。
     """
-    from core.constants import config_filename
+    from akaribot.core.constants import config_filename
 
     (path / config_filename).write_text(
         "# {I18N:config.header.line.1}\n"
@@ -87,15 +87,15 @@ def _install_test_config() -> Path:
     # 二者分别固化为配置目录与合并日志目录，未置位时都会落到真实的 config/ 与 data/。
     os.environ[TEST_CONFIG_PATH_ENV] = str(path)
 
-    from core.constants import default_locale
-    from core.constants.version import config_version
+    from akaribot.core.constants import default_locale
+    from akaribot.core.constants.version import config_version
 
     _write_minimal_config(path, default_locale, config_version)
 
-    from core.config import CFGManager
-    from core.config.scan import scan_config_templates
-    from core.constants import lang_list
-    from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+    from akaribot.core.config import CFGManager
+    from akaribot.core.config.scan import scan_config_templates
+    from akaribot.core.constants import lang_list
+    from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 
     # i18n 快照须先接上：模板生成的注释取自配置文件声明的语言，未接上时全部退化为 i18n 键名。
     build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
@@ -130,16 +130,16 @@ from typing import TypedDict
 
 from dotenv import load_dotenv
 
-from core.builtins.utils import confirm_command
-from core.constants import ascii_art, cache_path, tests_path
-from core.tester.decorator import CaseEntry, get_registry
-from core.tester.expectations import Expectation
-from core.tester.logger import TestLoggingLogger
-from core.tester.junit import JUnitReport, JUnitTestSuite, JUnitTestCase
-from core.tester.mock.database import close_db, get_last_init_error, init_db
-from core.tester.mock.loader import load_modules
-from core.tester.mock.random import Random
-from core.tester.process import run_case_entry, run_function_entry
+from akaribot.core.builtins.utils import confirm_command
+from akaribot.core.constants import ascii_art, cache_path, tests_path
+from akaribot.testing.decorator import CaseEntry, get_registry
+from akaribot.testing.expectations import Expectation
+from akaribot.testing.logger import TestLoggingLogger
+from akaribot.testing.junit import JUnitReport, JUnitTestSuite, JUnitTestCase
+from akaribot.testing.mock.database import close_db, get_last_init_error, init_db
+from akaribot.testing.mock.loader import load_modules
+from akaribot.testing.mock.random import Random
+from akaribot.testing.process import run_case_entry, run_function_entry
 
 Logger = TestLoggingLogger("TEST")
 

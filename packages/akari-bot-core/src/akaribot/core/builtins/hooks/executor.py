@@ -6,14 +6,14 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
-from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.utils.platform_scope import platform_scope, scope_allows
+from akaribot.core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.utils.platform_scope import platform_scope, scope_allows
 
 if TYPE_CHECKING:
-    from core.types import Module
-    from core.types.module.component_meta import HookMeta
+    from akaribot.core.types import Module
+    from akaribot.core.types.module.component_meta import HookMeta
 
 
 DEFAULT_HOOK_TIMEOUT = 5.0
@@ -217,7 +217,7 @@ class ModuleHookExecutor(HookExecutor):
         if not module_trigger and not subscriptions:
             raise ValueError(f"Invalid hook name {hook_name}")
 
-        from core.builtins.session.info import ModuleHookContext
+        from akaribot.core.builtins.session.info import ModuleHookContext
 
         outcome = ModuleHookDispatchOutcome()
         hook_args = dict(args or {})

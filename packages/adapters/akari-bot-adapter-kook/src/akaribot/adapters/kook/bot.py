@@ -2,19 +2,19 @@ import re
 
 from khl import Bot as khlBot, EventTypes, Event, Message, MessageTypes
 
-from bots.kook.client import bot
-from bots.kook.config import KookConfig
-from bots.kook.context import KOOKContextManager, KOOKFetchedContextManager, KOOKReactionContext
-from bots.kook.events import guild_member_joined, guild_member_left
-from bots.kook.info import *
-from bots.kook.lifecycle import run_bot
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image, Audio, Video
-from core.builtins.session.info import SessionInfo
-from core.builtins.utils import command_prefix
-from core.client.init import client_init
-from core.config.base import CoreConfig
+from akaribot.adapters.kook.client import bot
+from akaribot.adapters.kook.config import KookConfig
+from akaribot.adapters.kook.context import KOOKContextManager, KOOKFetchedContextManager, KOOKReactionContext
+from akaribot.adapters.kook.events import guild_member_joined, guild_member_left
+from akaribot.adapters.kook.info import *
+from akaribot.adapters.kook.lifecycle import run_bot
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.client.init import client_init
+from akaribot.core.config.base import CoreConfig
 
 Bot.register_bot(client_name=client_name)
 

@@ -9,8 +9,8 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
-from core.i18n import Locale, build_locale_snapshot, connect_locale_snapshot
-from core.tester import func_case, Tester
+from akaribot.core.i18n import Locale, build_locale_snapshot, connect_locale_snapshot
+from akaribot.testing import func_case, Tester
 
 
 def _write_locale(path: Path, value: str) -> None:

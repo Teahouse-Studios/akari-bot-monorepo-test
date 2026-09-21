@@ -1,7 +1,7 @@
 """直接验证匹配器的正反例；命令执行由 integration 用例覆盖。"""
 
-from core.builtins.message.elements import PlainElement
-from core.tester import (
+from akaribot.core.builtins.message.elements import PlainElement
+from akaribot.testing import (
     All,
     Any,
     AnyOutput,

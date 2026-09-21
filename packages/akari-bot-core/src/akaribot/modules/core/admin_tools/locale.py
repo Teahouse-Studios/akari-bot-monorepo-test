@@ -1,15 +1,15 @@
 import orjson
 from akari_bot_i18n.i18n import build_locale_snapshot
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, I18NContext, Plain, Url
-from core.config.base import CoreConfig
-from core.constants import lang_list, weblate_lang_codes
-from core.i18n import Locale, collect_locale_paths, get_available_locales
-from core.utils.http import get_url
-from core.constants.path import cache_path
-from modules.core.common_tools.setup import setup
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Plain, Url
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants import lang_list, weblate_lang_codes
+from akaribot.core.i18n import Locale, collect_locale_paths, get_available_locales
+from akaribot.core.utils.http import get_url
+from akaribot.core.constants.path import cache_path
+from akaribot.modules.core.common_tools.setup import setup
 
 WEBLATE_LANGUAGES_API = "https://hosted.weblate.org/api/projects/akaribot/languages/"
 TRANSLATION_PROGRESS_THRESHOLD = 95.0

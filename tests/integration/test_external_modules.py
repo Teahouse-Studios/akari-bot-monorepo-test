@@ -5,7 +5,7 @@ mcserver 不在此列：它经 ``mcstatus`` 走 Minecraft 的原生协议（TCP/
 要重新纳入，须先为 ``modules.mcserver.server`` 的 ``query_java_server`` 一类入口备好替身。
 """
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

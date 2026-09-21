@@ -1,13 +1,13 @@
 import re
 import urllib.parse
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain, escape_special_char
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.utils.dirty_check import check
-from core.logger import Logger
-from modules.wiki.utils.utils import strptime2ts
-from modules.wiki.utils.wikilib import WikiLib, WikiInfo
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain, escape_special_char
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.utils.dirty_check import check
+from akaribot.core.logger import Logger
+from akaribot.modules.wiki.utils.utils import strptime2ts
+from akaribot.modules.wiki.utils.wikilib import WikiLib, WikiInfo
 
 RC_LIMIT = 10
 

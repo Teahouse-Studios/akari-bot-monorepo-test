@@ -11,8 +11,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 import regex
 
-from core.constants.path import url_audit_data_path
-from core.logger import Logger
+from akaribot.core.constants.path import url_audit_data_path
+from akaribot.core.logger import Logger
 
 REGEX_RULE_PREFIX = "regex:"
 MAX_URL_LENGTH = 4096

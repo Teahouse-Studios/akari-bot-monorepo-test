@@ -29,7 +29,7 @@ from Crypto.Util import Counter
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 
-from core.utils.func import is_int
+from akaribot.core.utils.func import is_int
 
 
 class MkeyGenerator:

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from math import ceil
-from core.builtins.bot import Bot
-from core.config.base import CoreConfig
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.config.base import CoreConfig
 
 PREDICT_INPUT_TOKEN = 100
 PREDICT_CACHE_READ_TOKEN = 200

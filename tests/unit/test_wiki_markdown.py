@@ -3,13 +3,13 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.elements import MarkdownElement, PlainElement
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants.exceptions import SessionFinished
-from core.tester import func_case, Tester
-from modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib
-from modules.wiki.wiki import query_pages
+from akaribot.core.builtins.message.elements import MarkdownElement, PlainElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib
+from akaribot.modules.wiki.wiki import query_pages
 
 
 async def _capture_page_desc(support_markdown: bool):
@@ -43,8 +43,8 @@ async def _capture_page_desc(support_markdown: bool):
 
     with (
         patch.object(WikiLib, "parse_page_info", new=AsyncMock(return_value=page)),
-        patch("modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target)),
-        patch("modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
+        patch("akaribot.modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target)),
+        patch("akaribot.modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
         patch.object(MessageSession, "hold", new=AsyncMock()),
         patch.object(MessageSession, "release", new=AsyncMock()),
         patch.object(MessageSession, "finish", new=_finish),

@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.api import base as _base
-from core.constants.exceptions import ConfigFileNotFound
-from core.registry import CORE_API_VERSION
+from akaribot.core.api import base as _base
+from akaribot.core.constants.exceptions import ConfigFileNotFound
+from akaribot.core.registry import CORE_API_VERSION
 
 # 与发现层共用同一常量：registry 的 requires_core_api 闸门据此校验包兼容性。方向必须是
 # core.api 依赖 core.registry —— registry 被 core.component 等模块在导入期引用，反向依赖会成环。
@@ -25,7 +25,7 @@ __all__ = ["__api_version__", *_base.__all__]
 
 try:
     # 复制 base 已解析的名字。配置缺失时该导入会在中途中断，其余名字留给 __getattr__。
-    from core.api.base import *
+    from akaribot.core.api.base import *
 except ConfigFileNotFound:
     pass
 

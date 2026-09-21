@@ -4,11 +4,11 @@ from typing import Any
 
 import orjson
 
-from bots.onebot.info import sender_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image, Audio, Video, Raw
-from core.builtins.temp import Temp
-from core.logger import Logger
+from akaribot.adapters.onebot.info import sender_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video, Raw
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
 from .client import aiocqhttp_bot
 
 

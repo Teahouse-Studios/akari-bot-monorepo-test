@@ -3,11 +3,11 @@
 import asyncio
 from typing import Any
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.context import ContextManager
-from core.builtins.session.info import SessionInfo
-from core.exports import exports, add_export
-from core.logger import Logger
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.exports import exports, add_export
+from akaribot.core.logger import Logger
 from .base import JobQueueBase
 from .contracts import PlatformAPI, ProcessAPI, ServerAPI
 from .diagnostics import collect_self_usage

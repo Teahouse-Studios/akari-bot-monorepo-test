@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from core.config.base import CoreConfig
+from akaribot.core.config.base import CoreConfig
 
 test_log_path = Path("test_result.log")
 

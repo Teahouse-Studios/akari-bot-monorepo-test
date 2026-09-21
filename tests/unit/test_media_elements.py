@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, patch
 from PIL import Image as PILImage
 from tenacity import RetryError
 
-from core.builtins.message.elements import AudioElement, ImageElement, VideoElement
-from core.tester import Tester, func_case
-from core.utils.media import resolve_media_base64, resolve_media_path
+from akaribot.core.builtins.message.elements import AudioElement, ImageElement, VideoElement
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.media import resolve_media_base64, resolve_media_path
 
 
 def _inner_exception(error: BaseException) -> BaseException:
@@ -68,7 +68,7 @@ async def _test_image_element_missing_file_raises() -> bool:
 async def _test_image_element_get_image_accepts_png() -> bool:
     """响应体为图片时 get_image 落盘并返回缓存路径。"""
     content = _png_bytes()
-    with patch("core.builtins.message.elements.httpx.AsyncClient", return_value=_FakeClient(content)):
+    with patch("akaribot.core.builtins.message.elements.httpx.AsyncClient", return_value=_FakeClient(content)):
         path = await ImageElement.assign("https://example.com/image.png").get()
     try:
         return Path(path).is_file() and Path(path).read_bytes() == content
@@ -79,7 +79,7 @@ async def _test_image_element_get_image_accepts_png() -> bool:
 async def _test_image_element_get_image_rejects_non_image() -> bool:
     """响应体为 HTML 等非图片内容时，下载失败且不落盘。"""
     client = _FakeClient(b"<html>hotlink protection</html>")
-    with patch("core.builtins.message.elements.httpx.AsyncClient", return_value=client):
+    with patch("akaribot.core.builtins.message.elements.httpx.AsyncClient", return_value=client):
         try:
             await ImageElement.assign("https://example.com/blocked.png").get()
         except Exception as error:
@@ -108,7 +108,7 @@ async def _test_resolve_media_path_skips_failed_download() -> bool:
     """网络图片内容非法时返回 None。"""
     element = ImageElement.assign("https://example.com/blocked.png")
     with patch(
-        "core.builtins.message.elements.ImageElement.get",
+        "akaribot.core.builtins.message.elements.ImageElement.get",
         new=AsyncMock(side_effect=ValueError("not a recognized image file")),
     ):
         return await resolve_media_path(element) is None

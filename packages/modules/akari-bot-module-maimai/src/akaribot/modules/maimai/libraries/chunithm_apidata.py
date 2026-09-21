@@ -4,13 +4,13 @@ from typing import Any
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, I18NContext, Image, Plain
-from core.constants.exceptions import ConfigValueError
-from core.constants.path import cache_path
-from core.logger import Logger
-from core.utils.http import get_url, post_url, download
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image, Plain
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import get_url, post_url, download
 from .chunithm_mapping import *
 from .chunithm_music import Music, TotalList
 from .divingfish_oauth import (
@@ -30,7 +30,7 @@ from .lxns_oauth import (
 )
 from .lxns_oauth import request_player_data as request_lxns_data
 from ..database.models import DivingProberBindInfo, LxnsProberBindInfo
-from core.config.base import CoreConfig
+from akaribot.core.config.base import CoreConfig
 
 DF_CHUNITHM_RECORDS_URL = "https://www.diving-fish.com/api/chunithmprober/player/records"
 DF_CHUNITHM_QUERY_URL = "https://www.diving-fish.com/api/chunithmprober/query/player"

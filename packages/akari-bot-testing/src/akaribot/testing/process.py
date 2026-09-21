@@ -4,17 +4,17 @@ import traceback
 from types import FunctionType
 from typing import Any, Callable
 
-from core.builtins.message.chain import MessageChain, match_kecode
-from core.builtins.message.elements import PlainElement
-from core.constants.exceptions import SessionFinished
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.logger import Logger
-from core.tester.mock.database import close_db, get_last_init_error, init_db
-from core.tester.mock.loader import load_modules
-from core.tester.mock.parser import parser
-from core.tester.mock.random import Random
-from core.tester.mock.session import MockMessageSession
-from core.utils.container import ExpiringTempDict
+from akaribot.core.builtins.message.chain import MessageChain, match_kecode
+from akaribot.core.builtins.message.elements import PlainElement
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing.mock.database import close_db, get_last_init_error, init_db
+from akaribot.testing.mock.loader import load_modules
+from akaribot.testing.mock.parser import parser
+from akaribot.testing.mock.random import Random
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.core.utils.container import ExpiringTempDict
 from .decorator import CaseEntry
 from .expectations import Expectation
 
@@ -148,7 +148,7 @@ async def run_function_entry(
     tester = None
     start = time.perf_counter()
     try:
-        from core.tester import Tester as TesterClass
+        from akaribot.testing import Tester as TesterClass
 
         tester = TesterClass(fn.__name__)
         setattr(tester, "is_ci", is_ci)

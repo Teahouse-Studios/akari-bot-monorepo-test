@@ -2,10 +2,10 @@ from pathlib import Path
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Image as BImage, Plain, I18NContext
-from core.component import module
-from core.utils.web_render import web_render, SourceOptions
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Image as BImage, Plain, I18NContext
+from akaribot.core.component import module
+from akaribot.core.utils.web_render import web_render, SourceOptions
 
 arc_assets_path = Path(__file__).parent / "assets"
 

@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from core.constants.info import Info
+from akaribot.core.constants.info import Info
 
 
 def digest_request_body(data: Any) -> str | None:

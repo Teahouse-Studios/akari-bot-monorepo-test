@@ -8,21 +8,25 @@ import orjson
 from attrs import define, field
 from bs4 import BeautifulSoup
 
-import core.utils.html2text as html2text
-from core.builtins.message.internal import I18NContext, Url
-from core.builtins.session.internal import MessageSession
-from core.config.base import BaseConfig, CoreConfig
-from core.constants.exceptions import AbuseWarning, NoReportException
-from core.utils.dirty_check import check
-from core.i18n import Locale
-from core.logger import Logger
-from core.utils.http import get_url
-from core.utils.url_audit import evaluate_url_policy
-from core.utils.web_render import web_render, SourceOptions
-from modules.wiki.database.models import WikiSiteInfo
-from modules.wiki.utils.bot import BotAccount
-from modules.wiki.utils.disambiguation import DisambiguationBlock, is_disambiguation_page, parse_disambiguation_html
-from modules.wiki.utils.summarize import extract_summary, truncate_summary
+import akaribot.core.utils.html2text as html2text
+from akaribot.core.builtins.message.internal import I18NContext, Url
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.constants.exceptions import AbuseWarning, NoReportException
+from akaribot.core.utils.dirty_check import check
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.url_audit import evaluate_url_policy
+from akaribot.core.utils.web_render import web_render, SourceOptions
+from akaribot.modules.wiki.database.models import WikiSiteInfo
+from akaribot.modules.wiki.utils.bot import BotAccount
+from akaribot.modules.wiki.utils.disambiguation import (
+    DisambiguationBlock,
+    is_disambiguation_page,
+    parse_disambiguation_html,
+)
+from akaribot.modules.wiki.utils.summarize import extract_summary, truncate_summary
 from .mapping import *
 
 default_locale = BaseConfig.default_locale

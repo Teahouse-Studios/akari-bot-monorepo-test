@@ -7,17 +7,17 @@
 
 from urllib.parse import quote
 
-from core.builtins.message.chain import MessageChain, match_kecode
-from core.builtins.message.elements import (
+from akaribot.core.builtins.message.chain import MessageChain, match_kecode
+from akaribot.core.builtins.message.elements import (
     ActionTextElement,
     I18NContextElement,
     PlainElement,
     RawElement,
 )
-from core.builtins.message.internal import ActionText, I18NContext, Plain, Raw
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.tester import func_case, Tester
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Plain, Raw
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import func_case, Tester
 
 
 async def _session(target_suffix: str, support_action_text: bool):
@@ -150,7 +150,7 @@ def _test_to_plain_no_truncation():
 def _test_in_message_element_union():
     """测试新元素已纳入 MessageElement 联合类型"""
     try:
-        from core.builtins.types import MessageElement
+        from akaribot.core.builtins.types import MessageElement
 
         elem = ActionTextElement.assign("~wiki 沙盒")
         return isinstance(elem, MessageElement)
@@ -469,8 +469,8 @@ async def _test_inline_i18n_inner_translated():
 def _test_serialize_roundtrip_plain_inner():
     """测试内层为纯文本时的序列化往返"""
     try:
-        from core.builtins.converter import converter
-        from core.builtins.types import MessageElement
+        from akaribot.core.builtins.converter import converter
+        from akaribot.core.builtins.types import MessageElement
 
         elem = ActionTextElement.assign("~wiki 沙盒", show="沙盒", reference=True)
         data = converter.unstructure(elem, MessageElement)
@@ -496,8 +496,8 @@ def _test_serialize_roundtrip_i18n_inner():
     跨进程时翻译尚未发生，内层类型丢失会导致落地为字面量而非本地化文案。
     """
     try:
-        from core.builtins.converter import converter
-        from core.builtins.types import MessageElement
+        from akaribot.core.builtins.converter import converter
+        from akaribot.core.builtins.types import MessageElement
 
         elem = ActionTextElement.assign(
             I18NContext("wiki.message.query", page="沙盒"),
@@ -522,8 +522,8 @@ def _test_serialize_roundtrip_i18n_inner():
 def _test_serialize_roundtrip_no_show():
     """测试 show 为 None 时的序列化往返"""
     try:
-        from core.builtins.converter import converter
-        from core.builtins.types import MessageElement
+        from akaribot.core.builtins.converter import converter
+        from akaribot.core.builtins.types import MessageElement
 
         elem = ActionTextElement.assign("~wiki 沙盒")
         restored = converter.structure(converter.unstructure(elem, MessageElement), MessageElement)

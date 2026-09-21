@@ -1,9 +1,9 @@
 """modules.core.common_tools.merge 单元测试 - 迁移码的签发与消费。"""
 
-from core.database.models import UNION_SCOPE_SENDER, UNION_SCOPE_TARGET, TargetUnionBind, TargetUnionInfo
-from core.tester import func_case, Tester
-from modules.core.common_tools import merge
-from modules.core.common_tools._union_merge import generate_code
+from akaribot.core.database.models import UNION_SCOPE_SENDER, UNION_SCOPE_TARGET, TargetUnionBind, TargetUnionInfo
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.common_tools import merge
+from akaribot.modules.core.common_tools._union_merge import generate_code
 
 
 async def _test_target_code_roundtrip():
@@ -78,7 +78,7 @@ async def _test_invalid_code_returns_none():
 async def _test_bind_code_not_consumable():
     """测试迁移码 - bind 签发的绑定码不会被 merge 消费"""
     try:
-        from modules.core.common_tools import bind
+        from akaribot.modules.core.common_tools import bind
 
         code = generate_code(bind._sender_bind_codes, "USID|DDD", "QQ|1", {"is_private": True})
         taken = merge._take_merge_code(code)

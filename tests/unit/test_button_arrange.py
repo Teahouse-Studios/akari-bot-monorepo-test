@@ -5,9 +5,9 @@
 一两个按钮的参差排版。
 """
 
-from core.logger import Logger
-from core.tester import func_case, Tester
-from core.utils.button import (
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.button import (
     DEFAULT_BUTTONS_PER_ROW,
     MAX_BUTTONS_PER_ROW,
     MAX_BUTTON_ROWS,

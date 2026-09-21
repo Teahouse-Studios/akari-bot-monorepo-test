@@ -6,7 +6,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from attrs import define, field, Converter
 
-from core.utils.func import convert_list
+from akaribot.core.utils.func import convert_list
 from .component_matches import *
 
 

@@ -1,13 +1,13 @@
 import re
 import urllib.parse
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.utils.dirty_check import check_bool, rickroll
-from core.logger import Logger
-from modules.wiki.utils.utils import strptime2ts
-from modules.wiki.utils.wikilib import BlockedWikiError, WikiLib
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.utils.dirty_check import check_bool, rickroll
+from akaribot.core.logger import Logger
+from akaribot.modules.wiki.utils.utils import strptime2ts
+from akaribot.modules.wiki.utils.wikilib import BlockedWikiError, WikiLib
 
 
 async def get_user_info(msg: Bot.MessageSession, username, wikiurl, headers=None):

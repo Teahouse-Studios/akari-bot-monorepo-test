@@ -3,8 +3,8 @@
 import time
 from unittest.mock import patch
 
-from core.tester import func_case, Tester
-from core.utils.container import TokenBucket, ExpiringTempDict
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.container import TokenBucket, ExpiringTempDict
 
 
 def _test_token_bucket_basic():
@@ -66,7 +66,7 @@ def _test_token_bucket_bool():
     """测试 TokenBucket bool 转换"""
     try:
         clock = iter([100.0, 100.0, 100.0, 100.000001, 101.0])
-        with patch("core.utils.container.time.time", side_effect=lambda: next(clock)):
+        with patch("akaribot.core.utils.container.time.time", side_effect=lambda: next(clock)):
             bucket = TokenBucket(capacity=10, refill_interval=10)
             if bool(bucket) is not True:
                 return False

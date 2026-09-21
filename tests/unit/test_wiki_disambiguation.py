@@ -5,21 +5,21 @@ from unittest.mock import AsyncMock, patch
 
 from botpy.message import GroupMessage
 
-import bots.qqbot.context as qqbot_context
-from bots.qqbot.context import QQBotContextManager
-from bots.qqbot.info import target_group_prefix
-from core.builtins.message.elements import ActionTextElement, MarkdownElement
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import func_case, Tester
-from modules.wiki.utils.disambiguation import (
+import akaribot.adapters.qqbot.context as qqbot_context
+from akaribot.adapters.qqbot.context import QQBotContextManager
+from akaribot.adapters.qqbot.info import target_group_prefix
+from akaribot.core.builtins.message.elements import ActionTextElement, MarkdownElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.disambiguation import (
     DISAMBIGUATION_MAX_BLOCKS,
     DisambiguationBlock,
     DisambiguationPart,
     parse_disambiguation_html,
 )
-from modules.wiki.utils.wikilib import WikiInfo, WikiLib
-from modules.wiki.wiki import _build_disambiguation_output
+from akaribot.modules.wiki.utils.wikilib import WikiInfo, WikiLib
+from akaribot.modules.wiki.wiki import _build_disambiguation_output
 
 PARTICLE_HTML = """
 <div class="mw-content-ltr mw-parser-output">

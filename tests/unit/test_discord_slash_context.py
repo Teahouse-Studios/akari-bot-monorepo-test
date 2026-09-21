@@ -3,13 +3,13 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import bots.discord.slash_context as slash_context
-from bots.discord.slash_context import DiscordSlashContextManager
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Button, Plain
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
+import akaribot.adapters.discord.slash_context as slash_context
+from akaribot.adapters.discord.slash_context import DiscordSlashContextManager
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Button, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
 
 
 async def _test_slash_response_renders_button_element():

@@ -1,6 +1,6 @@
 from khl import Bot
 
-from bots.kook.config import KookSecretConfig
+from akaribot.adapters.kook.config import KookSecretConfig
 
 token = KookSecretConfig.kook_token
 

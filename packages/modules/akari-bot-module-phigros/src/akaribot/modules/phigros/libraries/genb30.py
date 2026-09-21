@@ -1,10 +1,10 @@
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
-from core.builtins.bot import Bot
-from core.constants.path import noto_sans_demilight_path, noto_sans_bold_path
-from core.logger import Logger
-from core.utils.cache import random_cache_path
-from core.utils.func import truncate_text
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.constants.path import noto_sans_demilight_path, noto_sans_bold_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.func import truncate_text
 
 from .PhiCloudActionAsync.ActionLib import getBest
 from .assets import pgr_assets_path, illustration_path, load_song_info

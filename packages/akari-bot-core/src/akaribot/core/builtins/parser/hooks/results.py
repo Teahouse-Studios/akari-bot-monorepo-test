@@ -9,7 +9,7 @@ from enum import StrEnum
 
 from attrs import define, field
 
-from core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.chain import MessageChain
 
 
 class HookResult:

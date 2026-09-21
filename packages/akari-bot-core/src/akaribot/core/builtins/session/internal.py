@@ -16,26 +16,26 @@ from akari_bot_i18n.i18n import Locale, safe_strftime
 from attrs import define, field
 from deprecated import deprecated
 
-from core.builtins.filter import filter_badwords
-from core.builtins.message.chain import MessageChain, get_message_chain, Chainable, MessageNodes
-from core.builtins.message.internal import Button, ButtonFrame, I18NContext, PlainElement
-from core.builtins.session.info import SessionInfo, FetchedSessionInfo
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.lock import ExecutionLockList, ExecutionState
-from core.builtins.session.tasks import SessionTaskManager
-from core.builtins.types import MessageElement
-from core.builtins.utils import confirm_command
-from core.config.base import BaseConfig, CoreConfig
-from core.constants import SessionContextUnavailable, SessionFinished, WaitCancelException
-from core.exports import add_export
-from core.logger import Logger
-from core.utils.button import bind_callback_reply_ids, build_button_rows, public_button_reply_ids
-from core.utils.func import is_int
-from core.utils.media import compress_media_chain
-from core.utils.random import Random
+from akaribot.core.builtins.filter import filter_badwords
+from akaribot.core.builtins.message.chain import MessageChain, get_message_chain, Chainable, MessageNodes
+from akaribot.core.builtins.message.internal import Button, ButtonFrame, I18NContext, PlainElement
+from akaribot.core.builtins.session.info import SessionInfo, FetchedSessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.lock import ExecutionLockList, ExecutionState
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.builtins.utils import confirm_command
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.constants import SessionContextUnavailable, SessionFinished, WaitCancelException
+from akaribot.core.exports import add_export
+from akaribot.core.logger import Logger
+from akaribot.core.utils.button import bind_callback_reply_ids, build_button_rows, public_button_reply_ids
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.media import compress_media_chain
+from akaribot.core.utils.random import Random
 
-from core.queue.contracts import PlatformAPI
-from core.queue.errors import RpcRemoteError
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.core.queue.errors import RpcRemoteError
 
 # 会话相关配置在导入期取一次快照，避免每次取文案都去读配置
 default_locale = BaseConfig.default_locale
@@ -89,7 +89,7 @@ async def normalize_outgoing_chain(session_info: SessionInfo, chain: Any, disabl
         chain = get_message_chain(session_info, chain=chain)
     chain = _filter_message_chain_badwords(chain, session_info)
     if isinstance(chain, MessageNodes) and not session_info.support_handle_message_nodes:
-        from core.utils.image import msgnode2image
+        from akaribot.core.utils.image import msgnode2image
 
         chain = MessageChain.assign(await msgnode2image(chain, session=session_info))
     if isinstance(chain, MessageChain):
@@ -255,7 +255,7 @@ class MessageSession:
         chain = _filter_message_chain_badwords(chain, self.session_info)
 
         if isinstance(chain, MessageNodes) and not self.session_info.support_handle_message_nodes:
-            from core.utils.image import msgnode2image
+            from akaribot.core.utils.image import msgnode2image
 
             chain = MessageChain.assign(await msgnode2image(chain, session=self.session_info))
 
@@ -272,7 +272,7 @@ class MessageSession:
 
         # ========== 步骤 2.5: 出站 before_send ==========
         # 在 callback 登记之前，避免取消时遗留 pending 注册
-        from core.builtins.parser.hooks import (
+        from akaribot.core.builtins.parser.hooks import (
             OutgoingPayload,
             Stop,
             dispatch_outgoing_before_send,
@@ -431,7 +431,7 @@ class MessageSession:
         chain = get_message_chain(session=self.session_info, chain=message_chain)
         chain = _filter_message_chain_badwords(chain, self.session_info)
         if isinstance(chain, MessageNodes):
-            from core.utils.image import msgnode2image
+            from akaribot.core.utils.image import msgnode2image
 
             chain = MessageChain.assign(await msgnode2image(chain, session=self.session_info))
         if not chain.is_safe and not disable_secret_check:
@@ -441,7 +441,7 @@ class MessageSession:
             return None
 
         # ========== 步骤 1.5: 出站 before_send ==========
-        from core.builtins.parser.hooks import (
+        from akaribot.core.builtins.parser.hooks import (
             OutgoingPayload,
             Stop,
             dispatch_outgoing_before_send,
@@ -496,7 +496,7 @@ class MessageSession:
         chain = get_message_chain(self.session_info, chain=message_chain)
         chain = _filter_message_chain_badwords(chain, self.session_info)
         if isinstance(chain, MessageNodes):
-            from core.utils.image import msgnode2image
+            from akaribot.core.utils.image import msgnode2image
 
             chain = MessageChain.assign(await msgnode2image(chain, session=self.session_info))
         if not chain.is_safe and not disable_secret_check:
@@ -506,7 +506,7 @@ class MessageSession:
         if chain is None:
             return []
 
-        from core.builtins.parser.hooks import (
+        from akaribot.core.builtins.parser.hooks import (
             OutgoingPayload,
             Stop,
             dispatch_outgoing_before_send,

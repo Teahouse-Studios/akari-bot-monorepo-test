@@ -3,19 +3,19 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from bots.discord.buttons import (
+from akaribot.adapters.discord.buttons import (
     DiscordActionTextButton,
     DiscordActionTextSelect,
     DiscordButton,
     build_discord_button_view,
     disable_selected_button,
 )
-from bots.discord.context import DiscordContextManager
-from core.builtins.message.internal import ActionText
-from core.builtins.session.info import SessionInfo
-from core.tester import Tester, func_case
-from core.utils.button import build_button_rows
-from core.utils.button_runtime import BUTTON_TOKEN_PREFIX, _clear_button_registry
+from akaribot.adapters.discord.context import DiscordContextManager
+from akaribot.core.builtins.message.internal import ActionText
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.button import build_button_rows
+from akaribot.core.utils.button_runtime import BUTTON_TOKEN_PREFIX, _clear_button_registry
 
 
 def _view():
@@ -122,7 +122,7 @@ async def _test_interaction_native_permission_uses_clicking_user():
 
 
 async def _test_successful_click_routes_message():
-    from bots.discord.interactions import handle_button_click
+    from akaribot.adapters.discord.interactions import handle_button_click
 
     _clear_button_registry()
     view = _view()
@@ -137,10 +137,14 @@ async def _test_successful_click_routes_message():
     )
     assigned = SimpleNamespace()
     with (
-        patch("bots.discord.interactions.ensure_client_initialized", new=AsyncMock()) as ensure_initialized,
-        patch("bots.discord.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)) as assign,
-        patch("bots.discord.interactions.Bot.process_message", new=AsyncMock()) as process,
-        patch("bots.discord.interactions._get_bot_id", return_value="30"),
+        patch(
+            "akaribot.adapters.discord.interactions.ensure_client_initialized", new=AsyncMock()
+        ) as ensure_initialized,
+        patch(
+            "akaribot.adapters.discord.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)
+        ) as assign,
+        patch("akaribot.adapters.discord.interactions.Bot.process_message", new=AsyncMock()) as process,
+        patch("akaribot.adapters.discord.interactions._get_bot_id", return_value="30"),
     ):
         await handle_button_click(interaction, button)
     kwargs = assign.await_args.kwargs
@@ -157,7 +161,7 @@ async def _test_successful_click_routes_message():
 
 
 async def _test_invalid_click_does_not_route_message():
-    from bots.discord.interactions import handle_button_click
+    from akaribot.adapters.discord.interactions import handle_button_click
 
     _clear_button_registry()
     view = _view()
@@ -169,13 +173,13 @@ async def _test_invalid_click_does_not_route_message():
         message=SimpleNamespace(id=10),
         response=response,
     )
-    with patch("bots.discord.interactions.Bot.process_message", new=AsyncMock()) as process:
+    with patch("akaribot.adapters.discord.interactions.Bot.process_message", new=AsyncMock()) as process:
         await handle_button_click(interaction, button)
     return response.send_message.await_args.kwargs.get("ephemeral") is True and process.await_count == 0
 
 
 async def _test_action_text_submit_routes_edited_message():
-    from bots.discord.interactions import DiscordActionTextContext, handle_action_text_submit
+    from akaribot.adapters.discord.interactions import DiscordActionTextContext, handle_action_text_submit
 
     response = SimpleNamespace(is_done=lambda: False, defer=AsyncMock())
     origin = SimpleNamespace(id=10)
@@ -187,10 +191,14 @@ async def _test_action_text_submit_routes_edited_message():
     )
     assigned = SimpleNamespace()
     with (
-        patch("bots.discord.interactions.ensure_client_initialized", new=AsyncMock()) as ensure_initialized,
-        patch("bots.discord.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)) as assign,
-        patch("bots.discord.interactions.Bot.process_message", new=AsyncMock()) as process,
-        patch("bots.discord.interactions._get_bot_id", return_value="30"),
+        patch(
+            "akaribot.adapters.discord.interactions.ensure_client_initialized", new=AsyncMock()
+        ) as ensure_initialized,
+        patch(
+            "akaribot.adapters.discord.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)
+        ) as assign,
+        patch("akaribot.adapters.discord.interactions.Bot.process_message", new=AsyncMock()) as process,
+        patch("akaribot.adapters.discord.interactions._get_bot_id", return_value="30"),
     ):
         await handle_action_text_submit(interaction, "~help edited", True, origin)
     kwargs = assign.await_args.kwargs

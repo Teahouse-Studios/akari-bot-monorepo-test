@@ -1,13 +1,13 @@
 from attrs import define
 
-from core.builtins.bot import Bot
-from core.builtins.message.elements import ActionTextElement
-from core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Plain
-from core.builtins.utils import command_prefix
-from core.component import module
-from core.config.base import CoreConfig
-from core.i18n import Locale
-from core.utils.button import arrange_buttons
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.elements import ActionTextElement
+from akaribot.core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Plain
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.i18n import Locale
+from akaribot.core.utils.button import arrange_buttons
 
 setup = module(
     "setup",

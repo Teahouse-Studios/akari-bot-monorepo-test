@@ -1,8 +1,8 @@
 """Wiki 论坛列表 Markdown 表格布局测试。"""
 
-from core.builtins.message.elements import ActionTextElement, MarkdownElement
-from core.tester import Tester, func_case
-from modules.wiki.utils.forum import (
+from akaribot.core.builtins.message.elements import ActionTextElement, MarkdownElement
+from akaribot.testing import Tester, func_case
+from akaribot.modules.wiki.utils.forum import (
     FORUM_TABLE_MAX_ROWS,
     build_forum_markdown_table,
     build_section_markdown_table,

@@ -1,12 +1,12 @@
 import asyncio
 import re
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Plain, I18NContext
-from core.component import module
-from modules.mod_dl.config import ModDlConfig
-from core.utils.func import is_int
-from core.utils.http import get_url
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Plain, I18NContext
+from akaribot.core.component import module
+from akaribot.modules.mod_dl.config import ModDlConfig
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.http import get_url
 
 mod_dl = module(
     module_name="mod-dl",

@@ -1,15 +1,15 @@
 import asyncio
 
-from core.builtins.bot import Bot
-from core.builtins.converter import converter
-from core.builtins.session.features import Features
-from core.constants import Info
-from core.database import close_db, init_db
-from core.i18n import connect_locale_snapshot
-from core.logger import Logger
-from core.queue.client import JobQueueClient
-from core.queue.backend import create_jobqueue_backend
-from core.queue.rpc import set_default_peer
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.constants import Info
+from akaribot.core.database import close_db, init_db
+from akaribot.core.i18n import connect_locale_snapshot
+from akaribot.core.logger import Logger
+from akaribot.core.queue.client import JobQueueClient
+from akaribot.core.queue.backend import create_jobqueue_backend
+from akaribot.core.queue.rpc import set_default_peer
 
 
 _queue_task: asyncio.Task[None] | None = None

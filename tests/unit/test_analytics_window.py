@@ -3,9 +3,9 @@
 import warnings
 from datetime import timedelta
 
-from core.database.models import AnalyticsData
-from core.tester import func_case, Tester
-from modules.core.su_tools.analytics import local_midnight
+from akaribot.core.database.models import AnalyticsData
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.su_tools.analytics import local_midnight
 
 
 def _test_local_midnight_is_aware():

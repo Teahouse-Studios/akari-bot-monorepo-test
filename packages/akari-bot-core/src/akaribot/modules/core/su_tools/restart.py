@@ -3,12 +3,12 @@ import traceback
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.converter import converter
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.logger import Logger
-from core.server.terminate import restart
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.server.terminate import restart
 
 rst = module("restart", required_superuser=True, base=True, doc=True, exclude_from=["Web"], load=Bot.Info.subprocess)
 

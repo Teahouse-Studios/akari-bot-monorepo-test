@@ -4,11 +4,11 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-import bots.discord.client as discord_client
-import bots.discord.slash_parser as discord_slash_parser
-import core.client.init as client_init_module
-from core.builtins.session.features import Features
-from core.tester import Tester, func_case
+import akaribot.adapters.discord.client as discord_client
+import akaribot.adapters.discord.slash_parser as discord_slash_parser
+import akaribot.core.client.init as client_init_module
+from akaribot.core.builtins.session.features import Features
+from akaribot.testing import Tester, func_case
 
 
 async def _reset_discord_client_init_task() -> None:

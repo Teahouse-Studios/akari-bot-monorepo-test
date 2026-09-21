@@ -1,12 +1,12 @@
 import shutil
 
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.config.base import CoreConfig
-from core.component import module
-from core.constants.path import cache_path
-from core.scheduler import CronTrigger
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.component import module
+from akaribot.core.constants.path import cache_path
+from akaribot.core.scheduler import CronTrigger
 
 auto_purge_crontab = CoreConfig.auto_purge_crontab
 

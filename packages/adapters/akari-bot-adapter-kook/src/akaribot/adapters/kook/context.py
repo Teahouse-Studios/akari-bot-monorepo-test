@@ -5,15 +5,21 @@ import httpx
 import orjson
 from khl import Message, MessageTypes, PublicChannel, User
 
-from core.builtins.message.mention import render_at_code
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import PlainElement, ImageElement, AudioElement, VideoElement, MentionElement
-from core.builtins.session.context import ContextManager
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.utils.media import resolve_media_path
+from akaribot.core.builtins.message.mention import render_at_code
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
+    PlainElement,
+    ImageElement,
+    AudioElement,
+    VideoElement,
+    MentionElement,
+)
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.core.utils.media import resolve_media_path
 from .client import bot
 from .client import token as kook_token
 from .features import features as kook_features

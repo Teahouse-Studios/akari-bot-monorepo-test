@@ -1,7 +1,7 @@
 """core.i18n 国际化系统单元测试。"""
 
-from core.i18n import Locale, get_available_locales, build_locale_snapshot, connect_locale_snapshot
-from core.tester import func_case, Tester
+from akaribot.core.i18n import Locale, get_available_locales, build_locale_snapshot, connect_locale_snapshot
+from akaribot.testing import func_case, Tester
 
 
 def _test_locale_create():
@@ -68,8 +68,8 @@ def _test_locale_t_str_no_template():
 def _test_load_locale_file():
     """load_locale_file: 加载语言文件不报错"""
     try:
-        from core.constants import lang_list
-        from core.i18n import collect_locale_paths
+        from akaribot.core.constants import lang_list
+        from akaribot.core.i18n import collect_locale_paths
 
         errors = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
         connect_locale_snapshot("akari-bot")

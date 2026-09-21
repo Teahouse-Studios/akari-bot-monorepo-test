@@ -1,23 +1,23 @@
 import re
 from typing import TYPE_CHECKING
 
-from core.builtins.message.internal import ActionText, I18NContext
-from core.builtins.parser.command import CommandParser
-from core.builtins.parser.hooks import HookPoint, dispatch_parser_hook
-from core.builtins.parser.message import _build_command_kwargs, _confirm_long_regex_message
-from core.builtins.session.tasks import SessionTaskManager
-from core.constants.exceptions import SessionFinished
-from core.config.base import CoreConfig
-from core.exports import exports
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.types import Module
-from core.types.module.component_meta import CommandMeta
-from core.utils.func import normalize_space
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.builtins.parser.hooks import HookPoint, dispatch_parser_hook
+from akaribot.core.builtins.parser.message import _build_command_kwargs, _confirm_long_regex_message
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.exports import exports
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta
+from akaribot.core.utils.func import normalize_space
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 async def parser(msg: "Bot.MessageSession"):

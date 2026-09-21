@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, patch
 import orjson
 from fastapi import WebSocketDisconnect
 
-from bots.web.config import WebConfig
-from bots.web.context import WebContextManager, _serialize_element, resolve_media_url
-from bots.web.features import features as web_features
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import (
+from akaribot.adapters.web.config import WebConfig
+from akaribot.adapters.web.context import WebContextManager, _serialize_element, resolve_media_url
+from akaribot.adapters.web.features import features as web_features
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
     AudioElement,
     ButtonElement,
     ButtonFrameElement,
@@ -21,11 +21,11 @@ from core.builtins.message.elements import (
     ImageElement,
     VideoElement,
 )
-from core.builtins.message.internal import ActionText, Embed, EmbedField, Markdown, Audio, Image, Plain
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.utils.session import inject_features
-from core.tester import Tester, func_case
+from akaribot.core.builtins.message.internal import ActionText, Embed, EmbedField, Markdown, Audio, Image, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.utils.session import inject_features
+from akaribot.testing import Tester, func_case
 
 
 class _RecordingWebSocket:
@@ -140,7 +140,7 @@ async def _test_private_message_cancellation_propagates() -> bool:
 
 async def _test_websocket_entry_binds_source_context() -> bool:
     with patch.object(WebConfig, "enable", False, create=True):
-        web_bot = importlib.import_module("bots.web.bot")
+        web_bot = importlib.import_module("akaribot.adapters.web.bot")
 
     class _IncomingWebSocket:
         def __init__(self):
@@ -193,7 +193,7 @@ async def _test_websocket_entry_binds_source_context() -> bool:
 
 async def _test_latest_disconnect_restores_previous_websocket() -> bool:
     with patch.object(WebConfig, "enable", False, create=True):
-        web_bot = importlib.import_module("bots.web.bot")
+        web_bot = importlib.import_module("akaribot.adapters.web.bot")
 
     class _WaitingWebSocket:
         def __init__(self):
@@ -239,7 +239,7 @@ async def _test_latest_disconnect_restores_previous_websocket() -> bool:
 
 
 async def _test_restart_cleans_client_before_exit() -> bool:
-    web_api = importlib.import_module("bots.web.api.api")
+    web_api = importlib.import_module("akaribot.adapters.web.api.api")
     order = []
 
     async def sleep(_delay):
@@ -263,7 +263,7 @@ async def _test_restart_cleans_client_before_exit() -> bool:
 
 
 async def _test_restart_schedule_is_singleton_and_retained() -> bool:
-    web_api = importlib.import_module("bots.web.api.api")
+    web_api = importlib.import_module("akaribot.adapters.web.api.api")
     gate = asyncio.Event()
     calls = 0
 

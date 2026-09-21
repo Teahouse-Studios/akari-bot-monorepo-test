@@ -18,11 +18,11 @@ import httpx
 from aiofile import async_open
 from tenacity import retry, wait_fixed, stop_after_attempt
 
-from core.config.base import CoreConfig, CoreSecretConfig
-from core.constants.exceptions import ExternalException
-from core.constants.path import cache_path
-from core.constants.info import Info
-from core.logger import Logger
+from akaribot.core.config.base import CoreConfig, CoreSecretConfig
+from akaribot.core.constants.exceptions import ExternalException
+from akaribot.core.constants.path import cache_path
+from akaribot.core.constants.info import Info
+from akaribot.core.logger import Logger
 
 debug = CoreConfig.debug
 proxy = CoreSecretConfig.proxy if CoreSecretConfig.proxy else None
@@ -119,7 +119,7 @@ async def request_url(
 
     # HTTPMock: check for cached mock response before making real request
     if Info.http_mock_enabled:
-        from core.tester.mock.http import HTTPMock
+        from akaribot.testing.mock.http import HTTPMock
 
         mock_resp = HTTPMock.get_response(url, method=method, data=data)
         if mock_resp is not None:

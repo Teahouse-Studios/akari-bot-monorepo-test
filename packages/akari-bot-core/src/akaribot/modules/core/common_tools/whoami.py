@@ -1,6 +1,6 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from modules.core.common_tools.bind import b
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.modules.core.common_tools.bind import b
 
 
 @b.command("whoami {{I18N:core.help.bind.whoami}}")

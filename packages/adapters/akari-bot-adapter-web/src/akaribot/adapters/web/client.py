@@ -8,14 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from slowapi import Limiter
 
-from bots.web.config import WebConfig, WebSecretConfig
-from bots.web.info import *
-from core.client.init import client_cleanup, client_init
-from core.config import CFGManager
-from core.constants.path import assets_path, data_path
-from core.database.models import SenderUnionInfo
-from core.logger import Logger
-from core.utils.random import SecureRandom
+from akaribot.adapters.web.config import WebConfig, WebSecretConfig
+from akaribot.adapters.web.info import *
+from akaribot.core.client.init import client_cleanup, client_init
+from akaribot.core.config import CFGManager
+from akaribot.core.constants.path import assets_path, data_path
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.core.utils.random import SecureRandom
 
 webui_path = data_path / "webui"
 if (webui_path / "dist").exists():

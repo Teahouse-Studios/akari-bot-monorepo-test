@@ -1,14 +1,14 @@
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Url, Image
-from core.component import module
-from core.logger import Logger
-from core.scheduler import IntervalTrigger
-from core.utils.http import get_url
-from core.utils.storedata import get_stored_list, update_stored_list
-from core.utils.web_render import web_render, SourceOptions, RawOptions
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Url, Image
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.scheduler import IntervalTrigger
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.storedata import get_stored_list, update_stored_list
+from akaribot.core.utils.web_render import web_render, SourceOptions, RawOptions
 
 minecraft_news = module(
     "minecraft-news",

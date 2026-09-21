@@ -1,10 +1,10 @@
 import importlib
 
-from core.constants import lang_list
-from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.registry import PackageRegistry
+from akaribot.core.constants import lang_list
+from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.registry import PackageRegistry
 
 
 def apply_monkey_patch(module, monkey_patches: dict[str, object] | None):
@@ -18,8 +18,8 @@ def apply_monkey_patch(module, monkey_patches: dict[str, object] | None):
 
 async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None = None, load_fixtures: bool = True):
     # 测试显式配置默认 RPC peer，与生产入口一致，避免依赖模块导入顺序。
-    from core.queue.server import JobQueueServer
-    from core.queue.rpc import set_default_peer
+    from akaribot.core.queue.server import JobQueueServer
+    from akaribot.core.queue.rpc import set_default_peer
 
     set_default_peer(JobQueueServer)
 
@@ -33,7 +33,7 @@ async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None 
     # Load HTTP fixtures if available
     if load_fixtures:
         try:
-            from core.tester.mock.fixtures import load_http_fixtures
+            from akaribot.testing.mock.fixtures import load_http_fixtures
 
             count = load_http_fixtures()
             if count > 0 and show_logs:
@@ -43,7 +43,7 @@ async def load_modules(show_logs=True, monkey_patches: dict[str, object] | None 
                 Logger.exception("Failed to load HTTP fixtures:")
 
         try:
-            from core.tester.mock.webrender import load_webrender_fixtures
+            from akaribot.testing.mock.webrender import load_webrender_fixtures
 
             count = load_webrender_fixtures()
             if count > 0 and show_logs:

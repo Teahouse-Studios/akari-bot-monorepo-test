@@ -5,7 +5,7 @@
 tests/unit/test_setup_panel.py 覆盖。
 """
 
-from core.tester import func_case, Tester, All, Contains, Not
+from akaribot.testing import func_case, Tester, All, Contains, Not
 
 
 @func_case

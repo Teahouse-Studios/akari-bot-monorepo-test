@@ -1,5 +1,5 @@
-from core.builtins.bot import Bot
-from core.component import module
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.component import module
 from .mcmod import mcmod as m
 
 mcmod = module(

@@ -3,14 +3,14 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-import modules.core.common_tools.bind as bind
-from modules.core.common_tools._union_merge import generate_code
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants.exceptions import SessionFinished
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.queue.contracts import PlatformAPI
-from core.tester import func_case, Tester
+import akaribot.modules.core.common_tools.bind as bind
+from akaribot.modules.core.common_tools._union_merge import generate_code
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import func_case, Tester
 
 
 async def _session(prefix: str, is_private: bool) -> MessageSession:

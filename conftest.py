@@ -21,10 +21,10 @@ from tester import test_config_path  # noqa: E402,F401
 
 import pytest  # noqa: E402
 
-from core.tester.mock.database import close_db, init_db  # noqa: E402
-from core.tester.mock.loader import load_modules  # noqa: E402
-from core.tester.mock.random import Random  # noqa: E402
-from core.tester.pytest_plugin import (  # noqa: E402
+from akaribot.testing.mock.database import close_db, init_db  # noqa: E402
+from akaribot.testing.mock.loader import load_modules  # noqa: E402
+from akaribot.testing.mock.random import Random  # noqa: E402
+from akaribot.testing.pytest_plugin import (  # noqa: E402
     PytestTester,
     close_session_loop,
     make_item,

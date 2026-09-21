@@ -2,8 +2,8 @@
 
 from types import SimpleNamespace
 
-from core.builtins.parser.message import regex_module_enabled
-from core.tester import func_case, Tester
+from akaribot.core.builtins.parser.message import regex_module_enabled
+from akaribot.testing import func_case, Tester
 
 
 def _fake_module(base: bool, regex: bool = False):

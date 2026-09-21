@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from core.builtins.parser.hooks import (
+from akaribot.core.builtins.parser.hooks import (
     Continue,
     HookPoint,
     OutgoingPayload,
@@ -15,9 +15,9 @@ from core.builtins.parser.hooks import (
     build_session_draft,
     build_subscription,
 )
-from core.tester import Tester, func_case
-from core.types import Module
-from core.types.module.component_meta import HookMeta
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import HookMeta
 
 
 class _FakeLocale:
@@ -198,7 +198,7 @@ def _test_commit_only_dirty_fields():
 def _test_draft_session_info_readonly():
     """draft.session_info 为只读视图"""
     try:
-        from core.builtins.parser.hooks import SessionInfoView
+        from akaribot.core.builtins.parser.hooks import SessionInfoView
 
         msg = _FakeMsg()
         draft = SessionDraft(msg.session_info)
@@ -254,8 +254,8 @@ def _test_readonly_containers_detached():
 
 def _test_readonly_union_methods_hidden():
     """真实 ORM 及嵌套 bind 只读；新增 callable 也默认拒绝，不依赖方法黑名单。"""
-    from core.builtins.session.info import SessionInfo
-    from core.database.models import SenderUnionInfo, TargetUnionBind, TargetUnionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.database.models import SenderUnionInfo, TargetUnionBind, TargetUnionInfo
 
     sender = SenderUnionInfo(union_id="readonly-sender", sender_data={"nested": ["original"]})
     target = TargetUnionInfo(union_id="readonly-target", modules=["safe"], target_data={"nested": ["original"]})
@@ -295,7 +295,7 @@ def _test_readonly_union_methods_hidden():
 
 def _test_readonly_message_copy_failure():
     """消息复制失败须拒绝读取，不能将原链作为容错返回值。"""
-    from core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.message.chain import MessageChain
 
     class UncopyableChain(MessageChain):
         def __deepcopy__(self, memo):
@@ -345,7 +345,7 @@ def _test_draft_locale_requires_nonempty_string():
 async def _test_outgoing_message_nodes_isolated():
     """失败 hook 修改 MessageNodes 节点文本不得污染正式 payload。"""
     try:
-        from core.builtins.message.chain import MessageChain, MessageNodes
+        from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
 
         async def mutator(ctx):
             ctx.outgoing.chain.values[0].values[0].text = "failed mutation"
@@ -377,7 +377,7 @@ async def _test_outgoing_message_nodes_isolated():
 async def _test_apply_from_detaches_draft_reference():
     """成功 hook 保留草稿链后，后续修改不得污染已提交的正式结果。"""
     try:
-        from core.builtins.message.chain import MessageChain
+        from akaribot.core.builtins.message.chain import MessageChain
 
         held = {}
 
@@ -425,7 +425,7 @@ def _test_draft_messages_type_validated():
             pass
         assert msg.session_info.messages is None
         # MessageChain 可以正常提交
-        from core.builtins.message.chain import MessageChain
+        from akaribot.core.builtins.message.chain import MessageChain
 
         draft2 = SessionDraft(msg.session_info)
         draft2.messages = MessageChain.assign("ok")

@@ -8,18 +8,18 @@ QQ 官方机器人在群主未开启「读取全部消息」权限时只收到�
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from bots.qqbot.features import group_disable_read_all_message_features
-from core.builtins.parser.message import regex_module_enabled
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.builtins.session.bot_state import BotState
-from core.constants.exceptions import SessionFinished
-from core.logger import Logger
-from core.tester import func_case, Tester
-from core.types.module import Module
-from modules.core.common_tools.help import create_module_entry, format_module_entries
-from modules.core.admin_tools.modules import config_modules
+from akaribot.adapters.qqbot.features import group_disable_read_all_message_features
+from akaribot.core.builtins.parser.message import regex_module_enabled
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
+from akaribot.core.types.module import Module
+from akaribot.modules.core.common_tools.help import create_module_entry, format_module_entries
+from akaribot.modules.core.admin_tools.modules import config_modules
 
 
 def _make_module(**kwargs) -> Module:
@@ -290,7 +290,7 @@ async def _test_enable_all_skips_modules_with_missing_bot_permissions():
 
     with (
         patch(
-            "modules.core.admin_tools.modules.ModulesManager.return_modules_list",
+            "akaribot.modules.core.admin_tools.modules.ModulesManager.return_modules_list",
             return_value={"allowed": allowed, "blocked": blocked},
         ),
         patch.object(MessageSession, "finish", new=_finish),

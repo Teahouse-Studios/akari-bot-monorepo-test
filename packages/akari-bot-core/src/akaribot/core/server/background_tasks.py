@@ -10,13 +10,13 @@
 
 import asyncio
 
-from core.builtins.session.tasks import SessionTaskManager
-from core.constants import Info, Secret
-from core.database.models import JobQueuesTable
-from core.logger import Logger
-from core.utils.container import ExpiringTempDict
-from core.utils.http import get_url
-from core.utils.web_render import check_web_render_status, init_web_render
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.constants import Info, Secret
+from akaribot.core.database.models import JobQueuesTable
+from akaribot.core.logger import Logger
+from akaribot.core.utils.container import ExpiringTempDict
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.web_render import check_web_render_status, init_web_render
 
 
 _background_task: asyncio.Task[None] | None = None

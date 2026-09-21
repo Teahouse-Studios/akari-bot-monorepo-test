@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from core.constants.path import cache_path
+from akaribot.core.constants.path import cache_path
 
 
 def random_cache_path(ftt: str = "") -> Path:

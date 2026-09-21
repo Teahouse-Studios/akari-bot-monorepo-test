@@ -2,14 +2,14 @@
 
 from unittest.mock import patch, MagicMock
 
-from core.tester import func_case, Tester
+from akaribot.testing import func_case, Tester
 
 
 def _test_config_passthrough():
     """Config: 值应直接透传 CFGManager.get 的返回值"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = "test_value"
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("key", "default")
@@ -20,7 +20,7 @@ def _test_config_none_passthrough():
     """Config: CFGManager.get 返回 None 时 Config 也返回 None"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = None
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("key", "default")
@@ -31,7 +31,7 @@ def _test_config_get_called_with_args():
     """Config: 应将参数正确传递给 CFGManager.get"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = "v"
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         config_module.Config("mykey", "mydefault", cfg_type=str, secret=True, table_name="module_test")
@@ -48,7 +48,7 @@ def _test_config_get_url_branch():
     """Config: get_url=True 时走 URL 格式化分支"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = "example.com/path"
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("api_url", get_url=True)
@@ -59,7 +59,7 @@ def _test_config_get_url_no_slash():
     """Config: get_url=True 无尾部斜杠时自动添加"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = "https://example.com/path"
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("api_url", get_url=True)
@@ -70,7 +70,7 @@ def _test_config_get_url_already_prefixed():
     """Config: get_url=True 已有协议头时不再添加"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = "https://example.com"
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("url", get_url=True)
@@ -81,7 +81,7 @@ def _test_config_get_url_none():
     """Config: get_url=True 值为 None 时返回 None"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = None
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("url", get_url=True)
@@ -92,7 +92,7 @@ def _test_config_int_passthrough():
     """Config: 整数值应正确透传"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = 42
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("count", default=0, cfg_type=int)
@@ -103,7 +103,7 @@ def _test_config_bool_passthrough():
     """Config: 布尔值应正确透传"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = True
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("flag", default=False, cfg_type=bool)
@@ -114,7 +114,7 @@ def _test_config_list_passthrough():
     """Config: 列表值应正确透传"""
     mock_cfg = MagicMock()
     mock_cfg.get.return_value = ["a", "b"]
-    import core.config as config_module
+    import akaribot.core.config as config_module
 
     with patch.object(config_module, "CFGManager", mock_cfg):
         result = config_module.Config("items", default=[], cfg_type=list)

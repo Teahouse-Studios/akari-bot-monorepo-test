@@ -5,9 +5,9 @@
 
 from datetime import timedelta
 
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 # 场景数据中承载时区偏移的键，写入方为 modules/core/setup.py
 OFFSET_KEY = "timezone_offset"

@@ -4,10 +4,10 @@ import importlib
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from bots.telegram.config import AiogramConfig, AiogramSecretConfig
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.tester import Tester, func_case
+from akaribot.adapters.telegram.config import AiogramConfig, AiogramSecretConfig
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import Tester, func_case
 
 
 def _load_telegram_bot_module():
@@ -20,7 +20,7 @@ def _load_telegram_bot_module():
             create=True,
         ),
     ):
-        return importlib.import_module("bots.telegram.bot")
+        return importlib.import_module("akaribot.adapters.telegram.bot")
 
 
 async def _test_document_without_mime_type_is_ignored() -> bool:
@@ -57,7 +57,7 @@ async def _test_message_without_from_user_is_ignored() -> bool:
 
 async def _test_send_failure_returns_empty() -> bool:
     _load_telegram_bot_module()
-    telegram_context = importlib.import_module("bots.telegram.context")
+    telegram_context = importlib.import_module("akaribot.adapters.telegram.context")
     session = SessionInfo(
         target_id="Telegram|Group|-10001",
         target_from="Telegram|Group",

@@ -2,14 +2,14 @@
 
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.parser.message import parser
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.database.models import TargetUnionInfo
-from core.queue.contracts import PlatformAPI
-from core.tester import func_case, Tester
-from core.tester.mock.factory import TestDataFactory
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.parser.message import parser
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.database.models import TargetUnionInfo
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.factory import TestDataFactory
 
 TARGET_ID = "TEST|Console|muted-policy"
 SENDER_ID = "TEST|0"

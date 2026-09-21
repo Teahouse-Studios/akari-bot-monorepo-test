@@ -12,10 +12,10 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
 
-from core.config import CFGManager
-from core.config.scan import scan_config_templates
-from core.constants.version import config_version
-from core.tester import func_case, Tester
+from akaribot.core.config import CFGManager
+from akaribot.core.config.scan import scan_config_templates
+from akaribot.core.constants.version import config_version
+from akaribot.testing import func_case, Tester
 
 MINIMAL_CONFIG = """# {I18N:config.header.line.1}
 default_locale = "zh_cn"
@@ -59,16 +59,16 @@ def _temp_config():
 
 def _test_core_templates_are_grouped_into_domain_files():
     """核心模板按领域拆分后，应保留旧导入路径并登记到各自的 TOML 文件。"""
-    from core.config.base import (
+    from akaribot.core.config.base import (
         CoreConfig as CompatibleCoreConfig,
         JobQueueConfig as CompatibleJobQueueConfig,
         S3Config as CompatibleS3Config,
         WebRenderConfig as CompatibleWebRenderConfig,
     )
-    from core.config.core import CoreConfig
-    from core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
-    from core.config.s3 import S3Config
-    from core.config.webrender import WebRenderConfig
+    from akaribot.core.config.core import CoreConfig
+    from akaribot.core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
+    from akaribot.core.config.s3 import S3Config
+    from akaribot.core.config.webrender import WebRenderConfig
 
     jobqueue_fields = JobQueueConfig.__config_fields__
     return (
@@ -102,7 +102,7 @@ def _test_core_templates_are_grouped_into_domain_files():
 
 def _test_fresh_process_generates_all_grouped_core_templates():
     """全新进程只导入扫描器时，也应生成所有领域配置文件与独立说明注释。"""
-    from core.config.jobqueue import JobQueueConfig
+    from akaribot.core.config.jobqueue import JobQueueConfig
 
     tmp = Path(tempfile.mkdtemp(prefix="akari_cfg_grouped_"))
     try:
@@ -176,7 +176,7 @@ def _test_scan_covers_all_directories_with_config_templates():
     """模板枚举须覆盖所有含 config.py 的目录，与守护进程按目录挑选平台的依据一致。"""
     import bots
     import modules
-    from core.config.scan import iter_config_template_modules
+    from akaribot.core.config.scan import iter_config_template_modules
 
     listed = set(iter_config_template_modules())
     expected = set()
@@ -186,7 +186,7 @@ def _test_scan_covers_all_directories_with_config_templates():
             if entry.is_dir() and not entry.name.startswith((".", "_")) and (entry / "config.py").is_file():
                 expected.add(f"{package.__name__}.{entry.name}.config")
     # bots/milky 曾因缺少 __init__.py 而不被 pkgutil.iter_modules 收录，配置因而从未生成
-    return bool(expected) and expected <= listed and "bots.milky.config" in listed
+    return bool(expected) and expected <= listed and "akaribot.adapters.milky.config" in listed
 
 
 def _test_fresh_process_generates_bot_adapter_config():
@@ -243,7 +243,7 @@ def _test_fresh_process_generates_bot_adapter_config():
 
 def _test_jobqueue_bootstrap_persists_missing_values_once():
     """JobQueue 共享身份与密钥应在配置生成阶段安全自举，并保留后续已有值。"""
-    from core.config.jobqueue import bootstrap_jobqueue_config
+    from akaribot.core.config.jobqueue import bootstrap_jobqueue_config
 
     generated_uuid = UUID("12345678-1234-4678-9234-567812345678")
     generated_token = "generated-jobqueue-token"
@@ -251,8 +251,10 @@ def _test_jobqueue_bootstrap_persists_missing_values_once():
         CFGManager.edit_write("jobqueue_node_id", "  ", str, table_name="jobqueue")
         CFGManager.edit_write("jobqueue_websocket_token", "", str, secret=True, table_name="jobqueue")
         with (
-            patch("core.config.jobqueue.uuid4", return_value=generated_uuid) as uuid_factory,
-            patch("core.utils.random.SecureRandom.token_urlsafe", return_value=generated_token) as token_factory,
+            patch("akaribot.core.config.jobqueue.uuid4", return_value=generated_uuid) as uuid_factory,
+            patch(
+                "akaribot.core.utils.random.SecureRandom.token_urlsafe", return_value=generated_token
+            ) as token_factory,
         ):
             first = bootstrap_jobqueue_config()
             second = bootstrap_jobqueue_config()
@@ -271,7 +273,7 @@ def _test_jobqueue_bootstrap_persists_missing_values_once():
 
 def _test_scan_writes_template_fields():
     """扫描所在的可写进程中，模板导入应将声明的字段及其本地化注释补入配置文件"""
-    from core.config.decorator import on_config
+    from akaribot.core.config.decorator import on_config
 
     # 已被 tester 导入的模板不会再次执行 _process_class，故以此处声明的模板验证补写行为
     with _temp_config() as tmp:
@@ -287,7 +289,7 @@ def _test_scan_writes_template_fields():
 
 def _test_standalone_comment_declaration_is_validated():
     """独立注释只能由非空 i18n 键元组关联至同一模板内已声明的字段。"""
-    from core.config.decorator import on_config
+    from akaribot.core.config.decorator import on_config
 
     with _temp_config():
         try:

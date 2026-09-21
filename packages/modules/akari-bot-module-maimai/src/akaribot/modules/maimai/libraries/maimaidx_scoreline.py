@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 
-from core.constants.path import noto_sans_demilight_path
+from akaribot.core.constants.path import noto_sans_demilight_path
 
 
 def draw_scoreline_table(tap: int = 0, hold: int = 0, slide: int = 0, touch: int = 0, brk: int = 0, mode: str = "0+"):

@@ -11,17 +11,17 @@ v1→v6 的升级步骤已被生产验证，本模块原样保留这套逻辑，
 
 from tortoise import Tortoise
 
-from core.database import fetch_module_db
-from core.database.link import db_type, get_db_link
-from core.database.models import (
+from akaribot.core.database import fetch_module_db
+from akaribot.core.database.link import db_type, get_db_link
+from akaribot.core.database.models import (
     DBVersion,
     SchemaMigration,
     TargetUnionInfo,
     TargetUnionBind,
     backfill_union_binds,
 )
-from core.logger import Logger
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.core.logger import Logger
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 # 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需登记 revision。
 LATEST_LEGACY_VERSION = 6
@@ -466,7 +466,7 @@ async def update_database():
     升级由 :func:`core.database.migration.run_startup_migrations` 统一触发。
     """
     database_list = fetch_module_db()
-    await Tortoise.init(db_url=get_db_link(), modules={"models": ["core.database.models"] + database_list})
+    await Tortoise.init(db_url=get_db_link(), modules={"models": ["akaribot.core.database.models"] + database_list})
 
     await Tortoise.generate_schemas(safe=True)
 
@@ -495,7 +495,7 @@ async def convert_legacy_version() -> int | None:
         Logger.info(f"Upgrading legacy database from v{version} to v{LATEST_LEGACY_VERSION}.")
         await legacy_upgrade_to_v6()
 
-    from core.database.migration import MigrationRunner
+    from akaribot.core.database.migration import MigrationRunner
 
     revisions: dict[str, list[str]] = {}
     for legacy_version in sorted(LEGACY_MAP):

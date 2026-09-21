@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock, patch
 # KOOK 客户端在导入阶段即构造 Bot，令符占位符会被配置层解析为 None 并触发 ValueError，
 # 与既有 KOOK 用例一致，此处以 Bot 替身完成导入。
 with patch("khl.Bot", return_value=SimpleNamespace()):
-    import bots.kook.context as kook_context
-    from bots.kook.context import KOOKContextManager
+    import akaribot.adapters.kook.context as kook_context
+    from akaribot.adapters.kook.context import KOOKContextManager
 
-from bots.kook.features import features as kook_features
-from bots.kook.info import client_name, sender_prefix, target_group_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import VideoElement
-from core.builtins.message.internal import Audio, Image, Plain
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
-from core.utils.session import inject_features
+from akaribot.adapters.kook.features import features as kook_features
+from akaribot.adapters.kook.info import client_name, sender_prefix, target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import VideoElement
+from akaribot.core.builtins.message.internal import Audio, Image, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.session import inject_features
 
 
 def _session(session_id: str) -> SessionInfo:

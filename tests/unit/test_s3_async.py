@@ -5,9 +5,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from botocore.exceptions import ClientError
-from core.tester import Tester, func_case
-from core.tester.timing import TIME_SCALE
-from core.utils.s3 import S3StorageAPI
+from akaribot.testing import Tester, func_case
+from akaribot.testing.timing import TIME_SCALE
+from akaribot.core.utils.s3 import S3StorageAPI
 
 
 async def _test_s3_sync_call_is_bounded_without_blocking_loop():

@@ -7,12 +7,12 @@ IndexError 来兜底，重构改为空列表时取 None 后，兜底分支即告
 
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.elements import I18NContextElement
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.tester import func_case, Tester
-from modules.bugtracker.bugtracker import bugtracker_get
+from akaribot.core.builtins.message.elements import I18NContextElement
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.testing import func_case, Tester
+from akaribot.modules.bugtracker.bugtracker import bugtracker_get
 
 EMPTY_RESULT = '{"issues": []}'
 FOUND_RESULT = """{"issues": [{"key": "MC-1", "fields": {"summary": "Test issue",
@@ -51,8 +51,8 @@ async def _query(response: str, mojira_id: str):
     """
     msg = await _build_session()
     with (
-        patch("modules.bugtracker.bugtracker.post_url", new=AsyncMock(return_value=response)),
-        patch("modules.bugtracker.bugtracker.get_url", new=AsyncMock(return_value="{}")),
+        patch("akaribot.modules.bugtracker.bugtracker.post_url", new=AsyncMock(return_value=response)),
+        patch("akaribot.modules.bugtracker.bugtracker.get_url", new=AsyncMock(return_value="{}")),
     ):
         return await bugtracker_get(msg, mojira_id)
 

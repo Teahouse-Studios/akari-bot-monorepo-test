@@ -11,10 +11,10 @@ from akari_bot_webrender.functions.options import (
     RawOptions,
 )
 
-from core.config import format_url
-from core.config.webrender import WebRenderConfig
-from core.constants.path import logs_path
-from core.logger import Logger
+from akaribot.core.config import format_url
+from akaribot.core.config.webrender import WebRenderConfig
+from akaribot.core.constants.path import logs_path
+from akaribot.core.logger import Logger
 
 enable_web_render = WebRenderConfig.enable
 remote_web_render_url = format_url(WebRenderConfig.remote_web_render_url)

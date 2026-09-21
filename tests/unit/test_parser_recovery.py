@@ -3,16 +3,22 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.parser.args import parse_template
-from core.builtins.parser.hooks import Handled, HookPoint, ParserHookExecutor, RecoveryProposal, build_subscription
-from core.builtins.parser.message import _execute_module
-from core.constants.exceptions import InvalidCommandFormatError
-from core.i18n import Locale
-from core.loader import ModulesManager
-from core.tester import Tester, func_case
-from core.types import Module
-from core.types.module.component_meta import CommandMeta, HookMeta
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.parser.args import parse_template
+from akaribot.core.builtins.parser.hooks import (
+    Handled,
+    HookPoint,
+    ParserHookExecutor,
+    RecoveryProposal,
+    build_subscription,
+)
+from akaribot.core.builtins.parser.message import _execute_module
+from akaribot.core.constants.exceptions import InvalidCommandFormatError
+from akaribot.core.i18n import Locale
+from akaribot.core.loader import ModulesManager
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta, HookMeta
 
 
 async def _run_template_recovery(
@@ -76,10 +82,13 @@ async def _run_template_recovery(
         check_super_user=lambda: False,
     )
     with (
-        patch("core.builtins.parser.message.ExecutionLockList.remove"),
-        patch("core.builtins.parser.message.has_hook_subscribers", side_effect=executor.has_subscribers),
-        patch("core.builtins.parser.message.dispatch_parser_hook", side_effect=executor.dispatch),
-        patch("core.builtins.parser.message.ModulesManager.return_modules_list", return_value={module_name: module}),
+        patch("akaribot.core.builtins.parser.message.ExecutionLockList.remove"),
+        patch("akaribot.core.builtins.parser.message.has_hook_subscribers", side_effect=executor.has_subscribers),
+        patch("akaribot.core.builtins.parser.message.dispatch_parser_hook", side_effect=executor.dispatch),
+        patch(
+            "akaribot.core.builtins.parser.message.ModulesManager.return_modules_list",
+            return_value={module_name: module},
+        ),
     ):
         await _execute_module(msg, manager.modules, module_name, "[recovery test]", allow_recovery=allow_recovery)
     return msg, called, unmatched

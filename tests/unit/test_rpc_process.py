@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from core.tester import Tester, func_case
+from akaribot.testing import Tester, func_case
 
 
 async def _test_bidirectional_process_rpc():

@@ -5,9 +5,9 @@ from __future__ import annotations
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
-from core.loader import ModulesManager
-from core.logger import Logger
+from akaribot.core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
 
 from .context import OutgoingPayload
 from .executor import HookDispatchOutcome, ParserHookExecutor
@@ -15,7 +15,7 @@ from .points import HookPoint
 from .results import Continue, HookResult, Stop
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 _executor: ParserHookExecutor | None = None
 

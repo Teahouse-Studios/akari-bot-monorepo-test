@@ -3,7 +3,7 @@ import inspect
 import traceback
 from collections.abc import Callable
 
-from core.logger import Logger
+from akaribot.core.logger import Logger
 from .expectations import Expectation
 from .process import run_test_case
 

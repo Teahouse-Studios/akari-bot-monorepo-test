@@ -1,8 +1,8 @@
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.database.models import SenderUnionInfo
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.database.models import SenderUnionInfo
 
 su = module("superuser", alias="su", required_superuser=True, base=True, doc=True)
 

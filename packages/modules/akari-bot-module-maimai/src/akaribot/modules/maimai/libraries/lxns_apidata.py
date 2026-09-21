@@ -8,11 +8,11 @@ from typing import Any
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext
-from core.constants.exceptions import ConfigValueError
-from core.constants.path import cache_path
-from core.logger import Logger
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
 from .lxns_oauth import (
     LXNS_API_BASE,
     LXNS_DEVELOPER_ENABLED,

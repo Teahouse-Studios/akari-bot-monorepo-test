@@ -22,7 +22,7 @@ class JobQueueBackend(Protocol):
 def create_jobqueue_backend(name: str | None = None) -> JobQueueBackend:
     """按照配置选择一套完整后端，不允许控制面和数据面交叉组合。"""
     if name is None:
-        from core.config.jobqueue import JobQueueConfig
+        from akaribot.core.config.jobqueue import JobQueueConfig
 
         name = JobQueueConfig.jobqueue_backend
     if not isinstance(name, str) or not name.strip():

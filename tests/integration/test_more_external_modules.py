@@ -1,6 +1,6 @@
 """更多外部模块集成测试 - emojimix, oba 等。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

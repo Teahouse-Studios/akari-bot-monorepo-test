@@ -7,8 +7,8 @@
 
 from pathlib import Path
 
-from core.tester import func_case, Tester
-from modules.wiki.utils.summarize import extract_summary, truncate_summary
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.summarize import extract_summary, truncate_summary
 
 _FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "wikitext" / "mcwiki_stone.wikitext"
 

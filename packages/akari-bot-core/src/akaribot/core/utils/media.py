@@ -9,11 +9,11 @@ from pathlib import Path
 
 from PIL import Image as PILImage
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import AudioElement, ImageElement, VideoElement
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.utils.cache import random_cache_path
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import AudioElement, ImageElement, VideoElement
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
 
 ffmpeg_path = CoreConfig.ffmpeg_path
 threshold = CoreConfig.media_compression_threshold

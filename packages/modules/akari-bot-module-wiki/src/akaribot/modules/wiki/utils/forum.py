@@ -2,9 +2,9 @@
 
 import math
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, Markdown
-from core.utils.table import escape_table_cell
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, Markdown
+from akaribot.core.utils.table import escape_table_cell
 
 FORUM_TABLE_MAX_ROWS = 5
 

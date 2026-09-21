@@ -3,14 +3,14 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.bot import Bot
-from core.builtins.message.elements import I18NContextElement, PlainElement
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.i18n import Locale
-from core.tester import func_case, Tester
-from modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib, _has_manual_anchor
-from modules.wiki.wiki import query_pages
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.elements import I18NContextElement, PlainElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.i18n import Locale
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib, _has_manual_anchor
+from akaribot.modules.wiki.wiki import query_pages
 
 
 MANUAL_ANCHOR_HTML = """
@@ -141,10 +141,10 @@ async def _test_manual_anchor_is_delegated_to_webrender():
     with (
         patch.object(Bot.Info, "web_render_status", True),
         patch.object(WikiLib, "parse_page_info", new=AsyncMock(return_value=page)),
-        patch("modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target)),
-        patch("modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
-        patch("modules.wiki.wiki.generate_screenshot_v2", new=render),
-        patch("modules.wiki.wiki._start_background_with_release", new=_run_background),
+        patch("akaribot.modules.wiki.wiki.WikiTargetInfo.get_by_target_id", new=AsyncMock(return_value=target)),
+        patch("akaribot.modules.wiki.wiki.finish_if_wiki_blocked", new=AsyncMock()),
+        patch("akaribot.modules.wiki.wiki.generate_screenshot_v2", new=render),
+        patch("akaribot.modules.wiki.wiki._start_background_with_release", new=_run_background),
         patch.object(MessageSession, "hold", new=AsyncMock()),
         patch.object(MessageSession, "release", new=AsyncMock()),
         patch.object(MessageSession, "send_message", new=_send_message),

@@ -6,11 +6,11 @@
 
 from unittest.mock import patch
 
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Plain
-from core.database.models import TargetUnionBind, TargetUnionInfo
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo
+from akaribot.testing import func_case, Tester
 
 # 各用例使用的客户端名。保活表由测试自行提供，故不必是真实存在的平台。
 _CLIENTS = ("UPUSHA", "UPUSHB", "UPUSHC")
@@ -149,11 +149,11 @@ async def _test_report_targets_dedup():
             sent.append(target.target_id)
 
         with (
-            patch("modules.core.hooks.tos._report_targets", return_value=targets),
+            patch("akaribot.modules.core.hooks.tos._report_targets", return_value=targets),
             patch.object(Alive, "get_alive", return_value=_ALIVE),
             patch.object(Bot, "send_direct_message", _record),
         ):
-            from modules.core.hooks.tos import tos_report
+            from akaribot.modules.core.hooks.tos import tos_report
 
             await tos_report("UPUSHA|1", "UPUSHA|Group|report", "reason")
         return sent == ["UPUSHA|Group|report"]

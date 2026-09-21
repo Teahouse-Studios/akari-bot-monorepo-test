@@ -9,12 +9,12 @@ modules/wiki/wiki.py 与 modules/idlist 等处踩坑的由来：那些地方以
 MessageChain.create() 起手，其后 append 的却是裸字符串。
 """
 
-from core.builtins.converter import converter
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import PlainElement
-from core.builtins.message.internal import Plain
-from core.logger import Logger
-from core.tester import func_case, Tester
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import PlainElement
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 
 async def _test_append_normalizes_str():

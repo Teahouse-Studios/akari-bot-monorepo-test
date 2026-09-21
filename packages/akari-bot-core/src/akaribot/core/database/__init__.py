@@ -7,8 +7,8 @@ from typing import Any
 from tortoise import Tortoise
 from tortoise.context import TortoiseContext
 
-from core.builtins.temp import Temp
-from core.logger import Logger
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
 from .compat import install_tortoise_transaction_compat
 from .link import get_db_link, prepare_db_link
 from .local import DB_LINK
@@ -31,7 +31,7 @@ class PreparedDatabaseReload:
 
 
 def fetch_module_db():
-    from core.registry import PackageRegistry
+    from akaribot.core.registry import PackageRegistry
 
     database_list = PackageRegistry.db_model_paths()
 
@@ -89,11 +89,11 @@ async def init_db(
                 },
                 "apps": {
                     "models": {
-                        "models": ["core.database.models"] + database_list,
+                        "models": ["akaribot.core.database.models"] + database_list,
                         "default_connection": "default",
                     },
                     "local_models": {
-                        "models": ["core.database.local"],
+                        "models": ["akaribot.core.database.local"],
                         "default_connection": "local",
                     },
                 },
@@ -145,11 +145,11 @@ def _database_config(load_module_db: bool, db_models: list[str] | None) -> tuple
             },
             "apps": {
                 "models": {
-                    "models": ["core.database.models"] + database_list,
+                    "models": ["akaribot.core.database.models"] + database_list,
                     "default_connection": "default",
                 },
                 "local_models": {
-                    "models": ["core.database.local"],
+                    "models": ["akaribot.core.database.local"],
                     "default_connection": "local",
                 },
             },
@@ -227,8 +227,8 @@ async def close_previous_db_context(prepared: PreparedDatabaseReload) -> None:
 
 async def reload_db(db_models: list[str] | None = None):
     async with _reload_lock:
-        from core.queue.server import JobQueueServer
-        from core.scheduler import SchedulerLifecycle
+        from akaribot.core.queue.server import JobQueueServer
+        from akaribot.core.scheduler import SchedulerLifecycle
 
         # 先排空 Queue handler，再停止新 Job 并取消运行中的 Job；新 context
         # 的构建不触碰旧连接，激活与旧 context 关闭在准备完成后完成。

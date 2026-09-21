@@ -5,10 +5,10 @@ from pathlib import Path
 
 import orjson
 
-from core.logger import Logger
-from core.registry import PackageRegistry
-from core.utils.cache import random_cache_path
-from core.utils.http import get_url, download
+from akaribot.core.logger import Logger
+from akaribot.core.registry import PackageRegistry
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.http import get_url, download
 
 pgr_module_path = Path(__file__).parent.parent
 # assets 只放随包分发的静态资源，下载所得的曲目信息、版本号与曲绘写入实例 data。目录创建留到

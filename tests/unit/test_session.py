@@ -4,18 +4,18 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.lock import ExecutionLockList
-from core.builtins.session.tasks import SessionTaskManager
-from core.constants import SessionContextUnavailable
-from core.database.models import SenderUnionInfo, TargetUnionBind, TargetUnionInfo
-from core.queue.contracts import PlatformAPI
-from core.queue.errors import RpcRemoteError
-from core.tester import func_case, Tester
-from core.tester.mock.session import MockMessageSession
-from core.tester.timing import TIME_SCALE
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.lock import ExecutionLockList
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.constants import SessionContextUnavailable
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionBind, TargetUnionInfo
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.core.queue.errors import RpcRemoteError
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.testing.timing import TIME_SCALE
 
 
 async def _wait_until(predicate, timeout: float | None = None) -> bool:
@@ -36,7 +36,7 @@ async def _make_held_session(
     reply_id: str | None = None,
 ):
     """建立不依赖真实平台 Queue 的等待结果会话。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class HeldSession(MessageSession):
         hold_calls = 0
@@ -67,7 +67,7 @@ async def _test_features_inject_action_text():
     字段会在注入时抛错，故新增能力标志必须两处同步声明。
     """
     try:
-        from core.builtins.session.info import SessionInfo
+        from akaribot.core.builtins.session.info import SessionInfo
 
         session_info = await SessionInfo.assign(
             target_id="TEST|Group|action_text",
@@ -100,7 +100,7 @@ async def _test_release_context_tolerates_prior_platform_cleanup():
 
 async def _test_hold_normalizes_remote_context_unavailable():
     """跨进程 hold 的上下文缺失应恢复为可供调用方处理的领域异常。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     session = MessageSession(
         SessionInfo(
@@ -135,7 +135,7 @@ async def _test_hold_normalizes_remote_context_unavailable():
 async def _test_features_inject_markdown_table():
     """测试 support_markdown_extension 能注入并随会话序列化"""
     try:
-        from core.builtins.session.info import SessionInfo
+        from akaribot.core.builtins.session.info import SessionInfo
 
         session_info = await SessionInfo.assign(
             target_id="TEST|Group|markdown_table",
@@ -430,7 +430,7 @@ async def _test_lock_get():
 
 async def _test_lock_detects_union_merge_by_physical_bindings():
     """Union 合并会更换 Union ID，但不得让新组中的另一账号绕过旧 lease。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     first_sender = "TEST|lock-merge-first"
     second_sender = "TEST|lock-merge-second"
@@ -474,7 +474,7 @@ async def _test_lock_detects_union_merge_by_physical_bindings():
 
 async def _test_wait_resume_reacquires_after_competing_command():
     """等待结果到达时，原 continuation 必须等待期间启动的新命令释放锁。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class WaitSession(MessageSession):
         async def end_typing(self):
@@ -548,7 +548,7 @@ async def _test_wait_resume_reacquires_after_competing_command():
 
 async def _test_cancelled_wait_leaves_no_task_or_lease():
     """取消已释放执行锁的等待时，不得遗留 waiter 或重获 lease。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class WaitSession(MessageSession):
         async def end_typing(self):
@@ -588,8 +588,8 @@ async def _test_cancelled_wait_leaves_no_task_or_lease():
 
 async def _test_execution_lock_state_does_not_survive_session_serialization():
     """SessionInfo 跨进程复制不能携带或释放原 MessageSession 的 lease。"""
-    from core.builtins.converter import converter
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.converter import converter
+    from akaribot.core.builtins.session.internal import MessageSession
 
     owner = MessageSession(
         await SessionInfo.assign(
@@ -622,7 +622,7 @@ async def _test_execution_lock_state_does_not_survive_session_serialization():
 
 async def _test_execution_lock_count_counts_leases():
     """多绑定账号只算一条命令，exclude 只排除当前执行域。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     owner = MessageSession(
         await SessionInfo.assign(
@@ -661,7 +661,7 @@ async def _test_execution_lock_count_counts_leases():
 
 async def _test_partial_overlap_merge_reservations_do_not_deadlock():
     """A+B 与 C+B 这类部分重叠 reservation 中，后进入者应主动让出。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     first = MessageSession(
         await SessionInfo.assign(
@@ -709,8 +709,12 @@ async def _test_partial_overlap_merge_reservations_do_not_deadlock():
 
 async def _test_active_sender_leases_are_barriered_before_merge():
     """两个活跃 Union 合并前须等待另一 lease，期间阻止双方新命令进入。"""
-    from core.builtins.session.internal import MessageSession
-    from modules.core.common_tools._union_merge import apply_sender_merge, plan_sender_merge, reserve_sender_merge
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.modules.core.common_tools._union_merge import (
+        apply_sender_merge,
+        plan_sender_merge,
+        reserve_sender_merge,
+    )
 
     target_id = "TEST|Group|active-sender-merge-barrier"
     first_id = "TEST|active-sender-merge-first"
@@ -760,7 +764,7 @@ async def _test_active_sender_leases_are_barriered_before_merge():
 
         ExecutionLockList.remove(first)
         reserved_plan = await asyncio.wait_for(reserve_task, timeout=10)
-        with patch("modules.core.common_tools._union_merge.write_merge_log"):
+        with patch("akaribot.modules.core.common_tools._union_merge.write_merge_log"):
             merged = await apply_sender_merge(reserved_plan, set(), merge_command)
         keys = ExecutionLockList.get()
         return (
@@ -792,7 +796,7 @@ async def _test_active_sender_leases_are_barriered_before_merge():
 
 async def _test_cross_user_wait_result_keeps_root_lock_subject():
     """wait_anyone 的回复者会话继续 sleep 时，lease 仍须覆盖命令发起者。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class LifecycleSession(MessageSession):
         hold_calls = 0
@@ -889,7 +893,7 @@ async def _test_cross_user_wait_result_keeps_root_lock_subject():
 
 async def _test_wait_result_context_release_retries_once():
     """wait-result context 第一次释放失败时应只重试失败项。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class RetryReleaseSession(MessageSession):
         release_calls = 0
@@ -928,8 +932,8 @@ async def _test_wait_result_context_release_retries_once():
 
 async def _test_wait_confirm_can_preserve_merge_barrier():
     """Union 冲突选择等待回复时可以保持已建立的 execution barrier。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class IncomingSession(MessageSession):
         hold_calls = 0
@@ -1002,9 +1006,9 @@ async def _test_wait_confirm_can_preserve_merge_barrier():
 
 async def _test_parser_wait_result_keeps_root_merge_barrier():
     """真实 parser 消费等待回复后不得释放根命令持有的 merge barrier。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.parser.message import parser
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.parser.message import parser
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class IncomingSession(MessageSession):
         hold_calls = 0
@@ -1078,7 +1082,7 @@ async def _test_parser_wait_result_keeps_root_merge_barrier():
 
 async def _test_inactive_wait_releases_context_acquired_during_hold():
     """hold 跨进程期间 waiter 被移除时，不得发布结果或遗留 context。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class BlockingHoldSession(MessageSession):
         hold_started = asyncio.Event()
@@ -1126,7 +1130,7 @@ async def _test_inactive_wait_releases_context_acquired_during_hold():
 
 async def _test_sleep_waits_for_competing_lease_before_resuming():
     """sleep 返回后的 continuation 必须等竞争命令释放后再重获 lease。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     original_sleep = asyncio.sleep
     sleep_entered = asyncio.Event()
@@ -1159,7 +1163,7 @@ async def _test_sleep_waits_for_competing_lease_before_resuming():
     try:
         if not await ExecutionLockList.acquire(owner):
             return False
-        with patch("core.builtins.session.internal.asyncio.sleep", controlled_sleep):
+        with patch("akaribot.core.builtins.session.internal.asyncio.sleep", controlled_sleep):
             sleep_task = asyncio.create_task(owner.sleep(10))
             await sleep_entered.wait()
             if not await ExecutionLockList.acquire(contender):
@@ -1182,7 +1186,7 @@ async def _test_sleep_waits_for_competing_lease_before_resuming():
 
 async def _test_cancelled_sleep_reacquire_keeps_competing_lease():
     """continuation 等待重获时被取消，不得破坏竞争者 lease 或留下幽灵锁。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     original_sleep = asyncio.sleep
     sleep_entered = asyncio.Event()
@@ -1215,7 +1219,7 @@ async def _test_cancelled_sleep_reacquire_keeps_competing_lease():
     try:
         if not await ExecutionLockList.acquire(owner):
             return False
-        with patch("core.builtins.session.internal.asyncio.sleep", controlled_sleep):
+        with patch("akaribot.core.builtins.session.internal.asyncio.sleep", controlled_sleep):
             sleep_task = asyncio.create_task(owner.sleep(10))
             await sleep_entered.wait()
             if not await ExecutionLockList.acquire(contender):
@@ -1297,12 +1301,12 @@ async def _test_task_add_callback():
 
 async def _test_send_message_binds_button_callback_reply_id():
     """带 callback 的按钮应自动取得虚拟 reply_id，并与真实消息 ID 一起注册。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.message.elements import ButtonFrameElement
-    from core.builtins.message.internal import Button
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
-    from core.i18n import Locale
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.message.elements import ButtonFrameElement
+    from akaribot.core.builtins.message.internal import Button
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.i18n import Locale
 
     captured = {}
 
@@ -1355,12 +1359,12 @@ async def _test_send_message_binds_button_callback_reply_id():
 
 async def _test_button_callback_registered_before_send_returns():
     """平台消息已显示但跨进程发送结果未回包时，立即点击按钮也不能丢 callback。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.message.elements import ButtonFrameElement
-    from core.builtins.message.internal import Button
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
-    from core.i18n import Locale
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.message.elements import ButtonFrameElement
+    from akaribot.core.builtins.message.internal import Button
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.i18n import Locale
 
     called = 0
 
@@ -1417,11 +1421,11 @@ async def _test_button_callback_registered_before_send_returns():
 
 async def _test_send_failure_does_not_leave_callback():
     """平台以空消息 ID 表示发送失败时不能留下虚拟 ID 或 bot_id callback。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.message.internal import Button
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
-    from core.i18n import Locale
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.message.internal import Button
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.i18n import Locale
 
     class FailedJobQueueServer:
         @classmethod
@@ -1642,8 +1646,8 @@ async def _test_callback_registration_handle_survives_alias_collision():
 
 async def _test_pending_plain_callbacks_make_bot_fallback_ambiguous():
     """无按钮 callback 在发送回包前也须登记，避免 bot_id fallback 串线。"""
-    from core.builtins.session.internal import MessageSession
-    from core.i18n import Locale
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.i18n import Locale
 
     entered = asyncio.Event()
     release_sends = asyncio.Event()
@@ -1761,7 +1765,7 @@ async def _test_callback_ignores_missing_reply_id():
 
 async def _test_callback_is_scoped_by_message_channel():
     """相同平台消息 ID 在不同现实场景中不能覆盖或误命中 callback。"""
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
     SessionTaskManager._callback_list.clear()
     called = []
@@ -1799,7 +1803,7 @@ async def _test_callback_is_scoped_by_message_channel():
 
 async def _test_callback_finish_is_consumed_as_control_flow():
     """callback 调用 msg.finish() 的 SessionFinished 不得让队列 action 卡在 processing。"""
-    from core.constants import SessionFinished
+    from akaribot.core.constants import SessionFinished
 
     SessionTaskManager._callback_list.clear()
     msg = MockMessageSession("1")
@@ -1818,7 +1822,7 @@ async def _test_callback_finish_is_consumed_as_control_flow():
 
 async def _test_callback_rejects_other_physical_sender():
     """普通 reply 必须与 callback 发送时的物理账号一致。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     target_id = "TEST|Group|callback-owner"
     owner = MessageSession(
@@ -1931,9 +1935,9 @@ async def _test_repeatable_callback_is_serialized():
 
 async def _test_parser_rejects_blocked_wait_responder_before_task_check():
     """全局屏蔽用户不得完成场景内的 wait_anyone。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.parser.message import parser
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.parser.message import parser
+    from akaribot.core.builtins.session.internal import MessageSession
 
     target_id = "TEST|Group|blocked-wait-responder"
     waiting = MessageSession(
@@ -1969,8 +1973,8 @@ async def _test_parser_rejects_blocked_wait_responder_before_task_check():
 
 async def _test_wait_confirm_ignores_unrelated_message():
     """确认等待只消费确认词，其他消息仍可进入普通 parser。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.internal import MessageSession, _is_confirmation_message
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.internal import MessageSession, _is_confirmation_message
 
     target_id = "TEST|Group|confirm-fallthrough"
     sender_id = "TEST|confirm-fallthrough"
@@ -2006,8 +2010,8 @@ async def _test_wait_confirm_ignores_unrelated_message():
 
 async def _test_wait_next_message_allows_parser_fallthrough():
     """wait_next_message 完成等待后，当前消息仍继续普通解析。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class IncomingSession(MessageSession):
         async def hold(self):
@@ -2047,8 +2051,8 @@ async def _test_wait_next_message_allows_parser_fallthrough():
 
 async def _test_wait_anyone_allows_parser_fallthrough():
     """wait_anyone 完成等待后，触发消息仍继续普通解析。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class IncomingSession(MessageSession):
         async def hold(self):
@@ -2094,9 +2098,9 @@ async def _test_wait_anyone_allows_parser_fallthrough():
 
 async def _test_parser_rejects_banned_callback_responder_before_task_check():
     """场景屏蔽用户不得继续触发封禁前登记的 callback。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.parser.message import parser
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.parser.message import parser
+    from akaribot.core.builtins.session.internal import MessageSession
 
     target_id = "TEST|Group|banned-callback-responder"
     sender_id = "TEST|banned-callback-responder"
@@ -2176,9 +2180,9 @@ async def _test_reply_task_preserves_comma_in_message_id():
 
 async def _test_send_message_does_not_set_transport_format_flag():
     """消息格式应由元素表达，发送链路不得再写入 transport 格式临时值。"""
-    from core.builtins.message.internal import Markdown
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.internal import Markdown
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class FailingQueueServer:
         @classmethod
@@ -2207,9 +2211,9 @@ async def _test_send_message_does_not_set_transport_format_flag():
 
 async def _test_wait_next_message_registers_before_fast_reply():
     """提示发送完成后下一事件循环拍到达的回复不应落在等待任务登记之前。"""
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     class FastReplySession(MessageSession):
         async def send_message(self, *args, **kwargs):
@@ -2240,9 +2244,9 @@ async def _test_wait_next_message_registers_before_fast_reply():
 
 async def _test_wait_next_message_preserves_choice_rows():
     """possibly_choices 的每个映射应保留为独立按钮行。"""
-    from core.builtins.message.elements import ButtonFrameElement
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.elements import ButtonFrameElement
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class CaptureSession(MessageSession):
         captured = None
@@ -2283,10 +2287,10 @@ async def _test_wait_next_message_preserves_choice_rows():
 
 async def _test_wait_confirm_registers_before_reaction_roundtrip():
     """添加确认反应发生网络让出时，立即到达的文本确认仍应命中等待任务。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     class FastConfirmSession(MessageSession):
         async def send_message(self, *args, **kwargs):
@@ -2321,8 +2325,8 @@ async def _test_wait_confirm_registers_before_reaction_roundtrip():
 
 async def _test_wait_confirm_any_message_retracts_prompt():
     """长消息确认的否按钮或普通消息都应结束等待并撤回提示。"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class Sent:
         message_id = ["long-regex-prompt"]
@@ -2364,7 +2368,7 @@ async def _test_wait_confirm_any_message_retracts_prompt():
 
 async def _test_wait_reply_registers_before_send_returns():
     """提示已在平台显示但发送 action 尚未回包时，快速引用回复不应丢失。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     check_task_holder = {}
     pending_reply_wait_started = asyncio.Event()
@@ -2443,7 +2447,7 @@ async def _test_wait_reply_registers_before_send_returns():
 
 async def _test_ready_reply_is_not_blocked_by_earlier_pending_reply():
     """较早 pending 的 reply task 不得阻塞后登记但已 ready 的精确目标。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     class HeldIncoming(MessageSession):
         hold_calls = 0
@@ -2516,7 +2520,7 @@ async def _test_ready_reply_is_not_blocked_by_earlier_pending_reply():
 
 async def _test_wait_reply_send_failure_unblocks_pending_parser():
     """reply 提示发送失败时，已到达的引用消息不得永远卡在 reply_ready。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     check_task_holder = {}
 
@@ -2581,8 +2585,8 @@ async def _test_wait_reply_send_failure_unblocks_pending_parser():
 
 async def _test_wait_reply_timeout_covers_pending_send():
     """wait_reply 的 timeout 必须覆盖发送阶段，并唤醒已等待 reply_ready 的 parser。"""
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     check_task_holder = {}
     send_entered = asyncio.Event()
@@ -2661,8 +2665,8 @@ async def _test_wait_reply_timeout_covers_pending_send():
 
 async def _test_wait_reply_timeout_is_single_deadline():
     """发送提示耗时须从后续等待回复的预算中扣除。"""
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     prompt_id = "single-deadline-prompt"
 
@@ -2720,7 +2724,7 @@ async def _test_wait_reply_timeout_is_single_deadline():
 
 async def _test_wait_reply_none_timeout_keeps_pending_send():
     """timeout=None 必须保留无限等待语义，直到调用方取消。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     send_entered = asyncio.Event()
     never_finish = asyncio.Event()
@@ -2768,8 +2772,8 @@ async def _test_wait_reply_none_timeout_keeps_pending_send():
 
 async def _test_wait_reply_deletes_prompt_when_reply_registration_is_lost():
     """发送成功后若 pending task 已失效，delete=True 仍须撤回无法交互的提示。"""
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     delete_calls = 0
 
@@ -2813,7 +2817,7 @@ async def _test_wait_reply_deletes_prompt_when_reply_registration_is_lost():
 
 async def _test_cancelled_wait_reply_deletes_sent_prompt():
     """调用方取消已经发出提示的 wait_reply 时，delete=True 不应遗留提示。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     send_returned = asyncio.Event()
     delete_calls = 0
@@ -2860,7 +2864,7 @@ async def _test_cancelled_wait_reply_deletes_sent_prompt():
 
 async def _test_wait_reply_committed_result_beats_timeout_observation():
     """incoming 已提交 result 后，即使 deadline 同拍触发也必须返回已消费的回复。"""
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
     prompt_id = "committed-result-prompt"
     check_task_holder = {}
@@ -2915,7 +2919,7 @@ async def _test_wait_reply_committed_result_beats_timeout_observation():
     waiting = RacingReplySession(waiting_info)
     SessionTaskManager._task_list.clear()
     try:
-        with patch("core.builtins.session.internal.asyncio.timeout", return_value=TimeoutAfterBody()):
+        with patch("akaribot.core.builtins.session.internal.asyncio.timeout", return_value=TimeoutAfterBody()):
             result = await waiting.wait_reply("prompt", timeout=0.1 * TIME_SCALE)
         handled = await check_task_holder["task"]
         await waiting.release_execution_resources()
@@ -2936,8 +2940,8 @@ async def _test_wait_reply_committed_result_beats_timeout_observation():
 
 async def _test_wait_reply_delete_failure_does_not_mask_cancellation():
     """撤回失败只能记录日志，不能把 wait_reply 的取消结果改成删除异常。"""
-    from core.builtins.session.internal import MessageSession
-    from core.constants import WaitCancelException
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.constants import WaitCancelException
 
     class Sent:
         message_id = ["failed-delete-wait-reply-prompt"]
@@ -3335,8 +3339,8 @@ async def _make_verification_session(response: str, support_button: bool) -> Moc
 async def _test_verify_user_with_button():
     msg = await _make_verification_session("22", support_button=True)
     with (
-        patch("core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
-        patch("core.builtins.session.internal.Random.choice", return_value=22),
+        patch("akaribot.core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
+        patch("akaribot.core.builtins.session.internal.Random.choice", return_value=22),
     ):
         result = await msg.verify_user(timeout=30, delete=False)
     return (
@@ -3349,8 +3353,8 @@ async def _test_verify_user_with_button():
 async def _test_verify_user_text_fallback():
     msg = await _make_verification_session("22", support_button=False)
     with (
-        patch("core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
-        patch("core.builtins.session.internal.Random.choice", return_value=22),
+        patch("akaribot.core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
+        patch("akaribot.core.builtins.session.internal.Random.choice", return_value=22),
     ):
         result = await msg.verify_user(timeout=30, delete=False)
     return result is True and not msg.buttons and any("发送数字“22”" in action for action in msg.action)
@@ -3359,8 +3363,8 @@ async def _test_verify_user_text_fallback():
 async def _test_verify_user_rejects_wrong_number():
     msg = await _make_verification_session("33", support_button=True)
     with (
-        patch("core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
-        patch("core.builtins.session.internal.Random.choice", return_value=22),
+        patch("akaribot.core.builtins.session.internal.Random.sample", return_value=[11, 22, 33]),
+        patch("akaribot.core.builtins.session.internal.Random.choice", return_value=22),
     ):
         return await msg.verify_user(timeout=30, delete=False) is False
 

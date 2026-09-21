@@ -2,20 +2,20 @@ import asyncio
 
 from tortoise.transactions import in_transaction
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ButtonFrame, I18NContext, Image, Mention
-from core.builtins.session.info import EventInfo
-from core.builtins.utils import command_prefix
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.path import assets_path
-from core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
-from core.logger import Logger
-from core.queue.errors import RpcError
-from core.utils.button import arrange_buttons
-from core.utils.random import SecureRandom
-from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
-from modules.captcha.service import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ButtonFrame, I18NContext, Image, Mention
+from akaribot.core.builtins.session.info import EventInfo
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import assets_path
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
+from akaribot.core.logger import Logger
+from akaribot.core.queue.errors import RpcError
+from akaribot.core.utils.button import arrange_buttons
+from akaribot.core.utils.random import SecureRandom
+from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+from akaribot.modules.captcha.service import (
     get_origin_session,
     new_token,
     notify_origin,

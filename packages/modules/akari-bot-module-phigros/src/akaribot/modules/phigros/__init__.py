@@ -1,12 +1,12 @@
 from time import monotonic
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, Image, I18NContext, Url
-from core.component import module
-from core.logger import Logger
-from core.types import Param
-from core.utils.random import Random
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, Image, I18NContext, Url
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.types import Param
+from akaribot.core.utils.random import Random
 
 from .database.models import PhigrosBindInfo
 from .libraries.assets import (

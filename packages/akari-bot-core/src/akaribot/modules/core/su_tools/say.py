@@ -1,9 +1,9 @@
-from core.builtins.bot import Bot
-from core.builtins.message.mention import wrap_sender_id
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Button
-from core.component import module
-from core.constants.exceptions import NoReportException
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.mention import wrap_sender_id
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Button
+from akaribot.core.component import module
+from akaribot.core.constants.exceptions import NoReportException
 
 say = module("say", required_superuser=True, base=True, doc=True)
 

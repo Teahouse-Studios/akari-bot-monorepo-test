@@ -13,19 +13,19 @@ from unittest.mock import patch
 from attr import evolve
 from botpy.message import GroupMessage
 
-import bots.qqbot.context as qqbot_context
-import bots.qqbot.features as qqbot_features_module
-from bots.qqbot.context import QQBotContextManager
-from bots.qqbot.features import features as qqbot_features
-from bots.qqbot.features import group_disable_read_all_message_features, resolve_features
-from bots.qqbot.info import target_group_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, Plain
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
+import akaribot.adapters.qqbot.context as qqbot_context
+import akaribot.adapters.qqbot.features as qqbot_features_module
+from akaribot.adapters.qqbot.context import QQBotContextManager
+from akaribot.adapters.qqbot.features import features as qqbot_features
+from akaribot.adapters.qqbot.features import group_disable_read_all_message_features, resolve_features
+from akaribot.adapters.qqbot.info import target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, Plain
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 # 用户数据中承载该偏好的键
 SWITCH_KEY = "use_markdown"

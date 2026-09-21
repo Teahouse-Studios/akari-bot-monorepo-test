@@ -9,10 +9,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from core.i18n import Locale
-from core.tester import All, Contains, Match, Not, Tester, func_case
-from core.tester.mock.session import MockMessageSession
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.core.i18n import Locale
+from akaribot.testing import All, Contains, Match, Not, Tester, func_case
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 START_WIKI = "~wiki set https://zh.minecraft.wiki/api.php"
 _original_mock_session_init = MockMessageSession.async_init
@@ -26,7 +26,7 @@ async def _init_url_manager_session(self, msg):
 @func_case
 async def test_wiki_set_url_policy(tester: Tester):
     """wiki set 应以规范 API 端点的全局 URL 策略作为唯一认证来源。"""
-    from modules.wiki.database.models import WikiTargetInfo
+    from akaribot.modules.wiki.database.models import WikiTargetInfo
 
     api = "https://zh.minecraft.wiki/api.php"
     with TemporaryDirectory() as temp_dir:
@@ -76,8 +76,8 @@ async def test_wiki_set_url_policy(tester: Tester):
                 GlobalURLBlocklist.add_user_rule(api)
                 blocked_message = Locale("zh_cn").t("wiki.message.invalid.blocked")
                 with (
-                    patch("modules.wiki.utils.wikilib.WikiLib.parse_page_info", side_effect=AssertionError),
-                    patch("modules.wiki.utils.wikilib.WikiLib.search_page", side_effect=AssertionError),
+                    patch("akaribot.modules.wiki.utils.wikilib.WikiLib.parse_page_info", side_effect=AssertionError),
+                    patch("akaribot.modules.wiki.utils.wikilib.WikiLib.search_page", side_effect=AssertionError),
                 ):
                     await tester.integrate(
                         "~wiki Minecraft",

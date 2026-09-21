@@ -5,9 +5,9 @@ from enum import Enum, auto
 
 from attrs import define
 
-from core.builtins.message.elements import ButtonPermission, ButtonRows
-from core.builtins.utils import confirm_command_default
-from core.utils.random import SecureRandom
+from akaribot.core.builtins.message.elements import ButtonPermission, ButtonRows
+from akaribot.core.builtins.utils import confirm_command_default
+from akaribot.core.utils.random import SecureRandom
 
 BUTTON_TOKEN_PREFIX = "akb:"
 BUTTON_EXPIRES = 3600

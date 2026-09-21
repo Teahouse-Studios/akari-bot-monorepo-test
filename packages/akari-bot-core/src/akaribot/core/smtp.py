@@ -5,12 +5,12 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from typing import Awaitable, Callable
 
-from core.builtins.message.chain import Chainable, MessageChain
-from core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
-from core.constants.path import assets_path
-from core.exports import exports
-from core.i18n import Locale, safe_strftime
-from core.logger import Logger
+from akaribot.core.builtins.message.chain import Chainable, MessageChain
+from akaribot.core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
+from akaribot.core.constants.path import assets_path
+from akaribot.core.exports import exports
+from akaribot.core.i18n import Locale, safe_strftime
+from akaribot.core.logger import Logger
 
 locale = Locale(BaseConfig.default_locale)
 LOGO_PATH = assets_path / "akaribot_logo.png"

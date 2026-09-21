@@ -1,4 +1,4 @@
-from core.constants import Info
+from akaribot.core.constants import Info
 
 platform_name = "Web"
 client_name = Info.resolve_client_name(platform_name)

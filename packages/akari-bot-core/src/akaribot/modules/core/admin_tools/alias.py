@@ -1,12 +1,12 @@
 import re
 from string import Template as StringTemplate
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Image, I18NContext, Plain
-from core.builtins.parser.hooks import HookPoint
-from core.logger import Logger
-from core.utils.image_table import image_table_render, ImageTable
-from modules.core.common_tools.setup import setup
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Image, I18NContext, Plain
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.logger import Logger
+from akaribot.core.utils.image_table import image_table_render, ImageTable
+from akaribot.modules.core.common_tools.setup import setup
 
 
 def transform_alias(command: str, aliases: dict[str, str], prefix: str) -> str:

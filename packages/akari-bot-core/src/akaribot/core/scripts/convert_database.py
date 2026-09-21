@@ -27,13 +27,13 @@ from tortoise.models import Model
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
 
-from core.constants.version import database_version
-from core.database import fetch_module_db
-from core.database.link import get_db_link
-from core.database.models import *
-from core.logger import Logger
-from core.registry import PackageRegistry
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.core.constants.version import database_version
+from akaribot.core.database import fetch_module_db
+from akaribot.core.database.link import get_db_link
+from akaribot.core.database.models import *
+from akaribot.core.logger import Logger
+from akaribot.core.registry import PackageRegistry
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 
 def _load_module_models() -> None:
@@ -372,7 +372,7 @@ async def rename_old_tables():
     错误处理：如果某些表不存在，异常会被捕获并忽略。
     """
     Logger.warning("Renaming old tables...")
-    await Tortoise.init(db_url=get_db_link(), modules={"models": ["core.scripts.convert_database"]})
+    await Tortoise.init(db_url=get_db_link(), modules={"models": ["akaribot.core.scripts.convert_database"]})
     conn = Tortoise.get_connection("default")
 
     # 重命名旧表以避免冲突
@@ -431,7 +431,7 @@ async def convert_database():
     # 第二步：初始化新的数据库架构
     await Tortoise.init(
         db_url=get_db_link(),
-        modules={"models": ["core.scripts.convert_database", "core.database.models"] + database_list},
+        modules={"models": ["akaribot.core.scripts.convert_database", "akaribot.core.database.models"] + database_list},
     )
     conn = Tortoise.get_connection("default")
 

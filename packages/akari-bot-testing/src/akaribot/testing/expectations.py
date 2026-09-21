@@ -4,9 +4,9 @@ import asyncio
 import re
 from typing import Callable
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.builtins.types import MessageElement, MultimediaElement
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.types import MessageElement, MultimediaElement
 
 
 def _searchable_texts(result: dict) -> tuple[str, ...]:

@@ -8,9 +8,9 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import core.queue.server as server
-from core.constants import Info
-from core.tester import Tester, func_case
+import akaribot.core.queue.server as server
+from akaribot.core.constants import Info
+from akaribot.testing import Tester, func_case
 
 RAW_STATUS = {
     "browser_initialized": True,

@@ -23,11 +23,11 @@ from pathlib import Path
 
 sys.path.insert(0, ".")
 
-from core.tester.mock.database import init_db, close_db
-from core.tester.mock.loader import load_modules
-from core.tester.mock.random import Random
-from core.tester.mock.fixtures import save_fixture, list_fixtures, FIXTURE_DIR
-from core.tester.mock.http import digest_request_body
+from akaribot.testing.mock.database import init_db, close_db
+from akaribot.testing.mock.loader import load_modules
+from akaribot.testing.mock.random import Random
+from akaribot.testing.mock.fixtures import save_fixture, list_fixtures, FIXTURE_DIR
+from akaribot.testing.mock.http import digest_request_body
 
 INTEGRATION_DIR = Path(__file__).parent / "integration"
 
@@ -55,7 +55,7 @@ def _normalize(result):
 
 async def _run_test_files(names: list[str]):
     """导入并执行指定集成测试文件中的全部 func_case。"""
-    from core.tester.tester import Tester
+    from akaribot.testing.tester import Tester
 
     for path in sorted(INTEGRATION_DIR.glob("test_*.py")):
         if names and not any(n in path.stem for n in names):
@@ -89,7 +89,7 @@ async def main():
     # 录制阶段必须关闭 fixture 回放，否则会把上一轮的 mock 结果再录一遍。
     await load_modules(show_logs=False, monkey_patches={"Random": Random()}, load_fixtures=False)
 
-    import core.utils.http as http_module
+    import akaribot.core.utils.http as http_module
 
     original_request_url = http_module.request_url
 

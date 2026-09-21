@@ -2,9 +2,9 @@ from datetime import datetime
 
 import discord
 
-from core.builtins.message.elements import EmbedElement
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
+from akaribot.core.builtins.message.elements import EmbedElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
 
 
 def get_channel_id(session_info: SessionInfo) -> str:

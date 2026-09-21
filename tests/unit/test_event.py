@@ -3,17 +3,17 @@
 from typing import Literal, get_args, get_origin, get_type_hints
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.bot import Bot
-from core.builtins.converter import converter
-from core.builtins.session.info import EventInfo
-from core.component import Bind
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.loader import ModulesManager
-from core.queue.contracts import ServerAPI
-from core.queue.peer import ServiceRoute
-from core.queue.server import receive_event
-from core.tester import Tester, func_case
-from core.types import Module
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.info import EventInfo
+from akaribot.core.component import Bind
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.loader import ModulesManager
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.queue.peer import ServiceRoute
+from akaribot.core.queue.server import receive_event
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
 
 
 def _remove_test_module(module_name: str):

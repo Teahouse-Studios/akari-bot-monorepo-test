@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, ".")
 
-from core.tester.mock.webrender import save_webrender_fixture
+from akaribot.testing.mock.webrender import save_webrender_fixture
 
 MINECRAFT_NEWS_URL = (
     "https://www.minecraft.net/content/minecraftnet/language-masters/en-us/"
@@ -77,7 +77,7 @@ NEGATIVE_RESPONSES = [
 def build():
     saved = []
 
-    from core.tester.mock.fixtures import save_fixture
+    from akaribot.testing.mock.fixtures import save_fixture
 
     for url, status, text in NEGATIVE_RESPONSES:
         saved.append(save_fixture(url=url, status_code=status, text=text, method="GET"))
@@ -88,7 +88,7 @@ def build():
         saved.append(save_webrender_fixture(url, "synthetic-image-bytes"))
 
     # 变更日志的 URL 由模块自身推导，此处直接复用其实现，避免规则不一致。
-    from modules.mcv_rss import get_changelog_url
+    from akaribot.modules.mcv_rss import get_changelog_url
 
     for version in MCV_VERSIONS:
         link = get_changelog_url(version)

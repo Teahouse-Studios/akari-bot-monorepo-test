@@ -2,12 +2,12 @@
 
 from unittest.mock import patch
 
-from core.builtins.utils import confirm_command_default
-from core.tester import Tester, func_case
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Button, ButtonFrame, ButtonRows
-from core.utils.button import bind_callback_reply_ids, build_button_rows
-from core.utils.button_runtime import (
+from akaribot.core.builtins.utils import confirm_command_default
+from akaribot.testing import Tester, func_case
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Button, ButtonFrame, ButtonRows
+from akaribot.core.utils.button import bind_callback_reply_ids, build_button_rows
+from akaribot.core.utils.button_runtime import (
     BUTTON_TOKEN_PREFIX,
     ButtonConsumeStatus,
     _clear_button_registry,
@@ -106,7 +106,7 @@ def _test_unlimited_click_limit():
 
 
 def _test_expired_is_distinct_from_invalid():
-    with patch("core.utils.button_runtime.time.time", return_value=0.001):
+    with patch("akaribot.core.utils.button_runtime.time.time", return_value=0.001):
         button = _register()
     expired = consume_button(button.token, "Discord|Client|1", now=3600.002)
     invalid = consume_button(f"{BUTTON_TOKEN_PREFIX}missing", "Discord|Client|1")
@@ -140,9 +140,9 @@ def _test_urls_do_not_register_tokens():
 
 def _test_register_prunes_expired_tokens():
     _clear_button_registry()
-    with patch("core.utils.button_runtime.time.time", return_value=0.001):
+    with patch("akaribot.core.utils.button_runtime.time.time", return_value=0.001):
         expired = register_button_rows(build_button_rows([{"Old": "~old"}]), "Discord|Client|1")[0][0]
-    with patch("core.utils.button_runtime.time.time", return_value=7200.002):
+    with patch("akaribot.core.utils.button_runtime.time.time", return_value=7200.002):
         register_button_rows(build_button_rows([{"New": "~new"}]), "Discord|Client|1")
     return consume_button(expired.token, "Discord|Client|1", now=7200.002).status is ButtonConsumeStatus.INVALID
 

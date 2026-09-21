@@ -10,7 +10,7 @@ from anthropic import (
 )
 from openai import APITimeoutError, RateLimitError, AsyncOpenAI
 
-from modules.ai.config import AiConfig
+from akaribot.modules.ai.config import AiConfig
 from .tools import TOOLS
 
 max_tokens = AiConfig.llm_max_tokens

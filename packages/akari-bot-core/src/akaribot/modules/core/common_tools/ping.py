@@ -4,11 +4,11 @@ import time
 import psutil
 from cpuinfo import get_cpu_info
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import FormattedTime, I18NContext, Markdown, Plain
-from core.queue.diagnostics import DAEMON_LABEL, PEERS_LABEL, gather_process_usage
-from modules.core.common_tools.about import about
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import FormattedTime, I18NContext, Markdown, Plain
+from akaribot.core.queue.diagnostics import DAEMON_LABEL, PEERS_LABEL, gather_process_usage
+from akaribot.modules.core.common_tools.about import about
 
 started_time = time.time()
 
@@ -84,7 +84,7 @@ async def _(msg: Bot.MessageSession):
 
 @about.command("status {{I18N:core.help.about.status}}", required_superuser=True)
 async def _(msg: Bot.MessageSession):
-    from core.queue.server import JobQueueServer
+    from akaribot.core.queue.server import JobQueueServer
 
     disk = psutil.disk_usage("/")
     result = MessageChain.assign(

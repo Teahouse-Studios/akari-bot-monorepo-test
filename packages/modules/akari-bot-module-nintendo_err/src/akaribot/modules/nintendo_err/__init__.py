@@ -1,10 +1,10 @@
 # ported from kurisu(https://github.com/nh-server/Kurisu/tree/main/cogs/results)
 import discord
 
-from core.builtins.bot import Bot
-from core.builtins.message.elements import EmbedElement
-from core.builtins.message.internal import Embed, EmbedField, I18NContext
-from core.component import module
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.elements import EmbedElement
+from akaribot.core.builtins.message.internal import Embed, EmbedField, I18NContext
+from akaribot.core.component import module
 
 
 class Results:

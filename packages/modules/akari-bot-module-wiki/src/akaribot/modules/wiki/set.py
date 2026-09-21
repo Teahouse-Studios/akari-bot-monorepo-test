@@ -1,11 +1,11 @@
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, I18NContext, Image, Plain, Url
-from core.utils.url_audit import evaluate_url_policy
-from modules.wiki.config import WikiConfig
-from core.utils.image_table import image_table_render, ImageTable
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image, Plain, Url
+from akaribot.core.utils.url_audit import evaluate_url_policy
+from akaribot.modules.wiki.config import WikiConfig
+from akaribot.core.utils.image_table import image_table_render, ImageTable
 from . import wiki
 from .database.models import WikiTargetInfo
 from .utils.wikilib import WikiLib

@@ -16,14 +16,14 @@ import httpx
 import orjson
 from tenacity import retry, wait_fixed, stop_after_attempt
 
-from core.builtins.filter.protect import get_protected_intervals, is_protected
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext
-from core.builtins.session.internal import MessageSession
-from core.builtins.types import MessageElement
-from core.config.base import CoreConfig, CoreSecretConfig
-from core.database.local import DirtyWordCache
-from core.logger import Logger
+from akaribot.core.builtins.filter.protect import get_protected_intervals, is_protected
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.config.base import CoreConfig, CoreSecretConfig
+from akaribot.core.database.local import DirtyWordCache
+from akaribot.core.logger import Logger
 
 access_key_id = CoreSecretConfig.check_access_key_id
 access_key_secret = CoreSecretConfig.check_access_key_secret

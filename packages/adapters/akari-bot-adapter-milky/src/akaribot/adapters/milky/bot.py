@@ -1,23 +1,23 @@
 import asyncio
 
-from bots.milky.client import milky_bot
-from bots.milky.config import MilkyConfig
-from bots.milky.context import MilkyContextManager, MilkyFetchedContextManager
-from bots.milky.info import *
-from bots.milky.utils import MILKY_IMPL_TEMP_KEY, get_milky_implementation, message_field, to_message_chain
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.builtins.utils import command_prefix
-from core.client.init import client_cleanup, client_init
-from core.config.base import BaseConfig, CoreConfig
-from core.constants.default import confirm_command_default
-from core.database.models import SenderUnionInfo, TargetUnionInfo, UnfriendlyActionRecords
-from core.i18n import Locale
-from core.logger import Logger
-from core.queue.contracts import ServerAPI
-from core.utils.retired import is_retired_client
+from akaribot.adapters.milky.client import milky_bot
+from akaribot.adapters.milky.config import MilkyConfig
+from akaribot.adapters.milky.context import MilkyContextManager, MilkyFetchedContextManager
+from akaribot.adapters.milky.info import *
+from akaribot.adapters.milky.utils import MILKY_IMPL_TEMP_KEY, get_milky_implementation, message_field, to_message_chain
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.client.init import client_cleanup, client_init
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.constants.default import confirm_command_default
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, UnfriendlyActionRecords
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.utils.retired import is_retired_client
 
 Bot.register_bot(client_name=client_name)
 ctx_id = Bot.register_context_manager(MilkyContextManager)

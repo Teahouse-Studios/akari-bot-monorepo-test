@@ -3,8 +3,8 @@ from typing import ClassVar
 
 from tortoise import fields
 
-from core.database.base import DBModel
-from core.database.models import UNION_SCOPE_SENDER, UNION_SCOPE_TARGET
+from akaribot.core.database.base import DBModel
+from akaribot.core.database.models import UNION_SCOPE_SENDER, UNION_SCOPE_TARGET
 
 
 def _verification_id(target_union_id: str, sender_union_id: str) -> str:

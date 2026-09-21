@@ -11,19 +11,19 @@ func_case，而该配置与 ``RETIRED_ROUTES`` 是进程级全局状态，分散
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain
-from core.builtins.parser.message import parser
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.builtins.session.tasks import SessionTaskManager
-from core.config.base import CoreConfig
-from core.database.models import TargetUnionBind, TargetUnionInfo
-from core.loader import ModulesManager
-from core.queue.contracts import PlatformAPI
-from core.utils.retired import (
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.builtins.parser.message import parser
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo
+from akaribot.core.loader import ModulesManager
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.core.utils.retired import (
     RETIRED_ALLOWED_MODULES,
     filter_retired_targets,
     is_merge_route_allowed,
@@ -34,9 +34,9 @@ from core.utils.retired import (
     reload_retired_routes,
     should_yield_channel,
 )
-from core.tester import func_case, Tester
-from modules.core.common_tools.bind import b as bind_module
-from modules.core.hooks.routing import channel_claim_cache
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.common_tools.bind import b as bind_module
+from akaribot.modules.core.hooks.routing import channel_claim_cache
 
 
 def _use_routes(entries: list):
@@ -406,7 +406,7 @@ async def _probe_merge_command_route(command: str, order: tuple[str, str], prefi
     try:
         with (
             patch.object(ModulesManager, "return_modules_list", return_value={"bind": module}),
-            patch("core.builtins.parser.message._execute_module", new=_record),
+            patch("akaribot.core.builtins.parser.message._execute_module", new=_record),
         ):
             for side in order:
                 await parser(sessions[side])

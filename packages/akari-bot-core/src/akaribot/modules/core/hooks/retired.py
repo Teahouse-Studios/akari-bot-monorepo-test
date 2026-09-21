@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from core.builtins.parser.hooks import HookPoint
-from core.component import module
-from core.database.models import TargetUnionBind
-from core.utils.retired import (
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.component import module
+from akaribot.core.database.models import TargetUnionBind
+from akaribot.core.utils.retired import (
     is_module_allowed_when_retired,
     is_retired_client,
     is_retired_target,
@@ -20,7 +20,7 @@ from core.utils.retired import (
 )
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 retired = module("_retired_policy", hidden=True, load=True, base=True)

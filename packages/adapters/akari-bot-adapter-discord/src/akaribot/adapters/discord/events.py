@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from bots.discord.info import client_name, sender_prefix, target_guild_prefix
-from core.builtins.bot import Bot
-from core.builtins.session.info import EventInfo
+from akaribot.adapters.discord.info import client_name, sender_prefix, target_guild_prefix
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.session.info import EventInfo
 
 
 async def guild_member_joined(

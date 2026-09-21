@@ -2,15 +2,15 @@
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.scheduler import IntervalTrigger
-from core.utils.http import get_url
-from core.utils.storedata import get_stored_list, update_stored_list
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.scheduler import IntervalTrigger
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
 arcaea_rss = module(
     "arcaea-rss",

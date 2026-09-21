@@ -14,7 +14,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-from core.constants.exceptions import ConfigFileNotFound
+from akaribot.core.constants.exceptions import ConfigFileNotFound
 
 # 门面对外承诺的全部名字。新增导出须同时更新 __all__ 与 LAZY_MODULES。
 __all__ = [
@@ -224,10 +224,10 @@ __all__ = [
 
 try:
     # 不依赖配置系统的名字：CLI 与发现层在配置就绪之前即可使用。
-    from core.builtins.message.mention import InlineMention, iter_at_code, render_at_code, wrap_sender_id
-    from core.builtins.parser.args import ArgumentPattern, Template, templates_to_str
-    from core.constants import config_filename, dev_mode
-    from core.constants.default import (
+    from akaribot.core.builtins.message.mention import InlineMention, iter_at_code, render_at_code, wrap_sender_id
+    from akaribot.core.builtins.parser.args import ArgumentPattern, Template, templates_to_str
+    from akaribot.core.constants import config_filename, dev_mode
+    from akaribot.core.constants.default import (
         confirm_command_default,
         lang_list,
         matrix_homeserver_default,
@@ -236,7 +236,7 @@ try:
         weblate_lang_codes,
         wiki_allowlist_url_default,
     )
-    from core.constants.exceptions import (
+    from akaribot.core.constants.exceptions import (
         AbuseWarning,
         ConfigValueError,
         ExternalException,
@@ -248,30 +248,30 @@ try:
         TestException,
         WaitCancelException,
     )
-    from core.constants.info import Info, Secret
-    from core.i18n import Locale, collect_locale_paths, get_available_locales
-    from core.queue.errors import RpcError
-    from core.utils.bash import run_sys_command
-    from core.utils.cache import random_cache_path
-    from core.utils.container import ExpiringTempDict, TokenBucket
-    from core.utils.func import chunk_list, is_float, is_int, parse_time_string, truncate_text
-    from core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
+    from akaribot.core.constants.info import Info, Secret
+    from akaribot.core.i18n import Locale, collect_locale_paths, get_available_locales
+    from akaribot.core.queue.errors import RpcError
+    from akaribot.core.utils.bash import run_sys_command
+    from akaribot.core.utils.cache import random_cache_path
+    from akaribot.core.utils.container import ExpiringTempDict, TokenBucket
+    from akaribot.core.utils.func import chunk_list, is_float, is_int, parse_time_string, truncate_text
+    from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 
     # 机器人与会话：模块函数的入参与运行环境。
-    from core.alive import Alive
-    from core.builtins.bot import Bot
-    from core.builtins.session.info import EventInfo, SessionInfo
-    from core.builtins.session.internal import (
+    from akaribot.core.alive import Alive
+    from akaribot.core.builtins.bot import Bot
+    from akaribot.core.builtins.session.info import EventInfo, SessionInfo
+    from akaribot.core.builtins.session.internal import (
         FetchedMessageSession,
         FinishedSession,
         MessageSession,
         confirm_prompt_key,
     )
-    from core.builtins.session.lock import ExecutionLockList
-    from core.builtins.utils import command_prefix, confirm_command
+    from akaribot.core.builtins.session.lock import ExecutionLockList
+    from akaribot.core.builtins.utils import command_prefix, confirm_command
 
     # 消息元素与消息链：模块回给用户的内容构造块。
-    from core.builtins.message.chain import (
+    from akaribot.core.builtins.message.chain import (
         Chainable,
         I18NMessageChain,
         MessageChain,
@@ -281,7 +281,7 @@ try:
         get_message_chain,
         match_kecode,
     )
-    from core.builtins.message.elements import (
+    from akaribot.core.builtins.message.elements import (
         ActionTextElement,
         AudioElement,
         BaseElement,
@@ -304,7 +304,7 @@ try:
         markdown_to_plain_text,
         normalize_button_click_limit,
     )
-    from core.builtins.message.internal import (
+    from akaribot.core.builtins.message.internal import (
         ActionText,
         Audio,
         Button,
@@ -323,25 +323,25 @@ try:
     )
 
     # 模块注册与解析：声明模块、命令模板与解析钩子。
-    from core.builtins.parser.command import CommandParser
-    from core.builtins.parser.hooks import Handled, HookPoint, RecoveryProposal, Stop, StopScope
-    from core.component import Bind, module
-    from core.loader import ModulesManager
-    from core.module_runtime import ModuleRuntimeManager
-    from core.types import Module, Param
-    from core.types.module.component_meta import CommandMeta
+    from akaribot.core.builtins.parser.command import CommandParser
+    from akaribot.core.builtins.parser.hooks import Handled, HookPoint, RecoveryProposal, Stop, StopScope
+    from akaribot.core.component import Bind, module
+    from akaribot.core.loader import ModulesManager
+    from akaribot.core.module_runtime import ModuleRuntimeManager
+    from akaribot.core.types import Module, Param
+    from akaribot.core.types.module.component_meta import CommandMeta
 
     # 配置：读取核心配置、声明模块自身配置项。
-    from core.builtins.converter import converter
-    from core.config import CFGManager
-    from core.config.base import BaseConfig, CoreConfig, CoreSecretConfig
-    from core.config.decorator import on_bot_config, on_module_config
+    from akaribot.core.builtins.converter import converter
+    from akaribot.core.config import CFGManager
+    from akaribot.core.config.base import BaseConfig, CoreConfig, CoreSecretConfig
+    from akaribot.core.config.decorator import on_bot_config, on_module_config
 
     # 数据库：定义模块模型、声明包内迁移与使用核心数据表。
-    from core.database import fetch_module_db, get_model_fields, get_model_names
-    from core.database.base import DBModel
-    from core.database.migration import MigrationContext
-    from core.database.models import (
+    from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
+    from akaribot.core.database.base import DBModel
+    from akaribot.core.database.migration import MigrationContext
+    from akaribot.core.database.models import (
         UNION_SCOPE_SENDER,
         UNION_SCOPE_TARGET,
         AnalyticsData,
@@ -359,20 +359,20 @@ try:
     )
 
     # 日志与调度：记录运行信息、注册定时任务。
-    from core.logger import Logger
-    from core.scheduler import AndTrigger, CronTrigger, DateTrigger, IntervalTrigger, OrTrigger
+    from akaribot.core.logger import Logger
+    from akaribot.core.scheduler import AndTrigger, CronTrigger, DateTrigger, IntervalTrigger, OrTrigger
 
     # 进程与队列：跨进程调用服务端动作、上报错误、重启进程。
-    from core.queue.contracts import ServerAPI
-    from core.server.terminate import restart
-    from core.smtp import send_report
+    from akaribot.core.queue.contracts import ServerAPI
+    from akaribot.core.server.terminate import restart
+    from akaribot.core.smtp import send_report
 
     # 工具：网络、随机、缓存、图像、表格、按钮、游戏、经济与 URL 审计。
-    from core.utils.button import arrange_buttons, build_button_rows
-    from core.utils.cooldown import CoolDown
-    from core.utils.dirty_check import check, check_bool, rickroll
-    from core.utils.game import GAME_EXPIRED, PlayState
-    from core.utils.http import (
+    from akaribot.core.utils.button import arrange_buttons, build_button_rows
+    from akaribot.core.utils.cooldown import CoolDown
+    from akaribot.core.utils.dirty_check import check, check_bool, rickroll
+    from akaribot.core.utils.game import GAME_EXPIRED, PlayState
+    from akaribot.core.utils.http import (
         delete_url,
         download,
         get_url,
@@ -383,11 +383,11 @@ try:
         request_url,
         url_pattern,
     )
-    from core.utils.image import cb64imglst, get_fontsize, msgchain2image, svg_render
-    from core.utils.image_table import ImageTable, image_table_render
-    from core.utils.petal import cost_petal, gained_petal, lost_petal, settle_petals, sign_get_petal
-    from core.utils.random import Random, SecureRandom
-    from core.utils.retired import (
+    from akaribot.core.utils.image import cb64imglst, get_fontsize, msgchain2image, svg_render
+    from akaribot.core.utils.image_table import ImageTable, image_table_render
+    from akaribot.core.utils.petal import cost_petal, gained_petal, lost_petal, settle_petals, sign_get_petal
+    from akaribot.core.utils.random import Random, SecureRandom
+    from akaribot.core.utils.retired import (
         RETIRED_SOURCES,
         RETIRED_TARGETS,
         enqueue_notice,
@@ -397,9 +397,15 @@ try:
         is_retired_target,
         should_yield_channel,
     )
-    from core.utils.storedata import get_stored_list, update_stored_list
-    from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRule, URLRuleError, evaluate_url_policy
-    from core.utils.web_render import (
+    from akaribot.core.utils.storedata import get_stored_list, update_stored_list
+    from akaribot.core.utils.url_audit import (
+        GlobalURLAllowlist,
+        GlobalURLBlocklist,
+        URLRule,
+        URLRuleError,
+        evaluate_url_policy,
+    )
+    from akaribot.core.utils.web_render import (
         ElementScreenshotOptions,
         LegacyScreenshotOptions,
         PageScreenshotOptions,
@@ -417,10 +423,10 @@ except ConfigFileNotFound:
 
 # 名称到来源模块的映射。仅在配置缺失导致上面的导入中断时使用。
 LAZY_MODULES: dict[str, tuple[str, ...]] = {
-    "core.alive": ("Alive",),
-    "core.builtins.bot": ("Bot",),
-    "core.builtins.converter": ("converter",),
-    "core.builtins.message.chain": (
+    "akaribot.core.alive": ("Alive",),
+    "akaribot.core.builtins.bot": ("Bot",),
+    "akaribot.core.builtins.converter": ("converter",),
+    "akaribot.core.builtins.message.chain": (
         "Chainable",
         "I18NMessageChain",
         "MessageChain",
@@ -430,7 +436,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "get_message_chain",
         "match_kecode",
     ),
-    "core.builtins.message.elements": (
+    "akaribot.core.builtins.message.elements": (
         "ActionTextElement",
         "AudioElement",
         "BaseElement",
@@ -453,7 +459,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "markdown_to_plain_text",
         "normalize_button_click_limit",
     ),
-    "core.builtins.message.internal": (
+    "akaribot.core.builtins.message.internal": (
         "ActionText",
         "Audio",
         "Button",
@@ -470,25 +476,25 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "Url",
         "Video",
     ),
-    "core.builtins.message.mention": ("InlineMention", "iter_at_code", "render_at_code", "wrap_sender_id"),
-    "core.builtins.parser.args": ("ArgumentPattern", "Template", "templates_to_str"),
-    "core.builtins.parser.command": ("CommandParser",),
-    "core.builtins.parser.hooks": ("Handled", "HookPoint", "RecoveryProposal", "Stop", "StopScope"),
-    "core.builtins.session.info": ("EventInfo", "SessionInfo"),
-    "core.builtins.session.internal": (
+    "akaribot.core.builtins.message.mention": ("InlineMention", "iter_at_code", "render_at_code", "wrap_sender_id"),
+    "akaribot.core.builtins.parser.args": ("ArgumentPattern", "Template", "templates_to_str"),
+    "akaribot.core.builtins.parser.command": ("CommandParser",),
+    "akaribot.core.builtins.parser.hooks": ("Handled", "HookPoint", "RecoveryProposal", "Stop", "StopScope"),
+    "akaribot.core.builtins.session.info": ("EventInfo", "SessionInfo"),
+    "akaribot.core.builtins.session.internal": (
         "FetchedMessageSession",
         "FinishedSession",
         "MessageSession",
         "confirm_prompt_key",
     ),
-    "core.builtins.session.lock": ("ExecutionLockList",),
-    "core.builtins.utils": ("command_prefix", "confirm_command"),
-    "core.component": ("Bind", "module"),
-    "core.config": ("CFGManager",),
-    "core.config.base": ("BaseConfig", "CoreConfig", "CoreSecretConfig"),
-    "core.config.decorator": ("on_bot_config", "on_module_config"),
-    "core.constants": ("config_filename", "dev_mode"),
-    "core.constants.default": (
+    "akaribot.core.builtins.session.lock": ("ExecutionLockList",),
+    "akaribot.core.builtins.utils": ("command_prefix", "confirm_command"),
+    "akaribot.core.component": ("Bind", "module"),
+    "akaribot.core.config": ("CFGManager",),
+    "akaribot.core.config.base": ("BaseConfig", "CoreConfig", "CoreSecretConfig"),
+    "akaribot.core.config.decorator": ("on_bot_config", "on_module_config"),
+    "akaribot.core.constants": ("config_filename", "dev_mode"),
+    "akaribot.core.constants.default": (
         "confirm_command_default",
         "lang_list",
         "matrix_homeserver_default",
@@ -497,7 +503,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "weblate_lang_codes",
         "wiki_allowlist_url_default",
     ),
-    "core.constants.exceptions": (
+    "akaribot.core.constants.exceptions": (
         "AbuseWarning",
         "ConfigValueError",
         "ExternalException",
@@ -509,11 +515,11 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "TestException",
         "WaitCancelException",
     ),
-    "core.constants.info": ("Info", "Secret"),
-    "core.database": ("fetch_module_db", "get_model_fields", "get_model_names"),
-    "core.database.base": ("DBModel",),
-    "core.database.migration": ("MigrationContext",),
-    "core.database.models": (
+    "akaribot.core.constants.info": ("Info", "Secret"),
+    "akaribot.core.database": ("fetch_module_db", "get_model_fields", "get_model_names"),
+    "akaribot.core.database.base": ("DBModel",),
+    "akaribot.core.database.migration": ("MigrationContext",),
+    "akaribot.core.database.models": (
         "AnalyticsData",
         "JobQueuesTable",
         "MaliciousLoginRecords",
@@ -529,26 +535,26 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "UnionDeleteBlocked",
         "union_mutation",
     ),
-    "core.i18n": ("Locale", "collect_locale_paths", "get_available_locales"),
-    "core.loader": ("ModulesManager",),
-    "core.logger": ("Logger",),
-    "core.module_runtime": ("ModuleRuntimeManager",),
-    "core.queue.contracts": ("ServerAPI",),
-    "core.queue.errors": ("RpcError",),
-    "core.scheduler": ("AndTrigger", "CronTrigger", "DateTrigger", "IntervalTrigger", "OrTrigger"),
-    "core.server.terminate": ("restart",),
-    "core.smtp": ("send_report",),
-    "core.types": ("Module", "Param"),
-    "core.types.module.component_meta": ("CommandMeta",),
-    "core.utils.bash": ("run_sys_command",),
-    "core.utils.button": ("arrange_buttons", "build_button_rows"),
-    "core.utils.cache": ("random_cache_path",),
-    "core.utils.container": ("ExpiringTempDict", "TokenBucket"),
-    "core.utils.cooldown": ("CoolDown",),
-    "core.utils.dirty_check": ("check", "check_bool", "rickroll"),
-    "core.utils.func": ("chunk_list", "is_float", "is_int", "parse_time_string", "truncate_text"),
-    "core.utils.game": ("GAME_EXPIRED", "PlayState"),
-    "core.utils.http": (
+    "akaribot.core.i18n": ("Locale", "collect_locale_paths", "get_available_locales"),
+    "akaribot.core.loader": ("ModulesManager",),
+    "akaribot.core.logger": ("Logger",),
+    "akaribot.core.module_runtime": ("ModuleRuntimeManager",),
+    "akaribot.core.queue.contracts": ("ServerAPI",),
+    "akaribot.core.queue.errors": ("RpcError",),
+    "akaribot.core.scheduler": ("AndTrigger", "CronTrigger", "DateTrigger", "IntervalTrigger", "OrTrigger"),
+    "akaribot.core.server.terminate": ("restart",),
+    "akaribot.core.smtp": ("send_report",),
+    "akaribot.core.types": ("Module", "Param"),
+    "akaribot.core.types.module.component_meta": ("CommandMeta",),
+    "akaribot.core.utils.bash": ("run_sys_command",),
+    "akaribot.core.utils.button": ("arrange_buttons", "build_button_rows"),
+    "akaribot.core.utils.cache": ("random_cache_path",),
+    "akaribot.core.utils.container": ("ExpiringTempDict", "TokenBucket"),
+    "akaribot.core.utils.cooldown": ("CoolDown",),
+    "akaribot.core.utils.dirty_check": ("check", "check_bool", "rickroll"),
+    "akaribot.core.utils.func": ("chunk_list", "is_float", "is_int", "parse_time_string", "truncate_text"),
+    "akaribot.core.utils.game": ("GAME_EXPIRED", "PlayState"),
+    "akaribot.core.utils.http": (
         "delete_url",
         "download",
         "get_url",
@@ -559,11 +565,11 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "request_url",
         "url_pattern",
     ),
-    "core.utils.image": ("cb64imglst", "get_fontsize", "msgchain2image", "svg_render"),
-    "core.utils.image_table": ("ImageTable", "image_table_render"),
-    "core.utils.petal": ("cost_petal", "gained_petal", "lost_petal", "settle_petals", "sign_get_petal"),
-    "core.utils.random": ("Random", "SecureRandom"),
-    "core.utils.retired": (
+    "akaribot.core.utils.image": ("cb64imglst", "get_fontsize", "msgchain2image", "svg_render"),
+    "akaribot.core.utils.image_table": ("ImageTable", "image_table_render"),
+    "akaribot.core.utils.petal": ("cost_petal", "gained_petal", "lost_petal", "settle_petals", "sign_get_petal"),
+    "akaribot.core.utils.random": ("Random", "SecureRandom"),
+    "akaribot.core.utils.retired": (
         "RETIRED_SOURCES",
         "RETIRED_TARGETS",
         "enqueue_notice",
@@ -573,16 +579,16 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "is_retired_target",
         "should_yield_channel",
     ),
-    "core.utils.storedata": ("get_stored_list", "update_stored_list"),
-    "core.utils.table": ("escape_table_cell", "format_table_code", "resolve_table_columns"),
-    "core.utils.url_audit": (
+    "akaribot.core.utils.storedata": ("get_stored_list", "update_stored_list"),
+    "akaribot.core.utils.table": ("escape_table_cell", "format_table_code", "resolve_table_columns"),
+    "akaribot.core.utils.url_audit": (
         "GlobalURLAllowlist",
         "GlobalURLBlocklist",
         "URLRule",
         "URLRuleError",
         "evaluate_url_policy",
     ),
-    "core.utils.web_render": (
+    "akaribot.core.utils.web_render": (
         "ElementScreenshotOptions",
         "LegacyScreenshotOptions",
         "PageScreenshotOptions",

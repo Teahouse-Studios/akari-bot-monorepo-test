@@ -1,9 +1,9 @@
 import discord
 
-from bots.discord.client import discord_bot
-from bots.discord.slash_parser import slash_parser
-from core.config.base import CoreConfig
-from core.i18n import get_available_locales
+from akaribot.adapters.discord.client import discord_bot
+from akaribot.adapters.discord.slash_parser import slash_parser
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.i18n import get_available_locales
 
 
 async def auto_get_lang(ctx: discord.AutocompleteContext):

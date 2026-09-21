@@ -21,14 +21,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import bot as daemon
-from core.alive import Alive
-from core.config import CFGManager
-from core.constants import Info
-from core.loader import ModulesManager
-from core.registry import PackageEntry, PackageManifest, PackageRegistry
-from core.tester import Tester, func_case
-from core.types import Module
-from core.types.module.component_meta import CommandMeta, EventMeta
+from akaribot.core.alive import Alive
+from akaribot.core.config import CFGManager
+from akaribot.core.constants import Info
+from akaribot.core.loader import ModulesManager
+from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta, EventMeta
 
 # 目录名 → 平台展示名。onebot 与 milky 都为 "QQ"：二者是同一批账号与场景数据的两种协议接入。
 PLATFORM_NAMES = {
@@ -172,7 +172,7 @@ def _test_default_instance_names_are_byte_identical():
 
 def _test_platform_identity_derivation():
     """platform_from 是 target_from 换掉客户端段；缺信息时退化为旧的两段判据。"""
-    from core.utils.platform_scope import resolve_platform_identity
+    from akaribot.core.utils.platform_scope import resolve_platform_identity
 
     saved_platform_name = Info.platform_name
     try:
@@ -392,7 +392,7 @@ def _test_adapter_manifests_match_config_templates():
 
 def _test_four_way_scope_matches():
     """available_for 的平台级声明覆盖该平台的全部实例，实例级声明只覆盖该实例。"""
-    from core.loader import ModulesManager as manager
+    from akaribot.core.loader import ModulesManager as manager
 
     with (
         _temporary_module("__test_mi_platform", available_for=["Telegram"]),
@@ -418,7 +418,7 @@ def _test_four_way_scope_matches():
         event = EventMeta(function=lambda msg: None, name="test.multi_instance", available_for=["Telegram"])
         if not command.available_for or command.exclude_from:
             return False
-        from core.types.module.component_matches import CommandMatches, EventMatches
+        from akaribot.core.types.module.component_matches import CommandMatches, EventMatches
 
         commands = CommandMatches.init()
         commands.add(command)
@@ -442,7 +442,7 @@ def _test_return_cache_does_not_collide():
 
 async def _test_session_info_platform_fields():
     """入站会话按进程的 Info.platform_name 填平台两段；旧会话在 refresh_info 后退化为两段判据。"""
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
     saved_platform_name, saved_instance_id = Info.platform_name, Info.instance_id
     try:

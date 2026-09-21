@@ -12,12 +12,12 @@ from abc import ABC, abstractmethod
 from copy import copy
 from typing import Any
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.bot_state import BotState
-from core.constants.exceptions import SessionContextUnavailable
-from core.logger import Logger
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.constants.exceptions import SessionContextUnavailable
+from akaribot.core.logger import Logger
 
 
 class ContextManager(ABC):

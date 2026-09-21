@@ -10,7 +10,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
 WRITABLE_FIELDS = frozenset({"tmp", "prefixes", "messages", "bot_name", "muted", "locale_lang"})
 
@@ -22,7 +22,7 @@ class SessionDraftError(RuntimeError):
 def _copy_messages(messages):
     if messages is None:
         return None
-    from core.builtins.message.chain import MessageChain, MessageNodes
+    from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
 
     if isinstance(messages, MessageChain):
         return MessageChain.assign(list(messages.values))
@@ -225,7 +225,7 @@ class SessionDraft:
         # 避免其余字段已写回而 locale 静默降级造成的半提交。
         new_locale = None
         if "locale_lang" in self._dirty:
-            from core.i18n import Locale
+            from akaribot.core.i18n import Locale
 
             new_locale = Locale(prepared["locale_lang"])
         if "tmp" in self._dirty:

@@ -1,12 +1,12 @@
 import discord
 
-from bots.discord.client import ensure_client_initialized
-from bots.discord.info import *
-from bots.discord.slash_context import DiscordSlashContextManager
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
+from akaribot.adapters.discord.client import ensure_client_initialized
+from akaribot.adapters.discord.info import *
+from akaribot.adapters.discord.slash_context import DiscordSlashContextManager
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
 
 slash_ctx_id = Bot.register_context_manager(DiscordSlashContextManager)
 

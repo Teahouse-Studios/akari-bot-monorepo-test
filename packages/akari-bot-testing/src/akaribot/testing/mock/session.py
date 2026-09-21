@@ -1,16 +1,22 @@
 import asyncio
 import os
 
-from core.builtins.message.chain import get_message_chain, MessageChain
-from core.builtins.message.elements import ButtonFrameElement, PlainElement, ImageElement, MentionElement, BaseElement
-from core.builtins.message.internal import Button
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.internal import MessageSession, I18NContext
-from core.builtins.utils import confirm_command
-from core.config.base import CoreConfig
-from core.constants.exceptions import SessionFinished
-from core.utils.button import bind_callback_reply_ids
+from akaribot.core.builtins.message.chain import get_message_chain, MessageChain
+from akaribot.core.builtins.message.elements import (
+    ButtonFrameElement,
+    PlainElement,
+    ImageElement,
+    MentionElement,
+    BaseElement,
+)
+from akaribot.core.builtins.message.internal import Button
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.internal import MessageSession, I18NContext
+from akaribot.core.builtins.utils import confirm_command
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.utils.button import bind_callback_reply_ids
 
 
 class MockMessageSession(MessageSession):

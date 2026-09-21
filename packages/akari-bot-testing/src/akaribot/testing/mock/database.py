@@ -3,8 +3,8 @@ import traceback
 from tortoise import Tortoise
 from tortoise.context import TortoiseContext
 
-from core.database import fetch_module_db, close_db
-from core.logger import Logger
+from akaribot.core.database import fetch_module_db, close_db
+from akaribot.core.logger import Logger
 
 _last_init_error = ""
 
@@ -30,11 +30,11 @@ async def init_db(load_module_db: bool = True) -> bool:
                 },
                 "apps": {
                     "models": {
-                        "models": ["core.database.models"] + database_list,
+                        "models": ["akaribot.core.database.models"] + database_list,
                         "default_connection": "default",
                     },
                     "local_models": {
-                        "models": ["core.database.local"],
+                        "models": ["akaribot.core.database.local"],
                         "default_connection": "local",
                     },
                 },

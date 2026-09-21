@@ -1,9 +1,9 @@
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.utils.dirty_check import check
-from modules.wiki.utils.utils import strptime2ts
-from modules.wiki.utils.wikilib import WikiLib
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.utils.dirty_check import check
+from akaribot.modules.wiki.utils.utils import strptime2ts
+from akaribot.modules.wiki.utils.wikilib import WikiLib
 
 AB_LIMIT = 5
 

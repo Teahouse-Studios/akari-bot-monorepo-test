@@ -1,11 +1,11 @@
-from core.builtins.message.internal import ActionText
-from core.builtins.message.internal import Image as BImage
-from core.component import module
-from core.logger import Logger
-from core.scheduler import CronTrigger
-from core.types import Param
-from core.utils.func import is_int
-from core.utils.image import msgchain2image
+from akaribot.core.builtins.message.internal import ActionText
+from akaribot.core.builtins.message.internal import Image as BImage
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.scheduler import CronTrigger
+from akaribot.core.types import Param
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.image import msgchain2image
 from .libraries.maimaidx_apidata import get_alias, get_info, search_by_alias, update_alias, update_cover
 from .libraries.maimaidx_best50 import SOURCE_NAME_DIVING_FISH, SOURCE_NAME_LXNS
 from .libraries.maimaidx_best50 import generate as generate_b50

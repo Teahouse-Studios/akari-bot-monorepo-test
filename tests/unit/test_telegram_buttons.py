@@ -5,21 +5,21 @@ from unittest.mock import AsyncMock, patch
 
 from aiogram.types import InlineKeyboardMarkup
 
-from bots.telegram.buttons import (
+from akaribot.adapters.telegram.buttons import (
     build_telegram_button_markup,
     get_telegram_context_chat_and_user,
     remove_selected_button,
 )
-from bots.telegram.action_text import (
+from akaribot.adapters.telegram.action_text import (
     build_action_text_inline_results,
     can_use_inline_action_text,
     is_own_inline_message,
 )
-from bots.telegram.context_snapshot import TelegramContextSnapshot
-from core.builtins.message.internal import ActionText
-from core.tester import Tester, func_case
-from core.utils.button import build_button_rows
-from core.utils.button_runtime import BUTTON_TOKEN_PREFIX, _clear_button_registry
+from akaribot.adapters.telegram.context_snapshot import TelegramContextSnapshot
+from akaribot.core.builtins.message.internal import ActionText
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.button import build_button_rows
+from akaribot.core.utils.button_runtime import BUTTON_TOKEN_PREFIX, _clear_button_registry
 
 
 def _markup():
@@ -145,7 +145,7 @@ def _test_context_snapshot_keeps_only_permission_fields():
 
 
 async def _test_successful_callback_routes_message():
-    from bots.telegram.interactions import handle_button_callback
+    from akaribot.adapters.telegram.interactions import handle_button_callback
 
     _clear_button_registry()
     markup = _markup()
@@ -164,9 +164,11 @@ async def _test_successful_callback_routes_message():
     )
     assigned = SimpleNamespace()
     with (
-        patch("bots.telegram.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)) as assign,
-        patch("bots.telegram.interactions.Bot.process_message", new=AsyncMock()) as process,
-        patch("bots.telegram.interactions._get_bot_id", return_value="30"),
+        patch(
+            "akaribot.adapters.telegram.interactions.SessionInfo.assign", new=AsyncMock(return_value=assigned)
+        ) as assign,
+        patch("akaribot.adapters.telegram.interactions.Bot.process_message", new=AsyncMock()) as process,
+        patch("akaribot.adapters.telegram.interactions._get_bot_id", return_value="30"),
     ):
         await handle_button_callback(callback)
     kwargs = assign.await_args.kwargs
@@ -185,7 +187,7 @@ async def _test_successful_callback_routes_message():
 
 
 async def _test_callback_without_message_is_rejected():
-    from bots.telegram.interactions import handle_button_callback
+    from akaribot.adapters.telegram.interactions import handle_button_callback
 
     callback = SimpleNamespace(
         data="akb:missing",
@@ -193,13 +195,13 @@ async def _test_callback_without_message_is_rejected():
         message=None,
         answer=AsyncMock(),
     )
-    with patch("bots.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
+    with patch("akaribot.adapters.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
         await handle_button_callback(callback)
     return callback.answer.await_count == 1 and process.await_count == 0
 
 
 async def _test_forbidden_callback_does_not_route_message():
-    from bots.telegram.interactions import handle_button_callback
+    from akaribot.adapters.telegram.interactions import handle_button_callback
 
     _clear_button_registry()
     markup = _markup()
@@ -209,22 +211,22 @@ async def _test_forbidden_callback_does_not_route_message():
         message=SimpleNamespace(message_id=10, chat=SimpleNamespace(id=20, type="group")),
         answer=AsyncMock(),
     )
-    with patch("bots.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
+    with patch("akaribot.adapters.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
         await handle_button_callback(callback)
     return callback.answer.await_count == 1 and process.await_count == 0
 
 
 async def _test_unrelated_callback_is_ignored():
-    from bots.telegram.interactions import handle_button_callback
+    from akaribot.adapters.telegram.interactions import handle_button_callback
 
     callback = SimpleNamespace(data="other:callback", answer=AsyncMock())
-    with patch("bots.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
+    with patch("akaribot.adapters.telegram.interactions.Bot.process_message", new=AsyncMock()) as process:
         await handle_button_callback(callback)
     return callback.answer.await_count == 0 and process.await_count == 0
 
 
 async def _test_inline_query_handler_answers_personally_without_cache():
-    from bots.telegram.action_text import handle_action_text_inline_query
+    from akaribot.adapters.telegram.action_text import handle_action_text_inline_query
 
     inline_query = SimpleNamespace(query="~help edited", answer=AsyncMock())
     await handle_action_text_inline_query(inline_query)

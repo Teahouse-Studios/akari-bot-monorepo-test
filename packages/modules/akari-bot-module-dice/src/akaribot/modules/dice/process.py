@@ -2,12 +2,12 @@ import math
 
 from simpleeval import SimpleEval, FunctionNotDefined, NameNotDefined
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Plain
-from core.constants.exceptions import ConfigValueError
-from core.logger import Logger
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.logger import Logger
 from .dice import *
-from modules.dice.config import DiceConfig
+from akaribot.modules.dice.config import DiceConfig
 
 # 配置常量
 MAX_DICE_COUNT = DiceConfig.dice_limit  # 一次摇动最多的骰子数量

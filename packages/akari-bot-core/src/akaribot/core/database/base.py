@@ -3,10 +3,10 @@ from typing import Literal, Self, TYPE_CHECKING, overload
 from tortoise.models import Model
 from tortoise.transactions import in_transaction
 
-from core.exports import exports
+from akaribot.core.exports import exports
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 def extract_session_id(value, attr: str) -> str | None:

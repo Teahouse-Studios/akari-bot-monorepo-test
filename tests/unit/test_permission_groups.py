@@ -1,23 +1,23 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-import bots.milky.context as milky_context
-import bots.onebot.context as onebot_context
-from bots.discord.context import DiscordContextManager
-from bots.discord.features import features as discord_features
-from bots.kook.features import features as kook_features
-from bots.milky.context import MilkyContextManager
-from bots.milky.features import features as milky_features
-from bots.onebot.context import OneBotContextManager
-from bots.onebot.features import features as onebot_features
-from bots.qqbot.context import QQBotContextManager
-from bots.qqbot.features import features as qqbot_features, guild_features
-from core.builtins.bot import Bot
-from core.builtins.session.info import SessionInfo
-from core.queue.client import JobQueueClient
-from core.queue.contracts import PlatformAPI
-from core.queue.peer import ServiceRoute
-from core.tester import Tester, func_case
+import akaribot.adapters.milky.context as milky_context
+import akaribot.adapters.onebot.context as onebot_context
+from akaribot.adapters.discord.context import DiscordContextManager
+from akaribot.adapters.discord.features import features as discord_features
+from akaribot.adapters.kook.features import features as kook_features
+from akaribot.adapters.milky.context import MilkyContextManager
+from akaribot.adapters.milky.features import features as milky_features
+from akaribot.adapters.onebot.context import OneBotContextManager
+from akaribot.adapters.onebot.features import features as onebot_features
+from akaribot.adapters.qqbot.context import QQBotContextManager
+from akaribot.adapters.qqbot.features import features as qqbot_features, guild_features
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.queue.client import JobQueueClient
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.core.queue.peer import ServiceRoute
+from akaribot.testing import Tester, func_case
 
 
 async def _test_permission_group_features():
@@ -32,7 +32,7 @@ async def _test_permission_group_features():
 
 
 async def _test_server_queue_forwarding():
-    with patch("core.builtins.session.info._current_client_peer_id", return_value=None):
+    with patch("akaribot.core.builtins.session.info._current_client_peer_id", return_value=None):
         session = await SessionInfo.assign(
             target_id="Discord|Channel|123",
             target_from="Discord|Channel",
@@ -125,7 +125,7 @@ async def _test_discord_permission_groups():
         client_name="Discord",
     )
 
-    with patch("bots.discord.context.get_discord_guild", new=AsyncMock(return_value=guild)):
+    with patch("akaribot.adapters.discord.context.get_discord_guild", new=AsyncMock(return_value=guild)):
         await DiscordContextManager.grant_permission_group(
             session,
             ["Discord|Client|1", "Discord|Client|2"],
@@ -142,7 +142,7 @@ async def _test_discord_permission_groups():
 
 async def _test_kook_permission_groups():
     with patch("khl.Bot", return_value=SimpleNamespace()):
-        from bots.kook.context import KOOKContextManager
+        from akaribot.adapters.kook.context import KOOKContextManager
 
     guild = SimpleNamespace(id="123", grant_role=AsyncMock(), revoke_role=AsyncMock())
     session = SessionInfo(
@@ -151,7 +151,7 @@ async def _test_kook_permission_groups():
         client_name="KOOK",
     )
 
-    with patch("bots.kook.context.get_guild", new=AsyncMock(return_value=guild)):
+    with patch("akaribot.adapters.kook.context.get_guild", new=AsyncMock(return_value=guild)):
         await KOOKContextManager.grant_permission_group(session, ["KOOK|User|1", "KOOK|User|2"], ["10", "20"])
         await KOOKContextManager.revoke_permission_group(session, "KOOK|User|1", "10")
 
@@ -174,7 +174,7 @@ async def _test_qqbot_permission_groups():
         client_name="QQBot",
     )
 
-    with patch("bots.qqbot.context._get_client", return_value=SimpleNamespace(api=api)):
+    with patch("akaribot.adapters.qqbot.context._get_client", return_value=SimpleNamespace(api=api)):
         await QQBotContextManager.grant_permission_group(session, "QQBot|Tiny|1", ["10", "20"])
         await QQBotContextManager.revoke_permission_group(session, "QQBot|Tiny|1", "10")
 

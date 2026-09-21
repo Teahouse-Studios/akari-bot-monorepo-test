@@ -1,6 +1,6 @@
 """modules/core 核心模块集成测试。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     All,
@@ -9,7 +9,7 @@ from core.tester import (
     Empty,
     Not,
 )
-from modules.core.common_tools.help import regex_disable_prefixes
+from akaribot.modules.core.common_tools.help import regex_disable_prefixes
 
 
 @func_case

@@ -6,16 +6,16 @@ from apscheduler.triggers.combining import AndTrigger, OrTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 
-from core.builtins.parser.args import parse_template
-from core.builtins.types import MessageElement
-from core.config.decorator import _process_class
-from core.constants.exceptions import InvalidTemplatePattern
-from core.loader import ModulesManager
-from core.module_runtime import ModuleRuntimeManager, RuntimeResource
-from core.registry import PackageRegistry
-from core.scheduler import IntervalTrigger
-from core.types import Module
-from core.types.module.component_meta import *
+from akaribot.core.builtins.parser.args import parse_template
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.config.decorator import _process_class
+from akaribot.core.constants.exceptions import InvalidTemplatePattern
+from akaribot.core.loader import ModulesManager
+from akaribot.core.module_runtime import ModuleRuntimeManager, RuntimeResource
+from akaribot.core.registry import PackageRegistry
+from akaribot.core.scheduler import IntervalTrigger
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import *
 
 
 class Bind:

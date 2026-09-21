@@ -1,13 +1,13 @@
 """core.component 组件注册系统单元测试。"""
 
-from core.tester import func_case, Tester
-from core.types import Module
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
 
 
 def _test_bind_module_create():
     """Bind.Module: 创建实例"""
     try:
-        from core.component import Bind
+        from akaribot.core.component import Bind
 
         bm = Bind.Module("test_bind_module")
         return bm.module_name == "test_bind_module"

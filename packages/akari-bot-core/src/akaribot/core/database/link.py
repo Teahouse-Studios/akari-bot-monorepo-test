@@ -1,8 +1,8 @@
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from core.config.base import CoreSecretConfig
-from core.constants import database_path
+from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.constants import database_path
 
 SQLITE_CONNECTION_DEFAULTS = {
     # Tortoise 按参数顺序执行 PRAGMA。先延长锁等待时间，再尝试切换 WAL，

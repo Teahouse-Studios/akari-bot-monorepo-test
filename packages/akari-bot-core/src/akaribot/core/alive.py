@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from core.builtins.converter import converter
-from core.builtins.session.features import Features
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.features import Features
 
 if TYPE_CHECKING:
-    from core.queue.peer import PeerRecord
+    from akaribot.core.queue.peer import PeerRecord
 
 
 class Alive:

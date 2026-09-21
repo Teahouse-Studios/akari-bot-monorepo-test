@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 from aiogram.types import FSInputFile, InputMediaAudio, InputMediaPhoto
 from PIL import Image as PILImage
 
-from bots.telegram.message_builder import (
+from akaribot.adapters.telegram.message_builder import (
     TelegramAudioOperation,
     TelegramContent,
     TelegramMediaGroupOperation,
@@ -21,12 +21,12 @@ from bots.telegram.message_builder import (
     execute_telegram_operations,
     split_telegram_html,
 )
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, Button, Image, Mention, Plain, Audio
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
-from core.utils.image_split import image_split
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, Button, Image, Mention, Plain, Audio
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.image_split import image_split
 
 
 def _visible(chunks: list[str]) -> str:
@@ -43,7 +43,7 @@ def _test_prefers_newline_boundary():
 
 def _test_long_plain_text_uses_lightweight_split_path():
     text = "a" * 100_000
-    with patch("bots.telegram.message_builder._HTMLAtomParser", side_effect=AssertionError):
+    with patch("akaribot.adapters.telegram.message_builder._HTMLAtomParser", side_effect=AssertionError):
         chunks = split_telegram_html(text, 4096)
     return "".join(chunks) == text and all(len(chunk) <= 4096 for chunk in chunks)
 
@@ -147,8 +147,11 @@ async def _test_collects_text_mentions_and_media():
             [Plain("hello"), Mention("Telegram|2"), Image("image.png", allow_split=False), Audio(audio_path)]
         )
         with (
-            patch("bots.telegram.message_builder.FSInputFile", side_effect=lambda path: SimpleNamespace(path=path)),
-            patch("core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value="image.bin")),
+            patch(
+                "akaribot.adapters.telegram.message_builder.FSInputFile",
+                side_effect=lambda path: SimpleNamespace(path=path),
+            ),
+            patch("akaribot.core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value="image.bin")),
         ):
             content = await collect_telegram_content(_session(), chain)
     finally:
@@ -184,8 +187,10 @@ async def _test_image_allow_split_controls_telegram_splitting():
     unsplit_image = Image("unsplit.png", allow_split=False)
     split_result = Image("part.png", allow_split=False)
     with (
-        patch("bots.telegram.message_builder.image_split", new=AsyncMock(return_value=[split_result])) as split,
-        patch("core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value="image.bin")),
+        patch(
+            "akaribot.adapters.telegram.message_builder.image_split", new=AsyncMock(return_value=[split_result])
+        ) as split,
+        patch("akaribot.core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value="image.bin")),
     ):
         content = await collect_telegram_content(
             _session(),

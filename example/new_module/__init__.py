@@ -1,10 +1,10 @@
 import re
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image
-from core.component import module
-from core.scheduler import IntervalTrigger
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image
+from akaribot.core.component import module
+from akaribot.core.scheduler import IntervalTrigger
 
 test = module("test")
 

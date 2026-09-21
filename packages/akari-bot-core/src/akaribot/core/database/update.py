@@ -5,6 +5,6 @@ v1→v6 的升级逻辑与旧版本号转换已整体移入 :mod:`core.database.
 update_database`` 导入点保留，不再承载任何迁移步骤。
 """
 
-from core.database.legacy import update_database
+from akaribot.core.database.legacy import update_database
 
 __all__ = ["update_database"]

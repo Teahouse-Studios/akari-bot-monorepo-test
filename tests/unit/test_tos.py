@@ -5,20 +5,20 @@ import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.info import SessionInfo
-from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
-from core.database.models import SenderUnionInfo
-from core.tester import Tester, func_case
-from core.tester.timing import TIME_SCALE
-from core.tester.mock.factory import TestDataFactory
-from core.tester.mock.session import MockMessageSession
-from core.utils.container import ExpiringTempDict
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.testing import Tester, func_case
+from akaribot.testing.timing import TIME_SCALE
+from akaribot.testing.mock.factory import TestDataFactory
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.core.utils.container import ExpiringTempDict
 
 
 async def _test_check_temp_ban_no_ban():
     """check_temp_ban: 未封禁时返回 False"""
     try:
-        from modules.core.hooks.tos import check_temp_ban, temp_ban_counter
+        from akaribot.modules.core.hooks.tos import check_temp_ban, temp_ban_counter
 
         temp_ban_counter.clear()
         result = await check_temp_ban("TEST|nonexistent_target")
@@ -30,7 +30,7 @@ async def _test_check_temp_ban_no_ban():
 async def _test_check_temp_ban_with_nested_dict():
     """check_temp_ban: 存储非空 dict 时应返回剩余秒数"""
     try:
-        from modules.core.hooks.tos import check_temp_ban, temp_ban_counter
+        from akaribot.modules.core.hooks.tos import check_temp_ban, temp_ban_counter
 
         temp_ban_counter.clear()
         target_id = "TEST|ban_target_1"
@@ -47,7 +47,7 @@ async def _test_check_temp_ban_with_nested_dict():
 async def _test_remove_temp_ban():
     """remove_temp_ban: 应清除封禁记录"""
     try:
-        from modules.core.hooks.tos import check_temp_ban, remove_temp_ban, temp_ban_counter
+        from akaribot.modules.core.hooks.tos import check_temp_ban, remove_temp_ban, temp_ban_counter
 
         temp_ban_counter.clear()
         target_id = "TEST|ban_target_2"
@@ -74,11 +74,11 @@ async def _test_abuse_warn_target_sends_message():
 
     with (
         patch.object(MockMessageSession, "check_super_user", lambda self: False),
-        patch("modules.core.hooks.tos.CoreConfig", MockConfig),
-        patch("modules.core.hooks.tos.tos_report", new_callable=AsyncMock),
-        patch("modules.core.hooks.tos._warning_counts", return_value=1),
+        patch("akaribot.modules.core.hooks.tos.CoreConfig", MockConfig),
+        patch("akaribot.modules.core.hooks.tos.tos_report", new_callable=AsyncMock),
+        patch("akaribot.modules.core.hooks.tos._warning_counts", return_value=1),
     ):
-        from modules.core.hooks.tos import abuse_warn_target
+        from akaribot.modules.core.hooks.tos import abuse_warn_target
 
         await abuse_warn_target(msg, "test_reason")
 
@@ -88,9 +88,9 @@ async def _test_abuse_warn_target_sends_message():
 async def _test_tos_report_no_targets():
     """tos_report: 无报告场景时不报错"""
     try:
-        from modules.core.hooks.tos import tos_report
+        from akaribot.modules.core.hooks.tos import tos_report
 
-        with patch("modules.core.hooks.tos._report_targets", return_value=[]):
+        with patch("akaribot.modules.core.hooks.tos._report_targets", return_value=[]):
             await tos_report("TEST|sender", "TEST|target", "reason")
         return True
     except Exception:
@@ -99,13 +99,13 @@ async def _test_tos_report_no_targets():
 
 async def _test_tos_report_delegates_to_send_report():
     """tos_report: 上报统一经 core.smtp.send_report，并透传上报场景与邮件主题"""
-    from core.builtins.message.chain import MessageChain
-    from core.builtins.message.elements import I18NContextElement
-    from modules.core.hooks.tos import tos_report
+    from akaribot.core.builtins.message.chain import MessageChain
+    from akaribot.core.builtins.message.elements import I18NContextElement
+    from akaribot.modules.core.hooks.tos import tos_report
 
     with (
-        patch("modules.core.hooks.tos._report_targets", return_value=["TEST|Group|report"]),
-        patch("modules.core.hooks.tos.send_report", new_callable=AsyncMock) as report,
+        patch("akaribot.modules.core.hooks.tos._report_targets", return_value=["TEST|Group|report"]),
+        patch("akaribot.modules.core.hooks.tos.send_report", new_callable=AsyncMock) as report,
     ):
         await tos_report("TEST|sender", "TEST|target", "{I18N:tos.message.reason.abuse}")
 
@@ -123,10 +123,10 @@ async def _test_tos_report_delegates_to_send_report():
 
 async def _test_tos_report_blocked_action():
     """tos_report: 封禁上报应标记为已封禁动作"""
-    from core.builtins.message.elements import I18NContextElement
-    from modules.core.hooks.tos import tos_report
+    from akaribot.core.builtins.message.elements import I18NContextElement
+    from akaribot.modules.core.hooks.tos import tos_report
 
-    with patch("modules.core.hooks.tos.send_report", new_callable=AsyncMock) as report:
+    with patch("akaribot.modules.core.hooks.tos.send_report", new_callable=AsyncMock) as report:
         await tos_report("TEST|sender", "TEST|target", "{I18N:tos.message.reason.abuse}", banned=True)
 
     message = report.await_args.args[0]
@@ -140,18 +140,18 @@ async def _test_tos_report_blocked_action():
 
 async def _test_tos_report_email_takes_priority():
     """tos_report: 启用邮件上报后发邮件，不再回传到上报场景"""
-    from core.builtins.bot import Bot
-    from core.config.base import SMTPConfig
-    from modules.core.hooks.tos import tos_report
+    from akaribot.core.builtins.bot import Bot
+    from akaribot.core.config.base import SMTPConfig
+    from akaribot.modules.core.hooks.tos import tos_report
 
     direct_sender = AsyncMock()
     with (
         patch.object(SMTPConfig, "enable_email_report", True),
         patch.object(SMTPConfig, "smtp_host", "smtp.example.com"),
         patch.object(SMTPConfig, "smtp_recipients", ["ops@example.com"]),
-        patch("core.smtp.send_email") as send_email,
+        patch("akaribot.core.smtp.send_email") as send_email,
         patch.object(Bot, "send_direct_message", direct_sender),
-        patch("modules.core.hooks.tos._report_targets", return_value=["TEST|Group|report"]),
+        patch("akaribot.modules.core.hooks.tos._report_targets", return_value=["TEST|Group|report"]),
     ):
         await tos_report("TEST|sender", "TEST|target", "{I18N:tos.message.reason.abuse}", banned=True)
 
@@ -164,7 +164,7 @@ async def _test_tos_report_email_takes_priority():
 async def _test_temp_ban_counter_type():
     """temp_ban_counter: 应为 ExpiringTempDict 实例"""
     try:
-        from modules.core.hooks.tos import temp_ban_counter
+        from akaribot.modules.core.hooks.tos import temp_ban_counter
 
         return isinstance(temp_ban_counter, ExpiringTempDict)
     except Exception:
@@ -174,7 +174,7 @@ async def _test_temp_ban_counter_type():
 async def _test_check_temp_ban_expired():
     """check_temp_ban: 过期的封禁应返回 False"""
     try:
-        from modules.core.hooks.tos import check_temp_ban, temp_ban_counter
+        from akaribot.modules.core.hooks.tos import check_temp_ban, temp_ban_counter
 
         temp_ban_counter.clear()
         target_id = "TEST|ban_expired"
@@ -210,8 +210,8 @@ async def _bound_sessions(prefix: str):
 
 async def _test_temp_ban_shared_by_sender_union():
     """临时封禁不能通过切换同一 Union 下的另一个平台身份绕过。"""
-    from core.builtins.parser.hooks import Stop
-    from modules.core.hooks.tos import _temp_ban_check, temp_ban_counter
+    from akaribot.core.builtins.parser.hooks import Stop
+    from akaribot.modules.core.hooks.tos import _temp_ban_check, temp_ban_counter
 
     first, second = await _bound_sessions("temp-ban-union")
     temp_ban_counter.clear()
@@ -227,8 +227,8 @@ async def _test_temp_ban_shared_by_sender_union():
 
 async def _test_rate_bucket_shared_by_sender_union():
     """单命令令牌桶应由绑定身份共同消耗。"""
-    from core.builtins.parser.hooks import Stop
-    from modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
+    from akaribot.core.builtins.parser.hooks import Stop
+    from akaribot.modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
 
     first, second = await _bound_sessions("rate-union")
     _buckets_same.clear()
@@ -269,8 +269,8 @@ async def test_tos(tester: Tester):
 
 async def _dispatch_tos_point(point, msg):
     """用真实 ToS 订阅和生产 executor 验证控制结果契约。"""
-    from core.builtins.parser.hooks import ParserHookExecutor, build_subscription
-    from core.loader import ModulesManager
+    from akaribot.core.builtins.parser.hooks import ParserHookExecutor, build_subscription
+    from akaribot.core.loader import ModulesManager
 
     module = ModulesManager.modules["tos"]
     subscriptions = [
@@ -287,15 +287,15 @@ async def _dispatch_tos_point(point, msg):
 
 async def _test_counter_overflow_survives_notify_failure():
     """令牌桶超限后即使处罚通知发送失败，也必须返回 Stop（拒绝决定不丢失）。"""
-    from core.builtins.parser.hooks import HookPoint, Stop, StopScope
-    from modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
+    from akaribot.core.builtins.parser.hooks import HookPoint, Stop, StopScope
+    from akaribot.modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
 
     first, _ = await _bound_sessions("notify-fail-union")
     first.trigger_msg = "flood-command"
     _buckets_same.clear()
     _buckets_all.clear()
     try:
-        with patch("modules.core.hooks.tos._enable_tos", return_value=True):
+        with patch("akaribot.modules.core.hooks.tos._enable_tos", return_value=True):
             for _ in range(10):
                 assert await _msg_counter(first, first.trigger_msg) is None
             for point, scope in (
@@ -308,7 +308,7 @@ async def _test_counter_overflow_survives_notify_failure():
                     SessionFinished(),
                     WaitCancelException(),
                 ):
-                    with patch("modules.core.hooks.tos._apply_abuse", new=AsyncMock(side_effect=error)):
+                    with patch("akaribot.modules.core.hooks.tos._apply_abuse", new=AsyncMock(side_effect=error)):
                         outcome = await _dispatch_tos_point(point, first)
                     assert outcome.failed == 0 and outcome.executed == 1
                     assert isinstance(outcome.result, Stop) and outcome.result.scope == scope
@@ -320,14 +320,14 @@ async def _test_counter_overflow_survives_notify_failure():
 
 async def _test_temp_ban_hint_has_no_compat_metadata():
     """临封提示与升级处罚都使用普通 Stop，不携带旧流程兼容元数据。"""
-    from core.builtins.parser.hooks import HookPoint, Stop
-    from modules.core.hooks.tos import _temp_ban_check, temp_ban_counter
+    from akaribot.core.builtins.parser.hooks import HookPoint, Stop
+    from akaribot.modules.core.hooks.tos import _temp_ban_check, temp_ban_counter
 
     first, _ = await _bound_sessions("stats-compat-union")
     temp_ban_counter.clear()
     try:
         # 两种提示都必须通过真实 executor 的消息类型校验，不能降级为 Continue。
-        with patch("modules.core.hooks.tos._enable_tos", return_value=True):
+        with patch("akaribot.modules.core.hooks.tos._enable_tos", return_value=True):
             for point in (HookPoint.COMMAND_PREPARE, HookPoint.REGEX_PREPARE):
                 for count in (0, 2):
                     entry = ExpiringTempDict(exp=300, ts=time.time(), root=False)
@@ -345,7 +345,7 @@ async def _test_temp_ban_hint_has_no_compat_metadata():
         entry2 = ExpiringTempDict(exp=300, ts=time.time(), root=False)
         entry2["count"] = 4
         temp_ban_counter[first.session_info.sender_union_id] = entry2
-        with patch("modules.core.hooks.tos._apply_abuse", new=AsyncMock()):
+        with patch("akaribot.modules.core.hooks.tos._apply_abuse", new=AsyncMock()):
             escalated = await _temp_ban_check(first)
         assert isinstance(escalated, Stop)
         assert escalated.data.get("penalty")
@@ -356,10 +356,10 @@ async def _test_temp_ban_hint_has_no_compat_metadata():
 
 
 async def _test_penalty_cancellation_propagates():
-    from modules.core.hooks.tos import _apply_abuse_safely
+    from akaribot.modules.core.hooks.tos import _apply_abuse_safely
 
     for error in (asyncio.CancelledError(), SystemExit(), KeyboardInterrupt()):
-        with patch("modules.core.hooks.tos._apply_abuse", new=AsyncMock(side_effect=error)):
+        with patch("akaribot.modules.core.hooks.tos._apply_abuse", new=AsyncMock(side_effect=error)):
             try:
                 await _apply_abuse_safely(None, "reason")
             except BaseException as raised:
@@ -370,7 +370,7 @@ async def _test_penalty_cancellation_propagates():
 
 
 async def _test_enforcement_failure_stops_execution():
-    from core.builtins.parser.hooks import HookPoint, Stop, StopScope
+    from akaribot.core.builtins.parser.hooks import HookPoint, Stop, StopScope
 
     first, _ = await _bound_sessions("check-fail-union")
     for point in (
@@ -379,13 +379,13 @@ async def _test_enforcement_failure_stops_execution():
         HookPoint.REGEX_PREPARE,
         HookPoint.REGEX_BEFORE_EXECUTE,
     ):
-        with patch("modules.core.hooks.tos._enable_tos", side_effect=RuntimeError("check failed")):
+        with patch("akaribot.modules.core.hooks.tos._enable_tos", side_effect=RuntimeError("check failed")):
             outcome = await _dispatch_tos_point(point, first)
         assert outcome.failed == 0 and outcome.executed == 1
         assert isinstance(outcome.result, Stop) and outcome.result.scope == StopScope.MESSAGE
         assert outcome.result.data["error"] == "tos_check_failed"
         for error in (asyncio.CancelledError(), SystemExit(), KeyboardInterrupt()):
-            with patch("modules.core.hooks.tos._enable_tos", side_effect=error):
+            with patch("akaribot.modules.core.hooks.tos._enable_tos", side_effect=error):
                 try:
                     await _dispatch_tos_point(point, first)
                 except BaseException as raised:
@@ -396,9 +396,9 @@ async def _test_enforcement_failure_stops_execution():
 
 
 async def _test_slow_penalty_keeps_rejection():
-    from core.builtins.parser.hooks import HookPoint, Stop
-    from core.loader import ModulesManager
-    from modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
+    from akaribot.core.builtins.parser.hooks import HookPoint, Stop
+    from akaribot.core.loader import ModulesManager
+    from akaribot.modules.core.hooks.tos import _buckets_all, _buckets_same, _msg_counter
 
     enforced_points = {
         HookPoint.COMMAND_PREPARE,
@@ -417,10 +417,10 @@ async def _test_slow_penalty_keeps_rejection():
     _buckets_same.clear()
     _buckets_all.clear()
     try:
-        with patch("modules.core.hooks.tos._enable_tos", return_value=True):
+        with patch("akaribot.modules.core.hooks.tos._enable_tos", return_value=True):
             for _ in range(10):
                 assert await _msg_counter(first, first.trigger_msg) is None
-            with patch("modules.core.hooks.tos._apply_abuse", side_effect=slow_penalty):
+            with patch("akaribot.modules.core.hooks.tos._apply_abuse", side_effect=slow_penalty):
                 outcome = await asyncio.wait_for(
                     _dispatch_tos_point(HookPoint.COMMAND_BEFORE_PARSE, first),
                     timeout=0.5 * TIME_SCALE,

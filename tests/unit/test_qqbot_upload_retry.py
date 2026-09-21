@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, patch
 import httpx
 from botpy.protocol import ApiError, MediaFileType, MessageType, TransportError
 
-import bots.qqbot.context as qqbot_context
-from bots.qqbot.context import QQBotContextManager
-from bots.qqbot.info import target_c2c_prefix, target_group_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import AudioElement, ImageElement, PlainElement, VideoElement
-from core.builtins.session.info import SessionInfo
-from core.tester import Tester, func_case
+import akaribot.adapters.qqbot.context as qqbot_context
+from akaribot.adapters.qqbot.context import QQBotContextManager
+from akaribot.adapters.qqbot.info import target_c2c_prefix, target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import AudioElement, ImageElement, PlainElement, VideoElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import Tester, func_case
 
 
 def _client(uploads, sends=None):

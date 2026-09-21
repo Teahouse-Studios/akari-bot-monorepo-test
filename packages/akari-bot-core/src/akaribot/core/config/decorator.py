@@ -16,7 +16,7 @@ import inspect
 from types import UnionType
 from typing import Any, Literal, TypeVar, get_args
 
-from core.exports import add_export
+from akaribot.core.exports import add_export
 from . import CFGManager, ALLOWED_TYPES
 
 # 类型变量，用于泛型支持

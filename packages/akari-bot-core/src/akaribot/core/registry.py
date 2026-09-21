@@ -66,7 +66,7 @@ def _logger():
     而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
     （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要写日志时。
     """
-    from core.logger import Logger
+    from akaribot.core.logger import Logger
 
     return Logger
 
@@ -598,7 +598,7 @@ class PackageRegistry:
         :return: 配置模板的模块名列表。
         """
         cls.discover()
-        names = ["core.config.base"]
+        names = ["akaribot.core.config.base"]
         for kind in ("adapter", "module"):
             candidates = sorted(
                 (entry for entry in cls._entries.values() if entry.kind == kind),
@@ -693,7 +693,7 @@ class PackageRegistry:
         取实例的可写 data 目录，而非顶层只读的 assets：包的可写数据不属于随仓库分发的
         内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
         """
-        from core.paths import Paths
+        from akaribot.core.paths import Paths
 
         return Paths.data
 

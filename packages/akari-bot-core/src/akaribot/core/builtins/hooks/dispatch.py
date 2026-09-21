@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.loader import ModulesManager
+from akaribot.core.loader import ModulesManager
 
 from .executor import ModuleHookExecutor
 

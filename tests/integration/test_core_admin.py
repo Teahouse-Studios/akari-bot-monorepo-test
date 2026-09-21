@@ -1,6 +1,6 @@
 """modules/core 管理员命令集成测试。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

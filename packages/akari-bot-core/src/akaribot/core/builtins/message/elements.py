@@ -26,12 +26,12 @@ from attrs import define
 from filetype import filetype
 from tenacity import retry, stop_after_attempt
 
-from core.i18n import safe_strftime
-from core.logger import Logger
-from core.utils.cache import random_cache_path
+from akaribot.core.i18n import safe_strftime
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
 
 if TYPE_CHECKING:
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
 
 class BaseElement:

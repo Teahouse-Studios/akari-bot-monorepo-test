@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from core.logger import Logger
+from akaribot.core.logger import Logger
 from .execute_python_code import *
 from .fetch_webpage import *
 from .search_images import *

@@ -1,10 +1,10 @@
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Url
-from core.config.base import CoreConfig
-from core.utils.bash import run_sys_command
-from modules.core.common_tools.about import about
-from modules.core.common_tools.version_utils import get_version_display
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Url
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.utils.bash import run_sys_command
+from akaribot.modules.core.common_tools.about import about
+from akaribot.modules.core.common_tools.version_utils import get_version_display
 
 
 @about.command("version {{I18N:core.help.about.version}}")

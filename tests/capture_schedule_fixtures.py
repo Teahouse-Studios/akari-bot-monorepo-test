@@ -19,13 +19,13 @@ import sys
 
 sys.path.insert(0, ".")
 
-from core.tester.mock.database import init_db, close_db
-from core.tester.mock.fixtures import save_fixture
-from core.tester.mock.http import digest_request_body
-from core.tester.mock.loader import load_modules
-from core.tester.mock.random import Random
-from core.tester.mock.scheduler import get_scheduled_tasks
-from core.tester.mock.webrender import save_webrender_fixture
+from akaribot.testing.mock.database import init_db, close_db
+from akaribot.testing.mock.fixtures import save_fixture
+from akaribot.testing.mock.http import digest_request_body
+from akaribot.testing.mock.loader import load_modules
+from akaribot.testing.mock.random import Random
+from akaribot.testing.mock.scheduler import get_scheduled_tasks
+from akaribot.testing.mock.webrender import save_webrender_fixture
 
 # 这些模块的定时任务无法在录制环境中产生有效语料，跳过以免徒劳等待。
 SKIPPED = {
@@ -62,8 +62,8 @@ async def main():
     await init_db()
     await load_modules(show_logs=False, monkey_patches={"Random": Random()}, load_fixtures=False)
 
-    import core.utils.http as http_module
-    from core.utils.web_render import web_render
+    import akaribot.core.utils.http as http_module
+    from akaribot.core.utils.web_render import web_render
 
     original_request = http_module.request_url
     original_source = web_render.source

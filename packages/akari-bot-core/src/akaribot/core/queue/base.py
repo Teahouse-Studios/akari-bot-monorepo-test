@@ -17,10 +17,10 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from uuid import uuid4
 
-from core.constants import QueueAlreadyRunning
-from core.logger import Logger
-from core.queue.backend import create_jobqueue_backend, JobQueueBackend
-from core.queue.errors import (
+from akaribot.core.constants import QueueAlreadyRunning
+from akaribot.core.logger import Logger
+from akaribot.core.queue.backend import create_jobqueue_backend, JobQueueBackend
+from akaribot.core.queue.errors import (
     ERROR_TYPES,
     RpcCancelledError,
     RpcError,
@@ -30,7 +30,7 @@ from core.queue.errors import (
     RpcTimeoutError,
     RpcUnavailableError,
 )
-from core.queue.transport import (
+from akaribot.core.queue.transport import (
     BatchSendResult,
     DEFAULT_TIMEOUT_SECONDS,
     JsonValue,
@@ -40,7 +40,7 @@ from core.queue.transport import (
     MessageTransport,
     MAX_RPC_TRACEBACK_LENGTH,
 )
-from core.queue.peer import (
+from akaribot.core.queue.peer import (
     PeerIdentity,
     PeerRegistry,
     PeerSelector,
@@ -188,7 +188,7 @@ class JobQueueBase:
         json.dumps(peer_metadata, allow_nan=False)
         if node_id is None:
             # 延迟导入配置模板，避免仅导入 JobQueue 基础模块便触发配置系统的初始化副作用。
-            from core.config.jobqueue import JobQueueConfig
+            from akaribot.core.config.jobqueue import JobQueueConfig
 
             node_id = JobQueueConfig.jobqueue_node_id
             if isinstance(node_id, str):
@@ -215,7 +215,7 @@ class JobQueueBase:
         cls._maintenance_exclusive_owner = None
         cls._shutting_down = False
         cls.pause_event.set()
-        from core.constants import Info
+        from akaribot.core.constants import Info
 
         Info.peer_id = peer_id
         Info.peer_role = role
@@ -1242,7 +1242,7 @@ class JobQueueBase:
         """以当前后端的权威注册表对账进程内拓扑缓存。"""
         expired_peer_ids = await cls.registry.expire_stale()
         records = await cls.registry.resolve()
-        from core.alive import Alive
+        from akaribot.core.alive import Alive
 
         for peer_id in expired_peer_ids:
             data = Alive.values.get(peer_id, {})
@@ -1273,7 +1273,7 @@ class JobQueueBase:
 
     @staticmethod
     def _update_peer_cache(snapshot: dict, *, force: bool = False) -> None:
-        from core.alive import Alive
+        from akaribot.core.alive import Alive
 
         peer_id = snapshot.get("peer_id")
         if not isinstance(peer_id, str) or not peer_id:
@@ -1465,7 +1465,7 @@ class JobQueueBase:
         finally:
             cls._ready_event.clear()
             cls._maintenance_active = False
-            from core.alive import Alive
+            from akaribot.core.alive import Alive
 
             Alive.refresh_peer(
                 cls.name,

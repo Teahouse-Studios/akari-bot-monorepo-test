@@ -2,10 +2,10 @@ import asyncio
 
 import discord
 
-from bots.discord.info import sender_prefix_list, target_prefix_list
-from core.client.init import client_cleanup, client_init
-from core.config.base import CoreSecretConfig
-from core.logger import Logger
+from akaribot.adapters.discord.info import sender_prefix_list, target_prefix_list
+from akaribot.core.client.init import client_cleanup, client_init
+from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.logger import Logger
 
 proxy = CoreSecretConfig.proxy
 
@@ -21,8 +21,8 @@ class AkariDiscordBot(discord.Bot):
         global _client_init_task
         try:
             try:
-                from bots.discord.context import DiscordContextManager
-                from bots.discord.slash_context import DiscordSlashContextManager
+                from akaribot.adapters.discord.context import DiscordContextManager
+                from akaribot.adapters.discord.slash_context import DiscordSlashContextManager
 
                 results = await asyncio.gather(
                     DiscordContextManager.shutdown(),

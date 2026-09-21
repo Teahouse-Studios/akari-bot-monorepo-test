@@ -11,18 +11,18 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from apscheduler.triggers.interval import IntervalTrigger
 
-import core.loader as loader_module
-from core.config import CFGManager
-from core.constants import PrivateData
-from core.database.models import ModuleStatus
-from core.loader import ModulesManager
-from core.module_runtime import ModuleRuntimeManager
-from core.queue.server import JobQueueServer
-from core.registry import PackageEntry, PackageManifest, PackageRegistry
-from core.scheduler import SchedulerLifecycle
-from core.tester import func_case, Tester
-from core.types import Module
-from core.types.module.component_meta import CommandMeta, EventMeta, HookMeta, RegexMeta, ScheduleMeta
+import akaribot.core.loader as loader_module
+from akaribot.core.config import CFGManager
+from akaribot.core.constants import PrivateData
+from akaribot.core.database.models import ModuleStatus
+from akaribot.core.loader import ModulesManager
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
+from akaribot.core.scheduler import SchedulerLifecycle
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta, EventMeta, HookMeta, RegexMeta, ScheduleMeta
 
 
 RENAMED_MODULES = {
@@ -850,15 +850,15 @@ def _test_reload_dependency_closure_is_dependency_first():
         patch.dict(
             ModulesManager._dependency_graph,
             {
-                "modules.wiki": set(),
-                "modules.wikilog": {"modules.wiki"},
-                "modules.wiki-audit": {"modules.wiki"},
+                "akaribot.modules.wiki": set(),
+                "modules.wikilog": {"akaribot.modules.wiki"},
+                "modules.wiki-audit": {"akaribot.modules.wiki"},
             },
             clear=True,
         ),
     ):
-        closure = ModulesManager._reload_closure("modules.wiki")
-    return closure == ["modules.wiki", "modules.wiki-audit", "modules.wikilog"]
+        closure = ModulesManager._reload_closure("akaribot.modules.wiki")
+    return closure == ["akaribot.modules.wiki", "modules.wiki-audit", "modules.wikilog"]
 
 
 def _test_dependency_scan_covers_from_import_and_dynamic_import():

@@ -1,19 +1,19 @@
 import re
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext
-from core.component import module
-from core.config.base import CoreConfig
-from core.database.models import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import (
     UNION_SCOPE_SENDER,
     UNION_SCOPE_TARGET,
     SenderUnionInfo,
     TargetUnionBind,
     TargetUnionInfo,
 )
-from core.utils.retired import RETIRED_SOURCES, RETIRED_TARGETS, enqueue_notice, is_merge_route_allowed
-from core.utils.container import ExpiringTempDict
-from modules.core.common_tools._union_merge import (
+from akaribot.core.utils.retired import RETIRED_SOURCES, RETIRED_TARGETS, enqueue_notice, is_merge_route_allowed
+from akaribot.core.utils.container import ExpiringTempDict
+from akaribot.modules.core.common_tools._union_merge import (
     BIND_CODE_EXPIRED,
     apply_sender_merge,
     apply_target_merge,
@@ -27,7 +27,7 @@ from modules.core.common_tools._union_merge import (
     take_code,
     target_lines,
 )
-from modules.core.common_tools.bind import b
+from akaribot.modules.core.common_tools.bind import b
 
 # 迁移码与 bind 的绑定码分开存放，两者不可互相消费：
 # 迁移码用于把退役实例上的数据搬到新实例，与常规的跨平台绑定不是同一件事。

@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from tortoise.exceptions import DoesNotExist
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Image, I18NContext, FormattedTime
-from core.component import module
-from core.config.base import CoreConfig
-from core.database.models import AnalyticsData
-from core.logger import Logger
-from core.utils.cache import random_cache_path
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Image, I18NContext, FormattedTime
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import AnalyticsData
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
 
 enable_analytics = CoreConfig.enable_analytics
 

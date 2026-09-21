@@ -3,8 +3,8 @@
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from core.tester import func_case, Tester
-from modules.ai import setting
+from akaribot.testing import func_case, Tester
+from akaribot.modules.ai import setting
 
 
 def _test_time_rules_use_server_time():

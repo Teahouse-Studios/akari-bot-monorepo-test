@@ -2,12 +2,12 @@ import re
 
 from aiocqhttp.exceptions import NetworkError
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.constants import Info
-from core.logger import Logger
-from modules.wiki.database.models import WikiTargetInfo
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.constants import Info
+from akaribot.core.logger import Logger
+from akaribot.modules.wiki.database.models import WikiTargetInfo
 from .ab import get_ab
 from .ab_qq import get_ab_qq
 from .newbie import get_newbie

@@ -11,10 +11,10 @@ send_direct_message_to_union_target 亦走这条路，其行为另由 test_union
 
 from datetime import UTC, datetime, timedelta
 
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.database.models import JobQueuePeersTable, TargetUnionBind, TargetUnionInfo
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.database.models import JobQueuePeersTable, TargetUnionBind, TargetUnionInfo
+from akaribot.testing import func_case, Tester
 
 _CLIENT = "REPORTTEST"
 

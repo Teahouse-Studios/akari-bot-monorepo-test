@@ -2,8 +2,8 @@
 
 import asyncio
 
-from core.client.init import client_cleanup
-from core.logger import Logger
+from akaribot.core.client.init import client_cleanup
+from akaribot.core.logger import Logger
 
 
 async def shutdown(bot) -> None:

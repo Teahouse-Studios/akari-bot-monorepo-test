@@ -12,20 +12,20 @@ import asyncio
 import logging
 
 import orjson
-from core.builtins.bot import Bot
-from core.builtins.converter import converter
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, I18NContext
-from core.builtins.session.info import SessionInfo
-from core.config import CFGManager
-from core.constants import assets_path, Info, PrivateData, Secret
-from core.database import init_db
-from core.loader import load_modules, ModulesManager
-from core.logger import Logger
-from core.queue.server import JobQueueServer
-from core.queue.backend import create_jobqueue_backend
-from core.scheduler import IntervalTrigger, SchedulerLifecycle
-from core.utils.bash import run_sys_command
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, I18NContext
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.config import CFGManager
+from akaribot.core.constants import assets_path, Info, PrivateData, Secret
+from akaribot.core.database import init_db
+from akaribot.core.loader import load_modules, ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.queue.backend import create_jobqueue_backend
+from akaribot.core.scheduler import IntervalTrigger, SchedulerLifecycle
+from akaribot.core.utils.bash import run_sys_command
 from .background_tasks import hourly_background_task, start_background_task
 
 # 等待发起重启的客户端重新注册为 ready 的秒数上限。server 与各 bot 子进程一同重启，
@@ -134,7 +134,7 @@ async def _wait_for_client_online(
     :return: 新客户端实例 ID，超时则返回 None
     """
 
-    from core.queue.peer import PeerSelector
+    from akaribot.core.queue.peer import PeerSelector
 
     async def _poll():
         selector = PeerSelector(roles=("client",), services=(client_name,))

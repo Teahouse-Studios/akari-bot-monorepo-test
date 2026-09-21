@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
+from akaribot.core.database.migration import MigrationContext
 
 REVISION = "0002_banned_users_and_nullable_sender"
 DEPENDS_ON = "0001_initial"

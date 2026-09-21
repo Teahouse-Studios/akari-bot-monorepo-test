@@ -3,11 +3,11 @@
 import inspect
 from unittest.mock import patch
 
-from core.constants.exceptions import ConfigValueError
-from core.tester import func_case, Tester
-from modules.maimai.database.models import LxnsProberBindInfo
-from modules.maimai.libraries import lxns_apidata, lxns_oauth, maimaidx_apidata
-from modules.maimai.libraries.lxns_apidata import (
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.testing import func_case, Tester
+from akaribot.modules.maimai.database.models import LxnsProberBindInfo
+from akaribot.modules.maimai.libraries import lxns_apidata, lxns_oauth, maimaidx_apidata
+from akaribot.modules.maimai.libraries.lxns_apidata import (
     LXNS_MAIMAI_BESTS_BY_FRIEND_CODE_URL,
     LXNS_MAIMAI_PLAYER_BY_FRIEND_CODE_URL,
     df_to_lxns_id,
@@ -21,14 +21,14 @@ from modules.maimai.libraries.lxns_apidata import (
     score_rating,
     top_rated,
 )
-from modules.maimai.libraries.maimaidx_utils import compute_rating
-from modules.maimai.libraries.lxns_oauth import (
+from akaribot.modules.maimai.libraries.maimaidx_utils import compute_rating
+from akaribot.modules.maimai.libraries.lxns_oauth import (
     _extract_bind_code,
     build_authorize_url,
     fetch_player_field,
     unwrap,
 )
-from modules.maimai.libraries.source import (
+from akaribot.modules.maimai.libraries.source import (
     GAME_CHUNITHM,
     GAME_MAIMAI,
     SOURCE_DIVING_FISH,

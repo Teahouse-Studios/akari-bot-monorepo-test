@@ -1,6 +1,6 @@
 import orjson
 
-from core.utils.http import get_url
+from akaribot.core.utils.http import get_url
 
 
 async def get_profile_name(userid):

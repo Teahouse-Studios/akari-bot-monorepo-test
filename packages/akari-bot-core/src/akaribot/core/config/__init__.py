@@ -21,18 +21,18 @@ from tomlkit import (
 from tomlkit.exceptions import KeyAlreadyPresent
 from tomlkit.items import AoT, Table
 
-from core.constants.path import CONFIG_READONLY_ENV, config_path as default_config_path
+from akaribot.core.constants.path import CONFIG_READONLY_ENV, config_path as default_config_path
 
 # 守护进程在 spawn 子进程之前置位，spawn 会继承环境。
 CONFIG_READONLY = bool(os.environ.get(CONFIG_READONLY_ENV))
 
 if not CONFIG_READONLY:
-    import core.config.update  # noqa
+    import akaribot.core.config.update  # noqa
 
-from core.constants.default import default_locale
-from core.constants.exceptions import ConfigValueError, ConfigOperationError
-from core.exports import add_export
-from core.i18n import Locale
+from akaribot.core.constants.default import default_locale
+from akaribot.core.constants.exceptions import ConfigValueError, ConfigOperationError
+from akaribot.core.exports import add_export
+from akaribot.core.i18n import Locale
 
 ALLOWED_TYPES = (bool, datetime.datetime, datetime.date, float, int, list, str)
 I18N_COMMENT_PATTERN = re.compile(r"^#\s*\{I18N:(?P<key>[^}]+)}\s*$")
@@ -129,7 +129,7 @@ class CFGManager:
             读取路径取 True；写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
         :return: 实际使用的表名。
         """
-        from core.constants.info import Info
+        from akaribot.core.constants.info import Info
 
         if not table_name or not Info.instance_id or not table_name.startswith("bot_"):
             return table_name

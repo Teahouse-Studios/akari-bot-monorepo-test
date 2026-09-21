@@ -8,14 +8,14 @@
 import math
 import uuid
 
-from core.builtins.message.elements import (
+from akaribot.core.builtins.message.elements import (
     ButtonElement,
     ButtonFrameElement,
     ButtonPermission,
     ButtonRows,
     I18NContextElement,
 )
-from core.logger import Logger
+from akaribot.core.logger import Logger
 
 # 平台单行按钮数量的硬上限
 MAX_BUTTONS_PER_ROW = 10

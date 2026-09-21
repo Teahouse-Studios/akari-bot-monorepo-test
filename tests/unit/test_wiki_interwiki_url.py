@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, patch
 
-from core.tester import func_case, Tester
-from modules.wiki.utils.wikilib import WikiInfo, WikiLib, WikiStatus
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.utils.wikilib import WikiInfo, WikiLib, WikiStatus
 
 SOURCE_API = "https://zh.minecraft.wiki/api.php"
 TARGET_PAGE_URL = "https://meta.minecraft.wiki/w/Namespace_IDs?variant=zh-cn"

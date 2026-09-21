@@ -1,7 +1,7 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext
-from core.component import module
-from core.database.models import SenderUnionBind, SenderUnionInfo
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext
+from akaribot.core.component import module
+from akaribot.core.database.models import SenderUnionBind, SenderUnionInfo
 
 admin = module(
     "admin",

@@ -5,17 +5,17 @@ import orjson
 from bs4 import BeautifulSoup
 from google_play_scraper import app as google_play_scraper
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, FormattedTime
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants import Secret
-from core.logger import Logger
-from core.scheduler import IntervalTrigger
-from core.utils.http import get_url
-from core.utils.storedata import get_stored_list, update_stored_list
-from core.utils.web_render import web_render, SourceOptions
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, FormattedTime
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants import Secret
+from akaribot.core.logger import Logger
+from akaribot.core.scheduler import IntervalTrigger
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.storedata import get_stored_list, update_stored_list
+from akaribot.core.utils.web_render import web_render, SourceOptions
 
 SNAPSHOT_PATTERN = re.compile(r"^(?P<major>[\d.]+)-snapshot-?(?P<patch>\d+)$")
 OLD_SNAPSHOT_PATTERN = re.compile(r"^(1\d)|(2[0-5])[w|W]\d{2}[A-Fa-f]$")

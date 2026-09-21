@@ -2,9 +2,9 @@
 
 from types import SimpleNamespace
 
-from core.builtins.parser.hooks import HookPoint, dispatch_parser_hook
-from core.tester import Tester, func_case
-from modules.core.admin_tools.alias import transform_alias
+from akaribot.core.builtins.parser.hooks import HookPoint, dispatch_parser_hook
+from akaribot.testing import Tester, func_case
+from akaribot.modules.core.admin_tools.alias import transform_alias
 
 
 def _test_simple_alias():

@@ -6,8 +6,8 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 
-from core.tester import func_case, Tester
-from modules.core.su_tools.analytics import annotate_points
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.su_tools.analytics import annotate_points
 
 FIGSIZES = ((6.4, 4.8), (4, 3), (12, 8))
 CASES = (

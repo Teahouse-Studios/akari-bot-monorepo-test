@@ -1,7 +1,7 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.builtins.utils import command_prefix
-from modules.core.common_tools.setup import setup
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.modules.core.common_tools.setup import setup
 
 
 @setup.command("prefix list {{I18N:core.help.setup.prefix.list}}")

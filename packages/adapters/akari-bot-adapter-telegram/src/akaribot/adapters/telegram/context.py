@@ -3,23 +3,23 @@ from datetime import datetime, timedelta
 
 from aiogram.types import ChatPermissions
 
-from bots.telegram.buttons import build_telegram_button_markup
-from bots.telegram.action_text import can_use_inline_action_text
-from bots.telegram.client import aiogram_bot
-from bots.telegram.context_snapshot import TelegramContextSnapshot
-from bots.telegram.features import features as telegram_features
-from bots.telegram.info import client_name
-from bots.telegram.message_builder import (
+from akaribot.adapters.telegram.buttons import build_telegram_button_markup
+from akaribot.adapters.telegram.action_text import can_use_inline_action_text
+from akaribot.adapters.telegram.client import aiogram_bot
+from akaribot.adapters.telegram.context_snapshot import TelegramContextSnapshot
+from akaribot.adapters.telegram.features import features as telegram_features
+from akaribot.adapters.telegram.info import client_name
+from akaribot.adapters.telegram.message_builder import (
     build_telegram_operations,
     collect_telegram_content,
     execute_telegram_operations,
 )
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.bot_state import BotState
-from core.logger import Logger
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.logger import Logger
 
 
 class TelegramContextManager(ContextManager):

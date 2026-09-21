@@ -18,9 +18,9 @@ from urllib.parse import unquote, urlparse
 
 import orjson
 
-from core.builtins.types import MessageElement
-from core.builtins.converter import converter
-from core.builtins.message.elements import (
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.message.elements import (
     BaseElement,
     PlainElement,
     MarkdownElement,
@@ -39,20 +39,20 @@ from core.builtins.message.elements import (
     ButtonFrameElement,
     RawElement,
 )
-from core.config.base import BaseConfig
-from core.constants import Secret
-from core.exports import add_export
-from core.i18n import Locale
-from core.utils.joke import shuffle_joke as joke
-from core.logger import Logger
-from core.utils.func import convert_bool
-from core.utils.http import url_pattern
-from core.utils.url_audit import GlobalURLBlocklist, evaluate_url_policy, redact_blocklisted_urls
-from core.utils.button import AUTO_BUTTON_MAX_ROWS, AUTO_BUTTONS_PER_ROW
+from akaribot.core.config.base import BaseConfig
+from akaribot.core.constants import Secret
+from akaribot.core.exports import add_export
+from akaribot.core.i18n import Locale
+from akaribot.core.utils.joke import shuffle_joke as joke
+from akaribot.core.logger import Logger
+from akaribot.core.utils.func import convert_bool
+from akaribot.core.utils.http import url_pattern
+from akaribot.core.utils.url_audit import GlobalURLBlocklist, evaluate_url_policy, redact_blocklisted_urls
+from akaribot.core.utils.button import AUTO_BUTTON_MAX_ROWS, AUTO_BUTTONS_PER_ROW
 
 if TYPE_CHECKING:
-    from core.builtins.session.info import SessionInfo
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
 
 
 _I18N_MESSAGE_PATTERN = re.compile(r"\[AKARI-MSG:([A-Za-z0-9_-]+={0,2})\]")

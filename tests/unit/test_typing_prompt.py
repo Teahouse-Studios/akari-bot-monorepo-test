@@ -5,10 +5,10 @@
 默认值、用户关不掉输入提示。
 """
 
-from core.builtins.session.info import SessionInfo
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 SWITCH_KEY = "typing_prompt"
 

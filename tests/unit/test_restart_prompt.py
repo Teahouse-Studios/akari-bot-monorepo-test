@@ -11,14 +11,14 @@ from unittest.mock import AsyncMock, patch
 
 import orjson
 
-from core.alive import Alive
-from core.builtins.converter import converter
-from core.builtins.session.info import SessionInfo
-from core.constants import PrivateData
-from core.database.models import JobQueuePeersTable, JobQueuesTable
-from core.server.init import load_prompt
-from core.queue.contracts import PlatformAPI
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.constants import PrivateData
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable
+from akaribot.core.server.init import load_prompt
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import func_case, Tester
 
 
 async def _write_restart_cache(client: str) -> None:
@@ -93,7 +93,7 @@ async def _test_ignores_previous_client_lease():
             await _register_client(client, new_peer)
 
         poll_sleep = AsyncMock(side_effect=_new_instance_comes_online)
-        with patch("core.server.init.asyncio", SimpleNamespace(sleep=poll_sleep, wait_for=asyncio.wait_for)):
+        with patch("akaribot.core.server.init.asyncio", SimpleNamespace(sleep=poll_sleep, wait_for=asyncio.wait_for)):
             await load_prompt(None, timeout=10)
         return poll_sleep.await_count == 1 and await _prompt_sent(new_peer) and not await _prompt_sent(old_peer)
     except Exception:
@@ -120,7 +120,7 @@ async def _test_waits_for_client_to_come_online():
             await _register_client(client)
 
         poll_sleep = AsyncMock(side_effect=_come_online)
-        with patch("core.server.init.asyncio", SimpleNamespace(sleep=poll_sleep, wait_for=asyncio.wait_for)):
+        with patch("akaribot.core.server.init.asyncio", SimpleNamespace(sleep=poll_sleep, wait_for=asyncio.wait_for)):
             await load_prompt(None, timeout=10)
         return poll_sleep.await_count == 1 and await _prompt_sent(f"TEST-PEER-{client}")
 

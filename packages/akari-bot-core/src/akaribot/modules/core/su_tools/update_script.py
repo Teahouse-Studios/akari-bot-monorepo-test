@@ -1,13 +1,13 @@
 import time
 import traceback
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.component import module
-from core.logger import Logger
-from core.server.terminate import restart
-from modules.core.su_tools.restart import restart_time, wait_for_restart, write_restart_cache
-from modules.core.su_tools.update import pull_repo, update_dependencies
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.server.terminate import restart
+from akaribot.modules.core.su_tools.restart import restart_time, wait_for_restart, write_restart_cache
+from akaribot.modules.core.su_tools.update import pull_repo, update_dependencies
 
 upds = module(
     "update&restart",

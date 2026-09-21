@@ -3,7 +3,7 @@ import time
 
 from tortoise import fields
 
-from core.constants.path import database_path
+from akaribot.core.constants.path import database_path
 from .base import DBModel
 
 database_path.mkdir(parents=True, exist_ok=True)

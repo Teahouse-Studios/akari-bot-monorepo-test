@@ -1,9 +1,9 @@
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image as BImage
-from core.component import module
-from core.types import Param
-from core.utils.func import is_int
-from core.utils.image import msgchain2image
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image as BImage
+from akaribot.core.component import module
+from akaribot.core.types import Param
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.image import msgchain2image
 from .libraries.chunithm_apidata import get_info, update_cover
 from .libraries.chunithm_best30 import generate as generate_b30
 from .libraries.chunithm_music import TotalList

@@ -2,8 +2,8 @@
 
 from uuid import uuid4
 
-from core.config import CFGManager
-from core.config.decorator import on_config
+from akaribot.core.config import CFGManager
+from akaribot.core.config.decorator import on_config
 
 
 @on_config(
@@ -49,7 +49,7 @@ def bootstrap_jobqueue_config() -> tuple[str, ...]:
 
     if _is_empty_config_value(JobQueueSecretConfig.jobqueue_websocket_token):
         # 延迟导入以避免配置模板初始化期间经 core.config.base 形成循环导入。
-        from core.utils.random import SecureRandom
+        from akaribot.core.utils.random import SecureRandom
 
         CFGManager.edit_write(
             "jobqueue_websocket_token",

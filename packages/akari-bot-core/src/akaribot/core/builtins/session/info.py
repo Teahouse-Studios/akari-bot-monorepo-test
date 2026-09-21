@@ -14,17 +14,17 @@ from typing import Self
 
 from attrs import define, field
 
-from core.alive import Alive
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.event_types import EventName
-from core.builtins.session.features import Features
-from core.builtins.utils import command_prefix
-from core.config.base import BaseConfig, CoreConfig
-from core.database.models import TargetUnionInfo, SenderUnionInfo
-from core.i18n import Locale
-from core.utils.func import parse_time_string
-from core.utils.platform_scope import resolve_platform_identity
-from core.utils.session import inject_features
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.event_types import EventName
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.database.models import TargetUnionInfo, SenderUnionInfo
+from akaribot.core.i18n import Locale
+from akaribot.core.utils.func import parse_time_string
+from akaribot.core.utils.platform_scope import resolve_platform_identity
+from akaribot.core.utils.session import inject_features
 
 default_locale = BaseConfig.default_locale
 
@@ -37,7 +37,7 @@ async def _none():
 
 
 def _current_client_peer_id() -> str | None:
-    from core.constants import Info
+    from akaribot.core.constants import Info
 
     return (Info.peer_id or None) if Info.peer_role == "client" else None
 
@@ -322,8 +322,8 @@ class SessionInfo:
         if fetch:
             get_params = {}
             if client_name:
-                from core.queue.peer import ServiceRoute
-                from core.queue.rpc import get_default_peer
+                from akaribot.core.queue.peer import ServiceRoute
+                from akaribot.core.queue.rpc import get_default_peer
 
                 routed_peer = await get_default_peer().registry.select_route(
                     ServiceRoute(service=client_name, routing_key=target_id, role="client")
@@ -350,7 +350,7 @@ class SessionInfo:
                     )
                 features = get_params.get("features", None)
                 if isinstance(features, dict):
-                    from core.builtins.converter import converter
+                    from akaribot.core.builtins.converter import converter
 
                     features = converter.structure(features, Features)
                 if features:
@@ -395,7 +395,7 @@ class SessionInfo:
         if isinstance(custom_prefixes, str):
             custom_prefixes = [custom_prefixes]
         self.prefixes = list(dict.fromkeys([*self.platform_prefixes, *custom_prefixes, *command_prefix]))
-        from core.loader import ModulesManager
+        from akaribot.core.loader import ModulesManager
 
         enabled_modules = []
         for module_name in target_union_info.modules or []:

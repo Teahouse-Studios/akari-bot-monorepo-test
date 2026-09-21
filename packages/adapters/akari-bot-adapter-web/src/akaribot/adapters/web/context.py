@@ -6,9 +6,9 @@ import uuid
 import orjson
 from fastapi import WebSocket
 
-from bots.web.features import features as web_features
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import (
+from akaribot.adapters.web.features import features as web_features
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
     ActionTextElement,
     ButtonFrameElement,
     EmbedElement,
@@ -17,13 +17,13 @@ from core.builtins.message.elements import (
     AudioElement,
     VideoElement,
 )
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.bot_state import BotState
-from core.builtins.temp import Temp
-from core.logger import Logger
-from core.utils.media import resolve_media_path
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
+from akaribot.core.utils.media import resolve_media_path
 
 _MEDIA_URL_LIFETIME = 600
 _media_urls: dict[str, tuple[str, float]] = {}

@@ -1,13 +1,13 @@
 """core.builtins.message.mention 行内 AT 码解析与渲染单元测试。"""
 
-from core.builtins.message.mention import (
+from akaribot.core.builtins.message.mention import (
     InlineMention,
     iter_at_code,
     render_at_code,
     spans_at_code,
     wrap_sender_id,
 )
-from core.tester import Tester, func_case
+from akaribot.testing import Tester, func_case
 
 
 def _rebuild(text: str) -> str:

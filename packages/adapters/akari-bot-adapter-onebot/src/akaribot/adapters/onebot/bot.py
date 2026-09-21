@@ -7,25 +7,25 @@ import orjson
 from aiocqhttp import Event
 from hypercorn import Config as HyperConfig
 
-from bots.onebot.client import aiocqhttp_bot
-from bots.onebot.config import AiocqhttpConfig
-from bots.onebot.context import OneBotContextManager, OneBotFetchedContextManager
-from bots.onebot.info import *
-from bots.onebot.utils import to_message_chain, get_onebot_implementation
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.builtins.utils import command_prefix
-from core.client.init import client_cleanup, client_init
-from core.config.base import BaseConfig, CoreConfig
-from core.constants.default import confirm_command_default
-from core.database.models import SenderUnionInfo, TargetUnionInfo, UnfriendlyActionRecords
-from core.i18n import Locale
-from core.logger import Logger
-from core.queue.contracts import ServerAPI
-from core.utils.retired import is_retired_client
+from akaribot.adapters.onebot.client import aiocqhttp_bot
+from akaribot.adapters.onebot.config import AiocqhttpConfig
+from akaribot.adapters.onebot.context import OneBotContextManager, OneBotFetchedContextManager
+from akaribot.adapters.onebot.info import *
+from akaribot.adapters.onebot.utils import to_message_chain, get_onebot_implementation
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.client.init import client_cleanup, client_init
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.constants.default import confirm_command_default
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, UnfriendlyActionRecords
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.utils.retired import is_retired_client
 
 Bot.register_bot(client_name=client_name)
 ctx_id = Bot.register_context_manager(OneBotContextManager)

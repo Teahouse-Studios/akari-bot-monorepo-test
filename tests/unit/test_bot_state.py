@@ -4,12 +4,12 @@ import inspect
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.context import ContextManager
-from core.builtins.session.info import SessionInfo
-from core.queue import codec
-from core.queue.contracts import PlatformAPI
-from core.tester import Tester, func_case
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.queue import codec
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import Tester, func_case
 
 
 def _test_bot_state_is_serializable_and_preserves_unknown_permissions() -> bool:
@@ -33,7 +33,7 @@ def _test_bot_state_rpc_contract_matches_context() -> bool:
 
 
 async def _test_webui_reports_full_state() -> bool:
-    from bots.web.context import WebContextManager
+    from akaribot.adapters.web.context import WebContextManager
 
     session = SessionInfo(
         target_id="Web|Group|state",
@@ -63,7 +63,7 @@ async def _test_webui_reports_full_state() -> bool:
 
 
 async def _test_mock_session_provides_local_bot_state() -> bool:
-    from core.tester.mock.session import MockMessageSession
+    from akaribot.testing.mock.session import MockMessageSession
 
     session = MockMessageSession()
     session.session_info = SessionInfo(
@@ -80,7 +80,7 @@ async def _test_mock_session_provides_local_bot_state() -> bool:
 
 async def _test_discord_permission_state_maps_effective_channel_permissions() -> bool:
     import discord
-    import bots.discord.context as discord_context
+    import akaribot.adapters.discord.context as discord_context
 
     DiscordContextManager = discord_context.DiscordContextManager
 
@@ -121,8 +121,8 @@ async def _test_discord_permission_state_maps_effective_channel_permissions() ->
 
 
 async def _test_qqbot_group_state_maps_official_bot_state() -> bool:
-    import bots.qqbot.context as qqbot_context
-    from bots.qqbot.info import target_group_prefix
+    import akaribot.adapters.qqbot.context as qqbot_context
+    from akaribot.adapters.qqbot.info import target_group_prefix
 
     session = SessionInfo(
         target_id=f"{target_group_prefix}|group-openid",
@@ -155,8 +155,8 @@ async def _test_qqbot_group_state_maps_official_bot_state() -> bool:
 
 
 async def _test_non_web_private_context_does_not_claim_management_permissions() -> bool:
-    import bots.qqbot.context as qqbot_context
-    from bots.qqbot.info import target_c2c_prefix
+    import akaribot.adapters.qqbot.context as qqbot_context
+    from akaribot.adapters.qqbot.info import target_c2c_prefix
 
     session = SessionInfo(
         target_id=f"{target_c2c_prefix}|user-openid",
@@ -178,8 +178,8 @@ async def _test_non_web_private_context_does_not_claim_management_permissions() 
 
 
 async def _test_onebot_group_state_maps_bot_role() -> bool:
-    import bots.onebot.context as onebot_context
-    from bots.onebot.info import target_group_prefix
+    import akaribot.adapters.onebot.context as onebot_context
+    from akaribot.adapters.onebot.info import target_group_prefix
 
     session = SessionInfo(
         target_id=f"{target_group_prefix}|123",
@@ -203,8 +203,8 @@ async def _test_onebot_group_state_maps_bot_role() -> bool:
 
 async def _test_matrix_power_levels_map_to_common_permissions() -> bool:
     import nio
-    import bots.matrix.context as matrix_context
-    from bots.matrix.info import target_prefix
+    import akaribot.adapters.matrix.context as matrix_context
+    from akaribot.adapters.matrix.info import target_prefix
 
     session = SessionInfo(
         target_id=f"{target_prefix}|!room:test",
@@ -243,7 +243,7 @@ async def _test_telegram_chat_member_status_uses_enum_value() -> bool:
     import importlib
 
     from aiogram.enums import ChatMemberStatus
-    from bots.telegram.config import AiogramConfig, AiogramSecretConfig
+    from akaribot.adapters.telegram.config import AiogramConfig, AiogramSecretConfig
 
     with (
         patch.object(AiogramConfig, "enable", False, create=True),
@@ -254,7 +254,7 @@ async def _test_telegram_chat_member_status_uses_enum_value() -> bool:
             create=True,
         ),
     ):
-        telegram_context = importlib.import_module("bots.telegram.context")
+        telegram_context = importlib.import_module("akaribot.adapters.telegram.context")
     session = SessionInfo(
         target_id="Telegram|Group|-10001",
         target_from="Telegram|Group",
@@ -291,8 +291,8 @@ async def _test_kook_role_and_channel_overrides_are_preserved() -> bool:
     import importlib
 
     with patch("khl.Bot", return_value=SimpleNamespace()):
-        kook_context = importlib.import_module("bots.kook.context")
-    from bots.kook.info import target_group_prefix
+        kook_context = importlib.import_module("akaribot.adapters.kook.context")
+    from akaribot.adapters.kook.info import target_group_prefix
 
     class FakeChannel:
         async def fetch_permission(self):

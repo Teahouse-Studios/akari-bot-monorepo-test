@@ -3,12 +3,18 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from core.builtins.message.elements import ButtonFrameElement, ImageElement, MarkdownElement, PlainElement, URLElement
-from core.builtins.utils import command_prefix
-from core.config.base import CoreConfig
-from core.i18n import Locale
-from core.tester import Contains, Tester, func_case
-from modules.core.common_tools.about import (
+from akaribot.core.builtins.message.elements import (
+    ButtonFrameElement,
+    ImageElement,
+    MarkdownElement,
+    PlainElement,
+    URLElement,
+)
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.i18n import Locale
+from akaribot.testing import Contains, Tester, func_case
+from akaribot.modules.core.common_tools.about import (
     CHARACTER_IMAGE_MAX_WIDTH,
     CHARACTER_IMAGE_PATH,
     build_about_message,
@@ -46,7 +52,7 @@ def _test_missing_or_empty_credits_are_hidden():
 
 
 def _test_markdown_layout_without_credits():
-    with patch("modules.core.common_tools.about.read_credits", return_value=None):
+    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None):
         chain = build_about_message(_msg())
     texts = _plain_texts(chain)
     introduction = Locale("zh_cn").t("core.message.about.introduction")
@@ -61,7 +67,7 @@ def _test_markdown_layout_without_credits():
 
 
 def _test_credits_button_and_no_button_hidden():
-    with patch("modules.core.common_tools.about.read_credits", return_value="Alice\nBob"):
+    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value="Alice\nBob"):
         markdown = build_about_message(_msg(support_markdown=True))
         no_button = build_about_message(_msg(support_markdown=False, support_button=False))
     locale = Locale("zh_cn")
@@ -82,7 +88,7 @@ def _test_credits_button_and_no_button_hidden():
 
 
 def _test_credits_message_markdown_and_plain():
-    with patch("modules.core.common_tools.about.read_credits", return_value="Alice\nBob"):
+    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value="Alice\nBob"):
         markdown = build_credits_message(_msg(support_markdown=True))
         plain = build_credits_message(_msg(support_markdown=False))
     title = Locale("zh_cn").t("core.message.about.credits")
@@ -137,7 +143,7 @@ def _test_button_rows_and_qq_only_entry():
 
 
 def _test_no_button_support_has_no_frame():
-    with patch("modules.core.common_tools.about.read_credits", return_value=None):
+    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None):
         chain = build_about_message(_msg(support_button=False))
     texts = [element.text for element in chain.values if isinstance(element, PlainElement)]
     urls = [element.original_url for element in chain.values if isinstance(element, URLElement)]
@@ -150,7 +156,7 @@ def _test_no_button_support_has_no_frame():
 
 
 def _test_repository_url_plain_fallback():
-    with patch("modules.core.common_tools.about.read_credits", return_value=None):
+    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None):
         chain = build_about_message(_msg(support_markdown=False))
     repo = next(element for element in chain.values if isinstance(element, URLElement))
     texts = [element.text for element in chain.values if isinstance(element, PlainElement)]

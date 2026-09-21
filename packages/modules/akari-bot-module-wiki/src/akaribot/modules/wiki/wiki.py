@@ -3,9 +3,9 @@ import re
 
 import filetype
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import (
     Button,
     ButtonFrame,
     ButtonRows,
@@ -17,22 +17,22 @@ from core.builtins.message.internal import (
     Video,
     Url,
 )
-from core.builtins.session.internal import FinishedSession, MessageSession, confirm_prompt_key
-from core.builtins.utils import confirm_command
-from core.component import module
-from core.constants.exceptions import (
+from akaribot.core.builtins.session.internal import FinishedSession, MessageSession, confirm_prompt_key
+from akaribot.core.builtins.utils import confirm_command
+from akaribot.core.component import module
+from akaribot.core.constants.exceptions import (
     AbuseWarning,
     SessionContextUnavailable,
     SessionFinished,
     WaitCancelException,
 )
-from core.logger import Logger
-from core.utils.func import is_int
-from core.utils.http import download
-from core.utils.image import svg_render
-from core.utils.image_table import image_table_render, ImageTable
-from core.utils.url_audit import evaluate_url_policy
-from core.utils.button import build_button_rows
+from akaribot.core.logger import Logger
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.http import download
+from akaribot.core.utils.image import svg_render
+from akaribot.core.utils.image_table import image_table_render, ImageTable
+from akaribot.core.utils.url_audit import evaluate_url_policy
+from akaribot.core.utils.button import build_button_rows
 from .database.models import WikiSiteInfo, WikiTargetInfo
 from .utils.mapping import generate_screenshot_v2_blocklist
 from .utils.forum import build_forum_markdown_table, build_section_markdown_table

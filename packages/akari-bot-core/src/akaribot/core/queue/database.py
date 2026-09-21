@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 
 from tortoise.transactions import in_transaction
 
-from core.database.models import JobQueuePeersTable, JobQueuesTable
-from core.logger import Logger
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable
+from akaribot.core.logger import Logger
 from .peer import PeerIdentity, PeerRecord, PeerRegistryBase, PeerSelector, PeerState
 from .transport import BatchSendResult, PROTOCOL_VERSION, RpcRequest, RpcResponse
 

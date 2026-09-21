@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 import yaml
 
-from core.registry import PackageRegistry
+from akaribot.core.registry import PackageRegistry
 
 ai_module_path = Path(__file__).parent
 ai_data_path = PackageRegistry.package_data("ai")

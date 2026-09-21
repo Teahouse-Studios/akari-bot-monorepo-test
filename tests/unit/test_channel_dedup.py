@@ -3,10 +3,10 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.parser.hooks import HookPoint, Stop, dispatch_parser_hook
-from core.database.models import TargetUnionInfo, TargetUnionBind
-from core.tester import func_case, Tester
-from modules.core.hooks.routing import CHANNEL_DEDUP_WINDOW, channel_claim_cache
+from akaribot.core.builtins.parser.hooks import HookPoint, Stop, dispatch_parser_hook
+from akaribot.core.database.models import TargetUnionInfo, TargetUnionBind
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.hooks.routing import CHANNEL_DEDUP_WINDOW, channel_claim_cache
 
 
 async def _fake_msg(target_id: str, trigger: str):

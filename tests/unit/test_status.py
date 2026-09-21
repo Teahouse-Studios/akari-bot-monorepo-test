@@ -3,11 +3,11 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.queue.diagnostics import DAEMON_LABEL, ProcessUnavailable, ProcessUsage
-from core.tester import Tester, func_case
-from modules.core.common_tools.ping import _build_process_usage_lines
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.core.queue.diagnostics import DAEMON_LABEL, ProcessUnavailable, ProcessUsage
+from akaribot.testing import Tester, func_case
+from akaribot.modules.core.common_tools.ping import _build_process_usage_lines
 
 
 def _msg(support_markdown: bool):
@@ -25,7 +25,7 @@ def _msg(support_markdown: bool):
 def _patch_usage(usages, failures):
     """让进程行构建读取固定数据，避免真实信号扇出。"""
     return patch(
-        "modules.core.common_tools.ping.gather_process_usage",
+        "akaribot.modules.core.common_tools.ping.gather_process_usage",
         new=AsyncMock(return_value=(usages, failures)),
     )
 

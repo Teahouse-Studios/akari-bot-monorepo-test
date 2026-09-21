@@ -6,7 +6,7 @@ from datetime import datetime
 from tortoise.expressions import F
 from tortoise.transactions import in_transaction
 
-from core.api import Bot, Random, SenderUnionInfo, StoredData, get_stored_list, update_stored_list
+from akaribot.core.api import Bot, Random, SenderUnionInfo, StoredData, get_stored_list, update_stored_list
 
 # 花苞与花瓣一样挂在 union 上、跨平台共享，存储桶复用花瓣的 Union 作用域。
 BUD_STORE_SCOPE = "Union"

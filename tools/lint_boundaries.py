@@ -46,7 +46,7 @@ ADAPTERS_ROOT = "bots"
 # 模块包对外承诺的路径只有 modules.<x>.api，包根与其余子路径都算内部实现。
 MODULE_PUBLIC_SEGMENT = "api"
 # 适配器专用门面：模块 import 它，多半是在做本应交给适配器的事（T4.7(d)）。
-ADAPTERS_FACADE = "core.api.adapters"
+ADAPTERS_FACADE = "akaribot.core.api.adapters"
 
 LEVEL_ERROR = "error"
 LEVEL_WARN = "warn"

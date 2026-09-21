@@ -129,7 +129,7 @@ class WebSocketSettings:
 
     @classmethod
     def from_config(cls) -> "WebSocketSettings":
-        from core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
+        from akaribot.core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
 
         settings = cls(
             mode=JobQueueConfig.jobqueue_websocket_mode,

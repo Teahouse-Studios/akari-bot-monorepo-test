@@ -11,22 +11,22 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from bots.discord.features import features as discord_features
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ActionTextElement, ButtonFrameElement, ImageElement, PlainElement
-from core.builtins.message.internal import ActionText, I18NContext, Image, Plain
-from core.builtins.parser.args import parse_template
-from core.builtins.parser.command import CommandParser
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.constants.exceptions import SessionFinished
-from core.i18n import Locale
-from core.logger import Logger
-from core.tester import func_case, Tester
-from core.types import Module
-from core.types.module.component_meta import CommandMeta
-from core.utils.table import TABLE_MAX_ROWS, format_table_code
-from modules.core.common_tools.help import (
+from akaribot.adapters.discord.features import features as discord_features
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ActionTextElement, ButtonFrameElement, ImageElement, PlainElement
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image, Plain
+from akaribot.core.builtins.parser.args import parse_template
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta
+from akaribot.core.utils.table import TABLE_MAX_ROWS, format_table_code
+from akaribot.modules.core.common_tools.help import (
     ModuleListEntry,
     build_clickable_modules,
     build_command_table,
@@ -47,7 +47,7 @@ TABLE_TITLE_KEY = "core.message.help.table.title"
 
 def _test_help_about_button_replaces_donate():
     msg = SimpleNamespace(session_info=SimpleNamespace(support_button=True, locale=Locale("zh_cn")))
-    with patch("modules.core.common_tools.help.help_url", "https://example.com/docs"):
+    with patch("akaribot.modules.core.common_tools.help.help_url", "https://example.com/docs"):
         buttons = get_help_link_buttons(msg, include_modules=False)
     return buttons == [("📃 在线文档", "https://example.com/docs"), ("ℹ️ 关于我们", "~about")]
 
@@ -182,7 +182,9 @@ async def _test_image_help_precedes_action_text_fallback():
     msg = _ImageHelpSession(session_info)
     generated = [Image("help.png")]
     try:
-        with patch("modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)) as generator:
+        with patch(
+            "akaribot.modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)
+        ) as generator:
             await modules_list_help(msg, legacy=False)
     except SessionFinished:
         pass
@@ -221,7 +223,9 @@ async def _test_image_flag_overrides_markdown_table():
     msg = _ImageHelpSession(session_info)
     generated = [Image("help.png")]
     try:
-        with patch("modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)) as generator:
+        with patch(
+            "akaribot.modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)
+        ) as generator:
             # 关键字须与命令模板 [--img] 解出的参数名一致，见 core/builtins/parser/message.py
             await help_overview(msg, img=True)
     except SessionFinished:
@@ -455,7 +459,7 @@ async def _test_markdown_help_header():
     session_info.bot_name = "小可测试版"
     msg = _FakeSession(session_info)
     try:
-        with patch("modules.core.common_tools.help.get_version_display", return_value="v1.2.3"):
+        with patch("akaribot.modules.core.common_tools.help.get_version_display", return_value="v1.2.3"):
             parts = build_module_table(
                 msg,
                 [(TABLE_TITLE_KEY, ["wiki", "dice", "coin"])],
@@ -496,7 +500,7 @@ async def _test_markdown_help_header_permissions_and_width():
         "superuser": "权限：超级用户",
     }
     try:
-        with patch("modules.core.common_tools.help.get_version_display", return_value=None):
+        with patch("akaribot.modules.core.common_tools.help.get_version_display", return_value=None):
             for permission, display in expected_permissions.items():
                 parts = build_module_table(
                     msg,
@@ -540,7 +544,7 @@ async def _test_qqbot_admin_help_includes_disabled_modules():
         "dice": _module("dice"),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -575,7 +579,7 @@ async def _test_qqbot_superuser_help_header():
     msg = _OverviewSession(session_info, is_admin=True, is_superuser=True)
     modules = {"help": _module("help", base=True)}
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -606,7 +610,7 @@ async def _test_qqbot_non_admin_help_keeps_module_list_button():
         "dice": _module("dice"),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -629,7 +633,7 @@ async def _test_help_hides_admin_modules_from_non_admin():
         "admin": _module("admin", base=True, admin=True),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -646,7 +650,7 @@ async def _test_help_shows_admin_modules_and_header_for_platform_admin():
         "admin": _module("admin", base=True, admin=True),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -706,7 +710,7 @@ async def _test_help_without_enable_requirement_shows_all_modules_as_enabled():
         "dice": _module("dice"),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg)
     except SessionFinished:
         pass
@@ -737,7 +741,7 @@ async def _test_qqbot_admin_legacy_help_keeps_legacy_scope():
         "dice": _module("dice"),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await help_overview(msg, legacy=True)
     except SessionFinished:
         pass
@@ -774,8 +778,8 @@ async def _test_qqbot_module_list_hides_toggles_from_non_admin():
     }
     try:
         with (
-            patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules),
-            patch("modules.core.common_tools.help.help_url", "https://example.com/help"),
+            patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules),
+            patch("akaribot.modules.core.common_tools.help.help_url", "https://example.com/help"),
         ):
             await modules_list_help(msg, legacy=False)
     except SessionFinished:
@@ -812,7 +816,7 @@ async def _test_qqbot_module_list_keeps_toggles_for_admin():
         "dice": _module("dice"),
     }
     try:
-        with patch("modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
+        with patch("akaribot.modules.core.common_tools.help.ModulesManager.return_modules_list", return_value=modules):
             await modules_list_help(msg, legacy=False)
     except SessionFinished:
         pass

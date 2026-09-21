@@ -22,22 +22,22 @@ from milky.models import (
     TextSegmentData,
 )
 
-from bots.milky.client import milky_bot
-from bots.milky.info import client_name, sender_prefix, target_group_prefix
-from core.builtins.message.mention import InlineMention, iter_at_code
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import (
+from akaribot.adapters.milky.client import milky_bot
+from akaribot.adapters.milky.info import client_name, sender_prefix, target_group_prefix
+from akaribot.core.builtins.message.mention import InlineMention, iter_at_code
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
     AudioElement,
     ImageElement,
     MentionElement,
     PlainElement,
     VideoElement,
 )
-from core.builtins.message.internal import Audio, Image, Plain, Raw, Video
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.logger import Logger
-from core.utils.media import resolve_media_base64, resolve_media_path
+from akaribot.core.builtins.message.internal import Audio, Image, Plain, Raw, Video
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
+from akaribot.core.utils.media import resolve_media_base64, resolve_media_path
 
 MILKY_IMPL_TEMP_KEY = "milky_impl"
 

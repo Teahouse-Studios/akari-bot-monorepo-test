@@ -2,15 +2,15 @@
 
 from datetime import UTC, datetime, timedelta
 
-from core.alive import Alive
-from core.builtins.converter import converter
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.internal import I18NContext, Plain
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.database.models import JobQueuePeersTable, JobQueuesTable
-from core.queue.contracts import PlatformAPI
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import func_case, Tester
 
 
 async def _session(client: str) -> MessageSession:

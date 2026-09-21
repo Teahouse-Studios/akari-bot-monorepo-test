@@ -2,9 +2,9 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from core.builtins.bot import Bot
-from core.constants.path import noto_sans_bold_path, noto_sans_demilight_path, noto_sans_symbol_path
-from core.utils.func import truncate_text
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.constants.path import noto_sans_bold_path, noto_sans_demilight_path, noto_sans_symbol_path
+from akaribot.core.utils.func import truncate_text
 from .lxns_apidata import get_record_lx
 from .maimaidx_apidata import get_record
 from .maimaidx_mapping import (

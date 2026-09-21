@@ -1,8 +1,8 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Image
-from core.component import module
-from core.utils.image_table import ImageTable, image_table_render
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRule, URLRuleError
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Image
+from akaribot.core.component import module
+from akaribot.core.utils.image_table import ImageTable, image_table_render
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRule, URLRuleError
 
 url = module(
     "url-audit",

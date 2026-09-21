@@ -6,14 +6,14 @@ import hashlib
 import time
 from typing import TYPE_CHECKING
 
-from core.builtins.parser.hooks import HookPoint
-from core.component import module
-from core.database.models import TargetUnionBind
-from core.logger import Logger
-from core.utils.container import ExpiringTempDict
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.component import module
+from akaribot.core.database.models import TargetUnionBind
+from akaribot.core.logger import Logger
+from akaribot.core.utils.container import ExpiringTempDict
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 CHANNEL_DEDUP_WINDOW = 10

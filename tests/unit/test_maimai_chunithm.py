@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import orjson
 
-from core.constants.exceptions import ConfigValueError
-from core.tester import Tester, func_case
-from modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
-from modules.maimai.libraries import chunithm_apidata
-from modules.maimai.libraries.chunithm_apidata import (
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.testing import Tester, func_case
+from akaribot.modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
+from akaribot.modules.maimai.libraries import chunithm_apidata
+from akaribot.modules.maimai.libraries.chunithm_apidata import (
     get_record_df,
     get_record_df_by_username,
     get_record_lx,

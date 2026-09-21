@@ -1,6 +1,6 @@
 from attrs import evolve
 
-from core.builtins.session.features import Features
+from akaribot.core.builtins.session.features import Features
 
 features = Features(
     support_image=True,

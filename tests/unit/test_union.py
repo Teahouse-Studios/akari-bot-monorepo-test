@@ -3,8 +3,8 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.info import SessionInfo
-from core.database.models import (
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.database.models import (
     AnalyticsData,
     SenderUnionInfo,
     SenderUnionBind,
@@ -12,9 +12,9 @@ from core.database.models import (
     TargetUnionBind,
     UnionDeleteBlocked,
 )
-from core.loader import ModulesManager
-from core.tester import func_case, Tester
-from core.types import Module
+from akaribot.core.loader import ModulesManager
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
 
 
 async def _test_resolve_union_creates_bind():
@@ -367,7 +367,7 @@ async def _test_merge_union_rewrites_permission_refs():
 async def _test_merge_union_moves_module_rows():
     """测试 merge_union - 模块表随之改挂新 union"""
     try:
-        from modules.phigros.database.models import PhigrosBindInfo
+        from akaribot.modules.phigros.database.models import PhigrosBindInfo
 
         keep = await SenderUnionInfo.resolve_union("UNIONTEST|modmove|1")
         drop = await SenderUnionInfo.resolve_union("UNIONTEST|modmove|2")
@@ -388,7 +388,7 @@ async def _test_merge_union_moves_module_rows():
 async def _test_merge_union_module_conflict_keeps_self():
     """测试 merge_union - 模块表冲突默认保留发起方"""
     try:
-        from modules.phigros.database.models import PhigrosBindInfo
+        from akaribot.modules.phigros.database.models import PhigrosBindInfo
 
         keep = await SenderUnionInfo.resolve_union("UNIONTEST|modkeep|1")
         drop = await SenderUnionInfo.resolve_union("UNIONTEST|modkeep|2")
@@ -409,7 +409,7 @@ async def _test_merge_union_module_conflict_keeps_self():
 async def _test_merge_union_module_conflict_keeps_other():
     """测试 merge_union - keep_other_tables 指定时保留被并入方"""
     try:
-        from modules.phigros.database.models import PhigrosBindInfo
+        from akaribot.modules.phigros.database.models import PhigrosBindInfo
 
         keep = await SenderUnionInfo.resolve_union("UNIONTEST|modother|1")
         drop = await SenderUnionInfo.resolve_union("UNIONTEST|modother|2")
@@ -430,7 +430,7 @@ async def _test_merge_union_module_conflict_keeps_other():
 async def _test_merge_target_union_moves_module_rows():
     """测试 merge_union - 场景侧模块表同样改挂 union"""
     try:
-        from modules.wiki.database.models import WikiTargetInfo
+        from akaribot.modules.wiki.database.models import WikiTargetInfo
 
         keep = await TargetUnionInfo.resolve_union("UNIONTEST|Group|wiki1")
         drop = await TargetUnionInfo.resolve_union("UNIONTEST|Group|wiki2")
@@ -562,8 +562,8 @@ async def _test_unify_channels_moves_complete_equivalence_class():
 
 async def _test_sender_merge_rolls_back_on_failure():
     """测试 merge_union - 中途异常时新组、映射、Captcha 引用和旧组数据全部回滚。"""
-    from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
-    from modules.captcha.service import verification_id
+    from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+    from akaribot.modules.captcha.service import verification_id
 
     first_id = "UNIONTEST|rollback|sender1"
     second_id = "UNIONTEST|rollback|sender2"
@@ -589,7 +589,7 @@ async def _test_sender_merge_rolls_back_on_failure():
     )
     before_count = await SenderUnionInfo.all().count()
 
-    with patch("core.database.models.rewrite_sender_union_refs", side_effect=RuntimeError("audit failure")):
+    with patch("akaribot.core.database.models.rewrite_sender_union_refs", side_effect=RuntimeError("audit failure")):
         try:
             await first.merge_union(second)
         except RuntimeError:
@@ -613,9 +613,9 @@ async def _test_sender_merge_rolls_back_on_failure():
 
 async def _test_target_merge_rolls_back_on_failure():
     """测试场景 merge_union - 显式引用迁移异常时不遗留新组或半迁移 Captcha 引用。"""
-    from core.database.models import migrate_union_references
-    from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
-    from modules.captcha.service import verification_id
+    from akaribot.core.database.models import migrate_union_references
+    from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+    from akaribot.modules.captcha.service import verification_id
 
     first_id = "UNIONTEST|Group|rollback-target1"
     second_id = "UNIONTEST|Group|rollback-target2"
@@ -645,7 +645,7 @@ async def _test_target_merge_rolls_back_on_failure():
         await migrate_union_references(*args, **kwargs)
         raise RuntimeError("audit failure")
 
-    with patch("core.database.models.migrate_union_references", side_effect=migrate_then_fail):
+    with patch("akaribot.core.database.models.migrate_union_references", side_effect=migrate_then_fail):
         try:
             await first.merge_union(second)
         except RuntimeError:
@@ -669,7 +669,7 @@ async def _test_target_merge_rolls_back_on_failure():
 
 async def _test_sender_unbind_rolls_back_on_failure():
     """显式引用迁移失败时，用户解绑的 Challenge、映射与新组须全部回滚。"""
-    from modules.captcha.database.models import CaptchaChallenge
+    from akaribot.modules.captcha.database.models import CaptchaChallenge
 
     kept_id = "UNIONTEST|rollback|unbind-sender-kept"
     split_id = "UNIONTEST|rollback|unbind-sender-split"
@@ -718,7 +718,7 @@ async def _test_sender_unbind_rolls_back_on_failure():
 
 async def _test_target_unbind_rolls_back_on_failure():
     """显式引用迁移失败时，场景解绑的 Challenge、通道、互认记录与新组须全部回滚。"""
-    from modules.captcha.database.models import CaptchaChallenge
+    from akaribot.modules.captcha.database.models import CaptchaChallenge
 
     kept_id = "UNIONTEST|Group|rollback-unbind-target-kept"
     split_id = "UNIONTEST|Group|rollback-unbind-target-split"
@@ -930,11 +930,11 @@ async def _test_list_ids_accepts_multiple():
 
 async def _test_delete_sender_union_cleans_current_state():
     """删除用户 Union 时清理模块状态、权限引用和验证码，但保留历史统计。"""
-    from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
-    from modules.captcha.service import verification_id
-    from modules.cytoid.database.models import CytoidBindInfo
-    from modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
-    from modules.phigros.database.models import PhigrosBindInfo
+    from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+    from akaribot.modules.captcha.service import verification_id
+    from akaribot.modules.cytoid.database.models import CytoidBindInfo
+    from akaribot.modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
+    from akaribot.modules.phigros.database.models import PhigrosBindInfo
 
     sender_id = "UNIONTEST|delete|sender"
     target_id = "UNIONTEST|Group|delete-sender-ref"
@@ -995,10 +995,10 @@ async def _test_delete_sender_union_cleans_current_state():
 
 async def _test_delete_target_union_cleans_current_state():
     """删除场景 Union 时清理场景模块状态和验证码，但保留历史统计。"""
-    from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
-    from modules.captcha.service import verification_id
-    from modules.wiki.database.models import WikiTargetInfo
-    from modules.wiki.database.models import WikiLogTargetSetInfo
+    from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+    from akaribot.modules.captcha.service import verification_id
+    from akaribot.modules.wiki.database.models import WikiTargetInfo
+    from akaribot.modules.wiki.database.models import WikiLogTargetSetInfo
 
     sender_id = "UNIONTEST|delete|target-sender"
     target_id = "UNIONTEST|Group|delete-target"
@@ -1049,8 +1049,8 @@ async def _test_delete_target_union_cleans_current_state():
 
 async def _test_delete_union_rejects_active_captcha():
     """仍有平台限制待解除的验证码时，删除必须整体拒绝。"""
-    from modules.captcha.database.models import CaptchaChallenge
-    from modules.captcha.service import verification_id
+    from akaribot.modules.captcha.database.models import CaptchaChallenge
+    from akaribot.modules.captcha.service import verification_id
 
     sender_id = "UNIONTEST|delete|active-captcha-sender"
     target_id = "UNIONTEST|Group|delete-active-captcha-target"
@@ -1292,8 +1292,8 @@ async def _test_stale_target_merge_ignores_deleted_side():
 
 async def _test_module_create_rechecks_union_after_resolve():
     """模块行创建前须重查核心 Union，不能信任 resolve_union 返回后的旧实例。"""
-    from modules.cytoid.database.models import CytoidBindInfo
-    from modules.wiki.database.models import WikiTargetInfo
+    from akaribot.modules.cytoid.database.models import CytoidBindInfo
+    from akaribot.modules.wiki.database.models import WikiTargetInfo
 
     sender_id = "UNIONTEST|module-create-race|sender"
     target_id = "UNIONTEST|Group|module-create-race-target"
@@ -1320,9 +1320,9 @@ async def _test_module_create_rechecks_union_after_resolve():
 
 async def _test_bind_models_reject_deleted_union():
     """直接调用模块绑定写入口时，已删除的用户 Union 不得留下悬空模块行。"""
-    from modules.cytoid.database.models import CytoidBindInfo
-    from modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
-    from modules.phigros.database.models import PhigrosBindInfo
+    from akaribot.modules.cytoid.database.models import CytoidBindInfo
+    from akaribot.modules.maimai.database.models import DivingProberBindInfo, LxnsProberBindInfo
+    from akaribot.modules.phigros.database.models import PhigrosBindInfo
 
     sender_id = "UNIONTEST|module-bind-deleted|sender"
     sender = await SenderUnionInfo.resolve_union(sender_id)
@@ -1348,7 +1348,7 @@ async def _test_bind_models_reject_deleted_union():
 
 async def _test_wiki_mutations_use_fresh_row():
     """Wiki 的旧实例更新不同字段或 JSON 键时应合并最新值，删除后不得写回。"""
-    from modules.wiki.database.models import WikiTargetInfo
+    from akaribot.modules.wiki.database.models import WikiTargetInfo
 
     target_id = "UNIONTEST|Group|wiki-stale-mutation"
     target = await TargetUnionInfo.resolve_union(target_id)
@@ -1386,7 +1386,7 @@ async def _test_wiki_mutations_use_fresh_row():
 
 async def _test_wikilog_mutations_use_fresh_nested_data():
     """Wikilog 的旧实例修改不同 Wiki 和嵌套字段时不得互相覆盖，删除后不得复活。"""
-    from modules.wiki.database.models import WikiLogTargetSetInfo
+    from akaribot.modules.wiki.database.models import WikiLogTargetSetInfo
 
     target_id = "UNIONTEST|Group|wikilog-stale-mutation"
     target = await TargetUnionInfo.resolve_union(target_id)

@@ -1,8 +1,8 @@
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.component import module
-from core.utils.http import get_url
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.component import module
+from akaribot.core.utils.http import get_url
 
 msg_types = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
 

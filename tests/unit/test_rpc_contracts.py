@@ -8,18 +8,18 @@ from unittest.mock import AsyncMock, patch
 
 from attrs import define, evolve
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import MarkdownElement, PlainElement
-from core.builtins.message.internal import I18NContext
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import FetchedSessionInfo, SessionInfo
-from core.queue import codec
-from core.queue.base import JobQueueBase
-from core.queue.contracts import PlatformAPI, ServerAPI
-from core.queue.peer import ServiceRoute
-from core.queue.rpc import context_method, remote
-from core.tester import Tester, func_case
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import MarkdownElement, PlainElement
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import FetchedSessionInfo, SessionInfo
+from akaribot.core.queue import codec
+from akaribot.core.queue.base import JobQueueBase
+from akaribot.core.queue.contracts import PlatformAPI, ServerAPI
+from akaribot.core.queue.peer import ServiceRoute
+from akaribot.core.queue.rpc import context_method, remote
+from akaribot.testing import Tester, func_case
 
 
 def _wire(value):
@@ -212,10 +212,10 @@ async def _test_union_discriminators_and_dictionary_contracts():
 
 
 async def _test_error_reporting_deduplicates_delivery_failures():
-    from core.exports import exports
-    from core.queue import reporting, server
-    from core.builtins.message.internal import Plain
-    from modules.core.hooks.errors import format_error_detail
+    from akaribot.core.exports import exports
+    from akaribot.core.queue import reporting, server
+    from akaribot.core.builtins.message.internal import Plain
+    from akaribot.modules.core.hooks.errors import format_error_detail
 
     session = await FetchedSessionInfo.assign(
         target_id="RPC-REPORT|Group|1", target_from="RPC-REPORT", client_name="RPC-REPORT", fetch=True
@@ -281,7 +281,7 @@ async def _test_error_reporting_deduplicates_delivery_failures():
 
 
 async def _test_server_queries_encode_real_module_metadata():
-    from core.queue import server
+    from akaribot.core.queue import server
 
     for method, handler, arguments, expected in [
         (ServerAPI.get_modules_list, server.get_modules_list, (), list),

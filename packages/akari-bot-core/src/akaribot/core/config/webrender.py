@@ -1,6 +1,6 @@
 """WebRender 配置模板。"""
 
-from core.config.decorator import on_config
+from akaribot.core.config.decorator import on_config
 
 
 @on_config("webrender")

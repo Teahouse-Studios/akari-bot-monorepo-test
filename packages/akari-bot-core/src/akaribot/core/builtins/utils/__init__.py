@@ -5,12 +5,12 @@
 并对其进行去重和处理，供系统其他部分使用。
 """
 
-from core.config.base import CoreConfig
-from core.constants.default import (
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.default import (
     confirm_command_default,
     command_prefix_default,
 )
-from core.utils.func import unique_list
+from akaribot.core.utils.func import unique_list
 
 
 # 确认命令列表 - 用户确认操作时可使用的关键词，加上默认的圆形符号表情

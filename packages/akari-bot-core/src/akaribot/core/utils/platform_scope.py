@@ -10,7 +10,7 @@
 
 from typing import Iterable
 
-from core.constants.info import Info
+from akaribot.core.constants.info import Info
 
 
 def resolve_platform_identity(

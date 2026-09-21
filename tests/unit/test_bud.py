@@ -1,16 +1,16 @@
 """modules.core.common_tools._bud 单元测试 - 花苞（拼手气红包）系统。"""
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.tester import func_case, Tester
-from core.tester.mock.factory import TestDataFactory
-from core.tester.mock.session import MockMessageSession
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.factory import TestDataFactory
+from akaribot.testing.mock.session import MockMessageSession
 
 
 async def _test_split_amount_conservation():
     """split_amount - 总额守恒且份数正确"""
     try:
-        from modules.core.common_tools._bud import split_amount
+        from akaribot.modules.core.common_tools._bud import split_amount
 
         for total, count in [(100, 5), (10, 10), (1, 1), (999, 3)]:
             shares = split_amount(total, count)
@@ -26,7 +26,7 @@ async def _test_split_amount_conservation():
 async def _test_split_amount_minimum():
     """split_amount - 每份至少 1 片"""
     try:
-        from modules.core.common_tools._bud import split_amount
+        from akaribot.modules.core.common_tools._bud import split_amount
 
         for _ in range(200):
             shares = split_amount(50, 8)
@@ -40,7 +40,7 @@ async def _test_split_amount_minimum():
 async def _test_split_amount_avoids_extreme_small_shares():
     """split_amount - 余量充足时避免拆出 1 片"""
     try:
-        from modules.core.common_tools._bud import split_amount
+        from akaribot.modules.core.common_tools._bud import split_amount
 
         for _ in range(200):
             shares = split_amount(50, 8)
@@ -54,7 +54,7 @@ async def _test_split_amount_avoids_extreme_small_shares():
 async def _test_split_amount_invalid():
     """split_amount - 非法参数抛异常"""
     try:
-        from modules.core.common_tools._bud import split_amount
+        from akaribot.modules.core.common_tools._bud import split_amount
 
         for total, count in [(0, 1), (5, 6), (3, 0)]:
             try:
@@ -70,7 +70,7 @@ async def _test_split_amount_invalid():
 async def _test_generate_bud_id():
     """generate_bud_id - 非空且不与已有 ID 冲突"""
     try:
-        from modules.core.common_tools._bud import generate_bud_id
+        from akaribot.modules.core.common_tools._bud import generate_bud_id
 
         existing = {"abc12345", "xyz98765"}
         bud_id = generate_bud_id(existing)
@@ -82,7 +82,7 @@ async def _test_generate_bud_id():
 async def _test_bud_ttl_24h():
     """BUD_TTL_SECONDS - 花苞有效期为 24 小时"""
     try:
-        from modules.core.common_tools._bud import BUD_TTL_SECONDS
+        from akaribot.modules.core.common_tools._bud import BUD_TTL_SECONDS
 
         return BUD_TTL_SECONDS == 24 * 60 * 60
     except Exception:
@@ -92,9 +92,15 @@ async def _test_bud_ttl_24h():
 async def _test_bud_refund_on_expiry():
     """过期花苞未领取部分退回发送者"""
     try:
-        from core.database.models import SenderUnionInfo
-        from modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, claim_bud, create_bud, find_bud
-        from core.utils.storedata import get_stored_list, update_stored_list
+        from akaribot.core.database.models import SenderUnionInfo
+        from akaribot.modules.core.common_tools._bud import (
+            BUD_STORE_KEY,
+            BUD_STORE_SCOPE,
+            claim_bud,
+            create_bud,
+            find_bud,
+        )
+        from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|0", petal=0)
         msg = MockMessageSession("~test")
@@ -139,9 +145,9 @@ async def _test_bud_refund_on_expiry():
 async def _test_release_buds():
     """release_buds - 清理空花苞并退款清理过期花苞"""
     try:
-        from core.database.models import SenderUnionInfo
-        from modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, create_bud, release_buds
-        from core.utils.storedata import get_stored_list, update_stored_list
+        from akaribot.core.database.models import SenderUnionInfo
+        from akaribot.modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, create_bud, release_buds
+        from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|release", petal=0)
         empty = await create_bud("TEST|release", sender.union_id, 5, 1, "release-empty")

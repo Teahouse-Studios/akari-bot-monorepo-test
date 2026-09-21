@@ -1,8 +1,8 @@
-from core.version import check_python_version  # skipcq
+from akaribot.core.version import check_python_version  # skipcq
 
 check_python_version()  # noqa
 
-from core.constants import config_path, config_filename  # skipcq
+from akaribot.core.constants import config_path, config_filename  # skipcq
 
 import asyncio
 import importlib
@@ -19,8 +19,8 @@ from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from loguru import logger
 
-from core.constants import CONFIG_READONLY_ENV, ascii_art, logs_path  # skipcq
-from core.registry import PackageRegistry  # skipcq
+from akaribot.core.constants import CONFIG_READONLY_ENV, ascii_art, logs_path  # skipcq
+from akaribot.core.registry import PackageRegistry  # skipcq
 
 
 AKARI_BOT_I18N_CACHE_DIR = str(Path("./data/i18n_cache/").resolve())
@@ -39,7 +39,7 @@ def _choose_first_run_locale() -> str:
 
     :return: 语言代码。
     """
-    from core.constants import default_locale, lang_list
+    from akaribot.core.constants import default_locale, lang_list
 
     if not sys.stdin.isatty():
         return default_locale
@@ -59,7 +59,7 @@ def _init_first_run_config() -> None:
     骨架只含 default_locale 与 config_version：这两个顶层键不属于任何模板，扫描补不出来。
     注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。
     """
-    from core.constants import config_version
+    from akaribot.core.constants import config_version
 
     locale = _choose_first_run_locale()
     config_path.mkdir(parents=True, exist_ok=True)
@@ -213,8 +213,8 @@ def discover_adapter_instances() -> list[AdapterInstance]:
 
     :return: 已启用的实例，按 ``(适配器, 实例 ID)`` 排序。
     """
-    from core.config import CFGManager
-    from core.constants import Info
+    from akaribot.core.config import CFGManager
+    from akaribot.core.constants import Info
 
     adapters = PackageRegistry.adapters()
     enabled: list[AdapterInstance] = []
@@ -322,7 +322,7 @@ def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
     :param instance: 实例。
     :return: 资源列表。
     """
-    from core.config import CFGManager
+    from akaribot.core.config import CFGManager
 
     resources: list[tuple[str, int, str]] = []
     web = _split_host_port(CFGManager.get("web_port", table_name=instance.table))
@@ -348,7 +348,7 @@ def _read_credential(instance: AdapterInstance, field: str) -> object:
     :param field: 凭据字段名。
     :return: 凭据值；两处都没有时返回 None。
     """
-    from core.config import CFGManager
+    from akaribot.core.config import CFGManager
 
     for secret in (True, False):
         value = CFGManager.get(field, secret=secret, table_name=instance.table)
@@ -423,9 +423,9 @@ def pre_init():
     Logger.info("Akaribot is launching...")
     from tortoise import run_async
 
-    from core.constants import PrivateData, cache_path, lang_list
-    from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
-    from core.paths import Paths
+    from akaribot.core.constants import PrivateData, cache_path, lang_list
+    from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+    from akaribot.core.paths import Paths
 
     # 目录创建集中在此：导入 core.constants 不再产生副作用。
     Paths.ensure("data", "cache", "logs", "database")
@@ -444,13 +444,13 @@ def pre_init():
 
     # CoreConfig 的导入须留在函数内：multiprocessing 以 spawn / forkserver 启动子进程时
     # 会以 __mp_main__ 重新导入主模块，置于顶层将使每个子进程再次触发配置模板的生成。
-    from core.config.core import CoreConfig
-    from core.config.jobqueue import bootstrap_jobqueue_config, JobQueueConfig
-    from core.config.scan import scan_config_templates
-    from core.constants.version import database_version
-    from core.database import close_db, init_db
-    from core.database.link import db_type
-    from core.database.models import SenderUnionInfo, DBVersion
+    from akaribot.core.config.core import CoreConfig
+    from akaribot.core.config.jobqueue import bootstrap_jobqueue_config, JobQueueConfig
+    from akaribot.core.config.scan import scan_config_templates
+    from akaribot.core.constants.version import database_version
+    from akaribot.core.database import close_db, init_db
+    from akaribot.core.database.link import db_type
+    from akaribot.core.database.models import SenderUnionInfo, DBVersion
 
     # 配置的生成集中在此完成：子进程一律只读，此处遗漏的键将在子进程读取时抛出异常，
     # 因此任何模板加载失败均须中止启动，而非延至运行期才暴露。
@@ -478,14 +478,14 @@ def pre_init():
         query_dbver = await DBVersion.all().first()
         if not query_dbver:
             Logger.warning("Database version not found, converting old database...")
-            from core.scripts.convert_database import convert_database
+            from akaribot.core.scripts.convert_database import convert_database
 
             await close_db()
             await convert_database()
             Logger.success("Database converted successfully!")
         elif query_dbver.version < database_version:
             Logger.info(f"Updating database from {query_dbver.version} to {database_version}...")
-            from core.database.update import update_database
+            from akaribot.core.database.update import update_database
 
             await close_db()
             await update_database()
@@ -534,8 +534,8 @@ def multiprocess_run_until_complete(func):
 
 
 def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, instance_id: str = ""):
-    from core.constants import Info
-    from core.logger import Logger
+    from akaribot.core.constants import Info
+    from akaribot.core.logger import Logger
 
     # instance_id 必须在导入适配器之前置位：bots.<x>.info 在导入期依它派生 client_name。
     Info.instance_id = instance_id
@@ -567,14 +567,14 @@ def server_go(
     hub_pid: int | None = None,
 ):
     # Server 依赖树（尤其 WebRender）只应由 Server 子进程加载，守护进程不需要保留一份。
-    from core.server.run import run_async
+    from akaribot.core.server.run import run_async
 
     run_async(subprocess, binary_mode, stop_event, daemon_pid, hub_pid)
 
 
 def jobqueue_hub_go(stop_event, ready_event):
     """在独立子进程中运行内置 WebSocket JobQueue Hub。"""
-    from core.queue.websocket import run_websocket_hub_process
+    from akaribot.core.queue.websocket import run_websocket_hub_process
 
     run_websocket_hub_process(stop_event, ready_event)
 
@@ -591,7 +591,7 @@ async def run_bot():
     os.environ["AKARI_BOT_I18N_CACHE_DIR"] = AKARI_BOT_I18N_CACHE_DIR
 
     # CONFIG_READONLY_ENV 必须先于 core.config 的首次导入置位；后者会在导入期执行配置版本迁移。
-    from core.config.jobqueue import JobQueueConfig
+    from akaribot.core.config.jobqueue import JobQueueConfig
 
     mp = multiprocessing.get_context("spawn" if sys.platform in ["win32", "darwin"] else "forkserver")
     # 守护进程与 Hub 非 JobQueue Peer，Server 无从 Registry 获知其 PID。此处随 Process
@@ -599,7 +599,7 @@ async def run_bot():
     hub_pid = None
 
     if JobQueueConfig.jobqueue_backend.strip().lower() == "websocket":
-        from core.queue.websocket import WebSocketSettings
+        from akaribot.core.queue.websocket import WebSocketSettings
 
         websocket_settings = WebSocketSettings.from_config()
     else:

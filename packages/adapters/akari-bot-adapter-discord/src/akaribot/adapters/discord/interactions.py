@@ -3,17 +3,17 @@
 import discord
 from attrs import define
 
-from bots.discord.buttons import disable_selected_button
-from bots.discord.client import discord_bot, ensure_client_initialized
-from bots.discord.info import client_name, sender_prefix, target_channel_prefix, target_dm_channel_prefix
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain
-from core.builtins.session.info import SessionInfo
-from core.config.base import BaseConfig
-from core.i18n import Locale
-from core.logger import Logger
-from core.utils.button_runtime import ButtonConsumeStatus, consume_button, normalize_button_payload
+from akaribot.adapters.discord.buttons import disable_selected_button
+from akaribot.adapters.discord.client import discord_bot, ensure_client_initialized
+from akaribot.adapters.discord.info import client_name, sender_prefix, target_channel_prefix, target_dm_channel_prefix
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.config.base import BaseConfig
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.core.utils.button_runtime import ButtonConsumeStatus, consume_button, normalize_button_payload
 
 _BUTTON_ERROR_KEYS = {
     ButtonConsumeStatus.INVALID: "message.button.invalid",

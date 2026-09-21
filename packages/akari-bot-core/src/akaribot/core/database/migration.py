@@ -21,9 +21,9 @@ from typing import Awaitable, Callable
 from tortoise import Tortoise
 from tortoise.transactions import in_transaction
 
-from core.database.link import db_type as configured_db_type
-from core.database.models import SchemaMigration
-from core.logger import Logger
+from akaribot.core.database.link import db_type as configured_db_type
+from akaribot.core.database.models import SchemaMigration
+from akaribot.core.logger import Logger
 
 CORE_PACKAGE = "core"
 
@@ -382,7 +382,7 @@ class MigrationRunner:
 
         :return: 包名到有序迁移列表的映射。
         """
-        from core.registry import PackageRegistry
+        from akaribot.core.registry import PackageRegistry
 
         directories: list[tuple[str, Path]] = [(CORE_PACKAGE, core_migrations_dir())]
         directories.extend(PackageRegistry.migration_dirs())
@@ -577,7 +577,7 @@ class MigrationRunner:
 
 async def run_startup_migrations() -> None:
     """启动期迁移入口：先转换旧版本号，再执行各包的待应用 revision。"""
-    from core.database.legacy import convert_legacy_version
+    from akaribot.core.database.legacy import convert_legacy_version
 
     await convert_legacy_version()
     applied = await MigrationRunner.upgrade()

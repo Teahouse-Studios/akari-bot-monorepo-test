@@ -1,8 +1,8 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.utils.dirty_check import rickroll
-from core.utils.http import get_url
-from modules.github.utils import time_diff, dirty_check, dark_check
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.utils.dirty_check import rickroll
+from akaribot.core.utils.http import get_url
+from akaribot.modules.github.utils import time_diff, dirty_check, dark_check
 
 
 async def user(msg: Bot.MessageSession, name: str, pat: str):

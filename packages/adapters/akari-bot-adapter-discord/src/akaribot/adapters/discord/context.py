@@ -5,18 +5,18 @@ from datetime import datetime, timedelta
 import discord
 from discord import Message
 
-from bots.discord.buttons import build_discord_button_view
-from bots.discord.client import discord_bot
-from bots.discord.features import features as discord_features
-from bots.discord.info import target_channel_prefix, target_dm_channel_prefix, target_guild_prefix
-from bots.discord.message_builder import build_discord_payloads, execute_discord_payloads
-from bots.discord.utils import get_channel_id, get_sender_id
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.bot_state import BotState
-from core.logger import Logger
+from akaribot.adapters.discord.buttons import build_discord_button_view
+from akaribot.adapters.discord.client import discord_bot
+from akaribot.adapters.discord.features import features as discord_features
+from akaribot.adapters.discord.info import target_channel_prefix, target_dm_channel_prefix, target_guild_prefix
+from akaribot.adapters.discord.message_builder import build_discord_payloads, execute_discord_payloads
+from akaribot.adapters.discord.utils import get_channel_id, get_sender_id
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.logger import Logger
 
 
 @dataclass(slots=True)

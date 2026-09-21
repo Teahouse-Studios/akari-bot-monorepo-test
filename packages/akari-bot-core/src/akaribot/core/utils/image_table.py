@@ -5,12 +5,12 @@ from typing import Any
 from PIL import Image as PILImage
 from tabulate import tabulate
 
-from core.builtins.session.info import SessionInfo
-from core.utils.joke import shuffle_joke as joke
-from core.logger import Logger
-from core.utils.cache import random_cache_path
-from core.utils.image import cb64imglst
-from core.utils.web_render import web_render, LegacyScreenshotOptions
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.utils.joke import shuffle_joke as joke
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.image import cb64imglst
+from akaribot.core.utils.web_render import web_render, LegacyScreenshotOptions
 
 
 class ImageTable:

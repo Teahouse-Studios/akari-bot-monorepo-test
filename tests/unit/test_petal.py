@@ -2,15 +2,15 @@
 
 from unittest.mock import patch
 
-from core.tester import func_case, Tester
-from core.tester.mock.factory import TestDataFactory
-from core.tester.mock.session import MockMessageSession
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.factory import TestDataFactory
+from akaribot.testing.mock.session import MockMessageSession
 
 
 async def _test_petal_functions_no_throw():
     """测试花瓣函数 - 不抛出异常"""
     try:
-        from core.utils.petal import gained_petal, lost_petal, cost_petal
+        from akaribot.core.utils.petal import gained_petal, lost_petal, cost_petal
 
         await TestDataFactory.setup_default_test_env()
         msg = MockMessageSession("~test")
@@ -28,7 +28,7 @@ async def _test_petal_functions_no_throw():
 async def _test_cost_petal_returns_bool():
     """测试 cost_petal - 返回布尔值"""
     try:
-        from core.utils.petal import cost_petal
+        from akaribot.core.utils.petal import cost_petal
 
         await TestDataFactory.setup_default_test_env()
         msg = MockMessageSession("~test")
@@ -46,7 +46,7 @@ async def _test_cost_petal_returns_bool():
 async def _test_gained_petal_with_mock():
     """测试 gained_petal - Mock Config 启用花瓣系统"""
     try:
-        from core.utils.petal import gained_petal
+        from akaribot.core.utils.petal import gained_petal
 
         await TestDataFactory.setup_default_test_env()
         msg = MockMessageSession("~test")
@@ -59,7 +59,7 @@ async def _test_gained_petal_with_mock():
             enable_get_petal = True
             petal_gained_limit = 100
 
-        with patch("core.utils.petal.CoreConfig", MockConfig):
+        with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
             result = await gained_petal(msg, 10)
             if result is None:
                 return False
@@ -72,7 +72,7 @@ async def _test_gained_petal_with_mock():
 async def _test_cost_petal_insufficient_with_mock():
     """测试 cost_petal - 花瓣不足时返回 False"""
     try:
-        from core.utils.petal import cost_petal
+        from akaribot.core.utils.petal import cost_petal
 
         await TestDataFactory.ensure_sender(petal=0)
         msg = MockMessageSession("~test")
@@ -83,7 +83,7 @@ async def _test_cost_petal_insufficient_with_mock():
 
             enable_petal = True
 
-        with patch("core.utils.petal.CoreConfig", MockConfig):
+        with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
             result = await cost_petal(msg, 100, send_prompt=False)
             if result is not False:
                 return False
@@ -95,8 +95,8 @@ async def _test_cost_petal_insufficient_with_mock():
 
 async def _test_petal_session_balance_stays_in_sync():
     """测试花瓣变更后会话快照与实际余额一致。"""
-    from core.database.models import SenderUnionInfo
-    from core.utils.petal import gained_petal, lost_petal, cost_petal
+    from akaribot.core.database.models import SenderUnionInfo
+    from akaribot.core.utils.petal import gained_petal, lost_petal, cost_petal
 
     await TestDataFactory.ensure_sender(petal=0)
     msg = MockMessageSession("~test")
@@ -108,7 +108,7 @@ async def _test_petal_session_balance_stays_in_sync():
         petal_gained_limit = 100
         petal_lost_limit = 100
 
-    with patch("core.utils.petal.CoreConfig", MockConfig):
+    with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
         await gained_petal(msg, 10)
         await cost_petal(msg, 3, send_prompt=False)
         await lost_petal(msg, 2)
@@ -119,8 +119,8 @@ async def _test_petal_session_balance_stays_in_sync():
 
 async def _test_sign_petal_once_per_day():
     """测试 sign_get_petal - 同一 union 每日仅可签到一次，跨日（服务器 0 点）重置。"""
-    from core.database.models import SenderUnionInfo, StoredData
-    from core.utils.petal import sign_get_petal
+    from akaribot.core.database.models import SenderUnionInfo, StoredData
+    from akaribot.core.utils.petal import sign_get_petal
 
     await TestDataFactory.ensure_sender(petal=0)
     msg = MockMessageSession("~test")
@@ -136,7 +136,7 @@ async def _test_sign_petal_once_per_day():
 
     store_key = "Union|signedpetal"
     try:
-        with patch("core.utils.petal.CoreConfig", MockConfig):
+        with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
             first = await sign_get_petal(msg)
             second = await sign_get_petal(msg)
             # 今日已签到返回 0，余额不再增加
@@ -158,8 +158,8 @@ async def _test_sign_petal_once_per_day():
 
 async def _test_petal_settlement_applies_rebate():
     """测试周期结算按返点比例保留余额。"""
-    from core.database.models import SenderUnionInfo
-    from core.utils.petal import settle_petals
+    from akaribot.core.database.models import SenderUnionInfo
+    from akaribot.core.utils.petal import settle_petals
 
     sender = await TestDataFactory.ensure_sender(petal=10)
 
@@ -167,7 +167,7 @@ async def _test_petal_settlement_applies_rebate():
         enable_petal = True
         petal_rebate_rate = 0.2
 
-    with patch("core.utils.petal.CoreConfig", MockConfig):
+    with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
         await settle_petals()
 
     refreshed = await SenderUnionInfo.get(union_id=sender.union_id)

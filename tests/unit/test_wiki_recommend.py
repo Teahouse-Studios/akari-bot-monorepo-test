@@ -7,16 +7,16 @@ interaction 事件另建会话，其可用前缀与常规消息入口不同，�
 
 from unittest.mock import patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ButtonFrameElement, I18NContextElement
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.builtins.utils import command_prefix
-from core.constants.exceptions import SessionFinished
-from core.tester import func_case, Tester
-from core.utils.button import DEFAULT_BUTTONS_PER_ROW
-from modules.wiki.utils.recommend import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ButtonFrameElement, I18NContextElement
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.button import DEFAULT_BUTTONS_PER_ROW
+from akaribot.modules.wiki.utils.recommend import (
     RECOMMENDED_WIKIS,
     finish_with_start_wiki_not_set,
     get_recommend_button_data,
@@ -85,7 +85,7 @@ async def _test_button_rows_are_split():
     try:
         count = DEFAULT_BUTTONS_PER_ROW * 2 + 1
         wikis = [(f"Wiki {i}", f"https://example{i}.invalid/api.php") for i in range(count)]
-        with patch("modules.wiki.utils.recommend.RECOMMENDED_WIKIS", wikis):
+        with patch("akaribot.modules.wiki.utils.recommend.RECOMMENDED_WIKIS", wikis):
             rows = get_recommend_button_data()
         # 7 个按钮在上限 3 之下分作三行，余数均摊到首行
         return [len(row.buttons) for row in rows] == [3, 2, 2]

@@ -6,17 +6,17 @@
 平台入口前缀，故须用全局前缀。这两条前缀不变量正是本文件守住的重点。
 """
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ActionTextElement, PlainElement
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.builtins.utils import command_prefix
-from core.config.base import CoreConfig
-from core.database.models import SenderUnionInfo, TargetUnionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
-from modules.core.common_tools.help import get_setup_button_data
-from modules.core.common_tools.setup import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ActionTextElement, PlainElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.common_tools.help import get_setup_button_data
+from akaribot.modules.core.common_tools.setup import (
     _ends_with_inline_entry,
     build_jump_buttons,
     build_sender_rows,

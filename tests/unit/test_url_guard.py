@@ -15,17 +15,17 @@ from unittest.mock import patch
 
 from attr import evolve
 
-import bots.qqbot.features as qqbot_features_module
-from bots.qqbot.features import features as qqbot_features
-from bots.qqbot.features import resolve_features
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import EmbedElement
-from core.builtins.message.internal import Embed, EmbedField, Url
-from core.builtins.session.info import SessionInfo
-from core.database.models import SenderUnionInfo
-from core.logger import Logger
-from core.tester import func_case, Tester
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+import akaribot.adapters.qqbot.features as qqbot_features_module
+from akaribot.adapters.qqbot.features import features as qqbot_features
+from akaribot.adapters.qqbot.features import resolve_features
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import EmbedElement
+from akaribot.core.builtins.message.internal import Embed, EmbedField, Url
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 # 跳板服务的域名，用以断言某条路径确实未走跳板
 _MM_HOST = "mm.teahouse.team"
@@ -325,7 +325,7 @@ async def _test_global_blocklist_fails_closed_on_regex_budget_exhaustion():
                     r"regex:https://blocked\.example\.test/.*" + "\n", encoding="utf-8"
                 )
                 GlobalURLBlocklist.clear_cache()
-                with patch("core.utils.url_audit.time.monotonic", side_effect=[0.0, 1.0]):
+                with patch("akaribot.core.utils.url_audit.time.monotonic", side_effect=[0.0, 1.0]):
                     return GlobalURLBlocklist.is_blocked(_URL)
     except Exception:
         return False

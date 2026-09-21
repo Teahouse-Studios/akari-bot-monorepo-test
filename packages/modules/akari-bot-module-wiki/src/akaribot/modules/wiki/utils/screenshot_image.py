@@ -6,11 +6,11 @@ from PIL import Image as PILImage
 from akari_bot_webrender.functions.options import SectionScreenshotOptions, LegacyScreenshotOptions
 from bs4 import BeautifulSoup, Comment
 
-from core.constants.path import cache_path
-from core.logger import Logger
-from core.utils.http import get_url
-from core.utils.image import cb64imglst
-from core.utils.web_render import web_render, ElementScreenshotOptions
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.image import cb64imglst
+from akaribot.core.utils.web_render import web_render, ElementScreenshotOptions
 from .mapping import infobox_elements
 
 

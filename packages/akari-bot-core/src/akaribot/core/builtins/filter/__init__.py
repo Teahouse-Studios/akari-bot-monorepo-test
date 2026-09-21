@@ -5,10 +5,10 @@ import threading
 from collections.abc import Iterable
 from pathlib import Path
 
-from core.builtins.filter.protect import get_protected_intervals, is_protected
-from core.builtins.message.internal import I18NContext
-from core.constants.path import filter_words_path
-from core.logger import Logger
+from akaribot.core.builtins.filter.protect import get_protected_intervals, is_protected
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.constants.path import filter_words_path
+from akaribot.core.logger import Logger
 
 # 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人读不动的文件放进目录。
 FILTER_WORD_SUFFIX = ".txt"

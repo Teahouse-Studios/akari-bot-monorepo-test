@@ -2,9 +2,9 @@
 
 import time
 
-from core.utils.cooldown import CoolDown, _cd_dict
-from core.tester import func_case, Tester
-from core.tester.mock.session import MockMessageSession
+from akaribot.core.utils.cooldown import CoolDown, _cd_dict
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.session import MockMessageSession
 
 
 async def _test_cooldown_init():
@@ -103,7 +103,7 @@ async def _test_cooldown_get_cd_dict_creates():
         await msg.async_init("~test")
         cd = CoolDown("dict_create_test", msg, delay=30)
         cd_dict = cd._get_cd_dict()
-        from core.utils.container import ExpiringTempDict
+        from akaribot.core.utils.container import ExpiringTempDict
 
         return isinstance(cd_dict, ExpiringTempDict)
     except Exception:

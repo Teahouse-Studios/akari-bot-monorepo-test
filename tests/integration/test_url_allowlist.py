@@ -5,9 +5,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.elements import ImageElement
-from core.tester import Contains, Empty, Exist, Tester, func_case
-from core.utils.url_audit import GlobalURLAllowlist, URLRuleError, match_regex_rules, validate_regex_pattern
+from akaribot.core.builtins.message.elements import ImageElement
+from akaribot.testing import Contains, Empty, Exist, Tester, func_case
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, URLRuleError, match_regex_rules, validate_regex_pattern
 
 
 @func_case
@@ -65,7 +65,7 @@ async def test_url_allowlist_commands(tester: Tester):
                 "命令写入 user.txt 时应保留正则反斜杠",
             )
             render = AsyncMock(return_value=["https://example.test/allowlist.png"])
-            with patch("modules.core.su_tools.url_audit.image_table_render", new=render):
+            with patch("akaribot.modules.core.su_tools.url_audit.image_table_render", new=render):
                 await tester.integrate(
                     "~url-audit allowlist list",
                     Exist(ImageElement),
@@ -81,7 +81,7 @@ async def test_url_allowlist_commands(tester: Tester):
                 ),
                 "允许列表图片表格应包含来源、类型与规则",
             )
-            with patch("modules.core.su_tools.url_audit.image_table_render", new=AsyncMock(return_value=None)):
+            with patch("akaribot.modules.core.su_tools.url_audit.image_table_render", new=AsyncMock(return_value=None)):
                 await tester.integrate(
                     "~url-audit allowlist list",
                     Empty(),

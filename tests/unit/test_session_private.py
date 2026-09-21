@@ -1,8 +1,8 @@
 """core.builtins.session 单元测试 - 私聊场景标识（需要数据库）。"""
 
-from core.builtins.converter import converter
-from core.builtins.session.info import SessionInfo
-from core.tester import func_case, Tester
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import func_case, Tester
 
 
 async def _test_is_private_defaults_to_false():

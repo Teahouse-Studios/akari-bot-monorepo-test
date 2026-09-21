@@ -1,9 +1,9 @@
 import orjson
 from PIL import Image as PILImage
 
-from core.constants.path import cache_path
-from core.logger import Logger
-from core.utils.http import get_url, download
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import get_url, download
 
 
 async def uuid_to_name(uuid):

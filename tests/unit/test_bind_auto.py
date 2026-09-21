@@ -5,15 +5,15 @@ import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.constants.exceptions import SessionFinished
-from core.database.models import TargetUnionInfo, TargetUnionBind
-from core.module_runtime import ModuleRuntimeManager
-from core.server.lifecycle import BackgroundTaskLifecycle
-from core.tester import func_case, Tester
-from core.tester.mock.session import MockMessageSession
-from modules.core.common_tools.bind import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.database.models import TargetUnionInfo, TargetUnionBind
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.server.lifecycle import BackgroundTaskLifecycle
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.modules.core.common_tools.bind import (
     _close_handshake,
     _complete_channel_handshake,
     _pending_confirms,
@@ -406,7 +406,7 @@ async def _test_expiry_task_creation_failure_rolls_back_handshake():
     msg.hold = AsyncMock()
     msg.release = AsyncMock()
 
-    with patch("core.module_runtime.asyncio.create_task", side_effect=RuntimeError("loop closed")):
+    with patch("akaribot.core.module_runtime.asyncio.create_task", side_effect=RuntimeError("loop closed")):
         try:
             await _start_handshake(msg)
         except RuntimeError:

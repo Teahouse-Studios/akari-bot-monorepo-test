@@ -14,13 +14,13 @@
 
 from datetime import UTC, datetime, timedelta
 
-from core.alive import Alive
-from core.constants.path import cache_path
-from core.database.models import JobQueuePeersTable, JobQueuesTable
-from core.queue.contracts import PlatformAPI
-from core.tester import func_case, Tester
-from core.tester.mock.factory import TestDataFactory
-from core.tester.mock.scheduler import (
+from akaribot.core.alive import Alive
+from akaribot.core.constants.path import cache_path
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.factory import TestDataFactory
+from akaribot.testing.mock.scheduler import (
     force_run_schedule,
     get_module_hooks,
     run_hook,
@@ -79,44 +79,44 @@ def _no_error(results: list[dict]) -> bool:
 
 async def _test_arcaea_rss_posts_new_version():
     """arcaea_rss: 发现新版本时应推送"""
-    results = await _run("arcaea-rss", "modules.arcaea_rss", ("arcaea_rss",))
+    results = await _run("arcaea-rss", "akaribot.modules.arcaea_rss", ("arcaea_rss",))
     return _no_error(results) and await _posted_count() >= 1
 
 
 async def _test_arcaea_rss_deduplicates():
     """arcaea_rss: 版本已记录时不应重复推送"""
-    await _run("arcaea-rss", "modules.arcaea_rss", ("arcaea_rss",))
+    await _run("arcaea-rss", "akaribot.modules.arcaea_rss", ("arcaea_rss",))
     # 第二次不清空持久化列表，仅重置队列，验证去重生效。
     await _reset_queue()
     with strict_http():
-        results = await force_run_schedule("arcaea-rss", "modules.arcaea_rss", (), timeout=25)
+        results = await force_run_schedule("arcaea-rss", "akaribot.modules.arcaea_rss", (), timeout=25)
     return _no_error(results) and await _posted_count() == 0
 
 
 async def _test_mcv_rss_posts_versions():
     """mcv_rss: 应推送最新正式版与快照版"""
-    results = await _run("mcv-rss", "modules.mcv_rss", ("mcv_rss", "mcnews"))
+    results = await _run("mcv-rss", "akaribot.modules.mcv_rss", ("mcv_rss", "mcnews"))
     return _no_error(results) and await _posted_count() >= 2
 
 
 async def _test_minecraft_news_posts_articles():
     """minecraft_news: 应逐条推送未记录过的文章"""
-    results = await _run("minecraft-news", "modules.minecraft_news", ("mcnews",))
+    results = await _run("minecraft-news", "akaribot.modules.minecraft_news", ("mcnews",))
     return _no_error(results) and await _posted_count() >= 1
 
 
 async def _test_minecraft_news_deduplicates():
     """minecraft_news: 已记录的文章不应重复推送"""
-    await _run("minecraft-news", "modules.minecraft_news", ("mcnews",))
+    await _run("minecraft-news", "akaribot.modules.minecraft_news", ("mcnews",))
     await _reset_queue()
     with strict_http():
-        results = await force_run_schedule("minecraft-news", "modules.minecraft_news", (), timeout=25)
+        results = await force_run_schedule("minecraft-news", "akaribot.modules.minecraft_news", (), timeout=25)
     return _no_error(results) and await _posted_count() == 0
 
 
 async def _test_feedback_news_posts_articles():
     """feedback_news: 应推送反馈站的新文章"""
-    results = await _run("feedback-news", "modules.minecraft_news", ("mcfeedbacknews",))
+    results = await _run("feedback-news", "akaribot.modules.minecraft_news", ("mcfeedbacknews",))
     return _no_error(results) and await _posted_count() >= 1
 
 
@@ -141,8 +141,8 @@ async def _test_purge_recreates_cache_dir():
 
 async def _test_schedules_report_failure_explicitly():
     """未录制语料时应显式失败，而非静默回落到真实网络"""
-    from core.constants.info import Info
-    from core.utils.http import get_url
+    from akaribot.core.constants.info import Info
+    from akaribot.core.utils.http import get_url
 
     with strict_http():
         if not Info.http_mock_strict:
@@ -162,7 +162,7 @@ async def _test_wikilog_keepalive_hook_runs():
 
 async def _test_wiki_autosearch_hook_returns_titles():
     """wiki.autosearch: 应按标题返回搜索候选"""
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
     await TestDataFactory.ensure_target(SUBSCRIBER_TARGET, modules=["wiki"])
     session = await SessionInfo.assign(
@@ -172,7 +172,7 @@ async def _test_wiki_autosearch_hook_returns_titles():
         sender_id="TEST|0",
         sender_from="TEST",
     )
-    from modules.wiki.database.models import WikiTargetInfo
+    from akaribot.modules.wiki.database.models import WikiTargetInfo
 
     target = await WikiTargetInfo.get_by_target_id(SUBSCRIBER_TARGET)
     await target.add_start_wiki("https://zh.minecraft.wiki/api.php")
@@ -184,7 +184,7 @@ async def _test_wiki_autosearch_hook_returns_titles():
 
 async def _test_wiki_custom_iw_hook_returns_list():
     """wiki.auto_get_custom_iw_list: 应返回自定义 Interwiki 列表"""
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
     session = await SessionInfo.assign(
         target_id=SUBSCRIBER_TARGET,

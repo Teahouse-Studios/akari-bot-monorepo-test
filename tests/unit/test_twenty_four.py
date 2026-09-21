@@ -8,8 +8,8 @@
 抛出 TypeError。
 """
 
-from core.tester import func_case, Tester
-from modules.twenty_four import calc, check_valid, contains_all_numbers, find_solution
+from akaribot.testing import func_case, Tester
+from akaribot.modules.twenty_four import calc, check_valid, contains_all_numbers, find_solution
 
 # 需借助除法与括号才能凑成 24 的经典组合，用于检验求解器不止会做整数四则运算。
 TRICKY_NUMBERS = (3, 3, 8, 8)

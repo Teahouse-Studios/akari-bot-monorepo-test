@@ -9,7 +9,7 @@ import itertools
 import re
 import traceback
 
-from core.constants.exceptions import InvalidTemplatePattern, InvalidCommandFormatError
+from akaribot.core.constants.exceptions import InvalidTemplatePattern, InvalidCommandFormatError
 
 # 最大嵌套深度限制 - 防止无限递归
 MAX_NEST_DEPTH = 10

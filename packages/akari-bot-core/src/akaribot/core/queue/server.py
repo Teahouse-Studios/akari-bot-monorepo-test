@@ -6,24 +6,24 @@ import time
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
 
-from core.alive import Alive
-from core.builtins.filter import reload_filter_words as reload_badword_rules
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.internal import I18NContext
-from core.builtins.parser.command import CommandParser
-from core.builtins.parser.message import parser
-from core.builtins.session.info import EventInfo, SessionInfo
-from core.builtins.utils import command_prefix
-from core.constants import Info
-from core.constants.path import assets_path
-from core.config.base import CoreConfig
-from core.exports import exports, add_export
-from core.i18n import Locale
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.smtp import send_report
-from core.utils.bash import run_sys_command
-from core.utils.web_render import (
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.filter import reload_filter_words as reload_badword_rules
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.builtins.parser.message import parser
+from akaribot.core.builtins.session.info import EventInfo, SessionInfo
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.constants import Info
+from akaribot.core.constants.path import assets_path
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.exports import exports, add_export
+from akaribot.core.i18n import Locale
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.smtp import send_report
+from akaribot.core.utils.bash import run_sys_command
+from akaribot.core.utils.web_render import (
     ElementScreenshotOptions,
     PageScreenshotOptions,
     SourceOptions,

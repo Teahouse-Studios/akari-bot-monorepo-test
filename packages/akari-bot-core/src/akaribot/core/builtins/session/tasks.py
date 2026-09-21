@@ -10,12 +10,12 @@ import time
 import uuid
 from typing import Callable, Coroutine, TYPE_CHECKING
 
-from core.constants.exceptions import SessionFinished
-from core.exports import add_export
-from core.logger import Logger
+from akaribot.core.constants.exceptions import SessionFinished
+from akaribot.core.exports import add_export
+from akaribot.core.logger import Logger
 
 if TYPE_CHECKING:
-    from core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.internal import MessageSession
 
 
 class SessionTaskManager:
@@ -305,7 +305,7 @@ class SessionTaskManager:
         if not cls._task_list:
             return []
 
-        from core.database.models import SenderUnionBind, TargetUnionBind, union_mutation
+        from akaribot.core.database.models import SenderUnionBind, TargetUnionBind, union_mutation
 
         target_ids = {session.session_info.target_id}
         sender_ids = {session.session_info.sender_id} if session.session_info.sender_id else set()

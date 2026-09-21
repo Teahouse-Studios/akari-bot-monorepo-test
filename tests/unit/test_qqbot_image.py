@@ -1,11 +1,11 @@
-from bots.qqbot.context import (
+from akaribot.adapters.qqbot.context import (
     MARKDOWN_IMAGE_LIST_SIZE,
     MARKDOWN_IMAGE_MAX_WIDTH,
     _markdown_image_list_size,
     _markdown_image_size,
 )
-from core.builtins.message.elements import ImageElement
-from core.tester import Tester, func_case
+from akaribot.core.builtins.message.elements import ImageElement
+from akaribot.testing import Tester, func_case
 
 
 def _test_default_markdown_image_width():

@@ -13,13 +13,13 @@ import types
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.session.internal import MessageSession
-from core.tester import func_case, Tester, Raise
-from core.tester.expectations import Contains, ContainsAll, ContainsAny, Expectation, Regex
-from core.tester.junit import JUnitReport, JUnitTestCase, JUnitTestSuite
-from core.tester.mock.http import MockHTTPResponse
-from core.tester.mock.session import MockMessageSession
-from core.logger import Logger
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.testing import func_case, Tester, Raise
+from akaribot.testing.expectations import Contains, ContainsAll, ContainsAny, Expectation, Regex
+from akaribot.testing.junit import JUnitReport, JUnitTestCase, JUnitTestSuite
+from akaribot.testing.mock.http import MockHTTPResponse
+from akaribot.testing.mock.session import MockMessageSession
+from akaribot.core.logger import Logger
 
 # request_url 支持以 fmt 指定返回形式，mock 响应必须覆盖代码库中实际用到的全部取值。
 REQUIRED_RESPONSE_FORMATS = ("json", "text", "read", "content")
@@ -67,7 +67,7 @@ def _test_mock_response_read_returns_bytes():
 
 async def _test_contains_matches_non_text_element():
     """文本搜索类断言应能命中图片等非文本元素的渲染结果"""
-    from core.builtins.message.elements import ImageElement, PlainElement
+    from akaribot.core.builtins.message.elements import ImageElement, PlainElement
 
     result = {"output": [PlainElement.assign("hello"), ImageElement.assign(path="https://example.com/a.png")]}
     return (
@@ -81,7 +81,7 @@ async def _test_contains_matches_non_text_element():
 
 async def _test_contains_still_rejects_absent_text():
     """回退匹配不得放宽到误报：输出中不存在的文本仍应判定为不匹配"""
-    from core.builtins.message.elements import PlainElement
+    from akaribot.core.builtins.message.elements import PlainElement
 
     result = {"output": [PlainElement.assign("hello")]}
     return not await Contains("definitely_absent_token").match(result)
@@ -115,7 +115,7 @@ async def _test_integrate_preserves_unexpected_exception():
         "output": None,
     }
     tester = Tester("exception")
-    with patch("core.tester.tester.run_test_case", new=AsyncMock(return_value=raw_result)):
+    with patch("akaribot.testing.tester.run_test_case", new=AsyncMock(return_value=raw_result)):
         result = await tester.integrate("~broken", Contains("success"))
     return (
         result.get("match") is False
@@ -136,14 +136,14 @@ async def _test_integrate_expected_exception_is_not_runner_error():
         "output": None,
     }
     tester = Tester("expected_exception")
-    with patch("core.tester.tester.run_test_case", new=AsyncMock(return_value=raw_result)):
+    with patch("akaribot.testing.tester.run_test_case", new=AsyncMock(return_value=raw_result)):
         result = await tester.integrate("~broken", Raise(ValueError, "boom"))
     return result.get("match") is True and "traceback" not in result
 
 
 async def _test_function_entry_timeout_is_structured_failure():
     """无进展的 func_case 应超时返回，不能阻塞整个测试列表。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     async def stuck():
         await asyncio.Event().wait()
@@ -152,9 +152,9 @@ async def _test_function_entry_timeout_is_structured_failure():
         await tester.test(stuck, "卡住的子测试")
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
     ):
         result = await run_function_entry(slow, is_ci=True, timeout=0.01)
     return (
@@ -167,7 +167,7 @@ async def _test_function_entry_timeout_is_structured_failure():
 
 async def _test_function_entry_timeout_resets_on_progress():
     """func_case 持续完成子测试时，总耗时超过单次超时仍应通过。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     async def step():
         await asyncio.sleep(0.02)
@@ -179,9 +179,9 @@ async def _test_function_entry_timeout_resets_on_progress():
         return tester
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
     ):
         result = await run_function_entry(progressing, is_ci=True, timeout=0.2)
     return not result.get("timeout") and all(entry.get("match") for entry in result.get("results", []))
@@ -189,8 +189,8 @@ async def _test_function_entry_timeout_resets_on_progress():
 
 async def _test_protocol_exception_is_recorded_without_stopping_function_test():
     """业务控制流异常应记录为失败，入口异常也必须有界清理。"""
-    from core.constants import WaitCancelException
-    from core.tester.process import run_function_entry
+    from akaribot.core.constants import WaitCancelException
+    from akaribot.testing.process import run_function_entry
 
     async def cancelled_wait():
         raise WaitCancelException
@@ -222,9 +222,9 @@ async def _test_protocol_exception_is_recorded_without_stopping_function_test():
 
     try:
         with (
-            patch("core.tester.process.close_db", new=AsyncMock()),
-            patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-            patch("core.tester.process.load_modules", new=AsyncMock()),
+            patch("akaribot.testing.process.close_db", new=AsyncMock()),
+            patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+            patch("akaribot.testing.process.load_modules", new=AsyncMock()),
         ):
             result = await run_function_entry(mixed, is_ci=True)
             unhandled_result = await run_function_entry(unhandled_protocol_exception, is_ci=True)
@@ -254,7 +254,7 @@ async def _test_protocol_exception_is_recorded_without_stopping_function_test():
 
 async def _test_function_entries_cancel_orphaned_tasks_before_reinitializing_database():
     """func_case 收尾必须回收遗留任务，避免它们使用上一轮数据库连接。"""
-    from core.tester.process import _cancel_orphan_tasks
+    from akaribot.testing.process import _cancel_orphan_tasks
 
     cancelled = asyncio.Event()
 
@@ -273,7 +273,7 @@ async def _test_function_entries_cancel_orphaned_tasks_before_reinitializing_dat
 
 async def _test_case_entry_cancels_orphaned_tasks_before_next_database_context():
     """注册表用例也必须回收任务，避免 action 持有上一轮数据库连接。"""
-    from core.tester.process import run_case_entry
+    from akaribot.testing.process import run_case_entry
 
     cancelled = asyncio.Event()
     orphan_task = None
@@ -301,10 +301,10 @@ async def _test_case_entry_cancels_orphaned_tasks_before_next_database_context()
         "line": 0,
     }
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
-        patch("core.tester.process.run_test_case", new=fake_run_test_case),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.run_test_case", new=fake_run_test_case),
     ):
         await run_case_entry(entry, is_ci=True)
     return orphan_task is not None and orphan_task.cancelled() and cancelled.is_set()
@@ -322,7 +322,7 @@ async def _test_progress_notifications_coalesce_to_latest_revision():
 
 async def _test_function_entry_bounds_cancellation_cleanup():
     """子测试延迟响应取消时，watchdog 也必须在固定时间内返回。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     cleanup_started = asyncio.Event()
     release_cleanup = asyncio.Event()
@@ -339,10 +339,10 @@ async def _test_function_entry_bounds_cancellation_cleanup():
 
     try:
         with (
-            patch("core.tester.process.close_db", new=AsyncMock()),
-            patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-            patch("core.tester.process.load_modules", new=AsyncMock()),
-            patch("core.tester.process.FUNCTION_TEST_CANCEL_TIMEOUT", 0.01),
+            patch("akaribot.testing.process.close_db", new=AsyncMock()),
+            patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+            patch("akaribot.testing.process.load_modules", new=AsyncMock()),
+            patch("akaribot.testing.process.FUNCTION_TEST_CANCEL_TIMEOUT", 0.01),
         ):
             result = await asyncio.wait_for(run_function_entry(stubborn, is_ci=True, timeout=0.01), timeout=0.1)
         return result.get("timeout") is True and result.get("cleanup_pending") is True and cleanup_started.is_set()
@@ -353,7 +353,7 @@ async def _test_function_entry_bounds_cancellation_cleanup():
 
 async def _test_cancelled_progress_waiter_does_not_reset_deadline():
     """外部取消进度等待器不能冒充子测试完成并无限刷新 watchdog。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     async def cancelled_waiter(_self, _after_revision):
         raise asyncio.CancelledError
@@ -362,9 +362,9 @@ async def _test_cancelled_progress_waiter_does_not_reset_deadline():
         await asyncio.Event().wait()
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
         patch.object(Tester, "_wait_for_progress", new=cancelled_waiter),
     ):
         result = await asyncio.wait_for(run_function_entry(stuck, is_ci=True, timeout=0.01), timeout=0.1)
@@ -381,7 +381,7 @@ async def _test_unit_subtest_exception_keeps_running_and_counts_once():
     async def fine():
         return True
 
-    from core.tester.decorator import func_case as _fc
+    from akaribot.testing.decorator import func_case as _fc
 
     @_fc
     async def mixed(tester):
@@ -390,11 +390,11 @@ async def _test_unit_subtest_exception_keeps_running_and_counts_once():
         return tester
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
     ):
-        from core.tester.process import run_function_entry
+        from akaribot.testing.process import run_function_entry
 
         res = await run_function_entry(mixed, is_ci=True)
 
@@ -462,7 +462,7 @@ async def _test_unit_subtest_exception_keeps_running_and_counts_once():
 
 async def _test_function_entry_does_not_misclassify_test_timeout():
     """子测试自身的 TimeoutError 应保留堆栈，不能冒充 runner 无进展超时。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     async def inner_timeout():
         raise TimeoutError("inner deadline")
@@ -472,9 +472,9 @@ async def _test_function_entry_does_not_misclassify_test_timeout():
         return tester
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=True)),
-        patch("core.tester.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
     ):
         result = await run_function_entry(timed_test, is_ci=True, timeout=0.2)
     (subtest,) = result.get("results", [])
@@ -490,14 +490,14 @@ async def _test_function_entry_does_not_misclassify_test_timeout():
 
 async def _test_function_entry_init_failure_is_error():
     """数据库初始化失败属于基础设施错误，不能被记为跳过或通过。"""
-    from core.tester.process import run_function_entry
+    from akaribot.testing.process import run_function_entry
 
     async def noop(_tester):
         return None
 
     with (
-        patch("core.tester.process.close_db", new=AsyncMock()),
-        patch("core.tester.process.init_db", new=AsyncMock(return_value=False)),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=False)),
     ):
         result = await run_function_entry(noop, is_ci=True)
     return bool(result.get("error")) and not result.get("skipped")
@@ -505,9 +505,9 @@ async def _test_function_entry_init_failure_is_error():
 
 def _test_union_merge_logs_stay_out_of_repo_data():
     """合并日志须写进测试隔离的目录，合成记录不得落进 data/。"""
-    from core.constants.path import data_path, union_merge_logs_path
-    from core.database.models import UNION_SCOPE_SENDER
-    from modules.core.common_tools._union_merge import write_merge_log
+    from akaribot.core.constants.path import data_path, union_merge_logs_path
+    from akaribot.core.database.models import UNION_SCOPE_SENDER
+    from akaribot.modules.core.common_tools._union_merge import write_merge_log
 
     repo_logs_dir = data_path / "union_merge_logs"
     before = set(repo_logs_dir.glob("*.json")) if repo_logs_dir.is_dir() else set()

@@ -8,18 +8,18 @@ from PIL import Image, ImageEnhance, ImageFont, ImageDraw, ImageOps
 from gql import Client, gql
 from gql.transport.httpx import HTTPXAsyncTransport
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.constants.path import (
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.constants.path import (
     cache_path,
     noto_sans_demilight_path,
 )
-from core.logger import Logger
-from core.utils.cache import random_cache_path
-from core.utils.func import truncate_text
-from core.utils.html2text import html2text
-from core.utils.http import get_url, download
-from core.utils.image import get_fontsize
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.func import truncate_text
+from akaribot.core.utils.html2text import html2text
+from akaribot.core.utils.http import get_url, download
+from akaribot.core.utils.image import get_fontsize
 
 ctd_assets_path = Path(__file__).parent / "assets"
 nunito_light_path = ctd_assets_path / "Nunito Light.ttf"

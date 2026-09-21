@@ -10,14 +10,14 @@
 import asyncio
 import signal
 
-from core.constants import Info, lang_list
-from core.logger import Logger
-from core.queue.server import JobQueueServer
-from core.queue.rpc import set_default_peer
-from core.server.init import init_async, load_prompt
-from core.server.terminate import cleanup_sessions
+from akaribot.core.constants import Info, lang_list
+from akaribot.core.logger import Logger
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.queue.rpc import set_default_peer
+from akaribot.core.server.init import init_async, load_prompt
+from akaribot.core.server.terminate import cleanup_sessions
 
-from core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
+from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
 
 stop_event = asyncio.Event()
 

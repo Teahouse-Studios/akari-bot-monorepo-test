@@ -3,13 +3,13 @@ from collections import deque
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.builtins.session.internal import FetchedMessageSession
-from core.component import module
-from core.logger import Logger
-from core.scheduler import IntervalTrigger
-from core.types import Param
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.session.internal import FetchedMessageSession
+from akaribot.core.component import module
+from akaribot.core.logger import Logger
+from akaribot.core.scheduler import IntervalTrigger
+from akaribot.core.types import Param
 
 from .config import WikiConfig
 from .database.models import WikiLogTargetSetInfo

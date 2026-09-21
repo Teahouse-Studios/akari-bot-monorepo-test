@@ -1,8 +1,8 @@
 from tortoise import fields
 from tortoise.transactions import in_transaction
 
-from core.database.base import DBModel
-from core.database.models import SenderUnionInfo, UNION_SCOPE_SENDER, union_mutation
+from akaribot.core.database.base import DBModel
+from akaribot.core.database.models import SenderUnionInfo, UNION_SCOPE_SENDER, union_mutation
 
 table_prefix = "module_cytoid_"
 

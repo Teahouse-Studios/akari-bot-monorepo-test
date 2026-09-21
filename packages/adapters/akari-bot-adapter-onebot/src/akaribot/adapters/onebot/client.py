@@ -4,7 +4,7 @@ from typing import Any
 from aiocqhttp import CQHttp
 from aiocqhttp.event import Event
 
-from bots.onebot.config import AiocqhttpSecretConfig
+from akaribot.adapters.onebot.config import AiocqhttpSecretConfig
 
 access_token = AiocqhttpSecretConfig.qq_access_token
 

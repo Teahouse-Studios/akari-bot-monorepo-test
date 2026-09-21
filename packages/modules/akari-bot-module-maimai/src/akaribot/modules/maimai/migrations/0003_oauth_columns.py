@@ -10,7 +10,7 @@ refresh token；落雪侧则改为保存用户的授权令牌。Developer-Token 
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
+from akaribot.core.database.migration import MigrationContext
 
 REVISION = "0003_oauth_columns"
 DEPENDS_ON = "0002_union_id"

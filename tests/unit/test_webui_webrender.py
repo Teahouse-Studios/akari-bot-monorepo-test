@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 
-import bots.web.api.webrender as webrender_api
-from core.tester import Tester, func_case
+import akaribot.adapters.web.api.webrender as webrender_api
+from akaribot.testing import Tester, func_case
 
 STATUS = {
     "available": True,

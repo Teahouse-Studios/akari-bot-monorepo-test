@@ -1,8 +1,8 @@
 import orjson
 import trafilatura
 
-from core.utils.http import get_url
-from core.utils.web_render import web_render, SourceOptions
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.web_render import web_render, SourceOptions
 
 MAX_LENGTH = 4096
 

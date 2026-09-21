@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from core.database.migration import MigrationContext
+from akaribot.core.database.migration import MigrationContext
 
 REVISION = "0002_union_id"
 

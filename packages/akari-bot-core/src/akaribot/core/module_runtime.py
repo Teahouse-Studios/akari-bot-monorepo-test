@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from core.constants.path import cache_path
-from core.logger import Logger
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
 
 
 T = TypeVar("T")

@@ -9,21 +9,21 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext
-from core.builtins.message.internal import ActionText
-from core.builtins.parser.hooks import HookPoint
-from core.builtins.session.lock import ExecutionLockList
-from core.component import module
-from core.config.base import CoreConfig
-from core.database.models import SenderUnionInfo
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.utils.container import ExpiringTempDict
-from core.utils.platform_scope import scope_allows, scope_of
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.message.internal import ActionText
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.builtins.session.lock import ExecutionLockList
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.utils.container import ExpiringTempDict
+from akaribot.core.utils.platform_scope import scope_allows, scope_of
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 policies = module("_parser_policies", hidden=True, load=True, base=True)
@@ -168,7 +168,7 @@ async def _module_route(ctx: "Bot.ParserHookContext"):
             )
         return ctx.Stop(message=MessageChain.assign(desc))
 
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
     bot = Bot
     if module.required_base_superuser and msg.session_info.sender_id not in bot.base_superuser_list:
@@ -207,7 +207,7 @@ async def _command_authorize(ctx: "Bot.ParserHookContext"):
         return None
     msg = ctx.msg
     module_name = ctx.module_name or ctx.command_first_word or ""
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
     bot = Bot
     if command.required_base_superuser and msg.session_info.sender_id not in bot.base_superuser_list:
@@ -254,7 +254,7 @@ async def _regex_permission(ctx: "Bot.ParserHookContext"):
     module_name = ctx.module_name or ""
     if rfunc is None:
         return None
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
     bot = Bot
     if rfunc.required_base_superuser and ctx.msg.session_info.sender_id not in bot.base_superuser_list:

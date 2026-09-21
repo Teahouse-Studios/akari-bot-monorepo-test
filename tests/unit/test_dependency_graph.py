@@ -9,15 +9,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-import core.loader as loader_module
-from core.loader import ModulesManager
-from core.registry import (
+import akaribot.core.loader as loader_module
+from akaribot.core.loader import ModulesManager
+from akaribot.core.registry import (
     CircularDependencyError,
     PackageEntry,
     PackageManifest,
     PackageRegistry,
 )
-from core.tester import Tester, func_case
+from akaribot.testing import Tester, func_case
 
 
 class _FakeMetadata:

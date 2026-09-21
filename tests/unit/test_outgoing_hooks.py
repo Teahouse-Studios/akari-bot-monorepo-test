@@ -5,17 +5,17 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.internal import I18NContext, Plain
-from core.builtins.parser.hooks import HookPoint, OutgoingPayload, ParserHookExecutor, build_subscription
-from core.builtins.parser.hooks import dispatch as hook_dispatch
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
-from core.queue.contracts import PlatformAPI
-from core.tester import Tester, func_case
-from core.types import Module
-from core.types.module.component_meta import HookMeta
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.builtins.parser.hooks import HookPoint, OutgoingPayload, ParserHookExecutor, build_subscription
+from akaribot.core.builtins.parser.hooks import dispatch as hook_dispatch
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants.exceptions import SendMessageFailed, SessionFinished, WaitCancelException
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import HookMeta
 
 _PATHS = ("send_message", "send_direct_message", "send_private_message")
 _RESULT_POINTS = (HookPoint.OUTGOING_SENT, HookPoint.OUTGOING_FAILED)
@@ -103,7 +103,7 @@ async def _test_observers_see_normalized_chain():
             with (
                 _sending(path, handlers, platform_effect) as (msg, platform),
                 patch(
-                    "core.utils.image.msgnode2image",
+                    "akaribot.core.utils.image.msgnode2image",
                     new=AsyncMock(return_value=Plain("rendered node", disable_joke=True)),
                 ),
                 patch.object(

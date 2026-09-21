@@ -8,11 +8,11 @@ contracts because their implementations must stay in the server process.
 
 from typing import Any, Literal
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.context import ContextManager
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.features import Features
-from core.builtins.session.info import EventInfo, SessionInfo
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import EventInfo, SessionInfo
 from .codec import register_value_type
 from .peer import ServiceRoute
 from .rpc import context_method, context_target, remote, signal

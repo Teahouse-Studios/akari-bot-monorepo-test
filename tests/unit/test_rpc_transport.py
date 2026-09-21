@@ -10,10 +10,10 @@ from uuid import uuid4
 
 from tortoise.queryset import QuerySet
 
-from core.database.models import JobQueuesTable
-from core.logger import Logger
-from core.queue.base import current_peer, JobQueueBase
-from core.queue.errors import (
+from akaribot.core.database.models import JobQueuesTable
+from akaribot.core.logger import Logger
+from akaribot.core.queue.base import current_peer, JobQueueBase
+from akaribot.core.queue.errors import (
     RpcCancelledError,
     RpcMethodNotFoundError,
     RpcProtocolError,
@@ -21,10 +21,10 @@ from core.queue.errors import (
     RpcTimeoutError,
     RpcUnavailableError,
 )
-from core.queue.peer import PeerRecord
-from core.queue.transport import MAX_RPC_TRACEBACK_LENGTH, PROTOCOL_VERSION, RpcRequest, RpcResponse
-from core.tester import func_case, Tester
-from core.tester.timing import TIME_SCALE
+from akaribot.core.queue.peer import PeerRecord
+from akaribot.core.queue.transport import MAX_RPC_TRACEBACK_LENGTH, PROTOCOL_VERSION, RpcRequest, RpcResponse
+from akaribot.testing import func_case, Tester
+from akaribot.testing.timing import TIME_SCALE
 
 
 RPC_TEST_TIMEOUT = 10 * TIME_SCALE

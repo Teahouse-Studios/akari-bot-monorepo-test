@@ -7,10 +7,10 @@ from html.parser import HTMLParser
 from aiogram.types import FSInputFile, InputMediaAudio, InputMediaPhoto
 from attrs import define, field
 
-from bots.telegram.info import client_name
-from core.builtins.message.mention import InlineMention, iter_at_code
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import (
+from akaribot.adapters.telegram.info import client_name
+from akaribot.core.builtins.message.mention import InlineMention, iter_at_code
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import (
     ActionTextElement,
     ButtonFrameElement,
     ButtonRows,
@@ -20,10 +20,10 @@ from core.builtins.message.elements import (
     AudioElement,
     VideoElement,
 )
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.utils.image_split import image_split
-from core.utils.media import resolve_media_path
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.core.utils.image_split import image_split
+from akaribot.core.utils.media import resolve_media_path
 
 
 @define(frozen=True)

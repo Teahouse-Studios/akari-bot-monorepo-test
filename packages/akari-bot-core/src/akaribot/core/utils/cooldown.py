@@ -1,7 +1,7 @@
 import time
 
-from core.builtins.session.internal import MessageSession
-from core.utils.container import ExpiringTempDict
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.utils.container import ExpiringTempDict
 
 _cd_dict = ExpiringTempDict()
 

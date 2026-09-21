@@ -7,22 +7,26 @@ from pathlib import Path
 import discord
 import filetype
 
-import bots.discord.slash as slash_modules
-from bots.discord.client import discord_bot, ensure_client_initialized
-from bots.discord.config import DiscordConfig, DiscordSecretConfig
-from bots.discord.buttons import set_action_text_submit_handler, set_button_click_handler
-from bots.discord.interactions import handle_action_text_submit, handle_button_click
-from bots.discord.context import DiscordContextManager, DiscordFetchedContextManager, DiscordReactionContext
-from bots.discord.events import guild_member_joined, guild_member_left
-from bots.discord.info import *
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image, Audio, Video
-from core.builtins.session.info import SessionInfo
-from core.builtins.utils import command_prefix
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.utils.http import download
+import akaribot.adapters.discord.slash as slash_modules
+from akaribot.adapters.discord.client import discord_bot, ensure_client_initialized
+from akaribot.adapters.discord.config import DiscordConfig, DiscordSecretConfig
+from akaribot.adapters.discord.buttons import set_action_text_submit_handler, set_button_click_handler
+from akaribot.adapters.discord.interactions import handle_action_text_submit, handle_button_click
+from akaribot.adapters.discord.context import (
+    DiscordContextManager,
+    DiscordFetchedContextManager,
+    DiscordReactionContext,
+)
+from akaribot.adapters.discord.events import guild_member_joined, guild_member_left
+from akaribot.adapters.discord.info import *
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import download
 
 Bot.register_bot(client_name=client_name)
 

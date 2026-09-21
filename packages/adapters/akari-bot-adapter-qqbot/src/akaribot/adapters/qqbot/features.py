@@ -2,12 +2,12 @@ from typing import TYPE_CHECKING
 
 from attr import evolve
 
-from bots.qqbot.config import QQBotConfig
-from core.builtins.session.features import Features
-from core.config.base import CoreConfig
+from akaribot.adapters.qqbot.config import QQBotConfig
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.config.base import CoreConfig
 
 if TYPE_CHECKING:
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.session.info import SessionInfo
 
 dirty_word_check = CoreConfig.enable_dirty_check
 qq_use_markdown = QQBotConfig.qq_use_markdown

@@ -1,6 +1,6 @@
 """工具模块集成测试 - dice, coin, random 等。"""
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Regex,

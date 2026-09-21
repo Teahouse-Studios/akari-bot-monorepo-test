@@ -4,9 +4,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
-from core.tester import Contains, Tester, func_case
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
-from modules.wiki.utils.wikilib import BlockedWikiError, WikiInfo, WikiLib, WikiStatus
+from akaribot.testing import Contains, Tester, func_case
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.modules.wiki.utils.wikilib import BlockedWikiError, WikiInfo, WikiLib, WikiStatus
 
 PAGE_URL = "https://wiki.example.test/wiki/Example_Page"
 API_URL = "https://wiki.example.test/w/api.php"

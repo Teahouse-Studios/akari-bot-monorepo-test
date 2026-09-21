@@ -6,8 +6,8 @@ import unicodedata
 from PIL import Image, ImageDraw, ImageFont
 from attrs import define, field
 
-from core.constants.path import noto_sans_bold_path
-from core.utils.random import Random
+from akaribot.core.constants.path import noto_sans_bold_path
+from akaribot.core.utils.random import Random
 
 words_txt = Path(__file__).parent / "assets" / "words.txt"
 answers_txt = Path(__file__).parent / "assets" / "answers.txt"

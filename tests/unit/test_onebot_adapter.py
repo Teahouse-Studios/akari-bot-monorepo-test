@@ -3,17 +3,17 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import bots.onebot.context as onebot_context
-from bots.onebot.context import OneBotContextManager
-from bots.onebot.features import features as onebot_features
-from bots.onebot.info import client_name, sender_prefix, target_group_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import VideoElement
-from core.builtins.message.internal import Audio, Image, Plain
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
-from core.utils.session import inject_features
+import akaribot.adapters.onebot.context as onebot_context
+from akaribot.adapters.onebot.context import OneBotContextManager
+from akaribot.adapters.onebot.features import features as onebot_features
+from akaribot.adapters.onebot.info import client_name, sender_prefix, target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import VideoElement
+from akaribot.core.builtins.message.internal import Audio, Image, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.session import inject_features
 
 
 def _session(session_id: str) -> SessionInfo:

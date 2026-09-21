@@ -26,12 +26,12 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 from tomlkit import parse as toml_parser, dumps as toml_dumps
 
-from core.paths import Paths
+from akaribot.core.paths import Paths
 
 if TYPE_CHECKING:
     from tomlkit import TOMLDocument
 
-    from core.registry import PackageEntry
+    from akaribot.core.registry import PackageEntry
 
 CONFIG_VERSION_KEY = "config_version"
 CORE_CONFIG_TABLE = "config"
@@ -61,7 +61,7 @@ def _config_root() -> Path:
 
     :return: 配置目录路径。
     """
-    module = sys.modules.get("core.config")
+    module = sys.modules.get("akaribot.core.config")
     if module is not None:
         return module.CFGManager.config_path
     return Paths.config
@@ -102,7 +102,7 @@ def iter_config_tables() -> list[tuple["PackageEntry", str]]:
 
     :return: (包条目, 配置表名) 列表，按包名排序。
     """
-    from core.registry import PackageRegistry
+    from akaribot.core.registry import PackageRegistry
 
     result: list[tuple[Any, str]] = []
     for kind in ("adapter", "module"):
@@ -148,7 +148,7 @@ def iter_config_revisions() -> dict[str, list[ConfigRevision]]:
 
     :return: 包名到迁移脚本列表的映射，无迁移的包不出现在结果中。
     """
-    from core.registry import PackageRegistry
+    from akaribot.core.registry import PackageRegistry
 
     result: dict[str, list[ConfigRevision]] = {}
     for kind in ("adapter", "module"):
@@ -282,7 +282,7 @@ def _write_document(path: Path, document: "TOMLDocument") -> None:
 
 def _reload_config_manager() -> None:
     """让已加载的配置管理器丢弃内存副本，避免其随后以迁移前的副本覆盖磁盘。"""
-    module = sys.modules.get("core.config")
+    module = sys.modules.get("akaribot.core.config")
     if module is not None:
         module.CFGManager.load()
 

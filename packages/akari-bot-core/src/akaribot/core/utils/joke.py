@@ -1,9 +1,9 @@
 import time
 
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.utils.http import url_pattern
-from core.utils.random import Random
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.utils.http import url_pattern
+from akaribot.core.utils.random import Random
 
 
 def shuffle_joke(text: str) -> str:

@@ -1,8 +1,8 @@
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import I18NContext, Plain, Url
-from core.builtins.session.internal import MessageSession
-from core.utils.dirty_check import check
-from modules.wiki.utils.wikilib import WikiLib
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.utils.dirty_check import check
+from akaribot.modules.wiki.utils.wikilib import WikiLib
 
 NEWBIE_LIMIT = 10
 

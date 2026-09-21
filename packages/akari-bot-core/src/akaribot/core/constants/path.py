@@ -12,7 +12,7 @@
 import os
 from pathlib import Path
 
-from core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
+from akaribot.core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
 
 # 配置只读模式的环境变量名：守护进程 spawn 子进程前置位，pre-init 进程清除。
 # 该常量须位于不依赖 core.config 的模块，以免提前触发导入期版本迁移。

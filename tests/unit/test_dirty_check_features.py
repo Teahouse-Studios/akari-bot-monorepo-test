@@ -2,13 +2,13 @@
 
 from datetime import UTC, datetime, timedelta
 
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.converter import converter
-from core.builtins.session.features import Features
-from core.builtins.session.internal import FetchedMessageSession
-from core.database.models import JobQueuePeersTable
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.converter import converter
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.internal import FetchedMessageSession
+from akaribot.core.database.models import JobQueuePeersTable
+from akaribot.testing import func_case, Tester
 
 FLAG = "require_check_dirty_words"
 
@@ -68,7 +68,7 @@ async def _test_flag_reaches_fetched_session():
 
 async def _test_wiki_content_check_respects_dirty_word_feature():
     """Wiki 内容检查须受 require_check_dirty_words 开关控制。"""
-    from modules.wiki.utils.wikilib import WikiLib
+    from akaribot.modules.wiki.utils.wikilib import WikiLib
 
     class SessionInfo:
         require_check_dirty_words = False

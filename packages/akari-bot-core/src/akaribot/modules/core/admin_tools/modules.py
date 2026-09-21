@@ -1,16 +1,16 @@
 from copy import deepcopy
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.builtins.parser.command import CommandParser
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.exceptions import InvalidHelpDocTypeError
-from core.database.models import ModuleStatus
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.utils.platform_scope import platform_fields
-from modules.core.common_tools.help import check_context_admin, modules_list_help
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.exceptions import InvalidHelpDocTypeError
+from akaribot.core.database.models import ModuleStatus
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.utils.platform_scope import platform_fields
+from akaribot.modules.core.common_tools.help import check_context_admin, modules_list_help
 
 # 模块受限成因到提示文案的映射，键取自 Module.unsupported_reason() 的返回值。
 UNSUPPORTED_PROMPTS = {

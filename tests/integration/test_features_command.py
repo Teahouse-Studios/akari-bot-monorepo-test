@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-import core.builtins.bot as bot_module
-from core.builtins.session.features import Features
-from core.tester import func_case, ContainsAll, Tester
-from core.utils.session import inject_features
+import akaribot.core.builtins.bot as bot_module
+from akaribot.core.builtins.session.features import Features
+from akaribot.testing import func_case, ContainsAll, Tester
+from akaribot.core.utils.session import inject_features
 
 
 @func_case

@@ -1,9 +1,9 @@
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.database.models import SenderUnionInfo
-from core.loader import ModulesManager
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.database.models import SenderUnionInfo
+from akaribot.core.loader import ModulesManager
 
 auth = module("auth", required_superuser=True, base=True, doc=True)
 

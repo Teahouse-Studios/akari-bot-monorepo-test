@@ -1,12 +1,12 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ActionText, I18NContext, ImageElement, Plain
-from core.builtins.message.chain import MessageChain
-from core.component import module
-from modules.ai.config import AiConfig
-from core.utils.cooldown import CoolDown
-from core.utils.dirty_check import check_bool, rickroll
-from core.logger import Logger
-from core.constants import WaitCancelException
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, ImageElement, Plain
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.component import module
+from akaribot.modules.ai.config import AiConfig
+from akaribot.core.utils.cooldown import CoolDown
+from akaribot.core.utils.dirty_check import check_bool, rickroll
+from akaribot.core.logger import Logger
+from akaribot.core.constants import WaitCancelException
 from .petal import precount_petal, count_token_petal
 from .setting import get_llm_billing, llm_api_list, llm_list, llm_su_list
 from .context import CONTEXT_EXPIRY, create_context, get_context

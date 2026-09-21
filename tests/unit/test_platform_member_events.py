@@ -5,11 +5,11 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from bots.discord import events as discord_events
-from bots.kook import events as kook_events
-from bots.matrix import events as matrix_events
-from bots.telegram import events as telegram_events
-from core.tester import Tester, func_case
+from akaribot.adapters.discord import events as discord_events
+from akaribot.adapters.kook import events as kook_events
+from akaribot.adapters.matrix import events as matrix_events
+from akaribot.adapters.telegram import events as telegram_events
+from akaribot.testing import Tester, func_case
 
 
 async def _capture_event(module, callback, *args, **kwargs):

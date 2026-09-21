@@ -6,23 +6,23 @@ from milky.async_client import MilkyError, MilkyHttpError
 from milky.models import OutgoingTextSegment, Role, TextSegmentData
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from bots.milky.client import milky_bot
-from bots.milky.config import MilkyConfig
-from bots.milky.features import features as milky_features
-from bots.milky.info import target_group_prefix, target_private_prefix
-from bots.milky.utils import (
+from akaribot.adapters.milky.client import milky_bot
+from akaribot.adapters.milky.config import MilkyConfig
+from akaribot.adapters.milky.features import features as milky_features
+from akaribot.adapters.milky.info import target_group_prefix, target_private_prefix
+from akaribot.adapters.milky.utils import (
     convert_chain_to_segments,
     convert_msg_nodes,
     get_available_group_list,
     get_available_private_list,
 )
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.logger import Logger
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
 
 qq_typing_emoji = str(MilkyConfig.qq_typing_emoji)
 qq_limited_emoji = str(MilkyConfig.qq_limited_emoji)

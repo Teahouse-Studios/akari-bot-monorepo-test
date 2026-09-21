@@ -1,12 +1,12 @@
 from simpleeval import simple_eval
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.component import module
-from core.utils.game import PlayState, GAME_EXPIRED
-from core.utils.petal import cost_petal, gained_petal, lost_petal
-from core.utils.func import is_int
-from core.utils.random import Random
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.component import module
+from akaribot.core.utils.game import PlayState, GAME_EXPIRED
+from akaribot.core.utils.petal import cost_petal, gained_petal, lost_petal
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.random import Random
 
 no_solution_lst = [
     "无解",

@@ -5,7 +5,7 @@ nbnhhsh 与 idlist 的响应均由 tests/fixtures/http/ 下的录制内容提供
 按「URL + 方法 + 请求体摘要」匹配，因此同一接口的不同查询各自对应独立语料。
 """
 
-from core.tester import (
+from akaribot.testing import (
     func_case,
     Tester,
     Contains,

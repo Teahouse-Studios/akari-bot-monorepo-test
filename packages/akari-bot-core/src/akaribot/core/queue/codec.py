@@ -8,7 +8,7 @@ import math
 import types
 from typing import Any, Literal, Union, get_args, get_origin
 
-from core.builtins.converter import converter
+from akaribot.core.builtins.converter import converter
 
 
 _value_types: dict[str, Any] = {}

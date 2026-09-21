@@ -17,8 +17,8 @@ from urllib.parse import quote
 
 sys.path.insert(0, ".")
 
-from core.tester.mock.webrender import save_webrender_fixture, FIXTURE_DIR
-from core.utils.http import get_url
+from akaribot.testing.mock.webrender import save_webrender_fixture, FIXTURE_DIR
+from akaribot.core.utils.http import get_url
 
 # 需要录制的 URL 与用途说明。
 TARGETS = [

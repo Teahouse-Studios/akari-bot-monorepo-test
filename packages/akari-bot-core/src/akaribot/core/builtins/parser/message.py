@@ -17,9 +17,9 @@ import time
 from types import UnionType
 from typing import TYPE_CHECKING, Union, get_args, get_origin
 
-from core.builtins.message.internal import I18NContext
-from core.builtins.parser.command import CommandParser
-from core.builtins.parser.hooks import (
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.builtins.parser.hooks import (
     Continue,
     Handled,
     HookPoint,
@@ -29,9 +29,9 @@ from core.builtins.parser.hooks import (
     dispatch_parser_hook,
     has_hook_subscribers,
 )
-from core.builtins.session.lock import ExecutionLockList
-from core.builtins.session.tasks import SessionTaskManager
-from core.constants.exceptions import (
+from akaribot.core.builtins.session.lock import ExecutionLockList
+from akaribot.core.builtins.session.tasks import SessionTaskManager
+from akaribot.core.constants.exceptions import (
     AbuseWarning,
     ExternalException,
     InvalidCommandFormatError,
@@ -40,18 +40,18 @@ from core.constants.exceptions import (
     SendMessageFailed,
     WaitCancelException,
 )
-from core.exports import exports
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.types import Module, Param
-from core.types.module.component_meta import CommandMeta
-from core.utils.container import ExpiringTempDict
-from core.utils.func import normalize_space
-from core.utils.platform_scope import platform_fields, platform_scope, scope_allows, scope_of
+from akaribot.core.exports import exports
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.types import Module, Param
+from akaribot.core.types.module.component_meta import CommandMeta
+from akaribot.core.utils.container import ExpiringTempDict
+from akaribot.core.utils.func import normalize_space
+from akaribot.core.utils.platform_scope import platform_fields, platform_scope, scope_allows, scope_of
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 # 匹配哈希缓存 - 缓存消息与模块的匹配结果，加速处理
 match_hash_cache = ExpiringTempDict()

@@ -4,15 +4,15 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.constants import SessionContextUnavailable
-from core.module_runtime import ModuleRuntimeManager
-from core.queue.contracts import PlatformAPI
-from core.server.lifecycle import BackgroundTaskLifecycle
-from core.tester import func_case, Tester
-from modules.wiki.wiki import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.constants import SessionContextUnavailable
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.queue.contracts import PlatformAPI
+from akaribot.core.server.lifecycle import BackgroundTaskLifecycle
+from akaribot.testing import func_case, Tester
+from akaribot.modules.wiki.wiki import (
     _WikiMessageTracker,
     _build_render_preview_callback,
     _build_forum_callback,
@@ -47,7 +47,7 @@ async def _test_render_preview_can_be_deleted_after_preview():
     rendered = MessageChain.assign("preview")
 
     with (
-        patch("modules.wiki.wiki._render_preview_items", new=AsyncMock(return_value=rendered)),
+        patch("akaribot.modules.wiki.wiki._render_preview_items", new=AsyncMock(return_value=rendered)),
         patch.object(PlatformAPI.delete_message, "submit", new=AsyncMock()) as delete,
     ):
         callback = _build_render_preview_callback([], {}, tracker)
@@ -72,7 +72,7 @@ async def _test_section_callback_uses_click_session_and_frozen_page():
     page.info.api = "https://last.example/api.php"
     click = _ClickSession("1")
 
-    with patch("modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
+    with patch("akaribot.modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
         await callback(click)
 
     return query.await_args == (
@@ -89,7 +89,7 @@ async def _test_section_callback_rejects_zero_index():
     )
     callback = _build_section_callback(page)
 
-    with patch("modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
+    with patch("akaribot.modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
         await callback(_ClickSession("0"))
 
     return query.await_count == 0
@@ -106,7 +106,7 @@ async def _test_forum_callback_uses_click_session_and_frozen_page():
     page.info.api = "https://last.example/api.php"
     click = _ClickSession("1")
 
-    with patch("modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
+    with patch("akaribot.modules.wiki.wiki.query_pages", new_callable=AsyncMock) as query:
         await callback(click)
 
     return query.await_args == (
@@ -159,7 +159,7 @@ async def _test_background_spawn_failure_rolls_back_hold():
     async def idle():
         await asyncio.sleep(0)
 
-    with patch("core.module_runtime.asyncio.create_task", side_effect=RuntimeError("loop closed")):
+    with patch("akaribot.core.module_runtime.asyncio.create_task", side_effect=RuntimeError("loop closed")):
         try:
             await _start_background_with_release(session, idle, name="wiki-spawn-failure")
         except RuntimeError:
@@ -218,7 +218,7 @@ async def _test_query_pages_holds_context_for_entire_query():
         events.append("query")
         return kwargs["title"]
 
-    with patch("modules.wiki.wiki._query_pages_impl", new=query):
+    with patch("akaribot.modules.wiki.wiki._query_pages_impl", new=query):
         result = await query_pages(session, title="Page")
 
     return result == "Page" and events == ["hold", "query", "release"]
@@ -237,7 +237,7 @@ async def _test_query_pages_skips_when_context_is_unavailable():
         )
     )
     query = AsyncMock()
-    with patch("modules.wiki.wiki._query_pages_impl", new=query):
+    with patch("akaribot.modules.wiki.wiki._query_pages_impl", new=query):
         result = await query_pages(session, title="Page")
 
     return result is None and query.await_count == 0

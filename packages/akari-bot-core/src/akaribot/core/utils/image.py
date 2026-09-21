@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING, Literal, overload
 from PIL import Image as PILImage
 from jinja2 import FileSystemLoader, Environment
 
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import PlainElement, ImageElement, EmbedElement
-from core.config.base import CoreConfig
-from core.constants.path import templates_path
-from core.logger import Logger
-from core.utils.cache import random_cache_path
-from core.utils.web_render import web_render, ElementScreenshotOptions
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import PlainElement, ImageElement, EmbedElement
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import templates_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.web_render import web_render, ElementScreenshotOptions
 
 if TYPE_CHECKING:
-    from core.builtins.session.internal import MessageSession
-    from core.builtins.session.info import SessionInfo, FetchedSessionInfo
+    from akaribot.core.builtins.session.internal import MessageSession
+    from akaribot.core.builtins.session.info import SessionInfo, FetchedSessionInfo
 
 
 env = Environment(loader=FileSystemLoader(templates_path), autoescape=True, enable_async=True)

@@ -1,7 +1,7 @@
 """core.types.module 单元测试 - 模块级命令语法错误提示开关。"""
 
-from core.tester import func_case, Tester
-from core.types.module import Module
+from akaribot.testing import func_case, Tester
+from akaribot.core.types.module import Module
 
 
 def _build(**kwargs):

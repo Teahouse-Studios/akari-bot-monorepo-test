@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from core.registry import PackageRegistry
+from akaribot.core.registry import PackageRegistry
 
 SONGS_PER_PAGE = 30
 SONGS_NEED_IMG = 10

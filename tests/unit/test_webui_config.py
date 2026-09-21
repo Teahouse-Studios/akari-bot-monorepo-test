@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 
-import bots.web.api.api as web_api
-from core.tester import Tester, func_case
+import akaribot.adapters.web.api.api as web_api
+from akaribot.testing import Tester, func_case
 
 
 async def _call(call) -> tuple[int, object]:

@@ -6,15 +6,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from core.builtins.parser.hooks import HookPoint
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.info import Info
-from core.database.models import AnalyticsData
-from core.logger import Logger
+from akaribot.core.builtins.parser.hooks import HookPoint
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.info import Info
+from akaribot.core.database.models import AnalyticsData
+from akaribot.core.logger import Logger
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
+    from akaribot.core.builtins.bot import Bot
 
 
 def _enable_analytics() -> bool:

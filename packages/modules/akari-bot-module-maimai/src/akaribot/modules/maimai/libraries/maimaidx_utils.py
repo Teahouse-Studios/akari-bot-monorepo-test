@@ -3,11 +3,11 @@ import time
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, I18NContext, Plain
-from core.utils.http import get_url
-from core.utils.random import Random
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Plain
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.random import Random
 from .divingfish_oauth import diving_fish_bind_usable, fill_bind_username
 from .maimaidx_apidata import get_record, get_song_record, get_total_record, get_plate
 from .maimaidx_mapping import *

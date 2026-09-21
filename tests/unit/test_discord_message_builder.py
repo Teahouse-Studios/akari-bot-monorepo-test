@@ -5,12 +5,12 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, Button, Embed, Image, Mention, Plain, Audio
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import Tester, func_case
-from bots.discord.message_builder import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, Button, Embed, Image, Mention, Plain, Audio
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import Tester, func_case
+from akaribot.adapters.discord.message_builder import (
     DiscordPayload,
     build_discord_payloads,
     execute_discord_payloads,
@@ -102,9 +102,11 @@ async def _test_mixed_elements_fit_one_payload():
         fake_file = SimpleNamespace(filename="direct.bin")
         fake_embed = SimpleNamespace()
         with (
-            patch("bots.discord.message_builder.discord.File", return_value=fake_file),
-            patch("bots.discord.message_builder.convert_embed", new=AsyncMock(return_value=(fake_embed, []))),
-            patch("core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
+            patch("akaribot.adapters.discord.message_builder.discord.File", return_value=fake_file),
+            patch(
+                "akaribot.adapters.discord.message_builder.convert_embed", new=AsyncMock(return_value=(fake_embed, []))
+            ),
+            patch("akaribot.core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
         ):
             payloads = await build_discord_payloads(_session(), chain)
     finally:
@@ -123,7 +125,7 @@ async def _test_unavailable_media_elements_are_skipped():
     chain = MessageChain.assign(
         [Plain("hello"), Image("missing-image-fixture.png"), Audio("missing-audio-fixture.mp3")]
     )
-    with patch("bots.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs):
+    with patch("akaribot.adapters.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs):
         payloads = await build_discord_payloads(_session(), chain)
     return len(payloads) == 1 and payloads[0].content == "hello" and payloads[0].files == []
 
@@ -131,8 +133,8 @@ async def _test_unavailable_media_elements_are_skipped():
 async def _test_file_limit_creates_second_payload():
     chain = MessageChain.assign([Image(f"{index}.png") for index in range(11)])
     with (
-        patch("bots.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs),
-        patch("core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
+        patch("akaribot.adapters.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs),
+        patch("akaribot.core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
     ):
         payloads = await build_discord_payloads(_session(), chain)
     return [len(payload.files) for payload in payloads] == [10, 1]
@@ -141,7 +143,7 @@ async def _test_file_limit_creates_second_payload():
 async def _test_embed_limit_creates_second_payload():
     chain = MessageChain.assign([Embed(title=str(index)) for index in range(11)])
     with patch(
-        "bots.discord.message_builder.convert_embed",
+        "akaribot.adapters.discord.message_builder.convert_embed",
         new=AsyncMock(side_effect=[(SimpleNamespace(index=index), []) for index in range(11)]),
     ):
         payloads = await build_discord_payloads(_session(), chain)
@@ -153,9 +155,11 @@ async def _test_embed_attachment_stays_with_embed():
     embed = SimpleNamespace()
     embed_file = SimpleNamespace(filename="embed-image.png")
     with (
-        patch("bots.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs),
-        patch("core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
-        patch("bots.discord.message_builder.convert_embed", new=AsyncMock(return_value=(embed, [embed_file]))),
+        patch("akaribot.adapters.discord.message_builder.discord.File", side_effect=lambda *_args, **kwargs: kwargs),
+        patch("akaribot.core.builtins.message.elements.ImageElement.get", new=AsyncMock(return_value=b"image")),
+        patch(
+            "akaribot.adapters.discord.message_builder.convert_embed", new=AsyncMock(return_value=(embed, [embed_file]))
+        ),
     ):
         payloads = await build_discord_payloads(_session(), chain)
     embed_payload = next(payload for payload in payloads if embed in payload.embeds)
@@ -193,7 +197,7 @@ async def _test_execute_preserves_messages_before_send_failure():
 
 
 def _test_interaction_reference_uses_component_message():
-    from bots.discord.context import resolve_discord_reference
+    from akaribot.adapters.discord.context import resolve_discord_reference
 
     message = SimpleNamespace(id=1)
     interaction = SimpleNamespace(message=message)

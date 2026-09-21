@@ -2,14 +2,14 @@ from collections import defaultdict
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import ActionText, I18NContext, Image, Plain
-from core.constants.exceptions import ConfigValueError
-from core.constants.path import cache_path
-from core.logger import Logger
-from core.utils.func import is_int
-from core.utils.http import download, get_url, post_url
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image, Plain
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.constants.path import cache_path
+from akaribot.core.logger import Logger
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.http import download, get_url, post_url
 from .divingfish_oauth import (
     DF_OAUTH_ENABLED,
     DivingFishTokenRevoked,
@@ -26,7 +26,7 @@ from .lxns_apidata import (
 )
 from .source import GAME_MAIMAI, SOURCE_LXNS, pick_source
 from ..database.models import DivingProberBindInfo
-from core.config.base import CoreConfig
+from akaribot.core.config.base import CoreConfig
 
 total_list = TotalList()
 

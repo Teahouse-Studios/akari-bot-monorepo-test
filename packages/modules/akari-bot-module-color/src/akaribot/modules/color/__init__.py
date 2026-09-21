@@ -7,10 +7,10 @@ import orjson
 import webcolors
 from PIL import Image, ImageDraw, ImageFont
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import Embed, EmbedField, Image as BImage, I18NContext
-from core.component import module
-from core.constants.path import noto_sans_demilight_path
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import Embed, EmbedField, Image as BImage, I18NContext
+from akaribot.core.component import module
+from akaribot.core.constants.path import noto_sans_demilight_path
 
 c = module(
     "color",

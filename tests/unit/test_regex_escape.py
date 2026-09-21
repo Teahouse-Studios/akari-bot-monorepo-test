@@ -2,15 +2,15 @@
 
 from unittest.mock import AsyncMock, patch
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import MessageSession
-from core.config.base import CoreConfig
-from core.constants.default import regex_disable_prefix_default
-from core.tester import func_case, Tester
-from core.tester.mock.parser import parser as mock_parser
-from core.tester.mock.session import MockMessageSession
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.default import regex_disable_prefix_default
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.parser import parser as mock_parser
+from akaribot.testing.mock.session import MockMessageSession
 
 
 def _test_default_from_constants():
@@ -22,7 +22,7 @@ async def _regex_called(input_: str) -> bool:
     msg = MockMessageSession(input_, is_ci=True)
     await msg.async_init(input_)
     execute_regex = AsyncMock()
-    with patch("core.tester.mock.parser._execute_regex", execute_regex):
+    with patch("akaribot.testing.mock.parser._execute_regex", execute_regex):
         await mock_parser(msg)
     return execute_regex.await_count == 1
 
@@ -40,7 +40,7 @@ async def _test_mock_parser_keeps_normal_regex_parsing():
 
 
 async def _production_regex_called(input_: str) -> bool:
-    from core.builtins.parser.message import parser
+    from akaribot.core.builtins.parser.message import parser
 
     session_info = await SessionInfo.assign(
         target_id="REGEXESCAPE|Group|0",
@@ -52,7 +52,7 @@ async def _production_regex_called(input_: str) -> bool:
     )
     msg = MessageSession(session_info=session_info)
     execute_regex = AsyncMock()
-    with patch("core.builtins.parser.message._execute_regex", execute_regex):
+    with patch("akaribot.core.builtins.parser.message._execute_regex", execute_regex):
         await parser(msg)
     return execute_regex.await_count == 1
 

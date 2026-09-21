@@ -2,14 +2,14 @@ import asyncio
 from datetime import datetime, UTC
 from pathlib import Path
 
-from core.builtins.message.internal import ActionText, I18NContext, Plain
-from core.config.base import CoreConfig
-from core.constants.path import retired_path
-from core.database.models import StoredData, TargetUnionBind
-from core.exports import exports
-from core.logger import Logger
-from core.server.lifecycle import BackgroundTaskLifecycle
-from core.utils.random import Random
+from akaribot.core.builtins.message.internal import ActionText, I18NContext, Plain
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import retired_path
+from akaribot.core.database.models import StoredData, TargetUnionBind
+from akaribot.core.exports import exports
+from akaribot.core.logger import Logger
+from akaribot.core.server.lifecycle import BackgroundTaskLifecycle
+from akaribot.core.utils.random import Random
 
 # 公告文案的基础语言。当前语言缺失时优先回退至此。
 NOTICE_FALLBACK_LOCALE = "zh_cn"

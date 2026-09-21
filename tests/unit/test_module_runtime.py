@@ -5,8 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from core.module_runtime import ModuleRuntimeManager
-from core.tester import Tester, func_case
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.testing import Tester, func_case
 
 
 def _reset_runtime_manager():
@@ -153,7 +153,7 @@ async def _test_spawned_task_failure_logs_traceback():
         raise ValueError("visible task failure")
 
     runtime = ModuleRuntimeManager.get_or_create(module_name)
-    with patch("core.module_runtime.Logger.error") as log_error:
+    with patch("akaribot.core.module_runtime.Logger.error") as log_error:
         task = runtime.spawn(worker(), name="runtime-test-failing-task")
         result = (await asyncio.gather(task, return_exceptions=True))[0]
         await asyncio.sleep(0)
@@ -250,7 +250,7 @@ async def _test_cache_paths_rotate_after_reload():
     """版本化缓存目录只在新 generation 提交后清理旧版本。"""
     module_name = "__test_module_runtime_cache_path"
     with TemporaryDirectory() as temp_dir:
-        with patch("core.module_runtime.cache_path", Path(temp_dir)):
+        with patch("akaribot.core.module_runtime.cache_path", Path(temp_dir)):
             old_runtime = ModuleRuntimeManager.get_or_create(module_name)
             old_path = old_runtime.declare_cache_path("data", 1)
             (old_path / "value.txt").write_text("old", encoding="utf-8")
@@ -266,7 +266,7 @@ async def _test_aborted_reload_preserves_shared_cache_path():
     """失败重载不得删除与旧 generation 共用的缓存目录。"""
     module_name = "__test_module_runtime_shared_cache_path"
     with TemporaryDirectory() as temp_dir:
-        with patch("core.module_runtime.cache_path", Path(temp_dir)):
+        with patch("akaribot.core.module_runtime.cache_path", Path(temp_dir)):
             old_runtime = ModuleRuntimeManager.get_or_create(module_name)
             old_path = old_runtime.declare_cache_path("data", 1)
             (old_path / "value.txt").write_text("old", encoding="utf-8")

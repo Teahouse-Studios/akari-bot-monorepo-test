@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import psutil
 
-from core.logger import Logger
+from akaribot.core.logger import Logger
 
 # 非 Peer 进程以固定标签标识，本地化由展示层处理。
 DAEMON_LABEL = "daemon"
@@ -188,8 +188,8 @@ async def gather_process_usage(
         if use_cache and _usage_cache and now - _usage_cache[0] < USAGE_CACHE_TTL_SECONDS:
             return _usage_cache[1], _usage_cache[2]
 
-        from core.alive import Alive
-        from core.constants import Info
+        from akaribot.core.alive import Alive
+        from akaribot.core.constants import Info
         from .contracts import ProcessAPI
         from .peer import PeerSelector
 

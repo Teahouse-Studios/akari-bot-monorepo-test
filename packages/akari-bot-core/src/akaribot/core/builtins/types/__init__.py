@@ -5,7 +5,7 @@
 用于类型注解和类型检查。
 """
 
-from core.builtins.message.elements import (
+from akaribot.core.builtins.message.elements import (
     PlainElement,
     MarkdownElement,
     URLElement,

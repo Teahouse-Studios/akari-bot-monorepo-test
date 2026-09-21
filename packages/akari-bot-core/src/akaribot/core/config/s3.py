@@ -1,6 +1,6 @@
 """S3 兼容对象存储配置模板。"""
 
-from core.config.decorator import on_config
+from akaribot.core.config.decorator import on_config
 
 
 @on_config("s3")

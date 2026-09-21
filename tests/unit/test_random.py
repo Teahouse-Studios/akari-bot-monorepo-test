@@ -1,7 +1,7 @@
 """core.utils.random 纯函数单元测试 - Random 类。"""
 
-from core.tester import func_case, Tester
-from core.utils.random import Random, SecureRandom
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.random import Random, SecureRandom
 
 
 def _test_random_random():

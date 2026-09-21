@@ -1,8 +1,8 @@
 """表外基础配置及历史导入路径兼容层。"""
 
-from core.config.decorator import on_base_config
-from core.constants.default import default_locale as default_locale_default
-from core.constants.version import config_version as config_version_default
+from akaribot.core.config.decorator import on_base_config
+from akaribot.core.constants.default import default_locale as default_locale_default
+from akaribot.core.constants.version import config_version as config_version_default
 
 
 # 位于 config.toml 中任何表之外的顶层键值对。它们在首次运行时由 bot.py 写出骨架，
@@ -14,11 +14,11 @@ class BaseConfig:
 
 
 # 保留既有导入路径
-from core.config.core import CoreConfig, CoreSecretConfig
-from core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
-from core.config.s3 import S3Config, S3SecretConfig
-from core.config.smtp import SMTPConfig, SMTPSecretConfig
-from core.config.webrender import WebRenderConfig
+from akaribot.core.config.core import CoreConfig, CoreSecretConfig
+from akaribot.core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
+from akaribot.core.config.s3 import S3Config, S3SecretConfig
+from akaribot.core.config.smtp import SMTPConfig, SMTPSecretConfig
+from akaribot.core.config.webrender import WebRenderConfig
 
 __all__ = [
     "BaseConfig",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from core.database.models import SenderUnionInfo, TargetUnionInfo
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
 
 
 class TestDataFactory:

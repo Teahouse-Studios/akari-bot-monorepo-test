@@ -6,9 +6,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import bot as daemon
-from core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
-from core.registry import PackageEntry, PackageManifest, PackageRegistry
-from core.tester import func_case, Tester
+from akaribot.core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
+from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
+from akaribot.testing import func_case, Tester
 
 
 class _FakeEvent:

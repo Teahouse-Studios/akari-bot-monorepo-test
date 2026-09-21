@@ -14,11 +14,11 @@ import os
 from tortoise import Tortoise
 
 # from core.builtins.session.tasks import SessionTaskManager
-from core.logger import Logger
-from core.module_runtime import ModuleRuntimeManager
-from core.queue.server import JobQueueServer
-from core.scheduler import SchedulerLifecycle
-from core.utils.web_render import close_web_render
+from akaribot.core.logger import Logger
+from akaribot.core.module_runtime import ModuleRuntimeManager
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.scheduler import SchedulerLifecycle
+from akaribot.core.utils.web_render import close_web_render
 from .background_tasks import stop_background_task
 from .lifecycle import BackgroundTaskLifecycle
 

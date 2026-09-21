@@ -17,8 +17,8 @@ from pathlib import Path
 from fastapi import HTTPException, Query, Request
 from fastapi.responses import Response
 
-from bots.web.client import app, get_client_ip, limiter
-from core.builtins.filter import (
+from akaribot.adapters.web.client import app, get_client_ip, limiter
+from akaribot.core.builtins.filter import (
     FILTER_WORD_SUFFIX,
     MAX_FILTER_CATEGORIES,
     MAX_FILTER_FILE_BYTES,
@@ -34,10 +34,10 @@ from core.builtins.filter import (
     remove_filter_words,
     write_filter_words,
 )
-from core.constants.path import filter_words_path
-from core.logger import Logger
-from core.queue.contracts import ServerAPI
-from core.utils.url_audit import (
+from akaribot.core.constants.path import filter_words_path
+from akaribot.core.logger import Logger
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.utils.url_audit import (
     MAX_FILE_BYTES,
     MAX_REGEX_RULES,
     MAX_RULE_LENGTH,

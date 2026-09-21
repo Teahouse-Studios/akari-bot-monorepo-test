@@ -1,6 +1,6 @@
 from milky import AsyncMilkyClient
 
-from bots.milky.config import MilkyConfig, MilkySecretConfig
+from akaribot.adapters.milky.config import MilkyConfig, MilkySecretConfig
 
 
 def normalize_base_url(host: str) -> str:

@@ -9,19 +9,19 @@ import tortoise.context as tortoise_context
 from tortoise import Tortoise
 from tortoise.context import TortoiseContext
 
-from core.database import fetch_module_db
-from core.database.legacy import LATEST_LEGACY_VERSION, LEGACY_MAP, convert_legacy_version
-from core.database.migration import (
+from akaribot.core.database import fetch_module_db
+from akaribot.core.database.legacy import LATEST_LEGACY_VERSION, LEGACY_MAP, convert_legacy_version
+from akaribot.core.database.migration import (
     MigrationContext,
     MigrationError,
     MigrationModule,
     MigrationRunner,
     order_migrations,
 )
-from core.database.models import DBVersion, SchemaMigration
-from core.registry import PackageRegistry
-from core.tester import Tester, func_case
-from core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.core.database.models import DBVersion, SchemaMigration
+from akaribot.core.registry import PackageRegistry
+from akaribot.testing import Tester, func_case
+from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "db"
 
@@ -48,7 +48,7 @@ class _isolated_db:
                 "connections": {"default": f"sqlite://{self.path}"},
                 "apps": {
                     "models": {
-                        "models": ["core.database.models"] + fetch_module_db(),
+                        "models": ["akaribot.core.database.models"] + fetch_module_db(),
                         "default_connection": "default",
                     }
                 },

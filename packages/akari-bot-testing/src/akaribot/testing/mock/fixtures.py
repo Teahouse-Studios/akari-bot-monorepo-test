@@ -25,7 +25,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from core.tester.mock.http import HTTPMock, MockHTTPResponse, digest_request_body
+from akaribot.testing.mock.http import HTTPMock, MockHTTPResponse, digest_request_body
 
 FIXTURE_DIR = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "http"
 

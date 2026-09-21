@@ -5,16 +5,22 @@ from pathlib import Path
 import nio
 from nio.api import RelationshipType
 
-from core.builtins.message.mention import render_at_code
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import PlainElement, ImageElement, AudioElement, VideoElement, MentionElement
-from core.builtins.session.context import ContextManager
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.logger import Logger
-from core.utils.image_split import image_split
-from core.utils.media import resolve_media_path
+from akaribot.core.builtins.message.mention import render_at_code
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
+    PlainElement,
+    ImageElement,
+    AudioElement,
+    VideoElement,
+    MentionElement,
+)
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.logger import Logger
+from akaribot.core.utils.image_split import image_split
+from akaribot.core.utils.media import resolve_media_path
 from .client import matrix_bot, homeserver_host
 from .features import features as matrix_features
 from .info import client_name, target_prefix

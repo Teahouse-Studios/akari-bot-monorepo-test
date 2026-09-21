@@ -2,9 +2,9 @@
 
 from botpy.configuration import ConfigurationManager
 
-from bots.qqbot.navigation import MENU_GROUPS, PANEL_GROUPS, PANEL_SCOPES, build_navigation
-from core.logger import Logger
-from core.tester import Tester, func_case
+from akaribot.adapters.qqbot.navigation import MENU_GROUPS, PANEL_GROUPS, PANEL_SCOPES, build_navigation
+from akaribot.core.logger import Logger
+from akaribot.testing import Tester, func_case
 
 
 def _text_width(value: str) -> int:

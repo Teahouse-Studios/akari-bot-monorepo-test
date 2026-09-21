@@ -1,7 +1,7 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.database.models import TargetUnionInfo
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.database.models import TargetUnionInfo
 
 post_whitelist = module(
     "post-whitelist", alias="post_whitelist", required_superuser=True, base=True, doc=True, available_for="QQ"

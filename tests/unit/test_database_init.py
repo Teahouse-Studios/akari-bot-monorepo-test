@@ -6,17 +6,17 @@ from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs, parse_qsl, urlsplit
 from unittest.mock import AsyncMock, patch
 
-import core.database as database
+import akaribot.core.database as database
 import tortoise.context as tortoise_context
-from core.database.models import JobQueuesTable
-from core.database.link import prepare_db_link
-from core.queue.server import JobQueueServer
-from core.registry import PackageEntry, PackageManifest, PackageRegistry
-from core.queue.transport import PROTOCOL_VERSION
-from core.scheduler import Scheduler, SchedulerLifecycle
-from core.tester import Tester, func_case
-from core.types import Module
-from core.types.module.component_meta import ScheduleMeta
+from akaribot.core.database.models import JobQueuesTable
+from akaribot.core.database.link import prepare_db_link
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
+from akaribot.core.queue.transport import PROTOCOL_VERSION
+from akaribot.core.scheduler import Scheduler, SchedulerLifecycle
+from akaribot.testing import Tester, func_case
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import ScheduleMeta
 from tortoise.context import TortoiseContext
 
 from apscheduler.triggers.interval import IntervalTrigger
@@ -132,7 +132,8 @@ async def _test_runtime_init_does_not_generate_schemas():
         return (
             result
             and generate_schemas.await_count == 0
-            and config["apps"]["models"]["models"] == ["core.database.models", "modules.example.database.models"]
+            and config["apps"]["models"]["models"]
+            == ["akaribot.core.database.models", "modules.example.database.models"]
             and _query_fields(config["connections"]["local"]).get("busy_timeout") == ["30000"]
         )
     finally:
@@ -163,7 +164,7 @@ async def _test_pre_init_mode_generates_all_schemas():
             and generate_schemas.await_args.kwargs == {"safe": True}
             and run_migrations.await_count == 1
             and "modules.example.database.models" in config["apps"]["models"]["models"]
-            and config["apps"]["local_models"]["models"] == ["core.database.local"]
+            and config["apps"]["local_models"]["models"] == ["akaribot.core.database.local"]
         )
     finally:
         if old_database_list is None:

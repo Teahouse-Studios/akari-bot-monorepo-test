@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ButtonRows
-from core.builtins.message.internal import Button, ButtonFrame, I18NContext, Image, Markdown, Plain, Url
-from core.builtins.utils import command_prefix
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.path import assets_path
-from core.logger import Logger
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ButtonRows
+from akaribot.core.builtins.message.internal import Button, ButtonFrame, I18NContext, Image, Markdown, Plain, Url
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import assets_path
+from akaribot.core.logger import Logger
 
 about = module(
     "about",

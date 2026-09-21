@@ -14,9 +14,9 @@ from tortoise.functions import Count
 from tortoise.models import Model
 from tortoise.transactions import in_transaction
 
-from core.config.base import BaseConfig
-from core.queue.transport import DEFAULT_TIMEOUT_SECONDS
-from core.utils.func import convert_list
+from akaribot.core.config.base import BaseConfig
+from akaribot.core.queue.transport import DEFAULT_TIMEOUT_SECONDS
+from akaribot.core.utils.func import convert_list
 from .base import DBModel, extract_session_id
 from ..logger import Logger
 
@@ -56,7 +56,7 @@ class UnionDeleteBlocked(RuntimeError):
 
 
 def _get_module_and_alias_first_words(module_names: str | list[str] | tuple[str, ...]) -> list[str]:
-    from core.loader import ModulesManager
+    from akaribot.core.loader import ModulesManager
 
     result = []
     for module_name in convert_list(module_names):

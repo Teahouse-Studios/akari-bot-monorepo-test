@@ -1,6 +1,6 @@
-from core.builtins.bot import Bot
-from core.component import module
-from core.constants.exceptions import TestException
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.component import module
+from akaribot.core.constants.exceptions import TestException
 
 rse = module("raise", required_superuser=True, base=True, doc=True)
 

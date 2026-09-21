@@ -1,7 +1,7 @@
 import discord
 
-from bots.discord.client import discord_bot
-from bots.discord.slash_parser import slash_parser
+from akaribot.adapters.discord.client import discord_bot
+from akaribot.adapters.discord.slash_parser import slash_parser
 
 
 async def auto_complete(ctx: discord.AutocompleteContext):

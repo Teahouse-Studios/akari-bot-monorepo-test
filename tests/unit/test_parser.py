@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from core.builtins.parser.args import (
+from akaribot.core.builtins.parser.args import (
     ArgumentPattern,
     DescPattern,
     Template,
@@ -11,14 +11,14 @@ from core.builtins.parser.args import (
     parse_template,
     templates_to_str,
 )
-from core.builtins.parser.command import CommandParser, _split_command
-from core.builtins.parser.message import _build_command_kwargs, _resolve_parsed_value, _unwrap_option_value
-from core.builtins.message.elements import MarkdownElement
-from core.builtins.bot import Bot
-from core.constants.exceptions import InvalidTemplatePattern
-from core.tester import func_case, Tester
-from core.types import Module
-from core.types.module.component_meta import CommandMeta
+from akaribot.core.builtins.parser.command import CommandParser, _split_command
+from akaribot.core.builtins.parser.message import _build_command_kwargs, _resolve_parsed_value, _unwrap_option_value
+from akaribot.core.builtins.message.elements import MarkdownElement
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.constants.exceptions import InvalidTemplatePattern
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import CommandMeta
 
 
 def _test_argument_pattern():

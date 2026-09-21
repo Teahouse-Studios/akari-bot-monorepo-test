@@ -7,19 +7,19 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
-from core.alive import Alive
-from core.builtins.session.info import FetchedSessionInfo
-from core.config.jobqueue import JobQueueConfig
-from core.constants import Info
-from core.database.models import JobQueuePeersTable, JobQueuesTable
-from core.queue.base import JobQueueBase
-from core.queue.errors import RpcProtocolError, RpcTimeoutError, RpcUnavailableError
-from core.queue.peer import PeerIdentity, PeerSelector, ServiceRoute
-from core.queue.rpc import remote, signal
-from core.queue.server import JobQueueServer
-from core.queue.transport import BatchSendResult, RpcRequest
-from core.tester import Tester, func_case
-from core.tester.timing import TIME_SCALE
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.session.info import FetchedSessionInfo
+from akaribot.core.config.jobqueue import JobQueueConfig
+from akaribot.core.constants import Info
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable
+from akaribot.core.queue.base import JobQueueBase
+from akaribot.core.queue.errors import RpcProtocolError, RpcTimeoutError, RpcUnavailableError
+from akaribot.core.queue.peer import PeerIdentity, PeerSelector, ServiceRoute
+from akaribot.core.queue.rpc import remote, signal
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.queue.transport import BatchSendResult, RpcRequest
+from akaribot.testing import Tester, func_case
+from akaribot.testing.timing import TIME_SCALE
 
 
 RPC_TEST_TIMEOUT = 10 * TIME_SCALE

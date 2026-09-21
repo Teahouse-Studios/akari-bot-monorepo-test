@@ -1,8 +1,8 @@
 """core.builtins.message 消息系统单元测试。"""
 
-from core.builtins.message.mention import wrap_sender_id
-from core.builtins.message.chain import MessageChain, match_kecode
-from core.builtins.message.elements import (
+from akaribot.core.builtins.message.mention import wrap_sender_id
+from akaribot.core.builtins.message.chain import MessageChain, match_kecode
+from akaribot.core.builtins.message.elements import (
     PlainElement,
     MarkdownElement,
     URLElement,
@@ -14,13 +14,13 @@ from core.builtins.message.elements import (
     ButtonRows,
     ButtonFrameElement,
 )
-from core.builtins.message.internal import (
+from akaribot.core.builtins.message.internal import (
     Markdown,
     Plain,
     Button,
     ButtonFrame,
 )
-from core.tester import func_case, Tester
+from akaribot.testing import func_case, Tester
 
 
 def _test_assign_from_string():
@@ -223,7 +223,7 @@ def _test_markdown_sendable_respects_session_capability():
     """支持 Markdown 时保留元素，不支持或显式禁用时降级。"""
     from types import SimpleNamespace
 
-    from core.i18n import Locale
+    from akaribot.core.i18n import Locale
 
     def session(support_markdown):
         return SimpleNamespace(
@@ -298,7 +298,7 @@ def _test_plain_allow_parse_roundtrip_and_behavior():
     """allow_parse 应跨序列化保留，并阻止消息链继续解析文本标记。"""
     from types import SimpleNamespace
 
-    from core.i18n import Locale
+    from akaribot.core.i18n import Locale
 
     try:
         raw = "[KE:mention,userid=QQ|123]"
@@ -594,7 +594,7 @@ def _test_image_element_preserves_base64_format():
 def _test_audio_element_assign():
     """AudioElement: assign"""
     try:
-        from core.builtins.message.elements import AudioElement
+        from akaribot.core.builtins.message.elements import AudioElement
 
         elem = AudioElement.assign("/tmp/audio.mp3")
         if elem.path != "/tmp/audio.mp3":
@@ -610,7 +610,7 @@ def _test_audio_element_assign():
 def _test_video_element_assign():
     """VideoElement: assign"""
     try:
-        from core.builtins.message.elements import VideoElement
+        from akaribot.core.builtins.message.elements import VideoElement
 
         elem = VideoElement.assign("/tmp/video.mp4")
         if elem.path != "/tmp/video.mp4":
@@ -680,7 +680,7 @@ def _test_button_element_follows_platform_capability():
     try:
         from types import SimpleNamespace
 
-        from core.i18n import Locale
+        from akaribot.core.i18n import Locale
 
         chain = MessageChain.assign([Plain("提示"), Button("帮助", "~help")])
         supported = SimpleNamespace(

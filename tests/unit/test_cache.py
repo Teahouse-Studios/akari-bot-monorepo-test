@@ -2,8 +2,8 @@
 
 import re
 
-from core.tester import func_case, Tester
-from core.utils.cache import random_cache_path
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.cache import random_cache_path
 
 
 def _test_random_cache_path_no_ext():

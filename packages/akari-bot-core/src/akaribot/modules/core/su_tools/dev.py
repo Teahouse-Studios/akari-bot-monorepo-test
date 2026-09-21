@@ -2,13 +2,13 @@ from tabulate import tabulate
 from tortoise import Tortoise
 from tortoise.exceptions import OperationalError
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain, Image
-from core.component import module
-from core.constants import dev_mode, NoReportException
-from core.database import fetch_module_db, get_model_fields, get_model_names
-from core.utils.func import is_int
-from core.utils.image_table import image_table_render, ImageTable
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain, Image
+from akaribot.core.component import module
+from akaribot.core.constants import dev_mode, NoReportException
+from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.image_table import image_table_render, ImageTable
 
 DBDATA_PER_PAGE = 10
 
@@ -28,14 +28,14 @@ db = module("database", alias="db", required_superuser=True, base=True, doc=True
 
 @db.command("model {{I18N:core.help.database.model}}")
 async def _(msg: Bot.MessageSession):
-    models_path = ["core.database.models"] + fetch_module_db()
+    models_path = ["akaribot.core.database.models"] + fetch_module_db()
     table_lst = sorted(get_model_names(models_path))
     await msg.finish([I18NContext("core.message.database.list")] + table_lst)
 
 
 @db.command("field <model> [--legacy] {{I18N:core.help.database.field}}")
 async def _(msg: Bot.MessageSession, model: str, legacy: bool = False):
-    models_path = ["core.database.models"] + fetch_module_db()
+    models_path = ["akaribot.core.database.models"] + fetch_module_db()
     result = get_model_fields(models_path, model)
 
     if not result:

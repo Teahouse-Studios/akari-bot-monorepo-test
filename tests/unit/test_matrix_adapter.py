@@ -5,16 +5,16 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, call, patch
 
-import bots.matrix.bot as matrix_bot_module
-import bots.matrix.context as matrix_context
+import akaribot.adapters.matrix.bot as matrix_bot_module
+import akaribot.adapters.matrix.context as matrix_context
 import nio
-from bots.matrix.info import client_name, sender_prefix, target_prefix
-from bots.matrix.features import features as matrix_features
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import VideoElement
-from core.builtins.message.internal import Audio, Image, Mention, Plain
-from core.builtins.session.info import SessionInfo
-from core.tester import Tester, func_case
+from akaribot.adapters.matrix.info import client_name, sender_prefix, target_prefix
+from akaribot.adapters.matrix.features import features as matrix_features
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import VideoElement
+from akaribot.core.builtins.message.internal import Audio, Image, Mention, Plain
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.testing import Tester, func_case
 
 
 async def _test_invalid_matrix_image_is_ignored():

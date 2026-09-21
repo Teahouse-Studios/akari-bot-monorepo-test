@@ -1,6 +1,6 @@
 """公共版本展示辅助。"""
 
-from core.builtins.bot import Bot
+from akaribot.core.builtins.bot import Bot
 
 
 def get_version_display() -> str | None:

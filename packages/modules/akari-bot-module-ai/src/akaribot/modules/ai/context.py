@@ -1,6 +1,6 @@
 import uuid
 
-from core.utils.container import ExpiringTempDict
+from akaribot.core.utils.container import ExpiringTempDict
 
 CONTEXT_EXPIRY = 600  # 上下文窗口有效期（秒）
 

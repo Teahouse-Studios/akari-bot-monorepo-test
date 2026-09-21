@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 
 from PIL import Image as PILImage
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import ImageElement, Image, Markdown, Plain, PlainElement
-from core.builtins.message.chain import MessageChain
-from modules.ai.config import AiConfig
-from core.constants.exceptions import ExternalException
-from core.utils.dirty_check import check
-from core.logger import Logger
-from core.utils.func import parse_time_string
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import ImageElement, Image, Markdown, Plain, PlainElement
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.modules.ai.config import AiConfig
+from akaribot.core.constants.exceptions import ExternalException
+from akaribot.core.utils.dirty_check import check
+from akaribot.core.logger import Logger
+from akaribot.core.utils.func import parse_time_string
 from .formatting import parse_markdown, generate_code_snippet, generate_latex, generate_md_table, format_refs
 from .setting import INSTRUCTIONS
 from .tools import tool_function_calls

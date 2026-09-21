@@ -8,21 +8,26 @@
 from types import SimpleNamespace
 from urllib.parse import quote
 
-from bots.qqbot.context import (
+from akaribot.adapters.qqbot.context import (
     ACTION_TEXT_MAX_LENGTH,
     QQBOT_MAX_KEYBOARD_COLUMNS,
     QQBOT_MAX_KEYBOARD_ROWS,
     _build_qqbot_keyboard,
     _render_action_text,
 )
-from bots.qqbot.info import target_group_prefix
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ActionTextElement, ButtonFrameElement, ButtonRows, PlainElement
-from core.builtins.message.internal import Button
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.tester import func_case, Tester
-from core.utils.button_runtime import BUTTON_TOKEN_PREFIX, ButtonConsumeStatus, consume_button, _clear_button_registry
+from akaribot.adapters.qqbot.info import target_group_prefix
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ActionTextElement, ButtonFrameElement, ButtonRows, PlainElement
+from akaribot.core.builtins.message.internal import Button
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.testing import func_case, Tester
+from akaribot.core.utils.button_runtime import (
+    BUTTON_TOKEN_PREFIX,
+    ButtonConsumeStatus,
+    consume_button,
+    _clear_button_registry,
+)
 
 
 def _test_render_full_attributes():

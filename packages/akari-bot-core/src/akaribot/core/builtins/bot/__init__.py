@@ -8,33 +8,33 @@
 import asyncio
 from typing import Any, Awaitable, Callable
 
-from core.alive import Alive
-from core.builtins.message.chain import *
-from core.builtins.parser.hooks import OutgoingPayload, ParserHookContext, Stop, dispatch_outgoing_before_send
-from core.builtins.session.context import ContextManager
-from core.builtins.session.features import Features
-from core.builtins.session.info import EventInfo, SessionInfo, FetchedSessionInfo, ModuleHookContext
-from core.builtins.session.internal import MessageSession, FetchedMessageSession, normalize_outgoing_chain
-from core.builtins.session.lock import ExecutionLockList
-from core.builtins.temp import *
-from core.config.base import CoreConfig
-from core.constants.info import Info
-from core.constants.path import PrivateData, data_path
-from core.database.models import (
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.message.chain import *
+from akaribot.core.builtins.parser.hooks import OutgoingPayload, ParserHookContext, Stop, dispatch_outgoing_before_send
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import EventInfo, SessionInfo, FetchedSessionInfo, ModuleHookContext
+from akaribot.core.builtins.session.internal import MessageSession, FetchedMessageSession, normalize_outgoing_chain
+from akaribot.core.builtins.session.lock import ExecutionLockList
+from akaribot.core.builtins.temp import *
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.info import Info
+from akaribot.core.constants.path import PrivateData, data_path
+from akaribot.core.database.models import (
     AnalyticsData,
     UNION_ID_PREFIXES,
     UNION_SCOPE_TARGET,
     TargetUnionBind,
     TargetUnionInfo,
 )
-from core.exports import add_export
-from core.logger import Logger
-from core.utils.retired import filter_retired_targets
-from core.utils.func import convert_list
-from core.utils.session import inject_features
+from akaribot.core.exports import add_export
+from akaribot.core.logger import Logger
+from akaribot.core.utils.retired import filter_retired_targets
+from akaribot.core.utils.func import convert_list
+from akaribot.core.utils.session import inject_features
 
-from core.queue.contracts import PlatformAPI, ServerAPI
-from core.queue.errors import RpcUnavailableError
+from akaribot.core.queue.contracts import PlatformAPI, ServerAPI
+from akaribot.core.queue.errors import RpcUnavailableError
 
 enable_analytics = CoreConfig.enable_analytics
 
@@ -617,7 +617,7 @@ class Bot:
             :return: 钩子函数的返回值
             :raises ValueError: 如果模块或钩子名称无效
             """
-            from core.builtins.hooks import dispatch_module_hook
+            from akaribot.core.builtins.hooks import dispatch_module_hook
 
             return await dispatch_module_hook(
                 module_or_hook_name,

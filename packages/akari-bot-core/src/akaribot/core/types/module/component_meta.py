@@ -7,10 +7,10 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from attrs import define, field
 
-from core.builtins.parser.args import Template
-from core.builtins.types import MessageElement
-from core.logger import Logger
-from core.utils.func import convert_list
+from akaribot.core.builtins.parser.args import Template
+from akaribot.core.builtins.types import MessageElement
+from akaribot.core.logger import Logger
+from akaribot.core.utils.func import convert_list
 
 
 class ModuleMeta:

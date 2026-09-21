@@ -5,18 +5,18 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import core.builtins.bot as bot_module
-import core.client.init as client_init_module
-import core.server.background_tasks as background_tasks
-import core.server.init as server_init
-import core.server.lifecycle as server_lifecycle
-import core.server.run as server_run
-import core.server.terminate as server_terminate
-import core.utils.web_render as web_render_module
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.queue.contracts import ServerAPI
-from core.tester import Tester, func_case
+import akaribot.core.builtins.bot as bot_module
+import akaribot.core.client.init as client_init_module
+import akaribot.core.server.background_tasks as background_tasks
+import akaribot.core.server.init as server_init
+import akaribot.core.server.lifecycle as server_lifecycle
+import akaribot.core.server.run as server_run
+import akaribot.core.server.terminate as server_terminate
+import akaribot.core.utils.web_render as web_render_module
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.testing import Tester, func_case
 
 
 async def _test_server_init_failure_still_cleans_up() -> bool:

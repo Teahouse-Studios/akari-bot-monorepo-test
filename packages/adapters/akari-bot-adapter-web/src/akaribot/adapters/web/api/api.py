@@ -10,13 +10,13 @@ from fastapi import HTTPException, Request, Query
 from fastapi.responses import FileResponse, Response
 from tortoise.expressions import Q
 
-from bots.web.client import app, client_cleanup, limiter, enable_https, get_client_ip
-from bots.web.config import WebConfig
-from core.builtins.utils import command_prefix
-from core.config.base import BaseConfig, CoreConfig
-from core.constants import config_filename
-from core.constants.path import config_path
-from core.database.models import (
+from akaribot.adapters.web.client import app, client_cleanup, limiter, enable_https, get_client_ip
+from akaribot.adapters.web.config import WebConfig
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.config.base import BaseConfig, CoreConfig
+from akaribot.core.constants import config_filename
+from akaribot.core.constants.path import config_path
+from akaribot.core.database.models import (
     AnalyticsData,
     SenderUnionInfo,
     SenderUnionBind,
@@ -24,10 +24,10 @@ from core.database.models import (
     TargetUnionBind,
     UnionDeleteBlocked,
 )
-from core.logger import Logger
-from core.queue.contracts import ServerAPI
+from akaribot.core.logger import Logger
+from akaribot.core.queue.contracts import ServerAPI
 from .auth import verify_jwt
-from bots.web.context import resolve_media_url
+from akaribot.adapters.web.context import resolve_media_url
 
 started_time = datetime.now()
 _restart_task: asyncio.Task | None = None

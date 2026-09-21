@@ -9,20 +9,26 @@ import aiocqhttp
 from aiocqhttp import Event, MessageSegment
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from bots.onebot.client import aiocqhttp_bot
-from bots.onebot.config import AiocqhttpConfig
-from bots.onebot.info import target_private_prefix, target_group_prefix, client_name
-from bots.onebot.utils import CQCodeHandler
-from core.builtins.message.mention import render_at_code
-from core.builtins.message.chain import MessageChain, MessageNodes
-from core.builtins.message.elements import PlainElement, ImageElement, AudioElement, VideoElement, MentionElement
-from core.builtins.session.context import ContextManager
-from core.builtins.session.bot_state import BotState
-from core.builtins.session.features import Features
-from core.builtins.session.info import SessionInfo
-from core.builtins.temp import Temp
-from core.logger import Logger
-from core.utils.media import resolve_media_base64, resolve_media_path
+from akaribot.adapters.onebot.client import aiocqhttp_bot
+from akaribot.adapters.onebot.config import AiocqhttpConfig
+from akaribot.adapters.onebot.info import target_private_prefix, target_group_prefix, client_name
+from akaribot.adapters.onebot.utils import CQCodeHandler
+from akaribot.core.builtins.message.mention import render_at_code
+from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+from akaribot.core.builtins.message.elements import (
+    PlainElement,
+    ImageElement,
+    AudioElement,
+    VideoElement,
+    MentionElement,
+)
+from akaribot.core.builtins.session.context import ContextManager
+from akaribot.core.builtins.session.bot_state import BotState
+from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.temp import Temp
+from akaribot.core.logger import Logger
+from akaribot.core.utils.media import resolve_media_base64, resolve_media_path
 from .features import features as onebot_features
 
 qq_typing_emoji = str(AiocqhttpConfig.qq_typing_emoji)

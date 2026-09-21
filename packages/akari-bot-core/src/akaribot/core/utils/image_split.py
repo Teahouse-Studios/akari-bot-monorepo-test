@@ -2,7 +2,7 @@
 
 from PIL import Image as PILImage
 
-from core.builtins.message.elements import ImageElement
+from akaribot.core.builtins.message.elements import ImageElement
 
 
 async def image_split(image: ImageElement, max_height: int = 1500) -> list[ImageElement]:

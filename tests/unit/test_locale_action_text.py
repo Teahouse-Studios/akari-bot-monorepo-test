@@ -2,11 +2,11 @@
 
 from types import SimpleNamespace
 
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ActionTextElement, I18NContextElement, PlainElement, URLElement
-from core.i18n import Locale, get_available_locales
-from core.tester import func_case, Tester
-from modules.core.admin_tools.locale import build_locale_list, build_locale_overview
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ActionTextElement, I18NContextElement, PlainElement, URLElement
+from akaribot.core.i18n import Locale, get_available_locales
+from akaribot.testing import func_case, Tester
+from akaribot.modules.core.admin_tools.locale import build_locale_list, build_locale_overview
 
 
 def _msg(support_action_text: bool = True):

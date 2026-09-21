@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from core.tester import func_case, Tester
-from modules.ai import context
+from akaribot.testing import func_case, Tester
+from akaribot.modules.ai import context
 
 
 def _test_context_isolated_by_context_key_and_can_branch():

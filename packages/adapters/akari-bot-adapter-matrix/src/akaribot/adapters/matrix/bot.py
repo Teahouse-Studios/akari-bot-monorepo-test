@@ -5,21 +5,26 @@ from uuid import uuid4
 
 import nio
 
-from bots.matrix import client
-from bots.matrix.client import matrix_bot
-from bots.matrix.config import MatrixConfig
-from bots.matrix.context import MatrixContextManager, MatrixFetchedContextManager
-from bots.matrix.events import member_joined, member_left, should_dispatch_member_joined, should_dispatch_member_left
-from bots.matrix.info import *
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, Image, Audio, Video
-from core.builtins.session.info import SessionInfo
-from core.builtins.utils import command_prefix
-from core.client.init import client_cleanup, client_init
-from core.config.base import CoreConfig
-from core.logger import Logger
-from core.queue.contracts import ServerAPI
+from akaribot.adapters.matrix import client
+from akaribot.adapters.matrix.client import matrix_bot
+from akaribot.adapters.matrix.config import MatrixConfig
+from akaribot.adapters.matrix.context import MatrixContextManager, MatrixFetchedContextManager
+from akaribot.adapters.matrix.events import (
+    member_joined,
+    member_left,
+    should_dispatch_member_joined,
+    should_dispatch_member_left,
+)
+from akaribot.adapters.matrix.info import *
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.client.init import client_cleanup, client_init
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.logger import Logger
+from akaribot.core.queue.contracts import ServerAPI
 
 Bot.register_bot(client_name=client_name)
 

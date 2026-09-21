@@ -9,17 +9,17 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
-from core.config.jobqueue import JobQueueConfig
-from core.queue.base import current_peer, JobQueueBase
-from core.queue.errors import RpcProtocolError, RpcUnavailableError
-from core.queue.peer import PeerSelector, SignalContext
-from core.queue.websocket import (
+from akaribot.core.config.jobqueue import JobQueueConfig
+from akaribot.core.queue.base import current_peer, JobQueueBase
+from akaribot.core.queue.errors import RpcProtocolError, RpcUnavailableError
+from akaribot.core.queue.peer import PeerSelector, SignalContext
+from akaribot.core.queue.websocket import (
     WebSocketHub,
     WebSocketJobQueueBackend,
     WebSocketSettings,
 )
-from core.queue.transport import RpcRequest
-from core.tester import func_case, Tester
+from akaribot.core.queue.transport import RpcRequest
+from akaribot.testing import func_case, Tester
 
 
 @asynccontextmanager
@@ -168,7 +168,7 @@ def _test_websocket_settings_use_mode_and_url_as_single_source():
     with (
         patch.object(JobQueueConfig, "jobqueue_websocket_mode", " EMBEDDED "),
         patch.object(JobQueueConfig, "jobqueue_websocket_url", " ws://localhost:8766 "),
-        patch("core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
+        patch("akaribot.core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
     ):
         settings = WebSocketSettings.from_config()
     if (
@@ -204,7 +204,7 @@ def _test_websocket_settings_use_mode_and_url_as_single_source():
     with (
         patch.object(JobQueueConfig, "jobqueue_websocket_mode", "embedded"),
         patch.object(JobQueueConfig, "jobqueue_websocket_url", "ws://127.0.0.1:0/jobqueue"),
-        patch("core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
+        patch("akaribot.core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
     ):
         try:
             WebSocketSettings.from_config()

@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock, patch
 
 from apscheduler.triggers.interval import IntervalTrigger as APSchedulerIntervalTrigger
 
-import core.component as component
-from core.config.base import CoreConfig
-from core.database.models import ModuleStatus
-from core.loader import ModulesManager
-from core.scheduler import IntervalTrigger, Scheduler, SchedulerLifecycle
-from core.tester import func_case, Tester
-from core.tester.mock.scheduler import (
+import akaribot.core.component as component
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.database.models import ModuleStatus
+from akaribot.core.loader import ModulesManager
+from akaribot.core.scheduler import IntervalTrigger, Scheduler, SchedulerLifecycle
+from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.scheduler import (
     get_scheduled_tasks,
     run_schedule_function,
 )
-from core.types import Module
-from core.types.module.component_meta import ScheduleMeta
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import ScheduleMeta
 
 
 def _test_get_scheduled_tasks_has_structure():
@@ -50,7 +50,7 @@ def _test_get_scheduled_tasks_filter_by_module():
 def _test_schedule_meta_stored_in_module():
     """Module.schedule_list: 应正确存储 ScheduleMeta"""
     try:
-        from core.types.module.component_meta import ScheduleMeta
+        from akaribot.core.types.module.component_meta import ScheduleMeta
 
         for name, mod in ModulesManager.modules.items():
             if mod.schedule_list and mod.schedule_list.set:

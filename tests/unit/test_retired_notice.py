@@ -11,10 +11,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import core.utils.retired as retired_module
+import akaribot.core.utils.retired as retired_module
 
-from core.database.models import StoredData
-from core.utils.retired import (
+from akaribot.core.database.models import StoredData
+from akaribot.core.utils.retired import (
     NOTIFIED_STORED_KEY,
     RETIRED_NOTIFY_DELAY_MAX,
     RETIRED_NOTIFY_DELAY_MIN,
@@ -27,8 +27,8 @@ from core.utils.retired import (
     reset_pending_cache,
     should_enqueue_notice,
 )
-from core.server.lifecycle import BackgroundTaskLifecycle
-from core.tester import func_case, Tester
+from akaribot.core.server.lifecycle import BackgroundTaskLifecycle
+from akaribot.testing import func_case, Tester
 
 
 def _write(base: Path, client: str, locale: str, text: str):

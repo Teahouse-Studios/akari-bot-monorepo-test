@@ -2,13 +2,13 @@ import re
 
 import orjson
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
-from core.config import CFGManager
-from core.logger import Logger
-from core.types import Param
-from core.utils.func import is_float, is_int
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
+from akaribot.core.config import CFGManager
+from akaribot.core.logger import Logger
+from akaribot.core.types import Param
+from akaribot.core.utils.func import is_float, is_int
 
 cfg_ = module("config", required_superuser=True, alias="cfg", base=True, doc=True)
 

@@ -5,13 +5,13 @@ from copy import copy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from core.builtins.parser.message import (
+from akaribot.core.builtins.parser.message import (
     LONG_REGEX_MESSAGE_LENGTH,
     _confirm_long_regex_message,
     regex_func_available,
     try_acquire_execution_lock,
 )
-from core.tester import func_case, Tester
+from akaribot.testing import func_case, Tester
 
 
 def _fake_lock_msg(sender_id: str):
@@ -28,7 +28,7 @@ def _fake_lock_msg(sender_id: str):
 async def _test_lock_acquired_once():
     """测试执行锁 - 首次获取成功，重复获取失败"""
     try:
-        from core.builtins.session.lock import ExecutionLockList
+        from akaribot.core.builtins.session.lock import ExecutionLockList
 
         msg = _fake_lock_msg("LOCKTEST|once")
         first = await try_acquire_execution_lock(msg)
@@ -43,7 +43,7 @@ async def _test_lock_acquired_once():
 async def _test_lock_released_can_reacquire():
     """测试执行锁 - 释放后可以重新获取"""
     try:
-        from core.builtins.session.lock import ExecutionLockList
+        from akaribot.core.builtins.session.lock import ExecutionLockList
 
         msg = _fake_lock_msg("LOCKTEST|again")
         await try_acquire_execution_lock(msg)

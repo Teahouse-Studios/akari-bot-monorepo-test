@@ -4,26 +4,26 @@ from html import escape
 
 from jinja2 import FileSystemLoader, Environment
 
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import ButtonRows, ImageElement
-from core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Markdown, Plain, Url, Button
-from core.builtins.parser.command import CommandParser
-from core.builtins.utils import command_prefix
-from core.component import module
-from core.config.base import CoreConfig
-from core.constants.path import templates_path
-from core.loader import ModulesManager
-from core.logger import Logger
-from core.utils.button import arrange_buttons
-from core.utils.cache import random_cache_path
-from core.utils.func import is_int
-from core.utils.image import cb64imglst
-from core.utils.platform_scope import platform_fields
-from core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
-from core.utils.web_render import ElementScreenshotOptions, web_render
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import ButtonRows, ImageElement
+from akaribot.core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Markdown, Plain, Url, Button
+from akaribot.core.builtins.parser.command import CommandParser
+from akaribot.core.builtins.utils import command_prefix
+from akaribot.core.component import module
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.constants.path import templates_path
+from akaribot.core.loader import ModulesManager
+from akaribot.core.logger import Logger
+from akaribot.core.utils.button import arrange_buttons
+from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.image import cb64imglst
+from akaribot.core.utils.platform_scope import platform_fields
+from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
+from akaribot.core.utils.web_render import ElementScreenshotOptions, web_render
 
-from modules.core.common_tools.version_utils import get_version_display
+from akaribot.modules.core.common_tools.version_utils import get_version_display
 
 env = Environment(loader=FileSystemLoader(templates_path), autoescape=True, enable_async=True)
 help_url = CoreConfig.help_url

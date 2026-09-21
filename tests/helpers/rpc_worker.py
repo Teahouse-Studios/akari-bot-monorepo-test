@@ -9,10 +9,10 @@ from pathlib import Path
 async def main(database_path: str, role: str) -> None:
     from tortoise import Tortoise
 
-    from core.queue.base import JobQueueBase
-    from core.queue.errors import RpcRemoteError
-    from core.queue.peer import PeerSelector
-    from core.queue.rpc import remote
+    from akaribot.core.queue.base import JobQueueBase
+    from akaribot.core.queue.errors import RpcRemoteError
+    from akaribot.core.queue.peer import PeerSelector
+    from akaribot.core.queue.rpc import remote
 
     class Peer(JobQueueBase):
         name = role
@@ -21,7 +21,7 @@ async def main(database_path: str, role: str) -> None:
 
     await Tortoise.init(
         db_url=f"sqlite://{database_path}",
-        modules={"models": ["core.database.models"]},
+        modules={"models": ["akaribot.core.database.models"]},
         _enable_global_fallback=True,
     )
     if role == "RPC-B":

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import orjson
 
-from core.api import (
+from akaribot.core.api import (
     UNION_SCOPE_SENDER,
     UNION_SCOPE_TARGET,
     ActionText,
@@ -23,8 +23,8 @@ from core.api import (
 
 # 下面几个名字尚未纳入 core.api：表名工具是否成为第三方契约待 P5 复核；日志路径常量在 T0.1 后
 # 只剩兼容 shim、阶段 4 删除，纳入门面会把待删的名字写进契约。
-from core.constants.path import union_merge_logs_path
-from core.database.models import collect_union_conflicts, get_table_name, get_union_module_name
+from akaribot.core.constants.path import union_merge_logs_path
+from akaribot.core.database.models import collect_union_conflicts, get_table_name, get_union_module_name
 
 BIND_CODE_EXPIRED = 300  # 绑定码有效期（秒）
 BIND_CODE_LENGTH = 6

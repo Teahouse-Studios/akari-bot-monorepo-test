@@ -1,8 +1,8 @@
 import discord
 
-from bots.discord.client import discord_bot
-from bots.discord.slash_parser import slash_parser, ctx_to_session
-from core.queue.contracts import ServerAPI
+from akaribot.adapters.discord.client import discord_bot
+from akaribot.adapters.discord.slash_parser import slash_parser, ctx_to_session
+from akaribot.core.queue.contracts import ServerAPI
 
 
 @discord_bot.slash_command(name="ab", description="Get recent abuse logs for the default wiki.")

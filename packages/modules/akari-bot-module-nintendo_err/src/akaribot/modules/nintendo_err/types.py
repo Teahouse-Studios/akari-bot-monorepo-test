@@ -1,4 +1,4 @@
-from core.builtins.message.internal import Url
+from akaribot.core.builtins.message.internal import Url
 
 
 class Module:

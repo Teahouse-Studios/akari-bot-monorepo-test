@@ -19,8 +19,8 @@ from .points import HookPoint
 from .results import Continue, Handled, RecoveryProposal, RewriteTrigger, Stop, StopScope
 
 if TYPE_CHECKING:
-    from core.builtins.bot import Bot
-    from core.builtins.session.info import SessionInfo
+    from akaribot.core.builtins.bot import Bot
+    from akaribot.core.builtins.session.info import SessionInfo
 
 
 def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
@@ -48,8 +48,8 @@ def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
         memo[id(value)] = result
         return result
 
-    from core.builtins.message.chain import MessageChain, MessageNodes
-    from core.i18n import Locale
+    from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
+    from akaribot.core.i18n import Locale
 
     if isinstance(value, (MessageChain, MessageNodes, Locale)):
         # 这些值对象允许在独立副本上使用翻译/消息 API；复制失败必须拒绝读取，不能退回源引用。
@@ -119,7 +119,7 @@ class OutgoingPayload:
     @staticmethod
     def _clone_chain(chain: Any) -> Any:
         """对明确支持的消息类型递归复制；未知类型不得静默共享引用。"""
-        from core.builtins.message.chain import MessageChain, MessageNodes
+        from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
 
         if isinstance(chain, MessageChain):
             return MessageChain.assign(list(chain.values))

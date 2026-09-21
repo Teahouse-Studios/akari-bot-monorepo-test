@@ -12,8 +12,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from core.builtins.session.internal import confirm_prompt_key
-from core.tester import func_case, Tester
+from akaribot.core.builtins.session.internal import confirm_prompt_key
+from akaribot.testing import func_case, Tester
 
 
 def _session(support_button: bool = False, support_reaction: bool = False, client_name: str = "TEST"):
@@ -60,14 +60,14 @@ def _test_no_quick_path():
 
 def _test_quick_confirm_off_disables_reaction():
     """关闭快速确认后不再提示表情反应，与不补加反应的实际行为相符。"""
-    with patch("core.builtins.session.internal.quick_confirm", False):
+    with patch("akaribot.core.builtins.session.internal.quick_confirm", False):
         key = confirm_prompt_key(_session(support_reaction=True, client_name="QQ"))
     return key == "message.wait.confirm.prompt"
 
 
 def _test_quick_confirm_off_keeps_button():
     """关闭快速确认不影响按钮：平台照常下发，提示须如实告知。"""
-    with patch("core.builtins.session.internal.quick_confirm", False):
+    with patch("akaribot.core.builtins.session.internal.quick_confirm", False):
         key = confirm_prompt_key(_session(support_button=True))
     return key == "message.wait.confirm.prompt.button"
 

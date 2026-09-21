@@ -1,6 +1,6 @@
-from bots.matrix.info import client_name, sender_prefix, target_prefix
-from core.builtins.bot import Bot
-from core.builtins.session.info import EventInfo
+from akaribot.adapters.matrix.info import client_name, sender_prefix, target_prefix
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.session.info import EventInfo
 
 
 def should_dispatch_member_joined(

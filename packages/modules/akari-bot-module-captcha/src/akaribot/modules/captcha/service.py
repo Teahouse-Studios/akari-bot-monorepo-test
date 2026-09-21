@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 
 from tortoise.transactions import in_transaction
 
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Mention
-from core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
-from core.logger import Logger
-from core.utils.random import SecureRandom
-from modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Mention
+from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
+from akaribot.core.logger import Logger
+from akaribot.core.utils.random import SecureRandom
+from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
 
 
 def verification_id(target_union_id: str, sender_union_id: str) -> str:

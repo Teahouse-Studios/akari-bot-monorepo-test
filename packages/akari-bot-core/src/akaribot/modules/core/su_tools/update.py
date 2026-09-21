@@ -1,7 +1,7 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Plain
-from core.component import module
-from core.utils.bash import run_sys_command
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Plain
+from akaribot.core.component import module
+from akaribot.core.utils.bash import run_sys_command
 
 upd = module("update", required_superuser=True, base=True, doc=True)
 

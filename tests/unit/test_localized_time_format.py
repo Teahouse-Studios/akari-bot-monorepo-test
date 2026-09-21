@@ -10,13 +10,13 @@ import re
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-import core.smtp as smtp
-from core.builtins.message.elements import FormattedTimeElement
-from core.builtins.session.info import SessionInfo
-from core.builtins.session.internal import FetchedMessageSession
-from core.i18n import Locale, safe_strftime
-from core.logger import Logger
-from core.tester import func_case, Tester
+import akaribot.core.smtp as smtp
+from akaribot.core.builtins.message.elements import FormattedTimeElement
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.builtins.session.internal import FetchedMessageSession
+from akaribot.core.i18n import Locale, safe_strftime
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 # 2009-02-13 23:31:30 UTC
 FIXED_TIMESTAMP = 1234567890.0

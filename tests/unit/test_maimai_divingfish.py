@@ -8,10 +8,10 @@
 
 from unittest.mock import patch
 
-from core.tester import Tester, func_case
-from modules.maimai.database.models import DivingProberBindInfo
-from modules.maimai.libraries import divingfish_oauth
-from modules.maimai.libraries.divingfish_oauth import (
+from akaribot.testing import Tester, func_case
+from akaribot.modules.maimai.database.models import DivingProberBindInfo
+from akaribot.modules.maimai.libraries import divingfish_oauth
+from akaribot.modules.maimai.libraries.divingfish_oauth import (
     DivingFishAuthorizationDenied,
     DivingFishConsentRequired,
     DivingFishDeviceCodeExpired,

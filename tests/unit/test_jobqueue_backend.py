@@ -3,21 +3,21 @@
 import time
 from unittest.mock import patch
 
-from core.config.jobqueue import JobQueueConfig
-from core.queue.backend import create_jobqueue_backend
-from core.queue.base import JobQueueBase
-from core.queue.database import DatabaseJobQueueBackend, DatabaseMessageTransport, DatabasePeerRegistry
-from core.queue.errors import RpcProtocolError
-from core.queue.transport import BatchSendResult, PROTOCOL_VERSION, RpcRequest, RpcResponse
-from core.queue.websocket import WebSocketJobQueueBackend
-from core.queue.websocket import (
+from akaribot.core.config.jobqueue import JobQueueConfig
+from akaribot.core.queue.backend import create_jobqueue_backend
+from akaribot.core.queue.base import JobQueueBase
+from akaribot.core.queue.database import DatabaseJobQueueBackend, DatabaseMessageTransport, DatabasePeerRegistry
+from akaribot.core.queue.errors import RpcProtocolError
+from akaribot.core.queue.transport import BatchSendResult, PROTOCOL_VERSION, RpcRequest, RpcResponse
+from akaribot.core.queue.websocket import WebSocketJobQueueBackend
+from akaribot.core.queue.websocket import (
     _encode_frame,
     _fit_error_response,
     _fit_request_tracebacks,
     _request_to_wire,
     _response_to_wire,
 )
-from core.tester import func_case, Tester
+from akaribot.testing import func_case, Tester
 
 
 async def _test_database_backend_is_a_complete_isolated_bundle():
@@ -46,7 +46,7 @@ async def _test_backend_factory_obeys_config_without_fallback():
         patch.object(JobQueueConfig, "jobqueue_websocket_queue_size", 1000),
         patch.object(JobQueueConfig, "jobqueue_websocket_max_message_bytes", 1048576),
         patch.object(JobQueueConfig, "jobqueue_websocket_command_timeout", 10),
-        patch("core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
+        patch("akaribot.core.config.jobqueue.JobQueueSecretConfig.jobqueue_websocket_token", ""),
     ):
         websocket = create_jobqueue_backend("websocket")
     if not isinstance(websocket, WebSocketJobQueueBackend):

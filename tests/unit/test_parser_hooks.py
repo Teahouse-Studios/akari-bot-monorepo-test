@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from core.builtins.parser.hooks import (
+from akaribot.core.builtins.parser.hooks import (
     Continue,
     HookPoint,
     HookSubscription,
@@ -12,13 +12,13 @@ from core.builtins.parser.hooks import (
     build_subscription,
     normalize_result,
 )
-from core.builtins.hooks import platform_allows, subscription_sort_key
-from core.builtins.parser.hooks.dispatch import reset_parser_hook_executor
-from core.builtins.parser.hooks.dispatch import get_parser_hook_executor
-from core.loader import ModulesManager
-from core.tester import func_case, Tester
-from core.types import Module
-from core.types.module.component_meta import HookMeta
+from akaribot.core.builtins.hooks import platform_allows, subscription_sort_key
+from akaribot.core.builtins.parser.hooks.dispatch import reset_parser_hook_executor
+from akaribot.core.builtins.parser.hooks.dispatch import get_parser_hook_executor
+from akaribot.core.loader import ModulesManager
+from akaribot.testing import func_case, Tester
+from akaribot.core.types import Module
+from akaribot.core.types.module.component_meta import HookMeta
 
 
 class _FakeMsg:
@@ -240,7 +240,7 @@ async def _test_invalid_result_isolated():
 async def _test_protocol_exception_isolated():
     """SessionFinished 等控制流异常不得由 hook 直接终止 parser"""
     try:
-        from core.constants.exceptions import SessionFinished
+        from akaribot.core.constants.exceptions import SessionFinished
 
         called = []
 
@@ -306,7 +306,7 @@ async def _test_timeout_discards_result():
 async def _test_handled_short_circuits():
     """Handled 作为控制结果停止后续 hook"""
     try:
-        from core.builtins.parser.hooks import Handled
+        from akaribot.core.builtins.parser.hooks import Handled
 
         called = []
 
@@ -338,8 +338,8 @@ async def _test_handled_short_circuits():
 async def _test_typo_suggests_close_module():
     """typo 模块对近似模块名返回 RecoveryProposal"""
     try:
-        from core.builtins.parser.hooks import RecoveryProposal
-        from modules.core.hooks.typo import suggest_correction
+        from akaribot.core.builtins.parser.hooks import RecoveryProposal
+        from akaribot.modules.core.hooks.typo import suggest_correction
 
         class _CmdList:
             def __init__(self, cmds):
@@ -367,7 +367,7 @@ async def _test_typo_suggests_close_module():
         msg.session_info.client_name = "TEST"
         msg.check_super_user = lambda: False
 
-        from core.exports import exports
+        from akaribot.core.exports import exports
 
         class _Bot:
             base_superuser_list = []
@@ -391,7 +391,7 @@ async def _test_typo_suggests_close_module():
 async def _test_stale_generation_skipped():
     """重载后旧代际订阅不执行"""
     try:
-        from core.module_runtime import ModuleRuntimeManager
+        from akaribot.core.module_runtime import ModuleRuntimeManager
 
         called = []
 
@@ -478,8 +478,8 @@ async def _test_per_subscription_timeout():
 async def _test_named_hook_skips_point_and_disabled():
     """Bot.Hook.trigger：跳过 point 订阅；停用模块不执行具名 hook"""
     try:
-        from core.builtins.bot import Bot
-        from core.loader import ModulesManager
+        from akaribot.core.builtins.bot import Bot
+        from akaribot.core.loader import ModulesManager
 
         called = []
 
@@ -525,8 +525,8 @@ async def _test_named_hook_skips_point_and_disabled():
 
 async def _test_named_hook_uses_shared_execution_contract():
     """具名 hook 复用共享执行器的广播隔离、平台筛选和单能力错误传播。"""
-    from core.builtins.hooks import dispatch_module_hook
-    from core.constants.exceptions import SessionFinished
+    from akaribot.core.builtins.hooks import dispatch_module_hook
+    from akaribot.core.constants.exceptions import SessionFinished
 
     module_name = "__test_named_contract"
     module = _make_module(module_name)
@@ -574,7 +574,7 @@ async def _test_named_hook_timeout_is_enforced():
     """具名 hook 的单次调用遵守订阅 timeout。"""
     import asyncio
 
-    from core.builtins.hooks import dispatch_module_hook
+    from akaribot.core.builtins.hooks import dispatch_module_hook
 
     module_name = "__test_named_timeout"
     module = _make_module(module_name)
@@ -599,9 +599,9 @@ async def _test_named_hook_timeout_is_enforced():
 async def _test_event_handler_isolation():
     """event 分发：单 handler 失败不影响其他 handler"""
     try:
-        from core.builtins.session.info import EventInfo
-        from core.loader import ModulesManager
-        from core.types.module.component_meta import EventMeta
+        from akaribot.core.builtins.session.info import EventInfo
+        from akaribot.core.loader import ModulesManager
+        from akaribot.core.types.module.component_meta import EventMeta
 
         called = []
 
@@ -641,7 +641,7 @@ async def _test_event_handler_isolation():
 async def _test_recovery_target_revalidated():
     """确认后重校验：停用/缺失模块拒绝过期建议"""
     try:
-        from core.builtins.parser.message import _validate_recovery_target
+        from akaribot.core.builtins.parser.message import _validate_recovery_target
 
         msg = _FakeMsg()
         msg.session_info.enabled_modules = []
@@ -699,8 +699,8 @@ async def _test_session_ready_draft_commit():
 async def _test_reload_failure_keeps_old_hooks():
     """reload 失败回退后，旧订阅仍按旧 runtime 代际执行。"""
     try:
-        from core.loader import ModulesManager
-        from core.module_runtime import ModuleRuntimeManager
+        from akaribot.core.loader import ModulesManager
+        from akaribot.core.module_runtime import ModuleRuntimeManager
 
         called = []
 
@@ -877,7 +877,7 @@ async def _test_nested_same_session_dispatch_skipped():
 async def _test_invalid_recovery_fields_rejected():
     """RecoveryProposal 字段非法时在 hook 边界被拒绝，不进入恢复流程。"""
     try:
-        from core.builtins.parser.hooks import RecoveryProposal
+        from akaribot.core.builtins.parser.hooks import RecoveryProposal
 
         async def bad(ctx):
             return RecoveryProposal(trigger_msg=None, command_first_word=[])
@@ -910,7 +910,7 @@ async def _test_invalid_recovery_fields_rejected():
 async def _test_snapshot_build_failure_isolated():
     """快照构建失败按当前 hook 失败处理，后续 hook 仍执行。"""
     try:
-        from core.builtins.parser.hooks import OutgoingPayload
+        from akaribot.core.builtins.parser.hooks import OutgoingPayload
 
         seen = []
 
@@ -948,7 +948,7 @@ async def _test_snapshot_build_failure_isolated():
 async def _test_missing_runtime_generation_skipped():
     """带代际的订阅失去 runtime 后必须视为陈旧，不能重新创建 runtime 执行。"""
     try:
-        from core.module_runtime import ModuleRuntimeManager
+        from akaribot.core.module_runtime import ModuleRuntimeManager
 
         module_name = "__missing_runtime_hook"
         called = []
@@ -988,7 +988,7 @@ async def _test_missing_runtime_generation_skipped():
 async def _test_generation_rechecked_between_hooks():
     """前一个 hook 等待期间发生 reload 时，已收集的后续旧代际回调必须跳过。"""
     try:
-        from core.module_runtime import ModuleRuntimeManager
+        from akaribot.core.module_runtime import ModuleRuntimeManager
 
         first_name = "__generation_recheck_first"
         stale_name = "__generation_recheck_stale"
@@ -1034,7 +1034,7 @@ async def _test_generation_rechecked_between_hooks():
         traceback.print_exc()
         return False
     finally:
-        from core.module_runtime import ModuleRuntimeManager
+        from akaribot.core.module_runtime import ModuleRuntimeManager
 
         if "first_name" in locals():
             ModuleRuntimeManager._current.pop(first_name, None)
@@ -1045,8 +1045,8 @@ async def _test_generation_rechecked_between_hooks():
 async def _test_outgoing_commit_failure_isolated():
     """成功回调产出不可复制内容时只丢弃该改写，并继续后续 hook。"""
     try:
-        from core.builtins.message.chain import MessageChain
-        from core.builtins.parser.hooks import OutgoingPayload
+        from akaribot.core.builtins.message.chain import MessageChain
+        from akaribot.core.builtins.parser.hooks import OutgoingPayload
 
         called = []
 

@@ -4,16 +4,16 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from core.alive import Alive
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.session.info import FetchedSessionInfo
-from core.database.models import JobQueuePeersTable, JobQueuesTable, TargetUnionInfo, TargetUnionBind
-from core.queue.client import post_message, send_private_msg
-from core.queue.server import JobQueueServer
-from core.queue.contracts import PlatformAPI, ServerAPI
-from core.queue.errors import RpcUnavailableError
-from core.tester import func_case, Tester
+from akaribot.core.alive import Alive
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.info import FetchedSessionInfo
+from akaribot.core.database.models import JobQueuePeersTable, JobQueuesTable, TargetUnionInfo, TargetUnionBind
+from akaribot.core.queue.client import post_message, send_private_msg
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.queue.contracts import PlatformAPI, ServerAPI
+from akaribot.core.queue.errors import RpcUnavailableError
+from akaribot.testing import func_case, Tester
 
 
 async def _build_channel(prefix: str) -> list[FetchedSessionInfo]:
@@ -189,7 +189,7 @@ async def _test_post_exception_uses_next_hop():
     next_hop = AsyncMock()
     message = MessageChain.assign("hello")
     with (
-        patch("core.queue.client.resolve_context", new=AsyncMock(return_value=context)),
+        patch("akaribot.core.queue.client.resolve_context", new=AsyncMock(return_value=context)),
         patch.object(ServerAPI.post_next_hop, "submit", new=next_hop),
     ):
         result = await post_message(session, message, "wiki")
@@ -201,7 +201,7 @@ async def _test_private_exception_returns_empty():
     session = SimpleNamespace(target_id="POSTF|Group|a")
     context = SimpleNamespace(send_private_msg=AsyncMock(side_effect=RuntimeError("platform failed")))
     message = MessageChain.assign("hello")
-    with patch("core.queue.client.resolve_context", new=AsyncMock(return_value=context)):
+    with patch("akaribot.core.queue.client.resolve_context", new=AsyncMock(return_value=context)):
         result = await send_private_msg(session, "POSTF|user", message)
     return result == []
 

@@ -5,8 +5,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-from core.registry import ENTRY_POINT_GROUPS, CORE_API_VERSION, PackageEntry, PackageManifest, PackageRegistry
-from core.tester import Tester, func_case
+from akaribot.core.registry import ENTRY_POINT_GROUPS, CORE_API_VERSION, PackageEntry, PackageManifest, PackageRegistry
+from akaribot.testing import Tester, func_case
 
 MANIFEST_SAMPLE = """schema = 1
 requires_core_api = ">=1"
@@ -65,10 +65,10 @@ def _test_by_import_path_uses_longest_prefix():
     """前缀匹配须取最长者，而非先命中者。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        short = _entry("module", "wiki", "modules.wiki", root)
+        short = _entry("module", "wiki", "akaribot.modules.wiki", root)
         long = _entry("module", "wikilog", "modules.wiki.log", root)
         with _isolated_registry({"module:wiki": short, "module:wikilog": long}):
-            exact = PackageRegistry.by_import_path("modules.wiki")
+            exact = PackageRegistry.by_import_path("akaribot.modules.wiki")
             child = PackageRegistry.by_import_path("modules.wiki.log.entry")
             unrelated = PackageRegistry.by_import_path("modules.other.child")
             boundary = PackageRegistry.by_import_path("modules.wikilog")
@@ -78,10 +78,10 @@ def _test_by_import_path_uses_longest_prefix():
 def _test_by_import_path_handles_nested_and_unknown_paths():
     """嵌套模块解析到所属包，未知路径返回 None。"""
     with tempfile.TemporaryDirectory() as tmp:
-        entry = _entry("module", "wiki", "modules.wiki", Path(tmp))
+        entry = _entry("module", "wiki", "akaribot.modules.wiki", Path(tmp))
         with _isolated_registry({"module:wiki": entry}):
-            deep = PackageRegistry.by_import_path("modules.wiki.utils.wikilib")
-            shallow = PackageRegistry.by_import_path("modules.wiki")
+            deep = PackageRegistry.by_import_path("akaribot.modules.wiki.utils.wikilib")
+            shallow = PackageRegistry.by_import_path("akaribot.modules.wiki")
             unknown_root = PackageRegistry.by_import_path("os.path")
             empty = PackageRegistry.by_import_path("")
         return deep is entry and shallow is entry and unknown_root is None and empty is None
@@ -92,11 +92,11 @@ def _test_modules_and_adapters_are_separated():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         as_module = _entry("module", "web", "modules.web", root)
-        as_adapter = _entry("adapter", "web", "bots.web", root)
+        as_adapter = _entry("adapter", "web", "akaribot.adapters.web", root)
         with _isolated_registry({"module:web": as_module, "adapter:web": as_adapter}):
             modules = PackageRegistry.modules()
             adapters = PackageRegistry.adapters()
-            by_adapter_path = PackageRegistry.by_import_path("bots.web.api")
+            by_adapter_path = PackageRegistry.by_import_path("akaribot.adapters.web.api")
             by_module_path = PackageRegistry.by_import_path("modules.web")
         return (
             list(modules) == ["web"]
@@ -123,7 +123,7 @@ def _test_entry_points_take_precedence_over_directory_scan():
     """同一包同时来自 entry point 与目录扫描时，entry point 胜出且不重复计数。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        scanned = _entry("module", "wiki", "modules.wiki", root)
+        scanned = _entry("module", "wiki", "akaribot.modules.wiki", root)
         installed = PackageEntry(
             kind="module",
             name="wiki",
@@ -218,7 +218,7 @@ def _test_config_template_paths_follow_file_existence():
         no_template = _entry("module", "no_template", "modules.no_template", Path(tmp) / "other")
         with _isolated_registry({"module:has_template": has_template, "module:no_template": no_template}):
             names = PackageRegistry.config_template_paths()
-    return names == ["core.config.base", "modules.has_template.config"]
+    return names == ["akaribot.core.config.base", "modules.has_template.config"]
 
 
 def _test_import_roots_cover_registered_packages():
@@ -266,7 +266,7 @@ def _test_package_data_is_per_kind_and_name():
 
 def _test_package_data_uses_instance_data_root():
     """包数据目录取实例的可写 data 目录，而非只读的 assets。"""
-    from core.paths import Paths
+    from akaribot.core.paths import Paths
 
     with tempfile.TemporaryDirectory() as tmp:
         entry = _entry("module", "sample", "modules.sample", Path(tmp))

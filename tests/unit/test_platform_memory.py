@@ -7,14 +7,14 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import bots.onebot.context as onebot_context
-import bots.qqbot.context as qqbot_context
-from bots.discord.context import DiscordContextManager
-from bots.discord.slash_context import DiscordSlashContextManager
-from bots.web.config import WebConfig
-from bots.web.context import WebContextManager
-from core.builtins.temp import Temp
-from core.tester import Tester, func_case
+import akaribot.adapters.onebot.context as onebot_context
+import akaribot.adapters.qqbot.context as qqbot_context
+from akaribot.adapters.discord.context import DiscordContextManager
+from akaribot.adapters.discord.slash_context import DiscordSlashContextManager
+from akaribot.adapters.web.config import WebConfig
+from akaribot.adapters.web.context import WebContextManager
+from akaribot.core.builtins.temp import Temp
+from akaribot.testing import Tester, func_case
 from fastapi import WebSocketDisconnect
 
 
@@ -299,7 +299,7 @@ async def _test_discord_slash_typing_end_cannot_miss_registration() -> bool:
 
 async def _test_web_disconnect_keeps_newer_websocket() -> bool:
     with patch.object(WebConfig, "enable", False, create=True):
-        web_bot = importlib.import_module("bots.web.bot")
+        web_bot = importlib.import_module("akaribot.adapters.web.bot")
 
     class _FakeWebSocket:
         def __init__(self):

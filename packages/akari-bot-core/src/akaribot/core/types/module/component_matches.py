@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from attrs import define, field
 
-from core.utils.platform_scope import platform_scope, scope_allows
+from akaribot.core.utils.platform_scope import platform_scope, scope_allows
 from .component_meta import *
 
 

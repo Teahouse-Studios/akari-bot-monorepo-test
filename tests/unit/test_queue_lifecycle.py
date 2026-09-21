@@ -5,15 +5,15 @@ from dataclasses import replace
 from datetime import datetime, timedelta, UTC
 from unittest.mock import AsyncMock, patch
 
-from core.database.models import JobQueuesTable
-from core.queue.base import JobQueueBase
-from core.queue.codec import decode
-from core.queue.contracts import ServerAPI
-from core.queue.server import JobQueueServer
-from core.queue.transport import PROTOCOL_VERSION, RpcResponse
-from core.exports import exports
-from core.tester import func_case, Tester
-from core.tester.timing import TIME_SCALE
+from akaribot.core.database.models import JobQueuesTable
+from akaribot.core.queue.base import JobQueueBase
+from akaribot.core.queue.codec import decode
+from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.queue.server import JobQueueServer
+from akaribot.core.queue.transport import PROTOCOL_VERSION, RpcResponse
+from akaribot.core.exports import exports
+from akaribot.testing import func_case, Tester
+from akaribot.testing.timing import TIME_SCALE
 
 
 class QueueAuditRuntime(JobQueueBase):
@@ -186,7 +186,7 @@ async def _test_concurrent_consumers_claim_once():
 
     with (
         patch.object(JobQueuesTable, "get_all", side_effect=_get_same_pending_snapshot),
-        patch("core.queue.base.asyncio.create_task", side_effect=_capture_task),
+        patch("akaribot.core.queue.base.asyncio.create_task", side_effect=_capture_task),
     ):
         await asyncio.gather(
             AuditQueue._check_queue("QUEUE-AUDIT-CLAIM"),

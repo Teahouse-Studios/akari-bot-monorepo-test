@@ -1,6 +1,6 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext
-from core.component import module
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.component import module
 
 mute = module("mute", base=True, doc=True, required_admin=True)
 

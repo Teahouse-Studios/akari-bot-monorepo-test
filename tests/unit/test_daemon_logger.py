@@ -1,7 +1,7 @@
 """BotDaemon 日志过滤测试。"""
 
 from bot import _is_daemon_log
-from core.tester import Tester, func_case
+from akaribot.testing import Tester, func_case
 
 
 def _test_daemon_log_filter():

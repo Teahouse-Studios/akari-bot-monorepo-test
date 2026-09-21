@@ -1,12 +1,12 @@
-from core.builtins.bot import Bot
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.internal import Plain, I18NContext, Image, Url
-from core.component import module
-from modules.ncmusic.config import NcmusicConfig, NcmusicSecretConfig
-from core.constants.exceptions import ConfigValueError
-from core.utils.func import is_int
-from core.utils.http import get_url
-from core.utils.image_table import image_table_render, ImageTable
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.internal import Plain, I18NContext, Image, Url
+from akaribot.core.component import module
+from akaribot.modules.ncmusic.config import NcmusicConfig, NcmusicSecretConfig
+from akaribot.core.constants.exceptions import ConfigValueError
+from akaribot.core.utils.func import is_int
+from akaribot.core.utils.http import get_url
+from akaribot.core.utils.image_table import image_table_render, ImageTable
 
 enable_card = NcmusicConfig.ncmusic_enable_card
 API = NcmusicSecretConfig.ncmusic_api

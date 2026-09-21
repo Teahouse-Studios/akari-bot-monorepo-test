@@ -7,17 +7,17 @@ from botpy.errors import ServerError
 from botpy.message import GroupMessage
 from botpy.protocol import MediaSendResult
 
-import bots.qqbot.context as qqbot_context
-from bots.qqbot.config import QQBotConfig
-from bots.qqbot.context import QQBotContextManager, _message_ids, _reply_target, _resolve_api_message_id
-from bots.qqbot.info import (
+import akaribot.adapters.qqbot.context as qqbot_context
+from akaribot.adapters.qqbot.config import QQBotConfig
+from akaribot.adapters.qqbot.context import QQBotContextManager, _message_ids, _reply_target, _resolve_api_message_id
+from akaribot.adapters.qqbot.info import (
     target_c2c_prefix,
     target_direct_prefix,
     target_group_prefix,
     target_guild_prefix,
 )
-from core.builtins.message.chain import MessageChain
-from core.builtins.message.elements import (
+from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.message.elements import (
     AudioElement,
     ImageElement,
     MarkdownElement,
@@ -25,13 +25,13 @@ from core.builtins.message.elements import (
     PlainElement,
     VideoElement,
 )
-from core.builtins.session.info import SessionInfo
-from core.i18n import Locale
-from core.logger import Logger
-from core.tester import func_case, Tester
+from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.i18n import Locale
+from akaribot.core.logger import Logger
+from akaribot.testing import func_case, Tester
 
 with patch.object(QQBotConfig, "enable", False):
-    import bots.qqbot.bot as qqbot_bot
+    import akaribot.adapters.qqbot.bot as qqbot_bot
 
 
 def _make_session(target_from: str, target: str = "target") -> SessionInfo:
@@ -648,7 +648,7 @@ async def _test_private_message_does_not_reuse_another_users_dm() -> bool:
 
 async def _test_private_message_client_failure_returns_empty() -> bool:
     session = _make_session(target_group_prefix)
-    with patch("bots.qqbot.context._get_client", side_effect=RuntimeError("client unavailable")):
+    with patch("akaribot.adapters.qqbot.context._get_client", side_effect=RuntimeError("client unavailable")):
         try:
             result = await QQBotContextManager.send_private_msg(
                 session,

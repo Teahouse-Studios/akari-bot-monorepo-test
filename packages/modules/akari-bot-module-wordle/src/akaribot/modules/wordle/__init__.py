@@ -1,11 +1,11 @@
-from core.builtins.bot import Bot
-from core.builtins.message.internal import I18NContext, Image as BImage, Plain, Url
-from core.component import module
-from modules.wordle.config import WordleConfig
-from core.utils.cooldown import CoolDown
-from core.utils.game import PlayState, GAME_EXPIRED
-from core.logger import Logger
-from core.utils.petal import gained_petal
+from akaribot.core.builtins.bot import Bot
+from akaribot.core.builtins.message.internal import I18NContext, Image as BImage, Plain, Url
+from akaribot.core.component import module
+from akaribot.modules.wordle.config import WordleConfig
+from akaribot.core.utils.cooldown import CoolDown
+from akaribot.core.utils.game import PlayState, GAME_EXPIRED
+from akaribot.core.logger import Logger
+from akaribot.core.utils.petal import gained_petal
 from .board import WordleBoard, WordleBoardImage
 
 text_mode = WordleConfig.wordle_disable_image

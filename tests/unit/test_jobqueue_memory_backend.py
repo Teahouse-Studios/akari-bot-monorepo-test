@@ -4,11 +4,11 @@ import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from core.queue.base import current_peer, JobQueueBase
-from core.queue.errors import RpcUnavailableError
-from core.queue.memory import InMemoryBroker, InMemoryJobQueueBackend
-from core.queue.peer import PeerSelector
-from core.tester import func_case, Tester
+from akaribot.core.queue.base import current_peer, JobQueueBase
+from akaribot.core.queue.errors import RpcUnavailableError
+from akaribot.core.queue.memory import InMemoryBroker, InMemoryJobQueueBackend
+from akaribot.core.queue.peer import PeerSelector
+from akaribot.testing import func_case, Tester
 
 
 @asynccontextmanager
