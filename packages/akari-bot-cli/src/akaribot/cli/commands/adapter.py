@@ -1099,13 +1099,17 @@ def _read_header_lines(path: Path) -> list[str]:
 
 
 def base_config_path(instance: InstanceLike, base_table: str) -> Path:
-    """基表配置文件在分层布局下的路径。
+    """基表配置文件的路径。
+
+    与其它配置表一致的一名一文件扁平布局：core 的 ``CFGManager.load()`` 只扫描
+    ``config/*.toml``，写到 ``config/adapters/`` 的表对 core 不可见，`config set` 会另写一份
+    扁平文件。分层布局待 P4.4 的 ``ConfigLayout`` 落地后再迁移（读取侧已同时兼容两种布局）。
 
     :param instance: 目标实例。
     :param base_table: 基表表名，如 ``bot_telegram``。
     :return: 配置文件路径。
     """
-    return config_root(instance) / ADAPTERS_DIR_NAME / f"{base_table_stem(base_table)}.toml"
+    return config_root(instance) / f"{base_table}.toml"
 
 
 def base_table_stem(base_table: str) -> str:

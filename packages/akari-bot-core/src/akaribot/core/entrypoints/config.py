@@ -144,7 +144,9 @@ def _declared_defaults(table: str) -> dict[str, dict]:
     result: dict[str, dict] = {}
     for entries in (PackageRegistry.modules(), PackageRegistry.adapters()):
         for entry in entries.values():
-            if entry.manifest.config_table != table:
+            declared_table = entry.manifest.config_table
+            # 实例表（bot_telegram-alt）由基表（bot_telegram）的模板派生，按前缀一并匹配。
+            if declared_table != table and not table.startswith(f"{declared_table}-"):
                 continue
             try:
                 module = importlib.import_module(f"{entry.import_path}.config")
@@ -159,6 +161,40 @@ def _declared_defaults(table: str) -> dict[str, dict]:
                         continue
                     result.setdefault(name, {"default": meta.get("default"), "type": meta.get("cfg_type")})
     return result
+
+
+def _coerce(table: str, key: str, value: str) -> Any:
+    """按配置模板声明的类型转换命令行字符串。
+
+    不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``：文件里类型不对，读回虽是 ``true``
+    但任何按布尔取用的代码都会拿到真值字符串。
+
+    :param table: 表名。
+    :param key: 键名。
+    :param value: 命令行给出的原始字符串。
+    :return: 转换后的值；无声明或无法转换时原样返回字符串。
+    """
+    cfg_type = _declared_defaults(table).get(key, {}).get("type")
+    if cfg_type is bool:
+        lowered = value.strip().lower()
+        if lowered in ("true", "1", "yes", "on"):
+            return True
+        if lowered in ("false", "0", "no", "off"):
+            return False
+        return value
+    if cfg_type is int:
+        try:
+            return int(value)
+        except ValueError:
+            return value
+    if cfg_type is float:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    if cfg_type is list:
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return value
 
 
 def _resolve_table(table: str) -> str:
@@ -227,7 +263,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "set":
             from akaribot.core.config import CFGManager
 
-            CFGManager.edit_write(args.key, args.value, table_name=_resolve_table(args.table))
+            table = _resolve_table(args.table)
+            value = _coerce(table, args.key, args.value)
+            CFGManager.edit_write(args.key, value, table_name=table)
             if args.json:
                 json.dump({"key": args.key, "value": args.value}, sys.stdout, ensure_ascii=False)
                 sys.stdout.write("\n")
