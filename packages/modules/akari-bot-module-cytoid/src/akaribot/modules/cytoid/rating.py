@@ -7,6 +7,7 @@ import orjson
 from PIL import Image, ImageEnhance, ImageFont, ImageDraw, ImageOps
 from gql import Client, gql
 from gql.transport.httpx import HTTPXAsyncTransport
+from html2text import html2text
 
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.internal import I18NContext, Plain
@@ -17,7 +18,6 @@ from akaribot.core.constants.path import (
 from akaribot.core.logger import Logger
 from akaribot.core.utils.cache import random_cache_path
 from akaribot.core.utils.func import truncate_text
-from akaribot.core.utils.html2text import html2text
 from akaribot.core.utils.http import get_url, download
 from akaribot.core.utils.image import get_fontsize
 

@@ -8,6 +8,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
+    "akari-bot-html2text>=0.1.0,<1.0",
     "Pillow>=12.0.0,<13.0.0",
     # aiocqhttp 是模块→平台 SDK 的现存违规边（T4.2 §7.6），收敛到 core HTTP 层之前必须保留
     "aiocqhttp>=1.4.3,<2.0.0",

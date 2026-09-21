@@ -46,15 +46,6 @@ packages/akari-bot-core/src/akaribot/core/queue/base.py	R7	Timeout rows created 
 packages/akari-bot-core/src/akaribot/core/queue/base.py	R7	send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
 packages/akari-bot-core/src/akaribot/core/server/terminate.py	R7	for x in get_wait_list:
 packages/akari-bot-core/src/akaribot/core/server/terminate.py	R7	restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R3	<pre>stuff...
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R3	Warning for the tempted!!!
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R7	I cannot think of a better solution for now.
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R7	This is a very dangerous call ... it could mess up
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R7	Warning for the tempted!!!
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R7	ref may be an empty string (e.g. for &lrm;/&rlm; markers that should
-packages/akari-bot-core/src/akaribot/core/utils/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
-packages/akari-bot-core/src/akaribot/core/utils/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
-packages/akari-bot-core/src/akaribot/core/utils/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
 packages/akari-bot-core/src/akaribot/modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
 packages/akari-bot-core/src/akaribot/modules/core/common_tools/_union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
 packages/akari-bot-core/src/akaribot/modules/core/common_tools/bind.py	R7	同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对
@@ -65,6 +56,15 @@ packages/akari-bot-core/src/akaribot/modules/core/common_tools/setup.py	R7	不�
 packages/akari-bot-core/tests/test_jobqueue_websocket_backend.py	R7	wait_ready 只保证各 Peer 已注册；ready/welcome 握手仍可能在其它 Peer 的
 packages/akari-bot-core/tests/test_loader.py	R7	The full suite can delay task scheduling while other async tests are unwinding.
 packages/akari-bot-core/tests/test_loader.py	R7	每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），
+packages/akari-bot-html2text/src/html2text/__init__.py	R3	<pre>stuff...
+packages/akari-bot-html2text/src/html2text/__init__.py	R3	Warning for the tempted!!!
+packages/akari-bot-html2text/src/html2text/__init__.py	R7	I cannot think of a better solution for now.
+packages/akari-bot-html2text/src/html2text/__init__.py	R7	This is a very dangerous call ... it could mess up
+packages/akari-bot-html2text/src/html2text/__init__.py	R7	Warning for the tempted!!!
+packages/akari-bot-html2text/src/html2text/__init__.py	R7	ref may be an empty string (e.g. for &lrm;/&rlm; markers that should
+packages/akari-bot-html2text/src/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
+packages/akari-bot-html2text/src/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
+packages/akari-bot-html2text/src/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，

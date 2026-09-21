@@ -21,6 +21,7 @@ members = [
     "akari-bot-adapter-telegram",
     "akari-bot-adapter-web",
     "akari-bot-core",
+    "akari-bot-html2text",
     "akari-bot-module-ai",
     "akari-bot-module-arcaea",
     "akari-bot-module-arcaea-rss",
@@ -521,6 +522,11 @@ requires-dist = [
 provides-extras = ["s3", "mysql", "image", "chart"]
 
 [[package]]
+name = "akari-bot-html2text"
+version = "0.1.0"
+source = { editable = "packages/akari-bot-html2text" }
+
+[[package]]
 name = "akari-bot-i18n"
 version = "0.1.3"
 source = { registry = "https://pypi.org/simple" }
@@ -714,6 +720,7 @@ version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-cytoid" }
 dependencies = [
     { name = "akari-bot-core" },
+    { name = "akari-bot-html2text" },
     { name = "gql" },
     { name = "orjson" },
     { name = "pillow" },
@@ -723,6 +730,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
+    { name = "akari-bot-html2text", editable = "packages/akari-bot-html2text" },
     { name = "gql", specifier = ">=4.0.0,<5.0.0" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
     { name = "pillow", specifier = ">=12.0.0,<13.0.0" },
@@ -1165,6 +1173,7 @@ source = { editable = "packages/modules/akari-bot-module-wiki" }
 dependencies = [
     { name = "aiocqhttp" },
     { name = "akari-bot-core" },
+    { name = "akari-bot-html2text" },
     { name = "akari-bot-webrender" },
     { name = "attrs" },
     { name = "beautifulsoup4" },
@@ -1181,6 +1190,7 @@ dependencies = [
 requires-dist = [
     { name = "aiocqhttp", specifier = ">=1.4.3,<2.0.0" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
+    { name = "akari-bot-html2text", editable = "packages/akari-bot-html2text" },
     { name = "akari-bot-webrender", specifier = "==0.6.2" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.11.1,<5.0.0" },

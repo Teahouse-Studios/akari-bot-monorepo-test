@@ -4,11 +4,11 @@ import urllib.parse
 from copy import deepcopy
 from datetime import datetime, UTC
 
+import html2text
 import orjson
 from attrs import define, field
 from bs4 import BeautifulSoup
 
-import akaribot.core.utils.html2text as html2text
 from akaribot.core.builtins.message.internal import I18NContext, Url
 from akaribot.core.builtins.session.internal import MessageSession
 from akaribot.core.config.base import BaseConfig, CoreConfig

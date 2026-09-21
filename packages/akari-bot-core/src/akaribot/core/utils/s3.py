@@ -7,15 +7,18 @@ from datetime import datetime, timezone
 from functools import partial
 from inspect import isawaitable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
-import boto3
 import orjson
-from botocore.config import Config as BotoConfig
-from botocore.exceptions import ClientError
 
+from akaribot.core.constants.exceptions import OptionalDependencyMissing
 from akaribot.core.logger import Logger
 from akaribot.core.config.s3 import S3Config, S3SecretConfig
+
+if TYPE_CHECKING:
+    # botocore 属可选依赖（extra ``s3``），只在类型标注中引用。
+    from botocore.exceptions import ClientError
 
 
 s3_access_key = S3SecretConfig.s3_access_key
@@ -23,6 +26,37 @@ s3_secret_key = S3SecretConfig.s3_secret_key
 endpoint_url = S3Config.s3_endpoint_url
 bucket = S3Config.s3_bucket
 region = S3Config.s3_region
+
+# 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未装时只在构造处抛出。
+_S3_DEPENDENCY_HINT = (
+    "S3 存储需要可选依赖 boto3，当前环境未安装。请安装 akari-bot-core 的 s3 extra："
+    'pip install "akari-bot-core[s3]"（或单独安装 boto3）后重试。'
+)
+
+
+def _load_sdk() -> tuple[Any, Any, type[Exception]]:
+    """惰性导入 boto3 及 botocore 的配置类与异常类。
+
+    默认可不装 boto3（extra ``s3``），故导入期不引入；只有真正创建客户端时才需要。
+
+    :return: ``(boto3 模块, botocore.config.Config, botocore.exceptions.ClientError)``。
+    :raises OptionalDependencyMissing: 未安装 boto3 时抛出，消息含安装指引。
+    """
+    try:
+        import boto3
+        from botocore.config import Config as botocore_config
+        from botocore.exceptions import ClientError as botocore_client_error
+    except ImportError as error:
+        raise OptionalDependencyMissing(_S3_DEPENDENCY_HINT) from error
+    return boto3, botocore_config, botocore_client_error
+
+
+def _client_error() -> type[Exception]:
+    """返回 botocore 的 ``ClientError`` 类型，供 ``except`` 子句惰性取用。
+
+    只在异常冒泡到处理分支时求值：那时客户端已建好，botocore 必然可以导入。
+    """
+    return _load_sdk()[2]
 
 
 class S3StorageAPI:
@@ -49,6 +83,9 @@ class S3StorageAPI:
         max_attempts: int = 2,
         max_workers: int = 4,
     ):
+        # 先解析 SDK：依赖缺失时在分配线程池之前抛出带指引的异常。
+        boto3, boto_config, _ = _load_sdk()
+
         self._endpoint = endpoint_url.rstrip("/")
         self.bucket = bucket
         self._public_endpoint = (public_endpoint or endpoint_url).rstrip("/")
@@ -64,7 +101,7 @@ class S3StorageAPI:
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region,
-            config=BotoConfig(
+            config=boto_config(
                 signature_version="s3v4",
                 connect_timeout=max(float(connect_timeout), 0.1),
                 read_timeout=max(float(read_timeout), 0.1),
@@ -169,7 +206,7 @@ class S3StorageAPI:
             resp = self._client.get_object(Bucket=self.bucket, Key=self._manifest_key(prefix))
             body = resp["Body"].read()
             return orjson.loads(body)
-        except ClientError as e:
+        except _client_error() as e:
             if self._is_not_found_error(e):
                 return []
             raise
@@ -253,7 +290,7 @@ class S3StorageAPI:
             await self._run_sync(self._client.delete_object, Bucket=self.bucket, Key=object_key)
             Logger.info(f"[S3] Deleted: {object_key}")
             return True
-        except ClientError as e:
+        except _client_error() as e:
             Logger.error(f"[S3] Failed to delete {object_key}: {e}")
             return False
 
@@ -281,7 +318,7 @@ class S3StorageAPI:
         try:
             await self._run_sync(self._client.head_object, Bucket=self.bucket, Key=key)
             return True
-        except ClientError as e:
+        except _client_error() as e:
             if self._is_not_found_error(e):
                 return False
             raise
@@ -348,8 +385,16 @@ class S3StorageAPI:
         return urlunparse(parsed._replace(netloc=target_netloc))
 
 
-if s3_access_key and s3_secret_key and endpoint_url and bucket and region:
-    S3Storage = S3StorageAPI(
+def _build_default_storage() -> S3StorageAPI | None:
+    """按配置构造默认存储实例。
+
+    :return: 配置完整时返回实例；配置不全返回 ``None``，沿用「S3 未启用」的既有语义。
+    :raises OptionalDependencyMissing: 配置完整但未安装 boto3 时抛出，消息含安装指引。
+    """
+    if not (s3_access_key and s3_secret_key and endpoint_url and bucket and region):
+        Logger.warning("[S3] S3 configuration is incomplete. S3Storage will not be initialized.")
+        return None
+    return S3StorageAPI(
         endpoint_url=endpoint_url,
         access_key=s3_access_key,
         secret_key=s3_secret_key,
@@ -364,8 +409,8 @@ if s3_access_key and s3_secret_key and endpoint_url and bucket and region:
         max_attempts=S3Config.s3_max_attempts,
         max_workers=S3Config.s3_max_workers,
     )
-else:
-    Logger.warning("[S3] S3 configuration is incomplete. S3Storage will not be initialized.")
-    S3Storage = None
 
-__all__ = ["S3Storage"]
+
+S3Storage = _build_default_storage()
+
+__all__ = ["S3Storage", "S3StorageAPI"]
