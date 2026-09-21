@@ -3,8 +3,8 @@
 本文面向**使用旧版 AkariBot 的部署者**。旧版把机器人与全部模块放在同一个仓库里，靠 `git pull`
 更新；新版把 core、模块与适配器拆成互相独立的分发包，用 `akaribot` 命令行工具管理实例。
 
-> **状态说明**：自动迁移命令 `akaribot migrate legacy` **仍在规划中**，尚未实现。本文给出可立即
-> 执行的手工迁移步骤；该命令落地后本文会改为以它为主。
+迁移可直接用 `akaribot migrate legacy <旧项目路径>` 完成（见下节）；下面另附手工步骤，供需要
+逐项控制或排查问题的场合使用。
 
 ## 变化概览
 
@@ -15,6 +15,21 @@
 | 依赖 | 全仓一份 | 每个包各自声明，实例 venv 内统一解析 |
 | 配置与数据 | 仓库根下的 `config/`、`database/`、`data/` | 实例根下的同名目录，位置不变 |
 | 多账号 | 一个平台一份配置 | 同一平台可建多个实例：`akaribot adapter instance add <平台> <实例 ID>` |
+
+## 自动迁移
+
+```
+akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
+```
+
+迁移会校验旧项目布局（须含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`），把旧模块名
+映射到新的分发包名（**多对一**：`wikilog`/`weekly`/`weekly_rss` 都归入 `akari-bot-module-wiki`），
+建新实例、搬配置与数据、装映射到的包、转换数据库版本号，最后在新实例根写出
+`migration-report.md`。**一律生成默认实例**（实例 ID 为空、`client_name` 与旧项目相同），因此
+`target_id` 前缀不变、场景数据无需改写。
+
+常用开关：`--dry-run`（只输出报告不写文件）、`--skip-install`（只搬文件）、`--force`（覆盖同名文件）。
+迁移**不修改旧项目**；失败项会记入报告的「需人工处理」，可重跑续做。
 
 ## 手工迁移步骤
 

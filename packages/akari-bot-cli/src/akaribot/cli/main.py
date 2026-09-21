@@ -7,7 +7,7 @@
 import typer
 
 from akaribot.cli import __version__
-from akaribot.cli.commands import adapter, config, doctor, init, module, new, run, test, tui, venv
+from akaribot.cli.commands import adapter, config, doctor, init, migrate, module, new, run, test, tui, venv
 
 app = typer.Typer(
     name="akaribot",
@@ -16,7 +16,7 @@ app = typer.Typer(
     add_completion=False,
 )
 
-for sub in (init, run, test, module, config, adapter, venv, doctor, new, tui):
+for sub in (init, run, test, module, config, adapter, venv, doctor, new, tui, migrate):
     app.add_typer(sub.app, name=sub.__name__.rsplit(".", 1)[-1])
 
 
