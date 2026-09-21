@@ -1,0 +1,162 @@
+from typing import Any
+
+from akaribot.core.api import MessageChain, MessageNodes, SessionInfo
+from akaribot.core.api.adapters import BotState, ContextManager
+
+from .features import features as platform_features
+
+
+class [@module_class@]ContextManager(ContextManager):
+    """[@module_class@] 平台的上下文管理器。
+
+    17 个抽象方法一个都不能少；不支持的能力在 features.py 里保持 False，方法体留空即可。
+    """
+
+    context: dict[str, Any] = {}
+    features = platform_features
+
+    @classmethod
+    async def check_native_permission(cls, session_info: SessionInfo) -> bool:
+        """判断会话成员是否具备平台原生权限。"""
+        ...
+
+    @classmethod
+    async def check_bot_state(cls, session_info: SessionInfo) -> BotState:
+        """返回机器人自身在该场景的成员状态与平台权限。"""
+        ...
+
+    @classmethod
+    async def send_message(
+        cls,
+        session_info: SessionInfo,
+        message: MessageChain | MessageNodes,
+        quote: bool = True,
+    ) -> list[str]:
+        """向会话所在场景发送消息，返回平台消息 ID 列表。"""
+        ...
+
+    @classmethod
+    async def send_private_msg(
+        cls,
+        session_info: SessionInfo,
+        user_id: str,
+        message: MessageChain | MessageNodes,
+    ) -> list[str]:
+        """向指定用户私聊发送消息；失败时吞掉平台异常并返回空列表。"""
+        ...
+
+    @classmethod
+    async def delete_message(
+        cls,
+        session_info: SessionInfo,
+        message_id: str | list[str],
+        reason: str | None = None,
+    ) -> None:
+        """撤回指定消息。"""
+        ...
+
+    @classmethod
+    async def restrict_member(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+        duration: int | None = None,
+        reason: str | None = None,
+    ) -> None:
+        """禁言指定成员。"""
+        ...
+
+    @classmethod
+    async def unrestrict_member(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+    ) -> None:
+        """解除指定成员的禁言。"""
+        ...
+
+    @classmethod
+    async def kick_member(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+        reason: str | None = None,
+    ) -> None:
+        """踢出指定成员。"""
+        ...
+
+    @classmethod
+    async def ban_member(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+        reason: str | None = None,
+    ) -> None:
+        """封禁指定成员。"""
+        ...
+
+    @classmethod
+    async def unban_member(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+    ) -> None:
+        """解除指定成员的封禁。"""
+        ...
+
+    @classmethod
+    async def grant_permission_group(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+        permission_group_id: str | list[str],
+        reason: str | None = None,
+    ) -> None:
+        """为成员授予平台原生权限组。"""
+        ...
+
+    @classmethod
+    async def revoke_permission_group(
+        cls,
+        session_info: SessionInfo,
+        user_id: str | list[str],
+        permission_group_id: str | list[str],
+        reason: str | None = None,
+    ) -> None:
+        """移除成员持有的平台原生权限组。"""
+        ...
+
+    @classmethod
+    async def add_reaction(
+        cls,
+        session_info: SessionInfo,
+        message_id: str | list[str],
+        emoji: str,
+    ) -> None:
+        """为消息添加表情回应。"""
+        ...
+
+    @classmethod
+    async def remove_reaction(
+        cls,
+        session_info: SessionInfo,
+        message_id: str | list[str],
+        emoji: str,
+    ) -> None:
+        """移除消息上的表情回应。"""
+        ...
+
+    @classmethod
+    async def start_typing(cls, session_info: SessionInfo) -> None:
+        """开始显示输入状态。"""
+        ...
+
+    @classmethod
+    async def end_typing(cls, session_info: SessionInfo) -> None:
+        """结束输入状态。"""
+        ...
+
+    @classmethod
+    async def error_signal(cls, session_info: SessionInfo) -> None:
+        """在处理出错时向场景发出提示。"""
+        ...

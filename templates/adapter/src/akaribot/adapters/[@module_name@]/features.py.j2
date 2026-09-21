@@ -1,0 +1,6 @@
+from akaribot.core.api import Features
+
+# 只声明已实现的能力：未实现的能力保持 False，模块会据此降级。
+features = Features(
+{% for feature in features | default([]) %}    {{ feature.name }}={{ feature.value }},
+{% endfor %})

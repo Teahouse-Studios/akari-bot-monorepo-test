@@ -1,0 +1,67 @@
+{% if has_config | default(false) %}import asyncio
+
+{% endif %}from akaribot.core.api import Bot, MessageChain, SessionInfo
+from akaribot.core.api.adapters import client_cleanup, client_init
+{% if has_config | default(false) %}from .config import [@module_class@]Config
+{% endif %}from .context import [@module_class@]ContextManager
+from .info import (
+    client_name,
+    sender_prefix,
+    sender_prefix_list,
+    target_prefix,
+    target_prefix_list,
+)
+
+Bot.register_bot(client_name=client_name)
+ctx_id = Bot.register_context_manager([@module_class@]ContextManager)
+
+
+async def handle_message(
+    raw_event: object,
+    *,
+    target_id: str,
+    sender_id: str,
+    is_private: bool,
+    messages: MessageChain,
+    target_from: str = target_prefix,
+    sender_from: str = sender_prefix,
+    sender_name: str = "",
+    message_id: str = "",
+    reply_id: str | None = None,
+) -> None:
+    """把平台事件转成会话后交给 core 处理。
+
+    target_id / sender_id 须带前缀与平台内 ID，形如 ``<target_prefix>|<群 ID>``；target_from 与
+    sender_from 默认取 info.py 的单一场景前缀，多场景平台按实际场景传入。raw_event 原样传给模块
+    侧，作为该会话的上下文对象。
+    """
+    session = await SessionInfo.assign(
+        target_id=target_id,
+        sender_id=sender_id,
+        sender_name=sender_name,
+        target_from=target_from,
+        sender_from=sender_from,
+        is_private=is_private,
+        client_name=client_name,
+        message_id=message_id,
+        reply_id=reply_id,
+        messages=messages,
+        ctx_slot=ctx_id,
+    )
+    await Bot.process_message(session, raw_event)
+
+
+async def main() -> None:
+    """启动平台 SDK 并接收事件。
+
+    ``client_init()`` 要早于 SDK 启动：它把 target / sender 前缀登记进实例数据。
+    """
+    await client_init(target_prefix_list, sender_prefix_list)
+    try:
+        ...
+    finally:
+        await client_cleanup()
+
+
+{% if has_config | default(false) %}if [@module_class@]Config.enable:
+    asyncio.run(main()){% else %}# 未生成 config.py：确认平台 SDK 的启动方式后在此调用 asyncio.run(main())。{% endif %}

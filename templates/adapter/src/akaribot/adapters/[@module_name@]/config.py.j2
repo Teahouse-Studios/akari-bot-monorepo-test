@@ -1,0 +1,19 @@
+{% if has_config | default(false) %}from akaribot.core.api import on_bot_config
+
+
+@on_bot_config("[@module_name@]")
+class [@module_class@]Config:
+    """[@module_class@] 平台的普通配置项。
+
+    字段注释写在 locale 的 ``config.comments.bot_[@module_name@].<字段名>``。
+    """
+
+    enable: bool = False{% for field in config_fields | default([]) %}
+    {{ field.name }}: {{ field.annotation }} = {{ field.default }}{% endfor %}{% if credential_fields | default([]) %}
+
+
+@on_bot_config("[@module_name@]", secret=True)
+class [@module_class@]SecretConfig:
+    """凭据项。本表不进入 ``~config`` 的明文输出。"""
+{% for field in credential_fields | default([]) %}
+    {{ field.name }}: str = ""{% endfor %}{% endif %}{% else %}# 未生成配置模板：需要 enable 开关或平台凭据时，重新生成并加 --config。{% endif %}

@@ -1,0 +1,74 @@
+# akari-bot-adapter-[@module_name@]
+
+[@module_desc@]
+
+作者：[@author@]；许可证：[@license@]。
+
+## 安装
+
+```bash
+akaribot module add [@module_name@]
+```
+
+在源码目录内开发时改走可编辑安装，改完代码重启适配器进程即生效：
+
+```bash
+akaribot module add -e .
+```
+
+## 结构
+
+```
+pyproject.toml                                  # 分发元数据与 akaribot.adapters entry point
+src/akaribot/adapters/[@module_name@]/
+  __init__.py                                   # 包声明
+  manifest.toml                                 # 包清单：配置表与凭据字段（可选）
+  info.py                                       # 平台标识与 target / sender 前缀
+  features.py                                   # 平台能力声明
+  context.py                                    # ContextManager 实现
+  bot.py                                        # 入口：注册与消息处理
+  config.py                                     # 平台配置字段声明（可选）
+  locales/zh_cn.json                            # 文案，只写 zh_cn
+```
+
+core 的发现层按 entry point 登记本包，运行期由守护进程导入
+`akaribot.adapters.[@module_name@].bot`。`info.py` 的 `platform_name` 是多实例身份的唯一真源，
+实例 ID 由 `Info.resolve_client_name()` 拼在后面，一旦使用不可更改。
+
+## 待完成
+
+1. `context.py` 的 17 个抽象方法目前都是空实现，逐个接上平台 SDK；只保留已实现的能力，
+   其余在 `features.py` 里保持 `False`，模块会据此降级。
+2. `bot.py` 的 `handle_message()` 需要平台事件到 `SessionInfo` 的字段映射；`main()` 里启动
+   平台 SDK 并注册回调。
+3. `info.py` 的 `target_prefix_list` / `sender_prefix_list` 要与实际场景类型一致，它们会写进
+   `target_id` / `sender_id` 前缀。
+
+{% if has_config | default(false) %}
+## 配置
+
+`config.py` 里以 `on_bot_config("[@module_name@]")` 声明的字段会成为实例配置文件中的
+`[bot_[@module_name@]]` 表，注释取 `locales/zh_cn.json` 的
+`config.comments.bot_[@module_name@].<字段名>`。凭据字段另起一个类并把 `secret=True` 传给装饰器，
+该表不进入 `~config` 的明文输出，注释键的表名带 `_secret` 后缀。
+
+`enable` 是守护进程的启动开关：保持 `False` 时本适配器不会上线。
+{% endif %}
+{% if not (has_config | default(false)) %}
+## 配置
+
+本模板未生成 `config.py`，因此没有 `bot_[@module_name@]` 表，守护进程不会拉起本适配器。
+补上配置模板（或重新生成时加 `--config`）后即可用 `akaribot config set enable true
+--table bot_[@module_name@]` 启用。
+{% endif %}
+
+## 本地化
+
+`locales/zh_cn.json` 是唯一手工编辑的真源，其余语言由 Weblate 在包发布后收集，不要手工添加。
+
+## 开发提示
+
+- 平台 SDK 的依赖加进 `pyproject.toml` 的 `dependencies`，与 core 的约束保持字面一致。
+- 适配器只 import `akaribot.core.api` 与 `akaribot.core.api.adapters` 两个门面，不要写
+  `akaribot.core.builtins.*` 这类内部路径。
+- 提交前跑 `ruff check .` 与 `ruff format --check .`。

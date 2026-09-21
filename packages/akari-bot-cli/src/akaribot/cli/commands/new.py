@@ -32,25 +32,6 @@ from akaribot.cli import i18n
 
 app = typer.Typer(help="脚手架")
 
-
-def apply_argv_locale() -> None:
-    """让帮助文本也跟随 ``--lang``。
-
-    选项帮助在命令树物化时即已固化，早于根回调解析 ``--lang``；故导入本模块时先从 ``sys.argv``
-    取一次语言，未给出时不改动当前语言。
-    """
-    argv = sys.argv[1:]
-    for index, item in enumerate(argv):
-        if item == "--lang" and index + 1 < len(argv):
-            i18n.set_locale(argv[index + 1])
-            return
-        if item.startswith("--lang="):
-            i18n.set_locale(item.partition("=")[2])
-            return
-
-
-apply_argv_locale()
-
 # 模板目录的定位顺序：显式参数、环境变量、当前目录向上的 templates/module、CLI 源码目录。
 TEMPLATE_DIR_ENV = "AKARIBOT_TEMPLATE_DIR"
 TEMPLATE_RELATIVE = ("templates", "module")

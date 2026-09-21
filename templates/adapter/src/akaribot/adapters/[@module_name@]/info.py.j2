@@ -1,0 +1,11 @@
+from akaribot.core.api import Info
+
+platform_name = "{{ platform_name | default('Sample') }}"
+client_name = Info.resolve_client_name(platform_name)
+
+sender_prefix = f"{client_name}|User"
+sender_prefix_list = [sender_prefix]
+
+# target_prefix_list 要覆盖平台的全部场景类型，它同样写进 target_id 前缀。
+target_prefix = f"{client_name}|Group"
+target_prefix_list = [f"{client_name}|Group", f"{client_name}|Private"]

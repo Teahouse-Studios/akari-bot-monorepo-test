@@ -27,8 +27,5 @@ test = ["akari-bot-testing>=0.1.0,<1.0"]
 packages = ["src/akaribot"]
 
 # locales 与 assets / migrations 位于导入包目录内，随 wheel 一并分发。
-[tool.hatch.build.targets.wheel.force-include]
-"src/akaribot/modules/[@module_name@]/locales" = "akaribot/modules/[@module_name@]/locales"
-{% if has_assets | default(false) %}"src/akaribot/modules/[@module_name@]/assets" = "akaribot/modules/[@module_name@]/assets"
-{% endif %}{% if has_database | default(false) %}"src/akaribot/modules/[@module_name@]/migrations" = "akaribot/modules/[@module_name@]/migrations"
-{% endif %}
+# locales/assets/migrations 已由上面的 packages 收录，不要再 force-include（重复收录会让
+# hatchling 报 'A second file is being added to the wheel archive at the same path'）。

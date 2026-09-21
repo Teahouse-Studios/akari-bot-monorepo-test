@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-adapter-[@module_name@]"
+version = "0.1.0"
+description = "[@module_desc@]"
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+license = "[@license@]"
+authors = [{ name = "[@author@]" }]
+dependencies = [
+    # 与仓库内其它包写法一致，core 升大版本时全仓一次改动。
+    "akari-bot-core>=0.1.0,<1.0",
+]
+
+[project.entry-points."akaribot.adapters"]
+"[@module_name@]" = "akaribot.adapters.[@module_name@]"
+
+[tool.hatch.build.targets.wheel]
+# 包目录内的 locales 等非 Python 文件随 packages 一并入 wheel，不要再写 force-include：
+# 重复收录同一路径会让 hatchling 报 "A second file is being added to the wheel archive"。
+packages = ["src/akaribot"]
