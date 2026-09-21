@@ -1,0 +1,144 @@
+name: Publish package
+
+# T6.3：按包发布到 PyPI。tag 规则 `<分发名>-v<版本>`，例如
+# `akari-bot-module-wiki-v0.2.0`、`akari-bot-core-v0.3.0`。
+# 与整仓发布（publish-release.yml 的 `v*`）互不干扰：本工作流只认带 `-v` 的 tag。
+on:
+  push:
+    tags:
+      - "*-v*"
+  workflow_dispatch:
+    inputs:
+      dist:
+        description: 要发布的分发名，如 akari-bot-module-wiki
+        required: true
+      confirm:
+        description: 输入 publish 以确认发布
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    if: github.event_name == 'push' || inputs.confirm == 'publish'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ github.event_name == 'push' && github.ref_name || inputs.dist }}
+    timeout-minutes: 30
+    outputs:
+      dist: ${{ steps.resolve.outputs.dist }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Resolve dist and version from tag
+        id: resolve
+        shell: bash
+        run: |
+          # tag 形如 <分发名>-v<版本>；分发名本身不含 "-v"，故按最后一个 "-v" 切分。
+          if [ "${{ github.event_name }}" = "push" ]; then
+            REF="${{ github.ref_name }}"
+            DIST="${REF%-v*}"
+            VERSION="${REF##*-v}"
+          else
+            DIST="${{ inputs.dist }}"
+            VERSION=""
+          fi
+          echo "dist=$DIST" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "发布目标：$DIST $VERSION"
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          # tag 里的版本必须与 pyproject 的 version 一致，否则发布出的 wheel 与 tag 对不上。
+          uv run python tools/check_versions.py --help >/dev/null
+          uv run python - "${{ steps.resolve.outputs.dist }}" "${{ steps.resolve.outputs.version }}" <<'PY'
+          import sys, tomllib
+          from pathlib import Path
+          dist, version = sys.argv[1], sys.argv[2]
+          for pyproject in Path("packages").glob("**/pyproject.toml"):
+              data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+              if data.get("project", {}).get("name") != dist:
+                  continue
+              actual = str(data["project"].get("version", ""))
+              if version and version != actual:
+                  raise SystemExit(f"tag 版本 {version} 与 {dist} 的 pyproject 版本 {actual} 不一致")
+              print(f"{dist} 版本 {actual} 校验通过")
+              break
+          else:
+              raise SystemExit(f"workspace 里找不到分发 {dist}")
+          PY
+
+      - name: Build wheel and sdist
+        shell: bash
+        run: |
+          uv build --package "${{ steps.resolve.outputs.dist }}" --out-dir dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # 已发布过的版本会失败；这是期望行为——同版本不得重复发布。
+
+  registry:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        shell: bash
+        run: |
+          uv sync --locked --all-extras --dev
+
+      - name: Build registry.json
+        shell: bash
+        run: |
+          # 从刚发布的 PyPI 状态生成索引：此处只列版本与元数据，下载地址由 gh-pages 侧拼接。
+          uv run python tools/build_registry.py --output registry.json
+
+      - name: Push registry.json to gh-pages
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages --depth=1 || true
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null
+          fi
+          cp "$GITHUB_WORKSPACE/registry.json" registry.json
+          git add registry.json
+          git commit -m "chore(registry): 由 ${{ needs.publish.outputs.dist }} ${{ needs.publish.outputs.version }} 重新生成" || echo "无变更"
+          git push origin gh-pages

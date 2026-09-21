@@ -43,6 +43,20 @@ jobs:
         run: |
           uv sync --locked --all-extras --dev
 
+      - name: Report changed packages
+        shell: bash
+        run: |
+          # T6.1：打印本次改动映射到的分发名矩阵；core 或全局文件改动时标记 full。
+          BASE=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            uv run python tools/changed_packages.py --base "$BASE"
+          else
+            uv run python tools/changed_packages.py
+          fi
+
       - name: Clean room install check
         shell: bash
         run: |

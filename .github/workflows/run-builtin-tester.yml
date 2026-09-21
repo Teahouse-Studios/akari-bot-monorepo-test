@@ -75,6 +75,22 @@ jobs:
           # uv lock 发现不了，故单列一道检查（见 T4.8）。
           uv run python tools/lint_versions.py
 
+      - name: Check version bumps
+        shell: bash
+        run: |
+          # T6.2 版本守卫：包内有源码改动但 version 未变即失败，提交信息含 [skip-version] 时放行。
+          BASE=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BASE="${{ github.event.before }}"
+          fi
+          if git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            uv run python tools/check_versions.py --base "$BASE"
+          else
+            echo "无可用 base，跳过版本守卫。"
+          fi
+
       - name: Lint with Ruff
         shell: bash
         run: |
