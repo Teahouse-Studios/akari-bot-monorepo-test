@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-minecraft_news"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "orjson>=3.10.9,<4.0.0",
+]
+
+[project.entry-points."akaribot.modules"]
+minecraft_news = "akaribot.modules.minecraft_news"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

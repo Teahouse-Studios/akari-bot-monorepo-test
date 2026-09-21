@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-nintendo_err"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    # py-cord 仍被 nintendo_err 顶层 import（T4.2 §7.5），改写落地前必须保留
+    "py-cord>=2.7.2",
+]
+
+[project.entry-points."akaribot.modules"]
+nintendo_err = "akaribot.modules.nintendo_err"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

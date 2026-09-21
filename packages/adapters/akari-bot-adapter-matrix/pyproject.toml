@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-adapter-matrix"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "matrix-nio>=0.25.0,<1.0.0",
+]
+
+[project.entry-points."akaribot.adapters"]
+matrix = "akaribot.adapters.matrix"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-adapter-discord"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "attrs>=25.0.0,<26.0.0",
+    "py-cord>=2.7.2",
+    "filetype>=1.2.0,<2.0.0",
+]
+
+[project.entry-points."akaribot.adapters"]
+discord = "akaribot.adapters.discord"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

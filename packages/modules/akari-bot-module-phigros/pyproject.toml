@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-phigros"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "pycryptodome>=3.18.0,<4.0.0",
+    "Pillow>=12.0.0,<13.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "orjson>=3.10.9,<4.0.0",
+    "qrcode>=8.2,<9.0.0",
+    "tortoise-orm>=1.1.2,<1.2.0",
+]
+
+[project.entry-points."akaribot.modules"]
+phigros = "akaribot.modules.phigros"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

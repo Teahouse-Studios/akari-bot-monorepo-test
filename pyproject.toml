@@ -1,113 +1,21 @@
-[project]
-name = "akari-bot"
-version = "0.1.0"
-description = ""
-authors = [
-    { name = "OasisAkari", email = "oasisakari@gmail.com" },
-    { name = "DoroWolf", email = "dorowolf314@gmail.com" },
-    { name = "cloudw233", email = "cloudw233@outlook.com" },
-    { name = "Dianliang233", email = "me@dian.fyi" },
-    { name = "_LittleC_", email = "i@ltlec.com" },
-    { name = "nullcat", email = "null@teahou.se" },
-]
-license = "AGPL-3.0"
-license-files = ["LICENSE", "**/LICENSE"]
-readme = "README.md"
-requires-python = ">=3.12.0,<4.0.0"
-dependencies = [
-    # akari-bot-service
-    "akari-bot-i18n==0.1.3",
-    "akari-bot-webrender==0.6.2",
-    "akari-bot-webui==0.4.5",
-    # lib
-    "coverage>=7.9.1,<8.0.0",
-    "cryptography>=50.0.0,<50.1.0",
-    "deprecated>=1.2.18,<2.0.0",
-    "pre-commit>=4.0.0,<5.0.0",
-    "pycryptodome>=3.18.0,<4.0.0",
-    "python-dotenv>=1.2.1,<2.0.0",
-    "python-multipart>=0.0.22,<1.0.0",
-    "pywin32>=312,<313; platform_system == 'Windows'",
-    # bots
-    "aiocqhttp>=1.4.3,<2.0.0",
-    "aiogram==3.31.0",
-    "argon2-cffi>=25.0.0,<26.0.0",
-    "fastapi>=0.120.0,<1.0.0",
-    "ffmpy>=1.0.0,<2.0.0",
-    "khl-py>=0.3.16,<1.0.0",
-    "matrix-nio>=0.25.0,<1.0.0",
-    "milky-python-sdk>=0.4.2",
-    "py-cord>=2.7.2",
-    "pyjwt[crypto]>=2.8.0,<3.0.0",
-    "pyotp>=2.9.0,<3.0.0",
-    "qq-botpy-sdk==2.0.5",
-    "slowapi>=0.1.9,<1.0.0",
-    "urllib3>=2.6.3",
-    "uvicorn[standard]>=0.38.0,<1.0.0",
-    # core
-    "cattrs>=26.1.0,<26.2.0",
-    "filetype>=1.2.0,<2.0.0",
-    "orjson>=3.10.9,<4.0.0",
-    "Pillow>=12.0.0,<13.0.0",
-    "rapidfuzz>=3.14.5",
-    "tenacity>=9.0.0,<10.0.0",
-    # core.config
-    "tomlkit>=0.14.0,<1.0.0",
-    # core.database
-    "tortoise-orm[asyncmy]>=1.1.2,<1.2.0",
-    # core.http
-    "aiofile>=3.8.1,<4.0.0",
-    "attrs>=25.0.0,<26.0.0",
-    "httpx>=0.28.1,<1.0.0",
-    "httpx-ws>=0.9.0,<1.0.0",
-    "jinja2>=3.1.6,<4.0.0",
-    # core.logger
-    "loguru>=0.7.0,<1.0.0",
-    # core.tester
-    "defusedxml>=0.7.1",
-    # core.utils
-    "boto3>=1.35.0,<2.0.0",
-    "psutil>=7.0.0,<8.0.0",
-    "regex>=2026.5.9,<2027.0.0",
-    "tabulate>=0.9.0,<1.0.0",
-    # core.scheduler
-    "APScheduler>=3.9.1-post.0,<4.0.0.0",
-    # modules.core
-    "matplotlib>=3.6.3,<4.0.0",
-    "py-cpuinfo>=9.0.0,<10.0.0",
-    # modules
-    "anthropic>=1.5.0",
-    "beautifulsoup4>=4.11.1,<5.0.0",
-    "ddgs>=9.14.2",
-    "e2b-code-interpreter>=2.6.2",
-    "emoji>=2.12.1,<3.0.0",
-    "feedparser>=6.0.10,<7.0.0",
-    "google-play-scraper>=1.2.2,<2.0.0",
-    "gql>=4.0.0,<5.0.0",
-    "langconv @ git+https://github.com/Teahouse-Studios/langconv.py.git",
-    "mcstatus>=14.1.0,<14.2.0",
-    "numpy<2.5.3",
-    "openai>=3.6.0,<3.7.0",
-    "pandas>=3.0.0,<4.0.0",
-    "pint>=0.25.0,<1.0.0",
-    "python-whois>=0.9.0,<1.0.0",
-    "qrcode>=8.2,<9.0.0",
-    "pyyaml>=6.0.3",
-    "rdkit>=2026.3.1,<2026.4.0",
-    "simpleeval>=1.0.0,<2.0.0",
-    "trafilatura>=2.0.0",
-    "webcolors>=25.0.0,<26.0.0",
-    "wikitextparser>=1.0.3",
-    "wolframalpha>=5.0.0,<6.0.0",
-    # uncategorized
-]
+# monorepo 根：虚拟工作区，不发布自身。依赖按包归位于各成员的 pyproject.toml，
+# 本文件只声明成员、workspace 内的版本来源，以及全仓工具配置。
 
-[project.urls]
-Homepage = "https://github.com/Teahouse-Studios/akari-bot"
-Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"
+# packages/* 会匹配到 adapters/ 与 modules/ 两个容器目录（它们不是包），故按前缀收窄。
+[tool.uv.workspace]
+members = ["packages/akari-bot-*", "packages/adapters/*", "packages/modules/*"]
+
+[tool.uv.sources]
+akari-bot-core = { workspace = true }
 
 [dependency-groups]
-dev = ["ruff>=0.15.1", "pytest>=9.0.2", "pytest-asyncio>=1.3.0"]
+dev = [
+    "coverage>=7.9.1,<8.0.0",
+    "pre-commit>=4.0.0,<5.0.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.1",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -117,6 +25,8 @@ filterwarnings = ["ignore:cannot collect test class:pytest.PytestCollectionWarni
 
 [tool.ruff]
 line-length = 120
+# 根 pyproject 无 [project]，target-version 无法由 requires-python 推出，须显式声明。
+target-version = "py312"
 
 [tool.ruff.lint]
 ignore = ["E402", "F405", "F403", "E741", "E721"]
@@ -126,7 +36,3 @@ quote-style = "double"
 
 [tool.pyright]
 reportUndefinedVariable = "error"
-
-#
-#[tool.uv.sources]
-#qq-botpy-sdk = { git = "https://github.com/Teahouse-Studios/qq-botpy-sdk.git" }

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-adapter-web"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "akari-bot-webui==0.4.5",
+    "argon2-cffi>=25.0.0,<26.0.0",
+    "py-cpuinfo>=9.0.0,<10.0.0",
+    "cryptography>=50.0.0,<50.1.0",
+    "fastapi>=0.120.0,<1.0.0",
+    "pyjwt[crypto]>=2.8.0,<3.0.0",
+    "orjson>=3.10.9,<4.0.0",
+    "psutil>=7.0.0,<8.0.0",
+    "pyotp>=2.9.0,<3.0.0",
+    "slowapi>=0.1.9,<1.0.0",
+    "tortoise-orm>=1.1.2,<1.2.0",
+    "uvicorn[standard]>=0.38.0,<1.0.0",
+    # 全仓库零 import，但 FastAPI Form/File 在路由定义期强制依赖（T4.2 §6）
+    "python-multipart>=0.0.22,<1.0.0",
+]
+
+[project.entry-points."akaribot.adapters"]
+web = "akaribot.adapters.web"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

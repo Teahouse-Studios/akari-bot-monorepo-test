@@ -27,8 +27,10 @@ RUN apt-get update && apt-get install -y \
     fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen
+# 源码与全部成员 pyproject 一并入镜像后按 workspace 安装：members 以 .pth editable 落地，
+# python bot.py 因此能解析 akaribot.*。依赖缓存由 BuildKit 的 uv cache mount 承担。
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 
-ADD . .
+ENV PATH="/akari-bot/.venv/bin:$PATH"
 CMD ["python", "./bot.py"]

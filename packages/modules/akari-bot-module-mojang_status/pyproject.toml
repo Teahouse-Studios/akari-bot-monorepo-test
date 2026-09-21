@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-mojang_status"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+]
+
+[project.entry-points."akaribot.modules"]
+mojang_status = "akaribot.modules.mojang_status"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

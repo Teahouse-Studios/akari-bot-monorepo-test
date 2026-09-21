@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-mcv"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "google-play-scraper>=1.2.2,<2.0.0",
+    "orjson>=3.10.9,<4.0.0",
+]
+
+[project.entry-points."akaribot.modules"]
+mcv = "akaribot.modules.mcv"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

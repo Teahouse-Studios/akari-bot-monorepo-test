@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-maimai"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "Pillow>=12.0.0,<13.0.0",
+    # langconv 只有 git 直链形态；发布前须先在 PyPI 提供常规版本（T4.5/T6）。
+    "langconv @ git+https://github.com/Teahouse-Studios/langconv.py.git",
+    "orjson>=3.10.9,<4.0.0",
+    "tortoise-orm>=1.1.2,<1.2.0",
+]
+
+[project.entry-points."akaribot.modules"]
+maimai = "akaribot.modules.maimai"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]
+
+# langconv 只有 git 直链；hatchling 默认拒绝 direct reference，发布前须替换为常规版本。
+[tool.hatch.metadata]
+allow-direct-references = true

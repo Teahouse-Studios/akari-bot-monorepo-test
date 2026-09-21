@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-module-mcv_rss"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "akari-bot-core>=0.1.0,<1.0",
+    "beautifulsoup4>=4.11.1,<5.0.0",
+    "google-play-scraper>=1.2.2,<2.0.0",
+    "orjson>=3.10.9,<4.0.0",
+]
+
+[project.entry-points."akaribot.modules"]
+mcv_rss = "akaribot.modules.mcv_rss"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-core"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "aiofile>=3.8.1,<4.0.0",
+    "akari-bot-i18n==0.1.3",
+    "akari-bot-webrender==0.6.2",
+    "APScheduler>=3.9.1-post.0,<4.0.0.0",
+    "attrs>=25.0.0,<26.0.0",
+    "cattrs>=26.1.0,<26.2.0",
+    "deprecated>=1.2.18,<2.0.0",
+    "fastapi>=0.120.0,<1.0.0",
+    "filetype>=1.2.0,<2.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "httpx-ws>=0.9.0,<1.0.0",
+    "jinja2>=3.1.6,<4.0.0",
+    "loguru>=0.7.0,<1.0.0",
+    "orjson>=3.10.9,<4.0.0",
+    "packaging>=26.0",
+    "Pillow>=12.0.0,<13.0.0",
+    "psutil>=7.0.0,<8.0.0",
+    # bundled modules/core 的 ~ping 顶层 import，按 T4.2 §3 裁决 1 留在必需依赖
+    "py-cpuinfo>=9.0.0,<10.0.0",
+    # bundled modules/core 的 analytics.py 顶层 import，根 pyproject 未声明（T4.2 §7.12）
+    "python-dateutil>=2.9.0.post0",
+    "python-dotenv>=1.2.1,<2.0.0",
+    "rapidfuzz>=3.14.5",
+    "regex>=2026.5.9,<2027.0.0",
+    "tabulate>=0.9.0,<1.0.0",
+    "tenacity>=9.0.0,<10.0.0",
+    "tomlkit>=0.14.0,<1.0.0",
+    "tortoise-orm>=1.1.2,<1.2.0",
+    "uvicorn[standard]>=0.38.0,<1.0.0",
+]
+
+[project.entry-points."akaribot.modules"]
+core = "akaribot.modules.core"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akaribot"]
+
+[project.optional-dependencies]
+s3 = ["boto3>=1.35.0,<2.0.0"]
+mysql = ["tortoise-orm[asyncmy]>=1.1.2,<1.2.0"]
+# matplotlib 体积大且 ~analytics 支持降级，按 T4.2 §3 裁决 2 进 extra；chart 是 plan:591 的旧名，保留为别名
+image = ["matplotlib>=3.6.3,<4.0.0"]
+chart = ["matplotlib>=3.6.3,<4.0.0"]
