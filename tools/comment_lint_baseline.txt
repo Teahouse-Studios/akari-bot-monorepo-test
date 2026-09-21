@@ -65,6 +65,7 @@ packages/akari-bot-html2text/src/html2text/__init__.py	R7	ref may be an empty st
 packages/akari-bot-html2text/src/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
 packages/akari-bot-html2text/src/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
 packages/akari-bot-html2text/src/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
+packages/akari-bot-testing/src/akaribot/testing/runner.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
 packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
@@ -90,7 +91,6 @@ packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/utils/user.py	R
 packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/utils/wikilib.py	R7	摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
 packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/wiki.py	R7	Let the runner enter its try/finally before handing it to detached lifecycle code.
 packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/wiki.py	R7	if lang in interwiki_list:
-tester.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 tests/build_synthetic_fixtures.py	R7	稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会回落到真实网络，
 tests/run_one.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 tests/unit/test_i18n_cmd_params.py	R7	以键名作为参数传入、由被调方统一补上 cmd 的调用点。
