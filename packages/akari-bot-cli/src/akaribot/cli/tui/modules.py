@@ -19,14 +19,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 
 STATE_INSTALLED = "installed"
 STATE_AVAILABLE = "available"
 STATE_UNKNOWN = "unknown"
 
-_STATE_LABELS = {STATE_INSTALLED: "已安装", STATE_AVAILABLE: "未安装", STATE_UNKNOWN: "状态未知"}
-_KIND_LABELS = {"module": "模块", "adapter": "适配器", "core": "核心", "testing": "测试"}
+# 状态与包类型是对端 JSON 的取值，界面按当前语言取标签，故这里只存文案键。
+_STATE_KEYS = {
+    STATE_INSTALLED: "cli.tui.modules.state_installed",
+    STATE_AVAILABLE: "cli.tui.modules.state_available",
+    STATE_UNKNOWN: "cli.tui.modules.state_unknown",
+}
+_KIND_KEYS = {
+    "module": "cli.tui.modules.kind_module",
+    "adapter": "cli.tui.modules.kind_adapter",
+    "core": "cli.tui.modules.kind_core",
+    "testing": "cli.tui.modules.kind_testing",
+}
 _KIND_ALIASES = {"builtin": "module", "builtins": "module", "package": "module", "unknown": ""}
 _INSTALLED_MARKERS = ("install", "loaded", "enabled", "active")
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -68,13 +79,15 @@ class ModuleRecord:
 
     @property
     def state_label(self) -> str:
-        """返回状态的中文标签。"""
-        return _STATE_LABELS.get(self.state, self.state)
+        """返回状态的本地化标签。"""
+        key = _STATE_KEYS.get(self.state)
+        return i18n.t(key) if key else self.state
 
     @property
     def kind_label(self) -> str:
-        """返回包类型的中文标签，未知时给出「未声明」。"""
-        return _KIND_LABELS.get(self.kind, "未声明")
+        """返回包类型的本地化标签，未知时给出「未声明」。"""
+        key = _KIND_KEYS.get(self.kind)
+        return i18n.t(key) if key else i18n.t("cli.tui.common.undeclared")
 
     def haystack(self) -> str:
         """返回搜索用的匹配文本，已做大小写折叠。"""
@@ -128,8 +141,12 @@ class StaticModuleSource:
         uninstall_result: OperationResult | None = None,
     ) -> None:
         self._records = tuple(records)
-        self._install_result = install_result or OperationResult(True, "安装成功", "stub")
-        self._uninstall_result = uninstall_result or OperationResult(True, "卸载成功", "stub")
+        self._install_result = install_result or OperationResult(
+            True, i18n.t("cli.tui.modules.stub_install_ok"), "stub"
+        )
+        self._uninstall_result = uninstall_result or OperationResult(
+            True, i18n.t("cli.tui.modules.stub_uninstall_ok"), "stub"
+        )
         self.calls = {"list": 0, "install": 0, "uninstall": 0}
         self.installed: list[str] = []
         self.uninstalled: list[str] = []
@@ -221,7 +238,7 @@ def _normalize_kind(value: Any) -> str:
     if not raw:
         return ""
     raw = _KIND_ALIASES.get(raw, raw)
-    return raw if raw in _KIND_LABELS else ""
+    return raw if raw in _KIND_KEYS else ""
 
 
 def _record_from_mapping(dist: str, info: Any) -> ModuleRecord:

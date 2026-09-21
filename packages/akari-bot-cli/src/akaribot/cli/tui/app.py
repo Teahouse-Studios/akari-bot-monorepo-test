@@ -11,6 +11,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.adapters import AdaptersPage
 from akaribot.cli.tui.config import ConfigPage
@@ -20,15 +21,15 @@ from akaribot.cli.tui.logs import LogsPage
 from akaribot.cli.tui.modules import ModuleSource, ModulesPage, SubprocessModuleSource
 from akaribot.cli.tui.run import RunPage
 
-# 侧栏顺序即页面顺序；key 同时用于控件 id（page-<key> / nav-<key>）。
+# 侧栏顺序即页面顺序；key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
 PAGES: tuple[tuple[str, str, type], ...] = (
-    ("dashboard", "Dashboard", DashboardPage),
-    ("modules", "Modules", ModulesPage),
-    ("adapters", "Adapters", AdaptersPage),
-    ("config", "Config", ConfigPage),
-    ("logs", "Logs", LogsPage),
-    ("run", "Run", RunPage),
-    ("dev", "Dev", DevPage),
+    ("dashboard", "cli.tui.nav.dashboard", DashboardPage),
+    ("modules", "cli.tui.nav.modules", ModulesPage),
+    ("adapters", "cli.tui.nav.adapters", AdaptersPage),
+    ("config", "cli.tui.nav.config", ConfigPage),
+    ("logs", "cli.tui.nav.logs", LogsPage),
+    ("run", "cli.tui.nav.run", RunPage),
+    ("dev", "cli.tui.nav.dev", DevPage),
 )
 
 INLINE_CSS = """
@@ -86,18 +87,19 @@ class TuiApp(compat.App[int]):
     :param boot_started_at: 启动计时起点，由 :func:`run_tui` 传入。
     """
 
-    TITLE = "AkariBot"
-    SUB_TITLE = "实例管理"
+    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    TITLE = i18n.t("cli.tui.app.title")
+    SUB_TITLE = i18n.t("cli.tui.app.subtitle")
     CSS = STYLESHEET
     ENABLE_COMMAND_PALETTE = False
     BINDINGS = compat.bindings(
-        ("q", "quit", "退出"),
-        ("ctrl+q", "quit", "退出"),
-        ("r", "refresh_modules", "刷新"),
-        ("slash", "focus_search", "搜索"),
-        ("i", "install_module", "安装"),
-        ("u", "uninstall_module", "卸载"),
-        ("escape", "clear_search", "清空搜索"),
+        ("q", "quit", i18n.t("cli.tui.app.bind_quit")),
+        ("ctrl+q", "quit", i18n.t("cli.tui.app.bind_quit")),
+        ("r", "refresh_modules", i18n.t("cli.tui.app.bind_refresh")),
+        ("slash", "focus_search", i18n.t("cli.tui.app.bind_search")),
+        ("i", "install_module", i18n.t("cli.tui.app.bind_install")),
+        ("u", "uninstall_module", i18n.t("cli.tui.app.bind_uninstall")),
+        ("escape", "clear_search", i18n.t("cli.tui.app.bind_clear_search")),
     )
 
     def __init__(
@@ -125,7 +127,10 @@ class TuiApp(compat.App[int]):
         yield compat.Header()
         with compat.Horizontal(id="shell"):
             yield compat.ListView(
-                *[compat.ListItem(compat.Label(title, markup=False), id=f"nav-{key}") for key, title, _ in PAGES],
+                *[
+                    compat.ListItem(compat.Label(i18n.t(title_key), markup=False), id=f"nav-{key}")
+                    for key, title_key, _ in PAGES
+                ],
                 id="nav",
             )
             with compat.Vertical(id="content"):
@@ -233,9 +238,12 @@ class TuiRunResult:
 
     def summary(self) -> str:
         """返回单行文字摘要。"""
-        return (
-            f"启动 {self.startup_ms:.0f} ms，首帧 {self.first_paint_ms:.0f} ms，"
-            f"共运行 {self.total_ms:.0f} ms，退出码 {self.exit_code}"
+        return i18n.t(
+            "cli.tui.app.run_summary",
+            startup=f"{self.startup_ms:.0f}",
+            first_paint=f"{self.first_paint_ms:.0f}",
+            total=f"{self.total_ms:.0f}",
+            exit_code=self.exit_code,
         )
 
 

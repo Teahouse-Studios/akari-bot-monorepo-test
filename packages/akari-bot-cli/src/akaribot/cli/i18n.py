@@ -68,7 +68,13 @@ def resolve_locale(explicit: str | None = None, instance_locale: str | None = No
     :param instance_locale: 实例元数据里的语言。
     :return: 受支持的语言码。
     """
-    for candidate in (explicit, os.environ.get(LOCALE_ENV), instance_locale, os.environ.get("LC_ALL"), os.environ.get("LANG")):
+    for candidate in (
+        explicit,
+        os.environ.get(LOCALE_ENV),
+        instance_locale,
+        os.environ.get("LC_ALL"),
+        os.environ.get("LANG"),
+    ):
         if candidate:
             return normalize(candidate)
     return DEFAULT_LOCALE
