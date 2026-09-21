@@ -20,6 +20,7 @@ import tomllib
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.version import InvalidVersion, Version
 
+from akaribot.cli import i18n
 from akaribot.cli.instance import (
     system_python,
     DEFAULT_REGISTRY_SOURCE,
@@ -155,8 +156,8 @@ class CommandRunner:
         completed = self.run(argv, env=env)
         if completed.returncode != 0:
             detail = summarize_uv_error(completed.stderr or completed.stdout or "")
-            raise CliError(f"{what}失败：{detail}")
-        ok(f"{what}完成")
+            raise CliError(i18n.t("cli.common.action_failed", what=what, detail=detail))
+        ok(i18n.t("cli.common.action_done", what=what))
 
 
 _PROBE_SCRIPT = r"""
@@ -972,10 +973,11 @@ def adopt(
             f"{instance.venv_dir} 已存在且非空。确认可覆盖后加 --force 重建，或先运行 `akaribot venv recreate`。"
         )
     runner.run_checked(
-        create_venv_argv(instance.venv_dir, python=python or str(source_python), clear=force), what="创建实例 venv"
+        create_venv_argv(instance.venv_dir, python=python or str(source_python), clear=force),
+        what=i18n.t("cli.venv_engine.what_create_venv"),
     )
     specs = [info.requirement() for info in source_dists.values()]
-    runner.run_checked(install_argv(target_python, specs), what="安装 akaribot 包到实例 venv")
+    runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"))
 
     step(3, 5, "验证 entry points 与源环境一致")
     if runner.dry_run:
@@ -1002,7 +1004,9 @@ def adopt(
         if CLI_DIST in {canonical(item) for item in source_dists}:
             warn(f"保留源环境的 {CLI_DIST}，避免卸载掉正在使用的 CLI。")
         if removable:
-            runner.run_checked(uninstall_argv(source_python, removable), what="从源环境卸载 akaribot 包")
+            runner.run_checked(
+                uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_source")
+            )
             removed = tuple(removable)
 
     step(5, 5, "更新实例元数据")
@@ -1048,7 +1052,7 @@ def release(
 
     step(2, 4, f"在当前环境安装（{target_python}）")
     specs = [info.requirement() for info in source_dists.values()]
-    runner.run_checked(install_argv(target_python, specs), what="安装 akaribot 包到当前环境")
+    runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"))
 
     step(3, 4, "验证 entry points 与实例 venv 一致")
     if runner.dry_run:
@@ -1074,7 +1078,9 @@ def release(
         if running_inside and len(removable) != len(source_dists):
             warn(f"CLI 正在实例 venv 内运行，保留其中的 {CLI_DIST}。")
         if removable:
-            runner.run_checked(uninstall_argv(source_python, removable), what="从实例 venv 卸载 akaribot 包")
+            runner.run_checked(
+                uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_venv")
+            )
             removed = tuple(removable)
     instance.meta.set_venv("")
     instance.meta.save()
@@ -1115,9 +1121,13 @@ def recreate(
         shutil.rmtree(staging)
     interpreter = Path(python) if python else system_python()
     console.print(f"  新环境解释器：{interpreter}")
-    runner.run_checked(create_venv_argv(staging, python=interpreter), what="创建新 venv")
+    runner.run_checked(
+        create_venv_argv(staging, python=interpreter), what=i18n.t("cli.venv_engine.what_create_new_venv")
+    )
     specs = [info.requirement() for info in source_dists.values()]
-    runner.run_checked(install_argv(venv_python_path(staging), specs), what="安装 akaribot 包到新 venv")
+    runner.run_checked(
+        install_argv(venv_python_path(staging), specs), what=i18n.t("cli.venv_engine.what_install_to_new_venv")
+    )
 
     step(3, 4, "验证 entry points 与新环境一致")
     if runner.dry_run:
@@ -1221,7 +1231,7 @@ def run_core_checked(instance: Instance, entrypoint: str, *args: str, what: str)
     proc = instance.run_core_capture(entrypoint, *args, timeout=None)
     if proc.returncode != 0:
         raise CliError(explain_process_failure(proc, what))
-    ok(f"{what}完成")
+    ok(i18n.t("cli.common.action_done", what=what))
 
 
 @dataclass(frozen=True)
@@ -1300,12 +1310,16 @@ def config_sync(instance: Instance, dist: str) -> None:
     ``CFGManager._ensure_writable()`` 会拒绝它们写入（tasks T5.2 的硬约束）。
     调用方应在调用前抓取 :class:`ConfigSnapshot`，以便失败时回滚本次写入。
     """
-    run_core_checked(instance, "config", "sync", "--package", dist, what=f"补写 {dist} 的配置")
+    run_core_checked(
+        instance, "config", "sync", "--package", dist, what=i18n.t("cli.venv_engine.what_config_sync", dist=dist)
+    )
 
 
 def db_upgrade(instance: Instance, dist: str) -> None:
     """第 5 步：应用该包自己的数据库迁移。"""
-    run_core_checked(instance, "db", "upgrade", "--package", dist, what=f"应用 {dist} 的数据库迁移")
+    run_core_checked(
+        instance, "db", "upgrade", "--package", dist, what=i18n.t("cli.venv_engine.what_db_upgrade", dist=dist)
+    )
 
 
 def db_purge(instance: Instance, dist: str) -> bool:
@@ -1317,6 +1331,6 @@ def db_purge(instance: Instance, dist: str) -> bool:
     if proc.returncode == 0:
         ok(f"已删除 {dist} 的数据表")
         return True
-    detail = explain_process_failure(proc, f"删除 {dist} 的数据表失败")
+    detail = explain_process_failure(proc, i18n.t("cli.venv_engine.what_purge_tables", dist=dist))
     warn(detail)
     return False

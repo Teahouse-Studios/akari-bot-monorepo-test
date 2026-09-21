@@ -91,8 +91,8 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
         paths = _join_list(str(path.relative_to(instance.root)) for path in restored[:10])
         console.print(i18n.t("cli.module.install.config_restored", paths=paths))
     try:
-        # what 会被 venv.py 拼成「{what}完成/失败」，该层不在本次范围内，保持原文以免中英混排。
-        runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=f"卸载 {dist}")
+        what = i18n.t("cli.venv_engine.what_uninstall_dist", dist=dist)
+        runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=what)
     except CliError as exc:
         warn(str(exc))
     instance.invalidate()
@@ -197,7 +197,8 @@ def _install(
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         runner.run_checked(
-            engine.install_argv(instance.python, target.specs, upgrade=upgrade), what=f"安装 {target.dist}"
+            engine.install_argv(instance.python, target.specs, upgrade=upgrade),
+            what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist),
         )
     except CliError as exc:
         fail(str(exc))
@@ -426,7 +427,8 @@ def remove(
             console.print(i18n.t("cli.module.remove.notify_line", dist=item.dist, detail=notify.detail))
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
-        runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what="卸载")
+        what = i18n.t("cli.venv_engine.what_uninstall_packages")
+        runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what=what)
     except CliError as exc:
         fail(str(exc))
     target.invalidate()

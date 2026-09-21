@@ -247,10 +247,9 @@ def init(
             runner.run(engine.create_venv_argv(instance.venv_dir, python=python or str(system_python()), clear=force))
         else:
             try:
-                # what 会被 venv.py 拼成「{what}完成/失败」，该层不在本次范围内，保持原文以免中英混排。
                 runner.run_checked(
                     engine.create_venv_argv(instance.venv_dir, python=python or str(system_python()), clear=force),
-                    what="创建实例 venv",
+                    what=i18n.t("cli.venv_engine.what_create_venv"),
                 )
             except CliError as exc:
                 fail(i18n.t("cli.init.venv_failed", error=exc))
@@ -262,7 +261,8 @@ def init(
 
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
-        runner.run_checked(engine.install_argv(instance.python, _install_specs(targets)), what="安装 core 与适配器")
+        what = i18n.t("cli.init.what_install")
+        runner.run_checked(engine.install_argv(instance.python, _install_specs(targets)), what=what)
     except CliError as exc:
         fail(str(exc))
 

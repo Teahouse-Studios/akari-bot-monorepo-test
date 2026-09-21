@@ -138,7 +138,9 @@ class MigrationLog:
     placeholders: list[tuple[str, int]] = field(default_factory=list)
     credential_files: list[str] = field(default_factory=list)
     database_note: str = ""
-    db_result: str = "未执行"
+    db_result: str = ""
+    # 数据库转换状态：none / done / failed / skipped；报告的人工清单按状态判断，不看文案。
+    db_status: str = "none"
 
 
 def _legacy_key(name: str) -> str:
@@ -490,18 +492,22 @@ def _install_packages(
 def _convert_database(instance: Instance, legacy: LegacyProject, *, log: MigrationLog) -> None:
     """在副本上执行旧版本号转换：复用 core 的 db 入口，不重写版本逻辑。"""
     if legacy.db_path and not legacy.db_path.startswith("sqlite"):
-        log.db_result = f"跳过：旧配置使用非 SQLite 数据库（{legacy.db_path}），数据须自行 dump 后导入。"
+        log.db_result = i18n.t("cli.migrate.db.non_sqlite", path=legacy.db_path)
+        log.db_status = "skipped"
         return
     if not instance.python_exists:
-        log.db_result = "跳过：实例解释器不存在（--skip-install 或 venv 未建），装好 core 后重跑本命令即可补做。"
+        log.db_result = i18n.t("cli.migrate.db.no_python")
+        log.db_status = "skipped"
         return
     try:
         proc = instance.run_core_capture("db", "upgrade", "--package", "akari-bot-core", "--json", timeout=None)
     except CliError as exc:
-        log.db_result = f"跳过：{exc}"
+        log.db_result = i18n.t("cli.migrate.db.skipped", error=exc)
+        log.db_status = "skipped"
         return
     if proc.returncode != 0:
-        log.db_result = explain_process_failure(proc, "数据库版本转换失败")
+        log.db_result = explain_process_failure(proc, i18n.t("cli.migrate.db.convert_failed"))
+        log.db_status = "failed"
         warn(log.db_result)
         return
     applied = 0
@@ -511,7 +517,8 @@ def _convert_database(instance: Instance, legacy: LegacyProject, *, log: Migrati
         payload = None
     if isinstance(payload, Mapping) and isinstance(payload.get("applied"), list):
         applied = len(payload["applied"])
-    log.db_result = f"完成：已登记 {applied} 项迁移；旧版本号转换由 core 的 convert_legacy_version() 完成。"
+    log.db_result = i18n.t("cli.migrate.db.done", applied=applied)
+    log.db_status = "done"
     ok(log.db_result)
 
 
@@ -583,7 +590,7 @@ def _render_report(
         lines.append(i18n.t("cli.migrate.report.nothing_installed"))
     lines += [
         "",
-        i18n.t("cli.migrate.report.db_result", result=log.db_result),
+        i18n.t("cli.migrate.report.db_result", result=log.db_result or i18n.t("cli.migrate.db.not_run")),
         "",
         i18n.t("cli.migrate.report.manual_heading"),
         "",
@@ -610,8 +617,8 @@ def _render_report(
         manual.append(i18n.t("cli.migrate.report.manual_config_failures", items=items))
     if log.database_note:
         manual.append(log.database_note)
-    # db_result 是报告里的取值（且被 startswith 用作状态判断），保持原文；此处只判断状态。
-    if log.db_result.startswith(("失败", "跳过")):
+    # 按状态字段判断：skipped 才进人工清单（与 HEAD 的 startswith 行为一致，失败态不进）。
+    if log.db_status == "skipped":
         manual.append(i18n.t("cli.migrate.report.manual_db_result", result=log.db_result))
     if manual:
         lines += [i18n.t("cli.migrate.report.manual_item", item=item) for item in manual]
@@ -750,10 +757,9 @@ def legacy(
         if managed and not instance.venv_dir.exists():
             runner = engine.CommandRunner(dry_run=False, verbose=verbose)
             try:
-                # what 会被 venv.py 拼成「{what}完成/失败」，该层不在本次范围内，保持原文。
                 runner.run_checked(
                     engine.create_venv_argv(instance.venv_dir, python=str(system_python())),
-                    what="创建实例 venv",
+                    what=i18n.t("cli.venv_engine.what_create_venv"),
                 )
             except CliError as exc:
                 fail(i18n.t("cli.migrate.venv_failed", error=exc))
@@ -768,7 +774,8 @@ def legacy(
         )
 
     if dry_run:
-        log.db_result = "未执行（dry-run）"
+        log.db_result = i18n.t("cli.migrate.db.not_run_dry_run")
+        log.db_status = "none"
     else:
         _convert_database(instance, legacy_project, log=log)
         _scan_placeholders(instance, log)

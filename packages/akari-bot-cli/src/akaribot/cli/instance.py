@@ -23,6 +23,8 @@ from packaging.requirements import InvalidRequirement, Requirement
 from rich.console import Console
 from typer.core import TyperGroup
 
+from akaribot.cli import i18n
+
 console = Console()
 err_console = Console(stderr=True)
 
@@ -31,7 +33,7 @@ InstancePathOption = Annotated[
     typer.Option(
         "--instance",
         "-I",
-        help="实例根目录；缺省时自当前目录向上查找 akaribot.toml，或读环境变量 AKARI_INSTANCE_DIR",
+        help=i18n.t("cli.common.instance_option"),
     ),
 ]
 
@@ -95,10 +97,10 @@ INSTANCE_DIRS = (
     "assets/private",
 )
 
-NO_INSTANCE_HINT = (
-    "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。"
-    "先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。"
-)
+
+def no_instance_hint() -> str:
+    """不在任何实例内时的可执行提示；运行期取值，不冻结语言。"""
+    return i18n.t("cli.error.not_instance")
 
 
 class CliError(Exception):
@@ -125,13 +127,13 @@ class CoreInvocationError(CliError):
 
 def fail(message: str, *, code: int = 1) -> NoReturn:
     """打印错误并退出。消息须自带可执行的下一步提示。"""
-    err_console.print(f"[bold red]错误[/bold red] {message}")
+    err_console.print(f"[bold red]{i18n.t('cli.common.error_label')}[/bold red] {message}")
     raise typer.Exit(code)
 
 
 def warn(message: str) -> None:
     """打印警告，不中断流程。"""
-    err_console.print(f"[bold yellow]警告[/bold yellow] {message}")
+    err_console.print(f"[bold yellow]{i18n.t('cli.common.warning_label')}[/bold yellow] {message}")
 
 
 def ok(message: str) -> None:
@@ -176,7 +178,7 @@ def system_python() -> Path:
         candidate = Path(override).expanduser()
         if candidate.is_file():
             return candidate
-        raise CliError(f"{PYTHON_ENV} 指向的解释器不存在：{candidate}")
+        raise CliError(i18n.t("cli.instance.python_env_missing", env=PYTHON_ENV, path=candidate))
     # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致；冻结后 sys.executable 指向
     # CLI 二进制自身，才需要回退到系统搜索。回退时优先带版本号的名字，避免拿到过旧的 python3。
     if not (getattr(sys, "frozen", False) or hasattr(sys, "__compiled__")):
@@ -185,7 +187,7 @@ def system_python() -> Path:
         found = shutil.which(name)
         if found:
             return Path(found)
-    raise CliError(f"找不到可用的系统 Python；请设置 {PYTHON_ENV} 指向实例要使用的解释器。")
+    raise CliError(i18n.t("cli.instance.no_system_python", env=PYTHON_ENV))
 
 
 def venv_python_path(venv_dir: Path) -> Path:
@@ -405,7 +407,9 @@ def extract_json(text: str) -> Any:
         except json.JSONDecodeError:
             continue
         return value
-    raise CoreInvocationError(f"core 未回传可解析的 JSON：{text.strip()[:200] or '<空输出>'}")
+    raise CoreInvocationError(
+        i18n.t("cli.instance.core_json_unparsable", text=text.strip()[:200] or i18n.t("cli.instance.empty_output"))
+    )
 
 
 @dataclass
@@ -430,11 +434,11 @@ class InstanceMeta:
         """
         path = root / INSTANCE_META_FILENAME
         if not path.is_file():
-            raise InstanceNotFound(f"{path} 不存在。{NO_INSTANCE_HINT}")
+            raise InstanceNotFound(i18n.t("cli.instance.meta_missing", path=path, hint=no_instance_hint()))
         try:
             doc = tomlkit.parse(path.read_text(encoding="utf-8"))
         except (OSError, tomlkit.exceptions.ParseError) as exc:
-            raise CliError(f"{path} 无法解析：{exc}") from exc
+            raise CliError(i18n.t("cli.instance.meta_parse_failed", path=path, error=exc)) from exc
         return cls(root=root, doc=doc)
 
     @classmethod
@@ -725,7 +729,7 @@ class Instance:
         proc = self.run_core_capture("registry", "--json", timeout=60.0)
         if proc.returncode != 0:
             raise CoreInvocationError(
-                self._explain_failure(proc, "读取已装包清单失败"),
+                self._explain_failure(proc, i18n.t("cli.instance.what_read_packages")),
                 returncode=proc.returncode,
                 stderr=proc.stderr or "",
             )
@@ -855,32 +859,32 @@ class Instance:
         """
         remote = {"install": "server.post_package_install", "remove": "server.post_package_remove"}.get(action)
         if remote is None:
-            raise CliError(f"未知的包变更动作：{action}")
+            raise CliError(i18n.t("cli.instance.notify_unknown_action", action=action))
         if not self.is_running():
-            return NotifyResult(False, False, "实例未运行，跳过热装载通知（下次启动自动装载）")
+            return NotifyResult(False, False, i18n.t("cli.instance.notify_not_running"))
         try:
             proc = self.run_core_capture("rpc", remote, dist, timeout=None)
         except CliError as exc:
-            return NotifyResult(True, False, f"热装载通知未送达：{exc}")
+            return NotifyResult(True, False, i18n.t("cli.instance.notify_not_delivered", error=exc))
         if proc.returncode == 0:
-            return NotifyResult(True, True, f"已通知运行中的实例执行 {remote}")
-        detail = self._explain_failure(proc, f"热装载通知失败（{remote}）")
+            return NotifyResult(True, True, i18n.t("cli.instance.notify_delivered", remote=remote))
+        detail = self._explain_failure(proc, i18n.t("cli.instance.notify_failed", remote=remote))
         return NotifyResult(True, False, detail)
 
     def _run(self, argv: list[str], **env: str) -> int:
         """执行命令并继承标准流。"""
         if not self.python_exists:
-            raise CliError(f"实例解释器不存在：{self.python}。托管 venv 损坏时运行 `akaribot venv recreate`。")
+            raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
             completed = subprocess.run(argv, env=self.core_env(**env), check=False)  # noqa: S603
         except OSError as exc:
-            raise CliError(f"无法执行 {argv[0]}：{exc}") from exc
+            raise CliError(i18n.t("cli.instance.exec_failed", argv0=argv[0], error=exc)) from exc
         return completed.returncode
 
     def _capture(self, argv: list[str], *, timeout: float | None, **env: str) -> subprocess.CompletedProcess[str]:
         """执行命令并捕获文本输出。"""
         if not self.python_exists:
-            raise CliError(f"实例解释器不存在：{self.python}。托管 venv 损坏时运行 `akaribot venv recreate`。")
+            raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
             return subprocess.run(  # noqa: S603
                 argv,
@@ -891,9 +895,10 @@ class Instance:
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as exc:
-            raise CliError(f"命令超时（{timeout:g}s）：{' '.join(argv)}") from exc
+            seconds = f"{timeout:g}"
+            raise CliError(i18n.t("cli.instance.timeout", seconds=seconds, command=" ".join(argv))) from exc
         except OSError as exc:
-            raise CliError(f"无法执行 {argv[0]}：{exc}") from exc
+            raise CliError(i18n.t("cli.instance.exec_failed", argv0=argv[0], error=exc)) from exc
 
     @staticmethod
     def _explain_failure(proc: subprocess.CompletedProcess[str], prefix: str) -> str:
@@ -910,13 +915,18 @@ def explain_process_failure(proc: subprocess.CompletedProcess[str], prefix: str)
     """
     stderr = (proc.stderr or "").strip()
     if "akaribot.core.entrypoints" in stderr and "No module named" in stderr:
-        return f"{prefix}：core 里还没有 akaribot.core.entrypoints 入口（core 侧 T5.1 尚未完成）。"
+        return i18n.t("cli.instance.failure_core_entrypoint", prefix=prefix)
     if "No module named 'akaribot.core" in stderr or 'No module named "akaribot.core' in stderr:
-        return f"{prefix}：实例内未安装 core。先运行 `akaribot module add akari-bot-core` 或重建实例。"
+        return i18n.t("cli.instance.failure_core_missing", prefix=prefix)
     if "No module named 'akaribot.testing" in stderr or 'No module named "akaribot.testing' in stderr:
-        return f"{prefix}：实例内未安装 akari-bot-testing。先运行 `akaribot module add akari-bot-testing`。"
+        return i18n.t("cli.instance.failure_testing_missing", prefix=prefix)
     tail = "\n".join(stderr.splitlines()[-3:])
-    return f"{prefix}（退出码 {proc.returncode}）：{tail or '无错误输出'}"
+    return i18n.t(
+        "cli.instance.failure_exit_code",
+        prefix=prefix,
+        code=proc.returncode,
+        tail=tail or i18n.t("cli.instance.no_error_output"),
+    )
 
 
 def _canonical(name: str) -> str:
@@ -1000,7 +1010,11 @@ def resolve_instance(
         if not (root / INSTANCE_META_FILENAME).is_file():
             if not required:
                 return None
-            raise InstanceNotFound(f"{root} 不是 AkariBot 实例（未找到 {INSTANCE_META_FILENAME}）。{NO_INSTANCE_HINT}")
+            raise InstanceNotFound(
+                i18n.t(
+                    "cli.instance.not_instance_root", path=root, meta=INSTANCE_META_FILENAME, hint=no_instance_hint()
+                )
+            )
         return Instance(root, python_override=python_override)
     override = os.environ.get(INSTANCE_DIR_ENV)
     root = find_instance_root()
@@ -1009,10 +1023,11 @@ def resolve_instance(
             return None
         if override:
             raise InstanceNotFound(
-                f"环境变量 {INSTANCE_DIR_ENV}={override} 指向的目录里没有 {INSTANCE_META_FILENAME}，"
-                "请改正该变量或运行 `akaribot init`。"
+                i18n.t(
+                    "cli.instance.not_instance_env", env=INSTANCE_DIR_ENV, path=override, meta=INSTANCE_META_FILENAME
+                )
             )
-        raise InstanceNotFound(NO_INSTANCE_HINT)
+        raise InstanceNotFound(no_instance_hint())
     return Instance(root, python_override=python_override)
 
 
@@ -1030,4 +1045,4 @@ def relative_venv_display(instance: Instance) -> str:
     """venv 路径的展示形式：托管模式显示相对路径，非托管模式显示当前解释器。"""
     if instance.managed:
         return instance.meta.venv
-    return f"（未托管）{instance.python}"
+    return i18n.t("cli.instance.unmanaged_python", python=instance.python)
