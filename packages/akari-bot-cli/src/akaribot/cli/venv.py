@@ -63,9 +63,7 @@ def uv_binary() -> str:
     found = shutil.which("uv")
     if found:
         return found
-    raise CliError(
-        f"未找到 uv。请先安装 uv（https://docs.astral.sh/uv/），或用环境变量 {UV_ENV_VAR}=/path/to/uv 指定其位置。"
-    )
+    raise CliError(i18n.t("cli.venv_engine.uv_not_found", env=UV_ENV_VAR))
 
 
 def create_venv_argv(venv_dir: Path, *, python: str | None = None, clear: bool = False) -> list[str]:
@@ -112,8 +110,8 @@ def summarize_uv_error(stderr: str, *, limit: int = 3) -> str:
     if not reasons:
         reasons = lines[-limit:]
     picked = reasons[:limit]
-    text = "；".join(picked) if picked else "uv 未给出原因"
-    return f"依赖解析失败：{text}（完整输出见 --verbose）"
+    text = i18n.t("cli.common.clause_separator").join(picked) if picked else i18n.t("cli.venv_engine.uv_no_reason")
+    return i18n.t("cli.venv_engine.dependency_resolve_failed", detail=text)
 
 
 @dataclass
@@ -141,7 +139,7 @@ class CommandRunner:
                 text=True,
             )
         except OSError as exc:
-            raise CliError(f"无法执行 {argv[0]}：{exc}") from exc
+            raise CliError(i18n.t("cli.venv_engine.exec_failed", command=argv[0], error=exc)) from exc
         if self.verbose:
             for stream in (completed.stdout, completed.stderr):
                 if stream and stream.strip():
@@ -265,7 +263,7 @@ def probe_environment(python: Path, *, names: Sequence[str] = (), timeout: float
     :raises CliError: 解释器不存在或探测失败。
     """
     if not Path(python).is_file():
-        raise CliError(f"解释器不存在：{python}")
+        raise CliError(i18n.t("cli.venv_engine.interpreter_missing", python=python))
     try:
         completed = subprocess.run(  # noqa: S603
             [str(python), "-c", _PROBE_SCRIPT],
@@ -276,16 +274,16 @@ def probe_environment(python: Path, *, names: Sequence[str] = (), timeout: float
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
-        raise CliError(f"探测 {python} 的已装包超时") from exc
+        raise CliError(i18n.t("cli.venv_engine.probe_timeout", python=python)) from exc
     except OSError as exc:
-        raise CliError(f"无法执行 {python}：{exc}") from exc
+        raise CliError(i18n.t("cli.venv_engine.exec_failed", command=python, error=exc)) from exc
     if completed.returncode != 0:
         tail = "\n".join((completed.stderr or "").strip().splitlines()[-3:])
-        raise CliError(f"探测 {python} 的已装包失败（退出码 {completed.returncode}）：{tail}")
+        raise CliError(i18n.t("cli.venv_engine.probe_failed", python=python, code=completed.returncode, tail=tail))
     try:
         payload = extract_json(completed.stdout or "")
     except CliError as exc:
-        raise CliError(f"探测结果无法解析：{exc}") from exc
+        raise CliError(i18n.t("cli.venv_engine.probe_unparsable", error=exc)) from exc
     result: dict[str, InstalledDist] = {}
     for name, item in (payload.get("distributions") or {}).items():
         path = item.get("path")
@@ -322,9 +320,9 @@ def compare_entry_points(source: Mapping[str, InstalledDist], target: Mapping[st
     for key, value in source_points.items():
         actual = target_points.get(key)
         if actual is None:
-            problems.append(f"目标环境缺少 entry point {key}（源为 {value}）")
+            problems.append(i18n.t("cli.venv_engine.entry_point_missing", name=key, value=value))
         elif actual != value:
-            problems.append(f"entry point {key} 指向不一致：源 {value} / 目标 {actual}")
+            problems.append(i18n.t("cli.venv_engine.entry_point_mismatch", name=key, source=value, target=actual))
     return problems
 
 
@@ -532,7 +530,7 @@ def path_target(
     project = data.get("project") or {}
     dist = str(project.get("name") or "")
     if not dist:
-        raise CliError(f"{root} 里没有可识别的 pyproject.toml（缺少 [project].name）。")
+        raise CliError(i18n.t("cli.venv_engine.no_pyproject", path=root))
     workspace = workspace_root or find_workspace_root(root)
     paths: list[WorkspacePackage] = []
     if workspace is not None:
@@ -693,7 +691,7 @@ class RegistryCatalog:
         cached = _read_json(cache_path)
         if offline:
             if cached is None:
-                raise CliError(f"离线模式下没有可用的 registry 缓存（{cache_path}）。")
+                raise CliError(i18n.t("cli.venv_engine.offline_no_cache", path=cache_path))
             return cls.from_payload(cached, source=str(cache_path)).mark_cached()
         errors: list[str] = []
         for url in sources:
@@ -705,20 +703,28 @@ class RegistryCatalog:
             try:
                 response = httpx.get(url, headers=headers, timeout=15.0, follow_redirects=True)
             except httpx.HTTPError as exc:
-                errors.append(f"{url}：{exc}")
+                errors.append(i18n.t("cli.venv_engine.registry_source_error", url=url, error=exc))
                 continue
             if response.status_code == 304 and cached is not None:
                 return cls.from_payload(cached, source=url).mark_cached()
             if response.status_code != 200:
-                errors.append(f"{url}：HTTP {response.status_code}")
+                errors.append(
+                    i18n.t("cli.venv_engine.registry_source_error", url=url, error=f"HTTP {response.status_code}")
+                )
                 continue
             try:
                 payload = response.json()
             except ValueError as exc:
-                errors.append(f"{url}：返回内容不是 JSON（{exc}）")
+                errors.append(
+                    i18n.t(
+                        "cli.venv_engine.registry_source_error",
+                        url=url,
+                        error=i18n.t("cli.venv_engine.registry_bad_json", error=exc),
+                    )
+                )
                 continue
             if not isinstance(payload, Mapping):
-                errors.append(f"{url}：registry.json 顶层不是对象")
+                errors.append(i18n.t("cli.venv_engine.registry_not_object", url=url))
                 continue
             directory.mkdir(parents=True, exist_ok=True)
             cache_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -728,13 +734,10 @@ class RegistryCatalog:
             )
             return cls.from_payload(payload, source=url)
         if cached is not None:
-            console.print("[yellow]registry 源不可用，改用本地缓存[/yellow]")
+            console.print(f"[yellow]{i18n.t('cli.venv_engine.registry_cache_fallback')}[/yellow]")
             return cls.from_payload(cached, source=str(cache_path)).mark_cached()
-        detail = "；".join(errors) or "未配置来源"
-        raise CliError(
-            f"无法获取 registry（{detail}）。可用 `--dist` 直接指定分发名，"
-            "或用 `--workspace-root` / `akaribot init --workspace-root` 改用工作区本地源码。"
-        )
+        detail = i18n.t("cli.common.clause_separator").join(errors) or i18n.t("cli.venv_engine.registry_no_source")
+        raise CliError(i18n.t("cli.venv_engine.registry_unavailable", detail=detail))
 
     def mark_cached(self) -> RegistryCatalog:
         """标记为来自缓存。"""
@@ -831,7 +834,7 @@ def resolve_target(
         return target
     query = dist or name
     if not query:
-        raise CliError("请给出包名，或用 `--dist <分发名>` / `-e <本地目录>` 指定安装对象。")
+        raise CliError(i18n.t("cli.venv_engine.package_name_required"))
     if workspace_root is not None:
         target = workspace_target(workspace_root, query, kind=kind, extra=extra)
         if target is not None and dist is None:
@@ -839,17 +842,11 @@ def resolve_target(
         if target is not None and canonical(target.dist) == canonical(dist or ""):
             return target
         if target is None and dist is None:
-            raise CliError(
-                f"工作区 {workspace_root} 里没有找到 {query}。"
-                "可用 `akaribot module add --dist <分发名>` 指定分发名，或检查 --workspace-root 是否指对。"
-            )
+            raise CliError(i18n.t("cli.venv_engine.workspace_package_missing", root=workspace_root, name=query))
     if not dist and catalog is not None:
         target = registry_target(catalog, query, version=version, kind=kind, extra=extra)
         if target is None:
-            raise CliError(
-                f"registry 里没有名为 {query} 的包。可用 `akaribot module search` 查看可用包，"
-                "或用 `--dist <分发名>` 直接指定。"
-            )
+            raise CliError(i18n.t("cli.venv_engine.registry_package_missing", name=query))
         return target
     if not dist:
         prefix = f"akari-bot-{kind}-" if kind else "akari-bot-module-"
@@ -895,7 +892,9 @@ def venv_status(instance: Instance) -> VenvStatus:
     mode = "managed" if instance.managed else "external"
     python = instance.python
     if not instance.python_exists:
-        return VenvStatus(mode, instance.venv_dir, python, False, None, "解释器不存在")
+        return VenvStatus(
+            mode, instance.venv_dir, python, False, None, i18n.t("cli.venv_engine.interpreter_missing_bare")
+        )
     try:
         packages = probe_environment(python)
     except CliError as exc:
@@ -930,7 +929,7 @@ def _check_distinct(source: Path, target: Path) -> None:
     except OSError:
         same = str(source) == str(target)
     if same:
-        raise CliError(f"源环境与目标环境是同一个解释器（{source}），无需执行该操作。")
+        raise CliError(i18n.t("cli.venv_engine.same_interpreter", python=source))
 
 
 def adopt(
@@ -961,17 +960,16 @@ def adopt(
     target_python = venv_python_path(instance.venv_dir)
     _check_distinct(source_python, target_python)
 
-    step(1, 5, f"枚举源环境已装的 akaribot 包（{source_python}）")
+    step(1, 5, i18n.t("cli.venv_engine.step_enumerate_source", python=source_python))
     source_dists = probe_environment(source_python)
     if CORE_DIST not in source_dists:
-        raise CliError(f"源环境 {source_python} 里没有 akari-bot-core，无法迁移。请先在源环境安装 core。")
-    console.print(f"  共 {len(source_dists)} 个包：" + "、".join(sorted(source_dists)))
+        raise CliError(i18n.t("cli.venv_engine.source_missing_core", python=source_python))
+    names = i18n.t("cli.common.list_separator").join(sorted(source_dists))
+    console.print("  " + i18n.t("cli.venv_engine.package_count", count=len(source_dists), names=names))
 
-    step(2, 5, f"创建实例 venv 并安装（{instance.venv_dir}）")
+    step(2, 5, i18n.t("cli.venv_engine.step_create_and_install", venv_dir=instance.venv_dir))
     if instance.venv_dir.exists() and any(instance.venv_dir.iterdir()) and not force:
-        raise CliError(
-            f"{instance.venv_dir} 已存在且非空。确认可覆盖后加 --force 重建，或先运行 `akaribot venv recreate`。"
-        )
+        raise CliError(i18n.t("cli.venv_engine.target_venv_exists", venv_dir=instance.venv_dir))
     runner.run_checked(
         create_venv_argv(instance.venv_dir, python=python or str(source_python), clear=force),
         what=i18n.t("cli.venv_engine.what_create_venv"),
@@ -979,47 +977,57 @@ def adopt(
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"))
 
-    step(3, 5, "验证 entry points 与源环境一致")
+    step(3, 5, i18n.t("cli.venv_engine.step_verify_source"))
     if runner.dry_run:
         consumed = [info.requirement() for info in source_dists.values() if canonical(info.dist) != CLI_DIST]
-        console.print("[dim]dry-run：跳过验证与源环境卸载；计划卸载 " + "、".join(consumed or ["<无>"]) + "[/dim]")
-        return HostingReport("adopt", source_python, target_python, tuple(source_dists), (), "dry-run 未做任何修改")
+        plan = i18n.t("cli.common.list_separator").join(consumed) or i18n.t("cli.venv_engine.none")
+        console.print(f"[dim]{i18n.t('cli.venv_engine.adopt_dry_run', names=plan)}[/dim]")
+        return HostingReport(
+            "adopt",
+            source_python,
+            target_python,
+            tuple(source_dists),
+            (),
+            i18n.t("cli.venv_engine.detail_dry_run"),
+        )
     target_dists = probe_environment(target_python)
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
             console.print(f"[red]  {item}[/red]")
-        raise CliError(
-            "目标环境的 entry points 与源环境不一致，已保留源环境不动。"
-            "请检查 uv 安装输出，修好后重新运行 `akaribot venv adopt`。"
-        )
-    ok(f"entry points 一致（{len(source_dists)} 个包）")
+        raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_source"))
+    ok(i18n.t("cli.venv_engine.entry_points_consistent", count=len(source_dists)))
 
-    step(4, 5, "卸载源环境的 akaribot 包")
+    step(4, 5, i18n.t("cli.venv_engine.step_uninstall_source"))
     removed: tuple[str, ...] = ()
     if keep_source:
-        console.print("[dim]--keep-source：保留源环境的包[/dim]")
+        console.print(f"[dim]{i18n.t('cli.venv_engine.adopt_keep_source')}[/dim]")
     else:
         removable = [info.dist for info in source_dists.values() if canonical(info.dist) != CLI_DIST]
         if CLI_DIST in {canonical(item) for item in source_dists}:
-            warn(f"保留源环境的 {CLI_DIST}，避免卸载掉正在使用的 CLI。")
+            warn(i18n.t("cli.venv_engine.keep_cli_in_source", dist=CLI_DIST))
         if removable:
             runner.run_checked(
                 uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_source")
             )
             removed = tuple(removable)
 
-    step(5, 5, "更新实例元数据")
+    step(5, 5, i18n.t("cli.venv_engine.step_update_metadata"))
     relative = os.path.relpath(instance.venv_dir, instance.root)
     if Path(relative).is_absolute() or relative.startswith(".."):
-        raise CliError(f"实例 venv 必须位于实例目录内，当前为 {instance.venv_dir}。")
+        raise CliError(i18n.t("cli.venv_engine.venv_outside_instance", venv_dir=instance.venv_dir))
     if not runner.dry_run:
         instance.meta.set_venv(relative)
         instance.meta.save()
         instance.invalidate()
-    ok(f"已切换为托管模式：{relative}")
+    ok(i18n.t("cli.venv_engine.switched_to_managed", venv=relative))
     return HostingReport(
-        "adopt", source_python, target_python, tuple(source_dists), removed, f"已写入 runtime.venv={relative}"
+        "adopt",
+        source_python,
+        target_python,
+        tuple(source_dists),
+        removed,
+        i18n.t("cli.venv_engine.detail_venv_written", venv=relative),
     )
 
 
@@ -1037,46 +1045,54 @@ def release(
     """
     runner = runner or CommandRunner()
     if not instance.managed:
-        raise CliError("当前实例未托管 venv（runtime.venv 为空），无需 release。")
+        raise CliError(i18n.t("cli.venv_engine.release_not_managed"))
     source_python = venv_python_path(instance.venv_dir)
     target_python = Path(host_python) if host_python else system_python()
     _check_distinct(source_python, target_python)
     if not source_python.is_file():
-        raise CliError(f"实例 venv 的解释器不存在：{source_python}。可用 `akaribot venv recreate` 重建。")
+        raise CliError(i18n.t("cli.venv_engine.instance_venv_python_missing", python=source_python))
 
-    step(1, 4, f"枚举实例 venv 已装的 akaribot 包（{source_python}）")
+    step(1, 4, i18n.t("cli.venv_engine.step_enumerate_venv", python=source_python))
     source_dists = probe_environment(source_python)
     if not source_dists:
-        raise CliError(f"实例 venv {instance.venv_dir} 里没有 akaribot 包，无法 release。")
-    console.print(f"  共 {len(source_dists)} 个包：" + "、".join(sorted(source_dists)))
+        raise CliError(i18n.t("cli.venv_engine.instance_venv_no_packages", venv_dir=instance.venv_dir))
+    names = i18n.t("cli.common.list_separator").join(sorted(source_dists))
+    console.print("  " + i18n.t("cli.venv_engine.package_count", count=len(source_dists), names=names))
 
-    step(2, 4, f"在当前环境安装（{target_python}）")
+    step(2, 4, i18n.t("cli.venv_engine.step_install_current", python=target_python))
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"))
 
-    step(3, 4, "验证 entry points 与实例 venv 一致")
+    step(3, 4, i18n.t("cli.venv_engine.step_verify_venv"))
     if runner.dry_run:
-        console.print("[dim]dry-run：跳过验证、卸载与元数据写入[/dim]")
-        return HostingReport("release", source_python, target_python, tuple(source_dists), (), "dry-run 未做任何修改")
+        console.print(f"[dim]{i18n.t('cli.venv_engine.release_dry_run')}[/dim]")
+        return HostingReport(
+            "release",
+            source_python,
+            target_python,
+            tuple(source_dists),
+            (),
+            i18n.t("cli.venv_engine.detail_dry_run"),
+        )
     target_dists = probe_environment(target_python)
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
             console.print(f"[red]  {item}[/red]")
-        raise CliError("当前环境的 entry points 与实例 venv 不一致，已保留实例 venv 不动。请检查 uv 安装输出。")
-    ok(f"entry points 一致（{len(source_dists)} 个包）")
+        raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_venv"))
+    ok(i18n.t("cli.venv_engine.entry_points_consistent", count=len(source_dists)))
 
-    step(4, 4, "卸载实例 venv 的包并更新元数据")
+    step(4, 4, i18n.t("cli.venv_engine.step_uninstall_venv_and_metadata"))
     removed: tuple[str, ...] = ()
     if keep_source:
-        console.print("[dim]--keep-source：保留实例 venv 的包[/dim]")
+        console.print(f"[dim]{i18n.t('cli.venv_engine.release_keep_source')}[/dim]")
     else:
         running_inside = target_python.resolve() == source_python.resolve()
         removable = [
             info.dist for info in source_dists.values() if not (running_inside and canonical(info.dist) == CLI_DIST)
         ]
         if running_inside and len(removable) != len(source_dists):
-            warn(f"CLI 正在实例 venv 内运行，保留其中的 {CLI_DIST}。")
+            warn(i18n.t("cli.venv_engine.keep_cli_in_venv", dist=CLI_DIST))
         if removable:
             runner.run_checked(
                 uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_venv")
@@ -1085,8 +1101,15 @@ def release(
     instance.meta.set_venv("")
     instance.meta.save()
     instance.invalidate()
-    ok(f"已切换为非托管模式；venv 目录保留在 {instance.venv_dir}，可手动删除")
-    return HostingReport("release", source_python, target_python, tuple(source_dists), removed, "已清空 runtime.venv")
+    ok(i18n.t("cli.venv_engine.switched_to_external", venv_dir=instance.venv_dir))
+    return HostingReport(
+        "release",
+        source_python,
+        target_python,
+        tuple(source_dists),
+        removed,
+        i18n.t("cli.venv_engine.detail_venv_cleared"),
+    )
 
 
 def recreate(
@@ -1102,25 +1125,24 @@ def recreate(
     """
     runner = runner or CommandRunner()
     if not instance.managed:
-        raise CliError(
-            "当前实例未托管 venv，请先运行 `akaribot venv adopt`；或用 `akaribot init --no-venv` 的实例改用 adopt。"
-        )
+        raise CliError(i18n.t("cli.venv_engine.recreate_not_managed"))
     old_python = venv_python_path(instance.venv_dir)
     if not old_python.is_file():
-        raise CliError(f"实例 venv 的解释器不存在：{old_python}。请运行 `akaribot venv adopt --force` 重建。")
+        raise CliError(i18n.t("cli.venv_engine.recreate_python_missing", python=old_python))
 
-    step(1, 4, "枚举现有 venv 的 akaribot 包")
+    step(1, 4, i18n.t("cli.venv_engine.step_enumerate_existing"))
     source_dists = probe_environment(old_python)
-    console.print(f"  共 {len(source_dists)} 个包：" + "、".join(sorted(source_dists)))
+    names = i18n.t("cli.common.list_separator").join(sorted(source_dists))
+    console.print("  " + i18n.t("cli.venv_engine.package_count", count=len(source_dists), names=names))
 
     staging = instance.venv_dir.with_name(instance.venv_dir.name + ".new")
-    step(2, 4, f"在 {staging} 创建新环境并安装")
+    step(2, 4, i18n.t("cli.venv_engine.step_create_staging", staging=staging))
     if staging.exists():
         if not force:
-            raise CliError(f"{staging} 已存在。确认可覆盖后加 --force，或手动删除该目录。")
+            raise CliError(i18n.t("cli.venv_engine.staging_exists", staging=staging))
         shutil.rmtree(staging)
     interpreter = Path(python) if python else system_python()
-    console.print(f"  新环境解释器：{interpreter}")
+    console.print("  " + i18n.t("cli.venv_engine.new_interpreter", python=interpreter))
     runner.run_checked(
         create_venv_argv(staging, python=interpreter), what=i18n.t("cli.venv_engine.what_create_new_venv")
     )
@@ -1129,20 +1151,25 @@ def recreate(
         install_argv(venv_python_path(staging), specs), what=i18n.t("cli.venv_engine.what_install_to_new_venv")
     )
 
-    step(3, 4, "验证 entry points 与新环境一致")
+    step(3, 4, i18n.t("cli.venv_engine.step_verify_new_venv"))
     if runner.dry_run:
-        console.print("[dim]dry-run：跳过验证与目录换位[/dim]")
+        console.print(f"[dim]{i18n.t('cli.venv_engine.recreate_dry_run')}[/dim]")
         return HostingReport(
-            "recreate", old_python, venv_python_path(staging), tuple(source_dists), (), "dry-run 未做任何修改"
+            "recreate",
+            old_python,
+            venv_python_path(staging),
+            tuple(source_dists),
+            (),
+            i18n.t("cli.venv_engine.detail_dry_run"),
         )
     target_dists = probe_environment(venv_python_path(staging))
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
             console.print(f"[red]  {item}[/red]")
-        raise CliError(f"新 venv 的 entry points 与旧环境不一致，旧 venv 未动。可删除 {staging} 后重试。")
+        raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_new", staging=staging))
 
-    step(4, 4, "换位并清理旧环境")
+    step(4, 4, i18n.t("cli.venv_engine.step_swap_and_cleanup"))
     retired = instance.venv_dir.with_name(instance.venv_dir.name + ".old")
     if retired.exists():
         shutil.rmtree(retired)
@@ -1150,9 +1177,14 @@ def recreate(
     staging.rename(instance.venv_dir)
     shutil.rmtree(retired, ignore_errors=True)
     instance.invalidate()
-    ok(f"已重建实例 venv：{instance.venv_dir}")
+    ok(i18n.t("cli.venv_engine.venv_recreated", venv_dir=instance.venv_dir))
     return HostingReport(
-        "recreate", old_python, venv_python_path(instance.venv_dir), tuple(source_dists), (), "旧 venv 已删除"
+        "recreate",
+        old_python,
+        venv_python_path(instance.venv_dir),
+        tuple(source_dists),
+        (),
+        i18n.t("cli.venv_engine.detail_old_venv_removed"),
     )
 
 
@@ -1182,7 +1214,15 @@ def dependency_conflicts(
             and requirement.specifier
             and not requirement.specifier.contains(info.version, prereleases=True)
         ):
-            problems.append(f"{candidate.dist} 要求 {requirement.name}{requirement.specifier}，但已装 {info.version}")
+            problems.append(
+                i18n.t(
+                    "cli.venv_engine.conflict_candidate_needs",
+                    dist=candidate.dist,
+                    requirement=requirement.name,
+                    specifier=requirement.specifier,
+                    version=info.version,
+                )
+            )
     for info in installed.values():
         for text in info.requires:
             try:
@@ -1198,11 +1238,23 @@ def dependency_conflicts(
                     satisfied = True
                 if not satisfied:
                     problems.append(
-                        f"已装 {info.dist} 要求 {requirement.name}{requirement.specifier}，"
-                        f"但待装版本 {candidate.version} 不满足"
+                        i18n.t(
+                            "cli.venv_engine.conflict_installed_needs_pending",
+                            installed=info.dist,
+                            requirement=requirement.name,
+                            specifier=requirement.specifier,
+                            version=candidate.version,
+                        )
                     )
             elif not requirement.specifier.contains(info.version, prereleases=True):
-                problems.append(f"已装 {info.dist} 要求 {requirement.name}{requirement.specifier}，与待装包冲突")
+                problems.append(
+                    i18n.t(
+                        "cli.venv_engine.conflict_installed_needs_conflict",
+                        installed=info.dist,
+                        requirement=requirement.name,
+                        specifier=requirement.specifier,
+                    )
+                )
     return problems
 
 
@@ -1217,7 +1269,14 @@ def installed_api_requirements(candidate: InstallTarget, installed: Mapping[str,
             except InvalidRequirement:
                 continue
             if canonical(requirement.name) == candidate_key:
-                result.append(f"{info.dist} 要求 {requirement.name}{requirement.specifier}")
+                result.append(
+                    i18n.t(
+                        "cli.venv_engine.requires_line",
+                        dist=info.dist,
+                        requirement=requirement.name,
+                        specifier=requirement.specifier,
+                    )
+                )
     return result
 
 
@@ -1329,7 +1388,7 @@ def db_purge(instance: Instance, dist: str) -> bool:
     """
     proc = instance.run_core_capture("db", "purge", "--package", dist, timeout=None)
     if proc.returncode == 0:
-        ok(f"已删除 {dist} 的数据表")
+        ok(i18n.t("cli.venv_engine.tables_purged", dist=dist))
         return True
     detail = explain_process_failure(proc, i18n.t("cli.venv_engine.what_purge_tables", dist=dist))
     warn(detail)
