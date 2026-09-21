@@ -8,6 +8,7 @@ CLI 不依赖 core，故直接用发布在 PyPI 的 ``akari-bot-i18n``。``zh_cn
 from __future__ import annotations
 
 import os
+import sys
 from importlib.resources import files
 from typing import Any
 
@@ -122,11 +123,28 @@ def current_locale() -> str:
     return _current_code
 
 
+def _argv_locale() -> str | None:
+    """从命令行里嗅探 ``--lang``。
+
+    typer 的 ``help=`` 在**导入期**求值，而根回调要等参数解析完才执行，故只靠 ``set_locale()``
+    无法本地化 ``--help``。这里提前读一次 argv，使导入期取到的就是用户要的语言。
+
+    :return: 嗅探到的语言码；未给出时为 ``None``。
+    """
+    argv = sys.argv[1:]
+    for index, item in enumerate(argv):
+        if item == "--lang" and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith("--lang="):
+            return item.split("=", 1)[1]
+    return None
+
+
 def _current() -> str:
-    """取当前语言码，未显式设置时按环境解析一次。"""
+    """取当前语言码，未显式设置时按 argv 与环境解析一次。"""
     global _current_code
     if _current_code == DEFAULT_LOCALE:
-        _current_code = resolve_locale()
+        _current_code = resolve_locale(_argv_locale())
     return _current_code
 
 
