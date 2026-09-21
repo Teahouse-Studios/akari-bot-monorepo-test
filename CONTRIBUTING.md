@@ -169,6 +169,38 @@ ruff check .
 ```
 如果你使用 VS Code，可以安装 Ruff 插件。
 
+### 新增模块包
+
+仓库已按包拆分，官方模块各占一个 workspace 成员（`packages/modules/akari-bot-module-<名>/`）。
+新增模块建议用脚手架生成，再按需修改：
+
+```
+akaribot new module <名>          # 交互问卷；也可用 --non-interactive 配合逐项参数
+akaribot module add -e .          # 把生成出来的包以可编辑方式装进实例
+```
+
+脚手架会按问卷产出 `pyproject.toml`、`manifest.toml`、`README.md`、`src/akaribot/modules/<名>/`
+（含 `config.py`、`database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与
+`tests/test_<名>.py`。生成后请核对几条硬性约定：
+
+- 代码一律 `from akaribot.core.api import ...`，不要写 `akaribot.core.builtins.*` 这类深路径。
+- `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate；键名前缀须与模块名一致。
+- 对 core 的约束写 `akari-bot-core>=0.1.0,<1.0`——全部 first-party 包的这一串必须**字面一致**，
+  `python tools/lint_versions.py` 会检查。
+- 模块之间不要互相依赖：官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
+- 若模块要建表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条 revision 是否已应用只看
+  `schema_migrations` 表）。
+- 包内不要出现 `akaribot/__init__.py`：`akaribot` 是命名空间包（B7）。
+
+提交前请跑全部门禁：
+
+```
+uv run ruff check . && uv run ruff format --check .
+uv run python tools/lint_comments.py      # 注释书面语与块长
+uv run python tools/lint_boundaries.py    # 分层、命名空间、依赖声明
+uv run python tools/lint_versions.py      # 内部版本约束一致性
+```
+
 ## 文字排版
 > “有研究显示，打字的时候不喜欢在中文和英文之间加空格的人，感情路都走得很辛苦，有七成的比例会在 34 岁的时候跟自己不爱的人结婚，而其余三成的人最后只能把遗产留给自己的猫。毕竟爱情跟书写都需要适时地留白。
 >
