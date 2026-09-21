@@ -44,6 +44,9 @@ def _repository_root() -> Path:
 class Paths:
     """实例目录及其子目录。"""
 
+    # as_dict() 面向「实例目录」清单；锁是文件，故显式排除。
+    _FILES = ("lock",)
+
     instance: Path = _env_path(INSTANCE_DIR_ENV) or Path(".").resolve()
     """实例根目录。"""
 
@@ -93,5 +96,5 @@ class Paths:
         return {
             name: str(value)
             for name, value in vars(cls).items()
-            if not name.startswith("_") and isinstance(value, Path)
+            if not name.startswith("_") and name not in cls._FILES and isinstance(value, Path)
         }
