@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-threedsdb"
 version = "0.1.0"
+description = "根据 3DSDB 搜索应用信息。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

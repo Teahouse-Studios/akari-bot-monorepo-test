@@ -234,6 +234,7 @@ def list_packages(
                 "version": info.version,
                 "editable": info.editable,
                 "requires_core_api": info.requires_core_api,
+                "summary": info.summary,
                 "provides_modules": list(info.provides_modules),
             }
             for info in selected

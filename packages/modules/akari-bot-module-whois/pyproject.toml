@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-whois"
 version = "0.1.0"
+description = "查询 WHOIS 信息。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

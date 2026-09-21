@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-core"
 version = "0.1.0"
+description = "AkariBot 核心运行时：机器人主程序、模块加载与公共设施"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "aiofile>=3.8.1,<4.0.0",

@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mcserver"
 version = "0.1.0"
+description = "获取 Minecraft 服务器 MOTD"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

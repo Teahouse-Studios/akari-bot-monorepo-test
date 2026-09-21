@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-captcha"
 version = "0.1.0"
+description = "为新加入 QQ 群聊的成员执行按钮验证码校验。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

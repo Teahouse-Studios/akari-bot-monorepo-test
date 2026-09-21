@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-bugtracker"
 version = "0.1.0"
+description = "查询 Mojira 上的漏洞编号内容。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

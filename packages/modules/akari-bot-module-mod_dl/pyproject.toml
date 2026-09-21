@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mod_dl"
 version = "0.1.0"
+description = "下载 CurseForge 和 Modrinth 上的 Mod。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",

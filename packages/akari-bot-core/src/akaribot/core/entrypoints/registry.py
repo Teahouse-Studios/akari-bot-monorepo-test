@@ -13,6 +13,22 @@ import sys
 from akaribot.core.registry import PackageRegistry
 
 
+def _summary(dist: str) -> str:
+    """取分发包的一句话简介。
+
+    :param dist: 分发名；为空或未安装时返回空串。
+    :return: 简介文本。
+    """
+    if not dist:
+        return ""
+    try:
+        from importlib.metadata import metadata
+
+        return metadata(dist).get("Summary", "") or ""
+    except Exception:  # noqa: BLE001 - 元数据缺失不该让清单输出失败
+        return ""
+
+
 def collect() -> dict:
     """收集已发现的模块与适配器包。
 
@@ -32,6 +48,7 @@ def collect() -> dict:
                     "import_path": entry.import_path,
                     "root": str(entry.root),
                     "modules": list(entry.manifest.provides_modules),
+                    "summary": _summary(entry.dist_name),
                 }
             )
     return {"packages": packages, "incompatible": PackageRegistry.incompatible()}

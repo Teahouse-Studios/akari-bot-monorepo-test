@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-adapter-qqbot"
 version = "0.1.0"
+description = "QQ 平台适配器"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     # s3 extra 依据 plan:498 / tasks:1382；core/utils/s3.py 改为惰性 import 之前该 extra 不可用（T4.2 §6）

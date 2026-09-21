@@ -208,6 +208,7 @@ class PackageInfo:
     :param owned_tables: 该包拥有的数据表，供 ``--purge-data`` 使用。
     :param dependencies: 该包声明的依赖项。
     :param dependents: 依赖该包的分发名，core 侧可缺省。
+    :param summary: 一句话简介，取自分发包元数据；取不到时为空串。
     """
 
     dist: str
@@ -217,6 +218,7 @@ class PackageInfo:
     import_path: str = ""
     editable: bool = False
     requires_core_api: str = ""
+    summary: str = ""
     provides_modules: tuple[str, ...] = ()
     owned_tables: tuple[str, ...] = ()
     dependencies: tuple[DependencyInfo, ...] = ()
@@ -254,6 +256,7 @@ class PackageInfo:
             requires_core_api=_first_str(data, ("requires_core_api",))
             or _first_str(manifest, ("requires_core_api",))
             or "",
+            summary=_first_str(data, ("summary", "description")) or _first_str(manifest, ("summary",)) or "",
             provides_modules=_as_tuple(data.get("provides_modules")) or _as_tuple(manifest.get("provides_modules")),
             owned_tables=_as_tuple(data.get("owned_tables")) or _as_tuple(manifest.get("owned_tables")),
             dependencies=_parse_dependencies(data.get("dependencies", data.get("requires", data.get("requires_dist")))),
