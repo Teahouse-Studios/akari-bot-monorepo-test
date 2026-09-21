@@ -32,6 +32,8 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
+          # --locked 会重新求解，是 workspace 依赖互斥的唯一拦截点；不得改为 --frozen
+          # 或 pip install，否则 PR 阶段将静默失去冲突探测能力（见 T4.9、CONTRIBUTING.md）。
           uv sync --locked --all-extras --dev
 
       - name: Lint comments
@@ -65,6 +67,13 @@ jobs:
           else
             uv run python tools/lint_boundaries.py
           fi
+
+      - name: Lint internal version constraints
+        shell: bash
+        run: |
+          # workspace 覆盖会丢弃内部依赖的版本约束，而发布出的 wheel 仍带着它，
+          # uv lock 发现不了，故单列一道检查（见 T4.8）。
+          uv run python tools/lint_versions.py
 
       - name: Lint with Ruff
         shell: bash
