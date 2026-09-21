@@ -523,8 +523,15 @@ def load_module(
     instance_path: InstancePathOption = None,
     as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
 ) -> None:
-    """全局装载模块：让它参与命令匹配（与安装、场景启用是两回事）。"""
+    """全局装载模块：让它参与命令匹配（与安装、场景启用是两回事）。
+
+    实例 ID 一旦使用请勿更改这条约束**不适用于本命令**：它只改全局装载状态，不触碰任何配置。
+    """
     instance = require_instance(instance_path)
+    # 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才回报，故先用锁文件短路；
+    # 为真时仍走子进程，由 core 判定 Server 是否在线。
+    if not instance.is_running():
+        fail("实例未运行，无法热装载；下次启动会自动装载。要立即生效请先 `akaribot run`。")
     code = instance.run_core("modules", "load", name)
     if as_json:
         console.print_json(json.dumps({"module": name, "action": "load", "returncode": code}, ensure_ascii=False))
@@ -540,8 +547,16 @@ def unload_module(
     instance_path: InstancePathOption = None,
     as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
 ) -> None:
-    """全局卸载模块：让它退出命令匹配；代码与配置都保留。"""
+    """全局卸载模块：让它退出命令匹配；代码与配置都保留。
+
+    实例 ID 一旦使用请勿更改这条约束**不适用于本命令**：它只改全局装载状态，不触碰任何配置。
+    """
     instance = require_instance(instance_path)
+    if not instance.is_running():
+        fail(
+            "实例未运行，无法热卸载；下次启动仍会按 module_status 的现有记录装载。"
+            "要让它保持卸载，请先 `akaribot run` 再执行本命令。"
+        )
     code = instance.run_core("modules", "unload", name)
     if as_json:
         console.print_json(json.dumps({"module": name, "action": "unload", "returncode": code}, ensure_ascii=False))

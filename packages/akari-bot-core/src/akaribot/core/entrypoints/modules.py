@@ -155,7 +155,8 @@ def _known_modules() -> tuple[set[str], bool]:
 
     :return: 二元组——名字集合；状态表是否已有记录（据此判断运行期注册名是否已收录）。
     """
-    declared = set(_declared())
+    # 与 list 口径一致：下划线开头是框架内部注册，不接受用户装载。
+    declared = {name for name in _declared() if not name.startswith("_")}
     try:
         status = asyncio.run(_status())
     except Exception as exc:  # noqa: BLE001 - 校验只是提前拦截笔误，读不到状态表不应阻断操作
