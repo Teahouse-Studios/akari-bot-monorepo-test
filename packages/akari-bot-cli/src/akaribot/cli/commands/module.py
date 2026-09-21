@@ -1,8 +1,11 @@
-"""模块安装与卸载。
+"""模块安装与全局装载。
 
 安装流水线的七步顺序有硬约束（tasks T5.2）：解析 → 兼容性预检 → uv 安装 →
 config sync → db upgrade → 热装载 RPC → 报告占位符。第 4 步必须由 CLI 子进程完成，
 因为机器人与 server 一律以只读配置运行，写配置会被 ``CFGManager._ensure_writable()`` 拒绝。
+
+``load`` / ``unload`` 是另一条路径：它们不碰分发包，只切换 ``module_status.load``，且必须由
+运行中的实例执行，故经 ``akari-bot.core.entrypoints.modules`` 子进程转成 JobQueue RPC。
 """
 
 from __future__ import annotations
@@ -31,7 +34,15 @@ from akaribot.cli.instance import (
     warn,
 )
 
-app = typer.Typer(help="模块安装与卸载：list / add / remove / update")
+app = typer.Typer(
+    help=(
+        "模块安装与全局装载：list / add / remove / update / load / unload\n\n"
+        "三级「启用」语义：add/remove 决定代码是否装在本实例；load/unload 决定模块是否参与命令匹配"
+        "（等价于机器人内的 `~module load` / `~module unload`，超管）；某个群/频道能否使用是场景级"
+        "开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用"
+        " enable/disable 表示全局装载。"
+    )
+)
 
 OfflineOption = Annotated[bool, typer.Option("--offline", help="registry 只用本地缓存，不联网")]
 DryRunOption = Annotated[bool, typer.Option("--dry-run", help="只打印将执行的命令，不修改任何文件")]
@@ -502,3 +513,40 @@ def update(
         warn(f"仅 {len(updated)} 个包更新成功；请检查上面的错误后重试。")
     else:
         ok(f"已更新 {len(updated)} 个包" + ("；运行中的实例已收到热装载通知" if updated else ""))
+
+
+# 三级「启用」语义（附录 B）：安装看 venv 里有没有这个分发，全局装载看 ModuleStatus.load，
+# 场景启用看 target_union_info.modules。本命令只管第二级，故动词用 load/unload 而非 enable/disable
+# ——后者在机器人内是场景级命令，撞词会让用户以为改了全局。
+@app.command("load")
+def load_module(
+    name: str,
+    instance_path: InstancePathOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
+) -> None:
+    """全局装载模块：让它参与命令匹配（与安装、场景启用是两回事）。"""
+    instance = require_instance(instance_path)
+    code = instance.run_core("modules", "load", name)
+    if as_json:
+        console.print_json(json.dumps({"module": name, "action": "load", "returncode": code}, ensure_ascii=False))
+    elif code == 0:
+        ok(f"已装载 {name}")
+    if code != 0:
+        raise typer.Exit(code)
+
+
+@app.command("unload")
+def unload_module(
+    name: str,
+    instance_path: InstancePathOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
+) -> None:
+    """全局卸载模块：让它退出命令匹配；代码与配置都保留。"""
+    instance = require_instance(instance_path)
+    code = instance.run_core("modules", "unload", name)
+    if as_json:
+        console.print_json(json.dumps({"module": name, "action": "unload", "returncode": code}, ensure_ascii=False))
+    elif code == 0:
+        ok(f"已卸载 {name}")
+    if code != 0:
+        raise typer.Exit(code)
