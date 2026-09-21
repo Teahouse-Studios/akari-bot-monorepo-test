@@ -100,7 +100,7 @@ INSTANCE_DIRS = (
 
 def no_instance_hint() -> str:
     """不在任何实例内时的可执行提示；运行期取值，不冻结语言。"""
-    return i18n.t("cli.error.not_instance")
+    return i18n.t("cli.error.not_instance_hint")
 
 
 class CliError(Exception):
@@ -1027,7 +1027,8 @@ def resolve_instance(
                     "cli.instance.not_instance_env", env=INSTANCE_DIR_ENV, path=override, meta=INSTANCE_META_FILENAME
                 )
             )
-        raise InstanceNotFound(no_instance_hint())
+        # 这条是「既没给路径也没设环境变量」的独立场景，需要完整诊断句而不只是操作提示。
+        raise InstanceNotFound(i18n.t("cli.error.not_instance"))
     return Instance(root, python_override=python_override)
 
 

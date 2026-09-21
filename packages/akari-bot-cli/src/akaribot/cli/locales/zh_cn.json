@@ -141,6 +141,7 @@
   "cli.doctor.report.summary": "共 ${total} 项：error ${errors}，warning ${warnings}",
   "cli.doctor.report.unconfigured": "已装但尚无配置的适配器：${adapters}",
   "cli.error.not_instance": "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
+  "cli.error.not_instance_hint": "先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
   "cli.init.already_instance": "${root} 已是 AkariBot 实例（存在 ${meta}）。要改配置请用 `akaribot config`，确认覆盖加 --force。",
   "cli.init.arg_path": "实例目录，缺省为当前目录",
   "cli.init.ask.adapters": "要安装的适配器（逗号分隔，留空只装 core）",
