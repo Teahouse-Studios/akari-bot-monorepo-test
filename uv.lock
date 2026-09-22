@@ -20,6 +20,8 @@ members = [
     "akari-bot-adapter-qqbot",
     "akari-bot-adapter-telegram",
     "akari-bot-adapter-web",
+    "akari-bot-assets-emotes",
+    "akari-bot-assets-fonts",
     "akari-bot-cli",
     "akari-bot-core",
     "akari-bot-html2text",
@@ -439,6 +441,16 @@ requires-dist = [
 ]
 
 [[package]]
+name = "akari-bot-assets-emotes"
+version = "0.1.0"
+source = { editable = "packages/akari-bot-assets-emotes" }
+
+[[package]]
+name = "akari-bot-assets-fonts"
+version = "0.1.0"
+source = { editable = "packages/akari-bot-assets-fonts" }
+
+[[package]]
 name = "akari-bot-cli"
 version = "0.1.0"
 source = { editable = "packages/akari-bot-cli" }
@@ -503,6 +515,12 @@ dependencies = [
 chart = [
     { name = "matplotlib" },
 ]
+full = [
+    { name = "akari-bot-assets-emotes" },
+    { name = "boto3" },
+    { name = "matplotlib" },
+    { name = "tortoise-orm", extra = ["asyncmy"] },
+]
 image = [
     { name = "matplotlib" },
 ]
@@ -516,10 +534,12 @@ s3 = [
 [package.metadata]
 requires-dist = [
     { name = "aiofile", specifier = ">=3.8.1,<4.0.0" },
+    { name = "akari-bot-assets-emotes", marker = "extra == 'full'", editable = "packages/akari-bot-assets-emotes" },
     { name = "akari-bot-i18n", specifier = "==0.1.3" },
     { name = "akari-bot-webrender", specifier = "==0.6.2" },
     { name = "apscheduler", specifier = ">=3.9.1.post0,<4.0.0.0" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
+    { name = "boto3", marker = "extra == 'full'", specifier = ">=1.35.0,<2.0.0" },
     { name = "boto3", marker = "extra == 's3'", specifier = ">=1.35.0,<2.0.0" },
     { name = "cattrs", specifier = ">=26.1.0,<26.2.0" },
     { name = "deprecated", specifier = ">=1.2.18,<2.0.0" },
@@ -530,6 +550,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "loguru", specifier = ">=0.7.0,<1.0.0" },
     { name = "matplotlib", marker = "extra == 'chart'", specifier = ">=3.6.3,<4.0.0" },
+    { name = "matplotlib", marker = "extra == 'full'", specifier = ">=3.6.3,<4.0.0" },
     { name = "matplotlib", marker = "extra == 'image'", specifier = ">=3.6.3,<4.0.0" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
     { name = "packaging", specifier = ">=26.0" },
@@ -544,10 +565,11 @@ requires-dist = [
     { name = "tenacity", specifier = ">=9.0.0,<10.0.0" },
     { name = "tomlkit", specifier = ">=0.14.0,<1.0.0" },
     { name = "tortoise-orm", specifier = ">=1.1.2,<1.2.0" },
+    { name = "tortoise-orm", extras = ["asyncmy"], marker = "extra == 'full'", specifier = ">=1.1.2,<1.2.0" },
     { name = "tortoise-orm", extras = ["asyncmy"], marker = "extra == 'mysql'", specifier = ">=1.1.2,<1.2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0,<1.0.0" },
 ]
-provides-extras = ["s3", "mysql", "image", "chart"]
+provides-extras = ["s3", "mysql", "image", "chart", "full"]
 
 [[package]]
 name = "akari-bot-html2text"
@@ -666,12 +688,14 @@ name = "akari-bot-module-captcha"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-captcha" }
 dependencies = [
+    { name = "akari-bot-assets-emotes" },
     { name = "akari-bot-core" },
     { name = "tortoise-orm" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-emotes", editable = "packages/akari-bot-assets-emotes" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "tortoise-orm", specifier = ">=1.1.2,<1.2.0" },
 ]
@@ -711,6 +735,7 @@ name = "akari-bot-module-color"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-color" }
 dependencies = [
+    { name = "akari-bot-assets-fonts" },
     { name = "akari-bot-core" },
     { name = "numpy" },
     { name = "orjson" },
@@ -720,6 +745,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-fonts", editable = "packages/akari-bot-assets-fonts" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "numpy", specifier = "<2.5.3" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
@@ -747,6 +773,7 @@ name = "akari-bot-module-cytoid"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-cytoid" }
 dependencies = [
+    { name = "akari-bot-assets-fonts" },
     { name = "akari-bot-core" },
     { name = "akari-bot-html2text" },
     { name = "gql" },
@@ -757,6 +784,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-fonts", editable = "packages/akari-bot-assets-fonts" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "akari-bot-html2text", editable = "packages/akari-bot-html2text" },
     { name = "gql", specifier = ">=4.0.0,<5.0.0" },
@@ -893,6 +921,7 @@ name = "akari-bot-module-maimai"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-maimai" }
 dependencies = [
+    { name = "akari-bot-assets-fonts" },
     { name = "akari-bot-core" },
     { name = "langconv" },
     { name = "orjson" },
@@ -902,6 +931,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-fonts", editable = "packages/akari-bot-assets-fonts" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "langconv", git = "https://github.com/Teahouse-Studios/langconv.py.git" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
@@ -1103,6 +1133,7 @@ name = "akari-bot-module-phigros"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-phigros" }
 dependencies = [
+    { name = "akari-bot-assets-fonts" },
     { name = "akari-bot-core" },
     { name = "httpx" },
     { name = "orjson" },
@@ -1114,6 +1145,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-fonts", editable = "packages/akari-bot-assets-fonts" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
@@ -1251,6 +1283,7 @@ name = "akari-bot-module-wordle"
 version = "0.1.0"
 source = { editable = "packages/modules/akari-bot-module-wordle" }
 dependencies = [
+    { name = "akari-bot-assets-fonts" },
     { name = "akari-bot-core" },
     { name = "attrs" },
     { name = "pillow" },
@@ -1258,6 +1291,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "akari-bot-assets-fonts", editable = "packages/akari-bot-assets-fonts" },
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
     { name = "pillow", specifier = ">=12.0.0,<13.0.0" },

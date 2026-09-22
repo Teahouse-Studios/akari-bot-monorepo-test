@@ -4,6 +4,7 @@ import time
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Union
 from urllib.parse import quote
 
@@ -56,7 +57,6 @@ from akaribot.core.builtins.session.bot_state import BotState
 from akaribot.core.builtins.session.features import Features
 from akaribot.core.builtins.session.info import SessionInfo
 from akaribot.core.config.base import CoreConfig
-from akaribot.core.constants.path import assets_path
 from akaribot.core.logger import Logger
 from akaribot.core.utils.button_runtime import register_button_rows
 from akaribot.core.utils.media import resolve_media_path
@@ -85,8 +85,19 @@ HIGH_PRIORITY_BURST = 5
 HIGH_PRIORITY_QUEUE_RESERVE = 16
 ADAPTER_SHUTDOWN_TIMEOUT = 10
 MEDIA_UPLOAD_MAX_ATTEMPTS = 3
-TYPING_EMOTE_DIR = assets_path / "emotes" / "typing"
-TYPING_EMOTES = tuple(sorted(TYPING_EMOTE_DIR.glob("*.gif")))
+
+
+def _typing_emote_dir() -> Path | None:
+    """取 typing 表情目录；可选资源包 akari-bot-assets-emotes 未安装时为 None。"""
+    try:
+        from akaribot.assets.emotes import emotes_dir
+    except ImportError:
+        return None
+    return emotes_dir() / "typing"
+
+
+TYPING_EMOTE_DIR = _typing_emote_dir()
+TYPING_EMOTES = tuple(sorted(TYPING_EMOTE_DIR.glob("*.gif"))) if TYPING_EMOTE_DIR else ()
 
 
 def _load_s3_storage():
@@ -1406,6 +1417,8 @@ class QQBotContextManager(ContextManager):
             if CoreConfig.use_emote:
                 if TYPING_EMOTES:
                     elements.append(Image(Random.choice(TYPING_EMOTES)))
+                elif TYPING_EMOTE_DIR is None:
+                    Logger.warning("QQBot typing emote is enabled but akari-bot-assets-emotes is not installed.")
                 else:
                     Logger.warning(
                         f"QQBot typing emote is enabled but no GIF resources were found in {TYPING_EMOTE_DIR}."

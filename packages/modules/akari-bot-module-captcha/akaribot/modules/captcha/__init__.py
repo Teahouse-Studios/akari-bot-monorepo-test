@@ -2,13 +2,13 @@ import asyncio
 
 from tortoise.transactions import in_transaction
 
+from akaribot.assets.emotes import emotes_dir
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.internal import ButtonFrame, I18NContext, Image, Mention
 from akaribot.core.builtins.session.info import EventInfo
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.component import module
 from akaribot.core.config.base import CoreConfig
-from akaribot.core.constants.path import assets_path
 from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
 from akaribot.core.logger import Logger
 from akaribot.core.queue.errors import RpcError
@@ -25,7 +25,7 @@ from akaribot.modules.captcha.service import (
 
 CAPTCHA_MUTE_SECONDS = 30 * 24 * 60 * 60
 CAPTCHA_EMOTE_ANSWER_OFFSET = 101
-CAPTCHA_EMOTE_DIR = assets_path / "emotes" / "captcha_held"
+CAPTCHA_EMOTE_DIR = emotes_dir() / "captcha_held"
 CAPTCHA_EMOTES = tuple(sorted(path.stem for path in CAPTCHA_EMOTE_DIR.glob("*.gif")))
 CAPTCHA_BUTTON_ROWS = 5
 CAPTCHA_BUTTONS_PER_ROW = 4

@@ -2,8 +2,8 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
+from akaribot.core.api import find_font
 from akaribot.core.builtins.bot import Bot
-from akaribot.core.constants.path import noto_sans_bold_path, noto_sans_demilight_path
 from akaribot.core.utils.func import truncate_text
 from .chunithm_apidata import get_record_df, get_record_lx
 from .chunithm_mapping import (
@@ -240,19 +240,19 @@ class DrawBest:
 
             temp_draw = ImageDraw.Draw(temp)
             temp_draw.polygon(level_triangle, color[chart_info.diff])
-            font = ImageFont.truetype(noto_sans_demilight_path, 18, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 18, encoding="utf-8")
             title = truncate_text(chart_info.title, 12)
             temp_draw.text((6, 7), title, "white", font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 10, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
             temp_draw.text((7, 29), f"ID: {chart_info.mid}", "white", font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 16, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 16, encoding="utf-8")
             temp_draw.text((6, 42), f"{chart_info.score:,}", "white", font)
-            font = ImageFont.truetype(noto_sans_bold_path, 18, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 18, encoding="utf-8")
             temp_draw.text((96, 42), chart_info.rate, self._get_goal_color(chart_info.rate), font)
-            font = ImageFont.truetype(noto_sans_bold_path, 12, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 12, encoding="utf-8")
             if chart_info.fc:
                 temp_draw.text((7, 64), chart_info.fc, self._get_goal_color(chart_info.fc), font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 12, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 12, encoding="utf-8")
             temp_draw.text(
                 (7, 80),
                 f"{chart_info.ds} -> {chart_info.ra:.2f}",
@@ -282,19 +282,19 @@ class DrawBest:
 
             temp_draw = ImageDraw.Draw(temp)
             temp_draw.polygon(level_triangle, color[chart_info.diff])
-            font = ImageFont.truetype(noto_sans_demilight_path, 18, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 18, encoding="utf-8")
             title = truncate_text(chart_info.title, 12)
             temp_draw.text((6, 7), title, "white", font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 10, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
             temp_draw.text((7, 29), f"ID: {chart_info.mid}", "white", font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 16, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 16, encoding="utf-8")
             temp_draw.text((6, 42), f"{chart_info.score:,}", "white", font)
-            font = ImageFont.truetype(noto_sans_bold_path, 18, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 18, encoding="utf-8")
             temp_draw.text((96, 42), chart_info.rate, self._get_goal_color(chart_info.rate), font)
-            font = ImageFont.truetype(noto_sans_bold_path, 12, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 12, encoding="utf-8")
             if chart_info.fc:
                 temp_draw.text((7, 64), chart_info.fc, self._get_goal_color(chart_info.fc), font)
-            font = ImageFont.truetype(noto_sans_demilight_path, 12, encoding="utf-8")
+            font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 12, encoding="utf-8")
             temp_draw.text(
                 (7, 80),
                 f"{chart_info.ds} -> {chart_info.ra:.2f}",
@@ -310,18 +310,18 @@ class DrawBest:
 
     def draw(self):
         img_draw = ImageDraw.Draw(self.img)
-        font = ImageFont.truetype(noto_sans_demilight_path, 30, encoding="utf-8")
+        font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 30, encoding="utf-8")
         img_draw.text((34, 24), " ".join(self.username), fill="black", font=font)
-        font = ImageFont.truetype(noto_sans_demilight_path, 24, encoding="utf-8")
+        font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 24, encoding="utf-8")
         img_draw.text((512, 60), f"API Source: {self.source}", fill="black", font=font)
-        font = ImageFont.truetype(noto_sans_bold_path, 16, encoding="utf-8")
+        font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 16, encoding="utf-8")
         self._draw_rating(self.img, img_draw, (38, 64), self.player_rating, font)
-        font = ImageFont.truetype(noto_sans_demilight_path, 20, encoding="utf-8")
+        font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 20, encoding="utf-8")
         img_draw.text((34, 114), f"BEST ({self.b30_rating:.2f})", fill="black", font=font)
         img_draw.text((34, 804), f"NEW ({self.n20_rating:.2f})", fill="black", font=font)
         self._draw_best_list(self.img, self.best_30, self.new_20)
 
-        font = ImageFont.truetype(noto_sans_demilight_path, 10, encoding="utf-8")
+        font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
         img_draw.text((5, 1285), 'Generated by Teahouse Studios "AkariBot"', "black", font=font)
 
     def get_dir(self):

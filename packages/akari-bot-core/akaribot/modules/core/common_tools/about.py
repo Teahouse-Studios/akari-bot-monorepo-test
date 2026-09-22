@@ -7,7 +7,6 @@ from akaribot.core.builtins.message.internal import Button, ButtonFrame, I18NCon
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.component import module
 from akaribot.core.config.base import CoreConfig
-from akaribot.core.constants.path import assets_path
 from akaribot.core.logger import Logger
 
 about = module(
@@ -21,8 +20,10 @@ about = module(
     },
 )
 
-CHARACTER_IMAGE_PATH = assets_path / "character_marked.png"
-CREDITS_PATH = assets_path / "credits.txt"
+# 随 bundled core 包分发（akaribot/modules/core/assets/），不再依赖实例 assets/。
+_PACKAGE_ASSETS = Path(__file__).resolve().parent.parent / "assets"
+CHARACTER_IMAGE_PATH = _PACKAGE_ASSETS / "character_marked.png"
+CREDITS_PATH = _PACKAGE_ASSETS / "credits.txt"
 CHARACTER_IMAGE_MAX_WIDTH = 512
 
 

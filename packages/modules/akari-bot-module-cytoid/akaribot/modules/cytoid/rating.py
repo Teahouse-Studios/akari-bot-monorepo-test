@@ -9,12 +9,10 @@ from gql import Client, gql
 from gql.transport.httpx import HTTPXAsyncTransport
 from html2text import html2text
 
+from akaribot.core.api import find_font
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.constants.path import (
-    cache_path,
-    noto_sans_demilight_path,
-)
+from akaribot.core.constants.path import cache_path
 from akaribot.core.logger import Logger
 from akaribot.core.utils.cache import random_cache_path
 from akaribot.core.utils.func import truncate_text
@@ -349,7 +347,7 @@ async def make_songcard(
     img_type = img_type.resize((40, 40))
     img.alpha_composite(img_type, (20, 20))
     font = ImageFont.truetype(nunito_light_path, 36)
-    noto1 = ImageFont.truetype(noto_sans_demilight_path, 20)
+    noto1 = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 20)
     font2 = ImageFont.truetype(nunito_light_path, 18)
     font3 = ImageFont.truetype(nunito_light_path, 16)
     drawtext = ImageDraw.Draw(img)

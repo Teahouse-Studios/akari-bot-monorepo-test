@@ -7,10 +7,10 @@ import orjson
 import webcolors
 from PIL import Image, ImageDraw, ImageFont
 
+from akaribot.core.api import find_font
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.internal import Embed, EmbedField, Image as BImage, I18NContext
 from akaribot.core.component import module
-from akaribot.core.constants.path import noto_sans_demilight_path
 
 c = module(
     "color",
@@ -22,7 +22,7 @@ c = module(
 
 md_color_path = Path(__file__).parent / "assets" / "material_colors.json"
 
-font = ImageFont.truetype(noto_sans_demilight_path, 40)
+font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 40)
 with open(md_color_path, "rb") as f:
     material_colors = material_colors_names_to_hex = orjson.loads(f.read())
     material_colors_hex_to_names = {v: k for k, v in material_colors.items()}

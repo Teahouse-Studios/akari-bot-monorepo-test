@@ -45,6 +45,16 @@ CONFIG_HEADER = (
     "config_version = {version} # {{I18N:config.comments.config_version}}\n"
 )
 
+# 默认安装的 core extra：full 含 emotes 表情资源包（T3.3），--minimal 装裸 core 时跳过。
+DEFAULT_CORE_EXTRA = "full"
+
+
+def _core_extras(minimal: bool, extra: list[str]) -> list[str]:
+    """core 要装的 extras：默认 full，``--extra`` 在其上追加，``--minimal`` 一个不装。"""
+    if minimal:
+        return []
+    return list(dict.fromkeys((DEFAULT_CORE_EXTRA, *extra)))
+
 
 def _config_version(instance: Instance) -> int:
     """问实例解释器要 core 的配置版本号；失败时退回 1 并告警。"""
@@ -175,7 +185,7 @@ def init(
 
     adapters = split_names(adapter)
     modules = split_names(module)
-    extras = split_names(extra)
+    extras = _core_extras(minimal, split_names(extra))
     if workspace_root is not None:
         workspace_root = workspace_root.expanduser().resolve()
         if not (workspace_root / "packages").is_dir():

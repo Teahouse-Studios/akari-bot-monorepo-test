@@ -21,6 +21,8 @@ ENV PYTHONUNBUFFERED=1
 # 配置、日志与数据库的落点。
 ENV AKARI_INSTANCE_DIR=/akari-bot
 
+# 系统字体：core 的 find_font() 第三级回退，fonts-noto-cjk 提供候选字族里的 Noto Sans CJK JP。
+# 资源包 akari-bot-assets-fonts 缺席时，字体由这一级兜底。
 RUN apt-get update && apt-get install -y \
     fonts-noto-cjk \
     fonts-noto-color-emoji \

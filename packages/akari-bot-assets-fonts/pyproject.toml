@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-assets-fonts"
+version = "0.1.0"
+description = "AkariBot 字体资源包：Noto Sans CJK 与 Noto Sans Symbols2，随默认安装分发"
+requires-python = ">=3.12,<4.0"
+# 字体为 SIL OFL 1.1，与本仓库主体的 AGPL-3.0 不同，分发时须原样携带 LICENSE。
+license = "OFL-1.1"
+license-files = ["akaribot/assets/fonts/LICENSE"]
+# 纯资源分发：包内只有字体、许可证与一个定位函数，不依赖任何分发（定位见 akaribot/assets/fonts/__init__.py）。
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["akaribot"]

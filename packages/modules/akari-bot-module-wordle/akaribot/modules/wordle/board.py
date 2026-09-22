@@ -6,7 +6,7 @@ import unicodedata
 from PIL import Image, ImageDraw, ImageFont
 from attrs import define, field
 
-from akaribot.core.constants.path import noto_sans_bold_path
+from akaribot.core.api import find_font
 from akaribot.core.utils.random import Random
 
 words_txt = Path(__file__).parent / "assets" / "words.txt"
@@ -203,7 +203,7 @@ class WordleBoardImage:
                 )
 
                 font_size = int(self.key_height * 0.5)
-                font = ImageFont.truetype(noto_sans_bold_path, font_size)
+                font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), font_size)
 
                 _, _, w, h = keyboard_draw.textbbox((0, 0), letter, font=font)
                 keyboard_draw.text(
@@ -220,7 +220,7 @@ class WordleBoardImage:
     def update_board(self):
         draw = ImageDraw.Draw(self.board_image)
         font_size = int(self.cell_size * 0.8)
-        font = ImageFont.truetype(noto_sans_bold_path, font_size)
+        font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), font_size)
 
         for row_index, row in enumerate(self.wordle_board.test_board()):
             for col_index, square in enumerate(row):
@@ -274,7 +274,7 @@ class WordleBoardImage:
         draw = ImageDraw.Draw(self.keyboard_image)
 
         font_size = int(self.key_height * 0.5)
-        font = ImageFont.truetype(noto_sans_bold_path, font_size)
+        font = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), font_size)
 
         letter_states = self._collect_letter_states()
 

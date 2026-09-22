@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "查询 Phigros 相关内容。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    # genb30 曲绘的文字用资源包里的 Noto Sans CJK（T3.3），缺它则曲绘渲染失败。
+    "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "pycryptodome>=3.18.0,<4.0.0",
     "Pillow>=12.0.0,<13.0.0",

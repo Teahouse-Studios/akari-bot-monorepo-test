@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "为新加入 QQ 群聊的成员执行按钮验证码校验。"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    # captcha_held 的 25 张表情在资源包里（T3.3），缺席时按钮验证码无法组题，故为直接依赖。
+    "akari-bot-assets-emotes>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "tortoise-orm>=1.1.2,<1.2.0",
 ]

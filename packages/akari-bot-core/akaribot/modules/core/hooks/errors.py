@@ -19,7 +19,6 @@ from akaribot.core.constants.exceptions import (
     NoReportException,
     SendMessageFailed,
 )
-from akaribot.core.constants.path import assets_path
 from akaribot.core.logger import Logger
 from akaribot.core.smtp import send_report
 from akaribot.core.utils.random import Random
@@ -30,9 +29,29 @@ if TYPE_CHECKING:
 
 errors = module("_parser_errors", hidden=True, load=True, base=True)
 
-COMMON_EMOTE_DIR = assets_path / "emotes" / "common"
-INVALID_COMMAND_EMOTES = tuple(sorted((COMMON_EMOTE_DIR / "invalid").glob("*.gif")))
-BUG_EMOTES = tuple(sorted((COMMON_EMOTE_DIR / "bug").glob("*.gif")))
+
+def _emotes_dir() -> Path | None:
+    """取 emotes 资源根目录；可选依赖 akari-bot-assets-emotes 缺席时为 None。"""
+    try:
+        from akaribot.assets.emotes import emotes_dir
+    except ImportError:
+        return None
+    return emotes_dir()
+
+
+_EMOTES_DIR = _emotes_dir()
+COMMON_EMOTE_DIR = _EMOTES_DIR / "common" if _EMOTES_DIR else None
+
+
+def _common_emotes(name: str) -> tuple[Path, ...]:
+    """取 ``emotes/common/<name>`` 下的全部 GIF；资源缺席时为空元组。"""
+    if COMMON_EMOTE_DIR is None:
+        return ()
+    return tuple(sorted((COMMON_EMOTE_DIR / name).glob("*.gif")))
+
+
+INVALID_COMMAND_EMOTES = _common_emotes("invalid")
+BUG_EMOTES = _common_emotes("bug")
 
 
 async def send_common_emote(msg: "Bot.MessageSession", emotes: tuple[Path, ...]) -> None:

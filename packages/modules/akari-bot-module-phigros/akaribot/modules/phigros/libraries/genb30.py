@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
+from akaribot.core.api import find_font
 from akaribot.core.builtins.bot import Bot
-from akaribot.core.constants.path import noto_sans_demilight_path, noto_sans_bold_path
 from akaribot.core.logger import Logger
 from akaribot.core.utils.cache import random_cache_path
 from akaribot.core.utils.func import truncate_text
@@ -93,8 +93,8 @@ def draw_b30(
     font2 = ImageFont.truetype(saira_regular_path, 20)
     font3 = ImageFont.truetype(saira_regular_path, 24)
     font4 = ImageFont.truetype(saira_regular_path, 28)
-    noto3 = ImageFont.truetype(noto_sans_demilight_path, 24)
-    noto_rank = ImageFont.truetype(noto_sans_bold_path, 60)
+    noto3 = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 24)
+    noto_rank = ImageFont.truetype(find_font("Noto Sans CJK Bold.otf"), 60)
 
     drawtext = ImageDraw.Draw(final_img)
 

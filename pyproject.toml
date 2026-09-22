@@ -6,6 +6,9 @@
 members = ["packages/akari-bot-*", "packages/adapters/*", "packages/modules/*"]
 
 [tool.uv.sources]
+# 资源分发包不在索引上：成员对它的依赖须显式指向工作区成员，uv 才会认这条依赖。
+akari-bot-assets-emotes = { workspace = true }
+akari-bot-assets-fonts = { workspace = true }
 akari-bot-core = { workspace = true }
 akari-bot-html2text = { workspace = true }
 

@@ -61,6 +61,7 @@ __all__ = [
     "ExternalException",
     "FetchedMessageSession",
     "FinishedSession",
+    "FontNotFoundError",
     "FormattedTime",
     "FormattedTimeElement",
     "GAME_EXPIRED",
@@ -165,6 +166,7 @@ __all__ = [
     "escape_table_cell",
     "evaluate_url_policy",
     "fetch_module_db",
+    "find_font",
     "format_table_code",
     "gained_petal",
     "get_available_locales",
@@ -373,6 +375,7 @@ try:
     from akaribot.core.utils.button import arrange_buttons, build_button_rows
     from akaribot.core.utils.cooldown import CoolDown
     from akaribot.core.utils.dirty_check import check, check_bool, rickroll
+    from akaribot.core.utils.font import FontNotFoundError, find_font
     from akaribot.core.utils.game import GAME_EXPIRED, PlayState
     from akaribot.core.utils.http import (
         delete_url,
@@ -555,6 +558,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.utils.container": ("ExpiringTempDict", "TokenBucket"),
     "akaribot.core.utils.cooldown": ("CoolDown",),
     "akaribot.core.utils.dirty_check": ("check", "check_bool", "rickroll"),
+    "akaribot.core.utils.font": ("FontNotFoundError", "find_font"),
     "akaribot.core.utils.func": ("chunk_list", "is_float", "is_int", "parse_time_string", "truncate_text"),
     "akaribot.core.utils.game": ("GAME_EXPIRED", "PlayState"),
     "akaribot.core.utils.http": (
