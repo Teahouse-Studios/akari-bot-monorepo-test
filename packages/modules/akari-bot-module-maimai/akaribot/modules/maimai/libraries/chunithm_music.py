@@ -3,9 +3,7 @@ from typing import Any
 
 import orjson
 
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url
-from akaribot.core.utils.random import Random
+from akaribot.core.api import Logger, get_url, Random
 from .chunithm_mapping import *
 
 

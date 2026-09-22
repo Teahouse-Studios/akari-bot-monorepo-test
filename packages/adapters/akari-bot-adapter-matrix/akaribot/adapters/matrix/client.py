@@ -2,9 +2,8 @@ from urllib.parse import urlparse
 from nio import AsyncClient, AsyncClientConfig
 
 from akaribot.adapters.matrix.config import MatrixConfig, MatrixSecretConfig
-from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.api import CoreSecretConfig, Logger
 from akaribot.core.constants.path import data_path
-from akaribot.core.logger import Logger
 
 homeserver = MatrixConfig.matrix_homeserver
 user = MatrixConfig.matrix_user

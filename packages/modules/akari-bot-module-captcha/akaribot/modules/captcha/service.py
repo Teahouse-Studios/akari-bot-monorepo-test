@@ -3,11 +3,16 @@ from datetime import UTC, datetime
 
 from tortoise.transactions import in_transaction
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Mention
-from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, union_mutation
-from akaribot.core.logger import Logger
-from akaribot.core.utils.random import SecureRandom
+from akaribot.core.api import (
+    Bot,
+    I18NContext,
+    Mention,
+    SenderUnionInfo,
+    TargetUnionInfo,
+    union_mutation,
+    Logger,
+    SecureRandom,
+)
 from akaribot.modules.captcha.database.models import CaptchaChallenge, CaptchaTrust
 
 

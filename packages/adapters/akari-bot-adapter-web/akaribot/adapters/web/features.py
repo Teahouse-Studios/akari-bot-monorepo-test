@@ -1,4 +1,4 @@
-from akaribot.core.builtins.session.features import Features
+from akaribot.core.api.adapters import Features
 
 features = Features(
     support_image=True,

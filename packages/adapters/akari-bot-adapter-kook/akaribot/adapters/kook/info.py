@@ -1,4 +1,4 @@
-from akaribot.core.constants import Info
+from akaribot.core.api import Info
 
 platform_name = "KOOK"
 client_name = Info.resolve_client_name(platform_name)

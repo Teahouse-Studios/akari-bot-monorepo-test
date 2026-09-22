@@ -1,11 +1,7 @@
 import re
 import urllib.parse
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
-from akaribot.core.utils.dirty_check import check_bool, rickroll
-from akaribot.core.logger import Logger
+from akaribot.core.api import Bot, MessageChain, I18NContext, Plain, Url, check_bool, rickroll, Logger
 from akaribot.modules.wiki.utils.utils import strptime2ts
 from akaribot.modules.wiki.utils.wikilib import BlockedWikiError, WikiLib
 

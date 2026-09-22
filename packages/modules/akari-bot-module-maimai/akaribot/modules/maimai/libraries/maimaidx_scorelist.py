@@ -1,8 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 
-from akaribot.core.api import find_font
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.api import find_font, Bot, I18NContext
 from .maimaidx_apidata import get_total_record
 from .maimaidx_mapping import *
 from .maimaidx_music import TotalList

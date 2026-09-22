@@ -16,13 +16,8 @@ from akaribot.adapters.milky.utils import (
     get_available_group_list,
     get_available_private_list,
 )
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.session.bot_state import BotState
-from akaribot.core.builtins.session.context import ContextManager
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.temp import Temp
-from akaribot.core.logger import Logger
+from akaribot.core.api import MessageChain, MessageNodes, SessionInfo, Logger
+from akaribot.core.api.adapters import BotState, ContextManager, Features, Temp
 
 qq_typing_emoji = str(MilkyConfig.qq_typing_emoji)
 qq_limited_emoji = str(MilkyConfig.qq_limited_emoji)

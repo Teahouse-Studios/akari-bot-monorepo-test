@@ -1,11 +1,6 @@
 from datetime import datetime, timedelta
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.logger import Logger
-from akaribot.core.queue.contracts import ServerAPI
-from akaribot.core.scheduler import DateTrigger, IntervalTrigger
+from akaribot.core.api import Bot, I18NContext, Plain, module, Logger, ServerAPI, DateTrigger, IntervalTrigger
 from .database.models import WikiBotAccountList
 from .utils.bot import BotAccount, LoginFailed
 from .utils.wikilib import BlockedWikiError, WikiLib

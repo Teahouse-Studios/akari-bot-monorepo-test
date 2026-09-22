@@ -11,15 +11,19 @@ from akaribot.adapters.telegram.action_text import handle_action_text_inline_que
 from akaribot.adapters.telegram.interactions import handle_button_callback
 from akaribot.adapters.telegram.events import handle_left_chat_member, handle_new_chat_members
 from akaribot.adapters.telegram.info import *
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Audio, Video, Image, Plain
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config.base import CoreConfig
-from akaribot.core.utils.button_runtime import BUTTON_TOKEN_PREFIX
-from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    Audio,
+    Video,
+    Image,
+    Plain,
+    SessionInfo,
+    command_prefix,
+    CoreConfig,
+    random_cache_path,
+)
+from akaribot.core.api.adapters import client_cleanup, client_init, BUTTON_TOKEN_PREFIX
 
 TELEGRAM_UPDATE_CONCURRENCY_LIMIT = 32
 

@@ -1,9 +1,6 @@
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import Embed, EmbedField, Image, Url, I18NContext
-from akaribot.core.utils.func import truncate_text
-from akaribot.core.utils.web_render import web_render, SourceOptions
+from akaribot.core.api import Bot, Embed, EmbedField, Image, Url, I18NContext, truncate_text, web_render, SourceOptions
 
 DESC_LENGTH = 100
 

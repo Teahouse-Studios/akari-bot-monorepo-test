@@ -9,16 +9,22 @@ import orjson
 from attrs import define, field
 from bs4 import BeautifulSoup
 
-from akaribot.core.builtins.message.internal import I18NContext, Url
-from akaribot.core.builtins.session.internal import MessageSession
-from akaribot.core.config.base import BaseConfig, CoreConfig
-from akaribot.core.constants.exceptions import AbuseWarning, NoReportException
-from akaribot.core.utils.dirty_check import check
-from akaribot.core.i18n import Locale
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url
-from akaribot.core.utils.url_audit import evaluate_url_policy
-from akaribot.core.utils.web_render import web_render, SourceOptions
+from akaribot.core.api import (
+    I18NContext,
+    Url,
+    MessageSession,
+    BaseConfig,
+    CoreConfig,
+    AbuseWarning,
+    NoReportException,
+    check,
+    Locale,
+    Logger,
+    get_url,
+    evaluate_url_policy,
+    web_render,
+    SourceOptions,
+)
 from akaribot.modules.wiki.database.models import WikiSiteInfo
 from akaribot.modules.wiki.utils.bot import BotAccount
 from akaribot.modules.wiki.utils.disambiguation import (

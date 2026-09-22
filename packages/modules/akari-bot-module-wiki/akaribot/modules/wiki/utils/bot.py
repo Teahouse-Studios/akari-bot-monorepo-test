@@ -1,6 +1,6 @@
 import httpx
 
-from akaribot.core.logger import Logger
+from akaribot.core.api import Logger
 from akaribot.modules.wiki.database.models import WikiBotAccountList
 
 

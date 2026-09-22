@@ -16,17 +16,29 @@ from akaribot.adapters.qqbot.context import (
 from akaribot.adapters.qqbot.info import *
 from akaribot.adapters.qqbot.features import group_disable_read_all_message_features, resolve_features, guild_features
 from akaribot.adapters.qqbot.navigation import build_navigation
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.elements import ButtonPayload
-from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video, Raw
-from akaribot.core.builtins.session.info import EventInfo, SessionInfo
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config.base import CoreConfig
-from akaribot.core.constants.default import confirm_command_default
-from akaribot.core.logger import Logger
-from akaribot.core.utils.button_runtime import BUTTON_TOKEN_PREFIX, ButtonConsumeStatus, consume_button
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    ButtonPayload,
+    Plain,
+    Image,
+    Audio,
+    Video,
+    Raw,
+    EventInfo,
+    SessionInfo,
+    command_prefix,
+    CoreConfig,
+    confirm_command_default,
+    Logger,
+)
+from akaribot.core.api.adapters import (
+    client_cleanup,
+    client_init,
+    BUTTON_TOKEN_PREFIX,
+    ButtonConsumeStatus,
+    consume_button,
+)
 
 Bot.register_bot(client_name=client_name)
 Logger.rename(client_name)

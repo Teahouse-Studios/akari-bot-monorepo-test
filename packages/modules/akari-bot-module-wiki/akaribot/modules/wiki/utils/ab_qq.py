@@ -1,6 +1,4 @@
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
-from akaribot.core.builtins.session.internal import MessageSession
+from akaribot.core.api import MessageChain, MessageNodes, I18NContext, Plain, Url, MessageSession
 from akaribot.modules.wiki.utils.wikilib import WikiLib
 from .ab import convert_ab_to_detailed_format
 

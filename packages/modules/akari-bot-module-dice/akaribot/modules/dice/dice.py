@@ -2,10 +2,8 @@ import re
 
 import numpy as np
 
-from akaribot.core.builtins.message.internal import I18NContext
+from akaribot.core.api import I18NContext, is_int, Random
 from akaribot.modules.dice.config import DiceConfig
-from akaribot.core.utils.func import is_int
-from akaribot.core.utils.random import Random
 
 MAX_DICE_COUNT = DiceConfig.dice_limit  # 一次摇动最多的骰子数量
 MAX_OUTPUT_CNT = DiceConfig.dice_output_count  # 输出的最多数据量

@@ -8,13 +8,8 @@ from akaribot.adapters.kook.context import KOOKContextManager, KOOKFetchedContex
 from akaribot.adapters.kook.events import guild_member_joined, guild_member_left
 from akaribot.adapters.kook.info import *
 from akaribot.adapters.kook.lifecycle import run_bot
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.client.init import client_init
-from akaribot.core.config.base import CoreConfig
+from akaribot.core.api import Bot, MessageChain, Plain, Image, Audio, Video, SessionInfo, command_prefix, CoreConfig
+from akaribot.core.api.adapters import client_init
 
 Bot.register_bot(client_name=client_name)
 

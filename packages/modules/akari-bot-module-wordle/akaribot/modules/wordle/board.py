@@ -6,8 +6,7 @@ import unicodedata
 from PIL import Image, ImageDraw, ImageFont
 from attrs import define, field
 
-from akaribot.core.api import find_font
-from akaribot.core.utils.random import Random
+from akaribot.core.api import find_font, Random
 
 words_txt = Path(__file__).parent / "assets" / "words.txt"
 answers_txt = Path(__file__).parent / "assets" / "answers.txt"

@@ -78,7 +78,9 @@ jobs:
       - name: Check version bumps
         shell: bash
         run: |
-          # T6.2 版本守卫：包内有源码改动但 version 未变即失败，提交信息含 [skip-version] 时放行。
+          # T6.2 版本守卫：包内有源码改动但 version 未变即失败；提交信息最后一段写了独立的
+          # Skip-Version trailer 时按声明范围豁免（true 为全部成员，逗号分隔的分发名只豁免列出的）。
+          # 正文里顺带提到该 token 不算，避免解释功能的一句话关掉整段区间的检查。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -103,7 +105,20 @@ jobs:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
         run: |
+          # runner 只要发现任何失败就以非 0 退出，而本仓库在拆分前就有 4 个用例失败（见
+          # tools/test_baseline.txt）。若让退出码直接决定 step 成败，这一轮会立刻变红，后面的
+          # 「只读包目录」一轮根本不会执行——那正是它长期没有被跑过的原因。故此处只记录退出码，
+          # 由下一步的逐名对拍做权威判定；不用 `|| true`，也不比数量。
+          set +e
           uv run python tester.py
+          echo "tester_exit=$?" >> "$GITHUB_ENV"
+          set -e
+          cp junit.xml junit-normal.xml
+
+      - name: Check failure set against baseline
+        shell: bash
+        run: |
+          uv run python tools/check_test_baseline.py --junit junit-normal.xml --baseline tools/test_baseline.txt
 
       - name: Run tests with read-only package directories
         timeout-minutes: 60
@@ -118,13 +133,24 @@ jobs:
           # 改名即静默失去覆盖；单根不随包增减变化，代价是适配器目录也一并纳入只读。
           chmod -R a-w packages
           trap 'chmod -R u+w packages' EXIT
+          set +e
           uv run python tester.py
+          echo "readonly_tester_exit=$?" >> "$GITHUB_ENV"
+          set -e
+          cp junit.xml junit-readonly.xml
+
+      - name: Check read-only failure set against baseline
+        shell: bash
+        run: |
+          # 只读挂载下可能多出写盘类失败，故单独一份基线：两轮都必须逐名对拍，且都能被强制缩小。
+          uv run python tools/check_test_baseline.py \
+            --junit junit-readonly.xml --baseline tools/test_baseline_readonly.txt
 
       - name: Generate test report
         uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Test report
-          path: junit.xml
+          path: junit-*.xml
           reporter: java-junit
           fail-on-error: 'false'

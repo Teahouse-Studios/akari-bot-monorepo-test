@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.utils.dirty_check import check_bool
+from akaribot.core.api import Bot, check_bool
 
 
 def dark_check(message: str):

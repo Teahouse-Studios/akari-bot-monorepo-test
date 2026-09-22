@@ -1,8 +1,7 @@
 import feedparser
 from html2text import html2text
 
-from akaribot.core.builtins.message.internal import Url
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Url, get_url
 
 
 async def get_rss():

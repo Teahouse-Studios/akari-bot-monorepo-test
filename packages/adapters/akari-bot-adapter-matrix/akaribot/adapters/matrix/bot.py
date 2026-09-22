@@ -16,15 +16,20 @@ from akaribot.adapters.matrix.events import (
     should_dispatch_member_left,
 )
 from akaribot.adapters.matrix.info import *
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config.base import CoreConfig
-from akaribot.core.logger import Logger
-from akaribot.core.queue.contracts import ServerAPI
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    Plain,
+    Image,
+    Audio,
+    Video,
+    SessionInfo,
+    command_prefix,
+    CoreConfig,
+    Logger,
+    ServerAPI,
+)
+from akaribot.core.api.adapters import client_cleanup, client_init
 
 Bot.register_bot(client_name=client_name)
 

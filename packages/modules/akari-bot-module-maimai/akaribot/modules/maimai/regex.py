@@ -2,10 +2,7 @@ import re
 
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
+from akaribot.core.api import Bot, MessageChain, I18NContext, Plain, module
 from .libraries.maimaidx_apidata import get_info, search_by_alias
 from .libraries.maimaidx_mapping import *
 from .libraries.maimaidx_music import TotalList

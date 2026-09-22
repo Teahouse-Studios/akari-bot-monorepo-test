@@ -2,9 +2,7 @@ from pathlib import Path
 
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
+from akaribot.core.api import Bot, I18NContext, Plain, module
 
 # 3DS 型号数据随仓库分发、运行时只读，位于 assets/data。
 data_path = Path(__file__).parent / "assets" / "data"

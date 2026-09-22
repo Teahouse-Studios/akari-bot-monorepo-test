@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 
-from akaribot.core.utils.http import proxy
+from akaribot.core.api import proxy
 from .PhiCloudActionAsync.ActionLib import DEFAULT_TIMEOUT, checkSessionToken
 from .PhiCloudActionAsync.CloudAction import PhigrosCloud
 

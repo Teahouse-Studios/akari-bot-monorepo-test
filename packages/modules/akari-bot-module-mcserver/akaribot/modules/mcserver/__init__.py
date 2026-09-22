@@ -1,11 +1,7 @@
 import asyncio
 import re
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.component import module
-from akaribot.core.types import Param
-from akaribot.core.utils.dirty_check import check
+from akaribot.core.api import Bot, I18NContext, module, Param, check
 from .server import query_java_server, query_bedrock_server
 
 s = module(

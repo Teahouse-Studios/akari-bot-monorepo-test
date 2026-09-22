@@ -1,10 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
-from akaribot.core.api import find_font
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.logger import Logger
-from akaribot.core.utils.cache import random_cache_path
-from akaribot.core.utils.func import truncate_text
+from akaribot.core.api import find_font, Bot, Logger, random_cache_path, truncate_text
 
 from .PhiCloudActionAsync.ActionLib import getBest
 from .assets import pgr_assets_path, illustration_path, load_song_info

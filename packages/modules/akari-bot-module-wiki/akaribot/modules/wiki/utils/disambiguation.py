@@ -4,9 +4,7 @@ from urllib.parse import unquote, urlparse
 from attrs import define, field
 from bs4 import BeautifulSoup, NavigableString, Tag
 
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import ActionText, Markdown, Plain
-from akaribot.core.utils.table import escape_table_cell, resolve_table_columns
+from akaribot.core.api import MessageChain, ActionText, Markdown, Plain, escape_table_cell, resolve_table_columns
 
 DISAMBIGUATION_MAX_BLOCKS = 10
 DISAMBIGUATION_MAX_TEXT_LENGTH = 1800

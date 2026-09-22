@@ -1,9 +1,6 @@
 import uuid
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.component import module
-from akaribot.core.types import Param
-from akaribot.core.utils.random import Random
+from akaribot.core.api import Bot, module, Param, Random
 
 r = module(
     "random",

@@ -3,9 +3,8 @@ import asyncio
 import discord
 
 from akaribot.adapters.discord.info import sender_prefix_list, target_prefix_list
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config.base import CoreSecretConfig
-from akaribot.core.logger import Logger
+from akaribot.core.api import CoreSecretConfig, Logger
+from akaribot.core.api.adapters import client_cleanup, client_init
 
 proxy = CoreSecretConfig.proxy
 

@@ -1,7 +1,6 @@
 import ast
 
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.logger import Logger
+from akaribot.core.api import I18NContext, Logger
 
 # gameKey 的 type 为 Bits[5]，五位依次对应下列类别。
 KEY_CATEGORIES = ("collection_read", "single", "collection", "background", "avatar")

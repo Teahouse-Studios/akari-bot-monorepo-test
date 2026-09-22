@@ -1,6 +1,4 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.component import module
+from akaribot.core.api import Bot, I18NContext, module
 from .process import process_expression
 
 dice = module(

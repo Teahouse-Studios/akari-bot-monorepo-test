@@ -2,6 +2,7 @@
 
 import tempfile
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -348,6 +349,74 @@ def _test_compatible_packages_are_kept():
     return not rejected and remaining == ["any", "default"]
 
 
+def _test_import_index_is_order_independent():
+    """同名导入路径的取舍不随条目输入顺序变化，且始终偏向带分发 metadata 者。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        scanned = _entry("module", "sample", "akaribot.modules.sample", root)
+        installed = replace(
+            _entry("module", "sample-alias", "akaribot.modules.sample", root),
+            dist_name="akari-bot-module-sample",
+        )
+        original_index = PackageRegistry._by_import_path
+        winners = []
+        try:
+            for ordered in ({"a": scanned, "b": installed}, {"a": installed, "b": scanned}):
+                PackageRegistry._rebuild_import_index(ordered)
+                winners.append(PackageRegistry._by_import_path["akaribot.modules.sample"])
+        finally:
+            # 重建写的是全局索引，不还原会让同进程后续用例（如 test_rpc_contracts 依赖的
+            # by_import_path("…wiki")）拿到残缺注册表，报出与本次改动无关的失败。
+            PackageRegistry._by_import_path = original_index
+    return winners == [installed, installed]
+
+
+def _test_reject_incompatible_rebuilds_index_with_same_rule():
+    """补做 API 门槛后重建的索引与发现阶段同规则，不退回「最后写入者胜出」。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        installed = replace(
+            _entry("module", "sample", "akaribot.modules.sample", root),
+            dist_name="akari-bot-module-sample",
+        )
+        scanned = _entry("module", "sample-alias", "akaribot.modules.sample", root)
+        outdated = _entry("module", "outdated", "akaribot.modules.outdated", root, requires_core_api=">=99")
+        entries = {"module:sample": installed, "module:sample-alias": scanned, "module:outdated": outdated}
+        original = PackageRegistry._incompatible
+        try:
+            with _isolated_registry(entries):
+                PackageRegistry.reject_incompatible()
+                winner = PackageRegistry._by_import_path["akaribot.modules.sample"]
+        finally:
+            PackageRegistry._incompatible = original
+    return winner is installed
+
+
+def _test_locales_paths_are_order_independent():
+    """locale 搜索路径按稳定的种类/包名/分发名排序，不随条目输入顺序变化。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for name in ("zulu", "alpha", "mike"):
+            (root / name / "locales").mkdir(parents=True)
+        entries = {
+            "module:zulu": _entry("module", "zulu", "akaribot.modules.zulu", root / "zulu"),
+            "module:alpha": _entry("module", "alpha", "akaribot.modules.alpha", root / "alpha"),
+            "adapter:mike": _entry("adapter", "mike", "akaribot.adapters.mike", root / "mike"),
+        }
+        orders = [
+            entries,
+            {key: entries[key] for key in reversed(list(entries))},
+            {key: entries[key] for key in ("module:alpha", "adapter:mike", "module:zulu")},
+        ]
+        results = []
+        with patch.object(PackageRegistry, "_core_locales_dir", return_value=None):
+            for ordered in orders:
+                with _isolated_registry(ordered):
+                    results.append(PackageRegistry.locales_paths())
+    expected = [str(root / "mike" / "locales"), str(root / "alpha" / "locales"), str(root / "zulu" / "locales")]
+    return results == [expected, expected, expected]
+
+
 @func_case
 async def test_registry(tester: Tester):
     """core.registry: 发现层测试"""
@@ -371,4 +440,7 @@ async def test_registry(tester: Tester):
     await tester.test(_test_incompatible_packages_are_rejected, "API 不兼容的包被拒绝注册")
     await tester.test(_test_unparsable_api_specifier_is_rejected, "描述符不可解析时拒绝注册")
     await tester.test(_test_compatible_packages_are_kept, "API 兼容的包保留注册")
+    await tester.test(_test_import_index_is_order_independent, "导入路径索引与条目顺序无关")
+    await tester.test(_test_reject_incompatible_rebuilds_index_with_same_rule, "API 门槛补做后按同规则重建索引")
+    await tester.test(_test_locales_paths_are_order_independent, "locale 搜索路径与条目顺序无关")
     return tester

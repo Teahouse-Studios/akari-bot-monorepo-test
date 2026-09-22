@@ -15,8 +15,7 @@ from uuid import uuid4
 import httpx
 import qrcode
 
-from akaribot.core.utils.cache import random_cache_path
-from akaribot.core.utils.http import proxy
+from akaribot.core.api import random_cache_path, proxy
 
 from .PhiCloudActionAsync.ActionLib import DEFAULT_TIMEOUT
 

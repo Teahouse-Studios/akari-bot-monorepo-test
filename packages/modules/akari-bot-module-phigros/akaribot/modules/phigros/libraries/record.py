@@ -2,9 +2,7 @@ from pathlib import Path
 
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.logger import Logger
+from akaribot.core.api import Bot, I18NContext, Logger
 
 from .PhiCloudActionAsync.ActionLib import countRks, decryptSave, unzipFile
 from .assets import load_song_info, pgr_data_path, to_difficulty_table

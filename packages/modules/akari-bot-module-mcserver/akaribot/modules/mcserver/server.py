@@ -3,9 +3,7 @@ import re
 import orjson as json
 from mcstatus import BedrockServer, JavaServer
 
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import I18NContext, Logger, get_url
 
 
 async def query_java_server(address: str, raw: bool = False, showplayer: bool = False) -> str:

@@ -1,10 +1,6 @@
 from PIL import Image as PILImage
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.elements import ImageElement
-from akaribot.core.builtins.message.internal import Image, Plain, I18NContext
-from akaribot.core.component import module
+from akaribot.core.api import Bot, MessageChain, ImageElement, Image, Plain, I18NContext, module
 
 image = module("image", developers=["OasisAkari"], required_superuser=True)
 # only superusers now due to indeterminate safety

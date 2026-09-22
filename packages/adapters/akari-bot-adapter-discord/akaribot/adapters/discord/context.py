@@ -11,12 +11,8 @@ from akaribot.adapters.discord.features import features as discord_features
 from akaribot.adapters.discord.info import target_channel_prefix, target_dm_channel_prefix, target_guild_prefix
 from akaribot.adapters.discord.message_builder import build_discord_payloads, execute_discord_payloads
 from akaribot.adapters.discord.utils import get_channel_id, get_sender_id
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.session.context import ContextManager
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.session.bot_state import BotState
-from akaribot.core.logger import Logger
+from akaribot.core.api import MessageChain, MessageNodes, SessionInfo, Logger
+from akaribot.core.api.adapters import ContextManager, Features, BotState
 
 
 @dataclass(slots=True)

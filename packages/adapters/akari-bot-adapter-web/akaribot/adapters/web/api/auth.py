@@ -16,9 +16,7 @@ from jwt.exceptions import ExpiredSignatureError
 from akaribot.adapters.web.client import app, limiter, ph, jwt_secret, get_client_ip
 from akaribot.adapters.web.config import WebConfig
 from akaribot.core.constants.path import data_path
-from akaribot.core.database.models import MaliciousLoginRecords
-from akaribot.core.logger import Logger
-from akaribot.core.utils.random import SecureRandom
+from akaribot.core.api import MaliciousLoginRecords, Logger, SecureRandom
 
 PASSWORD_PATH = data_path / "private" / "web" / ".password"
 LOGIN_BLOCK_DURATION = 3600

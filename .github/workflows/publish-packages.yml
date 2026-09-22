@@ -13,7 +13,7 @@ on:
         description: 要发布的分发名，如 akari-bot-module-wiki
         required: true
       confirm:
-        description: 输入 publish 以确认发布
+        description: 输入 publish 发布并重建索引；输入 registry-only 只重建索引（修复「包已发布、索引仍旧」）
         required: true
 
 permissions:
@@ -96,14 +96,20 @@ jobs:
           # 已发布过的版本会失败；这是期望行为——同版本不得重复发布。
 
   registry:
+    # 索引必须跟着发布走：publish 失败说明什么都没发出去，此时不该动 gh-pages；
+    # 只在 registry-only 重跑时 publish 被跳过，此时索引仍要重建以修复上一次的部分成功。
     needs: publish
+    if: always() && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          ref: main
+          # 索引必须由触发发布的那个提交生成：写死分支名时，分支不存在会让 job 在 checkout
+          # 阶段就失败，分支落后于 tag 时会漏掉本次版本。push 用触发 ref（tag），
+          # 手动重跑用触发时选定的提交。
+          ref: ${{ github.event_name == 'push' && github.ref || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -120,11 +126,55 @@ jobs:
         run: |
           uv sync --locked --all-extras --dev
 
+      - name: Resolve dist and version
+        id: resolve
+        shell: bash
+        run: |
+          # registry-only 重跑时 publish 被跳过、它的 outputs 为空，故此处自行解析；
+          # 版本一律以 workspace 为准，与 publish job 的 tag 校验互为印证。
+          if [ "${{ github.event_name }}" = "push" ]; then
+            REF="${{ github.ref_name }}"
+            DIST="${REF%-v*}"
+            TAG_VERSION="${REF##*-v}"
+          else
+            DIST="${{ inputs.dist }}"
+            TAG_VERSION=""
+          fi
+          VERSION="$(uv run python - "$DIST" <<'PY'
+          import sys, tomllib
+          from pathlib import Path
+          dist = sys.argv[1]
+          for pyproject in Path("packages").glob("**/pyproject.toml"):
+              data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+              if data.get("project", {}).get("name") == dist:
+                  print(str(data["project"].get("version", "")))
+                  break
+          else:
+              raise SystemExit(f"workspace 里找不到分发 {dist}")
+          PY
+          )"
+          if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" != "$VERSION" ]; then
+            echo "tag 版本 $TAG_VERSION 与 workspace 里的 $DIST 版本 $VERSION 不一致" >&2
+            exit 1
+          fi
+          echo "dist=$DIST" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "索引目标：$DIST $VERSION"
+
       - name: Build registry.json
         shell: bash
         run: |
-          # 从刚发布的 PyPI 状态生成索引：此处只列版本与元数据，下载地址由 gh-pages 侧拼接。
-          uv run python tools/build_registry.py --output registry.json
+          # 索引由 workspace 的 pyproject 与 manifest 静态生成；输出到 checkout 之外，
+          # 否则后面切到 gh-pages 分支时这份文件会被工作树覆盖，push 上去的就不是本次产物。
+          uv run python tools/build_registry.py --output "$RUNNER_TEMP/registry.json"
+
+      - name: Verify registry carries this release
+        shell: bash
+        run: |
+          uv run python tools/verify_registry_release.py \
+            --registry "$RUNNER_TEMP/registry.json" \
+            --dist "${{ steps.resolve.outputs.dist }}" \
+            --version "${{ steps.resolve.outputs.version }}"
 
       - name: Push registry.json to gh-pages
         shell: bash
@@ -138,7 +188,7 @@ jobs:
             git checkout --orphan gh-pages
             git rm -rf . >/dev/null
           fi
-          cp "$GITHUB_WORKSPACE/registry.json" registry.json
+          cp "$RUNNER_TEMP/registry.json" registry.json
           git add registry.json
-          git commit -m "chore(registry): 由 ${{ needs.publish.outputs.dist }} ${{ needs.publish.outputs.version }} 重新生成" || echo "无变更"
+          git commit -m "chore(registry): 由 ${{ steps.resolve.outputs.dist }} ${{ steps.resolve.outputs.version }} 重新生成" || echo "无变更"
           git push origin gh-pages

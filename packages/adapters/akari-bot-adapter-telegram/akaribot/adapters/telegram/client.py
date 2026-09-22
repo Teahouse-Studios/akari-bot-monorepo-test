@@ -3,7 +3,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
 from akaribot.adapters.telegram.config import AiogramConfig, AiogramSecretConfig
-from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.api import CoreSecretConfig
 
 api_url = AiogramConfig.telegram_api_url
 token = AiogramSecretConfig.telegram_token

@@ -71,6 +71,7 @@ class LegacyProject:
     :param database_files: ``database/*.db`` 及其 ``-wal`` / ``-shm``。
     :param module_dirs: ``modules/`` 下的模块目录名。
     :param enabled_modules: 旧库 ``module_status`` 里 ``load = 1`` 的模块名。
+    :param module_status_readable: 旧库是否至少有一个读成功；为假时「没启用任何模块」不可信。
     :param adapters: 旧配置里 ``enable = true`` 的平台名。
     :param locale: 旧配置的 ``default_locale``。
     :param db_path: 旧配置的 ``db_path``。
@@ -82,6 +83,7 @@ class LegacyProject:
     database_files: tuple[Path, ...] = ()
     module_dirs: tuple[str, ...] = ()
     enabled_modules: tuple[str, ...] = ()
+    module_status_readable: bool = False
     adapters: tuple[str, ...] = ()
     locale: str = DEFAULT_LOCALE
     db_path: str = ""
@@ -94,12 +96,16 @@ class MigrationPlan:
 
     :param modules: ``(旧模块名, 新分发名, 名字来源)`` 三元组。
     :param unmapped: 没有对应分发包的旧模块名。
+    :param skipped: 旧 ``modules/`` 里有目录、但旧库显示从未装载的模块名。
+    :param status_readable: 旧库是否可读；为假时跳过清单不代表「用户没启用过」。
     :param adapters: 由旧配置推导出的适配器分发名。
     :param missing_adapters: registry 中没有对应条目的适配器分发名。
     """
 
     modules: list[tuple[str, str, str]] = field(default_factory=list)
     unmapped: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
+    status_readable: bool = False
     adapters: list[str] = field(default_factory=list)
     missing_adapters: list[str] = field(default_factory=list)
 
@@ -174,12 +180,14 @@ def _inspect(root: Path) -> LegacyProject:
     library = _read_config_facts(root)
     database_dir = root / OLD_DATABASE_DIR
     database_files = tuple(sorted(path for path in database_dir.glob("*.db*") if path.is_file()))
+    enabled_modules, status_readable = _enabled_modules(database_files)
     return LegacyProject(
         root=root,
         config_files=library.config_files,
         database_files=database_files,
         module_dirs=_module_dirs(root / OLD_MODULES_DIR),
-        enabled_modules=_enabled_modules(database_files),
+        enabled_modules=enabled_modules,
+        module_status_readable=status_readable,
         adapters=library.adapters,
         locale=library.locale,
         db_path=library.db_path,
@@ -243,9 +251,17 @@ def _module_dirs(modules_root: Path) -> tuple[str, ...]:
     return tuple(names)
 
 
-def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[str, ...]:
-    """从旧 SQLite 库的 ``module_status`` 读启用过的模块名；库不可读时返回空元组。"""
+def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...], bool]:
+    """从旧 SQLite 库的 ``module_status`` 读启用过的模块名。
+
+    读不成功与「读到了但没有启用项」必须分开：前者不能推出「用户没启用过模块」，此时按空清单
+    安装会静默丢掉用户的模块，只能要求人工选择。
+
+    :param database_files: 旧项目的库文件。
+    :return: 二元组——启用过的模块名；是否至少有一个库读成功。
+    """
     names: list[str] = []
+    readable = False
     for path in database_files:
         if not path.name.endswith(".db"):
             continue
@@ -254,8 +270,9 @@ def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[str, ...]:
                 rows = conn.execute("SELECT module_name FROM module_status WHERE load = 1").fetchall()
         except sqlite3.Error:
             continue
+        readable = True
         names.extend(str(row[0]) for row in rows if row and row[0])
-    return tuple(dict.fromkeys(names))
+    return tuple(dict.fromkeys(names)), readable
 
 
 def _target_root(project_root: Path, instance: Path | None) -> Path:
@@ -303,26 +320,28 @@ def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
 
 
 def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engine.RegistryCatalog) -> MigrationPlan:
-    """由旧项目事实与 registry 映射算出迁移计划。"""
+    """由旧项目事实与 registry 映射算出迁移计划。
+
+    安装候选**只取旧库 ``module_status.load = 1`` 的模块**。旧版单仓库的 ``modules/`` 本来就含全部
+    官方模块，按目录决定安装会把四十余个用户从未启用的模块连同重依赖一起装进新实例，还会把
+    「未映射」与「未启用」混成同一类诊断。目录改作诊断来源：确认源码/数据是否存在，并列出
+    「有目录但未装载」供操作者核对。
+    """
     known_adapters = {engine.canonical(entry.dist) for entry in catalog.entries.values() if entry.kind == "adapter"}
-    plan = MigrationPlan()
+    plan = MigrationPlan(status_readable=legacy.module_status_readable)
     for platform in legacy.adapters:
         dist = f"{ADAPTER_DIST_PREFIX}{platform}"
         plan.adapters.append(dist)
         if engine.canonical(dist) not in known_adapters:
             plan.missing_adapters.append(dist)
-    candidates = sorted(set(legacy.module_dirs) | set(legacy.enabled_modules))
-    for name in candidates:
-        sources: list[str] = []
-        if name in legacy.module_dirs:
-            sources.append(i18n.t("cli.migrate.source.dir"))
-        if name in legacy.enabled_modules:
-            sources.append(i18n.t("cli.migrate.source.database"))
+    for name in sorted(set(legacy.enabled_modules)):
         dist = index.get(_legacy_key(name))
         if dist:
-            plan.modules.append((name, dist, "＋".join(sources)))
+            plan.modules.append((name, dist, i18n.t("cli.migrate.source.database")))
         else:
             plan.unmapped.append(name)
+    enabled_keys = {_legacy_key(name) for name in legacy.enabled_modules}
+    plan.skipped = sorted(name for name in legacy.module_dirs if _legacy_key(name) not in enabled_keys)
     return plan
 
 
@@ -569,6 +588,9 @@ def _render_report(
         lines += ["", i18n.t("cli.migrate.report.modules_note")]
     else:
         lines.append(i18n.t("cli.migrate.report.no_modules"))
+    if plan.skipped:
+        items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in plan.skipped)
+        lines += ["", i18n.t("cli.migrate.report.skipped", items=items)]
     lines += ["", i18n.t("cli.migrate.report.adapters_heading"), ""]
     if plan.adapters:
         for dist in plan.adapters:
@@ -596,6 +618,9 @@ def _render_report(
         "",
     ]
     manual: list[str] = []
+    if not plan.status_readable:
+        # 库读不到时「没启用任何模块」不可信：不能替用户决定装什么，只能把目录清单交给他核对。
+        manual.append(i18n.t("cli.migrate.report.manual_status_unreadable"))
     if plan.unmapped:
         items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in plan.unmapped)
         manual.append(i18n.t("cli.migrate.report.manual_unmapped", items=items))
@@ -643,6 +668,7 @@ def _print_plan(legacy: LegacyProject, target: Path, plan: MigrationPlan) -> Non
     none = i18n.t("cli.migrate.none")
     table.add_row(i18n.t("cli.migrate.plan.adapters"), separator.join(plan.adapters) or none)
     table.add_row(i18n.t("cli.migrate.plan.modules"), separator.join(plan.module_dists) or none)
+    table.add_row(i18n.t("cli.migrate.plan.skipped"), separator.join(plan.skipped) or none)
     table.add_row(i18n.t("cli.migrate.plan.unmapped"), separator.join(plan.unmapped) or none)
     console.print(table)
 

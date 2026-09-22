@@ -5,15 +5,19 @@ import time
 
 from tenacity import retry, stop_after_attempt
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import Image, I18NContext
-from akaribot.core.component import module
-from akaribot.core.utils.game import PlayState, GAME_EXPIRED
-from akaribot.core.logger import Logger
-from akaribot.core.utils.petal import gained_petal
-from akaribot.core.utils.cache import random_cache_path
-from akaribot.core.utils.http import get_url
-from akaribot.core.utils.random import Random
+from akaribot.core.api import (
+    Bot,
+    Image,
+    I18NContext,
+    module,
+    PlayState,
+    GAME_EXPIRED,
+    Logger,
+    gained_petal,
+    random_cache_path,
+    get_url,
+    Random,
+)
 from .coloring import element_colors
 
 ID_RANGE_MAX = 200000000  # 数据库增长速度很快，可手动在此修改 ID 区间

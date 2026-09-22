@@ -1,13 +1,18 @@
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Url
-from akaribot.core.component import module
-from akaribot.core.utils.dirty_check import check_bool, rickroll
-from akaribot.core.utils.func import is_int
-from akaribot.core.utils.http import get_url
-from akaribot.core.utils.image import cb64imglst
-from akaribot.core.utils.web_render import web_render, ElementScreenshotOptions
+from akaribot.core.api import (
+    Bot,
+    I18NContext,
+    Url,
+    module,
+    check_bool,
+    rickroll,
+    is_int,
+    get_url,
+    cb64imglst,
+    web_render,
+    ElementScreenshotOptions,
+)
 
 t = module(
     "tweet",

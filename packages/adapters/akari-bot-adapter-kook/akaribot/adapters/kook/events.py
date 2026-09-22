@@ -1,6 +1,5 @@
 from akaribot.adapters.kook.info import client_name, sender_prefix, target_guild_prefix
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.session.info import EventInfo
+from akaribot.core.api import Bot, EventInfo
 
 
 async def guild_member_joined(

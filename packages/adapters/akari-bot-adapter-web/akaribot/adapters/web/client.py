@@ -10,12 +10,9 @@ from slowapi import Limiter
 
 from akaribot.adapters.web.config import WebConfig, WebSecretConfig
 from akaribot.adapters.web.info import *
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config import CFGManager
+from akaribot.core.api import CFGManager, SenderUnionInfo, Logger, SecureRandom
+from akaribot.core.api.adapters import client_cleanup, client_init
 from akaribot.core.constants.path import assets_path, data_path
-from akaribot.core.database.models import SenderUnionInfo
-from akaribot.core.logger import Logger
-from akaribot.core.utils.random import SecureRandom
 
 webui_path = data_path / "webui"
 if (webui_path / "dist").exists():

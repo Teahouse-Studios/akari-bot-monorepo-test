@@ -1,6 +1,4 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image
-from akaribot.core.component import module
+from akaribot.core.api import Bot, ActionText, I18NContext, Image, module
 from akaribot.modules.cytoid.database.models import CytoidBindInfo
 from .profile import cytoid_profile
 from .rating import get_rating

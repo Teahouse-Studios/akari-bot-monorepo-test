@@ -1,10 +1,6 @@
 from typing import NoReturn
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import ActionText, ButtonFrame, I18NContext
-from akaribot.core.builtins.message.elements import ButtonRows
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.utils.button import arrange_buttons
+from akaribot.core.api import Bot, ActionText, ButtonFrame, I18NContext, ButtonRows, command_prefix, arrange_buttons
 
 # 未设置默认 Wiki 时向用户推荐的 Wiki，元素为（显示名称，API 端点地址）。
 RECOMMENDED_WIKIS: list[tuple[str, str]] = [

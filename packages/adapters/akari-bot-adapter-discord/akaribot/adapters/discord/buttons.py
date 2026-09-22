@@ -4,10 +4,8 @@ from collections.abc import Awaitable, Callable
 
 import discord
 
-from akaribot.core.builtins.message.elements import ActionTextElement, ButtonRows
-from akaribot.core.logger import Logger
-from akaribot.core.utils.button_runtime import register_button_rows
-from akaribot.core.utils.random import Random
+from akaribot.core.api import ActionTextElement, ButtonRows, Logger, Random
+from akaribot.core.api.adapters import register_button_rows
 
 ButtonClickHandler = Callable[[discord.Interaction, discord.ui.Button], Awaitable[None]]
 ActionTextSubmitHandler = Callable[[discord.Interaction, str, bool, discord.Message | None], Awaitable[None]]

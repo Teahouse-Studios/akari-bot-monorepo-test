@@ -6,10 +6,7 @@ from urllib.parse import urlencode
 
 import orjson
 
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import I18NContext, Url
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url, post_url
+from akaribot.core.api import MessageChain, I18NContext, Url, Logger, get_url, post_url
 from akaribot.modules.maimai.config import MaimaiConfig, MaimaiSecretConfig
 from ..database.models import DivingProberBindInfo
 

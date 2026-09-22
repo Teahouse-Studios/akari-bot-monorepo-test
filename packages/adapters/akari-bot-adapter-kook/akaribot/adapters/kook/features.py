@@ -1,5 +1,5 @@
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.config.base import CoreConfig
+from akaribot.core.api import CoreConfig
+from akaribot.core.api.adapters import Features
 
 dirty_word_check = CoreConfig.enable_dirty_check
 

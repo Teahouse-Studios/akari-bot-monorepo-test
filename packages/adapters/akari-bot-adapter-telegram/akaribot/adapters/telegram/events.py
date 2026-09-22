@@ -1,8 +1,7 @@
 from datetime import datetime
 
 from akaribot.adapters.telegram.info import client_name, sender_prefix, target_prefix
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.session.info import EventInfo
+from akaribot.core.api import Bot, EventInfo
 
 
 async def member_joined(

@@ -9,11 +9,14 @@ from akaribot.core.version import check_python_version  # skipcq
 
 check_python_version()  # noqa
 
+import argparse
 import atexit
 import os
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 from loguru import logger
 
@@ -154,6 +157,67 @@ Logger = TestLoggingLogger("TEST")
 REPO_ROOT_ENV = "AKARI_REPO_ROOT"
 
 
+@dataclass(frozen=True)
+class RunOptions:
+    """本次运行的选择项。
+
+    :param paths: 只跑这些测试文件或目录；空元组表示按默认根收集。
+    :param cases: 只跑名字里含这些子串的 ``func_case``；空元组表示全部。
+    :param ci: 是否按 CI 模式运行（无 Expectation 的用例跳过而不是等待人工输入）。
+    :param coverage: 是否启用覆盖率收集。
+    """
+
+    paths: tuple[str, ...] = ()
+    cases: tuple[str, ...] = ()
+    ci: bool = False
+    coverage: bool = False
+
+
+def parse_options(argv: Sequence[str] | None = None) -> RunOptions:
+    """解析命令行选项。
+
+    ``--ci`` 与 ``--coverage`` 必须在这里就被识别：``IS_CI`` / ``ENABLE_COVERAGE`` 在**导入期**
+    读取环境变量，等 ``main()`` 再解析已经太晚——这正是「选项拼进了 argv 却完全不生效」的原因。
+
+    :param argv: 参数列表；缺省取 ``sys.argv[1:]``。
+    :return: 解析结果。
+    :raises SystemExit: ``--help`` 或参数不合法。
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m akaribot.testing",
+        description="运行 AkariBot 自研测试框架的全部或部分用例。",
+    )
+    parser.add_argument("paths", nargs="*", help="只跑这些测试文件或目录，缺省跑全部默认根")
+    parser.add_argument("--case", action="append", default=[], metavar="NAME", help="只跑名字含该子串的用例，可重复")
+    parser.add_argument("--ci", action="store_true", help="按 CI 模式运行，跳过需要人工复核的用例")
+    parser.add_argument("--coverage", action="store_true", help="启用覆盖率收集")
+    args = parser.parse_args(argv)
+    return RunOptions(
+        paths=tuple(args.paths),
+        cases=tuple(args.case),
+        ci=bool(args.ci),
+        coverage=bool(args.coverage),
+    )
+
+
+def _prescan_mode_flags(argv: Sequence[str]) -> tuple[bool, bool]:
+    """只挑出影响导入期行为的两个开关。
+
+    完整解析留到 :func:`run`：本模块也会被 ``tester.py`` 等入口以各自的 argv 导入，在导入期做
+    严格解析会让那些入口因为不相干的参数直接退出。这里只做包含判断，不认识的一律忽略。
+
+    :param argv: 参数列表。
+    :return: 二元组——是否要求 CI 模式；是否要求覆盖率。
+    """
+    return "--ci" in argv, "--coverage" in argv
+
+
+# 本次运行的选择项；由 run() 严格解析后覆盖。main() 里的收集与筛选都在其之后读它。
+OPTIONS = RunOptions()
+
+_MODE_CI, _MODE_COVERAGE = _prescan_mode_flags(sys.argv[1:])
+
+
 def _resolve_repo_root() -> Path | None:
     """定位源码检出的仓库根，安装形态下返回 None。
 
@@ -204,8 +268,8 @@ os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
 if source_import_roots := _source_import_roots():
     os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in source_import_roots))
 
-IS_CI = os.environ.get("CI", "0") == "1"
-ENABLE_COVERAGE = os.environ.get("COVERAGE", "0") == "1"
+IS_CI = os.environ.get("CI", "0") == "1" or _MODE_CI
+ENABLE_COVERAGE = os.environ.get("COVERAGE", "0") == "1" or _MODE_COVERAGE
 MAX_CONCURRENT = 1
 
 # Coverage 集成
@@ -295,11 +359,36 @@ def _test_module_key(path: str) -> str:
     return "tests_" + "_".join(part.replace("-", "_") for part in relative.with_suffix("").parts)
 
 
-def _collect_test_files() -> list[str]:
-    """收集全部待运行的测试文件。
+def _explicit_test_files() -> list[str]:
+    """把 ``OPTIONS.paths`` 展开成测试文件列表。
+
+    目录递归取 ``*.py``，文件按原样收；路径按仓库根解析，相对路径因此与 ``tests/run_one.py``
+    的写法一致。给错路径时返回空列表，由调用方报「没有匹配的测试文件」——静默跑全量会让
+    ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
 
     :return: 文件路径列表，按路径排序且去重。
     """
+    files: list[str] = []
+    for raw in OPTIONS.paths:
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute() and REPO_ROOT is not None:
+            candidate = REPO_ROOT / candidate
+        if candidate.is_dir():
+            files.extend(glob.glob(os.path.join(candidate, "**", "*.py"), recursive=True))
+        elif candidate.is_file():
+            files.append(str(candidate))
+    return sorted({str(Path(path).resolve()) for path in files})
+
+
+def _collect_test_files() -> list[str]:
+    """收集待运行的测试文件。
+
+    给了位置参数就只跑这些路径；否则按默认根收集。两种情形都按路径排序且去重。
+
+    :return: 文件路径列表。
+    """
+    if OPTIONS.paths:
+        return _explicit_test_files()
     files: list[str] = []
     for root in _test_roots():
         files.extend(glob.glob(os.path.join(root, "**", "*.py"), recursive=True))
@@ -522,9 +611,19 @@ async def main(inspect_module=inspect):
             for _, fn in inspect_module.getmembers(mod, inspect_module.isfunction):
                 if not getattr(fn, "_func_case", False):
                     continue
+                if OPTIONS.cases and not any(needle in fn.__name__ for needle in OPTIONS.cases):
+                    continue
 
                 Logger.trace(f"main() found func_case: {fn.__name__} in {path}")
                 func_tasks.append((fn, path))
+
+        if OPTIONS.cases and not func_tasks:
+            Logger.error(f"--case 没有匹配到任何入口：{'、'.join(OPTIONS.cases)}")
+            failed += 1
+            total += 1
+            junit_testcase = JUnitTestCase(name="case_filter", classname="TestCollection")
+            junit_testcase.error = ("No matching case", f"--case {list(OPTIONS.cases)} matched nothing")
+            junit_func_suite.add_testcase(junit_testcase)
 
         Logger.trace(f"main() running {len(func_tasks)} func tests sequentially")
         func_results = []
@@ -813,5 +912,10 @@ async def main(inspect_module=inspect):
 
 
 def run() -> int:
-    """同步入口：跑完全部用例并返回进程退出码。"""
+    """同步入口：解析参数，跑完选中的用例并返回进程退出码。"""
+    global OPTIONS
+    OPTIONS = parse_options()
+    if OPTIONS.paths and not _explicit_test_files():
+        Logger.error(f"位置参数没有匹配到任何测试文件：{'、'.join(OPTIONS.paths)}")
+        return 1
     return asyncio.run(main())

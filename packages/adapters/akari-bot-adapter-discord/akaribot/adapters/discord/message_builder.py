@@ -7,9 +7,9 @@ from attrs import define, field
 
 from akaribot.adapters.discord.info import client_name, target_channel_prefix
 from akaribot.adapters.discord.utils import convert_embed
-from akaribot.core.builtins.message.mention import render_at_code
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.elements import (
+from akaribot.core.api import (
+    render_at_code,
+    MessageChain,
     ActionTextElement,
     ButtonFrameElement,
     ButtonRows,
@@ -19,10 +19,10 @@ from akaribot.core.builtins.message.elements import (
     PlainElement,
     AudioElement,
     VideoElement,
+    SessionInfo,
+    Logger,
 )
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.logger import Logger
-from akaribot.core.utils.media import resolve_media_path
+from akaribot.core.api.adapters import resolve_media_path
 
 
 @define

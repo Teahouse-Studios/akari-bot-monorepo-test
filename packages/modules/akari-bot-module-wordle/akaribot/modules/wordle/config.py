@@ -1,4 +1,4 @@
-from akaribot.core.config.decorator import on_module_config
+from akaribot.core.api import on_module_config
 
 
 @on_module_config("wordle")

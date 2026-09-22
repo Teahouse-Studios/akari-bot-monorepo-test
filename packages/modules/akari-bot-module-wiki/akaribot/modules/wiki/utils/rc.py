@@ -1,11 +1,7 @@
 import re
 import urllib.parse
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain, escape_special_char
-from akaribot.core.builtins.message.internal import I18NContext, Plain, Url
-from akaribot.core.utils.dirty_check import check
-from akaribot.core.logger import Logger
+from akaribot.core.api import Bot, MessageChain, escape_special_char, I18NContext, Plain, Url, check, Logger
 from akaribot.modules.wiki.utils.utils import strptime2ts
 from akaribot.modules.wiki.utils.wikilib import WikiLib, WikiInfo
 

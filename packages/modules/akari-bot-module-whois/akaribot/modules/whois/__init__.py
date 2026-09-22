@@ -2,10 +2,7 @@ from datetime import UTC
 
 from whois import whois
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.logger import Logger
+from akaribot.core.api import Bot, I18NContext, Plain, module, Logger
 
 
 def format_lst(input_):

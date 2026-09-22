@@ -3,7 +3,7 @@ import traceback
 import orjson
 from ddgs import DDGS
 
-from akaribot.core.config.base import CoreSecretConfig
+from akaribot.core.api import CoreSecretConfig
 
 proxy = CoreSecretConfig.proxy
 

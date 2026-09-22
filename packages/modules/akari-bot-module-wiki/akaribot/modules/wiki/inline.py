@@ -3,17 +3,25 @@ import urllib.parse
 
 import filetype
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import ButtonFrame, I18NContext, Image, Audio, Video, Url
-from akaribot.core.component import module
-from akaribot.core.utils.dirty_check import check
-from akaribot.core.logger import Logger
-from akaribot.core.utils.func import is_int
-from akaribot.core.utils.http import download
-from akaribot.core.utils.image import svg_render
-from akaribot.core.utils.image_table import image_table_render, ImageTable
-from akaribot.core.utils.button import build_button_rows
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    ButtonFrame,
+    I18NContext,
+    Image,
+    Audio,
+    Video,
+    Url,
+    module,
+    check,
+    Logger,
+    is_int,
+    download,
+    svg_render,
+    image_table_render,
+    ImageTable,
+    build_button_rows,
+)
 from .database.models import WikiTargetInfo
 from .utils.mapping import generate_screenshot_v2_blocklist
 from .utils.forum import build_forum_markdown_table, build_section_markdown_table

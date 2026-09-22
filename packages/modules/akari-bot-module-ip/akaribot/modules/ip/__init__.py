@@ -2,11 +2,7 @@ import ipaddress
 import socket
 from typing import Any
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Bot, I18NContext, Plain, module, Logger, get_url
 
 ip = module("ip", developers=["Dianliang233"], doc=True)
 

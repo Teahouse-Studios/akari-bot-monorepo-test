@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Mapping, NoReturn, Sequence
 
-import click
 import tomlkit
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
@@ -24,6 +23,13 @@ from rich.console import Console
 from typer.core import TyperGroup
 
 from akaribot.cli import i18n
+
+# 被覆写方法的 ctx 参数类型。typer ≥0.27 把 click 内置为 ``typer._click`` 且不再声明外部 click
+# 依赖，``click.Context`` 既不是同一个类、干净安装里也 import 不到（CLI wheel 曾因此装完即崩）。
+try:
+    from typer._click import Context as ClickContext
+except ImportError:  # typer <0.27 用真实 click，该版本由 typer 自己声明这条依赖
+    from click import Context as ClickContext
 
 console = Console()
 err_console = Console(stderr=True)
@@ -48,11 +54,11 @@ class FlatCommandGroup(TyperGroup):
     allow_interspersed_args = True
     passthrough_extra_args = False
 
-    def collect_usage_pieces(self, ctx: click.Context) -> list[str]:
+    def collect_usage_pieces(self, ctx: ClickContext) -> list[str]:
         """usage 里不追加子命令占位符。"""
         return super(TyperGroup, self).collect_usage_pieces(ctx)
 
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    def parse_args(self, ctx: ClickContext, args: list[str]) -> list[str]:
         """把剩余 token 交给唯一的命令；不支持透传时按多余参数报错。
 
         剩余 token 存在上下文私有字段 ``_protected_args``（click 8.4 与 typer 0.27 均如此），
@@ -234,6 +240,8 @@ class PackageInfo:
     :param requires_core_api: 声明的 core API 区间。
     :param provides_modules: 该包注册的模块名。
     :param owned_tables: 该包拥有的数据表，供 ``--purge-data`` 使用。
+    :param config_table: 该包在 ``config/`` 下的配置表名（``module_wiki`` 之类）；无配置时为空串。
+        ``--purge-data`` 靠它定位扁平配置文件，不能由 ``provides_modules`` 猜文件名。
     :param dependencies: 该包声明的依赖项。
     :param dependents: 依赖该包的分发名，core 侧可缺省。
     :param summary: 一句话简介，取自分发包元数据；取不到时为空串。
@@ -249,6 +257,7 @@ class PackageInfo:
     summary: str = ""
     provides_modules: tuple[str, ...] = ()
     owned_tables: tuple[str, ...] = ()
+    config_table: str = ""
     dependencies: tuple[DependencyInfo, ...] = ()
     dependents: tuple[str, ...] = ()
 
@@ -287,6 +296,7 @@ class PackageInfo:
             summary=_first_str(data, ("summary", "description")) or _first_str(manifest, ("summary",)) or "",
             provides_modules=_as_tuple(data.get("provides_modules")) or _as_tuple(manifest.get("provides_modules")),
             owned_tables=_as_tuple(data.get("owned_tables")) or _as_tuple(manifest.get("owned_tables")),
+            config_table=_first_str(data, ("config_table",)) or _first_str(manifest, ("config_table",)) or "",
             dependencies=_parse_dependencies(data.get("dependencies", data.get("requires", data.get("requires_dist")))),
             dependents=_parse_names(data.get("dependents", data.get("required_by"))),
         )
@@ -553,16 +563,50 @@ class InstanceMeta:
 
 @dataclass(frozen=True)
 class NotifyResult:
-    """热装载通知的结果。
+    """热装载或热拆卸通知的结果。
 
     :param attempted: 是否尝试了 RPC。
-    :param delivered: RPC 是否成功送达。
+    :param delivered: 实例是否已确认完成变更。
     :param detail: 面向用户的说明。
+    :param status: core 入口回传的状态：``delivered`` / ``rejected`` / ``not_running`` / ``timeout`` /
+        ``error``；未尝试投递（实例未运行）时为空串。
     """
 
     attempted: bool
     delivered: bool
     detail: str
+    status: str = ""
+
+    @property
+    def blocks_uninstall(self) -> bool:
+        """是否禁止继续卸载分发。
+
+        已尝试投递但未确认热拆卸时为真：运行中的实例可能仍持有旧模块、任务与数据库 context，
+        此时删除分发会留下指向已删代码的运行态。实例未运行（未尝试投递）不算阻塞。
+        """
+        return self.attempted and not self.delivered
+
+
+def _parse_notify_payload(stdout: str | None) -> Mapping[str, Any] | None:
+    """解析 core 入口回传的结果 JSON。
+
+    入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
+    ``status`` 的对象；找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
+
+    :param stdout: 子进程的标准输出。
+    :return: 结果映射；不可解析时为 ``None``。
+    """
+    for line in reversed((stdout or "").splitlines()):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except ValueError:
+            continue
+        if isinstance(payload, Mapping) and "status" in payload:
+            return payload
+    return None
 
 
 class Instance:
@@ -847,11 +891,12 @@ class Instance:
             return False
 
     def notify_package_change(self, action: str, dist: str) -> NotifyResult:
-        """把安装或卸载事件通知运行中的机器人，触发热装载。
+        """把安装或卸载事件通知运行中的机器人，触发热装载或热拆卸。
 
-        沿用 T5.3 的 RPC 契约 ``server.post_package_install`` / ``server.post_package_remove``，
-        经假定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 送达。
-        未运行时跳过；入口缺失时只告警，安装结果不回滚。
+        经固定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 送达 T5.3 的 RPC 契约
+        ``server.post_package_install`` / ``server.post_package_remove``，并解析其回传 JSON 区分
+        「未运行」「投递失败」「远端拒绝」「超时」。未运行时跳过；入口缺失或投递失败只告警，安装
+        结果不回滚，卸载方须先看 :attr:`NotifyResult.blocks_uninstall`。
 
         :param action: ``install`` 或 ``remove``。
         :param dist: 分发名。
@@ -865,18 +910,43 @@ class Instance:
         try:
             proc = self.run_core_capture("rpc", remote, dist, timeout=None)
         except CliError as exc:
-            return NotifyResult(True, False, i18n.t("cli.instance.notify_not_delivered", error=exc))
-        if proc.returncode == 0:
-            return NotifyResult(True, True, i18n.t("cli.instance.notify_delivered", remote=remote))
+            return NotifyResult(True, False, i18n.t("cli.instance.notify_not_delivered", error=exc), "error")
+
+        payload = _parse_notify_payload(proc.stdout)
+        if payload is not None:
+            status = str(payload.get("status") or "")
+            detail = str(payload.get("detail") or "").strip()
+            if status == "delivered" and proc.returncode == 0:
+                return NotifyResult(True, True, i18n.t("cli.instance.notify_delivered", remote=remote), status)
+            if status == "not_running":
+                return NotifyResult(True, False, i18n.t("cli.instance.notify_server_absent", detail=detail), status)
+            if status == "rejected":
+                return NotifyResult(
+                    True, False, i18n.t("cli.instance.notify_rejected", remote=remote, detail=detail), status
+                )
+            if status == "timeout":
+                return NotifyResult(
+                    True, False, i18n.t("cli.instance.notify_timeout", remote=remote, detail=detail), status
+                )
+            if status == "error":
+                return NotifyResult(True, False, i18n.t("cli.instance.notify_not_delivered", error=detail), status)
+
+        # 回传不可解析（core 版本过旧、入口缺失、进程被信号杀死）时退回退出码与 stderr 的既有解释。
         detail = self._explain_failure(proc, i18n.t("cli.instance.notify_failed", remote=remote))
-        return NotifyResult(True, False, detail)
+        return NotifyResult(True, False, detail, "error")
 
     def _run(self, argv: list[str], **env: str) -> int:
         """执行命令并继承标准流。"""
         if not self.python_exists:
             raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
-            completed = subprocess.run(argv, env=self.core_env(**env), check=False)  # noqa: S603
+            # 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不锚定实例根就会落到调用目录。
+            completed = subprocess.run(  # noqa: S603
+                argv,
+                env=self.core_env(**env),
+                cwd=str(self.root),
+                check=False,
+            )
         except OSError as exc:
             raise CliError(i18n.t("cli.instance.exec_failed", argv0=argv[0], error=exc)) from exc
         return completed.returncode
@@ -889,6 +959,7 @@ class Instance:
             return subprocess.run(  # noqa: S603
                 argv,
                 env=self.core_env(**env),
+                cwd=str(self.root),
                 check=False,
                 capture_output=True,
                 text=True,

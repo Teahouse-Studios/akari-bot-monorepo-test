@@ -1,11 +1,7 @@
 import re
 import time
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import I18NContext, Image, Plain
-from akaribot.core.component import module
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Bot, MessageChain, I18NContext, Image, Plain, module, get_url
 
 API = "https://bd.bangbang93.com/openbmclapi"
 TOP_LIMIT = 10

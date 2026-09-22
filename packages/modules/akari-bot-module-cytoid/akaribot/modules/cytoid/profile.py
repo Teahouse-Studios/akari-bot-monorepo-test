@@ -1,8 +1,6 @@
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import ActionText, I18NContext, Image, Plain
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Bot, ActionText, I18NContext, Image, Plain, get_url
 from akaribot.modules.cytoid.database.models import CytoidBindInfo
 
 

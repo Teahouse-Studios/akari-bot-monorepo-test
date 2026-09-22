@@ -1,5 +1,5 @@
 from akaribot.adapters.qqbot.config import QQBotConfig
-from akaribot.core.utils.http import url_pattern
+from akaribot.core.api import url_pattern
 
 enable_send_url = QQBotConfig.qq_bot_enable_send_url
 

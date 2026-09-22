@@ -35,20 +35,22 @@ from akaribot.core.builtins.filter import (
     write_filter_words,
 )
 from akaribot.core.constants.path import filter_words_path
-from akaribot.core.logger import Logger
+from akaribot.core.api import (
+    Logger,
+    ServerAPI,
+    GlobalURLAllowlist,
+    GlobalURLBlocklist,
+    URLRule,
+    URLRuleError,
+    evaluate_url_policy,
+)
 from akaribot.core.paths import Paths
-from akaribot.core.queue.contracts import ServerAPI
 from akaribot.core.utils.url_audit import (
     MAX_FILE_BYTES,
     MAX_REGEX_RULES,
     MAX_RULE_LENGTH,
     MAX_RULES,
     MAX_URL_LENGTH,
-    GlobalURLAllowlist,
-    GlobalURLBlocklist,
-    URLRule,
-    URLRuleError,
-    evaluate_url_policy,
     normalize_url,
     parse_rule,
 )

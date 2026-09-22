@@ -5,10 +5,8 @@ from typing import Any
 import orjson
 
 from akaribot.adapters.onebot.info import sender_prefix
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain, Image, Audio, Video, Raw
-from akaribot.core.builtins.temp import Temp
-from akaribot.core.logger import Logger
+from akaribot.core.api import MessageChain, Plain, Image, Audio, Video, Raw, Logger
+from akaribot.core.api.adapters import Temp
 from .client import aiocqhttp_bot
 
 

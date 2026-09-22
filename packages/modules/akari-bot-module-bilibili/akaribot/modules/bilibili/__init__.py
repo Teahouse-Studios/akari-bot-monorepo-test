@@ -2,11 +2,7 @@ import re
 
 import httpx
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.elements import PlainElement, RawElement
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.component import module
-from akaribot.core.types import Param
+from akaribot.core.api import Bot, PlainElement, RawElement, I18NContext, module, Param
 from .bili_api import get_video_info
 
 bili = module(

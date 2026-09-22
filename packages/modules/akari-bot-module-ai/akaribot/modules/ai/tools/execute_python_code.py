@@ -6,7 +6,7 @@ from e2b_code_interpreter import AsyncSandbox
 from e2b_code_interpreter.exceptions import TimeoutException
 
 from akaribot.modules.ai.config import AiConfigSecret
-from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.api import random_cache_path
 
 api_key = AiConfigSecret.e2b_api_key
 

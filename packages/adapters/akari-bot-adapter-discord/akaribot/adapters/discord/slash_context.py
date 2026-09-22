@@ -6,10 +6,8 @@ from akaribot.adapters.discord.buttons import build_discord_button_view
 from akaribot.adapters.discord.context import DiscordContextManager
 from akaribot.adapters.discord.features import slash_features
 from akaribot.adapters.discord.message_builder import build_discord_payloads
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.logger import Logger
+from akaribot.core.api import MessageChain, MessageNodes, SessionInfo, Logger
+from akaribot.core.api.adapters import Features
 
 
 class DiscordSlashContextManager(DiscordContextManager):

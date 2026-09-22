@@ -73,6 +73,8 @@ OFFICIAL_MODULES_PREFIX = ("packages", "modules")
 MODULES_ROOT = "akaribot.modules"
 ADAPTERS_ROOT = "akaribot.adapters"
 CORE_ROOT = "akaribot.core"
+# core 分发自身的目录；其 bundled 模块不计入「模块包走没走门面」的观察值。
+CORE_DIST_RELATIVE = "packages/akari-bot-core"
 CORE_API_ROOT = "akaribot.core.api"
 # 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根与其余子路径都算内部实现。
 MODULE_PUBLIC_SEGMENT = "api"
@@ -602,7 +604,11 @@ def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool,
     deep_core = 0
     for ref in resolve_imports(tree, location.package):
         found.extend(check_import(location, ref, workspace))
-        if location.layer == LAYER_MODULES and under(ref.target, CORE_ROOT) and not under(ref.target, CORE_API_ROOT):
+        # core 自带的 bundled 模块在路径上也属模块层，但它们随 core 同版本发布、与 core 内部同步
+        # 重构，不是「模块包绑定 core 内部目录」这件事；算进来会让观察值长期停在几百。
+        if location.layer != LAYER_MODULES or location.dist_relative == CORE_DIST_RELATIVE:
+            continue
+        if under(ref.target, CORE_ROOT) and not under(ref.target, CORE_API_ROOT):
             deep_core += 1
     return found, True, deep_core
 

@@ -5,8 +5,7 @@ import orjson
 from tortoise import fields
 from tortoise.transactions import in_transaction
 
-from akaribot.core.database.base import DBModel
-from akaribot.core.database.models import TargetUnionInfo, UNION_SCOPE_TARGET, union_mutation
+from akaribot.core.api import DBModel, TargetUnionInfo, UNION_SCOPE_TARGET, union_mutation
 
 table_prefix = "module_wiki_"
 

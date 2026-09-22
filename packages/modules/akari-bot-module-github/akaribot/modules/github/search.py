@@ -1,7 +1,4 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import Plain, I18NContext, Url
-from akaribot.core.utils.dirty_check import rickroll
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Bot, Plain, I18NContext, Url, rickroll, get_url
 from akaribot.modules.github.utils import dirty_check, dark_check
 
 SEARCH_LIMIT = 5

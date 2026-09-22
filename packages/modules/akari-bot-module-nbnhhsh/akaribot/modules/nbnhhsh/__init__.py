@@ -1,11 +1,6 @@
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.utils.dirty_check import check
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import post_url
+from akaribot.core.api import Bot, I18NContext, Plain, module, check, Logger, post_url
 
 n = module(
     "nbnhhsh", desc="{I18N:nbnhhsh.help.desc}", doc=True, developers=["Dianliang233"], support_languages=["zh_cn"]

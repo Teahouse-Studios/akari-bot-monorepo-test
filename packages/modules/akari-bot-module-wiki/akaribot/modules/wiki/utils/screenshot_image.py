@@ -7,10 +7,7 @@ from akari_bot_webrender.functions.options import SectionScreenshotOptions, Lega
 from bs4 import BeautifulSoup, Comment
 
 from akaribot.core.constants.path import cache_path
-from akaribot.core.logger import Logger
-from akaribot.core.utils.http import get_url
-from akaribot.core.utils.image import cb64imglst
-from akaribot.core.utils.web_render import web_render, ElementScreenshotOptions
+from akaribot.core.api import Logger, get_url, cb64imglst, web_render, ElementScreenshotOptions
 from .mapping import infobox_elements
 
 

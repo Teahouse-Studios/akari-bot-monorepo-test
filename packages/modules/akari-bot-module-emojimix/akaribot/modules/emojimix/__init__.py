@@ -2,13 +2,7 @@ from pathlib import Path
 
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Image, I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.logger import Logger
-from akaribot.core.utils.func import chunk_list
-from akaribot.core.utils.random import Random
+from akaribot.core.api import Bot, MessageChain, Image, I18NContext, Plain, module, Logger, chunk_list, Random
 
 data_path = Path(__file__).parent / "assets" / "emoji_data.json"
 API = "https://www.gstatic.com/android/keyboard/emojikitchen"

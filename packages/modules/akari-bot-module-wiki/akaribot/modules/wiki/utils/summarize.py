@@ -9,7 +9,7 @@ import re
 import orjson
 import wikitextparser as wtp
 
-from akaribot.core.logger import Logger
+from akaribot.core.api import Logger
 
 # 这些标签的内容不属于正文：引用来源、图库、代码块等。
 # wikitextparser 的 plain_text() 不剥离标签内容，故须在其之前显式清除。

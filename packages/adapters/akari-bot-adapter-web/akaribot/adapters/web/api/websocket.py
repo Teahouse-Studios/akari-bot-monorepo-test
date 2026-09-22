@@ -8,7 +8,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from akaribot.adapters.web.client import app
 from akaribot.core.constants.path import logs_path
-from akaribot.core.logger import Logger
+from akaribot.core.api import Logger
 
 INIT_READ_BYTES = 200 * 1024
 INITIAL_MAX_LINES = 100

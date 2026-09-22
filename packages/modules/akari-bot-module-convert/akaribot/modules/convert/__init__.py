@@ -2,9 +2,7 @@ from decimal import Decimal
 
 from pint import UnitRegistry
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.component import module
+from akaribot.core.api import Bot, I18NContext, module
 
 ureg = UnitRegistry(non_int_type=Decimal)
 i = module(

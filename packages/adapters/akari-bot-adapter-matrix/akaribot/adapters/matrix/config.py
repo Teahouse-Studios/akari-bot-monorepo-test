@@ -1,5 +1,4 @@
-from akaribot.core.config.decorator import on_bot_config
-from akaribot.core.constants.default import matrix_homeserver_default, matrix_user_default
+from akaribot.core.api import on_bot_config, matrix_homeserver_default, matrix_user_default
 
 
 @on_bot_config("matrix")

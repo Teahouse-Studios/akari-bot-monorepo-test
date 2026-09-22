@@ -4,10 +4,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 import matplotlib.pyplot as plt
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.utils.cache import random_cache_path
-from akaribot.core.utils.http import post_url
-from akaribot.core.utils.image_table import ImageTable, image_table_render
+from akaribot.core.api import Bot, random_cache_path, post_url, ImageTable, image_table_render
 
 
 def parse_markdown(md: str) -> list[dict[str, str]]:

@@ -2,13 +2,18 @@ import urllib.parse
 
 from PIL import Image as PILImage
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext, Image as BImage
-from akaribot.core.component import module
+from akaribot.core.api import (
+    Bot,
+    I18NContext,
+    Image as BImage,
+    module,
+    ConfigValueError,
+    ExternalException,
+    rickroll,
+    download,
+    get_url,
+)
 from akaribot.modules.wolframalpha.config import WolframalphaConfig
-from akaribot.core.constants.exceptions import ConfigValueError, ExternalException
-from akaribot.core.utils.dirty_check import rickroll
-from akaribot.core.utils.http import download, get_url
 from .check import secret_check
 
 appid = WolframalphaConfig.wolfram_alpha_appid

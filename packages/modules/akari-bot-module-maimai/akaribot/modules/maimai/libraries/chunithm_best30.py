@@ -2,9 +2,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from akaribot.core.api import find_font
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.utils.func import truncate_text
+from akaribot.core.api import find_font, Bot, truncate_text
 from .chunithm_apidata import get_record_df, get_record_lx
 from .chunithm_mapping import (
     chu_cover_path,

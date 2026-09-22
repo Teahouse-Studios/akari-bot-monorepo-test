@@ -36,9 +36,10 @@ from akaribot.adapters.qqbot.info import (
     target_c2c_prefix,
 )
 from akaribot.adapters.qqbot.utils import url_filter
-from akaribot.core.builtins.message.mention import render_at_code
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.message.elements import (
+from akaribot.core.api import (
+    render_at_code,
+    MessageChain,
+    MessageNodes,
     ActionTextElement,
     ButtonPermission,
     ButtonFrameElement,
@@ -50,18 +51,16 @@ from akaribot.core.builtins.message.elements import (
     VideoElement,
     MentionElement,
     URLElement,
+    I18NContext,
+    Image,
+    SessionInfo,
+    CoreConfig,
+    Logger,
+    Random,
+    escape_table_cell,
+    resolve_table_columns,
 )
-from akaribot.core.builtins.message.internal import I18NContext, Image
-from akaribot.core.builtins.session.context import ContextManager
-from akaribot.core.builtins.session.bot_state import BotState
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.config.base import CoreConfig
-from akaribot.core.logger import Logger
-from akaribot.core.utils.button_runtime import register_button_rows
-from akaribot.core.utils.media import resolve_media_path
-from akaribot.core.utils.random import Random
-from akaribot.core.utils.table import escape_table_cell, resolve_table_columns
+from akaribot.core.api.adapters import ContextManager, BotState, Features, register_button_rows, resolve_media_path
 
 qq_typing_emoji = str(QQBotConfig.qq_typing_emoji)
 qq_limited_emoji = str(QQBotConfig.qq_limited_emoji)

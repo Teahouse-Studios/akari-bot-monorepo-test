@@ -14,12 +14,8 @@ from akaribot.adapters.telegram.message_builder import (
     collect_telegram_content,
     execute_telegram_operations,
 )
-from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
-from akaribot.core.builtins.session.context import ContextManager
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.session.bot_state import BotState
-from akaribot.core.logger import Logger
+from akaribot.core.api import MessageChain, MessageNodes, SessionInfo, Logger
+from akaribot.core.api.adapters import ContextManager, Features, BotState
 
 
 class TelegramContextManager(ContextManager):

@@ -230,17 +230,39 @@ class PackageRegistry:
         cls._incompatible = api_rejected
         cls._api_refused = api_refused
         cls._dependency_rejected = rejected
-        cls._by_import_path = {}
-        for entry in entries.values():
-            current = cls._by_import_path.get(entry.import_path)
-            if current is None or cls._is_more_specific(entry, current):
-                cls._by_import_path[entry.import_path] = entry
+        cls._rebuild_import_index(entries)
         cls._discovered = True
 
     @staticmethod
     def _is_more_specific(candidate: PackageEntry, current: PackageEntry) -> bool:
         """同名导入路径冲突时，取 dist_name 非空者。"""
         return bool(candidate.dist_name) and not current.dist_name
+
+    @staticmethod
+    def _entry_sort_key(entry: PackageEntry) -> tuple[str, str, str]:
+        """条目的稳定排序键。
+
+        entry point 的枚举顺序不保证跨环境一致，凡是由条目集合推导出的结果（导入路径索引、
+        locale 搜索路径）都必须先按此键排序，否则同一批包在不同机器上可能得到不同结果。
+        """
+        return (entry.kind, entry.name, entry.dist_name)
+
+    @classmethod
+    def _rebuild_import_index(cls, entries: dict[str, PackageEntry]) -> None:
+        """由条目重建「导入路径 → 条目」索引。
+
+        同名导入路径可能同时来自 entry point 与目录扫描，取带分发 metadata 者。发现阶段与
+        :meth:`reject_incompatible` 的补做必须共用本方法：两处各写一遍取舍规则时，同一批数据
+        会因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
+
+        :param entries: 参与建索引的条目，按 :meth:`_key` 唯一。
+        """
+        index: dict[str, PackageEntry] = {}
+        for entry in sorted(entries.values(), key=cls._entry_sort_key):
+            current = index.get(entry.import_path)
+            if current is None or cls._is_more_specific(entry, current):
+                index[entry.import_path] = entry
+        cls._by_import_path = index
 
     @classmethod
     def _insert(cls, entries: dict[str, PackageEntry], entry: PackageEntry, *, source: str) -> None:
@@ -299,7 +321,7 @@ class PackageRegistry:
             # 发现阶段已闸过一遍，此时覆盖会丢掉已记录的原因（被拒的包已不在 _entries 里）
             return dict(cls._incompatible)
         cls._entries = kept
-        cls._by_import_path = {entry.import_path: entry for entry in kept.values()}
+        cls._rebuild_import_index(kept)
         cls._incompatible = rejected
         cls._api_refused = refused
         return dict(rejected)
@@ -583,19 +605,25 @@ class PackageRegistry:
 
     @classmethod
     def locales_paths(cls) -> list[str]:
-        """全部现存的 locale 目录，核心的 locale 目录排在最前。"""
+        """全部现存的 locale 目录，核心的 locale 目录排在最前。
+
+        核心之后的顺序按 :meth:`_entry_sort_key` 固定：重复的 locale 键由后加载者覆盖，若顺序随
+        entry point 枚举次序浮动，同一批包在不同环境下的最终文案就会不同。
+        """
         cls.discover()
         paths: list[str] = []
         core_locales = cls._core_locales_dir()
         if core_locales is not None:
             paths.append(str(core_locales))
+        discovered: list[tuple[tuple[str, str, str], str]] = []
         for entry in cls._entries.values():
             relative = entry.manifest.locales
             if not relative:
                 continue
             directory = entry.root / relative
             if directory.is_dir():
-                paths.append(str(directory))
+                discovered.append((cls._entry_sort_key(entry), str(directory)))
+        paths.extend(path for _, path in sorted(discovered))
         return paths
 
     @staticmethod

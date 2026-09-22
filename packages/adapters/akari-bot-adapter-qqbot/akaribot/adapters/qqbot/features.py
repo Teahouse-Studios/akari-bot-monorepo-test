@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from attr import evolve
 
 from akaribot.adapters.qqbot.config import QQBotConfig
-from akaribot.core.builtins.session.features import Features
-from akaribot.core.config.base import CoreConfig
+from akaribot.core.api import CoreConfig
+from akaribot.core.api.adapters import Features
 
 if TYPE_CHECKING:
     from akaribot.core.builtins.session.info import SessionInfo

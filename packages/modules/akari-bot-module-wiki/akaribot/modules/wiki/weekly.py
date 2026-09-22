@@ -5,12 +5,7 @@ from urllib import parse
 
 import orjson
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain, Image, Url, I18NContext
-from akaribot.core.component import module
-from akaribot.core.i18n import Locale
-from akaribot.core.utils.http import get_url
+from akaribot.core.api import Bot, MessageChain, Plain, Image, Url, I18NContext, module, Locale, get_url
 
 
 async def get_weekly(with_img=False, zh_tw=False):

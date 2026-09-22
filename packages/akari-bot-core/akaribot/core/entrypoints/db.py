@@ -1,6 +1,6 @@
 """数据库迁移入口。
 
-供 CLI 在安装/升级包后以子进程调用；读 ``AKARI_INSTANCE_DIR`` 决定实例，不依赖仓库根作为 cwd。
+供 CLI 在安装/升级/卸载包后以子进程调用；读 ``AKARI_INSTANCE_DIR`` 决定实例，不依赖仓库根作为 cwd。
 """
 
 from __future__ import annotations
@@ -9,6 +9,11 @@ import argparse
 import asyncio
 import json
 import sys
+from packaging.utils import canonicalize_name
+
+
+class PurgeError(RuntimeError):
+    """卸载清理不满足前提：包不在发现结果里，或没有可删的表。"""
 
 
 def _is_installed(dist: str) -> bool:
@@ -25,6 +30,34 @@ def _is_installed(dist: str) -> bool:
             if entry.dist_name == dist:
                 return True
     return False
+
+
+def _owned_tables(dist: str) -> tuple[str, ...]:
+    """取该分发 manifest 声明的表名。
+
+    表名只从 manifest 读，**绝不接受调用方传入**：purge 是破坏性操作，谁拥有哪张表只能由包自己
+    声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删掉未声明的表。
+
+    :param dist: 分发名。
+    :return: 声明的表名元组。
+    :raises PurgeError: 包不在发现结果里，或清单没有声明任何表。
+    """
+    from akaribot.core.registry import PackageRegistry
+
+    PackageRegistry.discover()
+    wanted = canonicalize_name(dist)
+    for entries in (PackageRegistry.modules(), PackageRegistry.adapters()):
+        for entry in entries.values():
+            name = entry.dist_name or f"akari-bot-{entry.kind}-{entry.name}"
+            if canonicalize_name(name) != wanted:
+                continue
+            declared = tuple(str(table) for table in entry.manifest.owned_tables)
+            if not declared:
+                raise PurgeError(f"{dist} 的 manifest 未声明 owned_tables，没有可删除的表")
+            return declared
+    reason = PackageRegistry.incompatible().get(wanted)
+    detail = f"（发现层拒绝：{reason}）" if reason else ""
+    raise PurgeError(f"未安装分发包 {dist}{detail}")
 
 
 async def _status() -> dict:
@@ -98,6 +131,53 @@ async def _upgrade(package: str | None) -> dict:
     return {"applied": [[name, revision] for name, revision in applied]}
 
 
+async def _purge(package: str) -> dict:
+    """删除该分发声明的表。
+
+    表已不存在时按**幂等成功**处理：本命令的契约是「这些表不再存在」，重跑或手工删过之后再跑
+    都满足该契约，报成失败只会让卸载流程卡在一个已经达成的目标上。缺失的表名照实回报，操作者
+    据此判断是不是清单漂移。
+
+    :param package: 分发名。
+    :return: ``{"dist": …, "dropped": [...], "missing": [...]}``。
+    :raises PurgeError: 包不在发现结果里，或清单没有声明任何表。
+    """
+    from tortoise import Tortoise
+
+    from akaribot.core.database import close_db, init_db
+    from akaribot.core.database.legacy import has_table
+    from akaribot.core.database.migration import MigrationContext
+
+    tables = _owned_tables(package)
+
+    await init_db(generate_schemas=False)
+    try:
+        conn = Tortoise.get_connection("default")
+        context = MigrationContext(conn)
+        dropped: list[str] = []
+        missing: list[str] = []
+        for table in tables:
+            if not await has_table(conn, table):
+                missing.append(table)
+                continue
+            await context.execute(f"DROP TABLE IF EXISTS {context.quote(table)};")
+            dropped.append(table)
+    finally:
+        await close_db()
+    return {"dist": package, "dropped": dropped, "missing": missing}
+
+
+def _emit_purge(payload: dict, as_json: bool) -> None:
+    """输出 purge 结果：``--json`` 走 stdout，否则打一行摘要。"""
+    if as_json:
+        json.dump(payload, sys.stdout, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return
+    print(f"已删除 {len(payload['dropped'])} 张表：{','.join(payload['dropped']) or '-'}")
+    if payload["missing"]:
+        print(f"以下表本就不存在，按幂等处理：{','.join(payload['missing'])}")
+
+
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
@@ -117,6 +197,10 @@ def main(argv: list[str] | None = None) -> int:
     upgrade.add_argument("--package", default=None, help="限定分发名，如 akari-bot-module-wiki")
     upgrade.add_argument("--json", action="store_true", help="以 JSON 输出")
 
+    purge = sub.add_parser("purge", help="删除某个分发声明的表（卸载清理用）")
+    purge.add_argument("--package", required=True, help="分发名，如 akari-bot-module-wiki")
+    purge.add_argument("--json", action="store_true", help="以 JSON 输出")
+
     args = parser.parse_args(argv)
 
     try:
@@ -131,6 +215,10 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"{package}\t已应用 {info['applied']}/{info['discovered']}\t待应用 {pending}")
             return 0
 
+        if args.command == "purge":
+            _emit_purge(asyncio.run(_purge(args.package)), args.json)
+            return 0
+
         data = asyncio.run(_upgrade(args.package))
         if args.json:
             json.dump(data, sys.stdout, ensure_ascii=False)
@@ -142,7 +230,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     except SystemExit as exc:
         return int(exc.code or 0)
+    except PurgeError as exc:
+        # --json 时把原因也写进 stdout：调用方（CLI 的 db_purge）解析的是 stdout，
+        # 只给 stderr 的话它拿不到结构化原因，只能退回「退出码 1」这种无用信息。
+        if getattr(args, "json", False):
+            json.dump(
+                {"dist": args.package, "error": str(exc), "dropped": [], "missing": []}, sys.stdout, ensure_ascii=False
+            )
+            sys.stdout.write("\n")
+        print(f"清理失败：{exc}", file=sys.stderr)
+        return 2
     except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+        if getattr(args, "json", False):
+            json.dump(
+                {"dist": args.package, "error": str(exc), "dropped": [], "missing": []}, sys.stdout, ensure_ascii=False
+            )
+            sys.stdout.write("\n")
         print(f"迁移执行失败：{exc}", file=sys.stderr)
         return 1
 

@@ -9,7 +9,9 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
+import sys
 
 from rich.markup import escape
 import time
@@ -46,6 +48,16 @@ CORE_DIST = "akari-bot-core"
 AKARIBOT_PREFIX = "akari-bot-"
 AKARIBOT_ENTRY_POINT_GROUPS = ("akaribot.modules", "akaribot.adapters")
 WORKSPACE_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pyproject.toml")
+MANIFEST_FILENAME = "manifest.toml"
+# 清单未声明 requires_core_api 时的默认区间；与 core.registry.PackageManifest 及
+# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 同口径，工作区视图与 registry 视图必须一致。
+DEFAULT_REQUIRES_CORE_API = ">=1"
+# 内置 uv 的文件名：Windows 上必须是带 .exe 的完整名，CreateProcess 不接受无扩展名的可执行文件。
+UV_BUNDLED_NAME = "uv"
+UV_BUNDLED_WINDOWS_NAME = "uv.exe"
+UV_WINDOWS_SUFFIXES = (".exe", ".com", ".bat", ".cmd")
+# 冻结后本文件落在解包目录内的包层级里，资源根只在上面若干级；设上限以免把无关祖先目录当成资源根。
+FROZEN_ROOT_MAX_DEPTH = 6
 
 
 def canonical(name: str) -> str:
@@ -53,15 +65,139 @@ def canonical(name: str) -> str:
     return name.strip().lower().replace("_", "-").replace(".", "-")
 
 
+def _windows_platform() -> bool:
+    """当前是否 Windows；单独成函数，便于测试注入另一平台的可执行文件判据。"""
+    return os.name == "nt"
+
+
+def bundled_uv_names() -> tuple[str, ...]:
+    """内置 uv 的候选文件名，按尝试顺序排列。"""
+    if _windows_platform():
+        return (UV_BUNDLED_WINDOWS_NAME, UV_BUNDLED_NAME)
+    return (UV_BUNDLED_NAME,)
+
+
+def is_executable(path: Path) -> bool:
+    """判断路径是否为可执行文件。
+
+    Windows 按扩展名判定；POSIX 按可执行位判定，并在缺失时补一次权限位——Nuitka onefile 解包
+    不保证保留数据文件的可执行位，只看权限位会让内置 uv 被静默跳过。
+
+    :param path: 待判定的路径。
+    :return: 可作为可执行文件启动时为 ``True``。
+    """
+    if not path.is_file():
+        return False
+    if _windows_platform():
+        return path.suffix.lower() in UV_WINDOWS_SUFFIXES
+    if os.access(path, os.X_OK):
+        return True
+    try:
+        path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    except OSError:
+        return False
+    return os.access(path, os.X_OK)
+
+
+def is_frozen() -> bool:
+    """是否运行在 Nuitka 冻结产物里。
+
+    Nuitka 会往每个被编译模块的全局名字里注入 ``__compiled__``，源码与普通安装下没有该名字。
+    """
+    return "__compiled__" in globals()
+
+
+def frozen_candidate_dirs() -> tuple[Path, ...]:
+    """冻结产物里可能承载包内资源的目录，按可信度排序。
+
+    三个探测点都取自 Nuitka 的既有机制，不依赖任何绝对路径：``__compiled__.containing_dir`` 是
+    Nuitka 直接给出的产物目录；``sys.argv[0]`` 在 standalone 下与资源同目录；本文件 ``__file__``
+    在 onefile 下落在解包目录内，其父目录里必有资源根。
+
+    :return: 去重后的候选目录。
+    """
+    directories: list[Path] = []
+    containing = getattr(globals().get("__compiled__"), "containing_dir", None)
+    if containing:
+        directories.append(Path(containing))
+    if sys.argv and sys.argv[0]:
+        directories.append(Path(sys.argv[0]).resolve().parent)
+    source = globals().get("__file__")
+    if source:
+        directories.extend(Path(source).resolve().parents[:FROZEN_ROOT_MAX_DEPTH])
+    ordered: list[Path] = []
+    for path in directories:
+        if path not in ordered:
+            ordered.append(path)
+    return tuple(ordered)
+
+
+def frozen_bundled_uv() -> Path | None:
+    """定位冻结产物内置的 uv；非冻结或资源未打包时返回 ``None``。
+
+    :return: 内置 uv 的路径。
+    """
+    if not is_frozen():
+        return None
+    for directory in frozen_candidate_dirs():
+        for name in bundled_uv_names():
+            candidate = directory / name
+            if is_executable(candidate):
+                return candidate
+    return None
+
+
+def frozen_resource_root() -> Path | None:
+    """冻结产物承载包内资源的根目录，供后续内置资源复用。
+
+    当前以内置 uv 作为存在性探针：``include-data-files`` 落下的资源与二进制同层，找到可执行的
+    uv 即证明该目录就是资源根。
+
+    :return: 资源根目录；非冻结或资源未打包时为 ``None``。
+    """
+    bundled = frozen_bundled_uv()
+    return bundled.parent if bundled is not None else None
+
+
+def _override_uv(value: str) -> Path | None:
+    """把 ``AKARIBOT_UV`` 的取值解析成可执行文件。
+
+    取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）；不可用时返回 ``None``，
+    由调用方回退到内置资源或 PATH。
+
+    :param value: 环境变量的原始取值。
+    :return: 可用的 uv 路径。
+    """
+    candidate = Path(value).expanduser()
+    if is_executable(candidate):
+        return candidate
+    separators = {os.sep, os.altsep} - {None}
+    if not any(separator in value for separator in separators):
+        found = shutil.which(value)
+        if found and is_executable(Path(found)):
+            return Path(found)
+    return None
+
+
 def uv_binary() -> str:
     """定位 uv 可执行文件。
 
+    顺序为显式覆盖 ``AKARIBOT_UV`` → 冻结产物内置的 uv → ``PATH``。显式覆盖排在首位：用户指定
+    的来源被静默忽略比找不到 uv 更难排查。内置的排在 ``PATH`` 之前，因为冻结产物带的那一份才是
+    构建时验证过的版本，用户机器上也不必预装 uv。
+
     :return: uv 的路径。
-    :raises CliError: 未找到 uv，提示安装方式或环境变量。
+    :raises CliError: 三个来源都不可用，提示安装方式或环境变量。
     """
     override = os.environ.get(UV_ENV_VAR)
     if override:
-        return override
+        resolved = _override_uv(override)
+        if resolved is not None:
+            return str(resolved)
+        warn(i18n.t("cli.venv_engine.uv_override_unusable", env=UV_ENV_VAR, path=override))
+    bundled = frozen_bundled_uv()
+    if bundled is not None:
+        return str(bundled)
     found = shutil.which("uv")
     if found:
         return found
@@ -381,6 +517,48 @@ def _read_toml(path: Path) -> dict[str, Any]:
         return {}
 
 
+def package_root_from_entry_point(pyproject: Path, import_path: str) -> Path | None:
+    """由 entry point 的导入路径定位导入包目录。
+
+    源码根优先取分发根，退回 ``src``（迁移前布局）：与 ``tools/build_registry.py`` 的
+    ``package_root()`` 同一口径。CLI 既不能 import core 内部，也不该在运行时依赖仓库工具，
+    故按同一规则实现，并由用例与工具对拍，避免分化出第三套规则。
+
+    :param pyproject: 该分发的 pyproject.toml。
+    :param import_path: entry point 的取值，如 ``akaribot.modules.wiki``。
+    :return: 导入包目录；两种布局都不存在时为 ``None``。
+    """
+    for base in (pyproject.parent, pyproject.parent / "src"):
+        root = base
+        for part in import_path.split("."):
+            root = root / part
+        if root.is_dir():
+            return root
+    return None
+
+
+def entry_point_manifest(pyproject: Path, entry_points: Mapping[str, Any]) -> dict[str, Any]:
+    """读入口点指向的导入包目录下的 ``manifest.toml``。
+
+    仓库契约是 manifest 位于 entry point 指向的导入包目录，分发根下的同名文件不是清单：发现层与
+    registry 生成工具都按导入路径定位包根，locales、assets、migrations 也相对它解析。多个入口点时
+    取第一个能定位到包目录的清单，与生成工具「每个分发恰好一个模块或适配器入口点」的口径一致。
+
+    :param pyproject: 该分发的 pyproject.toml。
+    :param entry_points: ``[project.entry-points]`` 表。
+    :return: 清单内容；定位不到包目录或文件缺失时为空字典。
+    """
+    for group in AKARIBOT_ENTRY_POINT_GROUPS:
+        targets = entry_points.get(group)
+        if not isinstance(targets, dict):
+            continue
+        for name in sorted(targets):
+            root = package_root_from_entry_point(pyproject, str(targets[name]))
+            if root is not None:
+                return _read_toml(root / MANIFEST_FILENAME)
+    return {}
+
+
 def workspace_index(workspace_root: Path) -> dict[str, WorkspacePackage]:
     """扫描工作区内的全部分发，按规范化分发名索引。
 
@@ -396,7 +574,7 @@ def workspace_index(workspace_root: Path) -> dict[str, WorkspacePackage]:
             if not dist:
                 continue
             entry_points = (project.get("entry-points") or {}) if isinstance(project.get("entry-points"), dict) else {}
-            manifest = _read_toml(pyproject.parent / "manifest.toml")
+            manifest = entry_point_manifest(pyproject, entry_points)
             index[canonical(dist)] = WorkspacePackage(
                 dist=dist,
                 version=str(project.get("version") or ""),
@@ -404,7 +582,7 @@ def workspace_index(workspace_root: Path) -> dict[str, WorkspacePackage]:
                 dependencies=tuple(str(item) for item in (project.get("dependencies") or ())),
                 module_names=tuple((entry_points.get("akaribot.modules") or {}).keys()),
                 adapter_names=tuple((entry_points.get("akaribot.adapters") or {}).keys()),
-                requires_core_api=str(manifest.get("requires_core_api") or ""),
+                requires_core_api=str(manifest.get("requires_core_api") or DEFAULT_REQUIRES_CORE_API),
                 provides_modules=tuple(str(item) for item in (manifest.get("provides_modules") or ())),
                 owned_tables=tuple(str(item) for item in (manifest.get("owned_tables") or ())),
             )
@@ -1383,15 +1561,73 @@ def db_upgrade(instance: Instance, dist: str) -> None:
     )
 
 
+PURGE_REASON_KEYS = ("error", "errors", "failures", "failed")
+PURGE_TABLE_STATUS_KEYS = ("table", "name")
+
+
+def _text_of(value: Any) -> str:
+    """从结构化错误的取值里取一句可读文本；取不到时返回空串。"""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, Mapping):
+        for key in ("message", "reason", "detail", "error", "code"):
+            text = value.get(key)
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+    return ""
+
+
+def purge_failure_reasons(payload: Any) -> tuple[str, ...]:
+    """从 ``db purge --json`` 的回传里提取逐项失败原因。
+
+    结构化错误的键名与嵌套形状由 core 侧定义，此处按「整体错误 → 逐表错误」的顺序收敛成可读行，
+    认不出的结构一律忽略，由调用方退回 stderr 摘要，避免把不可读的原始输出抛给用户。
+
+    :param payload: ``--json`` 回传解析出的对象。
+    :return: 去重后的失败原因，每项一行。
+    """
+    if not isinstance(payload, Mapping):
+        return ()
+    reasons: list[str] = []
+    for key in PURGE_REASON_KEYS:
+        value = payload.get(key)
+        for item in value if isinstance(value, list) else [value]:
+            text = _text_of(item)
+            if text:
+                reasons.append(text)
+    tables = payload.get("tables")
+    for item in tables if isinstance(tables, list) else []:
+        if not isinstance(item, Mapping) or item.get("ok") is True:
+            continue
+        status = str(item.get("status") or "")
+        if status in ("ok", "dropped", "skipped"):
+            continue
+        text = _text_of(item)
+        if not text:
+            continue
+        table = next((str(item[key]) for key in PURGE_TABLE_STATUS_KEYS if item.get(key)), "")
+        reasons.append(f"{table}: {text}" if table else text)
+    return tuple(dict.fromkeys(reasons))
+
+
 def db_purge(instance: Instance, dist: str) -> bool:
     """删除该包拥有的数据表，返回是否成功。
 
-    core 侧尚未定义 ``db purge`` 子命令，缺失时返回 ``False`` 由命令层如实告知用户。
+    core 侧以 ``db purge --package <分发> --json`` 执行：失败时非零退出并回传结构化原因，这里把
+    原因逐条打印出来，命令层才能逐项显示成功与失败，而不是只留一句「退出码 1」。
+
+    :param instance: 目标实例。
+    :param dist: 分发名。
+    :return: 删除成功为 ``True``。
     """
-    proc = instance.run_core_capture("db", "purge", "--package", dist, timeout=None)
+    proc = instance.run_core_capture("db", "purge", "--package", dist, "--json", timeout=None)
     if proc.returncode == 0:
         ok(i18n.t("cli.venv_engine.tables_purged", dist=dist))
         return True
-    detail = explain_process_failure(proc, i18n.t("cli.venv_engine.what_purge_tables", dist=dist))
-    warn(detail)
+    reasons = purge_failure_reasons(extract_json(proc.stdout or ""))
+    if reasons:
+        for reason in reasons:
+            warn(i18n.t("cli.venv_engine.tables_purge_failed", dist=dist, reason=reason))
+    else:
+        warn(explain_process_failure(proc, i18n.t("cli.venv_engine.what_purge_tables", dist=dist)))
     return False

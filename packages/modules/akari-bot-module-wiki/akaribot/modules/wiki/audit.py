@@ -1,8 +1,13 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import I18NContext, Plain
-from akaribot.core.component import module
-from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist, URLRuleError
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    I18NContext,
+    Plain,
+    module,
+    GlobalURLAllowlist,
+    GlobalURLBlocklist,
+    URLRuleError,
+)
 from .utils.wikilib import BlockedWikiError, WikiLib
 
 aud = module(

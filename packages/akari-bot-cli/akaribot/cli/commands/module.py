@@ -352,35 +352,101 @@ def _cascade_order(instance: Instance, root: PackageInfo) -> list[PackageInfo]:
     return ordered
 
 
-def _purge(instance: Instance, packages: Sequence[PackageInfo], *, yes: bool, dry_run: bool) -> None:
-    """删除这些包拥有的数据表与配置文件（``--purge-data``）。"""
+def _config_files(instance: Instance, package: PackageInfo) -> tuple[list[Path], list[Path]]:
+    """定位该包在实例 ``config/`` 下的配置文件。
+
+    基表取 ``manifest.config_table`` 的**扁平路径** ``config/<表名>.toml``：``CFGManager.load()``
+    只扫描 ``config/*.toml``，旧实现按 ``provides_modules`` 猜 ``config/modules/<名>.toml``，
+    那条路径下永远没有文件，``--purge-data`` 因此从不删配置。
+
+    适配器还要覆盖 ``config/<基表>-<实例 ID>.toml`` 这类实例表——表名由基表派生，只能按前缀匹配。
+
+    :param instance: 目标实例。
+    :param package: 目标包。
+    :return: 二元组——基表配置文件；实例配置文件（适配器才有）。
+    """
+    if not package.config_table:
+        return [], []
+    base = instance.config_dir / f"{package.config_table}.toml"
+    files = [base] if base.is_file() else []
+    if package.kind != "adapter":
+        return files, []
+    prefix = f"{package.config_table}-"
+    instances = sorted(
+        path for path in instance.config_dir.glob("*.toml") if path.name.startswith(prefix) and path != base
+    )
+    return files, instances
+
+
+def _purge(
+    instance: Instance,
+    packages: Sequence[PackageInfo],
+    *,
+    yes: bool,
+    dry_run: bool,
+    purge_instances: bool,
+) -> bool:
+    """删除这些包拥有的数据表与配置文件（``--purge-data``）。
+
+    必须在 uv uninstall **之前**调用：清单随分发一起被删，卸载后再也解析不出 ``owned_tables``
+    与 ``config_table``，那时连该删什么都不知道。任一步失败即返回 ``False``，由命令层决定中止
+    卸载还是按 ``--force`` 接受残留——静默返回成功会让用户以为数据已清干净。
+
+    :param instance: 目标实例。
+    :param packages: 待清理的包。
+    :param yes: 为真时跳过交互确认。
+    :param dry_run: 为真时只打印计划。
+    :param purge_instances: 是否连同适配器实例配置一起删除。
+    :return: 全部步骤成功为 ``True``。
+    """
     tables = sorted({table for package in packages for table in package.owned_tables})
-    files: list[Path] = []
+    base_files: list[Path] = []
+    instance_files: list[Path] = []
     for package in packages:
-        names = list(package.provides_modules) or ([package.name] if package.name else [])
-        subdir = "adapters" if package.kind == "adapter" else "modules"
-        for module_name in names:
-            candidate = instance.config_dir / subdir / f"{module_name}.toml"
-            if candidate.exists():
-                files.append(candidate)
+        base, instances = _config_files(instance, package)
+        base_files.extend(base)
+        if purge_instances:
+            instance_files.extend(instances)
+        elif instances:
+            console.print(i18n.t("cli.module.purge.instance_kept", count=len(instances), dist=package.dist))
     tables_text = _join_list(tables) if tables else i18n.t("cli.module.purge.none_tables")
     console.print(i18n.t("cli.module.purge.tables", tables=tables_text))
+    files = base_files + instance_files
     if files:
         files_text = _join_list(str(path.relative_to(instance.root)) for path in files)
     else:
         files_text = i18n.t("cli.module.purge.none")
     console.print(i18n.t("cli.module.purge.files", files=files_text))
     if dry_run:
-        return
+        return True
     if not yes:
         typer.confirm(i18n.t("cli.module.purge.confirm"), abort=True)
+
+    failures: list[str] = []
+    purged = 0
     for package in packages:
-        if package.owned_tables:
-            engine.db_purge(instance, package.dist)
+        if not package.owned_tables:
+            continue
+        if engine.db_purge(instance, package.dist):
+            purged += 1
+        else:
+            failures.append(i18n.t("cli.module.purge.failed_tables", dist=package.dist))
+    removed = 0
     for path in files:
-        path.unlink()
-    if files:
-        ok(i18n.t("cli.module.purge.removed_files", count=len(files)))
+        try:
+            path.unlink()
+        except OSError as exc:
+            failures.append(i18n.t("cli.module.purge.failed_file", path=path.name, error=exc))
+        else:
+            removed += 1
+    if removed:
+        ok(i18n.t("cli.module.purge.removed_files", count=removed))
+    if failures:
+        warn(i18n.t("cli.module.purge.partial", reasons=_join_list(failures)))
+        return False
+    if purged:
+        ok(i18n.t("cli.module.purge.done", count=purged))
+    return True
 
 
 @app.command("remove", help=i18n.t("cli.module.remove.help"))
@@ -422,10 +488,28 @@ def remove(
         warn(i18n.t("cli.module.remove.force_warning", packages=_describe_installed(dependents)))
 
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
+    blocked: list[str] = []
     for item in order:
-        notify = target.notify_package_change("remove", item.dist) if not dry_run else None
-        if notify is not None:
-            console.print(i18n.t("cli.module.remove.notify_line", dist=item.dist, detail=notify.detail))
+        if dry_run:
+            continue
+        notify = target.notify_package_change("remove", item.dist)
+        console.print(i18n.t("cli.module.remove.notify_line", dist=item.dist, detail=notify.detail))
+        # 先拆后卸：确认热拆卸失败时必须停手，否则运行中的实例会继续持有已删分发的模块与库 context。
+        if notify.blocks_uninstall:
+            blocked.append(i18n.t("cli.module.remove.detach_blocked", dist=item.dist, detail=notify.detail))
+    if blocked:
+        fail(i18n.t("cli.module.remove.detach_failed", reasons=_join_list(blocked)))
+    if purge_data:
+        # 先清理再卸载：清单随分发一起消失，卸载后再也解析不出 owned_tables 与 config_table。
+        purge_instances = yes or dry_run
+        if not purge_instances:
+            instances = sum(len(_config_files(target, item)[1]) for item in order)
+            if instances:
+                purge_instances = typer.confirm(i18n.t("cli.module.remove.purge_instances_confirm", count=instances))
+        if not _purge(target, order, yes=yes, dry_run=dry_run, purge_instances=purge_instances):
+            if not force:
+                fail(i18n.t("cli.module.remove.purge_failed"))
+            warn(i18n.t("cli.module.remove.purge_failed_forced"))
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         what = i18n.t("cli.venv_engine.what_uninstall_packages")
@@ -433,9 +517,7 @@ def remove(
     except CliError as exc:
         fail(str(exc))
     target.invalidate()
-    if purge_data:
-        _purge(target, order, yes=yes, dry_run=dry_run)
-    else:
+    if not purge_data:
         console.print(i18n.t("cli.module.remove.keep_data"))
 
 
@@ -572,6 +654,7 @@ def _perform_update(
 
     failed: list[tuple[str, str]] = []
     notified: list[tuple[str, str, bool]] = []
+    kinds = {engine.canonical(info.dist): info.kind for info in selected}
     for plan in plans:
         try:
             engine.config_sync(target_instance, plan.dist)
@@ -579,6 +662,16 @@ def _perform_update(
         except CliError as exc:
             failed.append((plan.dist, str(exc)))
             warn(str(exc))
+        if kinds.get(engine.canonical(plan.dist)) == "module":
+            # 代码已在磁盘上换新，但运行中的实例仍注册着旧代际，直接热装载会被判「已注册」；
+            # 先热拆卸再热装载才能换到新代码。适配器不支持整包热换，沿用重启提示。
+            detach = target_instance.notify_package_change("remove", plan.dist)
+            if detach.blocks_uninstall:
+                warn(i18n.t("cli.module.update.detach_failed", dist=plan.dist, detail=detach.detail))
+                notified.append((plan.dist, detach.detail, False))
+                continue
+            if detach.delivered:
+                console.print(i18n.t("cli.module.update.detach_line", dist=plan.dist))
         notify = target_instance.notify_package_change("install", plan.dist)
         notified.append((plan.dist, notify.detail, notify.delivered))
         if notify.attempted and not notify.delivered:

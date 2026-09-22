@@ -9,8 +9,7 @@
 
 from __future__ import annotations
 
-from akaribot.core.database.migration import MigrationContext
-from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
+from akaribot.core.api import MigrationContext, GlobalURLAllowlist, GlobalURLBlocklist
 
 REVISION = "0003_url_rules_to_global"
 DEPENDS_ON = "0002_union_id"

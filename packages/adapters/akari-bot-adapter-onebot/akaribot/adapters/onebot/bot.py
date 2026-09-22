@@ -12,20 +12,24 @@ from akaribot.adapters.onebot.config import AiocqhttpConfig
 from akaribot.adapters.onebot.context import OneBotContextManager, OneBotFetchedContextManager
 from akaribot.adapters.onebot.info import *
 from akaribot.adapters.onebot.utils import to_message_chain, get_onebot_implementation
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.temp import Temp
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.client.init import client_cleanup, client_init
-from akaribot.core.config.base import BaseConfig, CoreConfig
-from akaribot.core.constants.default import confirm_command_default
-from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo, UnfriendlyActionRecords
-from akaribot.core.i18n import Locale
-from akaribot.core.logger import Logger
-from akaribot.core.queue.contracts import ServerAPI
-from akaribot.core.utils.retired import is_retired_client
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    Plain,
+    SessionInfo,
+    command_prefix,
+    BaseConfig,
+    CoreConfig,
+    confirm_command_default,
+    SenderUnionInfo,
+    TargetUnionInfo,
+    UnfriendlyActionRecords,
+    Locale,
+    Logger,
+    ServerAPI,
+    is_retired_client,
+)
+from akaribot.core.api.adapters import Temp, client_cleanup, client_init
 
 Bot.register_bot(client_name=client_name)
 ctx_id = Bot.register_context_manager(OneBotContextManager)

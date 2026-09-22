@@ -1,12 +1,16 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain, I18NMessageChain, PlatformMessageChain
-from akaribot.core.builtins.message.internal import Plain
-from akaribot.core.builtins.utils import command_prefix
-from akaribot.core.component import module
-from akaribot.core.i18n import Locale
-from akaribot.core.logger import Logger
-from akaribot.core.scheduler import CronTrigger
-from akaribot.core.utils.image import msgchain2image
+from akaribot.core.api import (
+    Bot,
+    MessageChain,
+    I18NMessageChain,
+    PlatformMessageChain,
+    Plain,
+    command_prefix,
+    module,
+    Locale,
+    Logger,
+    CronTrigger,
+    msgchain2image,
+)
 from .weekly import get_weekly, get_teahouse_rss
 
 weekly_rss = module(

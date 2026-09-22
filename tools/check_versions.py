@@ -7,8 +7,10 @@
 包内 tests/ 与缓存目录不进 wheel，其改动不要求升版本；--strict 把包内任何文件都算作改动。
 包内的 pyproject.toml 改动算改动：依赖与入口点会原样写进 wheel 元数据。
 
-例外：`base..head` 区间内任一提交的信息含 [skip-version]（用 --skip-marker 可改）时，整次检查
-放行并返回 0。基准缺省或无法解析为提交时不比对，只提示并返回 0；工具自身无法运行时返回 2。
+例外：`base..head` 区间内的提交信息里写了独立的 `Skip-Version` trailer 时按声明范围豁免——
+`Skip-Version: true` 豁免全部成员，`Skip-Version: <分发名>[, <分发名>]` 只豁免列出的成员。
+正文里顺带提到该 token 不算，必须是行首即 token 的独立整行。基准缺省或无法解析为提交时不比对，
+只提示并返回 0；工具自身无法运行时返回 2。
 
 成员清单与分发名口径与 tools/lint_versions.py 一致：成员由根 pyproject.toml 的
 [tool.uv.workspace].members 展开，分发名与版本读成员自己的 [project].name / [project].version。
@@ -22,6 +24,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 import sys
 import tomllib
@@ -33,7 +36,7 @@ from packaging.version import InvalidVersion, Version
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT_PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
-DEFAULT_SKIP_MARKER = "[skip-version]"
+DEFAULT_SKIP_TRAILER = "Skip-Version"
 
 # 不进 wheel 的目录：其改动不要求升版本；--strict 时该豁免失效。
 # pyproject.toml 不在豁免内：依赖与入口点会写进 wheel 元数据，改动同样要发新版。
@@ -165,19 +168,73 @@ def changed_files(base: str, head: str) -> list[str]:
     return [path for path in output.split("\0") if path.strip()]
 
 
-def skip_commits(base: str, head: str, marker: str) -> list[str]:
-    """返回区间内提交信息含标记的提交，格式为「短 SHA 标题」。
+def skip_commits(base: str, head: str, trailer: str) -> list[tuple[str, str, tuple[str, ...]]]:
+    """返回区间内声明了跳过 trailer 的提交。
 
-    提交信息取全文（%B），标记写在标题或正文里都算；分隔符用不可打印字符，避免正文换行干扰。
+    只认**独立整行**的 trailer（``Token: 值`` 或 ``Token #值``，行首即 token），不认正文里顺带
+    提到的字符串：曾经因为一次提交在说明文字里写了两次旧标记，整个区间的版本守卫被静默放行，
+    之后一百多个提交的重构等于没有这道闸。取值含义见 :func:`parse_exemption`。
+
+    :param base: 区间起点（含）。
+    :param head: 区间终点（含）。
+    :param trailer: trailer 的 token，如 ``Skip-Version``。
+    :return: 三元组列表——短 SHA、标题、该提交豁免的分发名元组（空元组表示豁免全部）。
     """
     output = git_text(["log", "--format=%h%x1f%s%x1f%B%x1e", f"{base}..{head}"])
-    hits: list[str] = []
+    hits: list[tuple[str, str, tuple[str, ...]]] = []
     for record in output.split("\x1e"):
         fields = record.split("\x1f")
-        if len(fields) < 3 or marker not in fields[2]:
+        if len(fields) < 3:
             continue
-        hits.append(f"{fields[0].strip()} {fields[1].strip()}")
+        exemption = parse_exemption(fields[2], trailer)
+        if exemption is None:
+            continue
+        hits.append((fields[0].strip(), fields[1].strip(), exemption))
     return hits
+
+
+def trailer_block(message: str) -> list[str]:
+    """取提交信息的 trailer 段：末尾连续非空行。
+
+    与 git 的 trailer 约定一致（trailer 必须在最后一段），因此正文中间或缩进的代码块里出现
+    同样的字样不会被误当声明。整段可能为空——末尾是空行时说明该提交没有 trailer。
+    """
+    block: list[str] = []
+    for line in reversed(message.rstrip().splitlines()):
+        if not line.strip():
+            break
+        block.append(line)
+    block.reverse()
+    return block
+
+
+def parse_exemption(message: str, trailer: str) -> tuple[str, ...] | None:
+    """从提交信息的 trailer 段里解析跳过声明。
+
+    ``Token: true`` 豁免全部成员；``Token: <分发名>[, <分发名>]`` 只豁免列出的成员。绑定到具体
+    分发是必要的：一个标记放行整个区间全部成员时，豁免范围与实际未升版本的包毫无关系。
+
+    只认行首即 token 的独立整行（``Token: 值`` 或 ``Token #值``）：token 前有缩进、或出现在正文
+    中间时都不算，否则解释功能的一句话就能关掉整段区间的检查。
+
+    :param message: 提交信息全文。
+    :param trailer: trailer 的 token。
+    :return: 豁免的分发名元组；空元组表示全部。没有该 trailer 时返回 ``None``。
+    :raises ConfigError: 出现了 trailer 但取值无法识别——静默忽略会让豁免失效得毫无提示。
+    """
+    pattern = re.compile(rf"{re.escape(trailer)}\s*[:#]\s*(.*)$", re.IGNORECASE)
+    for line in trailer_block(message):
+        match = pattern.match(line.rstrip())
+        if match is None:
+            continue
+        value = match.group(1).strip()
+        if value.lower() == "true":
+            return ()
+        names = tuple(part.strip() for part in value.split(",") if part.strip())
+        if not names:
+            raise ConfigError(f"提交信息里的 {trailer} 没有取值：应写 true 或逗号分隔的分发名")
+        return names
+    return None
 
 
 def version_at(commit: str, pyproject: str) -> tuple[bool, str | None]:
@@ -293,7 +350,7 @@ def print_finding(finding: Finding) -> None:
     if len(finding.files) > MAX_FILES_SHOWN:
         print(f"    ……另有 {len(finding.files) - MAX_FILES_SHOWN} 个改动路径")
     if finding.is_violation:
-        print("    处理：升 [project].version，或在该区间内某个提交的信息里写 [skip-version]")
+        print("    处理：升 [project].version，或在该提交信息里写独立的 Skip-Version trailer")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -302,14 +359,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="版本守卫：包内有源码改动但 version 未变则失败",
         epilog=(
             "包外改动（根配置、tools/、文档）不归任何包，不触发本检查。tests/ 与缓存目录不进 wheel，\n"
-            "其改动默认不要求升版本，--strict 可收紧。区间内任一提交信息含跳过标记时整次放行。"
+            "其改动默认不要求升版本，--strict 可收紧。提交信息里有独立的 Skip-Version trailer 时\n"
+            "按声明范围豁免：true 为全部成员，逗号分隔的分发名只豁免列出的成员。"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--base", metavar="REV", help="比较基准；缺省时只提示，退出码 0")
     parser.add_argument("--head", metavar="REV", default="HEAD", help="比较终点，默认 HEAD")
     parser.add_argument(
-        "--skip-marker", metavar="TEXT", default=DEFAULT_SKIP_MARKER, help="跳过标记，默认 [skip-version]"
+        "--skip-trailer",
+        metavar="TOKEN",
+        default=DEFAULT_SKIP_TRAILER,
+        help="跳过用的 trailer token，默认 Skip-Version",
     )
     parser.add_argument("--strict", action="store_true", help="包内任何文件（含 tests/）改动都要求升版本")
     return parser
@@ -337,15 +398,33 @@ def main() -> int:
     base = resolve_base(resolved_base, resolved_head)
 
     try:
-        hits = skip_commits(base, resolved_head, args.skip_marker)
+        hits = skip_commits(base, resolved_head, args.skip_trailer)
+    except ConfigError as error:
+        print(f"跳过 trailer 无法解析：{error}", file=sys.stderr)
+        return 2
     except (subprocess.CalledProcessError, FileNotFoundError) as error:
         print(f"读取提交信息失败：{error}", file=sys.stderr)
         return 2
-    if hits:
-        print(f"区间 {base}..{resolved_head} 内有提交信息含 {args.skip_marker}，版本守卫放行，退出码 0：")
-        for hit in hits:
-            print(f"  {hit}")
+
+    known = {member.name for member in members}
+    exempt: set[str] = set()
+    blanket = False
+    for sha, subject, names in hits:
+        if not names:
+            blanket = True
+            print(f"  {sha} {subject}：Skip-Version: true，豁免区间内全部成员")
+            continue
+        unknown = [name for name in names if name not in known]
+        if unknown:
+            print(f"提交 {sha} 的 {args.skip_trailer} 列了不属于本 workspace 的分发：{unknown}", file=sys.stderr)
+            return 2
+        exempt.update(names)
+        print(f"  {sha} {subject}：豁免 {list(names)}")
+    if blanket:
+        print(f"区间 {base}..{resolved_head} 内有提交声明豁免全部成员，版本守卫放行，退出码 0。")
         return 0
+    if exempt:
+        print(f"区间 {base}..{resolved_head} 内声明的豁免分发：{sorted(exempt)}")
 
     try:
         paths = changed_files(base, resolved_head)
@@ -355,11 +434,15 @@ def main() -> int:
 
     findings: list[Finding] = []
     touched = 0
+    skipped = 0
     for member in members:
         files = [path for path in paths if path.startswith(member.directory + "/")]
         if not files:
             continue
         touched += 1
+        if member.name in exempt:
+            skipped += 1
+            continue
         finding = inspect_member(member, files, base, args.strict)
         if finding is not None:
             findings.append(finding)
@@ -379,9 +462,10 @@ def main() -> int:
             print(f"    {path}")
 
     scope = f"区间 {base}..{resolved_head}"
+    exemption_note = f"，按 trailer 豁免 {skipped}" if skipped else ""
     print(
         f"{scope} 改动涉及 {touched} 个成员：违规 {len(violations)}，"
-        f"无需判定 {touched - len(findings)}，通过 {len(findings) - len(violations)}。"
+        f"无需判定 {touched - len(findings) - skipped}，通过 {len(findings) - len(violations)}{exemption_note}。"
     )
     if violations:
         print(f"版本守卫失败：{len(violations)} 个包有源码改动但 version 未变，退出码 1。")

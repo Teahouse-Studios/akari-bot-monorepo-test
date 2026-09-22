@@ -6,7 +6,7 @@ WikiLog 与 Wiki 同属一个包，其表结构随 Wiki 一并维护。
 
 from __future__ import annotations
 
-from akaribot.core.database.migration import MigrationContext
+from akaribot.core.api import MigrationContext
 
 REVISION = "0002_union_id"
 

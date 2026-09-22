@@ -1,11 +1,7 @@
 import asyncio
 import re
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import ButtonFrame, I18NContext, Plain
-from akaribot.core.logger import Logger
-from akaribot.core.utils.button import build_button_rows
-from akaribot.core.utils.func import is_int
+from akaribot.core.api import Bot, ButtonFrame, I18NContext, Plain, Logger, build_button_rows, is_int
 from .database.models import WikiTargetInfo
 from .utils.recommend import finish_with_start_wiki_not_set
 from .utils.wikilib import BlockedWikiError, WikiLib

@@ -1,13 +1,8 @@
 import re
 import time
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import I18NContext
-from akaribot.core.component import module
+from akaribot.core.api import Bot, I18NContext, module, ConfigValueError, is_float, get_url
 from akaribot.modules.exchange_rate.config import ExchangeRateConfig
-from akaribot.core.constants.exceptions import ConfigValueError
-from akaribot.core.utils.func import is_float
-from akaribot.core.utils.http import get_url
 
 api_key = ExchangeRateConfig.exchange_rate_api_key
 

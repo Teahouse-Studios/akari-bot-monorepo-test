@@ -7,10 +7,7 @@ import orjson
 import webcolors
 from PIL import Image, ImageDraw, ImageFont
 
-from akaribot.core.api import find_font
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import Embed, EmbedField, Image as BImage, I18NContext
-from akaribot.core.component import module
+from akaribot.core.api import find_font, Bot, Embed, EmbedField, Image as BImage, I18NContext, module
 
 c = module(
     "color",

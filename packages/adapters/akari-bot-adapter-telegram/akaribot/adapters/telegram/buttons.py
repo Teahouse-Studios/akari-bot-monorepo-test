@@ -2,10 +2,8 @@
 
 from aiogram.types import CopyTextButton, InlineKeyboardButton, InlineKeyboardMarkup
 
-from akaribot.core.builtins.message.elements import ActionTextElement
-from akaribot.core.builtins.message.elements import ButtonRows
-from akaribot.core.logger import Logger
-from akaribot.core.utils.button_runtime import register_button_rows
+from akaribot.core.api import ActionTextElement, ButtonRows, Logger
+from akaribot.core.api.adapters import register_button_rows
 
 TELEGRAM_ACTION_TEXT_MAX_LENGTH = 256
 TELEGRAM_ACTION_LABEL_MAX_LENGTH = 64

@@ -2,10 +2,7 @@ import math
 
 from simpleeval import SimpleEval, FunctionNotDefined, NameNotDefined
 
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.internal import Plain
-from akaribot.core.constants.exceptions import ConfigValueError
-from akaribot.core.logger import Logger
+from akaribot.core.api import Bot, Plain, ConfigValueError, Logger
 from .dice import *
 from akaribot.modules.dice.config import DiceConfig
 

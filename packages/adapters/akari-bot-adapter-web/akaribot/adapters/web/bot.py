@@ -8,12 +8,8 @@ from akaribot.adapters.web.client import web_host, available_web_port, forwarded
 from akaribot.adapters.web.config import WebConfig
 from akaribot.adapters.web.context import WebContextManager
 from akaribot.adapters.web.info import *
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.builtins.message.chain import MessageChain
-from akaribot.core.builtins.message.internal import Plain, Image
-from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.builtins.temp import Temp
-from akaribot.core.utils.button_runtime import normalize_button_payload
+from akaribot.core.api import Bot, MessageChain, Plain, Image, SessionInfo
+from akaribot.core.api.adapters import Temp, normalize_button_payload
 
 Bot.register_bot(client_name=client_name)
 

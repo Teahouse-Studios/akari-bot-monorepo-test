@@ -1,5 +1,4 @@
-from akaribot.core.config.decorator import on_bot_config
-from akaribot.core.constants.default import qq_host_default
+from akaribot.core.api import on_bot_config, qq_host_default
 
 
 @on_bot_config("milky")

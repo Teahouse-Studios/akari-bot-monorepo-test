@@ -1,5 +1,4 @@
-from akaribot.core.builtins.bot import Bot
-from akaribot.core.component import module
+from akaribot.core.api import Bot, module
 from akaribot.modules.github.config import GithubConfig
 
 from akaribot.modules.github import repo, user, search
