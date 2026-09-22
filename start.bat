@@ -1,7 +1,7 @@
 chcp 65001
 setlocal enabledelayedexpansion
 set PYTHONIOENCODING=utf-8
-rem 源码树下可导入的包在 packages\*\src 与 packages\*\*\src；已按 workspace 安装时该设置无副作用。
+rem 源码树下可导入的包在 packages\* 与 packages\*\*（源码根即分发根）；已按 workspace 安装时无副作用。
 set "PYTHONPATH=%~dp0"
 for /d %%d in ("%~dp0packages\*") do (
     if exist "%%d\src" set "PYTHONPATH=!PYTHONPATH!;%%d\src"

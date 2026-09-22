@@ -21,14 +21,14 @@ akaribot module add -e .
 {% for command in commands | default([]) -%}
 - `~[@module_name@]{% if command.suffix %} {{ command.suffix }}{% endif %}`：{{ command.doc }}
 {% endfor %}
-帮助文本与回复文案都在 `src/akaribot/modules/[@module_name@]/locales/zh_cn.json`。本文件只写
+帮助文本与回复文案都在 `akaribot/modules/[@module_name@]/locales/zh_cn.json`。本文件只写
 `zh_cn`，其余语言由 Weblate 在包发布后收集，不要手工添加其它语言的键。
 
 ## 结构
 
 ```
 pyproject.toml                 # 分发元数据与 akaribot.modules entry point
-src/akaribot/modules/[@module_name@]/
+akaribot/modules/[@module_name@]/
   __init__.py                  # module() 注册与命令、组件骨架
   config.py                    # 模块配置字段声明（可选）
   database/models.py           # 数据库模型（可选）

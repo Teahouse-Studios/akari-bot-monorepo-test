@@ -50,7 +50,7 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
-          script-name: packages/akari-bot-cli/src/akaribot/cli/main.py
+          script-name: packages/akari-bot-cli/akaribot/cli/main.py
           mode: onefile
           output-dir: cli-build
           # 包内资源漏掉会让 TUI 在用户机器上崩（textual 的 .tcss、rich 的内置主题）。手工列举必然

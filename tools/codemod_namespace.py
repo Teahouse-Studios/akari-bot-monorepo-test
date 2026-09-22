@@ -112,9 +112,9 @@ def remap_new_to_old(segments: Sequence[str]) -> list[str] | None:
 
 
 def build_known(root: Path) -> frozenset[str]:
-    """遍历 packages/**/src/akaribot，反推出旧点分模块路径全集。"""
+    """遍历 packages/**/akaribot，反推出旧点分模块路径全集。"""
     known: set[str] = set()
-    for package_root in sorted(root.glob("packages/**/src/akaribot")):
+    for package_root in sorted(root.glob("packages/**/akaribot")):
         if not package_root.is_dir():
             continue
         for path in sorted(package_root.rglob("*.py")):
@@ -391,7 +391,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     known = build_known(root)
     if not known:
         print(
-            "错误：packages/**/src/akaribot 下未发现模块，字符串白名单无法建立；确认物理移动已完成。",
+            "错误：packages/**/akaribot 下未发现模块，字符串白名单无法建立；确认物理移动已完成。",
             file=sys.stderr,
         )
         return 2

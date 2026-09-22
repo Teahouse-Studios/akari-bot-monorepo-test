@@ -125,7 +125,7 @@ printf 'q' | script -q /dev/null akaribot tui   # 需要一个能分配 pty 的�
 # 冻结产物（T6.5(a)）
 nuitka --onefile --assume-yes-for-downloads \
   --include-package=akaribot.cli.tui --include-package-data=akaribot.cli.tui \
-  --output-filename=akaribot.bin packages/akari-bot-cli/src/akaribot/cli/main.py
+  --output-filename=akaribot.bin packages/akari-bot-cli/akaribot/cli/main.py
 ./akaribot.bin tui --self-check ; echo "exit=$?"   # 期望 0；任一 [fail] 项即决定 --include-package-data 要列哪些包
 ```
 

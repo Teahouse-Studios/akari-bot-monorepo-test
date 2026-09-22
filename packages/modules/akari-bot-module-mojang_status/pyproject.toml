@@ -15,4 +15,4 @@ dependencies = [
 mojang_status = "akaribot.modules.mojang_status"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

@@ -161,13 +161,22 @@ def entry_points(project: dict[str, Any], group: str, path: str) -> dict[str, st
 
 
 def package_root(pyproject: Path, import_path: str) -> Path:
-    """由 entry point 的导入路径定位包目录，src 布局是本仓库的既定结构。"""
-    root = pyproject.parent / "src"
-    for part in import_path.split("."):
-        root = root / part
-    if not root.is_dir():
-        raise ConfigError(f"{pyproject.name} 的 entry point {import_path} 指向的目录不存在：{root}")
-    return root
+    """由 entry point 的导入路径定位包目录。
+
+    源码根优先取分发根本身（当前布局），退回 ``src``（迁移前布局）——按固定层级拼接会在另一种
+    布局下静默落空或直接报「目录不存在」。
+
+    :param pyproject: 该分发的 pyproject.toml。
+    :param import_path: entry point 的导入路径。
+    :return: 导入包目录。
+    """
+    for base in (pyproject.parent, pyproject.parent / "src"):
+        root = base
+        for part in import_path.split("."):
+            root = root / part
+        if root.is_dir():
+            return root
+    raise ConfigError(f"{pyproject.name} 的 entry point {import_path} 指向的目录不存在（试过分发根与 src）")
 
 
 def read_manifest(package_path: str, root: Path) -> dict[str, Any]:

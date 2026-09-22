@@ -29,4 +29,4 @@ dependencies = [
 web = "akaribot.adapters.web"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

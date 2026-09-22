@@ -17,4 +17,4 @@ dependencies = [
 mcv = "akaribot.modules.mcv"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

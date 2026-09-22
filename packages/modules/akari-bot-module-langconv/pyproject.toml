@@ -17,7 +17,7 @@ dependencies = [
 langconv = "akaribot.modules.langconv"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]
 
 # langconv 只有 git 直链；hatchling 默认拒绝 direct reference，发布前须替换为常规版本。
 [tool.hatch.metadata]

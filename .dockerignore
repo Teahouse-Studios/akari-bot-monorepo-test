@@ -23,7 +23,7 @@ cache/
 data/
 database/
 logs/
-packages/modules/*/src/akaribot/modules/*/data/
+packages/modules/*/akaribot/modules/*/data/
 
 # Documentation
 SECURITY.md

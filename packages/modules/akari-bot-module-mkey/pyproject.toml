@@ -16,4 +16,4 @@ dependencies = [
 mkey = "akaribot.modules.mkey"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

@@ -10,9 +10,22 @@ from akaribot.core.constants.path import PrivateData
 from akaribot.core.paths import INSTANCE_DIR_ENV, Paths
 from akaribot.testing import Tester, func_case
 
-# 仓库根从 core 包的位置推算（<仓库根>/packages/akari-bot-core/src/akaribot/core/），
+
+# 仓库根从 core 包的位置向上推算（判据见 _repository_root），
 # 既不依赖测试文件所处位置，也不取自 Paths.tests——后者正是本用例要断言的取值。
-PROJECT_ROOT = Path(akaribot.core.__file__).resolve().parents[5]
+def _repository_root() -> Path:
+    """独立推算仓库根：向上找含 packages/ 与 pyproject.toml 的目录。
+
+    不按层数推算（源码根从 <dist>/src/akaribot 压成 <dist>/akaribot 后层数会变），也不取
+    Paths.tests——后者正是本用例要断言的取值。
+    """
+    for candidate in Path(akaribot.core.__file__).resolve().parents:
+        if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():
+            return candidate
+    raise AssertionError("找不到仓库根")
+
+
+PROJECT_ROOT = _repository_root()
 
 # 子进程脚本：取出实例目录相关取值并打印，用于验证环境变量在导入期生效。
 PROBE = (

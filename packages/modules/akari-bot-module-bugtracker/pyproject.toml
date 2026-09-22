@@ -16,4 +16,4 @@ dependencies = [
 bugtracker = "akaribot.modules.bugtracker"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

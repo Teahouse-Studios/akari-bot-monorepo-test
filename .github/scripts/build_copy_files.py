@@ -17,7 +17,7 @@ if __name__ == "__main__":
     shutil.copytree("assets", output_dir / "assets")
     (output_dir / "data").mkdir(exist_ok=True)
     shutil.copytree("packages/adapters", output_dir / "bots")
-    shutil.copytree("packages/akari-bot-core/src/akaribot/core/locales", output_dir / "core" / "locales")
+    shutil.copytree("packages/akari-bot-core/akaribot/core/locales", output_dir / "core" / "locales")
     # 整个 packages/modules 一并复制：除模块源码外还有各包的 pyproject.toml 与 assets/。
     # 可写数据已不在包目录内（见模块顶部说明），故此处无需再区分运行时产物。
     shutil.copytree("packages/modules", output_dir / "modules")

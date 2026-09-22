@@ -21,4 +21,4 @@ dependencies = [
 phigros = "akaribot.modules.phigros"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

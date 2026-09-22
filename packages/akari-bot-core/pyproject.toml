@@ -43,7 +43,7 @@ dependencies = [
 core = "akaribot.modules.core"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]
 
 [project.optional-dependencies]
 s3 = ["boto3>=1.35.0,<2.0.0"]

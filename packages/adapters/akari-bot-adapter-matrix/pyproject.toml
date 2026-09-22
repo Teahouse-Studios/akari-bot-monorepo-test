@@ -16,4 +16,4 @@ dependencies = [
 matrix = "akaribot.adapters.matrix"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

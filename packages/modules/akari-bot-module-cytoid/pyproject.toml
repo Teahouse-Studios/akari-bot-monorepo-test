@@ -20,4 +20,4 @@ dependencies = [
 cytoid = "akaribot.modules.cytoid"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

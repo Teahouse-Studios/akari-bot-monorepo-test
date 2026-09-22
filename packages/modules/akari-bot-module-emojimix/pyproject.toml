@@ -17,4 +17,4 @@ dependencies = [
 emojimix = "akaribot.modules.emojimix"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

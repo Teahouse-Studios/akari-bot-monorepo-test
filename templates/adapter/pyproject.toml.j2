@@ -21,4 +21,4 @@ dependencies = [
 [tool.hatch.build.targets.wheel]
 # 包目录内的 locales 等非 Python 文件随 packages 一并入 wheel，不要再写 force-include：
 # 重复收录同一路径会让 hatchling 报 "A second file is being added to the wheel archive"。
-packages = ["src/akaribot"]
+packages = ["akaribot"]

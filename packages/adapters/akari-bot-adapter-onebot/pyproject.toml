@@ -20,4 +20,4 @@ dependencies = [
 onebot = "akaribot.adapters.onebot"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

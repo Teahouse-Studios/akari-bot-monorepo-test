@@ -34,11 +34,15 @@ def _env_path(name: str) -> Path | None:
 def _repository_root() -> Path:
     """源码检出形态下的仓库根。
 
-    本文件位于 <仓库根>/packages/akari-bot-core/src/akaribot/core/，向上五级即仓库根。打包形态
-    的路径层级不再对应仓库，此时退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
+    判据是「含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先」，不按层数推算——源码根从
+    ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后层数会变，数层数会静默指到仓库之外。
+    打包形态下找不到这样的祖先，退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
     """
     current = Path(__file__).resolve()
-    return current.parents[5] if len(current.parents) > 5 else current.parent
+    for candidate in current.parents:
+        if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():
+            return candidate
+    return current.parent
 
 
 class Paths:

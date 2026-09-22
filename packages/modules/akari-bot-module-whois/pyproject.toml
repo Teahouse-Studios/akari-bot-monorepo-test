@@ -16,4 +16,4 @@ dependencies = [
 whois = "akaribot.modules.whois"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

@@ -14,4 +14,4 @@ license-files = ["LICENCE"]
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/html2text"]
+packages = ["html2text"]

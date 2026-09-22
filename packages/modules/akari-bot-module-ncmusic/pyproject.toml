@@ -15,4 +15,4 @@ dependencies = [
 ncmusic = "akaribot.modules.ncmusic"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

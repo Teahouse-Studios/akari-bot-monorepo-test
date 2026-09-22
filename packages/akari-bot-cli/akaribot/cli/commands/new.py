@@ -49,12 +49,12 @@ MODULE_ADD_TIMEOUT = 120.0
 
 # 问卷选项控制的模板文件：未启用时该文件不渲染，其独占目录也不会创建。
 OPTIONAL_TEMPLATES: dict[str, str] = {
-    "src/akaribot/modules/[@module_name@]/config.py.j2": "has_config",
-    "src/akaribot/modules/[@module_name@]/database/__init__.py.j2": "has_database",
-    "src/akaribot/modules/[@module_name@]/database/models.py.j2": "has_database",
-    "src/akaribot/modules/[@module_name@]/migrations/__init__.py.j2": "has_database",
-    "src/akaribot/modules/[@module_name@]/migrations/0001_initial.py.j2": "has_database",
-    "src/akaribot/modules/[@module_name@]/assets/.gitkeep": "has_assets",
+    "akaribot/modules/[@module_name@]/config.py.j2": "has_config",
+    "akaribot/modules/[@module_name@]/database/__init__.py.j2": "has_database",
+    "akaribot/modules/[@module_name@]/database/models.py.j2": "has_database",
+    "akaribot/modules/[@module_name@]/migrations/__init__.py.j2": "has_database",
+    "akaribot/modules/[@module_name@]/migrations/0001_initial.py.j2": "has_database",
+    "akaribot/modules/[@module_name@]/assets/.gitkeep": "has_assets",
     "tests/test_[@module_name@].py.j2": "with_tests",
 }
 
@@ -69,7 +69,7 @@ ADAPTER_TEMPLATE_SKIP = frozenset({"TEMPLATE.md", "selfcheck.py"})
 
 # 问卷选项控制的适配器模板文件：未启用时该文件不渲染。
 ADAPTER_OPTIONAL_TEMPLATES: dict[str, str] = {
-    "src/akaribot/adapters/[@module_name@]/config.py.j2": "has_config",
+    "akaribot/adapters/[@module_name@]/config.py.j2": "has_config",
 }
 
 PLATFORM_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,47}$")

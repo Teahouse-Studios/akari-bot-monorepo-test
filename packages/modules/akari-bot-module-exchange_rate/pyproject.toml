@@ -15,4 +15,4 @@ dependencies = [
 exchange_rate = "akaribot.modules.exchange_rate"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

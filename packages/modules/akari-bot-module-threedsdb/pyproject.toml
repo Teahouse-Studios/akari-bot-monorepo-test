@@ -16,4 +16,4 @@ dependencies = [
 threedsdb = "akaribot.modules.threedsdb"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

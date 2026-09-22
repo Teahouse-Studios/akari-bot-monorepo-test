@@ -16,4 +16,4 @@ dependencies = [
 mcmod = "akaribot.modules.mcmod"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

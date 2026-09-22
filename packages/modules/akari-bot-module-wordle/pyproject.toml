@@ -17,4 +17,4 @@ dependencies = [
 wordle = "akaribot.modules.wordle"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

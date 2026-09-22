@@ -72,7 +72,7 @@ def core_imports(tree: ast.AST) -> list[str]:
 def check_layout(package: Path) -> Path:
     """断言骨架文件齐全，返回导入包目录。"""
     stem = package.name.removeprefix("akari-bot-adapter-")
-    source = package / "src/akaribot/adapters" / stem
+    source = package / "akaribot/adapters" / stem
     missing = [name for name in SKELETON_FILES if not (source / name).is_file()]
     report(f"{package.name} 骨架文件齐全", not missing, ",".join(missing))
     return source
@@ -89,7 +89,7 @@ def check_metadata(package: Path) -> None:
         report(f"entry point 指向导入路径（{value}）", value == f"akaribot.adapters.{stem}")
     report("core 约束字面一致", EXPECTED_CORE in project["dependencies"], str(project["dependencies"]))
 
-    manifest = tomllib.loads((package / "src/akaribot/adapters" / stem / "manifest.toml").read_text(encoding="utf-8"))
+    manifest = tomllib.loads((package / "akaribot/adapters" / stem / "manifest.toml").read_text(encoding="utf-8"))
     report("manifest 非空", bool(manifest), str(sorted(manifest)))
     report("manifest 声明 schema", manifest.get("schema") == 1, str(manifest.get("schema")))
     report("manifest 声明 requires_core_api", manifest.get("requires_core_api") == ">=1")

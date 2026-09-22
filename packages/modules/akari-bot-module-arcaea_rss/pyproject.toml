@@ -16,4 +16,4 @@ dependencies = [
 arcaea_rss = "akaribot.modules.arcaea_rss"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

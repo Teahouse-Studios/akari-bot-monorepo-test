@@ -25,4 +25,4 @@ dependencies = [
 ai = "akaribot.modules.ai"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

@@ -73,7 +73,7 @@ def _source_import_roots() -> list[Path]:
     root = _repository_root()
     if root is None:
         return []
-    candidates = [root, *sorted(root.glob("packages/*/src")), *sorted(root.glob("packages/*/*/src"))]
+    candidates = [root, *sorted(root.glob("packages/*")), *sorted(root.glob("packages/*/*"))]
     return [path for path in candidates if path.is_dir()]
 
 

@@ -19,4 +19,4 @@ dependencies = [
 color = "akaribot.modules.color"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

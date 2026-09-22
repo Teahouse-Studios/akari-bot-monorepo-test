@@ -16,4 +16,4 @@ dependencies = [
 convert = "akaribot.modules.convert"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

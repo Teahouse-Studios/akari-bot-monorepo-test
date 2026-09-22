@@ -181,7 +181,7 @@ akaribot module add -e .          # 在生成的包目录内执行；脚手架 -
 ```
 
 脚手架产出 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 同构：
-`pyproject.toml`、`manifest.toml`、`README.md`、`src/akaribot/modules/<名>/`（含 `config.py`、
+`pyproject.toml`、`manifest.toml`、`README.md`、`akaribot/modules/<名>/`（含 `config.py`、
 `database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
 `--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`；若要手工执行，先进入包目录。
 
@@ -431,7 +431,7 @@ akaribot module add -e .          # run inside the generated package; the scaffo
 ```
 
 The scaffold writes `<--dir>/akari-bot-module-<name>/`, mirroring `packages/modules/akari-bot-module-<name>/`:
-`pyproject.toml`, `manifest.toml`, `README.md`, `src/akaribot/modules/<name>/` (with `config.py`,
+`pyproject.toml`, `manifest.toml`, `README.md`, `akaribot/modules/<name>/` (with `config.py`,
 `database/models.py`, `migrations/`, `locales/zh_cn.json`, `assets/`) and `tests/test_<name>.py`.
 
 `manifest.toml` lives inside the import package. Its fields map one-to-one to `PackageManifest` in

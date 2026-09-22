@@ -1,6 +1,6 @@
 """import 分层检查。
 
-对 monorepo 布局（packages[/<group>]/<dist>/src/akaribot/{core,modules,adapters}）做 AST 静态检查，
+对 monorepo 布局（packages[/<group>]/<dist>/akaribot/{core,modules,adapters}）做 AST 静态检查，
 规格见 generated_docs/monorepo_refactor_tasks.md 的 T4.6（#n 即该节表格的条号）：
 
     B1  warn/error  模块包 import 其它模块包的非 .api 内部路径（#2；packages/modules 下的官方包为 error）
@@ -9,7 +9,7 @@
     B4  error       akaribot.core.* import akaribot.modules.* 或 akaribot.adapters.*（core 不依赖可能缺席的包）
     B5  error       适配器包 import akaribot.modules.*（适配器不依赖具体模块）
     B6  error       模块包 import 其它模块包，却未在自身 pyproject 的 dependencies 里声明该分发（#1）
-    B7  error       包含 src/akaribot/{,modules/,adapters/}__init__.py（#4，命名空间污染 R2）
+    B7  error       包含 akaribot/{,modules/,adapters/}__init__.py（#4，命名空间污染 R2）
     B8  warn        模块包 import 的 akaribot.core 深路径符号未收录进 akaribot.core.api（#5）
     B9  error       适配器 entry point 名含 '-'（#6，会与多实例分隔符冲突，T1B.1）
     B10 error       官方模块包（packages/modules/*）import 其它模块包（#7，官方不建立模块间依赖）
@@ -59,7 +59,7 @@ EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
 # 分发清单：packages/<dist>/ 与 packages/<group>/<dist>/ 两层；容器目录（adapters、modules）无 pyproject。
 DIST_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pyproject.toml")
 
-# 命名空间根标志：源码位于 <dist>/src/akaribot/<layer>/…，据此定位分层与包路径。
+# 命名空间根标志：源码位于 <dist>/akaribot/<layer>/…，据此定位分层与包路径。
 NAMESPACE_ROOT = "akaribot"
 # 分层取命名空间根之后的第一段目录名；akaribot.testing 不在受约束的三层内，规则不适用。
 LAYER_CORE = "core"
@@ -302,7 +302,7 @@ def load_distributions() -> tuple[Dist, ...]:
             for value in module_entry_points.values()
             if str(value).startswith(f"{MODULES_ROOT}.")
         }
-        module_dir = path.parent / "src" / NAMESPACE_ROOT / LAYER_MODULES
+        module_dir = source_root(path.parent.name) / LAYER_MODULES
         if module_dir.is_dir():
             module_owners.update(
                 child.name for child in module_dir.iterdir() if child.is_dir() and child.name not in EXCLUDED_DIR_NAMES
@@ -339,14 +339,23 @@ def extract_all_names(tree: ast.AST) -> set[str]:
     return names
 
 
+def source_root(dist_relative: str) -> Path:
+    """分发源码根：优先 ``<dist>/akaribot``，退回 ``<dist>/akaribot``。
+
+    源码根从 ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后，按固定层级拼接的路径会静默落空
+    （B8 的符号面会变空、规则不再生效），故两种布局都认。
+
+    :param dist_relative: 分发目录的仓库根相对路径。
+    :return: 源码根目录。
+    """
+    flat = PROJECT_ROOT / dist_relative / NAMESPACE_ROOT
+    return flat if flat.is_dir() else PROJECT_ROOT / dist_relative / "src" / NAMESPACE_ROOT
+
+
 def load_core_api_names(dists: tuple[Dist, ...]) -> frozenset[str]:
     """取 akaribot.core.api 承诺的符号面，AST 解析 __all__ 字面量，不导入 core。"""
     api_dir = next(
-        (
-            PROJECT_ROOT / dist.relative / "src" / NAMESPACE_ROOT / LAYER_CORE / "api"
-            for dist in dists
-            if (PROJECT_ROOT / dist.relative / "src" / NAMESPACE_ROOT / LAYER_CORE / "api").is_dir()
-        ),
+        (candidate for dist in dists if (candidate := source_root(dist.relative) / LAYER_CORE / "api").is_dir()),
         None,
     )
     if api_dir is None:

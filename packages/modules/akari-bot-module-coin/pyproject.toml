@@ -15,4 +15,4 @@ dependencies = [
 coin = "akaribot.modules.coin"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

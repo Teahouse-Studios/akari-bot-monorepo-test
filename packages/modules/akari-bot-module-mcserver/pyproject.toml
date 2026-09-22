@@ -17,4 +17,4 @@ dependencies = [
 mcserver = "akaribot.modules.mcserver"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

@@ -179,7 +179,7 @@ OUTPUT_ROOT = REPO_ROOT if REPO_ROOT is not None else Path.cwd()
 def _source_import_roots() -> list[Path]:
     """源码检出下提供 ``akaribot`` 命名空间的目录。
 
-    各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
+    各包源码存放在 ``packages[/<类>]/<包名>``（源码根即分发根，不再有 ``src`` 一层），仓库根本身不再有可导入的 ``akaribot``。
     判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根不可知时返回空列表：此时
     ``akaribot`` 由已安装分发提供，无须也不应改写 ``PYTHONPATH``。
 
@@ -189,8 +189,11 @@ def _source_import_roots() -> list[Path]:
         return []
     candidates = [
         REPO_ROOT,
-        *sorted(REPO_ROOT.glob("packages/*/src")),
-        *sorted(REPO_ROOT.glob("packages/*/*/src")),
+        # 两种布局都收：源码根即分发根（当前布局），或分发根下的 src（迁移前布局）。
+        *sorted(path for path in REPO_ROOT.glob("packages/*") if (path / "akaribot").is_dir()),
+        *sorted(path for path in REPO_ROOT.glob("packages/*/*") if (path / "akaribot").is_dir()),
+        *sorted(path / "src" for path in REPO_ROOT.glob("packages/*") if (path / "src" / "akaribot").is_dir()),
+        *sorted(path / "src" for path in REPO_ROOT.glob("packages/*/*") if (path / "src" / "akaribot").is_dir()),
     ]
     return [path for path in candidates if path.is_dir()]
 

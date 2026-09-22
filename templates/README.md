@@ -41,7 +41,7 @@ T5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流
 生成器按两步处理，顺序不可颠倒：
 
 1. **路径替换**：复制目录树时，把路径中的 ``[@name@]`` 换成取值，得到
-   ``src/akaribot/modules/<实际模块名>/``；
+   ``akaribot/modules/<实际模块名>/``；
 2. **内容渲染**：用 Jinja2 渲染文件内容，再用同一份取值做一次 ``[@name@]`` 明文替换
    （路径与文本中的占位符都要替换），最后做一次 ``html.unescape``。
 
@@ -69,7 +69,7 @@ T5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流
       pyproject.toml.j2
       manifest.toml.j2
       README.md
-      src/akaribot/modules/[@module_name@]/
+      akaribot/modules/[@module_name@]/
         __init__.py.j2
         config.py.j2
         database/__init__.py.j2

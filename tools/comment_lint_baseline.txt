@@ -3,94 +3,94 @@
 # 键由 tools/lint_comments.py --generate-baseline 生成，随清理逐步缩小。
 # 生成时的违规总数：91
 
-packages/adapters/akari-bot-adapter-discord/src/akaribot/adapters/discord/context.py	R7	if session_info.session_id not in cls.context:
-packages/adapters/akari-bot-adapter-matrix/src/akaribot/adapters/matrix/bot.py	R7	Logger.info(f"Trying first sync")
-packages/adapters/akari-bot-adapter-matrix/src/akaribot/adapters/matrix/bot.py	R7	is_direct = (room.member_count == 1 or room.member_count == 2) and room.join_rule == "invite"
-packages/adapters/akari-bot-adapter-matrix/src/akaribot/adapters/matrix/context.py	R7	When the room does not follow MSC4291, ignore it silently
-packages/adapters/akari-bot-adapter-matrix/src/akaribot/adapters/matrix/context.py	R7	if session_info.session_id not in cls.context:
-packages/adapters/akari-bot-adapter-milky/src/akaribot/adapters/milky/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
-packages/adapters/akari-bot-adapter-onebot/src/akaribot/adapters/onebot/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
-packages/adapters/akari-bot-adapter-qqbot/src/akaribot/adapters/qqbot/context.py	R7	QQ Bot inline keyboards accept at most five rows with ten buttons per row.
-packages/adapters/akari-bot-adapter-qqbot/src/akaribot/adapters/qqbot/navigation.py	R7	C2C 输入框上菜单
+packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py	R7	if session_info.session_id not in cls.context:
+packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/bot.py	R7	Logger.info(f"Trying first sync")
+packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/bot.py	R7	is_direct = (room.member_count == 1 or room.member_count == 2) and room.join_rule == "invite"
+packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/context.py	R7	When the room does not follow MSC4291, ignore it silently
+packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/context.py	R7	if session_info.session_id not in cls.context:
+packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
+packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/bot.py	R7	本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
+packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py	R7	QQ Bot inline keyboards accept at most five rows with ten buttons per row.
+packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/navigation.py	R7	C2C 输入框上菜单
 packages/adapters/akari-bot-adapter-qqbot/tests/test_markdown_toggle.py	R7	平台能力集在导入时即依配置定型，qq_use_markdown 为假的部署上，markdown 相关能力全为假，
-packages/adapters/akari-bot-adapter-telegram/src/akaribot/adapters/telegram/context.py	R7	if session_info.session_id not in cls.context:
-packages/adapters/akari-bot-adapter-web/src/akaribot/adapters/web/api/api.py	R7	时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
-packages/akari-bot-core/src/akaribot/core/builtins/filter/protect.py	R7	---------------------------------------------------------
-packages/akari-bot-core/src/akaribot/core/builtins/message/chain.py	R7	指令操作是行内元素：它自身的产物、以及紧随其后的纯文本，
-packages/akari-bot-core/src/akaribot/core/builtins/parser/args.py	R6	无标志的可选参数暂时存储到 afters，后续处理
-packages/akari-bot-core/src/akaribot/core/builtins/parser/args.py	R6	暂时将其添加到 afters 列表，在剩余参数处理时再处理
-packages/akari-bot-core/src/akaribot/core/builtins/parser/args.py	R7	========== 步骤 1.5: 分离 `--` 之后的操作数 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/command.py	R7	========== 构建命令模板字典 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/command.py	R7	========== 步骤 3: 分割命令字符串 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/command.py	R7	========== 步骤 5: 参数匹配 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/hooks/executor.py	R7	Continue carries optional stage metadata (for example, whether
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	========== 步骤 4: 显示“正在输入……”状态 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	显示“正在输入……”状态（如果用户启用）
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	标记是否显示“正在输入……”
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	标记是否显示“正在输入……”状态
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	标记是否正在显示“正在输入……”状态
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R3	结束“正在输入……”状态
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R7	========== 步骤 2: 检查任务队列 ==========
-packages/akari-bot-core/src/akaribot/core/builtins/parser/message.py	R7	如果消息中有需要过滤的词，直接返回
-packages/akari-bot-core/src/akaribot/core/builtins/session/features.py	R3	输入状态显示支持 - 会话是否支持显示“正在输入……”的状态
-packages/akari-bot-core/src/akaribot/core/builtins/session/info.py	R7	assign() 已在平台进程为入站消息建立两侧映射。消息排队期间若管理员删除了
-packages/akari-bot-core/src/akaribot/core/builtins/session/lock.py	R7	_current_keys() 的数据库查询会让出执行权；其间同一执行域的另一协程
-packages/akari-bot-core/src/akaribot/core/builtins/session/tasks.py	R7	存储活跃任务的字典，索引只使用登记时不可变的物理场景／账号 ID。
-packages/akari-bot-core/src/akaribot/core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it is a key-value pair outside the table
-packages/akari-bot-core/src/akaribot/core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it"s a key-value pair outside the table
-packages/akari-bot-core/src/akaribot/core/database/__init__.py	R7	Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
-packages/akari-bot-core/src/akaribot/core/database/__init__.py	R7	Tortoise.init() 在无当前 context 时会把初始化 context 写入当前任务。
-packages/akari-bot-core/src/akaribot/core/exports.py	R3	Export some functions to be dynamically called by the core module to avoid circular imports...
-packages/akari-bot-core/src/akaribot/core/exports.py	R3	Only use them when resolving circular import hell...
-packages/akari-bot-core/src/akaribot/core/queue/base.py	R7	Timeout rows created by stale-task cleanup may have an empty
-packages/akari-bot-core/src/akaribot/core/queue/base.py	R7	send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
-packages/akari-bot-core/src/akaribot/core/server/terminate.py	R7	for x in get_wait_list:
-packages/akari-bot-core/src/akaribot/core/server/terminate.py	R7	restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
-packages/akari-bot-core/src/akaribot/modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/_union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/bind.py	R7	同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/help.py	R7	fname = f"{random_cache_path()}.html"
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/help.py	R7	每节为 (区隔行文案, [(种类, 首列, 次列), ...])；命令一节不带区隔行。
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/merge.py	R7	命令字面量在解析器中按「位置无关的标志」匹配，再取尾随参数。
-packages/akari-bot-core/src/akaribot/modules/core/common_tools/setup.py	R7	不加 available_for：框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，
+packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/context.py	R7	if session_info.session_id not in cls.context:
+packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/api/api.py	R7	时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
+packages/akari-bot-core/akaribot/core/builtins/filter/protect.py	R7	---------------------------------------------------------
+packages/akari-bot-core/akaribot/core/builtins/message/chain.py	R7	指令操作是行内元素：它自身的产物、以及紧随其后的纯文本，
+packages/akari-bot-core/akaribot/core/builtins/parser/args.py	R6	无标志的可选参数暂时存储到 afters，后续处理
+packages/akari-bot-core/akaribot/core/builtins/parser/args.py	R6	暂时将其添加到 afters 列表，在剩余参数处理时再处理
+packages/akari-bot-core/akaribot/core/builtins/parser/args.py	R7	========== 步骤 1.5: 分离 `--` 之后的操作数 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/command.py	R7	========== 构建命令模板字典 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/command.py	R7	========== 步骤 3: 分割命令字符串 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/command.py	R7	========== 步骤 5: 参数匹配 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/hooks/executor.py	R7	Continue carries optional stage metadata (for example, whether
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	========== 步骤 4: 显示“正在输入……”状态 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	显示“正在输入……”状态（如果用户启用）
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	标记是否显示“正在输入……”
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	标记是否显示“正在输入……”状态
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	标记是否正在显示“正在输入……”状态
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R3	结束“正在输入……”状态
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R7	========== 步骤 2: 检查任务队列 ==========
+packages/akari-bot-core/akaribot/core/builtins/parser/message.py	R7	如果消息中有需要过滤的词，直接返回
+packages/akari-bot-core/akaribot/core/builtins/session/features.py	R3	输入状态显示支持 - 会话是否支持显示“正在输入……”的状态
+packages/akari-bot-core/akaribot/core/builtins/session/info.py	R7	assign() 已在平台进程为入站消息建立两侧映射。消息排队期间若管理员删除了
+packages/akari-bot-core/akaribot/core/builtins/session/lock.py	R7	_current_keys() 的数据库查询会让出执行权；其间同一执行域的另一协程
+packages/akari-bot-core/akaribot/core/builtins/session/tasks.py	R7	存储活跃任务的字典，索引只使用登记时不可变的物理场景／账号 ID。
+packages/akari-bot-core/akaribot/core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it is a key-value pair outside the table
+packages/akari-bot-core/akaribot/core/config/__init__.py	R7	foo = bar <- if the item is not a table, assume it"s a key-value pair outside the table
+packages/akari-bot-core/akaribot/core/database/__init__.py	R7	Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
+packages/akari-bot-core/akaribot/core/database/__init__.py	R7	Tortoise.init() 在无当前 context 时会把初始化 context 写入当前任务。
+packages/akari-bot-core/akaribot/core/exports.py	R3	Export some functions to be dynamically called by the core module to avoid circular imports...
+packages/akari-bot-core/akaribot/core/exports.py	R3	Only use them when resolving circular import hell...
+packages/akari-bot-core/akaribot/core/queue/base.py	R7	Timeout rows created by stale-task cleanup may have an empty
+packages/akari-bot-core/akaribot/core/queue/base.py	R7	send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
+packages/akari-bot-core/akaribot/core/server/terminate.py	R7	for x in get_wait_list:
+packages/akari-bot-core/akaribot/core/server/terminate.py	R7	restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
+packages/akari-bot-core/akaribot/modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
+packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py	R7	标签仍须显示实际命令，操作提示仅作为附注；
+packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py	R7	同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对
+packages/akari-bot-core/akaribot/modules/core/common_tools/help.py	R7	fname = f"{random_cache_path()}.html"
+packages/akari-bot-core/akaribot/modules/core/common_tools/help.py	R7	每节为 (区隔行文案, [(种类, 首列, 次列), ...])；命令一节不带区隔行。
+packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py	R7	命令字面量在解析器中按「位置无关的标志」匹配，再取尾随参数。
+packages/akari-bot-core/akaribot/modules/core/common_tools/setup.py	R7	不加 available_for：框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，
 packages/akari-bot-core/tests/test_jobqueue_websocket_backend.py	R7	wait_ready 只保证各 Peer 已注册；ready/welcome 握手仍可能在其它 Peer 的
 packages/akari-bot-core/tests/test_loader.py	R7	The full suite can delay task scheduling while other async tests are unwinding.
 packages/akari-bot-core/tests/test_loader.py	R7	每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），
-packages/akari-bot-html2text/src/html2text/__init__.py	R3	<pre>stuff...
-packages/akari-bot-html2text/src/html2text/__init__.py	R3	Warning for the tempted!!!
-packages/akari-bot-html2text/src/html2text/__init__.py	R7	I cannot think of a better solution for now.
-packages/akari-bot-html2text/src/html2text/__init__.py	R7	This is a very dangerous call ... it could mess up
-packages/akari-bot-html2text/src/html2text/__init__.py	R7	Warning for the tempted!!!
-packages/akari-bot-html2text/src/html2text/__init__.py	R7	ref may be an empty string (e.g. for &lrm;/&rlm; markers that should
-packages/akari-bot-html2text/src/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
-packages/akari-bot-html2text/src/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
-packages/akari-bot-html2text/src/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
-packages/akari-bot-testing/src/akaribot/testing/runner.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
-packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
-packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
-packages/modules/akari-bot-module-captcha/src/akaribot/modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
-packages/modules/akari-bot-module-maimai/src/akaribot/modules/maimai/libraries/divingfish_oauth.py	R4	授权服务器根地址。各端点路径本应从发现文档读取，此处直接写死以简化实现。
-packages/modules/akari-bot-module-mcv/src/akaribot/modules/mcv/__init__.py	R7	@m.command("mcev {{I18N:mcv.help.mcev}}")
-packages/modules/akari-bot-module-mcv/src/akaribot/modules/mcv/mcv.py	R3	Probably...
-packages/modules/akari-bot-module-mcv/src/akaribot/modules/mcv/mcv.py	R3	except Exception:  # Probably...
-packages/modules/akari-bot-module-mcv/src/akaribot/modules/mcv/mcv.py	R7	async def mcev(msg: Bot.MessageSession):
-packages/modules/akari-bot-module-mcv_rss/src/akaribot/modules/mcv_rss/__init__.py	R7	mcv_jira_rss = module(
-packages/modules/akari-bot-module-mkey/src/akaribot/modules/mkey/generator.py	R7	
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/__init__.py	R7	Truncate input to 16 chars so as not to create a huge embed or do
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_results.py	R7	This is largely a dummy module, but FBI errors often get passed through the bot
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_support.py	R3	005-2008 is the same as 007-2920 and 009-2920...
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_support.py	R3	There are way more than 0x1F descriptions, but this is how Nintendo does it...
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_support.py	R3	in HTTP range...
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_support.py	R3	in SOAP range...
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/ctr_support.py	R7	We have some modules partially documented, those that aren't return None.
-packages/modules/akari-bot-module-nintendo_err/src/akaribot/modules/nintendo_err/switch.py	R7	TODO: How do I express INT32_MIN in pythonic terms?
-packages/modules/akari-bot-module-phigros/src/akaribot/modules/phigros/libraries/PhiCloudActionAsync/CloudAction.py	R7	仅加固 follow_redirects：这是本库能正常工作的前提——存档下载走 CDN
-packages/modules/akari-bot-module-phigros/src/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py	R7	if value == 0:
-packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/utils/summarize.py	R7	语义属性链接 [[属性::值]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
-packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/utils/user.py	R3	if one day LGBTers...
-packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/utils/wikilib.py	R7	摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
-packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/wiki.py	R7	Let the runner enter its try/finally before handing it to detached lifecycle code.
-packages/modules/akari-bot-module-wiki/src/akaribot/modules/wiki/wiki.py	R7	if lang in interwiki_list:
+packages/akari-bot-html2text/html2text/__init__.py	R3	<pre>stuff...
+packages/akari-bot-html2text/html2text/__init__.py	R3	Warning for the tempted!!!
+packages/akari-bot-html2text/html2text/__init__.py	R7	I cannot think of a better solution for now.
+packages/akari-bot-html2text/html2text/__init__.py	R7	This is a very dangerous call ... it could mess up
+packages/akari-bot-html2text/html2text/__init__.py	R7	Warning for the tempted!!!
+packages/akari-bot-html2text/html2text/__init__.py	R7	ref may be an empty string (e.g. for &lrm;/&rlm; markers that should
+packages/akari-bot-html2text/html2text/__init__.py	R7	the attrs parameter is empty for a closing tag. in addition, we
+packages/akari-bot-html2text/html2text/utils.py	R7	I'm not sure what this is for; I thought it was to detect lists,
+packages/akari-bot-html2text/html2text/utils.py	R7	If the text begins with a single -, *, or +, followed by a space,
+packages/akari-bot-testing/akaribot/testing/runner.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
+packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py	R7	只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
+packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py	R7	解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
+packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/service.py	R7	平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
+packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py	R4	授权服务器根地址。各端点路径本应从发现文档读取，此处直接写死以简化实现。
+packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/__init__.py	R7	@m.command("mcev {{I18N:mcv.help.mcev}}")
+packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/mcv.py	R3	Probably...
+packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/mcv.py	R3	except Exception:  # Probably...
+packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/mcv.py	R7	async def mcev(msg: Bot.MessageSession):
+packages/modules/akari-bot-module-mcv_rss/akaribot/modules/mcv_rss/__init__.py	R7	mcv_jira_rss = module(
+packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/generator.py	R7	
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/__init__.py	R7	Truncate input to 16 chars so as not to create a huge embed or do
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_results.py	R7	This is largely a dummy module, but FBI errors often get passed through the bot
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_support.py	R3	005-2008 is the same as 007-2920 and 009-2920...
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_support.py	R3	There are way more than 0x1F descriptions, but this is how Nintendo does it...
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_support.py	R3	in HTTP range...
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_support.py	R3	in SOAP range...
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/ctr_support.py	R7	We have some modules partially documented, those that aren't return None.
+packages/modules/akari-bot-module-nintendo_err/akaribot/modules/nintendo_err/switch.py	R7	TODO: How do I express INT32_MIN in pythonic terms?
+packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/CloudAction.py	R7	仅加固 follow_redirects：这是本库能正常工作的前提——存档下载走 CDN
+packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py	R7	if value == 0:
+packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py	R7	语义属性链接 [[属性::值]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
+packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/user.py	R3	if one day LGBTers...
+packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/wikilib.py	R7	摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
+packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/wiki.py	R7	Let the runner enter its try/finally before handing it to detached lifecycle code.
+packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/wiki.py	R7	if lang in interwiki_list:
 tests/build_synthetic_fixtures.py	R7	稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会回落到真实网络，
 tests/run_one.py	R7	union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 tests/unit/test_i18n_cmd_params.py	R7	以键名作为参数传入、由被调方统一补上 cmd 的调用点。

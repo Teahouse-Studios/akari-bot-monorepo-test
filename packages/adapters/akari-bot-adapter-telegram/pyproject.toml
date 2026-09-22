@@ -17,4 +17,4 @@ dependencies = [
 telegram = "akaribot.adapters.telegram"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

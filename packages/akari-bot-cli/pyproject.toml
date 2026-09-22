@@ -27,8 +27,7 @@ dependencies = [
 akaribot = "akaribot.cli.main:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]
 
-# 语言文件是包内资源，缺了会让全部文案退化为键名
-[tool.hatch.build.targets.wheel.force-include]
-"src/akaribot/cli/locales" = "akaribot/cli/locales"
+# 语言文件由 packages = ["akaribot"] 一并收录，不要再 force-include（重复收录会让 hatchling 报
+# "A second file is being added to the wheel archive at the same path"）。

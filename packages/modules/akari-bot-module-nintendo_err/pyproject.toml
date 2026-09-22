@@ -17,4 +17,4 @@ dependencies = [
 nintendo_err = "akaribot.modules.nintendo_err"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

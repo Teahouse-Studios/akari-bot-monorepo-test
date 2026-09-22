@@ -28,4 +28,4 @@ dependencies = [
 wiki = "akaribot.modules.wiki"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]

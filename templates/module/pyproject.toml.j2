@@ -24,7 +24,7 @@ test = ["akari-bot-testing>=0.1.0,<1.0"]
 "[@module_name@]" = "akaribot.modules.[@module_name@]"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]
 
 # locales 与 assets / migrations 位于导入包目录内，随 wheel 一并分发。
 # locales/assets/migrations 已由上面的 packages 收录，不要再 force-include（重复收录会让

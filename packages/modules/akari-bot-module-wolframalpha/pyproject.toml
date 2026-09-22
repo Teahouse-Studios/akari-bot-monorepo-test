@@ -16,4 +16,4 @@ dependencies = [
 wolframalpha = "akaribot.modules.wolframalpha"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/akaribot"]
+packages = ["akaribot"]
