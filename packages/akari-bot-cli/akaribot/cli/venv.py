@@ -10,6 +10,8 @@ import json
 import os
 import shutil
 import subprocess
+
+from rich.markup import escape
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -128,7 +130,7 @@ class CommandRunner:
     def run(self, argv: Sequence[str], *, env: Mapping[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         """执行命令并捕获文本输出。"""
         if self.dry_run:
-            console.print(f"[dim]$ {' '.join(argv)}[/dim]")
+            console.print(f"[dim]$ {escape(' '.join(argv))}[/dim]")
             return subprocess.CompletedProcess(list(argv), 0, stdout="", stderr="")
         try:
             completed = subprocess.run(  # noqa: S603
@@ -994,7 +996,7 @@ def adopt(
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
-            console.print(f"[red]  {item}[/red]")
+            console.print(f"[red]  {escape(str(item))}[/red]")
         raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_source"))
     ok(i18n.t("cli.venv_engine.entry_points_consistent", count=len(source_dists)))
 
@@ -1078,7 +1080,7 @@ def release(
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
-            console.print(f"[red]  {item}[/red]")
+            console.print(f"[red]  {escape(str(item))}[/red]")
         raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_venv"))
     ok(i18n.t("cli.venv_engine.entry_points_consistent", count=len(source_dists)))
 
@@ -1166,7 +1168,7 @@ def recreate(
     problems = compare_entry_points(source_dists, target_dists)
     if problems:
         for item in problems[:10]:
-            console.print(f"[red]  {item}[/red]")
+            console.print(f"[red]  {escape(str(item))}[/red]")
         raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_new", staging=staging))
 
     step(4, 4, i18n.t("cli.venv_engine.step_swap_and_cleanup"))

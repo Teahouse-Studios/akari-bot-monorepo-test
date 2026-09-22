@@ -19,6 +19,7 @@ from typing import Annotated, Iterable, Sequence
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from rich.markup import escape
 from rich.table import Table
 
 from akaribot.cli import i18n
@@ -140,7 +141,7 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
     problems.extend(engine.dependency_conflicts(target, installed_env))
     if problems:
         for problem in problems:
-            console.print(f"[red]  × {problem}[/red]")
+            console.print(f"[red]  × {escape(str(problem))}[/red]")
         related = engine.installed_api_requirements(target, installed_env)
         if related:
             items = i18n.t("cli.common.clause_separator").join(related)
@@ -549,7 +550,7 @@ def _perform_update(
     targets = _join_list(f"{plan.dist}→{plan.version or i18n.t('cli.module.update.local_source')}" for plan in plans)
     console.print(i18n.t("cli.module.update.will_update", targets=targets))
     if dry_run:
-        console.print(f"[dim]$ {' '.join(argv)}[/dim]")
+        console.print(f"[dim]$ {escape(' '.join(argv))}[/dim]")
         console.print(i18n.t("cli.module.dry_run_skip_rest"))
         return 0, _update_payload(updated=[], plans=plans, failed=[], skipped=skipped, notified=[], dry_run=True)
     if not assume_yes:
