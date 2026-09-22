@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from akaribot.core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
 from akaribot.core.i18n import Locale
-from akaribot.core.smtp import send_email, send_report
+from akaribot.core.smtp import LOGO_PATH, send_email, send_report
 from akaribot.testing import Tester, func_case
 
 
@@ -87,8 +87,9 @@ async def _test_external_smtp_client_uses_starttls_and_login():
         and plain_part.get_content() == f"body\n\n{footer}\n"
         and "body" in html_part.get_content()
         and f'<a href="{issue_url}">{issue_url}</a>' in html_part.get_content()
-        and len(inline_logo) == 1
-        and inline_logo[0].get_content_type() == "image/png"
+        # 标志来自 full extra 的品牌资产包：装了才内嵌，裸 core 下应为 0——两种形态都要成立。
+        and len(inline_logo) == (1 if LOGO_PATH is not None else 0)
+        and all(part.get_content_type() == "image/png" for part in inline_logo)
         and parsedate_to_datetime(message["Date"]).tzinfo is not None
     )
 

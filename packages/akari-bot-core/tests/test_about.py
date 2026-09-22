@@ -13,14 +13,17 @@ from akaribot.core.builtins.message.elements import (
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.config.base import CoreConfig
 from akaribot.core.i18n import Locale
+from akaribot.core.utils.brand import find_brand_asset
 from akaribot.testing import Contains, Tester, func_case
 from akaribot.modules.core.common_tools.about import (
     CHARACTER_IMAGE_MAX_WIDTH,
-    CHARACTER_IMAGE_PATH,
     build_about_message,
     build_credits_message,
     read_credits,
 )
+
+# 立绘由 akari-bot-assets-brand 资源包分发；实例 assets/ 可覆盖，故按同一入口取期望路径。
+CHARACTER_IMAGE_PATH = find_brand_asset("character_marked.png")
 
 
 def _msg(client_name="TEST", support_markdown=True, support_button=True):
@@ -56,13 +59,37 @@ def _test_markdown_layout_without_credits():
         chain = build_about_message(_msg())
     texts = _plain_texts(chain)
     introduction = Locale("zh_cn").t("core.message.about.introduction")
+    # 品牌资产是 full extra：装了才有配图，裸 core 下应跳过。两种形态都要成立，
+    # 否则本用例会在 `uv sync`（不带 --all-extras）的环境里假红。
+    if CHARACTER_IMAGE_PATH is None:
+        artwork_ok = all(not isinstance(element, ImageElement) for element in chain.values)
+    else:
+        artwork_ok = (
+            isinstance(chain.values[0], ImageElement)
+            and chain.values[0].path == str(CHARACTER_IMAGE_PATH)
+            and chain.values[0].max_h == CHARACTER_IMAGE_MAX_WIDTH
+        )
     return (
-        isinstance(chain.values[0], ImageElement)
-        and chain.values[0].path == str(CHARACTER_IMAGE_PATH)
-        and chain.values[0].max_h == CHARACTER_IMAGE_MAX_WIDTH
+        artwork_ok
         and texts[0] == introduction
         and "AGPL-3.0" in texts[0]
         and all("制作人员名单" not in text for text in texts)
+    )
+
+
+def _test_missing_artwork_degrades_instead_of_failing():
+    """品牌资产包缺失（或部署者删了图）时跳过配图，`~about` 其余内容照常发出。"""
+    with (
+        patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None),
+        patch("akaribot.modules.core.common_tools.about.find_brand_asset", return_value=None),
+    ):
+        chain = build_about_message(_msg())
+    texts = _plain_texts(chain)
+    introduction = Locale("zh_cn").t("core.message.about.introduction")
+    return (
+        all(not isinstance(element, ImageElement) for element in chain.values)
+        and texts[0] == introduction
+        and "AGPL-3.0" in texts[0]
     )
 
 

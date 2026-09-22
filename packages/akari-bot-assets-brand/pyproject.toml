@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akari-bot-assets-brand"
+version = "0.1.0"
+description = "AkariBot 品牌资源包：角色立绘、标志、制作人员名单"
+requires-python = ">=3.12,<4.0"
+# 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时须原样携带
+# LICENSE，不得套用仓库根许可证。
+license = "LicenseRef-Proprietary"
+license-files = ["akaribot/assets/brand/LICENSE"]
+# 纯资源分发：包内只有图片、名单、许可证与一个定位函数，不依赖任何分发。
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["akaribot"]

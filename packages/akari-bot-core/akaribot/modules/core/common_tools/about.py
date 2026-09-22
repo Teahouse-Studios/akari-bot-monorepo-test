@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from akaribot.core.api import find_brand_asset
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.message.elements import ButtonRows
@@ -20,21 +21,22 @@ about = module(
     },
 )
 
-# 随 bundled core 包分发（akaribot/modules/core/assets/），不再依赖实例 assets/。
-_PACKAGE_ASSETS = Path(__file__).resolve().parent.parent / "assets"
-CHARACTER_IMAGE_PATH = _PACKAGE_ASSETS / "character_marked.png"
-CREDITS_PATH = _PACKAGE_ASSETS / "credits.txt"
 CHARACTER_IMAGE_MAX_WIDTH = 512
 
 
-def read_credits(path: Path = CREDITS_PATH) -> str | None:
-    """读取制作人员名单；文件不存在、不可读或内容为空时不展示。"""
-    if not path.is_file():
+def read_credits(path: Path | None = None) -> str | None:
+    """读取制作人员名单；文件不存在、不可读或内容为空时不展示。
+
+    :param path: 名单文件；缺省按品牌资产顺序查找，两处都没有时为 ``None``。
+    :return: 名单正文；取不到时返回 ``None``。
+    """
+    resolved = find_brand_asset("credits.txt") if path is None else path
+    if resolved is None or not resolved.is_file():
         return None
     try:
-        return path.read_text(encoding="utf-8").strip() or None
+        return resolved.read_text(encoding="utf-8").strip() or None
     except OSError as e:
-        Logger.warning(f"Unable to read credits file {path}: {e}")
+        Logger.warning(f"Unable to read credits file {resolved}: {e}")
         return None
 
 
@@ -55,7 +57,12 @@ def build_about_message(msg: Bot.MessageSession) -> MessageChain:
     locale = msg.session_info.locale
     support_markdown = msg.session_info.support_markdown
     result = MessageChain.create()
-    result.append(Image(CHARACTER_IMAGE_PATH, max_h=CHARACTER_IMAGE_MAX_WIDTH))
+    # 品牌资产包缺失（或部署者删掉了图）时跳过配图：少一张图不该让整条 `~about` 失败。
+    character = find_brand_asset("character_marked.png")
+    if character is not None:
+        result.append(Image(character, max_h=CHARACTER_IMAGE_MAX_WIDTH))
+    else:
+        Logger.warning("Character artwork not found; sending the about menu without it.")
 
     introduction = locale.t("core.message.about.introduction")
     result.append(Plain(introduction, disable_joke=True))

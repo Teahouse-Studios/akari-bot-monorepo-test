@@ -51,9 +51,11 @@ mysql = ["tortoise-orm[asyncmy]>=1.1.2,<1.2.0"]
 # matplotlib 体积大且 ~analytics 支持降级，按 T4.2 §3 裁决 2 进 extra；chart 是 plan:591 的旧名，保留为别名
 image = ["matplotlib>=3.6.3,<4.0.0"]
 chart = ["matplotlib>=3.6.3,<4.0.0"]
-# CLI 的默认安装面（T3.3）：s3 / mysql / image 三个常规 extra 加 emotes 资源包，与 Dockerfile 的
-# --all-extras 开箱面一致；chart 与 image 同义不重列。`akaribot init --minimal` 装裸 core，跳过这一整套。
+# CLI 的默认安装面（T3.3）：s3 / mysql / image 三个常规 extra 加 emotes 与 brand 两个资源包，与
+# Dockerfile 的 --all-extras 开箱面一致；chart 与 image 同义不重列。`akaribot init --minimal` 装裸
+# core，跳过这一整套——此时 ~about 不带配图、SMTP 报告不带标志，其余照常（见 core/utils/brand.py）。
 full = [
+    "akari-bot-assets-brand>=0.1.0,<1.0",
     "akari-bot-assets-emotes>=0.1.0,<1.0",
     "boto3>=1.35.0,<2.0.0",
     "matplotlib>=3.6.3,<4.0.0",

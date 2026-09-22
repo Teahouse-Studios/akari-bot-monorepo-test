@@ -7,13 +7,14 @@ from typing import Awaitable, Callable
 
 from akaribot.core.builtins.message.chain import Chainable, MessageChain
 from akaribot.core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
-from akaribot.core.constants.path import assets_path
 from akaribot.core.exports import exports
 from akaribot.core.i18n import Locale, safe_strftime
 from akaribot.core.logger import Logger
+from akaribot.core.utils.brand import find_brand_asset
 
 locale = Locale(BaseConfig.default_locale)
-LOGO_PATH = assets_path / "akaribot_logo.png"
+# 品牌资产包优先，实例 assets/ 可覆盖；两处都没有时为 None，此时不内嵌标志。
+LOGO_PATH = find_brand_asset("akaribot_logo.png")
 
 
 DirectSender = Callable[[object, Chainable], Awaitable[None]]
@@ -69,8 +70,8 @@ def send_email(subject: str, body: str) -> None:
     # HTML版本
     emailmsg.add_alternative(_build_email_html(body, _report_footer_html(issue_url)), subtype="html")
 
-    # 内嵌Logo
-    if LOGO_PATH.exists():
+    # 内嵌Logo；品牌资产缺失时跳过，邮件正文本身照常发出。
+    if LOGO_PATH is not None and LOGO_PATH.is_file():
         with LOGO_PATH.open("rb") as fp:
             logo_data = fp.read()
 

@@ -155,6 +155,7 @@ __all__ = [
     "config_filename",
     "confirm_command",
     "confirm_command_default",
+    "find_brand_asset",
     "confirm_prompt_key",
     "converter",
     "cost_petal",
@@ -372,6 +373,7 @@ try:
     from akaribot.core.smtp import send_report
 
     # 工具：网络、随机、缓存、图像、表格、按钮、游戏、经济与 URL 审计。
+    from akaribot.core.utils.brand import find_brand_asset
     from akaribot.core.utils.button import arrange_buttons, build_button_rows
     from akaribot.core.utils.cooldown import CoolDown
     from akaribot.core.utils.dirty_check import check, check_bool, rickroll
@@ -554,6 +556,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.types.module.component_meta": ("CommandMeta",),
     "akaribot.core.utils.bash": ("run_sys_command",),
     "akaribot.core.utils.button": ("arrange_buttons", "build_button_rows"),
+    "akaribot.core.utils.brand": ("find_brand_asset",),
     "akaribot.core.utils.cache": ("random_cache_path",),
     "akaribot.core.utils.container": ("ExpiringTempDict", "TokenBucket"),
     "akaribot.core.utils.cooldown": ("CoolDown",),

@@ -20,6 +20,7 @@ members = [
     "akari-bot-adapter-qqbot",
     "akari-bot-adapter-telegram",
     "akari-bot-adapter-web",
+    "akari-bot-assets-brand",
     "akari-bot-assets-emotes",
     "akari-bot-assets-fonts",
     "akari-bot-cli",
@@ -441,6 +442,11 @@ requires-dist = [
 ]
 
 [[package]]
+name = "akari-bot-assets-brand"
+version = "0.1.0"
+source = { editable = "packages/akari-bot-assets-brand" }
+
+[[package]]
 name = "akari-bot-assets-emotes"
 version = "0.1.0"
 source = { editable = "packages/akari-bot-assets-emotes" }
@@ -516,6 +522,7 @@ chart = [
     { name = "matplotlib" },
 ]
 full = [
+    { name = "akari-bot-assets-brand" },
     { name = "akari-bot-assets-emotes" },
     { name = "boto3" },
     { name = "matplotlib" },
@@ -534,6 +541,7 @@ s3 = [
 [package.metadata]
 requires-dist = [
     { name = "aiofile", specifier = ">=3.8.1,<4.0.0" },
+    { name = "akari-bot-assets-brand", marker = "extra == 'full'", editable = "packages/akari-bot-assets-brand" },
     { name = "akari-bot-assets-emotes", marker = "extra == 'full'", editable = "packages/akari-bot-assets-emotes" },
     { name = "akari-bot-i18n", specifier = "==0.1.3" },
     { name = "akari-bot-webrender", specifier = "==0.6.2" },

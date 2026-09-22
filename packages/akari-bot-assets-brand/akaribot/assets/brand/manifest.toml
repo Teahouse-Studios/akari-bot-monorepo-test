@@ -1,0 +1,4 @@
+# akari-bot-assets-brand 的包清单。
+# 本包不是模块或适配器，无 registry 条目，清单仅供分发自述；资源根即包根。
+schema = 1
+requires_core_api = ">=1"
