@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-wiki"
 version = "0.1.0"
+authors = [
+    { name = "OasisAkari" },
+    { name = "Dianliang233" },
+]
 description = "查询一个 Wiki 页面。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

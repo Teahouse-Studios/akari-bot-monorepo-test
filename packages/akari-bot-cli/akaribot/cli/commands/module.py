@@ -367,6 +367,7 @@ def list_packages(
                 "editable": info.editable,
                 "requires_core_api": info.requires_core_api,
                 "summary": info.summary,
+                "developers": list(info.developers),
                 "provides_modules": list(info.provides_modules),
                 # manifest 的其余字段：TUI 详情与 --purge-data 都要看，缺了只能显示「未声明」。
                 "owned_tables": list(info.owned_tables),
@@ -385,6 +386,7 @@ def list_packages(
     table.add_column(i18n.t("cli.module.list.column_version"))
     table.add_column(i18n.t("cli.module.list.column_dist"))
     table.add_column(i18n.t("cli.module.list.column_provides"))
+    table.add_column(i18n.t("cli.module.list.column_developers"))
     table.add_column(i18n.t("cli.module.list.column_source"))
     for info in selected:
         table.add_row(
@@ -393,6 +395,7 @@ def list_packages(
             info.version,
             info.dist,
             _join_list(info.provides_modules) or "-",
+            _join_list(info.developers) or "-",
             i18n.t("cli.module.list.source_editable") if info.editable else i18n.t("cli.module.list.source_dist"),
         )
     console.print(table)
@@ -408,6 +411,7 @@ class AvailablePackage:
     :param version: 可安装的版本。
     :param detail: 补充信息：registry 来源是一句话简介，工作区来源是包路径。
     :param provides: 提供的模块名（适配器为 entry point 名）。
+    :param developers: 模块作者，取自包的 ``pyproject.toml``。
     """
 
     kind: str
@@ -416,6 +420,7 @@ class AvailablePackage:
     version: str
     detail: str
     provides: tuple[str, ...]
+    developers: tuple[str, ...] = ()
 
     def search_text(self) -> str:
         """拼出可搜索文本。"""
@@ -451,6 +456,7 @@ def _workspace_available(root: Path) -> list[AvailablePackage]:
                 version=package.version,
                 detail=_relative_path(package.path, root),
                 provides=package.provides_modules or package.module_names,
+                developers=engine.package_authors(package.path),
             )
         )
     return found
@@ -465,6 +471,7 @@ def _registry_available(catalog: engine.RegistryCatalog) -> list[AvailablePackag
             version=entry.latest,
             detail=_summary_text(entry),
             provides=entry.provides_modules,
+            developers=entry.developers,
         )
         for entry in catalog.entries.values()
         if entry.kind != "core"
@@ -526,6 +533,7 @@ def available(
                 "version": item.version,
                 "installed": engine.canonical(item.dist) in installed,
                 "provides_modules": list(item.provides),
+                "developers": list(item.developers),
                 "summary": "" if workspace_mode else item.detail,
                 # 工作区来源的 detail 是包路径；放进 origin，消费方（TUI、脚本）据此定位源码。
                 "origin": item.detail if workspace_mode else "",
@@ -545,6 +553,7 @@ def available(
     table.add_column(i18n.t("cli.module.available.column_dist"))
     table.add_column(i18n.t("cli.module.available.column_latest"))
     table.add_column(i18n.t("cli.module.available.column_state"))
+    table.add_column(i18n.t("cli.module.available.column_developers"))
     table.add_column(
         i18n.t("cli.module.available.column_path" if workspace_mode else "cli.module.available.column_summary")
     )
@@ -557,6 +566,7 @@ def available(
             i18n.t("cli.module.available.state_installed")
             if engine.canonical(item.dist) in installed
             else i18n.t("cli.module.available.state_available"),
+            _join_list(item.developers) or "-",
             item.detail or "-",
         )
     console.print(table)

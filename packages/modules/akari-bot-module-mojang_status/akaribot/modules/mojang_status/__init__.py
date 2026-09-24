@@ -4,7 +4,6 @@ mojang_status = module(
     "mojang-status",
     desc="{I18N:mojang_status.help.desc}",
     alias=["mojang_status", "mcstatus", "mjs", "mjsb"],
-    developers=["Don_Trueno"],
 )
 
 url = {

@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-ncmusic"
 version = "0.1.0"
+authors = [
+    { name = "bugungu" },
+]
 description = "网易云音乐相关工具。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

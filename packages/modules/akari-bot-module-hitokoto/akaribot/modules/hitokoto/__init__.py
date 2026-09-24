@@ -4,7 +4,6 @@ msg_types = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
 
 hitokoto = module(
     "hitokoto",
-    developers=["bugungu", "DoroWolf"],
     desc="{I18N:hitokoto.help.desc}",
     doc=True,
     alias=["htkt", "yiyan"],

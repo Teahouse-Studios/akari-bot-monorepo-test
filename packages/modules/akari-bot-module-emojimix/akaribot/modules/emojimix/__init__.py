@@ -112,7 +112,7 @@ def get_mixer() -> EmojimixGenerator:
     return _mixer
 
 
-emojimix = module("emojimix", developers=["DoroWolf"], doc=True)
+emojimix = module("emojimix", doc=True)
 
 
 @emojimix.command()

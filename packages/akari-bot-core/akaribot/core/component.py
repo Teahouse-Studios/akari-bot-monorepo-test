@@ -12,7 +12,7 @@ from akaribot.core.config.decorator import _process_class
 from akaribot.core.constants.exceptions import InvalidTemplatePattern
 from akaribot.core.loader import ModulesManager
 from akaribot.core.module_runtime import ModuleRuntimeManager, RuntimeResource
-from akaribot.core.registry import PackageRegistry
+from akaribot.core.registry import PackageRegistry, declared_authors
 from akaribot.core.scheduler import IntervalTrigger
 from akaribot.core.types import Module
 from akaribot.core.types.module.component_meta import *
@@ -375,7 +375,6 @@ def module(
     alias: str | list | tuple | dict | None = None,
     desc: str | None = None,
     recommend_modules: str | list | tuple | None = None,
-    developers: str | list | tuple | None = None,
     required_admin: bool = False,
     base: bool = False,
     doc: bool = False,
@@ -400,7 +399,6 @@ def module(
     同时被用作命令解析，当此项不为空时将会尝试解析其中的语法并储存结果在 MessageSession.parsed_msg 中。
     :param desc: 此命令的简介。
     :param recommend_modules: 推荐打开的其他模块。
-    :param developers: 模块作者。
     :param required_admin: 此命令是否需要场景管理员权限。
     :param base: 将此命令设为基础命令。设为基础命令后此命令将被强制开启。（默认为 False）
     :param doc: 此命令是否存在线上说明文件。（默认为 False）
@@ -419,8 +417,9 @@ def module(
     :param support_languages: 此命令支持的语言列表。
     """
 
+    # 调用方就是定义模块本身：再往外一层是 importlib，取到的是 "importlib._bootstrap"。
     frame = inspect.currentframe().f_back
-    caller_module = frame.f_back.f_globals["__name__"]
+    caller_module = frame.f_globals["__name__"]
 
     # 包名由发现层解析，不再从调用方的文件路径推导：路径推导在目录布局变化时
     # 会静默得到空串，连带使热重载、locale 指纹、依赖图与模块卸载失去依据。
@@ -432,7 +431,7 @@ def module(
         alias=alias,
         desc=desc,
         recommend_modules=recommend_modules,
-        developers=developers,
+        developers=declared_authors(entry.root, entry.dist_name) if entry else [],
         base=base,
         doc=doc,
         hidden=hidden,

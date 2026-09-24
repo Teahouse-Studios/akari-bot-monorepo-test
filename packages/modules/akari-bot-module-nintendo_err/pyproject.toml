@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-nintendo_err"
 version = "0.1.0"
+authors = [
+    { name = "OasisAkari" },
+    { name = "kurisu" },
+]
 description = "解析任天堂系列主机的报错码并给出原因。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

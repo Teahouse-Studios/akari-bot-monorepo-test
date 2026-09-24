@@ -27,8 +27,8 @@ T5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流
                      （``[@module_class@]Data``）
 ``[@module_desc@]``  模块的一句话说明，写入 ``module()`` 的 ``desc`` 与 zh_cn 的
                      ``[@module_name@].help.desc``
-``[@author@]``       作者名，写入 ``module()`` 的 ``developers`` 与 pyproject 的
-                     ``authors``
+``[@author@]``       作者名，写入 pyproject 的 ``authors``；模块作者一律由该字段提供，
+                     ``module()`` 不再接 ``developers``
 ``[@license@]``      许可证标识，写入 pyproject 的 ``license``
 ===============  ==========================================
 

@@ -12,7 +12,6 @@ from akaribot.core.api import find_font, Bot, Embed, EmbedField, Image as BImage
 c = module(
     "color",
     alias="colour",
-    developers=["Dianliang233"],
     desc="{I18N:color.help.desc}",
     doc=True,
 )

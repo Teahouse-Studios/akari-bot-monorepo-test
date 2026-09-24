@@ -20,7 +20,6 @@ wordle = module(
     "wordle",
     desc="{I18N:wordle.help.desc}",
     doc=True,
-    developers=["Dianliang233", "DoroWolf"],
 )
 
 

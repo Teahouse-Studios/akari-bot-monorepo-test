@@ -6,7 +6,7 @@ from akaribot.core.api import Bot, MessageChain, I18NContext, Image, Plain, modu
 API = "https://bd.bangbang93.com/openbmclapi"
 TOP_LIMIT = 10
 
-oba = module("oba", desc="{I18N:oba.help.desc}", developers="WorldHim")
+oba = module("oba", desc="{I18N:oba.help.desc}")
 
 
 def size_convert(value):

@@ -21,7 +21,6 @@ appid = WolframalphaConfig.wolfram_alpha_appid
 w = module(
     "wolframalpha",
     alias=["wolfram", "wa"],
-    developers=["DoroWolf"],
     desc="{I18N:wolframalpha.help.desc}",
     support_languages=["en_us"],
     doc=True,

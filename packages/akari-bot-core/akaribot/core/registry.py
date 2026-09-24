@@ -76,6 +76,81 @@ def _canonicalize(name: str) -> str:
     return canonicalize_name(name)
 
 
+PYPROJECT_FILENAME = "pyproject.toml"
+# 从包目录向上找 pyproject.toml 的层数上限；wheel 安装下不存在，靠这个上限尽快收手。
+AUTHOR_SEARCH_DEPTH = 6
+
+
+def declared_authors(root: Path | None, dist_name: str = "") -> list[str]:
+    """读分发包声明的作者列表。
+
+    作者写在包的 ``pyproject.toml`` 的 ``[project] authors`` 里。wheel 不带 pyproject，此时退回
+    分发元数据的 ``Author``——它正是构建时从同一字段生成的，代价是构建后端只保留第一位作者的
+    名字（多作者列表会被压成 ``Author: <首位>``）。因此源码工作区读到的是完整列表，wheel 安装
+    只读到首位，两者都不会给出错误的人名。
+
+    :param root: 包根目录；``None`` 时只走元数据。
+    :param dist_name: 分发名，用于确认找到的 pyproject 确实属于该分发。
+    :return: 作者名列表；无从得知时为空列表。
+    """
+    target = _canonicalize(dist_name) if dist_name else ""
+    for directory in _author_search_roots(root):
+        project = _project_table(directory / PYPROJECT_FILENAME)
+        if project is None:
+            continue
+        if target and _canonicalize(str(project.get("name") or "")) != target:
+            # 向上可能撞见无关的 pyproject；名字对不上就继续找，不据此判断作者。
+            continue
+        names = _author_names(project)
+        if names:
+            return names
+        if target:
+            return []
+    if not target:
+        return []
+    try:
+        raw = importlib.metadata.metadata(dist_name).get("Author", "") or ""
+    except Exception:  # noqa: BLE001 - 元数据缺失不该让作者查询失败
+        return []
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _author_search_roots(root: Path | None) -> list[Path]:
+    if root is None:
+        return []
+    started = root.resolve()
+    roots: list[Path] = []
+    for depth, directory in enumerate((started, *started.parents)):
+        if depth > AUTHOR_SEARCH_DEPTH:
+            break
+        roots.append(directory)
+    return roots
+
+
+def _project_table(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    project = data.get("project")
+    return project if isinstance(project, dict) else None
+
+
+def _author_names(project: dict[str, Any]) -> list[str]:
+    entries = project.get("authors")
+    if not isinstance(entries, list):
+        return []
+    names: list[str] = []
+    for entry in entries:
+        if isinstance(entry, dict):
+            name = str(entry.get("name") or "").strip()
+            if name:
+                names.append(name)
+    return names
+
+
 @dataclass(frozen=True, slots=True)
 class PackageManifest:
     """包的元数据声明。

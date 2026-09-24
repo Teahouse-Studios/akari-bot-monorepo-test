@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 
-from akaribot.core.registry import PackageRegistry
+from akaribot.core.registry import PackageRegistry, declared_authors
 
 
 def _summary(dist: str) -> str:
@@ -50,6 +50,7 @@ def collect() -> dict:
                     "owned_tables": list(entry.manifest.owned_tables),
                     "config_table": entry.manifest.config_table or "",
                     "summary": _summary(entry.dist_name),
+                    "developers": declared_authors(entry.root, entry.dist_name),
                 }
             )
     return {"packages": packages, "incompatible": PackageRegistry.incompatible()}

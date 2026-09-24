@@ -17,7 +17,6 @@ total_list = TotalList()
 
 chu = module(
     "chunithm",
-    developers=["DoroWolf"],
     doc=True,
     alias="chu",
     support_languages=["zh_cn"],

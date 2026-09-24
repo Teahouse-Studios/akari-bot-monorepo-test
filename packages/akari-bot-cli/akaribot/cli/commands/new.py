@@ -1198,7 +1198,7 @@ def new_module(
     template_dir: Path | None = typer.Option(None, "--template-dir", help="模板目录，默认自动定位"),
     alias: list[str] = typer.Option([], "--alias", help="命令别名，可重复"),
     desc: str | None = typer.Option(None, "--desc", help="一句话说明，写入 module() 的 desc 与 zh_cn 的 help.desc"),
-    author: str | None = typer.Option(None, "--author", help="作者名，写入 pyproject 与 module() 的 developers"),
+    author: str | None = typer.Option(None, "--author", help="作者名，写入 pyproject 的 authors；模块作者取自该字段"),
     license: str | None = typer.Option(None, "--license", help="许可证标识，写入 pyproject"),
     platform: list[str] = typer.Option([], "--platform", help="支持平台（available_for），可重复；留空表示全部平台"),
     exclude_platform: list[str] = typer.Option([], "--exclude-platform", help="排除平台（exclude_from），可重复"),

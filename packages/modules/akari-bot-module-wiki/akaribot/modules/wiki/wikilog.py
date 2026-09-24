@@ -47,7 +47,7 @@ async def _check_wiki_available(msg: Bot.MessageSession, wiki_info: WikiLib):
         await msg.finish(I18NContext("wiki.message.invalid.blocked", name=exc.url))
 
 
-wikilog = module("wikilog", developers=["OasisAkari"], required_admin=True, doc=True, rss=True, required_superuser=True)
+wikilog = module("wikilog", required_admin=True, doc=True, rss=True, required_superuser=True)
 
 
 @wikilog.command(

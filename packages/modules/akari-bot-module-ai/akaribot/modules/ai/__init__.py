@@ -20,7 +20,7 @@ from .context import CONTEXT_EXPIRY, create_context, get_context
 default_llm = AiConfig.ai_default_llm
 default_llm = default_llm if default_llm in llm_list else None
 
-ai = module("ai", developers=["DoroWolf", "Dianliang233"], desc="{I18N:ai.help.desc}", doc=True)
+ai = module("ai", desc="{I18N:ai.help.desc}", doc=True)
 
 
 def _get_message_images(msg: Bot.MessageSession) -> list[ImageElement]:

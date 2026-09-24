@@ -11,8 +11,7 @@ from akaribot.core.api import (
 mod = module(
     "[@module_name@]",
 {% if aliases | default([]) %}    alias={{ aliases | default([]) | tojson }},
-{% endif %}    developers={{ [author | default("")] | tojson }},
-    desc="{I18N:[@module_name@].help.desc}",
+{% endif %}    desc="{I18N:[@module_name@].help.desc}",
     doc=True,
 {% if available_for | default([]) %}    available_for={{ available_for | default([]) | tojson }},
 {% endif %}{% if exclude_from | default([]) %}    exclude_from={{ exclude_from | default([]) | tojson }},

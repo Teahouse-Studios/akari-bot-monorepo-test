@@ -3,7 +3,6 @@ from .mcv import mcjv, mcbv
 
 m = module(
     "mcv",
-    developers=["OasisAkari", "Dianliang233"],
     alias={
         "mcbv": "mcv mcbv",
         "mcev": "mcv mcev",

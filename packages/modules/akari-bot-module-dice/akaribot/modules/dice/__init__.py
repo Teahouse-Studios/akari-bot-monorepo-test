@@ -4,7 +4,6 @@ from .process import process_expression
 dice = module(
     "dice",
     alias=["rd", "roll"],
-    developers=["Light-Beacon", "DoroWolf"],
     desc="{I18N:dice.help.desc}",
     doc=True,
 )

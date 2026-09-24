@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mcv"
 version = "0.1.0"
+authors = [
+    { name = "OasisAkari" },
+    { name = "Dianliang233" },
+]
 description = "查询 Minecraft 版本信息"
 requires-python = ">=3.12,<4.0"
 dependencies = [

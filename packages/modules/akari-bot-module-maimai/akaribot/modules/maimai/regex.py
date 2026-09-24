@@ -17,7 +17,6 @@ mai_regex = module(
     doc=True,
     recommend_modules=["maimai"],
     alias=["maimai_regex", "mai_regex"],
-    developers=["DoroWolf"],
     support_languages=["zh_cn", "zh_tw"],
     regex=True,
 )

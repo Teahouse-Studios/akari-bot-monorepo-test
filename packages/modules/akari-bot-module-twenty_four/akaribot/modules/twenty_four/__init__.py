@@ -165,7 +165,6 @@ tf = module(
     "twenty-four",
     alias=["twenty_four", "twentyfour", "24"],
     desc="{I18N:twenty_four.help.desc}",
-    developers=["DoroWolf"],
     doc=True,
 )
 

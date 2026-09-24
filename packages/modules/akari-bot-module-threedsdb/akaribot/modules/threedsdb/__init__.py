@@ -8,7 +8,7 @@ from akaribot.core.api import Bot, I18NContext, Plain, module
 data_path = Path(__file__).parent / "assets" / "data"
 
 
-threedsdb = module("3dsdb", desc="{I18N:threedsdb.help.desc}", developers=["OasisAkari"])
+threedsdb = module("3dsdb", desc="{I18N:threedsdb.help.desc}")
 
 
 @threedsdb.command("<keywords> {{I18N:threedsdb.help.command}}")

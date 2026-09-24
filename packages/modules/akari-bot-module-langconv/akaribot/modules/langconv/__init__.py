@@ -1,6 +1,6 @@
 from akaribot.core.api import Bot, I18NContext, module
 
-lc_ = module("langconv", developers=["Dianliang233"], alias=["lc"], doc=True)
+lc_ = module("langconv", alias=["lc"], doc=True)
 
 _converters = None
 

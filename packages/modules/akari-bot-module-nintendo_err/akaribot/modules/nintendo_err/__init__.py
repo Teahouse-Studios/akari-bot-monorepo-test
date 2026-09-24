@@ -85,7 +85,7 @@ Only Nintendo Switch XXXX-YYYY formatted error codes are supported."
         return memes.get(err.casefold())
 
 
-e = module("nintendo-err", alias=["nintendo_err", "err"], developers=["OasisAkari", "kurisu"], doc=True)
+e = module("nintendo-err", alias=["nintendo_err", "err"], doc=True)
 
 
 def _convert_discord_embed(embed) -> EmbedElement:

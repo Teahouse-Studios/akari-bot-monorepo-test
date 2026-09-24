@@ -27,7 +27,6 @@ from .libraries.taptap import (
 
 phi = module(
     "phigros",
-    developers=["Mivik", "OasisAkari", "DoroWolf"],
     desc="{I18N:phigros.help.desc}",
     alias=["pgr", "phi"],
     doc=True,

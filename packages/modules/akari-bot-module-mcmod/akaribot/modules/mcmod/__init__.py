@@ -5,7 +5,6 @@ mcmod = module(
     module_name="mcmod",
     desc="{I18N:mcmod.help.desc}",
     doc=True,
-    developers=["Dianliang233", "HornCopper", "DrLee_lihr"],
     alias={"moddetails": "mcmod details"},
     support_languages=["zh_cn"],
 )

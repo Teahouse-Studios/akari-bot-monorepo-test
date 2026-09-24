@@ -6,7 +6,7 @@ FACE_UP_WEIGHT = CoinConfig.coin_faceup_weight
 FACE_DOWN_WEIGHT = CoinConfig.coin_facedown_weight
 STAND_WEIGHT = CoinConfig.coin_stand_weight
 
-coin = module("coin", developers=["Light-Beacon"], desc="{I18N:coin.help.desc}", doc=True)
+coin = module("coin", desc="{I18N:coin.help.desc}", doc=True)
 
 
 @coin.command("[<amount>] {{I18N:coin.help}}")

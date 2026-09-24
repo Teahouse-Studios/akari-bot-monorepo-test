@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-emojimix"
 version = "0.1.0"
+authors = [
+    { name = "DoroWolf" },
+]
 description = "将两个 Emoji 合成为一张图片，留空则随机组合。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

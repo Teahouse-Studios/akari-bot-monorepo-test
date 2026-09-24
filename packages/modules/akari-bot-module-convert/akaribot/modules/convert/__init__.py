@@ -9,7 +9,6 @@ i = module(
     "convert",
     alias=["conv", "unit"],
     desc="{I18N:convert.help.desc}",
-    developers=["Dianliang233"],
     doc=True,
     support_languages=["en_us"],
 )

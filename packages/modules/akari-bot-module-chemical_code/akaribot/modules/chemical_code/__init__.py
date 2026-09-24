@@ -203,7 +203,6 @@ async def search_pubchem(id: int | None = None):
 
 ccode = module(
     "chemical-code",
-    developers=["OasisAkari", "DoroWolf"],
     desc="{I18N:chemical_code.help.desc}",
     doc=True,
     alias={

@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mojang_status"
 version = "0.1.0"
+authors = [
+    { name = "Don_Trueno" },
+]
 description = "检查 Mojang 和 Minecraft 后端各服务的实时在线情况"
 requires-python = ">=3.12,<4.0"
 dependencies = [

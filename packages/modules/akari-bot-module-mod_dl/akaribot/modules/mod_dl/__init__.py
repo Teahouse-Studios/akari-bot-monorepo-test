@@ -8,7 +8,6 @@ mod_dl = module(
     module_name="mod-dl",
     desc="{I18N:mod_dl.help.desc}",
     doc=True,
-    developers=["HornCopper", "OasisAkari", "z0z0r4"],
     recommend_modules=["mcmod"],
     alias=["mod_dl", "moddl"],
 )

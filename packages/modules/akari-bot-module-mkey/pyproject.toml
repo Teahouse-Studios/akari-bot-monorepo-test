@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mkey"
 version = "0.1.0"
+authors = [
+    { name = "OasisAkari" },
+    { name = "Kurisu" },
+]
 description = "计算任天堂系列主机的监护管理万能密码。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

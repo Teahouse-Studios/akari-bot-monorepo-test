@@ -19,7 +19,6 @@ from akaribot.core.api import (
 
 minecraft_news = module(
     "minecraft-news",
-    developers=["_LittleC_", "OasisAkari", "Dianliang233"],
     recommend_modules=["feedback-news"],
     desc="{I18N:minecraft_news.help.minecraft-news}",
     alias=["minecraft_news", "minecraftnews", "mcnews"],
@@ -29,7 +28,6 @@ minecraft_news = module(
 
 feedback_news = module(
     "feedback-news",
-    developers=["Dianliang233"],
     recommend_modules=["minecraft-news"],
     desc="{I18N:minecraft_news.help.feedback-news}",
     alias=["feedback_news", "feedbacknews"],

@@ -7,7 +7,6 @@ from .server import query_java_server, query_bedrock_server
 s = module(
     "mcserver",
     alias="server",
-    developers=["_LittleC_", "OasisAkari", "DoroWolf"],
     doc=True,
 )
 

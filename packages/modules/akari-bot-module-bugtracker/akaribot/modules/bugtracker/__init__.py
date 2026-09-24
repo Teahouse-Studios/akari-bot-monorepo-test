@@ -3,7 +3,7 @@ import re
 from akaribot.core.api import Bot, Url, I18NContext, module
 from .bugtracker import bugtracker_get, make_screenshot
 
-bug = module("bugtracker", alias="bug", developers=["OasisAkari"], doc=True, regex=True)
+bug = module("bugtracker", alias="bug", doc=True, regex=True)
 
 
 async def query_bugtracker(msg: Bot.MessageSession, mojiraid: str):

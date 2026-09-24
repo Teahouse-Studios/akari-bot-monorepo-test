@@ -8,7 +8,6 @@ arc_assets_path = Path(__file__).parent / "assets"
 
 arc = module(
     "arcaea",
-    developers=["OasisAkari"],
     desc="{I18N:arcaea.help.desc}",
     doc=True,
     alias="arc",

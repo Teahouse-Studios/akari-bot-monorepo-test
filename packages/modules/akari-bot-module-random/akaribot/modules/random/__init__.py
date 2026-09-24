@@ -5,7 +5,6 @@ from akaribot.core.api import Bot, module, Param, Random
 r = module(
     "random",
     alias=["rand", "rng"],
-    developers=["Dianliang233"],
     desc="{I18N:random.help.desc}",
     doc=True,
 )

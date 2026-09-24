@@ -245,6 +245,7 @@ class PackageInfo:
     :param dependencies: 该包声明的依赖项。
     :param dependents: 依赖该包的分发名，core 侧可缺省。
     :param summary: 一句话简介，取自分发包元数据；取不到时为空串。
+    :param developers: 模块作者，取自包的 ``pyproject.toml``；取不到时为空。
     """
 
     dist: str
@@ -255,6 +256,7 @@ class PackageInfo:
     editable: bool = False
     requires_core_api: str = ""
     summary: str = ""
+    developers: tuple[str, ...] = ()
     provides_modules: tuple[str, ...] = ()
     owned_tables: tuple[str, ...] = ()
     config_table: str = ""
@@ -294,6 +296,7 @@ class PackageInfo:
             or _first_str(manifest, ("requires_core_api",))
             or "",
             summary=_first_str(data, ("summary", "description")) or _first_str(manifest, ("summary",)) or "",
+            developers=_as_tuple(data.get("developers")) or _as_tuple(manifest.get("developers")),
             # registry --json 用 ``modules`` 作键名；``provides_modules`` 是 manifest 与 module list 的写法。
             provides_modules=_as_tuple(data.get("provides_modules"))
             or _as_tuple(data.get("modules"))

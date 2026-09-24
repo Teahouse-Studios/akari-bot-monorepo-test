@@ -8,7 +8,6 @@ ctd = module(
     "cytoid",
     desc="{I18N:cytoid.help.desc}",
     doc=True,
-    developers=["OasisAkari"],
     alias="ctd",
 )
 

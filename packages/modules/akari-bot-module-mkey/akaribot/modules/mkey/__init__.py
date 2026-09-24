@@ -1,7 +1,7 @@
 from akaribot.core.api import Bot, I18NContext, module
 from .generator import get_mkey
 
-mk = module("mkey", desc="{I18N:mkey.help.desc}", doc=True, developers=["OasisAkari", "Kurisu"])
+mk = module("mkey", desc="{I18N:mkey.help.desc}", doc=True)
 
 
 @mk.command("<device> <month> <day> <inquiry_num> [<device_id>]")

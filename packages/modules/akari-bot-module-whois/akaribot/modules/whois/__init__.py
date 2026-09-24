@@ -12,7 +12,7 @@ def format_lst(input_):
     return input_
 
 
-w = module("whois", developers=["DoroWolf"], doc=True)
+w = module("whois", doc=True)
 
 
 @w.command("<domain> {{I18N:whois.help}}")

@@ -8,7 +8,6 @@ pat = GithubConfig.github_pat
 github = module(
     "github",
     alias="gh",
-    developers=["Dianliang233"],
     desc="{I18N:github.help.desc}",
     doc=True,
 )

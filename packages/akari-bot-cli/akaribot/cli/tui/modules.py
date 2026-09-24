@@ -64,6 +64,7 @@ class ModuleRecord:
     :param dependents: 依赖本模块的发行包名。
     :param origin: 记录来源说明，供详情面板展示。
     :param kind: ``module`` / ``adapter`` / ``core`` / ``testing``，未知时为空串。
+    :param developers: 模块作者，取自包的 ``pyproject.toml``。
     :param provides_modules: 该包注册的模块名。
     :param owned_tables: 该包拥有的数据表。
     :param config_table: 该包在 ``config/`` 下的扁平配置表名；无配置时为空串。
@@ -78,6 +79,7 @@ class ModuleRecord:
     dependents: tuple[str, ...] = ()
     origin: str = ""
     kind: str = ""
+    developers: tuple[str, ...] = ()
     provides_modules: tuple[str, ...] = ()
     owned_tables: tuple[str, ...] = ()
     config_table: str = ""
@@ -308,6 +310,7 @@ def _record_from_mapping(dist: str, info: Any) -> ModuleRecord:
         dependents=tuple(_text(item) for item in dependents),
         origin=_text(_pick(info, "origin", "path", "location", "dist_info")),
         kind=_normalize_kind(_pick(info, "kind", "type", "category")),
+        developers=_as_text_tuple(_pick(info, "developers", "authors", default=())),
         provides_modules=_as_text_tuple(_pick(info, "provides_modules", "modules", default=())),
         owned_tables=_as_text_tuple(_pick(info, "owned_tables", "tables", default=())),
         config_table=_text(_pick(info, "config_table", "config")),
@@ -938,6 +941,8 @@ class ModulesPage(compat.Vertical):
             (i18n.t("cli.tui.modules.field_summary"), record.summary or i18n.t("cli.tui.common.none")),
         ]
         separator = i18n.t("cli.tui.common.list_separator")
+        if record.developers:
+            rows.append((i18n.t("cli.tui.modules.field_developers"), separator.join(record.developers)))
         if record.provides_modules:
             rows.append((i18n.t("cli.tui.modules.field_provides"), separator.join(record.provides_modules)))
         if record.config_table:

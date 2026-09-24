@@ -16,7 +16,6 @@ from akaribot.core.api import (
 
 t = module(
     "tweet",
-    developers=["Dianliang233"],
     desc="{I18N:tweet.help.desc}",
     doc=True,
     alias=["x"],

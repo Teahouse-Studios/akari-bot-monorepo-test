@@ -20,7 +20,6 @@ SEARCH_LIMIT = 10
 
 ncmusic = module(
     "ncmusic",
-    developers=["bugungu"],
     desc="{I18N:ncmusic.help.desc}",
     doc=True,
     support_languages=["zh_cn"],

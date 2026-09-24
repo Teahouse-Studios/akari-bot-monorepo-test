@@ -2,7 +2,7 @@ from PIL import Image as PILImage
 
 from akaribot.core.api import Bot, MessageChain, ImageElement, Image, Plain, I18NContext, module
 
-image = module("image", developers=["OasisAkari"], required_superuser=True)
+image = module("image", required_superuser=True)
 # only superusers now due to indeterminate safety
 
 

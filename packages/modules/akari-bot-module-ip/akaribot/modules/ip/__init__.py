@@ -4,7 +4,7 @@ from typing import Any
 
 from akaribot.core.api import Bot, I18NContext, Plain, module, Logger, get_url
 
-ip = module("ip", developers=["Dianliang233"], doc=True)
+ip = module("ip", doc=True)
 
 
 @ip.command("<ip_address> {{I18N:ip.help}}")

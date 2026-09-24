@@ -2,9 +2,7 @@ import orjson
 
 from akaribot.core.api import Bot, I18NContext, Plain, module, check, Logger, post_url
 
-n = module(
-    "nbnhhsh", desc="{I18N:nbnhhsh.help.desc}", doc=True, developers=["Dianliang233"], support_languages=["zh_cn"]
-)
+n = module("nbnhhsh", desc="{I18N:nbnhhsh.help.desc}", doc=True, support_languages=["zh_cn"])
 
 
 @n.command("<term> {{I18N:nbnhhsh.help}}")

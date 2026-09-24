@@ -224,6 +224,31 @@ GIT_PREFIX = "git+"
 SUBDIRECTORY_FRAGMENT = "#subdirectory="
 
 
+def package_authors(package_root: Path) -> tuple[str, ...]:
+    """读包目录 ``pyproject.toml`` 里的 ``[project] authors``。
+
+    工作区模式下包就在磁盘上，直接读声明处；registry 模式下没有本地源码，作者随 registry 条目下发。
+
+    :param package_root: 包根目录（含 pyproject.toml）。
+    :return: 作者名列表；文件缺失或字段为空时返回空元组。
+    """
+    path = package_root / "pyproject.toml"
+    if not path.is_file():
+        return ()
+    try:
+        project = tomllib.loads(path.read_text(encoding="utf-8")).get("project")
+    except (OSError, tomllib.TOMLDecodeError):
+        return ()
+    if not isinstance(project, Mapping):
+        return ()
+    entries = project.get("authors")
+    if not isinstance(entries, list):
+        return ()
+    return tuple(
+        name for entry in entries if isinstance(entry, Mapping) and (name := str(entry.get("name") or "").strip())
+    )
+
+
 def git_spec(url: str, *, ref: str = "", subdir: str = "", dist: str = "") -> str:
     """把 git 仓库地址拼成 uv 接受的 PEP 508 直引用。
 
@@ -866,6 +891,7 @@ class RegistryEntry:
     requires_core_api: str = ""
     provides_modules: tuple[str, ...] = ()
     legacy_module_map: tuple[str, ...] = ()
+    developers: tuple[str, ...] = ()
     summary: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -880,6 +906,7 @@ class RegistryEntry:
             requires_core_api=str(data.get("requires_core_api") or ""),
             provides_modules=tuple(str(item) for item in (data.get("provides_modules") or ())),
             legacy_module_map=tuple(str(item) for item in (data.get("legacy_module_map") or ())),
+            developers=tuple(str(item) for item in (data.get("developers") or ())),
             summary={str(key): str(value) for key, value in summary.items()} if isinstance(summary, Mapping) else {},
         )
 

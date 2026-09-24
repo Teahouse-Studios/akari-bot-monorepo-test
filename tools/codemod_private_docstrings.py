@@ -135,13 +135,15 @@ def plan_file(path: Path) -> FilePlan:
             end += 1
         anchor = node.decorator_list[0].lineno if node.decorator_list else node.lineno
         indent = lines[anchor - 1][: len(lines[anchor - 1]) - len(lines[anchor - 1].lstrip())]
-        replacement = [f"{indent}# {line}\n" for line in prose_lines(doc.value.value)]
+        # 注释落在 docstring 原来的位置（函数体内），缩进取函数体而非 def 行。
+        body_indent = f"{indent}    "
+        replacement = [f"{body_indent}# {line}\n" for line in prose_lines(doc.value.value)]
         plan.hoisted += len(replacement)
         plan.removals += 1
         plan.details.append(f"{node.name}@{node.lineno}")
         if len(getattr(node, "body", [])) == 1:
             # 只剩 docstring 的定义删空后会语法错误，补 pass；缩进取函数体而非 def 行。
-            replacement.append(f"{indent}    pass\n")
+            replacement.append(f"{body_indent}pass\n")
         edits.append((start, end, replacement))
 
     if not edits:

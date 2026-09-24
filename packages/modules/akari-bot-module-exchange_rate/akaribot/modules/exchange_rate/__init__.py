@@ -11,7 +11,6 @@ excr = module(
     desc="{I18N:exchange_rate.help.desc}",
     doc=True,
     alias=["exchange_rate", "exchangerate", "exchange", "excr"],
-    developers=["DoroWolf"],
     regex=True,
 )
 

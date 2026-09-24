@@ -6,7 +6,6 @@ mcplayer = module(
     desc="{I18N:mcplayer.help.desc}",
     alias="namemc",
     doc=True,
-    developers=["Dianliang233"],
 )
 
 

@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-random"
 version = "0.1.0"
+authors = [
+    { name = "Dianliang233" },
+]
 description = "随机数生成器。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

@@ -5,6 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-phigros"
 version = "0.1.0"
+authors = [
+    { name = "Mivik" },
+    { name = "OasisAkari" },
+    { name = "DoroWolf" },
+]
 description = "查询 Phigros 相关内容。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

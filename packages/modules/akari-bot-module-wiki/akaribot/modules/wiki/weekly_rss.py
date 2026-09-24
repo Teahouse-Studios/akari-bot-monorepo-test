@@ -16,7 +16,6 @@ from .weekly import get_weekly, get_teahouse_rss
 weekly_rss = module(
     "weekly-rss",
     desc="{I18N:weekly_rss.help.desc}",
-    developers=["Dianliang233"],
     alias=["weekly_rss", "weeklyrss"],
     doc=True,
     rss=True,
@@ -25,7 +24,6 @@ weekly_rss = module(
 teahouse_weekly_rss = module(
     "teahouse-weekly-rss",
     desc="{I18N:weekly_rss.help.teahouse-weekly-rss.desc}",
-    developers=["OasisAkari"],
     alias=["teahouse_weekly_rss", "teahouseweeklyrss", "teahouserss"],
     doc=True,
     rss=True,

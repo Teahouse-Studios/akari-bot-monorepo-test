@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-arcaea_rss"
 version = "0.1.0"
+authors = [
+    { name = "SkyEye_FAST" },
+]
 description = "追踪 Arcaea 版本更新并推送更新消息。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

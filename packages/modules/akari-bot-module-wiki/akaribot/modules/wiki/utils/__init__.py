@@ -11,8 +11,8 @@ from .rc import get_rc
 from .rc_qq import get_rc_qq
 from .user import get_user_info
 
-rc_ = module("rc", developers=["OasisAkari"], recommend_modules="wiki", doc=True)
-ab_ = module("ab", developers=["OasisAkari"], recommend_modules="wiki", doc=True)
+rc_ = module("rc", recommend_modules="wiki", doc=True)
+ab_ = module("ab", recommend_modules="wiki", doc=True)
 
 
 @rc_.command(
@@ -69,7 +69,7 @@ async def _(msg: Bot.MessageSession):
             await msg.finish(I18NContext("wiki.message.error.fetch_log"))
 
 
-new = module("newbie", developers=["OasisAkari"], recommend_modules="wiki", doc=True)
+new = module("newbie", recommend_modules="wiki", doc=True)
 
 
 @new.command("{{I18N:wiki.help.newbie}}")
@@ -87,7 +87,7 @@ async def _(msg: Bot.MessageSession):
         await msg.finish(I18NContext("wiki.message.error.fetch_log"))
 
 
-usr = module("user", developers=["OasisAkari"], recommend_modules="wiki", doc=True)
+usr = module("user", recommend_modules="wiki", doc=True)
 
 
 @usr.command("<username> {{I18N:wiki.help.user}}")

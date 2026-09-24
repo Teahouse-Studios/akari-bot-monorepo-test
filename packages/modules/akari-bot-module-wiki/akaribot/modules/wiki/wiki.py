@@ -57,7 +57,6 @@ wiki = module(
         "wiki iw delete": "wiki iw remove",
     },
     recommend_modules="wiki-inline",
-    developers=["OasisAkari"],
     doc=True,
 )
 

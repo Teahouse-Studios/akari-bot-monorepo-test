@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-wordle"
 version = "0.1.0"
+authors = [
+    { name = "Dianliang233" },
+    { name = "DoroWolf" },
+]
 description = "玩 Wordle。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

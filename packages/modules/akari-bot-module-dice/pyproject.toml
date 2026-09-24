@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-dice"
 version = "0.1.0"
+authors = [
+    { name = "Light-Beacon" },
+    { name = "DoroWolf" },
+]
 description = "随机骰子，可指定投骰次数与 DC 判断判定。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-bilibili"
 version = "0.1.0"
+authors = [
+    { name = "DoroWolf" },
+]
 description = "哔哩哔哩视频相关工具。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

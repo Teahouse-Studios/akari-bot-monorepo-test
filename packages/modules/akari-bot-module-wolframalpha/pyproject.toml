@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-wolframalpha"
 version = "0.1.0"
+authors = [
+    { name = "DoroWolf" },
+]
 description = "使用 WolframAlpha。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

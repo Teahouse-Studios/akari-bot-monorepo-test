@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-nbnhhsh"
 version = "0.1.0"
+authors = [
+    { name = "Dianliang233" },
+]
 description = "能不能好好说话？拼音首字母缩写转义工具。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

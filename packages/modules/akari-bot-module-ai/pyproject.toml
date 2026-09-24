@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-ai"
 version = "0.1.0"
+authors = [
+    { name = "DoroWolf" },
+    { name = "Dianliang233" },
+]
 description = "有事为什么不问问小可呢？"
 requires-python = ">=3.12,<4.0"
 dependencies = [

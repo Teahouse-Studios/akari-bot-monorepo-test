@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-chemical_code"
 version = "0.1.0"
+authors = [
+    { name = "OasisAkari" },
+    { name = "DoroWolf" },
+]
 description = "化学式回答小游戏。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

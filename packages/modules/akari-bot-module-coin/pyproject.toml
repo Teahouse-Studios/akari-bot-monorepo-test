@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-coin"
 version = "0.1.0"
+authors = [
+    { name = "Light-Beacon" },
+]
 description = "抛硬币。"
 requires-python = ">=3.12,<4.0"
 dependencies = [

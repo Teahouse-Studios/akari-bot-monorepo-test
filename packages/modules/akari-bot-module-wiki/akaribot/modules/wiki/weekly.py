@@ -105,7 +105,7 @@ async def get_teahouse_rss(*args, **kwargs):
         return str(I18NContext("message.error")) + str(e)
 
 
-wky = module("weekly", developers=["Dianliang233"], support_languages=["zh_cn", "zh_tw"], doc=True)
+wky = module("weekly", support_languages=["zh_cn", "zh_tw"], doc=True)
 
 
 @wky.command("{{I18N:weekly.help}}")

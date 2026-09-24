@@ -39,7 +39,6 @@ wiki_inline = module(
     doc=True,
     recommend_modules=["wiki"],
     alias=["wiki_inline", "wiki_regex"],
-    developers=["OasisAkari"],
     regex=True,
 )
 

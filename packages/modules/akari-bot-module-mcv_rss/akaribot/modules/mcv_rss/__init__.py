@@ -69,7 +69,6 @@ startup_mute = [True, True]
 
 mcv_rss = module(
     "mcv-rss",
-    developers=["OasisAkari", "Dianliang233"],
     # recommend_modules=["mcv_jira_rss"],
     desc="{I18N:mcv_rss.help.mcv-rss.desc}",
     alias=["mcv_rss", "mcvrss"],
@@ -79,7 +78,6 @@ mcv_rss = module(
 
 mcbv_rss = module(
     "mcbv-rss",
-    developers=["OasisAkari"],
     desc="{I18N:mcv_rss.help.mcbv-rss.desc}",
     alias=["mcbv_rss", "mcbvrss"],
     doc=True,
