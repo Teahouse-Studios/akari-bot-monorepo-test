@@ -636,7 +636,7 @@ class RunPage(compat.Vertical):
 
     def focus_primary(self) -> None:
         """把焦点交给本页，供上层在页面切换时调用。"""
-        self.focus()
+        compat.focus_now(self)
 
     # region 状态读取（供测试与上层使用）
 

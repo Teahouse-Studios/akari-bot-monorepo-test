@@ -149,6 +149,7 @@ def run_self_check() -> int:
     results.append(_check_boot())
     results.append(_check_available_and_progress())
     results.append(_check_page_navigation())
+    results.append(_check_multi_select())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -160,6 +161,61 @@ def run_self_check() -> int:
         return 1
     typer.echo(i18n.t("cli.tui_cmd.self_check_ok", passed=len(results) - len(warnings), warnings=len(warnings)))
     return 0
+
+
+def _check_multi_select() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.app import TuiApp
+    from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
+
+    records = [
+        ModuleRecord(name="alpha", dist="akari-bot-module-alpha", version="1.0.0", state="installed"),
+        ModuleRecord(name="bravo", dist="akari-bot-module-bravo", version="0.9.0", state="available"),
+        ModuleRecord(name="charlie", dist="akari-bot-module-charlie", version="0.9.0", state="available"),
+    ]
+    source = StaticModuleSource(
+        records=records, available=records, stream_lines=["Resolved 1 package", "Installed 1 package"]
+    )
+    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+
+    async def probe() -> tuple[int, int, list[str]]:
+        async with compat.app_test(app_instance, size=(100, 30)) as pilot:
+            page = app_instance.modules_page()
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("space")
+            await pilot.pause()
+            await pilot.press("shift+down")
+            await pilot.pause()
+            await pilot.press("shift+down")
+            await pilot.pause()
+            selected = len(page._selected)
+            page.request_install()
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return selected, len(page.visible_records), list(source.installed)
+
+    try:
+        selected, total, installed = asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_multi_select"), f"{type(error).__name__}: {error}")
+    if selected != 3 or installed != ["akari-bot-module-bravo", "akari-bot-module-charlie"]:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_multi_select"),
+            i18n.t(
+                "cli.tui_cmd.check_multi_select_bad",
+                selected=selected,
+                total=total,
+                installed=i18n.t("cli.common.list_separator").join(installed) or "-",
+            ),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_multi_select"),
+        i18n.t("cli.tui_cmd.check_multi_select_detail", total=total, installed=len(installed)),
+    )
 
 
 def _check_page_navigation() -> CheckResult:

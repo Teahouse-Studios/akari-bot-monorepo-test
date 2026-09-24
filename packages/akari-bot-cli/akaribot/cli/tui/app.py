@@ -173,18 +173,20 @@ class TuiApp(compat.App[int]):
 
         :param key: 页面键，取自 :data:`PAGES`。
         """
-        for page_key, _, _ in PAGES:
-            self.query_one(f"#page-{page_key}").display = page_key == key
+        target = self.query_one(f"#page-{key}")
+        # 先亮目标页再隐藏旧页：反过来做的话，焦点会先随旧页一起被隐藏，Textual 会把焦点改派给
+        # 隐藏页里的滚动容器（它只看控件自身的 display，不看祖先），页级键位随即错页。
+        target.display = True
         self.active_page = key
         # 隐藏页不取数：只打开模块页时，其它页不应各自启动子进程、读日志或探测实例。
-        activate = getattr(self.query_one(f"#page-{key}"), "activate", None)
+        activate = getattr(target, "activate", None)
         if callable(activate):
             activate()
+        self.focus_active_page()
+        for page_key, _, _ in PAGES:
+            if page_key != key:
+                self.query_one(f"#page-{page_key}").display = False
         self._sync_nav(key)
-        # 焦点须随页面转移：焦点留在侧栏或上一页时，页级键位不会触发。
-        focus_primary = getattr(self.query_one(f"#page-{key}"), "focus_primary", None)
-        if callable(focus_primary):
-            focus_primary()
 
     def _sync_nav(self, key: str) -> None:
         # 侧栏的 ``Highlighted`` 会反过来调 :meth:`show_page`，故仅在索引确实不同的时候写回，

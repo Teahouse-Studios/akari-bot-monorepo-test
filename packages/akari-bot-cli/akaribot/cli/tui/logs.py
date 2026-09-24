@@ -469,6 +469,7 @@ class LogsPage(compat.Vertical):
 
     def focus_primary(self) -> None:
         """把焦点交给进程列表，供上层在页面切换时调用。"""
+        compat.focus_first(self, "#process-list")
 
     # region 状态读取（供测试与上层使用）
 

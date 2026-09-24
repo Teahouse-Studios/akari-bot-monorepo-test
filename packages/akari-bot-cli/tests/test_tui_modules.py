@@ -118,11 +118,12 @@ async def _test_install_streams_output_to_status():
         return page.stream_lines, page.status_text, app.module_source.installed
 
     lines, status, installed = await _with_app(_source(), body)
-    return (
+    ok = (
         lines == ("Resolved 2 packages", "Installed 2 packages")
         and status.startswith(i18n.t("cli.tui.modules.stub_install_ok"))
         and installed == ["akari-bot-module-wiki"]
     )
+    return ok
 
 
 async def _test_uninstall_streams_output_to_status():

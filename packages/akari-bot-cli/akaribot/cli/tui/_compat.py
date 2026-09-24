@@ -10,11 +10,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import importlib.resources
 import os
 import sys
-from collections.abc import AsyncIterator, Iterable, Iterator, Sequence
+import time
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -70,6 +72,7 @@ __all__ = [
     "events",
     "fit_cells",
     "focus_first",
+    "focus_now",
     "highlighted_index",
     "is_interactive_terminal",
     "load_stylesheet",
@@ -87,6 +90,7 @@ __all__ = [
     "set_text_selection",
     "textual_version",
     "truncate_cells",
+    "wait_for_idle",
     "widget_cells",
     "work",
 ]
@@ -316,16 +320,59 @@ def highlighted_index(list_view: ListView) -> int | None:
     return index if isinstance(index, int) and index >= 0 else None
 
 
+async def wait_for_idle(app: App[Any], is_busy: Callable[[], bool], *, timeout: float = 30.0) -> bool:
+    """等到页面既不忙、也没有未完成的后台任务。
+
+    ``workers.wait_for_complete()`` 在任务刚被 ``run_worker`` 调度、尚未注册时会立即返回，只靠它
+    判断会让自动化断言读到中间状态（实测同一用例在全量运行下偶发失败、单独运行必过）。故先等
+    worker 队列，再看页面自己的忙碌标志，两轮都空闲才算结束。
+
+    :param app: 应用实例。
+    :param is_busy: 返回页面是否仍在处理中。
+    :param timeout: 最长等待秒数。
+    :return: 是否在超时前进入空闲。
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        await app.workers.wait_for_complete()
+        if not is_busy():
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        await asyncio.sleep(0.02)
+
+
+def focus_now(widget: Widget) -> bool:
+    """立即把焦点交给控件，不等下一轮消息。
+
+    ``Widget.focus()`` 内部走 ``call_later``，真正生效要等下一次消息循环。隐藏旧页时 Textual 会
+    先 ``blur()`` 并改派焦点，延后的那次聚焦就晚了——隐藏页里的滚动容器会拿到焦点，那一页的键位
+    随之生效。切页时先同步聚焦目标页，旧页隐藏时便不再触发改派。
+
+    :param widget: 目标控件。
+    :return: 是否同步设置成功；失败时退回常规的延后聚焦。
+    """
+    try:
+        widget.screen.set_focus(widget)
+    except Exception:  # noqa: BLE001 - 未挂载或 Textual 内部签名变动时退回常规路径
+        widget.focus()
+        return False
+    return True
+
+
 def focus_first(page: Widget, *selectors: str) -> bool:
-    """按顺序把焦点交给第一个可聚焦的候选控件，全都不行时聚焦页面本身。
+    """按顺序把焦点交给第一个可用的候选控件，全都不行时聚焦页面本身。
 
     Textual 拒绝聚焦空的 ``ListView``：``focus()`` 静默失效，``app.focused`` 仍为 ``None``。
     列表尚在加载或实例里没有数据时，切页后焦点因此悬空，页级键位全部不响应。故列表为空时
-    退到下一个候选（搜索框、工具栏按钮等），最后兜底到页面容器。
+    退到下一个候选，最后兜底到页面容器。
+
+    聚焦走 :func:`focus_now` 而非 ``Widget.focus()``：后者延迟到下一轮消息，切页隐藏旧页时会被
+    Textual 的改派抢在前面。
 
     :param page: 页面控件。
     :param selectors: 候选控件的 CSS 选择器，按优先级排列。
-    :return: 是否真的把焦点落到了某个控件上。
+    :return: 是否把焦点交给了候选控件（``False`` 表示落到了页面容器上）。
     """
     for selector in selectors:
         try:
@@ -334,11 +381,10 @@ def focus_first(page: Widget, *selectors: str) -> bool:
             continue
         if isinstance(widget, ListView) and len(widget) == 0:
             continue
-        widget.focus()
-        if page.app.focused is widget:
-            return True
-    page.focus()
-    return page.app.focused is page
+        focus_now(widget)
+        return True
+    focus_now(page)
+    return False
 
 
 def plain_text(value: str, style: str | None = None) -> Text:

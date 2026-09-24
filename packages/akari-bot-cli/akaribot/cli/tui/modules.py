@@ -602,6 +602,13 @@ class ModulesPage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.modules.bind_search")),
         ("i", "install", i18n.t("cli.tui.modules.action_install")),
         ("u", "uninstall", i18n.t("cli.tui.modules.action_uninstall")),
+        ("space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
+        ("ctrl+space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
+        ("shift+up", "extend_up", i18n.t("cli.tui.modules.bind_extend")),
+        ("shift+down", "extend_down", i18n.t("cli.tui.modules.bind_extend")),
+        ("a", "select_all", i18n.t("cli.tui.modules.bind_select_all")),
+        ("ctrl+a", "select_all", i18n.t("cli.tui.modules.bind_select_all")),
+        ("c", "clear_selection", i18n.t("cli.tui.modules.bind_clear_selection")),
         ("escape", "clear_search", i18n.t("cli.tui.modules.bind_clear_search")),
     )
 
@@ -685,6 +692,11 @@ class ModulesPage(compat.Vertical):
         self._selected_key: str | None = None
         self._busy: bool = False
         self._installed_only: bool = False
+        # 多选：按分发名记录选区，刷新后只保留仍然存在的项；_anchor 是 Shift 扩选的起点。
+        self._selected: set[str] = set()
+        self._anchor: str | None = None
+        # 批量卸载的待确认集合；与下次请求的目标不一致就重新询问，无需在各处显式复位。
+        self._pending_uninstall: tuple[str, ...] = ()
         self._available_error: str = ""
         self._stream_line: str = ""
         self._stream_lines: list[str] = []
@@ -816,6 +828,12 @@ class ModulesPage(compat.Vertical):
         if not self._installed_only:
             records = await self._merge_available(records)
         self._records = tuple(sorted(records, key=sort_key))
+        # 选区按分发名保存，刷新后可能指向已经不存在或不再可见的项；丢掉它们，免得批量操作
+        # 悄悄带上一个界面上看不到的包。
+        known = {record.dist for record in self._records}
+        self._selected &= known
+        if self._anchor not in known:
+            self._anchor = None
         self._loaded_at = time.monotonic()
         self.last_error = ""
         self.last_result = i18n.t("cli.tui.modules.status_loaded", count=len(self._records))
@@ -823,6 +841,10 @@ class ModulesPage(compat.Vertical):
             self.last_result = f"{self.last_result}{self._available_error}"
         self._render_list()
         self._set_status(self.last_result)
+        # 挂载时列表还是空的，焦点只能停在页面容器上；数据到位后把它交给列表，
+        # 使 ↑/↓、Shift+↑/↓ 立即可用。仅在焦点仍停在本页时补，避免抢走搜索框。
+        if self.display and self.app.focused is self:
+            self.focus_primary()
         return True
 
     async def _merge_available(self, installed: Sequence[ModuleRecord]) -> list[ModuleRecord]:
@@ -888,16 +910,18 @@ class ModulesPage(compat.Vertical):
         return min(max(longest, 5), 8)
 
     def _row_text(self, record: ModuleRecord, name_width: int, version_width: int, inner_width: int) -> str:
+        # 首列是选中位：高亮条只表示光标所在，选中集合才是批量操作的作用对象。
+        marked = "✓" if record.dist in self._selected else " "
         marker = "●" if record.installed else "○"
         version = compat.fit_cells(record.version or "-", version_width)
-        fixed = compat.display_width(marker) + 2 + version_width
+        fixed = compat.display_width(marker) + 4 + version_width
         summary_width = inner_width - fixed - name_width - 1
         if summary_width < 6:
             name_width = max(inner_width - fixed, 4)
-            return f"{marker} {compat.fit_cells(record.name, name_width)} {version}".rstrip()
+            return f"{marked} {marker} {compat.fit_cells(record.name, name_width)} {version}".rstrip()
         name = compat.fit_cells(record.name, name_width)
         summary = compat.truncate_cells(record.summary, summary_width)
-        return f"{marker} {name} {version} {summary}".rstrip()
+        return f"{marked} {marker} {name} {version} {summary}".rstrip()
 
     def _index_for_key(self, records: Sequence[ModuleRecord]) -> int:
         if not records:
@@ -916,6 +940,8 @@ class ModulesPage(compat.Vertical):
             total=len(self._records),
             installed=installed,
         )
+        if self._selected:
+            text = f"{text}{i18n.t('cli.common.clause_separator')}{i18n.t('cli.tui.modules.count_selected', count=len(self._selected))}"
         self.query_one("#count", compat.Static).update(compat.plain_text(text))
 
     def _sync_detail(self) -> None:
@@ -1048,9 +1074,9 @@ class ModulesPage(compat.Vertical):
         return None
 
     def request_install(self) -> None:
-        """发起安装；无目标时给出提示而不动作。"""
-        target = self._install_target()
-        if target is None:
+        """发起安装；有标记时按标记批量，否则装当前项。"""
+        targets = self._batch_targets("install")
+        if not targets:
             compat.notify(
                 self.app,
                 i18n.t("cli.tui.modules.pick_install"),
@@ -1058,13 +1084,16 @@ class ModulesPage(compat.Vertical):
                 title=i18n.t("cli.tui.modules.action_install"),
             )
             return
-        label = i18n.t("cli.tui.modules.label_install", name=target.dist)
-        self._start_operation("install", label, target)
+        self._start_operation("install", targets)
 
     def request_uninstall(self) -> None:
-        """发起卸载；无目标时给出提示而不动作。"""
-        target = self._uninstall_target()
-        if target is None:
+        """发起卸载；有标记时按标记批量，否则卸当前项。
+
+        批量卸载一次动多个包，且实例未必在跑（卸载不产生日志），故要求再按一次同样的键确认；
+        目标集合一变就重新询问。
+        """
+        targets = self._batch_targets("uninstall")
+        if not targets:
             compat.notify(
                 self.app,
                 i18n.t("cli.tui.modules.pick_uninstall"),
@@ -1072,10 +1101,124 @@ class ModulesPage(compat.Vertical):
                 title=i18n.t("cli.tui.modules.action_uninstall"),
             )
             return
-        label = i18n.t("cli.tui.modules.label_uninstall", name=target.dist)
-        self._start_operation("uninstall", label, target)
+        keys = tuple(record.dist for record in targets)
+        if len(targets) > 1 and self._pending_uninstall != keys:
+            self._pending_uninstall = keys
+            self._set_status(
+                i18n.t(
+                    "cli.tui.modules.batch_uninstall_confirm",
+                    count=len(targets),
+                    names=i18n.t("cli.tui.common.list_separator").join(keys[:6]),
+                )
+            )
+            return
+        self._pending_uninstall = ()
+        self._start_operation("uninstall", targets)
 
-    def _start_operation(self, kind: str, label: str, record: ModuleRecord) -> None:
+    def _batch_targets(self, kind: str) -> list[ModuleRecord]:
+        # 选区里混着已装与未装是常态（列表默认两者同列），按操作方向各自筛一遍，免得把
+        # 「安装」和「卸载」一起按下去时互相打架。
+        if not self._selected:
+            single = self._install_target() if kind == "install" else self._uninstall_target()
+            return [single] if single is not None else []
+        wanted = [record for record in self._records if record.dist in self._selected]
+        if kind == "install":
+            return [record for record in wanted if not record.installed]
+        return [record for record in wanted if record.installed]
+
+    def action_toggle_select(self) -> None:
+        """键位动作：切换当前项的选中状态（对应 Ctrl+点击）。"""
+        record = self.selected_record
+        if record is None:
+            return
+        self._anchor = record.dist
+        if record.dist in self._selected:
+            self._selected.discard(record.dist)
+        else:
+            self._selected.add(record.dist)
+        self._render_list()
+
+    def action_select_all(self) -> None:
+        """键位动作：选中当前可见的全部（受搜索与筛选影响）。"""
+        visible = self.visible_records
+        if not visible:
+            return
+        self._selected.update(record.dist for record in visible)
+        self._anchor = visible[0].dist
+        self._render_list()
+
+    def action_clear_selection(self) -> None:
+        """键位动作：清空选区。"""
+        if not self._selected:
+            return
+        self._selected.clear()
+        self._anchor = None
+        self._render_list()
+
+    def action_extend_up(self) -> None:
+        """键位动作：光标上移并扩展选区。"""
+        self._move_cursor(-1, extend=True)
+
+    def action_extend_down(self) -> None:
+        """键位动作：光标下移并扩展选区。"""
+        self._move_cursor(1, extend=True)
+
+    def _move_cursor(self, step: int, *, extend: bool) -> None:
+        # Shift 扩选是「替换上一次的扩展结果」而不是累加，否则来回移动会把途经的行永久留在选区里。
+        records = self.visible_records
+        if not records:
+            return
+        list_view = self.query_one("#module-list", compat.ListView)
+        current = compat.highlighted_index(list_view) or 0
+        target = max(0, min(current + step, len(records) - 1))
+        list_view.index = target
+        if not extend:
+            return
+        if self._anchor is None:
+            self._anchor = records[current].dist
+        self._select_range(self._anchor, records[target].dist, records)
+        # _render_list 会按 _selected_key 复原光标；不先写它，刚移动的光标会被打回原处。
+        self._selected_key = records[target].dist
+        self._render_list()
+
+    def _select_range(self, anchor: str, focus: str, records: Sequence[ModuleRecord]) -> None:
+        names = [record.dist for record in records]
+        if anchor not in names or focus not in names:
+            self._selected = {focus}
+            return
+        start, end = sorted((names.index(anchor), names.index(focus)))
+        self._selected = set(names[start : end + 1])
+
+    def on_click(self, event: compat.events.Click) -> None:
+        """鼠标：普通点击单选，Ctrl 点击切换，Shift 点击扩选。
+
+        点击事件由 ``ListItem`` 冒泡上来，``event.widget`` 是那一项而非列表，故不能用带选择器的
+        ``@on``；这里自行判断来源，免得把按钮点击也当成选行。
+        """
+        list_view = self.query_one("#module-list", compat.ListView)
+        clicked = event.widget
+        if clicked is None or list_view not in clicked.ancestors_with_self:
+            return
+        records = self.visible_records
+        index = compat.highlighted_index(list_view)
+        if index is None or index >= len(records):
+            return
+        record = records[index]
+        if event.shift and self._anchor is not None:
+            self._select_range(self._anchor, record.dist, records)
+        elif event.ctrl:
+            self._anchor = record.dist
+            if record.dist in self._selected:
+                self._selected.discard(record.dist)
+            else:
+                self._selected.add(record.dist)
+        else:
+            self._anchor = record.dist
+            self._selected = {record.dist}
+        self._selected_key = record.dist
+        self._render_list()
+
+    def _start_operation(self, kind: str, targets: Sequence[ModuleRecord]) -> None:
         if self._busy:
             compat.notify(
                 self.app,
@@ -1089,22 +1232,40 @@ class ModulesPage(compat.Vertical):
         self._stream_lines = []
         self._sync_actions()
         compat.progress_phase(self.query_one("#progress", compat.ProgressBar), 1.0, _PROGRESS_PHASES)
+        first = targets[0]
+        label = i18n.t(f"cli.tui.modules.label_{kind}", name=first.dist)
+        if len(targets) > 1:
+            label = i18n.t("cli.tui.modules.batch_label", count=len(targets), label=label)
         self._set_status(i18n.t("cli.tui.modules.calling", label=label))
-        self.run_worker(self._operate_streaming(kind, label, record), group="modules-op", exclusive=True)
+        self.run_worker(self._operate_streaming(kind, targets), group="modules-op", exclusive=True)
 
-    async def _operate_streaming(self, kind: str, label: str, record: ModuleRecord) -> None:
+    async def _operate_streaming(self, kind: str, targets: Sequence[ModuleRecord]) -> None:
         # 安装期间子进程会打印 ``Resolved … / Installed …`` 这类进度行；把它们显示出来，操作者才能
-        # 区分「正在装」与「卡住了」。状态栏只留最后一行，完整尾部在失败时作为详情给出。
+        # 区分「正在装」与「卡住了」。批量时单条失败不中断后续：一次批量操作里某个包依赖冲突，
+        # 不该把其余的也一起放弃，故失败集中到收尾汇报。
         bar = self.query_one("#progress", compat.ProgressBar)
-        try:
-            result = await self.source.stream_operation(kind, record, self._on_operation_line)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
-            result = OperationResult(
-                False,
-                i18n.t("cli.tui.common.failed_label", label=label),
-                f"{type(error).__name__}: {error}",
-            )
-        await self._finish_operation(label, record, result, bar)
+        # 成功项连同数据源给出的结论文案一起留着：单条操作要原样显示它，批量才另作汇总。
+        succeeded: list[tuple[str, str]] = []
+        failed: list[tuple[str, str]] = []
+        total = len(targets)
+        for index, record in enumerate(targets, 1):
+            label = i18n.t(f"cli.tui.modules.label_{kind}", name=record.dist)
+            if total > 1:
+                self._set_status(i18n.t("cli.tui.modules.batch_progress", index=index, total=total, label=label))
+            try:
+                result = await self.source.stream_operation(kind, record, self._on_operation_line)
+            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+                result = OperationResult(
+                    False,
+                    i18n.t("cli.tui.common.failed_label", label=label),
+                    f"{type(error).__name__}: {error}",
+                )
+            compat.progress_phase(bar, 1.0 + 2.0 * index / total, _PROGRESS_PHASES)
+            if result.ok:
+                succeeded.append((record.dist, result.message))
+            else:
+                failed.append((record.dist, result.detail or result.message))
+        await self._finish_operation(kind, targets, succeeded, failed, bar)
 
     def _on_operation_line(self, line: str) -> None:
         # 回调由工作线程之外的异步读取循环调用，因此只写字段并直接刷新控件，不触发取数。
@@ -1113,33 +1274,70 @@ class ModulesPage(compat.Vertical):
         self._set_status(line)
 
     async def _finish_operation(
-        self, label: str, record: ModuleRecord, result: OperationResult, bar: compat.ProgressBar
+        self,
+        kind: str,
+        targets: Sequence[ModuleRecord],
+        succeeded: list[str],
+        failed: list[tuple[str, str]],
+        bar: compat.ProgressBar,
     ) -> None:
         compat.progress_phase(bar, 3.0, _PROGRESS_PHASES)
-        self._selected_key = record.dist
-        if result.ok:
-            self._set_status(i18n.t("cli.tui.modules.refreshing", message=result.message))
+        self._selected_key = targets[0].dist
+        if succeeded:
+            # 成功的项已改换状态，选中随之失效；失败的留着，便于修正后重试。
+            self._selected.difference_update(name for name, _ in succeeded)
+            self._set_status(i18n.t("cli.tui.modules.refreshing", message=""))
             self.invalidate_cache()
             await self._load_records()
-            compat.progress_phase(bar, _PROGRESS_PHASES, _PROGRESS_PHASES)
-            detail = (
-                i18n.t("cli.tui.modules.detail_wrap", detail=result.detail.splitlines()[-1]) if result.detail else ""
+        if failed:
+            names = i18n.t("cli.tui.common.list_separator").join(name for name, _ in failed)
+            self.last_error = failed[0][1]
+            self._set_status(
+                i18n.t(
+                    "cli.tui.modules.batch_failed",
+                    ok=len(succeeded),
+                    failed=len(failed),
+                    names=names,
+                    detail=failed[0][1],
+                    what=i18n.t(
+                        "cli.tui.modules.action_install" if kind == "install" else "cli.tui.modules.action_uninstall"
+                    ),
+                )
             )
-            self.last_result = f"{result.message}{detail}"
-            self._set_status(self.last_result)
-            compat.notify(self.app, result.message, severity="information", title=label)
-        else:
-            self.last_error = result.detail or result.message
-            detail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
-            self._set_status(i18n.t("cli.tui.modules.failed_detail", message=result.message, detail=detail))
             compat.progress_reset(bar)
-            compat.notify(self.app, result.message, severity="error", title=label)
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.notify_failed", count=len(failed)),
+                severity="error",
+                title=i18n.t(f"cli.tui.modules.label_{kind}", name=targets[0].dist),
+            )
+        elif succeeded:
+            compat.progress_phase(bar, _PROGRESS_PHASES, _PROGRESS_PHASES)
+            # 单条沿用数据源的结论（「安装成功」之类），批量才换成人次汇总。
+            message = (
+                succeeded[0][1]
+                if len(succeeded) == 1
+                else i18n.t(
+                    "cli.tui.modules.batch_done",
+                    count=len(succeeded),
+                    what=i18n.t(
+                        "cli.tui.modules.action_install" if kind == "install" else "cli.tui.modules.action_uninstall"
+                    ),
+                )
+            )
+            self.last_result = message
+            self._set_status(message)
+            compat.notify(self.app, message, severity="information", title=message)
         self._busy = False
         self._sync_actions()
 
     def focus_primary(self) -> None:
-        """把焦点交给列表；列表为空时退到搜索框。"""
-        compat.focus_first(self, "#module-list", "#search")
+        """把焦点交给列表。
+
+        列表为空时退到页面容器而不是搜索框：搜索框会吞掉 ↑/↓，用户按方向键却看到列表不动。
+        容器自己不带键位，等列表填充后 :meth:`_load_records` 会把焦点补回列表。
+        """
+        compat.focus_first(self, "#module-list")
 
     def action_refresh(self) -> None:
         """键位动作：强制重新读取列表。"""
@@ -1165,4 +1363,4 @@ class ModulesPage(compat.Vertical):
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
-        await self.app.workers.wait_for_complete()
+        await compat.wait_for_idle(self.app, lambda: self._busy)
