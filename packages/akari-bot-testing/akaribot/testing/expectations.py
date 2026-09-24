@@ -10,15 +10,9 @@ from akaribot.core.builtins.types import MessageElement, MultimediaElement
 
 
 def _searchable_texts(result: dict) -> tuple[str, ...]:
-    """取出用于文本搜索的候选串。
-
-    先给出仅含文本元素的渲染，再给出包含全部元素的渲染。图片、语音等非文本元素
-    在 `to_str()` 的默认模式下会被丢弃，若只比对前者，形如 `Contains("KE:image")`
-    的断言将永远无法命中。
-
-    :param result: 测试结果字典。
-    :return: 去重后的候选字符串元组，按匹配优先级排列。
-    """
+    # 先给出仅含文本元素的渲染，再给出包含全部元素的渲染。图片、语音等非文本元素
+    # 在 `to_str()` 的默认模式下会被丢弃，若只比对前者，形如 `Contains("KE:image")`
+    # 的断言将永远无法命中。
     output = result.get("output")
     text_only = MessageChain.assign(output).to_str()
     full = MessageChain.assign(output).to_str(text_only=False)

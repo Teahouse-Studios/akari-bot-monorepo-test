@@ -34,7 +34,6 @@ url_pattern = re.compile(
 
 
 async def _resolve_hostname(hostname: str, port: int) -> set[str]:
-    """异步解析主机名并返回解析到的全部地址。"""
     loop = asyncio.get_running_loop()
     addr_info = await loop.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
     return {entry[4][0] for entry in addr_info}
@@ -75,7 +74,6 @@ async def private_ip_check(url: str):
 
 
 async def _validate_public_request(request: httpx.Request) -> None:
-    """在 httpx 发送首跳及每个重定向请求前验证目标地址。"""
     await private_ip_check(str(request.url))
 
 

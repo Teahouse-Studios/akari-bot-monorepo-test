@@ -117,7 +117,6 @@ class Bot:
         session_info = inject_features(session_info, features)
 
         async def _process_msg():
-            """内部异步处理函数 - 管理消息处理的生命周期"""
             # 添加上下文到管理器（存储 session_id 和对应的上下文对象）
             ctx_manager.add_context(session_info, ctx)
             try:

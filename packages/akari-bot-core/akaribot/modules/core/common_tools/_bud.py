@@ -53,7 +53,6 @@ def generate_bud_id(existing_ids: set[str]) -> str:
 
 
 async def _refund_expired_bud(bud: dict) -> None:
-    """将过期花苞中未领取的花瓣退回发送者。"""
     claimed = sum(r.get("amount", 0) for r in bud.get("records", []))
     remaining = bud.get("total", 0) - claimed
     if remaining <= 0:
@@ -64,7 +63,6 @@ async def _refund_expired_bud(bud: dict) -> None:
 
 
 async def _load_buds() -> list[dict]:
-    """读取当前有效的花苞列表，过期花苞退回未领取花瓣并顺带清理。"""
     buds = await get_stored_list(BUD_STORE_SCOPE, BUD_STORE_KEY) or []
     now = datetime.now().timestamp()
     kept: list[dict] = []
@@ -157,7 +155,6 @@ async def claim_bud(msg: Bot.MessageSession, code: str) -> tuple[str, dict | Non
 
 
 async def _load_buds_for_update(connection) -> tuple[list[dict], StoredData | None]:
-    """在交易中鎖定花苞資料，並把過期退款與清理一併完成。"""
     stored = await (
         StoredData.filter(stored_key=f"{BUD_STORE_SCOPE}|{BUD_STORE_KEY}")
         .using_db(connection)

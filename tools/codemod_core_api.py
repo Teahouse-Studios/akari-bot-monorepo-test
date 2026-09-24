@@ -111,22 +111,11 @@ def iter_sources() -> list[Path]:
 
 
 def _render(module: str, names: list[tuple[str, str | None]]) -> str:
-    """拼一条 import 语句。
-
-    :param module: 模块名。
-    :param names: ``(符号名, 别名或 None)`` 列表。
-    :return: 单行 import 语句。
-    """
     rendered = ", ".join(name if alias is None else f"{name} as {alias}" for name, alias in names)
     return f"from {module} import {rendered}"
 
 
 def _facade_statements(tree: ast.Module) -> dict[str, ast.ImportFrom]:
-    """找文件里已有的门面 import 语句。
-
-    :param tree: 解析后的语法树。
-    :return: 门面模块名到语句的映射。
-    """
     found: dict[str, ast.ImportFrom] = {}
     for node in tree.body:
         if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in (FACADE, ADAPTER_FACADE):

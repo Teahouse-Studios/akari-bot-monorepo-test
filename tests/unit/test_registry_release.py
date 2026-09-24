@@ -27,7 +27,6 @@ REGISTRY_SAMPLE = {
 
 
 def _tool():
-    """按路径加载工具模块：tools/ 不是可导入包，只能显式加载。"""
     spec = importlib.util.spec_from_file_location("verify_registry_release", TOOL_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -35,7 +34,6 @@ def _tool():
 
 
 def _write_registry(payload) -> Path:
-    """把索引写到临时文件，供按路径读取的入口使用。"""
     handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False)
     with handle:
         json.dump(payload, handle, ensure_ascii=False)
@@ -43,7 +41,6 @@ def _write_registry(payload) -> Path:
 
 
 def _test_verify_locates_every_section():
-    """core、modules、adapters 三段都能定位到本次发布的分发。"""
     tool = _tool()
     results = [
         tool.verify(REGISTRY_SAMPLE, "akari-bot-core", "0.3.0"),
@@ -54,14 +51,12 @@ def _test_verify_locates_every_section():
 
 
 def _test_verify_normalizes_dist_name():
-    """分发名按 PEP 503 规范化后比对，大小写与分隔符差异不算不一致。"""
     tool = _tool()
     tool.verify(REGISTRY_SAMPLE, "Akari_Bot.Module-Wiki", "0.2.0")
     return True
 
 
 def _test_verify_rejects_stale_version():
-    """latest 与本次版本不符时必须抛错，否则旧索引会被推上去。"""
     tool = _tool()
     try:
         tool.verify(REGISTRY_SAMPLE, "akari-bot-module-wiki", "0.3.0")
@@ -71,7 +66,6 @@ def _test_verify_rejects_stale_version():
 
 
 def _test_verify_rejects_unknown_dist():
-    """索引里没有该分发时抛错，而不是静默通过。"""
     tool = _tool()
     try:
         tool.verify(REGISTRY_SAMPLE, "akari-bot-module-missing", "1.0.0")
@@ -81,7 +75,6 @@ def _test_verify_rejects_unknown_dist():
 
 
 def _test_verify_rejects_entry_without_latest():
-    """条目缺 latest 时抛错：无从确认版本，不能当成通过。"""
     tool = _tool()
     try:
         tool.verify(REGISTRY_SAMPLE, "akari-bot-module-blank", "1.0.0")
@@ -91,7 +84,6 @@ def _test_verify_rejects_entry_without_latest():
 
 
 def _test_main_exit_codes_follow_verification():
-    """入口以退出码表达结论：一致为 0，不一致与文件不可读均为非 0。"""
     tool = _tool()
     registry = _write_registry(REGISTRY_SAMPLE)
     try:

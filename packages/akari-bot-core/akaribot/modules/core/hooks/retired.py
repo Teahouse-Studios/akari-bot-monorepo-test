@@ -23,12 +23,11 @@ if TYPE_CHECKING:
     from akaribot.core.builtins.bot import Bot
 
 
-retired = module("_retired_policy", hidden=True, load=True, base=True)
+retired = module("retired_policy", hidden=True, load=True, base=True)
 
 
 @retired.hook(point=HookPoint.COMMAND_ROUTE, priority=1, name="route_gate", server_scope=True)
 async def _(ctx: "Bot.ParserHookContext"):
-    """在通道认领前过滤退役客户端上的非迁移命令。"""
     if not is_retired_client(ctx.msg.session_info.client_name):
         return None
     # 模块别名可以把白名单命令并入其它模块（merge 现解析为 bind），此时模块名不再落入
@@ -43,7 +42,6 @@ async def _(ctx: "Bot.ParserHookContext"):
 
 @retired.hook(point=HookPoint.SESSION_BEFORE_WAIT, priority=10, name="wait_task", server_scope=True, timeout=0)
 async def _(ctx: "Bot.ParserHookContext"):
-    """退役场景与存活场景共用通道时，不抢先前命令的等待回复。"""
     info = ctx.msg.session_info
     if not is_retired_target(info.target_id) or not info.target_union_id:
         return None
@@ -55,7 +53,6 @@ async def _(ctx: "Bot.ParserHookContext"):
 
 @retired.hook(point=HookPoint.REGEX_CANDIDATE, priority=10, name="regex_gate", server_scope=True)
 async def _(ctx: "Bot.ParserHookContext"):
-    """退役客户端不参与迁移白名单之外的正则匹配。"""
     if is_retired_client(ctx.msg.session_info.client_name) and not is_module_allowed_when_retired(ctx.module_name):
         return ctx.Stop(scope=ctx.StopScope.CANDIDATE)
     return None
@@ -63,7 +60,6 @@ async def _(ctx: "Bot.ParserHookContext"):
 
 @retired.hook(point=HookPoint.CHANNEL_CLAIM, priority=10, name="yield", server_scope=True, timeout=0)
 async def _(ctx: "Bot.ParserHookContext"):
-    """在同通道的退役/存活场景之间选择唯一执行端。"""
     info = ctx.msg.session_info
     if not info.target_union_id:
         return None

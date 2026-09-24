@@ -70,17 +70,3 @@ async def mcbv(msg: Bot.MessageSession):
         + f"""{str(I18NContext("mcv.message.mcbv.ms_store"))}
 {ms_store_version if ms_store_version else str(I18NContext("mcv.message.mcbv.get_failed"))}"""
     )
-
-
-# async def mcev(msg: Bot.MessageSession):
-#     try:
-#         data = await get_url(
-#             "https://meedownloads.blob.core.windows.net/win32/x86/updates/Updates.txt",
-#             200,
-#         )
-#         Logger.debug(data)
-#         version = re.search(r"(?<=\[)(.*?)(?=])", data)[0]
-#         Logger.debug(version)
-#         return I18NContext("mcv.message.mcev", version=version)
-#     except Exception:  # Probably...
-#         await msg.finish(I18NContext("mcv.message.error.server"))

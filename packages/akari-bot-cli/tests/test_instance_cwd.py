@@ -16,7 +16,6 @@ from akaribot.testing import Tester, func_case
 
 
 def _make_instance(root: Path) -> Instance:
-    """构造不读磁盘元数据的最小实例，解释器取当前测试进程自身。"""
     return Instance(root, python_override=system_python(), meta=InstanceMeta.create(root))
 
 

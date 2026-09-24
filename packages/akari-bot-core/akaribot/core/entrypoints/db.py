@@ -17,11 +17,6 @@ class PurgeError(RuntimeError):
 
 
 def _is_installed(dist: str) -> bool:
-    """判断某个分发包是否已装入当前实例。
-
-    :param dist: 分发名，如 ``akari-bot-module-dice``。
-    :return: 已安装为 ``True``。
-    """
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -33,15 +28,8 @@ def _is_installed(dist: str) -> bool:
 
 
 def _owned_tables(dist: str) -> tuple[str, ...]:
-    """取该分发 manifest 声明的表名。
-
-    表名只从 manifest 读，**绝不接受调用方传入**：purge 是破坏性操作，谁拥有哪张表只能由包自己
-    声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删掉未声明的表。
-
-    :param dist: 分发名。
-    :return: 声明的表名元组。
-    :raises PurgeError: 包不在发现结果里，或清单没有声明任何表。
-    """
+    # 表名只从 manifest 读，**绝不接受调用方传入**：purge 是破坏性操作，谁拥有哪张表只能由包自己
+    # 声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删掉未声明的表。
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -61,10 +49,6 @@ def _owned_tables(dist: str) -> tuple[str, ...]:
 
 
 async def _status() -> dict:
-    """读取各包的迁移状态。
-
-    :return: ``{"packages": {包名: {"discovered": n, "applied": n, "pending": [...]}}, ...}``。
-    """
     from akaribot.core.database import close_db, init_db
     from akaribot.core.database.migration import MigrationRunner
     from akaribot.core.database.models import SchemaMigration
@@ -94,12 +78,6 @@ async def _status() -> dict:
 
 
 async def _upgrade(package: str | None) -> dict:
-    """执行待应用迁移。
-
-    :param package: 限定包名；``None`` 表示全部。
-    :return: ``{"applied": [[包名, revision], ...]}``。
-    :raises SystemExit: 指定的包没有可发现的迁移目录。
-    """
     from akaribot.core.database import close_db, init_db
     from akaribot.core.database.legacy import convert_legacy_version
     from akaribot.core.database.migration import MigrationRunner
@@ -132,16 +110,9 @@ async def _upgrade(package: str | None) -> dict:
 
 
 async def _purge(package: str) -> dict:
-    """删除该分发声明的表。
-
-    表已不存在时按**幂等成功**处理：本命令的契约是「这些表不再存在」，重跑或手工删过之后再跑
-    都满足该契约，报成失败只会让卸载流程卡在一个已经达成的目标上。缺失的表名照实回报，操作者
-    据此判断是不是清单漂移。
-
-    :param package: 分发名。
-    :return: ``{"dist": …, "dropped": [...], "missing": [...]}``。
-    :raises PurgeError: 包不在发现结果里，或清单没有声明任何表。
-    """
+    # 表已不存在时按**幂等成功**处理：本命令的契约是「这些表不再存在」，重跑或手工删过之后再跑
+    # 都满足该契约，报成失败只会让卸载流程卡在一个已经达成的目标上。缺失的表名照实回报，操作者
+    # 据此判断是不是清单漂移。
     from tortoise import Tortoise
 
     from akaribot.core.database import close_db, init_db
@@ -168,7 +139,6 @@ async def _purge(package: str) -> dict:
 
 
 def _emit_purge(payload: dict, as_json: bool) -> None:
-    """输出 purge 结果：``--json`` 走 stdout，否则打一行摘要。"""
     if as_json:
         json.dump(payload, sys.stdout, ensure_ascii=False)
         sys.stdout.write("\n")

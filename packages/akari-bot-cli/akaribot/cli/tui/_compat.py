@@ -411,7 +411,7 @@ async def app_test(app: App[Any], size: tuple[int, int] = (80, 24)) -> AsyncIter
     """以无头模式启动应用并交出 pilot，用于自动化断言。
 
     :param app: 应用实例。
-    :param size: 虚拟终端尺寸，``(宽, 高)``，用于验证窄终端布局。
+    :param size: 虚拟终端尺寸，``(宽， 高)``，用于验证窄终端布局。
 
     理由：``run_test`` 的 ``headless`` 与 ``size`` 为关键字参数，早期版本没有 ``size``，
     统一由本包装提供默认 80×24。

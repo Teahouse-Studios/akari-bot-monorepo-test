@@ -37,11 +37,6 @@ _failures: list[tuple[str, str]] = []
 
 
 def _normalize(result):
-    """将 request_url 的返回值归一化为可持久化的字段。
-
-    :param result: request_url 的返回值，可能为 str、bytes 或已解析的 JSON 对象。
-    :return: (text, json_data, content) 三元组。
-    """
     if isinstance(result, bytes):
         # fmt="read"/"content" 的下载类请求返回二进制，无法直接写入 JSON。
         return "", None, result
@@ -54,7 +49,6 @@ def _normalize(result):
 
 
 async def _run_test_files(names: list[str]):
-    """导入并执行指定集成测试文件中的全部 func_case。"""
     from akaribot.testing.tester import Tester
 
     for path in sorted(INTEGRATION_DIR.glob("test_*.py")):

@@ -30,7 +30,6 @@ from akaribot.testing import Tester, func_case
 
 
 def _production_handlers() -> dict:
-    """生产 Server 上已绑定的两个包变更处理器（wire 名 → dispatch）。"""
     return {
         "server.post_package_install": JobQueueServer.handlers["server.post_package_install"],
         "server.post_package_remove": JobQueueServer.handlers["server.post_package_remove"],
@@ -39,14 +38,8 @@ def _production_handlers() -> dict:
 
 @asynccontextmanager
 async def _stack(*, server: bool = True, handlers: dict | None = None):
-    """在共享内存后端上装配「入口的临时 CLI peer + 可选 Server peer」。
-
-    入口按实例配置选择后端；测试改用共享内存后端，并让「是否需要连数据库」的分支落在非 database
-    一侧，避免触碰测试进程已初始化的内存库。
-
-    :param server: 是否起一个 service 为 ``Server`` 的 peer（入口按该 service 名定位实例）。
-    :param handlers: 该 peer 的 wire 处理器；缺省挂生产 Server 的真实 dispatch。
-    """
+    # 入口按实例配置选择后端；测试改用共享内存后端，并让「是否需要连数据库」的分支落在非 database
+    # 一侧，避免触碰测试进程已初始化的内存库。
     from akaribot.core.config.jobqueue import JobQueueConfig
     from akaribot.core.queue import backend as backend_module
 
@@ -91,7 +84,6 @@ async def _stack(*, server: bool = True, handlers: dict | None = None):
 
 
 def _emit(outcome: rpc.Outcome) -> tuple[int, dict, str]:
-    """调用入口的写出逻辑并取回退出码、JSON 载荷与 stderr 文本。"""
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         code = rpc._emit(outcome)
@@ -227,11 +219,8 @@ async def _test_timeout_is_distinct():
 
 
 def _pick_hot_install_target() -> PackageEntry | None:
-    """挑一个用于端到端热装载的已装模块包。
-
-    优先 arcaea_rss：它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除；缺失时退回任意
-    声明了 ``provides_modules`` 的模块包，用例对包名保持无关。
-    """
+    # 优先 arcaea_rss：它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除；缺失时退回任意
+    # 声明了 ``provides_modules`` 的模块包，用例对包名保持无关。
     PackageRegistry.discover(force=True)
     candidates = [
         entry for entry in PackageRegistry.modules().values() if entry.dist_name and entry.manifest.provides_modules
@@ -241,8 +230,6 @@ def _pick_hot_install_target() -> PackageEntry | None:
 
 
 class _ServerProcess:
-    """隔离实例里的真实 Server peer 子进程，经 stdin 请求状态快照。"""
-
     def __init__(self, process: asyncio.subprocess.Process) -> None:
         self.process = process
 
@@ -291,7 +278,6 @@ class _ServerProcess:
 
 
 async def _call_entry(instance: Path, remote: str, dist: str) -> tuple[int, dict, str]:
-    """以真实子进程调用入口，返回退出码、结果 JSON 与 stderr。"""
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",

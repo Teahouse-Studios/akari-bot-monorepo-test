@@ -2,7 +2,7 @@
 
 每个包在 ``migrations/`` 下声明 revision。Runner 固定先执行 core 的全部待应用 revision，再按
 包名依次执行各模块包——core 的改名与回填须先完成，模块包的列改名随后进行，这条跨包顺序无法用
-``DEPENDS_ON`` 表达，故写死在执行顺序里。
+``DEPENDS_ON`` 表达，故固定在执行顺序里。
 
 硬规则是幂等：MySQL 的 DDL 自动提交，无法把「执行 DDL」与「写 schema_migrations」放进同一事务，
 中途失败重跑时非幂等的迁移会重复施加变更。每条 revision 的每一步都要先探测再执行。SQLite 支持
@@ -41,15 +41,9 @@ class MigrationError(RuntimeError):
 
 
 def _dialect(conn) -> str:
-    """
-    取连接的方言名。
-
-    以连接自身的能力为准，而不是模块级配置：测试与转换脚本会在同一进程内使用与配置不同的
-    连接，按配置判断会生成错误的 DDL。
-
-    :param conn: 数据库连接。
-    :return: 方言名。
-    """
+    # 取连接的方言名。
+    # 以连接自身的能力为准，而不是模块级配置：测试与转换脚本会在同一进程内使用与配置不同的
+    # 连接，按配置判断会生成错误的 DDL。
     dialect = getattr(getattr(conn, "capabilities", None), "dialect", None)
     return dialect if isinstance(dialect, str) else configured_db_type
 
@@ -400,11 +394,7 @@ class MigrationRunner:
 
     @classmethod
     async def _applied(cls) -> dict[tuple[str, str], str | None]:
-        """
-        取已登记的 revision。
-
-        :return: ``(包名, revision)`` 到 checksum 的映射。
-        """
+        # 取已登记的 revision。
         rows = await SchemaMigration.all()
         return {(row.package, row.revision): row.checksum for row in rows}
 
@@ -426,15 +416,9 @@ class MigrationRunner:
 
     @classmethod
     def _warn_checksum_drift(cls, discovered: dict[str, list[MigrationModule]], applied: dict) -> None:
-        """
-        提示已应用的迁移文件被改写。
-
-        只警告不阻断：开发期改动迁移文件是常态，阻断会制造无谓摩擦，但生产环境的静默改动
-        值得一条告警。
-
-        :param discovered: 已发现的迁移。
-        :param applied: 已登记的 revision。
-        """
+        # 提示已应用的迁移文件被改写。
+        # 只警告不阻断：开发期改动迁移文件是常态，阻断会制造无谓摩擦，但生产环境的静默改动
+        # 值得一条告警。
         for package, modules in discovered.items():
             for module in modules:
                 recorded = applied.get((package, module.revision))
@@ -446,16 +430,9 @@ class MigrationRunner:
 
     @classmethod
     def _order(cls, discovered: dict[str, list[MigrationModule]], package: str | None) -> list[str]:
-        """
-        取包的执行顺序。
-
-        core 的全部 revision 先跑完，再按包名依次执行各模块包：模块侧的绑定回填依赖 core 的
-        改名与回填已完成，且各包的 revision 无法互相声明依赖。
-
-        :param discovered: 已发现的迁移。
-        :param package: 只执行该包；省略时执行全部包。
-        :return: 包名列表。
-        """
+        # 取包的执行顺序。
+        # core 的全部 revision 先跑完，再按包名依次执行各模块包：模块侧的绑定回填依赖 core 的
+        # 改名与回填已完成，且各包的 revision 无法互相声明依赖。
         if package is not None:
             if package not in discovered:
                 Logger.warning(f"No migrations discovered for package {package!r}.")
@@ -469,7 +446,7 @@ class MigrationRunner:
         执行待应用的 revision。
 
         :param package: 只执行该包；省略时执行全部包。
-        :return: 已应用的 ``(包名, revision)`` 列表。
+        :return: 已应用的 ``(包名， revision)`` 列表。
         """
         discovered = await cls.discover()
         applied = await cls._applied()
@@ -491,7 +468,7 @@ class MigrationRunner:
 
         :param package: 包名。
         :param to: 回退到该 revision 为止（保留它）；省略时全部回退。
-        :return: 已回退的 ``(包名, revision)`` 列表。
+        :return: 已回退的 ``(包名， revision)`` 列表。
         :raises MigrationError: revision 未声明 ``downgrade``，或 ``to`` 不存在。
         """
         discovered = await cls.discover()
@@ -545,11 +522,7 @@ class MigrationRunner:
 
     @classmethod
     async def _apply(cls, migration: MigrationModule) -> None:
-        """
-        执行并登记一条迁移。
-
-        :param migration: 迁移。
-        """
+        # 执行并登记一条迁移。
         Logger.info(f"Applying migration {migration.package}/{migration.revision}.")
         await cls._run(migration, migration.upgrade)
         await SchemaMigration.create(
@@ -560,12 +533,7 @@ class MigrationRunner:
 
     @classmethod
     async def _run(cls, migration: MigrationModule, entry: Callable) -> None:
-        """
-        在方言允许时以事务执行迁移入口。
-
-        :param migration: 迁移。
-        :param entry: 要执行的 ``upgrade`` 或 ``downgrade``。
-        """
+        # 在方言允许时以事务执行迁移入口。
         conn = Tortoise.get_connection("default")
         if _dialect(conn) not in TRANSACTIONAL_DIALECTS:
             await entry(MigrationContext(conn))

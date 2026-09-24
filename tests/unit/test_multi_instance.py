@@ -83,10 +83,6 @@ CONFLICT_CONFIG_FILES = {
 
 @contextmanager
 def _temp_config(files: dict[str, str]):
-    """把 CFGManager 切到一份临时配置，退出时完整还原。
-
-    :param files: 文件名到内容的映射，一律写在该目录下。
-    """
     original_path = CFGManager.config_path
     original_values = CFGManager.values
     original_tss = CFGManager._tss
@@ -114,10 +110,6 @@ def _temp_config(files: dict[str, str]):
 
 @contextmanager
 def _adapters_only(*names: str):
-    """把发现层的适配器清单收窄到给定几项，退出时还原。
-
-    :param names: 保留的适配器包名。
-    """
     real = PackageRegistry.adapters()
     with patch.object(PackageRegistry, "adapters", return_value={name: real[name] for name in names}):
         yield
@@ -125,11 +117,6 @@ def _adapters_only(*names: str):
 
 @contextmanager
 def _temporary_module(module_name: str, **fields):
-    """注册一个临时模块，退出时移除。
-
-    :param module_name: 模块名。
-    :param fields: 传给 ``Module.assign`` 的字段。
-    """
     module = Module.assign(module_name=module_name, alias=None, recommend_modules=None, developers=None, **fields)
     module._db_load = True
     ModulesManager.add_module(module, "test.py")
@@ -143,7 +130,6 @@ def _temporary_module(module_name: str, **fields):
 
 
 def _test_default_instance_names_are_byte_identical():
-    """默认实例（instance_id 为空）下八个适配器的 client_name 与改造前逐字节一致。"""
     saved = Info.instance_id
     try:
         Info.instance_id = ""
@@ -171,7 +157,6 @@ def _test_default_instance_names_are_byte_identical():
 
 
 def _test_platform_identity_derivation():
-    """platform_from 是 target_from 换掉客户端段；缺信息时退化为旧的两段判据。"""
     from akaribot.core.utils.platform_scope import resolve_platform_identity
 
     saved_platform_name = Info.platform_name
@@ -201,7 +186,6 @@ def _test_platform_identity_derivation():
 
 
 def _test_instance_config_scope():
-    """实例表存在时接管读取，enable 不回退，写入与删除只落实例表。"""
     with _temp_config(SCOPE_CONFIG_FILES):
         base_url = CFGManager.get("telegram_api_url", table_name="bot_telegram")
         base_token = CFGManager.get("telegram_token", secret=True, table_name="bot_telegram")
@@ -250,7 +234,6 @@ def _test_instance_config_scope():
 
 
 def _test_discover_adapter_instances():
-    """实例发现按配置表枚举：孤立配置与非法实例 ID 只告警并跳过，enable 缺失视为未启用。"""
     with _temp_config(DISCOVERY_CONFIG_FILES), _adapters_only("telegram", "kook"):
         daemon.disabled_bots.clear()
         with patch.object(daemon.Logger, "warning") as warning:
@@ -274,7 +257,6 @@ def _test_discover_adapter_instances():
 
 
 def _fake_adapter_entry(name: str, credential_fields: tuple[str, ...] = ()) -> PackageEntry:
-    """构造一个带清单的适配器条目。"""
     return PackageEntry(
         kind="adapter",
         name=name,
@@ -287,7 +269,6 @@ def _fake_adapter_entry(name: str, credential_fields: tuple[str, ...] = ()) -> P
 
 
 def _run_conflict_check(instances) -> tuple[object, str]:
-    """跑一次冲突检查，返回 ``(终止异常或 None, critical 消息)``。"""
     with patch.object(daemon.Logger, "critical") as critical:
         try:
             daemon.check_instance_conflicts(instances)
@@ -298,12 +279,6 @@ def _run_conflict_check(instances) -> tuple[object, str]:
 
 
 def _instance(platform: str, instance_id: str = "", platform_name: str | None = None) -> daemon.AdapterInstance:
-    """按命名规则构造实例记录。
-
-    :param platform: 适配器名。
-    :param instance_id: 实例 ID。
-    :param platform_name: 平台展示名；缺省时取适配器名（合成适配器可如此简化）。
-    """
     table = f"bot_{platform}" + (f"-{instance_id}" if instance_id else "")
     return daemon.AdapterInstance(
         platform=platform,
@@ -314,7 +289,6 @@ def _instance(platform: str, instance_id: str = "", platform_name: str | None = 
 
 
 def _test_instance_conflict_checks():
-    """端口冲突与同平台凭据重复中止启动并指名道姓；跨主机同端口不误报。"""
     with _temp_config(CONFLICT_CONFIG_FILES), _adapters_only("telegram", "web", "onebot", "milky"):
         terminal, message = _run_conflict_check([_instance("web", platform_name="Web"), _instance("web", "alt", "Web")])
         if not isinstance(terminal, SystemExit) or terminal.code != 1:
@@ -345,7 +319,6 @@ def _test_instance_conflict_checks():
 
 
 def _declared_bot_tables(source: str) -> set[str]:
-    """从适配器的 config.py 源码中取出 ``on_bot_config`` 声明的表名。"""
     tables = set()
     for node in ast.walk(ast.parse(source)):
         if not isinstance(node, ast.Call) or not node.args:
@@ -361,7 +334,6 @@ def _declared_bot_tables(source: str) -> set[str]:
 
 
 def _declared_field_names(source: str) -> set[str]:
-    """从适配器的 config.py 源码中取出全部带类型标注的字段名。"""
     fields = set()
     for node in ast.walk(ast.parse(source)):
         if not isinstance(node, ast.ClassDef):
@@ -373,7 +345,6 @@ def _declared_field_names(source: str) -> set[str]:
 
 
 def _test_adapter_manifests_match_config_templates():
-    """适配器清单的 config_table 必须等于 config.py 实际登记的表；包名不得含分隔符。"""
     adapters = PackageRegistry.adapters()
     if not adapters:
         return False
@@ -391,7 +362,6 @@ def _test_adapter_manifests_match_config_templates():
 
 
 def _test_four_way_scope_matches():
-    """available_for 的平台级声明覆盖该平台的全部实例，实例级声明只覆盖该实例。"""
     from akaribot.core.loader import ModulesManager as manager
 
     with (
@@ -433,7 +403,6 @@ def _test_four_way_scope_matches():
 
 
 def _test_return_cache_does_not_collide():
-    """同一 target_from / client_name 下，带与不带平台两段的结果不得互相顶替缓存。"""
     with _temporary_module("__test_mi_cache", available_for=["Telegram"]):
         scoped = ModulesManager.return_modules_list("Telegram-alt|Group", "Telegram-alt", "Telegram|Group", "Telegram")
         legacy = ModulesManager.return_modules_list("Telegram-alt|Group", "Telegram-alt")
@@ -441,7 +410,6 @@ def _test_return_cache_does_not_collide():
 
 
 async def _test_session_info_platform_fields():
-    """入站会话按进程的 Info.platform_name 填平台两段；旧会话在 refresh_info 后退化为两段判据。"""
     from akaribot.core.builtins.session.info import SessionInfo
 
     saved_platform_name, saved_instance_id = Info.platform_name, Info.instance_id
@@ -467,7 +435,6 @@ async def _test_session_info_platform_fields():
 
 
 def _test_alive_prefix_disambiguation():
-    """Telegram-alt 的前缀不得被 Telegram 抢走，判定取最长匹配。"""
     lease = datetime.now(UTC) + timedelta(seconds=300)
     Alive.refresh_peer("mi-p1", "Telegram", metadata={"target_prefix_list": ["Telegram|Group"]}, lease_until=lease)
     Alive.refresh_peer(

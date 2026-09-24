@@ -185,7 +185,6 @@ class SessionDraft:
         return frozenset(self._dirty)
 
     def _prepare_commit(self) -> dict[str, Any]:
-        """校验并准备独立提交值；任一失败则整体不发布。"""
         tmp_snapshot: dict[str, str] = {}
         for k, v in self._tmp.items():
             if not isinstance(k, str) or not isinstance(v, str):

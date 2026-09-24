@@ -123,13 +123,13 @@ class DrawLevelList:
                     fill=(0, 0, 0),
                 )
 
-                # 右侧用于放置封面ID
+                # 右侧用于放置封面 ID
                 draw.rectangle(
                     [x_offset + large_bar_width, bar_top, x_offset + self.image_size, bar_top + bar_height],
                     fill=dcolor,
                 )
 
-                # 绘制封面ID
+                # 绘制封面 ID
                 font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
                 bbox = draw.textbbox((0, 0), str(sid), font=font)
                 text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -206,7 +206,7 @@ class DrawLevelList:
                             for i, char in enumerate(self.goal):
                                 char_width, _ = get_text_size(char, font)
                                 draw.text((text_x, text_y), char, fill=text_color[i], font=font)
-                                text_x += char_width  # 更新x坐标，绘制下一个字母
+                                text_x += char_width  # 更新 x 坐标，绘制下一个字母
                         else:
                             text_x = x_offset + (self.image_size - text_width) // 2
                             text_y = y_offset + (self.image_size - text_height) // 2

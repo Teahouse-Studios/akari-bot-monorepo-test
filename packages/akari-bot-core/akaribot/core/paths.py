@@ -20,11 +20,6 @@ TESTS_PATH_ENV = "AKARI_TESTS_PATH"
 
 
 def _env_path(name: str) -> Path | None:
-    """读取路径类环境变量。
-
-    :param name: 环境变量名。
-    :return: 解析后的绝对路径；未设置或为空时为 ``None``。
-    """
     value = os.environ.get(name)
     if not value:
         return None
@@ -32,12 +27,9 @@ def _env_path(name: str) -> Path | None:
 
 
 def _repository_root() -> Path:
-    """源码检出形态下的仓库根。
-
-    判据是「含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先」，不按层数推算——源码根从
-    ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后层数会变，数层数会静默指到仓库之外。
-    打包形态下找不到这样的祖先，退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
-    """
+    # 判据是「含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先」，不按层数推算——源码根从
+    # ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后层数会变，数层数会静默指到仓库之外。
+    # 打包形态下找不到这样的祖先，退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
     current = Path(__file__).resolve()
     for candidate in current.parents:
         if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():

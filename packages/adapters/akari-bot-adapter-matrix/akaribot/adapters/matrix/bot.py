@@ -77,12 +77,6 @@ async def on_room_member(room: nio.MatrixRoom, event: nio.RoomMemberEvent):
     ):
         await member_left(member_id, room.room_id, event.event_id)
 
-    # is_direct = (room.member_count == 1 or room.member_count == 2) and room.join_rule == "invite"
-    # if not is_direct:
-    #     resp = await bot.room_get_state_event(room.room_id, "m.room.member", client.user)
-    #     if "prev_content" in resp.__dict__ and "is_direct" in resp.__dict__[
-    #             "prev_content"] and resp.__dict__["prev_content"]["is_direct"]:
-    #         is_direct = True
     if room.member_count == 1 and event.membership == "leave":
         resp = await matrix_bot.room_leave(room.room_id)
         if isinstance(resp, nio.ErrorResponse):
@@ -224,7 +218,6 @@ async def on_reaction(room: nio.MatrixRoom, event: nio.ReactionEvent):
 
 
 async def _sync_room_state() -> bool:
-    """执行一次初始同步；AsyncClient.sync 已负责更新房间并分发回调。"""
     response = await matrix_bot.sync(
         timeout=10000, since=matrix_bot.next_batch, full_state=True, set_presence="unavailable"
     )
@@ -278,11 +271,6 @@ async def on_in_room_verify(room: nio.MatrixRoom, event: nio.RoomMessageUnknown)
 
 async def _run_client():
     global initial_sync_complete
-    # Logger.info(f"Trying first sync")
-    # sync = await bot.sync()
-    # Logger.info(f"First sync finished in {sync.elapsed}ms, dropped older messages")
-    # if sync is nio.SyncError:
-    #     Logger.error(f"Failed in first sync: {sync.status_code} - {sync.message}")
     try:
         with open(client.store_path_next_batch, "r", encoding="utf-8") as fp:
             matrix_bot.next_batch = fp.read()

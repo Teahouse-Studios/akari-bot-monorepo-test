@@ -23,11 +23,6 @@ COMMENT_KEY = "config.comments.{table}.{key}"
 
 
 def _entry_for_dist(dist: str):
-    """按分发名取包条目。
-
-    :param dist: 分发名，如 ``akari-bot-module-wiki``。
-    :return: 包条目；未安装时为 ``None``。
-    """
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -39,12 +34,6 @@ def _entry_for_dist(dist: str):
 
 
 def _table_document(table: str) -> dict[str, Any]:
-    """取某个配置表在内存副本中的键值。
-
-    :param table: 表名，如 ``module_wiki``。
-    :return: 普通键与密钥键的映射。
-    :raises KeyError: 该表不存在。
-    """
     from akaribot.core.config import CFGManager
 
     document = CFGManager.values.get(table)
@@ -54,13 +43,6 @@ def _table_document(table: str) -> dict[str, Any]:
 
 
 def _localized_comment(table: str, key: str, secret: bool) -> str | None:
-    """取配置项的本地化注释。
-
-    :param table: 表名。
-    :param key: 键名。
-    :param secret: 是否来自密钥表。
-    :return: 注释文本；未声明时为 ``None``。
-    """
     from akaribot.core.config import CFGManager
     from akaribot.core.i18n import Locale
 
@@ -77,11 +59,8 @@ def _localized_comment(table: str, key: str, secret: bool) -> str | None:
 
 
 def _connect_locale() -> None:
-    """接上 i18n 快照。
-
-    子进程没有 bot 启动期的快照，不接上时 ``Locale.t`` 一律回退为键名（注释会显示成
-    ``{I18N:...}`` 标记）。只做一次。
-    """
+    # 子进程没有 bot 启动期的快照，不接上时 ``Locale.t`` 一律回退为键名（注释会显示成
+    # ``{I18N:...}`` 标记）。只做一次。
     global _LOCALE_READY
     if _LOCALE_READY:
         return
@@ -94,14 +73,8 @@ def _connect_locale() -> None:
 
 
 def _schema(table: str) -> list[dict]:
-    """列出一个配置表的全部键。
-
-    键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；类型取运行期值，
-    ``default`` 尽力从配置模板的声明里取，取不到时为 ``None``。
-
-    :param table: 表名。
-    :return: 条目列表，按键名排序。
-    """
+    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；类型取运行期值，
+    # ``default`` 尽力从配置模板的声明里取，取不到时为 ``None``。
     document = _table_document(table)
     plain = document.get(table) or {}
     secret_table = "secret" if table == "config" else f"{table}_secret"
@@ -130,14 +103,8 @@ def _schema(table: str) -> list[dict]:
 
 
 def _declared_defaults(table: str) -> dict[str, dict]:
-    """从配置模板里取声明默认值，取不到时返回空映射。
-
-    模板声明经 ``@on_module_config`` 在类创建期落盘，字段元数据保存在类的
-    ``__config_fields__``；此处只读该映射，不重新生成配置。
-
-    :param table: 表名。
-    :return: 键名到 ``{"default": ...}`` 的映射。
-    """
+    # 模板声明经 ``@on_module_config`` 在类创建期落盘，字段元数据保存在类的
+    # ``__config_fields__``；此处只读该映射，不重新生成配置。
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -164,16 +131,8 @@ def _declared_defaults(table: str) -> dict[str, dict]:
 
 
 def _coerce(table: str, key: str, value: str) -> Any:
-    """按配置模板声明的类型转换命令行字符串。
-
-    不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``：文件里类型不对，读回虽是 ``true``
-    但任何按布尔取用的代码都会拿到真值字符串。
-
-    :param table: 表名。
-    :param key: 键名。
-    :param value: 命令行给出的原始字符串。
-    :return: 转换后的值；无声明或无法转换时原样返回字符串。
-    """
+    # 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``：文件里类型不对，读回虽是 ``true``
+    # 但任何按布尔取用的代码都会拿到真值字符串。
     cfg_type = _declared_defaults(table).get(key, {}).get("type")
     if cfg_type is bool:
         lowered = value.strip().lower()
@@ -198,7 +157,6 @@ def _coerce(table: str, key: str, value: str) -> Any:
 
 
 def _resolve_table(table: str) -> str:
-    """表名归一化，与 :meth:`CFGManager.get` 的既有约定一致。"""
     from akaribot.core.config import CFGManager
 
     return CFGManager._resolve_table(table)

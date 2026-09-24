@@ -106,14 +106,12 @@ def kind_of_value(value: Any) -> str:
 
 
 def _list_items(value: Any) -> list[Any]:
-    """把列表值归一为元素列表，非序列输入按单元素处理。"""
     if isinstance(value, (list, tuple, set)):
         return list(value)
     return [] if value is None else [value]
 
 
 def _item_write_text(item: Any) -> str:
-    """返回列表元素的写入文本：数字与布尔不加引号，其余按 TOML 字符串转义。"""
     if isinstance(item, bool):
         return "true" if item else "false"
     if isinstance(item, int):
@@ -157,7 +155,6 @@ def edit_text(value: Any, kind: str = "") -> str:
 
 
 def _split_list(text: str) -> list[str]:
-    """按中英文逗号拆分列表输入，去空白与成对引号，丢弃空项。"""
     items: list[str] = []
     for chunk in _LIST_SPLIT_PATTERN.split(text):
         item = chunk.strip().strip("'\"")
@@ -167,7 +164,6 @@ def _split_list(text: str) -> list[str]:
 
 
 def _short(text: str, limit: int = 24) -> str:
-    """截断错误信息里的用户输入，避免状态栏被长值挤爆。"""
     shown = compat.truncate_cells(text.strip(), limit)
     return shown or i18n.t("cli.tui.config.empty_value")
 
@@ -337,7 +333,6 @@ def normalize_schema(payload: Any, table: str) -> list[ConfigField]:
 
 
 def _pick(source: Any, *names: str, default: Any = "") -> Any:
-    """从字典或对象上按候选名取值，兼容对端契约未冻结时的字段别名。"""
     for name in names:
         if isinstance(source, Mapping) and source.get(name) is not None:
             return source[name]
@@ -348,7 +343,6 @@ def _pick(source: Any, *names: str, default: Any = "") -> Any:
 
 
 def _text(value: Any) -> str:
-    """把任意标量转为展示用字符串。"""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -398,19 +392,11 @@ class RawEntry:
 
 
 def _error_reason(error: ParseError) -> str:
-    """取 tomlkit 错误原文中不含行列的部分。"""
     return _ERROR_TAIL_PATTERN.sub("", str(error)).strip()
 
 
 def _error_position(error: ParseError, text: str) -> tuple[int | None, int | None]:
-    """取错误的行列号（行从 1 起、列从 1 起）。
-
-    tomlkit 对文件尾部的未闭合结构会报回第 1 行第 0 列，此处校正到最后一行。
-
-    :param error: tomlkit 抛出的解析错误。
-    :param text: 被解析的原文。
-    :return: 二元组——行号与列号；取不到时为 ``None``。
-    """
+    # tomlkit 对文件尾部的未闭合结构会报回第 1 行第 0 列，此处校正到最后一行。
     line = getattr(error, "line", None)
     column = getattr(error, "col", None)
     if line is None:
@@ -455,12 +441,10 @@ def parse_toml_text(text: str) -> RawParseResult:
 
 
 def _unwrap(item: Any) -> Any:
-    """取 tomlkit 条目的普通 Python 值。"""
     return item.unwrap() if hasattr(item, "unwrap") else item
 
 
 def _section_matches(section: str, table: str) -> bool:
-    """判断文件里的段名是否属于当前表（含密钥段）。"""
     if section == table:
         return True
     return section in ({"secret"} if table == "config" else {f"{table}_secret"})
@@ -498,7 +482,6 @@ def flatten_document(document: Any, table: str) -> tuple[list[RawEntry], list[st
 
 
 def _is_nested(value: Any) -> bool:
-    """判断值是否为无法经 ``config set`` 写入的嵌套结构。"""
     if isinstance(value, Mapping):
         return True
     return isinstance(value, (list, tuple)) and any(isinstance(item, Mapping) for item in value)
@@ -729,7 +712,6 @@ class SubprocessConfigSource:
         return base / name
 
     def _tables_from_cli(self) -> list[str]:
-        """经 ``akaribot config list --json`` 取表清单。"""
         argv = self.cli_argv("config", "list", "--json")
         completed = self._run(argv)
         if completed.returncode != 0:
@@ -744,7 +726,6 @@ class SubprocessConfigSource:
         return normalize_tables(self._parse_json(completed.stdout, "config list --json"))
 
     def _tables_from_directory(self) -> list[str]:
-        """退回实例目录枚举：``<实例>/config`` 下的 ``*.toml`` 文件名即表名。"""
         root = self._instance_root()
         if root is None:
             raise ConfigSourceError(i18n.t("cli.tui.config.err_not_instance", root=self.root))
@@ -754,7 +735,6 @@ class SubprocessConfigSource:
         return normalize_tables(sorted(path.stem for path in base.rglob("*.toml")))
 
     def _core_json(self, *args: str, label: str) -> Any:
-        """调用 core 配置入口并解析 JSON 输出。"""
         instance = self._instance()
         try:
             completed = instance.run_core_capture("config", *args, "--json")
@@ -774,7 +754,6 @@ class SubprocessConfigSource:
         return self._parse_json(completed.stdout, label)
 
     def _instance_root(self) -> Path | None:
-        """定位实例根：优先环境变量，其次自当前目录向上查找 ``akaribot.toml``。"""
         try:
             from akaribot.cli.instance import find_instance_root
         except ImportError:
@@ -785,7 +764,6 @@ class SubprocessConfigSource:
             return None
 
     def _instance(self) -> Any:
-        """构造实例对象；模块缺失或实例不存在时给出可读原因。"""
         if self._instance_cache is not None:
             return self._instance_cache
         if self._instance_factory is not None:
@@ -807,7 +785,6 @@ class SubprocessConfigSource:
         return self._instance_cache
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        """执行子进程并把常见失败转成 :class:`ConfigSourceError`。"""
         env = dict(os.environ)
         env["PYTHONIOENCODING"] = "utf-8"
         try:
@@ -833,7 +810,6 @@ class SubprocessConfigSource:
             ) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
-        """解析子进程 JSON 输出。"""
         text = (stdout or "").strip()
         if not text:
             raise ConfigSourceError(i18n.t("cli.tui.config.err_empty_output", label=label))
@@ -843,7 +819,6 @@ class SubprocessConfigSource:
             raise ConfigSourceError(i18n.t("cli.tui.config.err_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
-        """截取子进程输出的尾部，供状态栏展示。"""
         return (text or "").strip()[-limit:]
 
 
@@ -885,7 +860,6 @@ def rebuild_raw_text(fields: Sequence[ConfigField]) -> str:
 
 
 def _toml_literal(value: Any, kind: str) -> str:
-    """把值渲染为 TOML 字面量，用于重建文本；嵌套表渲染为行内表。"""
     if isinstance(value, Mapping):
         if not value:
             return "{}"
@@ -909,11 +883,8 @@ def _toml_literal(value: Any, kind: str) -> str:
 
 
 def _optional_widget(name: str) -> Any | None:
-    """从 ``_compat`` 取可选控件，未收口时返回 ``None`` 由调用方降级。
-
-    理由：``TextArea`` / ``Switch`` 尚未在 ``_compat`` 再导出，而页面不得直接 import textual，
-    故按名字探测；``_compat`` 一旦导出，本页无需改动即自动切换到原生控件。
-    """
+    # 理由：``TextArea`` / ``Switch`` 尚未在 ``_compat`` 再导出，而页面不得直接 import textual，
+    # 故按名字探测；``_compat`` 一旦导出，本页无需改动即自动切换到原生控件。
     return getattr(compat, name, None)
 
 
@@ -956,7 +927,6 @@ class BoolToggle(compat.Horizontal):
         self.set_value(not self._value)
 
     def _button(self) -> compat.Button | None:
-        """取内部按钮；未挂载时返回 ``None``。"""
         try:
             return self.query_one(compat.Button)
         except Exception:  # noqa: BLE001 - 未挂载时按无按钮处理
@@ -997,7 +967,6 @@ class FieldRow(compat.Vertical):
         yield compat.Static(compat.plain_text(""), classes="field-error", markup=False)
 
     def _build_control(self) -> compat.Widget:
-        """构造本行的输入控件：布尔用开关，其余用输入框（密钥遮罩）。"""
         if self.field.kind == KIND_BOOL:
             switch = _optional_widget("Switch")
             if switch is not None:
@@ -1056,7 +1025,6 @@ class FieldRow(compat.Vertical):
         self._error_widget().update(compat.plain_text(""))
 
     def _error_widget(self) -> compat.Static:
-        """取行内的错误提示控件。"""
         return self.query_one(".field-error", compat.Static)
 
 
@@ -1130,7 +1098,6 @@ class RawTextEditor(compat.VerticalScroll):
         await self._remount_lines()
 
     def _textarea(self) -> Any | None:
-        """取原生 ``TextArea``；降级实现下返回 ``None``。"""
         if self._textarea_cls is None:
             return None
         try:
@@ -1139,7 +1106,6 @@ class RawTextEditor(compat.VerticalScroll):
             return None
 
     async def _remount_lines(self) -> None:
-        """重建逐行输入框。"""
         await self.remove_children(".raw-line")
         await self.mount(
             *[compat.Input(line, id=f"raw-line-{index}", classes="raw-line") for index, line in enumerate(self._lines)]
@@ -1520,7 +1486,6 @@ class ConfigPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.config.status_mode_switched", mode=i18n.t(mode_key)))
 
     async def _load_fields(self, table: str, *, force: bool = False) -> tuple[ConfigField, ...]:
-        """读取字段，命中缓存时不取数。"""
         if not force and table in self._schemas:
             return self._schemas[table]
         fields = tuple(await asyncio.to_thread(self.source.schema, table))
@@ -1544,7 +1509,6 @@ class ConfigPage(compat.Vertical):
         return await self.reload_tables()
 
     async def _rebuild_form(self, fields: Sequence[ConfigField]) -> None:
-        """按字段序列重建表单区。"""
         pane = self.query_one("#form-pane", compat.VerticalScroll)
         await pane.remove_children()
         headers = aligned_headers(fields)
@@ -1556,13 +1520,11 @@ class ConfigPage(compat.Vertical):
         await pane.mount(compat.Static(compat.plain_text(i18n.t(hint_key)), id="form-hint", markup=False))
 
     async def _show_form_hint(self, text: str) -> None:
-        """在表单区显示一条提示，替代字段列表。"""
         pane = self.query_one("#form-pane", compat.VerticalScroll)
         await pane.remove_children()
         await pane.mount(compat.Static(compat.plain_text(text), id="form-hint", markup=False))
 
     def _render_tables(self) -> None:
-        """按缓存中的表清单重绘左侧列表与摘要栏。"""
         list_view = self.query_one("#table-list", compat.ListView)
         width = self._table_inner_width(list_view)
         rows = [compat.fit_cells(name, width) for name in self._tables]
@@ -1574,7 +1536,6 @@ class ConfigPage(compat.Vertical):
         self._sync_caption()
 
     def _table_inner_width(self, list_view: compat.ListView) -> int:
-        """返回表清单可用内容宽度：外框宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(list_view)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -1582,13 +1543,11 @@ class ConfigPage(compat.Vertical):
         return max(outer - 4, 8)
 
     def _index_for(self, table: str | None) -> int:
-        """定位要高亮的表；找不到时回到首项。"""
         if table is not None and table in self._tables:
             return self._tables.index(table)
         return 0
 
     def _sync_caption(self) -> None:
-        """更新摘要栏：表名、项数、密钥与占位符数量、当前模式。"""
         if self._selected is None:
             text = i18n.t("cli.tui.config.caption_no_selection", total=len(self._tables))
         else:
@@ -1607,7 +1566,6 @@ class ConfigPage(compat.Vertical):
         self.query_one("#config-caption", compat.Static).update(compat.plain_text(text))
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         self.last_result = text
         self._status_rendered = text
         self.query_one("#config-status", compat.Static).update(compat.plain_text(text))
@@ -1663,11 +1621,8 @@ class ConfigPage(compat.Vertical):
         return await self._apply(plan)
 
     def _plan_form_save(self) -> tuple[list[RawEntry], list[str]]:
-        """收集表单里被改动的字段；校验失败的行在行内标出。
-
-        未改动的行既不校验也不写入：值原样来自 schema，重新写回没有意义，还可能把
-        未知结构（嵌套表等）交给 ``config set``。
-        """
+        # 未改动的行既不校验也不写入：值原样来自 schema，重新写回没有意义，还可能把
+        # 未知结构（嵌套表等）交给 ``config set``。
         plan: list[RawEntry] = []
         errors: list[str] = []
         for row in self.field_rows():
@@ -1684,7 +1639,6 @@ class ConfigPage(compat.Vertical):
         return plan, errors
 
     async def _plan_raw_save(self) -> list[RawEntry] | None:
-        """校验原始文本并给出改动条目；解析失败时返回 ``None`` 且不写任何键。"""
         parsed = parse_toml_text(self.raw_editor().text)
         if not parsed.ok:
             self.last_error = parsed.message
@@ -1703,7 +1657,6 @@ class ConfigPage(compat.Vertical):
         return changes
 
     async def _apply(self, plan: Sequence[RawEntry]) -> bool:
-        """逐项经数据源写入，成功后重读当前表。"""
         assert self._selected is not None
         self._set_status(i18n.t("cli.tui.config.status_writing", count=len(plan)))
         written: list[str] = []
@@ -1765,7 +1718,6 @@ class ConfigPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted, "#table-list")
     def _on_table_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        """表清单高亮项变化时切换当前表。"""
         index = compat.highlighted_index(self.query_one("#table-list", compat.ListView))
         if index is None or index >= len(self._tables):
             return
@@ -1775,7 +1727,6 @@ class ConfigPage(compat.Vertical):
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：保存、重读、模式切换、文本区增删行。"""
         button_id = event.button.id
         if button_id == "save":
             self.action_save()

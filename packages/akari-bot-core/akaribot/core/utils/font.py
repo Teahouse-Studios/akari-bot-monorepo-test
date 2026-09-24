@@ -53,10 +53,7 @@ class FontNotFoundError(FileNotFoundError):
 
 
 def _from_assets_package(name: str) -> Path | None:
-    """资源包内查找；资源包未安装时返回 None。
-
-    资源包是可选依赖，故按名字惰性导入：ImportError 即该级不可用，core 的依赖清单不变。
-    """
+    # 资源包是可选依赖，故按名字惰性导入：ImportError 即该级不可用，core 的依赖清单不变。
     try:
         from akaribot.assets.fonts import fonts_dir
     except ImportError:
@@ -66,13 +63,11 @@ def _from_assets_package(name: str) -> Path | None:
 
 
 def _from_instance_data(name: str) -> Path | None:
-    """实例 ``data/fonts`` 下部署者自备的字体；存在即压过系统字体。"""
     candidate = Paths.data / FONTS_DIR_NAME / name
     return candidate if candidate.is_file() else None
 
 
 def _from_system_fonts(name: str) -> Path | None:
-    """系统字体：经 matplotlib 的字族索引查找；matplotlib 缺席或字族未命中时为 None。"""
     families = SYSTEM_FAMILIES.get(name)
     if not families:
         return None

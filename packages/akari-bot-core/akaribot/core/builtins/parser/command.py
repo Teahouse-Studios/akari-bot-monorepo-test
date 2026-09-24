@@ -31,26 +31,9 @@ _QUOTE_CHARS = ('"', "'")
 
 
 def _split_command(command: str) -> list[str]:
-    """
-    按空白符号分割命令字符串，并原样保留参数中的字面字符（引号、反斜杠等）。
-
-    与标准 shell 的分词规则不同，这里只有在「整段参数被一对匹配的引号包裹」时，
-    引号才会作为分组符号被去除，以便参数中能够包含空白字符：
-
-    - ``'"multi word"'`` -> ``['multi word']``（引号包裹整段参数，作为分组符号）
-    - ``'{"a": "b"}'`` -> ``['{"a":', '"b"}']``（引号位于参数中间，原样保留）
-    - ``'a"b"c'`` -> ``['a"b"c']``（引号位于参数中间，原样保留）
-    - ``'"a b'`` -> ``['"a', 'b']``（引号不匹配，原样保留且不参与分组）
-
-    作为例外，选项的内联值支持引号分组（POSIX/GNU 的 ``--flag=value`` 形式），
-    以便值中包含空白字符：
-
-    - ``'--lang="zh cn"'`` -> ``['--lang=zh cn']``（引号紧跟在 ``=`` 之后，作为分组符号）
-    - ``'--foo="a b"c'`` -> ``['--foo="a', 'b"c']``（引号后仍有字符，按字面处理）
-
-    :param command: 待分割的命令字符串
-    :return: 分割后的参数列表
-    """
+    # 与标准 shell 不同，只有整段参数被一对匹配引号包裹时引号才作分组符号去除：``'"multi word"'``
+    # 得到 ``['multi word']``，而 ``'a"b"c'`` 与 ``'"a b'`` 原样保留。选项的内联值例外，
+    # ``'--lang="zh cn"'`` 中的引号紧跟在 ``=`` 之后，同样作为分组符号。
     split_command = []
     index = 0
     length = len(command)
@@ -101,7 +84,7 @@ class CommandParser:
     该类根据模块定义的命令模板，对用户输入进行解析和验证，
     支持多种命令格式和权限检查。
 
-    属性说明:
+    属性说明：
         command_prefixes: 命令前缀列表
         module_name: 模块名称
         origin_template: 原始命令模板
@@ -128,7 +111,7 @@ class CommandParser:
         :param msg: 消息会话对象（用于权限检查）
         :param is_superuser: 是否为超级用户（如为 None 则从会话自动检测）
         :param is_admin: 是否为场景管理员。为 None 时不过滤管理员命令，保持命令解析行为；
-            传入布尔值则据其过滤 ``required_admin`` 命令，供帮助文档按权限展示
+        传入布尔值则据其过滤 ``required_admin`` 命令，供帮助文档按权限展示
         """
         # 存储命令前缀列表（如 ["~", "!"]）
         self.command_prefixes = command_prefixes
@@ -259,15 +242,15 @@ class CommandParser:
             "args": [
                 {
                     "args": "~aaa <keyword>",
-                    "desc": "简介1"
+                    "desc": "简介 1"
                 },
                 {
                     "args": "~aaa bbb <keyword> [mode]",
-                    "desc": "简介2"
+                    "desc": "简介 2"
                 }
             ],
             "options": [
-                {"-o": "简介3"},
+                {"-o": "简介 3"},
             ]
         }
         ```
@@ -297,14 +280,14 @@ class CommandParser:
         for x in format_args:
             desc = ""
 
-            # 尝试匹配纯描述格式: "- {I18N:...}"
+            # 尝试匹配纯描述格式： "- {I18N:...}"
             match = re.fullmatch(r"- (\{I18N:.*?\})", x)
             if match:
                 # 纯描述，没有命令部分
                 x = ""
                 desc = locale.t_str(match.group(1), locale_failed_prompt=False)
             else:
-                # 尝试匹配命令 + 描述格式: "command - {I18N:...}"
+                # 尝试匹配命令 + 描述格式： "command - {I18N:...}"
                 match = re.search(r" - (\{I18N:.*?\})$", x)
                 if match:
                     # 提取描述部分
@@ -345,13 +328,13 @@ class CommandParser:
         6. 返回匹配的命令和解析的参数
 
         示例：
-        - 输入: "search python -t recent"
-        - 输出: (CommandMeta, {"keyword": "python", "-t": "recent"})
+        - 输入： "search python -t recent"
+        - 输出： (CommandMeta, {"keyword": "python", "-t": "recent"})
 
         :param command: 用户输入的完整命令字符串（不包括前缀）
         :return: (CommandMeta, 参数字典) 元组
                  - CommandMeta: 匹配的命令元数据
-                 - 参数字典: 解析后的参数，如果无参数则为 None
+                 - 参数字典： 解析后的参数，如果无参数则为 None
         :raises InvalidCommandFormatError: 如果命令格式不正确或无法匹配任何模板
         """
         # ========== 步骤 1: 检查是否有可用的命令 ==========
@@ -364,7 +347,7 @@ class CommandParser:
 
         # ========== 步骤 3: 分割命令字符串 ==========
         # 按空白符号分割命令，支持引号分组，并原样保留引号、反斜杠等字面字符
-        # 例如: "search 'multi word' -t recent" -> ["search", "multi word", "-t", "recent"]
+        # 例如： "search 'multi word' -t recent" -> ["search", "multi word", "-t", "recent"]
         split_command = _split_command(command)
 
         Logger.trace("splited command: " + str(split_command))

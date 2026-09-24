@@ -25,23 +25,18 @@ DIST = "akari-bot-module-dice"
 
 
 def _use_cli_locale() -> None:
-    """把语言快照切回 CLI 命名空间。
-
-    测试框架在每个用例前重跑 ``load_modules()``，它会把当前快照连到 core 的命名空间；而 CLI 的
-    ``Locale`` 按当前快照取键，不切回来就只会拿到键名。生产里 CLI 进程不加载 core，无此问题。
-    """
+    # 测试框架在每个用例前重跑 ``load_modules()``，它会把当前快照连到 core 的命名空间；而 CLI 的
+    # ``Locale`` 按当前快照取键，不切回来就只会拿到键名。生产里 CLI 进程不加载 core，无此问题。
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _make_instance(root: Path) -> Instance:
-    """建一个只带元数据文件的最小实例。"""
     (root / "akaribot.toml").write_text("", encoding="utf-8")
     return Instance(root)
 
 
 def _stub_result(instance: Instance, payload: dict | None, *, returncode: int, stderr: str = "") -> None:
-    """把实例的子进程调用替换成固定结果；``payload`` 为 ``None`` 时不回传 JSON。"""
     stdout = "" if payload is None else json.dumps(payload, ensure_ascii=False) + "\n"
 
     def run_core_capture(entrypoint: str, *args: str, timeout: float | None = 120.0, **env: str):
@@ -87,7 +82,7 @@ async def _test_rejected_surfaces_reason_and_blocks():
             },
             returncode=4,
         )
-    # 旧实现只看 returncode，既给不出「远端拒绝」的状态，也丢掉了 core 给出的具体原因。
+    # 只看 returncode 既给不出「远端拒绝」的状态，也丢掉了 core 给出的具体原因。
     return (
         result.attempted
         and not result.delivered
@@ -179,8 +174,6 @@ async def _test_payload_parser_tolerates_noise():
 
 
 class _RecordingRunner:
-    """替身：记录 argv，不真的执行 uv。"""
-
     calls: list[list[str]]
 
     def __init__(self, dry_run: bool = False, verbose: bool = False) -> None:
@@ -210,7 +203,6 @@ def _registry_payload(kind: str = "module") -> dict:
 
 
 def _remove_with_notify(notify: dict, returncode: int) -> tuple[int | None, list[list[str]], str]:
-    """跑一次 ``module remove``，返回退出码、卸载 argv 与输出文本。"""
     runner = _RecordingRunner()
     previous_runner = engine.CommandRunner
     previous_resolver = module_command.require_instance
@@ -264,8 +256,6 @@ async def _test_remove_uninstalls_after_confirmed_detach():
 
 
 class _Catalog:
-    """替身 registry：固定给出一个更高版本，使 update 一定有更新计划。"""
-
     def latest(self, dist: str) -> str:
         return "0.2.0"
 
@@ -273,7 +263,6 @@ class _Catalog:
 def _update_with_notify(
     detach: tuple[dict, int], install: tuple[dict, int], *, kind: str = "module"
 ) -> tuple[list[str], dict, list[list[str]]]:
-    """跑一次 ``module update``，返回 RPC 契约调用顺序、结果载荷与执行过的 argv。"""
     runner = _RecordingRunner()
     remotes: list[str] = []
     previous = (

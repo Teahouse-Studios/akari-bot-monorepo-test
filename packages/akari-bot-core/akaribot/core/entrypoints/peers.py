@@ -15,10 +15,6 @@ from datetime import UTC, datetime
 
 
 async def _snapshot() -> dict:
-    """读取 peer 快照。
-
-    :return: ``{"peers": [...], "available": bool, "note": str}``。
-    """
     # 导入本身就可能在实例配置缺失时抛错（core 的配置在导入期加载），故一并纳入降级路径。
     try:
         from akaribot.core.database import close_db, init_db

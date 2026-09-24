@@ -163,8 +163,8 @@ def entry_points(project: dict[str, Any], group: str, path: str) -> dict[str, st
 def package_root(pyproject: Path, import_path: str) -> Path:
     """由 entry point 的导入路径定位包目录。
 
-    源码根优先取分发根本身（当前布局），退回 ``src``（迁移前布局）——按固定层级拼接会在另一种
-    布局下静默落空或直接报「目录不存在」。
+    源码根优先取分发根本身，其次取分发根下的 ``src``——按固定层级拼接会在另一种布局下
+    静默落空或直接报「目录不存在」。
 
     :param pyproject: 该分发的 pyproject.toml。
     :param import_path: entry point 的导入路径。
@@ -570,7 +570,7 @@ def collect_artifacts(
 
     core 不参与：A.3 的 core 段只承载分发名、版本与 API 版本，无处安放产物信息。
 
-    :return: 二元组——分发名到（地址, sha256）的映射；缺 wheel 的分发名列表。
+    :return: 二元组——分发名到（地址， sha256）的映射；缺 wheel 的分发名列表。
     """
     artifacts: dict[str, tuple[str, str]] = {}
     missing: list[str] = []

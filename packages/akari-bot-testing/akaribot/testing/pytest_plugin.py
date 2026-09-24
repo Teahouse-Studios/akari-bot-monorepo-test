@@ -49,7 +49,6 @@ def run_in_session_loop(awaitable: Awaitable[Any]) -> Any:
 
 
 async def _cancel_pending_tasks() -> None:
-    """尽力取消遗留的后台任务，避免关闭循环时刷出大量 Task was destroyed 警告。"""
     current = asyncio.current_task()
     pending = [task for task in asyncio.all_tasks() if task is not current]
     if not pending:
@@ -79,7 +78,6 @@ def close_session_loop() -> None:
 
 
 def _label_of(sub_result: dict[str, Any], index: int) -> str:
-    """取子测试的可读标签，优先使用 note。"""
     return sub_result.get("note") or str(sub_result.get("input") or f"第 {index} 个子测试")
 
 
@@ -89,7 +87,7 @@ def describe_subresult(sub_result: dict[str, Any], label: str) -> tuple[str, str
 
     :param sub_result: ``Tester`` 记录的单条结果。
     :param label: 失败信息中的子测试标签。
-    :return: (类别, 详情)，类别为 ``error`` 或 ``failure``；通过或无需自动判定时为 None。
+    :return: (类别， 详情)，类别为 ``error`` 或 ``failure``；通过或无需自动判定时为 None。
     """
     if "timeout" in sub_result:
         return "failure", f"{label}: 子测试超时"
@@ -117,7 +115,7 @@ def evaluate_result(fn_name: str, res: dict[str, Any]) -> tuple[str, str] | None
 
     :param fn_name: 条目函数名，仅用于提示。
     :param res: :func:`akaribot.testing.process.run_function_entry` 的返回值。
-    :return: (类别, 详情)，类别为 ``error``/``failure``/``skip``；全部通过时为 None。
+    :return: (类别， 详情)，类别为 ``error``/``failure``/``skip``；全部通过时为 None。
     """
     if res.get("error"):
         return "error", str(res["error"])

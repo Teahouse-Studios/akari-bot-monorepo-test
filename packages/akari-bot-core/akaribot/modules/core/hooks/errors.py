@@ -27,11 +27,10 @@ if TYPE_CHECKING:
     from akaribot.core.builtins.bot import Bot
 
 
-errors = module("_parser_errors", hidden=True, load=True, base=True)
+errors = module("parser_errors", hidden=True, load=True, base=True)
 
 
 def _emotes_dir() -> Path | None:
-    """取 emotes 资源根目录；可选依赖 akari-bot-assets-emotes 缺席时为 None。"""
     try:
         from akaribot.assets.emotes import emotes_dir
     except ImportError:
@@ -44,7 +43,6 @@ COMMON_EMOTE_DIR = _EMOTES_DIR / "common" if _EMOTES_DIR else None
 
 
 def _common_emotes(name: str) -> tuple[Path, ...]:
-    """取 ``emotes/common/<name>`` 下的全部 GIF；资源缺席时为空元组。"""
     if COMMON_EMOTE_DIR is None:
         return ()
     return tuple(sorted((COMMON_EMOTE_DIR / name).glob("*.gif")))
@@ -136,7 +134,6 @@ async def process_exception(msg: "Bot.MessageSession", error: Exception) -> None
 
 @errors.hook(point=HookPoint.EXECUTION_ERROR, priority=100, name="default_feedback", server_scope=True, timeout=0)
 async def _execution_error(ctx: "Bot.ParserHookContext"):
-    """统一承接 parser 的异常反馈；默认策略不回落到核心 parser。"""
     error = ctx.data.get("error")
     # SendMessageFailed 继承 BaseException，是消息会话控制流的一部分，不能用
     # ``Exception`` 作为入口过滤，否则发送失败会被 parser 误记为未处理异常。
@@ -161,7 +158,6 @@ async def _execution_error(ctx: "Bot.ParserHookContext"):
 
 @errors.hook("format_error_detail")
 async def _format_error_detail_hook(ctx: "Bot.ModuleHookContext") -> MessageChain:
-    """供 RPC 报告使用的格式化能力，调用方无需依赖本模块实现。"""
     text = ctx.args.get("text", "")
     if not ctx.session_info.support_markdown:
         return MessageChain.assign(Plain(str(text), disable_joke=True, allow_parse=False))

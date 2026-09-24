@@ -45,8 +45,8 @@ async def init_async(start_scheduler=True, send_prompt=True) -> None:
     6. 加载密钥和启动提示
 
     Args:
-        start_scheduler: 是否启动定时任务（默认True）
-        send_prompt: 是否发送重启提示（默认True）。提示须等目标客户端重新注册为 ready 方能投递，
+        start_scheduler: 是否启动定时任务（默认 True）
+        send_prompt: 是否发送重启提示（默认 True）。提示须等目标客户端重新注册为 ready 方能投递，
                      故由调用方在数据库和队列启动后自行调用 `load_prompt`
     """
     # 设置客户端信息为 "Server"
@@ -126,14 +126,6 @@ async def _wait_for_client_online(
     timeout: float,
     previous_peer_id: str | None = None,
 ) -> str | None:
-    """等待客户端的新进程实例注册为 ready。
-
-    :param client_name: 目标客户端名称
-    :param timeout: 等待的秒数上限
-    :param previous_peer_id: 重启前绑定的客户端实例 ID；该实例必须排除
-    :return: 新客户端实例 ID，超时则返回 None
-    """
-
     from akaribot.core.queue.peer import PeerSelector
 
     async def _poll():

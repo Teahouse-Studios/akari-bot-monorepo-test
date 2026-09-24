@@ -616,16 +616,20 @@ _LAZY_INDEX: dict[str, str] = {name: path for path, names in LAZY_MODULES.items(
 
 
 def __getattr__(name: str) -> Any:
-    """按来源索引导入单个门面名字。
-
-    配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试；重试仍失败则原样抛出
-    ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
-    经过本函数。
-
-    :param name: 门面名字。
-    :return: 名字对应的对象。
-    :raises AttributeError: 该名字不在门面承诺的清单内。
     """
+    按来源索引导入单个门面名字。
+
+        配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试；重试仍失败则原样抛出
+        ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
+        经过本函数。
+
+        :param name: 门面名字。
+        :return: 名字对应的对象。
+        :raises AttributeError: 该名字不在门面承诺的清单内。
+    """
+    # 配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试；重试仍失败则原样抛出
+    # ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
+    # 经过本函数。
     module_path = _LAZY_INDEX.get(name)
     if module_path is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

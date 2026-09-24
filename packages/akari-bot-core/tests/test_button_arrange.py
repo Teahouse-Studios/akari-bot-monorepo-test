@@ -16,26 +16,14 @@ from akaribot.core.utils.button import (
 
 
 def _make_buttons(count: int) -> list[tuple[str, str]]:
-    """构造若干标签互异的按钮。
-
-    :param count: 按钮数量。
-    :return: （标签, 命令）序列。
-    """
     return [(f"label{i}", f"~cmd{i}") for i in range(count)]
 
 
 def _row_sizes(count: int, per_row: int = DEFAULT_BUTTONS_PER_ROW) -> list[int]:
-    """取排布结果中各行的按钮数量。
-
-    :param count: 按钮数量。
-    :param per_row: 每行按钮数量的可读性上限。
-    :return: 各行的按钮数量。
-    """
     return [len(row.buttons) for row in arrange_buttons(_make_buttons(count), per_row)]
 
 
 def _test_empty_returns_no_rows() -> bool:
-    """无按钮时不应产出空行，否则平台会收到一个空键盘"""
     if arrange_buttons([]) != []:
         Logger.error("Empty input should produce no rows")
         return False
@@ -43,7 +31,6 @@ def _test_empty_returns_no_rows() -> bool:
 
 
 def _test_row_sizes() -> bool:
-    """默认上限下的分行结果"""
     expected = {1: [1], 2: [2], 3: [3], 5: [3, 2], 7: [3, 2, 2], 12: [3, 3, 3, 3], 50: [10] * 5}
     for count, sizes in expected.items():
         actual = _row_sizes(count)
@@ -54,7 +41,6 @@ def _test_row_sizes() -> bool:
 
 
 def _test_platform_limits_hold() -> bool:
-    """任何输入下都不得突破平台的每行数量与行数上限"""
     for count in range(1, 60):
         rows = arrange_buttons(_make_buttons(count))
         if len(rows) > MAX_BUTTON_ROWS:
@@ -67,7 +53,6 @@ def _test_platform_limits_hold() -> bool:
 
 
 def _test_order_and_content_preserved() -> bool:
-    """排布不得打乱顺序或丢失按钮"""
     buttons = _make_buttons(12)
     flat = [(button.show, button.value) for row in arrange_buttons(buttons) for button in row.buttons]
     if flat != buttons:
@@ -77,7 +62,6 @@ def _test_order_and_content_preserved() -> bool:
 
 
 def _test_overflow_is_truncated() -> bool:
-    """超出容量时截断至容量上限，而非硬塞进最后一行"""
     capacity = MAX_BUTTONS_PER_ROW * MAX_BUTTON_ROWS
     total = sum(len(row.buttons) for row in arrange_buttons(_make_buttons(capacity + 1)))
     if total != capacity:
@@ -87,7 +71,6 @@ def _test_overflow_is_truncated() -> bool:
 
 
 def _test_custom_per_row() -> bool:
-    """可读性上限可由调用方指定"""
     if _row_sizes(6, per_row=2) != [2, 2, 2]:
         Logger.error("A custom per_row should govern the row count")
         return False
@@ -98,7 +81,6 @@ def _test_custom_per_row() -> bool:
 
 
 def _test_duplicate_labels_are_preserved() -> bool:
-    """按钮改为独立对象后，同一行重复展示文本不会互相覆盖。"""
     rows = arrange_buttons([("same", "~a"), ("same", "~b")])
     return [(button.show, button.value) for button in rows[0].buttons] == [("same", "~a"), ("same", "~b")]
 

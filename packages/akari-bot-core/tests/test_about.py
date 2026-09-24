@@ -78,7 +78,6 @@ def _test_markdown_layout_without_credits():
 
 
 def _test_missing_artwork_degrades_instead_of_failing():
-    """品牌资产包缺失（或部署者删了图）时跳过配图，`~about` 其余内容照常发出。"""
     with (
         patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None),
         patch("akaribot.modules.core.common_tools.about.find_brand_asset", return_value=None),

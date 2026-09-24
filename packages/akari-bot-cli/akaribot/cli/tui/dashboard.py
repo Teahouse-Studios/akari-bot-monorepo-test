@@ -43,7 +43,6 @@ UPDATE_SOURCE_PENDING_KEY = "cli.tui.dashboard.update_source_pending"
 
 
 def _pending_update_source() -> str:
-    """返回更新检查未接入时的来源说明，按当前语言取值。"""
     return i18n.t(UPDATE_SOURCE_PENDING_KEY)
 
 
@@ -289,17 +288,14 @@ class LocalDashboardSource:
         return lock_held(root / LOCK_FILENAME)
 
     def _root(self) -> Path | None:
-        """返回实例根，显式给定者优先。"""
         if self.root is not None:
             return self.root
         return resolve_instance_root(self.start)
 
     def _origin_text(self) -> str:
-        """定位失败时用于展示的候选路径。"""
         return str(self.root or self.start or Path.cwd())
 
     def _instance(self, root: Path) -> Any | None:
-        """构造 ``Instance``；不可用时返回 ``None`` 并记录原因。"""
         if self._instance_factory is not None:
             try:
                 return self._instance_factory(root)
@@ -322,7 +318,6 @@ class LocalDashboardSource:
             return None
 
     def _read_meta(self, root: Path) -> tuple[dict[str, str], str]:
-        """读取 ``akaribot.toml``，返回展示字段与失败原因。"""
         try:
             from akaribot.cli.instance import InstanceMeta
         except ImportError as error:
@@ -344,7 +339,6 @@ class LocalDashboardSource:
         }, ""
 
     def _version_from_cli(self, root: Path) -> tuple[str, str]:
-        """经模块数据源取 core 版本，返回版本号与来源说明。"""
         source = self._resolve_module_source(root)
         if source is None:
             return "", i18n.t("cli.tui.dashboard.src_modules_unavailable")
@@ -360,7 +354,6 @@ class LocalDashboardSource:
         return "", i18n.t("cli.tui.dashboard.src_no_core_record")
 
     def _resolve_module_source(self, root: Path) -> Any | None:
-        """取得模块数据源：优先注入者，否则复用 Modules 页的子进程实现。"""
         if self._module_source is not None:
             return self._module_source
         try:
@@ -375,7 +368,6 @@ class LocalDashboardSource:
         )
 
     def _update_hint(self) -> tuple[str, str]:
-        """取更新提示；未注入探测回调时留空并说明来源待接。"""
         if self._update_probe is None:
             return "", _pending_update_source()
         try:
@@ -387,7 +379,6 @@ class LocalDashboardSource:
         return hint, i18n.t("cli.tui.dashboard.update_source_probe")
 
     def _running_detail(self, root: Path) -> str:
-        """运行状态的判据说明：锁文件路径与探测过程中的降级原因。"""
         text = i18n.t("cli.tui.dashboard.running_detail_lock", path=str(root / LOCK_FILENAME))
         if self.last_probe_error:
             text = f"{text}{i18n.t('cli.tui.common.error_separator')}{self.last_probe_error}"
@@ -516,7 +507,6 @@ class DashboardPage(compat.Vertical):
         self.run_worker(self._load_snapshot(), group="dashboard-load", exclusive=True)
 
     async def _load_snapshot(self) -> bool:
-        """后台读取快照并刷新界面，返回是否成功。"""
         try:
             snapshot = await asyncio.to_thread(self.source.snapshot)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
@@ -556,7 +546,6 @@ class DashboardPage(compat.Vertical):
         return value
 
     def _on_tick(self) -> None:
-        """定时回调：只做廉价的锁文件探测；页面被隐藏时跳过，避免无谓轮询。"""
         if not self.display:
             return
         self.refresh_running()
@@ -566,7 +555,6 @@ class DashboardPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_fields(self) -> None:
-        """按缓存快照重绘信息面板，列宽按终端列数计算。"""
         snapshot = self._snapshot
         rows = [
             (
@@ -613,7 +601,6 @@ class DashboardPage(compat.Vertical):
         self.query_one("#fields", compat.Static).update(compat.plain_text(text))
 
     def _inner_width(self) -> int:
-        """返回信息面板可用内容宽度：控件宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(self)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -621,7 +608,6 @@ class DashboardPage(compat.Vertical):
         return max(outer - 6, 16)
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         self._status_rendered = text
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
 
@@ -635,7 +621,6 @@ class DashboardPage(compat.Vertical):
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：刷新快照。"""
         if event.button.id == "refresh":
             self.refresh_snapshot(force=True)
 
@@ -651,7 +636,6 @@ class DashboardPage(compat.Vertical):
 
 
 def _mode_text(snapshot: DashboardSnapshot) -> str:
-    """把模式与语言合成一行展示文本。"""
     mode = snapshot.instance_mode or i18n.t("cli.tui.common.unknown")
     if not snapshot.locale:
         return mode

@@ -74,8 +74,6 @@ class MockHTTPResponse:
 
 @dataclass
 class _Registration:
-    """一条 mock 规则。method 与 body_digest 为 None 时表示不限。"""
-
     pattern: re.Pattern
     response: MockHTTPResponse
     method: str | None = None
@@ -198,7 +196,7 @@ class HTTPMock:
     def get_all_responses(cls) -> list[tuple[str, MockHTTPResponse]]:
         """获取所有注册的 mock 响应。
 
-        :returns: (模式字符串, 响应) 列表
+        :returns: (模式字符串， 响应) 列表
         """
         return [(r.pattern.pattern, r.response) for r in cls._responses]
 

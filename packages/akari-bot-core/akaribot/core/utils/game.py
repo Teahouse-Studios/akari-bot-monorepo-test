@@ -29,9 +29,7 @@ class PlayState:
         self._generation = None
 
     def _get_ps_dict(self) -> ExpiringTempDict:
-        """
-        获取场景的游戏事件字典，如果不存在则自动创建。
-        """
+        # 获取场景的游戏事件字典，如果不存在则自动创建。
         target_dict = _ps_dict[self.channel_key]
         return target_dict[self.game]
 

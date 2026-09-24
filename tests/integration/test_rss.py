@@ -16,22 +16,18 @@ def _module(name: str):
 
 
 def _test_rss_modules_registered():
-    """RSS 模块应完成注册"""
     return all(_module(name) is not None for name in RSS_MODULES)
 
 
 def _test_rss_modules_flagged():
-    """RSS 模块应带有 rss 标记，供推送开关识别"""
     return all(_module(name).rss for name in RSS_MODULES)
 
 
 def _test_rss_modules_have_schedules():
-    """RSS 模块应注册定时任务，否则推送不会发生"""
     return all(len(_module(name).schedule_list.set) > 0 for name in RSS_MODULES)
 
 
 def _test_rss_modules_have_no_commands():
-    """RSS 模块不提供命令，以指令方式调用不会有任何输出"""
     return all(len(_module(name).command_list.set) == 0 for name in RSS_MODULES)
 
 

@@ -49,7 +49,6 @@ _LOG_NAME_PATTERN = re.compile(r"^(?P<process>.+?)(?P<debug>_debug)?_(?P<date>\d
 
 
 def _filter_name(process: str | None) -> str:
-    """返回过滤项的展示名：空值与 :data:`ALL_PROCESSES` 都表示不过滤。"""
     if not process or process == ALL_PROCESSES:
         return i18n.t("cli.tui.logs.all_processes")
     return process
@@ -118,11 +117,6 @@ class LogChunk:
 
 
 def _split_complete_lines(raw: bytes, limit: int) -> tuple[tuple[str, ...], int]:
-    """切出以换行结尾的完整行，返回行文本与已消费字节数。
-
-    :param raw: 本次读到的字节块。
-    :param limit: 本次读取的字节上限；整块无换行且已达上限时按上限切分以保证继续推进。
-    """
     if not raw:
         return (), 0
     cut = raw.rfind(b"\n")
@@ -330,7 +324,6 @@ class FileLogSource:
 
     @staticmethod
     def _stat_size(target: Path) -> int:
-        """取文件大小，失败时转成可展示的数据源错误。"""
         try:
             return target.stat().st_size
         except OSError as error:
@@ -338,7 +331,6 @@ class FileLogSource:
 
     @staticmethod
     def _read_at(target: Path, start: int, max_bytes: int) -> bytes:
-        """从 ``start`` 起读取至多 ``max_bytes`` 字节，失败时转成数据源错误。"""
         try:
             with target.open("rb") as handle:
                 handle.seek(start)
@@ -584,7 +576,6 @@ class LogsPage(compat.Vertical):
         self._set_status(self._status_line())
 
     def _choose_file(self, files: Sequence[LogFileInfo]) -> LogFileInfo | None:
-        """按 debug 偏好在候选文件里挑一个；候选已按最新在前排序。"""
         if not files:
             return None
         if self._prefer_debug == "debug":
@@ -598,7 +589,6 @@ class LogsPage(compat.Vertical):
         return files[0]
 
     def _switch_to(self, info: LogFileInfo) -> None:
-        """切换跟随目标：清空缓冲并从文件尾部对齐 offset。"""
         try:
             chunk = self.source.read_tail(info.path, max_bytes=TAIL_CHUNK_BYTES)
         except Exception as error:  # noqa: BLE001 - 读取失败只更新状态栏
@@ -650,7 +640,6 @@ class LogsPage(compat.Vertical):
         return chunk
 
     def _append(self, lines: Sequence[str]) -> None:
-        """把新行追加进环形缓冲并重绘，同时统计被丢弃的旧行。"""
         room = self._buffer.maxlen or 0
         overflow = len(self._buffer) + len(lines) - room
         if overflow > 0:
@@ -659,7 +648,6 @@ class LogsPage(compat.Vertical):
         self._render_log()
 
     def _tick(self) -> None:
-        """定时回调：按周期重新枚举目录并增量跟随；页面被隐藏时跳过。"""
         if not self.display:
             return
         if time.monotonic() - self._scanned_at >= self.rescan_seconds:
@@ -706,7 +694,6 @@ class LogsPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        """高亮项变化时切换进程过滤。"""
         index = compat.highlighted_index(event.list_view)
         process = self._process_at(index)
         if process != self._selected:
@@ -714,7 +701,6 @@ class LogsPage(compat.Vertical):
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：暂停/恢复、清屏、切换 debug、重新扫描。"""
         button_id = event.button.id
         if button_id == "pause":
             self.toggle_pause()
@@ -746,13 +732,11 @@ class LogsPage(compat.Vertical):
     # region 渲染
 
     def _process_at(self, index: int | None) -> str | None:
-        """把列表下标映射为进程名；首项与越界都表示不过滤。"""
         if index is None or index <= 0 or index > len(self._processes):
             return None
         return self._processes[index - 1]
 
     def _render_process_list(self) -> None:
-        """重绘进程过滤列表，并恢复当前过滤项的高亮。"""
         list_view = self.query_one("#process-list", compat.ListView)
         labels = [self._process_label(None)]
         labels.extend(self._process_label(name) for name in self._processes)
@@ -762,12 +746,10 @@ class LogsPage(compat.Vertical):
         list_view.index = min(index, max(len(labels) - 1, 0))
 
     def _process_label(self, process: str | None) -> str:
-        """构造进程项的显示文本，附文件数。"""
         count = sum(1 for info in self._files if process is None or info.process == process)
         return i18n.t("cli.tui.logs.process_item", name=_filter_name(process), count=count)
 
     def _render_target(self) -> None:
-        """重绘顶部「跟随目标」行，按控件宽度截断。"""
         followed = self._followed
         if followed is None:
             text = i18n.t("cli.tui.logs.target_none_filtered", filter_name=_filter_name(self._selected))
@@ -783,7 +765,6 @@ class LogsPage(compat.Vertical):
         self.query_one("#target", compat.Static).update(compat.plain_text(self._clip(text)))
 
     def _render_log(self) -> None:
-        """重绘日志正文；缓冲为空时给出占位文本。"""
         if self._buffer:
             text = "\n".join(self._buffer)
         else:
@@ -793,7 +774,6 @@ class LogsPage(compat.Vertical):
         self._scroll_to_end()
 
     def _scroll_to_end(self) -> None:
-        """把日志面板滚到底部；控件不支持该调用时静默跳过。"""
         try:
             pane = self.query_one("#log-pane", compat.VerticalScroll)
         except Exception:  # noqa: BLE001 - 未挂载时无需滚动
@@ -807,14 +787,10 @@ class LogsPage(compat.Vertical):
             scroll_end()
 
     def _paused_text(self) -> str:
-        """返回跟随状态的短标签。"""
         return i18n.t("cli.tui.logs.paused" if self._paused else "cli.tui.logs.following")
 
     def _status_line(self, *, reset: bool = False) -> str:
-        """构造状态栏文本，按重要性排序以便窄屏截断时先丢次要信息。
-
-        顺序：跟随状态、文件名、offset、缓冲、丢弃行数、异常提示。
-        """
+        # 顺序：跟随状态、文件名、offset、缓冲、丢弃行数、异常提示。
         followed = self._followed
         parts = [self._paused_text()]
         if followed is not None:
@@ -831,12 +807,10 @@ class LogsPage(compat.Vertical):
         return self._clip(i18n.t("cli.tui.logs.status_separator").join(parts))
 
     def _clip(self, text: str) -> str:
-        """按控件宽度截断单行文本，避免撑破 80 列终端。"""
         width = self._inner_width()
         return compat.truncate_cells(text, width) if width > 0 else text
 
     def _inner_width(self) -> int:
-        """返回本页可用内容宽度：控件宽减去边框与内边距。"""
         try:
             outer = compat.widget_cells(self)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -844,12 +818,10 @@ class LogsPage(compat.Vertical):
         return max(outer - 2, 16)
 
     def _sync_actions(self) -> None:
-        """按暂停状态更新按钮文字。"""
         key = "cli.tui.logs.action_resume" if self._paused else "cli.tui.logs.action_pause"
         self.query_one("#pause", compat.Button).label = i18n.t(key)
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         clipped = self._clip(text)
         self._status_rendered = clipped
         self.query_one("#status", compat.Static).update(compat.plain_text(clipped))

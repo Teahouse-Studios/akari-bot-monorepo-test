@@ -95,7 +95,6 @@ def build_mac_authorization(
 
 
 def _response_payload(response: httpx.Response) -> dict[str, Any]:
-    """读取 JSON 响应，并将非对象结果统一视作登录错误。"""
     try:
         payload = response.json()
     except ValueError as e:
@@ -107,7 +106,6 @@ def _response_payload(response: httpx.Response) -> dict[str, Any]:
 
 
 def _response_data(response: httpx.Response) -> dict[str, Any]:
-    """读取 TapTap 标准响应中的 data 对象。"""
     payload = _response_payload(response)
     response.raise_for_status()
     data = payload.get("data")
@@ -117,7 +115,6 @@ def _response_data(response: httpx.Response) -> dict[str, Any]:
 
 
 def _oauth_error(payload: dict[str, Any]) -> tuple[str | None, str | None]:
-    """从 TapTap OAuth 的顶层或 data 层提取错误码和描述。"""
     data = payload.get("data")
     error_data = data if isinstance(data, dict) else payload
     error = error_data.get("error")

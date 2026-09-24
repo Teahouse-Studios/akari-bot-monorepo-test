@@ -82,7 +82,6 @@ def resolve_locale(explicit: str | None = None, instance_locale: str | None = No
 
 
 def _connect() -> None:
-    """接上语言快照，只做一次。"""
     global _connected
     if _connected:
         return
@@ -124,13 +123,8 @@ def current_locale() -> str:
 
 
 def _argv_locale() -> str | None:
-    """从命令行里嗅探 ``--lang``。
-
-    typer 的 ``help=`` 在**导入期**求值，而根回调要等参数解析完才执行，故只靠 ``set_locale()``
-    无法本地化 ``--help``。这里提前读一次 argv，使导入期取到的就是用户要的语言。
-
-    :return: 嗅探到的语言码；未给出时为 ``None``。
-    """
+    # typer 的 ``help=`` 在**导入期**求值，而根回调要等参数解析完才执行，故只靠 ``set_locale()``
+    # 无法本地化 ``--help``。这里提前读一次 argv，使导入期取到的就是用户要的语言。
     argv = sys.argv[1:]
     for index, item in enumerate(argv):
         if item == "--lang" and index + 1 < len(argv):
@@ -141,7 +135,6 @@ def _argv_locale() -> str | None:
 
 
 def _current() -> str:
-    """取当前语言码，未显式设置时按 argv 与环境解析一次。"""
     global _current_code
     if _current_code == DEFAULT_LOCALE:
         _current_code = resolve_locale(_argv_locale())

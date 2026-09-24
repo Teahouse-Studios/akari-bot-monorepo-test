@@ -51,10 +51,6 @@ def format_data(money: list[int]) -> str:
 
 
 def _yes_no(value) -> str:
-    """把布尔状态转为供 i18n 模板插值的标记。
-
-    :param value: 存档中的原始值，通常为 0 或 1。
-    """
     return "✓" if value else "✗"
 
 

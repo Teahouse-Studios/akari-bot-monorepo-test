@@ -51,7 +51,7 @@ class Bind:
             - ``-i``、``<address:port>`` 等无法作为函数参数名的模板元素，可用 ``Param``
               标注指定对应的模板元素，如 ``data: Param("-i", bool) = False``。
 
-            示例::
+            示例：:
 
                 @module.command("test [-b] [--foo <bar>]")
                 async def _(msg: Bot.MessageSession, b: bool = False, foo: str | None = None):
@@ -402,18 +402,18 @@ def module(
     :param recommend_modules: 推荐打开的其他模块。
     :param developers: 模块作者。
     :param required_admin: 此命令是否需要场景管理员权限。
-    :param base: 将此命令设为基础命令。设为基础命令后此命令将被强制开启。（默认为False）
-    :param doc: 此命令是否存在线上说明文件。（默认为False）
-    :param hidden: 将此命令设为隐藏命令。设为隐藏命令后此命令在帮助列表不可见。（默认为False）
-    :param load: 将此命令设置是否加载。（默认为True）
-    :param rss: 将此命令设为 RSS 命令。（默认为False）
-    :param regex: 将此命令设为正则命令。（默认为False）
-    :param event: 将此命令设为事件模块。事件模块要求平台可读取全部消息。（默认为False）
-    :param required_superuser: 将此命令设为机器人的超级用户才可执行。（默认为False）
-    :param required_base_superuser: 将此命令设为机器人的基础超级用户才可执行。（默认为False）
+    :param base: 将此命令设为基础命令。设为基础命令后此命令将被强制开启。（默认为 False）
+    :param doc: 此命令是否存在线上说明文件。（默认为 False）
+    :param hidden: 将此命令设为隐藏命令。设为隐藏命令后此命令在帮助列表不可见。（默认为 False）
+    :param load: 将此命令设置是否加载。（默认为 True）
+    :param rss: 将此命令设为 RSS 命令。（默认为 False）
+    :param regex: 将此命令设为正则命令。（默认为 False）
+    :param event: 将此命令设为事件模块。事件模块要求平台可读取全部消息。（默认为 False）
+    :param required_superuser: 将此命令设为机器人的超级用户才可执行。（默认为 False）
+    :param required_base_superuser: 将此命令设为机器人的基础超级用户才可执行。（默认为 False）
     :param required_bot_permissions: 开启模块前要求机器人具备的平台权限字段。
     :param suppress_invalid_prompt: 命令未能匹配任何模板时是否抑制语法错误提示。
-    适用于命令按平台分流、匹配不上属于预期结果的模块。（默认为False）
+    适用于命令按平台分流、匹配不上属于预期结果的模块。（默认为 False）
     :param available_for: 此命令支持的平台列表。（默认为`*`）
     :param exclude_from: 此命令排除的平台列表。
     :param support_languages: 此命令支持的语言列表。

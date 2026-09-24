@@ -343,15 +343,8 @@ class JobQueueBase:
 
     @classmethod
     def _capture_caller_traceback(cls) -> str:
-        """Capture the local call site before an RPC crosses the process boundary.
-
-        The final two frames belong to this helper and ``call``/``submit``. The
-        remaining frames include the application code that initiated the RPC;
-        retaining the transport frame as well makes nested calls easy to follow.
-        If this is a reverse call made while handling another RPC, append the
-        parent request's origin so the eventual report can cross more than one
-        process boundary.
-        """
+        # The remaining frames include the application code that initiated the RPC; keeping the transport
+        # frame makes nested calls easy to follow. Reverse calls also append the parent request's origin.
         frames = traceback.format_stack()
         details = "".join(frames[:-2])
         parent = current_request.get()
@@ -373,7 +366,6 @@ class JobQueueBase:
         *,
         caller_traceback: str | None = None,
     ) -> str:
-        """Join the remote exception with enough request context to find its origin."""
         remote_traceback = remote_traceback.rstrip() if isinstance(remote_traceback, str) else ""
         context_prefix = "\n".join(
             [
@@ -423,7 +415,6 @@ class JobQueueBase:
 
     @staticmethod
     def _has_request_context(request: RpcRequest, details: str) -> bool:
-        """Return whether a diagnostic already identifies this exact request."""
         if not isinstance(details, str) or _RPC_CONTEXT_MARKER not in details:
             return False
         return all(
@@ -437,7 +428,6 @@ class JobQueueBase:
 
     @classmethod
     def _remote_traceback_part(cls, request: RpcRequest, details: str) -> str:
-        """Extract the remote portion from a diagnostic produced by this runtime."""
         if not cls._has_request_context(request, details):
             return details
         return details.split(f"\n\n{_RPC_CONTEXT_MARKER}", 1)[0].rstrip()
@@ -450,7 +440,6 @@ class JobQueueBase:
         *,
         caller_traceback: str | None = None,
     ) -> str:
-        """Normalize old and new response diagnostics without duplicating context."""
         remote_traceback = remote_traceback if isinstance(remote_traceback, str) else ""
         if caller_traceback is None:
             caller_traceback = request.caller_traceback
@@ -474,7 +463,6 @@ class JobQueueBase:
         task_id: str,
         caller_traceback: str | None = None,
     ) -> RpcError:
-        """Attach request identity and a useful local origin to synthetic failures."""
         error.method = method
         error.target = target
         error.task_id = task_id
@@ -513,15 +501,8 @@ class JobQueueBase:
 
     @classmethod
     async def _abandon_with_timeout(cls, task_ids: list[str]) -> None:
-        """Best-effort delivery cleanup with a bounded wait.
-
-        Cleanup may race a remote claim/respond transaction.  It must remain
-        cancellation-safe, but an unhealthy backend must not turn that race into
-        an unbounded wait in an RPC or shutdown ``finally`` block.  Once the
-        caller's bound is reached, the backend operation is allowed to finish in
-        the background so a slow database driver can release its transaction;
-        peer shutdown owns the final cancellation and join of these tasks.
-        """
+        # Cleanup may race a remote claim/respond transaction, so it must stay cancellation-safe; yet an
+        # unhealthy backend must not turn that race into an unbounded wait. Peer shutdown joins the task.
         if not task_ids:
             return
         abandon_task = asyncio.create_task(cls.transport.abandon(task_ids))
@@ -936,7 +917,6 @@ class JobQueueBase:
 
     @classmethod
     def _response_tracebacks(cls, request: RpcRequest, error: dict) -> tuple[str, str, str]:
-        """Validate response diagnostics and merge legacy bare stacks with their request."""
         remote_traceback = error.get("traceback", "")
         request_caller_traceback = request.caller_traceback if isinstance(request.caller_traceback, str) else ""
         response_caller_traceback = error.get("caller_traceback")
@@ -1239,7 +1219,6 @@ class JobQueueBase:
 
     @classmethod
     async def _refresh_peer_cache(cls):
-        """以当前后端的权威注册表对账进程内拓扑缓存。"""
         expired_peer_ids = await cls.registry.expire_stale()
         records = await cls.registry.resolve()
         from akaribot.core.alive import Alive

@@ -21,11 +21,8 @@ if TYPE_CHECKING:
 class SessionTaskManager:
     """管理等待任务与消息回调。任务以稳定的物理 ID 索引，命中时再按当前 Union 拓扑展开；回调使用独立注册 token，并在发送完成后绑定物理消息 ID。"""
 
-    # 存储活跃任务的字典，索引只使用登记时不可变的物理场景／账号 ID。
-    # Union ID 和 channel_id 会在等待期间因合并、解绑或重新分配通道而变化；若把
-    # 快照作为永久索引会使原物理用户失去 waiter，并可能由旧组成员错误接管。
-    # check() 会按 incoming 的当前数据库拓扑展开同现实场景和同用户组的物理 ID，
-    # 再从这些稳定 bucket 中选择候选。
+    # 索引只使用登记时不可变的物理场景／账号 ID：union ID 与 channel_id 会在等待期间因合并、
+    # 解绑或重新分配通道而变化，拿快照作永久索引会让原物理用户失去 waiter，甚至被旧组成员接管。
     _task_list = {}
     _task_sequence = 0
 
@@ -208,13 +205,11 @@ class SessionTaskManager:
 
     @staticmethod
     def _callback_expired(callback_info: dict, now: float | None = None) -> bool:
-        """判断 callback 是否已经超过自身有效期。"""
         timeout = callback_info.get("timeout", SessionTaskManager.CALLBACK_TTL)
         return timeout is not None and (time.time() if now is None else now) - callback_info["ts"] >= timeout
 
     @staticmethod
     def _attach_callback_message_id(session: "MessageSession", callback_info: dict) -> None:
-        """Restore the physical message ID when a platform only returns a virtual reply ID."""
         session_info = session.session_info
         if session_info.message_id is not None:
             return
@@ -301,7 +296,6 @@ class SessionTaskManager:
 
     @classmethod
     async def _active_tasks(cls, session: "MessageSession") -> list[tuple["MessageSession", dict]]:
-        """按当前 Union／channel 拓扑返回 incoming 可命中的稳定物理 bucket。"""
         if not cls._task_list:
             return []
 
@@ -358,7 +352,6 @@ class SessionTaskManager:
         task_info: dict,
         session: "MessageSession",
     ) -> bool:
-        """持有 incoming context 后原子地把消息发布给等待命令。"""
         try:
             await session.hold()
         except Exception:

@@ -15,7 +15,6 @@ WEB_RENDER_REQUEST_ERRORS = ("invalid_options", "invalid_mode", "missing_target"
 
 
 def _local_config() -> dict[str, Any]:
-    """本进程读取到的 WebRender 配置，供前端展示当前生效的设置。"""
     return {
         "enable": bool(WebRenderConfig.enable),
         "browser_type": WebRenderConfig.browser_type,
@@ -27,7 +26,6 @@ def _local_config() -> dict[str, Any]:
 
 
 async def _read_json_body(request: Request) -> dict:
-    """读取 JSON 请求体；非对象一律按无效请求处理。"""
     try:
         body = await request.json()
     except Exception:

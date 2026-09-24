@@ -4,7 +4,7 @@ workspace 的开发期覆盖会丢弃内部版本约束（`[tool.uv.sources]` �
 因此必须有一处跑「从 wheel 装」的路径：本工具构建全部包，再在全新 venv 里按组合安装，
 最后用 ``PackageRegistry.discover()`` 断言发现结果与兼容性。发布前必跑。
 
-用法::
+用法：:
 
     python tools/clean_room_check.py                    # 全部组合
     python tools/clean_room_check.py --combo core       # 只跑最小组合
@@ -86,7 +86,7 @@ def uv_cmd(arguments: list[str], offline: bool) -> list[str]:
 def workspace_members() -> tuple[list[str], list[str]]:
     """列出 workspace 的模块包与适配器包。
 
-    :return: ``(模块分发包名, 适配器分发包名)``。
+    :return: ``(模块分发包名， 适配器分发包名)``。
     """
     modules: list[str] = []
     adapters: list[str] = []
@@ -320,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
             # CLI 组合只装 CLI wheel，与发现阶段的探针无关，单独走一条检查路径。
             passed = check_cli_combo(offline=args.offline)
         else:
-            passed = check_combo(name, *combos[name], offline=args.offline)  # (包列表, extras)
+            passed = check_combo(name, *combos[name], offline=args.offline)  # (包列表， extras)
         if not passed:
             failures.append(name)
     print()

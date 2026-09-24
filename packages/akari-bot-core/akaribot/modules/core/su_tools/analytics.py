@@ -39,12 +39,7 @@ def local_midnight() -> datetime:
 
 
 def _pyplot():
-    """惰性导入 ``matplotlib.pyplot``。
-
-    matplotlib 是 core 体积最大的可选依赖（extra ``image``），默认安装不引入，绘图命令据此降级。
-
-    :return: ``matplotlib.pyplot`` 模块；未安装时为 ``None``。
-    """
+    # matplotlib 是 core 体积最大的可选依赖（extra ``image``），默认安装不引入，绘图命令据此降级。
     try:
         import matplotlib.pyplot as plt
     except ImportError:

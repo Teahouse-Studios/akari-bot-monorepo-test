@@ -30,9 +30,7 @@ default_locale = BaseConfig.default_locale
 
 
 async def _none():
-    """
-    并发解析时用于占位的空协程，使 gather 的两路返回值位置保持固定。
-    """
+    # 并发解析时用于占位的空协程，使 gather 的两路返回值位置保持固定。
     return None
 
 

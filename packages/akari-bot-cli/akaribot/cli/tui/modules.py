@@ -189,13 +189,6 @@ def sort_key(record: ModuleRecord) -> tuple[bool, str]:
 
 
 def _pick(source: Any, *names: str, default: Any = "") -> Any:
-    """从字典或对象上按候选名取值，兼容对端契约未冻结时的字段别名。
-
-    :param source: 字典或带属性的对象。
-    :param names: 候选字段名，按顺序取第一个非 ``None`` 值。
-    :param default: 全部缺失时的返回值。
-    :return: 取到的原始值。
-    """
     for name in names:
         if isinstance(source, Mapping) and source.get(name) is not None:
             return source[name]
@@ -206,7 +199,6 @@ def _pick(source: Any, *names: str, default: Any = "") -> Any:
 
 
 def _text(value: Any) -> str:
-    """把任意标量转为用于展示的字符串。"""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -217,7 +209,6 @@ def _text(value: Any) -> str:
 
 
 def _normalize_state(source: Any, fallback: str) -> str:
-    """把对端的状态字段归一到三种取值。"""
     raw = _text(_pick(source, "state", "status", "load_state", "install_state"))
     if raw:
         lowered = raw.casefold()
@@ -233,7 +224,6 @@ def _normalize_state(source: Any, fallback: str) -> str:
 
 
 def _normalize_kind(value: Any) -> str:
-    """把包类型归一到四种取值，未识别的类型返回空串。"""
     raw = _text(value).casefold()
     if not raw:
         return ""
@@ -242,7 +232,6 @@ def _normalize_kind(value: Any) -> str:
 
 
 def _record_from_mapping(dist: str, info: Any) -> ModuleRecord:
-    """把一条对端记录归一化为 :class:`ModuleRecord`。"""
     if isinstance(info, str):
         info = {"version": info}
     dist_name = _text(_pick(info, "dist", "distribution", "package", "dist_name")) or dist
@@ -359,18 +348,14 @@ class SubprocessModuleSource:
         return [sys.executable, "-m", "akaribot.cli.main", *args]
 
     def _env(self) -> dict[str, str]:
-        """构造子进程环境：注入实例目录，并把子进程标准流固定为 UTF-8。
-
-        理由：子进程输出含中文与 JSON，Windows 控制台默认代码页可能是 GBK，
-        读写编码不一致会得到乱码或解析失败，故两侧都显式声明 UTF-8。
-        """
+        # 理由：子进程输出含中文与 JSON，Windows 控制台默认代码页可能是 GBK，
+        # 读写编码不一致会得到乱码或解析失败，故两侧都显式声明 UTF-8。
         env = dict(os.environ)
         env["AKARI_INSTANCE_DIR"] = str(self.root)
         env["PYTHONIOENCODING"] = "utf-8"
         return env
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        """执行子进程并把常见失败转成 :class:`ModuleSourceError`。"""
         try:
             return self._runner(
                 list(argv),
@@ -392,7 +377,6 @@ class SubprocessModuleSource:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _list_from_cli_json(self) -> list[ModuleRecord]:
-        """经 ``akaribot module list --json`` 取数。"""
         argv = self.cli_argv("module", "list", "--json")
         completed = self._run(argv)
         if completed.returncode != 0:
@@ -407,7 +391,6 @@ class SubprocessModuleSource:
         return normalize_records(self._parse_json(completed.stdout, "module list --json"))
 
     def _list_from_instance(self) -> list[ModuleRecord]:
-        """退回 ``Instance.installed()`` 取数，该接口由 T5.1 提供。"""
         instance = self._instance()
         installed = getattr(instance, "installed", None)
         if not callable(installed):
@@ -421,7 +404,6 @@ class SubprocessModuleSource:
         return normalize_records(payload)
 
     def _instance(self) -> Any:
-        """构造实例对象；模块缺失、实例不存在或构造失败时给出可读原因。"""
         if self._instance_factory is not None:
             return self._instance_factory()
         try:
@@ -441,7 +423,6 @@ class SubprocessModuleSource:
             ) from error
 
     def _run_cli(self, args: Sequence[str], label: str) -> OperationResult:
-        """执行安装或卸载子命令并包装结果。"""
         argv = self.cli_argv(*args)
         completed = self._run(argv)
         if completed.returncode == 0:
@@ -453,7 +434,6 @@ class SubprocessModuleSource:
         )
 
     def _parse_json(self, stdout: str, label: str) -> Any:
-        """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_empty_output", label=label))
@@ -463,7 +443,6 @@ class SubprocessModuleSource:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
-        """截取子进程输出的尾部，供状态栏展示。"""
         cleaned = (text or "").strip()
         return cleaned[-limit:]
 
@@ -641,7 +620,6 @@ class ModulesPage(compat.Vertical):
         self.run_worker(self._load_records(), group="modules-load", exclusive=True)
 
     async def _load_records(self) -> bool:
-        """后台读取记录并刷新界面，返回是否成功。"""
         try:
             records = await asyncio.to_thread(self.source.list_modules)
         except ModuleSourceError as error:
@@ -676,7 +654,6 @@ class ModulesPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_list(self) -> None:
-        """按缓存与搜索词重绘列表、计数、详情与按钮状态。"""
         records = self.visible_records
         list_view = self.query_one("#module-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
@@ -698,7 +675,6 @@ class ModulesPage(compat.Vertical):
         return self._rendered_rows
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
-        """返回列表可用内容宽度：外框宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(list_view)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -706,24 +682,14 @@ class ModulesPage(compat.Vertical):
         return max(outer - 4, 8)
 
     def _name_column_width(self, inner_width: int) -> int:
-        """计算名称列宽度：取最长名称，但不挤掉简介列。"""
         longest = compat.column_width(record.name for record in self._records)
         return max(min(max(longest, 6), 20, inner_width - 14), 4)
 
     def _version_column_width(self) -> int:
-        """计算版本列宽度：同一屏内定宽，保证各行版本左对齐。"""
         longest = compat.column_width(record.version or "-" for record in self._records)
         return min(max(longest, 5), 8)
 
     def _row_text(self, record: ModuleRecord, name_width: int, version_width: int, inner_width: int) -> str:
-        """渲染列表行；列宽按终端列数计算，中文与英文混排仍对齐。
-
-        :param record: 记录。
-        :param name_width: 名称列宽度，单位终端列。
-        :param version_width: 版本列宽度，单位终端列。
-        :param inner_width: 行可用的终端列数。
-        :return: 显示宽度不超过 ``inner_width`` 的定宽行文本。
-        """
         marker = "●" if record.installed else "○"
         version = compat.fit_cells(record.version or "-", version_width)
         fixed = compat.display_width(marker) + 2 + version_width
@@ -736,7 +702,6 @@ class ModulesPage(compat.Vertical):
         return f"{marker} {name} {version} {summary}".rstrip()
 
     def _index_for_key(self, records: Sequence[ModuleRecord]) -> int:
-        """定位要恢复的高亮项，找不到时回到首项。"""
         if not records:
             return 0
         if self._selected_key is not None:
@@ -746,7 +711,6 @@ class ModulesPage(compat.Vertical):
         return 0
 
     def _sync_count(self, records: Sequence[ModuleRecord]) -> None:
-        """更新计数标签。"""
         installed = sum(1 for record in self._records if record.installed)
         text = i18n.t(
             "cli.tui.modules.count",
@@ -757,7 +721,6 @@ class ModulesPage(compat.Vertical):
         self.query_one("#count", compat.Static).update(compat.plain_text(text))
 
     def _sync_detail(self) -> None:
-        """按当前选中项更新详情面板。"""
         record = self.selected_record
         if record is None:
             if not self._records:
@@ -796,14 +759,12 @@ class ModulesPage(compat.Vertical):
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
 
     def _sync_actions(self) -> None:
-        """按当前选中项与忙碌状态更新按钮可用性。"""
         install_target = self._install_target()
         uninstall_target = self._uninstall_target()
         self.query_one("#install", compat.Button).disabled = self._busy or install_target is None
         self.query_one("#uninstall", compat.Button).disabled = self._busy or uninstall_target is None
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         self.last_result = text
         self._status_rendered = text
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
@@ -819,25 +780,21 @@ class ModulesPage(compat.Vertical):
 
     @compat.on(compat.Input.Changed, "#search")
     def _on_search_changed(self, event: compat.Input.Changed) -> None:
-        """搜索词变化时只过滤缓存。"""
         self._query = event.value
         self._render_list()
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        """高亮项变化时更新详情与按钮。"""
         self._sync_detail()
         self._sync_actions()
 
     @compat.on(compat.ListView.Selected)
     def _on_selected(self, event: compat.ListView.Selected) -> None:
-        """回车选中时刷新详情。"""
         self._sync_detail()
         self._sync_actions()
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：安装、卸载、刷新。"""
         button_id = event.button.id
         if button_id == "install":
             self.request_install()
@@ -863,7 +820,6 @@ class ModulesPage(compat.Vertical):
         self.query_one("#module-list", compat.ListView).focus()
 
     def _install_target(self) -> ModuleRecord | None:
-        """确定安装目标：优先未安装的选中项，其次搜索框里的模块名。"""
         record = self.selected_record
         if record is not None and not record.installed:
             return record
@@ -873,7 +829,6 @@ class ModulesPage(compat.Vertical):
         return None
 
     def _uninstall_target(self) -> ModuleRecord | None:
-        """确定卸载目标：当前选中的已安装项。"""
         record = self.selected_record
         if record is not None and record.installed:
             return record
@@ -914,7 +869,6 @@ class ModulesPage(compat.Vertical):
         record: ModuleRecord,
         func: Callable[[ModuleRecord], OperationResult],
     ) -> None:
-        """在后台任务里执行安装或卸载，并按阶段推进进度。"""
         if self._busy:
             compat.notify(
                 self.app,
@@ -936,7 +890,6 @@ class ModulesPage(compat.Vertical):
         record: ModuleRecord,
         func: Callable[[ModuleRecord], OperationResult],
     ) -> None:
-        """执行子进程操作；成功后缓存失效并重新读取列表。"""
         bar = self.query_one("#progress", compat.ProgressBar)
         try:
             result = await asyncio.to_thread(func, record)

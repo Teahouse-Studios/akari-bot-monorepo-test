@@ -544,12 +544,7 @@ class UnionInfo(DBModel):
 
     @classmethod
     async def _resolve_session(cls, value: Any, create: bool = True) -> Self | None:
-        """
-        从平台 ID 字符串或会话对象解析出 union 信息，供按会话取行的入口复用。
-
-        :param value: 平台 ID，或 MessageSession / FetchedMessageSession 实例。
-        :param create: 若尚未绑定任何 union，是否新建。
-        """
+        # 从平台 ID 字符串或会话对象解析出 union 信息，供按会话取行的入口复用。
         id_field = cls.bind_model.id_field
         platform_id = extract_session_id(value, id_field)
         if not platform_id:
@@ -914,7 +909,6 @@ class TargetUnionInfo(UnionInfo):
         current: "TargetUnionInfo",
         connection,
     ) -> bool:
-        """在已持有 Union mutation 锁和核心行锁时登记机器人互认记录。"""
         target_data = dict(current.target_data or {})
         peers = normalize_peer_bots(target_data.get("bots_id"))
         for observer, entries in links.items():
@@ -946,7 +940,6 @@ class TargetUnionInfo(UnionInfo):
         current: "TargetUnionInfo",
         connection,
     ) -> bool:
-        """在已持有 Union mutation 锁和核心行锁时清理机器人互认记录。"""
         target_data = dict(current.target_data or {})
         peers = normalize_peer_bots(target_data.get("bots_id"))
         peers.pop(target_id, None)

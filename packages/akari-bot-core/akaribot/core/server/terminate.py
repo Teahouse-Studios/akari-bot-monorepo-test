@@ -33,14 +33,6 @@ async def cleanup_sessions():
     """
     # get_wait_list = SessionTaskManager.get()
     Logger.warning("Cleaning up sessions...")
-    # for x in get_wait_list:
-    #     for y in get_wait_list[x]:
-    #         for z in get_wait_list[x][y]:
-    #             if get_wait_list[x][y][z]["active"]:
-    #                 await z.send_message(I18NContext("core.message.restart.prompt"))
-    # 先同步关闭 Scheduler 的新任务入口；真正取消／等待运行中 Job 放在其它 Queue
-    # handler 取消之后执行，避免正在 reload_db 的 handler 持有 Scheduler 维护锁时
-    # 与 restart action 互相等待。
     SchedulerLifecycle.begin_shutdown()
     # 先关闭新 action 入口并与已经开始领取的一轮轮询建立屏障。轮询器仍继续回收
     # 在途 RPC 的远端结果，供下面取消任务时释放平台 context。

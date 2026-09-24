@@ -303,7 +303,6 @@ class PackageInfo:
 
 
 def _first_str(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
-    """取第一个存在且非空的字符串字段。"""
     for key in keys:
         value = data.get(key)
         if isinstance(value, str) and value:
@@ -312,7 +311,6 @@ def _first_str(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
 
 
 def _as_tuple(value: Any) -> tuple[str, ...]:
-    """把 JSON 里的字符串列表归一为元组；非列表输入返回空元组。"""
     if isinstance(value, str):
         return (value,) if value else ()
     if isinstance(value, Sequence):
@@ -321,7 +319,6 @@ def _as_tuple(value: Any) -> tuple[str, ...]:
 
 
 def _short_name(dist: str) -> str:
-    """由分发名推出短名：去掉 ``akari-bot-(module|adapter)-`` 前缀。"""
     stem = dist.lower().replace("_", "-")
     for prefix in ("akari-bot-module-", "akari-bot-adapter-", "akari-bot-"):
         if stem.startswith(prefix):
@@ -341,12 +338,10 @@ _KIND_ALIASES = {
 
 
 def _normalize_kind(value: str) -> str:
-    """把 core 侧的种类写法归一到 CLI 的四种取值。"""
     return _KIND_ALIASES.get(value.strip().lower(), "unknown")
 
 
 def _parse_names(value: Any) -> tuple[str, ...]:
-    """解析 ``dependents`` 这类「分发名列表」，允许元素是对象。"""
     if isinstance(value, Mapping):
         return tuple(str(key) for key in value)
     if isinstance(value, str):
@@ -365,7 +360,6 @@ def _parse_names(value: Any) -> tuple[str, ...]:
 
 
 def _parse_dependencies(value: Any) -> tuple[DependencyInfo, ...]:
-    """解析依赖项列表，兼容字符串、对象与「名字到描述符」的映射三种写法。"""
     if isinstance(value, Mapping):
         raw_items: list[Any] = [{"dist": key, "specifier": item} for key, item in value.items()]
     elif isinstance(value, str):
@@ -395,7 +389,6 @@ def _parse_dependencies(value: Any) -> tuple[DependencyInfo, ...]:
 
 
 def _requirement_to_dependency(text: str) -> DependencyInfo:
-    """由 PEP 508 依赖串构造依赖项；解析失败时按分发名处理。"""
     try:
         requirement = Requirement(text)
     except InvalidRequirement:
@@ -555,7 +548,6 @@ class InstanceMeta:
         temporary.replace(self.path)
 
     def _section(self, key: str) -> Any:
-        """取得（必要时创建）一个子表。"""
         if key not in self.doc:
             self.doc[key] = tomlkit.table()
         return self.doc[key]
@@ -588,14 +580,8 @@ class NotifyResult:
 
 
 def _parse_notify_payload(stdout: str | None) -> Mapping[str, Any] | None:
-    """解析 core 入口回传的结果 JSON。
-
-    入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
-    ``status`` 的对象；找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
-
-    :param stdout: 子进程的标准输出。
-    :return: 结果映射；不可解析时为 ``None``。
-    """
+    # 入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
+    # ``status`` 的对象；找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
     for line in reversed((stdout or "").splitlines()):
         text = line.strip()
         if not text:
@@ -936,7 +922,6 @@ class Instance:
         return NotifyResult(True, False, detail, "error")
 
     def _run(self, argv: list[str], **env: str) -> int:
-        """执行命令并继承标准流。"""
         if not self.python_exists:
             raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
@@ -952,7 +937,6 @@ class Instance:
         return completed.returncode
 
     def _capture(self, argv: list[str], *, timeout: float | None, **env: str) -> subprocess.CompletedProcess[str]:
-        """执行命令并捕获文本输出。"""
         if not self.python_exists:
             raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
@@ -973,7 +957,6 @@ class Instance:
 
     @staticmethod
     def _explain_failure(proc: subprocess.CompletedProcess[str], prefix: str) -> str:
-        """把子进程失败翻译成可执行的提示，必要时附 stderr 尾部。"""
         return explain_process_failure(proc, prefix)
 
 
@@ -1001,16 +984,12 @@ def explain_process_failure(proc: subprocess.CompletedProcess[str], prefix: str)
 
 
 def _canonical(name: str) -> str:
-    """分发名规范化：小写并把下划线、点号归一为连字符。"""
     return name.strip().lower().replace("_", "-").replace(".", "-")
 
 
 def _iter_package_items(payload: Any) -> list[Mapping[str, Any]]:
-    """从 ``registry --json`` 的多种可能结构里取出包条目列表。
-
-    兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``
-    分组，以及「分发名到对象」的映射四种形态，core 侧只需命中其一。
-    """
+    # 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``
+    # 分组，以及「分发名到对象」的映射四种形态，core 侧只需命中其一。
     if isinstance(payload, list):
         return [item for item in payload if isinstance(item, Mapping)]
     if not isinstance(payload, Mapping):
@@ -1038,7 +1017,6 @@ def _iter_package_items(payload: Any) -> list[Mapping[str, Any]]:
 
 
 def _mapping_items(value: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    """把「名字到对象」的映射展开为带名字的条目列表。"""
     result: list[Mapping[str, Any]] = []
     for name, item in value.items():
         if isinstance(item, Mapping):

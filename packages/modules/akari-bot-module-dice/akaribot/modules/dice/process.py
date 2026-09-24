@@ -11,11 +11,11 @@ MAX_DICE_COUNT = DiceConfig.dice_limit  # 一次摇动最多的骰子数量
 MAX_ROLL_TIMES = DiceConfig.dice_roll_limit  # 一次命令最多的摇动次数
 MAX_OUTPUT_CNT = DiceConfig.dice_output_count  # 输出的最多数据量
 MAX_OUTPUT_LEN = DiceConfig.dice_output_len  # 输出的最大长度
-MAX_DETAIL_CNT = DiceConfig.dice_detail_count  # n次投掷的骰子的总量超过该值时将不再显示详细信息
+MAX_DETAIL_CNT = DiceConfig.dice_detail_count  # n 次投掷的骰子的总量超过该值时将不再显示详细信息
 MAX_ITEM_COUNT = DiceConfig.dice_count_limit  # 骰子表达式最多的项数
 
 dice_patterns = [
-    r"(\d+A\d+(?:[KQM]?\d*)?(?:[KQM]?\d*)?(?:[KQM]?\d*)?)",  # WOD骰子
+    r"(\d+A\d+(?:[KQM]?\d*)?(?:[KQM]?\d*)?(?:[KQM]?\d*)?)",  # WOD 骰子
     r"(\d+C\d+M?\d*)",  # 双重十字骰子
     r"(?:D(?:100|%)?)?([BP]\d*)",  # 奖惩骰子
     r"(\d*D?F)",  # 命运骰子

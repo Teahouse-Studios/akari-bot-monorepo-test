@@ -34,14 +34,9 @@ def version_string() -> str:
 
 
 def _version_callback(value: bool) -> None:
-    """``--version`` 的 eager 回调：打印版本并以 0 退出。
-
-    eager 是必需的：click 先解析完参数、再判定「有没有子命令」，非 eager 的回调排在该判定之后，
-    ``akaribot --version`` 会被 ``Missing command.`` 抢先。``--help`` 同为 eager，两者同时给出时
-    按命令行顺序先出现的先生效（click 对 eager 参数的既定处理），且都以 0 退出。
-
-    :param value: 命令行是否给出 ``--version``。
-    """
+    # eager 是必需的：click 先解析完参数、再判定「有没有子命令」，非 eager 的回调排在该判定之后，
+    # ``akaribot --version`` 会被 ``Missing command.`` 抢先。``--help`` 同为 eager，两者同时给出时
+    # 按命令行顺序先出现的先生效（click 对 eager 参数的既定处理），且都以 0 退出。
     if value:
         typer.echo(version_string())
         raise typer.Exit()

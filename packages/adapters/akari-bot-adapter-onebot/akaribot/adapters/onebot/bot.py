@@ -42,8 +42,8 @@ mention_required = CoreConfig.mention_required
 quick_confirm = CoreConfig.quick_confirm
 
 # 本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
-# 是管理员的正常处置，不应据此追责；且迁移完成后两侧的账号与场景同属一个 union，在此处封禁会
-# 连带波及用户在新平台上的身份，把一次合理的清退变成对已迁移用户的误封。
+# 是管理员的正常处置，不应据此追责；且两侧的账号与场景同属一个 union，在此处封禁会连带波及
+# 用户在新平台上的身份，把一次合理的清退变成误封。
 client_retired = is_retired_client(client_name)
 
 enable_temp_session = AiocqhttpConfig.qq_enable_temp_session
@@ -52,7 +52,6 @@ qq_account = None
 
 
 async def _tos_report(sender: str, target: str, reason: str, banned: bool = False):
-    """经 Server 具名 hook 上报；bot 进程不导入模块实现，失败仅记录日志。"""
     try:
         return await ServerAPI.trigger_hook(
             "tos.report",

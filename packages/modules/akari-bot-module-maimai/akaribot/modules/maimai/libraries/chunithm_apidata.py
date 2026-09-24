@@ -140,7 +140,6 @@ def split_chunithm_best(all_best: list[dict], new_best: list[dict]) -> dict:
 
 
 def _cache_file(msg: Bot.MessageSession, name: str):
-    """给出该用户的缓存文件路径。"""
     cache_dir = cache_path / "maimai-record"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / f"{msg.session_info.sender_id.replace('|', '_')}_{name}.json"
@@ -426,14 +425,6 @@ async def get_record_lx_oauth(
 
 
 async def _request_lxns_record(msg: Bot.MessageSession, fetch, cache_dir, use_cache: bool = True) -> dict | None:
-    """执行一次落雪取数：成功则写缓存，失败则按错误类型提示并退回本地缓存。
-
-    :param msg: 消息会话。
-    :param fetch: 无参协程函数，返回成绩字典。
-    :param cache_dir: 缓存文件路径。
-    :param use_cache: 是否读写本地缓存。
-    :return: 取回的成绩字典或缓存中的成绩字典。
-    """
     try:
         data = await fetch()
         if use_cache and data:

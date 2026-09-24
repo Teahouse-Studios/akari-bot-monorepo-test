@@ -49,17 +49,17 @@ async def get_whois(msg: Bot.MessageSession, domain: str):
         if whois_server:
             whois_server = whois_server.lower()
 
-        if updated_date:  # 此时间为UTC时间
+        if updated_date:  # 此时间为 UTC 时间
             if isinstance(updated_date, list):
                 updated_date = updated_date[0]
             updated_date = updated_date.replace(tzinfo=UTC)
 
-        if creation_date:  # 此时间为UTC时间
+        if creation_date:  # 此时间为 UTC 时间
             if isinstance(creation_date, list):
                 creation_date = creation_date[0]
             creation_date = creation_date.replace(tzinfo=UTC)
 
-        if expiration_date:  # 此时间为UTC时间
+        if expiration_date:  # 此时间为 UTC 时间
             if isinstance(expiration_date, list):
                 expiration_date = expiration_date[0]
             expiration_date = expiration_date.replace(tzinfo=UTC)

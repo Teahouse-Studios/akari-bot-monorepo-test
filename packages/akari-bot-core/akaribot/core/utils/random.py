@@ -17,8 +17,6 @@ T = TypeVar("T")
 
 
 class _RandomBackend:
-    """标准库 ``random`` 后端：速度快，不适合用于安全凭据。"""
-
     @staticmethod
     def random() -> float:
         return pyrandom.random()
@@ -71,8 +69,6 @@ class _RandomBackend:
 
 
 class _SecretsBackend:
-    """``secrets`` 后端：密码学安全，用于凭据与需要不可预测的随机。"""
-
     @staticmethod
     def random() -> float:
         return secrets.randbelow(INF) / INF
@@ -151,7 +147,7 @@ class Random:
     @classmethod
     def random(cls) -> float:
         """
-        返回0到1之间的随机浮点数。
+        返回 0 到 1 之间的随机浮点数。
 
         :return: 随机浮点数。
         """
@@ -194,7 +190,7 @@ class Random:
     @classmethod
     def randbits(cls, k: int) -> int:
         """
-        返回k字节长度的随机整数。
+        返回 k 字节长度的随机整数。
 
         :param k: 字节长度。
         :return: 符合条件的随机整数。
@@ -204,7 +200,7 @@ class Random:
     @classmethod
     def randbytes(cls, n: int) -> bytes:
         """
-        生成n个随机字节。
+        生成 n 个随机字节。
 
         :param n: 字节数量。
         :return: 符合条件的随机字节。
@@ -224,7 +220,7 @@ class Random:
     @classmethod
     def choices(cls, population: Sequence[T], k: int = 1) -> list[T]:
         """
-        从总体中选择k个元素，允许重复。
+        从总体中选择 k 个元素，允许重复。
 
         :param population: 给定序列。
         :param k: 选择的元素个数。
@@ -235,7 +231,7 @@ class Random:
     @classmethod
     def sample(cls, population: Sequence[T], k: int) -> list[T]:
         """
-        从总体中选择k个不重复元素。
+        从总体中选择 k 个不重复元素。
 
         :param population: 给定序列。
         :param k: 选择的元素个数。

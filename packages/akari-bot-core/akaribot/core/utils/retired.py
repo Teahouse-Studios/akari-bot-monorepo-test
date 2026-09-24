@@ -213,11 +213,7 @@ async def is_yielding_retired_session(target_id: str, union_id: str, channel_id:
 
 
 async def _load_notified() -> dict[str, str]:
-    """
-    加载已发送公告的场景记录，首次调用时从存储读入并转为字典。
-
-    :return: ``场景 ID → 发送时间`` 的映射。
-    """
+    # 加载已发送公告的场景记录，首次调用时从存储读入并转为字典。
     global _notified
     if _notified is not None:
         return _notified
@@ -360,15 +356,9 @@ def build_notice(client_name: str, locale: str, prefix: str) -> list:
 
 
 async def _deliver_notice(session_info, delay: int) -> None:
-    """
-    等待指定时长后向场景推送退役公告。
-
-    推送成功才记录已发送：失败多半意味着场景已永久失效（群解散、机器人被移出），
-    此时不重试，留待进程重启后由该场景的下条消息重新排队。
-
-    :param session_info: 目标会话信息。
-    :param delay: 延迟秒数。
-    """
+    # 等待指定时长后向场景推送退役公告。
+    # 推送成功才记录已发送：失败多半意味着场景已永久失效（群解散、机器人被移出），
+    # 此时不重试，留待进程重启后由该场景的下条消息重新排队。
     target_id = session_info.target_id
     try:
         await asyncio.sleep(delay)
@@ -390,7 +380,6 @@ async def _deliver_notice(session_info, delay: int) -> None:
 
 
 def _notice_task_done(task: asyncio.Task, target_id: str) -> None:
-    """Release queue state and retrieve failures even if a task was cancelled before its first step."""
     _notice_tasks.discard(task)
     pending_notices.discard(target_id)
     if task.cancelled():
@@ -401,7 +390,6 @@ def _notice_task_done(task: asyncio.Task, target_id: str) -> None:
 
 
 def _create_notice_task(awaitable, target_id: str) -> asyncio.Task:
-    """Create and retain one delayed retired-notice delivery task."""
     try:
         task = asyncio.create_task(awaitable, name=f"retired-notice-{target_id}")
     except BaseException:

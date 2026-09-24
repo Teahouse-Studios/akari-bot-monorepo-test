@@ -14,10 +14,10 @@ def encrypt(data: bytes):
     """
     AES CBC 加密
 
-    参数:
+    参数：
         data (bytes): 要加密的数据
 
-    返回:
+    返回：
         (bytes): 加密后的数据
     """
     data = pad(data, block_size)
@@ -28,10 +28,10 @@ def decrypt(data: bytes):
     """
     AES CBC 解密
 
-    参数:
+    参数：
         data (bytes): 要解密的数据
 
-    返回:
+    返回：
         (bytes): 解密后的数据
     """
     data = new(aes_key, MODE_CBC, aes_iv).decrypt(data)

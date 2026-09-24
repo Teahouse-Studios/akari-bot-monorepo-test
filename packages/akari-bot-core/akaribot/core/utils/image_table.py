@@ -57,11 +57,11 @@ async def image_table_render(
     save_source: bool = True,
 ) -> list[PILImage.Image] | None:
     """
-    使用WebRender渲染图片表格。
+    使用 WebRender 渲染图片表格。
 
     :param table: 要渲染的表格。
     :param save_source: 是否保存源文件。
-    :return: 图片的PIL对象。
+    :return: 图片的 PIL 对象。
     """
     try:
         tblst = []

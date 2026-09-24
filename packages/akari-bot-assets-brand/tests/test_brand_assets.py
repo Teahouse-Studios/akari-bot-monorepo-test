@@ -20,13 +20,11 @@ REQUIRED_FILES = ("character_marked.png", "akaribot_logo.png", "credits.txt", "L
 
 
 def _test_brand_dir_holds_every_asset():
-    """定位函数返回真实目录，三份资产与许可证都在。"""
     directory = brand_dir()
     return directory.is_dir() and all((directory / name).is_file() for name in REQUIRED_FILES)
 
 
 def _test_character_artwork_keeps_original_fidelity():
-    """立绘保持原件规格，未被降采样或转调色板。"""
     from PIL import Image
 
     path = brand_dir() / "character_marked.png"
@@ -37,7 +35,6 @@ def _test_character_artwork_keeps_original_fidelity():
 
 
 def _test_logo_is_a_readable_png():
-    """标志能被解码，且不是空文件。"""
     from PIL import Image
 
     path = brand_dir() / "akaribot_logo.png"
@@ -48,19 +45,16 @@ def _test_logo_is_a_readable_png():
 
 
 def _test_credits_is_not_empty():
-    """制作人员名单有实际内容；`~about credits` 依赖它。"""
     text = (brand_dir() / "credits.txt").read_text(encoding="utf-8").strip()
     return len(text) > 0
 
 
 def _test_license_is_bundled_with_the_artwork():
-    """许可证与美术资源同目录：画师保留权利，与仓库主体的 AGPL-3.0 不同，分发须原样携带。"""
     text = (brand_dir() / "LICENSE").read_text(encoding="utf-8")
     return "OasisAkari" in text and "SAWARATSUKI" in text
 
 
 def _test_no_stray_build_artifacts_beside_the_assets():
-    """资源目录里只应有资产、许可证与定位函数；打包残留（如 wheel 解包目录）说明打包范围写错了。"""
     directory = Path(brand_dir())
     allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__"}
     return all(child.name in allowed for child in directory.iterdir())

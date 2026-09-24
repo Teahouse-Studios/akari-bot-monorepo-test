@@ -34,7 +34,6 @@ PLACEHOLDER_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42
 
 
 def _url_to_filename(url: str) -> str:
-    """将 URL 转换为安全的文件名。"""
     url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
     try:
         domain = (urlparse(url).hostname or "unknown").replace(".", "_")[:30]

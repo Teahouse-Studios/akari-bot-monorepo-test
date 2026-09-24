@@ -103,7 +103,7 @@ class Dice(DiceItemBase):
             dice_adv = midstrs[2]
             positive = -1
         if positive and not dice_adv:
-            dice_adv = "1"  # K/Q后没有值默认为1
+            dice_adv = "1"  # K/Q 后没有值默认为 1
         # 语法合法检定
         if not is_int(dice_count):
             raise DiceValueError("{I18N:dice.message.error.value.count.invalid}", dice_count)
@@ -198,7 +198,7 @@ class FudgeDice(DiceItemBase):
 
         selected_results = [Random.choice(["-", "0", "+"]) for _ in range(self.count)]
 
-        if self.count > MAX_OUTPUT_CNT:  # 显示数据含100
+        if self.count > MAX_OUTPUT_CNT:  # 显示数据含 100
             output = "=[" + str(I18NContext("dice.message.output.too_long", length=self.count)) + "]"
         else:
             output += "=[" + ", ".join(selected_results) + "]"
@@ -267,7 +267,7 @@ class BonusPunishDice(DiceItemBase):
             dice_results.append(Random.randint(0, 9))
 
         new_results = [d100_result] + [int(str(item) + str(d100_digit)) for item in dice_results]
-        new_results = [100 if item == 0 else item for item in new_results]  # 将所有00转为100
+        new_results = [100 if item == 0 else item for item in new_results]  # 将所有 00 转为 100
 
         if self.count > 1:
             if self.count >= MAX_OUTPUT_CNT:

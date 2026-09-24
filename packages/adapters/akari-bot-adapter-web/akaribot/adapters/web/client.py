@@ -25,7 +25,6 @@ else:
 
 
 def _check_port_available(port: int, host: str = "127.0.0.1") -> bool:
-    """判断 ``host:port`` 当前是否可被绑定。"""
     try:
         socket.gethostbyname(host)
 
@@ -36,7 +35,6 @@ def _check_port_available(port: int, host: str = "127.0.0.1") -> bool:
 
 
 def _find_available_port(start_port: int, max_retries: int = 100, host: str = "127.0.0.1") -> int:
-    """自 ``start_port`` 起向后寻找可用端口，找不到时返回 0。"""
     for offset in range(max_retries):
         current_port = start_port + offset
         if current_port <= 0:
@@ -47,7 +45,6 @@ def _find_available_port(start_port: int, max_retries: int = 100, host: str = "1
 
 
 def _get_local_ip():
-    """取本机在默认路由上使用的地址，无法判定时返回 None。"""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))

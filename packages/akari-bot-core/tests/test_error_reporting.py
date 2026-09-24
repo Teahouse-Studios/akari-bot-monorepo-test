@@ -9,7 +9,6 @@ from akaribot.testing import Tester, func_case
 
 
 async def _test_exception_report_uses_target_markdown_capability():
-    """错误上报应以接收场景的 Markdown 能力决定 traceback 呈现格式。"""
     import importlib
 
     errors = importlib.import_module("akaribot.modules.core.hooks.errors")

@@ -193,7 +193,7 @@ def get_module_hooks(module_name: str | None = None) -> dict[str, Callable]:
     执行时统一经模块 hook executor 分发。
 
     :param module_name: 指定模块名，None 则返回全部钩子。
-    :returns: {钩子全名: 钩子函数} 字典。
+    :returns: {钩子全名： 钩子函数} 字典。
     """
     subscriptions = ModulesManager.modules_hook_subscriptions
     hooks = {

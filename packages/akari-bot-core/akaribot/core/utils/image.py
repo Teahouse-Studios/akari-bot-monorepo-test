@@ -39,9 +39,9 @@ def cb64imglst(b64imglst: list[str], bot_img: Literal[True]) -> list[ImageElemen
 
 
 def cb64imglst(b64imglst: list[str], bot_img: bool = False) -> list[PILImage.Image] | list[ImageElement]:
-    """转换base64编码的图片列表。
+    """转换 base64 编码的图片列表。
 
-    :param b64imglst: base64编码的图片列表。
+    :param b64imglst: base64 编码的图片列表。
     :param bot_img: 是否将图片转换为机器人 ImageElement 对象。
     :return: PIL Image 或机器人 Image 对象列表。
     """
@@ -73,7 +73,7 @@ async def msgnode2image(
 async def msgchain2image(
     message_chain: list | MessageChain, session: MessageSession | SessionInfo | FetchedSessionInfo | None = None
 ) -> list[ImageElement] | bool:
-    """使用WebRender将消息链转换为图片。
+    """使用 WebRender 将消息链转换为图片。
 
     :param message_chain: 消息链或消息链列表。
     :param session: 消息会话信息，用于转换消息链为可发送格式时使用。
@@ -133,9 +133,9 @@ async def msgchain2image(
 
 
 async def svg_render(file_path: str | Path) -> list[ImageElement] | bool:
-    """使用WebRender渲染svg文件。
+    """使用 WebRender 渲染 svg 文件。
 
-    :param file_path: svg文件路径。
+    :param file_path: svg 文件路径。
     :return: 机器人 Image 对象。
     """
 

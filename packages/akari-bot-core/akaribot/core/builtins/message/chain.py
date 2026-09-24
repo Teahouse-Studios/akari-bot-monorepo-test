@@ -68,7 +68,7 @@ class MessageChain:
     消息链是本系统中消息的基本数据结构，由一系列消息元素组成。
     支持多种构建方式、格式转换、安全检查等功能。
 
-    属性说明:
+    属性说明：
         values: 消息元素列表，包含此消息链的所有元素
     """
 
@@ -167,7 +167,7 @@ class MessageChain:
         """
         检查消息链是否包含安全内容。
 
-        遍历消息链中的所有元素，检查是否包含敏感信息（如密钥、API密钥、
+        遍历消息链中的所有元素，检查是否包含敏感信息（如密钥、API 密钥、
         私密数据等）。这是一个重要的安全机制，用于防止敏感信息泄露。
 
         检查范围：
@@ -397,11 +397,8 @@ class MessageChain:
                             x.text = session_info.locale.t_str(x.text)
                             # 解析 KE 码格式的消息
                             element_chain = match_kecode(x.text, x.disable_joke)
-                            # 指令操作是行内元素：它自身的产物、以及紧随其后的纯文本，
-                            # 都须并入上一行，否则同出一个字符串的一句话会被平台的
-                            # 换行拼接拆成数行。其余元素照旧各自追加，以免破坏
-                            # MessageChain([Plain("a"), Plain("b")]) 经 KE 码往返后
-                            # 仍应是两个元素的既有约定。
+                            # 指令操作是行内元素：其产物与紧随的纯文本都须并入上一行，否则同出一个字符串的一句话
+                            # 会被平台的换行拼接拆成数行。其余元素各自追加，以保住 KE 码往返的元素数约定。
                             append_parsed_elements(element_chain)
                             continue
                     else:
@@ -618,12 +615,7 @@ class MessageChain:
 
     @staticmethod
     def _normalize(element):
-        """
-        将单个入参归一化为消息元素。
-
-        :param element: 待归一化的对象。
-        :return: 对应的消息元素；空字符串与 None 返回 None，由调用方跳过。
-        """
+        # 将单个入参归一化为消息元素。
         if element is None:
             return None
         if isinstance(element, str):
@@ -711,27 +703,35 @@ class MessageChain:
         return self.__iadd__(other)
 
     def __str__(self):
-        """返回消息链的字符串表示（用于调试）"""
+        """
+        返回消息链的字符串表示（用于调试）
+        """
         return f"[{', '.join([x.__repr__() for x in self.values])}]"
 
     def __iter__(self):
-        """使消息链可迭代"""
+        """
+        使消息链可迭代
+        """
         return iter(self.values)
 
     def __len__(self):
-        """返回消息链中元素的数量"""
+        """
+        返回消息链中元素的数量
+        """
         return len(self.values)
 
     def __add__(self, other):
         """
         消息链的加法操作。
 
-        支持与另一个消息链或列表相加。
+                支持与另一个消息链或列表相加。
 
-        :param other: 另一个消息链或元素列表
-        :return: 新的消息链
-        :raises TypeError: 如果操作数类型不支持
+                :param other: 另一个消息链或元素列表
+                :return: 新的消息链
+                :raises TypeError: 如果操作数类型不支持
         """
+        # 消息链的加法操作。
+        # 支持与另一个消息链或列表相加。
         if isinstance(other, MessageChain):
             return MessageChain.assign(self.values + other.values)
         if isinstance(other, list):
@@ -744,10 +744,11 @@ class MessageChain:
         """
         消息链的右加法操作（当左操作数不支持加法时调用）。
 
-        :param other: 另一个消息链或元素列表
-        :return: 新的消息链
-        :raises TypeError: 如果操作数类型不支持
+                :param other: 另一个消息链或元素列表
+                :return: 新的消息链
+                :raises TypeError: 如果操作数类型不支持
         """
+        # 消息链的右加法操作（当左操作数不支持加法时调用）。
         if isinstance(other, MessageChain):
             return MessageChain.assign(other.values + self.values)
         if isinstance(other, list):
@@ -760,12 +761,14 @@ class MessageChain:
         """
         消息链的原地加法操作（+=）。
 
-        直接修改当前消息链，添加新元素。
+                直接修改当前消息链，添加新元素。
 
-        :param other: 另一个消息链或元素列表
-        :return: 修改后的消息链自身
-        :raises TypeError: 如果操作数类型不支持
+                :param other: 另一个消息链或元素列表
+                :return: 修改后的消息链自身
+                :raises TypeError: 如果操作数类型不支持
         """
+        # 消息链的原地加法操作（+=）。
+        # 直接修改当前消息链，添加新元素。
         if isinstance(other, MessageChain):
             self.values += other.values
         elif isinstance(other, list):
@@ -866,8 +869,8 @@ class PlatformMessageChain:
     示例：
     ```
         > platform_chain = PlatformMessageChain.assign({
-        ...     "QQ": MessageChain.assign("[QQ专属消息]"),
-        ...     "Discord": MessageChain.assign("[Discord专属消息]"),
+        ...     "QQ": MessageChain.assign("[QQ 专属消息]"),
+        ...     "Discord": MessageChain.assign("[Discord 专属消息]"),
         ...     "default": MessageChain.assign("[通用消息]")
         ... })
     ```
@@ -888,7 +891,7 @@ class PlatformMessageChain:
         示例：
         ```
             > chains = {
-            ...     "QQ": MessageChain.assign("QQ消息"),
+            ...     "QQ": MessageChain.assign("QQ 消息"),
             ...     "default": MessageChain.assign("默认消息")
             ... }
             > platform_chain = PlatformMessageChain.assign(chains)
@@ -936,14 +939,14 @@ class MessageNodes:
         示例：
         ```
             > chains = [
-            ...     MessageChain.assign("消息1"),
-            ...     MessageChain.assign("消息2")
+            ...     MessageChain.assign("消息 1"),
+            ...     MessageChain.assign("消息 2")
             ... ]
             > nodes = MessageNodes.assign(chains, "我的转发消息")
         ```
         """
         if not name:
-            # 生成随机名称：Message + 5个随机小写字母
+            # 生成随机名称：Message + 5 个随机小写字母
             name = "Message " + "".join(random.sample("abcdefghijklmnopqrstuvwxyz", 5))
 
         return cls(values=values, name=name)
@@ -1001,7 +1004,7 @@ def get_message_chain(session: SessionInfo, chain: Chainable) -> MessageChain | 
     示例：
     ```
         > platform_chain = PlatformMessageChain.assign({
-        ...     "QQ": MessageChain.assign("QQ消息"),
+        ...     "QQ": MessageChain.assign("QQ 消息"),
         ...     "default": MessageChain.assign("默认消息")
         ... })
         > result = get_message_chain(session, platform_chain)
@@ -1038,27 +1041,6 @@ def get_message_chain(session: SessionInfo, chain: Chainable) -> MessageChain | 
 
 
 def _extract_kecode_blocks(text):
-    """
-    从文本中提取 KE 码块。
-
-    该函数解析包含 KE 码格式的文本，将其分割为 KE 码块和
-    普通文本块。KE 码格式为 `[KE:type,params]`。
-
-    处理逻辑：
-    - 遇到 `[KE:` 开始一个新块
-    - 遇到 `]` 结束当前块
-    - 非 KE 码部分作为普通文本块
-
-    :param text: 包含 KE 码的文本字符串
-    :return: 字符串列表，包含 KE 码块和普通文本块
-
-    示例：
-    ```
-        > text = "Hello [KE:plain,text=World] !"
-        > _extract_kecode_blocks(text)
-        ['Hello ', '[KE:plain,text=World]', ' !']
-    ```
-    """
     result = []
     i = 0
     while i < len(text):
@@ -1095,16 +1077,8 @@ def _extract_kecode_blocks(text):
 
 
 def _append_inline(value: list, element: PlainElement) -> None:
-    """
-    将纯文本元素并入上一个纯文本元素，保持行内语义。
-
-    平台适配器多以换行拼接消息链中的各个元素，若不合并，一句话中的行内元素
-    会被拆到下一行。需要换行时，在前一个纯文本元素的末尾显式写入换行符即可，
-    与普通文本的行为一致。
-
-    :param value: 已转换的元素列表，就地修改。
-    :param element: 待并入的纯文本元素。
-    """
+    # 平台适配器多以换行拼接消息链中的各个元素，不合并会把一句话中的行内元素拆到下一行。
+    # 需要换行时，在前一个纯文本元素末尾显式写入换行符即可。
     if value and isinstance(value[-1], PlainElement):
         value[-1].text += element.text
     else:

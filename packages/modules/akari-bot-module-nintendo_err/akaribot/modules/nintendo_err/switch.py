@@ -1778,10 +1778,6 @@ lnx_binder = Module(
         74: ResultInfo("Unknown transaction."),
         75: ResultInfo("Bad index."),
         110: ResultInfo("Timed out."),
-        # TODO: How do I express INT32_MIN in pythonic terms?
-        # -(INT32_MIN + 7): ResultInfo("Fds not allowed."),
-        # -(INT32_MIN + 2): ResultInfo("Failed transaction."),
-        # -(INT32_MIN + 1): ResultInfo("Bad type."),
     },
 )
 

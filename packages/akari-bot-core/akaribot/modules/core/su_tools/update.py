@@ -71,7 +71,6 @@ class UpdateOutcome:
 
 
 def _executable(path: Path) -> bool:
-    """路径是否为可直接执行的普通文件。"""
     return path.is_file() and os.access(path, os.X_OK)
 
 
@@ -108,12 +107,6 @@ def locate_cli() -> CliLocation:
 
 
 async def _run_cli(path: str, argv: list[str]) -> tuple[int, str, str, bool]:
-    """以子进程执行 CLI 并捕获两个标准流。
-
-    :param path: CLI 可执行文件路径。
-    :param argv: 固定参数列表。
-    :return: 四元组——退出码、标准输出、标准错误、是否超时。
-    """
     env = dict(os.environ)
     # 只读标记只约束 server 自身：更新要写配置，须让子进程按宿主机 CLI 的权限运行。
     env.pop(CONFIG_READONLY_ENV, None)
@@ -184,7 +177,6 @@ async def delegate_update(*, force: bool = False) -> UpdateOutcome:
 
 
 def _names(payload: dict, key: str) -> list[str]:
-    """取载荷里的字符串列表字段，容忍字段缺失与元素为空。"""
     value = payload.get(key)
     if not isinstance(value, list):
         return []
@@ -192,7 +184,6 @@ def _names(payload: dict, key: str) -> list[str]:
 
 
 def _details(payload: dict, key: str, names: list[str]) -> list[str]:
-    """把 ``*_details`` 明细合并进名字列表，形如「分发名（原因）」。"""
     reasons: dict[str, str] = {}
     for item in payload.get(key) or []:
         if isinstance(item, dict) and item.get("dist"):
@@ -201,20 +192,12 @@ def _details(payload: dict, key: str, names: list[str]) -> list[str]:
 
 
 def _tail(text: str, lines: int = OUTPUT_TAIL_LINES) -> str:
-    """取文本末尾若干非空行，供回报附带失败原因。"""
     return "\n".join([line for line in text.splitlines() if line.strip()][-lines:])
 
 
 def _reload_pending(payload: dict, updated: list[str]) -> list[str]:
-    """取尚未热装载的已更新包。
-
-    新版 CLI 直接回传 ``reload_pending``；旧版只回传 ``notified`` 明细，据此推导；
-    两者都没有时保守地把全部已更新包视为待重载。
-
-    :param payload: CLI 回传的 JSON 主体。
-    :param updated: 已成功更新的分发名。
-    :return: 仍需重载的分发名。
-    """
+    # 新版 CLI 直接回传 ``reload_pending``；旧版只回传 ``notified`` 明细，据此推导；
+    # 两者都没有时保守地把全部已更新包视为待重载。
     if isinstance(payload.get("reload_pending"), list):
         return _names(payload, "reload_pending")
     notified = payload.get("notified")

@@ -66,7 +66,6 @@ def canonical(name: str) -> str:
 
 
 def _windows_platform() -> bool:
-    """当前是否 Windows；单独成函数，便于测试注入另一平台的可执行文件判据。"""
     return os.name == "nt"
 
 
@@ -160,14 +159,8 @@ def frozen_resource_root() -> Path | None:
 
 
 def _override_uv(value: str) -> Path | None:
-    """把 ``AKARIBOT_UV`` 的取值解析成可执行文件。
-
-    取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）；不可用时返回 ``None``，
-    由调用方回退到内置资源或 PATH。
-
-    :param value: 环境变量的原始取值。
-    :return: 可用的 uv 路径。
-    """
+    # 取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）；不可用时返回 ``None``，
+    # 由调用方回退到内置资源或 PATH。
     candidate = Path(value).expanduser()
     if is_executable(candidate):
         return candidate
@@ -385,7 +378,6 @@ class InstalledDist:
 
 
 def _probe_env(names: Sequence[str]) -> dict[str, str]:
-    """探测子进程所需的环境变量。"""
     result = dict(os.environ)
     result[PROBE_NAMES_ENV] = json.dumps([canonical(name) for name in names])
     result["PYTHONIOENCODING"] = "utf-8"
@@ -510,7 +502,6 @@ class WorkspacePackage:
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
-    """读取 TOML 文件；失败时返回空表。"""
     try:
         return tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError):
@@ -520,7 +511,7 @@ def _read_toml(path: Path) -> dict[str, Any]:
 def package_root_from_entry_point(pyproject: Path, import_path: str) -> Path | None:
     """由 entry point 的导入路径定位导入包目录。
 
-    源码根优先取分发根，退回 ``src``（迁移前布局）：与 ``tools/build_registry.py`` 的
+    源码根优先取分发根，其次取分发根下的 ``src``：与 ``tools/build_registry.py`` 的
     ``package_root()`` 同一口径。CLI 既不能 import core 内部，也不该在运行时依赖仓库工具，
     故按同一规则实现，并由用例与工具对拍，避免分化出第三套规则。
 
@@ -640,7 +631,6 @@ def local_dependency_closure(index: Mapping[str, WorkspacePackage], root: Worksp
 
 
 def _spec_with_version(dist: str, version: str | None, *, extra: Sequence[str] = ()) -> str:
-    """把 extras 与 ``--version`` 的取值拼成分发描述符，支持 ``1.2.3`` 与 ``>=1,<2`` 两种写法。"""
     base = dist + ("[" + ",".join(extra) + "]" if extra else "")
     if not version:
         return base
@@ -652,7 +642,6 @@ def _spec_with_version(dist: str, version: str | None, *, extra: Sequence[str] =
 def _specs_for_paths(
     paths: Sequence[WorkspacePackage], *, editable: bool, extra: Sequence[str] = ()
 ) -> tuple[str, ...]:
-    """把本地包列表拼成 uv 参数：默认用 ``--editable=<路径>``。"""
     specs: list[str] = []
     for item in paths:
         suffix = ""
@@ -951,7 +940,6 @@ def default_cache_dir() -> Path:
 
 
 def _read_json(path: Path) -> Any:
-    """读取 JSON 文件；缺失或损坏时返回 ``None``。"""
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1103,7 +1091,6 @@ class HostingReport:
 
 
 def _check_distinct(source: Path, target: Path) -> None:
-    """确认源与目标是两个不同的解释器。"""
     try:
         same = source.resolve() == target.resolve()
     except OSError:
@@ -1566,7 +1553,6 @@ PURGE_TABLE_STATUS_KEYS = ("table", "name")
 
 
 def _text_of(value: Any) -> str:
-    """从结构化错误的取值里取一句可读文本；取不到时返回空串。"""
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, Mapping):

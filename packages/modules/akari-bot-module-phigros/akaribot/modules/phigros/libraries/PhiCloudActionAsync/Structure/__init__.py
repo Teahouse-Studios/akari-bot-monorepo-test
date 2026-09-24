@@ -15,10 +15,10 @@ def headGetStructure(file_head: Dict[str, bytes]) -> Dict[str, Any]:
     """
     根据文件头获取对应结构类
 
-    参数:
+    参数：
         file_head (dict[str, bytes]): 每个文件的文件头
 
-    返回:
+    返回：
         (dict[str, Any]): 每个文件对应的结构类
     """
     structure_list = {}
@@ -83,10 +83,10 @@ def getFileHead(save_dict: Dict[str, dict]) -> Dict[str, bytes]:
     """
     根据存档反序列化数据获取最高支持的文件头
 
-    参数:
+    参数：
         save_dict (dict[str, dict]): 存档反序列化数据
 
-    返回:
+    返回：
         (dict[str, bytes]): 每个存档文件最高支持的文件头
     """
     file_head = {}

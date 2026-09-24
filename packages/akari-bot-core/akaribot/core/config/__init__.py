@@ -39,7 +39,6 @@ I18N_COMMENT_PATTERN = re.compile(r"^#\s*\{I18N:(?P<key>[^}]+)}\s*$")
 
 
 def _localized_config_text(locale: Locale, key: str) -> str | None:
-    """取得配置注释文本，无法翻译时返回 ``None``，避免把 i18n 标记写入配置。"""
     localized = locale.t(key, locale_failed_prompt=False)
     if localized in (key, f"{{I18N:{key}}}"):
         return None
@@ -70,9 +69,7 @@ class CFGManager:
     @classmethod
     @contextmanager
     def _exclusive(cls):
-        """
-        以配置目录下的锁文件在进程间互斥，可重入。
-        """
+        # 以配置目录下的锁文件在进程间互斥，可重入。
         if cls._lock_depth:
             cls._lock_depth += 1
             try:
@@ -109,7 +106,6 @@ class CFGManager:
     @classmethod
     @contextmanager
     def _writable(cls):
-        """临时解除只读限制，仅供 edit_* 使用。可重入。"""
         cls._allow_write_depth += 1
         try:
             yield
@@ -118,17 +114,8 @@ class CFGManager:
 
     @classmethod
     def _resolve_table(cls, table_name: str | None, *, fallback: bool = True) -> str | None:
-        """把配置表名解析到当前实例的作用域。
-
-        ``Info.instance_id`` 为空时原样返回，故默认实例的读写路径与改造前一致。多实例下
-        ``bot_telegram`` 解析为 ``bot_telegram-alt``，复用同一份适配器配置模板。``module_*`` 与
-        ``config`` 表不参与作用域：模块配置属场景数据，不是适配器身份。
-
-        :param table_name: 已归一化的表名（``_secret`` 后缀已剥离）。
-        :param fallback: 实例表尚未出现时是否回退到基表。
-            读取路径取 True；写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
-        :return: 实际使用的表名。
-        """
+        # ``Info.instance_id`` 为空时原样返回；多实例下 ``bot_telegram`` 解析为 ``bot_telegram-alt``，
+        # 复用同一份模板。读取取 True，写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
         from akaribot.core.constants.info import Info
 
         if not table_name or not Info.instance_id or not table_name.startswith("bot_"):
@@ -144,16 +131,8 @@ class CFGManager:
 
     @classmethod
     def _ensure_writable(cls, q: str | None = None, table_name: str | None = None, secret: bool = False):
-        """在只读进程中拒绝写入。
-
-        配置的生成统一由 bot.py 的 pre_init() 完成，bot 与 server 子进程一律只读，
-        以免同一批配置项被多个进程重复补写。交互式编辑须经 edit_write() / edit_delete()。
-
-        :param q: 配置项键名，仅用于组装错误信息。
-        :param table_name: 配置项表名，仅用于组装错误信息。
-        :param secret: 是否为密钥配置项，仅用于组装错误信息。
-        :raises ConfigOperationError: 当前进程只读，且不处于授权写入的作用域内。
-        """
+        # 配置的生成统一由 bot.py 的 pre_init() 完成，bot 与 server 子进程一律只读，
+        # 以免同一批配置项被多个进程重复补写。交互式编辑须经 edit_write() / edit_delete()。
         if not cls.readonly or cls._allow_write_depth:
             return
         process_name = multiprocessing.current_process().name
@@ -209,12 +188,7 @@ class CFGManager:
 
     @staticmethod
     def _atomic_write(path: Path, content: str):
-        """
-        原子地写入配置文件。
-
-        :param path: 目标文件路径。
-        :param content: 文件内容。
-        """
+        # 原子地写入配置文件。
         tmp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
         try:
             with open(tmp_path, "w", encoding="utf-8") as f:
@@ -265,7 +239,7 @@ class CFGManager:
         判断配置项是否已存在。
 
         :param q: 配置项键名。
-        :param secret: 是否为密钥配置项。（默认为False）
+        :param secret: 是否为密钥配置项。（默认为 False）
         :param table_name: 配置项表名。
         :return: 配置项是否已存在。
         """
@@ -353,10 +327,10 @@ class CFGManager:
         :param q: 配置项键名。
         :param default: 默认值。
         :param cfg_type: 配置项类型。
-        :param secret: 是否为密钥配置项。（默认为False）
+        :param secret: 是否为密钥配置项。（默认为 False）
         :param table_name: 配置项表名。
-        :param _global: 内部变量，是否在所有表中查找配置项。（默认为False）
-        :param _generate: 内部变量，生成配置文件时使用。（默认为False）
+        :param _global: 内部变量，是否在所有表中查找配置项。（默认为 False）
+        :param _generate: 内部变量，生成配置文件时使用。（默认为 False）
         :param _fallback: 内部变量，实例表不存在时是否回退到基表。实例发现读 ``enable`` 时取 False：
             回退会让「新建一个实例文件」等同于「立即上线一个机器人」。
         :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键
@@ -503,7 +477,7 @@ class CFGManager:
         :param q: 配置项键名。
         :param value: 修改值。
         :param cfg_type: 配置项类型。
-        :param secret: 是否为密钥配置项。（默认为False）
+        :param secret: 是否为密钥配置项。（默认为 False）
         :param table_name: 配置项表名。
         :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。
         """
@@ -710,7 +684,7 @@ class CFGManager:
         :param q: 配置项键名。
         :param value: 修改值。
         :param cfg_type: 配置项类型。
-        :param secret: 是否为密钥配置项。（默认为False）
+        :param secret: 是否为密钥配置项。（默认为 False）
         :param table_name: 配置项表名。
         """
         with cls._writable():
@@ -777,11 +751,11 @@ def Config(
     :param q: 配置项键名。
     :param default: 默认值。
     :param cfg_type: 配置项类型。
-    :param secret: 是否为密钥配置项。（默认为False）
+    :param secret: 是否为密钥配置项。（默认为 False）
     :param table_name: 配置项表名。
-    :param get_url: 是否为URL配置项。（默认为False）
-    :param _global: 内部变量，是否在所有表中查找配置项。（默认为False）
-    :param _generate: 内部变量，生成配置文件时使用。（默认为False）
+    :param get_url: 是否为 URL 配置项。（默认为 False）
+    :param _global: 内部变量，是否在所有表中查找配置项。（默认为 False）
+    :param _generate: 内部变量，生成配置文件时使用。（默认为 False）
     :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键
     :return: 配置文件中对应配置项的值。
     """

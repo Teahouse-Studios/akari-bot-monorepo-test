@@ -14,11 +14,6 @@ from akaribot.core.registry import PackageRegistry
 
 
 def _summary(dist: str) -> str:
-    """取分发包的一句话简介。
-
-    :param dist: 分发名；为空或未安装时返回空串。
-    :return: 简介文本。
-    """
     if not dist:
         return ""
     try:

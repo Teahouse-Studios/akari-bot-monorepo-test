@@ -94,7 +94,7 @@ class LegacyProject:
 class MigrationPlan:
     """迁移计划：模块映射结果与要安装的包。
 
-    :param modules: ``(旧模块名, 新分发名, 名字来源)`` 三元组。
+    :param modules: ``(旧模块名， 新分发名， 名字来源)`` 三元组。
     :param unmapped: 没有对应分发包的旧模块名。
     :param skipped: 旧 ``modules/`` 里有目录、但旧库显示从未装载的模块名。
     :param status_readable: 旧库是否可读；为假时跳过清单不代表「用户没启用过」。
@@ -150,17 +150,10 @@ class MigrationLog:
 
 
 def _legacy_key(name: str) -> str:
-    """旧模块名归一：小写并把连字符换成下划线（registry 的映射键即此口径）。"""
     return name.strip().lower().replace("-", "_")
 
 
 def _inspect(root: Path) -> LegacyProject:
-    """校验旧项目结构并读出迁移所需的事实。
-
-    :param root: 旧项目根目录。
-    :return: 只读视图。
-    :raises CliError: 目录不存在或缺少旧项目的判定文件。
-    """
     if not root.exists():
         raise CliError(i18n.t("cli.migrate.error.project_missing", path=root))
     if not root.is_dir():
@@ -197,8 +190,6 @@ def _inspect(root: Path) -> LegacyProject:
 
 @dataclass
 class _ConfigFacts:
-    """旧配置读取结果的中间结构。"""
-
     config_files: tuple[Path, ...]
     adapters: tuple[str, ...]
     locale: str
@@ -207,7 +198,6 @@ class _ConfigFacts:
 
 
 def _read_config_facts(root: Path) -> _ConfigFacts:
-    """读 ``config/*.toml``：汇总表名、启用平台、默认语言与数据库连接串。"""
     config_files = tuple(sorted(path for path in (root / OLD_CONFIG_DIR).glob("*.toml") if path.is_file()))
     tables: dict[str, Mapping[str, Any]] = {}
     failures: list[str] = []
@@ -239,7 +229,6 @@ def _read_config_facts(root: Path) -> _ConfigFacts:
 
 
 def _module_dirs(modules_root: Path) -> tuple[str, ...]:
-    """列出旧 ``modules/`` 下带 ``__init__.py`` 的模块目录名；``core`` 属核心，不计入。"""
     if not modules_root.is_dir():
         return ()
     names: list[str] = []
@@ -252,14 +241,8 @@ def _module_dirs(modules_root: Path) -> tuple[str, ...]:
 
 
 def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...], bool]:
-    """从旧 SQLite 库的 ``module_status`` 读启用过的模块名。
-
-    读不成功与「读到了但没有启用项」必须分开：前者不能推出「用户没启用过模块」，此时按空清单
-    安装会静默丢掉用户的模块，只能要求人工选择。
-
-    :param database_files: 旧项目的库文件。
-    :return: 二元组——启用过的模块名；是否至少有一个库读成功。
-    """
+    # 读不成功与「读到了但没有启用项」必须分开：前者不能推出「用户没启用过模块」，此时按空清单
+    # 安装会静默丢掉用户的模块，只能要求人工选择。
     names: list[str] = []
     readable = False
     for path in database_files:
@@ -276,14 +259,12 @@ def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...],
 
 
 def _target_root(project_root: Path, instance: Path | None) -> Path:
-    """解析新实例根：显式 ``--instance`` 优先，缺省为旧项目同级的 ``<旧项目名>-instance``。"""
     if instance is not None:
         return instance.expanduser().resolve()
     return (project_root.parent / f"{project_root.name}-instance").resolve()
 
 
 def _load_catalog(workspace_root: Path | None, *, offline: bool) -> engine.RegistryCatalog:
-    """加载 registry：工作区里有 ``registry.json`` 时优先本地文件，保证映射可离线复现。"""
     roots: list[Path] = []
     if workspace_root is not None:
         roots.append(workspace_root)
@@ -307,7 +288,6 @@ def _load_catalog(workspace_root: Path | None, *, offline: bool) -> engine.Regis
 
 
 def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
-    """旧模块名到新分发名的索引；``provides_modules`` 与 ``legacy_module_map`` 一并收录。"""
     index: dict[str, str] = {}
     for entry in catalog.entries.values():
         if entry.kind != "module":
@@ -320,13 +300,8 @@ def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
 
 
 def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engine.RegistryCatalog) -> MigrationPlan:
-    """由旧项目事实与 registry 映射算出迁移计划。
-
-    安装候选**只取旧库 ``module_status.load = 1`` 的模块**。旧版单仓库的 ``modules/`` 本来就含全部
-    官方模块，按目录决定安装会把四十余个用户从未启用的模块连同重依赖一起装进新实例，还会把
-    「未映射」与「未启用」混成同一类诊断。目录改作诊断来源：确认源码/数据是否存在，并列出
-    「有目录但未装载」供操作者核对。
-    """
+    # 安装候选只取旧库 ``module_status.load = 1`` 的模块：``modules/`` 含全部官方模块，按目录决定
+    # 安装会把从未启用的模块连同重依赖一并装进新实例，还会把「未映射」与「未启用」混成同一类诊断。
     known_adapters = {engine.canonical(entry.dist) for entry in catalog.entries.values() if entry.kind == "adapter"}
     plan = MigrationPlan(status_readable=legacy.module_status_readable)
     for platform in legacy.adapters:
@@ -348,10 +323,6 @@ def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engin
 def _prepare_instance(
     root: Path, legacy: LegacyProject, *, workspace_root: Path | None, managed: bool, force: bool
 ) -> Instance:
-    """创建或复用实例；目录与 ``akaribot.toml`` 均走 ``akaribot init`` 的既有路径。
-
-    :raises CliError: 目标非空且不是实例，或实例正在运行。
-    """
     if (root / INSTANCE_META_FILENAME).is_file():
         instance = Instance(root)
         if instance.is_running():
@@ -383,10 +354,6 @@ def _copy_file(
     rel: str,
     compare: bool = True,
 ) -> None:
-    """复制单个文件；内容一致则跳过，不同则默认保留目标，``--force`` 时覆盖。
-
-    :param compare: 为假时只按目标是否存在判断（大文件与数据库文件用）。
-    """
     if target.is_file():
         if compare and not force and target.read_bytes() == source.read_bytes():
             tally.unchanged.append(rel)
@@ -403,7 +370,6 @@ def _copy_file(
 
 
 def _copy_tree(source: Path, target: Path, *, force: bool, dry_run: bool, tally: CopyTally, rel: str) -> None:
-    """递归复制目录，逐文件套用 :func:`_copy_file` 的重入规则。"""
     for path in sorted(source.rglob("*")):
         if not path.is_file():
             continue
@@ -419,7 +385,6 @@ def _copy_tree(source: Path, target: Path, *, force: bool, dry_run: bool, tally:
 
 
 def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry_run: bool, log: MigrationLog) -> None:
-    """复制配置、数据库、旧 assets 与模块的部署者数据，并记录结果。"""
     config = CopyTally(i18n.t("cli.migrate.tally.config"))
     log.tallies.append(config)
     for path in legacy.config_files:
@@ -466,7 +431,6 @@ def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry
 
 
 def _resolve_target(name: str, *, kind: str, workspace_root: Path | None) -> engine.InstallTarget:
-    """解析安装目标：工作区模式取本地源码，否则按分发名安装。"""
     try:
         return engine.resolve_target(name, workspace_root=workspace_root, dist=name, kind=kind)
     except CliError as exc:
@@ -483,7 +447,6 @@ def _install_packages(
     verbose: bool,
     log: MigrationLog,
 ) -> None:
-    """按 core、适配器、模块的顺序安装；单个包失败只记入报告，不中断整体迁移。"""
     for kind, dist in targets:
         try:
             target = _resolve_target(dist, kind=kind, workspace_root=workspace_root)
@@ -509,7 +472,6 @@ def _install_packages(
 
 
 def _convert_database(instance: Instance, legacy: LegacyProject, *, log: MigrationLog) -> None:
-    """在副本上执行旧版本号转换：复用 core 的 db 入口，不重写版本逻辑。"""
     if legacy.db_path and not legacy.db_path.startswith("sqlite"):
         log.db_result = i18n.t("cli.migrate.db.non_sqlite", path=legacy.db_path)
         log.db_status = "skipped"
@@ -542,7 +504,6 @@ def _convert_database(instance: Instance, legacy: LegacyProject, *, log: Migrati
 
 
 def _scan_placeholders(instance: Instance, log: MigrationLog) -> None:
-    """统计复制后配置里的 ``<Replace me>``，并单独标出待填凭据的适配器文件。"""
     counts: dict[str, int] = {}
     for path in sorted(instance.config_dir.glob("*.toml")):
         count = engine.count_placeholders([path])
@@ -555,7 +516,6 @@ def _scan_placeholders(instance: Instance, log: MigrationLog) -> None:
 def _render_report(
     legacy: LegacyProject, instance: Instance, plan: MigrationPlan, log: MigrationLog, *, dry_run: bool
 ) -> str:
-    """生成 Markdown 迁移报告全文。"""
     lines: list[str] = [
         i18n.t("cli.migrate.report.title"),
         "",
@@ -660,7 +620,6 @@ def _render_report(
 
 
 def _print_plan(legacy: LegacyProject, target: Path, plan: MigrationPlan) -> None:
-    """打印迁移计划，供执行前确认。"""
     table = Table(title=i18n.t("cli.migrate.plan.title"), show_header=False, padding=(0, 2))
     table.add_row(i18n.t("cli.migrate.plan.old"), str(legacy.root))
     table.add_row(i18n.t("cli.migrate.plan.new"), str(target))

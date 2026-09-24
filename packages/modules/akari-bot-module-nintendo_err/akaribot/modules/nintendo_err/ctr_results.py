@@ -183,10 +183,8 @@ mvd = Module("mvd", {271: ResultInfo("无效的配置。")})
 
 qtm = Module("qtm", {8: ResultInfo("相机正在工作或忙碌。")})
 
-# This is largely a dummy module, but FBI errors often get passed through the bot
-# which return incorrect error strings. Since there\'s not really a feasible way to figure out the
-# application which is throwing the error, this is the best compromise without giving the user
-# false information.
+# FBI errors passed through the bot carry incorrect error strings, and the throwing application
+# cannot be identified; this is the best compromise that avoids giving the user false information.
 application = Module(
     "application-specific error",
     {(0, 1023): ResultInfo("程序抛出了错误。请向其他人请教源代码的问题或者向程序的作者发送报告。")},

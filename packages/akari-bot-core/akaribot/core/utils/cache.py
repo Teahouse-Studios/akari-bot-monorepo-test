@@ -6,7 +6,7 @@ from akaribot.core.constants.path import cache_path
 
 def random_cache_path(ftt: str = "") -> Path:
     """
-    提供带有随机UUID文件名的缓存路径。
+    提供带有随机 UUID 文件名的缓存路径。
     """
     if ftt:
         return cache_path / f"{str(uuid.uuid4())}.{ftt}"

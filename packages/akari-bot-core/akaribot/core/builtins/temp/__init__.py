@@ -13,7 +13,7 @@ class Temp:
     提供一个全局的临时数据存储字典，用于在会话或消息处理期间
     存储临时数据。数据在程序重启后将丢失。
 
-    示例:
+    示例：
     ```
         Temp.data['key'] = 'value'
         value = Temp.data['key']

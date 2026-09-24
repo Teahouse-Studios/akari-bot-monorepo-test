@@ -22,11 +22,6 @@ credential_fields = ["sample_token"]
 
 @contextmanager
 def _isolated_registry(entries: dict[str, PackageEntry]):
-    """以给定条目替换发现结果，退出时还原。
-
-    :param entries: 新的条目映射，键为 ``种类:包名``。
-    :return: 上下文管理器。
-    """
     original_entries = PackageRegistry._entries
     original_index = PackageRegistry._by_import_path
     original_discovered = PackageRegistry._discovered
@@ -42,15 +37,6 @@ def _isolated_registry(entries: dict[str, PackageEntry]):
 
 
 def _entry(kind: str, name: str, import_path: str, root: Path, **manifest_fields) -> PackageEntry:
-    """构造测试用条目。
-
-    :param kind: 包种类。
-    :param name: 包名。
-    :param import_path: 导入路径。
-    :param root: 包根目录。
-    :param manifest_fields: 清单字段覆盖项。
-    :return: 条目。
-    """
     return PackageEntry(
         kind=kind,
         name=name,
@@ -63,7 +49,6 @@ def _entry(kind: str, name: str, import_path: str, root: Path, **manifest_fields
 
 
 def _test_by_import_path_uses_longest_prefix():
-    """前缀匹配须取最长者，而非先命中者。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         short = _entry("module", "wiki", "akaribot.modules.wiki", root)
@@ -77,7 +62,6 @@ def _test_by_import_path_uses_longest_prefix():
 
 
 def _test_by_import_path_handles_nested_and_unknown_paths():
-    """嵌套模块解析到所属包，未知路径返回 None。"""
     with tempfile.TemporaryDirectory() as tmp:
         entry = _entry("module", "wiki", "akaribot.modules.wiki", Path(tmp))
         with _isolated_registry({"module:wiki": entry}):
@@ -89,7 +73,6 @@ def _test_by_import_path_handles_nested_and_unknown_paths():
 
 
 def _test_modules_and_adapters_are_separated():
-    """同名包按种类区分，互不覆盖。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         as_module = _entry("module", "web", "akaribot.modules.web", root)
@@ -108,11 +91,8 @@ def _test_modules_and_adapters_are_separated():
 
 
 def _test_directory_scan_finds_repository_packages():
-    """目录扫描兜底须找出仓库内的全部模块与适配器，且键与包名一致。
-
-    已安装分发的 entry point 会先于兜底收录条目，故须显式屏蔽该路径：本用例断言的是
-    兜底本身，结论不应取决于当前环境装没装包。
-    """
+    # 已安装分发的 entry point 会先于兜底收录条目，故须显式屏蔽该路径：本用例断言的是
+    # 兜底本身，结论不应取决于当前环境装没装包。
     try:
         with patch.object(PackageRegistry, "_from_entry_points", return_value=[]):
             PackageRegistry.discover(force=True)
@@ -129,7 +109,6 @@ def _test_directory_scan_finds_repository_packages():
 
 
 def _test_entry_points_take_precedence_over_directory_scan():
-    """同一包同时来自 entry point 与目录扫描时，entry point 胜出且不重复计数。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         scanned = _entry("module", "wiki", "akaribot.modules.wiki", root)
@@ -151,7 +130,6 @@ def _test_entry_points_take_precedence_over_directory_scan():
 
 
 def _test_manifest_defaults_when_missing():
-    """包内无 manifest 时取全默认值，与拆包前的现状等价。"""
     with tempfile.TemporaryDirectory() as tmp:
         manifest = PackageRegistry._read_manifest("akaribot.modules.sample", Path(tmp))
     return (
@@ -167,7 +145,6 @@ def _test_manifest_defaults_when_missing():
 
 
 def _test_manifest_is_read_from_package_root():
-    """manifest 存在时按字段读取，序列字段转为元组。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "manifest.toml").write_text(MANIFEST_SAMPLE, encoding="utf-8")
@@ -182,13 +159,11 @@ def _test_manifest_is_read_from_package_root():
 
 
 def _test_manifest_ignores_unknown_keys():
-    """未知键不得进入清单，也不得使读取失败。"""
     manifest = PackageManifest.from_mapping({"schema": 1, "not_a_field": "x", "config_table": "module_x"})
     return manifest.config_table == "module_x" and not hasattr(manifest, "not_a_field")
 
 
 def _test_manifest_with_unknown_schema_falls_back_to_defaults():
-    """结构版本不认识时仍走默认清单，不抛异常。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "manifest.toml").write_text('schema = 99\nconfig_table = "module_x"\n', encoding="utf-8")
@@ -197,7 +172,6 @@ def _test_manifest_with_unknown_schema_falls_back_to_defaults():
 
 
 def _test_locales_paths_skip_packages_without_locale_dir():
-    """manifest 声明了 locales 但目录不存在时不收录该路径。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "locales").mkdir()
@@ -219,7 +193,6 @@ def _test_locales_paths_skip_packages_without_locale_dir():
 
 
 def _test_config_template_paths_follow_file_existence():
-    """配置模板按文件是否存在判断，不导入包。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "config.py").write_text("", encoding="utf-8")
@@ -231,7 +204,6 @@ def _test_config_template_paths_follow_file_existence():
 
 
 def _test_import_roots_cover_registered_packages():
-    """顶层段由已注册包导出，供裸包导入的展开使用。"""
     PackageRegistry.discover(force=True)
     module_roots = PackageRegistry.import_roots("module")
     adapter_roots = PackageRegistry.import_roots("adapter")
@@ -240,12 +212,10 @@ def _test_import_roots_cover_registered_packages():
 
 
 def _test_core_api_version_is_declared():
-    """公共 API 版本已声明，供 manifest 的兼容性校验使用。"""
     return isinstance(CORE_API_VERSION, int) and CORE_API_VERSION >= 1
 
 
 def _test_frozen_registry_takes_precedence():
-    """存在 frozen registry 时直接采用其中清单，不再做 entry point 与目录扫描。"""
     frozen = {
         "module:frozen": PackageEntry(
             kind="module",
@@ -265,7 +235,6 @@ def _test_frozen_registry_takes_precedence():
 
 
 def _test_package_data_is_per_kind_and_name():
-    """数据目录按种类与包名分层。"""
     with tempfile.TemporaryDirectory() as tmp:
         entry = _entry("module", "sample", "akaribot.modules.sample", Path(tmp))
         with patch.object(PackageRegistry, "_instance_data_root", return_value=Path("/instance/data")):
@@ -274,7 +243,6 @@ def _test_package_data_is_per_kind_and_name():
 
 
 def _test_package_data_uses_instance_data_root():
-    """包数据目录取实例的可写 data 目录，而非只读的 assets。"""
     from akaribot.core.paths import Paths
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -284,7 +252,6 @@ def _test_package_data_uses_instance_data_root():
 
 
 def _test_package_assets_follows_manifest():
-    """包内静态资源目录取 manifest.assets，未声明时退回包根。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         declared = _entry("module", "declared", "akaribot.modules.declared", root, assets="assets")
@@ -296,7 +263,6 @@ def _test_package_assets_follows_manifest():
 
 
 def _test_incompatible_packages_are_rejected():
-    """requires_core_api 不满足的包不注册，并可查询到成因。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         compatible = _entry("module", "compatible", "akaribot.modules.compatible", root, requires_core_api=">=1")
@@ -319,7 +285,6 @@ def _test_incompatible_packages_are_rejected():
 
 
 def _test_unparsable_api_specifier_is_rejected():
-    """描述符本身写错时同样拒绝注册，而不是抛异常中断发现。"""
     with tempfile.TemporaryDirectory() as tmp:
         broken = _entry("module", "broken", "akaribot.modules.broken", Path(tmp), requires_core_api="not a specifier")
         original = PackageRegistry._incompatible
@@ -332,7 +297,6 @@ def _test_unparsable_api_specifier_is_rejected():
 
 
 def _test_compatible_packages_are_kept():
-    """区间覆盖当前版本时保留注册，且不留下不兼容记录。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         entries = {
@@ -350,7 +314,6 @@ def _test_compatible_packages_are_kept():
 
 
 def _test_import_index_is_order_independent():
-    """同名导入路径的取舍不随条目输入顺序变化，且始终偏向带分发 metadata 者。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         scanned = _entry("module", "sample", "akaribot.modules.sample", root)
@@ -372,7 +335,6 @@ def _test_import_index_is_order_independent():
 
 
 def _test_reject_incompatible_rebuilds_index_with_same_rule():
-    """补做 API 门槛后重建的索引与发现阶段同规则，不退回「最后写入者胜出」。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         installed = replace(
@@ -393,7 +355,6 @@ def _test_reject_incompatible_rebuilds_index_with_same_rule():
 
 
 def _test_locales_paths_are_order_independent():
-    """locale 搜索路径按稳定的种类/包名/分发名排序，不随条目输入顺序变化。"""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         for name in ("zulu", "alpha", "mike"):

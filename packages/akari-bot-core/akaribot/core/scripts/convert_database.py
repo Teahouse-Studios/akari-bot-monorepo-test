@@ -37,12 +37,9 @@ from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 
 def _load_module_models() -> None:
-    """把各模块包的数据库模型注入本模块命名空间。
-
-    转换逻辑要按新模型写入数据，但 core 不得静态依赖任何模块包：模块在拆包后是独立分发，
-    未安装时静态导入会让脚本直接导入失败。清单取自 PackageRegistry，未安装的包自然缺席，
-    其数据留在旧表里不动。
-    """
+    # 转换逻辑要按新模型写入数据，但 core 不得静态依赖任何模块包：模块在拆包后是独立分发，
+    # 未安装时静态导入会让脚本直接导入失败。清单取自 PackageRegistry，未安装的包自然缺席，
+    # 其数据留在旧表里不动。
     for path in PackageRegistry.db_model_paths():
         module = importlib.import_module(path)
         for name, value in vars(module).items():
@@ -125,7 +122,7 @@ class StoredDataL(Model):
 
     Attributes:
         name: 数据键名
-        value: 数据值（JSON格式）
+        value: 数据值（JSON 格式）
     """
 
     name = fields.CharField(max_length=512, primary_key=True)
@@ -145,7 +142,7 @@ class Analytics(Model):
         moduleName: 模块名称
         moduleType: 模块类型
         targetId: 场景 ID
-        senderId: 发送者ID
+        senderId: 发送者 ID
         command: 执行的命令
         timestamp: 执行时间
     """
@@ -170,7 +167,7 @@ class UnfriendlyActionsTable(Model):
     Attributes:
         id: 记录唯一标识
         targetId: 场景 ID
-        senderId: 发送者ID
+        senderId: 发送者 ID
         action: 不当行为类型
         detail: 行为详情
         timestamp: 发生时间
@@ -359,7 +356,7 @@ async def rename_old_tables():
     """重命名旧数据库表，为新表让位。
 
     将所有旧版本的表添加"_old"前缀，以便在创建新表时不产生冲突。
-    这一步是必要的，因为我们需要同时保留旧数据和创建新架构。
+    这一步是必要的：须同时保留旧数据并创建新架构。
 
     表重命名映射：
     - SenderUnionInfo -> _old_SenderInfo

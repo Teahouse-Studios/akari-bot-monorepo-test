@@ -44,12 +44,7 @@ def remove_punctuations(text: str) -> str:
 
 
 def _rows(text: str) -> list[list[str]]:
-    """按制表符切分 TSV 文本。
-
-    不使用 csv 模块：曲名中可能含有引号，会被 csv 的引用规则误解。
-
-    :param text: TSV 文本。
-    """
+    # 不使用 csv 模块：曲名中可能含有引号，会被 csv 的引用规则误解。
     return [line.split("\t") for line in text.splitlines() if line.strip()]
 
 
@@ -127,12 +122,7 @@ def load_song_info() -> dict[str, dict]:
 
 
 def _as_constant(value) -> float:
-    """将定数取值转为浮点数，无法解析者视作该难度缺失。
-
-    5.1 之前的曲目信息将定数原样保留为字符串，缺失的难度写作 "-"，直接转换会中断整表构建。
-
-    :param value: 定数取值。
-    """
+    # 5.1 之前的曲目信息将定数原样保留为字符串，缺失的难度写作 "-"，直接转换会中断整表构建。
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -196,17 +186,12 @@ def illustration_path(song_id: str) -> Path | None:
 
 
 def _local_version() -> str:
-    """读取本地记录的资源版本号。"""
     if not version_path.exists():
         return ""
     return version_path.read_text(encoding="utf-8").strip()
 
 
 async def _download_illustrations(song_ids: list[str]) -> None:
-    """下载缺失的曲绘。
-
-    :param song_ids: 曲目 id 列表。
-    """
     illustration_dir.mkdir(parents=True, exist_ok=True)
     known = set(song_ids)
     # 旧版本按归一化的小写 id 命名，与新键无法对应；此处按新键集合清理，旧文件自然落入待删之列。

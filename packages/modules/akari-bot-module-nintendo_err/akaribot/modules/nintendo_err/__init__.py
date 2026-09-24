@@ -89,7 +89,6 @@ e = module("nintendo-err", alias=["nintendo_err", "err"], developers=["OasisAkar
 
 
 def _convert_discord_embed(embed) -> EmbedElement:
-    """将 Discord Embed 转换为框架的 Embed 元素，供结果渲染使用。"""
     from discord import Embed as DiscordEmbed
 
     embed_ = Embed()

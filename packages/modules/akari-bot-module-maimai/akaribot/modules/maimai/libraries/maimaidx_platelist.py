@@ -165,7 +165,7 @@ class DrawPlateList:
                     fill=(0, 0, 0),
                 )
 
-                # 右侧用于放置封面ID
+                # 右侧用于放置封面 ID
                 draw.rectangle(
                     [x_offset + large_bar_width, bar_top, x_offset + self.image_size, bar_top + bar_height],
                     fill=vcolor,
@@ -193,7 +193,7 @@ class DrawPlateList:
                             fill=self.diff_colors[i],
                         )
 
-                # 绘制封面ID
+                # 绘制封面 ID
                 font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
                 bbox = draw.textbbox((0, 0), str(sid), font=font)
                 text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -203,7 +203,7 @@ class DrawPlateList:
 
                 if all(self.cover_marks[sid]):
                     overlay = Image.new("RGBA", (self.image_size, self.image_size), (0, 0, 0, 180))  # 半透明黑色
-                    self.img.paste(overlay, (x_offset, y_offset), overlay)  # 使用overlay进行粘贴
+                    self.img.paste(overlay, (x_offset, y_offset), overlay)  # 使用 overlay 进行粘贴
 
                     text_color = self._get_goal_color()
                     font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 36, encoding="utf-8")
@@ -263,7 +263,7 @@ async def _get_plate_process(
     verlist: list = res["verlist"]
 
     if goal in ["将", "者"]:
-        for song in verlist:  # 将剩余歌曲ID和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
             if song["level_index"] == 0 and song["achievements"] >= (100.0 if goal == "将" else 80.0):
                 song_complete_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["achievements"] >= (100.0 if goal == "将" else 80.0):
@@ -278,9 +278,9 @@ async def _get_plate_process(
                 and song["level_index"] == 4
                 and song["achievements"] >= (100.0 if goal == "将" else 80.0)
             ):
-                song_complete_remaster.append((str(song["id"]), song["level_index"]))  # 霸者和舞牌需要Re:MASTER难度
+                song_complete_remaster.append((str(song["id"]), song["level_index"]))  # 霸者和舞牌需要 Re:MASTER 难度
     elif goal == "極":
-        for song in verlist:  # 将剩余歌曲ID和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
             if song["level_index"] == 0 and song["fc"]:
                 song_complete_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["fc"]:
@@ -297,7 +297,7 @@ async def _get_plate_process(
             ):
                 song_complete_remaster.append((str(song["id"]), song["level_index"]))
     elif goal == "舞舞":
-        for song in verlist:  # 将剩余歌曲ID和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
             if song["level_index"] == 0 and song["fs"] in ["fsd", "fsdp"]:
                 song_complete_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["fs"] in ["fsd", "fsdp"]:
@@ -314,7 +314,7 @@ async def _get_plate_process(
             ):
                 song_complete_remaster.append((str(song["id"]), song["level_index"]))
     elif goal == "神":
-        for song in verlist:  # 将剩余歌曲ID和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
             if song["level_index"] == 0 and song["fc"] in ["ap", "app"]:
                 song_complete_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["fc"] in ["ap", "app"]:
@@ -359,7 +359,7 @@ async def _get_plate_process(
         "2": [],
         "1": [],
     }
-    for music in await total_list.get():  # 将未游玩歌曲ID加入目标列表
+    for music in await total_list.get():  # 将未游玩歌曲 ID 加入目标列表
         if (
             music["basic_info"]["from"] in payload["version"] and music.id not in song_expect and int(music.id) < 100000
         ):  # 过滤宴谱

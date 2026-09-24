@@ -38,12 +38,6 @@ def upgrade(doc, table):
 
 
 def _make_package(root: Path, *, schema_version: int = 0) -> PackageEntry:
-    """造一个带配置模板与两条迁移脚本的合成包。
-
-    :param root: 包根目录。
-    :param schema_version: 清单声明的表结构版本。
-    :return: 包条目。
-    """
     (root / "config.py").write_text("", encoding="utf-8")
     revisions = root / "config_migrations"
     revisions.mkdir()
@@ -65,11 +59,8 @@ def _make_package(root: Path, *, schema_version: int = 0) -> PackageEntry:
 
 
 def _patches(entry: PackageEntry, config_root: Path):
-    """把发现层、配置根与 CFGManager 重载替换成隔离实现。
-
-    ``PackageRegistry.modules()`` 的键是**包名**（不是 ``种类:包名``）：迁移运行器按 ``entry.name``
-    取回自己的 revision，键写错会让整条链路静默查不到迁移。
-    """
+    # ``PackageRegistry.modules()`` 的键是**包名**（不是 ``种类：包名``）：迁移运行器按 ``entry.name``
+    # 取回自己的 revision，键写错会让整条链路静默查不到迁移。
     return (
         patch.object(PackageRegistry, "modules", lambda: {PACKAGE: entry}),
         patch.object(PackageRegistry, "adapters", lambda: {}),
@@ -79,13 +70,11 @@ def _patches(entry: PackageEntry, config_root: Path):
 
 
 def _run_with(patches, action):
-    """在全部补丁生效的前提下执行一次动作。"""
     with patches[0], patches[1], patches[2], patches[3]:
         return action()
 
 
 def _write_config(config_root: Path, body: str) -> Path:
-    """写出待迁移的配置文件。"""
     config_root.mkdir(parents=True, exist_ok=True)
     path = config_root / f"{TABLE}.toml"
     path.write_text(body, encoding="utf-8")
@@ -93,7 +82,6 @@ def _write_config(config_root: Path, body: str) -> Path:
 
 
 def _test_revisions_are_discovered_in_order():
-    """迁移脚本按号段升序发现，并带上包名与修订标识。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)
@@ -104,7 +92,6 @@ def _test_revisions_are_discovered_in_order():
 
 
 def _test_upgrade_applies_and_bumps_version():
-    """两条 revision 依次应用，版本号推到最后一号，内容按脚本改写。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)
@@ -122,7 +109,6 @@ def _test_upgrade_applies_and_bumps_version():
 
 
 def _test_second_run_is_noop():
-    """二次执行是 no-op：版本号已到位，不再重复应用。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)
@@ -136,7 +122,6 @@ def _test_second_run_is_noop():
 
 
 def _test_pending_lists_unapplied_revisions():
-    """未迁移时 pending 列出全部号段，迁移后清空。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)
@@ -150,7 +135,6 @@ def _test_pending_lists_unapplied_revisions():
 
 
 def _test_versionless_file_starts_before_first_revision():
-    """没有版本号的旧文件从「首条 revision 之前」起算，因此首条也会被应用。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)
@@ -162,7 +146,6 @@ def _test_versionless_file_starts_before_first_revision():
 
 
 def _test_stamp_writes_schema_version():
-    """stamp 把清单的表结构版本写进配置文件，已一致时不重复写。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root, schema_version=7)
@@ -176,7 +159,6 @@ def _test_stamp_writes_schema_version():
 
 
 def _test_failed_revision_leaves_file_untouched():
-    """单条脚本抛错时不写回文件，下一次仍能从同一号段重试。"""
     with tempfile.TemporaryDirectory(prefix="akari-config-migration-") as raw:
         root = Path(raw)
         entry = _make_package(root)

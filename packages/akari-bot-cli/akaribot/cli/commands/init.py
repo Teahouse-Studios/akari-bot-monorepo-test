@@ -50,14 +50,12 @@ DEFAULT_CORE_EXTRA = "full"
 
 
 def _core_extras(minimal: bool, extra: list[str]) -> list[str]:
-    """core 要装的 extras：默认 full，``--extra`` 在其上追加，``--minimal`` 一个不装。"""
     if minimal:
         return []
     return list(dict.fromkeys((DEFAULT_CORE_EXTRA, *extra)))
 
 
 def _config_version(instance: Instance) -> int:
-    """问实例解释器要 core 的配置版本号；失败时退回 1 并告警。"""
     code = "from akaribot.core.constants import config_version; print(config_version)"
     try:
         proc = instance.run_python_capture("-c", code)
@@ -73,7 +71,6 @@ def _config_version(instance: Instance) -> int:
 
 
 def _write_config_skeleton(instance: Instance, locale: str) -> None:
-    """写出最小 config.toml 骨架，已存在时不覆盖。"""
     path = instance.config_dir / "config.toml"
     if path.exists():
         console.print(i18n.t("cli.init.skeleton_exists", path=path))
@@ -89,7 +86,6 @@ def _ask_questions(
     workspace_root: Path | None,
     no_venv: bool,
 ) -> tuple[str, list[str], Path | None, bool]:
-    """交互式补齐未给出的选项，全部为线性问答（typer 内建 prompt/confirm）。"""
     if locale is None:
         locale = typer.prompt(i18n.t("cli.init.ask.locale"), default=DEFAULT_LOCALE).strip()
     if not adapters:
@@ -114,7 +110,6 @@ def _plan(
     extras: list[str],
     offline: bool,
 ) -> list[engine.InstallTarget]:
-    """解析 core、适配器与初始模块的安装目标并去重。"""
     catalog: engine.RegistryCatalog | None = None
     if workspace_root is None:
         catalog = engine.RegistryCatalog.load(instance.meta.registry_sources, offline=offline)
@@ -136,7 +131,6 @@ def _plan(
 
 
 def _install_specs(targets: list[engine.InstallTarget]) -> list[str]:
-    """按分发名去重后拼出 uv 参数，本地依赖闭包里的重复路径只保留一次。"""
     specs: list[str] = []
     seen: set[str] = set()
     for target in targets:

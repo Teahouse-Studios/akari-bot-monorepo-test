@@ -14,29 +14,17 @@ SQLITE_CONNECTION_DEFAULTS = {
 
 
 def _is_absolute_target(target: str) -> bool:
-    """链接中的目标文件是否按绝对路径给出。
-
-    路径可能照抄自 Windows 配置，``Path`` 在其它平台上判不出盘符与反斜杠开头的写法，
-    故按字面补判，免得把绝对路径锚到实例根。
-
-    :param target: 链接中 ``://`` 之后、查询串之前的路径部分。
-    :return: 绝对路径为 ``True``。
-    """
+    # 路径可能照抄自 Windows 配置，``Path`` 在其它平台上判不出盘符与反斜杠开头的写法，
+    # 故按字面补判，免得把绝对路径锚到实例根。
     if Path(target).is_absolute() or target.startswith(("/", "\\")):
         return True
     return len(target) > 1 and target[1] == ":"
 
 
 def _resolve_sqlite_path(link: str) -> Path | None:
-    """解析 SQLite 链接指向的数据库文件，相对路径锚定到实例根。
-
-    默认链接是 ``sqlite://database/save.db`` 这样的相对路径，驱动按进程 cwd 解析它，
-    从实例外启动的入口因此会把库建到调用目录。实例内的相对路径一律以
-    :class:`akaribot.core.paths.Paths` 记录的实例根为基准，与 ``AKARI_INSTANCE_DIR`` 一致。
-
-    :param link: 数据库链接。
-    :return: 数据库文件路径；非 SQLite 链接与 ``:memory:`` 等无文件链接为 ``None``。
-    """
+    # 默认链接是 ``sqlite://database/save.db`` 这样的相对路径，驱动按进程 cwd 解析它，
+    # 从实例外启动的入口因此会把库建到调用目录。实例内的相对路径一律以
+    # :class:`akaribot.core.paths.Paths` 记录的实例根为基准，与 ``AKARI_INSTANCE_DIR`` 一致。
     parts = link.split("://", 1)
     if len(parts) < 2 or parts[0].split("+")[0] != "sqlite":
         return None
@@ -49,11 +37,6 @@ def _resolve_sqlite_path(link: str) -> Path | None:
 
 
 def _anchor_sqlite_link(link: str) -> str:
-    """把 SQLite 链接里的相对文件路径改写为实例根下的绝对路径。
-
-    :param link: 数据库链接。
-    :return: 改写后的链接；无需改写时为原值。
-    """
     resolved = _resolve_sqlite_path(link)
     if resolved is None:
         return link

@@ -61,25 +61,16 @@ class CircularDependencyError(RegistryError):
 
 
 def _logger():
-    """惰性取得日志器。
-
-    不能在模块层导入 core.logger：core.logger 会经 core.config.base 引入整个配置系统，
-    而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
-    （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要写日志时。
-    """
+    # 不能在模块层导入 core.logger：core.logger 会经 core.config.base 引入整个配置系统，
+    # 而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
+    # （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要写日志时。
     from akaribot.core.logger import Logger
 
     return Logger
 
 
 def _canonicalize(name: str) -> str:
-    """分发名的规范化形式。
-
-    依赖声明的写法允许大小写与下划线差异，比较前统归一形式，等价名字才能命中同一个包。
-
-    :param name: 分发名或包名。
-    :return: 规范化后的名字。
-    """
+    # 依赖声明的写法允许大小写与下划线差异，比较前统归一形式，等价名字才能命中同一个包。
     from packaging.utils import canonicalize_name
 
     return canonicalize_name(name)
@@ -235,28 +226,19 @@ class PackageRegistry:
 
     @staticmethod
     def _is_more_specific(candidate: PackageEntry, current: PackageEntry) -> bool:
-        """同名导入路径冲突时，取 dist_name 非空者。"""
         return bool(candidate.dist_name) and not current.dist_name
 
     @staticmethod
     def _entry_sort_key(entry: PackageEntry) -> tuple[str, str, str]:
-        """条目的稳定排序键。
-
-        entry point 的枚举顺序不保证跨环境一致，凡是由条目集合推导出的结果（导入路径索引、
-        locale 搜索路径）都必须先按此键排序，否则同一批包在不同机器上可能得到不同结果。
-        """
+        # entry point 的枚举顺序不保证跨环境一致，凡是由条目集合推导出的结果（导入路径索引、
+        # locale 搜索路径）都必须先按此键排序，否则同一批包在不同机器上可能得到不同结果。
         return (entry.kind, entry.name, entry.dist_name)
 
     @classmethod
     def _rebuild_import_index(cls, entries: dict[str, PackageEntry]) -> None:
-        """由条目重建「导入路径 → 条目」索引。
-
-        同名导入路径可能同时来自 entry point 与目录扫描，取带分发 metadata 者。发现阶段与
-        :meth:`reject_incompatible` 的补做必须共用本方法：两处各写一遍取舍规则时，同一批数据
-        会因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
-
-        :param entries: 参与建索引的条目，按 :meth:`_key` 唯一。
-        """
+        # 同名导入路径可能同时来自 entry point 与目录扫描，取带分发 metadata 者。发现阶段与
+        # :meth:`reject_incompatible` 的补做必须共用本方法：两处各写一遍取舍规则时，同一批数据
+        # 会因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
         index: dict[str, PackageEntry] = {}
         for entry in sorted(entries.values(), key=cls._entry_sort_key):
             current = index.get(entry.import_path)
@@ -266,12 +248,6 @@ class PackageRegistry:
 
     @classmethod
     def _insert(cls, entries: dict[str, PackageEntry], entry: PackageEntry, *, source: str) -> None:
-        """按键写入条目，已存在时保留先写入者并记录冲突。
-
-        :param entries: 待填充的映射。
-        :param entry: 新条目。
-        :param source: 冲突信息中用于指明来源的描述。
-        """
         key = cls._key(entry)
         existing = entries.get(key)
         if existing is None:
@@ -330,15 +306,9 @@ class PackageRegistry:
     def _reject_core_api_incompatible(
         cls, entries: dict[str, PackageEntry]
     ) -> tuple[dict[str, PackageEntry], dict[str, str], dict[str, str]]:
-        """按 ``requires_core_api`` 分出与当前 core API 版本不兼容的包。
-
-        结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出；
-        规范化分发名到原因，供依赖校验把「依赖一个已被拒绝的包」判为不可用。本方法不改动
-        类状态，由调用方决定如何登记。
-
-        :param entries: 本次发现的全部条目。
-        :return: 三元组——保留的条目；标签到原因；规范化分发名到原因。
-        """
+        # 结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出；
+        # 规范化分发名到原因，供依赖校验把「依赖一个已被拒绝的包」判为不可用。本方法不改动
+        # 类状态，由调用方决定如何登记。
         from packaging.specifiers import InvalidSpecifier, SpecifierSet
         from packaging.version import InvalidVersion, Version
 
@@ -381,12 +351,6 @@ class PackageRegistry:
 
     @classmethod
     def _from_entry_points(cls, kind: str, group: str) -> list[PackageEntry]:
-        """枚举某个 entry point 组的条目。
-
-        :param kind: 包种类。
-        :param group: entry point 组名。
-        :return: 条目列表；单个条目失败时记录错误并跳过。
-        """
         try:
             discovered = importlib.metadata.entry_points(group=group)
         except TypeError:
@@ -401,16 +365,8 @@ class PackageRegistry:
 
     @classmethod
     def _entry_from_entry_point(cls, kind: str, entry_point: Any) -> PackageEntry:
-        """把单个 entry point 解析为条目。
-
-        只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n
-        快照接上之前写盘，新实例生成的配置注释全部退化为空。
-
-        :param kind: 包种类。
-        :param entry_point: ``importlib.metadata.EntryPoint`` 实例。
-        :return: 条目。
-        :raises RegistryError: entry point 指向的不是包，或无法定位其目录。
-        """
+        # 只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n
+        # 快照接上之前写盘，新实例生成的配置注释全部退化为空。
         import_path = entry_point.value
         root = cls._root_of(import_path)
         distribution = importlib.metadata.distribution(entry_point.dist.name) if entry_point.dist else None
@@ -429,12 +385,6 @@ class PackageRegistry:
 
     @staticmethod
     def _root_of(import_path: str) -> Path:
-        """按导入路径定位包根目录，不导入该包。
-
-        :param import_path: 包导入路径，如 ``akaribot.modules.wiki``。
-        :return: 包根目录。
-        :raises RegistryError: 该路径无法定位，或不是包。
-        """
         spec = importlib.util.find_spec(import_path)
         if spec is None:
             raise RegistryError(f"{import_path} cannot be located")
@@ -447,7 +397,6 @@ class PackageRegistry:
 
     @staticmethod
     def _is_editable(distribution: Any) -> bool:
-        """判断已安装分发是否为可编辑安装。"""
         if distribution is None:
             return True
         direct_url = distribution.read_text("direct_url.json")
@@ -463,12 +412,7 @@ class PackageRegistry:
 
     @classmethod
     def _from_directory_scan(cls) -> list[PackageEntry]:
-        """扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``。
-
-        未安装分发的源码检出依赖这条路径，因此扫描对象是真实存在的包目录，而非硬编码的路径常量。
-
-        :return: 条目列表，按 ``(kind, name)`` 排序。
-        """
+        # 未安装分发的源码检出依赖这条路径，因此扫描对象是真实存在的包目录，而非硬编码的路径常量。
         entries: list[PackageEntry] = []
         for kind, package_name in (("module", "akaribot.modules"), ("adapter", "akaribot.adapters")):
             package = sys.modules.get(package_name) or cls._import_optional(package_name)
@@ -493,17 +437,9 @@ class PackageRegistry:
 
     @classmethod
     def _entry_from_directory(cls, kind: str, package_name: str, root: Path) -> PackageEntry:
-        """由目录扫描结果构造条目。
-
-        条目根取**导入包目录**而非分发包目录：manifest、locales、assets、migrations 都相对它
-        解析，entry point 路径下两者同为导入包目录，此处对齐。源码布局为 ``src`` 时按导入路径
-        下推；不是该布局时退回传入目录。
-
-        :param kind: 包种类。
-        :param package_name: 命名空间前缀，``akaribot.modules`` 或 ``akaribot.adapters``。
-        :param root: 分发包目录。
-        :return: 条目。
-        """
+        # 条目根取**导入包目录**而非分发包目录：manifest、locales、assets、migrations 都相对它
+        # 解析，entry point 路径下两者同为导入包目录，此处对齐。源码布局为 ``src`` 时按导入路径
+        # 下推；不是该布局时退回传入目录。
         import_path = f"{package_name}.{root.name}"
         package_root = root / "src" / Path(*import_path.split("."))
         if not package_root.is_dir():
@@ -520,12 +456,6 @@ class PackageRegistry:
 
     @classmethod
     def _read_manifest(cls, import_path: str, root: Path) -> PackageManifest:
-        """读取包内 manifest；不存在或结构版本不认识时返回默认清单。
-
-        :param import_path: 包导入路径，用于日志。
-        :param root: 包根目录。
-        :return: 清单对象。
-        """
         path = root / MANIFEST_FILENAME
         if not path.is_file():
             return PackageManifest()
@@ -694,7 +624,7 @@ class PackageRegistry:
         revision 在拆包后重新变为待应用。目录以 ``manifest.migrations`` 为准，未声明时回落包内
         ``migrations/``，否则拆包前没有任何包带 manifest，迁移目录会全部不可见。
 
-        :return: ``(包名, 目录)`` 列表，按包名排序。
+        :return: ``(包名， 目录)`` 列表，按包名排序。
         """
         cls.discover()
         directories: list[tuple[str, Path]] = []
@@ -739,23 +669,14 @@ class PackageRegistry:
 
     @staticmethod
     def _instance_data_root() -> Path:
-        """实例数据根目录。
-
-        取实例的可写 data 目录，而非顶层只读的 assets：包的可写数据不属于随仓库分发的
-        内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
-        """
+        # 取实例的可写 data 目录，而非顶层只读的 assets：包的可写数据不属于随仓库分发的
+        # 内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
         from akaribot.core.paths import Paths
 
         return Paths.data
 
     @classmethod
     def _resolve(cls, name_or_entry: str | PackageEntry) -> PackageEntry:
-        """把包名解析为条目。
-
-        :param name_or_entry: 包名或条目。
-        :return: 条目。
-        :raises KeyError: 无法解析。
-        """
         if isinstance(name_or_entry, PackageEntry):
             return name_or_entry
         cls.discover()
@@ -889,14 +810,7 @@ class PackageRegistry:
     def _record_rejection(
         cls, entry: PackageEntry, reason: str, rejected: dict[str, str], refused: dict[str, str]
     ) -> None:
-        """
-        登记一次拒绝。
-
-        :param entry: 被拒绝的包。
-        :param reason: 拒绝原因。
-        :param rejected: 展示用标签到原因的映射，就地写入。
-        :param refused: 规范化分发名到原因的映射，供依赖级联判分，就地写入。
-        """
+        # 登记一次拒绝。
         label = cls._package_label(entry)
         rejected[label] = reason
         for dist_name in cls._distribution_names(entry):
@@ -907,12 +821,6 @@ class PackageRegistry:
     def _reject_unsatisfied_dependencies(
         cls, entries: dict[str, PackageEntry], *, refused: dict[str, str] | None = None
     ) -> tuple[dict[str, PackageEntry], dict[str, str]]:
-        """剔除声明依赖缺失、版本不满足或成环的包，并级联剔除依赖它们的包。
-
-        :param entries: 本次发现中已通过 core API 校验的条目。
-        :param refused: 已确定不可用的依赖（规范化分发名到原因），由 core API 校验登记。
-        :return: 二元组——保留的条目；被拒绝包的标识到原因的映射。
-        """
         refused = dict(refused or {})
         kept: dict[str, PackageEntry] = {}
         rejected: dict[str, str] = {}
@@ -955,12 +863,7 @@ class PackageRegistry:
 
     @classmethod
     def _dependency_reason(cls, entry: PackageEntry, refused: dict[str, str] | None = None) -> str | None:
-        """声明依赖不满足时的原因；全部满足时为 ``None``。
-
-        :param entry: 待查询的包。
-        :param refused: 已被拒绝的依赖（规范化分发名到原因）。命中的依赖按不可用处理：
-            它可能仍装在环境里，但不会完成注册。
-        """
+        # 它可能仍装在环境里，但不会完成注册。
         refused = refused or {}
         reasons = []
         for dependency in cls.dependencies(entry):
@@ -977,14 +880,8 @@ class PackageRegistry:
 
     @staticmethod
     def _distribution_names(entry: PackageEntry) -> tuple[str, ...]:
-        """条目可被依赖声明引用的分发名。
-
-        目录扫描的包没有分发名，按 ``akari-bot-<种类>-<包名>`` 合成：该名字与拆包后的
-        分发名一致，依赖声明因此不必区分包来自 entry point 还是目录扫描。
-
-        :param entry: 包。
-        :return: 分发名元组。
-        """
+        # 目录扫描的包没有分发名，按 ``akari-bot-<种类>-<包名>`` 合成：该名字与拆包后的
+        # 分发名一致，依赖声明因此不必区分包来自 entry point 还是目录扫描。
         if entry.dist_name:
             return (entry.dist_name,)
         return (f"akari-bot-{entry.kind}-{entry.name}",)
@@ -998,7 +895,6 @@ class PackageRegistry:
 
     @staticmethod
     def _requirement_satisfied(installed: str | None, requirement: Any, dist_name: str) -> bool:
-        """已装版本是否满足依赖描述符。版本号不可解析时视为不满足。"""
         from packaging.version import InvalidVersion, Version
 
         if installed is None:
@@ -1011,14 +907,7 @@ class PackageRegistry:
 
     @staticmethod
     def _parsed_requirements(distribution: Any, dist_name: str) -> tuple[Any, ...]:
-        """解析分发 metadata 的 ``Requires-Dist``。
-
-        单行不可解析时跳过该行：一条写错的依赖不应让整个包从注册表中消失。
-
-        :param distribution: ``importlib.metadata`` 的分发对象。
-        :param dist_name: 分发名，用于日志。
-        :return: ``Requirement`` 元组。
-        """
+        # 单行不可解析时跳过该行：一条写错的依赖不应让整个包从注册表中消失。
         from packaging.requirements import InvalidRequirement, Requirement
 
         parsed = []
@@ -1031,16 +920,9 @@ class PackageRegistry:
 
     @classmethod
     def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
-        """该分发声明且已装的 extra。
-
-        分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取「该 extra 下属
-        的依赖都能解析为已装分发」为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
-        误判为已装，代价是多记一条依赖边。既有测试固化此判据。
-
-        :param distribution: 分发对象。
-        :param requirements: 已解析的 ``Requires-Dist``。
-        :return: 已装 extra 的规范化名字集合。
-        """
+        # 分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取「该 extra 下属
+        # 的依赖都能解析为已装分发」为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
+        # 误判为已装，代价是多记一条依赖边。既有测试固化此判据。
         declared = {_canonicalize(name) for name in distribution.metadata.get_all("Provides-Extra") or []}
         installed = set()
         for extra in declared:
@@ -1051,16 +933,9 @@ class PackageRegistry:
 
     @classmethod
     def _marker_applies(cls, marker: Any, extras: frozenset[str] | tuple[str, ...]) -> bool:
-        """环境标记是否成立。
-
-        extra 未指定时 packaging 代入空串，带 ``extra`` 子句的标记因此先判为假，再逐个
-        代入候选 extra 重判；只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
-        依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
-
-        :param marker: ``packaging.markers.Marker``；``None`` 表示无条件。
-        :param extras: 参与判定的已装 extra。
-        :return: 标记是否成立。
-        """
+        # extra 未指定时 packaging 代入空串，带 ``extra`` 子句的标记因此先判为假，再逐个
+        # 代入候选 extra 重判；只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
+        # 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
         if marker is None:
             return True
         try:
@@ -1073,11 +948,6 @@ class PackageRegistry:
 
     @classmethod
     def _edges_of(cls, entries: dict[str, PackageEntry]) -> dict[str, tuple[str, ...]]:
-        """给定条目集合内的声明依赖边。
-
-        :param entries: 条目映射，键为注册表键。
-        :return: 注册表键到其依赖键的映射，值为排序后的元组。
-        """
         index = {
             _canonicalize(name): key
             for key, candidate in entries.items()
@@ -1102,20 +972,13 @@ class PackageRegistry:
     def _cycle_labels(
         cls, cycles: tuple[tuple[str, ...], ...], entries: dict[str, PackageEntry]
     ) -> tuple[tuple[str, ...], ...]:
-        """把环的注册表键路径换成展示名路径。"""
         return tuple(tuple(cls._package_label(entries[key]) for key in cycle) for cycle in cycles)
 
     @staticmethod
     def _cycles(edges: dict[str, tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
-        """依赖图中的全部环。
-
-        以 Tarjan 算法求强连通分量：成员多于一个的分量即为环。返回的是分量成员而非
-        某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径；这样两个互不相交的环
-        都会被发现，不会被只找首个环的写法漏掉。
-
-        :param edges: 注册表键到其依赖键的映射。
-        :return: 每个环的成员键，按最小键排序。
-        """
+        # 以 Tarjan 算法求强连通分量：成员多于一个的分量即为环。返回的是分量成员而非
+        # 某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径；这样两个互不相交的环
+        # 都会被发现，不会被只找首个环的写法漏掉。
         index: dict[str, int] = {}
         low: dict[str, int] = {}
         stack: list[str] = []
@@ -1164,12 +1027,6 @@ class PackageRegistry:
 
     @staticmethod
     def _cycle_path(component: tuple[str, ...], edges: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
-        """从强连通分量中还原一条完整回路，首尾为同一个包。
-
-        :param component: 分量内的节点键。
-        :param edges: 依赖图。
-        :return: 回路路径，宽度优先取最短的一条。
-        """
         members = set(component)
         start = min(component)
         queue: deque[tuple[str, ...]] = deque([(start,)])

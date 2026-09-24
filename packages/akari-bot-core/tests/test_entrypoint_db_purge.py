@@ -24,7 +24,6 @@ UNKNOWN_DIST = "akari-bot-module-absent"
 
 
 def _entry(dist: str, tables: tuple[str, ...]) -> PackageEntry:
-    """构造一个声明了 owned_tables 的模块条目。"""
     return PackageEntry(
         kind="module",
         name="purgeable",
@@ -37,7 +36,6 @@ def _entry(dist: str, tables: tuple[str, ...]) -> PackageEntry:
 
 
 def _with_registry(entry: PackageEntry):
-    """把发现结果替换成单个条目，退出时还原。"""
     return patch.multiple(
         PackageRegistry,
         discover=lambda **kwargs: None,
@@ -48,8 +46,6 @@ def _with_registry(entry: PackageEntry):
 
 
 def _purge_patches(existing: list[bool], executed: list[str]):
-    """把数据库侧换成可观察的桩：init/close、表存在性、连接与 DDL 执行。"""
-
     class _Context:
         def __init__(self, conn, db_type=None) -> None:
             self.conn = conn
@@ -70,14 +66,12 @@ def _purge_patches(existing: list[bool], executed: list[str]):
 
 
 def _test_declared_tables_come_from_manifest():
-    """表名只从 manifest 读，调用方无从注入别的表名。"""
     with _with_registry(_entry(KNOWN_DIST, ("module_purgeable_a", "module_purgeable_b"))):
         tables = db._owned_tables(KNOWN_DIST)
     return tables == ("module_purgeable_a", "module_purgeable_b")
 
 
 def _test_unknown_distribution_is_rejected():
-    """未安装的分发必须报错，而不是返回空表名悄悄成功。"""
     with _with_registry(_entry(KNOWN_DIST, ("module_purgeable_a",))):
         try:
             db._owned_tables(UNKNOWN_DIST)
@@ -87,7 +81,6 @@ def _test_unknown_distribution_is_rejected():
 
 
 def _test_package_without_declared_tables_is_rejected():
-    """清单没声明任何表时报错，避免把「无表可删」误当成「已清理干净」。"""
     with _with_registry(_entry(KNOWN_DIST, ())):
         try:
             db._owned_tables(KNOWN_DIST)
@@ -97,7 +90,6 @@ def _test_package_without_declared_tables_is_rejected():
 
 
 async def _test_purge_drops_only_existing_declared_tables():
-    """只对存在的声明表发 DROP，缺失的表记入 missing 而不是发语句。"""
     executed: list[str] = []
     patches = _purge_patches([True, False], executed)
     with (
@@ -117,7 +109,6 @@ async def _test_purge_drops_only_existing_declared_tables():
 
 
 async def _test_missing_tables_are_idempotent_success():
-    """全部表都不存在时仍以 0 退出：契约是「这些表不再存在」，已经达成。"""
     stdout = io.StringIO()
     patches = _purge_patches([False], [])
     with (
@@ -135,7 +126,6 @@ async def _test_missing_tables_are_idempotent_success():
 
 
 async def _test_failure_still_emits_structured_reason_on_stdout():
-    """--json 下失败原因也要进 stdout：调用方解析的是 stdout，只给 stderr 它拿不到原因。"""
     stdout = io.StringIO()
     with _with_registry(_entry(KNOWN_DIST, ("module_purgeable_a",))), redirect_stdout(stdout):
         code = await asyncio.to_thread(db.main, ["purge", "--package", UNKNOWN_DIST, "--json"])
@@ -144,7 +134,6 @@ async def _test_failure_still_emits_structured_reason_on_stdout():
 
 
 def _test_human_output_reports_missing_tables():
-    """非 JSON 输出要把「本就不存在」讲清楚，不能只说删了 0 张。"""
     stdout = io.StringIO()
     with redirect_stdout(stdout):
         db._emit_purge({"dist": KNOWN_DIST, "dropped": ["a"], "missing": ["b"]}, False)

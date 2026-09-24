@@ -33,10 +33,7 @@ FIXTURE_DIR = Paths.tests / "fixtures" / "http"
 
 
 def _url_to_filename(url: str, method: str | None = None, body_digest: str | None = None) -> str:
-    """将请求特征转换为安全的文件名（使用 SHA256 hash）。
-
-    文件名需覆盖 method 与请求体，否则同一 URL 上请求体不同的调用会互相覆盖。
-    """
+    # 文件名需覆盖 method 与请求体，否则同一 URL 上请求体不同的调用会互相覆盖。
     key = url
     if method:
         key = f"{method.upper()} {key}"

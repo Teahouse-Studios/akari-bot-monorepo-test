@@ -18,7 +18,6 @@ NO_SOLUTION_NUMBERS = (1, 1, 1, 1)
 
 
 def _all_solutions_valid(numbers) -> bool:
-    """求证每个解均语法合法、求值为 24 且恰好用尽给定的数。"""
     solutions = find_solution(numbers)
     if not solutions:
         return False
@@ -34,7 +33,6 @@ def _all_solutions_valid(numbers) -> bool:
 
 
 async def _test_accepts_tuple():
-    """测试求解 - 接受元组入参，即命令函数实际传入的类型"""
     try:
         return _all_solutions_valid((1, 2, 3, 4))
 
@@ -43,7 +41,6 @@ async def _test_accepts_tuple():
 
 
 async def _test_accepts_list():
-    """测试求解 - 接受列表入参"""
     try:
         return _all_solutions_valid([1, 2, 3, 4])
 
@@ -52,7 +49,6 @@ async def _test_accepts_list():
 
 
 async def _test_solves_with_division():
-    """测试求解 - 解出需借助除法与括号的组合"""
     try:
         return _all_solutions_valid(TRICKY_NUMBERS)
 
@@ -61,7 +57,6 @@ async def _test_solves_with_division():
 
 
 async def _test_no_solution_returns_none():
-    """测试求解 - 无解的组合返回 None"""
     try:
         return find_solution(NO_SOLUTION_NUMBERS) is None
 

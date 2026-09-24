@@ -88,21 +88,6 @@ mcbv_rss = module(
 
 # for future use
 
-# mcv_jira_rss = module(
-#     "mcv_jira_rss",
-#     developers=["OasisAkari", "Dianliang233"],
-#     recommend_modules=["mcv_rss"],
-#     desc="{I18N:mcv_rss.help.mcv-jira-rss.desc}",
-#     alias="mcvjirarss",
-#     doc=True,
-#     rss=True,
-# )
-#
-#
-# @mcv_jira_rss.hook()
-# async def _(fetch: Bot, ctx: Bot.ModuleHookContext):
-#     await fetch.post_message("mcv_jira_rss", **ctx.args)
-
 
 @mcv_rss.schedule(IntervalTrigger(seconds=60))
 async def _():
@@ -207,7 +192,7 @@ async def _():
 async def _():
     global startup_mute
     if Secret.ip_country == "China" or not Secret.ip_country:
-        return  # 中国大陆无法访问Google Play商店
+        return  # 中国大陆无法访问 Google Play 商店
     try:
         verlist = await get_stored_list(Bot.Info.client_name, "mcbv_rss")
         version = google_play_scraper("com.mojang.minecraftpe")["version"]

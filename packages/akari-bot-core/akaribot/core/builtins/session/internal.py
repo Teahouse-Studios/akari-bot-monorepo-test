@@ -44,7 +44,6 @@ quick_confirm = CoreConfig.quick_confirm
 
 
 def _is_confirmation_message(msg: MessageSession) -> bool:
-    """判断消息是否为确认等待可消费的肯定或否定回答。"""
     value = msg.as_display(text_only=True).strip()
     return value in confirm_command
 
@@ -67,7 +66,6 @@ def confirm_prompt_key(session_info: SessionInfo) -> str:
 def _filter_message_chain_badwords(
     chain: MessageChain | MessageNodes, session_info: SessionInfo
 ) -> MessageChain | MessageNodes:
-    """在消息进入平台适配器前统一过滤可发送文本。"""
     if isinstance(chain, MessageNodes):
         chain.values = [cast(MessageChain, _filter_message_chain_badwords(node, session_info)) for node in chain.values]
         return chain
@@ -109,7 +107,7 @@ class MessageSession:
     该类提供了一套完整的消息交互接口，包括发送消息、接收回复、等待用户输入等功能。
     每个消息会话对应一个用户在某个平台的一条消息。
 
-    属性说明:
+    属性说明：
         session_info: 会话信息对象，包含会话的所有基本信息
         sent: 已发送消息链列表，用于跟踪消息历史
         trigger_msg: 触发本会话的原始消息文本
@@ -142,12 +140,10 @@ class MessageSession:
     _execution_state_owner: bool = field(default=True, repr=False, eq=False)
 
     def _share_execution_state(self, result: "MessageSession") -> None:
-        """让等待结果加入当前命令执行域，但不取得最终清理所有权。"""
         result._execution_state = ExecutionLockList.state(self)
         result._execution_state_owner = False
 
     def _adopt_wait_result(self, result: "MessageSession") -> None:
-        """接管一个已经持有平台 context 的等待结果。"""
         self._share_execution_state(result)
         ExecutionLockList.state(self).held_contexts.append(result)
 
@@ -730,13 +726,8 @@ class MessageSession:
         await PlatformAPI.end_typing(self.session_info)
 
     async def _add_confirm_reaction(self, message_id: str | list[str]):
-        """
-        内部方法：添加确认反应。
-
-        自动为不同平台选择合适的确认反应（勾选和叉号）。
-
-        :param message_id: 消息 ID
-        """
+        # 内部方法：添加确认反应。
+        # 自动为不同平台选择合适的确认反应（勾选和叉号）。
         if self.session_info.support_reaction:
             if self.session_info.client_name in ["QQ", "QQBot"]:
                 # QQ 平台使用特定的反应 ID
@@ -1180,7 +1171,7 @@ class MessageSession:
         格式化数字为本地化的表示。
 
         根据地区设置进行本地化处理，包括数字分隔符和单位符号的翻译。
-        支持自动缩放大数字（如 100万 -> 1百万 或 1M）。
+        支持自动缩放大数字（如 100 万 -> 1 百万 或 1M）。
 
         :param number: 要格式化的数字
         :param precision: 保留小数点位数（默认为 0）
@@ -1188,8 +1179,8 @@ class MessageSession:
 
         示例：
         ```
-            > session.format_num(1000000, precision=1)  # 中文: '100.0万'
-            > session.format_num(1000000, precision=1)  # 英文: '1.0M'
+            > session.format_num(1000000, precision=1)  # 中文： '100.0 万'
+            > session.format_num(1000000, precision=1)  # 英文： '1.0M'
         ```
         """
 
@@ -1244,11 +1235,13 @@ class MessageSession:
         """
         比较两个消息会话对象是否相等。
 
-        两个会话仅当会话 ID 相同时才认为相等。
+                两个会话仅当会话 ID 相同时才认为相等。
 
-        :param other: 另一个对象
-        :return: 如果相等返回 True，否则返回 False
+                :param other: 另一个对象
+                :return: 如果相等返回 True，否则返回 False
         """
+        # 比较两个消息会话对象是否相等。
+        # 两个会话仅当会话 ID 相同时才认为相等。
         if isinstance(other, MessageSession):
             return self.session_info.session_id == other.session_info.session_id
         return False
@@ -1290,7 +1283,9 @@ class FinishedSession:
         await PlatformAPI.delete_message.submit(self.session, self.message_id)
 
     def __str__(self):
-        """返回字符串表示"""
+        """
+        返回字符串表示
+        """
         return f"FinishedSession(message_id={self.message_id})"
 
 

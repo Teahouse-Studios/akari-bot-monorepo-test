@@ -34,8 +34,8 @@ mention_required = CoreConfig.mention_required
 quick_confirm = CoreConfig.quick_confirm
 
 # 本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
-# 是管理员的正常处置，不应据此追责；且迁移完成后两侧的账号与场景同属一个 union，在此处封禁会
-# 连带波及用户在新平台上的身份，把一次合理的清退变成对已迁移用户的误封。
+# 是管理员的正常处置，不应据此追责；且两侧的账号与场景同属一个 union，在此处封禁会连带波及
+# 用户在新平台上的身份，把一次合理的清退变成误封。
 client_retired = is_retired_client(client_name)
 
 enable_temp_session = MilkyConfig.qq_enable_temp_session
@@ -46,7 +46,6 @@ milky_account: int | None = None
 
 
 async def _tos_report(sender: str, target: str, reason: str, banned: bool = False):
-    """经 Server 具名 hook 上报；bot 进程不导入模块实现，失败仅记录日志。"""
     try:
         return await ServerAPI.trigger_hook(
             "tos.report",
@@ -62,32 +61,17 @@ async def _tos_report(sender: str, target: str, reason: str, banned: bool = Fals
 
 
 def _event_data(event: dict) -> dict:
-    """取出事件载荷。
-
-    :param event: Milky 原始事件。
-    :return: 事件载荷字典，缺失或非字典时返回空字典。
-    """
     data = event.get("data")
     return data if isinstance(data, dict) else {}
 
 
 def _is_self(user_id) -> bool:
-    """判断给定 QQ 号是否为机器人自身。
-
-    :param user_id: 待判断的 QQ 号。
-    :return: 是机器人自身时为 True。
-    """
     if milky_account is None or user_id is None:
         return False
     return str(user_id) == str(milky_account)
 
 
 def _sender_name(message: dict) -> str | None:
-    """从消息中取出发送者昵称，群名片优先。
-
-    :param message: Milky 消息字典。
-    :return: 发送者昵称；无法获取时返回 None。
-    """
     member = message_field(message, "group_member") or {}
     friend = message_field(message, "friend") or {}
     return member.get("card") or member.get("nickname") or friend.get("nickname") or None
@@ -113,17 +97,6 @@ async def _assign_session(
     message_id: str | None = None,
     reply_id: str | None = None,
 ) -> SessionInfo:
-    """按 Milky 场景组装会话信息。
-
-    :param context: `group` / `friend` / `temp`。
-    :param peer_id: 群号（群聊）或对端 QQ 号。
-    :param sender_uin: 发送者 QQ 号。
-    :param messages: 触发本次会话的消息链。
-    :param sender_name: 发送者昵称。
-    :param message_id: 消息序列号（字符串形式）。
-    :param reply_id: 被引用消息的序列号（字符串形式）。
-    :return: 会话信息。
-    """
     is_group = context == "group"
     return await SessionInfo.assign(
         target_id=f"{target_group_prefix}|{peer_id}" if is_group else f"{target_private_prefix}|{sender_uin}",
@@ -143,11 +116,6 @@ async def _assign_session(
 
 
 def _has_content(segments: list[dict]) -> bool:
-    """判断消息段列表中是否还有实际内容。
-
-    :param segments: Milky 消息段列表。
-    :return: 存在非空文本或非文本消息段时为 True。
-    """
     for segment in segments:
         if segment.get("type") != "text":
             return True
@@ -165,16 +133,6 @@ async def _process_synthetic_message(
     message_id: str | None = None,
     reply_id: str | None = None,
 ) -> None:
-    """把非消息事件转换为文本消息后交给模块处理（戳一戳等快速确认场景）。
-
-    :param context: `group` / `friend`。
-    :param peer_id: 群号或对端 QQ 号。
-    :param sender_uin: 触发者 QQ 号。
-    :param text: 合成消息文本。
-    :param source_event: 原始事件，作为模块处理时的上下文。
-    :param message_id: 关联的消息序列号。
-    :param reply_id: 被引用消息的序列号。
-    """
     msg_chain = await to_message_chain({"segments": [{"type": "text", "data": {"text": text}}]})
     session = await _assign_session(
         context=context,
@@ -188,12 +146,6 @@ async def _process_synthetic_message(
 
 
 async def _enforce_group_blocklist(session: SessionInfo, context: str, peer_id) -> None:
-    """群被列入封禁名单时发送告知并退出该群。
-
-    :param session: 本次会话。
-    :param context: 消息场景。
-    :param peer_id: 群号。
-    """
     if not enable_tos or context != "group":
         return
     target_id = f"{target_group_prefix}|{peer_id}"

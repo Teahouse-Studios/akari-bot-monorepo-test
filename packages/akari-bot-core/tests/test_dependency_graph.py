@@ -21,8 +21,6 @@ from akaribot.testing import Tester, func_case
 
 
 class _FakeMetadata:
-    """``email.Message`` 的最小替身，只实现 metadata.get_all()。"""
-
     def __init__(self, fields: dict[str, list[str]]):
         self._fields = fields
 
@@ -31,8 +29,6 @@ class _FakeMetadata:
 
 
 class _FakeDistribution:
-    """``importlib.metadata`` 分发对象的最小替身。"""
-
     def __init__(
         self,
         name: str,
@@ -52,7 +48,6 @@ class _FakeDistribution:
 
 
 def _canonicalize(name: str) -> str:
-    """分发名的比较形式，与 registry 内部的规范化保持一致。"""
     from packaging.utils import canonicalize_name
 
     return canonicalize_name(name)
@@ -60,10 +55,6 @@ def _canonicalize(name: str) -> str:
 
 @contextmanager
 def _fake_environment(distributions: dict[str, _FakeDistribution]):
-    """以替身替换分发查询。
-
-    :param distributions: 分发名到替身的映射。
-    """
     normalized = {_canonicalize(name): distribution for name, distribution in distributions.items()}
 
     def fake_distribution(name: str) -> _FakeDistribution:
@@ -86,13 +77,6 @@ def _fake_environment(distributions: dict[str, _FakeDistribution]):
 
 
 def _entry(kind: str, name: str, dist_name: str = "") -> PackageEntry:
-    """构造测试用条目。
-
-    :param kind: 包种类。
-    :param name: 包名。
-    :param dist_name: 分发名；为空串表示目录扫描兜底的包。
-    :return: 条目。
-    """
     root = "akaribot.modules" if kind == "module" else "akaribot.adapters"
     return PackageEntry(
         kind=kind,
@@ -106,12 +90,6 @@ def _entry(kind: str, name: str, dist_name: str = "") -> PackageEntry:
 
 
 def _fake_entry_points(entries: list[PackageEntry]):
-    """条目枚举替身，按种类返回给定条目。
-
-    :param entries: 全部条目。
-    :return: 可作 ``_from_entry_points`` 替身的函数。
-    """
-
     def source(kind: str, group: str) -> list[PackageEntry]:
         return [entry for entry in entries if entry.kind == kind]
 
@@ -119,7 +97,6 @@ def _fake_entry_points(entries: list[PackageEntry]):
 
 
 def _snapshot() -> tuple:
-    """注册表全部可变状态的快照。"""
     return (
         PackageRegistry._entries,
         PackageRegistry._by_import_path,
@@ -130,7 +107,6 @@ def _snapshot() -> tuple:
 
 
 def _restore(saved: tuple) -> None:
-    """还原注册表状态。"""
     (
         PackageRegistry._entries,
         PackageRegistry._by_import_path,
@@ -142,11 +118,6 @@ def _restore(saved: tuple) -> None:
 
 @contextmanager
 def _discovered_from(entries: list[PackageEntry], distributions: dict[str, _FakeDistribution]):
-    """以替身条目与替身分发完整跑一次 discover()，退出时还原注册表。
-
-    :param entries: 发现结果。
-    :param distributions: 环境中的分发。
-    """
     saved = _snapshot()
     try:
         with (
@@ -163,11 +134,6 @@ def _discovered_from(entries: list[PackageEntry], distributions: dict[str, _Fake
 
 @contextmanager
 def _isolated_registry(entries: dict[str, PackageEntry], distributions: dict[str, _FakeDistribution]):
-    """直接替换发现结果，跳过 discover() 的收尾校验。
-
-    :param entries: 条目映射，键为 ``种类:包名``。
-    :param distributions: 环境中的分发。
-    """
     saved = _snapshot()
     try:
         PackageRegistry._entries = dict(entries)
@@ -182,7 +148,6 @@ def _isolated_registry(entries: dict[str, PackageEntry], distributions: dict[str
 
 
 def _test_load_order_is_dependency_first():
-    """被依赖的包排在依赖它的包之前，同层按注册表键排序。"""
     entries = [
         _entry("module", "alpha", "akari-bot-module-alpha"),
         _entry("module", "beta", "akari-bot-module-beta"),
@@ -212,7 +177,6 @@ def _test_load_order_is_dependency_first():
 
 
 def _test_directory_scanned_package_has_no_dependencies():
-    """目录扫描的包没有分发 metadata，依赖恒为空元组且不被漏掉。"""
     scanned = _entry("module", "wiki")
     with _isolated_registry({"module:wiki": scanned}, {}):
         dependencies = PackageRegistry.dependencies(scanned)
@@ -221,7 +185,6 @@ def _test_directory_scanned_package_has_no_dependencies():
 
 
 def _test_missing_dependency_is_rejected():
-    """依赖未安装时该包不注册，原因写明缺哪个分发。"""
     entries = [
         _entry("module", "consumer", "akari-bot-module-consumer"),
         _entry("module", "plain", "akari-bot-module-plain"),
@@ -246,7 +209,6 @@ def _test_missing_dependency_is_rejected():
 
 
 def _test_version_mismatch_is_rejected():
-    """已装版本不满足描述符时拒绝注册，原因带已装版本与描述符。"""
     entries = [_entry("module", "consumer", "akari-bot-module-consumer")]
     distributions = {
         "akari-bot-module-consumer": _FakeDistribution(
@@ -269,7 +231,6 @@ def _test_version_mismatch_is_rejected():
 
 
 def _test_circular_dependencies_are_rejected():
-    """成环的全部包都不注册，原因列出完整环路径。"""
     expected = {
         ("a", "b"): "circular dependency akari-bot-module-a -> akari-bot-module-b -> akari-bot-module-a",
         ("a", "b", "c"): (
@@ -295,7 +256,6 @@ def _test_circular_dependencies_are_rejected():
 
 
 def _test_disjoint_cycles_are_all_rejected():
-    """互不相交的多个环全部被发现，每个环各报自己的路径。"""
     names = ("a", "b", "c", "d")
     edges = {"a": "b", "b": "a", "c": "d", "d": "c"}
     entries = [_entry("module", name, f"akari-bot-module-{name}") for name in names]
@@ -319,10 +279,7 @@ def _test_disjoint_cycles_are_all_rejected():
 
 
 def _test_dependency_on_api_rejected_package_cascades():
-    """依赖被 core API 门槛拒绝的包，依赖方也必须一起拒绝，原因指名该依赖。
-
-    条目顺序刻意让依赖方先出现：初始判定时被依赖方尚未登记为拒绝，只有级联才能拦住它。
-    """
+    # 条目顺序刻意让依赖方先出现：初始判定时被依赖方尚未登记为拒绝，只有级联才能拦住它。
     alpha = _entry("module", "alpha", "akari-bot-module-alpha")
     beta = PackageEntry(
         kind="module",
@@ -353,7 +310,6 @@ def _test_dependency_on_api_rejected_package_cascades():
 
 
 def _test_load_order_reports_cycle():
-    """直接调用 load_order() 时成环抛异常，异常里列出完整环。"""
     entries = {
         "module:a": _entry("module", "a", "akari-bot-module-a"),
         "module:b": _entry("module", "b", "akari-bot-module-b"),
@@ -376,7 +332,6 @@ def _test_load_order_reports_cycle():
 
 
 def _test_extra_marked_dependencies_follow_installed_extras():
-    """未装 extra 的依赖条目被忽略，已装 extra 的照常计入。"""
     consumer = _entry("module", "consumer", "akari-bot-module-consumer")
     distributions = {
         "akari-bot-module-consumer": _FakeDistribution(
@@ -404,7 +359,6 @@ def _test_extra_marked_dependencies_follow_installed_extras():
 
 
 def _test_undeclared_ast_dependency_warns_and_stays_in_closure():
-    """AST 扫出而 metadata 未声明的依赖告警一次，且仍进入 reload 闭包。"""
     scanned = {"akaribot.modules.alpha": {"akaribot.modules.beta"}, "akaribot.modules.beta": set()}
     entry = _entry("module", "alpha")
     with (

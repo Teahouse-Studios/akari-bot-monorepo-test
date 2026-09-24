@@ -100,24 +100,12 @@ class Conflict:
 
 
 def _label(config: AdapterInstanceConfig, registry: AdapterRegistry) -> str:
-    """实例在结论中的称呼。
-
-    :param config: 实例配置。
-    :param registry: 已装适配器清单。
-    :return: 形如 ``bot_telegram-alt（Telegram-alt）`` 的文本。
-    """
     client_name, inferred = client_name_for(config, registry)
     suffix = "（推断）" if inferred else ""
     return f"{config.table}（{client_name}{suffix}）"
 
 
 def _check_ports(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]:
-    """端口冲突：全部已启用实例的监听地址两两比对。
-
-    :param scan: 配置扫描结果。
-    :param registry: 已装适配器清单。
-    :return: 结论列表。
-    """
     observations: list[tuple[ListenEndpoint, AdapterInstanceConfig]] = []
     for config in scan.instances:
         adapter = registry.adapters.get(config.platform)
@@ -167,13 +155,6 @@ def _check_ports(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]
 def _credential_items(
     config: AdapterInstanceConfig, adapter: InstalledAdapter | None, registry: AdapterRegistry
 ) -> list[tuple[str, str]]:
-    """列出实例参与重复检查的凭据项。
-
-    :param config: 实例配置。
-    :param adapter: 该平台的已装适配器；未安装时为 ``None``。
-    :param registry: 已装适配器清单。
-    :return: 二元组列表——字段名与取值的规范化串（取值只用于比对，不进入输出）。
-    """
     if not registry.available:
         fields: Sequence[str] = tuple(config.secrets)
     elif adapter is None:
@@ -198,12 +179,6 @@ def _credential_items(
 
 
 def _check_credentials(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]:
-    """凭据重复：同平台不同实例配了相同的 token / appid。
-
-    :param scan: 配置扫描结果。
-    :param registry: 已装适配器清单。
-    :return: 结论列表。
-    """
     groups: dict[tuple[str, str, str], list[AdapterInstanceConfig]] = defaultdict(list)
     for config in scan.instances:
         adapter = registry.adapters.get(config.platform)
@@ -240,12 +215,6 @@ def _check_credentials(scan: AdapterScan, registry: AdapterRegistry) -> list[Con
 
 
 def _check_orphans(scan: AdapterScan, registry: AdapterRegistry) -> list[Conflict]:
-    """孤立配置：有实例配置文件，但对应平台的适配器包未安装。
-
-    :param scan: 配置扫描结果。
-    :param registry: 已装适配器清单。
-    :return: 结论列表。
-    """
     if not registry.available:
         return []
     conflicts: list[Conflict] = []
@@ -374,12 +343,6 @@ def run_checks(
 
 
 def _check_summary(scan: AdapterScan, registry: AdapterRegistry) -> dict[str, Any]:
-    """各项检查的执行情况，供 JSON 输出与报告尾注使用。
-
-    :param scan: 配置扫描结果。
-    :param registry: 已装适配器清单。
-    :return: 检查项与结论。
-    """
     configured = {config.platform for config in scan.instances}
     unconfigured = sorted(set(registry.adapters) - configured)
     return {
@@ -400,16 +363,6 @@ def _print_report(
     errors: Sequence[Conflict],
     warnings: Sequence[Conflict],
 ) -> None:
-    """打印可读的检查报告。
-
-    :param instance: 目标实例。
-    :param scan: 配置扫描结果。
-    :param registry: 已装适配器清单。
-    :param conflicts: 全部结论。
-    :param implementation: 本次使用的检查实现。
-    :param errors: error 级结论。
-    :param warnings: warning 级结论。
-    """
     console = Console()
     summary = _check_summary(scan, registry)
     # 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），故经 escape 再进入 rich 标记解析

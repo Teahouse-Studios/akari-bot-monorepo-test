@@ -87,7 +87,6 @@ MEDIA_UPLOAD_MAX_ATTEMPTS = 3
 
 
 def _typing_emote_dir() -> Path | None:
-    """取 typing 表情目录；可选资源包 akari-bot-assets-emotes 未安装时为 None。"""
     try:
         from akaribot.assets.emotes import emotes_dir
     except ImportError:
@@ -108,7 +107,6 @@ def _load_s3_storage():
 async def _upload_media(
     client: botpy.Client, target: ReplyTarget, file_type: MediaFileType, *, local_path: str
 ) -> dict[str, str]:
-    """仅为媒体预上传的瞬态网络错误补充重试，最多调用上传三次。"""
     attempts = 0
     while True:
         try:
@@ -136,7 +134,6 @@ async def _upload_media(
 
 
 async def _upload_markdown_image(client: botpy.Client, target: ReplyTarget, *, local_path: str) -> str | None:
-    """使用 QQ 分片接口取得可嵌入 Markdown 的临时图片直链。"""
     if target.scope not in ("group", "c2c"):
         return None
     api = getattr(client, "api", None)
@@ -170,15 +167,8 @@ async def _upload_markdown_image(client: botpy.Client, target: ReplyTarget, *, l
 
 
 def _truncate_action_text(value: str, field: str) -> str:
-    """
-    按平台上限截断指令操作的文本。
-
-    截断后的 text 会使用户点击标签得到残缺命令，故记录截断前的长度以便排查。
-
-    :param value: 原始文本。
-    :param field: 字段名，仅用于日志。
-    :return: 截断后的文本。
-    """
+    # 按平台上限截断指令操作的文本。
+    # 截断后的 text 会使用户点击标签得到残缺命令，故记录截断前的长度以便排查。
     if len(value) <= ACTION_TEXT_MAX_LENGTH:
         return value
     Logger.warning(f"ActionText {field} exceeds {ACTION_TEXT_MAX_LENGTH} characters ({len(value)}), truncated.")
@@ -186,16 +176,8 @@ def _truncate_action_text(value: str, field: str) -> str:
 
 
 def _render_action_text(element: ActionTextElement) -> str:
-    """
-    将指令操作元素渲染为平台的参数指令标签。
-
-    此处的 urlencode 与 KE 码中的 urlencode 互不相干：前者满足平台传值要求，
-    后者规避 KE 码分隔符冲突。元素既可能经 KE 码路径抵达，也可能直接放入消息链，
-    故两处各自编码。
-
-    :param element: 内层文案已解析的指令操作元素。
-    :return: 标签字符串；text 为空时返回空字符串。
-    """
+    # 此处的 urlencode 与 KE 码中的 urlencode 互不相干：前者满足平台传值要求，后者规避 KE 码
+    # 分隔符冲突。元素既可能经 KE 码路径抵达，也可能直接放入消息链，故两处各自编码。
     text = element.text.text if element.text else ""
     if not text:
         return ""
@@ -208,7 +190,6 @@ def _render_action_text(element: ActionTextElement) -> str:
 
 
 def _build_qqbot_keyboard(rows: list[ButtonRows], session_info: SessionInfo, target: ReplyTarget) -> Keyboard | None:
-    """将 ButtonFrame 的按钮行转换为 QQBot 键盘。"""
     if not rows:
         return None
 
@@ -278,19 +259,16 @@ MARKDOWN_IMAGE_LIST_SIZE = 32
 
 
 def _markdown_image_size(image: ImageElement, width: int, height: int) -> tuple[int, int]:
-    """计算 QQBot Markdown 图片尺寸；max_h 按兼容命名表示调用方指定的最大宽度。"""
     max_width = image.max_h or MARKDOWN_IMAGE_MAX_WIDTH
     scale = max_width / width if width > max_width else 1
     return int(width * scale), int(height * scale)
 
 
 def _markdown_image_list_size(width: int, height: int) -> tuple[int, int]:
-    """计算 QQBot Markdown 图片列表中的缩略图尺寸。"""
     return MARKDOWN_IMAGE_LIST_SIZE, MARKDOWN_IMAGE_LIST_SIZE
 
 
 def _markdown_image_list_table(images: list[tuple[str, int, int]]) -> str:
-    """将图片整理为只有一行图片内容的 Markdown 表格。"""
     indexes = "| " + " | ".join(str(index) for index in range(1, len(images) + 1)) + " |"
     separator = "| " + " | ".join("---" for _ in images) + " |"
     contents = []
@@ -371,7 +349,6 @@ def cache_message_id_pair(application_id: str | None, api_id: str | None) -> Non
 
 
 def _resolve_api_message_id(message_id: str) -> str | None:
-    """把框架持有的应用层消息 ID 还原成可用于 QQ OpenAPI 的 ID。"""
     message_id = str(message_id)
     if api_id := message_id_cache.get(message_id):
         message_id_cache.move_to_end(message_id)
@@ -426,7 +403,6 @@ def _message_ids(result) -> list[str]:
 
 
 def _api_error_codes(error: ApiError) -> set[str]:
-    """收集 QQ OpenAPI 异常在兼容层和响应正文中的错误码。"""
     codes = [error.code]
     if isinstance(error.response, Mapping):
         codes.extend((error.response.get("code"), error.response.get("err_code")))
@@ -434,7 +410,6 @@ def _api_error_codes(error: ApiError) -> set[str]:
 
 
 def _api_error_messages(error: ApiError) -> set[str]:
-    """收集 QQ OpenAPI 异常在兼容层和响应正文中的错误文案。"""
     messages = [error.message]
     if isinstance(error.response, Mapping):
         messages.extend((error.response.get("message"), error.response.get("msg")))
@@ -442,29 +417,22 @@ def _api_error_messages(error: ApiError) -> set[str]:
 
 
 def _is_passive_reply_fallback_error(error: ApiError) -> bool:
-    """判断被动回复是否因过期、超限或消息去重而可改发主动消息。"""
     return bool(_api_error_codes(error) & PASSIVE_REPLY_FALLBACK_ERROR_CODES)
 
 
 def _is_proactive_permission_denied_error(error: ApiError) -> bool:
-    """判断主动消息是否因目标未授予主动发送权限而失败。"""
     if _api_error_codes(error) & PROACTIVE_PERMISSION_DENIED_ERROR_CODES:
         return True
     return any("主动消息失败" in message and "无权限" in message for message in _api_error_messages(error))
 
 
 def _is_silent_send_abort_error(error: ApiError) -> bool:
-    """判断平台是否要求静默终止整条消息发送流程。"""
     return bool(_api_error_codes(error) & SILENT_SEND_ABORT_ERROR_CODES)
 
 
 class _TypingState:
-    """一轮输入状态的生命周期标志。
-
-    ``sending`` 表示普通回复已完成资源准备并进入发送阶段，用于阻止 typing 消息
-    后发；``spoken`` 只记录平台已经成功接受至少一条普通消息。
-    """
-
+    # ``sending`` 表示普通回复已完成资源准备并进入发送阶段，用于阻止 typing 消息
+    # 后发；``spoken`` 只记录平台已经成功接受至少一条普通消息。
     __slots__ = ("finished", "sending", "spoken")
 
     def __init__(self):
@@ -474,8 +442,6 @@ class _TypingState:
 
 
 class _PreparedMessage:
-    """已完成资源准备、只差调用平台消息发送接口的消息。"""
-
     __slots__ = ("has_payload", "queue_key", "send")
 
     def __init__(
@@ -491,8 +457,6 @@ class _PreparedMessage:
 
 
 class _QueuedMessage:
-    """等待进入 QQ OpenAPI 消息发送阶段的任务。"""
-
     __slots__ = ("future", "prepared", "sequence", "started", "typing_prompt", "typing_state")
 
     def __init__(
@@ -513,8 +477,6 @@ class _QueuedMessage:
 
 
 class _MessageSendQueue:
-    """同一 QQ 目标的短生命周期发送整形队列。"""
-
     __slots__ = ("pending", "worker")
 
     def __init__(self):
@@ -717,7 +679,6 @@ class QQBotContextManager(ContextManager):
         _typing_prompt: bool = False,
         _force_plain: bool = False,
     ) -> _PreparedMessage:
-        """完成消息渲染和媒体上传，不调用最终的消息发送接口。"""
         ctx: BaseMessage | Interaction | None = cls.context.get(session_info.session_id)
         client = _get_client()
         target = _reply_target(session_info, ctx)
@@ -939,8 +900,6 @@ class QQBotContextManager(ContextManager):
 
             if converted_message.only(PlainElement) and not converted_message.contains(MarkdownElement):
                 _use_markdown = False
-            if converted_message.only(ImageElement) and len(converted_message) == 1:
-                _use_markdown = False
             if message.contains(URLElement):
                 for x in message.values:
                     if isinstance(x, URLElement):
@@ -1077,7 +1036,6 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def _process_message_send_queue(cls, queue_key: str, queue: _MessageSendQueue) -> None:
-        """按目标串行发送，并在每次平台调用前淘汰已经过时的 typing 提示。"""
         try:
             await asyncio.sleep(0)
             while queue.pending:
@@ -1128,7 +1086,6 @@ class QQBotContextManager(ContextManager):
         _typing_prompt: bool = False,
         _typing_state: _TypingState | None = None,
     ) -> list[str]:
-        """进入实际消息发送阶段；调用前不再做媒体上传或图片读取。"""
         if cls._shutting_down or not prepared.has_payload:
             return []
 
@@ -1337,26 +1294,18 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     def _on_message_sent(cls, session_info: SessionInfo) -> None:
-        """登记平台已经成功接受该会话中的普通消息。"""
         state = cls.typing_states.get(session_info.session_id)
         if state:
             state.spoken.set()
 
     @classmethod
     def _on_message_sending(cls, session_info: SessionInfo) -> None:
-        """登记普通消息已完成资源准备，即将进入平台消息发送阶段。"""
         state = cls.typing_states.get(session_info.session_id)
         if state:
             state.sending.set()
 
     @staticmethod
     async def _wait_typing_over(state: _TypingState, timeout: float) -> bool:
-        """等待输入状态结束或普通回复进入发送阶段，取先到者。
-
-        :param state: 本轮输入状态的标志。
-        :param timeout: 最长等待秒数。
-        :return: 是否在超时之前等到了其中一个信号。
-        """
         waiters = [asyncio.ensure_future(state.finished.wait()), asyncio.ensure_future(state.sending.wait())]
         try:
             done, _ = await asyncio.wait(waiters, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
@@ -1367,11 +1316,6 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def _guild_typing(cls, session_info: SessionInfo, state: _TypingState) -> None:
-        """频道支持表情回应，直接以一枚回应表示正在处理。
-
-        :param session_info: 目标会话。
-        :param state: 本轮输入状态的标志。
-        """
         client = _get_client()
         emoji_type = 1 if int(qq_typing_emoji) < 9000 else 2
         try:
@@ -1387,7 +1331,6 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def _c2c_typing(cls, session_info: SessionInfo, state: _TypingState) -> None:
-        """好友消息使用 botpy 提供的原生输入状态通知。"""
         client = _get_client()
         context = cls.context.get(session_info.session_id)
         target = _reply_target(session_info, context)
@@ -1403,11 +1346,6 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def _group_typing(cls, session_info: SessionInfo, state: _TypingState) -> None:
-        """群聊没有原生输入状态，改以一条提示消息模拟，并保证其终将被撤回。
-
-        :param session_info: 目标会话。
-        :param state: 本轮输入状态的标志。
-        """
         typing_msg = None
         prepare_task = None
         state_waiter = None
@@ -1483,11 +1421,6 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def _typing_lifecycle(cls, session_info: SessionInfo, state: _TypingState) -> None:
-        """按会话来源执行一轮输入状态，并在结束后回收其登记。
-
-        :param session_info: 目标会话。
-        :param state: 本轮输入状态的标志。
-        """
         try:
             async with asyncio.timeout(cls.TYPING_PROMPT_DELAY + cls.TYPING_PROMPT_MAX_LIFETIME + 10):
                 if session_info.target_from == target_guild_prefix:

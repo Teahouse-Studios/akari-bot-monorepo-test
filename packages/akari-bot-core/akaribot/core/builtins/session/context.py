@@ -27,7 +27,7 @@ class ContextManager(ABC):
     定义了会话上下文的管理接口、消息发送接口、权限管理接口等，
     用于与各种通讯平台的集成。
 
-    属性说明:
+    属性说明：
         context: 存储会话上下文的字典，键为 session_id，值为上下文对象
         features: 会话支持的功能特性对象
         typing_flags: 输入状态标志的事件对象字典

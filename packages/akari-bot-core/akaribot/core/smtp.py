@@ -25,12 +25,10 @@ def email_report_enabled() -> bool:
 
 
 def _report_footer(issue_url: str) -> str:
-    """构建上报邮件的页脚，引导不应收到通知的收件人前往项目 issue 反馈。"""
     return locale.t("smtp.report.footer", issue_url=issue_url)
 
 
 def _report_footer_html(issue_url: str) -> str:
-    """将页脚中的反馈地址转换为 HTML 超链接。"""
     footer = _report_footer(issue_url)
     if not issue_url:
         return footer
@@ -67,10 +65,10 @@ def send_email(subject: str, body: str) -> None:
     # 纯文本版本
     emailmsg.set_content(f"{body}\n\n{_report_footer(issue_url)}")
 
-    # HTML版本
+    # HTML 版本
     emailmsg.add_alternative(_build_email_html(body, _report_footer_html(issue_url)), subtype="html")
 
-    # 内嵌Logo；品牌资产缺失时跳过，邮件正文本身照常发出。
+    # 内嵌 Logo；品牌资产缺失时跳过，邮件正文本身照常发出。
     if LOGO_PATH is not None and LOGO_PATH.is_file():
         with LOGO_PATH.open("rb") as fp:
             logo_data = fp.read()

@@ -48,12 +48,10 @@ YesOption = Annotated[bool, typer.Option("--yes", "-y", help=i18n.t("cli.common.
 
 
 def _join_list(items: Iterable[str]) -> str:
-    """按当前语言的顿号或逗号拼接展示用列表。"""
     return i18n.t("cli.common.list_separator").join(items)
 
 
 def _load_catalog(instance: Instance, *, offline: bool, needed: bool) -> engine.RegistryCatalog | None:
-    """按需加载 registry；本地路径模式不需要远端 catalog。"""
     if not needed:
         return None
     try:
@@ -63,12 +61,10 @@ def _load_catalog(instance: Instance, *, offline: bool, needed: bool) -> engine.
 
 
 def _describe_installed(packages: Sequence[PackageInfo]) -> str:
-    """把包列表拼成「名字 版本」的展示串。"""
     return _join_list(f"{info.display_name} {info.version}".strip() for info in packages)
 
 
 def _report_placeholders(instance: Instance, snapshot: engine.ConfigSnapshot) -> int:
-    """第 7 步：报告新增配置项里的 ``<Replace me>`` 占位符数量。"""
     changed = snapshot.changed_paths(instance)
     if changed:
         paths = _join_list(str(path.relative_to(instance.root)) for path in changed[:10])
@@ -82,10 +78,7 @@ def _report_placeholders(instance: Instance, snapshot: engine.ConfigSnapshot) ->
 
 
 def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, runner: engine.CommandRunner) -> None:
-    """失败回滚：恢复第 4 步写入的配置，并卸载刚装上的分发包。
-
-    第 5 步的数据库迁移不回滚：迁移是幂等且向前的，回滚风险大于收益，报告里如实告知用户表已建。
-    """
+    # 第 5 步的数据库迁移不回滚：迁移是幂等且向前的，回滚风险大于收益，报告里如实告知用户表已建。
     warn(i18n.t("cli.module.install.rollback_start"))
     restored = snapshot.restore(instance)
     if restored:
@@ -101,10 +94,7 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
 
 
 def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) -> None:
-    """第 2 步：core API 兼容性与依赖对称检查。
-
-    冲突说明以「谁要求什么、实际是什么」呈现，不把 uv 解析器的原始报错抛给用户。
-    """
+    # 冲突说明以「谁要求什么、实际是什么」呈现，不把 uv 解析器的原始报错抛给用户。
     extra_names: list[str] = []
     for text in target.dependencies:
         try:
@@ -156,7 +146,6 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
 def _resolve(
     instance: Instance, name: str | None, *, dist, version, editable, extra, kind, offline
 ) -> engine.InstallTarget:
-    """按工作区 / registry / 显式分发名三条路径解析安装目标。"""
     workspace_root = instance.workspace_root
     needs_catalog = dist is None and editable is None and workspace_root is None
     catalog = _load_catalog(instance, offline=offline, needed=needs_catalog)
@@ -184,7 +173,6 @@ def _install(
     verbose: bool,
     upgrade: bool = False,
 ) -> int:
-    """执行安装流水线，返回占位符数量。"""
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
     step(1, 7, i18n.t("cli.module.install.step_resolve", dist=target.dist, source=target.source))
     console.print(i18n.t("cli.module.install.specs_line", specs=" ".join(target.specs)))
@@ -335,7 +323,6 @@ def add(
 
 
 def _cascade_order(instance: Instance, root: PackageInfo) -> list[PackageInfo]:
-    """按「依赖者先、被依赖者后」的顺序展开连带卸载清单。"""
     ordered: list[PackageInfo] = []
     seen: set[str] = set()
 
@@ -353,18 +340,8 @@ def _cascade_order(instance: Instance, root: PackageInfo) -> list[PackageInfo]:
 
 
 def _config_files(instance: Instance, package: PackageInfo) -> tuple[list[Path], list[Path]]:
-    """定位该包在实例 ``config/`` 下的配置文件。
-
-    基表取 ``manifest.config_table`` 的**扁平路径** ``config/<表名>.toml``：``CFGManager.load()``
-    只扫描 ``config/*.toml``，旧实现按 ``provides_modules`` 猜 ``config/modules/<名>.toml``，
-    那条路径下永远没有文件，``--purge-data`` 因此从不删配置。
-
-    适配器还要覆盖 ``config/<基表>-<实例 ID>.toml`` 这类实例表——表名由基表派生，只能按前缀匹配。
-
-    :param instance: 目标实例。
-    :param package: 目标包。
-    :return: 二元组——基表配置文件；实例配置文件（适配器才有）。
-    """
+    # 基表取 ``manifest.config_table`` 的扁平路径：``CFGManager.load()`` 只扫描 ``config/*.toml``，
+    # 按 ``provides_modules`` 拼出的路径不在扫描范围内。适配器实例表名由基表派生，只能按前缀匹配。
     if not package.config_table:
         return [], []
     base = instance.config_dir / f"{package.config_table}.toml"
@@ -386,19 +363,9 @@ def _purge(
     dry_run: bool,
     purge_instances: bool,
 ) -> bool:
-    """删除这些包拥有的数据表与配置文件（``--purge-data``）。
-
-    必须在 uv uninstall **之前**调用：清单随分发一起被删，卸载后再也解析不出 ``owned_tables``
-    与 ``config_table``，那时连该删什么都不知道。任一步失败即返回 ``False``，由命令层决定中止
-    卸载还是按 ``--force`` 接受残留——静默返回成功会让用户以为数据已清干净。
-
-    :param instance: 目标实例。
-    :param packages: 待清理的包。
-    :param yes: 为真时跳过交互确认。
-    :param dry_run: 为真时只打印计划。
-    :param purge_instances: 是否连同适配器实例配置一起删除。
-    :return: 全部步骤成功为 ``True``。
-    """
+    # 必须在 uv uninstall **之前**调用：清单随分发一起被删，卸载后再也解析不出 ``owned_tables``
+    # 与 ``config_table``，那时连该删什么都不知道。任一步失败即返回 ``False``，由命令层决定中止
+    # 卸载还是按 ``--force`` 接受残留——静默返回成功会让用户以为数据已清干净。
     tables = sorted({table for package in packages for table in package.owned_tables})
     base_files: list[Path] = []
     instance_files: list[Path] = []
@@ -530,20 +497,9 @@ def _update_payload(
     notified: Sequence[tuple[str, str, bool]],
     dry_run: bool,
 ) -> dict:
-    """整理更新结果的 JSON 载荷。
-
-    ``updated`` / ``failed`` / ``skipped`` 保持纯名字列表以兼容既有消费者，明细另置
-    ``*_details``；``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update``
-    判断要不要提示 ``~restart``。
-
-    :param updated: 更新成功的分发名。
-    :param plans: 本次计划更新的目标。
-    :param failed: 分发名与失败原因的二元组。
-    :param skipped: 分发名、跳过原因、人类可读跳过文案的三元组；前两项进 JSON 契约，末项只供打印。
-    :param notified: 分发名、通知详情、是否送达的三元组。
-    :param dry_run: 是否为演练模式。
-    :return: JSON 可序列化的载荷。
-    """
+    # ``updated`` / ``failed`` / ``skipped`` 保持纯名字列表以兼容既有消费者，明细另置
+    # ``*_details``；``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update``
+    # 判断要不要提示 ``~restart``。
     delivered = {dist: ok_ for dist, _, ok_ in notified}
     reload_pending = [dist for dist in updated if not delivered.get(dist, False)]
     return {
@@ -572,13 +528,8 @@ def _perform_update(
     verbose: bool,
     json_mode: bool,
 ) -> tuple[int, dict]:
-    """执行更新主体，返回退出码与 JSON 载荷。
-
-    ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout；
-    ``json_mode`` 只影响整体失败时报错还是回传载荷。
-
-    :return: 二元组——退出码（1 表示有包失败）；结果载荷。
-    """
+    # ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout；
+    # ``json_mode`` 只影响整体失败时报错还是回传载荷。
     target_instance = require_instance(instance_path)
     try:
         installed = target_instance.installed()

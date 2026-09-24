@@ -21,27 +21,23 @@ SAMPLE = REPO_ROOT / "tests" / "unit" / "test_registry_release.py"
 
 
 def _test_parse_paths_and_cases():
-    """位置参数与 --case 都按出现顺序收集，可重复。"""
     options = runner.parse_options(["a/b.py", "c/", "--case", "one", "--case", "two"])
     return options.paths == ("a/b.py", "c/") and options.cases == ("one", "two")
 
 
 def _test_parse_mode_flags():
-    """--ci 与 --coverage 各自独立。"""
     plain = runner.parse_options([])
     both = runner.parse_options(["--ci", "--coverage"])
     return plain.ci is False and plain.coverage is False and both.ci is True and both.coverage is True
 
 
 def _test_prescan_ignores_unrelated_arguments():
-    """预扫描只挑模式开关，别的参数一律忽略——否则 tester.py 等入口会被不相干的 argv 弄崩。"""
     ci, coverage = runner._prescan_mode_flags(["--ci", "--unknown", "some/path"])
     plain, none = runner._prescan_mode_flags(["some/path", "--case", "x"])
     return (ci, coverage) == (True, False) and (plain, none) == (False, False)
 
 
 def _test_import_time_flags_follow_argv():
-    """导入期取值必须跟随 argv 里的 --ci / --coverage，且环境变量仍然有效。"""
     script = (
         "import sys; sys.argv = ['akaribot.testing'] + {argv!r};"
         " from akaribot.testing import runner;"
@@ -70,7 +66,6 @@ def _test_import_time_flags_follow_argv():
 
 
 def _test_explicit_path_selects_single_file():
-    """给了文件路径就只收该文件。"""
     files = runner._explicit_test_files.__wrapped__ if hasattr(runner._explicit_test_files, "__wrapped__") else None
     original = runner.OPTIONS
     try:
@@ -82,7 +77,6 @@ def _test_explicit_path_selects_single_file():
 
 
 def _test_directory_path_expands_to_python_files():
-    """给目录时递归收 *.py。"""
     with tempfile.TemporaryDirectory(prefix="akari-testing-opts-") as raw:
         root = Path(raw)
         (root / "nested").mkdir()
@@ -99,7 +93,6 @@ def _test_directory_path_expands_to_python_files():
 
 
 def _test_unmatched_path_yields_nothing():
-    """路径不存在时收不到文件，由 run() 报错而不是静默跑全量。"""
     original = runner.OPTIONS
     try:
         runner.OPTIONS = runner.RunOptions(paths=("tests/unit/definitely_absent.py",))
@@ -110,7 +103,6 @@ def _test_unmatched_path_yields_nothing():
 
 
 def _test_default_collection_is_unchanged_without_paths():
-    """不给位置参数时仍按默认根收集，且数量远大于单个文件。"""
     original = runner.OPTIONS
     try:
         runner.OPTIONS = runner.RunOptions()
@@ -121,7 +113,6 @@ def _test_default_collection_is_unchanged_without_paths():
 
 
 def _test_cli_test_command_passes_modes_as_environment():
-    """CLI 必须把模式经环境变量传：runner 在导入期读，argv 里的开关到得太晚。"""
     source = (REPO_ROOT / "packages" / "akari-bot-cli" / "akaribot" / "cli" / "commands" / "test.py").read_text(
         encoding="utf-8"
     )
@@ -129,7 +120,6 @@ def _test_cli_test_command_passes_modes_as_environment():
 
 
 def _reload_runner():
-    """重载 runner 以观察导入期取值。"""
     return importlib.reload(runner)
 
 

@@ -26,7 +26,7 @@ from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 # 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需登记 revision。
 LATEST_LEGACY_VERSION = 6
 
-# 旧版本号到 ``(包名, revision)`` 的对照表。包名取分发名，与 PackageRegistry.migration_dirs()
+# 旧版本号到 ``(包名， revision)`` 的对照表。包名取分发名，与 PackageRegistry.migration_dirs()
 # 的键一致；旧库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。
 LEGACY_MAP: dict[int, list[tuple[str, str]]] = {
     1: [("core", "0001_initial")],

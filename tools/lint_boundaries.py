@@ -193,7 +193,7 @@ class Dist:
     :param name: `[project].name`，已按 PEP 503 规范化。
     :param dependencies: `[project].dependencies` 里的分发名，同样规范化。
     :param module_owners: 该分发提供的 akaribot.modules.<x> 的 <x> 集合。
-    :param adapter_entry_points: 适配器 entry point 的 (名, pyproject 行号) 列表。
+    :param adapter_entry_points: 适配器 entry point 的 (名， pyproject 行号) 列表。
     :param official: 是否位于 packages/modules/ 下，即官方模块包。
     """
 
@@ -688,7 +688,7 @@ def diff_scope(base_ref: str) -> set[tuple[str, int]] | None:
     B9 的违规位置在 entry point 定义行上。
 
     :param base_ref: 比较基准，如 `HEAD~1` 或提交 SHA。
-    :return: (仓库根相对 POSIX 路径, 行号) 集合；git 调用失败时返回 None，调用方回退为
+    :return: (仓库根相对 POSIX 路径， 行号) 集合；git 调用失败时返回 None，调用方回退为
         全量检查。返回空集表示基准之后确实没有任何改动。
     """
     try:

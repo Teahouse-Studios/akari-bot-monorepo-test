@@ -23,20 +23,17 @@ ADAPTER_DIST = "akari-bot-adapter-telegram"
 
 
 def _use_cli_locale() -> None:
-    """把语言快照切回 CLI 命名空间，否则断言只能拿到键名。"""
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _make_instance(root: Path) -> Instance:
-    """建一个只带元数据文件的最小实例，并备好扁平 ``config/``。"""
     (root / "akaribot.toml").write_text("", encoding="utf-8")
     (root / "config").mkdir(parents=True, exist_ok=True)
     return Instance(root)
 
 
 def _module_package() -> PackageInfo:
-    """wiki 模块包：声明表与配置表。"""
     return PackageInfo(
         dist=MODULE_DIST,
         kind="module",
@@ -48,7 +45,6 @@ def _module_package() -> PackageInfo:
 
 
 def _adapter_package() -> PackageInfo:
-    """telegram 适配器包：基表加两个实例表。"""
     return PackageInfo(
         dist=ADAPTER_DIST,
         kind="adapter",
@@ -59,7 +55,6 @@ def _adapter_package() -> PackageInfo:
 
 
 def _test_flat_config_path_is_resolved_by_config_table():
-    """基表按 config_table 的扁平路径定位，不再猜 config/modules/<名>.toml。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         flat = instance.config_dir / "module_wiki.toml"
@@ -72,7 +67,6 @@ def _test_flat_config_path_is_resolved_by_config_table():
 
 
 def _test_adapter_instance_tables_are_matched_by_prefix():
-    """适配器实例表按 ``<基表>-`` 前缀匹配，其它表不受影响。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         base = instance.config_dir / "bot_telegram.toml"
@@ -85,7 +79,6 @@ def _test_adapter_instance_tables_are_matched_by_prefix():
 
 
 def _test_missing_config_table_deletes_nothing():
-    """清单没声明 config_table 时不去猜文件名，返回空。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         (instance.config_dir / "module_dice.toml").write_text("", encoding="utf-8")
@@ -95,7 +88,6 @@ def _test_missing_config_table_deletes_nothing():
 
 
 def _test_instance_config_is_kept_without_confirmation():
-    """未确认删除实例配置时只删基表，实例表原样保留并如实报告。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         base = instance.config_dir / "bot_telegram.toml"
@@ -118,7 +110,6 @@ def _test_instance_config_is_kept_without_confirmation():
 
 
 def _test_instance_config_is_removed_when_confirmed():
-    """确认后实例表一并删除。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         base = instance.config_dir / "bot_telegram.toml"
@@ -139,7 +130,6 @@ def _test_instance_config_is_removed_when_confirmed():
 
 
 def _test_table_purge_failure_is_reported_and_not_swallowed():
-    """表删除失败时返回 False——静默成功会让用户以为数据已清干净。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         flat = instance.config_dir / "module_wiki.toml"
@@ -157,7 +147,6 @@ def _test_table_purge_failure_is_reported_and_not_swallowed():
 
 
 def _test_file_removal_failure_is_reported():
-    """配置文件删不掉时同样返回 False，而不是只记一条成功。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         flat = instance.config_dir / "module_wiki.toml"
@@ -184,7 +173,6 @@ def _test_file_removal_failure_is_reported():
 
 
 def _test_dry_run_writes_nothing():
-    """dry-run 只打印计划，不删表也不删文件。"""
     with TemporaryDirectory(prefix="akari-cli-purge-") as directory:
         instance = _make_instance(Path(directory))
         flat = instance.config_dir / "module_wiki.toml"

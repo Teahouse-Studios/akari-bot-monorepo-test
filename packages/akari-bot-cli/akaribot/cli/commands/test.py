@@ -22,15 +22,9 @@ TESTING_DIST = "akari-bot-testing"
 
 
 def _ensure_testing_installed(target) -> None:
-    """确认实例里装了测试框架，否则给出可执行的安装指引。
-
-    ``init`` 默认只装 core、适配器与用户选的模块，不装 ``akari-bot-testing``——它是开发期依赖。
-    缺包时若直接把子进程的 ``No module named`` 抛给用户，没人知道该装什么；这里换成一句明确的
-    下一步。
-
-    :param target: 目标实例。
-    :raises CliError: 实例解释器里导入不到测试框架。
-    """
+    # ``init`` 默认只装 core、适配器与用户选的模块，不装 ``akari-bot-testing``——它是开发期依赖。
+    # 缺包时若直接把子进程的 ``No module named`` 抛给用户，没人知道该装什么；这里换成一句明确的
+    # 下一步。
     try:
         proc = target.run_python_capture("-c", f"import {TESTING_MODULE}", timeout=60.0)
     except CliError as exc:

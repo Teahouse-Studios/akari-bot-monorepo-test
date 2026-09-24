@@ -31,14 +31,7 @@ INDIRECT_PROVIDER = "packages/akari-bot-core/akaribot/modules/core/common_tools/
 
 
 def _iter_call_args(source: str, key: str):
-    """取出源码中每一处以该键起头的调用的完整实参文本。
-
-    以键名字面量为锚点，向前找到本次调用的左括号，再向后按括号配平找到右括号。
-
-    :param source: 源码全文。
-    :param key: i18n 键名。
-    :return: 每处调用的实参片段。
-    """
+    # 以键名字面量为锚点，向前找到本次调用的左括号，再向后按括号配平找到右括号。
     for match in re.finditer(re.escape(f'"{key}"'), source):
         depth = 0
         left = match.start()
@@ -64,7 +57,6 @@ def _iter_call_args(source: str, key: str):
 
 
 def _collect_cmd_keys() -> set[str]:
-    """收集所有文案中含 ${cmd} 的键名。"""
     keys = set()
     for path in glob.glob("packages/**/locales/zh_cn.json", recursive=True):
         with open(path, encoding="utf-8") as f:
@@ -75,7 +67,6 @@ def _collect_cmd_keys() -> set[str]:
 
 
 def _collect_sources() -> dict[str, str]:
-    """读取各包与核心的全部源码，测试文件自身的构造串不算调用点。"""
     sources = {}
     for path in glob.glob("packages/**/*.py", recursive=True):
         if "tests" in pathlib.PurePath(path).parts:
@@ -86,7 +77,6 @@ def _collect_sources() -> dict[str, str]:
 
 
 def _test_every_call_passes_cmd():
-    """测试含 ${cmd} 的文案在每一处调用点都传了该参数"""
     try:
         keys = _collect_cmd_keys()
         if not keys:
@@ -107,15 +97,8 @@ def _test_every_call_passes_cmd():
 
 
 def _test_indirect_keys_have_provider():
-    """测试间接传参的键确有补上 cmd 的去处
-
-    白名单会掩盖真实的漏传，故要求其对应的补参代码仍然在位：
-    issue_code() 一旦不再构造 ActionText，此处即失守。
-
-    此处逐条报明缘由而不笼统吞掉异常：INDIRECT_PROVIDER 曾随文件迁移而失效，
-    读不到文件的报错被 except 收成了断言不成立，看上去与「补参代码不在位」别无二致，
-    白名单就此形同虚设却无人察觉。
-    """
+    # 白名单会掩盖真实的漏传，故要求其对应的补参代码仍在位：issue_code() 一旦不再构造 ActionText，
+    # 此处即失守。逐条报明缘由而不笼统吞异常——读不到文件若被收成断言不成立，白名单便形同虚设。
     try:
         with open(INDIRECT_PROVIDER, encoding="utf-8") as f:
             provider = f.read()
@@ -135,10 +118,7 @@ def _test_indirect_keys_have_provider():
 
 
 def _test_no_stale_cmd_placeholder():
-    """测试不存在只在文案中出现、代码里却无人引用的 ${cmd} 键
-
-    改文案却忘了改调用点时，该键会成为孤儿，渲染出的仍是字面量。
-    """
+    # 改文案却忘了改调用点时，该键会成为孤儿，渲染出的仍是字面量。
     try:
         keys = _collect_cmd_keys()
         sources = _collect_sources()

@@ -17,7 +17,6 @@ DryRunOption = Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.venv.o
 
 
 def _report(report: engine.HostingReport) -> None:
-    """打印托管动作的结果。"""
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_row(i18n.t("cli.venv.report.action"), report.action)
     table.add_row(i18n.t("cli.venv.report.source"), str(report.source))

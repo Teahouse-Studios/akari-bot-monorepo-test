@@ -35,13 +35,7 @@ _S3_DEPENDENCY_HINT = (
 
 
 def _load_sdk() -> tuple[Any, Any, type[Exception]]:
-    """惰性导入 boto3 及 botocore 的配置类与异常类。
-
-    默认可不装 boto3（extra ``s3``），故导入期不引入；只有真正创建客户端时才需要。
-
-    :return: ``(boto3 模块, botocore.config.Config, botocore.exceptions.ClientError)``。
-    :raises OptionalDependencyMissing: 未安装 boto3 时抛出，消息含安装指引。
-    """
+    # 默认可不装 boto3（extra ``s3``），故导入期不引入；只有真正创建客户端时才需要。
     try:
         import boto3
         from botocore.config import Config as botocore_config
@@ -52,10 +46,7 @@ def _load_sdk() -> tuple[Any, Any, type[Exception]]:
 
 
 def _client_error() -> type[Exception]:
-    """返回 botocore 的 ``ClientError`` 类型，供 ``except`` 子句惰性取用。
-
-    只在异常冒泡到处理分支时求值：那时客户端已建好，botocore 必然可以导入。
-    """
+    # 只在异常冒泡到处理分支时求值：那时客户端已建好，botocore 必然可以导入。
     return _load_sdk()[2]
 
 
@@ -112,7 +103,6 @@ class S3StorageAPI:
         Logger.info(f"[S3] Initialized storage client for bucket: {bucket}")
 
     async def _run_sync(self, func, *args, **kwargs):
-        """在 S3 专用线程池执行同步 SDK 调用，并限制调用方的最长等待时间。"""
         loop = asyncio.get_running_loop()
         future = loop.run_in_executor(self._executor, partial(func, *args, **kwargs))
         try:
@@ -222,10 +212,7 @@ class S3StorageAPI:
         await self._run_sync(self._write_manifest_sync, prefix, files)
 
     async def _update_manifest(self, prefix: str, updater):
-        """在锁保护下读取 manifest、执行 updater(files)、写回（防止并发覆盖）。
-
-        updater 可为同步或异步函数；返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
-        """
+        # updater 可为同步或异步函数；返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
         lock = self._manifest_locks.setdefault(prefix, asyncio.Lock())
         async with lock:
             files = await self._read_manifest(prefix)
@@ -314,7 +301,6 @@ class S3StorageAPI:
             Logger.exception("[S3] Failed to update temporary-file manifest: ")
 
     async def _key_exists(self, key: str) -> bool:
-        """检查指定 key 是否已存在于桶中（使用 head_object）。"""
         try:
             await self._run_sync(self._client.head_object, Bucket=self.bucket, Key=key)
             return True
@@ -332,10 +318,6 @@ class S3StorageAPI:
 
     @staticmethod
     def _compute_hash(file_path: str | Path) -> str:
-        """计算文件的 SHA256 哈希，返回前 HASH_LENGTH 位 hex 字符串。
-
-        :param file_path: 本地文件路径。
-        """
         sha = hashlib.sha256()
         with open(file_path, "rb") as f:
             while chunk := f.read(8192):
@@ -343,8 +325,6 @@ class S3StorageAPI:
         return sha.hexdigest()[: S3StorageAPI.HASH_LENGTH]
 
     async def _ensure_temp_quota(self):
-        """确保 temp 文件夹文件数不超过上限，超出则删除最旧的文件。"""
-
         async def _cleanup(files):
             while len(files) >= self.temp_max_count:
                 oldest = files.pop(0)
@@ -365,10 +345,7 @@ class S3StorageAPI:
 
     @staticmethod
     def _build_key(prefix: str, file_path: str | Path, object_key: str | None, file_hash: str) -> str:
-        """构建 S3 对象 key，将 hash 嵌入文件名（在扩展名之前）。
-
-        例: ("persist", "/tmp/data.txt", None, "a1b2c3") → "persist/data_a1b2c3.txt"
-        """
+        # 例： ("persist", "/tmp/data.txt", None, "a1b2c3") → "persist/data_a1b2c3.txt"
         name = (object_key or Path(file_path).name).lstrip("/")
         stem, sep, ext = name.rpartition(".")
         if sep and stem:
@@ -386,11 +363,6 @@ class S3StorageAPI:
 
 
 def _build_default_storage() -> S3StorageAPI | None:
-    """按配置构造默认存储实例。
-
-    :return: 配置完整时返回实例；配置不全返回 ``None``，沿用「S3 未启用」的既有语义。
-    :raises OptionalDependencyMissing: 配置完整但未安装 boto3 时抛出，消息含安装指引。
-    """
     if not (s3_access_key and s3_secret_key and endpoint_url and bucket and region):
         Logger.warning("[S3] S3 configuration is incomplete. S3Storage will not be initialized.")
         return None

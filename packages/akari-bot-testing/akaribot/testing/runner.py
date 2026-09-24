@@ -28,7 +28,7 @@ TEST_CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"  # 须与 core.constants.path.CONFIG_
 # 留在 data/ 里只会随每次测试运行越积越多。
 TEST_UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
-# 测试所需的配置覆盖项，格式为 (表名, 键名, 值)。文件名不再逐项硬编码：现行扁平布局下
+# 测试所需的配置覆盖项，格式为 (表名， 键名， 值)。文件名不再逐项硬编码：现行扁平布局下
 # 一个表名恰好对应一个配置文件，映射由 CFGManager 的写入路径完成（P4.4 后由 ConfigLayout 提供）。
 TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
     ("config", "enable_petal", True),
@@ -39,16 +39,9 @@ TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
 
 
 def _write_minimal_config(path: Path, locale: str, version: int) -> None:
-    """写出仅含 default_locale 与 config_version 的配置骨架。
-
-    注释先以 i18n 标记落盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值：
-    core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。
-    本函数须在 ``AKARI_CONFIG_PATH`` 置位之后调用，其内的 core.constants 导入会固化配置目录。
-
-    :param path: 配置目录。
-    :param locale: 默认语言代码。
-    :param version: 当前配置版本号。
-    """
+    # 注释先以 i18n 标记落盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值：
+    # core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。
+    # 本函数须在 ``AKARI_CONFIG_PATH`` 置位之后调用，其内的 core.constants 导入会固化配置目录。
     from akaribot.core.constants import config_filename
 
     (path / config_filename).write_text(
@@ -63,15 +56,8 @@ def _write_minimal_config(path: Path, locale: str, version: int) -> None:
 
 
 def _install_test_union_merge_logs() -> Path:
-    """
-    把 union 合并日志引到临时目录，避免测试合成的日志堆积在 data/ 中。
-
-    日志写入本身仍被完整走到，只是产物随进程退出一并删除；需要留存时
-    可自行设置 ``AKARI_UNION_MERGE_LOGS_PATH``，已显式设置的值优先。
-    先行设置过的运行器（如 tests/run_one.py）直接沿用，不再另建一份目录。
-
-    :return: 日志目录的路径。
-    """
+    # 日志写入仍被完整走到，产物随进程退出一并删除；需要留存时设置 ``AKARI_UNION_MERGE_LOGS_PATH``。
+    # 已显式设置过的运行器（如 tests/run_one.py）直接沿用，不再另建目录。
     configured = os.environ.get(TEST_UNION_MERGE_LOGS_PATH_ENV)
     if configured:
         return Path(configured)
@@ -83,14 +69,9 @@ def _install_test_union_merge_logs() -> Path:
 
 
 def _install_test_config() -> Path:
-    """
-    铺好一份测试专用配置，并令其后的导入一律指向它。
-
-    配置不再取自仓库内的配置快照：只写最小骨架，其余键由配置模板扫描补全，
-    因此仓库里不存在需要与代码同步维护的派生配置。
-
-    :return: 临时配置目录的路径。
-    """
+    # 铺好一份测试专用配置，并令其后的导入一律指向它。
+    # 配置不再取自仓库内的配置快照：只写最小骨架，其余键由配置模板扫描补全，
+    # 因此仓库里不存在需要与代码同步维护的派生配置。
     path = Path(tempfile.mkdtemp(prefix="akari_test_config_"))
 
     # 顺序约束：AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。
@@ -201,14 +182,8 @@ def parse_options(argv: Sequence[str] | None = None) -> RunOptions:
 
 
 def _prescan_mode_flags(argv: Sequence[str]) -> tuple[bool, bool]:
-    """只挑出影响导入期行为的两个开关。
-
-    完整解析留到 :func:`run`：本模块也会被 ``tester.py`` 等入口以各自的 argv 导入，在导入期做
-    严格解析会让那些入口因为不相干的参数直接退出。这里只做包含判断，不认识的一律忽略。
-
-    :param argv: 参数列表。
-    :return: 二元组——是否要求 CI 模式；是否要求覆盖率。
-    """
+    # 完整解析留到 :func:`run`：本模块也会被 ``tester.py`` 等入口以各自的 argv 导入，在导入期做
+    # 严格解析会让那些入口因为不相干的参数直接退出。这里只做包含判断，不认识的一律忽略。
     return "--ci" in argv, "--coverage" in argv
 
 
@@ -219,14 +194,9 @@ _MODE_CI, _MODE_COVERAGE = _prescan_mode_flags(sys.argv[1:])
 
 
 def _resolve_repo_root() -> Path | None:
-    """定位源码检出的仓库根，安装形态下返回 None。
-
-    不按本文件位置回推：本模块已在包内，回推只会落到 site-packages。优先取 ``AKARI_REPO_ROOT``；
-    否则取 ``Paths.tests`` 的父目录——源码检出下 ``tests/`` 位于仓库根，再以 ``packages/``
-    是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
-
-    :return: 仓库根；无法确定时为 None，调用方据此退化为只跑 ``Paths.tests``。
-    """
+    # 不按本文件位置回推：本模块已在包内，回推只会落到 site-packages。优先取 ``AKARI_REPO_ROOT``；
+    # 否则取 ``Paths.tests`` 的父目录——源码检出下 ``tests/`` 位于仓库根，再以 ``packages/``
+    # 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
     explicit = os.environ.get(REPO_ROOT_ENV)
     if explicit:
         return Path(explicit).expanduser().resolve()
@@ -241,19 +211,14 @@ OUTPUT_ROOT = REPO_ROOT if REPO_ROOT is not None else Path.cwd()
 
 
 def _source_import_roots() -> list[Path]:
-    """源码检出下提供 ``akaribot`` 命名空间的目录。
-
-    各包源码存放在 ``packages[/<类>]/<包名>``（源码根即分发根，不再有 ``src`` 一层），仓库根本身不再有可导入的 ``akaribot``。
-    判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根不可知时返回空列表：此时
-    ``akaribot`` 由已安装分发提供，无须也不应改写 ``PYTHONPATH``。
-
-    :return: 参与 PYTHONPATH 的目录列表，按路径排序。
-    """
+    # 各包源码存放在 ``packages[/<类>]/<包名>``（源码根即分发根，不再有 ``src`` 一层），仓库根本身不再有可导入的 ``akaribot``。
+    # 判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根不可知时返回空列表：此时
+    # ``akaribot`` 由已安装分发提供，无须也不应改写 ``PYTHONPATH``。
     if REPO_ROOT is None:
         return []
     candidates = [
         REPO_ROOT,
-        # 两种布局都收：源码根即分发根（当前布局），或分发根下的 src（迁移前布局）。
+        # 两种布局都收：源码根即分发根，或分发根下的 src。
         *sorted(path for path in REPO_ROOT.glob("packages/*") if (path / "akaribot").is_dir()),
         *sorted(path for path in REPO_ROOT.glob("packages/*/*") if (path / "akaribot").is_dir()),
         *sorted(path / "src" for path in REPO_ROOT.glob("packages/*") if (path / "src" / "akaribot").is_dir()),
@@ -327,13 +292,8 @@ class FuncTestResult(TypedDict):
 
 
 def _test_roots() -> list[Path]:
-    """测试文件根目录。
-
-    仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。后者只在
-    源码检出下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。
-
-    :return: 存在的目录列表，包内目录按路径排序。
-    """
+    # 仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。后者只在
+    # 源码检出下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。
     roots = [Path(tests_path)]
     if REPO_ROOT is not None:
         for pattern in ("packages/*/tests", "packages/*/*/tests"):
@@ -342,14 +302,8 @@ def _test_roots() -> list[Path]:
 
 
 def _test_module_key(path: str) -> str:
-    """测试文件的合成模块名。
-
-    按仓库根相对路径生成：不同包里可以存在同名测试文件，仅取文件名会互相覆盖。仓库根不可知时
-    退回原路径，模块名的唯一性由绝对路径本身保证。
-
-    :param path: 测试文件路径。
-    :return: ``sys.modules`` 中使用的模块名。
-    """
+    # 按仓库根相对路径生成：不同包里可以存在同名测试文件，仅取文件名会互相覆盖。仓库根不可知时
+    # 退回原路径，模块名的唯一性由绝对路径本身保证。
     relative = Path(path)
     if REPO_ROOT is not None:
         try:
@@ -360,14 +314,9 @@ def _test_module_key(path: str) -> str:
 
 
 def _explicit_test_files() -> list[str]:
-    """把 ``OPTIONS.paths`` 展开成测试文件列表。
-
-    目录递归取 ``*.py``，文件按原样收；路径按仓库根解析，相对路径因此与 ``tests/run_one.py``
-    的写法一致。给错路径时返回空列表，由调用方报「没有匹配的测试文件」——静默跑全量会让
-    ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
-
-    :return: 文件路径列表，按路径排序且去重。
-    """
+    # 目录递归取 ``*.py``，文件按原样收；路径按仓库根解析，相对路径因此与 ``tests/run_one.py``
+    # 的写法一致。给错路径时返回空列表，由调用方报「没有匹配的测试文件」——静默跑全量会让
+    # ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
     files: list[str] = []
     for raw in OPTIONS.paths:
         candidate = Path(raw).expanduser()
@@ -381,12 +330,7 @@ def _explicit_test_files() -> list[str]:
 
 
 def _collect_test_files() -> list[str]:
-    """收集待运行的测试文件。
-
-    给了位置参数就只跑这些路径；否则按默认根收集。两种情形都按路径排序且去重。
-
-    :return: 文件路径列表。
-    """
+    # 给了位置参数就只跑这些路径；否则按默认根收集。两种情形都按路径排序且去重。
     if OPTIONS.paths:
         return _explicit_test_files()
     files: list[str] = []

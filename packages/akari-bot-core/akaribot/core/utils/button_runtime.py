@@ -127,5 +127,4 @@ def normalize_button_payload(payload: str) -> str:
 
 
 def _clear_button_registry() -> None:
-    """清空按钮注册表，仅供测试隔离。"""
     _button_registry.clear()

@@ -25,7 +25,7 @@ async def test_wordle_stop(tester: Tester):
 
 @func_case
 async def test_twenty_four(tester: Tester):
-    """twenty_four 模块测试 - 24点游戏"""
+    """twenty_four 模块测试 - 24 点游戏"""
     await tester.integrate(["~twenty_four", "1+2+3+4"], Contains("数字"), "twenty_four 应显示数字组合")
     return tester
 

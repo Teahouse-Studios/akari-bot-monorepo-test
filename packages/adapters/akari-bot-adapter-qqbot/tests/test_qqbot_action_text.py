@@ -31,7 +31,6 @@ from akaribot.core.utils.button_runtime import (
 
 
 def _test_render_full_attributes():
-    """测试标签属性完整且值经 urlencode"""
     try:
         elem = ActionTextElement.assign("~wiki 沙盒", show="沙盒", reference=True).resolve(None)
         tag = _render_action_text(elem)
@@ -45,7 +44,6 @@ def _test_render_full_attributes():
 
 
 def _test_render_omits_empty_show():
-    """测试 show 为空时省略该属性，由平台默认取 text"""
     try:
         elem = ActionTextElement.assign("~wiki 沙盒").resolve(None)
         tag = _render_action_text(elem)
@@ -59,7 +57,6 @@ def _test_render_omits_empty_show():
 
 
 def _test_render_escapes_quotes():
-    """测试属性值编码后不含会破坏标签的字符"""
     try:
         elem = ActionTextElement.assign('~echo "a" <b> &c', show="<标签>").resolve(None)
         tag = _render_action_text(elem)
@@ -73,7 +70,6 @@ def _test_render_escapes_quotes():
 
 
 def _test_render_truncates_text():
-    """测试超长 text 截断至平台上限"""
     try:
         long_text = "长" * 200
         elem = ActionTextElement.assign(long_text).resolve(None)
@@ -87,7 +83,6 @@ def _test_render_truncates_text():
 
 
 def _test_render_truncates_show():
-    """测试超长 show 独立截断，不受 text 影响"""
     try:
         elem = ActionTextElement.assign("~wiki 沙盒", show="标" * 150).resolve(None)
         tag = _render_action_text(elem)
@@ -102,7 +97,6 @@ def _test_render_truncates_show():
 
 
 def _test_render_empty_text():
-    """测试 text 为空时不产出标签"""
     try:
         elem = ActionTextElement.assign("").resolve(None)
         return _render_action_text(elem) == ""
@@ -111,11 +105,8 @@ def _test_render_empty_text():
 
 
 def _test_send_msg_markdown_inline_join():
-    """测试指令操作与其前后文本落在同一行
-
-    句子经 KE 码切分后形如「（」、指令操作、「）」三段，适配器以换行拼接各项，
-    不跟踪行内状态就会把一句话拆成三行。
-    """
+    # 句子经 KE 码切分后形如「（」、指令操作、「）」三段，适配器以换行拼接各项，
+    # 不跟踪行内状态就会把一句话拆成三行。
     try:
         # 复刻 send_msg_markdown() 的拼接逻辑，验证状态跟踪的取值
         elements = [
@@ -152,7 +143,6 @@ def _test_send_msg_markdown_inline_join():
 
 
 def _test_button_element_builds_keyboard():
-    """测试 ButtonElement 经消息链转换后生成 QQBot 键盘。"""
     try:
         session = SessionInfo(
             target_id=f"{target_group_prefix}|1",
@@ -185,7 +175,6 @@ def _test_button_element_builds_keyboard():
 
 
 def _test_keyboard_reflows_and_caps_qq_limits():
-    """测试超宽/超长按钮区域在 QQ 限制内重排，并丢弃超出容量的尾部按钮。"""
     try:
         session = SessionInfo(
             target_id=f"{target_group_prefix}|1",

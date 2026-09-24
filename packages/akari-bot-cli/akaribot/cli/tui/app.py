@@ -139,12 +139,6 @@ class TuiApp(compat.App[int]):
         yield compat.Footer()
 
     def _build_page(self, key: str, page_class: type) -> compat.Widget:
-        """按页构造控件，注入该页的数据源（若提供）。
-
-        :param key: 页面键。
-        :param page_class: 页面类。
-        :return: 页面控件。
-        """
         source = self.sources.get(key)
         if key == "modules":
             module_source = source if source is not None else self.module_source
@@ -179,7 +173,6 @@ class TuiApp(compat.App[int]):
 
     @compat.on(compat.ListView.Selected, "#nav")
     def _on_nav_selected(self, event: compat.ListView.Selected) -> None:
-        """侧栏选中即切换页面。"""
         item_id = event.item.id or ""
         if item_id.startswith("nav-"):
             self.show_page(item_id.removeprefix("nav-"))
@@ -189,7 +182,6 @@ class TuiApp(compat.App[int]):
         return self.query_one(f"#page-{key}")
 
     def _mark_first_paint(self) -> None:
-        """首帧渲染回调。"""
         self.first_paint_ms = (time.monotonic() - self._boot_started_at) * 1000.0
 
     def modules_page(self) -> ModulesPage:

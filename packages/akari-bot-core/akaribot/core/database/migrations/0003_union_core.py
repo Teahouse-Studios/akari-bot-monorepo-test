@@ -54,11 +54,7 @@ async def upgrade(ctx: MigrationContext) -> None:
 
 
 async def _rename_tables(ctx: MigrationContext) -> None:
-    """
-    把核心表改名为 union 命名。
-
-    :param ctx: 迁移上下文。
-    """
+    # 把核心表改名为 union 命名。
     for old_table, new_table in CORE_RENAME_TABLES.items():
         if not await ctx.has_table(old_table):
             continue
@@ -71,11 +67,7 @@ async def _rename_tables(ctx: MigrationContext) -> None:
 
 
 async def _rename_columns(ctx: MigrationContext) -> None:
-    """
-    把核心表的主键列改名为 union_id。
-
-    :param ctx: 迁移上下文。
-    """
+    # 把核心表的主键列改名为 union_id。
     for old_column, tables in CORE_RENAME_COLUMNS.items():
         for table in tables:
             if not await ctx.has_column(table, old_column):
@@ -84,14 +76,9 @@ async def _rename_columns(ctx: MigrationContext) -> None:
 
 
 async def _ensure_channel_ids(ctx: MigrationContext) -> None:
-    """
-    为绑定行补上消息通道号并按组顺延。
-
-    通道号须在组内逐个顺延：若一律保留默认值，同一 union 下的全部场景会被判定为同一条消息
-    通道，命令与推送将相互去重，导致场景不再有消息送达。
-
-    :param ctx: 迁移上下文。
-    """
+    # 为绑定行补上消息通道号并按组顺延。
+    # 通道号须在组内逐个顺延：若一律保留默认值，同一 union 下的全部场景会被判定为同一条消息
+    # 通道，命令与推送将相互去重，导致场景不再有消息送达。
     if not await ctx.has_column("target_union_bind", "channel_id"):
         await ctx.add_column("target_union_bind", "channel_id", "INT", null=False, default="1")
     for union_id in set(await TargetUnionBind.all().values_list("union_id", flat=True)):
@@ -102,11 +89,8 @@ async def _ensure_channel_ids(ctx: MigrationContext) -> None:
 
 
 async def _drop_legacy_bots_id() -> None:
-    """清除旧版机器人互认记录。
-
-    旧版 connect 把互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。
-    该结构已改为两级字典，旧值直接清除，重新执行一次 ``bind auto`` 即可。
-    """
+    # 旧版 connect 把互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。
+    # 该结构已改为两级字典，旧值直接清除，重新执行一次 ``bind auto`` 即可。
     for target in await TargetUnionInfo.all():
         if isinstance(target.target_data.get("bots_id"), list):
             target.target_data.pop("bots_id")
@@ -114,11 +98,7 @@ async def _drop_legacy_bots_id() -> None:
 
 
 async def _add_union_record_columns(ctx: MigrationContext) -> None:
-    """
-    为统计与审计表增设 union 列并回填。
-
-    :param ctx: 迁移上下文。
-    """
+    # 为统计与审计表增设 union 列并回填。
     for table in UNION_RECORD_TABLES:
         for column, source in (("target_union_id", "target_id"), ("sender_union_id", "sender_id")):
             if await ctx.has_column(table, column):
@@ -131,11 +111,7 @@ async def _add_union_record_columns(ctx: MigrationContext) -> None:
 
 
 async def _create_indexes(ctx: MigrationContext) -> None:
-    """
-    为轮询与区间统计补建索引。
-
-    :param ctx: 迁移上下文。
-    """
+    # 为轮询与区间统计补建索引。
     for table, columns, index_name in CORE_INDEXES:
         if not await ctx.has_column(table, columns[0]):
             continue

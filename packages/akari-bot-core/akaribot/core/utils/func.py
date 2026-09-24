@@ -160,7 +160,7 @@ def camel_to_snake(text: str, abbr_map: dict[str, str] | None = None) -> str:
 def snake_to_camel(text: str, upper: bool = True, abbr_map: dict[str, str] | None = None) -> str:
     """蛇形命名转驼峰命名。
 
-    :param upper: 是否转为大驼峰。（默认True）"""
+    :param upper: 是否转为大驼峰。（默认 True）"""
     if abbr_map:
         for k, v in abbr_map.items():
             text = text.replace(v, k)

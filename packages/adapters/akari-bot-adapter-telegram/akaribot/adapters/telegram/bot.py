@@ -70,7 +70,6 @@ async def to_message_chain(msg: types.Message):
 
 
 async def _download_telegram_file(file_path: str | None) -> Path:
-    """使用 aiogram 会话流式下载文件，避免整份媒体同时驻留内存。"""
     if not file_path:
         raise ValueError("Telegram file path is unavailable")
     suffix = Path(file_path).suffix.lstrip(".")

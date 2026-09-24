@@ -1,8 +1,7 @@
 """核心表的 v2 变更。
 
-``target_info`` 增设 ``banned_users``：封禁状态原先混在 ``target_data.ban`` 里，与场景数据
-共用一份 JSON，无法单独建索引也无法区分「未封禁」与「字段缺失」；拆出独立列后封禁判定不再
-需要解析整份场景数据。``analytics_data.sender_id`` 同时改为可空，以容纳无发送者的记录。
+``target_info`` 增设 ``banned_users``：把封禁状态从 ``target_data.ban`` 拆为独立列，使其可
+单独建索引，并能区分「未封禁」与「字段缺失」，封禁判定无须解析整份场景数据。``analytics_data.sender_id`` 同时改为可空，以容纳无发送者的记录。
 """
 
 from __future__ import annotations
@@ -86,11 +85,7 @@ async def upgrade(ctx: MigrationContext) -> None:
 
 
 async def _add_banned_users(ctx: MigrationContext) -> None:
-    """
-    为场景表增设封禁用户列。
-
-    :param ctx: 迁移上下文。
-    """
+    # 为场景表增设封禁用户列。
     if not await ctx.has_table(LEGACY_TARGET_TABLE):
         return
     if await ctx.has_column(LEGACY_TARGET_TABLE, "banned_users"):
@@ -102,11 +97,7 @@ async def _add_banned_users(ctx: MigrationContext) -> None:
 
 
 async def _make_sender_id_nullable(ctx: MigrationContext) -> None:
-    """
-    放宽统计表的发送者列。
-
-    :param ctx: 迁移上下文。
-    """
+    # 放宽统计表的发送者列。
     if not await ctx.has_table("analytics_data"):
         return
     if not await ctx.has_column("analytics_data", "sender_id"):

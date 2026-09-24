@@ -82,7 +82,7 @@ async def init_background_task():
     """初始化后台任务。
 
     启动以下服务：
-    1. IP信息获取
+    1. IP 信息获取
     2. WebRender 初始化
     3. 检查并记录 WebRender 状态
     """
@@ -108,7 +108,6 @@ async def init_background_task():
 
 
 def _background_task_done(task: asyncio.Task[None]) -> None:
-    """取回后台初始化任务的异常，避免出现 ``Task exception was never retrieved``。"""
     try:
         task.result()
     except asyncio.CancelledError:

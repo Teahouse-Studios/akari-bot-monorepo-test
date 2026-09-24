@@ -19,11 +19,6 @@ from akaribot.testing import Tester, func_case
 
 
 def _file_target(link: str) -> str:
-    """取链接中的文件路径部分，去掉查询串。
-
-    :param link: 数据库链接。
-    :return: ``://`` 之后的路径。
-    """
     return link.split("://", 1)[1].partition("?")[0]
 
 
@@ -50,7 +45,6 @@ def _test_absolute_and_memory_links_are_untouched():
 
 
 def _test_windows_drive_path_is_not_anchored():
-    """带盘符的写法在 POSIX 上判不出绝对，须按字面识别，否则会被锚到实例根。"""
     target = _file_target(prepare_db_link("sqlite://C:/akari/save.db"))
     return target == "C:/akari/save.db"
 
@@ -61,7 +55,6 @@ def _test_non_sqlite_links_are_untouched():
 
 
 def _write_minimal_config(config_dir: Path) -> None:
-    """写出最小配置骨架，其余键由配置模板扫描补齐。"""
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / config_filename).write_text(
         f'default_locale = "zh_cn"\nconfig_version = {config_version}\n',
@@ -70,7 +63,6 @@ def _write_minimal_config(config_dir: Path) -> None:
 
 
 def _test_entrypoint_keeps_artifacts_inside_instance():
-    """cwd 在实例外时，db 入口的数据库、配置与日志仍只落实例根。"""
     with TemporaryDirectory() as temp:
         base = Path(temp)
         instance_root = base / "instance"

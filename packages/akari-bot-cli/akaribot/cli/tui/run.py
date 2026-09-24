@@ -456,7 +456,6 @@ class SubprocessRunSource:
         return [sys.executable, "-m", "akaribot.cli.main", *args]
 
     def _root(self) -> Path | None:
-        """返回实例根，显式给定者优先。"""
         if self.root is not None:
             return self.root
         from akaribot.cli.tui.dashboard import resolve_instance_root
@@ -464,16 +463,13 @@ class SubprocessRunSource:
         return resolve_instance_root(self.start_dir)
 
     def _origin_text(self) -> str:
-        """定位失败时用于展示的候选路径。"""
         return str(self.root or self.start_dir or Path.cwd())
 
     def _lock_path(self) -> Path:
-        """返回锁文件路径，实例根未知时给出候选路径拼接结果。"""
         root = self._root() or Path(self._origin_text())
         return root / LOCK_FILENAME
 
     def _instance(self, root: Path) -> Any | None:
-        """构造 ``Instance``；不可用时返回 ``None``。"""
         if self._instance_factory is not None:
             try:
                 return self._instance_factory(root)
@@ -500,7 +496,6 @@ class SubprocessRunSource:
             return None
 
     def _popen_kwargs(self, root: Path, handle: Any) -> dict[str, Any]:
-        """构造 Popen 关键字参数：注入实例目录、UTF-8 输出与独立进程组。"""
         env = dict(os.environ)
         env[INSTANCE_DIR_ENV] = str(root)
         env["PYTHONIOENCODING"] = "utf-8"
@@ -518,7 +513,6 @@ class SubprocessRunSource:
         return kwargs
 
     def _request_stop(self, process: Any, *, force: bool) -> None:
-        """请求停止：优先向进程组发信号，不可用时退回 ``Popen.terminate()``。"""
         pid = getattr(process, "pid", None)
         if pid is not None and self._kill(int(pid), force):
             return
@@ -530,7 +524,6 @@ class SubprocessRunSource:
                 return
 
     def _close_log(self) -> None:
-        """关闭子进程标准输出的落盘句柄。"""
         handle = self._log_handle
         self._log_handle = None
         if handle is None:
@@ -686,7 +679,6 @@ class RunPage(compat.Vertical):
         self._set_status(self.last_result or self._summary())
 
     def _on_tick(self) -> None:
-        """定时回调：重新轮询状态表；页面被隐藏时跳过，避免无谓轮询。"""
         if not self.display:
             return
         self.refresh_status()
@@ -720,7 +712,6 @@ class RunPage(compat.Vertical):
         self._start_operation(i18n.t("cli.tui.run.label_restart"), self.source.restart)
 
     def _start_operation(self, label: str, func: Callable[[], RunResult]) -> None:
-        """在后台任务里执行启停操作。"""
         if self._busy:
             compat.notify(
                 self.app,
@@ -736,7 +727,6 @@ class RunPage(compat.Vertical):
         self.run_worker(self._operate(label, func), group="run-op", exclusive=True)
 
     async def _operate(self, label: str, func: Callable[[], RunResult]) -> None:
-        """执行启停子进程操作，结束后刷新状态表。"""
         try:
             result = await asyncio.to_thread(func)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
@@ -772,7 +762,6 @@ class RunPage(compat.Vertical):
             self._set_status(failure)
 
     def _summary(self) -> str:
-        """构造状态表的一句话摘要。"""
         if not self._records:
             return i18n.t("cli.tui.run.summary_empty")
         parts = [
@@ -793,7 +782,6 @@ class RunPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_table(self) -> None:
-        """按缓存状态表重绘表格，列宽按终端列数计算，窄屏依次丢弃尾列。"""
         columns = [i18n.t(key) for key in _TABLE_COLUMNS]
         rows = [
             (
@@ -825,7 +813,6 @@ class RunPage(compat.Vertical):
         self.query_one("#table", compat.Static).update(compat.plain_text(text))
 
     def _fit_columns(self, widths: Sequence[int]) -> int:
-        """按可用宽度决定保留几列：至少保留目标与状态两列。"""
         width = self._inner_width()
         if width <= 0:
             return len(widths)
@@ -835,7 +822,6 @@ class RunPage(compat.Vertical):
         return keep
 
     def _inner_width(self) -> int:
-        """返回表格可用内容宽度：控件宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(self)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -843,7 +829,6 @@ class RunPage(compat.Vertical):
         return max(outer - 6, 12)
 
     def _sync_actions(self) -> None:
-        """按运行状态与忙碌状态更新按钮可用性。"""
         running = self.running
         self.query_one("#start", compat.Button).disabled = self._busy or running
         self.query_one("#stop", compat.Button).disabled = self._busy or not running
@@ -851,7 +836,6 @@ class RunPage(compat.Vertical):
         self.query_one("#refresh", compat.Button).disabled = self._busy
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏，按控件宽度截断。"""
         width = self._inner_width()
         clipped = compat.truncate_cells(text, width) if width > 0 else text
         self._status_rendered = clipped
@@ -867,7 +851,6 @@ class RunPage(compat.Vertical):
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：启动、停止、重启、刷新。"""
         button_id = event.button.id
         if button_id == "start":
             self.request_start()

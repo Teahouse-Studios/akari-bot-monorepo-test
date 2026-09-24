@@ -39,12 +39,6 @@ FILE_BY_TABLE = {"config": "config.toml", "secret": "secret.toml"}
 
 
 def _entrypoint_json(instance: Instance, *args: str) -> object:
-    """调用 core 配置入口并解析其 JSON 输出。
-
-    :param instance: 目标实例。
-    :param args: 传给入口的参数（本函数会补 ``--json``）。
-    :return: 解析后的对象。
-    """
     result = instance.run_core_capture("config", *args, "--json")
     if result.returncode != 0:
         detail = [line for line in (result.stderr or "").strip().splitlines() if line]
@@ -56,12 +50,6 @@ def _entrypoint_json(instance: Instance, *args: str) -> object:
 
 
 def _config_file(instance: Instance, table: str) -> Path:
-    """取配置表对应的文件路径。
-
-    :param instance: 目标实例。
-    :param table: 表名。
-    :return: 配置文件路径（未必存在）。
-    """
     name = FILE_BY_TABLE.get(table, f"{table}.toml")
     base = instance.meta.root / "config"
     for candidate in (base / name, base / "modules" / name, base / "adapters" / name):

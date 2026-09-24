@@ -159,7 +159,7 @@ def build_clickable_modules(msg: Bot.MessageSession, groups: list[tuple[str, lis
     否则会紧贴在上一组末尾的标签之后。
 
     :param msg: 消息会话。
-    :param groups: (标题多语言键, 模块名列表) 的序列，模块名为空的组会被跳过。
+    :param groups: (标题多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
     :return: 消息元素列表；所有组皆空时返回空片段，空态文案由调用方负责。
     """
     prefix = msg.session_info.prefixes[0]
@@ -228,7 +228,7 @@ def build_module_table(
     区隔行因此与上一组的收尾同处一个元素。
 
     :param msg: 消息会话。
-    :param groups: (组名多语言键, 模块名列表) 的序列，模块名为空的组会被跳过。
+    :param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
     :param include_help_header: 是否在模块表格内加入 help 顶栏。
     :param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。
     :return: 消息元素列表；所有组皆空时返回空片段，空态文案由调用方负责。
@@ -372,14 +372,14 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
 
     :param msg: 消息会话。
     :param help_doc: :meth:`CommandParser.return_json_help_doc` 的产出。
-    :param regex_rows: (正则表达式, 说明) 序列。
+    :param regex_rows: (正则表达式， 说明) 序列。
     :return: 消息元素列表；无任何内容时返回空片段。
     """
     locale = msg.session_info.locale
     args = help_doc.get("args") or []
     options = help_doc.get("options") or []
 
-    # 每节为 (区隔行文案, [(种类, 首列, 次列), ...])；命令一节不带区隔行。
+    # 每节为 (区隔行文案， [(种类， 首列， 次列), ...])；命令一节不带区隔行。
     # 种类决定首列如何落到单元格里：command 做成指令操作，code 已是成型的行内代码，
     # text 则照常转义。
     sections = []
@@ -438,7 +438,7 @@ def get_help_link_buttons(msg: Bot.MessageSession, include_modules: bool = True)
     取自全局配置，不含各平台在常规消息入口所用的前缀。
 
     :param msg: 消息会话。
-    :return: （标签, 命令）序列；会话不具备按钮能力时为空列表。
+    :return: （标签， 命令）序列；会话不具备按钮能力时为空列表。
     """
     if not msg.session_info.support_button:
         return []
@@ -571,7 +571,7 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
     if msg.parsed_msg:
         mdocs = []
         malias = []
-        # 表格版另需成对的（正则, 说明），与拼成一行的 mdocs 并行收集
+        # 表格版另需成对的（正则， 说明），与拼成一行的 mdocs 并行收集
         regex_rows = []
 
         help_name = alias[module].split()[0] if module in alias else module.split()[0]

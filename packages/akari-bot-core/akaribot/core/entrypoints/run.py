@@ -1,6 +1,6 @@
-"""机器人守护进程入口：原仓库根 ``bot.py``。
+"""机器人守护进程入口。
 
-``python -m akaribot.core.entrypoints.run`` 与迁移前的 ``python bot.py`` 等价：安装 BotDaemon
+``python -m akaribot.core.entrypoints.run`` 与 ``python bot.py`` 等价：安装 BotDaemon
 日志、取单实例锁、以 ``pre_init`` 子进程完成配置与数据库准备，再按配置启动各适配器进程与 Server
 进程。仓库根的 ``bot.py`` 只是转发到本模块的兼容层。
 
@@ -45,14 +45,9 @@ AKARI_BOT_I18N_CACHE_DIR = str(Paths.data / "i18n_cache")
 
 
 def _repository_root() -> Path | None:
-    """定位源码检出的仓库根，安装形态下返回 None。
-
-    本模块位于包内，按自身位置回推仓库根只会落到 site-packages，故取与
-    :mod:`akaribot.testing.runner` 相同的判据：优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``
-    的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
-
-    :return: 仓库根；无法确定时为 None。
-    """
+    # 本模块位于包内，按自身位置回推仓库根只会落到 site-packages，故取与
+    # :mod:`akaribot.testing.runner` 相同的判据：优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``
+    # 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
     explicit = os.environ.get(REPO_ROOT_ENV)
     if explicit:
         return Path(explicit).expanduser().resolve()
@@ -61,15 +56,8 @@ def _repository_root() -> Path | None:
 
 
 def _source_import_roots() -> list[Path]:
-    """源码检出下提供 ``akaribot`` 命名空间的目录。
-
-    各包源码存放在 ``packages[/<类>]/<包名>/src``，仓库根本身不再有可导入的 ``akaribot``。
-    判据只用目录是否存在，不依赖已安装分发的 metadata。仓库根一并保留，使 ``tester`` 等根级
-    脚本对子进程仍可导入。仓库根不可知时返回空列表：此时 ``akaribot`` 由已安装分发提供，
-    无须也不应改写 ``PYTHONPATH``。
-
-    :return: 参与 PYTHONPATH 的目录列表，按路径排序。
-    """
+    # 判据只用目录是否存在，不依赖已安装分发的 metadata；仓库根一并保留，使 ``tester`` 等根级脚本
+    # 对子进程仍可导入。仓库根不可知时返回空列表：此时 ``akaribot`` 由已安装分发提供。
     root = _repository_root()
     if root is None:
         return []
@@ -78,7 +66,7 @@ def _source_import_roots() -> list[Path]:
 
 
 # 显式传入实例根下的 .env：不给路径时 python-dotenv 从本模块所在目录向上查找，包内位置与
-# 仓库根、实例根都不对应。AKARI_INSTANCE_DIR 未设置时实例根即进程 cwd，与迁移前一致。
+# 仓库根、实例根都不对应。AKARI_INSTANCE_DIR 未设置时实例根即进程 cwd。
 load_dotenv(Paths.instance / ".env")
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
 # 空列表时不置位：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
@@ -88,13 +76,8 @@ os.environ.setdefault("AKARI_BOT_I18N_CACHE_DIR", AKARI_BOT_I18N_CACHE_DIR)
 
 
 def _choose_first_run_locale() -> str:
-    """首次运行时询问默认语言。
-
-    完整交互式初始化并入 CLI（阶段 5），此处仅保留语言选择。无终端时（容器、CI）
-    直接采用默认语言，不阻塞在 input() 上。
-
-    :return: 语言代码。
-    """
+    # 完整交互式初始化并入 CLI（阶段 5），此处仅保留语言选择。无终端时（容器、CI）
+    # 直接采用默认语言，不阻塞在 input() 上。
     from akaribot.core.constants import default_locale, lang_list
 
     if not sys.stdin.isatty():
@@ -110,11 +93,8 @@ def _choose_first_run_locale() -> str:
 
 
 def _init_first_run_config() -> None:
-    """首次运行时写出配置骨架，其余配置项交给 pre_init() 的模板扫描补全。
-
-    骨架只含 default_locale 与 config_version：这两个顶层键不属于任何模板，扫描补不出来。
-    注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。
-    """
+    # 骨架只含 default_locale 与 config_version：这两个顶层键不属于任何模板，扫描补不出来。
+    # 注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。
     from akaribot.core.constants import config_version
 
     locale = _choose_first_run_locale()
@@ -147,7 +127,6 @@ _daemon_logger_initialized = False
 
 
 def _is_daemon_log(record):
-    """守护进程自身及尚未重命名的核心日志均写入 BotDaemon。"""
     return record["extra"].get("name") in {None, "BotDaemon"}
 
 
@@ -264,12 +243,12 @@ def adapter_platform_name(platform: str) -> str:
 def discover_adapter_instances() -> list[AdapterInstance]:
     """枚举全部已启用的适配器实例。
 
-    以配置中的 ``bot_*`` 表为索引：表名去前缀后按第一个 ``-`` 拆成 ``(适配器, 实例 ID)``，与已
+    以配置中的 ``bot_*`` 表为索引：表名去前缀后按第一个 ``-`` 拆成 ``(适配器， 实例 ID)``，与已
     安装的适配器核对，再读该表自己的 ``enable``。孤立配置与非法实例 ID 只告警跳过，不中止启动。
 
     ``enable`` 不回退到基表，否则「新建一个实例文件」等同于「立即上线一个机器人」。
 
-    :return: 已启用的实例，按 ``(适配器, 实例 ID)`` 排序。
+    :return: 已启用的实例，按 ``(适配器， 实例 ID)`` 排序。
     """
     from akaribot.core.config import CFGManager
     from akaribot.core.constants import Info
@@ -317,7 +296,7 @@ def discover_adapter_instances() -> list[AdapterInstance]:
 
 
 # 监听地址字段。web 的 web_port 与 onebot / milky 的 qq_host 最终都占用一个 TCP 端口，
-# 故统一解析出 (主机, 端口) 后比对：web 与 onebot 撞同一个端口同样是致命的。
+# 故统一解析出 (主机， 端口) 后比对：web 与 onebot 撞同一个端口同样是致命的。
 INSTANCE_LISTEN_FIELDS = ("web_port", "qq_host")
 
 # web_host 缺省时的绑定地址，与 WebConfig 声明的默认值一致。守护进程不能向 CFGManager.get
@@ -326,11 +305,6 @@ DEFAULT_WEB_HOST = "127.0.0.1"
 
 
 def _split_host_port(value: object) -> tuple[str, int] | None:
-    """从监听配置中解析出 ``(主机, 端口)``。
-
-    :param value: 配置值，可能是 ``6485``、``"127.0.0.1:8080"`` 或 ``"http://127.0.0.1:8080"``。
-    :return: 主机（小写，可能为空串）与端口；解析不出或端口越界时返回 None。
-    """
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, int):
@@ -358,28 +332,15 @@ def _split_host_port(value: object) -> tuple[str, int] | None:
 
 
 def _hosts_conflict(left: str, right: str) -> bool:
-    """判断两个监听主机是否会争用同一个端口。
-
-    通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同：
-    宁可漏报也不误报，误报会让本来可用的部署起不来。
-
-    :param left: 主机一。
-    :param right: 主机二。
-    :return: 是否争用。
-    """
+    # 通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同：
+    # 宁可漏报也不误报，误报会让本来可用的部署起不来。
     wildcard = {"", "*", "0.0.0.0", "::", "[::]"}
     return left in wildcard or right in wildcard or left == right
 
 
 def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
-    """收集实例占用的 ``(主机, 端口, 字段名)``。
-
-    ``qq_host`` 在 onebot 是反向 WS 的绑定地址、在 milky 是所连 Milky 服务的目标地址，
-    取值形式统一按 ``host:port`` 或 URL 解析；``web_port`` 的绑定主机取自 ``web_host``。
-
-    :param instance: 实例。
-    :return: 资源列表。
-    """
+    # ``qq_host`` 在 onebot 是反向 WS 的绑定地址、在 milky 是所连 Milky 服务的目标地址，
+    # 取值形式统一按 ``host:port`` 或 URL 解析；``web_port`` 的绑定主机取自 ``web_host``。
     from akaribot.core.config import CFGManager
 
     resources: list[tuple[str, int, str]] = []
@@ -397,15 +358,8 @@ def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
 
 
 def _read_credential(instance: AdapterInstance, field: str) -> object:
-    """读取实例的某个凭据字段。
-
-    凭据多数落在密钥表，也有落在普通表的（如 ``qq_bot_appid``），两处都试一次。
-    未填写的占位符由 ``CFGManager.get`` 归一为 None，不会被误判为重复。
-
-    :param instance: 实例。
-    :param field: 凭据字段名。
-    :return: 凭据值；两处都没有时返回 None。
-    """
+    # 凭据多数落在密钥表，也有落在普通表的（如 ``qq_bot_appid``），两处都试一次。
+    # 未填写的占位符由 ``CFGManager.get`` 归一为 None，不会被误判为重复。
     from akaribot.core.config import CFGManager
 
     for secret in (True, False):

@@ -38,13 +38,13 @@ def arrange_buttons(
     per_row: int = DEFAULT_BUTTONS_PER_ROW,
 ) -> list[ButtonRows]:
     """
-    将（展示文本, 点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
+    将（展示文本， 点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
 
     行数由 ``per_row`` 算出后即固定，再把按钮均分到各行，使各行的数量至多相差一个——
     直接按 ``per_row`` 切片会得到 ``[3, 3, 3, 1]`` 这样参差的末行。行数超出平台上限时
     压回上限，此时每行的数量将突破 ``per_row``，至多到 ``MAX_BUTTONS_PER_ROW``。
 
-    :param buttons: （标签, 命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
+    :param buttons: （标签， 命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
     :param per_row: 每行按钮数量的可读性上限。
     :return: 按钮行列表；输入为空时返回空列表。
     """
@@ -79,7 +79,6 @@ def build_button_rows(rows: list[dict[str, str]]) -> list[ButtonRows]:
 
 
 def _iter_buttons(value):
-    """递归取得消息对象中的按钮，包含 i18n 参数内嵌的消息元素。"""
     if isinstance(value, ButtonElement):
         yield value
     elif isinstance(value, ButtonFrameElement):

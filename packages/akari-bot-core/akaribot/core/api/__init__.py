@@ -31,10 +31,11 @@ except ConfigFileNotFound:
 
 
 def __getattr__(name: str) -> Any:
-    """转发到实现模块，使配置缺失时未绑定的名字在首次访问时重试。
+    """
+    转发到实现模块，使配置缺失时未绑定的名字在首次访问时重试。
 
-    :param name: 门面名字。
-    :return: 名字对应的对象。
-    :raises AttributeError: 该名字不在门面承诺的清单内。
+        :param name: 门面名字。
+        :return: 名字对应的对象。
+        :raises AttributeError: 该名字不在门面承诺的清单内。
     """
     return getattr(_base, name)

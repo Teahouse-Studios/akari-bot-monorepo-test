@@ -328,7 +328,6 @@ PROTECTED_CONFIG_FILES = (config_filename,)
 
 
 def _list_cfg_files() -> list[str]:
-    """列出配置目录下的 TOML 文件，主配置置顶。"""
     cfg_files = sorted(cfg.name for cfg in config_path.iterdir() if cfg.name.endswith(".toml"))
     if config_filename in cfg_files:
         cfg_files.remove(config_filename)
@@ -883,7 +882,6 @@ async def restart():
 
 
 def _restart_done(task: asyncio.Task) -> None:
-    """Release the retained restart task and retrieve unexpected failures."""
     global _restart_task
     if _restart_task is task:
         _restart_task = None

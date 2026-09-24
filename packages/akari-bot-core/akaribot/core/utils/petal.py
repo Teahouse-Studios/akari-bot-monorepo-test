@@ -140,7 +140,7 @@ async def cost_petal(msg: Bot.MessageSession, amount: int, send_prompt: bool = T
 
     :param msg: 消息会话。
     :param amount: 花费的花瓣数量。
-    :param send_prompt: 花瓣不足时是否显示提示消息。（默认True）
+    :param send_prompt: 花瓣不足时是否显示提示消息。（默认 True）
     :returns: 是否成功处理。
     """
     if CoreConfig.enable_petal:

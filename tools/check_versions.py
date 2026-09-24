@@ -171,9 +171,9 @@ def changed_files(base: str, head: str) -> list[str]:
 def skip_commits(base: str, head: str, trailer: str) -> list[tuple[str, str, tuple[str, ...]]]:
     """返回区间内声明了跳过 trailer 的提交。
 
-    只认**独立整行**的 trailer（``Token: 值`` 或 ``Token #值``，行首即 token），不认正文里顺带
-    提到的字符串：曾经因为一次提交在说明文字里写了两次旧标记，整个区间的版本守卫被静默放行，
-    之后一百多个提交的重构等于没有这道闸。取值含义见 :func:`parse_exemption`。
+    只认**独立整行**的 trailer（``Token: 值`` 或 ``Token #值``，行首即 token）：正文里顺带提到
+    的字符串不算声明，否则解释功能的一句话就能关掉整段区间的检查。取值含义见
+    :func:`parse_exemption`。
 
     :param base: 区间起点（含）。
     :param head: 区间终点（含）。

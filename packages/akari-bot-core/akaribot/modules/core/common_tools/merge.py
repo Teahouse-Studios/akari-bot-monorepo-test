@@ -40,12 +40,7 @@ m = module("merge", base=True, hidden=True, load=bool(CoreConfig.retired_clients
 
 
 def _take_merge_code(code: str) -> tuple[str, dict] | None:
-    """
-    取出并消费一枚由 ``merge`` 签发的迁移码。
-
-    :param code: 用户输入的迁移码。
-    :return: ``(union 域, 迁移码信息)``，无效或已过期时为 None。
-    """
+    # 取出并消费一枚由 ``merge`` 签发的迁移码。
     return take_code(
         code,
         ((UNION_SCOPE_SENDER, _sender_merge_codes), (UNION_SCOPE_TARGET, _target_merge_codes)),
@@ -53,21 +48,9 @@ def _take_merge_code(code: str) -> tuple[str, dict] | None:
 
 
 async def _unify_channel(initiator_target_id: str, current_target_id: str) -> int:
-    """
-    把两个场景并入同一条消息通道。
-
-    迁移完成后二者对应同一个现实场景，统一通道号可使命令执行与消息推送只由其中一方承担。
-    若日后取消退役、两个机器人回到共作状态，不同通道会让通道认领的快路径判定「通道内仅有自身」
-    而双双放行，同一条命令因此被响应两次；统一通道是那条回退路径唯一的保险。
-
-    通道号取发起方的现有编号。两个场景原本所在的完整通道都会保留等价关系，
-    避免只移动端点而把同通道的第三个平台入口拆开。若迁移码存活期间发起方绑定
-    已被删除，则把仍存在的兑换方安全移到通道 1；两侧均不存在时也按旧契约返回 1。
-
-    :param initiator_target_id: 发起方的场景 ID。
-    :param current_target_id: 兑换方的场景 ID。
-    :return: 统一后的通道号。
-    """
+    # 两个场景并入同一条通道，使命令执行与消息推送只由其中一方承担；若两个机器人回到共作状态，
+    # 不同通道会让通道认领的快路径双双放行，同一条命令被响应两次，统一通道是那条回退路径的保险。
+    # 通道号取发起方的现有编号；两个场景原本所在的完整通道都保留等价关系，避免拆开第三个入口。
     channel_id = await TargetUnionInfo.unify_channels(initiator_target_id, current_target_id)
     if channel_id is not None:
         return channel_id
@@ -127,14 +110,9 @@ async def _(msg: Bot.MessageSession):
 
 
 async def _merge_private(msg: Bot.MessageSession, entry: dict) -> None:
-    """
-    完成一次私聊迁移：账号数据与私聊场景数据一并合并。
-
-    私聊里「这个账号」与「这段私聊」指的是同一件事，只并其一会让另一半的数据留在退役实例上。
-    两者共用一次确认后一起执行，避免用户在第二次确认时取消而停在只迁一半的状态。
-
-    :param entry: 迁移码携带的发起方信息。
-    """
+    # 完成一次私聊迁移：账号数据与私聊场景数据一并合并。
+    # 私聊里「这个账号」与「这段私聊」指的是同一件事，只并其一会让另一半的数据留在退役实例上。
+    # 两者共用一次确认后一起执行，避免用户在第二次确认时取消而停在只迁一半的状态。
     session_info = msg.session_info
     sender_current = session_info.sender_union_info
     target_current = session_info.target_union_info
@@ -204,10 +182,8 @@ async def _merge_private(msg: Bot.MessageSession, entry: dict) -> None:
     )
 
 
-# 命令字面量在解析器中按「位置无关的标志」匹配，再取尾随参数。
-# 若沿用 merge token 作为命令路径，源平台上的迁移码会被 bind token 抢先匹配
-# （<code> 吞掉 "merge"），源平台将不再让位给新机器人。故取一个不与其冲突的
-# 单词；用户侧的命令不变，~merge token <code> 经别名映射到这里。
+# 命令字面量按「位置无关的标志」匹配：沿用 merge token 作命令路径会被 bind token 抢先匹配
+# （``<code>`` 吞掉 "merge"），源平台便不再让位。用户侧命令不变，经别名映射到这里。
 @b.command("merge-token <code> {{I18N:core.help.bind.merge.token}}", available_for=RETIRED_TARGETS)
 async def _(msg: Bot.MessageSession, code: str):
     taken = _take_merge_code(code)
@@ -276,12 +252,6 @@ async def _(msg: Bot.MessageSession, code: str):
     available_for=RETIRED_SOURCES,
 )
 async def _(msg: Bot.MessageSession):
-    """
-    退役公告的触发器。
-
-    只做排队，不向场景发送任何内容：公告由延时任务在数分钟后主动推送，与命令是否被拦截无关。
-    若挂在命令拦截上，退役后用户不再发命令，该场景便永远收不到公告；而群内聊天是持续的。
-
-    标记为单次触发，使其对每个场景只跑一次，避免每条消息都付出通道认领的数据库查询与统计插入。
-    """
+    # 只做排队，不向场景发送内容：公告由延时任务在数分钟后推送。若挂在命令拦截上，退役后用户
+    # 不再发命令，该场景便永远收不到公告。单次触发使每个场景只跑一次，避免每条消息都查库。
     await enqueue_notice(msg.session_info)

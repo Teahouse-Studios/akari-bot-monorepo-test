@@ -62,8 +62,9 @@ class BaseElement:
         """
         获取元素类名。
 
-        :return: 类的名称字符串
+                :return: 类的名称字符串
         """
+        # 获取元素类名。
         return cls.__name__
 
     def kecode(self):
@@ -82,11 +83,13 @@ class BaseElement:
         """
         转换为字符串表示。
 
-        该方法返回元素的可读字符串表示。
+                该方法返回元素的可读字符串表示。
 
-        :return: 字符串表示
-        :raises NotImplementedError: 子类必须实现此方法
+                :return: 字符串表示
+                :raises NotImplementedError: 子类必须实现此方法
         """
+        # 转换为字符串表示。
+        # 该方法返回元素的可读字符串表示。
         raise NotImplementedError
 
 
@@ -152,7 +155,9 @@ class PlainElement(BaseElement):
         return f"[KE:plain,{','.join(params)}]"
 
     def __str__(self):
-        """返回文本内容"""
+        """
+        返回文本内容
+        """
         return self.text
 
 
@@ -339,7 +344,9 @@ class URLElement(BaseElement):
         return f"[KE:url,text={encoded},trusted={'1' if self.trusted else '0'}]"
 
     def __str__(self):
-        """返回 URL 地址或转换后的链接"""
+        """
+        返回 URL 地址或转换后的链接
+        """
         return self.url
 
 
@@ -470,7 +477,9 @@ class FormattedTimeElement(BaseElement):
         return f"[KE:plain,text={parse.quote(self.to_str(session_info), safe='')}]"
 
     def __str__(self):
-        """返回默认格式的时间字符串"""
+        """
+        返回默认格式的时间字符串
+        """
         return self.to_str()
 
     @classmethod
@@ -595,8 +604,9 @@ class I18NContextElement(BaseElement):
         """
         返回多语言标记表示。
 
-        :return:多语言标记格式的字符串表示
+                :return:多语言标记格式的字符串表示
         """
+        # 返回多语言标记表示。
         if self.kwargs:
             params = ",".join(f"{k}={v}" for k, v in self.kwargs.items())
             return f"{{I18N:{self.key},{params}}}"
@@ -838,7 +848,9 @@ class ImageElement(BaseElement):
         return PILImage.open(await self.get())
 
     def __str__(self):
-        """返回 KE 码格式"""
+        """
+        返回 KE 码格式
+        """
         return self.kecode()
 
     async def get_wh(self):
@@ -884,7 +896,9 @@ class AudioElement(BaseElement):
         return f"[KE:audio,path={self.path}]"
 
     def __str__(self):
-        """返回 KE 码格式"""
+        """
+        返回 KE 码格式
+        """
         return self.kecode()
 
 
@@ -923,7 +937,9 @@ class VideoElement(BaseElement):
         return f"[KE:video,path={self.path}]"
 
     def __str__(self):
-        """返回 KE 码格式"""
+        """
+        返回 KE 码格式
+        """
         return self.kecode()
 
 
@@ -966,17 +982,14 @@ class MentionElement(BaseElement):
         return f"[KE:mention,userid={self.client}|{self.id}]"
 
     def __str__(self):
-        """返回 AT 码格式"""
+        """
+        返回 AT 码格式
+        """
         return f"<AT:{self.client}|{self.id}>"
 
 
 def _as_inner_element(value: str | PlainElement | I18NContextElement) -> PlainElement | I18NContextElement:
-    """
-    将指令操作的文案入参规范化为消息元素。
-
-    :param value: 文案，字符串或消息元素。
-    :return: 消息元素；字符串会被包装为纯文本元素。
-    """
+    # 将指令操作的文案入参规范化为消息元素。
     if isinstance(value, str):
         return PlainElement.assign(value)
     return value
@@ -986,16 +999,9 @@ def _resolve_inner_text(
     element: PlainElement | I18NContextElement | None,
     session_info: SessionInfo | None,
 ) -> str:
-    """
-    将指令操作的内层元素解析为字符串。
-
-    无会话信息时不作翻译，直接返回元素自身的字符串表示，如此已解析过的元素
-    再次解析仍是恒等变换，KE 码序列化等无会话的路径也不会破坏既有内容。
-
-    :param element: 内层元素。
-    :param session_info: 会话信息，为 None 时不作翻译。
-    :return: 解析后的字符串；元素为 None 时返回空字符串。
-    """
+    # 将指令操作的内层元素解析为字符串。
+    # 无会话信息时不作翻译，直接返回元素自身的字符串表示，如此已解析过的元素
+    # 再次解析仍是恒等变换，KE 码序列化等无会话的路径也不会破坏既有内容。
     if element is None:
         return ""
     if isinstance(element, I18NContextElement):
@@ -1153,7 +1159,9 @@ class ActionTextElement(BaseElement):
         return f"[KE:action_text,{','.join(params)}]"
 
     def __str__(self):
-        """返回 KE 码格式"""
+        """
+        返回 KE 码格式
+        """
         return self.kecode()
 
 
@@ -1298,7 +1306,9 @@ class ButtonElement(BaseElement):
         return f"[KE:button,{','.join(params)}]"
 
     def __str__(self):
-        """返回 KE 码格式。"""
+        """
+        返回 KE 码格式。
+        """
         return self.kecode()
 
 
@@ -1359,7 +1369,9 @@ class ButtonFrameElement(BaseElement):
         return f"[KE:button_frame,data={data}]"
 
     def __str__(self):
-        """返回 KE 码格式。"""
+        """
+        返回 KE 码格式。
+        """
         return self.kecode()
 
 
@@ -1403,7 +1415,9 @@ class EmbedFieldElement(BaseElement):
         """... KE 码格式未实现 ..."""
 
     def __str__(self):
-        """返回字符串表示"""
+        """
+        返回字符串表示
+        """
         return f"[EmbedField:{self.name},{self.value},{self.inline}]"
 
 
@@ -1554,7 +1568,9 @@ class EmbedElement(BaseElement):
         """... KE 码格式未实现 ..."""
 
     def __str__(self):
-        """返回消息链的字符串表示"""
+        """
+        返回消息链的字符串表示
+        """
         return str(self.to_message_chain())
 
 
@@ -1594,7 +1610,9 @@ class RawElement(BaseElement):
         """... KE 码格式未实现 ..."""
 
     def __str__(self):
-        """返回原始值"""
+        """
+        返回原始值
+        """
         return self.value
 
 

@@ -74,13 +74,7 @@ def build_authorize_url() -> str:
 
 
 def _extract_bind_code(text: str) -> str:
-    """从用户发来的内容里取出授权码。
-
-    用户可能直接粘贴授权码，也可能把回调地址整串复制过来；后者要从中取出 `code` 参数。
-
-    :param text: 用户发来的内容。
-    :return: 授权码；内容里没有授权码时返回空字符串。
-    """
+    # 用户可能直接粘贴授权码，也可能把回调地址整串复制过来；后者要从中取出 `code` 参数。
     text = text.strip().strip("\"'“”‘’`")
     match = re.search(r"[?&#]code=([^&\s]+)", text)
     if match:
@@ -103,7 +97,6 @@ def unwrap(resp: Any) -> Any:
 
 
 def _expires_in(resp: dict, default: float = 900.0) -> float:
-    """读取响应中的 `expires_in`，缺失或非法时按默认值处理。"""
     try:
         return float(resp.get("expires_in", default))
     except (TypeError, ValueError):
@@ -111,15 +104,9 @@ def _expires_in(resp: dict, default: float = 900.0) -> float:
 
 
 async def _token_request(payload: dict) -> dict:
-    """向令牌端点提交一次请求。
-
-    令牌端点只用一次性的授权码或 refresh token，重发可能扫掉第一份已签发的令牌，故不重试。
-    错误以响应体中的 `error` 字段表达，因此传 `status_code=None` 以读取 4xx 的响应体。
-
-    :param payload: 请求体。
-    :return: 响应体解析所得的字典。
-    :raise LxnsOAuthError: 请求失败或响应格式异常。
-    """
+    # 令牌端点只用一次性的授权码或 refresh token，重发可能扫掉第一份已签发的令牌，故不重试。
+    # 错误以响应体中的 `error` 字段表达，因此传 `status_code=None` 以读取 4xx 的响应体。
+    # :raise LxnsOAuthError: 请求失败或响应格式异常。
     try:
         resp = await post_url(
             LXNS_TOKEN_URL,
@@ -137,7 +124,6 @@ async def _token_request(payload: dict) -> dict:
 
 
 def _check_client_config() -> None:
-    """校验应用信息，免得把必然失败的请求发出去。"""
     if not LXNS_OAUTH_ENABLED:
         raise LxnsOAuthError("The LXNS OAuth client_id is not configured.")
 
@@ -200,7 +186,6 @@ async def refresh_access_token(refresh_token: str) -> dict:
 
 
 def _cache_token(union_id: str, token: str, expires_in: float) -> None:
-    """把 access token 记入进程内缓存。"""
     _access_token_cache[union_id] = (token, time.monotonic() + max(0.0, expires_in - _TOKEN_EXPIRE_MARGIN))
 
 

@@ -5,7 +5,7 @@ values 的声明类型是 list[MessageElement]，而 append 一类原地修改�
 mapping」暴露——彼时调用栈已深入 cattrs 内部，难以追溯是哪一处放进去的。
 
 assign() 一向会把字符串转作文本元素，原地修改的方法却不会。两者行为不一致，正是
-akaribot/modules/wiki/wiki.py 与 akaribot/modules/idlist 等处踩坑的由来：那些地方以
+akaribot/modules/wiki/wiki.py 与 akaribot/modules/idlist 等处出错的由来：那些地方以
 MessageChain.create() 起手，其后 append 的却是裸字符串。
 """
 
@@ -18,7 +18,6 @@ from akaribot.testing import func_case, Tester
 
 
 async def _test_append_normalizes_str():
-    """测试归一化 - append 裸字符串转作文本元素"""
     try:
         chain = MessageChain.create()
         chain.append("裸字符串")
@@ -32,12 +31,9 @@ async def _test_append_normalizes_str():
 
 
 async def _test_appended_chain_is_serialisable():
-    """测试归一化 - append 裸字符串后消息链仍可序列化
-
-    这一条直接复现线上报错：finish() 收到的若已是 MessageChain，get_message_chain()
-    便原样返回、跳过 assign 的归一化，裸字符串一路传至 cattrs 才抛
-    TypeError: 'str' object is not a mapping。
-    """
+    # 这一条直接复现线上报错：finish() 收到的若已是 MessageChain，get_message_chain()
+    # 便原样返回、跳过 assign 的归一化，裸字符串一路传至 cattrs 才抛
+    # TypeError: 'str' object is not a mapping。
     try:
         chain = MessageChain.create()
         chain.append("裸字符串")
@@ -50,7 +46,6 @@ async def _test_appended_chain_is_serialisable():
 
 
 async def _test_insert_normalizes_str():
-    """测试归一化 - insert 裸字符串转作文本元素"""
     try:
         chain = MessageChain.assign(Plain("尾"))
         chain.insert(0, "头")
@@ -61,7 +56,6 @@ async def _test_insert_normalizes_str():
 
 
 async def _test_iadd_list_normalizes_str():
-    """测试归一化 - 以 += 并入的列表中的裸字符串一并转换"""
     try:
         chain = MessageChain.create()
         chain += [Plain("甲"), "乙"]
@@ -72,7 +66,6 @@ async def _test_iadd_list_normalizes_str():
 
 
 async def _test_append_keeps_elements_intact():
-    """测试归一化 - 传入的消息元素原样保留，不得误伤"""
     try:
         element = Plain("元素")
         chain = MessageChain.create()
@@ -84,7 +77,6 @@ async def _test_append_keeps_elements_intact():
 
 
 async def _test_append_skips_empty_and_none():
-    """测试归一化 - 空字符串与 None 一律跳过，与 assign 的取舍一致"""
     try:
         chain = MessageChain.create()
         chain.append("")

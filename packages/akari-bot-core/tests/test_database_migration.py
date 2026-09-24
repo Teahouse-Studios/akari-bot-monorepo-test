@@ -32,11 +32,7 @@ LXNS_TABLE = "module_maimai_lxns_prober_bind_info"
 
 
 class _isolated_db:
-    """在独立的 Tortoise 上下文里打开一个 SQLite 文件。
-
-    样本库与测试进程自带的库不能共用连接：升级会改动表结构，必须落在文件副本上。
-    """
-
+    # 样本库与测试进程自带的库不能共用连接：升级会改动表结构，必须落在文件副本上。
     def __init__(self, path: Path) -> None:
         self.path = path
         self.context = TortoiseContext()
@@ -64,7 +60,6 @@ class _isolated_db:
 
 
 def _patch_rule_paths(root: Path) -> None:
-    """把 URL 名单写到临时目录，避免升级用例改动实例数据。"""
     allowlist = root / "allowlist"
     blocklist = root / "blocklist"
     GlobalURLAllowlist.directory = allowlist
@@ -88,7 +83,7 @@ async def _test_discovery_covers_legacy_map():
 
 
 async def _noop_upgrade(ctx: MigrationContext) -> None:
-    """排序用例使用的占位迁移。"""
+    pass
 
 
 def _module(revision: str, depends_on: str | None = None) -> MigrationModule:
@@ -196,7 +191,6 @@ CREATE TABLE "analytics_data" (
 
 
 async def _test_core_revisions_upgrade_v1_shaped_tables():
-    """core revision 要能在 v2 之前的结构上真正执行，而非仅在最新结构上空转"""
     with TemporaryDirectory() as temp_dir:
         async with _isolated_db(Path(temp_dir) / "v1_shaped.db"):
             conn = Tortoise.get_connection("default")
@@ -235,7 +229,6 @@ async def _test_core_revisions_upgrade_v1_shaped_tables():
 
 
 async def _test_legacy_fixtures_reach_latest_schema():
-    """六条旧版本升级路径都要升到最新结构，且重跑为 no-op"""
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         _patch_rule_paths(root)
@@ -278,7 +271,6 @@ async def _test_legacy_fixtures_reach_latest_schema():
 
 
 async def _downgrade_maimai_oauth(conn) -> None:
-    """把 maimai 绑定表还原成 OAuth 列出现之前的结构。"""
     await conn.execute_query(f'ALTER TABLE "{DIVING_TABLE}" DROP COLUMN "refresh_token";')
     await conn.execute_query(f'ALTER TABLE "{DIVING_TABLE}" DROP COLUMN "subject";')
     await conn.execute_query(f'ALTER TABLE "{LXNS_TABLE}" DROP COLUMN "refresh_token";')
@@ -292,7 +284,6 @@ async def _maimai_oauth_columns(conn) -> tuple[bool, bool]:
 
 
 async def _test_missing_module_package_is_skipped():
-    """模块包缺席时其 revision 不被发现，其表也不被触碰"""
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         registry_dirs = PackageRegistry.migration_dirs()

@@ -29,12 +29,10 @@ class FakeRequest:
 
 
 def _endpoint(func):
-    """剥掉 slowapi 限流装饰层，直接取到接口实现。"""
     return inspect.unwrap(func)
 
 
 async def _call(call) -> tuple[int, object]:
-    """执行接口，返回 ``(状态码, detail 或响应体)``，便于断言错误分支。"""
     try:
         result = await call()
     except HTTPException as exc:
@@ -43,7 +41,6 @@ async def _call(call) -> tuple[int, object]:
 
 
 async def _url_audit_case() -> bool:
-    """URL 审计名单接口：读写、版本号约定与错误码。"""
     try:
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
@@ -139,7 +136,6 @@ async def _url_audit_case() -> bool:
 
 
 async def _filter_words_case() -> bool:
-    """过滤词库接口：读写、词库即时重载与错误码。"""
     try:
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)

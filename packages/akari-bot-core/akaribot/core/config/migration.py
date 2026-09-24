@@ -55,12 +55,7 @@ class ConfigRevision:
 
 
 def _config_root() -> Path:
-    """取配置根目录。
-
-    配置管理器已加载时以它为准：测试与脚本可能已切换过配置路径。
-
-    :return: 配置目录路径。
-    """
+    # 配置管理器已加载时以它为准：测试与脚本可能已切换过配置路径。
     module = sys.modules.get("akaribot.core.config")
     if module is not None:
         return module.CFGManager.config_path
@@ -68,26 +63,14 @@ def _config_root() -> Path:
 
 
 def _config_file(table: str) -> Path:
-    """由配置表名推出配置文件路径。
-
-    现行扁平布局下非核心表一名一文件；P4.4 的 ConfigLayout 落地后改由
-    ConfigLayout.file_for() 提供同一映射。
-
-    :param table: 配置表名，如 "module_wiki"。
-    :return: 配置文件路径。
-    """
+    # 现行扁平布局下非核心表一名一文件；P4.4 的 ConfigLayout 落地后改由
+    # ConfigLayout.file_for() 提供同一映射。
     return _config_root() / f"{table}.toml"
 
 
 def _config_table(entry: "PackageEntry") -> str:
-    """取包配置所在的表名。
-
-    清单未声明 ``config_table`` 时按装饰器的命名规则回推：适配器为 ``bot_<名>``，
-    模块为 ``module_<名>``。
-
-    :param entry: 包条目。
-    :return: 配置表名。
-    """
+    # 清单未声明 ``config_table`` 时按装饰器的命名规则回推：适配器为 ``bot_<名>``，
+    # 模块为 ``module_<名>``。
     if entry.manifest.config_table:
         return entry.manifest.config_table
     prefix = "bot" if entry.kind == "adapter" else "module"
@@ -100,7 +83,7 @@ def iter_config_tables() -> list[tuple["PackageEntry", str]]:
     核心配置不出现在结果中：它由 akaribot/core/config/update.py 单独维护版本。清单的判定与
     ``PackageRegistry.config_template_paths()`` 同源，均以 ``config.py`` 是否存在为准。
 
-    :return: (包条目, 配置表名) 列表，按包名排序。
+    :return: (包条目， 配置表名) 列表，按包名排序。
     """
     from akaribot.core.registry import PackageRegistry
 
@@ -118,13 +101,6 @@ def iter_config_tables() -> list[tuple["PackageEntry", str]]:
 
 
 def _collect_revisions(package: str, directory: Path) -> list[ConfigRevision]:
-    """收集一个包内的迁移脚本，按号段升序排列。
-
-    :param package: 包名。
-    :param directory: 迁移脚本目录。
-    :raises ValueError: 号段重复。
-    :return: 迁移脚本列表。
-    """
     revisions: list[ConfigRevision] = []
     numbers: set[int] = set()
     for path in sorted(directory.glob("*.py")):
@@ -168,11 +144,6 @@ def iter_config_revisions() -> dict[str, list[ConfigRevision]]:
 
 
 def _document_version(document: "TOMLDocument") -> int | None:
-    """读文件自身声明的配置版本号。
-
-    :param document: 解析后的配置文档。
-    :return: 版本号；缺失或类型非法时为 ``None``。
-    """
     value = document.get(CONFIG_VERSION_KEY)
     if isinstance(value, bool) or not isinstance(value, int):
         return None
@@ -180,44 +151,21 @@ def _document_version(document: "TOMLDocument") -> int | None:
 
 
 def _baseline_version(entry: "PackageEntry", revisions: list[ConfigRevision]) -> int:
-    """未写版本号的文件所处的版本。
-
-    这类文件生成于本机制落地之前，其内容等价于该包首个迁移之前的状态；包尚无迁移脚本时，
-    直接取清单声明的表结构版本。
-
-    :param entry: 包条目。
-    :param revisions: 该包的全部迁移脚本，按号段升序。
-    :return: 基准版本号。
-    """
+    # 这类文件生成于本机制落地之前，其内容等价于该包首个迁移之前的状态；包尚无迁移脚本时，
+    # 直接取清单声明的表结构版本。
     if revisions:
         return revisions[0].number - 1
     return entry.manifest.config_schema_version
 
 
 def _file_version(path: Path, entry: "PackageEntry", revisions: list[ConfigRevision]) -> int:
-    """读配置文件当前的配置版本，缺失时回退至基准版本。
-
-    :param path: 配置文件路径。
-    :param entry: 包条目。
-    :param revisions: 该包的全部迁移脚本。
-    :return: 当前版本号。
-    """
     version = _document_version(toml_parser(path.read_text(encoding="utf-8")))
     return _baseline_version(entry, revisions) if version is None else version
 
 
 def _load_revision_hook(revision: ConfigRevision):
-    """按文件路径加载迁移脚本的 ``upgrade`` 钩子。
-
-    不经 ``importlib.import_module`` 加载：以号段开头的模块名不是合法标识符，且重复加载会在
-    ``sys.modules`` 留下同名残留。脚本声明的 ``REVISION`` 与文件名不一致时立即报错。
-
-    :param revision: 迁移脚本。
-    :raises ImportError: 无法加载脚本。
-    :raises ValueError: 脚本声明的修订标识与文件名不一致。
-    :raises AttributeError: 脚本未提供可调用的 ``upgrade``。
-    :return: ``upgrade`` 可调用对象。
-    """
+    # 不经 ``importlib.import_module`` 加载：以号段开头的模块名不是合法标识符，且重复加载会在
+    # ``sys.modules`` 留下同名残留。脚本声明的 ``REVISION`` 与文件名不一致时立即报错。
     spec = importlib.util.spec_from_file_location(f"akari_config_migration_{revision.revision}", revision.path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load config migration {revision.path}")
@@ -234,14 +182,8 @@ def _load_revision_hook(revision: ConfigRevision):
 
 
 def _run_awaitable(awaitable) -> None:
-    """驱动迁移脚本返回的可等待对象。
-
-    调用方可能是同步的启动流程，也可能处在事件循环内；后者不能再执行 ``asyncio.run``，
-    故另起线程驱动。
-
-    :param awaitable: 脚本返回的可等待对象。
-    """
-
+    # 调用方可能是同步的启动流程，也可能处在事件循环内；后者不能再执行 ``asyncio.run``，
+    # 故另起线程驱动。
     async def _drive():
         return await awaitable
 
@@ -255,23 +197,12 @@ def _run_awaitable(awaitable) -> None:
 
 
 def _run_revision(revision: ConfigRevision, document: "TOMLDocument", table: str) -> None:
-    """执行单条迁移脚本。
-
-    :param revision: 迁移脚本。
-    :param document: 待迁移的文档，脚本就地修改。
-    :param table: 配置表名。
-    """
     result = _load_revision_hook(revision)(document, table)
     if inspect.isawaitable(result):
         _run_awaitable(result)
 
 
 def _write_document(path: Path, document: "TOMLDocument") -> None:
-    """原子地写回配置文件。
-
-    :param path: 目标文件路径。
-    :param document: 迁移后的文档。
-    """
     tmp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     try:
         tmp_path.write_text(toml_dumps(document), encoding="utf-8")
@@ -281,7 +212,6 @@ def _write_document(path: Path, document: "TOMLDocument") -> None:
 
 
 def _reload_config_manager() -> None:
-    """让已加载的配置管理器丢弃内存副本，避免其随后以迁移前的副本覆盖磁盘。"""
     module = sys.modules.get("akaribot.core.config")
     if module is not None:
         module.CFGManager.load()
@@ -290,14 +220,6 @@ def _reload_config_manager() -> None:
 def _upgrade_package(
     entry: "PackageEntry", table: str, path: Path, revisions: list[ConfigRevision]
 ) -> list[tuple[str, str]]:
-    """应用单个包的待办迁移，全部成功后才写回文件。
-
-    :param entry: 包条目。
-    :param table: 配置表名。
-    :param path: 配置文件路径。
-    :param revisions: 该包的全部迁移脚本，按号段升序。
-    :return: 实际应用的 (包名, 修订标识) 列表。
-    """
     document = toml_parser(path.read_text(encoding="utf-8"))
     version = _document_version(document)
     if version is None:
@@ -349,7 +271,7 @@ class ConfigMigrationRunner:
         ``pending()`` 会在下一次调用时重新列出它。
 
         :param package: 限定包名；``None`` 表示全部包。
-        :return: 实际写入磁盘的 (包名, 修订标识) 列表。
+        :return: 实际写入磁盘的 (包名， 修订标识) 列表。
         """
         revisions_by_package = iter_config_revisions()
         applied: list[tuple[str, str]] = []

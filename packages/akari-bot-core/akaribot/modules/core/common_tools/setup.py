@@ -123,15 +123,7 @@ class SettingRow:
 
 
 def _toggle_row(locale: Locale, name_key: str, enabled: bool, command: str) -> SettingRow:
-    """
-    构造一个开关型设置行，其取值与入口文案按当前状态选定。
-
-    :param locale: 会话语言。
-    :param name_key: 设置名的多语言键。
-    :param enabled: 当前是否开启。
-    :param command: 不含前缀的切换命令。
-    :return: 设置行。
-    """
+    # 构造一个开关型设置行，其取值与入口文案按当前状态选定。
     name = locale.t(name_key)
     return SettingRow(
         label=name,
@@ -255,14 +247,8 @@ def build_sender_rows(msg: Bot.MessageSession) -> list[SettingRow]:
 
 
 def _ends_with_inline_entry(elements: list) -> bool:
-    """
-    判断元素列表是否以行内入口收尾。
-
-    适配器会把紧随行内入口之后的文本并入同一行，故其后的元素须自带换行。
-
-    :param elements: 已积累的消息元素。
-    :return: 末元素是否为行内入口。
-    """
+    # 判断元素列表是否以行内入口收尾。
+    # 适配器会把紧随行内入口之后的文本并入同一行，故其后的元素须自带换行。
     return bool(elements) and isinstance(elements[-1], ActionTextElement)
 
 
@@ -329,7 +315,7 @@ def build_jump_buttons(msg: Bot.MessageSession, show_target: bool, show_sender: 
     :param msg: 消息会话。
     :param show_target: 本次是否列出了场景域。
     :param show_sender: 本次是否列出了个人域。
-    :return: （标签, 命令）序列。
+    :return: （标签， 命令）序列。
     """
     if not msg.session_info.support_button or show_target == show_sender:
         return []

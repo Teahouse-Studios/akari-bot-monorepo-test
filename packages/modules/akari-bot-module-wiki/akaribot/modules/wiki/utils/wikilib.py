@@ -41,7 +41,6 @@ MAX_RESEARCH_SUGGESTIONS = 5
 
 
 def _has_manual_anchor(html: str, section: str) -> bool:
-    """检查渲染正文中是否存在与 URL 片段匹配的手动锚点。"""
     normalized = urllib.parse.unquote(section).replace(" ", "_")
     soup = BeautifulSoup(html, "html.parser")
     for anchor in soup.find_all("span", id=True):
@@ -51,7 +50,6 @@ def _has_manual_anchor(html: str, section: str) -> bool:
 
 
 def _merge_research_suggestions(search_results, limit: int = MAX_RESEARCH_SUGGESTIONS) -> list[str]:
-    """Merge ordered search-mode results into a unique, bounded suggestion list."""
     suggestions = []
     for titles, _invalid_namespace in search_results:
         for title in titles:
@@ -414,8 +412,6 @@ class WikiLib:
 
     @staticmethod
     def _title_from_article_url(article_url: str, articlepath: str) -> str | None:
-        """按目标 Wiki 的 articlepath 从完整页面 URL 中还原标题。"""
-
         def extract(template: str, value: str) -> str | None:
             if "$1" not in template:
                 return None
@@ -440,7 +436,6 @@ class WikiLib:
         return None
 
     async def _resolve_interwiki_target_title(self, fallback_title: str) -> str:
-        """发现 Interwiki 目标 API，并从其 articlepath 还原实际页面标题。"""
         await self.fixup_wiki_info()
         return self._title_from_article_url(self.url, self.wiki_info.articlepath) or fallback_title
 
@@ -514,15 +509,9 @@ class WikiLib:
 
     @staticmethod
     def _get_revision_content(page_raw: dict) -> str:
-        """
-        从查询结果中取出页面的 Wikitext。
-
-        MediaWiki 1.32 起内容置于 slots 结构下，更低版本直接置于 revision 上，
-        两种结构都要认。
-
-        :param page_raw: 查询结果中单个页面的原始数据。
-        :returns: 页面的 Wikitext；无修订内容时返回空字符串。
-        """
+        # 从查询结果中取出页面的 Wikitext。
+        # MediaWiki 1.32 起内容置于 slots 结构下，更低版本直接置于 revision 上，
+        # 两种结构都要认。
         revisions = page_raw.get("revisions")
         if not revisions:
             return ""
@@ -666,14 +655,14 @@ class WikiLib:
         check_render: bool = False,
     ) -> PageInfo:
         """
-        :param title: 页面标题，如果为None，则使用pageid。
-        :param pageid: 页面id。
-        :param inline: 是否为inline模式。
+        :param title: 页面标题，如果为 None，则使用 pageid。
+        :param pageid: 页面 id。
+        :param inline: 是否为 inline 模式。
         :param lang: 所需的对应语言版本。
         :param _doc: 是否为文档模式，仅用作内部递归调用判断。
-        :param _tried: 尝试iw跳转的次数，仅用作内部递归调用判断。
-        :param _prefix: iw前缀，仅用作内部递归调用判断。
-        :param _iw: 是否为iw模式，仅用作内部递归调用判断。
+        :param _tried: 尝试 iw 跳转的次数，仅用作内部递归调用判断。
+        :param _prefix: iw 前缀，仅用作内部递归调用判断。
+        :param _iw: 是否为 iw 模式，仅用作内部递归调用判断。
         :param _search: 是否为搜索模式，仅用作内部递归调用判断。
         :param session: 消息会话，用作检查结果时使用。
         :param check_render: 是否使用 MediaWiki parse API 预检查 WebRender 目标。

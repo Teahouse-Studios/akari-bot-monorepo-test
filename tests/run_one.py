@@ -26,7 +26,6 @@ os.environ.setdefault(TEST_UNION_MERGE_LOGS_PATH_ENV, str(_test_union_merge_logs
 
 
 def _cleanup_test_union_merge_logs() -> None:
-    """删除临时日志目录；os._exit 不触发 atexit，收尾时须再显式调用一次。"""
     shutil.rmtree(_test_union_merge_logs_path, ignore_errors=True)
 
 

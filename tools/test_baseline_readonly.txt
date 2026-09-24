@@ -1,20 +1,8 @@
 # 期望失败的测试：<用例名>\t<failure|error>\t<消息>，由 tools/check_test_baseline.py --update 生成。
 #
-# 只读挂载轮（chmod -R a-w packages）专用的基线：比 tools/test_baseline.txt 多出
-# test_database_migration 的三条。该用例在只读包目录下会以 OperationalError 失败，
-# 属于既有测试自身的写盘行为（read-only 轮此前从未真正执行过，故未被发现），
-# 不是本轮改动引入的回归；修好测试的写盘路径后应当同步删除这三条。
+# 只读挂载轮（chmod -R a-w packages）专用：比 tools/test_baseline.txt 多出 test_database_migration
+# 的三条。该用例在只读包目录下会以 OperationalError 失败，属测试自身的写盘行为，不是产品缺陷；
+# 修好测试的写盘路径后应当同步删除这三条。普通轮当前为全绿。
 test_database_migration	failure	Function test failed
 test_database_migration::六个旧版本样本库均升到最新结构且重跑为 no-op	failure	Subtest raised OperationalError
 test_database_migration::模块包缺席时跳过其 revision 且不触碰其表	failure	Subtest raised OperationalError
-test_parser_args	failure	Function test failed
-test_parser_args::Markdown 错误详情代码块测试	failure	Subtest raised ValueError
-test_parser_recovery	failure	Function test failed
-test_parser_recovery::已执行命令的格式错误不进入恢复重试	failure	Subtest raised AssertionError
-test_parser_recovery::模板恢复与静默、拒绝、默认提示边界	failure	Subtest raised AssertionError
-test_qqbot_modern_api	failure	Function test failed
-test_tos	failure	Function test failed
-test_tos::ToS 处罚不受默认 hook 超时策略放行测试	failure	Subtest raised KeyError
-test_tos::ToS 检查故障拒绝执行并保留退出信号测试	failure	Subtest raised KeyError
-test_tos::临封提示不携带兼容元数据测试	failure	Subtest raised KeyError
-test_tos::超限拒绝不被通知故障丢弃测试	failure	Subtest raised KeyError

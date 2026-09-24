@@ -270,11 +270,6 @@ def find_instance_root(start: Path | None = None) -> Path | None:
 
 
 def _colleague_instance(root: Path) -> InstanceLike | None:
-    """尝试用 ``akaribot.cli.instance`` 构造实例对象。
-
-    :param root: 实例根目录。
-    :return: 实例对象；模块缺失或构造签名不符时返回 ``None``。
-    """
     module = instance_module()
     if module is None:
         return None
@@ -488,11 +483,6 @@ class AdapterRegistry:
 
 
 def _unwrap_mapping(value: Any) -> dict[str, Any]:
-    """把 tomlkit 表转成普通映射。
-
-    :param value: tomlkit 表或普通映射。
-    :return: 普通字典；无法转换时返回空字典。
-    """
     if isinstance(value, Mapping):
         try:
             return dict(value.unwrap())
@@ -502,13 +492,7 @@ def _unwrap_mapping(value: Any) -> dict[str, Any]:
 
 
 def _iter_package_entries(payload: Any) -> list[tuple[Mapping[str, Any], str]]:
-    """从 ``registry --json`` 的负载中取出包条目。
-
-    兼容三种包装：条目列表、``{"packages"|"adapters"|...: [...]}``、``{名称: 条目}``。
-
-    :param payload: 解析后的 JSON 负载。
-    :return: 二元组列表——包条目与来源包装给出的种类提示（无则为空串）。
-    """
+    # 兼容三种包装：条目列表、``{"packages"|"adapters"|...: [...]}``、``{名称： 条目}``。
     if isinstance(payload, Mapping):
         for key in ("packages", "adapters", "installed", "entries", "items", "registry"):
             value = payload.get(key)
@@ -525,11 +509,6 @@ def _iter_package_entries(payload: Any) -> list[tuple[Mapping[str, Any], str]]:
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:
-    """把 JSON 中的字符串列表规整为元组。
-
-    :param value: 任意值。
-    :return: 字符串元组；输入不可迭代时为空元组。
-    """
     if isinstance(value, str):
         return (value,)
     if isinstance(value, Sequence):
@@ -538,14 +517,7 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
 
 
 def _parse_installed_adapter(entry: Mapping[str, Any], hint: str = "") -> InstalledAdapter | None:
-    """由一条 registry 条目构造 :class:`InstalledAdapter`。
-
-    条目可以是扁平结构，也可以把 manifest 字段嵌在 ``manifest`` 下，两种形状都接受。
-
-    :param entry: registry 条目。
-    :param hint: 来源包装给出的种类提示。
-    :return: 已装适配器；非适配器条目或缺名条目返回 ``None``。
-    """
+    # 条目可以是扁平结构，也可以把 manifest 字段嵌在 ``manifest`` 下，两种形状都接受。
     manifest = entry.get("manifest")
     manifest = manifest if isinstance(manifest, Mapping) else {}
     name = str(entry.get("name") or entry.get("stem") or "").strip()
@@ -676,11 +648,6 @@ def parse_bot_table(table: str) -> tuple[str, str] | None:
 
 
 def _adapter_config_files(root: Path) -> list[tuple[Path, bool]]:
-    """列出候选适配器配置文件，分层布局优先。
-
-    :param root: 配置根目录。
-    :return: 二元组列表——文件路径与是否来自扁平布局。
-    """
     found: list[tuple[Path, bool]] = []
     layered = root / ADAPTERS_DIR_NAME
     if layered.is_dir():
@@ -691,12 +658,6 @@ def _adapter_config_files(root: Path) -> list[tuple[Path, bool]]:
 
 
 def _read_adapter_config(path: Path, *, legacy_layout: bool) -> tuple[list[AdapterInstanceConfig], str | None]:
-    """读取一个配置文件中的全部适配器实例表。
-
-    :param path: 配置文件路径。
-    :param legacy_layout: 文件是否来自扁平布局。
-    :return: 二元组——实例列表与解析错误描述（无错误时为 ``None``）。
-    """
     try:
         document = tomlkit.parse(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -804,11 +765,6 @@ class ListenEndpoint:
 
 
 def _coerce_port(value: Any) -> int | None:
-    """把配置值转成端口号。
-
-    :param value: 配置值。
-    :return: 端口号；无法转换时返回 ``None``。
-    """
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, int):
@@ -818,11 +774,6 @@ def _coerce_port(value: Any) -> int | None:
 
 
 def _split_host_port(raw: str) -> tuple[str, int | None]:
-    """拆分 ``host:port`` 形式的地址。
-
-    :param raw: 地址原文。
-    :return: 二元组——主机与端口。
-    """
     text = raw.strip()
     if not text:
         return "", None
@@ -837,11 +788,6 @@ def _split_host_port(raw: str) -> tuple[str, int | None]:
 
 
 def _endpoint_from_value(value: Any) -> ListenEndpoint:
-    """由单个监听字段的取值构造端点。
-
-    :param value: 字段取值。
-    :return: 端点。
-    """
     raw = "" if value is None else str(value).strip()
     if "://" in raw:
         authority = raw.split("://", 1)[1].split("/", 1)[0]
@@ -852,14 +798,8 @@ def _endpoint_from_value(value: Any) -> ListenEndpoint:
 
 
 def _guess_listen_fields(values: Mapping[str, Any]) -> tuple[str, ...]:
-    """适配器未声明 ``listen_fields`` 时，按字段名推断监听项。
-
-    现有 8 个适配器的 manifest 均未声明 ``listen_fields``（附录 A 已预留该字段），故端口检查依赖
-    本推断：``web_host`` / ``web_port`` / ``qq_host`` 这类名字命中，其余平台不受影响。
-
-    :param values: 非密钥表的键值。
-    :return: 推断出的监听字段名。
-    """
+    # 现有 8 个适配器的 manifest 均未声明 ``listen_fields``（附录 A 已预留该字段），故端口检查依赖
+    # 本推断：``web_host`` / ``web_port`` / ``qq_host`` 这类名字命中，其余平台不受影响。
     names: list[str] = []
     for key in values:
         lowered = str(key).lower()
@@ -977,11 +917,6 @@ class SchemaField:
 
 
 def _normalize_type_name(value: Any) -> str:
-    """把 JSON 中的类型描述规整为可读字符串。
-
-    :param value: ``type`` 字段的取值。
-    :return: 类型名。
-    """
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, Sequence):
@@ -992,11 +927,6 @@ def _normalize_type_name(value: Any) -> str:
 
 
 def _parse_schema_field(entry: Mapping[str, Any]) -> SchemaField | None:
-    """由一条 schema 条目构造 :class:`SchemaField`。
-
-    :param entry: schema 条目。
-    :return: 配置项；缺键名时返回 ``None``。
-    """
     key = str(entry.get("key") or entry.get("name") or "").strip()
     if not key:
         return None
@@ -1047,11 +977,6 @@ def fetch_schema(instance: InstanceLike, table: str) -> list[SchemaField]:
 
 
 def _placeholder_for(type_name: str) -> str:
-    """按类型给出占位符文本，与 core 生成配置时的写法一致。
-
-    :param type_name: 类型名。
-    :return: 占位符文本。
-    """
     return f"<Replace me with {type_name} value>" if type_name else "<Replace me>"
 
 
@@ -1092,11 +1017,6 @@ def render_instance_config(
 
 
 def _read_header_lines(path: Path) -> list[str]:
-    """取基表配置文件的文件头注释，供新文件复用。
-
-    :param path: 基表配置文件路径。
-    :return: 首个表头之前的注释与空行；文件不存在时为空列表。
-    """
     if not path.is_file():
         return []
     try:
@@ -1153,12 +1073,6 @@ def base_header_lines(instance: InstanceLike, base_table: str) -> list[str]:
 
 
 def _client_name_summary(config: AdapterInstanceConfig, registry: AdapterRegistry) -> str:
-    """实例的一行摘要，供 remove 的提示使用。
-
-    :param config: 实例配置。
-    :param registry: 已装适配器清单。
-    :return: 形如 ``telegram/beta（Telegram-beta，enable=true）`` 的文本。
-    """
     client_name, _ = client_name_for(config, registry)
     return i18n.t(
         "cli.adapter.instance.summary",
@@ -1177,10 +1091,6 @@ instance_app = typer.Typer(
 
 
 def _print_registry_note(registry: AdapterRegistry) -> None:
-    """打印已装适配器清单的可用性问题。
-
-    :param registry: 已装适配器清单。
-    """
     if not registry.available:
         warn(i18n.t("cli.adapter.registry_unavailable", note=registry.note))
         warn(i18n.t("cli.adapter.registry_inferred"))
@@ -1190,12 +1100,6 @@ def _print_registry_note(registry: AdapterRegistry) -> None:
 
 
 def _instance_rows(scan: AdapterScan, registry: AdapterRegistry) -> list[dict[str, Any]]:
-    """把扫描结果整理成可输出的行。
-
-    :param scan: 扫描结果。
-    :param registry: 已装适配器清单。
-    :return: 每行一个实例的字典列表。
-    """
     rows: list[dict[str, Any]] = []
     for config in scan.instances:
         adapter = registry.adapters.get(config.platform)
@@ -1228,12 +1132,6 @@ def _instance_rows(scan: AdapterScan, registry: AdapterRegistry) -> list[dict[st
 
 
 def _issue_labels(row: Mapping[str, Any], registry: AdapterRegistry) -> list[str]:
-    """按行内字段重算本地化的问题说明，供表格展示（JSON 里的 issues 保持原文）。
-
-    :param row: :func:`_instance_rows` 生成的一行。
-    :param registry: 已装适配器清单。
-    :return: 本地化的问题说明列表。
-    """
     labels: list[str] = []
     if registry.available and not row["installed"]:
         labels.append(i18n.t("cli.adapter.list.issue_orphan"))
@@ -1466,11 +1364,6 @@ def remove_instance_config(config: AdapterInstanceConfig) -> bool:
 
 
 def _purge_scope_lines(client_name: str) -> list[str]:
-    """``--purge-data`` 的影响范围说明。
-
-    :param client_name: 目标实例的 ``client_name``。
-    :return: 逐行说明。
-    """
     tables = i18n.t("cli.common.list_separator").join(PURGE_SCOPE_CORE_TABLES)
     return [
         i18n.t("cli.adapter.instance.purge.scope_intro", client_name=client_name),

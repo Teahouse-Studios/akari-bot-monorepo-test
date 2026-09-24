@@ -60,15 +60,18 @@ _DEPRECATED_FONT_CONSTANTS = {
 
 
 def __getattr__(name: str) -> Path:
-    """已弃用字体常量的取用口，替代品为 ``akaribot.core.api.find_font``。
-
-    惰性导入避免导入期多拉一层依赖：字体查找要用 importlib.resources 与 matplotlib，而本模块
-    在引导阶段就被读入。
-
-    :param name: 常量名。
-    :return: 字体文件路径。
-    :raises AttributeError: 名字不在已弃用清单内。
     """
+    已弃用字体常量的取用口，替代品为 ``akaribot.core.api.find_font``。
+
+        惰性导入避免导入期多拉一层依赖：字体查找要用 importlib.resources 与 matplotlib，而本模块
+        在引导阶段就被读入。
+
+        :param name: 常量名。
+        :return: 字体文件路径。
+        :raises AttributeError: 名字不在已弃用清单内。
+    """
+    # 惰性导入避免导入期多拉一层依赖：字体查找要用 importlib.resources 与 matplotlib，而本模块
+    # 在引导阶段就被读入。
     font_name = _DEPRECATED_FONT_CONSTANTS.get(name)
     if font_name is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -211,10 +211,7 @@ WEB_RENDER_TEST_SOURCE_KEYS = ("url", "locale", "stealth", "wait_until", "wait_a
 
 
 def _web_render_status_payload(status: dict | None) -> dict | None:
-    """把依赖库的状态字典转为可经 RPC 与 JSON 传递的结构。
-
-    ``contexts_open_sorted`` 以 BrowserContext 对象为键，无法序列化，改为按出现顺序编号的列表。
-    """
+    # ``contexts_open_sorted`` 以 BrowserContext 对象为键，无法序列化，改为按出现顺序编号的列表。
     if not isinstance(status, dict):
         return None
     contexts = []
@@ -485,11 +482,6 @@ async def post_module_action(module: str, action: Literal["load", "unload", "rel
 
 
 def _module_package(dist: str) -> PackageEntry | None:
-    """按分发名定位已安装的模块包。
-
-    :param dist: 分发名，如 ``akari-bot-module-wiki``。
-    :return: 包条目；未安装或被发现层拒绝时为 ``None``。
-    """
     PackageRegistry.discover(force=True)
     wanted = canonicalize_name(dist)
     for entry in PackageRegistry.modules().values():
@@ -500,7 +492,6 @@ def _module_package(dist: str) -> PackageEntry | None:
 
 
 def _explain_missing_package(dist: str) -> str:
-    """给出包不在发现结果里的原因，供热装载日志定位。"""
     return PackageRegistry.incompatible().get(canonicalize_name(dist), "the package registry did not register it")
 
 

@@ -49,7 +49,6 @@ ROW_INDENT = 2
 
 
 def _column_titles() -> tuple[str, ...]:
-    """按列序返回当前语言的列标题；``client_name`` 与 ``enable`` 是配置字段名，原样保留。"""
     return (
         i18n.t("cli.tui.adapters.column_instance"),
         "client_name",
@@ -61,13 +60,11 @@ def _column_titles() -> tuple[str, ...]:
 
 
 def _enable_column_width() -> int:
-    """enable 列宽度：取字段名表头与三种标签的最大显示宽度。"""
     labels = (i18n.t(_ENABLE_MISSING_KEY), *(i18n.t(key) for key in _ENABLE_KEYS.values()))
     return compat.column_width((_column_titles()[2], *labels))
 
 
 def _status_column_width() -> int:
-    """连接列宽度：取表头与三种状态标签的最大显示宽度。"""
     labels = (i18n.t("cli.tui.common.unknown"), *(i18n.t(key) for key in _ALIVE_KEYS.values()))
     return compat.column_width((_column_titles()[3], *labels))
 
@@ -270,7 +267,6 @@ class AdapterSource(Protocol):
 
 
 def _text(value: Any) -> str:
-    """把任意标量转为展示用字符串。"""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -281,7 +277,6 @@ def _text(value: Any) -> str:
 
 
 def _pick(source: Any, *names: str, default: Any = None) -> Any:
-    """从字典或对象上按候选名取值，兼容对端契约未冻结时的字段别名。"""
     for name in names:
         if isinstance(source, Mapping) and source.get(name) is not None:
             return source[name]
@@ -292,7 +287,6 @@ def _pick(source: Any, *names: str, default: Any = None) -> Any:
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:
-    """把 JSON 中的字符串列表规整为字符串元组。"""
     if isinstance(value, str):
         return (value,) if value else ()
     if isinstance(value, Sequence):
@@ -301,7 +295,6 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
 
 
 def _flag(value: Any) -> bool:
-    """把 JSON 里的布尔写法归一为布尔值。"""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -310,7 +303,6 @@ def _flag(value: Any) -> bool:
 
 
 def _rows(payload: Any, *keys: str) -> list[Any]:
-    """从负载中取出记录数组，接受包装对象与裸数组两种形态。"""
     if isinstance(payload, Mapping):
         for key in keys:
             nested = payload.get(key)
@@ -368,7 +360,6 @@ def normalize_snapshot(payload: Any) -> AdapterSnapshot:
 
 
 def _lease_expired(value: Any, now: float) -> bool | None:
-    """判断租约是否过期；无法解析时返回 ``None``。"""
     if value is None:
         return None
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -388,11 +379,8 @@ def _lease_expired(value: Any, now: float) -> bool | None:
 
 
 def _peer_aliases(entry: Mapping[str, Any], peer_id: str) -> tuple[str, set[str]]:
-    """列出 peer 记录可用于匹配实例的名字，含路由前缀里的 ``client_name``。
-
-    平台展示名（``metadata.platform_name``）刻意不作为别名：多实例下它与默认实例的
-    ``client_name`` 同名，会让同平台的其他实例误命中默认实例的状态。
-    """
+    # 平台展示名（``metadata.platform_name``）刻意不作为别名：多实例下它与默认实例的
+    # ``client_name`` 同名，会让同平台的其他实例误命中默认实例的状态。
     primary = _text(_pick(entry, "client_name")) or _text(_pick(entry, "service")) or peer_id
     aliases = {primary, _text(_pick(entry, "service")), _text(_pick(entry, "client_name"))}
     metadata = _pick(entry, "metadata", default={})
@@ -582,7 +570,6 @@ class SubprocessAdapterSource:
         return [str(self._instance_python()), "-m", f"akaribot.core.entrypoints.{PEER_ENTRYPOINT}", "--json"]
 
     def _instance_python(self) -> Path:
-        """解析实例解释器；实例不可发现时回退到当前解释器。"""
         try:
             instance = self._instance()
         except AdapterSourceError:
@@ -591,7 +578,6 @@ class SubprocessAdapterSource:
         return candidate if candidate.exists() else Path(sys.executable)
 
     def _instance(self) -> Any:
-        """构造实例对象；实例目录不成立时给出可读原因。"""
         if self._instance_factory is not None:
             return self._instance_factory()
         try:
@@ -604,14 +590,12 @@ class SubprocessAdapterSource:
         return Instance(root)
 
     def _env(self) -> dict[str, str]:
-        """构造子进程环境：注入实例目录，并把标准流固定为 UTF-8。"""
         env = dict(os.environ)
         env[INSTANCE_ENV] = str(self.root)
         env["PYTHONIOENCODING"] = "utf-8"
         return env
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        """执行子进程并把常见失败转成 :class:`AdapterSourceError`。"""
         try:
             return self._runner(
                 list(argv),
@@ -633,7 +617,6 @@ class SubprocessAdapterSource:
             raise AdapterSourceError(i18n.t("cli.tui.adapters.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
-        """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
             raise AdapterSourceError(i18n.t("cli.tui.adapters.src_empty_output", label=label))
@@ -643,7 +626,6 @@ class SubprocessAdapterSource:
             raise AdapterSourceError(i18n.t("cli.tui.adapters.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
-        """截取子进程输出的尾部，供状态栏展示。"""
         return (text or "").strip()[-limit:]
 
 
@@ -889,7 +871,6 @@ class AdaptersPage(compat.Vertical):
         self.run_worker(self._load(), group="adapters-load", exclusive=True)
 
     async def _load(self) -> bool:
-        """后台读取快照并刷新界面，返回实例清单是否读取成功。"""
         try:
             snapshot = await asyncio.to_thread(self.source.list_instances)
         except AdapterSourceError as error:
@@ -918,7 +899,6 @@ class AdaptersPage(compat.Vertical):
         return True
 
     async def _load_peers(self) -> PeerSnapshot:
-        """读取 peer 快照；失败只降级为「未知」，不影响实例清单。"""
         try:
             return await asyncio.to_thread(self.source.peer_status)
         except Exception as error:  # noqa: BLE001 - 连接状态取不到不应中断页面
@@ -934,11 +914,9 @@ class AdaptersPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _records_in_row_order(self) -> tuple[AdapterRecord, ...]:
-        """按分组顺序铺平实例，与列表行序一致。"""
         return tuple(record for _, group in self._snapshot.grouped() for record in group)
 
     def _render_all(self) -> None:
-        """按缓存重绘摘要、列标题、列表、详情与按钮状态。"""
         list_view = self.query_one("#adapter-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
         self._layout = self._build_layout(inner_width)
@@ -979,7 +957,6 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
-        """返回列表可用内容宽度：外框宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(list_view)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -987,7 +964,6 @@ class AdaptersPage(compat.Vertical):
         return max(outer - 4, 8)
 
     def _build_layout(self, inner_width: int) -> ColumnLayout:
-        """按可用宽度分配列宽；宽度不足时依次收起最近错误列与监听地址列。"""
         records = self._snapshot.instances
         titles = _column_titles()
         id_width = min(
@@ -1027,11 +1003,9 @@ class AdaptersPage(compat.Vertical):
         )
 
     def _header_row(self, layout: ColumnLayout) -> str:
-        """渲染列标题行，列宽与实例行一致。"""
         return self._compose_row(_column_titles(), layout)
 
     def _record_cells(self, record: AdapterRecord) -> tuple[str, ...]:
-        """按列序给出实例行的各列取值。"""
         status = self._peers.status_for(record.client_name)
         error = record.issue_text
         if error == EMPTY_CELL and status.error:
@@ -1046,19 +1020,16 @@ class AdaptersPage(compat.Vertical):
         )
 
     def _compose_row(self, cells: Sequence[str], layout: ColumnLayout) -> str:
-        """把各列取值拼成定宽行；超宽列按终端列宽截断。"""
         parts = [compat.fit_cells(value, width) for value, width in zip(cells, layout.widths()) if width > 0]
         return (" " * ROW_INDENT + (" " * COLUMN_GAP).join(parts)).rstrip()
 
     def _group_row(self, platform: str, group: Sequence[AdapterRecord], inner_width: int) -> str:
-        """渲染平台分组标题行。"""
         suffix = group_display(group, self._snapshot.registry_available)
         return compat.truncate_cells(
             i18n.t("cli.tui.adapters.group_row", platform=platform, suffix=suffix), inner_width
         )
 
     def _index_for_key(self) -> int:
-        """定位要恢复的高亮项，找不到时回到首个实例行。"""
         records = self._records_in_row_order()
         target = self._selected_key
         if target is not None:
@@ -1075,7 +1046,6 @@ class AdaptersPage(compat.Vertical):
         return next((index for index, kind in enumerate(self._row_kinds) if kind == "instance"), 0)
 
     def _sync_summary(self) -> None:
-        """更新顶部摘要：实例数、分组数、清单可用性与扁平布局提示。"""
         snapshot = self._snapshot
         enabled = sum(1 for record in snapshot.instances if record.enabled)
         parts = [
@@ -1119,7 +1089,6 @@ class AdaptersPage(compat.Vertical):
         self.query_one("#summary", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
 
     def _fit_page_width(self, text: str) -> str:
-        """把单行文本截到页面可用列宽，避免被终端硬裁。"""
         try:
             width = compat.widget_cells(self)[0] - 2
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -1127,7 +1096,6 @@ class AdaptersPage(compat.Vertical):
         return compat.truncate_cells(text, max(width, 8))
 
     def _sync_detail(self) -> None:
-        """按当前选中项更新详情栏：配置文件、表名与 peer 状态说明。"""
         record = self.selected_record
         if record is None:
             text = (
@@ -1166,7 +1134,6 @@ class AdaptersPage(compat.Vertical):
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
 
     def _sync_actions(self) -> None:
-        """按选中项与忙碌状态更新按钮可用性。"""
         toggle = self.query_one("#toggle", compat.Button)
         toggle.disabled = self._busy or self.selected_record is None
         record = self.selected_record
@@ -1177,7 +1144,6 @@ class AdaptersPage(compat.Vertical):
         )
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         self.last_result = text
         self._status_rendered = text
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
@@ -1193,19 +1159,16 @@ class AdaptersPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        """高亮项变化时更新详情与按钮。"""
         self._sync_detail()
         self._sync_actions()
 
     @compat.on(compat.ListView.Selected)
     def _on_selected(self, event: compat.ListView.Selected) -> None:
-        """回车选中时更新详情与按钮。"""
         self._sync_detail()
         self._sync_actions()
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：切换 enable 与刷新。"""
         if event.button.id == "toggle":
             self.request_toggle()
         elif event.button.id == "refresh":
@@ -1225,7 +1188,6 @@ class AdaptersPage(compat.Vertical):
         self._start_toggle(record, not record.enabled)
 
     def _start_toggle(self, record: AdapterRecord, enabled: bool) -> None:
-        """在后台任务里执行 enable 切换。"""
         if self._busy:
             compat.notify(
                 self.app,
@@ -1245,7 +1207,6 @@ class AdaptersPage(compat.Vertical):
         self.run_worker(self._toggle(record, enabled, label), group="adapters-toggle", exclusive=True)
 
     async def _toggle(self, record: AdapterRecord, enabled: bool, label: str) -> None:
-        """执行切换；成功后缓存失效并重新读取。"""
         try:
             result = await asyncio.to_thread(self.source.set_enable, record, enabled)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示

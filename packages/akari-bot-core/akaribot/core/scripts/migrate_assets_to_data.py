@@ -19,7 +19,7 @@ import shutil
 import sys
 from pathlib import Path
 
-# (旧路径, 新路径)，两者都相对仓库根。
+# (旧路径， 新路径)，两者都相对仓库根。
 MOVES = [
     ("assets/i18n_cache", "data/i18n_cache"),
     ("assets/private", "data/private"),
@@ -38,7 +38,7 @@ MOVES = [
     ("modules/threedsdb/data", "modules/threedsdb/assets/data"),
 ]
 
-# (仓库内旧路径, 实例内新路径)。仅收录部署者提供的文件：下载产物可重新获取，无需迁移。
+# (仓库内旧路径， 实例内新路径)。仅收录部署者提供的文件：下载产物可重新获取，无需迁移。
 INSTANCE_MOVES = [
     ("modules/ai/data/llm_api_list.yaml", "data/module/ai/llm_api_list.yaml"),
     ("modules/ai/data/llm_api_list.yml", "data/module/ai/llm_api_list.yml"),

@@ -27,8 +27,6 @@ TEST_DELAY = 0.05
 
 
 class _FakeClient:
-    """替身 botpy Client，覆盖适配器使用的高层发送接口。"""
-
     def __init__(self, fail_times: int = 0):
         self.fail_times = fail_times
         self.send_calls = 0
@@ -59,8 +57,6 @@ class _FakeClient:
 
 
 class _FakeGroupMessage(GroupMessage):
-    """替身群消息，绕过 SDK 的构造流程，仅保留发送路径依赖的属性。"""
-
     def __init__(self, fail_times: int = 0):
         self.id = "source-message"
         self.group_openid = "fake_group"
@@ -69,8 +65,6 @@ class _FakeGroupMessage(GroupMessage):
 
 
 class _ProbingImage(ImageElement):
-    """转换耗时的图片，转换期间回调一次，用于观察当时的登记状态。"""
-
     # 不加类型注解，避免被 attrs 当作字段处理
     observer = None
 
@@ -82,11 +76,6 @@ class _ProbingImage(ImageElement):
 
 
 def _make_session(session_id: str) -> SessionInfo:
-    """构造一个群聊会话，只填充输入状态机用到的字段。
-
-    :param session_id: 会话 ID，各用例之间须互不相同。
-    :return: 可交由 start_typing 使用的会话信息。
-    """
     return SessionInfo(
         target_id=f"{target_group_prefix}|test_group",
         sender_id="QQ|Tiny|1",
@@ -97,11 +86,7 @@ def _make_session(session_id: str) -> SessionInfo:
 
 
 class _Recorder:
-    """接管收发接口，记录调用而不触网。
-
-    区分「输入提示」与「机器人自身消息」两类发送，便于断言前者是否被撤回。
-    """
-
+    # 区分「输入提示」与「机器人自身消息」两类发送，便于断言前者是否被撤回。
     def __init__(self):
         self.prompts: list[str] = []
         self.prompt_messages: list[MessageChain] = []
@@ -174,8 +159,6 @@ class _Recorder:
 
 
 class _InFlightPromptRecorder:
-    """模拟平台已接受 typing 消息、但 SDK 尚未返回消息 ID 的窗口。"""
-
     def __init__(self):
         self.prompt_started = asyncio.Event()
         self.release_prompt = asyncio.Event()
@@ -253,8 +236,6 @@ class _InFlightPromptRecorder:
 
 
 class _Session:
-    """在受控的上下文中跑一个会话，退出时清干净全局状态。"""
-
     def __init__(self, session_id: str):
         self.session = _make_session(session_id)
 
@@ -269,10 +250,6 @@ class _Session:
 
 
 async def _wait_prompt_sent(rec: _Recorder) -> bool:
-    """等到输入提示发出为止。
-
-    :return: 提示是否已发出。
-    """
     for _ in range(40):
         await asyncio.sleep(TEST_DELAY / 2)
         if rec.prompts:
@@ -281,7 +258,6 @@ async def _wait_prompt_sent(rec: _Recorder) -> bool:
 
 
 async def _test_prompt_recalled_after_bot_message() -> bool:
-    """机器人发出自身消息后，输入提示应随即撤回，无须等到输入状态结束"""
     with _Recorder() as rec:
         async with _Session("typing-after-message") as session:
             await QQBotContextManager.start_typing(session)
@@ -299,7 +275,6 @@ async def _test_prompt_recalled_after_bot_message() -> bool:
 
 
 async def _test_prompt_recalled_when_context_dropped() -> bool:
-    """上下文已销毁时结束输入状态，不得抛错，且仍须撤回输入提示"""
     with _Recorder() as rec:
         session = _make_session("typing-context-dropped")
         QQBotContextManager.context[session.session_id] = object()
@@ -327,7 +302,6 @@ async def _test_prompt_recalled_when_context_dropped() -> bool:
 
 
 async def _test_prompt_recalled_on_repeated_start() -> bool:
-    """同一会话重复开启输入状态时，先前的输入提示不得被遗弃"""
     with _Recorder() as rec:
         async with _Session("typing-repeated-start") as session:
             await QQBotContextManager.start_typing(session)
@@ -347,7 +321,6 @@ async def _test_prompt_recalled_on_repeated_start() -> bool:
 
 
 async def _test_no_prompt_when_message_sent_early() -> bool:
-    """机器人在等待窗口内已发言时，不应再补发输入提示"""
     with _Recorder() as rec:
         async with _Session("typing-early-message") as session:
             await QQBotContextManager.start_typing(session)
@@ -361,7 +334,6 @@ async def _test_no_prompt_when_message_sent_early() -> bool:
 
 
 async def _test_prompt_recalled_on_end_typing() -> bool:
-    """常规路径：输入状态结束时须撤回输入提示"""
     with _Recorder() as rec:
         session = _make_session("typing-end-normally")
         QQBotContextManager.context[session.session_id] = object()
@@ -383,7 +355,6 @@ async def _test_prompt_recalled_on_end_typing() -> bool:
 
 
 async def _test_in_flight_prompt_recalled_after_response() -> bool:
-    """响应先完成、typing 后落地时，仍须等待其消息 ID 并完成撤回。"""
     session = _make_session("typing-in-flight-after-response")
     QQBotContextManager.context[session.session_id] = object()
     with _InFlightPromptRecorder() as rec:
@@ -418,7 +389,6 @@ async def _test_in_flight_prompt_recalled_after_response() -> bool:
 
 
 async def _test_group_typing_uses_emote_when_enabled() -> bool:
-    """开启 use_emote 后，群聊输入提示应附带随机 GIF，并强制走原生图片发送。"""
     if not TYPING_EMOTES:
         Logger.error("Typing emote assets are missing, the enabled-path test cannot run")
         return False
@@ -457,7 +427,6 @@ async def _test_group_typing_uses_emote_when_enabled() -> bool:
 
 
 async def _test_group_typing_omits_emote_when_disabled() -> bool:
-    """关闭 use_emote 后，群聊输入提示应保持原有纯文本形态。"""
     with patch("akaribot.adapters.qqbot.context.CoreConfig", new=SimpleNamespace(use_emote=False)), _Recorder() as rec:
         async with _Session("typing-emote-disabled") as session:
             await QQBotContextManager.start_typing(session)
@@ -479,13 +448,6 @@ async def _test_group_typing_omits_emote_when_disabled() -> bool:
 
 
 async def _send_via_context(session: SessionInfo, ctx: _FakeGroupMessage, message) -> tuple[_TypingState, bool]:
-    """在受控上下文中走一遍真实的发送流程。
-
-    :param session: 目标会话。
-    :param ctx: 替身群消息，充当平台上下文。
-    :param message: 待发送的消息链。
-    :return: 本轮的输入状态标志，以及发送是否成功。
-    """
     sid = session.session_id
     state = _TypingState()
     QQBotContextManager.context[sid] = ctx
@@ -504,7 +466,6 @@ async def _send_via_context(session: SessionInfo, ctx: _FakeGroupMessage, messag
 
 
 async def _test_group_typing_prepares_immediately() -> bool:
-    """群聊 typing 信号到达后应立即开始资源准备，不等待提示延时。"""
     cm = QQBotContextManager
     session = _make_session("typing-prepares-immediately")
     prepare_started = asyncio.Event()
@@ -541,7 +502,6 @@ async def _test_group_typing_prepares_immediately() -> bool:
 
 
 async def _test_group_typing_preuploads_emote_immediately() -> bool:
-    """带 GIF 的 typing 应在延时窗口开始时 upload_media，而不是临发送才上传。"""
     if not TYPING_EMOTES:
         Logger.error("Typing emote assets are missing, the pre-upload test cannot run")
         return False
@@ -588,7 +548,6 @@ async def _test_group_typing_preuploads_emote_immediately() -> bool:
 
 
 async def _test_send_queue_drops_stale_typing_prompt() -> bool:
-    """typing 已入队但尚未调用平台接口时，普通回复进入发送阶段应使其失效。"""
     cm = QQBotContextManager
     session = _make_session("typing-send-queue-race")
     state = _TypingState()
@@ -631,7 +590,6 @@ async def _test_send_queue_drops_stale_typing_prompt() -> bool:
 
 
 async def _test_c2c_uses_native_typing() -> bool:
-    """C2C 会话应调用 botpy 的原生输入状态接口，并带上入站消息 ID。"""
     session = SessionInfo(
         target_id=f"{target_c2c_prefix}|friend",
         sender_id="QQBot|friend",
@@ -663,7 +621,6 @@ async def _test_c2c_uses_native_typing() -> bool:
 
 
 async def _test_marked_after_send_succeeds() -> bool:
-    """发送成功后须同时登记已进入发送阶段与已发言。"""
     session = _make_session("send-succeeds")
     ctx = _FakeGroupMessage()
     state, ok = await _send_via_context(session, ctx, MessageChain.assign(PlainElement.assign("hi")))
@@ -681,7 +638,6 @@ async def _test_marked_after_send_succeeds() -> bool:
 
 
 async def _test_not_marked_when_send_fails() -> bool:
-    """平台发送失败时仍已进入发送阶段，但不得登记为已成功发言。"""
     session = _make_session("send-fails")
     ctx = _FakeGroupMessage(fail_times=1)
     state, ok = await _send_via_context(session, ctx, MessageChain.assign(PlainElement.assign("hi")))
@@ -699,7 +655,6 @@ async def _test_not_marked_when_send_fails() -> bool:
 
 
 async def _test_not_marked_while_converting_image() -> bool:
-    """图片读取与 upload_media 都属于资源准备，不得登记为已进入发送阶段。"""
     session = _make_session("converting-image")
     ctx = _FakeGroupMessage()
     observed: list[tuple[bool, bool]] = []

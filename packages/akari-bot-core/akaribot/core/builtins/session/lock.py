@@ -67,12 +67,10 @@ class ExecutionLockList:
 
     @classmethod
     def _subject(cls, msg: "MessageSession") -> "MessageSession":
-        """返回该命令执行域稳定的锁主体。"""
         return cls.state(msg).lock_subject or msg
 
     @staticmethod
     def _local_keys(msg: "MessageSession") -> set[str]:
-        """返回无需 I/O 即可确定的身份键。"""
         msg = ExecutionLockList._subject(msg)
         keys = set()
         if msg.session_info.sender_union_id:
@@ -83,7 +81,6 @@ class ExecutionLockList:
 
     @classmethod
     async def _current_keys(cls, msg: "MessageSession") -> set[str]:
-        """展开会话当前 Union 的全部物理账号。"""
         msg = cls._subject(msg)
         sender_id = msg.session_info.sender_id
         keys = {sender_id} if sender_id else set()
@@ -118,7 +115,6 @@ class ExecutionLockList:
 
     @classmethod
     def _bind_owner_task(cls, state: ExecutionState) -> None:
-        """把执行域绑定到当前根任务，并为非正常退出安装兜底清理。"""
         task = asyncio.current_task()
         if task is None or state.lock_owner_task is task:
             return
@@ -133,7 +129,6 @@ class ExecutionLockList:
 
     @classmethod
     def _release_finished_owner(cls, state: ExecutionState, finished: asyncio.Task) -> None:
-        """在 lease 所属任务结束后同步回收仍遗留的 token。"""
         if state.lock_owner_task is not finished:
             return
         state.lock_owner_task = None

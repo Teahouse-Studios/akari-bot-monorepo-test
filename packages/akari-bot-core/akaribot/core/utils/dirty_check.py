@@ -148,12 +148,6 @@ def dirty_word_cache_namespace(backend: str) -> str:
 
 
 async def _check_aliyun(texts: list[str], confidence: float = 60) -> list[dict]:
-    """对文本列表执行阿里云内容安全审核。
-
-    :param texts: 待审核的文本列表。
-    :param confidence: 判定置信度阈值。
-    :returns: 与输入顺序一致的审核结果字典列表。
-    """
     cache_namespace = dirty_word_cache_namespace(ALIYUN_BACKEND)
 
     query_list = {}
@@ -378,9 +372,9 @@ async def check_bool(
 
 
 def rickroll() -> str:
-    """合规检查失败时输出的Rickroll消息。
+    """合规检查失败时输出的 Rickroll 消息。
 
-    :returns: Rickroll消息。
+    :returns: Rickroll 消息。
     """
     rickroll_msg = CoreConfig.rickroll_msg
     if CoreConfig.enable_rickroll and rickroll_msg:

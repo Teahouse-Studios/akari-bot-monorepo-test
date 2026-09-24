@@ -17,7 +17,6 @@ ASSET = "character_marked.png"
 
 
 def _test_package_asset_wins():
-    """资源包存在时优先取包内的那份（默认值来自随包分发的原件）。"""
     with tempfile.TemporaryDirectory(prefix="akari-brand-") as raw:
         package_dir = Path(raw) / "package"
         instance_dir = Path(raw) / "instance"
@@ -33,7 +32,6 @@ def _test_package_asset_wins():
 
 
 def _test_instance_asset_is_the_fallback():
-    """资源包缺席时回退到实例 assets/，部署者据此覆盖默认图。"""
     with tempfile.TemporaryDirectory(prefix="akari-brand-") as raw:
         instance_dir = Path(raw) / "instance"
         instance_dir.mkdir()
@@ -47,7 +45,6 @@ def _test_instance_asset_is_the_fallback():
 
 
 def _test_missing_everywhere_returns_none():
-    """两处都没有时返回 None，而不是抛异常或返回一个不存在的路径。"""
     with tempfile.TemporaryDirectory(prefix="akari-brand-") as raw:
         instance_dir = Path(raw) / "instance"
         instance_dir.mkdir()
@@ -60,7 +57,6 @@ def _test_missing_everywhere_returns_none():
 
 
 def _test_package_without_the_named_asset_falls_through():
-    """资源包在、但里面没有该文件时继续回退，不把包目录当成万能来源。"""
     with tempfile.TemporaryDirectory(prefix="akari-brand-") as raw:
         package_dir = Path(raw) / "package"
         instance_dir = Path(raw) / "instance"
@@ -76,7 +72,6 @@ def _test_package_without_the_named_asset_falls_through():
 
 
 def _test_uninstalled_package_is_not_an_error():
-    """资源包没装时定位函数不抛异常——裸 core 是受支持的安装形态。"""
     with tempfile.TemporaryDirectory(prefix="akari-brand-") as raw:
         instance_dir = Path(raw) / "instance"
         instance_dir.mkdir()
@@ -92,7 +87,6 @@ def _test_uninstalled_package_is_not_an_error():
 
 
 def _test_real_install_resolves_the_shipped_assets():
-    """当前环境装了品牌资源包时，三份资产都应能定位到（CI 用 --all-extras）。"""
     directory = brand._package_brand_dir()
     if directory is None:
         return True

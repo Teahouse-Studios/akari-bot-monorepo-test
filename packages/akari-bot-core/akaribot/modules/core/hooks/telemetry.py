@@ -21,12 +21,11 @@ def _enable_analytics() -> bool:
     return bool(getattr(CoreConfig, "enable_analytics", False))
 
 
-telemetry = module("_telemetry", hidden=True, load=True, base=True)
+telemetry = module("telemetry", hidden=True, load=True, base=True)
 
 
 @telemetry.hook(point=HookPoint.EXECUTION_FINISHED, priority=50, name="record", server_scope=True)
 async def _(ctx: "Bot.ParserHookContext"):
-    """命令/正则执行结束后的解析计数与入库。"""
     Info.command_parsed += 1
     if not _enable_analytics():
         return None
@@ -48,7 +47,6 @@ async def _(ctx: "Bot.ParserHookContext"):
 
 @telemetry.hook(point=HookPoint.FINISHED, priority=50, name="message_parsed", server_scope=True)
 async def _(ctx: "Bot.ParserHookContext"):
-    """parser 主流程 finally：消息级计数。"""
     Info.message_parsed += 1
 
 

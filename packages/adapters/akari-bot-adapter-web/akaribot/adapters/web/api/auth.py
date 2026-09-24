@@ -29,7 +29,6 @@ TOTP_ISSUER = "AkariBot"
 
 
 def _read_password_data() -> dict | None:
-    """读取密码文件，不存在时返回 None。"""
     if not PASSWORD_PATH.exists():
         return None
     with open(PASSWORD_PATH, "rb") as f:
@@ -37,19 +36,16 @@ def _read_password_data() -> dict | None:
 
 
 def _write_password_data(data: dict) -> None:
-    """写入密码文件，必要时自动创建父目录。"""
     PASSWORD_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(PASSWORD_PATH, "wb") as f:
         f.write(orjson.dumps(data))
 
 
 def _is_2fa_enabled(password_data: dict | None) -> bool:
-    """检查是否已启用 2FA。"""
     return bool(password_data and password_data.get("totp_enabled") and password_data.get("totp_secret"))
 
 
 def _get_totp(password_data: dict | None) -> pyotp.TOTP | None:
-    """从密码数据中解密并返回 TOTP 实例，失败时返回 None。"""
     if not _is_2fa_enabled(password_data):
         return None
     try:
@@ -301,7 +297,7 @@ async def change_password(request: Request, response: Response):
         with open(PASSWORD_PATH, "wb") as file:
             file.write(orjson.dumps(password_data))
 
-        # TODO 签的jwt存db, 改密码时删掉
+        # TODO 签的 jwt 存 db, 改密码时删掉
         Logger.info(f"[WebUI] {ip} has changed password.")
         return Response(status_code=205)
     except HTTPException as e:

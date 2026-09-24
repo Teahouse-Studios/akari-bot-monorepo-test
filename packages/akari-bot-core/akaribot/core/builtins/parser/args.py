@@ -167,7 +167,7 @@ def split_multi_arguments(lst: list[str]) -> list[str]:
 
     支持嵌套的括号和多个选择组。
 
-    示例:
+    示例：
     ```
         >>> split_multi_arguments(["hello(world|earth)"])
         ["hello world", "hello earth"]
@@ -183,7 +183,7 @@ def split_multi_arguments(lst: list[str]) -> list[str]:
 
     for item in lst:
         # 将 "hello(world|earth)foo(a|b)" 拆分为文本块和选项列表
-        # 例如: ["hello", "world|earth", "foo", "a|b", ""]
+        # 例如： ["hello", "world|earth", "foo", "a|b", ""]
         parts = patn.split(item)
 
         # 将选项块按 "|" 分割转换为列表，纯文本直接作为单元素列表
@@ -208,13 +208,13 @@ def parse_template(argv: list[str], depth: int = 0) -> list[Template]:
     该函数是命令解析系统的核心，将用户定义的模板字符串转换为可用于匹配的
     Template 对象。支持递归处理嵌套的可选参数。
 
-    模板语法:
+    模板语法：
         - <arg>: 必需参数，用 < > 包括
         - [option]: 可选参数，用 [ ] 包括
         - [flag <arg>]: 带标志的可选参数
         - {description}: 描述信息，用于生成帮助文本
 
-    示例:
+    示例：
     ```
         > parse_template(["<source> [-o <destination>] {Copy a file}"])
         [Template([ArgumentPattern('source'),
@@ -264,7 +264,7 @@ def parse_template(argv: list[str], depth: int = 0) -> list[Template]:
             arg_names: set[str] = set()
 
             # 跟踪最后一个处理的模式类型（用于检查顺序合法性）
-            # 可能的值: "argument", "optional", "optional_no_flag", "desc", "variadic"
+            # 可能的值： "argument", "optional", "optional_no_flag", "desc", "variadic"
             last_type = None
 
             # 标志是否已经出现过描述块
@@ -418,7 +418,7 @@ def templates_to_str(templates: list[Template], with_desc=False, simplify=True) 
 
     该函数用于生成帮助文本，将解析后的 Template 对象转换为人类可读的字符串格式。
 
-    示例:
+    示例：
     ```
         > template = Template([ArgumentPattern('<source>'), OptionalPattern('-o', [Template([ArgumentPattern('<destination>')])]), DescPattern('Copy a file')])
         > templates_to_str([template])
@@ -489,16 +489,8 @@ OPTION_TERMINATOR = "--"
 
 
 def _split_option_terminator(argv: list[str]) -> tuple[list[str], list[str]]:
-    """
-    按第一个 ``--`` 将参数列表切分为「选项区」与「操作数区」。
-
-    POSIX 约定（Utility Syntax Guideline 10）：第一个 ``--`` 之后的 token 即使以 ``-``
-    开头也应视作操作数，因此选项匹配只应在前半部分进行。``--`` 本身不进入任何参数值，
-    其后再次出现的 ``--`` 作为字面操作数保留。
-
-    :param argv: 待切分的参数列表
-    :return: ``(选项区, 操作数区)`` 二元组，均为新列表（不会与传入的列表共享引用）
-    """
+    # POSIX 约定（Utility Syntax Guideline 10）：第一个 ``--`` 之后的 token 即使以 ``-`` 开头也
+    # 应视作操作数，故选项匹配只在 ``--`` 之前进行；``--`` 本身不进入任何参数值。
     if OPTION_TERMINATOR in argv:
         index = argv.index(OPTION_TERMINATOR)
         return argv[:index], argv[index + 1 :]
@@ -506,19 +498,8 @@ def _split_option_terminator(argv: list[str]) -> tuple[list[str], list[str]]:
 
 
 def _find_option(argv: list[str], flag: str, allow_inline: bool = True) -> tuple[int, str | None] | None:
-    """
-    在参数列表中定位选项，支持 ``--flag=value`` 形式的内联值。
-
-    - 精确匹配 ``flag`` -> ``(索引, None)``
-    - 内联匹配 ``flag=value`` -> ``(索引, value)``，仅当 ``allow_inline`` 为真且 ``flag``
-      以 ``-`` 开头时启用；按第一个 ``=`` 切分，允许值为空串或自身包含 ``=``。
-    - 非 ``-`` 开头的标志（如无前缀的子命令名）只做精确匹配。
-
-    :param argv: 参数列表（应已剔除 ``--`` 之后的操作数）
-    :param flag: 模板中定义的选项标志，如 ``-p``、``--legacy``
-    :param allow_inline: 是否接受 ``flag=value`` 形式（带子参数的选项应设为真）
-    :return: ``(索引, 内联值或 None)``，未找到时返回 ``None``
-    """
+    # 内联值 ``--flag=value`` 仅当 ``allow_inline`` 为真且标志以 ``-`` 开头时启用，按第一个 ``=``
+    # 切分，允许值为空串或自身包含 ``=``；非 ``-`` 开头的标志（如子命令名）只做精确匹配。
     if not flag:
         return None
 
@@ -566,9 +547,9 @@ def parse_argv(argv: list[str], templates: list["Template"]) -> MatchedResult:
     - 选项可出现在操作数之间的任意位置（GNU 风格排列），仅第一个 ``--`` 具有特殊含义
 
     示例：
-    - 模板: Template([ArgumentPattern('<lang>'), OptionalPattern('-v', [...])])
-    - 输入: argv = ["python", "-v"]
-    - 输出: MatchedResult({"<lang>": "python", "-v": True}, template, priority)
+    - 模板： Template([ArgumentPattern('<lang>'), OptionalPattern('-v', [...])])
+    - 输入： argv = ["python", "-v"]
+    - 输出： MatchedResult({"<lang>": "python", "-v": True}, template, priority)
 
     :param argv: 命令行参数列表（不包括命令名本身）
     :param templates: 可用的模板列表，会逐个尝试匹配

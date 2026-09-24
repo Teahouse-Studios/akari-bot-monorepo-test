@@ -89,7 +89,6 @@ class DivingFishDeviceCode:
 
 
 def _masked(value: str) -> str:
-    """遮挡身份串的中间部分，保留首尾各两位。"""
     if len(value) < 5:
         return "*" * len(value)
     return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
@@ -130,33 +129,16 @@ def diving_fish_bind_usable(bind_info: DivingProberBindInfo | None, confidential
 
 
 def _authenticated(payload: dict) -> dict:
-    """按应用登记的形态补上客户端凭据。
-
-    令牌端点严格比对认证方式：机密客户端少传 client_secret、公开客户端多传，得到的都是
-    `401 invalid_client`，且两种情形的响应完全相同。故只能由配置里有无 client_secret 决定。
-
-    :param payload: 表单字段。
-    :return: 补全后的表单字段。
-    """
+    # 令牌端点严格比对认证方式：机密客户端少传 client_secret、公开客户端多传，得到的都是
+    # `401 invalid_client`，且两种情形的响应完全相同。故只能由配置里有无 client_secret 决定。
     if DF_CONFIDENTIAL_CLIENT:
         payload["client_secret"] = DF_CLIENT_SECRET
     return payload
 
 
 async def _post_form(url: str, payload: dict, *, attempt: int = 3, expect_json: bool = True) -> dict:
-    """以 `application/x-www-form-urlencoded` 提交表单。
-
-    OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），因此这里传
-    `status_code=None`，使 4xx 响应也照常返回响应体而非抛出异常。
-
-    :param url: 端点地址。
-    :param payload: 表单字段。
-    :param attempt: 请求尝试次数。令牌端点不做重试：设备码与 refresh token 都只能使用一次，
-        重发可能扫掉第一次已签发的令牌。
-    :param expect_json: 响应是否为 JSON。撤销端点成功时可能返回空响应体。
-    :return: 响应体解析所得的字典；响应不是 JSON 对象时返回空字典。
-    :raise DivingFishOAuthError: 请求失败。
-    """
+    # OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），故传
+    # `status_code=None`，使 4xx 也照常返回响应体。重发可能扫掉第一次已签发的令牌。
     try:
         resp = await post_url(
             url,
@@ -176,7 +158,6 @@ async def _post_form(url: str, payload: dict, *, attempt: int = 3, expect_json: 
 
 
 def _expires_in(resp: dict, default: float = 900.0) -> float:
-    """读取响应中的 `expires_in`，缺失或非法时按默认值处理。"""
     try:
         return float(resp.get("expires_in", default))
     except (TypeError, ValueError):
@@ -349,12 +330,10 @@ async def exchange_on_behalf_of(subject: str) -> dict:
 
 
 def _cache_token(union_id: str, token: str, expires_in: float) -> None:
-    """把 access token 记入进程内缓存。"""
     _access_token_cache[union_id] = (token, time.monotonic() + max(0.0, expires_in - _TOKEN_EXPIRE_MARGIN))
 
 
 def _cached_access_token(union_id: str) -> str | None:
-    """取出仍在有效期内的 access token，没有则返回 `None`。"""
     cached = _access_token_cache.get(union_id)
     if cached and cached[1] > time.monotonic():
         return cached[0]

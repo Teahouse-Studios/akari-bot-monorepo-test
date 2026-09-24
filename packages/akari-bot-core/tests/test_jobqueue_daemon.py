@@ -91,7 +91,6 @@ _TEST_PLATFORM = "test-platform"
 
 
 def _fake_adapters():
-    """只暴露一个合成适配器，使守护进程的编排路径可被完整断言。"""
     return {
         _TEST_PLATFORM: PackageEntry(
             kind="adapter",

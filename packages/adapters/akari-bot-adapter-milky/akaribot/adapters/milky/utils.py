@@ -156,11 +156,6 @@ async def to_message_chain(message: Any) -> MessageChain:
 
 
 def _append_text(segments: list, text: str) -> None:
-    """追加文本段，与相邻文本段合并以减少消息段数量。
-
-    :param segments: 出站消息段列表，会被就地修改。
-    :param text: 待追加的文本。
-    """
     if not text:
         return
     if segments and isinstance(segments[-1], OutgoingTextSegment):
@@ -170,11 +165,6 @@ def _append_text(segments: list, text: str) -> None:
 
 
 def _append_mention(segments: list, user_id: Any) -> None:
-    """追加提及段。
-
-    :param segments: 出站消息段列表，会被就地修改。
-    :param user_id: 被提及的用户 ID，非数字时视为全体提及。
-    """
     if str(user_id).isdigit():
         segments.append(OutgoingMentionSegment(data=MentionSegmentData(user_id=int(user_id))))
     else:
@@ -182,12 +172,7 @@ def _append_mention(segments: list, user_id: Any) -> None:
 
 
 def _ensure_line_break(segments: list) -> None:
-    """为块级元素补齐换行，使其不与上一行内容粘连。
-
-    末段已是文本段时直接在末尾补换行（已以换行结尾则跳过），否则新增一个换行文本段。
-
-    :param segments: 出站消息段列表，会被就地修改。
-    """
+    # 末段已是文本段时直接在末尾补换行（已以换行结尾则跳过），否则新增一个换行文本段。
     if isinstance(segments[-1], OutgoingTextSegment):
         if not segments[-1].data.text.endswith("\n"):
             segments[-1].data.text += "\n"

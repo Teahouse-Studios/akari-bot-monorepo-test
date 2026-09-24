@@ -50,7 +50,7 @@ class Features:
     # Markdown 语法支持 - 会话是否支持 Markdown 格式化文本
     support_markdown: bool = False
 
-    # Markdown 扩展支持 - 会话是否支持渲染表格、代码块、LaTeX等
+    # Markdown 扩展支持 - 会话是否支持渲染表格、代码块、LaTeX 等
     support_markdown_extension: bool = False
 
     # 消息反应支持 - 会话是否支持对消息添加反应（如表情符号）

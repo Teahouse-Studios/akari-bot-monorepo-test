@@ -72,7 +72,6 @@ FSTRING_SNIPPET_LIMIT = 80
 
 
 def _dotted_segments(node: cst.CSTNode | None) -> list[str] | None:
-    """把纯点分表达式拆成段序列，其他形态返回 None。"""
     if isinstance(node, cst.Name):
         return [node.value]
     if isinstance(node, cst.Attribute):
@@ -84,7 +83,6 @@ def _dotted_segments(node: cst.CSTNode | None) -> list[str] | None:
 
 
 def _build_dotted(segments: Sequence[str]) -> cst.BaseExpression:
-    """按段序列重建点分表达式。"""
     node: cst.BaseExpression = cst.Name(segments[0])
     for segment in segments[1:]:
         node = cst.Attribute(value=node, attr=cst.Name(segment))
@@ -94,7 +92,6 @@ def _build_dotted(segments: Sequence[str]) -> cst.BaseExpression:
 def _apply_prefix(
     segments: Sequence[str], rules: Sequence[tuple[tuple[str, ...], tuple[str, ...]]]
 ) -> list[str] | None:
-    """按段匹配前缀规则并拼接剩余段，无命中返回 None。"""
     for old, new in rules:
         if tuple(segments[: len(old)]) == old:
             return [*new, *segments[len(old) :]]
@@ -144,14 +141,12 @@ def longest_known_prefix(text: str, known: frozenset[str]) -> str | None:
 
 
 def _leftmost_name(node: cst.CSTNode) -> str | None:
-    """取表达式的起始名字，用于识别 f-string 里对旧根名的引用。"""
     while isinstance(node, (cst.Attribute, cst.Subscript)):
         node = node.value
     return node.value if isinstance(node, cst.Name) else None
 
 
 def _patch_argument_kinds(call: cst.Call) -> tuple[frozenset[int], frozenset[str]]:
-    """返回 patch 调用中承载点分路径的位置下标与关键字名。"""
     segments = _dotted_segments(call.func)
     if segments is None:
         return frozenset(), frozenset()
@@ -163,7 +158,6 @@ def _patch_argument_kinds(call: cst.Call) -> tuple[frozenset[int], frozenset[str
 
 
 def _rewrite_literal(node: cst.SimpleString, old: str, new: str) -> str | None:
-    """保留前缀与引号替换字面量文本，文本含转义导致前缀不匹配时返回 None。"""
     raw = node.raw_value
     if not raw.startswith(old):
         return None
@@ -171,7 +165,6 @@ def _rewrite_literal(node: cst.SimpleString, old: str, new: str) -> str | None:
 
 
 def _fstring_snippet(node: cst.FormattedString) -> str:
-    """取 f-string 的源码片段，压缩空白并截断。"""
     try:
         snippet = cst.Module(body=[]).code_for_node(node)
     except Exception:  # noqa: BLE001 - 片段仅用于报告，取不到源码时退回占位文本
@@ -263,7 +256,6 @@ class NamespaceTransformer(cst.CSTTransformer):
         return updated_node.with_changes(module=_build_dotted(remapped))
 
     def _in_i18n_context(self) -> bool:
-        """判断当前是否位于 i18n 调用的实参位置。"""
         if not self._calls:
             return False
         func = self._calls[-1].func
@@ -274,7 +266,6 @@ class NamespaceTransformer(cst.CSTTransformer):
         return False
 
     def _is_patch_target(self, node: cst.CSTNode) -> bool:
-        """判断字面量是否位于 patch 调用的路径实参位置。"""
         if not self._calls:
             return False
         call = self._calls[-1]
@@ -335,13 +326,11 @@ class NamespaceTransformer(cst.CSTTransformer):
 
 
 def _read_source(path: Path) -> str:
-    """按源码原始换行读取文件。"""
     with path.open("r", encoding="utf-8", newline="") as handle:
         return handle.read()
 
 
 def _write_source(path: Path, source: str) -> None:
-    """按源码原始换行写回文件。"""
     with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(source)
 

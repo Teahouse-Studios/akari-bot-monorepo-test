@@ -28,12 +28,7 @@ class InstanceUnreachable(RuntimeError):
 
 
 async def _status() -> dict[str, bool]:
-    """读取 ``module_status`` 表。
-
-    表缺席表示实例尚未完成过一次启动，与状态为空对操作者是同一件事，故一并返回空映射。
-
-    :return: 模块名到 ``module_status.load`` 的映射。
-    """
+    # 表缺席表示实例尚未完成过一次启动，与状态为空对操作者是同一件事，故一并返回空映射。
     from akaribot.core.database import close_db, init_db
     from akaribot.core.database.models import ModuleStatus
 
@@ -49,13 +44,8 @@ async def _status() -> dict[str, bool]:
 
 
 def _declared() -> dict[str, str]:
-    """取发现层声明的模块名及其分发名。
-
-    清单里的 ``provides_modules`` 覆盖 bundled 模块与已装模块包；它声明为空的包只有运行期才
-    知道注册名，这类包不产生条目，其模块名由状态表补上，分发名留空。
-
-    :return: 模块名到分发名的映射。
-    """
+    # 清单里的 ``provides_modules`` 覆盖 bundled 模块与已装模块包；它声明为空的包只有运行期才
+    # 知道注册名，这类包不产生条目，其模块名由状态表补上，分发名留空。
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -85,10 +75,6 @@ def collect() -> tuple[list[dict], str]:
 
 
 async def _connect_database_if_needed() -> bool:
-    """数据库后端与运行中的实例共用队列表，须先接上库连接。
-
-    :return: 是否已建立连接（调用方据此决定收尾时是否关闭）。
-    """
     from akaribot.core.config.jobqueue import JobQueueConfig
 
     if JobQueueConfig.jobqueue_backend.strip().lower() != "database":
@@ -100,15 +86,7 @@ async def _connect_database_if_needed() -> bool:
 
 
 async def _notify_server(module: str, action: str) -> bool:
-    """把全局装载动作交给运行中的 Server 执行。
-
-    本进程只做一次 RPC：注册为临时 peer 以便收结果，不改任何模块索引，也不写状态表。
-
-    :param module: 模块名。
-    :param action: ``load`` 或 ``unload``。
-    :return: Server 报告的结果。
-    :raises InstanceUnreachable: JobQueue 不可达，或注册表里没有在线的 Server 实例。
-    """
+    # 本进程只做一次 RPC：注册为临时 peer 以便收结果，不改任何模块索引，也不写状态表。
     from akaribot.core.queue.backend import create_jobqueue_backend
     from akaribot.core.queue.base import JobQueueBase
     from akaribot.core.queue.contracts import ServerAPI
@@ -151,10 +129,6 @@ async def _notify_server(module: str, action: str) -> bool:
 
 
 def _known_modules() -> tuple[set[str], bool]:
-    """收集可用于校验模块名的名字集合。
-
-    :return: 二元组——名字集合；状态表是否已有记录（据此判断运行期注册名是否已收录）。
-    """
     # 与 list 口径一致：下划线开头是框架内部注册，不接受用户装载。
     declared = {name for name in _declared() if not name.startswith("_")}
     try:
@@ -166,12 +140,6 @@ def _known_modules() -> tuple[set[str], bool]:
 
 
 def _load_or_unload(module: str, action: str) -> int:
-    """执行一次全局装载或卸载。
-
-    :param module: 模块名。
-    :param action: ``load`` 或 ``unload``。
-    :return: 进程退出码。
-    """
     known, status_seen = _known_modules()
     if module not in known:
         hedge = "" if status_seen else "；若该模块由未声明 provides_modules 的包在运行期注册，请先启动一次实例再试"

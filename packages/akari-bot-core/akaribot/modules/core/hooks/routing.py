@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 CHANNEL_DEDUP_WINDOW = 10
 
-routing = module("_parser_routing", hidden=True, load=True, base=True)
+routing = module("parser_routing", hidden=True, load=True, base=True)
 
 channel_claim_cache = routing.state(
     "channel_claim_cache",
@@ -41,7 +41,6 @@ async def _(ctx: "Bot.ParserHookContext"):
 
 @routing.hook(point=HookPoint.CHANNEL_CLAIM, priority=100, name="claim", server_scope=True, timeout=0)
 async def _(ctx: "Bot.ParserHookContext"):
-    """抢占同一通道内的消息；返回 Stop 表示当前场景应当避让。"""
     info = ctx.msg.session_info
     union_id = info.target_union_id
     if not union_id:

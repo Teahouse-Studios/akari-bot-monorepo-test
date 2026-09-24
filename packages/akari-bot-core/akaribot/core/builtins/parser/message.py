@@ -71,10 +71,7 @@ async def _dispatch_stage(
     command_first_word: str | None = None,
     data: dict | None = None,
 ) -> Continue | Stop | RecoveryProposal | Handled:
-    """分发入口 hook 并应用控制结果。
-
-    无订阅时短路，避免每条消息空跑 executor。
-    """
+    # 无订阅时短路，避免每条消息空跑 executor。
     if not has_hook_subscribers(point):
         return Continue()
     outcome = await dispatch_parser_hook(
@@ -104,7 +101,6 @@ async def _dispatch_execution_error(
     module_type: str,
     error_kind: str | None = None,
 ) -> None:
-    """把执行异常交给错误策略；核心只负责分类和分发。"""
     data = {"error": error, "module_type": module_type}
     if error_kind is not None:
         data["error_kind"] = error_kind
@@ -125,7 +121,6 @@ async def _validate_recovery_target(
     command_first_word: str,
     trigger_msg: str,
 ) -> bool:
-    """确认后重校验：模块仍在、已加载、平台可用、模板仍可解析。"""
     module = modules.get(command_first_word)
     if module is None or not module._db_load:
         return False
@@ -148,11 +143,6 @@ async def _try_command_recovery(
     *,
     unmatched_kind: str = "module",
 ) -> bool:
-    """处理未匹配命令：请求恢复建议，确认后按最新注册表重解析并执行。
-
-    :param unmatched_kind: ``module`` 未找到模块；``template`` 模块存在但模板不匹配。
-    :return: True 表示已消费本次恢复路径。
-    """
     proposal_result = await _dispatch_stage(
         HookPoint.COMMAND_UNMATCHED,
         msg,
@@ -360,7 +350,6 @@ async def parser(msg: "Bot.MessageSession"):
 
 
 def _command_available_for_current_session(msg: "Bot.MessageSession", module: Module, command_first_word: str) -> bool:
-    """判断当前客户端能否解析一个按平台分流的具体命令。"""
     command_parser = CommandParser(
         module, msg=msg, module_name=command_first_word, command_prefixes=msg.session_info.prefixes
     )
@@ -372,16 +361,6 @@ def _command_available_for_current_session(msg: "Bot.MessageSession", module: Mo
 
 
 def _get_prefixes(msg: "Bot.MessageSession"):
-    """
-    检查并处理消息的命令前缀。
-
-    该函数检查禁用前缀配置、匹配消息前缀，并把命中的前缀移到列表首位。
-
-    :param msg: 消息会话对象
-    :return: (disable_prefix, in_prefix_list) 元组
-             - disable_prefix: 是否禁用前缀检查（True 表示任何消息都视为命令）
-             - in_prefix_list: 消息是否以某个前缀开头
-    """
     disable_prefix = False
     # 如果上游指定了命令前缀，使用指定的命令前缀
     if msg.session_info.prefixes:
@@ -412,26 +391,6 @@ def _get_prefixes(msg: "Bot.MessageSession"):
 
 
 async def _process_command(msg: "Bot.MessageSession", modules, disable_prefix, in_prefix_list):
-    """
-    处理和解析命令字符串。
-
-    该函数负责：
-    1. 移除命令前缀，提取实际命令
-    2. 检查命令是否为模块的直接名称
-    3. 处理命令别名（多词别名）
-    4. 将别名转换为实际的模块命令
-
-    别名处理逻辑：
-    - 支持多词别名（如 "aaa bbb" 作为某个命令的别名）
-    - 优先匹配最长的别名（避免误匹配）
-    - 如果命令已经是实际模块名，只匹配该模块下的别名
-
-    :param msg: 消息会话对象
-    :param modules: 可用的模块字典
-    :param disable_prefix: 是否禁用前缀
-    :param in_prefix_list: 消息是否以前缀开头
-    :return: 命令的第一个词（模块名）
-    """
     # ========== 步骤 1: 移除命令前缀 ==========
     if disable_prefix and not in_prefix_list:
         # 禁用前缀模式，使用完整消息作为命令
@@ -499,28 +458,6 @@ async def _execute_module(
     *,
     allow_recovery: bool = True,
 ):
-    """
-    执行模块的命令处理逻辑。
-
-    这是命令执行的核心函数，负责：
-    1. 权限检查（超级用户、管理员、模块启用状态等）
-    2. 服务条款（ToS）检查和滥用检测
-    3. 命令模板解析或直接传递消息
-    4. 错误处理和异常报告
-    5. 分析数据记录
-
-    权限层级（从高到低）：
-    - required_base_superuser: 基础超级用户（最高权限）
-    - required_superuser: 超级用户
-    - required_admin: 管理员
-    - 普通用户
-
-    :param msg: 消息会话对象
-    :param modules: 可用的模块字典
-    :param command_first_word: 命令的第一个词（模块名）
-    :param identify_str: 用于日志的标识字符串
-    :param allow_recovery: 是否允许模板不匹配时走纠错恢复；恢复重入应传 False
-    """
     time_start = time.perf_counter()
     _typing = False  # 标记是否正在显示“正在输入……”状态
     try:
@@ -665,8 +602,8 @@ def regex_module_enabled(
     """
     判断一个模块的正则处理函数是否应当参与匹配。
 
-    base 模块无须在场景中启用即可生效，与命令路径 :func:`_execute_module` 的判定保持一致。
-    此前该豁免仅存在于命令路径，导致 base 模块注册的正则永远不会触发。
+    base 模块无须在场景中启用即可生效，与命令路径 :func:`_execute_module` 的判定保持一致，
+    base 模块注册的正则据此也能触发。
 
     权限判定置于启用判定之前：模块可能在权限开启期间被启用，其后权限又被关闭，此时
     ``enabled_modules`` 中仍留有该模块，只拦截启用入口并不足够。
@@ -711,9 +648,8 @@ def regex_func_available(
 
     判据与 :meth:`RegexMatches.get` 一致：按 target_from / client_name / platform_from /
     platform_name 的四元组判分，使 ``available_for="Telegram"`` 对全部 Telegram 实例有效。
-    此前 :func:`_execute_regex` 直接遍历 ``regex_list.set``，
-    只校验模块级的 ``available_for``，正则级的平台声明因而从未生效——注册时写下的
-    ``@module.regex(available_for=...)`` 形同虚设。
+    只校验模块级的 ``available_for`` 会让注册时写下的 ``@module.regex(available_for=...)``
+    形同虚设，故正则级的平台声明同样参与判分。
 
     :param rfunc: 正则处理函数的元数据。
     :param target_from: 当前场景的前缀。
@@ -732,7 +668,6 @@ def regex_func_available(
 
 
 def _match_regex(rfunc, trigger_msg: str):
-    """按正则元数据执行一次匹配，返回 ``(是否命中, 匹配结果)``。"""
     if rfunc.mode in ("M", "MATCH"):
         matched_msg = rfunc.compiled.match(trigger_msg)
         return bool(matched_msg), matched_msg
@@ -743,7 +678,6 @@ def _match_regex(rfunc, trigger_msg: str):
 
 
 def _regex_module_available(msg: "Bot.MessageSession", module: Module, module_name: str) -> bool:
-    """判断正则模块是否能在当前会话参与匹配。"""
     if not regex_module_enabled(
         module, module_name, msg.session_info.enabled_modules, msg.session_info.read_all_messages
     ):
@@ -754,7 +688,6 @@ def _regex_module_available(msg: "Bot.MessageSession", module: Module, module_na
 
 
 def _regex_matches_message(msg: "Bot.MessageSession", modules) -> bool:
-    """检查长消息是否至少命中一条当前会话可用的正则。"""
     if len(msg.trigger_msg) <= LONG_REGEX_MESSAGE_LENGTH:
         return False
 
@@ -777,31 +710,12 @@ def _regex_matches_message(msg: "Bot.MessageSession", modules) -> bool:
 
 
 async def _confirm_long_regex_message(msg: "Bot.MessageSession", modules) -> bool:
-    """长消息命中正则时请求确认；返回 False 表示终止本次解析。"""
     if not _regex_matches_message(msg, modules):
         return True
     return await msg.wait_confirm(I18NContext("parser.regex.message_too_long"), consume_any_message=True)
 
 
 async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
-    """
-    执行正则表达式匹配的模块。
-
-    该函数遍历所有已启用的模块，查找包含正则表达式匹配规则的模块，
-    并尝试用正则表达式匹配消息内容。如果匹配成功，执行相应的模块函数。
-
-    正则匹配流程：
-    1. 遍历所有已加载的模块
-    2. 检查模块是否已启用且有正则表达式列表
-    3. 检查用户权限
-    4. 检查模块的可用性和平台限制
-    5. 尝试匹配正则表达式
-    6. 执行匹配成功的模块函数
-
-    :param msg: 消息会话对象
-    :param modules: 可用的模块字典
-    :param identify_str: 用于日志的标识字符串
-    """
     # 同一条消息会被所有模块的正则轮流匹配，而渲染结果只由这两个参数决定，
     # 按参数缓存一次，避免每条正则都把消息链重新走一遍
     display_cache: dict[tuple[bool, tuple], str] = {}
@@ -946,11 +860,11 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
                                 await msg.start_typing()
                                 _typing = True
                                 async with ModuleRuntimeManager.use(regex_module.module_name):
-                                    await rfunc.function(msg)  # 将msg传入下游模块
+                                    await rfunc.function(msg)  # 将 msg 传入下游模块
 
                             else:
                                 async with ModuleRuntimeManager.use(regex_module.module_name):
-                                    await rfunc.function(msg)  # 将msg传入下游模块
+                                    await rfunc.function(msg)  # 将 msg 传入下游模块
                             ExecutionLockList.remove(msg)
                             raise SessionFinished(msg.sent)  # if not using msg.finish
                     except SessionFinished as e:
@@ -995,19 +909,12 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
 
 @functools.lru_cache(maxsize=256)
 def _get_cached_signature(func):
-    """缓存 inspect.signature 的结果，避免每次命令执行都做内省。"""
     return inspect.signature(func)
 
 
 def _unwrap_optional(annotation):
-    """取出 ``X | None`` 或 ``Optional[X]`` 中的实际类型。
-
-    可选参数标注为 ``int | None`` 时仍应按 ``int`` 做类型转换，
-    否则值会以原始字符串形式传入命令函数。
-
-    :param annotation: 参数的类型注解。
-    :return: 剥去 None 后的类型；非 Optional 标注则原样返回。
-    """
+    # 可选参数标注为 ``int | None`` 时仍应按 ``int`` 做类型转换，
+    # 否则值会以原始字符串形式传入命令函数。
     if get_origin(annotation) in (Union, UnionType):
         args = [arg for arg in get_args(annotation) if arg is not type(None)]
         if len(args) == 1:
@@ -1016,36 +923,15 @@ def _unwrap_optional(annotation):
 
 
 def _unwrap_option_value(value):
-    """解包带杠选项的解析结果，方便直接作为函数参数传入。
-
-    带子参数的选项（如 ``[--foo <bar>]``）在 ``msg.parsed_msg`` 中会被解析为字典
-    （形如 ``{"<bar>": "value"}``）。恰好只有一个子参数时解包为该子参数的值，
-    使函数参数可以直接拿到 ``"value"``；其余情况原样返回。
-
-    :param value: 选项在 ``msg.parsed_msg`` 中的值。
-    :return: 解包后的选项值。
-    """
+    # 带子参数的选项（如 ``[--foo <bar>]``）在 ``msg.parsed_msg`` 中会被解析为字典
+    # （形如 ``{"<bar>": "value"}``）。恰好只有一个子参数时解包为该子参数的值，
+    # 使函数参数可以直接拿到 ``"value"``；其余情况原样返回。
     if isinstance(value, dict) and len(value) == 1:
         return next(iter(value.values()))
     return value
 
 
 def _resolve_parsed_value(param_name: str, parsed_msg: dict):
-    """在解析结果中查找与命令函数参数对应的值。
-
-    查找顺序如下，命中即返回：
-
-    1. ``<param_name>``：位置参数；
-    2. ``param_name``：无杠标志或子命令；
-    3. ``-param_name`` / ``--param-name``：带杠选项，参数名中的下划线按连字符匹配
-       （如参数 ``no_cover`` 对应 ``--no-cover``），带子参数的选项按
-       :func:`_unwrap_option_value` 解包；
-    4. 带杠选项的子参数 ``<param_name>``：如 ``[-p <page>]`` 对应参数 ``page``。
-
-    :param param_name: 命令函数的参数名。
-    :param parsed_msg: ``msg.parsed_msg`` 映射后的解析结果。
-    :return: ``(found, value)`` 二元组；``found`` 为假时应使用参数默认值。
-    """
     if (key := f"<{param_name}>") in parsed_msg:
         return True, parsed_msg[key]
 
@@ -1066,23 +952,8 @@ def _resolve_parsed_value(param_name: str, parsed_msg: dict):
 
 
 def _build_command_kwargs(command, msg: "Bot.MessageSession", bot) -> dict:
-    """根据命令函数的签名构建调用参数。
-
-    将 ``msg.parsed_msg`` 的解析结果映射为函数的关键字参数：
-
-    - 标注为 ``Bot.MessageSession`` 的参数注入会话对象；
-    - 标注为 ``Param`` 的参数按 ``Param.name`` 取解析结果，适用于
-      ``-i``、``<address:port>`` 等无法作为函数参数名的模板元素；
-    - 其余参数按 :func:`_resolve_parsed_value` 取位置参数或带杠选项的值。
-      选项未提供时（解析结果为 ``False``）对非 ``bool`` 参数回退到默认值，
-      标注为 ``bool`` 时直接传入 ``False``。
-
-    :param command: 匹配到的 ``CommandMeta``。
-    :param msg: 消息会话对象。
-    :param bot: ``Bot`` 类，用于判断 ``Bot.MessageSession`` 标注。
-    :return: 调用命令函数用的关键字参数字典。
-    :raises InvalidCommandFormatError: 参数存在但无法转换为标注的类型时抛出。
-    """
+    # 标注为 ``Param`` 的参数按 ``Param.name`` 取值：``-i``、``<address:port>`` 这类模板元素
+    # 无法作为函数参数名。选项未提供时，非 ``bool`` 参数回退到默认值，``bool`` 参数传入 ``False``。
     kwargs = {}
     func_params = _get_cached_signature(command.function).parameters
 
@@ -1157,22 +1028,6 @@ def _build_command_kwargs(command, msg: "Bot.MessageSession", bot) -> dict:
 
 
 async def _execute_module_command(msg: "Bot.MessageSession", module, command_first_word):
-    """
-    执行模块的命令解析和处理。
-
-    该函数是带命令模板的模块的执行入口，负责：
-    1. 使用 CommandParser 解析命令参数
-    2. 验证用户权限（超级用户、管理员等）
-    3. 检查命令在当前场景中的有效性（平台限制等）
-    4. 根据命令函数的参数签名构建调用参数
-    5. 显示“正在输入……”状态（如果用户启用）
-    6. 执行命令函数
-
-    :param msg: 消息会话对象
-    :param module: 模块对象
-    :param command_first_word: 命令的第一个词（模块名）
-    :return: 仅模板未匹配时返回 False，由外层协调恢复与默认提示。
-    """
     bot: "Bot" = exports["Bot"]
     _typing = False  # 标记是否显示“正在输入……”状态
     try:

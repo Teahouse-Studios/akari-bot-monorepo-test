@@ -129,7 +129,6 @@ def run_headless(*, mouse: bool = False) -> int:
 
 
 def _source_calls(app_instance: object) -> int:
-    """读取数据源的取数次数，供冒烟输出展示缓存是否生效。"""
     source = getattr(app_instance, "module_source", None)
     calls = getattr(source, "calls", None)
     if isinstance(calls, dict):
@@ -162,7 +161,6 @@ def run_self_check() -> int:
 
 
 def _check_environment() -> list[CheckResult]:
-    """检查 Textual 版本与终端能力。"""
     from akaribot.cli.tui import _compat as compat
 
     results: list[CheckResult] = []
@@ -185,7 +183,6 @@ def _check_environment() -> list[CheckResult]:
 
 
 def _check_stylesheet() -> list[CheckResult]:
-    """检查样式表来源与语法。"""
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.app import STYLESHEET, stylesheet_summary
 
@@ -221,7 +218,6 @@ def _check_stylesheet() -> list[CheckResult]:
 
 
 def _check_resources() -> list[CheckResult]:
-    """检查包内资源能否读取，这一项在冻结产物里最容易失败。"""
     from akaribot.cli.tui import _compat as compat
 
     results: list[CheckResult] = []
@@ -258,7 +254,6 @@ def _check_resources() -> list[CheckResult]:
 
 
 def _check_width() -> list[CheckResult]:
-    """检查中文宽字符的宽度计算。"""
     from akaribot.cli.tui import _compat as compat
 
     sample = "安装骰子"
@@ -277,7 +272,6 @@ def _check_width() -> list[CheckResult]:
 
 
 def _check_boot() -> CheckResult:
-    """在 80×24 无头终端里启动一次界面，验证控件树与样式表可用。"""
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.app import TuiApp
     from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource

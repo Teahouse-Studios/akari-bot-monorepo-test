@@ -160,7 +160,7 @@ async def _execute_module(msg: "Bot.MessageSession", modules, command_first_word
             if msg.session_info.typing_prompt_enabled:
                 await msg.start_typing()
             async with ModuleRuntimeManager.use(module.module_name):
-                await func.function(msg)  # 将msg传入下游模块
+                await func.function(msg)  # 将 msg 传入下游模块
             raise SessionFinished  # if not using msg.finish
 
 
@@ -185,7 +185,7 @@ async def _execute_regex(msg: "Bot.MessageSession", modules):
                     if hasattr(msg, "_casetest_target") and rfunc.function is not msg._casetest_target:
                         continue
                     async with ModuleRuntimeManager.use(regex_module.module_name):
-                        await rfunc.function(msg)  # 将msg传入下游模块
+                        await rfunc.function(msg)  # 将 msg 传入下游模块
                     raise SessionFinished  # if not using msg.finish
 
 
@@ -205,7 +205,7 @@ async def _execute_module_command(msg: "Bot.MessageSession", module, command_fir
     kwargs = _build_command_kwargs(command, msg, bot)
 
     async with ModuleRuntimeManager.use(module.module_name):
-        await parsed_msg[0].function(**kwargs)  # 将msg传入下游模块
+        await parsed_msg[0].function(**kwargs)  # 将 msg 传入下游模块
     return True
 
 

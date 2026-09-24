@@ -94,10 +94,6 @@ class Outcome:
 
 
 async def _connect_database_if_needed() -> bool:
-    """数据库后端与运行中的实例共用队列表，须先接上库连接。
-
-    :return: 是否已建立连接（调用方据此决定收尾时是否关闭）。
-    """
     from akaribot.core.config.jobqueue import JobQueueConfig
 
     if JobQueueConfig.jobqueue_backend.strip().lower() != "database":
@@ -109,14 +105,6 @@ async def _connect_database_if_needed() -> bool:
 
 
 async def _deliver(remote: str, dist: str, timeout: float) -> bool:
-    """把包变更交给运行中的 Server 执行并等待确认。
-
-    :param remote: 白名单内的契约名。
-    :param dist: 分发名。
-    :param timeout: 等待确认的秒数上限。
-    :return: Server 报告的返回值。
-    :raises InstanceUnreachable: JobQueue 不可达，或注册表里没有在线的 Server 实例。
-    """
     from akaribot.core.queue.backend import create_jobqueue_backend
     from akaribot.core.queue.base import JobQueueBase
     from akaribot.core.queue.contracts import ServerAPI
@@ -160,13 +148,6 @@ async def _deliver(remote: str, dist: str, timeout: float) -> bool:
 
 
 async def _run(remote: str, dist: str, *, timeout: float = RPC_TIMEOUT_SECONDS) -> Outcome:
-    """执行一次包变更 RPC，把失败分类成可区分的结果。
-
-    :param remote: 契约名；不在白名单内时直接判为用法错误。
-    :param dist: 分发名。
-    :param timeout: 等待确认的秒数上限；测试用它缩短等待。
-    :return: 结果对象。
-    """
     if remote not in REMOTE_METHODS:
         return Outcome(remote, dist, STATUS_USAGE, None, f"未知的 remote：{remote!r}，不在固定白名单内。")
 
@@ -190,11 +171,6 @@ async def _run(remote: str, dist: str, *, timeout: float = RPC_TIMEOUT_SECONDS) 
 
 
 def _emit(outcome: Outcome) -> int:
-    """把结果写成 stdout 的 JSON 与 stderr 的可读说明。
-
-    :param outcome: 结果对象。
-    :return: 进程退出码。
-    """
     json.dump(outcome.payload(), sys.stdout, ensure_ascii=False, default=str)
     sys.stdout.write("\n")
     print(outcome.detail, file=sys.stderr)

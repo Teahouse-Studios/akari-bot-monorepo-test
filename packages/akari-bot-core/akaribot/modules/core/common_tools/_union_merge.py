@@ -66,8 +66,8 @@ def take_code(code: str, stores: tuple[tuple[str, ExpiringTempDict], ...]) -> tu
     签发时随码留存的附加信息一律原样带回，调用方各自取用所需的字段。
 
     :param code: 用户输入的绑定码。
-    :param stores: ``(union 域, 存储)`` 的序列，按顺序查找。
-    :return: ``(union 域, 绑定码信息)``，无效或已过期时为 None。
+    :param stores: ``(union 域， 存储)`` 的序列，按顺序查找。
+    :return: ``(union 域， 绑定码信息)``，无效或已过期时为 None。
     """
     code = code.strip().upper()
     for scope, store in stores:

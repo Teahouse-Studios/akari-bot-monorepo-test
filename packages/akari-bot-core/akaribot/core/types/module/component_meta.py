@@ -57,7 +57,7 @@ class RegexMeta(ModuleMeta):
     def __attrs_post_init__(self):
         if isinstance(self.pattern, re.Pattern):
             if self.flags:
-                # 已编译的模式无法再附加 flags，此前每次匹配都会因此抛错
+                # 已编译的模式无法再附加 flags，附加会在此后的每次匹配中抛错
                 Logger.warning(f"Regex {self.pattern.pattern} is already compiled, the given flags are ignored.")
             self.compiled = self.pattern
         elif self.pattern is not None:

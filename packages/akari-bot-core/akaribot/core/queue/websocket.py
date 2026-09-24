@@ -256,7 +256,6 @@ def _truncate_text_for_bytes(
     max_bytes: int,
     marker: str = "\n... traceback truncated ...\n",
 ) -> str:
-    """Trim diagnostic text to a UTF-8 byte budget while retaining both ends."""
     if max_bytes <= 0:
         return ""
     encoded = value.encode("utf-8")
@@ -274,7 +273,6 @@ def _truncate_text_for_bytes(
 
 
 def _request_batch_fits(requests: list[RpcRequest], max_bytes: int) -> bool:
-    """Preflight the command frame using a UUID-sized command ID."""
     try:
         _encode_frame(
             {
@@ -291,7 +289,6 @@ def _request_batch_fits(requests: list[RpcRequest], max_bytes: int) -> bool:
 
 
 def _fit_request_tracebacks(requests: list[RpcRequest], max_bytes: int) -> list[RpcRequest]:
-    """Fit caller stacks into a WebSocket command without changing local requests."""
     if _request_batch_fits(requests, max_bytes):
         return requests
     if not any(isinstance(request.caller_traceback, str) and request.caller_traceback for request in requests):
@@ -388,12 +385,9 @@ def _response_frame_fits(response: RpcResponse, max_bytes: int) -> bool:
 
 
 def _fit_error_response(response: RpcResponse, max_bytes: int) -> RpcResponse:
-    """Drop or trim optional diagnostics when a small WebSocket frame cannot carry them.
-
-    The caller retains the original request (and therefore its local caller
-    stack), so omitting the remote diagnostic is preferable to losing the
-    response altogether.
-    """
+    # The caller retains the original request (and therefore its local caller
+    # stack), so omitting the remote diagnostic is preferable to losing the
+    # response altogether.
     if _response_frame_fits(response, max_bytes):
         return response
     envelope = response.envelope

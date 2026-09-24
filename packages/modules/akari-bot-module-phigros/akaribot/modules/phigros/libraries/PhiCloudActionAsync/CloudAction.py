@@ -22,10 +22,10 @@ def getSaveModifiedAt(record: dict) -> datetime:
     优先使用 modifiedAt.iso，缺失时回退到 updatedAt。两者都取不到或格式无法解析时
     返回可表示的最早时间，使该记录排在最后。
 
-    参数:
+    参数：
         record (dict): 存档记录原始数据
 
-    返回:
+    返回：
         (datetime): 记录的修改时间
     """
     modified = record.get("modifiedAt")
@@ -181,7 +181,7 @@ class PhigrosCloud:
     async def getNickname(self) -> str:
         """获取玩家昵称
 
-        返回:
+        返回：
             (str): 玩家昵称
         """
         logger.debug("调用函数：getNickname()")
@@ -200,10 +200,10 @@ class PhigrosCloud:
         同一账号也可能存在多条记录，故取回全部后按 modifiedAt 降序排序，
         只使用最新的一条。
 
-        返回:
+        返回：
             (dict): 存档记录的原始数据
 
-        异常:
+        异常：
             ValueError: 当前账号名下没有可用的存档记录，或服务端返回了他人的记录
         """
         logger.debug("调用函数：getSaveInfo()")
@@ -256,7 +256,7 @@ class PhigrosCloud:
     async def getSummary(self) -> dict:
         """获取玩家 summary
 
-        返回:
+        返回：
             (dict): 玩家 summary 数据
         """
         logger.debug("调用函数：getSummary()")
@@ -287,11 +287,11 @@ class PhigrosCloud:
     async def getSave(self, url: Optional[str] = None, checksum: Optional[str] = None) -> bytes:
         """获取存档数据，返回的是压缩包数据
 
-        参数:
+        参数：
             url (str | None): 存档的 URL。留空则自动获取当前 token 的数据
             checksum (str | None): 存档的 md5 校验值。留空则自动获取当前 token 的数据
 
-        返回:
+        返回：
             (bytes): 存档压缩包数据
         """
         logger.debug("调用函数：getSave()")
@@ -326,9 +326,9 @@ class PhigrosCloud:
     async def refreshSessionToken(self) -> str:
         """刷新 sessionToken
 
-        刷新是即时的，原先的 sessionToken 会立即失效，新的 sessionToken 立即生效。
+        刷新是即时的：调用后当前 sessionToken 立即失效，返回的新 token 立即生效。
 
-        返回:
+        返回：
             (str): 新的 sessionToken
         """
         logger.debug("调用函数：refreshSessionToken()")
@@ -345,10 +345,10 @@ class PhigrosCloud:
     async def uploadNickname(self, name: str):
         """更新玩家昵称
 
-        参数:
+        参数：
             name (str): 要更改的昵称
 
-        返回:
+        返回：
             (None): 无
         """
         logger.debug("调用函数：uploadNickname()")
@@ -373,10 +373,10 @@ class PhigrosCloud:
 
         上传后的 summary 仅供查看，覆盖原有数据后不可恢复，且不影响游戏内的实际数据。
 
-        参数:
+        参数：
             summary_dict (dict): 要上传的 summary
 
-        返回:
+        返回：
             (None): 无
         """
         logger.debug("调用函数：uploadSummary()")

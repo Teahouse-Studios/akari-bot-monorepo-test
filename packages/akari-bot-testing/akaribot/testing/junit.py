@@ -123,7 +123,6 @@ class JUnitReport:
 
     @staticmethod
     def _indent_element(elem, level=0):
-        """Add pretty-print indentation to XML elements."""
         indent = "\n" + ("  " * level)
         child_indent = "\n" + ("  " * (level + 1))
 

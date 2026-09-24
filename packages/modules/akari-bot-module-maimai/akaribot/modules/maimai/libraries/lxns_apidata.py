@@ -169,12 +169,10 @@ def plate_versions(version: str) -> list[str]:
 
 
 def _rebind_cmd(msg: Bot.MessageSession) -> ActionText:
-    """给出重新绑定落雪账号的命令，供令牌失效时提示。"""
     return ActionText(f"{msg.session_info.prefixes[0]}maimai bind lx")
 
 
 def _cache_file(msg: Bot.MessageSession, name: str):
-    """给出该用户的缓存文件路径。"""
     cache_dir = cache_path / "maimai-record"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / f"{msg.session_info.sender_id.replace('|', '_')}_{name}.json"
@@ -200,11 +198,6 @@ async def get_bind_info(msg: Bot.MessageSession) -> LxnsProberBindInfo:
 
 
 async def _prompt_error(msg: Bot.MessageSession, e: Exception) -> None:
-    """按错误类型给出提示；无法解释的错误只记日志。
-
-    :param msg: 消息会话。
-    :param e: 请求抛出的异常。
-    """
     if isinstance(e, LxnsTokenRevoked):
         Logger.warning(f"LXNS refresh token is no longer valid: {e}")
         await msg.finish(I18NContext("maimai.message.oauth.lx.revoked", cmd=_rebind_cmd(msg)))
@@ -218,13 +211,6 @@ async def _prompt_error(msg: Bot.MessageSession, e: Exception) -> None:
 
 
 async def _with_cache(msg: Bot.MessageSession, cache_file, fetch):
-    """执行一次取数，成功则写缓存，失败则提示用户并退回本地缓存。
-
-    :param msg: 消息会话。
-    :param cache_file: 缓存文件路径。
-    :param fetch: 无参协程函数，返回可 JSON 序列化的数据。
-    :return: 取回的数据或缓存中的数据。
-    """
     try:
         data = await fetch()
     except Exception as e:
@@ -248,13 +234,11 @@ async def _with_cache(msg: Bot.MessageSession, cache_file, fetch):
 
 
 def _require_oauth() -> None:
-    """未登记 OAuth 应用时，用户态接口一概不可用。"""
     if not LXNS_OAUTH_ENABLED:
         raise ConfigValueError("{I18N:error.config.secret.not_found}")
 
 
 def _require_developer() -> None:
-    """未配置开发者密钥时，按好友码查询一概不可用。"""
     if not LXNS_DEVELOPER_ENABLED:
         raise ConfigValueError("{I18N:error.config.secret.not_found}")
 
@@ -336,12 +320,6 @@ async def get_total_record_lx(
 
 
 def _raw_scores(data: dict | None, key: str) -> list[dict]:
-    """取出一组落雪原始成绩，忽略形状不对的条目。
-
-    :param data: 落雪接口的响应。
-    :param key: 成绩所在字段名，`standard` 或 `dx`。
-    :return: 落雪原始字段的成绩列表。
-    """
     scores = (data or {}).get(key)
     if not isinstance(scores, list):
         return []

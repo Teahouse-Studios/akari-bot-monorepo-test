@@ -67,17 +67,14 @@ _COLUMN_KEYS: tuple[str | None, ...] = (
 
 
 def _column_titles() -> tuple[str, ...]:
-    """给出列标题行各列的展示文案。"""
     return tuple(i18n.t(key) if key else "editable" for key in _COLUMN_KEYS)
 
 
 def _canonical_dist(name: str) -> str:
-    """分发名规范化，规则与 ``akaribot.cli.venv.canonical`` 一致。"""
     return name.strip().lower().replace("_", "-").replace(".", "-")
 
 
 def _text(value: Any) -> str:
-    """把任意标量转为展示用字符串。"""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -88,7 +85,6 @@ def _text(value: Any) -> str:
 
 
 def _pick(source: Any, *names: str, default: Any = None) -> Any:
-    """从字典或对象上按候选名取值，兼容对端契约未冻结时的字段别名。"""
     for name in names:
         if isinstance(source, Mapping) and source.get(name) is not None:
             return source[name]
@@ -99,7 +95,6 @@ def _pick(source: Any, *names: str, default: Any = None) -> Any:
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:
-    """把 JSON 中的字符串列表规整为字符串元组。"""
     if isinstance(value, str):
         return (value,) if value else ()
     if isinstance(value, Sequence):
@@ -108,7 +103,6 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
 
 
 def _flag(value: Any) -> bool:
-    """把 JSON 里的布尔写法归一为布尔值。"""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -367,7 +361,6 @@ class SubprocessDevSource:
         )
 
     def _read_meta(self) -> tuple[dict[str, Any], list[str]]:
-        """读取 ``akaribot.toml``；定位失败或解析失败时返回可展示的错误。"""
         if self._meta_reader is not None:
             try:
                 return dict(self._meta_reader()), []
@@ -395,7 +388,6 @@ class SubprocessDevSource:
         }, []
 
     def _workspace_members(self, workspace_root: str) -> tuple[dict[str, str], list[str]]:
-        """扫描工作区成员，返回规范化分发名到本地路径的映射。"""
         path = Path(workspace_root).expanduser()
         if not path.is_dir():
             return {}, [i18n.t("cli.tui.dev.workspace_dir_missing", path=path)]
@@ -410,7 +402,6 @@ class SubprocessDevSource:
         return {_canonical_dist(dist): str(member.path) for dist, member in index.items()}, []
 
     def _list_packages(self) -> tuple[Any, str]:
-        """经 ``akaribot module list --json`` 取包清单，失败时返回错误文本。"""
         argv = [*self.cli_argv("module", "list", "--json"), "--instance", str(self.root)]
         try:
             completed = self._run(argv)
@@ -443,14 +434,12 @@ class SubprocessDevSource:
         return [sys.executable, "-m", "akaribot.cli.main", *args]
 
     def _env(self) -> dict[str, str]:
-        """构造子进程环境：注入实例目录，并把标准流固定为 UTF-8。"""
         env = dict(os.environ)
         env[INSTANCE_ENV] = str(self.root)
         env["PYTHONIOENCODING"] = "utf-8"
         return env
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        """执行子进程并把常见失败转成 :class:`DevSourceError`。"""
         try:
             return self._runner(
                 list(argv),
@@ -472,7 +461,6 @@ class SubprocessDevSource:
             raise DevSourceError(i18n.t("cli.tui.dev.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def _parse_json(self, stdout: str, label: str) -> Any:
-        """解析子进程 JSON 输出。"""
         text = stdout.strip()
         if not text:
             raise DevSourceError(i18n.t("cli.tui.dev.src_empty_output", label=label))
@@ -482,7 +470,6 @@ class SubprocessDevSource:
             raise DevSourceError(i18n.t("cli.tui.dev.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
-        """截取子进程输出的尾部，供状态栏展示。"""
         return (text or "").strip()[-limit:]
 
 
@@ -699,7 +686,6 @@ class DevPage(compat.Vertical):
         self.run_worker(self._load(), group="dev-load", exclusive=True)
 
     async def _load(self) -> bool:
-        """后台读取快照并刷新界面；错误记入状态栏，页面结构保持可用。"""
         try:
             snapshot = await asyncio.to_thread(self.source.load_snapshot)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
@@ -721,7 +707,6 @@ class DevPage(compat.Vertical):
         return True
 
     def _result_line(self, count: int) -> str:
-        """给出取数结论：包总数与按来源的分布。"""
         counts = self._snapshot.source_counts()
         detail = i18n.t("cli.tui.dev.status_separator").join(
             i18n.t("cli.tui.dev.source_count", label=i18n.t(_SOURCE_KEYS[key]), count=counts[key])
@@ -742,7 +727,6 @@ class DevPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_all(self) -> None:
-        """按缓存重绘 workspace 面板、列标题、包列表、详情与状态。"""
         list_view = self.query_one("#package-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
         layout = self._build_layout(inner_width)
@@ -761,7 +745,6 @@ class DevPage(compat.Vertical):
         self._sync_actions()
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
-        """返回列表可用内容宽度：外框宽减去边框与左右内边距。"""
         try:
             outer = compat.widget_cells(list_view)[0]
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -769,7 +752,6 @@ class DevPage(compat.Vertical):
         return max(outer - 4, 8)
 
     def _build_layout(self, inner_width: int) -> PackageLayout:
-        """按可用宽度分配列宽；宽度不足时依次收起本地路径列、来源列，再压缩包名与版本。"""
         packages = self._snapshot.packages
         titles = _column_titles()
         name_width = min(
@@ -808,7 +790,6 @@ class DevPage(compat.Vertical):
         return PackageLayout(name_width, kind_width, version_width, editable_width, 0, 0)
 
     def _row_cells(self, package: DevPackage) -> tuple[str, ...]:
-        """按列序给出包行的各列取值。"""
         return (
             package.display_name,
             package.kind_label,
@@ -819,12 +800,10 @@ class DevPage(compat.Vertical):
         )
 
     def _compose_row(self, cells: Sequence[str], layout: PackageLayout) -> str:
-        """把各列取值拼成定宽行；超宽列按终端列宽截断。"""
         parts = [compat.fit_cells(value, width) for value, width in zip(cells, layout.widths()) if width > 0]
         return (" " * ROW_INDENT + (" " * COLUMN_GAP).join(parts)).rstrip()
 
     def _index_for_key(self) -> int:
-        """定位要恢复的高亮项，找不到时回到首行。"""
         if self._selected_key is not None:
             for index, package in enumerate(self._snapshot.packages):
                 if package.key == self._selected_key:
@@ -832,7 +811,6 @@ class DevPage(compat.Vertical):
         return 0
 
     def _sync_workspace(self) -> None:
-        """更新顶部 workspace 面板：实例、模式、工作区与远端源。"""
         snapshot = self._snapshot
         sources = i18n.t("cli.tui.common.list_separator").join(snapshot.registry_sources) or i18n.t(
             "cli.tui.dev.sources_unset"
@@ -858,7 +836,6 @@ class DevPage(compat.Vertical):
         self.query_one("#workspace", compat.Static).update(compat.plain_text(text))
 
     def _fit_page_width(self, text: str) -> str:
-        """把单行文本截到页面可用列宽，避免被终端硬裁。"""
         try:
             width = compat.widget_cells(self)[0] - 2
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -866,7 +843,6 @@ class DevPage(compat.Vertical):
         return compat.truncate_cells(text, max(width, 8))
 
     def _sync_detail(self) -> None:
-        """按当前选中项更新详情栏：来源、版本与依赖声明。"""
         package = self.selected_package
         if package is None:
             key = "cli.tui.dev.detail_hint_select" if self._snapshot.packages else "cli.tui.dev.detail_empty"
@@ -896,11 +872,9 @@ class DevPage(compat.Vertical):
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
 
     def _sync_actions(self) -> None:
-        """按忙碌状态更新刷新按钮。"""
         self.query_one("#refresh", compat.Button).disabled = self._busy
 
     def _set_status(self, text: str) -> None:
-        """更新状态栏。"""
         self.last_result = text
         self._status_rendered = text
         self.query_one("#status", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
@@ -916,12 +890,10 @@ class DevPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        """高亮项变化时更新详情。"""
         self._sync_detail()
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """按钮回调：只读页面唯一的动作是刷新。"""
         if event.button.id == "refresh":
             self.refresh_snapshot(force=True)
 

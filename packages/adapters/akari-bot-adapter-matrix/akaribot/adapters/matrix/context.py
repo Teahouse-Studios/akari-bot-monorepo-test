@@ -29,7 +29,6 @@ class MatrixContextManager(ContextManager):
 
     @staticmethod
     def _response_succeeded(response, operation: str) -> bool:
-        """Matrix SDK 会以错误响应对象表示协议失败，而不一定抛异常。"""
         if isinstance(response, nio.ErrorResponse):
             Logger.error(f"Failed to {operation}: {response}")
             return False

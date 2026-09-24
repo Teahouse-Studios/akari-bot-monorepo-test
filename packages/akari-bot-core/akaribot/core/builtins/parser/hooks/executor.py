@@ -136,7 +136,6 @@ class ParserHookExecutor(HookExecutor):
         return isinstance(result, allowed)
 
     def _result_fields_valid(self, result: HookResult) -> bool:
-        """控制结果的字段必须在 hook 边界校验，不能让核心承担后续类型错误。"""
         if isinstance(result, RecoveryProposal):
             return (
                 isinstance(result.trigger_msg, str)

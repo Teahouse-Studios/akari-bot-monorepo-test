@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 
 
 def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
-    """只转发不可变值；容器递归隔离，对象默认包装，禁止暴露源对象的方法。"""
     if callable(value):
         raise AttributeError("Methods are not available through a read-only session view")
     if type(value) in (str, bytes, int, float, complex, bool, type(None), date, datetime, time, timedelta, Decimal):
@@ -58,8 +57,6 @@ def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
 
 
 class _ReadOnlyObjectView:
-    """未知对象及嵌套 ORM 关系默认只开放只读属性，所有调用方法均隐藏。"""
-
     __slots__ = ("_target",)
 
     def __init__(self, target: Any):
@@ -118,7 +115,6 @@ class OutgoingPayload:
 
     @staticmethod
     def _clone_chain(chain: Any) -> Any:
-        """对明确支持的消息类型递归复制；未知类型不得静默共享引用。"""
         from akaribot.core.builtins.message.chain import MessageChain, MessageNodes
 
         if isinstance(chain, MessageChain):

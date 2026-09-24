@@ -153,7 +153,6 @@ class ModulesManager:
 
     @classmethod
     def _sync_config_fields(cls, py_module: str) -> list[str]:
-        """Create missing module config fields through the authorized config writer."""
         config_module_name = f"{py_module}.config"
         config_module = sys.modules.get(config_module_name)
         if config_module is None:
@@ -185,7 +184,6 @@ class ModulesManager:
 
     @classmethod
     def _stable_schema_value(cls, value):
-        """Convert Tortoise schema metadata to a reload-stable hashable value."""
         if value is None or isinstance(value, (bool, int, float, str, bytes)):
             return value
         if isinstance(value, type):
@@ -224,7 +222,6 @@ class ModulesManager:
 
     @classmethod
     def _model_schema_fingerprint(cls, py_module: str) -> tuple[tuple, ...]:
-        """Return a stable structural fingerprint for a module's ORM models."""
         models_module = f"{py_module}.database.models"
         try:
             spec = importlib.util.find_spec(models_module)
@@ -472,14 +469,8 @@ class ModulesManager:
 
     @classmethod
     def _namespace_prefix(cls, module_name: str) -> str | None:
-        """匹配导入路径所属的模块包命名空间，取最长者。
-
-        按段比较而非字符串前缀：``akaribot.modules_extra`` 与 ``akaribot.modules`` 仅首段相同，
-        前者不是后者的成员包，不该被归约进来。命名空间本身也在此命中，由调用方判断它是否成包。
-
-        :param module_name: 导入路径。
-        :return: 命名空间前缀，如 ``akaribot.modules``；不属于任何命名空间时为 ``None``。
-        """
+        # 按段比较而非字符串前缀：``akaribot.modules_extra`` 与 ``akaribot.modules`` 仅首段相同，
+        # 前者不是后者的成员包，不该被归约进来。命名空间本身也在此命中，由调用方判断它是否成包。
         parts = module_name.split(".")
         matched: str | None = None
         for root in cls._import_roots():
@@ -492,14 +483,8 @@ class ModulesManager:
 
     @classmethod
     def _normalize_package_name(cls, module_name: str) -> str | None:
-        """把任意导入路径归一化为模块包的导入路径。
-
-        纯字符串归约，不校验该包是否已注册：调用方拿它建依赖图，图上的边会在
-        与已注册包取交集时被过滤。校验注册状态由 :meth:`return_py_module` 负责。
-
-        :param module_name: 导入路径。
-        :return: 模块包的导入路径，即「命名空间 + 包名」；命名空间本身或不在其内时为 ``None``。
-        """
+        # 纯字符串归约，不校验该包是否已注册：调用方拿它建依赖图，图上的边会在
+        # 与已注册包取交集时被过滤。校验注册状态由 :meth:`return_py_module` 负责。
         prefix = cls._namespace_prefix(module_name)
         if prefix is None:
             return None
@@ -512,14 +497,9 @@ class ModulesManager:
 
     @classmethod
     def _import_roots(cls) -> set[str]:
-        """全部模块包的命名空间前缀。
-
-        用于识别 ``from akaribot.modules import x`` 这类裸包导入：其 AST 只给出
-        ``akaribot.modules``，子模块名在 ``node.names`` 中，需展开成 ``akaribot.modules.x``
-        后才可能匹配到具体包。
-
-        :return: 命名空间前缀集合。
-        """
+        # 用于识别 ``from akaribot.modules import x`` 这类裸包导入：其 AST 只给出
+        # ``akaribot.modules``，子模块名在 ``node.names`` 中，需展开成 ``akaribot.modules.x``
+        # 后才可能匹配到具体包。
         return PackageRegistry.import_roots("module")
 
     @classmethod
@@ -590,14 +570,8 @@ class ModulesManager:
 
     @classmethod
     def _declared_package_dependencies(cls, package_name: str) -> set[str]:
-        """包在分发 metadata 里声明的模块包依赖。
-
-        取已注册条目的声明依赖，而非 AST 扫描结果；目录扫描的包没有 metadata，
-        返回空集，其依赖全部落到 :meth:`_scan_package_dependencies` 补充探测。
-
-        :param package_name: 包导入路径。
-        :return: 依赖包的导入路径集合。
-        """
+        # 取已注册条目的声明依赖，而非 AST 扫描结果；目录扫描的包没有 metadata，
+        # 返回空集，其依赖全部落到 :meth:`_scan_package_dependencies` 补充探测。
         entry = PackageRegistry.by_import_path(package_name)
         if entry is None:
             return set()
@@ -605,11 +579,8 @@ class ModulesManager:
 
     @classmethod
     def _rebuild_dependency_graph(cls):
-        """重建依赖图，源为「声明的依赖图 ∪ AST 扫描结果」。
-
-        AST 扫出而 metadata 未声明的耦合仍然计入并告警：静默忽略会让 reload 漏掉该重载
-        的包，比多一条告警危险。
-        """
+        # AST 扫出而 metadata 未声明的耦合仍然计入并告警：静默忽略会让 reload 漏掉该重载
+        # 的包，比多一条告警危险。
         packages = {py_module for m in cls.modules if (py_module := cls.return_py_module(m))}
         graph: dict[str, set[str]] = {}
         for package_name in packages:
@@ -621,13 +592,7 @@ class ModulesManager:
 
     @classmethod
     def _warn_undeclared_dependencies(cls, package_name: str, undeclared: set[str]) -> None:
-        """未声明依赖只告警一次。
-
-        热重载每次都会重建依赖图，逐次重复告警会淹没日志，故按「包对」在进程内去重。
-
-        :param package_name: 发起依赖的包导入路径。
-        :param undeclared: AST 扫出、metadata 未声明的依赖包导入路径集合。
-        """
+        # 热重载每次都会重建依赖图，逐次重复告警会淹没日志，故按「包对」在进程内去重。
         for dependency in sorted(undeclared):
             pair = (package_name, dependency)
             if pair in cls._undeclared_dependency_warned:
@@ -640,11 +605,8 @@ class ModulesManager:
 
     @classmethod
     def _reload_closure(cls, py_module: str) -> list[str]:
-        """该包的依赖优先重载闭包。
-
-        图源为「声明的依赖图 ∪ AST 扫描结果」。成环的包在 discover() 阶段已被拒绝注册，
-        能走到此处的图必然无环，闭包内的遇环跳过只作防御。
-        """
+        # 图源为「声明的依赖图 ∪ AST 扫描结果」。成环的包在 discover() 阶段已被拒绝注册，
+        # 能走到此处的图必然无环，闭包内的遇环跳过只作防御。
         cls._rebuild_dependency_graph()
         dependents: dict[str, set[str]] = {package_name: set() for package_name in cls._dependency_graph}
         for package_name, dependencies in cls._dependency_graph.items():
@@ -1112,7 +1074,7 @@ class ModulesManager:
     @classmethod
     def reload_py_module(cls, module_name: str):
         """
-        重载该Python模块
+        重载该 Python 模块
         """
         module_names = [name for name in sys.modules if name == module_name or name.startswith(f"{module_name}.")]
         if module_name not in module_names:
@@ -1141,13 +1103,8 @@ class ModulesManager:
 
     @classmethod
     def _snapshot_package_index(cls) -> dict[str, object]:
-        """发现层索引的快照，供包热装载失败时整体回退。
-
-        PackageRegistry 只有重建缓存（discover）的入口，没有回退点。安装失败后 CLI 会卸载该分发，
-        索引若停留在含该包的状态，下一次数据库重挂会去导入已经不存在的模型模块。
-
-        :return: 索引字段名到副本的映射。
-        """
+        # PackageRegistry 只有重建缓存（discover）的入口，没有回退点。安装失败后 CLI 会卸载该分发，
+        # 索引若停留在含该包的状态，下一次数据库重挂会去导入已经不存在的模型模块。
         return {
             "_entries": dict(PackageRegistry._entries),
             "_by_import_path": dict(PackageRegistry._by_import_path),
@@ -1158,16 +1115,12 @@ class ModulesManager:
 
     @classmethod
     def _restore_package_index(cls, snapshot: dict[str, object]) -> None:
-        """把发现层索引还原到快照状态。"""
         for name, value in snapshot.items():
             setattr(PackageRegistry, name, value)
 
     @classmethod
     def _forget_package(cls, entry: PackageEntry) -> None:
-        """把包从发现层索引里摘除，使其模型不再进入数据库清单。
-
-        卸载 RPC 先于 uv pip uninstall 执行，重跑 discover() 依旧会看到该分发，故直接改写索引缓存。
-        """
+        # 卸载 RPC 先于 uv pip uninstall 执行，重跑 discover() 依旧会看到该分发，故直接改写索引缓存。
         PackageRegistry._entries.pop(f"{entry.kind}:{entry.name}", None)
         indexed = PackageRegistry._by_import_path.get(entry.import_path)
         if indexed is not None and indexed.kind == entry.kind and indexed.name == entry.name:
@@ -1175,11 +1128,8 @@ class ModulesManager:
 
     @classmethod
     def _reload_config_view(cls) -> None:
-        """重读配置目录，让新包由 CLI 补写的配置文件进入内存副本。
-
-        只读进程只认启动时列出的文件，新表必须经 load() 重新枚举才会出现。此处失败不阻断安装，
-        导入期读取新配置项时会以只读守卫的形式报出。
-        """
+        # 只读进程只认启动时列出的文件，新表必须经 load() 重新枚举才会出现。此处失败不阻断安装，
+        # 导入期读取新配置项时会以只读守卫的形式报出。
         try:
             CFGManager.load()
         except Exception:
@@ -1187,7 +1137,6 @@ class ModulesManager:
 
     @classmethod
     def _rebuild_locale_snapshot(cls, py_module: str) -> None:
-        """重建 i18n 快照，使包目录的增删立即生效。"""
         try:
             locale_errors = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
         except Exception:
@@ -1366,11 +1315,8 @@ class ModulesManager:
 
     @classmethod
     async def _swap_package_database(cls, py_module: str, note: str) -> PreparedDatabaseReload | None:
-        """重挂数据库 context 并关闭旧连接，返回已激活的新 context。
-
-        旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口；
-        ``note`` 只用于日志措辞（新 context 是纳入还是去掉该包的模型）。
-        """
+        # 旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口；
+        # ``note`` 只用于日志措辞（新 context 是纳入还是去掉该包的模型）。
         from akaribot.core.queue.server import JobQueueServer
 
         prepared_db = await prepare_db_reload()

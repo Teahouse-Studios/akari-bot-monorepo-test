@@ -193,7 +193,7 @@
     "wiki.message.wiki-bot.toggle.enable": "已开启使用机器人账户。",
     "wiki.message.wiki-inline.flies": "此页面包括以下文件：\n${file}",
     "wikilog.message.config.wiki.success": "成功操作 Wiki：${wiki}",
-    "wikilog.message.config.wiki.failed": "操作 Wiki 失败，请检查URL是否正确：${message}",
+    "wikilog.message.config.wiki.failed": "操作 Wiki 失败，请检查 URL 是否正确：${message}",
     "wikilog.message.enable.log.success": "成功操作了 ${wiki} ${logtype} 的监控设置。",
     "wikilog.message.enable.log.failed": "为 ${apilink} 操作 ${logtype} 失败，请检查此 Wiki 是否已添加或站点状态是否正常。",
     "wikilog.message.enable.log.invalid_logtype": "无效的 ${logtype}。",

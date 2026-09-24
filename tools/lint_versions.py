@@ -242,7 +242,7 @@ def collect_dependencies(
 ) -> tuple[list[Violation], dict[str, list[tuple[Member, Dependency]]], int]:
     """遍历全部成员，跑 V1/V3/V4，同时收集对 core 的约束写法。
 
-    :return: 三元组——违规列表；core 约束比较键到（来源成员, 条目）列表的映射；内部依赖边总数。
+    :return: 三元组——违规列表；core 约束比较键到（来源成员， 条目）列表的映射；内部依赖边总数。
     """
     violations: list[Violation] = []
     core_specs: dict[str, list[tuple[Member, Dependency]]] = collections.defaultdict(list)
