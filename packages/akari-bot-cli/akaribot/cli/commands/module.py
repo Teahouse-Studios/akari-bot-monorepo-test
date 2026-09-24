@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Iterable, Sequence
 
@@ -51,11 +52,14 @@ def _join_list(items: Iterable[str]) -> str:
     return i18n.t("cli.common.list_separator").join(items)
 
 
-def _load_catalog(instance: Instance, *, offline: bool, needed: bool) -> engine.RegistryCatalog | None:
+def _load_catalog(
+    instance: Instance, *, offline: bool, needed: bool, ttl: float | None = None
+) -> engine.RegistryCatalog | None:
     if not needed:
         return None
+    kwargs = {} if ttl is None else {"ttl": ttl}
     try:
-        return engine.RegistryCatalog.load(instance.meta.registry_sources, offline=offline)
+        return engine.RegistryCatalog.load(instance.meta.registry_sources, offline=offline, **kwargs)
     except CliError as exc:
         fail(str(exc))
 
@@ -86,7 +90,7 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
         console.print(i18n.t("cli.module.install.config_restored", paths=paths))
     try:
         what = i18n.t("cli.venv_engine.what_uninstall_dist", dist=dist)
-        runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=what)
+        runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=what, stream=True)
     except CliError as exc:
         warn(str(exc))
     instance.invalidate()
@@ -188,6 +192,7 @@ def _install(
         runner.run_checked(
             engine.install_argv(instance.python, target.specs, upgrade=upgrade),
             what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist),
+            stream=True,
         )
     except CliError as exc:
         fail(str(exc))
@@ -272,6 +277,170 @@ def list_packages(
             i18n.t("cli.module.list.source_editable") if info.editable else i18n.t("cli.module.list.source_dist"),
         )
     console.print(table)
+
+
+@dataclass(frozen=True)
+class AvailablePackage:
+    """一条「可安装」记录，工作区与 registry 两个来源共用同一形状。
+
+    :param kind: ``module`` 或 ``adapter``。
+    :param name: 短名；工作区来源取 entry point 名。
+    :param dist: 分发名。
+    :param version: 可安装的版本。
+    :param detail: 补充信息：registry 来源是一句话简介，工作区来源是包路径。
+    :param provides: 提供的模块名（适配器为 entry point 名）。
+    """
+
+    kind: str
+    name: str
+    dist: str
+    version: str
+    detail: str
+    provides: tuple[str, ...]
+
+    def search_text(self) -> str:
+        """拼出可搜索文本。"""
+        return " ".join((self.name, self.dist, self.detail, *self.provides)).casefold()
+
+
+def _relative_path(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _workspace_available(root: Path) -> list[AvailablePackage]:
+    # 工作区模式下安装一律取本地源码（``resolve_target`` 的优先级如此），此时 registry 并不是
+    # 「能装什么」的答案来源；把本地成员列出来才是。
+    index = engine.workspace_index(root)
+    found: list[AvailablePackage] = []
+    for package in index.values():
+        if engine.canonical(package.dist) == engine.CORE_DIST:
+            continue
+        if package.adapter_names:
+            kind, names = "adapter", package.adapter_names
+        elif package.module_names:
+            kind, names = "module", package.module_names
+        else:
+            continue
+        found.append(
+            AvailablePackage(
+                kind=kind,
+                name=names[0],
+                dist=package.dist,
+                version=package.version,
+                detail=_relative_path(package.path, root),
+                provides=package.provides_modules or package.module_names,
+            )
+        )
+    return found
+
+
+def _registry_available(catalog: engine.RegistryCatalog) -> list[AvailablePackage]:
+    return [
+        AvailablePackage(
+            kind=entry.kind,
+            name=entry.name,
+            dist=entry.dist,
+            version=entry.latest,
+            detail=_summary_text(entry),
+            provides=entry.provides_modules,
+        )
+        for entry in catalog.entries.values()
+        if entry.kind != "core"
+    ]
+
+
+def _summary_text(entry: engine.RegistryEntry) -> str:
+    preferred = i18n.current_locale()
+    if text := entry.summary.get(preferred):
+        return text
+    return next((text for text in entry.summary.values() if text), "")
+
+
+@app.command("available", help=i18n.t("cli.module.available.help"))
+def available(
+    instance: InstancePathOption = None,
+    kind: Annotated[str | None, typer.Option("--kind", help=i18n.t("cli.module.available.option_kind"))] = None,
+    search: Annotated[str | None, typer.Option("--search", help=i18n.t("cli.module.available.option_search"))] = None,
+    refresh: Annotated[bool, typer.Option("--refresh", help=i18n.t("cli.module.available.option_refresh"))] = False,
+    offline: OfflineOption = False,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
+) -> None:
+    """列出可安装的模块与适配器，并标出哪些已装。
+
+    ``add`` 只认名字，而名字从哪来看不到；本命令把可安装集合连同「是否已装」一并列出。
+    工作区模式下集合来自本地工作区成员，否则来自实例配置的 registry 来源。
+    """
+    target = require_instance(instance)
+    workspace_root = Path(target.meta.workspace_root) if target.meta.workspace_root else None
+    workspace_mode = workspace_root is not None and (workspace_root / "packages").is_dir()
+    catalog: engine.RegistryCatalog | None = None
+    if workspace_mode:
+        candidates = _workspace_available(workspace_root)
+        source = i18n.t("cli.module.available.source_workspace", root=workspace_root)
+    else:
+        catalog = _load_catalog(target, offline=offline, needed=True, ttl=0.0 if refresh and not offline else None)
+        if catalog is None:
+            return
+        candidates = _registry_available(catalog)
+        source = catalog.source or "-"
+    try:
+        installed = {engine.canonical(info.dist) for info in target.installed().values()}
+    except CliError as exc:
+        fail(str(exc))
+    needle = (search or "").strip().casefold()
+    selected = [
+        item
+        for item in candidates
+        if (kind is None or item.kind == kind) and (not needle or needle in item.search_text())
+    ]
+    selected.sort(key=lambda item: (item.kind, item.dist))
+    if as_json:
+        payload = [
+            {
+                "dist": item.dist,
+                "name": item.name,
+                "kind": item.kind,
+                "latest": item.version,
+                "installed": engine.canonical(item.dist) in installed,
+                "provides_modules": list(item.provides),
+                "summary": item.detail if not workspace_mode else "",
+            }
+            for item in selected
+        ]
+        console.print_json(json.dumps(payload, ensure_ascii=False))
+        return
+    console.print(i18n.t("cli.module.available.source_line", source=source))
+    if not selected:
+        console.print(i18n.t("cli.module.available.none", search=search or ""))
+        console.print(i18n.t("cli.module.available.none_hint"))
+        return
+    table = Table(title=i18n.t("cli.module.available.table_title", count=len(selected)))
+    table.add_column(i18n.t("cli.module.available.column_kind"))
+    table.add_column(i18n.t("cli.module.available.column_name"))
+    table.add_column(i18n.t("cli.module.available.column_dist"))
+    table.add_column(i18n.t("cli.module.available.column_latest"))
+    table.add_column(i18n.t("cli.module.available.column_state"))
+    table.add_column(
+        i18n.t("cli.module.available.column_path" if workspace_mode else "cli.module.available.column_summary")
+    )
+    for item in selected:
+        table.add_row(
+            item.kind,
+            item.name,
+            item.dist,
+            item.version or "-",
+            i18n.t("cli.module.available.state_installed")
+            if engine.canonical(item.dist) in installed
+            else i18n.t("cli.module.available.state_available"),
+            item.detail or "-",
+        )
+    console.print(table)
+    console.print(i18n.t("cli.module.available.install_hint"))
+    if catalog is not None and catalog.from_cache:
+        console.print(i18n.t("cli.module.available.cached_hint"))
 
 
 @app.command("add", help=i18n.t("cli.module.add.help"))
@@ -480,7 +649,7 @@ def remove(
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         what = i18n.t("cli.venv_engine.what_uninstall_packages")
-        runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what=what)
+        runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what=what, stream=True)
     except CliError as exc:
         fail(str(exc))
     target.invalidate()

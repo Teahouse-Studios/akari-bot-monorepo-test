@@ -175,16 +175,23 @@ async def _test_payload_parser_tolerates_noise():
 
 class _RecordingRunner:
     calls: list[list[str]]
+    streamed: list[bool]
 
     def __init__(self, dry_run: bool = False, verbose: bool = False) -> None:
         self.calls = []
+        self.streamed = []
 
     def run(self, argv: Any, *, env: Any = None) -> subprocess.CompletedProcess[str]:
         self.calls.append(list(argv))
         return subprocess.CompletedProcess(list(argv), 0, "", "")
 
-    def run_checked(self, argv: Any, *, what: str, env: Any = None) -> None:
-        self.run(argv, env=env)
+    def run_streaming(self, argv: Any, *, env: Any = None) -> subprocess.CompletedProcess[str]:
+        return self.run(argv, env=env)
+
+    def run_checked(self, argv: Any, *, what: str, env: Any = None, stream: bool = False) -> None:
+        # 只在这里记一次：run_streaming 是传输方式，不是调用点。
+        self.streamed.append(stream)
+        (self.run_streaming if stream else self.run)(argv, env=env)
 
 
 def _registry_payload(kind: str = "module") -> dict:
@@ -202,7 +209,7 @@ def _registry_payload(kind: str = "module") -> dict:
     }
 
 
-def _remove_with_notify(notify: dict, returncode: int) -> tuple[int | None, list[list[str]], str]:
+def _remove_with_notify(notify: dict, returncode: int) -> tuple[int | None, list[list[str]], list[bool], str]:
     runner = _RecordingRunner()
     previous_runner = engine.CommandRunner
     previous_resolver = module_command.require_instance
@@ -230,11 +237,11 @@ def _remove_with_notify(notify: dict, returncode: int) -> tuple[int | None, list
     finally:
         engine.CommandRunner = previous_runner  # type: ignore[assignment]
         module_command.require_instance = previous_resolver  # type: ignore[assignment]
-    return code, runner.calls, out.getvalue() + err.getvalue()
+    return code, runner.calls, runner.streamed, out.getvalue() + err.getvalue()
 
 
 async def _test_remove_aborts_before_uninstall_when_detach_unconfirmed():
-    code, calls, text = _remove_with_notify(
+    code, calls, _, text = _remove_with_notify(
         {
             "ok": False,
             "status": "rejected",
@@ -248,11 +255,12 @@ async def _test_remove_aborts_before_uninstall_when_detach_unconfirmed():
 
 
 async def _test_remove_uninstalls_after_confirmed_detach():
-    code, calls, _ = _remove_with_notify(
+    code, calls, streamed, _ = _remove_with_notify(
         {"ok": True, "status": "delivered", "remote": "server.post_package_remove", "result": True, "detail": ""},
         0,
     )
-    return code is None and len(calls) == 1 and DIST in calls[0] and "uninstall" in calls[0]
+    # 卸载可能跑上几分钟，必须走实时转发，否则界面上看不出「正在卸」还是「卡住了」。
+    return code is None and len(calls) == 1 and DIST in calls[0] and "uninstall" in calls[0] and streamed == [True]
 
 
 class _Catalog:

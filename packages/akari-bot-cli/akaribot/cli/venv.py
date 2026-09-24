@@ -15,6 +15,7 @@ import sys
 
 from rich.markup import escape
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -31,6 +32,7 @@ from akaribot.cli.instance import (
     CliError,
     Instance,
     console,
+    err_console,
     explain_process_failure,
     extract_json,
     ok,
@@ -43,6 +45,8 @@ UV_ENV_VAR = "AKARIBOT_UV"
 CACHE_DIR_ENV = "AKARIBOT_CACHE_DIR"
 PROBE_NAMES_ENV = "AKARI_PROBE_NAMES"
 REGISTRY_CACHE_TTL = 3600.0
+# 实时转发时保留的末尾行数，供失败时摘要使用。
+STREAM_TAIL_LINES = 40
 CLI_DIST = "akari-bot-cli"
 CORE_DIST = "akari-bot-core"
 AKARIBOT_PREFIX = "akari-bot-"
@@ -250,7 +254,7 @@ class CommandRunner:
     """外部命令的执行者。
 
     :param dry_run: 为真时只打印 argv，不真正执行，供自证与离线检查。
-    :param verbose: 为真时回显子进程的全部输出。
+    :param verbose: 为真时连命令本身一并回显。
     """
 
     dry_run: bool = False
@@ -277,12 +281,52 @@ class CommandRunner:
                     console.print(stream.rstrip())
         return completed
 
-    def run_checked(self, argv: Sequence[str], *, what: str, env: Mapping[str, str] | None = None) -> None:
+    def run_streaming(
+        self, argv: Sequence[str], *, env: Mapping[str, str] | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        """执行命令并实时转发输出。
+
+        安装与卸载可能跑上几分钟（解析依赖、下载 wheel、写 venv）。若沿用 ``capture_output``，
+        这段时间界面上没有任何变化，操作者无法区分「正在装」与「卡住了」。故逐行转发：uv 即使
+        输出被重定向也会打印 ``Resolved … / Installed …`` 这类进度行，转发即可见。
+
+        输出走 stderr，``--json`` 的 stdout 因此保持干净；同时保留末尾若干行供失败时摘要。
+        """
+        if self.dry_run:
+            console.print(f"[dim]$ {escape(' '.join(argv))}[/dim]")
+            return subprocess.CompletedProcess(list(argv), 0, stdout="", stderr="")
+        if self.verbose:
+            err_console.print(f"[dim]$ {escape(' '.join(argv))}[/dim]")
+        try:
+            process = subprocess.Popen(  # noqa: S603
+                list(argv),
+                env=dict(env) if env is not None else None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+        except OSError as exc:
+            raise CliError(i18n.t("cli.venv_engine.exec_failed", command=argv[0], error=exc)) from exc
+        tail: deque[str] = deque(maxlen=STREAM_TAIL_LINES)
+        for line in process.stdout or ():
+            stripped = line.rstrip()
+            if not stripped:
+                continue
+            tail.append(stripped)
+            err_console.print(f"[dim]{escape(stripped)}[/dim]")
+        returncode = process.wait()
+        return subprocess.CompletedProcess(list(argv), returncode, stdout="", stderr="\n".join(tail))
+
+    def run_checked(
+        self, argv: Sequence[str], *, what: str, env: Mapping[str, str] | None = None, stream: bool = False
+    ) -> None:
         """执行命令，失败时抛出带摘要的错误。
 
         :param what: 动作描述，用于成功与失败消息。
+        :param stream: 为真时实时转发输出，供耗时命令显示进度。
         """
-        completed = self.run(argv, env=env)
+        completed = self.run_streaming(argv, env=env) if stream else self.run(argv, env=env)
         if completed.returncode != 0:
             detail = summarize_uv_error(completed.stderr or completed.stdout or "")
             raise CliError(i18n.t("cli.common.action_failed", what=what, detail=detail))
@@ -971,6 +1015,47 @@ def registry_target(
     )
 
 
+def _candidate_hint(names: Sequence[str]) -> str:
+    if not names:
+        return ""
+    return "\n" + i18n.t("cli.venv_engine.candidate_hint", names=i18n.t("cli.common.list_separator").join(names))
+
+
+def available_names(
+    *,
+    workspace_root: Path | None = None,
+    catalog: RegistryCatalog | None = None,
+    kind: str | None = None,
+    limit: int = 24,
+) -> list[str]:
+    """列出该来源下可安装的短名，供「找不到包」时直接给出候选。
+
+    只报名字，不解释来源差异：调用方已经知道自己走的是哪条路径。
+
+    :param workspace_root: 工作区根；非空时取本地成员。
+    :param catalog: 已加载的 registry。
+    :param kind: ``module`` 或 ``adapter``；``None`` 表示两者都要。
+    :param limit: 最多返回多少个名字。
+    :return: 排序后的短名列表。
+    """
+    names: list[str] = []
+    if workspace_root is not None:
+        for package in workspace_index(workspace_root).values():
+            if canonical(package.dist) == CORE_DIST:
+                continue
+            if kind == "adapter" and not package.adapter_names:
+                continue
+            if kind == "module" and not package.module_names:
+                continue
+            names.extend(package.adapter_names or package.module_names)
+    elif catalog is not None:
+        for entry in catalog.entries.values():
+            if entry.kind == "core" or (kind is not None and entry.kind != kind):
+                continue
+            names.append(entry.name)
+    return sorted(dict.fromkeys(names))[:limit]
+
+
 def resolve_target(
     name: str | None,
     *,
@@ -1010,11 +1095,17 @@ def resolve_target(
         if target is not None and canonical(target.dist) == canonical(dist or ""):
             return target
         if target is None and dist is None:
-            raise CliError(i18n.t("cli.venv_engine.workspace_package_missing", root=workspace_root, name=query))
+            raise CliError(
+                i18n.t("cli.venv_engine.workspace_package_missing", root=workspace_root, name=query)
+                + _candidate_hint(available_names(workspace_root=workspace_root, kind=kind))
+            )
     if not dist and catalog is not None:
         target = registry_target(catalog, query, version=version, kind=kind, extra=extra)
         if target is None:
-            raise CliError(i18n.t("cli.venv_engine.registry_package_missing", name=query))
+            raise CliError(
+                i18n.t("cli.venv_engine.registry_package_missing", name=query)
+                + _candidate_hint(available_names(catalog=catalog, kind=kind))
+            )
         return target
     if not dist:
         prefix = f"akari-bot-{kind}-" if kind else "akari-bot-module-"
@@ -1142,7 +1233,9 @@ def adopt(
         what=i18n.t("cli.venv_engine.what_create_venv"),
     )
     specs = [info.requirement() for info in source_dists.values()]
-    runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"))
+    runner.run_checked(
+        install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"), stream=True
+    )
 
     step(3, 5, i18n.t("cli.venv_engine.step_verify_source"))
     if runner.dry_run:
@@ -1175,7 +1268,9 @@ def adopt(
             warn(i18n.t("cli.venv_engine.keep_cli_in_source", dist=CLI_DIST))
         if removable:
             runner.run_checked(
-                uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_source")
+                uninstall_argv(source_python, removable),
+                what=i18n.t("cli.venv_engine.what_uninstall_from_source"),
+                stream=True,
             )
             removed = tuple(removable)
 
@@ -1228,7 +1323,9 @@ def release(
 
     step(2, 4, i18n.t("cli.venv_engine.step_install_current", python=target_python))
     specs = [info.requirement() for info in source_dists.values()]
-    runner.run_checked(install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"))
+    runner.run_checked(
+        install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"), stream=True
+    )
 
     step(3, 4, i18n.t("cli.venv_engine.step_verify_venv"))
     if runner.dry_run:
@@ -1262,7 +1359,9 @@ def release(
             warn(i18n.t("cli.venv_engine.keep_cli_in_venv", dist=CLI_DIST))
         if removable:
             runner.run_checked(
-                uninstall_argv(source_python, removable), what=i18n.t("cli.venv_engine.what_uninstall_from_venv")
+                uninstall_argv(source_python, removable),
+                what=i18n.t("cli.venv_engine.what_uninstall_from_venv"),
+                stream=True,
             )
             removed = tuple(removable)
     instance.meta.set_venv("")
@@ -1315,7 +1414,9 @@ def recreate(
     )
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(
-        install_argv(venv_python_path(staging), specs), what=i18n.t("cli.venv_engine.what_install_to_new_venv")
+        install_argv(venv_python_path(staging), specs),
+        what=i18n.t("cli.venv_engine.what_install_to_new_venv"),
+        stream=True,
     )
 
     step(3, 4, i18n.t("cli.venv_engine.step_verify_new_venv"))

@@ -552,6 +552,8 @@ SYS_EXECUTABLE_ALLOWED = (
     "akaribot/cli/commands/new.py",  # 脚手架末尾自调用 CLI
     "akaribot/cli/instance.py",  # system_python()：非冻结时它就是可用解释器，冻结时才改搜索
 )
+# CLI 的 tests/ 不在 wheel 内（hatchling 只收 akaribot/），永远不会被冻结，本规则不适用。
+SYS_EXECUTABLE_EXEMPT_SEGMENTS = ("/tests/",)
 
 
 def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violation]:
@@ -567,6 +569,8 @@ def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violatio
     if not location.relative.startswith("packages/akari-bot-cli/"):
         return []
     if any(prefix in location.relative for prefix in SYS_EXECUTABLE_ALLOWED):
+        return []
+    if any(segment in f"/{location.relative}" for segment in SYS_EXECUTABLE_EXEMPT_SEGMENTS):
         return []
     found: list[Violation] = []
     for node in ast.walk(tree):
