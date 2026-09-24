@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
+from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.modules import OperationResult
 
@@ -479,7 +480,9 @@ class SubprocessAdapterSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        self.root = Path(root) if root is not None else Path.cwd()
+        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
+        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
+        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
         self.timeout = timeout
         self.calls = {"list": 0, "peers": 0, "set_enable": 0}
         self._runner = runner or subprocess.run
@@ -667,6 +670,8 @@ class AdaptersPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数；enable 切换成功后立即失效，与有效期无关。
     """
 
+    can_focus = True
+
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
         ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable")),
@@ -733,6 +738,7 @@ class AdaptersPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: AdapterSource = source if source is not None else SubprocessAdapterSource()
         self.cache_ttl = cache_ttl
         self.last_error: str = ""
@@ -764,9 +770,14 @@ class AdaptersPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
+        """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        self.query_one("#adapter-list", compat.ListView).focus()
+
+    def activate(self) -> None:
+        """首次显示时读取适配器实例。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_instances()
 
     # region 状态读取（供测试与 App 使用）
@@ -1082,6 +1093,8 @@ class AdaptersPage(compat.Vertical):
                     note=self._peers.note or i18n.t("cli.tui.adapters.peer_unavailable"),
                 )
             )
+            # 只报「未知」会让人无从下手：补上可执行的下一步，原因仍保留在上面那句里。
+            parts.append(i18n.t("cli.tui.adapters.peer_status_unknown_hint"))
         for error in snapshot.errors:
             parts.append(error)
         text = i18n.t("cli.tui.common.error_separator").join(parts)
@@ -1232,6 +1245,10 @@ class AdaptersPage(compat.Vertical):
             compat.notify(self.app, result.message, severity="error", title=label)
         self._busy = False
         self._sync_actions()
+
+    def focus_primary(self) -> None:
+        """把焦点交给适配器列表；列表为空时退到页面容器。"""
+        compat.focus_first(self, "#adapter-list")
 
     def action_refresh(self) -> None:
         """键位动作：强制重新读取。"""

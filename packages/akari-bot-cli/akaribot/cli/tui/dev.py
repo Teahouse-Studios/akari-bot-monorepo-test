@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
+from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 
 SOURCE_WORKSPACE = "workspace"
@@ -324,7 +325,9 @@ class SubprocessDevSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         meta_reader: Callable[[], Mapping[str, Any]] | None = None,
     ) -> None:
-        self.root = Path(root) if root is not None else Path.cwd()
+        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
+        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
+        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
         self.timeout = timeout
         self.calls = {"load": 0}
         self._runner = runner or subprocess.run
@@ -511,6 +514,8 @@ class DevPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数；超期后按 ``r`` 重新取数。
     """
 
+    can_focus = True
+
     BINDINGS = compat.bindings(("r", "refresh", i18n.t("cli.tui.dev.action_refresh")))
 
     DEFAULT_CSS = """
@@ -571,6 +576,7 @@ class DevPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: DevSource = source if source is not None else SubprocessDevSource()
         self.cache_ttl = cache_ttl
         self.last_error: str = ""
@@ -597,9 +603,14 @@ class DevPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
+        """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        self.query_one("#package-list", compat.ListView).focus()
+
+    def activate(self) -> None:
+        """首次显示时读取工作区快照。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_snapshot()
 
     # region 状态读取（供测试与 App 使用）
@@ -896,6 +907,10 @@ class DevPage(compat.Vertical):
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         if event.button.id == "refresh":
             self.refresh_snapshot(force=True)
+
+    def focus_primary(self) -> None:
+        """把焦点交给包列表；列表为空时退到页面容器。"""
+        compat.focus_first(self, "#package-list")
 
     def action_refresh(self) -> None:
         """键位动作：强制重新读取。"""

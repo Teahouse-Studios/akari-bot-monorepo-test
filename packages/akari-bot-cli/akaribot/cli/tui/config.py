@@ -28,6 +28,7 @@ from tomlkit.exceptions import ParseError
 from tomlkit.items import Table
 
 from akaribot.cli import i18n
+from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 
 KIND_BOOL = "bool"
@@ -618,7 +619,9 @@ class SubprocessConfigSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        self.root = Path(root) if root is not None else Path.cwd()
+        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
+        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
+        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
         self.timeout = timeout
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
         self.last_raw_origin = ""
@@ -1222,6 +1225,8 @@ class ConfigPage(compat.Vertical):
     """
 
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    can_focus = True
+
     BINDINGS = compat.bindings(
         ("s", "save", i18n.t("cli.tui.config.action_save")),
         ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form")),
@@ -1238,6 +1243,7 @@ class ConfigPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: ConfigSource = source if source is not None else SubprocessConfigSource()
         self.cache_ttl = cache_ttl
         self.last_error: str = ""
@@ -1276,9 +1282,14 @@ class ConfigPage(compat.Vertical):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次表清单，并把焦点交给表清单使键位立即可用。"""
+        """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        self.query_one("#table-list", compat.ListView).focus()
+
+    def activate(self) -> None:
+        """首次显示时读取配置表清单。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_tables()
 
     # region 状态读取（供测试与 App 使用）
@@ -1756,6 +1767,10 @@ class ConfigPage(compat.Vertical):
     def action_mode_raw(self) -> None:
         """键位动作：切到原始文本模式。"""
         self.run_worker(self.set_mode(MODE_RAW), group="config-mode", exclusive=True)
+
+    def focus_primary(self) -> None:
+        """把焦点交给配置表列表；列表为空时退到页面容器。"""
+        compat.focus_first(self, "#table-list")
 
     def action_focus_tables(self) -> None:
         """键位动作：把焦点交回表清单。"""

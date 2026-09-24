@@ -255,6 +255,12 @@ def list_packages(
                 "requires_core_api": info.requires_core_api,
                 "summary": info.summary,
                 "provides_modules": list(info.provides_modules),
+                # manifest 的其余字段：TUI 详情与 --purge-data 都要看，缺了只能显示「未声明」。
+                "owned_tables": list(info.owned_tables),
+                "config_table": info.config_table,
+                "dependencies": [
+                    f"{dep.dist}{dep.specifier}" if dep.specifier else dep.dist for dep in info.dependencies
+                ],
             }
             for info in selected
         ]

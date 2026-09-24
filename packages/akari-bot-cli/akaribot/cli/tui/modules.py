@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
+from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 
 STATE_INSTALLED = "installed"
@@ -63,6 +64,9 @@ class ModuleRecord:
     :param dependents: 依赖本模块的发行包名。
     :param origin: 记录来源说明，供详情面板展示。
     :param kind: ``module`` / ``adapter`` / ``core`` / ``testing``，未知时为空串。
+    :param provides_modules: 该包注册的模块名。
+    :param owned_tables: 该包拥有的数据表。
+    :param config_table: 该包在 ``config/`` 下的扁平配置表名；无配置时为空串。
     """
 
     name: str
@@ -74,6 +78,9 @@ class ModuleRecord:
     dependents: tuple[str, ...] = ()
     origin: str = ""
     kind: str = ""
+    provides_modules: tuple[str, ...] = ()
+    owned_tables: tuple[str, ...] = ()
+    config_table: str = ""
 
     @property
     def installed(self) -> bool:
@@ -94,7 +101,15 @@ class ModuleRecord:
 
     def haystack(self) -> str:
         """返回搜索用的匹配文本，已做大小写折叠。"""
-        parts = (self.name, self.dist, self.version, self.summary, self.state_label, self.kind_label)
+        parts = (
+            self.name,
+            self.dist,
+            self.version,
+            self.summary,
+            self.state_label,
+            self.kind_label,
+            *self.provides_modules,
+        )
         return " ".join(part for part in parts if part).casefold()
 
     def matches(self, query: str) -> bool:
@@ -244,6 +259,14 @@ def _text(value: Any) -> str:
     return str(value)
 
 
+def _as_text_tuple(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if isinstance(value, (list, tuple, set)):
+        return tuple(text for item in value if (text := _text(item)))
+    return ()
+
+
 def _normalize_state(source: Any, fallback: str) -> str:
     raw = _text(_pick(source, "state", "status", "load_state", "install_state"))
     if raw:
@@ -285,6 +308,9 @@ def _record_from_mapping(dist: str, info: Any) -> ModuleRecord:
         dependents=tuple(_text(item) for item in dependents),
         origin=_text(_pick(info, "origin", "path", "location", "dist_info")),
         kind=_normalize_kind(_pick(info, "kind", "type", "category")),
+        provides_modules=_as_text_tuple(_pick(info, "provides_modules", "modules", default=())),
+        owned_tables=_as_text_tuple(_pick(info, "owned_tables", "tables", default=())),
+        config_table=_text(_pick(info, "config_table", "config")),
     )
 
 
@@ -337,8 +363,9 @@ class SubprocessModuleSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 子进程以 root 为 cwd 并把它写进 AKARI_INSTANCE_DIR；相对路径会在子进程里二次拼接而失效。
-        self.root = (Path(root) if root is not None else Path.cwd()).expanduser().resolve()
+        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；相对值会在子进程里二次拼接而失效，
+        # 只认 cwd 则会忽略 AKARI_INSTANCE_DIR。
+        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
         self.timeout = timeout
         self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
         self._runner = runner or subprocess.run
@@ -566,6 +593,17 @@ class ModulesPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数；安装/卸载成功后立即失效，与有效期无关。
     """
 
+    # 页面键位由页面自己声明：注册在 App 上会作用于隐藏页（停在配置页按 u 曾会卸载模块）。
+    BINDINGS = compat.bindings(
+        ("r", "refresh", i18n.t("cli.tui.modules.action_refresh")),
+        ("slash", "focus_search", i18n.t("cli.tui.modules.bind_search")),
+        ("i", "install", i18n.t("cli.tui.modules.action_install")),
+        ("u", "uninstall", i18n.t("cli.tui.modules.action_uninstall")),
+        ("escape", "clear_search", i18n.t("cli.tui.modules.bind_clear_search")),
+    )
+
+    can_focus = True
+
     DEFAULT_CSS = """
     ModulesPage {
         layout: vertical;
@@ -633,6 +671,7 @@ class ModulesPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: ModuleSource = source if source is not None else SubprocessModuleSource()
         self.cache_ttl = cache_ttl
         self.last_error: str = ""
@@ -668,9 +707,14 @@ class ModulesPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次数据，并把焦点交给列表，使键位立即可用。"""
+        """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        self.query_one("#module-list", compat.ListView).focus()
+
+    def activate(self) -> None:
+        """首次显示时读取模块列表。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_records()
 
     # region 状态读取（供测试与 App 使用）
@@ -892,6 +936,13 @@ class ModulesPage(compat.Vertical):
             (i18n.t("cli.tui.modules.field_core_api"), record.requires_core_api or i18n.t("cli.tui.common.undeclared")),
             (i18n.t("cli.tui.modules.field_summary"), record.summary or i18n.t("cli.tui.common.none")),
         ]
+        separator = i18n.t("cli.tui.common.list_separator")
+        if record.provides_modules:
+            rows.append((i18n.t("cli.tui.modules.field_provides"), separator.join(record.provides_modules)))
+        if record.config_table:
+            rows.append((i18n.t("cli.tui.modules.field_config_table"), record.config_table))
+        if record.owned_tables:
+            rows.append((i18n.t("cli.tui.modules.field_tables"), separator.join(record.owned_tables)))
         if record.dependents:
             rows.append(
                 (
@@ -1080,9 +1131,29 @@ class ModulesPage(compat.Vertical):
         self._busy = False
         self._sync_actions()
 
+    def focus_primary(self) -> None:
+        """把焦点交给列表；列表为空时退到搜索框。"""
+        compat.focus_first(self, "#module-list", "#search")
+
     def action_refresh(self) -> None:
         """键位动作：强制重新读取列表。"""
         self.refresh_records(force=True)
+
+    def action_focus_search(self) -> None:
+        """键位动作：聚焦搜索框。"""
+        self.focus_search()
+
+    def action_install(self) -> None:
+        """键位动作：安装当前目标。"""
+        self.request_install()
+
+    def action_uninstall(self) -> None:
+        """键位动作：卸载当前目标。"""
+        self.request_uninstall()
+
+    def action_clear_search(self) -> None:
+        """键位动作：清空搜索框。"""
+        self.clear_search()
 
     # endregion
 

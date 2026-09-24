@@ -433,6 +433,7 @@ class DashboardPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: DashboardSource = source if source is not None else LocalDashboardSource()
         self.cache_ttl = cache_ttl
         self.refresh_interval = refresh_interval
@@ -452,15 +453,20 @@ class DashboardPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次快照，并按周期探测锁文件。"""
+        """挂载后只装配控件；取数与周期探测推迟到首次显示。"""
         compat.set_text_selection(self, False)
+
+    def activate(self) -> None:
+        """首次显示时读取快照，并按周期探测锁文件。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_snapshot(force=True)
         if self.refresh_interval and self.refresh_interval > 0:
             self.set_interval(self.refresh_interval, self._on_tick)
 
     def focus_primary(self) -> None:
         """把焦点交给本页，供上层在页面切换时调用。"""
-        self.focus()
 
     # region 状态读取（供测试与上层使用）
 

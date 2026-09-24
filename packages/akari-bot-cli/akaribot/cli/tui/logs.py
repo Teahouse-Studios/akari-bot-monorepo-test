@@ -419,6 +419,7 @@ class LogsPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: LogSource = source if source is not None else FileLogSource()
         self.follow_interval = follow_interval
         self.rescan_seconds = rescan_seconds
@@ -454,16 +455,20 @@ class LogsPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后枚举一次日志目录，并按周期跟随。"""
+        """挂载后只装配控件；枚举日志与周期跟随推迟到首次显示。"""
         compat.set_text_selection(self, False)
+
+    def activate(self) -> None:
+        """首次显示时枚举日志目录，并按周期跟随。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_files()
-        self.focus_primary()
         if self.follow_interval and self.follow_interval > 0:
             self.set_interval(self.follow_interval, self._tick)
 
     def focus_primary(self) -> None:
         """把焦点交给进程列表，供上层在页面切换时调用。"""
-        self.query_one("#process-list", compat.ListView).focus()
 
     # region 状态读取（供测试与上层使用）
 

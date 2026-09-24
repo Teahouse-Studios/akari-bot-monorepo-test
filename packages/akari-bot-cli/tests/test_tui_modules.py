@@ -283,6 +283,61 @@ def _test_relative_root_is_resolved():
     )
 
 
+async def _test_detail_shows_manifest_metadata():
+    # 这些值来自 registry --json：`module list --json` 曾丢掉它们，界面因此对已装包显示「核心 API
+    # 未声明」、提供模块为空，与 manifest 实际内容不符。
+    record = ModuleRecord(
+        name="wiki",
+        dist="akari-bot-module-wiki",
+        version="0.1.0",
+        state="installed",
+        kind="module",
+        requires_core_api=">=1",
+        provides_modules=("wiki", "wikilog"),
+        owned_tables=("module_wiki_site_info",),
+        config_table="module_wiki",
+    )
+
+    async def body(app, page, pilot):
+        page.query_one("#module-list", compat.ListView).index = 0
+        await pilot.pause()
+        text = page.detail_text
+        await pilot.press("q")
+        return text
+
+    detail = await _detail_of(record, body)
+    return (
+        ">=1" in detail
+        and "wiki、wikilog" in detail
+        and "module_wiki" in detail
+        and "module_wiki_site_info" in detail
+        and i18n.t("cli.tui.common.undeclared") not in detail
+    )
+
+
+async def _test_detail_falls_back_when_manifest_missing():
+    record = ModuleRecord(name="plain", dist="akari-bot-module-plain", state="installed")
+
+    async def body(app, page, pilot):
+        page.query_one("#module-list", compat.ListView).index = 0
+        await pilot.pause()
+        text = page.detail_text
+        await pilot.press("q")
+        return text
+
+    detail = await _detail_of(record, body)
+    return i18n.t("cli.tui.common.undeclared") in detail
+
+
+async def _detail_of(record, body):
+    app = TuiApp(source=StaticModuleSource([record]), boot_started_at=time.monotonic())
+    async with compat.app_test(app, size=(100, 30)) as pilot:
+        page = app.modules_page()
+        await page.wait_for_idle()
+        await pilot.pause()
+        return await body(app, page, pilot)
+
+
 @func_case
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
@@ -298,4 +353,6 @@ async def test_tui_modules_available(tester: Tester):
     await tester.test(_test_subprocess_source_streams_and_reports, "真源逐行回调并给出结论")
     await tester.test(_test_subprocess_source_timeout, "真源超时按数据源错误上报")
     await tester.test(_test_relative_root_is_resolved, "相对实例根解析为绝对路径")
+    await tester.test(_test_detail_shows_manifest_metadata, "详情展示 manifest 元数据")
+    await tester.test(_test_detail_falls_back_when_manifest_missing, "manifest 缺失才显示未声明")
     return tester

@@ -148,6 +148,7 @@ def run_self_check() -> int:
     results.extend(_check_width())
     results.append(_check_boot())
     results.append(_check_available_and_progress())
+    results.append(_check_page_navigation())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -159,6 +160,55 @@ def run_self_check() -> int:
         return 1
     typer.echo(i18n.t("cli.tui_cmd.self_check_ok", passed=len(results) - len(warnings), warnings=len(warnings)))
     return 0
+
+
+def _check_page_navigation() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.app import PAGES, TuiApp
+    from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
+
+    source = StaticModuleSource(
+        [ModuleRecord(name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed")]
+    )
+    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+
+    async def probe() -> tuple[list[str], list[str]]:
+        mismatched: list[str] = []
+        unfocused: list[str] = []
+        async with compat.app_test(app_instance, size=(100, 30)) as pilot:
+            await pilot.pause()
+            for position, (key, _, _) in enumerate(PAGES):
+                app_instance.show_page(key)
+                await pilot.pause()
+                nav = app_instance.query_one("#nav", compat.ListView)
+                visible = app_instance.query_one(f"#page-{key}").display
+                if app_instance.active_page != key or compat.highlighted_index(nav) != position or not visible:
+                    mismatched.append(key)
+                if app_instance.focused is None:
+                    unfocused.append(key)
+            await pilot.press("q")
+        return mismatched, unfocused
+
+    try:
+        mismatched, unfocused = asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_navigation"), f"{type(error).__name__}: {error}")
+    if mismatched or unfocused:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_navigation"),
+            i18n.t(
+                "cli.tui_cmd.check_navigation_bad",
+                count=len(PAGES),
+                mismatched=i18n.t("cli.common.list_separator").join(mismatched) or "-",
+                unfocused=i18n.t("cli.common.list_separator").join(unfocused) or "-",
+            ),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_navigation"),
+        i18n.t("cli.tui_cmd.check_navigation_detail", count=len(PAGES)),
+    )
 
 
 def _check_available_and_progress() -> CheckResult:

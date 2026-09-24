@@ -92,14 +92,11 @@ class TuiApp(compat.App[int]):
     SUB_TITLE = i18n.t("cli.tui.app.subtitle")
     CSS = STYLESHEET
     ENABLE_COMMAND_PALETTE = False
+    # 只保留真正全局的动作。页面键位（r、/、i、u、Esc 等）由各页自行声明：注册在这里会作用于
+    # 隐藏页——停在配置页按 u 曾会卸载模块页选中项。
     BINDINGS = compat.bindings(
         ("q", "quit", i18n.t("cli.tui.app.bind_quit")),
         ("ctrl+q", "quit", i18n.t("cli.tui.app.bind_quit")),
-        ("r", "refresh_modules", i18n.t("cli.tui.app.bind_refresh")),
-        ("slash", "focus_search", i18n.t("cli.tui.app.bind_search")),
-        ("i", "install_module", i18n.t("cli.tui.app.bind_install")),
-        ("u", "uninstall_module", i18n.t("cli.tui.app.bind_uninstall")),
-        ("escape", "clear_search", i18n.t("cli.tui.app.bind_clear_search")),
     )
 
     def __init__(
@@ -152,24 +149,50 @@ class TuiApp(compat.App[int]):
         return page
 
     def on_mount(self) -> None:
-        """记录启动耗时、切到初始页，并在首帧后补记首屏时间。"""
+        """记录启动耗时、切到初始页，并在首帧后补记首屏时间与焦点。
+
+        挂载期 Textual 尚未定焦点，此时调用 ``focus_primary()`` 会被随后的默认聚焦覆盖（焦点落在
+        侧栏上，页级键位随之失效），故首帧之后再补一次。
+        """
         self.startup_ms = (time.monotonic() - self._boot_started_at) * 1000.0
         self.show_page(self.initial_page)
         self.call_after_refresh(self._mark_first_paint)
+        self.call_after_refresh(self.focus_active_page)
+
+    def focus_active_page(self) -> None:
+        """把焦点交给当前页的主控件。"""
+        focus_primary = getattr(self.query_one(f"#page-{self.active_page}"), "focus_primary", None)
+        if callable(focus_primary):
+            focus_primary()
 
     def show_page(self, key: str) -> None:
-        """切换可见页面，并同步侧栏选中项。
+        """切换可见页面，并同步侧栏选中项与焦点。
+
+        侧栏高亮、可见页面与 ``active_page`` 三者必须一致：只改 ``display`` 会让高亮停在旧项上，
+        用户据此判断不出当前页，启动后的第一次按键也可能落到侧栏。
 
         :param key: 页面键，取自 :data:`PAGES`。
         """
         for page_key, _, _ in PAGES:
             self.query_one(f"#page-{page_key}").display = page_key == key
         self.active_page = key
-        # 焦点须随页面转移：焦点留在侧栏或上一页时，页级键位（r/space/c/d/s/x）不会触发，
-        # 反而被 App 级同键接管。页面未提供 focus_primary 时保持现状。
+        # 隐藏页不取数：只打开模块页时，其它页不应各自启动子进程、读日志或探测实例。
+        activate = getattr(self.query_one(f"#page-{key}"), "activate", None)
+        if callable(activate):
+            activate()
+        self._sync_nav(key)
+        # 焦点须随页面转移：焦点留在侧栏或上一页时，页级键位不会触发。
         focus_primary = getattr(self.query_one(f"#page-{key}"), "focus_primary", None)
         if callable(focus_primary):
             focus_primary()
+
+    def _sync_nav(self, key: str) -> None:
+        # 侧栏的 ``Highlighted`` 会反过来调 :meth:`show_page`，故仅在索引确实不同的时候写回，
+        # 避免「同步高亮 → 触发选中 → 再次同步」的往返。
+        nav = self.query_one("#nav", compat.ListView)
+        index = next((position for position, (page_key, _, _) in enumerate(PAGES) if page_key == key), 0)
+        if compat.highlighted_index(nav) != index:
+            nav.index = index
 
     @compat.on(compat.ListView.Selected, "#nav")
     def _on_nav_selected(self, event: compat.ListView.Selected) -> None:
@@ -191,26 +214,6 @@ class TuiApp(compat.App[int]):
     def action_quit(self) -> None:
         """退出应用并返回退出码 0。"""
         self.exit(0)
-
-    def action_refresh_modules(self) -> None:
-        """键位动作：强制刷新模块列表。"""
-        self.modules_page().refresh_records(force=True)
-
-    def action_install_module(self) -> None:
-        """键位动作：安装当前目标。"""
-        self.modules_page().request_install()
-
-    def action_uninstall_module(self) -> None:
-        """键位动作：卸载当前目标。"""
-        self.modules_page().request_uninstall()
-
-    def action_focus_search(self) -> None:
-        """键位动作：聚焦搜索框。"""
-        self.modules_page().focus_search()
-
-    def action_clear_search(self) -> None:
-        """键位动作：清空搜索框。"""
-        self.modules_page().clear_search()
 
 
 @dataclass(frozen=True)

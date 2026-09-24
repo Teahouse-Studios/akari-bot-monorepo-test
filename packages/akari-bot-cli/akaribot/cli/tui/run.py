@@ -600,6 +600,7 @@ class RunPage(compat.Vertical):
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
+        self._activated = False
         self.source: RunSource = source if source is not None else SubprocessRunSource()
         self.status_interval = status_interval
         self.last_error: str = ""
@@ -621,8 +622,14 @@ class RunPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后读取一次状态表，并按周期轮询进程与锁文件。"""
+        """挂载后只装配控件；取数与周期轮询推迟到首次显示。"""
         compat.set_text_selection(self, False)
+
+    def activate(self) -> None:
+        """首次显示时读取状态表，并按周期轮询进程与锁文件。"""
+        if self._activated:
+            return
+        self._activated = True
         self.refresh_status()
         if self.status_interval and self.status_interval > 0:
             self.set_interval(self.status_interval, self._on_tick)

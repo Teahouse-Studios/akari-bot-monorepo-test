@@ -43,6 +43,8 @@ def collect() -> dict:
                     "import_path": entry.import_path,
                     "root": str(entry.root),
                     "modules": list(entry.manifest.provides_modules),
+                    # 兼容性诊断要用：缺了它，消费方只能显示「未声明」，与 manifest 实际内容不符。
+                    "requires_core_api": entry.manifest.requires_core_api,
                     # 卸载清理要用：表名决定删哪些表，config_table 决定删哪个扁平配置文件。
                     # 缺这两项时 CLI 只能靠 provides_modules 猜文件名，而现行布局是扁平路径。
                     "owned_tables": list(entry.manifest.owned_tables),

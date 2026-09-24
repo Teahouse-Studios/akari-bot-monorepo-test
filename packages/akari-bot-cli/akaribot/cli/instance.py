@@ -294,7 +294,10 @@ class PackageInfo:
             or _first_str(manifest, ("requires_core_api",))
             or "",
             summary=_first_str(data, ("summary", "description")) or _first_str(manifest, ("summary",)) or "",
-            provides_modules=_as_tuple(data.get("provides_modules")) or _as_tuple(manifest.get("provides_modules")),
+            # registry --json 用 ``modules`` 作键名；``provides_modules`` 是 manifest 与 module list 的写法。
+            provides_modules=_as_tuple(data.get("provides_modules"))
+            or _as_tuple(data.get("modules"))
+            or _as_tuple(manifest.get("provides_modules")),
             owned_tables=_as_tuple(data.get("owned_tables")) or _as_tuple(manifest.get("owned_tables")),
             config_table=_first_str(data, ("config_table",)) or _first_str(manifest, ("config_table",)) or "",
             dependencies=_parse_dependencies(data.get("dependencies", data.get("requires", data.get("requires_dist")))),
@@ -1041,6 +1044,25 @@ def find_instance_root(start: Path | None = None) -> Path | None:
         if (candidate / INSTANCE_META_FILENAME).is_file():
             return candidate
     return None
+
+
+def resolve_instance_root(start: Path | None = None) -> Path | None:
+    """定位实例根并转成绝对路径；未找到时为 ``None``。
+
+    各页数据源都经此解析：子进程以实例根为 cwd 又把它写进 ``AKARI_INSTANCE_DIR``，相对值会在
+    子进程里二次拼接而失效；只认 ``Path.cwd()`` 则会忽略 ``AKARI_INSTANCE_DIR``，在仓库根运行
+    TUI 时静默读到另一个实例的配置与日志。
+
+    :param start: 查找起点，缺省为当前工作目录。
+    :return: 实例根绝对路径；未找到时为 ``None``。
+    """
+    found = find_instance_root(start)
+    return found.resolve() if found is not None else None
+
+
+def default_instance_root() -> Path:
+    """缺省实例根；未定位到时退回当前工作目录，供各页数据源构造子进程用。"""
+    return resolve_instance_root() or Path.cwd().resolve()
 
 
 def resolve_instance(
