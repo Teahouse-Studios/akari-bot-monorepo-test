@@ -144,7 +144,7 @@
   "cli.error.not_instance_hint": "Run `akaribot init` first, or pass `--instance <root>` / set AKARI_INSTANCE_DIR.",
   "cli.init.already_instance": "${root} is already an AkariBot instance (${meta} exists). Use `akaribot config` to change config, or add --force to overwrite.",
   "cli.init.arg_path": "Instance directory; defaults to the current directory",
-  "cli.init.ask.adapters": "Adapters to install (comma separated; leave empty to install core only)",
+  "cli.init.ask.adapters": "adapters to install (comma-separated; leave empty for core only; `akaribot module available --kind adapter` lists them all)",
   "cli.init.ask.locale": "Default language of the instance (zh_cn / en_us / ja_jp / ko_kr / zh_tw)",
   "cli.init.ask.managed_venv": "Let the CLI manage the instance venv (${venv}, recommended)",
   "cli.init.ask.workspace": "Install from the local workspace sources (required while nothing is published on PyPI)",
