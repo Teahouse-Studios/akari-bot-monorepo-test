@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,8 +44,10 @@ _INSTALLED_MARKERS = ("install", "loaded", "enabled", "active")
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 
-# 子进程式安装拿不到字节级进度，进度条按阶段推进：解析、执行、重载、完成。
+# 进度条按阶段推进：解析、执行、重载、完成；阶段内的细粒度进度由子进程输出行承担。
 _PROGRESS_PHASES = 4.0
+# 实时转发时保留的末尾行数，失败时作为详情展示。
+_STREAM_TAIL_LINES = 40
 
 
 @dataclass(frozen=True)
@@ -128,26 +131,32 @@ class ModuleSourceError(RuntimeError):
 class StaticModuleSource:
     """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
 
-    :param records: 直接返回的记录序列。
+    :param records: ``list_modules`` 直接返回的记录序列。
+    :param available: ``list_available`` 直接返回的记录序列。
     :param install_result: 安装返回值；缺省为成功。
     :param uninstall_result: 卸载返回值；缺省为成功。
+    :param stream_lines: ``stream_operation`` 逐行上报的假输出。
     """
 
     def __init__(
         self,
         records: Sequence[ModuleRecord] = (),
         *,
+        available: Sequence[ModuleRecord] = (),
         install_result: OperationResult | None = None,
         uninstall_result: OperationResult | None = None,
+        stream_lines: Sequence[str] = (),
     ) -> None:
         self._records = tuple(records)
+        self._available = tuple(available)
+        self._stream_lines = tuple(stream_lines)
         self._install_result = install_result or OperationResult(
             True, i18n.t("cli.tui.modules.stub_install_ok"), "stub"
         )
         self._uninstall_result = uninstall_result or OperationResult(
             True, i18n.t("cli.tui.modules.stub_uninstall_ok"), "stub"
         )
-        self.calls = {"list": 0, "install": 0, "uninstall": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
         self.installed: list[str] = []
         self.uninstalled: list[str] = []
 
@@ -155,6 +164,11 @@ class StaticModuleSource:
         """见 :meth:`ModuleSource.list_modules`。"""
         self.calls["list"] += 1
         return self._records
+
+    def list_available(self) -> Sequence[ModuleRecord]:
+        """见 :meth:`ModuleSource.list_available`。"""
+        self.calls["available"] += 1
+        return self._available
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """见 :meth:`ModuleSource.install`。"""
@@ -168,6 +182,14 @@ class StaticModuleSource:
         self.uninstalled.append(record.dist or record.name)
         return self._uninstall_result
 
+    async def stream_operation(
+        self, kind: str, record: ModuleRecord, on_line: Callable[[str], None]
+    ) -> OperationResult:
+        """见 :meth:`ModuleSource.stream_operation`；替身直接回放固定输出。"""
+        for line in self._stream_lines:
+            on_line(line)
+        return self.install(record) if kind == "install" else self.uninstall(record)
+
 
 @runtime_checkable
 class ModuleSource(Protocol):
@@ -176,11 +198,25 @@ class ModuleSource(Protocol):
     def list_modules(self) -> Sequence[ModuleRecord]:
         """返回全部模块记录。"""
 
+    def list_available(self) -> Sequence[ModuleRecord]:
+        """返回可安装的模块记录，含尚未安装的项。"""
+
     def install(self, record: ModuleRecord) -> OperationResult:
         """安装给定记录。"""
 
     def uninstall(self, record: ModuleRecord) -> OperationResult:
         """卸载给定记录。"""
+
+    async def stream_operation(
+        self, kind: str, record: ModuleRecord, on_line: Callable[[str], None]
+    ) -> OperationResult:
+        """执行安装或卸载，并把子进程输出逐行交给 ``on_line``。
+
+        :param kind: ``install`` 或 ``uninstall``。
+        :param record: 目标记录。
+        :param on_line: 每读到一行输出就调用一次，供界面显示进度。
+        :return: 操作结果。
+        """
 
 
 def sort_key(record: ModuleRecord) -> tuple[bool, str]:
@@ -301,9 +337,10 @@ class SubprocessModuleSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        self.root = Path(root) if root is not None else Path.cwd()
+        # 子进程以 root 为 cwd 并把它写进 AKARI_INSTANCE_DIR；相对路径会在子进程里二次拼接而失效。
+        self.root = (Path(root) if root is not None else Path.cwd()).expanduser().resolve()
         self.timeout = timeout
-        self.calls = {"list": 0, "install": 0, "uninstall": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
 
@@ -318,6 +355,26 @@ class SubprocessModuleSource:
                 errors.append(str(error))
         raise ModuleSourceError(i18n.t("cli.tui.common.error_separator").join(errors))
 
+    def list_available(self) -> Sequence[ModuleRecord]:
+        """见 :meth:`ModuleSource.list_available`。
+
+        ``module available`` 自己就区分了已装与未装，因此这里不做二次过滤，全部交给界面按
+        ``state`` 展示；该命令需要实例上下文（registry 来源写在实例配置里），故必带实例目录。
+        """
+        self.calls["available"] += 1
+        argv = self.cli_argv("module", "available", "--json")
+        completed = self._run(argv)
+        if completed.returncode != 0:
+            raise ModuleSourceError(
+                i18n.t(
+                    "cli.tui.modules.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
+        return normalize_records(self._parse_json(completed.stdout, "module available --json"))
+
     def install(self, record: ModuleRecord) -> OperationResult:
         """见 :meth:`ModuleSource.install`。"""
         self.calls["install"] += 1
@@ -329,6 +386,61 @@ class SubprocessModuleSource:
         self.calls["uninstall"] += 1
         name = record.dist or record.name
         return self._run_cli(("module", "remove", name), i18n.t("cli.tui.modules.label_uninstall", name=name))
+
+    async def stream_operation(
+        self, kind: str, record: ModuleRecord, on_line: Callable[[str], None]
+    ) -> OperationResult:
+        """见 :meth:`ModuleSource.stream_operation`。
+
+        安装要解析依赖、下载 wheel、写 venv，可能跑上几分钟；沿用 ``subprocess.run`` 时这段时间
+        界面只能空转。改为异步起进程并逐行读输出，界面据此显示进度。
+        """
+        self.calls["install" if kind == "install" else "uninstall"] += 1
+        name = record.dist or record.name
+        subcommand = "add" if kind == "install" else "remove"
+        argv = self.cli_argv("module", subcommand, name)
+        label = i18n.t(f"cli.tui.modules.label_{kind}", name=name)
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *argv,
+                cwd=str(self.root),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=self._env(),
+            )
+        except FileNotFoundError as error:
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_exe_missing", path=argv[0], error=error)) from error
+        except OSError as error:
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
+        tail: deque[str] = deque(maxlen=_STREAM_TAIL_LINES)
+        try:
+            returncode = await asyncio.wait_for(self._pump(process, on_line, tail), timeout=self.timeout)
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            raise ModuleSourceError(
+                i18n.t("cli.tui.modules.src_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from None
+        detail = "\n".join(tail)
+        if returncode != 0:
+            return OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                self._tail(detail) or i18n.t("cli.tui.common.no_output"),
+            )
+        return OperationResult(True, i18n.t("cli.tui.modules.operation_done", label=label), detail)
+
+    @staticmethod
+    async def _pump(process: asyncio.subprocess.Process, on_line: Callable[[str], None], tail: deque[str]) -> int:
+        stream = process.stdout
+        if stream is not None:
+            async for raw in stream:
+                line = raw.decode("utf-8", errors="replace").rstrip()
+                if not line:
+                    continue
+                tail.append(line)
+                on_line(line)
+        return await process.wait()
 
     def cli_argv(self, *args: str) -> list[str]:
         """构造调用本 CLI 的 argv。
@@ -465,6 +577,10 @@ class ModulesPage(compat.Vertical):
     ModulesPage #search {
         width: 1fr;
     }
+    ModulesPage #show-available {
+        width: auto;
+        padding: 1 0 0 1;
+    }
     ModulesPage #count {
         width: auto;
         padding: 1 1 0 1;
@@ -526,6 +642,10 @@ class ModulesPage(compat.Vertical):
         self._query: str = ""
         self._selected_key: str | None = None
         self._busy: bool = False
+        self._show_available: bool = False
+        self._available_error: str = ""
+        self._stream_line: str = ""
+        self._stream_lines: list[str] = []
         self._detail_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._rendered_rows: tuple[str, ...] = ()
@@ -534,6 +654,7 @@ class ModulesPage(compat.Vertical):
         """装配页面控件树。"""
         with compat.Horizontal(id="search-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.modules.search_placeholder"), id="search")
+            yield compat.Checkbox(i18n.t("cli.tui.modules.show_available"), id="show-available")
             yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
         with compat.Horizontal(id="body"):
             yield compat.ListView(id="module-list")
@@ -596,6 +717,14 @@ class ModulesPage(compat.Vertical):
         """返回状态栏当前文本。"""
         return self._status_rendered
 
+    @property
+    def stream_lines(self) -> tuple[str, ...]:
+        """返回最近一次安装或卸载收到的子进程输出行。
+
+        状态栏只留最后一行，操作结束后又会被结论覆盖；完整序列留在这里，供失败排查与自动化断言。
+        """
+        return tuple(self._stream_lines)
+
     def cache_age(self) -> float:
         """返回缓存自上次读取以来的秒数；从未读取时为无穷大。"""
         if not self._loaded_at:
@@ -636,13 +765,34 @@ class ModulesPage(compat.Vertical):
             self._render_list()
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
+        if self._show_available:
+            records = await self._merge_available(records)
         self._records = tuple(sorted(records, key=sort_key))
         self._loaded_at = time.monotonic()
         self.last_error = ""
         self.last_result = i18n.t("cli.tui.modules.status_loaded", count=len(self._records))
+        if self._available_error:
+            self.last_result = f"{self.last_result}{self._available_error}"
         self._render_list()
         self._set_status(self.last_result)
         return True
+
+    async def _merge_available(self, installed: Sequence[ModuleRecord]) -> list[ModuleRecord]:
+        # 以分发名为键去重：两边都有的项保留已装那条（它带着本地版本与依赖信息），只把尚未安装的
+        # 项补进来。取不到可安装集合时保留已装列表并记下原因，不让一次子进程失败清空整页。
+        self._available_error = ""
+        try:
+            available = await asyncio.to_thread(self.source.list_available)
+        except ModuleSourceError as error:
+            self._available_error = i18n.t("cli.tui.modules.available_failed", error=error)
+            return list(installed)
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+            self._available_error = i18n.t("cli.tui.modules.available_failed", error=f"{type(error).__name__}: {error}")
+            return list(installed)
+        known = {record.dist for record in installed}
+        merged = list(installed)
+        merged.extend(record for record in available if record.dist not in known)
+        return merged
 
     def invalidate_cache(self) -> None:
         """使缓存立即失效，下一次读取必定走数据源。"""
@@ -783,6 +933,12 @@ class ModulesPage(compat.Vertical):
         self._query = event.value
         self._render_list()
 
+    @compat.on(compat.Checkbox.Changed, "#show-available")
+    def _on_show_available_changed(self, event: compat.Checkbox.Changed) -> None:
+        self._show_available = bool(event.value)
+        self._selected_key = None
+        self.refresh_records(force=True)
+
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
         self._sync_detail()
@@ -846,7 +1002,7 @@ class ModulesPage(compat.Vertical):
             )
             return
         label = i18n.t("cli.tui.modules.label_install", name=target.dist)
-        self._start_operation("install", label, target, self.source.install)
+        self._start_operation("install", label, target)
 
     def request_uninstall(self) -> None:
         """发起卸载；无目标时给出提示而不动作。"""
@@ -860,15 +1016,9 @@ class ModulesPage(compat.Vertical):
             )
             return
         label = i18n.t("cli.tui.modules.label_uninstall", name=target.dist)
-        self._start_operation("uninstall", label, target, self.source.uninstall)
+        self._start_operation("uninstall", label, target)
 
-    def _start_operation(
-        self,
-        kind: str,
-        label: str,
-        record: ModuleRecord,
-        func: Callable[[ModuleRecord], OperationResult],
-    ) -> None:
+    def _start_operation(self, kind: str, label: str, record: ModuleRecord) -> None:
         if self._busy:
             compat.notify(
                 self.app,
@@ -878,27 +1028,36 @@ class ModulesPage(compat.Vertical):
             )
             return
         self._busy = True
+        self._stream_line = ""
+        self._stream_lines = []
         self._sync_actions()
         compat.progress_phase(self.query_one("#progress", compat.ProgressBar), 1.0, _PROGRESS_PHASES)
         self._set_status(i18n.t("cli.tui.modules.calling", label=label))
-        self.run_worker(self._operate(kind, label, record, func), group="modules-op", exclusive=True)
+        self.run_worker(self._operate_streaming(kind, label, record), group="modules-op", exclusive=True)
 
-    async def _operate(
-        self,
-        kind: str,
-        label: str,
-        record: ModuleRecord,
-        func: Callable[[ModuleRecord], OperationResult],
-    ) -> None:
+    async def _operate_streaming(self, kind: str, label: str, record: ModuleRecord) -> None:
+        # 安装期间子进程会打印 ``Resolved … / Installed …`` 这类进度行；把它们显示出来，操作者才能
+        # 区分「正在装」与「卡住了」。状态栏只留最后一行，完整尾部在失败时作为详情给出。
         bar = self.query_one("#progress", compat.ProgressBar)
         try:
-            result = await asyncio.to_thread(func, record)
+            result = await self.source.stream_operation(kind, record, self._on_operation_line)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
                 f"{type(error).__name__}: {error}",
             )
+        await self._finish_operation(label, record, result, bar)
+
+    def _on_operation_line(self, line: str) -> None:
+        # 回调由工作线程之外的异步读取循环调用，因此只写字段并直接刷新控件，不触发取数。
+        self._stream_line = line
+        self._stream_lines.append(line)
+        self._set_status(line)
+
+    async def _finish_operation(
+        self, label: str, record: ModuleRecord, result: OperationResult, bar: compat.ProgressBar
+    ) -> None:
         compat.progress_phase(bar, 3.0, _PROGRESS_PHASES)
         self._selected_key = record.dist
         if result.ok:

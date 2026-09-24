@@ -30,7 +30,7 @@ from textual.pilot import Pilot
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Header, Input, Label, ListItem, ListView, ProgressBar, Static
+from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, ListItem, ListView, ProgressBar, Static
 
 from akaribot.cli import i18n
 
@@ -39,6 +39,7 @@ __all__ = [
     "Binding",
     "BindingType",
     "Button",
+    "Checkbox",
     "ComposeResult",
     "Footer",
     "Header",

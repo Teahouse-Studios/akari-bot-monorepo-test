@@ -128,7 +128,7 @@ def _test_json_payload_shape():
         and dice["kind"] == "module"
         and dice["installed"] is True
         and by_dist["akari-bot-adapter-telegram"]["installed"] is False
-        and dice["latest"] == "0.1.0"
+        and dice["version"] == "0.1.0"
     )
 
 

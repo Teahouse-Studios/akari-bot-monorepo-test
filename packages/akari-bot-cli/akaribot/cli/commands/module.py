@@ -403,10 +403,13 @@ def available(
                 "dist": item.dist,
                 "name": item.name,
                 "kind": item.kind,
-                "latest": item.version,
+                # 键名与 `module list --json` 对齐：TUI 的 normalize_records 按 version 取值。
+                "version": item.version,
                 "installed": engine.canonical(item.dist) in installed,
                 "provides_modules": list(item.provides),
-                "summary": item.detail if not workspace_mode else "",
+                "summary": "" if workspace_mode else item.detail,
+                # 工作区来源的 detail 是包路径；放进 origin，消费方（TUI、脚本）据此定位源码。
+                "origin": item.detail if workspace_mode else "",
             }
             for item in selected
         ]

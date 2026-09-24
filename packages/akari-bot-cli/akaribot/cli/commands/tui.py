@@ -147,6 +147,7 @@ def run_self_check() -> int:
     results.extend(_check_resources())
     results.extend(_check_width())
     results.append(_check_boot())
+    results.append(_check_available_and_progress())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -158,6 +159,68 @@ def run_self_check() -> int:
         return 1
     typer.echo(i18n.t("cli.tui_cmd.self_check_ok", passed=len(results) - len(warnings), warnings=len(warnings)))
     return 0
+
+
+def _check_available_and_progress() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.app import TuiApp
+    from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
+
+    installed = ModuleRecord(
+        name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed"
+    )
+    candidate = ModuleRecord(
+        name="wiki", dist="akari-bot-module-wiki", version="0.2.0", summary="维基", state="available"
+    )
+    source = StaticModuleSource(
+        records=[installed],
+        available=[installed, candidate],
+        stream_lines=["Resolved 2 packages", "Installed 2 packages"],
+    )
+    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+
+    async def probe() -> tuple[int, int, tuple[str, ...], str]:
+        async with compat.app_test(app_instance, size=(100, 30)) as pilot:
+            page = app_instance.modules_page()
+            await page.wait_for_idle()
+            await pilot.pause()
+            before = len(page.visible_records)
+            page.query_one("#show-available", compat.Checkbox).value = True
+            await page.wait_for_idle()
+            await pilot.pause()
+            after = len(page.visible_records)
+            page.query_one("#module-list", compat.ListView).index = after - 1
+            await pilot.pause()
+            page.request_install()
+            await page.wait_for_idle()
+            await pilot.pause()
+            lines = page.stream_lines
+            status = page.status_text
+            await pilot.press("q")
+            return before, after, lines, status
+
+    try:
+        before, after, lines, status = asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_available"), f"{type(error).__name__}: {error}")
+    if after <= before or len(lines) < 2:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_available"),
+            i18n.t("cli.tui_cmd.check_available_bad", before=before, after=after, lines=len(lines)),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_available"),
+        i18n.t(
+            "cli.tui_cmd.check_available_detail",
+            before=before,
+            after=after,
+            lines=len(lines),
+            last=lines[-1],
+            status=status,
+        ),
+    )
 
 
 def _check_environment() -> list[CheckResult]:
