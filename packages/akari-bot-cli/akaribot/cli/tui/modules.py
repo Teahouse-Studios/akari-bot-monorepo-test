@@ -392,7 +392,8 @@ class SubprocessModuleSource:
         ``state`` 展示；该命令需要实例上下文（registry 来源写在实例配置里），故必带实例目录。
         """
         self.calls["available"] += 1
-        argv = self.cli_argv("module", "available", "--json")
+        # 只要模块：适配器有自己的一页，混进模块列表会让「安装模块」按到适配器上。
+        argv = self.cli_argv("module", "available", "--json", "--kind", "module")
         completed = self._run(argv)
         if completed.returncode != 0:
             raise ModuleSourceError(
@@ -825,6 +826,9 @@ class ModulesPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
         # 默认展示全部：已装与未装同列，用户不必先知道名字再搜索。开关只用于收窄到已装。
+        # 适配器有自己的一页：它们混在这里，用户会以为「安装模块」能装适配器，也会在模块页看到
+        # 平台实例。kind 未知的记录保留，宁可多显示也不要把认不出的东西藏掉。
+        records = [record for record in records if record.kind != "adapter"]
         if not self._installed_only:
             records = await self._merge_available(records)
         self._records = tuple(sorted(records, key=sort_key))
@@ -861,7 +865,8 @@ class ModulesPage(compat.Vertical):
             return list(installed)
         known = {record.dist for record in installed}
         merged = list(installed)
-        merged.extend(record for record in available if record.dist not in known)
+        # 再兜一道：上游若把适配器塞进可安装集合，也不该出现在模块页。
+        merged.extend(record for record in available if record.dist not in known and record.kind != "adapter")
         return merged
 
     def invalidate_cache(self) -> None:

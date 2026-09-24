@@ -23,7 +23,7 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
-from akaribot.cli.tui.modules import OperationResult
+from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
 # core 侧的 peer 快照入口：``python -m akaribot.core.entrypoints.peers --json``。
 # 该入口在 core 落地前必然失败，失败原因原样上报，页面按「未知」显示连接状态。
@@ -86,6 +86,7 @@ class AdapterRecord:
     :param legacy_layout: 配置是否来自尚未迁移的扁平布局。
     :param client_name_inferred: ``client_name`` 是否为按平台名推断的结果。
     :param issues: ``adapter list`` 给出的备注。
+    :param developers: 适配器作者，取自包的 ``pyproject.toml``；仅可安装清单提供。
     """
 
     platform: str
@@ -100,6 +101,7 @@ class AdapterRecord:
     legacy_layout: bool = False
     client_name_inferred: bool = False
     issues: tuple[str, ...] = ()
+    developers: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:
@@ -108,15 +110,32 @@ class AdapterRecord:
 
     @property
     def display_id(self) -> str:
-        """实例列的展示文本。"""
+        """实例列的展示文本；还没有配置实例的平台留空，免得显示成默认实例。"""
+        if self.installable and not self.configured:
+            return EMPTY_CELL
         return self.instance_id or i18n.t("cli.tui.adapters.default_id")
 
     @property
+    def installable(self) -> bool:
+        """适配器包是否尚未安装。
+
+        未安装的项也要出现在列表里，用户才知道有哪些平台可选；装了之后同一个位置就是启用／禁用。
+        """
+        return not self.installed
+
+    @property
     def enable_label(self) -> str:
-        """enable 列的展示文本。"""
+        """enable 列的展示文本；包未安装时说明未安装，而不是报「缺 enable」。"""
+        if self.installable:
+            return i18n.t("cli.tui.adapters.state_not_installed")
         if self.enable is None:
             return i18n.t(_ENABLE_MISSING_KEY)
         return i18n.t(_ENABLE_KEYS[self.enabled])
+
+    @property
+    def configured(self) -> bool:
+        """是否已有配置表；由可安装清单合成的记录没有配置。"""
+        return bool(self.table)
 
     @property
     def listen_text(self) -> str:
@@ -180,6 +199,19 @@ class AdapterSnapshot:
             groups.setdefault(record.platform, []).append(record)
         return tuple((platform, tuple(groups[platform])) for platform in sorted(groups))
 
+    def with_available(self, records: Sequence[AdapterRecord]) -> AdapterSnapshot:
+        """并入尚未安装的适配器包。
+
+        已有配置的平台不再补：那种情况下 ``adapter list`` 已经给出 ``installed=False`` 的记录，
+        再补一条会出现同一个平台两行。仅平台完全没出现时才补，供页面提供安装入口。
+        """
+        known = {record.platform for record in self.instances}
+        extra = [record for record in records if record.platform not in known]
+        if not extra:
+            return self
+        merged = tuple(sorted((*self.instances, *extra), key=lambda item: (item.platform, item.instance_id)))
+        return replace(self, instances=merged)
+
 
 @dataclass(frozen=True)
 class PeerSnapshot:
@@ -214,6 +246,7 @@ class StaticAdapterSource:
     """固定数据的替身数据源，供自动化断言使用，不产生任何子进程。
 
     :param snapshot: ``list_instances`` 的返回值。
+    :param available: ``list_available`` 的返回值。
     :param peers: ``peer_status`` 的返回值；缺省表示快照不可用。
     :param toggle_result: ``set_enable`` 的返回值；缺省为成功。
     """
@@ -222,19 +255,41 @@ class StaticAdapterSource:
         self,
         snapshot: AdapterSnapshot | None = None,
         *,
+        available: Sequence[AdapterRecord] = (),
         peers: PeerSnapshot | None = None,
         toggle_result: OperationResult | None = None,
+        install_result: OperationResult | None = None,
+        install_lines: Sequence[str] = (),
     ) -> None:
         self._snapshot = snapshot or AdapterSnapshot()
+        self._available = tuple(available)
+        self._install_result = install_result or OperationResult(
+            True, i18n.t("cli.tui.adapters.stub_install_ok"), "stub"
+        )
+        self._install_lines = tuple(install_lines)
+        self.installed: list[str] = []
         self._peers = peers or PeerSnapshot(note=i18n.t("cli.tui.adapters.stub_no_peers"))
         self._toggle_result = toggle_result or OperationResult(True, i18n.t("cli.tui.adapters.stub_toggle_ok"), "stub")
-        self.calls = {"list": 0, "peers": 0, "set_enable": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
         self.toggles: list[tuple[str, bool]] = []
 
     def list_instances(self) -> AdapterSnapshot:
         """见 :meth:`AdapterSource.list_instances`。"""
         self.calls["list"] += 1
         return self._snapshot
+
+    def list_available(self) -> tuple[AdapterRecord, ...]:
+        """见 :meth:`AdapterSource.list_available`。"""
+        self.calls["available"] += 1
+        return self._available
+
+    async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
+        """见 :meth:`AdapterSource.stream_install`；替身直接回放固定输出。"""
+        self.calls["install"] += 1
+        self.installed.append(record.platform)
+        for line in self._install_lines:
+            on_line(line)
+        return self._install_result
 
     def peer_status(self) -> PeerSnapshot:
         """见 :meth:`AdapterSource.peer_status`。"""
@@ -259,6 +314,12 @@ class AdapterSource(Protocol):
 
     def list_instances(self) -> AdapterSnapshot:
         """返回实例清单。"""
+
+    def list_available(self) -> tuple[AdapterRecord, ...]:
+        """返回可安装的适配器包，含尚未安装的平台。"""
+
+    async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
+        """安装该平台的适配器包，并把子进程输出逐行交给 ``on_line``。"""
 
     def peer_status(self) -> PeerSnapshot:
         """返回 peer 连接状态快照；不可用时以 ``available=False`` 上报原因，不抛异常。"""
@@ -301,6 +362,29 @@ def _flag(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().casefold() in {"1", "true", "yes", "on"}
     return bool(value)
+
+
+def available_adapter_records(payload: Any) -> tuple[AdapterRecord, ...]:
+    """把 ``module available --kind adapter --json`` 的结果归一化为未安装的适配器记录。
+
+    :param payload: ``json.loads`` 的结果。
+    :return: 适配器记录；``installed`` 为真时仍带上，由调用方按平台去重。
+    """
+    records: list[AdapterRecord] = []
+    for item in _rows(payload, "packages", "items", "data") or (payload if isinstance(payload, list) else []):
+        if not isinstance(item, Mapping):
+            continue
+        name = _text(_pick(item, "name", "platform", "module", "id"))
+        if not name:
+            continue
+        records.append(
+            AdapterRecord(
+                platform=name,
+                installed=bool(_pick(item, "installed", "is_installed", default=False)),
+                developers=tuple(str(value) for value in _pick(item, "developers", "authors", default=()) or ()),
+            )
+        )
+    return tuple(records)
 
 
 def _rows(payload: Any, *keys: str) -> list[Any]:
@@ -484,7 +568,7 @@ class SubprocessAdapterSource:
         # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
         self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
         self.timeout = timeout
-        self.calls = {"list": 0, "peers": 0, "set_enable": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
 
@@ -503,6 +587,32 @@ class SubprocessAdapterSource:
                 )
             )
         return normalize_snapshot(self._parse_json(completed.stdout, "adapter list --json"))
+
+    def list_available(self) -> tuple[AdapterRecord, ...]:
+        """见 :meth:`AdapterSource.list_available`；复用 ``module available`` 的可安装集合。"""
+        self.calls["available"] += 1
+        argv = self.cli_argv("module", "available", "--json", "--kind", "adapter")
+        completed = self._run(argv)
+        if completed.returncode != 0:
+            raise AdapterSourceError(
+                i18n.t(
+                    "cli.tui.adapters.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
+        return available_adapter_records(self._parse_json(completed.stdout, "module available --json"))
+
+    async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
+        """见 :meth:`AdapterSource.stream_install`。
+
+        安装走模块源的同一套子进程通道：适配器也是普通分发包，``module add <平台名>`` 即可，
+        单独再写一遍读取循环只会让两条进度路径慢慢分叉。
+        """
+        self.calls["install"] += 1
+        installer = SubprocessModuleSource(root=self.root, timeout=self.timeout)
+        return await installer.stream_operation("install", ModuleRecord(name=record.platform), on_line)
 
     def peer_status(self) -> PeerSnapshot:
         """见 :meth:`AdapterSource.peer_status`。
@@ -675,6 +785,7 @@ class AdaptersPage(compat.Vertical):
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
         ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable")),
+        ("i", "install", i18n.t("cli.tui.adapters.action_install")),
     )
 
     DEFAULT_CSS = """
@@ -748,6 +859,8 @@ class AdaptersPage(compat.Vertical):
         self._loaded_at: float = 0.0
         self._selected_key: str | None = None
         self._busy: bool = False
+        self._available_error: str = ""
+        self._stream_lines: list[str] = []
         self._layout = ColumnLayout(6, 8, _enable_column_width(), _status_column_width(), MIN_FLEX_COLUMN_WIDTH, 0)
         self._row_texts: tuple[str, ...] = ()
         self._row_kinds: tuple[str, ...] = ()
@@ -901,13 +1014,28 @@ class AdaptersPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.adapters.status_load_failed", error=self.last_error))
             return False
         self._peers = await self._load_peers()
-        self._snapshot = snapshot
+        self._snapshot = await self._with_available(snapshot)
         self._loaded_at = time.monotonic()
         self.last_error = ""
         self.last_result = i18n.t("cli.tui.adapters.status_loaded", count=len(snapshot.instances))
         self._render_all()
         self._set_status(self.last_result)
         return True
+
+    async def _with_available(self, snapshot: AdapterSnapshot) -> AdapterSnapshot:
+        # 与模块页同理：可安装集合取不到不该清空整页——实例与它们的启用状态才是这一页的主要内容。
+        self._available_error = ""
+        try:
+            records = await asyncio.to_thread(self.source.list_available)
+        except AdapterSourceError as error:
+            self._available_error = i18n.t("cli.tui.adapters.available_failed", error=error)
+            return snapshot
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+            self._available_error = i18n.t(
+                "cli.tui.adapters.available_failed", error=f"{type(error).__name__}: {error}"
+            )
+            return snapshot
+        return snapshot.with_available(records)
 
     async def _load_peers(self) -> PeerSnapshot:
         try:
@@ -1058,7 +1186,9 @@ class AdaptersPage(compat.Vertical):
 
     def _sync_summary(self) -> None:
         snapshot = self._snapshot
-        enabled = sum(1 for record in snapshot.instances if record.enabled)
+        # 未安装的平台只是「可选项」，没有实例也没有启用状态，不能计进实例数。
+        instances = tuple(record for record in snapshot.instances if not record.installable)
+        enabled = sum(1 for record in instances if record.enabled)
         parts = [
             i18n.t(
                 "cli.tui.adapters.summary_root",
@@ -1066,9 +1196,9 @@ class AdaptersPage(compat.Vertical):
             ),
             i18n.t(
                 "cli.tui.adapters.summary_counts",
-                total=len(snapshot.instances),
+                total=len(instances),
                 enabled=enabled,
-                platforms=len(snapshot.grouped()),
+                platforms=len({record.platform for record in instances}),
             ),
         ]
         if not snapshot.registry_available:
@@ -1095,6 +1225,11 @@ class AdaptersPage(compat.Vertical):
             )
             # 只报「未知」会让人无从下手：补上可执行的下一步，原因仍保留在上面那句里。
             parts.append(i18n.t("cli.tui.adapters.peer_status_unknown_hint"))
+        installable = sum(1 for record in snapshot.instances if record.installable)
+        if installable:
+            parts.append(i18n.t("cli.tui.adapters.summary_installable", count=installable))
+        if self._available_error:
+            parts.append(self._available_error)
         for error in snapshot.errors:
             parts.append(error)
         text = i18n.t("cli.tui.common.error_separator").join(parts)
@@ -1120,6 +1255,21 @@ class AdaptersPage(compat.Vertical):
             self.query_one("#detail", compat.Static).update(compat.plain_text(text))
             return
         self._selected_key = record.key
+        if record.installable:
+            # 未安装的平台没有实例、配置与连接状态，讲这些只会显示一串「未知」。
+            parts = [i18n.t("cli.tui.adapters.detail_not_installed", platform=record.platform)]
+            if record.developers:
+                parts.append(
+                    i18n.t(
+                        "cli.tui.adapters.detail_developers",
+                        names=i18n.t("cli.tui.common.list_separator").join(record.developers),
+                    )
+                )
+            parts.append(i18n.t("cli.tui.adapters.detail_install_hint"))
+            text = i18n.t("cli.tui.common.error_separator").join(parts)
+            self._detail_rendered = self._fit_page_width(text)
+            self.query_one("#detail", compat.Static).update(compat.plain_text(self._detail_rendered))
+            return
         status = self._peers.status_for(record.client_name)
         notes = [item for item in (status.detail, status.error) if item]
         if record.enable is None:
@@ -1150,11 +1300,14 @@ class AdaptersPage(compat.Vertical):
         toggle = self.query_one("#toggle", compat.Button)
         toggle.disabled = self._busy or self.selected_record is None
         record = self.selected_record
-        toggle.label = (
-            i18n.t("cli.tui.adapters.action_toggle")
-            if record is None
-            else i18n.t("cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable")
-        )
+        if record is None:
+            toggle.label = i18n.t("cli.tui.adapters.action_toggle")
+        elif record.installable:
+            toggle.label = i18n.t("cli.tui.adapters.action_install")
+        else:
+            toggle.label = i18n.t(
+                "cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable"
+            )
 
     def _set_status(self, text: str) -> None:
         self.last_result = text
@@ -1198,7 +1351,70 @@ class AdaptersPage(compat.Vertical):
                 title="enable",
             )
             return
+        if record.installable:
+            # 同一个按钮承载两种动作：没装就先装，装完再谈启用，省得两处入口互相打架。
+            self.request_install()
+            return
         self._start_toggle(record, not record.enabled)
+
+    def request_install(self) -> None:
+        """安装选中平台的适配器包；已装或无选中项时给出提示而不动作。"""
+        record = self.selected_record
+        if record is None or not record.installable:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.pick_install"),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_install"),
+            )
+            return
+        self._start_install(record)
+
+    def _start_install(self, record: AdapterRecord) -> None:
+        if self._busy:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.busy"),
+                severity="warning",
+                title=i18n.t("cli.tui.common.busy_title"),
+            )
+            return
+        self._busy = True
+        self._selected_key = record.key
+        self._stream_lines = []
+        self._sync_actions()
+        label = i18n.t("cli.tui.adapters.label_install", name=record.platform)
+        self._set_status(i18n.t("cli.tui.adapters.calling", label=label))
+        self.run_worker(self._install(record, label), group="adapters-install", exclusive=True)
+
+    async def _install(self, record: AdapterRecord, label: str) -> None:
+        try:
+            result = await self.source.stream_install(record, self._on_install_line)
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                f"{type(error).__name__}: {error}",
+            )
+        if result.ok:
+            self._set_status(i18n.t("cli.tui.adapters.refreshing", message=result.message))
+            self.invalidate_cache()
+            await self._load()
+            self.last_result = result.message
+            self._set_status(self.last_result)
+            compat.notify(self.app, result.message, severity="information", title=label)
+        else:
+            self.last_error = result.detail or result.message
+            tail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
+            self._set_status(i18n.t("cli.tui.adapters.failed_detail", message=result.message, detail=tail))
+            compat.notify(self.app, result.message, severity="error", title=label)
+        self._busy = False
+        self._sync_actions()
+
+    def _on_install_line(self, line: str) -> None:
+        # 安装可能跑上几分钟；逐行显示子进程输出，操作者才分得清「在装」与「卡住了」。
+        self._stream_lines.append(line)
+        self._set_status(line)
 
     def _start_toggle(self, record: AdapterRecord, enabled: bool) -> None:
         if self._busy:
@@ -1253,6 +1469,10 @@ class AdaptersPage(compat.Vertical):
     def action_refresh(self) -> None:
         """键位动作：强制重新读取。"""
         self.refresh_instances(force=True)
+
+    def action_install(self) -> None:
+        """键位动作：安装当前平台尚未安装的适配器包。"""
+        self.request_install()
 
     def action_toggle_enable(self) -> None:
         """键位动作：切换选中实例的 enable。"""

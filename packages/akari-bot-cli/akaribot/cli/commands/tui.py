@@ -150,6 +150,7 @@ def run_self_check() -> int:
     results.append(_check_available_and_progress())
     results.append(_check_page_navigation())
     results.append(_check_multi_select())
+    results.append(_check_adapter_install())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -328,6 +329,69 @@ def _check_available_and_progress() -> CheckResult:
             last=lines[-1],
             status=status,
         ),
+    )
+
+
+def _check_adapter_install() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.adapters import AdapterRecord, AdapterSnapshot, StaticAdapterSource
+    from akaribot.cli.tui.app import TuiApp
+
+    installed = AdapterRecord(
+        platform="telegram",
+        client_name="Telegram",
+        table="bot_telegram",
+        enable=True,
+        enabled=True,
+        installed=True,
+    )
+    source = StaticAdapterSource(
+        snapshot=AdapterSnapshot(instances=(installed,), instance_root="/tmp/inst"),
+        available=(
+            AdapterRecord(platform="discord", installed=False),
+            AdapterRecord(platform="telegram", installed=True),
+        ),
+        install_lines=["Resolved 1 package", "Installed 1 package"],
+    )
+    app_instance = TuiApp(sources={"adapters": source}, initial_page="adapters", boot_started_at=time.monotonic())
+
+    async def probe() -> tuple[list[str], str, list[str]]:
+        async with compat.app_test(app_instance, size=(120, 34)) as pilot:
+            page = app_instance.page("adapters")
+            await page.wait_for_idle()
+            await pilot.pause()
+            order = page._records_in_row_order()
+            rows = [index for index, kind in enumerate(page._row_kinds) if kind == "instance"]
+            page.query_one("#adapter-list", compat.ListView).index = rows[
+                next(index for index, record in enumerate(order) if record.platform == "discord")
+            ]
+            await pilot.pause()
+            label = str(page.query_one("#toggle", compat.Button).label)
+            await pilot.press("i")
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return [record.platform for record in order], label, list(source.installed)
+
+    try:
+        platforms, label, installed_now = asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_adapter_install"), f"{type(error).__name__}: {error}")
+    if platforms != ["discord", "telegram"] or installed_now != ["discord"]:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_adapter_install"),
+            i18n.t(
+                "cli.tui_cmd.check_adapter_install_bad",
+                platforms=i18n.t("cli.common.list_separator").join(platforms) or "-",
+                label=label,
+                installed=i18n.t("cli.common.list_separator").join(installed_now) or "-",
+            ),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_adapter_install"),
+        i18n.t("cli.tui_cmd.check_adapter_install_detail", count=len(platforms), installed=len(installed_now)),
     )
 
 
