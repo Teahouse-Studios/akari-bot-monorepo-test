@@ -1,7 +1,7 @@
 """Modules 页的可安装列表与安装进度。
 
-本文件固定两条链路：勾选「显示可安装」后列表并入未装项、未装项可被选中安装；安装与卸载把
-子进程输出逐行显示到状态栏，完整序列留在 ``stream_lines``，失败时输出尾部作为详情。
+本文件固定两条链路：列表默认给出全部（已装与未装同列，未装项可直接选中安装），开关只用于收窄到
+已装；安装与卸载把子进程输出逐行显示到状态栏，完整序列留在 ``stream_lines``，失败时输出尾部作为详情。
 """
 
 import os
@@ -52,26 +52,15 @@ async def _with_app(source: StaticModuleSource, body) -> object:
         return await body(app, page, pilot)
 
 
-def _toggle_available(app: TuiApp) -> None:
-    checkbox = app.modules_page().query_one("#show-available", compat.Checkbox)
+def _filter_installed(app: TuiApp) -> None:
+    # 勾选「只看已安装」。
+    checkbox = app.modules_page().query_one("#installed-only", compat.Checkbox)
     checkbox.value = True
 
 
-async def _test_available_off_by_default():
+async def _test_lists_everything_by_default():
+    # 默认列出全部：已装与未装同列，用户不必先知道名字再搜索。
     async def body(app, page, pilot):
-        rows = tuple(record.dist for record in page.visible_records)
-        await pilot.press("q")
-        return rows, app.module_source.calls["available"]
-
-    rows, available_calls = await _with_app(_source(), body)
-    return rows == ("akari-bot-module-dice",) and available_calls == 0
-
-
-async def _test_toggle_merges_available_records():
-    async def body(app, page, pilot):
-        _toggle_available(app)
-        await page.wait_for_idle()
-        await pilot.pause()
         rows = tuple(record.dist for record in page.visible_records)
         await pilot.press("q")
         return rows, app.module_source.calls["available"]
@@ -83,11 +72,27 @@ async def _test_toggle_merges_available_records():
     )
 
 
-async def _test_uninstalled_record_is_installable():
+async def _test_toggle_filters_to_installed():
+    # 勾选后收窄到已装，取消勾选后恢复全部。
     async def body(app, page, pilot):
-        _toggle_available(app)
+        all_rows = tuple(record.dist for record in page.visible_records)
+        _filter_installed(app)
         await page.wait_for_idle()
         await pilot.pause()
+        filtered = tuple(record.dist for record in page.visible_records)
+        page.query_one("#installed-only", compat.Checkbox).value = False
+        await page.wait_for_idle()
+        await pilot.pause()
+        restored = tuple(record.dist for record in page.visible_records)
+        await pilot.press("q")
+        return all_rows, filtered, restored
+
+    all_rows, filtered, restored = await _with_app(_source(), body)
+    return len(all_rows) == 3 and filtered == ("akari-bot-module-dice",) and restored == all_rows
+
+
+async def _test_uninstalled_record_is_installable():
+    async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2  # 排序为：已装 dice、适配器 telegram、模块 wiki
         await pilot.pause()
@@ -104,9 +109,6 @@ async def _test_uninstalled_record_is_installable():
 
 async def _test_install_streams_output_to_status():
     async def body(app, page, pilot):
-        _toggle_available(app)
-        await page.wait_for_idle()
-        await pilot.pause()
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2
         await pilot.pause()
@@ -161,9 +163,6 @@ async def _test_available_failure_keeps_installed_list():
             raise ModuleSourceError("registry 不可用")
 
     async def body(app, page, pilot):
-        _toggle_available(app)
-        await page.wait_for_idle()
-        await pilot.pause()
         rows = tuple(record.dist for record in page.visible_records)
         return rows, page.status_text
 
@@ -342,8 +341,8 @@ async def _detail_of(record, body):
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
     _use_cli_locale()
-    await tester.test(_test_available_off_by_default, "默认只列已装且不取可安装集合")
-    await tester.test(_test_toggle_merges_available_records, "勾选后并入可安装项且不重复")
+    await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
+    await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
     await tester.test(_test_uninstalled_record_is_installable, "未装项可安装")
     await tester.test(_test_install_streams_output_to_status, "安装输出逐行显示到状态栏")
     await tester.test(_test_uninstall_streams_output_to_status, "卸载输出逐行显示到状态栏")

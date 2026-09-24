@@ -615,7 +615,7 @@ class ModulesPage(compat.Vertical):
     ModulesPage #search {
         width: 1fr;
     }
-    ModulesPage #show-available {
+    ModulesPage #installed-only {
         width: auto;
         padding: 1 0 0 1;
     }
@@ -681,7 +681,7 @@ class ModulesPage(compat.Vertical):
         self._query: str = ""
         self._selected_key: str | None = None
         self._busy: bool = False
-        self._show_available: bool = False
+        self._installed_only: bool = False
         self._available_error: str = ""
         self._stream_line: str = ""
         self._stream_lines: list[str] = []
@@ -693,7 +693,7 @@ class ModulesPage(compat.Vertical):
         """装配页面控件树。"""
         with compat.Horizontal(id="search-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.modules.search_placeholder"), id="search")
-            yield compat.Checkbox(i18n.t("cli.tui.modules.show_available"), id="show-available")
+            yield compat.Checkbox(i18n.t("cli.tui.modules.installed_only"), id="installed-only")
             yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
         with compat.Horizontal(id="body"):
             yield compat.ListView(id="module-list")
@@ -809,7 +809,8 @@ class ModulesPage(compat.Vertical):
             self._render_list()
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
-        if self._show_available:
+        # 默认展示全部：已装与未装同列，用户不必先知道名字再搜索。开关只用于收窄到已装。
+        if not self._installed_only:
             records = await self._merge_available(records)
         self._records = tuple(sorted(records, key=sort_key))
         self._loaded_at = time.monotonic()
@@ -984,9 +985,9 @@ class ModulesPage(compat.Vertical):
         self._query = event.value
         self._render_list()
 
-    @compat.on(compat.Checkbox.Changed, "#show-available")
-    def _on_show_available_changed(self, event: compat.Checkbox.Changed) -> None:
-        self._show_available = bool(event.value)
+    @compat.on(compat.Checkbox.Changed, "#installed-only")
+    def _on_installed_only_changed(self, event: compat.Checkbox.Changed) -> None:
+        self._installed_only = bool(event.value)
         self._selected_key = None
         self.refresh_records(force=True)
 

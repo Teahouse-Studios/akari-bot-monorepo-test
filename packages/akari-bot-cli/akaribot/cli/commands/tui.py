@@ -234,18 +234,20 @@ def _check_available_and_progress() -> CheckResult:
             page = app_instance.modules_page()
             await page.wait_for_idle()
             await pilot.pause()
+            # 默认列全部：已装的 dice 与未装的 wiki 同时在列。
             before = len(page.visible_records)
-            page.query_one("#show-available", compat.Checkbox).value = True
-            await page.wait_for_idle()
-            await pilot.pause()
-            after = len(page.visible_records)
-            page.query_one("#module-list", compat.ListView).index = after - 1
+            list_view = page.query_one("#module-list", compat.ListView)
+            list_view.index = next(index for index, record in enumerate(page.visible_records) if not record.installed)
             await pilot.pause()
             page.request_install()
             await page.wait_for_idle()
             await pilot.pause()
             lines = page.stream_lines
             status = page.status_text
+            page.query_one("#installed-only", compat.Checkbox).value = True
+            await page.wait_for_idle()
+            await pilot.pause()
+            after = len(page.visible_records)
             await pilot.press("q")
             return before, after, lines, status
 
@@ -253,7 +255,7 @@ def _check_available_and_progress() -> CheckResult:
         before, after, lines, status = asyncio.run(probe())
     except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_available"), f"{type(error).__name__}: {error}")
-    if after <= before or len(lines) < 2:
+    if after >= before or len(lines) < 2:
         return CheckResult(
             LEVEL_FAIL,
             i18n.t("cli.tui_cmd.check_available"),

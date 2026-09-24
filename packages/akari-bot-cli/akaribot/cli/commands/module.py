@@ -147,6 +147,26 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
         ok(i18n.t("cli.module.precheck.ok"))
 
 
+def _resolve_git(
+    name: str | None,
+    *,
+    dist: str | None,
+    version: str | None,
+    editable: Path | None,
+    git: str,
+    ref: str | None,
+    subdir: str | None,
+) -> engine.InstallTarget:
+    # git 来源在装完之前拿不到 manifest，因此除名字以外的字段留空，由 :func:`_install` 在安装后补齐。
+    if editable is not None:
+        raise CliError(i18n.t("cli.module.git.editable_conflict"))
+    if version:
+        raise CliError(i18n.t("cli.module.git.version_conflict"))
+    dist_name = (dist or name or "").strip()
+    spec = engine.git_spec(git, ref=ref or "", subdir=subdir or "", dist=dist_name)
+    return engine.InstallTarget(dist=dist_name, specs=(spec,), source="git")
+
+
 def _resolve(
     instance: Instance, name: str | None, *, dist, version, editable, extra, kind, offline
 ) -> engine.InstallTarget:
@@ -168,6 +188,84 @@ def _resolve(
         fail(str(exc))
 
 
+def _refuse_if_installed(instance: Instance, dist: str, *, force: bool) -> None:
+    try:
+        current = instance.find_package(dist)
+    except CliError as exc:
+        fail(str(exc))
+    if current is None:
+        return
+    if not force:
+        fail(
+            i18n.t(
+                "cli.module.add.already_installed",
+                dist=current.dist,
+                version=current.version,
+                name=current.display_name,
+            )
+        )
+    warn(i18n.t("cli.module.add.force_reinstall", dist=current.dist, version=current.version))
+
+
+def _installed_dists(instance: Instance) -> set[str]:
+    # git 直引用不预先知道分发名，只能靠安装前后的差集认领新装的那个，故安装前先记一份。
+    try:
+        return {engine.canonical(dist) for dist in instance.installed(refresh=True)}
+    except CliError as exc:
+        fail(str(exc))
+
+
+def _dist_from_git_install(instance: Instance, before: set[str], *, requested: str) -> str:
+    try:
+        packages = instance.installed(refresh=True)
+    except CliError as exc:
+        fail(str(exc))
+    added = sorted(dist for dist in packages if engine.canonical(dist) not in before)
+    if requested:
+        for dist in packages.values():
+            if engine.canonical(dist.dist) == engine.canonical(requested):
+                return dist.dist
+    if len(added) == 1:
+        return packages[added[0]].dist
+    if not added:
+        raise CliError(i18n.t("cli.module.git.nothing_added", dist=requested or "-"))
+    raise CliError(i18n.t("cli.module.git.ambiguous", names=_join_list(added)))
+
+
+def _check_git_api(instance: Instance, dist: str, *, runner: engine.CommandRunner) -> None:
+    # 预检阶段拿不到 manifest，若把这一步也省掉，不兼容的包会直接装进实例并在运行时才炸。
+    package = instance.find_package(dist)
+    if package is None or not package.requires_core_api:
+        return
+    api_version = instance.api_version() or engine.probe_api_version(instance.python)
+    if api_version is None:
+        warn(i18n.t("cli.module.precheck.api_unknown"))
+        return
+    try:
+        specifier = SpecifierSet(package.requires_core_api)
+    except InvalidSpecifier:
+        warn(i18n.t("cli.module.precheck.unparsable_api", dist=package.dist, spec=package.requires_core_api))
+        return
+    if api_version in specifier:
+        ok(i18n.t("cli.module.precheck.ok"))
+        return
+    console.print(
+        f"[red]  × "
+        f"{escape(i18n.t('cli.module.precheck.api_mismatch', dist=package.dist, spec=package.requires_core_api, current=api_version))}"
+        f"[/red]"
+    )
+    try:
+        runner.run_checked(
+            engine.uninstall_argv(instance.python, [package.dist]),
+            what=i18n.t("cli.venv_engine.what_uninstall_dist", dist=package.dist),
+            stream=True,
+        )
+    except CliError as exc:
+        warn(str(exc))
+    instance.invalidate()
+    fail(i18n.t("cli.module.git.rolled_back", dist=package.dist))
+
+
 def _install(
     instance: Instance,
     target: engine.InstallTarget,
@@ -178,20 +276,26 @@ def _install(
     upgrade: bool = False,
 ) -> int:
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
-    step(1, 7, i18n.t("cli.module.install.step_resolve", dist=target.dist, source=target.source))
+    # git 直引用可能没有名字，此时用 spec 自身作为展示对象，免得出现「解析 （来源：git）」。
+    step(1, 7, i18n.t("cli.module.install.step_resolve", dist=target.dist or target.specs[0], source=target.source))
     console.print(i18n.t("cli.module.install.specs_line", specs=" ".join(target.specs)))
+    from_git = target.source == "git"
     step(2, 7, i18n.t("cli.module.install.step_precheck"))
     if dry_run:
         console.print(i18n.t("cli.module.dry_run_precheck"))
+    elif from_git:
+        # git 直引用要装完才解析出分发名与 manifest，此时无从预检，改为装完后校验 core API。
+        console.print(i18n.t("cli.module.install.precheck_git"))
     else:
         _precheck(instance, target, force=force)
 
     step(3, 7, i18n.t("cli.module.install.step_install", python=instance.python))
+    before = _installed_dists(instance) if from_git and not dry_run else None
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         runner.run_checked(
             engine.install_argv(instance.python, target.specs, upgrade=upgrade),
-            what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist),
+            what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist or target.specs[0]),
             stream=True,
         )
     except CliError as exc:
@@ -200,26 +304,35 @@ def _install(
         console.print(i18n.t("cli.module.dry_run_skip_rest"))
         return 0
     instance.invalidate()
+    dist = target.dist
+    if before is not None:
+        try:
+            dist = _dist_from_git_install(instance, before, requested=target.dist)
+        except CliError as exc:
+            fail(str(exc))
+        console.print(i18n.t("cli.module.git.resolved", dist=dist))
+        if not force:
+            _check_git_api(instance, dist, runner=runner)
 
     snapshot = engine.ConfigSnapshot.take(instance)
     step(4, 7, i18n.t("cli.module.install.step_config_sync"))
     try:
-        engine.config_sync(instance, target.dist)
+        engine.config_sync(instance, dist)
     except CliError as exc:
         warn(str(exc))
-        _rollback(instance, target.dist, snapshot, runner)
-        fail(i18n.t("cli.module.install.config_sync_failed", dist=target.dist))
+        _rollback(instance, dist, snapshot, runner)
+        fail(i18n.t("cli.module.install.config_sync_failed", dist=dist))
 
     step(5, 7, i18n.t("cli.module.install.step_db_upgrade"))
     try:
-        engine.db_upgrade(instance, target.dist)
+        engine.db_upgrade(instance, dist)
     except CliError as exc:
         warn(str(exc))
-        _rollback(instance, target.dist, snapshot, runner)
-        fail(i18n.t("cli.module.install.db_upgrade_failed", dist=target.dist))
+        _rollback(instance, dist, snapshot, runner)
+        fail(i18n.t("cli.module.install.db_upgrade_failed", dist=dist))
 
     step(6, 7, i18n.t("cli.module.install.step_notify"))
-    notify = instance.notify_package_change("install", target.dist)
+    notify = instance.notify_package_change("install", dist)
     if notify.attempted and not notify.delivered:
         warn(notify.detail)
         warn(i18n.t("cli.module.install.restart_needed"))
@@ -462,6 +575,9 @@ def add(
     ] = None,
     extra: Annotated[list[str] | None, typer.Option("--extra", help=i18n.t("cli.module.add.option_extra"))] = None,
     kind: Annotated[str | None, typer.Option("--kind", help=i18n.t("cli.module.add.option_kind"))] = None,
+    git: Annotated[str | None, typer.Option("--git", help=i18n.t("cli.module.add.option_git"))] = None,
+    ref: Annotated[str | None, typer.Option("--ref", help=i18n.t("cli.module.add.option_ref"))] = None,
+    subdir: Annotated[str | None, typer.Option("--subdir", help=i18n.t("cli.module.add.option_subdir"))] = None,
     force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.module.add.option_force"))] = False,
     offline: OfflineOption = False,
     dry_run: DryRunOption = False,
@@ -470,6 +586,20 @@ def add(
 ) -> None:
     """安装模块或适配器：解析 → 预检 → 安装 → 补配置 → 迁移 → 热装载 → 报告。"""
     target_instance = require_instance(instance)
+    if git is not None:
+        try:
+            target = _resolve_git(name, dist=dist, version=version, editable=editable, git=git, ref=ref, subdir=subdir)
+        except CliError as exc:
+            fail(str(exc))
+        # 给了名字才可能提前查重；不给名字时无从查起，只能装完再由差集认领。
+        if target.dist:
+            _refuse_if_installed(target_instance, target.dist, force=force)
+        _install(target_instance, target, force=force, dry_run=dry_run, verbose=verbose)
+        if not dry_run:
+            console.print(i18n.t("cli.module.add.next_steps"))
+        return
+    if ref is not None or subdir is not None:
+        fail(i18n.t("cli.module.add.ref_without_git"))
     target = _resolve(
         target_instance,
         name,
@@ -480,21 +610,7 @@ def add(
         kind=kind,
         offline=offline,
     )
-    try:
-        current = target_instance.find_package(target.dist)
-    except CliError as exc:
-        fail(str(exc))
-    if current is not None and not force:
-        fail(
-            i18n.t(
-                "cli.module.add.already_installed",
-                dist=current.dist,
-                version=current.version,
-                name=current.display_name,
-            )
-        )
-    if current is not None:
-        warn(i18n.t("cli.module.add.force_reinstall", dist=current.dist, version=current.version))
+    _refuse_if_installed(target_instance, target.dist, force=force)
     _install(target_instance, target, force=force, dry_run=dry_run, verbose=verbose)
     if not dry_run:
         console.print(i18n.t("cli.module.add.next_steps"))

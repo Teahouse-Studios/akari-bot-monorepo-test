@@ -56,7 +56,7 @@ ModulesPage ──(注入)──> ModuleSource
                           ├── SubprocessModuleSource（默认，唯一生产实现）
                           │     ├── 策略 1：python -m akaribot.cli.main module list --json
                           │     ├── 策略 2：akaribot.cli.instance.Instance.installed()
-                          │     ├── 可安装集合：… module available --json
+                          │     ├── 可安装集合（默认并入）：… module available --json
                           │     └── 安装/卸载：… module add|remove，逐行读回输出
                           └── StaticModuleSource（自动化断言与 --self-check 用替身）
 ```
@@ -72,8 +72,9 @@ ModulesPage ──(注入)──> ModuleSource
 - **安装/卸载**：异步起子进程并逐行读回输出（`stream_operation`），每行显示在状态栏，完整序列
   留在 `stream_lines`；进度条按 4 个阶段推进（解析 → 子进程 → 重载列表 → 完成），失败时归零并
   把输出尾部作为详情。子进程输出可能长达数分钟，沿用阻塞式 `subprocess.run` 时界面只能空转。
-- **可安装集合**：勾选搜索行的「显示可安装」后，`list_available()` 的结果并入列表（按分发名去重，
-  已装项保留带版本与依赖的那条）；取不到时保留已装列表并把原因附在状态栏，不清空整页。
+- **列表范围**：默认列出全部（已装在前、未装在后），用户不必先知道名字再搜索；搜索行的
+  「只看已安装」开关把列表收窄到已装。未装项来自 `list_available()`（按分发名去重，已装项保留带
+  版本与依赖的那条）；取不到时保留已装列表并把原因附在状态栏，不清空整页。
 - 安装目标：优先当前选中的未安装项，否则取搜索框里合法的模块名（`module add <名>` 语义）。
 
 ## 四、已验证（本机：macOS 27.0 / arm64、Python 3.12.13、textual 8.2.8）
@@ -89,7 +90,7 @@ ModulesPage ──(注入)──> ModuleSource
 | 非终端保护 | 无 TTY 时拒绝启动并提示改用 `--self-check` / `--headless`（退出码 2） |
 | 启动耗时 | run→`on_mount` 14–19 ms，首帧 46–60 ms；`tui --headless` 进程总耗时 0.37–0.45 s（`import textual` 本身 0.06–0.07 s；真实取数子进程 0.28–0.30 s 在后台任务里，不阻塞首屏） |
 | 渲染截图 | `export_screenshot()` 导出真实渲染 SVG（合成数据 80×24 / 60×20 / 100×30，真实数据 100×30），列表行与详情文本可在 SVG 里逐字核对 |
-| `--self-check` | 10 项通过 / 5 项警告 / 退出码 0（警告为终端环境项，如不在 tmux、非冻结产物、`app.tcss` 尚未拆分）；含「可安装列表与安装进度」一项，实测列表 1 → 2 行、安装收到 2 行输出 |
+| `--self-check` | 11 项通过 / 5 项警告 / 退出码 0（警告为终端环境项，如不在 tmux、非冻结产物、`app.tcss` 尚未拆分）；含「可安装列表与安装进度」一项，实测列表 1 → 2 行、安装收到 2 行输出 |
 | 静态检查 | `ruff check` 与 `ruff format --check` 通过；`tools/lint_comments.py` 对本次新增文件 0 违规 |
 
 ## 五、未验证（需要什么环境、要观察什么、本机为什么做不了）

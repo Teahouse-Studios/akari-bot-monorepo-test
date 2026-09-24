@@ -58,12 +58,25 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 5. **安装你实际用到的模块**：
 
    ```
+   akaribot module available            # 列出可安装的包及其「已安装／可安装」状态
    akaribot module add wiki
    akaribot module add dice
    akaribot module list                # 核对已装清单
    ```
 
-   模块不再随仓库内置，旧配置里出现的模块若未安装，其命令不会被注册。
+   模块不再随仓库内置，旧配置里出现的模块若未安装，其命令不会被注册。自建模块可以直接从 git
+   仓库安装：
+
+   ```
+   akaribot module add --git https://github.com/<你>/<仓库>.git
+   akaribot module add --git https://github.com/<你>/<仓库>.git --ref v1.0   # 钉到分支、标签或提交
+   akaribot module add --git https://github.com/<你>/<仓库>.git --subdir packages/my-mod
+   ```
+
+   仓库里包的 `pyproject.toml` 必须声明 `akaribot.modules` 或 `akaribot.adapters` entry point。
+   不带名字时安装后从「新增分发的差集」里认领名字；仓库里有多个包或该包已装过时，用
+   `--dist <分发名>` 指明。git 直引用要装完才能读到 manifest，因此兼容性检查在安装后执行，
+   声明了不满足的 `requires_core_api` 会自动卸载回滚。
 6. **校验**：
 
    ```

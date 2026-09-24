@@ -220,6 +220,44 @@ def install_argv(python: Path, specs: Sequence[str], *, upgrade: bool = False) -
     return argv
 
 
+GIT_PREFIX = "git+"
+SUBDIRECTORY_FRAGMENT = "#subdirectory="
+
+
+def git_spec(url: str, *, ref: str = "", subdir: str = "", dist: str = "") -> str:
+    """把 git 仓库地址拼成 uv 接受的 PEP 508 直引用。
+
+    形如 ``[name @ ]git+<url>[@<ref>][#subdirectory=<path>]``。带 ``git+`` 前缀时原样沿用，
+    便于直接粘贴 uv 文档里的写法。
+
+    :param url: 仓库地址。
+    :param ref: 分支、标签或提交。
+    :param subdir: 包在仓库中的子目录。
+    :param dist: 分发名；给定时写成 ``name @`` 形式，否则由 uv 从仓库的 pyproject 推断。
+    :return: 交给 ``uv pip install`` 的参数 token。
+    :raises CliError: 地址为空，或地址里已带 ref／片段而参数又给了同一个。
+    """
+    address = url.strip()
+    if not address:
+        raise CliError(i18n.t("cli.module.git.url_required"))
+    base = address if address.startswith(GIT_PREFIX) else GIT_PREFIX + address
+    head, _, fragment = base.partition("#")
+    existing = dict(part.split("=", 1) for part in fragment.split("&") if "=" in part)
+    # ref 只能跟在路径之后：路径末段里的 @ 才是 ref，userinfo 的 @（git@host）出现在更前面。
+    if ref:
+        if "@" in head.rpartition("/")[2]:
+            raise CliError(i18n.t("cli.module.git.ref_conflict"))
+        head = f"{head}@{ref}"
+    if subdir:
+        if "subdirectory" in existing:
+            raise CliError(i18n.t("cli.module.git.subdir_conflict"))
+        existing["subdirectory"] = subdir
+    if existing:
+        fragment = "&".join(f"{key}={value}" for key, value in existing.items())
+    spec = head + (f"#{fragment}" if fragment else "")
+    return f"{dist} @ {spec}" if dist else spec
+
+
 def uninstall_argv(python: Path, dists: Sequence[str]) -> list[str]:
     """``uv pip uninstall --python <解释器>`` 的 argv。"""
     return [uv_binary(), "pip", "uninstall", "--python", str(python), *dists]
