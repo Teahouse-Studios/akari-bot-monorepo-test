@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import subprocess
-import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -22,6 +20,7 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 
 SOURCE_WORKSPACE = "workspace"
 SOURCE_EDITABLE = "editable"
@@ -43,8 +42,6 @@ _KIND_KEYS = {
 }
 _MODE_KEYS = {"workspace": "cli.tui.dev.mode_workspace", "installed": "cli.tui.dev.mode_installed"}
 
-CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
-INSTANCE_ENV = "AKARI_INSTANCE_DIR"
 EMPTY_CELL = "—"
 
 NAME_MAX_WIDTH = 18
@@ -405,7 +402,7 @@ class SubprocessDevSource:
         return {_canonical_dist(dist): str(member.path) for dist, member in index.items()}, []
 
     def _list_packages(self) -> tuple[Any, str]:
-        argv = [*self.cli_argv("module", "list", "--json"), "--instance", str(self.root)]
+        argv = self.cli_argv("module", "list", "--json")
         try:
             completed = self._run(argv)
         except DevSourceError as error:
@@ -423,24 +420,11 @@ class SubprocessDevSource:
             return None, str(error)
 
     def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv。
-
-        冻结产物（Nuitka onefile）里 ``sys.executable`` 就是 CLI 本体，不能再加 ``-m``；
-        可用环境变量 ``AKARIBOT_CLI_BIN`` 显式指定 CLI 入口。
-        """
-        override = os.environ.get(CLI_ENV_BIN)
-        if override:
-            return [override, *args]
-        frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-        if frozen:
-            return [sys.executable, *args]
-        return [sys.executable, "-m", "akaribot.cli.main", *args]
+        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
+        return cli_process.cli_argv(*args)
 
     def _env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        env[INSTANCE_ENV] = str(self.root)
-        env["PYTHONIOENCODING"] = "utf-8"
-        return env
+        return cli_process.cli_env(self.root)
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
         try:

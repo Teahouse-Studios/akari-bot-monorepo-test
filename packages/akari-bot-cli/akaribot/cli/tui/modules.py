@@ -9,10 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import re
 import subprocess
-import sys
 import time
 from collections import deque
 from collections.abc import Callable, Mapping, Sequence
@@ -23,6 +21,7 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 
 STATE_INSTALLED = "installed"
 STATE_AVAILABLE = "available"
@@ -43,7 +42,6 @@ _KIND_KEYS = {
 _KIND_ALIASES = {"builtin": "module", "builtins": "module", "package": "module", "unknown": ""}
 _INSTALLED_MARKERS = ("install", "loaded", "enabled", "active")
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-_CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 
 # 三种操作共用同一条批量与流式路径，只在这里区分对应的 CLI 子命令。
 _OPERATION_SUBCOMMANDS = {"install": "add", "uninstall": "remove", "update": "update"}
@@ -484,29 +482,11 @@ class SubprocessModuleSource:
         return await process.wait()
 
     def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv。
-
-        冻结产物（Nuitka onefile）里 ``sys.executable`` 就是 CLI 本体，不能再加 ``-m``；
-        可用环境变量 ``AKARIBOT_CLI_BIN`` 显式指定 CLI 入口。
-
-        :param args: 子命令及其参数。
-        :return: 可直接交给 :mod:`subprocess` 的参数列表。
-        """
-        override = os.environ.get(_CLI_ENV_BIN)
-        if override:
-            return [override, *args]
-        frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-        if frozen:
-            return [sys.executable, *args]
-        return [sys.executable, "-m", "akaribot.cli.main", *args]
+        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
+        return cli_process.cli_argv(*args)
 
     def _env(self) -> dict[str, str]:
-        # 理由：子进程输出含中文与 JSON，Windows 控制台默认代码页可能是 GBK，
-        # 读写编码不一致会得到乱码或解析失败，故两侧都显式声明 UTF-8。
-        env = dict(os.environ)
-        env["AKARI_INSTANCE_DIR"] = str(self.root)
-        env["PYTHONIOENCODING"] = "utf-8"
-        return env
+        return cli_process.cli_env(self.root)
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
         try:

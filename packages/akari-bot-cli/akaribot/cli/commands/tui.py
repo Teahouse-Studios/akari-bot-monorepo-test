@@ -151,6 +151,7 @@ def run_self_check() -> int:
     results.append(_check_page_navigation())
     results.append(_check_multi_select())
     results.append(_check_adapter_install())
+    results.append(_check_command_surface())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -330,6 +331,113 @@ def _check_available_and_progress() -> CheckResult:
             status=status,
         ),
     )
+
+
+def _check_command_surface() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.app import TuiApp
+    from akaribot.cli.tui.commands import (
+        CommandEntry,
+        CommandParam,
+        StaticCommandCatalog,
+        StaticCommandSource,
+        build_catalog,
+    )
+
+    catalog = build_catalog()
+    exported = {entry.name() for entry in catalog}
+    registered = _registered_commands()
+    missing = sorted(registered - exported)
+    if missing:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_commands"),
+            i18n.t(
+                "cli.tui_cmd.check_commands_bad",
+                missing=i18n.t("cli.tui.common.list_separator").join(missing),
+                exported=len(exported),
+                registered=len(registered),
+            ),
+        )
+    # 参数表单里出现框架参数就说明收集规则退化，用户会看到自己不该填的输入框。
+    leaked = sorted(
+        {
+            param.label()
+            for entry in catalog
+            for param in entry.params
+            if param.label() in {"--help", "--instance", "-I"}
+        }
+    )
+    if leaked:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_commands"),
+            i18n.t("cli.tui_cmd.check_commands_leak", names=", ".join(leaked)),
+        )
+    entry = CommandEntry(path=("venv", "status"), params=(CommandParam(name="json", kind="flag", flags=("--json",)),))
+    source = StaticCommandSource(lines=["venv status"])
+    app_instance = TuiApp(
+        sources={"commands": source, "commands_catalog": StaticCommandCatalog([entry])},
+        initial_page="commands",
+        boot_started_at=time.monotonic(),
+    )
+
+    async def probe() -> tuple[tuple[str, ...], str]:
+        async with compat.app_test(app_instance, size=(100, 30)) as pilot:
+            page = app_instance.query_one("#page-commands")
+            await page.wait_for_idle()
+            await pilot.pause()
+            page.query_one("#param-json", compat.Checkbox).value = True
+            await pilot.pause()
+            page.run_selected()
+            await page.wait_for_idle()
+            await pilot.pause()
+            calls = source.calls[-1] if source.calls else ()
+            status = page.status_text
+            await pilot.press("q")
+            return calls, status
+
+    try:
+        calls, status = asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_commands"), f"{type(error).__name__}: {error}")
+    if calls != ("venv", "status", "--json"):
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_commands"),
+            i18n.t("cli.tui_cmd.check_commands_argv", calls=" ".join(calls)),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_commands"),
+        i18n.t("cli.tui_cmd.check_commands_detail", count=len(exported), status=status),
+    )
+
+
+def _registered_commands() -> set[str]:
+    # 与命令页各自走一遍命令树：这里数「叶子」，命令页数它导出的条目，两边不一致即缺口。
+    import typer
+
+    from akaribot.cli.main import app as typer_app
+
+    found: set[str] = set()
+
+    def walk(group: object, prefix: tuple[str, ...]) -> None:
+        commands = getattr(group, "commands", None)
+        if not isinstance(commands, dict):
+            return
+        if prefix and not commands:
+            found.add(" ".join(prefix))
+            return
+        for name, command in commands.items():
+            path = (*prefix, str(name))
+            if isinstance(getattr(command, "commands", None), dict):
+                walk(command, path)
+            else:
+                found.add(" ".join(path))
+
+    walk(typer.main.get_command(typer_app), ())
+    return found
 
 
 def _check_adapter_install() -> CheckResult:

@@ -7,8 +7,10 @@ Run / Adapters / Dev）遵循。
 | 文件 | 职责 |
 | --- | --- |
 | `_compat.py` | 全部 Textual 导入与调用、终端宽度计算、包内资源与样式表加载、键位构造 |
-| `app.py` | App 装配、全局键位、样式表来源、启动计时 |
-| `modules.py` | Modules 页：数据源接口 + 子进程实现 + 页面控件 |
+| `cli_process.py` | 调用本 CLI 的 argv 与环境拼装（冻结感知、实例根、UTF-8），各页共用 |
+| `app.py` | App 装配、侧栏与页面注册、全局键位、样式表来源、启动计时 |
+| `dashboard.py` / `modules.py` / `adapters.py` / `config.py` / `logs.py` / `run.py` / `dev.py` | 概览 / 模块 / 适配器 / 配置 / 日志 / 运行 / 开发七页 |
+| `commands.py` | 命令页：按 CLI 命令树生成参数表单并执行任意子命令 |
 | `commands/tui.py` | `akaribot tui [--self-check] [--headless] [--no-mouse]` |
 
 **硬性约定**：`akaribot/cli/tui/` 下除 `_compat.py` 外的模块**不得**直接 `import textual` 或
@@ -36,9 +38,9 @@ Run / Adapters / Dev）遵循。
 | `App[ReturnType]` 泛型、`ComposeResult`、各 widget 一律从 `_compat` 取 | 这些名字的导出位置（`textual.app` / `textual.widgets` / `textual.containers`）在版本间搬过家 |
 | 数据源走注入接口，绝不在渲染路径取数 | `installed()` 是子进程（实测 90–170 ms，core 未就绪时更久）；每帧调用会直接拖垮界面 |
 | **自有属性与方法名不得占用 Textual 基类名**（`_render` / `offset` / `refresh` / `display` / `styles` 等），如渲染辅助改叫 `_render_fields`、读取游标改叫 `read_offset` | 覆盖 `Widget._render()` 会让容器 visual 为 `None`，headless 下必崩（`AttributeError: 'NoneType' object has no attribute 'render_strips'`）；`Widget.offset` 是控件位置，语义完全不同 |
-| 定时轮询前先判 `self.display`，隐藏页直接跳过 | 七页同挂载，隐藏页仍按周期取数会白白起子进程；实测隐藏页取数次数完全不变 |
+| 定时轮询前先判 `self.display`，隐藏页直接跳过 | 各页同挂载，隐藏页仍按周期取数会白白起子进程；实测隐藏页取数次数完全不变 |
 | 切页后把焦点交给该页（各页提供 `focus_primary()`，`app.show_page()` 统一调用） | 焦点留在侧栏或上一页时，页级键位（`r`/`space`/`c`/`d`/`s`/`x`）不触发，反而被 App 级同键接管 |
-| 页面只经 `_compat` 使用 Textual，页面内零 `import textual` / `import rich` | 升级 Textual 时改动面收敛到一个文件；已 grep 验证七页均无直接导入 |
+| 页面只经 `_compat` 使用 Textual，页面内零 `import textual` / `import rich` | 升级 Textual 时改动面收敛到一个文件；已 grep 验证各页均无直接导入 |
 
 ## 二、中文宽字符（本项目默认中文，最关键的一条）
 
@@ -90,6 +92,17 @@ ModulesPage ──(注入)──> ModuleSource
   复原光标。
 - 安装目标：优先当前选中的未安装项，否则取搜索框里合法的模块名（`module add <名>` 语义）。
 
+### 命令页（CLI 命令面的统一入口）
+
+- 参数清单、默认值与帮助文本都从 CLI 自身的命令树导出（`typer.main.get_command(app)` 后遍历
+  Click 分组），**不在界面里另写一份**；CLI 新增子命令或参数后界面自动跟上。
+- 执行仍是 `akaribot <子命令>` 子进程，argv 与环境统一由 `cli_process` 拼装；语言随界面走
+  （前置 `--lang`），标准输入指向空设备——需要交互确认的命令在这里直接失败并回报退出码，
+  不会与界面争抢键盘。
+- 分组自身即命令的情况（`init` / `test` / `doctor` / `tui` / `run` 用 `@app.callback()` 注册）
+  按叶子命令处理；透传分组（`run` / `test`）额外给一个自由输入，未识别参数原样交给 core。
+- 频繁且危险的动作（安装、卸载、启停、保存配置）仍走各自的专用页面；本页覆盖其余全部子命令。
+
 ## 四、已验证（本机：macOS 27.0 / arm64、Python 3.12.13、textual 8.2.8）
 
 | 项目 | 结论与证据 |
@@ -103,7 +116,7 @@ ModulesPage ──(注入)──> ModuleSource
 | 非终端保护 | 无 TTY 时拒绝启动并提示改用 `--self-check` / `--headless`（退出码 2） |
 | 启动耗时 | run→`on_mount` 14–19 ms，首帧 46–60 ms；`tui --headless` 进程总耗时 0.37–0.45 s（`import textual` 本身 0.06–0.07 s；真实取数子进程 0.28–0.30 s 在后台任务里，不阻塞首屏） |
 | 渲染截图 | `export_screenshot()` 导出真实渲染 SVG（合成数据 80×24 / 60×20 / 100×30，真实数据 100×30），列表行与详情文本可在 SVG 里逐字核对 |
-| `--self-check` | 13 项通过 / 5 项警告 / 退出码 0（警告为终端环境项，如不在 tmux、非冻结产物、`app.tcss` 尚未拆分）；含「可安装列表与安装进度」一项，实测列表 1 → 2 行、安装收到 2 行输出 |
+| `--self-check` | 14 项通过 / 5 项警告 / 退出码 0（警告为终端环境项，如不在 tmux、非冻结产物、`app.tcss` 尚未拆分）；含「可安装列表与安装进度」与「命令面覆盖」两项，后者实测导出 28 条命令并跑通 `venv status --json` |
 | 静态检查 | `ruff check` 与 `ruff format --check` 通过；`tools/lint_comments.py` 对本次新增文件 0 违规 |
 
 ## 五、未验证（需要什么环境、要观察什么、本机为什么做不了）

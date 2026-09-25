@@ -13,10 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import re
 import subprocess
-import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -30,6 +28,7 @@ from tomlkit.items import Table
 from akaribot.cli import i18n
 from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 
 KIND_BOOL = "bool"
 KIND_INT = "int"
@@ -70,7 +69,6 @@ _ERROR_TAIL_PATTERN = re.compile(r"\s*at line \d+ col \d+\s*$")
 # 表名与配置文件一一对应：config.toml 同时承载 config 与 secret 两段。
 _FILE_BY_TABLE = {"config": "config.toml", "secret": "config.toml"}
 _CONFIG_SUBDIRS = ("", "modules", "adapters", "core")
-_CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 
 
 # region 字段模型与值文本
@@ -688,14 +686,8 @@ class SubprocessConfigSource:
         )
 
     def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv；冻结产物去掉 ``-m``，可用 ``AKARIBOT_CLI_BIN`` 覆盖。"""
-        override = os.environ.get(_CLI_ENV_BIN)
-        if override:
-            return [override, *args]
-        frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-        if frozen:
-            return [sys.executable, *args]
-        return [sys.executable, "-m", "akaribot.cli.main", *args]
+        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
+        return cli_process.cli_argv(*args)
 
     def config_file(self, table: str) -> Path | None:
         """定位配置表对应的文件；实例未找到时返回 ``None``。
@@ -788,8 +780,7 @@ class SubprocessConfigSource:
         return self._instance_cache
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
-        env["PYTHONIOENCODING"] = "utf-8"
+        env = cli_process.cli_env(self.root)
         try:
             return self._runner(
                 list(argv),

@@ -15,6 +15,7 @@ from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.adapters import AdaptersPage
 from akaribot.cli.tui.config import ConfigPage
+from akaribot.cli.tui.commands import CommandsPage
 from akaribot.cli.tui.dashboard import DashboardPage
 from akaribot.cli.tui.dev import DevPage
 from akaribot.cli.tui.logs import LogsPage
@@ -30,6 +31,7 @@ PAGES: tuple[tuple[str, str, type], ...] = (
     ("logs", "cli.tui.nav.logs", LogsPage),
     ("run", "cli.tui.nav.run", RunPage),
     ("dev", "cli.tui.nav.dev", DevPage),
+    ("commands", "cli.tui.nav.commands", CommandsPage),
 )
 
 INLINE_CSS = """
@@ -120,7 +122,7 @@ class TuiApp(compat.App[int]):
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
 
     def compose(self) -> compat.ComposeResult:
-        """装配侧栏与七个页面。"""
+        """装配侧栏与全部页面。"""
         yield compat.Header()
         with compat.Horizontal(id="shell"):
             yield compat.ListView(
@@ -140,6 +142,9 @@ class TuiApp(compat.App[int]):
         if key == "modules":
             module_source = source if source is not None else self.module_source
             page = page_class(module_source, cache_ttl=self.cache_ttl, id=f"page-{key}")
+        elif key == "commands":
+            catalog = self.sources.get("commands_catalog")
+            page = page_class(source, catalog, id=f"page-{key}") if source is not None else page_class(id=f"page-{key}")
         elif source is None:
             page = page_class(id=f"page-{key}")
         else:

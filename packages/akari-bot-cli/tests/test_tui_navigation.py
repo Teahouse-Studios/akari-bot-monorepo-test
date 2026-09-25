@@ -262,7 +262,7 @@ async def test_tui_navigation(tester: Tester):
     _use_cli_locale()
     await tester.test(_test_initial_page_matches_sidebar, "启动页与侧栏高亮一致")
     await tester.test(_test_show_page_syncs_every_page, "逐页切换同步侧栏且只显示一页")
-    await tester.test(_test_every_page_takes_focus, "七页都有焦点落点")
+    await tester.test(_test_every_page_takes_focus, "每页都有焦点落点")
     await tester.test(_test_focus_stays_on_active_page, "焦点落在当前页内")
     await tester.test(_test_module_keys_do_not_fire_elsewhere, "其它页按 i/u/r/Esc 不触碰模块")
     await tester.test(_test_module_keys_fire_on_modules_page, "模块页页级键位生效")

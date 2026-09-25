@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import subprocess
 import sys
 import time
@@ -23,14 +22,13 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
 # core 侧的 peer 快照入口：``python -m akaribot.core.entrypoints.peers --json``。
 # 该入口在 core 落地前必然失败，失败原因原样上报，页面按「未知」显示连接状态。
 PEER_ENTRYPOINT = "peers"
 PEER_READY_STATE = "ready"
-CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
-INSTANCE_ENV = "AKARI_INSTANCE_DIR"
 
 # 展示文案按当前语言取值，故常量只存文案键；列宽也据这些文案推导（英文比中文宽）。
 _ALIVE_KEYS = {True: "cli.tui.adapters.online", False: "cli.tui.adapters.offline"}
@@ -662,18 +660,8 @@ class SubprocessAdapterSource:
         )
 
     def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv。
-
-        冻结产物（Nuitka onefile）里 ``sys.executable`` 就是 CLI 本体，不能再加 ``-m``；
-        可用环境变量 ``AKARIBOT_CLI_BIN`` 显式指定 CLI 入口。
-        """
-        override = os.environ.get(CLI_ENV_BIN)
-        if override:
-            return [override, *args]
-        frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-        if frozen:
-            return [sys.executable, *args]
-        return [sys.executable, "-m", "akaribot.cli.main", *args]
+        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
+        return cli_process.cli_argv(*args)
 
     def peer_argv(self) -> list[str]:
         """构造 peer 快照入口的 argv：实例解释器加 core 入口模块。
@@ -703,10 +691,7 @@ class SubprocessAdapterSource:
         return Instance(root)
 
     def _env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        env[INSTANCE_ENV] = str(self.root)
-        env["PYTHONIOENCODING"] = "utf-8"
-        return env
+        return cli_process.cli_env(self.root)
 
     def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
         try:

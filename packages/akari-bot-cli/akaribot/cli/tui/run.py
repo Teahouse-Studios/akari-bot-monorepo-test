@@ -11,7 +11,6 @@ import asyncio
 import os
 import signal
 import subprocess
-import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 
 STATE_RUNNING = "running"
 STATE_STOPPED = "stopped"
@@ -28,8 +28,6 @@ STATE_EXITED = "exited"
 STATE_UNKNOWN = "unknown"
 
 RUN_LABEL = "akaribot run"
-CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
-INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 LOCK_FILENAME = ".bot.lock"
 RUN_LOG_PREFIX = "TuiRun"
 
@@ -442,18 +440,8 @@ class SubprocessRunSource:
         return lock_held(root / LOCK_FILENAME)
 
     def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv，规则与 Modules 页的子进程数据源一致。
-
-        :param args: 子命令及其参数。
-        :return: 可直接交给 :mod:`subprocess` 的参数列表。
-        """
-        override = os.environ.get(CLI_ENV_BIN)
-        if override:
-            return [override, *args]
-        frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
-        if frozen:
-            return [sys.executable, *args]
-        return [sys.executable, "-m", "akaribot.cli.main", *args]
+        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
+        return cli_process.cli_argv(*args)
 
     def _root(self) -> Path | None:
         if self.root is not None:
@@ -496,9 +484,7 @@ class SubprocessRunSource:
             return None
 
     def _popen_kwargs(self, root: Path, handle: Any) -> dict[str, Any]:
-        env = dict(os.environ)
-        env[INSTANCE_DIR_ENV] = str(root)
-        env["PYTHONIOENCODING"] = "utf-8"
+        env = cli_process.cli_env(root)
         kwargs: dict[str, Any] = {
             "cwd": str(root),
             "env": env,
