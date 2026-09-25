@@ -45,6 +45,11 @@ _INSTALLED_MARKERS = ("install", "loaded", "enabled", "active")
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _CLI_ENV_BIN = "AKARIBOT_CLI_BIN"
 
+# 三种操作共用同一条批量与流式路径，只在这里区分对应的 CLI 子命令。
+_OPERATION_SUBCOMMANDS = {"install": "add", "uninstall": "remove", "update": "update"}
+# 更新要 ``--yes``：界面里已经在批量确认层面问过了，不该再被 CLI 的交互提问卡住。
+_OPERATION_EXTRA_ARGS = {"update": ("--yes",)}
+
 # 进度条按阶段推进：解析、执行、重载、完成；阶段内的细粒度进度由子进程输出行承担。
 _PROGRESS_PHASES = 4.0
 # 实时转发时保留的末尾行数，失败时作为详情展示。
@@ -173,7 +178,7 @@ class StaticModuleSource:
         self._uninstall_result = uninstall_result or OperationResult(
             True, i18n.t("cli.tui.modules.stub_uninstall_ok"), "stub"
         )
-        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0, "update": 0}
         self.installed: list[str] = []
         self.uninstalled: list[str] = []
 
@@ -234,6 +239,11 @@ class ModuleSource(Protocol):
         :param on_line: 每读到一行输出就调用一次，供界面显示进度。
         :return: 操作结果。
         """
+
+
+def _operation_action(kind: str) -> str:
+    # 安装、卸载、更新的动作名，用于批量汇总与通知标题。
+    return i18n.t(f"cli.tui.modules.action_{kind}")
 
 
 def sort_key(record: ModuleRecord) -> tuple[bool, str]:
@@ -426,10 +436,10 @@ class SubprocessModuleSource:
         安装要解析依赖、下载 wheel、写 venv，可能跑上几分钟；沿用 ``subprocess.run`` 时这段时间
         界面只能空转。改为异步起进程并逐行读输出，界面据此显示进度。
         """
-        self.calls["install" if kind == "install" else "uninstall"] += 1
+        self.calls[kind if kind in self.calls else "install"] += 1
         name = record.dist or record.name
-        subcommand = "add" if kind == "install" else "remove"
-        argv = self.cli_argv("module", subcommand, name)
+        subcommand = _OPERATION_SUBCOMMANDS[kind]
+        argv = self.cli_argv("module", subcommand, name, *_OPERATION_EXTRA_ARGS.get(kind, ()))
         label = i18n.t(f"cli.tui.modules.label_{kind}", name=name)
         try:
             process = await asyncio.create_subprocess_exec(
@@ -603,6 +613,8 @@ class ModulesPage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.modules.bind_search")),
         ("i", "install", i18n.t("cli.tui.modules.action_install")),
         ("u", "uninstall", i18n.t("cli.tui.modules.action_uninstall")),
+        ("U", "update", i18n.t("cli.tui.modules.action_update")),
+        ("ctrl+u", "update", i18n.t("cli.tui.modules.action_update")),
         ("space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
         ("ctrl+space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
         ("shift+up", "extend_up", i18n.t("cli.tui.modules.bind_extend")),
@@ -1091,6 +1103,19 @@ class ModulesPage(compat.Vertical):
             return
         self._start_operation("install", targets)
 
+    def request_update(self) -> None:
+        """更新选中的已装包；没有选中项时更新当前项。"""
+        targets = self._batch_targets("update")
+        if not targets:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.pick_update"),
+                severity="warning",
+                title=i18n.t("cli.tui.modules.action_update"),
+            )
+            return
+        self._start_operation("update", targets)
+
     def request_uninstall(self) -> None:
         """发起卸载；有标记时按标记批量，否则卸当前项。
 
@@ -1125,10 +1150,11 @@ class ModulesPage(compat.Vertical):
         # 「安装」和「卸载」一起按下去时互相打架。
         if not self._selected:
             single = self._install_target() if kind == "install" else self._uninstall_target()
-            return [single] if single is not None else []
+            return [single] if single is not None else []  # 更新与卸载同取已装项
         wanted = [record for record in self._records if record.dist in self._selected]
         if kind == "install":
             return [record for record in wanted if not record.installed]
+        # 卸载与更新都只作用于已装项。
         return [record for record in wanted if record.installed]
 
     def action_toggle_select(self) -> None:
@@ -1304,9 +1330,7 @@ class ModulesPage(compat.Vertical):
                     failed=len(failed),
                     names=names,
                     detail=failed[0][1],
-                    what=i18n.t(
-                        "cli.tui.modules.action_install" if kind == "install" else "cli.tui.modules.action_uninstall"
-                    ),
+                    what=_operation_action(kind),
                 )
             )
             compat.progress_reset(bar)
@@ -1322,13 +1346,7 @@ class ModulesPage(compat.Vertical):
             message = (
                 succeeded[0][1]
                 if len(succeeded) == 1
-                else i18n.t(
-                    "cli.tui.modules.batch_done",
-                    count=len(succeeded),
-                    what=i18n.t(
-                        "cli.tui.modules.action_install" if kind == "install" else "cli.tui.modules.action_uninstall"
-                    ),
-                )
+                else i18n.t("cli.tui.modules.batch_done", count=len(succeeded), what=_operation_action(kind))
             )
             self.last_result = message
             self._set_status(message)
@@ -1359,6 +1377,10 @@ class ModulesPage(compat.Vertical):
     def action_uninstall(self) -> None:
         """键位动作：卸载当前目标。"""
         self.request_uninstall()
+
+    def action_update(self) -> None:
+        """键位动作：更新选中或当前的已装包。"""
+        self.request_update()
 
     def action_clear_search(self) -> None:
         """键位动作：清空搜索框。"""

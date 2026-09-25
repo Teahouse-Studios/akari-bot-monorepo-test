@@ -5,6 +5,7 @@
 """
 
 from importlib import metadata
+from pathlib import Path
 
 import typer
 
@@ -63,9 +64,43 @@ def main(
 ) -> None:
     """AkariBot 实例管理工具。"""
     i18n.set_locale(lang)
-    if ctx.invoked_subcommand is None:
+    if ctx.invoked_subcommand is not None:
+        return
+    # 裸调用在可交互终端下直接进界面；没有实例就先引导初始化。非终端（管道、CI、重定向）仍打印
+    # 帮助：那种环境下界面起不来，把帮助塞进错误面板只会让人以为出错了。
+    if not _tui_available():
         typer.echo(ctx.get_help())
         raise typer.Exit(code=NO_COMMAND_EXIT_CODE)
+    if _ensure_instance(lang) is None:
+        raise typer.Exit(code=NO_COMMAND_EXIT_CODE)
+    from akaribot.cli.commands.tui import run_interactive
+
+    run_interactive()
+
+
+def _tui_available() -> bool:
+    from akaribot.cli.tui import _compat as compat
+
+    # 界面需要能读键、能画全屏，管道与重定向下不可用。
+    return compat.is_interactive_terminal()
+
+
+def _ensure_instance(lang: str | None) -> Path | None:
+    # 初始化直接调用 ``akaribot init`` 的命令本体，不复制它建目录、装包、写元数据的流程；问答也由
+    # init 自己完成，两边不会各问一套。返回实例根，用户放弃或初始化未成功时为 ``None``。
+    from akaribot.cli.instance import find_instance_root
+
+    found = find_instance_root()
+    if found is not None:
+        return found
+    from akaribot.cli.commands.init import init
+
+    typer.confirm(i18n.t("cli.main.init_confirm", root=Path.cwd()), abort=True)
+    init(Path.cwd(), locale=lang)
+    found = find_instance_root()
+    if found is None:
+        typer.echo(i18n.t("cli.main.init_failed"), err=True)
+    return found
 
 
 if __name__ == "__main__":

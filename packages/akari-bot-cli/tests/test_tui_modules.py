@@ -222,6 +222,85 @@ def _fake_cli(root: Path, name: str, body: str) -> str:
     return str(path)
 
 
+FAKE_CLI_ECHO_ARGV = """#!/usr/bin/env python3
+import sys
+
+print(" ".join(sys.argv[1:]))
+sys.exit(0)
+"""
+
+
+UPDATE_INSTALLED = ModuleRecord(name="alpha", dist="akari-bot-module-alpha", version="1.0.0", state="installed")
+UPDATE_SECOND = ModuleRecord(name="bravo", dist="akari-bot-module-bravo", version="1.0.0", state="installed")
+UPDATE_PENDING = ModuleRecord(name="charlie", dist="akari-bot-module-charlie", version="0.9.0", state="available")
+
+
+class _RecordingUpdate(StaticModuleSource):
+    # 记录每次流式操作的种类与目标，用于断言更新确实走了 update 通道。
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.streamed: list[tuple[str, str]] = []
+
+    async def stream_operation(self, kind, record, on_line):
+        self.streamed.append((kind, record.dist))
+        return await super().stream_operation(kind, record, on_line)
+
+
+def _update_source() -> _RecordingUpdate:
+    records = [UPDATE_INSTALLED, UPDATE_SECOND, UPDATE_PENDING]
+    return _RecordingUpdate(records=records, available=records, stream_lines=["Updated 1 package"])
+
+
+async def _test_update_covers_installed_selection():
+    # 按 U 更新选中的已装项，走的是 update 而非重装。
+    source = _update_source()
+
+    async def body(app, page, pilot):
+        await pilot.press("a")
+        await pilot.pause()
+        page.request_update()
+        await page.wait_for_idle()
+        await pilot.pause()
+        return list(source.streamed), page.status_text
+
+    streamed, status = await _with_app(source, body)
+    return (
+        streamed == [("update", "akari-bot-module-alpha"), ("update", "akari-bot-module-bravo")]
+        and i18n.t("cli.tui.modules.batch_done", count=2, what=i18n.t("cli.tui.modules.action_update")) in status
+    )
+
+
+async def _test_update_only_targets_installed():
+    # 未装项不进更新目标：更新只对已装包有意义。
+    source = _update_source()
+
+    async def body(app, page, pilot):
+        await pilot.press("a")
+        await pilot.pause()
+        page.request_update()
+        await page.wait_for_idle()
+        await pilot.pause()
+        return [dist for _, dist in source.streamed]
+
+    streamed = await _with_app(source, body)
+    return streamed == ["akari-bot-module-alpha", "akari-bot-module-bravo"]
+
+
+async def _test_update_argv_passes_yes():
+    # 真源按 ``module update <分发名> --yes`` 调用：界面里已经确认过，不该再被 CLI 追问。
+    from akaribot.cli.tui.modules import SubprocessModuleSource
+
+    with TemporaryDirectory(prefix="akari-update-") as raw:
+        root = Path(raw)
+        fake = _fake_cli(root, "fake_update", FAKE_CLI_ECHO_ARGV)
+        record = ModuleRecord(name="alpha", dist="akari-bot-module-alpha")
+        lines: list[str] = []
+        with patch.dict(os.environ, {"AKARIBOT_CLI_BIN": fake}):
+            source = SubprocessModuleSource(root=root, timeout=30.0)
+            result = await source.stream_operation("update", record, lines.append)
+    return result.ok and lines == ["module update akari-bot-module-alpha --yes"]
+
+
 async def _test_subprocess_source_streams_and_reports():
     # 用 AKARIBOT_CLI_BIN 指向一个假 CLI，既走完整的 spawn/读取/等待路径，又不必真的装包。
     from akaribot.cli.tui.modules import SubprocessModuleSource
@@ -350,6 +429,9 @@ async def test_tui_modules_available(tester: Tester):
     await tester.test(_test_failed_install_reports_detail, "失败时展示输出尾部")
     await tester.test(_test_available_failure_keeps_installed_list, "可安装集合失败不清空列表")
     await tester.test(_test_stream_operation_failure_becomes_result, "数据源异常转成结果展示")
+    await tester.test(_test_update_covers_installed_selection, "按 U 更新选中的已装项")
+    await tester.test(_test_update_only_targets_installed, "更新只作用于已装项")
+    await tester.test(_test_update_argv_passes_yes, "更新带 --yes 调用 CLI")
     await tester.test(_test_subprocess_source_streams_and_reports, "真源逐行回调并给出结论")
     await tester.test(_test_subprocess_source_timeout, "真源超时按数据源错误上报")
     await tester.test(_test_relative_root_is_resolved, "相对实例根解析为绝对路径")

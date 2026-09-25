@@ -5,12 +5,17 @@
 :class:`typer.testing.CliRunner` 调用根应用，不起子进程，也不碰任何实例目录。
 """
 
+import inspect
 from importlib import metadata
+from pathlib import Path
 from unittest import mock
+
+import typer
 
 from typer.testing import CliRunner
 
 from akaribot.cli import __version__, main
+from akaribot.cli.commands.init import init as init_command
 from akaribot.testing import func_case, Tester
 
 _MISSING_COMMAND = "Missing command"
@@ -122,6 +127,84 @@ async def _test_subcommand_still_dispatches():
         return False
 
 
+async def _test_bare_invocation_enters_tui_on_terminal():
+    # 可交互终端下裸调用直接进界面，不打印帮助。
+    calls: list[str] = []
+    try:
+        with (
+            mock.patch.object(main, "_tui_available", return_value=True),
+            mock.patch("akaribot.cli.instance.find_instance_root", return_value=Path("/tmp/inst")),
+            mock.patch("akaribot.cli.commands.tui.run_interactive", side_effect=lambda **_: calls.append("tui")),
+        ):
+            result = _run()
+        return result.exit_code == 0 and calls == ["tui"] and "Usage:" not in result.stdout
+    except Exception:
+        return False
+
+
+async def _test_bare_invocation_guides_init_without_instance():
+    # 没有实例时先问一句，复用 init 本体初始化，再进界面。
+    calls: list[tuple] = []
+    found = {"count": 0}
+
+    def _find(*args, **kwargs):
+        found["count"] += 1
+        # 第一次找不到实例（触发引导），初始化后能找到。
+        return None if found["count"] == 1 else Path("/tmp/inst")
+
+    def _init(path, **kwargs):
+        calls.append(("init", str(path), kwargs.get("locale")))
+
+    try:
+        with (
+            mock.patch.object(main, "_tui_available", return_value=True),
+            mock.patch("akaribot.cli.instance.find_instance_root", side_effect=_find),
+            mock.patch("akaribot.cli.commands.init.init", side_effect=_init),
+            mock.patch("akaribot.cli.commands.tui.run_interactive", side_effect=lambda **_: calls.append(("tui",))),
+        ):
+            result = CliRunner().invoke(main.app, ["--lang", "en_us"], input="y\n")
+        return result.exit_code == 0 and calls == [("init", str(Path.cwd()), "en_us"), ("tui",)]
+    except Exception:
+        return False
+
+
+async def _test_bare_invocation_aborts_when_init_declined():
+    # 拒绝初始化时不进界面，也不调用 init。
+    calls: list[str] = []
+    try:
+        with (
+            mock.patch.object(main, "_tui_available", return_value=True),
+            mock.patch("akaribot.cli.instance.find_instance_root", return_value=None),
+            mock.patch("akaribot.cli.commands.init.init", side_effect=lambda *a, **k: calls.append("init")),
+            mock.patch("akaribot.cli.commands.tui.run_interactive", side_effect=lambda **_: calls.append("tui")),
+        ):
+            result = CliRunner().invoke(main.app, [], input="n\n")
+        return result.exit_code != 0 and calls == []
+    except Exception:
+        return False
+
+
+async def _test_init_is_callable_with_defaults():
+    # ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填
+    # （或默认值变成 typer 的 OptionInfo），裸调用入口会在运行时失败，而 ``akaribot init`` 子命令
+    # 仍然正常，这条守卫专门盯住这个差值。
+    try:
+        signature = inspect.signature(init_command)
+        required = [
+            name
+            for name, parameter in signature.parameters.items()
+            if name != "path" and parameter.default is inspect.Parameter.empty
+        ]
+        option_like = [
+            name
+            for name, parameter in signature.parameters.items()
+            if isinstance(parameter.default, (typer.models.OptionInfo, typer.models.ArgumentInfo))
+        ]
+        return required == [] and option_like == []
+    except Exception:
+        return False
+
+
 @func_case
 async def test_cli_main(tester: Tester):
     """CLI 根命令：版本查询、裸调用帮助、参数顺序与冻结兜底"""
@@ -131,5 +214,9 @@ async def test_cli_main(tester: Tester):
     await tester.test(_test_version_and_help_first_wins, "--version 与 --help 同时给出时先出现的先生效")
     await tester.test(_test_version_falls_back_when_metadata_missing, "冻结产物无 metadata 时回退包内常量")
     await tester.test(_test_subcommand_still_dispatches, "子命令派发不受影响")
+    await tester.test(_test_bare_invocation_enters_tui_on_terminal, "终端下裸调用进界面")
+    await tester.test(_test_bare_invocation_guides_init_without_instance, "无实例时引导初始化")
+    await tester.test(_test_bare_invocation_aborts_when_init_declined, "拒绝初始化时不进界面")
+    await tester.test(_test_init_is_callable_with_defaults, "init 参数均有默认值可直调")
 
     return tester
