@@ -66,7 +66,9 @@ __all__ = [
     "Vertical",
     "VerticalScroll",
     "Widget",
+    "TextPromptScreen",
     "align_rows",
+    "ask_text",
     "app_test",
     "bind",
     "bindings",
@@ -498,13 +500,131 @@ def notify(app: App[Any], message: str, *, severity: str = "information", title:
         return
 
 
-def push_screen(app: App[Any], screen: Screen[Any] | str) -> Any:
-    """推入一个页面。
+def push_screen(app: App[Any], screen: Screen[Any] | str, callback: Callable[[Any], None] | None = None) -> Any:
+    """推入一个页面，可选地把关闭结果交给回调。
 
-    理由：``push_screen`` 的 ``callback`` / ``wait_for_dismiss`` / ``mode`` 参数是逐版本加上的，
-    页面只传页面对象或名字，返回值由调用方决定是否等待。
+    理由：``push_screen`` 的 ``callback`` / ``wait_for_dismiss`` / ``mode`` 参数是逐版本加上的；
+    回调存在时按关键字传入，不存在时保持只传页面对象。
     """
-    return app.push_screen(screen)
+    if callback is None:
+        return app.push_screen(screen)
+    return app.push_screen(screen, callback)
+
+
+class TextPromptScreen(Screen[str | None]):
+    """单行文本输入的模态框：回车或「确认」提交，「取消」或 Esc 返回 ``None``。
+
+    :param title: 标题。
+    :param hint: 说明文字，写清提交后会发生什么。
+    :param confirm_label: 确认按钮文字。
+    :param cancel_label: 取消按钮文字。
+    :param placeholder: 输入框占位符。
+    :param initial: 输入框初始值。
+    """
+
+    DEFAULT_CSS = """
+    TextPromptScreen {
+        align: center middle;
+    }
+    TextPromptScreen #prompt-box {
+        width: 72;
+        max-width: 90%;
+        height: auto;
+        border: round $primary;
+        background: $surface;
+        padding: 1 1;
+    }
+    TextPromptScreen #prompt-title {
+        text-style: bold;
+    }
+    TextPromptScreen #prompt-hint {
+        color: $text-muted;
+    }
+    TextPromptScreen #prompt-actions {
+        height: 3;
+        align-horizontal: right;
+    }
+    """
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        hint: str = "",
+        confirm_label: str,
+        cancel_label: str,
+        placeholder: str = "",
+        initial: str = "",
+        id: str | None = None,
+    ) -> None:
+        super().__init__(id=id)
+        self.prompt_title = title
+        self.prompt_hint = hint
+        self.placeholder = placeholder
+        self.initial = initial
+        self.confirm_label = confirm_label
+        self.cancel_label = cancel_label
+
+    def compose(self) -> ComposeResult:
+        """装配输入框与两个按钮。"""
+        with Vertical(id="prompt-box"):
+            yield Static(plain_text(self.prompt_title), id="prompt-title", markup=False)
+            if self.prompt_hint:
+                yield Static(plain_text(self.prompt_hint), id="prompt-hint", markup=False)
+            yield Input(value=self.initial, placeholder=self.placeholder, id="prompt-input")
+            with Horizontal(id="prompt-actions"):
+                yield Button(self.confirm_label, id="prompt-confirm", variant="primary")
+                yield Button(self.cancel_label, id="prompt-cancel")
+
+    def on_mount(self) -> None:
+        """打开即聚焦输入框。"""
+        focus_now(self.query_one("#prompt-input", Input))
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """回车提交。"""
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """按钮提交或取消。"""
+        if event.button.id == "prompt-confirm":
+            self._submit()
+        elif event.button.id == "prompt-cancel":
+            self.dismiss(None)
+
+    def key_escape(self) -> None:
+        """Esc 取消。"""
+        self.dismiss(None)
+
+    def _submit(self) -> None:
+        value = self.query_one("#prompt-input", Input).value.strip()
+        self.dismiss(value or None)
+
+
+def ask_text(
+    app: App[Any],
+    *,
+    title: str,
+    confirm_label: str,
+    cancel_label: str,
+    hint: str = "",
+    placeholder: str = "",
+    initial: str = "",
+    callback: Callable[[str | None], None],
+) -> None:
+    """弹出单行输入框，把结果交给回调。
+
+    ``push_screen`` 的 ``callback`` 参数是逐步加上的，故把回调包在页面里而不是交给 Textual。
+    这里只推入页面，回调由 :meth:`TextPromptScreen.dismiss` 触发。
+    """
+    screen = TextPromptScreen(
+        title=title,
+        hint=hint,
+        confirm_label=confirm_label,
+        cancel_label=cancel_label,
+        placeholder=placeholder,
+        initial=initial,
+    )
+    push_screen(app, screen, callback)
 
 
 def pop_screen(app: App[Any]) -> Any:

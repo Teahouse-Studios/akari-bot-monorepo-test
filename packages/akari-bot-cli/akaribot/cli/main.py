@@ -10,7 +10,7 @@ from pathlib import Path
 import typer
 
 from akaribot.cli import __version__, i18n
-from akaribot.cli.commands import adapter, config, doctor, init, migrate, module, new, run, test, tui, venv
+from akaribot.cli.commands import adapter, config, db, doctor, init, migrate, module, new, run, test, tui, venv
 
 DIST_NAME = "akari-bot-cli"
 # 无子命令时的退出码。click ≥8.2 把 no_args_is_help 实现为 NoArgsIsHelpError（UsageError，退出码 2），
@@ -52,7 +52,7 @@ app = typer.Typer(
     add_completion=False,
 )
 
-for sub in (init, run, test, module, config, adapter, venv, doctor, new, tui, migrate):
+for sub in (init, run, test, module, config, db, adapter, venv, doctor, new, tui, migrate):
     app.add_typer(sub.app, name=sub.__name__.rsplit(".", 1)[-1])
 
 

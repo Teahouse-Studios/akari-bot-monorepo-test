@@ -37,12 +37,19 @@ class _Counting:
         return _record
 
 
+def _page_index(key: str) -> int:
+    # 页面顺序调整时用例自动适配，不使用固定下标。
+    return [page_key for page_key, _, _ in PAGES].index(key)
+
+
 def _real_sources(root) -> dict:
     from akaribot.cli.tui.adapters import SubprocessAdapterSource
     from akaribot.cli.tui.config import SubprocessConfigSource
     from akaribot.cli.tui.dashboard import LocalDashboardSource
     from akaribot.cli.tui.dev import SubprocessDevSource
     from akaribot.cli.tui.doctor import SubprocessDoctorSource
+    from akaribot.cli.tui.environment import SubprocessEnvironmentSource
+    from akaribot.cli.tui.misc import StaticMiscSource
     from akaribot.cli.tui.logs import FileLogSource
     from akaribot.cli.tui.run import SubprocessRunSource
 
@@ -54,6 +61,9 @@ def _real_sources(root) -> dict:
         "run": _Counting(SubprocessRunSource(root=root, timeout=10.0)),
         "dev": _Counting(SubprocessDevSource(root=root, timeout=10.0)),
         "doctor": _Counting(SubprocessDoctorSource(root=root, timeout=10.0)),
+        "environment": _Counting(SubprocessEnvironmentSource(root=root, query_timeout=10.0, action_timeout=10.0)),
+        # 杂项页没有预取，替身即可；真源会在用例里起一次 CLI 子进程。
+        "misc": _Counting(StaticMiscSource()),
     }
 
 
@@ -85,7 +95,7 @@ async def _test_initial_page_matches_sidebar():
         return app.active_page, _nav_index(app), app.page("modules").display
 
     active, index, visible = await _with_app(body)
-    return active == "modules" and index == 1 and visible is True
+    return active == "modules" and index == _page_index("modules") and visible is True
 
 
 async def _test_show_page_syncs_every_page():
@@ -233,7 +243,7 @@ async def _test_sidebar_browse_does_not_switch():
         return browsing
 
     active, index = await _with_app(body)
-    return active == "modules" and index == 4
+    return active == "modules" and index == _page_index("logs")
 
 
 async def _test_sidebar_selection_switches_page():
@@ -255,7 +265,7 @@ async def _test_sidebar_selection_switches_page():
         return active, index, focused is not None
 
     active, index, has_focus = await _with_app(body)
-    return active == "logs" and index == 4 and has_focus
+    return active == "logs" and index == _page_index("logs") and has_focus
 
 
 @func_case

@@ -50,6 +50,15 @@ def status(
                     "venv": target.meta.venv,
                     "exists": state.exists,
                     "package_count": state.package_count if state.packages is not None else None,
+                    # 界面要列出环境里装了什么：分发名、版本与是否可编辑安装。
+                    "packages": (
+                        [
+                            {"dist": info.dist, "version": info.version, "editable": info.editable}
+                            for info in sorted(state.packages.values(), key=lambda item: item.dist)
+                        ]
+                        if state.packages is not None
+                        else None
+                    ),
                     "core_version": state.core_version,
                     "error": state.error,
                 },

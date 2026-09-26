@@ -8,20 +8,16 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
-import signal
 import subprocess
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
-from akaribot.cli.tui import cli_process
-from akaribot.cli.tui.modules import OperationResult
 
 STATE_RUNNING = "running"
 STATE_STOPPED = "stopped"
@@ -30,8 +26,6 @@ STATE_UNKNOWN = "unknown"
 INSTANCE_META_FILENAME = "akaribot.toml"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 LOCK_FILENAME = ".bot.lock"
-# 环境动作的秒数上限：要建 venv、解析依赖、装几十个包，比查询宽松得多。
-ACTION_TIMEOUT_SECONDS = 1800.0
 
 # 状态取值来自锁文件探测，界面按当前语言取标签，故这里只存文案键。
 _STATE_KEYS = {
@@ -93,63 +87,6 @@ class DashboardSnapshot:
         """返回运行状态的本地化标签，带状态标记。"""
         key = _STATE_KEYS.get(self.state)
         return f"{_STATE_MARKS[self.state]} {i18n.t(key) if key else self.state}"
-
-
-@dataclass(frozen=True)
-class VenvState:
-    """实例环境的托管状态，来自 ``akaribot venv status --json``。
-
-    :param mode: ``managed`` 或 ``external``。
-    :param python: 当前生效的解释器路径。
-    :param venv_dir: 托管 venv 的目标目录。
-    :param ready: 解释器是否存在。
-    :param packages: 已装 akaribot 包数量；探测失败时为 ``None``。
-    :param core_version: core 版本号。
-    :param error: 读取失败的原因。
-    """
-
-    mode: str = ""
-    python: str = ""
-    venv_dir: str = ""
-    ready: bool = False
-    packages: int | None = None
-    core_version: str = ""
-    error: str = ""
-
-    def text(self) -> str:
-        """返回一行的环境摘要，供概览页展示。"""
-        if self.error:
-            return i18n.t("cli.tui.dashboard.venv_failed", error=self.error)
-        if self.mode not in ("managed", "external"):
-            # 模式读不到时不能按「外部解释器」展示：那会让用户以为可以接管。
-            return i18n.t(
-                "cli.tui.dashboard.venv_mode_unknown_label", path=self.python or i18n.t("cli.tui.common.unknown")
-            )
-        label = i18n.t(
-            "cli.tui.dashboard.venv_managed" if self.mode == "managed" else "cli.tui.dashboard.venv_external"
-        )
-        if not self.ready:
-            return i18n.t("cli.tui.dashboard.venv_missing", label=label, path=self.python)
-        packages = (
-            i18n.t("cli.tui.dashboard.venv_probe_failed")
-            if self.packages is None
-            else i18n.t("cli.tui.dashboard.venv_packages", count=self.packages)
-        )
-        return i18n.t(
-            "cli.tui.dashboard.venv_line",
-            label=label,
-            path=self.python,
-            packages=packages,
-            version=self.core_version or i18n.t("cli.tui.dashboard.value_version_missing"),
-        )
-
-
-def _signal_name(number: int) -> str:
-    # 换不出名字时退回编号文本。
-    try:
-        return signal.Signals(number).name
-    except ValueError:
-        return str(number)
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
@@ -238,8 +175,6 @@ class StaticDashboardSource:
         snapshot: DashboardSnapshot | None = None,
         *,
         running: bool | None = None,
-        venv: VenvState | None = None,
-        venv_result: OperationResult | None = None,
     ) -> None:
         base = snapshot or DashboardSnapshot(
             instance_root="/tmp/fake-instance",
@@ -252,13 +187,7 @@ class StaticDashboardSource:
             update_hint="",
         )
         self._snapshot = replace(base, running=base.running if running is None else running)
-        self._venv = venv or VenvState(
-            mode="managed", python="/tmp/fake-instance/.venv/bin/python", ready=True, packages=42, core_version="9.9.9"
-        )
-        self._venv_result = venv_result or OperationResult(True, i18n.t("cli.tui.dashboard.stub_venv_ok"), "stub")
-        self.calls = {"snapshot": 0, "probe": 0, "venv": 0, "venv_action": 0, "migrate": 0}
-        self.venv_actions: list[str] = []
-        self.migrated: list[str] = []
+        self.calls = {"snapshot": 0, "probe": 0}
 
     def snapshot(self) -> DashboardSnapshot:
         """见 :meth:`DashboardSource.snapshot`。"""
@@ -269,27 +198,6 @@ class StaticDashboardSource:
         """见 :meth:`DashboardSource.probe_running`。"""
         self.calls["probe"] += 1
         return self._snapshot.running
-
-    def venv_state(self) -> VenvState:
-        """见 :meth:`DashboardSource.venv_state`。"""
-        self.calls["venv"] += 1
-        return self._venv
-
-    def venv_action(self, kind: str) -> OperationResult:
-        """见 :meth:`DashboardSource.venv_action`。"""
-        self.calls["venv_action"] += 1
-        self.venv_actions.append(kind)
-        return self._venv_result
-
-    def migrate_legacy(self, project: str) -> OperationResult:
-        """见 :meth:`DashboardSource.migrate_legacy`。"""
-        self.calls["migrate"] += 1
-        self.migrated.append(project)
-        return self._venv_result
-
-    def set_venv(self, state: VenvState) -> None:
-        """替换替身返回的环境状态。"""
-        self._venv = state
 
     def set_running(self, value: bool | None) -> None:
         """改写替身的运行状态，模拟实例启停。"""
@@ -310,7 +218,6 @@ class LocalDashboardSource:
     :param instance_factory: 构造 ``Instance`` 的回调，测试可注入以避开 T5.1 的实现。
     :param module_source: 取版本用的模块数据源；缺省复用 Modules 页的子进程实现。
     :param update_probe: 返回更新提示的回调；未注入时更新提示留空。
-    :param action_timeout: 环境动作的秒数上限；装包可能跑上几分钟，故单独给一个宽松值。
     """
 
     def __init__(
@@ -323,9 +230,7 @@ class LocalDashboardSource:
         instance_factory: Callable[[Path], Any] | None = None,
         module_source: Any | None = None,
         update_probe: Callable[[], str] | None = None,
-        action_timeout: float = ACTION_TIMEOUT_SECONDS,
     ) -> None:
-        self.action_timeout = action_timeout
         self.root = Path(root) if root is not None else None
         self.start = Path(start) if start is not None else None
         self.timeout = timeout
@@ -368,93 +273,6 @@ class LocalDashboardSource:
             update_source=hint_source,
             error=meta_error,
         )
-
-    def venv_state(self) -> VenvState:
-        """见 :meth:`DashboardSource.venv_state`；经 ``akaribot venv status --json`` 读取。"""
-        self.calls["venv"] = self.calls.get("venv", 0) + 1
-        root = self._root()
-        if root is None:
-            return VenvState(error=i18n.t("cli.tui.dashboard.src_root_unknown"))
-        completed = self._run_cli(root, ("venv", "status", "--json"))
-        if completed.returncode != 0:
-            return VenvState(error=self._tail(completed.stderr) or f"exit {completed.returncode}")
-        try:
-            payload = json.loads((completed.stdout or "").strip() or "{}")
-        except json.JSONDecodeError as error:
-            return VenvState(error=i18n.t("cli.tui.dashboard.venv_bad_json", error=error))
-        if not isinstance(payload, Mapping):
-            return VenvState(error=i18n.t("cli.tui.dashboard.venv_bad_json", error="not an object"))
-        return VenvState(
-            mode=str(payload.get("mode") or ""),
-            python=str(payload.get("python") or ""),
-            venv_dir=str(payload.get("venv_dir") or ""),
-            ready=bool(payload.get("exists")),
-            packages=payload.get("package_count"),
-            core_version=str(payload.get("core_version") or ""),
-            error=str(payload.get("error") or ""),
-        )
-
-    def venv_action(self, kind: str) -> OperationResult:
-        """见 :meth:`DashboardSource.venv_action`；``--yes`` 由界面代答。
-
-        界面上已经确认过，不该再被 CLI 的交互提问卡住；``--yes`` 对三个动作含义一致。
-        """
-        self.calls["venv_action"] = self.calls.get("venv_action", 0) + 1
-        root = self._root()
-        label = i18n.t(f"cli.tui.dashboard.venv_label_{kind}")
-        if root is None:
-            return OperationResult(False, i18n.t("cli.tui.common.failed_label", label=label), self.last_error)
-        completed = self._run_cli(root, ("venv", kind, "--yes"), timeout=self.action_timeout)
-        if completed.returncode == 0:
-            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
-        detail = self._tail(completed.stderr) or self._tail(completed.stdout)
-        if completed.returncode < 0:
-            # 子进程被信号终止（超时清理、终端断连等）时退出码是负数，只报数字看不出所以然。
-            return OperationResult(
-                False,
-                i18n.t("cli.tui.dashboard.venv_signalled", label=label, signal=_signal_name(-completed.returncode)),
-                detail,
-            )
-        return OperationResult(
-            False,
-            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
-            detail,
-        )
-
-    def migrate_legacy(self, project: str) -> OperationResult:
-        """见 :meth:`DashboardSource.migrate_legacy`；旧目录只读，迁移可重复执行。"""
-        self.calls["migrate"] = self.calls.get("migrate", 0) + 1
-        root = self._root()
-        label = i18n.t("cli.tui.dashboard.label_migrate")
-        if root is None:
-            return OperationResult(False, i18n.t("cli.tui.common.failed_label", label=label), self.last_error)
-        completed = self._run_cli(root, ("migrate", "legacy", project))
-        if completed.returncode == 0:
-            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
-        return OperationResult(
-            False,
-            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
-            self._tail(completed.stderr) or self._tail(completed.stdout),
-        )
-
-    def _run_cli(
-        self, root: Path, args: Sequence[str], *, timeout: float | None = None
-    ) -> subprocess.CompletedProcess[str]:
-        runner = self._runner or subprocess.run
-        return runner(
-            cli_process.cli_argv(*args),
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=self.timeout if timeout is None else timeout,
-            env=cli_process.cli_env(root),
-        )
-
-    @staticmethod
-    def _tail(text: str | None, limit: int = 400) -> str:
-        return (text or "").strip()[-limit:]
 
     def probe_running(self) -> bool | None:
         """见 :meth:`DashboardSource.probe_running`：只读锁文件，不起子进程。"""
@@ -593,13 +411,6 @@ class DashboardPage(compat.Vertical):
     DashboardPage #fields {
         width: 1fr;
     }
-    DashboardPage #migrate-row {
-        height: 3;
-        padding: 0 0 0 1;
-    }
-    DashboardPage #legacy-path {
-        width: 1fr;
-    }
     DashboardPage #actions {
         height: 3;
         padding: 0 0 0 1;
@@ -616,10 +427,6 @@ class DashboardPage(compat.Vertical):
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
-        ("a", "venv_adopt", i18n.t("cli.tui.dashboard.bind_venv_adopt")),
-        ("x", "venv_release", i18n.t("cli.tui.dashboard.bind_venv_release")),
-        ("ctrl+n", "venv_recreate", i18n.t("cli.tui.dashboard.bind_venv_recreate")),
-        ("m", "migrate_legacy", i18n.t("cli.tui.dashboard.bind_migrate")),
     )
 
     can_focus = True
@@ -640,9 +447,6 @@ class DashboardPage(compat.Vertical):
         self.last_error: str = ""
         self._snapshot = DashboardSnapshot()
         self._loaded_at: float = 0.0
-        self._venv = VenvState()
-        self._busy: bool = False
-        self._pending_venv: str = ""
         self._rows: tuple[tuple[str, str], ...] = ()
         self._fields_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
@@ -651,21 +455,13 @@ class DashboardPage(compat.Vertical):
         """装配页面控件树。"""
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
-        with compat.Horizontal(id="migrate-row"):
-            yield compat.Input(placeholder=i18n.t("cli.tui.dashboard.legacy_placeholder"), id="legacy-path")
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.dashboard.action_refresh"), id="refresh", variant="primary")
-            yield compat.Button(i18n.t("cli.tui.dashboard.button_venv_adopt"), id="venv-adopt")
-            yield compat.Button(i18n.t("cli.tui.dashboard.button_venv_release"), id="venv-release")
-            yield compat.Button(i18n.t("cli.tui.dashboard.button_venv_recreate"), id="venv-recreate", variant="warning")
-            yield compat.Button(i18n.t("cli.tui.dashboard.button_migrate"), id="migrate")
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
         """挂载后只装配控件；取数与周期探测推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        # 环境模式未知时先不显示环境动作，读到模式后再按适用性放出来。
-        self._sync_actions()
 
     def activate(self) -> None:
         """首次显示时读取快照，并按周期探测锁文件。"""
@@ -735,14 +531,9 @@ class DashboardPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.dashboard.status_load_failed", error=self.last_error))
             return False
         self._snapshot = snapshot
-        try:
-            self._venv = await asyncio.to_thread(self.source.venv_state)
-        except Exception as error:  # noqa: BLE001 - 环境状态读不到只降级为一行说明
-            self._venv = VenvState(error=f"{type(error).__name__}: {error}")
         self._loaded_at = time.monotonic()
         self.last_error = snapshot.error
         self._render_fields()
-        self._sync_actions()
         if snapshot.error:
             self._set_status(i18n.t("cli.tui.dashboard.status_partial_failed", error=snapshot.error))
         else:
@@ -803,7 +594,6 @@ class DashboardPage(compat.Vertical):
                 i18n.t("cli.tui.dashboard.field_update_hint"),
                 snapshot.update_hint or i18n.t("cli.tui.dashboard.value_no_hint"),
             ),
-            (i18n.t("cli.tui.dashboard.field_venv"), self._venv.text()),
         ]
         self._rows = tuple(rows)
         lines = compat.align_rows(rows, gap=2)
@@ -845,140 +635,8 @@ class DashboardPage(compat.Vertical):
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        for kind in ("adopt", "release", "recreate"):
-            if event.button.id == f"venv-{kind}":
-                self.request_venv_action(kind)
-                return
-        if event.button.id == "migrate":
-            self.request_migrate()
-        elif event.button.id == "refresh":
+        if event.button.id == "refresh":
             self.refresh_snapshot(force=True)
-
-    def request_venv_action(self, kind: str) -> None:
-        """执行环境动作；连按两次同一个动作才真正执行。
-
-        三个动作都会换掉实例正在使用的解释器，因此实例运行期间一律拒绝；动作不适用于当前模式时
-        也不动作，只说明为什么。
-        """
-        reason = self._venv_blocker(kind)
-        if reason:
-            compat.notify(self.app, reason, severity="warning", title=i18n.t(f"cli.tui.dashboard.venv_label_{kind}"))
-            return
-        if self._pending_venv != kind:
-            self._pending_venv = kind
-            self._set_status(i18n.t(f"cli.tui.dashboard.venv_confirm_{kind}"))
-            return
-        self._pending_venv = ""
-        self._set_status(
-            i18n.t("cli.tui.dashboard.status_venv_calling", label=i18n.t(f"cli.tui.dashboard.venv_label_{kind}"))
-        )
-        self.run_worker(self._venv_op(kind), group="dashboard-venv", exclusive=True)
-
-    def _venv_blocker(self, kind: str) -> str:
-        # 可以执行时返回空串。
-        if self._busy:
-            return i18n.t("cli.tui.common.busy_title")
-        if self._snapshot.running:
-            return i18n.t("cli.tui.dashboard.venv_running_blocked")
-        mode = self._venv.mode
-        if mode not in ("managed", "external"):
-            return i18n.t("cli.tui.dashboard.venv_mode_unknown")
-        if kind == "adopt" and mode == "managed":
-            return i18n.t("cli.tui.dashboard.venv_already_managed")
-        if kind in ("release", "recreate") and mode != "managed":
-            return i18n.t("cli.tui.dashboard.venv_not_managed")
-        return ""
-
-    async def _venv_op(self, kind: str) -> None:
-        self._busy = True
-        self._sync_actions()
-        label = i18n.t(f"cli.tui.dashboard.venv_label_{kind}")
-        try:
-            result = await asyncio.to_thread(self.source.venv_action, kind)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
-            result = OperationResult(
-                False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
-            )
-        if result.ok:
-            compat.notify(self.app, result.message, severity="information", title=label)
-        else:
-            self.last_error = result.detail or result.message
-            compat.notify(self.app, result.message, severity="error", title=label)
-        self._busy = False
-        self.refresh_snapshot(force=True)
-
-    def _sync_actions(self) -> None:
-        # 只显示当前模式下有意义的动作：托管实例给「改用系统解释器」与「重建」，外部实例只给
-        # 「改用托管 venv」。点不到的按钮不会让人去猜它是干什么的。
-        mode = self._venv.mode
-        applicable = {
-            "venv-adopt": mode == "external",
-            "venv-release": mode == "managed",
-            "venv-recreate": mode == "managed",
-            "migrate": True,
-        }
-        for button_id, visible in applicable.items():
-            button = self.query_one(f"#{button_id}", compat.Button)
-            button.display = visible
-            button.disabled = self._busy
-
-    def request_migrate(self) -> None:
-        """迁移旧版项目；填了路径后连按两次才执行。
-
-        旧目录只读，迁移可重复执行，但会往实例里搬配置与数据，故要求再按一次确认；路径一变就
-        重新询问。
-        """
-        project = self.query_one("#legacy-path", compat.Input).value.strip()
-        if not project:
-            compat.notify(
-                self.app,
-                i18n.t("cli.tui.dashboard.migrate_path_required"),
-                severity="warning",
-                title=i18n.t("cli.tui.dashboard.button_migrate"),
-            )
-            return
-        if self._pending_venv != f"migrate:{project}":
-            self._pending_venv = f"migrate:{project}"
-            self._set_status(i18n.t("cli.tui.dashboard.migrate_confirm", project=project))
-            return
-        self._pending_venv = ""
-        self._set_status(i18n.t("cli.tui.dashboard.status_migrate_calling", project=project))
-        self.run_worker(self._migrate(project), group="dashboard-migrate", exclusive=True)
-
-    async def _migrate(self, project: str) -> None:
-        self._busy = True
-        self._sync_actions()
-        try:
-            result = await asyncio.to_thread(self.source.migrate_legacy, project)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
-            result = OperationResult(
-                False,
-                i18n.t("cli.tui.common.failed_label", label=i18n.t("cli.tui.dashboard.label_migrate")),
-                f"{type(error).__name__}: {error}",
-            )
-        if result.ok:
-            compat.notify(self.app, result.message, severity="information", title=result.message)
-        else:
-            self.last_error = result.detail or result.message
-            compat.notify(self.app, result.message, severity="error", title=result.message)
-        self._busy = False
-        self.refresh_snapshot(force=True)
-
-    def action_migrate_legacy(self) -> None:
-        """键位动作：迁移输入框里的旧项目。"""
-        self.request_migrate()
-
-    def action_venv_adopt(self) -> None:
-        """键位动作：把外部解释器接管为托管 venv。"""
-        self.request_venv_action("adopt")
-
-    def action_venv_release(self) -> None:
-        """键位动作：解除托管，把包留在现有 venv 里。"""
-        self.request_venv_action("release")
-
-    def action_venv_recreate(self) -> None:
-        """键位动作：重建托管 venv 并重装包。"""
-        self.request_venv_action("recreate")
 
     def action_refresh(self) -> None:
         """键位动作：强制重新读取快照。"""

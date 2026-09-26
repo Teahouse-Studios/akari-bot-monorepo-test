@@ -16,15 +16,20 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.adapters import AdaptersPage
 from akaribot.cli.tui.config import ConfigPage
 from akaribot.cli.tui.dashboard import DashboardPage
+from akaribot.cli.tui.database import DatabasePage
+from akaribot.cli.tui.environment import EnvironmentPage
 from akaribot.cli.tui.dev import DevPage
 from akaribot.cli.tui.doctor import DoctorPage
 from akaribot.cli.tui.logs import LogsPage
+from akaribot.cli.tui.misc import MiscPage
 from akaribot.cli.tui.modules import ModuleSource, ModulesPage, SubprocessModuleSource
 from akaribot.cli.tui.run import RunPage
 
 # 侧栏顺序即页面顺序；key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
 PAGES: tuple[tuple[str, str, type], ...] = (
     ("dashboard", "cli.tui.nav.dashboard", DashboardPage),
+    ("environment", "cli.tui.nav.environment", EnvironmentPage),
+    ("database", "cli.tui.nav.database", DatabasePage),
     ("modules", "cli.tui.nav.modules", ModulesPage),
     ("adapters", "cli.tui.nav.adapters", AdaptersPage),
     ("config", "cli.tui.nav.config", ConfigPage),
@@ -32,6 +37,7 @@ PAGES: tuple[tuple[str, str, type], ...] = (
     ("run", "cli.tui.nav.run", RunPage),
     ("dev", "cli.tui.nav.dev", DevPage),
     ("doctor", "cli.tui.nav.doctor", DoctorPage),
+    ("misc", "cli.tui.nav.misc", MiscPage),
 )
 
 INLINE_CSS = """
