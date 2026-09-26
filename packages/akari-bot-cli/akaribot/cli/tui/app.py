@@ -99,6 +99,7 @@ class TuiApp(compat.App[int]):
     BINDINGS = compat.bindings(
         ("q", "quit", i18n.t("cli.tui.app.bind_quit")),
         ("ctrl+q", "quit", i18n.t("cli.tui.app.bind_quit")),
+        ("ctrl+t", "toggle_theme", i18n.t("cli.tui.app.bind_toggle_theme")),
     )
 
     def __init__(
@@ -111,6 +112,8 @@ class TuiApp(compat.App[int]):
         initial_page: str = "modules",
     ) -> None:
         super().__init__()
+        # 主题在挂载前注册并激活：样式表里的 $primary 等变量在首次解析时就要取到品牌色。
+        compat.install_akari_themes(self)
         self.module_source: ModuleSource = source if source is not None else SubprocessModuleSource()
         # 各页数据源的可注入映射（键为 PAGES 的 key）；缺省时各页自建子进程实现，便于无头测试。
         self.sources: dict[str, Any] = dict(sources or {})
@@ -120,6 +123,17 @@ class TuiApp(compat.App[int]):
         self.startup_ms: float = 0.0
         self.first_paint_ms: float = 0.0
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
+
+    def action_toggle_theme(self) -> None:
+        """键位动作：在品牌深色与浅色主题之间切换。"""
+        chosen = compat.toggle_akari_theme(self)
+        name = i18n.t("cli.tui.app.theme_dark" if chosen == compat.AKARI_THEME_DARK else "cli.tui.app.theme_light")
+        compat.notify(
+            self,
+            i18n.t("cli.tui.app.theme_switched", name=name),
+            severity="information",
+            title=i18n.t("cli.tui.app.bind_toggle_theme"),
+        )
 
     def compose(self) -> compat.ComposeResult:
         """装配侧栏与全部页面。"""

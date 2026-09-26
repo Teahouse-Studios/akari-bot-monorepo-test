@@ -635,6 +635,22 @@ class SubprocessModuleSource:
         return cleaned[-limit:]
 
 
+@dataclass(frozen=True)
+class ModuleLayout:
+    """模块列表的列宽计划。
+
+    :param name_width: 名称列宽。
+    :param version_width: 版本列宽。
+    :param load_width: 装载列宽；``0`` 表示本屏没有这一列。
+    :param show_summary: 是否还放得下简介列。
+    """
+
+    name_width: int
+    version_width: int
+    load_width: int
+    show_summary: bool
+
+
 class ModulesPage(compat.Vertical):
     """Modules 页控件。
 
@@ -674,9 +690,12 @@ class ModulesPage(compat.Vertical):
     ModulesPage #search {
         width: 1fr;
     }
+    ModulesPage #toggle-row {
+        height: 3;
+        align-horizontal: center;
+    }
     ModulesPage #installed-only {
         width: auto;
-        padding: 1 0 0 1;
     }
     ModulesPage #count {
         width: auto;
@@ -686,9 +705,19 @@ class ModulesPage(compat.Vertical):
     ModulesPage #body {
         height: 1fr;
     }
-    ModulesPage #module-list {
+    ModulesPage #list-pane {
         width: 40%;
         min-width: 24;
+    }
+    ModulesPage #columns {
+        height: 1;
+        padding: 0 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    ModulesPage #module-list {
+        height: 1fr;
         border: round $primary;
     }
     ModulesPage #module-list > ListItem {
@@ -754,15 +783,19 @@ class ModulesPage(compat.Vertical):
         self._detail_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._rendered_rows: tuple[str, ...] = ()
+        self._columns_rendered: str = ""
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树。"""
         with compat.Horizontal(id="search-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.modules.search_placeholder"), id="search")
-            yield compat.Checkbox(i18n.t("cli.tui.modules.installed_only"), id="installed-only")
             yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
+        with compat.Horizontal(id="toggle-row"):
+            yield compat.Checkbox(i18n.t("cli.tui.modules.installed_only"), id="installed-only")
         with compat.Horizontal(id="body"):
-            yield compat.ListView(id="module-list")
+            with compat.Vertical(id="list-pane"):
+                yield compat.Static("", id="columns", markup=False)
+                yield compat.ListView(id="module-list")
             with compat.VerticalScroll(id="detail-pane"):
                 yield compat.Static(i18n.t("cli.tui.modules.detail_placeholder"), id="detail", markup=False)
         with compat.Horizontal(id="actions"):
@@ -956,9 +989,9 @@ class ModulesPage(compat.Vertical):
         records = self.visible_records
         list_view = self.query_one("#module-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
-        name_width = self._name_column_width(inner_width)
-        version_width = self._version_column_width()
-        rows = [self._row_text(record, name_width, version_width, inner_width) for record in records]
+        layout = self._layout(inner_width)
+        rows = [self._row_text(record, layout, inner_width) for record in records]
+        self._render_columns(layout, inner_width)
         list_view.clear()
         items = [compat.ListItem(compat.Static(row, markup=False)) for row in rows]
         if items:
@@ -972,6 +1005,25 @@ class ModulesPage(compat.Vertical):
     def row_texts(self) -> tuple[str, ...]:
         """返回最近一次渲染出的列表行文本，供自动化断言核对宽度。"""
         return self._rendered_rows
+
+    def column_text(self) -> str:
+        """返回最近一次渲染出的表头文本。"""
+        return self._columns_rendered
+
+    def _render_columns(self, layout: ModuleLayout, inner_width: int) -> None:
+        # 表头与行共用同一份列宽计划：行里若因放不下而丢掉简介列并放宽名称列，表头也必须照做。
+        cells = [
+            f"{' ' * 4}{compat.fit_cells(i18n.t('cli.tui.modules.column_name'), layout.name_width)}",
+            compat.fit_cells(i18n.t("cli.tui.modules.column_version"), layout.version_width),
+        ]
+        if layout.load_width:
+            cells.append(compat.fit_cells(i18n.t("cli.tui.modules.column_load"), layout.load_width))
+        text = " ".join(cells)
+        if layout.show_summary:
+            text = f"{text} {i18n.t('cli.tui.modules.column_summary')}"
+        text = compat.truncate_cells(text, inner_width).rstrip()
+        self._columns_rendered = text
+        self.query_one("#columns", compat.Static).update(compat.plain_text(text))
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:
@@ -988,22 +1040,44 @@ class ModulesPage(compat.Vertical):
         longest = compat.column_width(record.version or "-" for record in self._records)
         return min(max(longest, 5), 8)
 
-    def _row_text(self, record: ModuleRecord, name_width: int, version_width: int, inner_width: int) -> str:
-        # 首列是选中位：高亮条只表示光标所在，选中集合才是批量操作的作用对象。
+    def _load_column_width(self) -> int:
+        # 只统计有装载语义的行：未装或没有模块声明的行不占这一列。
+        texts = [self.load_state_text(record) for record in self._records if self._has_load_column(record)]
+        return max((compat.display_width(text) for text in texts), default=0)
+
+    def _layout(self, inner_width: int) -> ModuleLayout:
+        # 放不下简介时整列丢掉，并把余量给名称列。
+        name_width = self._name_column_width(inner_width)
+        version_width = self._version_column_width()
+        load_width = self._load_column_width()
+        fixed = 4 + version_width + (load_width + 1 if load_width else 0) + 1
+        show_summary = inner_width - fixed - name_width - 1 >= 6
+        if not show_summary:
+            name_width = max(inner_width - fixed, 4)
+        # 窄屏再挤一次：行宽是 4 + 名称 + 1 + 版本 [+ 1 + 装载]，装不下时先收窄装载列，
+        # 收到 4 列以下就整列去掉——半截的「装…」还不如不留。
+        budget = inner_width - 6 - name_width - version_width
+        if load_width and budget < load_width:
+            load_width = budget if budget >= 4 else 0
+        return ModuleLayout(name_width, version_width, load_width, show_summary)
+
+    @staticmethod
+    def _has_load_column(record: ModuleRecord) -> bool:
+        return record.installed and bool(record.provides_modules)
+
+    def _row_text(self, record: ModuleRecord, layout: ModuleLayout, inner_width: int) -> str:
+        # 首列是选中位：高亮条只表示光标所在，选中集合才是批量操作的操作对象。
         marked = "✓" if record.dist in self._selected else " "
         marker = "●" if record.installed else "○"
-        version = compat.fit_cells(record.version or "-", version_width)
-        load = self.load_state_text(record) if record.installed else ""
-        load_width = compat.display_width(load) + 1 if load else 0
-        fixed = compat.display_width(marker) + 4 + version_width + load_width
-        summary_width = inner_width - fixed - name_width - 1
-        load_cell = f" {load}" if load else ""
-        if summary_width < 6:
-            name_width = max(inner_width - fixed, 4)
-            return f"{marked} {marker} {compat.fit_cells(record.name, name_width)} {version}{load_cell}".rstrip()
-        name = compat.fit_cells(record.name, name_width)
-        summary = compat.truncate_cells(record.summary, summary_width)
-        return f"{marked} {marker} {name} {version}{load_cell} {summary}".rstrip()
+        version = compat.fit_cells(record.version or "-", layout.version_width)
+        load = self.load_state_text(record) if self._has_load_column(record) else ""
+        load_cell = f" {compat.fit_cells(load, layout.load_width)}" if layout.load_width else ""
+        name = compat.fit_cells(record.name, layout.name_width)
+        row = f"{marked} {marker} {name} {version}{load_cell}"
+        if not layout.show_summary:
+            return row.rstrip()
+        summary_width = inner_width - compat.display_width(row) - 1
+        return f"{row} {compat.truncate_cells(record.summary, summary_width)}".rstrip()
 
     def _load_detail(self, record: ModuleRecord) -> str:
         separator = i18n.t("cli.tui.common.list_separator")

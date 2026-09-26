@@ -524,6 +524,46 @@ async def _test_toggle_load_ignores_uninstalled():
     return loaded == {} and status
 
 
+async def _test_columns_header_aligns_with_rows():
+    # 表头与行用同一套列宽：版本列与装载列在两者中的起始列必须一致。
+    source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
+
+    async def body(app, page, pilot):
+        header = page.column_text()
+        rows = page.row_texts()
+        await pilot.press("q")
+        return header, rows
+
+    header, rows = await _with_app(source, body)
+    for key in ("column_name", "column_version", "column_load"):
+        if i18n.t(f"cli.tui.modules.{key}") not in header:
+            return False
+    version_col = compat.display_width(header[: header.index(i18n.t("cli.tui.modules.column_version"))])
+    load_col = compat.display_width(header[: header.index(i18n.t("cli.tui.modules.column_load"))])
+    version_ok = all(
+        compat.display_width(row[: row.index(version)]) == version_col
+        for row, version in zip(rows, ("1.0.0", "1.0.0", "0.3.0"), strict=False)
+    )
+    load_positions = [compat.display_width(row[: row.index("装载")]) for row in rows if "装载" in row]
+    return version_ok and len(load_positions) == 2 and all(position == load_col for position in load_positions)
+
+
+async def _test_toggle_row_is_centered():
+    # 「只看已安装」独立成一行并水平居中；放在搜索行里会被输入框挤到边缘。
+    source = _load_source({"wiki": True, "ab": True})
+
+    async def body(app, page, pilot):
+        row = page.query_one("#toggle-row")
+        toggle = page.query_one("#installed-only")
+        await pilot.press("q")
+        return row.region, toggle.region
+
+    row, toggle = await _with_app(source, body)
+    row_center = row.x + row.width / 2
+    toggle_center = toggle.x + toggle.width / 2
+    return abs(row_center - toggle_center) <= 1.0
+
+
 @func_case
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
@@ -548,4 +588,6 @@ async def test_tui_modules_available(tester: Tester):
     await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 l 装载整包")
     await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
     await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
+    await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
+    await tester.test(_test_toggle_row_is_centered, "只看已安装水平居中")
     return tester

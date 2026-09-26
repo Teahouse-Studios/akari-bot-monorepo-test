@@ -16,7 +16,7 @@ import importlib.resources
 import os
 import sys
 import time
-from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Sequence
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -31,12 +31,17 @@ from textual.css.stylesheet import Stylesheet
 from textual.pilot import Pilot
 from textual.reactive import reactive
 from textual.screen import Screen
+from textual.theme import Theme
 from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, ListItem, ListView, ProgressBar, Static
 
 from akaribot.cli import i18n
 
 __all__ = [
+    "AKARI_DARK_PALETTE",
+    "AKARI_LIGHT_PALETTE",
+    "AKARI_THEME_DARK",
+    "AKARI_THEME_LIGHT",
     "App",
     "Binding",
     "BindingType",
@@ -65,6 +70,7 @@ __all__ = [
     "app_test",
     "bind",
     "bindings",
+    "build_theme",
     "cell_width",
     "check_textual_version",
     "column_width",
@@ -74,6 +80,7 @@ __all__ = [
     "focus_first",
     "focus_now",
     "highlighted_index",
+    "install_akari_themes",
     "is_interactive_terminal",
     "load_stylesheet",
     "notify",
@@ -89,6 +96,7 @@ __all__ = [
     "run_app",
     "set_text_selection",
     "textual_version",
+    "toggle_akari_theme",
     "truncate_cells",
     "wait_for_idle",
     "widget_cells",
@@ -281,6 +289,78 @@ def parse_stylesheet(css: str, path: str = "<tui>", app: App[Any] | None = None)
     sheet.add_source(css, read_from=("tui", path))
     sheet.parse()
     return sheet
+
+
+# endregion
+
+
+# region 品牌主题
+
+# 主题名与调色板取自 character_marked.png（品牌立绘）：不透明部分以浅紫与粉色为主，暗部是深紫褐。
+# 深色版取暗部作底、亮部作强调色；浅色版用图里的浅底与深色描边。语义色按同一色相家族调和。
+AKARI_THEME_DARK = "akari-dark"
+AKARI_THEME_LIGHT = "akari-light"
+
+AKARI_DARK_PALETTE: dict[str, str] = {
+    "primary": "#d69cdd",
+    "secondary": "#f5b8e0",
+    "accent": "#fbc1ed",
+    "foreground": "#f7e5fa",
+    "background": "#17101a",
+    "surface": "#221726",
+    "panel": "#2c1e31",
+    "success": "#9ed7a6",
+    "warning": "#f2c48a",
+    "error": "#f2809b",
+}
+AKARI_LIGHT_PALETTE: dict[str, str] = {
+    "primary": "#8e4f9e",
+    "secondary": "#b361a8",
+    "accent": "#c2499e",
+    "foreground": "#3a2438",
+    "background": "#fdfbf5",
+    "surface": "#f9e6f6",
+    "panel": "#f2d3fd",
+    "success": "#2f7d4f",
+    "warning": "#8a5a12",
+    "error": "#b3324f",
+}
+
+
+def build_theme(name: str, palette: Mapping[str, str], *, dark: bool) -> Theme:
+    """按调色板构造主题对象。
+
+    :param name: 主题名。
+    :param palette: 颜色映射，键同 :class:`~textual.theme.Theme` 的字段名。
+    :param dark: 是否为深色主题。
+    :return: 主题对象。
+    """
+    return Theme(name=name, dark=dark, **palette)
+
+
+def install_akari_themes(app: App[Any], *, dark: bool = True) -> str:
+    """注册品牌主题并激活其中一个。
+
+    :param app: 应用实例。
+    :param dark: 为真时激活深色版，否则激活浅色版。
+    :return: 激活的主题名。
+    """
+    app.register_theme(build_theme(AKARI_THEME_DARK, AKARI_DARK_PALETTE, dark=True))
+    app.register_theme(build_theme(AKARI_THEME_LIGHT, AKARI_LIGHT_PALETTE, dark=False))
+    chosen = AKARI_THEME_DARK if dark else AKARI_THEME_LIGHT
+    app.theme = chosen
+    return chosen
+
+
+def toggle_akari_theme(app: App[Any]) -> str:
+    """在品牌深色与浅色主题之间切换。
+
+    :param app: 应用实例。
+    :return: 切换后的主题名。
+    """
+    chosen = AKARI_THEME_LIGHT if app.theme == AKARI_THEME_DARK else AKARI_THEME_DARK
+    app.theme = chosen
+    return chosen
 
 
 # endregion

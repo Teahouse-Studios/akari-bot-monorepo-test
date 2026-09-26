@@ -151,6 +151,7 @@ def run_self_check() -> int:
     results.append(_check_page_navigation())
     results.append(_check_multi_select())
     results.append(_check_adapter_install())
+    results.append(_check_theme())
 
     for result in results:
         stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
@@ -332,6 +333,30 @@ def _check_available_and_progress() -> CheckResult:
     )
 
 
+def _check_theme() -> CheckResult:
+    from akaribot.cli.tui import _compat as compat
+
+    try:
+        app_instance = compat.App()
+        compat.install_akari_themes(app_instance)
+        variables = app_instance.get_css_variables()
+    except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
+        return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_theme"), f"{type(error).__name__}: {error}")
+    primary = str(variables.get("primary", "")).lower()
+    expected = compat.AKARI_DARK_PALETTE["primary"].lower()
+    if app_instance.theme != compat.AKARI_THEME_DARK or primary != expected:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_theme"),
+            i18n.t("cli.tui_cmd.check_theme_bad", name=app_instance.theme, primary=primary),
+        )
+    return CheckResult(
+        LEVEL_OK,
+        i18n.t("cli.tui_cmd.check_theme"),
+        i18n.t("cli.tui_cmd.check_theme_detail", name=app_instance.theme, primary=primary),
+    )
+
+
 def _check_adapter_install() -> CheckResult:
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.adapters import AdapterRecord, AdapterSnapshot, StaticAdapterSource
@@ -436,7 +461,9 @@ def _check_stylesheet() -> list[CheckResult]:
         )
     ]
     try:
-        compat.parse_stylesheet(STYLESHEET, "<akaribot-tui>", app=compat.App())
+        probe = compat.App()
+        compat.install_akari_themes(probe)
+        compat.parse_stylesheet(STYLESHEET, "<akaribot-tui>", app=probe)
     except Exception as error:  # noqa: BLE001 - 解析失败即硬失败，需报出原文
         results.append(
             CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_stylesheet_parse"), f"{type(error).__name__}: {error}")

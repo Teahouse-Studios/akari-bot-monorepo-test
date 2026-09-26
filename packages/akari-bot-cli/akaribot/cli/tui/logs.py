@@ -428,6 +428,7 @@ class LogsPage(compat.Vertical):
         self.last_error: str = ""
         self._processes: tuple[str, ...] = ()
         self._files: tuple[LogFileInfo, ...] = ()
+        self._process_labels: tuple[str, ...] = ()
         self._selected: str | None = None
         self._followed: LogFileInfo | None = None
         self._offset: int = 0
@@ -480,8 +481,19 @@ class LogsPage(compat.Vertical):
 
     @property
     def files(self) -> tuple[LogFileInfo, ...]:
-        """返回最近一次枚举到的文件，按最新在前排序。"""
-        return self._files
+        """返回当前进程过滤下可见的文件，按最新在前排序。"""
+        return self.visible_files
+
+    @property
+    def visible_files(self) -> tuple[LogFileInfo, ...]:
+        """返回当前过滤下可见的文件。
+
+        枚举结果始终保留完整清单，过滤在读取时进行：进程行的文件计数若跟着过滤结果算，选中一个
+        进程后其余进程的计数会全变成 0，看上去像在随机跳动。
+        """
+        if self._selected is None:
+            return self._files
+        return tuple(info for info in self._files if info.process == self._selected)
 
     @property
     def selected_process(self) -> str | None:
@@ -492,6 +504,10 @@ class LogsPage(compat.Vertical):
     def followed_file(self) -> LogFileInfo | None:
         """返回当前跟随的文件。"""
         return self._followed
+
+    def process_labels(self) -> tuple[str, ...]:
+        """返回最近一次渲染出的进程行文本，供自动化断言核对计数。"""
+        return self._process_labels
 
     @property
     def read_offset(self) -> int:
@@ -548,7 +564,7 @@ class LogsPage(compat.Vertical):
             processes = tuple(self.source.list_processes())
             if self._selected is not None and self._selected not in processes:
                 self._selected = None
-            files = tuple(self.source.list_files(self._selected))
+            files = tuple(self.source.list_files(None))
         except Exception as error:  # noqa: BLE001 - 枚举失败只更新状态栏
             self._processes = ()
             self._files = ()
@@ -562,7 +578,7 @@ class LogsPage(compat.Vertical):
         self._processes = processes
         self._files = files
         self.last_error = ""
-        chosen = self._choose_file(files)
+        chosen = self._choose_file(self.visible_files)
         if chosen is None:
             self._followed = None
             self._offset = 0
@@ -746,12 +762,14 @@ class LogsPage(compat.Vertical):
         list_view = self.query_one("#process-list", compat.ListView)
         labels = [self._process_label(None)]
         labels.extend(self._process_label(name) for name in self._processes)
+        self._process_labels = tuple(labels)
         list_view.clear()
         list_view.extend(compat.ListItem(compat.Static(label, markup=False)) for label in labels)
         index = 0 if self._selected is None else (self._processes.index(self._selected) + 1)
         list_view.index = min(index, max(len(labels) - 1, 0))
 
     def _process_label(self, process: str | None) -> str:
+        # 计数始终针对完整清单：它表示该进程（或全部进程）有多少个日志文件，与当前过滤无关。
         count = sum(1 for info in self._files if process is None or info.process == process)
         return i18n.t("cli.tui.logs.process_item", name=_filter_name(process), count=count)
 
