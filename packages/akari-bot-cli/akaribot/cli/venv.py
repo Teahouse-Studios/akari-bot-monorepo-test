@@ -53,6 +53,8 @@ AKARIBOT_PREFIX = "akari-bot-"
 AKARIBOT_ENTRY_POINT_GROUPS = ("akaribot.modules", "akaribot.adapters")
 WORKSPACE_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pyproject.toml")
 MANIFEST_FILENAME = "manifest.toml"
+# 判定目录是否为 venv 的标志文件。
+VENV_MARKER_FILENAME = "pyvenv.cfg"
 # 清单未声明 requires_core_api 时的默认区间；与 core.registry.PackageManifest 及
 # tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 同口径，工作区视图与 registry 视图必须一致。
 DEFAULT_REQUIRES_CORE_API = ">=1"
@@ -1246,12 +1248,31 @@ class HostingReport:
     detail: str = ""
 
 
-def _check_distinct(source: Path, target: Path) -> None:
+def environment_root(python: Path) -> Path:
+    """返回解释器所属的环境根目录。
+
+    venv 里的解释器是 ``<环境>/bin/python``（Windows 为 ``<环境>\\Scripts\\python.exe``），
+    只有目录里有 ``pyvenv.cfg`` 才算一个环境；裸解释器按自身真实路径归到一个唯一位置。
+
+    :param python: 解释器路径。
+    :return: 环境根目录。
+    """
+    for candidate in (python.parent.parent, python.parent):
+        if (candidate / VENV_MARKER_FILENAME).is_file():
+            try:
+                return candidate.resolve()
+            except OSError:
+                return candidate
     try:
-        same = source.resolve() == target.resolve()
+        return python.resolve().parent
     except OSError:
-        same = str(source) == str(target)
-    if same:
+        return python.parent
+
+
+def _check_distinct(source: Path, target: Path) -> None:
+    # 比的是环境而不是解释器文件：uv 建的 venv 都把 bin/python 指向同一个基础解释器，
+    # 按 resolve() 后的文件比较会把两个不同的 venv 判成同一个环境，操作全被拒。
+    if environment_root(source) == environment_root(target):
         raise CliError(i18n.t("cli.venv_engine.same_interpreter", python=source))
 
 

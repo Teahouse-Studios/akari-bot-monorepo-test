@@ -548,20 +548,25 @@ async def _test_columns_header_aligns_with_rows():
     return version_ok and len(load_positions) == 2 and all(position == load_col for position in load_positions)
 
 
-async def _test_toggle_row_is_centered():
-    # 「只看已安装」独立成一行并水平居中；放在搜索行里会被输入框挤到边缘。
+async def _test_toggle_shares_search_row_and_is_centered():
+    # 开关与搜索框同一行（单独占一行会白吃 3 行高度），且要垂直居中：之前它的内边距把内容顶到
+    # 行的下缘，看起来像「居底」。
     source = _load_source({"wiki": True, "ab": True})
 
     async def body(app, page, pilot):
-        row = page.query_one("#toggle-row")
-        toggle = page.query_one("#installed-only")
+        row = page.query_one("#search-row").region
+        search = page.query_one("#search").region
+        toggle = page.query_one("#installed-only").region
+        count = page.query_one("#count").region
         await pilot.press("q")
-        return row.region, toggle.region
+        return row, search, toggle, count
 
-    row, toggle = await _with_app(source, body)
-    row_center = row.x + row.width / 2
-    toggle_center = toggle.x + toggle.width / 2
-    return abs(row_center - toggle_center) <= 1.0
+    row, search, toggle, count = await _with_app(source, body)
+    same_row = toggle.y == row.y and toggle.x > search.x and count.x > toggle.x
+    centered = all(
+        abs((widget.y + widget.height / 2) - (row.y + row.height / 2)) <= 0.5 for widget in (search, toggle, count)
+    )
+    return same_row and centered and toggle.height <= row.height
 
 
 @func_case
@@ -589,5 +594,5 @@ async def test_tui_modules_available(tester: Tester):
     await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
     await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
     await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
-    await tester.test(_test_toggle_row_is_centered, "只看已安装水平居中")
+    await tester.test(_test_toggle_shares_search_row_and_is_centered, "只看已安装在搜索行内垂直居中")
     return tester

@@ -686,20 +686,20 @@ class ModulesPage(compat.Vertical):
     }
     ModulesPage #search-row {
         height: 3;
+        align-vertical: middle;
     }
     ModulesPage #search {
         width: 1fr;
     }
-    ModulesPage #toggle-row {
-        height: 3;
-        align-horizontal: center;
-    }
     ModulesPage #installed-only {
         width: auto;
+        margin: 0 0 0 1;
     }
     ModulesPage #count {
         width: auto;
-        padding: 1 1 0 1;
+        height: 3;
+        content-align-vertical: middle;
+        margin: 0 1 0 1;
         color: $text-muted;
     }
     ModulesPage #body {
@@ -789,9 +789,8 @@ class ModulesPage(compat.Vertical):
         """装配页面控件树。"""
         with compat.Horizontal(id="search-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.modules.search_placeholder"), id="search")
-            yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
-        with compat.Horizontal(id="toggle-row"):
             yield compat.Checkbox(i18n.t("cli.tui.modules.installed_only"), id="installed-only")
+            yield compat.Static(i18n.t("cli.tui.modules.status_pending"), id="count")
         with compat.Horizontal(id="body"):
             with compat.Vertical(id="list-pane"):
                 yield compat.Static("", id="columns", markup=False)

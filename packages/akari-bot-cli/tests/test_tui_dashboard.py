@@ -82,18 +82,69 @@ async def _test_venv_failure_only_degrades_row():
 
 
 async def _test_venv_action_needs_two_presses():
+    # 托管实例（默认替身）适用的动作是重建：第一次只问，第二次才执行。
     async def body(app, page, pilot, source):
-        page.request_venv_action("adopt")
+        page.request_venv_action("recreate")
         await pilot.pause()
         first = list(source.venv_actions), page.status_text
-        page.request_venv_action("adopt")
+        page.request_venv_action("recreate")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
         return first, list(source.venv_actions)
 
     first, second = await _with_page(body)
-    return first[0] == [] and first[1] and second == ["adopt"]
+    return first[0] == [] and first[1] and second == ["recreate"]
+
+
+async def _test_only_applicable_action_is_offered():
+    # 托管实例只给「改用系统解释器」与「重建」；外部实例只给「改用托管 venv」。
+    async def managed_body(app, page, pilot, source):
+        shown = [sel for sel in ("#venv-adopt", "#venv-release", "#venv-recreate") if page.query_one(sel).display]
+        await pilot.press("q")
+        return shown
+
+    managed = await _with_page(managed_body)
+    external = await _with_page(
+        managed_body, _source(venv=VenvState(mode="external", python="/usr/bin/python3", ready=True))
+    )
+    return managed == ["#venv-release", "#venv-recreate"] and external == ["#venv-adopt"]
+
+
+async def _test_inapplicable_action_is_refused_with_reason():
+    # 快捷键绕过隐藏也能按到，此时必须拒绝并说明原因，而不是跑一个注定失败的命令。
+    async def body(app, page, pilot, source):
+        page.request_venv_action("adopt")
+        await pilot.pause()
+        adopted = list(source.venv_actions)
+        page.request_venv_action("release")
+        await pilot.pause()
+        page.request_venv_action("release")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return adopted, list(source.venv_actions)
+
+    adopted, released = await _with_page(body)
+    return adopted == [] and released == ["release"]
+
+
+async def _test_venv_action_refused_while_running():
+    # 实例运行中换解释器会把它正在用的环境抽走，必须先停实例。
+    source = _source(running=True)
+
+    async def body(app, page, pilot, source):
+        before = page.status_text
+        page.request_venv_action("recreate")
+        await pilot.pause()
+        page.request_venv_action("recreate")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(source.venv_actions), page.status_text == before
+
+    actions, untouched = await _with_page(body, source)
+    return actions == [] and untouched
 
 
 async def _test_venv_action_switches_on_other_action():
@@ -196,6 +247,9 @@ async def test_tui_dashboard(tester: Tester):
     await tester.test(_test_venv_failure_only_degrades_row, "环境状态读取失败只降级该行")
     await tester.test(_test_venv_action_needs_two_presses, "环境动作需二次确认")
     await tester.test(_test_venv_action_switches_on_other_action, "换动作后重新确认且不执行")
+    await tester.test(_test_only_applicable_action_is_offered, "只显示当前模式适用的环境动作")
+    await tester.test(_test_inapplicable_action_is_refused_with_reason, "不适用时拒绝并说明")
+    await tester.test(_test_venv_action_refused_while_running, "实例运行中拒绝环境动作")
     await tester.test(_test_venv_action_failure_keeps_page_usable, "环境动作失败后界面仍可用")
     await tester.test(_test_recreate_refreshes_state, "环境动作后重新读取状态")
     await tester.test(_test_migrate_requires_path_and_confirmation, "迁移需填路径并二次确认")
