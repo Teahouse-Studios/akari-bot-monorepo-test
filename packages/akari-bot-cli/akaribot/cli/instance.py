@@ -23,6 +23,15 @@ from rich.console import Console
 from typer.core import TyperGroup
 
 from akaribot.cli import i18n
+from akaribot.cli.process import (
+    DEFAULT_REAP_GRACE,
+    DEFAULT_STOP_TIMEOUT,
+    ProcessControl,
+    StopOutcome,
+    detach_kwargs,
+    read_lock_record,
+    stop_process,
+)
 
 # 被覆写方法的 ctx 参数类型。typer ≥0.27 把 click 内置为 ``typer._click`` 且不再声明外部 click
 # 依赖，``click.Context`` 既不是同一个类、干净安装里也 import 不到（CLI wheel 曾因此装完即崩）。
@@ -206,6 +215,38 @@ def venv_python_path(venv_dir: Path) -> Path:
 def venv_scripts_dir(venv_dir: Path) -> Path:
     """虚拟环境中的可执行文件目录。"""
     return venv_dir / ("Scripts" if is_windows() else "bin")
+
+
+@dataclass(frozen=True)
+class RunState:
+    """实例运行状态。
+
+    :param running: 锁是否被持有。
+    :param pid: 持锁进程号；锁文件里没有记录时为空。
+    :param started_at: 启动时间，ISO 8601 字符串。
+    :param argv: 启动参数。
+    :param detail: 面向用户的补充说明。
+    """
+
+    running: bool
+    pid: int | None = None
+    started_at: str = ""
+    argv: tuple[str, ...] = ()
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class DetachedRun:
+    """一次后台启动的结果。
+
+    :param pid: 进程号。
+    :param log_path: 控制台输出的落盘路径。
+    :param argv: 实际执行的参数。
+    """
+
+    pid: int
+    log_path: Path
+    argv: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -881,6 +922,98 @@ class Instance:
                 return True
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
             return False
+
+    def lock_path(self) -> Path:
+        """返回实例锁文件路径。"""
+        return self.root / LOCK_FILENAME
+
+    def run_state(self) -> RunState:
+        """读取实例运行状态与持锁进程记录。
+
+        运行与否以锁为准，进程号取自锁文件内容。由旧版本或第三方启动的实例可能没有记录，
+        此时状态仍是「运行中」，但没有可用于停止的进程号。
+        """
+        running = self.is_running()
+        if not running:
+            return RunState(running=False, detail=i18n.t("cli.run.state_stopped_detail", path=self.lock_path()))
+        record = read_lock_record(self.lock_path())
+        if record is None:
+            return RunState(running=True, detail=i18n.t("cli.run.state_unmanaged_detail", path=self.lock_path()))
+        return RunState(
+            running=True,
+            pid=record.pid,
+            started_at=record.started_at,
+            argv=record.argv,
+            detail=i18n.t("cli.run.state_running_detail", path=self.lock_path()),
+        )
+
+    def stop_running(
+        self,
+        *,
+        timeout: float = DEFAULT_STOP_TIMEOUT,
+        reap_grace: float = DEFAULT_REAP_GRACE,
+        control: ProcessControl | None = None,
+    ) -> StopOutcome:
+        """停止正在运行的实例。
+
+        :param timeout: 等待主进程退出的秒数。
+        :param reap_grace: 主进程退出后清收子进程的宽限秒数。
+        :param control: 进程控制原语，缺省用系统实现。
+        :return: 停止结果；实例本来就没运行时视为成功。
+        """
+        state = self.run_state()
+        if not state.running:
+            return StopOutcome(True, i18n.t("cli.run.stop_not_running"), str(self.lock_path()))
+        if state.pid is None:
+            return StopOutcome(
+                False,
+                i18n.t("cli.run.stop_unmanaged"),
+                i18n.t("cli.run.stop_unmanaged_detail", path=self.lock_path()),
+            )
+        return stop_process(
+            pid=state.pid,
+            running=self.is_running,
+            timeout=timeout,
+            reap_grace=reap_grace,
+            control=control,
+        )
+
+    def spawn_detached(
+        self,
+        *args: str,
+        log_path: Path | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> DetachedRun:
+        """以脱离当前会话的方式启动实例，进程由 CLI 记录在锁文件里。
+
+        进程自建会话，因此启动它的界面或终端退出后实例继续运行；控制权落在实例锁与锁文件记录上，
+        任何控制器都能重新接管。
+
+        :param args: 传给 core ``run`` 入口的参数。
+        :param log_path: 控制台输出的落盘路径；缺省为 ``<实例根>/logs/RunConsole_<日期>.log``。
+        :param env: 额外的环境变量。
+        :return: 启动结果，含进程号与日志路径。
+        """
+        if not self.python_exists:
+            raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
+        target = log_path or (self.root / "logs" / f"RunConsole_{datetime.now().strftime('%Y-%m-%d')}.log")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        argv = self.core_argv("run", *args)
+        environment = self.core_env(**(dict(env) if env else {}))
+        with target.open("ab") as handle:
+            try:
+                process = subprocess.Popen(  # noqa: S603
+                    argv,
+                    cwd=str(self.root),
+                    env=environment,
+                    stdin=subprocess.DEVNULL,
+                    stdout=handle,
+                    stderr=subprocess.STDOUT,
+                    **detach_kwargs(),
+                )
+            except OSError as exc:
+                raise CliError(i18n.t("cli.instance.exec_failed", argv0=argv[0], error=exc)) from exc
+        return DetachedRun(pid=process.pid, log_path=target, argv=tuple(argv))
 
     def notify_package_change(self, action: str, dist: str) -> NotifyResult:
         """把安装或卸载事件通知运行中的机器人，触发热装载或热拆卸。

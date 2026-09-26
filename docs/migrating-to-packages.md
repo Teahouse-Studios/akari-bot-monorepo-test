@@ -81,8 +81,14 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 
    ```
    akaribot doctor                     # 端口冲突、凭据重复、孤立配置
-   akaribot run                        # 启动；日志在 <实例目录>/logs/
+   akaribot run --detach               # 后台启动；控制台输出在 <实例目录>/logs/RunConsole_<日期>.log
+   akaribot run --status               # 运行状态与进程号
+   akaribot run --stop                 # 停止（含由界面或系统服务启动的实例）
    ```
+
+   前台运行用 `akaribot run`（不加 `--detach`），日志同样落在 `<实例目录>/logs/`。实例的进程号
+   记在实例锁 `<实例目录>/.bot.lock` 里，`run --stop` 据此终止进程，因此无论实例是谁启动的都能
+   被停掉；后台实例自建会话，启动它的终端退出后继续运行。
 
    需要交互界面时直接运行 `akaribot`（在实例目录内）或 `akaribot tui`；没有实例时会先询问是否
    就地初始化。无图形终端的环境请用命令行子命令。界面里的「命令」页可以执行上面列出的全部子命令，

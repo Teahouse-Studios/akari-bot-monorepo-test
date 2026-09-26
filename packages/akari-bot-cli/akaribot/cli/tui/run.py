@@ -1,18 +1,18 @@
-"""Run 页：启动 / 停止 / 重启实例，并显示子进程状态表。
+"""Run 页：启动 / 停止 / 重启实例，并显示运行状态。
 
-数据流：界面只读 :class:`RunSource`；默认实现 :class:`SubprocessRunSource` 以
-``akaribot run`` 子进程启停实例（POSIX 下自建进程组，停止时向整组发信号），状态表由本页
-启动的 Popen 对象与实例锁文件共同推出。启停走后台任务，状态表刷新只轮询 Popen 与锁文件。
+数据流：界面只读 :class:`RunSource`；默认实现 :class:`SubprocessRunSource` 把状态、启动与停止
+全部交给 ``akaribot run`` 子进程。实例由 CLI 以独立会话启动并登记在实例锁里，界面因此不持有
+进程句柄：界面退出后实例继续运行，新开的界面能接管并停止由其它控制器启动的实例。启停走后台
+任务，状态刷新按周期询问 CLI。
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
-import signal
+import json
 import subprocess
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +29,9 @@ STATE_UNKNOWN = "unknown"
 
 RUN_LABEL = "akaribot run"
 LOCK_FILENAME = ".bot.lock"
-RUN_LOG_PREFIX = "TuiRun"
+# 交给 CLI 的停止等待秒数；CLI 超时后会强杀，界面只需等它给出结论。
+STOP_TIMEOUT_SECONDS = 20.0
+_TAIL_CHARS = 400
 
 # 状态与表头都是按当前语言取的展示标签，故这里只存文案键，取值一律在渲染时进行。
 _STATE_KEYS = {
@@ -221,17 +223,22 @@ class StaticRunSource:
         return RunResult(True, i18n.t("cli.tui.run.msg_restarted", pid=self.running_pid), "stub restart")
 
 
+class RunSourceError(RuntimeError):
+    """数据源无法给出结论：CLI 调用失败或输出不可解析。"""
+
+
 class SubprocessRunSource:
-    """默认数据源：以 ``akaribot run`` 子进程启停实例，CLI 进程内不 import core。
+    """默认数据源：状态与启停全部经 ``akaribot run`` 子进程。
+
+    界面不自己持有实例进程：``akaribot run --detach`` 让实例自建会话，界面退出后实例继续运行；
+    状态与进程号取自 ``run --status --json``，停止走 ``run --stop``。因此新开的界面能接管并停止
+    由其它控制器（另一个界面、终端、系统服务）启动的实例。
 
     :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param start: 向上查找的起点，缺省为当前工作目录。
-    :param timeout: 停止时等待退出的秒数，超时后向进程组发强杀信号。
-    :param popen: 子进程构造器，签名同 :func:`subprocess.Popen`，测试可注入替身。
-    :param kill: 向进程组发信号的函数 ``(pid, force) -> 是否已发送``，测试可注入。
-    :param instance_factory: 构造 ``Instance`` 的回调，测试可注入以避开 T5.1 的实现。
-    :param log_path: 子进程标准输出的落盘路径；缺省为 ``<实例根>/logs/TuiRun_<日期>.log``。
-    :param now: 返回展示用时间字符串的回调，测试可注入固定值。
+    :param timeout: 单次 CLI 调用的秒数上限。
+    :param stop_timeout: 交给 CLI 的停止等待秒数。
+    :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
     def __init__(
@@ -239,169 +246,61 @@ class SubprocessRunSource:
         *,
         root: Path | str | None = None,
         start: Path | str | None = None,
-        timeout: float = 10.0,
-        popen: Callable[..., Any] | None = None,
-        kill: Callable[[int, bool], bool] | None = None,
-        instance_factory: Callable[[Path], Any] | None = None,
-        log_path: Path | str | None = None,
-        now: Callable[[], str] | None = None,
+        timeout: float = 60.0,
+        stop_timeout: float = STOP_TIMEOUT_SECONDS,
+        runner: Callable[..., Any] | None = None,
     ) -> None:
         self.root = Path(root) if root is not None else None
         self.start_dir = Path(start) if start is not None else None
         self.timeout = timeout
+        self.stop_timeout = stop_timeout
         self.label = RUN_LABEL
         self.calls = {"status": 0, "start": 0, "stop": 0, "restart": 0}
         self.last_error = ""
-        self._popen = popen or subprocess.Popen
-        self._kill = kill or default_kill
-        self._instance_factory = instance_factory
-        self._log_path = Path(log_path) if log_path is not None else None
-        self._now = now or (lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        self._process: Any | None = None
-        self._log_handle: Any | None = None
-        self._started_at = ""
-        self._argv_text = ""
-        self._history: ProcessRecord | None = None
+        self.last_argv = ""
+        self._runner = runner or subprocess.run
 
     def status(self) -> Sequence[ProcessRecord]:
-        """见 :meth:`RunSource.status`：本界面启动的进程优先，其次报告外部持锁进程。"""
+        """见 :meth:`RunSource.status`。"""
         self.calls["status"] += 1
-        process = self._process
-        if process is not None:
-            code = process.poll()
-            if code is None:
-                return (
-                    ProcessRecord(
-                        label=self.label,
-                        pid=getattr(process, "pid", None),
-                        started_at=self._started_at,
-                        state=STATE_RUNNING,
-                        origin=i18n.t("cli.tui.run.origin_ui"),
-                        detail=self._argv_text,
-                    ),
-                )
-            self._history = ProcessRecord(
-                label=self.label,
-                pid=getattr(process, "pid", None),
-                started_at=self._started_at,
-                exit_code=int(code),
-                state=STATE_EXITED,
-                origin=i18n.t("cli.tui.run.origin_ui"),
-                detail=self._argv_text,
-            )
-            self._process = None
-            self._close_log()
-        running = self.probe_running()
-        if running:
-            return (
-                ProcessRecord(
-                    label=self.label,
-                    state=STATE_RUNNING,
-                    origin=i18n.t("cli.tui.run.origin_external"),
-                    detail=i18n.t("cli.tui.run.detail_lock_held", path=self._lock_path()),
-                ),
-            )
-        if running is None:
-            return (
-                ProcessRecord(
-                    label=self.label,
-                    state=STATE_UNKNOWN,
-                    origin=i18n.t("cli.tui.run.origin_probe_failed"),
-                    detail=self.last_error,
-                ),
-            )
-        if self._history is not None:
-            return (self._history,)
-        return (
-            ProcessRecord(
-                label=self.label,
-                state=STATE_STOPPED,
-                origin="",
-                detail=i18n.t("cli.tui.run.detail_never_started"),
-            ),
-        )
+        return self._records_from(self._state())
 
     def start(self) -> RunResult:
-        """见 :meth:`RunSource.start`：执行 ``akaribot run``，标准输出落盘到日志文件。"""
+        """见 :meth:`RunSource.start`：经 ``run --detach`` 启动，界面不持有进程句柄。"""
         self.calls["start"] += 1
-        if self._process is not None and self._process.poll() is None:
-            return RunResult(
-                False,
-                i18n.t("cli.tui.run.msg_already_running"),
-                f"PID {getattr(self._process, 'pid', None)}",
-            )
-        root = self._root()
-        if root is None:
-            self.last_error = i18n.t("cli.tui.run.error_no_instance", origin=self._origin_text())
-            return RunResult(False, i18n.t("cli.tui.run.msg_no_instance"), self.last_error)
-        argv = self.cli_argv("run")
-        log_file = self._log_path or (root / "logs" / f"{RUN_LOG_PREFIX}_{datetime.now().strftime('%Y-%m-%d')}.log")
-        handle: Any | None = None
         try:
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            handle = log_file.open("ab")
-            process = self._popen(argv, **self._popen_kwargs(root, handle))
-        except (OSError, ValueError) as error:
-            if handle is not None:
-                handle.close()
-            self.last_error = f"{type(error).__name__}: {error}"
-            return RunResult(
-                False,
-                i18n.t("cli.tui.common.failed_label", label=i18n.t("cli.tui.run.label_start")),
-                self.last_error,
-            )
-        self._process = process
-        self._log_handle = handle
-        self._history = None
-        self._started_at = self._now()
-        self._argv_text = " ".join(argv)
+            payload = self._invoke("start", "run", "--detach", "--json")
+        except RunSourceError as error:
+            return self._failed("cli.tui.run.label_start", str(error))
+        if not payload.get("started"):
+            self.last_error = str(payload.get("detail") or "")
+            return RunResult(False, i18n.t("cli.tui.run.msg_start_failed"), self.last_error)
         self.last_error = ""
         return RunResult(
             True,
-            i18n.t("cli.tui.run.msg_started", pid=getattr(process, "pid", None)),
-            i18n.t("cli.tui.run.detail_start_output", cmd=self._argv_text, path=log_file),
+            i18n.t("cli.tui.run.msg_started", pid=payload.get("pid")),
+            i18n.t("cli.tui.run.detail_detached", log=payload.get("log") or ""),
         )
 
     def stop(self) -> RunResult:
-        """见 :meth:`RunSource.stop`：先温和终止进程组，超时后强杀。"""
+        """见 :meth:`RunSource.stop`：经 ``run --stop`` 停止，能停掉别的控制器启动的实例。"""
         self.calls["stop"] += 1
-        process = self._process
-        if process is None or process.poll() is not None:
-            if self.probe_running():
-                return RunResult(
-                    False,
-                    i18n.t("cli.tui.run.msg_stop_external"),
-                    i18n.t("cli.tui.run.detail_lock_held", path=self._lock_path()),
-                )
-            return RunResult(False, i18n.t("cli.tui.run.msg_not_running"), "")
-        pid = getattr(process, "pid", None)
-        forced = False
-        self._request_stop(process, force=False)
         try:
-            process.wait(timeout=self.timeout)
-        except Exception:  # noqa: BLE001 - 超时或替身不支持等待，转为强杀
-            forced = True
-            self._request_stop(process, force=True)
-            try:
-                process.wait(timeout=self.timeout)
-            except Exception as error:  # noqa: BLE001 - 强杀后仍等待失败，如实上报
-                self.last_error = f"{type(error).__name__}: {error}"
-                return RunResult(False, i18n.t("cli.tui.run.msg_stop_failed_pid", pid=pid), self.last_error)
-        code = process.poll()
-        return RunResult(
-            True,
-            i18n.t("cli.tui.run.msg_stopped_forced") if forced else i18n.t("cli.tui.run.msg_stopped"),
-            i18n.t(
-                "cli.tui.run.detail_pid_exit",
-                pid=pid,
-                code=i18n.t("cli.tui.common.unknown") if code is None else code,
-            ),
-        )
+            payload = self._invoke("stop", "run", "--stop", "--json", "--timeout", f"{self.stop_timeout:g}")
+        except RunSourceError as error:
+            return self._failed("cli.tui.run.label_stop", str(error))
+        message = str(payload.get("message") or "")
+        detail = str(payload.get("detail") or "")
+        if not payload.get("stopped"):
+            self.last_error = detail or message
+            return RunResult(False, message or i18n.t("cli.tui.run.msg_stop_failed"), detail)
+        self.last_error = ""
+        return RunResult(True, message, detail)
 
     def restart(self) -> RunResult:
         """见 :meth:`RunSource.restart`：先停后启，停止失败则中止。"""
         self.calls["restart"] += 1
-        if self._process is not None and self._process.poll() is None:
+        if self.probe_running():
             stopped = self.stop()
             if not stopped.ok:
                 return RunResult(
@@ -419,29 +318,81 @@ class SubprocessRunSource:
         return RunResult(True, i18n.t("cli.tui.run.msg_restarted_with", message=started.message), started.detail)
 
     def probe_running(self) -> bool | None:
-        """探测实例是否在运行：优先询问 ``Instance.is_running()``，失败时直接读锁文件。"""
-        self.last_error = ""
+        """探测实例是否在运行；探测失败返回 ``None``。"""
+        try:
+            state = self._state()
+        except RunSourceError as error:
+            self.last_error = str(error)
+            return None
+        return bool(state.get("running"))
+
+    def _failed(self, label_key: str, detail: str) -> RunResult:
+        self.last_error = detail
+        return RunResult(False, i18n.t("cli.tui.common.failed_label", label=i18n.t(label_key)), detail)
+
+    def _state(self) -> dict[str, Any]:
+        return self._invoke("status", "run", "--status", "--json")
+
+    def _records_from(self, state: Mapping[str, Any]) -> tuple[ProcessRecord, ...]:
+        if not state.get("running"):
+            return (
+                ProcessRecord(
+                    label=self.label,
+                    state=STATE_STOPPED,
+                    detail=i18n.t("cli.tui.run.detail_never_started"),
+                ),
+            )
+        argv = state.get("argv") or []
+        detail = i18n.t("cli.tui.run.detail_cli_record", log=state.get("console_log") or "")
+        if argv:
+            detail = i18n.t("cli.tui.common.error_separator").join((detail, " ".join(str(item) for item in argv)))
+        return (
+            ProcessRecord(
+                label=self.label,
+                pid=state.get("pid"),
+                started_at=_local_time(state.get("started_at")),
+                state=STATE_RUNNING,
+                origin=i18n.t("cli.tui.run.origin_cli"),
+                detail=detail,
+            ),
+        )
+
+    def _invoke(self, action: str, *args: str) -> dict[str, Any]:
         root = self._root()
         if root is None:
-            self.last_error = i18n.t("cli.tui.run.error_root_unknown", origin=self._origin_text())
-            return None
-        instance = self._instance(root)
-        if instance is not None:
-            try:
-                return bool(instance.is_running())
-            except Exception as error:  # noqa: BLE001 - 降级到本地锁探测
-                self.last_error = i18n.t(
-                    "cli.tui.run.error_probe_failed",
-                    kind=type(error).__name__,
-                    error=error,
+            self.last_error = i18n.t("cli.tui.run.error_no_instance", origin=self._origin_text())
+            raise RunSourceError(self.last_error)
+        argv = cli_process.cli_argv(*args)
+        self.last_argv = " ".join(argv)
+        try:
+            completed = self._runner(
+                list(argv),
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.timeout,
+                env=cli_process.cli_env(root),
+            )
+        except subprocess.TimeoutExpired as error:
+            raise RunSourceError(
+                i18n.t("cli.tui.run.error_cli_timeout", command=" ".join(args), seconds=f"{self.timeout:g}")
+            ) from error
+        except OSError as error:
+            raise RunSourceError(i18n.t("cli.tui.run.error_cli_failed", command=" ".join(args), error=error)) from error
+        payload = _parse_payload(completed.stdout)
+        if payload is None:
+            tail = (completed.stderr or completed.stdout or "").strip()[-_TAIL_CHARS:]
+            raise RunSourceError(
+                i18n.t(
+                    "cli.tui.run.error_cli_output",
+                    command=" ".join(args),
+                    code=completed.returncode,
+                    tail=tail or i18n.t("cli.tui.common.no_output"),
                 )
-        from akaribot.cli.tui.dashboard import lock_held
-
-        return lock_held(root / LOCK_FILENAME)
-
-    def cli_argv(self, *args: str) -> list[str]:
-        """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
-        return cli_process.cli_argv(*args)
+            )
+        return payload
 
     def _root(self) -> Path | None:
         if self.root is not None:
@@ -454,86 +405,29 @@ class SubprocessRunSource:
         return str(self.root or self.start_dir or Path.cwd())
 
     def _lock_path(self) -> Path:
-        root = self._root() or Path(self._origin_text())
-        return root / LOCK_FILENAME
-
-    def _instance(self, root: Path) -> Any | None:
-        if self._instance_factory is not None:
-            try:
-                return self._instance_factory(root)
-            except Exception as error:  # noqa: BLE001 - 替身失败只降级
-                self.last_error = i18n.t(
-                    "cli.tui.run.error_stub_failed",
-                    kind=type(error).__name__,
-                    error=error,
-                )
-                return None
-        try:
-            from akaribot.cli.instance import Instance
-        except ImportError as error:
-            self.last_error = i18n.t("cli.tui.run.error_instance_unavailable", error=error)
-            return None
-        try:
-            return Instance(root)
-        except Exception as error:  # noqa: BLE001 - 构造失败只作为降级原因
-            self.last_error = i18n.t(
-                "cli.tui.run.error_instance_failed",
-                kind=type(error).__name__,
-                error=error,
-            )
-            return None
-
-    def _popen_kwargs(self, root: Path, handle: Any) -> dict[str, Any]:
-        env = cli_process.cli_env(root)
-        kwargs: dict[str, Any] = {
-            "cwd": str(root),
-            "env": env,
-            "stdin": subprocess.DEVNULL,
-            "stdout": handle,
-            "stderr": subprocess.STDOUT,
-        }
-        if os.name == "nt":
-            kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        else:
-            kwargs["start_new_session"] = True
-        return kwargs
-
-    def _request_stop(self, process: Any, *, force: bool) -> None:
-        pid = getattr(process, "pid", None)
-        if pid is not None and self._kill(int(pid), force):
-            return
-        terminate = getattr(process, "terminate", None)
-        if callable(terminate):
-            try:
-                terminate()
-            except OSError:
-                return
-
-    def _close_log(self) -> None:
-        handle = self._log_handle
-        self._log_handle = None
-        if handle is None:
-            return
-        try:
-            handle.close()
-        except OSError:
-            return
+        return (self._root() or Path(self._origin_text())) / LOCK_FILENAME
 
 
-def default_kill(pid: int, force: bool) -> bool:
-    """向进程组发送停止信号，返回是否已发送。
-
-    :param pid: 进程号；取其进程组并向整组发信号，以覆盖 ``akaribot run`` 拉起的子进程。
-    :param force: 为 ``True`` 时发强杀信号，否则发温和终止信号。
-    :return: 是否成功发送；Windows 下返回 ``False``，由 ``Popen.terminate()`` 兜底。
-    """
-    if os.name == "nt":
-        return False
+def _parse_payload(stdout: str | None) -> dict[str, Any] | None:
+    # CLI 以 --json 输出单行对象；退出码非零时对象本身带有失败结论，故先解析再看退出码。
+    text = (stdout or "").strip()
+    if not text:
+        return None
     try:
-        os.killpg(os.getpgid(pid), signal.SIGKILL if force else signal.SIGTERM)
-    except (OSError, ProcessLookupError):
-        return False
-    return True
+        payload = json.loads(text.splitlines()[-1])
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _local_time(value: Any) -> str:
+    text = str(value or "")
+    if not text:
+        return ""
+    try:
+        return datetime.fromisoformat(text).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return text
 
 
 class RunPage(compat.Vertical):
@@ -653,11 +547,14 @@ class RunPage(compat.Vertical):
     def refresh_status(self) -> None:
         """读取状态表并重绘。
 
-        只轮询已有的 Popen 对象与实例锁文件，不起子进程、不取版本，故同步执行；
-        数据源异常只更新状态栏，不中断界面。
+        状态经 ``akaribot run --status --json`` 子进程取得，故放到后台任务里执行；同一时刻只保留
+        最新一次刷新，响应慢时不会堆积。数据源异常只更新状态栏，不中断界面。
         """
+        self.run_worker(self._refresh, group="run-status", exclusive=True)
+
+    async def _refresh(self) -> None:
         try:
-            records = tuple(self.source.status())
+            records = tuple(await asyncio.to_thread(self.source.status))
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
             self.last_error = f"{type(error).__name__}: {error}"
             self._records = ()

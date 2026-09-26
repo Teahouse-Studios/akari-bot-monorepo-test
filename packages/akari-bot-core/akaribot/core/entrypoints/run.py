@@ -17,13 +17,16 @@ from akaribot.core.constants import config_path, config_filename, tests_path  # 
 
 import asyncio
 import importlib
+import json
 import multiprocessing
 import os
 import shutil
+import signal
 import sys
 import time
 import traceback
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -803,22 +806,41 @@ async def main_async():
         raise e
 
 
+def _write_lock_record(handle) -> None:
+    # 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程；取锁失败的进程不会走到这里，
+    # 因此文件内容始终属于当前持锁者。
+    record = {"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat(), "argv": sys.argv[1:]}
+    handle.seek(0)
+    handle.write(json.dumps(record, ensure_ascii=False))
+    handle.truncate()
+    handle.flush()
+    os.fsync(handle.fileno())
+
+
+def _raise_keyboard_interrupt(signum, frame):
+    # 信号处理器在主线程的两个字节码之间执行，抛出的异常从 asyncio.run() 冒出，与 Ctrl+C 同路。
+    raise KeyboardInterrupt
+
+
 def main():
     """进程入口：安装守护日志、取实例锁，然后进入重启循环。
 
     锁文件为 ``<实例根>/.bot.lock``（``AKARI_INSTANCE_DIR`` 未设置时即进程 cwd），与
     ``akaribot.cli.instance`` 的运行探测同源；同实例已有进程持锁时以退出码 1 中止。锁在进程
-    存活期间一直持有，句柄存入模块级 ``_lock_file``。
+    存活期间一直持有，句柄存入模块级 ``_lock_file``；文件里另写有进程号与启动时间，CLI 的
+    ``run --stop`` 据此终止由任意入口启动的实例。
     """
     global _lock_file
 
     init_daemon_logger()
     # Detect if the program is already running
     lock_file_path = Paths.lock
+    # 不截断打开：取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
+    # 决定，文件内容只用于让控制器定位进程。
+    _lock_file = os.fdopen(os.open(lock_file_path, os.O_RDWR | os.O_CREAT, 0o644), "r+", encoding="utf-8")  # skipcq
     if sys.platform == "win32":
         import msvcrt
 
-        _lock_file = open(lock_file_path, "w")  # skipcq
         try:
             msvcrt.locking(_lock_file.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError:
@@ -827,12 +849,16 @@ def main():
     else:
         import fcntl
 
-        _lock_file = open(lock_file_path, "w")  # skipcq
         try:
             fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             Logger.critical("Another instance is already running. Aborting.")
             sys.exit(1)
+    _write_lock_record(_lock_file)
+    # SIGTERM 默认直接终止进程，适配器与 Server 会变成孤儿进程；转成 KeyboardInterrupt 走
+    # 与 Ctrl+C 相同的收拢路径。
+    if sys.platform != "win32":
+        signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
 
     # Capture the base import lists to avoid clearing essential modules when restarting
     def clear_import_cache():
