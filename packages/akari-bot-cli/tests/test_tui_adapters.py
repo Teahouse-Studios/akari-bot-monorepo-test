@@ -233,6 +233,99 @@ def _test_adapter_record_installable_semantics():
     return missing.installable and missing.configured
 
 
+async def _test_add_instance_uses_input_and_platform():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.query_one("#new-instance", compat.Input).value = "work"
+        await pilot.pause()
+        page.request_add_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        value = page.query_one("#new-instance", compat.Input).value
+        await pilot.press("q")
+        return list(chosen.added), value, page.status_text
+
+    added, value, status = await _with_page(body, source)
+    return added == [("telegram", "work")] and value == "" and status
+
+
+async def _test_add_instance_rejects_bad_id():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.query_one("#new-instance", compat.Input).value = "Bad ID"
+        await pilot.pause()
+        page.request_add_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(chosen.added), page.status_text
+
+    added, status = await _with_page(body, source)
+    return added == [] and status
+
+
+async def _test_remove_instance_needs_two_presses():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance(purge_data=False)
+        await pilot.pause()
+        first = list(chosen.removed), page.status_text
+        page.request_remove_instance(purge_data=False)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return first, list(chosen.removed)
+
+    first, second = await _with_page(body, source)
+    return first[0] == [] and first[1] and second == [("telegram", "", False)]
+
+
+async def _test_purge_instance_passes_flag():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance(purge_data=True)
+        await pilot.pause()
+        page.request_remove_instance(purge_data=True)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(chosen.removed)
+
+    removed = await _with_page(body, source)
+    return removed == [("telegram", "", True)]
+
+
+async def _test_instance_op_reloads_list():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.query_one("#new-instance", compat.Input).value = "work"
+        await pilot.pause()
+        before = chosen.calls["list"]
+        page.request_add_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return before, chosen.calls["list"]
+
+    before, after = await _with_page(body, source)
+    return after > before
+
+
 @func_case
 async def test_tui_adapters(tester: Tester):
     """cli.tui.adapters: 未安装平台与安装入口测试"""
@@ -248,4 +341,9 @@ async def test_tui_adapters(tester: Tester):
     await tester.test(_test_modules_page_excludes_adapters, "模块页不列适配器")
     await tester.test(_test_available_normalizer_reads_module_available_json, "解析可安装清单")
     await tester.test(_test_adapter_record_installable_semantics, "缺包但有配置也算可安装")
+    await tester.test(_test_add_instance_uses_input_and_platform, "按输入框与平台新增实例")
+    await tester.test(_test_add_instance_rejects_bad_id, "非法实例 ID 不执行")
+    await tester.test(_test_remove_instance_needs_two_presses, "移除实例需二次确认")
+    await tester.test(_test_purge_instance_passes_flag, "清数据移除带 --purge-data")
+    await tester.test(_test_instance_op_reloads_list, "实例变更后重载列表")
     return tester

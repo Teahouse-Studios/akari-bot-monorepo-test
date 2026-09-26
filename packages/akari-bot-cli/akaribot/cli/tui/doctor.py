@@ -1,0 +1,756 @@
+"""体检页：多实例三查的结论、检查项统计与重新体检。
+
+结论经 ``akaribot doctor --json`` 子进程取得，CLI 进程内不 import core。存在 error 级结论时该命令
+以退出码 1 结束，stdout 仍是完整 JSON，故先解析输出再看退出码：退出码 1 不是读取失败，结论照常展示。
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import subprocess
+import time
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
+
+from akaribot.cli import i18n
+from akaribot.cli.instance import default_instance_root
+from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
+
+SOURCE_LABEL = "doctor --json"
+"""子进程调用的说明文本，出错时随原因一起展示。"""
+
+LEVEL_ERROR = "error"
+LEVEL_WARNING = "warning"
+
+IMPLEMENTATION_CORE = "core"
+IMPLEMENTATION_LOCAL = "cli"
+IMPLEMENTATION_UNKNOWN = "unknown"
+
+ORPHAN_RAN = "ran"
+ORPHAN_SKIPPED = "skipped"
+
+# 级别与实现来源的取值来自对端 JSON，界面按当前语言取标签，故这里只存文案键。
+_LEVEL_KEYS = {LEVEL_ERROR: "cli.tui.doctor.level_error", LEVEL_WARNING: "cli.tui.doctor.level_warning"}
+_LEVEL_MARKS = {LEVEL_ERROR: "✖", LEVEL_WARNING: "!"}
+_IMPLEMENTATION_KEYS = {
+    IMPLEMENTATION_CORE: "cli.tui.doctor.impl_core",
+    IMPLEMENTATION_LOCAL: "cli.tui.doctor.impl_local",
+    IMPLEMENTATION_UNKNOWN: "cli.tui.doctor.impl_unknown",
+}
+_ORPHAN_KEYS = {ORPHAN_RAN: "cli.tui.doctor.orphan_ran", ORPHAN_SKIPPED: "cli.tui.doctor.orphan_skipped"}
+# 结论缺省级别与 CLI 侧判据一致：端口与凭据重复报错，孤立配置只告警。
+_DEFAULT_LEVELS = {"port": LEVEL_ERROR, "credential": LEVEL_ERROR, "orphan": LEVEL_WARNING, "config": LEVEL_ERROR}
+
+
+def _text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (list, tuple, set)):
+        return i18n.t("cli.tui.common.list_separator").join(item for item in (_text(entry) for entry in value) if item)
+    return str(value)
+
+
+def _pick(source: Any, *names: str, default: Any = None) -> Any:
+    for name in names:
+        if isinstance(source, Mapping) and source.get(name) is not None:
+            return source[name]
+        value = getattr(source, name, None)
+        if value is not None:
+            return value
+    return default
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if isinstance(value, Sequence):
+        return tuple(item for item in (_text(entry) for entry in value) if item)
+    return ()
+
+
+def _flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().casefold() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _count(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip())
+    except ValueError:
+        return None
+
+
+def _implementation_kind(value: str) -> str:
+    text = value.strip().casefold()
+    if text.startswith(IMPLEMENTATION_LOCAL):
+        return IMPLEMENTATION_LOCAL
+    if text.startswith(IMPLEMENTATION_CORE):
+        return IMPLEMENTATION_CORE
+    return IMPLEMENTATION_UNKNOWN
+
+
+def _scalar_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, Mapping):
+        return json.dumps(dict(value), ensure_ascii=False, sort_keys=True, default=str)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        separator = i18n.t("cli.tui.common.list_separator")
+        return separator.join(item for item in (_text(entry) for entry in value) if item)
+    return str(value)
+
+
+def _detail_text(detail: Mapping[str, Any]) -> str:
+    if not detail:
+        return i18n.t("cli.tui.common.none")
+    separator = i18n.t("cli.tui.common.list_separator")
+    return separator.join(f"{name}={_scalar_text(detail[name])}" for name in sorted(detail))
+
+
+@dataclass(frozen=True)
+class DoctorConflict:
+    """一项体检结论。
+
+    :param kind: ``port`` / ``credential`` / ``orphan`` / ``config``。
+    :param level: ``error`` 或 ``warning``。
+    :param message: 面向用户的一句话结论。
+    :param platform: 相关平台名；跨平台时为空串。
+    :param instances: 相关表名。
+    :param detail: 结构化细节，原样来自 CLI 输出。
+    """
+
+    kind: str
+    level: str
+    message: str
+    platform: str = ""
+    instances: tuple[str, ...] = ()
+    detail: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def mark(self) -> str:
+        """级别标记；未知级别用问号。"""
+        return _LEVEL_MARKS.get(self.level, "?")
+
+    @property
+    def level_label(self) -> str:
+        """级别的本地化标签；未知级别直接显示原值。"""
+        key = _LEVEL_KEYS.get(self.level)
+        return i18n.t(key) if key else self.level
+
+
+@dataclass(frozen=True)
+class DoctorChecks:
+    """``doctor --json`` 的 ``checks`` 段。
+
+    :param instances: 扫描到的适配器实例数。
+    :param installed_adapters: 已装适配器的平台名。
+    :param unconfigured_adapters: 已装但未配置实例的平台名。
+    :param orphan_check: 孤立配置检查的执行状态，``ran`` 或 ``skipped``。
+    :param credential_scope: 凭据比对覆盖的字段范围，原样来自 CLI 输出。
+    """
+
+    instances: int = 0
+    installed_adapters: tuple[str, ...] = ()
+    unconfigured_adapters: tuple[str, ...] = ()
+    orphan_check: str = ""
+    credential_scope: str = ""
+
+    @property
+    def orphan_label(self) -> str:
+        """孤立配置检查执行状态的本地化标签。"""
+        key = _ORPHAN_KEYS.get(self.orphan_check)
+        return i18n.t(key) if key else i18n.t("cli.tui.doctor.orphan_unknown")
+
+
+@dataclass(frozen=True)
+class DoctorSnapshot:
+    """一次体检取数的结果。
+
+    :param instance_root: 实例根目录文本。
+    :param config_root: 配置目录文本。
+    :param implementation: 结论的实现来源，原样来自 CLI 输出。
+    :param registry_available: 已装适配器清单是否可用。
+    :param registry_note: 清单不可用时的原因。
+    :param conflicts: 结论列表，顺序与 CLI 输出一致。
+    :param error_count: error 级结论数。
+    :param warning_count: warning 级结论数。
+    :param checks: 检查项统计。
+    :param errors: 取数错误；有值时结论不完整。
+    """
+
+    instance_root: str = ""
+    config_root: str = ""
+    implementation: str = ""
+    registry_available: bool = False
+    registry_note: str = ""
+    conflicts: tuple[DoctorConflict, ...] = ()
+    error_count: int = 0
+    warning_count: int = 0
+    checks: DoctorChecks = field(default_factory=DoctorChecks)
+    errors: tuple[str, ...] = ()
+
+    @property
+    def implementation_kind(self) -> str:
+        """结论来自 core 入口、CLI 本地实现还是未知来源。"""
+        return _implementation_kind(self.implementation)
+
+    @property
+    def implementation_label(self) -> str:
+        """实现来源的本地化标签。"""
+        kind = self.implementation_kind
+        if kind == IMPLEMENTATION_UNKNOWN and self.implementation:
+            return i18n.t("cli.tui.doctor.impl_other", value=self.implementation)
+        return i18n.t(_IMPLEMENTATION_KEYS[kind])
+
+    @property
+    def passed(self) -> bool:
+        """取数完整且没有任何结论。"""
+        return not self.errors and not self.conflicts
+
+
+def normalize_snapshot(payload: Any) -> DoctorSnapshot:
+    """把 ``doctor --json`` 的负载归一化为快照。
+
+    :param payload: ``json.loads`` 的结果。
+    :return: 体检快照；缺字段按缺省值处理。
+    :raises DoctorSourceError: 负载不是 JSON 对象。
+    """
+    if not isinstance(payload, Mapping):
+        raise DoctorSourceError(i18n.t("cli.tui.doctor.src_bad_payload", label=SOURCE_LABEL))
+    raw_conflicts = payload.get("conflicts")
+    entries = (
+        list(raw_conflicts)
+        if isinstance(raw_conflicts, Sequence) and not isinstance(raw_conflicts, (str, bytes))
+        else []
+    )
+    conflicts: list[DoctorConflict] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            continue
+        kind = _text(_pick(entry, "kind", "type"))
+        detail = entry.get("detail")
+        conflicts.append(
+            DoctorConflict(
+                kind=kind,
+                level=_text(_pick(entry, "level")).casefold() or _DEFAULT_LEVELS.get(kind, LEVEL_WARNING),
+                message=_text(_pick(entry, "message", "summary")),
+                platform=_text(_pick(entry, "platform")),
+                instances=_string_tuple(_pick(entry, "instances", "tables")),
+                detail=detail if isinstance(detail, Mapping) else {},
+            )
+        )
+    summary = payload.get("summary")
+    summary = summary if isinstance(summary, Mapping) else {}
+    error_count = _count(summary.get("error"))
+    warning_count = _count(summary.get("warning"))
+    if error_count is None:
+        error_count = sum(1 for item in conflicts if item.level == LEVEL_ERROR)
+    if warning_count is None:
+        warning_count = sum(1 for item in conflicts if item.level != LEVEL_ERROR)
+    return DoctorSnapshot(
+        instance_root=_text(payload.get("instance_root")),
+        config_root=_text(payload.get("config_root")),
+        implementation=_text(payload.get("implementation")),
+        registry_available=_flag(payload.get("registry_available")),
+        registry_note=_text(payload.get("registry_note")),
+        conflicts=tuple(conflicts),
+        error_count=error_count,
+        warning_count=warning_count,
+        checks=_checks(payload.get("checks")),
+    )
+
+
+def _checks(payload: Any) -> DoctorChecks:
+    source = payload if isinstance(payload, Mapping) else {}
+    count = _count(_pick(source, "instances", "instance_count"))
+    return DoctorChecks(
+        instances=count if count is not None else 0,
+        installed_adapters=_string_tuple(_pick(source, "installed_adapters", default=())),
+        unconfigured_adapters=_string_tuple(_pick(source, "unconfigured_adapters", default=())),
+        orphan_check=_text(_pick(source, "orphan_check")).casefold(),
+        credential_scope=_text(_pick(source, "credential_scope")),
+    )
+
+
+class DoctorSourceError(RuntimeError):
+    """数据源不可用：子进程缺失、输出不是 JSON 或结构不符。"""
+
+
+@runtime_checkable
+class DoctorSource(Protocol):
+    """体检数据源接口；测试注入替身，生产走子进程。"""
+
+    def load_snapshot(self) -> DoctorSnapshot:
+        """返回一次体检结果；取数错误记入快照的 ``errors`` 而不抛出。"""
+
+
+class StaticDoctorSource:
+    """固定数据的替身数据源，供自动化断言使用，不产生任何子进程。
+
+    :param snapshot: ``load_snapshot`` 的返回值。
+    :param error: 设定后 ``load_snapshot`` 抛出该异常，用于验证失败路径。
+    """
+
+    def __init__(self, snapshot: DoctorSnapshot | None = None, error: Exception | None = None) -> None:
+        self._snapshot = snapshot if snapshot is not None else DoctorSnapshot()
+        self._error = error
+        self.calls = {"load": 0}
+
+    def load_snapshot(self) -> DoctorSnapshot:
+        """见 :meth:`DoctorSource.load_snapshot`。"""
+        self.calls["load"] += 1
+        if self._error is not None:
+            raise self._error
+        return self._snapshot
+
+
+class SubprocessDoctorSource:
+    """默认数据源：经 ``akaribot doctor --json`` 子进程取数。
+
+    :param root: 实例根目录，默认取当前实例。
+    :param timeout: 子进程的超时秒数。
+    :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
+    """
+
+    def __init__(
+        self,
+        *,
+        root: Path | str | None = None,
+        timeout: float = 120.0,
+        runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    ) -> None:
+        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
+        # 在仓库根运行界面时静默读到另一个实例的配置。
+        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        self.timeout = timeout
+        self.calls = {"load": 0}
+        self._runner = runner or subprocess.run
+
+    def load_snapshot(self) -> DoctorSnapshot:
+        """见 :meth:`DoctorSource.load_snapshot`。"""
+        self.calls["load"] += 1
+        argv = cli_process.cli_argv("doctor", "--json")
+        try:
+            completed = self._run(argv)
+        except DoctorSourceError as error:
+            return DoctorSnapshot(errors=(str(error),))
+        try:
+            payload = self._parse_json(completed.stdout)
+        except DoctorSourceError as error:
+            if completed.returncode != 0:
+                tail = self._tail(completed.stderr) or i18n.t("cli.tui.common.no_output")
+                exit_error = i18n.t(
+                    "cli.tui.doctor.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=tail,
+                )
+                return DoctorSnapshot(errors=(exit_error, str(error)))
+            return DoctorSnapshot(errors=(str(error),))
+        try:
+            return normalize_snapshot(payload)
+        except DoctorSourceError as error:
+            return DoctorSnapshot(errors=(str(error),))
+
+    def _run(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        try:
+            return self._runner(
+                list(argv),
+                cwd=str(self.root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.timeout,
+                env=cli_process.cli_env(self.root),
+            )
+        except FileNotFoundError as error:
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_exe_missing", path=argv[0], error=error)) from error
+        except subprocess.TimeoutExpired as error:
+            raise DoctorSourceError(
+                i18n.t("cli.tui.doctor.src_timeout", cmd=" ".join(argv), seconds=f"{self.timeout:.0f}")
+            ) from error
+        except OSError as error:
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_oserror", cmd=" ".join(argv), error=error)) from error
+
+    def _parse_json(self, stdout: str) -> Any:
+        text = stdout.strip()
+        if not text:
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_empty_output", label=SOURCE_LABEL))
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as error:
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_bad_json", label=SOURCE_LABEL, error=error)) from error
+
+    def _tail(self, text: str | None, limit: int = 400) -> str:
+        return (text or "").strip()[-limit:]
+
+
+class DoctorPage(compat.Vertical):
+    """体检页控件。
+
+    :param source: 数据源，缺省为 :class:`SubprocessDoctorSource`。
+    """
+
+    can_focus = True
+
+    BINDINGS = compat.bindings(("r", "refresh", i18n.t("cli.tui.doctor.bind_refresh")))
+
+    DEFAULT_CSS = """
+    DoctorPage {
+        layout: vertical;
+        height: 1fr;
+    }
+    DoctorPage #summary {
+        height: 6;
+        padding: 0 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    DoctorPage #verdict {
+        height: 1;
+        padding: 0 1;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    DoctorPage #conflict-list {
+        height: 1fr;
+        border: round $primary;
+    }
+    DoctorPage #conflict-list > ListItem {
+        padding: 0;
+    }
+    DoctorPage #conflict-list Static {
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    DoctorPage #actions {
+        height: 3;
+        padding: 0 0 0 1;
+    }
+    DoctorPage #detail {
+        height: 6;
+        padding: 0 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    DoctorPage #status {
+        height: 2;
+        padding: 0 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    """
+
+    def __init__(self, source: DoctorSource | None = None, *, id: str | None = None) -> None:
+        super().__init__(id=id)
+        self._activated = False
+        self.source: DoctorSource = source if source is not None else SubprocessDoctorSource()
+        self.last_error: str = ""
+        self._snapshot = DoctorSnapshot()
+        self._loaded_at: float = 0.0
+        self._busy: bool = False
+        self._selected_index: int = 0
+        self._summary_rendered: str = ""
+        self._verdict_rendered: str = ""
+        self._detail_rendered: str = ""
+        self._row_texts: tuple[str, ...] = ()
+        self._conflict_rows: tuple[tuple[str, str, str], ...] = ()
+        self._status_key: str = "cli.tui.common.status_ready"
+        self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
+
+    def compose(self) -> compat.ComposeResult:
+        """装配页面控件树：统计面板、结论行、冲突列表、刷新按钮、详情与状态栏。"""
+        yield compat.Static(i18n.t("cli.tui.doctor.summary_pending"), id="summary", markup=False)
+        yield compat.Static(i18n.t("cli.tui.doctor.verdict_pending"), id="verdict", markup=False)
+        yield compat.ListView(id="conflict-list")
+        with compat.Horizontal(id="actions"):
+            yield compat.Button(i18n.t("cli.tui.doctor.action_refresh"), id="refresh", variant="primary")
+        yield compat.Static(i18n.t("cli.tui.doctor.detail_placeholder"), id="detail", markup=False)
+        yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
+
+    def on_mount(self) -> None:
+        """挂载后只装配控件；取数推迟到首次显示。"""
+        compat.set_text_selection(self, False)
+
+    def activate(self) -> None:
+        """首次显示时读取一次体检结果。"""
+        if self._activated:
+            return
+        self._activated = True
+        self.refresh_report()
+
+    def focus_primary(self) -> None:
+        """把焦点交给冲突列表；列表为空时退到页面容器。"""
+        compat.focus_first(self, "#conflict-list")
+
+    # region 状态读取（供测试与 App 使用）
+
+    @property
+    def snapshot(self) -> DoctorSnapshot:
+        """返回最近一次取到的快照，不触发子进程。"""
+        return self._snapshot
+
+    @property
+    def conflicts(self) -> tuple[DoctorConflict, ...]:
+        """返回缓存中的结论列表。"""
+        return self._snapshot.conflicts
+
+    @property
+    def selected_conflict(self) -> DoctorConflict | None:
+        """返回列表当前高亮项对应的结论。"""
+        conflicts = self._snapshot.conflicts
+        if not conflicts:
+            return None
+        try:
+            list_view = self.query_one("#conflict-list", compat.ListView)
+        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+            return None
+        index = compat.highlighted_index(list_view)
+        if index is None or index >= len(conflicts):
+            return None
+        return conflicts[index]
+
+    @property
+    def summary_text(self) -> str:
+        """返回统计面板当前渲染出的文本。"""
+        return self._summary_rendered
+
+    @property
+    def verdict_text(self) -> str:
+        """返回结论行当前渲染出的文本。"""
+        return self._verdict_rendered
+
+    @property
+    def detail_text(self) -> str:
+        """返回详情区当前渲染出的文本。"""
+        return self._detail_rendered
+
+    @property
+    def status_text(self) -> str:
+        """返回状态栏当前文本。"""
+        return self._status_rendered
+
+    @property
+    def status_key(self) -> str:
+        """返回状态栏当前文案的键，文案未合并时供自动化断言核对状态。"""
+        return self._status_key
+
+    def row_texts(self) -> tuple[str, ...]:
+        """返回最近一次渲染出的冲突行文本。"""
+        return self._row_texts
+
+    def row_cells(self) -> tuple[tuple[str, str, str], ...]:
+        """返回冲突行的级别标记、级别与结论，顺序与列表一致。"""
+        return self._conflict_rows
+
+    # endregion
+
+    # region 数据读取
+
+    def refresh_report(self) -> None:
+        """重新体检；取数期间状态栏显示进行中并禁用刷新按钮。"""
+        if self._busy:
+            return
+        self._set_busy(True)
+        self._set_status("cli.tui.doctor.status_loading")
+        self.run_worker(self._load(), group="doctor-load", exclusive=True)
+
+    async def _load(self) -> bool:
+        try:
+            snapshot = await asyncio.to_thread(self.source.load_snapshot)
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+            self._snapshot = DoctorSnapshot(errors=(f"{type(error).__name__}: {error}",))
+            self._loaded_at = time.monotonic()
+            self.last_error = self._snapshot.errors[0]
+            self._render_report()
+            self._set_status("cli.tui.doctor.status_failed", error=self.last_error)
+            self._set_busy(False)
+            return False
+        self._snapshot = snapshot
+        self._loaded_at = time.monotonic()
+        self.last_error = i18n.t("cli.tui.common.error_separator").join(snapshot.errors)
+        self._render_report()
+        if self.last_error:
+            self._set_status("cli.tui.doctor.status_failed", error=self.last_error)
+        else:
+            self._set_status(
+                "cli.tui.doctor.status_loaded",
+                errors=snapshot.error_count,
+                warnings=snapshot.warning_count,
+                implementation=snapshot.implementation_label,
+            )
+        self._set_busy(False)
+        return True
+
+    def _set_busy(self, value: bool) -> None:
+        self._busy = value
+        self.query_one("#refresh", compat.Button).disabled = value
+
+    # endregion
+
+    # region 渲染（只读缓存）
+
+    def _render_report(self) -> None:
+        self._render_summary()
+        self._render_verdict()
+        self._render_rows()
+        self._render_detail()
+
+    def _render_summary(self) -> None:
+        snapshot = self._snapshot
+        checks = snapshot.checks
+        separator = i18n.t("cli.tui.common.list_separator")
+        installed = separator.join(checks.installed_adapters) or i18n.t("cli.tui.common.none")
+        unconfigured = separator.join(checks.unconfigured_adapters) or i18n.t("cli.tui.common.none")
+        scope = checks.credential_scope or i18n.t("cli.tui.common.unknown")
+        if snapshot.registry_available:
+            checks_line = i18n.t("cli.tui.doctor.checks_line", orphan=checks.orphan_label, scope=scope)
+        else:
+            checks_line = i18n.t(
+                "cli.tui.doctor.checks_degraded",
+                orphan=checks.orphan_label,
+                scope=scope,
+                note=snapshot.registry_note or i18n.t("cli.tui.common.unknown"),
+            )
+        unknown = i18n.t("cli.tui.common.unknown")
+        rows = [
+            (i18n.t("cli.tui.doctor.field_instance_root"), snapshot.instance_root or unknown),
+            (i18n.t("cli.tui.doctor.field_config_root"), snapshot.config_root or unknown),
+            (i18n.t("cli.tui.doctor.field_instance_count"), str(checks.instances)),
+            (i18n.t("cli.tui.doctor.field_installed_adapters"), installed),
+            (i18n.t("cli.tui.doctor.field_unconfigured_adapters"), unconfigured),
+            (i18n.t("cli.tui.doctor.field_checks"), checks_line),
+        ]
+        text = "\n".join(self._fit_page_width(line) for line in compat.align_rows(rows))
+        self._summary_rendered = text
+        self.query_one("#summary", compat.Static).update(compat.plain_text(text))
+
+    def _render_verdict(self) -> None:
+        text = self._verdict_line()
+        self._verdict_rendered = text
+        self.query_one("#verdict", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
+
+    def _verdict_line(self) -> str:
+        if not self._loaded_at:
+            return i18n.t("cli.tui.doctor.verdict_pending")
+        if self._snapshot.errors:
+            return i18n.t("cli.tui.doctor.verdict_failed")
+        if not self._snapshot.conflicts:
+            return i18n.t("cli.tui.doctor.verdict_passed")
+        return i18n.t(
+            "cli.tui.doctor.verdict_conflicts",
+            errors=self._snapshot.error_count,
+            warnings=self._snapshot.warning_count,
+        )
+
+    def _render_rows(self) -> None:
+        list_view = self.query_one("#conflict-list", compat.ListView)
+        conflicts = self._snapshot.conflicts
+        self._conflict_rows = tuple((item.mark, item.level, item.message) for item in conflicts)
+        self._row_texts = tuple(self._compose_row(item) for item in conflicts)
+        list_view.clear()
+        if self._row_texts:
+            items = [compat.ListItem(compat.Static(text, markup=False)) for text in self._row_texts]
+            list_view.extend(items)
+        list_view.index = self._restore_index()
+
+    def _compose_row(self, conflict: DoctorConflict) -> str:
+        return f"{conflict.mark} {conflict.level_label}  {conflict.message}"
+
+    def _restore_index(self) -> int:
+        if self._selected_index and 0 <= self._selected_index < len(self._snapshot.conflicts):
+            return self._selected_index
+        return 0
+
+    def _render_detail(self) -> None:
+        text = "\n".join(self._fit_page_width(line) for line in self._detail_lines())
+        self._detail_rendered = text
+        self.query_one("#detail", compat.Static).update(compat.plain_text(text))
+
+    def _detail_lines(self) -> list[str]:
+        conflict = self.selected_conflict
+        if conflict is None:
+            return [self._empty_detail_line()]
+        rows: list[tuple[str, str]] = [
+            (i18n.t("cli.tui.doctor.field_level"), f"{conflict.mark} {conflict.level_label}"),
+            (i18n.t("cli.tui.doctor.field_kind"), conflict.kind or i18n.t("cli.tui.common.unknown")),
+        ]
+        if conflict.platform:
+            rows.append((i18n.t("cli.tui.doctor.field_platform"), conflict.platform))
+        if conflict.instances:
+            separator = i18n.t("cli.tui.common.list_separator")
+            rows.append((i18n.t("cli.tui.doctor.field_instances"), separator.join(conflict.instances)))
+        rows.append((i18n.t("cli.tui.doctor.field_message"), conflict.message))
+        rows.append((i18n.t("cli.tui.doctor.field_detail"), _detail_text(conflict.detail)))
+        return compat.align_rows(rows)
+
+    def _empty_detail_line(self) -> str:
+        if not self._loaded_at:
+            return i18n.t("cli.tui.doctor.detail_placeholder")
+        if self._snapshot.errors:
+            return i18n.t("cli.tui.doctor.detail_failed")
+        if not self._snapshot.conflicts:
+            return i18n.t("cli.tui.doctor.detail_passed")
+        return i18n.t("cli.tui.doctor.detail_hint_select")
+
+    def _fit_page_width(self, text: str) -> str:
+        try:
+            width = compat.widget_cells(self)[0] - 2
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+            width = 78
+        return compat.truncate_cells(text, max(width, 8))
+
+    def _set_status(self, key: str, **params: Any) -> None:
+        self._status_key = key
+        self._status_rendered = i18n.t(key, **params)
+        self.query_one("#status", compat.Static).update(compat.plain_text(self._fit_page_width(self._status_rendered)))
+
+    def on_resize(self, event: compat.events.Resize) -> None:
+        """终端尺寸变化时按缓存重排，不重新取数。"""
+        if self._loaded_at:
+            self._render_report()
+
+    # endregion
+
+    # region 交互
+
+    @compat.on(compat.ListView.Highlighted, "#conflict-list")
+    def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
+        index = compat.highlighted_index(event.list_view)
+        if index is not None:
+            self._selected_index = index
+        self._render_detail()
+
+    @compat.on(compat.Button.Pressed)
+    def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
+        if event.button.id == "refresh":
+            self.refresh_report()
+
+    def action_refresh(self) -> None:
+        """键位动作：重新体检。"""
+        self.refresh_report()
+
+    # endregion
+
+    async def wait_for_idle(self) -> None:
+        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        await compat.wait_for_idle(self.app, lambda: self._busy)

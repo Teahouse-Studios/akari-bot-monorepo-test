@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
+from akaribot.cli.instance import INSTANCE_ID_PATTERN, default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
@@ -247,6 +247,7 @@ class StaticAdapterSource:
     :param available: ``list_available`` 的返回值。
     :param peers: ``peer_status`` 的返回值；缺省表示快照不可用。
     :param toggle_result: ``set_enable`` 的返回值；缺省为成功。
+    :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值；缺省为成功。
     """
 
     def __init__(
@@ -258,6 +259,7 @@ class StaticAdapterSource:
         toggle_result: OperationResult | None = None,
         install_result: OperationResult | None = None,
         install_lines: Sequence[str] = (),
+        instance_result: OperationResult | None = None,
     ) -> None:
         self._snapshot = snapshot or AdapterSnapshot()
         self._available = tuple(available)
@@ -268,8 +270,21 @@ class StaticAdapterSource:
         self.installed: list[str] = []
         self._peers = peers or PeerSnapshot(note=i18n.t("cli.tui.adapters.stub_no_peers"))
         self._toggle_result = toggle_result or OperationResult(True, i18n.t("cli.tui.adapters.stub_toggle_ok"), "stub")
-        self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
+        self._instance_result = instance_result or OperationResult(
+            True, i18n.t("cli.tui.adapters.stub_instance_ok"), "stub"
+        )
+        self.calls = {
+            "list": 0,
+            "available": 0,
+            "install": 0,
+            "peers": 0,
+            "set_enable": 0,
+            "add_instance": 0,
+            "remove_instance": 0,
+        }
         self.toggles: list[tuple[str, bool]] = []
+        self.added: list[tuple[str, str]] = []
+        self.removed: list[tuple[str, str, bool]] = []
 
     def list_instances(self) -> AdapterSnapshot:
         """见 :meth:`AdapterSource.list_instances`。"""
@@ -293,6 +308,18 @@ class StaticAdapterSource:
         """见 :meth:`AdapterSource.peer_status`。"""
         self.calls["peers"] += 1
         return self._peers
+
+    def add_instance(self, platform: str, instance_id: str) -> OperationResult:
+        """见 :meth:`AdapterSource.add_instance`。"""
+        self.calls["add_instance"] += 1
+        self.added.append((platform, instance_id))
+        return self._instance_result
+
+    def remove_instance(self, record: AdapterRecord, *, purge_data: bool) -> OperationResult:
+        """见 :meth:`AdapterSource.remove_instance`。"""
+        self.calls["remove_instance"] += 1
+        self.removed.append((record.platform, record.instance_id, purge_data))
+        return self._instance_result
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
         """见 :meth:`AdapterSource.set_enable`；成功后替换缓存里的该条记录。"""
@@ -659,6 +686,51 @@ class SubprocessAdapterSource:
             self._tail(completed.stderr),
         )
 
+    def add_instance(self, platform: str, instance_id: str) -> OperationResult:
+        """见 :meth:`AdapterSource.add_instance`；经 ``akaribot adapter instance add`` 新建。"""
+        self.calls["add_instance"] += 1
+        label = i18n.t("cli.tui.adapters.label_instance_add", name=self._instance_display(platform, instance_id))
+        args = ["adapter", "instance", "add", platform]
+        if instance_id:
+            args.append(instance_id)
+        completed = self._run(self.cli_argv(*args))
+        if completed.returncode == 0:
+            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
+        return OperationResult(
+            False,
+            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
+            self._tail(completed.stderr) or self._tail(completed.stdout),
+        )
+
+    def remove_instance(self, record: AdapterRecord, *, purge_data: bool) -> OperationResult:
+        """见 :meth:`AdapterSource.remove_instance`；经 ``adapter instance remove`` 移除。
+
+        ``--yes`` 由界面代答：删除前的确认已经在界面上问过，不该再被 CLI 的交互提问卡住。
+        """
+        self.calls["remove_instance"] += 1
+        label = i18n.t(
+            "cli.tui.adapters.label_instance_purge" if purge_data else "cli.tui.adapters.label_instance_remove",
+            name=self._instance_display(record.platform, record.instance_id),
+        )
+        args = ["adapter", "instance", "remove", record.platform]
+        if record.instance_id:
+            args.append(record.instance_id)
+        if purge_data:
+            args.append("--purge-data")
+        args.append("--yes")
+        completed = self._run(self.cli_argv(*args))
+        if completed.returncode == 0:
+            return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
+        return OperationResult(
+            False,
+            i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
+            self._tail(completed.stderr) or self._tail(completed.stdout),
+        )
+
+    @staticmethod
+    def _instance_display(platform: str, instance_id: str) -> str:
+        return f"{platform}/{instance_id}" if instance_id else i18n.t("cli.tui.adapters.default_id")
+
     def cli_argv(self, *args: str) -> list[str]:
         """构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。"""
         return cli_process.cli_argv(*args)
@@ -771,6 +843,9 @@ class AdaptersPage(compat.Vertical):
         ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
         ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable")),
         ("i", "install", i18n.t("cli.tui.adapters.action_install")),
+        ("a", "add_instance", i18n.t("cli.tui.adapters.bind_add_instance")),
+        ("d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance")),
+        ("ctrl+d", "purge_instance", i18n.t("cli.tui.adapters.bind_purge_instance")),
     )
 
     DEFAULT_CSS = """
@@ -805,6 +880,13 @@ class AdaptersPage(compat.Vertical):
     }
     AdaptersPage #adapter-list > ListItem.group-header {
         color: $accent;
+    }
+    AdaptersPage #instance-row {
+        height: 3;
+        padding: 0 0 0 1;
+    }
+    AdaptersPage #new-instance {
+        width: 1fr;
     }
     AdaptersPage #actions {
         height: 3;
@@ -844,6 +926,7 @@ class AdaptersPage(compat.Vertical):
         self._loaded_at: float = 0.0
         self._selected_key: str | None = None
         self._busy: bool = False
+        self._pending_remove: tuple[str, bool] = ()
         self._available_error: str = ""
         self._stream_lines: list[str] = []
         self._layout = ColumnLayout(6, 8, _enable_column_width(), _status_column_width(), MIN_FLEX_COLUMN_WIDTH, 0)
@@ -861,8 +944,14 @@ class AdaptersPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.adapters.summary_pending"), id="summary", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="adapter-list")
+        with compat.Horizontal(id="instance-row"):
+            yield compat.Input(placeholder=i18n.t("cli.tui.adapters.instance_placeholder"), id="new-instance")
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.adapters.action_toggle"), id="toggle", variant="primary")
+            yield compat.Button(i18n.t("cli.tui.adapters.action_add_instance"), id="add-instance")
+            yield compat.Button(
+                i18n.t("cli.tui.adapters.action_remove_instance"), id="remove-instance", variant="error"
+            )
             yield compat.Button(i18n.t("cli.tui.adapters.action_refresh"), id="refresh")
         yield compat.Static(i18n.t("cli.tui.adapters.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -1285,6 +1374,10 @@ class AdaptersPage(compat.Vertical):
         toggle = self.query_one("#toggle", compat.Button)
         toggle.disabled = self._busy or self.selected_record is None
         record = self.selected_record
+        self.query_one("#add-instance", compat.Button).disabled = self._busy or record is None
+        self.query_one("#remove-instance", compat.Button).disabled = (
+            self._busy or record is None or not record.configured
+        )
         if record is None:
             toggle.label = i18n.t("cli.tui.adapters.action_toggle")
         elif record.installable:
@@ -1322,8 +1415,130 @@ class AdaptersPage(compat.Vertical):
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         if event.button.id == "toggle":
             self.request_toggle()
+        elif event.button.id == "add-instance":
+            self.request_add_instance()
+        elif event.button.id == "remove-instance":
+            self.request_remove_instance(purge_data=False)
         elif event.button.id == "refresh":
             self.refresh_instances(force=True)
+
+    def request_add_instance(self) -> None:
+        """为选中行所属平台新建实例；实例 ID 取自输入框。
+
+        实例 ID 是 ``target_id`` 前缀的一部分，建好后不可改名，故这里只校验形态，不猜默认值。
+        """
+        record = self.selected_record
+        if record is None:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.pick_platform"),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_add_instance"),
+            )
+            return
+        instance_id = self.query_one("#new-instance", compat.Input).value.strip()
+        if not instance_id:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.instance_id_required"),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_add_instance"),
+            )
+            return
+        if not INSTANCE_ID_PATTERN.fullmatch(instance_id):
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.instance_id_invalid", instance_id=instance_id),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_add_instance"),
+            )
+            return
+        self._start_instance_op(
+            i18n.t("cli.tui.adapters.label_instance_add", name=f"{record.platform}/{instance_id}"),
+            lambda: self.source.add_instance(record.platform, instance_id),
+            clear_input=True,
+        )
+
+    def request_remove_instance(self, *, purge_data: bool) -> None:
+        """移除选中实例的配置；连按两次同一动作才执行。
+
+        删除会丢掉该实例的配置，``--purge-data`` 还会清掉它的场景与用户数据，故要求再按一次同样的
+        键确认；目标或动作一变就重新询问。
+        """
+        record = self.selected_record
+        if record is None or not record.configured:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.pick_instance"),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_remove_instance"),
+            )
+            return
+        key = (record.key, purge_data)
+        if self._pending_remove != key:
+            self._pending_remove = key
+            self._set_status(
+                i18n.t(
+                    "cli.tui.adapters.purge_confirm" if purge_data else "cli.tui.adapters.remove_confirm",
+                    name=self._instance_display(record),
+                )
+            )
+            return
+        self._pending_remove = ()
+        label = i18n.t(
+            "cli.tui.adapters.label_instance_purge" if purge_data else "cli.tui.adapters.label_instance_remove",
+            name=self._instance_display(record),
+        )
+        self._start_instance_op(
+            label,
+            lambda: self.source.remove_instance(record, purge_data=purge_data),
+            clear_input=False,
+        )
+
+    def _instance_display(self, record: AdapterRecord) -> str:
+        return (
+            f"{record.platform}/{record.instance_id}" if record.instance_id else i18n.t("cli.tui.adapters.default_id")
+        )
+
+    def _start_instance_op(self, label: str, func: Callable[[], OperationResult], *, clear_input: bool) -> None:
+        if self._busy:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.busy"),
+                severity="warning",
+                title=i18n.t("cli.tui.common.busy_title"),
+            )
+            return
+        self._busy = True
+        self._sync_actions()
+        self._set_status(i18n.t("cli.tui.adapters.calling", label=label))
+        self.run_worker(self._instance_op(label, func, clear_input), group="adapters-instance", exclusive=True)
+
+    async def _instance_op(self, label: str, func: Callable[[], OperationResult], clear_input: bool) -> None:
+        try:
+            result = await asyncio.to_thread(func)
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                f"{type(error).__name__}: {error}",
+            )
+        if result.ok:
+            if clear_input:
+                self.query_one("#new-instance", compat.Input).value = ""
+            self._set_status(i18n.t("cli.tui.adapters.refreshing", message=result.message))
+            self.invalidate_cache()
+            await self._load()
+            self.last_result = result.message
+            self._set_status(self.last_result)
+            compat.notify(self.app, result.message, severity="information", title=label)
+        else:
+            self.last_error = result.detail or result.message
+            tail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
+            self._set_status(i18n.t("cli.tui.adapters.failed_detail", message=result.message, detail=tail))
+            compat.notify(self.app, result.message, severity="error", title=label)
+        self._busy = False
+        self._sync_actions()
 
     def request_toggle(self) -> None:
         """切换选中实例的 ``enable``；无选中项时给出提示而不动作。"""
@@ -1458,6 +1673,18 @@ class AdaptersPage(compat.Vertical):
     def action_install(self) -> None:
         """键位动作：安装当前平台尚未安装的适配器包。"""
         self.request_install()
+
+    def action_add_instance(self) -> None:
+        """键位动作：按输入框的实例 ID 新建实例。"""
+        self.request_add_instance()
+
+    def action_remove_instance(self) -> None:
+        """键位动作：移除选中实例配置。"""
+        self.request_remove_instance(purge_data=False)
+
+    def action_purge_instance(self) -> None:
+        """键位动作：移除选中实例配置并清理其数据。"""
+        self.request_remove_instance(purge_data=True)
 
     def action_toggle_enable(self) -> None:
         """键位动作：切换选中实例的 enable。"""

@@ -39,6 +39,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from akaribot.cli import i18n
+from akaribot.cli.instance import INSTANCE_ID_PATTERN
 
 INSTANCE_ENV = "AKARI_INSTANCE_DIR"
 CONFIG_ENV = "AKARI_CONFIG_PATH"
@@ -49,7 +50,6 @@ DEFAULT_VENV_DIR = ".venv"
 CORE_ENTRYPOINT_ROOT = "akaribot.core.entrypoints"
 CORE_TIMEOUT_SECONDS = 120.0
 
-INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 PLACEHOLDER_PATTERN = re.compile(r"^<Replace me.*>$")
 BOT_TABLE_PREFIX = "bot_"
 SECRET_TABLE_SUFFIX = "_secret"

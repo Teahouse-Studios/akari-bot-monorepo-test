@@ -7,6 +7,7 @@ CLI 进程不 import ``akaribot.core``：实例操作一律经实例 venv 的解
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 import shutil
@@ -96,6 +97,8 @@ PYTHON_ENV = "AKARIBOT_PYTHON"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 CORE_ENTRYPOINT_PREFIX = "akaribot.core.entrypoints"
 LOCK_FILENAME = ".bot.lock"
+# 实例 ID 的形态：它是 ``target_id`` 前缀的一部分，用小写字母、数字与下划线，建好后不可改名。
+INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 DEFAULT_VENV = ".venv"
 DEFAULT_LOCALE = "zh_cn"
 DEFAULT_REGISTRY_SOURCE = "https://akaribot.teahou.se/registry.json"

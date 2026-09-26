@@ -42,6 +42,7 @@ def _real_sources(root) -> dict:
     from akaribot.cli.tui.config import SubprocessConfigSource
     from akaribot.cli.tui.dashboard import LocalDashboardSource
     from akaribot.cli.tui.dev import SubprocessDevSource
+    from akaribot.cli.tui.doctor import SubprocessDoctorSource
     from akaribot.cli.tui.logs import FileLogSource
     from akaribot.cli.tui.run import SubprocessRunSource
 
@@ -52,6 +53,7 @@ def _real_sources(root) -> dict:
         "logs": _Counting(FileLogSource(root=root)),
         "run": _Counting(SubprocessRunSource(root=root, timeout=10.0)),
         "dev": _Counting(SubprocessDevSource(root=root, timeout=10.0)),
+        "doctor": _Counting(SubprocessDoctorSource(root=root, timeout=10.0)),
     }
 
 

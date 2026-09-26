@@ -417,6 +417,113 @@ async def _detail_of(record, body):
         return await body(app, page, pilot)
 
 
+LOADED_PKG = ModuleRecord(
+    name="wiki",
+    dist="akari-bot-module-wiki",
+    version="1.0.0",
+    state="installed",
+    provides_modules=("wiki", "ab"),
+)
+PARTIAL_PKG = ModuleRecord(
+    name="arcaea",
+    dist="akari-bot-module-arcaea",
+    version="1.0.0",
+    state="installed",
+    provides_modules=("arcaea", "arcaea-rss"),
+)
+
+
+def _select_package(page, dist: str) -> None:
+    # 列表按「已装在前、其次按名」排序，选中项由页面自己维护，这里直接指定以固定用例目标。
+    page._selected_key = dist
+    page._selected = {dist}
+    page._render_list()
+
+
+PENDING_PKG = ModuleRecord(
+    name="cytoid",
+    dist="akari-bot-module-cytoid",
+    version="0.3.0",
+    state="available",
+    provides_modules=("cytoid",),
+)
+
+
+def _load_source(states) -> StaticModuleSource:
+    records = [LOADED_PKG, PARTIAL_PKG, PENDING_PKG]
+    return StaticModuleSource(
+        records=records,
+        available=records,
+        load_states=states,
+        stream_lines=["已全局装载模块 wiki"],
+    )
+
+
+async def _test_load_cell_counts_loaded_modules():
+    # 装载与安装是两回事：列表按包声明逐个数出已装载的模块。
+    source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
+
+    async def body(app, page, pilot):
+        rows = page.row_texts()
+        await pilot.press("q")
+        return rows
+
+    rows = await _with_app(source, body)
+    # 排序为「已装在前、其次按名」：arcaea 在 wiki 之前。
+    return (
+        i18n.t("cli.tui.modules.load_cell", loaded=1, total=2) in rows[0]
+        and i18n.t("cli.tui.modules.load_cell", loaded=2, total=2) in rows[1]
+    )
+
+
+async def _test_toggle_load_loads_when_partly_unloaded():
+    source = _load_source({"wiki": True, "ab": False, "arcaea": True, "arcaea-rss": True})
+
+    async def body(app, page, pilot):
+        _select_package(page, LOADED_PKG.dist)
+        await pilot.pause()
+        await pilot.press("l")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(source.loaded.get("load", [])), page.status_text
+
+    loaded, status = await _with_app(source, body)
+    return loaded == ["wiki", "ab"] and status
+
+
+async def _test_toggle_load_unloads_when_all_loaded():
+    source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": True})
+
+    async def body(app, page, pilot):
+        _select_package(page, LOADED_PKG.dist)
+        await pilot.pause()
+        await pilot.press("l")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(source.loaded.get("unload", []))
+
+    unloaded = await _with_app(source, body)
+    return unloaded == ["wiki", "ab"]
+
+
+async def _test_toggle_load_ignores_uninstalled():
+    source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": True})
+
+    async def body(app, page, pilot):
+        _select_package(page, PENDING_PKG.dist)
+        await pilot.pause()
+        page.request_toggle_load()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return dict(source.loaded), page.status_text
+
+    loaded, status = await _with_app(source, body)
+    return loaded == {} and status
+
+
 @func_case
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
@@ -437,4 +544,8 @@ async def test_tui_modules_available(tester: Tester):
     await tester.test(_test_relative_root_is_resolved, "相对实例根解析为绝对路径")
     await tester.test(_test_detail_shows_manifest_metadata, "详情展示 manifest 元数据")
     await tester.test(_test_detail_falls_back_when_manifest_missing, "manifest 缺失才显示未声明")
+    await tester.test(_test_load_cell_counts_loaded_modules, "列表按模块数展示装载状态")
+    await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 l 装载整包")
+    await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
+    await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
     return tester

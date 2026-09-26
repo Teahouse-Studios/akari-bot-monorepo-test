@@ -15,7 +15,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Iterable, Sequence
+from typing import Annotated, Any, Iterable, Sequence
 
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
@@ -32,6 +32,7 @@ from akaribot.cli.instance import (
     PackageInfo,
     console,
     err_console,
+    explain_process_failure,
     fail,
     ok,
     require_instance,
@@ -999,6 +1000,50 @@ def update(
     )
     if code != 0:
         raise typer.Exit(code)
+
+
+@app.command("status", help=i18n.t("cli.module.status.help"))
+def module_status(
+    instance_path: InstancePathOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
+) -> None:
+    """列出各模块的全局装载状态（``module_status.load``）。
+
+    状态表由实例的数据库提供，实例未运行时读到的可能是上次退出前的记录，故不加运行校验；
+    ``loaded`` 为 ``null`` 表示该模块尚无记录（实例未完成过一次启动）。
+    """
+    instance = require_instance(instance_path)
+    completed = instance.run_core_capture("modules", "list", "--json", timeout=60.0)
+    if completed.returncode != 0:
+        fail(explain_process_failure(completed, i18n.t("cli.module.status.failed")))
+    try:
+        payload = json.loads(completed.stdout or "[]")
+    except json.JSONDecodeError as error:
+        fail(i18n.t("cli.module.status.bad_json", error=error))
+    items = [item for item in payload if isinstance(item, dict)]
+    note = (completed.stderr or "").strip()
+    if as_json:
+        console.print_json(json.dumps({"modules": items, "note": note}, ensure_ascii=False))
+        return
+    table = Table(title=i18n.t("cli.module.status.table_title", count=len(items)))
+    table.add_column(i18n.t("cli.module.status.column_module"))
+    table.add_column(i18n.t("cli.module.status.column_state"))
+    table.add_column(i18n.t("cli.module.status.column_dist"))
+    for item in items:
+        table.add_row(
+            str(item.get("name") or ""),
+            _load_state_label(item.get("loaded")),
+            str(item.get("installed_dist") or "-"),
+        )
+    console.print(table)
+    if note:
+        warn(note)
+
+
+def _load_state_label(loaded: Any) -> str:
+    if loaded is None:
+        return i18n.t("cli.module.status.state_unknown")
+    return i18n.t("cli.module.status.state_loaded") if loaded else i18n.t("cli.module.status.state_unloaded")
 
 
 # 三级「启用」语义（附录 B）：安装看 venv、全局装载看 ModuleStatus.load、场景启用看

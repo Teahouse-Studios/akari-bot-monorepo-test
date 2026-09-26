@@ -44,7 +44,13 @@ _INSTALLED_MARKERS = ("install", "loaded", "enabled", "active")
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # 三种操作共用同一条批量与流式路径，只在这里区分对应的 CLI 子命令。
-_OPERATION_SUBCOMMANDS = {"install": "add", "uninstall": "remove", "update": "update"}
+_OPERATION_SUBCOMMANDS = {
+    "install": "add",
+    "uninstall": "remove",
+    "update": "update",
+    "load": "load",
+    "unload": "unload",
+}
 # 更新要 ``--yes``：界面里已经在批量确认层面问过了，不该再被 CLI 的交互提问卡住。
 _OPERATION_EXTRA_ARGS = {"update": ("--yes",)}
 
@@ -156,6 +162,7 @@ class StaticModuleSource:
     :param install_result: 安装返回值；缺省为成功。
     :param uninstall_result: 卸载返回值；缺省为成功。
     :param stream_lines: ``stream_operation`` 逐行上报的假输出。
+    :param load_states: ``load_states`` 返回的模块装载状态。
     """
 
     def __init__(
@@ -166,19 +173,22 @@ class StaticModuleSource:
         install_result: OperationResult | None = None,
         uninstall_result: OperationResult | None = None,
         stream_lines: Sequence[str] = (),
+        load_states: Mapping[str, bool | None] | None = None,
     ) -> None:
         self._records = tuple(records)
         self._available = tuple(available)
         self._stream_lines = tuple(stream_lines)
+        self._load_states: dict[str, bool | None] = dict(load_states or {})
         self._install_result = install_result or OperationResult(
             True, i18n.t("cli.tui.modules.stub_install_ok"), "stub"
         )
         self._uninstall_result = uninstall_result or OperationResult(
             True, i18n.t("cli.tui.modules.stub_uninstall_ok"), "stub"
         )
-        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0, "update": 0}
+        self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0, "update": 0, "status": 0}
         self.installed: list[str] = []
         self.uninstalled: list[str] = []
+        self.loaded: dict[str, list[str]] = {}
 
     def list_modules(self) -> Sequence[ModuleRecord]:
         """见 :meth:`ModuleSource.list_modules`。"""
@@ -189,6 +199,11 @@ class StaticModuleSource:
         """见 :meth:`ModuleSource.list_available`。"""
         self.calls["available"] += 1
         return self._available
+
+    def load_states(self) -> Mapping[str, bool | None]:
+        """见 :meth:`ModuleSource.load_states`。"""
+        self.calls["status"] += 1
+        return dict(self._load_states)
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """见 :meth:`ModuleSource.install`。"""
@@ -208,6 +223,10 @@ class StaticModuleSource:
         """见 :meth:`ModuleSource.stream_operation`；替身直接回放固定输出。"""
         for line in self._stream_lines:
             on_line(line)
+        if kind in ("load", "unload"):
+            self.calls[kind] = self.calls.get(kind, 0) + 1
+            self.loaded.setdefault(kind, []).append(record.dist or record.name)
+            return self._install_result
         return self.install(record) if kind == "install" else self.uninstall(record)
 
 
@@ -220,6 +239,9 @@ class ModuleSource(Protocol):
 
     def list_available(self) -> Sequence[ModuleRecord]:
         """返回可安装的模块记录，含尚未安装的项。"""
+
+    def load_states(self) -> Mapping[str, bool | None]:
+        """返回模块名到全局装载状态的映射；``None`` 表示尚无记录。"""
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """安装给定记录。"""
@@ -509,6 +531,39 @@ class SubprocessModuleSource:
         except OSError as error:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
 
+    def load_states(self) -> Mapping[str, bool | None]:
+        """见 :meth:`ModuleSource.load_states`：读 ``module status --json``。
+
+        状态表在实例未运行时也可能读到（数据库仍在），故不加运行校验；读不到时抛出
+        :class:`ModuleSourceError`，由页面决定降级方式。
+        """
+        self.calls["status"] = self.calls.get("status", 0) + 1
+        argv = self.cli_argv("module", "status", "--json")
+        completed = self._run(argv)
+        if completed.returncode != 0:
+            raise ModuleSourceError(
+                i18n.t(
+                    "cli.tui.modules.src_exit_code",
+                    cmd=" ".join(argv),
+                    code=completed.returncode,
+                    tail=self._tail(completed.stderr),
+                )
+            )
+        payload = self._parse_json(completed.stdout, "module status --json")
+        items = payload.get("modules") if isinstance(payload, Mapping) else payload
+        if not isinstance(items, Sequence) or isinstance(items, str | bytes):
+            raise ModuleSourceError(i18n.t("cli.tui.modules.src_bad_status", label="module status --json"))
+        states: dict[str, bool | None] = {}
+        for item in items:
+            if not isinstance(item, Mapping):
+                continue
+            name = item.get("name")
+            if not name:
+                continue
+            loaded = item.get("loaded")
+            states[str(name)] = None if loaded is None else bool(loaded)
+        return states
+
     def _list_from_cli_json(self) -> list[ModuleRecord]:
         argv = self.cli_argv("module", "list", "--json")
         completed = self._run(argv)
@@ -595,6 +650,7 @@ class ModulesPage(compat.Vertical):
         ("u", "uninstall", i18n.t("cli.tui.modules.action_uninstall")),
         ("U", "update", i18n.t("cli.tui.modules.action_update")),
         ("ctrl+u", "update", i18n.t("cli.tui.modules.action_update")),
+        ("l", "toggle_load", i18n.t("cli.tui.modules.bind_load")),
         ("space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
         ("ctrl+space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
         ("shift+up", "extend_up", i18n.t("cli.tui.modules.bind_extend")),
@@ -691,6 +747,8 @@ class ModulesPage(compat.Vertical):
         # 批量卸载的待确认集合；与下次请求的目标不一致就重新询问，无需在各处显式复位。
         self._pending_uninstall: tuple[str, ...] = ()
         self._available_error: str = ""
+        self._load_states: dict[str, bool | None] = {}
+        self._load_error: str = ""
         self._stream_line: str = ""
         self._stream_lines: list[str] = []
         self._detail_rendered: str = ""
@@ -710,6 +768,7 @@ class ModulesPage(compat.Vertical):
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.modules.action_install"), id="install", variant="primary")
             yield compat.Button(i18n.t("cli.tui.modules.action_uninstall"), id="uninstall", variant="error")
+            yield compat.Button(i18n.t("cli.tui.modules.button_load"), id="toggle-load")
             yield compat.Button(i18n.t("cli.tui.modules.action_refresh"), id="refresh")
         yield compat.ProgressBar(total=100.0, show_eta=False, id="progress")
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -823,6 +882,7 @@ class ModulesPage(compat.Vertical):
         records = [record for record in records if record.kind != "adapter"]
         if not self._installed_only:
             records = await self._merge_available(records)
+        await self._load_module_states()
         self._records = tuple(sorted(records, key=sort_key))
         # 选区按分发名保存，刷新后可能指向已经不存在或不再可见的项；丢掉它们，免得批量操作
         # 悄悄带上一个界面上看不到的包。
@@ -835,6 +895,8 @@ class ModulesPage(compat.Vertical):
         self.last_result = i18n.t("cli.tui.modules.status_loaded", count=len(self._records))
         if self._available_error:
             self.last_result = f"{self.last_result}{self._available_error}"
+        if self._load_error:
+            self.last_result = f"{self.last_result}{self._load_error}"
         self._render_list()
         self._set_status(self.last_result)
         # 挂载时列表还是空的，焦点只能停在页面容器上；数据到位后把它交给列表，
@@ -842,6 +904,26 @@ class ModulesPage(compat.Vertical):
         if self.display and self.app.focused is self:
             self.focus_primary()
         return True
+
+    async def _load_module_states(self) -> None:
+        # 装载状态与安装状态是两回事：安装看 venv，装载看 module_status。读不到时只把原因附在状态栏，
+        # 列表照常展示——没装模块的实例读不到状态表是常态。
+        try:
+            states = await asyncio.to_thread(self.source.load_states)
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都只降级
+            self._load_states = {}
+            self._load_error = i18n.t("cli.tui.modules.status_load_unavailable", error=error)
+            return
+        self._load_states = dict(states)
+        self._load_error = ""
+
+    def load_state_text(self, record: ModuleRecord) -> str:
+        """返回某条记录的装载状态文本，供列表与详情展示。"""
+        modules = [name for name in record.provides_modules if name in self._load_states]
+        if not modules:
+            return i18n.t("cli.tui.modules.load_cell_unknown")
+        loaded = sum(1 for name in modules if self._load_states.get(name) is True)
+        return i18n.t("cli.tui.modules.load_cell", loaded=loaded, total=len(modules))
 
     async def _merge_available(self, installed: Sequence[ModuleRecord]) -> list[ModuleRecord]:
         # 以分发名为键去重：两边都有的项保留已装那条（它带着本地版本与依赖信息），只把尚未安装的
@@ -911,14 +993,30 @@ class ModulesPage(compat.Vertical):
         marked = "✓" if record.dist in self._selected else " "
         marker = "●" if record.installed else "○"
         version = compat.fit_cells(record.version or "-", version_width)
-        fixed = compat.display_width(marker) + 4 + version_width
+        load = self.load_state_text(record) if record.installed else ""
+        load_width = compat.display_width(load) + 1 if load else 0
+        fixed = compat.display_width(marker) + 4 + version_width + load_width
         summary_width = inner_width - fixed - name_width - 1
+        load_cell = f" {load}" if load else ""
         if summary_width < 6:
             name_width = max(inner_width - fixed, 4)
-            return f"{marked} {marker} {compat.fit_cells(record.name, name_width)} {version}".rstrip()
+            return f"{marked} {marker} {compat.fit_cells(record.name, name_width)} {version}{load_cell}".rstrip()
         name = compat.fit_cells(record.name, name_width)
         summary = compat.truncate_cells(record.summary, summary_width)
-        return f"{marked} {marker} {name} {version} {summary}".rstrip()
+        return f"{marked} {marker} {name} {version}{load_cell} {summary}".rstrip()
+
+    def _load_detail(self, record: ModuleRecord) -> str:
+        separator = i18n.t("cli.tui.common.list_separator")
+        parts = []
+        for name in record.provides_modules:
+            if name not in self._load_states:
+                parts.append(f"{name}={i18n.t('cli.tui.common.unknown')}")
+            elif self._load_states[name]:
+                parts.append(f"{name}={i18n.t('cli.module.status.state_loaded')}")
+            else:
+                parts.append(f"{name}={i18n.t('cli.module.status.state_unloaded')}")
+        text = separator.join(parts) or i18n.t("cli.tui.common.none")
+        return text if self._load_states else i18n.t("cli.tui.modules.load_state_hint")
 
     def _index_for_key(self, records: Sequence[ModuleRecord]) -> int:
         if not records:
@@ -968,6 +1066,7 @@ class ModulesPage(compat.Vertical):
             rows.append((i18n.t("cli.tui.modules.field_developers"), separator.join(record.developers)))
         if record.provides_modules:
             rows.append((i18n.t("cli.tui.modules.field_provides"), separator.join(record.provides_modules)))
+            rows.append((i18n.t("cli.tui.modules.field_load"), self._load_detail(record)))
         if record.config_table:
             rows.append((i18n.t("cli.tui.modules.field_config_table"), record.config_table))
         if record.owned_tables:
@@ -993,6 +1092,7 @@ class ModulesPage(compat.Vertical):
         uninstall_target = self._uninstall_target()
         self.query_one("#install", compat.Button).disabled = self._busy or install_target is None
         self.query_one("#uninstall", compat.Button).disabled = self._busy or uninstall_target is None
+        self.query_one("#toggle-load", compat.Button).disabled = self._busy or not self._load_targets()
 
     def _set_status(self, text: str) -> None:
         self.last_result = text
@@ -1036,6 +1136,8 @@ class ModulesPage(compat.Vertical):
             self.request_install()
         elif button_id == "uninstall":
             self.request_uninstall()
+        elif button_id == "toggle-load":
+            self.request_toggle_load()
         elif button_id == "refresh":
             self.refresh_records(force=True)
 
@@ -1124,6 +1226,34 @@ class ModulesPage(compat.Vertical):
             return
         self._pending_uninstall = ()
         self._start_operation("uninstall", targets)
+
+    def request_toggle_load(self) -> None:
+        """装载或卸载选中项声明的模块。
+
+        方向由目标自身状态决定：还有未装载的模块就装载，全部已装载才卸载。装载状态由
+        ``module status`` 给出，实例未运行时那可能仍是上次退出前的记录。
+        """
+        targets = self._load_targets()
+        if not targets:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.modules.pick_load"),
+                severity="warning",
+                title=i18n.t("cli.tui.modules.bind_load"),
+            )
+            return
+        modules = [name for record in targets for name in record.provides_modules]
+        states = [self._load_states.get(name) for name in modules]
+        action = "load" if any(state is not True for state in states) else "unload"
+        self._start_operation(action, [ModuleRecord(name=name, dist=name) for name in modules])
+
+    def _load_targets(self) -> list[ModuleRecord]:
+        # 装载只对已安装、且声明了模块名的包有意义：没装的东西没有可装载的代码。
+        records = [record for record in self._records if record.dist in self._selected] if self._selected else []
+        if not records:
+            current = self.selected_record
+            records = [current] if current is not None else []
+        return [record for record in records if record.installed and record.provides_modules]
 
     def _batch_targets(self, kind: str) -> list[ModuleRecord]:
         # 选区里混着已装与未装是常态（列表默认两者同列），按操作方向各自筛一遍，免得把
@@ -1361,6 +1491,10 @@ class ModulesPage(compat.Vertical):
     def action_update(self) -> None:
         """键位动作：更新选中或当前的已装包。"""
         self.request_update()
+
+    def action_toggle_load(self) -> None:
+        """键位动作：装载或卸载选中项声明的模块。"""
+        self.request_toggle_load()
 
     def action_clear_search(self) -> None:
         """键位动作：清空搜索框。"""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 import typer
@@ -31,10 +32,31 @@ def _report(report: engine.HostingReport) -> None:
 
 
 @app.command("status", help=i18n.t("cli.venv.status.help"))
-def status(instance: InstancePathOption = None) -> None:
+def status(
+    instance: InstancePathOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
+) -> None:
     """显示当前模式、解释器路径与已装 akaribot 包数量。"""
     target = require_instance(instance)
     state = engine.venv_status(target)
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "mode": state.mode,
+                    "root": str(target.root),
+                    "python": str(state.python),
+                    "venv_dir": str(state.venv_dir),
+                    "venv": target.meta.venv,
+                    "exists": state.exists,
+                    "package_count": state.package_count if state.packages is not None else None,
+                    "core_version": state.core_version,
+                    "error": state.error,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return
     table = Table(title=i18n.t("cli.venv.status.title"), show_header=False, padding=(0, 2))
     if state.mode == "managed":
         table.add_row(i18n.t("cli.venv.status.mode"), i18n.t("cli.venv.status.mode_managed", venv=target.meta.venv))
