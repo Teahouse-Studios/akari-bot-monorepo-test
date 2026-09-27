@@ -19,7 +19,6 @@ from rich.markup import escape
 
 from akaribot.cli import i18n
 from akaribot.cli.instance import console, fail, ok, warn
-from akaribot.cli.instances import registry_home
 from akaribot.cli.service import (
     DEFAULT_BACKOFF,
     DEFAULT_INTERVAL,
@@ -38,19 +37,14 @@ DryRunOption = Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.servic
 JsonOption = Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))]
 
 
-def build_backend(*, kind: str | None = None, home: Path | None = None, workdir: Path | None = None) -> ServiceBackend:
+def build_backend(*, kind: str | None = None, home: Path | None = None) -> ServiceBackend:
     """构造系统服务管理器后端。
 
     :param kind: 后端名；缺省按当前平台判定。
     :param home: 家目录；缺省用当前用户的家目录。
-    :param workdir: 服务工作目录；缺省用注册表目录。
     :return: 可直接执行安装、卸载与状态查询的后端。
     """
-    return ServiceBackend(
-        kind=kind or detect_backend(),
-        home=Path(home) if home is not None else Path.home(),
-        workdir=workdir if workdir is not None else registry_home(),
-    )
+    return ServiceBackend(kind=kind or detect_backend(), home=Path(home) if home is not None else Path.home())
 
 
 def build_supervisor(*, max_restarts: int, backoff: float) -> Supervisor:

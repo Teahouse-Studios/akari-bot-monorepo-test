@@ -19,7 +19,7 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from akaribot.cli.instance import DetachedRun, Instance, InstanceMeta, RunState, StopOutcome
-from akaribot.cli.instances import STATE_RUNNING, STATE_STOPPED, InstanceRegistry
+from akaribot.cli.instances import HOME_ENV, STATE_RUNNING, STATE_STOPPED, InstanceRegistry
 from akaribot.cli.main import app as cli_app
 from akaribot.cli.service import (
     BACKEND_LAUNCHD,
@@ -40,6 +40,7 @@ from akaribot.cli.service import (
     Supervisor,
     detect_backend,
     render_unit,
+    service_env,
     unit_path,
 )
 from akaribot.testing import Tester, func_case
@@ -126,11 +127,20 @@ class _Rig:
         )
 
 
-def _backend(kind: str, home: Path, *, runner=None, which: bool = True, workdir: Path | None = None) -> ServiceBackend:
+def _backend(
+    kind: str,
+    home: Path,
+    *,
+    runner=None,
+    which: bool = True,
+    workdir: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> ServiceBackend:
     return ServiceBackend(
         kind=kind,
         home=home,
         workdir=workdir,
+        env=env if env is not None else {HOME_ENV: str(home / "registry")},
         runner=runner if runner is not None else _FakeRunner(),
         which=(lambda name: f"/usr/bin/{name}") if which else (lambda name: None),
         cli_argv=CLI_BIN,
@@ -145,7 +155,10 @@ def _kinds(report) -> list[str]:
 async def _test_launchd_render_and_path():
     with TemporaryDirectory() as raw:
         home = Path(raw)
-        text = render_unit(BACKEND_LAUNCHD, cli_argv=PYTHON_ARGV, workdir=Path("/tmp/akari"), log_dir=home / "Logs")
+        env = {HOME_ENV: "/tmp/akari/registry"}
+        text = render_unit(
+            BACKEND_LAUNCHD, cli_argv=PYTHON_ARGV, workdir=Path("/tmp/akari"), log_dir=home / "Logs", env=env
+        )
         payload = plistlib.loads(text.encode("utf-8"))
         return (
             unit_path(BACKEND_LAUNCHD, home=home) == home / "Library" / "LaunchAgents" / f"{LAUNCHD_LABEL}.plist"
@@ -155,6 +168,7 @@ async def _test_launchd_render_and_path():
             and payload["KeepAlive"] == {"SuccessfulExit": False}
             and payload["ProcessType"] == "Background"
             and payload["WorkingDirectory"] == "/tmp/akari"
+            and payload["EnvironmentVariables"] == env
             and payload["StandardOutPath"] == str(home / "Logs" / "service.log")
             and payload["StandardErrorPath"] == str(home / "Logs" / "service.err.log")
         )
@@ -163,8 +177,17 @@ async def _test_launchd_render_and_path():
 async def _test_systemd_render_and_path():
     with TemporaryDirectory() as raw:
         home = Path(raw)
-        text = render_unit(BACKEND_SYSTEMD, cli_argv=PYTHON_ARGV, workdir=Path("/tmp/akari"), log_dir=home / "Logs")
+        env = {HOME_ENV: "/tmp/akari/registry"}
+        text = render_unit(
+            BACKEND_SYSTEMD, cli_argv=PYTHON_ARGV, workdir=Path("/tmp/akari"), log_dir=home / "Logs", env=env
+        )
         quoted = render_unit(BACKEND_SYSTEMD, cli_argv=("/opt/my cli/akaribot",), workdir=None, log_dir=home / "Logs")
+        spaced = render_unit(
+            BACKEND_SYSTEMD,
+            cli_argv=PYTHON_ARGV,
+            log_dir=home / "Logs",
+            env={HOME_ENV: "/tmp/akari home/registry"},
+        )
         return (
             unit_path(BACKEND_SYSTEMD, home=home) == home / ".config" / "systemd" / "user" / "akaribot.service"
             and f"ExecStart={' '.join(PYTHON_ARGV)} service supervise" in text
@@ -173,9 +196,24 @@ async def _test_systemd_render_and_path():
             and "WantedBy=default.target" in text
             and "After=network-online.target" in text
             and "WorkingDirectory=/tmp/akari" in text
+            and f"{HOME_ENV}=/tmp/akari/registry" in text
+            and f'Environment="{HOME_ENV}=/tmp/akari home/registry"' in spaced
             and 'ExecStart="/opt/my cli/akaribot" service supervise' in quoted
             and "WorkingDirectory=" not in quoted
         )
+
+
+async def _test_service_env_follows_registry_home():
+    # 服务进程不继承 shell 环境，安装时必须把注册表位置写进单元，否则守护进程会去读另一份注册表。
+    with TemporaryDirectory() as raw:
+        home = Path(raw)
+        registry = home / "akaribot home"
+        with patch.dict(os.environ, {HOME_ENV: str(registry)}):
+            pinned = service_env()
+        backend = _backend(BACKEND_LAUNCHD, home, env=pinned)
+        backend.install()
+        payload = plistlib.loads(backend.path().read_bytes())
+        return pinned == {HOME_ENV: str(registry)} and payload["EnvironmentVariables"] == pinned
 
 
 async def _test_unsupported_platform_reports_hint():
@@ -568,6 +606,7 @@ async def test_service(tester: Tester):
     """cli.service: 服务单元渲染、安装卸载、状态与守护循环测试"""
     await tester.test(_test_launchd_render_and_path, "launchd 单元含 Label、ProgramArguments、RunAtLoad 与 KeepAlive")
     await tester.test(_test_systemd_render_and_path, "systemd 单元含 ExecStart、Restart、RestartSec 与 WantedBy")
+    await tester.test(_test_service_env_follows_registry_home, "单元带上注册表位置，服务读到同一份注册表")
     await tester.test(_test_unsupported_platform_reports_hint, "其它平台报尚未支持并给出路径提示")
     await tester.test(_test_install_writes_unit_and_registers, "安装落盘并调用注册命令")
     await tester.test(_test_install_falls_back_to_load, "bootstrap 失败时回退 load -w")

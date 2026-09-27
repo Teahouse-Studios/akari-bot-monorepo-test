@@ -16,14 +16,14 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from akaribot.cli import i18n
 from akaribot.cli.instance import Instance
-from akaribot.cli.instances import STATE_RUNNING, InstanceRegistry, RegistryError
+from akaribot.cli.instances import HOME_ENV, STATE_RUNNING, InstanceRegistry, RegistryError, registry_home
 from akaribot.cli.process import pid_alive, wait_until
 from akaribot.cli.tui import cli_process
 
@@ -125,25 +125,45 @@ def default_cli_argv() -> tuple[str, ...]:
     return tuple(cli_process.cli_argv())
 
 
-def render_unit(backend: str, *, cli_argv: Sequence[str], workdir: Path | None = None, log_dir: Path) -> str:
+def service_env() -> dict[str, str]:
+    """服务进程需要显式带上的环境变量。
+
+    launchd 与 systemd 都不继承登录 shell 的环境：注册表位置若只存在于安装时的 shell 里，守护
+    进程会退回 ``~/.akaribot`` 去读另一份注册表，一个实例都恢复不了。安装时把注册表位置写进
+    单元，服务读到的注册表与 ``service status`` 读到的就是同一份。
+    """
+    return {HOME_ENV: str(registry_home())}
+
+
+def render_unit(
+    backend: str,
+    *,
+    cli_argv: Sequence[str],
+    workdir: Path | None = None,
+    log_dir: Path,
+    env: Mapping[str, str] | None = None,
+) -> str:
     """渲染服务单元文件的内容。
 
     :param backend: :func:`detect_backend` 的返回值之一。
     :param cli_argv: 调用本 CLI 的 argv 前缀；子命令由本函数追加。
     :param workdir: 服务工作目录；``None`` 表示不在单元里声明。
     :param log_dir: 控制台输出的落盘目录。
+    :param env: 服务进程的环境变量；``None`` 或空表示不在单元里声明。
     :return: 单元文件的完整文本。
     :raises ServiceError: 平台不受支持。
     """
     command = [*cli_argv, *SERVICE_COMMAND]
     if backend == BACKEND_LAUNCHD:
-        return _render_launchd(command, workdir=workdir, log_dir=log_dir)
+        return _render_launchd(command, workdir=workdir, log_dir=log_dir, env=env)
     if backend == BACKEND_SYSTEMD:
-        return _render_systemd(command, workdir=workdir, log_dir=log_dir)
+        return _render_systemd(command, workdir=workdir, log_dir=log_dir, env=env)
     raise ServiceError(unsupported_detail())
 
 
-def _render_launchd(command: Sequence[str], *, workdir: Path | None, log_dir: Path) -> str:
+def _render_launchd(
+    command: Sequence[str], *, workdir: Path | None, log_dir: Path, env: Mapping[str, str] | None = None
+) -> str:
     payload: dict[str, Any] = {
         "Label": LAUNCHD_LABEL,
         "ProgramArguments": list(command),
@@ -156,10 +176,14 @@ def _render_launchd(command: Sequence[str], *, workdir: Path | None, log_dir: Pa
     }
     if workdir is not None:
         payload["WorkingDirectory"] = str(workdir)
+    if env:
+        payload["EnvironmentVariables"] = dict(sorted(env.items()))
     return plistlib.dumps(payload, fmt=plistlib.FMT_XML, sort_keys=False).decode("utf-8")
 
 
-def _render_systemd(command: Sequence[str], *, workdir: Path | None, log_dir: Path) -> str:
+def _render_systemd(
+    command: Sequence[str], *, workdir: Path | None, log_dir: Path, env: Mapping[str, str] | None = None
+) -> str:
     lines = [
         "[Unit]",
         f"Description={i18n.t('cli.service.unit.description')}",
@@ -176,8 +200,18 @@ def _render_systemd(command: Sequence[str], *, workdir: Path | None, log_dir: Pa
     ]
     if workdir is not None:
         lines.append(f"WorkingDirectory={workdir}")
+    lines += [f"Environment={_systemd_env(name, value)}" for name, value in sorted((env or {}).items())]
     lines += ["", "[Install]", "WantedBy=default.target", ""]
     return "\n".join(lines)
+
+
+def _systemd_env(name: str, value: str) -> str:
+    # Environment= 按空白切分赋值，值里含空白或引号时整个赋值要加引号并转义。
+    assignment = f"{name}={value}"
+    if value and not any(char in assignment for char in " \t\"'\\"):
+        return assignment
+    escaped = assignment.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 def _systemd_argv(command: Sequence[str]) -> str:
@@ -239,7 +273,8 @@ class ServiceBackend:
 
     :param kind: ``launchd`` / ``systemd`` / ``unsupported``。
     :param home: 家目录，单元文件与默认日志目录都相对它定位。
-    :param workdir: 服务的工作目录；``None`` 表示不在单元里声明。
+    :param workdir: 服务的工作目录；缺省用注册表目录，``None`` 表示不在单元里声明。
+    :param env: 服务进程的环境变量；缺省带上当前注册表位置。
     :param runner: 系统命令执行器，测试注入替身后不会真的调用系统工具。
     :param which: 系统工具查找器。
     :param cli_argv: 调用本 CLI 的 argv 前缀。
@@ -248,7 +283,9 @@ class ServiceBackend:
 
     kind: str = field(default_factory=detect_backend)
     home: Path = field(default_factory=Path.home)
-    workdir: Path | None = None
+    # 缺省工作目录取注册表目录：界面与命令行走同一个缺省，装出来的单元才一致。
+    workdir: Path | None = field(default_factory=registry_home)
+    env: Mapping[str, str] = field(default_factory=service_env)
     runner: CommandRunner = system_runner
     which: WhichFn = shutil.which
     cli_argv: tuple[str, ...] = field(default_factory=default_cli_argv)
@@ -274,7 +311,9 @@ class ServiceBackend:
 
         :raises ServiceError: 平台不受支持。
         """
-        return render_unit(self.kind, cli_argv=self.cli_argv, workdir=self.workdir, log_dir=self.log_dir())
+        return render_unit(
+            self.kind, cli_argv=self.cli_argv, workdir=self.workdir, log_dir=self.log_dir(), env=self.env
+        )
 
     def install(self, *, dry_run: bool = False, force: bool = False) -> ServiceStatus:
         """写入单元文件并注册服务。
