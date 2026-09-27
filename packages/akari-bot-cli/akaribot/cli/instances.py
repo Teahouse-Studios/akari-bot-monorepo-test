@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import INSTANCE_META_FILENAME
+from akaribot.cli.instance import INSTANCE_META_FILENAME, InstanceMeta
 
 HOME_ENV = "AKARIBOT_HOME"
 REGISTRY_FILENAME = "instances.toml"
@@ -59,6 +59,47 @@ def suggested_name(root: Path) -> str:
     """
     text = re.sub(r"[^a-z0-9]+", "-", root.name.strip().lower()).strip("-")
     return text[:32] or "instance"
+
+
+def child_instances(root: Path, *, limit: int | None = 4) -> tuple[Path, ...]:
+    """列出目录下第一层的实例目录。
+
+    登记时常被指向「装着实例的项目目录」而不是实例本身，报错时列出这些候选比只说缺文件有用。
+
+    :param root: 要检查的目录。
+    :param limit: 最多列出几个候选；``None`` 表示不限。
+    :return: 含 ``akaribot.toml`` 的直接子目录；``root`` 本身就是实例时为空。
+    """
+    if (root / INSTANCE_META_FILENAME).is_file():
+        return ()
+    try:
+        found = sorted(path for path in root.iterdir() if (path / INSTANCE_META_FILENAME).is_file())
+    except OSError:
+        return ()
+    return tuple(found if limit is None else found[:limit])
+
+
+def register_existing(root: Path) -> InstanceEntry | None:
+    """登记目录对应的实例；已登记或目录不是实例时返回 ``None``。
+
+    站在实例目录里启动界面时自动走这一步，省掉「先手动登记才能管理」的前置动作。
+
+    :param root: 实例根目录。
+    :return: 新登记的记录；无需登记时为 ``None``。
+    :raises RegistryError: 名称冲突或注册表写入失败。
+    """
+    resolved = _resolve(root)
+    registry = InstanceRegistry()
+    if registry.find_by_root(resolved) is not None:
+        return None
+    if not (resolved / INSTANCE_META_FILENAME).is_file():
+        return None
+    locale = ""
+    try:
+        locale = InstanceMeta.load(resolved).locale
+    except Exception:  # noqa: BLE001 - 读不出语言不影响登记
+        locale = ""
+    return registry.add(resolved, locale=locale)
 
 
 @dataclass(frozen=True)
@@ -186,7 +227,7 @@ class InstanceRegistry:
         """
         root = _resolve(root)
         if not (root / INSTANCE_META_FILENAME).is_file():
-            raise RegistryError(i18n.t("cli.instance_registry.not_instance", path=root, meta=INSTANCE_META_FILENAME))
+            raise RegistryError(_not_instance_message(root))
         existing = self.find_by_root(root)
         if existing is not None:
             return existing
@@ -286,6 +327,19 @@ def probe_running(root: Path) -> bool | None:
         return bool(Instance(root, python_override=system_python()).is_running())
     except Exception:  # noqa: BLE001 - 探测失败按未知处理，不中断调用方
         return None
+
+
+def _not_instance_message(root: Path) -> str:
+    found = child_instances(root)
+    if not found:
+        return i18n.t("cli.instance_registry.not_instance", path=root, meta=INSTANCE_META_FILENAME)
+    listing = i18n.t("cli.common.list_separator").join(str(path) for path in found)
+    return i18n.t(
+        "cli.instance_registry.not_instance_with_children",
+        path=root,
+        meta=INSTANCE_META_FILENAME,
+        found=listing,
+    )
 
 
 def _resolve(path: Path) -> Path:

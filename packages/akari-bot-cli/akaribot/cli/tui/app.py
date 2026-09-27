@@ -96,6 +96,7 @@ class TuiApp(compat.App[int]):
 
     :param source: 模块数据源，缺省为 :class:`SubprocessModuleSource`。
     :param boot_started_at: 启动计时起点，由 :func:`run_tui` 传入。
+    :param boot_note: 进入界面前发生的事（如自动登记了当前实例），挂载时以通知报出。
     """
 
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
@@ -119,6 +120,7 @@ class TuiApp(compat.App[int]):
         boot_started_at: float | None = None,
         cache_ttl: float = 30.0,
         initial_page: str = "modules",
+        boot_note: str = "",
     ) -> None:
         super().__init__()
         # 主题在挂载前注册并激活：样式表里的 $primary 等变量在首次解析时就要取到品牌色。
@@ -127,6 +129,7 @@ class TuiApp(compat.App[int]):
         # 各页数据源的可注入映射（键为 PAGES 的 key）；缺省时各页自建子进程实现，便于无头测试。
         self.sources: dict[str, Any] = dict(sources or {})
         self.cache_ttl = cache_ttl
+        self.boot_note = boot_note
         self.initial_page = initial_page if any(key == initial_page for key, _, _ in PAGES) else "modules"
         self.active_page = self.initial_page
         self.instance_root = context.active_root()
@@ -209,8 +212,15 @@ class TuiApp(compat.App[int]):
         """
         self.startup_ms = (time.monotonic() - self._boot_started_at) * 1000.0
         self.show_page(self.initial_page)
+        self._announce_boot_note()
         self.call_after_refresh(self._mark_first_paint)
         self.call_after_refresh(self.focus_active_page)
+
+    def _announce_boot_note(self) -> None:
+        # 首屏未必是概览页，进界面前发生的事只能用通知报出来，否则要等用户翻到概览页才看得到。
+        if not self.boot_note:
+            return
+        compat.notify(self, self.boot_note, title=i18n.t("cli.tui.app.boot_note_title"))
 
     def focus_active_page(self) -> None:
         """把焦点交给当前页的主控件。"""
@@ -304,6 +314,7 @@ def run_tui(
     initial_page: str = "modules",
     mouse: bool = True,
     headless: bool = False,
+    boot_note: str = "",
 ) -> TuiRunResult:
     """启动 TUI 并阻塞到退出。
 
@@ -312,10 +323,17 @@ def run_tui(
     :param initial_page: 启动时显示的页面 key。
     :param mouse: 是否请求鼠标追踪；哑终端或 tmux 下可经 ``--no-mouse`` 关闭。
     :param headless: 是否无头运行，供冻结产物自检使用。
+    :param boot_note: 进入界面前发生的事，挂载时以通知报出；空串表示没有要报的。
     :return: 运行统计。
     """
     started = time.monotonic()
-    app = TuiApp(source=source, sources=sources, initial_page=initial_page, boot_started_at=started)
+    app = TuiApp(
+        source=source,
+        sources=sources,
+        initial_page=initial_page,
+        boot_started_at=started,
+        boot_note=boot_note,
+    )
     value = compat.run_app(app, mouse=mouse, headless=headless)
     total_ms = (time.monotonic() - started) * 1000.0
     exit_code = value if isinstance(value, int) else 0

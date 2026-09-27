@@ -15,7 +15,13 @@ from typer.testing import CliRunner
 from akaribot.cli import i18n
 from akaribot.cli.commands import instance as instance_cmd
 from akaribot.cli.instance import resolve_instance_root
-from akaribot.cli.instances import InstanceRegistry, RegistryError, probe_running
+from akaribot.cli.instances import (
+    InstanceRegistry,
+    RegistryError,
+    child_instances,
+    probe_running,
+    register_existing,
+)
 from akaribot.testing import Tester, func_case
 
 
@@ -87,6 +93,65 @@ async def _test_add_rejects_non_instance():
             else:
                 rejected = False
     return rejected
+
+
+async def _test_add_parent_lists_child_instances():
+    # 常被指向「装着实例的项目目录」，报错要直接给出可登记的子目录。
+    with TemporaryDirectory(prefix="akari-reg-") as raw:
+        base = Path(raw)
+        project = base / "project"
+        project.mkdir()
+        _make_instance(project / "demo")
+        with patch.dict(os.environ, {"AKARIBOT_HOME": str(base / "home")}):
+            try:
+                InstanceRegistry().add(project)
+            except RegistryError as error:
+                message = str(error)
+            else:
+                message = ""
+            found = child_instances(project)
+    return (
+        str(project / "demo") in message
+        and "akaribot.toml" in message
+        and found == (project / "demo",)
+        and child_instances(project / "demo") == ()
+    )
+
+
+async def _test_register_existing_is_idempotent():
+    # 界面在实例目录里启动时自动登记：重复调用与指向非实例都要原样返回 None，不重复写。
+    with TemporaryDirectory(prefix="akari-reg-") as raw:
+        base = Path(raw)
+        home = base / "home"
+        instance = _make_instance(base / "one")
+        awkward = _make_instance(base / "My Bot")
+        plain = base / "plain"
+        plain.mkdir()
+        with patch.dict(os.environ, {"AKARIBOT_HOME": str(home)}):
+            first = register_existing(instance)
+            again = register_existing(instance)
+            skipped = register_existing(plain)
+            named = register_existing(awkward)
+            total = len(InstanceRegistry().load())
+    return (
+        first is not None
+        and first.name == "one"
+        and again is None
+        and skipped is None
+        and named is not None
+        and named.name == "my-bot"
+        and total == 2
+    )
+
+
+async def _test_register_existing_keeps_locale():
+    with TemporaryDirectory(prefix="akari-reg-") as raw:
+        base = Path(raw)
+        instance = _make_instance(base / "one")
+        (instance / "akaribot.toml").write_text('[instance]\nname = "one"\nlocale = "en_us"\n', encoding="utf-8")
+        with patch.dict(os.environ, {"AKARIBOT_HOME": str(base / "home")}):
+            entry = register_existing(instance)
+    return entry is not None and entry.locale == "en_us"
 
 
 async def _test_policy_and_default():
@@ -174,6 +239,9 @@ async def test_instance_registry(tester: Tester):
     await tester.test(_test_add_list_remove, "登记、列出与移除")
     await tester.test(_test_duplicate_root_keeps_existing_entry, "同目录重复登记不产生第二条")
     await tester.test(_test_add_rejects_non_instance, "非实例目录拒绝登记")
+    await tester.test(_test_add_parent_lists_child_instances, "登记父目录时列出可登记的子实例")
+    await tester.test(_test_register_existing_is_idempotent, "自动登记幂等，非实例与重复调用不改注册表")
+    await tester.test(_test_register_existing_keeps_locale, "自动登记沿用实例自身的语言")
     await tester.test(_test_policy_and_default, "策略与缺省实例写回注册表")
     await tester.test(_test_resolution_falls_back_to_default, "实例解析回落到缺省实例")
     await tester.test(_test_cli_add_use_policy_remove, "instance 子命令增删改查")

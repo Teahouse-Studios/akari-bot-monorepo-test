@@ -367,17 +367,27 @@ class StaticInstanceListSource:
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
-    """定位实例根，供三页的默认数据源共用。
+    """定位实例根，供概览、运行与日志三页的默认数据源共用。
+
+    顺序与 :func:`akaribot.cli.tui.context.resolve_root` 一致：界面里选中的实例优先，其次自起点
+    向上查找，最后是注册表里的缺省实例。区别只在三者都没有时返回 ``None`` 而不是退回当前目录——
+    这三页要能区分「没找到实例」并如实说明。
 
     :param start: 查找起点，缺省为当前工作目录。
-    :return: 含 ``akaribot.toml`` 的实例根；未找到时为 ``None``。
+    :return: 实例根；未找到时为 ``None``。
     """
+    active = context.active_root()
+    if active is not None:
+        return active
     try:
-        from akaribot.cli.instance import find_instance_root
+        from akaribot.cli.instance import find_instance_root, registry_default_root
     except ImportError:
         candidate = Path(os.environ.get(INSTANCE_DIR_ENV) or (start or Path.cwd())).expanduser()
         return candidate.resolve() if (candidate / INSTANCE_META_FILENAME).is_file() else None
-    return find_instance_root(start)
+    found = find_instance_root(start)
+    if found is not None:
+        return found.resolve()
+    return registry_default_root()
 
 
 def lock_held(lock_path: Path) -> bool | None:
@@ -990,6 +1000,7 @@ class DashboardPage(compat.Vertical):
             title=i18n.t("cli.tui.dashboard.add_title"),
             hint=i18n.t("cli.tui.dashboard.add_hint"),
             placeholder=i18n.t("cli.tui.dashboard.add_placeholder"),
+            initial=str(context.resolve_root()),
             confirm_label=i18n.t("cli.tui.dashboard.add_confirm"),
             cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
             callback=self.on_instance_path_entered,

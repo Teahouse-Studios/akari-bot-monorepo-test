@@ -13,6 +13,7 @@ import asyncio
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import typer
 
@@ -73,9 +74,48 @@ def run_interactive(*, mouse: bool = True) -> None:
 
     from akaribot.cli.tui.app import run_tui
 
-    result = run_tui(mouse=mouse)
+    result = run_tui(mouse=mouse, boot_note=register_active())
     typer.echo(result.summary(), err=True)
     raise typer.Exit(code=result.exit_code)
+
+
+def register_active() -> str:
+    """登记本次界面要管的实例，返回给界面报出的结论文案。
+
+    站在实例目录里则登记它；站在实例之外（例如源码仓库根）而下级目录里恰好有一个实例时，登记并
+    切换过去——「项目路径下的那个实例」正是用户要管的对象。下级有多个实例时不猜，只把候选报出来。
+
+    :return: 提示文案；无需登记也无需切换时为空串。
+    """
+    from akaribot.cli.instance import resolve_instance_root
+    from akaribot.cli.instances import InstanceRegistry, child_instances, register_existing
+    from akaribot.cli.tui import context
+
+    root = resolve_instance_root()
+    adopted = False
+    if root is None:
+        found = child_instances(Path.cwd(), limit=None)
+        if len(found) > 1:
+            listing = i18n.t("cli.common.list_separator").join(str(path) for path in found)
+            return i18n.t("cli.tui_cmd.discover_ambiguous", count=len(found), found=listing)
+        if not found:
+            return ""
+        root = found[0]
+        adopted = True
+    # 自动登记失败不该挡住界面：注册表写不进去时照常进入，把原因交给通知。
+    try:
+        entry = register_existing(root)
+    except Exception as error:  # noqa: BLE001
+        return i18n.t("cli.tui_cmd.register_auto_failed", error=f"{type(error).__name__}: {error}")
+    if adopted:
+        context.set_active_root(root)
+        # register_existing 只在确实新登记时给记录，已在注册表里的要自己取回来才有名字可显示。
+        known = entry if entry is not None else InstanceRegistry().find_by_root(root)
+        name = known.name if known is not None else str(root)
+        return i18n.t("cli.tui_cmd.discover_done", name=name, root=root, parent=Path.cwd())
+    if entry is None:
+        return ""
+    return i18n.t("cli.tui.dashboard.register_auto", name=entry.name, root=entry.root)
 
 
 def run_headless(*, mouse: bool = False) -> int:

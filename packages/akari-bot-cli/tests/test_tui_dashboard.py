@@ -7,6 +7,7 @@
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
@@ -47,7 +48,7 @@ def _instance_rows() -> tuple[InstanceRow, ...]:
     )
 
 
-async def _with_page(body, source=None, size=(110, 32), instances=None, service=None):
+async def _with_page(body, source=None, size=(110, 32), instances=None, service=None, boot_note=""):
     chosen = source if source is not None else StaticDashboardSource(SNAPSHOT, running=True)
     listed = instances if instances is not None else StaticInstanceListSource(_instance_rows())
     control = service if service is not None else StaticServiceControl()
@@ -55,6 +56,7 @@ async def _with_page(body, source=None, size=(110, 32), instances=None, service=
         sources={"dashboard": chosen, "dashboard_instances": listed, "dashboard_service": control},
         initial_page="dashboard",
         boot_started_at=time.monotonic(),
+        boot_note=boot_note,
     )
     async with compat.app_test(app, size=size) as pilot:
         page = app.page("dashboard")
@@ -233,6 +235,60 @@ async def _test_register_instance_from_prompt():
     return opened and added == ["/tmp/gamma"]
 
 
+async def _test_add_prompt_prefills_active_root():
+    # 在实例目录里启动界面时，登记框预填当前实例：直接回车即可登记，不必手打路径。
+    with TemporaryDirectory(prefix="akari-add-") as raw:
+        root = Path(raw) / "inst"
+        root.mkdir()
+        previous = context.active_root()
+        context.set_active_root(root)
+
+        async def body(app, page, pilot, source, listed, control):
+            page.request_add_instance()
+            await pilot.pause()
+            value = app.screen.query_one("#prompt-input", compat.Input).value
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.press("q")
+            return value
+
+        try:
+            value = await _with_page(body)
+        finally:
+            context.set_active_root(previous)
+    return value == str(root.resolve())
+
+
+async def _test_boot_note_is_announced():
+    # 进界面前发生的事（如自动登记）要在首屏就报出来，不能等用户翻到概览页才看到。
+    note = i18n.t("cli.tui.dashboard.register_auto", name="demo", root="/tmp/demo")
+    seen: list[str] = []
+
+    async def body(app, page, pilot, source, listed, control):
+        await pilot.press("q")
+
+    with mock.patch.object(compat, "notify", side_effect=lambda app, message, **_: seen.append(message)):
+        await _with_page(body, boot_note=note)
+    return seen == [note]
+
+
+async def _test_local_source_follows_switched_instance():
+    # 切换实例后概览页自己的描述也要跟着走：默认数据源在取数时读共享状态，而不是记住启动目录。
+    from akaribot.cli.tui.dashboard import LocalDashboardSource
+
+    with TemporaryDirectory(prefix="akari-root-") as raw:
+        switched = Path(raw) / "switched"
+        switched.mkdir()
+        (switched / "akaribot.toml").write_text('[instance]\nname = "switched"\nlocale = "zh_cn"\n', encoding="utf-8")
+        previous = context.active_root()
+        context.set_active_root(switched)
+        try:
+            snapshot = LocalDashboardSource().snapshot()
+        finally:
+            context.set_active_root(previous)
+    return snapshot.instance_root == str(switched.resolve()) and snapshot.instance_name == "switched"
+
+
 async def _test_unregister_needs_two_presses():
     listed = StaticInstanceListSource(_instance_rows())
 
@@ -342,6 +398,9 @@ async def test_tui_dashboard(tester: Tester):
     await tester.test(_test_switch_refused_for_missing_directory, "目录无 akaribot.toml 时拒绝切换")
     await tester.test(_test_policy_toggle_writes_registry, "自启与崩溃重启开关写回注册表")
     await tester.test(_test_register_instance_from_prompt, "输入框登记实例")
+    await tester.test(_test_add_prompt_prefills_active_root, "登记框预填当前实例目录")
+    await tester.test(_test_boot_note_is_announced, "进界面时的自动登记以通知报出")
+    await tester.test(_test_local_source_follows_switched_instance, "概览页描述跟着切换后的实例")
     await tester.test(_test_unregister_needs_two_presses, "移除登记需二次确认")
     await tester.test(_test_policy_refused_for_unregistered, "未登记实例不设策略")
     await tester.test(_test_service_row_reports_state, "服务行展示后端与单元文件")
