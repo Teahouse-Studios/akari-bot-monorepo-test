@@ -1185,18 +1185,39 @@ def find_instance_root(start: Path | None = None) -> Path | None:
     return None
 
 
+def registry_default_root() -> Path | None:
+    """返回本机注册表里的缺省实例根；没登记或目录已失效时为 ``None``。
+
+    注册表损坏、读不出来时同样返回 ``None``：实例解析不该被一份坏掉的注册表拖住。
+    """
+    from akaribot.cli.instances import InstanceRegistry
+
+    try:
+        registry = InstanceRegistry()
+        name = registry.default_name()
+        entry = registry.get(name) if name else None
+    except Exception:  # noqa: BLE001 - 注册表不可用按「没有缺省实例」处理
+        return None
+    if entry is None or not entry.exists:
+        return None
+    return entry.root
+
+
 def resolve_instance_root(start: Path | None = None) -> Path | None:
     """定位实例根并转成绝对路径；未找到时为 ``None``。
 
     各页数据源都经此解析：子进程以实例根为 cwd 又把它写进 ``AKARI_INSTANCE_DIR``，相对值会在
     子进程里二次拼接而失效；只认 ``Path.cwd()`` 则会忽略 ``AKARI_INSTANCE_DIR``，在仓库根运行
-    TUI 时静默读到另一个实例的配置与日志。
+    TUI 时静默读到另一个实例的配置与日志。站在任何实例之外时回落到注册表里的缺省实例——那正是
+    「这台机器上要管哪一个」的答案。
 
     :param start: 查找起点，缺省为当前工作目录。
     :return: 实例根绝对路径；未找到时为 ``None``。
     """
     found = find_instance_root(start)
-    return found.resolve() if found is not None else None
+    if found is not None:
+        return found.resolve()
+    return registry_default_root()
 
 
 def default_instance_root() -> Path:

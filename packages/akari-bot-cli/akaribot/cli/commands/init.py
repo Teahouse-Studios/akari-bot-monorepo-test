@@ -9,6 +9,7 @@ import typer
 from rich.table import Table
 
 from akaribot.cli import i18n
+from akaribot.cli.instances import InstanceRegistry
 from akaribot.cli import venv as engine
 from akaribot.cli.instance import (
     system_python,
@@ -303,6 +304,13 @@ def init(
     ok(i18n.t("cli.init.import_ok", version=reported))
 
     instance.invalidate()
+    # 登记进本机注册表：界面与 `instance` 子命令据此列出这台机器上的实例。注册表不可用不影响初始化。
+    try:
+        entry = InstanceRegistry().add(root, locale=locale)
+    except Exception as exc:  # noqa: BLE001 - 注册失败只是少一条记录，不该让初始化失败
+        warn(i18n.t("cli.init.registry_failed", error=exc))
+    else:
+        ok(i18n.t("cli.init.registry_ok", name=entry.name))
     console.print(i18n.t("cli.init.next_steps"))
     console.print(f"  cd {root}")
     console.print(i18n.t("cli.init.next_config_edit"))

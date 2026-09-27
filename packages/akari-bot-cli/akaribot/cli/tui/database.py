@@ -17,9 +17,9 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 
 # 一次读取的数据项条数：界面只做浏览与单条改写，分页由 core 侧统一收口。
 PAGE_LIMIT = 20
@@ -332,10 +332,16 @@ class SubprocessDatabaseSource:
         timeout: float = QUERY_TIMEOUT_SECONDS,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"tables": 0, "rows": 0, "set": 0, "insert": 0, "delete": 0}
         self._runner = runner or subprocess.run
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def tables(self) -> Sequence[TableInfo]:
         """见 :meth:`DatabaseSource.tables`。"""

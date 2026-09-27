@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 
 SOURCE_WORKSPACE = "workspace"
 SOURCE_EDITABLE = "editable"
@@ -427,7 +427,8 @@ class SubprocessDevSource:
     ) -> None:
         # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
         # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.action_timeout = action_timeout
         self.calls = {"load": 0}
@@ -435,6 +436,11 @@ class SubprocessDevSource:
         self._meta_reader = meta_reader
         self._action_process: asyncio.subprocess.Process | None = None
         self._action_cancelled = False
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def load_snapshot(self) -> DevSnapshot:
         """见 :meth:`DevSource.load_snapshot`。"""

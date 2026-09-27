@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import hashlib
 import time
 from dataclasses import dataclass
@@ -13,6 +15,7 @@ from typing import Any
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import context
 from akaribot.cli.tui.adapters import AdaptersPage
 from akaribot.cli.tui.config import ConfigPage
 from akaribot.cli.tui.dashboard import DashboardPage
@@ -126,6 +129,7 @@ class TuiApp(compat.App[int]):
         self.cache_ttl = cache_ttl
         self.initial_page = initial_page if any(key == initial_page for key, _, _ in PAGES) else "modules"
         self.active_page = self.initial_page
+        self.instance_root = context.active_root()
         self.startup_ms: float = 0.0
         self.first_paint_ms: float = 0.0
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
@@ -162,6 +166,17 @@ class TuiApp(compat.App[int]):
         if key == "modules":
             module_source = source if source is not None else self.module_source
             page = page_class(module_source, cache_ttl=self.cache_ttl, id=f"page-{key}")
+        elif key == "dashboard":
+            # 概览页另有实例清单与服务控制两个数据源，键为 dashboard_instances / dashboard_service。
+            instances = self.sources.get("dashboard_instances")
+            control = self.sources.get("dashboard_service")
+            page = page_class(
+                source,
+                instances=instances,
+                service_control=control,
+                cache_ttl=self.cache_ttl,
+                id=f"page-{key}",
+            )
         elif source is None:
             page = page_class(id=f"page-{key}")
         else:
@@ -169,6 +184,22 @@ class TuiApp(compat.App[int]):
         # 各页自行声明 __init__ 签名（不接受 classes），故样式类在此追加。
         page.add_class("page")
         return page
+
+    def switch_instance(self, root: Path) -> None:
+        """切换当前管理的实例，并让所有页面改指新实例。
+
+        各页数据源在取数时才解析实例根，故这里只需重挂载页面：新页面首次显示时会重新取数，
+        注入的替身数据源保持不变，自动化断言仍按同一份数据源核对调用次数。
+        """
+        context.set_active_root(root)
+        self.instance_root = Path(root).expanduser().resolve()
+        content = self.query_one("#content", compat.Vertical)
+        self.run_worker(self._remount_pages(content), group="switch-instance", exclusive=True)
+
+    async def _remount_pages(self, content: compat.Vertical) -> None:
+        await content.remove_children()
+        await content.mount_all([self._build_page(key, page_class) for key, _, page_class in PAGES])
+        self.show_page(self.active_page)
 
     def on_mount(self) -> None:
         """记录启动耗时、切到初始页，并在首帧后补记首屏时间与焦点。

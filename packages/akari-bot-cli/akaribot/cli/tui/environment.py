@@ -17,9 +17,9 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import OperationResult
 
 # 环境动作的秒数上限：要建 venv、解析依赖、装几十个包，比查询宽松得多。
@@ -187,11 +187,17 @@ class SubprocessEnvironmentSource:
         action_timeout: float = ACTION_TIMEOUT_SECONDS,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.query_timeout = query_timeout
         self.action_timeout = action_timeout
         self.calls = {"state": 0, "running": 0, "action": 0}
         self._runner = runner or subprocess.run
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def state(self) -> EnvironmentState:
         """见 :meth:`EnvironmentSource.state`。"""

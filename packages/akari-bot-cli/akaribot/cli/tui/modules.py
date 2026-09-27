@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 
 STATE_INSTALLED = "installed"
 STATE_AVAILABLE = "available"
@@ -398,11 +398,17 @@ class SubprocessModuleSource:
     ) -> None:
         # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；相对值会在子进程里二次拼接而失效，
         # 只认 cwd 则会忽略 AKARI_INSTANCE_DIR。
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def list_modules(self) -> Sequence[ModuleRecord]:
         """见 :meth:`ModuleSource.list_modules`。"""

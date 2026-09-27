@@ -20,9 +20,10 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import INSTANCE_ID_PATTERN, default_instance_root
+from akaribot.cli.instance import INSTANCE_ID_PATTERN
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
 # core 侧的 peer 快照入口：``python -m akaribot.core.entrypoints.peers --json``。
@@ -591,11 +592,17 @@ class SubprocessAdapterSource:
     ) -> None:
         # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
         # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def list_instances(self) -> AdapterSnapshot:
         """见 :meth:`AdapterSource.list_instances`。"""

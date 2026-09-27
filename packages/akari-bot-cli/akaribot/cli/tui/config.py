@@ -26,9 +26,9 @@ from tomlkit.exceptions import ParseError
 from tomlkit.items import Table
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 
 KIND_BOOL = "bool"
 KIND_INT = "int"
@@ -619,13 +619,19 @@ class SubprocessConfigSource:
     ) -> None:
         # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
         # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
         self.last_raw_origin = ""
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
         self._instance_cache: Any = None
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def list_tables(self) -> Sequence[str]:
         """见 :meth:`ConfigSource.list_tables`。"""

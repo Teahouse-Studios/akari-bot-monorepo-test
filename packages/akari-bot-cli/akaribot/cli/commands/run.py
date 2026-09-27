@@ -18,6 +18,7 @@ from akaribot.cli.instance import (
     ok,
     require_instance,
 )
+from akaribot.cli.instances import STATE_RUNNING, STATE_STOPPED, InstanceRegistry, RegistryError
 from akaribot.cli.process import pid_alive, wait_until
 
 app = typer.Typer(
@@ -136,6 +137,8 @@ def _stop(target, *, as_json: bool, timeout: float) -> None:
         ok(outcome.message)
     else:
         fail(outcome.message)
+    if outcome.ok:
+        _remember_desired(target, STATE_STOPPED)
 
 
 def _start_detached(target, args: list[str], *, as_json: bool) -> None:
@@ -147,6 +150,7 @@ def _start_detached(target, args: list[str], *, as_json: bool) -> None:
     # 取到锁才算启动成功：进程可能在 pre-init 阶段就因配置或数据库问题退出。
     ready = wait_until(lambda: target.is_running() or not pid_alive(launched.pid), timeout=READY_TIMEOUT_SECONDS)
     if ready and target.is_running():
+        _remember_desired(target, STATE_RUNNING)
         if as_json:
             typer.echo(
                 json.dumps({"started": True, "pid": launched.pid, "log": str(launched.log_path)}, ensure_ascii=False)
@@ -168,3 +172,15 @@ def _log_tail(path: Path, limit: int = LOG_TAIL_CHARS) -> str:
     except OSError:
         return ""
     return text.strip()[-limit:] or i18n.t("cli.common.no_output")
+
+
+def _remember_desired(target, state: str) -> None:
+    # 服务守护循环按这里的 desired 恢复上次的运行状态；未登记的实例与不可用的注册表都不该让
+    # 启动或停止失败，故静默跳过。
+    try:
+        registry = InstanceRegistry()
+        entry = registry.find_by_root(target.root)
+        if entry is not None:
+            registry.update(entry.name, desired=state)
+    except (RegistryError, OSError):
+        return

@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from akaribot.cli import i18n
-from akaribot.cli.instance import default_instance_root
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import OperationResult
 
 MIGRATE_TIMEOUT_SECONDS = 1800.0
@@ -62,10 +62,16 @@ class SubprocessMiscSource:
         timeout: float = MIGRATE_TIMEOUT_SECONDS,
         runner: Callable[..., Any] | None = None,
     ) -> None:
-        self.root = Path(root).expanduser().resolve() if root is not None else default_instance_root()
+        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"migrate": 0}
         self._runner = runner or subprocess.run
+
+    @property
+    def root(self) -> Path:
+        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        return context.resolve_root(self._root_override)
 
     def migrate_legacy(self, project: str) -> OperationResult:
         """见 :meth:`MiscSource.migrate_legacy`。"""

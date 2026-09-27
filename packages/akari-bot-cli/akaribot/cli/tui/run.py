@@ -21,6 +21,7 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
+from akaribot.cli.tui import context
 
 STATE_RUNNING = "running"
 STATE_STOPPED = "stopped"
@@ -395,6 +396,9 @@ class SubprocessRunSource:
         return payload
 
     def _root(self) -> Path | None:
+        found = context.active_root()
+        if found is not None:
+            return found
         if self.root is not None:
             return self.root
         from akaribot.cli.tui.dashboard import resolve_instance_root

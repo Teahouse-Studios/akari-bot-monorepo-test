@@ -18,6 +18,7 @@ from typing import Protocol, runtime_checkable
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import context
 
 ALL_PROCESSES = "all"
 """进程过滤里的「不过滤」项；取值只作内部标识，展示文案在用到时按当前语言取。"""
@@ -241,6 +242,9 @@ class FileLogSource:
         """返回日志目录；未显式指定时按实例根拼接 ``logs``。"""
         if self.logs_dir is not None:
             return self.logs_dir
+        found = context.active_root()
+        if found is not None:
+            return found / "logs"
         from akaribot.cli.tui.dashboard import resolve_instance_root
 
         root = self.root if self.root is not None else resolve_instance_root()

@@ -93,6 +93,16 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
    需要交互界面时直接运行 `akaribot`（在实例目录内）或 `akaribot tui`；没有实例时会先询问是否
    就地初始化。无图形终端的环境请用命令行子命令。
 
+   一台机器上可以管多个实例：`akaribot instance add <目录>` 登记，`instance list` 查看状态，
+   `instance use <名>` 设为缺省（站在实例之外时的默认目标），登记信息在
+   `~/.akaribot/instances.toml`。界面概览页的实例清单可以做同样的事，并直接回车切换当前管理的
+   实例。
+
+   要让实例随机器启动、崩了自动重启，先装常驻服务：`akaribot service install`（macOS 写
+   `~/Library/LaunchAgents`，Linux 写 systemd 用户单元），再用 `akaribot instance policy <名>
+   --autostart --restart-on-crash` 逐实例开策略；服务启动时按各实例**上次的期望状态**恢复，所以
+   停电前在跑的实例会自动回来。
+
 ## 同一个平台跑多个账号
 
 迁移一律生成**默认实例**，它的 `client_name` 与旧项目逐字节相同，因此历史场景数据（`target_id`

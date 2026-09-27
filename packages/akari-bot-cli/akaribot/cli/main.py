@@ -10,7 +10,22 @@ from pathlib import Path
 import typer
 
 from akaribot.cli import __version__, i18n
-from akaribot.cli.commands import adapter, config, db, doctor, init, migrate, module, new, run, test, tui, venv
+from akaribot.cli.commands import (
+    adapter,
+    config,
+    db,
+    doctor,
+    init,
+    instance,
+    migrate,
+    module,
+    new,
+    run,
+    service,
+    test,
+    tui,
+    venv,
+)
 
 DIST_NAME = "akari-bot-cli"
 # 无子命令时的退出码。click ≥8.2 把 no_args_is_help 实现为 NoArgsIsHelpError（UsageError，退出码 2），
@@ -52,7 +67,7 @@ app = typer.Typer(
     add_completion=False,
 )
 
-for sub in (init, run, test, module, config, db, adapter, venv, doctor, new, tui, migrate):
+for sub in (init, run, service, test, module, config, db, instance, adapter, venv, doctor, new, tui, migrate):
     app.add_typer(sub.app, name=sub.__name__.rsplit(".", 1)[-1])
 
 
@@ -88,16 +103,17 @@ def _tui_available() -> bool:
 def _ensure_instance(lang: str | None) -> Path | None:
     # 初始化直接调用 ``akaribot init`` 的命令本体，不复制它建目录、装包、写元数据的流程；问答也由
     # init 自己完成，两边不会各问一套。返回实例根，用户放弃或初始化未成功时为 ``None``。
-    from akaribot.cli.instance import find_instance_root
+    from akaribot.cli.instance import resolve_instance_root
 
-    found = find_instance_root()
+    # 站在实例之外时按注册表里的缺省实例进入：这台机器上登记过就管它，而不是每次都问要不要初始化。
+    found = resolve_instance_root()
     if found is not None:
         return found
     from akaribot.cli.commands.init import init
 
     typer.confirm(i18n.t("cli.main.init_confirm", root=Path.cwd()), abort=True)
     init(Path.cwd(), locale=lang)
-    found = find_instance_root()
+    found = resolve_instance_root()
     if found is None:
         typer.echo(i18n.t("cli.main.init_failed"), err=True)
     return found
