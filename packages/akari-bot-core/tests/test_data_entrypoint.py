@@ -22,6 +22,8 @@ from akaribot.core.entrypoints import data
 from akaribot.testing import Tester, func_case
 
 TABLE = "module_status"
+# 多列改写的用例需要一张有两个以上普通列的表。
+WIDE_TABLE = "module_wiki_bot_account_list"
 PROBE_KEY = "probe-entry"
 
 
@@ -71,7 +73,7 @@ async def _test_unknown_table_is_rejected():
 
 async def _test_unknown_column_is_rejected():
     with _temp_instance():
-        code, payload = await _call("set", TABLE, "--key", "dice", "--column", "no_such_column", "--value", "1")
+        code, payload = await _call("set", TABLE, "--key", "dice", "--set", "no_such_column=1")
         order_code, order_payload = await _call("rows", TABLE, "--order-by", "no_such_column")
         filter_code, filter_payload = await _call("rows", TABLE, "--filter", "no_such_column=1")
     return (
@@ -92,7 +94,7 @@ async def _test_missing_required_field_is_rejected():
 
 async def _test_primary_key_cannot_be_changed():
     with _temp_instance():
-        code, payload = await _call("set", TABLE, "--key", "dice", "--column", "module_name", "--value", "other")
+        code, payload = await _call("set", TABLE, "--key", "dice", "--set", "module_name=other")
     return code == 2 and "module_name" in _error(payload)
 
 
@@ -112,9 +114,68 @@ async def _test_negative_paging_is_rejected():
 async def _test_missing_key_is_rejected():
     with _temp_instance():
         await _create_schema()
-        code, payload = await _call("set", TABLE, "--key", "absent", "--column", "load", "--value", "true")
+        code, payload = await _call("set", TABLE, "--key", "absent", "--set", "load=true")
         delete_code, delete_payload = await _call("delete", TABLE, "--key", "absent")
     return code == 2 and delete_code == 2 and "absent" in _error(payload) and "absent" in _error(delete_payload)
+
+
+async def _test_multi_column_set_is_one_update():
+    # 一行多列：一次 set 改写整行的若干列，回读后各列都已生效。
+    with _temp_instance():
+        await _create_schema()
+        await _call(
+            "insert",
+            WIDE_TABLE,
+            "--set",
+            f"api_link={PROBE_KEY}",
+            "--set",
+            "bot_account=old",
+            "--set",
+            "bot_password=secret",
+        )
+        code, updated = await _call(
+            "set", WIDE_TABLE, "--key", PROBE_KEY, "--set", "bot_account=new", "--set", "bot_password=rotated"
+        )
+        _, page = await _call("rows", WIDE_TABLE, "--filter", f"api_link={PROBE_KEY}")
+        rows = page.get("rows") if isinstance(page, dict) else None
+    return (
+        code == 0
+        and updated.get("updated") == 1
+        and updated.get("columns") == ["bot_account", "bot_password"]
+        and rows == [{"api_link": PROBE_KEY, "bot_account": "new", "bot_password": "rotated"}]
+    )
+
+
+async def _test_multi_column_set_rejects_before_writing():
+    # 多列里有一处取值非法时整行不动：转换全部通过才下发 UPDATE，不会留下改了一半的行。
+    with _temp_instance():
+        await _create_schema()
+        await _call(
+            "insert",
+            WIDE_TABLE,
+            "--set",
+            f"api_link={PROBE_KEY}",
+            "--set",
+            "bot_account=old",
+            "--set",
+            "bot_password=secret",
+        )
+        code, payload = await _call(
+            "set", WIDE_TABLE, "--key", PROBE_KEY, "--set", "bot_account=changed", "--set", "no_such_column=1"
+        )
+        _, page = await _call("rows", WIDE_TABLE, "--filter", f"api_link={PROBE_KEY}")
+        rows = page.get("rows") if isinstance(page, dict) else None
+    return (
+        code == 2
+        and "no_such_column" in _error(payload)
+        and rows == [{"api_link": PROBE_KEY, "bot_account": "old", "bot_password": "secret"}]
+    )
+
+
+async def _test_set_without_assignment_is_rejected():
+    with _temp_instance():
+        code, payload = await _call("set", TABLE, "--key", "dice")
+    return code == 2 and "set" in _error(payload)
 
 
 async def _test_sqlite_round_trip():
@@ -122,7 +183,7 @@ async def _test_sqlite_round_trip():
         await _create_schema()
         insert_code, inserted = await _call("insert", TABLE, "--set", f"module_name={PROBE_KEY}", "--set", "load=yes")
         read_code, page = await _call("rows", TABLE, "--filter", f"module_name={PROBE_KEY}")
-        set_code, updated = await _call("set", TABLE, "--key", PROBE_KEY, "--column", "load", "--value", "false")
+        set_code, updated = await _call("set", TABLE, "--key", PROBE_KEY, "--set", "load=false")
         _, after = await _call("rows", TABLE, "--filter", f"module_name={PROBE_KEY}")
         delete_code, deleted = await _call("delete", TABLE, "--key", PROBE_KEY)
         repeat_code, _ = await _call("delete", TABLE, "--key", PROBE_KEY)
@@ -212,6 +273,9 @@ async def test_data_entrypoint(tester: Tester):
     await tester.test(_test_unparsable_value_is_rejected, "值无法按列类型解析被拒")
     await tester.test(_test_negative_paging_is_rejected, "负分页参数被拒")
     await tester.test(_test_missing_key_is_rejected, "主键不存在被拒")
+    await tester.test(_test_multi_column_set_is_one_update, "一次改写多列并回读")
+    await tester.test(_test_multi_column_set_rejects_before_writing, "一处取值非法则整行不动")
+    await tester.test(_test_set_without_assignment_is_rejected, "缺少列赋值被拒")
     await tester.test(_test_sqlite_round_trip, "sqlite 上的最小读写闭环")
     await tester.test(_test_tables_payload_shape, "表清单载荷形状")
     await tester.test(_test_values_are_json_safe, "时间值以 ISO 文本回传")

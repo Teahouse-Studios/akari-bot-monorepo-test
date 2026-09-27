@@ -240,19 +240,31 @@ async def _rows(
     return {"table": table, "total": total, "rows": [_row_payload(fields, row) for row in rows]}
 
 
-async def _set(table_name: str, *, key: str, column: str, value: str) -> dict[str, Any]:
+async def _set(table_name: str, *, key: str, assignments: Sequence[str]) -> dict[str, Any]:
+    # 一行多列：所有取值先转换完再下发，且在同一次 UPDATE 里写入，不会出现「改了一半」的行。
     table, model = _table_or_fail(table_name)
     fields = _fields(model)
     pk_name = _pk_name(model)
-    if column == pk_name:
-        raise DataError(f"列 {column!r} 是表 {table} 的主键，主键不可修改；如需更换请删除后新建。")
-    field = _column_or_fail(fields, table, column)
+    if not assignments:
+        raise DataError("至少要给出一处 --set <列>=<值>。")
+    values: dict[str, Any] = {}
+    for raw in assignments:
+        column, value = _parse_assignment(raw, table=table)
+        if column == pk_name:
+            raise DataError(f"列 {column!r} 是表 {table} 的主键，主键不可修改；如需更换请删除后新建。")
+        field = _column_or_fail(fields, table, column)
+        if column in values:
+            raise DataError(f"表 {table} 的列 {column!r} 被重复赋值。")
+        values[column] = _coerce(field, value, table=table, column=column)
     converted_key = _coerce(_column_or_fail(fields, table, pk_name), key, table=table, column=pk_name)
-    converted = _coerce(field, value, table=table, column=column)
-    updated = await _write(model.filter(**{pk_name: converted_key}).update(**{column: converted}), table)
+    from tortoise.transactions import in_transaction
+
+    # 连接名必须显式给出：实例同时挂着 default 与 local 两个库，省略会被 Tortoise 拒绝。
+    async with in_transaction("default"):
+        updated = await _write(model.filter(**{pk_name: converted_key}).update(**values), table)
     if not updated:
         raise DataError(f"表 {table} 中不存在主键 {pk_name}={key!r} 的数据项。")
-    return {"table": table, "key": key, "column": column, "updated": updated}
+    return {"table": table, "key": key, "columns": sorted(values), "updated": updated}
 
 
 async def _insert(table_name: str, assignments: Sequence[str]) -> dict[str, Any]:
@@ -302,7 +314,7 @@ async def _dispatch(args: argparse.Namespace) -> Any:
                 filters=tuple(args.filter or ()),
             )
         if args.command == "set":
-            return await _set(args.table, key=args.key, column=args.column, value=args.value)
+            return await _set(args.table, key=args.key, assignments=tuple(args.set or ()))
         if args.command == "insert":
             return await _insert(args.table, tuple(args.set or ()))
         return await _delete(args.table, key=args.key)
@@ -331,11 +343,10 @@ def _build_parser() -> argparse.ArgumentParser:
     rows.add_argument("--order-by", default=None, help="排序列，可带 :asc 或 :desc 后缀；缺省按主键倒序")
     rows.add_argument("--filter", action="append", default=[], help="等值筛选，形如 <列>=<值>，可重复")
 
-    setter = sub.add_parser("set", parents=[common], help="按主键改写单个列")
+    setter = sub.add_parser("set", parents=[common], help="按主键改写一行的若干列，一次 UPDATE 下发")
     setter.add_argument("table", help="表标识")
     setter.add_argument("--key", required=True, help="主键值")
-    setter.add_argument("--column", required=True, help="列名，主键列不可修改")
-    setter.add_argument("--value", required=True, help="按列类型解析后的新值")
+    setter.add_argument("--set", action="append", default=[], help="列赋值，形如 <列>=<值>，可重复")
 
     insert = sub.add_parser("insert", parents=[common], help="新建一条数据项")
     insert.add_argument("table", help="表标识")

@@ -246,8 +246,8 @@ class DatabaseSource(Protocol):
     def rows(self, table: str, *, limit: int, offset: int) -> RowPage:
         """返回一张表的一页数据项。"""
 
-    def set_value(self, table: str, key: str, column: str, value: str) -> WriteResult:
-        """按主键改写单个列。"""
+    def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
+        """按主键改写一行的一个或多个列；多列在同一次调用里下发。"""
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
         """新建一条数据项。"""
@@ -298,10 +298,10 @@ class StaticDatabaseSource:
         items = self._pages.get(table, [])
         return RowPage(table=table, total=len(items), rows=tuple(items[offset : offset + limit]))
 
-    def set_value(self, table: str, key: str, column: str, value: str) -> WriteResult:
-        """见 :meth:`DatabaseSource.set_value`。"""
+    def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
+        """见 :meth:`DatabaseSource.set_values`。"""
         self.calls["set"] += 1
-        self.writes.append((table, key, column, value))
+        self.writes.append((table, key, dict(values)))
         return self._write_result
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
@@ -348,10 +348,13 @@ class SubprocessDatabaseSource:
         payload = self._invoke("rows", table, "--limit", str(limit), "--offset", str(offset))
         return normalize_page(payload, table)
 
-    def set_value(self, table: str, key: str, column: str, value: str) -> WriteResult:
-        """见 :meth:`DatabaseSource.set_value`。"""
+    def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
+        """见 :meth:`DatabaseSource.set_values`：一行一次 CLI 调用，各列经重复的 ``--set`` 下发。"""
         self.calls["set"] += 1
-        return self._write("set", table, "--key", key, "--column", column, "--value", value)
+        args = ["set", table, "--key", key]
+        for column, value in values.items():
+            args.extend(["--set", f"{column}={value}"])
+        return self._write(*args)
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
         """见 :meth:`DatabaseSource.insert_row`。"""
@@ -1158,10 +1161,9 @@ class DatabasePage(compat.Vertical):
     async def _dispatch(self, plan: WritePlan) -> list[WriteResult]:
         try:
             if plan.kind == "set":
-                return [
-                    await asyncio.to_thread(self.source.set_value, plan.table, plan.key, column, after)
-                    for column, _, after in plan.changes
-                ]
+                # 一行一次调用：多列在同一次 UPDATE 里落库，不会出现改了一半的行。
+                changed = {column: after for column, _, after in plan.changes}
+                return [await asyncio.to_thread(self.source.set_values, plan.table, plan.key, changed)]
             if plan.kind == "insert":
                 result = await asyncio.to_thread(self.source.insert_row, plan.table, dict(plan.values))
                 return [result]

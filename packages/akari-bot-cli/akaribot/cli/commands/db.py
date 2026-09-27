@@ -145,17 +145,19 @@ def list_rows(
 
 
 @app.command("set", help=i18n.t("cli.db.set.help"))
-def set_value(
+def set_values(
     table_name: TableArgument,
     key: Annotated[str, typer.Option("--key", help=i18n.t("cli.db.option_key"))],
-    column: Annotated[str, typer.Option("--column", help=i18n.t("cli.db.set.option_column"))],
-    value: Annotated[str, typer.Option("--value", help=i18n.t("cli.db.set.option_value"))],
+    assignments: Annotated[list[str], typer.Option("--set", help=i18n.t("cli.db.set.option_set"))] = [],
     as_json: JsonOption = False,
     instance_path: InstancePathOption = None,
 ) -> None:
-    """按主键改写单个列；主键列不可修改。"""
+    """按主键改写一行的若干列；各列在同一次 UPDATE 里下发，主键列不可修改。"""
     instance = require_instance(instance_path)
-    payload = _guard(lambda: _call(instance, "set", table_name, "--key", key, "--column", column, "--value", value))
+    args = ["set", table_name, "--key", key]
+    for assignment in assignments:
+        args += ["--set", assignment]
+    payload = _guard(lambda: _call(instance, *args))
     if as_json:
         _emit_json(payload)
         return
@@ -164,7 +166,7 @@ def set_value(
             "cli.db.set.done",
             table=table_name,
             pk=key,
-            column=column,
+            columns=i18n.t("cli.common.list_separator").join(str(name) for name in payload.get("columns") or ()),
             count=payload.get("updated") or 0,
         )
     )

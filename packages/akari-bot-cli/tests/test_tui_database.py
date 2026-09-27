@@ -179,7 +179,32 @@ async def _test_save_needs_two_presses():
         and pending is not None
         and pending.changes == (("load", "true", "false"),)
         and status_changed
-        and written == [("module_status", "dice", "load", "false")]
+        and written == [("module_status", "dice", {"load": "false"})]
+    )
+
+
+async def _test_multi_column_save_is_one_call():
+    # 一行多列：改动几列都只发一次写入，各列在同一次 UPDATE 里落库。
+    source = _source()
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "stored_data")
+        await _select_row(pilot, page, 0)
+        page.set_editor_value("value", '{"a": 2}')
+        await pilot.press("s")
+        await pilot.pause()
+        pending = page.pending
+        await pilot.press("s")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return pending, list(source.writes)
+
+    pending, written = await _with_page(body, source)
+    return (
+        pending is not None
+        and len(pending.changes) == 1
+        and written == [("stored_data", "demo", {"value": '{"a": 2}'})]
     )
 
 
@@ -234,9 +259,7 @@ async def _test_save_passes_argv_to_cli():
             return before, [call for call in calls if "set" in call]
 
         before, after = await _with_page(body, source)
-    expected = cli_process.cli_argv(
-        "db", "set", "module_status", "--key", "dice", "--column", "load", "--value", "false", "--json"
-    )
+    expected = cli_process.cli_argv("db", "set", "module_status", "--key", "dice", "--set", "load=false", "--json")
     return before == [] and after == [expected]
 
 
@@ -446,9 +469,9 @@ async def _test_page_still_usable_after_failure():
             super().__init__(*args, **kwargs)
             self.remaining_failures = 1
 
-        def set_value(self, table, key, column, value):
+        def set_values(self, table, key, values):
             self.calls["set"] += 1
-            self.writes.append((table, key, column, value))
+            self.writes.append((table, key, dict(values)))
             if self.remaining_failures:
                 self.remaining_failures -= 1
                 return WriteResult(False, "写入被拒绝", "写入被拒绝：唯一约束冲突")
@@ -486,7 +509,7 @@ async def _test_page_still_usable_after_failure():
         and len(reloaded) == 2
         and filled == {"load": "true"}
         and len(written) == 2
-        and written[1] == ("module_status", "dice", "load", "false")
+        and written[1] == ("module_status", "dice", {"load": "false"})
         and "写入被拒绝" not in status
     )
 
@@ -551,6 +574,7 @@ async def test_tui_database(tester: Tester):
     await tester.test(_test_primary_key_is_read_only, "主键只读不进编辑字段")
     await tester.test(_test_json_values_round_trip_in_editor, "JSON 值按 JSON 文本回填")
     await tester.test(_test_save_needs_two_presses, "保存需两次确认")
+    await tester.test(_test_multi_column_save_is_one_call, "多列改动合并成一次写入")
     await tester.test(_test_unchanged_editor_writes_nothing, "未改动不写入")
     await tester.test(_test_save_passes_argv_to_cli, "保存以正确 argv 调用 CLI")
     await tester.test(_test_insert_needs_two_presses, "新建走 insert")
