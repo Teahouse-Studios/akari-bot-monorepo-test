@@ -28,6 +28,7 @@ from akaribot.cli.service import (
     KIND_ABANDONED,
     KIND_FAILED,
     KIND_MISSING,
+    KIND_NO_AUTOSTART,
     KIND_OBSERVED,
     KIND_RECOVERED,
     KIND_REFUSED,
@@ -86,12 +87,20 @@ class _Rig:
     def registry(self) -> InstanceRegistry:
         return InstanceRegistry(self.config / "instances.toml")
 
-    def add(self, name: str, *, restart_on_crash: bool = False, desired: str = STATE_RUNNING) -> Path:
+    def add(
+        self,
+        name: str,
+        *,
+        restart_on_crash: bool = False,
+        desired: str = STATE_RUNNING,
+        autostart: bool = True,
+    ) -> Path:
+        # 恢复用例默认开自启：自启关掉的实例不该被服务拉起。
         root = self.config / name
         root.mkdir(parents=True, exist_ok=True)
         InstanceMeta.create(root, venv="").save()
         registry = self.registry()
-        registry.add(root, name=name, restart_on_crash=restart_on_crash)
+        registry.add(root, name=name, restart_on_crash=restart_on_crash, autostart=autostart)
         registry.update(name, desired=desired)
         self.instances[name] = _FakeInstance(root)
         return root
@@ -387,6 +396,22 @@ async def _test_supervise_keeps_crashed_instance_without_policy():
         return _kinds(refused) == [KIND_REFUSED] and _kinds(repeated) == [] and rig.spawned == []
 
 
+async def _test_supervise_does_not_restore_without_autostart():
+    # 自启是逐实例的开关：上次在跑不等于这次要拉起，关掉自启就不该被服务恢复。
+    with TemporaryDirectory() as raw:
+        rig = _Rig(Path(raw))
+        rig.add("alpha", autostart=False)
+        supervisor = rig.supervisor()
+        round_ = supervisor.run_once()
+        repeated = supervisor.run_once()
+        return (
+            _kinds(round_) == [KIND_NO_AUTOSTART]
+            and _kinds(repeated) == []
+            and rig.spawned == []
+            and round_.checked == 1
+        )
+
+
 async def _test_supervise_skips_missing_and_stray():
     with TemporaryDirectory() as raw:
         rig = _Rig(Path(raw))
@@ -555,6 +580,7 @@ async def test_service(tester: Tester):
     await tester.test(_test_uninstall_when_absent_is_not_an_error, "卸载未安装的服务不算失败")
     await tester.test(_test_status_reports_installation_and_registration, "状态区分未安装、未注册与已注册")
     await tester.test(_test_supervise_recovers_once_and_quiets_down, "期望运行且未在跑时恢复拉起且不重复刷屏")
+    await tester.test(_test_supervise_does_not_restore_without_autostart, "未开自启的实例不被恢复")
     await tester.test(_test_supervise_restarts_with_backoff_and_cap, "崩溃后按退避重启并在上限处放弃")
     await tester.test(_test_supervise_keeps_crashed_instance_without_policy, "未开启崩溃重启时保持不动")
     await tester.test(_test_supervise_skips_missing_and_stray, "目录不存在与期望停止在跑时都跳过")

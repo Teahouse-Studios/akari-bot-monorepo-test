@@ -629,6 +629,7 @@
   "cli.run.stop_not_running": "The instance was not running",
   "cli.run.stop_unmanaged": "Cannot stop: the lock file has no process record",
   "cli.run.stop_unmanaged_detail": "The lock is held (${path}) but not by a record this version wrote; end the holder manually",
+  "cli.service.supervise.no_autostart": "${name} has autostart disabled; its last state is not restored",
   "cli.test.arg_path": "Test path to run; defaults to everything",
   "cli.test.help": "Run tests (equivalent to python -m akaribot.testing)",
   "cli.test.option_case": "Only run the given cases; may be repeated",

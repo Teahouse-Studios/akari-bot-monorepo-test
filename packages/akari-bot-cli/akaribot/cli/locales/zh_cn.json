@@ -659,6 +659,7 @@
   "cli.service.supervise.failed": "实例 ${name} 拉起失败：${error}",
   "cli.service.supervise.help": "守护本机实例：按注册表策略恢复、重启或跳过。",
   "cli.service.supervise.missing": "实例 ${name} 的目录已不存在：${root}，跳过。",
+  "cli.service.supervise.no_autostart": "${name} 未开启开机自启，不恢复上次的运行状态",
   "cli.service.supervise.observed": "实例 ${name} 正在运行（pid ${pid}）。",
   "cli.service.supervise.option_backoff": "崩溃重启的指数退避基数秒数。",
   "cli.service.supervise.option_interval": "两轮之间的间隔秒数。",

@@ -49,6 +49,7 @@ KIND_RESTARTED = "restarted"
 KIND_ABANDONED = "abandoned"
 KIND_REFUSED = "refused"
 KIND_MISSING = "missing"
+KIND_NO_AUTOSTART = "no-autostart"
 KIND_STRAY = "stray"
 KIND_FAILED = "failed"
 KIND_REGISTRY = "registry"
@@ -597,9 +598,21 @@ class Supervisor:
     def _handle_down(
         self, entry: Any, watch: _Watch, controller: Any, now: float, events: list[SuperviseEvent], tally: _Tally
     ) -> None:
-        # 本次服务启动后还没见过它运行，说明是掉电或退出后的恢复，直接拉起；见过才按崩溃处理。
+        # 本次服务启动后还没见过它运行，说明是掉电或退出后的恢复：只有开了开机自启的实例才恢复，
+        # 「上次在跑」本身不构成自启的理由。见过它运行过的才按崩溃处理。
         if not watch.seen_running and not watch.recovery_done:
             watch.recovery_done = True
+            if not entry.autostart:
+                watch.abandoned = True
+                tally.skipped += 1
+                self._note(
+                    events,
+                    watch,
+                    entry.name,
+                    KIND_NO_AUTOSTART,
+                    i18n.t("cli.service.supervise.no_autostart", name=entry.name),
+                )
+                return
             self._launch(entry, watch, controller, events, tally, recovered=True)
             return
         if watch.abandoned:
