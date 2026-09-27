@@ -203,6 +203,119 @@ async def _test_sqlite_round_trip():
     )
 
 
+async def _seed_rows(names: list[str]) -> None:
+    # 分页与筛选需要一批可控的数据：直接建行，绕开逐条子进程调用。
+    await init_db(generate_schemas=False)
+    from akaribot.core.database.models import ModuleStatus
+
+    for name in names:
+        await ModuleStatus.create(module_name=name, load=name.endswith("0"))
+    await close_db()
+
+
+async def _test_filters_narrow_and_page():
+    # 条件与分页都在 core 侧收口：界面只报条件，条数按筛选后计算，offset 只影响本页。
+    with _temp_instance():
+        await _create_schema()
+        await _seed_rows([f"mod-{index:03d}" for index in range(120)])
+        _, all_rows = await _call("rows", TABLE, "--limit", "5", "--order-by", "module_name:asc")
+        _, filtered = await _call(
+            "rows", TABLE, "--filter", "load=true", "--limit", "5", "--order-by", "module_name:asc"
+        )
+        _, paged = await _call("rows", TABLE, "--limit", "5", "--offset", "100", "--order-by", "module_name:asc")
+    names = [row["module_name"] for row in all_rows["rows"]]
+    filtered_names = [row["module_name"] for row in filtered["rows"]]
+    paged_names = [row["module_name"] for row in paged["rows"]]
+    return (
+        all_rows["total"] == 120
+        and names == ["mod-000", "mod-001", "mod-002", "mod-003", "mod-004"]
+        and all_rows["offset"] == 0
+        and all_rows["limit"] == 5
+        and filtered["total"] == 12
+        and filtered_names == ["mod-000", "mod-010", "mod-020", "mod-030", "mod-040"]
+        and paged["offset"] == 100
+        and len(paged_names) == 5
+        and paged_names[0] == "mod-100"
+    )
+
+
+async def _test_no_count_skips_total():
+    # 大表上 COUNT 是全表扫描：翻页可以只取本页，total 回 null，由调用方沿用上次的条数。
+    with _temp_instance():
+        await _create_schema()
+        await _seed_rows([f"mod-{index:03d}" for index in range(30)])
+        _, counted = await _call("rows", TABLE, "--limit", "5")
+        _, uncounted = await _call("rows", TABLE, "--limit", "5", "--offset", "5", "--no-count")
+    return (
+        counted["total"] == 30
+        and counted["counted"] is True
+        and uncounted["total"] is None
+        and uncounted["counted"] is False
+        and len(uncounted["rows"]) == 5
+        and uncounted["offset"] == 5
+    )
+
+
+async def _test_condition_operators():
+    with _temp_instance():
+        await _create_schema()
+        await _seed_rows([f"mod-{index:03d}" for index in range(20)])
+        _, exact = await _call("rows", TABLE, "--filter", "module_name=mod-005")
+        _, prefix = await _call("rows", TABLE, "--filter", "module_name^mod-01", "--limit", "50")
+        _, suffix = await _call("rows", TABLE, "--filter", "module_name$5", "--order-by", "module_name:asc")
+        _, contains = await _call("rows", TABLE, "--filter", "module_name~005")
+        _, negated = await _call("rows", TABLE, "--filter", "module_name!~mod-", "--limit", "50")
+        _, empty = await _call("rows", TABLE, "--filter", "module_name=null")
+        _, not_empty = await _call("rows", TABLE, "--filter", "module_name")
+        _, combined = await _call("rows", TABLE, "--filter", "load=true", "--filter", "module_name~mod-01")
+    return (
+        exact["total"] == 1
+        and prefix["total"] == 10
+        and suffix["total"] == 2
+        and [row["module_name"] for row in suffix["rows"]] == ["mod-005", "mod-015"]
+        and contains["total"] == 1
+        and negated["total"] == 0
+        and empty["total"] == 0
+        and not_empty["total"] == 20
+        # 造数据时 load 等于「名字以 0 结尾」，故 load=true 且名字含 mod-01 的只有 mod-010。
+        and combined["total"] == 1
+    )
+
+
+async def _test_search_scans_text_columns():
+    with _temp_instance():
+        await _create_schema()
+        await _seed_rows(["dice", "wiki", "wikilog"])
+        _, found = await _call("rows", TABLE, "--search", "wiki", "--limit", "50")
+        _, case_insensitive = await _call("rows", TABLE, "--search", "DICE")
+        _, mixed = await _call("rows", TABLE, "--search", "wiki", "--filter", "load=false")
+    names = sorted(row["module_name"] for row in found["rows"])
+    # 被搜索的三行 load 都是 false，故与 load=false 取交集的条数不变。
+    return (
+        found["total"] == 2 and names == ["wiki", "wikilog"] and case_insensitive["total"] == 1 and mixed["total"] == 2
+    )
+
+
+async def _test_bad_conditions_are_rejected():
+    with _temp_instance():
+        await _create_schema()
+        unknown_code, unknown = await _call("rows", TABLE, "--filter", "no_such=1")
+        text_code, text_op = await _call("rows", TABLE, "--filter", "load~true")
+        empty_code, empty = await _call("rows", TABLE, "--filter", "   ")
+        # 空白搜索词按「没给」处理：界面清空搜索框后不必再区分空串与缺省。
+        blank_code, blank = await _call("rows", TABLE, "--search", "   ")
+    return (
+        unknown_code == 2
+        and "没有列" in _error(unknown)
+        and text_code == 2
+        and "不支持包含" in _error(text_op)
+        and empty_code == 2
+        and "不能为空" in _error(empty)
+        and blank_code == 0
+        and blank.get("search") == "   "
+    )
+
+
 async def _test_tables_payload_shape():
     with _temp_instance():
         # 尚未建表时也要给得出清单：条数按未知回报，而不是整份清单失败。
@@ -277,6 +390,11 @@ async def test_data_entrypoint(tester: Tester):
     await tester.test(_test_multi_column_set_rejects_before_writing, "一处取值非法则整行不动")
     await tester.test(_test_set_without_assignment_is_rejected, "缺少列赋值被拒")
     await tester.test(_test_sqlite_round_trip, "sqlite 上的最小读写闭环")
+    await tester.test(_test_filters_narrow_and_page, "筛选与分页：条数按条件重算")
+    await tester.test(_test_no_count_skips_total, "--no-count 时总数回 null")
+    await tester.test(_test_condition_operators, "筛选运算符：等值、前后缀、包含、取反与判空")
+    await tester.test(_test_search_scans_text_columns, "全表搜索扫文本列且不区分大小写")
+    await tester.test(_test_bad_conditions_are_rejected, "非法条件在入口层被拒")
     await tester.test(_test_tables_payload_shape, "表清单载荷形状")
     await tester.test(_test_values_are_json_safe, "时间值以 ISO 文本回传")
     await tester.test(_test_plain_output_is_json, "缺省输出与 --json 一致")

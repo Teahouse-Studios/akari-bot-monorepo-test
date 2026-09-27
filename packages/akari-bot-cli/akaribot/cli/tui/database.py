@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -21,8 +22,23 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 
-# 一次读取的数据项条数：界面只做浏览与单条改写，分页由 core 侧统一收口。
-PAGE_LIMIT = 20
+# 一页读取的数据项条数：线上表可能很大，界面一次只取一页，翻页与条数都由 core 侧收口。
+PAGE_LIMIT = 50
+# 条件里的运算符，从长到短匹配，避免 != 被当成 =。
+FILTER_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
+# 条件必须写成「列名 + 运算符 + 值」；只看「含运算符」会把搜索词里的 ~、= 之类误当成条件。
+CONDITION_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\s*(?:!=|>=|<=|!~|~|\^|\$|=|>|<)")
+
+
+def is_condition(text: str) -> bool:
+    """判断输入是筛选条件还是搜索词：写成列名加运算符的算条件，其余一律按全表搜索。
+
+    :param text: 用户输入的文本。
+    :return: 是条件时为 ``True``。
+    """
+    return bool(CONDITION_PATTERN.match(text.strip()))
+
+
 QUERY_TIMEOUT_SECONDS = 120.0
 STATUS_TAIL_LIMIT = 300
 
@@ -89,17 +105,78 @@ class TableInfo:
 
 
 @dataclass(frozen=True)
+class RowQuery:
+    """一次读取数据项的条件与排序。
+
+    :param filters: 筛选条件，形如 ``<列><运算符><值>``；多条之间是 AND。
+    :param search: 全表搜索词，在所有文本列上做包含匹配。
+    :param order_by: 排序列，可带 ``:asc`` / ``:desc``；空串表示用 core 的缺省顺序。
+    """
+
+    filters: tuple[str, ...] = ()
+    search: str = ""
+    order_by: str = ""
+
+    def is_empty(self) -> bool:
+        """返回是否没有任何条件。"""
+        return not self.filters and not self.search
+
+    def with_filter(self, condition: str) -> RowQuery:
+        """追加一条筛选条件；重复的条件不重复添加。"""
+        text = condition.strip()
+        if not text or text in self.filters:
+            return self
+        return replace(self, filters=(*self.filters, text))
+
+    def with_search(self, keyword: str) -> RowQuery:
+        """设置全表搜索词。"""
+        return replace(self, search=keyword.strip())
+
+    def summary(self) -> str:
+        """返回状态栏用的一行说明。"""
+        separator = i18n.t("cli.common.list_separator")
+        parts = list(self.filters)
+        if self.search:
+            parts.append(i18n.t("cli.tui.database.search_term", keyword=self.search))
+        return separator.join(parts)
+
+
+@dataclass(frozen=True)
 class RowPage:
     """一页数据项。
 
     :param table: 表标识。
-    :param total: 该表的数据项总数。
+    :param total: 满足当前条件的数据项总数；未统计时为 ``None``（调用方沿用上次的值）。
     :param rows: 本页数据项，键为列名。
+    :param offset: 本页起始偏移。
+    :param limit: 本页条数上限。
     """
 
     table: str = ""
-    total: int = 0
+    total: int | None = 0
     rows: tuple[dict[str, Any], ...] = ()
+    offset: int = 0
+    limit: int = PAGE_LIMIT
+
+    @property
+    def rows_total(self) -> int:
+        """返回已知的总条数；未统计时按 0 处理。"""
+        return int(self.total or 0)
+
+    @property
+    def pages(self) -> int:
+        """返回总页数，至少为 1。"""
+        return max(1, -(-self.rows_total // max(self.limit, 1)))
+
+    @property
+    def page_number(self) -> int:
+        """返回当前页码，从 1 开始。"""
+        return self.offset // max(self.limit, 1) + 1
+
+    @property
+    def last_offset(self) -> int:
+        """返回末页的起始偏移。"""
+        return max(0, (self.pages - 1) * max(self.limit, 1))
 
 
 @dataclass(frozen=True)
@@ -147,6 +224,65 @@ class WritePlan:
             for column, before, after in self.changes
         )
         return i18n.t("cli.tui.database.confirm_set", table=self.table, pk=self.key, changes=changes)
+
+
+# 替身数据源的筛选口径：与 core 的运算符一致，只作用于 JSON 化的取值。 真源在 core 侧（``entrypoints/data.py``）；这里实现一份是为了让用例能断言「条件确实收窄了 列表」，而不是只断言请求参数。
+def _matches(row: Mapping[str, Any], query: RowQuery) -> bool:
+    text = _text
+    for condition in query.filters:
+        column, operator, value = _split_filter(condition)
+        if not column or column not in row:
+            return False
+        current = text(row.get(column))
+        wanted = value.strip()
+        if wanted.casefold() in ("null", "none"):
+            hit = not current
+        elif operator == "~":
+            hit = wanted.casefold() in current.casefold()
+        elif operator == "!~":
+            hit = wanted.casefold() not in current.casefold()
+        elif operator == "^":
+            hit = current.casefold().startswith(wanted.casefold())
+        elif operator == "$":
+            hit = current.casefold().endswith(wanted.casefold())
+        elif operator == "!=":
+            hit = current != wanted
+        elif operator == ">":
+            hit = _compare(current, wanted) > 0
+        elif operator == ">=":
+            hit = _compare(current, wanted) >= 0
+        elif operator == "<":
+            hit = _compare(current, wanted) < 0
+        elif operator == "<=":
+            hit = _compare(current, wanted) <= 0
+        else:
+            hit = current == wanted
+        if not hit:
+            return False
+    if query.search:
+        needle = query.search.casefold()
+        if not any(needle in text(value).casefold() for key, value in row.items() if key != "__none__"):
+            return False
+    return True
+
+
+# 拆分 ``<列><运算符><值>``；只有列名时按「非空」处理。
+def _split_filter(condition: str) -> tuple[str, str, str]:
+    text = condition.strip()
+    for operator in FILTER_OPERATORS:
+        column, found, value = text.partition(operator)
+        if found:
+            return column.strip(), operator, value
+    return text, "!=", "null"
+
+
+def _compare(current: str, wanted: str) -> int:
+    # 能当数字比就按数字比，否则按文本比：替身只服务于断言，口径够用即可。
+    try:
+        left, right = float(current), float(wanted)
+    except ValueError:
+        return (current > wanted) - (current < wanted)
+    return (left > right) - (left < right)
 
 
 def _text(value: Any) -> str:
@@ -228,7 +364,11 @@ def normalize_page(payload: Any, table: str) -> RowPage:
     if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
         collected = [dict(row) for row in rows if isinstance(row, Mapping)]
     return RowPage(
-        table=str(payload.get("table") or table), total=int(payload.get("total") or 0), rows=tuple(collected)
+        table=str(payload.get("table") or table),
+        total=int(payload["total"]) if isinstance(payload.get("total"), int) else None,
+        rows=tuple(collected),
+        offset=int(payload.get("offset") or 0),
+        limit=int(payload.get("limit") or PAGE_LIMIT),
     )
 
 
@@ -243,8 +383,10 @@ class DatabaseSource(Protocol):
     def tables(self) -> Sequence[TableInfo]:
         """返回实例数据库里已注册模型的表。"""
 
-    def rows(self, table: str, *, limit: int, offset: int) -> RowPage:
-        """返回一张表的一页数据项。"""
+    def rows(
+        self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
+    ) -> RowPage:
+        """返回一张表的一页数据项；``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。"""
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
         """按主键改写一行的一个或多个列；多列在同一次调用里下发。"""
@@ -285,18 +427,28 @@ class StaticDatabaseSource:
         self.inserted: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[tuple[str, str]] = []
         self.reads: list[tuple[str, int, int]] = []
+        self.queries: list[tuple[str, RowQuery, bool]] = []
 
     def tables(self) -> Sequence[TableInfo]:
         """见 :meth:`DatabaseSource.tables`。"""
         self.calls["tables"] += 1
         return self._tables
 
-    def rows(self, table: str, *, limit: int, offset: int) -> RowPage:
-        """见 :meth:`DatabaseSource.rows`。"""
+    def rows(
+        self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
+    ) -> RowPage:
+        """见 :meth:`DatabaseSource.rows`：先按条件过滤，再按偏移切片，和 core 侧口径一致。"""
         self.calls["rows"] += 1
         self.reads.append((table, limit, offset))
-        items = self._pages.get(table, [])
-        return RowPage(table=table, total=len(items), rows=tuple(items[offset : offset + limit]))
+        self.queries.append((table, query or RowQuery(), count))
+        items = [row for row in self._pages.get(table, []) if _matches(row, query or RowQuery())]
+        return RowPage(
+            table=table,
+            total=len(items) if count else None,
+            rows=tuple(items[offset : offset + limit]),
+            offset=offset,
+            limit=limit,
+        )
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
         """见 :meth:`DatabaseSource.set_values`。"""
@@ -348,11 +500,22 @@ class SubprocessDatabaseSource:
         self.calls["tables"] += 1
         return normalize_tables(self._invoke("tables"))
 
-    def rows(self, table: str, *, limit: int, offset: int) -> RowPage:
-        """见 :meth:`DatabaseSource.rows`。"""
+    def rows(
+        self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
+    ) -> RowPage:
+        """见 :meth:`DatabaseSource.rows`：条件、搜索与排序都交给 ``db rows``。"""
         self.calls["rows"] += 1
-        payload = self._invoke("rows", table, "--limit", str(limit), "--offset", str(offset))
-        return normalize_page(payload, table)
+        condition = query or RowQuery()
+        args = ["rows", table, "--limit", str(limit), "--offset", str(offset)]
+        for item in condition.filters:
+            args += ["--filter", item]
+        if condition.search:
+            args += ["--search", condition.search]
+        if condition.order_by:
+            args += ["--order-by", condition.order_by]
+        if not count:
+            args += ["--no-count"]
+        return normalize_page(self._invoke(*args), table)
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
         """见 :meth:`DatabaseSource.set_values`：一行一次 CLI 调用，各列经重复的 ``--set`` 下发。"""
@@ -519,9 +682,22 @@ class DatabasePage(compat.Vertical):
         text-wrap: nowrap;
         text-overflow: ellipsis;
     }
+    DatabasePage #filter-bar {
+        height: 2;
+        padding: 0 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
     DatabasePage #row-list {
         height: 1fr;
         border: round $panel;
+    }
+    DatabasePage #pager {
+        height: 3;
+    }
+    DatabasePage #pager Button {
+        min-width: 8;
     }
     DatabasePage #row-list > ListItem {
         padding: 0 1;
@@ -592,6 +768,12 @@ class DatabasePage(compat.Vertical):
         ("d", "delete", i18n.t("cli.tui.database.bind_delete")),
         ("slash", "focus_search", i18n.t("cli.tui.database.bind_search")),
         ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel")),
+        ("f", "add_filter", i18n.t("cli.tui.database.bind_filter")),
+        ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters")),
+        ("n", "next_page", i18n.t("cli.tui.database.bind_next_page")),
+        ("p", "previous_page", i18n.t("cli.tui.database.bind_previous_page")),
+        ("g", "first_page", i18n.t("cli.tui.database.bind_first_page")),
+        ("G", "last_page", i18n.t("cli.tui.database.bind_last_page")),
     )
 
     def __init__(
@@ -612,6 +794,8 @@ class DatabasePage(compat.Vertical):
         self._selected: str | None = None
         self._page = RowPage()
         self._offset = 0
+        self._row_query = RowQuery()
+        self._order_by = ""
         self._row_index: int | None = None
         self._row_key: str = ""
         self._original: dict[str, Any] = {}
@@ -633,7 +817,15 @@ class DatabasePage(compat.Vertical):
                 yield compat.Static(
                     compat.plain_text(i18n.t("cli.tui.database.rows_caption_empty")), id="rows-caption", markup=False
                 )
+                yield compat.Static(
+                    compat.plain_text(i18n.t("cli.tui.database.filter_none")), id="filter-bar", markup=False
+                )
                 yield compat.ListView(id="row-list")
+                with compat.Horizontal(id="pager"):
+                    yield compat.Button(i18n.t("cli.tui.database.button_first_page"), id="db-first-page")
+                    yield compat.Button(i18n.t("cli.tui.database.button_previous_page"), id="db-previous-page")
+                    yield compat.Button(i18n.t("cli.tui.database.button_next_page"), id="db-next-page")
+                    yield compat.Button(i18n.t("cli.tui.database.button_last_page"), id="db-last-page")
             with compat.VerticalScroll(id="editor-pane"):
                 yield compat.Static(
                     compat.plain_text(i18n.t("cli.tui.database.editor_caption_empty")),
@@ -715,6 +907,19 @@ class DatabasePage(compat.Vertical):
         return self._page
 
     @property
+    def row_query(self) -> RowQuery:
+        """返回当前生效的筛选条件与搜索词。
+
+        不能叫 ``query``：``Widget.query()`` 是 Textual 的公开方法，覆盖它会让页面里的控件查询全部失效。
+        """
+        return self._row_query
+
+    @property
+    def offset(self) -> int:
+        """返回当前页的起始偏移。"""
+        return self._offset
+
+    @property
     def insert_mode(self) -> bool:
         """返回是否处于新建模式。"""
         return self._insert_mode
@@ -764,6 +969,17 @@ class DatabasePage(compat.Vertical):
     def caption_text(self) -> str:
         """返回数据项列表上方的摘要文本。"""
         return _static_text(self.query_one("#rows-caption", compat.Static))
+
+    def filter_text(self) -> str:
+        """返回条件行的当前文本。"""
+        return _static_text(self.query_one("#filter-bar", compat.Static))
+
+    def pager_states(self) -> dict[str, bool]:
+        """返回四个翻页按钮的禁用状态，供自动化断言。"""
+        return {
+            button_id: bool(self.query_one(f"#{button_id}", compat.Button).disabled)
+            for button_id in ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
+        }
 
     def editor_caption(self) -> str:
         """返回编辑区上方的摘要文本。"""
@@ -839,6 +1055,9 @@ class DatabasePage(compat.Vertical):
             await self._clear_rows(i18n.t("cli.tui.database.rows_no_table"))
             self._set_status(i18n.t("cli.tui.database.status_no_tables"))
             return False
+        if table != self._selected:
+            # 条件里的列名只对原表成立，换表即清空，免得拿着旧条件去撞「没有这一列」。
+            self._row_query = RowQuery()
         self._selected = table
         info = self.selected_info
         if info is None:
@@ -849,7 +1068,7 @@ class DatabasePage(compat.Vertical):
         self._pending = None
         ok = await self.reload_rows(reset_offset=True)
         if ok:
-            self._set_status(i18n.t("cli.tui.database.status_table_loaded", table=table, rows=self._page.total))
+            self._set_status(i18n.t("cli.tui.database.status_table_loaded", table=table, rows=self._page.rows_total))
         return ok
 
     async def reload_rows(self, *, reset_offset: bool = False) -> bool:
@@ -861,8 +1080,13 @@ class DatabasePage(compat.Vertical):
         if self._selected is None:
             return False
         offset = 0 if reset_offset else self._offset
+        query = replace(self._row_query, order_by=self._order_by)
+        # 条件变化或重载时重新数总数；纯翻页沿用上次的条数，省掉大表上的一次全表扫描。
+        count = reset_offset or self._page.total is None
         try:
-            page = await asyncio.to_thread(self.source.rows, self._selected, limit=PAGE_LIMIT, offset=offset)
+            page = await asyncio.to_thread(
+                self.source.rows, self._selected, limit=PAGE_LIMIT, offset=offset, query=query, count=count
+            )
         except Exception as error:  # noqa: BLE001 - 取数失败只影响本页展示
             self.last_error = f"{type(error).__name__}: {error}"
             await self._clear_rows(i18n.t("cli.tui.database.rows_load_failed", error=error))
@@ -872,7 +1096,14 @@ class DatabasePage(compat.Vertical):
                 )
             )
             return False
+        if page.total is None:
+            # 没数总数时沿用上次的值：页码与末页跳转都靠它。
+            page = replace(page, total=self._page.total)
         self._page = page
+        # 写入或翻页后偏移可能落到末页之外（总数变小），这里夹回末页，避免停在空白页。
+        if page.rows_total and offset > page.last_offset:
+            self._offset = page.last_offset
+            return await self.reload_rows()
         self._offset = offset
         self.last_error = ""
         self._render_rows()
@@ -880,7 +1111,7 @@ class DatabasePage(compat.Vertical):
         return True
 
     async def _clear_rows(self, hint: str) -> None:
-        self._page = RowPage(table=self._selected or "")
+        self._page = RowPage(table=self._selected or "", limit=PAGE_LIMIT)
         self._row_index = None
         self._row_key = ""
         self._original = {}
@@ -996,11 +1227,131 @@ class DatabasePage(compat.Vertical):
             list_view.index = None
         self._row_texts = tuple(rows)
         caption = (
-            i18n.t("cli.tui.database.rows_caption", table=info.name, total=self._page.total, count=len(rows))
+            i18n.t(
+                "cli.tui.database.rows_caption",
+                table=info.name,
+                total=self._page.rows_total,
+                count=len(rows),
+                page=self._page.page_number,
+                pages=self._page.pages,
+            )
             if info is not None
             else i18n.t("cli.tui.database.rows_caption_empty")
         )
         self.query_one("#rows-caption", compat.Static).update(compat.plain_text(caption))
+        filters = self._filter_text()
+        self.query_one("#filter-bar", compat.Static).update(compat.plain_text(filters))
+        self._sync_pager()
+
+    def _filter_text(self) -> str:
+        if self._row_query.is_empty():
+            return i18n.t("cli.tui.database.filter_none")
+        return i18n.t("cli.tui.database.filter_line", conditions=self._row_query.summary())
+
+    def _sync_pager(self) -> None:
+        # 翻页按钮按当前页位置禁用：到头了就没有可点的下一页，避免点出一个空页。
+        page = self._page
+        first = page.offset <= 0
+        last = page.offset >= page.last_offset
+        for button_id, disabled in (
+            ("db-first-page", first),
+            ("db-previous-page", first),
+            ("db-next-page", last),
+            ("db-last-page", last),
+        ):
+            button = self.query_one(f"#{button_id}", compat.Button)
+            button.disabled = disabled or self._selected is None
+
+    def action_add_filter(self) -> None:
+        """键位动作：添加筛选条件或搜索词。"""
+        if self._selected is None:
+            self._set_status(i18n.t("cli.tui.database.status_no_tables"))
+            return
+        info = self.selected_info
+        columns = i18n.t("cli.common.list_separator").join(column.name for column in (info.columns if info else ()))
+        compat.ask_text(
+            self.app,
+            title=i18n.t("cli.tui.database.filter_title", table=self._selected),
+            hint=i18n.t("cli.tui.database.filter_hint", columns=columns),
+            placeholder=i18n.t("cli.tui.database.filter_placeholder"),
+            confirm_label=i18n.t("cli.tui.database.filter_confirm"),
+            cancel_label=i18n.t("cli.tui.database.cancel"),
+            callback=self.on_filter_entered,
+        )
+
+    def on_filter_entered(self, text: str | None) -> None:
+        """输入框回调：带运算符的按条件下发，只写一个词的按全表搜索下发。
+
+        :param text: 用户输入的文本；取消时为 ``None``。
+        """
+        value = (text or "").strip()
+        if not value:
+            self._set_status(i18n.t("cli.tui.database.filter_cancelled"))
+            return
+        if is_condition(value):
+            self._row_query = self._row_query.with_filter(value)
+            message = i18n.t("cli.tui.database.status_filter_added", condition=value)
+        else:
+            self._row_query = self._row_query.with_search(value)
+            message = i18n.t("cli.tui.database.status_search_set", keyword=value)
+        self._set_status(message)
+        self.refresh_rows(reset_offset=True)
+
+    def action_clear_filters(self) -> None:
+        """键位动作：清空全部条件与搜索词。"""
+        if self._row_query.is_empty():
+            self._set_status(i18n.t("cli.tui.database.filter_none"))
+            return
+        self._row_query = RowQuery()
+        self._set_status(i18n.t("cli.tui.database.status_filters_cleared"))
+        self.refresh_rows(reset_offset=True)
+
+    def refresh_rows(self, *, reset_offset: bool = False) -> None:
+        """按当前条件重新读取数据项。
+
+        :param reset_offset: 为 ``True`` 时回到第一页。
+        """
+        self.run_worker(self.reload_rows(reset_offset=reset_offset), group="database-rows", exclusive=True)
+
+    def action_next_page(self) -> None:
+        """键位动作：下一页。"""
+        self.goto_offset(self._page.offset + PAGE_LIMIT)
+
+    def action_previous_page(self) -> None:
+        """键位动作：上一页。"""
+        self.goto_offset(self._page.offset - PAGE_LIMIT)
+
+    def action_first_page(self) -> None:
+        """键位动作：第一页。"""
+        self.goto_offset(0)
+
+    def action_last_page(self) -> None:
+        """键位动作：最后一页。"""
+        self.goto_offset(self._page.last_offset)
+
+    def goto_offset(self, offset: int) -> None:
+        """跳到指定偏移所在的那一页。
+
+        :param offset: 目标偏移，会被夹到 ``0`` 与末页之间。
+        """
+        if self._selected is None:
+            self._set_status(i18n.t("cli.tui.database.status_no_tables"))
+            return
+        bounded = max(0, min(offset, self._page.last_offset))
+        if bounded == self._page.offset:
+            self._set_status(
+                i18n.t("cli.tui.database.status_page_same", page=self._page.page_number, pages=self._page.pages)
+            )
+            return
+        self._set_status(i18n.t("cli.tui.database.status_page_loading"))
+        self.run_worker(self._goto_offset(bounded), group="database-rows", exclusive=True)
+
+    async def _goto_offset(self, offset: int) -> None:
+        self._offset = offset
+        if await self.reload_rows():
+            self._set_status(
+                i18n.t("cli.tui.database.status_page_loaded", page=self._page.page_number, pages=self._page.pages)
+            )
 
     def _list_width(self, list_view: compat.ListView) -> int:
         try:
@@ -1231,5 +1582,13 @@ class DatabasePage(compat.Vertical):
             self.request_delete()
         elif button_id == "db-refresh":
             self.action_refresh()
+        elif button_id == "db-first-page":
+            self.action_first_page()
+        elif button_id == "db-previous-page":
+            self.action_previous_page()
+        elif button_id == "db-next-page":
+            self.action_next_page()
+        elif button_id == "db-last-page":
+            self.action_last_page()
 
     # endregion

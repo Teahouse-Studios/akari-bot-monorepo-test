@@ -22,6 +22,13 @@ MAX_LIMIT = 200
 _INT_FIELDS = frozenset({"IntField", "BigIntField", "SmallIntField"})
 _TRUE_WORDS = frozenset({"true", "1", "yes", "y", "on"})
 _FALSE_WORDS = frozenset({"false", "0", "no", "n", "off"})
+# 文本列才能做包含与前后缀匹配；其余类型只支持等值与大小比较。
+_TEXT_FIELDS = frozenset({"CharField", "TextField"})
+_NULL_WORDS = frozenset({"null", "none"})
+# 运算符按「先长后短」排列：!= 必须先于 = 命中，否则 a!=b 会被切成列 a! 加 =b。
+_CONDITION_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
+_COMPARISON_LOOKUPS = {"=": "exact", "!=": "exact", ">": "gt", ">=": "gte", "<": "lt", "<=": "lte"}
+_TEXT_LOOKUPS = {"~": "icontains", "!~": "icontains", "^": "istartswith", "$": "iendswith"}
 
 
 class DataError(RuntimeError):
@@ -152,6 +159,57 @@ def _parse_assignment(raw: str, *, table: str) -> tuple[str, str]:
     return column, value
 
 
+# 把 ``<列><运算符><值>`` 拆成三段；运算符与值都可省（省了按等值处理）。
+def _split_condition(raw: str, *, table: str) -> tuple[str, str, str]:
+    text = raw.strip()
+    if not text:
+        raise DataError(f"表 {table} 的筛选条件不能为空。")
+    for operator in _CONDITION_OPERATORS:
+        column, found, value = text.partition(operator)
+        if found:
+            column = column.strip()
+            if not column:
+                raise DataError(f"表 {table} 的筛选条件 {raw!r} 缺少列名。")
+            return column, operator, value
+    # 只有列名：按「该列非空」理解，比默默当成等值空串更符合预期。
+    return text, "!=", "null"
+
+
+def _condition_query(fields: Mapping[str, Any], table: str, raw: str) -> Any:
+    from tortoise.expressions import Q
+
+    column, operator, value = _split_condition(raw, table=table)
+    field = _column_or_fail(fields, table, column)
+    kind = type(field).__name__
+    if operator in _COMPARISON_LOOKUPS and value.strip().casefold() in _NULL_WORDS:
+        empty = Q(**{f"{column}__isnull": True})
+        return empty if operator == "=" else ~empty
+    if operator in _TEXT_LOOKUPS and kind not in _TEXT_FIELDS:
+        raise DataError(f"表 {table} 的列 {column} 是 {kind}，不支持包含或前后缀匹配；改用 =、!= 或大小比较。")
+    coerced = _coerce(field, value, table=table, column=column)
+    # Tortoise 的等值筛选不支持 ``__exact`` 后缀，直接写列名。
+    lookup = _COMPARISON_LOOKUPS[operator] if operator in _COMPARISON_LOOKUPS else _TEXT_LOOKUPS[operator]
+    key = column if lookup == "exact" else f"{column}__{lookup}"
+    condition = Q(**{key: coerced})
+    return ~condition if operator.startswith("!") else condition
+
+
+# 在所有文本列上做不区分大小写的包含匹配；表里没有文本列时拒绝。
+def _search_query(fields: Mapping[str, Any], table: str, keyword: str) -> Any:
+    from tortoise.expressions import Q
+
+    text = keyword.strip()
+    if not text:
+        raise DataError("搜索关键词不能为空。")
+    names = [name for name, field in fields.items() if type(field).__name__ in _TEXT_FIELDS]
+    if not names:
+        raise DataError(f"表 {table} 没有可搜索的文本列；请改用 --filter 指定条件。")
+    combined = Q(**{f"{names[0]}__icontains": text})
+    for name in names[1:]:
+        combined |= Q(**{f"{name}__icontains": text})
+    return combined
+
+
 def _order_terms(fields: Mapping[str, Any], table: str, pk_name: str, order_by: str | None) -> list[str]:
     if not order_by:
         return [f"-{pk_name}"]
@@ -224,20 +282,32 @@ async def _rows(
     offset: int,
     order_by: str | None,
     filters: Sequence[str],
+    search: str = "",
+    count: bool = True,
 ) -> dict[str, Any]:
     table, model = _table_or_fail(table_name)
     fields = _fields(model)
     # 用户错误先判完再碰库：未知列与非法取值不该先撞上一条数据库报错。
     terms = _order_terms(fields, table, _pk_name(model), order_by)
-    conditions: dict[str, Any] = {}
-    for raw in filters:
-        column, value = _parse_assignment(raw, table=table)
-        field = _column_or_fail(fields, table, column)
-        conditions[column] = _coerce(field, value, table=table, column=column)
-    query = model.filter(**conditions)
-    total = await query.count()
+    conditions = [_condition_query(fields, table, raw) for raw in filters]
+    if search.strip():
+        conditions.append(_search_query(fields, table, search))
+    query = model.filter(*conditions)
+    # 大表上 COUNT 是一次全表扫描，故翻页可以只取本页；不数时 total 回 null，由调用方沿用上次的值。
+    total = await query.count() if count else None
     rows = await query.order_by(*terms).limit(limit).offset(offset).values(*fields)
-    return {"table": table, "total": total, "rows": [_row_payload(fields, row) for row in rows]}
+    return {
+        "table": table,
+        "total": total,
+        "rows": [_row_payload(fields, row) for row in rows],
+        # 回显分页与筛选状态：调用方据此显示「第几页 / 共几条 / 当前条件」，不必自己记。
+        "limit": limit,
+        "offset": offset,
+        "order_by": order_by or f"-{_pk_name(model)}",
+        "counted": count,
+        "filters": list(filters),
+        "search": search,
+    }
 
 
 async def _set(table_name: str, *, key: str, assignments: Sequence[str]) -> dict[str, Any]:
@@ -312,6 +382,8 @@ async def _dispatch(args: argparse.Namespace) -> Any:
                 offset=args.offset,
                 order_by=args.order_by,
                 filters=tuple(args.filter or ()),
+                search=args.search or "",
+                count=not args.no_count,
             )
         if args.command == "set":
             return await _set(args.table, key=args.key, assignments=tuple(args.set or ()))
@@ -341,7 +413,26 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     rows.add_argument("--offset", type=int, default=0, help="起始偏移，默认 0")
     rows.add_argument("--order-by", default=None, help="排序列，可带 :asc 或 :desc 后缀；缺省按主键倒序")
-    rows.add_argument("--filter", action="append", default=[], help="等值筛选，形如 <列>=<值>，可重复")
+    rows.add_argument(
+        "--filter",
+        action="append",
+        default=[],
+        help=(
+            "筛选条件，形如 <列><运算符><值>，可重复（多条之间是 AND）："
+            "= 等值、!= 不等、> >= < <= 比较、~ 包含、!~ 不包含、^ 前缀、$ 后缀；"
+            "值写 null 表示判空，只写列名表示该列非空"
+        ),
+    )
+    rows.add_argument(
+        "--no-count",
+        action="store_true",
+        help="不统计满足条件的总条数（total 回 null）：翻页时省掉一次全表扫描，调用方沿用上次的条数",
+    )
+    rows.add_argument(
+        "--search",
+        default="",
+        help="在所有文本列上做包含匹配（不区分大小写），与 --filter 同时给出时取 AND；大表上会全表扫描",
+    )
 
     setter = sub.add_parser("set", parents=[common], help="按主键改写一行的若干列，一次 UPDATE 下发")
     setter.add_argument("table", help="表标识")

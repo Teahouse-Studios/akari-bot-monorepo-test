@@ -121,18 +121,57 @@ def list_rows(
     table_name: TableArgument,
     limit: Annotated[int, typer.Option("--limit", help=i18n.t("cli.db.rows.option_limit"))] = DEFAULT_LIMIT,
     offset: Annotated[int, typer.Option("--offset", help=i18n.t("cli.db.rows.option_offset"))] = 0,
+    filter_: Annotated[
+        list[str] | None, typer.Option("--filter", "-f", help=i18n.t("cli.db.rows.option_filter"))
+    ] = None,
+    search: Annotated[str, typer.Option("--search", "-q", help=i18n.t("cli.db.rows.option_search"))] = "",
+    order_by: Annotated[str | None, typer.Option("--order-by", help=i18n.t("cli.db.rows.option_order_by"))] = None,
+    no_count: Annotated[bool, typer.Option("--no-count", help=i18n.t("cli.db.rows.option_no_count"))] = False,
     as_json: JsonOption = False,
     instance_path: InstancePathOption = None,
 ) -> None:
-    """按主键倒序分页读取一张表的数据项。"""
+    """按条件与排序分页读取一张表的数据项。"""
     instance = require_instance(instance_path)
-    payload = _guard(lambda: _call(instance, "rows", table_name, "--limit", str(limit), "--offset", str(offset)))
+    args = ["rows", table_name, "--limit", str(limit), "--offset", str(offset)]
+    for condition in filter_ or []:
+        args += ["--filter", condition]
+    if search:
+        args += ["--search", search]
+    if order_by:
+        args += ["--order-by", order_by]
+    if no_count:
+        args += ["--no-count"]
+    payload = _guard(lambda: _call(instance, *args))
     if as_json:
         _emit_json(payload)
         return
     rows = payload.get("rows") or []
     columns = list(rows[0]) if rows else []
-    console.print(i18n.t("cli.db.rows.table_title", table=table_name, total=payload.get("total") or 0, count=len(rows)))
+    # 总条数是筛选后的条数，页码据此算；offset 可能超出末页，仍按它算当前页。
+    counted = payload.get("total")
+    total = int(counted or 0)
+    offset_now = int(payload.get("offset") or 0)
+    console.print(
+        i18n.t(
+            "cli.db.rows.table_title" if counted is not None else "cli.db.rows.table_title_uncounted",
+            table=table_name,
+            total=total,
+            count=len(rows),
+            page=offset_now // max(int(payload.get("limit") or limit), 1) + 1,
+            pages=max(1, -(-total // max(int(payload.get("limit") or limit), 1))),
+            offset=offset_now,
+        )
+    )
+    conditions = list(payload.get("filters") or ())
+    if payload.get("search"):
+        conditions.append(i18n.t("cli.db.rows.search_term", keyword=payload.get("search")))
+    if conditions:
+        console.print(
+            i18n.t(
+                "cli.db.rows.conditions",
+                conditions=i18n.t("cli.common.list_separator").join(str(item) for item in conditions),
+            )
+        )
     if not columns:
         console.print(i18n.t("cli.db.rows.empty"))
         return

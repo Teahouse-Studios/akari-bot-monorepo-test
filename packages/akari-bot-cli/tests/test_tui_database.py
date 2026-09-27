@@ -15,8 +15,10 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui.app import TuiApp
 from akaribot.cli.tui.database import (
+    PAGE_LIMIT,
     ColumnInfo,
     DatabaseSource,
+    RowQuery,
     StaticDatabaseSource,
     SubprocessDatabaseSource,
     TableInfo,
@@ -112,7 +114,7 @@ async def _test_selecting_table_loads_rows():
         and len(texts) == 2
         and "dice" in texts[0]
         and "wiki" in texts[1]
-        and reads == [("module_status", 20, 0)]
+        and reads == [("module_status", PAGE_LIMIT, 0)]
     )
 
 
@@ -549,18 +551,308 @@ async def _test_broken_json_reaches_status():
 
 
 async def _test_row_page_expands_offset():
-    source = _source()
+    source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
-        page._offset = 20
+        page._offset = PAGE_LIMIT
         await page.reload_rows()
         await pilot.pause()
         await pilot.press("q")
         return list(source.reads)
 
     reads = await _with_page(body, source)
-    return reads == [("module_status", 20, 0), ("module_status", 20, 20)]
+    return reads == [("module_status", PAGE_LIMIT, 0), ("module_status", PAGE_LIMIT, PAGE_LIMIT)]
+
+
+def _big_rows(count: int = 130) -> tuple[dict[str, object], ...]:
+    return tuple({"module_name": f"mod-{index:03d}", "load": index % 2 == 0} for index in range(count))
+
+
+async def _test_paging_walks_pages():
+    # 线上表很大，界面一次只取一页：翻页改的是偏移，条数与页码由服务端回传的总数算。
+    pages = {"module_status": _big_rows()}
+    source = _source(pages=pages)
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        first = (page.page.page_number, page.page.pages, len(page.row_texts()), page.pager_states())
+        await pilot.press("n")
+        await page.wait_for_idle()
+        await pilot.pause()
+        second = (page.page.page_number, page.offset, len(page.row_texts()))
+        await pilot.press("G")
+        await page.wait_for_idle()
+        await pilot.pause()
+        last = (page.page.page_number, page.offset, len(page.row_texts()), page.pager_states())
+        await pilot.press("g")
+        await page.wait_for_idle()
+        await pilot.pause()
+        back = (page.page.page_number, page.offset)
+        await pilot.press("q")
+        return first, second, last, back, list(source.reads)
+
+    first, second, last, back, reads = await _with_page(body, source)
+    return (
+        first[0] == 1
+        and first[1] == 3
+        and first[2] == PAGE_LIMIT
+        and first[3]["db-previous-page"] is True
+        and first[3]["db-next-page"] is False
+        and second == (2, PAGE_LIMIT, PAGE_LIMIT)
+        and last[0] == 3
+        and last[1] == 2 * PAGE_LIMIT
+        and last[2] == 30
+        and last[3]["db-next-page"] is True
+        and last[3]["db-last-page"] is True
+        and back == (1, 0)
+        and reads
+        == [
+            ("module_status", PAGE_LIMIT, 0),
+            ("module_status", PAGE_LIMIT, PAGE_LIMIT),
+            ("module_status", PAGE_LIMIT, 2 * PAGE_LIMIT),
+            ("module_status", PAGE_LIMIT, 0),
+        ]
+    )
+
+
+async def _test_page_turns_skip_the_count():
+    # 纯翻页不再重算总数：大表上一次 COUNT 就是一次全表扫描，条数沿用上一页的。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        await pilot.press("n")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("n")
+        await page.wait_for_idle()
+        await pilot.pause()
+        caption = page.caption_text()
+        await pilot.press("q")
+        return list(source.queries), caption, page.page.rows_total
+
+    queries, caption, total = await _with_page(body, source)
+    # 末页只剩 30 条，条数沿用上一页统计出来的 130。
+    return (
+        [item[2] for item in queries] == [True, False, False]
+        and total == 130
+        and i18n.t("cli.tui.database.rows_caption", table="module_status", total=130, count=30, page=3, pages=3)
+        == caption
+    )
+
+
+async def _test_paging_stops_at_last_page():
+    # 已在末页时不再重复取数，只在状态栏说明。
+    source = _source(pages={"module_status": _big_rows(10)})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        before = len(source.reads)
+        await pilot.press("n")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return before, len(source.reads), status, page.pager_states()
+
+    before, after, status, states = await _with_page(body, source)
+    return (
+        before == 1
+        and after == 1
+        and status == i18n.t("cli.tui.database.status_page_same", page=1, pages=1)
+        and states["db-next-page"] is True
+    )
+
+
+async def _test_filter_narrows_rows():
+    # 按条件筛选：条件下发到数据源，列表收窄，总数与页码随之重算，偏移回到第一页。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        await pilot.press("n")
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.action_add_filter()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "load=false"
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return page.row_query, page.offset, page.page, status, list(source.queries)
+
+    query, offset, page_info, status, queries = await _with_page(body, source)
+    return (
+        query.filters == ("load=false",)
+        and offset == 0
+        and page_info.total == 65
+        and len(page_info.rows) == PAGE_LIMIT
+        and all(row["load"] is False for row in page_info.rows)
+        and status == i18n.t("cli.tui.database.status_filter_added", condition="load=false")
+        and queries[-1][1].filters == ("load=false",)
+        and queries[-1][2] is True
+    )
+
+
+async def _test_search_uses_text_columns():
+    # 只写一个词时按全表搜索下发，而不是当成条件。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.action_add_filter()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "mod-01"
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return page.row_query, page.page.total, page.row_texts(), page.filter_text()
+
+    query, total, rows, bar = await _with_page(body, source)
+    return (
+        query.search == "mod-01"
+        and query.filters == ()
+        and total == 10
+        and len(rows) == 10
+        and i18n.t("cli.tui.database.search_term", keyword="mod-01") in bar
+    )
+
+
+async def _test_search_word_with_operator_chars_stays_search():
+    # 搜索词里带 ~、= 之类字符时不能误判成条件：只有「列名 + 运算符」才算条件。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.on_filter_entered("~mod-01")
+        await page.wait_for_idle()
+        await pilot.pause()
+        searches = page.row_query
+        page.on_filter_entered("mod-012")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return searches, page.row_query
+
+    searches, word = await _with_page(body, source)
+    return searches.filters == () and searches.search == "~mod-01" and word.filters == () and word.search == "mod-012"
+
+
+async def _test_conditions_are_anded_and_clearable():
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.on_filter_entered("load=true")
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.on_filter_entered("module_name~mod-0")
+        await page.wait_for_idle()
+        await pilot.pause()
+        anded = (page.row_query, page.page.total, page.offset)
+        await pilot.press("ctrl+f")
+        await page.wait_for_idle()
+        await pilot.pause()
+        cleared = (page.row_query, page.page.total, page.filter_text())
+        await pilot.press("q")
+        return anded, cleared
+
+    anded, cleared = await _with_page(body, source)
+    return (
+        anded[0].filters == ("load=true", "module_name~mod-0")
+        and anded[1] == 50
+        and anded[2] == 0
+        and cleared[0].is_empty()
+        and cleared[1] == 130
+        and cleared[2] == i18n.t("cli.tui.database.filter_none")
+    )
+
+
+async def _test_switching_table_clears_filters():
+    # 条件里的列名只对原表成立，换表即清空。
+    source = _source(pages={"module_status": _big_rows(), "stored_data": ROWS["stored_data"]})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.on_filter_entered("load=false")
+        await page.wait_for_idle()
+        await pilot.pause()
+        filtered = page.row_query
+        await _select_table(pilot, page, "stored_data")
+        await pilot.press("q")
+        return filtered, page.row_query
+
+    filtered, after = await _with_page(body, source)
+    return filtered.filters == ("load=false",) and after.is_empty()
+
+
+async def _test_subprocess_source_passes_query_argv():
+    # 界面把条件、搜索与排序拼成 ``db rows`` 的 argv，core 侧才认得出这些参数。
+    calls: list[list[str]] = []
+
+    def runner(argv, **kwargs):
+        calls.append([str(item) for item in argv])
+        return subprocess.CompletedProcess(
+            list(argv), 0, stdout=json.dumps({"table": "t", "total": 0, "rows": []}), stderr=""
+        )
+
+    source = SubprocessDatabaseSource(runner=runner)
+    source.rows(
+        "module_status",
+        limit=PAGE_LIMIT,
+        offset=PAGE_LIMIT,
+        query=RowQuery(filters=("load=false", "module_name~w"), search="wik", order_by="module_name:asc"),
+    )
+    argv = calls[0]
+    tail = argv[argv.index("db") :]
+    return tail == [
+        "db",
+        "rows",
+        "module_status",
+        "--limit",
+        str(PAGE_LIMIT),
+        "--offset",
+        str(PAGE_LIMIT),
+        "--filter",
+        "load=false",
+        "--filter",
+        "module_name~w",
+        "--search",
+        "wik",
+        "--order-by",
+        "module_name:asc",
+        "--json",
+    ]
+
+
+async def _test_offset_clamps_to_last_page():
+    # 总数变小后偏移可能落到末页之外：夹回末页，而不是把用户留在空白页。
+    source = _source(pages={"module_status": _big_rows(10)})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page._offset = 5 * PAGE_LIMIT
+        await page.reload_rows()
+        await pilot.pause()
+        await pilot.press("q")
+        return page.page.page_number, page.offset, list(source.reads)
+
+    number, offset, reads = await _with_page(body, source)
+    # 三次读取：载入表、按越界偏移取一次、夹回末页再取一次。
+    return (
+        number == 1
+        and offset == 0
+        and reads
+        == [
+            ("module_status", PAGE_LIMIT, 0),
+            ("module_status", PAGE_LIMIT, 5 * PAGE_LIMIT),
+            ("module_status", PAGE_LIMIT, 0),
+        ]
+    )
 
 
 @func_case
@@ -588,4 +880,14 @@ async def test_tui_database(tester: Tester):
     await tester.test(_test_broken_json_is_reported, "JSON 解析失败如实上报")
     await tester.test(_test_broken_json_reaches_status, "解析失败进状态栏")
     await tester.test(_test_row_page_expands_offset, "重新读取沿用当前偏移")
+    await tester.test(_test_offset_clamps_to_last_page, "偏移超出末页时夹回末页")
+    await tester.test(_test_paging_walks_pages, "分页翻页：下一页、末页、首页")
+    await tester.test(_test_page_turns_skip_the_count, "纯翻页跳过总数统计")
+    await tester.test(_test_paging_stops_at_last_page, "末页不再重复取数")
+    await tester.test(_test_filter_narrows_rows, "按条件筛选并重算总数")
+    await tester.test(_test_search_uses_text_columns, "单词输入走全表搜索")
+    await tester.test(_test_search_word_with_operator_chars_stays_search, "带运算符字符的搜索词仍是搜索")
+    await tester.test(_test_conditions_are_anded_and_clearable, "多条条件是 AND 且可一键清空")
+    await tester.test(_test_switching_table_clears_filters, "换表清空条件")
+    await tester.test(_test_subprocess_source_passes_query_argv, "条件与排序拼成 db rows 的 argv")
     return tester
