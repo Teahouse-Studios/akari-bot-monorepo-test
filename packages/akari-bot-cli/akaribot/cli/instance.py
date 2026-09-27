@@ -368,6 +368,25 @@ def _as_tuple(value: Any) -> tuple[str, ...]:
     return ()
 
 
+# 按分发名去重需求串，保留首次出现的写法；认不出名字的写法按整串比较。
+def _dedupe_specs(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        try:
+            key = _canonical(Requirement(text).name)
+        except InvalidRequirement:
+            key = text.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
 def _short_name(dist: str) -> str:
     stem = dist.lower().replace("_", "-")
     for prefix in ("akari-bot-module-", "akari-bot-adapter-", "akari-bot-"):
@@ -524,6 +543,7 @@ class InstanceMeta:
             "\n"
             "[runtime]\n"
             f"venv = {json.dumps(venv)}  # 相对实例目录；空串表示使用当前环境\n"
+            "requirements = []  # 记录在清单里的运行库；环境重建时按它补装\n"
             "\n"
             "[dev]\n"
             f"workspace_root = {json.dumps(workspace_root)}  # 非空时安装一律取工作区内的本地路径\n"
@@ -564,6 +584,11 @@ class InstanceMeta:
         return str(self._section("runtime").get("venv", ""))
 
     @property
+    def requirements(self) -> tuple[str, ...]:
+        """实例清单里记录的运行库需求串，按记录顺序。"""
+        return _as_tuple(self._section("runtime").get("requirements", []))
+
+    @property
     def workspace_root(self) -> str:
         """本地工作区根；非空时安装取本地路径。"""
         return str(self._section("dev").get("workspace_root", ""))
@@ -577,6 +602,10 @@ class InstanceMeta:
     def set_venv(self, value: str) -> None:
         """设置 venv 相对路径；空串表示释放托管。"""
         self._section("runtime")["venv"] = value
+
+    def set_requirements(self, values: Sequence[str]) -> None:
+        """设置记录的运行库需求串，按分发名去重后写盘。"""
+        self._section("runtime")["requirements"] = _dedupe_specs(values)
 
     def set_workspace_root(self, value: str) -> None:
         """设置本地工作区根。"""

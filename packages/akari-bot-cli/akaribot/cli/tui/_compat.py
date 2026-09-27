@@ -68,6 +68,7 @@ __all__ = [
     "Widget",
     "TextPromptScreen",
     "align_rows",
+    "ask_choice",
     "ask_text",
     "app_test",
     "bind",
@@ -625,6 +626,101 @@ def ask_text(
         initial=initial,
     )
     push_screen(app, screen, callback)
+
+
+class ChoiceScreen(Screen[str | None]):
+    """多选一的模态框：每个选项一个按钮，Esc 或「取消」返回 ``None``。
+
+    :param title: 标题。
+    :param hint: 说明文字，写清各选项的差别。
+    :param options: ``(取值, 按钮文字)`` 列表，按给出顺序排列。
+    :param cancel_label: 取消按钮文字。
+    """
+
+    DEFAULT_CSS = """
+    ChoiceScreen {
+        align: center middle;
+    }
+    ChoiceScreen #choice-box {
+        width: 72;
+        max-width: 90%;
+        height: auto;
+        border: round $primary;
+        background: $surface;
+        padding: 1 1;
+    }
+    ChoiceScreen #choice-title {
+        text-style: bold;
+    }
+    ChoiceScreen #choice-hint {
+        color: $text-muted;
+    }
+    ChoiceScreen #choice-actions {
+        height: auto;
+        align-horizontal: right;
+    }
+    ChoiceScreen Button {
+        margin: 0 0 0 1;
+    }
+    """
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        options: Sequence[tuple[str, str]],
+        cancel_label: str,
+        hint: str = "",
+        id: str | None = None,
+    ) -> None:
+        super().__init__(id=id)
+        self.choice_title = title
+        self.choice_hint = hint
+        self.options = tuple(options)
+        self.cancel_label = cancel_label
+
+    def compose(self) -> ComposeResult:
+        """装配标题、说明与每个选项一个按钮。"""
+        with Vertical(id="choice-box"):
+            yield Static(plain_text(self.choice_title), id="choice-title", markup=False)
+            if self.choice_hint:
+                yield Static(plain_text(self.choice_hint), id="choice-hint", markup=False)
+            with Horizontal(id="choice-actions"):
+                for index, (_, label) in enumerate(self.options):
+                    yield Button(label, id=f"choice-{index}", variant="primary" if index == 0 else "default")
+                yield Button(self.cancel_label, id="choice-cancel")
+
+    def on_mount(self) -> None:
+        """打开即聚焦第一个选项，回车即选中它。"""
+        focus_now(self.query_one("#choice-0", Button))
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """按钮即结果：取消按钮返回 ``None``。"""
+        button_id = event.button.id or ""
+        if button_id == "choice-cancel":
+            self.dismiss(None)
+            return
+        if button_id.startswith("choice-"):
+            index = int(button_id.removeprefix("choice-"))
+            if 0 <= index < len(self.options):
+                self.dismiss(self.options[index][0])
+
+    def key_escape(self) -> None:
+        """Esc 取消。"""
+        self.dismiss(None)
+
+
+def ask_choice(
+    app: App[Any],
+    *,
+    title: str,
+    options: Sequence[tuple[str, str]],
+    cancel_label: str,
+    callback: Callable[[str | None], None],
+    hint: str = "",
+) -> None:
+    """弹出多选一的模态框，把选中的取值交给回调；取消时为 ``None``。"""
+    push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
 
 
 def pop_screen(app: App[Any]) -> Any:

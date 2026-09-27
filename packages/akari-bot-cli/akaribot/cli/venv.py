@@ -44,6 +44,8 @@ from akaribot.cli.instance import (
 UV_ENV_VAR = "AKARIBOT_UV"
 CACHE_DIR_ENV = "AKARIBOT_CACHE_DIR"
 PROBE_NAMES_ENV = "AKARI_PROBE_NAMES"
+PROBE_ALL_ENV = "AKARI_PROBE_ALL"
+PROBE_PREFIX_ENV = "AKARI_PROBE_PREFIX"
 REGISTRY_CACHE_TTL = 3600.0
 # 实时转发时保留的末尾行数，供失败时摘要使用。
 STREAM_TAIL_LINES = 40
@@ -410,6 +412,10 @@ def norm(name):
 
 
 wanted = {norm(item) for item in json.loads(os.environ.get("AKARI_PROBE_NAMES", "[]"))}
+# 界面要管理环境里的全部内容（含 httpx 这类传递依赖），故除按需过滤外还支持「全都要」。
+wanted_all = os.environ.get("AKARI_PROBE_ALL") == "1"
+# 前缀由 Python 侧传入：分发名前缀写错过一次，两边各写一份就会再错一次。
+prefix = os.environ.get("AKARI_PROBE_PREFIX") or "akari-bot-"
 distributions = {}
 for dist in metadata.distributions():
     raw = (dist.metadata["Name"] if dist.metadata else None) or ""
@@ -422,9 +428,9 @@ for dist in metadata.distributions():
             entry_points[f"{entry.group}|{entry.name}"] = entry.value
     except Exception:
         entry_points = {}
-    is_akari = name.startswith("akaribot-")
+    is_akari = name.startswith(prefix)
     in_groups = any(key.split("|", 1)[0] in GROUPS for key in entry_points)
-    if name in distributions or not (is_akari or in_groups or name in wanted):
+    if name in distributions or not (wanted_all or is_akari or in_groups or name in wanted):
         continue
     info = {
         "name": raw,
@@ -433,7 +439,7 @@ for dist in metadata.distributions():
         "requires": [],
         "editable": False,
     }
-    if is_akari or name in wanted:
+    if wanted_all or is_akari or name in wanted:
         try:
             info["requires"] = [str(item) for item in (dist.requires or [])]
         except Exception:
@@ -449,6 +455,8 @@ for dist in metadata.distributions():
             data = {}
         url = data.get("url") or ""
         info["editable"] = bool((data.get("dir_info") or {}).get("editable"))
+        # 直引用的来源地址：git 直引用装完只能靠它认出分发名，故原样带回。
+        info["url"] = url
         if url.startswith("file://"):
             info["path"] = url[len("file://") :]
     distributions[name] = info
@@ -466,6 +474,7 @@ class InstalledDist:
     :param editable: 是否为可编辑安装。
     :param requires: metadata 里的依赖串。
     :param entry_points: ``"<group>|<name>" -> value``。
+    :param url: 直引用的来源地址（``direct_url.json`` 的 ``url``）；非直引用安装时为空串。
     """
 
     dist: str
@@ -474,6 +483,7 @@ class InstalledDist:
     editable: bool = False
     requires: tuple[str, ...] = ()
     entry_points: Mapping[str, str] = field(default_factory=dict)
+    url: str = ""
 
     def requirement(self) -> str:
         """重装到另一环境时使用的 uv 参数 token。"""
@@ -486,18 +496,37 @@ class InstalledDist:
         return self.dist
 
 
-def _probe_env(names: Sequence[str]) -> dict[str, str]:
+def _probe_env(names: Sequence[str], *, all_distributions: bool = False) -> dict[str, str]:
     result = dict(os.environ)
     result[PROBE_NAMES_ENV] = json.dumps([canonical(name) for name in names])
+    result[PROBE_PREFIX_ENV] = AKARIBOT_PREFIX
+    if all_distributions:
+        result[PROBE_ALL_ENV] = "1"
+    else:
+        result.pop(PROBE_ALL_ENV, None)
     result["PYTHONIOENCODING"] = "utf-8"
     return result
 
 
-def probe_environment(python: Path, *, names: Sequence[str] = (), timeout: float = 120.0) -> dict[str, InstalledDist]:
-    """询问目标解释器里装了哪些 akaribot 包，以及指定名字的分发详情。
+def is_akari_dist(info: InstalledDist) -> bool:
+    """判断一个已装分发是否属于 AkariBot：名字带前缀，或提供了模块／适配器入口点。"""
+    if canonical(info.dist).startswith(AKARIBOT_PREFIX):
+        return True
+    return any(key.split("|", 1)[0] in AKARIBOT_ENTRY_POINT_GROUPS for key in info.entry_points)
+
+
+def probe_environment(
+    python: Path,
+    *,
+    names: Sequence[str] = (),
+    all_distributions: bool = False,
+    timeout: float = 120.0,
+) -> dict[str, InstalledDist]:
+    """询问目标解释器里装了哪些包，以及指定名字的分发详情。
 
     :param python: 目标解释器。
     :param names: 额外需要读取 metadata 的分发名（用于依赖冲突检查）。
+    :param all_distributions: 为真时返回环境里的全部分发（含传递依赖），否则只返回 AkariBot 相关。
     :return: 规范化分发名到已装信息的映射。
     :raises CliError: 解释器不存在或探测失败。
     """
@@ -506,7 +535,7 @@ def probe_environment(python: Path, *, names: Sequence[str] = (), timeout: float
     try:
         completed = subprocess.run(  # noqa: S603
             [str(python), "-c", _PROBE_SCRIPT],
-            env=_probe_env(names),
+            env=_probe_env(names, all_distributions=all_distributions),
             check=False,
             capture_output=True,
             text=True,
@@ -533,6 +562,7 @@ def probe_environment(python: Path, *, names: Sequence[str] = (), timeout: float
             editable=bool(item.get("editable")),
             requires=tuple(item.get("requires") or ()),
             entry_points={str(key): str(value) for key, value in (item.get("entry_points") or {}).items()},
+            url=str(item.get("url") or ""),
         )
     return result
 
@@ -1192,6 +1222,8 @@ class VenvStatus:
     :param exists: 解释器是否存在。
     :param packages: 已装 akaribot 包；探测失败时为 ``None``。
     :param error: 探测失败的原因。
+    :param installed: 环境里的全部分发（含传递依赖）；未探测时为 ``None``。
+    :param requirements: 实例清单里记录的运行库需求串。
     """
 
     mode: str
@@ -1200,11 +1232,18 @@ class VenvStatus:
     exists: bool
     packages: Mapping[str, InstalledDist] | None = None
     error: str = ""
+    installed: Mapping[str, InstalledDist] | None = None
+    requirements: tuple[str, ...] = ()
 
     @property
     def package_count(self) -> int:
         """已装 akaribot 包数量。"""
         return len(self.packages or {})
+
+    @property
+    def installed_count(self) -> int:
+        """环境里的全部已装分发数量；未探测时为 ``-1``。"""
+        return -1 if self.installed is None else len(self.installed)
 
     @property
     def core_version(self) -> str | None:
@@ -1213,19 +1252,70 @@ class VenvStatus:
         return info.version if info else None
 
 
-def venv_status(instance: Instance) -> VenvStatus:
-    """采集 venv 状态；解释器缺失或探测失败都不抛异常，交命令层展示。"""
+def venv_status(instance: Instance, *, all_distributions: bool = True) -> VenvStatus:
+    """采集 venv 状态；解释器缺失或探测失败都不抛异常，交命令层展示。
+
+    :param instance: 目标实例。
+    :param all_distributions: 为真时一并带回环境里的全部分发，供界面列清单。
+    """
     mode = "managed" if instance.managed else "external"
     python = instance.python
+    requirements = instance.meta.requirements
     if not instance.python_exists:
         return VenvStatus(
-            mode, instance.venv_dir, python, False, None, i18n.t("cli.venv_engine.interpreter_missing_bare")
+            mode,
+            instance.venv_dir,
+            python,
+            False,
+            None,
+            i18n.t("cli.venv_engine.interpreter_missing_bare"),
+            None,
+            requirements,
         )
     try:
-        packages = probe_environment(python)
+        installed = probe_environment(python, all_distributions=all_distributions)
     except CliError as exc:
-        return VenvStatus(mode, instance.venv_dir, python, True, None, str(exc))
-    return VenvStatus(mode, instance.venv_dir, python, True, packages)
+        return VenvStatus(mode, instance.venv_dir, python, True, None, str(exc), None, requirements)
+    packages = {name: info for name, info in installed.items() if is_akari_dist(info)}
+    return VenvStatus(mode, instance.venv_dir, python, True, packages, "", installed, requirements)
+
+
+def requirement_names(specs: Sequence[str]) -> dict[str, str]:
+    """把记录的需求串映射到分发名；认不出分发名的写法（裸地址）跳过。
+
+    :param specs: 需求串列表。
+    :return: 规范化分发名到原始需求串的映射。
+    """
+    result: dict[str, str] = {}
+    for spec in specs:
+        try:
+            name = canonical(Requirement(str(spec)).name)
+        except InvalidRequirement:
+            continue
+        result.setdefault(name, str(spec))
+    return result
+
+
+def install_runtime_requirements(
+    instance: Instance,
+    python: Path,
+    *,
+    runner: CommandRunner,
+) -> tuple[str, ...]:
+    """把实例清单里记录的运行库装进目标环境，返回实际交给 uv 的需求串。
+
+    adopt / recreate 会另建一个环境，只有记录在清单里的运行库才会跟过去；「仅装进环境」的那部分
+    按定义留在旧环境里。
+    """
+    specs = instance.meta.requirements
+    if not specs:
+        return ()
+    runner.run_checked(
+        install_argv(python, specs),
+        what=i18n.t("cli.venv_engine.what_install_runtime"),
+        stream=True,
+    )
+    return specs
 
 
 @dataclass(frozen=True)
@@ -1322,6 +1412,7 @@ def adopt(
     runner.run_checked(
         install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"), stream=True
     )
+    install_runtime_requirements(instance, target_python, runner=runner)
 
     step(3, 5, i18n.t("cli.venv_engine.step_verify_source"))
     if runner.dry_run:
@@ -1412,6 +1503,7 @@ def release(
     runner.run_checked(
         install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"), stream=True
     )
+    install_runtime_requirements(instance, target_python, runner=runner)
 
     step(3, 4, i18n.t("cli.venv_engine.step_verify_venv"))
     if runner.dry_run:
@@ -1504,6 +1596,7 @@ def recreate(
         what=i18n.t("cli.venv_engine.what_install_to_new_venv"),
         stream=True,
     )
+    install_runtime_requirements(instance, venv_python_path(staging), runner=runner)
 
     step(3, 4, i18n.t("cli.venv_engine.step_verify_new_venv"))
     if runner.dry_run:

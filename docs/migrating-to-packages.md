@@ -100,6 +100,12 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
    `~/.akaribot/instances.toml`。界面概览页的实例清单可以做同样的事，并直接回车切换当前管理的
    实例；按 `n` 登记时输入框已预填当前实例目录，回车即登记。
 
+   额外要用的运行库（第三方 SDK、自己打的包）用 `akaribot venv add <需求串>` 装进实例环境：
+   `--save`（缺省）同时记进 `akaribot.toml` 的 `runtime.requirements`，`venv recreate` 与
+   `venv adopt` 会按它补装；`--no-save` 只装进当前环境，重建后不保留。卸载用
+   `akaribot venv remove <分发名>`，`--no-save` 卸载但保留记录。界面环境页做同样的事，并列出
+   环境里的**全部**已装包（含 httpx 这类传递依赖）与每条记录的去处。
+
    要让实例随机器启动、崩了自动重启，先装常驻服务：`akaribot service install`（macOS 写
    `~/Library/LaunchAgents`，Linux 写 systemd 用户单元），再用 `akaribot instance policy <名>
    --autostart --restart-on-crash` 逐实例开策略。服务启动时只恢复**开了开机自启**且上次在跑的

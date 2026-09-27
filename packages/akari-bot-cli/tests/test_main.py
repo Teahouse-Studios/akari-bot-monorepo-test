@@ -317,6 +317,15 @@ async def _test_tui_entry_adopts_the_only_child_instance():
 async def test_cli_main(tester: Tester):
     """CLI 根命令：版本查询、裸调用帮助、参数顺序与冻结兜底"""
     _use_cli_locale()
+    # 实例解析会回落到注册表里的缺省实例，故整轮都指向一份空注册表：否则这几条用例的结果取决于
+    # 跑测试这台机器上登记过什么。
+    with TemporaryDirectory(prefix="akari-main-") as raw:
+        with mock.patch.dict(os.environ, {"AKARIBOT_HOME": str(Path(raw) / "home"), "AKARI_INSTANCE_DIR": ""}):
+            await _run_cli_main_cases(tester)
+    return tester
+
+
+async def _run_cli_main_cases(tester: Tester) -> None:
     await tester.test(_test_version_stdout_only_version, "--version 只输出版本号并退出 0")
     await tester.test(_test_version_matches_distribution_metadata, "版本号与分发 metadata 一致")
     await tester.test(_test_bare_invocation_prints_help, "裸调用打印帮助且无 Missing command")
@@ -330,5 +339,3 @@ async def test_cli_main(tester: Tester):
     await tester.test(_test_tui_entry_registers_active_instance, "进界面时自动登记所在实例")
     await tester.test(_test_tui_entry_hands_the_note_to_the_ui, "自动登记的结论交给界面报出")
     await tester.test(_test_tui_entry_adopts_the_only_child_instance, "唯一的下级实例被发现并切换")
-
-    return tester
