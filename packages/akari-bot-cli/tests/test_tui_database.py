@@ -157,6 +157,45 @@ async def _test_json_values_round_trip_in_editor():
     return values == {"value": '{"a": 1}'}
 
 
+async def _test_write_keeps_the_page_and_recounts():
+    # 翻到第几页是用户的上下文：改一行、删一行都留在当前页，但条数要重算（写入会改变总数）。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.action_next_page()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await _select_row(pilot, page, 0)
+        page.set_editor_value("load", "false")
+        await pilot.press("s")
+        await pilot.pause()
+        await pilot.press("s")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return page.offset, [item[2] for item in source.queries], list(source.writes)
+
+    offset, counts, writes = await _with_page(body, source)
+    return offset == PAGE_LIMIT and counts[-1] is True and len(writes) == 1
+
+
+async def _test_failed_rows_load_disables_the_pager():
+    source = _source()
+    source.rows = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        states = page.pager_states()
+        caption = page.caption_text()
+        await pilot.press("q")
+        return states, caption
+
+    states, caption = await _with_page(body, source)
+    # 失败原因写在标题行，且四个翻页按钮全部禁用。
+    return all(states.values()) and "boom" in caption
+
+
 async def _test_save_needs_two_presses():
     source = _source()
 
@@ -921,6 +960,8 @@ async def test_tui_database(tester: Tester):
     await tester.test(_test_primary_key_is_read_only, "主键只读不进编辑字段")
     await tester.test(_test_json_values_round_trip_in_editor, "JSON 值按 JSON 文本回填")
     await tester.test(_test_save_needs_two_presses, "保存需两次确认")
+    await tester.test(_test_write_keeps_the_page_and_recounts, "写入留在当前页并重算条数")
+    await tester.test(_test_failed_rows_load_disables_the_pager, "取数失败时禁用翻页按钮")
     await tester.test(_test_multi_column_save_is_one_call, "多列改动合并成一次写入")
     await tester.test(_test_unchanged_editor_writes_nothing, "未改动不写入")
     await tester.test(_test_save_passes_argv_to_cli, "保存以正确 argv 调用 CLI")

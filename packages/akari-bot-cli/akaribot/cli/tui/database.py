@@ -852,6 +852,8 @@ class DatabasePage(compat.Vertical):
     def on_mount(self) -> None:
         """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
+        # 取数前也先把翻页按钮按「还没有表」的状态摆好，免得首帧露出可点却是空的按钮。
+        self._sync_pager()
 
     def activate(self) -> None:
         """首次显示时读取表清单。"""
@@ -1071,17 +1073,19 @@ class DatabasePage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.database.status_table_loaded", table=table, rows=self._page.rows_total))
         return ok
 
-    async def reload_rows(self, *, reset_offset: bool = False) -> bool:
+    async def reload_rows(self, *, reset_offset: bool = False, count: bool | None = None) -> bool:
         """读取当前表的数据项并重绘列表。
 
         :param reset_offset: 为 ``True`` 时回到第一页。
+        :param count: 是否重算总条数；``None`` 表示按需决定（换页不数，其余都数）。
         :return: 是否成功。
         """
         if self._selected is None:
             return False
         offset = 0 if reset_offset else self._offset
         # 条件变化或重载时重新数总数；纯翻页沿用上次的条数，省掉大表上的一次全表扫描。
-        count = reset_offset or self._page.total is None
+        if count is None:
+            count = reset_offset or self._page.total is None
         try:
             page = await asyncio.to_thread(
                 self.source.rows,
@@ -1123,6 +1127,7 @@ class DatabasePage(compat.Vertical):
         list_view.clear()
         self._row_texts = ()
         self.query_one("#rows-caption", compat.Static).update(compat.plain_text(hint))
+        self._sync_pager()
         await self._clear_editor()
 
     async def _clear_editor(self) -> None:
@@ -1580,10 +1585,14 @@ class DatabasePage(compat.Vertical):
             return [WriteResult(False, f"{type(error).__name__}: {error}", "")]
 
     async def reload_tables_after_write(self, plan: WritePlan) -> None:
-        """写入成功后重新读取当前表的数据项，并尽量停在原来的主键上。"""
+        """写入成功后重新读取数据项，并尽量停在原来的主键上。
+
+        改一行或删一行都留在当前页：翻到第几页是用户的上下文，写入不该把它丢掉；新建则回第一页，
+        新行按缺省顺序本来就排在那里。条数一律重算——写入会改变总数。
+        """
         previous = self._row_key
         self._loaded_at = 0.0
-        await self.reload_rows(reset_offset=True)
+        await self.reload_rows(reset_offset=plan.kind == "insert", count=True)
         if plan.kind == "delete" or previous == self._row_key:
             return
         for index, row in enumerate(self._page.rows):

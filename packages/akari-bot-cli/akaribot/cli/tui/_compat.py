@@ -691,8 +691,9 @@ class ChoiceScreen(Screen[str | None]):
                 yield Button(self.cancel_label, id="choice-cancel")
 
     def on_mount(self) -> None:
-        """打开即聚焦第一个选项，回车即选中它。"""
-        focus_now(self.query_one("#choice-0", Button))
+        """打开即聚焦第一个选项，回车即选中它；没有选项时只留取消按钮。"""
+        if self.options:
+            focus_now(self.query_one("#choice-0", Button))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """按钮即结果：取消按钮返回 ``None``。"""
