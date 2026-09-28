@@ -768,7 +768,62 @@ async def _test_conditions_are_anded_and_clearable():
         and anded[2] == 0
         and cleared[0].is_empty()
         and cleared[1] == 130
-        and cleared[2] == i18n.t("cli.tui.database.filter_none")
+        and cleared[2].startswith(i18n.t("cli.tui.database.filter_none"))
+    )
+
+
+async def _test_sort_dialog_sets_order():
+    # 排序也下推到 core：界面只报「列:方向」，改排序后回到第一页。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.action_next_page()
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.action_set_order()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "module_name:asc"
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        sorts = (page.offset, page.row_query.order_by, page.filter_text())
+        await pilot.press("q")
+        return sorts, status, list(source.queries)
+
+    (offset, order, line), status, queries = await _with_page(body, source)
+    return (
+        offset == 0
+        and order == "module_name:asc"
+        and queries[-1][1].order_by == "module_name:asc"
+        and status == i18n.t("cli.tui.database.status_order_set", order="module_name:asc")
+        and "module_name:asc" in line
+    )
+
+
+async def _test_empty_order_falls_back_to_default():
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        await _select_table(pilot, page, "module_status")
+        page.on_order_entered("units:desc")
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.on_order_entered("   ")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        default_line = page.filter_text()
+        await pilot.press("q")
+        return status, default_line, page.row_query.order_by, list(source.queries)
+
+    status, default_line, order, queries = await _with_page(body, source)
+    return (
+        order == ""
+        and queries[-1][1].order_by == ""
+        and status == i18n.t("cli.tui.database.status_order_reset")
+        and i18n.t("cli.tui.database.order_default", column="-module_name") in default_line
     )
 
 
@@ -888,6 +943,8 @@ async def test_tui_database(tester: Tester):
     await tester.test(_test_search_uses_text_columns, "单词输入走全表搜索")
     await tester.test(_test_search_word_with_operator_chars_stays_search, "带运算符字符的搜索词仍是搜索")
     await tester.test(_test_conditions_are_anded_and_clearable, "多条条件是 AND 且可一键清空")
+    await tester.test(_test_sort_dialog_sets_order, "排序对话框把列与方向下推")
+    await tester.test(_test_empty_order_falls_back_to_default, "清空排序回到缺省主键倒序")
     await tester.test(_test_switching_table_clears_filters, "换表清空条件")
     await tester.test(_test_subprocess_source_passes_query_argv, "条件与排序拼成 db rows 的 argv")
     return tester

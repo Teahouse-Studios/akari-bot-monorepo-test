@@ -769,6 +769,7 @@ class DatabasePage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.database.bind_search")),
         ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel")),
         ("f", "add_filter", i18n.t("cli.tui.database.bind_filter")),
+        ("o", "set_order", i18n.t("cli.tui.database.bind_order")),
         ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters")),
         ("n", "next_page", i18n.t("cli.tui.database.bind_next_page")),
         ("p", "previous_page", i18n.t("cli.tui.database.bind_previous_page")),
@@ -795,7 +796,6 @@ class DatabasePage(compat.Vertical):
         self._page = RowPage()
         self._offset = 0
         self._row_query = RowQuery()
-        self._order_by = ""
         self._row_index: int | None = None
         self._row_key: str = ""
         self._original: dict[str, Any] = {}
@@ -1080,12 +1080,16 @@ class DatabasePage(compat.Vertical):
         if self._selected is None:
             return False
         offset = 0 if reset_offset else self._offset
-        query = replace(self._row_query, order_by=self._order_by)
         # 条件变化或重载时重新数总数；纯翻页沿用上次的条数，省掉大表上的一次全表扫描。
         count = reset_offset or self._page.total is None
         try:
             page = await asyncio.to_thread(
-                self.source.rows, self._selected, limit=PAGE_LIMIT, offset=offset, query=query, count=count
+                self.source.rows,
+                self._selected,
+                limit=PAGE_LIMIT,
+                offset=offset,
+                query=self._row_query,
+                count=count,
             )
         except Exception as error:  # noqa: BLE001 - 取数失败只影响本页展示
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1245,8 +1249,14 @@ class DatabasePage(compat.Vertical):
 
     def _filter_text(self) -> str:
         if self._row_query.is_empty():
-            return i18n.t("cli.tui.database.filter_none")
-        return i18n.t("cli.tui.database.filter_line", conditions=self._row_query.summary())
+            line = i18n.t("cli.tui.database.filter_none")
+        else:
+            line = i18n.t("cli.tui.database.filter_line", conditions=self._row_query.summary())
+        return i18n.t("cli.tui.database.filter_with_order", line=line, order=self.sort_text())
+
+    def sort_text(self) -> str:
+        """返回当前排序的展示文本。"""
+        return self._row_query.order_by or i18n.t("cli.tui.database.order_default", column=self._default_order_label())
 
     def _sync_pager(self) -> None:
         # 翻页按钮按当前页位置禁用：到头了就没有可点的下一页，避免点出一个空页。
@@ -1302,9 +1312,49 @@ class DatabasePage(compat.Vertical):
         if self._row_query.is_empty():
             self._set_status(i18n.t("cli.tui.database.filter_none"))
             return
-        self._row_query = RowQuery()
+        # 排序不是条件，清空条件时留着它。
+        self._row_query = RowQuery(order_by=self._row_query.order_by)
         self._set_status(i18n.t("cli.tui.database.status_filters_cleared"))
         self.refresh_rows(reset_offset=True)
+
+    def action_set_order(self) -> None:
+        """键位动作：改排序方式。"""
+        if self._selected is None:
+            self._set_status(i18n.t("cli.tui.database.status_no_tables"))
+            return
+        info = self.selected_info
+        columns = i18n.t("cli.common.list_separator").join(column.name for column in (info.columns if info else ()))
+        compat.ask_text(
+            self.app,
+            title=i18n.t("cli.tui.database.order_title", table=self._selected),
+            hint=i18n.t("cli.tui.database.order_hint", columns=columns),
+            placeholder=i18n.t("cli.tui.database.order_placeholder"),
+            initial=self._row_query.order_by,
+            confirm_label=i18n.t("cli.tui.database.order_confirm"),
+            cancel_label=i18n.t("cli.tui.database.cancel"),
+            callback=self.on_order_entered,
+        )
+
+    def on_order_entered(self, text: str | None) -> None:
+        """输入框回调：设定排序；空输入回到缺省（主键倒序）。
+
+        :param text: 用户输入的排序方式；取消时为 ``None``。
+        """
+        if text is None:
+            self._set_status(i18n.t("cli.tui.database.order_cancelled"))
+            return
+        value = text.strip()
+        self._row_query = replace(self._row_query, order_by=value)
+        self._set_status(
+            i18n.t("cli.tui.database.status_order_set", order=self.sort_text())
+            if value
+            else i18n.t("cli.tui.database.status_order_reset")
+        )
+        self.refresh_rows(reset_offset=True)
+
+    def _default_order_label(self) -> str:
+        info = self.selected_info
+        return f"-{info.pk_name}" if info is not None and info.pk_name else "-"
 
     def refresh_rows(self, *, reset_offset: bool = False) -> None:
         """按当前条件重新读取数据项。
