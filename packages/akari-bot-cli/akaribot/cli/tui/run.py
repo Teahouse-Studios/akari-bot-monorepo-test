@@ -15,6 +15,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -108,8 +109,8 @@ class RunSource(Protocol):
     def status(self) -> Sequence[ProcessRecord]:
         """返回状态表，本轮至少一行。"""
 
-    def start(self) -> RunResult:
-        """启动实例。"""
+    def start(self, *, adapter: str = "") -> RunResult:
+        """启动实例；``adapter`` 非空时只启动该平台的适配器。"""
 
     def stop(self) -> RunResult:
         """停止本页启动的实例。"""
@@ -147,6 +148,8 @@ class StaticRunSource:
         self.stop_exit_code = stop_exit_code
         self.started_at = "2026-01-01 00:00:00"
         self.calls = {"status": 0, "start": 0, "stop": 0, "restart": 0}
+        # 每次启动请求带的适配器名，供自动化断言核对界面确实把平台交给了数据源。
+        self.adapters: list[str] = []
         self._results = dict(results or {})
 
     def set_result(self, action: str, result: RunResult) -> None:
@@ -162,9 +165,10 @@ class StaticRunSource:
         self.calls["status"] += 1
         return tuple(self.records)
 
-    def start(self) -> RunResult:
+    def start(self, *, adapter: str = "") -> RunResult:
         """见 :meth:`RunSource.start`。"""
         self.calls["start"] += 1
+        self.adapters.append(adapter)
         override = self._results.get("start")
         if override is not None:
             return override
@@ -266,11 +270,14 @@ class SubprocessRunSource:
         self.calls["status"] += 1
         return self._records_from(self._state())
 
-    def start(self) -> RunResult:
+    def start(self, *, adapter: str = "") -> RunResult:
         """见 :meth:`RunSource.start`：经 ``run --detach`` 启动，界面不持有进程句柄。"""
         self.calls["start"] += 1
+        argv = ["run", "--detach", "--json"]
+        if adapter:
+            argv += ["--adapter", adapter]
         try:
-            payload = self._invoke("start", "run", "--detach", "--json")
+            payload = self._invoke("start", *argv)
         except RunSourceError as error:
             return self._failed("cli.tui.run.label_start", str(error))
         if not payload.get("started"):
@@ -467,11 +474,14 @@ class RunPage(compat.Vertical):
     }
     """
 
+    # 重启、指定适配器与前台运行在操作行上都有按钮，键位属低频入口，不进页脚。
     BINDINGS = compat.bindings(
         ("s", "start", i18n.t("cli.tui.run.label_start")),
         ("x", "stop", i18n.t("cli.tui.run.label_stop")),
-        ("ctrl+r", "restart", i18n.t("cli.tui.run.label_restart")),
+        ("ctrl+r", "restart", i18n.t("cli.tui.run.label_restart"), False),
         ("r", "refresh", i18n.t("cli.tui.run.bind_refresh")),
+        ("a", "adapter_start", i18n.t("cli.tui.run.bind_adapter_start"), False),
+        ("f", "foreground", i18n.t("cli.tui.run.label_foreground"), False),
     )
 
     can_focus = True
@@ -491,6 +501,9 @@ class RunPage(compat.Vertical):
         self.last_result: str = ""
         self._records: tuple[ProcessRecord, ...] = ()
         self._busy: bool = False
+        self._pending = compat.PendingConfirm()
+        self._adapter: str = ""
+        self._pending_text: str = ""
         self._table_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
@@ -502,6 +515,8 @@ class RunPage(compat.Vertical):
             yield compat.Button(i18n.t("cli.tui.run.label_start"), id="start", variant="primary")
             yield compat.Button(i18n.t("cli.tui.run.label_stop"), id="stop", variant="error")
             yield compat.Button(i18n.t("cli.tui.run.label_restart"), id="restart", variant="warning")
+            yield compat.Button(i18n.t("cli.tui.run.label_adapter_start"), id="adapter-start")
+            yield compat.Button(i18n.t("cli.tui.run.label_foreground"), id="foreground")
             yield compat.Button(i18n.t("cli.tui.run.label_refresh"), id="refresh")
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -548,18 +563,30 @@ class RunPage(compat.Vertical):
 
     # region 数据读取与操作
 
-    def refresh_status(self) -> None:
+    def refresh_status(self, *, manual: bool = False) -> None:
         """读取状态表并重绘。
 
         状态经 ``akaribot run --status --json`` 子进程取得，故放到后台任务里执行；同一时刻只保留
         最新一次刷新，响应慢时不会堆积。数据源异常只更新状态栏，不中断界面。
-        """
-        self.run_worker(self._refresh, group="run-status", exclusive=True)
 
-    async def _refresh(self) -> None:
+        :param manual: 是否由用户显式刷新；轮询不作废待确认，手动刷新才作废。
+        """
+        self.run_worker(partial(self._refresh, manual=manual), group="run-status", exclusive=True)
+
+    async def _refresh(self, *, manual: bool = False) -> None:
+        # 轮询不动待确认：2 秒一次的摘要会把确认窗口压成「同一周期内按两次」。
+        if manual:
+            self._pending.reset()
+            self._pending_text = ""
+        elif self._pending_text and not self._pending.pending_key():
+            # 已超时的提示不再作数，撤掉它并把状态栏还给摘要。
+            self._pending_text = ""
         try:
             records = tuple(await asyncio.to_thread(self.source.status))
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+            # 状态读不到就无法判断语境，待确认随本轮失效。
+            self._pending.reset()
+            self._pending_text = ""
             self.last_error = f"{type(error).__name__}: {error}"
             self._records = ()
             self._render_table()
@@ -570,12 +597,21 @@ class RunPage(compat.Vertical):
         self.last_error = ""
         self._render_table()
         self._sync_actions()
-        self._set_status(self.last_result or self._summary())
+        # 有待确认时状态栏优先显示那句提示，轮询摘要不得把它盖掉。
+        self._set_status(self._pending_text or self.last_result or self._summary())
 
     def _on_tick(self) -> None:
         if not self.display:
             return
         self.refresh_status()
+
+    def reset_pending(self) -> None:
+        """作废待确认状态；切页时由 App 调用。"""
+        self._pending.reset()
+        if not self._pending_text:
+            return
+        self._pending_text = ""
+        self._set_status(self.last_result or self._summary())
 
     def request_start(self) -> None:
         """发起启动；已有进程在运行时给出提示而不动作。"""
@@ -587,7 +623,7 @@ class RunPage(compat.Vertical):
                 title=i18n.t("cli.tui.run.label_start"),
             )
             return
-        self._start_operation(i18n.t("cli.tui.run.label_start"), self.source.start)
+        self._request_start(self._adapter)
 
     def request_stop(self) -> None:
         """发起停止；没有本页启动的进程时给出提示而不动作。"""
@@ -599,11 +635,77 @@ class RunPage(compat.Vertical):
                 title=i18n.t("cli.tui.run.label_stop"),
             )
             return
+        if not self._pending.arm("stop"):
+            self._announce_pending(i18n.t("cli.tui.run.confirm_stop", hotkey="x"))
+            return
         self._start_operation(i18n.t("cli.tui.run.label_stop"), self.source.stop)
 
     def request_restart(self) -> None:
         """发起重启。"""
+        if not self._pending.arm("restart"):
+            self._announce_pending(i18n.t("cli.tui.run.confirm_restart", hotkey="ctrl+r"))
+            return
         self._start_operation(i18n.t("cli.tui.run.label_restart"), self.source.restart)
+
+    def request_adapter_start(self) -> None:
+        """发起「只启动指定适配器」；未选过平台时先弹输入框收集。"""
+        if self.running:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.run.notify_start_running"),
+                severity="warning",
+                title=i18n.t("cli.tui.run.label_adapter_start"),
+            )
+            return
+        if self._pending.pending_key() == self._start_key(self._adapter) and self._adapter:
+            self._request_start(self._adapter)
+            return
+        compat.ask_text(
+            self.app,
+            title=i18n.t("cli.tui.run.adapter_title"),
+            hint=i18n.t("cli.tui.run.adapter_hint"),
+            placeholder=i18n.t("cli.tui.run.adapter_placeholder"),
+            confirm_label=i18n.t("cli.tui.run.adapter_confirm"),
+            cancel_label=i18n.t("cli.tui.run.adapter_cancel"),
+            initial=self._adapter,
+            callback=self._set_adapter,
+        )
+
+    def _set_adapter(self, value: str | None) -> None:
+        chosen = (value or "").strip()
+        if not chosen:
+            self._pending.reset()
+            self._set_status(i18n.t("cli.tui.run.adapter_cancelled"))
+            return
+        self._adapter = chosen
+        # 输入框刚问过一次，此处重新起算，使确认仍由下一次按键给出。
+        self._pending.reset()
+        self._request_start(chosen)
+
+    def _request_start(self, adapter: str) -> None:
+        if not self._pending.arm(self._start_key(adapter)):
+            self._announce_pending(
+                i18n.t(
+                    "cli.tui.run.confirm_start_adapter" if adapter else "cli.tui.run.confirm_start",
+                    platform=adapter,
+                    hotkey="a" if adapter else "s",
+                )
+            )
+            return
+        label = i18n.t("cli.tui.run.label_start")
+        func = partial(self.source.start, adapter=adapter) if adapter else self.source.start
+        self._start_operation(label, func)
+
+    def _start_key(self, adapter: str) -> str:
+        return f"start:{adapter}"
+
+    def _announce_pending(self, text: str) -> None:
+        self._pending_text = text
+        self._set_status(text)
+
+    def _foreground_command(self) -> str:
+        command = f"{RUN_LABEL} --foreground"
+        return f"{command} --adapter {self._adapter}" if self._adapter else command
 
     def _start_operation(self, label: str, func: Callable[[], RunResult]) -> None:
         if self._busy:
@@ -614,6 +716,8 @@ class RunPage(compat.Vertical):
                 title=i18n.t("cli.tui.common.busy_title"),
             )
             return
+        self._pending.reset()
+        self._pending_text = ""
         self._busy = True
         self.last_result = ""
         self._sync_actions()
@@ -727,9 +831,13 @@ class RunPage(compat.Vertical):
         self.query_one("#start", compat.Button).disabled = self._busy or running
         self.query_one("#stop", compat.Button).disabled = self._busy or not running
         self.query_one("#restart", compat.Button).disabled = self._busy
+        self.query_one("#adapter-start", compat.Button).disabled = self._busy or running
         self.query_one("#refresh", compat.Button).disabled = self._busy
 
     def _set_status(self, text: str) -> None:
+        # 状态栏被别的结论占用时，待确认提示不再作数，切页复位不应把它盖回摘要。
+        if text != self._pending_text:
+            self._pending_text = ""
         width = self._inner_width()
         clipped = compat.truncate_cells(text, width) if width > 0 else text
         self._status_rendered = clipped
@@ -752,8 +860,12 @@ class RunPage(compat.Vertical):
             self.request_stop()
         elif button_id == "restart":
             self.request_restart()
+        elif button_id == "adapter-start":
+            self.request_adapter_start()
+        elif button_id == "foreground":
+            self.action_foreground()
         elif button_id == "refresh":
-            self.refresh_status()
+            self.refresh_status(manual=True)
 
     def action_start(self) -> None:
         """键位动作：启动实例。"""
@@ -767,9 +879,19 @@ class RunPage(compat.Vertical):
         """键位动作：重启实例。"""
         self.request_restart()
 
+    def action_adapter_start(self) -> None:
+        """键位动作：只启动指定平台的适配器。"""
+        self.request_adapter_start()
+
+    def action_foreground(self) -> None:
+        """键位动作：给出前台运行的命令与后果，界面内不执行。"""
+        text = i18n.t("cli.tui.run.foreground_hint", command=self._foreground_command())
+        compat.notify(self.app, text, severity="warning", title=i18n.t("cli.tui.run.label_foreground"))
+        self._set_status(text)
+
     def action_refresh(self) -> None:
         """键位动作：刷新状态表。"""
-        self.refresh_status()
+        self.refresh_status(manual=True)
 
     # endregion
 

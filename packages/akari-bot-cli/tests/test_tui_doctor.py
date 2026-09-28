@@ -1,8 +1,8 @@
-"""体检页：结论列表、检查项统计与重新体检。
+"""体检页：结论列表、检查项统计、重新体检与跳转处理页面。
 
-本文件固定三条链路：状态栏汇总 error/warning 与实现来源；退出码 1 但 stdout 仍是完整 JSON 时结论
-照常展示；取数失败只在状态栏给出原因，界面不崩。文案键尚未并入 locales，故断言一律针对状态与结构
-（状态栏文案键、结论条数、选中项、数据源调用次数），不比对中文文案。
+本文件固定四条链路：状态栏汇总 error/warning 与实现来源；退出码 1 但 stdout 仍是完整 JSON 时结论
+照常展示；取数失败只在状态栏给出原因，界面不崩；回车按结论种类切到对应处理页面。新文案键尚未并入
+locales 时先从片段合并一份语言快照，故断言取到的插值文案是真实渲染结果。
 """
 
 import json
@@ -15,7 +15,10 @@ from unittest.mock import patch
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui.adapters import StaticAdapterSource
 from akaribot.cli.tui.app import TuiApp
+from akaribot.cli.tui.config import StaticConfigSource
+from akaribot.cli.tui.dashboard import StaticDashboardSource
 from akaribot.cli.tui.doctor import (
     DoctorChecks,
     DoctorConflict,
@@ -29,6 +32,8 @@ from akaribot.testing import Tester, func_case
 
 PORT_MESSAGE = "端口冲突：bot_a 与 bot_b 都监听 0.0.0.0:8080"
 ORPHAN_MESSAGE = "孤立配置：bot_kook 的适配器未安装"
+
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "doctor_dev_misc.json"
 
 PORT_CONFLICT = DoctorConflict(
     kind="port",
@@ -46,6 +51,13 @@ ORPHAN_CONFLICT = DoctorConflict(
     instances=("bot_kook",),
     detail={"config_file": "config/bot_kook.toml"},
 )
+CONFIG_CONFLICT = DoctorConflict(
+    kind="config",
+    level="error",
+    message="配置文件无法解析：config/bot_x.toml",
+    detail={"error": "缺少 platform"},
+)
+UNKNOWN_CONFLICT = DoctorConflict(kind="quota", level="warning", message="额度结论：无法定位处理入口")
 REPORT_CHECKS = DoctorChecks(
     instances=3,
     installed_adapters=("telegram", "discord"),
@@ -59,9 +71,33 @@ STATUS_LOADING = "cli.tui.doctor.status_loading"
 STATUS_FAILED = "cli.tui.doctor.status_failed"
 
 
+def _fragment_entries() -> dict[str, str]:
+    try:
+        data = json.loads(FRAGMENT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(key): str(value) for key, value in data.items()}
+
+
 def _use_cli_locale() -> None:
-    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
-    i18n.connect_locale_snapshot("akaribot-cli")
+    # 先触发包内连接，随后的 connect 才不会被它按包内目录重建覆盖。
+    i18n.locale()
+    extra = _fragment_entries()
+    if not extra:
+        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+        i18n.connect_locale_snapshot("akaribot-cli")
+        return
+    with TemporaryDirectory(prefix="akari-locale-") as raw:
+        directory = Path(raw)
+        for name in ("zh_cn.json", "en_us.json"):
+            data = json.loads((Path(i18n.locales_dir()) / name).read_text(encoding="utf-8"))
+            if name == "zh_cn.json":
+                data.update(extra)
+            (directory / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(directory)], "akaribot-cli")
+        i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _snapshot(conflicts=(PORT_CONFLICT, ORPHAN_CONFLICT), **kwargs) -> DoctorSnapshot:
@@ -80,8 +116,10 @@ def _snapshot(conflicts=(PORT_CONFLICT, ORPHAN_CONFLICT), **kwargs) -> DoctorSna
     return DoctorSnapshot(**params)
 
 
-async def _with_page(source, body, *, size=(150, 40)):
-    app = TuiApp(sources={"doctor": source}, initial_page="doctor", boot_started_at=time.monotonic())
+async def _with_page(source, body, *, size=(150, 40), sources=None):
+    mapping = {"doctor": source}
+    mapping.update(sources or {})
+    app = TuiApp(sources=mapping, initial_page="doctor", boot_started_at=time.monotonic())
     async with compat.app_test(app, size=size) as pilot:
         page = app.page("doctor")
         await page.wait_for_idle()
@@ -446,9 +484,110 @@ def _test_implementation_kind_detection():
     )
 
 
+async def _test_enter_jumps_to_target_page():
+    # 平台类结论去适配器页，config 类去配置页，落不到页面的去概览页。
+    source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT, UNKNOWN_CONFLICT)))
+    jump_sources = {
+        "adapters": StaticAdapterSource(),
+        "config": StaticConfigSource(),
+        "dashboard": StaticDashboardSource(),
+    }
+
+    async def body(app, page, pilot):
+        observed = []
+        list_view = page.query_one("#conflict-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        for expected in ("adapters", "config", "dashboard"):
+            await pilot.press("enter")
+            await pilot.pause()
+            observed.append((expected, app.active_page, page.status_text))
+            app.show_page("doctor")
+            await pilot.pause()
+            if expected != "dashboard":
+                # 上下键仍归列表：类型按钮改绑回车不能把游标键一起丢掉。
+                await pilot.press("down")
+                await pilot.pause()
+        await pilot.press("q")
+        return observed
+
+    observed = await _with_page(source, body, sources=jump_sources)
+    return all(
+        expected == page_key
+        and status == i18n.t("cli.tui.doctor.status_jumped", page=i18n.t(f"cli.tui.nav.{expected}"))
+        for expected, page_key, status in observed
+    )
+
+
+async def _test_button_jumps_to_target_page():
+    source = StaticDoctorSource(_snapshot(conflicts=(CONFIG_CONFLICT,)))
+
+    async def body(app, page, pilot):
+        page.query_one("#open-conflict", compat.Button).press()
+        await pilot.pause()
+        observed = (app.active_page, page.status_text)
+        await pilot.press("q")
+        return observed
+
+    observed = await _with_page(source, body, sources={"config": StaticConfigSource()})
+    return observed == ("config", i18n.t("cli.tui.doctor.status_jumped", page=i18n.t("cli.tui.nav.config")))
+
+
+async def _test_enter_without_conflicts_reports_nothing():
+    source = StaticDoctorSource(_snapshot(conflicts=()))
+
+    async def body(app, page, pilot):
+        await pilot.press("enter")
+        await pilot.pause()
+        observed = (app.active_page, page.status_text)
+        await pilot.press("q")
+        return observed
+
+    observed = await _with_page(source, body)
+    return observed == ("doctor", i18n.t("cli.tui.doctor.status_nothing"))
+
+
+async def _test_detail_shows_next_step():
+    source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, UNKNOWN_CONFLICT)))
+
+    async def body(app, page, pilot):
+        list_view = page.query_one("#conflict-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        mapped = page.detail_text
+        list_view.index = 1
+        await pilot.pause()
+        unmapped = page.detail_text
+        await pilot.press("q")
+        return mapped, unmapped
+
+    mapped, unmapped = await _with_page(source, body)
+    return (
+        i18n.t("cli.tui.doctor.next_step_page", page=i18n.t("cli.tui.nav.adapters")) in mapped
+        and i18n.t("cli.tui.doctor.next_step_cli") in unmapped
+        and "${" not in mapped
+        and "${" not in unmapped
+    )
+
+
+async def _test_click_only_moves_highlight():
+    # 单击一行只更新高亮与详情：列表把点击也发成 Selected，跳转只认键盘回车。
+    source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT)))
+
+    async def body(app, page, pilot):
+        await pilot.click("#conflict-list > ListItem")
+        await pilot.pause()
+        observed = (app.active_page, page.detail_text)
+        await pilot.press("q")
+        return observed
+
+    observed = await _with_page(source, body)
+    return observed[0] == "doctor" and PORT_MESSAGE in observed[1]
+
+
 @func_case
 async def test_tui_doctor(tester: Tester):
-    """cli.tui.doctor: 体检页结论、统计与重新体检测试"""
+    """cli.tui.doctor: 体检页结论、统计、重新体检与跳转测试"""
     _use_cli_locale()
     await tester.test(_test_lists_conflicts_and_summarizes, "列出结论行并汇总 error/warning")
     await tester.test(_test_exit_code_one_with_json_still_renders, "退出码 1 但 stdout 是 JSON 仍展示结论")
@@ -458,6 +597,11 @@ async def test_tui_doctor(tester: Tester):
     await tester.test(_test_detail_follows_selection, "详情区随选中项切换")
     await tester.test(_test_refresh_key_reloads, "按 r 重新取数")
     await tester.test(_test_busy_disables_refresh_button, "取数期间禁用按钮并显示进行中")
+    await tester.test(_test_enter_jumps_to_target_page, "回车按结论种类切到处理页面")
+    await tester.test(_test_button_jumps_to_target_page, "按钮切到处理页面")
+    await tester.test(_test_enter_without_conflicts_reports_nothing, "无结论时回车只提示")
+    await tester.test(_test_click_only_moves_highlight, "单击一行只移动高亮")
+    await tester.test(_test_detail_shows_next_step, "详情给出下一步或终端命令")
     await tester.test(_test_subprocess_source_argv_and_env, "子进程源构造 argv 与环境")
     await tester.test(_test_normalize_defaults_and_shape, "负载归一化与形状校验")
     await tester.test(_test_implementation_kind_detection, "区分 core 入口与 CLI 本地实现")

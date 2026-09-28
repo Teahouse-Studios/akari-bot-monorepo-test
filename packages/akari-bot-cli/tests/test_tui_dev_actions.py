@@ -1,11 +1,15 @@
 """Dev 页动作：跑测试与生成脚手架。
 
 包清单本身只读，两个动作各起一次 CLI 子进程：``t`` 跑 ``akaribot test``，``n`` 跑 ``akaribot new``。
-断言全部走注入的替身数据源——真实测试套件要跑数分钟，脚手架会写盘，都不适合放进用例。
+断言全部走注入的替身数据源——真实测试套件要跑数分钟，脚手架会写盘，都不适合放进用例。新建表单的类型
+是二态按钮，另收 config / database / tests 三个开关；新文案键尚未并入 locales 时先从片段合并语言快照。
 """
 
 import asyncio
+import json
 import time
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
@@ -30,14 +34,17 @@ SNAPSHOT = DevSnapshot(instance_root=INSTANCE, workspace_root=WORKSPACE, workspa
 TEST_TARGET = "packages/akari-bot-cli/tests/test_tui_dev_actions.py"
 TEST_OUTPUT = ("collected 3 items", "3 passed")
 FAILED_OUTPUT = ("collected 2 items", "1 failed", "AssertionError: boom")
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "doctor_dev_misc.json"
 FORM_CONTROLS = (
     "refresh",
     "run-tests",
     "test-path",
     "new-package",
     "new-name",
-    "new-kind-module",
-    "new-kind-adapter",
+    "new-kind",
+    "new-config",
+    "new-database",
+    "new-tests",
     "new-dir",
     "new-confirm",
     "new-close",
@@ -45,9 +52,33 @@ FORM_CONTROLS = (
 )
 
 
+def _fragment_entries() -> dict[str, str]:
+    try:
+        data = json.loads(FRAGMENT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(key): str(value) for key, value in data.items()}
+
+
 def _use_cli_locale() -> None:
-    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
-    i18n.connect_locale_snapshot("akaribot-cli")
+    # 先触发包内连接，随后的 connect 才不会被它按包内目录重建覆盖。
+    i18n.locale()
+    extra = _fragment_entries()
+    if not extra:
+        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+        i18n.connect_locale_snapshot("akaribot-cli")
+        return
+    with TemporaryDirectory(prefix="akari-locale-") as raw:
+        directory = Path(raw)
+        for name in ("zh_cn.json", "en_us.json"):
+            data = json.loads((Path(i18n.locales_dir()) / name).read_text(encoding="utf-8"))
+            if name == "zh_cn.json":
+                data.update(extra)
+            (directory / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(directory)], "akaribot-cli")
+        i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _source(**kwargs) -> StaticDevSource:
@@ -86,13 +117,21 @@ def _set_input(page, selector: str, value: str) -> None:
 async def _test_keys_and_controls_are_present():
     async def body(app, page, pilot, source):
         keys = {binding.key for binding in DevPage.BINDINGS}
+        shown = {binding.key for binding in DevPage.BINDINGS if binding.show}
         missing = [name for name in FORM_CONTROLS if len(page.query(f"#{name}")) != 1]
         active = set(app.screen.active_bindings)
         await pilot.press("q")
-        return keys, missing, active
+        return keys, shown, missing, active
 
-    keys, missing, active = await _with_page(body)
-    return {"t", "n", "escape", "r"} <= keys and not missing and {"t", "n"} <= active
+    keys, shown, missing, active = await _with_page(body)
+    # 终止是低频动作，不进页脚；刷新、测试、新建三条常驻。
+    return (
+        {"t", "n", "escape", "r"} <= keys
+        and {"t", "n", "r"} <= shown
+        and "escape" not in shown
+        and not missing
+        and {"t", "n"} <= active
+    )
 
 
 async def _test_run_tests_streams_output():
@@ -185,14 +224,61 @@ async def _test_new_form_rejects_invalid_names():
     return opened and all(hint and still_open for hint, still_open in rejected) and action_calls == 0 and actions == []
 
 
+async def _test_new_form_shows_skeleton_hint():
+    async def body(app, page, pilot, source):
+        await pilot.press("n")
+        await pilot.pause()
+        hint = page.new_hint_text
+        label = str(page.query_one("#new-kind", compat.Button).label)
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return hint, label
+
+    hint, label = await _with_page(body)
+    return (
+        hint == i18n.t("cli.tui.dev.new_skeleton_hint")
+        and "${" not in hint
+        and label == i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_module"))
+    )
+
+
+async def _test_kind_toggle_switches_label():
+    async def body(app, page, pilot, source):
+        await pilot.press("n")
+        await pilot.pause()
+        module_label = str(page.query_one("#new-kind", compat.Button).label)
+        page.query_one("#new-kind", compat.Button).press()
+        await pilot.pause()
+        adapter_label = str(page.query_one("#new-kind", compat.Button).label)
+        adapter_disabled = page.query_one("#new-database", compat.Checkbox).disabled
+        page.query_one("#new-kind", compat.Button).press()
+        await pilot.pause()
+        back = str(page.query_one("#new-kind", compat.Button).label)
+        module_disabled = page.query_one("#new-database", compat.Checkbox).disabled
+        await pilot.press("q")
+        return module_label, adapter_label, adapter_disabled, back, module_disabled
+
+    module_label, adapter_label, adapter_disabled, back, module_disabled = await _with_page(body)
+    return (
+        module_label == i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_module"))
+        and adapter_label == i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_adapter"))
+        and adapter_disabled is True
+        and back == module_label
+        and module_disabled is False
+    )
+
+
 async def _test_new_form_submits_adapter():
     async def body(app, page, pilot, source):
         await pilot.press("n")
         await pilot.pause()
         _set_input(page, "#new-name", "demo")
-        page.query_one("#new-kind-adapter", compat.Checkbox).value = True
+        page.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
-        module_checked = page.query_one("#new-kind-module", compat.Checkbox).value
+        adapter_label = str(page.query_one("#new-kind", compat.Button).label)
+        # 按下按钮后焦点在按钮上，回车会再切一次类型；交回名称输入框再提交。
+        compat.focus_now(page.query_one("#new-name", compat.Input))
         await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
@@ -201,28 +287,96 @@ async def _test_new_form_submits_adapter():
         focused = app.focused
         hidden_focus = focused is None or page.query_one("#new-form") in focused.ancestors_with_self
         await pilot.press("q")
-        return actions, module_checked, form_open, hidden_focus
+        return actions, adapter_label, form_open, hidden_focus
 
-    actions, module_checked, form_open, hidden_focus = await _with_page(body)
+    actions, adapter_label, form_open, hidden_focus = await _with_page(body)
     return (
-        actions == [(ACTION_NEW, {"name": "demo", "target": TARGET_ADAPTER, "directory": "", "cwd": WORKSPACE})]
-        and module_checked is False
+        actions
+        == [
+            (
+                ACTION_NEW,
+                {
+                    "name": "demo",
+                    "target": TARGET_ADAPTER,
+                    "directory": "",
+                    "config": False,
+                    "database": False,
+                    "tests": True,
+                    "cwd": WORKSPACE,
+                },
+            )
+        ]
+        and adapter_label == i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_adapter"))
         and form_open is False
         and not hidden_focus
     )
 
 
+async def _test_new_form_carries_switches():
+    async def body(app, page, pilot, source):
+        await pilot.press("n")
+        await pilot.pause()
+        _set_input(page, "#new-name", "demo")
+        page.query_one("#new-config", compat.Checkbox).value = True
+        page.query_one("#new-database", compat.Checkbox).value = True
+        page.query_one("#new-tests", compat.Checkbox).value = False
+        await pilot.pause()
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        actions = source.actions
+        await pilot.press("q")
+        return actions
+
+    actions = await _with_page(body)
+    return actions == [
+        (
+            ACTION_NEW,
+            {
+                "name": "demo",
+                "target": TARGET_MODULE,
+                "directory": "",
+                "config": True,
+                "database": True,
+                "tests": False,
+                "cwd": WORKSPACE,
+            },
+        )
+    ]
+
+
 def _test_production_source_builds_argv():
     source = SubprocessDevSource(root=INSTANCE, timeout=5.0)
+    module_params = {
+        "name": "demo",
+        "target": TARGET_MODULE,
+        "directory": "packages/modules",
+        "config": True,
+        "database": True,
+        "tests": True,
+    }
+    adapter_params = {"name": "demo", "target": TARGET_ADAPTER, "directory": "", "config": False}
     return (
         source._action_argv(ACTION_TEST, {"args": (TEST_TARGET, "--ci")})
         == cli_process.cli_argv("test", TEST_TARGET, "--ci")
         and source._action_argv(ACTION_TEST, {"args": ()}) == cli_process.cli_argv("test")
         # --non-interactive 是必需的：子进程与界面共用终端，缺了它会把问卷打进输出区并抢键盘。
-        and source._action_argv(ACTION_NEW, {"name": "demo", "target": TARGET_ADAPTER, "directory": ""})
-        == cli_process.cli_argv("new", "adapter", "demo", "--non-interactive")
-        and source._action_argv(ACTION_NEW, {"name": "demo", "target": TARGET_MODULE, "directory": "packages/modules"})
-        == cli_process.cli_argv("new", "module", "demo", "--non-interactive", "--dir", "packages/modules")
+        # 三个开关显式给值，未勾选时用 --no-* 覆盖 CLI 自己的缺省。
+        and source._action_argv(ACTION_NEW, module_params)
+        == cli_process.cli_argv(
+            "new",
+            "module",
+            "demo",
+            "--non-interactive",
+            "--config",
+            "--database",
+            "--tests",
+            "--dir",
+            "packages/modules",
+        )
+        # new adapter 没有 database 与 tests 选项，多给的开关会被 typer 当成未知选项拒绝。
+        and source._action_argv(ACTION_NEW, adapter_params)
+        == cli_process.cli_argv("new", "adapter", "demo", "--non-interactive", "--no-config")
         and source._action_cwd({"cwd": WORKSPACE}) == WORKSPACE
         and source._action_cwd({}) == str(source.root)
     )
@@ -317,7 +471,10 @@ async def test_tui_dev_actions(tester: Tester):
     await tester.test(_test_second_press_while_running_is_ignored, "运行中再按 t 不重复启动")
     await tester.test(_test_failed_exit_code_reports_tail, "失败退出码报状态并带输出尾部")
     await tester.test(_test_new_form_rejects_invalid_names, "名称非法只提示不执行")
+    await tester.test(_test_new_form_shows_skeleton_hint, "表单提示位写明只生成最小骨架")
+    await tester.test(_test_kind_toggle_switches_label, "类型按钮在模块与适配器之间切换")
     await tester.test(_test_new_form_submits_adapter, "表单选适配器后提交")
+    await tester.test(_test_new_form_carries_switches, "三个开关进入生成参数")
     await tester.test(_test_production_source_builds_argv, "生产数据源的 argv 形态")
     await tester.test(_test_new_success_reloads_packages, "新建成功后刷新包清单")
     await tester.test(_test_new_failure_keeps_cache, "新建失败不刷新包清单")

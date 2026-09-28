@@ -6,11 +6,13 @@ httpx 这类传递依赖），底部按性质分两行——包装卸与解释�
 """
 
 import time
+from unittest import mock
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.app import TuiApp
 from akaribot.cli.tui.environment import (
+    DRY_RUN_SUFFIX,
     EnvironmentPackage,
     EnvironmentState,
     PackageCall,
@@ -168,7 +170,7 @@ async def _test_install_choice_decides_recording():
         await pilot.press("enter")
         await pilot.pause()
         labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
-        await pilot.click("#choice-0")
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -185,7 +187,7 @@ async def _test_install_env_only_skips_recording():
         app.screen.query_one("#prompt-input", compat.Input).value = "git+https://github.com/psf/requests"
         await pilot.press("enter")
         await pilot.pause()
-        await pilot.click("#choice-1")
+        app.screen.query_one("#choice-1", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -217,7 +219,7 @@ async def _test_uninstall_recorded_package_offers_modes():
         page.request_uninstall()
         await pilot.pause()
         labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
-        await pilot.click("#choice-1")
+        app.screen.query_one("#choice-1", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -332,35 +334,57 @@ async def _test_only_applicable_action_is_offered():
     )
 
 
-async def _test_action_needs_two_presses():
+async def _test_action_asks_before_running():
+    # 解释器动作先用选择框问一次：没答之前绝不动作，答「执行」才跑。
     async def body(app, page, pilot, source):
         page.request_action("recreate")
         await pilot.pause()
-        first = list(source.actions), page.status_text
-        page.request_action("recreate")
+        asked = type(app.screen).__name__
+        before = list(source.actions)
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return first, list(source.actions)
+        return asked, before, list(source.actions)
 
-    first, second = await _with_page(body)
-    return first[0] == [] and first[1] and second == ["recreate"]
+    asked, before, after = await _with_page(body)
+    return asked == "ChoiceScreen" and before == [] and after == ["recreate"]
 
 
-async def _test_switching_action_asks_again():
+async def _test_action_dry_run_option():
+    # 「先预演」把 --dry-run 交给 CLI，执行记录因此带后缀。
     async def body(app, page, pilot, source):
-        page.request_action("release")
-        await pilot.pause()
         page.request_action("recreate")
         await pilot.pause()
-        page.request_action("release")
+        app.screen.query_one("#choice-1", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
         return list(source.actions)
 
     actions = await _with_page(body)
-    return actions == []
+    return actions == [f"recreate{DRY_RUN_SUFFIX}"]
+
+
+async def _test_cancelled_action_does_nothing():
+    # 取消（Esc）后不动作；再按同一个键又是先问一次。
+    async def body(app, page, pilot, source):
+        page.request_action("release")
+        await pilot.pause()
+        await pilot.press("escape")
+        await page.wait_for_idle()
+        await pilot.pause()
+        cancelled = list(source.actions)
+        page.request_action("release")
+        await pilot.pause()
+        asked = type(app.screen).__name__
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return cancelled, asked, list(source.actions)
+
+    cancelled, asked, after = await _with_page(body)
+    return cancelled == [] and asked == "ChoiceScreen" and after == []
 
 
 async def _test_refused_while_running():
@@ -385,17 +409,17 @@ async def _test_inapplicable_action_refused():
     async def body(app, page, pilot, source):
         page.request_action("adopt")
         await pilot.pause()
-        adopted = list(source.actions)
+        adopted, modal = list(source.actions), type(app.screen).__name__
         page.request_action("recreate")
         await pilot.pause()
-        page.request_action("recreate")
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return adopted, list(source.actions)
+        return adopted, modal, list(source.actions)
 
-    adopted, rebuilt = await _with_page(body)
-    return adopted == [] and rebuilt == ["recreate"]
+    adopted, modal, rebuilt = await _with_page(body)
+    return adopted == [] and modal == "Screen" and rebuilt == ["recreate"]
 
 
 async def _test_failure_reports_detail_and_reloads():
@@ -405,7 +429,7 @@ async def _test_failure_reports_detail_and_reloads():
         before = source.calls["state"]
         page.request_action("recreate")
         await pilot.pause()
-        page.request_action("recreate")
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         # 动作结束后会重新读取一次；后台任务注册有延迟，轮询到计数变化为止。
@@ -425,23 +449,26 @@ async def _test_failure_reports_detail_and_reloads():
 async def test_tui_environment(tester: Tester):
     """cli.tui.environment: 环境清单、包装卸与环境动作测试"""
     _use_cli_locale()
-    await tester.test(_test_lists_every_installed_package, "列出环境里的全部分发（含传递依赖）")
-    await tester.test(_test_search_and_filter_narrow_the_list, "搜索与「只看清单里的」收窄清单")
-    await tester.test(_test_recorded_but_missing_row_is_listed, "清单里记着但没装上的条目也在列")
-    await tester.test(_test_package_probe_failure_degrades, "包列表探测失败只降级")
-    await tester.test(_test_install_choice_decides_recording, "安装先选去处：写进清单")
-    await tester.test(_test_install_env_only_skips_recording, "安装先选去处：只装进环境")
-    await tester.test(_test_install_cancelled_by_empty_spec, "取消安装不调用子进程")
-    await tester.test(_test_uninstall_recorded_package_offers_modes, "卸载已记录的包可选是否删记录")
-    await tester.test(_test_uninstall_plain_package_needs_two_presses, "卸载普通包连按两次确认")
-    await tester.test(_test_uninstall_needs_selection, "没有选中项时拒绝卸载")
-    await tester.test(_test_package_change_while_running_notes_restart, "运行期间装卸提示重启生效")
-    await tester.test(_test_selected_package_shows_dependents, "选中项显示被谁依赖")
-    await tester.test(_test_only_applicable_action_is_offered, "只放出当前模式适用的动作")
-    await tester.test(_test_action_needs_two_presses, "环境动作连按两次确认")
-    await tester.test(_test_switching_action_asks_again, "换动作后重新确认且不执行")
-    await tester.test(_test_refused_while_running, "实例运行中拒绝环境动作")
-    await tester.test(_test_inapplicable_action_refused, "不适用的动作被拒绝")
-    await tester.test(_test_failure_reports_detail_and_reloads, "失败时给出原因并重新读取")
+    # 选择框取代了「连按两次」，但闸门仍会挡住同一动作的连发；用例里压缩防抖窗口。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_lists_every_installed_package, "列出环境里的全部分发（含传递依赖）")
+        await tester.test(_test_search_and_filter_narrow_the_list, "搜索与「只看清单里的」收窄清单")
+        await tester.test(_test_recorded_but_missing_row_is_listed, "清单里记着但没装上的条目也在列")
+        await tester.test(_test_package_probe_failure_degrades, "包列表探测失败只降级")
+        await tester.test(_test_install_choice_decides_recording, "安装先选去处：写进清单")
+        await tester.test(_test_install_env_only_skips_recording, "安装先选去处：只装进环境")
+        await tester.test(_test_install_cancelled_by_empty_spec, "取消安装不调用子进程")
+        await tester.test(_test_uninstall_recorded_package_offers_modes, "卸载已记录的包可选是否删记录")
+        await tester.test(_test_uninstall_plain_package_needs_two_presses, "卸载普通包连按两次确认")
+        await tester.test(_test_uninstall_needs_selection, "没有选中项时拒绝卸载")
+        await tester.test(_test_package_change_while_running_notes_restart, "运行期间装卸提示重启生效")
+        await tester.test(_test_selected_package_shows_dependents, "选中项显示被谁依赖")
+        await tester.test(_test_only_applicable_action_is_offered, "只放出当前模式适用的动作")
+        await tester.test(_test_action_asks_before_running, "环境动作先问一次，答执行才动作")
+        await tester.test(_test_action_dry_run_option, "预演选项把 --dry-run 交给 CLI")
+        await tester.test(_test_cancelled_action_does_nothing, "取消后不动作，再按仍先问")
+        await tester.test(_test_refused_while_running, "实例运行中拒绝环境动作")
+        await tester.test(_test_inapplicable_action_refused, "不适用的动作被拒绝")
+        await tester.test(_test_failure_reports_detail_and_reloads, "失败时给出原因并重新读取")
 
-    return tester
+        return tester

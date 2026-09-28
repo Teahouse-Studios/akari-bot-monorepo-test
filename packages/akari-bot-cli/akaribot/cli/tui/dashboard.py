@@ -3,7 +3,14 @@
 数据流：界面只读 :class:`DashboardSource`（当前实例的快照）与 :class:`InstanceListSource`（注册表
 里的其它实例）。默认实现 :class:`LocalDashboardSource` 先读 ``akaribot.toml``，取不到 core 版本时
 再经 ``akaribot module list --json`` 子进程补取，运行状态一律探测实例锁文件 ``.bot.lock``；实例清单
-直接读本机注册表，不起子进程。在清单里选中一条并回车即切换当前实例，各页随后的取数都指向它。
+直接读本机注册表，不起子进程。在清单里选中一条并回车即切换当前实例（同时写回注册表的缺省项），
+各页随后的取数都指向它；``ctrl+n`` 经 ``akaribot init`` 子进程新建实例并登记。
+
+服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
+里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
+
+写动作（登记、移除、策略、缺省项、服务装卸、新建实例）一律经 :class:`CliRunner` 起
+``akaribot <子命令>`` 子进程，注册表只用于读取。
 """
 
 from __future__ import annotations
@@ -20,7 +27,8 @@ from typing import Any, Protocol, runtime_checkable
 from akaribot.cli import i18n
 from akaribot.cli.instances import InstanceRegistry, probe_running
 from akaribot.cli.tui import _compat as compat
-from akaribot.cli.tui import context
+from akaribot.cli.tui import cli_process, context
+from akaribot.cli.tui.modules import OperationResult
 
 STATE_RUNNING = "running"
 STATE_STOPPED = "stopped"
@@ -47,6 +55,71 @@ UPDATE_SOURCE_PENDING_KEY = "cli.tui.dashboard.update_source_pending"
 
 def _pending_update_source() -> str:
     return i18n.t(UPDATE_SOURCE_PENDING_KEY)
+
+
+# 新建实例要解析依赖并装 core 与适配器，耗时可达数分钟，超时按最坏情况给足。
+INIT_TIMEOUT_SECONDS = 1800.0
+# 服务预演只渲染单元文件并读一次系统工具，正常在数秒内结束。
+SERVICE_CLI_TIMEOUT_SECONDS = 60.0
+# 注册表与服务单元的写入是秒级操作，超时只用于兜住卡死的子进程。
+CLI_WRITE_TIMEOUT_SECONDS = 60.0
+
+
+def _tail(text: str | None, limit: int = 400) -> str:
+    return (text or "").strip()[-limit:]
+
+
+def _first_line(text: str) -> str:
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def _result_summary(result: OperationResult) -> str:
+    line = _first_line(result.detail)
+    if not line:
+        return result.message
+    return f"{result.message}{i18n.t('cli.tui.common.error_separator')}{line}"
+
+
+def _run_cli_operation(
+    argv: Sequence[str],
+    *,
+    label: str,
+    cwd: Path,
+    root: Path,
+    timeout: float,
+    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+) -> OperationResult:
+    # 与模块页安装同一条通路：阻塞式子进程，成功取标准输出尾部，失败取标准错误尾部。
+    execute = runner or subprocess.run
+    try:
+        completed = execute(
+            list(argv),
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            env=cli_process.cli_env(root),
+        )
+    except subprocess.TimeoutExpired:
+        return OperationResult(False, i18n.t("cli.tui.dashboard.cli_timeout", label=label, seconds=f"{timeout:g}"), "")
+    except OSError as error:
+        return OperationResult(
+            False,
+            i18n.t("cli.tui.common.failed_label", label=label),
+            f"{type(error).__name__}: {error}",
+        )
+    if completed.returncode == 0:
+        return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), _tail(completed.stdout))
+    return OperationResult(
+        False,
+        i18n.t("cli.tui.common.op_failed", label=label, code=completed.returncode),
+        _tail(completed.stderr) or _tail(completed.stdout),
+    )
 
 
 @dataclass(frozen=True)
@@ -150,16 +223,16 @@ class ServiceRow:
 
 @runtime_checkable
 class ServiceControl(Protocol):
-    """服务安装状态与装卸动作。"""
+    """服务状态的读取与预演；装卸经 :class:`CliRunner` 交给命令层。"""
 
     def service_status(self) -> ServiceRow:
         """返回服务单元状态。"""
 
-    def install_service(self) -> ServiceRow:
-        """安装并注册服务。"""
+    def preview_service(self, action: str) -> OperationResult:
+        """执行 ``akaribot service <动作> --dry-run``，返回预演输出。
 
-    def uninstall_service(self) -> ServiceRow:
-        """注销并删除服务单元。"""
+        :param action: ``install`` 或 ``uninstall``。
+        """
 
 
 class SystemServiceControl:
@@ -192,60 +265,161 @@ class SystemServiceControl:
         """见 :meth:`ServiceControl.service_status`。"""
         return self._row(self._service().status())
 
-    def install_service(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.install_service`。"""
-        return self._row(self._service().install(force=True))
-
-    def uninstall_service(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.uninstall_service`。"""
-        return self._row(self._service().uninstall())
+    def preview_service(self, action: str) -> OperationResult:
+        """见 :meth:`ServiceControl.preview_service`。"""
+        return _run_cli_operation(
+            cli_process.cli_argv("service", action, "--dry-run"),
+            label=i18n.t(f"cli.tui.dashboard.service_preview_label_{action}"),
+            cwd=Path.cwd(),
+            root=Path.cwd(),
+            timeout=SERVICE_CLI_TIMEOUT_SECONDS,
+        )
 
 
 class StaticServiceControl:
     """固定服务状态的替身，供自动化断言使用。
 
     :param status: ``service_status`` 的返回值。
-    :param result: 安装 / 卸载后的返回值；缺省按动作推出一个合理状态。
+    :param preview_result: ``preview_service`` 的返回值；缺省为成功。
     """
 
-    def __init__(self, status: ServiceRow | None = None, *, result: ServiceRow | None = None) -> None:
+    def __init__(
+        self,
+        status: ServiceRow | None = None,
+        *,
+        preview_result: OperationResult | None = None,
+    ) -> None:
         self._status = status or ServiceRow(backend="launchd", installed=False)
-        self._result = result
-        self.calls = {"status": 0, "install": 0, "uninstall": 0}
+        self._preview = preview_result or OperationResult(
+            True, i18n.t("cli.tui.dashboard.service_preview_stub_ok"), "stub"
+        )
+        self.calls = {"status": 0, "preview": 0}
+        self.previewed: list[str] = []
 
     def service_status(self) -> ServiceRow:
         """见 :meth:`ServiceControl.service_status`。"""
         self.calls["status"] += 1
         return self._status
 
-    def install_service(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.install_service`。"""
-        self.calls["install"] += 1
-        self._status = self._result or replace(self._status, installed=True, enabled=True, path=Path("/tmp/agent"))
-        return self._status
+    def set_status(self, status: ServiceRow) -> None:
+        """替换替身记录的服务状态，模拟单元文件在界面之外出现或消失。"""
+        self._status = status
 
-    def uninstall_service(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.uninstall_service`。"""
-        self.calls["uninstall"] += 1
-        self._status = self._result or replace(self._status, installed=False, enabled=False)
-        return self._status
+    def preview_service(self, action: str) -> OperationResult:
+        """见 :meth:`ServiceControl.preview_service`。"""
+        self.calls["preview"] += 1
+        self.previewed.append(action)
+        return self._preview
+
+
+@runtime_checkable
+class CliRunner(Protocol):
+    """写操作的执行接口：一次 ``akaribot <子命令>`` 调用。"""
+
+    def run(self, args: Sequence[str], *, label: str) -> OperationResult:
+        """执行子命令并返回操作结果。
+
+        :param args: 子命令及其参数，不含解释器与入口。
+        :param label: 用于拼装结论的操作名。
+        """
+
+
+class SubprocessCliRunner:
+    """默认实现：经子进程执行本 CLI 的写子命令。
+
+    :param timeout: 子进程超时秒数。
+    :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
+    """
+
+    def __init__(
+        self,
+        *,
+        timeout: float = CLI_WRITE_TIMEOUT_SECONDS,
+        runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    ) -> None:
+        self.timeout = timeout
+        self._runner = runner
+
+    def run(self, args: Sequence[str], *, label: str) -> OperationResult:
+        """见 :meth:`CliRunner.run`。"""
+        root = context.resolve_root()
+        return _run_cli_operation(
+            cli_process.cli_argv(*args),
+            label=label,
+            cwd=root,
+            root=root,
+            timeout=self.timeout,
+            runner=self._runner,
+        )
+
+
+@runtime_checkable
+class InitRunner(Protocol):
+    """新建实例的执行接口；测试注入替身，生产经 ``akaribot init`` 子进程。"""
+
+    def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
+        """创建实例并返回操作结果。
+
+        :param root: 新实例根目录。
+        :param managed_venv: 是否建托管 venv；为假时用当前环境。
+        :param locale: 实例默认语言。
+        """
+
+
+class SubprocessInitRunner:
+    """默认实现：经 ``akaribot init`` 子进程创建实例。
+
+    :param timeout: 子进程超时秒数；初始化要装 core 与适配器，按最坏情况给足。
+    :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
+    """
+
+    def __init__(
+        self,
+        *,
+        timeout: float = INIT_TIMEOUT_SECONDS,
+        runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    ) -> None:
+        self.timeout = timeout
+        self._runner = runner
+
+    def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
+        """见 :meth:`InitRunner.create`。"""
+        argv = cli_process.cli_argv("init", str(root), "--non-interactive", "--locale", locale)
+        if not managed_venv:
+            argv.append("--no-venv")
+        return _run_cli_operation(
+            argv,
+            label=i18n.t("cli.tui.dashboard.new_label", root=root),
+            # 实例目录由 init 自己创建，子进程的工作目录只能取它的父目录。
+            cwd=root.parent,
+            root=root,
+            timeout=self.timeout,
+            runner=self._runner,
+        )
+
+
+class StaticInitRunner:
+    """固定结果的替身执行器，供自动化断言使用。
+
+    :param result: ``create`` 的返回值；缺省为成功。
+    """
+
+    def __init__(self, result: OperationResult | None = None) -> None:
+        self._result = result or OperationResult(True, i18n.t("cli.tui.dashboard.new_stub_ok"), "stub")
+        self.created: list[tuple[str, bool, str]] = []
+
+    def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
+        """见 :meth:`InitRunner.create`。"""
+        self.created.append((str(root), managed_venv, locale))
+        return self._result
 
 
 @runtime_checkable
 class InstanceListSource(Protocol):
-    """本机实例清单的数据源接口。"""
+    """本机实例清单的数据源接口；写动作经 :class:`CliRunner` 交给命令层。"""
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
         """返回注册表里的实例，附带实时运行状态。"""
-
-    def add_instance(self, root: Path, *, name: str | None = None) -> InstanceRow:
-        """登记一个实例。"""
-
-    def remove_instance(self, name: str) -> bool:
-        """删除一条登记。"""
-
-    def set_policy(self, name: str, **fields: object) -> InstanceRow:
-        """改写实例策略（自启 / 崩溃重启）。"""
 
 
 class RegistryInstanceListSource:
@@ -262,7 +436,7 @@ class RegistryInstanceListSource:
         probe: Callable[[Path], bool | None] | None = None,
     ) -> None:
         self.registry = registry if registry is not None else InstanceRegistry()
-        self.calls = {"list": 0, "add": 0, "remove": 0, "policy": 0}
+        self.calls = {"list": 0}
         self._probe = probe or probe_running
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
@@ -286,37 +460,6 @@ class RegistryInstanceListSource:
             rows.append(InstanceRow(name="", root=active, running=self._probe(active), registered=False))
         return tuple(rows)
 
-    def add_instance(self, root: Path, *, name: str | None = None) -> InstanceRow:
-        """见 :meth:`InstanceListSource.add_instance`。"""
-        self.calls["add"] += 1
-        entry = self.registry.add(root, name=name)
-        return InstanceRow(
-            name=entry.name,
-            root=entry.root,
-            locale=entry.locale,
-            running=self._probe(entry.root),
-            autostart=entry.autostart,
-            restart_on_crash=entry.restart_on_crash,
-        )
-
-    def remove_instance(self, name: str) -> bool:
-        """见 :meth:`InstanceListSource.remove_instance`。"""
-        self.calls["remove"] += 1
-        return self.registry.remove(name)
-
-    def set_policy(self, name: str, **fields: object) -> InstanceRow:
-        """见 :meth:`InstanceListSource.set_policy`。"""
-        self.calls["policy"] += 1
-        entry = self.registry.update(name, **fields)
-        return InstanceRow(
-            name=entry.name,
-            root=entry.root,
-            locale=entry.locale,
-            running=self._probe(entry.root),
-            autostart=entry.autostart,
-            restart_on_crash=entry.restart_on_crash,
-        )
-
 
 class StaticInstanceListSource:
     """固定清单的替身数据源，供自动化断言使用。
@@ -326,44 +469,12 @@ class StaticInstanceListSource:
 
     def __init__(self, rows: Sequence[InstanceRow] = ()) -> None:
         self._rows = list(rows)
-        self.calls = {"list": 0, "add": 0, "remove": 0, "policy": 0}
-        self.added: list[str] = []
-        self.removed: list[str] = []
-        self.policies: list[tuple[str, dict[str, object]]] = []
+        self.calls = {"list": 0}
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
         """见 :meth:`InstanceListSource.list_instances`。"""
         self.calls["list"] += 1
         return tuple(self._rows)
-
-    def add_instance(self, root: Path, *, name: str | None = None) -> InstanceRow:
-        """见 :meth:`InstanceListSource.add_instance`。"""
-        self.calls["add"] += 1
-        self.added.append(str(root))
-        row = InstanceRow(name=name or "added", root=Path(root), registered=True)
-        self._rows.append(row)
-        return row
-
-    def remove_instance(self, name: str) -> bool:
-        """见 :meth:`InstanceListSource.remove_instance`。"""
-        self.calls["remove"] += 1
-        self.removed.append(name)
-        self._rows = [row for row in self._rows if row.name != name]
-        return True
-
-    def set_policy(self, name: str, **fields: object) -> InstanceRow:
-        """见 :meth:`InstanceListSource.set_policy`。"""
-        self.calls["policy"] += 1
-        self.policies.append((name, dict(fields)))
-        updated: list[InstanceRow] = []
-        result: InstanceRow | None = None
-        for row in self._rows:
-            if row.name == name:
-                row = replace(row, **fields)  # type: ignore[arg-type]
-                result = row
-            updated.append(row)
-        self._rows = updated
-        return result or InstanceRow(name=name, root=Path("/tmp"), registered=False)
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
@@ -681,6 +792,10 @@ class DashboardPage(compat.Vertical):
     """Dashboard 页控件。
 
     :param source: 数据源，缺省为 :class:`LocalDashboardSource`。
+    :param instances: 实例清单数据源，缺省读本机注册表。
+    :param service_control: 服务状态与预演接口，缺省直接用 CLI 侧的 service 模块。
+    :param init_runner: 新建实例的执行接口，缺省经 ``akaribot init`` 子进程。
+    :param cli_runner: 写动作的执行接口，缺省经 ``akaribot <子命令>`` 子进程。
     :param cache_ttl: 快照缓存有效期（秒）；缓存内刷新只重绘，不取版本。
     :param refresh_interval: 锁文件探测周期（秒）；自动化断言可调大以避免定时刷新干扰。
     """
@@ -738,14 +853,16 @@ class DashboardPage(compat.Vertical):
     """
 
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    # 页脚只放高频键位：a / c / n / ctrl+d 由清单上方的说明行承载，i 由服务行承载。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
         ("s", "switch_instance", i18n.t("cli.tui.dashboard.bind_switch")),
-        ("a", "toggle_autostart", i18n.t("cli.tui.dashboard.bind_autostart")),
-        ("c", "toggle_crash_restart", i18n.t("cli.tui.dashboard.bind_crash_restart")),
-        ("n", "add_instance", i18n.t("cli.tui.dashboard.bind_add_instance")),
-        ("d", "remove_instance", i18n.t("cli.tui.dashboard.bind_remove_instance")),
-        ("i", "toggle_service", i18n.t("cli.tui.dashboard.bind_service")),
+        ("ctrl+n", "new_instance", i18n.t("cli.tui.dashboard.bind_new_instance")),
+        ("a", "toggle_autostart", i18n.t("cli.tui.dashboard.bind_autostart"), False),
+        ("c", "toggle_crash_restart", i18n.t("cli.tui.dashboard.bind_crash_restart"), False),
+        ("n", "add_instance", i18n.t("cli.tui.dashboard.bind_add_instance"), False),
+        ("ctrl+d", "remove_instance", i18n.t("cli.tui.dashboard.bind_remove_instance"), False),
+        ("i", "toggle_service", i18n.t("cli.tui.dashboard.bind_service"), False),
     )
 
     can_focus = True
@@ -756,6 +873,8 @@ class DashboardPage(compat.Vertical):
         *,
         instances: InstanceListSource | None = None,
         service_control: ServiceControl | None = None,
+        init_runner: InitRunner | None = None,
+        cli_runner: CliRunner | None = None,
         cache_ttl: float = 5.0,
         refresh_interval: float = 2.0,
         id: str | None = None,
@@ -767,11 +886,16 @@ class DashboardPage(compat.Vertical):
         self.service_control: ServiceControl = (
             service_control if service_control is not None else SystemServiceControl()
         )
+        self.init_runner: InitRunner = init_runner if init_runner is not None else SubprocessInitRunner()
+        self.cli_runner: CliRunner = cli_runner if cli_runner is not None else SubprocessCliRunner()
         self._service = ServiceRow()
         self._service_text = ""
-        self._pending_service = ""
+        self._service_preview = ""
+        self._busy = False
+        self._pending_service = compat.PendingConfirm()
         self._instance_rows: tuple[InstanceRow, ...] = ()
-        self._pending_remove: str = ""
+        self._highlighted_key = ""
+        self._pending_remove = compat.PendingConfirm()
         self.cache_ttl = cache_ttl
         self.refresh_interval = refresh_interval
         self.last_error: str = ""
@@ -783,7 +907,7 @@ class DashboardPage(compat.Vertical):
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树：实例清单 + 当前实例的字段 + 操作与状态栏。"""
-        yield compat.Static(i18n.t("cli.tui.dashboard.instances_caption"), id="instances-caption", markup=False)
+        yield compat.Static(i18n.t("cli.tui.dashboard.instances_keys_caption"), id="instances-caption", markup=False)
         yield compat.Static("", id="service", markup=False)
         yield compat.ListView(id="instance-list")
         with compat.VerticalScroll(id="fields-pane"):
@@ -816,15 +940,23 @@ class DashboardPage(compat.Vertical):
         """返回最近一次读取到的实例清单。"""
         return self._instance_rows
 
-    def refresh_instances(self) -> None:
-        """重新读取本机实例清单并重绘。"""
+    def refresh_instances(self, *, polling: bool = False) -> None:
+        """重新读取本机实例清单并重绘。
+
+        :param polling: 周期轮询只刷新显示，不作废待确认。
+        """
         try:
             rows = tuple(self.instances.list_instances())
         except Exception as error:  # noqa: BLE001 - 注册表不可用只降级为一句提示
             self._instance_rows = ()
+            if not polling:
+                self.reset_pending()
             self._render_instances()
             self._set_status(i18n.t("cli.tui.dashboard.instances_failed", error=f"{type(error).__name__}: {error}"))
             return
+        if not polling and rows != self._instance_rows:
+            # 清单内容变了，待确认的那个实例可能已经不在原位，作废重问。
+            self.reset_pending()
         self._instance_rows = rows
         self._render_instances()
 
@@ -858,10 +990,17 @@ class DashboardPage(compat.Vertical):
         list_view.clear()
         if rows:
             list_view.extend([compat.ListItem(compat.Static(row, markup=False)) for row in rows])
-        list_view.index = self._index_of_active()
+        index = self._index_of_active()
+        list_view.index = index
+        # 重建时把高亮拨回当前实例属于显示刷新，不能算用户换了选中项。
+        self._highlighted_key = self._highlight_key(self._instance_rows[index] if index is not None else None)
         self.query_one("#instances-caption", compat.Static).update(
-            compat.plain_text(i18n.t("cli.tui.dashboard.instances_caption_with_count", count=len(rows)))
+            compat.plain_text(i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(rows)))
         )
+
+    @staticmethod
+    def _highlight_key(row: InstanceRow | None) -> str:
+        return row.name if row is not None else ""
 
     def _index_of_active(self) -> int | None:
         active = context.active_root()
@@ -879,7 +1018,7 @@ class DashboardPage(compat.Vertical):
             return 72
 
     def switch_to_selected(self) -> None:
-        """把当前实例切换为清单里高亮的那条。"""
+        """把当前实例切换为清单里高亮的那条，并把缺省实例写回注册表。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -891,8 +1030,30 @@ class DashboardPage(compat.Vertical):
         if not callable(switch):
             self._set_status(i18n.t("cli.tui.dashboard.switch_unsupported"))
             return
+        if self._reject_when_busy():
+            return
         switch(row.root)
-        self._set_status(i18n.t("cli.tui.dashboard.switch_done", name=row.name or str(row.root)))
+        if context.active_root() != Path(row.root).expanduser().resolve():
+            # 别处有未保存改动时切换要先过确认框，确认前不能改写缺省项。
+            self._set_status(i18n.t("cli.tui.dashboard.switch_deferred"))
+            return
+        name = row.name or str(row.root)
+        separator = i18n.t("cli.tui.common.error_separator")
+        self._set_status(f"{i18n.t('cli.tui.dashboard.switch_done', name=name)}{separator}{self._default_note(row)}")
+
+    def _default_note(self, row: InstanceRow) -> str:
+        # 命令行读的是注册表缺省项，只切内存态会让界面与 `instance use` 各说各话。
+        if not row.registered or not row.name:
+            return i18n.t("cli.tui.dashboard.switch_default_skipped")
+        # 同步等子进程：切换随后会重挂载本页，异步回报的状态栏会随旧页对象一起消失。
+        label = i18n.t("cli.tui.dashboard.use_label", name=row.name)
+        try:
+            result = self.cli_runner.run(("instance", "use", row.name), label=label)
+        except Exception as error:  # noqa: BLE001 - 执行器异常只降级为一句说明
+            return i18n.t("cli.tui.dashboard.switch_default_failed", error=f"{type(error).__name__}: {error}")
+        if not result.ok:
+            return i18n.t("cli.tui.dashboard.switch_default_failed", error=_result_summary(result))
+        return i18n.t("cli.tui.dashboard.switch_default_done")
 
     def toggle_policy(self, field_name: str) -> None:
         """翻转当前实例的自启 / 崩溃重启策略。
@@ -906,11 +1067,23 @@ class DashboardPage(compat.Vertical):
         if not row.registered:
             self._set_status(i18n.t("cli.tui.dashboard.policy_unregistered", root=row.root))
             return
+        if self._reject_when_busy():
+            return
         wanted = not (row.autostart if field_name == "autostart" else row.restart_on_crash)
-        try:
-            self.instances.set_policy(row.name, **{field_name: wanted})
-        except Exception as error:  # noqa: BLE001 - 策略写入失败只报错，不改界面状态
-            self._set_status(i18n.t("cli.tui.dashboard.policy_failed", error=f"{type(error).__name__}: {error}"))
+        option = field_name.replace("_", "-")
+        args = ("instance", "policy", row.name, f"--{option}" if wanted else f"--no-{option}")
+        label = i18n.t("cli.tui.dashboard.policy_label", name=row.name)
+        self._set_status(i18n.t("cli.tui.dashboard.policy_calling", name=row.name))
+        self._start_action(
+            lambda: self.cli_runner.run(args, label=label),
+            label=label,
+            group="dashboard-instance",
+            on_done=lambda result: self._finish_policy(row, field_name, wanted, result),
+        )
+
+    def _finish_policy(self, row: InstanceRow, field_name: str, wanted: bool, result: OperationResult) -> None:
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.policy_failed", error=_result_summary(result)))
             return
         self.refresh_instances()
         key = "policy_autostart_on" if wanted else "policy_autostart_off"
@@ -923,8 +1096,14 @@ class DashboardPage(compat.Vertical):
         """返回最近一次读到的服务状态。"""
         return self._service
 
+    @property
+    def service_preview(self) -> str:
+        """返回最近一次服务预演的完整输出。"""
+        return self._service_preview
+
     def refresh_service(self) -> None:
         """读取服务单元状态并重绘那一行。"""
+        self._pending_service.reset()
         try:
             self._service = self.service_control.service_status()
         except Exception as error:  # noqa: BLE001 - 服务状态读不到只降级为一句说明
@@ -958,36 +1137,147 @@ class DashboardPage(compat.Vertical):
         )
 
     def request_toggle_service(self) -> None:
-        """安装或卸载常驻服务；连按两次同一个动作才执行。
+        """安装或卸载常驻服务：一次触发即弹确认框，框里可选执行或先预演。
 
-        安装会往系统里写一个自启单元，卸载会注销它，故都要求再按一次确认；确认文案里带上单元
-        文件路径，用户知道到底动了什么。
+        安装会往系统里写一个自启单元，卸载会注销它，故都经模态框确认；框里给出单元文件路径与
+        覆盖提示，用户知道到底动了什么。
         """
-        row = self._service
-        action = "uninstall" if row.installed else "install"
-        if self._pending_service != action:
-            self._pending_service = action
-            key = "cli.tui.dashboard.service_confirm_remove" if action == "uninstall" else "service_confirm_add"
-            self._set_status(i18n.t(f"cli.tui.dashboard.{key}", path=row.path or "-"))
+        action, force = self._service_action()
+        if not self._pending_service.accept(f"service:{action}"):
+            # 防抖窗口内的重复触发（鼠标双击、键盘连发）直接忽略，避免叠起两层模态框。
             return
-        self._pending_service = ""
-        self._start_service(action)
+        self._ask_service(action, force=force)
 
-    def _start_service(self, action: str) -> None:
-        self._set_status(i18n.t(f"cli.tui.dashboard.service_calling_{action}"))
-        self.run_worker(self._service_op(action), group="dashboard-service", exclusive=True)
-
-    async def _service_op(self, action: str) -> None:
-        call = self.service_control.uninstall_service if action == "uninstall" else self.service_control.install_service
+    def _service_action(self) -> tuple[str, bool]:
+        if self._service.installed:
+            return "uninstall", False
+        # 缓存的安装状态可能过期：单元文件已存在时安装会覆盖它，确认框据此写提示。
         try:
-            row = await asyncio.to_thread(call)
-        except Exception as error:  # noqa: BLE001 - 装卸失败只报错，不改界面状态
-            self._set_status(i18n.t("cli.tui.dashboard.service_failed", error=f"{type(error).__name__}: {error}"))
-            return
-        self._service = row
+            fresh = self.service_control.service_status()
+        except Exception:  # noqa: BLE001 - 重读失败按缓存状态处理，执行时不带 force
+            return "install", False
+        self._service = fresh
         self._render_service()
+        return "install", fresh.installed
+
+    def _ask_service(self, action: str, *, force: bool) -> None:
+        hint = i18n.t("cli.tui.dashboard.service_choice_hint")
+        if force:
+            hint = i18n.t("cli.tui.dashboard.service_choice_hint_force", path=self._service.path or "-")
+        compat.ask_choice(
+            self.app,
+            title=i18n.t(
+                "cli.tui.dashboard.service_choice_title",
+                action=i18n.t(f"cli.tui.dashboard.service_action_{action}"),
+            ),
+            hint=hint,
+            options=(
+                (action, i18n.t(f"cli.tui.dashboard.service_choice_{action}")),
+                ("dry-run", i18n.t("cli.tui.dashboard.service_choice_dry_run")),
+            ),
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=lambda choice: self.on_service_choice(action, force, choice),
+        )
+
+    def on_service_choice(self, action: str, force: bool, choice: str | None) -> None:
+        """确认框回调：选执行则装卸服务，选预演则只打印将发生什么。
+
+        :param action: ``install`` 或 ``uninstall``。
+        :param force: 是否覆盖已存在的单元文件。
+        :param choice: 用户选中的取值；取消时为 ``None``。
+        """
+        if choice == "dry-run":
+            self.preview_service(action)
+            return
+        if choice != action:
+            self._set_status(i18n.t("cli.tui.dashboard.service_cancelled"))
+            return
+        self._start_service(action, force=force)
+
+    def preview_service(self, action: str) -> None:
+        """执行 ``akaribot service <动作> --dry-run``，把输出留在状态栏与预演区。"""
+        if self._reject_when_busy():
+            return
+        self._set_status(
+            i18n.t(
+                "cli.tui.dashboard.service_calling_preview",
+                action=i18n.t(f"cli.tui.dashboard.service_action_{action}"),
+            )
+        )
+        self._service_preview = ""
+        self._start_action(
+            lambda: self.service_control.preview_service(action),
+            label=i18n.t(f"cli.tui.dashboard.service_preview_label_{action}"),
+            group="dashboard-service",
+            on_done=self._finish_preview,
+        )
+
+    def _finish_preview(self, result: OperationResult) -> None:
+        self._service_preview = result.detail
+        output = _first_line(result.detail) or i18n.t("cli.tui.common.no_output")
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.service_preview_failed", error=_result_summary(result)))
+            return
+        self._set_status(i18n.t("cli.tui.dashboard.service_preview_done", output=output))
+
+    def _start_service(self, action: str, *, force: bool = False) -> None:
+        if self._reject_when_busy():
+            return
+        args = ["service", action]
+        if action == "install" and force:
+            args.append("--force")
+        label = i18n.t(f"cli.tui.dashboard.service_label_{action}")
+        self._set_status(i18n.t(f"cli.tui.dashboard.service_calling_{action}"))
+        self._start_action(
+            lambda: self.cli_runner.run(tuple(args), label=label),
+            label=label,
+            group="dashboard-service",
+            on_done=lambda result: self._finish_service(action, result),
+        )
+
+    def _finish_service(self, action: str, result: OperationResult) -> None:
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.service_failed", error=_result_summary(result)))
+            return
+        self.refresh_service()
         key = "service_removed" if action == "uninstall" else "service_added"
-        self._set_status(i18n.t(f"cli.tui.dashboard.{key}", path=row.path or "-"))
+        self._set_status(i18n.t(f"cli.tui.dashboard.{key}", path=self._service.path or "-"))
+
+    def _reject_when_busy(self) -> bool:
+        # 写动作各起一个子进程，连点会让多个进程同时改同一份注册表。
+        if not self._busy:
+            return False
+        self._set_status(i18n.t("cli.tui.dashboard.busy_running"))
+        return True
+
+    def _start_action(
+        self,
+        call: Callable[[], OperationResult],
+        *,
+        label: str,
+        group: str,
+        on_done: Callable[[OperationResult], None],
+    ) -> None:
+        self._busy = True
+        self.run_worker(self._run_action(call, label=label, on_done=on_done), group=group, exclusive=True)
+
+    async def _run_action(
+        self,
+        call: Callable[[], OperationResult],
+        *,
+        label: str,
+        on_done: Callable[[OperationResult], None],
+    ) -> None:
+        try:
+            result = await asyncio.to_thread(call)
+        except Exception as error:  # noqa: BLE001 - 执行器任意异常都只降级为一句说明
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.common.failed_label", label=label),
+                f"{type(error).__name__}: {error}",
+            )
+        self._busy = False
+        on_done(result)
 
     def action_toggle_service(self) -> None:
         """键位动作：安装或卸载常驻服务。"""
@@ -1014,13 +1304,102 @@ class DashboardPage(compat.Vertical):
         if not path:
             self._set_status(i18n.t("cli.tui.dashboard.add_cancelled"))
             return
-        try:
-            row = self.instances.add_instance(Path(path).expanduser())
-        except Exception as error:  # noqa: BLE001 - 目录不是实例等原因照实展示
-            self._set_status(i18n.t("cli.tui.dashboard.add_failed", error=error))
+        if self._reject_when_busy():
+            return
+        root = Path(path).expanduser()
+        label = i18n.t("cli.tui.dashboard.add_label", root=root)
+        self._set_status(i18n.t("cli.tui.dashboard.add_calling", root=root))
+        self._start_action(
+            lambda: self.cli_runner.run(("instance", "add", str(root)), label=label),
+            label=label,
+            group="dashboard-instance",
+            on_done=lambda result: self._finish_add(root, result),
+        )
+
+    def _finish_add(self, root: Path, result: OperationResult) -> None:
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.add_failed", error=_result_summary(result)))
             return
         self.refresh_instances()
-        self._set_status(i18n.t("cli.tui.dashboard.add_done", name=row.name, root=row.root))
+        self._set_status(i18n.t("cli.tui.dashboard.add_done", name=self._registered_name(root), root=root))
+
+    def _registered_name(self, root: Path) -> str:
+        # 注册名由命令层推导，界面从刷新后的清单里取；取不到时退回目录名。
+        wanted = root.expanduser().resolve()
+        for row in self._instance_rows:
+            if row.root.expanduser().resolve() == wanted:
+                return row.name or wanted.name
+        return root.name
+
+    def request_new_instance(self) -> None:
+        """弹出输入框要新实例目录，拿到目录后再问环境方式。"""
+        compat.ask_text(
+            self.app,
+            title=i18n.t("cli.tui.dashboard.new_title"),
+            hint=i18n.t("cli.tui.dashboard.new_hint"),
+            placeholder=i18n.t("cli.tui.dashboard.new_placeholder"),
+            initial=self._new_instance_default(),
+            confirm_label=i18n.t("cli.tui.dashboard.new_confirm"),
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=self.on_new_instance_path_entered,
+        )
+
+    def _new_instance_default(self) -> str:
+        # 新实例多半是当前实例的邻居，预填它的父目录；没有实例时退回当前工作目录。
+        root = resolve_instance_root()
+        if root is not None:
+            return str(root.parent)
+        return str(Path.cwd())
+
+    def on_new_instance_path_entered(self, path: str | None) -> None:
+        """输入框回调：把目录交给下一步的环境方式选择框。
+
+        :param path: 用户输入的路径；取消时为 ``None``。
+        """
+        if not path:
+            self._set_status(i18n.t("cli.tui.dashboard.new_cancelled"))
+            return
+        root = Path(path).expanduser()
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.dashboard.new_venv_title", root=root),
+            hint=i18n.t("cli.tui.dashboard.new_venv_hint"),
+            options=(
+                ("managed", i18n.t("cli.tui.dashboard.new_venv_managed")),
+                ("current", i18n.t("cli.tui.dashboard.new_venv_current")),
+            ),
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=lambda choice: self.on_new_instance_venv_chosen(root, choice),
+        )
+
+    def on_new_instance_venv_chosen(self, root: Path, choice: str | None) -> None:
+        """选择框回调：按所选环境方式执行 ``akaribot init``。
+
+        :param root: 新实例目录。
+        :param choice: ``managed`` 建托管 venv，``current`` 装进当前环境；取消时为 ``None``。
+        """
+        if choice not in ("managed", "current"):
+            self._set_status(i18n.t("cli.tui.dashboard.new_cancelled"))
+            return
+        if self._reject_when_busy():
+            return
+        locale = i18n.current_locale()
+        managed_venv = choice == "managed"
+        self._set_status(i18n.t("cli.tui.dashboard.new_calling", root=root))
+        self._start_action(
+            lambda: self.init_runner.create(root, managed_venv=managed_venv, locale=locale),
+            label=i18n.t("cli.tui.dashboard.new_label", root=root),
+            group="dashboard-new",
+            on_done=lambda result: self._finish_new_instance(root, result),
+        )
+
+    def _finish_new_instance(self, root: Path, result: OperationResult) -> None:
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.new_failed", error=_result_summary(result)))
+            return
+        # init 自己会把新实例登记进注册表，界面只需重读清单。
+        self.refresh_instances()
+        self._set_status(i18n.t("cli.tui.dashboard.new_done", name=self._registered_name(root), root=root))
 
     def request_remove_instance(self) -> None:
         """移除清单里高亮实例的登记；连按两次才执行，实例目录本身不动。"""
@@ -1031,22 +1410,26 @@ class DashboardPage(compat.Vertical):
         if not row.registered:
             self._set_status(i18n.t("cli.tui.dashboard.policy_unregistered", root=row.root))
             return
-        if self._pending_remove != row.name:
-            self._pending_remove = row.name
+        if not self._pending_remove.arm(row.name or str(row.root)):
             self._set_status(i18n.t("cli.tui.dashboard.remove_confirm", name=row.name, root=row.root))
             return
-        self._pending_remove = ""
-        try:
-            removed = self.instances.remove_instance(row.name)
-        except Exception as error:  # noqa: BLE001 - 移除失败只报错
-            self._set_status(i18n.t("cli.tui.dashboard.remove_failed", error=f"{type(error).__name__}: {error}"))
+        if self._reject_when_busy():
+            return
+        label = i18n.t("cli.tui.dashboard.remove_label", name=row.name)
+        self._set_status(i18n.t("cli.tui.dashboard.remove_calling", name=row.name))
+        self._start_action(
+            lambda: self.cli_runner.run(("instance", "remove", row.name, "--yes"), label=label),
+            label=label,
+            group="dashboard-instance",
+            on_done=lambda result: self._finish_remove(row, result),
+        )
+
+    def _finish_remove(self, row: InstanceRow, result: OperationResult) -> None:
+        if not result.ok:
+            self._set_status(i18n.t("cli.tui.dashboard.remove_failed", error=_result_summary(result)))
             return
         self.refresh_instances()
-        self._set_status(
-            i18n.t("cli.tui.dashboard.remove_done", name=row.name)
-            if removed
-            else i18n.t("cli.tui.dashboard.remove_missing", name=row.name)
-        )
+        self._set_status(i18n.t("cli.tui.dashboard.remove_done", name=row.name))
 
     def action_switch_instance(self) -> None:
         """键位动作：切换到清单里高亮的实例。"""
@@ -1063,6 +1446,10 @@ class DashboardPage(compat.Vertical):
     def action_add_instance(self) -> None:
         """键位动作：登记一个实例目录。"""
         self.request_add_instance()
+
+    def action_new_instance(self) -> None:
+        """键位动作：新建实例。"""
+        self.request_new_instance()
 
     def action_remove_instance(self) -> None:
         """键位动作：移除实例登记。"""
@@ -1105,6 +1492,8 @@ class DashboardPage(compat.Vertical):
 
         :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
         """
+        # 用户主动刷新即视为换了一轮语境，任何待确认动作都要重新问过。
+        self.reset_pending()
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_fields()
             self._set_status(i18n.t("cli.tui.dashboard.status_cached", age=f"{self.cache_age():.1f}"))
@@ -1155,7 +1544,7 @@ class DashboardPage(compat.Vertical):
         if not self.display:
             return
         self.refresh_running()
-        self.refresh_instances()
+        self.refresh_instances(polling=True)
 
     # endregion
 
@@ -1230,11 +1619,25 @@ class DashboardPage(compat.Vertical):
 
     # region 交互
 
-    @compat.on(compat.Button.Pressed)
+    def reset_pending(self) -> None:
+        """作废本页的待确认状态；切页、刷新与换选中项后必须重问。"""
+        self._pending_service.reset()
+        self._pending_remove.reset()
+
     @compat.on(compat.ListView.Selected, "#instance-list")
     def _on_instance_selected(self, event: compat.ListView.Selected) -> None:
         self.switch_to_selected()
 
+    @compat.on(compat.ListView.Highlighted, "#instance-list")
+    def _on_instance_highlighted(self, event: compat.ListView.Highlighted) -> None:
+        # 重建列表会先清高亮再回填，按当前下标比对可避开这类假变化。
+        key = self._highlight_key(self.selected_instance())
+        if key == self._highlighted_key:
+            return
+        self._highlighted_key = key
+        self.reset_pending()
+
+    @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         if event.button.id == "refresh":
             self.refresh_snapshot(force=True)

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from akaribot.cli import i18n
+from akaribot.cli.instances import InstanceRegistry
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import context
 from akaribot.cli.tui.adapters import AdaptersPage
@@ -109,7 +110,11 @@ class TuiApp(compat.App[int]):
     BINDINGS = compat.bindings(
         ("q", "quit", i18n.t("cli.tui.app.bind_quit")),
         ("ctrl+q", "quit", i18n.t("cli.tui.app.bind_quit")),
-        ("ctrl+t", "toggle_theme", i18n.t("cli.tui.app.bind_toggle_theme")),
+        ("question_mark", "show_help", i18n.t("cli.tui.app.bind_help")),
+        ("ctrl+t", "toggle_theme", i18n.t("cli.tui.app.bind_toggle_theme"), False),
+        # 前后翻页常驻可用但不必占页脚：页脚在 80 列下要留给本页高频键位。
+        ("ctrl+right", "next_page", i18n.t("cli.tui.app.bind_next_page"), False),
+        ("ctrl+left", "previous_page", i18n.t("cli.tui.app.bind_previous_page"), False),
     )
 
     def __init__(
@@ -119,7 +124,7 @@ class TuiApp(compat.App[int]):
         sources: dict[str, Any] | None = None,
         boot_started_at: float | None = None,
         cache_ttl: float = 30.0,
-        initial_page: str = "modules",
+        initial_page: str = "dashboard",
         boot_note: str = "",
     ) -> None:
         super().__init__()
@@ -130,12 +135,77 @@ class TuiApp(compat.App[int]):
         self.sources: dict[str, Any] = dict(sources or {})
         self.cache_ttl = cache_ttl
         self.boot_note = boot_note
-        self.initial_page = initial_page if any(key == initial_page for key, _, _ in PAGES) else "modules"
+        self.initial_page = initial_page if any(key == initial_page for key, _, _ in PAGES) else "dashboard"
         self.active_page = self.initial_page
         self.instance_root = context.active_root()
         self.startup_ms: float = 0.0
         self.first_paint_ms: float = 0.0
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
+
+    def _instance_label(self) -> str:
+        # 优先用注册名（与 `instance list`、概览页清单一致），未登记时退回实例自报名，再退回目录名。
+        root = self.instance_root or context.active_root()
+        if root is None:
+            return i18n.t("cli.tui.app.instance_unknown")
+        try:
+            entry = InstanceRegistry().find_by_root(Path(root))
+        except Exception:  # noqa: BLE001 - 注册表不可用时退回路径名
+            entry = None
+        if entry is not None and entry.name:
+            return entry.name
+        return Path(root).name or str(root)
+
+    def _sync_subtitle(self) -> None:
+        # 界面同时管多个实例：标题栏必须写明当前是哪一个，否则在配置页改 secret、在数据库页删数据项
+        # 时看不出改的是谁。
+        self.sub_title = i18n.t("cli.tui.app.subtitle_with_instance", name=self._instance_label())
+
+    def _running_workers(self) -> list[str]:
+        names: list[str] = []
+        for worker in self.workers:
+            if worker.is_finished or worker.is_cancelled:
+                continue
+            names.append(worker.group or worker.name or i18n.t("cli.tui.app.worker_unnamed"))
+        return names
+
+    def action_next_page(self) -> None:
+        """键位动作：切到下一个页面。"""
+        self._step_page(1)
+
+    def action_previous_page(self) -> None:
+        """键位动作：切到上一个页面。"""
+        self._step_page(-1)
+
+    def _step_page(self, delta: int) -> None:
+        keys = [key for key, _, _ in PAGES]
+        index = keys.index(self.active_page) if self.active_page in keys else 0
+        self.show_page(keys[(index + delta) % len(keys)])
+
+    def action_show_help(self) -> None:
+        """键位动作：列出当前页与全局键位。"""
+        page = self.query_one(f"#page-{self.active_page}")
+        rows: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for binding in [*getattr(page, "BINDINGS", ()), *self.BINDINGS]:
+            key = str(getattr(binding, "key", ""))
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            rows.append((key, str(getattr(binding, "description", ""))))
+        compat.show_help(
+            self,
+            title=i18n.t("cli.tui.app.help_title", page=i18n.t(self._page_title_key(self.active_page))),
+            hint=i18n.t("cli.tui.app.help_hint"),
+            rows=tuple(rows),
+            close_label=i18n.t("cli.tui.app.help_close"),
+        )
+
+    @staticmethod
+    def _page_title_key(key: str) -> str:
+        for page_key, title_key, _ in PAGES:
+            if page_key == key:
+                return title_key
+        return "cli.tui.app.title"
 
     def action_toggle_theme(self) -> None:
         """键位动作：在品牌深色与浅色主题之间切换。"""
@@ -194,8 +264,29 @@ class TuiApp(compat.App[int]):
         各页数据源在取数时才解析实例根，故这里只需重挂载页面：新页面首次显示时会重新取数，
         注入的替身数据源保持不变，自动化断言仍按同一份数据源核对调用次数。
         """
+        notes = self._dirty_notes()
+        if not notes:
+            self._switch_instance(root)
+            return
+        target = Path(root).expanduser().resolve()
+
+        def _decide(choice: str | None) -> None:
+            if choice == "discard":
+                self._switch_instance(target)
+
+        compat.ask_choice(
+            self,
+            title=i18n.t("cli.tui.app.switch_dirty_title"),
+            hint=i18n.t("cli.tui.app.switch_dirty_hint", notes=i18n.t("cli.common.list_separator").join(notes)),
+            options=(("discard", i18n.t("cli.tui.app.switch_dirty_confirm")),),
+            cancel_label=i18n.t("cli.tui.app.switch_dirty_cancel"),
+            callback=_decide,
+        )
+
+    def _switch_instance(self, root: Path) -> None:
         context.set_active_root(root)
         self.instance_root = Path(root).expanduser().resolve()
+        self._sync_subtitle()
         content = self.query_one("#content", compat.Vertical)
         self.run_worker(self._remount_pages(content), group="switch-instance", exclusive=True)
 
@@ -211,6 +302,7 @@ class TuiApp(compat.App[int]):
         侧栏上，页级键位随之失效），故首帧之后再补一次。
         """
         self.startup_ms = (time.monotonic() - self._boot_started_at) * 1000.0
+        self._sync_subtitle()
         self.show_page(self.initial_page)
         self._announce_boot_note()
         self.call_after_refresh(self._mark_first_paint)
@@ -221,6 +313,32 @@ class TuiApp(compat.App[int]):
         if not self.boot_note:
             return
         compat.notify(self, self.boot_note, title=i18n.t("cli.tui.app.boot_note_title"))
+
+    def _reset_pending(self, key: str) -> None:
+        # 页面实现 reset_pending() 才需要复位；没有待确认状态的页面不必实现。
+        try:
+            page = self.query_one(f"#page-{key}")
+        except Exception:  # noqa: BLE001 - 页面尚未挂载时无事可做
+            return
+        reset = getattr(page, "reset_pending", None)
+        if callable(reset):
+            reset()
+
+    # 收集各页未保存改动的说明；页面实现 dirty_note() 才参与。
+    def _dirty_notes(self) -> list[str]:
+        notes: list[str] = []
+        for key, _, _ in PAGES:
+            try:
+                page = self.query_one(f"#page-{key}")
+            except Exception:  # noqa: BLE001 - 未挂载的页面没有脏值
+                continue
+            probe = getattr(page, "dirty_note", None)
+            if not callable(probe):
+                continue
+            note = str(probe() or "").strip()
+            if note:
+                notes.append(note)
+        return notes
 
     def focus_active_page(self) -> None:
         """把焦点交给当前页的主控件。"""
@@ -237,6 +355,9 @@ class TuiApp(compat.App[int]):
         :param key: 页面键，取自 :data:`PAGES`。
         """
         target = self.query_one(f"#page-{key}")
+        # 离开的页面可能正等着第二次确认：切页后那次确认的语境已经不同，必须作废，否则用户以为
+        # 自己在回答第一次询问，实际直接执行了破坏性动作。
+        self._reset_pending(self.active_page)
         # 先亮目标页再隐藏旧页：反过来做的话，焦点会先随旧页一起被隐藏，Textual 会把焦点改派给
         # 隐藏页里的滚动容器（它只看控件自身的 display，不看祖先），页级键位随即错页。
         target.display = True
@@ -277,8 +398,27 @@ class TuiApp(compat.App[int]):
         return self.query_one(ModulesPage)
 
     def action_quit(self) -> None:
-        """退出应用并返回退出码 0。"""
-        self.exit(0)
+        """退出应用；仍有后台任务在跑时先问一次，免得把装了一半的子进程丢在后台。"""
+        pending = self._running_workers()
+        if not pending:
+            self.exit(0)
+            return
+
+        def _decide(choice: str | None) -> None:
+            if choice == "quit":
+                self.exit(0)
+
+        compat.ask_choice(
+            self,
+            title=i18n.t("cli.tui.app.quit_busy_title"),
+            hint=i18n.t(
+                "cli.tui.app.quit_busy_hint",
+                actions=i18n.t("cli.common.list_separator").join(pending[:6]),
+            ),
+            options=(("quit", i18n.t("cli.tui.app.quit_busy_confirm")),),
+            cancel_label=i18n.t("cli.tui.app.quit_busy_cancel"),
+            callback=_decide,
+        )
 
 
 @dataclass(frozen=True)
@@ -311,7 +451,7 @@ def run_tui(
     source: ModuleSource | None = None,
     *,
     sources: dict[str, Any] | None = None,
-    initial_page: str = "modules",
+    initial_page: str = "dashboard",
     mouse: bool = True,
     headless: bool = False,
     boot_note: str = "",

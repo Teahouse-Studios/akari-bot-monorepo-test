@@ -11,6 +11,7 @@ from tempfile import TemporaryDirectory
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import context
 from akaribot.cli.tui.app import PAGES, TuiApp
 from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 from akaribot.testing import Tester, func_case
@@ -76,14 +77,14 @@ def _nav_index(app: TuiApp) -> int | None:
     return compat.highlighted_index(app.query_one("#nav", compat.ListView))
 
 
-async def _with_app(body, *, initial_page: str = "modules", sources=None):
+async def _with_app(body, *, initial_page: str = "modules", sources=None, size=(100, 30)):
     app = TuiApp(
         source=StaticModuleSource([RECORD]),
         sources=sources,
         initial_page=initial_page,
         boot_started_at=time.monotonic(),
     )
-    async with compat.app_test(app, size=(100, 30)) as pilot:
+    async with compat.app_test(app, size=size) as pilot:
         await pilot.pause()
         await asyncio.sleep(0.3)
         return await body(app, pilot)
@@ -166,7 +167,152 @@ async def _test_module_keys_do_not_fire_elsewhere():
     return all(not delta for _, delta in leaked)
 
 
+async def _test_initial_page_is_dashboard():
+    # 首屏落在概览：第一次进来最该看到的是「我在管哪个实例、它跑没跑」，而不是包列表。
+    app = TuiApp(source=StaticModuleSource([RECORD]), boot_started_at=time.monotonic())
+    async with compat.app_test(app, size=(100, 30)) as pilot:
+        await pilot.pause()
+        page = app.active_page
+        highlighted = _nav_index(app)
+        await pilot.press("q")
+    return page == "dashboard" and highlighted == _page_index("dashboard")
+
+
+async def _test_subtitle_names_the_current_instance():
+    # 标题栏要写明当前实例：在配置页改 secret、数据库页删数据项时，看不出改的是哪一个最危险。
+    with TemporaryDirectory(prefix="akari-nav-") as raw:
+        root = Path(raw) / "demo-instance"
+        root.mkdir()
+        (root / "akaribot.toml").write_text('[instance]\nname = "demo"\n', encoding="utf-8")
+        previous = context.active_root()
+        context.set_active_root(root)
+        try:
+            app = TuiApp(source=StaticModuleSource([RECORD]), boot_started_at=time.monotonic())
+            async with compat.app_test(app, size=(100, 30)) as pilot:
+                await pilot.pause()
+                named = app.sub_title
+                await pilot.press("q")
+        finally:
+            context.set_active_root(previous)
+    return "demo-instance" in named and i18n.t("cli.tui.app.subtitle") != named
+
+
+async def _test_page_step_keys_walk_the_sidebar():
+    # ctrl+← / ctrl+→ 逐页走，越界回到另一端；不依赖鼠标点侧栏。
+    async def body(app, pilot):
+        first = app.active_page
+        await pilot.press("ctrl+right")
+        await pilot.pause()
+        second = (app.active_page, _nav_index(app))
+        await pilot.press("ctrl+left")
+        await pilot.pause()
+        back = app.active_page
+        for _ in range(len(PAGES) - 1):
+            await pilot.press("ctrl+left")
+            await pilot.pause()
+        wrapped = app.active_page
+        await pilot.press("q")
+        return first, second, back, wrapped
+
+    # 从 modules 连按 len(PAGES)-1 次「上一页」等于往回绕一圈，落在它的下一页。
+    start = _page_index("modules")
+    expected_wrap = [key for key, _, _ in PAGES][(start + 1) % len(PAGES)]
+    first, second, back, wrapped = await _with_app(body)
+    return (
+        first == "modules"
+        and second == ("adapters", _page_index("adapters"))
+        and back == "modules"
+        and wrapped == expected_wrap
+    )
+
+
+async def _test_help_overlay_lists_page_keys():
+    # 页脚在 80 列下装不下十几条键位，故 ? 要给出一份完整清单。
+    async def body(app, pilot):
+        await pilot.press("question_mark")
+        await pilot.pause()
+        screen = app.screen
+        opened = type(screen).__name__
+        rows = [str(item.query_one(compat.Static).content) for item in screen.query(compat.ListItem)]
+        text = "\n".join(rows)
+        await pilot.press("escape")
+        await pilot.pause()
+        closed = type(app.screen).__name__
+        await pilot.press("q")
+        return opened, text, closed
+
+    opened, text, closed = await _with_app(body)
+    return opened == "HelpScreen" and "u" in text and closed == "Screen"
+
+
+async def _test_footer_fits_eighty_columns():
+    # 页脚在 80 列下会静默截断：把低频键位藏起来（bindings 四元组第 4 项 False）后仍要量一遍。
+    async def body(app, pilot):
+        widths: dict[str, int] = {}
+        for key, _, _ in PAGES:
+            app.show_page(key)
+            await pilot.pause()
+            await asyncio.sleep(0.05)
+            footer = app.query_one(compat.Footer)
+            widths[key] = compat.display_width(str(footer.render()))
+        await pilot.press("q")
+        return widths
+
+    widths = await _with_app(body, size=(80, 24))
+    return all(width <= 80 for width in widths.values())
+
+
+async def _test_busy_quit_asks_first():
+    # 后台任务在跑时按 q 必须先问一次：装了一半的 uv 子进程不该被丢在后台。
+    async def body(app, pilot):
+        app.run_worker(asyncio.sleep(2.0), group="demo-task")
+        await pilot.pause()
+        await pilot.press("q")
+        await pilot.pause()
+        asked = type(app.screen).__name__
+        await pilot.press("escape")
+        await pilot.pause()
+        stayed = app.is_running
+        await pilot.press("q")
+        await pilot.pause()
+        # 任务仍在跑，第二次按 q 依然只提问；用例结束由 app_test 收尾。
+        again = type(app.screen).__name__
+        return asked, stayed, again
+
+    asked, stayed, again = await _with_app(body)
+    return asked == "ChoiceScreen" and stayed is True and again == "ChoiceScreen"
+
+
+async def _test_switching_instance_asks_when_dirty():
+    # 切实例会重挂载页面：有未保存改动时要先问一次。
+    with TemporaryDirectory(prefix="akari-nav-") as raw:
+        root = Path(raw) / "target"
+        root.mkdir()
+        (root / "akaribot.toml").write_text('[instance]\nname = "target"\n', encoding="utf-8")
+
+        async def body(app, pilot):
+            page = app.page("database")
+            page.dirty_note = lambda: "数据库页有一条未写入的新数据项"
+            previous = context.active_root()
+            app.switch_instance(root)
+            await pilot.pause()
+            asked = type(app.screen).__name__
+            page.query_one  # 占位：保持页面引用存活
+            await pilot.click("#choice-cancel") if False else None
+            app.screen.query_one("#choice-0", compat.Button).press()
+            await pilot.pause()
+            await asyncio.sleep(0.2)
+            switched = context.active_root()
+            context.set_active_root(previous)
+            await pilot.press("q")
+            return asked, switched
+
+        asked, switched = await _with_app(body)
+    return asked == "ChoiceScreen" and switched is not None and switched.name == "target"
+
+
 async def _test_module_keys_fire_on_modules_page():
+    # 卸载现在一次按键即弹处置方式框，故这里断言「弹了框、没有直接卸」与「r 仍触发取数」。
     async def body(app, pilot):
         source = app.module_source
         app.show_page("modules")
@@ -176,16 +322,21 @@ async def _test_module_keys_fire_on_modules_page():
         await pilot.press("u")
         await pilot.pause()
         await asyncio.sleep(0.2)
+        opened = len(app.screen_stack) > 1
+        await pilot.press("escape")
+        await pilot.pause()
         await pilot.press("r")
         await pilot.pause()
         await asyncio.sleep(0.2)
         await pilot.press("q")
-        return source.calls.get("uninstall", 0) - before.get("uninstall", 0), source.calls.get("list", 0) - before.get(
-            "list", 0
+        return (
+            opened,
+            source.calls.get("uninstall", 0) - before.get("uninstall", 0),
+            source.calls.get("list", 0) - before.get("list", 0),
         )
 
-    uninstalls, lists = await _with_app(body)
-    return uninstalls == 1 and lists >= 1
+    opened, uninstalls, lists = await _with_app(body)
+    return opened and uninstalls == 0 and lists >= 1
 
 
 async def _test_hidden_pages_do_not_load():
@@ -277,6 +428,13 @@ async def test_tui_navigation(tester: Tester):
     await tester.test(_test_every_page_takes_focus, "每页都有焦点落点")
     await tester.test(_test_focus_stays_on_active_page, "焦点落在当前页内")
     await tester.test(_test_module_keys_do_not_fire_elsewhere, "其它页按 i/u/r/Esc 不触碰模块")
+    await tester.test(_test_initial_page_is_dashboard, "首屏落在概览页")
+    await tester.test(_test_subtitle_names_the_current_instance, "标题栏写明当前实例")
+    await tester.test(_test_page_step_keys_walk_the_sidebar, "翻页键逐页走且越界折返")
+    await tester.test(_test_help_overlay_lists_page_keys, "帮助浮层列出本页键位")
+    await tester.test(_test_footer_fits_eighty_columns, "80 列下每页页脚不溢出")
+    await tester.test(_test_busy_quit_asks_first, "有后台任务时退出先确认")
+    await tester.test(_test_switching_instance_asks_when_dirty, "切换实例前先处理未保存改动")
     await tester.test(_test_module_keys_fire_on_modules_page, "模块页页级键位生效")
     await tester.test(_test_hidden_pages_do_not_load, "隐藏页不取数")
     await tester.test(_test_first_visit_loads_once, "首次访问取一次数")

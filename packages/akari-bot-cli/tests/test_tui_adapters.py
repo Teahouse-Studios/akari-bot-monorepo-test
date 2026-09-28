@@ -6,6 +6,7 @@
 """
 
 import time
+from unittest import mock
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
@@ -25,6 +26,15 @@ INSTALLED = AdapterRecord(
     instance_id="",
     client_name="Telegram",
     table="bot_telegram",
+    enable=True,
+    enabled=True,
+    installed=True,
+)
+ALTERNATE = AdapterRecord(
+    platform="discord",
+    instance_id="work",
+    client_name="Discord-work",
+    table="bot_discord-work",
     enable=True,
     enabled=True,
     installed=True,
@@ -53,7 +63,12 @@ def _source(**kwargs) -> StaticAdapterSource:
 
 async def _with_page(body, source: StaticAdapterSource | None = None):
     chosen = source if source is not None else _source()
-    app = TuiApp(sources={"adapters": chosen}, initial_page="adapters", boot_started_at=time.monotonic())
+    app = TuiApp(
+        source=StaticModuleSource(),
+        sources={"adapters": chosen},
+        initial_page="adapters",
+        boot_started_at=time.monotonic(),
+    )
     async with compat.app_test(app, size=(120, 34)) as pilot:
         page = app.page("adapters")
         await page.wait_for_idle()
@@ -66,6 +81,17 @@ async def _select(page, platform: str) -> None:
     target = next(index for index, record in enumerate(order) if record.platform == platform)
     rows = [index for index, kind in enumerate(page._row_kinds) if kind == "instance"]
     page.query_one("#adapter-list", compat.ListView).index = rows[target]
+
+
+async def _open_purge_choice(page, pilot) -> None:
+    page.request_purge_instance()
+    await pilot.pause()
+
+
+async def _choose_mode(app, pilot, index: int) -> None:
+    # 按控件 API 触发：按钮宽度随文案变化，按坐标点击在长文案下会落到控件之外。
+    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    await pilot.pause()
 
 
 async def _test_uninstalled_platforms_are_listed():
@@ -276,35 +302,299 @@ async def _test_remove_instance_needs_two_presses():
     async def body(app, page, pilot, chosen):
         await _select(page, "telegram")
         await pilot.pause()
-        page.request_remove_instance(purge_data=False)
+        page.request_remove_instance()
         await pilot.pause()
-        first = list(chosen.removed), page.status_text
-        page.request_remove_instance(purge_data=False)
+        first = list(chosen.removed)
+        asked = page.status_text
+        page.request_remove_instance()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return first, list(chosen.removed)
+        return first, asked, list(chosen.removed)
 
-    first, second = await _with_page(body, source)
-    return first[0] == [] and first[1] and second == [("telegram", "", False)]
+    first, asked, second = await _with_page(body, source)
+    return (
+        first == []
+        and asked == i18n.t("cli.tui.adapters.remove_confirm", name=i18n.t("cli.tui.adapters.default_id"))
+        and second == [("telegram", "", False)]
+    )
 
 
-async def _test_purge_instance_passes_flag():
+async def _test_remove_repeat_within_debounce_is_ignored():
     source = _source()
 
     async def body(app, page, pilot, chosen):
         await _select(page, "telegram")
         await pilot.pause()
-        page.request_remove_instance(purge_data=True)
+        page.request_remove_instance()
         await pilot.pause()
-        page.request_remove_instance(purge_data=True)
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        removed = list(chosen.removed)
+        armed = page._gate.armed
+        await pilot.press("q")
+        return removed, armed
+
+    removed, armed = await _with_page(body, source)
+    return removed == [] and armed
+
+
+async def _test_remove_confirm_resets_on_refresh():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        armed_before = page._gate.armed
+        page.refresh_instances(force=True)
+        await page.wait_for_idle()
+        await pilot.pause()
+        armed_after = page._gate.armed
+        page.request_remove_instance()
+        await pilot.pause()
+        after_ask = list(chosen.removed)
+        page.request_remove_instance()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return list(chosen.removed)
+        return armed_before, armed_after, after_ask, list(chosen.removed)
 
-    removed = await _with_page(body, source)
-    return removed == [("telegram", "", True)]
+    armed_before, armed_after, after_ask, after_confirm = await _with_page(body, source)
+    return armed_before and not armed_after and after_ask == [] and after_confirm == [("telegram", "", False)]
+
+
+async def _test_remove_confirm_resets_on_highlight():
+    source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE), instance_root="/tmp/inst"))
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        armed_before = page._gate.armed
+        await _select(page, "discord")
+        await pilot.pause()
+        armed_after = page._gate.armed
+        page.request_remove_instance()
+        await pilot.pause()
+        after_ask = list(chosen.removed)
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return armed_before, armed_after, after_ask, list(chosen.removed)
+
+    armed_before, armed_after, after_ask, after_confirm = await _with_page(body, source)
+    return armed_before and not armed_after and after_ask == [] and after_confirm == [("discord", "work", False)]
+
+
+async def _test_remove_confirm_resets_on_page_switch():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        armed_before = page._gate.armed
+        app.show_page("modules")
+        await pilot.pause()
+        armed_after = page._gate.armed
+        app.show_page("adapters")
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        await pilot.press("q")
+        return armed_before, armed_after, list(chosen.removed)
+
+    armed_before, armed_after, removed = await _with_page(body, source)
+    return armed_before and not armed_after and removed == []
+
+
+async def _test_purge_choice_offers_both_modes():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        await _open_purge_choice(page, pilot)
+        opened = len(app.screen_stack) > 1
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        await _choose_mode(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        screens = len(app.screen_stack)
+        await pilot.press("q")
+        return opened, labels, screens, list(chosen.removed)
+
+    opened, labels, screens, removed = await _with_page(body, source)
+    return (
+        opened
+        and labels
+        == [
+            i18n.t("cli.tui.adapters.remove_choice_plain"),
+            i18n.t("cli.tui.adapters.remove_choice_purge"),
+            i18n.t("cli.tui.adapters.cancel"),
+        ]
+        and screens == 1
+        and removed == [("telegram", "", False)]
+    )
+
+
+async def _test_purge_repeat_within_debounce_opens_one_modal():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_purge_instance()
+        await pilot.pause()
+        page.request_purge_instance()
+        await pilot.pause()
+        depth = len(app.screen_stack)
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return depth, list(chosen.removed)
+
+    depth, removed = await _with_page(body, source)
+    return depth == 2 and removed == []
+
+
+async def _test_purge_requires_typed_instance_id():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        await _open_purge_choice(page, pilot)
+        await _choose_mode(app, pilot, 1)
+        prompt_open = len(app.screen_stack) > 1
+        app.screen.query_one("#prompt-input", compat.Input).value = INSTALLED.client_name
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return prompt_open, list(chosen.removed)
+
+    prompt_open, removed = await _with_page(body, source)
+    return prompt_open and removed == [("telegram", "", True)]
+
+
+async def _test_purge_wrong_id_cancels():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        await _open_purge_choice(page, pilot)
+        await _choose_mode(app, pilot, 1)
+        app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
+        await pilot.press("enter")
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return list(chosen.removed), status
+
+    removed, status = await _with_page(body, source)
+    return removed == [] and status == i18n.t(
+        "cli.tui.adapters.purge_mismatch", entered="telegram", expected=INSTALLED.client_name
+    )
+
+
+async def _test_purge_accepts_instance_id_of_named_instance():
+    source = _source(snapshot=AdapterSnapshot(instances=(ALTERNATE,), instance_root="/tmp/inst"))
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "discord")
+        await pilot.pause()
+        await _open_purge_choice(page, pilot)
+        await _choose_mode(app, pilot, 1)
+        app.screen.query_one("#prompt-input", compat.Input).value = ALTERNATE.client_name
+        await pilot.press("enter")
+        await pilot.pause()
+        rejected = page.status_text
+        await _open_purge_choice(page, pilot)
+        await _choose_mode(app, pilot, 1)
+        app.screen.query_one("#prompt-input", compat.Input).value = ALTERNATE.instance_id
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return rejected, list(chosen.removed)
+
+    rejected, removed = await _with_page(body, source)
+    return rejected == i18n.t(
+        "cli.tui.adapters.purge_mismatch", entered=ALTERNATE.client_name, expected=ALTERNATE.instance_id
+    ) and removed == [("discord", "work", True)]
+
+
+async def _test_purge_prompt_cancel_keeps_instance():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        await _open_purge_choice(page, pilot)
+        await _choose_mode(app, pilot, 1)
+        await pilot.press("escape")
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return list(chosen.removed), status
+
+    removed, status = await _with_page(body, source)
+    return removed == [] and status == i18n.t("cli.tui.adapters.purge_cancelled")
+
+
+def _test_pending_confirm_gate_debounce_and_timeout():
+    gate = compat.PendingConfirm()
+    first = gate.arm("x", now=100.0)
+    too_soon = gate.arm("x", now=100.1)
+    confirmed = gate.arm("x", now=101.0)
+    other = gate.arm("y", now=200.0)
+    expired = gate.arm("y", now=220.0)
+    modal = compat.PendingConfirm()
+    accepted = modal.accept("x", now=100.0)
+    repeated = modal.accept("x", now=100.1)
+    accepted_again = modal.accept("x", now=101.0)
+    return (
+        first is False
+        and too_soon is False
+        and confirmed is True
+        and other is False
+        and expired is False
+        and gate.armed
+        and accepted is True
+        and repeated is False
+        and accepted_again is True
+    )
+
+
+async def _test_footer_keeps_page_bindings_within_80_columns():
+    source = _source()
+    app = TuiApp(
+        source=StaticModuleSource(),
+        sources={"adapters": source},
+        initial_page="adapters",
+        boot_started_at=time.monotonic(),
+    )
+    page_actions = {"refresh", "install", "remove_instance", "purge_instance"}
+    async with compat.app_test(app, size=(80, 24)) as pilot:
+        page = app.page("adapters")
+        await page.wait_for_idle()
+        await pilot.pause()
+        footer = app.query_one(compat.Footer)
+        # 只量本页键位：其它层级的键位不由本页负责。
+        keys = [child for child in footer.children if getattr(child, "action", "") in page_actions]
+        content_width = sum(compat.widget_cells(child)[0] for child in keys)
+        visible = tuple(binding.key for binding in page.BINDINGS if binding.show)
+        hidden = tuple(binding.key for binding in page.BINDINGS if not binding.show)
+        await pilot.press("q")
+    return len(keys) == 4 and content_width <= 80 and visible == ("r", "i", "d", "ctrl+d") and hidden == ("e", "a")
 
 
 async def _test_instance_op_reloads_list():
@@ -330,20 +620,35 @@ async def _test_instance_op_reloads_list():
 async def test_tui_adapters(tester: Tester):
     """cli.tui.adapters: 未安装平台与安装入口测试"""
     _use_cli_locale()
-    await tester.test(_test_uninstalled_platforms_are_listed, "未安装平台并入列表且不重复")
-    await tester.test(_test_uninstalled_row_marked, "未安装行标注状态与详情")
-    await tester.test(_test_button_follows_state, "按钮随安装状态切换")
-    await tester.test(_test_install_action_streams_output, "按 i 安装并显示进度")
-    await tester.test(_test_toggle_on_uninstalled_installs, "未安装时按 e 走安装")
-    await tester.test(_test_toggle_still_works_for_installed, "已安装时按 e 切换启用")
-    await tester.test(_test_summary_counts_instances_only, "摘要只计真实例")
-    await tester.test(_test_available_failure_keeps_instances, "清单失败不清空实例")
-    await tester.test(_test_modules_page_excludes_adapters, "模块页不列适配器")
-    await tester.test(_test_available_normalizer_reads_module_available_json, "解析可安装清单")
-    await tester.test(_test_adapter_record_installable_semantics, "缺包但有配置也算可安装")
-    await tester.test(_test_add_instance_uses_input_and_platform, "按输入框与平台新增实例")
-    await tester.test(_test_add_instance_rejects_bad_id, "非法实例 ID 不执行")
-    await tester.test(_test_remove_instance_needs_two_presses, "移除实例需二次确认")
-    await tester.test(_test_purge_instance_passes_flag, "清数据移除带 --purge-data")
-    await tester.test(_test_instance_op_reloads_list, "实例变更后重载列表")
+    await tester.test(_test_pending_confirm_gate_debounce_and_timeout, "二次确认闸门防抖与超时")
+    # 放大防抖窗口，使「连发第二次请求」不依赖两次调用之间的真实耗时。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
+        await tester.test(_test_remove_repeat_within_debounce_is_ignored, "连发第二次请求不执行移除")
+        await tester.test(_test_purge_repeat_within_debounce_opens_one_modal, "连发第二次请求不叠模态框")
+    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_uninstalled_platforms_are_listed, "未安装平台并入列表且不重复")
+        await tester.test(_test_uninstalled_row_marked, "未安装行标注状态与详情")
+        await tester.test(_test_button_follows_state, "按钮随安装状态切换")
+        await tester.test(_test_install_action_streams_output, "按 i 安装并显示进度")
+        await tester.test(_test_toggle_on_uninstalled_installs, "未安装时按 e 走安装")
+        await tester.test(_test_toggle_still_works_for_installed, "已安装时按 e 切换启用")
+        await tester.test(_test_summary_counts_instances_only, "摘要只计真实例")
+        await tester.test(_test_available_failure_keeps_instances, "清单失败不清空实例")
+        await tester.test(_test_modules_page_excludes_adapters, "模块页不列适配器")
+        await tester.test(_test_available_normalizer_reads_module_available_json, "解析可安装清单")
+        await tester.test(_test_adapter_record_installable_semantics, "缺包但有配置也算可安装")
+        await tester.test(_test_add_instance_uses_input_and_platform, "按输入框与平台新增实例")
+        await tester.test(_test_add_instance_rejects_bad_id, "非法实例 ID 不执行")
+        await tester.test(_test_remove_instance_needs_two_presses, "移除实例需二次确认")
+        await tester.test(_test_remove_confirm_resets_on_refresh, "刷新作废待确认的移除")
+        await tester.test(_test_remove_confirm_resets_on_highlight, "换选中项作废待确认的移除")
+        await tester.test(_test_remove_confirm_resets_on_page_switch, "切页作废待确认的移除")
+        await tester.test(_test_purge_choice_offers_both_modes, "ctrl+d 弹出两种移除方式")
+        await tester.test(_test_purge_requires_typed_instance_id, "清数据要输入实例 ID")
+        await tester.test(_test_purge_wrong_id_cancels, "实例 ID 不符则取消清数据")
+        await tester.test(_test_purge_accepts_instance_id_of_named_instance, "具名实例以实例 ID 为确认目标")
+        await tester.test(_test_purge_prompt_cancel_keeps_instance, "取消打字确认不执行")
+        await tester.test(_test_footer_keeps_page_bindings_within_80_columns, "80 列页脚不溢出")
+        await tester.test(_test_instance_op_reloads_list, "实例变更后重载列表")
     return tester

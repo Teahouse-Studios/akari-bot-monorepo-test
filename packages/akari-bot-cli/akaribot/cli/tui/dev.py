@@ -552,12 +552,19 @@ class SubprocessDevSource:
         if kind == ACTION_NEW:
             # --non-interactive：表单没收集的选项取默认值。缺了它，子进程会把问卷打进输出区并
             # 与界面争抢键盘——它继承的是同一个终端。
+            target = _text(params.get("target")) or TARGET_MODULE
             args = [
                 "new",
-                _text(params.get("target")) or TARGET_MODULE,
+                target,
                 _text(params.get("name")),
                 "--non-interactive",
+                # 三个开关一律显式给值：不给时 CLI 取自己的缺省（tests 默认为真），与表单显示不符。
+                "--config" if _flag(params.get("config")) else "--no-config",
             ]
+            if target != TARGET_ADAPTER:
+                # new adapter 只声明了 --config，多给的开关会被 typer 当成未知选项拒绝。
+                args.append("--database" if _flag(params.get("database")) else "--no-database")
+                args.append("--tests" if _flag(params.get("tests")) else "--no-tests")
             directory = _text(params.get("directory"))
             if directory:
                 args += ["--dir", directory]
@@ -712,7 +719,8 @@ class DevPage(compat.Vertical):
         ("r", "refresh", i18n.t("cli.tui.dev.action_refresh")),
         ("t", "run_tests", i18n.t("cli.tui.dev.action_run_tests")),
         ("n", "new_package", i18n.t("cli.tui.dev.action_new_package")),
-        ("escape", "cancel_action", i18n.t("cli.tui.dev.action_cancel")),
+        # 终止是低频动作，页脚留给刷新、测试与新建三条。
+        ("escape", "cancel_action", i18n.t("cli.tui.dev.action_cancel"), False),
     )
 
     DEFAULT_CSS = """
@@ -758,14 +766,18 @@ class DevPage(compat.Vertical):
     DevPage #new-form {
         height: auto;
     }
-    DevPage #new-fields, DevPage #new-buttons {
+    DevPage #new-fields, DevPage #new-switches, DevPage #new-buttons {
         height: 3;
         padding: 0 0 0 1;
     }
     DevPage #new-name, DevPage #new-dir {
         width: 1fr;
     }
-    DevPage #new-kind-module, DevPage #new-kind-adapter {
+    DevPage #new-kind {
+        width: auto;
+        margin: 0 0 0 1;
+    }
+    DevPage #new-config, DevPage #new-database, DevPage #new-tests {
         width: auto;
         padding: 1 0 0 1;
     }
@@ -828,6 +840,7 @@ class DevPage(compat.Vertical):
         self._action_result: ActionResult | None = None
         self._cancel_requested: bool = False
         self._new_form_open: bool = False
+        self._new_kind: str = TARGET_MODULE
         self._new_hint: str = ""
 
     def compose(self) -> compat.ComposeResult:
@@ -839,9 +852,15 @@ class DevPage(compat.Vertical):
             with compat.Vertical(id="new-form"):
                 with compat.Horizontal(id="new-fields"):
                     yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_name_placeholder"), id="new-name")
-                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_kind_module"), value=True, id="new-kind-module")
-                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_kind_adapter"), id="new-kind-adapter")
+                    yield compat.Button(
+                        i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_module")),
+                        id="new-kind",
+                    )
                     yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_dir_placeholder"), id="new-dir")
+                with compat.Horizontal(id="new-switches"):
+                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_config"), id="new-config")
+                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_database"), id="new-database")
+                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_tests"), value=True, id="new-tests")
                 with compat.Horizontal(id="new-buttons"):
                     yield compat.Button(i18n.t("cli.tui.dev.new_confirm"), id="new-confirm", variant="primary")
                     yield compat.Button(i18n.t("cli.tui.dev.new_close"), id="new-close")
@@ -1040,7 +1059,8 @@ class DevPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.dev.status_action_busy", label=_action_label(self._action_kind)))
             return
         self._new_form_open = True
-        self._clear_new_hint()
+        self._sync_new_kind()
+        self._show_new_hint(i18n.t("cli.tui.dev.new_skeleton_hint"))
         self._render_action_panel()
         compat.focus_now(self.query_one("#new-name", compat.Input))
 
@@ -1060,7 +1080,7 @@ class DevPage(compat.Vertical):
         name = self._input_text("#new-name")
         rejection = _name_rejection(name)
         if rejection:
-            self._show_new_hint(rejection)
+            self._show_new_hint(rejection, warning=True)
             return
         self._new_form_open = False
         self._clear_new_hint()
@@ -1068,13 +1088,37 @@ class DevPage(compat.Vertical):
             ACTION_NEW,
             {
                 "name": name,
-                "target": self._new_target(),
+                "target": self._new_kind,
                 "directory": self._input_text("#new-dir"),
+                "config": self._switch_value("#new-config"),
+                "database": self._switch_value("#new-database"),
+                "tests": self._switch_value("#new-tests"),
                 "cwd": self._snapshot.workspace_root,
             },
         )
-        # 收起表单会把焦点留给隐藏控件，回车或空格随即落到不可见的复选框上；交回列表。
+        # 收起表单会把焦点留给隐藏控件，回车或空格随即落到不可见的控件上；交回列表。
         self.focus_primary()
+
+    def toggle_new_kind(self) -> None:
+        """在模块与适配器之间切换生成类型；类型二选一，故用二态按钮而不是两个复选框。"""
+        self._new_kind = TARGET_ADAPTER if self._new_kind == TARGET_MODULE else TARGET_MODULE
+        self._sync_new_kind()
+
+    def _sync_new_kind(self) -> None:
+        label_key = (
+            "cli.tui.dev.new_kind_adapter" if self._new_kind == TARGET_ADAPTER else "cli.tui.dev.new_kind_module"
+        )
+        self.query_one("#new-kind", compat.Button).label = i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t(label_key))
+        # 适配器脚手架没有 database 与 tests 选项，关掉这两项，免得生成参数被 CLI 拒绝。
+        adapter = self._new_kind == TARGET_ADAPTER
+        for selector in ("#new-database", "#new-tests"):
+            self.query_one(selector, compat.Checkbox).disabled = adapter
+
+    def _switch_value(self, selector: str) -> bool:
+        try:
+            return bool(self.query_one(selector, compat.Checkbox).value)
+        except Exception:  # noqa: BLE001 - 控件缺失时按未勾选处理
+            return False
 
     def cancel_running_action(self) -> None:
         """请求终止正在运行的动作；空闲时不触碰数据源。"""
@@ -1151,14 +1195,12 @@ class DevPage(compat.Vertical):
             return conclusion
         return i18n.t("cli.tui.common.error_separator").join((conclusion, _one_line(result.detail)))
 
-    def _new_target(self) -> str:
-        adapter = self.query_one("#new-kind-adapter", compat.Checkbox)
-        return TARGET_ADAPTER if adapter.value else TARGET_MODULE
-
-    def _show_new_hint(self, message: str) -> None:
+    def _show_new_hint(self, message: str, *, warning: bool = False) -> None:
         self._new_hint = message
-        self.query_one("#new-hint", compat.Static).update(compat.plain_text(message, style="bold red"))
-        self._set_status(message)
+        style = "bold red" if warning else "dim"
+        self.query_one("#new-hint", compat.Static).update(compat.plain_text(message, style=style))
+        if warning:
+            self._set_status(message)
 
     def _clear_new_hint(self) -> None:
         self._new_hint = ""
@@ -1383,19 +1425,12 @@ class DevPage(compat.Vertical):
             self.run_tests()
         elif button_id == "new-package":
             self.open_new_form()
+        elif button_id == "new-kind":
+            self.toggle_new_kind()
         elif button_id == "new-confirm":
             self.submit_new_form()
         elif button_id == "new-close":
             self.close_new_form()
-
-    @compat.on(compat.Checkbox.Changed)
-    def _on_new_kind_changed(self, event: compat.Checkbox.Changed) -> None:
-        if event.checkbox.id not in ("new-kind-module", "new-kind-adapter") or not event.value:
-            return
-        other_id = "new-kind-adapter" if event.checkbox.id == "new-kind-module" else "new-kind-module"
-        other = self.query_one(f"#{other_id}", compat.Checkbox)
-        if other.value:
-            other.value = False
 
     @compat.on(compat.Input.Submitted, "#new-name")
     def _on_new_name_submitted(self, event: compat.Input.Submitted) -> None:

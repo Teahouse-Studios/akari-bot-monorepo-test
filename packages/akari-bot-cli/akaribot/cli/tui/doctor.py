@@ -45,6 +45,25 @@ _ORPHAN_KEYS = {ORPHAN_RAN: "cli.tui.doctor.orphan_ran", ORPHAN_SKIPPED: "cli.tu
 # 结论缺省级别与 CLI 侧判据一致：端口与凭据重复报错，孤立配置只告警。
 _DEFAULT_LEVELS = {"port": LEVEL_ERROR, "credential": LEVEL_ERROR, "orphan": LEVEL_WARNING, "config": LEVEL_ERROR}
 
+PAGE_DASHBOARD = "dashboard"
+PAGE_ADAPTERS = "adapters"
+# 结论种类到处理页面的映射；kind 取自 doctor --json，当前 CLI 产出 port / credential / orphan / config，
+# 其余取值一并列出，对端新增结论时页面不必跟着改。
+_PAGE_BY_KIND = {
+    "module": "modules",
+    "modules": "modules",
+    "adapter": PAGE_ADAPTERS,
+    "adapters": PAGE_ADAPTERS,
+    "platform": PAGE_ADAPTERS,
+    "config": "config",
+    "configuration": "config",
+    "environment": "environment",
+    "interpreter": "environment",
+    "venv": "environment",
+    "database": "database",
+    "db": "database",
+}
+
 
 def _text(value: Any) -> str:
     if value is None:
@@ -151,6 +170,26 @@ class DoctorConflict:
         """级别的本地化标签；未知级别直接显示原值。"""
         key = _LEVEL_KEYS.get(self.level)
         return i18n.t(key) if key else self.level
+
+    @property
+    def target_page(self) -> str:
+        """该项对应的处理页面键；没有专页时按平台落到适配器页，否则落到概览页。"""
+        page = _PAGE_BY_KIND.get(self.kind.strip().casefold())
+        if page:
+            return page
+        return PAGE_ADAPTERS if self.platform else PAGE_DASHBOARD
+
+    @property
+    def target_page_label(self) -> str:
+        """处理页面的本地化名称。"""
+        return i18n.t(f"cli.tui.nav.{self.target_page}")
+
+    @property
+    def next_step(self) -> str:
+        """详情里的下一步：能落到页面的指路，落不到的给终端命令。"""
+        if _PAGE_BY_KIND.get(self.kind.strip().casefold()) or self.platform:
+            return i18n.t("cli.tui.doctor.next_step_page", page=self.target_page_label)
+        return i18n.t("cli.tui.doctor.next_step_cli")
 
 
 @dataclass(frozen=True)
@@ -407,6 +446,15 @@ class SubprocessDoctorSource:
         return (text or "").strip()[-limit:]
 
 
+class _ConflictListView(compat.ListView):
+    # 列表默认把回车转成 Selected，而鼠标单击也发同一条消息；这里把回车改绑到页面的跳转动作上，
+    # 单击仍然只移动高亮，用户能单独查看某一行的详情。
+    BINDINGS = [compat.bind("enter", "open_conflict", i18n.t("cli.tui.doctor.bind_open"))]
+
+    def action_open_conflict(self) -> None:
+        self.screen.query_one(DoctorPage).open_selected_conflict()
+
+
 class DoctorPage(compat.Vertical):
     """体检页控件。
 
@@ -415,7 +463,10 @@ class DoctorPage(compat.Vertical):
 
     can_focus = True
 
-    BINDINGS = compat.bindings(("r", "refresh", i18n.t("cli.tui.doctor.bind_refresh")))
+    BINDINGS = compat.bindings(
+        ("r", "refresh", i18n.t("cli.tui.doctor.bind_refresh")),
+        ("enter", "open_conflict", i18n.t("cli.tui.doctor.bind_open")),
+    )
 
     DEFAULT_CSS = """
     DoctorPage {
@@ -437,6 +488,7 @@ class DoctorPage(compat.Vertical):
     }
     DoctorPage #conflict-list {
         height: 1fr;
+        min-height: 5;
         border: round $primary;
     }
     DoctorPage #conflict-list > ListItem {
@@ -451,7 +503,8 @@ class DoctorPage(compat.Vertical):
         padding: 0 0 0 1;
     }
     DoctorPage #detail {
-        height: 6;
+        height: 1fr;
+        max-height: 7;
         padding: 0 1;
         color: $text-muted;
         text-wrap: nowrap;
@@ -484,12 +537,13 @@ class DoctorPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：统计面板、结论行、冲突列表、刷新按钮、详情与状态栏。"""
+        """装配页面控件树：统计面板、结论行、冲突列表、动作按钮、详情与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.doctor.summary_pending"), id="summary", markup=False)
         yield compat.Static(i18n.t("cli.tui.doctor.verdict_pending"), id="verdict", markup=False)
-        yield compat.ListView(id="conflict-list")
+        yield _ConflictListView(id="conflict-list")
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.doctor.action_refresh"), id="refresh", variant="primary")
+            yield compat.Button(i18n.t("cli.tui.doctor.action_open"), id="open-conflict")
         yield compat.Static(i18n.t("cli.tui.doctor.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -707,6 +761,7 @@ class DoctorPage(compat.Vertical):
             rows.append((i18n.t("cli.tui.doctor.field_instances"), separator.join(conflict.instances)))
         rows.append((i18n.t("cli.tui.doctor.field_message"), conflict.message))
         rows.append((i18n.t("cli.tui.doctor.field_detail"), _detail_text(conflict.detail)))
+        rows.append((i18n.t("cli.tui.doctor.field_next"), conflict.next_step))
         return compat.align_rows(rows)
 
     def _empty_detail_line(self) -> str:
@@ -750,10 +805,27 @@ class DoctorPage(compat.Vertical):
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         if event.button.id == "refresh":
             self.refresh_report()
+        elif event.button.id == "open-conflict":
+            self.open_selected_conflict()
 
     def action_refresh(self) -> None:
         """键位动作：重新体检。"""
         self.refresh_report()
+
+    def action_open_conflict(self) -> None:
+        """键位动作：切到当前结论对应的处理页面。"""
+        self.open_selected_conflict()
+
+    def open_selected_conflict(self) -> None:
+        """切到当前结论对应的处理页面，并在状态栏与通知里说明去向。"""
+        conflict = self.selected_conflict
+        if conflict is None:
+            self._set_status("cli.tui.doctor.status_nothing")
+            return
+        self.app.show_page(conflict.target_page)
+        self._set_status("cli.tui.doctor.status_jumped", page=conflict.target_page_label)
+        # 切页后本页状态栏已经隐藏，通知是唯一能让用户立刻看到去向的通道。
+        compat.notify(self.app, self._status_rendered, title=i18n.t("cli.tui.doctor.bind_open"))
 
     # endregion
 

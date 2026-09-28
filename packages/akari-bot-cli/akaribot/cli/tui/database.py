@@ -24,6 +24,8 @@ from akaribot.cli.tui import context
 
 # 一页读取的数据项条数：线上表可能很大，界面一次只取一页，翻页与条数都由 core 侧收口。
 PAGE_LIMIT = 50
+# 四个翻页按钮的控件 id，状态同步与按键处理共用一份。
+PAGER_BUTTONS = ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
 # 条件里的运算符，从长到短匹配，避免 != 被当成 =。
 FILTER_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
 # 条件必须写成「列名 + 运算符 + 值」；只看「含运算符」会把搜索词里的 ~、= 之类误当成条件。
@@ -761,20 +763,22 @@ class DatabasePage(compat.Vertical):
 
     can_focus = True
 
+    # 破坏性动作不用单字母：删除走 ``ctrl+d``。分页与筛选的低频键位不进页脚——80 列下装不下，
+    # 页面上的翻页按钮与条件行已经承担了同样的提示。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.database.bind_refresh")),
         ("s", "save", i18n.t("cli.tui.database.bind_save")),
         ("i", "insert", i18n.t("cli.tui.database.bind_insert")),
-        ("d", "delete", i18n.t("cli.tui.database.bind_delete")),
+        ("ctrl+d", "delete", i18n.t("cli.tui.database.bind_delete")),
         ("slash", "focus_search", i18n.t("cli.tui.database.bind_search")),
-        ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel")),
         ("f", "add_filter", i18n.t("cli.tui.database.bind_filter")),
-        ("o", "set_order", i18n.t("cli.tui.database.bind_order")),
-        ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters")),
-        ("n", "next_page", i18n.t("cli.tui.database.bind_next_page")),
-        ("p", "previous_page", i18n.t("cli.tui.database.bind_previous_page")),
-        ("g", "first_page", i18n.t("cli.tui.database.bind_first_page")),
-        ("G", "last_page", i18n.t("cli.tui.database.bind_last_page")),
+        ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel"), False),
+        ("o", "set_order", i18n.t("cli.tui.database.bind_order"), False),
+        ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters"), False),
+        ("n", "next_page", i18n.t("cli.tui.database.bind_next_page"), False),
+        ("p", "previous_page", i18n.t("cli.tui.database.bind_previous_page"), False),
+        ("g", "first_page", i18n.t("cli.tui.database.bind_first_page"), False),
+        ("G", "last_page", i18n.t("cli.tui.database.bind_last_page"), False),
     )
 
     def __init__(
@@ -801,6 +805,7 @@ class DatabasePage(compat.Vertical):
         self._original: dict[str, Any] = {}
         self._insert_mode = False
         self._pending: WritePlan | None = None
+        self._gate = compat.PendingConfirm()
         self._busy = False
         self._loaded_at = 0.0
         self._table_rows: tuple[str, ...] = ()
@@ -978,10 +983,7 @@ class DatabasePage(compat.Vertical):
 
     def pager_states(self) -> dict[str, bool]:
         """返回四个翻页按钮的禁用状态，供自动化断言。"""
-        return {
-            button_id: bool(self.query_one(f"#{button_id}", compat.Button).disabled)
-            for button_id in ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
-        }
+        return {button_id: bool(self.query_one(f"#{button_id}", compat.Button).disabled) for button_id in PAGER_BUTTONS}
 
     def editor_caption(self) -> str:
         """返回编辑区上方的摘要文本。"""
@@ -1067,7 +1069,7 @@ class DatabasePage(compat.Vertical):
             return False
         await self._rebuild_editor(info)
         self._insert_mode = False
-        self._pending = None
+        self.reset_pending()
         ok = await self.reload_rows(reset_offset=True)
         if ok:
             self._set_status(i18n.t("cli.tui.database.status_table_loaded", table=table, rows=self._page.rows_total))
@@ -1202,7 +1204,10 @@ class DatabasePage(compat.Vertical):
         )
 
     def _render_tables(self) -> None:
-        list_view = self.query_one("#table-list", compat.ListView)
+        try:
+            list_view = self.query_one("#table-list", compat.ListView)
+        except Exception:  # noqa: BLE001 - 页面已卸载时后台任务仍可能落地，此时没有可画的控件
+            return
         width = self._list_width(list_view)
         # 行文本由表名与行数直接拼出：这两项都是数据，交给模板插值反而让列表读不出表名。
         rows = tuple(
@@ -1220,7 +1225,10 @@ class DatabasePage(compat.Vertical):
 
     def _render_rows(self) -> None:
         info = self.selected_info
-        list_view = self.query_one("#row-list", compat.ListView)
+        try:
+            list_view = self.query_one("#row-list", compat.ListView)
+        except Exception:  # noqa: BLE001 - 同上：卸载后不再绘制
+            return
         width = self._list_width(list_view)
         separator = i18n.t("cli.tui.common.list_separator")
         rows: list[str] = []
@@ -1268,14 +1276,17 @@ class DatabasePage(compat.Vertical):
         page = self._page
         first = page.offset <= 0
         last = page.offset >= page.last_offset
+        try:
+            buttons = {name: self.query_one(f"#{name}", compat.Button) for name in PAGER_BUTTONS}
+        except Exception:  # noqa: BLE001 - 页面已卸载时无事可做
+            return
         for button_id, disabled in (
             ("db-first-page", first),
             ("db-previous-page", first),
             ("db-next-page", last),
             ("db-last-page", last),
         ):
-            button = self.query_one(f"#{button_id}", compat.Button)
-            button.disabled = disabled or self._selected is None
+            buttons[button_id].disabled = disabled or self._selected is None
 
     def action_add_filter(self) -> None:
         """键位动作：添加筛选条件或搜索词。"""
@@ -1425,7 +1436,10 @@ class DatabasePage(compat.Vertical):
     def _set_status(self, text: str) -> None:
         self.last_result = text
         self._status_rendered = text
-        self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
+        try:
+            self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
+        except Exception:  # noqa: BLE001 - 页面已卸载时后台任务仍可能落地，此时没有可写的状态栏
+            return
 
     def on_resize(self, event: compat.events.Resize) -> None:
         """终端尺寸变化时按缓存重排，不重新取数。"""
@@ -1440,7 +1454,7 @@ class DatabasePage(compat.Vertical):
 
     def action_refresh(self) -> None:
         """键位动作：作废缓存并重新读取表与数据项。"""
-        self._pending = None
+        self.reset_pending()
         self.refresh_tables(force=True)
 
     def action_save(self) -> None:
@@ -1516,10 +1530,36 @@ class DatabasePage(compat.Vertical):
             return
         self._request(WritePlan(kind="delete", table=info.name, key=self._row_key))
 
+    def reset_pending(self) -> None:
+        """作废待确认的写入；切页、刷新、换表与换行时调用。"""
+        self._gate.reset()
+        self._pending = None
+
+    def dirty_note(self) -> str:
+        """返回未保存改动的说明；没有改动时为空串。
+
+        供 :meth:`TuiApp.switch_instance` 在切换实例前统一询问——切实例会重挂载页面，
+        编辑区里改了一半的内容会随之消失。
+        """
+        if self._insert_mode:
+            filled = [name for name, text in self.editor_values().items() if text != ""]
+            if filled:
+                return i18n.t("cli.tui.database.dirty_insert", count=len(filled))
+            return ""
+        if self._row_index is None:
+            return ""
+        changed = [
+            name for name, value in self.editor_values().items() if _text(value) != _text(self._original.get(name))
+        ]
+        if not changed:
+            return ""
+        return i18n.t("cli.tui.database.dirty_edit", count=len(changed), pk=self._row_key)
+
     def cancel_edit(self) -> None:
         """退出新建模式、清空待确认状态并把编辑区还原为当前数据项。"""
         cancelled = self._pending is not None or self._insert_mode
         self._pending = None
+        self._gate.reset()
         self._insert_mode = False
         self._sync_editor()
         self._set_status(
@@ -1530,7 +1570,8 @@ class DatabasePage(compat.Vertical):
         if self._busy:
             self._set_status(i18n.t("cli.tui.common.busy_title"))
             return
-        if self._pending != plan:
+        # 闸门挡住鼠标双击与键盘连发：同一个计划在防抖窗口内的第二次请求不算确认。
+        if not self._gate.arm(plan.summary()):
             self._pending = plan
             self._set_status(plan.summary())
             return
@@ -1627,7 +1668,7 @@ class DatabasePage(compat.Vertical):
         if index is None or index >= len(self._page.rows):
             return
         self._insert_mode = False
-        self._pending = None
+        self.reset_pending()
         self._select_row(index)
 
     @compat.on(compat.Button.Pressed)

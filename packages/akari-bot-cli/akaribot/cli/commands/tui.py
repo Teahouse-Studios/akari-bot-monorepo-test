@@ -218,7 +218,7 @@ def _check_multi_select() -> CheckResult:
     source = StaticModuleSource(
         records=records, available=records, stream_lines=["Resolved 1 package", "Installed 1 package"]
     )
-    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
 
     async def probe() -> tuple[int, int, list[str]]:
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
@@ -268,7 +268,7 @@ def _check_page_navigation() -> CheckResult:
     source = StaticModuleSource(
         [ModuleRecord(name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed")]
     )
-    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
 
     async def probe() -> tuple[list[str], list[str]]:
         mismatched: list[str] = []
@@ -325,7 +325,7 @@ def _check_available_and_progress() -> CheckResult:
         available=[installed, candidate],
         stream_lines=["Resolved 2 packages", "Installed 2 packages"],
     )
-    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
 
     async def probe() -> tuple[int, int, tuple[str, ...], str]:
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
@@ -584,7 +584,7 @@ def _check_boot() -> CheckResult:
             ModuleRecord(name="wiki", dist="akari-bot-module-wiki", version="0.2.0", summary="维基查询"),
         ]
     )
-    app_instance = TuiApp(source=source, boot_started_at=time.monotonic())
+    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
 
     async def boot() -> tuple[int, str, tuple[int, int], float]:
         async with compat.app_test(app_instance, size=(80, 24)) as pilot:

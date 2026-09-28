@@ -39,6 +39,8 @@ MARK_PLAIN = "○"
 
 # 装卸的去处：与 ``venv add`` / ``venv remove`` 的 ``--save`` 一一对应。
 SAVE_MODES = ("save", "once")
+# 预演的执行记录加这个后缀，日志与断言一眼能分出「真做了」与「只预演」。
+DRY_RUN_SUFFIX = ":dry-run"
 
 GROUP_MODULE = "akaribot.modules"
 GROUP_ADAPTER = "akaribot.adapters"
@@ -229,10 +231,10 @@ class EnvironmentSource(Protocol):
     def running(self) -> bool | None:
         """返回实例是否在运行；探测失败时返回 ``None``。"""
 
-    def action(self, kind: str) -> OperationResult:
-        """执行 ``adopt`` / ``release`` / ``recreate``。"""
+    def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
+        """执行 ``adopt`` / ``release`` / ``recreate``；``dry_run`` 为真时只预演。"""
 
-    def add_package(self, spec: str, *, save: bool) -> OperationResult:
+    def add_package(self, spec: str, *, save: bool, upgrade: bool = False) -> OperationResult:
         """安装运行库；``save`` 为真时同时记进实例清单。"""
 
     def remove_package(self, dist: str, *, save: bool) -> OperationResult:
@@ -246,11 +248,13 @@ class PackageCall:
     :param kind: ``add`` 或 ``remove``。
     :param target: 需求串或分发名。
     :param save: 是否写实例清单。
+    :param upgrade: 是否允许升级已装版本。
     """
 
     kind: str
     target: str
     save: bool
+    upgrade: bool = False
 
 
 class StaticEnvironmentSource:
@@ -304,16 +308,16 @@ class StaticEnvironmentSource:
         self.calls["running"] += 1
         return self._running
 
-    def action(self, kind: str) -> OperationResult:
+    def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
         """见 :meth:`EnvironmentSource.action`。"""
         self.calls["action"] += 1
-        self.actions.append(kind)
+        self.actions.append(f"{kind}{DRY_RUN_SUFFIX}" if dry_run else kind)
         return self._action_result
 
-    def add_package(self, spec: str, *, save: bool) -> OperationResult:
+    def add_package(self, spec: str, *, save: bool, upgrade: bool = False) -> OperationResult:
         """见 :meth:`EnvironmentSource.add_package`。"""
         self.calls["package"] += 1
-        self.package_calls.append(PackageCall("add", spec, save))
+        self.package_calls.append(PackageCall("add", spec, save, upgrade))
         return self._package_result
 
     def remove_package(self, dist: str, *, save: bool) -> OperationResult:
@@ -398,18 +402,23 @@ class SubprocessEnvironmentSource:
             return None
         return bool(payload.get("running"))
 
-    def action(self, kind: str) -> OperationResult:
+    def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
         """见 :meth:`EnvironmentSource.action`；``--yes`` 由界面代答。"""
         self.calls["action"] = self.calls.get("action", 0) + 1
         label = i18n.t(f"cli.tui.environment.label_{kind}")
-        return self._run(cli_process.cli_argv("venv", kind, "--yes"), label=label)
+        argv = ["venv", kind, "--yes"]
+        if dry_run:
+            argv.insert(2, "--dry-run")
+        return self._run(cli_process.cli_argv(*argv), label=label)
 
-    def add_package(self, spec: str, *, save: bool) -> OperationResult:
+    def add_package(self, spec: str, *, save: bool, upgrade: bool = False) -> OperationResult:
         """见 :meth:`EnvironmentSource.add_package`。"""
         self.calls["package"] = self.calls.get("package", 0) + 1
         label = i18n.t("cli.tui.environment.label_add_package", spec=spec)
-        argv = cli_process.cli_argv("venv", "add", spec, "--save" if save else "--no-save")
-        return self._run(argv, label=label)
+        argv = ["venv", "add", spec, "--save" if save else "--no-save"]
+        if upgrade:
+            argv.append("--upgrade")
+        return self._run(cli_process.cli_argv(*argv), label=label)
 
     def remove_package(self, dist: str, *, save: bool) -> OperationResult:
         """见 :meth:`EnvironmentSource.remove_package`。"""
@@ -574,9 +583,9 @@ class EnvironmentPage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.environment.bind_search")),
         ("i", "install_package", i18n.t("cli.tui.environment.bind_install")),
         ("u", "uninstall_package", i18n.t("cli.tui.environment.bind_uninstall")),
-        ("a", "adopt", i18n.t("cli.tui.environment.bind_adopt")),
-        ("x", "release", i18n.t("cli.tui.environment.bind_release")),
-        ("ctrl+n", "recreate", i18n.t("cli.tui.environment.bind_recreate")),
+        ("a", "adopt", i18n.t("cli.tui.environment.bind_adopt"), False),
+        ("x", "release", i18n.t("cli.tui.environment.bind_release"), False),
+        ("ctrl+n", "recreate", i18n.t("cli.tui.environment.bind_recreate"), False),
     )
 
     can_focus = True
@@ -599,7 +608,7 @@ class EnvironmentPage(compat.Vertical):
         self._recorded_only = False
         self._busy = False
         self._running: bool | None = False
-        self._pending: str = ""
+        self._gate = compat.PendingConfirm()
         self._pending_remove: str = ""
         self._pending_status: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
@@ -698,6 +707,7 @@ class EnvironmentPage(compat.Vertical):
 
     def action_refresh(self) -> None:
         """键位动作：强制重新读取。"""
+        self.reset_pending()
         self._pending_status = ""
         self.refresh_state(force=True)
 
@@ -773,23 +783,51 @@ class EnvironmentPage(compat.Vertical):
         return max(0.0, time.monotonic() - self._loaded_at)
 
     def request_action(self, kind: str) -> None:
-        """执行解释器动作；连按两次同一个动作才真正执行。
+        """执行解释器动作：先弹一次选择框，可选直接执行或先预演。
 
         三个动作都会换掉实例正在使用的解释器，因此实例运行期间一律拒绝；动作不适用于当前模式时
-        也不动作，只说明为什么。
+        也不动作，只说明为什么。选择框代替「再按一次」：既挡住鼠标双击与键盘连发，也让用户在动手
+        之前能先看一眼将要发生什么。
         """
         reason = self._blocker(kind)
         if reason:
             compat.notify(self.app, reason, severity="warning", title=i18n.t(f"cli.tui.environment.label_{kind}"))
             return
-        if self._pending != kind:
-            self._pending = kind
-            self._set_status(i18n.t(f"cli.tui.environment.confirm_{kind}"))
-            return
-        self._pending = ""
         label = i18n.t(f"cli.tui.environment.label_{kind}")
+        gate_key = f"{kind}:{self._state.mode}"
+        if not self._gate.accept(gate_key):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.environment.confirm_title", label=label),
+            hint=i18n.t(f"cli.tui.environment.confirm_{kind}"),
+            options=(
+                ("run", i18n.t("cli.tui.environment.confirm_run")),
+                ("dry", i18n.t("cli.tui.environment.confirm_dry_run")),
+            ),
+            cancel_label=i18n.t("cli.tui.environment.cancel"),
+            callback=lambda choice, target=kind: self.start_action(target, choice),
+        )
+
+    def start_action(self, kind: str, choice: str | None) -> None:
+        """按选择执行解释器动作。
+
+        :param kind: ``adopt`` / ``release`` / ``recreate``。
+        :param choice: ``run`` 直接执行，``dry`` 只预演，``None`` 表示取消。
+        """
+        self._gate.reset()
+        if choice not in ("run", "dry"):
+            self._set_status(i18n.t("cli.tui.environment.action_cancelled"))
+            return
+        label = i18n.t(f"cli.tui.environment.label_{kind}")
+        if choice == "dry":
+            label = i18n.t("cli.tui.environment.label_dry_run", label=label)
         self._set_status(i18n.t("cli.tui.environment.calling", label=label))
-        self.run_worker(self._operate(kind, label), group="environment-action", exclusive=True)
+        self.run_worker(self._operate(kind, label, dry_run=choice == "dry"), group="environment-action", exclusive=True)
+
+    def reset_pending(self) -> None:
+        """作废待确认的解释器动作；切页时由 :meth:`TuiApp.show_page` 调用。"""
+        self._gate.reset()
 
     def _blocker(self, kind: str) -> str:
         # 可以执行时返回空串。
@@ -806,11 +844,11 @@ class EnvironmentPage(compat.Vertical):
             return i18n.t("cli.tui.environment.not_managed")
         return ""
 
-    async def _operate(self, kind: str, label: str) -> None:
+    async def _operate(self, kind: str, label: str, *, dry_run: bool = False) -> None:
         self._busy = True
         self._sync_actions()
         try:
-            result = await asyncio.to_thread(self.source.action, kind)
+            result = await asyncio.to_thread(self.source.action, kind, dry_run=dry_run)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
@@ -844,17 +882,29 @@ class EnvironmentPage(compat.Vertical):
         if not text:
             self._set_status(i18n.t("cli.tui.environment.install_cancelled"))
             return
+        options: list[tuple[str, str]] = [
+            ("save", i18n.t("cli.tui.environment.install_to_manifest")),
+            ("once", i18n.t("cli.tui.environment.install_to_env")),
+        ]
+        if self._installed_named(text):
+            # 名字已经装过时多给一条升级路径：升级只能靠写版本区间，这里直接给 -U。
+            options.append(("upgrade", i18n.t("cli.tui.environment.install_upgrade")))
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.environment.install_target_title", spec=text),
             hint=i18n.t("cli.tui.environment.install_target_hint"),
-            options=(
-                ("save", i18n.t("cli.tui.environment.install_to_manifest")),
-                ("once", i18n.t("cli.tui.environment.install_to_env")),
-            ),
+            options=tuple(options),
             cancel_label=i18n.t("cli.tui.environment.cancel"),
             callback=lambda mode: self.start_install(text, mode),
         )
+
+    def _installed_named(self, spec: str) -> bool:
+        # 需求串里的分发名与环境里的已装包比对；写地址或带版本区间时不必猜，直接按名字取前缀。
+        name = recorded_name(spec)
+        if not name:
+            return False
+        wanted = name.casefold()
+        return any(package.dist.casefold() == wanted for package in self._packages)
 
     def start_install(self, spec: str, mode: str | None) -> None:
         """按选定的去处安装运行库。
@@ -862,13 +912,14 @@ class EnvironmentPage(compat.Vertical):
         :param spec: 需求串。
         :param mode: ``save`` 记进清单，``once`` 只装进环境；``None`` 表示取消。
         """
-        if mode not in SAVE_MODES:
+        if mode not in (*SAVE_MODES, "upgrade"):
             self._set_status(i18n.t("cli.tui.environment.install_cancelled"))
             return
+        upgrade = mode == "upgrade"
         label = i18n.t("cli.tui.environment.label_add_package", spec=spec)
         self._set_status(i18n.t("cli.tui.environment.calling", label=label))
         self.run_worker(
-            self._package_operate("add", spec, mode == "save", label),
+            self._package_operate("add", spec, mode != "once", label, upgrade=upgrade),
             group="environment-package",
             exclusive=True,
         )
@@ -932,12 +983,12 @@ class EnvironmentPage(compat.Vertical):
             return i18n.t("cli.tui.environment.package_blocked", reason=reason)
         return ""
 
-    async def _package_operate(self, kind: str, target: str, save: bool, label: str) -> None:
+    async def _package_operate(self, kind: str, target: str, save: bool, label: str, *, upgrade: bool = False) -> None:
         self._busy = True
         self._sync_actions()
         try:
             if kind == "add":
-                result = await asyncio.to_thread(self.source.add_package, target, save=save)
+                result = await asyncio.to_thread(self.source.add_package, target, save=save, upgrade=upgrade)
             else:
                 result = await asyncio.to_thread(self.source.remove_package, target, save=save)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示

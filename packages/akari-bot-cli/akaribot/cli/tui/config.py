@@ -1224,12 +1224,13 @@ class ConfigPage(compat.Vertical):
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
     can_focus = True
 
+    # 四种模式与刷新动作在工具条上都有按钮，键位属低频入口，不进页脚以免挤掉全局键位。
     BINDINGS = compat.bindings(
         ("s", "save", i18n.t("cli.tui.config.action_save")),
-        ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form")),
-        ("t", "mode_raw", i18n.t("cli.tui.config.action_mode_raw")),
-        ("ctrl+r", "reload", i18n.t("cli.tui.config.action_reload")),
-        ("escape", "focus_tables", i18n.t("cli.tui.config.action_focus_tables")),
+        ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form"), False),
+        ("t", "mode_raw", i18n.t("cli.tui.config.action_mode_raw"), False),
+        ("ctrl+r", "reload", i18n.t("cli.tui.config.action_reload"), False),
+        ("escape", "focus_tables", i18n.t("cli.tui.config.action_focus_tables"), False),
     )
 
     def __init__(
@@ -1251,9 +1252,11 @@ class ConfigPage(compat.Vertical):
         self._loaded_at: float = 0.0
         self._selected: str | None = None
         self._raw_table: str | None = None
+        self._raw_original: str = ""
         self._mode: str = MODE_FORM
         self._saved: tuple[str, ...] = ()
         self._skipped: tuple[str, ...] = ()
+        self._confirming: bool = False
         self._rendered_tables: tuple[str, ...] = ()
         self._caption_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
@@ -1348,6 +1351,26 @@ class ConfigPage(compat.Vertical):
                 return row
         return None
 
+    def is_dirty(self) -> bool:
+        """是否存在未保存的编辑：表单行与原始文本任一与载入值不同即为真。"""
+        for row in self.field_rows():
+            if self._row_text(row) != row.field.edit_value:
+                return True
+        return self._raw_table is not None and self.raw_editor().text != self._raw_original
+
+    def dirty_note(self) -> str:
+        """返回未保存改动的说明；没有改动时为空串。"""
+        if not self.is_dirty():
+            return ""
+        return i18n.t("cli.tui.config.dirty_note", table=self._selected or i18n.t("cli.tui.common.none"))
+
+    def _row_text(self, row: FieldRow) -> str:
+        # 行在重挂载期间可能还没有控件，此时读不到输入值，按载入值处理。
+        try:
+            return row.text
+        except Exception:  # noqa: BLE001 - 未装配完成的行不构成脏值
+            return row.field.edit_value
+
     def raw_editor(self) -> RawTextEditor:
         """返回原始文本编辑区。"""
         return self.query_one("#raw-editor", RawTextEditor)
@@ -1370,7 +1393,9 @@ class ConfigPage(compat.Vertical):
             hint = self.query_one("#form-hint", compat.Static)
         except Exception:  # noqa: BLE001 - 没有提示控件时按空串处理
             return ""
-        return str(getattr(hint.renderable, "plain", hint.renderable))
+        # ``Static.content`` 是 update() 传进来的原对象：文本控件收到的是 rich 的 Text。
+        content = hint.content
+        return str(getattr(content, "plain", content))
 
     # endregion
 
@@ -1381,6 +1406,10 @@ class ConfigPage(compat.Vertical):
 
         :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
         """
+        # 强制刷新会重建表单与原始文本，未保存的编辑必须先问过用户。
+        if force and self.is_dirty():
+            self._confirm_discard(self.reload)
+            return
         if not force and self._tables and self.cache_age() < self.cache_ttl:
             self._render_tables()
             self._set_status(
@@ -1471,6 +1500,7 @@ class ConfigPage(compat.Vertical):
             return False
         await self.raw_editor().load_text(text)
         self._raw_table = table
+        self._raw_original = text
         return True
 
     async def set_mode(self, mode: str) -> None:
@@ -1514,6 +1544,7 @@ class ConfigPage(compat.Vertical):
         """作废缓存并重新读取表清单与当前表。"""
         self.invalidate_cache()
         self._raw_table = None
+        self._raw_original = ""
         return await self.reload_tables()
 
     async def _rebuild_form(self, fields: Sequence[ConfigField]) -> None:
@@ -1731,7 +1762,7 @@ class ConfigPage(compat.Vertical):
             return
         table = self._tables[index]
         if table != self._selected:
-            self.run_worker(self.select_table(table), group="config-select", exclusive=True)
+            self.request_table(table)
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
@@ -1741,13 +1772,86 @@ class ConfigPage(compat.Vertical):
         elif button_id == "reload":
             self.action_reload()
         elif button_id == "mode-form":
-            self.action_mode_form()
+            self.request_mode(MODE_FORM)
         elif button_id == "mode-raw":
-            self.action_mode_raw()
+            self.request_mode(MODE_RAW)
         elif button_id == "raw-add":
             self.run_worker(self.raw_editor().append_line(), group="config-raw", exclusive=True)
         elif button_id == "raw-del":
             self.run_worker(self.raw_editor().remove_last_line(), group="config-raw", exclusive=True)
+
+    def request_table(self, table: str) -> None:
+        """切换表前先处理未保存的编辑。
+
+        :param table: 目标表名。
+        """
+
+        def _switch() -> Any:
+            return self.select_table(table)
+
+        self._confirm_discard(_switch, on_keep=self._restore_table_highlight)
+
+    def request_mode(self, mode: str) -> None:
+        """切换编辑模式前先处理未保存的编辑。
+
+        :param mode: ``form`` 或 ``raw``。
+        """
+        if mode == self._mode:
+            return
+
+        def _switch() -> Any:
+            return self.set_mode(mode)
+
+        self._confirm_discard(_switch)
+
+    def _confirm_discard(self, proceed: Callable[[], Any], *, on_keep: Callable[[], None] | None = None) -> None:
+        # 覆盖编辑区的动作都要先问过：直接重建会让用户以为已经保存的改动无声消失。
+        if self._confirming:
+            return
+        if not self.is_dirty():
+            self.run_worker(proceed(), group="config-select", exclusive=True)
+            return
+
+        def _decide(choice: str | None) -> None:
+            self._confirming = False
+            if choice == "discard":
+                # 与直接切换分属两个任务组：重读会在内部再触发一次直接切换，同组会取消自己。
+                self.run_worker(self._discard_then(proceed), group="config-switch", exclusive=True)
+                return
+            self._set_status(i18n.t("cli.tui.config.dirty_kept"))
+            if on_keep is not None:
+                on_keep()
+
+        self._confirming = True
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.config.dirty_title"),
+            hint=i18n.t("cli.tui.config.dirty_hint", table=self._selected or i18n.t("cli.tui.common.none")),
+            options=(("discard", i18n.t("cli.tui.config.dirty_discard")),),
+            cancel_label=i18n.t("cli.tui.config.dirty_keep"),
+            callback=_decide,
+        )
+
+    async def _discard_then(self, proceed: Callable[[], Any]) -> None:
+        await self._discard_edits()
+        await proceed()
+
+    async def _discard_edits(self) -> None:
+        for row in self.field_rows():
+            try:
+                row.clear_error()
+                row.set_text(row.field.edit_value)
+            except Exception:  # noqa: BLE001 - 行未装配完成时没有可回退的控件
+                continue
+        if self._raw_table is not None:
+            await self.raw_editor().load_text(self._raw_original)
+
+    def _restore_table_highlight(self) -> None:
+        # 用户选择保留改动时列表高亮已经落到新表上，必须拨回当前表，否则显示与选中项不一致。
+        list_view = self.query_one("#table-list", compat.ListView)
+        index = self._index_for(self._selected)
+        if compat.highlighted_index(list_view) != index:
+            list_view.index = index
 
     def action_save(self) -> None:
         """键位动作：保存当前表。"""
@@ -1755,15 +1859,15 @@ class ConfigPage(compat.Vertical):
 
     def action_reload(self) -> None:
         """键位动作：作废缓存并重读。"""
-        self.run_worker(self.reload(), group="config-reload", exclusive=True)
+        self._confirm_discard(self.reload)
 
     def action_mode_form(self) -> None:
         """键位动作：切到表单模式。"""
-        self.run_worker(self.set_mode(MODE_FORM), group="config-mode", exclusive=True)
+        self.request_mode(MODE_FORM)
 
     def action_mode_raw(self) -> None:
         """键位动作：切到原始文本模式。"""
-        self.run_worker(self.set_mode(MODE_RAW), group="config-mode", exclusive=True)
+        self.request_mode(MODE_RAW)
 
     def focus_primary(self) -> None:
         """把焦点交给配置表列表；列表为空时退到页面容器。"""

@@ -2,18 +2,28 @@
 
 本文件固定两条链路：列表默认给出全部（已装与未装同列，未装项可直接选中安装），开关只用于收窄到
 已装；安装与卸载把子进程输出逐行显示到状态栏，完整序列留在 ``stream_lines``，失败时输出尾部作为详情。
+安装先弹输入框再按输入内容选来源，卸载先确认目标再选数据与依赖的处置方式。
 """
 
 import os
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 from unittest.mock import patch
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui.app import TuiApp
-from akaribot.cli.tui.modules import ModuleRecord, ModuleSourceError, OperationResult, StaticModuleSource
+from akaribot.cli.tui.modules import (
+    ModuleRecord,
+    ModuleSourceError,
+    ModulesPage,
+    OperationResult,
+    StaticModuleSource,
+    _git_install_args,
+    _split_git_address,
+)
 from akaribot.testing import Tester, func_case
 
 INSTALLED = ModuleRecord(name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed")
@@ -39,7 +49,7 @@ def _source(**kwargs) -> StaticModuleSource:
 
 
 async def _boot(source: StaticModuleSource):
-    app = TuiApp(source=source, boot_started_at=time.monotonic())
+    app = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
     return app
 
 
@@ -107,7 +117,42 @@ async def _test_uninstalled_record_is_installable():
     return selected_is_wiki and disabled is False
 
 
+def _choice_labels(app: TuiApp) -> list[str]:
+    return [str(button.label) for button in app.screen.query("#choice-actions Button")]
+
+
+async def _pick_choice(app: TuiApp, pilot, index: int) -> None:
+    # 直接派发按下消息：选项多时按钮可能排到可视区之外，按坐标点击会落空。
+    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    await pilot.pause()
+
+
 async def _test_install_streams_output_to_status():
+    # 光标停在已装项上时按 i 先弹输入框，输入名字后再选来源。
+    async def body(app, page, pilot):
+        page.request_install()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "akari-bot-module-wiki"
+        await pilot.press("enter")
+        await pilot.pause()
+        labels = _choice_labels(app)
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        return labels, page.stream_lines, page.status_text, app.module_source.installed
+
+    labels, lines, status, installed = await _with_app(_source(), body)
+    ok = (
+        i18n.t("cli.tui.modules.install_from_registry") in labels
+        and lines == ("Resolved 2 packages", "Installed 2 packages")
+        and status.startswith(i18n.t("cli.tui.modules.stub_install_ok"))
+        and installed == ["akari-bot-module-wiki"]
+    )
+    return ok
+
+
+async def _test_install_highlighted_record_without_dialog():
+    # 光标停在未装项上时该项已经指名目标，直接安装，不弹输入框。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2
@@ -115,15 +160,151 @@ async def _test_install_streams_output_to_status():
         page.request_install()
         await page.wait_for_idle()
         await pilot.pause()
-        return page.stream_lines, page.status_text, app.module_source.installed
+        dialog = app.screen is not page.screen
+        await pilot.press("q")
+        return dialog, app.module_source.installed
 
-    lines, status, installed = await _with_app(_source(), body)
-    ok = (
-        lines == ("Resolved 2 packages", "Installed 2 packages")
-        and status.startswith(i18n.t("cli.tui.modules.stub_install_ok"))
-        and installed == ["akari-bot-module-wiki"]
+    dialog, installed = await _with_app(_source(), body)
+    return dialog is False and installed == ["akari-bot-module-wiki"]
+
+
+async def _test_install_search_term_prefills_dialog():
+    # 搜索框里的模块名预填进输入框：用户已经敲过名字，回车即沿用。
+    async def body(app, page, pilot):
+        page.set_query("akari-bot-module-unknown")
+        await pilot.pause()
+        page.request_install()
+        await pilot.pause()
+        prefill = app.screen.query_one("#prompt-input", compat.Input).value
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return prefill
+
+    prefill = await _with_app(_source(), body)
+    return prefill == "akari-bot-module-unknown"
+
+
+async def _test_install_cancelled_by_empty_spec():
+    async def body(app, page, pilot):
+        page.request_install()
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        status = page.status_text
+        installed = list(app.module_source.installed)
+        await pilot.press("q")
+        return status, installed
+
+    status, installed = await _with_app(_source(), body)
+    return installed == [] and status == i18n.t("cli.tui.modules.install_cancelled")
+
+
+async def _test_install_git_spec_offers_git_source():
+    # 含协议头的地址只给 git 一项，并把 ref 与 subdirectory 拆到 CLI 的同名选项。
+    spec = "git+https://github.com/akari-bot/modules@v1.2#subdirectory=packages/wiki"
+
+    async def body(app, page, pilot):
+        page.on_install_spec_entered(spec)
+        await pilot.pause()
+        labels = _choice_labels(app)
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return labels, list(app.module_source.stream_calls)
+
+    labels, calls = await _with_app(_source(), body)
+    return labels[:-1] == [i18n.t("cli.tui.modules.install_from_git")] and calls == [
+        (
+            "install",
+            spec,
+            ("--git", "git+https://github.com/akari-bot/modules", "--ref", "v1.2", "--subdir", "packages/wiki"),
+            False,
+        )
+    ]
+
+
+async def _test_install_editable_directory_offers_editable_source():
+    with TemporaryDirectory(prefix="akari-editable-") as raw:
+        directory = str(Path(raw).resolve())
+
+        async def body(app, page, pilot):
+            page.on_install_spec_entered(directory)
+            await pilot.pause()
+            labels = _choice_labels(app)
+            await _pick_choice(app, pilot, 0)
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return labels, list(app.module_source.stream_calls)
+
+        labels, calls = await _with_app(_source(), body)
+    return labels[:-1] == [i18n.t("cli.tui.modules.install_editable")] and calls == [
+        ("install", directory, ("-e", directory), False)
+    ]
+
+
+async def _test_install_unknown_spec_is_rejected():
+    async def body(app, page, pilot):
+        page.on_install_spec_entered("不存在的目标！")
+        await pilot.pause()
+        status = page.status_text
+        installed = list(app.module_source.installed)
+        await pilot.press("q")
+        return status, installed
+
+    status, installed = await _with_app(_source(), body)
+    return installed == [] and status == i18n.t("cli.tui.modules.install_unknown_spec", spec="不存在的目标！")
+
+
+def _test_git_address_split():
+    # 末段里的 @ 才是 ref：``git@host`` 的 @ 属于 userinfo，不能当成 ref 拆走。
+    return (
+        _split_git_address("git+https://github.com/oasis/akari@v2") == ("git+https://github.com/oasis/akari", "v2", "")
+        and _split_git_address("git@github.com:oasis/akari.git") == ("git@github.com:oasis/akari.git", "", "")
+        and _git_install_args("ssh://git@host/oasis/akari.git#subdirectory=mod")
+        == ("--git", "ssh://git@host/oasis/akari.git", "--subdir", "mod")
     )
-    return ok
+
+
+async def _uninstall_confirmed(app: TuiApp, page, pilot, choice: int = 0) -> str:
+    # 一次按键即弹出处置方式，选完才执行；入口用例把防抖窗口压到 0。
+    page.request_uninstall()
+    await pilot.pause()
+    title = str(app.screen.query_one("#choice-title", compat.Static).render())
+    await _pick_choice(app, pilot, choice)
+    await page.wait_for_idle()
+    await pilot.pause()
+    return title
+
+
+async def _test_single_uninstall_opens_options():
+    # 单个与批量走同一套确认：一次按键即弹出处置方式，标题写明要卸的是哪一个。
+    async def body(app, page, pilot):
+        list_view = page.query_one("#module-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.request_uninstall()
+        await pilot.pause()
+        title = str(app.screen.query_one("#choice-title", compat.Static).render())
+        first = list(app.module_source.uninstalled)
+        labels = _choice_labels(app)
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return title, first, labels
+
+    title, first, labels = await _with_app(_source(), body)
+    return (
+        title == i18n.t("cli.tui.modules.uninstall_confirm_one", name="akari-bot-module-dice")
+        and first == []
+        and labels[:-1]
+        == [
+            i18n.t("cli.tui.modules.uninstall_keep_data"),
+            i18n.t("cli.tui.modules.uninstall_purge_data"),
+        ]
+    )
 
 
 async def _test_uninstall_streams_output_to_status():
@@ -131,13 +312,15 @@ async def _test_uninstall_streams_output_to_status():
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 0
         await pilot.pause()
-        page.request_uninstall()
-        await page.wait_for_idle()
-        await pilot.pause()
-        return page.stream_lines, app.module_source.uninstalled
+        title = await _uninstall_confirmed(app, page, pilot)
+        return title, page.stream_lines, app.module_source.uninstalled
 
-    lines, uninstalled = await _with_app(_source(), body)
-    return lines == ("Resolved 2 packages", "Installed 2 packages") and uninstalled == ["akari-bot-module-dice"]
+    title, lines, uninstalled = await _with_app(_source(), body)
+    return (
+        title == i18n.t("cli.tui.modules.uninstall_confirm_one", name="akari-bot-module-dice")
+        and lines == ("Resolved 2 packages", "Installed 2 packages")
+        and uninstalled == ["akari-bot-module-dice"]
+    )
 
 
 async def _test_failed_install_reports_detail():
@@ -145,9 +328,7 @@ async def _test_failed_install_reports_detail():
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 0
         await pilot.pause()
-        page.request_uninstall()
-        await page.wait_for_idle()
-        await pilot.pause()
+        await _uninstall_confirmed(app, page, pilot)
         return page.status_text, page.last_error
 
     source = _source(
@@ -177,13 +358,11 @@ async def _test_available_failure_keeps_installed_list():
 
 async def _test_stream_operation_failure_becomes_result():
     class _Exploding(StaticModuleSource):
-        async def stream_operation(self, kind, record, on_line):
+        async def stream_operation(self, kind, record, on_line, **kwargs):
             raise RuntimeError("子进程炸了")
 
     async def body(app, page, pilot):
-        page.request_uninstall()
-        await page.wait_for_idle()
-        await pilot.pause()
+        await _uninstall_confirmed(app, page, pilot)
         return page.status_text
 
     source = _Exploding(records=[INSTALLED])
@@ -241,9 +420,9 @@ class _RecordingUpdate(StaticModuleSource):
         super().__init__(**kwargs)
         self.streamed: list[tuple[str, str]] = []
 
-    async def stream_operation(self, kind, record, on_line):
+    async def stream_operation(self, kind, record, on_line, **kwargs):
         self.streamed.append((kind, record.dist))
-        return await super().stream_operation(kind, record, on_line)
+        return await super().stream_operation(kind, record, on_line, **kwargs)
 
 
 def _update_source() -> _RecordingUpdate:
@@ -409,7 +588,7 @@ async def _test_detail_falls_back_when_manifest_missing():
 
 
 async def _detail_of(record, body):
-    app = TuiApp(source=StaticModuleSource([record]), boot_started_at=time.monotonic())
+    app = TuiApp(source=StaticModuleSource([record]), initial_page="modules", boot_started_at=time.monotonic())
     async with compat.app_test(app, size=(100, 30)) as pilot:
         page = app.modules_page()
         await page.wait_for_idle()
@@ -569,30 +748,165 @@ async def _test_toggle_shares_search_row_and_is_centered():
     return same_row and centered and toggle.height <= row.height
 
 
+async def _test_uninstall_argv_passes_data_options():
+    # 真源把选定的处置方式拼进 argv：界面已代答确认，子进程不该再提问。
+    from akaribot.cli.tui.modules import SubprocessModuleSource
+
+    with TemporaryDirectory(prefix="akari-remove-") as raw:
+        root = Path(raw)
+        fake = _fake_cli(root, "fake_remove", FAKE_CLI_ECHO_ARGV)
+        record = ModuleRecord(name="dice", dist="akari-bot-module-dice")
+        lines: list[str] = []
+        with patch.dict(os.environ, {"AKARIBOT_CLI_BIN": fake}):
+            source = SubprocessModuleSource(root=root, timeout=30.0)
+            result = await source.stream_operation("uninstall", record, lines.append, extra_args=("--purge-data",))
+    return result.ok and lines == ["module remove akari-bot-module-dice --yes --purge-data"]
+
+
+async def _test_install_argv_for_git_and_editable():
+    from akaribot.cli.tui.modules import SubprocessModuleSource
+
+    with TemporaryDirectory(prefix="akari-add-") as raw:
+        root = Path(raw)
+        fake = _fake_cli(root, "fake_add", FAKE_CLI_ECHO_ARGV)
+        record = ModuleRecord(name="wiki", dist="wiki")
+        lines: list[str] = []
+        with patch.dict(os.environ, {"AKARIBOT_CLI_BIN": fake}):
+            source = SubprocessModuleSource(root=root, timeout=30.0)
+            await source.stream_operation(
+                "install",
+                record,
+                lines.append,
+                extra_args=("--git", "git+https://github.com/oasis/akari", "--ref", "v2"),
+                positional=False,
+            )
+            await source.stream_operation(
+                "install", record, lines.append, extra_args=("-e", str(root)), positional=False
+            )
+    return lines == [
+        "module add --git git+https://github.com/oasis/akari --ref v2",
+        f"module add -e {root}",
+    ]
+
+
+def _test_low_frequency_bindings_stay_out_of_footer():
+    # 80 列下页脚只留高频键位；其余键位仍可用，只是不占页脚。
+    shown = {binding.key for binding in ModulesPage.BINDINGS if binding.show}
+    hidden = {binding.key for binding in ModulesPage.BINDINGS if not binding.show}
+    return shown == {"r", "slash", "i", "u", "U", "space", "a"} and hidden == {
+        "ctrl+u",
+        "l",
+        "ctrl+space",
+        "shift+up",
+        "shift+down",
+        "ctrl+a",
+        "c",
+        "escape",
+    }
+
+
+def _test_pending_confirm_gate():
+    # 闸门本身的语义：连发被忽略、正常二次确认放行、超时后重新提问而不是执行；
+    # accept 给模态动作用，只挡连发，窗口之外再次触发照常弹窗。
+    gate = compat.PendingConfirm()
+    first = gate.arm("x", now=100.0)
+    burst = gate.arm("x", now=100.1)
+    confirmed = gate.arm("x", now=101.0)
+    other = gate.arm("y", now=200.0)
+    expired = gate.arm("y", now=220.0)
+    pending = gate.pending_key(now=220.0)
+    accepted = gate.accept("z", now=300.0)
+    accepted_burst = gate.accept("z", now=300.1)
+    accepted_again = gate.accept("z", now=301.0)
+    return (
+        first is False
+        and burst is False
+        and confirmed is True
+        and other is False
+        and expired is False
+        and pending == "y"
+        and accepted is True
+        and accepted_burst is False
+        and accepted_again is True
+    )
+
+
+async def _test_pending_invalidated_by_refresh_and_selection():
+    # 刷新、换选中项与清空选区都会重置闸门：紧接着的按键不该被当成上一次的连发吞掉。
+    async def body(app, page, pilot):
+        list_view = page.query_one("#module-list", compat.ListView)
+        page._confirm.accept("probe")
+        page.action_clear_selection()
+        cleared = page._confirm.armed
+        page._confirm.accept("probe")
+        list_view.index = 1
+        await pilot.pause()
+        highlighted = page._confirm.armed
+        page._confirm.accept("probe")
+        page.refresh_records(force=True)
+        refreshed = page._confirm.armed
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return cleared, highlighted, refreshed, list(app.module_source.uninstalled)
+
+    cleared, highlighted, refreshed, uninstalled = await _with_app(_source(), body)
+    return cleared is False and highlighted is False and refreshed is False and uninstalled == []
+
+
+async def _test_reset_pending_hook_clears_gate():
+    async def body(app, page, pilot):
+        page._confirm.accept("probe")
+        armed = page._confirm.armed
+        page.reset_pending()
+        await pilot.press("q")
+        return armed, page._confirm.armed
+
+    armed, after = await _with_app(_source(), body)
+    return armed is True and after is False
+
+
 @func_case
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
     _use_cli_locale()
-    await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
-    await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
-    await tester.test(_test_uninstalled_record_is_installable, "未装项可安装")
-    await tester.test(_test_install_streams_output_to_status, "安装输出逐行显示到状态栏")
-    await tester.test(_test_uninstall_streams_output_to_status, "卸载输出逐行显示到状态栏")
-    await tester.test(_test_failed_install_reports_detail, "失败时展示输出尾部")
-    await tester.test(_test_available_failure_keeps_installed_list, "可安装集合失败不清空列表")
-    await tester.test(_test_stream_operation_failure_becomes_result, "数据源异常转成结果展示")
-    await tester.test(_test_update_covers_installed_selection, "按 U 更新选中的已装项")
-    await tester.test(_test_update_only_targets_installed, "更新只作用于已装项")
-    await tester.test(_test_update_argv_passes_yes, "更新带 --yes 调用 CLI")
-    await tester.test(_test_subprocess_source_streams_and_reports, "真源逐行回调并给出结论")
-    await tester.test(_test_subprocess_source_timeout, "真源超时按数据源错误上报")
-    await tester.test(_test_relative_root_is_resolved, "相对实例根解析为绝对路径")
-    await tester.test(_test_detail_shows_manifest_metadata, "详情展示 manifest 元数据")
-    await tester.test(_test_detail_falls_back_when_manifest_missing, "manifest 缺失才显示未声明")
-    await tester.test(_test_load_cell_counts_loaded_modules, "列表按模块数展示装载状态")
-    await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 l 装载整包")
-    await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
-    await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
-    await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
-    await tester.test(_test_toggle_shares_search_row_and_is_centered, "只看已安装在搜索行内垂直居中")
+    # 闸门本身按真实防抖窗口断言，故这条不放进压缩窗口的块里。
+    await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并超时重新提问")
+    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
+        await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
+        await tester.test(_test_uninstalled_record_is_installable, "未装项可安装")
+        await tester.test(_test_install_streams_output_to_status, "安装先问名字再选来源并逐行回显")
+        await tester.test(_test_install_highlighted_record_without_dialog, "光标停在未装项上直接安装")
+        await tester.test(_test_install_search_term_prefills_dialog, "搜索词预填安装输入框")
+        await tester.test(_test_install_cancelled_by_empty_spec, "安装输入框取消后不动列表")
+        await tester.test(_test_install_git_spec_offers_git_source, "仓库地址只给 git 来源")
+        await tester.test(_test_install_editable_directory_offers_editable_source, "本地目录给可编辑安装")
+        await tester.test(_test_install_unknown_spec_is_rejected, "无法识别的安装目标直接拒绝")
+        await tester.test(_test_git_address_split, "仓库地址拆出 ref 与 subdirectory")
+        await tester.test(_test_single_uninstall_opens_options, "单个卸载一次按键即弹处置方式")
+        await tester.test(_test_uninstall_streams_output_to_status, "卸载确认后输出逐行显示到状态栏")
+        await tester.test(_test_failed_install_reports_detail, "失败时展示输出尾部")
+        await tester.test(_test_available_failure_keeps_installed_list, "可安装集合失败不清空列表")
+        await tester.test(_test_stream_operation_failure_becomes_result, "数据源异常转成结果展示")
+        await tester.test(_test_update_covers_installed_selection, "按 U 更新选中的已装项")
+        await tester.test(_test_update_only_targets_installed, "更新只作用于已装项")
+        await tester.test(_test_update_argv_passes_yes, "更新带 --yes 调用 CLI")
+        await tester.test(_test_uninstall_argv_passes_data_options, "卸载把 --purge-data 拼进 argv")
+        await tester.test(_test_install_argv_for_git_and_editable, "git 与可编辑安装拼出对应 argv")
+        await tester.test(_test_subprocess_source_streams_and_reports, "真源逐行回调并给出结论")
+        await tester.test(_test_subprocess_source_timeout, "真源超时按数据源错误上报")
+        await tester.test(_test_relative_root_is_resolved, "相对实例根解析为绝对路径")
+        await tester.test(_test_detail_shows_manifest_metadata, "详情展示 manifest 元数据")
+        await tester.test(_test_detail_falls_back_when_manifest_missing, "manifest 缺失才显示未声明")
+        await tester.test(_test_load_cell_counts_loaded_modules, "列表按模块数展示装载状态")
+        await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 l 装载整包")
+        await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
+        await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
+        await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
+        await tester.test(_test_toggle_shares_search_row_and_is_centered, "只看已安装在搜索行内垂直居中")
+        await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
+        await tester.test(_test_pending_invalidated_by_refresh_and_selection, "刷新、换选中项与清选区作废待确认")
+        await tester.test(_test_reset_pending_hook_clears_gate, "切页钩子清掉待确认状态")
     return tester

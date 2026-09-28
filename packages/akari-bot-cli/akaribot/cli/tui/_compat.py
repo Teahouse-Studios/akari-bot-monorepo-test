@@ -68,6 +68,10 @@ __all__ = [
     "Widget",
     "TextPromptScreen",
     "align_rows",
+    "CONFIRM_DEBOUNCE_SECONDS",
+    "CONFIRM_TIMEOUT_SECONDS",
+    "PendingConfirm",
+    "HelpScreen",
     "ask_choice",
     "ask_text",
     "app_test",
@@ -91,6 +95,7 @@ __all__ = [
     "pad_cells",
     "plain_text",
     "pop_screen",
+    "show_help",
     "progress_phase",
     "push_screen",
     "reactive",
@@ -389,9 +394,93 @@ def bind(key: str, action: str, description: str, *, show: bool = True) -> Bindi
     return Binding(KEY_ALIASES.get(key, key), action, description, show=show)
 
 
-def bindings(*items: tuple[str, str, str]) -> list[BindingType]:
-    """批量构造键位绑定，入参为 ``(key, action, description)`` 序列。"""
-    return [bind(key, action, description) for key, action, description in items]
+def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[BindingType]:
+    """批量构造键位绑定。
+
+    每项为 ``(key, action, description)`` 或 ``(key, action, description, show)``：四元组的第 4 项为
+    ``False`` 时该键位不进页脚，用于低频或危险动作——页脚在 80 列终端下装不下十几条键位。
+    """
+    result: list[BindingType] = []
+    for item in items:
+        key, action, description, *rest = item
+        result.append(bind(key, action, description, show=rest[0] if rest else True))
+    return result
+
+
+# 二次确认的时间闸门：鼠标双击与键盘连发会在几十毫秒内送来同一个动作的两次请求，
+# 「第一次问、第二次做」在两帧之间就会被穿透，故两次确认之间要有最短间隔。
+CONFIRM_DEBOUNCE_SECONDS = 0.4
+# 待确认状态的最长寿命：放置过久后第二次按下的语境早已不同（可能换过页、换过选中项），必须重新问。
+CONFIRM_TIMEOUT_SECONDS = 15.0
+
+
+class PendingConfirm:
+    """破坏性动作的二次确认闸门。
+
+    页面调用 :meth:`arm`：返回 ``False`` 表示本次只是「记下并提示」，调用方应停下；
+    返回 ``True`` 表示可以执行。同一个目标在 :data:`CONFIRM_DEBOUNCE_SECONDS` 内的第二次请求被忽略
+    （鼠标双击、键盘连发），超过 :data:`CONFIRM_TIMEOUT_SECONDS` 的待确认自动作废（切页、刷新、
+    换选中项等时机由页面调用 :meth:`reset` 显式作废）。
+    """
+
+    # 两个窗口做成类属性：生产路径用模块常量，自动化断言可以压缩等待——用例里的两次按键
+    # 相隔只有几毫秒，按真实窗口会把每条确认都拖成 0.4 秒。
+    debounce: float = CONFIRM_DEBOUNCE_SECONDS
+    timeout: float = CONFIRM_TIMEOUT_SECONDS
+
+    def __init__(self) -> None:
+        self.key: str = ""
+        self.at: float = 0.0
+
+    def arm(self, key: str, *, now: float | None = None) -> bool:
+        """请求执行 ``key`` 对应的动作。
+
+        :param key: 目标标识，如动作名、主键或选中集合的键。
+        :param now: 当前时刻，缺省取 :func:`time.monotonic`；用例注入以求可断言。
+        :return: 是否应当真正执行。
+        """
+        moment = time.monotonic() if now is None else now
+        if self.key == key and self.pending_key(now=moment) == key:
+            if moment - self.at < self.debounce:
+                return False
+            self.reset()
+            return True
+        self.key = key
+        self.at = moment
+        return False
+
+    def accept(self, key: str, *, now: float | None = None) -> bool:
+        """是否接受这次触发：防抖窗口内的重复触发返回 ``False``。
+
+        给「一次触发就弹模态确认」的动作使用——模态本身就是确认，闸门只负责挡住鼠标双击与键盘连发
+        带来的第二次弹窗（叠两层模态时用户答的是下面那层）。
+        """
+        moment = time.monotonic() if now is None else now
+        if self.key == key and moment - self.at < self.debounce:
+            return False
+        self.key = key
+        self.at = moment
+        return True
+
+    def pending_key(self, *, now: float | None = None) -> str:
+        """返回仍然有效的待确认目标；超时则作废并返回空串。"""
+        if not self.key:
+            return ""
+        moment = time.monotonic() if now is None else now
+        if moment - self.at >= self.timeout:
+            self.reset()
+            return ""
+        return self.key
+
+    @property
+    def armed(self) -> bool:
+        """是否记着一次待确认（不判断是否超时）。"""
+        return bool(self.key)
+
+    def reset(self) -> None:
+        """作废待确认状态。"""
+        self.key = ""
+        self.at = 0.0
 
 
 def highlighted_index(list_view: ListView) -> int | None:
@@ -722,6 +811,111 @@ def ask_choice(
 ) -> None:
     """弹出多选一的模态框，把选中的取值交给回调；取消时为 ``None``。"""
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
+
+
+class HelpScreen(Screen[None]):
+    """当前页键位一览的浮层：列出本页与全局键位，Esc / q / ? 关闭。
+
+    :param title: 标题。
+    :param hint: 说明文字。
+    :param rows: ``(键位, 说明)`` 列表，按展示顺序。
+    :param close_label: 关闭按钮文字。
+    """
+
+    DEFAULT_CSS = """
+    HelpScreen {
+        align: center middle;
+    }
+    HelpScreen #help-box {
+        width: 88;
+        max-width: 94%;
+        height: 80%;
+        border: round $primary;
+        background: $surface;
+        padding: 1 1;
+    }
+    HelpScreen #help-title {
+        text-style: bold;
+    }
+    HelpScreen #help-hint {
+        color: $text-muted;
+    }
+    HelpScreen #help-list {
+        height: 1fr;
+    }
+    HelpScreen #help-actions {
+        height: 3;
+        align-horizontal: right;
+    }
+    """
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        rows: Sequence[tuple[str, str]],
+        close_label: str,
+        hint: str = "",
+        id: str | None = None,
+    ) -> None:
+        super().__init__(id=id)
+        self.help_title = title
+        self.help_hint = hint
+        self.rows = tuple(rows)
+        self.close_label = close_label
+
+    def compose(self) -> ComposeResult:
+        """装配标题、说明与键位清单。"""
+        with Vertical(id="help-box"):
+            yield Static(plain_text(self.help_title), id="help-title", markup=False)
+            if self.help_hint:
+                yield Static(plain_text(self.help_hint), id="help-hint", markup=False)
+            yield ListView(
+                *[
+                    ListItem(Static(plain_text(_help_row(key, description)), markup=False))
+                    for key, description in self.rows
+                ],
+                id="help-list",
+            )
+            with Horizontal(id="help-actions"):
+                yield Button(self.close_label, id="help-close", variant="primary")
+
+    def on_mount(self) -> None:
+        """打开即聚焦关闭按钮。"""
+        focus_now(self.query_one("#help-close", Button))
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """关闭按钮即关闭。"""
+        if event.button.id == "help-close":
+            self.dismiss(None)
+
+    def key_escape(self) -> None:
+        """Esc 关闭。"""
+        self.dismiss(None)
+
+    def key_q(self) -> None:
+        """q 关闭。"""
+        self.dismiss(None)
+
+    def key_question_mark(self) -> None:
+        """再按一次 ? 关闭。"""
+        self.dismiss(None)
+
+
+def _help_row(key: str, description: str) -> str:
+    return f"{key:<14} {description}"
+
+
+def show_help(
+    app: App[Any],
+    *,
+    title: str,
+    rows: Sequence[tuple[str, str]],
+    close_label: str,
+    hint: str = "",
+) -> None:
+    """弹出键位一览浮层。"""
+    push_screen(app, HelpScreen(title=title, rows=rows, close_label=close_label, hint=hint))
 
 
 def pop_screen(app: App[Any]) -> Any:

@@ -1,12 +1,14 @@
 """概览页：实例信息与运行状态。
 
 环境信息与环境动作已移到「环境」页、旧项目迁移移到「杂项」页，本页只留实例本身：根目录、名称、
-语言、core 版本与来源、运行状态与判据、更新提示。
+语言、core 版本与来源、运行状态与判据、更新提示，以及实例清单与服务行的动作。
 """
 
+import threading
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest import mock
 
 from akaribot.cli import i18n
@@ -14,13 +16,20 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import context
 from akaribot.cli.tui.app import TuiApp
 from akaribot.cli.tui.dashboard import (
+    CLI_WRITE_TIMEOUT_SECONDS,
+    INIT_TIMEOUT_SECONDS,
+    DashboardPage,
     DashboardSnapshot,
     InstanceRow,
     ServiceRow,
     StaticDashboardSource,
+    StaticInitRunner,
     StaticInstanceListSource,
     StaticServiceControl,
+    SubprocessCliRunner,
+    SubprocessInitRunner,
 )
+from akaribot.cli.tui.modules import OperationResult
 from akaribot.testing import Tester, func_case
 
 SNAPSHOT = DashboardSnapshot(
@@ -41,6 +50,42 @@ def _use_cli_locale() -> None:
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
+class _RecordingRunner:
+    # 记录下发 argv 的假 CLI 执行器；可按需返回失败或在执行时改动替身状态。
+
+    def __init__(self, result: OperationResult | None = None, *, on_run=None) -> None:
+        self.calls: list[tuple[str, ...]] = []
+        self.labels: list[str] = []
+        self._result = result
+        self._on_run = on_run
+
+    def run(self, args, *, label: str, **_: object) -> OperationResult:
+        self.calls.append(tuple(args))
+        self.labels.append(label)
+        if self._on_run is not None:
+            self._on_run(args)
+        return self._result or OperationResult(True, i18n.t("cli.tui.dashboard.cli_stub_ok"), "stub")
+
+
+class _ChangingListSource(StaticInstanceListSource):
+    # 第二次取数起把首条记录的运行状态翻过来，模拟轮询期间实例启停。
+
+    def list_instances(self) -> tuple[InstanceRow, ...]:
+        rows = list(super().list_instances())
+        if self.calls["list"] > 1 and rows:
+            first = rows[0]
+            rows[0] = InstanceRow(
+                name=first.name,
+                root=first.root,
+                locale=first.locale,
+                running=not first.running,
+                autostart=first.autostart,
+                restart_on_crash=first.restart_on_crash,
+                registered=first.registered,
+            )
+        return tuple(rows)
+
+
 def _instance_rows() -> tuple[InstanceRow, ...]:
     return (
         InstanceRow(name="alpha", root=Path("/tmp/alpha"), running=True, autostart=True),
@@ -48,7 +93,13 @@ def _instance_rows() -> tuple[InstanceRow, ...]:
     )
 
 
-async def _with_page(body, source=None, size=(110, 32), instances=None, service=None, boot_note=""):
+async def _pick_choice(app, pilot, index: int) -> None:
+    # 直接触发按钮：选项文案可能长到把按钮撑出屏幕，坐标点击会落空。
+    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    await pilot.pause()
+
+
+async def _with_page(body, source=None, size=(110, 32), instances=None, service=None, boot_note="", cli=None):
     chosen = source if source is not None else StaticDashboardSource(SNAPSHOT, running=True)
     listed = instances if instances is not None else StaticInstanceListSource(_instance_rows())
     control = service if service is not None else StaticServiceControl()
@@ -60,6 +111,8 @@ async def _with_page(body, source=None, size=(110, 32), instances=None, service=
     )
     async with compat.app_test(app, size=size) as pilot:
         page = app.page("dashboard")
+        if cli is not None:
+            page.cli_runner = cli
         await page.wait_for_idle()
         await pilot.pause()
         return await body(app, page, pilot, chosen, listed, control)
@@ -157,6 +210,7 @@ async def _test_instance_list_marks_state_and_policy():
 
 async def _test_enter_switches_instance():
     # 在清单里选中一条即切换当前实例：上下文与所有页面的下一次取数都指向它。
+    runner = _RecordingRunner()
     with TemporaryDirectory(prefix="akari-switch-") as raw:
         beta = Path(raw) / "beta"
         beta.mkdir()
@@ -180,9 +234,98 @@ async def _test_enter_switches_instance():
             await pilot.press("q")
             return active, status, chosen
 
-        active, status, _ = await _with_page(body, instances=listed)
+        active, status, _ = await _with_page(body, instances=listed, cli=runner)
     # 上下文里的根按真实路径保存：macOS 的临时目录本身是软链接。
-    return active == beta.resolve() and status
+    return active == beta.resolve() and status and list(runner.calls) == [("instance", "use", "beta")]
+
+
+async def _test_switch_writes_default_instance():
+    # 切换要把缺省项经 `instance use` 写回注册表，命令行读到的才是新实例。
+    runner = _RecordingRunner()
+    with TemporaryDirectory(prefix="akari-default-") as raw:
+        beta = Path(raw) / "beta"
+        beta.mkdir()
+        (beta / "akaribot.toml").write_text("[instance]\nname = 'beta'\n", encoding="utf-8")
+        listed = StaticInstanceListSource(
+            (
+                InstanceRow(name="alpha", root=Path("/tmp/alpha"), running=True),
+                InstanceRow(name="beta", root=beta, running=False),
+            )
+        )
+
+        async def body(app, page, pilot, source, chosen, control):
+            list_view = page.query_one("#instance-list", compat.ListView)
+            list_view.index = 1
+            await pilot.pause()
+            page.switch_to_selected()
+            await page.wait_for_idle()
+            await pilot.pause()
+            status = page.status_text
+            await pilot.press("q")
+            return status
+
+        status = await _with_page(body, instances=listed, cli=runner)
+    separator = i18n.t("cli.tui.common.error_separator")
+    expected = f"{i18n.t('cli.tui.dashboard.switch_done', name='beta')}{separator}"
+    expected = f"{expected}{i18n.t('cli.tui.dashboard.switch_default_done')}"
+    return list(runner.calls) == [("instance", "use", "beta")] and status == expected
+
+
+async def _test_switch_skips_default_for_unregistered():
+    runner = _RecordingRunner()
+    with TemporaryDirectory(prefix="akari-plain-") as raw:
+        plain = Path(raw) / "plain"
+        plain.mkdir()
+        (plain / "akaribot.toml").write_text("[instance]\nname = 'plain'\n", encoding="utf-8")
+        listed = StaticInstanceListSource((InstanceRow(name="", root=plain, running=False, registered=False),))
+
+        async def body(app, page, pilot, source, chosen, control):
+            list_view = page.query_one("#instance-list", compat.ListView)
+            list_view.index = 0
+            await pilot.pause()
+            page.switch_to_selected()
+            await page.wait_for_idle()
+            await pilot.pause()
+            status = page.status_text
+            await pilot.press("q")
+            return status
+
+        status = await _with_page(body, instances=listed, cli=runner)
+    separator = i18n.t("cli.tui.common.error_separator")
+    expected = f"{i18n.t('cli.tui.dashboard.switch_done', name=str(plain))}{separator}"
+    expected = f"{expected}{i18n.t('cli.tui.dashboard.switch_default_skipped')}"
+    return list(runner.calls) == [] and status == expected
+
+
+async def _test_switch_default_failure_is_reported():
+    runner = _RecordingRunner(OperationResult(False, "把 beta 设为缺省实例失败（退出码 1）", "registry down"))
+    with TemporaryDirectory(prefix="akari-badreg-") as raw:
+        beta = Path(raw) / "beta"
+        beta.mkdir()
+        (beta / "akaribot.toml").write_text("[instance]\nname = 'beta'\n", encoding="utf-8")
+        listed = StaticInstanceListSource(
+            (
+                InstanceRow(name="alpha", root=Path("/tmp/alpha"), running=True),
+                InstanceRow(name="beta", root=beta, running=False),
+            )
+        )
+
+        async def body(app, page, pilot, source, chosen, control):
+            list_view = page.query_one("#instance-list", compat.ListView)
+            list_view.index = 1
+            await pilot.pause()
+            page.switch_to_selected()
+            await page.wait_for_idle()
+            await pilot.pause()
+            status = page.status_text
+            await pilot.press("q")
+            return status
+
+        status = await _with_page(body, instances=listed, cli=runner)
+    separator = i18n.t("cli.tui.common.error_separator")
+    expected = f"{i18n.t('cli.tui.dashboard.switch_done', name='beta')}{separator}"
+    expected = f"{expected}{i18n.t('cli.tui.dashboard.switch_default_failed', error=f'把 beta 设为缺省实例失败（退出码 1）{separator}registry down')}"
+    return list(runner.calls) == [("instance", "use", "beta")] and status == expected
 
 
 async def _test_switch_refused_for_missing_directory():
@@ -200,8 +343,34 @@ async def _test_switch_refused_for_missing_directory():
     return i18n.t("cli.tui.dashboard.switch_missing").split("${")[0].strip() in status
 
 
-async def _test_policy_toggle_writes_registry():
-    listed = StaticInstanceListSource(_instance_rows())
+async def _test_policy_toggle_sends_cli_flags():
+    # 策略开关经 `instance policy` 下发，方向由取值翻转决定。
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.toggle_policy("autostart")
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.toggle_policy("restart_on_crash")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(runner.calls)
+
+    calls = await _with_page(body, cli=runner)
+    return calls == [
+        ("instance", "policy", "alpha", "--no-autostart"),
+        ("instance", "policy", "alpha", "--restart-on-crash"),
+    ]
+
+
+async def _test_busy_rejects_second_action():
+    # 上一条命令没跑完时拒绝新动作，免得连点叠起多个改注册表的子进程。
+    gate = threading.Event()
+    runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
 
     async def body(app, page, pilot, source, listed, control):
         list_view = page.query_one("#instance-list", compat.ListView)
@@ -211,15 +380,47 @@ async def _test_policy_toggle_writes_registry():
         await pilot.pause()
         page.toggle_policy("restart_on_crash")
         await pilot.pause()
+        busy_status = page.status_text
+        gate.set()
+        await page.wait_for_idle()
+        await pilot.pause()
         await pilot.press("q")
-        return list(listed.policies)
+        return busy_status, list(runner.calls)
 
-    policies = await _with_page(body, instances=listed)
-    return policies == [("alpha", {"autostart": False}), ("alpha", {"restart_on_crash": True})]
+    busy_status, calls = await _with_page(body, cli=runner)
+    return busy_status == i18n.t("cli.tui.dashboard.busy_running") and calls == [
+        ("instance", "policy", "alpha", "--no-autostart")
+    ]
+
+
+async def _test_cli_failure_is_reported():
+    # 子进程报错时状态栏给出 CLI 的结论与输出尾部。
+    runner = _RecordingRunner(OperationResult(False, "移除 alpha 的登记失败（退出码 1）", "instance not found"))
+
+    async def body(app, page, pilot, source, listed, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return status
+
+    status = await _with_page(body, cli=runner)
+    separator = i18n.t("cli.tui.common.error_separator")
+    expected = i18n.t(
+        "cli.tui.dashboard.remove_failed",
+        error=f"移除 alpha 的登记失败（退出码 1）{separator}instance not found",
+    )
+    return status == expected
 
 
 async def _test_register_instance_from_prompt():
-    listed = StaticInstanceListSource(_instance_rows())
+    runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
         page.request_add_instance()
@@ -227,12 +428,17 @@ async def _test_register_instance_from_prompt():
         opened = len(app.screen_stack) > 1
         app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/gamma"
         await pilot.press("enter")
+        await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return opened, list(listed.added)
+        return opened, list(runner.calls), page.status_text
 
-    opened, added = await _with_page(body, instances=listed)
-    return opened and added == ["/tmp/gamma"]
+    opened, calls, status = await _with_page(body, cli=runner)
+    return (
+        opened
+        and calls == [("instance", "add", "/tmp/gamma")]
+        and status == i18n.t("cli.tui.dashboard.add_done", name="gamma", root=Path("/tmp/gamma"))
+    )
 
 
 async def _test_add_prompt_prefills_active_root():
@@ -290,7 +496,7 @@ async def _test_local_source_follows_switched_instance():
 
 
 async def _test_unregister_needs_two_presses():
-    listed = StaticInstanceListSource(_instance_rows())
+    runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
         list_view = page.query_one("#instance-list", compat.ListView)
@@ -298,28 +504,30 @@ async def _test_unregister_needs_two_presses():
         await pilot.pause()
         page.request_remove_instance()
         await pilot.pause()
-        asked = list(listed.removed), page.status_text
+        asked = list(runner.calls), page.status_text
         page.request_remove_instance()
+        await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return asked, list(listed.removed)
+        return asked, list(runner.calls)
 
-    asked, removed = await _with_page(body, instances=listed)
-    return asked[0] == [] and asked[1] and removed == ["alpha"]
+    asked, calls = await _with_page(body, cli=runner)
+    return asked[0] == [] and asked[1] and calls == [("instance", "remove", "alpha", "--yes")]
 
 
 async def _test_policy_refused_for_unregistered():
     listed = StaticInstanceListSource((InstanceRow(name="", root=Path("/tmp/plain"), registered=False),))
+    runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
         page.toggle_policy("autostart")
         await pilot.pause()
         status = page.status_text
         await pilot.press("q")
-        return status, list(listed.policies)
+        return status, list(runner.calls)
 
-    status, policies = await _with_page(body, instances=listed)
-    return policies == [] and status
+    status, calls = await _with_page(body, instances=listed, cli=runner)
+    return calls == [] and status
 
 
 async def _test_service_row_reports_state():
@@ -349,62 +557,442 @@ async def _test_service_row_reports_unsupported():
     return "Windows" in text
 
 
-async def _test_service_install_needs_two_presses():
+async def _test_service_install_opens_confirm_modal():
+    # 一次触发即弹模态：框里给执行与预演两个去处，模态本身就是确认。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
-
-    async def body(app, page, pilot, source, listed, control):
-        page.request_toggle_service()
-        await pilot.pause()
-        asked = control.calls["install"], page.status_text
-        page.request_toggle_service()
-        await page.wait_for_idle()
-        await pilot.pause()
-        await pilot.press("q")
-        return asked, control.calls, page.service_row.installed
-
-    asked, calls, installed = await _with_page(body, service=control)
-    return asked[0] == 0 and asked[1] and calls["install"] == 1 and installed
-
-
-async def _test_service_uninstall_when_installed():
-    control = StaticServiceControl(
-        ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist")),
-        result=ServiceRow(backend="launchd", installed=False, enabled=False),
+    runner = _RecordingRunner(
+        on_run=lambda _args: control.set_status(
+            ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist"))
+        )
     )
 
     async def body(app, page, pilot, source, listed, control):
         page.request_toggle_service()
         await pilot.pause()
-        page.request_toggle_service()
+        opened = len(app.screen_stack) > 1
+        asked = list(runner.calls)
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        await _pick_choice(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return control.calls, page.service_row.installed
+        return opened, asked, labels, list(runner.calls), page.service_row.installed, page.status_text
 
-    calls, installed = await _with_page(body, service=control)
-    return calls["uninstall"] == 1 and calls["install"] == 0 and not installed
+    opened, asked, labels, calls, installed, status = await _with_page(body, service=control, cli=runner)
+    return (
+        opened
+        and asked == []
+        and labels[:2]
+        == [
+            i18n.t("cli.tui.dashboard.service_choice_install"),
+            i18n.t("cli.tui.dashboard.service_choice_dry_run"),
+        ]
+        and calls == [("service", "install")]
+        and installed
+        and status == i18n.t("cli.tui.dashboard.service_added", path="/tmp/agent.plist")
+    )
+
+
+async def _test_service_uninstall_when_installed():
+    control = StaticServiceControl(
+        ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist"))
+    )
+    runner = _RecordingRunner(
+        on_run=lambda _args: control.set_status(ServiceRow(backend="launchd", installed=False, enabled=False))
+    )
+
+    async def body(app, page, pilot, source, listed, control):
+        page.request_toggle_service()
+        await pilot.pause()
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(runner.calls), page.service_row.installed, labels
+
+    calls, installed, labels = await _with_page(body, service=control, cli=runner)
+    return (
+        calls == [("service", "uninstall")]
+        and not installed
+        and i18n.t("cli.tui.dashboard.service_choice_uninstall") in labels
+    )
+
+
+async def _test_service_install_confirms_overwrite_before_force():
+    # 缓存的安装状态可能过期：单元文件已存在时确认框要写明覆盖，执行时才带 --force。
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        control.set_status(ServiceRow(backend="launchd", installed=True, path=Path("/tmp/agent.plist")))
+        page.request_toggle_service()
+        await pilot.pause()
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return hint, list(runner.calls)
+
+    hint, calls = await _with_page(body, service=control, cli=runner)
+    expected = i18n.t("cli.tui.dashboard.service_choice_hint_force", path="/tmp/agent.plist")
+    return expected in hint and calls == [("service", "install", "--force")]
+
+
+async def _test_service_confirmation_offers_dry_run():
+    # 确认框里的「先预演」只跑 --dry-run 并把输出留在状态栏与预演区，看过之后仍可执行真动作。
+    preview = OperationResult(True, "预演成功", "将写入 /tmp/agent.plist\nlaunchctl bootstrap gui/501")
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False), preview_result=preview)
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        page.request_toggle_service()
+        await pilot.pause()
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        await _pick_choice(app, pilot, 1)
+        await page.wait_for_idle()
+        await pilot.pause()
+        after_preview = (list(runner.calls), page.status_text, page.service_preview)
+        page.request_toggle_service()
+        await pilot.pause()
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return labels, after_preview, list(runner.calls), control.calls, list(control.previewed)
+
+    labels, after_preview, calls, service_calls, previewed = await _with_page(body, service=control, cli=runner)
+    return (
+        i18n.t("cli.tui.dashboard.service_choice_dry_run") in labels
+        and after_preview[0] == []
+        and after_preview[1] == i18n.t("cli.tui.dashboard.service_preview_done", output="将写入 /tmp/agent.plist")
+        and after_preview[2] == preview.detail
+        and service_calls["preview"] == 1
+        and previewed == ["install"]
+        and calls == [("service", "install")]
+    )
+
+
+async def _test_service_repeat_press_keeps_single_modal():
+    # 连发第二次落在防抖窗口内，不该叠起两层模态框。
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
+
+    async def body(app, page, pilot, source, listed, control):
+        page.request_toggle_service()
+        page.request_toggle_service()
+        await pilot.pause()
+        opened = len(app.screen_stack)
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return opened
+
+    opened = await _with_page(body, service=control)
+    return opened == 2
+
+
+async def _test_remove_confirm_resets_on_refresh():
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        page.refresh_snapshot(force=True)
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return list(runner.calls), status
+
+    calls, status = await _with_page(body, cli=runner)
+    return calls == [] and status == i18n.t("cli.tui.dashboard.remove_confirm", name="alpha", root=Path("/tmp/alpha"))
+
+
+async def _test_remove_confirm_resets_on_highlight_change():
+    # 光标离开又回到同一行也要重新问过，否则第二次按键直接执行。
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.request_remove_instance()
+        list_view.index = 1
+        await pilot.pause()
+        list_view.index = 0
+        await pilot.pause()
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(runner.calls)
+
+    calls = await _with_page(body, cli=runner)
+    return calls == []
+
+
+async def _test_polling_keeps_pending_confirm():
+    # 周期轮询只刷新显示：清单内容变化与高亮回拨都不作废待确认。
+    listed = _ChangingListSource(_instance_rows())
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        before = page.instance_rows[0].running
+        page.refresh_instances(polling=True)
+        await pilot.pause()
+        flipped = page.instance_rows[0].running != before
+        restored = compat.highlighted_index(list_view)
+        page.request_remove_instance()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return flipped, restored, list(runner.calls)
+
+    flipped, restored, calls = await _with_page(body, instances=listed, cli=runner)
+    return flipped is True and restored == 0 and calls == [("instance", "remove", "alpha", "--yes")]
+
+
+async def _test_service_confirm_resets_on_status_reread():
+    # 服务状态重读后闸门作废：取消模态后紧接着再按一次，仍应弹出新的确认框。
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
+
+    async def body(app, page, pilot, source, listed, control):
+        page.request_toggle_service()
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        page.refresh_service()
+        page.request_toggle_service()
+        await pilot.pause()
+        opened = len(app.screen_stack) > 1
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return opened
+
+    opened = await _with_page(body, service=control)
+    return opened
+
+
+async def _test_new_instance_runs_init():
+    # 新建实例：输入目录 → 选环境方式 → init 子进程 → 刷新清单。
+    runner = StaticInitRunner()
+
+    with TemporaryDirectory(prefix="akari-new-") as raw:
+        root = Path(raw) / "inst"
+        root.mkdir()
+        (root / "akaribot.toml").write_text("[instance]\nname = 'inst'\n", encoding="utf-8")
+        previous = context.active_root()
+        context.set_active_root(root)
+
+        async def body(app, page, pilot, source, listed, control):
+            page.init_runner = runner
+            page.request_new_instance()
+            await pilot.pause()
+            prefilled = app.screen.query_one("#prompt-input", compat.Input).value
+            app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/newbie"
+            await pilot.press("enter")
+            await pilot.pause()
+            labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+            await _pick_choice(app, pilot, 0)
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return prefilled, labels, list(runner.created), page.status_text
+
+        try:
+            prefilled, labels, created, status = await _with_page(body)
+        finally:
+            context.set_active_root(previous)
+    return (
+        prefilled == str(root.resolve().parent)
+        and labels
+        == [
+            i18n.t("cli.tui.dashboard.new_venv_managed"),
+            i18n.t("cli.tui.dashboard.new_venv_current"),
+            i18n.t("cli.tui.dashboard.add_cancel"),
+        ]
+        and created == [("/tmp/newbie", True, i18n.current_locale())]
+        and status == i18n.t("cli.tui.dashboard.new_done", name="newbie", root=Path("/tmp/newbie"))
+    )
+
+
+async def _test_new_instance_current_env_skips_managed_venv():
+    runner = StaticInitRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        page.init_runner = runner
+        page.request_new_instance()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/plain"
+        await pilot.press("enter")
+        await pilot.pause()
+        await _pick_choice(app, pilot, 1)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(runner.created), page.status_text
+
+    created, status = await _with_page(body)
+    return created == [("/tmp/plain", False, i18n.current_locale())] and status
+
+
+async def _test_new_instance_failure_is_reported():
+    runner = StaticInitRunner(OperationResult(False, "创建实例失败", "目录非空"))
+
+    async def body(app, page, pilot, source, listed, control):
+        page.init_runner = runner
+        page.request_new_instance()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/busy"
+        await pilot.press("enter")
+        await pilot.pause()
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return status
+
+    status = await _with_page(body)
+    separator = i18n.t("cli.tui.common.error_separator")
+    return status == i18n.t("cli.tui.dashboard.new_failed", error=f"创建实例失败{separator}目录非空")
+
+
+async def _test_subprocess_init_runner_builds_argv():
+    # init 的开关必须与命令层一致：--non-interactive 取缺省选项，--no-venv 才是装进当前环境。
+    calls: list[tuple[list[str], dict]] = []
+
+    def runner(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    init = SubprocessInitRunner(runner=runner)
+    managed = init.create(Path("/tmp/newbie"), managed_venv=True, locale="zh_cn")
+    plain = init.create(Path("/tmp/newbie"), managed_venv=False, locale="en_us")
+    first, second = calls[0][0], calls[1][0]
+    options = calls[0][1]
+    env = options["env"]
+    return (
+        managed.ok
+        and plain.ok
+        and first[-5:] == ["init", "/tmp/newbie", "--non-interactive", "--locale", "zh_cn"]
+        and second[-6:] == ["init", "/tmp/newbie", "--non-interactive", "--locale", "en_us", "--no-venv"]
+        and options["cwd"] == "/tmp"
+        and options["timeout"] == INIT_TIMEOUT_SECONDS
+        and env["AKARI_INSTANCE_DIR"] == "/tmp/newbie"
+        and env["PYTHONIOENCODING"] == "utf-8"
+    )
+
+
+async def _test_pending_confirm_window():
+    # 闸门按真实窗口判定：防抖期内忽略，放久的待确认按第一次请求重新计。
+    confirm = compat.PendingConfirm()
+    return (
+        confirm.arm("x", now=100.0) is False
+        and confirm.arm("x", now=100.1) is False
+        and confirm.arm("x", now=101.0) is True
+        and confirm.arm("y", now=200.0) is False
+        and confirm.arm("y", now=220.0) is False
+    )
+
+
+async def _test_subprocess_cli_runner_builds_argv():
+    # 写动作的 argv 落在真实子命令上，环境与编码与其它页一致。
+    calls: list[tuple[list[str], dict]] = []
+
+    def runner(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    cli = SubprocessCliRunner(runner=runner)
+    result = cli.run(("instance", "policy", "alpha", "--no-autostart"), label="设置 alpha 的服务策略")
+    argv, options = calls[0]
+    env = options["env"]
+    return (
+        result.ok
+        and argv[3:] == ["instance", "policy", "alpha", "--no-autostart"]
+        and options["timeout"] == CLI_WRITE_TIMEOUT_SECONDS
+        and options["encoding"] == "utf-8"
+        and env["PYTHONIOENCODING"] == "utf-8"
+    )
+
+
+async def _test_accept_window():
+    # accept 给「一次触发就弹模态」的动作挡重复触发：防抖窗口内忽略，之后照常放行。
+    gate = compat.PendingConfirm()
+    return (
+        gate.accept("x", now=100.0) is True
+        and gate.accept("x", now=100.1) is False
+        and gate.accept("x", now=101.0) is True
+    )
+
+
+async def _test_bindings_follow_key_convention():
+    # 破坏性动作不用单字母键；低频键位不进页脚，80 列终端才放得下高频的那几条。
+    shown = {binding.key: binding.show for binding in DashboardPage.BINDINGS}
+    return (
+        "d" not in shown
+        and shown.get("ctrl+d") is False
+        and shown.get("ctrl+n") is True
+        and all(shown.get(key) is False for key in ("a", "c", "n", "i"))
+    )
 
 
 @func_case
 async def test_tui_dashboard(tester: Tester):
     """cli.tui.dashboard: 实例信息与运行状态测试"""
     _use_cli_locale()
-    await tester.test(_test_fields_show_instance_facts, "展示实例根、名称与版本")
-    await tester.test(_test_state_follows_probe, "运行状态跟着探测结果")
-    await tester.test(_test_refresh_rereads_snapshot, "刷新重新读取快照")
-    await tester.test(_test_load_failure_degrades_to_status, "读取失败只降级到状态栏")
-    await tester.test(_test_instance_list_marks_state_and_policy, "实例清单带状态与策略标记")
-    await tester.test(_test_enter_switches_instance, "在清单里切换实例")
-    await tester.test(_test_switch_refused_for_missing_directory, "目录无 akaribot.toml 时拒绝切换")
-    await tester.test(_test_policy_toggle_writes_registry, "自启与崩溃重启开关写回注册表")
-    await tester.test(_test_register_instance_from_prompt, "输入框登记实例")
-    await tester.test(_test_add_prompt_prefills_active_root, "登记框预填当前实例目录")
-    await tester.test(_test_boot_note_is_announced, "进界面时的自动登记以通知报出")
-    await tester.test(_test_local_source_follows_switched_instance, "概览页描述跟着切换后的实例")
-    await tester.test(_test_unregister_needs_two_presses, "移除登记需二次确认")
-    await tester.test(_test_policy_refused_for_unregistered, "未登记实例不设策略")
-    await tester.test(_test_service_row_reports_state, "服务行展示后端与单元文件")
-    await tester.test(_test_service_row_reports_unsupported, "平台不支持时如实说明")
-    await tester.test(_test_service_install_needs_two_presses, "安装服务需二次确认")
-    await tester.test(_test_service_uninstall_when_installed, "已安装时按键走卸载")
+    await tester.test(_test_pending_confirm_window, "确认闸门按防抖与超时判定")
+    await tester.test(_test_accept_window, "一次触发的闸门挡重复触发")
+    await tester.test(_test_subprocess_init_runner_builds_argv, "init 子进程按命令层开关拼装")
+    await tester.test(_test_subprocess_cli_runner_builds_argv, "写动作子进程按命令层 argv 拼装")
+    await tester.test(_test_bindings_follow_key_convention, "键位约定：破坏性动作带修饰键")
+    await tester.test(_test_service_repeat_press_keeps_single_modal, "连发第二次不叠模态框")
+    await tester.test(_test_service_confirm_resets_on_status_reread, "服务状态重读后闸门作废")
+    # 用例里的两次按键相隔只有几毫秒，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_fields_show_instance_facts, "展示实例根、名称与版本")
+        await tester.test(_test_state_follows_probe, "运行状态跟着探测结果")
+        await tester.test(_test_refresh_rereads_snapshot, "刷新重新读取快照")
+        await tester.test(_test_load_failure_degrades_to_status, "读取失败只降级到状态栏")
+        await tester.test(_test_instance_list_marks_state_and_policy, "实例清单带状态与策略标记")
+        await tester.test(_test_enter_switches_instance, "在清单里切换实例")
+        await tester.test(_test_switch_writes_default_instance, "切换实例写回缺省项")
+        await tester.test(_test_switch_skips_default_for_unregistered, "未登记实例不改写缺省项")
+        await tester.test(_test_switch_default_failure_is_reported, "缺省项写入失败如实报出")
+        await tester.test(_test_switch_refused_for_missing_directory, "目录无 akaribot.toml 时拒绝切换")
+        await tester.test(_test_policy_toggle_sends_cli_flags, "自启与崩溃重启经 CLI 下发")
+        await tester.test(_test_busy_rejects_second_action, "上一条命令未完成时拒绝新动作")
+        await tester.test(_test_register_instance_from_prompt, "输入框登记实例")
+        await tester.test(_test_add_prompt_prefills_active_root, "登记框预填当前实例目录")
+        await tester.test(_test_new_instance_runs_init, "新建实例经 init 并刷新清单")
+        await tester.test(_test_new_instance_current_env_skips_managed_venv, "用当前环境时不建托管 venv")
+        await tester.test(_test_new_instance_failure_is_reported, "新建失败不登记且报出原因")
+        await tester.test(_test_boot_note_is_announced, "进界面时的自动登记以通知报出")
+        await tester.test(_test_local_source_follows_switched_instance, "概览页描述跟着切换后的实例")
+        await tester.test(_test_unregister_needs_two_presses, "移除登记需二次确认")
+        await tester.test(_test_cli_failure_is_reported, "CLI 报错时状态栏给出原因")
+        await tester.test(_test_remove_confirm_resets_on_refresh, "刷新后待确认作废")
+        await tester.test(_test_remove_confirm_resets_on_highlight_change, "高亮换过再回来要重新确认")
+        await tester.test(_test_polling_keeps_pending_confirm, "周期轮询不作废待确认")
+        await tester.test(_test_policy_refused_for_unregistered, "未登记实例不设策略")
+        await tester.test(_test_service_row_reports_state, "服务行展示后端与单元文件")
+        await tester.test(_test_service_row_reports_unsupported, "平台不支持时如实说明")
+        await tester.test(_test_service_install_opens_confirm_modal, "一次触发即弹服务确认框")
+        await tester.test(_test_service_install_confirms_overwrite_before_force, "单元文件已存在时写明覆盖")
+        await tester.test(_test_service_confirmation_offers_dry_run, "确认框可先预演再决定")
+        await tester.test(_test_service_uninstall_when_installed, "已安装时按键走卸载")
     return tester
