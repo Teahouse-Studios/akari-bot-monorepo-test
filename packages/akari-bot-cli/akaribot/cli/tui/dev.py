@@ -1223,6 +1223,8 @@ class DevPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_all(self) -> None:
+        if not compat.mounted(self):
+            return
         list_view = self.query_one("#package-list", compat.ListView)
         inner_width = self._list_inner_width(list_view)
         layout = self._build_layout(inner_width)

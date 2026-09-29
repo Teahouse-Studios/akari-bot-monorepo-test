@@ -46,7 +46,7 @@ SNAPSHOT = DashboardSnapshot(
     update_hint="",
 )
 
-# 页底两行按钮的 id，按上行到下行、从左到右排列。
+# 页底按钮的 id，按 ButtonFlow 的装箱顺序排列。
 BUTTON_IDS = (
     "switch",
     "new-instance",
@@ -1468,30 +1468,73 @@ async def _test_action_buttons_disable_while_busy():
     )
 
 
-async def _test_action_buttons_fit_narrow_screen():
-    # 两行按钮在 80 列下都要完整落在页内：按钮默认 min-width 会把末位按钮挤出可视区。
+async def _test_action_buttons_share_one_row_when_wide():
+    # 宽终端下八个按钮排成一行：固定两行会多占一行高度，右侧也留出空白。
     async def body(app, page, pilot, source, listed, control):
         # 标签在首次取数时改写，宽度要等这轮重排落地后再量。
         await pilot.pause()
         page_region = page.region
         boxes = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
-        first = page.query_one("#actions-instance").region
-        second = page.query_one("#actions-policy").region
-        status = page.query_one("#status", compat.Static).region
         fields = page.query_one("#fields-pane").region
+        status = page.query_one("#status", compat.Static).region
         await pilot.press("q")
-        return page_region, boxes, (first, second, status, fields)
+        return page_region, boxes, fields, status
 
-    page_region, boxes, rows = await _with_page(body, size=(80, 24))
-    first, second, status, fields = rows
+    page_region, boxes, fields, status = await _with_page(body, size=(120, 32))
     inside = all(box.width > 0 and box.x >= page_region.x and box.right <= page_region.right for box in boxes.values())
-    stacked = (
-        first.y >= fields.bottom
-        and second.y >= first.bottom
-        and status.y >= second.bottom
-        and len({box.y for box in boxes.values()}) == 2
+    return (
+        inside
+        and len({box.y for box in boxes.values()}) == 1
+        and min(box.y for box in boxes.values()) >= fields.bottom
+        and status.y >= max(box.bottom for box in boxes.values())
     )
-    return inside and stacked
+
+
+async def _test_action_buttons_wrap_after_remove_instance():
+    # 80 列下折成两行，断点落在 remove-instance 之后：实例操作与策略服务各占一行。
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        page_region = page.region
+        fields = page.query_one("#fields-pane").region
+        status = page.query_one("#status", compat.Static).region
+        boxes = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
+        # 切到已登记且服务已安装：标签改写后重新量一次，确认仍在页内。
+        control.set_status(ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist")))
+        page.refresh_service()
+        await pilot.pause()
+        rewritten = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
+        labels = _labels(page)
+        await pilot.press("q")
+        return page_region, boxes, rewritten, labels, fields, status
+
+    page_region, boxes, rewritten, labels, fields, status = await _with_page(body, size=(80, 24))
+    rows = {button_id: box.y for button_id, box in boxes.items()}
+    instance_rows = {rows[button_id] for button_id in BUTTON_IDS[:4]}
+    policy_rows = {rows[button_id] for button_id in BUTTON_IDS[4:]}
+    expected_labels = {
+        "switch": i18n.t("cli.tui.dashboard.button_switch"),
+        "new-instance": i18n.t("cli.tui.dashboard.button_new_instance"),
+        "add-instance": i18n.t("cli.tui.dashboard.button_add_instance"),
+        "remove-instance": i18n.t("cli.tui.dashboard.button_remove_instance"),
+        "autostart": i18n.t("cli.tui.dashboard.button_autostart_on"),
+        "crash-restart": i18n.t("cli.tui.dashboard.button_crash_off"),
+        "service-toggle": i18n.t("cli.tui.dashboard.button_service_uninstall"),
+        "refresh": i18n.t("cli.tui.dashboard.action_refresh"),
+    }
+    return (
+        all(
+            box.width > 0 and box.x >= page_region.x and box.right <= page_region.right
+            for box in (*boxes.values(), *rewritten.values())
+        )
+        and len(instance_rows) == 1
+        and len(policy_rows) == 1
+        and len(set(rows.values())) == 2
+        and max(instance_rows) < min(policy_rows)
+        and min(rows.values()) >= fields.bottom
+        and status.y >= max(box.bottom for box in boxes.values())
+        and labels == expected_labels
+    )
 
 
 async def _test_instances_caption_points_to_buttons():
@@ -1568,7 +1611,8 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_button_refresh_rereads_snapshot, "按钮刷新重新读取快照")
         await tester.test(_test_action_buttons_follow_state, "按钮禁用与标签跟着数据走")
         await tester.test(_test_action_buttons_disable_while_busy, "忙时禁用全部按钮")
-        await tester.test(_test_action_buttons_fit_narrow_screen, "80 列下两行按钮都在页内")
+        await tester.test(_test_action_buttons_share_one_row_when_wide, "宽终端下按钮只占一行")
+        await tester.test(_test_action_buttons_wrap_after_remove_instance, "80 列下在移除登记后折行")
         await tester.test(_test_instances_caption_points_to_buttons, "说明行按条数插值后指向按钮")
         await tester.test(_test_instances_caption_drops_key_list, "说明行新文案不再逐条列键位")
     with mock.patch.object(compat.PendingConfirm, "debounce", 10.0):

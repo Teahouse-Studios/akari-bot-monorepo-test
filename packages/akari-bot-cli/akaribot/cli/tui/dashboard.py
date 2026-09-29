@@ -7,8 +7,8 @@
 use`` 子进程异步写回，结论以应用级通知报出；各页随后的取数都指向它。``ctrl+n`` 经 ``akaribot init``
 子进程新建实例并登记，``ctrl+d`` 弹确认框移除登记。
 
-页底两行按钮是这些动作的主要入口：上行作用于高亮的实例，下行作用于当前实例的策略与服务；键位是
-同一批动作的快捷方式，逐条列在 ``?`` 键位一览里。
+页底按钮是这些动作的主要入口：高亮实例的操作在前、当前实例的策略与服务在后，按可用宽度排布，宽
+终端排成一行，放不下时在两组之间折行；键位是同一批动作的快捷方式，逐条列在 ``?`` 键位一览里。
 
 服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
 里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
@@ -848,14 +848,8 @@ class DashboardPage(compat.Vertical):
         width: 1fr;
     }
     DashboardPage #actions {
-        height: 6;
+        height: auto;
         padding: 0 0 0 1;
-    }
-    DashboardPage #actions Horizontal {
-        height: 3;
-    }
-    DashboardPage #actions Button {
-        min-width: 0;
     }
     DashboardPage #status {
         height: 2;
@@ -920,25 +914,25 @@ class DashboardPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：实例清单 + 当前实例的字段 + 两行操作按钮与状态栏。"""
+        """装配页面控件树：实例清单 + 当前实例的字段 + 操作按钮区与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.dashboard.instances_keys_caption"), id="instances-caption", markup=False)
         yield compat.Static("", id="service", markup=False)
         yield compat.ListView(id="instance-list")
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
-        with compat.Vertical(id="actions"):
-            with compat.Horizontal(id="actions-instance"):
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_switch"), id="switch")
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_new_instance"), id="new-instance")
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_add_instance"), id="add-instance")
-                yield compat.Button(
-                    i18n.t("cli.tui.dashboard.button_remove_instance"), id="remove-instance", variant="error"
-                )
-            with compat.Horizontal(id="actions-policy"):
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_autostart_off"), id="autostart")
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_crash_off"), id="crash-restart")
-                yield compat.Button(i18n.t("cli.tui.dashboard.button_service_install"), id="service-toggle")
-                yield compat.Button(i18n.t("cli.tui.dashboard.action_refresh"), id="refresh", variant="primary")
+        # 实例操作与策略服务各成一组：宽终端下一行放得下，放不下时在两组之间折行。
+        yield compat.ButtonFlow(
+            ("switch", i18n.t("cli.tui.dashboard.button_switch")),
+            ("new-instance", i18n.t("cli.tui.dashboard.button_new_instance")),
+            ("add-instance", i18n.t("cli.tui.dashboard.button_add_instance")),
+            ("remove-instance", i18n.t("cli.tui.dashboard.button_remove_instance"), "error"),
+            ("autostart", i18n.t("cli.tui.dashboard.button_autostart_off")),
+            ("crash-restart", i18n.t("cli.tui.dashboard.button_crash_off")),
+            ("service-toggle", i18n.t("cli.tui.dashboard.button_service_install")),
+            ("refresh", i18n.t("cli.tui.dashboard.action_refresh"), "primary"),
+            breaks=("remove-instance",),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
@@ -1218,6 +1212,7 @@ class DashboardPage(compat.Vertical):
             if self._service.installed
             else "cli.tui.dashboard.button_service_install"
         )
+        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _sync_policy_button(self, button_id: str, field_name: str, row: InstanceRow | None) -> None:
         enabled = row is not None and (row.autostart if field_name == "autostart" else row.restart_on_crash)
@@ -1226,6 +1221,8 @@ class DashboardPage(compat.Vertical):
         button = self.query_one(f"#{button_id}", compat.Button)
         button.disabled = self._busy or row is None or not row.registered
         button.label = i18n.t(f"cli.tui.dashboard.button_{prefix}_{state}")
+        # 标签改写会改变按钮宽度，列数要跟着重算。
+        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def request_toggle_service(self) -> None:
         """安装或卸载常驻服务：一次触发即弹确认框，框里可选执行或先预演。

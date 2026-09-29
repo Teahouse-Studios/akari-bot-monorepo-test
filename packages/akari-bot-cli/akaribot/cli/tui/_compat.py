@@ -26,12 +26,14 @@ from rich.text import Text
 from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.css.stylesheet import Stylesheet
 from textual.pilot import Pilot
 from textual.reactive import reactive
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.theme import Theme
+from textual.worker import WorkerFailed
 from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, ListItem, ListView, ProgressBar, Static
 
@@ -70,8 +72,11 @@ __all__ = [
     "align_rows",
     "CONFIRM_DEBOUNCE_SECONDS",
     "PendingConfirm",
+    "ButtonFlow",
     "HelpScreen",
     "ask_choice",
+    "button_width",
+    "mounted",
     "ask_text",
     "app_test",
     "bind",
@@ -776,6 +781,164 @@ def ask_choice(
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
 
 
+ButtonSpec = tuple[str, str] | tuple[str, str, str]
+
+
+def mounted(widget: Widget) -> bool:
+    """控件是否还在控件树里。
+
+    后台取数与定时轮询可能在页面卸载（切实例重挂载、退出界面）之后才落地，此时按 id 取控件会抛
+    ``NoMatches``，界面退出时会连带把异常抛给用户。渲染入口先问一句再动手。
+    """
+    return bool(getattr(widget, "is_mounted", False))
+
+
+def button_width(button: Button) -> int:
+    """按钮占用的列数：标签宽度加左右各一格内边距。
+
+    按钮没有边框，``padding`` 是 ``0 1``，故自然宽度就是标签宽度加二。
+    """
+    return display_width(str(button.label)) + 2
+
+
+class ButtonFlow(Grid):
+    """按可用宽度自动折行的按钮区。
+
+    界面里一组动作（实例操作、环境装卸、解释器动作）在宽终端下一行放得下，窄终端下要折行；
+    固定按两行摆放会在宽终端下空出整行高度与右侧大片空白。这里用网格摆放按钮：列数按自然宽度
+    算出来，一行放得下就一行，放不下才折行，且优先在 ``breaks`` 标出的语义分组处断开。
+
+    按钮始终是同一个控件、始终挂在树里（只换列数），故标签与禁用状态不会丢，页面随时可以按 id
+    取用。列宽取该列最宽的那个按钮，行内因此对齐。
+
+    :param specs: ``(id, 标签)`` 或 ``(id, 标签, variant)`` 序列，顺序即摆放顺序。
+    :param breaks: 允许断行的位置，给出该组最后一个按钮的 ``id``；一组自身超宽时按按钮继续拆。
+    """
+
+    DEFAULT_CSS = """
+    ButtonFlow {
+        grid-columns: auto;
+        grid-rows: auto;
+        grid-gutter: 0;
+        height: auto;
+        width: 100%;
+    }
+    ButtonFlow Button {
+        min-width: 0;
+    }
+    """
+
+    def __init__(self, *specs: ButtonSpec, breaks: tuple[str, ...] = (), id: str | None = None) -> None:
+        super().__init__(id=id)
+        self._specs = specs
+        self._breaks = breaks
+        # 按钮只建一次并一直挂在树里：重排只改列数，标签与禁用状态都留着。
+        self._buttons: dict[str, Button] = {}
+        self._columns = 0
+
+    def compose(self) -> ComposeResult:
+        """按顺序装配按钮；列数在首次排布时按宽度算。"""
+        for spec in self._specs:
+            yield self._build(spec[0])
+
+    def on_mount(self) -> None:
+        """首次排布前算一次列数。"""
+        self.relayout()
+
+    def on_resize(self, event: events.Resize) -> None:
+        """宽度变化后重算列数。"""
+        self.relayout(event.size.width)
+
+    def relayout(self, width: int | None = None) -> None:
+        """按 ``width`` 重算列数；列数没变时不动样式。
+
+        :param width: 可用列数；缺省取当前控件宽度。
+        """
+        available = self.size.width if width is None else width
+        if available <= 0:
+            return
+        columns = self._columns_for(available)
+        if columns == self._columns:
+            return
+        self._columns = columns
+        self.styles.grid_size_columns = columns
+
+    def _columns_for(self, width: int) -> int:
+        # 列数按最长的那一行定：网格按行优先填充，行长即列数。列宽取该列最宽者（网格按列对齐），
+        # 故还要按列宽复核总宽，超了就减一列重算。
+        rows = self._pack(width)
+        columns = max((len(row) for row in rows), default=1)
+        while columns > 1 and self._grid_width(rows, columns) > width:
+            columns -= 1
+        return max(1, columns)
+
+    def _grid_width(self, rows: tuple[tuple[str, ...], ...], columns: int) -> int:
+        widest = [0] * columns
+        for row in rows:
+            for index, button_id in enumerate(row):
+                if index < columns:
+                    widest[index] = max(widest[index], self._natural_width(button_id))
+        return sum(widest)
+
+    def _pack(self, width: int) -> tuple[tuple[str, ...], ...]:
+        # 先按语义分组装：一组放得进当前行就并进去，放不进就换行；一组自身超宽时把它的按钮
+        # 按宽度继续拆，保证窄终端下仍然不溢出。
+        rows: list[list[str]] = []
+        current: list[str] = []
+        used = 0
+        for group in self._groups():
+            need = sum(self._natural_width(spec[0]) for spec in group)
+            if current and used + need > width:
+                rows.append(current)
+                current, used = [], 0
+            for spec in group:
+                button_id = spec[0]
+                item = self._natural_width(button_id)
+                if current and used + item > width:
+                    rows.append(current)
+                    current, used = [], 0
+                current.append(button_id)
+                used += item
+        if current:
+            rows.append(current)
+        return tuple(tuple(row) for row in rows)
+
+    def _natural_width(self, button_id: str) -> int:
+        # 以控件当前的标签为准：状态改写会换标签（安装服务 / 卸载服务），装箱要跟着变；
+        # 不适用的按钮会被页面隐藏（display=False），它们不占宽度也不该触发折行。
+        button = self._buttons.get(button_id)
+        if button is not None:
+            return 0 if button.display is False else button_width(button)
+        for spec in self._specs:
+            if spec[0] == button_id:
+                return display_width(spec[1]) + 2
+        return 0
+
+    def _groups(self) -> list[list[ButtonSpec]]:
+        groups: list[list[ButtonSpec]] = []
+        current: list[ButtonSpec] = []
+        for spec in (item for item in self._specs if self._natural_width(item[0]) > 0):
+            current.append(spec)
+            if spec[0] in self._breaks:
+                groups.append(current)
+                current = []
+        if current:
+            groups.append(current)
+        return groups
+
+    def _build(self, button_id: str) -> Button:
+        cached = self._buttons.get(button_id)
+        if cached is not None:
+            return cached
+        for spec in self._specs:
+            if spec[0] == button_id:
+                variant = spec[2] if len(spec) > 2 else "default"
+                button = Button(spec[1], id=button_id, variant=variant)
+                self._buttons[button_id] = button
+                return button
+        raise KeyError(button_id)
+
+
 class HelpScreen(Screen[None]):
     """当前页键位一览的浮层：列出本页与全局键位，Esc / q / ? 关闭。
 
@@ -941,10 +1104,16 @@ async def app_test(app: App[Any], size: tuple[int, int] = (80, 24)) -> AsyncIter
     :param size: 虚拟终端尺寸，``(宽， 高)``，用于验证窄终端布局。
 
     理由：``run_test`` 的 ``headless`` 与 ``size`` 为关键字参数，早期版本没有 ``size``，
-    统一由本包装提供默认 80×24。
+    统一由本包装提供默认 80×24。另外吞掉退出阶段的 ``NoMatches``：取数与轮询可能在页面卸载之后
+    才落地，``run_test`` 会把这类 ``WorkerFailed`` 当成用例失败抛出，而界面此时已经在关闭，
+    用户看不到任何异常（各页渲染入口另有 ``mounted()`` 判断，这里是兜底）。
     """
-    async with app.run_test(headless=True, size=size) as pilot:
-        yield pilot
+    try:
+        async with app.run_test(headless=True, size=size) as pilot:
+            yield pilot
+    except WorkerFailed as error:
+        if app.is_running or not isinstance(error.__cause__, NoMatches):
+            raise
 
 
 def progress_phase(bar: ProgressBar, done: float, total: float = 100.0) -> None:

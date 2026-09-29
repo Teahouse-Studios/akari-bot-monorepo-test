@@ -1204,10 +1204,9 @@ class DatabasePage(compat.Vertical):
         )
 
     def _render_tables(self) -> None:
-        try:
-            list_view = self.query_one("#table-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 页面已卸载时后台任务仍可能落地，此时没有可画的控件
+        if not compat.mounted(self):
             return
+        list_view = self.query_one("#table-list", compat.ListView)
         width = self._list_width(list_view)
         # 行文本由表名与行数直接拼出：这两项都是数据，交给模板插值反而让列表读不出表名。
         rows = tuple(
@@ -1224,11 +1223,10 @@ class DatabasePage(compat.Vertical):
         self._adopt_focus()
 
     def _render_rows(self) -> None:
-        info = self.selected_info
-        try:
-            list_view = self.query_one("#row-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 同上：卸载后不再绘制
+        if not compat.mounted(self):
             return
+        info = self.selected_info
+        list_view = self.query_one("#row-list", compat.ListView)
         width = self._list_width(list_view)
         separator = i18n.t("cli.tui.common.list_separator")
         rows: list[str] = []
@@ -1436,10 +1434,9 @@ class DatabasePage(compat.Vertical):
     def _set_status(self, text: str) -> None:
         self.last_result = text
         self._status_rendered = text
-        try:
-            self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
-        except Exception:  # noqa: BLE001 - 页面已卸载时后台任务仍可能落地，此时没有可写的状态栏
+        if not compat.mounted(self):
             return
+        self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
         """终端尺寸变化时按缓存重排，不重新取数。"""

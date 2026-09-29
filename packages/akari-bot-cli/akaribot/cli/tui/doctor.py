@@ -697,12 +697,18 @@ class DoctorPage(compat.Vertical):
     # region 渲染（只读缓存）
 
     def _render_report(self) -> None:
+        if not compat.mounted(self):
+            return
         self._render_summary()
         self._render_verdict()
         self._render_rows()
         self._render_detail()
 
     def _render_summary(self) -> None:
+        try:
+            self.query_one("#summary", compat.Static)
+        except Exception:  # noqa: BLE001 - 页面已卸载时后台取数仍可能落地，此时没有可写的控件
+            return
         snapshot = self._snapshot
         checks = snapshot.checks
         separator = i18n.t("cli.tui.common.list_separator")
@@ -734,6 +740,10 @@ class DoctorPage(compat.Vertical):
         self.query_one("#summary", compat.Static).update(compat.plain_text(text))
 
     def _render_verdict(self) -> None:
+        try:
+            self.query_one("#verdict", compat.Static)
+        except Exception:  # noqa: BLE001 - 页面已卸载时后台取数仍可能落地，此时没有可写的控件
+            return
         text = self._verdict_line()
         self._verdict_rendered = text
         self.query_one("#verdict", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
@@ -771,6 +781,10 @@ class DoctorPage(compat.Vertical):
         return 0
 
     def _render_detail(self) -> None:
+        try:
+            self.query_one("#detail", compat.Static)
+        except Exception:  # noqa: BLE001 - 同上：卸载后不再绘制
+            return
         text = "\n".join(self._fit_page_width(line) for line in self._detail_lines())
         self._detail_rendered = text
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
@@ -811,6 +825,10 @@ class DoctorPage(compat.Vertical):
         return compat.truncate_cells(text, max(width, 8))
 
     def _set_status(self, key: str, **params: Any) -> None:
+        try:
+            self.query_one("#status", compat.Static)
+        except Exception:  # noqa: BLE001 - 同上：卸载后不再写状态栏
+            return
         self._status_key = key
         self._status_rendered = i18n.t(key, **params)
         self.query_one("#status", compat.Static).update(compat.plain_text(self._fit_page_width(self._status_rendered)))

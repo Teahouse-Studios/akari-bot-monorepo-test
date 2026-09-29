@@ -563,11 +563,8 @@ class EnvironmentPage(compat.Vertical):
         text-overflow: ellipsis;
     }
     EnvironmentPage #actions {
-        height: 6;
+        height: auto;
         padding: 0 0 0 1;
-    }
-    EnvironmentPage #actions Horizontal {
-        height: 3;
     }
     EnvironmentPage #status {
         height: 2;
@@ -636,15 +633,17 @@ class EnvironmentPage(compat.Vertical):
             yield compat.Static("", id="count", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="package-list")
-        with compat.Vertical(id="actions"):
-            with compat.Horizontal(id="package-actions"):
-                yield compat.Button(i18n.t("cli.tui.environment.button_install"), id="install", variant="primary")
-                yield compat.Button(i18n.t("cli.tui.environment.button_uninstall"), id="uninstall", variant="error")
-                yield compat.Button(i18n.t("cli.tui.environment.button_refresh"), id="refresh")
-            with compat.Horizontal(id="interpreter-actions"):
-                yield compat.Button(i18n.t("cli.tui.environment.button_adopt"), id="adopt", variant="warning")
-                yield compat.Button(i18n.t("cli.tui.environment.button_release"), id="release", variant="warning")
-                yield compat.Button(i18n.t("cli.tui.environment.button_recreate"), id="recreate", variant="warning")
+        # 装卸与解释器动作各成一组：宽终端下一行放完，放不下时在两组之间折行。
+        yield compat.ButtonFlow(
+            ("install", i18n.t("cli.tui.environment.button_install"), "primary"),
+            ("uninstall", i18n.t("cli.tui.environment.button_uninstall"), "error"),
+            ("refresh", i18n.t("cli.tui.environment.button_refresh")),
+            ("adopt", i18n.t("cli.tui.environment.button_adopt"), "warning"),
+            ("release", i18n.t("cli.tui.environment.button_release"), "warning"),
+            ("recreate", i18n.t("cli.tui.environment.button_recreate"), "warning"),
+            breaks=("refresh",),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
@@ -1142,6 +1141,8 @@ class EnvironmentPage(compat.Vertical):
             button.disabled = self._busy
         for kind in ("install", "uninstall", "refresh"):
             self.query_one(f"#{kind}", compat.Button).disabled = self._busy
+        # 显示状态变了，按钮区的可用宽度跟着变（隐藏的按钮不占位置），重新算一次列数。
+        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
         self._status_rendered = text
