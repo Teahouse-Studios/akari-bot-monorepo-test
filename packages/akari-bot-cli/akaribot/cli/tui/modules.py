@@ -57,6 +57,9 @@ _OPERATION_EXTRA_ARGS = {"update": ("--yes",), "uninstall": ("--yes",)}
 _UNINSTALL_COUNT_THRESHOLD = 10
 # 卸载方式对应的 CLI 开关：保留数据不加参数，清数据与连同依赖卸载各拼一个。
 _UNINSTALL_MODE_ARGS = {"purge": ("--purge-data",), "cascade": ("--cascade",)}
+# 更新范围：选中项逐条更新，全部交给 CLI 的 ``--all`` 自行枚举已装包。
+_UPDATE_SELECTED = "selected"
+_UPDATE_ALL = "all"
 
 # 进度条按阶段推进：解析、执行、重载、完成；阶段内的细粒度进度由子进程输出行承担。
 _PROGRESS_PHASES = 4.0
@@ -523,7 +526,7 @@ class SubprocessModuleSource:
         name = record.dist or record.name
         subcommand = _OPERATION_SUBCOMMANDS[kind]
         target = (name,) if name and positional else ()
-        argv = self.cli_argv("module", subcommand, *target, *_OPERATION_EXTRA_ARGS.get(kind, ()), *extra_args)
+        argv = self.cli_argv("module", subcommand, *target, *extra_args, *_OPERATION_EXTRA_ARGS.get(kind, ()))
         label = i18n.t(f"cli.tui.modules.label_{kind}", name=name)
         try:
             process = await asyncio.create_subprocess_exec(
@@ -804,6 +807,9 @@ class ModulesPage(compat.Vertical):
         height: 3;
         padding: 0 0 0 1;
     }
+    ModulesPage #actions Button {
+        min-width: 0;
+    }
     ModulesPage #progress {
         height: 1;
     }
@@ -838,8 +844,8 @@ class ModulesPage(compat.Vertical):
         # 多选：按分发名记录选区，刷新后只保留仍然存在的项；_anchor 是 Shift 扩选的起点。
         self._selected: set[str] = set()
         self._anchor: str | None = None
-        # 卸载的确认闸门：一次触发即弹模态，防抖窗口挡住双击与连发；刷新、换选中项或
-        # 清空选区时由 reset_pending() 作废。
+        # 确认闸门：一次触发即弹模态的动作先经它放行，防抖窗口挡住鼠标双击与键盘连发带来的
+        # 第二次弹窗；刷新、换选中项或清空选区时由 reset_pending() 作废。
         self._confirm = compat.PendingConfirm()
         self._available_error: str = ""
         self._load_states: dict[str, bool | None] = {}
@@ -866,6 +872,7 @@ class ModulesPage(compat.Vertical):
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.modules.action_install"), id="install", variant="primary")
             yield compat.Button(i18n.t("cli.tui.modules.action_uninstall"), id="uninstall", variant="error")
+            yield compat.Button(i18n.t("cli.tui.modules.action_update"), id="update")
             yield compat.Button(i18n.t("cli.tui.modules.button_load"), id="toggle-load")
             yield compat.Button(i18n.t("cli.tui.modules.action_refresh"), id="refresh")
         yield compat.ProgressBar(total=100.0, show_eta=False, id="progress")
@@ -912,8 +919,11 @@ class ModulesPage(compat.Vertical):
         return records[index]
 
     @property
-    def query(self) -> str:
-        """返回当前搜索词。"""
+    def search_query(self) -> str:
+        """返回当前搜索词。
+
+        不能叫 ``query``：``Widget.query()`` 是 Textual 的公开方法，覆盖它会让页面里的控件查询失效。
+        """
         return self._query
 
     @property
@@ -1233,6 +1243,8 @@ class ModulesPage(compat.Vertical):
         # 安装按输入框里的名字或地址进行，与光标停在哪个包无关，故只受忙碌状态约束。
         self.query_one("#install", compat.Button).disabled = self._busy
         self.query_one("#uninstall", compat.Button).disabled = self._busy or uninstall_target is None
+        # 更新始终可用：全量更新不依赖光标与选区。
+        self.query_one("#update", compat.Button).disabled = self._busy
         self.query_one("#toggle-load", compat.Button).disabled = self._busy or not self._load_targets()
 
     def _set_status(self, text: str) -> None:
@@ -1280,6 +1292,8 @@ class ModulesPage(compat.Vertical):
             self.request_install()
         elif button_id == "uninstall":
             self.request_uninstall()
+        elif button_id == "update":
+            self.request_update()
         elif button_id == "toggle-load":
             self.request_toggle_load()
         elif button_id == "refresh":
@@ -1407,17 +1421,49 @@ class ModulesPage(compat.Vertical):
         self._start_operation("install", [record], extra_args=extra, positional=not extra)
 
     def request_update(self) -> None:
-        """更新选中的已装包；没有选中项时更新当前项。"""
+        """发起更新：弹出选择框决定更新选中项还是全部已装包。"""
         targets = self._batch_targets("update")
-        if not targets:
-            compat.notify(
-                self.app,
-                i18n.t("cli.tui.modules.pick_update"),
-                severity="warning",
-                title=i18n.t("cli.tui.modules.action_update"),
-            )
+        # 选择框本身就是确认，闸门只负责挡掉鼠标双击与键盘连发带来的第二次弹窗。
+        if not self._confirm.accept(f"update:{','.join(record.dist for record in targets)}"):
             return
-        self._start_operation("update", targets)
+        options: list[tuple[str, str]] = []
+        if targets:
+            options.append((_UPDATE_SELECTED, i18n.t("cli.tui.modules.update_selected")))
+        options.append((_UPDATE_ALL, i18n.t("cli.tui.modules.update_all")))
+        hint = i18n.t("cli.tui.modules.update_hint")
+        if not targets:
+            hint = f"{hint}{i18n.t('cli.common.clause_separator')}{i18n.t('cli.tui.modules.update_no_target')}"
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.modules.action_update"),
+            hint=hint,
+            options=tuple(options),
+            cancel_label=i18n.t("cli.tui.modules.cancel"),
+            callback=lambda mode: self.start_update(targets, mode),
+        )
+
+    def start_update(self, targets: Sequence[ModuleRecord], mode: str | None) -> None:
+        """按选定范围更新。
+
+        :param targets: 选区（没有选区时为当前项）里的已装包；为空表示只能全量更新。
+        :param mode: ``selected`` / ``all``；``None`` 表示取消。
+        """
+        # 选择框已给出结论，防抖记录随之作废：取消后紧接着再按一次应当重新弹框。
+        self._confirm.reset()
+        if mode == _UPDATE_SELECTED and targets:
+            self._start_operation("update", targets)
+            return
+        if mode != _UPDATE_ALL:
+            self._set_status(i18n.t("cli.tui.modules.update_cancelled"))
+            return
+        name = i18n.t("cli.tui.modules.update_all_target")
+        # 全量更新没有单条记录：目标名只用于状态栏与通知，已装包由 CLI 的 ``--all`` 枚举。
+        self._start_operation(
+            "update",
+            [ModuleRecord(name=name, dist=name, state=STATE_INSTALLED)],
+            extra_args=("--all",),
+            positional=False,
+        )
 
     def request_uninstall(self) -> None:
         """发起卸载：弹出确认框选择数据与依赖的处置方式。
@@ -1801,7 +1847,7 @@ class ModulesPage(compat.Vertical):
         self.request_uninstall()
 
     def action_update(self) -> None:
-        """键位动作：更新选中或当前的已装包。"""
+        """键位动作：更新选中项或全部已装包。"""
         self.request_update()
 
     def action_toggle_load(self) -> None:

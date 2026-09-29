@@ -1,14 +1,16 @@
 """杂项页：只放不属于其它页面的一次性操作。
 
-目前只有「迁移项目」：把旧版项目搬成当前实例。页面平时只显示一个按钮，点击后才弹出输入框要路径，
+目前只有「迁移项目」：把旧版项目搬进新实例。页面平时只显示一个按钮，点击后才弹出输入框要路径，
 路径确定后再从确认框里选「先预演」或「开始迁移」——旧目录只读，但迁移会往实例里写配置与数据。
+勾选的开关随 ``akaribot migrate legacy`` 下发，目标实例由 CLI 决定：未给 ``--instance`` 时取旧项目同级的
+``<旧项目名>-instance``。
 """
 
 from __future__ import annotations
 
 import asyncio
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -28,13 +30,25 @@ CHOICE_DRY_RUN = "dry-run"
 # 请求闸门的键与路径分开命名：两者语义不同，取值撞上会互相顶掉防抖记录。
 MIGRATE_REQUEST = "migrate-request"
 
+# 迁移页的开关：取值即 CLI 参数名，文案键写它的界面标签，顺序即界面顺序与 argv 顺序。
+MIGRATE_SWITCHES = (
+    ("--skip-install", "cli.tui.misc.option_skip_install"),
+    ("--no-venv", "cli.tui.misc.option_no_venv"),
+    ("--force", "cli.tui.misc.option_force"),
+    ("--offline", "cli.tui.misc.option_offline"),
+)
+
+
+def _option_id(flag: str) -> str:
+    return f"option-{flag.removeprefix('--')}"
+
 
 @runtime_checkable
 class MiscSource(Protocol):
     """杂项动作的数据源接口；测试注入替身，生产走子进程。"""
 
-    def migrate_legacy(self, project: str, *, dry_run: bool = False) -> OperationResult:
-        """把旧版项目迁移为当前实例；``dry_run`` 为真时只打印将要执行的动作。"""
+    def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
+        """把旧版项目迁移为当前实例；``dry_run`` 为真时只打印将要执行的动作，``flags`` 是附加的 CLI 开关。"""
 
 
 class StaticMiscSource:
@@ -46,12 +60,12 @@ class StaticMiscSource:
     def __init__(self, result: OperationResult | None = None) -> None:
         self._result = result or OperationResult(True, i18n.t("cli.tui.misc.stub_migrate_ok"), "stub")
         self.calls = {"migrate": 0}
-        self.migrated: list[tuple[str, bool]] = []
+        self.migrated: list[tuple[str, bool, tuple[str, ...]]] = []
 
-    def migrate_legacy(self, project: str, *, dry_run: bool = False) -> OperationResult:
+    def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
         """见 :meth:`MiscSource.migrate_legacy`。"""
         self.calls["migrate"] += 1
-        self.migrated.append((project, dry_run))
+        self.migrated.append((project, dry_run, tuple(flags)))
         return self._result
 
 
@@ -81,13 +95,15 @@ class SubprocessMiscSource:
         """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
         return context.resolve_root(self._root_override)
 
-    def migrate_legacy(self, project: str, *, dry_run: bool = False) -> OperationResult:
+    def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
         """见 :meth:`MiscSource.migrate_legacy`。"""
         self.calls["migrate"] += 1
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
-        argv = cli_process.cli_argv("migrate", "legacy", project)
+        # 带 --instance 指定目标：不带时 CLI 会另建「<旧项目名>-instance」，那不是界面上显示的实例。
+        argv = cli_process.cli_argv("migrate", "legacy", project, "--instance", str(self.root))
         if dry_run:
             argv.append("--dry-run")
+        argv.extend(flags)
         try:
             completed = self._runner(
                 argv,
@@ -140,6 +156,17 @@ class MiscPage(compat.Vertical):
         padding: 0 1;
         color: $text-muted;
     }
+    MiscPage #migrate-options {
+        height: 1;
+        padding: 0 0 0 1;
+    }
+    MiscPage #migrate-options Checkbox {
+        width: auto;
+        height: 1;
+        border: none;
+        padding: 0;
+        margin: 0 1 0 0;
+    }
     MiscPage #actions {
         height: 3;
         padding: 0 1;
@@ -181,8 +208,11 @@ class MiscPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：说明、一个动作按钮、输出区与状态栏。"""
+        """装配页面控件树：说明、开关行、一个动作按钮、输出区与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.misc.hint"), id="misc-hint", markup=False)
+        with compat.Horizontal(id="migrate-options"):
+            for flag, label_key in MIGRATE_SWITCHES:
+                yield compat.Checkbox(i18n.t(label_key), id=_option_id(flag))
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.misc.button_migrate"), id="migrate", variant="primary")
         yield compat.Static("", id="migrate-output", markup=False)
@@ -214,6 +244,16 @@ class MiscPage(compat.Vertical):
     def output_text(self) -> str:
         """返回输出区当前显示的文本。"""
         return self._output_rendered
+
+    @property
+    def selected_flags(self) -> tuple[str, ...]:
+        """返回当前勾选的开关，顺序与界面一致。"""
+        chosen: list[str] = []
+        for flag, _ in MIGRATE_SWITCHES:
+            widget = self._action_widget(f"#{_option_id(flag)}")
+            if isinstance(widget, compat.Checkbox) and widget.value:
+                chosen.append(flag)
+        return tuple(chosen)
 
     def reset_pending(self) -> None:
         """作废待确认的迁移；切页时由 :meth:`TuiApp.show_page` 调用。"""
@@ -272,11 +312,20 @@ class MiscPage(compat.Vertical):
 
     def _open_choice(self, project: str) -> None:
         self._set_status(i18n.t("cli.tui.misc.confirm_migrate_pending", project=project))
+        # 勾选的开关要在确认前写清：确认框里说到的命令就是随后原样下发的那条。
+        chosen = self.selected_flags
+        options = " ".join(chosen) if chosen else i18n.t("cli.tui.misc.choice_options_none")
+        hint = "\n".join(
+            (
+                i18n.t("cli.tui.misc.choice_hint", project=project),
+                i18n.t("cli.tui.misc.choice_options", options=options),
+            )
+        )
         # 预演放在第一位：确认框打开即聚焦第一项，回车先落到只读的预演上。
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.misc.dialog_title"),
-            hint=i18n.t("cli.tui.misc.choice_hint", project=project),
+            hint=hint,
             options=(
                 (CHOICE_DRY_RUN, i18n.t("cli.tui.misc.choice_dry_run")),
                 (CHOICE_MIGRATE, i18n.t("cli.tui.misc.choice_migrate")),
@@ -319,11 +368,15 @@ class MiscPage(compat.Vertical):
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
         key = "cli.tui.misc.calling_dry_run" if dry_run else "cli.tui.misc.calling"
         self._set_status(i18n.t(key, project=project))
-        self.run_worker(self._migrate(project, label, dry_run=dry_run), group="misc-migrate", exclusive=True)
+        # 开关在按下动作时定下：确认框关掉后用户改不到它们，本次下发的集合只有一份。
+        flags = self.selected_flags
+        self.run_worker(
+            self._migrate(project, label, dry_run=dry_run, flags=flags), group="misc-migrate", exclusive=True
+        )
 
-    async def _migrate(self, project: str, label: str, *, dry_run: bool) -> None:
+    async def _migrate(self, project: str, label: str, *, dry_run: bool, flags: tuple[str, ...]) -> None:
         try:
-            result = await asyncio.to_thread(self.source.migrate_legacy, project, dry_run=dry_run)
+            result = await asyncio.to_thread(self.source.migrate_legacy, project, dry_run=dry_run, flags=flags)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"

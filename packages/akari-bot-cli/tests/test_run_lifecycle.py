@@ -2,8 +2,10 @@
 
 固定三条链路：``run --detach`` 启动的进程脱离当前会话并写下进程记录；``run --status`` 从锁与
 记录推出状态；``run --stop`` 按记录终止进程——**包括不是本次启动、甚至不是本控制器启动的实例**。
+运行页的启动、停止、重启与「只启动指定适配器」都先弹一次模态确认框，选「执行」才调用数据源。
 """
 
+import asyncio
 import json
 import os
 import subprocess
@@ -20,6 +22,9 @@ from akaribot.cli import i18n
 from akaribot.cli.instance import Instance, InstanceMeta
 from akaribot.cli.main import app
 from akaribot.testing import Tester, func_case
+
+# 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，断言才比对得到真实文案。
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_run.json"
 
 # 假实例进程：取锁、写下进程记录、按参数决定是否响应 SIGTERM，然后一直等待。
 FAKE_BOT = """#!/usr/bin/env python3
@@ -273,6 +278,79 @@ async def _test_tui_source_takes_over_foreign_process():
                 foreign.wait(timeout=10)
 
 
+def _running_source():
+    from akaribot.cli.tui.run import STATE_RUNNING, ProcessRecord, StaticRunSource
+
+    return StaticRunSource(
+        [ProcessRecord(pid=4321, state=STATE_RUNNING, origin=i18n.t("cli.tui.run.origin_cli"), detail="recorded")]
+    )
+
+
+def _choice_text(app, widget_id: str) -> str:
+    from akaribot.cli.tui import _compat as compat
+
+    return str(app.screen.query_one(widget_id, compat.Static).render())
+
+
+def _choice_title(app) -> str:
+    return _choice_text(app, "#choice-title")
+
+
+def _choice_hint(app) -> str:
+    return _choice_text(app, "#choice-hint")
+
+
+def _choice_labels(app) -> list[str]:
+    return [str(button.label) for button in app.screen.query("#choice-actions Button")]
+
+
+async def _wait_choice(app, timeout: float = 5.0) -> bool:
+    # 输入框提交后确认框由回调推入，等到它真的出现再断言。
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if app.screen.query("#choice-0"):
+            return True
+        await asyncio.sleep(0.01)
+    return False
+
+
+async def _choose(app, pilot, index: int) -> None:
+    # 按控件 API 触发：按钮宽度随文案变化，按坐标点击在长文案下会落到控件之外。
+    from akaribot.cli.tui import _compat as compat
+
+    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    await pilot.pause()
+
+
+async def _with_run_page(body, source=None, size=(110, 32)):
+    from akaribot.cli.tui import _compat as compat
+    from akaribot.cli.tui.app import TuiApp
+    from akaribot.cli.tui.run import StaticRunSource
+
+    chosen = source if source is not None else StaticRunSource()
+    app = TuiApp(sources={"run": chosen}, initial_page="run")
+    async with compat.app_test(app, size=size) as pilot:
+        page = app.query_one("#page-run")
+        await pilot.pause()
+        await page.wait_for_idle()
+        await pilot.pause()
+        return await body(app, page, pilot, chosen)
+
+
+def _test_pending_confirm_gate():
+    # 闸门本身：同一动作在防抖窗口内只放行一次，窗口外与换动作立即放行，复位后立即可用。
+    from akaribot.cli.tui import _compat as compat
+
+    gate = compat.PendingConfirm()
+    first = gate.accept("stop", now=100.0)
+    debounced = gate.accept("stop", now=100.1)
+    accepted = gate.accept("stop", now=101.0)
+    other = gate.accept("restart", now=101.1)
+    gate.reset()
+    after_reset = gate.accept("stop", now=101.2)
+    return first is True and debounced is False and accepted is True and other is True and after_reset is True
+
+
 async def _test_run_page_renders_cli_state():
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.app import TuiApp
@@ -291,105 +369,166 @@ async def _test_run_page_renders_cli_state():
         running = page.running
         page.request_stop()
         await pilot.pause()
-        asked = (source.calls["stop"], page.status_text)
-        page.request_stop()
+        asked = (source.calls["stop"], _choice_hint(app), _choice_title(app))
+        await _choose(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         calls = dict(source.calls)
         await pilot.press("q")
+    expected = i18n.t("cli.tui.run.choice_title", label=i18n.t("cli.tui.run.label_stop"))
     return (
         "4321" in table
         and running
-        and asked == (0, i18n.t("cli.tui.run.confirm_stop", hotkey="x"))
+        and asked == (0, i18n.t("cli.tui.run.choice_hint_stop"), expected)
         and calls["stop"] == 1
     )
 
 
-def _running_source():
-    from akaribot.cli.tui.run import STATE_RUNNING, ProcessRecord, StaticRunSource
+async def _test_four_paths_confirm_through_modal():
+    # 四条路径都是「一次触发弹模态、选执行才动手」：模态展示期间数据源未被调用，取消不调用。
+    from akaribot.cli.tui import _compat as compat
 
-    return StaticRunSource(
-        [ProcessRecord(pid=4321, state=STATE_RUNNING, origin=i18n.t("cli.tui.run.origin_cli"), detail="recorded")]
+    async def body(app, page, pilot, source):
+        app.query_one("#start", compat.Button).press()
+        await pilot.pause()
+        start_hint = _choice_hint(app)
+        asked_before = source.calls["start"]
+        await pilot.press("escape")
+        await pilot.pause()
+        cancelled = page.status_text
+        await pilot.press("a")
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
+        await pilot.press("enter")
+        await _wait_choice(app)
+        adapter = (_choice_hint(app), _choice_title(app))
+        await _choose(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        restart_hint = _choice_hint(app)
+        await _choose(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        app.query_one("#stop", compat.Button).press()
+        await pilot.pause()
+        stop_hint = _choice_hint(app)
+        labels = _choice_labels(app)
+        await _choose(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return {
+            "start_hint": start_hint,
+            "asked_before": asked_before,
+            "cancelled": cancelled,
+            "adapter": adapter,
+            "restart_hint": restart_hint,
+            "stop_hint": stop_hint,
+            "labels": labels,
+            # 文案里不得残留未替换的占位符：「再按一次」那套提示已由模态框取代。
+            "texts": (start_hint, cancelled, *adapter, restart_hint, stop_hint, *labels),
+            "calls": dict(source.calls),
+            "adapters": list(source.adapters),
+        }
+
+    observed = await _with_run_page(body)
+    calls = observed["calls"]
+    return (
+        observed["start_hint"] == i18n.t("cli.tui.run.choice_hint_start")
+        and observed["asked_before"] == 0
+        and observed["cancelled"] == i18n.t("cli.tui.run.choice_cancelled", label=i18n.t("cli.tui.run.label_start"))
+        and observed["adapter"]
+        == (
+            i18n.t("cli.tui.run.choice_hint_start_adapter", platform="telegram"),
+            i18n.t("cli.tui.run.choice_title", label=i18n.t("cli.tui.run.label_adapter_start")),
+        )
+        and observed["restart_hint"] == i18n.t("cli.tui.run.choice_hint_restart")
+        and observed["stop_hint"] == i18n.t("cli.tui.run.choice_hint_stop")
+        and observed["labels"] == [i18n.t("cli.tui.run.choice_run"), i18n.t("cli.tui.run.choice_cancel")]
+        and all("${" not in text for text in observed["texts"])
+        and calls["start"] == 1
+        and calls["restart"] == 1
+        and calls["stop"] == 1
+        and observed["adapters"] == ["telegram"]
     )
 
 
-async def _with_run_page(body, source=None, size=(110, 32)):
-    from akaribot.cli.tui import _compat as compat
-    from akaribot.cli.tui.app import TuiApp
-    from akaribot.cli.tui.run import StaticRunSource
-
-    chosen = source if source is not None else StaticRunSource()
-    app = TuiApp(sources={"run": chosen}, initial_page="run")
-    async with compat.app_test(app, size=size) as pilot:
-        page = app.query_one("#page-run")
-        await pilot.pause()
-        await page.wait_for_idle()
-        await pilot.pause()
-        return await body(app, page, pilot, chosen)
-
-
-async def _test_pending_confirm_gate():
-    # 闸门本身：注入时钟，第一次记下、防抖窗口内忽略、过后放行、超时作废且不误放行。
-    from akaribot.cli.tui import _compat as compat
-
-    gate = compat.PendingConfirm()
-    first = gate.arm("x", now=100.0)
-    debounced = gate.arm("x", now=100.1)
-    accepted = gate.arm("x", now=101.0)
-    other = gate.arm("y", now=200.0)
-    expired = gate.arm("y", now=220.0)
-    return first is False and debounced is False and accepted is True and other is False and expired is False
-
-
-async def _test_show_page_resets_confirmation():
-    # 切页会作废待确认：回到运行页后第一次按键只重新询问。
+async def _test_repeat_trigger_keeps_one_modal():
+    # 同一动作连发只弹一层模态；换动作会重新弹，两个动作都不执行。
     source = _running_source()
 
     async def body(app, page, pilot, source):
         page.request_stop()
         await pilot.pause()
+        page.request_stop()
+        await pilot.pause()
+        after_repeat = len(app.screen_stack)
+        page.request_restart()
+        await pilot.pause()
+        after_switch = len(app.screen_stack)
+        for _ in range(2):
+            await pilot.press("escape")
+            await pilot.pause()
+        await pilot.press("q")
+        return (after_repeat, after_switch), dict(source.calls)
+
+    openings, calls = await _with_run_page(body, source)
+    return openings == (2, 3) and calls["stop"] == 0 and calls["restart"] == 0
+
+
+async def _test_show_page_resets_confirmation():
+    # 切页作废待确认：回到运行页后同一个动作重新弹一层模态。
+    source = _running_source()
+
+    async def body(app, page, pilot, source):
+        page.request_stop()
+        await pilot.pause()
+        before = len(app.screen_stack)
         app.show_page("misc")
         await pilot.pause()
         app.show_page("run")
         await pilot.pause()
         page.request_stop()
         await pilot.pause()
-        after_return = source.calls["stop"]
-        page.request_stop()
-        await page.wait_for_idle()
-        await pilot.pause()
+        after = len(app.screen_stack)
+        for _ in range(2):
+            await pilot.press("escape")
+            await pilot.pause()
         await pilot.press("q")
-        return after_return, source.calls["stop"]
+        return before, after, dict(source.calls)
 
-    after_return, executed = await _with_run_page(body, source)
-    return after_return == 0 and executed == 1
+    before, after, calls = await _with_run_page(body, source)
+    return before == 2 and after == 3 and calls["stop"] == 0
 
 
 async def _test_refresh_invalidates_confirmation():
-    # 手动刷新（r 与刷新按钮）后状态可能已变，待确认作废，需要重新按两次。
+    # 手动刷新后状态可能已变，待确认作废：同一个动作重新弹一层模态。
     source = _running_source()
 
     async def body(app, page, pilot, source):
         page.request_stop()
         await pilot.pause()
+        before = len(app.screen_stack)
         page.action_refresh()
         await page.wait_for_idle()
         await pilot.pause()
         page.request_stop()
         await pilot.pause()
-        after_refresh = source.calls["stop"]
-        page.request_stop()
-        await page.wait_for_idle()
-        await pilot.pause()
+        after = len(app.screen_stack)
+        for _ in range(2):
+            await pilot.press("escape")
+            await pilot.pause()
         await pilot.press("q")
-        return after_refresh, source.calls["stop"]
+        return before, after, dict(source.calls)
 
-    after_refresh, executed = await _with_run_page(body, source)
-    return after_refresh == 0 and executed == 1
+    before, after, calls = await _with_run_page(body, source)
+    return before == 2 and after == 3 and calls["stop"] == 0
 
 
 async def _test_poll_keeps_confirmation():
-    # 轮询不作废待确认：等待期间状态栏仍显示那句提示，第二次按键直接执行。
+    # 轮询不作废待确认：周期刷新后同一个动作仍在防抖窗口内，不叠第二层模态，确认照常执行。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -398,20 +537,21 @@ async def _test_poll_keeps_confirmation():
         page._on_tick()
         await page.wait_for_idle()
         await pilot.pause()
-        asked = page.status_text
         page.request_stop()
+        await pilot.pause()
+        depth = len(app.screen_stack)
+        await _choose(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return asked, source.calls["stop"]
+        return depth, dict(source.calls)
 
-    asked, executed = await _with_run_page(body, source)
-    expected = i18n.t("cli.tui.run.confirm_stop", hotkey="x")
-    return asked == expected and executed == 1
+    depth, calls = await _with_run_page(body, source)
+    return depth == 2 and calls["stop"] == 1
 
 
 async def _test_adapter_start_collects_platform():
-    # `a` 先弹输入框收平台，随后仍要确认一次；执行时把平台交给数据源。
+    # `a` 先弹输入框收平台，提交后再弹确认框；选「执行」才把平台交给数据源。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import StaticRunSource
 
@@ -421,17 +561,18 @@ async def _test_adapter_start_collects_platform():
         opened = len(app.screen_stack) > 1
         app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
         await pilot.press("enter")
-        await pilot.pause()
-        asked = (source.calls["start"], page.status_text)
-        await pilot.press("a")
+        await _wait_choice(app)
+        asked = (source.calls["start"], _choice_hint(app), _choice_title(app))
+        await _choose(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
         return opened, asked, source.calls["start"], list(source.adapters)
 
     opened, asked, starts, adapters = await _with_run_page(body, StaticRunSource())
-    expected = i18n.t("cli.tui.run.confirm_start_adapter", platform="telegram", hotkey="a")
-    return opened and asked == (0, expected) and starts == 1 and adapters == ["telegram"]
+    expected = i18n.t("cli.tui.run.choice_hint_start_adapter", platform="telegram")
+    title = i18n.t("cli.tui.run.choice_title", label=i18n.t("cli.tui.run.label_adapter_start"))
+    return opened and asked == (0, expected, title) and starts == 1 and adapters == ["telegram"]
 
 
 async def _test_foreground_only_prints_command():
@@ -444,6 +585,8 @@ async def _test_foreground_only_prints_command():
         await pilot.pause()
         app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
         await pilot.press("enter")
+        await _wait_choice(app)
+        await pilot.press("escape")
         await pilot.pause()
         with mock.patch.object(compat, "notify") as notify:
             page.action_foreground()
@@ -519,13 +662,17 @@ async def test_run_lifecycle(tester: Tester):
     await tester.test(_test_stop_process_primitive_skips_own_group, "同组进程不按进程组处理")
     await tester.test(_test_tui_source_takes_over_foreign_process, "界面数据源接管别的控制器启动的实例")
     await tester.test(_test_subprocess_start_passes_adapter, "只启动指定适配器时 argv 带 --adapter")
-    await tester.test(_test_pending_confirm_gate, "确认闸门的防抖与超时")
-    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
-    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
-        await tester.test(_test_run_page_renders_cli_state, "运行页展示 CLI 记录并需两次确认才停止")
+    await tester.test(_test_pending_confirm_gate, "确认闸门的防抖与复位")
+    # 放大防抖窗口，使「连发同一动作」与「刷新后重新确认」不依赖两次调用之间的真实耗时。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
+        await tester.test(_test_repeat_trigger_keeps_one_modal, "连发同一动作不叠模态，换动作重新弹")
         await tester.test(_test_show_page_resets_confirmation, "切页作废待确认")
         await tester.test(_test_refresh_invalidates_confirmation, "手动刷新作废待确认")
         await tester.test(_test_poll_keeps_confirmation, "轮询不作废待确认")
+    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_run_page_renders_cli_state, "运行页展示 CLI 记录并经模态确认才停止")
+        await tester.test(_test_four_paths_confirm_through_modal, "四条启停路径都先弹模态确认")
         await tester.test(_test_adapter_start_collects_platform, "只启动指定适配器")
         await tester.test(_test_foreground_only_prints_command, "前台运行只给命令不代为执行")
         await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")

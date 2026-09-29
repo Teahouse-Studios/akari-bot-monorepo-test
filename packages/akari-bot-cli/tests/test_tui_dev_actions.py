@@ -6,10 +6,8 @@
 """
 
 import asyncio
-import json
 import time
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
@@ -52,33 +50,9 @@ FORM_CONTROLS = (
 )
 
 
-def _fragment_entries() -> dict[str, str]:
-    try:
-        data = json.loads(FRAGMENT.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {str(key): str(value) for key, value in data.items()}
-
-
 def _use_cli_locale() -> None:
-    # 先触发包内连接，随后的 connect 才不会被它按包内目录重建覆盖。
-    i18n.locale()
-    extra = _fragment_entries()
-    if not extra:
-        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
-        i18n.connect_locale_snapshot("akaribot-cli")
-        return
-    with TemporaryDirectory(prefix="akari-locale-") as raw:
-        directory = Path(raw)
-        for name in ("zh_cn.json", "en_us.json"):
-            data = json.loads((Path(i18n.locales_dir()) / name).read_text(encoding="utf-8"))
-            if name == "zh_cn.json":
-                data.update(extra)
-            (directory / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(directory)], "akaribot-cli")
-        i18n.connect_locale_snapshot("akaribot-cli")
+    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+    i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _source(**kwargs) -> StaticDevSource:

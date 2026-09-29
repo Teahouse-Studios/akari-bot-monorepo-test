@@ -13,8 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
+import shlex
+import shutil
 import subprocess
+import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -69,6 +73,47 @@ _ERROR_TAIL_PATTERN = re.compile(r"\s*at line \d+ col \d+\s*$")
 # 表名与配置文件一一对应：config.toml 同时承载 config 与 secret 两段。
 _FILE_BY_TABLE = {"config": "config.toml", "secret": "config.toml"}
 _CONFIG_SUBDIRS = ("", "modules", "adapters", "core")
+
+
+# region 外部编辑器
+
+
+def editor_setting(env: Mapping[str, str] | None = None) -> str:
+    """返回外部编辑器命令文本，取值顺序与 ``akaribot config open`` 一致。
+
+    :param env: 环境变量映射，缺省取 ``os.environ``。
+    :return: ``VISUAL`` / ``EDITOR`` 的取值；两者都为空时按平台取缺省命令。
+    """
+    source = os.environ if env is None else env
+    chosen = source.get("VISUAL") or source.get("EDITOR")
+    if chosen:
+        return chosen
+    if sys.platform.startswith("win"):
+        return "notepad"
+    return "open" if sys.platform == "darwin" else "xdg-open"
+
+
+def editor_argv(env: Mapping[str, str] | None = None) -> list[str] | None:
+    """把编辑器命令文本拆成 argv，取不到可执行文件时返回 ``None``。
+
+    :param env: 环境变量映射，缺省取 ``os.environ``。
+    :return: 命令 argv；引号不配对或首个词不是可执行文件时为 ``None``。
+    """
+    try:
+        parts = shlex.split(editor_setting(env))
+    except ValueError:
+        return None
+    if not parts or shutil.which(parts[0]) is None:
+        return None
+    return parts
+
+
+def _stdin_isatty() -> bool:
+    # 只认标准输入：自动化与冻结产物自检里它不接终端，挂起界面后没有人能操作编辑器。
+    return bool(sys.stdin.isatty())
+
+
+# endregion
 
 
 # region 字段模型与值文本
@@ -538,6 +583,7 @@ class StaticConfigSource:
     :param tables: 表清单。
     :param fields: 表名到字段序列的映射。
     :param raw: 表名到原始 TOML 文本的映射。
+    :param files: 表名到配置文件路径的映射，供编辑器动作定位文件。
     :param set_result: 写入返回值；缺省为成功。
     """
 
@@ -547,11 +593,13 @@ class StaticConfigSource:
         fields: Mapping[str, Sequence[ConfigField]] | None = None,
         raw: Mapping[str, str] | None = None,
         *,
+        files: Mapping[str, str | Path] | None = None,
         set_result: SetResult | None = None,
     ) -> None:
         self._tables = tuple(tables)
         self._fields = {name: tuple(items) for name, items in (fields or {}).items()}
         self._raw = dict(raw or {})
+        self._files = {name: Path(path) for name, path in (files or {}).items()}
         self._set_result = set_result or SetResult(True, i18n.t("cli.tui.config.stub_write_ok"), "stub")
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
         self.applied: list[tuple[str, str, str]] = []
@@ -577,6 +625,10 @@ class StaticConfigSource:
         self.applied.append((section, key, value))
         return self._set_result
 
+    def config_file(self, table: str) -> Path | None:
+        """见 :meth:`ConfigSource.config_file`。"""
+        return self._files.get(table)
+
 
 @runtime_checkable
 class ConfigSource(Protocol):
@@ -593,6 +645,9 @@ class ConfigSource(Protocol):
 
     def set_value(self, section: str, key: str, value: str) -> SetResult:
         """写入一项；``section`` 为 ``config set --table`` 的表引用。"""
+
+    def config_file(self, table: str) -> Path | None:
+        """返回一张表对应的配置文件路径；定位不到实例时返回 ``None``。"""
 
 
 class SubprocessConfigSource:
@@ -1125,6 +1180,7 @@ class ConfigPage(compat.Vertical):
     :param cache_ttl: 表清单缓存有效期秒数；保存与重读会立即失效。
     """
 
+    # 工具条在 80 列下只有 61 列可用：五个按钮按缺省 min-width 16 排会裁掉保存与重读，故收窄到 10。
     DEFAULT_CSS = """
     ConfigPage {
         layout: vertical;
@@ -1133,6 +1189,9 @@ class ConfigPage(compat.Vertical):
     ConfigPage #config-toolbar {
         height: 3;
         padding: 0 0 0 1;
+    }
+    ConfigPage #config-toolbar Button {
+        min-width: 10;
     }
     ConfigPage #config-caption {
         width: 1fr;
@@ -1227,6 +1286,7 @@ class ConfigPage(compat.Vertical):
     # 四种模式与刷新动作在工具条上都有按钮，键位属低频入口，不进页脚以免挤掉全局键位。
     BINDINGS = compat.bindings(
         ("s", "save", i18n.t("cli.tui.config.action_save")),
+        ("o", "open_editor", i18n.t("cli.tui.config.action_open_editor"), False),
         ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form"), False),
         ("t", "mode_raw", i18n.t("cli.tui.config.action_mode_raw"), False),
         ("ctrl+r", "reload", i18n.t("cli.tui.config.action_reload"), False),
@@ -1260,12 +1320,17 @@ class ConfigPage(compat.Vertical):
         self._rendered_tables: tuple[str, ...] = ()
         self._caption_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
+        # 挂起界面与起编辑器可注入：自动化用例不得真的交出终端或启动外部进程。
+        self._editor_runner: Callable[..., Any] = subprocess.run
+        self._suspend: Callable[[], Any] | None = None
+        self._stdin_isatty: Callable[[], bool] = _stdin_isatty
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树：工具条、表清单、表单区、文本区、状态栏。"""
         with compat.Horizontal(id="config-toolbar"):
             yield compat.Button(i18n.t("cli.tui.config.action_mode_form"), id="mode-form", variant="primary")
             yield compat.Button(i18n.t("cli.tui.config.action_mode_raw"), id="mode-raw")
+            yield compat.Button(i18n.t("cli.tui.config.action_open_editor"), id="open-editor")
             yield compat.Static(
                 compat.plain_text(i18n.t("cli.tui.config.caption_unloaded")), id="config-caption", markup=False
             )
@@ -1775,6 +1840,8 @@ class ConfigPage(compat.Vertical):
             self.request_mode(MODE_FORM)
         elif button_id == "mode-raw":
             self.request_mode(MODE_RAW)
+        elif button_id == "open-editor":
+            self.action_open_editor()
         elif button_id == "raw-add":
             self.run_worker(self.raw_editor().append_line(), group="config-raw", exclusive=True)
         elif button_id == "raw-del":
@@ -1868,6 +1935,72 @@ class ConfigPage(compat.Vertical):
     def action_mode_raw(self) -> None:
         """键位动作：切到原始文本模式。"""
         self.request_mode(MODE_RAW)
+
+    def config_path(self, table: str | None = None) -> Path | None:
+        """返回表的配置文件路径，沿用本页数据源的定位规则。
+
+        :param table: 表名；缺省取当前选中的表。
+        :return: 配置文件路径；没有选中表或数据源定位不到实例时为 ``None``。
+        """
+        name = table if table is not None else self._selected
+        if name is None:
+            return None
+        try:
+            path = self.source.config_file(name)
+        except Exception:  # noqa: BLE001 - 定位失败按拿不到文件处理，由调用方在状态栏说明
+            return None
+        return None if path is None else Path(path)
+
+    async def open_in_editor(self) -> bool:
+        """用外部编辑器打开当前表的配置文件，退出后重读该表。
+
+        非交互终端不交出终端，只报出绝对路径与可直接粘贴的命令。
+
+        :return: 是否启动过编辑器并完成重读。
+        """
+        table = self._selected
+        if table is None:
+            self._set_status(i18n.t("cli.tui.config.status_editor_no_selection"))
+            return False
+        path = self.config_path(table)
+        if path is None or not path.is_file():
+            self._set_status(i18n.t("cli.tui.config.status_editor_no_file", table=table))
+            return False
+        editor = editor_argv()
+        if editor is None:
+            self._set_status(i18n.t("cli.tui.config.status_editor_missing", editor=editor_setting()))
+            return False
+        argv = [*editor, str(path)]
+        if not self._stdin_isatty():
+            message = i18n.t(
+                "cli.tui.config.editor_noninteractive",
+                path=str(path.resolve()),
+                command=shlex.join(argv),
+            )
+            compat.notify(
+                self.app,
+                message,
+                severity="warning",
+                title=i18n.t("cli.tui.config.action_open_editor"),
+            )
+            self._set_status(message)
+            return False
+        suspend = self._suspend if self._suspend is not None else self.app.suspend
+        with suspend():
+            completed = self._editor_runner(argv)
+        await self.reload()
+        self._set_status(
+            i18n.t(
+                "cli.tui.config.status_editor_done",
+                table=table,
+                code=getattr(completed, "returncode", -1),
+            )
+        )
+        return True
+
+    def action_open_editor(self) -> None:
+        """键位动作：用外部编辑器打开当前表的配置文件。"""
+        self._confirm_discard(self.open_in_editor)
 
     def focus_primary(self) -> None:
         """把焦点交给配置表列表；列表为空时退到页面容器。"""

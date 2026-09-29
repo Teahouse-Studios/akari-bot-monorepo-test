@@ -69,7 +69,6 @@ __all__ = [
     "TextPromptScreen",
     "align_rows",
     "CONFIRM_DEBOUNCE_SECONDS",
-    "CONFIRM_TIMEOUT_SECONDS",
     "PendingConfirm",
     "HelpScreen",
     "ask_choice",
@@ -407,53 +406,32 @@ def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[
     return result
 
 
-# 二次确认的时间闸门：鼠标双击与键盘连发会在几十毫秒内送来同一个动作的两次请求，
-# 「第一次问、第二次做」在两帧之间就会被穿透，故两次确认之间要有最短间隔。
+# 模态确认的连发闸门：鼠标双击与键盘连发会在几十毫秒内送来同一个动作的两次请求，第二次会把
+# 确认框叠成两层——用户答的是下面那层。故同一个目标在最短间隔内只接受一次。
 CONFIRM_DEBOUNCE_SECONDS = 0.4
-# 待确认状态的最长寿命：放置过久后第二次按下的语境早已不同（可能换过页、换过选中项），必须重新问。
-CONFIRM_TIMEOUT_SECONDS = 15.0
 
 
 class PendingConfirm:
-    """破坏性动作的二次确认闸门。
+    """破坏性动作弹确认框前的连发闸门。
 
-    页面调用 :meth:`arm`：返回 ``False`` 表示本次只是「记下并提示」，调用方应停下；
-    返回 ``True`` 表示可以执行。同一个目标在 :data:`CONFIRM_DEBOUNCE_SECONDS` 内的第二次请求被忽略
-    （鼠标双击、键盘连发），超过 :data:`CONFIRM_TIMEOUT_SECONDS` 的待确认自动作废（切页、刷新、
-    换选中项等时机由页面调用 :meth:`reset` 显式作废）。
+    页面在弹框前调用 :meth:`accept`：返回 ``False`` 表示这是防抖窗口内的重复触发，调用方应直接
+    返回（既不弹框也不执行）。:meth:`reset` 在切页、刷新、换选中项时清掉记录，下一次触发立即放行。
     """
 
-    # 两个窗口做成类属性：生产路径用模块常量，自动化断言可以压缩等待——用例里的两次按键
-    # 相隔只有几毫秒，按真实窗口会把每条确认都拖成 0.4 秒。
+    # 防抖窗口做成类属性：生产路径用模块常量，自动化断言可以压缩等待——用例里的两次触发只隔
+    # 几毫秒，按真实窗口会让每条确认都多等 0.4 秒。
     debounce: float = CONFIRM_DEBOUNCE_SECONDS
-    timeout: float = CONFIRM_TIMEOUT_SECONDS
 
     def __init__(self) -> None:
-        self.key: str = ""
-        self.at: float = 0.0
-
-    def arm(self, key: str, *, now: float | None = None) -> bool:
-        """请求执行 ``key`` 对应的动作。
-
-        :param key: 目标标识，如动作名、主键或选中集合的键。
-        :param now: 当前时刻，缺省取 :func:`time.monotonic`；用例注入以求可断言。
-        :return: 是否应当真正执行。
-        """
-        moment = time.monotonic() if now is None else now
-        if self.key == key and self.pending_key(now=moment) == key:
-            if moment - self.at < self.debounce:
-                return False
-            self.reset()
-            return True
-        self.key = key
-        self.at = moment
-        return False
+        self.key = ""
+        self.at = 0.0
 
     def accept(self, key: str, *, now: float | None = None) -> bool:
-        """是否接受这次触发：防抖窗口内的重复触发返回 ``False``。
+        """是否接受这次触发。
 
-        给「一次触发就弹模态确认」的动作使用——模态本身就是确认，闸门只负责挡住鼠标双击与键盘连发
-        带来的第二次弹窗（叠两层模态时用户答的是下面那层）。
+        :param key: 目标标识，如动作名或记录主键；换目标立即放行。
+        :param now: 当前时刻，缺省取 :func:`time.monotonic`；用例注入以求可断言。
+        :return: ``True`` 表示应当继续弹确认框。
         """
         moment = time.monotonic() if now is None else now
         if self.key == key and moment - self.at < self.debounce:
@@ -462,23 +440,8 @@ class PendingConfirm:
         self.at = moment
         return True
 
-    def pending_key(self, *, now: float | None = None) -> str:
-        """返回仍然有效的待确认目标；超时则作废并返回空串。"""
-        if not self.key:
-            return ""
-        moment = time.monotonic() if now is None else now
-        if moment - self.at >= self.timeout:
-            self.reset()
-            return ""
-        return self.key
-
-    @property
-    def armed(self) -> bool:
-        """是否记着一次待确认（不判断是否超时）。"""
-        return bool(self.key)
-
     def reset(self) -> None:
-        """作废待确认状态。"""
+        """清掉记录，下一次触发立即放行。"""
         self.key = ""
         self.at = 0.0
 

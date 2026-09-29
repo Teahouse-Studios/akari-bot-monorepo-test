@@ -2,10 +2,12 @@
 
 选择模型对齐桌面列表：Ctrl（macOS 的 Control）逐个切换、Shift 扩选一段、普通点击收敛为单选；
 键盘上以 Space/Ctrl+Space 切换、Shift+↑/↓ 扩选。批量操作作用于选区，单条操作仍是「没有选区时
-按当前项」，两者共用同一条执行路径。批量卸载先确认目标，目标过多时改成输入数量。
+按当前项」，两者共用同一条执行路径。批量卸载先确认目标，目标过多时改成输入数量；更新一次触发
+弹出范围选择（选中项 / 全部已装包）。
 """
 
 import time
+from pathlib import Path
 from unittest import mock
 
 from akaribot.cli import i18n
@@ -20,6 +22,8 @@ RECORDS = [
     ModuleRecord(name="charlie", dist="akari-bot-module-charlie", version="0.9.0", state="available"),
     ModuleRecord(name="delta", dist="akari-bot-module-delta", version="0.9.0", state="available"),
 ]
+
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "modules.json"
 
 
 def _use_cli_locale() -> None:
@@ -165,6 +169,59 @@ async def _test_batch_install_covers_selection():
 
     installed, lines = await _with_page(body)
     return installed == ["akari-bot-module-charlie", "akari-bot-module-delta"] and len(lines) == 4
+
+
+async def _test_update_selected_covers_selection():
+    # 选「更新选中项」时目标是选区而不是光标：只选 bravo 就只更新 bravo。
+    async def body(app, page, pilot, source):
+        list_view = page.query_one("#module-list", compat.ListView)
+        list_view.index = 1
+        await pilot.pause()
+        await pilot.press("space")
+        await pilot.pause()
+        selected = sorted(page._selected)
+        page.request_update()
+        await pilot.pause()
+        labels = _choice_labels(app)
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return selected, labels, list(source.stream_calls)
+
+    selected, labels, calls = await _with_page(body)
+    return (
+        selected == ["akari-bot-module-bravo"]
+        and labels[:-1]
+        == [
+            i18n.t("cli.tui.modules.update_selected"),
+            i18n.t("cli.tui.modules.update_all"),
+        ]
+        and calls == [("update", "akari-bot-module-bravo", (), True)]
+    )
+
+
+async def _test_update_all_ignores_selection():
+    # 选「更新全部」时不带位置参数：已装包由 CLI 的 --all 枚举，与选区无关。
+    async def body(app, page, pilot, source):
+        await pilot.press("a")
+        await pilot.pause()
+        page.request_update()
+        await pilot.pause()
+        await _pick_choice(app, pilot, 1)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(source.stream_calls)
+
+    calls = await _with_page(body)
+    return (
+        len(calls) == 1
+        and calls[0][0] == "update"
+        and calls[0][1] == i18n.t("cli.tui.modules.update_all_target")
+        and calls[0][2] == ("--all",)
+        and calls[0][3] is False
+    )
 
 
 async def _test_batch_uninstall_needs_confirmation():
@@ -391,6 +448,8 @@ async def test_tui_multi_select(tester: Tester):
         await tester.test(_test_select_all_and_clear, "全选可见与清空")
         await tester.test(_test_mouse_modifiers, "鼠标 Ctrl/Shift/普通点击")
         await tester.test(_test_batch_install_covers_selection, "批量安装按选区执行")
+        await tester.test(_test_update_selected_covers_selection, "更新选中项按选区执行")
+        await tester.test(_test_update_all_ignores_selection, "更新全部不带选区")
         await tester.test(_test_batch_uninstall_needs_confirmation, "批量卸载需确认并选处置方式")
         await tester.test(_test_batch_uninstall_can_purge_data, "批量卸载可连数据一起清")
         await tester.test(_test_batch_uninstall_offers_cascade_for_dependents, "有反向依赖时给出连同依赖卸载")

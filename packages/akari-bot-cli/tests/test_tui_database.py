@@ -50,6 +50,12 @@ def _source(**kwargs) -> StaticDatabaseSource:
     return StaticDatabaseSource(**params)
 
 
+# 点确认框里的「写入」按钮：写入一律经模态确认，第二次按键不再直接执行。
+async def _confirm_write(app, pilot) -> None:
+    app.screen.query_one("#choice-0", compat.Button).press()
+    await pilot.pause()
+
+
 async def _with_page(body, source: DatabaseSource | None = None, size=(120, 34)):
     chosen = source if source is not None else _source()
     app = TuiApp(sources={"database": chosen}, initial_page="database", boot_started_at=time.monotonic())
@@ -171,7 +177,7 @@ async def _test_write_keeps_the_page_and_recounts():
         page.set_editor_value("load", "false")
         await pilot.press("s")
         await pilot.pause()
-        await pilot.press("s")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -197,7 +203,7 @@ async def _test_failed_rows_load_disables_the_pager():
     return all(states.values()) and "boom" in caption
 
 
-async def _test_save_needs_two_presses():
+async def _test_save_asks_for_confirmation():
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -209,7 +215,7 @@ async def _test_save_needs_two_presses():
         await page.wait_for_idle()
         await pilot.pause()
         asked, pending = list(source.writes), page.pending
-        await pilot.press("s")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -236,7 +242,7 @@ async def _test_multi_column_save_is_one_call():
         await pilot.press("s")
         await pilot.pause()
         pending = page.pending
-        await pilot.press("s")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -257,14 +263,16 @@ async def _test_unchanged_editor_writes_nothing():
         await _select_table(pilot, page, "module_status")
         await _select_row(pilot, page, 0)
         await pilot.press("s")
-        await pilot.press("s")
+        await pilot.pause()
+        # 没有改动时连确认框都不该出现：先说明「没有可写的内容」，不打扰用户。
+        opened = type(app.screen).__name__
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return list(source.writes), page.pending
+        return list(source.writes), page.pending, opened
 
-    written, pending = await _with_page(body, source)
-    return written == [] and pending is None
+    written, pending, opened = await _with_page(body, source)
+    return written == [] and pending is None and opened == "Screen"
 
 
 async def _test_save_passes_argv_to_cli():
@@ -291,10 +299,9 @@ async def _test_save_passes_argv_to_cli():
             await _select_row(pilot, page, 0)
             page.set_editor_value("load", "false")
             page.request_save()
-            await page.wait_for_idle()
             await pilot.pause()
             before = [call for call in calls if "set" in call]
-            page.request_save()
+            app.screen.query_one("#choice-0", compat.Button).press()
             await page.wait_for_idle()
             await pilot.pause()
             await pilot.press("q")
@@ -305,7 +312,7 @@ async def _test_save_passes_argv_to_cli():
     return before == [] and after == [expected]
 
 
-async def _test_insert_needs_two_presses():
+async def _test_insert_asks_for_confirmation():
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -320,7 +327,7 @@ async def _test_insert_needs_two_presses():
         await pilot.press("i")
         await pilot.pause()
         asked = list(source.inserted)
-        await pilot.press("i")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -351,7 +358,7 @@ async def _test_insert_can_set_primary_key():
         page.set_editor_value("load", "true")
         await pilot.press("i")
         await pilot.pause()
-        await pilot.press("i")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -383,7 +390,7 @@ async def _test_insert_passes_argv_to_cli():
             page.set_editor_value("load", "false")
             page.request_insert()
             await pilot.pause()
-            page.request_insert()
+            app.screen.query_one("#choice-0", compat.Button).press()
             await page.wait_for_idle()
             await pilot.pause()
             await pilot.press("q")
@@ -394,7 +401,7 @@ async def _test_insert_passes_argv_to_cli():
     return inserts == [expected]
 
 
-async def _test_delete_needs_two_presses():
+async def _test_delete_asks_for_confirmation():
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -403,7 +410,7 @@ async def _test_delete_needs_two_presses():
         await pilot.press("ctrl+d")
         await pilot.pause()
         asked, pending = list(source.deleted), page.pending
-        await pilot.press("ctrl+d")
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -441,9 +448,8 @@ async def _test_delete_passes_argv_to_cli():
             await page.select_table("module_status")
             await _select_row(pilot, page, 0)
             page.request_delete()
-            await page.wait_for_idle()
             await pilot.pause()
-            page.request_delete()
+            app.screen.query_one("#choice-0", compat.Button).press()
             await page.wait_for_idle()
             await pilot.pause()
             await pilot.press("q")
@@ -468,14 +474,25 @@ async def _test_cancel_clears_pending():
         await pilot.pause()
         cleared = page.pending is None
         restored = page.editor_values()
+        # 取消后编辑区退回该行的取值，此时再按 s 只会提示「没有可写的内容」，不会落库。
         await pilot.press("s")
+        await pilot.pause()
+        reopened = type(app.screen).__name__
+        status = page.status_text
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return pending, cleared, restored, list(source.writes)
+        return pending, cleared, restored, list(source.writes), reopened, status
 
-    pending, cleared, restored, written = await _with_page(body, source)
-    return pending and cleared and restored == {"load": "true"} and written == []
+    pending, cleared, restored, written, reopened, status = await _with_page(body, source)
+    return (
+        pending
+        and cleared
+        and restored == {"load": "true"}
+        and written == []
+        and reopened == "Screen"
+        and status == i18n.t("cli.tui.database.status_no_changes", table="module_status", pk="module_name")
+    )
 
 
 async def _test_write_failure_reports_reason():
@@ -489,7 +506,8 @@ async def _test_write_failure_reports_reason():
         before = page.status_text
         page.set_editor_value("load", "false")
         await pilot.press("s")
-        await pilot.press("s")
+        await pilot.pause()
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -526,7 +544,8 @@ async def _test_page_still_usable_after_failure():
         await _select_row(pilot, page, 0)
         page.set_editor_value("load", "false")
         await pilot.press("s")
-        await pilot.press("s")
+        await pilot.pause()
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         failed = page.status_text
@@ -539,7 +558,8 @@ async def _test_page_still_usable_after_failure():
         filled = page.editor_values()
         page.set_editor_value("load", "false")
         await pilot.press("s")
-        await pilot.press("s")
+        await pilot.pause()
+        await _confirm_write(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -962,16 +982,16 @@ async def test_tui_database(tester: Tester):
         await tester.test(_test_selecting_row_fills_editor, "选中数据项填充编辑区")
         await tester.test(_test_primary_key_is_read_only, "主键只读不进编辑字段")
         await tester.test(_test_json_values_round_trip_in_editor, "JSON 值按 JSON 文本回填")
-        await tester.test(_test_save_needs_two_presses, "保存需两次确认")
+        await tester.test(_test_save_asks_for_confirmation, "保存先弹确认框")
         await tester.test(_test_write_keeps_the_page_and_recounts, "写入留在当前页并重算条数")
         await tester.test(_test_failed_rows_load_disables_the_pager, "取数失败时禁用翻页按钮")
         await tester.test(_test_multi_column_save_is_one_call, "多列改动合并成一次写入")
         await tester.test(_test_unchanged_editor_writes_nothing, "未改动不写入")
         await tester.test(_test_save_passes_argv_to_cli, "保存以正确 argv 调用 CLI")
-        await tester.test(_test_insert_needs_two_presses, "新建走 insert")
+        await tester.test(_test_insert_asks_for_confirmation, "新建先弹确认框再 insert")
         await tester.test(_test_insert_can_set_primary_key, "新建时可填非自增主键")
         await tester.test(_test_insert_passes_argv_to_cli, "新建以正确 argv 调用 CLI")
-        await tester.test(_test_delete_needs_two_presses, "删除需两次确认")
+        await tester.test(_test_delete_asks_for_confirmation, "删除先弹确认框")
         await tester.test(_test_delete_passes_argv_to_cli, "删除以正确 argv 调用 CLI")
         await tester.test(_test_cancel_clears_pending, "Esc 清空待确认")
         await tester.test(_test_write_failure_reports_reason, "写失败在状态栏给出原因")

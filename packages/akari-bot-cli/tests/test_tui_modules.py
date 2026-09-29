@@ -2,7 +2,8 @@
 
 本文件固定两条链路：列表默认给出全部（已装与未装同列，未装项可直接选中安装），开关只用于收窄到
 已装；安装与卸载把子进程输出逐行显示到状态栏，完整序列留在 ``stream_lines``，失败时输出尾部作为详情。
-安装先弹输入框再按输入内容选来源，卸载先确认目标再选数据与依赖的处置方式。
+安装先弹输入框再按输入内容选来源，卸载先确认目标再选数据与依赖的处置方式，更新一次触发即弹出范围选择
+（选中项 / 全部已装包）。
 """
 
 import os
@@ -31,6 +32,8 @@ CANDIDATE = ModuleRecord(name="wiki", dist="akari-bot-module-wiki", version="0.2
 ADAPTER = ModuleRecord(
     name="telegram", dist="akari-bot-adapter-telegram", version="0.1.0", summary="", state="available"
 )
+
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "modules.json"
 
 
 def _use_cli_locale() -> None:
@@ -431,20 +434,28 @@ def _update_source() -> _RecordingUpdate:
 
 
 async def _test_update_covers_installed_selection():
-    # 按 U 更新选中的已装项，走的是 update 而非重装。
+    # 按 U 一次即弹出范围选择，选「更新选中项」后逐个更新选中的已装项，走的是 update 而非重装。
     source = _update_source()
 
     async def body(app, page, pilot):
         await pilot.press("a")
         await pilot.pause()
-        page.request_update()
+        await pilot.press("U")
+        await pilot.pause()
+        labels = _choice_labels(app)
+        await _pick_choice(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
-        return list(source.streamed), page.status_text
+        return labels, list(source.streamed), page.status_text
 
-    streamed, status = await _with_app(source, body)
+    labels, streamed, status = await _with_app(source, body)
     return (
-        streamed == [("update", "akari-bot-module-alpha"), ("update", "akari-bot-module-bravo")]
+        labels[:-1]
+        == [
+            i18n.t("cli.tui.modules.update_selected"),
+            i18n.t("cli.tui.modules.update_all"),
+        ]
+        and streamed == [("update", "akari-bot-module-alpha"), ("update", "akari-bot-module-bravo")]
         and i18n.t("cli.tui.modules.batch_done", count=2, what=i18n.t("cli.tui.modules.action_update")) in status
     )
 
@@ -457,12 +468,123 @@ async def _test_update_only_targets_installed():
         await pilot.press("a")
         await pilot.pause()
         page.request_update()
+        await pilot.pause()
+        await _pick_choice(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         return [dist for _, dist in source.streamed]
 
     streamed = await _with_app(source, body)
     return streamed == ["akari-bot-module-alpha", "akari-bot-module-bravo"]
+
+
+async def _test_update_entry_points_open_choice():
+    # U、ctrl+u 与按钮走同一条路径：一次触发弹出范围选择框，取消按钮即取消。
+    async def body(app, page, pilot):
+        seen: list[list[str]] = []
+        for trigger in ("U", "ctrl+u"):
+            await pilot.press(trigger)
+            await pilot.pause()
+            seen.append(_choice_labels(app))
+            await pilot.press("escape")
+            await pilot.pause()
+        page.query_one("#update", compat.Button).press()
+        await pilot.pause()
+        seen.append(_choice_labels(app))
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return seen
+
+    seen = await _with_app(_update_source(), body)
+    expected = [
+        i18n.t("cli.tui.modules.update_selected"),
+        i18n.t("cli.tui.modules.update_all"),
+        i18n.t("cli.tui.modules.cancel"),
+    ]
+    return seen == [expected, expected, expected]
+
+
+async def _test_update_all_dispatches_all_flag():
+    # 选「更新全部」时不下发位置参数：已装包由 CLI 的 --all 自行枚举。
+    source = _update_source()
+
+    async def body(app, page, pilot):
+        page.request_update()
+        await pilot.pause()
+        await _pick_choice(app, pilot, 1)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(source.stream_calls)
+
+    calls = await _with_app(source, body)
+    return calls == [("update", i18n.t("cli.tui.modules.update_all_target"), ("--all",), False)]
+
+
+async def _test_update_hint_warns_and_cancel_changes_nothing():
+    # 提示写明全量更新逐个安装最新版本、可能耗时较久；取消后不发起任何操作。
+    async def body(app, page, pilot):
+        page.request_update()
+        await pilot.pause()
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
+        await pilot.press("escape")
+        await pilot.pause()
+        status = page.status_text
+        calls = list(app.module_source.stream_calls)
+        await pilot.press("q")
+        return hint, status, calls
+
+    hint, status, calls = await _with_app(_update_source(), body)
+    return (
+        hint == i18n.t("cli.tui.modules.update_hint")
+        and status == i18n.t("cli.tui.modules.update_cancelled")
+        and calls == []
+    )
+
+
+async def _test_update_without_target_offers_all_only():
+    # 选区里没有已装项时只给「更新全部」一项，并在提示里说明原因。
+    source = _RecordingUpdate(records=[UPDATE_PENDING], available=[UPDATE_PENDING], stream_lines=["Updated 1 package"])
+
+    async def body(app, page, pilot):
+        page.request_update()
+        await pilot.pause()
+        labels = _choice_labels(app)
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return labels, hint, list(source.stream_calls)
+
+    labels, hint, calls = await _with_app(source, body)
+    expected_hint = (
+        f"{i18n.t('cli.tui.modules.update_hint')}{i18n.t('cli.common.clause_separator')}"
+        f"{i18n.t('cli.tui.modules.update_no_target')}"
+    )
+    return (
+        labels[:-1] == [i18n.t("cli.tui.modules.update_all")]
+        and hint == expected_hint
+        and calls == [("update", i18n.t("cli.tui.modules.update_all_target"), ("--all",), False)]
+    )
+
+
+async def _test_update_all_argv_passes_all_and_yes():
+    # 真源按 ``module update --all --yes`` 调用：界面里已经选定范围，不该再被 CLI 追问。
+    from akaribot.cli.tui.modules import SubprocessModuleSource
+
+    with TemporaryDirectory(prefix="akari-update-all-") as raw:
+        root = Path(raw)
+        fake = _fake_cli(root, "fake_update_all", FAKE_CLI_ECHO_ARGV)
+        record = ModuleRecord(name="alpha", dist="akari-bot-module-alpha")
+        lines: list[str] = []
+        with patch.dict(os.environ, {"AKARIBOT_CLI_BIN": fake}):
+            source = SubprocessModuleSource(root=root, timeout=30.0)
+            result = await source.stream_operation(
+                "update", record, lines.append, extra_args=("--all",), positional=False
+            )
+    return result.ok and lines == ["module update --all --yes"]
 
 
 async def _test_update_argv_passes_yes():
@@ -727,6 +849,22 @@ async def _test_columns_header_aligns_with_rows():
     return version_ok and len(load_positions) == 2 and all(position == load_col for position in load_positions)
 
 
+async def _test_action_buttons_fit_narrow_screen():
+    # 五个动作按钮在 80 列下都要落在页内：按钮的默认 min-width 会把最后一个挤出可视区。
+    app = TuiApp(source=_update_source(), initial_page="modules", boot_started_at=time.monotonic())
+    async with compat.app_test(app, size=(80, 24)) as pilot:
+        page = app.modules_page()
+        await page.wait_for_idle()
+        await pilot.pause()
+        actions = page.query_one("#actions").region
+        boxes = [
+            page.query_one(f"#{name}", compat.Button).region
+            for name in ("install", "uninstall", "update", "toggle-load", "refresh")
+        ]
+        await pilot.press("q")
+    return all(box.width > 0 for box in boxes) and max(box.right for box in boxes) <= actions.right
+
+
 async def _test_toggle_shares_search_row_and_is_centered():
     # 开关与搜索框同一行（单独占一行会白吃 3 行高度），且要垂直居中：之前它的内边距把内容顶到
     # 行的下缘，看起来像「居底」。
@@ -760,7 +898,7 @@ async def _test_uninstall_argv_passes_data_options():
         with patch.dict(os.environ, {"AKARIBOT_CLI_BIN": fake}):
             source = SubprocessModuleSource(root=root, timeout=30.0)
             result = await source.stream_operation("uninstall", record, lines.append, extra_args=("--purge-data",))
-    return result.ok and lines == ["module remove akari-bot-module-dice --yes --purge-data"]
+    return result.ok and lines == ["module remove akari-bot-module-dice --purge-data --yes"]
 
 
 async def _test_install_argv_for_git_and_editable():
@@ -806,64 +944,67 @@ def _test_low_frequency_bindings_stay_out_of_footer():
 
 
 def _test_pending_confirm_gate():
-    # 闸门本身的语义：连发被忽略、正常二次确认放行、超时后重新提问而不是执行；
-    # accept 给模态动作用，只挡连发，窗口之外再次触发照常弹窗。
+    # 闸门本身的语义：同一目标的连发被忽略，窗口之外或换了目标都照常放行。
     gate = compat.PendingConfirm()
-    first = gate.arm("x", now=100.0)
-    burst = gate.arm("x", now=100.1)
-    confirmed = gate.arm("x", now=101.0)
-    other = gate.arm("y", now=200.0)
-    expired = gate.arm("y", now=220.0)
-    pending = gate.pending_key(now=220.0)
-    accepted = gate.accept("z", now=300.0)
-    accepted_burst = gate.accept("z", now=300.1)
-    accepted_again = gate.accept("z", now=301.0)
-    return (
-        first is False
-        and burst is False
-        and confirmed is True
-        and other is False
-        and expired is False
-        and pending == "y"
-        and accepted is True
-        and accepted_burst is False
-        and accepted_again is True
-    )
+    first = gate.accept("x", now=100.0)
+    burst = gate.accept("x", now=100.1)
+    again = gate.accept("x", now=101.0)
+    other = gate.accept("y", now=200.0)
+    return first is True and burst is False and again is True and other is True
 
 
 async def _test_pending_invalidated_by_refresh_and_selection():
     # 刷新、换选中项与清空选区都会重置闸门：紧接着的按键不该被当成上一次的连发吞掉。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
-        page._confirm.accept("probe")
-        page.action_clear_selection()
-        cleared = page._confirm.armed
-        page._confirm.accept("probe")
-        list_view.index = 1
+        list_view.index = 0
         await pilot.pause()
-        highlighted = page._confirm.armed
-        page._confirm.accept("probe")
-        page.refresh_records(force=True)
-        refreshed = page._confirm.armed
-        await page.wait_for_idle()
-        await pilot.pause()
+        with mock.patch.object(compat.PendingConfirm, "debounce", 30.0), mock.patch.object(compat, "ask_choice") as ask:
+            page.request_update()
+            await pilot.pause()
+            page.request_update()
+            await pilot.pause()
+            swallowed = ask.call_count
+            page.action_clear_selection()
+            await pilot.pause()
+            page.request_update()
+            await pilot.pause()
+            cleared = ask.call_count
+            list_view.index = 1
+            await pilot.pause()
+            page.request_update()
+            await pilot.pause()
+            highlighted = ask.call_count
+            page.refresh_records(force=True)
+            await page.wait_for_idle()
+            await pilot.pause()
+            page.request_update()
+            await pilot.pause()
+            refreshed = ask.call_count
         await pilot.press("q")
-        return cleared, highlighted, refreshed, list(app.module_source.uninstalled)
+        return swallowed, cleared, highlighted, refreshed, list(app.module_source.uninstalled)
 
-    cleared, highlighted, refreshed, uninstalled = await _with_app(_source(), body)
-    return cleared is False and highlighted is False and refreshed is False and uninstalled == []
+    swallowed, cleared, highlighted, refreshed, uninstalled = await _with_app(_source(), body)
+    return swallowed == 1 and cleared == 2 and highlighted == 3 and refreshed == 4 and uninstalled == []
 
 
 async def _test_reset_pending_hook_clears_gate():
     async def body(app, page, pilot):
-        page._confirm.accept("probe")
-        armed = page._confirm.armed
-        page.reset_pending()
+        with mock.patch.object(compat.PendingConfirm, "debounce", 30.0), mock.patch.object(compat, "ask_choice") as ask:
+            page.request_update()
+            await pilot.pause()
+            page.request_update()
+            await pilot.pause()
+            first = ask.call_count
+            page.reset_pending()
+            page.request_update()
+            await pilot.pause()
+            after = ask.call_count
         await pilot.press("q")
-        return armed, page._confirm.armed
+        return first, after
 
-    armed, after = await _with_app(_source(), body)
-    return armed is True and after is False
+    first, after = await _with_app(_source(), body)
+    return first == 1 and after == 2
 
 
 @func_case
@@ -871,7 +1012,7 @@ async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
     _use_cli_locale()
     # 闸门本身按真实防抖窗口断言，故这条不放进压缩窗口的块里。
-    await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并超时重新提问")
+    await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并在窗口外放行")
     # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
@@ -890,9 +1031,14 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_failed_install_reports_detail, "失败时展示输出尾部")
         await tester.test(_test_available_failure_keeps_installed_list, "可安装集合失败不清空列表")
         await tester.test(_test_stream_operation_failure_becomes_result, "数据源异常转成结果展示")
-        await tester.test(_test_update_covers_installed_selection, "按 U 更新选中的已装项")
+        await tester.test(_test_update_entry_points_open_choice, "U、ctrl+u 与按钮都弹出更新范围选择")
+        await tester.test(_test_update_covers_installed_selection, "选「更新选中项」逐个更新已装项")
         await tester.test(_test_update_only_targets_installed, "更新只作用于已装项")
+        await tester.test(_test_update_all_dispatches_all_flag, "选「更新全部」下发 --all")
+        await tester.test(_test_update_without_target_offers_all_only, "没有可更新目标时只给全量更新")
+        await tester.test(_test_update_hint_warns_and_cancel_changes_nothing, "提示写明全量更新耗时且取消无副作用")
         await tester.test(_test_update_argv_passes_yes, "更新带 --yes 调用 CLI")
+        await tester.test(_test_update_all_argv_passes_all_and_yes, "全量更新按 update --all --yes 调用 CLI")
         await tester.test(_test_uninstall_argv_passes_data_options, "卸载把 --purge-data 拼进 argv")
         await tester.test(_test_install_argv_for_git_and_editable, "git 与可编辑安装拼出对应 argv")
         await tester.test(_test_subprocess_source_streams_and_reports, "真源逐行回调并给出结论")
@@ -905,8 +1051,9 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
         await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
         await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
+        await tester.test(_test_action_buttons_fit_narrow_screen, "80 列下五个动作按钮都在页内")
         await tester.test(_test_toggle_shares_search_row_and_is_centered, "只看已安装在搜索行内垂直居中")
         await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
-        await tester.test(_test_pending_invalidated_by_refresh_and_selection, "刷新、换选中项与清选区作废待确认")
-        await tester.test(_test_reset_pending_hook_clears_gate, "切页钩子清掉待确认状态")
+        await tester.test(_test_pending_invalidated_by_refresh_and_selection, "刷新、换选中项与清选区作废防抖记录")
+        await tester.test(_test_reset_pending_hook_clears_gate, "切页钩子清掉防抖记录")
     return tester

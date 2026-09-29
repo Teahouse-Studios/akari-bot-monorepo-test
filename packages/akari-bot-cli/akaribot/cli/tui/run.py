@@ -444,6 +444,8 @@ def _local_time(value: Any) -> str:
 class RunPage(compat.Vertical):
     """Run 页控件。
 
+    启动、停止、重启与「只启动指定适配器」都先弹一次模态确认框，选「执行」后才调用数据源。
+
     :param source: 数据源，缺省为 :class:`SubprocessRunSource`。
     :param status_interval: 状态表刷新周期（秒）；``None`` 或非正数表示只手动刷新。
     """
@@ -503,7 +505,6 @@ class RunPage(compat.Vertical):
         self._busy: bool = False
         self._pending = compat.PendingConfirm()
         self._adapter: str = ""
-        self._pending_text: str = ""
         self._table_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
@@ -574,19 +575,14 @@ class RunPage(compat.Vertical):
         self.run_worker(partial(self._refresh, manual=manual), group="run-status", exclusive=True)
 
     async def _refresh(self, *, manual: bool = False) -> None:
-        # 轮询不动待确认：2 秒一次的摘要会把确认窗口压成「同一周期内按两次」。
+        # 轮询不作废待确认：确认框开着时，周期刷新不得把它撤掉。
         if manual:
             self._pending.reset()
-            self._pending_text = ""
-        elif self._pending_text and not self._pending.pending_key():
-            # 已超时的提示不再作数，撤掉它并把状态栏还给摘要。
-            self._pending_text = ""
         try:
             records = tuple(await asyncio.to_thread(self.source.status))
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
             # 状态读不到就无法判断语境，待确认随本轮失效。
             self._pending.reset()
-            self._pending_text = ""
             self.last_error = f"{type(error).__name__}: {error}"
             self._records = ()
             self._render_table()
@@ -597,8 +593,7 @@ class RunPage(compat.Vertical):
         self.last_error = ""
         self._render_table()
         self._sync_actions()
-        # 有待确认时状态栏优先显示那句提示，轮询摘要不得把它盖掉。
-        self._set_status(self._pending_text or self.last_result or self._summary())
+        self._set_status(self.last_result or self._summary())
 
     def _on_tick(self) -> None:
         if not self.display:
@@ -608,10 +603,6 @@ class RunPage(compat.Vertical):
     def reset_pending(self) -> None:
         """作废待确认状态；切页时由 App 调用。"""
         self._pending.reset()
-        if not self._pending_text:
-            return
-        self._pending_text = ""
-        self._set_status(self.last_result or self._summary())
 
     def request_start(self) -> None:
         """发起启动；已有进程在运行时给出提示而不动作。"""
@@ -635,20 +626,24 @@ class RunPage(compat.Vertical):
                 title=i18n.t("cli.tui.run.label_stop"),
             )
             return
-        if not self._pending.arm("stop"):
-            self._announce_pending(i18n.t("cli.tui.run.confirm_stop", hotkey="x"))
-            return
-        self._start_operation(i18n.t("cli.tui.run.label_stop"), self.source.stop)
+        self._ask_confirm(
+            "stop",
+            label=i18n.t("cli.tui.run.label_stop"),
+            hint=i18n.t("cli.tui.run.choice_hint_stop"),
+            func=self.source.stop,
+        )
 
     def request_restart(self) -> None:
         """发起重启。"""
-        if not self._pending.arm("restart"):
-            self._announce_pending(i18n.t("cli.tui.run.confirm_restart", hotkey="ctrl+r"))
-            return
-        self._start_operation(i18n.t("cli.tui.run.label_restart"), self.source.restart)
+        self._ask_confirm(
+            "restart",
+            label=i18n.t("cli.tui.run.label_restart"),
+            hint=i18n.t("cli.tui.run.choice_hint_restart"),
+            func=self.source.restart,
+        )
 
     def request_adapter_start(self) -> None:
-        """发起「只启动指定适配器」；未选过平台时先弹输入框收集。"""
+        """发起「只启动指定适配器」；先弹输入框收集平台，确认后才执行。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -656,9 +651,6 @@ class RunPage(compat.Vertical):
                 severity="warning",
                 title=i18n.t("cli.tui.run.label_adapter_start"),
             )
-            return
-        if self._pending.pending_key() == self._start_key(self._adapter) and self._adapter:
-            self._request_start(self._adapter)
             return
         compat.ask_text(
             self.app,
@@ -678,30 +670,41 @@ class RunPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.run.adapter_cancelled"))
             return
         self._adapter = chosen
-        # 输入框刚问过一次，此处重新起算，使确认仍由下一次按键给出。
-        self._pending.reset()
         self._request_start(chosen)
 
     def _request_start(self, adapter: str) -> None:
-        if not self._pending.arm(self._start_key(adapter)):
-            self._announce_pending(
-                i18n.t(
-                    "cli.tui.run.confirm_start_adapter" if adapter else "cli.tui.run.confirm_start",
-                    platform=adapter,
-                    hotkey="a" if adapter else "s",
-                )
-            )
-            return
-        label = i18n.t("cli.tui.run.label_start")
-        func = partial(self.source.start, adapter=adapter) if adapter else self.source.start
-        self._start_operation(label, func)
+        if adapter:
+            label = i18n.t("cli.tui.run.label_adapter_start")
+            hint = i18n.t("cli.tui.run.choice_hint_start_adapter", platform=adapter)
+            func: Callable[[], RunResult] = partial(self.source.start, adapter=adapter)
+        else:
+            label = i18n.t("cli.tui.run.label_start")
+            hint = i18n.t("cli.tui.run.choice_hint_start")
+            func = self.source.start
+        self._ask_confirm(self._start_key(adapter), label=label, hint=hint, func=func)
 
     def _start_key(self, adapter: str) -> str:
-        return f"start:{adapter}"
+        return f"start:{adapter}" if adapter else "start"
 
-    def _announce_pending(self, text: str) -> None:
-        self._pending_text = text
-        self._set_status(text)
+    def _ask_confirm(self, key: str, *, label: str, hint: str, func: Callable[[], RunResult]) -> None:
+        # 模态框就是确认；闸门只挡鼠标双击与键盘连发带来的第二层弹窗。
+        if not self._pending.accept(key):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.run.choice_title", label=label),
+            hint=hint,
+            options=(("run", i18n.t("cli.tui.run.choice_run")),),
+            cancel_label=i18n.t("cli.tui.run.choice_cancel"),
+            callback=lambda choice: self._on_confirm_choice(choice, label=label, func=func),
+        )
+
+    def _on_confirm_choice(self, choice: str | None, *, label: str, func: Callable[[], RunResult]) -> None:
+        self._pending.reset()
+        if choice != "run":
+            self._set_status(i18n.t("cli.tui.run.choice_cancelled", label=label))
+            return
+        self._start_operation(label, func)
 
     def _foreground_command(self) -> str:
         command = f"{RUN_LABEL} --foreground"
@@ -717,7 +720,6 @@ class RunPage(compat.Vertical):
             )
             return
         self._pending.reset()
-        self._pending_text = ""
         self._busy = True
         self.last_result = ""
         self._sync_actions()
@@ -835,9 +837,6 @@ class RunPage(compat.Vertical):
         self.query_one("#refresh", compat.Button).disabled = self._busy
 
     def _set_status(self, text: str) -> None:
-        # 状态栏被别的结论占用时，待确认提示不再作数，切页复位不应把它盖回摘要。
-        if text != self._pending_text:
-            self._pending_text = ""
         width = self._inner_width()
         clipped = compat.truncate_cells(text, width) if width > 0 else text
         self._status_rendered = clipped

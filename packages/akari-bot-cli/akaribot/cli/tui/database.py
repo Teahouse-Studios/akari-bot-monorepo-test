@@ -1567,15 +1567,32 @@ class DatabasePage(compat.Vertical):
         )
 
     def _request(self, plan: WritePlan) -> None:
+        # 写入一律先弹确认框：状态栏里「再按一次」的确认既容易被连发穿透，也很难让人看清将改动什么。
         if self._busy:
             self._set_status(i18n.t("cli.tui.common.busy_title"))
             return
-        # 闸门挡住鼠标双击与键盘连发：同一个计划在防抖窗口内的第二次请求不算确认。
-        if not self._gate.arm(plan.summary()):
-            self._pending = plan
-            self._set_status(plan.summary())
+        if not self._gate.accept(f"{plan.kind}:{plan.table}:{plan.key}"):
             return
+        self._pending = plan
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.database.write_title", table=plan.table),
+            hint=plan.summary(),
+            options=(("write", i18n.t("cli.tui.database.write_confirm")),),
+            cancel_label=i18n.t("cli.tui.database.cancel"),
+            callback=lambda choice, target=plan: self.start_write(target, choice),
+        )
+
+    def start_write(self, plan: WritePlan, choice: str | None) -> None:
+        """按确认结果执行写入。
+
+        :param plan: 待写入的计划。
+        :param choice: ``write`` 表示确认，``None`` 表示取消。
+        """
         self._pending = None
+        if choice != "write":
+            self._set_status(i18n.t("cli.tui.database.write_cancelled"))
+            return
         self._set_status(i18n.t("cli.tui.database.status_writing", table=plan.table))
         self.run_worker(self._apply(plan), group="database-write", exclusive=True)
 

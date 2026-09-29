@@ -296,7 +296,7 @@ async def _test_add_instance_rejects_bad_id():
     return added == [] and status
 
 
-async def _test_remove_instance_needs_two_presses():
+async def _test_remove_instance_opens_modal_on_first_press():
     source = _source()
 
     async def body(app, page, pilot, chosen):
@@ -304,23 +304,45 @@ async def _test_remove_instance_needs_two_presses():
         await pilot.pause()
         page.request_remove_instance()
         await pilot.pause()
-        first = list(chosen.removed)
-        asked = page.status_text
-        page.request_remove_instance()
+        opened = len(app.screen_stack) > 1
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
+        await _choose_mode(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
+        screens = len(app.screen_stack)
         await pilot.press("q")
-        return first, asked, list(chosen.removed)
+        return opened, labels, hint, screens, list(chosen.removed)
 
-    first, asked, second = await _with_page(body, source)
+    opened, labels, hint, screens, removed = await _with_page(body, source)
     return (
-        first == []
-        and asked == i18n.t("cli.tui.adapters.remove_confirm", name=i18n.t("cli.tui.adapters.default_id"))
-        and second == [("telegram", "", False)]
+        opened
+        and labels == [i18n.t("cli.tui.adapters.remove_choice_plain"), i18n.t("cli.tui.adapters.cancel")]
+        and hint == i18n.t("cli.tui.adapters.remove_only_hint", name=i18n.t("cli.tui.adapters.default_id"))
+        and screens == 1
+        and removed == [("telegram", "", False)]
     )
 
 
-async def _test_remove_repeat_within_debounce_is_ignored():
+async def _test_remove_choice_cancel_keeps_instance():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        await _select(page, "telegram")
+        await pilot.pause()
+        page.request_remove_instance()
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        status = page.status_text
+        await pilot.press("q")
+        return list(chosen.removed), status
+
+    removed, status = await _with_page(body, source)
+    return removed == [] and status == i18n.t("cli.tui.adapters.remove_cancelled")
+
+
+async def _test_remove_repeat_within_debounce_opens_one_modal():
     source = _source()
 
     async def body(app, page, pilot, chosen):
@@ -329,41 +351,33 @@ async def _test_remove_repeat_within_debounce_is_ignored():
         page.request_remove_instance()
         await pilot.pause()
         page.request_remove_instance()
-        await page.wait_for_idle()
+        page.request_purge_instance()
         await pilot.pause()
-        removed = list(chosen.removed)
-        armed = page._gate.armed
+        depth = len(app.screen_stack)
+        await pilot.press("escape")
+        await pilot.pause()
         await pilot.press("q")
-        return removed, armed
+        return depth, list(chosen.removed)
 
-    removed, armed = await _with_page(body, source)
-    return removed == [] and armed
+    depth, removed = await _with_page(body, source)
+    return depth == 2 and removed == []
 
 
+# 三条复位路径共用的探针：先占住闸门，复位后同一目标应立即可再次接受。
 async def _test_remove_confirm_resets_on_refresh():
     source = _source()
 
     async def body(app, page, pilot, chosen):
-        await _select(page, "telegram")
-        await pilot.pause()
-        page.request_remove_instance()
-        await pilot.pause()
-        armed_before = page._gate.armed
+        page._gate.accept("probe")
         page.refresh_instances(force=True)
         await page.wait_for_idle()
         await pilot.pause()
-        armed_after = page._gate.armed
-        page.request_remove_instance()
-        await pilot.pause()
-        after_ask = list(chosen.removed)
-        page.request_remove_instance()
-        await page.wait_for_idle()
-        await pilot.pause()
+        reopened = page._gate.accept("probe")
         await pilot.press("q")
-        return armed_before, armed_after, after_ask, list(chosen.removed)
+        return reopened, list(chosen.removed)
 
-    armed_before, armed_after, after_ask, after_confirm = await _with_page(body, source)
-    return armed_before and not armed_after and after_ask == [] and after_confirm == [("telegram", "", False)]
+    reopened, removed = await _with_page(body, source)
+    return reopened and removed == []
 
 
 async def _test_remove_confirm_resets_on_highlight():
@@ -372,46 +386,32 @@ async def _test_remove_confirm_resets_on_highlight():
     async def body(app, page, pilot, chosen):
         await _select(page, "telegram")
         await pilot.pause()
-        page.request_remove_instance()
-        await pilot.pause()
-        armed_before = page._gate.armed
+        page._gate.accept("probe")
         await _select(page, "discord")
         await pilot.pause()
-        armed_after = page._gate.armed
-        page.request_remove_instance()
-        await pilot.pause()
-        after_ask = list(chosen.removed)
-        page.request_remove_instance()
-        await page.wait_for_idle()
-        await pilot.pause()
+        reopened = page._gate.accept("probe")
         await pilot.press("q")
-        return armed_before, armed_after, after_ask, list(chosen.removed)
+        return reopened, list(chosen.removed)
 
-    armed_before, armed_after, after_ask, after_confirm = await _with_page(body, source)
-    return armed_before and not armed_after and after_ask == [] and after_confirm == [("discord", "work", False)]
+    reopened, removed = await _with_page(body, source)
+    return reopened and removed == []
 
 
 async def _test_remove_confirm_resets_on_page_switch():
     source = _source()
 
     async def body(app, page, pilot, chosen):
-        await _select(page, "telegram")
-        await pilot.pause()
-        page.request_remove_instance()
-        await pilot.pause()
-        armed_before = page._gate.armed
+        page._gate.accept("probe")
         app.show_page("modules")
         await pilot.pause()
-        armed_after = page._gate.armed
         app.show_page("adapters")
         await pilot.pause()
-        page.request_remove_instance()
-        await pilot.pause()
+        reopened = page._gate.accept("probe")
         await pilot.press("q")
-        return armed_before, armed_after, list(chosen.removed)
+        return reopened, list(chosen.removed)
 
-    armed_before, armed_after, removed = await _with_page(body, source)
-    return armed_before and not armed_after and removed == []
+    reopened, removed = await _with_page(body, source)
+    return reopened and removed == []
 
 
 async def _test_purge_choice_offers_both_modes():
@@ -550,28 +550,15 @@ async def _test_purge_prompt_cancel_keeps_instance():
     return removed == [] and status == i18n.t("cli.tui.adapters.purge_cancelled")
 
 
-def _test_pending_confirm_gate_debounce_and_timeout():
+def _test_pending_confirm_gate_debounce_and_reset():
+    # 模态动作用 accept：窗口内的连发被忽略，窗口之外再次触发照常弹窗，复位后立即可用。
     gate = compat.PendingConfirm()
-    first = gate.arm("x", now=100.0)
-    too_soon = gate.arm("x", now=100.1)
-    confirmed = gate.arm("x", now=101.0)
-    other = gate.arm("y", now=200.0)
-    expired = gate.arm("y", now=220.0)
-    modal = compat.PendingConfirm()
-    accepted = modal.accept("x", now=100.0)
-    repeated = modal.accept("x", now=100.1)
-    accepted_again = modal.accept("x", now=101.0)
-    return (
-        first is False
-        and too_soon is False
-        and confirmed is True
-        and other is False
-        and expired is False
-        and gate.armed
-        and accepted is True
-        and repeated is False
-        and accepted_again is True
-    )
+    accepted = gate.accept("x", now=100.0)
+    burst = gate.accept("x", now=100.1)
+    accepted_again = gate.accept("x", now=101.0)
+    gate.reset()
+    after_reset = gate.accept("x", now=101.1)
+    return accepted and not burst and accepted_again and after_reset
 
 
 async def _test_footer_keeps_page_bindings_within_80_columns():
@@ -620,10 +607,10 @@ async def _test_instance_op_reloads_list():
 async def test_tui_adapters(tester: Tester):
     """cli.tui.adapters: 未安装平台与安装入口测试"""
     _use_cli_locale()
-    await tester.test(_test_pending_confirm_gate_debounce_and_timeout, "二次确认闸门防抖与超时")
+    await tester.test(_test_pending_confirm_gate_debounce_and_reset, "确认闸门防抖与复位")
     # 放大防抖窗口，使「连发第二次请求」不依赖两次调用之间的真实耗时。
     with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
-        await tester.test(_test_remove_repeat_within_debounce_is_ignored, "连发第二次请求不执行移除")
+        await tester.test(_test_remove_repeat_within_debounce_opens_one_modal, "连发与跨键位触发不叠模态框")
         await tester.test(_test_purge_repeat_within_debounce_opens_one_modal, "连发第二次请求不叠模态框")
     # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
@@ -640,7 +627,8 @@ async def test_tui_adapters(tester: Tester):
         await tester.test(_test_adapter_record_installable_semantics, "缺包但有配置也算可安装")
         await tester.test(_test_add_instance_uses_input_and_platform, "按输入框与平台新增实例")
         await tester.test(_test_add_instance_rejects_bad_id, "非法实例 ID 不执行")
-        await tester.test(_test_remove_instance_needs_two_presses, "移除实例需二次确认")
+        await tester.test(_test_remove_instance_opens_modal_on_first_press, "按 d 一次即弹移除模态")
+        await tester.test(_test_remove_choice_cancel_keeps_instance, "取消移除模态不执行并提示")
         await tester.test(_test_remove_confirm_resets_on_refresh, "刷新作废待确认的移除")
         await tester.test(_test_remove_confirm_resets_on_highlight, "换选中项作废待确认的移除")
         await tester.test(_test_remove_confirm_resets_on_page_switch, "切页作废待确认的移除")

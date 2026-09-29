@@ -1476,31 +1476,32 @@ class AdaptersPage(compat.Vertical):
         )
 
     def request_remove_instance(self) -> None:
-        """移除选中实例的配置并保留数据；状态栏问一次，再按一次同一动作才执行。"""
-        record = self._removal_target()
-        if record is None:
-            return
-        if not self._gate.arm(record.key):
-            self._set_status(i18n.t("cli.tui.adapters.remove_confirm", name=self._instance_display(record)))
-            return
-        self._start_remove(record, purge_data=False)
+        """弹出仅移除实例的确认框；一次触发即弹模态，防抖窗口内的连发忽略。"""
+        self._request_remove(allow_purge=False)
 
     def request_purge_instance(self) -> None:
-        """按选择框给出的方式移除选中实例；一次触发即弹模态框。"""
+        """弹出移除方式选择框；一次触发即弹模态，防抖窗口内的连发忽略。"""
+        self._request_remove(allow_purge=True)
+
+    def _request_remove(self, *, allow_purge: bool) -> None:
         record = self._removal_target()
         if record is None:
             return
-        if not self._gate.accept(f"purge:{record.key}"):
-            # 防抖窗口内的重复触发（鼠标双击、键盘连发）直接忽略，避免叠起两层模态框。
+        # 两个键位共用一道闸门：d 与 ctrl+d 先后触发时只弹一层模态框。
+        if not self._gate.accept(f"remove:{record.key}"):
             return
+        name = self._instance_display(record)
+        options = [("remove", i18n.t("cli.tui.adapters.remove_choice_plain"))]
+        if allow_purge:
+            options.append(("purge", i18n.t("cli.tui.adapters.remove_choice_purge")))
+            hint = i18n.t("cli.tui.adapters.remove_choice_hint")
+        else:
+            hint = i18n.t("cli.tui.adapters.remove_only_hint", name=name)
         compat.ask_choice(
             self.app,
-            title=i18n.t("cli.tui.adapters.remove_choice_title", name=self._instance_display(record)),
-            hint=i18n.t("cli.tui.adapters.remove_choice_hint"),
-            options=(
-                ("remove", i18n.t("cli.tui.adapters.remove_choice_plain")),
-                ("purge", i18n.t("cli.tui.adapters.remove_choice_purge")),
-            ),
+            title=i18n.t("cli.tui.adapters.remove_choice_title", name=name),
+            hint=hint,
+            options=tuple(options),
             cancel_label=i18n.t("cli.tui.adapters.cancel"),
             callback=lambda choice: self.on_remove_mode_chosen(record, choice),
         )
@@ -1759,7 +1760,7 @@ class AdaptersPage(compat.Vertical):
         self.request_add_instance()
 
     def action_remove_instance(self) -> None:
-        """键位动作：移除选中实例配置并保留数据。"""
+        """键位动作：弹出移除选中实例并保留数据的确认框。"""
         self.request_remove_instance()
 
     def action_purge_instance(self) -> None:

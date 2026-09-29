@@ -13,8 +13,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
+from akaribot.cli.tui import cli_process
 from akaribot.cli.tui.adapters import StaticAdapterSource
 from akaribot.cli.tui.app import TuiApp
 from akaribot.cli.tui.config import StaticConfigSource
@@ -32,8 +34,6 @@ from akaribot.testing import Tester, func_case
 
 PORT_MESSAGE = "端口冲突：bot_a 与 bot_b 都监听 0.0.0.0:8080"
 ORPHAN_MESSAGE = "孤立配置：bot_kook 的适配器未安装"
-
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "doctor_dev_misc.json"
 
 PORT_CONFLICT = DoctorConflict(
     kind="port",
@@ -65,39 +65,14 @@ REPORT_CHECKS = DoctorChecks(
     orphan_check="ran",
     credential_scope="manifest credential_fields",
 )
-
 STATUS_LOADED = "cli.tui.doctor.status_loaded"
 STATUS_LOADING = "cli.tui.doctor.status_loading"
 STATUS_FAILED = "cli.tui.doctor.status_failed"
 
 
-def _fragment_entries() -> dict[str, str]:
-    try:
-        data = json.loads(FRAGMENT.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {str(key): str(value) for key, value in data.items()}
-
-
 def _use_cli_locale() -> None:
-    # 先触发包内连接，随后的 connect 才不会被它按包内目录重建覆盖。
-    i18n.locale()
-    extra = _fragment_entries()
-    if not extra:
-        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
-        i18n.connect_locale_snapshot("akaribot-cli")
-        return
-    with TemporaryDirectory(prefix="akari-locale-") as raw:
-        directory = Path(raw)
-        for name in ("zh_cn.json", "en_us.json"):
-            data = json.loads((Path(i18n.locales_dir()) / name).read_text(encoding="utf-8"))
-            if name == "zh_cn.json":
-                data.update(extra)
-            (directory / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(directory)], "akaribot-cli")
-        i18n.connect_locale_snapshot("akaribot-cli")
+    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+    i18n.connect_locale_snapshot("akaribot-cli")
 
 
 def _snapshot(conflicts=(PORT_CONFLICT, ORPHAN_CONFLICT), **kwargs) -> DoctorSnapshot:
@@ -127,11 +102,21 @@ async def _with_page(source, body, *, size=(150, 40), sources=None):
         return await body(app, page, pilot)
 
 
+def _visible_detail_rows(page) -> tuple[str, ...]:
+    # 详情被父容器裁掉尾部时 region 会超出屏幕：取 region 与屏幕可视区的交集，再逐行取控件自己的渲染结果。
+    detail = page.query_one("#detail", compat.Static)
+    region = detail.region
+    screen = page.app.screen.region
+    first = max(0, max(region.y, screen.y) - region.y)
+    last = max(first, min(region.bottom, screen.bottom) - region.y)
+    return tuple(detail.render_line(y).text.rstrip() for y in range(first, last))
+
+
 class _SlowDoctorSource(StaticDoctorSource):
     # 取数放慢，便于观察进行中的状态栏与按钮。
-    def load_snapshot(self):
+    def load_snapshot(self, *, strict: bool = False):
         time.sleep(0.4)
-        return super().load_snapshot()
+        return super().load_snapshot(strict=strict)
 
 
 # 假 CLI 写成带 shebang 的可执行文件：AKARIBOT_CLI_BIN 是单一路径，不按空格拆解释器与脚本。
@@ -221,7 +206,7 @@ async def _test_lists_conflicts_and_summarizes():
         and "telegram" in observed["summary"]
         and "discord" in observed["summary"]
         and "kook" in observed["summary"]
-        and observed["summary"].count("\n") == 5
+        and observed["summary"].count("\n") == 6
         and observed["status_key"] == STATUS_LOADED
         and observed["status"]
         == i18n.t(
@@ -570,6 +555,156 @@ async def _test_detail_shows_next_step():
     )
 
 
+async def _test_detail_orders_next_step_before_facts():
+    # 详情重排后「级别」与「种类」合成一行，总行数不超过六行。
+    source = StaticDoctorSource(_snapshot())
+
+    async def body(app, page, pilot):
+        lines = page.detail_text.split("\n")
+        await pilot.press("q")
+        return lines
+
+    lines = await _with_page(source, body)
+    labels = (
+        i18n.t("cli.tui.doctor.field_message"),
+        i18n.t("cli.tui.doctor.field_next"),
+        i18n.t("cli.tui.doctor.field_level_kind"),
+        i18n.t("cli.tui.doctor.field_platform"),
+        i18n.t("cli.tui.doctor.field_instances"),
+        i18n.t("cli.tui.doctor.field_detail"),
+    )
+    merged = lines[2] if len(lines) > 2 else ""
+    return (
+        len(lines) == 6
+        and all(line.startswith(label) for line, label in zip(lines, labels))
+        and PORT_MESSAGE in lines[0]
+        and i18n.t("cli.tui.doctor.next_step_page", page=i18n.t("cli.tui.nav.adapters")) in lines[1]
+        and "✖" in merged
+        and i18n.t("cli.tui.doctor.level_error") in merged
+        and "port" in merged
+        and "${" not in "\n".join(lines)
+    )
+
+
+async def _test_next_step_visible_at_narrow_sizes():
+    # 80×24 只放得下详情的前几行：尾部可以裁掉，但「下一步」必须落在可视区内。
+    async def body(app, page, pilot):
+        detail = page.query_one("#detail", compat.Static)
+        observed = (page.detail_text.split("\n"), detail.region, app.size.height, _visible_detail_rows(page))
+        await pilot.press("q")
+        return observed
+
+    narrow = await _with_page(StaticDoctorSource(_snapshot()), body, size=(80, 24))
+    wide = await _with_page(StaticDoctorSource(_snapshot()), body, size=(120, 34))
+    next_step = i18n.t("cli.tui.doctor.next_step_page", page=i18n.t("cli.tui.nav.adapters"))
+    narrow_lines, narrow_region, narrow_height, narrow_visible = narrow
+    wide_lines, wide_region, wide_height, wide_visible = wide
+    next_index = next((index for index, line in enumerate(narrow_lines) if next_step in line), None)
+    return (
+        next_index == 1
+        and narrow_height == 24
+        and narrow_region.height < len(narrow_lines)
+        and narrow_region.y + next_index < narrow_height
+        and next_index < len(narrow_visible)
+        and len(narrow_visible) < len(narrow_lines)
+        and narrow_visible == tuple(line.rstrip() for line in narrow_lines[: len(narrow_visible)])
+        and i18n.t("cli.tui.doctor.field_detail") not in "\n".join(narrow_visible)
+        and wide_height == 34
+        and wide_region.y + next_index < wide_height
+        and len(wide_visible) == len(wide_lines)
+        and i18n.t("cli.tui.doctor.field_detail") in "\n".join(wide_visible)
+    )
+
+
+async def _test_strict_option_reloads_with_flag():
+    # 勾选严格模式即重新体检，状态同时写进页面字段区；复选框在 80 列下完整可见。
+    source = StaticDoctorSource(_snapshot())
+
+    async def body(app, page, pilot):
+        actions = page.query_one("#actions")
+        checkbox = page.query_one("#strict", compat.Checkbox)
+        before = (
+            checkbox.value,
+            page.strict,
+            source.calls["load"],
+            source.calls["strict"],
+            i18n.t("cli.tui.doctor.field_strict") in page.summary_text,
+            i18n.t("cli.tui.doctor.strict_off") in page.summary_text,
+        )
+        label = checkbox.render_line(0).text
+        checkbox.focus()
+        await pilot.pause()
+        focused = app.focused is checkbox
+        await pilot.press("space")
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (
+            checkbox.value,
+            page.strict,
+            source.calls["load"],
+            source.calls["strict"],
+            i18n.t("cli.tui.doctor.strict_on") in page.summary_text,
+        )
+        accepted = checkbox.region.right <= actions.region.right
+        unresolved = "{I18N" in page.summary_text
+        await pilot.press("q")
+        return before, after, focused, accepted, label, unresolved
+
+    before, after, focused, accepted, label, unresolved = await _with_page(source, body, size=(80, 24))
+    return (
+        before == (False, False, 1, 0, True, True)
+        and after == (True, True, 2, 1, True)
+        and focused
+        and accepted
+        and i18n.t("cli.tui.doctor.strict_option") in label
+        and not unresolved
+    )
+
+
+async def _test_strict_toggle_restarts_running_load():
+    # 取数期间勾选：正在跑的那次按旧选项下发，结论作废，必须按新选项重来。
+    source = _SlowDoctorSource(_snapshot())
+
+    async def body(app, page, pilot):
+        refresh = page.query_one("#refresh", compat.Button)
+        await pilot.press("r")
+        await pilot.pause()
+        during = (page.status_key, refresh.disabled)
+        page.query_one("#strict", compat.Checkbox).value = True
+        await pilot.pause()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (page.status_key, refresh.disabled, source.calls["load"], source.calls["strict"])
+        await pilot.press("q")
+        return during, after
+
+    during, after = await _with_page(source, body)
+    return during == (STATUS_LOADING, True) and after == (STATUS_LOADED, False, 3, 1)
+
+
+def _test_subprocess_source_adds_strict_flag():
+    recorded = []
+
+    def runner(argv, **kwargs):
+        recorded.append(list(argv))
+        payload = {"conflicts": [], "summary": {"error": 0, "warning": 0}}
+        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
+
+    def silent(argv, **kwargs):
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    source = SubprocessDoctorSource(root="/tmp/inst", timeout=5.0, runner=runner)
+    plain = source.load_snapshot()
+    strict = source.load_snapshot(strict=True)
+    failure = SubprocessDoctorSource(root="/tmp/inst", timeout=5.0, runner=silent).load_snapshot(strict=True)
+    return (
+        recorded == [cli_process.cli_argv("doctor", "--json"), cli_process.cli_argv("doctor", "--strict", "--json")]
+        and plain.errors == ()
+        and strict.errors == ()
+        and failure.errors == (i18n.t("cli.tui.doctor.src_empty_output", label="doctor --strict --json"),)
+    )
+
+
 async def _test_click_only_moves_highlight():
     # 单击一行只更新高亮与详情：列表把点击也发成 Selected，跳转只认键盘回车。
     source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT)))
@@ -602,6 +737,11 @@ async def test_tui_doctor(tester: Tester):
     await tester.test(_test_enter_without_conflicts_reports_nothing, "无结论时回车只提示")
     await tester.test(_test_click_only_moves_highlight, "单击一行只移动高亮")
     await tester.test(_test_detail_shows_next_step, "详情给出下一步或终端命令")
+    await tester.test(_test_detail_orders_next_step_before_facts, "详情按结论、下一步、定位信息、细节排列")
+    await tester.test(_test_next_step_visible_at_narrow_sizes, "80×24 与 120×34 下下一步仍在可视区")
+    await tester.test(_test_strict_option_reloads_with_flag, "勾选严格模式即按 --strict 重新体检")
+    await tester.test(_test_strict_toggle_restarts_running_load, "取数期间勾选严格模式按新选项重来")
+    await tester.test(_test_subprocess_source_adds_strict_flag, "子进程源按严格模式追加 --strict")
     await tester.test(_test_subprocess_source_argv_and_env, "子进程源构造 argv 与环境")
     await tester.test(_test_normalize_defaults_and_shape, "负载归一化与形状校验")
     await tester.test(_test_implementation_kind_detection, "区分 core 入口与 CLI 本地实现")

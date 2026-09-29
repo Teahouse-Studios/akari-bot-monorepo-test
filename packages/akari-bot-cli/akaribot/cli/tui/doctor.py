@@ -2,6 +2,7 @@
 
 结论经 ``akaribot doctor --json`` 子进程取得，CLI 进程内不 import core。存在 error 级结论时该命令
 以退出码 1 结束，stdout 仍是完整 JSON，故先解析输出再看退出码：退出码 1 不是读取失败，结论照常展示。
+打开严格模式后改经 ``akaribot doctor --strict --json`` 取数，告警也按失败处理，展示方式不变。
 """
 
 from __future__ import annotations
@@ -22,6 +23,9 @@ from akaribot.cli.tui import context
 
 SOURCE_LABEL = "doctor --json"
 """子进程调用的说明文本，出错时随原因一起展示。"""
+
+STRICT_FLAG = "--strict"
+"""严格模式开关：打开后告警也让 doctor 以非零码结束。"""
 
 LEVEL_ERROR = "error"
 LEVEL_WARNING = "warning"
@@ -334,8 +338,8 @@ class DoctorSourceError(RuntimeError):
 class DoctorSource(Protocol):
     """体检数据源接口；测试注入替身，生产走子进程。"""
 
-    def load_snapshot(self) -> DoctorSnapshot:
-        """返回一次体检结果；取数错误记入快照的 ``errors`` 而不抛出。"""
+    def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
+        """返回一次体检结果；``strict`` 为真时告警也按失败处理。取数错误记入快照的 ``errors`` 而不抛出。"""
 
 
 class StaticDoctorSource:
@@ -348,11 +352,13 @@ class StaticDoctorSource:
     def __init__(self, snapshot: DoctorSnapshot | None = None, error: Exception | None = None) -> None:
         self._snapshot = snapshot if snapshot is not None else DoctorSnapshot()
         self._error = error
-        self.calls = {"load": 0}
+        self.calls = {"load": 0, "strict": 0}
 
-    def load_snapshot(self) -> DoctorSnapshot:
+    def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
         """见 :meth:`DoctorSource.load_snapshot`。"""
         self.calls["load"] += 1
+        if strict:
+            self.calls["strict"] += 1
         if self._error is not None:
             raise self._error
         return self._snapshot
@@ -386,16 +392,20 @@ class SubprocessDoctorSource:
         """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
         return context.resolve_root(self._root_override)
 
-    def load_snapshot(self) -> DoctorSnapshot:
+    def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
         """见 :meth:`DoctorSource.load_snapshot`。"""
         self.calls["load"] += 1
-        argv = cli_process.cli_argv("doctor", "--json")
+        args = SOURCE_LABEL.split()
+        if strict:
+            args.insert(1, STRICT_FLAG)
+        label = " ".join(args)
+        argv = cli_process.cli_argv(*args)
         try:
             completed = self._run(argv)
         except DoctorSourceError as error:
             return DoctorSnapshot(errors=(str(error),))
         try:
-            payload = self._parse_json(completed.stdout)
+            payload = self._parse_json(completed.stdout, label)
         except DoctorSourceError as error:
             if completed.returncode != 0:
                 tail = self._tail(completed.stderr) or i18n.t("cli.tui.common.no_output")
@@ -433,14 +443,14 @@ class SubprocessDoctorSource:
         except OSError as error:
             raise DoctorSourceError(i18n.t("cli.tui.doctor.src_oserror", cmd=" ".join(argv), error=error)) from error
 
-    def _parse_json(self, stdout: str) -> Any:
+    def _parse_json(self, stdout: str, label: str) -> Any:
         text = stdout.strip()
         if not text:
-            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_empty_output", label=SOURCE_LABEL))
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_empty_output", label=label))
         try:
             return json.loads(text)
         except json.JSONDecodeError as error:
-            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_bad_json", label=SOURCE_LABEL, error=error)) from error
+            raise DoctorSourceError(i18n.t("cli.tui.doctor.src_bad_json", label=label, error=error)) from error
 
     def _tail(self, text: str | None, limit: int = 400) -> str:
         return (text or "").strip()[-limit:]
@@ -474,7 +484,7 @@ class DoctorPage(compat.Vertical):
         height: 1fr;
     }
     DoctorPage #summary {
-        height: 6;
+        height: 7;
         padding: 0 1;
         color: $text-muted;
         text-wrap: nowrap;
@@ -488,7 +498,7 @@ class DoctorPage(compat.Vertical):
     }
     DoctorPage #conflict-list {
         height: 1fr;
-        min-height: 5;
+        min-height: 4;
         border: round $primary;
     }
     DoctorPage #conflict-list > ListItem {
@@ -502,9 +512,16 @@ class DoctorPage(compat.Vertical):
         height: 3;
         padding: 0 0 0 1;
     }
+    DoctorPage #actions Button {
+        min-width: 0;
+    }
+    DoctorPage #strict {
+        width: auto;
+        margin: 0 0 0 2;
+    }
     DoctorPage #detail {
         height: 1fr;
-        max-height: 7;
+        max-height: 6;
         padding: 0 1;
         color: $text-muted;
         text-wrap: nowrap;
@@ -527,6 +544,7 @@ class DoctorPage(compat.Vertical):
         self._snapshot = DoctorSnapshot()
         self._loaded_at: float = 0.0
         self._busy: bool = False
+        self._strict: bool = False
         self._selected_index: int = 0
         self._summary_rendered: str = ""
         self._verdict_rendered: str = ""
@@ -544,6 +562,7 @@ class DoctorPage(compat.Vertical):
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.doctor.action_refresh"), id="refresh", variant="primary")
             yield compat.Button(i18n.t("cli.tui.doctor.action_open"), id="open-conflict")
+            yield compat.Checkbox(i18n.t("cli.tui.doctor.strict_option"), id="strict")
         yield compat.Static(i18n.t("cli.tui.doctor.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -614,6 +633,11 @@ class DoctorPage(compat.Vertical):
         """返回状态栏当前文案的键，文案未合并时供自动化断言核对状态。"""
         return self._status_key
 
+    @property
+    def strict(self) -> bool:
+        """返回严格模式开关的当前取值。"""
+        return self._strict
+
     def row_texts(self) -> tuple[str, ...]:
         """返回最近一次渲染出的冲突行文本。"""
         return self._row_texts
@@ -630,13 +654,16 @@ class DoctorPage(compat.Vertical):
         """重新体检；取数期间状态栏显示进行中并禁用刷新按钮。"""
         if self._busy:
             return
+        self._start_load()
+
+    def _start_load(self) -> None:
         self._set_busy(True)
         self._set_status("cli.tui.doctor.status_loading")
-        self.run_worker(self._load(), group="doctor-load", exclusive=True)
+        self.run_worker(self._load(self._strict), group="doctor-load", exclusive=True)
 
-    async def _load(self) -> bool:
+    async def _load(self, strict: bool) -> bool:
         try:
-            snapshot = await asyncio.to_thread(self.source.load_snapshot)
+            snapshot = await asyncio.to_thread(self.source.load_snapshot, strict=strict)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
             self._snapshot = DoctorSnapshot(errors=(f"{type(error).__name__}: {error}",))
             self._loaded_at = time.monotonic()
@@ -692,6 +719,7 @@ class DoctorPage(compat.Vertical):
                 note=snapshot.registry_note or i18n.t("cli.tui.common.unknown"),
             )
         unknown = i18n.t("cli.tui.common.unknown")
+        strict_state = i18n.t("cli.tui.doctor.strict_on" if self._strict else "cli.tui.doctor.strict_off")
         rows = [
             (i18n.t("cli.tui.doctor.field_instance_root"), snapshot.instance_root or unknown),
             (i18n.t("cli.tui.doctor.field_config_root"), snapshot.config_root or unknown),
@@ -699,6 +727,7 @@ class DoctorPage(compat.Vertical):
             (i18n.t("cli.tui.doctor.field_installed_adapters"), installed),
             (i18n.t("cli.tui.doctor.field_unconfigured_adapters"), unconfigured),
             (i18n.t("cli.tui.doctor.field_checks"), checks_line),
+            (i18n.t("cli.tui.doctor.field_strict"), strict_state),
         ]
         text = "\n".join(self._fit_page_width(line) for line in compat.align_rows(rows))
         self._summary_rendered = text
@@ -750,18 +779,19 @@ class DoctorPage(compat.Vertical):
         conflict = self.selected_conflict
         if conflict is None:
             return [self._empty_detail_line()]
+        # 24 行终端放不下全部字段，按「结论 → 下一步 → 定位信息 → 细节」排：被裁掉的是尾部，不是出路。
+        kind = conflict.kind or i18n.t("cli.tui.common.unknown")
         rows: list[tuple[str, str]] = [
-            (i18n.t("cli.tui.doctor.field_level"), f"{conflict.mark} {conflict.level_label}"),
-            (i18n.t("cli.tui.doctor.field_kind"), conflict.kind or i18n.t("cli.tui.common.unknown")),
+            (i18n.t("cli.tui.doctor.field_message"), conflict.message),
+            (i18n.t("cli.tui.doctor.field_next"), conflict.next_step),
+            (i18n.t("cli.tui.doctor.field_level_kind"), f"{conflict.mark} {conflict.level_label} · {kind}"),
         ]
         if conflict.platform:
             rows.append((i18n.t("cli.tui.doctor.field_platform"), conflict.platform))
         if conflict.instances:
             separator = i18n.t("cli.tui.common.list_separator")
             rows.append((i18n.t("cli.tui.doctor.field_instances"), separator.join(conflict.instances)))
-        rows.append((i18n.t("cli.tui.doctor.field_message"), conflict.message))
         rows.append((i18n.t("cli.tui.doctor.field_detail"), _detail_text(conflict.detail)))
-        rows.append((i18n.t("cli.tui.doctor.field_next"), conflict.next_step))
         return compat.align_rows(rows)
 
     def _empty_detail_line(self) -> str:
@@ -800,6 +830,14 @@ class DoctorPage(compat.Vertical):
         if index is not None:
             self._selected_index = index
         self._render_detail()
+
+    @compat.on(compat.Checkbox.Changed, "#strict")
+    def _on_strict_changed(self, event: compat.Checkbox.Changed) -> None:
+        self._strict = bool(event.value)
+        if self._loaded_at:
+            self._render_summary()
+        # 选项换了，正在跑的那次取数按旧选项下发，结论作废：直接按新选项重来，exclusive 会取消旧任务。
+        self._start_load()
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:

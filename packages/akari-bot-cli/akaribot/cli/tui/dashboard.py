@@ -3,8 +3,9 @@
 数据流：界面只读 :class:`DashboardSource`（当前实例的快照）与 :class:`InstanceListSource`（注册表
 里的其它实例）。默认实现 :class:`LocalDashboardSource` 先读 ``akaribot.toml``，取不到 core 版本时
 再经 ``akaribot module list --json`` 子进程补取，运行状态一律探测实例锁文件 ``.bot.lock``；实例清单
-直接读本机注册表，不起子进程。在清单里选中一条并回车即切换当前实例（同时写回注册表的缺省项），
-各页随后的取数都指向它；``ctrl+n`` 经 ``akaribot init`` 子进程新建实例并登记。
+直接读本机注册表，不起子进程。在清单里选中一条并回车即切换当前实例，缺省项经 ``akaribot instance
+use`` 子进程异步写回，结论以应用级通知报出；各页随后的取数都指向它。``ctrl+n`` 经 ``akaribot init``
+子进程新建实例并登记，``ctrl+d`` 弹确认框移除登记。
 
 服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
 里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
@@ -55,6 +56,10 @@ UPDATE_SOURCE_PENDING_KEY = "cli.tui.dashboard.update_source_pending"
 
 def _pending_update_source() -> str:
     return i18n.t(UPDATE_SOURCE_PENDING_KEY)
+
+
+# 切换实例会重挂载本页，最近一次下发 `instance use` 的目标名挂在应用上，新页面才读得到这份记录。
+_USE_REQUEST_ATTR = "_dashboard_use_requested"
 
 
 # 新建实例要解析依赖并装 core 与适配器，耗时可达数分钟，超时按最坏情况给足。
@@ -1018,7 +1023,7 @@ class DashboardPage(compat.Vertical):
             return 72
 
     def switch_to_selected(self) -> None:
-        """把当前实例切换为清单里高亮的那条，并把缺省实例写回注册表。"""
+        """把当前实例切换为清单里高亮的那条，并把缺省项交给命令层写回。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1032,28 +1037,57 @@ class DashboardPage(compat.Vertical):
             return
         if self._reject_when_busy():
             return
-        switch(row.root)
-        if context.active_root() != Path(row.root).expanduser().resolve():
-            # 别处有未保存改动时切换要先过确认框，确认前不能改写缺省项。
-            self._set_status(i18n.t("cli.tui.dashboard.switch_deferred"))
-            return
+        target = Path(row.root).expanduser().resolve()
+        if context.active_root() != target:
+            switch(row.root)
+            if context.active_root() != target:
+                # 别处有未保存改动时切换要先过确认框，确认前不能改写缺省项。
+                self._set_status(i18n.t("cli.tui.dashboard.switch_deferred"))
+                return
         name = row.name or str(row.root)
         separator = i18n.t("cli.tui.common.error_separator")
-        self._set_status(f"{i18n.t('cli.tui.dashboard.switch_done', name=name)}{separator}{self._default_note(row)}")
+        self._set_status(
+            f"{i18n.t('cli.tui.dashboard.switch_done', name=name)}{separator}{self._request_default_instance(row)}"
+        )
 
-    def _default_note(self, row: InstanceRow) -> str:
+    def _request_default_instance(self, row: InstanceRow) -> str:
         # 命令行读的是注册表缺省项，只切内存态会让界面与 `instance use` 各说各话。
         if not row.registered or not row.name:
             return i18n.t("cli.tui.dashboard.switch_default_skipped")
-        # 同步等子进程：切换随后会重挂载本页，异步回报的状态栏会随旧页对象一起消失。
-        label = i18n.t("cli.tui.dashboard.use_label", name=row.name)
-        try:
-            result = self.cli_runner.run(("instance", "use", row.name), label=label)
-        except Exception as error:  # noqa: BLE001 - 执行器异常只降级为一句说明
-            return i18n.t("cli.tui.dashboard.switch_default_failed", error=f"{type(error).__name__}: {error}")
-        if not result.ok:
-            return i18n.t("cli.tui.dashboard.switch_default_failed", error=_result_summary(result))
-        return i18n.t("cli.tui.dashboard.switch_default_done")
+        app = self.app
+        name = row.name
+        note = i18n.t("cli.tui.dashboard.use_calling", name=name)
+        if getattr(app, _USE_REQUEST_ATTR, "") == name:
+            # 同一目标名已经下发过，重复切换不再叠一个改注册表的子进程。
+            return note
+        setattr(app, _USE_REQUEST_ATTR, name)
+        label = i18n.t("cli.tui.dashboard.use_label", name=name)
+        # worker 挂在应用上：本页随切换重挂载，挂在本页的 worker 会在卸载时被取消而丢掉结论。
+        app.run_worker(
+            self._run_action(
+                lambda: self.cli_runner.run(("instance", "use", name), label=label),
+                label=label,
+                on_done=lambda result: self._finish_default_instance(app, name, label, result),
+                track_busy=False,
+            ),
+            group="dashboard-use",
+        )
+        return note
+
+    def _finish_default_instance(self, app: Any, name: str, label: str, result: OperationResult) -> None:
+        # 本页随后被重挂载，结论只能经应用级通知报出；旧页的状态栏已随页面消失。
+        if result.ok:
+            compat.notify(app, i18n.t("cli.tui.dashboard.switch_default_done"), title=label)
+            return
+        if getattr(app, _USE_REQUEST_ATTR, "") == name:
+            # 写失败即撤掉记录，用户再切一次就能重试。
+            setattr(app, _USE_REQUEST_ATTR, "")
+        compat.notify(
+            app,
+            i18n.t("cli.tui.dashboard.switch_default_failed", error=_result_summary(result)),
+            severity="error",
+            title=label,
+        )
 
     def toggle_policy(self, field_name: str) -> None:
         """翻转当前实例的自启 / 崩溃重启策略。
@@ -1267,6 +1301,7 @@ class DashboardPage(compat.Vertical):
         *,
         label: str,
         on_done: Callable[[OperationResult], None],
+        track_busy: bool = True,
     ) -> None:
         try:
             result = await asyncio.to_thread(call)
@@ -1276,7 +1311,9 @@ class DashboardPage(compat.Vertical):
                 i18n.t("cli.tui.common.failed_label", label=label),
                 f"{type(error).__name__}: {error}",
             )
-        self._busy = False
+        if track_busy:
+            # 未纳管的动作不得清掉别的动作置上的忙标志。
+            self._busy = False
         on_done(result)
 
     def action_toggle_service(self) -> None:
@@ -1402,7 +1439,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.dashboard.new_done", name=self._registered_name(root), root=root))
 
     def request_remove_instance(self) -> None:
-        """移除清单里高亮实例的登记；连按两次才执行，实例目录本身不动。"""
+        """移除清单里高亮实例的登记；一次触发即弹确认框，实例目录本身不动。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1410,8 +1447,27 @@ class DashboardPage(compat.Vertical):
         if not row.registered:
             self._set_status(i18n.t("cli.tui.dashboard.policy_unregistered", root=row.root))
             return
-        if not self._pending_remove.arm(row.name or str(row.root)):
-            self._set_status(i18n.t("cli.tui.dashboard.remove_confirm", name=row.name, root=row.root))
+        if not self._pending_remove.accept(row.name or str(row.root)):
+            # 防抖窗口内的重复触发（鼠标双击、键盘连发）直接忽略，避免叠起两层模态框。
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.dashboard.remove_label", name=row.name),
+            hint=i18n.t("cli.tui.dashboard.remove_choice_hint"),
+            options=(("remove", i18n.t("cli.tui.dashboard.remove_choice_confirm")),),
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=lambda choice: self.on_remove_choice(row, choice),
+        )
+
+    def on_remove_choice(self, row: InstanceRow, choice: str | None) -> None:
+        """确认框回调：选中「移除登记」才下发 ``instance remove``。
+
+        :param row: 待移除的记录。
+        :param choice: ``remove`` 表示确认；取消时为 ``None``。
+        """
+        self._pending_remove.reset()
+        if choice != "remove":
+            self._set_status(i18n.t("cli.tui.dashboard.remove_cancelled"))
             return
         if self._reject_when_busy():
             return
