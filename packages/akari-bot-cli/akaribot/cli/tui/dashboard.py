@@ -7,6 +7,9 @@
 use`` 子进程异步写回，结论以应用级通知报出；各页随后的取数都指向它。``ctrl+n`` 经 ``akaribot init``
 子进程新建实例并登记，``ctrl+d`` 弹确认框移除登记。
 
+页底两行按钮是这些动作的主要入口：上行作用于高亮的实例，下行作用于当前实例的策略与服务；键位是
+同一批动作的快捷方式，逐条列在 ``?`` 键位一览里。
+
 服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
 里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
 
@@ -845,8 +848,14 @@ class DashboardPage(compat.Vertical):
         width: 1fr;
     }
     DashboardPage #actions {
-        height: 3;
+        height: 6;
         padding: 0 0 0 1;
+    }
+    DashboardPage #actions Horizontal {
+        height: 3;
+    }
+    DashboardPage #actions Button {
+        min-width: 0;
     }
     DashboardPage #status {
         height: 2;
@@ -858,7 +867,7 @@ class DashboardPage(compat.Vertical):
     """
 
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
-    # 页脚只放高频键位：a / c / n / ctrl+d 由清单上方的说明行承载，i 由服务行承载。
+    # 页脚只放高频键位：低频动作由页底按钮承载，键位仍可在 ? 键位一览里查到。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
         ("s", "switch_instance", i18n.t("cli.tui.dashboard.bind_switch")),
@@ -911,14 +920,25 @@ class DashboardPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：实例清单 + 当前实例的字段 + 操作与状态栏。"""
+        """装配页面控件树：实例清单 + 当前实例的字段 + 两行操作按钮与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.dashboard.instances_keys_caption"), id="instances-caption", markup=False)
         yield compat.Static("", id="service", markup=False)
         yield compat.ListView(id="instance-list")
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
-        with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.dashboard.action_refresh"), id="refresh", variant="primary")
+        with compat.Vertical(id="actions"):
+            with compat.Horizontal(id="actions-instance"):
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_switch"), id="switch")
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_new_instance"), id="new-instance")
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_add_instance"), id="add-instance")
+                yield compat.Button(
+                    i18n.t("cli.tui.dashboard.button_remove_instance"), id="remove-instance", variant="error"
+                )
+            with compat.Horizontal(id="actions-policy"):
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_autostart_off"), id="autostart")
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_crash_off"), id="crash-restart")
+                yield compat.Button(i18n.t("cli.tui.dashboard.button_service_install"), id="service-toggle")
+                yield compat.Button(i18n.t("cli.tui.dashboard.action_refresh"), id="refresh", variant="primary")
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
@@ -1002,6 +1022,7 @@ class DashboardPage(compat.Vertical):
         self.query_one("#instances-caption", compat.Static).update(
             compat.plain_text(i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(rows)))
         )
+        self._sync_actions()
 
     @staticmethod
     def _highlight_key(row: InstanceRow | None) -> str:
@@ -1015,6 +1036,14 @@ class DashboardPage(compat.Vertical):
             if row.root == active:
                 return index
         return 0
+
+    @staticmethod
+    def _is_active_instance(row: InstanceRow) -> bool:
+        # 上下文里的根按真实路径保存，比较前同样解析，否则软链接下的临时实例永远判为不同。
+        active = context.active_root()
+        if active is None:
+            return False
+        return Path(row.root).expanduser().resolve() == active
 
     def _instance_width(self, list_view: compat.ListView) -> int:
         try:
@@ -1169,6 +1198,34 @@ class DashboardPage(compat.Vertical):
         self.query_one("#service", compat.Static).update(
             compat.plain_text(compat.truncate_cells(text, self._inner_width()))
         )
+        self._sync_actions()
+
+    def _sync_actions(self) -> None:
+        # 按钮是主要入口，禁用状态与标签都要跟着清单、策略与服务状态走，免得点下去才被拒绝。
+        row = self.selected_instance()
+        registered = row is not None and row.registered
+        self.query_one("#switch", compat.Button).disabled = self._busy or row is None or self._is_active_instance(row)
+        for button_id in ("new-instance", "add-instance", "refresh"):
+            self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
+        self.query_one("#remove-instance", compat.Button).disabled = self._busy or not registered
+        self._sync_policy_button("autostart", "autostart", row)
+        self._sync_policy_button("crash-restart", "restart_on_crash", row)
+        service = self.query_one("#service-toggle", compat.Button)
+        # 策略与服务都写在注册表上，未登记时写不了；平台没有服务后端时也无处可装。
+        service.disabled = self._busy or not registered or self._service.backend == "unsupported"
+        service.label = i18n.t(
+            "cli.tui.dashboard.button_service_uninstall"
+            if self._service.installed
+            else "cli.tui.dashboard.button_service_install"
+        )
+
+    def _sync_policy_button(self, button_id: str, field_name: str, row: InstanceRow | None) -> None:
+        enabled = row is not None and (row.autostart if field_name == "autostart" else row.restart_on_crash)
+        state = "on" if enabled else "off"
+        prefix = "autostart" if field_name == "autostart" else "crash"
+        button = self.query_one(f"#{button_id}", compat.Button)
+        button.disabled = self._busy or row is None or not row.registered
+        button.label = i18n.t(f"cli.tui.dashboard.button_{prefix}_{state}")
 
     def request_toggle_service(self) -> None:
         """安装或卸载常驻服务：一次触发即弹确认框，框里可选执行或先预演。
@@ -1293,6 +1350,7 @@ class DashboardPage(compat.Vertical):
         on_done: Callable[[OperationResult], None],
     ) -> None:
         self._busy = True
+        self._sync_actions()
         self.run_worker(self._run_action(call, label=label, on_done=on_done), group=group, exclusive=True)
 
     async def _run_action(
@@ -1314,6 +1372,7 @@ class DashboardPage(compat.Vertical):
         if track_busy:
             # 未纳管的动作不得清掉别的动作置上的忙标志。
             self._busy = False
+            self._sync_actions()
         on_done(result)
 
     def action_toggle_service(self) -> None:
@@ -1651,6 +1710,7 @@ class DashboardPage(compat.Vertical):
         text = "\n".join(lines)
         self._fields_rendered = text
         self.query_one("#fields", compat.Static).update(compat.plain_text(text))
+        self._sync_actions()
 
     def _inner_width(self) -> int:
         try:
@@ -1692,10 +1752,26 @@ class DashboardPage(compat.Vertical):
             return
         self._highlighted_key = key
         self.reset_pending()
+        self._sync_actions()
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        if event.button.id == "refresh":
+        button_id = event.button.id
+        if button_id == "switch":
+            self.switch_to_selected()
+        elif button_id == "new-instance":
+            self.request_new_instance()
+        elif button_id == "add-instance":
+            self.request_add_instance()
+        elif button_id == "remove-instance":
+            self.request_remove_instance()
+        elif button_id == "autostart":
+            self.toggle_policy("autostart")
+        elif button_id == "crash-restart":
+            self.toggle_policy("restart_on_crash")
+        elif button_id == "service-toggle":
+            self.request_toggle_service()
+        elif button_id == "refresh":
             self.refresh_snapshot(force=True)
 
     def action_refresh(self) -> None:

@@ -609,7 +609,6 @@ class EnvironmentPage(compat.Vertical):
         self._busy = False
         self._running: bool | None = False
         self._gate = compat.PendingConfirm()
-        self._pending_remove: str = ""
         self._pending_status: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
         self._loaded_at: float = 0.0
@@ -950,12 +949,17 @@ class EnvironmentPage(compat.Vertical):
                 callback=lambda mode: self.start_uninstall(package, mode),
             )
             return
-        if self._pending_remove != package.dist:
-            self._pending_remove = package.dist
-            self._set_status(i18n.t("cli.tui.environment.uninstall_confirm", dist=package.dist))
+        # 未记进清单的包没有去处可选，但仍要弹一次确认框：卸载会动到环境，状态栏连按两次不叫确认。
+        if not self._gate.accept(f"uninstall:{package.dist}"):
             return
-        self._pending_remove = ""
-        self.start_uninstall(package, "once")
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.environment.uninstall_title", dist=package.dist),
+            hint=i18n.t("cli.tui.environment.uninstall_confirm", dist=package.dist),
+            options=(("once", i18n.t("cli.tui.environment.uninstall_confirm_action")),),
+            cancel_label=i18n.t("cli.tui.environment.cancel"),
+            callback=lambda mode, target=package: self.start_uninstall(target, mode),
+        )
 
     def start_uninstall(self, package: EnvironmentPackage, mode: str | None) -> None:
         """按选定的去处卸载。
@@ -1160,7 +1164,6 @@ class EnvironmentPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        self._pending_remove = ""
         self._render_fields()
 
     @compat.on(compat.Button.Pressed)

@@ -46,7 +46,29 @@ SNAPSHOT = DashboardSnapshot(
     update_hint="",
 )
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dashboard.json"
+# 页底两行按钮的 id，按上行到下行、从左到右排列。
+BUTTON_IDS = (
+    "switch",
+    "new-instance",
+    "add-instance",
+    "remove-instance",
+    "autostart",
+    "crash-restart",
+    "service-toggle",
+    "refresh",
+)
+
+
+def _button(page, button_id: str) -> compat.Button:
+    return page.query_one(f"#{button_id}", compat.Button)
+
+
+def _labels(page) -> dict[str, str]:
+    return {button_id: str(_button(page, button_id).label) for button_id in BUTTON_IDS}
+
+
+def _disabled(page) -> dict[str, bool]:
+    return {button_id: _button(page, button_id).disabled for button_id in BUTTON_IDS}
 
 
 def _use_cli_locale() -> None:
@@ -1153,6 +1175,343 @@ async def _test_bindings_follow_key_convention():
     )
 
 
+async def _test_button_switch_matches_key():
+    # 点「切换实例」与回车同路：切到高亮那条，缺省项仍经 instance use 写回。
+    runner = _RecordingRunner()
+    with TemporaryDirectory(prefix="akari-btn-switch-") as raw:
+        roots = _temp_instances(raw, "alpha", "beta")
+        listed = StaticInstanceListSource(
+            (
+                InstanceRow(name="alpha", root=roots["alpha"], running=True),
+                InstanceRow(name="beta", root=roots["beta"], running=False),
+            )
+        )
+
+        async def body(app, page, pilot, source, chosen, control):
+            page.query_one("#instance-list", compat.ListView).index = 1
+            await pilot.pause()
+            _button(page, "switch").press()
+            await pilot.pause()
+            status = page.status_text
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return context.active_root(), status
+
+        active, status = await _with_page(body, instances=listed, cli=runner)
+        expected = roots["beta"].resolve()
+    return (
+        active == expected
+        and status.startswith(i18n.t("cli.tui.dashboard.switch_done", name="beta"))
+        and list(runner.calls) == [("instance", "use", "beta")]
+    )
+
+
+async def _test_button_new_instance_runs_init():
+    # 点「新建实例」等价于 ctrl+n：弹目录输入框，随后选环境方式并经 init 创建。
+    runner = StaticInitRunner()
+
+    with TemporaryDirectory(prefix="akari-btn-new-") as raw:
+        root = Path(raw) / "inst"
+        root.mkdir()
+        (root / "akaribot.toml").write_text("[instance]\nname = 'inst'\n", encoding="utf-8")
+        previous = context.active_root()
+        context.set_active_root(root)
+
+        async def body(app, page, pilot, source, listed, control):
+            page.init_runner = runner
+            _button(page, "new-instance").press()
+            await pilot.pause()
+            opened = len(app.screen_stack) > 1
+            prefilled = app.screen.query_one("#prompt-input", compat.Input).value
+            app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/btn-new"
+            await pilot.press("enter")
+            await pilot.pause()
+            await _pick_choice(app, pilot, 0)
+            await page.wait_for_idle()
+            await pilot.pause()
+            await pilot.press("q")
+            return opened, prefilled, list(runner.created), page.status_text
+
+        try:
+            opened, prefilled, created, status = await _with_page(body)
+        finally:
+            context.set_active_root(previous)
+    return (
+        opened
+        and prefilled == str(root.resolve().parent)
+        and created == [("/tmp/btn-new", True, i18n.current_locale())]
+        and status == i18n.t("cli.tui.dashboard.new_done", name="btn-new", root=Path("/tmp/btn-new"))
+    )
+
+
+async def _test_button_add_instance_registers_directory():
+    # 点「登记目录」等价于 n：弹输入框收目录，回车后经 instance add 登记。
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        _button(page, "add-instance").press()
+        await pilot.pause()
+        opened = len(app.screen_stack) > 1
+        app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/btn-gamma"
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return opened, list(runner.calls), page.status_text
+
+    opened, calls, status = await _with_page(body, cli=runner)
+    return (
+        opened
+        and calls == [("instance", "add", "/tmp/btn-gamma")]
+        and status == i18n.t("cli.tui.dashboard.add_done", name="btn-gamma", root=Path("/tmp/btn-gamma"))
+    )
+
+
+async def _test_button_remove_instance_opens_confirm_modal():
+    # 点「移除登记」等价于 ctrl+d：先弹确认框，选中才下发 instance remove。
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        _button(page, "remove-instance").press()
+        await pilot.pause()
+        opened = len(app.screen_stack) > 1
+        asked = list(runner.calls)
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return opened, asked, list(runner.calls), page.status_text
+
+    opened, asked, calls, status = await _with_page(body, cli=runner)
+    return (
+        opened
+        and asked == []
+        and calls == [("instance", "remove", "alpha", "--yes")]
+        and status == i18n.t("cli.tui.dashboard.remove_done", name="alpha")
+    )
+
+
+async def _test_button_policy_toggles_send_cli_flags():
+    # 两个策略按钮与 a / c 同路：方向由当前取值翻转，argv 落在 instance policy 上。
+    runner = _RecordingRunner()
+
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        _button(page, "autostart").press()
+        await page.wait_for_idle()
+        await pilot.pause()
+        _button(page, "crash-restart").press()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return list(runner.calls)
+
+    calls = await _with_page(body, cli=runner)
+    return calls == [
+        ("instance", "policy", "alpha", "--no-autostart"),
+        ("instance", "policy", "alpha", "--restart-on-crash"),
+    ]
+
+
+async def _test_button_service_opens_confirm_modal():
+    # 点服务按钮等价于 i：一次触发即弹确认框，框里仍是执行与预演两个去处。
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
+    runner = _RecordingRunner(
+        on_run=lambda _args: control.set_status(
+            ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist"))
+        )
+    )
+
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        _button(page, "service-toggle").press()
+        await pilot.pause()
+        opened = len(app.screen_stack) > 1
+        labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        await _pick_choice(app, pilot, 0)
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return opened, labels, list(runner.calls), page.status_text
+
+    opened, labels, calls, status = await _with_page(body, service=control, cli=runner)
+    return (
+        opened
+        and labels[:2]
+        == [
+            i18n.t("cli.tui.dashboard.service_choice_install"),
+            i18n.t("cli.tui.dashboard.service_choice_dry_run"),
+        ]
+        and calls == [("service", "install")]
+        and status == i18n.t("cli.tui.dashboard.service_added", path="/tmp/agent.plist")
+    )
+
+
+async def _test_button_refresh_rereads_snapshot():
+    # 点「刷新」等价于 r：忽略缓存重新取快照。
+    async def body(app, page, pilot, source, listed, control):
+        before = source.calls["snapshot"]
+        _button(page, "refresh").press()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return before, source.calls["snapshot"]
+
+    before, after = await _with_page(body)
+    return after > before
+
+
+async def _test_action_buttons_follow_state():
+    # 禁用状态与标签跟着清单、策略与服务状态走：未登记时策略与服务写不了注册表。
+    control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
+    listed = StaticInstanceListSource(
+        (
+            InstanceRow(name="alpha", root=Path("/tmp/alpha"), running=True, autostart=True),
+            InstanceRow(name="", root=Path("/tmp/plain"), running=False, registered=False),
+        )
+    )
+    previous = context.active_root()
+    context.set_active_root("/tmp/alpha")
+
+    async def body(app, page, pilot, source, chosen, control):
+        list_view = page.query_one("#instance-list", compat.ListView)
+        list_view.index = 0
+        await pilot.pause()
+        current = (_labels(page), _disabled(page))
+        control.set_status(ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist")))
+        page.refresh_service()
+        await pilot.pause()
+        installed = (_labels(page)["service-toggle"], _disabled(page)["service-toggle"])
+        control.set_status(ServiceRow(backend="unsupported", detail="未支持"))
+        page.refresh_service()
+        await pilot.pause()
+        unsupported = _disabled(page)["service-toggle"]
+        list_view.index = 1
+        await pilot.pause()
+        unregistered = (_labels(page), _disabled(page))
+        await pilot.press("q")
+        return current, installed, unsupported, unregistered
+
+    try:
+        current, installed, unsupported, unregistered = await _with_page(body, instances=listed, service=control)
+    finally:
+        context.set_active_root(previous)
+    current_labels, current_disabled = current
+    unregistered_labels, unregistered_disabled = unregistered
+    return (
+        current_disabled
+        == {
+            "switch": True,
+            "new-instance": False,
+            "add-instance": False,
+            "remove-instance": False,
+            "autostart": False,
+            "crash-restart": False,
+            "service-toggle": False,
+            "refresh": False,
+        }
+        and current_labels["autostart"] == i18n.t("cli.tui.dashboard.button_autostart_on")
+        and current_labels["crash-restart"] == i18n.t("cli.tui.dashboard.button_crash_off")
+        and current_labels["service-toggle"] == i18n.t("cli.tui.dashboard.button_service_install")
+        and installed == (i18n.t("cli.tui.dashboard.button_service_uninstall"), False)
+        and unsupported is True
+        and unregistered_disabled
+        == {
+            "switch": False,
+            "new-instance": False,
+            "add-instance": False,
+            "remove-instance": True,
+            "autostart": True,
+            "crash-restart": True,
+            "service-toggle": True,
+            "refresh": False,
+        }
+        and unregistered_labels["autostart"] == i18n.t("cli.tui.dashboard.button_autostart_off")
+        and unregistered_labels["crash-restart"] == i18n.t("cli.tui.dashboard.button_crash_off")
+    )
+
+
+async def _test_action_buttons_disable_while_busy():
+    # 写动作进行中禁用全部按钮：连点会叠起多个改注册表的子进程。
+    gate = threading.Event()
+    runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
+    previous = context.active_root()
+    context.set_active_root("/tmp/elsewhere")
+
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        _button(page, "autostart").press()
+        started = await _wait_until(lambda: page._busy)
+        busy = _disabled(page)
+        gate.set()
+        await page.wait_for_idle()
+        await pilot.pause()
+        idle = _disabled(page)
+        await pilot.press("q")
+        return started, busy, idle, list(runner.calls)
+
+    try:
+        started, busy, idle, calls = await _with_page(body, cli=runner)
+    finally:
+        context.set_active_root(previous)
+    return (
+        started
+        and all(busy.values())
+        and not any(idle.values())
+        and calls == [("instance", "policy", "alpha", "--no-autostart")]
+    )
+
+
+async def _test_action_buttons_fit_narrow_screen():
+    # 两行按钮在 80 列下都要完整落在页内：按钮默认 min-width 会把末位按钮挤出可视区。
+    async def body(app, page, pilot, source, listed, control):
+        # 标签在首次取数时改写，宽度要等这轮重排落地后再量。
+        await pilot.pause()
+        page_region = page.region
+        boxes = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
+        first = page.query_one("#actions-instance").region
+        second = page.query_one("#actions-policy").region
+        status = page.query_one("#status", compat.Static).region
+        fields = page.query_one("#fields-pane").region
+        await pilot.press("q")
+        return page_region, boxes, (first, second, status, fields)
+
+    page_region, boxes, rows = await _with_page(body, size=(80, 24))
+    first, second, status, fields = rows
+    inside = all(box.width > 0 and box.x >= page_region.x and box.right <= page_region.right for box in boxes.values())
+    stacked = (
+        first.y >= fields.bottom
+        and second.y >= first.bottom
+        and status.y >= second.bottom
+        and len({box.y for box in boxes.values()}) == 2
+    )
+    return inside and stacked
+
+
+async def _test_instances_caption_points_to_buttons():
+    # 说明行改口径后仍按当前条数插值，界面上读到的就是该键的完整文案。
+    async def body(app, page, pilot, source, listed, control):
+        caption = str(page.query_one("#instances-caption", compat.Static).render())
+        await pilot.press("q")
+        return caption
+
+    caption = await _with_page(body)
+    return caption == i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(_instance_rows()))
+
+
+async def _test_instances_caption_drops_key_list():
+    # 新文案不再逐条列键位，改指页底按钮（键位仍可在 ? 键位一览里查到）。
+    counted = i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=2)
+    single = i18n.t("cli.tui.dashboard.instances_keys_caption")
+    return "ctrl+d" not in counted and "ctrl+d" not in single and "2" in counted and "${count}" not in counted
+
+
 @func_case
 async def test_tui_dashboard(tester: Tester):
     """cli.tui.dashboard: 实例信息与运行状态测试"""
@@ -1200,6 +1559,18 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_service_install_confirms_overwrite_before_force, "单元文件已存在时写明覆盖")
         await tester.test(_test_service_confirmation_offers_dry_run, "确认框可先预演再决定")
         await tester.test(_test_service_uninstall_when_installed, "已安装时按键走卸载")
+        await tester.test(_test_button_switch_matches_key, "按钮切换实例与键位同效")
+        await tester.test(_test_button_new_instance_runs_init, "按钮新建实例弹输入框并执行 init")
+        await tester.test(_test_button_add_instance_registers_directory, "按钮登记目录弹输入框并下发")
+        await tester.test(_test_button_remove_instance_opens_confirm_modal, "按钮移除登记一次触发即弹确认框")
+        await tester.test(_test_button_policy_toggles_send_cli_flags, "按钮翻转自启与崩溃重启")
+        await tester.test(_test_button_service_opens_confirm_modal, "按钮装卸服务一次触发即弹确认框")
+        await tester.test(_test_button_refresh_rereads_snapshot, "按钮刷新重新读取快照")
+        await tester.test(_test_action_buttons_follow_state, "按钮禁用与标签跟着数据走")
+        await tester.test(_test_action_buttons_disable_while_busy, "忙时禁用全部按钮")
+        await tester.test(_test_action_buttons_fit_narrow_screen, "80 列下两行按钮都在页内")
+        await tester.test(_test_instances_caption_points_to_buttons, "说明行按条数插值后指向按钮")
+        await tester.test(_test_instances_caption_drops_key_list, "说明行新文案不再逐条列键位")
     with mock.patch.object(compat.PendingConfirm, "debounce", 10.0):
         await tester.test(_test_remove_gate_reset_on_page_reset, "reset_pending() 后同一目标可重新弹框")
     return tester

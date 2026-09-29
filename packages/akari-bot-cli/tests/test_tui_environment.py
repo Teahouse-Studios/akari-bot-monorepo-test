@@ -233,26 +233,28 @@ async def _test_uninstall_recorded_package_offers_modes():
     )
 
 
-async def _test_uninstall_plain_package_needs_two_presses():
-    # 没记在清单里的包（传递依赖是这种）只有一种去处，连按两次确认即可。
+async def _test_uninstall_plain_package_opens_confirm():
+    # 没记在清单里的包（传递依赖是这种）只有一种去处，但仍要弹一次确认框。
     async def body(app, page, pilot, source):
         _select(page, "certifi")
         await pilot.pause()
         page.request_uninstall()
         await pilot.pause()
-        armed = page.status_text
-        first = list(source.package_calls)
-        page.request_uninstall()
+        opened = type(app.screen).__name__
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).content)
+        before = list(source.package_calls)
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return armed, first, list(source.package_calls)
+        return opened, hint, before, list(source.package_calls)
 
-    armed, first, second = await _with_page(body)
+    opened, hint, before, after = await _with_page(body)
     return (
-        i18n.t("cli.tui.environment.uninstall_confirm", dist="certifi") == armed
-        and first == []
-        and second == [PackageCall("remove", "certifi", False)]
+        opened == "ChoiceScreen"
+        and hint == i18n.t("cli.tui.environment.uninstall_confirm", dist="certifi")
+        and before == []
+        and after == [PackageCall("remove", "certifi", False)]
     )
 
 
@@ -279,7 +281,7 @@ async def _test_package_change_while_running_notes_restart():
         await pilot.pause()
         page.request_uninstall()
         await pilot.pause()
-        page.request_uninstall()
+        app.screen.query_one("#choice-0", compat.Button).press()
         await page.wait_for_idle()
         await pilot.pause()
         status = page.status_text
@@ -459,7 +461,7 @@ async def test_tui_environment(tester: Tester):
         await tester.test(_test_install_env_only_skips_recording, "安装先选去处：只装进环境")
         await tester.test(_test_install_cancelled_by_empty_spec, "取消安装不调用子进程")
         await tester.test(_test_uninstall_recorded_package_offers_modes, "卸载已记录的包可选是否删记录")
-        await tester.test(_test_uninstall_plain_package_needs_two_presses, "卸载普通包连按两次确认")
+        await tester.test(_test_uninstall_plain_package_opens_confirm, "卸载普通包也弹确认框")
         await tester.test(_test_uninstall_needs_selection, "没有选中项时拒绝卸载")
         await tester.test(_test_package_change_while_running_notes_restart, "运行期间装卸提示重启生效")
         await tester.test(_test_selected_package_shows_dependents, "选中项显示被谁依赖")
