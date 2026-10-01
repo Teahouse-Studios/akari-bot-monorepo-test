@@ -9,6 +9,7 @@ import threading
 import asyncio
 import json
 import shutil
+import subprocess
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -1728,6 +1729,32 @@ async def _test_setup_load_failure_degrades():
     )
 
 
+async def _test_setup_estimated_placeholders_are_labelled():
+    # 估算口径要写在摘要上：标签标明估算，取值附上原因，精确值的标签不再出现。
+    reason = i18n.t("cli.tui.dashboard.setup_placeholders_estimated_reason", detail="统计命令超时")
+    brief = StaticSetupSummarySource(
+        SetupSummary(pending_placeholders=31, placeholders_reason=reason, placeholders_estimated=True)
+    )
+
+    async def body(app, page, pilot, source, listed, control):
+        rows = dict(page.setup_rows)
+        await pilot.press("q")
+        return rows
+
+    rows = await _with_page(body, setup=brief)
+    # 新键尚未并入 locales，渲染侧只核对用的是估算标签；措辞按片段文件校验。
+    estimated_key = "cli.tui.dashboard.setup_placeholders_label_estimated"
+    fragment = json.loads(FRAGMENT.read_text(encoding="utf-8"))
+    return (
+        rows[i18n.t(estimated_key)]
+        == i18n.t("cli.tui.dashboard.setup_placeholders_value_note", count=31, reason=reason)
+        and i18n.t("cli.tui.dashboard.setup_placeholders_label") not in rows
+        and "疑似待填写" in fragment[estimated_key]
+        and "估算" in fragment[estimated_key]
+        and "估算" in fragment["cli.tui.dashboard.setup_placeholders_estimated_reason"]
+    )
+
+
 async def _test_setup_loads_lazily_on_first_display():
     # 摘要在首次显示本页时取一次；没显示过不取数，重绘与轮询也不重取。
     brief = StaticSetupSummarySource(SETUP)
@@ -1880,46 +1907,136 @@ async def _test_setup_buttons_wrap_when_narrow():
 
 
 async def _test_local_setup_source_reads_doctor_and_placeholders():
-    # 默认数据源：体检统计来自 doctor --json 子进程，占位符按本机配置文件里的标记统计。
+    # 默认数据源：体检统计来自 doctor --json 子进程，占位符来自 config placeholders --json 的 core 判定。
     calls: list[tuple[list[str], dict]] = []
-    payload = {
+    doctor = {
         "registry_available": True,
         "registry_note": "",
         "summary": {"error": 2, "warning": 1},
         "checks": {"unconfigured_adapters": ["telegram", "qqbot"]},
     }
+    placeholders = {
+        "tables": {"config": {"placeholder": 3, "total": 8}},
+        "count": 3,
+        "scanned": ["config"],
+        "failed": {},
+    }
 
     def runner(argv, **kwargs):
         calls.append((list(argv), dict(kwargs)))
+        payload = doctor if "doctor" in argv else placeholders
         return SimpleNamespace(returncode=0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
 
     with TemporaryDirectory(prefix="akari-setup-") as raw:
         root = Path(raw)
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text('[config]\nkey = "<Replace me with str value>"\n', "utf-8")
-        (root / "config" / "bot_telegram.toml").write_text("<Replace me with str value>\n", "utf-8")
-        (root / "config" / "notes.txt").write_text("<Replace me>\n", "utf-8")
         brief = LocalSetupSummarySource(root=root, runner=runner)
         summary = brief.summary()
-    argv, options = calls[0]
+    doctor_argv, doctor_options = calls[0]
+    placeholders_argv, placeholders_options = calls[1]
     return (
-        argv[3:] == ["doctor", "--json"]
-        and options["cwd"] == str(root)
-        and options["encoding"] == "utf-8"
-        and options["env"]["AKARI_INSTANCE_DIR"] == str(root)
+        doctor_argv[3:] == ["doctor", "--json"]
+        and placeholders_argv[3:] == ["config", "placeholders", "--json"]
+        and doctor_options["cwd"] == str(root)
+        and doctor_options["encoding"] == "utf-8"
+        and doctor_options["env"]["AKARI_INSTANCE_DIR"] == str(root)
+        and placeholders_options["cwd"] == str(root)
+        and placeholders_options["env"]["AKARI_INSTANCE_DIR"] == str(root)
         and brief.calls["summary"] == 1
         and summary.unconfigured_adapters == 2
         and summary.doctor_errors == 2
         and summary.doctor_warnings == 1
-        and summary.pending_placeholders == 2
+        and summary.pending_placeholders == 3
+        and summary.placeholders_estimated is False
         and summary.adapters_reason == ""
         and summary.doctor_reason == ""
         and summary.placeholders_reason == ""
     )
 
 
+async def _test_local_setup_source_falls_back_to_estimate():
+    # 统计命令起不来、超时或输出读不懂时都退化为估算，原因写明走的是配置文本标记。
+    # 前面的用例起过真实 CLI 子进程，共享快照会被包内 locales 重建，故先重接一次合并快照。
+    _use_cli_locale()
+    doctor = {
+        "registry_available": True,
+        "registry_note": "",
+        "summary": {"error": 0, "warning": 0},
+        "checks": {"unconfigured_adapters": []},
+    }
+
+    def unreachable(argv, **kwargs):
+        if "doctor" in argv:
+            return SimpleNamespace(returncode=0, stdout=json.dumps(doctor), stderr="")
+        raise OSError("no cli")
+
+    def timed_out(argv, **kwargs):
+        if "doctor" in argv:
+            return SimpleNamespace(returncode=0, stdout=json.dumps(doctor), stderr="")
+        raise subprocess.TimeoutExpired(cmd="akaribot", timeout=60.0)
+
+    def garbled(argv, **kwargs):
+        if "doctor" in argv:
+            return SimpleNamespace(returncode=0, stdout=json.dumps(doctor), stderr="")
+        return SimpleNamespace(returncode=0, stdout="不是 JSON", stderr="")
+
+    with TemporaryDirectory(prefix="akari-setup-estimate-") as raw:
+        root = Path(raw)
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            '[config]\nkey = "<Replace me with str value>"\nnote = "见 <Replace me> 说明"\n# <Replace me>\n',
+            "utf-8",
+        )
+        summaries = [LocalSetupSummarySource(root=root, runner=runner).summary() for runner in (unreachable, timed_out)]
+        garbled_summary = LocalSetupSummarySource(root=root, runner=garbled).summary()
+    timeout_detail = i18n.t("cli.tui.dashboard.setup_placeholders_timeout", seconds="60")
+    unreadable = i18n.t("cli.tui.dashboard.setup_placeholders_unreadable", code=0)
+    # 估算沿用标记形状：真实取值、字符串里的同形文本与注释各计一次，故为 3 而不是 core 判定的 1。
+    return (
+        all(summary.pending_placeholders == 3 and summary.placeholders_estimated is True for summary in summaries)
+        and summaries[0].placeholders_reason
+        == i18n.t("cli.tui.dashboard.setup_placeholders_estimated_reason", detail="OSError: no cli")
+        and summaries[1].placeholders_reason
+        == i18n.t("cli.tui.dashboard.setup_placeholders_estimated_reason", detail=timeout_detail)
+        and garbled_summary.pending_placeholders == 3
+        and garbled_summary.placeholders_estimated is True
+        and unreadable in garbled_summary.placeholders_reason
+        and "不是 JSON" in garbled_summary.placeholders_reason
+    )
+
+
+async def _test_local_setup_source_marks_uncounted_tables():
+    # core 报告有表未纳入统计时保留它的计数，但原因写明覆盖范围，不把部分统计当作全量。
+    doctor = {
+        "registry_available": True,
+        "registry_note": "",
+        "summary": {"error": 0, "warning": 0},
+        "checks": {"unconfigured_adapters": []},
+    }
+    placeholders = {
+        "tables": {"config": {"placeholder": 5, "total": 9}},
+        "count": 5,
+        "scanned": ["config"],
+        "failed": {"binary": "读取失败：UnicodeDecodeError"},
+    }
+
+    def runner(argv, **kwargs):
+        payload = doctor if "doctor" in argv else placeholders
+        return SimpleNamespace(returncode=0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
+
+    with TemporaryDirectory(prefix="akari-setup-partial-") as raw:
+        summary = LocalSetupSummarySource(root=Path(raw), runner=runner).summary()
+    return (
+        summary.pending_placeholders == 5
+        and summary.placeholders_estimated is False
+        and summary.placeholders_reason
+        == i18n.t("cli.tui.dashboard.setup_placeholders_partial_reason", count=1, tables="binary")
+    )
+
+
 async def _test_local_setup_source_degrades_per_item():
-    # 子进程起不来、输出读不懂、清单不可用时各留一句原因，取值写成未取到。
+    # 子进程起不来、输出读不懂、清单不可用时各留一句原因；占位符一律退化为标明口径的估算。
     def unreachable(argv, **kwargs):
         raise OSError("no cli")
 
@@ -1954,6 +2071,11 @@ async def _test_local_setup_source_degrades_per_item():
         and partial.doctor_errors == 0
         and partial.doctor_warnings == 0
         and partial.pending_placeholders == 0
+        and broken.placeholders_estimated is True
+        and unreadable.placeholders_estimated is True
+        and unreadable.placeholders_reason
+        == i18n.t("cli.tui.dashboard.setup_placeholders_estimated_reason", detail="体检失败")
+        and partial.placeholders_estimated is True
     )
 
 
@@ -2041,6 +2163,7 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_setup_summary_renders_four_items, "首次使用摘要四项各自渲染")
         await tester.test(_test_setup_state_follows_snapshot, "摘要里的运行状态跟着探测结果")
         await tester.test(_test_setup_missing_values_say_missing, "取不到的摘要项写未取到并附原因")
+        await tester.test(_test_setup_estimated_placeholders_are_labelled, "估算口径在摘要里标明并附原因")
         await tester.test(_test_setup_load_failure_degrades, "摘要取数失败只降级为逐项说明")
         await tester.test(_test_setup_loads_lazily_on_first_display, "摘要首次显示时取一次")
         await tester.test(_test_setup_buttons_jump_pages, "行动区按钮切到配置、运行与体检页")
@@ -2050,6 +2173,8 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_setup_buttons_wrap_when_narrow, "窄终端下按钮按宽度折行")
         await tester.test(_test_setup_actions_follow_busy_state, "写动作进行时摘要按钮不跟着置灰")
         await tester.test(_test_local_setup_source_reads_doctor_and_placeholders, "默认数据源取体检统计与占位符")
+        await tester.test(_test_local_setup_source_falls_back_to_estimate, "统计命令失败后退化为标明口径的估算")
+        await tester.test(_test_local_setup_source_marks_uncounted_tables, "未纳入统计的表写进口径说明")
         await tester.test(_test_local_setup_source_degrades_per_item, "默认数据源逐项降级说明原因")
     with mock.patch.object(compat.PendingConfirm, "debounce", 10.0):
         await tester.test(_test_remove_gate_reset_on_page_reset, "reset_pending() 后同一目标可重新弹框")

@@ -1329,10 +1329,10 @@ class DatabasePage(compat.Vertical):
         page = self._page
         first = page.offset <= 0
         last = page.offset >= page.last_offset
-        try:
-            buttons = {name: self.query_one(f"#{name}", compat.Button) for name in PAGER_BUTTONS}
-        except Exception:  # noqa: BLE001 - 页面已卸载时无事可做
+        # 页面已卸载时后台取数仍可能落地，此时没有可写的按钮。
+        if not compat.mounted(self):
             return
+        buttons = {name: self.query_one(f"#{name}", compat.Button) for name in PAGER_BUTTONS}
         for button_id, disabled in (
             ("db-first-page", first),
             ("db-previous-page", first),

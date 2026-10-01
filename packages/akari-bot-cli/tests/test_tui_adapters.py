@@ -6,9 +6,18 @@
 
 移除实例只删配置文件：`d` 与 `ctrl+d` 是同一条路径的入口，确认框与执行后的提示都必须写明
 场景与用户数据保留，用户才不会以为不可逆数据已经清除。
+
+peer 连接状态取自 core 的 peers 入口：本文件按该入口的真实 JSON 形状固定页面的解析与降级，
+入口返回 `available: false` 时页面显示「未知」并展示入口给出的原因。
 """
 
+import json
+import shutil
+import subprocess
+import sys
 import time
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import mock
 
 from akaribot.cli import i18n
@@ -18,6 +27,7 @@ from akaribot.cli.tui.adapters import (
     AdapterSnapshot,
     AdapterSourceError,
     StaticAdapterSource,
+    SubprocessAdapterSource,
     available_adapter_records,
 )
 from akaribot.cli.tui.app import TuiApp
@@ -48,9 +58,28 @@ CANDIDATES = (
     AdapterRecord(platform="telegram", installed=True),
 )
 
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "adapters.json"
+_KEEP_ALIVE: list[TemporaryDirectory] = []
+
+
+def _merged_locale_dir() -> Path:
+    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，断言才取到真实渲染结果。
+    holder = TemporaryDirectory(prefix="akari-adapters-locale-")
+    _KEEP_ALIVE.append(holder)
+    root = Path(holder.name)
+    for path in Path(i18n.locales_dir()).glob("*.json"):
+        shutil.copy(path, root / path.name)
+    target = root / "zh_cn.json"
+    document = json.loads(target.read_text(encoding="utf-8"))
+    document.update(json.loads(FRAGMENT.read_text(encoding="utf-8")))
+    target.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8")
+    return root
+
 
 def _use_cli_locale() -> None:
-    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+    # CLI 的首次取文案会用包内 locales 重建快照，把合并目录顶掉；先取一次把它顶过，再建合并快照。
+    i18n.t("cli.tui.common.status_ready")
+    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
@@ -260,6 +289,143 @@ def _test_available_normalizer_reads_module_available_json():
 def _test_adapter_record_installable_semantics():
     missing = AdapterRecord(platform="kook", table="bot_kook", installed=False)
     return missing.installable and missing.configured
+
+
+def _peer_source(payload) -> tuple[SubprocessAdapterSource, list[tuple[str, ...]]]:
+    calls: list[tuple[str, ...]] = []
+
+    def runner(argv, **kwargs):
+        calls.append(tuple(argv))
+        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
+
+    source = SubprocessAdapterSource(
+        root="/tmp/akari-peer-instance",
+        runner=runner,
+        instance_factory=lambda: {"python": sys.executable},
+    )
+    return source, calls
+
+
+def _test_peer_status_reads_core_snapshot():
+    # 形状照抄 ``python -m akaribot.core.entrypoints.peers --json``：顶层 available/note，
+    # 每个 peer 带 peer_id/service/state/lease_until/metadata，另有页面不读的 role/online。
+    payload = {
+        "peers": [
+            {
+                "peer_id": "Internal|47d7c765-ae6b-4b8a-9f30-12609f5b1a0c",
+                "service": "CLI",
+                "role": "cli",
+                "state": "expired",
+                "online": False,
+                "lease_until": "2026-09-22T12:04:53.378047+00:00",
+                "metadata": {"pid": 6830},
+            },
+            {
+                "peer_id": "Telegram|8f2b0d3a",
+                "service": "Telegram",
+                "role": "client",
+                "state": "ready",
+                "online": True,
+                "lease_until": "2999-01-01T00:00:00+00:00",
+                "metadata": {"client_name": "Telegram"},
+            },
+            {
+                "peer_id": "Worker|31c6f0",
+                "service": "",
+                "role": "worker",
+                "state": "starting",
+                "online": False,
+                "lease_until": None,
+                "metadata": {},
+            },
+        ],
+        "available": True,
+        "note": "",
+    }
+    source, calls = _peer_source(payload)
+    snapshot = source.peer_status()
+    expired = snapshot.status_for("CLI")
+    ready = snapshot.status_for("Telegram")
+    starting = snapshot.status_for("Worker|31c6f0")
+    return (
+        calls == [(sys.executable, "-m", "akaribot.core.entrypoints.peers", "--json")]
+        and snapshot.available
+        and snapshot.note == ""
+        and len(snapshot.statuses) == 3
+        and expired.client_name == "CLI"
+        and expired.state == "expired"
+        and expired.alive is False
+        and expired.label == i18n.t("cli.tui.adapters.offline")
+        and expired.detail == i18n.t("cli.tui.adapters.peer_state", state="expired")
+        and ready.state == "ready"
+        and ready.alive is True
+        and ready.label == i18n.t("cli.tui.adapters.online")
+        and ready.error == ""
+        and starting.client_name == "Worker|31c6f0"
+        and starting.state == "starting"
+        and starting.alive is False
+    )
+
+
+def _test_peer_status_unavailable_reports_note():
+    note = "数据库不可用：unable to open database file"
+    source, _ = _peer_source({"peers": [], "available": False, "note": note})
+    snapshot = source.peer_status()
+    status = snapshot.status_for("Telegram")
+    return (
+        snapshot.available is False
+        and snapshot.note == note
+        and status.alive is None
+        and status.label == i18n.t("cli.tui.common.unknown")
+        and status.detail == note
+        and status.detail != i18n.t("cli.tui.adapters.peer_missing")
+    )
+
+
+def _test_peer_status_shape_anomaly_degrades():
+    # 顶层缺字段或类型不符时降级为「不可用 + 原因」，不抛异常，也不冒充「没有 peer」。
+    cases = (
+        ([], i18n.t("cli.tui.adapters.peer_not_object")),
+        ("no peers", i18n.t("cli.tui.adapters.peer_not_object")),
+        ({}, i18n.t("cli.tui.adapters.peer_missing_field", field="available")),
+        ({"available": True}, i18n.t("cli.tui.adapters.peer_missing_field", field="peers")),
+        ({"peers": [], "note": ""}, i18n.t("cli.tui.adapters.peer_missing_field", field="available")),
+        ({"peers": {}, "available": True}, i18n.t("cli.tui.adapters.peer_missing_field", field="peers")),
+    )
+    for payload, expected in cases:
+        source, _ = _peer_source(payload)
+        snapshot = source.peer_status()
+        status = snapshot.status_for("Telegram")
+        if snapshot.available or snapshot.note != expected:
+            return False
+        if status.alive is not None or status.label != i18n.t("cli.tui.common.unknown"):
+            return False
+        if status.detail != expected or status.detail == i18n.t("cli.tui.adapters.peer_missing"):
+            return False
+    return True
+
+
+async def _test_peer_unavailable_page_shows_note():
+    note = "peer 表不可读：no such table: job_queue_peers"
+    source, _ = _peer_source({"peers": [], "available": False, "note": note})
+    peers = source.peer_status()
+
+    async def body(app, page, pilot, chosen):
+        summary = page.summary_text
+        await _select(page, "telegram")
+        await pilot.pause()
+        detail = page.detail_text
+        await pilot.press("q")
+        return summary, detail
+
+    summary, detail = await _with_page(body, _source(peers=peers))
+    return (
+        i18n.t("cli.tui.adapters.peer_status_unknown", note=note) in summary
+        and i18n.t("cli.tui.adapters.peer_status_unknown_hint") in summary
+        and i18n.t("cli.tui.common.unknown") in detail
+        and note in detail
+        and i18n.t("cli.tui.adapters.peer_missing") not in detail
+    )
 
 
 async def _test_add_instance_uses_input_and_platform():
@@ -552,6 +718,10 @@ async def test_tui_adapters(tester: Tester):
         await tester.test(_test_modules_page_excludes_adapters, "模块页不列适配器")
         await tester.test(_test_available_normalizer_reads_module_available_json, "解析可安装清单")
         await tester.test(_test_adapter_record_installable_semantics, "缺包但有配置也算可安装")
+        await tester.test(_test_peer_status_reads_core_snapshot, "解析 core peer 快照的真实字段")
+        await tester.test(_test_peer_status_unavailable_reports_note, "入口不可用时以 note 作为原因")
+        await tester.test(_test_peer_status_shape_anomaly_degrades, "快照形状异常降级为未知")
+        await tester.test(_test_peer_unavailable_page_shows_note, "快照不可用时页面显示未知与原因")
         await tester.test(_test_add_instance_uses_input_and_platform, "按输入框与平台新增实例")
         await tester.test(_test_add_instance_rejects_bad_id, "非法实例 ID 不执行")
         await tester.test(_test_remove_instance_opens_modal_on_first_press, "按 d 一次即弹移除模态")

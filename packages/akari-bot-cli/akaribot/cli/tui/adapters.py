@@ -1,9 +1,11 @@
 """Adapters 页：按平台分组的实例表、enable 开关与连接状态。
 
 界面只读 :class:`AdapterSource`。默认实现 :class:`SubprocessAdapterSource` 以
-``akaribot adapter list --json`` 取实例清单，再向 core 的 peers 入口要连接状态；该入口当前尚未提供，
-取不到时按「未知」展示并给出原因。切换 enable 走 ``akaribot config set``，由 core 的原子写入落盘，
-页面不直接改配置文件。实例清单缓存在页内，切换成功后立即失效；CLI 进程内不 import core。
+``akaribot adapter list --json`` 取实例清单，再向 core 的 peers 入口
+（``python -m akaribot.core.entrypoints.peers --json``）要连接状态；实例数据库、peer 表或进程租约
+不可用时入口返回 ``available: false`` 与原因，页面按「未知」展示该原因。切换 enable 走
+``akaribot config set``，由 core 的原子写入落盘，页面不直接改配置文件。实例清单缓存在页内，
+切换成功后立即失效；CLI 进程内不 import core。
 
 移除实例只有一条路径，``d`` 与 ``ctrl+d`` 都是它的入口：弹出模态确认，确认后交给
 ``adapter instance remove`` 删除配置文件，场景与用户数据保留。待确认状态在切页、刷新、换选中项或
@@ -31,7 +33,7 @@ from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
 # core 侧的 peer 快照入口：``python -m akaribot.core.entrypoints.peers --json``。
-# 该入口在 core 落地前必然失败，失败原因原样上报，页面按「未知」显示连接状态。
+# 实例数据库、peer 表或进程租约不可用时入口返回 ``available: false`` 与原因，页面按「未知」显示该原因。
 PEER_ENTRYPOINT = "peers"
 PEER_READY_STATE = "ready"
 
@@ -510,17 +512,29 @@ def _peer_aliases(entry: Mapping[str, Any], peer_id: str) -> tuple[str, set[str]
 def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnapshot:
     """把 core 的 peer 快照负载归一化为 :class:`PeerSnapshot`。
 
-    期望形状为 ``{"peers": [{"peer_id", "service", "state", "lease_until", "metadata"}]}``；
-    也接受裸数组。在线判据与 ``Alive.get_alive`` 一致：``state == ready`` 且租约未过期。
+    期望形状为 ``{"peers": [...], "available": bool, "note": str}``，其中每个 peer 含 ``peer_id``、
+    ``service``、``state``、``lease_until`` 与 ``metadata``。顶层字段缺失或类型不符时按「不可用 +
+    原因」返回。在线判据与 ``Alive.get_alive`` 一致：``state == ready`` 且租约未过期。
 
     :param payload: ``json.loads`` 的结果。
     :param now: 判定租约用的当前时刻，缺省取 :func:`time.time`。
     :return: 归一化结果，状态按多个别名入表。
     """
+    if not isinstance(payload, Mapping):
+        return PeerSnapshot(available=False, note=i18n.t("cli.tui.adapters.peer_not_object"))
+    available = payload.get("available")
+    if not isinstance(available, bool):
+        return PeerSnapshot(available=False, note=i18n.t("cli.tui.adapters.peer_missing_field", field="available"))
+    rows = payload.get("peers")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        return PeerSnapshot(available=False, note=i18n.t("cli.tui.adapters.peer_missing_field", field="peers"))
+    note = _text(payload.get("note"))
+    if not available:
+        return PeerSnapshot(available=False, note=note or i18n.t("cli.tui.adapters.peer_unavailable"))
     moment = time.time() if now is None else now
     statuses: dict[str, PeerStatus] = {}
     seen: set[str] = set()
-    for entry in _rows(payload, "peers", "items", "data"):
+    for entry in rows:
         if not isinstance(entry, Mapping):
             continue
         peer_id = _text(_pick(entry, "peer_id", "id"))
@@ -552,7 +566,7 @@ def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnaps
         status = PeerStatus(client_name=primary, state=state, alive=alive, error=error, detail=detail)
         for alias in aliases or {peer_id}:
             statuses.setdefault(alias, status)
-    return PeerSnapshot(statuses=statuses, available=True)
+    return PeerSnapshot(statuses=statuses, available=True, note=note)
 
 
 def group_display(records: Sequence[AdapterRecord], registry_available: bool) -> str:
@@ -653,7 +667,8 @@ class SubprocessAdapterSource:
     def peer_status(self) -> PeerSnapshot:
         """见 :meth:`AdapterSource.peer_status`。
 
-        core 目前没有 peers 入口，故本方法以「不可用 + 原因」返回，页面按「未知」显示连接状态。
+        入口在实例数据库、peer 表或进程租约不可用时返回 ``available: false`` 与原因；页面按
+        「未知」显示连接状态并展示该原因。
         """
         self.calls["peers"] += 1
         argv = self.peer_argv()

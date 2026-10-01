@@ -599,10 +599,10 @@ class DoctorPage(compat.Vertical):
         conflicts = self._snapshot.conflicts
         if not conflicts:
             return None
-        try:
-            list_view = self.query_one("#conflict-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        # 页面已卸载时后台取数仍可能落地，此时没有可读的列表控件。
+        if not compat.mounted(self):
             return None
+        list_view = self.query_one("#conflict-list", compat.ListView)
         index = compat.highlighted_index(list_view)
         if index is None or index >= len(conflicts):
             return None
@@ -705,9 +705,8 @@ class DoctorPage(compat.Vertical):
         self._render_detail()
 
     def _render_summary(self) -> None:
-        try:
-            self.query_one("#summary", compat.Static)
-        except Exception:  # noqa: BLE001 - 页面已卸载时后台取数仍可能落地，此时没有可写的控件
+        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        if not compat.mounted(self):
             return
         snapshot = self._snapshot
         checks = snapshot.checks
@@ -740,9 +739,8 @@ class DoctorPage(compat.Vertical):
         self.query_one("#summary", compat.Static).update(compat.plain_text(text))
 
     def _render_verdict(self) -> None:
-        try:
-            self.query_one("#verdict", compat.Static)
-        except Exception:  # noqa: BLE001 - 页面已卸载时后台取数仍可能落地，此时没有可写的控件
+        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        if not compat.mounted(self):
             return
         text = self._verdict_line()
         self._verdict_rendered = text
@@ -781,9 +779,8 @@ class DoctorPage(compat.Vertical):
         return 0
 
     def _render_detail(self) -> None:
-        try:
-            self.query_one("#detail", compat.Static)
-        except Exception:  # noqa: BLE001 - 同上：卸载后不再绘制
+        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        if not compat.mounted(self):
             return
         text = "\n".join(self._fit_page_width(line) for line in self._detail_lines())
         self._detail_rendered = text
@@ -825,9 +822,8 @@ class DoctorPage(compat.Vertical):
         return compat.truncate_cells(text, max(width, 8))
 
     def _set_status(self, key: str, **params: Any) -> None:
-        try:
-            self.query_one("#status", compat.Static)
-        except Exception:  # noqa: BLE001 - 同上：卸载后不再写状态栏
+        # 页面已卸载时后台取数仍可能落地，状态栏没有可写的控件。
+        if not compat.mounted(self):
             return
         self._status_key = key
         self._status_rendered = i18n.t(key, **params)

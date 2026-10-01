@@ -1,7 +1,7 @@
 """交互界面。
 
 ``akaribot tui`` 默认进入交互界面；``--self-check`` 用于在冻结产物里验证包内资源与样式表
-能否加载（T6.5(a)），``--headless`` 用于没有终端的环境做一次启动冒烟。
+能否加载（T6.5(a)），``--headless`` 用于没有终端的环境冒烟默认首屏与模块页各一次。
 
 Textual 及其应用模块一律在函数内延迟导入：``akaribot --help`` 等普通命令不应为一个
 用不到的界面付出导入开销。
@@ -123,54 +123,133 @@ def register_active() -> str:
     return i18n.t("cli.tui.dashboard.register_auto", name=entry.name, root=entry.root)
 
 
+# 无头冒烟的两段各启一个实例：默认首屏（概览页）与懒加载的模块页。
+DASHBOARD_PAGE = "dashboard"
+MODULES_PAGE = "modules"
+# 首屏必查的三处控件：实例清单、首次使用行动区与字段区，缺任一即说明默认首屏没有装配完整。
+FIRST_SCREEN_WIDGETS = ("#setup", "#instance-list", "#fields")
+
+
 def run_headless(*, mouse: bool = False) -> int:
-    """无头启动一次界面并立即退出，返回进程退出码。
+    """无头跑默认首屏与模块页两段冒烟，返回进程退出码。
 
     :param mouse: 是否请求鼠标追踪，无头模式下无实际作用，保留以便与交互路径参数对齐。
-    :return: 0 表示启动与退出均成功。
+    :return: 0 表示两段冒烟均通过。
     """
-    from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.app import TuiApp, stylesheet_summary
+    from akaribot.cli.tui.modules import SubprocessModuleSource
 
     del mouse
     started = time.monotonic()
-    app_instance = TuiApp(boot_started_at=started)
+    first_screen = TuiApp(boot_started_at=started)
+    first_failure = _smoke_first_screen(first_screen)
+    # 模块页是懒加载的隐藏页，只有显式启动到该页才会取数，故另起一个实例单独冒烟。
+    modules = TuiApp(source=SubprocessModuleSource(), initial_page=MODULES_PAGE, boot_started_at=time.monotonic())
+    modules_failure, rows = _smoke_modules(modules)
+    calls = _source_calls(modules)
 
-    async def smoke() -> int:
-        async with compat.app_test(app_instance, size=(80, 24)) as pilot:
-            page = app_instance.modules_page()
-            await page.wait_for_idle()
-            await pilot.pause()
-            rows = len(page.visible_records)
-            await pilot.press("q")
-            return rows
-
-    try:
-        rows = asyncio.run(smoke())
-    except Exception as error:  # noqa: BLE001 - 冒烟失败必须转成非零退出码
-        typer.echo(i18n.t("cli.tui_cmd.headless_failed", error=f"{type(error).__name__}: {error}"), err=True)
-        return 1
-    elapsed_ms = (time.monotonic() - started) * 1000.0
+    if first_failure:
+        typer.echo(i18n.t("cli.tui_cmd.headless_failed", error=first_failure), err=True)
+    else:
+        typer.echo(
+            i18n.t(
+                "cli.tui_cmd.headless_first_ok",
+                page=first_screen.active_page,
+                widgets=i18n.t("cli.common.list_separator").join(FIRST_SCREEN_WIDGETS),
+            )
+        )
+    if modules_failure:
+        typer.echo(i18n.t("cli.tui_cmd.headless_failed", error=modules_failure), err=True)
+    elif rows:
+        typer.echo(i18n.t("cli.tui_cmd.headless_modules_ok", rows=rows, calls=calls))
+    else:
+        typer.echo(i18n.t("cli.tui_cmd.headless_modules_empty", calls=calls))
     sheet = stylesheet_summary()
     typer.echo(
         i18n.t(
-            "cli.tui_cmd.headless_ok",
-            rows=rows,
-            ms=f"{elapsed_ms:.0f}",
+            "cli.tui_cmd.headless_summary",
             origin=sheet["origin"],
             lines=sheet["lines"],
             sha256=sheet["sha256"],
+            startup=f"{first_screen.startup_ms:.0f}",
+            first_paint=f"{first_screen.first_paint_ms:.0f}",
+            ms=f"{(time.monotonic() - started) * 1000.0:.0f}",
         )
     )
-    typer.echo(
-        i18n.t(
-            "cli.tui_cmd.headless_timing",
-            startup=f"{app_instance.startup_ms:.0f}",
-            first_paint=f"{app_instance.first_paint_ms:.0f}",
-            calls=_source_calls(app_instance),
+    return 1 if first_failure or modules_failure else 0
+
+
+def _smoke_first_screen(app_instance: Any) -> str:
+    from akaribot.cli.tui import _compat as compat
+
+    async def probe() -> str:
+        async with compat.app_test(app_instance, size=(80, 24)) as pilot:
+            failure = await _first_screen_failure(app_instance, app_instance.page(DASHBOARD_PAGE), pilot)
+            await pilot.press("q")
+            return failure
+
+    try:
+        return asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 冒烟失败必须转成非零退出码
+        return f"{type(error).__name__}: {error}"
+
+
+def _smoke_modules(app_instance: Any) -> tuple[str, int]:
+    from akaribot.cli.tui import _compat as compat
+
+    async def probe() -> tuple[str, int]:
+        async with compat.app_test(app_instance, size=(80, 24)) as pilot:
+            page = app_instance.modules_page()
+            failure = await _modules_failure(app_instance, page, pilot)
+            rows = len(page.visible_records)
+            await pilot.press("q")
+            return failure, rows
+
+    try:
+        return asyncio.run(probe())
+    except Exception as error:  # noqa: BLE001 - 冒烟失败必须转成非零退出码
+        return f"{type(error).__name__}: {error}", 0
+
+
+async def _first_screen_failure(app_instance: Any, page: Any, pilot: Any) -> str:
+    # 先让出一次消息循环：run_worker 刚调度的任务要到那时才注册，立即等空闲会读到取数前的中间状态。
+    await pilot.pause()
+    failure = await _page_failure(page, pilot)
+    if failure:
+        return failure
+    if app_instance.active_page != DASHBOARD_PAGE:
+        return i18n.t("cli.tui_cmd.headless_page_bad", page=app_instance.active_page, expected=DASHBOARD_PAGE)
+    missing = _missing_widgets(app_instance, FIRST_SCREEN_WIDGETS)
+    if missing:
+        return i18n.t(
+            "cli.tui_cmd.headless_first_widgets_bad", missing=i18n.t("cli.common.list_separator").join(missing)
         )
-    )
-    return 0
+    if app_instance.focused is None:
+        return i18n.t("cli.tui_cmd.headless_first_focus_bad")
+    return ""
+
+
+async def _modules_failure(app_instance: Any, page: Any, pilot: Any) -> str:
+    await pilot.pause()
+    failure = await _page_failure(page, pilot)
+    if failure:
+        return failure
+    if app_instance.active_page != MODULES_PAGE:
+        return i18n.t("cli.tui_cmd.headless_page_bad", page=app_instance.active_page, expected=MODULES_PAGE)
+    calls = _source_calls(app_instance)
+    if calls < 1:
+        return i18n.t("cli.tui_cmd.headless_modules_uncalled", calls=calls)
+    return ""
+
+
+def _missing_widgets(app_instance: Any, selectors: tuple[str, ...]) -> list[str]:
+    missing: list[str] = []
+    for selector in selectors:
+        try:
+            app_instance.query_one(selector)
+        except Exception:  # noqa: BLE001 - 未挂载与选择器不存在都算控件缺失，由调用方汇总
+            missing.append(selector)
+    return missing
 
 
 def _source_calls(app_instance: object) -> int:

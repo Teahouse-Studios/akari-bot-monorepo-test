@@ -17,7 +17,7 @@ Run / Adapters / Dev）遵循。
 | `config.py` | 配置页：表清单、表单与原始文本两种模式；`o` 把终端交给外部编辑器打开该表文件 |
 | `logs.py` | 日志页：进程筛选、贴底跟随（上滚即暂停）、关键词过滤、清空、debug；解析规则在 `akaribot/cli/logs.py` |
 | `run.py` | 运行页：启动 / 停止 / 重启（均弹框确认，可只启动指定适配器），状态轮询 |
-| `dev.py` | 开发页：工作区包清单、跑测试、生成模块 / 适配器脚手架（类型二态切换，config / database / tests 开关） |
+| `dev.py` | 开发页：工作区包清单、跑测试、生成模块 / 适配器脚手架（类型二态切换，config / database / tests 开关）；动作输出全量保留在可滚动区，状态栏只放结论 |
 | `doctor.py` | 体检页：端口冲突、凭据重复、孤立配置；回车跳到对应页面处理 |
 | `misc.py` | 迁移页：迁移旧项目（按钮 → 输入框 → 模态确认，可先预演） |
 | `dashboard.py` | 概览页：本机实例清单、服务状态与装卸、当前实例的字段；实例操作都在页底两行按钮上 |
@@ -131,8 +131,10 @@ ModulesPage ──(注入)──> ModuleSource
 - 顶部是首次使用的行动区：四项摘要（未配置适配器数、待填写占位符数、实例运行状态、最近一次体检
   结论）与三个跳转按钮（去配置 / 启动实例 / 运行体检），前提不满足的按钮置灰并说明原因。摘要首次
   显示时取一次，`r` 可重取；取数失败逐项降级为「未取到（原因）」，不影响页面其余部分。
-  未配置适配器数与体检结论来自 `akaribot doctor --json`，运行状态来自锁文件探测，占位符数按实例
-  `config` 目录里的标记形状统计（逐表 `config schema` 需要约 25 秒，不适合首屏）。
+  未配置适配器数与体检结论来自 `akaribot doctor --json`，运行状态来自锁文件探测，占位符数来自
+  `akaribot config placeholders --json`（core 入口 `placeholders` 一次遍历全部表，本机实测 0.27 s；
+  逐表 `config schema` 需 13 s 级）。该命令失败时退化为按配置文本标记估算，标签改成「疑似待填写
+  （估算）」并在原因里写明走了估算——估算值不作精确值展示。
 
 - 顶部是**本机实例清单**（注册表 `~/.akaribot/instances.toml`，`AKARIBOT_HOME` 可改）：每行给
   注册名、运行状态、位置与策略标记，当前管理的那个带 `▸`；站在未登记的实例里启动界面时，它也会
@@ -234,14 +236,28 @@ ModulesPage ──(注入)──> ModuleSource
 - 侧栏次序与翻页次序不同：页面创建、`ctrl+←/→` 翻页与逐页遍历只读 `PAGES`，侧栏下标由
   `TuiApp._nav_position(key)` 折算。80×24 下侧栏需要滚动才能看全 15 条。
 
+### 长输出
+
+动作输出（跑测试、装包、迁移失败等）不再截断：数据源的 `detail` 保留全部行，页面里放进
+`VerticalScroll`，长行换行后完整可读。`o` 或「查看输出」按钮把焦点交给输出区，`Home`/`End`/
+`PgUp`/`PgDn`/`↑`/`↓` 都可用；运行中只在已经贴底时自动跟随，上滚即暂停并在标题行提示按 `End`
+回到末尾。状态栏只留结论与下一步（例如「动作失败，退出码 7，按 o 查看完整输出」），行数写在输出
+区标题里。
+
 ### 渲染守卫
 
 后台取数与定时轮询可能在页面卸载（切实例重挂载、退出界面）之后才落地，此时 Textual 已经卸掉子
 控件，按 id 取控件会抛 `NoMatches` 并把异常抛给 worker。页面构造时由 `_compat.guard_renders()`
-统一把 `_render*` / `_sync*` / `_set_*` / `_paint*` 这些只写控件的入口包一层，先问
-`_compat.mounted()`：控件不可用就直接返回。`mounted()` 除挂载状态外还要求应用仍在运行——只判
-`is_mounted` 不够，页面自身在子控件被卸掉后仍报告已挂载。跳过只发生在卸载与退出阶段，挂载中的
-真实错误照旧抛出。
+统一把 `_render*` / `_sync*` / `_set_*` / `_paint*` 这些只写控件的入口包一层：
+
+- 进入时页面不可用（应用已请求退出，或页面挂载过又被卸下）→ 直接返回，并记一次跳过诊断；
+- 进入时页面可用、抛错时已被卸下 → 属卸载竞态，按不可用处理；
+- **页面可用时抛出的 `NoMatches` 原样抛出**——活动页面里的选择器错误必须让 worker、自检与用例
+  看到，不能被统一守卫吞掉。`tests/test_tui_render_guard.py` 固化这三条契约。
+
+`mounted()` 的判据分三种情形：应用已请求退出（`App._exit`）→ 不可用；页面挂载过又被卸下 →
+不可用；页面还没走完首次 `on_mount`（此时 `is_mounted` 尚为假，但子控件已建好、首次渲染正依赖
+这一点）→ 可用。只判 `is_mounted` 会跳过页面自己的首次渲染，界面会停在未初始化的样子。
 
 ### 与 CLI 的分工
 
@@ -287,7 +303,7 @@ ModulesPage ──(注入)──> ModuleSource
 | --- | --- |
 | 版本紧钉 | `pyproject.toml` 为 `textual==8.2.8`；`--self-check` 比对运行期版本，不一致即硬失败 |
 | headless 渲染自证 | `run_test()` 79 条断言全通过：启动、列表填充、排序、搜索过滤、详情随选中项更新、安装/卸载回调、键位、80×24 与 60×20 布局 |
-| 真实数据端到端 | 用最小实例跑真实 `akaribot module list --json`：取到 52 条记录（含 `kind` 模块/适配器），52 行全部渲染、行宽不溢出、只取数一次；`AKARI_INSTANCE_DIR=<实例> akaribot tui --headless` 输出「80×24 下渲染 52 行模块记录」 |
+| 真实数据端到端 | `akaribot tui --headless` 跑两段真实冒烟：默认首屏（断言 `active_page == dashboard`、`#setup` / `#instance-list` / `#fields` 已挂载、焦点非空）与模块页（显式 `initial_page="modules"`、真实 `module list` 子进程、要求数据源取数 ≥1 次并打印真实行数）。用最小实例实测：模块页渲染 44 行、`list` 调用 1 次 |
 | 中文宽字符 | 见第二节；与 Textual 自身渲染结果交叉验证一致，详情各列值起始列实测同为第 10 列 |
 | 渲染路径不取数 | 「第二次取数即抛错」替身证明搜索/重绘/resize/缓存内刷新均未取数 |
 | 子进程取数链路 | 注入 runner 校验 argv、cwd、`AKARI_INSTANCE_DIR`、`PYTHONIOENCODING`/`encoding=utf-8`、JSON 解析、失败汇总；冻结产物分支的 argv 去掉 `-m` 也被断言覆盖 |
@@ -320,7 +336,7 @@ ModulesPage ──(注入)──> ModuleSource
 export UV_CACHE_DIR="$PWD/.uvcache"
 .venv/bin/akaribot tui --help
 .venv/bin/akaribot tui --self-check      # 资源 / 样式表 / 中文宽度 / 80x24 启动；非零退出码表示失败
-.venv/bin/akaribot tui --headless        # 无 TTY 环境下的冒烟：启动、取数一次、退出并打印耗时
+.venv/bin/akaribot tui --headless        # 无 TTY 冒烟：真实默认首屏（概览页控件与焦点）+ 模块页真实取数，任一段失败即非零退出
 .venv/bin/akaribot tui --no-mouse        # tmux 或旧 conhost 下先关鼠标对比
 .venv/bin/python /tmp/verify_tui_pilot.py   # 79 条 headless 断言（脚本在 /tmp，不入库）
 

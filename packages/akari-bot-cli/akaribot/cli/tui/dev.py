@@ -4,7 +4,8 @@
 与 ``[instance] mode`` 出自实例的 ``akaribot.toml``，由 CLI 自己的 ``InstanceMeta`` 读取——
 ``akaribot dev status --json``（上位文档 §3.2.2）尚未实现，工作区成员索引因此在本进程内扫描。
 包清单本身只读：不提供 use / link / unlink，也不写实例配置；两个动作各起一次 ``akaribot`` 子进程，
-``t`` 跑测试（``akaribot test``），``n`` 生成脚手架（``akaribot new module|adapter``），输出逐行回显。
+``t`` 跑测试（``akaribot test``），``n`` 生成脚手架（``akaribot new module|adapter``）。输出逐行回显在可滚动
+的输出区，行数与跟随状态写在该区标题行，状态栏只给结论与下一步。
 """
 
 from __future__ import annotations
@@ -13,7 +14,6 @@ import asyncio
 import json
 import subprocess
 import time
-from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,11 +60,6 @@ ACTION_NEW = "new"
 
 TARGET_MODULE = "module"
 TARGET_ADAPTER = "adapter"
-
-# 输出区只回显尾部若干行；完整序列留在 ``action_lines()``，供断言与失败详情使用。
-ACTION_OUTPUT_LINES = 4
-ACTION_TAIL_LINES = 40
-STATUS_DETAIL_LIMIT = 400
 
 # 列标题在渲染时按当前语言取；editable 是数据字段名，两种语言写法一致，故不入键表。
 _COLUMN_KEYS: tuple[str | None, ...] = (
@@ -132,10 +127,6 @@ def _name_rejection(name: str) -> str:
     if any(char.isspace() for char in name) or "/" in name or "\\" in name:
         return i18n.t("cli.tui.dev.new_name_invalid")
     return ""
-
-
-def _one_line(text: str, limit: int = STATUS_DETAIL_LIMIT) -> str:
-    return " ".join(text.split())[-limit:]
 
 
 @dataclass(frozen=True)
@@ -251,7 +242,7 @@ class ActionResult:
     :param ok: 子进程是否以退出码 0 结束。
     :param returncode: 子进程退出码；被终止时为信号值。
     :param message: 状态栏显示的一行结论，由数据源按动作与结果生成。
-    :param detail: 输出尾部，失败时并入状态栏。
+    :param detail: 本次动作的完整输出，供程序化诊断使用；界面按行回显在输出区。
     :param cancelled: 是否由终止请求结束。
     """
 
@@ -287,6 +278,7 @@ class StaticDevSource:
         self.calls = {"load": 0, "action": 0, "cancel": 0}
         self.actions: list[tuple[str, dict[str, Any]]] = []
         self.cancelled: list[str] = []
+        self._on_line: Callable[[str], None] | None = None
 
     def load_snapshot(self) -> DevSnapshot:
         """见 :meth:`DevSource.load_snapshot`。"""
@@ -297,18 +289,34 @@ class StaticDevSource:
         """见 :meth:`DevSource.stream_action`；替身回放固定输出，不产生子进程。"""
         self.calls["action"] += 1
         self.actions.append((kind, dict(params)))
-        if self._hold:
-            await self.gate.wait()
-        if kind in self.cancelled:
-            return ActionResult(
-                ok=False,
-                returncode=-15,
-                message=i18n.t("cli.tui.dev.action_cancelled", label=_action_label(kind)),
-                cancelled=True,
-            )
-        for line in self._action_lines:
-            on_line(line)
-        return self._action_result
+        self._on_line = on_line
+        try:
+            if self._hold:
+                await self.gate.wait()
+            if kind in self.cancelled:
+                return ActionResult(
+                    ok=False,
+                    returncode=-15,
+                    message=i18n.t("cli.tui.dev.action_cancelled", label=_action_label(kind)),
+                    cancelled=True,
+                )
+            for line in self._action_lines:
+                on_line(line)
+            return self._action_result
+        finally:
+            self._on_line = None
+
+    def emit(self, line: str) -> bool:
+        """向正在运行的动作补送一行输出，供「运行中」的断言按需推进输出。
+
+        :param line: 输出行。
+        :return: 是否送达；没有正在运行的动作时返回 ``False``。
+        """
+        on_line = self._on_line
+        if on_line is None:
+            return False
+        on_line(line)
+        return True
 
     def cancel_action(self, kind: str) -> bool:
         """见 :meth:`DevSource.cancel_action`；替身记录请求并放行被挂起的动作。"""
@@ -495,9 +503,9 @@ class SubprocessDevSource:
         except OSError as error:
             raise DevSourceError(i18n.t("cli.tui.dev.src_oserror", cmd=" ".join(argv), error=error)) from error
         self._action_process = process
-        tail: deque[str] = deque(maxlen=ACTION_TAIL_LINES)
+        received: list[str] = []
         try:
-            returncode = await asyncio.wait_for(self._pump(process, on_line, tail), timeout=self.action_timeout)
+            returncode = await asyncio.wait_for(self._pump(process, on_line, received), timeout=self.action_timeout)
         except TimeoutError:
             process.kill()
             await process.wait()
@@ -509,7 +517,7 @@ class SubprocessDevSource:
             raise
         finally:
             self._action_process = None
-        detail = "\n".join(tail)
+        detail = "\n".join(received)
         if self._action_cancelled:
             return ActionResult(
                 ok=False,
@@ -537,14 +545,14 @@ class SubprocessDevSource:
         return True
 
     @staticmethod
-    async def _pump(process: asyncio.subprocess.Process, on_line: Callable[[str], None], tail: deque[str]) -> int:
+    async def _pump(process: asyncio.subprocess.Process, on_line: Callable[[str], None], received: list[str]) -> int:
         stream = process.stdout
         if stream is not None:
             async for raw in stream:
                 line = raw.decode("utf-8", errors="replace").rstrip()
                 if not line:
                     continue
-                tail.append(line)
+                received.append(line)
                 on_line(line)
         return await process.wait()
 
@@ -719,7 +727,8 @@ class DevPage(compat.Vertical):
         ("r", "refresh", i18n.t("cli.tui.dev.action_refresh")),
         ("t", "run_tests", i18n.t("cli.tui.dev.action_run_tests")),
         ("n", "new_package", i18n.t("cli.tui.dev.action_new_package")),
-        # 终止是低频动作，页脚留给刷新、测试与新建三条。
+        ("o", "focus_output", i18n.t("cli.tui.dev.action_focus_output")),
+        # 终止是低频动作，页脚留给刷新、测试、新建与输出四条。
         ("escape", "cancel_action", i18n.t("cli.tui.dev.action_cancel"), False),
     )
 
@@ -757,6 +766,9 @@ class DevPage(compat.Vertical):
         height: 3;
         padding: 0 0 0 1;
     }
+    DevPage #actions Button {
+        min-width: 0;
+    }
     DevPage #test-path {
         width: 1fr;
     }
@@ -788,12 +800,21 @@ class DevPage(compat.Vertical):
         text-wrap: nowrap;
         text-overflow: ellipsis;
     }
-    DevPage #action-output {
-        height: 6;
-        border: round $primary;
+    DevPage #action-output-title {
+        height: 1;
         padding: 0 1;
+        color: $text-muted;
         text-wrap: nowrap;
         text-overflow: ellipsis;
+    }
+    DevPage #action-output {
+        height: auto;
+        max-height: 7;
+        border: round $primary;
+        padding: 0 1;
+    }
+    DevPage #action-output-text {
+        width: 1fr;
     }
     DevPage #detail {
         height: 2;
@@ -837,6 +858,8 @@ class DevPage(compat.Vertical):
         self._action_kind: str = ""
         self._action_lines: list[str] = []
         self._action_rendered: str = ""
+        self._output_title_rendered: str = ""
+        self._output_revealed: bool = False
         self._action_result: ActionResult | None = None
         self._cancel_requested: bool = False
         self._new_form_open: bool = False
@@ -865,12 +888,15 @@ class DevPage(compat.Vertical):
                     yield compat.Button(i18n.t("cli.tui.dev.new_confirm"), id="new-confirm", variant="primary")
                     yield compat.Button(i18n.t("cli.tui.dev.new_close"), id="new-close")
                     yield compat.Static("", id="new-hint", markup=False)
-            yield compat.Static("", id="action-output", markup=False)
+            yield compat.Static("", id="action-output-title", markup=False)
+            with compat.VerticalScroll(id="action-output"):
+                yield compat.Static(i18n.t("cli.tui.dev.output_empty"), id="action-output-text", markup=False)
         with compat.Horizontal(id="actions"):
             yield compat.Button(i18n.t("cli.tui.dev.action_refresh"), id="refresh")
             yield compat.Button(i18n.t("cli.tui.dev.action_run_tests"), id="run-tests")
             yield compat.Input(placeholder=i18n.t("cli.tui.dev.test_path_placeholder"), id="test-path")
             yield compat.Button(i18n.t("cli.tui.dev.action_new_package"), id="new-package")
+            yield compat.Button(i18n.t("cli.tui.dev.action_focus_output"), id="focus-output")
         yield compat.Static(i18n.t("cli.tui.dev.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -904,10 +930,10 @@ class DevPage(compat.Vertical):
         packages = self._snapshot.packages
         if not packages:
             return None
-        try:
-            list_view = self.query_one("#package-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        # 页面已卸载时后台取数仍可能落地，此时没有可读的列表控件。
+        if not compat.mounted(self):
             return None
+        list_view = self.query_one("#package-list", compat.ListView)
         index = compat.highlighted_index(list_view)
         if index is None or index >= len(packages):
             return None
@@ -959,8 +985,13 @@ class DevPage(compat.Vertical):
 
     @property
     def action_output_text(self) -> str:
-        """返回输出区当前显示的文本。"""
+        """返回输出区当前保留的完整文本；本次动作还没有输出时为空串。"""
         return self._action_rendered
+
+    @property
+    def output_title_text(self) -> str:
+        """返回输出区标题行当前文本，含行数与跟随状态。"""
+        return self._output_title_rendered
 
     @property
     def new_form_open(self) -> bool:
@@ -1172,8 +1203,10 @@ class DevPage(compat.Vertical):
         self._render_action_panel()
 
     def _on_action_line(self, line: str) -> None:
+        # 贴底与否按追加前的视口判断：追加之后 max_scroll_y 尚未跟上，读不出用户是否上滚。
+        follow = self._output_at_end()
         self._action_lines.append(line)
-        self._render_action_output()
+        self._render_action_output(pin=follow)
         if self._action_kind:
             self._set_status(self._running_text())
 
@@ -1191,9 +1224,7 @@ class DevPage(compat.Vertical):
         else:
             key = "cli.tui.dev.status_action_done" if result.ok else "cli.tui.dev.status_action_failed"
             conclusion = i18n.t(key, code=result.returncode)
-        if result.ok or not result.detail:
-            return conclusion
-        return i18n.t("cli.tui.common.error_separator").join((conclusion, _one_line(result.detail)))
+        return i18n.t("cli.tui.dev.status_separator").join((conclusion, i18n.t("cli.tui.dev.status_next_step")))
 
     def _show_new_hint(self, message: str, *, warning: bool = False) -> None:
         self._new_hint = message
@@ -1380,25 +1411,68 @@ class DevPage(compat.Vertical):
         form = self._action_widget("#new-form")
         if form is not None:
             form.display = self._new_form_open
-        output = self._action_widget("#action-output")
-        if output is not None:
-            output.display = bool(self._action_kind or self._action_lines)
+        visible = bool(self._action_kind or self._action_lines or self._output_revealed)
+        for selector in ("#action-output-title", "#action-output"):
+            widget = self._action_widget(selector)
+            if widget is not None:
+                widget.display = visible
         self._render_action_output()
         self._sync_actions()
 
-    def _render_action_output(self) -> None:
-        self._action_rendered = "\n".join(self._action_lines[-ACTION_OUTPUT_LINES:])
-        output = self._action_widget("#action-output")
-        if output is None:
+    def _render_action_output(self, *, pin: bool = False) -> None:
+        self._action_rendered = "\n".join(self._action_lines)
+        output = self._action_widget("#action-output-text")
+        if output is not None:
+            text = self._action_rendered or i18n.t("cli.tui.dev.output_empty")
+            output.update(compat.plain_text(text))
+        self._sync_output_title()
+        if pin:
+            self._pin_output_to_end()
+
+    def _sync_output_title(self) -> None:
+        parts = [i18n.t("cli.tui.dev.output_title", count=len(self._action_lines))]
+        if self._action_kind and not self._output_at_end():
+            parts.append(i18n.t("cli.tui.dev.output_paused"))
+        text = self._fit_page_width(i18n.t("cli.tui.dev.status_separator").join(parts))
+        self._output_title_rendered = text
+        title = self._action_widget("#action-output-title")
+        if title is not None:
+            title.update(compat.plain_text(text))
+
+    def _output_pane(self) -> compat.VerticalScroll | None:
+        widget = self._action_widget("#action-output")
+        return widget if isinstance(widget, compat.VerticalScroll) else None
+
+    def _output_at_end(self) -> bool:
+        pane = self._output_pane()
+        if pane is None:
+            return True
+        return bool(pane.is_vertical_scroll_end)
+
+    def _scroll_output_end(self) -> None:
+        pane = self._output_pane()
+        if pane is None:
             return
-        lines = self._action_rendered.split("\n") if self._action_rendered else [i18n.t("cli.tui.dev.output_waiting")]
-        output.update(compat.plain_text("\n".join(self._fit_page_width(line) for line in lines)))
+        scroll_end = getattr(pane, "scroll_end", None)
+        if not callable(scroll_end):
+            return
+        try:
+            scroll_end(animate=False)
+        except TypeError:
+            scroll_end()
+
+    def _pin_output_to_end(self) -> None:
+        self._scroll_output_end()
+        # 本帧的 max_scroll_y 还停在追加内容之前，布局完成后再贴一次底，下一行到达时才不会
+        # 把「布局尚未跟上」误判成用户上滚。
+        if self.is_mounted:
+            self.call_after_refresh(self._scroll_output_end)
 
     def _action_widget(self, selector: str) -> compat.Widget | None:
-        try:
-            return self.query_one(selector)
-        except Exception:  # noqa: BLE001 - 未挂载时按无控件处理
+        # 页面已卸载时后台取数仍可能落地，此时没有可读的动作控件。
+        if not compat.mounted(self):
             return None
+        return self.query_one(selector)
 
     def _set_status(self, text: str) -> None:
         self.last_result = text
@@ -1427,6 +1501,8 @@ class DevPage(compat.Vertical):
             self.run_tests()
         elif button_id == "new-package":
             self.open_new_form()
+        elif button_id == "focus-output":
+            self.focus_output()
         elif button_id == "new-kind":
             self.toggle_new_kind()
         elif button_id == "new-confirm":
@@ -1457,6 +1533,18 @@ class DevPage(compat.Vertical):
     def action_new_package(self) -> None:
         """键位动作：展开新建包表单，已展开时把焦点交回名称输入框。"""
         self.open_new_form()
+
+    def action_focus_output(self) -> None:
+        """键位动作：把焦点交给输出区。"""
+        self.focus_output()
+
+    def focus_output(self) -> None:
+        """显示输出区并把焦点交给滚动容器；输出为空时区内给出提示。"""
+        self._output_revealed = True
+        self._render_action_panel()
+        pane = self._output_pane()
+        if pane is not None:
+            compat.focus_now(pane)
 
     def action_cancel_action(self) -> None:
         """键位动作：终止运行中的动作；空闲时收起新建包表单。"""

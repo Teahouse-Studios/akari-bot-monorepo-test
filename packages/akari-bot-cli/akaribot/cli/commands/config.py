@@ -2,7 +2,8 @@
 
 数据与写入一律经子进程调用 ``python -m akaribot.core.entrypoints.config``：CLI 进程不 import
 core，且写入必须走 ``CFGManager.edit_write()`` 的原子路径，命令行与 TUI 都不直接改文件。
-表单模式与原始文本模式在 TUI 的 Config 页；命令行提供 list / schema / get / set 与外部编辑器。
+表单模式与原始文本模式在 TUI 的 Config 页；命令行提供 list / schema / placeholders / get / set
+与外部编辑器。
 """
 
 from __future__ import annotations
@@ -100,6 +101,39 @@ def show_schema(
             shown = i18n.t("cli.config.schema.placeholder")
         grid.add_row(str(item["key"]), str(item["type"]), shown, str(item.get("comment") or "-"))
     console.print(grid)
+
+
+@app.command("placeholders", help=i18n.t("cli.config.placeholders.help"))
+def show_placeholders(
+    instance_path: InstancePathOption = None,
+    json_out: JsonOption = False,
+) -> None:
+    """统计各表的待填写占位符（core 的占位符判定）。"""
+    instance = require_instance(instance_path)
+    tables = sorted({path.stem for path in (instance.meta.root / "config").rglob("*.toml")})
+    args = ["placeholders", "--tables", ",".join(tables)] if tables else ["placeholders"]
+    payload = _entrypoint_json(instance, *args)
+    if json_out:
+        # 界面按行解析 stdout，故 JSON 保持单行原样，不做二次排版。
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+    assert isinstance(payload, dict)
+    rows = payload.get("tables") if isinstance(payload.get("tables"), dict) else {}
+    failed = payload.get("failed") if isinstance(payload.get("failed"), dict) else {}
+    if not rows and not failed:
+        console.print(i18n.t("cli.config.placeholders.none"))
+        return
+    grid = Table(title=i18n.t("cli.config.placeholders.table_title", count=payload.get("count") or 0, tables=len(rows)))
+    grid.add_column(i18n.t("cli.config.placeholders.column_table"))
+    grid.add_column(i18n.t("cli.config.placeholders.column_placeholder"))
+    grid.add_column(i18n.t("cli.config.placeholders.column_total"))
+    for table, counts in rows.items():
+        detail = counts if isinstance(counts, dict) else {}
+        grid.add_row(table, str(detail.get("placeholder")), str(detail.get("total")))
+    console.print(grid)
+    if failed:
+        detail = "、".join(f"{name}（{reason}）" for name, reason in failed.items())
+        console.print(i18n.t("cli.config.placeholders.failed_line", count=len(failed), detail=detail))
 
 
 @app.command("get", help=i18n.t("cli.config.get.help"))

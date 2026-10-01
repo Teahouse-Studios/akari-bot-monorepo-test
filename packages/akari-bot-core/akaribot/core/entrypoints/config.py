@@ -11,6 +11,7 @@ import importlib
 import json
 import re
 import sys
+from collections.abc import Mapping
 from typing import Any
 
 PLACEHOLDER_PATTERN = re.compile(r"^<Replace me.*?>$")
@@ -72,34 +73,90 @@ def _connect_locale() -> None:
     _LOCALE_READY = True
 
 
-def _schema(table: str) -> list[dict]:
-    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；类型取运行期值，
-    # ``default`` 尽力从配置模板的声明里取，取不到时为 ``None``。
-    document = _table_document(table)
+def _table_values(table: str, document: Mapping[str, Any]) -> list[dict[str, Any]]:
+    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；占位判定是 schema 与
+    # placeholders 共用的口径，只在这里出现一次。
     plain = document.get(table) or {}
     secret_table = "secret" if table == "config" else f"{table}_secret"
     secret = document.get(secret_table) or {}
-
-    declared = _declared_defaults(table)
-    items: list[dict] = []
+    values: list[dict[str, Any]] = []
     for key in sorted({*plain, *secret}):
         raw = secret[key] if key in secret else plain[key]
         value = raw.unwrap() if hasattr(raw, "unwrap") else raw
-        is_secret = key in secret
-        meta = declared.get(key, {})
-        cfg_type = meta.get("type")
-        items.append(
+        values.append(
             {
                 "key": key,
-                "type": getattr(cfg_type, "__name__", None) or type(value).__name__,
-                "default": meta.get("default"),
-                "secret": is_secret,
-                "comment": _localized_comment(table, key, is_secret),
                 "value": value,
+                "secret": key in secret,
                 "is_placeholder": bool(PLACEHOLDER_PATTERN.match(str(value))),
             }
         )
+    return values
+
+
+def _schema(table: str) -> list[dict]:
+    # 类型取运行期值，``default`` 尽力从配置模板的声明里取，取不到时为 ``None``。
+    document = _table_document(table)
+    declared = _declared_defaults(table)
+    items: list[dict] = []
+    for entry in _table_values(table, document):
+        meta = declared.get(entry["key"], {})
+        cfg_type = meta.get("type")
+        items.append(
+            {
+                "key": entry["key"],
+                "type": getattr(cfg_type, "__name__", None) or type(entry["value"]).__name__,
+                "default": meta.get("default"),
+                "secret": entry["secret"],
+                "comment": _localized_comment(table, entry["key"], entry["secret"]),
+                "value": entry["value"],
+                "is_placeholder": entry["is_placeholder"],
+            }
+        )
     return items
+
+
+def _read_table_file(table: str) -> Any:
+    # 任一文件损坏都会让 ``CFGManager.load()`` 整体失败，故按表读文件，未读到的表单独归集。
+    from tomlkit import parse as toml_parser
+
+    from akaribot.core.paths import Paths
+
+    with open(Paths.config / f"{table}.toml", "r", encoding="utf-8") as handle:
+        return toml_parser(handle.read())
+
+
+def _placeholder_report(tables: str | None) -> dict[str, Any]:
+    from akaribot.core.paths import Paths
+
+    if tables is None:
+        requested = sorted(path.stem for path in Paths.config.glob("*.toml"))
+    else:
+        requested = [name.strip() for name in tables.split(",") if name.strip()]
+
+    table_counts: dict[str, dict[str, int]] = {}
+    failed: dict[str, str] = {}
+    scanned: list[str] = []
+    count = 0
+    for table in dict.fromkeys(requested):
+        # 表名只用于拼接配置目录下的文件名；含分隔符的名字一律拒绝，读不到目录之外。
+        if "/" in table or "\\" in table:
+            failed[table] = "表名含路径分隔符"
+            continue
+        try:
+            document = _read_table_file(table)
+        except (OSError, UnicodeDecodeError) as error:
+            failed[table] = f"读取失败：{type(error).__name__}: {error}"
+            continue
+        except Exception as error:  # noqa: BLE001 - 解析错误类型由 tomlkit 决定，逐表归集后继续
+            failed[table] = f"解析失败：{type(error).__name__}: {error}"
+            continue
+        values = _table_values(table, document)
+        placeholder = sum(1 for item in values if item["is_placeholder"])
+        table_counts[table] = {"placeholder": placeholder, "total": len(values)}
+        scanned.append(table)
+        count += placeholder
+    return {"tables": table_counts, "count": count, "scanned": scanned, "failed": failed}
 
 
 def _declared_defaults(table: str) -> dict[str, dict]:
@@ -193,9 +250,27 @@ def main(argv: list[str] | None = None) -> int:
     sync.add_argument("--package", required=True)
     sync.add_argument("--json", action="store_true")
 
+    placeholders = sub.add_parser("placeholders", help="统计各表的待填写占位符")
+    placeholders.add_argument("--tables", help="逗号分隔的表名；缺省统计配置目录下的全部表")
+    placeholders.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "placeholders":
+            report = _placeholder_report(args.tables)
+            if args.json:
+                json.dump(report, sys.stdout, ensure_ascii=False, default=str)
+                sys.stdout.write("\n")
+            else:
+                for table, counts in report["tables"].items():
+                    print(f"{table}\t{counts['placeholder']}/{counts['total']}")
+                print(f"待填写 {report['count']} 项，统计 {len(report['scanned'])} 张表。")
+                if report["failed"]:
+                    detail = "、".join(f"{name}（{reason}）" for name, reason in report["failed"].items())
+                    print(f"未统计 {len(report['failed'])} 张表：{detail}")
+            return 0
+
         if args.command == "schema":
             items = _schema(_resolve_table(args.table))
             if args.json:

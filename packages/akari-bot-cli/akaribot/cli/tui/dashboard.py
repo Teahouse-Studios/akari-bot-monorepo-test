@@ -12,7 +12,8 @@ use`` 子进程异步写回，结论以应用级通知报出；各页随后的�
 
 实例清单与字段区之间是首次使用行动区：四项摘要（未配置适配器、待填写占位符、实例运行状态、最近
 一次体检结论）与三个跳转按钮。摘要只在首次显示本页时取一次，取不到的那项如实写成「未取到」并附
-原因；按钮在前提不满足时置灰，原因写在按钮标签上。
+原因；占位符按 core 的通用判定统计，判定不可用时退化为标明口径的估算；按钮在前提不满足时置灰，
+原因写在按钮标签上。
 
 服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
 里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
@@ -547,8 +548,9 @@ class SetupSummary:
     :param doctor_errors: 最近一次体检的错误级结论数；``None`` 表示未取到。
     :param doctor_warnings: 最近一次体检的告警级结论数；``None`` 表示未取到。
     :param adapters_reason: 适配器数量未取到的原因；取到时为空串。
-    :param placeholders_reason: 占位符数量未取到的原因；取到时为空串。
+    :param placeholders_reason: 占位符数量的口径说明；按 core 判定完整取数时为空串。
     :param doctor_reason: 体检结论未取到的原因；取到时为空串。
+    :param placeholders_estimated: 占位符数量是否来自配置文本标记的估算。
     """
 
     unconfigured_adapters: int | None = None
@@ -558,6 +560,19 @@ class SetupSummary:
     adapters_reason: str = ""
     placeholders_reason: str = ""
     doctor_reason: str = ""
+    placeholders_estimated: bool = False
+
+
+def _placeholders_text(summary: SetupSummary) -> str:
+    if summary.pending_placeholders is None:
+        return _missing_text(summary.placeholders_reason)
+    if summary.placeholders_reason:
+        return i18n.t(
+            "cli.tui.dashboard.setup_placeholders_value_note",
+            count=summary.pending_placeholders,
+            reason=summary.placeholders_reason,
+        )
+    return i18n.t("cli.tui.dashboard.setup_placeholders_value", count=summary.pending_placeholders)
 
 
 @runtime_checkable
@@ -593,11 +608,10 @@ class StaticSetupSummarySource:
 
 
 class LocalSetupSummarySource:
-    """默认实现：体检统计经 ``akaribot doctor --json`` 子进程，占位符按本机配置文件统计。
+    """默认实现：体检统计经 ``akaribot doctor --json`` 子进程，占位符经 ``config placeholders --json`` 子进程。
 
-    体检要 core 参与判断，故经子进程取 ``doctor --json`` 的统计；占位符只数实例 ``config`` 目录下
-    的模板标记——逐表 ``config schema`` 才有 ``is_placeholder`` 字段，本机实测每张表约 1.4 秒，
-    作为首屏摘要不可接受。
+    占位符判定由 core 的 schema 给出，一条命令一次统计全部表；命令失败或输出读不懂时退化为按配置
+    文本里的标记形状估算，摘要标明估算口径并写明原因，不把估算值当作精确值。
 
     :param root: 实例根；缺省在取数时按界面当前实例解析。
     :param timeout: 子进程超时秒数。
@@ -625,7 +639,7 @@ class LocalSetupSummarySource:
             reason = i18n.t("cli.tui.dashboard.setup_src_no_instance")
             return SetupSummary(adapters_reason=reason, placeholders_reason=reason, doctor_reason=reason)
         adapters, errors, warnings, adapters_reason, doctor_reason = self._doctor(root)
-        placeholders, placeholders_reason = self._placeholders(root)
+        placeholders, placeholders_reason, placeholders_estimated = self._placeholders(root)
         return SetupSummary(
             unconfigured_adapters=adapters,
             pending_placeholders=placeholders,
@@ -634,6 +648,7 @@ class LocalSetupSummarySource:
             adapters_reason=adapters_reason,
             placeholders_reason=placeholders_reason,
             doctor_reason=doctor_reason,
+            placeholders_estimated=placeholders_estimated,
         )
 
     def _doctor(self, root: Path) -> tuple[int | None, int | None, int | None, str, str]:
@@ -684,12 +699,61 @@ class LocalSetupSummarySource:
         doctor_reason = "" if errors is not None and warnings is not None else unreadable
         return adapters, errors, warnings, adapters_reason, doctor_reason
 
-    def _placeholders(self, root: Path) -> tuple[int | None, str]:
+    def _placeholders(self, root: Path) -> tuple[int | None, str, bool]:
+        argv = cli_process.cli_argv("config", "placeholders", "--json")
+        execute = self._runner or subprocess.run
+        try:
+            completed = execute(
+                list(argv),
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.timeout,
+                env=cli_process.cli_env(root),
+            )
+        except subprocess.TimeoutExpired:
+            detail = i18n.t("cli.tui.dashboard.setup_placeholders_timeout", seconds=f"{self.timeout:g}")
+            return self._estimate_placeholders(root, detail)
+        except OSError as error:
+            return self._estimate_placeholders(root, f"{type(error).__name__}: {error}")
+        if completed.returncode != 0:
+            failed = i18n.t("cli.tui.dashboard.setup_placeholders_failed", code=completed.returncode)
+            detail = _first_line(_tail(completed.stderr) or _tail(completed.stdout)) or failed
+            return self._estimate_placeholders(root, detail)
+        payload = _json_object(completed.stdout)
+        count = _count_of(payload.get("count")) if payload is not None else None
+        if count is None:
+            reason = i18n.t("cli.tui.dashboard.setup_placeholders_unreadable", code=completed.returncode)
+            tail = _first_line(_tail(completed.stderr) or _tail(completed.stdout))
+            if tail:
+                reason = f"{reason}{i18n.t('cli.tui.common.error_separator')}{tail}"
+            return self._estimate_placeholders(root, reason)
+        failed_tables = payload.get("failed")
+        if isinstance(failed_tables, Mapping) and failed_tables:
+            names = "、".join(str(name) for name in failed_tables)
+            reason = i18n.t(
+                "cli.tui.dashboard.setup_placeholders_partial_reason",
+                count=len(failed_tables),
+                tables=names,
+            )
+            return count, reason, False
+        return count, "", False
+
+    def _estimate_placeholders(self, root: Path, detail: str) -> tuple[int | None, str, bool]:
+        # core 判定不可用时沿用配置文本里的标记形状估算；摘要据此标明估算口径，不显示成精确值。
         try:
             paths = sorted((root / CONFIG_DIRNAME).rglob(CONFIG_GLOB))
         except OSError as error:
-            return None, f"{type(error).__name__}: {error}"
-        return _count_placeholders(paths), ""
+            reason = i18n.t(
+                "cli.tui.dashboard.setup_placeholders_estimate_unavailable",
+                detail=detail,
+                error=f"{type(error).__name__}: {error}",
+            )
+            return None, reason, True
+        reason = i18n.t("cli.tui.dashboard.setup_placeholders_estimated_reason", detail=detail)
+        return _count_placeholders(paths), reason, True
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
@@ -1969,10 +2033,10 @@ class DashboardPage(compat.Vertical):
                 else i18n.t("cli.tui.dashboard.setup_adapters_value", count=self._setup.unconfigured_adapters),
             ),
             (
-                i18n.t("cli.tui.dashboard.setup_placeholders_label"),
-                _missing_text(self._setup.placeholders_reason)
-                if self._setup.pending_placeholders is None
-                else i18n.t("cli.tui.dashboard.setup_placeholders_value", count=self._setup.pending_placeholders),
+                i18n.t("cli.tui.dashboard.setup_placeholders_label_estimated")
+                if self._setup.placeholders_estimated
+                else i18n.t("cli.tui.dashboard.setup_placeholders_label"),
+                _placeholders_text(self._setup),
             ),
             (i18n.t("cli.tui.dashboard.setup_instance_label"), state),
             (

@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import importlib
 import importlib.resources
+import logging
 import os
 import sys
 import time
@@ -41,6 +42,8 @@ from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, List
 
 from akaribot.cli import i18n
 
+_logger = logging.getLogger(__name__)
+
 __all__ = [
     "AKARI_DARK_PALETTE",
     "AKARI_LIGHT_PALETTE",
@@ -60,8 +63,10 @@ __all__ = [
     "Label",
     "ListItem",
     "ListView",
+    "NoMatches",
     "Pilot",
     "ProgressBar",
+    "RenderGuard",
     "Screen",
     "Static",
     "Stylesheet",
@@ -794,16 +799,45 @@ def mounted(widget: Widget) -> bool:
     **页面自身的 ``is_mounted`` 仍可能为真**——Textual 先卸子控件再卸父控件——按 id 取子控件会抛
     ``NoMatches``，异常最终在 worker 里抛给用户。
 
-    判据分三种情形：应用已请求退出（``App._exit``）→ 不可用；页面挂载过又被卸下 → 不可用；页面
-    还没走完首次 ``on_mount``（此时 ``is_mounted`` 尚为假，但子控件已经建好，页面自己的首次渲染
-    正依赖这一点）→ 可用。
+    判据覆盖四种不可用情形：应用已请求退出（``App._exit``）；应用已停止运行（退出流程里子控件先
+    被卸下，此时尚未请求退出）；页面正在被移除（``_pruning``，界面仍在运行时切实例重挂载即走这条
+    路）；页面挂载过又被卸下。页面还没走完首次 ``on_mount``（此时 ``is_mounted`` 尚为假，但子控件
+    已经建好，页面自己的首次渲染正依赖这一点）→ 可用。
     """
     app = getattr(widget, "app", None)
-    if bool(getattr(app, "_exit", False)):
+    if bool(getattr(app, "_exit", False)) or not bool(getattr(app, "is_running", True)):
+        return False
+    if bool(getattr(widget, "_pruning", False)):
         return False
     if getattr(widget, "_tui_mounted_once", False) and not getattr(widget, "is_mounted", False):
         return False
     return True
+
+
+class RenderGuard:
+    """页面渲染守卫的跳过记账，供用例与自检读取。
+
+    :attr:`skipped_renders` 与 :attr:`last_skipped_method` 只读：守卫只在页面不可用时跳过渲染
+    才累计；页面可用时的选择器错误记不到这里，而是照常抛给 worker。
+    """
+
+    def __init__(self) -> None:
+        self._skipped_renders = 0
+        self._last_skipped_method = ""
+
+    @property
+    def skipped_renders(self) -> int:
+        """因页面不可用而跳过的渲染次数。"""
+        return self._skipped_renders
+
+    @property
+    def last_skipped_method(self) -> str:
+        """最近一次因页面不可用而跳过的渲染方法名，未跳过时为空串。"""
+        return self._last_skipped_method
+
+    def _record_skip(self, method: str) -> None:
+        self._skipped_renders += 1
+        self._last_skipped_method = method
 
 
 def guard_renders(page: Widget) -> None:
@@ -811,9 +845,11 @@ def guard_renders(page: Widget) -> None:
 
     逐页逐方法加判断会漏（漏掉的那个方法照样把 ``NoMatches`` 抛进 worker），故在页面构造处统一
     包一层：``_render*`` / ``_sync*`` / ``_set_*`` / ``_paint*`` 这些只写控件的入口先问
-    :func:`mounted`，不可用就直接返回。跳过只发生在页面正在卸载或界面正在退出时，不会丢正常渲染。
+    :func:`mounted`，不可用就记一笔 :class:`RenderGuard` 后返回。页面可用时的 ``NoMatches``
+    原样上抛——选择器写错必须在 worker、自检与用例里看得见。
     """
     page._tui_mounted_once = False
+    page.render_guard = RenderGuard()
     _guard_mount(page)
     for name in dir(type(page)):
         if not name.startswith(("_render", "_sync", "_set_", "_paint")):
@@ -838,17 +874,31 @@ def _guard_mount(page: Widget) -> None:
 
 def _guarded(page: Widget, method: Callable[..., Any]) -> Callable[..., Any]:
     # 包的是**绑定方法**且挂在实例上：实例属性不参与描述符绑定，故闭包里直接引用页面与绑定方法。
+    name = getattr(method, "__name__", "")
+
     @functools.wraps(method)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not mounted(page):
+            _record_skip(page, name)
             return None
         try:
             return method(*args, **kwargs)
         except NoMatches:
-            # 兜底：页面正在被卸下时子控件可能先一步消失，这类渲染没有目标可写，不能抛给 worker。
+            # 进入时页面尚可用、抛错时已被卸下：这一轮没有可写的控件，属卸载竞态而非选择器错误。
+            if mounted(page):
+                raise
+            _record_skip(page, name)
             return None
 
     return wrapper
+
+
+def _record_skip(page: Widget, method: str) -> None:
+    guard = page.render_guard
+    guard._record_skip(method)
+    _logger.debug(
+        "TUI render skipped: page=%s method=%s skipped=%d", type(page).__name__, method, guard.skipped_renders
+    )
 
 
 def button_width(button: Button) -> int:
