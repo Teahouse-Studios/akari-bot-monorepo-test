@@ -14,6 +14,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -26,14 +27,18 @@ app = typer.Typer(
 
 LEVEL_OK = "ok"
 LEVEL_WARN = "warn"
+LEVEL_SKIP = "skip"
 LEVEL_FAIL = "fail"
+
+# 未执行与失败都要退出非零：环境能力不足导致产品检查没跑成的路径，不能用「通过」掩盖。
+BLOCKING_LEVELS = (LEVEL_SKIP, LEVEL_FAIL)
 
 
 @dataclass(frozen=True)
 class CheckResult:
     """一条自检结论。
 
-    :param level: ``ok`` / ``warn`` / ``fail``。
+    :param level: ``ok`` / ``warn`` / ``skip`` / ``fail``；``warn`` 只报环境事实，``skip`` 表示产品检查未执行。
     :param name: 检查项名称。
     :param detail: 实测结果说明。
     """
@@ -177,9 +182,9 @@ def _source_calls(app_instance: object) -> int:
 
 
 def run_self_check() -> int:
-    """执行自检并返回进程退出码，非零表示存在硬失败。
+    """执行自检并返回进程退出码，非零表示存在硬失败或未执行的产品检查。
 
-    :return: 0 表示全部硬性检查通过；1 表示存在 ``fail`` 项。
+    :return: 0 表示全部硬性检查通过；1 表示存在 ``fail`` 项或 ``skip`` 项。
     """
     results: list[CheckResult] = []
     results.extend(_check_environment())
@@ -192,12 +197,27 @@ def run_self_check() -> int:
     results.append(_check_multi_select())
     results.append(_check_adapter_install())
     results.append(_check_theme())
+    return _report_self_check(results)
 
+
+def _report_self_check(results: list[CheckResult]) -> int:
     for result in results:
-        stream = sys.stderr if result.level == LEVEL_FAIL else sys.stdout
+        stream = sys.stderr if result.level in BLOCKING_LEVELS else sys.stdout
         typer.echo(result.render(), file=stream)
     failures = [result for result in results if result.level == LEVEL_FAIL]
+    skipped = [result for result in results if result.level == LEVEL_SKIP]
     warnings = [result for result in results if result.level == LEVEL_WARN]
+    if skipped:
+        typer.echo(
+            i18n.t(
+                "cli.tui_cmd.self_check_blocked",
+                failures=len(failures),
+                skipped=len(skipped),
+                warnings=len(warnings),
+            ),
+            err=True,
+        )
+        return 1
     if failures:
         typer.echo(i18n.t("cli.tui_cmd.self_check_failed", failures=len(failures), warnings=len(warnings)), err=True)
         return 1
@@ -260,53 +280,89 @@ def _check_multi_select() -> CheckResult:
     )
 
 
-def _check_page_navigation() -> CheckResult:
+def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult:
     from akaribot.cli.tui import _compat as compat
-    from akaribot.cli.tui.app import PAGES, TuiApp
+    from akaribot.cli.tui.app import PAGES, TuiApp, _nav_position
     from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 
     source = StaticModuleSource(
         [ModuleRecord(name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed")]
     )
-    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
+    app_instance = TuiApp(source=source, sources=sources, initial_page="modules", boot_started_at=time.monotonic())
 
-    async def probe() -> tuple[list[str], list[str]]:
+    async def probe() -> tuple[list[str], list[str], list[str]]:
         mismatched: list[str] = []
         unfocused: list[str] = []
+        broken: list[str] = []
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
             await pilot.pause()
-            for position, (key, _, _) in enumerate(PAGES):
+            for key, title_key, _ in PAGES:
                 app_instance.show_page(key)
                 await pilot.pause()
+                failure = await _page_failure(app_instance.page(key), pilot)
+                if failure:
+                    broken.append(f"{i18n.t(title_key)}：{failure}")
                 nav = app_instance.query_one("#nav", compat.ListView)
                 visible = app_instance.query_one(f"#page-{key}").display
-                if app_instance.active_page != key or compat.highlighted_index(nav) != position or not visible:
+                # 侧栏混排了分组标题，高亮下标要按 app 自己的折算读，不能直接用 PAGES 下标。
+                if (
+                    app_instance.active_page != key
+                    or compat.highlighted_index(nav) != _nav_position(key)
+                    or not visible
+                ):
                     mismatched.append(key)
                 if app_instance.focused is None:
                     unfocused.append(key)
             await pilot.press("q")
-        return mismatched, unfocused
+        return mismatched, unfocused, broken
 
     try:
-        mismatched, unfocused = asyncio.run(probe())
+        mismatched, unfocused, broken = asyncio.run(probe())
     except Exception as error:  # noqa: BLE001 - 自检失败需报出原文
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_navigation"), f"{type(error).__name__}: {error}")
+    problems: list[str] = []
     if mismatched or unfocused:
-        return CheckResult(
-            LEVEL_FAIL,
-            i18n.t("cli.tui_cmd.check_navigation"),
+        problems.append(
             i18n.t(
                 "cli.tui_cmd.check_navigation_bad",
                 count=len(PAGES),
                 mismatched=i18n.t("cli.common.list_separator").join(mismatched) or "-",
                 unfocused=i18n.t("cli.common.list_separator").join(unfocused) or "-",
-            ),
+            )
+        )
+    if broken:
+        problems.append(i18n.t("cli.common.list_separator").join(broken))
+    if problems:
+        return CheckResult(
+            LEVEL_FAIL,
+            i18n.t("cli.tui_cmd.check_navigation"),
+            i18n.t("cli.tui.common.error_separator").join(problems),
         )
     return CheckResult(
         LEVEL_OK,
         i18n.t("cli.tui_cmd.check_navigation"),
         i18n.t("cli.tui_cmd.check_navigation_detail", count=len(PAGES)),
     )
+
+
+async def _page_failure(page: Any, pilot: Any) -> str:
+    # worker 一完成即从 app.workers 移除，故先取句柄再等；错误状态在句柄上仍可读。
+    workers = list(page.app.workers)
+    failure = ""
+    try:
+        await page.wait_for_idle()
+    except Exception as error:  # noqa: BLE001 - 自检要把异常原文带进结论
+        failure = f"{type(error).__name__}: {error}"
+    await pilot.pause()
+    if not failure:
+        for worker in workers:
+            if worker.error is not None:
+                failure = f"{type(worker.error).__name__}: {worker.error}"
+                break
+    if not failure:
+        failure = str(getattr(page, "last_error", ""))
+    # 页面错误常带子进程输出的多行尾巴，压成单行才不破坏一条结论一行的格式。
+    return " ".join(failure.split())
 
 
 def _check_available_and_progress() -> CheckResult:
@@ -535,9 +591,10 @@ def _check_resources() -> list[CheckResult]:
             )
         )
     else:
+        # 枚举不到可读资源即这项产品检查没跑成（冻结产物未带包数据），故记未执行而不是警告。
         results.append(
             CheckResult(
-                LEVEL_WARN,
+                LEVEL_SKIP,
                 i18n.t("cli.tui_cmd.check_resources"),
                 i18n.t("cli.tui_cmd.check_resources_missing", package=package),
             )

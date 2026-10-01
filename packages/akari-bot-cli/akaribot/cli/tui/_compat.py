@@ -24,6 +24,8 @@ from rich.cells import cell_len, chop_cells, get_character_cell_size
 from rich.markup import escape as _rich_escape
 from rich.text import Text
 from textual import events, on, work
+import functools
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
@@ -76,6 +78,7 @@ __all__ = [
     "HelpScreen",
     "ask_choice",
     "button_width",
+    "guard_renders",
     "mounted",
     "ask_text",
     "app_test",
@@ -785,12 +788,67 @@ ButtonSpec = tuple[str, str] | tuple[str, str, str]
 
 
 def mounted(widget: Widget) -> bool:
-    """控件是否还在控件树里。
+    """控件是否还能安全地取子控件。
 
-    后台取数与定时轮询可能在页面卸载（切实例重挂载、退出界面）之后才落地，此时按 id 取控件会抛
-    ``NoMatches``，界面退出时会连带把异常抛给用户。渲染入口先问一句再动手。
+    界面的取数与轮询由 worker 驱动，可能在页面卸载（切实例重挂载、退出界面）之后才落地。此时
+    **页面自身的 ``is_mounted`` 仍可能为真**——Textual 先卸子控件再卸父控件——按 id 取子控件会抛
+    ``NoMatches``，异常最终在 worker 里抛给用户。
+
+    判据分三种情形：应用已请求退出（``App._exit``）→ 不可用；页面挂载过又被卸下 → 不可用；页面
+    还没走完首次 ``on_mount``（此时 ``is_mounted`` 尚为假，但子控件已经建好，页面自己的首次渲染
+    正依赖这一点）→ 可用。
     """
-    return bool(getattr(widget, "is_mounted", False))
+    app = getattr(widget, "app", None)
+    if bool(getattr(app, "_exit", False)):
+        return False
+    if getattr(widget, "_tui_mounted_once", False) and not getattr(widget, "is_mounted", False):
+        return False
+    return True
+
+
+def guard_renders(page: Widget) -> None:
+    """把页面的渲染方法包一层「页面不可用就跳过」。
+
+    逐页逐方法加判断会漏（漏掉的那个方法照样把 ``NoMatches`` 抛进 worker），故在页面构造处统一
+    包一层：``_render*`` / ``_sync*`` / ``_set_*`` / ``_paint*`` 这些只写控件的入口先问
+    :func:`mounted`，不可用就直接返回。跳过只发生在页面正在卸载或界面正在退出时，不会丢正常渲染。
+    """
+    page._tui_mounted_once = False
+    _guard_mount(page)
+    for name in dir(type(page)):
+        if not name.startswith(("_render", "_sync", "_set_", "_paint")):
+            continue
+        method = getattr(page, name, None)
+        if not callable(method):
+            continue
+        setattr(page, name, _guarded(page, method))
+
+
+def _guard_mount(page: Widget) -> None:
+    # 首次挂载完成后再标记：页面自己的 ``on_mount`` 里就要渲染一次，那一轮必须放行。
+    original = getattr(page, "on_mount", None)
+
+    def on_mount() -> None:
+        if original is not None:
+            original()
+        page._tui_mounted_once = True
+
+    page.on_mount = on_mount
+
+
+def _guarded(page: Widget, method: Callable[..., Any]) -> Callable[..., Any]:
+    # 包的是**绑定方法**且挂在实例上：实例属性不参与描述符绑定，故闭包里直接引用页面与绑定方法。
+    @functools.wraps(method)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        if not mounted(page):
+            return None
+        try:
+            return method(*args, **kwargs)
+        except NoMatches:
+            # 兜底：页面正在被卸下时子控件可能先一步消失，这类渲染没有目标可写，不能抛给 worker。
+            return None
+
+    return wrapper
 
 
 def button_width(button: Button) -> int:
@@ -946,6 +1004,7 @@ class HelpScreen(Screen[None]):
     :param hint: 说明文字。
     :param rows: ``(键位, 说明)`` 列表，按展示顺序。
     :param close_label: 关闭按钮文字。
+    :param nav_hint: 固定的导航说明，各页相同。
     """
 
     DEFAULT_CSS = """
@@ -966,6 +1025,9 @@ class HelpScreen(Screen[None]):
     HelpScreen #help-hint {
         color: $text-muted;
     }
+    HelpScreen #help-nav {
+        color: $text-muted;
+    }
     HelpScreen #help-list {
         height: 1fr;
     }
@@ -982,11 +1044,13 @@ class HelpScreen(Screen[None]):
         rows: Sequence[tuple[str, str]],
         close_label: str,
         hint: str = "",
+        nav_hint: str = "",
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
         self.help_title = title
         self.help_hint = hint
+        self.help_nav = nav_hint
         self.rows = tuple(rows)
         self.close_label = close_label
 
@@ -996,6 +1060,8 @@ class HelpScreen(Screen[None]):
             yield Static(plain_text(self.help_title), id="help-title", markup=False)
             if self.help_hint:
                 yield Static(plain_text(self.help_hint), id="help-hint", markup=False)
+            if self.help_nav:
+                yield Static(plain_text(self.help_nav), id="help-nav", markup=False)
             yield ListView(
                 *[
                     ListItem(Static(plain_text(_help_row(key, description)), markup=False))
@@ -1039,9 +1105,10 @@ def show_help(
     rows: Sequence[tuple[str, str]],
     close_label: str,
     hint: str = "",
+    nav_hint: str = "",
 ) -> None:
     """弹出键位一览浮层。"""
-    push_screen(app, HelpScreen(title=title, rows=rows, close_label=close_label, hint=hint))
+    push_screen(app, HelpScreen(title=title, rows=rows, close_label=close_label, hint=hint, nav_hint=nav_hint))
 
 
 def pop_screen(app: App[Any]) -> Any:

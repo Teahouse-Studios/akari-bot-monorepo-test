@@ -10,6 +10,10 @@ use`` 子进程异步写回，结论以应用级通知报出；各页随后的�
 页底按钮是这些动作的主要入口：高亮实例的操作在前、当前实例的策略与服务在后，按可用宽度排布，宽
 终端排成一行，放不下时在两组之间折行；键位是同一批动作的快捷方式，逐条列在 ``?`` 键位一览里。
 
+实例清单与字段区之间是首次使用行动区：四项摘要（未配置适配器、待填写占位符、实例运行状态、最近
+一次体检结论）与三个跳转按钮。摘要只在首次显示本页时取一次，取不到的那项如实写成「未取到」并附
+原因；按钮在前提不满足时置灰，原因写在按钮标签上。
+
 服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
 里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
 
@@ -20,7 +24,9 @@ use`` 子进程异步写回，结论以应用级通知报出；各页随后的�
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import re
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -41,6 +47,10 @@ STATE_UNKNOWN = "unknown"
 INSTANCE_META_FILENAME = "akaribot.toml"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 LOCK_FILENAME = ".bot.lock"
+CONFIG_DIRNAME = "config"
+CONFIG_GLOB = "*.toml"
+
+_PLACEHOLDER_PATTERN = re.compile(r"<Replace me[^>]*>")
 
 # 状态取值来自锁文件探测，界面按当前语言取标签，故这里只存文案键。
 _STATE_KEYS = {
@@ -71,6 +81,15 @@ INIT_TIMEOUT_SECONDS = 1800.0
 SERVICE_CLI_TIMEOUT_SECONDS = 60.0
 # 注册表与服务单元的写入是秒级操作，超时只用于兜住卡死的子进程。
 CLI_WRITE_TIMEOUT_SECONDS = 60.0
+# 首次使用摘要要起一次体检子进程，本机实测半秒级，超时只用于兜住卡死的子进程。
+SETUP_TIMEOUT_SECONDS = 60.0
+
+SETUP_BUTTONS: tuple[tuple[str, str], ...] = (
+    ("config", "goto-config"),
+    ("run", "goto-run"),
+    ("doctor", "goto-doctor"),
+)
+"""首次使用行动区的三个按钮：页面键与控件 id，文案键按 ``setup_button_<页面键>`` 派生。"""
 
 
 def _tail(text: str | None, limit: int = 400) -> str:
@@ -89,6 +108,40 @@ def _result_summary(result: OperationResult) -> str:
     if not line:
         return result.message
     return f"{result.message}{i18n.t('cli.tui.common.error_separator')}{line}"
+
+
+def _json_object(text: str | None) -> Mapping[str, Any] | None:
+    try:
+        payload = json.loads(text or "")
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return payload if isinstance(payload, Mapping) else None
+
+
+def _count_of(value: Any) -> int | None:
+    # JSON 里的布尔值也是 int，统计字段只认真正的整数。
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def _missing_text(reason: str) -> str:
+    if reason:
+        return i18n.t("cli.tui.dashboard.setup_value_missing_reason", reason=reason)
+    return i18n.t("cli.tui.dashboard.setup_value_missing")
+
+
+def _count_placeholders(paths: Sequence[Path]) -> int:
+    # CLI 现成的 count_placeholders 只认字面 <Replace me>，模板生成的却是
+    # <Replace me with str value>，对本机实例实测恒为 0；这里按标记本身的形状统计。
+    total = 0
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        total += len(_PLACEHOLDER_PATTERN.findall(text))
+    return total
 
 
 def _run_cli_operation(
@@ -485,6 +538,160 @@ class StaticInstanceListSource:
         return tuple(self._rows)
 
 
+@dataclass(frozen=True)
+class SetupSummary:
+    """首次使用摘要的一次取数结果。
+
+    :param unconfigured_adapters: 已装但未配置的适配器数量；``None`` 表示未取到。
+    :param pending_placeholders: 待填写的占位符数量；``None`` 表示未取到。
+    :param doctor_errors: 最近一次体检的错误级结论数；``None`` 表示未取到。
+    :param doctor_warnings: 最近一次体检的告警级结论数；``None`` 表示未取到。
+    :param adapters_reason: 适配器数量未取到的原因；取到时为空串。
+    :param placeholders_reason: 占位符数量未取到的原因；取到时为空串。
+    :param doctor_reason: 体检结论未取到的原因；取到时为空串。
+    """
+
+    unconfigured_adapters: int | None = None
+    pending_placeholders: int | None = None
+    doctor_errors: int | None = None
+    doctor_warnings: int | None = None
+    adapters_reason: str = ""
+    placeholders_reason: str = ""
+    doctor_reason: str = ""
+
+
+@runtime_checkable
+class SetupSummarySource(Protocol):
+    """首次使用摘要的数据源接口；测试注入替身，生产经子进程与本机配置文件。"""
+
+    def summary(self) -> SetupSummary:
+        """返回一次摘要取数结果。"""
+
+
+class StaticSetupSummarySource:
+    """固定摘要的替身数据源，供自动化断言使用。
+
+    :param summary: ``summary`` 的返回值；缺省给一份全部取到的合成结果。
+    :param error: 注入后 ``summary`` 每次都抛出它，用于断言整次取数失败的降级行为。
+    """
+
+    def __init__(self, summary: SetupSummary | None = None, *, error: Exception | None = None) -> None:
+        self._summary = summary if summary is not None else SetupSummary(0, 0, 0, 0)
+        self._error = error
+        self.calls = {"summary": 0}
+
+    def summary(self) -> SetupSummary:
+        """见 :meth:`SetupSummarySource.summary`。"""
+        self.calls["summary"] += 1
+        if self._error is not None:
+            raise self._error
+        return self._summary
+
+    def set_summary(self, summary: SetupSummary) -> None:
+        """替换替身记录的摘要，模拟配置或体检结论在界面之外变化。"""
+        self._summary = summary
+
+
+class LocalSetupSummarySource:
+    """默认实现：体检统计经 ``akaribot doctor --json`` 子进程，占位符按本机配置文件统计。
+
+    体检要 core 参与判断，故经子进程取 ``doctor --json`` 的统计；占位符只数实例 ``config`` 目录下
+    的模板标记——逐表 ``config schema`` 才有 ``is_placeholder`` 字段，本机实测每张表约 1.4 秒，
+    作为首屏摘要不可接受。
+
+    :param root: 实例根；缺省在取数时按界面当前实例解析。
+    :param timeout: 子进程超时秒数。
+    :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
+    """
+
+    def __init__(
+        self,
+        *,
+        root: Path | str | None = None,
+        timeout: float = SETUP_TIMEOUT_SECONDS,
+        runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    ) -> None:
+        self.root = Path(root) if root is not None else None
+        self.timeout = timeout
+        self._runner = runner
+        self.calls = {"summary": 0}
+        self.last_argv: tuple[str, ...] = ()
+
+    def summary(self) -> SetupSummary:
+        """见 :meth:`SetupSummarySource.summary`。"""
+        self.calls["summary"] += 1
+        root = self.root or resolve_instance_root()
+        if root is None:
+            reason = i18n.t("cli.tui.dashboard.setup_src_no_instance")
+            return SetupSummary(adapters_reason=reason, placeholders_reason=reason, doctor_reason=reason)
+        adapters, errors, warnings, adapters_reason, doctor_reason = self._doctor(root)
+        placeholders, placeholders_reason = self._placeholders(root)
+        return SetupSummary(
+            unconfigured_adapters=adapters,
+            pending_placeholders=placeholders,
+            doctor_errors=errors,
+            doctor_warnings=warnings,
+            adapters_reason=adapters_reason,
+            placeholders_reason=placeholders_reason,
+            doctor_reason=doctor_reason,
+        )
+
+    def _doctor(self, root: Path) -> tuple[int | None, int | None, int | None, str, str]:
+        argv = cli_process.cli_argv("doctor", "--json")
+        self.last_argv = tuple(argv)
+        execute = self._runner or subprocess.run
+        try:
+            completed = execute(
+                list(argv),
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.timeout,
+                env=cli_process.cli_env(root),
+            )
+        except subprocess.TimeoutExpired:
+            reason = i18n.t("cli.tui.dashboard.setup_cli_timeout", seconds=f"{self.timeout:g}")
+            return None, None, None, reason, reason
+        except OSError as error:
+            reason = f"{type(error).__name__}: {error}"
+            return None, None, None, reason, reason
+        # 体检有 error 级结论时退出码非零，完整统计仍写在标准输出，故先解析再看退出码。
+        payload = _json_object(completed.stdout)
+        if payload is None:
+            reason = i18n.t("cli.tui.dashboard.setup_doctor_unreadable", code=completed.returncode)
+            tail = _tail(completed.stderr) or _tail(completed.stdout)
+            if tail:
+                reason = f"{reason}{i18n.t('cli.tui.common.error_separator')}{tail}"
+            return None, None, None, reason, reason
+        unreadable = i18n.t("cli.tui.dashboard.setup_checks_unreadable")
+        checks = payload.get("checks")
+        checks = checks if isinstance(checks, Mapping) else {}
+        summary = payload.get("summary")
+        summary = summary if isinstance(summary, Mapping) else {}
+        unconfigured = checks.get("unconfigured_adapters")
+        adapters: int | None = None
+        adapters_reason = ""
+        if payload.get("registry_available") is False:
+            adapters_reason = str(payload.get("registry_note") or "").strip() or unreadable
+        elif isinstance(unconfigured, Sequence) and not isinstance(unconfigured, (str, bytes)):
+            adapters = len(unconfigured)
+        else:
+            adapters_reason = unreadable
+        errors = _count_of(summary.get("error"))
+        warnings = _count_of(summary.get("warning"))
+        doctor_reason = "" if errors is not None and warnings is not None else unreadable
+        return adapters, errors, warnings, adapters_reason, doctor_reason
+
+    def _placeholders(self, root: Path) -> tuple[int | None, str]:
+        try:
+            paths = sorted((root / CONFIG_DIRNAME).rglob(CONFIG_GLOB))
+        except OSError as error:
+            return None, f"{type(error).__name__}: {error}"
+        return _count_placeholders(paths), ""
+
+
 def resolve_instance_root(start: Path | None = None) -> Path | None:
     """定位实例根，供概览、运行与日志三页的默认数据源共用。
 
@@ -802,6 +1009,8 @@ class DashboardPage(compat.Vertical):
     :param source: 数据源，缺省为 :class:`LocalDashboardSource`。
     :param instances: 实例清单数据源，缺省读本机注册表。
     :param service_control: 服务状态与预演接口，缺省直接用 CLI 侧的 service 模块。
+    :param setup: 首次使用摘要的数据源；缺省取应用注入的 ``dashboard_setup``，没有时用
+        :class:`LocalSetupSummarySource`。
     :param init_runner: 新建实例的执行接口，缺省经 ``akaribot init`` 子进程。
     :param cli_runner: 写动作的执行接口，缺省经 ``akaribot <子命令>`` 子进程。
     :param cache_ttl: 快照缓存有效期（秒）；缓存内刷新只重绘，不取版本。
@@ -821,7 +1030,7 @@ class DashboardPage(compat.Vertical):
         text-overflow: ellipsis;
     }
     DashboardPage #instance-list {
-        height: 8;
+        height: 6;
         min-height: 4;
         border: round $panel;
     }
@@ -839,6 +1048,25 @@ class DashboardPage(compat.Vertical):
         text-wrap: nowrap;
         text-overflow: ellipsis;
     }
+    DashboardPage #setup {
+        height: 2;
+        padding: 0 1;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    DashboardPage #setup-actions {
+        height: auto;
+        padding: 0 0 0 1;
+    }
+    DashboardPage #setup-actions Button {
+        height: 1;
+        min-height: 1;
+        max-width: 100%;
+        border: none;
+        padding: 0 1;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
     DashboardPage #fields-pane {
         height: 1fr;
         border: round $primary;
@@ -852,7 +1080,7 @@ class DashboardPage(compat.Vertical):
         padding: 0 0 0 1;
     }
     DashboardPage #status {
-        height: 2;
+        height: 1;
         padding: 0 0 0 1;
         color: $text-muted;
         text-wrap: nowrap;
@@ -881,6 +1109,7 @@ class DashboardPage(compat.Vertical):
         *,
         instances: InstanceListSource | None = None,
         service_control: ServiceControl | None = None,
+        setup: SetupSummarySource | None = None,
         init_runner: InitRunner | None = None,
         cli_runner: CliRunner | None = None,
         cache_ttl: float = 5.0,
@@ -896,6 +1125,10 @@ class DashboardPage(compat.Vertical):
         )
         self.init_runner: InitRunner = init_runner if init_runner is not None else SubprocessInitRunner()
         self.cli_runner: CliRunner = cli_runner if cli_runner is not None else SubprocessCliRunner()
+        self._setup_source = setup
+        self._setup = SetupSummary()
+        self._setup_rows: tuple[tuple[str, str], ...] = ()
+        self._setup_rendered: str = ""
         self._service = ServiceRow()
         self._service_text = ""
         self._service_preview = ""
@@ -914,10 +1147,19 @@ class DashboardPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：实例清单 + 当前实例的字段 + 操作按钮区与状态栏。"""
+        """装配页面控件树：实例清单 + 首次使用行动区 + 当前实例的字段 + 操作按钮区与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.dashboard.instances_keys_caption"), id="instances-caption", markup=False)
         yield compat.Static("", id="service", markup=False)
         yield compat.ListView(id="instance-list")
+        yield compat.Static("", id="setup", markup=False)
+        # 三个跳转按钮压在字段区上方：新用户不必先猜「先去配置、再回运行」。按钮压到一行高，
+        # 80×24 下字段区与状态栏才留得下位置。
+        yield compat.ButtonFlow(
+            ("goto-config", i18n.t("cli.tui.dashboard.setup_button_config")),
+            ("goto-run", i18n.t("cli.tui.dashboard.setup_button_run")),
+            ("goto-doctor", i18n.t("cli.tui.dashboard.setup_button_doctor")),
+            id="setup-actions",
+        )
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
         # 实例操作与策略服务各成一组：宽终端下一行放得下，放不下时在两组之间折行。
@@ -938,15 +1180,20 @@ class DashboardPage(compat.Vertical):
     def on_mount(self) -> None:
         """挂载后只装配控件；取数与周期探测推迟到首次显示。"""
         compat.set_text_selection(self, False)
+        # 跳转按钮压到一行高：80×24 下字段区与状态栏才留得下位置。CSS 的 line-pad 只收正整数，
+        # 置零只能在代码里做，否则默认的一行上下留白会把标签挤出这一行。
+        for _, button_id in SETUP_BUTTONS:
+            self.query_one(f"#{button_id}", compat.Button).styles.line_pad = 0
 
     def activate(self) -> None:
-        """首次显示时读取快照，并按周期探测锁文件。"""
+        """首次显示时读取快照与首次使用摘要，并按周期探测锁文件。"""
         if self._activated:
             return
         self._activated = True
         self.refresh_snapshot(force=True)
         self.refresh_instances()
         self.refresh_service()
+        self.refresh_setup()
         if self.refresh_interval and self.refresh_interval > 0:
             self.set_interval(self.refresh_interval, self._on_tick)
 
@@ -1016,6 +1263,7 @@ class DashboardPage(compat.Vertical):
         self.query_one("#instances-caption", compat.Static).update(
             compat.plain_text(i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(rows)))
         )
+        self._sync_setup_actions()
         self._sync_actions()
 
     @staticmethod
@@ -1585,6 +1833,21 @@ class DashboardPage(compat.Vertical):
         return self._fields_rendered
 
     @property
+    def setup_summary(self) -> SetupSummary:
+        """返回最近一次取到的首次使用摘要，不触发取数。"""
+        return self._setup
+
+    @property
+    def setup_rows(self) -> tuple[tuple[str, str], ...]:
+        """返回首次使用摘要最近一次渲染的标签与值，供自动化断言逐项核对。"""
+        return self._setup_rows
+
+    @property
+    def setup_text(self) -> str:
+        """返回首次使用行动区当前渲染出的纯文本。"""
+        return self._setup_rendered
+
+    @property
     def status_text(self) -> str:
         """返回状态栏当前文本。"""
         return self._status_rendered
@@ -1658,9 +1921,71 @@ class DashboardPage(compat.Vertical):
         self.refresh_running()
         self.refresh_instances(polling=True)
 
+    def refresh_setup(self) -> None:
+        """读取首次使用摘要；整次取数失败时三项都写成「未取到」并附原因。"""
+        source = self._resolve_setup_source()
+        self.run_worker(self._load_setup(source), group="dashboard-setup", exclusive=True)
+
+    def _resolve_setup_source(self) -> SetupSummarySource:
+        if self._setup_source is not None:
+            return self._setup_source
+        # 概览页的三个数据源都由应用按 key 注入，本页在首次取数时才解析，替身因此不必改装配代码。
+        app_sources = getattr(self.app, "sources", None)
+        injected = app_sources.get("dashboard_setup") if isinstance(app_sources, Mapping) else None
+        self._setup_source = injected if injected is not None else LocalSetupSummarySource()
+        return self._setup_source
+
+    async def _load_setup(self, source: SetupSummarySource) -> None:
+        try:
+            summary = await asyncio.to_thread(source.summary)
+        except Exception as error:  # noqa: BLE001 - 取数失败只降级为逐项说明
+            reason = f"{type(error).__name__}: {error}"
+            summary = SetupSummary(adapters_reason=reason, placeholders_reason=reason, doctor_reason=reason)
+        self._setup = summary
+        self._render_setup()
+
     # endregion
 
     # region 渲染（只读缓存）
+
+    def _render_setup(self) -> None:
+        rows = self._setup_rows_for_render()
+        self._setup_rows = rows
+        # 四项摘要排成两行两列：80×24 下行动区最多只占两行，实例清单与状态栏才留得下位置。
+        # 放不下时由控件的 nowrap 与省略号裁剪，这里不预先截断，渲染文本仍留全四个取值。
+        cells = [f"{label} {value}" for label, value in rows]
+        text = "\n".join("  ".join(cells[index : index + 2]) for index in range(0, len(cells), 2))
+        self._setup_rendered = text
+        self.query_one("#setup", compat.Static).update(compat.plain_text(text))
+        self._sync_setup_actions()
+
+    def _setup_rows_for_render(self) -> tuple[tuple[str, str], ...]:
+        state = self._snapshot.state_label if self._loaded_at else _missing_text("")
+        return (
+            (
+                i18n.t("cli.tui.dashboard.setup_adapters_label"),
+                _missing_text(self._setup.adapters_reason)
+                if self._setup.unconfigured_adapters is None
+                else i18n.t("cli.tui.dashboard.setup_adapters_value", count=self._setup.unconfigured_adapters),
+            ),
+            (
+                i18n.t("cli.tui.dashboard.setup_placeholders_label"),
+                _missing_text(self._setup.placeholders_reason)
+                if self._setup.pending_placeholders is None
+                else i18n.t("cli.tui.dashboard.setup_placeholders_value", count=self._setup.pending_placeholders),
+            ),
+            (i18n.t("cli.tui.dashboard.setup_instance_label"), state),
+            (
+                i18n.t("cli.tui.dashboard.setup_doctor_label"),
+                _missing_text(self._setup.doctor_reason)
+                if self._setup.doctor_errors is None or self._setup.doctor_warnings is None
+                else i18n.t(
+                    "cli.tui.dashboard.setup_doctor_value",
+                    errors=self._setup.doctor_errors,
+                    warnings=self._setup.doctor_warnings,
+                ),
+            ),
+        )
 
     def _render_fields(self) -> None:
         snapshot = self._snapshot
@@ -1707,6 +2032,8 @@ class DashboardPage(compat.Vertical):
         text = "\n".join(lines)
         self._fields_rendered = text
         self.query_one("#fields", compat.Static).update(compat.plain_text(text))
+        # 摘要里的运行状态与宽度都跟着本次重绘走，故整块重排而不是只同步按钮。
+        self._render_setup()
         self._sync_actions()
 
     def _inner_width(self) -> int:
@@ -1770,10 +2097,56 @@ class DashboardPage(compat.Vertical):
             self.request_toggle_service()
         elif button_id == "refresh":
             self.refresh_snapshot(force=True)
+            self.refresh_setup()
+        else:
+            page_key = next((key for key, widget_id in SETUP_BUTTONS if widget_id == button_id), "")
+            if page_key:
+                self.open_setup_page(page_key)
+
+    def _sync_setup_actions(self) -> None:
+        for page_key, button_id in SETUP_BUTTONS:
+            label_key, reason = self._setup_button_state(page_key)
+            button = self.query_one(f"#{button_id}", compat.Button)
+            button.disabled = bool(reason)
+            button.label = i18n.t(label_key)
+        # 置灰会换标签，列数与列宽都要跟着重算。
+        self.query_one("#setup-actions", compat.ButtonFlow).relayout()
+
+    def _setup_button_state(self, page_key: str) -> tuple[str, str]:
+        # 返回按钮的文案键与置灰原因：原因写在标签上，用户不必点下去才知道为什么不可用。
+        if not self._setup_has_instance():
+            return f"cli.tui.dashboard.setup_button_{page_key}_blocked", i18n.t(
+                "cli.tui.dashboard.setup_block_no_instance"
+            )
+        if page_key == "run" and self._snapshot.running is True:
+            return "cli.tui.dashboard.setup_button_run_running", i18n.t("cli.tui.dashboard.setup_block_running")
+        return f"cli.tui.dashboard.setup_button_{page_key}", ""
+
+    def _setup_has_instance(self) -> bool:
+        # 清单里没有实例且界面没有选中实例时，配置页、运行页与体检页都无处可去。
+        return bool(self._instance_rows) or context.active_root() is not None
+
+    def open_setup_page(self, page_key: str) -> None:
+        """切到首次使用行动区指向的页面；前提不满足时只在状态栏说明原因。
+
+        :param page_key: 页面键，取自 :data:`SETUP_BUTTONS`。
+        """
+        _, reason = self._setup_button_state(page_key)
+        if reason:
+            self._set_status(
+                i18n.t(
+                    "cli.tui.dashboard.setup_blocked_status",
+                    action=i18n.t(f"cli.tui.dashboard.setup_button_{page_key}"),
+                    reason=reason,
+                )
+            )
+            return
+        self.app.show_page(page_key)
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取快照。"""
+        """键位动作：强制重新读取快照与首次使用摘要。"""
         self.refresh_snapshot(force=True)
+        self.refresh_setup()
 
     # endregion
 

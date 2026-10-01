@@ -1,8 +1,9 @@
 """数据库页：浏览表与数据项，改动经二次确认后写回。
 
 数据与写入一律经 ``akaribot db`` 子命令（该命令再经 core 的 ``data`` 入口读写），界面不直接连库：
-表名与列名只认 ORM 注册过的模型。左栏是表清单与搜索框，右上数据项，右下编辑区；``s``、``i``、``d``
-第一次按只在状态栏问一次，第二次按同一个键才真正写入。
+表名与列名只认 ORM 注册过的模型。宽终端下左栏是表清单与搜索框，右上数据项，右下编辑区；内容区
+不足 :data:`SIDE_BY_SIDE_MIN_WIDTH` 列时三栏上下两行排布。``s``、``i``、``d`` 第一次按只在状态栏
+问一次，第二次按同一个键才真正写入。
 """
 
 from __future__ import annotations
@@ -24,6 +25,9 @@ from akaribot.cli.tui import context
 
 # 一页读取的数据项条数：线上表可能很大，界面一次只取一页，翻页与条数都由 core 侧收口。
 PAGE_LIMIT = 50
+# 三栏并排所需的最小内容宽度：表清单 26 列、数据项 32 列（四个翻页按钮的自然宽度）、编辑区 34 列。
+# 内容区窄于此值时改成上下两行，否则固定宽度会把数据项列挤到只剩边框。
+SIDE_BY_SIDE_MIN_WIDTH = 92
 # 四个翻页按钮的控件 id，状态同步与按键处理共用一份。
 PAGER_BUTTONS = ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
 # 条件里的运算符，从长到短匹配，避免 != 被当成 =。
@@ -656,7 +660,7 @@ class DatabasePage(compat.Vertical):
         height: 1fr;
     }
     DatabasePage #tables-pane {
-        width: 32;
+        width: 26;
         min-width: 20;
     }
     DatabasePage #database-search {
@@ -675,6 +679,7 @@ class DatabasePage(compat.Vertical):
     }
     DatabasePage #rows-pane {
         width: 1fr;
+        min-width: 24;
         height: 1fr;
     }
     DatabasePage #rows-caption {
@@ -699,7 +704,8 @@ class DatabasePage(compat.Vertical):
         height: 3;
     }
     DatabasePage #pager Button {
-        min-width: 8;
+        width: 1fr;
+        min-width: 0;
     }
     DatabasePage #row-list > ListItem {
         padding: 0 1;
@@ -709,7 +715,7 @@ class DatabasePage(compat.Vertical):
         text-overflow: ellipsis;
     }
     DatabasePage #editor-pane {
-        width: 42;
+        width: 34;
         min-width: 24;
         border: round $primary;
         padding: 0 1;
@@ -733,6 +739,9 @@ class DatabasePage(compat.Vertical):
         text-wrap: nowrap;
         text-overflow: ellipsis;
     }
+    DatabasePage #editor-fields {
+        height: 1fr;
+    }
     DatabasePage EditorField {
         height: auto;
         margin: 0 0 1 0;
@@ -750,7 +759,8 @@ class DatabasePage(compat.Vertical):
         height: 3;
     }
     DatabasePage #editor-actions Button {
-        min-width: 8;
+        width: 1fr;
+        min-width: 0;
     }
     DatabasePage #database-status {
         height: 2;
@@ -758,6 +768,42 @@ class DatabasePage(compat.Vertical):
         color: $text-muted;
         text-wrap: nowrap;
         text-overflow: ellipsis;
+    }
+    DatabasePage #database-body.narrow {
+        layout: grid;
+        grid-size: 2 2;
+        grid-columns: 1fr 1fr;
+        grid-rows: 1fr 1fr;
+    }
+    DatabasePage #database-body.narrow #tables-pane {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+    }
+    DatabasePage #database-body.narrow #rows-pane {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+    }
+    DatabasePage #database-body.narrow #editor-pane {
+        column-span: 2;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+    }
+    DatabasePage #database-body.narrow #rows-caption, DatabasePage #database-body.narrow #filter-bar {
+        height: 1;
+    }
+    DatabasePage #database-body.narrow #pager {
+        height: 1;
+    }
+    DatabasePage #database-body.narrow #pager Button {
+        height: 1;
+        border: none;
+    }
+    /* 窄屏下每行只有半屏宽，四个按钮挤在一行会裁掉标签，故只留高频的翻页两个，跳页用 g / G。 */
+    DatabasePage #database-body.narrow #db-first-page, DatabasePage #database-body.narrow #db-last-page {
+        display: none;
     }
     """
 
@@ -831,7 +877,7 @@ class DatabasePage(compat.Vertical):
                     yield compat.Button(i18n.t("cli.tui.database.button_previous_page"), id="db-previous-page")
                     yield compat.Button(i18n.t("cli.tui.database.button_next_page"), id="db-next-page")
                     yield compat.Button(i18n.t("cli.tui.database.button_last_page"), id="db-last-page")
-            with compat.VerticalScroll(id="editor-pane"):
+            with compat.Vertical(id="editor-pane"):
                 yield compat.Static(
                     compat.plain_text(i18n.t("cli.tui.database.editor_caption_empty")),
                     id="editor-caption",
@@ -844,7 +890,8 @@ class DatabasePage(compat.Vertical):
                     yield compat.Input(
                         placeholder=i18n.t("cli.tui.database.editor_pk_placeholder"), id="editor-pk-input"
                     )
-                yield compat.Vertical(id="editor-fields")
+                # 字段单独放进滚动容器：字段多时只有它滚动，编辑区底部的按钮始终留在原地。
+                yield compat.VerticalScroll(id="editor-fields")
                 with compat.Horizontal(id="editor-actions"):
                     yield compat.Button(i18n.t("cli.tui.database.button_save"), id="db-save", variant="success")
                     yield compat.Button(i18n.t("cli.tui.database.button_insert"), id="db-insert")
@@ -857,8 +904,16 @@ class DatabasePage(compat.Vertical):
     def on_mount(self) -> None:
         """挂载后只装配控件；取数推迟到首次显示。"""
         compat.set_text_selection(self, False)
+        self._sync_layout(self.size.width)
         # 取数前也先把翻页按钮按「还没有表」的状态摆好，免得首帧露出可点却是空的按钮。
         self._sync_pager()
+
+    def _sync_layout(self, width: int) -> None:
+        # 切换的是容器上的类，三栏的构成与控件 id 都不变；并排所需宽度见 SIDE_BY_SIDE_MIN_WIDTH。
+        if width <= 0:
+            return
+        body = self.query_one("#database-body", compat.Horizontal)
+        body.set_class(width < SIDE_BY_SIDE_MIN_WIDTH, "narrow")
 
     def activate(self) -> None:
         """首次显示时读取表清单。"""
@@ -1133,7 +1188,7 @@ class DatabasePage(compat.Vertical):
         await self._clear_editor()
 
     async def _clear_editor(self) -> None:
-        pane = self.query_one("#editor-fields", compat.Vertical)
+        pane = self.query_one("#editor-fields", compat.VerticalScroll)
         await pane.remove_children()
         self.query_one("#editor-pk", compat.Static).update(
             compat.plain_text(i18n.t("cli.tui.database.editor_pk_empty"))
@@ -1143,7 +1198,7 @@ class DatabasePage(compat.Vertical):
         )
 
     async def _rebuild_editor(self, info: TableInfo) -> None:
-        pane = self.query_one("#editor-fields", compat.Vertical)
+        pane = self.query_one("#editor-fields", compat.VerticalScroll)
         await pane.remove_children()
         fields = [EditorField(column, id=f"editor-{column.name}") for column in info.editable_columns()]
         if fields:
@@ -1439,7 +1494,8 @@ class DatabasePage(compat.Vertical):
         self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+        """终端尺寸变化时切换布局并按缓存重排，不重新取数。"""
+        self._sync_layout(event.size.width)
         if self._tables:
             self._render_tables()
         if self._page.rows:

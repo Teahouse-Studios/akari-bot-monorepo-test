@@ -60,17 +60,6 @@ EXIT_FAILURE = 1
 ADAPTER_KINDS = frozenset({"adapter", "adapters", "bot", "bot_adapter"})
 MODULE_KINDS = frozenset({"module", "modules"})
 
-# 实例数据清理涉及的核心表。表名取自 core/database/models.py 的 Meta.table，行以 client_name 前缀
-# 出现在 union_id / target_id / sender_id 列上。模块表由各包 manifest 的 owned_tables 与 id_columns 声明。
-PURGE_SCOPE_CORE_TABLES = (
-    "target_union_info",
-    "target_union_bind",
-    "sender_union_info",
-    "sender_union_bind",
-    "analytics_data",
-    "unfriendly_actions",
-)
-
 # 适配器未声明 listen_fields 时，按字段名识别监听项的候选集合（见 _guess_listen_fields）。
 LISTEN_FIELD_EXACT = ("host", "port", "listen", "listen_host", "listen_port", "bind", "addr", "address")
 WILDCARD_HOSTS = frozenset({"", "*", "0.0.0.0", "::", "[::]", "::0"})
@@ -1363,31 +1352,15 @@ def remove_instance_config(config: AdapterInstanceConfig) -> bool:
     return False
 
 
-def _purge_scope_lines(client_name: str) -> list[str]:
-    tables = i18n.t("cli.common.list_separator").join(PURGE_SCOPE_CORE_TABLES)
-    return [
-        i18n.t("cli.adapter.instance.purge.scope_intro", client_name=client_name),
-        i18n.t("cli.adapter.instance.purge.core_tables", tables=tables),
-        i18n.t("cli.adapter.instance.purge.core_tables_hint"),
-        i18n.t("cli.adapter.instance.purge.module_tables"),
-        i18n.t("cli.adapter.instance.purge.row_count"),
-    ]
-
-
 @instance_app.command("remove", help=i18n.t("cli.adapter.instance.remove.help"))
 def instance_remove(
     platform: str = typer.Argument(..., help=i18n.t("cli.adapter.instance.arg_platform")),
     instance_id: str | None = typer.Argument(None, help=i18n.t("cli.adapter.instance.remove.arg_instance_id")),
-    purge_data: bool = typer.Option(
-        False, "--purge-data", help=i18n.t("cli.adapter.instance.remove.option_purge_data")
-    ),
-    yes: bool = typer.Option(False, "--yes", "-y", help=i18n.t("cli.common.yes_option")),
     dry_run: bool = typer.Option(False, "--dry-run", help=i18n.t("cli.adapter.instance.remove.option_dry_run")),
 ) -> None:
     """移除适配器实例配置。
 
-    默认只删除配置文件，数据保留；``--purge-data`` 追加清理该 ``client_name`` 前缀下的场景与用户数据，
-    执行前要求二次确认并列出影响范围。实例 ID 一旦使用请勿更改，本命令不提供改名。
+    只删除该实例的配置文件，场景与用户数据保留。实例 ID 一旦使用请勿更改，本命令不提供改名。
     """
     instance = open_instance()
     platform = platform.strip().lower()
@@ -1415,14 +1388,9 @@ def instance_remove(
     if match.enabled:
         warn(i18n.t("cli.adapter.instance.remove.enabled_warning"))
 
-    if purge_data:
-        for line in _purge_scope_lines(client_name):
-            console.print(escape(line))
     if dry_run:
         console.print(i18n.t("cli.adapter.instance.remove.dry_run"))
         return
-    if purge_data and not yes:
-        typer.confirm(i18n.t("cli.adapter.instance.remove.confirm"), abort=True)
 
     try:
         removed_file = remove_instance_config(match)
@@ -1433,11 +1401,7 @@ def instance_remove(
     else:
         console.print(escape(i18n.t("cli.adapter.instance.remove.table_removed", path=match.path, table=match.table)))
 
-    if purge_data:
-        console.print(i18n.t("cli.adapter.instance.remove.data_kept"))
-        console.print(escape(i18n.t("cli.adapter.instance.remove.purge_later", client_name=client_name)))
-    else:
-        console.print(escape(i18n.t("cli.adapter.instance.remove.keep_hint", client_name=client_name)))
+    console.print(escape(i18n.t("cli.adapter.instance.remove.keep_hint", client_name=client_name)))
     console.print(i18n.t("cli.adapter.instance.remove.recheck"))
 
 

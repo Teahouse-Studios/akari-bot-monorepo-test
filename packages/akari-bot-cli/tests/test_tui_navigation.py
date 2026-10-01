@@ -1,10 +1,12 @@
 """页面切换契约：侧栏高亮、可见页面、焦点与键位归属。
 
 四者必须一致，否则用户判断不出当前页，且页级键位会被 App 级同键接管——停在配置页按 u 曾会
-卸载模块页的选中项。本文件逐页断言这四条，并固定「隐藏页不取数」的启动行为。
+卸载模块页的选中项。本文件逐页断言这四条，并固定「隐藏页不取数」的启动行为。侧栏按 NAV_GROUPS
+分了四组，故高亮下标按条目 id 折算回 PAGES 下标，页面顺序仍以 PAGES 为准。
 """
 
 import asyncio
+import json
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,11 +14,12 @@ from tempfile import TemporaryDirectory
 from akaribot.cli import i18n
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import context
-from akaribot.cli.tui.app import PAGES, TuiApp
+from akaribot.cli.tui.app import NAV_GROUPS, NAV_PLAN, PAGE_BLURB, PAGES, TuiApp
 from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 from akaribot.testing import Tester, func_case
 
 RECORD = ModuleRecord(name="coin", dist="akari-bot-module-coin", version="0.1.0", state="installed")
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "sidebar.json"
 
 
 class _Counting:
@@ -74,7 +77,19 @@ def _use_cli_locale() -> None:
 
 
 def _nav_index(app: TuiApp) -> int | None:
-    return compat.highlighted_index(app.query_one("#nav", compat.ListView))
+    # 侧栏混排着四个分组标题，高亮下标不等于页面下标，按高亮项的 id 折算回 PAGES 顺序。
+    nav = app.query_one("#nav", compat.ListView)
+    position = compat.highlighted_index(nav)
+    if position is None or position >= len(nav.children):
+        return None
+    item_id = nav.children[position].id or ""
+    if not item_id.startswith("nav-"):
+        return None
+    return _page_index(item_id.removeprefix("nav-"))
+
+
+def _fragment() -> dict[str, str]:
+    return json.loads(FRAGMENT.read_text(encoding="utf-8"))
 
 
 async def _with_app(body, *, initial_page: str = "modules", sources=None, size=(100, 30)):
@@ -384,17 +399,21 @@ async def _test_sidebar_browse_does_not_switch():
         nav = app.query_one("#nav", compat.ListView)
         nav.focus()
         await pilot.pause()
-        # 侧栏起始高亮落在活动页上，故按目标位置相对移动，不固定按键次数。
-        target = [key for key, _, _ in PAGES].index("logs")
-        while (_nav_index(app) or 0) < target:
-            await pilot.press("down")
-            await pilot.pause()
-        browsing = (app.active_page, _nav_index(app))
+        before = (app.active_page, _nav_index(app))
+        await pilot.press("down")
+        await pilot.pause()
+        after = (app.active_page, _nav_index(app))
         await pilot.press("q")
-        return browsing
+        return before, after
 
-    active, index = await _with_app(body)
-    return active == "modules" and index == _page_index("logs")
+    # 侧栏分组后条目次序与 PAGES 不同，故只断言方向键移了高亮、活动页未动，不指定落点。
+    before, after = await _with_app(body)
+    return (
+        before == ("modules", _page_index("modules"))
+        and after[0] == "modules"
+        and after[1] is not None
+        and after[1] != before[1]
+    )
 
 
 async def _test_sidebar_selection_switches_page():
@@ -402,10 +421,9 @@ async def _test_sidebar_selection_switches_page():
         nav = app.query_one("#nav", compat.ListView)
         nav.focus()
         await pilot.pause()
-        target = [key for key, _, _ in PAGES].index("logs")
-        while (_nav_index(app) or 0) < target:
-            await pilot.press("down")
-            await pilot.pause()
+        await pilot.press("down")
+        await pilot.pause()
+        highlighted = _nav_index(app)
         await pilot.press("enter")
         await pilot.pause()
         await asyncio.sleep(0.2)
@@ -413,10 +431,110 @@ async def _test_sidebar_selection_switches_page():
         index = _nav_index(app)
         focused = app.focused
         await pilot.press("q")
-        return active, index, focused is not None
+        return highlighted, active, index, focused is not None
 
-    active, index, has_focus = await _with_app(body)
-    return active == "logs" and index == _page_index("logs") and has_focus
+    highlighted, active, index, has_focus = await _with_app(body)
+    opened = [key for key, _, _ in PAGES][highlighted] if highlighted is not None else ""
+    return (
+        highlighted is not None
+        and highlighted != _page_index("modules")
+        and active == opened
+        and index == highlighted
+        and has_focus
+    )
+
+
+async def _test_sidebar_groups_follow_the_plan():
+    # 侧栏按 NAV_GROUPS 分四组：分组标题禁用且不可高亮，页面条目仍覆盖 PAGES 的全部页面。
+    async def body(app, pilot):
+        nav = app.query_one("#nav", compat.ListView)
+        items = [
+            (child.id or "", child.disabled, tuple(str(label.render()) for label in child.query(compat.Label)))
+            for child in nav.children
+        ]
+        await pilot.press("q")
+        return items
+
+    items = await _with_app(body)
+    expected = [
+        (f"navgroup-{position}" if kind == "group" else f"nav-{value}", kind == "group")
+        for position, (kind, value) in enumerate(NAV_PLAN)
+    ]
+    observed = [(item_id, disabled) for item_id, disabled, _ in items]
+    titles = {key: i18n.t(title_key) for key, title_key, _ in PAGES}
+    group_texts = [labels[0] for item_id, disabled, labels in items if disabled and labels]
+    plan_groups = [i18n.t(value) for kind, value in NAV_PLAN if kind == "group"]
+    pages = {item_id.removeprefix("nav-") for item_id, disabled, _ in items if not disabled}
+    return observed == expected and len(NAV_GROUPS) == 4 and pages == set(titles) and group_texts == plan_groups
+
+
+async def _test_page_blurbs_come_from_the_table():
+    fragment = _fragment()
+
+    # 每页一行用途说明写在侧栏标题下，文案键先落在片段文件；合并进 locales 之前 i18n.t 返回占位标记。
+    async def body(app, pilot):
+        nav = app.query_one("#nav", compat.ListView)
+        observed = {}
+        squeezed = []
+        for child in nav.children:
+            item_id = child.id or ""
+            if not item_id.startswith("nav-"):
+                continue
+            key = item_id.removeprefix("nav-")
+            labels = list(child.query(compat.Label))
+            observed[key] = tuple(str(label.render()) for label in labels)
+            # 侧栏固定 18 列、中文每字 2 列：按片段文案核对说明行放得下，不被省略号截断。
+            if compat.display_width(fragment[PAGE_BLURB[key]]) > labels[1].size.width:
+                squeezed.append(key)
+        await pilot.press("q")
+        return observed, squeezed
+
+    observed, squeezed = await _with_app(body)
+    titles = {key: i18n.t(title_key) for key, title_key, _ in PAGES}
+    pairs_ok = all(observed.get(key) == (titles[key], i18n.t(blurb_key)) for key, blurb_key in PAGE_BLURB.items())
+    return pairs_ok and not squeezed and all(blurb_key in fragment for blurb_key in PAGE_BLURB.values())
+
+
+async def _test_sidebar_scrolls_eighty_by_twenty_four():
+    # 11 个页面加 4 个分组标题在 80×24 下超出侧栏高度：滚动后末项仍完整落在侧栏可视区内。
+    async def body(app, pilot):
+        nav = app.query_one("#nav", compat.ListView)
+        app.show_page("misc")
+        await pilot.pause()
+        await asyncio.sleep(0.2)
+        last = nav.children[-1]
+        return (
+            len(nav.children),
+            nav.max_scroll_y,
+            nav.scroll_offset.y,
+            last.region.y >= nav.region.y and last.region.bottom <= nav.region.bottom,
+            _nav_index(app),
+        )
+
+    count, max_scroll, scrolled, reached, index = await _with_app(body, size=(80, 24))
+    return count == len(NAV_PLAN) and max_scroll > 0 and scrolled > 0 and reached and index == _page_index("misc")
+
+
+async def _test_help_overlay_adds_navigation_hint():
+    # ? 浮层补一段各页相同的导航说明，并把本页用途当作说明行给出。
+    async def body(app, pilot):
+        await pilot.press("question_mark")
+        await pilot.pause()
+        nav_text = str(app.screen.query_one("#help-nav", compat.Static).render())
+        hint_text = str(app.screen.query_one("#help-hint", compat.Static).render())
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("q")
+        return nav_text, hint_text
+
+    nav_text, hint_text = await _with_app(body)
+    fragment = _fragment()
+    return (
+        nav_text == i18n.t("cli.tui.app.help_nav")
+        and hint_text == i18n.t("cli.tui.app.help_purpose", purpose=i18n.t(PAGE_BLURB["modules"]))
+        and "cli.tui.app.help_nav" in fragment
+        and "cli.tui.app.help_purpose" in fragment
+    )
 
 
 @func_case
@@ -431,7 +549,11 @@ async def test_tui_navigation(tester: Tester):
     await tester.test(_test_initial_page_is_dashboard, "首屏落在概览页")
     await tester.test(_test_subtitle_names_the_current_instance, "标题栏写明当前实例")
     await tester.test(_test_page_step_keys_walk_the_sidebar, "翻页键逐页走且越界折返")
+    await tester.test(_test_sidebar_groups_follow_the_plan, "侧栏按四组归类且页面齐全")
+    await tester.test(_test_page_blurbs_come_from_the_table, "每页一行用途说明取自映射表")
+    await tester.test(_test_sidebar_scrolls_eighty_by_twenty_four, "80 列 24 行下侧栏可滚动浏览")
     await tester.test(_test_help_overlay_lists_page_keys, "帮助浮层列出本页键位")
+    await tester.test(_test_help_overlay_adds_navigation_hint, "帮助浮层补导航说明与本页用途")
     await tester.test(_test_footer_fits_eighty_columns, "80 列下每页页脚不溢出")
     await tester.test(_test_busy_quit_asks_first, "有后台任务时退出先确认")
     await tester.test(_test_switching_instance_asks_when_dirty, "切换实例前先处理未保存改动")

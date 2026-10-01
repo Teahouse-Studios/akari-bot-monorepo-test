@@ -5,9 +5,9 @@
 取不到时按「未知」展示并给出原因。切换 enable 走 ``akaribot config set``，由 core 的原子写入落盘，
 页面不直接改配置文件。实例清单缓存在页内，切换成功后立即失效；CLI 进程内不 import core。
 
-移除实例分两条路径：``d`` 只移除配置，状态栏问一次、再按一次 ``d`` 才执行；``ctrl+d`` 一次按下即弹出
-选择框，选「移除并清空数据」后还须输入实例 ID。全界面唯一的不可逆动作因此不与可恢复动作共用同一个键，
-待确认状态在切页、刷新、换选中项或超时后作废，键盘连发与鼠标双击也不会穿透。
+移除实例只有一条路径，``d`` 与 ``ctrl+d`` 都是它的入口：弹出模态确认，确认后交给
+``adapter instance remove`` 删除配置文件，场景与用户数据保留。待确认状态在切页、刷新、换选中项或
+超时后作废，键盘连发与鼠标双击也不会穿透。
 """
 
 from __future__ import annotations
@@ -320,10 +320,10 @@ class StaticAdapterSource:
         self.added.append((platform, instance_id))
         return self._instance_result
 
-    def remove_instance(self, record: AdapterRecord, *, purge_data: bool) -> OperationResult:
+    def remove_instance(self, record: AdapterRecord) -> OperationResult:
         """见 :meth:`AdapterSource.remove_instance`。"""
         self.calls["remove_instance"] += 1
-        self.removed.append((record.platform, record.instance_id, purge_data))
+        self.removed.append((record.platform, record.instance_id))
         return self._instance_result
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
@@ -713,22 +713,19 @@ class SubprocessAdapterSource:
             self._tail(completed.stderr) or self._tail(completed.stdout),
         )
 
-    def remove_instance(self, record: AdapterRecord, *, purge_data: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.remove_instance`；经 ``adapter instance remove`` 移除。
+    def remove_instance(self, record: AdapterRecord) -> OperationResult:
+        """见 :meth:`AdapterSource.remove_instance`；经 ``adapter instance remove`` 移除，数据保留。
 
-        ``--yes`` 由界面代答：删除前的确认已经在界面上问过，不该再被 CLI 的交互提问卡住。
+        ``--yes`` 由界面代答：确认已经在界面上问过，CLI 不重复提问。
         """
         self.calls["remove_instance"] += 1
         label = i18n.t(
-            "cli.tui.adapters.label_instance_purge" if purge_data else "cli.tui.adapters.label_instance_remove",
+            "cli.tui.adapters.label_instance_remove",
             name=self._instance_display(record.platform, record.instance_id),
         )
         args = ["adapter", "instance", "remove", record.platform]
         if record.instance_id:
             args.append(record.instance_id)
-        if purge_data:
-            args.append("--purge-data")
-        args.append("--yes")
         completed = self._run(self.cli_argv(*args))
         if completed.returncode == 0:
             return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), self._tail(completed.stdout))
@@ -857,7 +854,7 @@ class AdaptersPage(compat.Vertical):
         ("i", "install", i18n.t("cli.tui.adapters.action_install")),
         ("a", "add_instance", i18n.t("cli.tui.adapters.bind_add_instance"), False),
         ("d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance")),
-        ("ctrl+d", "purge_instance", i18n.t("cli.tui.adapters.bind_purge_instance")),
+        ("ctrl+d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance")),
     )
 
     DEFAULT_CSS = """
@@ -1477,73 +1474,32 @@ class AdaptersPage(compat.Vertical):
 
     def request_remove_instance(self) -> None:
         """弹出仅移除实例的确认框；一次触发即弹模态，防抖窗口内的连发忽略。"""
-        self._request_remove(allow_purge=False)
-
-    def request_purge_instance(self) -> None:
-        """弹出移除方式选择框；一次触发即弹模态，防抖窗口内的连发忽略。"""
-        self._request_remove(allow_purge=True)
-
-    def _request_remove(self, *, allow_purge: bool) -> None:
         record = self._removal_target()
         if record is None:
             return
-        # 两个键位共用一道闸门：d 与 ctrl+d 先后触发时只弹一层模态框。
         if not self._gate.accept(f"remove:{record.key}"):
             return
         name = self._instance_display(record)
-        options = [("remove", i18n.t("cli.tui.adapters.remove_choice_plain"))]
-        if allow_purge:
-            options.append(("purge", i18n.t("cli.tui.adapters.remove_choice_purge")))
-            hint = i18n.t("cli.tui.adapters.remove_choice_hint")
-        else:
-            hint = i18n.t("cli.tui.adapters.remove_only_hint", name=name)
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.adapters.remove_choice_title", name=name),
-            hint=hint,
-            options=tuple(options),
+            hint=i18n.t("cli.tui.adapters.remove_only_hint", name=name),
+            options=(("remove", i18n.t("cli.tui.adapters.remove_choice_plain")),),
             cancel_label=i18n.t("cli.tui.adapters.cancel"),
-            callback=lambda choice: self.on_remove_mode_chosen(record, choice),
+            callback=lambda choice: self.on_remove_chosen(record, choice),
         )
 
-    def on_remove_mode_chosen(self, record: AdapterRecord, choice: str | None) -> None:
-        """处理移除方式的选择结果。
+    def on_remove_chosen(self, record: AdapterRecord, choice: str | None) -> None:
+        """处理移除确认的结果。
 
         :param record: 目标实例。
-        :param choice: ``remove`` 只移除配置，``purge`` 转打字确认；``None`` 表示取消。
+        :param choice: ``remove`` 执行移除；``None`` 表示取消。
         """
         self.reset_pending()
-        if choice == "remove":
-            self._start_remove(record, purge_data=False)
-            return
-        if choice != "purge":
+        if choice != "remove":
             self._set_status(i18n.t("cli.tui.adapters.remove_cancelled"))
             return
-        compat.ask_text(
-            self.app,
-            title=i18n.t("cli.tui.adapters.purge_title", name=self._instance_display(record)),
-            hint=i18n.t("cli.tui.adapters.purge_hint", token=self._purge_token(record)),
-            placeholder=i18n.t("cli.tui.adapters.purge_placeholder"),
-            confirm_label=i18n.t("cli.tui.adapters.purge_submit"),
-            cancel_label=i18n.t("cli.tui.adapters.cancel"),
-            callback=lambda typed: self.on_purge_typed(record, typed),
-        )
-
-    def on_purge_typed(self, record: AdapterRecord, typed: str | None) -> None:
-        """处理打字确认的结果。
-
-        :param record: 目标实例。
-        :param typed: 用户输入的实例标识；取消时为 ``None``，与目标不符时不执行。
-        """
-        if typed is None:
-            self._set_status(i18n.t("cli.tui.adapters.purge_cancelled"))
-            return
-        entered = typed.strip()
-        token = self._purge_token(record)
-        if entered != token:
-            self._set_status(i18n.t("cli.tui.adapters.purge_mismatch", entered=entered, expected=token))
-            return
-        self._start_remove(record, purge_data=True)
+        self._start_remove(record)
 
     def reset_pending(self) -> None:
         """作废待确认的移除；切页、刷新与换选中项时调用。"""
@@ -1561,20 +1517,16 @@ class AdaptersPage(compat.Vertical):
         )
         return None
 
-    def _start_remove(self, record: AdapterRecord, *, purge_data: bool) -> None:
-        label = i18n.t(
-            "cli.tui.adapters.label_instance_purge" if purge_data else "cli.tui.adapters.label_instance_remove",
-            name=self._instance_display(record),
-        )
-        self._start_instance_op(
-            label,
-            lambda: self.source.remove_instance(record, purge_data=purge_data),
-            clear_input=False,
-        )
+    def _start_remove(self, record: AdapterRecord) -> None:
+        name = self._instance_display(record)
+        label = i18n.t("cli.tui.adapters.label_instance_remove", name=name)
+        kept = i18n.t("cli.tui.adapters.remove_kept", name=name)
 
-    def _purge_token(self, record: AdapterRecord) -> str:
-        # 默认实例的 instance_id 是空串，无法作为输入目标，退回列表里显示的 client_name。
-        return record.instance_id or record.client_name or record.table
+        def remove() -> OperationResult:
+            result = self.source.remove_instance(record)
+            return replace(result, message=kept) if result.ok else result
+
+        self._start_instance_op(label, remove, clear_input=False)
 
     def _instance_display(self, record: AdapterRecord) -> str:
         return (
@@ -1762,10 +1714,6 @@ class AdaptersPage(compat.Vertical):
     def action_remove_instance(self) -> None:
         """键位动作：弹出移除选中实例并保留数据的确认框。"""
         self.request_remove_instance()
-
-    def action_purge_instance(self) -> None:
-        """键位动作：按选择框与打字确认移除选中实例配置并清理其数据。"""
-        self.request_purge_instance()
 
     def action_toggle_enable(self) -> None:
         """键位动作：切换选中实例的 enable。"""

@@ -970,6 +970,153 @@ async def _test_offset_clamps_to_last_page():
     )
 
 
+# 三种尺寸下实测的控件 region 下限（宽，高）：窄屏上下两行时数据项占半行、编辑区占整行，
+# 宽屏三栏并排。布局改动后按新实测值更新这张表。
+GEOMETRY_CASES = {
+    (60, 20): {"#row-list": (20, 5), "#editor-pane": (40, 8), "#editor-fields": (36, 1)},
+    (80, 24): {"#row-list": (30, 6), "#editor-pane": (60, 10), "#editor-fields": (56, 3)},
+    (120, 34): {"#row-list": (40, 20), "#editor-pane": (32, 28), "#editor-fields": (28, 20)},
+}
+
+
+def _overflow(page, app) -> list[str]:
+    # 只算可见控件：窄屏下隐藏的低频按钮不占位置，也不该被算作越界。
+    offenders: list[str] = []
+    for widget in page.walk_children():
+        if not (widget.display and widget.visible):
+            continue
+        region = widget.region
+        if region.right > app.size.width or region.x < page.region.x:
+            offenders.append(widget.id or type(widget).__name__)
+    return offenders
+
+
+def _focused_name(app) -> str:
+    widget = app.focused
+    if widget is None:
+        return ""
+    if widget.id:
+        return widget.id
+    if isinstance(widget, compat.Input):
+        return "editor-input"
+    return type(widget).__name__
+
+
+def _geometry_case(size: tuple[int, int]):
+    limits = GEOMETRY_CASES[size]
+
+    async def case():
+        async def body(app, page, pilot, source):
+            page.focus_primary()
+            await pilot.pause()
+            # region 含边框与内边距，比 size 更贴近用户实际看到的占位；退出前取值，卸载后 region 会归零。
+            regions = {selector: page.query_one(selector).region for selector in limits}
+            measured = {selector: (region.width, region.height) for selector, region in regions.items()}
+            status = page.query_one("#database-status", compat.Static)
+            save = page.query_one("#db-save", compat.Button)
+            snapshot = (
+                _overflow(page, app),
+                measured,
+                status.display,
+                status.region,
+                save.region,
+                page.region,
+                app.size,
+            )
+            await pilot.press("q")
+            return snapshot
+
+        offenders, measured, status_visible, status, save, page_region, app_size = await _with_page(body, size=size)
+        return (
+            offenders == []
+            and all(
+                measured[selector][0] >= width and measured[selector][1] >= height
+                for selector, (width, height) in limits.items()
+            )
+            and status_visible
+            and status.right <= app_size.width
+            and 0 < status.height <= app_size.height
+            and save.x >= page_region.x
+            and save.right <= page_region.right
+            and save.bottom <= app_size.height
+            and save.width >= 6
+        )
+
+    return case
+
+
+async def _test_wide_screen_keeps_three_columns():
+    async def body(app, page, pilot, source):
+        narrow = page.query_one("#database-body", compat.Horizontal).has_class("narrow")
+        tables = page.query_one("#tables-pane").region
+        rows = page.query_one("#rows-pane").region
+        editor = page.query_one("#editor-pane").region
+        fields = page.query_one("#editor-fields")
+        await pilot.press("q")
+        return narrow, tables, rows, editor, fields.display, fields.region.width
+
+    narrow, tables, rows, editor, fields_visible, fields_width = await _with_page(body, size=(120, 34))
+    return not narrow and tables.right <= rows.x and rows.right <= editor.x and fields_visible and fields_width > 0
+
+
+async def _test_layout_switches_on_resize():
+    async def body(app, page, pilot, source):
+        body_widget = page.query_one("#database-body", compat.Horizontal)
+        initial = body_widget.has_class("narrow")
+        await pilot.resize_terminal(60, 20)
+        await pilot.pause()
+        narrowed = body_widget.has_class("narrow")
+        offenders = _overflow(page, app)
+        save = page.query_one("#db-save", compat.Button).region
+        narrow_size = app.size
+        await pilot.resize_terminal(120, 34)
+        await pilot.pause()
+        restored = body_widget.has_class("narrow")
+        await pilot.press("q")
+        return initial, narrowed, offenders, save, narrow_size, restored
+
+    initial, narrowed, offenders, save, narrow_size, restored = await _with_page(body, size=(120, 34))
+    return (
+        not initial
+        and narrowed
+        and offenders == []
+        and save.right <= narrow_size.width
+        and save.bottom <= narrow_size.height
+        and not restored
+    )
+
+
+async def _test_narrow_focus_order():
+    # 焦点顺序与摆放方式无关，由控件树决定；窄屏堆叠后仍要能从表清单走到保存按钮。
+    source = _source(pages={"module_status": _big_rows()})
+
+    async def body(app, page, pilot, source):
+        page.focus_primary()
+        await pilot.pause()
+        forward = [_focused_name(app)]
+        for _ in range(8):
+            await pilot.press("tab")
+            await pilot.pause()
+            forward.append(_focused_name(app))
+        backward = []
+        for _ in range(len(forward) - 1):
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            backward.append(_focused_name(app))
+        await pilot.press("q")
+        return forward, backward
+
+    forward, backward = await _with_page(body, source, size=(60, 20))
+    required = ("table-list", "row-list", "editor-input", "db-save")
+    positions = [forward.index(name) for name in required if name in forward]
+    return (
+        forward[0] == "table-list"
+        and len(positions) == len(required)
+        and positions == sorted(positions)
+        and backward == list(reversed(forward[:-1]))
+    )
+
+
 @func_case
 async def test_tui_database(tester: Tester):
     """cli.tui.database: 数据库页的表清单、数据项与写入确认测试"""
@@ -1011,4 +1158,10 @@ async def test_tui_database(tester: Tester):
         await tester.test(_test_empty_order_falls_back_to_default, "清空排序回到缺省主键倒序")
         await tester.test(_test_switching_table_clears_filters, "换表清空条件")
         await tester.test(_test_subprocess_source_passes_query_argv, "条件与排序拼成 db rows 的 argv")
+        await tester.test(_geometry_case((60, 20)), "60×20 无水平溢出且控件保底宽度")
+        await tester.test(_geometry_case((80, 24)), "80×24 无水平溢出且控件保底宽度")
+        await tester.test(_geometry_case((120, 34)), "120×34 无水平溢出且控件保底宽度")
+        await tester.test(_test_wide_screen_keeps_three_columns, "宽屏保留三栏并排")
+        await tester.test(_test_layout_switches_on_resize, "窗口缩放切换窄屏布局")
+        await tester.test(_test_narrow_focus_order, "窄屏 Tab 焦点顺序")
         return tester

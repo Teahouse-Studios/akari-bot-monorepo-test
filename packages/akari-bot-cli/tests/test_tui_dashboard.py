@@ -7,6 +7,8 @@
 
 import threading
 import asyncio
+import json
+import shutil
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -23,11 +25,14 @@ from akaribot.cli.tui.dashboard import (
     DashboardPage,
     DashboardSnapshot,
     InstanceRow,
+    LocalSetupSummarySource,
     ServiceRow,
+    SetupSummary,
     StaticDashboardSource,
     StaticInitRunner,
     StaticInstanceListSource,
     StaticServiceControl,
+    StaticSetupSummarySource,
     SubprocessCliRunner,
     SubprocessInitRunner,
 )
@@ -58,6 +63,9 @@ BUTTON_IDS = (
     "refresh",
 )
 
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dashboard.json"
+_KEEP_ALIVE: list[TemporaryDirectory] = []
+
 
 def _button(page, button_id: str) -> compat.Button:
     return page.query_one(f"#{button_id}", compat.Button)
@@ -71,8 +79,24 @@ def _disabled(page) -> dict[str, bool]:
     return {button_id: _button(page, button_id).disabled for button_id in BUTTON_IDS}
 
 
+def _merged_locale_dir() -> Path:
+    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，断言才取到真实渲染结果。
+    holder = TemporaryDirectory(prefix="akari-dashboard-locale-")
+    _KEEP_ALIVE.append(holder)
+    root = Path(holder.name)
+    for path in Path(i18n.locales_dir()).glob("*.json"):
+        shutil.copy(path, root / path.name)
+    target = root / "zh_cn.json"
+    document = json.loads(target.read_text(encoding="utf-8"))
+    document.update(json.loads(FRAGMENT.read_text(encoding="utf-8")))
+    target.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8")
+    return root
+
+
 def _use_cli_locale() -> None:
-    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
+    # CLI 的首次取文案会用包内 locales 重建快照，把合并目录顶掉；先取一次把它顶过，再建合并快照。
+    i18n.t("cli.tui.common.status_ready")
+    i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
@@ -149,12 +173,28 @@ async def _pick_cancel(app, pilot) -> None:
     await pilot.pause()
 
 
-async def _with_page(body, source=None, size=(110, 32), instances=None, service=None, boot_note="", cli=None):
+async def _with_page(
+    body,
+    source=None,
+    size=(110, 32),
+    instances=None,
+    service=None,
+    setup=None,
+    boot_note="",
+    cli=None,
+):
     chosen = source if source is not None else StaticDashboardSource(SNAPSHOT, running=True)
     listed = instances if instances is not None else StaticInstanceListSource(_instance_rows())
     control = service if service is not None else StaticServiceControl()
+    # 首次使用摘要默认为替身：生产实现要起体检子进程，用例不得真的起进程。
+    brief = setup if setup is not None else StaticSetupSummarySource()
     app = TuiApp(
-        sources={"dashboard": chosen, "dashboard_instances": listed, "dashboard_service": control},
+        sources={
+            "dashboard": chosen,
+            "dashboard_instances": listed,
+            "dashboard_service": control,
+            "dashboard_setup": brief,
+        },
         initial_page="dashboard",
         boot_started_at=time.monotonic(),
         boot_note=boot_note,
@@ -1555,6 +1595,389 @@ async def _test_instances_caption_drops_key_list():
     return "ctrl+d" not in counted and "ctrl+d" not in single and "2" in counted and "${count}" not in counted
 
 
+SETUP = SetupSummary(unconfigured_adapters=2, pending_placeholders=38, doctor_errors=1, doctor_warnings=3)
+
+SETUP_IDS = ("goto-config", "goto-run", "goto-doctor")
+
+
+def _setup_button_state(page) -> dict[str, tuple[bool, str]]:
+    return {
+        button_id: (
+            page.query_one(f"#{button_id}", compat.Button).disabled,
+            str(page.query_one(f"#{button_id}", compat.Button).label),
+        )
+        for button_id in SETUP_IDS
+    }
+
+
+def _setup_label(key: str, *, blocked: bool = False) -> str:
+    suffix = "_blocked" if blocked else ""
+    return i18n.t(f"cli.tui.dashboard.setup_button_{key}{suffix}")
+
+
+def _inside(region, page_region) -> bool:
+    return region.x >= page_region.x and region.right <= page_region.right and region.bottom <= page_region.bottom
+
+
+def _setup_expected(state_label: str) -> dict[str, str]:
+    return {
+        i18n.t("cli.tui.dashboard.setup_adapters_label"): i18n.t(
+            "cli.tui.dashboard.setup_adapters_value", count=SETUP.unconfigured_adapters
+        ),
+        i18n.t("cli.tui.dashboard.setup_placeholders_label"): i18n.t(
+            "cli.tui.dashboard.setup_placeholders_value", count=SETUP.pending_placeholders
+        ),
+        i18n.t("cli.tui.dashboard.setup_instance_label"): state_label,
+        i18n.t("cli.tui.dashboard.setup_doctor_label"): i18n.t(
+            "cli.tui.dashboard.setup_doctor_value", errors=SETUP.doctor_errors, warnings=SETUP.doctor_warnings
+        ),
+    }
+
+
+async def _test_setup_summary_renders_four_items():
+    # 四项摘要各取值一次渲染：标签与取值成对出现，两行放得下四个。
+    brief = StaticSetupSummarySource(SETUP)
+
+    async def body(app, page, pilot, source, listed, control):
+        rows = dict(page.setup_rows)
+        text = page.setup_text
+        lines = text.splitlines()
+        calls = brief.calls["summary"]
+        # 周期探测不重取摘要：懒加载一次之后界面不再起子进程。
+        page.refresh_running()
+        page.refresh_instances(polling=True)
+        await pilot.pause()
+        await pilot.press("q")
+        return rows, text, lines, calls, brief.calls["summary"]
+
+    rows, text, lines, calls, calls_after = await _with_page(body, setup=brief)
+    expected = _setup_expected(SNAPSHOT.state_label)
+    return (
+        rows == expected
+        and len(lines) == 2
+        and all(f"{label} {value}" in text for label, value in expected.items())
+        and calls == 1
+        and calls_after == 1
+    )
+
+
+async def _test_setup_state_follows_snapshot():
+    # 摘要里的运行状态与字段区同源：探测结果一变，第一行随即改写。
+    async def body(app, page, pilot, source, listed, control):
+        running = dict(page.setup_rows)[i18n.t("cli.tui.dashboard.setup_instance_label")]
+        source.set_running(False)
+        page.refresh_running()
+        await pilot.pause()
+        stopped = dict(page.setup_rows)[i18n.t("cli.tui.dashboard.setup_instance_label")]
+        await pilot.press("q")
+        return running, stopped
+
+    running, stopped = await _with_page(body)
+    return running == SNAPSHOT.state_label and stopped == DashboardSnapshot(running=False).state_label
+
+
+async def _test_setup_missing_values_say_missing():
+    # 取不到的项如实写「未取到」并附原因，不留空值。
+    reasons = {
+        "adapters_reason": "体检统计缺少需要的字段",
+        "placeholders_reason": "配置目录读不到",
+        "doctor_reason": "体检输出无法解析（退出码 1）",
+    }
+    brief = StaticSetupSummarySource(SetupSummary(**reasons))
+
+    async def body(app, page, pilot, source, listed, control):
+        rows = dict(page.setup_rows)
+        await pilot.press("q")
+        return rows
+
+    rows = await _with_page(body, setup=brief)
+    expected = {
+        i18n.t("cli.tui.dashboard.setup_adapters_label"): i18n.t(
+            "cli.tui.dashboard.setup_value_missing_reason", reason=reasons["adapters_reason"]
+        ),
+        i18n.t("cli.tui.dashboard.setup_placeholders_label"): i18n.t(
+            "cli.tui.dashboard.setup_value_missing_reason", reason=reasons["placeholders_reason"]
+        ),
+        i18n.t("cli.tui.dashboard.setup_doctor_label"): i18n.t(
+            "cli.tui.dashboard.setup_value_missing_reason", reason=reasons["doctor_reason"]
+        ),
+    }
+    return all(rows[label] == value for label, value in expected.items()) and all(
+        rows[label] != i18n.t("cli.tui.dashboard.setup_value_missing") for label in expected
+    )
+
+
+async def _test_setup_load_failure_degrades():
+    # 整次取数失败不拖垮页面：三项各自写成一句「未取到（原因）」，字段区与状态栏照常。
+    brief = StaticSetupSummarySource(error=RuntimeError("boom"))
+
+    async def body(app, page, pilot, source, listed, control):
+        rows = dict(page.setup_rows)
+        await pilot.press("q")
+        return rows, page.fields_text, page.status_text, brief.calls["summary"]
+
+    rows, fields, status, calls = await _with_page(body, setup=brief)
+    expected = i18n.t("cli.tui.dashboard.setup_value_missing_reason", reason="RuntimeError: boom")
+    return (
+        calls == 1
+        and rows[i18n.t("cli.tui.dashboard.setup_adapters_label")] == expected
+        and rows[i18n.t("cli.tui.dashboard.setup_placeholders_label")] == expected
+        and rows[i18n.t("cli.tui.dashboard.setup_doctor_label")] == expected
+        and i18n.t("cli.tui.dashboard.field_instance_root") in fields
+        and status
+    )
+
+
+async def _test_setup_loads_lazily_on_first_display():
+    # 摘要在首次显示本页时取一次；没显示过不取数，重绘与轮询也不重取。
+    brief = StaticSetupSummarySource(SETUP)
+    app = TuiApp(
+        sources={
+            "dashboard": StaticDashboardSource(SNAPSHOT, running=True),
+            "dashboard_instances": StaticInstanceListSource(_instance_rows()),
+            "dashboard_service": StaticServiceControl(),
+            "dashboard_setup": brief,
+        },
+        initial_page="modules",
+        boot_started_at=time.monotonic(),
+    )
+    async with compat.app_test(app, size=(110, 32)) as pilot:
+        await pilot.pause()
+        before = brief.calls["summary"]
+        app.show_page("dashboard")
+        page = app.page("dashboard")
+        await page.wait_for_idle()
+        await pilot.pause()
+        page.refresh_snapshot(force=True)
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = brief.calls["summary"]
+        app.show_page("modules")
+        await pilot.pause()
+    return before == 0 and after == 1
+
+
+async def _test_setup_buttons_jump_pages():
+    # 三个按钮分别切到配置页、运行页与体检页：动作落在 self.app.show_page(key) 上。
+    async def body(app, page, pilot, source, listed, control):
+        visited: list[str] = []
+        for page_key, button_id in zip(("config", "run", "doctor"), SETUP_IDS, strict=True):
+            page.query_one(f"#{button_id}", compat.Button).press()
+            await pilot.pause()
+            visited.append(app.active_page)
+            app.show_page("dashboard")
+            await pilot.pause()
+        await pilot.press("q")
+        return visited, app.active_page
+
+    visited, active = await _with_page(body, source=StaticDashboardSource(SNAPSHOT, running=False))
+    return visited == ["config", "run", "doctor"] and active == "dashboard"
+
+
+async def _test_setup_buttons_disabled_rules():
+    # 前提不满足就置灰并把原因写在标签上：没有实例时三个都不可用，运行中只剩启动按钮不可用。
+    brief = StaticSetupSummarySource(SETUP)
+    empty = StaticInstanceListSource(())
+    previous = context.active_root()
+    context.set_active_root(None)
+
+    async def body(app, page, pilot, source, listed, control):
+        state = _setup_button_state(page)
+        page.open_setup_page("run")
+        await pilot.pause()
+        blocked = (app.active_page, page.status_text)
+        await pilot.press("q")
+        return state, blocked
+
+    try:
+        state, blocked = await _with_page(body, setup=brief, instances=empty)
+    finally:
+        context.set_active_root(previous)
+    blocked_status = i18n.t(
+        "cli.tui.dashboard.setup_blocked_status",
+        action=i18n.t("cli.tui.dashboard.setup_button_run"),
+        reason=i18n.t("cli.tui.dashboard.setup_block_no_instance"),
+    )
+    no_instance = state == {
+        "goto-config": (True, _setup_label("config", blocked=True)),
+        "goto-run": (True, _setup_label("run", blocked=True)),
+        "goto-doctor": (True, _setup_label("doctor", blocked=True)),
+    }
+    refused = blocked == ("dashboard", blocked_status)
+
+    async def running_body(app, page, pilot, source, listed, control):
+        state = _setup_button_state(page)
+        await pilot.press("q")
+        return state
+
+    running = await _with_page(running_body, setup=brief)
+    return (
+        no_instance
+        and refused
+        and running
+        == {
+            "goto-config": (False, _setup_label("config")),
+            "goto-run": (True, i18n.t("cli.tui.dashboard.setup_button_run_running")),
+            "goto-doctor": (False, _setup_label("doctor")),
+        }
+    )
+
+
+async def _test_setup_buttons_enabled_when_stopped():
+    # 实例已停止且清单里有记录时三个按钮都可用，标签回到动作名。
+    async def body(app, page, pilot, source, listed, control):
+        state = _setup_button_state(page)
+        await pilot.press("q")
+        return state
+
+    state = await _with_page(body, source=StaticDashboardSource(SNAPSHOT, running=False))
+    return state == {
+        "goto-config": (False, _setup_label("config")),
+        "goto-run": (False, _setup_label("run")),
+        "goto-doctor": (False, _setup_label("doctor")),
+    }
+
+
+async def _test_setup_layout_at_80x24():
+    # 80×24 是默认支持尺寸：实例清单留够 4 行，按钮区与状态栏都在页内。
+    async def body(app, page, pilot, source, listed, control):
+        page_region = page.region
+        list_region = page.query_one("#instance-list", compat.ListView).region
+        setup_region = page.query_one("#setup", compat.Static).region
+        flow = page.query_one("#setup-actions", compat.ButtonFlow).region
+        boxes = {button_id: page.query_one(f"#{button_id}", compat.Button).region for button_id in SETUP_IDS}
+        status = page.query_one("#status", compat.Static).region
+        await pilot.press("q")
+        return page_region, list_region, setup_region, flow, boxes, status
+
+    page_region, list_region, setup_region, flow, boxes, status = await _with_page(body, size=(80, 24))
+    rows = {box.y for box in boxes.values()}
+    return (
+        list_region.height - 2 >= 4
+        and setup_region.height == 2
+        and _inside(flow, page_region)
+        and _inside(status, page_region)
+        and all(_inside(box, page_region) and box.height == 1 for box in boxes.values())
+        # 按钮按宽度折行：三行是标签最长时的上限，合并文案下只占一行。
+        and 1 <= len(rows) <= 3
+        and min(box.y for box in boxes.values()) >= setup_region.bottom
+        and status.y >= max(box.bottom for box in boxes.values())
+    )
+
+
+async def _test_setup_buttons_wrap_when_narrow():
+    # 窄终端下三个按钮按宽度折行，且仍不出页。
+    async def body(app, page, pilot, source, listed, control):
+        page_region = page.region
+        boxes = {button_id: page.query_one(f"#{button_id}", compat.Button).region for button_id in SETUP_IDS}
+        await pilot.press("q")
+        return page_region, boxes
+
+    page_region, boxes = await _with_page(body, size=(44, 24))
+    return len({box.y for box in boxes.values()}) >= 2 and all(
+        box.x >= page_region.x and box.right <= page_region.right for box in boxes.values()
+    )
+
+
+async def _test_local_setup_source_reads_doctor_and_placeholders():
+    # 默认数据源：体检统计来自 doctor --json 子进程，占位符按本机配置文件里的标记统计。
+    calls: list[tuple[list[str], dict]] = []
+    payload = {
+        "registry_available": True,
+        "registry_note": "",
+        "summary": {"error": 2, "warning": 1},
+        "checks": {"unconfigured_adapters": ["telegram", "qqbot"]},
+    }
+
+    def runner(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        return SimpleNamespace(returncode=0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
+
+    with TemporaryDirectory(prefix="akari-setup-") as raw:
+        root = Path(raw)
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text('[config]\nkey = "<Replace me with str value>"\n', "utf-8")
+        (root / "config" / "bot_telegram.toml").write_text("<Replace me with str value>\n", "utf-8")
+        (root / "config" / "notes.txt").write_text("<Replace me>\n", "utf-8")
+        brief = LocalSetupSummarySource(root=root, runner=runner)
+        summary = brief.summary()
+    argv, options = calls[0]
+    return (
+        argv[3:] == ["doctor", "--json"]
+        and options["cwd"] == str(root)
+        and options["encoding"] == "utf-8"
+        and options["env"]["AKARI_INSTANCE_DIR"] == str(root)
+        and brief.calls["summary"] == 1
+        and summary.unconfigured_adapters == 2
+        and summary.doctor_errors == 2
+        and summary.doctor_warnings == 1
+        and summary.pending_placeholders == 2
+        and summary.adapters_reason == ""
+        and summary.doctor_reason == ""
+        and summary.placeholders_reason == ""
+    )
+
+
+async def _test_local_setup_source_degrades_per_item():
+    # 子进程起不来、输出读不懂、清单不可用时各留一句原因，取值写成未取到。
+    def unreachable(argv, **kwargs):
+        raise OSError("no cli")
+
+    def garbled(argv, **kwargs):
+        return SimpleNamespace(returncode=1, stdout="不是 JSON", stderr="体检失败")
+
+    unavailable = {
+        "registry_available": False,
+        "registry_note": "registry --json 不可用",
+        "summary": {"error": 0, "warning": 0},
+        "checks": {},
+    }
+
+    def no_registry(argv, **kwargs):
+        return SimpleNamespace(returncode=0, stdout=json.dumps(unavailable, ensure_ascii=False), stderr="")
+
+    with TemporaryDirectory(prefix="akari-setup-bad-") as raw:
+        root = Path(raw)
+        (root / "config").mkdir()
+        broken = LocalSetupSummarySource(root=root, runner=unreachable).summary()
+        unreadable = LocalSetupSummarySource(root=root, runner=garbled).summary()
+        partial = LocalSetupSummarySource(root=root, runner=no_registry).summary()
+    return (
+        broken.unconfigured_adapters is None
+        and broken.doctor_errors is None
+        and "no cli" in broken.adapters_reason
+        and unreadable.unconfigured_adapters is None
+        and i18n.t("cli.tui.dashboard.setup_doctor_unreadable", code=1) in unreadable.doctor_reason
+        and "体检失败" in unreadable.doctor_reason
+        and partial.unconfigured_adapters is None
+        and partial.adapters_reason == "registry --json 不可用"
+        and partial.doctor_errors == 0
+        and partial.doctor_warnings == 0
+        and partial.pending_placeholders == 0
+    )
+
+
+async def _test_setup_actions_follow_busy_state():
+    # 摘要在忙时照常显示；按钮的置灰只跟前提走，不跟写动作的忙标志走。
+    gate = threading.Event()
+    runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
+
+    async def body(app, page, pilot, source, listed, control):
+        page.query_one("#instance-list", compat.ListView).index = 0
+        await pilot.pause()
+        _button(page, "autostart").press()
+        started = await _wait_until(lambda: page._busy)
+        disabled = {button_id: page.query_one(f"#{button_id}", compat.Button).disabled for button_id in SETUP_IDS}
+        gate.set()
+        await page.wait_for_idle()
+        await pilot.pause()
+        await pilot.press("q")
+        return started, disabled
+
+    started, disabled = await _with_page(body, cli=runner)
+    return started and disabled == {"goto-config": False, "goto-run": True, "goto-doctor": False}
+
+
 @func_case
 async def test_tui_dashboard(tester: Tester):
     """cli.tui.dashboard: 实例信息与运行状态测试"""
@@ -1615,6 +2038,19 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_action_buttons_wrap_after_remove_instance, "80 列下在移除登记后折行")
         await tester.test(_test_instances_caption_points_to_buttons, "说明行按条数插值后指向按钮")
         await tester.test(_test_instances_caption_drops_key_list, "说明行新文案不再逐条列键位")
+        await tester.test(_test_setup_summary_renders_four_items, "首次使用摘要四项各自渲染")
+        await tester.test(_test_setup_state_follows_snapshot, "摘要里的运行状态跟着探测结果")
+        await tester.test(_test_setup_missing_values_say_missing, "取不到的摘要项写未取到并附原因")
+        await tester.test(_test_setup_load_failure_degrades, "摘要取数失败只降级为逐项说明")
+        await tester.test(_test_setup_loads_lazily_on_first_display, "摘要首次显示时取一次")
+        await tester.test(_test_setup_buttons_jump_pages, "行动区按钮切到配置、运行与体检页")
+        await tester.test(_test_setup_buttons_disabled_rules, "前提不满足时按钮置灰并写明原因")
+        await tester.test(_test_setup_buttons_enabled_when_stopped, "实例停止时三个按钮都可用")
+        await tester.test(_test_setup_layout_at_80x24, "80×24 下清单留 4 行且按钮与状态栏不出页")
+        await tester.test(_test_setup_buttons_wrap_when_narrow, "窄终端下按钮按宽度折行")
+        await tester.test(_test_setup_actions_follow_busy_state, "写动作进行时摘要按钮不跟着置灰")
+        await tester.test(_test_local_setup_source_reads_doctor_and_placeholders, "默认数据源取体检统计与占位符")
+        await tester.test(_test_local_setup_source_degrades_per_item, "默认数据源逐项降级说明原因")
     with mock.patch.object(compat.PendingConfirm, "debounce", 10.0):
         await tester.test(_test_remove_gate_reset_on_page_reset, "reset_pending() 后同一目标可重新弹框")
     return tester

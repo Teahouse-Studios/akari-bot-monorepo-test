@@ -3,6 +3,9 @@
 两页各管一段：模块页只列模块，适配器页列出全部平台——未安装的给安装入口，已装的给启用／禁用。
 未安装的平台若不出现在列表里，用户只能另开命令去猜有哪些适配器可选；适配器若混进模块页，又会
 让人以为「安装模块」能装适配器。
+
+移除实例只删配置文件：`d` 与 `ctrl+d` 是同一条路径的入口，确认框与执行后的提示都必须写明
+场景与用户数据保留，用户才不会以为不可逆数据已经清除。
 """
 
 import time
@@ -83,8 +86,8 @@ async def _select(page, platform: str) -> None:
     page.query_one("#adapter-list", compat.ListView).index = rows[target]
 
 
-async def _open_purge_choice(page, pilot) -> None:
-    page.request_purge_instance()
+async def _open_remove_modal(page, pilot) -> None:
+    page.request_remove_instance()
     await pilot.pause()
 
 
@@ -320,7 +323,7 @@ async def _test_remove_instance_opens_modal_on_first_press():
         and labels == [i18n.t("cli.tui.adapters.remove_choice_plain"), i18n.t("cli.tui.adapters.cancel")]
         and hint == i18n.t("cli.tui.adapters.remove_only_hint", name=i18n.t("cli.tui.adapters.default_id"))
         and screens == 1
-        and removed == [("telegram", "", False)]
+        and removed == [("telegram", "")]
     )
 
 
@@ -351,7 +354,6 @@ async def _test_remove_repeat_within_debounce_opens_one_modal():
         page.request_remove_instance()
         await pilot.pause()
         page.request_remove_instance()
-        page.request_purge_instance()
         await pilot.pause()
         depth = len(app.screen_stack)
         await pilot.press("escape")
@@ -361,6 +363,18 @@ async def _test_remove_repeat_within_debounce_opens_one_modal():
 
     depth, removed = await _with_page(body, source)
     return depth == 2 and removed == []
+
+
+async def _test_remove_entries_share_one_action():
+    source = _source()
+
+    async def body(app, page, pilot, chosen):
+        pairs = tuple((binding.key, binding.action) for binding in page.BINDINGS)
+        await pilot.press("q")
+        return pairs
+
+    pairs = await _with_page(body, source)
+    return ("d", "remove_instance") in pairs and ("ctrl+d", "remove_instance") in pairs
 
 
 # 三条复位路径共用的探针：先占住闸门，复位后同一目标应立即可再次接受。
@@ -414,140 +428,53 @@ async def _test_remove_confirm_resets_on_page_switch():
     return reopened and removed == []
 
 
-async def _test_purge_choice_offers_both_modes():
+async def _test_ctrl_d_opens_same_remove_modal():
     source = _source()
 
     async def body(app, page, pilot, chosen):
         await _select(page, "telegram")
         await pilot.pause()
-        await _open_purge_choice(page, pilot)
+        await pilot.press("ctrl+d")
+        await pilot.pause()
         opened = len(app.screen_stack) > 1
         labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
         await _choose_mode(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
         screens = len(app.screen_stack)
         await pilot.press("q")
-        return opened, labels, screens, list(chosen.removed)
+        return opened, labels, hint, screens, list(chosen.removed)
 
-    opened, labels, screens, removed = await _with_page(body, source)
+    opened, labels, hint, screens, removed = await _with_page(body, source)
     return (
         opened
-        and labels
-        == [
-            i18n.t("cli.tui.adapters.remove_choice_plain"),
-            i18n.t("cli.tui.adapters.remove_choice_purge"),
-            i18n.t("cli.tui.adapters.cancel"),
-        ]
+        and labels == [i18n.t("cli.tui.adapters.remove_choice_plain"), i18n.t("cli.tui.adapters.cancel")]
+        and hint == i18n.t("cli.tui.adapters.remove_only_hint", name=i18n.t("cli.tui.adapters.default_id"))
         and screens == 1
-        and removed == [("telegram", "", False)]
+        and removed == [("telegram", "")]
     )
 
 
-async def _test_purge_repeat_within_debounce_opens_one_modal():
+async def _test_remove_message_states_data_kept():
     source = _source()
 
     async def body(app, page, pilot, chosen):
         await _select(page, "telegram")
         await pilot.pause()
-        page.request_purge_instance()
-        await pilot.pause()
-        page.request_purge_instance()
-        await pilot.pause()
-        depth = len(app.screen_stack)
-        await pilot.press("escape")
-        await pilot.pause()
-        await pilot.press("q")
-        return depth, list(chosen.removed)
-
-    depth, removed = await _with_page(body, source)
-    return depth == 2 and removed == []
-
-
-async def _test_purge_requires_typed_instance_id():
-    source = _source()
-
-    async def body(app, page, pilot, chosen):
-        await _select(page, "telegram")
-        await pilot.pause()
-        await _open_purge_choice(page, pilot)
-        await _choose_mode(app, pilot, 1)
-        prompt_open = len(app.screen_stack) > 1
-        app.screen.query_one("#prompt-input", compat.Input).value = INSTALLED.client_name
-        await pilot.press("enter")
+        await _open_remove_modal(page, pilot)
+        await _choose_mode(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
-        await pilot.press("q")
-        return prompt_open, list(chosen.removed)
-
-    prompt_open, removed = await _with_page(body, source)
-    return prompt_open and removed == [("telegram", "", True)]
-
-
-async def _test_purge_wrong_id_cancels():
-    source = _source()
-
-    async def body(app, page, pilot, chosen):
-        await _select(page, "telegram")
-        await pilot.pause()
-        await _open_purge_choice(page, pilot)
-        await _choose_mode(app, pilot, 1)
-        app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
-        await pilot.press("enter")
-        await pilot.pause()
+        result = page.last_result
         status = page.status_text
         await pilot.press("q")
-        return list(chosen.removed), status
+        return result, status
 
-    removed, status = await _with_page(body, source)
-    return removed == [] and status == i18n.t(
-        "cli.tui.adapters.purge_mismatch", entered="telegram", expected=INSTALLED.client_name
-    )
-
-
-async def _test_purge_accepts_instance_id_of_named_instance():
-    source = _source(snapshot=AdapterSnapshot(instances=(ALTERNATE,), instance_root="/tmp/inst"))
-
-    async def body(app, page, pilot, chosen):
-        await _select(page, "discord")
-        await pilot.pause()
-        await _open_purge_choice(page, pilot)
-        await _choose_mode(app, pilot, 1)
-        app.screen.query_one("#prompt-input", compat.Input).value = ALTERNATE.client_name
-        await pilot.press("enter")
-        await pilot.pause()
-        rejected = page.status_text
-        await _open_purge_choice(page, pilot)
-        await _choose_mode(app, pilot, 1)
-        app.screen.query_one("#prompt-input", compat.Input).value = ALTERNATE.instance_id
-        await pilot.press("enter")
-        await page.wait_for_idle()
-        await pilot.pause()
-        await pilot.press("q")
-        return rejected, list(chosen.removed)
-
-    rejected, removed = await _with_page(body, source)
-    return rejected == i18n.t(
-        "cli.tui.adapters.purge_mismatch", entered=ALTERNATE.client_name, expected=ALTERNATE.instance_id
-    ) and removed == [("discord", "work", True)]
-
-
-async def _test_purge_prompt_cancel_keeps_instance():
-    source = _source()
-
-    async def body(app, page, pilot, chosen):
-        await _select(page, "telegram")
-        await pilot.pause()
-        await _open_purge_choice(page, pilot)
-        await _choose_mode(app, pilot, 1)
-        await pilot.press("escape")
-        await pilot.pause()
-        status = page.status_text
-        await pilot.press("q")
-        return list(chosen.removed), status
-
-    removed, status = await _with_page(body, source)
-    return removed == [] and status == i18n.t("cli.tui.adapters.purge_cancelled")
+    result, status = await _with_page(body, source)
+    expected = i18n.t("cli.tui.adapters.remove_kept", name=i18n.t("cli.tui.adapters.default_id"))
+    # 数据源只回「实例配置已变更」，保留数据这句必须由页面在移除后补上。
+    return result == expected and expected in status and i18n.t("cli.tui.adapters.stub_instance_ok") not in result
 
 
 def _test_pending_confirm_gate_debounce_and_reset():
@@ -569,7 +496,8 @@ async def _test_footer_keeps_page_bindings_within_80_columns():
         initial_page="adapters",
         boot_started_at=time.monotonic(),
     )
-    page_actions = {"refresh", "install", "remove_instance", "purge_instance"}
+    # d 与 ctrl+d 共用动作名，页脚按动作合并后只留一条移除键位。
+    page_actions = {"refresh", "install", "remove_instance"}
     async with compat.app_test(app, size=(80, 24)) as pilot:
         page = app.page("adapters")
         await page.wait_for_idle()
@@ -581,7 +509,7 @@ async def _test_footer_keeps_page_bindings_within_80_columns():
         visible = tuple(binding.key for binding in page.BINDINGS if binding.show)
         hidden = tuple(binding.key for binding in page.BINDINGS if not binding.show)
         await pilot.press("q")
-    return len(keys) == 4 and content_width <= 80 and visible == ("r", "i", "d", "ctrl+d") and hidden == ("e", "a")
+    return len(keys) == 3 and content_width <= 80 and visible == ("r", "i", "d", "ctrl+d") and hidden == ("e", "a")
 
 
 async def _test_instance_op_reloads_list():
@@ -610,8 +538,7 @@ async def test_tui_adapters(tester: Tester):
     await tester.test(_test_pending_confirm_gate_debounce_and_reset, "确认闸门防抖与复位")
     # 放大防抖窗口，使「连发第二次请求」不依赖两次调用之间的真实耗时。
     with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
-        await tester.test(_test_remove_repeat_within_debounce_opens_one_modal, "连发与跨键位触发不叠模态框")
-        await tester.test(_test_purge_repeat_within_debounce_opens_one_modal, "连发第二次请求不叠模态框")
+        await tester.test(_test_remove_repeat_within_debounce_opens_one_modal, "连发两次请求不叠模态框")
     # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_uninstalled_platforms_are_listed, "未安装平台并入列表且不重复")
@@ -632,11 +559,9 @@ async def test_tui_adapters(tester: Tester):
         await tester.test(_test_remove_confirm_resets_on_refresh, "刷新作废待确认的移除")
         await tester.test(_test_remove_confirm_resets_on_highlight, "换选中项作废待确认的移除")
         await tester.test(_test_remove_confirm_resets_on_page_switch, "切页作废待确认的移除")
-        await tester.test(_test_purge_choice_offers_both_modes, "ctrl+d 弹出两种移除方式")
-        await tester.test(_test_purge_requires_typed_instance_id, "清数据要输入实例 ID")
-        await tester.test(_test_purge_wrong_id_cancels, "实例 ID 不符则取消清数据")
-        await tester.test(_test_purge_accepts_instance_id_of_named_instance, "具名实例以实例 ID 为确认目标")
-        await tester.test(_test_purge_prompt_cancel_keeps_instance, "取消打字确认不执行")
+        await tester.test(_test_remove_entries_share_one_action, "d 与 ctrl+d 是同一条移除路径")
+        await tester.test(_test_ctrl_d_opens_same_remove_modal, "ctrl+d 弹同一个仅移除确认框")
+        await tester.test(_test_remove_message_states_data_kept, "移除后提示写明数据保留")
         await tester.test(_test_footer_keeps_page_bindings_within_80_columns, "80 列页脚不溢出")
         await tester.test(_test_instance_op_reloads_list, "实例变更后重载列表")
     return tester

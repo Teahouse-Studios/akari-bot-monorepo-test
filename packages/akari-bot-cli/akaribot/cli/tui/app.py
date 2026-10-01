@@ -29,7 +29,7 @@ from akaribot.cli.tui.misc import MiscPage
 from akaribot.cli.tui.modules import ModuleSource, ModulesPage, SubprocessModuleSource
 from akaribot.cli.tui.run import RunPage
 
-# 侧栏顺序即页面顺序；key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
+# 翻页顺序即此处顺序；key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
 PAGES: tuple[tuple[str, str, type], ...] = (
     ("dashboard", "cli.tui.nav.dashboard", DashboardPage),
     ("environment", "cli.tui.nav.environment", EnvironmentPage),
@@ -43,6 +43,42 @@ PAGES: tuple[tuple[str, str, type], ...] = (
     ("doctor", "cli.tui.nav.doctor", DoctorPage),
     ("misc", "cli.tui.nav.misc", MiscPage),
 )
+
+# 侧栏的四组归属：分组只决定侧栏的阅读顺序，翻页与逐页遍历仍只认 PAGES。
+NAV_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("cli.tui.nav.group.runtime", ("dashboard", "run", "logs", "doctor")),
+    ("cli.tui.nav.group.platform", ("config", "adapters", "modules")),
+    ("cli.tui.nav.group.data", ("environment", "database")),
+    ("cli.tui.nav.group.dev", ("dev", "misc")),
+)
+
+# 每页一行用途说明：侧栏标题下与 `?` 键位一览共用；页面名（环境、迁移）本身说明不了管什么。
+PAGE_BLURB: dict[str, str] = {
+    "dashboard": "cli.tui.nav.blurb.dashboard",
+    "environment": "cli.tui.nav.blurb.environment",
+    "database": "cli.tui.nav.blurb.database",
+    "modules": "cli.tui.nav.blurb.modules",
+    "adapters": "cli.tui.nav.blurb.adapters",
+    "config": "cli.tui.nav.blurb.config",
+    "logs": "cli.tui.nav.blurb.logs",
+    "run": "cli.tui.nav.blurb.run",
+    "dev": "cli.tui.nav.blurb.dev",
+    "doctor": "cli.tui.nav.blurb.doctor",
+    "misc": "cli.tui.nav.blurb.misc",
+}
+
+# 侧栏条目计划：分组标题与页面交替，页面按 NAV_GROUPS 的次序排列；高亮下标按它折算。
+NAV_PLAN: tuple[tuple[str, str], ...] = tuple(
+    item
+    for group_key, page_keys in NAV_GROUPS
+    for item in (("group", group_key), *(("page", key) for key in page_keys))
+)
+
+
+def _nav_position(key: str) -> int:
+    # 侧栏混排了分组标题，高亮下标与 PAGES 下标不同，按 NAV_PLAN 折算。
+    return next((position for position, entry in enumerate(NAV_PLAN) if entry == ("page", key)), 0)
+
 
 INLINE_CSS = """
 Screen {
@@ -64,6 +100,25 @@ TuiApp #shell {
 TuiApp #nav {
     width: 18;
     border-right: solid $panel;
+}
+
+TuiApp #nav ListItem {
+    height: auto;
+}
+
+TuiApp #nav Label {
+    width: 1fr;
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+}
+
+TuiApp #nav .nav-group {
+    color: $text-muted;
+    text-style: bold;
+}
+
+TuiApp #nav .nav-purpose {
+    text-opacity: 60%;
 }
 
 TuiApp #content {
@@ -195,7 +250,8 @@ class TuiApp(compat.App[int]):
         compat.show_help(
             self,
             title=i18n.t("cli.tui.app.help_title", page=i18n.t(self._page_title_key(self.active_page))),
-            hint=i18n.t("cli.tui.app.help_hint"),
+            hint=i18n.t("cli.tui.app.help_purpose", purpose=i18n.t(PAGE_BLURB[self.active_page])),
+            nav_hint=i18n.t("cli.tui.app.help_nav"),
             rows=tuple(rows),
             close_label=i18n.t("cli.tui.app.help_close"),
         )
@@ -222,17 +278,33 @@ class TuiApp(compat.App[int]):
         """装配侧栏与全部页面。"""
         yield compat.Header()
         with compat.Horizontal(id="shell"):
-            yield compat.ListView(
-                *[
-                    compat.ListItem(compat.Label(i18n.t(title_key), markup=False), id=f"nav-{key}")
-                    for key, title_key, _ in PAGES
-                ],
-                id="nav",
-            )
+            yield compat.ListView(*self._nav_items(), id="nav")
             with compat.Vertical(id="content"):
                 for key, _, page_class in PAGES:
                     yield self._build_page(key, page_class)
         yield compat.Footer()
+
+    def _nav_items(self) -> list[compat.ListItem]:
+        # 分组标题做成禁用的 ListItem：方向键与高亮跳过它，鼠标点它也不会切页。
+        items: list[compat.ListItem] = []
+        for position, (kind, value) in enumerate(NAV_PLAN):
+            if kind == "group":
+                items.append(
+                    compat.ListItem(
+                        compat.Label(i18n.t(value), markup=False, classes="nav-group"),
+                        id=f"navgroup-{position}",
+                        disabled=True,
+                    )
+                )
+                continue
+            items.append(
+                compat.ListItem(
+                    compat.Label(i18n.t(self._page_title_key(value)), markup=False),
+                    compat.Label(i18n.t(PAGE_BLURB[value]), markup=False, classes="nav-purpose"),
+                    id=f"nav-{value}",
+                )
+            )
+        return items
 
     def _build_page(self, key: str, page_class: type) -> compat.Widget:
         source = self.sources.get(key)
@@ -256,6 +328,8 @@ class TuiApp(compat.App[int]):
             page = page_class(source, id=f"page-{key}")
         # 各页自行声明 __init__ 签名（不接受 classes），故样式类在此追加。
         page.add_class("page")
+        # 渲染入口在这里统一包一层守卫：取数与轮询可能在页面卸载后才落地，逐个方法加判断会漏。
+        compat.guard_renders(page)
         return page
 
     def switch_instance(self, root: Path) -> None:
@@ -376,15 +450,18 @@ class TuiApp(compat.App[int]):
         # 侧栏的 ``Highlighted`` 会反过来调 :meth:`show_page`，故仅在索引确实不同的时候写回，
         # 避免「同步高亮 → 触发选中 → 再次同步」的往返。
         nav = self.query_one("#nav", compat.ListView)
-        index = next((position for position, (page_key, _, _) in enumerate(PAGES) if page_key == key), 0)
+        index = _nav_position(key)
         if compat.highlighted_index(nav) != index:
             nav.index = index
 
     @compat.on(compat.ListView.Selected, "#nav")
     def _on_nav_selected(self, event: compat.ListView.Selected) -> None:
-        item_id = event.item.id or ""
-        if item_id.startswith("nav-"):
-            self.show_page(item_id.removeprefix("nav-"))
+        key = (event.item.id or "").removeprefix("nav-")
+        if any(key == page_key for page_key, _, _ in PAGES):
+            self.show_page(key)
+        else:
+            # 分组标题不可选中：鼠标点击仍会送来 Selected，此时把高亮还给活动页。
+            self._sync_nav(self.active_page)
 
     def page(self, key: str) -> compat.Widget:
         """按 key 取页面控件，供测试与键位动作使用。"""
