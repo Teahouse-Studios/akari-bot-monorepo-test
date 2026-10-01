@@ -1229,7 +1229,9 @@ async def app_test(app: App[Any], size: tuple[int, int] = (80, 24)) -> AsyncIter
         async with app.run_test(headless=True, size=size) as pilot:
             yield pilot
     except WorkerFailed as error:
-        if app.is_running or not isinstance(error.__cause__, NoMatches):
+        # Textual 把 worker 的原异常放在 ``WorkerFailed.error``，不设 ``__cause__``；两者都看一眼。
+        cause = getattr(error, "error", None) or error.__cause__
+        if app.is_running or not isinstance(cause, NoMatches):
             raise
 
 

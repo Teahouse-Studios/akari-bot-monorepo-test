@@ -1486,6 +1486,8 @@ class ConfigPage(compat.Vertical):
 
     async def reload_tables(self) -> bool:
         """后台读取表清单并载入当前表，返回是否成功。"""
+        if not compat.mounted(self):
+            return False
         try:
             tables = await asyncio.to_thread(self.source.list_tables)
         except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
@@ -1519,6 +1521,8 @@ class ConfigPage(compat.Vertical):
         :param force: 为 ``True`` 时忽略字段缓存。
         :return: 是否成功。
         """
+        if not compat.mounted(self):
+            return False
         if table is None:
             self._selected = None
             self._fields = ()
@@ -1613,6 +1617,8 @@ class ConfigPage(compat.Vertical):
         return await self.reload_tables()
 
     async def _rebuild_form(self, fields: Sequence[ConfigField]) -> None:
+        if not compat.mounted(self):
+            return
         pane = self.query_one("#form-pane", compat.VerticalScroll)
         await pane.remove_children()
         headers = aligned_headers(fields)
@@ -1624,6 +1630,8 @@ class ConfigPage(compat.Vertical):
         await pane.mount(compat.Static(compat.plain_text(i18n.t(hint_key)), id="form-hint", markup=False))
 
     async def _show_form_hint(self, text: str) -> None:
+        if not compat.mounted(self):
+            return
         pane = self.query_one("#form-pane", compat.VerticalScroll)
         await pane.remove_children()
         await pane.mount(compat.Static(compat.plain_text(text), id="form-hint", markup=False))

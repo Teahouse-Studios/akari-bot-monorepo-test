@@ -255,6 +255,11 @@ ModulesPage ──(注入)──> ModuleSource
 - **页面可用时抛出的 `NoMatches` 原样抛出**——活动页面里的选择器错误必须让 worker、自检与用例
   看到，不能被统一守卫吞掉。`tests/test_tui_render_guard.py` 固化这三条契约。
 
+前缀只覆盖同步渲染入口。**异步 worker 链要自己判**：配置页 `reload_tables` / `select_table` /
+`_rebuild_form` / `_show_form_hint` 每次 `await` 之后都可能撞上页面卸载（实测约占完整导航的 5%），
+故这些方法的入口都有 `compat.mounted(self)` 判断，卸载后安全返回而不是把 `NoMatches` 抛给 worker。
+新增异步渲染路径时照此办理。
+
 `mounted()` 的判据分三种情形：应用已请求退出（`App._exit`）→ 不可用；页面挂载过又被卸下 →
 不可用；页面还没走完首次 `on_mount`（此时 `is_mounted` 尚为假，但子控件已建好、首次渲染正依赖
 这一点）→ 可用。只判 `is_mounted` 会跳过页面自己的首次渲染，界面会停在未初始化的样子。

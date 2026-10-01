@@ -116,6 +116,29 @@ async def _with_page(body, source=None, size=(110, 32)):
         return await body(app, page, pilot, chosen)
 
 
+async def _test_worker_marks_stop_after_unmount():
+    # 页面卸载后 worker 仍可能继续跑：三个异步渲染入口要先判页面可用，不能把 NoMatches 抛进 worker。
+    async def body(app, page, pilot, source):
+        content = app.query_one("#content", compat.Vertical)
+        await content.remove_children()
+        await pilot.pause()
+        outcomes = []
+        for call in (
+            page.reload_tables,
+            lambda: page.select_table("config"),
+            lambda: page._rebuild_form(()),
+            lambda: page._show_form_hint("卸载后的提示"),
+        ):
+            try:
+                outcomes.append(await call())
+            except Exception as error:  # noqa: BLE001 - 用例只关心有没有异常逃出
+                outcomes.append(f"{type(error).__name__}: {error}")
+        return outcomes
+
+    outcomes = await _with_page(body)
+    return all(outcome in (False, None) for outcome in outcomes)
+
+
 async def _test_dirty_note_tracks_edits():
     # 未编辑时不说有改动；改过之后说明里带上表名。
     async def body(app, page, pilot, source):
@@ -524,6 +547,7 @@ async def test_tui_config(tester: Tester):
     _use_cli_locale()
     # 确认原语在 _compat 里共用；用例里的两次按键几乎同时发生，统一压缩防抖窗口。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
+        await tester.test(_test_worker_marks_stop_after_unmount, "页面卸载后异步渲染入口安全返回")
         await tester.test(_test_dirty_note_tracks_edits, "脏值说明随编辑出现")
         await tester.test(_test_table_switch_keeps_edits, "换表选择保留则不切换")
         await tester.test(_test_table_switch_discards_edits, "换表选择放弃才切换")
