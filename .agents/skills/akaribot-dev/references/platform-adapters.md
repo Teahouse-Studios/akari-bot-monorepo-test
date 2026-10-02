@@ -2,64 +2,72 @@
 
 ## 目录
 
-- [适配器包结构](#81-适配器包结构)
+- [适配器文件结构](#81-适配器文件结构)
 - [平台标识](#82-infopy)
 - [Features 能力实例](#83-featurespy)
 - [消息入口](#84-botpy)
 - [ContextManager 实现](#85-contextpy)
-- [包元数据与启用](#86-包元数据与启用)
-- [导入面](#87-导入面)
+- [启用适配器](#86-启用适配器)
+- [出站网络设置](#87-出站网络设置)
 
-开始适配器改动前，同时读取 `architecture.md` 与 `messaging-and-parser.md`；涉及配置、JobQueue 或 loader 时再读取 `infrastructure.md`。路由以主 `SKILL.md` 为准，不要把本文件当作唯一入口。
+开始适配器改动前，同时读取主技能直接链接的 `architecture.md` 和 `messaging-and-parser.md`；若涉及配置、JobQueue 或 loader，再读取 `infrastructure.md`。不要把其他 reference 当作唯一入口，路由以主 `SKILL.md` 为准。
 
 ---
 
 ## 8. 平台适配器开发
 
-### 8.1 适配器包结构
-
-每个平台适配器是一个独立分发，源码在 `packages/adapters/akari-bot-adapter-<平台>/`：
+### 8.1 适配器文件结构
 
 ```
-packages/adapters/akari-bot-adapter-<平台>/
-├── pyproject.toml                       # 分发元数据与 entry point
-└── akaribot/adapters/<平台>/
-    ├── manifest.toml                    # 包内清单：配置表、凭据字段、监听字段
-    ├── info.py                          # 平台标识常量
-    ├── features.py                      # 平台能力声明
-    ├── bot.py                           # 入口：注册与消息处理
-    ├── context.py                       # ContextManager 实现
-    ├── client.py                        # SDK 客户端（可选）
-    ├── config.py                        # 平台配置模板（可选）
-    └── locales/zh_cn.json               # 平台文案，只提交 zh_cn
+bots/{platform}/
+├── bot.py          # 入口，注册和消息处理
+├── context.py      # ContextManager 实现
+├── features.py     # 平台能力声明
+├── info.py         # 平台标识常量
+├── client.py       # SDK 客户端（可选）
+├── config.py       # 平台配置（可选）
+└── utils.py        # 工具函数（可选）
 ```
-
-`akaribot/adapters/` 是 PEP 420 命名空间目录，不得放 `__init__.py`（门禁 B7）。包内可以放辅助模块，官方适配器现有 `action_text.py`、`buttons.py`、`context_snapshot.py`、`events.py`、`interactions.py`、`message_builder.py` 等，按需参考。
-
-适配器与模块的依赖方向是单向的：适配器不得 import `akaribot.modules.*`（B5），模块也不得 import `akaribot.adapters.*`（B2）。
 
 ### 8.2 info.py
 
 ```python
-from akaribot.core.api import Info
+# bots/my_platform/info.py
+client_name = "MyPlatform"
 
-platform_name = "MyPlatform"
-client_name = Info.resolve_client_name(platform_name)
+sender_prefix = f"{client_name}|User"
+sender_prefix_list = [sender_prefix]
 
 target_group_prefix = f"{client_name}|Group"
 target_private_prefix = f"{client_name}|Private"
+target_prefix_list = [target_group_prefix, target_private_prefix]
 ```
 
-`Info.resolve_client_name()` 会把实例 ID 拼进 `client_name`：默认实例不加后缀，其余实例形如 `MyPlatform-alt`。该值同时进入 `target_id` / `sender_id` 前缀，因此实例 ID 一经使用不可更改（CLI 不提供重命名）。
+`sender_prefix_list` 与 `target_prefix_list` 是**必需**的：`core/client/init.py` 登记客户端时要用它们来判断某个 ID 属于哪个平台。中间那几个具体前缀的命名各平台并不统一（onebot / milky 用 `target_group_prefix` + `target_private_prefix`，discord 用 `target_channel_prefix` / `target_dm_channel_prefix` / `target_guild_prefix`，web 只有一个 `target_prefix`），按自己平台的场景类型取名即可，只要都收进 `target_prefix_list`。
 
-entry point 名不得含 `-`（门禁 B9）：`-` 是多实例分隔符，两者冲突会导致 `client_name` 无法反解。
+**术语词条**：会话称呼（群聊 / 频道 / 私聊）由 i18n 组件的 `{TERM:name}` 占位符解析，候选链由 `target_from` 与 `is_private` 推出（`core/builtins/session/terms.py`）。适配器**不需要**建术语文件，新增平台时只在 `core/locales/terms/zh_cn.json` 追加词条：
+
+```json
+{
+    "target.myplatform": "频道",
+    "target.myplatform.group": "群聊"
+}
+```
+
+- 术语词条集中在 core 的语言目录 `terms/` 子目录，键省略 `term.` 前缀，加载时自动补全；文件名是语言标签（其他语言由 Weblate 生成，不要手写）。集中托管是因为术语是词表而非平台逻辑，且单一归属才能避免共用平台身份（milky 与 onebot 都是 `QQ`）时同名键被判为冲突并整体丢弃。
+- 键名规则：`term.<术语名>.<candidate>`。candidate 是 `target_from` 各段的小写形式以 `.` 连接（`MyPlatform|Group` → `target.myplatform.group`）；只声明平台级默认值（`target.myplatform`）即可覆盖该平台的其余场景。
+- 顶层语言文件里不要再写 `term.*` 键：残留的同名副本会被术语目录覆盖，并由构建期审计报出。
+- `is_private=True` 的会话会命中共享的 `term.target.private`，一般无需平台单独声明。
+- 新增词条后执行一次 `~setup locale reload` 即可生效；构建期 `audit_terms()` 会检查引用与基础键是否齐备。
 
 ### 8.3 features.py
 
 ```python
+# bots/my_platform/features.py
 from attrs import evolve
 
-from akaribot.core.api import Features
+from core.builtins.session.features import Features
+
 
 features = Features(
     support_image=True,
@@ -72,42 +80,45 @@ features = Features(
     support_wait=True,
 )
 
-# 同一平台的不同入口需要微调能力时，从实例复制而不是子类化
+# 同平台不同入口需要微调能力时，从实例复制
 slash_features = evolve(features, require_enable_modules=False)
 ```
-
-平台能力必须以 `Features(...)` 实例声明，不得子类化 `Features`，也不得把类对象赋给 `ContextManager.features`。完整字段以 `akaribot/core/builtins/session/features.py` 为准；官方适配器中 `telegram` 覆盖能力较全，`discord` 次之。
 
 ### 8.4 bot.py
 
 ```python
-from akaribot.core.api import Bot, SessionInfo
-
-from .context import MyPlatformContextManager
-from .info import client_name, target_group_prefix
+# bots/my_platform/bot.py
+from core.builtins.bot import Bot
+from core.builtins.session.info import SessionInfo
+from .info import client_name, sender_prefix_list, target_prefix_list
+from .context import MyPlatformContextManager, MyPlatformFetchedContextManager
 
 Bot.register_bot(client_name=client_name)
 ctx_id = Bot.register_context_manager(MyPlatformContextManager)
-
+# 主动推送（post_message / fetch_target）走的是 fetch_session 这一路，必须一并注册
+Bot.register_context_manager(MyPlatformFetchedContextManager, fetch_session=True)
 
 async def message_handler(event):
+    target_id = f"{target_group_prefix}|{event.group_id}"
+    sender_id = f"{client_name}|{event.user_id}"
+
     session = await SessionInfo.assign(
-        target_id=f"{target_group_prefix}|{event.group_id}",
-        sender_id=f"{client_name}|{event.user_id}",
+        target_id=target_id,
+        sender_id=sender_id,
         target_from=client_name,
         client_name=client_name,
     )
+
     await Bot.process_message(session, event)
 ```
 
-`Bot.register_bot()` 与 `Bot.register_context_manager()` 都在导入期执行：entry point 指向本包，core 发现包时导入它即完成注册。需要为拉取历史消息单独提供上下文管理器时，再调用一次并传 `fetch_session=True`，参考 `TelegramFetchedContextManager`。
+传给 `process_message()` 的 `ctx` 要能支撑后续的平台操作。SDK 的 event 对象在跨越等待后可能失效，部分适配器为此传入自己的快照对象（如 `bots/telegram/bot.py` 的 `TelegramContextSnapshot`），写新适配器时可参考。
 
 ### 8.5 context.py
 
 ```python
-from typing import Any
-
-from akaribot.core.api.adapters import ContextManager
+# bots/my_platform/context.py
+from core.builtins.session.context import ContextManager
 
 from .features import features as platform_features
 
@@ -116,24 +127,28 @@ class MyPlatformContextManager(ContextManager):
     context: dict[str, Any] = {}
     features = platform_features
 
-    # 17 个抽象方法一个都不能少；不支持的能力留空实现，并在 Features 里置 False
+    # 17 个抽象方法一个都不能少，不支持的能力写 pass 并在 Features 实例里置 False
     @classmethod
     async def check_native_permission(cls, session_info) -> bool: ...
 
     @classmethod
-    async def check_bot_state(cls, session_info): ...
+    async def check_bot_state(cls, session_info) -> BotState: ...
 
     @classmethod
-    async def send_message(cls, session_info, message, quote=True) -> list[str]: ...
+    async def send_message(cls, session_info, message, quote=True, **kwargs) -> list[str]:
+        # 将 MessageChain 转换为平台格式并发送，返回 message_id 列表
+        ...
 
     @classmethod
-    async def send_private_msg(cls, session_info, user_id, message) -> list[str]: ...
+    async def send_private_msg(cls, session_info, user_id, message, **kwargs) -> list[str]:
+        # 无法私信或发送失败时吞掉平台异常并返回 []
+        ...
 
     @classmethod
-    async def delete_message(cls, session_info, message_id, reason=None) -> None: ...
+    async def delete_message(cls, session_info, message_id, **kwargs) -> None: ...
 
     @classmethod
-    async def restrict_member(cls, session_info, user_id, duration=None, reason=None) -> None: ...
+    async def restrict_member(cls, session_info, user_id, duration, **kwargs) -> None: ...
 
     @classmethod
     async def unrestrict_member(cls, session_info, user_id) -> None: ...
@@ -148,10 +163,10 @@ class MyPlatformContextManager(ContextManager):
     async def unban_member(cls, session_info, user_id) -> None: ...
 
     @classmethod
-    async def grant_permission_group(cls, session_info, user_id, permission_group_id, reason=None) -> None: ...
+    async def grant_permission_group(cls, session_info, ...) -> None: ...
 
     @classmethod
-    async def revoke_permission_group(cls, session_info, user_id, permission_group_id, reason=None) -> None: ...
+    async def revoke_permission_group(cls, session_info, ...) -> None: ...
 
     @classmethod
     async def add_reaction(cls, session_info, message_id, emoji) -> None: ...
@@ -169,78 +184,23 @@ class MyPlatformContextManager(ContextManager):
     async def error_signal(cls, session_info) -> None: ...
 ```
 
-行为约定：
+写新适配器时最省事的做法是抄一个能力最接近的现成实现（`bots/telegram/context.py` 结构清晰、`bots/discord/context.py` 覆盖能力最全）。
 
-- `send_message()` 返回平台消息 ID 列表，供后续撤回、加表情使用；`send_private_msg()` 在平台不支持私信或发送失败时吞掉平台异常并返回 `[]`。
-- `check_bot_state()` 返回 `BotState`，用于判断机器人自身在该场景的成员状态与平台权限。
-- 抽象方法列表以 `akaribot/core/builtins/session/context.py` 的 `ContextManager` 为准；新增抽象方法属于 core 的 API 变更，需同步全部官方适配器。
+### 8.6 启用适配器
 
-### 8.6 包元数据与启用
-
-**entry point**（`pyproject.toml`）：
+在 `config/bot_my_platform.toml` 中添加：
 
 ```toml
-[project.entry-points."akaribot.adapters"]
-my_platform = "akaribot.adapters.my_platform"
+[bot_my_platform]
+enable = true
+# 平台特定配置
 ```
 
-对 core 的依赖约束必须与仓库其余包字面一致（当前为 `akari-bot-core>=0.1.0,<1.0`），由 `tools/lint_versions.py` 检查。
+### 8.7 出站网络设置
 
-**manifest.toml**（包内，适配器只用到以下字段）：
+适配器的对外请求统一取 `core.config.network` 的 `proxy` 与 `ssl_verify`，不要直接读 `CoreSecretConfig.proxy`：配置未填写时后者是空字符串，而 SDK 普遍只把 `None` 视作直连。SDK 有 `proxy`/`ssl` 参数时直接传入，只暴露连接器的（aiogram、py-cord）在连接器上落地；SDK 不支持代理时保持原样，不要为此改写 SDK 内部实现。
 
-```toml
-config_table = "bot_my_platform"
-credential_fields = ["my_platform_token"]
-listen_fields = ["web_host", "web_port"]
-supports_replicas = false
-id_columns = []
-```
-
-- `config_table`：`config.py` 中 `on_bot_config("<平台>")` 登记的表名，缺省按 `bot_<平台>` 推导；
-- `credential_fields`：`akaribot doctor` 据此检测「两个实例配了同一账号」；
-- `listen_fields`：`akaribot doctor` 据此检测端口冲突；
-- `supports_replicas`：默认 `false`，多数平台 SDK 不允许同账号双连接；
-- `id_columns`：为将来的实例重命名预留，当前不实现。
-
-**配置模板**（`config.py`）：
-
-```python
-from akaribot.core.config.decorator import on_bot_config
-
-
-@on_bot_config("my_platform")
-class MyPlatformConfig:
-    enable: bool = False
-    my_platform_token: str = ""
-
-
-@on_bot_config("my_platform", secret=True)
-class MyPlatformSecretConfig:
-    my_platform_token: str = ""
-```
-
-**启用与多实例**：
-
-```bash
-akaribot adapter list                          # 按平台列出全部实例
-akaribot adapter instance add telegram beta    # 新建实例：写 config/bot_telegram.toml 的 [bot_telegram-beta]
-akaribot adapter instance remove telegram beta
-```
-
-配置写扁平路径 `config/<基表>.toml`，同一平台的全部实例共用一个文件的不同表：默认实例是 `[bot_telegram]`，其余实例是 `[bot_telegram-<实例 ID>]`。core 的 `CFGManager.load()` 只扫描 `config/*.toml`，写到 `config/adapters/` 的表对 core 不可见。分层布局的读取侧已兼容，但写入仍走扁平路径。
-
-适配器随实例 venv 安装：`akaribot module add telegram`（`add` 同时接受模块名与适配器名）。
-
-### 8.7 导入面
-
-适配器依赖两个门面：
-
-- `akaribot.core.api`：与模块共享的公共面（`Bot`、`SessionInfo`、消息元素、`Features`、`ContextManager` 等）；
-- `akaribot.core.api.adapters`：只有适配器使用的设施（`PlatformAPI`、`BotState`、按钮运行时、媒体压缩、S3 存储等）。
-
-模块包不得 import `akaribot.core.api.adapters`（B3），该面只供适配器使用。两个门面都按需解析名字：配置文件缺失时导入期中途中断，未绑定的名字在首次访问时重试，因此发现层可以在配置就绪前安全导入。
-
-官方适配器当前仍有大量 `akaribot.core.*` 深路径 import（`tools/lint_boundaries.py` 的 B8 以 warn 记录），迁移到门面是进行中的工作；新增代码一律写门面路径。
+失败重发与出站限速同样优先交给 SDK：qq-botpy-sdk 会按平台 `err_code` 回退主动消息、轮换 `msg_seq` 并按指数退避重发，同时默认按接口频率整流。适配器只保留 SDK 覆盖不到的部分（如发送目标的优先级排序、逐元素发送时的部分成功处理），不要自行复制错误码表、退避序列或固定冷却间隔。SDK 侧这类开关多为默认开启，接入前先确认是默认行为还是需要显式传参（例如未认证机器人须声明主动消息配额档位）。
 
 ---
 

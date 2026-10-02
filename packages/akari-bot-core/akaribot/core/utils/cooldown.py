@@ -74,8 +74,6 @@ class CoolDown:
         return remaining if remaining > 0 else 0
 
     def reset(self):
-        """
-        重置冷却事件。
-        """
+        """重置冷却事件。"""
         cd_instance = self._get_cd_dict()
         cd_instance.refresh()

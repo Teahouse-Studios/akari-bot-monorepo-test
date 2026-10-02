@@ -383,9 +383,7 @@ class WikiLib:
         )
 
     async def check_wiki_info_from_database_cache(self):
-        """
-        check wiki_info from database cache, the result maybe incorrect since some wiki that distinguish languages by url path
-        """
+        """check wiki_info from database cache, the result maybe incorrect since some wiki that distinguish languages by url path"""
         parse_url = urllib.parse.urlparse(self.url)
         get = await WikiSiteInfo.get_like_this(parse_url.scheme + "://" + parse_url.netloc)
         if get:
@@ -400,9 +398,7 @@ class WikiLib:
         return WikiStatus(available=False, value=False, message="")
 
     async def fixup_wiki_info(self):
-        """
-        autofill missing required information for wiki_info
-        """
+        """autofill missing required information for wiki_info"""
         if not self.wiki_info.api:
             wiki_info = await self.check_wiki_available()
             if wiki_info.available:
@@ -446,9 +442,7 @@ class WikiLib:
         return await self.get_json_from_api(self.wiki_info.api, _no_login=_no_login, **kwargs)
 
     async def return_api(self, _no_login=False, _no_format=False, **kwargs) -> str:
-        """
-        return formatted api links with kwargs
-        """
+        """return formatted api links with kwargs"""
         await self.fixup_wiki_info()
         api = self.wiki_info.api
         if api in redirect_list:
@@ -462,15 +456,11 @@ class WikiLib:
 
     @staticmethod
     def parse_text(text):
-        """
-        parse text to get a short description
-        """
+        """parse text to get a short description"""
         return truncate_summary(text)
 
     async def get_html_to_text(self, page_name, section=None):
-        """
-        get html and convert to text
-        """
+        """get html and convert to text"""
         await self.fixup_wiki_info()
         get_parse = await self.get_json(action="parse", page=page_name, prop="text")
         h = html2text.HTML2Text(url_formatter=lambda u: str(Url(u)))
@@ -582,12 +572,7 @@ class WikiLib:
         return parse_head_html.body["class"]
 
     async def check_page_renderable(self, page_name: str, *, content_mode: bool = False) -> bool:
-        """Check the rendered page HTML before exposing a WebRender button.
-
-        WebRender selects elements from the rendered page, so checking the wikitext alone
-        cannot tell whether a page actually contains a renderable target.  MediaWiki's
-        ``parse`` endpoint gives us the same HTML structure without opening a browser.
-        """
+        """Check the rendered page HTML before exposing a WebRender button."""
         try:
             parsed = await self.get_json(action="parse", page=page_name, prop="text|headhtml")
             parse_data = parsed.get("parse", {})
@@ -1074,7 +1059,11 @@ class WikiLib:
                                 query_wiki_info = query_wiki.wiki_info
                                 q_articlepath = query_wiki_info.articlepath.replace("$1", "(.*)")
                                 get_title = re.sub(r"" + q_articlepath, "\\1", langlinks_[lang])
-                                query_langlinks = await query_wiki.parse_page_info(urllib.parse.unquote(get_title))
+                                query_langlinks = await query_wiki.parse_page_info(
+                                    urllib.parse.unquote(get_title) + urllib.parse.unquote(page_info.args or ""),
+                                    session=session,
+                                    check_render=check_render,
+                                )
                             if "WikibaseClient" in self.wiki_info.extensions and not query_langlinks:
                                 title = (await self.parse_page_info(title)).title
                                 qc_string = {
@@ -1103,7 +1092,11 @@ class WikiLib:
                                     for x in qr_result:
                                         if "missing" not in qr_result[x]:
                                             target_site_page_title = qr_result[x]["sitelinks"][target_siteid]["title"]
-                                            q_target = await query_target_site.parse_page_info(target_site_page_title)
+                                            q_target = await query_target_site.parse_page_info(
+                                                target_site_page_title + urllib.parse.unquote(page_info.args or ""),
+                                                session=session,
+                                                check_render=check_render,
+                                            )
                                             if q_target.status:
                                                 query_langlinks = q_target
                                                 break
@@ -1122,7 +1115,9 @@ class WikiLib:
                                     self.wiki_info.interwiki[lang],
                                 )
                                 query_langlinks_ = await query_wiki.parse_page_info(
-                                    get_title_schema.replace("$1", title)
+                                    get_title_schema.replace("$1", title) + urllib.parse.unquote(page_info.args or ""),
+                                    session=session,
+                                    check_render=check_render,
                                 )
                                 if query_langlinks_.status:
                                     query_langlinks = query_langlinks_
@@ -1219,6 +1214,9 @@ class WikiLib:
                             page_info.templates = query_langlinks.templates
                             page_info.is_disambiguation = query_langlinks.is_disambiguation
                             page_info.disambiguation_blocks = query_langlinks.disambiguation_blocks
+                            page_info.has_template_doc = query_langlinks.has_template_doc
+                            page_info.is_forum_topic = query_langlinks.is_forum_topic
+                            page_info.renderable = query_langlinks.renderable
         interwiki_: list[dict[str, str]] = query.get("interwiki")
         if interwiki_:
             # handling interwiki pages
@@ -1248,8 +1246,15 @@ class WikiLib:
                     else:
                         _prefix += i["iw"] + ":"
                     # try to query interwiki page
+                    # 章节与查询参数随标题交给目标 wiki，由其按自身章节表校验并判定渲染目标
                     iw_query = await target_wiki.parse_page_info(
-                        iw_title, lang=lang, _tried=_tried + 1, _prefix=_prefix, _iw=_iw
+                        iw_title + urllib.parse.unquote(page_info.args or ""),
+                        lang=lang,
+                        _tried=_tried + 1,
+                        _prefix=_prefix,
+                        _iw=_iw,
+                        session=session,
+                        check_render=check_render,
                     )
                     before_page_info = page_info
                     page_info = iw_query
@@ -1263,7 +1268,8 @@ class WikiLib:
                             if before_page_info.args or page_info.id == -1 or not page_info.id:  # preserve args if any
                                 page_info.before_title += urllib.parse.unquote(before_page_info.args)
                                 t += urllib.parse.unquote(before_page_info.args)
-                                if page_info.link:
+                                # 参数已由目标 wiki 解析并拼入链接，此处不再重复拼接
+                                if page_info.link and not page_info.args:
                                     page_info.link += before_page_info.args
                             else:
                                 # else rebuild link by curid

@@ -1,8 +1,4 @@
-"""
-Wikitext 离线摘要提取。
-
-本模块只做纯文本处理，不涉及网络请求。
-"""
+"""Wikitext 离线摘要提取。"""
 
 import re
 
@@ -176,12 +172,7 @@ def _extract_section_text(wikitext: str, section: str | None) -> str:
 
 
 def extract_summary(wikitext: str, section: str | None = None) -> str:
-    """
-    离线解析 Wikitext，取出指定章节的正文纯文本。
-
-    模板、文件链接与格式标记由 plain_text() 剥离，表格与引用等噪音节点须在其之前
-    显式清除。引言取不到正文时改取 TemplateData 中的模板说明，模板文档页的正文
-    往往只写在那里。返回空字符串表示无法离线取得正文。
+    """离线解析 Wikitext，取出指定章节的正文纯文本。
 
     :param wikitext: 页面的原始 Wikitext。
     :param section: 章节名。为 None 时取引言段。
@@ -216,11 +207,7 @@ def _take_sentence(text: str) -> str | None:
 
 
 def truncate_summary(text: str) -> str:
-    """
-    将正文截断为摘要。
-
-    取开头的一句；首句短于 MIN_FIRST_SENTENCE_LENGTH 时补上第二句。随后应用长度与
-    行数上限，超出者末尾附省略号。
+    """将正文截断为摘要。
 
     :param text: 待截断的正文纯文本。
     :returns: 截断后的摘要。

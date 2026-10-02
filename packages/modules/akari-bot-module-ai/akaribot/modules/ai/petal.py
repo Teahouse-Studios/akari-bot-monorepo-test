@@ -1,6 +1,6 @@
 from decimal import Decimal
 from math import ceil
-from akaribot.core.api import Bot, CoreConfig
+from akaribot.core.api import CoreConfig, SessionInfo
 
 PREDICT_INPUT_TOKEN = 100
 PREDICT_CACHE_READ_TOKEN = 200
@@ -10,7 +10,7 @@ ONE_M = Decimal("1000000")
 
 
 def precount_petal(
-    msg: Bot.MessageSession,
+    session_info: SessionInfo,
     input_price: float,
     output_price: float,
     cache_read_price: float,
@@ -21,7 +21,7 @@ def precount_petal(
     cache_write_tokens: int = PREDICT_CACHE_WRITE_TOKEN,
     call_price: float = 0,
 ) -> bool:
-    if CoreConfig.enable_petal and not msg.check_super_user():
+    if CoreConfig.enable_petal and not session_info.superuser:
         unit_input_price = Decimal(str(input_price)) / ONE_M
         unit_output_price = Decimal(str(output_price)) / ONE_M
         unit_cache_read_price = Decimal(str(cache_read_price)) / ONE_M
@@ -35,12 +35,13 @@ def precount_petal(
         petal = petal if petal > 0 else 0
         if petal == 0:
             return True
-        return msg.session_info.sender_union_info.petal >= petal
+        sender_union_info = session_info.sender_union_info
+        return bool(sender_union_info) and sender_union_info.petal >= petal
     return True
 
 
 async def count_token_petal(
-    msg: Bot.MessageSession,
+    session_info: SessionInfo,
     input_price: float,
     output_price: float,
     cache_read_price: float,
@@ -51,7 +52,7 @@ async def count_token_petal(
     cache_write_tokens: int,
     call_price: float = 0,
 ) -> int:
-    if CoreConfig.enable_petal and not msg.check_super_user():
+    if CoreConfig.enable_petal and not session_info.superuser:
         unit_input_price = Decimal(str(input_price)) / ONE_M
         unit_output_price = Decimal(str(output_price)) / ONE_M
         unit_cache_read_price = Decimal(str(cache_read_price)) / ONE_M
@@ -64,7 +65,10 @@ async def count_token_petal(
         petal = input_petal + output_petal + cache_read_petal + cache_write_petal + int(ceil(Decimal(str(call_price))))
         petal = petal if petal > 0 else 0
         if petal != 0:
-            await msg.session_info.sender_union_info.modify_petal(-petal)
-            msg.session_info.petal = msg.session_info.sender_union_info.petal
+            sender_union_info = session_info.sender_union_info
+            if not sender_union_info:
+                return 0
+            await sender_union_info.modify_petal(-petal)
+            session_info.petal = sender_union_info.petal
             return petal
     return 0

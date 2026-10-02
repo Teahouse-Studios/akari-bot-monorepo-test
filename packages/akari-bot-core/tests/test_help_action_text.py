@@ -1,12 +1,4 @@
-"""帮助页布局与可点击模块列表的单元测试。
-
-`~help` 与 `~module list` 列出的模块名，在具备指令操作能力的平台上做成可点击标签，
-点击即把 `~help <模块名>` 填入输入框。此处把关三件事：元素序列的交错排布、标题
-末尾的换行，以及经适配器渲染后的分行结果。
-
-标题的换行是易错点：适配器会把指令操作无条件拼入上一项，标题若不自带换行，
-模块列表会被挤到标题同一行，与既有的纯文本版排版不符。
-"""
+"""帮助页布局与可点击模块列表的单元测试。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -525,7 +517,8 @@ async def _test_qqbot_admin_help_includes_disabled_modules():
         and "~disable dice" in commands
         and "~disable help" not in commands
         and "[help]" in rendered
-        and "场景管理员" in rendered
+        # QQBot 群会话的术语是「群聊」，权限行按术语渲染，不再是通用文案里的「场景」。
+        and "群聊管理员" in rendered
         and not any(command.endswith("module list") for command in buttons.values())
     )
 

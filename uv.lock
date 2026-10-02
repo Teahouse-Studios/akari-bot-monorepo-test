@@ -61,7 +61,6 @@ members = [
     "akari-bot-module-nintendo-err",
     "akari-bot-module-oba",
     "akari-bot-module-phigros",
-    "akari-bot-module-random",
     "akari-bot-module-threedsdb",
     "akari-bot-module-tweet",
     "akari-bot-module-twenty-four",
@@ -382,7 +381,7 @@ requires-dist = [
     { name = "akari-bot-core", extras = ["s3"], editable = "packages/akari-bot-core" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
-    { name = "qq-botpy-sdk", specifier = "==2.0.5" },
+    { name = "qq-botpy-sdk", specifier = "==2.1.0" },
 ]
 
 [[package]]
@@ -473,7 +472,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "akari-bot-i18n", specifier = "==0.1.3" },
+    { name = "akari-bot-i18n", specifier = "==0.2.1" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "packaging", specifier = ">=26.0" },
@@ -543,7 +542,7 @@ requires-dist = [
     { name = "aiofile", specifier = ">=3.8.1,<4.0.0" },
     { name = "akari-bot-assets-brand", marker = "extra == 'full'", editable = "packages/akari-bot-assets-brand" },
     { name = "akari-bot-assets-emotes", marker = "extra == 'full'", editable = "packages/akari-bot-assets-emotes" },
-    { name = "akari-bot-i18n", specifier = "==0.1.3" },
+    { name = "akari-bot-i18n", specifier = "==0.2.1" },
     { name = "akari-bot-webrender", specifier = "==0.6.2" },
     { name = "apscheduler", specifier = ">=3.9.1.post0,<4.0.0.0" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
@@ -586,14 +585,14 @@ source = { editable = "packages/akari-bot-html2text" }
 
 [[package]]
 name = "akari-bot-i18n"
-version = "0.1.3"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "orjson" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/fb/51005ef724268c9590931a0227d23da115f1e2664faf8fdbf94e53be5cd1/akari_bot_i18n-0.1.3.tar.gz", hash = "sha256:aeeda94c53f39982451123d032231220d8d6f227208dceea5610efd77ee324d8", size = 29782, upload-time = "2026-09-17T06:46:56.043Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/12/45834ab1da8ea8d890e869c9e2c6cd15bbdab22a2eaa7de48ec4e5430096/akari_bot_i18n-0.2.1.tar.gz", hash = "sha256:9b50e2db5ad80c012014b351f53112b48031e72240407e59fab3ddd7cdf02792", size = 39272, upload-time = "2026-09-29T13:19:21.038Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/7c/612cf71a7686d391e93fca9e03586f242dbace878caa3666bad38504eec7/akari_bot_i18n-0.1.3-py3-none-any.whl", hash = "sha256:c99719baa103e04db5324e849866dc10893ad672da3eedcf98a312f6983d74dd", size = 30274, upload-time = "2026-09-17T06:46:54.871Z" },
+    { url = "https://files.pythonhosted.org/packages/57/9c/e63ae4079bebcf97c238a5d773a525ba440c2e4e8cb1280900f5d5df2a6b/akari_bot_i18n-0.2.1-py3-none-any.whl", hash = "sha256:daa8f48958c11aa0f0c06bf30893427cef6566a9ad4b5872f871e23d0f4e5afa", size = 39488, upload-time = "2026-09-29T13:19:19.552Z" },
 ]
 
 [[package]]
@@ -1162,17 +1161,6 @@ requires-dist = [
     { name = "qrcode", specifier = ">=8.2,<9.0.0" },
     { name = "tortoise-orm", specifier = ">=1.1.2,<1.2.0" },
 ]
-
-[[package]]
-name = "akari-bot-module-random"
-version = "0.1.0"
-source = { editable = "packages/modules/akari-bot-module-random" }
-dependencies = [
-    { name = "akari-bot-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "akari-bot-core", editable = "packages/akari-bot-core" }]
 
 [[package]]
 name = "akari-bot-module-threedsdb"
@@ -4214,7 +4202,7 @@ wheels = [
 
 [[package]]
 name = "qq-botpy-sdk"
-version = "2.0.5"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
@@ -4223,9 +4211,9 @@ dependencies = [
     { name = "httpx-ws" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/df/03bad9d71192f29afb1a2b5ec340db8b47b91ed32c965a465865303e9448/qq_botpy_sdk-2.0.5.tar.gz", hash = "sha256:c618a8f0bf6fc2be4f528bb0ffd849321569f18e6e2f3a891b0ec6fd7e289b3c", size = 117647, upload-time = "2026-09-20T03:26:04.632Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/cf/0c2a7bde98116cc72c911757048081279996649da52dcdcb15c367ddc464/qq_botpy_sdk-2.1.0.tar.gz", hash = "sha256:0a837eaec62f4ffcdc6b907042899f3eb20e8c9a5d9dd6d4eb8e622c27ea814a", size = 143016, upload-time = "2026-09-30T15:19:32.511Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/d5/a44ff8d65a11f5076a12da3c1829d5c3e98c13f8225b17623cc95767f5ec/qq_botpy_sdk-2.0.5-py3-none-any.whl", hash = "sha256:bd9f05c819e8391d4a9db85f555ba651e8712231c584861292f2580efe22676d", size = 149423, upload-time = "2026-09-20T03:26:03.125Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/ca/6c554a9bfca73f83a3da9e28ea06a56ec8976521ee41a6e8fd246db7c51a/qq_botpy_sdk-2.1.0-py3-none-any.whl", hash = "sha256:c50fec264e7029df42c9167ed2ba868e3da22d21992daa4e639f5983c1898cab", size = 177312, upload-time = "2026-09-30T15:19:31.196Z" },
 ]
 
 [[package]]

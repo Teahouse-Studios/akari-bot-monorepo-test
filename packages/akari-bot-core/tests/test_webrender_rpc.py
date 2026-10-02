@@ -1,8 +1,4 @@
-"""core.queue.server 新增 WebUI 相关处理器的单元测试。
-
-这些处理器在服务端进程内运行：状态净化必须产出纯 JSON，渲染测试的参数校验
-必须在触达依赖库之前完成，控制接口必须回写 Info.web_render_status。
-"""
+"""core.queue.server 新增 WebUI 相关处理器的单元测试。"""
 
 import json
 from types import SimpleNamespace

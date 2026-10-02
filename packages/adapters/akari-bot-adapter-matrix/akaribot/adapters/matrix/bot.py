@@ -106,7 +106,6 @@ async def to_message_chain(event: nio.RoomMessageFormatted, reply_id: str | None
             url = str(content["url"])
         elif "file" in content:
             # todo: decrypt image
-            # url = str(content["file"]["url"])
             return MessageChain.assign([])
         else:
             Logger.error(f"Got invalid m.image message from {target_id}")
@@ -286,7 +285,6 @@ async def _run_client():
     matrix_bot.add_to_device_callback(on_verify, nio.KeyVerificationEvent)
     matrix_bot.add_event_callback(on_in_room_verify, nio.RoomMessageUnknown)
 
-    # E2EE setup
     if matrix_bot.olm:
         if matrix_bot.should_upload_keys:
             Logger.info("Uploading matrix E2E encryption keys...")
@@ -322,7 +320,6 @@ async def _run_client():
             await matrix_bot.import_keys(megolm_backup_path, passphrase)
             Logger.info("Megolm backup imported.")
 
-    # set device name
     if client.device_name:
         try:
             response = await matrix_bot.update_device(client.device_id, {"display_name": client.device_name})
@@ -331,9 +328,7 @@ async def _run_client():
         except Exception:
             Logger.exception("Failed to update Matrix device name:")
 
-    # sync joined room state
     Logger.info("Starting sync room full state...")
-    # bot.upload_filter(presence={"limit":1},room={"timeline":{"limit":1}})
     if not await _sync_room_state():
         return
     initial_sync_complete = True

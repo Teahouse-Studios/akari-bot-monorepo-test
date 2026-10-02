@@ -1,8 +1,4 @@
-"""落雪咖啡屋（LXNS）舞萌成绩的适配层。
-
-落雪给出的成绩字段名与曲目 ID 都和水鱼不同，而绘图、列表、名牌板等消费方一律按水鱼的数据
-形状读取（`song_id`、`dxScore`、`fc`、`fs`……），故在此统一换算，下游不必关心数据来自哪一侧。
-"""
+"""落雪咖啡屋（LXNS）舞萌成绩的适配层。"""
 
 from typing import Any
 
@@ -92,9 +88,6 @@ def is_dx_id(song_id: Any) -> bool:
 def score_rating(score: dict, ds: float) -> int:
     """取单曲 Rating。
 
-    接口给出 `dx_rating` 时直接采用；缺失时按定数与达成率就地推算，以免排序时把成绩一律
-    当作 0 分。本地缺曲便没有定数，只能记 0。
-
     :param score: 落雪成绩。
     :param ds: 该谱面的定数。
     :return: 单曲 Rating。
@@ -111,9 +104,6 @@ def score_rating(score: dict, ds: float) -> int:
 
 def map_score(score: dict, music: Any = None) -> dict:
     """把一条落雪成绩换算成水鱼形状。
-
-    舞萌的 `Score` 里没有定数，定数只能取自本地曲库；本地缺曲时定数记 0，曲名退回接口给的
-    `song_name`，封面的查找也会落空。
 
     :param score: 落雪成绩。
     :param music: 本地曲库中对应的曲目，可为空。
@@ -153,9 +143,6 @@ def top_rated(records: list[dict], count: int) -> list[dict]:
 def plate_versions(version: str) -> list[str]:
     """给出版本标识对应的查分器版本名，用于名牌板筛选。
 
-    与名牌板流程保持一致：真代为无印版本，霸者与舞牌取全部标准谱面版本；“初”不是版本名，
-    其余按名牌板映射查表。
-
     :param version: 名牌板的版本标识，如 `舞`、`真`。
     :return: 版本名列表；无法识别时为空列表。
     """
@@ -180,8 +167,6 @@ def _cache_file(msg: Bot.MessageSession, name: str):
 
 async def get_bind_info(msg: Bot.MessageSession) -> LxnsProberBindInfo:
     """取得该用户的落雪绑定记录。
-
-    查询对象由令牌决定，故必须存在这位用户自己的授权记录。
 
     :param msg: 消息会话。
     :return: 该用户的绑定记录。
@@ -244,21 +229,11 @@ def _require_developer() -> None:
 
 
 async def fetch_player(bind_info: LxnsProberBindInfo) -> dict:
-    """取回玩家信息。
-
-    :param bind_info: 该用户的绑定记录。
-    :return: 玩家信息，含 `name` 与 `rating`。
-    """
     profile = unwrap(await request_player_data(bind_info, LXNS_MAIMAI_PLAYER_URL))
     return profile if isinstance(profile, dict) else {}
 
 
 async def fetch_scores(bind_info: LxnsProberBindInfo) -> list[dict]:
-    """取回该账号的全部成绩（落雪原始字段）。
-
-    :param bind_info: 该用户的绑定记录。
-    :return: 成绩列表。
-    """
     resp = unwrap(await request_player_data(bind_info, LXNS_MAIMAI_SCORES_URL))
     scores = resp.get("scores", []) if isinstance(resp, dict) else resp
     if not isinstance(scores, list):
@@ -267,24 +242,12 @@ async def fetch_scores(bind_info: LxnsProberBindInfo) -> list[dict]:
 
 
 async def load_scores(msg: Bot.MessageSession, bind_info: LxnsProberBindInfo, use_cache: bool = True) -> list[dict]:
-    """取回全量成绩，可按需读写本地缓存。
-
-    :param msg: 消息会话。
-    :param bind_info: 该用户的绑定记录。
-    :param use_cache: 是否读写本地缓存。
-    :return: 落雪原始字段的成绩列表。
-    """
     if not use_cache:
         return await fetch_scores(bind_info)
     return await _with_cache(msg, _cache_file(msg, "maimaidx_lx_scores"), lambda: fetch_scores(bind_info))
 
 
 async def map_scores(scores: list[dict]) -> list[dict]:
-    """把落雪成绩逐条换算成水鱼形状，并补齐本地曲库中的定数。
-
-    :param scores: 落雪原始字段的成绩列表。
-    :return: 水鱼形状的成绩列表。
-    """
     total = await total_list.get()
     return [map_score(score, total.by_id(lxns_to_df_id(score.get("id"), score.get("type")))) for score in scores]
 
@@ -329,9 +292,6 @@ def _raw_scores(data: dict | None, key: str) -> list[dict]:
 async def map_bests(bests: dict | None) -> dict:
     """把落雪按旧曲、现曲给出的 Best 换算成水鱼形状的 B35 与 B15。
 
-    `standard` 与 `dx` 本身就是游戏内 Rating 所取的 B35 与 B15，故各自照单换算。旧曲里也有
-    DX 谱面——它们的曲目 ID 就是 DX 曲目 ID——但它们属于 B35，不能按谱面类型重新划到 B15。
-
     :param bests: 含 `standard` 与 `dx` 两组成绩的落雪响应。
     :return: 含 `sd`（B35）与 `dx`（B15）两份成绩列表的字典。
     """
@@ -342,14 +302,6 @@ async def map_bests(bests: dict | None) -> dict:
 
 
 async def split_bests(scores: list[dict]) -> dict:
-    """把全量成绩按谱面类型近似划分成 B35 与 B15。
-
-    只在落雪没给出划分好的 Best 时用作退路：全量成绩里没有旧曲与现曲之分，只能按谱面类型各
-    取前 35 / 15 张近似，与官方按旧曲、现曲划分的结果可能略有出入。
-
-    :param scores: 落雪原始字段的成绩列表。
-    :return: 含 `sd` 与 `dx` 两份成绩列表的字典。
-    """
     records = await map_scores(scores)
     return {
         "sd": top_rated([record for record in records if record["type"] == "SD"], 35),
@@ -358,30 +310,17 @@ async def split_bests(scores: list[dict]) -> dict:
 
 
 async def fetch_player_by_friend_code(friend_code: str) -> dict:
-    """按好友码取回玩家信息（开发者端点）。
-
-    :param friend_code: 落雪好友码。
-    :return: 玩家信息，含 `name` 与 `rating`。
-    """
     resp = await request_developer_data(LXNS_MAIMAI_PLAYER_BY_FRIEND_CODE_URL.format(friend_code=friend_code))
     return resp if isinstance(resp, dict) else {}
 
 
 async def fetch_bests_by_friend_code(friend_code: str) -> dict:
-    """按好友码取回官方划分的 Best 成绩（开发者端点）。
-
-    :param friend_code: 落雪好友码。
-    :return: 含 `standard` 与 `dx` 两份成绩列表的响应。
-    """
     resp = await request_developer_data(LXNS_MAIMAI_BESTS_BY_FRIEND_CODE_URL.format(friend_code=friend_code))
     return resp if isinstance(resp, dict) else {}
 
 
 async def get_record_lx_dev(msg: Bot.MessageSession, friend_code: str, use_cache: bool = True) -> dict:
     """以开发者端点按好友码取回 B35 与 B15，形状与水鱼的 `/query/player` 一致。
-
-    落雪把旧曲与现曲的 Best 分开给出，正是游戏内 Rating 所取的 B35 与 B15；按谱面类型从全量
-    成绩里截取只能得到近似结果，故配置了开发者密钥便一律走这里。
 
     :param msg: 消息会话。
     :param friend_code: 落雪好友码。
@@ -405,17 +344,6 @@ async def get_record_lx_dev(msg: Bot.MessageSession, friend_code: str, use_cache
 
 
 async def get_record_lx_oauth(msg: Bot.MessageSession, bind_info: LxnsProberBindInfo, use_cache: bool = True) -> dict:
-    """以 OAuth 令牌取回 B35 与 B15，形状与水鱼的 `/query/player` 一致。
-
-    落雪文档里真正的 Best 是按好友码寻址的开发者端点，故这里只是未配置开发者密钥时的退路：
-    先试用户态文档未列出的 `bests`，取不到时退化为按谱面类型从全量成绩里各取前 35 / 15 张，
-    与官方按旧曲、现曲划分的 B35 / B15 可能略有出入。
-
-    :param msg: 消息会话。
-    :param bind_info: 该用户的落雪绑定记录。
-    :param use_cache: 是否读写本地缓存。
-    :return: 含 `nickname`、`rating` 与 `charts.sd` / `charts.dx` 的成绩字典。
-    """
     _require_oauth()
 
     async def fetch():
@@ -450,10 +378,6 @@ async def get_record_lx(
 ) -> dict:
     """取回 B35 与 B15，形状与水鱼的 `/query/player` 一致。
 
-    查询对象按参数决定：给出好友码时查询该玩家，只有开发者密钥能识别好友码；否则查询令牌
-    所属的账号——落雪的令牌认不出好友码，故再用个人资料里的好友码换成开发者端点，以取到
-    官方划分的 B35 / B15。
-
     :param msg: 消息会话。
     :param token: 该用户的落雪绑定记录；为空时自行解析。
     :param friend_code: 要查询的好友码；为空时查询绑定账号。
@@ -474,8 +398,6 @@ async def get_record_lx(
 async def get_song_record_lx(msg: Bot.MessageSession, sid: str | list[str], use_cache: bool = True) -> dict:
     """取某首歌全部难度的成绩，形状与水鱼的 `/player/record` 一致。
 
-    落雪没有等价的按曲查询端点（`/bests` 只给最佳成绩），故从全量成绩里筛出目标曲目。
-
     :param msg: 消息会话。
     :param sid: 水鱼风格的曲目 ID，可为列表。
     :param use_cache: 是否读写本地缓存。
@@ -493,9 +415,6 @@ async def get_song_record_lx(msg: Bot.MessageSession, sid: str | list[str], use_
 
 async def get_plate_lx(msg: Bot.MessageSession, payload: dict, version: str, use_cache: bool = True) -> dict:
     """按版本整理出名牌板所需的成绩列表，形状与水鱼的 `verlist` 一致。
-
-    落雪没有水鱼那样的名牌板端点，只能取回全量成绩后按本地曲库的版本自行筛选；本地缺曲时
-    无从判断版本，该条成绩便不计入。
 
     :param msg: 消息会话。
     :param payload: 承载版本列表的载荷，由调用方按名牌板填入。

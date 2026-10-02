@@ -1,9 +1,4 @@
-"""
-会话信息模块 - 定义和管理消息会话的信息和上下文。
-
-该模块定义了 SessionInfo 类，用于承载一个消息会话的所有相关信息，
-包括场景、用户、平台特性、权限信息等。
-"""
+"""会话信息模块 - 定义和管理消息会话的信息和上下文。"""
 
 from __future__ import annotations
 
@@ -18,6 +13,7 @@ from akaribot.core.alive import Alive
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.session.event_types import EventName
 from akaribot.core.builtins.session.features import Features
+from akaribot.core.builtins.session.terms import build_term_candidates
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.config.base import BaseConfig, CoreConfig
 from akaribot.core.database.models import TargetUnionInfo, SenderUnionInfo
@@ -262,7 +258,7 @@ class SessionInfo:
         platform_name, platform_from = resolve_platform_identity(target_from, client_name, platform_name, platform_from)
         timestamp = datetime.now().timestamp()
         session_id = str(uuid.uuid4())
-        locale = Locale(target_union_info.locale)
+        locale = Locale(target_union_info.locale, term_candidates=build_term_candidates(target_from, is_private))
         bot_name = locale.t("bot_name")
         _tz_offset = target_union_info.target_data.get("timezone_offset", CoreConfig.timezone_offset)
         platform_prefixes = list(prefixes) if prefixes is not None else []
@@ -385,7 +381,9 @@ class SessionInfo:
         self.banned_users = target_union_info.banned_users
         self.custom_admins = target_union_info.custom_admins
         self.muted = target_union_info.muted
-        self.locale = Locale(target_union_info.locale)
+        self.locale = Locale(
+            target_union_info.locale, term_candidates=build_term_candidates(self.target_from, self.is_private)
+        )
         self.bot_name = self.locale.t("bot_name")
         self._tz_offset = target_union_info.target_data.get("timezone_offset", CoreConfig.timezone_offset)
         self.timezone_offset = parse_time_string(self._tz_offset)
@@ -404,28 +402,18 @@ class SessionInfo:
         self.target_channel_id = bind.channel_id if bind else 1
 
     def get_common_target_id(self) -> str:
-        """
-        获取场景的常用 ID。
-        """
+        """获取场景的常用 ID。"""
         return self.target_id.split("|")[-1]
 
     def get_common_sender_id(self) -> str:
-        """
-        获取用户的常用 ID。
-        """
+        """获取用户的常用 ID。"""
         if self.sender_id:
             return self.sender_id.split("|")[-1]
         return ""
 
     @property
     def channel_key(self) -> str:
-        """
-        现实场景的标识，形如 ``UTID|8B1F...|1``。
-
-        union 只表示若干平台场景共享同一份数据，并不等于它们是现实中的同一个场景；
-        组内 ``target_channel_id`` 相同才是，而默认各占一号即默认谁也不与谁合并。
-        冷却、游戏状态、等待任务这类「同一个现实场景内共享」的内存态须按此建键：
-        只按 union 建键会把仅仅共享配置、实为不同现实场景的双方错误地并作一处。
+        """现实场景的标识，形如 ``UTID|8B1F...|1``。
 
         :return: union ID 与消息通道号拼成的键。
         """
@@ -452,16 +440,12 @@ class SessionInfo:
 
 @define
 class FetchedSessionInfo(SessionInfo):
-    """
-    主动获取的消息会话信息。
-    """
+    """主动获取的消息会话信息。"""
 
 
 @define
 class ModuleHookContext:
-    """
-    模块任务上下文。主要用于传递模块任务的参数。
-    """
+    """模块任务上下文。主要用于传递模块任务的参数。"""
 
     args: dict
     session_info: SessionInfo | None = None

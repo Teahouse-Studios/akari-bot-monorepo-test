@@ -1,8 +1,4 @@
-"""core.server.init 单元测试 - 重启提示的送达（需要数据库）。
-
-server 进程重启后须等目标客户端重新注册为 ready，且以 Peer Registry 的有效租约为准，
-才能投递重启提示，否则 RPC 会以「客户端掉线」为由拒绝请求。
-"""
+"""core.server.init 单元测试 - 重启提示的送达（需要数据库）。"""
 
 import asyncio
 from datetime import UTC, datetime, timedelta

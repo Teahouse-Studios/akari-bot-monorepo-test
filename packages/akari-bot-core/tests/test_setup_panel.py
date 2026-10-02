@@ -1,10 +1,4 @@
-"""设置面板单元测试 - 设置行的构造与渲染。
-
-面板把每一项设置抽象为 SettingRow，取值与入口文案在构造时即翻译完毕，渲染只管排版。
-每一行的入口都挂在自己那一行上，底部键盘只承担跨域跳转 —— 两者的前缀不可混用：行内指令
-操作填入的是用户正在使用的输入框，故取会话前缀；按钮回流经 interaction 另建会话，取不到
-平台入口前缀，故须用全局前缀。这两条前缀不变量正是本文件守住的重点。
-"""
+"""设置面板单元测试 - 设置行的构造与渲染。"""
 
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.message.elements import ActionTextElement, PlainElement

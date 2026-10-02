@@ -476,9 +476,6 @@ async def _query_pages_impl(
             await finish_with_start_wiki_not_set(session)
     if isinstance(session, MessageSession):
         await finish_if_wiki_blocked(session, start_wiki)
-    # if lang in interwiki_list:
-    #     start_wiki = interwiki_list[lang]
-    #     lang = None
     if random_page:
         random_wiki = WikiLib(start_wiki, headers, locale=session.session_info.locale.locale)
         random_result = await random_wiki.get_json(action="query", list="random", rnnamespace="0")
@@ -1205,9 +1202,6 @@ async def auto_search(ctx: Bot.ModuleHookContext):
 
 @wiki.hook("auto_get_custom_iw_list")
 async def auto_get_custom_iw_list(ctx: Bot.ModuleHookContext):
-    """
-    Get custom interwiki list from target info.
-    """
     target = await WikiTargetInfo.get_by_target_id(ctx.session_info.target_id)
     if not target:
         return []

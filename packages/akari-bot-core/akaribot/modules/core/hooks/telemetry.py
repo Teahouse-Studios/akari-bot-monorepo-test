@@ -1,6 +1,4 @@
-"""
-通过 parser 观察入口写入 AnalyticsData 与 Info 计数。
-"""
+"""通过 parser 观察入口写入 AnalyticsData 与 Info 计数。"""
 
 from __future__ import annotations
 

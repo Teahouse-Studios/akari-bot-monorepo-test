@@ -29,15 +29,15 @@ _RPC_CONTEXT_MARKER = "--- RPC request context ---"
 
 
 class WebSocketBackendError(RpcUnavailableError):
-    """WebSocket JobQueue 连接或远端命令失败。"""
+    pass
 
 
 class WebSocketProtocolError(RpcProtocolError):
-    """WebSocket JobQueue 帧不符合协议。"""
+    pass
 
 
 class WebSocketCommandTimeout(RpcTimeoutError):
-    """控制命令的处理结果未知。"""
+    pass
 
 
 def _is_loopback(host: str | None) -> bool:
@@ -1354,7 +1354,6 @@ class WebSocketJobQueueBackend:
 
 
 async def run_websocket_hub(stop_event=None, ready_event=None) -> None:
-    """运行配置指定的独立 Hub，供守护进程子进程或命令行入口调用。"""
     settings = WebSocketSettings.from_config()
     hub = WebSocketHub(settings)
     await hub.start()

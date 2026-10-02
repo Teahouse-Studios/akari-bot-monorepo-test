@@ -1,8 +1,4 @@
-"""bots.web.api 单元测试 - 状态接口的运行时统计与进程内存占用。
-
-接口只读服务端经 RPC 汇总的数据，测试以替身固定 RPC 返回值与系统指标，
-不依赖真实进程扇出，也不在本机取样 CPU 占用。
-"""
+"""bots.web.api 单元测试 - 状态接口的运行时统计与进程内存占用。"""
 
 import inspect
 from unittest.mock import AsyncMock, patch

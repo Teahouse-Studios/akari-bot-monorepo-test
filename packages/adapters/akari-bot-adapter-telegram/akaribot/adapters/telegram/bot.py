@@ -80,14 +80,12 @@ async def _download_telegram_file(file_path: str | None) -> Path:
 
 @dp.message(F.new_chat_members)
 async def member_joined_handler(message: types.Message):
-    """接收 Telegram 群组和超级群的新成员事件。"""
     bot_user = await message.bot.me()
     await handle_new_chat_members(message, bot_user.id, ignored_sender)
 
 
 @dp.message(F.left_chat_member)
 async def member_left_handler(message: types.Message):
-    """接收 Telegram 群组和超级群的成员离开事件。"""
     bot_user = await message.bot.me()
     await handle_left_chat_member(message, bot_user.id, ignored_sender)
 

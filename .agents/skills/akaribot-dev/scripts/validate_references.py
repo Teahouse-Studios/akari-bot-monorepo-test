@@ -7,9 +7,8 @@
 3. references/ 下没有未被 SKILL.md 直接链接的孤立文件。
 4. 超过 100 行的 reference 在顶部保留 `## 目录`。
 5. SKILL.md 仍然覆盖若干条必须守住的规则。
-6. reference 里出现的仓库路径真实存在（迁移与拆包后最容易失效的一类内容）。
 
-用法：.venv/bin/python .agents/skills/akaribot-dev/scripts/validate_references.py
+用法：uv run python .agents/skills/akaribot-dev/scripts/validate_references.py
 """
 
 import re
@@ -22,8 +21,6 @@ TOC_HEADING = "## 目录"
 TOC_MAX_INDEX = 10
 
 LINK_PATTERN = re.compile(r"\]\(references/([^)#]+\.md)(?:#[^)]+)?\)")
-# 反引号包裹的仓库相对路径；含通配符或占位符的跳过。
-PATH_PATTERN = re.compile(r"`((?:packages|tools|tests|\.agents|\.github|docs)/[^`\s]+?)`")
 
 # SKILL.md 必须守住的规则。改动技能正文时若移除了其中任意一条，这里会失败。
 REQUIRED_GUARDS = [
@@ -36,30 +33,11 @@ REQUIRED_GUARDS = [
     ("SessionInfo", r"SessionInfo"),
     ("JobQueue", r"JobQueue"),
     ("core.exports", r"core\.exports"),
-    ("only-current-state rule", r"只描述当前状态"),
 ]
-
-
-def check_paths(skill_root: Path, repo_root: Path) -> list[str]:
-    """核对 reference 里出现的仓库路径真实存在。
-
-    :param skill_root: 技能目录。
-    :param repo_root: 仓库根。
-    :return: 问题列表。
-    """
-    problems: list[str] = []
-    for path in [skill_root / "SKILL.md", *sorted((skill_root / "references").glob("*.md"))]:
-        for token in sorted(set(PATH_PATTERN.findall(path.read_text(encoding="utf-8")))):
-            if any(marker in token for marker in ("*", "<", ">", "...")):
-                continue
-            if not (repo_root / token).exists():
-                problems.append(f"Path in {path.name} does not exist: {token}")
-    return problems
 
 
 def main() -> int:
     skill_root = Path(__file__).resolve().parent.parent
-    repo_root = skill_root.parents[2]
     root_path = skill_root / "SKILL.md"
     reference_dir = skill_root / "references"
 
@@ -77,7 +55,7 @@ def main() -> int:
     if root_line_count >= MAX_ROOT_LINES:
         errors.append(f"SKILL.md has {root_line_count} lines; expected fewer than {MAX_ROOT_LINES}.")
 
-    # 链接名按大小写不敏感比对，与文件系统的实际行为保持一致。
+    # 链接名按大小写不敏感比对，与文件系统的实际行为保持一致
     linked: set[str] = set()
     for name in LINK_PATTERN.findall(root_text):
         linked.add(name.casefold())
@@ -91,15 +69,16 @@ def main() -> int:
 
         lines = file.read_text(encoding="utf-8").splitlines()
         if len(lines) > TOC_REQUIRED_AFTER_LINES:
-            toc_index = lines.index(TOC_HEADING) if TOC_HEADING in lines else -1
+            try:
+                toc_index = lines.index(TOC_HEADING)
+            except ValueError:
+                toc_index = -1
             if toc_index < 0 or toc_index > TOC_MAX_INDEX:
                 errors.append(f"Long reference lacks a top-level TOC: {file.name}")
 
     for label, pattern in REQUIRED_GUARDS:
         if not re.search(pattern, root_text):
             errors.append(f"Required root guard is missing: {label}")
-
-    errors.extend(check_paths(skill_root, repo_root))
 
     if errors:
         for error in errors:

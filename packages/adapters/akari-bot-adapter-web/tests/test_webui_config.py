@@ -1,8 +1,4 @@
-"""bots.web.api 单元测试 - 配置文件删除接口（临时目录）。
-
-测试只操作临时目录，不触碰部署者真实的 config/。删除只作用于磁盘文件：
-本组测试同时守住主配置不可删与路径校验这两条约束。
-"""
+"""bots.web.api 单元测试 - 配置文件删除接口（临时目录）。"""
 
 import inspect
 from pathlib import Path

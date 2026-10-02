@@ -1,9 +1,4 @@
-"""RSS 模块集成测试 - minecraft_news、feedback_news。
-
-这两个模块只注册定时任务，不提供任何命令，无法通过发送指令触发。它们的推送内容
-依赖外部站点的实时更新，也不适合以固定语料断言。因此此处只校验注册结构本身：
-模块存在、被标记为 RSS、注册了定时任务且未注册命令。
-"""
+"""RSS 模块集成测试 - minecraft_news、feedback_news。"""
 
 from akaribot.core.loader import ModulesManager
 from akaribot.testing import func_case, Tester

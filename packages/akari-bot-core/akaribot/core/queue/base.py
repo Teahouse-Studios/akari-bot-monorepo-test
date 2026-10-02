@@ -1,8 +1,4 @@
-"""Symmetric RPC runtime. Contracts own codecs; transports own delivery.
-
-Cancellation stops local waiting only. The receiver uses the request deadline and
-never retries a claimed request. Each peer has independent handlers and waiters.
-"""
+"""Symmetric RPC runtime. Contracts own codecs; transports own delivery."""
 
 from __future__ import annotations
 
@@ -1551,13 +1547,7 @@ class JobQueueBase:
     @classmethod
     @asynccontextmanager
     async def maintenance_window(cls, *, exclusive: bool = True):
-        """Drain handlers, optionally excluding polling while the body runs.
-
-        Non-exclusive maintenance keeps the poller alive for response delivery,
-        heartbeats, and cleanup RPCs, but ``pause_event`` prevents new actions
-        from being claimed. Database replacement can nest an exclusive window
-        when queue storage itself must be quiesced.
-        """
+        """Drain handlers, optionally excluding polling while the body runs."""
         current = asyncio.current_task()
         if cls._maintenance_owner is current:
             if exclusive and cls._maintenance_exclusive_owner is not current:

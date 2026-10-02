@@ -1,12 +1,4 @@
-"""用户级 markdown 消息开关的单元测试。
-
-QQ 官方机器人的 markdown 消息承载了行内指令操作、底部按钮与内嵌图片，除配置项
-qq_use_markdown 的全局开关外，本开关把这一选择下放到用户，经特性覆盖生效：关闭后
-该用户的会话不再具备 markdown 相关能力，发送路径走纯文本。
-
-最易写错的一处是 support_markdown_toggle 自身——它必须在覆盖后仍为真，否则设置面板中
-的该行会一并消失，用户再无入口把它开回来。
-"""
+"""用户级 markdown 消息开关的单元测试。"""
 
 from unittest.mock import patch
 
@@ -27,7 +19,6 @@ from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 
-# 用户数据中承载该偏好的键
 SWITCH_KEY = "use_markdown"
 
 # 平台能力集在导入时即依配置定型，qq_use_markdown 为假的部署上，markdown 相关能力全为假，
@@ -106,7 +97,6 @@ def _test_resolve_disables_markdown_features() -> bool:
 
 
 def _test_resolve_keeps_toggle_available() -> bool:
-    # 标志一旦随之关闭，设置面板中的该行会消失，用户再无入口把 markdown 开回来。
     if _resolve({SWITCH_KEY: False}).support_markdown_toggle is not True:
         Logger.error("support_markdown_toggle must survive the override, or the user cannot switch markdown back on")
         return False
@@ -162,8 +152,6 @@ class _FakeClient:
 
 
 async def _send_and_capture(support_markdown: bool) -> dict:
-    # 消息须带指令操作，且 support_action_text 保持为真：send_msg_markdown() 对纯文本会退回纯文本
-    # 路径，生产中二者又由 resolve_features() 一同关闭；刻意拆开才能把 support_markdown 单独隔离出来。
     session_id = f"markdown-send-{support_markdown}"
     session_info = SessionInfo(
         target_id=f"{target_group_prefix}|fake_group",
@@ -193,7 +181,6 @@ async def _send_and_capture(support_markdown: bool) -> dict:
 
 
 async def _test_send_path_follows_session() -> bool:
-    # 这一条守住整条链路的末端：能力覆盖得再对，发送时若仍只看模块级常量，用户的偏好便落空。
     with_md = await _send_and_capture(True)
     without_md = await _send_and_capture(False)
     if "markdown" not in with_md:
@@ -210,7 +197,7 @@ async def _test_send_path_follows_session() -> bool:
 
 @func_case
 async def test_markdown_toggle(tester: Tester):
-    """bots.qqbot.features: 用户级 markdown 开关测试"""
+    """akaribot.adapters.qqbot.features: 用户级 markdown 开关测试"""
     await tester.test(_test_feature_injects_into_session, "特性可注入会话测试")
     await tester.test(_test_resolve_keeps_base_when_enabled, "开启时保持默认能力测试")
     await tester.test(_test_resolve_disables_markdown_features, "关闭时禁用相关能力测试")

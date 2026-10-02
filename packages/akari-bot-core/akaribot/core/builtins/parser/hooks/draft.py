@@ -1,8 +1,4 @@
-"""SessionInfo 会话草稿：允许入口 hook 修改有限字段，成功才提交。
-
-不 deepcopy 整个 MessageSession / ExecutionState；不暴露 ORM 写方法。
-身份、权限、路由字段只读。提交前先校验并准备全部独立值，再一次性发布。
-"""
+"""SessionInfo 会话草稿：允许入口 hook 修改有限字段，成功才提交。"""
 
 from __future__ import annotations
 
@@ -34,11 +30,7 @@ def _copy_messages(messages):
 
 
 class SessionDraft:
-    """从已提交 SessionInfo 构建的独立草稿。
-
-    getter 返回内部可变容器；``commit()`` 对全部可写字段做校验、准备副本，
-    再一次性写回正式对象，避免半提交。
-    """
+    """从已提交 SessionInfo 构建的独立草稿。"""
 
     __slots__ = (
         "_source",
@@ -224,9 +216,8 @@ class SessionDraft:
         # 避免其余字段已写回而 locale 静默降级造成的半提交。
         new_locale = None
         if "locale_lang" in self._dirty:
-            from akaribot.core.i18n import Locale
-
-            new_locale = Locale(prepared["locale_lang"])
+            # 走派生接口以保留术语作用域；新建 Locale 会让本会话之后的渲染退回基础术语。
+            new_locale = target.locale.with_locale(prepared["locale_lang"])
         if "tmp" in self._dirty:
             if not hasattr(target, "tmp") or target.tmp is None:
                 target.tmp = {}

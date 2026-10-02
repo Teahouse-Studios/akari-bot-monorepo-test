@@ -26,8 +26,6 @@ def cache_files(union_id: str) -> tuple[Path, Path]:
 def parse_part(save_data: bytes, part: str) -> dict:
     """只解析存档中的指定文件。
 
-    整包解析会让任一文件的结构版本更新波及全部命令，故按需解析。
-
     :param save_data: 存档压缩包数据。
     :param part: 存档内的文件名，如 gameRecord、gameProgress、settings、gameKey、user。
     """

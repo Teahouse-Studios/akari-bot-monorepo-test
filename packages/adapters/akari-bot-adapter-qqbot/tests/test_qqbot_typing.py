@@ -1,12 +1,4 @@
-"""QQBot 群聊「正在输入中」提示的撤回时机测试。
-
-QQ 群没有原生输入状态能力，适配器以「先发一条提示消息、事后撤回」的方式模拟。
-提示消息一旦漏撤就会永久留在群里，且用户无从自行清理，因此其撤回必须对每条
-异常路径都成立——包括上下文已销毁、同一会话重复开启输入状态等情形。
-
-撤回由「普通回复进入实际发送阶段」驱动。资源准备期间不能提前落下该标志；一旦
-准备完成并进入发送队列，即使平台稍后返回失败，也不得再让 typing 消息抢在回复后面。
-"""
+"""QQBot 群聊「正在输入中」提示的撤回时机测试。"""
 
 import asyncio
 from types import SimpleNamespace
@@ -86,7 +78,6 @@ def _make_session(session_id: str) -> SessionInfo:
 
 
 class _Recorder:
-    # 区分「输入提示」与「机器人自身消息」两类发送，便于断言前者是否被撤回。
     def __init__(self):
         self.prompts: list[str] = []
         self.prompt_messages: list[MessageChain] = []
@@ -154,7 +145,6 @@ class _Recorder:
 
     @property
     def leaked(self) -> list[str]:
-        """已发出但未被撤回的输入提示。"""
         return [p for p in self.prompts if p not in self.deleted]
 
 
@@ -455,7 +445,7 @@ async def _send_via_context(session: SessionInfo, ctx: _FakeGroupMessage, messag
     previous_client = QQBotContextManager.client
     QQBotContextManager.client = ctx.client
     try:
-        await QQBotContextManager.send_message(session, message, quote=False, _ignore_retries=True)
+        await QQBotContextManager.send_message(session, message, quote=False)
         return state, True
     except Exception:
         return state, False
@@ -703,7 +693,7 @@ async def _test_not_marked_while_converting_image() -> bool:
 
 @func_case
 async def test_qqbot_typing(tester: Tester):
-    """bots.qqbot.context: 群聊输入提示的撤回时机测试"""
+    """akaribot.adapters.qqbot.context: 群聊输入提示的撤回时机测试"""
     await tester.test(_test_c2c_uses_native_typing, "C2C 原生输入状态测试")
     await tester.test(_test_prompt_recalled_after_bot_message, "机器人发言后撤回输入提示测试")
     await tester.test(_test_prompt_recalled_when_context_dropped, "上下文销毁后撤回输入提示测试")

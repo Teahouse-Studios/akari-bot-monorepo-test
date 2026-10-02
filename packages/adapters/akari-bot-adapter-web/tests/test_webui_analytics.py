@@ -1,4 +1,4 @@
-"""bots.web.api 单元测试 - 统计接口的时间窗口筛选（需要数据库）。"""
+"""adapters.web.api 单元测试 - 统计接口的时间窗口筛选（需要数据库）。"""
 
 import inspect
 from datetime import datetime, timedelta, UTC
@@ -12,7 +12,6 @@ MARKER = "webui_analytics_probe"
 
 
 async def _add_record(hours_ago: float) -> None:
-    # 写入一条指定时间的统计记录。timestamp 是 auto_now_add 字段，只能建好之后再改写。
     record = await AnalyticsData.create(
         module_name=MARKER,
         module_type="command",
@@ -52,7 +51,7 @@ async def _test_analytics_counts_records_in_window():
 
 @func_case
 async def test_webui_analytics_modules(tester: Tester):
-    """bots.web.api: 模块调用数量统计接口测试"""
+    """akaribot.adapters.web.api: 模块调用数量统计接口测试"""
     await tester.test(_test_analytics_modules_counts_in_window, "模块统计时间窗口测试")
     await tester.test(_test_analytics_modules_respects_limit, "模块统计 limit 测试")
 
@@ -107,7 +106,7 @@ async def _test_analytics_modules_respects_limit():
 
 @func_case
 async def test_webui_analytics(tester: Tester):
-    """bots.web.api: 统计接口测试"""
+    """akaribot.adapters.web.api: 统计接口测试"""
     await tester.test(_test_analytics_counts_records_in_window, "统计接口时间窗口测试")
 
     return tester

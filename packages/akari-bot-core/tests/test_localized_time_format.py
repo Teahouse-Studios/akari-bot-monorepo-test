@@ -1,10 +1,4 @@
-"""本地化时间格式化的非 ASCII 字面文本测试。
-
-语言文件中的 ``time.*.format`` 带有非 ASCII 字面文本（如韩文 ``%Y년 %m월 %d일``）。
-Windows 上 ``datetime.strftime()`` 会先把整个格式串按进程 ANSI 代码页编码，直接调用
-即抛出 ``UnicodeEncodeError``；上报邮件的 HTML、会话的 ``format_time()`` 与
-``FormattedTimeElement`` 都必须经 ``safe_strftime()`` 按指令与字面文本分离后再格式化。
-"""
+"""本地化时间格式化的非 ASCII 字面文本测试。"""
 
 import re
 from datetime import datetime, timedelta

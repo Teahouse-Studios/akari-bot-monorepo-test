@@ -31,6 +31,8 @@ from akaribot.core.api import (
     CoreConfig,
     confirm_command_default,
     Logger,
+    proxy,
+    ssl_verify,
 )
 from akaribot.core.api.adapters import (
     client_cleanup,
@@ -457,24 +459,44 @@ class MyClient(botpy.Client):
         await Bot.process_message(session, interaction, resolve_features(session))
 
 
-intents = botpy.Intents.none()
-intents.public_guild_messages = True
-intents.public_messages = True
-intents.direct_message = True
-intents.interaction = True
-intents.group_member_event = True
-if QQBotConfig.qq_private_bot:
-    intents.guild_messages = True
+def _build_client() -> MyClient:
+    intents = botpy.Intents.none()
+    intents.public_guild_messages = True
+    intents.public_messages = True
+    intents.direct_message = True
+    intents.interaction = True
+    intents.group_member_event = True
+    if QQBotConfig.qq_private_bot:
+        intents.guild_messages = True
 
-menu, panels = build_navigation()
-client = MyClient(
-    intents=intents,
-    bot_log=None,
-    loguru_logger=Logger.log,
-    menu=menu,
-    panels=panels,
-    config_sync_strict=QQBotConfig.qq_navigation_sync_strict,
-)
+    # Webhook 模式由平台回调驱动，须在本机监听；SDK 只提供 HTTP，公网 HTTPS 交由反向代理终止。
+    transport_options: dict[str, object] = {"transport": "websocket"}
+    if QQBotConfig.qq_use_webhook:
+        transport_options = {
+            "transport": "webhook",
+            "webhook_host": str(QQBotConfig.qq_webhook_host),
+            "webhook_port": int(QQBotConfig.qq_webhook_port),
+            "webhook_path": str(QQBotConfig.qq_webhook_path),
+        }
+    if QQBotConfig.qq_api_url:
+        transport_options["base_url"] = QQBotConfig.qq_api_url
+
+    menu, panels = build_navigation()
+    return MyClient(
+        intents=intents,
+        bot_log=None,
+        loguru_logger=Logger.log,
+        menu=menu,
+        panels=panels,
+        config_sync_strict=QQBotConfig.qq_navigation_sync_strict,
+        proxy=proxy,
+        ssl=ssl_verify,
+        rate_limit={"certification": "certified" if QQBotConfig.qq_bot_certified else "unverified"},
+        **transport_options,
+    )
+
+
+client = _build_client()
 QQBotContextManager.client = client
 
 if QQBotConfig.enable:

@@ -1,7 +1,4 @@
-"""ToS 限流、临时封禁与滥用上报。
-
-通过 parser 入口 hook 接入策略；具名能力供管理命令与 Client RPC（OneBot 等）使用。
-"""
+"""ToS 限流、临时封禁与滥用上报。"""
 
 from __future__ import annotations
 
@@ -107,11 +104,7 @@ async def remove_temp_ban(target):
 
 
 async def tos_report(sender: str, target: str, reason: str, banned: bool = False):
-    """上报滥用行为。
-
-    上报统一交给 ``core.smtp.send_report``：启用 SMTP 邮件上报时发邮件，
-    未启用时才回传到配置的上报场景（按场景组展开，同一现实场景只通知一次）。
-    """
+    """上报滥用行为。"""
     warn_template = MessageChain.assign(
         [I18NContext("tos.message.report", sender=sender, target=target, disable_joke=True)]
     )

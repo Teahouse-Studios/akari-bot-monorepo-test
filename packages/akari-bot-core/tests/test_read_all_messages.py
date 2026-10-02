@@ -1,9 +1,4 @@
-"""read_all_messages 特性与正则模块管控单元测试。
-
-QQ 官方机器人在群主未开启「读取全部消息」权限时只收到提及自身的消息，此时正则模块的
-触发会变得断续且难以解释，推送权限亦多半未开。平台不提供查询推送权限的接口，故以消息
-事件类型为判据，一并关闭两类模块。
-"""
+"""read_all_messages 特性与正则模块管控单元测试。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -179,7 +174,8 @@ async def _test_enable_plain_module_still_works():
 
 
 async def _test_enable_event_module_is_rejected():
-    expected = "失败：此场景无法读取全部消息，不能开启事件模块，请先授予机器人对应权限。"
+    # 该用例刻意使用 QQ 官方群会话，术语随之显示为「群聊」。
+    expected = "失败：此群聊无法读取全部消息，不能开启事件模块，请先授予机器人对应权限。"
     actual = await _enable_prompt("captcha", target_from="QQBot|Group", client_name="QQBot")
     if actual != expected:
         Logger.error(f"Expected event rejection prompt {expected!r}, got {actual!r}")

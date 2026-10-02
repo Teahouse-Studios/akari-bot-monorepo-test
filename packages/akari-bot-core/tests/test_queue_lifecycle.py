@@ -17,7 +17,7 @@ from akaribot.testing.timing import TIME_SCALE
 
 
 class QueueAuditRuntime(JobQueueBase):
-    """为直接传输测试提供显式数据库后端。"""
+    pass
 
 
 async def _test_cleanup_keeps_active_tasks():

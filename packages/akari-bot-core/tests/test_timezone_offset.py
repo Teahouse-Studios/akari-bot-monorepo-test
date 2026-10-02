@@ -1,7 +1,4 @@
-"""时区偏移取值来源测试。
-
-``~setup timeoffset`` 将偏移量写入场景数据的 timezone_offset 键，会话应读取同一份数据。
-"""
+"""时区偏移取值来源测试。"""
 
 from datetime import timedelta
 

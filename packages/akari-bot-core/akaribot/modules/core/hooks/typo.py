@@ -1,7 +1,4 @@
-"""命令纠错建议：通过 ``parser.command.unmatched`` 返回 RecoveryProposal。
-
-确认与重解析由核心恢复协调器完成；本模块只做候选计算，不跨 120s wait 持有草稿。
-"""
+"""命令纠错建议：通过 ``parser.command.unmatched`` 返回 RecoveryProposal。"""
 
 from __future__ import annotations
 

@@ -1,10 +1,4 @@
-"""水鱼（Diving-Fish）OAuth 的纯逻辑单元测试：客户端形态判定、绑定落盘、取令牌与撤销。
-
-水鱼查分器按应用登记形态区分两类客户端：带 client_secret 的机密客户端走换票，不带凭据的公开
-客户端走 refresh token。两者在令牌端点上互斥——多传与少传 client_secret 得到的是同一个
-`401 invalid_client`，故配置里有没有 client_secret 是唯一判据。本文件把两条分支各跑一遍，并
-确认机密客户端不会在库里留下任何用户凭据。
-"""
+"""水鱼（Diving-Fish）OAuth 的纯逻辑单元测试：客户端形态判定、绑定落盘、取令牌与撤销。"""
 
 from unittest.mock import patch
 

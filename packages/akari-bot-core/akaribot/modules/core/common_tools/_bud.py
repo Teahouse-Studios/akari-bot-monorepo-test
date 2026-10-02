@@ -19,8 +19,6 @@ _bud_mutation_lock = asyncio.Lock()
 def split_amount(total: int, count: int) -> list[int]:
     """将 ``total`` 片花瓣随机拆成 ``count`` 份，每份至少 1 片、总和守恒。
 
-    采用带平均值保底的二倍均值法，减少极端小额。
-
     :param total: 花瓣总数。
     :param count: 拆分份数。
     :raises ValueError: 当 ``count`` 非正或 ``total < count`` 时无法拆分。
@@ -121,10 +119,7 @@ async def release_buds() -> int:
 
 
 async def claim_bud(msg: Bot.MessageSession, code: str) -> tuple[str, dict | None, int | None]:
-    """领取花苞，返回 ``(状态, 花苞, 领取数量)``。
-
-    状态取值：``not_found`` / ``empty`` / ``already`` / ``success``。
-    """
+    """领取花苞，返回 ``(状态, 花苞, 领取数量)``。"""
     sender_union_info = msg.session_info.sender_union_info
     union_id = msg.session_info.sender_union_id
     if not sender_union_info or not union_id:

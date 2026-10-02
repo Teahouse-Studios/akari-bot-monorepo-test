@@ -1,13 +1,4 @@
-"""未认证链接的呈现方式单元测试。
-
-enable_urlmanager 开启时，未经认证的链接原本一律转为 ROT13 编码的跳板地址。跳板地址
-无从辨识且须经第三方页面中转，故在支持 markdown 的会话上改以代码块呈现原始链接，供用户
-自行复制，同时保留未认证的警示；不支持 markdown 的会话（含用户自行关闭 markdown 者）
-仍走跳板。
-
-易错处有二：其一是取链接须用 original_url——模块显式传入 trusted=False 时 url 字段已被
-替换成跳板地址；其二是代码块内不可再套 [名称](URL)，故该路径须跳过 markdown 格式转换。
-"""
+"""未认证链接的呈现方式单元测试。"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory

@@ -1,12 +1,4 @@
-"""twenty_four 求解器单元测试 - 表达式枚举与结果校验。
-
-模块的集成测试只断言输出含有特定文本，求解器给出的表达式是否真的等于 24、
-是否恰好用尽给定的四个数，均不在其覆盖范围内，故在此直接求证。
-
-命令函数传给 find_solution 的是元组，求解器内部又以下标取值，元组入参因而是
-必须守住的一条路径：曾有一次改写将下标循环误写为 enumerate，正是在这条路径上
-抛出 TypeError。
-"""
+"""twenty_four 求解器单元测试 - 表达式枚举与结果校验。"""
 
 from akaribot.testing import func_case, Tester
 from akaribot.modules.twenty_four import calc, check_valid, contains_all_numbers, find_solution

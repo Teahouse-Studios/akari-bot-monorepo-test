@@ -1,8 +1,4 @@
-"""bots.web.api.webrender 单元测试 - 参数校验与 RPC 转发。
-
-浏览器归服务端所有，接口只校验请求并转发；测试以替身固定 RPC 返回值，
-既不起浏览器，也不依赖服务端进程在线。
-"""
+"""bots.web.api.webrender 单元测试 - 参数校验与 RPC 转发。"""
 
 import inspect
 from contextlib import ExitStack, contextmanager
@@ -27,8 +23,6 @@ STATUS = {
 
 
 class FakeRequest:
-    """绕过 FastAPI 的最小请求替身，只提供接口用到的 json()。"""
-
     def __init__(self, body=None):
         self._body = body
 

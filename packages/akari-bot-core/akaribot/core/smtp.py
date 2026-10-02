@@ -100,10 +100,7 @@ async def send_report(
     direct_sender: DirectSender | None = None,
     targets: list | None = None,
 ) -> None:
-    """将上报发送到 SMTP 邮件或配置的上报场景。
-
-    邮件上报配置完整时不会触发任何场景消息；未启用邮件时才使用场景上报。
-    """
+    """将上报发送到 SMTP 邮件或配置的上报场景。"""
     if email_report_enabled():
         subject = f"[AkariBot] {locale.t_str(subject)}"
         if body is None:

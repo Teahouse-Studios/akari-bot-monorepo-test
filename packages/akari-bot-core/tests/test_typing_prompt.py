@@ -1,9 +1,4 @@
-"""输入提示开关的取值来源测试。
-
-``~setup typing`` 将开关写入用户数据（``sender_data``），故各处判断必须一律读用户数据。
-曾有解析路径误读场景数据（``target_data``），而该键从不写入场景数据，导致判断恒取
-默认值、用户关不掉输入提示。
-"""
+"""输入提示开关的取值来源测试。"""
 
 from akaribot.core.builtins.session.info import SessionInfo
 from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo

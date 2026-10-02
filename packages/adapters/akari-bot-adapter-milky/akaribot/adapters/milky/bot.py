@@ -78,7 +78,6 @@ def _sender_name(message: dict) -> str | None:
 
 
 async def refresh_login_info() -> None:
-    """拉取并缓存机器人自身信息，供会话构建与主动消息使用。"""
     global milky_account
     login_info = await milky_bot.get_login_info()
     milky_account = login_info.uin
@@ -211,7 +210,6 @@ async def message_handler(event: dict) -> None:
 
 
 async def friend_request_handler(event: dict) -> None:
-    """处理好友请求：超级用户与信任用户自动同意，配置允许时按黑名单决定。"""
     message = _event_data(event)
     initiator_uid = message_field(message, "initiator_uid")
     if not initiator_uid:
@@ -229,7 +227,6 @@ async def friend_request_handler(event: dict) -> None:
 
 
 async def group_invitation_handler(event: dict) -> None:
-    """处理他人邀请机器人入群：超级用户与信任用户自动同意，配置允许时跳过黑名单群。"""
     message = _event_data(event)
     group_id = message_field(message, "group_id")
     invitation_seq = message_field(message, "invitation_seq")
@@ -252,7 +249,6 @@ async def group_invitation_handler(event: dict) -> None:
 
 
 async def group_nudge_handler(event: dict) -> None:
-    """处理群戳一戳：被戳时按快速确认处理。"""
     message = _event_data(event)
     if not quick_confirm or not _is_self(message_field(message, "receiver_id")):
         return
@@ -266,7 +262,6 @@ async def group_nudge_handler(event: dict) -> None:
 
 
 async def friend_nudge_handler(event: dict) -> None:
-    """处理好友戳一戳：被戳时按快速确认处理。"""
     message = _event_data(event)
     if not quick_confirm or not message_field(message, "is_self_receive", False):
         return
@@ -280,7 +275,6 @@ async def friend_nudge_handler(event: dict) -> None:
 
 
 async def group_mute_handler(event: dict) -> None:
-    """机器人被禁言时按 ToS 记录并处理操作者。"""
     if not (enable_tos and not client_retired):
         return
     message = _event_data(event)
@@ -319,7 +313,6 @@ async def group_mute_handler(event: dict) -> None:
 
 
 async def group_member_decrease_handler(event: dict) -> None:
-    """机器人被移出群聊时按 ToS 记录并处理操作者。"""
     if not (enable_tos and not client_retired):
         return
     message = _event_data(event)
@@ -353,7 +346,6 @@ async def group_member_decrease_handler(event: dict) -> None:
 
 
 async def bot_offline_handler(event: dict) -> None:
-    """协议端下线事件：仅记录原因，事件流断开后由主循环负责重连。"""
     reason = message_field(_event_data(event), "reason", "") or "unknown reason"
     Logger.error(f"Milky bot went offline: {reason}")
 
@@ -373,8 +365,6 @@ EVENT_HANDLERS = {
 async def dispatch_event(event: dict) -> None:
     """按事件类型分发单个 Milky 事件。
 
-    未注册的事件类型（如群名称变更、精华消息变更等通知）直接忽略。
-
     :param event: Milky 原始事件。
     """
     event_type = event.get("event_type")
@@ -391,7 +381,6 @@ async def dispatch_event(event: dict) -> None:
 
 
 async def event_loop() -> None:
-    """持续消费 SSE 事件流，断开后按固定间隔重连。"""
     while True:
         try:
             async for event in milky_bot.events_sse():

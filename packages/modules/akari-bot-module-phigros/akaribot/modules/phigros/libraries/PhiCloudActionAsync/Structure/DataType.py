@@ -229,8 +229,6 @@ class ShortInt(dataTypeAbstract):
 
 
 class Int(dataTypeAbstract):
-    """整型 (4 字节)"""
-
     @staticmethod
     def read(data: bytes, pos: int):
         """

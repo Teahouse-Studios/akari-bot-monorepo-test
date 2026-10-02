@@ -1,9 +1,4 @@
-"""
-按钮排布工具 - 将扁平的按钮序列整理为消息底部键盘所需的按行结构。
-
-平台允许单行至多 10 个按钮、至多 5 行，但一行真塞满 10 个会挤到显示不全，
-故另设一个可读性上限作为默认值，仅在按钮总数超出「可读性上限 × 5 行」时才放宽至硬上限。
-"""
+"""按钮排布工具 - 将扁平的按钮序列整理为消息底部键盘所需的按行结构。"""
 
 import math
 import uuid
@@ -99,11 +94,7 @@ def _iter_buttons(value):
 
 
 def bind_callback_reply_ids(message, callback_id: str | None = None) -> list[str]:
-    """为消息中的按钮绑定 callback 使用的虚拟 ``reply_id``。
-
-    已显式设置 reply_id 的按钮保持原值；其余非链接按钮共享一个自动生成的 ID。
-    返回值是 callback 注册时需要监听的全部虚拟 reply_id，并保持出现顺序。
-    """
+    """为消息中的按钮绑定 callback 使用的虚拟 ``reply_id``。"""
     buttons = []
     reply_ids = []
     for button in _iter_buttons(message):

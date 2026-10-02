@@ -101,11 +101,6 @@ def message_field(message: Any, key: str, default: Any = None) -> Any:
 
 
 def iter_message_segments(message: Any) -> list[dict[str, Any]]:
-    """以字典形式取出消息中的全部消息段。
-
-    :param message: Milky 消息字典或 SDK 模型。
-    :return: 消息段字典列表，非法项已被剔除。
-    """
     segments = message_field(message, "segments") or []
     dumped = [segment.model_dump() if hasattr(segment, "model_dump") else segment for segment in segments]
     return [segment for segment in dumped if isinstance(segment, dict)]
@@ -113,9 +108,6 @@ def iter_message_segments(message: Any) -> list[dict[str, Any]]:
 
 async def to_message_chain(message: Any) -> MessageChain:
     """将 Milky 入站消息转换为消息链。
-
-    媒体段使用协议端给出的临时链接，链接失效时由调用方按需重新获取。
-    无法识别的消息段以原始文本保留，避免静默丢失内容。
 
     :param message: Milky 消息字典或 SDK 模型。
     :return: 消息链。
@@ -172,7 +164,6 @@ def _append_mention(segments: list, user_id: Any) -> None:
 
 
 def _ensure_line_break(segments: list) -> None:
-    # 末段已是文本段时直接在末尾补换行（已以换行结尾则跳过），否则新增一个换行文本段。
     if isinstance(segments[-1], OutgoingTextSegment):
         if not segments[-1].data.text.endswith("\n"):
             segments[-1].data.text += "\n"
@@ -186,11 +177,6 @@ async def convert_chain_to_segments(
     quote: bool = False,
 ) -> list:
     """将消息链转换为 Milky 出站消息段。
-
-    媒体元素不可得时静默跳过该元素；全部元素均被跳过时返回空列表，由调用方放弃发送。
-
-    各元素均为块级元素，除首个元素外都另起一行；仅文本流内部的 AT 码属于行内内容，
-    沿用所在行而不额外换行。
 
     :param session_info: 会话信息。
     :param message: 待发送的消息链。

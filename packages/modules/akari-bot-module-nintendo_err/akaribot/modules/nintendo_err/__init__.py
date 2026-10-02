@@ -5,10 +5,6 @@ from akaribot.core.api import Bot, EmbedElement, Embed, EmbedField, I18NContext,
 
 
 class Results:
-    """
-    Parses game console result codes.
-    """
-
     @staticmethod
     def fetch(error):
         from . import ctr_results, ctr_support, switch, wiiu_results, wiiu_support

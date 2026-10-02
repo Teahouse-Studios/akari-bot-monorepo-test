@@ -354,6 +354,10 @@ async def _test_kook_call_api_rejects_business_error():
     sys.modules["akaribot.adapters.kook.client"] = fake_client
 
     class FakeHTTPClient:
+        # 出站网络设置集中到 core.config.network 后，适配器会给 AsyncClient 传 proxy 与 verify。
+        def __init__(self, *args, **kwargs):
+            self.init_args = (args, kwargs)
+
         async def __aenter__(self):
             return self
 

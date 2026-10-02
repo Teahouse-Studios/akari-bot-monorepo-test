@@ -33,12 +33,6 @@ _PUNCTUATIONS = (
 
 
 def remove_punctuations(text: str) -> str:
-    """去除字符串中的标点与空白并转为小写。
-
-    仅用于用户输入的曲名匹配。曲目 id 与 7aGiven 的键天然一致，不需归一化。
-
-    :param text: 待处理的字符串。
-    """
     text = "".join(char for char in text if char not in string.punctuation and char not in _PUNCTUATIONS)
     return re.sub(" +", " ", text).strip().lower()
 
@@ -49,12 +43,6 @@ def _rows(text: str) -> list[list[str]]:
 
 
 def parse_info_tsv(text: str) -> dict[str, dict]:
-    """解析 info.tsv。
-
-    每行为曲目 id、曲名、曲师、画师，其后为各难度谱师，列数在 4 至 7 之间浮动。
-
-    :param text: info.tsv 的文本内容。
-    """
     result = {}
     for row in _rows(text):
         if len(row) < 4:
@@ -71,8 +59,6 @@ def parse_info_tsv(text: str) -> dict[str, dict]:
 
 def parse_difficulty_tsv(text: str) -> dict[str, dict[str, float]]:
     """解析 difficulty.tsv。
-
-    每行为曲目 id 与各难度定数，难度数量随曲目而异。
 
     :param text: difficulty.tsv 的文本内容。
     """
@@ -93,11 +79,6 @@ def parse_difficulty_tsv(text: str) -> dict[str, dict[str, float]]:
 
 
 def build_song_info(info_text: str, diff_text: str) -> dict[str, dict]:
-    """合并两份 TSV 为曲目信息结构。
-
-    :param info_text: info.tsv 的文本内容。
-    :param diff_text: difficulty.tsv 的文本内容。
-    """
     songs = parse_info_tsv(info_text)
     for song_id, diff in parse_difficulty_tsv(diff_text).items():
         song = songs.setdefault(
@@ -132,10 +113,6 @@ def _as_constant(value) -> float:
 def is_legacy_song_info(song_info: dict) -> bool:
     """判断曲目信息是否为 5.1 之前的旧版结构。
 
-    旧版以归一化后的小写曲目 id 为键，与存档中的原始 id 无法对应，即便定数容错也只会
-    得出全空的成绩，故须在使用前识别并要求重建。判据取旧版独有的 composer 字段与
-    字符串定数两项，命中其一即可认定。
-
     :param song_info: 曲目信息结构。
     """
     for info in song_info.values():
@@ -148,9 +125,6 @@ def is_legacy_song_info(song_info: dict) -> bool:
 
 def to_difficulty_table(song_info: dict) -> dict[str, list[float]]:
     """转换为 countRks 所需的定数表。
-
-    countRks 以 EZ、HD、IN、AT、Legacy 的下标取值，故列表固定为五位；
-    缺失的难度补 0.0，避免其内部因 IndexError 输出告警。
 
     :param song_info: 曲目信息结构。
     """

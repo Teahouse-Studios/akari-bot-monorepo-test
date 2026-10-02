@@ -88,21 +88,10 @@ OBSOLETE_BIND_COLUMNS = (("module_maimai_lxns_prober_bind_info", "friend_code"),
 
 
 def quote_ident(name: str) -> str:
-    """
-    按当前数据库类型给标识符加引号。
-
-    :param name: 表名或列名。
-    """
     return f'"{name}"' if db_type == "sqlite" else f"`{name}`"
 
 
 async def has_table(conn, table: str) -> bool:
-    """
-    判断某张表是否存在。
-
-    :param conn: 数据库连接。
-    :param table: 表名。
-    """
     if db_type == "sqlite":
         rows = await conn.execute_query_dict(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?;", [table]
@@ -116,13 +105,6 @@ async def has_table(conn, table: str) -> bool:
 
 
 async def has_column(conn, table: str, column: str) -> bool:
-    """
-    判断某张表中是否存在指定列，表不存在时同样返回 False。
-
-    :param conn: 数据库连接。
-    :param table: 表名。
-    :param column: 列名。
-    """
     if db_type == "sqlite":
         rows = await conn.execute_query_dict(f"PRAGMA table_info({quote_ident(table)});")
         return any(row["name"] == column for row in rows)
@@ -135,16 +117,6 @@ async def has_column(conn, table: str, column: str) -> bool:
 
 
 async def has_index(conn, table: str, column: str) -> bool:
-    """
-    判断某张表的指定列上是否已有索引（作为任意索引的首列即算）。
-
-    按列而非按索引名判断：新建的库由 ``generate_schemas`` 依模型声明建索引，索引名由 ORM 生成，
-    与迁移里显式指定的名字不同；若按名字判断，已有索引的库会被重复建一份。
-
-    :param conn: 数据库连接。
-    :param table: 表名。
-    :param column: 列名。
-    """
     if db_type == "sqlite":
         indexes = await conn.execute_query_dict(f"PRAGMA index_list({quote_ident(table)});")
         for index in indexes:
@@ -161,7 +133,6 @@ async def has_index(conn, table: str, column: str) -> bool:
 
 
 async def migrate_wiki_url_rules(conn) -> None:
-    """将旧 Wiki API 名单迁入全局 URL 用户规则文件。"""
     for table, rule_list in WIKI_URL_RULE_TABLES:
         if not await has_table(conn, table):
             continue
@@ -290,9 +261,6 @@ async def update_database_to_v4(conn):
 
 async def update_database_to_v5(conn):
     """将数据库升级至 v5：丢弃旧任务队列表并按当前模型重新创建。
-
-    JobQueue 记录仅表示进程间的临时在途任务，不属于需要跨版本保留的业务数据。协议 v2 的表结构
-    与旧协议不兼容，因此升级时直接删除旧表，避免保留无法可靠解释或继续执行的历史任务。
 
     :param conn: 数据库连接。
     """

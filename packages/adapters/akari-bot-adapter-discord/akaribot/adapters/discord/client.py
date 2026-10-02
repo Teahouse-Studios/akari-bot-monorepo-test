@@ -1,12 +1,11 @@
 import asyncio
 
+import aiohttp
 import discord
 
 from akaribot.adapters.discord.info import sender_prefix_list, target_prefix_list
-from akaribot.core.api import CoreSecretConfig, Logger
+from akaribot.core.api import Logger, proxy, ssl_verify
 from akaribot.core.api.adapters import client_cleanup, client_init
-
-proxy = CoreSecretConfig.proxy
 
 intents = discord.Intents.default()
 intents.members = True
@@ -16,6 +15,12 @@ _client_init_task: asyncio.Task[None] | None = None
 
 
 class AkariDiscordBot(discord.Bot):
+    async def login(self, token: str) -> None:
+        # 关闭证书校验只能通过连接器实现，而连接器必须在事件循环内创建，因此推迟到登录前。
+        if not ssl_verify and self.http.connector is None:
+            self.http.connector = aiohttp.TCPConnector(ssl=False)
+        await super().login(token)
+
     async def close(self) -> None:
         global _client_init_task
         try:

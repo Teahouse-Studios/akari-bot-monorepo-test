@@ -16,6 +16,8 @@ from akaribot.core.api import (
     MentionElement,
     SessionInfo,
     Logger,
+    proxy,
+    ssl_verify,
 )
 from akaribot.core.api.adapters import ContextManager, BotState, Features, resolve_media_path
 from .client import bot
@@ -38,7 +40,7 @@ class KOOKReactionContext:
 
 async def call_api(endpoint: str, **params):
     url = f"{kook_base}/api/v3/{endpoint}"
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(proxy=proxy, verify=ssl_verify) as client:
         resp = await client.post(url, data=params, headers=kook_headers)
     try:
         data = orjson.loads(resp.text)
@@ -94,7 +96,7 @@ class KOOKContextManager(ContextManager):
         guild = await bot.client.fetch_guild(channel.guild_id)
         user_roles = (await guild.fetch_user(author)).roles
         guild_roles = await guild.fetch_roles()
-        for i in guild_roles:  # 遍历服务器身分组
+        for i in guild_roles:
             if i.id in user_roles and i.has_permission(0):
                 return True
         if author == guild.master_id:
@@ -211,8 +213,6 @@ class KOOKContextManager(ContextManager):
         quote: bool = True,
         msg_ids: list[str] | None = None,
     ) -> list[str]:
-        # if session_info.session_id not in cls.context:
-        #     raise ValueError("Session not found in context")
         raw_ctx = cls.context.get(session_info.session_id)
         ctx = raw_ctx if isinstance(raw_ctx, Message) else None
         reaction_ctx = raw_ctx if isinstance(raw_ctx, KOOKReactionContext) else None

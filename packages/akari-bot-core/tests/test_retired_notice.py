@@ -1,9 +1,4 @@
-"""core.utils.retired 单元测试 - 公告文案读取、已发记录与排队。
-
-凡是改动 ``CoreConfig.retired_clients`` 的用例一律放在 ``test_retired_gate.py``：
-``tester.py`` 并发执行各个 func_case，而该配置与 ``RETIRED_ROUTES`` 是进程级全局状态，
-分散在多个文件中改动会互相覆盖。同一 func_case 内部则是串行的。
-"""
+"""core.utils.retired 单元测试 - 公告文案读取、已发记录与排队。"""
 
 import asyncio
 import tempfile

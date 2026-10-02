@@ -1,13 +1,4 @@
-"""消息节点在 QQBot 上的表格化测试。
-
-平台没有合并转发，节点摊平成一张 markdown 表：编号与内容上下相邻——编号在上一格、内容在
-正下方那一格，表头留给节点组名称。与帮助的表格同一思路：高度封顶，
-节点变多时由列数吸收。
-
-两处易错：节点内容常为多行（wiki 的近期更改每条含标题、摘要、链接与时间戳），单元格容不下
-换行，须换成 <br>；摊平后的表格必须保留 MarkdownElement 类型，否则会按普通文本发送，
-表格标记原样露出。
-"""
+"""消息节点在 QQBot 上的表格化测试。"""
 
 from unittest.mock import patch
 
@@ -58,8 +49,6 @@ def _test_nodes_disabled_without_table_support() -> bool:
 
 
 def _test_table_shape() -> bool:
-    # 一「行」实为两行：一行编号、一行内容。上限现为一对，故不论多少节点都只有一对数据行，
-    # 列数即节点数。
     session_info = _make_session()
     for count in (1, 3, 10, 99):
         lines = nodes_to_table(session_info, _make_nodes(count)).split("\n")
@@ -87,7 +76,6 @@ def _test_rows_are_uniform() -> bool:
 
 
 def _test_index_sits_above_content() -> bool:
-    # 按结构遍历而非比对固定字符串：列数随高度上限而变，固定行内容会在调整上限时失效。
     lines = nodes_to_table(_make_session(), _make_nodes(5)).split("\n")
     data = lines[2:]
     seen = 0
@@ -120,7 +108,6 @@ def _test_name_is_the_header() -> bool:
 
 
 def _test_multiline_content_uses_br() -> bool:
-    # 单元格容不下换行，放任换行会把表格劈成两半。
     nodes = MessageNodes.assign([MessageChain.assign(Plain("第一行\n第二行"))], name="标题")
     table = nodes_to_table(_make_session(), nodes)
     if "第一行  <br>  第二行" not in table:
@@ -220,7 +207,7 @@ async def _test_markdown_element_selects_markdown_path() -> bool:
 
 @func_case
 async def test_qqbot_message_nodes(tester: Tester):
-    """bots.qqbot.context: 消息节点表格化测试"""
+    """akaribot.adapters.qqbot.context: 消息节点表格化测试"""
     await tester.test(_test_nodes_disabled_without_table_support, "无表格能力时节点使用图片回退测试")
     await tester.test(_test_table_shape, "表格行列数测试")
     await tester.test(_test_rows_are_uniform, "表格列数齐平测试")

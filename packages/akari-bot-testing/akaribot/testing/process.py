@@ -17,9 +17,12 @@ from akaribot.testing.mock.session import MockMessageSession
 from akaribot.core.utils.container import ExpiringTempDict
 from .decorator import CaseEntry
 from .expectations import Expectation
+from .timing import TIME_SCALE
 
-DEFAULT_FUNCTION_TEST_TIMEOUT = 120.0
-FUNCTION_TEST_CANCEL_TIMEOUT = 1.0
+# 无进展看门狗随测试时限系数放大，但封顶 5 倍：慢机器上子测试可以更久，
+# 真正卡死时也不能让单个用例占用整个 CI 任务太久。
+DEFAULT_FUNCTION_TEST_TIMEOUT = 120.0 * min(TIME_SCALE, 5.0)
+FUNCTION_TEST_CANCEL_TIMEOUT = 1.0 * TIME_SCALE
 
 
 class _FunctionTestNoProgress(Exception):
@@ -50,8 +53,6 @@ async def _cancel_task(task: asyncio.Task) -> bool:
 
 
 async def _cancel_orphan_tasks(baseline: set[asyncio.Task] | None = None) -> bool:
-    # Function tests share an event loop but rebuild their in-memory SQLite context between entries, so
-    # a detached task on the old context could retain locks. Cleanup is bounded so CI cannot stall.
     current = asyncio.current_task()
     tasks = [
         task

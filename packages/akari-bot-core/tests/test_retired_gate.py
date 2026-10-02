@@ -1,12 +1,4 @@
-"""core.utils.retired 单元测试 - 迁移关系解析、退役判定与介入点。
-
-本文件集中放置所有改动 ``CoreConfig.retired_clients`` 的用例：``tester.py`` 并发执行各个
-func_case，而该配置与 ``RETIRED_ROUTES`` 是进程级全局状态，分散在多个文件中改动会互相覆盖。
-同一 func_case 内部则是串行的，因此集中于此即可避免竞争。
-
-末尾的等待任务用例须要数据库与已加载的模块，因为它们经由真实的 ``parser()`` 求证介入点的位置，
-而非只验判据本身。
-"""
+"""core.utils.retired 单元测试 - 迁移关系解析、退役判定与介入点。"""
 
 import asyncio
 from unittest.mock import AsyncMock, patch

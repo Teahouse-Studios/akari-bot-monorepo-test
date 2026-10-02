@@ -1,13 +1,4 @@
-"""WebUI 策略内容接口：全局 URL 审计名单与本地过滤词库。
-
-两个目录都是部署者可维护的纯文本配置：``data/url_audit/<list>/user.txt`` 与
-``data/filter_words/*.txt``。随仓库分发的 ``global.txt`` 只读展示，接口不会改动它。
-
-写入接口共用一份版本号约定：读取响应里的 ``revision``，写入时原样回传；若期间
-有其他人（命令、手工编辑、另一个前端）改动过文件，服务端返回 409
-``revision_mismatch`` 并附带 ``X-Policy-Revision`` 响应头，调用方重新拉取即可。
-完整约定见同目录 README.md。
-"""
+"""WebUI 策略内容接口：全局 URL 审计名单与本地过滤词库。"""
 
 from __future__ import annotations
 
@@ -88,7 +79,6 @@ def _file_meta(path: Path) -> dict:
 
 
 def _display_path(path: Path) -> str:
-    # 源码检出下实例根即仓库根；路径不在实例内时退回绝对路径，调用方无需另行判断。
     try:
         return f"./{path.resolve().relative_to(ROOT_DIR).as_posix()}"
     except ValueError:
@@ -106,7 +96,6 @@ async def _json_body(request: Request) -> dict:
 
 
 def _assert_revision(expected, current: str) -> None:
-    # 未提供版本号（或提供了非字符串值）时不做校验，客户端可只读地使用接口。
     if not isinstance(expected, str) or not expected:
         return
     if expected != current:
@@ -256,8 +245,6 @@ def _filter_category_response(category: str, changed: bool) -> dict:
 
 
 async def _sync_filter_words() -> bool:
-    # WebUI 与机器人核心分处两个进程：本进程直接重载，核心进程经 RPC 触发重载。
-    # 核心重载失败不影响文件写入结果，前端可据 ``runtime_synced`` 提示用户。
     reload_filter_words()
     try:
         return bool(await ServerAPI.reload_filter_words())
@@ -269,7 +256,6 @@ async def _sync_filter_words() -> bool:
 @app.get("/api/policy/revision")
 @limiter.limit("120/minute")
 async def get_policy_revision(request: Request):
-    """轻量轮询接口：只读文件元信息，用于判断是否需要重新拉取内容。"""
     try:
         verify_jwt(request)
 
@@ -293,7 +279,6 @@ async def get_policy_revision(request: Request):
 @app.get("/api/url-audit")
 @limiter.limit("60/minute")
 async def get_url_audit(request: Request, revision: str = Query(None)):
-    """读取两份 URL 名单；``revision`` 与当前一致时返回 304 空响应。"""
     try:
         verify_jwt(request)
 

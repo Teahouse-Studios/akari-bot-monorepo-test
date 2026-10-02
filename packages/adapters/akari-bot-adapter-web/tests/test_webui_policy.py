@@ -1,7 +1,4 @@
-"""bots.web.api.policy 单元测试 - URL 审计名单与过滤词库接口。
-
-测试只操作临时目录，不触碰部署者真实的名单与词库文件。
-"""
+"""bots.web.api.policy 单元测试 - URL 审计名单与过滤词库接口。"""
 
 import inspect
 from pathlib import Path
@@ -17,8 +14,6 @@ from akaribot.testing import Tester, func_case
 
 
 class FakeRequest:
-    """绕过 FastAPI 的最小请求替身，只提供接口用到的 json()。"""
-
     def __init__(self, body=None):
         self._body = body
 

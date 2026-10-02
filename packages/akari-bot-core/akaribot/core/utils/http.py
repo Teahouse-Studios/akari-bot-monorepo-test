@@ -1,7 +1,4 @@
-"""基于 `httpx` 的互联网请求工具，用于让机器人请求外部网站。
-
-请勿在本项目中导入并使用 `request`，否则可能会导致阻塞问题。
-"""
+"""基于 `httpx` 的互联网请求工具，用于让机器人请求外部网站。"""
 
 import asyncio
 import ipaddress
@@ -18,14 +15,14 @@ import httpx
 from aiofile import async_open
 from tenacity import retry, wait_fixed, stop_after_attempt
 
-from akaribot.core.config.base import CoreConfig, CoreSecretConfig
+from akaribot.core.config.base import CoreConfig
+from akaribot.core.config.network import proxy, ssl_verify
 from akaribot.core.constants.exceptions import ExternalException
 from akaribot.core.constants.path import cache_path
 from akaribot.core.constants.info import Info
 from akaribot.core.logger import Logger
 
 debug = CoreConfig.debug
-proxy = CoreSecretConfig.proxy if CoreSecretConfig.proxy else None
 repo_url = CoreConfig.repo_url
 
 url_pattern = re.compile(
@@ -147,7 +144,9 @@ async def request_url(
         if not CoreConfig.allow_request_private_ip and not request_private_ip:
             event_hooks = {"request": [_validate_public_request]}
 
-        async with httpx.AsyncClient(headers=headers, proxy=proxy, verify=not debug, event_hooks=event_hooks) as client:
+        async with httpx.AsyncClient(
+            headers=headers, proxy=proxy, verify=ssl_verify and not debug, event_hooks=event_hooks
+        ) as client:
             if cookies:
                 ck = SimpleCookie()
                 ck.load(cookies)

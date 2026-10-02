@@ -1,9 +1,4 @@
-"""测试框架自身的单元测试。
-
-框架的 mock 对象需要与被替身的真实实现保持接口一致。一旦真实实现新增参数而
-mock 未同步，模块代码会在测试中抛出 TypeError，且失败信息与被测逻辑毫无关系，
-排查成本极高。此处将这类一致性约束固化为断言。
-"""
+"""测试框架自身的单元测试。"""
 
 import inspect
 import re
@@ -508,7 +503,7 @@ def _test_union_merge_logs_stay_out_of_repo_data():
 
 @func_case
 async def test_tester_framework(tester: Tester):
-    """core.tester: 测试框架自身一致性测试"""
+    """akaribot.testing: 测试框架自身一致性测试"""
     await tester.test(_test_mock_session_signature_matches_real, "mock 会话签名与真实实现一致测试")
     await tester.test(_test_mock_response_supports_all_formats, "mock 响应支持全部 fmt 测试")
     await tester.test(_test_mock_response_read_returns_bytes, "mock 响应 read() 返回二进制测试")

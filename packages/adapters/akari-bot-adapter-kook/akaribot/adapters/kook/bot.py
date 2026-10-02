@@ -165,7 +165,6 @@ async def private_add_reaction(b: khlBot, event: Event):
 
 @bot.on_event(EventTypes.JOINED_GUILD)
 async def joined_guild(b: khlBot, event: Event):
-    """接收 KOOK 服务器成员加入事件。"""
     body = event.body
     member_id = body.get("user_id")
     guild_id = event.target_id
@@ -173,6 +172,7 @@ async def joined_guild(b: khlBot, event: Event):
         return
 
     sender_id = f"{sender_prefix}|{member_id}"
+    await b.client.fetch_me()
     if member_id == b.client.me.id or sender_id in ignored_sender:
         return
 
@@ -186,7 +186,6 @@ async def joined_guild(b: khlBot, event: Event):
 
 @bot.on_event(EventTypes.EXITED_GUILD)
 async def exited_guild(b: khlBot, event: Event):
-    """接收 KOOK 服务器成员离开事件。"""
     body = event.body
     member_id = body.get("user_id")
     guild_id = event.target_id
@@ -194,6 +193,7 @@ async def exited_guild(b: khlBot, event: Event):
         return
 
     sender_id = f"{sender_prefix}|{member_id}"
+    await b.client.fetch_me()
     if member_id == b.client.me.id or sender_id in ignored_sender:
         return
 

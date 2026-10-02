@@ -188,9 +188,6 @@ class WebContextManager(ContextManager):
 
     @classmethod
     def _get_websocket(cls, session_info: SessionInfo) -> WebSocket | None:
-        # A normal session must keep using the socket from which its message
-        # arrived.  Only fetched sessions (scheduled or otherwise proactive
-        # messages) may fall back to the most recently connected console.
         if not getattr(session_info, "fetch", False):
             context = cls.context.get(session_info.session_id)
             if isinstance(context, dict):
@@ -360,8 +357,6 @@ class WebContextManager(ContextManager):
 
     @classmethod
     async def end_typing(cls, session_info: SessionInfo) -> None:
-        # if session_info.session_id not in cls.context:
-        #     raise ValueError("Session not found in context")
         flag = cls.typing_flags.pop(session_info.session_id, None)
         if flag:
             flag.set()
@@ -369,7 +364,6 @@ class WebContextManager(ContextManager):
         if task:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
-        # 这里可以添加结束输入状态的逻辑
         try:
             websocket = cls._get_websocket(session_info)
 
@@ -383,7 +377,6 @@ class WebContextManager(ContextManager):
     async def error_signal(cls, session_info: SessionInfo) -> None:
         if session_info.session_id not in cls.context:
             raise ValueError("Session not found in context")
-        # 这里可以添加错误处理逻辑
         try:
             websocket = cls._get_websocket(session_info)
 

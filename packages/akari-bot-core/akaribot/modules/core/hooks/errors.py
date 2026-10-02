@@ -71,7 +71,6 @@ def format_error_detail(msg_or_session, text: str) -> MessageChain:
 
 
 def format_error_detail_markdown(text: str) -> MessageChain:
-    """将错误详情包装成可按接收方能力降级的 Markdown 代码块。"""
     longest_fence = max((len(match.group(0)) for match in re.finditer(r"`+", text)), default=0)
     fence = "`" * max(3, longest_fence + 1)
     return MessageChain.assign(Markdown(f"{fence}\n{text}\n{fence}", disable_joke=True, allow_parse=False))

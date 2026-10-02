@@ -1,15 +1,4 @@
-"""
-配置装饰器模块。
-
-该模块提供了一个配置装饰器，用于将 Python 类自动转换为配置对象。
-装饰器会自动处理配置文件的生成和加载，使得定义配置变得简单直观。
-
-主要功能：
-- 为类自动生成配置文件
-- 支持类型注解和类型检查
-- 支持敏感信息加密存储
-- 自动生成 __init__ 和 __repr__ 方法
-"""
+"""配置装饰器模块。"""
 
 from collections.abc import Mapping
 import inspect
@@ -19,16 +8,10 @@ from typing import Any, Literal, TypeVar, get_args
 from akaribot.core.exports import add_export
 from . import CFGManager, ALLOWED_TYPES
 
-# 类型变量，用于泛型支持
 T = TypeVar("T")
 
 
 class ConfigMeta(type):
-    """配置模板的元类，使类属性访问直接返回配置文件中的当前值。
-
-    必须实现在元类上：类体内的 ``__getattr__`` 只对实例生效，对类属性访问不起作用。
-    """
-
     def __getattr__(cls, name: str):
         """
         转调 :meth:`CFGManager.get` 读取配置项。
@@ -134,19 +117,17 @@ def _process_class(
                 # 检查配置项是否已存在于目标表中，不存在时才补写。
                 # 不可用 attr_name 与 CFGManager.values 比较：其键为配置文件名，判据恒真。
                 if not CFGManager.has(attr_name, secret, table_name):
-                    # 创建新的配置项
                     CFGManager.get(
                         attr_name,
                         __attr if __attr != "" else None,  # 默认值：使用类属性值或 None
                         # 须传入已规整的 __attr_type：含不受支持成员的联合类型（如 str | None）在上方已被置空，
                         # 此处若回退为原始的 attr_type，下游将取得不具有 __name__ 的 UnionType 而报错
-                        get_args(__attr_type) if isinstance(__attr_type, UnionType) else __attr_type,  # 类型信息
-                        secret,  # 敏感信息标志
-                        table_name,  # 配置表名
+                        get_args(__attr_type) if isinstance(__attr_type, UnionType) else __attr_type,
+                        secret,
+                        table_name,
                         _generate=True,  # 生成模式标志
                         standalone_comment_keys=standalone_comments.get(attr_name, ()),
                     )
-                    # 保存修改到配置文件
                     CFGManager.save()
 
     # 执行配置文件生成，为该类创建配置项，同时填充 config_fields
@@ -214,7 +195,6 @@ def on_config(
 
         :return: 处理后的类，具有自动生成的配置管理功能
         """
-        # 构造表名：如果 table_type 不为空，则添加前缀和下划线分隔符
         __type = table_type + "_" if table_type != "" else table_type
         return _process_class(cls, __type + table_name, secret, standalone_comments)
 
@@ -294,5 +274,4 @@ def on_module_config(
     return on_config(module_name, "module", secret, standalone_comments)
 
 
-# 将 _process_class 函数导出到系统模块导出表中，使其可被其他模块导入使用
 add_export(_process_class)

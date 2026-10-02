@@ -34,9 +34,7 @@ class PlayState:
         return target_dict[self.game]
 
     def enable(self) -> None:
-        """
-        开启游戏事件。
-        """
+        """开启游戏事件。"""
         playstate_dict = self._get_ps_dict()
         self._generation = object()
         playstate_dict["_status"] = True
@@ -45,9 +43,7 @@ class PlayState:
         Logger.info(f"[{self.channel_key}]: Enabled {self.game} by {self.sender_union_id}.")
 
     def disable(self) -> None:
-        """
-        关闭游戏事件。
-        """
+        """关闭游戏事件。"""
         if self.channel_key not in _ps_dict:
             return
         playstate_dict = _ps_dict[self.channel_key].get(self.game)
@@ -68,18 +64,14 @@ class PlayState:
                 self.disable()
 
     def update(self, **kwargs) -> None:
-        """
-        更新游戏事件中需要的值。
-        """
+        """更新游戏事件中需要的值。"""
         playstate_dict = self._get_ps_dict()
         for k, v in kwargs.items():
             playstate_dict[k] = v
         Logger.debug(f"[{self.game}]: Updated {kwargs} at {self.channel_key}.")
 
     def check(self) -> bool:
-        """
-        检查游戏事件状态。
-        """
+        """检查游戏事件状态。"""
         playstate_dict = self._get_ps_dict()
         return playstate_dict.get("_status", False)
 

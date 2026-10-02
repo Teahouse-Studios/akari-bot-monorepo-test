@@ -58,7 +58,6 @@ class TapTapQRCode:
 
 
 def build_client() -> httpx.AsyncClient:
-    """构造使用项目代理设置的 TapTap HTTP 客户端。"""
     return httpx.AsyncClient(follow_redirects=True, timeout=DEFAULT_TIMEOUT, proxy=proxy)
 
 

@@ -1,8 +1,4 @@
-"""Bot.send_direct_message_to_union_target 单元测试 - 按消息通道去重的组内推送。
-
-退役场景的滤除一并由本方法承担，但那条用例改动 ``CoreConfig.retired_clients``，
-按既有约定归入 ``test_retired_gate.py``。
-"""
+"""Bot.send_direct_message_to_union_target 单元测试 - 按消息通道去重的组内推送。"""
 
 from unittest.mock import patch
 

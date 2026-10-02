@@ -50,8 +50,6 @@ async def _test_gained_petal_with_mock():
         await msg.async_init("~test")
 
         class MockConfig:
-            """替换 CoreConfig 的桩，仅提供被测代码读取的字段。"""
-
             enable_petal = True
             enable_get_petal = True
             petal_gained_limit = 100
@@ -75,8 +73,6 @@ async def _test_cost_petal_insufficient_with_mock():
         await msg.async_init("~test")
 
         class MockConfig:
-            """替换 CoreConfig 的桩，仅提供被测代码读取的字段。"""
-
             enable_petal = True
 
         with patch("akaribot.core.utils.petal.CoreConfig", MockConfig):
@@ -121,8 +117,6 @@ async def _test_sign_petal_once_per_day():
     await msg.async_init("~test")
 
     class MockConfig:
-        """替换 CoreConfig 的桩，固定签到收益以便断言。"""
-
         enable_petal = True
         petal_sign_min = 5
         petal_sign_max = 5

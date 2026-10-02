@@ -1,8 +1,4 @@
-"""消息入口的内置策略。
-
-这些规则属于部署策略而不是 parser 的控制流：它们通过 parser 入口 hook
-参与消息处理，核心 parser 只负责在正确的生命周期阶段分发并消费结果。
-"""
+"""消息入口的内置策略。"""
 
 from __future__ import annotations
 
@@ -219,7 +215,6 @@ async def _locked_prompt(ctx: "Bot.ParserHookContext"):
 
 
 def should_skip_regex(trigger_msg: str) -> bool:
-    """判断是否使用配置的正则禁用前缀。"""
     prefixes = tuple(prefix for prefix in CoreConfig.regex_disable_prefix if isinstance(prefix, str) and prefix)
     return bool(prefixes) and trigger_msg.startswith(prefixes)
 

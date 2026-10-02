@@ -718,9 +718,7 @@ class ModulesManager:
 
     @classmethod
     async def load_module(cls, module_name: str):
-        """
-        全域加载该机器人模块。
-        """
+        """全域加载该机器人模块。"""
         if module_name in cls.modules:
             module = cls.modules[module_name]
             old_load = module._db_load
@@ -748,9 +746,7 @@ class ModulesManager:
 
     @classmethod
     async def unload_module(cls, module_name: str):
-        """
-        全域卸载该机器人模块。
-        """
+        """全域卸载该机器人模块。"""
         if module_name in cls.modules:
             from akaribot.core.queue.server import JobQueueServer
 

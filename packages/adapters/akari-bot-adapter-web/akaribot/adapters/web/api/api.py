@@ -38,16 +38,6 @@ default_locale = BaseConfig.default_locale
 
 
 async def filter_by_bound_id(bind_model, prefix: str | None, id: str | None) -> Q | None:
-    """
-    把按平台 ID 的筛选条件转换为对 union 的筛选条件。
-
-    数据现在挂在 union 上，平台 ID 只存在于映射表中，因此需要先查映射表再按 union 过滤。
-
-    :param bind_model: 映射表模型。
-    :param prefix: 平台前缀。
-    :param id: 平台 ID 的部分内容。
-    :return: 针对 union 的筛选条件，无需筛选时为 None。
-    """
     if not prefix and not id:
         return None
     id_field = bind_model._meta.pk_attr
@@ -61,12 +51,6 @@ async def filter_by_bound_id(bind_model, prefix: str | None, id: str | None) -> 
 
 
 async def map_bound_ids(bind_model, union_ids: list[str]) -> dict[str, list[str]]:
-    """
-    批量获取每个 union 下绑定的全部平台 ID。
-
-    :param bind_model: 映射表模型。
-    :param union_ids: union ID 列表。
-    """
     id_field = bind_model._meta.pk_attr
     mapping = {u: [] for u in union_ids}
     if not union_ids:
@@ -77,9 +61,6 @@ async def map_bound_ids(bind_model, union_ids: list[str]) -> dict[str, list[str]
 
 
 def pick_display_id(union_id: str, bound_ids: list[str], prefix: str | None = None) -> str:
-    """
-    从 union 下的平台 ID 中挑一个用于展示，尽量与筛选前缀一致。
-    """
     if prefix:
         for i in bound_ids:
             if i.startswith(f"{prefix}|"):
@@ -88,9 +69,6 @@ def pick_display_id(union_id: str, bound_ids: list[str], prefix: str | None = No
 
 
 def dump_target(target: TargetUnionInfo, bound_ids: list[str], display_id: str) -> dict:
-    """
-    序列化场景信息。``target_id`` 保持向后兼容，另附 union ID 与全部已绑定的平台 ID。
-    """
     return {
         "target_id": display_id,
         "union_id": target.union_id,
@@ -106,9 +84,6 @@ def dump_target(target: TargetUnionInfo, bound_ids: list[str], display_id: str) 
 
 
 def dump_sender(sender: SenderUnionInfo, bound_ids: list[str], display_id: str) -> dict:
-    """
-    序列化用户信息。``sender_id`` 保持向后兼容，另附 union ID 与全部已绑定的平台 ID。
-    """
     return {
         "sender_id": display_id,
         "union_id": sender.union_id,
@@ -123,9 +98,6 @@ def dump_sender(sender: SenderUnionInfo, bound_ids: list[str], display_id: str) 
 
 
 def dump_sender_group(sender: SenderUnionInfo, bound_ids: list[str]) -> dict:
-    """
-    序列化用户组信息，列出组内已绑定的全部平台账号 ID。
-    """
     return {
         "union_id": sender.union_id,
         "member_count": len(bound_ids),
@@ -140,9 +112,6 @@ def dump_sender_group(sender: SenderUnionInfo, bound_ids: list[str]) -> dict:
 
 
 def dump_target_group(target: TargetUnionInfo, channels: dict[str, int]) -> dict:
-    """
-    序列化场景组信息，列出组内全部场景及其消息通道号。
-    """
     members = [
         {"target_id": target_id, "channel_id": channel_id}
         for target_id, channel_id in sorted(channels.items(), key=lambda kv: (kv[1], kv[0]))
@@ -162,11 +131,6 @@ def dump_target_group(target: TargetUnionInfo, channels: dict[str, int]) -> dict
 
 
 async def resolve_sender_unions(ids: list[str]) -> list[str]:
-    """
-    把权限列表中的平台账号 ID 解析为 union ID，已经是 union ID 的原样保留。
-
-    ``custom_admins`` / ``banned_users`` 存的是 union ID，但控制台可能直接填入平台账号 ID。
-    """
     resolved = []
     for i in ids:
         bind = await SenderUnionBind.get_or_none(sender_id=i)
@@ -403,11 +367,7 @@ async def edit_config_file(request: Request, cfg_filename: str):
 @app.delete("/api/config/{cfg_filename}")
 @limiter.limit("10/minute")
 async def delete_config_file(request: Request, cfg_filename: str):
-    """删除配置文件。
-
-    只删除磁盘文件，不触碰运行时内存中的配置副本：核心进程在重启前仍沿用已加载的值，
-    而下次启动的模板补全会按默认值重建该文件，因此删除等价于「重启后恢复默认」。
-    """
+    """删除配置文件。"""
     ip = get_client_ip(request)
     try:
         verify_jwt(request)

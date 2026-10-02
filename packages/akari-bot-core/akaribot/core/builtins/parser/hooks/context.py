@@ -1,7 +1,4 @@
-"""Parser / 出站入口 hook 的上下文对象。
-
-``session_info`` 返回只读快照；可写走 SessionDraft 或 OutgoingPayload 草稿。
-"""
+"""Parser / 出站入口 hook 的上下文对象。"""
 
 from __future__ import annotations
 
@@ -72,11 +69,7 @@ class _ReadOnlyObjectView:
 
 
 class SessionInfoView:
-    """SessionInfo 的只读视图：阻止就地写入身份与可变容器。
-
-    容器递归隔离，未知对象（包括 Union ORM 及关联对象）只开放属性读取，
-    不转发任何方法。新增会话字段也遵守同一默认规则，无须维护可变字段黑名单。
-    """
+    """SessionInfo 的只读视图：阻止就地写入身份与可变容器。"""
 
     __slots__ = ("_info", "_tmp", "_prefixes")
 
@@ -103,11 +96,7 @@ class SessionInfoView:
 
 @dataclass
 class OutgoingPayload:
-    """出站 before_send 的可变载荷。
-
-    执行器为每个 hook 建独立草稿；成功才提交回正式 payload。
-    观察入口拿与正式结果断开引用的快照。
-    """
+    """出站 before_send 的可变载荷。"""
 
     chain: Any
     quote: bool = True

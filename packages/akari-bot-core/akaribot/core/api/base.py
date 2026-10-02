@@ -214,6 +214,7 @@ __all__ = [
     "settle_petals",
     "should_yield_channel",
     "sign_get_petal",
+    "ssl_verify",
     "svg_render",
     "templates_to_str",
     "truncate_text",
@@ -341,6 +342,7 @@ try:
     from akaribot.core.config import CFGManager
     from akaribot.core.config.base import BaseConfig, CoreConfig, CoreSecretConfig
     from akaribot.core.config.decorator import on_bot_config, on_module_config
+    from akaribot.core.config.network import proxy, ssl_verify
 
     # 数据库：定义模块模型、声明包内迁移与使用核心数据表。
     from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
@@ -385,7 +387,6 @@ try:
         get_url,
         patch_url,
         post_url,
-        proxy,
         put_url,
         request_url,
         url_pattern,
@@ -501,6 +502,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.config": ("CFGManager",),
     "akaribot.core.config.base": ("BaseConfig", "CoreConfig", "CoreSecretConfig"),
     "akaribot.core.config.decorator": ("on_bot_config", "on_module_config"),
+    "akaribot.core.config.network": ("proxy", "ssl_verify"),
     "akaribot.core.constants": ("config_filename", "dev_mode"),
     "akaribot.core.constants.default": (
         "confirm_command_default",
@@ -570,7 +572,6 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "get_url",
         "patch_url",
         "post_url",
-        "proxy",
         "put_url",
         "request_url",
         "url_pattern",

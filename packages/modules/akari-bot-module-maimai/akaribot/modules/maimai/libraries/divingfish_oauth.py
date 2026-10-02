@@ -61,25 +61,15 @@ class DivingFishTokenRevoked(DivingFishOAuthError):
 
 
 class DivingFishConsentRequired(DivingFishTokenRevoked):
-    """该用户未授权本应用，换票被拒。
-
-    换票是「应用凭据 + 用户标识」查表，查不到人（授权已撤销，或用户不存在）即返回此错。
-    归在 :class:`DivingFishTokenRevoked` 之下，使各处既有的「引导用户重新绑定」处理直接
-    生效——两种情况对用户而言要做的事完全相同。
-    """
+    """该用户未授权本应用，换票被拒。"""
 
 
 class DivingFishRateLimited(DivingFishOAuthError):
-    """请求过于频繁，授权服务器要求稍后再试。
-
-    消息以状态码开头，便于沿用各调用点既有的 `str(e).startswith("429")` 分支。
-    """
+    """请求过于频繁，授权服务器要求稍后再试。"""
 
 
 @dataclass(frozen=True)
 class DivingFishDeviceCode:
-    """一次设备码绑定所需的数据。"""
-
     device_code: str
     user_code: str
     verification_uri: str
@@ -95,15 +85,6 @@ def _masked(value: str) -> str:
 
 
 def binding_label(session_info) -> str:
-    """生成遮挡后的身份展示串，如 ``QQ 11****14``。
-
-    设备码流程没有回调地址，同意页上的「绑定身份」是用户唯一可能察觉异常的地方：若有人把
-    自己发起的绑定链接转发给他人，受害者只能靠这一行判断绑定的并非自己。故发起绑定时务必
-    提交本串。
-
-    :param session_info: 发起绑定的会话信息。
-    :return: 遮挡后的展示串。
-    """
     sender = str(session_info.get_common_sender_id())
     client = session_info.client_name or "Bot"
     return f"{client} {_masked(sender)}"
@@ -111,9 +92,6 @@ def binding_label(session_info) -> str:
 
 def diving_fish_bind_usable(bind_info: DivingProberBindInfo | None, confidential: bool | None = None) -> bool:
     """判断一条水鱼绑定记录当前是否可用于取分。
-
-    公开客户端凭 refresh token 查分，令牌在记录即可用；机密客户端凭换票查分，只要有水鱼
-    用户 ID 就能换到令牌。
 
     :param bind_info: 该用户的绑定记录。
     :param confidential: 是否按机密客户端判断，默认取配置。
@@ -165,16 +143,6 @@ def _expires_in(resp: dict, default: float = 900.0) -> float:
 
 
 async def request_device_code(label: str) -> DivingFishDeviceCode:
-    """发起一次设备码绑定，取得用户码与授权链接。
-
-    公开客户端调用该端点时无需凭据，任何人都能用本应用的 client_id 生成一条绑定链接；机密
-    客户端则会校验 client_secret。因此两种情况都要求调用方把用户码显示在用户自己触发的会话
-    里，不可做成「把链接转发给需要绑定的人」的形式。
-
-    :param label: 遮挡后的身份展示串，即 :func:`binding_label` 的结果。
-    :return: 设备码与授权链接等数据。
-    :raise DivingFishOAuthError: 发起失败，如应用信息未补全、scope 未获批准。
-    """
     resp = await _post_form(
         DF_DEVICE_AUTHORIZATION_URL,
         _authenticated(
@@ -213,10 +181,6 @@ async def request_device_code(label: str) -> DivingFishDeviceCode:
 
 async def poll_device_token(device_code: str) -> dict | None:
     """轮询一次设备码，尝试取得该用户的令牌。
-
-    公开客户端无法换票，用户令牌（含 refresh token）只在这一次轮询的响应中出现，因此必须
-    轮询到底；机密客户端本可放着设备码不管、等待下一次换票，但轮询是唯一能得知用户究竟点了
-    同意还是拒绝的途径，且响应中的水鱼用户 ID 正是后续换票所需的标识，故同样轮询。
 
     :param device_code: 设备码端点返回的设备码。
     :return: 令牌响应；用户尚未完成授权时返回 `None`。
@@ -261,8 +225,6 @@ async def poll_device_token(device_code: str) -> dict | None:
 async def refresh_access_token(refresh_token: str) -> dict:
     """以 refresh token 换取新的 access token 与 refresh token。
 
-    只有公开客户端会走到这里：机密客户端的令牌响应里没有 refresh token，续期一律走换票。
-
     :param refresh_token: 当前持有的 refresh token。
     :return: 令牌响应，含轮换后的 `refresh_token`。
     :raise DivingFishTokenRevoked: 该 refresh token 已失效，用户需要重新绑定。
@@ -291,13 +253,6 @@ async def refresh_access_token(refresh_token: str) -> dict:
 
 async def exchange_on_behalf_of(subject: str) -> dict:
     """换票：以应用凭据换取一张代表指定用户的短期令牌。
-
-    这是机密客户端唯一需要的取数方式。授权服务器会依次核对应用凭据、该用户是否授权过本应用、
-    申请的 scope 是否落在用户的授权范围之内，任何一步不过都取不到令牌；`subject` 只是查表用
-    的标识，本身不是凭据。此处不传 `scope`：省略时服务器取「用户授权范围」与「应用已批准范围」
-    的交集，正好是用户当初在授权页里勾选的那些权限，比照着 :data:`DF_SCOPES` 再要一遍更宽松
-    ——用户若只勾了一部分，后者会以「scope not granted」落进 `consent_required`，把「少勾了
-    一项」误报成「授权已撤销」。
 
     :param subject: 用户标识，写法为 `sub:<水鱼用户 ID>`。
     :return: 令牌响应，含 `access_token` 与 `expires_in`，不含 refresh token。
@@ -351,12 +306,6 @@ def drop_access_token(union_id: str) -> None:
 async def get_access_token(bind_info: DivingProberBindInfo) -> str:
     """取得代表该绑定用户的 access token，未过期时复用进程内缓存。
 
-    公开客户端以 refresh token 续期：刷新会轮换令牌，旧的再次出现时授权服务器会视其为凭据
-    泄露、吊销整条令牌链，因此同一用户不得并发刷新，这里按 union_id 加锁；且新令牌必须先落盘
-    再返回——进程若在落盘前退出，旧令牌已作废，用户就只能重新绑定一次。
-    机密客户端改为换票，凭据在应用手上、令牌也无需落盘，但换得的令牌只有 5 分钟且同一用户每
-    小时至多 60 次，同样要复用缓存与加锁。
-
     :param bind_info: 该用户的绑定记录。
     :return: access token。
     :raise DivingFishTokenRevoked: 凭据已失效或用户不再授权，用户需要重新绑定。
@@ -407,9 +356,6 @@ async def request_player_data(
 ) -> Any:
     """携带代表该用户的 Bearer 令牌请求查分器端点。
 
-    令牌在请求前一刻取得（未过期则直接复用缓存）；若资源服务器判定令牌已失效（`401`），则
-    丢弃缓存重新刷新并重试一次。
-
     :param bind_info: 该用户的绑定记录。
     :param url: 端点地址。
     :param method: 请求方法，`GET` 或 `POST`。
@@ -441,16 +387,6 @@ async def request_player_data(
 
 
 async def revoke_token(token: str, token_type_hint: str = "refresh_token") -> None:
-    """撤销一枚令牌，立即切断本应用对该用户的访问。
-
-    用户也可以自行在水鱼账号的设置页撤销授权。解绑是最佳努力：即便撤销失败，本地记录也须
-    照常删除。
-
-    :param token: 要撤销的令牌。
-    :param token_type_hint: `refresh_token` 或 `access_token`。它只是提示，撤销与否由服务器
-        按令牌本身判断。
-    :raise DivingFishOAuthError: 撤销请求失败。
-    """
     await _post_form(
         DF_REVOKE_URL,
         _authenticated(
@@ -466,9 +402,6 @@ async def revoke_token(token: str, token_type_hint: str = "refresh_token") -> No
 
 async def fill_bind_username(bind_info: DivingProberBindInfo) -> str:
     """补全绑定记录中的水鱼用户名，并返回昵称。
-
-    查询对象已由令牌决定，多数端点并不需要用户名；但 B50 等公开端点仍只接受 `qq` 或
-    `username`，非 QQ 平台因此需要留下用户名。用户名取自成绩端点响应，无需额外 scope。
 
     :param bind_info: 该用户的绑定记录。
     :return: 昵称；获取失败时返回空字符串。
@@ -493,10 +426,6 @@ async def fill_bind_username(bind_info: DivingProberBindInfo) -> str:
 
 async def store_binding(union_id: str, token: dict) -> bool:
     """把一次成功的设备码绑定落盘。
-
-    公开客户端没有别的凭据来源，refresh token 必须存下，此后凭它自行续期；机密客户端凭换票
-    取数，只留水鱼用户 ID，并顺手清掉旧流程可能留下的 refresh token——那枚令牌此后不再被
-    使用，留着只是多一份需要照看的长期凭据。
 
     :param union_id: 用户联合 ID。
     :param token: 设备码兑换所得的令牌响应。
@@ -525,9 +454,6 @@ async def store_binding(union_id: str, token: dict) -> bool:
 
 async def bind_account(msg) -> None:
     """以设备码流程引导用户完成一次水鱼账号绑定。
-
-    用户码只在发起绑定的这场会话中展示：链接一旦被转发给他人，对方点下同意，令牌就落在转发
-    者手上。轮询成功后落盘什么由客户端形态决定，见 :func:`store_binding`。
 
     :param msg: 消息会话。
     """
@@ -585,8 +511,6 @@ async def bind_account(msg) -> None:
 
 async def unbind_account(msg) -> None:
     """撤销授权并删除本地绑定记录。
-
-    解绑由用户自己发起，故这里的撤销是收回他人手里那枚令牌的最后机会。
 
     :param msg: 消息会话。
     """

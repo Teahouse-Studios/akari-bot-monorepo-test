@@ -1,9 +1,4 @@
-"""QQBot 指令操作标签的渲染测试。
-
-标签构造与长度截断放在适配器侧而非核心层：100 字符是该平台的约束，日后其他平台
-若具备等价能力，上限未必相同。此处单独成文件，是因为渲染须 import 依赖 botpy 的
-适配器模块，混在核心层测试中会让后者平白背上这个依赖。
-"""
+"""QQBot 指令操作标签的渲染测试。"""
 
 from types import SimpleNamespace
 from urllib.parse import quote
@@ -105,8 +100,6 @@ def _test_render_empty_text():
 
 
 def _test_send_msg_markdown_inline_join():
-    # 句子经 KE 码切分后形如「（」、指令操作、「）」三段，适配器以换行拼接各项，
-    # 不跟踪行内状态就会把一句话拆成三行。
     try:
         # 复刻 send_msg_markdown() 的拼接逻辑，验证状态跟踪的取值
         elements = [
@@ -200,7 +193,7 @@ def _test_keyboard_reflows_and_caps_qq_limits():
 
 @func_case
 async def test_qqbot_action_text(tester: Tester):
-    """bots.qqbot.context: 指令操作标签渲染测试"""
+    """akaribot.adapters.qqbot.context: 指令操作标签渲染测试"""
     await tester.test(_test_render_full_attributes, "标签属性完整性测试")
     await tester.test(_test_render_omits_empty_show, "无 show 省略属性测试")
     await tester.test(_test_render_escapes_quotes, "属性值编码测试")

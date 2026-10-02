@@ -1,11 +1,4 @@
-"""临时的单测运行脚本，仅用于开发期跑单个测试入口。
-
-自研测试框架的 tester.py 会 glob 全部用例且无过滤参数，逐个验证时过于笨重。
-此脚本按文件与函数名跑单个入口，并在收尾时强制退出——框架加载的模块会留下
-未完成的后台任务，不强制退出会一直挂到超时。
-
-用法：uv run --no-sync python tests/run_one.py <文件路径> <入口函数名>
-"""
+"""临时的单测运行脚本，仅用于开发期跑单个测试入口。"""
 
 import asyncio
 import atexit
@@ -17,7 +10,7 @@ import tempfile
 import traceback
 from pathlib import Path
 
-# union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
+# union 合并日志目录，须与 akaribot.core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
 # 单入口运行同样会走到真实的合并流程，不重定向就会在 data/ 里留下合成的日志
 # （与 tester.py 的引导一致）；已显式设置的值优先，需要留存日志时可自行指定。
 TEST_UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
@@ -42,8 +35,7 @@ from akaribot.testing.process import run_function_entry
 
 
 async def main(path: str, entry: str) -> int:
-    """
-    跑单个测试入口并打印每条用例的结果。
+    """跑单个测试入口并打印每条用例的结果。
 
     :param path: 测试文件路径。
     :param entry: 入口函数名。

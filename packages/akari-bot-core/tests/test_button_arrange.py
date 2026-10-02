@@ -1,9 +1,4 @@
-"""按钮排布工具单元测试。
-
-平台允许单行 10 个按钮、最多 5 行，但一行塞满 10 个会挤到显示不全，故默认按可读性上限
-分行，仅在总数超出「上限 × 5 行」时才放宽至硬上限。行数定下后均分，是为避免末行只剩
-一两个按钮的参差排版。
-"""
+"""按钮排布工具单元测试。"""
 
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester

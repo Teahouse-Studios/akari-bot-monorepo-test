@@ -1,9 +1,4 @@
-"""bugtracker 空查询结果单元测试。
-
-Mojira 的搜索接口对不存在的项目或漏洞返回空的 issues 列表。旧实现以 issues[0] 触发
-IndexError 来兜底，重构改为空列表时取 None 后，兜底分支即告失效，None 一路流到
-"errorMessages" in load_json 处崩溃。用例即为守住空结果须转为提示文案这条边界。
-"""
+"""bugtracker 空查询结果单元测试。"""
 
 from unittest.mock import AsyncMock, patch
 

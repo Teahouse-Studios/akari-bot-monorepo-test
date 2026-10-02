@@ -27,7 +27,7 @@ SIGNAL_TIMEOUT = 5 * TIME_SCALE
 
 
 class RegistryAuditPeer(JobQueueBase):
-    """为直接 Registry 测试提供显式数据库后端。"""
+    pass
 
 
 @asynccontextmanager
