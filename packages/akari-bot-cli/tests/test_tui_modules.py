@@ -1,10 +1,4 @@
-"""Modules 页的可安装列表与安装进度。
-
-本文件固定两条链路：列表默认给出全部（已装与未装同列，未装项可直接选中安装），开关只用于收窄到
-已装；安装与卸载把子进程输出逐行显示到状态栏，完整序列留在 ``stream_lines``，失败时输出尾部作为详情。
-安装先弹输入框再按输入内容选来源，卸载先确认目标再选数据与依赖的处置方式，更新一次触发即弹出范围选择
-（选中项 / 全部已装包）。
-"""
+"""模块页的可安装列表、模块操作、确认流程及进度显示测试。"""
 
 import os
 import time
@@ -56,9 +50,9 @@ async def _boot(source: StaticModuleSource):
     return app
 
 
-async def _with_app(source: StaticModuleSource, body) -> object:
+async def _with_app(source: StaticModuleSource, body, *, size: tuple[int, int] = (100, 30)) -> object:
     app = await _boot(source)
-    async with compat.app_test(app, size=(100, 30)) as pilot:
+    async with compat.app_test(app, size=size) as pilot:
         page = app.modules_page()
         await page.wait_for_idle()
         await pilot.pause()
@@ -66,13 +60,13 @@ async def _with_app(source: StaticModuleSource, body) -> object:
 
 
 def _filter_installed(app: TuiApp) -> None:
-    # 勾选「只看已安装」。
+
     checkbox = app.modules_page().query_one("#installed-only", compat.Checkbox)
     checkbox.value = True
 
 
 async def _test_lists_everything_by_default():
-    # 默认列出全部：已装与未装同列，用户不必先知道名字再搜索。
+    # 默认同时显示已安装与未安装模块。
     async def body(app, page, pilot):
         rows = tuple(record.dist for record in page.visible_records)
         await pilot.press("q")
@@ -86,7 +80,7 @@ async def _test_lists_everything_by_default():
 
 
 async def _test_toggle_filters_to_installed():
-    # 勾选后收窄到已装，取消勾选后恢复全部。
+    # 勾选后仅显示已安装模块，取消勾选后显示全部模块。
     async def body(app, page, pilot):
         all_rows = tuple(record.dist for record in page.visible_records)
         _filter_installed(app)
@@ -107,7 +101,7 @@ async def _test_toggle_filters_to_installed():
 async def _test_uninstalled_record_is_installable():
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
-        list_view.index = 2  # 排序为：已装 dice、适配器 telegram、模块 wiki
+        list_view.index = 2  # 排序为已安装的 dice、适配器 telegram、模块 wiki。
         await pilot.pause()
         selected = page.selected_record
         install_button = page.query_one("#install", compat.Button)
@@ -125,13 +119,12 @@ def _choice_labels(app: TuiApp) -> list[str]:
 
 
 async def _pick_choice(app: TuiApp, pilot, index: int) -> None:
-    # 直接派发按下消息：选项多时按钮可能排到可视区之外，按坐标点击会落空。
-    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    assert await pilot.click(f"#choice-{index}")
     await pilot.pause()
 
 
 async def _test_install_streams_output_to_status():
-    # 光标停在已装项上时按 i 先弹输入框，输入名字后再选来源。
+    # 高亮已安装项时，安装操作通过输入框指定目标并选择来源。
     async def body(app, page, pilot):
         page.request_install()
         await pilot.pause()
@@ -155,7 +148,7 @@ async def _test_install_streams_output_to_status():
 
 
 async def _test_install_highlighted_record_without_dialog():
-    # 光标停在未装项上时该项已经指名目标，直接安装，不弹输入框。
+    # 未安装的高亮项直接作为安装目标。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2
@@ -172,7 +165,7 @@ async def _test_install_highlighted_record_without_dialog():
 
 
 async def _test_install_search_term_prefills_dialog():
-    # 搜索框里的模块名预填进输入框：用户已经敲过名字，回车即沿用。
+    # 搜索词预填到安装输入框，避免重复输入。
     async def body(app, page, pilot):
         page.set_query("akari-bot-module-unknown")
         await pilot.pause()
@@ -204,7 +197,7 @@ async def _test_install_cancelled_by_empty_spec():
 
 
 async def _test_install_git_spec_offers_git_source():
-    # 含协议头的地址只给 git 一项，并把 ref 与 subdirectory 拆到 CLI 的同名选项。
+    # 仓库地址使用 Git 安装，ref 与 subdirectory 分别传入对应 CLI 选项。
     spec = "git+https://github.com/akari-bot/modules@v1.2#subdirectory=packages/wiki"
 
     async def body(app, page, pilot):
@@ -262,7 +255,7 @@ async def _test_install_unknown_spec_is_rejected():
 
 
 def _test_git_address_split():
-    # 末段里的 @ 才是 ref：``git@host`` 的 @ 属于 userinfo，不能当成 ref 拆走。
+    # 地址末段的 @ 分隔 ref；``git@host`` 中的 @ 属于 userinfo。
     return (
         _split_git_address("git+https://github.com/oasis/akari@v2") == ("git+https://github.com/oasis/akari", "v2", "")
         and _split_git_address("git@github.com:oasis/akari.git") == ("git@github.com:oasis/akari.git", "", "")
@@ -272,7 +265,7 @@ def _test_git_address_split():
 
 
 async def _uninstall_confirmed(app: TuiApp, page, pilot, choice: int = 0) -> str:
-    # 一次按键即弹出处置方式，选完才执行；入口用例把防抖窗口压到 0。
+    # 卸载需先选择处置方式；交互用例关闭防抖延迟。
     page.request_uninstall()
     await pilot.pause()
     title = str(app.screen.query_one("#choice-title", compat.Static).render())
@@ -283,7 +276,7 @@ async def _uninstall_confirmed(app: TuiApp, page, pilot, choice: int = 0) -> str
 
 
 async def _test_single_uninstall_opens_options():
-    # 单个与批量走同一套确认：一次按键即弹出处置方式，标题写明要卸的是哪一个。
+    # 单个与批量卸载共用确认流程，标题明确列出目标。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 0
@@ -373,7 +366,7 @@ async def _test_stream_operation_failure_becomes_result():
     return "RuntimeError" in status and "子进程炸了" in status
 
 
-# 假 CLI 写成带 shebang 的可执行文件：AKARIBOT_CLI_BIN 是单一路径，不按空格拆解释器与脚本。
+# AKARIBOT_CLI_BIN 必须为可执行文件路径，因此替身脚本包含 shebang。
 FAKE_CLI_OK = """#!/usr/bin/env python3
 import sys
 
@@ -418,7 +411,7 @@ UPDATE_PENDING = ModuleRecord(name="charlie", dist="akari-bot-module-charlie", v
 
 
 class _RecordingUpdate(StaticModuleSource):
-    # 记录每次流式操作的种类与目标，用于断言更新确实走了 update 通道。
+    # 记录操作类型与目标，验证更新调用 update。
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.streamed: list[tuple[str, str]] = []
@@ -434,7 +427,7 @@ def _update_source() -> _RecordingUpdate:
 
 
 async def _test_update_covers_installed_selection():
-    # 按 U 一次即弹出范围选择，选「更新选中项」后逐个更新选中的已装项，走的是 update 而非重装。
+    # 更新选中项时逐个调用 update，目标仅包含已安装包。
     source = _update_source()
 
     async def body(app, page, pilot):
@@ -461,7 +454,7 @@ async def _test_update_covers_installed_selection():
 
 
 async def _test_update_only_targets_installed():
-    # 未装项不进更新目标：更新只对已装包有意义。
+    # 更新目标仅包含已安装包。
     source = _update_source()
 
     async def body(app, page, pilot):
@@ -479,7 +472,7 @@ async def _test_update_only_targets_installed():
 
 
 async def _test_update_entry_points_open_choice():
-    # U、ctrl+u 与按钮走同一条路径：一次触发弹出范围选择框，取消按钮即取消。
+    # U、ctrl+u 与按钮共用范围选择流程。
     async def body(app, page, pilot):
         seen: list[list[str]] = []
         for trigger in ("U", "ctrl+u"):
@@ -506,7 +499,7 @@ async def _test_update_entry_points_open_choice():
 
 
 async def _test_update_all_dispatches_all_flag():
-    # 选「更新全部」时不下发位置参数：已装包由 CLI 的 --all 自行枚举。
+    # 全部更新通过 --all 枚举已安装包，不传递位置参数。
     source = _update_source()
 
     async def body(app, page, pilot):
@@ -523,7 +516,7 @@ async def _test_update_all_dispatches_all_flag():
 
 
 async def _test_update_hint_warns_and_cancel_changes_nothing():
-    # 提示写明全量更新逐个安装最新版本、可能耗时较久；取消后不发起任何操作。
+    # 提示明确全部更新的范围，取消后不执行操作。
     async def body(app, page, pilot):
         page.request_update()
         await pilot.pause()
@@ -544,7 +537,7 @@ async def _test_update_hint_warns_and_cancel_changes_nothing():
 
 
 async def _test_update_without_target_offers_all_only():
-    # 选区里没有已装项时只给「更新全部」一项，并在提示里说明原因。
+    # 选区没有已安装包时，仅提供全部更新并说明原因。
     source = _RecordingUpdate(records=[UPDATE_PENDING], available=[UPDATE_PENDING], stream_lines=["Updated 1 package"])
 
     async def body(app, page, pilot):
@@ -571,7 +564,7 @@ async def _test_update_without_target_offers_all_only():
 
 
 async def _test_update_all_argv_passes_all_and_yes():
-    # 真源按 ``module update --all --yes`` 调用：界面里已经选定范围，不该再被 CLI 追问。
+    # 界面确认后通过 ``module update --all --yes`` 执行，避免重复交互。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-update-all-") as raw:
@@ -588,7 +581,7 @@ async def _test_update_all_argv_passes_all_and_yes():
 
 
 async def _test_update_argv_passes_yes():
-    # 真源按 ``module update <分发名> --yes`` 调用：界面里已经确认过，不该再被 CLI 追问。
+    # 界面确认后通过 ``module update <分发名> --yes`` 执行，避免重复交互。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-update-") as raw:
@@ -603,7 +596,7 @@ async def _test_update_argv_passes_yes():
 
 
 async def _test_subprocess_source_streams_and_reports():
-    # 用 AKARIBOT_CLI_BIN 指向一个假 CLI，既走完整的 spawn/读取/等待路径，又不必真的装包。
+    # CLI 替身覆盖进程启动、输出读取与退出等待，避免实际安装包。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-tui-src-") as raw:
@@ -646,7 +639,7 @@ async def _test_subprocess_source_timeout():
 
 
 def _test_relative_root_is_resolved():
-    # 实例根是子进程的 cwd 又写进 AKARI_INSTANCE_DIR，相对值会二次拼接（test/test）而找不到实例。
+    # 实例根同时作为 cwd 和 AKARI_INSTANCE_DIR，必须使用绝对路径以避免重复拼接。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-tui-root-") as raw:
@@ -664,8 +657,8 @@ def _test_relative_root_is_resolved():
 
 
 async def _test_detail_shows_manifest_metadata():
-    # 这些值来自 registry --json：`module list --json` 曾丢掉它们，界面因此对已装包显示「核心 API
-    # 未声明」、提供模块为空，与 manifest 实际内容不符。
+    # 模块记录必须保留 manifest 元数据，以准确显示核心 API 与模块声明。
+
     record = ModuleRecord(
         name="wiki",
         dist="akari-bot-module-wiki",
@@ -735,7 +728,7 @@ PARTIAL_PKG = ModuleRecord(
 
 
 def _select_package(page, dist: str) -> None:
-    # 列表按「已装在前、其次按名」排序，选中项由页面自己维护，这里直接指定以固定用例目标。
+    # 直接指定选中项，以独立于页面的默认选择策略验证目标记录。
     page._selected_key = dist
     page._selected = {dist}
     page._render_list()
@@ -761,7 +754,7 @@ def _load_source(states) -> StaticModuleSource:
 
 
 async def _test_load_cell_counts_loaded_modules():
-    # 装载与安装是两回事：列表按包声明逐个数出已装载的模块。
+    # 装载状态按包声明的模块统计，与包的安装状态独立。
     source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
 
     async def body(app, page, pilot):
@@ -770,7 +763,7 @@ async def _test_load_cell_counts_loaded_modules():
         return rows
 
     rows = await _with_app(source, body)
-    # 排序为「已装在前、其次按名」：arcaea 在 wiki 之前。
+    # 已安装包优先，其次按名称排序；arcaea 先于 wiki。
     return (
         i18n.t("cli.tui.modules.load_cell", loaded=1, total=2) in rows[0]
         and i18n.t("cli.tui.modules.load_cell", loaded=2, total=2) in rows[1]
@@ -826,7 +819,7 @@ async def _test_toggle_load_ignores_uninstalled():
 
 
 async def _test_columns_header_aligns_with_rows():
-    # 表头与行用同一套列宽：版本列与装载列在两者中的起始列必须一致。
+    # 表头与数据行的版本列、装载列必须对齐。
     source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
 
     async def body(app, page, pilot):
@@ -850,44 +843,103 @@ async def _test_columns_header_aligns_with_rows():
 
 
 async def _test_action_buttons_fit_narrow_screen():
-    # 五个动作按钮在 80 列下都要落在页内：按钮的默认 min-width 会把最后一个挤出可视区。
-    app = TuiApp(source=_update_source(), initial_page="modules", boot_started_at=time.monotonic())
-    async with compat.app_test(app, size=(80, 24)) as pilot:
-        page = app.modules_page()
-        await page.wait_for_idle()
-        await pilot.pause()
-        actions = page.query_one("#actions").region
-        boxes = [
-            page.query_one(f"#{name}", compat.Button).region
-            for name in ("install", "uninstall", "update", "toggle-load", "refresh")
-        ]
-        await pilot.press("q")
-    return all(box.width > 0 for box in boxes) and max(box.right for box in boxes) <= actions.right
+    for size in ((80, 24), (60, 20)):
+        app = TuiApp(source=_update_source(), initial_page="modules", boot_started_at=time.monotonic())
+        async with compat.app_test(app, size=size) as pilot:
+            page = app.modules_page()
+            await page.wait_for_idle()
+            await pilot.pause()
+            actions = page.query_one("#actions").region
+            buttons = [
+                page.query_one(f"#{name}", compat.Button)
+                for name in ("install", "uninstall", "update", "toggle-load", "refresh")
+            ]
+            if not all(
+                button.region.width >= compat.button_width(button)
+                and actions.contains_region(button.region)
+                and page.content_region.contains_region(button.region)
+                for button in buttons
+            ):
+                return False
+    return True
 
 
-async def _test_toggle_shares_search_row_and_is_centered():
-    # 开关与搜索框同一行（单独占一行会白吃 3 行高度），且要垂直居中：之前它的内边距把内容顶到
-    # 行的下缘，看起来像「居底」。
-    source = _load_source({"wiki": True, "ab": True})
+async def _test_search_remains_visible_with_full_catalog():
+    records = [
+        ModuleRecord(name=f"module-{index:02}", dist=f"akari-bot-module-{index:02}", state="installed")
+        for index in range(43)
+    ]
+    for size in ((80, 24), (60, 20)):
+        source = StaticModuleSource(records=records, available=records)
+        app = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
+        async with compat.app_test(app, size=size) as pilot:
+            page = app.modules_page()
+            await page.wait_for_idle()
+            page.action_select_all()
+            await pilot.pause()
+            row = page.query_one("#search-row").region
+            search = page.query_one("#search", compat.Input)
+            toggle = page.query_one("#installed-only", compat.Checkbox)
+            count = page.query_one("#count").region
+            layout_ok = (
+                search.content_size.width >= 10
+                and row.contains_region(search.region)
+                and row.contains_region(toggle.region)
+                and search.region.right <= toggle.region.x
+                and count.y == row.bottom
+                and page.query_one("#module-list").content_size.height >= 3
+            )
+            await pilot.press("slash", "0", "1")
+            await pilot.pause()
+            if not (
+                layout_ok
+                and search.content_size.width >= 10
+                and search.has_focus
+                and page.search_query == "01"
+                and [record.name for record in page.visible_records] == ["module-01"]
+            ):
+                return False
+    return True
+
+
+async def _test_purge_requires_typed_confirmation():
+    record = ModuleRecord(
+        name="dice",
+        dist=INSTALLED.dist,
+        state="installed",
+        config_table="module_dice",
+        owned_tables=("dice_history",),
+    )
+    source = StaticModuleSource(records=[record], available=[record])
 
     async def body(app, page, pilot):
-        row = page.query_one("#search-row").region
-        search = page.query_one("#search").region
-        toggle = page.query_one("#installed-only").region
-        count = page.query_one("#count").region
-        await pilot.press("q")
-        return row, search, toggle, count
+        for value in ("", "dice", record.dist):
+            page.request_uninstall()
+            await pilot.pause()
+            await _pick_choice(app, pilot, 1)
+            prompt = app.screen
+            if not (
+                isinstance(prompt, compat.TextPromptScreen)
+                and record.dist in prompt.prompt_hint
+                and "config/module_dice.toml" in prompt.prompt_hint
+                and "dice_history" in prompt.prompt_hint
+                and prompt.query_one("#prompt-input", compat.Input).value == ""
+                and source.stream_calls == []
+            ):
+                return False
+            prompt.query_one("#prompt-input", compat.Input).value = value
+            await pilot.press("enter" if value else "escape")
+            await page.wait_for_idle()
+            await pilot.pause()
+            if value != record.dist and source.stream_calls:
+                return False
+        return source.stream_calls == [("uninstall", record.dist, ("--purge-data",), True)]
 
-    row, search, toggle, count = await _with_app(source, body)
-    same_row = toggle.y == row.y and toggle.x > search.x and count.x > toggle.x
-    centered = all(
-        abs((widget.y + widget.height / 2) - (row.y + row.height / 2)) <= 0.5 for widget in (search, toggle, count)
-    )
-    return same_row and centered and toggle.height <= row.height
+    return await _with_app(source, body, size=(80, 24))
 
 
 async def _test_uninstall_argv_passes_data_options():
-    # 真源把选定的处置方式拼进 argv：界面已代答确认，子进程不该再提问。
+    # CLI 参数包含选定的卸载方式和 --yes，避免重复交互。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-remove-") as raw:
@@ -931,7 +983,10 @@ def _test_low_frequency_bindings_stay_out_of_footer():
     # 80 列下页脚只留高频键位；其余键位仍可用，只是不占页脚。
     shown = {binding.key for binding in ModulesPage.BINDINGS if binding.show}
     hidden = {binding.key for binding in ModulesPage.BINDINGS if not binding.show}
-    return shown == {"r", "slash", "i", "u", "U", "space", "a"} and hidden == {
+    return shown == {"r", "slash", "i", "space"} and hidden == {
+        "a",
+        "u",
+        "U",
         "ctrl+u",
         "l",
         "ctrl+space",
@@ -944,7 +999,7 @@ def _test_low_frequency_bindings_stay_out_of_footer():
 
 
 def _test_pending_confirm_gate():
-    # 闸门本身的语义：同一目标的连发被忽略，窗口之外或换了目标都照常放行。
+    # 防抖窗口内忽略同一目标的重复请求，其他目标和超时请求正常处理。
     gate = compat.PendingConfirm()
     first = gate.accept("x", now=100.0)
     burst = gate.accept("x", now=100.1)
@@ -954,7 +1009,7 @@ def _test_pending_confirm_gate():
 
 
 async def _test_pending_invalidated_by_refresh_and_selection():
-    # 刷新、换选中项与清空选区都会重置闸门：紧接着的按键不该被当成上一次的连发吞掉。
+    # 刷新、高亮切换及清空选区后应清除防抖状态。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 0
@@ -1011,9 +1066,9 @@ async def _test_reset_pending_hook_clears_gate():
 async def test_tui_modules_available(tester: Tester):
     """cli.tui.modules: 可安装列表与安装进度测试"""
     _use_cli_locale()
-    # 闸门本身按真实防抖窗口断言，故这条不放进压缩窗口的块里。
+    # 防抖专项用例使用实际窗口，与关闭延迟的交互用例分开运行。
     await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并在窗口外放行")
-    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
         await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
@@ -1052,7 +1107,8 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
         await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
         await tester.test(_test_action_buttons_fit_narrow_screen, "80 列下五个动作按钮都在页内")
-        await tester.test(_test_toggle_shares_search_row_and_is_centered, "只看已安装在搜索行内垂直居中")
+        await tester.test(_test_search_remains_visible_with_full_catalog, "完整模块列表在窄屏下可输入搜索")
+        await tester.test(_test_purge_requires_typed_confirmation, "清理配置与数据需输入分发名确认")
         await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
         await tester.test(_test_pending_invalidated_by_refresh_and_selection, "刷新、换选中项与清选区作废防抖记录")
         await tester.test(_test_reset_pending_hook_clears_gate, "切页钩子清掉防抖记录")

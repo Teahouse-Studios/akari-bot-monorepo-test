@@ -1,8 +1,6 @@
-"""界面调用本 CLI 的统一入口。
+"""TUI 调用 CLI 子进程的统一入口。
 
-界面里的每个动作最终都是一次 ``akaribot <子命令>`` 子进程调用，argv 与环境的拼装规则集中在这里：
-冻结产物（Nuitka onefile）里 ``sys.executable`` 就是 CLI 本体，不能再加 ``-m``；实例根同时是子进程
-的工作目录与 ``AKARI_INSTANCE_DIR``，只认其一会在仓库根运行界面时静默读到另一个实例。
+冻结可执行文件直接接受子命令；实例根目录同时用于工作目录和 AKARI_INSTANCE_DIR。
 """
 
 from __future__ import annotations
@@ -33,11 +31,11 @@ def cli_argv(*args: str) -> list[str]:
 
 
 def cli_env(root: Path | str, *, extra: Mapping[str, str] | None = None) -> dict[str, str]:
-    """构造子进程环境：钉住实例根与输出编码。
+    """构造包含实例根目录和输出编码的子进程环境。
 
-    :param root: 实例根，写入 ``AKARI_INSTANCE_DIR``。
-    :param extra: 需要额外覆盖的环境变量。
-    :return: 可直接交给 :mod:`subprocess` 的环境映射。
+    :param root: 实例根目录。
+    :param extra: 额外覆盖的环境变量。
+    :return: 子进程环境映射。
     """
     env = dict(os.environ)
     env[INSTANCE_DIR_ENV] = str(root)

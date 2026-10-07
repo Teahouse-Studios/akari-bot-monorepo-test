@@ -1,13 +1,3 @@
-"""Dev 页：workspace 路径、各包来源与 editable 状态，附跑测试与生成脚手架的入口。
-
-包清单经 ``akaribot module list --json`` 子进程取数，CLI 进程内不 import core；``[dev] workspace_root``
-与 ``[instance] mode`` 出自实例的 ``akaribot.toml``，由 CLI 自己的 ``InstanceMeta`` 读取——
-``akaribot dev status --json``（上位文档 §3.2.2）尚未实现，工作区成员索引因此在本进程内扫描。
-包清单本身只读：不提供 use / link / unlink，也不写实例配置；两个动作各起一次 ``akaribot`` 子进程，
-``t`` 跑测试（``akaribot test``），``n`` 生成脚手架（``akaribot new module|adapter``）。输出逐行回显在可滚动
-的输出区，行数与跟随状态写在该区标题行，状态栏只给结论与下一步。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -29,7 +19,7 @@ SOURCE_EDITABLE = "editable"
 SOURCE_REGISTRY = "registry"
 SOURCE_UNKNOWN = "unknown"
 
-# 来源、包类型与模式取自对端 JSON，界面按当前语言取标签，故这里只存文案键。
+# 文案随当前语言解析，常量仅保存文案键。
 _SOURCE_KEYS = {
     SOURCE_WORKSPACE: "cli.tui.dev.source_workspace",
     SOURCE_EDITABLE: "cli.tui.dev.source_editable",
@@ -61,7 +51,7 @@ ACTION_NEW = "new"
 TARGET_MODULE = "module"
 TARGET_ADAPTER = "adapter"
 
-# 列标题在渲染时按当前语言取；editable 是数据字段名，两种语言写法一致，故不入键表。
+# editable 使用数据字段名，其余列标题按当前语言解析。
 _COLUMN_KEYS: tuple[str | None, ...] = (
     "cli.tui.dev.col_package",
     "cli.tui.dev.col_kind",
@@ -121,7 +111,7 @@ def _action_label(kind: str) -> str:
 
 
 def _name_rejection(name: str) -> str:
-    # 页面只拦下显然无法成包的名字；其余校验（长度、首字符、关键字）交给 CLI 报错。
+    # 页面校验名称中的空白与路径分隔符，其余命名规则由 CLI 校验。
     if not name:
         return i18n.t("cli.tui.dev.new_name_required")
     if any(char.isspace() for char in name) or "/" in name or "\\" in name:
@@ -131,18 +121,18 @@ def _name_rejection(name: str) -> str:
 
 @dataclass(frozen=True)
 class DevPackage:
-    """一个已装包的来源与 editable 状态。
+    """已安装包的来源与可编辑状态。
 
     :param dist: 分发名，如 ``akari-bot-module-wiki``。
     :param name: 短名，如 ``wiki``。
     :param kind: ``module`` / ``adapter`` / ``core`` / ``testing``。
-    :param version: 已装版本。
+    :param version: 已安装版本。
     :param editable: ``module list --json`` 回传的 editable 标记。
     :param source: ``workspace`` / ``editable`` / ``registry`` / ``unknown``。
     :param path: 本地路径；仅工作区成员有值。
     :param requires_core_api: 声明的 core API 区间。
     :param provides_modules: 该包注册的模块名。
-    :param summary: 一句话简介。
+    :param summary: 包简介。
     """
 
     dist: str
@@ -190,16 +180,16 @@ class DevPackage:
 
 @dataclass(frozen=True)
 class DevSnapshot:
-    """一次 Dev 取数的结果。
+    """开发环境快照。
 
     :param instance_root: 实例根目录文本。
     :param meta_path: ``akaribot.toml`` 路径文本。
-    :param mode: ``workspace`` / ``installed``；读不到时为空串。
+    :param mode: ``workspace`` / ``installed``；读取失败时为空字符串。
     :param workspace_root: ``[dev] workspace_root`` 原值。
     :param workspace_exists: 工作区根是否为存在的目录。
     :param registry_sources: ``[registry] sources``。
-    :param packages: 已装包记录。
-    :param errors: 取数错误。
+    :param packages: 已安装包记录。
+    :param errors: 数据读取错误。
     :param notes: 其他说明，如工作区未配置。
     """
 
@@ -237,7 +227,7 @@ class DevSnapshot:
 
 @dataclass(frozen=True)
 class ActionResult:
-    """一次动作的结局。
+    """操作执行结果。
 
     :param ok: 子进程是否以退出码 0 结束。
     :param returncode: 子进程退出码；被终止时为信号值。
@@ -254,12 +244,12 @@ class ActionResult:
 
 
 class StaticDevSource:
-    """固定数据的替身数据源，供自动化断言使用，不产生任何子进程。
+    """用于测试的静态数据源，不创建子进程。
 
     :param snapshot: ``load_snapshot`` 的返回值。
     :param action_lines: 动作逐行回放的固定输出。
-    :param action_result: 动作的返回值；``hold`` 为真时先等 :attr:`gate` 放行。
-    :param hold: 为真时 ``stream_action`` 停在 :attr:`gate` 上，供「运行中」断言使用。
+    :param action_result: 操作返回值；``hold`` 为真时等待 :attr:`gate`。
+    :param hold: 为真时 ``stream_action`` 等待 :attr:`gate`，用于验证运行状态。
     """
 
     def __init__(
@@ -307,7 +297,7 @@ class StaticDevSource:
             self._on_line = None
 
     def emit(self, line: str) -> bool:
-        """向正在运行的动作补送一行输出，供「运行中」的断言按需推进输出。
+        """向运行中的操作追加一行输出。
 
         :param line: 输出行。
         :return: 是否送达；没有正在运行的动作时返回 ``False``。
@@ -328,18 +318,18 @@ class StaticDevSource:
 
 @runtime_checkable
 class DevSource(Protocol):
-    """Dev 数据源接口；测试注入替身，生产走子进程。"""
+    """开发环境状态与操作的数据源接口。"""
 
     def load_snapshot(self) -> DevSnapshot:
-        """返回 workspace 配置与已装包清单；错误记入快照而不抛出。"""
+        """返回 workspace 配置与已安装包清单；错误记入快照而不抛出。"""
 
     async def stream_action(self, kind: str, params: Mapping[str, Any], on_line: Callable[[str], None]) -> ActionResult:
-        """执行一次耗时的 CLI 动作，并把子进程输出逐行交给 ``on_line``。
+        """执行 CLI 操作，通过 ``on_line`` 逐行返回输出。
 
         :param kind: :data:`ACTION_TEST` 或 :data:`ACTION_NEW`。
         :param params: 动作参数——``test`` 取 ``args``（追加到 ``test`` 之后的参数）与 ``cwd``；
             ``new`` 取 ``name`` / ``target`` / ``directory`` 与 ``cwd``。
-        :param on_line: 每读到一行输出就调用一次，供界面回显进度。
+        :param on_line: 每行输出的回调。
         :return: 动作结果。
         """
 
@@ -348,13 +338,9 @@ class DevSource(Protocol):
 
 
 def normalize_packages(payload: Any, members: Mapping[str, str] | None = None) -> tuple[DevPackage, ...]:
-    """把 ``module list --json`` 的负载归一化为包记录。
+    """将包清单输出转换为包记录，优先按工作区成员索引判定来源。
 
-    来源判定按优先级降级：分发名命中工作区成员索引时记为本地工作区并带路径；否则按
-    ``editable`` 区分本地可编辑安装与远端发行版。``editable`` 单独不足以判定来源——
-    工作区成员经 ``uv sync`` 装进来时该标记为假，却在磁盘上有本地源码。
-
-    :param payload: ``json.loads`` 的结果；接受包装对象与裸数组。
+    :param payload: ``json.loads`` 的结果；支持对象与数组。
     :param members: 规范化分发名到本地路径的映射。
     :return: 按类型与分发名排序的包记录。
     """
@@ -380,6 +366,7 @@ def normalize_packages(payload: Any, members: Mapping[str, str] | None = None) -
         dist = _text(_pick(entry, "dist", "dist_name", "distribution", "package"))
         name = _text(_pick(entry, "name", "module", "short_name"))
         editable = _flag(_pick(entry, "editable", default=False))
+        # uv workspace 安装不一定标记为 editable，来源判定优先采用成员索引。
         path = index.get(_canonical_dist(dist or name), "")
         if path:
             source = SOURCE_WORKSPACE
@@ -412,16 +399,13 @@ class DevSourceError(RuntimeError):
 
 
 class SubprocessDevSource:
-    """默认数据源：包清单经子进程取数，实例元数据在 CLI 进程内读取。
+    """通过子进程读取包清单，在 CLI 进程内读取本机实例元数据。
 
-    实例元数据不经子进程的理由：``akaribot dev status --json`` 尚未实现，而 ``akaribot.toml``
-    属 CLI 自己的契约；工作区成员索引按 ``pyproject.toml`` 扫描，同样不触碰 core。
-
-    :param root: 实例根目录，默认当前工作目录。
+    :param root: 实例根目录；默认取当前实例。
     :param timeout: 子进程的超时秒数。
-    :param action_timeout: 单次动作的超时秒数；测试套件可能跑数分钟。
+    :param action_timeout: 单次操作的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
-    :param meta_reader: 实例元数据读取回调，缺省读 ``akaribot.toml``，测试可注入。
+    :param meta_reader: 实例元数据读取回调，默认读 ``akaribot.toml``，测试可注入。
     """
 
     def __init__(
@@ -433,9 +417,7 @@ class SubprocessDevSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         meta_reader: Callable[[], Mapping[str, Any]] | None = None,
     ) -> None:
-        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
-        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.action_timeout = action_timeout
@@ -447,7 +429,7 @@ class SubprocessDevSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def load_snapshot(self) -> DevSnapshot:
@@ -481,18 +463,14 @@ class SubprocessDevSource:
         )
 
     async def stream_action(self, kind: str, params: Mapping[str, Any], on_line: Callable[[str], None]) -> ActionResult:
-        """见 :meth:`DevSource.stream_action`。
-
-        测试套件与脚手架都可能跑上数分钟，沿用 ``subprocess.run`` 时这段时间界面只能空转；
-        改为异步起进程并逐行读输出，界面据此显示进度，``Esc`` 也能终止进程。
-        """
+        """异步执行 CLI 操作，逐行返回输出并支持终止请求。"""
         argv = self._action_argv(kind, params)
         self._action_cancelled = False
         try:
             process = await asyncio.create_subprocess_exec(
                 *argv,
                 cwd=self._action_cwd(params),
-                # 标准输入指向空设备：动作子进程不该读界面这一侧的终端，需要输入的选项已在 argv 里给全。
+                # 参数由界面收集，子进程标准输入使用空设备，避免读取 TUI 终端。
                 stdin=subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -558,19 +536,18 @@ class SubprocessDevSource:
 
     def _action_argv(self, kind: str, params: Mapping[str, Any]) -> list[str]:
         if kind == ACTION_NEW:
-            # --non-interactive：表单没收集的选项取默认值。缺了它，子进程会把问卷打进输出区并
-            # 与界面争抢键盘——它继承的是同一个终端。
+            # 非交互模式使表单未提供的选项采用默认值，避免子进程等待输入。
             target = _text(params.get("target")) or TARGET_MODULE
             args = [
                 "new",
                 target,
                 _text(params.get("name")),
                 "--non-interactive",
-                # 三个开关一律显式给值：不给时 CLI 取自己的缺省（tests 默认为真），与表单显示不符。
+                # 显式传递开关值，使 CLI 参数与表单状态一致。
                 "--config" if _flag(params.get("config")) else "--no-config",
             ]
             if target != TARGET_ADAPTER:
-                # new adapter 只声明了 --config，多给的开关会被 typer 当成未知选项拒绝。
+                # new adapter 仅支持 --config，不能传递模块专用参数。
                 args.append("--database" if _flag(params.get("database")) else "--no-database")
                 args.append("--tests" if _flag(params.get("tests")) else "--no-tests")
             directory = _text(params.get("directory"))
@@ -580,7 +557,7 @@ class SubprocessDevSource:
         return self.cli_argv(ACTION_TEST, *_string_tuple(params.get("args")))
 
     def _action_cwd(self, params: Mapping[str, Any]) -> str:
-        # 动作在工作区根执行：测试路径与新建包的目录都相对它解析；工作区未配置时退回实例根。
+        # 测试路径与新包目录相对工作区根解析；未配置工作区时使用实例根。
         return _text(params.get("cwd")) or str(self.root)
 
     def _read_meta(self) -> tuple[dict[str, Any], list[str]]:
@@ -715,10 +692,10 @@ class PackageLayout:
 
 
 class DevPage(compat.Vertical):
-    """Dev 页控件：包清单只读，跑测试与生成脚手架经数据源起子进程。
+    """开发页面，提供包清单、测试与脚手架操作。
 
-    :param source: 数据源，缺省为 :class:`SubprocessDevSource`。
-    :param cache_ttl: 缓存有效期秒数；超期后按 ``r`` 重新取数。
+    :param source: 数据源，默认为 :class:`SubprocessDevSource`。
+    :param cache_ttl: 缓存有效期秒数；超期后按 ``r`` 重新读取数据。
     """
 
     can_focus = True
@@ -728,7 +705,6 @@ class DevPage(compat.Vertical):
         ("t", "run_tests", i18n.t("cli.tui.dev.action_run_tests")),
         ("n", "new_package", i18n.t("cli.tui.dev.action_new_package")),
         ("o", "focus_output", i18n.t("cli.tui.dev.action_focus_output")),
-        # 终止是低频动作，页脚留给刷新、测试、新建与输出四条。
         ("escape", "cancel_action", i18n.t("cli.tui.dev.action_cancel"), False),
     )
 
@@ -867,7 +843,7 @@ class DevPage(compat.Vertical):
         self._new_hint: str = ""
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：包清单、动作表单与输出区，动作由键位与按钮触发。"""
+
         yield compat.Static(i18n.t("cli.tui.dev.workspace_pending"), id="workspace", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="package-list")
@@ -901,7 +877,7 @@ class DevPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+
         compat.set_text_selection(self, False)
         self._render_action_panel()
 
@@ -912,11 +888,9 @@ class DevPage(compat.Vertical):
         self._activated = True
         self.refresh_snapshot()
 
-    # region 状态读取（供测试与 App 使用）
-
     @property
     def snapshot(self) -> DevSnapshot:
-        """返回最近一次取到的快照，不触发子进程。"""
+        """返回缓存快照，不启动子进程。"""
         return self._snapshot
 
     @property
@@ -930,7 +904,7 @@ class DevPage(compat.Vertical):
         packages = self._snapshot.packages
         if not packages:
             return None
-        # 页面已卸载时后台取数仍可能落地，此时没有可读的列表控件。
+        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
         if not compat.mounted(self):
             return None
         list_view = self.query_one("#package-list", compat.ListView)
@@ -975,17 +949,17 @@ class DevPage(compat.Vertical):
 
     @property
     def action_kind(self) -> str:
-        """返回正在运行的动作名；空闲时为空串。"""
+
         return self._action_kind
 
     @property
     def action_result(self) -> ActionResult | None:
-        """返回最近一次动作的结局；从未执行时为 ``None``。"""
+
         return self._action_result
 
     @property
     def action_output_text(self) -> str:
-        """返回输出区当前保留的完整文本；本次动作还没有输出时为空串。"""
+
         return self._action_rendered
 
     @property
@@ -1004,21 +978,17 @@ class DevPage(compat.Vertical):
         return self._new_hint
 
     def action_lines(self) -> tuple[str, ...]:
-        """返回最近一次动作的完整输出行。"""
+
         return tuple(self._action_lines)
 
     def test_args(self) -> tuple[str, ...]:
-        """返回测试输入框里的参数，按空白拆分。"""
+        """按空白拆分并返回测试输入框中的参数。"""
         return self._split_args(self._input_text("#test-path"))
-
-    # endregion
-
-    # region 数据读取
 
     def refresh_snapshot(self, *, force: bool = False) -> None:
         """读取 workspace 配置与包清单。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
+        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
         """
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_all()
@@ -1036,7 +1006,7 @@ class DevPage(compat.Vertical):
     async def _load(self) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.load_snapshot)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             self._snapshot = DevSnapshot()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1066,18 +1036,14 @@ class DevPage(compat.Vertical):
         return i18n.t("cli.tui.dev.status_loaded_detail", total=count, detail=detail)
 
     def invalidate_cache(self) -> None:
-        """使缓存立即失效，下一次读取必定走数据源。"""
+        """清除缓存有效期，使下次请求重新读取数据。"""
         self._loaded_at = 0.0
         self._snapshot = DevSnapshot()
 
-    # endregion
-
-    # region 动作（t / n / Esc）
-
     def run_tests(self, args: Sequence[str] | None = None) -> None:
-        """跑一次 ``akaribot test``；已有动作时不重复启动。
+        """运行 ``akaribot test``；已有操作运行时拒绝重复启动。
 
-        :param args: 追加到 ``test`` 之后的参数；缺省取输入框内容，留空表示不带参数。
+        :param args: 追加到 ``test`` 之后的参数；默认取输入框内容，留空表示不带参数。
         """
         if not self._action_ready():
             return
@@ -1085,7 +1051,7 @@ class DevPage(compat.Vertical):
         self._start_action(ACTION_TEST, {"args": tokens, "cwd": self._snapshot.workspace_root})
 
     def open_new_form(self) -> None:
-        """展开新建包表单，并把焦点交给名称输入框；动作运行期间不展开。"""
+        """展开新建包表单并聚焦名称输入框；操作运行期间不可用。"""
         if self._action_kind:
             self._set_status(i18n.t("cli.tui.dev.status_action_busy", label=_action_label(self._action_kind)))
             return
@@ -1127,11 +1093,11 @@ class DevPage(compat.Vertical):
                 "cwd": self._snapshot.workspace_root,
             },
         )
-        # 收起表单会把焦点留给隐藏控件，回车或空格随即落到不可见的控件上；交回列表。
+        # 隐藏表单后需转移焦点，避免键盘输入仍作用于隐藏控件。
         self.focus_primary()
 
     def toggle_new_kind(self) -> None:
-        """在模块与适配器之间切换生成类型；类型二选一，故用二态按钮而不是两个复选框。"""
+        """切换模块或适配器脚手架类型。"""
         self._new_kind = TARGET_ADAPTER if self._new_kind == TARGET_MODULE else TARGET_MODULE
         self._sync_new_kind()
 
@@ -1140,7 +1106,7 @@ class DevPage(compat.Vertical):
             "cli.tui.dev.new_kind_adapter" if self._new_kind == TARGET_ADAPTER else "cli.tui.dev.new_kind_module"
         )
         self.query_one("#new-kind", compat.Button).label = i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t(label_key))
-        # 适配器脚手架没有 database 与 tests 选项，关掉这两项，免得生成参数被 CLI 拒绝。
+        # 适配器脚手架不支持 database 与 tests 选项，切换类型时清除对应值。
         adapter = self._new_kind == TARGET_ADAPTER
         for selector in ("#new-database", "#new-tests"):
             self.query_one(selector, compat.Checkbox).disabled = adapter
@@ -1152,7 +1118,7 @@ class DevPage(compat.Vertical):
             return False
 
     def cancel_running_action(self) -> None:
-        """请求终止正在运行的动作；空闲时不触碰数据源。"""
+        """请求终止运行中的操作；空闲时不调用数据源。"""
         if not self._action_kind:
             return
         if self._cancel_requested:
@@ -1188,13 +1154,13 @@ class DevPage(compat.Vertical):
     async def _run_action(self, kind: str, params: Mapping[str, Any]) -> None:
         try:
             result = await self.source.stream_action(kind, params, self._on_action_line)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             result = ActionResult(
                 message=i18n.t("cli.tui.dev.status_action_error", error=f"{type(error).__name__}: {error}")
             )
         status = self._conclusion_text(kind, result)
         if result.ok and kind == ACTION_NEW:
-            # 新包已经落盘，刷新包清单让它出现在列表里；状态栏最后写结论，不被重载覆盖。
+            # 创建包后刷新清单，并保留本次操作的状态结果。
             self.invalidate_cache()
             await self._load()
         self._action_kind = ""
@@ -1203,7 +1169,7 @@ class DevPage(compat.Vertical):
         self._render_action_panel()
 
     def _on_action_line(self, line: str) -> None:
-        # 贴底与否按追加前的视口判断：追加之后 max_scroll_y 尚未跟上，读不出用户是否上滚。
+        # 追加输出后布局尚未更新，需使用追加前的视口判断是否继续滚动跟随。
         follow = self._output_at_end()
         self._action_lines.append(line)
         self._render_action_output(pin=follow)
@@ -1248,10 +1214,6 @@ class DevPage(compat.Vertical):
     @staticmethod
     def _split_args(text: str) -> tuple[str, ...]:
         return tuple(text.split())
-
-    # endregion
-
-    # region 渲染（只读缓存）
 
     def _render_all(self) -> None:
         if not compat.mounted(self):
@@ -1407,7 +1369,7 @@ class DevPage(compat.Vertical):
         self.query_one("#new-package", compat.Button).disabled = running
 
     def _render_action_panel(self) -> None:
-        # 表单与输出区互斥：表单占位时收起输出，动作跑起来后表单已经关闭。
+
         form = self._action_widget("#new-form")
         if form is not None:
             form.display = self._new_form_open
@@ -1463,13 +1425,12 @@ class DevPage(compat.Vertical):
 
     def _pin_output_to_end(self) -> None:
         self._scroll_output_end()
-        # 本帧的 max_scroll_y 还停在追加内容之前，布局完成后再贴一次底，下一行到达时才不会
-        # 把「布局尚未跟上」误判成用户上滚。
+        # 布局更新后重新滚动到底部，避免将过期的滚动范围误判为用户操作。
         if self.is_mounted:
             self.call_after_refresh(self._scroll_output_end)
 
     def _action_widget(self, selector: str) -> compat.Widget | None:
-        # 页面已卸载时后台取数仍可能落地，此时没有可读的动作控件。
+        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
         if not compat.mounted(self):
             return None
         return self.query_one(selector)
@@ -1480,13 +1441,9 @@ class DevPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(self._fit_page_width(text)))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+
         if self._snapshot.packages or self._loaded_at:
             self._render_all()
-
-    # endregion
-
-    # region 交互
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
@@ -1519,27 +1476,27 @@ class DevPage(compat.Vertical):
         self.run_tests()
 
     def focus_primary(self) -> None:
-        """把焦点交给包列表；列表为空时退到页面容器。"""
+        """聚焦包列表；列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#package-list")
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取。"""
+
         self.refresh_snapshot(force=True)
 
     def action_run_tests(self) -> None:
-        """键位动作：运行测试。"""
+
         self.run_tests()
 
     def action_new_package(self) -> None:
-        """键位动作：展开新建包表单，已展开时把焦点交回名称输入框。"""
+
         self.open_new_form()
 
     def action_focus_output(self) -> None:
-        """键位动作：把焦点交给输出区。"""
+
         self.focus_output()
 
     def focus_output(self) -> None:
-        """显示输出区并把焦点交给滚动容器；输出为空时区内给出提示。"""
+        """显示并聚焦输出区；无输出时显示提示。"""
         self._output_revealed = True
         self._render_action_panel()
         pane = self._output_pane()
@@ -1547,13 +1504,11 @@ class DevPage(compat.Vertical):
             compat.focus_now(pane)
 
     def action_cancel_action(self) -> None:
-        """键位动作：终止运行中的动作；空闲时收起新建包表单。"""
+
         if self._action_kind:
             self.cancel_running_action()
         elif self._new_form_open:
             self.close_new_form()
-
-    # endregion
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

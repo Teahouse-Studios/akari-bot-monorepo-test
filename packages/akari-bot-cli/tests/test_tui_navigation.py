@@ -1,8 +1,7 @@
 """页面切换契约：侧栏高亮、可见页面、焦点与键位归属。
 
-四者必须一致，否则用户判断不出当前页，且页级键位会被 App 级同键接管——停在配置页按 u 曾会
-卸载模块页的选中项。本文件逐页断言这四条，并固定「隐藏页不取数」的启动行为。侧栏按 NAV_GROUPS
-分了四组，故高亮下标按条目 id 折算回 PAGES 下标，页面顺序仍以 PAGES 为准。
+四者必须一致，以保证页级键位作用于当前可见页面。本文件逐页断言交互归属与隐藏页不取数的行为。
+侧栏分组与键盘翻页顺序由 NAV_PLAN 决定，高亮下标按条目 id 折算回 PAGES 的页面创建顺序。
 """
 
 import asyncio
@@ -23,8 +22,8 @@ FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragme
 
 
 class _Counting:
-    # 用真实数据源而不是空替身：页面会读返回值的字段（如 ``snapshot.error``），返回空列表的替身
-    # 会直接让页面抛异常，测到的就不是「有没有取数」而是替身不够像。
+    # 使用真实数据源保留完整返回结构，避免替身结构不符导致误报。
+
     def __init__(self, inner) -> None:
         self._inner = inner
         self.calls: dict[str, int] = {}
@@ -66,7 +65,7 @@ def _real_sources(root) -> dict:
         "dev": _Counting(SubprocessDevSource(root=root, timeout=10.0)),
         "doctor": _Counting(SubprocessDoctorSource(root=root, timeout=10.0)),
         "environment": _Counting(SubprocessEnvironmentSource(root=root, query_timeout=10.0, action_timeout=10.0)),
-        # 杂项页没有预取，替身即可；真源会在用例里起一次 CLI 子进程。
+        # 杂项页使用替身，避免启动 CLI 子进程。
         "misc": _Counting(StaticMiscSource()),
     }
 
@@ -183,7 +182,7 @@ async def _test_module_keys_do_not_fire_elsewhere():
 
 
 async def _test_initial_page_is_dashboard():
-    # 首屏落在概览：第一次进来最该看到的是「我在管哪个实例、它跑没跑」，而不是包列表。
+    # 首屏应显示当前实例及其运行状态。
     app = TuiApp(source=StaticModuleSource([RECORD]), boot_started_at=time.monotonic())
     async with compat.app_test(app, size=(100, 30)) as pilot:
         await pilot.pause()
@@ -194,7 +193,7 @@ async def _test_initial_page_is_dashboard():
 
 
 async def _test_subtitle_names_the_current_instance():
-    # 标题栏要写明当前实例：在配置页改 secret、数据库页删数据项时，看不出改的是哪一个最危险。
+    # 标题栏持续显示实例标识，确保写操作的目标明确。
     with TemporaryDirectory(prefix="akari-nav-") as raw:
         root = Path(raw) / "demo-instance"
         root.mkdir()
@@ -213,36 +212,25 @@ async def _test_subtitle_names_the_current_instance():
 
 
 async def _test_page_step_keys_walk_the_sidebar():
-    # ctrl+← / ctrl+→ 逐页走，越界回到另一端；不依赖鼠标点侧栏。
     async def body(app, pilot):
-        first = app.active_page
-        await pilot.press("ctrl+right")
-        await pilot.pause()
-        second = (app.active_page, _nav_index(app))
-        await pilot.press("ctrl+left")
-        await pilot.pause()
-        back = app.active_page
-        for _ in range(len(PAGES) - 1):
-            await pilot.press("ctrl+left")
+        keys = [(child.id or "").removeprefix("nav-") for child in app.query_one("#nav").children if not child.disabled]
+        app.show_page(keys[0])
+        visited = []
+        for _ in keys:
+            visited.append(app.active_page)
+            await pilot.press("ctrl+right")
             await pilot.pause()
         wrapped = app.active_page
-        await pilot.press("q")
-        return first, second, back, wrapped
+        await pilot.press("ctrl+left")
+        await pilot.pause()
+        previous = app.active_page
+        return visited == keys and wrapped == keys[0] and previous == keys[-1]
 
-    # 从 modules 连按 len(PAGES)-1 次「上一页」等于往回绕一圈，落在它的下一页。
-    start = _page_index("modules")
-    expected_wrap = [key for key, _, _ in PAGES][(start + 1) % len(PAGES)]
-    first, second, back, wrapped = await _with_app(body)
-    return (
-        first == "modules"
-        and second == ("adapters", _page_index("adapters"))
-        and back == "modules"
-        and wrapped == expected_wrap
-    )
+    return await _with_app(body)
 
 
 async def _test_help_overlay_lists_page_keys():
-    # 页脚在 80 列下装不下十几条键位，故 ? 要给出一份完整清单。
+    # 页脚仅显示高频键位，? 应列出完整快捷键。
     async def body(app, pilot):
         await pilot.press("question_mark")
         await pilot.pause()
@@ -261,24 +249,24 @@ async def _test_help_overlay_lists_page_keys():
 
 
 async def _test_footer_fits_eighty_columns():
-    # 页脚在 80 列下会静默截断：把低频键位藏起来（bindings 四元组第 4 项 False）后仍要量一遍。
     async def body(app, pilot):
-        widths: dict[str, int] = {}
         for key, _, _ in PAGES:
             app.show_page(key)
             await pilot.pause()
-            await asyncio.sleep(0.05)
             footer = app.query_one(compat.Footer)
-            widths[key] = compat.display_width(str(footer.render()))
-        await pilot.press("q")
-        return widths
+            keys = [child for child in footer.children if getattr(child, "action", "")]
+            if not keys or any(not footer.region.contains_region(child.region) for child in keys):
+                return False
+            descriptions = {getattr(child, "description", "") for child in keys}
+            if not {i18n.t("cli.tui.app.bind_quit"), i18n.t("cli.tui.app.bind_help")} <= descriptions:
+                return False
+        return True
 
-    widths = await _with_app(body, size=(80, 24))
-    return all(width <= 80 for width in widths.values())
+    return await _with_app(body, size=(80, 24))
 
 
 async def _test_busy_quit_asks_first():
-    # 后台任务在跑时按 q 必须先问一次：装了一半的 uv 子进程不该被丢在后台。
+    # 后台任务运行时退出需确认，避免中断未完成的操作。
     async def body(app, pilot):
         app.run_worker(asyncio.sleep(2.0), group="demo-task")
         await pilot.pause()
@@ -290,7 +278,7 @@ async def _test_busy_quit_asks_first():
         stayed = app.is_running
         await pilot.press("q")
         await pilot.pause()
-        # 任务仍在跑，第二次按 q 依然只提问；用例结束由 app_test 收尾。
+        # 后台任务运行期间再次退出仍需确认，应用由测试上下文关闭。
         again = type(app.screen).__name__
         return asked, stayed, again
 
@@ -299,7 +287,7 @@ async def _test_busy_quit_asks_first():
 
 
 async def _test_switching_instance_asks_when_dirty():
-    # 切实例会重挂载页面：有未保存改动时要先问一次。
+    # 切换实例会重新挂载页面，有未保存更改时需确认。
     with TemporaryDirectory(prefix="akari-nav-") as raw:
         root = Path(raw) / "target"
         root.mkdir()
@@ -312,7 +300,7 @@ async def _test_switching_instance_asks_when_dirty():
             app.switch_instance(root)
             await pilot.pause()
             asked = type(app.screen).__name__
-            page.query_one  # 占位：保持页面引用存活
+            page.query_one
             await pilot.click("#choice-cancel") if False else None
             app.screen.query_one("#choice-0", compat.Button).press()
             await pilot.pause()
@@ -327,7 +315,7 @@ async def _test_switching_instance_asks_when_dirty():
 
 
 async def _test_module_keys_fire_on_modules_page():
-    # 卸载现在一次按键即弹处置方式框，故这里断言「弹了框、没有直接卸」与「r 仍触发取数」。
+    # 卸载请求应打开确认框且不立即执行，刷新键仍应触发读取。
     async def body(app, pilot):
         source = app.module_source
         app.show_page("modules")
@@ -406,7 +394,7 @@ async def _test_sidebar_browse_does_not_switch():
         await pilot.press("q")
         return before, after
 
-    # 侧栏分组后条目次序与 PAGES 不同，故只断言方向键移了高亮、活动页未动，不指定落点。
+    # 侧栏顺序由 NAV_PLAN 决定；此处验证方向键仅移动高亮，不切换页面。
     before, after = await _with_app(body)
     return (
         before == ("modules", _page_index("modules"))
@@ -468,14 +456,10 @@ async def _test_sidebar_groups_follow_the_plan():
     return observed == expected and len(NAV_GROUPS) == 4 and pages == set(titles) and group_texts == plan_groups
 
 
-async def _test_page_blurbs_come_from_the_table():
-    fragment = _fragment()
-
-    # 每页一行用途说明写在侧栏标题下，文案键先落在片段文件；合并进 locales 之前 i18n.t 返回占位标记。
+async def _test_sidebar_items_have_single_label():
     async def body(app, pilot):
         nav = app.query_one("#nav", compat.ListView)
         observed = {}
-        squeezed = []
         for child in nav.children:
             item_id = child.id or ""
             if not item_id.startswith("nav-"):
@@ -483,20 +467,16 @@ async def _test_page_blurbs_come_from_the_table():
             key = item_id.removeprefix("nav-")
             labels = list(child.query(compat.Label))
             observed[key] = tuple(str(label.render()) for label in labels)
-            # 侧栏固定 18 列、中文每字 2 列：按片段文案核对说明行放得下，不被省略号截断。
-            if compat.display_width(fragment[PAGE_BLURB[key]]) > labels[1].size.width:
-                squeezed.append(key)
         await pilot.press("q")
-        return observed, squeezed
+        return observed
 
-    observed, squeezed = await _with_app(body)
+    observed = await _with_app(body)
     titles = {key: i18n.t(title_key) for key, title_key, _ in PAGES}
-    pairs_ok = all(observed.get(key) == (titles[key], i18n.t(blurb_key)) for key, blurb_key in PAGE_BLURB.items())
-    return pairs_ok and not squeezed and all(blurb_key in fragment for blurb_key in PAGE_BLURB.values())
+    return observed == {key: (title,) for key, title in titles.items()}
 
 
-async def _test_sidebar_scrolls_eighty_by_twenty_four():
-    # 11 个页面加 4 个分组标题在 80×24 下超出侧栏高度：滚动后末项仍完整落在侧栏可视区内。
+async def _test_sidebar_fits_eighty_by_twenty_four():
+    # 单行页面条目让 80×24 下的侧栏一次显示全部页面。
     async def body(app, pilot):
         nav = app.query_one("#nav", compat.ListView)
         app.show_page("misc")
@@ -506,17 +486,16 @@ async def _test_sidebar_scrolls_eighty_by_twenty_four():
         return (
             len(nav.children),
             nav.max_scroll_y,
-            nav.scroll_offset.y,
             last.region.y >= nav.region.y and last.region.bottom <= nav.region.bottom,
             _nav_index(app),
         )
 
-    count, max_scroll, scrolled, reached, index = await _with_app(body, size=(80, 24))
-    return count == len(NAV_PLAN) and max_scroll > 0 and scrolled > 0 and reached and index == _page_index("misc")
+    count, max_scroll, reached, index = await _with_app(body, size=(80, 24))
+    return count == len(NAV_PLAN) and max_scroll == 0 and reached and index == _page_index("misc")
 
 
 async def _test_help_overlay_adds_navigation_hint():
-    # ? 浮层补一段各页相同的导航说明，并把本页用途当作说明行给出。
+    # 快捷键浮层同时显示公共导航说明与当前页面用途。
     async def body(app, pilot):
         await pilot.press("question_mark")
         await pilot.pause()
@@ -550,8 +529,8 @@ async def test_tui_navigation(tester: Tester):
     await tester.test(_test_subtitle_names_the_current_instance, "标题栏写明当前实例")
     await tester.test(_test_page_step_keys_walk_the_sidebar, "翻页键逐页走且越界折返")
     await tester.test(_test_sidebar_groups_follow_the_plan, "侧栏按四组归类且页面齐全")
-    await tester.test(_test_page_blurbs_come_from_the_table, "每页一行用途说明取自映射表")
-    await tester.test(_test_sidebar_scrolls_eighty_by_twenty_four, "80 列 24 行下侧栏可滚动浏览")
+    await tester.test(_test_sidebar_items_have_single_label, "侧栏选项只显示页面名称")
+    await tester.test(_test_sidebar_fits_eighty_by_twenty_four, "80 列 24 行下侧栏一次显示全部页面")
     await tester.test(_test_help_overlay_lists_page_keys, "帮助浮层列出本页键位")
     await tester.test(_test_help_overlay_adds_navigation_hint, "帮助浮层补导航说明与本页用途")
     await tester.test(_test_footer_fits_eighty_columns, "80 列下每页页脚不溢出")

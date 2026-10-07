@@ -1,9 +1,4 @@
-"""日志页：进程计数、贴底跟随与关键词过滤。
-
-进程行括号里的数字是「该进程有多少个日志文件」，它是判断日志是否轮转过的依据，因此必须与当前
-过滤无关：选中某个进程后，其余进程的计数不能跟着变，否则看上去像在随机跳动。
-跟随只在视口贴底时滚动，用户上滚即暂停；关键词过滤只作用于显示缓冲，不改 offset，也不打断跟随。
-"""
+"""日志页的文件计数、底部跟随与关键词筛选测试。"""
 
 import time
 
@@ -52,7 +47,7 @@ def _labels(page) -> tuple[str, ...]:
 
 
 async def _test_counts_are_file_counts():
-    # 括号里的数字是该进程的日志文件数，「全部进程」是总数。
+    # 进程计数为日志文件数，“全部进程”显示文件总数。
     async def body(app, page, pilot, source):
         labels = _labels(page)
         await pilot.press("q")
@@ -97,7 +92,7 @@ async def _test_filter_keeps_following_in_that_process():
 
 
 async def _test_rescan_picks_up_new_file():
-    # 重新枚举后计数跟着目录走：新一天的文件出现，计数加一。
+    # 重新枚举目录后，文件计数应包含新增日志。
     async def body(app, page, pilot, source):
         before = _labels(page)
         source.append("Server_2026-09-26.log", "s5")
@@ -116,7 +111,7 @@ async def _test_rescan_picks_up_new_file():
 
 
 async def _test_scroll_back_is_not_yanked_to_end():
-    # 上滚后跟随周期不得把视口拽回底部；上滚即暂停，恢复后重新贴底。
+    # 向上滚动暂停跟随，恢复跟随后滚动到底部。
     async def body(app, page, pilot, source):
         pane = page.query_one("#log-pane", compat.VerticalScroll)
         await pilot.pause()
@@ -143,7 +138,7 @@ async def _test_scroll_back_is_not_yanked_to_end():
 
 
 async def _test_keyword_filter_limits_display_only():
-    # 过滤只改显示：缓冲、offset 与跟随都不动，命中行数进状态栏，Esc 清空后恢复全文。
+    # 筛选仅影响显示，不改变缓冲、offset 或跟随状态；清空后恢复全文。
     async def body(app, page, pilot, source):
         await pilot.press("slash")
         await pilot.pause()
@@ -188,6 +183,37 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
     return {"d", "r", "escape"} <= hidden and {"space", "c", "slash"} <= shown
 
 
+async def _test_action_buttons_fit_after_resize_and_label_changes():
+    async def body(app, page, pilot, source):
+        results = []
+        for width, height in ((80, 24), (60, 20), (50, 24), (120, 40)):
+            await pilot.resize_terminal(width, height)
+            for _ in range(3):
+                page.cycle_debug_preference()
+                page.toggle_pause()
+                await pilot.pause()
+                actions = page.query_one("#actions", compat.ButtonFlow)
+                status = page.query_one("#status", compat.Static)
+                content = page.query_one("#body")
+                results.append(
+                    content.content_region.height >= 5
+                    and content.region.bottom <= actions.region.y
+                    and actions.region.bottom <= status.region.y
+                    and status.region.bottom <= page.region.bottom
+                    and all(
+                        button.region.width > 0
+                        and button.region.x >= actions.content_region.x
+                        and button.region.right <= actions.content_region.right
+                        and button.region.y >= actions.region.y
+                        and button.region.bottom <= actions.region.bottom
+                        for button in actions.query(compat.Button)
+                    )
+                )
+        return all(results)
+
+    return await _with_page(body)
+
+
 @func_case
 async def test_tui_logs(tester: Tester):
     """cli.tui.logs: 进程计数、贴底跟随与关键词过滤测试"""
@@ -199,4 +225,5 @@ async def test_tui_logs(tester: Tester):
     await tester.test(_test_scroll_back_is_not_yanked_to_end, "上滚后不被跟随拽回底部，上滚即暂停")
     await tester.test(_test_keyword_filter_limits_display_only, "关键词过滤只改显示并报出命中行数")
     await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
+    await tester.test(_test_action_buttons_fit_after_resize_and_label_changes, "缩放与切换日志状态后全部按钮可见")
     return tester

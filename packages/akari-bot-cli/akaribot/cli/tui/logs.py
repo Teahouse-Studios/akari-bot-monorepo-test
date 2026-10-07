@@ -1,11 +1,3 @@
-"""Logs 页：实时跟随实例 ``logs/`` 下的日志，并按进程过滤。
-
-数据流：界面只读 :class:`LogSource`；默认实现 :class:`FileLogSource` 经 :mod:`akaribot.cli.logs`
-归组进程与文件（文件名约定与增量读取规则见该模块），读取一律带 offset 进行，只取新增字节。
-两条不变式：只显示以换行结尾的完整行；offset 不越过未写完的半行，故重复读取不会丢行、
-也不会重复显示。显示缓冲是定长环形缓冲，仅在确有新行时重绘。
-"""
-
 from __future__ import annotations
 
 import time
@@ -31,7 +23,7 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import context
 
 ALL_PROCESSES = "all"
-"""进程过滤里的「不过滤」项；取值只作内部标识，展示文案在用到时按当前语言取。"""
+"""全部进程的内部标识；显示文案按当前语言解析。"""
 
 DEFAULT_FOLLOW_SECONDS = 1.0
 """默认跟随周期（秒）。"""
@@ -40,7 +32,7 @@ DEFAULT_RESCAN_SECONDS = 15.0
 """重新枚举日志目录的周期（秒），用于跨日轮转时切换文件。"""
 
 DEBUG_MODES = ("auto", "info", "debug")
-# debug 偏好是对端取值，界面按当前语言取标签，故这里只存文案键。
+# 日志模式须按当前语言显示，因此常量只保存文案键。
 _DEBUG_MODE_KEYS = {
     "auto": "cli.tui.logs.debug_auto",
     "info": "cli.tui.logs.debug_info",
@@ -63,7 +55,7 @@ class LogSource(Protocol):
     """日志数据源接口；测试注入替身，生产直接读文件系统。"""
 
     def list_processes(self) -> Sequence[str]:
-        """返回日志目录里出现过的进程名。"""
+        """返回日志目录中出现过的进程名。"""
 
     def list_files(self, process: str | None = None) -> Sequence[LogFileInfo]:
         """按进程过滤返回日志文件，最新的排在前面。"""
@@ -79,7 +71,7 @@ class StaticLogSource:
     """替身数据源：按「文件名 → 行列表」登记内容，``offset`` 即行号游标。
 
     :param files: 文件名到初始行列表的映射，文件名须符合 ``<进程>[_debug]_<日期>.log``。
-    :param mtimes: 文件名到最后修改时间的映射，缺省按登记顺序递增，用于断言「取最新文件」。
+    :param mtimes: 文件名到最后修改时间的映射，默认按登记顺序递增，用于断言「取最新文件」。
     """
 
     def __init__(
@@ -103,7 +95,6 @@ class StaticLogSource:
         self._lines[name] = list(lines)
 
     def list_processes(self) -> Sequence[str]:
-        """见 :meth:`LogSource.list_processes`。"""
         self.calls["processes"] += 1
         names = []
         for name in self._lines:
@@ -113,7 +104,6 @@ class StaticLogSource:
         return tuple(sorted(names))
 
     def list_files(self, process: str | None = None) -> Sequence[LogFileInfo]:
-        """见 :meth:`LogSource.list_files`。"""
         self.calls["files"] += 1
         infos: list[LogFileInfo] = []
         for index, (name, lines) in enumerate(self._lines.items()):
@@ -135,7 +125,6 @@ class StaticLogSource:
         return tuple(sorted(infos, key=lambda info: (info.modified, info.name), reverse=True))
 
     def read_since(self, path: Path, offset: int, *, max_bytes: int = READ_CHUNK_BYTES) -> LogChunk:
-        """见 :meth:`LogSource.read_since`；``offset`` 按行号解释。"""
         del max_bytes
         name = Path(path).name
         self.calls["read"] += 1
@@ -148,7 +137,6 @@ class StaticLogSource:
         return LogChunk(lines=tuple(lines[offset:]), offset=len(lines), path=name)
 
     def read_tail(self, path: Path, *, max_bytes: int = TAIL_CHUNK_BYTES) -> LogChunk:
-        """见 :meth:`LogSource.read_tail`；``max_bytes`` 在替身里解释为行数上限。"""
         name = Path(path).name
         self.calls["tail"] += 1
         lines = self._lines.get(name, [])
@@ -158,11 +146,10 @@ class StaticLogSource:
 
 
 class FileLogSource:
-    """默认数据源：直接读实例 ``logs/`` 目录，不起子进程。
+    """默认数据源：直接读实例 ``logs/`` 目录，不启动子进程。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param logs_dir: 直接指定日志目录；给定后不再解析实例根。
-    :param chunk_bytes: 单次增量读取的字节上限。
     """
 
     def __init__(self, *, root: Path | str | None = None, logs_dir: Path | str | None = None) -> None:
@@ -184,14 +171,12 @@ class FileLogSource:
         return root / "logs"
 
     def list_processes(self) -> Sequence[str]:
-        """见 :meth:`LogSource.list_processes`。"""
         names: set[str] = set()
         for info in self.list_files(None):
             names.add(info.process)
         return tuple(sorted(names))
 
     def list_files(self, process: str | None = None) -> Sequence[LogFileInfo]:
-        """见 :meth:`LogSource.list_files`；目录不存在时抛出 :class:`LogSourceError`。"""
         directory = self.logs_path()
         try:
             return list_log_files(directory, process)
@@ -199,14 +184,12 @@ class FileLogSource:
             raise LogSourceError(self._directory_error(error)) from error
 
     def read_since(self, path: Path, offset: int, *, max_bytes: int = READ_CHUNK_BYTES) -> LogChunk:
-        """见 :meth:`LogSource.read_since`。"""
         try:
             return read_since(path, offset, max_bytes=max_bytes)
         except LogReadError as error:
             raise LogSourceError(self._file_error(error)) from error
 
     def read_tail(self, path: Path, *, max_bytes: int = TAIL_CHUNK_BYTES) -> LogChunk:
-        """见 :meth:`LogSource.read_tail`。"""
         try:
             return read_tail(path, max_bytes=max_bytes)
         except LogReadError as error:
@@ -220,15 +203,15 @@ class FileLogSource:
 
     @staticmethod
     def _file_error(error: LogReadError) -> str:
-        # stat 与 read 分开：前者多为文件已被轮转掉，后者是读取本身失败。
+        # 区分文件状态查询与读取失败，以识别轮转导致的文件缺失。
         key = "cli.tui.logs.src_file_unreadable" if error.reason == "stat" else "cli.tui.logs.src_file_read_failed"
         return i18n.t(key, path=error.path, error=error.error)
 
 
 class LogsPage(compat.Vertical):
-    """Logs 页控件。
+    """日志页控件。
 
-    :param source: 数据源，缺省为 :class:`FileLogSource`。
+    :param source: 数据源，默认为 :class:`FileLogSource`。
     :param follow_interval: 跟随周期（秒）；``None`` 或非正数表示不自动跟随，只手动刷新。
     :param rescan_seconds: 重新枚举日志目录的间隔（秒），用于跨日轮转时切换文件。
     :param buffer_lines: 显示缓冲的行数上限，超出后丢弃最早的行。
@@ -278,7 +261,7 @@ class LogsPage(compat.Vertical):
         width: 1fr;
     }
     LogsPage #actions {
-        height: 3;
+        height: auto;
         padding: 0 0 0 1;
     }
     LogsPage #status {
@@ -294,7 +277,7 @@ class LogsPage(compat.Vertical):
         ("space", "toggle_pause", i18n.t("cli.tui.logs.bind_toggle_pause")),
         ("c", "clear", i18n.t("cli.tui.logs.bind_clear")),
         ("slash", "focus_filter", i18n.t("cli.tui.logs.bind_filter")),
-        # debug、重新扫描与清空过滤都有按钮或输入框提示，页脚在 80 列下装不下十几条键位。
+        # 低频操作通过按钮或输入提示提供，避免页脚超出 80 列。
         ("d", "cycle_debug", i18n.t("cli.tui.logs.bind_cycle_debug"), False),
         ("r", "rescan", i18n.t("cli.tui.logs.bind_rescan"), False),
         ("escape", "clear_filter", i18n.t("cli.tui.logs.bind_clear_filter"), False),
@@ -337,7 +320,6 @@ class LogsPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：上方关键词过滤，左侧进程过滤，右侧日志正文。"""
         yield compat.Static(i18n.t("cli.tui.logs.target_none"), id="target", markup=False)
         with compat.Horizontal(id="filter-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.logs.filter_placeholder"), id="filter")
@@ -345,15 +327,16 @@ class LogsPage(compat.Vertical):
             yield compat.ListView(id="process-list")
             with compat.VerticalScroll(id="log-pane"):
                 yield compat.Static(i18n.t("cli.tui.logs.reading"), id="log-view", markup=False)
-        with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.logs.action_pause"), id="pause")
-            yield compat.Button(i18n.t("cli.tui.logs.action_clear"), id="clear")
-            yield compat.Button(i18n.t("cli.tui.logs.debug_button", label=self.debug_label), id="debug")
-            yield compat.Button(i18n.t("cli.tui.logs.action_rescan"), id="refresh")
+        yield compat.ButtonFlow(
+            ("pause", i18n.t("cli.tui.logs.action_pause")),
+            ("clear", i18n.t("cli.tui.logs.action_clear")),
+            ("debug", i18n.t("cli.tui.logs.debug_button", label=self.debug_label)),
+            ("refresh", i18n.t("cli.tui.logs.action_rescan")),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；枚举日志与周期跟随推迟到首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -366,10 +349,8 @@ class LogsPage(compat.Vertical):
             self.set_interval(self.follow_interval, self._tick)
 
     def focus_primary(self) -> None:
-        """把焦点交给进程列表，供上层在页面切换时调用。"""
+        """聚焦进程列表，供上层在页面切换时调用。"""
         compat.focus_first(self, "#process-list")
-
-    # region 状态读取（供测试与上层使用）
 
     @property
     def processes(self) -> tuple[str, ...]:
@@ -383,11 +364,7 @@ class LogsPage(compat.Vertical):
 
     @property
     def visible_files(self) -> tuple[LogFileInfo, ...]:
-        """返回当前过滤下可见的文件。
-
-        枚举结果始终保留完整清单，过滤在读取时进行：进程行的文件计数若跟着过滤结果算，选中一个
-        进程后其余进程的计数会全变成 0，看上去像在随机跳动。
-        """
+        """返回当前过滤条件下的文件，保留完整清单用于统计。"""
         if self._selected is None:
             return self._files
         return tuple(info for info in self._files if info.process == self._selected)
@@ -408,10 +385,8 @@ class LogsPage(compat.Vertical):
 
     @property
     def read_offset(self) -> int:
-        """返回当前读取偏移；文件数据源里单位为字节。
-
-        命名避开 ``Widget.offset``（控件在父容器里的位置），以免覆盖基类属性。
-        """
+        """返回当前读取偏移；文件数据源以字节为单位。"""
+        # Widget.offset 表示控件位置，不能用于日志游标。
         return self._offset
 
     @property
@@ -464,10 +439,6 @@ class LogsPage(compat.Vertical):
     def status_text(self) -> str:
         """返回状态栏当前文本。"""
         return self._status_rendered
-
-    # endregion
-
-    # region 枚举与跟随
 
     def refresh_files(self) -> None:
         """重新枚举进程与文件，必要时切换跟随目标并载入目标尾部。"""
@@ -586,7 +557,7 @@ class LogsPage(compat.Vertical):
         self.follow_once()
 
     def _pause_on_scroll_back(self) -> bool:
-        # 视口离开底部即用户上滚：跟随暂停，避免下一个周期把视口拽回底部。
+        # 用户向上滚动时暂停跟随，保留当前阅读位置。
         if self._paused:
             return False
         pane = self._log_pane()
@@ -595,10 +566,6 @@ class LogsPage(compat.Vertical):
         self.pause()
         return True
 
-    # endregion
-
-    # region 交互
-
     def pause(self) -> None:
         """暂停跟随；offset 保持不变，恢复后从暂停位置继续。"""
         self._paused = True
@@ -606,7 +573,7 @@ class LogsPage(compat.Vertical):
         self._set_status(self._status_line())
 
     def resume(self) -> None:
-        """恢复跟随，补读暂停期间新增的行并回到缓冲末尾。"""
+        """恢复跟随，补读暂停期间新增的行并返回缓冲末尾。"""
         self._paused = False
         self._sync_actions()
         self.follow_once()
@@ -621,7 +588,7 @@ class LogsPage(compat.Vertical):
             self.pause()
 
     def clear_buffer(self) -> None:
-        """清屏：只清显示缓冲，不改 offset，因此不会重读历史日志。"""
+        """清空显示缓冲，保留读取偏移。"""
         self._buffer.clear()
         self._render_log()
         self._pin_to_end()
@@ -632,11 +599,11 @@ class LogsPage(compat.Vertical):
         self.query_one("#filter", compat.Input).value = value
 
     def focus_filter(self) -> None:
-        """把焦点移到关键词过滤框。"""
+        """聚焦关键词过滤框。"""
         self.query_one("#filter", compat.Input).focus()
 
     def clear_filter(self) -> None:
-        """清空关键词过滤；已为空时把焦点交回进程列表。"""
+        """清空关键词过滤；已为空时聚焦进程列表。"""
         field = self.query_one("#filter", compat.Input)
         if field.value:
             field.value = ""
@@ -649,6 +616,7 @@ class LogsPage(compat.Vertical):
         self._prefer_debug = DEBUG_MODES[(index + 1) % len(DEBUG_MODES)]
         button = self.query_one("#debug", compat.Button)
         button.label = i18n.t("cli.tui.logs.debug_button", label=self.debug_label)
+        self.query_one("#actions", compat.ButtonFlow).relayout()
         self.refresh_files()
 
     @compat.on(compat.ListView.Highlighted)
@@ -677,32 +645,22 @@ class LogsPage(compat.Vertical):
             self.refresh_files()
 
     def action_toggle_pause(self) -> None:
-        """键位动作：暂停或恢复跟随。"""
         self.toggle_pause()
 
     def action_clear(self) -> None:
-        """键位动作：清屏。"""
         self.clear_buffer()
 
     def action_cycle_debug(self) -> None:
-        """键位动作：切换 debug 偏好。"""
         self.cycle_debug_preference()
 
     def action_focus_filter(self) -> None:
-        """键位动作：把焦点移到关键词过滤框。"""
         self.focus_filter()
 
     def action_clear_filter(self) -> None:
-        """键位动作：清空关键词过滤。"""
         self.clear_filter()
 
     def action_rescan(self) -> None:
-        """键位动作：重新枚举日志目录。"""
         self.refresh_files()
-
-    # endregion
-
-    # region 渲染
 
     def _process_at(self, index: int | None) -> str | None:
         if index is None or index <= 0 or index > len(self._processes):
@@ -720,7 +678,7 @@ class LogsPage(compat.Vertical):
         list_view.index = min(index, max(len(labels) - 1, 0))
 
     def _process_label(self, process: str | None) -> str:
-        # 计数始终针对完整清单：它表示该进程（或全部进程）有多少个日志文件，与当前过滤无关。
+        # 文件计数基于完整清单，避免其他进程的计数随过滤条件变化。
         count = sum(1 for info in self._files if process is None or info.process == process)
         return i18n.t("cli.tui.logs.process_item", name=_filter_name(process), count=count)
 
@@ -783,8 +741,7 @@ class LogsPage(compat.Vertical):
 
     def _pin_to_end(self) -> None:
         self._scroll_to_end()
-        # 本帧的 max_scroll_y 还停在追加内容之前，布局完成后再贴一次底，下一个周期才不会
-        # 把「刚追加完、布局尚未跟上」误判成用户上滚。
+        # 新增内容的滚动范围在布局后更新，须再次定位末尾，避免误判为用户向上滚动。
         if self.is_mounted:
             self.call_after_refresh(self._scroll_to_end)
 
@@ -792,8 +749,7 @@ class LogsPage(compat.Vertical):
         return i18n.t("cli.tui.logs.paused" if self._paused else "cli.tui.logs.following")
 
     def _status_line(self, *, reset: bool = False) -> str:
-        # 顺序：跟随状态、恢复提示、过滤命中、文件名、offset、缓冲、丢弃行数、异常提示。
-        # 恢复提示与命中行数排在前列：状态栏按宽度裁剪，跟随周期里用户最需要先看到这两项。
+        # 状态栏可能截断，优先显示恢复提示与过滤结果。
         followed = self._followed
         parts = [self._paused_text()]
         if self._paused:
@@ -827,6 +783,7 @@ class LogsPage(compat.Vertical):
     def _sync_actions(self) -> None:
         key = "cli.tui.logs.action_resume" if self._paused else "cli.tui.logs.action_pause"
         self.query_one("#pause", compat.Button).label = i18n.t(key)
+        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
         clipped = self._clip(text)
@@ -834,15 +791,12 @@ class LogsPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(clipped))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存内容重排，不重新读文件。"""
         self._render_target()
         self._render_log()
-        # 视口高度变了，max_scroll_y 随之变化；跟随中要重新贴底，暂停时保留用户的位置。
+        # 视口高度改变后，跟随状态须重新定位末尾；暂停时保留阅读位置。
         if not self._paused:
             self._pin_to_end()
         self._set_status(self._status_line())
-
-    # endregion
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

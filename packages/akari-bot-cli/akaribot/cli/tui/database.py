@@ -1,9 +1,7 @@
-"""数据库页：浏览表与数据项，改动经二次确认后写回。
+"""数据库页：浏览已注册的表和数据项，通过模态框确认写入操作。
 
-数据与写入一律经 ``akaribot db`` 子命令（该命令再经 core 的 ``data`` 入口读写），界面不直接连库：
-表名与列名只认 ORM 注册过的模型。宽终端下左栏是表清单与搜索框，右上数据项，右下编辑区；内容区
-不足 :data:`SIDE_BY_SIDE_MIN_WIDTH` 列时三栏上下两行排布。``s``、``i``、``d`` 第一次按只在状态栏
-问一次，第二次按同一个键才真正写入。
+数据读取与写入均通过 ``akaribot db`` 子命令执行。
+内容区不足 :data:`SIDE_BY_SIDE_MIN_WIDTH` 列时，表清单、数据项与编辑区分为两行显示。
 """
 
 from __future__ import annotations
@@ -23,21 +21,21 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 
-# 一页读取的数据项条数：线上表可能很大，界面一次只取一页，翻页与条数都由 core 侧收口。
+# 仅加载当前页，避免一次读取大量数据；分页与总数由 core 计算。
 PAGE_LIMIT = 50
 # 三栏并排所需的最小内容宽度：表清单 26 列、数据项 32 列（四个翻页按钮的自然宽度）、编辑区 34 列。
-# 内容区窄于此值时改成上下两行，否则固定宽度会把数据项列挤到只剩边框。
+# 窄屏采用两行布局，为数据项和编辑区保留可读宽度。
 SIDE_BY_SIDE_MIN_WIDTH = 92
-# 四个翻页按钮的控件 id，状态同步与按键处理共用一份。
+
 PAGER_BUTTONS = ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
-# 条件里的运算符，从长到短匹配，避免 != 被当成 =。
+# 运算符按长度降序匹配，避免将 != 识别为 =。
 FILTER_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
-# 条件必须写成「列名 + 运算符 + 值」；只看「含运算符」会把搜索词里的 ~、= 之类误当成条件。
+# 筛选条件必须包含列名，避免将搜索词中的运算符识别为条件。
 CONDITION_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\s*(?:!=|>=|<=|!~|~|\^|\$|=|>|<)")
 
 
 def is_condition(text: str) -> bool:
-    """判断输入是筛选条件还是搜索词：写成列名加运算符的算条件，其余一律按全表搜索。
+    """判断输入是否为列名与运算符组成的筛选条件，其余输入作为全表搜索词。
 
     :param text: 用户输入的文本。
     :return: 是条件时为 ``True``。
@@ -68,7 +66,7 @@ class ColumnInfo:
 
     @property
     def label(self) -> str:
-        """返回编辑区里的字段名标签，带上类型。"""
+        """返回包含类型的字段名标签。"""
         if not self.type:
             return self.name
         return i18n.t("cli.tui.database.field_label", column=self.name, kind=self.type)
@@ -81,7 +79,7 @@ class TableInfo:
     :param name: 表标识，如 ``module_status``。
     :param model: 模型类名。
     :param rows: 表内数据项条数。
-    :param package: 声明该表的已装分发包；取不到时为空串。
+    :param package: 声明该表的已安装分发包；无法获取时为空串。
     :param columns: 列信息，顺序同模型声明。
     """
 
@@ -101,7 +99,7 @@ class TableInfo:
 
     @property
     def pk_name(self) -> str:
-        """返回主键列名，取不到时返回空串。"""
+        """返回主键列名，无法获取时返回空串。"""
         column = self.pk
         return column.name if column is not None else ""
 
@@ -112,11 +110,11 @@ class TableInfo:
 
 @dataclass(frozen=True)
 class RowQuery:
-    """一次读取数据项的条件与排序。
+    """数据项查询的筛选条件与排序。
 
     :param filters: 筛选条件，形如 ``<列><运算符><值>``；多条之间是 AND。
     :param search: 全表搜索词，在所有文本列上做包含匹配。
-    :param order_by: 排序列，可带 ``:asc`` / ``:desc``；空串表示用 core 的缺省顺序。
+    :param order_by: 排序列，可带 ``:asc`` / ``:desc``；空串表示用 core 的默认顺序。
     """
 
     filters: tuple[str, ...] = ()
@@ -217,7 +215,7 @@ class WritePlan:
     values: tuple[tuple[str, str], ...] = ()
 
     def summary(self) -> str:
-        """返回状态栏用的一行说明，列出将改动的列与新旧值。"""
+        """返回状态栏用的一行说明，列出将更改的列与新旧值。"""
         if self.kind == "delete":
             return i18n.t("cli.tui.database.confirm_delete", table=self.table, pk=self.key)
         if self.kind == "insert":
@@ -232,7 +230,7 @@ class WritePlan:
         return i18n.t("cli.tui.database.confirm_set", table=self.table, pk=self.key, changes=changes)
 
 
-# 替身数据源的筛选口径：与 core 的运算符一致，只作用于 JSON 化的取值。 真源在 core 侧（``entrypoints/data.py``）；这里实现一份是为了让用例能断言「条件确实收窄了 列表」，而不是只断言请求参数。
+# 替身数据源使用与 core 一致的筛选运算符，使测试能够验证筛选后的记录。
 def _matches(row: Mapping[str, Any], query: RowQuery) -> bool:
     text = _text
     for condition in query.filters:
@@ -283,7 +281,7 @@ def _split_filter(condition: str) -> tuple[str, str, str]:
 
 
 def _compare(current: str, wanted: str) -> int:
-    # 能当数字比就按数字比，否则按文本比：替身只服务于断言，口径够用即可。
+    # 数值优先按数值比较，其他值按文本比较。
     try:
         left, right = float(current), float(wanted)
     except ValueError:
@@ -302,7 +300,7 @@ def _text(value: Any) -> str:
 
 
 def normalize_columns(payload: Any) -> tuple[ColumnInfo, ...]:
-    """把 ``db tables --json`` 里的列数组归一化为列信息。
+    """把 ``db tables --json`` 中的列数组归一化为列信息。
 
     :param payload: ``columns`` 字段的内容。
     :return: 列信息元组，无法识别的条目跳过。
@@ -384,10 +382,10 @@ class DatabaseSourceError(RuntimeError):
 
 @runtime_checkable
 class DatabaseSource(Protocol):
-    """数据库数据源接口；测试注入替身，生产走子进程。"""
+    """数据库数据源接口；测试注入替身，实际运行通过子进程访问。"""
 
     def tables(self) -> Sequence[TableInfo]:
-        """返回实例数据库里已注册模型的表。"""
+        """返回实例数据库中已注册模型的表。"""
 
     def rows(
         self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
@@ -395,7 +393,7 @@ class DatabaseSource(Protocol):
         """返回一张表的一页数据项；``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。"""
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
-        """按主键改写一行的一个或多个列；多列在同一次调用里下发。"""
+        """按主键更新数据项的指定列；多列更改通过一次调用提交。"""
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
         """新建一条数据项。"""
@@ -408,10 +406,10 @@ class StaticDatabaseSource:
     """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
 
     :param tables: 表清单。
-    :param pages: 表名到数据项的映射；缺省时每张表都返回空页。
-    :param write_result: 写入返回值；缺省为成功。
-    :param delete_result: 删除返回值；缺省为成功。
-    :param insert_result: 新建返回值；缺省为成功。
+    :param pages: 表名到数据项的映射；未指定时返回空页。
+    :param write_result: 写入返回值；默认为成功。
+    :param delete_result: 删除返回值；默认为成功。
+    :param insert_result: 新建返回值；默认为成功。
     """
 
     def __init__(
@@ -443,7 +441,7 @@ class StaticDatabaseSource:
     def rows(
         self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
     ) -> RowPage:
-        """见 :meth:`DatabaseSource.rows`：先按条件过滤，再按偏移切片，和 core 侧口径一致。"""
+        """返回按条件筛选并分页的数据项，筛选规则与 core 一致。"""
         self.calls["rows"] += 1
         self.reads.append((table, limit, offset))
         self.queries.append((table, query or RowQuery(), count))
@@ -478,7 +476,7 @@ class StaticDatabaseSource:
 class SubprocessDatabaseSource:
     """默认数据源：一律经 ``akaribot db`` 子进程，CLI 进程内不 import core。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param timeout: 单个子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
@@ -490,7 +488,7 @@ class SubprocessDatabaseSource:
         timeout: float = QUERY_TIMEOUT_SECONDS,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 每次读取时解析实例根，确保切换实例后使用当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"tables": 0, "rows": 0, "set": 0, "insert": 0, "delete": 0}
@@ -540,12 +538,12 @@ class SubprocessDatabaseSource:
         return self._write(*args)
 
     def delete_row(self, table: str, key: str) -> WriteResult:
-        """见 :meth:`DatabaseSource.delete_row`；界面自己问过，故代为回答 CLI 的确认。"""
+        """删除数据项，使用 ``--yes`` 传递界面的确认结果。"""
         self.calls["delete"] += 1
         return self._write("delete", table, "--key", key, "--yes")
 
     def _write(self, *args: str) -> WriteResult:
-        # 解析失败与退出码非零都如实回报：状态栏要能区分「core 说不行」与「读不懂 core 的输出」。
+        # 分别报告执行失败和输出解析失败，便于定位错误。
         try:
             payload = self._invoke(*args)
         except DatabaseSourceError as error:
@@ -590,7 +588,7 @@ class SubprocessDatabaseSource:
                 )
             )
         if payload is None:
-            # 解析失败要把原始输出带上：调用方据此判断是 CLI 坏了还是 core 输出变了。
+            # 解析失败时保留原始输出，供调用方诊断。
             raise DatabaseSourceError(
                 i18n.t("cli.tui.common.error_separator").join(
                     [i18n.t("cli.tui.database.err_bad_json", cmd=" ".join(args)), _tail(stdout)]
@@ -613,12 +611,12 @@ def _tail(text: str | None, limit: int = STATUS_TAIL_LIMIT) -> str:
 
 
 def _static_text(widget: compat.Static) -> str:
-    # 只读文本一律经 render() 取：``Static.renderable`` 在 Textual 8.x 已不再是公开属性。
+    # 通过公开的 render() 读取文本，避免依赖 Textual 的内部属性。
     return str(widget.render())
 
 
 class EditorField(compat.Vertical):
-    """编辑区里的一列：字段名标签与非主键输入框。
+    """编辑区中的一列：字段名标签与非主键输入框。
 
     :param column: 列信息。
     """
@@ -636,7 +634,7 @@ class EditorField(compat.Vertical):
 
     @property
     def value(self) -> str:
-        """返回输入框里的当前文本。"""
+        """返回输入框中的当前文本。"""
         return self.query_one(compat.Input).value
 
     def set_value(self, text: str) -> None:
@@ -647,7 +645,7 @@ class EditorField(compat.Vertical):
 class DatabasePage(compat.Vertical):
     """数据库页控件。
 
-    :param source: 数据源，缺省为 :class:`SubprocessDatabaseSource`。
+    :param source: 数据源，默认为 :class:`SubprocessDatabaseSource`。
     :param cache_ttl: 表清单缓存有效期秒数；重新读取与写入成功后立即失效。
     """
 
@@ -801,7 +799,7 @@ class DatabasePage(compat.Vertical):
         height: 1;
         border: none;
     }
-    /* 窄屏下每行只有半屏宽，四个按钮挤在一行会裁掉标签，故只留高频的翻页两个，跳页用 g / G。 */
+    /* 窄屏保留前后翻页按钮；首末页通过 g / G 跳转。 */
     DatabasePage #database-body.narrow #db-first-page, DatabasePage #database-body.narrow #db-last-page {
         display: none;
     }
@@ -809,15 +807,14 @@ class DatabasePage(compat.Vertical):
 
     can_focus = True
 
-    # 破坏性动作不用单字母：删除走 ``ctrl+d``。分页与筛选的低频键位不进页脚——80 列下装不下，
-    # 页面上的翻页按钮与条件行已经承担了同样的提示。
+    # 删除使用组合键；分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.database.bind_refresh")),
         ("s", "save", i18n.t("cli.tui.database.bind_save")),
-        ("i", "insert", i18n.t("cli.tui.database.bind_insert")),
-        ("ctrl+d", "delete", i18n.t("cli.tui.database.bind_delete")),
+        ("i", "insert", i18n.t("cli.tui.database.bind_insert"), False),
+        ("ctrl+d", "delete", i18n.t("cli.tui.database.bind_delete"), False),
         ("slash", "focus_search", i18n.t("cli.tui.database.bind_search")),
-        ("f", "add_filter", i18n.t("cli.tui.database.bind_filter")),
+        ("f", "add_filter", i18n.t("cli.tui.database.bind_filter"), False),
         ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel"), False),
         ("o", "set_order", i18n.t("cli.tui.database.bind_order"), False),
         ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters"), False),
@@ -902,10 +899,10 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+        """挂载后只装配控件；读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
         self._sync_layout(self.size.width)
-        # 取数前也先把翻页按钮按「还没有表」的状态摆好，免得首帧露出可点却是空的按钮。
+        # 加载前禁用不可用的分页操作，避免首帧出现无效按钮。
         self._sync_pager()
 
     def _sync_layout(self, width: int) -> None:
@@ -923,11 +920,11 @@ class DatabasePage(compat.Vertical):
         self.refresh_tables(force=True)
 
     def focus_primary(self) -> None:
-        """把焦点交给表清单；列表为空时退到页面容器，页级键位仍然生效。"""
+        """聚焦表清单；列表为空时聚焦页面容器，保持页面键位可用。"""
         compat.focus_first(self, "#table-list")
 
     def _adopt_focus(self) -> None:
-        # 表清单由后台任务填充：首帧时它还是空的，焦点只能落在页面容器上，数据到位后再补交给列表。
+        # 列表加载后仅在焦点仍位于页面容器时恢复列表焦点，避免中断用户输入。
         if self.display and getattr(self.app, "focused", None) is self:
             compat.focus_first(self, "#table-list")
 
@@ -970,10 +967,8 @@ class DatabasePage(compat.Vertical):
 
     @property
     def row_query(self) -> RowQuery:
-        """返回当前生效的筛选条件与搜索词。
-
-        不能叫 ``query``：``Widget.query()`` 是 Textual 的公开方法，覆盖它会让页面里的控件查询全部失效。
-        """
+        """返回当前生效的筛选条件与搜索词。"""
+        # 名称需避免覆盖 Textual 的 Widget.query()。
         return self._row_query
 
     @property
@@ -1010,7 +1005,7 @@ class DatabasePage(compat.Vertical):
         return self._row_texts
 
     def editor(self) -> tuple[EditorField, ...]:
-        """返回编辑区里的字段控件。"""
+        """返回编辑区中的字段控件。"""
         return tuple(self.query(EditorField))
 
     def editor_values(self) -> dict[str, str]:
@@ -1055,7 +1050,7 @@ class DatabasePage(compat.Vertical):
     def refresh_tables(self, *, force: bool = False) -> None:
         """读取表清单。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
+        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
         """
         if not force and self._tables and self.cache_age() < self.cache_ttl:
             self._render_tables()
@@ -1115,7 +1110,7 @@ class DatabasePage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.database.status_no_tables"))
             return False
         if table != self._selected:
-            # 条件里的列名只对原表成立，换表即清空，免得拿着旧条件去撞「没有这一列」。
+            # 筛选列属于当前表，切换表时清空条件，避免引用不存在的列。
             self._row_query = RowQuery()
         self._selected = table
         info = self.selected_info
@@ -1133,14 +1128,14 @@ class DatabasePage(compat.Vertical):
     async def reload_rows(self, *, reset_offset: bool = False, count: bool | None = None) -> bool:
         """读取当前表的数据项并重绘列表。
 
-        :param reset_offset: 为 ``True`` 时回到第一页。
+        :param reset_offset: 为 ``True`` 时恢复为第一页。
         :param count: 是否重算总条数；``None`` 表示按需决定（换页不数，其余都数）。
         :return: 是否成功。
         """
         if self._selected is None:
             return False
         offset = 0 if reset_offset else self._offset
-        # 条件变化或重载时重新数总数；纯翻页沿用上次的条数，省掉大表上的一次全表扫描。
+        # 翻页复用记录总数，避免对大表重复执行全表统计。
         if count is None:
             count = reset_offset or self._page.total is None
         try:
@@ -1152,7 +1147,7 @@ class DatabasePage(compat.Vertical):
                 query=self._row_query,
                 count=count,
             )
-        except Exception as error:  # noqa: BLE001 - 取数失败只影响本页展示
+        except Exception as error:  # noqa: BLE001 - 读取数据失败只影响本页展示
             self.last_error = f"{type(error).__name__}: {error}"
             await self._clear_rows(i18n.t("cli.tui.database.rows_load_failed", error=error))
             self._set_status(
@@ -1162,10 +1157,10 @@ class DatabasePage(compat.Vertical):
             )
             return False
         if page.total is None:
-            # 没数总数时沿用上次的值：页码与末页跳转都靠它。
+            # 未重新统计时保留总数，用于页码和末页定位。
             page = replace(page, total=self._page.total)
         self._page = page
-        # 写入或翻页后偏移可能落到末页之外（总数变小），这里夹回末页，避免停在空白页。
+        # 记录减少可能使偏移超出末页，修正偏移以避免空白页。
         if page.rows_total and offset > page.last_offset:
             self._offset = page.last_offset
             return await self.reload_rows()
@@ -1221,13 +1216,12 @@ class DatabasePage(compat.Vertical):
         self._sync_editor()
 
     def _sync_editor(self) -> None:
-        # 编辑区只读缓存里的数据项：渲染路径不得起子进程。
+        # 编辑区只读缓存中的数据项：渲染路径不得起子进程。
         info = self.selected_info
         if info is None:
             return
         if self._insert_mode:
-            # 新建时主键可填：自增主键留空由数据库生成，非自增主键（如 module_status.module_name）
-            # 必须由用户给出，只读展示会让这类表根本建不了数据项。
+            # 新建时允许输入主键，以支持 module_status.module_name 等非自增主键。
             self._row_key = ""
             self._original = {}
             for field_ in self.editor():
@@ -1263,7 +1257,6 @@ class DatabasePage(compat.Vertical):
             return
         list_view = self.query_one("#table-list", compat.ListView)
         width = self._list_width(list_view)
-        # 行文本由表名与行数直接拼出：这两项都是数据，交给模板插值反而让列表读不出表名。
         rows = tuple(
             compat.fit_cells(f"{table.name}（{table.rows if table.rows is not None else '-'}）", width)
             for table in self.visible_tables
@@ -1325,11 +1318,11 @@ class DatabasePage(compat.Vertical):
         return self._row_query.order_by or i18n.t("cli.tui.database.order_default", column=self._default_order_label())
 
     def _sync_pager(self) -> None:
-        # 翻页按钮按当前页位置禁用：到头了就没有可点的下一页，避免点出一个空页。
+        # 首末页禁用对应的翻页操作，避免进入空白页。
         page = self._page
         first = page.offset <= 0
         last = page.offset >= page.last_offset
-        # 页面已卸载时后台取数仍可能落地，此时没有可写的按钮。
+        # 后台读取可能在页面卸载后完成，此时跳过控件更新。
         if not compat.mounted(self):
             return
         buttons = {name: self.query_one(f"#{name}", compat.Button) for name in PAGER_BUTTONS}
@@ -1381,7 +1374,7 @@ class DatabasePage(compat.Vertical):
         if self._row_query.is_empty():
             self._set_status(i18n.t("cli.tui.database.filter_none"))
             return
-        # 排序不是条件，清空条件时留着它。
+        # 清空筛选条件不影响排序。
         self._row_query = RowQuery(order_by=self._row_query.order_by)
         self._set_status(i18n.t("cli.tui.database.status_filters_cleared"))
         self.refresh_rows(reset_offset=True)
@@ -1405,7 +1398,7 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_order_entered(self, text: str | None) -> None:
-        """输入框回调：设定排序；空输入回到缺省（主键倒序）。
+        """输入框回调：设定排序；空输入恢复为默认（主键倒序）。
 
         :param text: 用户输入的排序方式；取消时为 ``None``。
         """
@@ -1426,9 +1419,9 @@ class DatabasePage(compat.Vertical):
         return f"-{info.pk_name}" if info is not None and info.pk_name else "-"
 
     def refresh_rows(self, *, reset_offset: bool = False) -> None:
-        """按当前条件重新读取数据项。
+        """按当前条件重新加载数据项。
 
-        :param reset_offset: 为 ``True`` 时回到第一页。
+        :param reset_offset: 为 ``True`` 时恢复为第一页。
         """
         self.run_worker(self.reload_rows(reset_offset=reset_offset), group="database-rows", exclusive=True)
 
@@ -1494,7 +1487,7 @@ class DatabasePage(compat.Vertical):
         self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时切换布局并按缓存重排，不重新取数。"""
+        """终端尺寸变化时切换布局并按缓存重排，不重新读取数据。"""
         self._sync_layout(event.size.width)
         if self._tables:
             self._render_tables()
@@ -1511,7 +1504,7 @@ class DatabasePage(compat.Vertical):
         self.refresh_tables(force=True)
 
     def action_save(self) -> None:
-        """键位动作：保存编辑区的改动；新建模式下等价于写入新数据项。"""
+        """键位动作：保存编辑区的更改；新建模式下等价于写入新数据项。"""
         self.request_save()
 
     def action_insert(self) -> None:
@@ -1534,11 +1527,11 @@ class DatabasePage(compat.Vertical):
         self.cancel_edit()
 
     def action_focus_search(self) -> None:
-        """键位动作：把焦点交给搜索框。"""
+        """键位动作：聚焦搜索框。"""
         self.query_one("#database-search", compat.Input).focus()
 
     def request_save(self) -> None:
-        """保存编辑区的改动；第一次按只在状态栏问一次，第二次按同一个键才写。"""
+        """通过模态框确认并保存编辑区的更改。"""
         info = self.selected_info
         if info is None or self._insert_mode:
             self.request_insert()
@@ -1558,7 +1551,7 @@ class DatabasePage(compat.Vertical):
         self._request(WritePlan(kind="set", table=info.name, key=self._row_key, changes=changes))
 
     def request_insert(self) -> None:
-        """进入新建模式；已在新建模式时按同一个键两次才写入。"""
+        """进入新建模式；已处于新建模式时打开写入确认框。"""
         info = self.selected_info
         if info is None:
             self._set_status(i18n.t("cli.tui.database.status_no_table"))
@@ -1576,7 +1569,7 @@ class DatabasePage(compat.Vertical):
         self._request(WritePlan(kind="insert", table=info.name, values=tuple(values)))
 
     def request_delete(self) -> None:
-        """删除当前数据项；第一次按只在状态栏问一次，第二次按同一个键才删。"""
+        """通过模态框确认并删除当前数据项。"""
         info = self.selected_info
         if info is None or self._row_index is None or not self._row_key:
             self._set_status(i18n.t("cli.tui.database.status_no_row"))
@@ -1589,11 +1582,7 @@ class DatabasePage(compat.Vertical):
         self._pending = None
 
     def dirty_note(self) -> str:
-        """返回未保存改动的说明；没有改动时为空串。
-
-        供 :meth:`TuiApp.switch_instance` 在切换实例前统一询问——切实例会重挂载页面，
-        编辑区里改了一半的内容会随之消失。
-        """
+        """返回未保存更改的说明；没有更改时返回空字符串。"""
         if self._insert_mode:
             filled = [name for name, text in self.editor_values().items() if text != ""]
             if filled:
@@ -1620,7 +1609,7 @@ class DatabasePage(compat.Vertical):
         )
 
     def _request(self, plan: WritePlan) -> None:
-        # 写入一律先弹确认框：状态栏里「再按一次」的确认既容易被连发穿透，也很难让人看清将改动什么。
+        # 写入前通过模态框展示操作范围，并防止连续触发重复确认。
         if self._busy:
             self._set_status(i18n.t("cli.tui.common.busy_title"))
             return
@@ -1684,7 +1673,7 @@ class DatabasePage(compat.Vertical):
     async def _dispatch(self, plan: WritePlan) -> list[WriteResult]:
         try:
             if plan.kind == "set":
-                # 一行一次调用：多列在同一次 UPDATE 里落库，不会出现改了一半的行。
+                # 同一数据项的多列更改通过一次 UPDATE 写入，避免部分列更新。
                 changed = {column: after for column, _, after in plan.changes}
                 return [await asyncio.to_thread(self.source.set_values, plan.table, plan.key, changed)]
             if plan.kind == "insert":
@@ -1696,11 +1685,7 @@ class DatabasePage(compat.Vertical):
             return [WriteResult(False, f"{type(error).__name__}: {error}", "")]
 
     async def reload_tables_after_write(self, plan: WritePlan) -> None:
-        """写入成功后重新读取数据项，并尽量停在原来的主键上。
-
-        改一行或删一行都留在当前页：翻到第几页是用户的上下文，写入不该把它丢掉；新建则回第一页，
-        新行按缺省顺序本来就排在那里。条数一律重算——写入会改变总数。
-        """
+        """写入后重新加载数据项和记录总数；编辑与删除保留当前页，新建返回第一页。"""
         previous = self._row_key
         self._loaded_at = 0.0
         await self.reload_rows(reset_offset=plan.kind == "insert", count=True)

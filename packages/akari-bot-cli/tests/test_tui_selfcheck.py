@@ -1,9 +1,4 @@
-"""TUI 自检与无头冒烟：逐页等待页面 worker、检查异常，并区分未执行的产品检查。
-
-逐页切换在读取导航断言前先等该页空闲，页面 worker 异常与页面错误状态都记成失败；环境事实记警告
-不影响退出码，产品检查未执行记 ``skip`` 并计入非零退出码。无头冒烟分默认首屏与模块页两段：首屏
-要求停在概览页且三个关键控件已挂载，模块页要求数据源实际取数，任一段失败即非零退出码。
-"""
+"""TUI 自检与无头冒烟的异步等待、异常处理和退出码测试。"""
 
 import asyncio
 import json
@@ -39,16 +34,16 @@ from akaribot.cli.tui.run import StaticRunSource
 from akaribot.testing import Tester, func_case
 
 INJECTED_ERROR = "注入的取数异常"
-# 杂项页没有预取，替身不会被调用，不参与「取数发生过」的断言。
+# 迁移页无需预加载，不参与数据源调用次数断言。
 NO_PREFETCH = ("misc",)
-# 模块页在挂载时就取过一次数，那次早于逐页循环，不参与串行断言。
+# 模块页首次加载发生在导航循环前，不计入导航请求顺序。
 PRELOADED = ("modules",)
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "tui_selfcheck.json"
 _KEEP_ALIVE: list[tempfile.TemporaryDirectory] = []
 
 
 def _merged_locale_dir() -> Path:
-    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，断言才取到真实渲染结果。
+    # 合并文案片段，构造测试使用的语言快照。
     holder = tempfile.TemporaryDirectory(prefix="akari-selfcheck-locale-")
     _KEEP_ALIVE.append(holder)
     root = Path(holder.name)
@@ -62,7 +57,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # CLI 的首次取文案会用包内 locales 重建快照，把合并目录顶掉；先取一次把它顶过，再建合并快照。
+    # 首次读取会初始化包内语言快照，须先完成初始化再注入测试快照。
     i18n.t("cli.tui.common.status_ready")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
@@ -85,11 +80,11 @@ def _static_sources() -> dict:
 
 
 class _Counting:
-    # 取数返回后才计数：计数非空即说明该页的取数确实跑完过，没等空闲就读断言会拿到空计数。
+    # 数据返回后再记录调用次数，确保断言验证的是已完成的请求。
     def __init__(self, inner, delay: float = 0.05) -> None:
         self._inner = inner
         self._delay = delay
-        # 数据源自带的计数沿用同一个字典：生产键名是 list，替身另起的键名会让计数断言落空。
+        # 复用数据源计数字典与 list 键，保持替身和生产接口一致。
         counts = getattr(inner, "calls", None)
         self.calls: dict[str, int] = counts if isinstance(counts, dict) else {}
         self.first: tuple[float, float] | None = None
@@ -138,7 +133,6 @@ class _FakePilot:
 
 
 class _StubApp:
-    # 只提供冒烟断言读到的属性：控件查询、当前页、焦点与数据源计数各自可控。
     def __init__(
         self,
         selectors=(),
@@ -159,7 +153,7 @@ class _StubApp:
 
 
 class _FakeApp:
-    # 记录构造参数：第二段冒烟必须显式启动到模块页并带上模块数据源。
+    # 记录构造参数，用于验证模块页冒烟显式注入数据源并指定初始页。
     def __init__(self, *args: object, **kwargs: object) -> None:
         self.args = args
         self.kwargs = dict(kwargs)
@@ -175,7 +169,7 @@ MODULE_RECORDS = (
 
 
 def _first_screen_sources() -> dict:
-    # 首次使用摘要的替身必须显式注入：生产实现要起体检子进程，用例不得真的起进程。
+    # 显式注入启动准备摘要替身，避免测试启动实际诊断子进程。
     sources = _static_sources()
     sources["dashboard_instances"] = StaticInstanceListSource()
     sources["dashboard_service"] = StaticServiceControl()
@@ -201,7 +195,7 @@ def _run_headless_with_segments(first: str, modules: tuple[str, int]) -> tuple[i
     with (
         patch.object(tui_app_module, "TuiApp", build),
         patch.object(tui_app_module, "stylesheet_summary", lambda: dict(STYLESHEET_INFO)),
-        # 冻结时钟：总耗时与启动耗时都成了定值，三行输出可以逐字比对。
+        # 固定时钟以稳定总耗时与启动耗时，支持逐字比较输出。
         patch.object(tui_cmd, "time", SimpleNamespace(monotonic=lambda: 1000.0)),
         patch.object(tui_cmd, "_smoke_first_screen", lambda app: first),
         patch.object(tui_cmd, "_smoke_modules", lambda app: modules),
@@ -211,7 +205,7 @@ def _run_headless_with_segments(first: str, modules: tuple[str, int]) -> tuple[i
 
 
 async def _navigate(**kwargs) -> tui_cmd.CheckResult:
-    # 自检内部用 asyncio.run()，而用例跑在事件循环里，故放回无循环的线程执行。
+    # 自检内部调用 asyncio.run()，须在无运行事件循环的线程中执行。
     return await asyncio.to_thread(tui_cmd._check_page_navigation, **kwargs)
 
 
@@ -235,7 +229,7 @@ async def _test_navigation_waits_for_each_page_load():
     counted = {key: _Counting(source) for key, source in _static_sources().items()}
     result = await _navigate(sources=counted)
     loaded = {key: sum(source.calls.values()) for key, source in counted.items() if key not in NO_PREFETCH}
-    # 逐页串行：上一页取数结束后才开始下一页，说明每次切换都等到了页面空闲。
+    # 导航检查必须等待当前页请求完成后再切换下一页。
     order = [key for key, _, _ in PAGES if key not in NO_PREFETCH and key not in PRELOADED]
     serial = all(
         counted[order[index]].first[1] <= counted[order[index + 1]].first[0] for index in range(len(order) - 1)
@@ -294,7 +288,7 @@ async def _test_headless_modules_smoke_requires_fetch():
         failure = await tui_cmd._modules_failure(app_instance, page, pilot)
         rows = len(page.visible_records)
         await pilot.press("q")
-    # 未取数的数据源必须判失败：计数停在 0 时冒烟不得报成功。
+    # 数据源未被调用时，模块页冒烟必须失败。
     uncalled = await tui_cmd._modules_failure(
         _StubApp(active_page=tui_cmd.MODULES_PAGE, calls=0), _FakePage(), _FakePilot()
     )
@@ -308,7 +302,7 @@ async def _test_headless_modules_smoke_requires_fetch():
 
 def _headless_exit_code_checks() -> bool:
     widgets = i18n.t("cli.common.list_separator").join(tui_cmd.FIRST_SCREEN_WIDGETS)
-    # 三行输出各自对应一个键：首行只讲概览页，模块页那行才是取数结果。
+
     first = i18n.t("cli.tui_cmd.headless_first_ok", page=tui_cmd.DASHBOARD_PAGE, widgets=widgets)
     modules = i18n.t("cli.tui_cmd.headless_modules_ok", rows=2, calls=1)
     summary = i18n.t(
@@ -327,7 +321,6 @@ def _headless_exit_code_checks() -> bool:
     copy = json.loads(FRAGMENT.read_text(encoding="utf-8"))
     return (
         ok_code == 0
-        # 第一段不覆盖 initial_page；第二段显式带数据源启动到模块页。
         and ok_apps[0].kwargs.get("initial_page") is None
         and ok_apps[1].kwargs.get("initial_page") == tui_cmd.MODULES_PAGE
         and ok_apps[1].kwargs.get("source") is not None
@@ -335,21 +328,21 @@ def _headless_exit_code_checks() -> bool:
         and ok_lines[0] != modules
         and ok_lines[1] == modules
         and ok_lines[2] == summary
-        # 0 行同样是通过：文案要写明数据源已经取过数。
+        # 空清单不代表读取失败；调用数据源后返回零行也应通过。
         and empty_code == 0
         and empty_lines[1] == i18n.t("cli.tui_cmd.headless_modules_empty", calls=1)
         and first_code == 1
         and any("概览页缺关键控件" in line for line in first_lines)
         and modules_code == 1
         and any("模块页未取数" in line for line in modules_lines)
-        # 片段是这批新文案的真源：首屏那句必须点明概览页，模块那句必须点明模块页。
+        # 验证测试快照中的冒烟文案可区分概览页与模块页。
         and "概览页" in copy["cli.tui_cmd.headless_first_ok"]
         and "模块页" in copy["cli.tui_cmd.headless_modules_ok"]
     )
 
 
 async def _test_headless_exit_code_covers_both_segments():
-    # 两段冒烟在此被替身替换，run_headless 不再起事件循环，故直接在用例循环里跑。
+    # 冒烟入口使用同步替身，可直接在测试事件循环中执行。
     return _headless_exit_code_checks()
 
 

@@ -1,9 +1,4 @@
-"""配置页：编辑未保存时的拦截与外部编辑器动作。
-
-表单行与原始文本都只改控件、不落盘；换表、重读、切模式与强制刷新都会重建编辑区，故这些路径
-必须先问一次「放弃未保存的改动？」，选择保留则动作不执行且编辑仍在。外部编辑器动作同样重建
-编辑区，故走同一次询问；非交互终端下不交出终端，只报出路径与可直接粘贴的命令。
-"""
+"""配置页的未保存更改保护、异步渲染与外部编辑器测试。"""
 
 import asyncio
 import os
@@ -43,7 +38,6 @@ FIELDS = {
         ConfigField(key="prefixes", table="module_wiki", kind=KIND_LIST, value=["wiki", "维基"]),
         ConfigField(key="enable", table="module_wiki", kind=KIND_BOOL, value=False),
     ),
-    # 没有字段的表用于核对表单区提示的读取路径。
     "empty_table": (),
 }
 RAW = {
@@ -75,7 +69,7 @@ def _config_file(root: Path, table: str, text: str = "") -> Path:
 
 @contextmanager
 def _editor_env(env: dict[str, str], *, found: str | None = "/usr/bin/editor"):
-    # 编辑器解析读环境变量与 PATH，两者都注入：用例不得依赖本机装了哪个编辑器。
+    # 注入编辑器变量与 PATH，避免测试依赖本机安装状态。
     with mock.patch.dict(os.environ, env):
         with mock.patch("akaribot.cli.tui.config.shutil.which", return_value=found):
             yield
@@ -101,7 +95,7 @@ async def _wait_until(predicate, timeout: float = 5.0) -> bool:
 
 
 def _screen_title(app: TuiApp) -> str:
-    # 模态框自己记着标题，不必经渲染层取文本。
+
     return str(getattr(app.screen, "choice_title", ""))
 
 
@@ -117,7 +111,7 @@ async def _with_page(body, source=None, size=(110, 32)):
 
 
 async def _test_worker_marks_stop_after_unmount():
-    # 页面卸载后 worker 仍可能继续跑：三个异步渲染入口要先判页面可用，不能把 NoMatches 抛进 worker。
+    # 页面卸载后 worker 仍可能完成，异步渲染入口须在访问控件前检查挂载状态。
     async def body(app, page, pilot, source):
         content = app.query_one("#content", compat.Vertical)
         await content.remove_children()
@@ -131,7 +125,7 @@ async def _test_worker_marks_stop_after_unmount():
         ):
             try:
                 outcomes.append(await call())
-            except Exception as error:  # noqa: BLE001 - 用例只关心有没有异常逃出
+            except Exception as error:  # noqa: BLE001 - 验证异常是否向外传播
                 outcomes.append(f"{type(error).__name__}: {error}")
         return outcomes
 
@@ -140,7 +134,7 @@ async def _test_worker_marks_stop_after_unmount():
 
 
 async def _test_dirty_note_tracks_edits():
-    # 未编辑时不说有改动；改过之后说明里带上表名。
+
     async def body(app, page, pilot, source):
         clean = (page.is_dirty(), page.dirty_note())
         page.row_for("count").set_text("9")
@@ -155,7 +149,7 @@ async def _test_dirty_note_tracks_edits():
 
 
 async def _test_table_switch_keeps_edits():
-    # 选择保留改动时：动作不执行、表不变、编辑仍在、列表高亮拨回当前表。
+
     async def body(app, page, pilot, source):
         page.row_for("count").set_text("9")
         await pilot.pause()
@@ -180,7 +174,7 @@ async def _test_table_switch_keeps_edits():
 
 
 async def _test_table_switch_discards_edits():
-    # 选择放弃改动时：切到新表，旧编辑随表单重建消失。
+
     async def body(app, page, pilot, source):
         page.row_for("count").set_text("9")
         await pilot.pause()
@@ -201,7 +195,7 @@ async def _test_table_switch_discards_edits():
 
 
 async def _test_reload_asks_before_rereading():
-    # ctrl+r 重读先问：保留则不取数，放弃才重读并退回载入值。
+    # 取消重新加载时须保留编辑内容，且不得调用数据源。
     async def body(app, page, pilot, source):
         page.row_for("count").set_text("9")
         await pilot.pause()
@@ -226,7 +220,7 @@ async def _test_reload_asks_before_rereading():
 
 
 async def _test_forced_refresh_asks():
-    # force=True 的刷新路径同样重建编辑区，不能绕过询问。
+    # 强制刷新也会重建编辑区，必须保留未保存更改检查。
     async def body(app, page, pilot, source):
         page.row_for("count").set_text("9")
         await pilot.pause()
@@ -269,7 +263,7 @@ async def _test_mode_switch_asks_before_switching():
 
 
 async def _test_raw_edits_count_as_dirty():
-    # 原始文本模式的编辑同样算脏值，说明里仍带当前表名。
+
     async def body(app, page, pilot, source):
         await page.set_mode(MODE_RAW)
         await pilot.pause()
@@ -286,7 +280,7 @@ async def _test_raw_edits_count_as_dirty():
 
 
 async def _test_form_hint_reads_widget_text():
-    # 没有字段的表在表单区留一句提示，读取路径要能拿到它的纯文本。
+
     async def body(app, page, pilot, source):
         page.query_one("#table-list", compat.ListView).index = 2
         await page.wait_for_idle()
@@ -300,7 +294,7 @@ async def _test_form_hint_reads_widget_text():
 
 
 async def _test_low_frequency_bindings_stay_out_of_footer():
-    # 工具条上都有按钮的动作不进页脚，80 列下才能容纳全局键位。
+    # 工具栏操作从页脚隐藏，为 80 列终端保留全局快捷键空间。
     async def body(app, page, pilot, source):
         footer = app.query_one(compat.Footer)
         actions = {"save", "mode_form", "mode_raw", "open_editor", "reload", "focus_tables"}
@@ -323,7 +317,7 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
 
 
 def _test_editor_command_resolution():
-    # 取值顺序与 `akaribot config open` 一致：VISUAL 优先于 EDITOR，命令按 shell 规则切词。
+    # 编辑器解析须与 config open 一致：VISUAL 优先于 EDITOR，命令按 shell 规则拆分。
     default = "notepad" if sys.platform.startswith("win") else ("open" if sys.platform == "darwin" else "xdg-open")
     with mock.patch("akaribot.cli.tui.config.shutil.which", return_value="/usr/bin/editor"):
         visual = editor_argv({"VISUAL": "code -w", "EDITOR": "vi"})
@@ -344,14 +338,14 @@ def _test_editor_command_resolution():
 
 
 def _test_derived_instance_table_keeps_its_own_file():
-    # 实例表（bot_telegram-alt）由基表派生，配置文件按实例表名定位；文件缺失时给出候选路径。
+    # 派生实例表按完整表名定位文件，文件缺失时仍返回候选路径。
     with TemporaryDirectory(prefix="akari-config-file-") as raw:
         root = Path(raw).resolve()
         (root / "akaribot.toml").write_text("", encoding="utf-8")
         derived = _config_file(root, "bot_telegram-alt", "[bot_telegram-alt]\n")
         shared = _config_file(root, "config", RAW["config"])
         source = SubprocessConfigSource(root=root)
-        # AKARI_INSTANCE_DIR 优先于显式根，用例先摘掉以免读到别的实例。
+        # 清除 AKARI_INSTANCE_DIR，隔离本机当前实例对路径解析的影响。
         with mock.patch.dict(os.environ):
             os.environ.pop("AKARI_INSTANCE_DIR", None)
             instance = source.config_file("bot_telegram-alt")
@@ -361,7 +355,7 @@ def _test_derived_instance_table_keeps_its_own_file():
 
 
 async def _test_editor_button_reports_command_outside_terminal():
-    # 非交互终端不交出终端：按钮报出绝对路径与可直接粘贴的命令，不取数也不起子进程。
+    # 非交互终端仅提供路径与命令，不挂起界面或启动编辑器。
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -393,7 +387,7 @@ async def _test_editor_button_reports_command_outside_terminal():
 
 
 async def _test_editor_action_suspends_and_rereads():
-    # 交互终端下挂起界面跑编辑器：argv 带上表对应的路径，退出后重读并在状态栏报退出码。
+    # 交互编辑须先挂起界面，编辑器退出后再重新加载配置。
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -404,7 +398,7 @@ async def _test_editor_action_suspends_and_rereads():
             seen: list[tuple[list[str], int]] = []
 
             def runner(argv, **kwargs):
-                # 记录起编辑器那一刻的取数次数：大于它才说明重读发生在退出之后。
+                # 记录编辑器启动前的读取次数，用于验证重新加载发生在编辑器退出后。
                 seen.append((list(argv), source.calls["schema"]))
                 events.append("run")
                 return subprocess.CompletedProcess(list(argv), codes.pop(0))
@@ -440,7 +434,7 @@ async def _test_editor_action_suspends_and_rereads():
 
 
 async def _test_editor_action_reports_missing_table_or_file():
-    # 拿不到表或文件时只在状态栏说明：不弹通知，也不启动编辑器。
+
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -473,7 +467,7 @@ async def _test_editor_action_reports_missing_table_or_file():
 
 
 async def _test_editor_action_reports_unusable_editor():
-    # 编辑器命令取不到可执行文件时只报状态栏，不挂起界面。
+
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -495,7 +489,7 @@ async def _test_editor_action_reports_unusable_editor():
 
 
 async def _test_editor_action_asks_before_discarding_edits():
-    # 未保存的改动先问一次：保留则不起编辑器，放弃才把文件交出去。
+    # 外部编辑器会触发配置重新加载，启动前必须确认未保存更改。
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -543,9 +537,9 @@ async def _test_editor_action_asks_before_discarding_edits():
 
 @func_case
 async def test_tui_config(tester: Tester):
-    """cli.tui.config: 未保存改动的拦截与外部编辑器动作"""
+    """cli.tui.config: 未保存更改的拦截与外部编辑器动作"""
     _use_cli_locale()
-    # 确认原语在 _compat 里共用；用例里的两次按键几乎同时发生，统一压缩防抖窗口。
+    # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_worker_marks_stop_after_unmount, "页面卸载后异步渲染入口安全返回")
         await tester.test(_test_dirty_note_tracks_edits, "脏值说明随编辑出现")

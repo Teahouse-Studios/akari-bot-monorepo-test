@@ -1,27 +1,3 @@
-"""Dashboard 页：本机实例清单 + 当前实例的路径 / core 版本 / 运行状态 / 更新提示。
-
-数据流：界面只读 :class:`DashboardSource`（当前实例的快照）与 :class:`InstanceListSource`（注册表
-里的其它实例）。默认实现 :class:`LocalDashboardSource` 先读 ``akaribot.toml``，取不到 core 版本时
-再经 ``akaribot module list --json`` 子进程补取，运行状态一律探测实例锁文件 ``.bot.lock``；实例清单
-直接读本机注册表，不起子进程。在清单里选中一条并回车即切换当前实例，缺省项经 ``akaribot instance
-use`` 子进程异步写回，结论以应用级通知报出；各页随后的取数都指向它。``ctrl+n`` 经 ``akaribot init``
-子进程新建实例并登记，``ctrl+d`` 弹确认框移除登记。
-
-页底按钮是这些动作的主要入口：高亮实例的操作在前、当前实例的策略与服务在后，按可用宽度排布，宽
-终端排成一行，放不下时在两组之间折行；键位是同一批动作的快捷方式，逐条列在 ``?`` 键位一览里。
-
-实例清单与字段区之间是首次使用行动区：四项摘要（未配置适配器、待填写占位符、实例运行状态、最近
-一次体检结论）与三个跳转按钮。摘要只在首次显示本页时取一次，取不到的那项如实写成「未取到」并附
-原因；占位符按 core 的通用判定统计，判定不可用时退化为标明口径的估算；按钮在前提不满足时置灰，
-原因写在按钮标签上。
-
-服务装卸经 :class:`ServiceControl`：安装前重读一次状态，单元文件已存在时确认框里写明覆盖；确认框
-里另给 ``--dry-run`` 预演，用户看过将写入的单元文件再决定。
-
-写动作（登记、移除、策略、缺省项、服务装卸、新建实例）一律经 :class:`CliRunner` 起
-``akaribot <子命令>`` 子进程，注册表只用于读取。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -53,7 +29,7 @@ CONFIG_GLOB = "*.toml"
 
 _PLACEHOLDER_PATTERN = re.compile(r"<Replace me[^>]*>")
 
-# 状态取值来自锁文件探测，界面按当前语言取标签，故这里只存文案键。
+# 标签须按当前语言解析，因此常量只保存文案键。
 _STATE_KEYS = {
     STATE_RUNNING: "cli.tui.dashboard.state_running",
     STATE_STOPPED: "cli.tui.dashboard.state_stopped",
@@ -72,17 +48,14 @@ def _pending_update_source() -> str:
     return i18n.t(UPDATE_SOURCE_PENDING_KEY)
 
 
-# 切换实例会重挂载本页，最近一次下发 `instance use` 的目标名挂在应用上，新页面才读得到这份记录。
+# 切换实例会重新挂载页面，操作记录保存在应用上以供新页面读取。
 _USE_REQUEST_ATTR = "_dashboard_use_requested"
 
 
-# 新建实例要解析依赖并装 core 与适配器，耗时可达数分钟，超时按最坏情况给足。
+# 实例创建包含依赖解析与安装，超时须覆盖下载耗时。
 INIT_TIMEOUT_SECONDS = 1800.0
-# 服务预演只渲染单元文件并读一次系统工具，正常在数秒内结束。
 SERVICE_CLI_TIMEOUT_SECONDS = 60.0
-# 注册表与服务单元的写入是秒级操作，超时只用于兜住卡死的子进程。
 CLI_WRITE_TIMEOUT_SECONDS = 60.0
-# 首次使用摘要要起一次体检子进程，本机实测半秒级，超时只用于兜住卡死的子进程。
 SETUP_TIMEOUT_SECONDS = 60.0
 
 SETUP_BUTTONS: tuple[tuple[str, str], ...] = (
@@ -120,7 +93,7 @@ def _json_object(text: str | None) -> Mapping[str, Any] | None:
 
 
 def _count_of(value: Any) -> int | None:
-    # JSON 里的布尔值也是 int，统计字段只认真正的整数。
+    # bool 是 int 的子类，计数字段须显式排除布尔值。
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
@@ -133,8 +106,7 @@ def _missing_text(reason: str) -> str:
 
 
 def _count_placeholders(paths: Sequence[Path]) -> int:
-    # CLI 现成的 count_placeholders 只认字面 <Replace me>，模板生成的却是
-    # <Replace me with str value>，对本机实例实测恒为 0；这里按标记本身的形状统计。
+    # 配置模板的占位符包含类型说明，估算时须匹配完整标记。
     total = 0
     for path in paths:
         try:
@@ -154,7 +126,6 @@ def _run_cli_operation(
     timeout: float,
     runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> OperationResult:
-    # 与模块页安装同一条通路：阻塞式子进程，成功取标准输出尾部，失败取标准错误尾部。
     execute = runner or subprocess.run
     try:
         completed = execute(
@@ -186,13 +157,13 @@ def _run_cli_operation(
 
 @dataclass(frozen=True)
 class DashboardSnapshot:
-    """Dashboard 的一次快照。
+    """实例概览快照。
 
     :param instance_root: 实例根目录的绝对路径。
     :param instance_name: ``[instance] name``。
     :param instance_mode: ``installed`` 或 ``workspace``。
     :param locale: 实例默认语言。
-    :param core_version: core 版本号；取不到时为空串。
+    :param core_version: core 版本号；无法获取时为空串。
     :param core_origin: core 版本的来源说明（``akaribot.toml`` 或 ``module list --json``）。
     :param running: 运行状态；``None`` 表示锁文件探测不可用。
     :param running_detail: 运行状态的判据说明，含锁文件路径与降级原因。
@@ -215,7 +186,7 @@ class DashboardSnapshot:
 
     @property
     def state(self) -> str:
-        """把三态运行状态归一到 :data:`STATE_RUNNING` 等取值。"""
+        """将运行状态转换为 :data:`STATE_RUNNING` 等取值。"""
         if self.running is None:
             return STATE_UNKNOWN
         return STATE_RUNNING if self.running else STATE_STOPPED
@@ -229,15 +200,15 @@ class DashboardSnapshot:
 
 @dataclass(frozen=True)
 class InstanceRow:
-    """实例清单里的一行。
+    """实例清单记录。
 
     :param name: 注册名；未登记的当前实例用空串。
     :param root: 实例根目录。
     :param locale: 实例默认语言。
     :param running: 是否在运行；探测失败时为 ``None``。
-    :param autostart: 是否随服务启动而拉起。
+    :param autostart: 是否在服务启动时自动启动。
     :param restart_on_crash: 崩溃后是否自动重启。
-    :param registered: 是否已在注册表里。
+    :param registered: 是否已在注册表中。
     """
 
     name: str
@@ -271,9 +242,9 @@ class ServiceRow:
 
     :param backend: ``launchd`` / ``systemd`` / ``unsupported``。
     :param installed: 单元文件是否存在。
-    :param enabled: 系统是否已注册；探测不到时为 ``None``。
+    :param enabled: 系统是否已注册；无法探测时为 ``None``。
     :param path: 单元文件路径。
-    :param detail: 面向用户的一句话说明。
+    :param detail: 面向用户的简要说明。
     """
 
     backend: str = ""
@@ -285,22 +256,22 @@ class ServiceRow:
 
 @runtime_checkable
 class ServiceControl(Protocol):
-    """服务状态的读取与预演；装卸经 :class:`CliRunner` 交给命令层。"""
+    """读取服务状态并执行预览；装卸经 :class:`CliRunner` 执行。"""
 
     def service_status(self) -> ServiceRow:
         """返回服务单元状态。"""
 
     def preview_service(self, action: str) -> OperationResult:
-        """执行 ``akaribot service <动作> --dry-run``，返回预演输出。
+        """执行 ``akaribot service <动作> --dry-run``，返回预览输出。
 
         :param action: ``install`` 或 ``uninstall``。
         """
 
 
 class SystemServiceControl:
-    """默认实现：直接用 CLI 侧的 service 模块，界面不自己拼单元文件。
+    """通过 CLI 服务模块读取状态并执行预览。
 
-    :param backend: 服务后端；缺省按平台探测。
+    :param backend: 服务后端；默认按平台探测。
     """
 
     def __init__(self, backend: Any | None = None) -> None:
@@ -324,11 +295,9 @@ class SystemServiceControl:
         )
 
     def service_status(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.service_status`。"""
         return self._row(self._service().status())
 
     def preview_service(self, action: str) -> OperationResult:
-        """见 :meth:`ServiceControl.preview_service`。"""
         return _run_cli_operation(
             cli_process.cli_argv("service", action, "--dry-run"),
             label=i18n.t(f"cli.tui.dashboard.service_preview_label_{action}"),
@@ -342,7 +311,7 @@ class StaticServiceControl:
     """固定服务状态的替身，供自动化断言使用。
 
     :param status: ``service_status`` 的返回值。
-    :param preview_result: ``preview_service`` 的返回值；缺省为成功。
+    :param preview_result: ``preview_service`` 的返回值；默认为成功。
     """
 
     def __init__(
@@ -359,7 +328,6 @@ class StaticServiceControl:
         self.previewed: list[str] = []
 
     def service_status(self) -> ServiceRow:
-        """见 :meth:`ServiceControl.service_status`。"""
         self.calls["status"] += 1
         return self._status
 
@@ -368,7 +336,6 @@ class StaticServiceControl:
         self._status = status
 
     def preview_service(self, action: str) -> OperationResult:
-        """见 :meth:`ServiceControl.preview_service`。"""
         self.calls["preview"] += 1
         self.previewed.append(action)
         return self._preview
@@ -382,12 +349,12 @@ class CliRunner(Protocol):
         """执行子命令并返回操作结果。
 
         :param args: 子命令及其参数，不含解释器与入口。
-        :param label: 用于拼装结论的操作名。
+        :param label: 操作结果使用的名称。
         """
 
 
 class SubprocessCliRunner:
-    """默认实现：经子进程执行本 CLI 的写子命令。
+    """通过 CLI 子进程执行写操作。
 
     :param timeout: 子进程超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
@@ -403,7 +370,6 @@ class SubprocessCliRunner:
         self._runner = runner
 
     def run(self, args: Sequence[str], *, label: str) -> OperationResult:
-        """见 :meth:`CliRunner.run`。"""
         root = context.resolve_root()
         return _run_cli_operation(
             cli_process.cli_argv(*args),
@@ -423,7 +389,7 @@ class InitRunner(Protocol):
         """创建实例并返回操作结果。
 
         :param root: 新实例根目录。
-        :param managed_venv: 是否建托管 venv；为假时用当前环境。
+        :param managed_venv: 是否创建托管 venv；为假时用当前环境。
         :param locale: 实例默认语言。
         """
 
@@ -431,7 +397,7 @@ class InitRunner(Protocol):
 class SubprocessInitRunner:
     """默认实现：经 ``akaribot init`` 子进程创建实例。
 
-    :param timeout: 子进程超时秒数；初始化要装 core 与适配器，按最坏情况给足。
+    :param timeout: 子进程超时秒数；包含 core 与适配器的安装时间。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
@@ -445,14 +411,13 @@ class SubprocessInitRunner:
         self._runner = runner
 
     def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
-        """见 :meth:`InitRunner.create`。"""
         argv = cli_process.cli_argv("init", str(root), "--non-interactive", "--locale", locale)
         if not managed_venv:
             argv.append("--no-venv")
         return _run_cli_operation(
             argv,
             label=i18n.t("cli.tui.dashboard.new_label", root=root),
-            # 实例目录由 init 自己创建，子进程的工作目录只能取它的父目录。
+            # 目标目录由 init 创建，子进程须以父目录作为工作目录。
             cwd=root.parent,
             root=root,
             timeout=self.timeout,
@@ -463,7 +428,7 @@ class SubprocessInitRunner:
 class StaticInitRunner:
     """固定结果的替身执行器，供自动化断言使用。
 
-    :param result: ``create`` 的返回值；缺省为成功。
+    :param result: ``create`` 的返回值；默认为成功。
     """
 
     def __init__(self, result: OperationResult | None = None) -> None:
@@ -471,23 +436,22 @@ class StaticInitRunner:
         self.created: list[tuple[str, bool, str]] = []
 
     def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
-        """见 :meth:`InitRunner.create`。"""
         self.created.append((str(root), managed_venv, locale))
         return self._result
 
 
 @runtime_checkable
 class InstanceListSource(Protocol):
-    """本机实例清单的数据源接口；写动作经 :class:`CliRunner` 交给命令层。"""
+    """本机实例清单的数据源接口；写操作经 :class:`CliRunner` 交给命令层。"""
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
-        """返回注册表里的实例，附带实时运行状态。"""
+        """返回注册表中的实例，附带实时运行状态。"""
 
 
 class RegistryInstanceListSource:
-    """默认实现：读本机注册表，逐条探测锁文件。
+    """读取本机注册表，逐条探测锁文件。
 
-    :param registry: 注册表；缺省用默认位置。
+    :param registry: 注册表；默认用默认位置。
     :param probe: 探测运行状态的函数 ``(root) -> bool | None``，测试可注入。
     """
 
@@ -502,7 +466,6 @@ class RegistryInstanceListSource:
         self._probe = probe or probe_running
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
-        """见 :meth:`InstanceListSource.list_instances`。"""
         self.calls["list"] += 1
         rows: list[InstanceRow] = []
         for entry in self.registry.load():
@@ -518,7 +481,7 @@ class RegistryInstanceListSource:
             )
         active = context.active_root()
         if active is not None and self.registry.find_by_root(active) is None:
-            # 正在管理的实例可能没登记过（比如站在实例目录里直接启动界面），也要出现在清单里。
+            # 当前实例可能尚未登记，清单须包含该实例。
             rows.append(InstanceRow(name="", root=active, running=self._probe(active), registered=False))
         return tuple(rows)
 
@@ -534,22 +497,21 @@ class StaticInstanceListSource:
         self.calls = {"list": 0}
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
-        """见 :meth:`InstanceListSource.list_instances`。"""
         self.calls["list"] += 1
         return tuple(self._rows)
 
 
 @dataclass(frozen=True)
 class SetupSummary:
-    """首次使用摘要的一次取数结果。
+    """首次使用摘要。
 
-    :param unconfigured_adapters: 已装但未配置的适配器数量；``None`` 表示未取到。
-    :param pending_placeholders: 待填写的占位符数量；``None`` 表示未取到。
-    :param doctor_errors: 最近一次体检的错误级结论数；``None`` 表示未取到。
-    :param doctor_warnings: 最近一次体检的告警级结论数；``None`` 表示未取到。
-    :param adapters_reason: 适配器数量未取到的原因；取到时为空串。
-    :param placeholders_reason: 占位符数量的口径说明；按 core 判定完整取数时为空串。
-    :param doctor_reason: 体检结论未取到的原因；取到时为空串。
+    :param unconfigured_adapters: 已安装但未配置的适配器数量；``None`` 表示未获取。
+    :param pending_placeholders: 待填写的占位符数量；``None`` 表示未获取。
+    :param doctor_errors: 最近一次诊断的错误级结论数；``None`` 表示未获取。
+    :param doctor_warnings: 最近一次诊断的告警级结论数；``None`` 表示未获取。
+    :param adapters_reason: 适配器数量未获取的原因；获取成功时为空串。
+    :param placeholders_reason: 占位符数量的口径说明；core 返回完整统计时为空串。
+    :param doctor_reason: 诊断结论未获取的原因；获取成功时为空串。
     :param placeholders_estimated: 占位符数量是否来自配置文本标记的估算。
     """
 
@@ -580,14 +542,14 @@ class SetupSummarySource(Protocol):
     """首次使用摘要的数据源接口；测试注入替身，生产经子进程与本机配置文件。"""
 
     def summary(self) -> SetupSummary:
-        """返回一次摘要取数结果。"""
+        """返回摘要数据。"""
 
 
 class StaticSetupSummarySource:
     """固定摘要的替身数据源，供自动化断言使用。
 
-    :param summary: ``summary`` 的返回值；缺省给一份全部取到的合成结果。
-    :param error: 注入后 ``summary`` 每次都抛出它，用于断言整次取数失败的降级行为。
+    :param summary: ``summary`` 的返回值；默认提供完整的模拟摘要。
+    :param error: 指定后每次读取均抛出该异常，用于验证读取失败时的处理。
     """
 
     def __init__(self, summary: SetupSummary | None = None, *, error: Exception | None = None) -> None:
@@ -596,24 +558,20 @@ class StaticSetupSummarySource:
         self.calls = {"summary": 0}
 
     def summary(self) -> SetupSummary:
-        """见 :meth:`SetupSummarySource.summary`。"""
         self.calls["summary"] += 1
         if self._error is not None:
             raise self._error
         return self._summary
 
     def set_summary(self, summary: SetupSummary) -> None:
-        """替换替身记录的摘要，模拟配置或体检结论在界面之外变化。"""
+        """替换替身记录的摘要，模拟配置或诊断结论在界面之外变化。"""
         self._summary = summary
 
 
 class LocalSetupSummarySource:
-    """默认实现：体检统计经 ``akaribot doctor --json`` 子进程，占位符经 ``config placeholders --json`` 子进程。
+    """通过 CLI 获取诊断与占位符统计；占位符命令失败时按配置标记估算并注明原因。
 
-    占位符判定由 core 的 schema 给出，一条命令一次统计全部表；命令失败或输出读不懂时退化为按配置
-    文本里的标记形状估算，摘要标明估算口径并写明原因，不把估算值当作精确值。
-
-    :param root: 实例根；缺省在取数时按界面当前实例解析。
+    :param root: 实例根；默认在读取数据时按界面当前实例解析。
     :param timeout: 子进程超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
@@ -632,7 +590,6 @@ class LocalSetupSummarySource:
         self.last_argv: tuple[str, ...] = ()
 
     def summary(self) -> SetupSummary:
-        """见 :meth:`SetupSummarySource.summary`。"""
         self.calls["summary"] += 1
         root = self.root or resolve_instance_root()
         if root is None:
@@ -672,7 +629,7 @@ class LocalSetupSummarySource:
         except OSError as error:
             reason = f"{type(error).__name__}: {error}"
             return None, None, None, reason, reason
-        # 体检有 error 级结论时退出码非零，完整统计仍写在标准输出，故先解析再看退出码。
+        # 诊断发现错误时返回非零退出码，但标准输出仍包含有效统计。
         payload = _json_object(completed.stdout)
         if payload is None:
             reason = i18n.t("cli.tui.dashboard.setup_doctor_unreadable", code=completed.returncode)
@@ -742,7 +699,7 @@ class LocalSetupSummarySource:
         return count, "", False
 
     def _estimate_placeholders(self, root: Path, detail: str) -> tuple[int | None, str, bool]:
-        # core 判定不可用时沿用配置文本里的标记形状估算；摘要据此标明估算口径，不显示成精确值。
+        # core 统计不可用时按配置标记估算，摘要须注明估算方式。
         try:
             paths = sorted((root / CONFIG_DIRNAME).rglob(CONFIG_GLOB))
         except OSError as error:
@@ -759,11 +716,9 @@ class LocalSetupSummarySource:
 def resolve_instance_root(start: Path | None = None) -> Path | None:
     """定位实例根，供概览、运行与日志三页的默认数据源共用。
 
-    顺序与 :func:`akaribot.cli.tui.context.resolve_root` 一致：界面里选中的实例优先，其次自起点
-    向上查找，最后是注册表里的缺省实例。区别只在三者都没有时返回 ``None`` 而不是退回当前目录——
-    这三页要能区分「没找到实例」并如实说明。
+    依次查询当前实例、起点及其父目录、注册表中的默认实例。
 
-    :param start: 查找起点，缺省为当前工作目录。
+    :param start: 查找起点，默认为当前工作目录。
     :return: 实例根；未找到时为 ``None``。
     """
     active = context.active_root()
@@ -781,9 +736,9 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
 
 
 def lock_held(lock_path: Path) -> bool | None:
-    """探测锁文件是否被排他锁持有，供 Dashboard 与 Run 两页共用。
+    """探测锁文件是否被排他锁持有，供概览与运行页共用。
 
-    只读打开文件，不截断运行中进程持有的锁；``Instance.is_running()`` 不可用时作为兜底实现。
+    只读打开文件，不截断运行中进程持有的锁；``Instance.is_running()`` 不可用时作为备用实现。
 
     :param lock_path: 锁文件路径，通常是 ``<实例根>/.bot.lock``。
     :return: ``True`` 运行中、``False`` 未运行、``None`` 平台或权限不支持探测。
@@ -830,10 +785,10 @@ def meta_core_version(doc: Any) -> str:
 
 @runtime_checkable
 class DashboardSource(Protocol):
-    """Dashboard 数据源接口；测试注入替身，生产走文件系统与子进程。"""
+    """Dashboard 数据源接口；测试注入替身，运行时通过文件系统与子进程读取。"""
 
     def snapshot(self) -> DashboardSnapshot:
-        """返回一次完整快照（含较贵的版本查询）。"""
+        """返回完整快照，包括版本查询结果。"""
 
     def probe_running(self) -> bool | None:
         """只探测运行状态，代价须与读一个锁文件相当。"""
@@ -842,7 +797,7 @@ class DashboardSource(Protocol):
 class StaticDashboardSource:
     """固定快照的替身数据源，不产生任何子进程与文件访问。
 
-    :param snapshot: 初始快照；缺省给一份合成实例。
+    :param snapshot: 初始快照；默认提供合成实例。
     :param running: 初始运行状态；为 ``None`` 时沿用快照自身的取值，构造后可经
         :meth:`set_running` 改成 ``True`` / ``False`` / ``None`` 以断言界面随之变化。
     """
@@ -867,12 +822,10 @@ class StaticDashboardSource:
         self.calls = {"snapshot": 0, "probe": 0}
 
     def snapshot(self) -> DashboardSnapshot:
-        """见 :meth:`DashboardSource.snapshot`。"""
         self.calls["snapshot"] += 1
         return self._snapshot
 
     def probe_running(self) -> bool | None:
-        """见 :meth:`DashboardSource.probe_running`。"""
         self.calls["probe"] += 1
         return self._snapshot.running
 
@@ -886,14 +839,14 @@ class StaticDashboardSource:
 
 
 class LocalDashboardSource:
-    """默认数据源：文件系统 + 子进程，CLI 进程内不 import core。
+    """通过文件系统与子进程读取实例信息。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
-    :param start: 向上查找的起点，缺省为当前工作目录。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param start: 向上查找的起点，默认为当前工作目录。
     :param timeout: 子进程超时秒数，仅在需要补取版本时使用。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
-    :param instance_factory: 构造 ``Instance`` 的回调，测试可注入以避开 T5.1 的实现。
-    :param module_source: 取版本用的模块数据源；缺省复用 Modules 页的子进程实现。
+    :param instance_factory: 构造 ``Instance`` 的回调，测试可注入。
+    :param module_source: 取版本用的模块数据源；默认复用 Modules 页的子进程实现。
     :param update_probe: 返回更新提示的回调；未注入时更新提示留空。
     """
 
@@ -920,7 +873,6 @@ class LocalDashboardSource:
         self._update_probe = update_probe
 
     def snapshot(self) -> DashboardSnapshot:
-        """见 :meth:`DashboardSource.snapshot`。"""
         self.calls["snapshot"] += 1
         root = self._root()
         if root is None:
@@ -952,7 +904,6 @@ class LocalDashboardSource:
         )
 
     def probe_running(self) -> bool | None:
-        """见 :meth:`DashboardSource.probe_running`：只读锁文件，不起子进程。"""
         self.calls["probe"] += 1
         self.last_probe_error = ""
         root = self._root()
@@ -1057,7 +1008,9 @@ class LocalDashboardSource:
         except Exception as error:  # noqa: BLE001 - 探测失败不影响其余字段
             return "", i18n.t("cli.tui.dashboard.src_probe_callback_failed", kind=type(error).__name__, error=error)
         if not hint:
-            return "", i18n.t("cli.tui.dashboard.update_source_probe_no_hint", source=_pending_update_source())
+            return "", i18n.t(
+                "cli.tui.dashboard.update_source_probe_no_hint", source=i18n.t("cli.tui.dashboard.update_source_probe")
+            )
         return hint, i18n.t("cli.tui.dashboard.update_source_probe")
 
     def _running_detail(self, root: Path) -> str:
@@ -1068,15 +1021,15 @@ class LocalDashboardSource:
 
 
 class DashboardPage(compat.Vertical):
-    """Dashboard 页控件。
+    """概览页控件。
 
-    :param source: 数据源，缺省为 :class:`LocalDashboardSource`。
-    :param instances: 实例清单数据源，缺省读本机注册表。
-    :param service_control: 服务状态与预演接口，缺省直接用 CLI 侧的 service 模块。
-    :param setup: 首次使用摘要的数据源；缺省取应用注入的 ``dashboard_setup``，没有时用
+    :param source: 数据源，默认为 :class:`LocalDashboardSource`。
+    :param instances: 实例清单数据源，默认读本机注册表。
+    :param service_control: 服务状态与预览接口，默认直接用 CLI 侧的 service 模块。
+    :param setup: 首次使用摘要的数据源；默认取应用注入的 ``dashboard_setup``，没有时用
         :class:`LocalSetupSummarySource`。
-    :param init_runner: 新建实例的执行接口，缺省经 ``akaribot init`` 子进程。
-    :param cli_runner: 写动作的执行接口，缺省经 ``akaribot <子命令>`` 子进程。
+    :param init_runner: 新建实例的执行接口，默认经 ``akaribot init`` 子进程。
+    :param cli_runner: 写动作的执行接口，默认经 ``akaribot <子命令>`` 子进程。
     :param cache_ttl: 快照缓存有效期（秒）；缓存内刷新只重绘，不取版本。
     :param refresh_interval: 锁文件探测周期（秒）；自动化断言可调大以避免定时刷新干扰。
     """
@@ -1105,6 +1058,9 @@ class DashboardPage(compat.Vertical):
         text-wrap: nowrap;
         text-overflow: ellipsis;
     }
+    DashboardPage.short #instance-list {
+        height: 4;
+    }
     DashboardPage #service {
         height: 1;
         padding: 0 1;
@@ -1122,7 +1078,7 @@ class DashboardPage(compat.Vertical):
         height: auto;
         padding: 0 0 0 1;
     }
-    DashboardPage #setup-actions Button {
+    DashboardPage #setup-actions Button, DashboardPage.compact #actions Button {
         height: 1;
         min-height: 1;
         max-width: 100%;
@@ -1152,8 +1108,8 @@ class DashboardPage(compat.Vertical):
     }
     """
 
-    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
-    # 页脚只放高频键位：低频动作由页底按钮承载，键位仍可在 ? 键位一览里查到。
+    # 文案在类定义时解析，更改 --lang 后须重启进程。
+    # 低频键位通过按钮和帮助提供，避免页脚超出 80 列。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
         ("s", "switch_instance", i18n.t("cli.tui.dashboard.bind_switch")),
@@ -1211,13 +1167,10 @@ class DashboardPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：实例清单 + 首次使用行动区 + 当前实例的字段 + 操作按钮区与状态栏。"""
         yield compat.Static(i18n.t("cli.tui.dashboard.instances_keys_caption"), id="instances-caption", markup=False)
         yield compat.Static("", id="service", markup=False)
         yield compat.ListView(id="instance-list")
         yield compat.Static("", id="setup", markup=False)
-        # 三个跳转按钮压在字段区上方：新用户不必先猜「先去配置、再回运行」。按钮压到一行高，
-        # 80×24 下字段区与状态栏才留得下位置。
         yield compat.ButtonFlow(
             ("goto-config", i18n.t("cli.tui.dashboard.setup_button_config")),
             ("goto-run", i18n.t("cli.tui.dashboard.setup_button_run")),
@@ -1226,7 +1179,6 @@ class DashboardPage(compat.Vertical):
         )
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
-        # 实例操作与策略服务各成一组：宽终端下一行放得下，放不下时在两组之间折行。
         yield compat.ButtonFlow(
             ("switch", i18n.t("cli.tui.dashboard.button_switch")),
             ("new-instance", i18n.t("cli.tui.dashboard.button_new_instance")),
@@ -1242,12 +1194,11 @@ class DashboardPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数与周期探测推迟到首次显示。"""
         compat.set_text_selection(self, False)
-        # 跳转按钮压到一行高：80×24 下字段区与状态栏才留得下位置。CSS 的 line-pad 只收正整数，
-        # 置零只能在代码里做，否则默认的一行上下留白会把标签挤出这一行。
+        # CSS 不接受值为零的 line-pad，须通过样式对象设置，确保单行按钮的标签可见。
         for _, button_id in SETUP_BUTTONS:
             self.query_one(f"#{button_id}", compat.Button).styles.line_pad = 0
+        self._adapt_height()
 
     def activate(self) -> None:
         """首次显示时读取快照与首次使用摘要，并按周期探测锁文件。"""
@@ -1262,7 +1213,7 @@ class DashboardPage(compat.Vertical):
             self.set_interval(self.refresh_interval, self._on_tick)
 
     def focus_primary(self) -> None:
-        """把焦点交给实例清单；清单为空时退到页面容器。"""
+        """聚焦实例清单；为空时聚焦页面。"""
         compat.focus_first(self, "#instance-list")
 
     @property
@@ -1277,7 +1228,7 @@ class DashboardPage(compat.Vertical):
         """
         try:
             rows = tuple(self.instances.list_instances())
-        except Exception as error:  # noqa: BLE001 - 注册表不可用只降级为一句提示
+        except Exception as error:  # noqa: BLE001 - 注册表不可用仅显示错误提示
             self._instance_rows = ()
             if not polling:
                 self.reset_pending()
@@ -1285,13 +1236,13 @@ class DashboardPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.dashboard.instances_failed", error=f"{type(error).__name__}: {error}"))
             return
         if not polling and rows != self._instance_rows:
-            # 清单内容变了，待确认的那个实例可能已经不在原位，作废重问。
+            # 清单变化可能使待确认目标失效，须重新确认。
             self.reset_pending()
         self._instance_rows = rows
         self._render_instances()
 
     def selected_instance(self) -> InstanceRow | None:
-        """返回清单里当前高亮的那条记录。"""
+        """返回清单中当前高亮的记录。"""
         if not self._instance_rows:
             return None
         try:
@@ -1316,13 +1267,13 @@ class DashboardPage(compat.Vertical):
                 text = f"{text}  {marks}"
             if not (row.root / INSTANCE_META_FILENAME).is_file():
                 text = f"{text}  {i18n.t('cli.tui.dashboard.instance_missing')}"
-            rows.append(compat.fit_cells(text, self._instance_width(list_view)))
+            rows.append(text)
         list_view.clear()
         if rows:
             list_view.extend([compat.ListItem(compat.Static(row, markup=False)) for row in rows])
         index = self._index_of_active()
         list_view.index = index
-        # 重建时把高亮拨回当前实例属于显示刷新，不能算用户换了选中项。
+        # 重建列表恢复高亮时，不应使确认状态失效。
         self._highlighted_key = self._highlight_key(self._instance_rows[index] if index is not None else None)
         self.query_one("#instances-caption", compat.Static).update(
             compat.plain_text(i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(rows)))
@@ -1345,20 +1296,14 @@ class DashboardPage(compat.Vertical):
 
     @staticmethod
     def _is_active_instance(row: InstanceRow) -> bool:
-        # 上下文里的根按真实路径保存，比较前同样解析，否则软链接下的临时实例永远判为不同。
+        # 统一解析真实路径，避免将同一目录的符号链接视为不同实例。
         active = context.active_root()
         if active is None:
             return False
         return Path(row.root).expanduser().resolve() == active
 
-    def _instance_width(self, list_view: compat.ListView) -> int:
-        try:
-            return max(compat.widget_cells(list_view)[0] - 4, 16)
-        except Exception:  # noqa: BLE001 - 未完成布局时按保守宽度排版
-            return 72
-
     def switch_to_selected(self) -> None:
-        """把当前实例切换为清单里高亮的那条，并把缺省项交给命令层写回。"""
+        """切换到高亮实例，并通过 CLI 设置默认实例。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1376,7 +1321,7 @@ class DashboardPage(compat.Vertical):
         if context.active_root() != target:
             switch(row.root)
             if context.active_root() != target:
-                # 别处有未保存改动时切换要先过确认框，确认前不能改写缺省项。
+                # 切换确认前不得修改默认实例，以免丢失未保存的更改。
                 self._set_status(i18n.t("cli.tui.dashboard.switch_deferred"))
                 return
         name = row.name or str(row.root)
@@ -1386,18 +1331,18 @@ class DashboardPage(compat.Vertical):
         )
 
     def _request_default_instance(self, row: InstanceRow) -> str:
-        # 命令行读的是注册表缺省项，只切内存态会让界面与 `instance use` 各说各话。
+        # CLI 读取注册表中的默认实例，切换结果须同步写入。
         if not row.registered or not row.name:
             return i18n.t("cli.tui.dashboard.switch_default_skipped")
         app = self.app
         name = row.name
         note = i18n.t("cli.tui.dashboard.use_calling", name=name)
         if getattr(app, _USE_REQUEST_ATTR, "") == name:
-            # 同一目标名已经下发过，重复切换不再叠一个改注册表的子进程。
+            # 同一目标只启动一次注册表写入进程。
             return note
         setattr(app, _USE_REQUEST_ATTR, name)
         label = i18n.t("cli.tui.dashboard.use_label", name=name)
-        # worker 挂在应用上：本页随切换重挂载，挂在本页的 worker 会在卸载时被取消而丢掉结论。
+        # 任务由应用持有，避免页面重新挂载时取消注册表写入。
         app.run_worker(
             self._run_action(
                 lambda: self.cli_runner.run(("instance", "use", name), label=label),
@@ -1410,12 +1355,12 @@ class DashboardPage(compat.Vertical):
         return note
 
     def _finish_default_instance(self, app: Any, name: str, label: str, result: OperationResult) -> None:
-        # 本页随后被重挂载，结论只能经应用级通知报出；旧页的状态栏已随页面消失。
+        # 页面重新挂载会清除状态栏，因此结果通过应用通知显示。
         if result.ok:
             compat.notify(app, i18n.t("cli.tui.dashboard.switch_default_done"), title=label)
             return
         if getattr(app, _USE_REQUEST_ATTR, "") == name:
-            # 写失败即撤掉记录，用户再切一次就能重试。
+            # 写入失败后清除请求记录，允许重试。
             setattr(app, _USE_REQUEST_ATTR, "")
         compat.notify(
             app,
@@ -1467,15 +1412,15 @@ class DashboardPage(compat.Vertical):
 
     @property
     def service_preview(self) -> str:
-        """返回最近一次服务预演的完整输出。"""
+        """返回最近一次服务预览的完整输出。"""
         return self._service_preview
 
     def refresh_service(self) -> None:
-        """读取服务单元状态并重绘那一行。"""
+        """读取并显示服务单元状态。"""
         self._pending_service.reset()
         try:
             self._service = self.service_control.service_status()
-        except Exception as error:  # noqa: BLE001 - 服务状态读不到只降级为一句说明
+        except Exception as error:  # noqa: BLE001 - 服务状态读取失败仅显示错误说明
             self._service = ServiceRow(detail=f"{type(error).__name__}: {error}")
         self._render_service()
 
@@ -1499,7 +1444,7 @@ class DashboardPage(compat.Vertical):
             )
         else:
             text = i18n.t("cli.tui.dashboard.service_missing", backend=row.backend)
-        # 首次激活时页面还没完成布局，宽度取不到；这里只存原文，截断按当前宽度在重绘时进行。
+        # 首次激活时布局可能未完成；保留原文，渲染时按当前宽度截断。
         self._service_text = text
         self.query_one("#service", compat.Static).update(
             compat.plain_text(compat.truncate_cells(text, self._inner_width()))
@@ -1507,7 +1452,6 @@ class DashboardPage(compat.Vertical):
         self._sync_actions()
 
     def _sync_actions(self) -> None:
-        # 按钮是主要入口，禁用状态与标签都要跟着清单、策略与服务状态走，免得点下去才被拒绝。
         row = self.selected_instance()
         registered = row is not None and row.registered
         self.query_one("#switch", compat.Button).disabled = self._busy or row is None or self._is_active_instance(row)
@@ -1517,7 +1461,7 @@ class DashboardPage(compat.Vertical):
         self._sync_policy_button("autostart", "autostart", row)
         self._sync_policy_button("crash-restart", "restart_on_crash", row)
         service = self.query_one("#service-toggle", compat.Button)
-        # 策略与服务都写在注册表上，未登记时写不了；平台没有服务后端时也无处可装。
+        # 策略依赖已登记实例；服务操作还须有可用的平台后端。
         service.disabled = self._busy or not registered or self._service.backend == "unsupported"
         service.label = i18n.t(
             "cli.tui.dashboard.button_service_uninstall"
@@ -1533,28 +1477,23 @@ class DashboardPage(compat.Vertical):
         button = self.query_one(f"#{button_id}", compat.Button)
         button.disabled = self._busy or row is None or not row.registered
         button.label = i18n.t(f"cli.tui.dashboard.button_{prefix}_{state}")
-        # 标签改写会改变按钮宽度，列数要跟着重算。
+        # 标签变化可能影响按钮宽度，须重新计算布局。
         self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def request_toggle_service(self) -> None:
-        """安装或卸载常驻服务：一次触发即弹确认框，框里可选执行或先预演。
-
-        安装会往系统里写一个自启单元，卸载会注销它，故都经模态框确认；框里给出单元文件路径与
-        覆盖提示，用户知道到底动了什么。
-        """
+        """请求安装或卸载服务，提供执行与预览选项。"""
         action, force = self._service_action()
         if not self._pending_service.accept(f"service:{action}"):
-            # 防抖窗口内的重复触发（鼠标双击、键盘连发）直接忽略，避免叠起两层模态框。
             return
         self._ask_service(action, force=force)
 
     def _service_action(self) -> tuple[str, bool]:
         if self._service.installed:
             return "uninstall", False
-        # 缓存的安装状态可能过期：单元文件已存在时安装会覆盖它，确认框据此写提示。
+        # 缓存可能过期，确认覆盖前须重新检查单元文件。
         try:
             fresh = self.service_control.service_status()
-        except Exception:  # noqa: BLE001 - 重读失败按缓存状态处理，执行时不带 force
+        except Exception:  # noqa: BLE001 - 刷新失败按缓存状态处理，执行时不带 force
             return "install", False
         self._service = fresh
         self._render_service()
@@ -1580,12 +1519,6 @@ class DashboardPage(compat.Vertical):
         )
 
     def on_service_choice(self, action: str, force: bool, choice: str | None) -> None:
-        """确认框回调：选执行则装卸服务，选预演则只打印将发生什么。
-
-        :param action: ``install`` 或 ``uninstall``。
-        :param force: 是否覆盖已存在的单元文件。
-        :param choice: 用户选中的取值；取消时为 ``None``。
-        """
         if choice == "dry-run":
             self.preview_service(action)
             return
@@ -1595,7 +1528,7 @@ class DashboardPage(compat.Vertical):
         self._start_service(action, force=force)
 
     def preview_service(self, action: str) -> None:
-        """执行 ``akaribot service <动作> --dry-run``，把输出留在状态栏与预演区。"""
+        """执行 ``akaribot service <动作> --dry-run``，在状态栏与预览区显示输出。"""
         if self._reject_when_busy():
             return
         self._set_status(
@@ -1644,7 +1577,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t(f"cli.tui.dashboard.{key}", path=self._service.path or "-"))
 
     def _reject_when_busy(self) -> bool:
-        # 写动作各起一个子进程，连点会让多个进程同时改同一份注册表。
+        # 串行执行写操作，避免多个子进程同时修改注册表。
         if not self._busy:
             return False
         self._set_status(i18n.t("cli.tui.dashboard.busy_running"))
@@ -1672,24 +1605,23 @@ class DashboardPage(compat.Vertical):
     ) -> None:
         try:
             result = await asyncio.to_thread(call)
-        except Exception as error:  # noqa: BLE001 - 执行器任意异常都只降级为一句说明
+        except Exception as error:  # noqa: BLE001 - 执行器异常仅显示错误说明
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
                 f"{type(error).__name__}: {error}",
             )
         if track_busy:
-            # 未纳管的动作不得清掉别的动作置上的忙标志。
+            # 仅由设置忙状态的操作负责清除该状态。
             self._busy = False
             self._sync_actions()
         on_done(result)
 
     def action_toggle_service(self) -> None:
-        """键位动作：安装或卸载常驻服务。"""
         self.request_toggle_service()
 
     def request_add_instance(self) -> None:
-        """弹出输入框要实例目录，登记进本机注册表。"""
+        """请求输入实例目录并登记。"""
         compat.ask_text(
             self.app,
             title=i18n.t("cli.tui.dashboard.add_title"),
@@ -1702,10 +1634,6 @@ class DashboardPage(compat.Vertical):
         )
 
     def on_instance_path_entered(self, path: str | None) -> None:
-        """输入框回调：登记用户填写的实例目录。
-
-        :param path: 用户输入的路径；取消时为 ``None``。
-        """
         if not path:
             self._set_status(i18n.t("cli.tui.dashboard.add_cancelled"))
             return
@@ -1729,7 +1657,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.dashboard.add_done", name=self._registered_name(root), root=root))
 
     def _registered_name(self, root: Path) -> str:
-        # 注册名由命令层推导，界面从刷新后的清单里取；取不到时退回目录名。
+        # 注册名由 CLI 生成；刷新后无法取得时使用目录名。
         wanted = root.expanduser().resolve()
         for row in self._instance_rows:
             if row.root.expanduser().resolve() == wanted:
@@ -1737,7 +1665,7 @@ class DashboardPage(compat.Vertical):
         return root.name
 
     def request_new_instance(self) -> None:
-        """弹出输入框要新实例目录，拿到目录后再问环境方式。"""
+        """请求输入新实例目录并选择环境方式。"""
         compat.ask_text(
             self.app,
             title=i18n.t("cli.tui.dashboard.new_title"),
@@ -1750,17 +1678,12 @@ class DashboardPage(compat.Vertical):
         )
 
     def _new_instance_default(self) -> str:
-        # 新实例多半是当前实例的邻居，预填它的父目录；没有实例时退回当前工作目录。
         root = resolve_instance_root()
         if root is not None:
             return str(root.parent)
         return str(Path.cwd())
 
     def on_new_instance_path_entered(self, path: str | None) -> None:
-        """输入框回调：把目录交给下一步的环境方式选择框。
-
-        :param path: 用户输入的路径；取消时为 ``None``。
-        """
         if not path:
             self._set_status(i18n.t("cli.tui.dashboard.new_cancelled"))
             return
@@ -1778,11 +1701,6 @@ class DashboardPage(compat.Vertical):
         )
 
     def on_new_instance_venv_chosen(self, root: Path, choice: str | None) -> None:
-        """选择框回调：按所选环境方式执行 ``akaribot init``。
-
-        :param root: 新实例目录。
-        :param choice: ``managed`` 建托管 venv，``current`` 装进当前环境；取消时为 ``None``。
-        """
         if choice not in ("managed", "current"):
             self._set_status(i18n.t("cli.tui.dashboard.new_cancelled"))
             return
@@ -1802,12 +1720,12 @@ class DashboardPage(compat.Vertical):
         if not result.ok:
             self._set_status(i18n.t("cli.tui.dashboard.new_failed", error=_result_summary(result)))
             return
-        # init 自己会把新实例登记进注册表，界面只需重读清单。
+        # init 负责实例登记，创建成功后刷新清单。
         self.refresh_instances()
         self._set_status(i18n.t("cli.tui.dashboard.new_done", name=self._registered_name(root), root=root))
 
     def request_remove_instance(self) -> None:
-        """移除清单里高亮实例的登记；一次触发即弹确认框，实例目录本身不动。"""
+        """请求确认移除高亮实例的登记，保留实例目录。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1816,11 +1734,10 @@ class DashboardPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.dashboard.policy_unregistered", root=row.root))
             return
         if not self._pending_remove.accept(row.name or str(row.root)):
-            # 防抖窗口内的重复触发（鼠标双击、键盘连发）直接忽略，避免叠起两层模态框。
             return
         compat.ask_choice(
             self.app,
-            title=i18n.t("cli.tui.dashboard.remove_label", name=row.name),
+            title=i18n.t("cli.tui.dashboard.remove_choice_title", name=row.name),
             hint=i18n.t("cli.tui.dashboard.remove_choice_hint"),
             options=(("remove", i18n.t("cli.tui.dashboard.remove_choice_confirm")),),
             cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
@@ -1828,11 +1745,6 @@ class DashboardPage(compat.Vertical):
         )
 
     def on_remove_choice(self, row: InstanceRow, choice: str | None) -> None:
-        """确认框回调：选中「移除登记」才下发 ``instance remove``。
-
-        :param row: 待移除的记录。
-        :param choice: ``remove`` 表示确认；取消时为 ``None``。
-        """
         self._pending_remove.reset()
         if choice != "remove":
             self._set_status(i18n.t("cli.tui.dashboard.remove_cancelled"))
@@ -1856,34 +1768,26 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.dashboard.remove_done", name=row.name))
 
     def action_switch_instance(self) -> None:
-        """键位动作：切换到清单里高亮的实例。"""
         self.switch_to_selected()
 
     def action_toggle_autostart(self) -> None:
-        """键位动作：翻转开机自启。"""
         self.toggle_policy("autostart")
 
     def action_toggle_crash_restart(self) -> None:
-        """键位动作：翻转崩溃重启。"""
         self.toggle_policy("restart_on_crash")
 
     def action_add_instance(self) -> None:
-        """键位动作：登记一个实例目录。"""
         self.request_add_instance()
 
     def action_new_instance(self) -> None:
-        """键位动作：新建实例。"""
         self.request_new_instance()
 
     def action_remove_instance(self) -> None:
-        """键位动作：移除实例登记。"""
         self.request_remove_instance()
-
-    # region 状态读取（供测试与上层使用）
 
     @property
     def snapshot(self) -> DashboardSnapshot:
-        """返回缓存中的快照，不触发取数。"""
+        """返回缓存中的快照，不重新读取数据。"""
         return self._snapshot
 
     @property
@@ -1898,7 +1802,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def setup_summary(self) -> SetupSummary:
-        """返回最近一次取到的首次使用摘要，不触发取数。"""
+        """返回缓存中的首次使用摘要，不重新读取数据。"""
         return self._setup
 
     @property
@@ -1922,16 +1826,12 @@ class DashboardPage(compat.Vertical):
             return float("inf")
         return time.monotonic() - self._loaded_at
 
-    # endregion
-
-    # region 数据读取
-
     def refresh_snapshot(self, *, force: bool = False) -> None:
         """读取快照。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
+        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
         """
-        # 用户主动刷新即视为换了一轮语境，任何待确认动作都要重新问过。
+        # 手动刷新使待确认目标失效，须重新确认。
         self.reset_pending()
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_fields()
@@ -1943,7 +1843,7 @@ class DashboardPage(compat.Vertical):
     async def _load_snapshot(self) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.snapshot)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._snapshot = DashboardSnapshot(error=self.last_error)
@@ -1964,7 +1864,7 @@ class DashboardPage(compat.Vertical):
         """只探测运行状态并就地更新该行，返回探测结果。
 
         判据与 :meth:`DashboardSource.probe_running` 一致：读锁文件或询问实例对象，
-        不起子进程、不重取版本；探测结果与缓存相同时不重绘。
+        不启动子进程、不重取版本；探测结果与缓存相同时不重绘。
         """
         try:
             value = self.source.probe_running()
@@ -1986,14 +1886,13 @@ class DashboardPage(compat.Vertical):
         self.refresh_instances(polling=True)
 
     def refresh_setup(self) -> None:
-        """读取首次使用摘要；整次取数失败时三项都写成「未取到」并附原因。"""
+        """读取首次使用摘要；失败时显示原因。"""
         source = self._resolve_setup_source()
         self.run_worker(self._load_setup(source), group="dashboard-setup", exclusive=True)
 
     def _resolve_setup_source(self) -> SetupSummarySource:
         if self._setup_source is not None:
             return self._setup_source
-        # 概览页的三个数据源都由应用按 key 注入，本页在首次取数时才解析，替身因此不必改装配代码。
         app_sources = getattr(self.app, "sources", None)
         injected = app_sources.get("dashboard_setup") if isinstance(app_sources, Mapping) else None
         self._setup_source = injected if injected is not None else LocalSetupSummarySource()
@@ -2008,15 +1907,10 @@ class DashboardPage(compat.Vertical):
         self._setup = summary
         self._render_setup()
 
-    # endregion
-
-    # region 渲染（只读缓存）
-
     def _render_setup(self) -> None:
         rows = self._setup_rows_for_render()
         self._setup_rows = rows
-        # 四项摘要排成两行两列：80×24 下行动区最多只占两行，实例清单与状态栏才留得下位置。
-        # 放不下时由控件的 nowrap 与省略号裁剪，这里不预先截断，渲染文本仍留全四个取值。
+        # 摘要限高两行，为列表与详情保留空间；原文保留完整取值，由控件按宽度截断。
         cells = [f"{label} {value}" for label, value in rows]
         text = "\n".join("  ".join(cells[index : index + 2]) for index in range(0, len(cells), 2))
         self._setup_rendered = text
@@ -2096,7 +1990,7 @@ class DashboardPage(compat.Vertical):
         text = "\n".join(lines)
         self._fields_rendered = text
         self.query_one("#fields", compat.Static).update(compat.plain_text(text))
-        # 摘要里的运行状态与宽度都跟着本次重绘走，故整块重排而不是只同步按钮。
+        # 运行状态和可用宽度均可能变化，须同时刷新摘要与按钮。
         self._render_setup()
         self._sync_actions()
 
@@ -2106,7 +2000,7 @@ class DashboardPage(compat.Vertical):
         except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
             return 72
         if outer < 8:
-            # 首次激活时页面尚未布局，宽度还是 0；按保守值排版，布局完成后的 resize 会重排。
+            # 首次激活时宽度可能为零，使用默认宽度并在 resize 时重新布局。
             return 72
         return max(outer - 6, 16)
 
@@ -2115,16 +2009,19 @@ class DashboardPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+        self._adapt_height()
         self._render_fields()
         self._render_service()
 
-    # endregion
-
-    # region 交互
+    def _adapt_height(self) -> None:
+        compact = self.size.height < 28
+        self.set_class(compact, "compact")
+        self.set_class(self.size.height < 22, "short")
+        for button in self.query("#actions Button"):
+            button.styles.line_pad = 0 if compact else 1
 
     def reset_pending(self) -> None:
-        """作废本页的待确认状态；切页、刷新与换选中项后必须重问。"""
+        """作废本页的待确认状态；切页、刷新与更换选中项后须重新确认。"""
         self._pending_service.reset()
         self._pending_remove.reset()
 
@@ -2134,7 +2031,7 @@ class DashboardPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted, "#instance-list")
     def _on_instance_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        # 重建列表会先清高亮再回填，按当前下标比对可避开这类假变化。
+        # 重建列表也会触发高亮事件，须比较目标以排除显示刷新。
         key = self._highlight_key(self.selected_instance())
         if key == self._highlighted_key:
             return
@@ -2173,11 +2070,10 @@ class DashboardPage(compat.Vertical):
             button = self.query_one(f"#{button_id}", compat.Button)
             button.disabled = bool(reason)
             button.label = i18n.t(label_key)
-        # 置灰会换标签，列数与列宽都要跟着重算。
+        # 禁用状态可能改变标签宽度，须重新计算布局。
         self.query_one("#setup-actions", compat.ButtonFlow).relayout()
 
     def _setup_button_state(self, page_key: str) -> tuple[str, str]:
-        # 返回按钮的文案键与置灰原因：原因写在标签上，用户不必点下去才知道为什么不可用。
         if not self._setup_has_instance():
             return f"cli.tui.dashboard.setup_button_{page_key}_blocked", i18n.t(
                 "cli.tui.dashboard.setup_block_no_instance"
@@ -2187,7 +2083,6 @@ class DashboardPage(compat.Vertical):
         return f"cli.tui.dashboard.setup_button_{page_key}", ""
 
     def _setup_has_instance(self) -> bool:
-        # 清单里没有实例且界面没有选中实例时，配置页、运行页与体检页都无处可去。
         return bool(self._instance_rows) or context.active_root() is not None
 
     def open_setup_page(self, page_key: str) -> None:
@@ -2208,11 +2103,8 @@ class DashboardPage(compat.Vertical):
         self.app.show_page(page_key)
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取快照与首次使用摘要。"""
         self.refresh_snapshot(force=True)
         self.refresh_setup()
-
-    # endregion
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

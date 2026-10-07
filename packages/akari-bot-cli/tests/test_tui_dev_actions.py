@@ -1,10 +1,4 @@
-"""Dev 页动作：跑测试与生成脚手架。
-
-包清单本身只读，两个动作各起一次 CLI 子进程：``t`` 跑 ``akaribot test``，``n`` 跑 ``akaribot new``。
-断言全部走注入的替身数据源——真实测试套件要跑数分钟，脚手架会写盘，都不适合放进用例。新建表单的类型
-是二态按钮，另收 config / database / tests 三个开关。动作输出全部留在可滚动的输出区：行数与跟随状态在
-输出区标题行，状态栏只给结论与下一步；新文案键尚未并入 locales 时先从片段合并语言快照。
-"""
+"""开发页的测试执行、脚手架表单与完整输出展示测试。"""
 
 import asyncio
 import json
@@ -39,8 +33,7 @@ FAILED_OUTPUT = ("collected 2 items", "1 failed", "AssertionError: boom")
 LONG_OUTPUT = tuple(f"用例行 {index:03d}" for index in range(1, 201))
 FOLLOW_OUTPUT = tuple(f"line {index:03d}" for index in range(1, 41))
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dev.json"
-# 快照放在本文件专用的命名空间：共享命名空间会被其他测试进程按包内 locales 重新发布，
-# 连接期间取词随之回退，片段文案读不到。
+# 使用独立命名空间，避免其他测试重新发布语言快照后覆盖本用例的固定文案。
 LOCALE_NAMESPACE = "akaribot-cli-dev-actions"
 FORM_CONTROLS = (
     "refresh",
@@ -64,7 +57,7 @@ _KEEP_ALIVE: list[TemporaryDirectory] = []
 
 
 def _merged_locale_dir() -> Path:
-    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，断言才取到真实渲染结果。
+    # 合并文案片段，构造测试使用的语言快照。
     holder = TemporaryDirectory(prefix="akari-dev-locale-")
     _KEEP_ALIVE.append(holder)
     root = Path(holder.name)
@@ -78,7 +71,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # CLI 的首次取文案会用包内 locales 重建快照，把合并目录顶掉；先取一次把它顶过，再建合并快照。
+    # 首次读取会初始化包内语言快照，须先完成初始化再注入测试快照。
     i18n.t("cli.tui.common.status_ready")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], LOCALE_NAMESPACE)
     i18n.connect_locale_snapshot(LOCALE_NAMESPACE)
@@ -139,7 +132,7 @@ async def _test_keys_and_controls_are_present():
         return keys, shown, missing, active
 
     keys, shown, missing, active = await _with_page(body)
-    # 终止是低频动作，不进页脚；刷新、测试、新建与输出四条常驻。
+
     return (
         {"t", "n", "escape", "r", "o"} <= keys
         and {"t", "n", "r", "o"} <= shown
@@ -219,7 +212,7 @@ async def _test_failed_status_is_conclusion_only():
         return result, lines, status, title, shown
 
     result, lines, status, title, shown = await _with_page(body, source)
-    # 失败结论只有动作、退出码与下一步；输出整段留在输出区，不塞进状态栏。
+
     return (
         result is not None
         and not result.ok
@@ -382,7 +375,7 @@ async def _test_follow_pauses_on_scroll_back_and_resumes():
     started, pinned, pinned_tail, entered, detached, held_offset = values[:6]
     announced, following, resumed_title, finished_title = values[6:]
     counted = i18n.t("cli.tui.dev.output_title", count=len(FOLLOW_OUTPUT) + 2)
-    # 上滚后新行不再把视口拽回底部，标题改报暂停与恢复方式；按 End 回到末尾后继续跟。
+    # 用户上滚后须暂停自动滚动，按 End 后恢复。
     return (
         started
         and pinned
@@ -399,7 +392,7 @@ async def _test_follow_pauses_on_scroll_back_and_resumes():
 
 def _test_fragment_texts_are_active():
     document = json.loads(FRAGMENT.read_text(encoding="utf-8"))
-    # 片段里的键尚未并入 locales：合并快照就位后，逐键取到的文本必须与片段一致。
+    # 验证注入快照中的文案与测试片段一致。
     return all(i18n.t(key) == value for key, value in document.items())
 
 
@@ -418,7 +411,7 @@ async def _test_empty_output_hint():
         return hidden, hint_at_mount, shown, focused, hint, title
 
     hidden, hint_at_mount, shown, focused, hint, title = await _with_page(body)
-    # 没有动作时输出区收起；键位与按钮打开它后，区内说明本次动作还没有输出。
+
     return (
         hidden
         and hint_at_mount == i18n.t("cli.tui.dev.output_empty")
@@ -430,7 +423,7 @@ async def _test_empty_output_hint():
 
 
 class _FakeStdout:
-    # 子进程标准输出的替身：异步逐行产出字节，与 asyncio 子进程的读取方式一致。
+    # 标准输出替身按行异步返回字节，与 asyncio 子进程接口一致。
     def __init__(self, lines: tuple[str, ...]) -> None:
         self._lines = lines
 
@@ -529,7 +522,7 @@ async def _test_new_form_submits_adapter():
         page.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
         adapter_label = str(page.query_one("#new-kind", compat.Button).label)
-        # 按下按钮后焦点在按钮上，回车会再切一次类型；交回名称输入框再提交。
+        # 切换类型后焦点仍在按钮上，须聚焦名称输入框后再按回车提交。
         compat.focus_now(page.query_one("#new-name", compat.Input))
         await pilot.press("enter")
         await page.wait_for_idle()
@@ -612,8 +605,8 @@ def _test_production_source_builds_argv():
         source._action_argv(ACTION_TEST, {"args": (TEST_TARGET, "--ci")})
         == cli_process.cli_argv("test", TEST_TARGET, "--ci")
         and source._action_argv(ACTION_TEST, {"args": ()}) == cli_process.cli_argv("test")
-        # --non-interactive 是必需的：子进程与界面共用终端，缺了它会把问卷打进输出区并抢键盘。
-        # 三个开关显式给值，未勾选时用 --no-* 覆盖 CLI 自己的缺省。
+        # 子进程与界面共用终端，须用 --non-interactive 防止交互提示占用输入与输出。
+        # 三个开关须显式传值，未勾选时用 --no-* 覆盖 CLI 默认值。
         and source._action_argv(ACTION_NEW, module_params)
         == cli_process.cli_argv(
             "new",
@@ -626,7 +619,7 @@ def _test_production_source_builds_argv():
             "--dir",
             "packages/modules",
         )
-        # new adapter 没有 database 与 tests 选项，多给的开关会被 typer 当成未知选项拒绝。
+        # new adapter 不支持 database 与 tests 选项，不能传递模块专用参数。
         and source._action_argv(ACTION_NEW, adapter_params)
         == cli_process.cli_argv("new", "adapter", "demo", "--non-interactive", "--no-config")
         and source._action_cwd({"cwd": WORKSPACE}) == WORKSPACE
@@ -716,7 +709,7 @@ async def _test_escape_on_idle_page_leaves_source_alone():
 
 @func_case
 async def test_tui_dev_actions(tester: Tester):
-    """cli.tui.dev: 跑测试与生成脚手架的动作测试"""
+    """cli.tui.dev: 运行测试与生成脚手架的动作测试"""
     _use_cli_locale()
     await tester.test(_test_keys_and_controls_are_present, "键位与按钮齐备且在页脚生效")
     await tester.test(_test_run_tests_streams_output, "按 t 跑测试并逐行回显输出")

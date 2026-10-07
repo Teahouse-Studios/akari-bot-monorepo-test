@@ -1,14 +1,3 @@
-"""环境页：实例用的解释器、环境里装了什么，以及往环境里装／卸运行库。
-
-这一页是 uv 的薄封装：数据经 ``akaribot venv status --json`` 取得，动作经 ``venv add`` /
-``venv remove`` / ``venv adopt`` / ``venv release`` / ``venv recreate`` 执行——界面不直接改环境。
-装运行库有两种去处：**记进实例清单**（``akaribot.toml`` 的 ``runtime.requirements``，环境重建时
-按它补装）与**只装进当前环境**（重建后不保留）；卸载与之一一对应。
-
-三个解释器动作都会换掉实例正在使用的解释器，因此实例运行期间一律拒绝；装卸包只动 site-packages，
-运行期间允许，但要提示重启后才生效。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -27,19 +16,19 @@ from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import OperationResult
 
-# 环境动作的秒数上限：要建 venv、解析依赖、装几十个包，比查询宽松得多。
+# 环境操作包含依赖解析与安装，超时上限高于状态查询。
 ACTION_TIMEOUT_SECONDS = 1800.0
 QUERY_TIMEOUT_SECONDS = 120.0
 MODE_MANAGED = "managed"
 MODE_EXTERNAL = "external"
 
-# 标记列：● 表示清单里记着这个分发，○ 表示只存在于当前环境。
+
 MARK_RECORDED = "●"
 MARK_PLAIN = "○"
 
-# 装卸的去处：与 ``venv add`` / ``venv remove`` 的 ``--save`` 一一对应。
+# save 模式同时更新实例清单，once 模式仅更改当前环境。
 SAVE_MODES = ("save", "once")
-# 预演的执行记录加这个后缀，日志与断言一眼能分出「真做了」与「只预演」。
+# 预览记录使用独立后缀，以区分实际执行。
 DRY_RUN_SUFFIX = ":dry-run"
 
 GROUP_MODULE = "akaribot.modules"
@@ -47,7 +36,7 @@ GROUP_ADAPTER = "akaribot.adapters"
 
 
 def _signal_name(number: int) -> str:
-    # 换不出名字时退回编号文本。
+
     try:
         return signal.Signals(number).name
     except ValueError:
@@ -56,17 +45,17 @@ def _signal_name(number: int) -> str:
 
 @dataclass(frozen=True)
 class EnvironmentPackage:
-    """环境里的一个已装分发，或清单里一条尚未装上的记录。
+    """环境中的分发或清单中的未安装记录。
 
     :param dist: 分发名。
     :param version: 版本。
     :param editable: 是否为可编辑安装。
-    :param recorded: 是否记在实例清单里。
-    :param akari: 是否属于 AkariBot（名字带前缀，或提供模块／适配器入口点）。
+    :param recorded: 是否记录在实例清单中。
+    :param akari: 是否属于 AkariBot 分发。
     :param groups: 该分发提供的入口点分组。
-    :param requires: metadata 里的依赖串。
+    :param requires: 分发元数据中的依赖声明。
     :param url: 直引用的来源地址。
-    :param installed: 是否真的装在环境里；``False`` 表示只有清单记录。
+    :param installed: 是否已安装；``False`` 表示仅有清单记录。
     """
 
     dist: str
@@ -81,7 +70,7 @@ class EnvironmentPackage:
 
     @property
     def tag_keys(self) -> tuple[str, ...]:
-        """返回这一行要显示的标记文案键，按固定顺序。"""
+        """按显示顺序返回标记文案键。"""
         keys: list[str] = []
         if GROUP_MODULE in self.groups:
             keys.append("cli.tui.environment.tag_module")
@@ -104,7 +93,7 @@ class EnvironmentPackage:
     def row_text(self, layout: EnvironmentLayout) -> str:
         """返回列表行文本。
 
-        :param layout: 列宽计划；表头与行共用同一份，列宽因此永远对得上。
+        :param layout: 表头与数据行共用的列宽计划。
         """
         mark = MARK_RECORDED if self.recorded else MARK_PLAIN
         name = compat.fit_cells(self.dist, layout.name_width)
@@ -121,7 +110,7 @@ class EnvironmentLayout:
 
     :param name_width: 名称列宽。
     :param version_width: 版本列宽。
-    :param tag_width: 标记列宽；``0`` 表示放不下，这一列整体不显示。
+    :param tag_width: 标记列宽；``0`` 表示隐藏该列。
     """
 
     name_width: int
@@ -133,14 +122,14 @@ class EnvironmentLayout:
 class EnvironmentState:
     """一次环境快照。
 
-    :param mode: ``managed``（实例自带 venv）或 ``external``（用当前解释器）。
+    :param mode: ``managed``（托管 venv）或 ``external``（当前解释器）。
     :param python: 当前生效的解释器。
     :param venv_dir: 托管 venv 的目标目录。
     :param ready: 解释器是否存在。
-    :param packages: 环境里装的分发；探测失败时为 ``None``。
+    :param packages: 环境中已安装的分发；探测失败时为 ``None``。
     :param core_version: core 版本号。
     :param error: 读取失败的原因。
-    :param requirements: 实例清单里记录的运行库需求串。
+    :param requirements: 实例清单中的运行库需求声明。
     """
 
     mode: str = ""
@@ -161,7 +150,7 @@ class EnvironmentState:
         return i18n.t("cli.tui.environment.mode_unknown")
 
     def package_count(self) -> int:
-        """返回已装分发数量；探测失败时为 ``-1``。"""
+        """返回已安装分发数量；探测失败时为 ``-1``。"""
         return -1 if self.packages is None else len(self.packages)
 
     def count_text(self) -> str:
@@ -179,7 +168,7 @@ class EnvironmentState:
         return i18n.t("cli.tui.environment.requirement_count", count=len(self.requirements))
 
     def rows(self) -> tuple[EnvironmentPackage, ...]:
-        """返回清单与环境的并集：装了的分发，加上只在清单里的记录。"""
+        """返回已安装分发与清单记录的并集。"""
         packages = list(self.packages or ())
         known = {package.dist.casefold() for package in packages}
         for spec in self.requirements:
@@ -191,10 +180,7 @@ class EnvironmentState:
 
 
 def recorded_name(spec: str) -> str:
-    """从清单记录里取分发名；取不出名字的记录返回空串。
-
-    记录一律写成 ``名字[extras]==版本`` 或 ``名字 @ 地址``，故取 ``@`` 之前、版本操作符之前的部分。
-    """
+    """提取清单记录中的分发名；无法解析时返回空字符串。"""
     text = str(spec).split(" @ ", 1)[0].strip()
     for separator in ("==", ">=", "<=", "!=", "~=", ">", "<", "["):
         text = text.split(separator, 1)[0]
@@ -206,8 +192,6 @@ def requirement_matches(spec: str, name: str) -> bool:
     """判断一条记录是否指向某个分发。"""
     wanted = name.strip().casefold()
     return bool(wanted) and recorded_name(spec).casefold() == wanted
-
-    # 从依赖串里取分发名；``httpx>=0.27; extra == "x"`` 这类写法也认得。
 
 
 def _needs_dist(requirement: str) -> str:
@@ -223,7 +207,7 @@ class EnvironmentSourceError(RuntimeError):
 
 @runtime_checkable
 class EnvironmentSource(Protocol):
-    """环境数据源接口；测试注入替身，生产走子进程。"""
+    """环境状态与操作的数据源接口。"""
 
     def state(self) -> EnvironmentState:
         """返回环境快照。"""
@@ -232,23 +216,23 @@ class EnvironmentSource(Protocol):
         """返回实例是否在运行；探测失败时返回 ``None``。"""
 
     def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
-        """执行 ``adopt`` / ``release`` / ``recreate``；``dry_run`` 为真时只预演。"""
+        """执行 ``adopt`` / ``release`` / ``recreate``；``dry_run`` 为真时只预览。"""
 
     def add_package(self, spec: str, *, save: bool, upgrade: bool = False) -> OperationResult:
-        """安装运行库；``save`` 为真时同时记进实例清单。"""
+        """安装运行库；``save`` 为真时同时写入实例清单。"""
 
     def remove_package(self, dist: str, *, save: bool) -> OperationResult:
-        """卸载运行库；``save`` 为真时同时删掉清单里的记录。"""
+        """卸载运行库；``save`` 为真时同时删除清单记录。"""
 
 
 @dataclass(frozen=True)
 class PackageCall:
-    """替身记录的一次装卸调用。
+    """静态数据源记录的包安装或卸载操作。
 
     :param kind: ``add`` 或 ``remove``。
     :param target: 需求串或分发名。
     :param save: 是否写实例清单。
-    :param upgrade: 是否允许升级已装版本。
+    :param upgrade: 是否允许升级已安装版本。
     """
 
     kind: str
@@ -258,12 +242,12 @@ class PackageCall:
 
 
 class StaticEnvironmentSource:
-    """固定数据的替身数据源，供自动化断言使用。
+    """用于测试的静态数据源。
 
     :param state: ``state`` 的返回值。
     :param running: ``running`` 的返回值。
-    :param action_result: ``action`` 的返回值；缺省为成功。
-    :param package_result: ``add_package`` / ``remove_package`` 的返回值；缺省为成功。
+    :param action_result: ``action`` 的返回值；默认为成功。
+    :param package_result: ``add_package`` / ``remove_package`` 的返回值；默认为成功。
     """
 
     def __init__(
@@ -332,9 +316,9 @@ class StaticEnvironmentSource:
 
 
 class SubprocessEnvironmentSource:
-    """默认数据源：一律经 ``akaribot`` 子进程，CLI 进程内不 import core。
+    """通过 ``akaribot`` 子进程读取环境状态并执行操作。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param query_timeout: 查询类调用的秒数上限。
     :param action_timeout: 环境动作的秒数上限。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
@@ -348,7 +332,7 @@ class SubprocessEnvironmentSource:
         action_timeout: float = ACTION_TIMEOUT_SECONDS,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 每次请求均解析当前实例，避免切换实例后继续访问旧路径。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.query_timeout = query_timeout
         self.action_timeout = action_timeout
@@ -357,7 +341,7 @@ class SubprocessEnvironmentSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def state(self) -> EnvironmentState:
@@ -394,7 +378,7 @@ class SubprocessEnvironmentSource:
         )
 
     def running(self) -> bool | None:
-        """见 :meth:`EnvironmentSource.running`：读锁文件记录，不起实例进程。"""
+        """通过锁文件读取实例运行状态。"""
         self.calls["running"] = self.calls.get("running", 0) + 1
         try:
             payload = self._invoke(("run", "--status", "--json"), timeout=self.query_timeout)
@@ -455,7 +439,7 @@ class SubprocessEnvironmentSource:
         if completed.returncode == 0:
             return OperationResult(True, i18n.t("cli.tui.common.op_ok", label=label), detail)
         if completed.returncode < 0:
-            # 子进程被信号终止时退出码是负数，只报数字看不出所以然。
+            # 负退出码表示终止信号，转换为信号名称显示。
             return OperationResult(
                 False,
                 i18n.t("cli.tui.environment.action_signalled", label=label, signal=_signal_name(-completed.returncode)),
@@ -509,7 +493,7 @@ def _tail(text: str | None, limit: int = 400) -> str:
 class EnvironmentPage(compat.Vertical):
     """环境页控件。
 
-    :param source: 数据源，缺省为 :class:`SubprocessEnvironmentSource`。
+    :param source: 数据源，默认为 :class:`SubprocessEnvironmentSource`。
     :param cache_ttl: 快照缓存有效期（秒）。
     """
 
@@ -519,7 +503,7 @@ class EnvironmentPage(compat.Vertical):
         height: 1fr;
     }
     EnvironmentPage #fields-pane {
-        height: 10;
+        height: 6;
         border: round $primary;
         padding: 0 1;
     }
@@ -538,10 +522,8 @@ class EnvironmentPage(compat.Vertical):
         margin: 0 0 0 1;
     }
     EnvironmentPage #count {
-        width: auto;
-        height: 3;
-        content-align-vertical: middle;
-        margin: 0 1 0 1;
+        height: 1;
+        padding: 0 1;
         color: $text-muted;
     }
     EnvironmentPage #columns {
@@ -567,11 +549,21 @@ class EnvironmentPage(compat.Vertical):
         padding: 0 0 0 1;
     }
     EnvironmentPage #status {
-        height: 2;
+        height: 1;
         padding: 0 0 0 1;
         color: $text-muted;
         text-wrap: nowrap;
         text-overflow: ellipsis;
+    }
+    EnvironmentPage.spacious #fields-pane {
+        height: 9;
+    }
+    EnvironmentPage.compact #fields-pane {
+        height: 5;
+    }
+    EnvironmentPage.compact #actions Button {
+        height: 1;
+        border: none;
     }
     """
 
@@ -624,16 +616,16 @@ class EnvironmentPage(compat.Vertical):
         return self._columns_rendered
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：环境概览、包清单、包装卸与解释器动作。"""
+
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.environment.fields_placeholder"), id="fields", markup=False)
         with compat.Horizontal(id="search-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.environment.search_placeholder"), id="package-search")
             yield compat.Checkbox(i18n.t("cli.tui.environment.recorded_only"), id="recorded-only")
-            yield compat.Static("", id="count", markup=False)
+        yield compat.Static("", id="count", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="package-list")
-        # 装卸与解释器动作各成一组：宽终端下一行放完，放不下时在两组之间折行。
+        # 包管理与解释器操作分组排列，窄屏优先在组间换行。
         yield compat.ButtonFlow(
             ("install", i18n.t("cli.tui.environment.button_install"), "primary"),
             ("uninstall", i18n.t("cli.tui.environment.button_uninstall"), "error"),
@@ -647,7 +639,7 @@ class EnvironmentPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -658,12 +650,12 @@ class EnvironmentPage(compat.Vertical):
         self.refresh_state(force=True)
 
     def focus_primary(self) -> None:
-        """把焦点交给包列表；列表为空时退到页面容器。"""
+        """聚焦包列表；列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#package-list")
 
     @property
     def state(self) -> EnvironmentState:
-        """返回缓存中的环境快照，不触发取数。"""
+        """返回缓存中的环境快照，不重新读取数据。"""
         return self._state
 
     @property
@@ -690,7 +682,7 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def selected_package(self) -> EnvironmentPackage | None:
-        """返回清单里高亮的那条记录。"""
+        """返回列表中高亮的包记录。"""
         visible = self.visible_packages
         if not visible:
             return None
@@ -704,33 +696,33 @@ class EnvironmentPage(compat.Vertical):
         return visible[index]
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取。"""
+
         self.reset_pending()
         self._pending_status = ""
         self.refresh_state(force=True)
 
     def action_focus_search(self) -> None:
-        """键位动作：把焦点交给搜索框。"""
+
         self.query_one("#package-search", compat.Input).focus()
 
     def action_install_package(self) -> None:
-        """键位动作：安装运行库。"""
+
         self.request_install()
 
     def action_uninstall_package(self) -> None:
-        """键位动作：卸载选中的包。"""
+
         self.request_uninstall()
 
     def action_adopt(self) -> None:
-        """键位动作：改用托管 venv。"""
+
         self.request_action("adopt")
 
     def action_release(self) -> None:
-        """键位动作：改用系统解释器。"""
+
         self.request_action("release")
 
     def action_recreate(self) -> None:
-        """键位动作：重建实例 venv。"""
+
         self.request_action("recreate")
 
     def set_query(self, value: str) -> None:
@@ -738,7 +730,7 @@ class EnvironmentPage(compat.Vertical):
         self.query_one("#package-search", compat.Input).value = value
 
     def set_recorded_only(self, value: bool) -> None:
-        """设置「只看清单里的」，等价于用户勾选。"""
+        """设置是否仅显示清单中的包。"""
         self.query_one("#recorded-only", compat.Checkbox).value = value
 
     def refresh_state(self, *, force: bool = False) -> None:
@@ -757,7 +749,7 @@ class EnvironmentPage(compat.Vertical):
         try:
             state = await asyncio.to_thread(self.source.state)
             running = await asyncio.to_thread(self.source.running)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._state = EnvironmentState(error=self.last_error)
@@ -772,7 +764,7 @@ class EnvironmentPage(compat.Vertical):
         self.last_error = state.error
         self.last_result = i18n.t("cli.tui.environment.status_loaded", count=max(state.package_count(), 0))
         self._render_all()
-        # 动作刚失败时保留那句结论：紧接着的重读不该把「为什么失败」冲掉。
+        # 操作结束后的自动刷新必须保留失败原因。
         self._set_status(self._pending_status or self.last_result)
         self._sync_actions()
         return True
@@ -781,11 +773,9 @@ class EnvironmentPage(compat.Vertical):
         return max(0.0, time.monotonic() - self._loaded_at)
 
     def request_action(self, kind: str) -> None:
-        """执行解释器动作：先弹一次选择框，可选直接执行或先预演。
+        """请求解释器动作；执行重建需要输入确认，预览只读取计划。
 
-        三个动作都会换掉实例正在使用的解释器，因此实例运行期间一律拒绝；动作不适用于当前模式时
-        也不动作，只说明为什么。选择框代替「再按一次」：既挡住鼠标双击与键盘连发，也让用户在动手
-        之前能先看一眼将要发生什么。
+        :param kind: ``adopt`` / ``release`` / ``recreate``。
         """
         reason = self._blocker(kind)
         if reason:
@@ -811,24 +801,50 @@ class EnvironmentPage(compat.Vertical):
         """按选择执行解释器动作。
 
         :param kind: ``adopt`` / ``release`` / ``recreate``。
-        :param choice: ``run`` 直接执行，``dry`` 只预演，``None`` 表示取消。
+        :param choice: ``run`` 请求执行，``dry`` 只预览，``None`` 表示取消。
         """
         self._gate.reset()
         if choice not in ("run", "dry"):
             self._set_status(i18n.t("cli.tui.environment.action_cancelled"))
             return
+        if kind == "recreate" and choice == "run":
+            token = i18n.t("cli.tui.environment.recreate_token")
+            compat.ask_text(
+                self.app,
+                title=i18n.t("cli.tui.environment.confirm_title", label=i18n.t("cli.tui.environment.label_recreate")),
+                hint=i18n.t("cli.tui.environment.recreate_type_hint", path=self._state.venv_dir, token=token),
+                placeholder=token,
+                confirm_label=i18n.t("cli.tui.environment.confirm_run"),
+                cancel_label=i18n.t("cli.tui.environment.cancel"),
+                callback=lambda value: self._confirm_recreate(value, token),
+            )
+            return
+        self._start_action(kind, dry_run=choice == "dry")
+
+    def _confirm_recreate(self, value: str | None, token: str) -> None:
+        if value != token:
+            key = "action_cancelled" if value is None else "recreate_mismatch"
+            self._set_status(i18n.t(f"cli.tui.environment.{key}"))
+            return
+        self._start_action("recreate", dry_run=False)
+
+    def _start_action(self, kind: str, *, dry_run: bool) -> None:
         label = i18n.t(f"cli.tui.environment.label_{kind}")
-        if choice == "dry":
+        reason = self._blocker(kind)
+        if reason:
+            compat.notify(self.app, reason, severity="warning", title=label)
+            return
+        if dry_run:
             label = i18n.t("cli.tui.environment.label_dry_run", label=label)
         self._set_status(i18n.t("cli.tui.environment.calling", label=label))
-        self.run_worker(self._operate(kind, label, dry_run=choice == "dry"), group="environment-action", exclusive=True)
+        self.run_worker(self._operate(kind, label, dry_run=dry_run), group="environment-action", exclusive=True)
 
     def reset_pending(self) -> None:
         """作废待确认的解释器动作；切页时由 :meth:`TuiApp.show_page` 调用。"""
         self._gate.reset()
 
     def _blocker(self, kind: str) -> str:
-        # 可以执行时返回空串。
+
         if self._busy:
             return i18n.t("cli.tui.common.busy_title")
         if self._running:
@@ -847,19 +863,17 @@ class EnvironmentPage(compat.Vertical):
         self._sync_actions()
         try:
             result = await asyncio.to_thread(self.source.action, kind, dry_run=dry_run)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
             )
         self._finish(result, label)
 
     def request_install(self) -> None:
-        """弹出输入框要需求串，再问装到哪里。"""
+        """请求输入运行库需求声明，并选择安装方式。"""
         reason = self._package_blocker()
         if reason:
-            compat.notify(
-                self.app, reason, severity="warning", title=i18n.t("cli.tui.environment.label_install_package")
-            )
+            compat.notify(self.app, reason, severity="warning", title=i18n.t("cli.tui.environment.install_title"))
             return
         compat.ask_text(
             self.app,
@@ -872,10 +886,7 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def on_install_spec_entered(self, spec: str | None) -> None:
-        """输入框回调：拿到需求串后再让用户选去处。
 
-        :param spec: 用户输入的需求串；取消时为 ``None``。
-        """
         text = (spec or "").strip()
         if not text:
             self._set_status(i18n.t("cli.tui.environment.install_cancelled"))
@@ -885,7 +896,7 @@ class EnvironmentPage(compat.Vertical):
             ("once", i18n.t("cli.tui.environment.install_to_env")),
         ]
         if self._installed_named(text):
-            # 名字已经装过时多给一条升级路径：升级只能靠写版本区间，这里直接给 -U。
+            # 对已安装的分发提供升级选项，对应 CLI 的 -U 参数。
             options.append(("upgrade", i18n.t("cli.tui.environment.install_upgrade")))
         compat.ask_choice(
             self.app,
@@ -897,7 +908,7 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def _installed_named(self, spec: str) -> bool:
-        # 需求串里的分发名与环境里的已装包比对；写地址或带版本区间时不必猜，直接按名字取前缀。
+
         name = recorded_name(spec)
         if not name:
             return False
@@ -905,10 +916,10 @@ class EnvironmentPage(compat.Vertical):
         return any(package.dist.casefold() == wanted for package in self._packages)
 
     def start_install(self, spec: str, mode: str | None) -> None:
-        """按选定的去处安装运行库。
+        """按所选方式安装运行库。
 
         :param spec: 需求串。
-        :param mode: ``save`` 记进清单，``once`` 只装进环境；``None`` 表示取消。
+        :param mode: ``save`` 同时写入清单，``once`` 仅安装到当前环境；``None`` 表示取消。
         """
         if mode not in (*SAVE_MODES, "upgrade"):
             self._set_status(i18n.t("cli.tui.environment.install_cancelled"))
@@ -923,12 +934,10 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def request_uninstall(self) -> None:
-        """卸载选中的包；记在清单里的要选去处，其余连按两次确认。"""
+        """确认并卸载选中的包，可选择是否保留清单记录。"""
         reason = self._package_blocker()
         if reason:
-            compat.notify(
-                self.app, reason, severity="warning", title=i18n.t("cli.tui.environment.label_uninstall_package")
-            )
+            compat.notify(self.app, reason, severity="warning", title=i18n.t("cli.tui.environment.bind_uninstall"))
             return
         package = self.selected_package()
         if package is None:
@@ -948,7 +957,7 @@ class EnvironmentPage(compat.Vertical):
                 callback=lambda mode: self.start_uninstall(package, mode),
             )
             return
-        # 未记进清单的包没有去处可选，但仍要弹一次确认框：卸载会动到环境，状态栏连按两次不叫确认。
+        # 未记录在清单中的包仍会更改当前环境，卸载前必须确认。
         if not self._gate.accept(f"uninstall:{package.dist}"):
             return
         compat.ask_choice(
@@ -961,10 +970,10 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def start_uninstall(self, package: EnvironmentPackage, mode: str | None) -> None:
-        """按选定的去处卸载。
+        """按所选方式卸载运行库。
 
         :param package: 目标记录。
-        :param mode: ``save`` 同时删掉清单记录，``once`` 只从环境卸载；``None`` 表示取消。
+        :param mode: ``save`` 同时删除清单记录，``once`` 仅从环境卸载；``None`` 表示取消。
         """
         if mode not in SAVE_MODES:
             self._set_status(i18n.t("cli.tui.environment.uninstall_cancelled"))
@@ -978,7 +987,7 @@ class EnvironmentPage(compat.Vertical):
         )
 
     def _package_blocker(self) -> str:
-        # 装卸包只动 site-packages，实例运行期间允许；这里只挡正在忙与没有可用解释器两种情况。
+        # 包操作仅更改 site-packages，允许在实例运行期间执行。
         if self._busy:
             return i18n.t("cli.tui.common.busy_title")
         if self._state.mode not in (MODE_MANAGED, MODE_EXTERNAL) or not self._state.ready:
@@ -994,7 +1003,7 @@ class EnvironmentPage(compat.Vertical):
                 result = await asyncio.to_thread(self.source.add_package, target, save=save, upgrade=upgrade)
             else:
                 result = await asyncio.to_thread(self.source.remove_package, target, save=save)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
             )
@@ -1006,7 +1015,7 @@ class EnvironmentPage(compat.Vertical):
             self.last_result = result.message
             compat.notify(self.app, result.message, severity="information", title=label)
             if self._running:
-                # 已经 import 过的模块不会因为环境变了就换版本，改完要重启实例才生效。
+                # 已导入的模块保留在进程中，更改包后需要重启实例。
                 self._pending_status = i18n.t("cli.tui.environment.restart_needed", label=label)
         else:
             self.last_error = result.detail or result.message
@@ -1068,7 +1077,7 @@ class EnvironmentPage(compat.Vertical):
         return separator.join(parts)
 
     def _dependents_of(self, dist: str) -> tuple[str, ...]:
-        # 返回依赖该分发的已装 AkariBot 包名。
+
         wanted = dist.strip().casefold()
         if not wanted:
             return ()
@@ -1085,7 +1094,7 @@ class EnvironmentPage(compat.Vertical):
         name_width = max(min(compat.column_width(package.dist for package in packages), 32, inner_width - 18), 8)
         version_width = min(max(compat.column_width(package.version or "-" for package in packages), 5), 12)
         tag_width = min(compat.column_width(package.tags_text for package in packages), 24)
-        # 放不下时先丢标记列：把名字挤成省略号比少一列标签更难用。
+        # 窄屏优先隐藏标记列，保留包名宽度。
         if tag_width and name_width + version_width + tag_width + 5 > inner_width:
             tag_width = 0
         return EnvironmentLayout(name_width, version_width, tag_width)
@@ -1108,7 +1117,7 @@ class EnvironmentPage(compat.Vertical):
         self._render_fields()
 
     def _render_columns(self, layout: EnvironmentLayout, inner_width: int) -> None:
-        # 表头与行共用同一份列宽计划：行里放不下标记列时，表头也必须照做。
+
         cells = [
             f"  {compat.fit_cells(i18n.t('cli.tui.environment.column_name'), layout.name_width)}",
             compat.fit_cells(i18n.t("cli.tui.environment.column_version"), layout.version_width),
@@ -1127,8 +1136,7 @@ class EnvironmentPage(compat.Vertical):
         return max(outer - 6, 16)
 
     def _sync_actions(self) -> None:
-        # 只显示当前模式下有意义的解释器动作：托管实例给「改用系统解释器」与「重建」，外部实例只给
-        # 「改用托管 venv」。点不到的按钮不会让人去猜它是干什么的。
+
         mode = self._state.mode
         visible = {
             "adopt": mode == MODE_EXTERNAL,
@@ -1141,7 +1149,7 @@ class EnvironmentPage(compat.Vertical):
             button.disabled = self._busy
         for kind in ("install", "uninstall", "refresh"):
             self.query_one(f"#{kind}", compat.Button).disabled = self._busy
-        # 显示状态变了，按钮区的可用宽度跟着变（隐藏的按钮不占位置），重新算一次列数。
+        # 隐藏按钮不占空间，显示状态变化后需重新计算列数。
         self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
@@ -1150,7 +1158,9 @@ class EnvironmentPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+
+        self.set_class(event.size.height < 22, "compact")
+        self.set_class(event.size.height >= 30, "spacious")
         self._render_all()
 
     @compat.on(compat.Input.Changed, "#package-search")

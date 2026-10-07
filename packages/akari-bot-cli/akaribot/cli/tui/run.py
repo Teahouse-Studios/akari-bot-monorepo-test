@@ -1,11 +1,3 @@
-"""Run 页：启动 / 停止 / 重启实例，并显示运行状态。
-
-数据流：界面只读 :class:`RunSource`；默认实现 :class:`SubprocessRunSource` 把状态、启动与停止
-全部交给 ``akaribot run`` 子进程。实例由 CLI 以独立会话启动并登记在实例锁里，界面因此不持有
-进程句柄：界面退出后实例继续运行，新开的界面能接管并停止由其它控制器启动的实例。启停走后台
-任务，状态刷新按周期询问 CLI。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -31,11 +23,11 @@ STATE_UNKNOWN = "unknown"
 
 RUN_LABEL = "akaribot run"
 LOCK_FILENAME = ".bot.lock"
-# 交给 CLI 的停止等待秒数；CLI 超时后会强杀，界面只需等它给出结论。
+# 停止超时由 CLI 处理，界面等待操作结果。
 STOP_TIMEOUT_SECONDS = 20.0
 _TAIL_CHARS = 400
 
-# 状态与表头都是按当前语言取的展示标签，故这里只存文案键，取值一律在渲染时进行。
+# 状态与表头须按当前语言解析，因此常量只保存文案键。
 _STATE_KEYS = {
     STATE_RUNNING: "cli.tui.run.state_running",
     STATE_STOPPED: "cli.tui.run.state_stopped",
@@ -56,7 +48,7 @@ _TABLE_COLUMNS = (
 
 @dataclass(frozen=True)
 class ProcessRecord:
-    """状态表里的一行。
+    """状态表中的一行。
 
     :param label: 目标名，通常是 ``akaribot run``。
     :param pid: 进程号；未启动或由外部进程持锁时为空。
@@ -104,28 +96,28 @@ class RunResult:
 
 @runtime_checkable
 class RunSource(Protocol):
-    """运行控制数据源接口；测试注入替身，生产走子进程。"""
+    """运行控制数据源接口；测试注入替身，运行时通过子进程执行。"""
 
     def status(self) -> Sequence[ProcessRecord]:
-        """返回状态表，本轮至少一行。"""
+        """返回状态表，至少一行。"""
 
     def start(self, *, adapter: str = "") -> RunResult:
         """启动实例；``adapter`` 非空时只启动该平台的适配器。"""
 
     def stop(self) -> RunResult:
-        """停止本页启动的实例。"""
+        """停止当前实例。"""
 
     def restart(self) -> RunResult:
         """先停后启。"""
 
 
 class StaticRunSource:
-    """替身数据源：不产生任何子进程，启停只累加调用次数并做状态迁移。
+    """替身数据源：不产生任何子进程，启停只累加调用次数并更新状态。
 
-    :param records: 初始状态表；缺省给一行「已停止」。
+    :param records: 初始状态表；默认给一行「已停止」。
     :param running_pid: 启动成功后上报的 PID。
     :param stop_exit_code: 停止后上报的退出码。
-    :param results: 覆盖 ``start`` / ``stop`` / ``restart`` 的返回值；覆盖时不再迁移状态表。
+    :param results: 覆盖 ``start`` / ``stop`` / ``restart`` 的返回值；指定结果时保留现有状态表。
     """
 
     def __init__(
@@ -148,12 +140,11 @@ class StaticRunSource:
         self.stop_exit_code = stop_exit_code
         self.started_at = "2026-01-01 00:00:00"
         self.calls = {"status": 0, "start": 0, "stop": 0, "restart": 0}
-        # 每次启动请求带的适配器名，供自动化断言核对界面确实把平台交给了数据源。
         self.adapters: list[str] = []
         self._results = dict(results or {})
 
     def set_result(self, action: str, result: RunResult) -> None:
-        """覆盖某个动作的返回值；覆盖后该动作不再迁移状态表。
+        """设置操作的模拟结果，保留现有状态表。
 
         :param action: ``start`` / ``stop`` / ``restart``。
         :param result: 该动作要返回的结果。
@@ -161,12 +152,10 @@ class StaticRunSource:
         self._results[action] = result
 
     def status(self) -> Sequence[ProcessRecord]:
-        """见 :meth:`RunSource.status`。"""
         self.calls["status"] += 1
         return tuple(self.records)
 
     def start(self, *, adapter: str = "") -> RunResult:
-        """见 :meth:`RunSource.start`。"""
         self.calls["start"] += 1
         self.adapters.append(adapter)
         override = self._results.get("start")
@@ -185,7 +174,6 @@ class StaticRunSource:
         return RunResult(True, i18n.t("cli.tui.run.msg_started", pid=self.running_pid), "stub run")
 
     def stop(self) -> RunResult:
-        """见 :meth:`RunSource.stop`。"""
         self.calls["stop"] += 1
         override = self._results.get("stop")
         if override is not None:
@@ -209,7 +197,6 @@ class StaticRunSource:
         )
 
     def restart(self) -> RunResult:
-        """见 :meth:`RunSource.restart`。"""
         self.calls["restart"] += 1
         override = self._results.get("restart")
         if override is not None:
@@ -229,18 +216,16 @@ class StaticRunSource:
 
 
 class RunSourceError(RuntimeError):
-    """数据源无法给出结论：CLI 调用失败或输出不可解析。"""
+    """运行数据读取失败：CLI 调用失败或输出不可解析。"""
 
 
 class SubprocessRunSource:
-    """默认数据源：状态与启停全部经 ``akaribot run`` 子进程。
+    """通过 ``akaribot run`` 子进程读取状态并控制实例。
 
-    界面不自己持有实例进程：``akaribot run --detach`` 让实例自建会话，界面退出后实例继续运行；
-    状态与进程号取自 ``run --status --json``，停止走 ``run --stop``。因此新开的界面能接管并停止
-    由其它控制器（另一个界面、终端、系统服务）启动的实例。
+    实例进程使用独立会话，界面退出后继续运行。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
-    :param start: 向上查找的起点，缺省为当前工作目录。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param start: 向上查找的起点，默认为当前工作目录。
     :param timeout: 单次 CLI 调用的秒数上限。
     :param stop_timeout: 交给 CLI 的停止等待秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
@@ -266,12 +251,10 @@ class SubprocessRunSource:
         self._runner = runner or subprocess.run
 
     def status(self) -> Sequence[ProcessRecord]:
-        """见 :meth:`RunSource.status`。"""
         self.calls["status"] += 1
         return self._records_from(self._state())
 
     def start(self, *, adapter: str = "") -> RunResult:
-        """见 :meth:`RunSource.start`：经 ``run --detach`` 启动，界面不持有进程句柄。"""
         self.calls["start"] += 1
         argv = ["run", "--detach", "--json"]
         if adapter:
@@ -291,7 +274,6 @@ class SubprocessRunSource:
         )
 
     def stop(self) -> RunResult:
-        """见 :meth:`RunSource.stop`：经 ``run --stop`` 停止，能停掉别的控制器启动的实例。"""
         self.calls["stop"] += 1
         try:
             payload = self._invoke("stop", "run", "--stop", "--json", "--timeout", f"{self.stop_timeout:g}")
@@ -306,7 +288,6 @@ class SubprocessRunSource:
         return RunResult(True, message, detail)
 
     def restart(self) -> RunResult:
-        """见 :meth:`RunSource.restart`：先停后启，停止失败则中止。"""
         self.calls["restart"] += 1
         if self.probe_running():
             stopped = self.stop()
@@ -420,7 +401,7 @@ class SubprocessRunSource:
 
 
 def _parse_payload(stdout: str | None) -> dict[str, Any] | None:
-    # CLI 以 --json 输出单行对象；退出码非零时对象本身带有失败结论，故先解析再看退出码。
+    # 非零退出码对应的 JSON 仍包含失败详情，须先解析输出。
     text = (stdout or "").strip()
     if not text:
         return None
@@ -442,11 +423,11 @@ def _local_time(value: Any) -> str:
 
 
 class RunPage(compat.Vertical):
-    """Run 页控件。
+    """运行页控件。
 
-    启动、停止、重启与「只启动指定适配器」都先弹一次模态确认框，选「执行」后才调用数据源。
+    启停操作经模态确认后执行。
 
-    :param source: 数据源，缺省为 :class:`SubprocessRunSource`。
+    :param source: 数据源，默认为 :class:`SubprocessRunSource`。
     :param status_interval: 状态表刷新周期（秒）；``None`` 或非正数表示只手动刷新。
     """
 
@@ -464,7 +445,7 @@ class RunPage(compat.Vertical):
         width: 1fr;
     }
     RunPage #actions {
-        height: 3;
+        height: auto;
         padding: 0 0 0 1;
     }
     RunPage #status {
@@ -476,7 +457,7 @@ class RunPage(compat.Vertical):
     }
     """
 
-    # 重启、指定适配器与前台运行在操作行上都有按钮，键位属低频入口，不进页脚。
+    # 低频操作通过按钮提供，避免页脚超出可用宽度。
     BINDINGS = compat.bindings(
         ("s", "start", i18n.t("cli.tui.run.label_start")),
         ("x", "stop", i18n.t("cli.tui.run.label_stop")),
@@ -509,20 +490,21 @@ class RunPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：状态表、操作按钮与状态栏。"""
         with compat.VerticalScroll(id="table-pane"):
             yield compat.Static(i18n.t("cli.tui.run.table_loading"), id="table", markup=False)
-        with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.run.label_start"), id="start", variant="primary")
-            yield compat.Button(i18n.t("cli.tui.run.label_stop"), id="stop", variant="error")
-            yield compat.Button(i18n.t("cli.tui.run.label_restart"), id="restart", variant="warning")
-            yield compat.Button(i18n.t("cli.tui.run.label_adapter_start"), id="adapter-start")
-            yield compat.Button(i18n.t("cli.tui.run.label_foreground"), id="foreground")
-            yield compat.Button(i18n.t("cli.tui.run.label_refresh"), id="refresh")
+        yield compat.ButtonFlow(
+            ("start", i18n.t("cli.tui.run.label_start"), "primary"),
+            ("stop", i18n.t("cli.tui.run.label_stop"), "error"),
+            ("restart", i18n.t("cli.tui.run.label_restart"), "warning"),
+            ("adapter-start", i18n.t("cli.tui.run.label_adapter_start")),
+            ("foreground", i18n.t("cli.tui.run.label_foreground")),
+            ("refresh", i18n.t("cli.tui.run.label_refresh")),
+            breaks=("restart",),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数与周期轮询推迟到首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -535,19 +517,17 @@ class RunPage(compat.Vertical):
             self.set_interval(self.status_interval, self._on_tick)
 
     def focus_primary(self) -> None:
-        """把焦点交给本页，供上层在页面切换时调用。"""
+        """聚焦本页，供上层在页面切换时调用。"""
         compat.focus_now(self)
-
-    # region 状态读取（供测试与上层使用）
 
     @property
     def records(self) -> tuple[ProcessRecord, ...]:
-        """返回缓存中的状态表，不触发取数。"""
+        """返回缓存中的状态表，不重新读取数据。"""
         return self._records
 
     @property
     def running(self) -> bool:
-        """状态表里是否存在运行中的进程。"""
+        """状态表中是否存在运行中的进程。"""
         return any(record.running for record in self._records)
 
     @property
@@ -560,28 +540,21 @@ class RunPage(compat.Vertical):
         """返回状态栏当前文本。"""
         return self._status_rendered
 
-    # endregion
-
-    # region 数据读取与操作
-
     def refresh_status(self, *, manual: bool = False) -> None:
-        """读取状态表并重绘。
-
-        状态经 ``akaribot run --status --json`` 子进程取得，故放到后台任务里执行；同一时刻只保留
-        最新一次刷新，响应慢时不会堆积。数据源异常只更新状态栏，不中断界面。
+        """后台刷新运行状态，同一时刻只保留最新请求。
 
         :param manual: 是否由用户显式刷新；轮询不作废待确认，手动刷新才作废。
         """
         self.run_worker(partial(self._refresh, manual=manual), group="run-status", exclusive=True)
 
     async def _refresh(self, *, manual: bool = False) -> None:
-        # 轮询不作废待确认：确认框开着时，周期刷新不得把它撤掉。
+        # 周期轮询不得使正在确认的操作失效。
         if manual:
             self._pending.reset()
         try:
             records = tuple(await asyncio.to_thread(self.source.status))
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
-            # 状态读不到就无法判断语境，待确认随本轮失效。
+        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面
+            # 状态读取失败时，待确认操作失效。
             self._pending.reset()
             self.last_error = f"{type(error).__name__}: {error}"
             self._records = ()
@@ -605,7 +578,7 @@ class RunPage(compat.Vertical):
         self._pending.reset()
 
     def request_start(self) -> None:
-        """发起启动；已有进程在运行时给出提示而不动作。"""
+        """请求启动当前实例；已运行时显示提示。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -617,7 +590,7 @@ class RunPage(compat.Vertical):
         self._request_start(self._adapter)
 
     def request_stop(self) -> None:
-        """发起停止；没有本页启动的进程时给出提示而不动作。"""
+        """请求停止当前实例；未运行时显示提示。"""
         if not self.running:
             compat.notify(
                 self.app,
@@ -643,7 +616,7 @@ class RunPage(compat.Vertical):
         )
 
     def request_adapter_start(self) -> None:
-        """发起「只启动指定适配器」；先弹输入框收集平台，确认后才执行。"""
+        """请求输入平台名，确认后启动指定适配器。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -687,7 +660,6 @@ class RunPage(compat.Vertical):
         return f"start:{adapter}" if adapter else "start"
 
     def _ask_confirm(self, key: str, *, label: str, hint: str, func: Callable[[], RunResult]) -> None:
-        # 模态框就是确认；闸门只挡鼠标双击与键盘连发带来的第二层弹窗。
         if not self._pending.accept(key):
             return
         compat.ask_choice(
@@ -729,7 +701,7 @@ class RunPage(compat.Vertical):
     async def _operate(self, label: str, func: Callable[[], RunResult]) -> None:
         try:
             result = await asyncio.to_thread(func)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常都转成结果展示
             result = RunResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -776,10 +748,6 @@ class RunPage(compat.Vertical):
         else:
             parts.append(i18n.t("cli.tui.run.summary_manual"))
         return i18n.t("cli.tui.common.error_separator").join(parts)
-
-    # endregion
-
-    # region 渲染（只读缓存）
 
     def _render_table(self) -> None:
         columns = [i18n.t(key) for key in _TABLE_COLUMNS]
@@ -843,12 +811,7 @@ class RunPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(clipped))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
         self._render_table()
-
-    # endregion
-
-    # region 交互
 
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
@@ -867,32 +830,24 @@ class RunPage(compat.Vertical):
             self.refresh_status(manual=True)
 
     def action_start(self) -> None:
-        """键位动作：启动实例。"""
         self.request_start()
 
     def action_stop(self) -> None:
-        """键位动作：停止实例。"""
         self.request_stop()
 
     def action_restart(self) -> None:
-        """键位动作：重启实例。"""
         self.request_restart()
 
     def action_adapter_start(self) -> None:
-        """键位动作：只启动指定平台的适配器。"""
         self.request_adapter_start()
 
     def action_foreground(self) -> None:
-        """键位动作：给出前台运行的命令与后果，界面内不执行。"""
         text = i18n.t("cli.tui.run.foreground_hint", command=self._foreground_command())
         compat.notify(self.app, text, severity="warning", title=i18n.t("cli.tui.run.label_foreground"))
         self._set_status(text)
 
     def action_refresh(self) -> None:
-        """键位动作：刷新状态表。"""
         self.refresh_status(manual=True)
-
-    # endregion
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

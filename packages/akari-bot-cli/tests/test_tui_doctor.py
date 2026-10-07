@@ -1,9 +1,4 @@
-"""体检页：结论列表、检查项统计、重新体检与跳转处理页面。
-
-本文件固定四条链路：状态栏汇总 error/warning 与实现来源；退出码 1 但 stdout 仍是完整 JSON 时结论
-照常展示；取数失败只在状态栏给出原因，界面不崩；回车按结论种类切到对应处理页面。新文案键尚未并入
-locales 时先从片段合并一份语言快照，故断言取到的插值文案是真实渲染结果。
-"""
+"""诊断页的结论、统计、读取失败与处理页面跳转测试。"""
 
 import json
 import os
@@ -103,7 +98,7 @@ async def _with_page(source, body, *, size=(150, 40), sources=None):
 
 
 def _visible_detail_rows(page) -> tuple[str, ...]:
-    # 详情被父容器裁掉尾部时 region 会超出屏幕：取 region 与屏幕可视区的交集，再逐行取控件自己的渲染结果。
+    # 控件区域可能超出屏幕，须取可视区交集后检查实际渲染内容。
     detail = page.query_one("#detail", compat.Static)
     region = detail.region
     screen = page.app.screen.region
@@ -113,13 +108,13 @@ def _visible_detail_rows(page) -> tuple[str, ...]:
 
 
 class _SlowDoctorSource(StaticDoctorSource):
-    # 取数放慢，便于观察进行中的状态栏与按钮。
+    # 延迟数据返回，以验证请求期间的状态与按钮可用性。
     def load_snapshot(self, *, strict: bool = False):
         time.sleep(0.4)
         return super().load_snapshot(strict=strict)
 
 
-# 假 CLI 写成带 shebang 的可执行文件：AKARIBOT_CLI_BIN 是单一路径，不按空格拆解释器与脚本。
+# AKARIBOT_CLI_BIN 仅接受可执行文件路径，CLI 替身须包含 shebang。
 FAKE_CLI_DOCTOR_EXIT_ONE = """#!/usr/bin/env python3
 import json
 import sys
@@ -221,7 +216,7 @@ async def _test_lists_conflicts_and_summarizes():
 
 
 async def _test_exit_code_one_with_json_still_renders():
-    # 存在 error 级结论时 doctor 以退出码 1 结束，stdout 仍是完整 JSON，结论照常展示。
+    # 非零退出码可能表示诊断发现问题，完整 JSON 结果仍须展示。
     with TemporaryDirectory(prefix="akari-doctor-") as raw:
         root = Path(raw)
         fake = _fake_cli(root, "fake_doctor_exit_one", FAKE_CLI_DOCTOR_EXIT_ONE)
@@ -470,7 +465,7 @@ def _test_implementation_kind_detection():
 
 
 async def _test_enter_jumps_to_target_page():
-    # 平台类结论去适配器页，config 类去配置页，落不到页面的去概览页。
+
     source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT, UNKNOWN_CONFLICT)))
     jump_sources = {
         "adapters": StaticAdapterSource(),
@@ -490,7 +485,7 @@ async def _test_enter_jumps_to_target_page():
             app.show_page("doctor")
             await pilot.pause()
             if expected != "dashboard":
-                # 上下键仍归列表：类型按钮改绑回车不能把游标键一起丢掉。
+                # 自定义回车操作不应影响列表方向键导航。
                 await pilot.press("down")
                 await pilot.pause()
         await pilot.press("q")
@@ -556,7 +551,7 @@ async def _test_detail_shows_next_step():
 
 
 async def _test_detail_orders_next_step_before_facts():
-    # 详情重排后「级别」与「种类」合成一行，总行数不超过六行。
+
     source = StaticDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
@@ -587,7 +582,7 @@ async def _test_detail_orders_next_step_before_facts():
 
 
 async def _test_next_step_visible_at_narrow_sizes():
-    # 80×24 只放得下详情的前几行：尾部可以裁掉，但「下一步」必须落在可视区内。
+    # 短屏可裁剪详情尾部，但必须显示处理步骤。
     async def body(app, page, pilot):
         detail = page.query_one("#detail", compat.Static)
         observed = (page.detail_text.split("\n"), detail.region, app.size.height, _visible_detail_rows(page))
@@ -617,7 +612,7 @@ async def _test_next_step_visible_at_narrow_sizes():
 
 
 async def _test_strict_option_reloads_with_flag():
-    # 勾选严格模式即重新体检，状态同时写进页面字段区；复选框在 80 列下完整可见。
+
     source = StaticDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
@@ -662,7 +657,7 @@ async def _test_strict_option_reloads_with_flag():
 
 
 async def _test_strict_toggle_restarts_running_load():
-    # 取数期间勾选：正在跑的那次按旧选项下发，结论作废，必须按新选项重来。
+    # 请求期间更改选项会使旧结果失效，须按新选项重新诊断。
     source = _SlowDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
@@ -706,7 +701,7 @@ def _test_subprocess_source_adds_strict_flag():
 
 
 async def _test_click_only_moves_highlight():
-    # 单击一行只更新高亮与详情：列表把点击也发成 Selected，跳转只认键盘回车。
+    # 单击也会触发 Selected 消息，只有回车应执行页面跳转。
     source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT)))
 
     async def body(app, page, pilot):
@@ -722,7 +717,7 @@ async def _test_click_only_moves_highlight():
 
 @func_case
 async def test_tui_doctor(tester: Tester):
-    """cli.tui.doctor: 体检页结论、统计、重新体检与跳转测试"""
+    """cli.tui.doctor: 诊断页结论、统计、重新诊断与跳转测试"""
     _use_cli_locale()
     await tester.test(_test_lists_conflicts_and_summarizes, "列出结论行并汇总 error/warning")
     await tester.test(_test_exit_code_one_with_json_still_renders, "退出码 1 但 stdout 是 JSON 仍展示结论")

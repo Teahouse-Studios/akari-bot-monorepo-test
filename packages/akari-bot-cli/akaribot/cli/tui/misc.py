@@ -1,11 +1,3 @@
-"""杂项页：只放不属于其它页面的一次性操作。
-
-目前只有「迁移项目」：把旧版项目搬进新实例。页面平时只显示一个按钮，点击后才弹出输入框要路径，
-路径确定后再从确认框里选「先预演」或「开始迁移」——旧目录只读，但迁移会往实例里写配置与数据。
-勾选的开关随 ``akaribot migrate legacy`` 下发，目标实例由 CLI 决定：未给 ``--instance`` 时取旧项目同级的
-``<旧项目名>-instance``。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -21,16 +13,16 @@ from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import OperationResult
 
 MIGRATE_TIMEOUT_SECONDS = 1800.0
-# 预演输出是迁移计划报告，比失败原因长得多，故单独给一个截取上限。
+# 迁移计划通常较长，预览输出使用独立的截断上限。
 DRY_RUN_OUTPUT_LIMIT = 4000
 OUTPUT_LINES = 6
 
 CHOICE_MIGRATE = "migrate"
 CHOICE_DRY_RUN = "dry-run"
-# 请求闸门的键与路径分开命名：两者语义不同，取值撞上会互相顶掉防抖记录。
+# 请求防抖键与项目路径分离，避免同名值覆盖防抖记录。
 MIGRATE_REQUEST = "migrate-request"
 
-# 迁移页的开关：取值即 CLI 参数名，文案键写它的界面标签，顺序即界面顺序与 argv 顺序。
+
 MIGRATE_SWITCHES = (
     ("--skip-install", "cli.tui.misc.option_skip_install"),
     ("--no-venv", "cli.tui.misc.option_no_venv"),
@@ -45,16 +37,16 @@ def _option_id(flag: str) -> str:
 
 @runtime_checkable
 class MiscSource(Protocol):
-    """杂项动作的数据源接口；测试注入替身，生产走子进程。"""
+    """项目迁移数据源接口。"""
 
     def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
-        """把旧版项目迁移为当前实例；``dry_run`` 为真时只打印将要执行的动作，``flags`` 是附加的 CLI 开关。"""
+        """迁移旧版项目到当前实例；``dry_run`` 为真时仅预览，``flags`` 为附加的 CLI 参数。"""
 
 
 class StaticMiscSource:
-    """固定数据的替身数据源，供自动化断言使用。
+    """用于测试的静态数据源。
 
-    :param result: ``migrate_legacy`` 的返回值；缺省为成功。
+    :param result: ``migrate_legacy`` 的返回值；默认为成功。
     """
 
     def __init__(self, result: OperationResult | None = None) -> None:
@@ -70,10 +62,10 @@ class StaticMiscSource:
 
 
 class SubprocessMiscSource:
-    """默认数据源：经 ``akaribot migrate legacy`` 执行，CLI 进程内不 import core。
+    """通过 ``akaribot migrate legacy`` 执行项目迁移。
 
-    :param root: 实例根；缺省按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
-    :param timeout: 单个子进程的超时秒数；迁移要搬文件、装包，给足时间。
+    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param timeout: 迁移子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
@@ -84,7 +76,7 @@ class SubprocessMiscSource:
         timeout: float = MIGRATE_TIMEOUT_SECONDS,
         runner: Callable[..., Any] | None = None,
     ) -> None:
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 每次请求均解析当前实例，避免切换实例后继续访问旧路径。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"migrate": 0}
@@ -92,14 +84,14 @@ class SubprocessMiscSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
         """见 :meth:`MiscSource.migrate_legacy`。"""
         self.calls["migrate"] += 1
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
-        # 带 --instance 指定目标：不带时 CLI 会另建「<旧项目名>-instance」，那不是界面上显示的实例。
+        # 必须显式指定 --instance，确保迁移目标为界面当前实例。
         argv = cli_process.cli_argv("migrate", "legacy", project, "--instance", str(self.root))
         if dry_run:
             argv.append("--dry-run")
@@ -143,7 +135,7 @@ def _tail(text: str | None, limit: int = 400) -> str:
 class MiscPage(compat.Vertical):
     """杂项页控件。
 
-    :param source: 数据源，缺省为 :class:`SubprocessMiscSource`。
+    :param source: 数据源，默认为 :class:`SubprocessMiscSource`。
     """
 
     DEFAULT_CSS = """
@@ -189,7 +181,6 @@ class MiscPage(compat.Vertical):
 
     BINDINGS = compat.bindings(
         ("m", "migrate", i18n.t("cli.tui.misc.bind_migrate")),
-        # 预演在确认框里就有按钮，键位只是给已填过路径时的快捷方式，不进页脚。
         ("p", "dry_run", i18n.t("cli.tui.misc.bind_dry_run"), False),
     )
 
@@ -208,7 +199,7 @@ class MiscPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：说明、开关行、一个动作按钮、输出区与状态栏。"""
+
         yield compat.Static(i18n.t("cli.tui.misc.hint"), id="misc-hint", markup=False)
         with compat.Horizontal(id="migrate-options"):
             for flag, label_key in MIGRATE_SWITCHES:
@@ -219,7 +210,7 @@ class MiscPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；输出区没有内容时不占屏幕。"""
+
         compat.set_text_selection(self, False)
         self._sync_output()
 
@@ -227,7 +218,7 @@ class MiscPage(compat.Vertical):
         """本页没有需要预取的数据。"""
 
     def focus_primary(self) -> None:
-        """把焦点交给按钮。"""
+        """聚焦按钮。"""
         compat.focus_first(self, "#migrate")
 
     @property
@@ -261,11 +252,11 @@ class MiscPage(compat.Vertical):
         self._pending_project = ""
 
     def action_migrate(self) -> None:
-        """键位动作：进入迁移确认流程。"""
+
         self.request_migrate()
 
     def action_dry_run(self) -> None:
-        """键位动作：对已输入的路径先预演；没有路径时只提示。"""
+
         if self._busy:
             self._notify_busy()
             return
@@ -275,11 +266,11 @@ class MiscPage(compat.Vertical):
         self._start_migration(self._pending_project, dry_run=True)
 
     def request_migrate(self) -> None:
-        """按一次即进入确认流程：没有路径时先要路径，随后弹确认框。"""
+        """请求迁移；未指定路径时先请求输入，再显示确认框。"""
         if self._busy:
             self._notify_busy()
             return
-        # 闸门挡住鼠标双击与键盘连发：窗口内的第二次请求不重复弹窗。
+        # 防抖窗口内忽略重复请求，避免叠加确认框。
         if not self._confirm.accept(MIGRATE_REQUEST):
             return
         project = self._pending_project
@@ -297,22 +288,19 @@ class MiscPage(compat.Vertical):
         )
 
     def on_project_entered(self, project: str | None) -> None:
-        """输入框回调：拿到路径后弹出确认框。
 
-        :param project: 用户输入的路径；取消时为 ``None``。
-        """
         if not project:
             self._set_status(i18n.t("cli.tui.misc.cancelled"))
             return
         self._pending_project = project
-        # 记下提交路径的时刻：输入框与确认框都认回车，紧接着的那次回车是连发而不是确认。
+        # 输入框与确认框均响应回车，记录提交时刻以防止连续按键误确认。
         self._confirm.reset()
         self._confirm.accept(project)
         self._open_choice(project)
 
     def _open_choice(self, project: str) -> None:
         self._set_status(i18n.t("cli.tui.misc.confirm_migrate_pending", project=project))
-        # 勾选的开关要在确认前写清：确认框里说到的命令就是随后原样下发的那条。
+        # 确认框必须列明即将传递给 CLI 的参数。
         chosen = self.selected_flags
         options = " ".join(chosen) if chosen else i18n.t("cli.tui.misc.choice_options_none")
         hint = "\n".join(
@@ -321,7 +309,7 @@ class MiscPage(compat.Vertical):
                 i18n.t("cli.tui.misc.choice_options", options=options),
             )
         )
-        # 预演放在第一位：确认框打开即聚焦第一项，回车先落到只读的预演上。
+        # 默认聚焦只读预览选项，避免连续回车直接执行迁移。
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.misc.dialog_title"),
@@ -335,20 +323,17 @@ class MiscPage(compat.Vertical):
         )
 
     def on_migration_choice(self, choice: str | None) -> None:
-        """确认框回调：先预演、开始迁移或取消。
 
-        :param choice: 选中的取值；取消时为 ``None``。
-        """
         project = self._pending_project
         if not project or not choice:
             self.reset_pending()
             self._set_status(i18n.t("cli.tui.misc.cancelled"))
             return
         if choice == CHOICE_DRY_RUN:
-            # 预演不写盘，不必过闸门。
+            # 预览不写入数据，无需执行确认防抖检查。
             self._start_migration(project, dry_run=True)
             return
-        # 模态框本身就是确认，闸门只挡「回车提交路径 + 回车确认」这类连发。
+        # 防抖检查避免提交路径后的连续回车直接确认迁移。
         if not self._confirm.accept(project):
             self._set_status(i18n.t("cli.tui.misc.confirm_migrate_again", project=project))
             return
@@ -368,7 +353,7 @@ class MiscPage(compat.Vertical):
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
         key = "cli.tui.misc.calling_dry_run" if dry_run else "cli.tui.misc.calling"
         self._set_status(i18n.t(key, project=project))
-        # 开关在按下动作时定下：确认框关掉后用户改不到它们，本次下发的集合只有一份。
+        # 在操作开始时固定参数，避免后台任务执行期间读取变化中的表单状态。
         flags = self.selected_flags
         self.run_worker(
             self._migrate(project, label, dry_run=dry_run, flags=flags), group="misc-migrate", exclusive=True
@@ -377,7 +362,7 @@ class MiscPage(compat.Vertical):
     async def _migrate(self, project: str, label: str, *, dry_run: bool, flags: tuple[str, ...]) -> None:
         try:
             result = await asyncio.to_thread(self.source.migrate_legacy, project, dry_run=dry_run, flags=flags)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
             )
@@ -388,7 +373,7 @@ class MiscPage(compat.Vertical):
             self._set_status(f"{result.message}｜{detail}" if detail else result.message)
             compat.notify(self.app, result.message, severity="information", title=label)
             if not dry_run:
-                # 迁移已经落盘，再按 m 应重新要路径，而不是复用这一次的目标。
+                # 迁移成功后清除路径，避免后续操作复用已完成的目标。
                 self.reset_pending()
         else:
             self.last_error = result.detail or result.message

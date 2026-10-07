@@ -1,8 +1,4 @@
-"""数据库页：表清单、数据项、编辑区与二次确认的写入。
-
-页面只经 ``akaribot db`` 子命令读写，故用例一律注入替身数据源，不起真子进程：写操作必须按两次
-同一个键才发生，第一次只把将改动的列与新旧值记在待确认计划里；写入失败后页面仍可继续读取与重试。
-"""
+"""数据库页的浏览、筛选、分页、编辑与模态确认测试。"""
 
 import json
 import subprocess
@@ -50,7 +46,6 @@ def _source(**kwargs) -> StaticDatabaseSource:
     return StaticDatabaseSource(**params)
 
 
-# 点确认框里的「写入」按钮：写入一律经模态确认，第二次按键不再直接执行。
 async def _confirm_write(app, pilot) -> None:
     app.screen.query_one("#choice-0", compat.Button).press()
     await pilot.pause()
@@ -165,7 +160,7 @@ async def _test_json_values_round_trip_in_editor():
 
 
 async def _test_write_keeps_the_page_and_recounts():
-    # 翻到第几页是用户的上下文：改一行、删一行都留在当前页，但条数要重算（写入会改变总数）。
+    # 写入后保留当前页，并重新统计可能变化的总数。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -199,7 +194,7 @@ async def _test_failed_rows_load_disables_the_pager():
         return states, caption
 
     states, caption = await _with_page(body, source)
-    # 失败原因写在标题行，且四个翻页按钮全部禁用。
+
     return all(states.values()) and "boom" in caption
 
 
@@ -232,7 +227,7 @@ async def _test_save_asks_for_confirmation():
 
 
 async def _test_multi_column_save_is_one_call():
-    # 一行多列：改动几列都只发一次写入，各列在同一次 UPDATE 里落库。
+    # 同一行的多列更改须合并为一次原子写入。
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -264,7 +259,7 @@ async def _test_unchanged_editor_writes_nothing():
         await _select_row(pilot, page, 0)
         await pilot.press("s")
         await pilot.pause()
-        # 没有改动时连确认框都不该出现：先说明「没有可写的内容」，不打扰用户。
+
         opened = type(app.screen).__name__
         await page.wait_for_idle()
         await pilot.pause()
@@ -292,7 +287,7 @@ async def _test_save_passes_argv_to_cli():
         source = SubprocessDatabaseSource(root=Path(raw), timeout=10.0, runner=runner)
 
         async def body(app, page, pilot, source):
-            # 表清单直接写进页面，只让写路径经子进程，argv 才能被逐段核对。
+            # 注入表清单以隔离读取路径，仅验证写入命令参数。
             page._tables = TABLES
             page._loaded_at = time.monotonic()
             await page.select_table("module_status")
@@ -344,7 +339,7 @@ async def _test_insert_asks_for_confirmation():
 
 
 async def _test_insert_can_set_primary_key():
-    # 主键非自增且必填的表（如 module_status.module_name）必须能填主键，否则这类表建不了数据项。
+    # 非自增主键必须支持输入，否则无法为该表新增数据项。
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -474,7 +469,7 @@ async def _test_cancel_clears_pending():
         await pilot.pause()
         cleared = page.pending is None
         restored = page.editor_values()
-        # 取消后编辑区退回该行的取值，此时再按 s 只会提示「没有可写的内容」，不会落库。
+
         await pilot.press("s")
         await pilot.pause()
         reopened = type(app.screen).__name__
@@ -524,7 +519,6 @@ async def _test_write_failure_reports_reason():
 
 async def _test_page_still_usable_after_failure():
     class FlakySource(StaticDatabaseSource):
-        # 第一次写入失败、之后成功：验证失败后仍能重新读取并完成写入。
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self.remaining_failures = 1
@@ -584,7 +578,7 @@ async def _test_broken_json_is_reported():
         source = SubprocessDatabaseSource(root=Path(raw), timeout=10.0, runner=runner)
         try:
             source.rows("module_status", limit=20, offset=0)
-        except Exception as error:  # noqa: BLE001 - 用例只核对失败原因是否如实转述
+        except Exception as error:  # noqa: BLE001 - 验证失败原因是否完整保留
             return "not json at all" in str(error)
     return False
 
@@ -630,7 +624,7 @@ def _big_rows(count: int = 130) -> tuple[dict[str, object], ...]:
 
 
 async def _test_paging_walks_pages():
-    # 线上表很大，界面一次只取一页：翻页改的是偏移，条数与页码由服务端回传的总数算。
+    # 分页只读取当前页，页数与总数以数据源返回值为准。
     pages = {"module_status": _big_rows()}
     source = _source(pages=pages)
 
@@ -677,7 +671,7 @@ async def _test_paging_walks_pages():
 
 
 async def _test_page_turns_skip_the_count():
-    # 纯翻页不再重算总数：大表上一次 COUNT 就是一次全表扫描，条数沿用上一页的。
+    # 纯翻页复用总数，避免重复执行全表 COUNT。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -693,7 +687,7 @@ async def _test_page_turns_skip_the_count():
         return list(source.queries), caption, page.page.rows_total
 
     queries, caption, total = await _with_page(body, source)
-    # 末页只剩 30 条，条数沿用上一页统计出来的 130。
+
     return (
         [item[2] for item in queries] == [True, False, False]
         and total == 130
@@ -703,7 +697,7 @@ async def _test_page_turns_skip_the_count():
 
 
 async def _test_paging_stops_at_last_page():
-    # 已在末页时不再重复取数，只在状态栏说明。
+
     source = _source(pages={"module_status": _big_rows(10)})
 
     async def body(app, page, pilot, source):
@@ -726,7 +720,7 @@ async def _test_paging_stops_at_last_page():
 
 
 async def _test_filter_narrows_rows():
-    # 按条件筛选：条件下发到数据源，列表收窄，总数与页码随之重算，偏移回到第一页。
+
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -758,7 +752,7 @@ async def _test_filter_narrows_rows():
 
 
 async def _test_search_uses_text_columns():
-    # 只写一个词时按全表搜索下发，而不是当成条件。
+
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -783,7 +777,7 @@ async def _test_search_uses_text_columns():
 
 
 async def _test_search_word_with_operator_chars_stays_search():
-    # 搜索词里带 ~、= 之类字符时不能误判成条件：只有「列名 + 运算符」才算条件。
+    # 含运算符的搜索词仍可能是普通文本，筛选条件必须同时匹配列名。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -833,7 +827,7 @@ async def _test_conditions_are_anded_and_clearable():
 
 
 async def _test_sort_dialog_sets_order():
-    # 排序也下推到 core：界面只报「列:方向」，改排序后回到第一页。
+    # 排序由 core 执行，更改排序后须重置分页。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -888,7 +882,7 @@ async def _test_empty_order_falls_back_to_default():
 
 
 async def _test_switching_table_clears_filters():
-    # 条件里的列名只对原表成立，换表即清空。
+    # 筛选列名仅对当前表有效，更换表时须清除条件。
     source = _source(pages={"module_status": _big_rows(), "stored_data": ROWS["stored_data"]})
 
     async def body(app, page, pilot, source):
@@ -906,7 +900,7 @@ async def _test_switching_table_clears_filters():
 
 
 async def _test_subprocess_source_passes_query_argv():
-    # 界面把条件、搜索与排序拼成 ``db rows`` 的 argv，core 侧才认得出这些参数。
+
     calls: list[list[str]] = []
 
     def runner(argv, **kwargs):
@@ -945,7 +939,7 @@ async def _test_subprocess_source_passes_query_argv():
 
 
 async def _test_offset_clamps_to_last_page():
-    # 总数变小后偏移可能落到末页之外：夹回末页，而不是把用户留在空白页。
+    # 总数减少可能使偏移越界，须调整到有效末页。
     source = _source(pages={"module_status": _big_rows(10)})
 
     async def body(app, page, pilot, source):
@@ -957,7 +951,7 @@ async def _test_offset_clamps_to_last_page():
         return page.page.page_number, page.offset, list(source.reads)
 
     number, offset, reads = await _with_page(body, source)
-    # 三次读取：载入表、按越界偏移取一次、夹回末页再取一次。
+    # 读取依次覆盖首次加载、越界偏移与调整后的末页。
     return (
         number == 1
         and offset == 0
@@ -970,8 +964,7 @@ async def _test_offset_clamps_to_last_page():
     )
 
 
-# 三种尺寸下实测的控件 region 下限（宽，高）：窄屏上下两行时数据项占半行、编辑区占整行，
-# 宽屏三栏并排。布局改动后按新实测值更新这张表。
+# 各终端尺寸下控件可用区域的最小宽高；窄屏纵向排列，宽屏横向排列。
 GEOMETRY_CASES = {
     (60, 20): {"#row-list": (20, 5), "#editor-pane": (40, 8), "#editor-fields": (36, 1)},
     (80, 24): {"#row-list": (30, 6), "#editor-pane": (60, 10), "#editor-fields": (56, 3)},
@@ -980,7 +973,7 @@ GEOMETRY_CASES = {
 
 
 def _overflow(page, app) -> list[str]:
-    # 只算可见控件：窄屏下隐藏的低频按钮不占位置，也不该被算作越界。
+    # 隐藏控件不占布局空间，不计入边界检查。
     offenders: list[str] = []
     for widget in page.walk_children():
         if not (widget.display and widget.visible):
@@ -1009,7 +1002,7 @@ def _geometry_case(size: tuple[int, int]):
         async def body(app, page, pilot, source):
             page.focus_primary()
             await pilot.pause()
-            # region 含边框与内边距，比 size 更贴近用户实际看到的占位；退出前取值，卸载后 region 会归零。
+            # region 包含边框与内边距；须在退出前读取，卸载后该值归零。
             regions = {selector: page.query_one(selector).region for selector in limits}
             measured = {selector: (region.width, region.height) for selector, region in regions.items()}
             status = page.query_one("#database-status", compat.Static)
@@ -1087,7 +1080,7 @@ async def _test_layout_switches_on_resize():
 
 
 async def _test_narrow_focus_order():
-    # 焦点顺序与摆放方式无关，由控件树决定；窄屏堆叠后仍要能从表清单走到保存按钮。
+    # 窄屏重排不应破坏从表清单到保存按钮的键盘焦点顺序。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -1121,7 +1114,7 @@ async def _test_narrow_focus_order():
 async def test_tui_database(tester: Tester):
     """cli.tui.database: 数据库页的表清单、数据项与写入确认测试"""
     _use_cli_locale()
-    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_tables, "渲染表清单")
         await tester.test(_test_search_narrows_tables, "搜索收窄表清单")

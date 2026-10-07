@@ -1,9 +1,4 @@
-"""环境页：托管方式、环境里装了什么、清单里记了什么，以及装卸与三个解释器动作。
-
-环境是实例级信息，单独一页展示：页面上半是托管方式、解释器、包数量与选中项，下半是包清单（含
-httpx 这类传递依赖），底部按性质分两行——包装卸与解释器动作。装卸分两种去处：写进实例清单
-（环境重建时补装）与只装进当前环境；三个解释器动作会换掉解释器，实例运行期间一律拒绝。
-"""
+"""环境页的包列表、安装方式、实例清单与解释器操作测试。"""
 
 import time
 from unittest import mock
@@ -72,14 +67,13 @@ def _shown(page) -> list[str]:
     return [kind for kind in ("adopt", "release", "recreate") if page.query_one(f"#{kind}", compat.Button).display]
 
 
-# 把高亮移到指定分发那一行。
 def _select(page, dist: str) -> None:
     index = next(position for position, row in enumerate(page.visible_packages) if row.dist == dist)
     page.query_one("#package-list", compat.ListView).index = index
 
 
 async def _test_lists_every_installed_package():
-    # 页面要回答「环境里装了什么」：连 httpx 这类传递依赖也在列，标记区分清单记录与其它。
+    # 包列表包含 httpx 等传递依赖，并区分实例清单记录。
     async def body(app, page, pilot, source):
         rows = page.rows
         fields = str(page.query_one("#fields", compat.Static).render())
@@ -122,7 +116,7 @@ async def _test_search_and_filter_narrow_the_list():
 
 
 async def _test_recorded_but_missing_row_is_listed():
-    # 记录在清单里却没装上的（例如只从环境卸载过）要看得见，否则用户不知道重建时会补装什么。
+    # 清单中的未安装包应保持可见，以说明重建环境时的安装范围。
     state = EnvironmentState(
         mode="managed",
         python="/tmp/inst/.venv/bin/python",
@@ -162,7 +156,7 @@ async def _test_package_probe_failure_degrades():
 
 
 async def _test_install_choice_decides_recording():
-    # 装运行库要先问去处：写进清单的会在重建时补装，只装进环境的不会。
+    # 安装前需选择是否写入实例清单，以确定环境重建时是否恢复安装。
     async def body(app, page, pilot, source):
         page.request_install()
         await pilot.pause()
@@ -234,7 +228,7 @@ async def _test_uninstall_recorded_package_offers_modes():
 
 
 async def _test_uninstall_plain_package_opens_confirm():
-    # 没记在清单里的包（传递依赖是这种）只有一种去处，但仍要弹一次确认框。
+    # 未登记在实例清单中的包仍需确认卸载。
     async def body(app, page, pilot, source):
         _select(page, "certifi")
         await pilot.pause()
@@ -273,7 +267,7 @@ async def _test_uninstall_needs_selection():
 
 
 async def _test_package_change_while_running_notes_restart():
-    # 装卸只动 site-packages，运行期间允许，但已经 import 的模块要重启实例才换版本。
+    # 运行期间允许修改 site-packages，已导入模块需重启实例后更新。
     source = _source(running=True)
 
     async def body(app, page, pilot, source):
@@ -326,7 +320,7 @@ async def _test_only_applicable_action_is_offered():
         await pilot.press("q")
         return text
 
-    # 模式读不到时不能当成「外部解释器」展示：那会让人以为可以接管。
+    # 无法识别管理模式时应标记未知，避免误导用户执行接管。
     text = await _with_page(fields_body, _source(state=EnvironmentState()))
     return (
         managed == ["release", "recreate"]
@@ -336,25 +330,73 @@ async def _test_only_applicable_action_is_offered():
     )
 
 
+async def _submit_recreate_confirmation(app, pilot):
+    app.screen.query_one("#prompt-input", compat.Input).value = i18n.t("cli.tui.environment.recreate_token")
+    await pilot.press("enter")
+    await pilot.pause()
+
+
 async def _test_action_asks_before_running():
-    # 解释器动作先用选择框问一次：没答之前绝不动作，答「执行」才跑。
     async def body(app, page, pilot, source):
         page.request_action("recreate")
         await pilot.pause()
         asked = type(app.screen).__name__
         before = list(source.actions)
         app.screen.query_one("#choice-0", compat.Button).press()
+        await pilot.pause()
+        typed = type(app.screen).__name__
+        pending = list(source.actions)
+        await _submit_recreate_confirmation(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
-        await pilot.press("q")
-        return asked, before, list(source.actions)
+        return asked, before, typed, pending, list(source.actions)
 
-    asked, before, after = await _with_page(body)
-    return asked == "ChoiceScreen" and before == [] and after == ["recreate"]
+    asked, before, typed, pending, after = await _with_page(body)
+    return (
+        asked == "ChoiceScreen"
+        and before == []
+        and typed == "TextPromptScreen"
+        and pending == []
+        and after == ["recreate"]
+    )
+
+
+async def _test_recreate_rejects_unconfirmed_input():
+    async def body(app, page, pilot, source):
+        for value in ("incorrect", None):
+            page.request_action("recreate")
+            await pilot.pause()
+            app.screen.query_one("#choice-0", compat.Button).press()
+            await pilot.pause()
+            if value is None:
+                await pilot.press("escape")
+            else:
+                app.screen.query_one("#prompt-input", compat.Input).value = value
+                await pilot.press("enter")
+            await pilot.pause()
+            if source.actions:
+                return False
+        return True
+
+    return await _with_page(body)
+
+
+async def _test_recreate_rechecks_runtime_after_confirmation():
+    async def body(app, page, pilot, source):
+        page.request_action("recreate")
+        await pilot.pause()
+        app.screen.query_one("#choice-0", compat.Button).press()
+        await pilot.pause()
+        page._running = True
+        await _submit_recreate_confirmation(app, pilot)
+        await page.wait_for_idle()
+        return not source.actions
+
+    return await _with_page(body)
 
 
 async def _test_action_dry_run_option():
-    # 「先预演」把 --dry-run 交给 CLI，执行记录因此带后缀。
+    # 预览通过 --dry-run 执行，并在操作记录中标记。
     async def body(app, page, pilot, source):
         page.request_action("recreate")
         await pilot.pause()
@@ -369,7 +411,7 @@ async def _test_action_dry_run_option():
 
 
 async def _test_cancelled_action_does_nothing():
-    # 取消（Esc）后不动作；再按同一个键又是先问一次。
+    # 取消后不执行操作，再次触发时重新确认。
     async def body(app, page, pilot, source):
         page.request_action("release")
         await pilot.pause()
@@ -407,7 +449,7 @@ async def _test_refused_while_running():
 
 
 async def _test_inapplicable_action_refused():
-    # 快捷键绕过隐藏也能按到，此时必须拒绝，而不是跑一个注定失败的命令。
+    # 隐藏按钮的快捷键仍可能触发，操作入口必须校验前置条件。
     async def body(app, page, pilot, source):
         page.request_action("adopt")
         await pilot.pause()
@@ -415,6 +457,8 @@ async def _test_inapplicable_action_refused():
         page.request_action("recreate")
         await pilot.pause()
         app.screen.query_one("#choice-0", compat.Button).press()
+        await pilot.pause()
+        await _submit_recreate_confirmation(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -432,9 +476,11 @@ async def _test_failure_reports_detail_and_reloads():
         page.request_action("recreate")
         await pilot.pause()
         app.screen.query_one("#choice-0", compat.Button).press()
+        await pilot.pause()
+        await _submit_recreate_confirmation(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
-        # 动作结束后会重新读取一次；后台任务注册有延迟，轮询到计数变化为止。
+        # 操作结束后重新读取；轮询计数以等待后台任务完成。
         deadline = time.monotonic() + 5.0
         while source.calls["state"] <= before and time.monotonic() < deadline:
             await pilot.pause()
@@ -447,11 +493,39 @@ async def _test_failure_reports_detail_and_reloads():
     return "重建失败" in status and "boom" in status and after > before
 
 
+async def _test_narrow_layout_keeps_package_list_usable():
+    async def body(app, page, pilot, source):
+        for width, height in ((80, 24), (60, 20), (120, 34)):
+            await pilot.resize_terminal(width, height)
+            await pilot.pause()
+            widgets = [widget for widget in page.query("#actions Button") if widget.display]
+            widgets.extend(
+                page.query(selector).first() for selector in ("#package-search", "#recorded-only", "#status")
+            )
+            if any(not page.region.contains_region(widget.region) for widget in widgets):
+                return False
+            search = page.query_one("#package-search", compat.Input)
+            if search.content_region.width < 10:
+                return False
+            list_view = page.query_one("#package-list", compat.ListView)
+            if list_view.content_region.height < (4 if height >= 24 else 3):
+                return False
+            page.set_query("httpx")
+            await pilot.pause()
+            if len(page.visible_packages) != 1:
+                return False
+            page.set_query("")
+            await pilot.pause()
+        return True
+
+    return await _with_page(body)
+
+
 @func_case
 async def test_tui_environment(tester: Tester):
     """cli.tui.environment: 环境清单、包装卸与环境动作测试"""
     _use_cli_locale()
-    # 选择框取代了「连按两次」，但闸门仍会挡住同一动作的连发；用例里压缩防抖窗口。
+    # 交互用例关闭防抖延迟，重复触发保护由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_every_installed_package, "列出环境里的全部分发（含传递依赖）")
         await tester.test(_test_search_and_filter_narrow_the_list, "搜索与「只看清单里的」收窄清单")
@@ -466,7 +540,10 @@ async def test_tui_environment(tester: Tester):
         await tester.test(_test_package_change_while_running_notes_restart, "运行期间装卸提示重启生效")
         await tester.test(_test_selected_package_shows_dependents, "选中项显示被谁依赖")
         await tester.test(_test_only_applicable_action_is_offered, "只放出当前模式适用的动作")
-        await tester.test(_test_action_asks_before_running, "环境动作先问一次，答执行才动作")
+        await tester.test(_test_action_asks_before_running, "重建环境须先选择执行，再输入确认")
+        await tester.test(_test_recreate_rejects_unconfirmed_input, "重建输入错误或取消均不执行")
+        await tester.test(_test_recreate_rechecks_runtime_after_confirmation, "输入确认后重新检查运行状态")
+        await tester.test(_test_narrow_layout_keeps_package_list_usable, "窄屏保留包列表、搜索框与所有操作按钮")
         await tester.test(_test_action_dry_run_option, "预演选项把 --dry-run 交给 CLI")
         await tester.test(_test_cancelled_action_does_nothing, "取消后不动作，再按仍先问")
         await tester.test(_test_refused_while_running, "实例运行中拒绝环境动作")

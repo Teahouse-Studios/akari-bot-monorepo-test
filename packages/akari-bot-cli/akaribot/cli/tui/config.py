@@ -1,12 +1,7 @@
-"""Config 页：表切换 + 表单模式 + 原始文本模式。
+"""配置页：配置表浏览、表单编辑与原始文本编辑。
 
-数据流：界面只读 :class:`ConfigSource`，默认实现 :class:`SubprocessConfigSource` 以子进程取数
-（CLI 进程不 import core）。表清单来自 ``akaribot config list --json``，字段来自
-``akaribot config schema --table <表> --json``；原始文本模式读配置文件只为展示，保存一律经
-``akaribot config set <键> <值> --table <表>``，与命令行走同一条 ``CFGManager.edit_write()`` 原子路径。
-
-写路径说明：本页不打开配置文件写，也不自己拼 tmp 文件；密钥字段按 ``<表>_secret`` 段写
-（``config`` 表的密钥段为 ``secret``），与 core 的 ``write()`` 对表名的约定一致。
+数据通过 :class:`ConfigSource` 读取，保存通过 ``akaribot config set`` 执行。
+密钥写入 ``<表>_secret`` 段；``config`` 表的密钥段为 ``secret``。
 """
 
 from __future__ import annotations
@@ -44,7 +39,7 @@ KIND_OTHER = "other"
 MODE_FORM = "form"
 MODE_RAW = "raw"
 
-# 类型标签随当前语言取值，故这里只存文案键。
+# 类型标签保存文案键，按当前语言解析。
 _KIND_KEYS = {
     KIND_BOOL: "cli.tui.config.kind_bool",
     KIND_INT: "cli.tui.config.kind_int",
@@ -81,8 +76,8 @@ _CONFIG_SUBDIRS = ("", "modules", "adapters", "core")
 def editor_setting(env: Mapping[str, str] | None = None) -> str:
     """返回外部编辑器命令文本，取值顺序与 ``akaribot config open`` 一致。
 
-    :param env: 环境变量映射，缺省取 ``os.environ``。
-    :return: ``VISUAL`` / ``EDITOR`` 的取值；两者都为空时按平台取缺省命令。
+    :param env: 环境变量映射，默认取 ``os.environ``。
+    :return: ``VISUAL`` / ``EDITOR`` 的取值；两者都为空时按平台取默认命令。
     """
     source = os.environ if env is None else env
     chosen = source.get("VISUAL") or source.get("EDITOR")
@@ -94,9 +89,9 @@ def editor_setting(env: Mapping[str, str] | None = None) -> str:
 
 
 def editor_argv(env: Mapping[str, str] | None = None) -> list[str] | None:
-    """把编辑器命令文本拆成 argv，取不到可执行文件时返回 ``None``。
+    """把编辑器命令文本拆成 argv，无法获取可执行文件时返回 ``None``。
 
-    :param env: 环境变量映射，缺省取 ``os.environ``。
+    :param env: 环境变量映射，默认取 ``os.environ``。
     :return: 命令 argv；引号不配对或首个词不是可执行文件时为 ``None``。
     """
     try:
@@ -109,7 +104,7 @@ def editor_argv(env: Mapping[str, str] | None = None) -> list[str] | None:
 
 
 def _stdin_isatty() -> bool:
-    # 只认标准输入：自动化与冻结产物自检里它不接终端，挂起界面后没有人能操作编辑器。
+    # 标准输入必须连接终端，否则外部编辑器无法交互。
     return bool(sys.stdin.isatty())
 
 
@@ -122,7 +117,7 @@ def _stdin_isatty() -> bool:
 def kind_of_type(type_name: str) -> str:
     """把对端给的类型名归一到 :data:`KIND_BOOL` 等六种取值。
 
-    :param type_name: ``akaribot config schema --json`` 里的 ``type`` 字段。
+    :param type_name: ``akaribot config schema --json`` 中的 ``type`` 字段。
     :return: 归一化类型；无法识别时为 :data:`KIND_OTHER`。
     """
     raw = (type_name or "").strip().casefold()
@@ -172,7 +167,7 @@ def write_text(value: Any, kind: str = "") -> str:
     """把值渲染为可交给 ``config set`` 的规范文本。
 
     :param value: 运行期值。
-    :param kind: 归一化类型；缺省按值推断。
+    :param kind: 归一化类型；默认按值推断。
     :return: 布尔为 ``true`` / ``false``，列表为 TOML 数组字面量，字符串不加引号。
     """
     if value is None:
@@ -190,7 +185,7 @@ def write_text(value: Any, kind: str = "") -> str:
 
 
 def edit_text(value: Any, kind: str = "") -> str:
-    """把值渲染为输入框里的文本：列表按中英文逗号分隔，其余同 :func:`write_text`。"""
+    """把值渲染为输入框中的文本：列表按中英文逗号分隔，其余同 :func:`write_text`。"""
     if value is None:
         return ""
     if (kind or kind_of_value(value)) == KIND_LIST:
@@ -239,7 +234,7 @@ class ConfigField:
 
     @property
     def kind_label(self) -> str:
-        """返回类型的本地化标签，未知类型带上对端给出的原始类型名。"""
+        """返回类型的本地化标签；未知类型附带原始类型名。"""
         label = i18n.t(_KIND_KEYS.get(self.kind, _KIND_KEYS[KIND_OTHER]))
         if self.kind == KIND_OTHER and self.type_name:
             return i18n.t("cli.tui.config.kind_with_type", label=label, name=_short(self.type_name, 12))
@@ -254,17 +249,17 @@ class ConfigField:
 
     @property
     def edit_value(self) -> str:
-        """返回输入控件里的初始文本。"""
+        """返回输入控件中的初始文本。"""
         return edit_text(self.value, self.kind)
 
     @property
     def write_value(self) -> str:
-        """返回当前值对应的写入文本，也用于判断字段是否被改动。"""
+        """返回当前值对应的写入文本，也用于判断字段是否被更改。"""
         return write_text(self.value, self.kind)
 
     @property
     def help_text(self) -> str:
-        """返回帮助文本：注释优先，值为空时补一句默认值。"""
+        """返回帮助文本；优先使用注释，空值时补充默认值。"""
         parts = [self.comment.strip()] if self.comment.strip() else []
         if self.value in (None, "") and self.default not in (None, ""):
             parts.append(i18n.t("cli.tui.config.default_value", value=_short(edit_text(self.default), 40)))
@@ -272,7 +267,7 @@ class ConfigField:
 
     @property
     def marks(self) -> str:
-        """返回表头里的本地化徽标：密钥与待填写。"""
+        """返回表头中的本地化徽标：密钥与待填写。"""
         marks = []
         if self.secret:
             marks.append(i18n.t("cli.tui.config.mark_secret"))
@@ -418,7 +413,7 @@ class RawParseResult:
 
 @dataclass(frozen=True)
 class RawEntry:
-    """原始文本里的一条可写入项。
+    """原始文本中的一条可写入项。
 
     :param section: ``config set --table`` 用的表引用。
     :param key: 键名。
@@ -454,7 +449,7 @@ def _error_position(error: ParseError, text: str) -> tuple[int | None, int | Non
 def parse_toml_text(text: str) -> RawParseResult:
     """解析原始 TOML 文本，失败时给出可定位到行的说明。
 
-    :param text: 编辑区里的全文。
+    :param text: 编辑区中的全文。
     :return: 解析结果；失败时 ``message`` 形如「TOML 解析失败（第 2 行第 5 列）：…」。
     """
     try:
@@ -478,7 +473,7 @@ def parse_toml_text(text: str) -> RawParseResult:
             i18n.t("cli.tui.config.error_toml", where=where, reason=_error_reason(error), snippet=snippet),
             line,
         )
-    except Exception as error:  # noqa: BLE001 - 解析器的其它异常同样只用于展示，不应中断界面
+    except Exception as error:  # noqa: BLE001 - 解析器的其他异常同样只用于展示，不应中断界面
         return RawParseResult(
             False, None, i18n.t("cli.tui.config.error_toml_generic", kind=type(error).__name__, error=error)
         )
@@ -497,7 +492,7 @@ def _section_matches(section: str, table: str) -> bool:
 def flatten_document(document: Any, table: str) -> tuple[list[RawEntry], list[str]]:
     """把 TOML 文档摊平为可经 ``config set`` 写入的条目。
 
-    嵌套表与顶层键无法表达为一次 ``config set``（写路径只认「段 + 键」两层），故跳过并给出原因。
+    嵌套表与顶层键无法表达为一次 ``config set``（写路径仅支持「段 + 键」两层），故跳过并给出原因。
 
     :param document: ``tomlkit.parse`` 的结果。
     :param table: 当前编辑的表名。
@@ -534,12 +529,12 @@ def _is_nested(value: Any) -> bool:
 def diff_document(
     document: Any, fields: Sequence[ConfigField], table: str
 ) -> tuple[list[RawEntry], list[str], list[str]]:
-    """比较原始文本与当前值，给出真正需要写入的条目。
+    """比较原始文本与当前值，给出需要写入的条目。
 
     :param document: 解析后的文档。
     :param fields: 当前表的字段，提供各键的类型与当前值。
     :param table: 表名。
-    :return: 三元组——改动条目；跳过说明；值未变的键名。
+    :return: 三元组——更改条目；跳过说明；值未变的键名。
     """
     entries, skipped = flatten_document(document, table)
     current = {(field.section, field.key): field.write_value for field in fields}
@@ -580,11 +575,11 @@ class SetResult:
 class StaticConfigSource:
     """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
 
-    :param tables: 表清单。
+    :param tables: 配置表列表。
     :param fields: 表名到字段序列的映射。
     :param raw: 表名到原始 TOML 文本的映射。
     :param files: 表名到配置文件路径的映射，供编辑器动作定位文件。
-    :param set_result: 写入返回值；缺省为成功。
+    :param set_result: 写入返回值；默认为成功。
     """
 
     def __init__(
@@ -632,7 +627,7 @@ class StaticConfigSource:
 
 @runtime_checkable
 class ConfigSource(Protocol):
-    """配置数据源接口；测试注入替身，生产走子进程。"""
+    """配置数据源接口；测试注入替身，实际运行通过子进程访问。"""
 
     def list_tables(self) -> Sequence[str]:
         """返回实例内的全部配置表名。"""
@@ -651,12 +646,7 @@ class ConfigSource(Protocol):
 
 
 class SubprocessConfigSource:
-    """默认数据源：一律经子进程取数与写入，CLI 进程内不 import core。
-
-    取数按优先级降级：表清单先调 ``akaribot config list --json``，失败时退回
-    :class:`akaribot.cli.instance.Instance` 的实例目录枚举；字段与写入经
-    ``Instance.run_core_capture("config", ...)``，与 ``akaribot config schema/set`` 命令同一条路径。
-    原始文本只读配置文件（读不是写，写一律经 ``config set``）。
+    """配置数据源：通过 CLI 读取配置表列表和字段、写入配置，原始文本直接读取配置文件。
 
     :param root: 实例根目录，默认当前工作目录。
     :param timeout: 单个子进程的超时秒数。
@@ -672,9 +662,7 @@ class SubprocessConfigSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
-        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 每次读取时解析实例根，确保切换实例后使用当前实例的配置。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
@@ -896,10 +884,9 @@ def normalize_tables(payload: Any) -> list[str]:
 
 
 def rebuild_raw_text(fields: Sequence[ConfigField]) -> str:
-    """由字段重建一份可解析的 TOML 文本，供找不到配置文件时展示。
+    """由字段重建一份可解析的 TOML 文本，供未找到配置文件时展示。
 
-    重建会丢掉原有注释与书写顺序，故只在文件缺失时使用；保存仍逐键经 ``config set``。
-    同一段只输出一次表头：密钥段可能夹在普通段中间，重复表头会让 TOML 解析失败。
+    仅在文件缺失时使用；保存通过 ``config set`` 执行。
 
     :param fields: 字段序列。
     :return: TOML 文本。
@@ -938,8 +925,7 @@ def _toml_literal(value: Any, kind: str) -> str:
 
 
 def _optional_widget(name: str) -> Any | None:
-    # 理由：``TextArea`` / ``Switch`` 尚未在 ``_compat`` 再导出，而页面不得直接 import textual，
-    # 故按名字探测；``_compat`` 一旦导出，本页无需改动即自动切换到原生控件。
+    # 原生控件是否可用由兼容层决定，页面通过属性检测选择实现。
     return getattr(compat, name, None)
 
 
@@ -1041,7 +1027,7 @@ class FieldRow(compat.Vertical):
 
     @property
     def text(self) -> str:
-        """返回控件里的当前编辑文本。"""
+        """返回控件中的当前编辑文本。"""
         control = self.control()
         if isinstance(control, BoolToggle):
             return "true" if control.value else "false"
@@ -1060,13 +1046,13 @@ class FieldRow(compat.Vertical):
             control.value = text.strip().casefold() in _TRUE_WORDS
 
     def toggle(self) -> None:
-        """切换布尔控件；非布尔行不动作。"""
+        """切换布尔控件；非布尔行不执行操作。"""
         control = self.control()
         if isinstance(control, BoolToggle):
             control.toggle()
 
     def focus_control(self) -> None:
-        """把焦点交给本行控件。"""
+        """聚焦本行控件。"""
         self.control().focus()
 
     def show_error(self, message: str) -> None:
@@ -1174,13 +1160,13 @@ class RawTextEditor(compat.VerticalScroll):
 
 
 class ConfigPage(compat.Vertical):
-    """Config 页控件。
+    """配置页控件。
 
-    :param source: 数据源，缺省为 :class:`SubprocessConfigSource`。
-    :param cache_ttl: 表清单缓存有效期秒数；保存与重读会立即失效。
+    :param source: 数据源，默认为 :class:`SubprocessConfigSource`。
+    :param cache_ttl: 配置表列表缓存有效期秒数；保存与重新加载会立即失效。
     """
 
-    # 工具条在 80 列下只有 61 列可用：五个按钮按缺省 min-width 16 排会裁掉保存与重读，故收窄到 10。
+    # 限制按钮最小宽度，确保 80 列终端能够显示全部操作。
     DEFAULT_CSS = """
     ConfigPage {
         layout: vertical;
@@ -1283,7 +1269,7 @@ class ConfigPage(compat.Vertical):
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
     can_focus = True
 
-    # 四种模式与刷新动作在工具条上都有按钮，键位属低频入口，不进页脚以免挤掉全局键位。
+    # 低频操作由工具栏提供入口，页脚为全局键位保留空间。
     BINDINGS = compat.bindings(
         ("s", "save", i18n.t("cli.tui.config.action_save")),
         ("o", "open_editor", i18n.t("cli.tui.config.action_open_editor"), False),
@@ -1320,13 +1306,13 @@ class ConfigPage(compat.Vertical):
         self._rendered_tables: tuple[str, ...] = ()
         self._caption_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
-        # 挂起界面与起编辑器可注入：自动化用例不得真的交出终端或启动外部进程。
+        # 终端挂起和编辑器启动允许注入替身，避免自动化测试启动交互进程。
         self._editor_runner: Callable[..., Any] = subprocess.run
         self._suspend: Callable[[], Any] | None = None
         self._stdin_isatty: Callable[[], bool] = _stdin_isatty
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：工具条、表清单、表单区、文本区、状态栏。"""
+        """装配页面控件树：工具条、配置表列表、表单区、文本区、状态栏。"""
         with compat.Horizontal(id="config-toolbar"):
             yield compat.Button(i18n.t("cli.tui.config.action_mode_form"), id="mode-form", variant="primary")
             yield compat.Button(i18n.t("cli.tui.config.action_mode_raw"), id="mode-raw")
@@ -1347,11 +1333,11 @@ class ConfigPage(compat.Vertical):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+        """挂载后只装配控件；读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
-        """首次显示时读取配置表清单。"""
+        """首次显示时读取配置表列表。"""
         if self._activated:
             return
         self._activated = True
@@ -1361,7 +1347,7 @@ class ConfigPage(compat.Vertical):
 
     @property
     def tables(self) -> tuple[str, ...]:
-        """返回缓存中的表清单，不触发子进程。"""
+        """返回缓存中的配置表列表，不触发子进程。"""
         return self._tables
 
     @property
@@ -1391,7 +1377,7 @@ class ConfigPage(compat.Vertical):
 
     @property
     def saved_entries(self) -> tuple[str, ...]:
-        """返回最近一次保存真正写入的「表.键=值」列表。"""
+        """返回最近一次保存写入的「表.键=值」列表。"""
         return self._saved
 
     @property
@@ -1400,17 +1386,17 @@ class ConfigPage(compat.Vertical):
         return self._skipped
 
     def cache_age(self) -> float:
-        """返回表清单缓存自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回配置表列表缓存自上次读取以来的秒数；从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
 
     def field_rows(self) -> tuple[FieldRow, ...]:
-        """返回表单区里的全部字段行（按渲染顺序）。"""
+        """返回表单区中的全部字段行（按渲染顺序）。"""
         return tuple(self.query(FieldRow))
 
     def row_for(self, key: str) -> FieldRow | None:
-        """按键名取字段行，找不到时返回 ``None``。"""
+        """按键名取字段行，未找到时返回 ``None``。"""
         for row in self.field_rows():
             if row.field.key == key:
                 return row
@@ -1424,13 +1410,13 @@ class ConfigPage(compat.Vertical):
         return self._raw_table is not None and self.raw_editor().text != self._raw_original
 
     def dirty_note(self) -> str:
-        """返回未保存改动的说明；没有改动时为空串。"""
+        """返回未保存更改的说明；没有更改时为空串。"""
         if not self.is_dirty():
             return ""
         return i18n.t("cli.tui.config.dirty_note", table=self._selected or i18n.t("cli.tui.common.none"))
 
     def _row_text(self, row: FieldRow) -> str:
-        # 行在重挂载期间可能还没有控件，此时读不到输入值，按载入值处理。
+        # 重新挂载期间输入控件可能尚未创建，此时使用载入值。
         try:
             return row.text
         except Exception:  # noqa: BLE001 - 未装配完成的行不构成脏值
@@ -1441,7 +1427,7 @@ class ConfigPage(compat.Vertical):
         return self.query_one("#raw-editor", RawTextEditor)
 
     def table_row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的表清单行文本，供自动化断言核对宽度。"""
+        """返回最近一次渲染出的配置表列表行文本，供自动化断言核对宽度。"""
         return self._rendered_tables
 
     def header_texts(self) -> tuple[str, ...]:
@@ -1467,11 +1453,11 @@ class ConfigPage(compat.Vertical):
     # region 读取与渲染
 
     def refresh_tables(self, *, force: bool = False) -> None:
-        """读取配置表清单。
+        """读取配置表列表。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
+        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
         """
-        # 强制刷新会重建表单与原始文本，未保存的编辑必须先问过用户。
+        # 强制刷新会重建编辑区，必须确认未保存更改的处理方式。
         if force and self.is_dirty():
             self._confirm_discard(self.reload)
             return
@@ -1485,7 +1471,7 @@ class ConfigPage(compat.Vertical):
         self.run_worker(self.reload_tables(), group="config-tables", exclusive=True)
 
     async def reload_tables(self) -> bool:
-        """后台读取表清单并载入当前表，返回是否成功。"""
+        """后台读取配置表列表并载入当前表，返回是否成功。"""
         if not compat.mounted(self):
             return False
         try:
@@ -1534,7 +1520,7 @@ class ConfigPage(compat.Vertical):
         self._selected = table
         try:
             self._fields = await self._load_fields(table, force=force)
-        except Exception as error:  # noqa: BLE001 - 取数失败只影响本页展示
+        except Exception as error:  # noqa: BLE001 - 读取数据失败只影响本页展示
             self._fields = ()
             self.last_error = f"{type(error).__name__}: {error}"
             self._sync_caption()
@@ -1552,8 +1538,8 @@ class ConfigPage(compat.Vertical):
     async def load_raw(self, table: str | None = None, *, force: bool = False) -> bool:
         """读取并展示某表的原始 TOML 文本。
 
-        :param table: 目标表；缺省为当前表。
-        :param force: 为 ``True`` 时即使已载入也重读。
+        :param table: 目标表；默认为当前表。
+        :param force: 为 ``True`` 时即使已载入也重新加载。
         :return: 是否成功。
         """
         table = table if table is not None else self._selected
@@ -1575,7 +1561,7 @@ class ConfigPage(compat.Vertical):
     async def set_mode(self, mode: str) -> None:
         """切换编辑模式：表单模式与原始文本模式。
 
-        :param mode: ``form`` 或 ``raw``；其它取值不动作。
+        :param mode: ``form`` 或 ``raw``；其他取值不执行操作。
         """
         if mode not in (MODE_FORM, MODE_RAW):
             return
@@ -1610,7 +1596,7 @@ class ConfigPage(compat.Vertical):
         self._raw_table = None
 
     async def reload(self, *, force: bool = True) -> bool:
-        """作废缓存并重新读取表清单与当前表。"""
+        """作废缓存并重新读取配置表列表与当前表。"""
         self.invalidate_cache()
         self._raw_table = None
         self._raw_original = ""
@@ -1683,7 +1669,7 @@ class ConfigPage(compat.Vertical):
         self.query_one("#config-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排表清单，不重新取数。"""
+        """终端尺寸变化时按缓存重排配置表列表，不重新读取数据。"""
         if self._tables:
             self._render_tables()
 
@@ -1694,7 +1680,7 @@ class ConfigPage(compat.Vertical):
     async def save(self) -> bool:
         """保存当前表，返回是否全部写入成功。
 
-        表单模式逐项校验类型后只写入被改动的键；原始文本模式先用 ``tomlkit.parse()``
+        表单模式逐项校验类型后只写入被更改的键；原始文本模式先用 ``tomlkit.parse()``
         校验全文，解析失败直接拒绝保存并给出出错行，不发出任何写入调用。
         """
         if self._selected is None:
@@ -1733,8 +1719,7 @@ class ConfigPage(compat.Vertical):
         return await self._apply(plan)
 
     def _plan_form_save(self) -> tuple[list[RawEntry], list[str]]:
-        # 未改动的行既不校验也不写入：值原样来自 schema，重新写回没有意义，还可能把
-        # 未知结构（嵌套表等）交给 ``config set``。
+        # 未更改的字段保留原值，避免将表单不支持的嵌套结构提交给 ``config set``。
         plan: list[RawEntry] = []
         errors: list[str] = []
         for row in self.field_rows():
@@ -1880,7 +1865,7 @@ class ConfigPage(compat.Vertical):
         self._confirm_discard(_switch)
 
     def _confirm_discard(self, proceed: Callable[[], Any], *, on_keep: Callable[[], None] | None = None) -> None:
-        # 覆盖编辑区的动作都要先问过：直接重建会让用户以为已经保存的改动无声消失。
+        # 重建编辑区前必须确认未保存更改的处理方式。
         if self._confirming:
             return
         if not self.is_dirty():
@@ -1890,7 +1875,7 @@ class ConfigPage(compat.Vertical):
         def _decide(choice: str | None) -> None:
             self._confirming = False
             if choice == "discard":
-                # 与直接切换分属两个任务组：重读会在内部再触发一次直接切换，同组会取消自己。
+                # 刷新会触发切换任务，使用独立任务组避免自我取消。
                 self.run_worker(self._discard_then(proceed), group="config-switch", exclusive=True)
                 return
             self._set_status(i18n.t("cli.tui.config.dirty_kept"))
@@ -1922,7 +1907,7 @@ class ConfigPage(compat.Vertical):
             await self.raw_editor().load_text(self._raw_original)
 
     def _restore_table_highlight(self) -> None:
-        # 用户选择保留改动时列表高亮已经落到新表上，必须拨回当前表，否则显示与选中项不一致。
+        # 保留更改时恢复当前表的高亮，确保选中项与编辑内容一致。
         list_view = self.query_one("#table-list", compat.ListView)
         index = self._index_for(self._selected)
         if compat.highlighted_index(list_view) != index:
@@ -1933,21 +1918,21 @@ class ConfigPage(compat.Vertical):
         self.run_worker(self.save(), group="config-save", exclusive=True)
 
     def action_reload(self) -> None:
-        """键位动作：作废缓存并重读。"""
+        """键位动作：作废缓存并重新加载。"""
         self._confirm_discard(self.reload)
 
     def action_mode_form(self) -> None:
-        """键位动作：切到表单模式。"""
+        """键位动作：切换到表单模式。"""
         self.request_mode(MODE_FORM)
 
     def action_mode_raw(self) -> None:
-        """键位动作：切到原始文本模式。"""
+        """键位动作：切换到原始文本模式。"""
         self.request_mode(MODE_RAW)
 
     def config_path(self, table: str | None = None) -> Path | None:
         """返回表的配置文件路径，沿用本页数据源的定位规则。
 
-        :param table: 表名；缺省取当前选中的表。
+        :param table: 表名；默认取当前选中的表。
         :return: 配置文件路径；没有选中表或数据源定位不到实例时为 ``None``。
         """
         name = table if table is not None else self._selected
@@ -1955,16 +1940,14 @@ class ConfigPage(compat.Vertical):
             return None
         try:
             path = self.source.config_file(name)
-        except Exception:  # noqa: BLE001 - 定位失败按拿不到文件处理，由调用方在状态栏说明
+        except Exception:  # noqa: BLE001 - 文件定位失败由调用方显示错误
             return None
         return None if path is None else Path(path)
 
     async def open_in_editor(self) -> bool:
-        """用外部编辑器打开当前表的配置文件，退出后重读该表。
+        """使用外部编辑器编辑当前配置文件，退出后重新加载配置。
 
-        非交互终端不交出终端，只报出绝对路径与可直接粘贴的命令。
-
-        :return: 是否启动过编辑器并完成重读。
+        :return: 是否启动编辑器并完成重新加载；非交互终端返回 ``False``。
         """
         table = self._selected
         if table is None:
@@ -2011,11 +1994,11 @@ class ConfigPage(compat.Vertical):
         self._confirm_discard(self.open_in_editor)
 
     def focus_primary(self) -> None:
-        """把焦点交给配置表列表；列表为空时退到页面容器。"""
+        """聚焦配置表列表；列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#table-list")
 
     def action_focus_tables(self) -> None:
-        """键位动作：把焦点交回表清单。"""
+        """键位动作：聚焦配置表列表。"""
         self.query_one("#table-list", compat.ListView).focus()
 
     async def wait_for_idle(self) -> None:

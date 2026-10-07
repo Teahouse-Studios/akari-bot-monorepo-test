@@ -1,10 +1,4 @@
-"""Modules 页的多选与批量操作。
-
-选择模型对齐桌面列表：Ctrl（macOS 的 Control）逐个切换、Shift 扩选一段、普通点击收敛为单选；
-键盘上以 Space/Ctrl+Space 切换、Shift+↑/↓ 扩选。批量操作作用于选区，单条操作仍是「没有选区时
-按当前项」，两者共用同一条执行路径。批量卸载先确认目标，目标过多时改成输入数量；更新一次触发
-弹出范围选择（选中项 / 全部已装包）。
-"""
+"""模块页的鼠标与键盘多选、批量操作及卸载确认测试。"""
 
 import time
 from pathlib import Path
@@ -41,10 +35,10 @@ def _source(**kwargs) -> StaticModuleSource:
     return StaticModuleSource(**params)
 
 
-async def _with_page(body, source: StaticModuleSource | None = None, *, records=None):
+async def _with_page(body, source: StaticModuleSource | None = None, *, records=None, size=(110, 34)):
     chosen = source if source is not None else _source()
     app = TuiApp(source=chosen, initial_page="modules", boot_started_at=time.monotonic())
-    async with compat.app_test(app, size=(110, 34)) as pilot:
+    async with compat.app_test(app, size=size) as pilot:
         page = app.modules_page()
         await page.wait_for_idle()
         await pilot.pause()
@@ -56,8 +50,7 @@ def _choice_labels(app: TuiApp) -> list[str]:
 
 
 async def _pick_choice(app: TuiApp, pilot, index: int) -> None:
-    # 直接派发按下消息：选项多时按钮可能排到可视区之外，按坐标点击会落空。
-    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    assert await pilot.click(f"#choice-{index}")
     await pilot.pause()
 
 
@@ -172,7 +165,7 @@ async def _test_batch_install_covers_selection():
 
 
 async def _test_update_selected_covers_selection():
-    # 选「更新选中项」时目标是选区而不是光标：只选 bravo 就只更新 bravo。
+    # 更新目标由选区决定，高亮位置不影响目标集合。
     async def body(app, page, pilot, source):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 1
@@ -202,7 +195,7 @@ async def _test_update_selected_covers_selection():
 
 
 async def _test_update_all_ignores_selection():
-    # 选「更新全部」时不带位置参数：已装包由 CLI 的 --all 枚举，与选区无关。
+    # 全部更新通过 CLI 的 --all 枚举目标，与选区无关。
     async def body(app, page, pilot, source):
         await pilot.press("a")
         await pilot.pause()
@@ -225,7 +218,7 @@ async def _test_update_all_ignores_selection():
 
 
 async def _test_batch_uninstall_needs_confirmation():
-    # 一次按键即弹出处置方式，标题列出全部目标；选完才执行。
+    # 确认框列出全部目标，选择处置方式后执行。
     async def body(app, page, pilot, source):
         await pilot.press("a")
         await pilot.pause()
@@ -256,27 +249,59 @@ async def _test_batch_uninstall_needs_confirmation():
 
 
 async def _test_batch_uninstall_can_purge_data():
-    # 「连数据一起清」把 --purge-data 交给 CLI；界面已确认过，故同时带 --yes。
     async def body(app, page, pilot, source):
         await pilot.press("a")
         await pilot.pause()
         page.request_uninstall()
         await pilot.pause()
         await _pick_choice(app, pilot, 1)
+        pending = list(source.stream_calls)
+        prompt = app.screen
+        hint = prompt.prompt_hint
+        prompt.query_one("#prompt-input", compat.Input).value = i18n.t("cli.tui.modules.purge_batch_token", count=2)
+        await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
-        return list(source.stream_calls)
+        return pending, hint, list(source.stream_calls)
 
-    calls = await _with_page(body)
-    return calls == [
-        ("uninstall", "akari-bot-module-alpha", ("--purge-data",), True),
-        ("uninstall", "akari-bot-module-bravo", ("--purge-data",), True),
-    ]
+    pending, hint, calls = await _with_page(body)
+    return (
+        pending == []
+        and all(record.dist in hint for record in RECORDS[:2])
+        and calls
+        == [
+            ("uninstall", "akari-bot-module-alpha", ("--purge-data",), True),
+            ("uninstall", "akari-bot-module-bravo", ("--purge-data",), True),
+        ]
+    )
+
+
+async def _test_batch_purge_rejects_bare_count():
+    source = StaticModuleSource(records=MANY, available=MANY)
+
+    async def body(app, page, pilot, source):
+        await pilot.press("a")
+        await pilot.pause()
+        page.request_uninstall()
+        await pilot.pause()
+        app.screen.query_one("#prompt-input", compat.Input).value = "12"
+        await pilot.press("enter")
+        await pilot.pause()
+        await _pick_choice(app, pilot, 1)
+        if app.screen.query_one("#prompt-input", compat.Input).value:
+            return False
+        app.screen.query_one("#prompt-input", compat.Input).value = "12"
+        await pilot.press("enter")
+        await page.wait_for_idle()
+        await pilot.pause()
+        return source.stream_calls == [] and page.status_text == i18n.t("cli.tui.modules.purge_mismatch")
+
+    return await _with_page(body, source, size=(80, 24))
 
 
 async def _test_batch_uninstall_offers_cascade_for_dependents():
-    # 有反向依赖时模态框里多出 --cascade 一项，并把依赖列表展开给用户看。
+    # 存在反向依赖时提供 --cascade 选项，并列出依赖方。
     dependent = ModuleRecord(
         name="alpha",
         dist="akari-bot-module-alpha",
@@ -318,7 +343,7 @@ MANY = [
 
 
 async def _test_large_batch_requires_target_count():
-    # 目标超过阈值时状态栏列不下全部名字，改为输入目标数量；输入不符即取消。
+    # 大批量卸载通过目标数量确认范围，数量不符时取消。
     source = StaticModuleSource(records=MANY, available=MANY)
 
     async def body(app, page, pilot, chosen):
@@ -367,6 +392,28 @@ async def _test_large_batch_cancelled_by_count_dialog():
 
     status, uninstalled = await _with_page(body, source)
     return status == i18n.t("cli.tui.modules.uninstall_cancelled") and uninstalled == []
+
+
+async def _test_large_batch_confirmation_ignores_repeated_trigger():
+    source = StaticModuleSource(records=MANY, available=MANY)
+
+    async def body(app, page, pilot, chosen):
+        page.action_select_all()
+        await pilot.pause()
+        with mock.patch.object(compat.PendingConfirm, "debounce", 30.0):
+            page.request_uninstall()
+            page.request_uninstall()
+            await pilot.pause()
+            single_prompt = len(app.screen_stack) == 2
+            await pilot.press("escape")
+            await pilot.pause()
+            page.request_uninstall()
+            await pilot.pause()
+            reopened = isinstance(app.screen, compat.TextPromptScreen) and len(app.screen_stack) == 2
+            await pilot.press("escape")
+        return single_prompt and reopened and not chosen.stream_calls
+
+    return await _with_page(body, source)
 
 
 async def _test_batch_continues_after_failure():
@@ -441,7 +488,7 @@ async def _test_rows_show_selection_marker():
 async def test_tui_multi_select(tester: Tester):
     """cli.tui.modules: 多选与批量操作测试"""
     _use_cli_locale()
-    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_space_toggles_selection, "Space/Ctrl+Space 切换选中")
         await tester.test(_test_shift_extends_and_replaces_range, "Shift+↑/↓ 扩选且重算范围")
@@ -452,9 +499,11 @@ async def test_tui_multi_select(tester: Tester):
         await tester.test(_test_update_all_ignores_selection, "更新全部不带选区")
         await tester.test(_test_batch_uninstall_needs_confirmation, "批量卸载需确认并选处置方式")
         await tester.test(_test_batch_uninstall_can_purge_data, "批量卸载可连数据一起清")
+        await tester.test(_test_batch_purge_rejects_bare_count, "批量清理不能以目标数量代替清理确认文字")
         await tester.test(_test_batch_uninstall_offers_cascade_for_dependents, "有反向依赖时给出连同依赖卸载")
         await tester.test(_test_large_batch_requires_target_count, "超过阈值时按目标数量确认")
         await tester.test(_test_large_batch_cancelled_by_count_dialog, "数量输入取消后不卸载")
+        await tester.test(_test_large_batch_confirmation_ignores_repeated_trigger, "批量数量确认忽略连发且取消后可重开")
         await tester.test(_test_batch_continues_after_failure, "批量中单条失败不中断")
         await tester.test(_test_selection_pruned_on_refresh, "刷新后剪掉失效选区")
         await tester.test(_test_rows_show_selection_marker, "选中行显示勾选标记")

@@ -1,17 +1,3 @@
-"""Adapters 页：按平台分组的实例表、enable 开关与连接状态。
-
-界面只读 :class:`AdapterSource`。默认实现 :class:`SubprocessAdapterSource` 以
-``akaribot adapter list --json`` 取实例清单，再向 core 的 peers 入口
-（``python -m akaribot.core.entrypoints.peers --json``）要连接状态；实例数据库、peer 表或进程租约
-不可用时入口返回 ``available: false`` 与原因，页面按「未知」展示该原因。切换 enable 走
-``akaribot config set``，由 core 的原子写入落盘，页面不直接改配置文件。实例清单缓存在页内，
-切换成功后立即失效；CLI 进程内不 import core。
-
-移除实例只有一条路径，``d`` 与 ``ctrl+d`` 都是它的入口：弹出模态确认，确认后交给
-``adapter instance remove`` 删除配置文件，场景与用户数据保留。待确认状态在切页、刷新、换选中项或
-超时后作废，键盘连发与鼠标双击也不会穿透。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -32,17 +18,16 @@ from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
-# core 侧的 peer 快照入口：``python -m akaribot.core.entrypoints.peers --json``。
-# 实例数据库、peer 表或进程租约不可用时入口返回 ``available: false`` 与原因，页面按「未知」显示该原因。
+
 PEER_ENTRYPOINT = "peers"
 PEER_READY_STATE = "ready"
 
-# 展示文案按当前语言取值，故常量只存文案键；列宽也据这些文案推导（英文比中文宽）。
+# 文案与列宽随当前语言计算，常量仅保存文案键。
 _ALIVE_KEYS = {True: "cli.tui.adapters.online", False: "cli.tui.adapters.offline"}
 _ENABLE_KEYS = {True: "cli.tui.adapters.enable_on", False: "cli.tui.adapters.enable_off"}
 _ENABLE_MISSING_KEY = "cli.tui.adapters.enable_missing"
 
-# 该字面量来自对端 ``adapter list --json``（数据侧），只用于归一化比对；展示走 default_id 文案键。
+# 此值用于解析 CLI 输出；显示文本使用 default_id 文案键。
 DEFAULT_ID_LABEL = "（默认）"
 EMPTY_CELL = "—"
 
@@ -87,8 +72,8 @@ class AdapterRecord:
     :param enable: ``enable`` 原值；配置缺该键时为 ``None``。
     :param enabled: 是否已启用。
     :param listen: 监听地址的展示文本。
-    :param installed: 对应平台的适配器包是否已装。
-    :param legacy_layout: 配置是否来自尚未迁移的扁平布局。
+    :param installed: 对应平台的适配器包是否已安装。
+    :param legacy_layout: 配置是否采用扁平布局。
     :param client_name_inferred: ``client_name`` 是否为按平台名推断的结果。
     :param issues: ``adapter list`` 给出的备注。
     :param developers: 适配器作者，取自包的 ``pyproject.toml``；仅可安装清单提供。
@@ -115,22 +100,19 @@ class AdapterRecord:
 
     @property
     def display_id(self) -> str:
-        """实例列的展示文本；还没有配置实例的平台留空，免得显示成默认实例。"""
+        """返回实例列文本；未配置实例的平台为空。"""
         if self.installable and not self.configured:
             return EMPTY_CELL
         return self.instance_id or i18n.t("cli.tui.adapters.default_id")
 
     @property
     def installable(self) -> bool:
-        """适配器包是否尚未安装。
-
-        未安装的项也要出现在列表里，用户才知道有哪些平台可选；装了之后同一个位置就是启用／禁用。
-        """
+        """返回适配器包是否需要安装。"""
         return not self.installed
 
     @property
     def enable_label(self) -> str:
-        """enable 列的展示文本；包未安装时说明未安装，而不是报「缺 enable」。"""
+        """返回启用状态文本；未安装的适配器显示安装状态。"""
         if self.installable:
             return i18n.t("cli.tui.adapters.state_not_installed")
         if self.enable is None:
@@ -160,7 +142,7 @@ class PeerStatus:
     :param client_name: 该记录声明的 ``client_name``。
     :param state: peer 的原始状态，如 ``ready``；无记录时为空串。
     :param alive: 是否在线；无法判定时为 ``None``。
-    :param error: peer 元数据里的最近错误。
+    :param error: peer 元数据中的最近错误。
     :param detail: 无法判定或状态异常时的说明。
     """
 
@@ -180,11 +162,11 @@ class PeerStatus:
 
 @dataclass(frozen=True)
 class AdapterSnapshot:
-    """一次实例清单取数的结果。
+    """适配器实例清单快照。
 
     :param instances: 实例记录，按平台名与实例 ID 排序。
     :param instance_root: 实例根目录文本。
-    :param registry_available: 已装适配器清单是否可用。
+    :param registry_available: 已安装适配器清单是否可用。
     :param registry_note: 清单不可用或形状异常时的说明。
     :param legacy_layout: 是否含扁平布局配置。
     :param errors: 配置文件的解析错误。
@@ -205,11 +187,7 @@ class AdapterSnapshot:
         return tuple((platform, tuple(groups[platform])) for platform in sorted(groups))
 
     def with_available(self, records: Sequence[AdapterRecord]) -> AdapterSnapshot:
-        """并入尚未安装的适配器包。
-
-        已有配置的平台不再补：那种情况下 ``adapter list`` 已经给出 ``installed=False`` 的记录，
-        再补一条会出现同一个平台两行。仅平台完全没出现时才补，供页面提供安装入口。
-        """
+        """补充尚无实例记录的可安装平台。"""
         known = {record.platform for record in self.instances}
         extra = [record for record in records if record.platform not in known]
         if not extra:
@@ -220,7 +198,7 @@ class AdapterSnapshot:
 
 @dataclass(frozen=True)
 class PeerSnapshot:
-    """一次 peer 快照取数的结果。
+    """peer 连接状态快照。
 
     :param statuses: 别名（``client_name`` / ``service`` / 路由前缀）到连接状态的映射。
     :param available: 快照是否可用。
@@ -232,7 +210,7 @@ class PeerSnapshot:
     note: str = ""
 
     def status_for(self, client_name: str) -> PeerStatus:
-        """取某个 ``client_name`` 的连接状态，取不到时返回「未知」并带原因。"""
+        """返回指定 ``client_name`` 的连接状态；无记录时返回未知状态与原因。"""
         found = self.statuses.get(client_name)
         if found is not None:
             return found
@@ -248,13 +226,13 @@ class AdapterSourceError(RuntimeError):
 
 
 class StaticAdapterSource:
-    """固定数据的替身数据源，供自动化断言使用，不产生任何子进程。
+    """用于测试的静态数据源，不创建子进程。
 
     :param snapshot: ``list_instances`` 的返回值。
     :param available: ``list_available`` 的返回值。
-    :param peers: ``peer_status`` 的返回值；缺省表示快照不可用。
-    :param toggle_result: ``set_enable`` 的返回值；缺省为成功。
-    :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值；缺省为成功。
+    :param peers: ``peer_status`` 的返回值；默认表示快照不可用。
+    :param toggle_result: ``set_enable`` 的返回值；默认为成功。
+    :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值；默认为成功。
     """
 
     def __init__(
@@ -329,7 +307,7 @@ class StaticAdapterSource:
         return self._instance_result
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.set_enable`；成功后替换缓存里的该条记录。"""
+        """见 :meth:`AdapterSource.set_enable`；成功后替换缓存中的该条记录。"""
         self.calls["set_enable"] += 1
         self.toggles.append((record.table or record.client_name, enabled))
         records = [
@@ -342,7 +320,7 @@ class StaticAdapterSource:
 
 @runtime_checkable
 class AdapterSource(Protocol):
-    """适配器数据源接口；测试注入替身，生产走子进程。"""
+    """适配器状态与操作的数据源接口。"""
 
     def list_instances(self) -> AdapterSnapshot:
         """返回实例清单。"""
@@ -351,13 +329,13 @@ class AdapterSource(Protocol):
         """返回可安装的适配器包，含尚未安装的平台。"""
 
     async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
-        """安装该平台的适配器包，并把子进程输出逐行交给 ``on_line``。"""
+        """安装适配器包，通过 ``on_line`` 逐行返回输出。"""
 
     def peer_status(self) -> PeerSnapshot:
         """返回 peer 连接状态快照；不可用时以 ``available=False`` 上报原因，不抛异常。"""
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """经 CLI 命令层改写实例的 ``enable``。"""
+        """通过 CLI 设置实例的 ``enable``。"""
 
 
 def _text(value: Any) -> str:
@@ -397,10 +375,10 @@ def _flag(value: Any) -> bool:
 
 
 def available_adapter_records(payload: Any) -> tuple[AdapterRecord, ...]:
-    """把 ``module available --kind adapter --json`` 的结果归一化为未安装的适配器记录。
+    """将可安装清单输出转换为适配器记录。
 
     :param payload: ``json.loads`` 的结果。
-    :return: 适配器记录；``installed`` 为真时仍带上，由调用方按平台去重。
+    :return: 适配器记录，包含已安装的平台，由调用方去重。
     """
     records: list[AdapterRecord] = []
     for item in _rows(payload, "packages", "items", "data") or (payload if isinstance(payload, list) else []):
@@ -432,10 +410,10 @@ def _rows(payload: Any, *keys: str) -> list[Any]:
 
 
 def normalize_snapshot(payload: Any) -> AdapterSnapshot:
-    """把 ``adapter list --json`` 的负载归一化为 :class:`AdapterSnapshot`。
+    """将适配器清单输出转换为 :class:`AdapterSnapshot`。
 
-    :param payload: ``json.loads`` 的结果；接受包装对象与裸数组。
-    :return: 归一化结果，实例按平台名与实例 ID 排序。
+    :param payload: ``json.loads`` 的结果；支持对象与数组。
+    :return: 按平台名与实例 ID 排序的实例快照。
     """
     records: list[AdapterRecord] = []
     for entry in _rows(payload, "instances", "items", "adapters", "data"):
@@ -496,8 +474,7 @@ def _lease_expired(value: Any, now: float) -> bool | None:
 
 
 def _peer_aliases(entry: Mapping[str, Any], peer_id: str) -> tuple[str, set[str]]:
-    # 平台展示名（``metadata.platform_name``）刻意不作为别名：多实例下它与默认实例的
-    # ``client_name`` 同名，会让同平台的其他实例误命中默认实例的状态。
+    # 平台显示名可能与默认实例的 client_name 相同，不能用作其他实例的状态别名。
     primary = _text(_pick(entry, "client_name")) or _text(_pick(entry, "service")) or peer_id
     aliases = {primary, _text(_pick(entry, "service")), _text(_pick(entry, "client_name"))}
     metadata = _pick(entry, "metadata", default={})
@@ -510,15 +487,11 @@ def _peer_aliases(entry: Mapping[str, Any], peer_id: str) -> tuple[str, set[str]
 
 
 def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnapshot:
-    """把 core 的 peer 快照负载归一化为 :class:`PeerSnapshot`。
-
-    期望形状为 ``{"peers": [...], "available": bool, "note": str}``，其中每个 peer 含 ``peer_id``、
-    ``service``、``state``、``lease_until`` 与 ``metadata``。顶层字段缺失或类型不符时按「不可用 +
-    原因」返回。在线判据与 ``Alive.get_alive`` 一致：``state == ready`` 且租约未过期。
+    """将 core 的 peer 快照转换为 :class:`PeerSnapshot`。
 
     :param payload: ``json.loads`` 的结果。
-    :param now: 判定租约用的当前时刻，缺省取 :func:`time.time`。
-    :return: 归一化结果，状态按多个别名入表。
+    :param now: 判定租约用的当前时刻，默认取 :func:`time.time`。
+    :return: 连接状态快照；状态为 ready 且租约有效时判定为在线。
     """
     if not isinstance(payload, Mapping):
         return PeerSnapshot(available=False, note=i18n.t("cli.tui.adapters.peer_not_object"))
@@ -570,11 +543,11 @@ def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnaps
 
 
 def group_display(records: Sequence[AdapterRecord], registry_available: bool) -> str:
-    """给出平台分组标题里的状态后缀。
+    """返回平台分组标题的状态后缀。
 
     :param records: 该平台下的实例。
-    :param registry_available: 已装适配器清单是否可用。
-    :return: 平台展示名、「适配器未安装」或「已装清单不可用」。
+    :param registry_available: 已安装适配器清单是否可用。
+    :return: 平台显示名或清单状态。
     """
     for record in records:
         if not record.installed:
@@ -592,9 +565,9 @@ def group_display(records: Sequence[AdapterRecord], registry_available: bool) ->
 
 
 class SubprocessAdapterSource:
-    """默认数据源：一律经子进程取数，CLI 进程内不 import core。
+    """通过子进程读取适配器状态并执行操作。
 
-    :param root: 实例根目录，默认当前工作目录。
+    :param root: 实例根目录；默认取当前实例。
     :param timeout: 单个子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     :param instance_factory: ``Instance`` 的构造回调，测试可注入以避开实例发现。
@@ -608,9 +581,7 @@ class SubprocessAdapterSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
-        # 在仓库根运行 TUI 时静默读到另一个实例的配置与日志。
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
@@ -619,7 +590,7 @@ class SubprocessAdapterSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def list_instances(self) -> AdapterSnapshot:
@@ -655,21 +626,13 @@ class SubprocessAdapterSource:
         return available_adapter_records(self._parse_json(completed.stdout, "module available --json"))
 
     async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
-        """见 :meth:`AdapterSource.stream_install`。
-
-        安装走模块源的同一套子进程通道：适配器也是普通分发包，``module add <平台名>`` 即可，
-        单独再写一遍读取循环只会让两条进度路径慢慢分叉。
-        """
+        """通过模块数据源安装适配器，并逐行返回进度。"""
         self.calls["install"] += 1
         installer = SubprocessModuleSource(root=self.root, timeout=self.timeout)
         return await installer.stream_operation("install", ModuleRecord(name=record.platform), on_line)
 
     def peer_status(self) -> PeerSnapshot:
-        """见 :meth:`AdapterSource.peer_status`。
-
-        入口在实例数据库、peer 表或进程租约不可用时返回 ``available: false`` 与原因；页面按
-        「未知」显示连接状态并展示该原因。
-        """
+        """返回 peer 连接状态；入口不可用时返回原因。"""
         self.calls["peers"] += 1
         argv = self.peer_argv()
         try:
@@ -729,10 +692,7 @@ class SubprocessAdapterSource:
         )
 
     def remove_instance(self, record: AdapterRecord) -> OperationResult:
-        """见 :meth:`AdapterSource.remove_instance`；经 ``adapter instance remove`` 移除，数据保留。
-
-        ``--yes`` 由界面代答：确认已经在界面上问过，CLI 不重复提问。
-        """
+        """通过 CLI 移除适配器配置，保留实例数据。"""
         self.calls["remove_instance"] += 1
         label = i18n.t(
             "cli.tui.adapters.label_instance_remove",
@@ -759,10 +719,7 @@ class SubprocessAdapterSource:
         return cli_process.cli_argv(*args)
 
     def peer_argv(self) -> list[str]:
-        """构造 peer 快照入口的 argv：实例解释器加 core 入口模块。
-
-        peer 记录由 JobQueue 后端持有，只有实例解释器里的 core 能读到，故不经 CLI 自身转发。
-        """
+        """构造使用实例解释器读取 peer 快照的命令参数。"""
         return [str(self._instance_python()), "-m", f"akaribot.core.entrypoints.{PEER_ENTRYPOINT}", "--json"]
 
     def _instance_python(self) -> Path:
@@ -854,9 +811,9 @@ class ColumnLayout:
 
 
 class AdaptersPage(compat.Vertical):
-    """Adapters 页控件。
+    """适配器页面。
 
-    :param source: 数据源，缺省为 :class:`SubprocessAdapterSource`。
+    :param source: 数据源，默认为 :class:`SubprocessAdapterSource`。
     :param cache_ttl: 缓存有效期秒数；enable 切换成功后立即失效，与有效期无关。
     """
 
@@ -864,12 +821,10 @@ class AdaptersPage(compat.Vertical):
 
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
-        # ``e`` 与 ``a`` 各有常驻按钮，键位不进页脚：80 列页脚留给 ``d`` 与无按钮入口的 ``ctrl+d``。
         ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable"), False),
         ("i", "install", i18n.t("cli.tui.adapters.action_install")),
         ("a", "add_instance", i18n.t("cli.tui.adapters.bind_add_instance"), False),
-        ("d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance")),
-        ("ctrl+d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance")),
+        ("ctrl+d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance"), False),
     )
 
     DEFAULT_CSS = """
@@ -913,7 +868,7 @@ class AdaptersPage(compat.Vertical):
         width: 1fr;
     }
     AdaptersPage #actions {
-        height: 3;
+        height: auto;
         padding: 0 0 0 1;
     }
     AdaptersPage #detail {
@@ -964,24 +919,24 @@ class AdaptersPage(compat.Vertical):
         self._detail_rendered: str = ""
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树。"""
+
         yield compat.Static(i18n.t("cli.tui.adapters.summary_pending"), id="summary", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="adapter-list")
         with compat.Horizontal(id="instance-row"):
             yield compat.Input(placeholder=i18n.t("cli.tui.adapters.instance_placeholder"), id="new-instance")
-        with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.adapters.action_toggle"), id="toggle", variant="primary")
-            yield compat.Button(i18n.t("cli.tui.adapters.action_add_instance"), id="add-instance")
-            yield compat.Button(
-                i18n.t("cli.tui.adapters.action_remove_instance"), id="remove-instance", variant="error"
-            )
-            yield compat.Button(i18n.t("cli.tui.adapters.action_refresh"), id="refresh")
+        yield compat.ButtonFlow(
+            ("toggle", i18n.t("cli.tui.adapters.action_toggle"), "primary"),
+            ("add-instance", i18n.t("cli.tui.adapters.action_add_instance")),
+            ("remove-instance", i18n.t("cli.tui.adapters.action_remove_instance"), "error"),
+            ("refresh", i18n.t("cli.tui.adapters.action_refresh")),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.adapters.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -991,8 +946,6 @@ class AdaptersPage(compat.Vertical):
         self._activated = True
         self.refresh_instances()
 
-    # region 状态读取（供测试与 App 使用）
-
     @property
     def records(self) -> tuple[AdapterRecord, ...]:
         """返回缓存中的全部实例，不触发子进程。"""
@@ -1000,12 +953,12 @@ class AdaptersPage(compat.Vertical):
 
     @property
     def snapshot(self) -> AdapterSnapshot:
-        """返回最近一次取到的实例清单快照。"""
+        """返回最近一次实例清单快照。"""
         return self._snapshot
 
     @property
     def peers(self) -> PeerSnapshot:
-        """返回最近一次取到的 peer 快照。"""
+        """返回最近一次 peer 快照。"""
         return self._peers
 
     @property
@@ -1053,7 +1006,7 @@ class AdaptersPage(compat.Vertical):
         return self._detail_rendered
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的全部行文本，分组标题行也在内。"""
+        """返回最近一次渲染出的全部行文本，包含分组标题行。"""
         return self._row_texts
 
     def group_titles(self) -> tuple[str, ...]:
@@ -1070,14 +1023,10 @@ class AdaptersPage(compat.Vertical):
             return float("inf")
         return time.monotonic() - self._loaded_at
 
-    # endregion
-
-    # region 数据读取
-
     def refresh_instances(self, *, force: bool = False) -> None:
         """读取实例清单与 peer 快照。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不取数。
+        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
         """
         self.reset_pending()
         if not force and self._snapshot.instances and self.cache_age() < self.cache_ttl:
@@ -1104,7 +1053,7 @@ class AdaptersPage(compat.Vertical):
             self._render_all()
             self._set_status(i18n.t("cli.tui.adapters.status_load_failed", error=error))
             return False
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             self._snapshot = AdapterSnapshot()
             self._peers = PeerSnapshot()
             self._loaded_at = time.monotonic()
@@ -1122,14 +1071,14 @@ class AdaptersPage(compat.Vertical):
         return True
 
     async def _with_available(self, snapshot: AdapterSnapshot) -> AdapterSnapshot:
-        # 与模块页同理：可安装集合取不到不该清空整页——实例与它们的启用状态才是这一页的主要内容。
+        # 可安装清单读取失败时，仍保留实例配置与启用状态。
         self._available_error = ""
         try:
             records = await asyncio.to_thread(self.source.list_available)
         except AdapterSourceError as error:
             self._available_error = i18n.t("cli.tui.adapters.available_failed", error=error)
             return snapshot
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             self._available_error = i18n.t(
                 "cli.tui.adapters.available_failed", error=f"{type(error).__name__}: {error}"
             )
@@ -1139,17 +1088,13 @@ class AdaptersPage(compat.Vertical):
     async def _load_peers(self) -> PeerSnapshot:
         try:
             return await asyncio.to_thread(self.source.peer_status)
-        except Exception as error:  # noqa: BLE001 - 连接状态取不到不应中断页面
+        except Exception as error:  # noqa: BLE001 - 连接状态读取失败不应中断页面
             return PeerSnapshot(available=False, note=f"{type(error).__name__}: {error}")
 
     def invalidate_cache(self) -> None:
-        """使缓存立即失效，下一次读取必定走数据源。"""
+        """清除缓存有效期，使下次请求重新读取数据。"""
         self._loaded_at = 0.0
         self._snapshot = AdapterSnapshot()
-
-    # endregion
-
-    # region 渲染（只读缓存）
 
     def _records_in_row_order(self) -> tuple[AdapterRecord, ...]:
         return tuple(record for _, group in self._snapshot.grouped() for record in group)
@@ -1285,7 +1230,7 @@ class AdaptersPage(compat.Vertical):
 
     def _sync_summary(self) -> None:
         snapshot = self._snapshot
-        # 未安装的平台只是「可选项」，没有实例也没有启用状态，不能计进实例数。
+        # 可安装平台记录不代表已配置实例，不计入实例总数。
         instances = tuple(record for record in snapshot.instances if not record.installable)
         enabled = sum(1 for record in instances if record.enabled)
         parts = [
@@ -1322,7 +1267,7 @@ class AdaptersPage(compat.Vertical):
                     note=self._peers.note or i18n.t("cli.tui.adapters.peer_unavailable"),
                 )
             )
-            # 只报「未知」会让人无从下手：补上可执行的下一步，原因仍保留在上面那句里。
+
             parts.append(i18n.t("cli.tui.adapters.peer_status_unknown_hint"))
         installable = sum(1 for record in snapshot.instances if record.installable)
         if installable:
@@ -1355,7 +1300,6 @@ class AdaptersPage(compat.Vertical):
             return
         self._selected_key = record.key
         if record.installable:
-            # 未安装的平台没有实例、配置与连接状态，讲这些只会显示一串「未知」。
             parts = [i18n.t("cli.tui.adapters.detail_not_installed", platform=record.platform)]
             if record.developers:
                 parts.append(
@@ -1411,6 +1355,7 @@ class AdaptersPage(compat.Vertical):
             toggle.label = i18n.t(
                 "cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable"
             )
+        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
         self.last_result = text
@@ -1418,13 +1363,9 @@ class AdaptersPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+
         if self._snapshot.instances:
             self._render_all()
-
-    # endregion
-
-    # region 交互
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
@@ -1450,11 +1391,7 @@ class AdaptersPage(compat.Vertical):
             self.refresh_instances(force=True)
 
     def request_add_instance(self) -> None:
-        """为选中行所属平台新建实例；实例 ID 取自输入框。
-
-        实例 ID 是 ``target_id`` 前缀的一部分，建好后不可改名，故这里只校验形态，不猜默认值。
-        ``adapter instance add`` 没有名字参数，实例的显示名由 CLI 按平台名与实例 ID 推导，界面不收集。
-        """
+        """使用输入的实例 ID，为所选平台创建实例。"""
         record = self.selected_record
         if record is None:
             compat.notify(
@@ -1464,6 +1401,7 @@ class AdaptersPage(compat.Vertical):
                 title=i18n.t("cli.tui.adapters.action_add_instance"),
             )
             return
+        # 实例 ID 参与 target_id 前缀，必须由用户指定，创建后不可更改。
         instance_id = self.query_one("#new-instance", compat.Input).value.strip()
         if not instance_id:
             compat.notify(
@@ -1488,7 +1426,7 @@ class AdaptersPage(compat.Vertical):
         )
 
     def request_remove_instance(self) -> None:
-        """弹出仅移除实例的确认框；一次触发即弹模态，防抖窗口内的连发忽略。"""
+        """请求确认移除实例配置，忽略防抖窗口内的重复请求。"""
         record = self._removal_target()
         if record is None:
             return
@@ -1505,11 +1443,7 @@ class AdaptersPage(compat.Vertical):
         )
 
     def on_remove_chosen(self, record: AdapterRecord, choice: str | None) -> None:
-        """处理移除确认的结果。
 
-        :param record: 目标实例。
-        :param choice: ``remove`` 执行移除；``None`` 表示取消。
-        """
         self.reset_pending()
         if choice != "remove":
             self._set_status(i18n.t("cli.tui.adapters.remove_cancelled"))
@@ -1565,7 +1499,7 @@ class AdaptersPage(compat.Vertical):
     async def _instance_op(self, label: str, func: Callable[[], OperationResult], clear_input: bool) -> None:
         try:
             result = await asyncio.to_thread(func)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1589,7 +1523,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def request_toggle(self) -> None:
-        """切换选中实例的 ``enable``；无选中项时给出提示而不动作。"""
+        """切换所选实例的启用状态；无选中项时显示提示。"""
         record = self.selected_record
         if record is None:
             compat.notify(
@@ -1600,13 +1534,13 @@ class AdaptersPage(compat.Vertical):
             )
             return
         if record.installable:
-            # 同一个按钮承载两种动作：没装就先装，装完再谈启用，省得两处入口互相打架。
+            # 未安装的适配器必须先安装，才能设置启用状态。
             self.request_install()
             return
         self._start_toggle(record, not record.enabled)
 
     def request_install(self) -> None:
-        """安装选中平台的适配器包；已装或无选中项时给出提示而不动作。"""
+        """安装所选平台的适配器；已安装或无选中项时显示提示。"""
         record = self.selected_record
         if record is None or not record.installable:
             compat.notify(
@@ -1638,7 +1572,7 @@ class AdaptersPage(compat.Vertical):
     async def _install(self, record: AdapterRecord, label: str) -> None:
         try:
             result = await self.source.stream_install(record, self._on_install_line)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1660,7 +1594,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def _on_install_line(self, line: str) -> None:
-        # 安装可能跑上几分钟；逐行显示子进程输出，操作者才分得清「在装」与「卡住了」。
+        # 安装耗时较长，通过实时输出提供进度反馈。
         self._stream_lines.append(line)
         self._set_status(line)
 
@@ -1686,7 +1620,7 @@ class AdaptersPage(compat.Vertical):
     async def _toggle(self, record: AdapterRecord, enabled: bool, label: str) -> None:
         try:
             result = await asyncio.to_thread(self.source.set_enable, record, enabled)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1711,30 +1645,28 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def focus_primary(self) -> None:
-        """把焦点交给适配器列表；列表为空时退到页面容器。"""
+        """聚焦适配器列表；列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#adapter-list")
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取。"""
+
         self.refresh_instances(force=True)
 
     def action_install(self) -> None:
-        """键位动作：安装当前平台尚未安装的适配器包。"""
+
         self.request_install()
 
     def action_add_instance(self) -> None:
-        """键位动作：按输入框的实例 ID 新建实例。"""
+
         self.request_add_instance()
 
     def action_remove_instance(self) -> None:
-        """键位动作：弹出移除选中实例并保留数据的确认框。"""
+
         self.request_remove_instance()
 
     def action_toggle_enable(self) -> None:
-        """键位动作：切换选中实例的 enable。"""
-        self.request_toggle()
 
-    # endregion
+        self.request_toggle()
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

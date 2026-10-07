@@ -1,9 +1,4 @@
-"""杂项页：只放不属于其它页面的一次性操作，目前是「迁移项目」。
-
-页面平时只有一个按钮，点击后弹出输入框要旧项目路径；拿到路径后再从确认框里选「先预演」或
-「开始迁移」。迁移会往实例里写配置与数据，故路径提交后还要在确认框里选一次才会执行，切页即作废。
-按钮上方一行开关随 ``migrate legacy`` 下发，全不勾时 argv 不带这些参数。
-"""
+"""项目迁移的路径输入、参数、预览与模态确认测试。"""
 
 import asyncio
 import subprocess
@@ -35,7 +30,7 @@ PROJECT = "/tmp/old-project"
 
 
 async def _wait_until(predicate, timeout: float = 1.0) -> bool:
-    # 模态框的关闭与 worker 的落地时刻不确定，用轮询等条件成立。
+    # 模态关闭与后台任务完成时间独立，须等待断言条件成立。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
@@ -70,14 +65,14 @@ def _prompt_open(app) -> bool:
 
 
 async def _choose(app, pilot, index: int) -> None:
-    # 按确认框里的第 index 个选项（0 先预演，1 开始迁移）；模态框关掉即回调已经执行。
+
     app.screen.query_one(f"#choice-{index}", compat.Button).press()
     await _wait_until(lambda: not app.screen.query("#choice-0"))
     await pilot.pause()
 
 
 async def _test_page_offers_one_button():
-    # 页面只放一个按钮，不常驻输入框。
+
     async def body(app, page, pilot, source):
         buttons = [child.id for child in page.query(compat.Button)]
         inputs = len(page.query(compat.Input))
@@ -89,7 +84,7 @@ async def _test_page_offers_one_button():
 
 
 async def _test_click_opens_prompt_and_cancel_is_safe():
-    # 点击后弹出输入框；取消不会调用数据源。
+
     async def body(app, page, pilot, source):
         page.request_migrate()
         await pilot.pause()
@@ -106,7 +101,7 @@ async def _test_click_opens_prompt_and_cancel_is_safe():
 
 
 async def _test_prompt_asks_before_migrating():
-    # 输入路径后不立即执行：先弹确认框，选「开始迁移」才迁移。
+
     async def body(app, page, pilot, source):
         await _enter_path(app, page, pilot)
         asked = (list(source.migrated), page.status_text, page.pending_project, len(app.screen_stack) > 1)
@@ -141,7 +136,7 @@ async def _test_enter_key_submits_prompt():
 
 
 async def _test_cancel_choice_clears_pending():
-    # 确认框取消后路径作废：再按 m 重新要路径，不会拿旧路径直接迁移。
+    # 取消确认后清除路径，后续迁移必须重新输入。
     async def body(app, page, pilot, source):
         await _enter_path(app, page, pilot)
         await pilot.press("escape")
@@ -159,7 +154,7 @@ async def _test_cancel_choice_clears_pending():
 
 
 async def _test_switch_page_clears_pending_path():
-    # 待确认状态随切页作废：切回本页再按 m 必须重新输入路径。
+
     async def body(app, page, pilot, source):
         await _enter_path(app, page, pilot)
         await _choose(app, pilot, 0)
@@ -211,7 +206,7 @@ async def _test_dry_run_option_prints_plan():
 
 
 async def _test_confirm_within_debounce_is_ignored():
-    # 提交路径后紧接着选「开始迁移」属连发，不算确认：闸门挡下，迁移不执行。
+    # 防抖窗口内的连续提交不能触发迁移。
     async def body(app, page, pilot, source):
         await _enter_path(app, page, pilot)
         await _choose(app, pilot, 1)
@@ -261,7 +256,7 @@ async def _test_output_panel_hidden_until_output():
 
 
 def _test_pending_confirm_windows():
-    # 闸门自身的窗口：两次触发相隔不足防抖窗口时忽略后一次，换目标或复位后立即放行。
+
     with mock.patch.object(compat.PendingConfirm, "debounce", compat.CONFIRM_DEBOUNCE_SECONDS):
         gate = compat.PendingConfirm()
         accepted = gate.accept("x", now=100.0)
@@ -303,7 +298,7 @@ def _test_subprocess_source_appends_dry_run_and_switches():
 
 
 async def _test_option_row_lists_switches():
-    # 四个开关一行排开，默认全不勾；空选择让 argv 不带任何多余参数。
+
     async def body(app, page, pilot, source):
         row = page.query_one("#migrate-options")
         observed = []
@@ -333,7 +328,7 @@ async def _test_option_row_lists_switches():
 
 
 async def _test_confirm_hint_lists_switches():
-    # 确认模态框里列出本次将下发的开关；没勾选时写明没有附加开关。
+
     async def body(app, page, pilot, source):
         page.query_one("#option-force", compat.Checkbox).value = True
         page.query_one("#option-skip-install", compat.Checkbox).value = True
@@ -364,7 +359,7 @@ async def _test_confirm_hint_lists_switches():
 
 
 async def _test_switches_ride_along_with_dispatch():
-    # 勾选的开关随每次下发：先预演与真正迁移带的是同一份集合，顺序与界面一致。
+    # 预览与执行使用相同参数，顺序与界面一致。
     async def body(app, page, pilot, source):
         page.query_one("#option-offline", compat.Checkbox).value = True
         page.query_one("#option-no-venv", compat.Checkbox).value = True
@@ -374,7 +369,7 @@ async def _test_switches_ride_along_with_dispatch():
         await page.wait_for_idle()
         await pilot.pause()
         dry_run_call = list(source.migrated)
-        # 预演不作废路径：再按一次 m 直接回到确认框，不必重输。
+        # 预览保留源目录，后续请求直接进入确认步骤。
         page.request_migrate()
         await _wait_until(lambda: bool(app.screen.query("#choice-0")))
         await pilot.pause()
@@ -391,9 +386,9 @@ async def _test_switches_ride_along_with_dispatch():
 
 @func_case
 async def test_tui_misc(tester: Tester):
-    """cli.tui.misc: 迁移项目的按钮、确认与预演测试"""
+    """cli.tui.misc: 迁移项目的按钮、确认与预览测试"""
     _use_cli_locale()
-    # 用例里的两次按键相隔只有几毫秒，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_page_offers_one_button, "页面只放一个按钮")
         await tester.test(_test_click_opens_prompt_and_cancel_is_safe, "点击弹出输入框且取消安全")

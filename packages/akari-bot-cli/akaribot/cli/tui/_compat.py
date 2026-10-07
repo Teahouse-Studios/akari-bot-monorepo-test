@@ -1,11 +1,6 @@
-"""Textual 兼容层：TUI 内全部 Textual 用法经此收口。
+"""Textual 兼容接口、终端宽度计算与公共控件。
 
-上游 Textual 跨版本有 API 变动史——widget 的导出位置、消息类名、``Binding`` 构造参数、
-``run`` / ``run_test`` 的关键字、CSS 属性的名称与取值、鼠标相关开关——把导入与调用集中在
-本模块后，升级 Textual 只需改这一个文件。本模块只做再导出、薄包装与终端宽度计算，不含业务逻辑。
-
-约定：``akaribot/cli/tui`` 下的其它模块一律 ``from akaribot.cli.tui import _compat as compat``，
-不得直接 ``import textual``，也不得直接 ``import rich``。
+TUI 的其他模块通过本模块使用 Textual 和 Rich。
 """
 
 from __future__ import annotations
@@ -126,8 +121,7 @@ __all__ = [
 TEXTUAL_PIN = "8.2.8"
 """与 ``pyproject.toml`` 中 ``textual==8.2.8`` 一致的期望版本。
 
-本模块的包装按该版本的行为编写与实测；运行期版本不一致时自检必须报错，
-以免「依赖被顶版」的表现被误判成界面缺陷。
+兼容接口以此版本为依据，版本不匹配时自检报告错误。
 """
 
 KEY_ALIASES = {
@@ -138,8 +132,7 @@ KEY_ALIASES = {
 }
 """键名别名表。
 
-Textual 对非字母数字键的命名由 Unicode 名派生（``/`` 即 ``SOLIDUS``），历史上出现过
-``solidus`` / ``slash`` 两种写法，故在 :func:`bind` 内统一归一，页面只写规范名。
+Textual 的键名以 ``slash`` 表示 ``/``；绑定时将 Unicode 名称等别名统一为该键名。
 """
 
 
@@ -150,10 +143,10 @@ def textual_version() -> str:
 
 
 def check_textual_version(pin: str = TEXTUAL_PIN) -> tuple[bool, str]:
-    """比对运行期版本与紧钉版本。
+    """检查运行期 Textual 版本是否符合依赖约束。
 
-    :param pin: 期望版本，默认取 :data:`TEXTUAL_PIN`。
-    :return: 二元组——是否符合紧钉；可直接打印的说明文本。
+    :param pin: 要求的版本。
+    :return: 版本是否匹配及检查结果说明。
     """
     found = textual_version()
     return found == pin, i18n.t("cli.tui.selfcheck.textual_version", pin=pin, found=found)
@@ -161,8 +154,7 @@ def check_textual_version(pin: str = TEXTUAL_PIN) -> tuple[bool, str]:
 
 # region 宽度计算（中文宽字符对齐）
 
-# 理由：``len()`` 数的是码点，中日韩字符与 emoji 在终端占 2 列，直接用它排版必然错位。
-# ``rich.cells`` 与 Textual 渲染同源，故列表列宽、详情标签列与截断统一走这里。
+# 码点数量与终端列宽不同；宽度计算使用与 Textual 一致的 rich.cells。
 
 
 def cell_width(char: str) -> int:
@@ -176,7 +168,7 @@ def display_width(text: str) -> int:
 
 
 def truncate_cells(text: str, width: int, ellipsis: str = "…") -> str:
-    """按终端列宽截断，且不劈开宽字符；被截断时补省略号。
+    """按终端列宽截断，保持宽字符完整；被截断时补省略号。
 
     :param text: 原始文本。
     :param width: 可用的终端列数，小于等于 0 时返回空串。
@@ -226,7 +218,7 @@ def column_width(values: Iterable[str]) -> int:
 
 
 def align_rows(rows: Sequence[tuple[str, str]], gap: int = 2, align: str = "left") -> list[str]:
-    """把两列文本按显示宽度对齐成定宽行。
+    """将两列文本按显示宽度对齐。
 
     :param rows: 二元组序列——左列（标签）与右列（值）。
     :param gap: 两列之间的空格数。
@@ -242,8 +234,7 @@ def align_rows(rows: Sequence[tuple[str, str]], gap: int = 2, align: str = "left
 
 # region 包内资源与样式表
 
-# 理由：``App.CSS_PATH`` 依赖 App 子类所在文件的磁盘路径，Nuitka onefile 冻结后该路径不成立；
-# 因此样式表统一由 ``importlib.resources`` 读取文本后赋给 ``App.CSS``，并在读不到时回退内联常量。
+# 冻结环境中的源文件路径不可用，样式表通过包内资源读取；资源缺失时使用内联样式。
 
 
 def read_resource_text(package: str, resource: str) -> str | None:
@@ -295,15 +286,12 @@ def load_stylesheet(package: str, resource: str, fallback: str) -> tuple[str, st
 
 
 def parse_stylesheet(css: str, path: str = "<tui>", app: App[Any] | None = None) -> Stylesheet:
-    """把样式表文本交给 Textual 解析，语法错误与未定义变量在此暴露。
+    """解析样式表并校验主题变量。
 
     :param css: 样式表文本。
-    :param path: 报错时显示的名称。
-    :param app: 提供主题变量的应用实例；省略时样式表中的 ``$变量`` 无法解析。
-    :return: 已解析的 :class:`~textual.css.stylesheet.Stylesheet`。
-
-    理由：``Stylesheet`` 需要 ``App.get_css_variables()`` 提供的主题变量（``$text-muted`` 等），
-    脱离应用实例解析会报未定义变量，故把变量来源一并收进本包装。
+    :param path: 错误信息中的文件名。
+    :param app: 提供主题变量的应用实例。
+    :return: 解析后的样式表。
     """
     sheet = Stylesheet(variables=app.get_css_variables() if app is not None else None)
     sheet.add_source(css, read_from=("tui", path))
@@ -316,8 +304,7 @@ def parse_stylesheet(css: str, path: str = "<tui>", app: App[Any] | None = None)
 
 # region 品牌主题
 
-# 主题名与调色板取自 character_marked.png（品牌立绘）：不透明部分以浅紫与粉色为主，暗部是深紫褐。
-# 深色版取暗部作底、亮部作强调色；浅色版用图里的浅底与深色描边。语义色按同一色相家族调和。
+# 调色板取自品牌立绘 character_marked.png，并分别适配深色与浅色背景。
 AKARI_THEME_DARK = "akari-dark"
 AKARI_THEME_LIGHT = "akari-light"
 
@@ -388,29 +375,24 @@ def toggle_akari_theme(app: App[Any]) -> str:
 
 # region 应用、键位与消息
 
-# 理由：``ComposeResult`` 曾只在 ``textual.app`` 内可用；``ListView`` 等 widget 的模块路径也变过。
-
 
 def bind(key: str, action: str, description: str, *, show: bool = True) -> BindingType:
-    """构造一条键位绑定。
+    """构造快捷键绑定并规范键名。
 
     :param key: 键名，如 ``q``、``ctrl+r``。
-    :param action: 动作名，对应 ``action_<name>`` 方法。
-    :param description: 页脚显示的文字。
-    :param show: 是否在页脚展示。
-    :return: Textual 的绑定对象；页面不直接构造 ``Binding``。
-
-    理由：``Binding`` 的参数表在版本间增删过（四元组写法、``id`` / ``system`` / ``group``、
-    ``priority`` 语义），页面只提供三元组可把差异挡在本函数内；键名同时经 :data:`KEY_ALIASES` 归一。
+    :param action: 对应的动作名。
+    :param description: 快捷键说明。
+    :param show: 是否在页脚显示。
+    :return: Textual 绑定对象。
     """
     return Binding(KEY_ALIASES.get(key, key), action, description, show=show)
 
 
 def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[BindingType]:
-    """批量构造键位绑定。
+    """批量构造快捷键绑定。
 
-    每项为 ``(key, action, description)`` 或 ``(key, action, description, show)``：四元组的第 4 项为
-    ``False`` 时该键位不进页脚，用于低频或危险动作——页脚在 80 列终端下装不下十几条键位。
+    :param items: 三元组 ``(key, action, description)`` 或含 ``show`` 的四元组。
+    :return: 绑定列表；``show=False`` 的快捷键不在页脚显示。
     """
     result: list[BindingType] = []
     for item in items:
@@ -419,20 +401,17 @@ def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[
     return result
 
 
-# 模态确认的连发闸门：鼠标双击与键盘连发会在几十毫秒内送来同一个动作的两次请求，第二次会把
-# 确认框叠成两层——用户答的是下面那层。故同一个目标在最短间隔内只接受一次。
+# 双击与按键连发可能重复触发同一请求，防抖窗口用于防止确认框重复打开。
 CONFIRM_DEBOUNCE_SECONDS = 0.4
 
 
 class PendingConfirm:
-    """破坏性动作弹确认框前的连发闸门。
+    """确认请求的防抖记录。
 
-    页面在弹框前调用 :meth:`accept`：返回 ``False`` 表示这是防抖窗口内的重复触发，调用方应直接
-    返回（既不弹框也不执行）。:meth:`reset` 在切页、刷新、换选中项时清掉记录，下一次触发立即放行。
+    同一目标在防抖窗口内仅接受一次请求；切页、刷新或选择变化时应清除记录。
     """
 
-    # 防抖窗口做成类属性：生产路径用模块常量，自动化断言可以压缩等待——用例里的两次触发只隔
-    # 几毫秒，按真实窗口会让每条确认都多等 0.4 秒。
+    # 允许测试调整防抖窗口，避免依赖固定的实际等待时间。
     debounce: float = CONFIRM_DEBOUNCE_SECONDS
 
     def __init__(self) -> None:
@@ -440,11 +419,11 @@ class PendingConfirm:
         self.at = 0.0
 
     def accept(self, key: str, *, now: float | None = None) -> bool:
-        """是否接受这次触发。
+        """判断是否接受确认请求。
 
-        :param key: 目标标识，如动作名或记录主键；换目标立即放行。
-        :param now: 当前时刻，缺省取 :func:`time.monotonic`；用例注入以求可断言。
-        :return: ``True`` 表示应当继续弹确认框。
+        :param key: 操作目标标识。
+        :param now: 当前时间，默认使用单调时钟。
+        :return: 是否可打开确认框。
         """
         moment = time.monotonic() if now is None else now
         if self.key == key and moment - self.at < self.debounce:
@@ -454,32 +433,26 @@ class PendingConfirm:
         return True
 
     def reset(self) -> None:
-        """清掉记录，下一次触发立即放行。"""
+        """清除防抖记录。"""
         self.key = ""
         self.at = 0.0
 
 
 def highlighted_index(list_view: ListView) -> int | None:
-    """取当前高亮项下标，无高亮时返回 ``None``。
-
-    理由：``ListView.index`` 与 ``highlighted_child`` 的语义在版本间有出入，统一读 ``index``。
-    """
+    """返回当前高亮项索引，无高亮项时返回 ``None``。"""
     index = getattr(list_view, "index", None)
     return index if isinstance(index, int) and index >= 0 else None
 
 
 async def wait_for_idle(app: App[Any], is_busy: Callable[[], bool], *, timeout: float = 30.0) -> bool:
-    """等到页面既不忙、也没有未完成的后台任务。
-
-    ``workers.wait_for_complete()`` 在任务刚被 ``run_worker`` 调度、尚未注册时会立即返回，只靠它
-    判断会让自动化断言读到中间状态（实测同一用例在全量运行下偶发失败、单独运行必过）。故先等
-    worker 队列，再看页面自己的忙碌标志，两轮都空闲才算结束。
+    """等待后台任务与页面操作均完成。
 
     :param app: 应用实例。
-    :param is_busy: 返回页面是否仍在处理中。
+    :param is_busy: 返回页面是否仍在处理操作。
     :param timeout: 最长等待秒数。
-    :return: 是否在超时前进入空闲。
+    :return: 是否在超时前进入空闲状态。
     """
+    # 任务注册可能延迟，需同时检查 worker 队列与页面忙碌状态。
     deadline = time.monotonic() + timeout
     while True:
         await app.workers.wait_for_complete()
@@ -491,15 +464,12 @@ async def wait_for_idle(app: App[Any], is_busy: Callable[[], bool], *, timeout: 
 
 
 def focus_now(widget: Widget) -> bool:
-    """立即把焦点交给控件，不等下一轮消息。
-
-    ``Widget.focus()`` 内部走 ``call_later``，真正生效要等下一次消息循环。隐藏旧页时 Textual 会
-    先 ``blur()`` 并改派焦点，延后的那次聚焦就晚了——隐藏页里的滚动容器会拿到焦点，那一页的键位
-    随之生效。切页时先同步聚焦目标页，旧页隐藏时便不再触发改派。
+    """同步设置控件焦点。
 
     :param widget: 目标控件。
-    :return: 是否同步设置成功；失败时退回常规的延后聚焦。
+    :return: 是否同步设置成功；失败时使用异步聚焦。
     """
+    # 同步聚焦可避免切页时 Textual 将焦点分配给隐藏页面。
     try:
         widget.screen.set_focus(widget)
     except Exception:  # noqa: BLE001 - 未挂载或 Textual 内部签名变动时退回常规路径
@@ -509,23 +479,17 @@ def focus_now(widget: Widget) -> bool:
 
 
 def focus_first(page: Widget, *selectors: str) -> bool:
-    """按顺序把焦点交给第一个可用的候选控件，全都不行时聚焦页面本身。
-
-    Textual 拒绝聚焦空的 ``ListView``：``focus()`` 静默失效，``app.focused`` 仍为 ``None``。
-    列表尚在加载或实例里没有数据时，切页后焦点因此悬空，页级键位全部不响应。故列表为空时
-    退到下一个候选，最后兜底到页面容器。
-
-    聚焦走 :func:`focus_now` 而非 ``Widget.focus()``：后者延迟到下一轮消息，切页隐藏旧页时会被
-    Textual 的改派抢在前面。
+    """聚焦首个可用的候选控件；无可用候选时聚焦页面容器。
 
     :param page: 页面控件。
-    :param selectors: 候选控件的 CSS 选择器，按优先级排列。
-    :return: 是否把焦点交给了候选控件（``False`` 表示落到了页面容器上）。
+    :param selectors: 按优先级排列的 CSS 选择器。
+    :return: 是否聚焦候选控件。
     """
+    # 空列表不可聚焦，需保留后续候选与页面容器作为回退目标。
     for selector in selectors:
         try:
             widget = page.query_one(selector)
-        except Exception:  # noqa: BLE001 - 候选控件可能尚未装配，跳过即可
+        except Exception:  # noqa: BLE001 - 跳过尚未装配的候选控件
             continue
         if isinstance(widget, ListView) and len(widget) == 0:
             continue
@@ -536,13 +500,11 @@ def focus_first(page: Widget, *selectors: str) -> bool:
 
 
 def plain_text(value: str, style: str | None = None) -> Text:
-    """构造不做标记解析的富文本。
+    """构造不解析标记的富文本。
 
     :param value: 原始文本。
     :param style: 可选的 Rich 样式名。
-    :return: 可直接交给 ``Static.update`` 的文本对象。
-
-    理由：模块名与简介来自子进程 JSON，含 ``[`` 时会被 Textual 标记语法吞掉，故一律关闭解析。
+    :return: 可用于 ``Static.update`` 的文本对象。
     """
     return Text(value, style=style)
 
@@ -553,10 +515,7 @@ def escape_markup(value: str) -> str:
 
 
 def notify(app: App[Any], message: str, *, severity: str = "information", title: str = "") -> None:
-    """弹出通知，未挂载或不支持时静默返回。
-
-    理由：``App.notify`` 的 ``severity`` 由位置参数改为关键字参数，统一按关键字调用。
-    """
+    """显示通知；未挂载或不支持通知时返回。"""
     notify_fn = getattr(app, "notify", None)
     if notify_fn is None:
         return
@@ -567,11 +526,7 @@ def notify(app: App[Any], message: str, *, severity: str = "information", title:
 
 
 def push_screen(app: App[Any], screen: Screen[Any] | str, callback: Callable[[Any], None] | None = None) -> Any:
-    """推入一个页面，可选地把关闭结果交给回调。
-
-    理由：``push_screen`` 的 ``callback`` / ``wait_for_dismiss`` / ``mode`` 参数是逐版本加上的；
-    回调存在时按关键字传入，不存在时保持只传页面对象。
-    """
+    """打开页面，并通过可选回调传递关闭结果。"""
     if callback is None:
         return app.push_screen(screen)
     return app.push_screen(screen, callback)
@@ -581,7 +536,7 @@ class TextPromptScreen(Screen[str | None]):
     """单行文本输入的模态框：回车或「确认」提交，「取消」或 Esc 返回 ``None``。
 
     :param title: 标题。
-    :param hint: 说明文字，写清提交后会发生什么。
+    :param hint: 操作后果说明。
     :param confirm_label: 确认按钮文字。
     :param cancel_label: 取消按钮文字。
     :param placeholder: 输入框占位符。
@@ -596,6 +551,7 @@ class TextPromptScreen(Screen[str | None]):
         width: 72;
         max-width: 90%;
         height: auto;
+        max-height: 90%;
         border: round $primary;
         background: $surface;
         padding: 1 1;
@@ -606,9 +562,13 @@ class TextPromptScreen(Screen[str | None]):
     TextPromptScreen #prompt-hint {
         color: $text-muted;
     }
+    TextPromptScreen #prompt-description {
+        height: 1fr;
+        min-height: 1;
+        overflow-x: hidden;
+    }
     TextPromptScreen #prompt-actions {
-        height: 3;
-        align-horizontal: right;
+        height: auto;
     }
     """
 
@@ -634,17 +594,24 @@ class TextPromptScreen(Screen[str | None]):
     def compose(self) -> ComposeResult:
         """装配输入框与两个按钮。"""
         with Vertical(id="prompt-box"):
-            yield Static(plain_text(self.prompt_title), id="prompt-title", markup=False)
-            if self.prompt_hint:
-                yield Static(plain_text(self.prompt_hint), id="prompt-hint", markup=False)
+            with VerticalScroll(id="prompt-description"):
+                yield Static(plain_text(self.prompt_title), id="prompt-title", markup=False)
+                if self.prompt_hint:
+                    yield Static(plain_text(self.prompt_hint), id="prompt-hint", markup=False)
             yield Input(value=self.initial, placeholder=self.placeholder, id="prompt-input")
-            with Horizontal(id="prompt-actions"):
-                yield Button(self.confirm_label, id="prompt-confirm", variant="primary")
-                yield Button(self.cancel_label, id="prompt-cancel")
+            yield ButtonFlow(
+                ("prompt-confirm", self.confirm_label, "primary"),
+                ("prompt-cancel", self.cancel_label),
+                id="prompt-actions",
+            )
 
     def on_mount(self) -> None:
         """打开即聚焦输入框。"""
         focus_now(self.query_one("#prompt-input", Input))
+        self.call_after_refresh(_fit_dialog, self, "prompt", 3)
+
+    def on_resize(self, event: events.Resize) -> None:
+        self.call_after_refresh(_fit_dialog, self, "prompt", 3)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """回车提交。"""
@@ -677,11 +644,7 @@ def ask_text(
     initial: str = "",
     callback: Callable[[str | None], None],
 ) -> None:
-    """弹出单行输入框，把结果交给回调。
-
-    ``push_screen`` 的 ``callback`` 参数是逐步加上的，故把回调包在页面里而不是交给 Textual。
-    这里只推入页面，回调由 :meth:`TextPromptScreen.dismiss` 触发。
-    """
+    """打开单行输入框，通过回调返回输入值；取消时返回 ``None``。"""
     screen = TextPromptScreen(
         title=title,
         hint=hint,
@@ -697,7 +660,7 @@ class ChoiceScreen(Screen[str | None]):
     """多选一的模态框：每个选项一个按钮，Esc 或「取消」返回 ``None``。
 
     :param title: 标题。
-    :param hint: 说明文字，写清各选项的差别。
+    :param hint: 选项说明。
     :param options: ``(取值, 按钮文字)`` 列表，按给出顺序排列。
     :param cancel_label: 取消按钮文字。
     """
@@ -710,6 +673,7 @@ class ChoiceScreen(Screen[str | None]):
         width: 72;
         max-width: 90%;
         height: auto;
+        max-height: 90%;
         border: round $primary;
         background: $surface;
         padding: 1 1;
@@ -720,12 +684,13 @@ class ChoiceScreen(Screen[str | None]):
     ChoiceScreen #choice-hint {
         color: $text-muted;
     }
+    ChoiceScreen #choice-description {
+        height: 1fr;
+        min-height: 1;
+        overflow-x: hidden;
+    }
     ChoiceScreen #choice-actions {
         height: auto;
-        align-horizontal: right;
-    }
-    ChoiceScreen Button {
-        margin: 0 0 0 1;
     }
     """
 
@@ -747,21 +712,32 @@ class ChoiceScreen(Screen[str | None]):
     def compose(self) -> ComposeResult:
         """装配标题、说明与每个选项一个按钮。"""
         with Vertical(id="choice-box"):
-            yield Static(plain_text(self.choice_title), id="choice-title", markup=False)
-            if self.choice_hint:
-                yield Static(plain_text(self.choice_hint), id="choice-hint", markup=False)
-            with Horizontal(id="choice-actions"):
-                for index, (_, label) in enumerate(self.options):
-                    yield Button(label, id=f"choice-{index}", variant="primary" if index == 0 else "default")
-                yield Button(self.cancel_label, id="choice-cancel")
+            with VerticalScroll(id="choice-description"):
+                yield Static(plain_text(self.choice_title), id="choice-title", markup=False)
+                if self.choice_hint:
+                    yield Static(plain_text(self.choice_hint), id="choice-hint", markup=False)
+            yield ButtonFlow(
+                *(
+                    (f"choice-{index}", label, "primary" if index == 0 else "default")
+                    for index, (_, label) in enumerate(self.options)
+                ),
+                ("choice-cancel", self.cancel_label),
+                id="choice-actions",
+            )
 
     def on_mount(self) -> None:
-        """打开即聚焦第一个选项，回车即选中它；没有选项时只留取消按钮。"""
+        """聚焦首个选项；无选项时聚焦取消按钮。"""
         if self.options:
             focus_now(self.query_one("#choice-0", Button))
+        else:
+            focus_now(self.query_one("#choice-cancel", Button))
+        self.call_after_refresh(_fit_dialog, self, "choice")
+
+    def on_resize(self, event: events.Resize) -> None:
+        self.call_after_refresh(_fit_dialog, self, "choice")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """按钮即结果：取消按钮返回 ``None``。"""
+        """返回选项值；取消按钮返回 ``None``。"""
         button_id = event.button.id or ""
         if button_id == "choice-cancel":
             self.dismiss(None)
@@ -789,21 +765,31 @@ def ask_choice(
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
 
 
+def _fit_dialog(screen: Screen[Any], prefix: str, input_height: int = 0) -> None:
+    if not screen.is_mounted:
+        return
+    box = screen.query_one(f"#{prefix}-box")
+    description = screen.query_one(f"#{prefix}-description")
+    actions = screen.query_one(f"#{prefix}-actions", ButtonFlow)
+    actions.relayout()
+    buttons = list(actions.query(Button))
+    rows = (len(buttons) + actions._columns - 1) // max(actions._columns, 1)
+    action_height = rows * max((button.region.height for button in buttons), default=3)
+    width = max(description.scrollable_content_region.width, 1)
+    text_height = sum(child.get_content_height(description.size, screen.size, width) for child in description.children)
+    desired = text_height + action_height + input_height + box.styles.gutter.height
+    box.styles.height = min(desired, max(int(screen.size.height * 0.9), 1))
+
+
 ButtonSpec = tuple[str, str] | tuple[str, str, str]
 
 
 def mounted(widget: Widget) -> bool:
-    """控件是否还能安全地取子控件。
+    """判断控件当前是否允许访问子控件。
 
-    界面的取数与轮询由 worker 驱动，可能在页面卸载（切实例重挂载、退出界面）之后才落地。此时
-    **页面自身的 ``is_mounted`` 仍可能为真**——Textual 先卸子控件再卸父控件——按 id 取子控件会抛
-    ``NoMatches``，异常最终在 worker 里抛给用户。
-
-    判据覆盖四种不可用情形：应用已请求退出（``App._exit``）；应用已停止运行（退出流程里子控件先
-    被卸下，此时尚未请求退出）；页面正在被移除（``_pruning``，界面仍在运行时切实例重挂载即走这条
-    路）；页面挂载过又被卸下。页面还没走完首次 ``on_mount``（此时 ``is_mounted`` 尚为假，但子控件
-    已经建好，页面自己的首次渲染正依赖这一点）→ 可用。
+    应用退出、控件正在移除或已卸载时返回 ``False``；首次挂载期间允许访问。
     """
+    # Textual 先卸载子控件，父控件的 is_mounted 可能尚未更新。
     app = getattr(widget, "app", None)
     if bool(getattr(app, "_exit", False)) or not bool(getattr(app, "is_running", True)):
         return False
@@ -815,11 +801,7 @@ def mounted(widget: Widget) -> bool:
 
 
 class RenderGuard:
-    """页面渲染守卫的跳过记账，供用例与自检读取。
-
-    :attr:`skipped_renders` 与 :attr:`last_skipped_method` 只读：守卫只在页面不可用时跳过渲染
-    才累计；页面可用时的选择器错误记不到这里，而是照常抛给 worker。
-    """
+    """记录页面不可用时跳过的渲染次数及最近一次方法名。"""
 
     def __init__(self) -> None:
         self._skipped_renders = 0
@@ -841,12 +823,9 @@ class RenderGuard:
 
 
 def guard_renders(page: Widget) -> None:
-    """把页面的渲染方法包一层「页面不可用就跳过」。
+    """为页面渲染方法添加生命周期检查。
 
-    逐页逐方法加判断会漏（漏掉的那个方法照样把 ``NoMatches`` 抛进 worker），故在页面构造处统一
-    包一层：``_render*`` / ``_sync*`` / ``_set_*`` / ``_paint*`` 这些只写控件的入口先问
-    :func:`mounted`，不可用就记一笔 :class:`RenderGuard` 后返回。页面可用时的 ``NoMatches``
-    原样上抛——选择器写错必须在 worker、自检与用例里看得见。
+    页面不可用时跳过渲染并记录统计；页面可用时保留选择器异常。
     """
     page._tui_mounted_once = False
     page.render_guard = RenderGuard()
@@ -861,7 +840,7 @@ def guard_renders(page: Widget) -> None:
 
 
 def _guard_mount(page: Widget) -> None:
-    # 首次挂载完成后再标记：页面自己的 ``on_mount`` 里就要渲染一次，那一轮必须放行。
+    # 首次 on_mount 需要执行渲染，卸载检查仅适用于已完成挂载的页面。
     original = getattr(page, "on_mount", None)
 
     def on_mount() -> None:
@@ -873,7 +852,7 @@ def _guard_mount(page: Widget) -> None:
 
 
 def _guarded(page: Widget, method: Callable[..., Any]) -> Callable[..., Any]:
-    # 包的是**绑定方法**且挂在实例上：实例属性不参与描述符绑定，故闭包里直接引用页面与绑定方法。
+    # 实例属性不参与描述符绑定，闭包须保留页面对象与已绑定方法。
     name = getattr(method, "__name__", "")
 
     @functools.wraps(method)
@@ -884,7 +863,7 @@ def _guarded(page: Widget, method: Callable[..., Any]) -> Callable[..., Any]:
         try:
             return method(*args, **kwargs)
         except NoMatches:
-            # 进入时页面尚可用、抛错时已被卸下：这一轮没有可写的控件，属卸载竞态而非选择器错误。
+            # 检查后仍可能发生卸载，仅在控件不可用时忽略此竞态产生的异常。
             if mounted(page):
                 raise
             _record_skip(page, name)
@@ -902,25 +881,15 @@ def _record_skip(page: Widget, method: str) -> None:
 
 
 def button_width(button: Button) -> int:
-    """按钮占用的列数：标签宽度加左右各一格内边距。
-
-    按钮没有边框，``padding`` 是 ``0 1``，故自然宽度就是标签宽度加二。
-    """
+    """返回按钮的自然列宽，包括左右内边距。"""
     return display_width(str(button.label)) + 2
 
 
 class ButtonFlow(Grid):
-    """按可用宽度自动折行的按钮区。
+    """按可用宽度折行排列按钮，并保留控件状态。
 
-    界面里一组动作（实例操作、环境装卸、解释器动作）在宽终端下一行放得下，窄终端下要折行；
-    固定按两行摆放会在宽终端下空出整行高度与右侧大片空白。这里用网格摆放按钮：列数按自然宽度
-    算出来，一行放得下就一行，放不下才折行，且优先在 ``breaks`` 标出的语义分组处断开。
-
-    按钮始终是同一个控件、始终挂在树里（只换列数），故标签与禁用状态不会丢，页面随时可以按 id
-    取用。列宽取该列最宽的那个按钮，行内因此对齐。
-
-    :param specs: ``(id, 标签)`` 或 ``(id, 标签, variant)`` 序列，顺序即摆放顺序。
-    :param breaks: 允许断行的位置，给出该组最后一个按钮的 ``id``；一组自身超宽时按按钮继续拆。
+    :param specs: ``(id, 标签)`` 或 ``(id, 标签, variant)`` 序列。
+    :param breaks: 优先断行位置，各项为分组末尾按钮的标识。
     """
 
     DEFAULT_CSS = """
@@ -933,6 +902,9 @@ class ButtonFlow(Grid):
     }
     ButtonFlow Button {
         min-width: 0;
+        max-width: 100%;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
     }
     """
 
@@ -940,12 +912,12 @@ class ButtonFlow(Grid):
         super().__init__(id=id)
         self._specs = specs
         self._breaks = breaks
-        # 按钮只建一次并一直挂在树里：重排只改列数，标签与禁用状态都留着。
+        # 重排保留按钮实例，避免丢失标签、禁用状态或焦点。
         self._buttons: dict[str, Button] = {}
         self._columns = 0
 
     def compose(self) -> ComposeResult:
-        """按顺序装配按钮；列数在首次排布时按宽度算。"""
+        """按声明顺序创建按钮。"""
         for spec in self._specs:
             yield self._build(spec[0])
 
@@ -955,10 +927,10 @@ class ButtonFlow(Grid):
 
     def on_resize(self, event: events.Resize) -> None:
         """宽度变化后重算列数。"""
-        self.relayout(event.size.width)
+        self.relayout()
 
     def relayout(self, width: int | None = None) -> None:
-        """按 ``width`` 重算列数；列数没变时不动样式。
+        """按 ``width`` 重算列数与列宽。
 
         :param width: 可用列数；缺省取当前控件宽度。
         """
@@ -966,31 +938,28 @@ class ButtonFlow(Grid):
         if available <= 0:
             return
         columns = self._columns_for(available)
-        if columns == self._columns:
-            return
         self._columns = columns
         self.styles.grid_size_columns = columns
+        self.styles.grid_columns = " ".join(str(min(value, available)) for value in self._column_widths(columns))
 
     def _columns_for(self, width: int) -> int:
-        # 列数按最长的那一行定：网格按行优先填充，行长即列数。列宽取该列最宽者（网格按列对齐），
-        # 故还要按列宽复核总宽，超了就减一列重算。
+        # 网格按列对齐，须复核每列最大宽度之和，避免长短标签混排时溢出。
         rows = self._pack(width)
         columns = max((len(row) for row in rows), default=1)
-        while columns > 1 and self._grid_width(rows, columns) > width:
+        while columns > 1 and sum(self._column_widths(columns)) > width:
             columns -= 1
         return max(1, columns)
 
-    def _grid_width(self, rows: tuple[tuple[str, ...], ...], columns: int) -> int:
+    def _column_widths(self, columns: int) -> list[int]:
         widest = [0] * columns
-        for row in rows:
-            for index, button_id in enumerate(row):
-                if index < columns:
-                    widest[index] = max(widest[index], self._natural_width(button_id))
-        return sum(widest)
+        visible = [spec[0] for spec in self._specs if self._natural_width(spec[0]) > 0]
+        for index, button_id in enumerate(visible):
+            column = index % columns
+            widest[column] = max(widest[column], self._natural_width(button_id))
+        return widest
 
     def _pack(self, width: int) -> tuple[tuple[str, ...], ...]:
-        # 先按语义分组装：一组放得进当前行就并进去，放不进就换行；一组自身超宽时把它的按钮
-        # 按宽度继续拆，保证窄终端下仍然不溢出。
+        # 优先保留语义分组；单组超宽时允许在组内换行。
         rows: list[list[str]] = []
         current: list[str] = []
         used = 0
@@ -1012,8 +981,7 @@ class ButtonFlow(Grid):
         return tuple(tuple(row) for row in rows)
 
     def _natural_width(self, button_id: str) -> int:
-        # 以控件当前的标签为准：状态改写会换标签（安装服务 / 卸载服务），装箱要跟着变；
-        # 不适用的按钮会被页面隐藏（display=False），它们不占宽度也不该触发折行。
+        # 状态切换可能修改标签或隐藏按钮，宽度应以当前可见内容为准。
         button = self._buttons.get(button_id)
         if button is not None:
             return 0 if button.display is False else button_width(button)
@@ -1048,7 +1016,7 @@ class ButtonFlow(Grid):
 
 
 class HelpScreen(Screen[None]):
-    """当前页键位一览的浮层：列出本页与全局键位，Esc / q / ? 关闭。
+    """快捷键帮助浮层：列出本页与全局快捷键，Esc / q / ? 关闭。
 
     :param title: 标题。
     :param hint: 说明文字。
@@ -1157,7 +1125,7 @@ def show_help(
     hint: str = "",
     nav_hint: str = "",
 ) -> None:
-    """弹出键位一览浮层。"""
+    """打开快捷键帮助。"""
     push_screen(app, HelpScreen(title=title, rows=rows, close_label=close_label, hint=hint, nav_hint=nav_hint))
 
 
@@ -1167,10 +1135,7 @@ def pop_screen(app: App[Any]) -> Any:
 
 
 def widget_cells(widget: Widget) -> tuple[int, int]:
-    """返回控件的 ``(宽, 高)``，单位为终端列/行。
-
-    理由：``Widget.size`` 由具名元组改为 ``Size`` 数据类，页面统一按二元组使用。
-    """
+    """返回控件宽度和高度，单位分别为终端列和行。"""
     size = widget.size
     return int(size.width), int(size.height)
 
@@ -1182,18 +1147,15 @@ def widget_cells(widget: Widget) -> tuple[int, int]:
 
 
 def is_interactive_terminal() -> bool:
-    """判断当前标准输入输出是否接在真实终端上。"""
+    """判断标准输入输出是否连接交互终端。"""
     return bool(sys.stdin.isatty() and sys.stdout.isatty())
 
 
 def set_text_selection(widget: Widget, enabled: bool) -> None:
-    """开关鼠标拖选文本。
+    """设置鼠标文本选择功能。
 
     :param widget: 目标控件。
-    :param enabled: 为 ``False`` 时鼠标点击不再进入文本选择。
-
-    理由：``ALLOW_SELECT`` 是较新版本才拆出的开关（早期只有 App 级），列表页靠它避免
-    点击被解释成选择；该属性缺失时静默跳过，不影响键位操作。
+    :param enabled: 是否允许选择文本。
     """
     if hasattr(widget, "ALLOW_SELECT"):
         try:
@@ -1215,35 +1177,27 @@ def run_app(app: App[Any], *, mouse: bool = True, headless: bool = False) -> Any
 
 @asynccontextmanager
 async def app_test(app: App[Any], size: tuple[int, int] = (80, 24)) -> AsyncIterator[Pilot[Any]]:
-    """以无头模式启动应用并交出 pilot，用于自动化断言。
+    """以无头模式运行应用，并提供交互测试控制器。
 
     :param app: 应用实例。
-    :param size: 虚拟终端尺寸，``(宽， 高)``，用于验证窄终端布局。
-
-    理由：``run_test`` 的 ``headless`` 与 ``size`` 为关键字参数，早期版本没有 ``size``，
-    统一由本包装提供默认 80×24。另外吞掉退出阶段的 ``NoMatches``：取数与轮询可能在页面卸载之后
-    才落地，``run_test`` 会把这类 ``WorkerFailed`` 当成用例失败抛出，而界面此时已经在关闭，
-    用户看不到任何异常（各页渲染入口另有 ``mounted()`` 判断，这里是兜底）。
+    :param size: 虚拟终端尺寸，单位为列和行。
     """
     try:
         async with app.run_test(headless=True, size=size) as pilot:
             yield pilot
     except WorkerFailed as error:
-        # Textual 把 worker 的原异常放在 ``WorkerFailed.error``，不设 ``__cause__``；两者都看一眼。
+        # 原始异常可能保存在 WorkerFailed.error 或 __cause__ 中，须检查两种来源。
         cause = getattr(error, "error", None) or error.__cause__
         if app.is_running or not isinstance(cause, NoMatches):
             raise
 
 
 def progress_phase(bar: ProgressBar, done: float, total: float = 100.0) -> None:
-    """按「阶段」更新进度条。
+    """按已完成阶段更新进度条。
 
     :param bar: 进度条控件。
     :param done: 已完成阶段数。
     :param total: 阶段总数。
-
-    理由：子进程式安装拿不到字节级进度，只能按阶段推进；``ProgressBar`` 的
-    ``advance`` 与 ``update(progress=...)`` 在不同版本可用性不同，统一走 ``update``。
     """
     bar.update(total=total, progress=done)
 
@@ -1260,7 +1214,7 @@ def progress_reset(bar: ProgressBar) -> None:
 
 
 class TerminalCapability:
-    """描述当前终端能验证到什么程度，供自检与 README 的结论表对齐。"""
+    """终端能力的检测结果。"""
 
     def __init__(self, name: str, available: bool, detail: str) -> None:
         self.name = name
@@ -1273,7 +1227,7 @@ class TerminalCapability:
 
 
 def terminal_capabilities() -> Iterator[TerminalCapability]:
-    """逐条报告终端能力，不猜测，只报告本机实际可观测到的事实。"""
+    """读取当前终端的环境信息及可用能力。"""
     yield TerminalCapability(
         i18n.t("cli.tui.selfcheck.cap_interactive"),
         is_interactive_terminal(),

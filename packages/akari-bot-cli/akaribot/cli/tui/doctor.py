@@ -1,10 +1,3 @@
-"""体检页：多实例三查的结论、检查项统计与重新体检。
-
-结论经 ``akaribot doctor --json`` 子进程取得，CLI 进程内不 import core。存在 error 级结论时该命令
-以退出码 1 结束，stdout 仍是完整 JSON，故先解析输出再看退出码：退出码 1 不是读取失败，结论照常展示。
-打开严格模式后改经 ``akaribot doctor --strict --json`` 取数，告警也按失败处理，展示方式不变。
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -22,10 +15,10 @@ from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 
 SOURCE_LABEL = "doctor --json"
-"""子进程调用的说明文本，出错时随原因一起展示。"""
+
 
 STRICT_FLAG = "--strict"
-"""严格模式开关：打开后告警也让 doctor 以非零码结束。"""
+
 
 LEVEL_ERROR = "error"
 LEVEL_WARNING = "warning"
@@ -37,7 +30,7 @@ IMPLEMENTATION_UNKNOWN = "unknown"
 ORPHAN_RAN = "ran"
 ORPHAN_SKIPPED = "skipped"
 
-# 级别与实现来源的取值来自对端 JSON，界面按当前语言取标签，故这里只存文案键。
+# 文案随当前语言解析，常量仅保存文案键。
 _LEVEL_KEYS = {LEVEL_ERROR: "cli.tui.doctor.level_error", LEVEL_WARNING: "cli.tui.doctor.level_warning"}
 _LEVEL_MARKS = {LEVEL_ERROR: "✖", LEVEL_WARNING: "!"}
 _IMPLEMENTATION_KEYS = {
@@ -46,13 +39,12 @@ _IMPLEMENTATION_KEYS = {
     IMPLEMENTATION_UNKNOWN: "cli.tui.doctor.impl_unknown",
 }
 _ORPHAN_KEYS = {ORPHAN_RAN: "cli.tui.doctor.orphan_ran", ORPHAN_SKIPPED: "cli.tui.doctor.orphan_skipped"}
-# 结论缺省级别与 CLI 侧判据一致：端口与凭据重复报错，孤立配置只告警。
+# 结论默认级别与 CLI 侧判据一致：端口与凭据重复报错，孤立配置只告警。
 _DEFAULT_LEVELS = {"port": LEVEL_ERROR, "credential": LEVEL_ERROR, "orphan": LEVEL_WARNING, "config": LEVEL_ERROR}
 
 PAGE_DASHBOARD = "dashboard"
 PAGE_ADAPTERS = "adapters"
-# 结论种类到处理页面的映射；kind 取自 doctor --json，当前 CLI 产出 port / credential / orphan / config，
-# 其余取值一并列出，对端新增结论时页面不必跟着改。
+
 _PAGE_BY_KIND = {
     "module": "modules",
     "modules": "modules",
@@ -147,14 +139,14 @@ def _detail_text(detail: Mapping[str, Any]) -> str:
 
 @dataclass(frozen=True)
 class DoctorConflict:
-    """一项体检结论。
+    """一项诊断结论。
 
     :param kind: ``port`` / ``credential`` / ``orphan`` / ``config``。
     :param level: ``error`` 或 ``warning``。
-    :param message: 面向用户的一句话结论。
+    :param message: 面向用户的诊断结论。
     :param platform: 相关平台名；跨平台时为空串。
     :param instances: 相关表名。
-    :param detail: 结构化细节，原样来自 CLI 输出。
+    :param detail: CLI 返回的结构化详情。
     """
 
     kind: str
@@ -177,7 +169,7 @@ class DoctorConflict:
 
     @property
     def target_page(self) -> str:
-        """该项对应的处理页面键；没有专页时按平台落到适配器页，否则落到概览页。"""
+        """返回处理页面键；无专用页面时按平台信息选择适配器页或概览页。"""
         page = _PAGE_BY_KIND.get(self.kind.strip().casefold())
         if page:
             return page
@@ -190,7 +182,7 @@ class DoctorConflict:
 
     @property
     def next_step(self) -> str:
-        """详情里的下一步：能落到页面的指路，落不到的给终端命令。"""
+        """返回处理页面或 CLI 命令提示。"""
         if _PAGE_BY_KIND.get(self.kind.strip().casefold()) or self.platform:
             return i18n.t("cli.tui.doctor.next_step_page", page=self.target_page_label)
         return i18n.t("cli.tui.doctor.next_step_cli")
@@ -201,10 +193,10 @@ class DoctorChecks:
     """``doctor --json`` 的 ``checks`` 段。
 
     :param instances: 扫描到的适配器实例数。
-    :param installed_adapters: 已装适配器的平台名。
-    :param unconfigured_adapters: 已装但未配置实例的平台名。
+    :param installed_adapters: 已安装适配器的平台名。
+    :param unconfigured_adapters: 已安装但未配置实例的平台名。
     :param orphan_check: 孤立配置检查的执行状态，``ran`` 或 ``skipped``。
-    :param credential_scope: 凭据比对覆盖的字段范围，原样来自 CLI 输出。
+    :param credential_scope: CLI 返回的凭据比较字段范围。
     """
 
     instances: int = 0
@@ -222,18 +214,18 @@ class DoctorChecks:
 
 @dataclass(frozen=True)
 class DoctorSnapshot:
-    """一次体检取数的结果。
+    """诊断结果快照。
 
     :param instance_root: 实例根目录文本。
     :param config_root: 配置目录文本。
-    :param implementation: 结论的实现来源，原样来自 CLI 输出。
-    :param registry_available: 已装适配器清单是否可用。
+    :param implementation: CLI 返回的实现来源。
+    :param registry_available: 已安装适配器清单是否可用。
     :param registry_note: 清单不可用时的原因。
     :param conflicts: 结论列表，顺序与 CLI 输出一致。
     :param error_count: error 级结论数。
     :param warning_count: warning 级结论数。
     :param checks: 检查项统计。
-    :param errors: 取数错误；有值时结论不完整。
+    :param errors: 数据读取错误；有值时结论不完整。
     """
 
     instance_root: str = ""
@@ -249,7 +241,7 @@ class DoctorSnapshot:
 
     @property
     def implementation_kind(self) -> str:
-        """结论来自 core 入口、CLI 本地实现还是未知来源。"""
+        """返回诊断结果的实现来源。"""
         return _implementation_kind(self.implementation)
 
     @property
@@ -262,15 +254,15 @@ class DoctorSnapshot:
 
     @property
     def passed(self) -> bool:
-        """取数完整且没有任何结论。"""
+        """返回诊断是否完成且未发现问题。"""
         return not self.errors and not self.conflicts
 
 
 def normalize_snapshot(payload: Any) -> DoctorSnapshot:
-    """把 ``doctor --json`` 的负载归一化为快照。
+    """将 ``doctor --json`` 输出转换为诊断快照。
 
     :param payload: ``json.loads`` 的结果。
-    :return: 体检快照；缺字段按缺省值处理。
+    :return: 诊断快照；缺字段按默认值处理。
     :raises DoctorSourceError: 负载不是 JSON 对象。
     """
     if not isinstance(payload, Mapping):
@@ -336,14 +328,14 @@ class DoctorSourceError(RuntimeError):
 
 @runtime_checkable
 class DoctorSource(Protocol):
-    """体检数据源接口；测试注入替身，生产走子进程。"""
+    """诊断数据源接口。"""
 
     def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
-        """返回一次体检结果；``strict`` 为真时告警也按失败处理。取数错误记入快照的 ``errors`` 而不抛出。"""
+        """返回诊断结果；严格模式下警告视为失败，读取错误记录在快照的 ``errors`` 中。"""
 
 
 class StaticDoctorSource:
-    """固定数据的替身数据源，供自动化断言使用，不产生任何子进程。
+    """用于测试的静态数据源，不创建子进程。
 
     :param snapshot: ``load_snapshot`` 的返回值。
     :param error: 设定后 ``load_snapshot`` 抛出该异常，用于验证失败路径。
@@ -365,7 +357,7 @@ class StaticDoctorSource:
 
 
 class SubprocessDoctorSource:
-    """默认数据源：经 ``akaribot doctor --json`` 子进程取数。
+    """通过 ``akaribot doctor --json`` 子进程读取诊断结果。
 
     :param root: 实例根目录，默认取当前实例。
     :param timeout: 子进程的超时秒数。
@@ -379,9 +371,7 @@ class SubprocessDoctorSource:
         timeout: float = 120.0,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        # 实例根同时是子进程的 cwd 与 AKARI_INSTANCE_DIR；只认 cwd 会忽略环境变量，
-        # 在仓库根运行界面时静默读到另一个实例的配置。
-        # 根在取数时解析：界面切换实例后，同一份数据源要指向新实例，不能在构造时定死。
+        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"load": 0}
@@ -389,7 +379,7 @@ class SubprocessDoctorSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
@@ -404,6 +394,7 @@ class SubprocessDoctorSource:
             completed = self._run(argv)
         except DoctorSourceError as error:
             return DoctorSnapshot(errors=(str(error),))
+        # 非零退出码可能表示诊断发现问题，完整的 JSON 结果仍须展示。
         try:
             payload = self._parse_json(completed.stdout, label)
         except DoctorSourceError as error:
@@ -457,8 +448,7 @@ class SubprocessDoctorSource:
 
 
 class _ConflictListView(compat.ListView):
-    # 列表默认把回车转成 Selected，而鼠标单击也发同一条消息；这里把回车改绑到页面的跳转动作上，
-    # 单击仍然只移动高亮，用户能单独查看某一行的详情。
+    # 回车与单击均产生 Selected 消息，需单独绑定回车，才能保留单击查看详情的行为。
     BINDINGS = [compat.bind("enter", "open_conflict", i18n.t("cli.tui.doctor.bind_open"))]
 
     def action_open_conflict(self) -> None:
@@ -466,9 +456,9 @@ class _ConflictListView(compat.ListView):
 
 
 class DoctorPage(compat.Vertical):
-    """体检页控件。
+    """诊断页控件。
 
-    :param source: 数据源，缺省为 :class:`SubprocessDoctorSource`。
+    :param source: 数据源，默认为 :class:`SubprocessDoctorSource`。
     """
 
     can_focus = True
@@ -555,7 +545,7 @@ class DoctorPage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：统计面板、结论行、冲突列表、动作按钮、详情与状态栏。"""
+
         yield compat.Static(i18n.t("cli.tui.doctor.summary_pending"), id="summary", markup=False)
         yield compat.Static(i18n.t("cli.tui.doctor.verdict_pending"), id="verdict", markup=False)
         yield _ConflictListView(id="conflict-list")
@@ -567,25 +557,23 @@ class DoctorPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；取数推迟到首次显示。"""
+
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
-        """首次显示时读取一次体检结果。"""
+        """首次显示时读取一次诊断结果。"""
         if self._activated:
             return
         self._activated = True
         self.refresh_report()
 
     def focus_primary(self) -> None:
-        """把焦点交给冲突列表；列表为空时退到页面容器。"""
+        """聚焦冲突列表；列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#conflict-list")
-
-    # region 状态读取（供测试与 App 使用）
 
     @property
     def snapshot(self) -> DoctorSnapshot:
-        """返回最近一次取到的快照，不触发子进程。"""
+        """返回缓存快照，不启动子进程。"""
         return self._snapshot
 
     @property
@@ -599,7 +587,7 @@ class DoctorPage(compat.Vertical):
         conflicts = self._snapshot.conflicts
         if not conflicts:
             return None
-        # 页面已卸载时后台取数仍可能落地，此时没有可读的列表控件。
+        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
         if not compat.mounted(self):
             return None
         list_view = self.query_one("#conflict-list", compat.ListView)
@@ -630,7 +618,7 @@ class DoctorPage(compat.Vertical):
 
     @property
     def status_key(self) -> str:
-        """返回状态栏当前文案的键，文案未合并时供自动化断言核对状态。"""
+        """返回状态栏当前文案键。"""
         return self._status_key
 
     @property
@@ -646,12 +634,8 @@ class DoctorPage(compat.Vertical):
         """返回冲突行的级别标记、级别与结论，顺序与列表一致。"""
         return self._conflict_rows
 
-    # endregion
-
-    # region 数据读取
-
     def refresh_report(self) -> None:
-        """重新体检；取数期间状态栏显示进行中并禁用刷新按钮。"""
+        """执行诊断并更新页面；读取期间禁用刷新按钮。"""
         if self._busy:
             return
         self._start_load()
@@ -664,7 +648,7 @@ class DoctorPage(compat.Vertical):
     async def _load(self, strict: bool) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.load_snapshot, strict=strict)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
             self._snapshot = DoctorSnapshot(errors=(f"{type(error).__name__}: {error}",))
             self._loaded_at = time.monotonic()
             self.last_error = self._snapshot.errors[0]
@@ -692,10 +676,6 @@ class DoctorPage(compat.Vertical):
         self._busy = value
         self.query_one("#refresh", compat.Button).disabled = value
 
-    # endregion
-
-    # region 渲染（只读缓存）
-
     def _render_report(self) -> None:
         if not compat.mounted(self):
             return
@@ -705,7 +685,7 @@ class DoctorPage(compat.Vertical):
         self._render_detail()
 
     def _render_summary(self) -> None:
-        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
         if not compat.mounted(self):
             return
         snapshot = self._snapshot
@@ -739,7 +719,7 @@ class DoctorPage(compat.Vertical):
         self.query_one("#summary", compat.Static).update(compat.plain_text(text))
 
     def _render_verdict(self) -> None:
-        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
         if not compat.mounted(self):
             return
         text = self._verdict_line()
@@ -779,7 +759,7 @@ class DoctorPage(compat.Vertical):
         return 0
 
     def _render_detail(self) -> None:
-        # 页面已卸载时后台取数仍可能落地，此时没有可写的控件。
+        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
         if not compat.mounted(self):
             return
         text = "\n".join(self._fit_page_width(line) for line in self._detail_lines())
@@ -790,7 +770,7 @@ class DoctorPage(compat.Vertical):
         conflict = self.selected_conflict
         if conflict is None:
             return [self._empty_detail_line()]
-        # 24 行终端放不下全部字段，按「结论 → 下一步 → 定位信息 → 细节」排：被裁掉的是尾部，不是出路。
+        # 短屏优先显示结论与处理步骤，定位信息与详情按需滚动查看。
         kind = conflict.kind or i18n.t("cli.tui.common.unknown")
         rows: list[tuple[str, str]] = [
             (i18n.t("cli.tui.doctor.field_message"), conflict.message),
@@ -822,7 +802,7 @@ class DoctorPage(compat.Vertical):
         return compat.truncate_cells(text, max(width, 8))
 
     def _set_status(self, key: str, **params: Any) -> None:
-        # 页面已卸载时后台取数仍可能落地，状态栏没有可写的控件。
+        # 后台请求可能在页面卸载后完成，更新状态栏前需检查挂载状态。
         if not compat.mounted(self):
             return
         self._status_key = key
@@ -830,13 +810,9 @@ class DoctorPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(self._fit_page_width(self._status_rendered)))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新取数。"""
+
         if self._loaded_at:
             self._render_report()
-
-    # endregion
-
-    # region 交互
 
     @compat.on(compat.ListView.Highlighted, "#conflict-list")
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
@@ -850,7 +826,7 @@ class DoctorPage(compat.Vertical):
         self._strict = bool(event.value)
         if self._loaded_at:
             self._render_summary()
-        # 选项换了，正在跑的那次取数按旧选项下发，结论作废：直接按新选项重来，exclusive 会取消旧任务。
+        # 选项变化后，旧请求的结果无效，需取消旧请求并重新诊断。
         self._start_load()
 
     @compat.on(compat.Button.Pressed)
@@ -861,25 +837,23 @@ class DoctorPage(compat.Vertical):
             self.open_selected_conflict()
 
     def action_refresh(self) -> None:
-        """键位动作：重新体检。"""
+
         self.refresh_report()
 
     def action_open_conflict(self) -> None:
-        """键位动作：切到当前结论对应的处理页面。"""
+
         self.open_selected_conflict()
 
     def open_selected_conflict(self) -> None:
-        """切到当前结论对应的处理页面，并在状态栏与通知里说明去向。"""
+        """打开当前结论对应的处理页面，并显示切换结果。"""
         conflict = self.selected_conflict
         if conflict is None:
             self._set_status("cli.tui.doctor.status_nothing")
             return
         self.app.show_page(conflict.target_page)
         self._set_status("cli.tui.doctor.status_jumped", page=conflict.target_page_label)
-        # 切页后本页状态栏已经隐藏，通知是唯一能让用户立刻看到去向的通道。
+        # 切页后当前状态栏不可见，使用通知显示跳转结果。
         compat.notify(self.app, self._status_rendered, title=i18n.t("cli.tui.doctor.bind_open"))
-
-    # endregion
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
