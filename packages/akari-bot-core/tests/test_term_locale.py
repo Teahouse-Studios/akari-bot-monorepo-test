@@ -58,6 +58,7 @@ NON_SESSION_LOCALE_FILES = {
     "packages/akari-bot-core/akaribot/core/queue/server.py": "WebUI 帮助文档",
     "packages/akari-bot-core/akaribot/core/smtp.py": "邮件上报",
     "packages/akari-bot-core/akaribot/modules/core/admin_tools/locale.py": "语言名与翻译进度",
+    "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/screenshot_image.py": "wiki 差异渲染语言",
     "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/wikilib.py": "wiki 内容语言",
     "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/weekly.py": "双语言周刊推送",
     "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/weekly_rss.py": "双语言周刊推送",

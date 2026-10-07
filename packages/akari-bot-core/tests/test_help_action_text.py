@@ -517,7 +517,7 @@ async def _test_qqbot_admin_help_includes_disabled_modules():
         and "~disable dice" in commands
         and "~disable help" not in commands
         and "[help]" in rendered
-        # QQBot 群会话的术语是「群聊」，权限行按术语渲染，不再是通用文案里的「场景」。
+        # QQBot 群会话的术语是「群聊」，权限行按该术语渲染。
         and "群聊管理员" in rendered
         and not any(command.endswith("module list") for command in buttons.values())
     )

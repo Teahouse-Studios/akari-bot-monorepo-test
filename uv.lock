@@ -381,7 +381,7 @@ requires-dist = [
     { name = "akari-bot-core", extras = ["s3"], editable = "packages/akari-bot-core" },
     { name = "attrs", specifier = ">=25.0.0,<26.0.0" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
-    { name = "qq-botpy-sdk", specifier = "==2.1.0" },
+    { name = "qq-botpy-sdk", specifier = "==2.1.1" },
 ]
 
 [[package]]
@@ -425,7 +425,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "akari-bot-core", editable = "packages/akari-bot-core" },
-    { name = "akari-bot-webui", specifier = "==0.4.5" },
+    { name = "akari-bot-webui", specifier = "==0.4.6" },
     { name = "argon2-cffi", specifier = ">=25.0.0,<26.0.0" },
     { name = "cryptography", specifier = ">=50.0.0,<50.1.0" },
     { name = "fastapi", specifier = ">=0.120.0,<1.0.0" },
@@ -1236,6 +1236,7 @@ dependencies = [
     { name = "feedparser" },
     { name = "filetype" },
     { name = "httpx" },
+    { name = "jinja2" },
     { name = "orjson" },
     { name = "pillow" },
     { name = "tortoise-orm" },
@@ -1253,6 +1254,7 @@ requires-dist = [
     { name = "feedparser", specifier = ">=6.0.10,<7.0.0" },
     { name = "filetype", specifier = ">=1.2.0,<2.0.0" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
+    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "orjson", specifier = ">=3.10.9,<4.0.0" },
     { name = "pillow", specifier = ">=12.0.0,<13.0.0" },
     { name = "tortoise-orm", specifier = ">=1.1.2,<1.2.0" },
@@ -1336,11 +1338,11 @@ wheels = [
 
 [[package]]
 name = "akari-bot-webui"
-version = "0.4.5"
+version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/32/a0/ba2f415b9c7fcdc81b94ef24d6cf82e461f9aac049ef7bab21e486dd79bc/akari_bot_webui-0.4.5.tar.gz", hash = "sha256:0ffad905f733e06feb01c88b776c2f4a643f7a000153741114cc45267c79f9f2", size = 1118588, upload-time = "2026-09-09T08:03:49.22Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/40/3029ca69b00949d5d3944243ec0a768f745672c0d2ffae377162e393212d/akari_bot_webui-0.4.6.tar.gz", hash = "sha256:542b524c3b594d920fdd9d06755c1ffb95b5caf7390fddcbdab6d97967b6dfe4", size = 1117357, upload-time = "2026-10-06T18:04:05.537Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/d4/4ec209b9444c98dc85ffae5a4becf76b5e973e01be826467b1067dedff28/akari_bot_webui-0.4.5-py3-none-any.whl", hash = "sha256:099f428dcbc02f582ba2676248594a3a9a7140a8446f25a0dd1620c84ebf6063", size = 1143132, upload-time = "2026-09-09T08:03:47.378Z" },
+    { url = "https://files.pythonhosted.org/packages/de/6d/f7a23714d50344b003493d529feba8c5f1391f5a12171768b0cd19e8bc77/akari_bot_webui-0.4.6-py3-none-any.whl", hash = "sha256:dc0db504b8f8be0f9ba0b1d8b3ac60de51b94d2e8ff82f311f964d47d441ee75", size = 1141980, upload-time = "2026-10-06T18:04:03.756Z" },
 ]
 
 [[package]]
@@ -4014,11 +4016,11 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.13.0"
+version = "2.15.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/81/58d0ac84e1ef3a3843791d6954d94c0b33d526c75eeb1efbce9d0a4c4077/pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423", size = 107515, upload-time = "2026-05-21T19:54:36.618Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/ea/5194e52748b0da83d71e082d75496eaec6e58f419f5e184786ded517e6a9/pyjwt-2.15.1.tar.gz", hash = "sha256:4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8", size = 121252, upload-time = "2026-09-28T18:40:42.598Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/5e/ecf12fdb62546d64385c158514e9b2b671f7832108ef2ecd2020ce0af2d1/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728", size = 31274, upload-time = "2026-05-21T19:54:35.362Z" },
+    { url = "https://files.pythonhosted.org/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl", hash = "sha256:42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193", size = 33860, upload-time = "2026-09-28T18:40:41.429Z" },
 ]
 
 [package.optional-dependencies]
@@ -4202,7 +4204,7 @@ wheels = [
 
 [[package]]
 name = "qq-botpy-sdk"
-version = "2.1.0"
+version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
@@ -4211,9 +4213,9 @@ dependencies = [
     { name = "httpx-ws" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/cf/0c2a7bde98116cc72c911757048081279996649da52dcdcb15c367ddc464/qq_botpy_sdk-2.1.0.tar.gz", hash = "sha256:0a837eaec62f4ffcdc6b907042899f3eb20e8c9a5d9dd6d4eb8e622c27ea814a", size = 143016, upload-time = "2026-09-30T15:19:32.511Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/8f/2d26d84a2c5c002fa9f1cc32bd3ca8ce4e95a7147d1dc64b9233b7cf6432/qq_botpy_sdk-2.1.1.tar.gz", hash = "sha256:8f96260d907990b945a48b3bd3436f6eac74662ec826fe4357b24dca4823bd1b", size = 147626, upload-time = "2026-10-02T14:30:00.371Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/ca/6c554a9bfca73f83a3da9e28ea06a56ec8976521ee41a6e8fd246db7c51a/qq_botpy_sdk-2.1.0-py3-none-any.whl", hash = "sha256:c50fec264e7029df42c9167ed2ba868e3da22d21992daa4e639f5983c1898cab", size = 177312, upload-time = "2026-09-30T15:19:31.196Z" },
+    { url = "https://files.pythonhosted.org/packages/84/b2/92f2ad682633a9a50692c3d9fbf0c73938b3d9451cb059915c59a18a0f39/qq_botpy_sdk-2.1.1-py3-none-any.whl", hash = "sha256:41083037b9672036b5da14e594744165561aff102100552d4713e39cf2b3fb5f", size = 181945, upload-time = "2026-10-02T14:29:58.98Z" },
 ]
 
 [[package]]
@@ -4824,11 +4826,11 @@ wheels = [
 
 [[package]]
 name = "urllib3"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/53/0c/06f8b233b8fd13b9e5ee11424ef85419ba0d8ba0b3138bf360be2ff56953/urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c", size = 433602, upload-time = "2026-05-07T16:13:18.596Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63", size = 458972, upload-time = "2026-09-15T19:29:36.253Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897", size = 131087, upload-time = "2026-05-07T16:13:17.151Z" },
+    { url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3", size = 135717, upload-time = "2026-09-15T19:29:34.577Z" },
 ]
 
 [[package]]

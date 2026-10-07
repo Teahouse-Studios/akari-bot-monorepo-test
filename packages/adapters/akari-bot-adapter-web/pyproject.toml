@@ -9,7 +9,7 @@ description = "Web 平台适配器"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
-    "akari-bot-webui==0.4.5",
+    "akari-bot-webui==0.4.6",
     "argon2-cffi>=25.0.0,<26.0.0",
     "py-cpuinfo>=9.0.0,<10.0.0",
     "cryptography>=50.0.0,<50.1.0",
