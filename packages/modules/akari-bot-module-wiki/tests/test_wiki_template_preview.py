@@ -18,7 +18,7 @@ from akaribot.core.i18n import Locale
 from akaribot.testing import Tester, func_case
 from akaribot.modules.wiki.utils import template_preview as preview
 from akaribot.modules.wiki.utils.preview_render import PreviewRequests
-from akaribot.modules.wiki.utils.preview_render import _document_resources, _remote_render
+from akaribot.modules.wiki.utils.preview_render import _document_resources, _remote_render, render_shell_document
 from akaribot.modules.wiki.utils.template_preview import TemplateInvocation, TemplatePreviewError
 from akaribot.modules.wiki.utils.wikilib import PageInfo, WikiInfo, WikiLib
 from akaribot.modules.wiki.wiki import (
@@ -126,13 +126,14 @@ def _test_parameters():
     return True
 
 
-async def _test_buttons_are_whitelisted_and_lazy():
+async def _test_buttons_are_whitelisted_and_preloaded():
     for mode in ["button", "auto"]:
         sent, buttons, preload, _ = await _query(mode=mode)
         assert [button.value for button in buttons] == ["wiki_template_preview", "wiki_render_delete"]
         assert buttons[0].show == "预览效果"
         assert buttons[0].permission.value == "owner" and buttons[0].click_limit == 1
-        assert sent[0][1]["callback_timeout"] == 300 and preload.await_count == 0
+        assert sent[0][1]["callback_timeout"] == 300 and preload.await_count == 1
+        assert preload.await_args.kwargs["name"] == "wiki-template-preview-preload"
     for options in [dict(allowed=False), dict(title="Infobox"), dict(mode="off")]:
         _, buttons, _, _ = await _query(**options)
         assert all(button.value != "wiki_template_preview" for button in buttons)
@@ -140,7 +141,7 @@ async def _test_buttons_are_whitelisted_and_lazy():
     assert buttons[0].value == "wiki_template_preview"
     assert parse.await_args.args == () and parse.await_args.kwargs["title"] == "Template:Infobox"
     _, _, background, _ = await _query(mode="auto", multiple=True)
-    assert background.await_count == 0
+    assert background.await_count == 1
     return True
 
 
@@ -293,6 +294,7 @@ async def _test_whole_message_preview_keeps_multiple_templates():
         patch.object(preview, "evaluate_url_policy", return_value=_policy(True)),
         patch.object(preview, "check_template_parameters", new=AsyncMock()),
         patch.object(preview, "PreviewRequests", return_value=manager),
+        patch.object(preview, "_render_template_shell", new=AsyncMock(side_effect=RuntimeError("shell unavailable"))),
         patch.object(
             preview, "render_preview_document", new=AsyncMock(return_value=(PILImage.new("RGB", (12, 8)), False))
         ),
@@ -320,6 +322,7 @@ async def _test_generation_uses_actual_template_and_only_read_api():
         patch.object(preview, "evaluate_url_policy", return_value=_policy(True)),
         patch.object(preview, "check_template_parameters", new=AsyncMock()) as audit,
         patch.object(preview, "PreviewRequests", return_value=manager),
+        patch.object(preview, "_render_template_shell", new=AsyncMock(side_effect=RuntimeError("shell unavailable"))),
         patch.object(
             preview, "render_preview_document", new=AsyncMock(return_value=(PILImage.new("RGBA", (10, 10)), False))
         ) as render,
@@ -332,6 +335,8 @@ async def _test_generation_uses_actual_template_and_only_read_api():
     assert parse_args["action"] == "parse" and parse_args["preview"] == 1
     assert parse_args["text"] == SOURCE.replace("{{Infobox", "{{Template:Infobox", 1)
     assert parse_args["title"] == preview.PREVIEW_CONTEXT
+    assert not parse_args["title"].startswith("Template:")
+    assert parse_args["useskin"] == "vector"
     with patch.object(preview, "evaluate_url_policy", return_value=_policy(False)):
         try:
             await preview.generate_template_preview(invocation, session)
@@ -354,6 +359,7 @@ async def _test_callback_identity_once_and_delete():
 
     with (
         patch.object(Bot.Info, "web_render_status", True),
+        patch("akaribot.modules.wiki.wiki.evaluate_url_policy", return_value=_policy(True)),
         patch(
             "akaribot.modules.wiki.wiki.generate_template_preview",
             new=AsyncMock(return_value=PILImage.new("RGB", (20, 20))),
@@ -500,6 +506,7 @@ async def _test_deletion_cancels_pending_render():
 
     with (
         patch.object(Bot.Info, "web_render_status", True),
+        patch("akaribot.modules.wiki.wiki.evaluate_url_policy", return_value=_policy(True)),
         patch("akaribot.modules.wiki.wiki.generate_template_preview", new=render),
         patch("akaribot.modules.wiki.wiki._start_background_with_release", new=background),
     ):
@@ -513,11 +520,214 @@ async def _test_deletion_cancels_pending_render():
     return True
 
 
+async def _test_dual_render_uses_shell_or_concurrent_fallback():
+    for outcome in ("shell", "failed", "timeout", "fallback_failed"):
+        api_image = PILImage.new("RGB", (12, 8), "red")
+        shell_image = PILImage.new("RGB", (12, 8), "blue")
+        requests = SimpleNamespace(
+            api_json=AsyncMock(
+                side_effect=[
+                    {"query": {"pages": [{"ns": 10, "title": "Template:Infobox", "pageid": 42}]}},
+                    {"parse": {"text": '<div class="mw-parser-output"><p>结果</p></div>', "headhtml": ""}},
+                ]
+            )
+        )
+        manager = AsyncMock()
+        manager.__aenter__.return_value = requests
+        api_started, shell_started = asyncio.Event(), asyncio.Event()
+        api_cancelled, shell_cancelled = asyncio.Event(), asyncio.Event()
+
+        async def api(*_):
+            api_started.set()
+            await shell_started.wait()
+            if outcome == "shell":
+                try:
+                    await asyncio.Event().wait()
+                finally:
+                    api_cancelled.set()
+            if outcome == "fallback_failed":
+                raise RuntimeError("API renderer unavailable")
+            return api_image, False
+
+        async def shell(*_):
+            shell_started.set()
+            await api_started.wait()
+            if outcome == "timeout":
+                try:
+                    await asyncio.Event().wait()
+                finally:
+                    shell_cancelled.set()
+            if outcome == "failed":
+                raise RuntimeError("WAF")
+            return shell_image
+
+        with (
+            patch.object(preview, "evaluate_url_policy", return_value=_policy(True)),
+            patch.object(preview, "check_template_parameters", new=AsyncMock()),
+            patch.object(preview, "PreviewRequests", return_value=manager),
+            patch.object(preview, "render_preview_document", new=api),
+            patch.object(preview, "_render_template_shell", new=shell),
+            patch.object(preview, "TEMPLATE_SHELL_TIMEOUT", 0.03),
+        ):
+            result = await preview.generate_template_preview(_invocation(), _session())
+        assert result is (api_image if outcome in {"failed", "timeout"} else shell_image), outcome
+        assert requests.api_json.await_count == 2 and api_started.is_set() and shell_started.is_set()
+        assert not preview._ACTIVE_SENDERS
+        if outcome == "shell":
+            assert api_cancelled.is_set()
+        if outcome == "timeout":
+            assert shell_cancelled.is_set()
+    return True
+
+
+async def _test_cancel_cleans_both_template_renderers():
+    requests = SimpleNamespace(
+        api_json=AsyncMock(
+            side_effect=[
+                {"query": {"pages": [{"ns": 10, "title": "Template:Infobox", "pageid": 42}]}},
+                {"parse": {"text": "正文", "headhtml": ""}},
+            ]
+        )
+    )
+    manager = AsyncMock()
+    manager.__aenter__.return_value = requests
+    started = [asyncio.Event(), asyncio.Event()]
+    stopped = [asyncio.Event(), asyncio.Event()]
+
+    async def render(index):
+        started[index].set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            stopped[index].set()
+
+    with (
+        patch.object(preview, "evaluate_url_policy", return_value=_policy(True)),
+        patch.object(preview, "check_template_parameters", new=AsyncMock()),
+        patch.object(preview, "PreviewRequests", return_value=manager),
+        patch.object(preview, "render_preview_document", new=lambda *_: render(0)),
+        patch.object(preview, "_render_template_shell", new=lambda *_: render(1)),
+    ):
+        task = asyncio.create_task(preview.generate_template_preview(_invocation(), _session()))
+        await asyncio.gather(*(event.wait() for event in started))
+        task.cancel()
+        result = await asyncio.gather(task, return_exceptions=True)
+    assert isinstance(result[0], asyncio.CancelledError)
+    assert all(event.is_set() for event in stopped) and not preview._ACTIVE_SENDERS
+    return True
+
+
+async def _test_template_preload_is_cached_until_clicked():
+    owner = _session()
+    tracker = _WikiMessageTracker(owner)
+    click = SimpleNamespace(session_info=owner.session_info, send_message=AsyncMock())
+    click.as_display = lambda text_only=False: "wiki_template_preview"
+
+    async def background(session, factory, **_):
+        return asyncio.create_task(factory())
+
+    with (
+        patch.object(Bot.Info, "web_render_status", True),
+        patch("akaribot.modules.wiki.wiki.evaluate_url_policy", return_value=_policy(True)),
+        patch(
+            "akaribot.modules.wiki.wiki.generate_template_preview",
+            new=AsyncMock(return_value=PILImage.new("RGB", (8, 8))),
+        ) as generate,
+        patch("akaribot.modules.wiki.wiki._start_background_with_release", new=background),
+    ):
+        callback = _build_template_preview_callback(_invocation(), tracker, preload_session=owner)
+        await (await callback.preload())
+        assert generate.await_count == 1 and click.send_message.await_count == 0
+        await callback(click)
+        await callback(click)
+        assert generate.await_count == 1 and click.send_message.await_count == 1
+    return True
+
+
+def _test_shell_fragment_preserves_site_container():
+    parsed = {
+        "text": '<div class="mw-parser-output"><div style="display:flex">内容</div><script>injected()</script></div>',
+        "headhtml": "",
+    }
+    document, _ = preview.preview_document(parsed, _invocation(), Locale("zh_cn"), single_template=True, shell=True)
+    soup = BeautifulSoup(document, "html.parser")
+    assert soup.select_one('.mw-parser-output[data-akari-template-output] > [style="display:flex"]')
+    assert not soup.select_one("#akari-template-output") and not soup.select_one("#mw-content-text")
+    assert soup.select_one("#akari-preview-css-panel") and soup.select_one("#akari-preview-watermark")
+    assert "padding: 18px 22px" in soup.find("style").get_text()
+    assert "injected()" not in document and "akariFillCssPanel" in document
+    assert preview._template_page_url(_invocation()) == "https://example.org/"
+    return True
+
+
+async def _test_remote_shell_keeps_ancestors_and_rejects_other_origins():
+    parsed = {"text": '<div class="mw-parser-output"><div class="box">结果</div></div>', "headhtml": ""}
+    fragment, _ = preview.preview_document(parsed, _invocation(), Locale("zh_cn"), single_template=True, shell=True)
+    page_url = preview._template_page_url(_invocation())
+    requests = PreviewRequests(API, "https://example.org", {})
+    requests.fetch = AsyncMock(
+        return_value=(
+            b"<html><head><style>.skin-special #content article .mw-body-content > .mw-parser-output > .box {display:flex}</style></head>"
+            b'<body class="skin-special"><main id="content"><article><div id="mw-content-text" class="mw-body-content">'
+            b"<p>Old body</p><script>siteCode()</script></div></article></main>"
+            b'<footer><img src="https://meta.weirdgloop.org/images/footer.png"></footer></body></html>',
+            "text/html",
+            page_url,
+        )
+    )
+    buffer = BytesIO()
+    PILImage.new("RGB", (12, 8)).save(buffer, "PNG")
+    with (
+        patch("akaribot.modules.wiki.utils.preview_render.evaluate_url_policy", return_value=_policy(True)),
+        patch("akaribot.modules.wiki.utils.preview_render.web_render.remote_only", True),
+        patch(
+            "akaribot.modules.wiki.utils.preview_render.web_render.element_screenshot",
+            new=AsyncMock(return_value=[base64.b64encode(buffer.getvalue()).decode()]),
+        ) as screenshot,
+    ):
+        image, warning = await render_shell_document(fragment, parsed, page_url, requests, Locale("zh_cn"))
+        assert image.size == (12, 8) and warning
+        options = screenshot.await_args.args[0]
+        assert options.element == "#mw-content-text"
+        soup = BeautifulSoup(options.content, "html.parser")
+        assert soup.select_one(".skin-special #content article .mw-body-content > .mw-parser-output > .box")
+        assert soup.select_one("#akari-preview-css-panel") and soup.select_one("#akari-preview-watermark")
+        assert "Old body" not in soup.text and "siteCode()" not in options.content
+        assert soup.select_one('meta[http-equiv="Content-Security-Policy"]')
+        assert ("https", "meta.weirdgloop.org", 443) in requests.origins
+        calls = requests.fetch.await_count
+        try:
+            await render_shell_document(
+                fragment, parsed, "https://untrusted.org/wiki/Template:Infobox", requests, Locale("zh_cn")
+            )
+        except ValueError:
+            pass
+        else:
+            return False
+        assert requests.fetch.await_count == calls
+    return True
+
+
+def _test_shell_document_discovers_image_origins_without_scripts():
+    requests = PreviewRequests(API, "https://example.org", {})
+    _document_resources(
+        '<html><head><script src="https://cdn.example.org/site.js"></script></head>'
+        '<body><img src="https://meta.weirdgloop.org/images/footer.png" srcset="https://meta.weirdgloop.org/images/footer@2x.png 2x"></body></html>',
+        requests,
+        include_images=True,
+        include_scripts=False,
+    )
+    assert ("https", "meta.weirdgloop.org", 443) in requests.origins
+    assert ("https", "cdn.example.org", 443) not in requests.origins
+    assert ("cdn.example.org", "/site.js") not in requests.script_paths
+    return True
+
+
 @func_case
 async def test_wiki_template_preview(tester: Tester):
     for function, note in [
         (_test_parameters, "保留重复、空值及嵌套参数，拒绝无效调用"),
-        (_test_buttons_are_whitelisted_and_lazy, "白名单、命名空间、模式与站点路由控制按钮，查询阶段不渲染"),
+        (_test_buttons_are_whitelisted_and_preloaded, "白名单、命名空间、模式与站点路由控制按钮，消息发出后预载"),
         (_test_expression_routing_keeps_complete_parameters, "表达式入口将完整参数传入页面查询，同名调用绑定第一条"),
         (_test_only_parameters_are_audited, "仅审核用户参数，审核缺配置、失败与无效结果拒绝预览"),
         (_test_document_preserves_effects_and_removes_input_scripts, "保留站点样式、图片及渲染模块，参数不能注入脚本"),
@@ -530,6 +740,18 @@ async def test_wiki_template_preview(tester: Tester):
         (_test_remote_inlines_styles_and_images, "远程渲染保留表格样式与图片，资源全部内联且禁止浏览器联网"),
         (_test_long_input_posts_only_read_requests, "长参数使用只读 POST，编辑接口不能进入请求路径"),
         (_test_deletion_cancels_pending_render, "删除结果取消正在渲染的任务，禁止发送晚到图片"),
+        (
+            _test_dual_render_uses_shell_or_concurrent_fallback,
+            "双路并发：优先真实外壳，失败或超时复用 API 兜底，取消未选中的任务",
+        ),
+        (_test_cancel_cleans_both_template_renderers, "取消模板预览时收尾两条渲染链并释放发送者状态"),
+        (_test_template_preload_is_cached_until_clicked, "预载只缓存图片，点击才发送且不重复渲染"),
+        (_test_shell_fragment_preserves_site_container, "真实外壳保留站点内容层级，共享 CSS 面板和水印，移除用户脚本"),
+        (
+            _test_remote_shell_keeps_ancestors_and_rejects_other_origins,
+            "远端渲染保留皮肤祖先 DOM，清理原正文与脚本，拒绝站外外壳",
+        ),
+        (_test_shell_document_discovers_image_origins_without_scripts, "本地外壳导航登记图片来源但不放行外部脚本"),
     ]:
         await tester.test(function, note)
     return tester

@@ -17,7 +17,7 @@ dependencies = [
     "Pillow>=12.0.0,<13.0.0",
     # aiocqhttp 是模块→平台 SDK 的现存违规边（T4.2 §7.6），收敛到 core HTTP 层之前必须保留
     "aiocqhttp>=1.4.3,<2.0.0",
-    "akari-bot-webrender==0.6.2",
+    "akari-bot-webrender==0.7.0",
     "attrs>=25.0.0,<26.0.0",
     "beautifulsoup4>=4.11.1,<5.0.0",
     "feedparser>=6.0.10,<7.0.0",

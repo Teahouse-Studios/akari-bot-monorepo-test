@@ -1,8 +1,11 @@
 import base64
+import copy
 import math
 import re
 import uuid
 from io import BytesIO
+from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urljoin, urlsplit, urlunsplit
 
 import httpx
@@ -13,6 +16,8 @@ from PIL import Image as PILImage
 from akaribot.core.api import (
     CoreConfig,
     ElementScreenshotOptions,
+    Logger,
+    ReplaceElementScreenshotOptions,
     evaluate_url_policy,
     proxy,
     ssl_verify,
@@ -24,6 +29,10 @@ _MAX_RESOURCE_BYTES = 10 * 1024 * 1024
 _MAX_PIXELS = 12_000_000
 _CSS_URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.I)
 _CSS_IMPORT = re.compile(r"@import\s+(['\"])(.*?)\1", re.I)
+_PREVIEW_SCRIPTS = {
+    name: Path(__file__).with_name("template_preview_" + name + ".js").read_text(encoding="utf-8")
+    for name in ("watermark", "css", "initialize")
+}
 
 
 def _origin(url):
@@ -48,6 +57,37 @@ class PreviewRequests:
         if not any(key.lower() == "user-agent" for key in self.headers):
             self.headers["User-Agent"] = f"AkariBot/1.0 (+{CoreConfig.repo_url})"
 
+    @staticmethod
+    def _log_url(url):
+        if not url:
+            return None
+        value = str(url)
+        if value.startswith("data:"):
+            return "data:<inline>"
+        return urlunsplit(urlsplit(value)._replace(query="", fragment=""))
+
+    @classmethod
+    def _log_error(cls, error):
+        value = str(error)
+        for token in value.split():
+            if token.startswith(("http://", "https://")):
+                trimmed = token.rstrip(".,;:)]}")
+                value = value.replace(token, cls._log_url(trimmed) + token[len(trimmed) :])
+        return value
+
+    def mark_warning(self, reason, *, url=None, kind=None, error=None):
+        self.warning = True
+        details = [reason]
+        if kind:
+            details.append(f"kind={kind}")
+        if url:
+            details.append(f"url={self._log_url(url)}")
+        if error:
+            details.append(f"error={type(error).__name__}: {self._log_error(error)}")
+        message = "[Wiki preview] " + "; ".join(details)
+        self.failures.append(message)
+        Logger.warning(message)
+
     async def __aenter__(self):
         self.client = httpx.AsyncClient(
             proxy=proxy, verify=ssl_verify, timeout=8, headers=self.headers, follow_redirects=False
@@ -60,18 +100,27 @@ class PreviewRequests:
     def allow_resource(self, url):
         self.origins.add(_origin(urljoin(self.site, url)))
 
-    def resource_allowed(self, url, kind):
+    def resource_rejection_reason(self, url, kind):
         parsed = urlsplit(url)
         if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
-            return False
-        if _origin(url) not in self.origins or evaluate_url_policy(url).blocked:
-            return False
+            return "resource URL scheme or credentials are not allowed"
+        if _origin(url) not in self.origins:
+            return "resource origin is outside the allowed Wiki origins"
+        if evaluate_url_policy(url).blocked:
+            return "resource blocked by URL policy"
         action = parse_qs(parsed.query).get("action", [])
         if action and action != ["query"] and action != ["parse"]:
-            return False
+            return f"resource request contains a disallowed API action: {action}"
         if kind == "script":
-            return (parsed.netloc, parsed.path) in self.script_paths
-        return kind in {"stylesheet", "image", "font"}
+            if (parsed.netloc, parsed.path) not in self.script_paths:
+                return "script path is outside the allowed load.php paths"
+            return None
+        if kind not in {"stylesheet", "image", "font", "document"}:
+            return f"resource type is not allowed: {kind}"
+        return None
+
+    def resource_allowed(self, url, kind):
+        return self.resource_rejection_reason(url, kind) is None
 
     async def fetch(self, url, kind, *, params=None):
         endpoint = url
@@ -88,9 +137,10 @@ class PreviewRequests:
                 endpoint = urlunsplit(urlsplit(url)._replace(query="", fragment=""))
                 if not evaluate_url_policy(endpoint).allowed or evaluate_url_policy(url).blocked:
                     raise ValueError("Wiki API is not allowed")
-            elif not self.resource_allowed(url, kind):
-                raise ValueError("Preview resource is not allowed")
-            await private_ip_check(url)
+            elif (reason := self.resource_rejection_reason(url, kind)) is not None:
+                raise ValueError(reason)
+            if not CoreConfig.allow_request_private_ip:
+                await private_ip_check(url)
             async with self.client.stream(
                 "POST" if body else "GET",
                 url,
@@ -128,15 +178,25 @@ class PreviewRequests:
         return response
 
 
-def _document_resources(document, requests):
+def _document_resources(document, requests, *, include_images=False, include_scripts=True):
     soup = BeautifulSoup(document, "html.parser")
-    for tag in soup.head.find_all("link", href=True):
+    head = soup.head or soup
+    for tag in head.find_all("link", href=True):
         if "stylesheet" in tag.get("rel", []):
             requests.allow_resource(tag["href"])
-    for tag in soup.head.find_all("script", src=True):
-        target = urlsplit(urljoin(requests.site, tag["src"]))
-        requests.allow_resource(tag["src"])
-        requests.script_paths.add((target.netloc, target.path))
+    if include_scripts:
+        for tag in head.find_all("script", src=True):
+            target = urlsplit(urljoin(requests.site, tag["src"]))
+            requests.allow_resource(tag["src"])
+            requests.script_paths.add((target.netloc, target.path))
+    if include_images:
+        for tag in soup.find_all(["img", "source"], src=True):
+            requests.allow_resource(tag["src"])
+        for tag in soup.find_all(["img", "source"], srcset=True):
+            for candidate in tag["srcset"].split(","):
+                target = candidate.strip().split(maxsplit=1)[0]
+                if target:
+                    requests.allow_resource(target)
     return soup
 
 
@@ -163,28 +223,30 @@ async def _local_render(document, requests, locale):
                 data, content_type, _ = await requests.fetch(request.url, request.resource_type)
                 await route.fulfill(body=data, content_type=content_type)
             except Exception as error:
-                requests.warning = True
-                requests.failures.append(type(error).__name__)
+                requests.mark_warning(
+                    "resource request was rejected or failed", url=request.url, kind=request.resource_type, error=error
+                )
                 await route.abort()
 
         await context.route("**/*", route_request)
         page = await context.new_page()
-        page.on("pageerror", lambda error: requests.failures.append(str(error)[:200]))
+        page.on("pageerror", lambda error: Logger.warning(f"[Wiki preview] page script error: {str(error)[:200]}"))
         # 本地应答的虚拟 URL 为站点模块提供正确 origin，不向 Wiki 创建或请求页面。
         await page.goto(document_url, wait_until="networkidle", timeout=15000)
         try:
             await page.wait_for_function("window.akariPreviewReady === true", timeout=6000)
             if await page.evaluate("Boolean(window.akariPreviewPartial)"):
-                requests.warning = True
-        except Exception:
-            requests.warning = True
-            requests.failures.append("Module initialization timed out")
-        await page.evaluate(
-            "async () => {await document.fonts.ready; await Promise.all(Array.from(document.images, "
-            "img => img.decode().catch(() => {window.akariPreviewResourcePartial=true;})));}"
+                requests.mark_warning("MediaWiki module loading failed")
+        except Exception as error:
+            requests.mark_warning("MediaWiki module loading timed out or initialization failed", error=error)
+        failed_images = await page.evaluate(
+            "async () => {await document.fonts.ready; const failed = []; "
+            "await Promise.all(Array.from(document.images, async img => {"
+            "try { await img.decode(); } catch (_) { failed.push(img.currentSrc || img.src || '<unknown>'); }"
+            "})); return failed;}"
         )
-        if await page.evaluate("Boolean(window.akariPreviewResourcePartial)"):
-            requests.warning = True
+        for image_url in failed_images or []:
+            requests.mark_warning("image decoding failed", url=image_url, kind="image")
         content = page.locator("body > #mw-content-text")
         await content.evaluate(
             "() => {if (typeof window.akariFillCssPanel === 'function') window.akariFillCssPanel();}"
@@ -231,11 +293,15 @@ async def _inline_css(css, base, requests, depth=0):
         raise ValueError("Preview stylesheet nesting exceeds limits")
     for match in list(_CSS_IMPORT.finditer(css)):
         target = urljoin(base, match[2])
-        data, _, final = await requests.fetch(target, "stylesheet")
-        replacement = await _inline_css(data.decode("utf-8", errors="replace"), final, requests, depth + 1)
-        css = css.replace(
-            match[0], '@import url("data:text/css;base64,' + base64.b64encode(replacement.encode()).decode() + '")'
-        )
+        try:
+            data, _, final = await requests.fetch(target, "stylesheet")
+            replacement = await _inline_css(data.decode("utf-8", errors="replace"), final, requests, depth + 1)
+            css = css.replace(
+                match[0], '@import url("data:text/css;base64,' + base64.b64encode(replacement.encode()).decode() + '")'
+            )
+        except Exception as error:
+            requests.mark_warning("CSS @import resource failed", url=target, kind="stylesheet", error=error)
+            raise
     for match in list(_CSS_URL.finditer(css)):
         target = match[2]
         if target.startswith(("data:", "#")):
@@ -248,16 +314,17 @@ async def _inline_css(css, base, requests, depth=0):
                 data = (await _inline_css(data.decode("utf-8", errors="replace"), final, requests, depth + 1)).encode()
             replacement = "data:" + content_type.split(";", 1)[0] + ";base64," + base64.b64encode(data).decode()
             css = css.replace(match[0], 'url("' + replacement + '")')
-        except Exception:
-            requests.warning = True
+        except Exception as error:
+            requests.mark_warning("resource referenced by CSS failed", url=target, kind=kind, error=error)
             css = css.replace(match[0], 'url("")')
     return css
 
 
-async def _remote_render(soup, requests, locale):
+async def _remote_render(soup, requests, locale, *, element="body > #mw-content-text"):
     # 远程接口不支持请求路由，所有资源须先受控下载并内联，CSP 禁止后续联网。
+    Logger.warning("[Wiki preview] Using restricted rendering: external scripts are removed and resources are inlined")
     requests.warning = True
-    watermark = soup.select_one("body > #akari-preview-watermark")
+    watermark = soup.select_one("#akari-preview-watermark")
     watermark["data-preview-partial"] = "true"
     for script in soup.find_all("script"):
         if script.get("data-akari-preview-script") not in {"css-panel", "watermark"}:
@@ -269,8 +336,8 @@ async def _remote_render(soup, requests, locale):
                 style = soup.new_tag("style")
                 style.string = await _inline_css(data.decode("utf-8", errors="replace"), final, requests)
                 tag.replace_with(style)
-            except Exception:
-                requests.warning = True
+            except Exception as error:
+                requests.mark_warning("stylesheet failed to load", url=tag["href"], kind="stylesheet", error=error)
                 tag.decompose()
         else:
             tag.decompose()
@@ -284,8 +351,8 @@ async def _remote_render(soup, requests, locale):
             try:
                 data, content_type, _ = await requests.fetch(urljoin(requests.site, tag["src"]), "image")
                 tag["src"] = "data:" + content_type.split(";", 1)[0] + ";base64," + base64.b64encode(data).decode()
-            except Exception:
-                requests.warning = True
+            except Exception as error:
+                requests.mark_warning("image resource failed to load", url=tag["src"], kind="image", error=error)
                 tag.attrs.pop("src", None)
     soup.head.insert(
         0,
@@ -300,7 +367,7 @@ async def _remote_render(soup, requests, locale):
     images = await web_render.element_screenshot(
         ElementScreenshotOptions(
             content=str(soup),
-            element="body > #mw-content-text",
+            element=element,
             width=960,
             counttime=False,
             locale=locale.locale,
@@ -316,6 +383,143 @@ async def _remote_render(soup, requests, locale):
     return image
 
 
+async def render_shell_document(fragment, parsed, page_url, requests, locale):
+    parts = urlsplit(page_url)
+    if _origin(page_url) not in requests.origins or parts.username or parts.password:
+        raise ValueError("Template page is outside the Wiki origin")
+    if not requests.resource_allowed(page_url, "document"):
+        raise ValueError("Template page is not allowed")
+    head = parsed.get("headhtml", "")
+    if isinstance(head, dict):
+        head = head.get("*", "")
+    _document_resources(head, requests)
+    if await _local_browser_available("template shell"):
+        return await _local_shell_render(fragment, parsed, page_url, requests, locale), requests.warning
+
+    data, _, final_url = await requests.fetch(page_url, "document")
+    if len(data) > 1024 * 1024:
+        raise ValueError("Invalid template page shell")
+    soup = BeautifulSoup(data, "html.parser")
+    content = soup.select_one("#mw-content-text")
+    if not soup.head or not content:
+        raise ValueError("Template page has no content container")
+    for script in soup.find_all("script"):
+        script.decompose()
+    for tag in soup.find_all(True):
+        for attr in list(tag.attrs):
+            if attr.lower().startswith("on"):
+                del tag[attr]
+    content.clear()
+    content["data-akari-preview-shell"] = "true"
+    content.append(BeautifulSoup(fragment, "html.parser"))
+    for base in soup.find_all("base"):
+        base.decompose()
+    soup.head.insert(0, soup.new_tag("base", href=final_url))
+    _document_resources(str(soup), requests, include_images=True)
+    return await _remote_render(soup, requests, locale, element="#mw-content-text"), True
+
+
+async def _local_shell_render(fragment, parsed, page_url, requests, locale):
+    browser = web_render.browser.browser
+    context = await browser.new_context(
+        viewport={"width": 960, "height": 800}, locale=locale.locale.replace("_", "-"), service_workers="block"
+    )
+    try:
+        served = False
+
+        async def route_request(route):
+            nonlocal served
+            request = route.request
+            if request.method != "GET" or (request.is_navigation_request() and served):
+                await route.abort()
+                return
+            kind = request.resource_type
+            if request.is_navigation_request():
+                served = True
+                kind = "document"
+            try:
+                data, content_type, _ = await requests.fetch(request.url, kind)
+                if kind == "document":
+                    # The shell document is fetched during browser navigation, so discover its
+                    # declared image origins before Chromium starts requesting those images.
+                    _document_resources(data, requests, include_images=True, include_scripts=False)
+                await route.fulfill(body=data, content_type=content_type)
+            except Exception as error:
+                requests.mark_warning(
+                    "shell resource request was rejected or failed", url=request.url, kind=kind, error=error
+                )
+                await route.abort()
+
+        await context.route("**/*", route_request)
+        renderer = copy.copy(web_render)
+        renderer.remote_only = False
+        renderer.remote_webrender_url = None
+
+        async def new_page(**_):
+            return await context.new_page()
+
+        renderer.browser = SimpleNamespace(new_page=new_page, check_status=web_render.browser.check_status)
+        screenshot = renderer.select_element_and_screenshot
+
+        async def initialized_screenshot(**options):
+            page = options["page"]
+            # 替换接口插入的 script 保持惰性；仅显式执行机器人自带的初始化代码。
+            await page.evaluate(_PREVIEW_SCRIPTS["watermark"])
+            await page.evaluate(_PREVIEW_SCRIPTS["css"])
+            config = parsed.get("jsconfigvars", {})
+            await page.evaluate(
+                _PREVIEW_SCRIPTS["initialize"],
+                {
+                    "config": config if isinstance(config, dict) else {},
+                    "modules": ["mediawiki.page.ready", *parsed.get("modules", [])],
+                    "partial": requests.warning or bool(parsed.get("parsewarnings")),
+                },
+            )
+            return await screenshot(**options)
+
+        renderer.select_element_and_screenshot = initialized_screenshot
+        images = await renderer.replace_element_screenshot(
+            ReplaceElementScreenshotOptions(
+                url=page_url,
+                element="#mw-content-text",
+                content=fragment,
+                width=960,
+                height=800,
+                locale=locale.locale,
+                output_type="png",
+                counttime=False,
+                stealth=False,
+                wait_until="networkidle",
+                elements_to_disable=[],
+            )
+        )
+        if not images or len(images) != 1:
+            raise ValueError("Template shell must return one image")
+        image = PILImage.open(BytesIO(base64.b64decode(images[0])))
+        if image.width * image.height > _MAX_PIXELS:
+            raise ValueError("Template shell dimensions exceed limits")
+        image.load()
+        return image
+    finally:
+        await context.close()
+
+
+async def _local_browser_available(label):
+    if web_render.remote_only:
+        Logger.warning(f"[Wiki preview] {label} using restricted rendering: remote_only=True")
+        return False
+    try:
+        available = bool(await web_render.browser.check_status())
+    except Exception as error:
+        Logger.warning(f"[Wiki preview] {label} local Chromium status check failed: {type(error).__name__}: {error}")
+        return False
+    if available:
+        Logger.debug(f"[Wiki preview] {label} using local Chromium")
+    else:
+        Logger.warning(f"[Wiki preview] {label} using restricted rendering: browser_ready=False")
+    return available
+
+
 async def render_preview_document(document, requests, locale):
     soup = _document_resources(document, requests)
     soup.head.insert(
@@ -328,7 +532,7 @@ async def render_preview_document(document, requests, locale):
             },
         ),
     )
-    if not web_render.remote_only and await web_render.browser.check_status():
+    if await _local_browser_available("API preview"):
         image = await _local_render(str(soup), requests, locale)
     else:
         image = await _remote_render(soup, requests, locale)

@@ -10,7 +10,7 @@ requires-python = ">=3.12,<4.0"
 dependencies = [
     "aiofile>=3.8.1,<4.0.0",
     "akari-bot-i18n==0.2.1",
-    "akari-bot-webrender==0.6.2",
+    "akari-bot-webrender==0.7.0",
     "APScheduler>=3.9.1-post.0,<4.0.0.0",
     "attrs>=25.0.0,<26.0.0",
     "cattrs>=26.1.0,<26.2.0",
