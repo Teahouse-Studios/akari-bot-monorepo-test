@@ -61,6 +61,33 @@ async def _test_counts_are_file_counts():
     )
 
 
+async def _test_switched_process_stays_highlighted():
+    # 关键回归：重建列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮，
+    # 而切换进程会 clear() + extend() 重建条目，index 却与重建前相同。
+    async def body(app, page, pilot, source):
+        list_view = page.query_one("#process-list", compat.ListView)
+        states = [bool(item.highlighted) for item in list_view.children]
+        target = len(list_view.children) - 1
+        row = list_view.children[target].region
+        await pilot.click("#process-list", offset=(6, row.y - list_view.region.y))
+        await pilot.pause()
+        after_click = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        page.refresh_files()
+        await pilot.pause()
+        after_rescan = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        await pilot.press("q")
+        return target, states, after_click, after_rescan
+
+    target, states, after_click, after_rescan = await _with_page(body)
+
+    def only(index, flags):
+        return flags[index] is True and sum(flags) == 1
+
+    return (
+        only(0, states) and after_click[0] == target and only(target, after_click[1]) and only(target, after_rescan[1])
+    )
+
+
 async def _test_counts_survive_process_filter():
     # 关键回归：切换进程过滤后，各进程的计数必须与过滤无关。
     async def body(app, page, pilot, source):
@@ -219,6 +246,7 @@ async def test_tui_logs(tester: Tester):
     """cli.tui.logs: 进程计数、贴底跟随与关键词过滤测试"""
     _use_cli_locale()
     await tester.test(_test_counts_are_file_counts, "计数是各进程的日志文件数")
+    await tester.test(_test_switched_process_stays_highlighted, "切换日志后选中行仍然高亮")
     await tester.test(_test_counts_survive_process_filter, "切换过滤后计数不变")
     await tester.test(_test_filter_keeps_following_in_that_process, "过滤只影响可见文件与跟随目标")
     await tester.test(_test_rescan_picks_up_new_file, "重新枚举后计数随目录更新")

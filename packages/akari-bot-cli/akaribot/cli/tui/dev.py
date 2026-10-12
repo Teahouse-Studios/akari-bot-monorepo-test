@@ -1226,11 +1226,7 @@ class DevPage(compat.Vertical):
         cells = [self._row_cells(package) for package in self._snapshot.packages]
         self._package_rows = tuple(cells)
         self._row_texts = tuple(self._compose_row(row, layout) for row in cells)
-        list_view.clear()
-        if self._row_texts:
-            items = [compat.ListItem(compat.Static(text, markup=False)) for text in self._row_texts]
-            list_view.extend(items)
-        list_view.index = self._index_for_key()
+        compat.rebuild_rows(list_view, self._row_texts, self._index_for_key())
         self._sync_workspace()
         self._sync_detail()
         self._sync_actions()

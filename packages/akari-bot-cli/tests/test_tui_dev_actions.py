@@ -17,6 +17,7 @@ from akaribot.cli.tui.dev import (
     TARGET_ADAPTER,
     TARGET_MODULE,
     ActionResult,
+    DevPackage,
     DevPage,
     DevSnapshot,
     StaticDevSource,
@@ -140,6 +141,42 @@ async def _test_keys_and_controls_are_present():
         and not missing
         and {"t", "n", "o"} <= active
     )
+
+
+async def _test_refresh_keeps_row_highlighted():
+    # 关键回归：重建包清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    packages = (
+        DevPackage(dist="akari-bot-core", name="core", kind="core", version="0.1.0"),
+        DevPackage(dist="akari-bot-module-wiki", name="wiki", kind="module", version="0.2.0"),
+    )
+    source = _source(
+        snapshot=DevSnapshot(
+            instance_root=INSTANCE,
+            workspace_root=WORKSPACE,
+            workspace_exists=True,
+            packages=packages,
+        )
+    )
+
+    async def body(app, page, pilot, chosen):
+        list_view = page.query_one("#package-list", compat.ListView)
+        list_view.index = 1
+        await pilot.pause()
+        target = list_view.index
+        before = [bool(item.highlighted) for item in list_view.children]
+        page.refresh_snapshot()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        await pilot.press("q")
+        return target, before, after
+
+    target, before, after = await _with_page(body, source)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return only(before, target) and after[0] == target and only(after[1], target)
 
 
 async def _test_run_tests_streams_output():
@@ -712,6 +749,7 @@ async def test_tui_dev_actions(tester: Tester):
     """cli.tui.dev: 运行测试与生成脚手架的动作测试"""
     _use_cli_locale()
     await tester.test(_test_keys_and_controls_are_present, "键位与按钮齐备且在页脚生效")
+    await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中包仍然高亮")
     await tester.test(_test_run_tests_streams_output, "按 t 跑测试并逐行回显输出")
     await tester.test(_test_second_press_while_running_is_ignored, "运行中再按 t 不重复启动")
     await tester.test(_test_failed_status_is_conclusion_only, "失败时状态栏只给结论，整段输出留在输出区")

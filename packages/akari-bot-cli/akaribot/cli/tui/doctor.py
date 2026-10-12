@@ -744,11 +744,7 @@ class DoctorPage(compat.Vertical):
         conflicts = self._snapshot.conflicts
         self._conflict_rows = tuple((item.mark, item.level, item.message) for item in conflicts)
         self._row_texts = tuple(self._compose_row(item) for item in conflicts)
-        list_view.clear()
-        if self._row_texts:
-            items = [compat.ListItem(compat.Static(text, markup=False)) for text in self._row_texts]
-            list_view.extend(items)
-        list_view.index = self._restore_index()
+        compat.rebuild_rows(list_view, self._row_texts, self._restore_index())
 
     def _compose_row(self, conflict: DoctorConflict) -> str:
         return f"{conflict.mark} {conflict.level_label}  {conflict.message}"

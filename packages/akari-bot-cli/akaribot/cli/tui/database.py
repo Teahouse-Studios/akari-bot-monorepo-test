@@ -1261,12 +1261,7 @@ class DatabasePage(compat.Vertical):
             compat.fit_cells(f"{table.name}（{table.rows if table.rows is not None else '-'}）", width)
             for table in self.visible_tables
         )
-        list_view.clear()
-        if rows:
-            list_view.extend([compat.ListItem(compat.Static(compat.plain_text(row), markup=False)) for row in rows])
-        index = self._table_index()
-        if compat.highlighted_index(list_view) != index:
-            list_view.index = index
+        compat.rebuild_rows(list_view, rows, self._table_index())
         self._table_rows = rows
         self._adopt_focus()
 
@@ -1282,12 +1277,8 @@ class DatabasePage(compat.Vertical):
             for row in self._page.rows:
                 summary = separator.join(f"{name}={_text(value)}" for name, value in row.items())
                 rows.append(compat.fit_cells(summary, width))
-        list_view.clear()
-        if rows:
-            list_view.extend([compat.ListItem(compat.Static(compat.plain_text(row), markup=False)) for row in rows])
-            list_view.index = self._row_index if self._row_index is not None and self._row_index < len(rows) else 0
-        else:
-            list_view.index = None
+        index = self._row_index if self._row_index is not None and self._row_index < len(rows) else 0
+        compat.rebuild_rows(list_view, rows, index if rows else None)
         self._row_texts = tuple(rows)
         caption = (
             i18n.t(

@@ -134,6 +134,44 @@ async def _test_selecting_row_fills_editor():
     return values == {"load": "false"} and fields == ["load"] and bool(pk_text) and key == "wiki"
 
 
+async def _test_refresh_keeps_highlighted_rows():
+    # 关键回归：重建表清单与数据行后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    async def body(app, page, pilot, source):
+        table_list = page.query_one("#table-list", compat.ListView)
+        await _select_table(pilot, page, "stored_data")
+        table_target = table_list.index
+        tables_before = [bool(item.highlighted) for item in table_list.children]
+        page.refresh_tables()
+        await page.wait_for_idle()
+        await pilot.pause()
+        tables_after = (table_list.index, [bool(item.highlighted) for item in table_list.children])
+        await _select_table(pilot, page, "module_status")
+        row_list = page.query_one("#row-list", compat.ListView)
+        await _select_row(pilot, page, 1)
+        row_target = row_list.index
+        rows_before = [bool(item.highlighted) for item in row_list.children]
+        page.refresh_rows()
+        await page.wait_for_idle()
+        await pilot.pause()
+        rows_after = (row_list.index, [bool(item.highlighted) for item in row_list.children])
+        await pilot.press("q")
+        return table_target, tables_before, tables_after, row_target, rows_before, rows_after
+
+    table_target, tables_before, tables_after, row_target, rows_before, rows_after = await _with_page(body)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return (
+        only(tables_before, table_target)
+        and tables_after[0] == table_target
+        and only(tables_after[1], table_target)
+        and only(rows_before, row_target)
+        and rows_after[0] == row_target
+        and only(rows_after[1], row_target)
+    )
+
+
 async def _test_primary_key_is_read_only():
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "stored_data")
@@ -1120,6 +1158,7 @@ async def test_tui_database(tester: Tester):
         await tester.test(_test_search_narrows_tables, "搜索收窄表清单")
         await tester.test(_test_selecting_table_loads_rows, "选中表加载数据项")
         await tester.test(_test_selecting_row_fills_editor, "选中数据项填充编辑区")
+        await tester.test(_test_refresh_keeps_highlighted_rows, "刷新后选中表与数据行仍然高亮")
         await tester.test(_test_primary_key_is_read_only, "主键只读不进编辑字段")
         await tester.test(_test_json_values_round_trip_in_editor, "JSON 值按 JSON 文本回填")
         await tester.test(_test_save_asks_for_confirmation, "保存先弹确认框")

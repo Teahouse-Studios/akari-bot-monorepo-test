@@ -1123,21 +1123,27 @@ class AdaptersPage(compat.Vertical):
         self._row_kinds = tuple(kinds)
         self._instance_rows = tuple(cells)
         self._group_titles = tuple(titles)
-        list_view.clear()
-        if lines:
-            items = [
-                compat.ListItem(
-                    compat.Static(line, markup=False),
-                    disabled=kind == "header",
-                    classes="group-header" if kind == "header" else "",
-                )
-                for line, kind in zip(lines, kinds)
-            ]
-            list_view.extend(items)
-        list_view.index = self._index_for_key()
+        items = [
+            compat.ListItem(
+                compat.Static(line, markup=False),
+                disabled=kind == "header",
+                classes="group-header" if kind == "header" else "",
+            )
+            for line, kind in zip(lines, kinds)
+        ]
+        list_view.run_worker(self._rebuild_rows(items, self._index_for_key()), group="rebuild-rows", exclusive=True)
         self._sync_summary()
         self._sync_detail()
         self._sync_actions()
+
+    async def _rebuild_rows(self, items: Sequence[compat.ListItem], index: int) -> None:
+        # 分组标题行带禁用与样式，条目只能自建；clear() 的移除是异步的，须等移除完成再落高亮。
+        if not compat.mounted(self):
+            return
+        list_view = self.query_one("#adapter-list", compat.ListView)
+        await list_view.clear()
+        await list_view.extend(items)
+        compat.highlight_row(list_view, index)
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:

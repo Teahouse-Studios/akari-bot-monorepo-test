@@ -1626,10 +1626,7 @@ class ConfigPage(compat.Vertical):
         list_view = self.query_one("#table-list", compat.ListView)
         width = self._table_inner_width(list_view)
         rows = [compat.fit_cells(name, width) for name in self._tables]
-        list_view.clear()
-        if rows:
-            list_view.extend([compat.ListItem(compat.Static(compat.plain_text(row), markup=False)) for row in rows])
-        list_view.index = self._index_for(self._selected)
+        compat.rebuild_rows(list_view, rows, self._index_for(self._selected))
         self._rendered_tables = tuple(rows)
         self._sync_caption()
 
@@ -1909,9 +1906,7 @@ class ConfigPage(compat.Vertical):
     def _restore_table_highlight(self) -> None:
         # 保留更改时恢复当前表的高亮，确保选中项与编辑内容一致。
         list_view = self.query_one("#table-list", compat.ListView)
-        index = self._index_for(self._selected)
-        if compat.highlighted_index(list_view) != index:
-            list_view.index = index
+        compat.highlight_row(list_view, self._index_for(self._selected))
 
     def action_save(self) -> None:
         """键位动作：保存当前表。"""

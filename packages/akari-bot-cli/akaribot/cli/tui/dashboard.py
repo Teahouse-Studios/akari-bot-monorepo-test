@@ -1268,11 +1268,8 @@ class DashboardPage(compat.Vertical):
             if not (row.root / INSTANCE_META_FILENAME).is_file():
                 text = f"{text}  {i18n.t('cli.tui.dashboard.instance_missing')}"
             rows.append(text)
-        list_view.clear()
-        if rows:
-            list_view.extend([compat.ListItem(compat.Static(row, markup=False)) for row in rows])
         index = self._index_of_active()
-        list_view.index = index
+        compat.rebuild_rows(list_view, rows, index)
         # 重建列表恢复高亮时，不应使确认状态失效。
         self._highlighted_key = self._highlight_key(self._instance_rows[index] if index is not None else None)
         self.query_one("#instances-caption", compat.Static).update(
@@ -2031,9 +2028,14 @@ class DashboardPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted, "#instance-list")
     def _on_instance_highlighted(self, event: compat.ListView.Highlighted) -> None:
+        if compat.highlighted_index(event.list_view) is None:
+            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按「不变」处理。
+            return
         # 重建列表也会触发高亮事件，须比较目标以排除显示刷新。
         key = self._highlight_key(self.selected_instance())
         if key == self._highlighted_key:
+            # 重建后按钮状态可能仍是按空列表算出的，须按当前高亮刷新。
+            self._sync_actions()
             return
         self._highlighted_key = key
         self.reset_pending()

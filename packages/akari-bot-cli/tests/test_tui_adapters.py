@@ -237,6 +237,31 @@ async def _test_modules_page_excludes_adapters():
     return kinds == {"module"} and names == ["coin", "wiki"]
 
 
+async def _test_refresh_keeps_row_highlighted():
+    # 关键回归：重建列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE), instance_root="/tmp/inst"))
+
+    async def body(app, page, pilot, chosen):
+        list_view = page.query_one("#adapter-list", compat.ListView)
+        await _select(page, "discord")
+        await pilot.pause()
+        target = list_view.index
+        before = [bool(item.highlighted) for item in list_view.children]
+        page.refresh_instances()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        await pilot.press("q")
+        return target, before, after
+
+    target, before, after = await _with_page(body, source)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return only(before, target) and after[0] == target and only(after[1], target)
+
+
 def _test_available_normalizer_reads_module_available_json():
     records = available_adapter_records(
         [
@@ -701,6 +726,7 @@ async def test_tui_adapters(tester: Tester):
         await tester.test(_test_toggle_on_uninstalled_installs, "未安装时按 e 走安装")
         await tester.test(_test_toggle_still_works_for_installed, "已安装时按 e 切换启用")
         await tester.test(_test_summary_counts_instances_only, "摘要只计真实例")
+        await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中行仍然高亮")
         await tester.test(_test_available_failure_keeps_instances, "清单失败不清空实例")
         await tester.test(_test_modules_page_excludes_adapters, "模块页不列适配器")
         await tester.test(_test_available_normalizer_reads_module_available_json, "解析可安装清单")

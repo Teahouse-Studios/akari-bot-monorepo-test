@@ -79,6 +79,29 @@ async def _test_lists_everything_by_default():
     )
 
 
+async def _test_refresh_keeps_row_highlighted():
+    # 关键回归：重建模块列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    async def body(app, page, pilot):
+        list_view = page.query_one("#module-list", compat.ListView)
+        list_view.index = 1
+        await pilot.pause()
+        target = list_view.index
+        before = [bool(item.highlighted) for item in list_view.children]
+        page.refresh_records()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        await pilot.press("q")
+        return target, before, after
+
+    target, before, after = await _with_app(_source(), body)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return only(before, target) and after[0] == target and only(after[1], target)
+
+
 async def _test_toggle_filters_to_installed():
     # 勾选后仅显示已安装模块，取消勾选后显示全部模块。
     async def body(app, page, pilot):
@@ -1071,6 +1094,7 @@ async def test_tui_modules_available(tester: Tester):
     # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
+        await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中行仍然高亮")
         await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
         await tester.test(_test_uninstalled_record_is_installable, "未装项可安装")
         await tester.test(_test_install_streams_output_to_status, "安装先问名字再选来源并逐行回显")

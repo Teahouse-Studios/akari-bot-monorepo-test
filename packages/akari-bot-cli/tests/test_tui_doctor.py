@@ -215,6 +215,31 @@ async def _test_lists_conflicts_and_summarizes():
     )
 
 
+async def _test_refresh_keeps_row_highlighted():
+    # 关键回归：重建结论列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    source = StaticDoctorSource(_snapshot())
+
+    async def body(app, page, pilot):
+        list_view = page.query_one("#conflict-list", compat.ListView)
+        list_view.index = 1
+        await pilot.pause()
+        target = list_view.index
+        before = [bool(item.highlighted) for item in list_view.children]
+        page.refresh_report()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+        await pilot.press("q")
+        return target, before, after
+
+    target, before, after = await _with_page(source, body)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return target == 1 and only(before, target) and after[0] == target and only(after[1], target)
+
+
 async def _test_exit_code_one_with_json_still_renders():
     # 非零退出码可能表示诊断发现问题，完整 JSON 结果仍须展示。
     with TemporaryDirectory(prefix="akari-doctor-") as raw:
@@ -720,6 +745,7 @@ async def test_tui_doctor(tester: Tester):
     """cli.tui.doctor: 诊断页结论、统计、重新诊断与跳转测试"""
     _use_cli_locale()
     await tester.test(_test_lists_conflicts_and_summarizes, "列出结论行并汇总 error/warning")
+    await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中结论仍然高亮")
     await tester.test(_test_exit_code_one_with_json_still_renders, "退出码 1 但 stdout 是 JSON 仍展示结论")
     await tester.test(_test_passed_when_no_conflicts, "无冲突时展示通过文案")
     await tester.test(_test_source_exception_reports_reason, "数据源抛异常时状态栏给出原因")

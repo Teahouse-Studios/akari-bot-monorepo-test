@@ -622,6 +622,9 @@ class LogsPage(compat.Vertical):
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
         index = compat.highlighted_index(event.list_view)
+        if index is None:
+            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按「不变」处理。
+            return
         process = self._process_at(index)
         if process != self._selected:
             self.select_process(process)
@@ -672,10 +675,9 @@ class LogsPage(compat.Vertical):
         labels = [self._process_label(None)]
         labels.extend(self._process_label(name) for name in self._processes)
         self._process_labels = tuple(labels)
-        list_view.clear()
-        list_view.extend(compat.ListItem(compat.Static(label, markup=False)) for label in labels)
         index = 0 if self._selected is None else (self._processes.index(self._selected) + 1)
-        list_view.index = min(index, max(len(labels) - 1, 0))
+        # 重建与落高亮交给 _compat.rebuild_rows：clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
+        compat.rebuild_rows(list_view, labels, min(index, max(len(labels) - 1, 0)))
 
     def _process_label(self, process: str | None) -> str:
         # 文件计数基于完整清单，避免其他进程的计数随过滤条件变化。

@@ -1042,11 +1042,7 @@ class ModulesPage(compat.Vertical):
         layout = self._layout(inner_width)
         rows = [self._row_text(record, layout, inner_width) for record in records]
         self._render_columns(layout, inner_width)
-        list_view.clear()
-        items = [compat.ListItem(compat.Static(row, markup=False)) for row in rows]
-        if items:
-            list_view.extend(items)
-        list_view.index = self._index_for_key(records)
+        compat.rebuild_rows(list_view, rows, self._index_for_key(records))
         self._rendered_rows = tuple(rows)
         self._sync_count(records)
         self._sync_detail()
@@ -1641,7 +1637,7 @@ class ModulesPage(compat.Vertical):
         list_view = self.query_one("#module-list", compat.ListView)
         current = compat.highlighted_index(list_view) or 0
         target = max(0, min(current + step, len(records) - 1))
-        list_view.index = target
+        compat.highlight_row(list_view, target)
         if not extend:
             return
         if self._anchor is None:

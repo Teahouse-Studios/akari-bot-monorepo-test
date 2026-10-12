@@ -133,6 +133,32 @@ async def _test_worker_marks_stop_after_unmount():
     return all(outcome in (False, None) for outcome in outcomes)
 
 
+async def _test_refresh_keeps_table_highlighted():
+    # 关键回归：重建表清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    async def body(app, page, pilot, source):
+        table_list = page.query_one("#table-list", compat.ListView)
+        table_list.index = 1
+        await pilot.pause()
+        await page.wait_for_idle()
+        await pilot.pause()
+        target = table_list.index
+        before = [bool(item.highlighted) for item in table_list.children]
+        page.refresh_tables()
+        await page.wait_for_idle()
+        await pilot.pause()
+        after = (table_list.index, [bool(item.highlighted) for item in table_list.children])
+        selected = page.selected_table
+        await pilot.press("q")
+        return target, before, after, selected
+
+    target, before, after, selected = await _with_page(body)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return selected == "module_wiki" and only(before, target) and after[0] == target and only(after[1], target)
+
+
 async def _test_dirty_note_tracks_edits():
 
     async def body(app, page, pilot, source):
@@ -542,6 +568,7 @@ async def test_tui_config(tester: Tester):
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_worker_marks_stop_after_unmount, "页面卸载后异步渲染入口安全返回")
+        await tester.test(_test_refresh_keeps_table_highlighted, "刷新后选中表仍然高亮")
         await tester.test(_test_dirty_note_tracks_edits, "脏值说明随编辑出现")
         await tester.test(_test_table_switch_keeps_edits, "换表选择保留则不切换")
         await tester.test(_test_table_switch_discards_edits, "换表选择放弃才切换")

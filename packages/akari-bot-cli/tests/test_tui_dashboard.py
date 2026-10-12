@@ -252,6 +252,39 @@ async def _test_refresh_rereads_snapshot():
     return after > before
 
 
+async def _test_refresh_keeps_instance_highlighted():
+    # 关键回归：重建实例清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    with TemporaryDirectory(prefix="akari-dashboard-highlight-") as raw:
+        roots = _temp_instances(raw, "alpha", "beta")
+        rows = (
+            InstanceRow(name="alpha", root=roots["alpha"].resolve(), running=True, autostart=True),
+            InstanceRow(name="beta", root=roots["beta"].resolve(), running=False, restart_on_crash=True),
+        )
+        previous = context.active_root()
+        context.set_active_root(roots["beta"])
+        try:
+
+            async def body(app, page, pilot, source, listed, control):
+                list_view = page.query_one("#instance-list", compat.ListView)
+                target = list_view.index
+                before = [bool(item.highlighted) for item in list_view.children]
+                page.refresh_instances()
+                await page.wait_for_idle()
+                await pilot.pause()
+                after = (list_view.index, [bool(item.highlighted) for item in list_view.children])
+                await pilot.press("q")
+                return target, before, after
+
+            target, before, after = await _with_page(body, instances=StaticInstanceListSource(rows))
+        finally:
+            context.set_active_root(previous)
+
+    def only(flags, index):
+        return index is not None and flags[index] is True and sum(flags) == 1
+
+    return target == 1 and only(before, target) and after[0] == target and only(after[1], target)
+
+
 async def _test_load_failure_degrades_to_status():
     class Failing:
         """快照读取必定失败的数据源，用于断言降级行为。"""
@@ -2140,6 +2173,7 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_fields_show_instance_facts, "展示实例根、名称与版本")
         await tester.test(_test_state_follows_probe, "运行状态跟着探测结果")
         await tester.test(_test_refresh_rereads_snapshot, "刷新重新读取快照")
+        await tester.test(_test_refresh_keeps_instance_highlighted, "刷新后选中实例仍然高亮")
         await tester.test(_test_load_failure_degrades_to_status, "读取失败只降级到状态栏")
         await tester.test(_test_instance_list_marks_state_and_policy, "实例清单带状态与策略标记")
         await tester.test(_test_enter_switches_instance, "在清单里切换实例")

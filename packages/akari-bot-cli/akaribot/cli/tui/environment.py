@@ -1105,10 +1105,8 @@ class EnvironmentPage(compat.Vertical):
         inner_width = self._inner_width()
         layout = self._layout(inner_width)
         rows = tuple(package.row_text(layout) for package in packages)
-        list_view.clear()
-        if rows:
-            list_view.extend([compat.ListItem(compat.Static(row, markup=False)) for row in rows])
-        list_view.index = 0 if rows else None
+        # 重建与落高亮交给 _compat.rebuild_rows：clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
+        compat.rebuild_rows(list_view, rows, 0 if rows else None)
         self._rows = rows
         self._render_columns(layout, inner_width)
         self.query_one("#count", compat.Static).update(

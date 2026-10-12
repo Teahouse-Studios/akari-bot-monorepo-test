@@ -93,7 +93,9 @@ __all__ = [
     "fit_cells",
     "focus_first",
     "focus_now",
+    "highlight_row",
     "highlighted_index",
+    "rebuild_rows",
     "install_akari_themes",
     "is_interactive_terminal",
     "load_stylesheet",
@@ -436,6 +438,47 @@ class PendingConfirm:
         """清除防抖记录。"""
         self.key = ""
         self.at = 0.0
+
+
+def rebuild_rows(list_view: ListView, labels: Sequence[str], index: int | None) -> None:
+    """重建列表条目并把高亮落到 ``index`` 行。
+
+    页面直接 ``clear()`` + ``extend()`` + 设 ``index`` 有一个时序陷阱：``clear()`` 的移除是异步的，
+    不 await 就挂新条目时 ``ListView._nodes`` 里仍是待删除的旧条目，``index`` 的赋值会把高亮打在旧行上；
+    移除完成后的新条目一个高亮都没有——切换选中项后那一行就不再亮起。这里把三步放进 worker 串起来，
+    并复用 :func:`highlight_row`。
+
+    :param list_view: 目标列表。
+    :param labels: 新的条目文本，按显示顺序。
+    :param index: 要高亮的行下标；``None`` 表示不高亮。
+    """
+    list_view.run_worker(_rebuild_rows(list_view, labels, index), group="rebuild-rows", exclusive=True)
+
+
+async def _rebuild_rows(list_view: ListView, labels: Sequence[str], index: int | None) -> None:
+    if not mounted(list_view):
+        return
+    await list_view.clear()
+    await list_view.extend(ListItem(Static(plain_text(label), markup=False)) for label in labels)
+    highlight_row(list_view, index)
+
+
+def highlight_row(list_view: ListView, index: int | None) -> None:
+    """把高亮落到指定行，供重建列表之后调用。
+
+    ``ListView`` 只在 ``index`` **变化**时更新高亮（``watch_index``）。页面重建列表（``clear()`` 之后
+    ``extend()``）时新条目一个高亮都没有，而重建后的下标常与重建前相同（刷新、重扫、内容变化），
+    于是选中行不再亮起。这里显式设置目标条目的 ``highlighted``，并同步 ``index``；下标越界按未选中处理。
+
+    :param list_view: 目标列表。
+    :param index: 要高亮的行下标；``None`` 表示不高亮任何行。
+    """
+    items = [child for child in list_view.children if isinstance(child, ListItem)]
+    if index is not None and not 0 <= index < len(items):
+        index = None
+    for position, item in enumerate(items):
+        item.highlighted = position == index
+    list_view.index = index
 
 
 def highlighted_index(list_view: ListView) -> int | None:

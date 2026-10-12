@@ -115,6 +115,28 @@ async def _test_search_and_filter_narrow_the_list():
     return len(narrowed) == 1 and "akari-bot-module-wiki" in narrowed[0] and restored == 4 and recorded == ["httpx"]
 
 
+async def _test_list_keeps_a_highlight_after_rebuild():
+    # 关键回归：过滤会重建列表，ListView 的 clear() 是异步移除，顺序错了就一行都不亮。
+    async def body(app, page, pilot, source):
+        list_view = page.query_one("#package-list", compat.ListView)
+        first = [bool(item.highlighted) for item in list_view.children]
+        page.set_query("module")
+        await pilot.pause()
+        narrowed = [bool(item.highlighted) for item in list_view.children]
+        page.set_query("")
+        await pilot.pause()
+        restored = [bool(item.highlighted) for item in list_view.children]
+        await pilot.press("q")
+        return first, narrowed, restored
+
+    first, narrowed, restored = await _with_page(body)
+
+    def one_on_first_row(flags):
+        return bool(flags) and flags[0] is True and sum(flags) == 1
+
+    return one_on_first_row(first) and one_on_first_row(narrowed) and one_on_first_row(restored)
+
+
 async def _test_recorded_but_missing_row_is_listed():
     # 清单中的未安装包应保持可见，以说明重建环境时的安装范围。
     state = EnvironmentState(
@@ -529,6 +551,7 @@ async def test_tui_environment(tester: Tester):
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_every_installed_package, "列出环境里的全部分发（含传递依赖）")
         await tester.test(_test_search_and_filter_narrow_the_list, "搜索与「只看清单里的」收窄清单")
+        await tester.test(_test_list_keeps_a_highlight_after_rebuild, "过滤重建后首行仍然高亮")
         await tester.test(_test_recorded_but_missing_row_is_listed, "清单里记着但没装上的条目也在列")
         await tester.test(_test_package_probe_failure_degrades, "包列表探测失败只降级")
         await tester.test(_test_install_choice_decides_recording, "安装先选去处：写进清单")
