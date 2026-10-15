@@ -13,6 +13,15 @@ from typing import Iterable
 from akaribot.core.constants.info import Info
 
 
+def platform_name_of(session_info) -> str:
+    """读取会话的平台名称，缺少平台字段时使用客户端名称。
+
+    :param session_info: 会话信息对象。
+    :return: 平台名称；身份未知时为空字符串。
+    """
+    return getattr(session_info, "platform_name", "") or getattr(session_info, "client_name", "") or ""
+
+
 def resolve_platform_identity(
     target_from: str | None,
     client_name: str | None = None,

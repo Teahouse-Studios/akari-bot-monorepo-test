@@ -709,9 +709,8 @@ class SubprocessConfigSource:
     def set_value(self, section: str, key: str, value: str) -> SetResult:
         """见 :meth:`ConfigSource.set_value`。"""
         self.calls["set"] += 1
-        instance = self._instance()
         try:
-            completed = instance.run_core_capture("config", "set", key, value, "--table", section)
+            completed = self._run(self.cli_argv("config", "set", key, value, "--table", section))
         except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的结果
             raise ConfigSourceError(
                 i18n.t(

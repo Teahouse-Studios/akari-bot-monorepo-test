@@ -5,12 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-adapter-telegram"
 version = "0.1.0"
+readme = "README.md"
 description = "Telegram 平台适配器"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
     "aiogram==3.31.0",
-    "attrs>=25.0.0,<26.0.0",
+    "attrs>=26.1.0",
 ]
 
 [project.entry-points."akaribot.adapters"]
@@ -18,3 +21,8 @@ telegram = "akaribot.adapters.telegram"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

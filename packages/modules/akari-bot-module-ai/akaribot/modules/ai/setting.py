@@ -10,8 +10,9 @@ from .config import AiConfig
 ai_module_path = Path(__file__).parent
 ai_data_path = PackageRegistry.package_data("ai")
 
-# 默认提示词随包分发，属只读资源；用户可编辑的接口清单才写进实例可写的 data 目录。
-instructions_path = ai_module_path / "assets" / "instructions.txt"
+instructions_path = ai_data_path / "instructions.txt"
+if not instructions_path.is_file():
+    instructions_path = ai_module_path / "assets" / "instructions.txt"
 if instructions_path.exists():
     with open(instructions_path, "r", encoding="utf-8") as f:
         INSTRUCTIONS = f.read()

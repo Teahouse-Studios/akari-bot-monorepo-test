@@ -8,6 +8,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from akaribot.testing import func_case, Tester
 
@@ -115,6 +116,14 @@ def _test_new_packages_do_not_count_as_unbumped():
     return code == 0
 
 
+def _test_downgrade_is_a_violation():
+    tool = _tool()
+    member = tool.Member("example", "0.1.0", "packages/example", "packages/example/pyproject.toml")
+    with patch.object(tool, "version_at", return_value=(True, "0.2.0")):
+        finding = tool.inspect_member(member, ["packages/example/example.py"], "base", False)
+    return finding.is_violation
+
+
 @func_case
 async def test_check_versions(tester: Tester):
     """tools.check_versions: 版本守卫豁免解析测试"""
@@ -125,4 +134,5 @@ async def test_check_versions(tester: Tester):
     await tester.test(_test_empty_exemption_value_is_an_error, "trailer 无取值时报错")
     await tester.test(_test_guard_reports_unbumped_packages_after_split, "拆分后区间仍能抓出未升版本包")
     await tester.test(_test_new_packages_do_not_count_as_unbumped, "新建包不报未升版本")
+    await tester.test(_test_downgrade_is_a_violation, "版本下调不能通过版本守卫")
     return tester

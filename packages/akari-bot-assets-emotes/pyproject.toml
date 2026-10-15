@@ -5,10 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-assets-emotes"
 version = "0.1.0"
+readme = "README.md"
 description = "AkariBot 表情资源包：assets/emotes 拆出的独立分发，随 akari-bot-core[full] 默认安装"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 # 纯资源分发：包内只有 GIF、README 与一个定位函数，不依赖任何分发（定位见 akaribot/assets/emotes/__init__.py）。
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

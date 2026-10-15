@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-assets-fonts"
 version = "0.1.0"
+readme = "README.md"
 description = "AkariBot 字体资源包：Noto Sans CJK 与 Noto Sans Symbols2，随默认安装分发"
 requires-python = ">=3.12,<4.0"
 # 字体为 SIL OFL 1.1，与本仓库主体的 AGPL-3.0 不同，分发时须原样携带 LICENSE。
@@ -15,3 +16,8 @@ dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

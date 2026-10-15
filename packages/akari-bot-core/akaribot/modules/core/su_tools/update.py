@@ -2,19 +2,20 @@
 
 机器人与 server 一律以只读配置运行（``AKARI_CONFIG_READONLY``），而更新要写配置（新版本可能带来
 新配置项）与数据库（迁移），故更新动作必须交给 CLI 子进程（tasks T7.2 / D7）。本模块只负责定位
-CLI、以子进程执行 ``akaribot module update --all --non-interactive --json`` 并转述其结果。
+CLI、以子进程执行 ``akaribot module update --all --non-interactive --defer-runtime --json`` 并转述其结果。
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-import locale
 import os
 import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import psutil
 
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.internal import I18NContext, Plain
@@ -31,7 +32,7 @@ CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 
 # 委托参数固定，不接受用户输入拼接：--all 覆盖全部已装包，--json 让结果可解析。
-UPDATE_ARGV = ("module", "update", "--all", "--non-interactive", "--json")
+UPDATE_ARGV = ("module", "update", "--all", "--non-interactive", "--defer-runtime", "--json")
 
 # 更新要在子进程里跑 uv 下载、配置补写与数据库迁移，等待上限按分钟计。
 UPDATE_TIMEOUT_SECONDS = 1800
@@ -110,7 +111,7 @@ async def _run_cli(path: str, argv: list[str]) -> tuple[int, str, str, bool]:
     env = dict(os.environ)
     # 只读标记只约束 server 自身：更新要写配置，须让子进程按宿主机 CLI 的权限运行。
     env.pop(CONFIG_READONLY_ENV, None)
-    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env["PYTHONIOENCODING"] = "utf-8"
     instance_dir = env.get(INSTANCE_DIR_ENV, "").strip()
     cwd = instance_dir if instance_dir and Path(instance_dir).is_dir() else None
     try:
@@ -121,17 +122,36 @@ async def _run_cli(path: str, argv: list[str]) -> tuple[int, str, str, bool]:
         return -1, "", f"无法执行 {path}：{exc}", False
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=UPDATE_TIMEOUT_SECONDS)
+    except asyncio.CancelledError:
+        await asyncio.shield(_stop_cli(process))
+        raise
     except asyncio.TimeoutError:
-        process.kill()
-        await process.wait()
+        await _stop_cli(process)
         return -1, "", f"CLI 超过 {UPDATE_TIMEOUT_SECONDS} 秒未返回", True
-    encoding = locale.getpreferredencoding(False)
     return (
         process.returncode if process.returncode is not None else -1,
-        stdout.decode(encoding, errors="ignore").strip(),
-        stderr.decode(encoding, errors="ignore").strip(),
+        stdout.decode("utf-8", errors="replace").strip(),
+        stderr.decode("utf-8", errors="replace").strip(),
         False,
     )
+
+
+async def _stop_cli(process) -> None:
+    try:
+        descendants = psutil.Process(process.pid).children(recursive=True)
+    except psutil.Error:
+        descendants = []
+    if process.returncode is None:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+    for child in reversed(descendants):
+        try:
+            child.kill()
+        except psutil.Error:
+            pass
+    await process.wait()
 
 
 def extract_update_payload(stdout: str) -> dict | None:

@@ -318,6 +318,20 @@ def _test_instance_conflict_checks():
         return "Telegram" in message and "Telegram-alt" in message and "telegram_token" in message
 
 
+def _test_remote_milky_and_shared_gateway_token_are_allowed():
+    files = {
+        "config.toml": BASE_CONFIG,
+        "bot_web.toml": '[bot_web]\nweb_host = "0.0.0.0"\nweb_port = 6485\n',
+        "bot_milky.toml": '[bot_milky]\nqq_host = "http://10.42.0.9:6485"\n',
+        "bot_onebot.toml": '[bot_onebot]\nqq_host = "127.0.0.1:6700"\n[bot_onebot_secret]\nqq_access_token = "shared"\n',
+        "bot_onebot-alt.toml": '[bot_onebot-alt]\nqq_host = "127.0.0.1:6701"\n[bot_onebot-alt_secret]\nqq_access_token = "shared"\n',
+    }
+    with _temp_config(files), _adapters_only("web", "milky", "onebot"):
+        remote, _ = _run_conflict_check([_instance("web", platform_name="Web"), _instance("milky", platform_name="QQ")])
+        shared, _ = _run_conflict_check([_instance("onebot", platform_name="QQ"), _instance("onebot", "alt", "QQ")])
+    return remote is None and shared is None
+
+
 def _declared_bot_tables(source: str) -> set[str]:
     tables = set()
     for node in ast.walk(ast.parse(source)):
@@ -460,6 +474,9 @@ async def test_multi_instance(tester: Tester):
     await tester.test(_test_instance_config_scope, "配置的实例作用域与 enable 不回退")
     await tester.test(_test_discover_adapter_instances, "实例发现与孤立配置跳过")
     await tester.test(_test_instance_conflict_checks, "端口与凭据冲突中止启动")
+    await tester.test(
+        _test_remote_milky_and_shared_gateway_token_are_allowed, "远端 Milky 与共享网关令牌不构成本机或账号冲突"
+    )
     await tester.test(_test_adapter_manifests_match_config_templates, "适配器清单与配置模板一致")
     await tester.test(_test_four_way_scope_matches, "四元组平台判据")
     await tester.test(_test_return_cache_does_not_collide, "return_modules_list 缓存键不串")

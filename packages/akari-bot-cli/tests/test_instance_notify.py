@@ -269,7 +269,7 @@ class _Catalog:
 
 
 def _update_with_notify(
-    detach: tuple[dict, int], install: tuple[dict, int], *, kind: str = "module"
+    detach: tuple[dict, int], install: tuple[dict, int], *, kind: str = "module", defer_runtime: bool = False
 ) -> tuple[list[str], dict, list[list[str]]]:
     runner = _RecordingRunner()
     remotes: list[str] = []
@@ -282,7 +282,12 @@ def _update_with_notify(
     )
     engine.CommandRunner = lambda **kwargs: runner  # type: ignore[assignment]
     engine.config_sync = lambda *args, **kwargs: None  # type: ignore[assignment]
-    engine.db_upgrade = lambda *args, **kwargs: None  # type: ignore[assignment]
+
+    def migrate(*args, **kwargs):
+        if defer_runtime:
+            raise AssertionError("Deferred updates must migrate after the running server stops.")
+
+    engine.db_upgrade = migrate  # type: ignore[assignment]
     module_command._load_catalog = lambda *args, **kwargs: _Catalog()  # type: ignore[assignment]
     out, err = io.StringIO(), io.StringIO()
     try:
@@ -313,6 +318,7 @@ def _update_with_notify(
                     dry_run=False,
                     verbose=False,
                     json_mode=False,
+                    defer_runtime=defer_runtime,
                 )
     finally:
         (
@@ -377,6 +383,21 @@ async def _test_update_does_not_detach_adapters():
     return remotes == ["server.post_package_install"] and payload["restart_required"] is False
 
 
+async def _test_deferred_update_does_not_wait_for_runtime():
+    remotes, payload, argv = _update_with_notify(
+        _notify_payload("delivered", "server.post_package_remove"),
+        _notify_payload("delivered", "server.post_package_install"),
+        defer_runtime=True,
+    )
+    return (
+        remotes == []
+        and bool(argv)
+        and payload["updated"] == [DIST]
+        and payload["reload_pending"] == [DIST]
+        and payload["restart_required"] is True
+    )
+
+
 @func_case
 async def test_cli_notify(tester: Tester):
     """包变更通知的结果解析与卸载顺序。"""
@@ -396,4 +417,5 @@ async def test_cli_notify(tester: Tester):
     await tester.test(_test_update_detaches_before_reloading, "更新先热拆卸旧代际再热装载")
     await tester.test(_test_update_skips_reload_when_detach_unconfirmed, "热拆卸未确认时跳过热装载并标记需重启")
     await tester.test(_test_update_does_not_detach_adapters, "适配器更新不投递热拆卸")
+    await tester.test(_test_deferred_update_does_not_wait_for_runtime, "延迟运行时更新只安装同步并标记重启")
     return tester

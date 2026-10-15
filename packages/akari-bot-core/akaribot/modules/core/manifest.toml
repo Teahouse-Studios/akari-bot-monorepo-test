@@ -1,6 +1,6 @@
 # akari-bot-core 的包清单。
 schema = 1
-requires_core_api = ">=1"
+requires_core_api = ">=1,<2"
 locales = "locales"
 # bundled 于 core 的模块注册名，取自包内全部 module() 调用。
 provides_modules = [

@@ -5,12 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mcmod"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "Dianliang233" },
     { name = "HornCopper" },
     { name = "DrLee_lihr" },
 ]
 description = "从 MC 百科获取 Minecraft Mod 信息。"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
@@ -22,3 +25,8 @@ mcmod = "akaribot.modules.mcmod"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

@@ -4,6 +4,29 @@
 .gitignore
 
 # Development / CI
+.venv/
+.uvcache/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+**/*.pyc
+.worktrees/
+.baseline/
+.codemod-deps/
+test/
+.env
+*.env
+config/
+.bot.lock
+.pid_last
+generated_docs/
+output/
+dist/
+cli-build/
+.idea/
+.vscode/
+.run/
+.DS_Store
 .deepsource.toml
 .editorconfig
 .pre-commit-config.yaml
@@ -14,6 +37,7 @@ requirements.txt
 conftest.py
 tests/
 tester.py
+packages/**/tests/
 
 # Runtime cache (recreated on startup)
 cache/

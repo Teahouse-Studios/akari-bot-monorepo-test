@@ -11,11 +11,14 @@ from __future__ import annotations
 import json
 import os
 import signal
+import subprocess
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+
+import psutil
 
 from akaribot.cli import i18n
 
@@ -72,14 +75,13 @@ class LockRecord:
 def pid_alive(pid: int) -> bool:
     """进程是否仍存在。
 
-    Windows 上不能用信号 0 探测——那里 ``os.kill`` 走 ``TerminateProcess``，探测本身会终止进程，
-    故一律按存活处理，由锁探测给出结论。
+    Windows 通过进程查询探测，避免使用具有终止语义的 ``os.kill``。
 
     :param pid: 进程号。
     :return: 进程是否存活。
     """
     if is_windows():
-        return True
+        return psutil.pid_exists(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -94,8 +96,12 @@ def pid_alive(pid: int) -> bool:
 def read_lock_record(path: Path) -> LockRecord | None:
     """读取锁文件里的进程记录；文件不存在或不可读时返回 ``None``。"""
     try:
-        return LockRecord.parse(path.read_text(encoding="utf-8"))
-    except OSError:
+        with path.open("rb", buffering=0) as handle:
+            # Windows 的首字节被排他锁保护，记录读取须避开锁区。
+            if is_windows():
+                handle.seek(1)
+            return LockRecord.parse(handle.read().decode("utf-8"))
+    except (OSError, UnicodeDecodeError):
         return None
 
 
@@ -141,12 +147,22 @@ class ProcessControl(Protocol):
 
 
 class SystemProcessControl:
-    """基于 :mod:`os` 与 :mod:`signal` 的默认实现。"""
+    """通过平台信号或 Windows 停止事件控制实例进程。"""
+
+    def __init__(self) -> None:
+        self._trees: dict[int, list[psutil.Process]] = {}
 
     def process_group(self, pid: int) -> int | None:
         """见 :meth:`ProcessControl.process_group`。"""
         if is_windows():
-            return None
+            if pid == os.getpid():
+                return None
+            try:
+                parent = psutil.Process(pid)
+                self._trees[pid] = [parent, *parent.children(recursive=True)]
+            except psutil.Error:
+                return None
+            return pid
         try:
             pgid = os.getpgid(pid)
         except OSError:
@@ -163,18 +179,46 @@ class SystemProcessControl:
 
     def group_alive(self, pgid: int) -> bool:
         """见 :meth:`ProcessControl.group_alive`。"""
+        if is_windows():
+            self._refresh_tree(pgid)
+            return any(process.is_running() for process in self._trees.get(pgid, ()))
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
             return False
         except PermissionError:
-            return True
+            # macOS 对已退出但尚未回收的组长可返回 EPERM，须继续核对可运行成员。
+            pass
         except OSError:
             return False
-        return True
+        for process in psutil.process_iter(("pid", "status")):
+            if process.info["status"] in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                continue
+            try:
+                if os.getpgid(process.pid) == pgid:
+                    return True
+            except ProcessLookupError:
+                continue
+            except PermissionError:
+                continue
+        return False
 
     def terminate(self, pid: int, *, force: bool) -> bool:
         """见 :meth:`ProcessControl.terminate`。"""
+        if is_windows():
+            if not force:
+                from akaribot.cli.windows import request_stop
+
+                return request_stop(pid)
+            try:
+                process = self._trees[pid][0] if pid in self._trees else psutil.Process(pid)
+                if process.is_running():
+                    process.kill()
+            except psutil.NoSuchProcess:
+                return True
+            except psutil.Error:
+                return False
+            return True
         try:
             os.kill(pid, signal.SIGKILL if force else signal.SIGTERM)
         except OSError:
@@ -183,11 +227,61 @@ class SystemProcessControl:
 
     def terminate_group(self, pgid: int, *, force: bool) -> bool:
         """见 :meth:`ProcessControl.terminate_group`。"""
+        if is_windows():
+            if not force:
+                return False
+            ok = True
+            suspended: list[psutil.Process] = []
+            try:
+                while True:
+                    self._refresh_tree(pgid)
+                    pending = [process for process in self._trees.get(pgid, ()) if process not in suspended]
+                    if not pending:
+                        break
+                    for process in pending:
+                        try:
+                            if process.is_running():
+                                process.suspend()
+                            suspended.append(process)
+                        except psutil.NoSuchProcess:
+                            suspended.append(process)
+                        except psutil.Error:
+                            return False
+                for process in reversed(suspended):
+                    try:
+                        if process.is_running():
+                            process.kill()
+                    except psutil.NoSuchProcess:
+                        continue
+                    except psutil.Error:
+                        ok = False
+            finally:
+                for process in suspended:
+                    try:
+                        if process.is_running():
+                            process.resume()
+                    except psutil.Error:
+                        continue
+            return ok
         try:
             os.killpg(pgid, signal.SIGKILL if force else signal.SIGTERM)
         except OSError:
             return False
         return True
+
+    def _refresh_tree(self, pid: int) -> None:
+        processes = self._trees.get(pid, [])
+        known = set(processes)
+        for process in tuple(processes):
+            try:
+                if not process.is_running():
+                    continue
+                for child in process.children(recursive=True):
+                    if child not in known:
+                        processes.append(child)
+                        known.add(child)
+            except psutil.Error:
+                continue
 
     def sleep(self, seconds: float) -> None:
         """见 :meth:`ProcessControl.sleep`。"""
@@ -235,10 +329,18 @@ def stop_process(
     worker = control or SYSTEM_CONTROL
     pgid = worker.process_group(pid)
     worker.terminate(pid, force=False)
-    if not wait_until(lambda: not running(), timeout=timeout, control=worker):
-        worker.terminate(pid, force=True)
+    forced = False
+
+    def stopped():
+        if pgid is not None:
+            worker.group_alive(pgid)
+        return not running()
+
+    if not wait_until(stopped, timeout=timeout, control=worker):
         if pgid is not None:
             worker.terminate_group(pgid, force=True)
+        worker.terminate(pid, force=True)
+        forced = True
         if not wait_until(lambda: not running(), timeout=timeout, control=worker):
             return StopOutcome(
                 False,
@@ -246,27 +348,35 @@ def stop_process(
                 i18n.t("cli.run.stop_failed_detail", seconds=f"{timeout:.0f}"),
                 forced=True,
             )
-        return StopOutcome(True, i18n.t("cli.run.stop_forced", pid=pid), forced=True)
     if pgid is not None:
-        _reap_group(pgid, grace=reap_grace, control=worker)
-    return StopOutcome(True, i18n.t("cli.run.stop_done", pid=pid))
+        reaped, reap_forced = _reap_group(pgid, grace=reap_grace, control=worker)
+        forced = forced or reap_forced
+        if not reaped:
+            return StopOutcome(
+                False,
+                i18n.t("cli.run.stop_failed", pid=pid),
+                i18n.t("cli.run.stop_failed_detail", seconds=f"{reap_grace:.0f}"),
+                forced=True,
+            )
+    key = "cli.run.stop_forced" if forced else "cli.run.stop_done"
+    return StopOutcome(True, i18n.t(key, pid=pid), forced=forced)
 
 
-def _reap_group(pgid: int, *, grace: float, control: ProcessControl) -> bool:
+def _reap_group(pgid: int, *, grace: float, control: ProcessControl) -> tuple[bool, bool]:
     # 主进程已按自身顺序收拢过子进程，这里只处理残留：先温和，宽限期内没退干净再强杀。
     if not control.group_alive(pgid):
-        return True
+        return True, False
     control.terminate_group(pgid, force=False)
     if wait_until(lambda: not control.group_alive(pgid), timeout=grace, control=control):
-        return True
+        return True, False
     control.terminate_group(pgid, force=True)
-    return wait_until(lambda: not control.group_alive(pgid), timeout=grace, control=control)
+    return wait_until(lambda: not control.group_alive(pgid), timeout=grace, control=control), True
 
 
 def detach_kwargs() -> dict[str, Any]:
     """返回让子进程脱离当前会话的 :mod:`subprocess` 参数。"""
     if is_windows():
         return {
-            "creationflags": getattr(os, "DETACHED_PROCESS", 0) | getattr(os, "CREATE_NEW_PROCESS_GROUP", 0),
+            "creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
         }
     return {"start_new_session": True}

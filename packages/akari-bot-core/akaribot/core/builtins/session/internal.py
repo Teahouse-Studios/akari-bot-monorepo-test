@@ -31,6 +31,7 @@ from akaribot.core.utils.random import Random
 
 from akaribot.core.queue.contracts import PlatformAPI
 from akaribot.core.queue.errors import RpcRemoteError
+from akaribot.core.utils.platform_scope import platform_name_of
 
 # 会话相关配置在导入期取一次快照，避免每次取文案都去读配置
 default_locale = BaseConfig.default_locale
@@ -51,7 +52,7 @@ def confirm_prompt_key(session_info: SessionInfo) -> str:
     if session_info.support_button:
         return "message.wait.confirm.prompt.button"
     if session_info.support_reaction and quick_confirm:
-        if session_info.client_name == "QQ":
+        if platform_name_of(session_info) == "QQ":
             return "message.wait.confirm.prompt.qq"
         return "message.wait.confirm.prompt.reaction"
     return "message.wait.confirm.prompt"
@@ -634,7 +635,7 @@ class MessageSession:
         # 内部方法：添加确认反应。
         # 自动为不同平台选择合适的确认反应（勾选和叉号）。
         if self.session_info.support_reaction:
-            if self.session_info.client_name in ["QQ", "QQBot"]:
+            if platform_name_of(self.session_info) in ["QQ", "QQBot"]:
                 await PlatformAPI.add_reaction(self.session_info, message_id, "11093")
                 await PlatformAPI.add_reaction(self.session_info, message_id, "10060")
             else:

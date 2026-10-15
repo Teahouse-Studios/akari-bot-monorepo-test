@@ -104,6 +104,7 @@ __all__ = [
     "PlainElement",
     "PlatformMessageChain",
     "PlayState",
+    "platform_name_of",
     "RETIRED_SOURCES",
     "RETIRED_TARGETS",
     "Random",
@@ -395,6 +396,7 @@ try:
     from akaribot.core.utils.image import cb64imglst, get_fontsize, msgchain2image, svg_render
     from akaribot.core.utils.image_table import ImageTable, image_table_render
     from akaribot.core.utils.petal import cost_petal, gained_petal, lost_petal, settle_petals, sign_get_petal
+    from akaribot.core.utils.platform_scope import platform_name_of
     from akaribot.core.utils.random import Random, SecureRandom
     from akaribot.core.utils.retired import (
         RETIRED_SOURCES,
@@ -581,6 +583,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.utils.image": ("cb64imglst", "get_fontsize", "msgchain2image", "svg_render"),
     "akaribot.core.utils.image_table": ("ImageTable", "image_table_render"),
     "akaribot.core.utils.petal": ("cost_petal", "gained_petal", "lost_petal", "settle_petals", "sign_get_petal"),
+    "akaribot.core.utils.platform_scope": ("platform_name_of",),
     "akaribot.core.utils.random": ("Random", "SecureRandom"),
     "akaribot.core.utils.retired": (
         "RETIRED_SOURCES",

@@ -1,3 +1,4 @@
+from akaribot.core.api import platform_name_of
 from akaribot.core.api import (
     Bot,
     MessageChain,
@@ -148,7 +149,7 @@ async def _(msg: Bot.MessageSession, keyword: str, legacy: bool = False):
             else:
                 await msg.finish(I18NContext("ncmusic.message.search.invalid.non_digital"))
 
-        if msg.session_info.client_name == "QQ" and enable_card:
+        if platform_name_of(msg.session_info) == "QQ" and enable_card:
             await msg.finish(f"[CQ:music,type=163,id={sid}]", quote=False)
 
 

@@ -56,15 +56,21 @@ jobs:
           # 包内资源漏掉会让 TUI 在用户机器上崩（textual 的 .tcss、rich 的内置主题）。手工列举必然
           # 会漏，唯一可靠的兜底是在**不含 Python 的环境**里跑冒烟——本仓库尚无该环境，属已知缺口。
           include-data-files: |
-            uv-bundled=uv
+            uv-bundled=${{ runner.os == 'Windows' && 'uv.exe' || 'uv' }}
+          include-data-dir: |
+            packages/akari-bot-cli/akaribot/cli/locales=akaribot/cli/locales
+            packages/akari-bot-cli/akaribot/cli/templates=akaribot/cli/templates
           include-package-data: |
+            akaribot.cli
+            akari_bot_i18n
             textual
             rich
           include-package: |
+            akaribot.cli
+            akari_bot_i18n
             textual
             rich
             typer
-            click
             tomlkit
             httpx
             packaging
@@ -77,6 +83,8 @@ jobs:
           echo "产物：$BIN"
           "$BIN" --version
           "$BIN" tui --self-check
+          "$BIN" new module release_probe --non-interactive --no-add --dir "$RUNNER_TEMP/cli-smoke"
+          "$BIN" new adapter release_probe --non-interactive --no-add --dir "$RUNNER_TEMP/cli-smoke"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -586,3 +586,28 @@ async def test_tui_config(tester: Tester):
         await tester.test(_test_editor_action_reports_unusable_editor, "编辑器不可用时只说状态栏")
         await tester.test(_test_editor_action_asks_before_discarding_edits, "未保存改动前先问")
     return tester
+
+
+@func_case
+async def test_tui_config_cli_write(tester: Tester):
+    async def check():
+        with TemporaryDirectory(prefix="akari-config-cli-") as raw:
+            root = Path(raw)
+            seen = []
+
+            def runner(argv, **kwargs):
+                seen.append((argv, kwargs))
+                return subprocess.CompletedProcess(argv, 0, stdout="written", stderr="")
+
+            source = SubprocessConfigSource(root=root, runner=runner)
+            with mock.patch.object(source, "_instance", side_effect=AssertionError("direct core write")):
+                result = source.set_value("bot_telegram-alt", "enable", "false")
+        argv, kwargs = seen[0]
+        return (
+            result.ok
+            and argv[-6:] == ["config", "set", "enable", "false", "--table", "bot_telegram-alt"]
+            and kwargs["env"]["AKARI_INSTANCE_DIR"] == str(root.resolve())
+        )
+
+    await tester.test(check, "配置写入经 CLI 并保留实例表和目标目录")
+    return tester

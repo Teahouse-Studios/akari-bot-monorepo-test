@@ -1,0 +1,45 @@
+name: Instance lifecycle
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/akari-bot-cli/**"
+      - "packages/akari-bot-core/akaribot/core/entrypoints/run.py"
+      - "packages/akari-bot-core/akaribot/core/utils/process_control.py"
+      - "tools/check_instance_lifecycle.py"
+      - ".github/workflows/instance-lifecycle.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/akari-bot-cli/**"
+      - "packages/akari-bot-core/akaribot/core/entrypoints/run.py"
+      - "packages/akari-bot-core/akaribot/core/utils/process_control.py"
+      - "tools/check_instance_lifecycle.py"
+      - ".github/workflows/instance-lifecycle.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lifecycle:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+      - name: Install process controls
+        shell: bash
+        run: |
+          uv sync --locked --package akari-bot-cli
+          uv pip install --no-deps -e packages/akari-bot-core
+      - name: Validate instance lifecycle
+        shell: bash
+        run: uv run --no-sync python tools/check_instance_lifecycle.py

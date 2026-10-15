@@ -342,8 +342,7 @@ def _hosts_conflict(left: str, right: str) -> bool:
 
 
 def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
-    # ``qq_host`` 在 onebot 是反向 WS 的绑定地址、在 milky 是所连 Milky 服务的目标地址，
-    # 取值形式统一按 ``host:port`` 或 URL 解析；``web_port`` 的绑定主机取自 ``web_host``。
+    # Milky 的 qq_host 是远端服务地址，不占用本机监听口。
     from akaribot.core.config import CFGManager
 
     resources: list[tuple[str, int, str]] = []
@@ -353,7 +352,11 @@ def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
         if not host:
             host = str(CFGManager.get("web_host", table_name=instance.table) or DEFAULT_WEB_HOST).lower()
         resources.append((host, port, "web_port"))
-    qq = _split_host_port(CFGManager.get("qq_host", table_name=instance.table))
+    qq = (
+        _split_host_port(CFGManager.get("qq_host", table_name=instance.table))
+        if instance.platform == "onebot"
+        else None
+    )
     if qq is not None:
         host, port = qq
         resources.append((host, port, "qq_host"))
@@ -536,13 +539,12 @@ def multiprocess_run_until_complete(func):
     p = mp.Process(target=func, daemon=True)
     p.start()
 
-    while True:
-        if not p.is_alive():
-            break
-        time.sleep(1)
-    # Process.close() 之后再访问 exitcode 会抛 ValueError，故须在 terminate_process 之前取值
-    exitcode = p.exitcode
-    terminate_process(p)
+    try:
+        while p.is_alive():
+            time.sleep(1)
+        exitcode = p.exitcode
+    finally:
+        terminate_process(p)
     if exitcode != 0:
         Logger.critical(f"Pre-init failed with exit code {exitcode}, aborting.")
         sys.exit(exitcode)
@@ -794,24 +796,36 @@ async def main_async():
         multiprocess_run_until_complete(pre_init)
         await run_bot()  # Process will block here so
     except RestartBot as e:
-        cleanup_processes()
         raise e
     except (KeyboardInterrupt, SystemExit) as e:
-        cleanup_processes()
         raise e
     except Exception as e:
         Logger.critical("An error occurred, please check the output.")
         traceback.print_exc()
-        cleanup_processes()
         raise e
+    finally:
+        cleanup_processes()
 
 
 def _write_lock_record(handle) -> None:
     # 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程；取锁失败的进程不会走到这里，
     # 因此文件内容始终属于当前持锁者。
     record = {"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat(), "argv": sys.argv[1:]}
+    serialized = json.dumps(record, ensure_ascii=False)
+    if sys.platform == "win32":
+        # msvcrt 对 byte 0 加 mandatory lock；通过底层二进制流写入并跳过锁区。
+        handle.flush()
+        binary = handle.buffer
+        binary.seek(0)
+        binary.write(b"\n")
+        binary.seek(1)
+        binary.write(serialized.encode("utf-8"))
+        binary.truncate()
+        binary.flush()
+        os.fsync(binary.fileno())
+        return
     handle.seek(0)
-    handle.write(json.dumps(record, ensure_ascii=False))
+    handle.write(serialized)
     handle.truncate()
     handle.flush()
     os.fsync(handle.fileno())
@@ -854,7 +868,6 @@ def main():
         except BlockingIOError:
             Logger.critical("Another instance is already running. Aborting.")
             sys.exit(1)
-    _write_lock_record(_lock_file)
     # SIGTERM 默认直接终止进程，适配器与 Server 会变成孤儿进程；转成 KeyboardInterrupt 走
     # 与 Ctrl+C 相同的收拢路径。
     if sys.platform != "win32":
@@ -868,18 +881,24 @@ def main():
 
     base_import_lists = list(sys.modules)
 
-    while True:
-        try:
-            asyncio.run(main_async())
-        except RestartBot:
-            clear_import_cache()
-            continue
-        except SystemExit as exit_signal:
-            # 重新抛出而非 break：run_bot() 跑在守护进程自身而非子进程，其 sys.exit(code) 若在此
-            # 被吞掉，进程会以 0 退出，把「配置冲突中止」报成正常结束，守护工具因而不会告警。
-            raise exit_signal
-        except KeyboardInterrupt:
-            break
+    from contextlib import nullcontext
+
+    from akaribot.core.utils.process_control import listen_for_windows_stop
+
+    stop_listener = listen_for_windows_stop() if sys.platform == "win32" else nullcontext()
+    with stop_listener:
+        _write_lock_record(_lock_file)
+        while True:
+            try:
+                asyncio.run(main_async())
+            except RestartBot:
+                clear_import_cache()
+                continue
+            except SystemExit as exit_signal:
+                # 配置冲突等守护进程错误须保留退出码，供管理器判断启动结果。
+                raise exit_signal
+            except KeyboardInterrupt:
+                break
 
 
 if __name__ == "__main__":

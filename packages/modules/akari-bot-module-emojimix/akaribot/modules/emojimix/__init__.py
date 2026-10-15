@@ -2,6 +2,7 @@ from pathlib import Path
 
 import orjson
 
+from akaribot.core.api import platform_name_of
 from akaribot.core.api import Bot, MessageChain, Image, I18NContext, Plain, module, Logger, chunk_list, Random
 
 data_path = Path(__file__).parent / "assets" / "emoji_data.json"
@@ -176,7 +177,7 @@ async def _(msg: Bot.MessageSession, emoji: str | None = None):
     if emoji:
         if supported_emojis:
             send_msgs = MessageChain.assign(I18NContext("emojimix.message.combine_supported", emoji=emoji))
-            if msg.session_info.client_name == "Discord":
+            if platform_name_of(msg.session_info) == "Discord":
                 send_msgs += MessageChain.assign(
                     [Plain("".join(supported_emojis[i : i + 200])) for i in range(0, len(supported_emojis), 200)]
                 )
@@ -188,7 +189,7 @@ async def _(msg: Bot.MessageSession, emoji: str | None = None):
     else:
         send_msgs = MessageChain.assign(I18NContext("emojimix.message.all_supported"))
         if supported_emojis:
-            if msg.session_info.client_name == "Discord":
+            if platform_name_of(msg.session_info) == "Discord":
                 send_msgs += MessageChain.assign([Plain("".join(chunk)) for chunk in chunk_list(supported_emojis, 200)])
             else:
                 send_msgs.append(Plain("".join(supported_emojis)))

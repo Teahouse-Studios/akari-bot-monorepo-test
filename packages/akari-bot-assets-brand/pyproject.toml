@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-assets-brand"
 version = "0.1.0"
+readme = "README.md"
 description = "AkariBot 品牌资源包：角色立绘、标志、制作人员名单"
 requires-python = ">=3.12,<4.0"
 # 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时须原样携带
@@ -16,3 +17,8 @@ dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

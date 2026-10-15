@@ -92,7 +92,7 @@ def check_metadata(package: Path) -> None:
     manifest = tomllib.loads((package / "akaribot/adapters" / stem / "manifest.toml").read_text(encoding="utf-8"))
     report("manifest 非空", bool(manifest), str(sorted(manifest)))
     report("manifest 声明 schema", manifest.get("schema") == 1, str(manifest.get("schema")))
-    report("manifest 声明 requires_core_api", manifest.get("requires_core_api") == ">=1")
+    report("manifest 声明 requires_core_api", manifest.get("requires_core_api") == ">=1,<2")
     report("manifest 声明 locales", manifest.get("locales") == "locales")
 
 

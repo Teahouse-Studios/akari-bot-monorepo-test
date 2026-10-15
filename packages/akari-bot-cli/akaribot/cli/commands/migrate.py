@@ -10,10 +10,13 @@ import json
 import shutil
 import sqlite3
 import tomllib
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated, Any, Mapping
 
+import tomlkit
 import typer
 from rich.markdown import Markdown
 from rich.table import Table
@@ -32,6 +35,7 @@ from akaribot.cli.instance import (
     explain_process_failure,
     extract_json,
     fail,
+    is_windows,
     now_iso,
     ok,
     step,
@@ -57,6 +61,7 @@ ASSET_MOVES = (
     ("assets/union_merge_logs", "data/union_merge_logs"),
     ("assets/bad_words", "data/filter_words"),
     ("assets/retired", "data/retired"),
+    ("assets/config_store_bak", "data/config_store_bak"),
     ("assets/url_audit/allowlist/user.txt", "data/url_audit/allowlist/user.txt"),
     ("assets/url_audit/blocklist/user.txt", "data/url_audit/blocklist/user.txt"),
 )
@@ -68,7 +73,8 @@ class LegacyProject:
 
     :param root: 旧项目根目录。
     :param config_files: ``config/*.toml``。
-    :param database_files: ``database/*.db`` 及其 ``-wal`` / ``-shm``。
+    :param database_files: SQLite 主库文件；快照同时包含已提交的 WAL 数据。
+    :param database_file: 配置指定的主数据库文件。
     :param module_dirs: ``modules/`` 下的模块目录名。
     :param enabled_modules: 旧库 ``module_status`` 里 ``load = 1`` 的模块名。
     :param module_status_readable: 旧库是否至少有一个读成功；为假时「没启用任何模块」不可信。
@@ -81,6 +87,7 @@ class LegacyProject:
     root: Path
     config_files: tuple[Path, ...] = ()
     database_files: tuple[Path, ...] = ()
+    database_file: Path | None = None
     module_dirs: tuple[str, ...] = ()
     enabled_modules: tuple[str, ...] = ()
     module_status_readable: bool = False
@@ -153,7 +160,7 @@ def _legacy_key(name: str) -> str:
     return name.strip().lower().replace("-", "_")
 
 
-def _inspect(root: Path) -> LegacyProject:
+def _inspect(root: Path, *, dry_run: bool = False) -> LegacyProject:
     if not root.exists():
         raise CliError(i18n.t("cli.migrate.error.project_missing", path=root))
     if not root.is_dir():
@@ -170,14 +177,27 @@ def _inspect(root: Path) -> LegacyProject:
             )
         )
 
+    _require_stopped(root)
+    with _source_lock(root, required=not dry_run):
+        return _inspect_stopped(root)
+
+
+def _inspect_stopped(root: Path) -> LegacyProject:
     library = _read_config_facts(root)
+    if library.failures:
+        raise CliError(i18n.t("cli.migrate.error.config_unreadable", errors="；".join(library.failures)))
+    primary = _sqlite_database_file(root, library.db_path)
     database_dir = root / OLD_DATABASE_DIR
-    database_files = tuple(sorted(path for path in database_dir.glob("*.db*") if path.is_file()))
+    files = {path.resolve() for path in database_dir.glob("*.db") if path.is_file()}
+    if primary.is_file():
+        files.add(primary)
+    database_files = tuple(sorted(files))
     enabled_modules, status_readable = _enabled_modules(database_files)
     return LegacyProject(
         root=root,
         config_files=library.config_files,
         database_files=database_files,
+        database_file=primary,
         module_dirs=_module_dirs(root / OLD_MODULES_DIR),
         enabled_modules=enabled_modules,
         module_status_readable=status_readable,
@@ -201,16 +221,19 @@ def _read_config_facts(root: Path) -> _ConfigFacts:
     config_files = tuple(sorted(path for path in (root / OLD_CONFIG_DIR).glob("*.toml") if path.is_file()))
     tables: dict[str, Mapping[str, Any]] = {}
     failures: list[str] = []
+    main: Mapping[str, Any] = {}
     for path in config_files:
         try:
             data = tomllib.loads(path.read_text(encoding="utf-8"))
         except (OSError, tomllib.TOMLDecodeError) as exc:
             failures.append(f"{path.relative_to(root)}：{exc}")
             continue
+        if path.name == "config.toml":
+            main = data
         for table, value in data.items():
             if isinstance(value, Mapping):
                 tables[table] = value
-    core = tables.get("config") or {}
+    secret = main.get("secret") if isinstance(main.get("secret"), Mapping) else {}
     adapters: list[str] = []
     for table, value in tables.items():
         if not table.startswith("bot_"):
@@ -222,10 +245,57 @@ def _read_config_facts(root: Path) -> _ConfigFacts:
     return _ConfigFacts(
         config_files=config_files,
         adapters=tuple(sorted(adapters)),
-        locale=str(core.get("default_locale") or DEFAULT_LOCALE),
-        db_path=str(core.get("db_path") or ""),
+        locale=str(main.get("default_locale") or DEFAULT_LOCALE),
+        db_path=str(secret.get("db_path") or ""),
         failures=tuple(failures),
     )
+
+
+def _require_stopped(root: Path) -> None:
+    if Instance.detached(root).is_running():
+        raise CliError(i18n.t("cli.migrate.error.running", path=root))
+
+
+@contextmanager
+def _source_lock(root: Path, *, required: bool = True):
+    path = root / ".bot.lock"
+    if not path.is_file():
+        if required:
+            raise CliError(i18n.t("cli.migrate.error.source_lock_missing", path=path))
+        _require_stopped(root)
+        yield
+        return
+    with path.open("rb+") as handle:
+        try:
+            if is_windows():
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise CliError(i18n.t("cli.migrate.error.running", path=root)) from exc
+        try:
+            yield
+        finally:
+            if is_windows():
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _sqlite_database_file(root: Path, link: str) -> Path:
+    value = link or "sqlite://database/save.db"
+    scheme, separator, address = value.partition("://")
+    if not separator or scheme.split("+", 1)[0] != "sqlite":
+        raise CliError(i18n.t("cli.migrate.error.external_database"))
+    filename = address.partition("?")[0]
+    if not filename or filename == ":memory:":
+        raise CliError(i18n.t("cli.migrate.error.memory_database"))
+    path = Path(filename).expanduser()
+    return (path if path.is_absolute() else root / path).resolve()
 
 
 def _module_dirs(modules_root: Path) -> tuple[str, ...]:
@@ -246,16 +316,27 @@ def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...],
     names: list[str] = []
     readable = False
     for path in database_files:
-        if not path.name.endswith(".db"):
-            continue
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with _read_database_copy(path) as conn:
                 rows = conn.execute("SELECT module_name FROM module_status WHERE load = 1").fetchall()
-        except sqlite3.Error:
+        except (OSError, sqlite3.Error):
             continue
         readable = True
         names.extend(str(row[0]) for row in rows if row and row[0])
     return tuple(dict.fromkeys(names)), readable
+
+
+@contextmanager
+def _read_database_copy(path: Path):
+    # SQLite 的只读 WAL 连接仍可改写共享内存文件，故读取使用停机源库的临时副本。
+    with TemporaryDirectory(prefix="akari-legacy-db-") as temporary:
+        copied = Path(temporary) / path.name
+        shutil.copy2(path, copied)
+        wal = path.with_name(path.name + "-wal")
+        if wal.is_file():
+            shutil.copy2(wal, copied.with_name(copied.name + "-wal"))
+        with sqlite3.connect(f"{copied.as_uri()}?mode=ro", uri=True) as conn:
+            yield conn
 
 
 def _target_root(project_root: Path, instance: Path | None) -> Path:
@@ -354,6 +435,7 @@ def _copy_file(
     rel: str,
     compare: bool = True,
 ) -> None:
+    _require_plain_target(target)
     if target.is_file():
         if compare and not force and target.read_bytes() == source.read_bytes():
             tally.unchanged.append(rel)
@@ -365,8 +447,22 @@ def _copy_file(
         tally.copied.append(rel)
         return
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
+    temporary = target.with_name(target.name + ".migration.tmp")
+    _require_plain_target(temporary)
+    temporary.unlink(missing_ok=True)
+    try:
+        shutil.copy2(source, temporary)
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
     tally.copied.append(rel)
+
+
+def _require_plain_target(path: Path) -> None:
+    if any(parent.is_symlink() for parent in (path, *path.parents)):
+        raise CliError(i18n.t("cli.migrate.error.symlink_target", path=path))
+    if path.exists() and not path.is_file():
+        raise CliError(i18n.t("cli.migrate.error.target_not_file", path=path))
 
 
 def _copy_tree(source: Path, target: Path, *, force: bool, dry_run: bool, tally: CopyTally, rel: str) -> None:
@@ -384,7 +480,97 @@ def _copy_tree(source: Path, target: Path, *, force: bool, dry_run: bool, tally:
         )
 
 
+def _database_target(legacy: LegacyProject, instance: Instance, source: Path) -> Path:
+    directory = (legacy.root / OLD_DATABASE_DIR).resolve()
+    relative = source.relative_to(directory) if source.is_relative_to(directory) else Path("external") / source.name
+    target = instance.root / OLD_DATABASE_DIR / relative
+    _require_plain_target(target)
+    same_file = target.exists() and source.exists() and target.samefile(source)
+    if not target.resolve().is_relative_to(instance.root) or target.resolve() == source.resolve() or same_file:
+        raise CliError(i18n.t("cli.migrate.error.database_target", path=target))
+    return target
+
+
+def _snapshot_database(source: Path, target: Path, *, force: bool, dry_run: bool, tally: CopyTally, rel: str) -> None:
+    if target.exists() and not force:
+        tally.kept.append(rel)
+        return
+    if dry_run:
+        tally.copied.append(rel)
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + ".migration.tmp")
+    temporary.unlink(missing_ok=True)
+    try:
+        with _read_database_copy(source) as origin:
+            with sqlite3.connect(temporary) as destination:
+                origin.backup(destination)
+        for suffix in ("-wal", "-shm"):
+            target.with_name(target.name + suffix).unlink(missing_ok=True)
+        temporary.replace(target)
+    except (OSError, sqlite3.Error) as exc:
+        raise CliError(i18n.t("cli.migrate.error.database_snapshot", path=source, error=exc)) from exc
+    finally:
+        temporary.unlink(missing_ok=True)
+    tally.copied.append(rel)
+
+
+def _check_existing_database(legacy: LegacyProject, instance: Instance, *, force: bool) -> bool:
+    path = instance.config_dir / "config.toml"
+    _require_plain_target(path)
+    if force or not path.is_file():
+        return True
+    try:
+        document = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise CliError(i18n.t("cli.migrate.error.target_config_invalid", path=path, error=exc)) from exc
+    secret = document.get("secret") or {}
+    if not isinstance(secret, Mapping):
+        raise CliError(i18n.t("cli.migrate.error.database_conflict", path=path, expected="[secret]"))
+    target = _sqlite_database_file(instance.root, str(secret.get("db_path") or ""))
+    alias = target.exists() and any(source.exists() and target.samefile(source) for source in legacy.database_files)
+    if not target.is_relative_to(instance.root) or target in legacy.database_files or alias:
+        raise CliError(i18n.t("cli.migrate.error.database_target", path=target))
+    source = legacy.database_file or _sqlite_database_file(legacy.root, legacy.db_path)
+    expected = _database_target(legacy, instance, source)
+    if target != expected:
+        raise CliError(i18n.t("cli.migrate.error.database_conflict", path=target, expected=expected))
+    return False
+
+
+def _bind_database(legacy: LegacyProject, instance: Instance, *, dry_run: bool, required: bool) -> None:
+    source = legacy.database_file or _sqlite_database_file(legacy.root, legacy.db_path)
+    target = _database_target(legacy, instance, source)
+    if dry_run or not required:
+        return
+    path = instance.config_dir / "config.toml"
+    document = tomlkit.parse(path.read_text(encoding="utf-8"))
+    if "secret" not in document:
+        document["secret"] = tomlkit.table()
+    query = legacy.db_path.partition("?")[2]
+    document["secret"]["db_path"] = f"sqlite://{target.relative_to(instance.root).as_posix()}" + (
+        f"?{query}" if query else ""
+    )
+    temporary = path.with_name(path.name + ".migration.tmp")
+    _require_plain_target(temporary)
+    temporary.unlink(missing_ok=True)
+    temporary.write_text(tomlkit.dumps(document), encoding="utf-8")
+    temporary.replace(path)
+
+
 def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry_run: bool, log: MigrationLog) -> None:
+    with _source_lock(legacy.root, required=not dry_run):
+        _copy_locked_payload(legacy, instance, force=force, dry_run=dry_run, log=log)
+
+
+def _copy_locked_payload(
+    legacy: LegacyProject, instance: Instance, *, force: bool, dry_run: bool, log: MigrationLog
+) -> None:
+    _sqlite_database_file(legacy.root, legacy.db_path)
+    facts = _read_config_facts(legacy.root)
+    if facts.failures or facts.db_path != legacy.db_path or facts.locale != legacy.locale:
+        raise CliError(i18n.t("cli.migrate.error.source_changed"))
+    bind_required = _check_existing_database(legacy, instance, force=force)
     config = CopyTally(i18n.t("cli.migrate.tally.config"))
     log.tallies.append(config)
     for path in legacy.config_files:
@@ -400,18 +586,22 @@ def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry
     database = CopyTally(i18n.t("cli.migrate.tally.database"))
     log.tallies.append(database)
     for path in legacy.database_files:
-        _copy_file(
+        target = _database_target(legacy, instance, path)
+        _snapshot_database(
             path,
-            instance.root / OLD_DATABASE_DIR / path.name,
+            target,
             force=force,
             dry_run=dry_run,
             tally=database,
-            rel=f"database/{path.name}",
-            compare=False,
+            rel=target.relative_to(instance.root).as_posix(),
         )
+    _bind_database(legacy, instance, dry_run=dry_run, required=bind_required)
 
     runtime = CopyTally(i18n.t("cli.migrate.tally.runtime"))
     log.tallies.append(runtime)
+    data = legacy.root / "data"
+    if data.is_dir():
+        _copy_tree(data, instance.root / "data", force=force, dry_run=dry_run, tally=runtime, rel="data")
     for source_rel, target_rel in ASSET_MOVES:
         source = legacy.root / source_rel
         if not source.exists():
@@ -419,9 +609,9 @@ def _copy_payload(legacy: LegacyProject, instance: Instance, *, force: bool, dry
             continue
         target = instance.root / target_rel
         if source.is_dir():
-            _copy_tree(source, target, force=force, dry_run=dry_run, tally=runtime, rel=target_rel)
+            _copy_tree(source, target, force=False, dry_run=dry_run, tally=runtime, rel=target_rel)
         else:
-            _copy_file(source, target, force=force, dry_run=dry_run, tally=runtime, rel=target_rel)
+            _copy_file(source, target, force=False, dry_run=dry_run, tally=runtime, rel=target_rel)
 
     for name in legacy.module_dirs:
         source = legacy.root / OLD_MODULES_DIR / name / "data"
@@ -602,8 +792,7 @@ def _render_report(
         manual.append(i18n.t("cli.migrate.report.manual_config_failures", items=items))
     if log.database_note:
         manual.append(log.database_note)
-    # 按状态字段判断：skipped 才进人工清单（与 HEAD 的 startswith 行为一致，失败态不进）。
-    if log.db_status == "skipped":
+    if log.db_status in ("skipped", "failed"):
         manual.append(i18n.t("cli.migrate.report.manual_db_result", result=log.db_result))
     if manual:
         lines += [i18n.t("cli.migrate.report.manual_item", item=item) for item in manual]
@@ -659,7 +848,7 @@ def legacy(
     root = project.expanduser().resolve()
     step(1, 6, i18n.t("cli.migrate.step.inspect"))
     try:
-        legacy_project = _inspect(root)
+        legacy_project = _inspect(root, dry_run=dry_run)
     except CliError as exc:
         fail(str(exc))
     ok(
@@ -718,7 +907,10 @@ def legacy(
             fail(str(exc))
 
     step(4, 6, i18n.t("cli.migrate.step.copy"))
-    _copy_payload(legacy_project, instance, force=force, dry_run=dry_run, log=log)
+    try:
+        _copy_payload(legacy_project, instance, force=force, dry_run=dry_run, log=log)
+    except (CliError, OSError, tomlkit.exceptions.ParseError) as exc:
+        fail(str(exc))
     for tally in log.tallies:
         console.print(
             i18n.t(
@@ -761,6 +953,10 @@ def legacy(
     if dry_run:
         log.db_result = i18n.t("cli.migrate.db.not_run_dry_run")
         log.db_status = "none"
+    elif skip_install:
+        log.db_result = i18n.t("cli.migrate.db.not_run_skip_install")
+        log.db_status = "skipped"
+        _scan_placeholders(instance, log)
     else:
         _convert_database(instance, legacy_project, log=log)
         _scan_placeholders(instance, log)
@@ -772,6 +968,7 @@ def legacy(
         console.print(i18n.t("cli.migrate.dry_run_no_write"))
         return
     report_path = instance.root / "migration-report.md"
+    _require_plain_target(report_path)
     report_path.write_text(report, encoding="utf-8")
     ok(i18n.t("cli.migrate.report_written", path=report_path))
     if log.install_failed or plan.unmapped:

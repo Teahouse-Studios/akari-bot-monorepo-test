@@ -137,6 +137,8 @@ def _stop(target, *, as_json: bool, timeout: float) -> None:
         ok(outcome.message)
     else:
         fail(outcome.message)
+    if not outcome.ok:
+        raise typer.Exit(1)
     if outcome.ok:
         _remember_desired(target, STATE_STOPPED)
 

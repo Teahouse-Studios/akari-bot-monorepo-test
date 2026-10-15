@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-html2text"
 version = "0.1.0"
+readme = "README.md"
 description = "AkariBot 维护的 html2text 分支：HTML 转 Markdown 文本"
 requires-python = ">=3.12,<4.0"
 # 本包是 GPL-3.0 的上游分支，与本仓库主体的 AGPL-3.0 不同，分发时须原样携带 LICENCE。
@@ -15,3 +16,8 @@ dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["html2text"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

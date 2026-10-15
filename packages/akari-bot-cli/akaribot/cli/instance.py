@@ -199,7 +199,7 @@ def system_python() -> Path:
         raise CliError(i18n.t("cli.instance.python_env_missing", env=PYTHON_ENV, path=candidate))
     # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致；冻结后 sys.executable 指向
     # CLI 二进制自身，才需要回退到系统搜索。回退时优先带版本号的名字，避免拿到过旧的 python3。
-    if not (getattr(sys, "frozen", False) or hasattr(sys, "__compiled__")):
+    if not (getattr(sys, "frozen", False) or "__compiled__" in globals()):
         return Path(sys.executable)
     for name in ("python3.13", "python3.12", "python3", "python"):
         found = shutil.which(name)
@@ -785,6 +785,8 @@ class Instance:
         """
         result = dict(os.environ)
         result[INSTANCE_DIR_ENV] = str(self.root)
+        result["AKARI_CONFIG_PATH"] = str(self.config_dir)
+        result.pop("AKARI_CONFIG_READONLY", None)
         result["PYTHONIOENCODING"] = result.get("PYTHONIOENCODING", "utf-8")
         for key, value in env.items():
             result[key] = str(value)

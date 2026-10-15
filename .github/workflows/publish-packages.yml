@@ -1,8 +1,5 @@
 name: Publish package
 
-# T6.3：按包发布到 PyPI。tag 规则 `<分发名>-v<版本>`，例如
-# `akari-bot-module-wiki-v0.2.0`、`akari-bot-core-v0.3.0`。
-# 与整仓发布（publish-release.yml 的 `v*`）互不干扰：本工作流只认带 `-v` 的 tag。
 on:
   push:
     tags:
@@ -10,185 +7,247 @@ on:
   workflow_dispatch:
     inputs:
       dist:
-        description: 要发布的分发名，如 akari-bot-module-wiki
+        description: 分发名，如 akari-bot-module-wiki
         required: true
+      version:
+        description: 发布版本；registry-only 必填，publish 留空时取 pyproject 版本
+        required: false
       confirm:
-        description: 输入 publish 发布并重建索引；输入 registry-only 只重建索引（修复「包已发布、索引仍旧」）
+        description: publish 上传产物；registry-only 核验 PyPI 并修复发布记录
+        type: choice
+        options: [publish, registry-only]
         required: true
+      artifact_run_id:
+        description: 补传时填写原始 release-files 与 release-manifest 所在 run ID
+        required: false
+      artifact_sha:
+        description: 补传时填写原始 run 的完整 head SHA
+        required: false
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
+
+concurrency:
+  group: package-publish-${{ github.event_name == 'push' && github.ref_name || inputs.dist }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.event_name == 'push' || inputs.confirm == 'publish'
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ github.event_name == 'push' && github.ref_name || inputs.dist }}
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
     timeout-minutes: 30
     outputs:
       dist: ${{ steps.resolve.outputs.dist }}
       version: ${{ steps.resolve.outputs.version }}
+      upload: ${{ steps.resolve.outputs.upload }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
-      - name: Resolve dist and version from tag
+      - name: Resolve and validate release
         id: resolve
-        shell: bash
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_DIST: ${{ inputs.dist }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_MODE: ${{ inputs.confirm }}
+          RELEASE_ARTIFACT_RUN: ${{ inputs.artifact_run_id }}
+          RELEASE_ARTIFACT_SHA: ${{ inputs.artifact_sha }}
         run: |
-          # tag 形如 <分发名>-v<版本>；分发名本身不含 "-v"，故按最后一个 "-v" 切分。
-          if [ "${{ github.event_name }}" = "push" ]; then
-            REF="${{ github.ref_name }}"
-            DIST="${REF%-v*}"
-            VERSION="${REF##*-v}"
-          else
-            DIST="${{ inputs.dist }}"
-            VERSION=""
-          fi
-          echo "dist=$DIST" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "发布目标：$DIST $VERSION"
-
-      - name: Verify tag matches package version
-        shell: bash
-        run: |
-          # tag 里的版本必须与 pyproject 的 version 一致，否则发布出的 wheel 与 tag 对不上。
-          uv run python tools/check_versions.py --help >/dev/null
-          uv run python - "${{ steps.resolve.outputs.dist }}" "${{ steps.resolve.outputs.version }}" <<'PY'
-          import sys, tomllib
+          python - <<'PY'
+          import os, re, tomllib
           from pathlib import Path
-          dist, version = sys.argv[1], sys.argv[2]
-          for pyproject in Path("packages").glob("**/pyproject.toml"):
-              data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-              if data.get("project", {}).get("name") != dist:
-                  continue
-              actual = str(data["project"].get("version", ""))
-              if version and version != actual:
-                  raise SystemExit(f"tag 版本 {version} 与 {dist} 的 pyproject 版本 {actual} 不一致")
-              print(f"{dist} 版本 {actual} 校验通过")
-              break
+          upload = os.environ["RELEASE_EVENT"] == "push" or os.environ["RELEASE_MODE"] == "publish"
+          if os.environ["RELEASE_EVENT"] == "push":
+              dist, version = os.environ["RELEASE_REF"].rsplit("-v", 1)
           else:
-              raise SystemExit(f"workspace 里找不到分发 {dist}")
-          PY
-
-      - name: Build wheel and sdist
-        shell: bash
-        run: |
-          uv build --package "${{ steps.resolve.outputs.dist }}" --out-dir dist
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          # 已发布过的版本会失败；这是期望行为——同版本不得重复发布。
-
-  registry:
-    # 索引必须跟着发布走：publish 失败说明什么都没发出去，此时不该动 gh-pages；
-    # 只在 registry-only 重跑时 publish 被跳过，此时索引仍要重建以修复上一次的部分成功。
-    needs: publish
-    if: always() && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          # 索引必须由触发发布的那个提交生成：写死分支名时，分支不存在会让 job 在 checkout
-          # 阶段就失败，分支落后于 tag 时会漏掉本次版本。push 用触发 ref（tag），
-          # 手动重跑用触发时选定的提交。
-          ref: ${{ github.event_name == 'push' && github.ref || github.sha }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Sync workspace
-        shell: bash
-        run: |
-          uv sync --locked --all-extras --dev
-
-      - name: Resolve dist and version
-        id: resolve
-        shell: bash
-        run: |
-          # registry-only 重跑时 publish 被跳过、它的 outputs 为空，故此处自行解析；
-          # 版本一律以 workspace 为准，与 publish job 的 tag 校验互为印证。
-          if [ "${{ github.event_name }}" = "push" ]; then
-            REF="${{ github.ref_name }}"
-            DIST="${REF%-v*}"
-            TAG_VERSION="${REF##*-v}"
-          else
-            DIST="${{ inputs.dist }}"
-            TAG_VERSION=""
-          fi
-          VERSION="$(uv run python - "$DIST" <<'PY'
-          import sys, tomllib
-          from pathlib import Path
-          dist = sys.argv[1]
-          for pyproject in Path("packages").glob("**/pyproject.toml"):
-              data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-              if data.get("project", {}).get("name") == dist:
-                  print(str(data["project"].get("version", "")))
+              dist, version = os.environ["RELEASE_DIST"], os.environ["RELEASE_VERSION"]
+              if os.environ["RELEASE_MODE"] not in ("publish", "registry-only"):
+                  raise SystemExit("无效的发布模式")
+          if not re.fullmatch(r"akari-bot-[a-z0-9_-]+", dist):
+              raise SystemExit("无效的分发名")
+          if (not upload or os.environ["RELEASE_ARTIFACT_RUN"]) and not version:
+              raise SystemExit("registry-only 必须指定已发布版本")
+          for path in Path("packages").glob("**/pyproject.toml"):
+              project = tomllib.loads(path.read_text(encoding="utf-8")).get("project", {})
+              if project.get("name") == dist:
+                  actual = project["version"]
+                  if upload and not os.environ["RELEASE_ARTIFACT_RUN"] and version and version != actual:
+                      raise SystemExit("tag 或输入版本与 pyproject 不符")
+                  version = version or actual
                   break
           else:
-              raise SystemExit(f"workspace 里找不到分发 {dist}")
+              raise SystemExit("工作区没有此分发")
+          if not re.fullmatch(r"[0-9][a-zA-Z0-9.!+-]*", version):
+              raise SystemExit("无效的版本")
+          run, sha = os.environ["RELEASE_ARTIFACT_RUN"], os.environ["RELEASE_ARTIFACT_SHA"]
+          if bool(run) != bool(sha) or (run and (not run.isdigit() or not re.fullmatch(r"[0-9a-f]{40}", sha))):
+              raise SystemExit("补传必须提供有效原始 run ID 与完整 SHA")
+          if run and not upload:
+              raise SystemExit("原始构建产物仅用于 publish 补传")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"dist={dist}\nversion={version}\nupload={str(upload).lower()}\n")
           PY
-          )"
-          if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" != "$VERSION" ]; then
-            echo "tag 版本 $TAG_VERSION 与 workspace 里的 $DIST 版本 $VERSION 不一致" >&2
-            exit 1
+
+      - name: Validate recovery provenance
+        if: inputs.artifact_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL_RUN: ${{ inputs.artifact_run_id }}
+          ORIGINAL_SHA: ${{ inputs.artifact_sha }}
+          RELEASE_DIST: ${{ steps.resolve.outputs.dist }}
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ORIGINAL_RUN" > "$RUNNER_TEMP/original-run.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ["RUNNER_TEMP"]) / "original-run.json").read_text())
+          if run["head_sha"] != os.environ["ORIGINAL_SHA"] or run["event"] != "push":
+              raise SystemExit("原始 run 的 SHA 或触发方式不符")
+          if run["head_branch"] != f'{os.environ["RELEASE_DIST"]}-v{os.environ["RELEASE_VERSION"]}':
+              raise SystemExit("原始 run 不属于指定发布 tag")
+          if run["path"] != ".github/workflows/publish-packages.yml":
+              raise SystemExit("原始 run 的 workflow 不符")
+          PY
+
+      - uses: actions/download-artifact@v4
+        if: inputs.artifact_run_id != ''
+        with:
+          name: release-files
+          path: dist/
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: inputs.artifact_run_id != ''
+        with:
+          name: release-manifest
+          path: .
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Build wheel and sdist
+        if: steps.resolve.outputs.upload == 'true' && inputs.artifact_run_id == ''
+        env:
+          RELEASE_DIST: ${{ steps.resolve.outputs.dist }}
+        run: uv build --package "$RELEASE_DIST" --out-dir dist
+
+      - name: Record build hashes
+        if: steps.resolve.outputs.upload == 'true' && inputs.artifact_run_id == ''
+        env:
+          RELEASE_DIST: ${{ steps.resolve.outputs.dist }}
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          uv run --no-project --with packaging python tools/publish_registry.py manifest \
+            --dist "$RELEASE_DIST" --version "$RELEASE_VERSION" --output release-manifest.json
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolve.outputs.upload == 'true'
+        with:
+          name: release-manifest
+          path: release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolve.outputs.upload == 'true'
+        with:
+          name: release-files
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Select missing PyPI files
+        if: steps.resolve.outputs.upload == 'true'
+        id: missing
+        env:
+          RELEASE_DIST: ${{ steps.resolve.outputs.dist }}
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          uv run --no-project --with packaging python tools/publish_registry.py prepare-upload \
+            --dist "$RELEASE_DIST" --version "$RELEASE_VERSION" \
+            --manifest release-manifest.json --output upload-dist
+          COUNT=$(python -c 'from pathlib import Path; print(len(list(Path("upload-dist").iterdir())))')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to PyPI
+        if: steps.resolve.outputs.upload == 'true' && steps.missing.outputs.count != '0'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: upload-dist/
+
+  registry:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        if: needs.publish.outputs.upload == 'true'
+        with:
+          name: release-manifest
+          path: ${{ runner.temp }}/release-manifest
+
+      - name: Verify published files
+        env:
+          RELEASE_DIST: ${{ needs.publish.outputs.dist }}
+          RELEASE_VERSION: ${{ needs.publish.outputs.version }}
+          RELEASE_UPLOAD: ${{ needs.publish.outputs.upload }}
+        run: |
+          MANIFEST_ARGS=()
+          if [ "$RELEASE_UPLOAD" = "true" ]; then
+            MANIFEST_ARGS=(--manifest "$RUNNER_TEMP/release-manifest/release-manifest.json")
           fi
-          echo "dist=$DIST" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "索引目标：$DIST $VERSION"
+          uv run --no-project --with packaging python tools/publish_registry.py verify \
+            --dist "$RELEASE_DIST" --version "$RELEASE_VERSION" \
+            --output "$RUNNER_TEMP/verified-release.json" "${MANIFEST_ARGS[@]}"
 
-      - name: Build registry.json
-        shell: bash
+      - name: Merge and push published state
+        env:
+          RELEASE_DIST: ${{ needs.publish.outputs.dist }}
+          RELEASE_VERSION: ${{ needs.publish.outputs.version }}
         run: |
-          # 索引由 workspace 的 pyproject 与 manifest 静态生成；输出到 checkout 之外，
-          # 否则后面切到 gh-pages 分支时这份文件会被工作树覆盖，push 上去的就不是本次产物。
-          uv run python tools/build_registry.py --output "$RUNNER_TEMP/registry.json"
-
-      - name: Verify registry carries this release
-        shell: bash
-        run: |
-          uv run python tools/verify_registry_release.py \
-            --registry "$RUNNER_TEMP/registry.json" \
-            --dist "${{ steps.resolve.outputs.dist }}" \
-            --version "${{ steps.resolve.outputs.version }}"
-
-      - name: Push registry.json to gh-pages
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages --depth=1 || true
-          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
-            git checkout -B gh-pages origin/gh-pages
-          else
-            git checkout --orphan gh-pages
-            git rm -rf . >/dev/null
-          fi
-          cp "$RUNNER_TEMP/registry.json" registry.json
-          git add registry.json
-          git commit -m "chore(registry): 由 ${{ steps.resolve.outputs.dist }} ${{ steps.resolve.outputs.version }} 重新生成" || echo "无变更"
-          git push origin gh-pages
+          git worktree add --detach "$RUNNER_TEMP/published" HEAD
+          git -C "$RUNNER_TEMP/published" config user.name "github-actions[bot]"
+          git -C "$RUNNER_TEMP/published" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for ATTEMPT in 1 2 3 4 5; do
+            PAGES_REF=$(git ls-remote --heads origin gh-pages)
+            if [ -n "$PAGES_REF" ]; then
+              git fetch origin gh-pages --depth=1
+              git -C "$RUNNER_TEMP/published" reset --hard origin/gh-pages
+            elif [ "$ATTEMPT" = "1" ]; then
+              git -C "$RUNNER_TEMP/published" checkout --orphan "registry-$GITHUB_RUN_ID"
+              git -C "$RUNNER_TEMP/published" rm -rf .
+            fi
+            uv run --no-project --with packaging python tools/publish_registry.py merge \
+              --dist "$RELEASE_DIST" --version "$RELEASE_VERSION" \
+              --record "$RUNNER_TEMP/verified-release.json" --output "$RUNNER_TEMP/published"
+            git -C "$RUNNER_TEMP/published" add releases.json registry.json registry-prerelease.json
+            if git -C "$RUNNER_TEMP/published" diff --cached --quiet; then
+              exit 0
+            fi
+            git -C "$RUNNER_TEMP/published" commit -m "更新发布索引：$RELEASE_DIST $RELEASE_VERSION"
+            if git -C "$RUNNER_TEMP/published" push origin HEAD:gh-pages; then
+              exit 0
+            fi
+          done
+          echo "索引写入失败；请以相同分发和版本运行 registry-only。" >&2
+          exit 1

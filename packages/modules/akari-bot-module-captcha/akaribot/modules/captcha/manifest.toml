@@ -1,6 +1,6 @@
 # akari-bot-module-captcha 的包清单。
 schema = 1
-requires_core_api = ">=1"
+requires_core_api = ">=1,<2"
 locales = "locales"
 # 本包 module() 注册的全部模块名。
 provides_modules = ["captcha", "token"]

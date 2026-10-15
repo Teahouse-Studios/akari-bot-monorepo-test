@@ -5,11 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-nintendo_err"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "OasisAkari" },
     { name = "kurisu" },
 ]
 description = "解析任天堂系列主机的报错码并给出原因。"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
@@ -22,3 +25,8 @@ nintendo_err = "akaribot.modules.nintendo_err"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

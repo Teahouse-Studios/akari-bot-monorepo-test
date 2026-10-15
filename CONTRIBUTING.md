@@ -191,7 +191,7 @@ akaribot module add -e .          # 在生成的包目录内执行；脚手架 -
 | 字段 | 用途 |
 | --- | --- |
 | `schema` | 清单版本，当前为 `1` |
-| `requires_core_api` | 兼容的 core 公共 API 区间，当前写 `">=1"` |
+| `requires_core_api` | 兼容的 core 公共 API 区间，当前写 `">=1,<2"` |
 | `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根的路径，没有的能力省略 |
 | `config_table` / `config_schema_version` | `config.py` 中 `on_module_config("<名>")` 登记的表名与配置版本 |
 | `provides_modules` | 本包 `module()` 注册的全部模块名 |
@@ -440,7 +440,7 @@ The scaffold writes `<--dir>/akari-bot-module-<name>/`, mirroring `packages/modu
 | Field | Purpose |
 | --- | --- |
 | `schema` | Manifest version, currently `1` |
-| `requires_core_api` | Compatible core public API range, currently `">=1"` |
+| `requires_core_api` | Compatible core public API range, currently `">=1,<2"` |
 | `locales` / `assets` / `migrations` / `config_migrations` | Directory paths relative to the package root; omitted when absent |
 | `config_table` / `config_schema_version` | Table registered by `on_module_config("<name>")` in `config.py`, and its config version |
 | `provides_modules` | Every module name registered by `module()` in this package |

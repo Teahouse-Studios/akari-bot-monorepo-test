@@ -5,20 +5,22 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-maimai"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "mai-bot" },
     { name = "OasisAkari" },
     { name = "DoroWolf" },
 ]
 description = "查询 Maimai 相关内容。"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     # best30 等成绩图的文字与符号用资源包里的 Noto Sans CJK 与 Symbols2（T3.3），缺它则出图失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "Pillow>=12.0.0,<13.0.0",
-    # langconv 上游停更，本仓库的修复版 fork 尚未发版，故暂用 git 直链；发布前须改为常规分发。
-    "langconv @ git+https://github.com/Teahouse-Studios/langconv.py.git",
+    "langconv==0.4.0",
     "orjson>=3.10.9,<4.0.0",
     "tortoise-orm>=1.1.2,<1.2.0",
 ]
@@ -29,6 +31,7 @@ maimai = "akaribot.modules.maimai"
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 
-# langconv 只有 git 直链；hatchling 默认拒绝 direct reference，发布前须替换为常规版本。
-[tool.hatch.metadata]
-allow-direct-references = true
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

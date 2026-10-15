@@ -134,7 +134,7 @@ def _test_manifest_defaults_when_missing():
         manifest = PackageRegistry._read_manifest("akaribot.modules.sample", Path(tmp))
     return (
         manifest.schema == 1
-        and manifest.requires_core_api == ">=1"
+        and manifest.requires_core_api == ">=1,<2"
         and manifest.locales == "locales"
         and manifest.assets is None
         and manifest.config_table is None

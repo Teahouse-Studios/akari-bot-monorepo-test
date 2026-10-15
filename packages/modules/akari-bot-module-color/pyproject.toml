@@ -5,10 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-color"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "Dianliang233" },
 ]
 description = "获取颜色信息。"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     # 取色卡的文字用资源包里的 Noto Sans CJK DemiLight（T3.3），缺它则卡片渲染失败。
@@ -25,3 +28,8 @@ color = "akaribot.modules.color"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

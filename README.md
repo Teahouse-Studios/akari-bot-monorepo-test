@@ -65,6 +65,24 @@ _多功能、跨平台、可自由扩展的异步聊天机器人助手_
 
 ### 自搭建
 
+机器人使用独立实例目录，CLI 管理实例虚拟环境、适配器、模块、配置和运行状态。
+需要 Python 3.12 或更高版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
+
+```sh
+pipx install akari-bot-cli
+akaribot init /opt/akaribot --adapter telegram
+cd /opt/akaribot
+akaribot module add wiki
+akaribot config schema --table bot_telegram
+akaribot doctor
+akaribot run
+```
+
+填写适配器凭据后再启用实例；`akaribot config set <字段> <值> --table <表名>` 按模板类型写入。
+CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安装包含品牌、表情和常规可选依赖，
+`init --minimal` 选择核心最小依赖。源码开发与发行包安装的工作区约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，
+旧部署的备份、预演和迁移见 [迁移指南](docs/migrating-to-packages.md)。
+
 你可以参考[此处](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）来尝试搭建。
 
 若遇到问题，可以通过 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues/new) 或其他方式咨询开发者。

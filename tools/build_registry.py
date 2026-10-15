@@ -53,7 +53,7 @@ CORE_NAME = canonicalize_name(CORE_DISTRIBUTION)
 # manifest 的 schema 与分发默认值，与 core.registry 的 PackageManifest、MANIFEST_SCHEMA 对齐。
 MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
-DEFAULT_REQUIRES_CORE_API = ">=1"
+DEFAULT_REQUIRES_CORE_API = ">=1,<2"
 DEFAULT_LOCALES_DIR = "locales"
 
 REGISTRY_SCHEMA = 1

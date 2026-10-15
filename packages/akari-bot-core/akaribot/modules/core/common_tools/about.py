@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from akaribot.core.utils.platform_scope import platform_name_of
 from akaribot.core.api import find_brand_asset
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.chain import MessageChain
@@ -71,7 +72,7 @@ def build_about_message(msg: Bot.MessageSession) -> MessageChain:
 
     if CoreConfig.repo_url:
         repository_label = locale.t("core.message.about.button.repository")
-        if support_markdown and msg.session_info.client_name == "QQBot":
+        if support_markdown and platform_name_of(msg.session_info) == "QQBot":
             result.append(Plain("\n"))
         result.append(Plain(f"{repository_label}：", disable_joke=True))
         result.append(
@@ -84,7 +85,7 @@ def build_about_message(msg: Bot.MessageSession) -> MessageChain:
     links = [
         ("core.message.about.button.issue", CoreConfig.issue_url),
     ]
-    if msg.session_info.client_name == "QQBot" and CoreConfig.qq_test_group_url:
+    if platform_name_of(msg.session_info) == "QQBot" and CoreConfig.qq_test_group_url:
         links.append(("core.message.about.button.qq_group", CoreConfig.qq_test_group_url))
     links.append(("core.message.about.button.donate", CoreConfig.donate_url))
     links = [(label_key, value) for label_key, value in links if value]

@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import math
 import re
 import sys
 from collections.abc import Mapping
@@ -21,6 +22,21 @@ _LOCALE_READY = False
 
 # 注释键前缀：与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
 COMMENT_KEY = "config.comments.{table}.{key}"
+
+
+class ConfigInputError(ValueError):
+    def __init__(self, field: str, *, unknown: bool = False):
+        self.field = field
+        self.unknown = unknown
+        super().__init__(field)
+
+
+def _base_table(table: str) -> tuple[str, bool]:
+    if table == "secret":
+        return "config", True
+    if table.endswith("_secret"):
+        return table.removesuffix("_secret"), True
+    return table, False
 
 
 def _entry_for_dist(dist: str):
@@ -37,7 +53,8 @@ def _entry_for_dist(dist: str):
 def _table_document(table: str) -> dict[str, Any]:
     from akaribot.core.config import CFGManager
 
-    document = CFGManager.values.get(table)
+    base, _ = _base_table(table)
+    document = CFGManager.values.get(base)
     if document is None:
         raise KeyError(table)
     return dict(document)
@@ -50,7 +67,11 @@ def _localized_comment(table: str, key: str, secret: bool) -> str | None:
     _connect_locale()
     locale_name = CFGManager.values.get("config", {}).get("default_locale") or "zh_cn"
     locale = Locale(locale_name)
-    candidates = [COMMENT_KEY.format(table=f"{table}_secret" if secret else table, key=key)]
+    table, _ = _base_table(table)
+    if table.startswith("bot_"):
+        table = table.partition("-")[0]
+    secret_table = "secret" if table == "config" else f"{table}_secret"
+    candidates = [COMMENT_KEY.format(table=secret_table if secret else table, key=key)]
     candidates.append(COMMENT_KEY.format(table=table, key=key))
     for candidate in candidates:
         text = locale.t(candidate, locale_failed_prompt=False)
@@ -76,7 +97,8 @@ def _connect_locale() -> None:
 def _table_values(table: str, document: Mapping[str, Any]) -> list[dict[str, Any]]:
     # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；占位判定是 schema 与
     # placeholders 共用的口径，只在这里出现一次。
-    plain = document.get(table) or {}
+    table, only_secret = _base_table(table)
+    plain = {} if only_secret else document.get(table) or {}
     secret_table = "secret" if table == "config" else f"{table}_secret"
     secret = document.get(secret_table) or {}
     values: list[dict[str, Any]] = []
@@ -95,7 +117,7 @@ def _table_values(table: str, document: Mapping[str, Any]) -> list[dict[str, Any
 
 
 def _schema(table: str) -> list[dict]:
-    # 类型取运行期值，``default`` 尽力从配置模板的声明里取，取不到时为 ``None``。
+    # 类型与默认值优先使用模板声明，未声明的项使用配置文件中的类型。
     document = _table_document(table)
     declared = _declared_defaults(table)
     items: list[dict] = []
@@ -160,22 +182,22 @@ def _placeholder_report(tables: str | None) -> dict[str, Any]:
 
 
 def _declared_defaults(table: str) -> dict[str, dict]:
-    # 模板声明经 ``@on_module_config`` 在类创建期落盘，字段元数据保存在类的
-    # ``__config_fields__``；此处只读该映射，不重新生成配置。
+    from akaribot.core.config import CFGManager
     from akaribot.core.registry import PackageRegistry
 
-    PackageRegistry.discover()
+    base, only_secret = _base_table(table)
     result: dict[str, dict] = {}
-    for entries in (PackageRegistry.modules(), PackageRegistry.adapters()):
-        for entry in entries.values():
-            declared_table = entry.manifest.config_table
-            # 实例表（bot_telegram-alt）由基表（bot_telegram）的模板派生，按前缀一并匹配。
-            if declared_table != table and not table.startswith(f"{declared_table}-"):
-                continue
-            try:
-                module = importlib.import_module(f"{entry.import_path}.config")
-            except Exception:  # noqa: BLE001 - 模板不可导入时降级为无默认值
-                continue
+    modules = ["akaribot.core.config.base"]
+    for entry in PackageRegistry.all().values():
+        declared_table = entry.manifest.config_table or f"{'bot' if entry.kind == 'adapter' else 'module'}_{entry.name}"
+        if declared_table == base or (entry.kind == "adapter" and base.startswith(f"{declared_table}-")):
+            if (entry.root / "config.py").is_file():
+                modules.append(f"{entry.import_path}.config")
+    previous_readonly = CFGManager.readonly
+    CFGManager.readonly = True
+    try:
+        for module_name in modules:
+            module = importlib.import_module(module_name)
             for obj in vars(module).values():
                 fields = getattr(obj, "__config_fields__", None)
                 if not isinstance(fields, dict):
@@ -183,40 +205,85 @@ def _declared_defaults(table: str) -> dict[str, dict]:
                 for name, meta in fields.items():
                     if not isinstance(meta, dict):
                         continue
-                    result.setdefault(name, {"default": meta.get("default"), "type": meta.get("cfg_type")})
+                    declared_table = meta.get("table_name") or "config"
+                    if declared_table != base and not (
+                        declared_table.startswith("bot_") and base.startswith(f"{declared_table}-")
+                    ):
+                        continue
+                    if only_secret and not meta.get("secret"):
+                        continue
+                    result.setdefault(
+                        name,
+                        {
+                            "default": meta.get("default"),
+                            "type": meta.get("cfg_type"),
+                            "secret": meta.get("secret"),
+                            "table_name": meta.get("table_name"),
+                        },
+                    )
+    finally:
+        CFGManager.readonly = previous_readonly
     return result
 
 
 def _coerce(table: str, key: str, value: str) -> Any:
     # 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``：文件里类型不对，读回虽是 ``true``
     # 但任何按布尔取用的代码都会拿到真值字符串。
-    cfg_type = _declared_defaults(table).get(key, {}).get("type")
+    meta = _declared_defaults(table).get(key, {})
+    cfg_type = meta.get("type")
+    if cfg_type is None:
+        existing = {item["key"]: item["value"] for item in _table_values(table, _table_document(table))}
+        if key not in existing:
+            raise ConfigInputError(f"{table}.{key}", unknown=True)
+        cfg_type = type(existing[key])
+    if isinstance(cfg_type, tuple):
+        choices = cfg_type
+    else:
+        choices = (cfg_type,)
+    for choice in choices:
+        try:
+            return _coerce_type(choice, value)
+        except (ValueError, TypeError):
+            continue
+    raise ConfigInputError(f"{table}.{key}")
+
+
+def _coerce_type(cfg_type: type, value: str) -> Any:
     if cfg_type is bool:
         lowered = value.strip().lower()
         if lowered in ("true", "1", "yes", "on"):
             return True
         if lowered in ("false", "0", "no", "off"):
             return False
-        return value
+        raise ValueError("Expected a boolean")
     if cfg_type is int:
-        try:
-            return int(value)
-        except ValueError:
-            return value
+        return int(value)
     if cfg_type is float:
-        try:
-            return float(value)
-        except ValueError:
-            return value
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("Expected a finite number")
+        return number
     if cfg_type is list:
+        if value.lstrip().startswith("["):
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                raise ValueError("Expected an array")
+            return parsed
         return [item.strip() for item in value.split(",") if item.strip()]
+    if cfg_type is dict:
+        parsed = json.loads(value)
+        if not isinstance(parsed, dict):
+            raise ValueError("Expected an object")
+        return parsed
     return value
 
 
 def _resolve_table(table: str) -> str:
     from akaribot.core.config import CFGManager
 
-    return CFGManager._resolve_table(table)
+    base, secret = _base_table(table.lower())
+    resolved = CFGManager._resolve_table(base, fallback=False)
+    return ("secret" if resolved == "config" else f"{resolved}_secret") if secret else resolved
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -285,7 +352,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "get":
             from akaribot.core.config import CFGManager
 
-            value = CFGManager.get(args.key, table_name=_resolve_table(args.table))
+            table = _resolve_table(args.table)
+            meta = _declared_defaults(table).get(args.key, {})
+            value = CFGManager.get(
+                args.key,
+                secret=bool(meta.get("secret")),
+                table_name=None if meta and meta.get("table_name") is None else table,
+            )
             if args.json:
                 json.dump({"key": args.key, "value": value}, sys.stdout, ensure_ascii=False, default=str)
                 sys.stdout.write("\n")
@@ -298,9 +371,15 @@ def main(argv: list[str] | None = None) -> int:
 
             table = _resolve_table(args.table)
             value = _coerce(table, args.key, args.value)
-            CFGManager.edit_write(args.key, value, table_name=table)
+            meta = _declared_defaults(table).get(args.key, {})
+            CFGManager.edit_write(
+                args.key,
+                value,
+                secret=bool(meta.get("secret")),
+                table_name=None if meta and meta.get("table_name") is None else table,
+            )
             if args.json:
-                json.dump({"key": args.key, "value": args.value}, sys.stdout, ensure_ascii=False)
+                json.dump({"key": args.key, "value": value}, sys.stdout, ensure_ascii=False)
                 sys.stdout.write("\n")
             return 0
 
@@ -336,6 +415,15 @@ def main(argv: list[str] | None = None) -> int:
             for key in placeholders:
                 print(f"  待填写：{key}")
         return 0
+    except ConfigInputError as exc:
+        from akaribot.core.config import CFGManager
+        from akaribot.core.i18n import Locale
+
+        _connect_locale()
+        locale = Locale(CFGManager.values.get("config", {}).get("default_locale") or "zh_cn")
+        message_key = "config.error.unknown_field" if exc.unknown else "config.error.invalid_value"
+        print(locale.t(message_key, field=exc.field), file=sys.stderr)
+        return 2
     except KeyError as exc:
         print(f"配置表不存在：{exc}", file=sys.stderr)
         return 2

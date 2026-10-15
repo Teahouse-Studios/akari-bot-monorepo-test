@@ -5,12 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mcserver"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "_LittleC_" },
     { name = "OasisAkari" },
     { name = "DoroWolf" },
 ]
 description = "获取 Minecraft 服务器 MOTD"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
@@ -23,3 +26,8 @@ mcserver = "akaribot.modules.mcserver"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

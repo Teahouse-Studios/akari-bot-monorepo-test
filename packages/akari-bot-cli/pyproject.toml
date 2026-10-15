@@ -5,7 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-cli"
 version = "0.1.0"
+readme = "README.md"
 description = "AkariBot 实例管理 CLI 与 TUI"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 # 不依赖 core：全部实例操作经子进程调用 `python -m akaribot.core.entrypoints.*`，
 # 使 CLI 能在实例 venv 之外运行（系统解释器、pipx 安装）。
@@ -16,6 +19,7 @@ dependencies = [
     # 脚手架渲染（T5.5）：core 也依赖它，但 CLI 不依赖 core，故自带
     "jinja2>=3.1.6,<4.0.0",
     "packaging>=26.0",
+    "psutil>=7.0.0,<8.0.0",
     "rich>=13.0.0,<15.0.0",
     # 紧钉：Textual 跨大版本有 API 变动史，全部调用经 akaribot.cli.tui._compat 收口
     "textual==8.2.8",
@@ -31,3 +35,8 @@ packages = ["akaribot"]
 
 # 语言文件由 packages = ["akaribot"] 一并收录，不要再 force-include（重复收录会让 hatchling 报
 # "A second file is being added to the wheel archive at the same path"）。
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

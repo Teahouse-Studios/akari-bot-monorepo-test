@@ -171,7 +171,7 @@ class PackageManifest:
     """
 
     schema: int = MANIFEST_SCHEMA
-    requires_core_api: str = ">=1"
+    requires_core_api: str = ">=1,<2"
     locales: str | None = "locales"
     assets: str | None = None
     migrations: str | None = None

@@ -1,6 +1,10 @@
 """JobQueue WebSocket Hub 守护进程编排测试。"""
 
+import asyncio
+import json
 import os
+import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
@@ -267,4 +271,37 @@ async def test_jobqueue_daemon(tester: Tester):
     await tester.test(_test_sqlite_database_backend_warns_without_changing_selection, "SQLite 数据库后端启动警告")
     await tester.test(_test_warning_is_not_emitted_for_recommended_or_non_sqlite_backends, "非风险后端组合不警告")
     await tester.test(_test_cleanup_keeps_hub_until_last, "守护进程按 Bot、Server、Hub 顺序关闭")
+    await tester.test(_test_cancelled_daemon_cleans_children, "守护进程任务取消仍执行子进程清理")
+    await tester.test(_test_windows_lock_record_skips_mandatory_lock_byte, "Windows 锁记录避开 mandatory 锁定字节")
     return tester
+
+
+async def _test_cancelled_daemon_cleans_children():
+    started = asyncio.Event()
+
+    async def run():
+        started.set()
+        await asyncio.Event().wait()
+
+    with (
+        patch.object(daemon, "multiprocess_run_until_complete"),
+        patch.object(daemon, "run_bot", side_effect=run),
+        patch.object(daemon, "cleanup_processes") as cleanup,
+    ):
+        task = asyncio.create_task(daemon.main_async())
+        await started.wait()
+        task.cancel()
+        result = await asyncio.gather(task, return_exceptions=True)
+    return isinstance(result[0], asyncio.CancelledError) and cleanup.call_count == 1
+
+
+def _test_windows_lock_record_skips_mandatory_lock_byte():
+    from bot import _write_lock_record
+
+    with tempfile.TemporaryDirectory(prefix="akari-windows-lock-") as temporary:
+        path = Path(temporary) / ".bot.lock"
+        with path.open("w+", encoding="utf-8") as handle:
+            with patch.object(sys, "platform", "win32"):
+                _write_lock_record(handle)
+        raw = path.read_bytes()
+    return raw.startswith(b"\n") and json.loads(raw[1:])["pid"] == os.getpid()

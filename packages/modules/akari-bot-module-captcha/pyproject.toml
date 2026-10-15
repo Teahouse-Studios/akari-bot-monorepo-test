@@ -5,7 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-captcha"
 version = "0.1.0"
+readme = "README.md"
 description = "为新加入 QQ 群聊的成员执行按钮验证码校验。"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     # captcha_held 的 25 张表情在资源包里（T3.3），缺席时按钮验证码无法组题，故为直接依赖。
@@ -19,3 +22,8 @@ captcha = "akaribot.modules.captcha"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

@@ -24,7 +24,7 @@ def cli_argv(*args: str) -> list[str]:
     override = os.environ.get(CLI_BIN_ENV)
     if override:
         return [override, *args]
-    frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
+    frozen = bool(getattr(sys, "frozen", False)) or "__compiled__" in globals()
     if frozen:
         return [sys.executable, *args]
     return [sys.executable, "-m", "akaribot.cli.main", *args]
@@ -39,6 +39,8 @@ def cli_env(root: Path | str, *, extra: Mapping[str, str] | None = None) -> dict
     """
     env = dict(os.environ)
     env[INSTANCE_DIR_ENV] = str(root)
+    env["AKARI_CONFIG_PATH"] = str(Path(root).expanduser().resolve() / "config")
+    env.pop("AKARI_CONFIG_READONLY", None)
     # 子进程输出含中文与 JSON，Windows 控制台默认代码页可能是 GBK，两侧编码不一致会得到乱码或解析失败。
     env["PYTHONIOENCODING"] = "utf-8"
     if extra:

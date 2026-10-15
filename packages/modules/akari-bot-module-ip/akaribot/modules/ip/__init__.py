@@ -2,6 +2,7 @@ import ipaddress
 import socket
 from typing import Any
 
+from akaribot.core.api import platform_name_of
 from akaribot.core.api import Bot, I18NContext, Plain, module, Logger, get_url
 
 ip = module("ip", doc=True)
@@ -94,7 +95,7 @@ async def check_ip(ip: str):
 
 
 def zzzq(msg: Bot.MessageSession, country: str):
-    if msg.session_info.client_name in ["KOOK", "QQ", "QQBot"] and country in ["Hong Kong", "Macao", "Taiwan"]:
+    if platform_name_of(msg.session_info) in ["KOOK", "QQ", "QQBot"] and country in ["Hong Kong", "Macao", "Taiwan"]:
         return "China"
     return country
 

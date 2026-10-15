@@ -1,5 +1,5 @@
 # akari-bot-module-mojang_status 的包清单。
 schema = 1
-requires_core_api = ">=1"
+requires_core_api = ">=1,<2"
 locales = "locales"
 provides_modules = ["mojang-status"]

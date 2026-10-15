@@ -1,6 +1,6 @@
 # akari-bot-module-coin 的包清单。
 schema = 1
-requires_core_api = ">=1"
+requires_core_api = ">=1,<2"
 locales = "locales"
 # config.py 的 on_module_config("coin") 登记的表。
 config_table = "module_coin"

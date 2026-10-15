@@ -1,6 +1,7 @@
 import re
 import urllib.parse
 
+from akaribot.core.api import platform_name_of
 from akaribot.core.api import (
     Bot,
     MessageChain,
@@ -280,7 +281,7 @@ async def _parse_wiki_urls(msg: Bot.MessageSession):
                                     )
                                 )
                                 use_markdown_section = (
-                                    msg.session_info.client_name == "QQBot"
+                                    platform_name_of(msg.session_info) == "QQBot"
                                     and msg.session_info.support_markdown
                                     and msg.session_info.support_markdown_extension
                                     and msg.session_info.support_action_text
@@ -326,7 +327,7 @@ async def _parse_wiki_urls(msg: Bot.MessageSession):
                         if get_page.is_forum:
                             forum_data = get_page.forum_data
                             use_markdown_forum = (
-                                msg.session_info.client_name == "QQBot"
+                                platform_name_of(msg.session_info) == "QQBot"
                                 and msg.session_info.support_markdown
                                 and msg.session_info.support_markdown_extension
                                 and msg.session_info.support_action_text

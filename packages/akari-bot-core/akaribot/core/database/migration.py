@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -82,6 +83,24 @@ class MigrationContext:
             await self.conn.execute_query(sql)
         else:
             await self.conn.execute_query(sql, params)
+
+    async def execute_script(self, script: str) -> None:
+        """执行多条 SQL，保留 SQLite 当前事务。
+
+        :param script: SQL 脚本。
+        """
+        if self.db_type != "sqlite":
+            await self.conn.execute_script(script)
+            return
+        # SQLite executescript 会隐式提交；完整语句逐条执行以保留 revision 的事务边界。
+        statement = ""
+        for fragment in script.split(";"):
+            statement += fragment + ";"
+            if sqlite3.complete_statement(statement):
+                await self.execute(statement)
+                statement = ""
+        if statement.strip("; \t\r\n"):
+            raise MigrationError("Incomplete SQLite migration statement.")
 
     async def fetch_all(self, sql: str, params: list | None = None) -> list[dict]:
         """
@@ -247,7 +266,12 @@ class MigrationContext:
         await self.execute(f"CREATE INDEX {self.quote(name)} ON {self.quote(table)} ({column_sql});")
 
     async def generate_schemas(self) -> None:
-        await Tortoise.generate_schemas(safe=True)
+        if self.db_type != "sqlite":
+            await Tortoise.generate_schemas(safe=True)
+            return
+        from tortoise.utils import get_schema_sql
+
+        await self.execute_script(get_schema_sql(self.conn, safe=True))
 
 
 @dataclass(frozen=True, slots=True)
@@ -488,8 +512,7 @@ class MigrationRunner:
             if migration.downgrade is None:
                 raise MigrationError(f"Migration {package}/{migration.revision} has no downgrade().")
             Logger.info(f"Reverting migration {package}/{migration.revision}.")
-            await cls._run(migration, migration.downgrade)
-            await SchemaMigration.filter(package=package, revision=migration.revision).delete()
+            await cls._run(migration, migration.downgrade, reverting=True)
             results.append((package, migration.revision))
         return results
 
@@ -525,22 +548,30 @@ class MigrationRunner:
         # 执行并登记一条迁移。
         Logger.info(f"Applying migration {migration.package}/{migration.revision}.")
         await cls._run(migration, migration.upgrade)
-        await SchemaMigration.create(
-            package=migration.package,
-            revision=migration.revision,
-            checksum=migration.checksum,
-        )
 
     @classmethod
-    async def _run(cls, migration: MigrationModule, entry: Callable) -> None:
+    async def _run(cls, migration: MigrationModule, entry: Callable, *, reverting: bool = False) -> None:
         # 在方言允许时以事务执行迁移入口。
         conn = Tortoise.get_connection("default")
         if _dialect(conn) not in TRANSACTIONAL_DIALECTS:
             await entry(MigrationContext(conn))
+            await cls._record(migration, reverting=reverting)
             return
         # 事务内取到的连接由事务上下文登记，模型查询与裸 SQL 都会走同一连接。
         async with in_transaction("default") as transaction:
             await entry(MigrationContext(transaction))
+            await cls._record(migration, reverting=reverting)
+
+    @classmethod
+    async def _record(cls, migration: MigrationModule, *, reverting: bool) -> None:
+        if reverting:
+            await SchemaMigration.filter(package=migration.package, revision=migration.revision).delete()
+        else:
+            await SchemaMigration.create(
+                package=migration.package,
+                revision=migration.revision,
+                checksum=migration.checksum,
+            )
 
 
 async def run_startup_migrations() -> None:

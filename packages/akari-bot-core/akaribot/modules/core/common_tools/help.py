@@ -19,7 +19,7 @@ from akaribot.core.utils.button import arrange_buttons
 from akaribot.core.utils.cache import random_cache_path
 from akaribot.core.utils.func import is_int
 from akaribot.core.utils.image import cb64imglst
-from akaribot.core.utils.platform_scope import platform_fields
+from akaribot.core.utils.platform_scope import platform_fields, platform_name_of
 from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 from akaribot.core.utils.web_render import ElementScreenshotOptions, web_render
 
@@ -88,7 +88,7 @@ def has_unsupported_entries(groups: list[tuple[str, list[str | ModuleListEntry]]
 
 
 def qqbot_permissions_limited(msg: Bot.MessageSession) -> bool:
-    return msg.session_info.client_name == "QQBot" and not (
+    return platform_name_of(msg.session_info) == "QQBot" and not (
         msg.session_info.support_rss and msg.session_info.read_all_messages
     )
 
@@ -706,7 +706,7 @@ async def help_overview(msg: Bot.MessageSession, img: bool = False, legacy: bool
     use_table = should_use_markdown_table(msg, force_image, force_legacy)
     use_clickable = not use_table and not force_legacy and msg.session_info.support_action_text
     is_admin = await check_context_admin(msg)
-    qqbot_style = msg.session_info.client_name == "QQBot" and is_admin and not force_legacy
+    qqbot_style = platform_name_of(msg.session_info) == "QQBot" and is_admin and not force_legacy
     show_all_modules = qqbot_style or not msg.session_info.require_enable_modules
 
     legacy_help = True
@@ -888,7 +888,7 @@ async def modules_list_help(msg: Bot.MessageSession, legacy, force_image=False):
             help_msg.append(ButtonFrame(get_module_list_button_data(msg)))
             await msg.finish(imgs + help_msg)
     if legacy_help:
-        can_manage_modules = msg.session_info.client_name == "QQBot" and is_admin
+        can_manage_modules = platform_name_of(msg.session_info) == "QQBot" and is_admin
         module_list = ModulesManager.return_modules_list(*platform_fields(msg.session_info))
         target_enabled_list = msg.session_info.enabled_modules or []
         module_ = []

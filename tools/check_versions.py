@@ -325,13 +325,13 @@ def inspect_member(member: Member, files: list[str], base: str, strict: bool) ->
             conclusion="包内源码改动但 version 未变",
             is_violation=True,
         )
-    note = "，且为版本回退" if order is not None and order < 0 else ""
     return Finding(
         name=member.name,
         base_version=base_version,
         head_version=member.version,
         files=sources,
-        conclusion=f"版本已变 {base_version} → {member.version}{note}",
+        conclusion=f"版本已变 {base_version} → {member.version}",
+        is_violation=order is None or order < 0,
     )
 
 

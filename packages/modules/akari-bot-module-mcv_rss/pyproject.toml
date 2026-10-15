@@ -5,11 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-mcv_rss"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "OasisAkari" },
     { name = "Dianliang233" },
 ]
 description = "推送 Minecraft 版本更新"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
@@ -23,3 +26,8 @@ mcv_rss = "akaribot.modules.mcv_rss"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

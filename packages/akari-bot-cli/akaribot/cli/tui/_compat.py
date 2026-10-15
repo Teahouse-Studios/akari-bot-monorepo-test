@@ -1301,7 +1301,7 @@ def terminal_capabilities() -> Iterator[TerminalCapability]:
         bool(os.environ.get("SSH_CONNECTION")),
         os.environ.get("SSH_CONNECTION") or i18n.t("cli.tui.selfcheck.not_ssh"),
     )
-    frozen = bool(getattr(sys, "frozen", False)) or hasattr(sys, "__compiled__")
+    frozen = bool(getattr(sys, "frozen", False)) or "__compiled__" in globals()
     yield TerminalCapability(
         i18n.t("cli.tui.selfcheck.cap_frozen"),
         frozen,

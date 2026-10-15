@@ -25,6 +25,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from packaging.utils import parse_wheel_filename
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DIST_DIR = REPO_ROOT / "dist"
 CORE = "akari-bot-core"
@@ -38,6 +40,8 @@ CLI_SMOKE_COMMANDS: tuple[tuple[str, ...], ...] = (
     ("--help",),
     ("new", "--help"),
     ("tui", "--self-check"),
+    ("new", "module", "release_probe", "--non-interactive", "--no-add"),
+    ("new", "adapter", "release_probe", "--non-interactive", "--no-add"),
 )
 
 # 发现阶段要读实例配置（真实用户也先跑 akaribot init），故探针自带一份最小配置。
@@ -113,8 +117,13 @@ def stage_fresh_wheels(tmp: Path) -> Path:
     """
     staged = tmp / "wheels"
     staged.mkdir()
+    constraints = []
     for wheel in sorted(DIST_DIR.glob("*.whl")):
-        shutil.copy2(wheel, staged / wheel.name)
+        target = staged / wheel.name
+        shutil.copy2(wheel, target)
+        distribution, _, _, _ = parse_wheel_filename(wheel.name)
+        constraints.append(f"{distribution} @ {target.resolve().as_uri()}")
+    (staged / "constraints.txt").write_text("\n".join(constraints) + "\n", encoding="utf-8")
     return staged
 
 
@@ -152,6 +161,7 @@ def check_combo(name: str, packages: list[str], extras: str = "", offline: bool 
             print(f"[{name}] 建 venv 失败：{created.stderr[-400:]}")
             return False
         targets = [f"{CORE}{extras}" if pkg == CORE else pkg for pkg in packages]
+        staged = stage_fresh_wheels(Path(tmp))
         installed = run(
             uv_cmd(
                 [
@@ -159,10 +169,11 @@ def check_combo(name: str, packages: list[str], extras: str = "", offline: bool 
                     "install",
                     "--python",
                     str(venv / "bin" / "python"),
-                    # 不封索引：akari-bot-i18n / webrender / webui 是发布在 PyPI 的独立库，
-                    # 封了索引连最小组合都解不开；被验证的官方包本身不在 PyPI，仍只来自本地 wheel。
+                    # 外部依赖从索引解析，内部约束同时限定到本次 wheel，防止远端版本掩盖源码遗漏。
                     "--find-links",
-                    str(stage_fresh_wheels(Path(tmp))),
+                    str(staged),
+                    "--constraint",
+                    str(staged / "constraints.txt"),
                     *targets,
                 ],
                 offline,
@@ -178,7 +189,12 @@ def check_combo(name: str, packages: list[str], extras: str = "", offline: bool 
         probe = run(
             [str(venv / "bin" / "python"), "-c", PROBE],
             cwd=tmp,
-            env={**os.environ, "AKARI_INSTANCE_DIR": tmp},
+            env={
+                **os.environ,
+                "AKARI_INSTANCE_DIR": tmp,
+                "AKARI_CONFIG_PATH": str(Path(tmp) / "config"),
+                "AKARI_CONFIG_READONLY": "",
+            },
         )
         if probe.returncode != 0:
             print(f"[{name}] 发现阶段失败：{probe.stderr[-800:]}", file=sys.stderr)
@@ -221,6 +237,7 @@ def check_cli_combo(offline: bool = False) -> bool:
         if created.returncode != 0:
             print(f"[{name}] 建 venv 失败：{created.stderr[-400:]}")
             return False
+        staged = stage_fresh_wheels(Path(tmp))
         installed = run(
             uv_cmd(
                 [
@@ -229,7 +246,9 @@ def check_cli_combo(offline: bool = False) -> bool:
                     "--python",
                     str(venv / "bin" / "python"),
                     "--find-links",
-                    str(stage_fresh_wheels(Path(tmp))),
+                    str(staged),
+                    "--constraint",
+                    str(staged / "constraints.txt"),
                     CLI,
                 ],
                 offline,
@@ -245,7 +264,11 @@ def check_cli_combo(offline: bool = False) -> bool:
 
         binary = venv / "bin" / "akaribot"
         for arguments in CLI_SMOKE_COMMANDS:
-            smoke = run([str(binary), *arguments], cwd=tmp, env={**os.environ, "AKARI_INSTANCE_DIR": tmp})
+            smoke = run(
+                [str(binary), *arguments],
+                cwd=tmp,
+                env={**os.environ, "AKARI_INSTANCE_DIR": tmp, "AKARIBOT_HOME": str(Path(tmp) / "cli-home")},
+            )
             label = " ".join(("akaribot", *arguments))
             if smoke.returncode != 0:
                 print(f"[{name}] {label} 退出 {smoke.returncode}：")
@@ -284,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
         "--exclude",
         action="append",
         default=[],
-        help="排除的分发包，可重复；用于隔离已知阻塞（如 langconv 的 git 直链依赖）后验证其余组合",
+        help="排除的分发包，可重复；用于隔离已知阻塞后验证其余组合",
     )
     args = parser.parse_args(argv)
 
@@ -303,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     sample = sorted(rng.sample(modules, min(args.random_count, len(modules))))
     combos: dict[str, tuple[list[str], str]] = {
         "core": ([CORE], ""),
-        "core-full": ([CORE], "[s3,image]"),
+        "core-full": ([CORE], "[full]"),
         "typical": ([CORE, "akari-bot-adapter-telegram", "akari-bot-module-wiki"], ""),
         "all": ([CORE, *modules, *adapters], ""),
         "random": ([CORE, *sample], ""),

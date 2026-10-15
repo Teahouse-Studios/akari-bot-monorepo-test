@@ -189,6 +189,28 @@ async def _test_stop_when_idle_is_success():
         return result.exit_code == 0
 
 
+def _test_json_stop_failure_prevents_restart():
+    from types import SimpleNamespace
+
+    from akaribot.cli.commands import run as run_cmd
+    from akaribot.cli.process import StopOutcome
+
+    target = SimpleNamespace(stop_running=lambda **_: StopOutcome(False, "failed"))
+    with (
+        patch.object(run_cmd, "require_instance", return_value=target),
+        patch.object(run_cmd, "_start_detached") as start,
+    ):
+        stopped = CliRunner().invoke(app, ["run", "--stop", "--json"])
+        restarted = CliRunner().invoke(app, ["run", "--restart", "--json"])
+    return (
+        stopped.exit_code == 1
+        and restarted.exit_code == 1
+        and not json.loads(stopped.stdout)["stopped"]
+        and not json.loads(restarted.stdout)["stopped"]
+        and not start.called
+    )
+
+
 async def _test_stop_refuses_without_record():
     # 锁被持有但文件里没有进程记录时不能瞎猜进程号，如实报「无法停止」。
     with TemporaryDirectory(prefix="akari-life-") as raw:
@@ -657,6 +679,7 @@ async def test_run_lifecycle(tester: Tester):
     await tester.test(_test_stop_takes_over_foreign_process, "能停止由别的控制器启动的实例")
     await tester.test(_test_stop_force_kills_unresponsive_process, "不响应信号的实例被强制终止")
     await tester.test(_test_stop_when_idle_is_success, "未运行时停止视为成功")
+    await tester.test(_test_json_stop_failure_prevents_restart, "JSON 停止失败返回非零且不继续重启")
     await tester.test(_test_stop_refuses_without_record, "没有进程记录时拒绝停止")
     await tester.test(_test_conflicting_actions_rejected, "互斥动作被拒绝")
     await tester.test(_test_stop_process_primitive_skips_own_group, "同组进程不按进程组处理")

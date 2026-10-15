@@ -307,7 +307,9 @@ def _check_multi_select() -> CheckResult:
     source = StaticModuleSource(
         records=records, available=records, stream_lines=["Resolved 1 package", "Installed 1 package"]
     )
-    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
+    app_instance = TuiApp(
+        source=source, sources=_self_check_sources(), initial_page="modules", boot_started_at=time.monotonic()
+    )
 
     async def probe() -> tuple[int, int, list[str]]:
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
@@ -357,7 +359,12 @@ def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult
     source = StaticModuleSource(
         [ModuleRecord(name="dice", dist="akari-bot-module-dice", version="1.0.0", summary="骰子", state="installed")]
     )
-    app_instance = TuiApp(source=source, sources=sources, initial_page="modules", boot_started_at=time.monotonic())
+    app_instance = TuiApp(
+        source=source,
+        sources=sources if sources is not None else _self_check_sources(),
+        initial_page="modules",
+        boot_started_at=time.monotonic(),
+    )
 
     async def probe() -> tuple[list[str], list[str], list[str]]:
         mismatched: list[str] = []
@@ -414,6 +421,40 @@ def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult
     )
 
 
+def _self_check_sources() -> dict[str, Any]:
+    from akaribot.cli.tui.adapters import StaticAdapterSource
+    from akaribot.cli.tui.config import StaticConfigSource
+    from akaribot.cli.tui.dashboard import (
+        StaticDashboardSource,
+        StaticInstanceListSource,
+        StaticServiceControl,
+        StaticSetupSummarySource,
+    )
+    from akaribot.cli.tui.database import StaticDatabaseSource
+    from akaribot.cli.tui.dev import StaticDevSource
+    from akaribot.cli.tui.doctor import StaticDoctorSource
+    from akaribot.cli.tui.environment import StaticEnvironmentSource
+    from akaribot.cli.tui.logs import StaticLogSource
+    from akaribot.cli.tui.misc import StaticMiscSource
+    from akaribot.cli.tui.run import StaticRunSource
+
+    return {
+        "dashboard": StaticDashboardSource(),
+        "dashboard_instances": StaticInstanceListSource(),
+        "dashboard_service": StaticServiceControl(),
+        "dashboard_setup": StaticSetupSummarySource(),
+        "environment": StaticEnvironmentSource(),
+        "database": StaticDatabaseSource(),
+        "adapters": StaticAdapterSource(),
+        "config": StaticConfigSource(),
+        "logs": StaticLogSource(),
+        "run": StaticRunSource(),
+        "dev": StaticDevSource(),
+        "doctor": StaticDoctorSource(),
+        "misc": StaticMiscSource(),
+    }
+
+
 async def _page_failure(page: Any, pilot: Any) -> str:
     # 已完成的 worker 会从 app.workers 移除，须提前保留句柄以读取错误状态。
     workers = list(page.app.workers)
@@ -450,7 +491,9 @@ def _check_available_and_progress() -> CheckResult:
         available=[installed, candidate],
         stream_lines=["Resolved 2 packages", "Installed 2 packages"],
     )
-    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
+    app_instance = TuiApp(
+        source=source, sources=_self_check_sources(), initial_page="modules", boot_started_at=time.monotonic()
+    )
 
     async def probe() -> tuple[int, int, tuple[str, ...], str]:
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
@@ -542,7 +585,11 @@ def _check_adapter_install() -> CheckResult:
         ),
         install_lines=["Resolved 1 package", "Installed 1 package"],
     )
-    app_instance = TuiApp(sources={"adapters": source}, initial_page="adapters", boot_started_at=time.monotonic())
+    app_instance = TuiApp(
+        sources={**_self_check_sources(), "adapters": source},
+        initial_page="adapters",
+        boot_started_at=time.monotonic(),
+    )
 
     async def probe() -> tuple[list[str], str, list[str]]:
         async with compat.app_test(app_instance, size=(120, 34)) as pilot:
@@ -709,7 +756,9 @@ def _check_boot() -> CheckResult:
             ModuleRecord(name="wiki", dist="akari-bot-module-wiki", version="0.2.0", summary="维基查询"),
         ]
     )
-    app_instance = TuiApp(source=source, initial_page="modules", boot_started_at=time.monotonic())
+    app_instance = TuiApp(
+        source=source, sources=_self_check_sources(), initial_page="modules", boot_started_at=time.monotonic()
+    )
 
     async def boot() -> tuple[int, str, tuple[int, int], float]:
         async with compat.app_test(app_instance, size=(80, 24)) as pilot:

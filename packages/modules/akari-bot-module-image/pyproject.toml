@@ -5,10 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "akari-bot-module-image"
 version = "0.1.0"
+readme = "README.md"
 authors = [
     { name = "OasisAkari" },
 ]
 description = "图片处理与图像化输出"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
@@ -20,3 +23,8 @@ image = "akaribot.modules.image"
 
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
+
+[project.urls]
+Documentation = "https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md"
+Source = "https://github.com/Teahouse-Studios/akari-bot"
+Issues = "https://github.com/Teahouse-Studios/akari-bot/issues"

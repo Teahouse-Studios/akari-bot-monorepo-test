@@ -214,6 +214,14 @@ async def _test_navigation_passes_with_static_sources():
     return result.level == tui_cmd.LEVEL_OK and str(len(PAGES)) in result.detail
 
 
+async def _test_navigation_without_instance_uses_static_sources():
+    with tempfile.TemporaryDirectory(prefix="akari-selfcheck-empty-") as raw:
+        with patch("subprocess.run", side_effect=AssertionError("unexpected subprocess")):
+            with patch.dict("os.environ", {"AKARI_INSTANCE_DIR": raw, "AKARIBOT_HOME": raw}):
+                result = await _navigate()
+    return result.level == tui_cmd.LEVEL_OK
+
+
 async def _test_navigation_reports_page_source_failure():
     sources = _static_sources()
     sources["dashboard"] = _FailingDashboardSource()
@@ -391,6 +399,7 @@ async def test_tui_selfcheck(tester: Tester):
     """cli.tui 自检: 逐页 worker 等待与异常、未执行的产品检查"""
     _use_cli_locale()
     await tester.test(_test_navigation_passes_with_static_sources, "逐页切换等待取数后仍通过")
+    await tester.test(_test_navigation_without_instance_uses_static_sources, "无实例的默认导航自检不启动子进程")
     await tester.test(_test_navigation_reports_page_source_failure, "页面数据源抛异常时导航检查失败")
     await tester.test(_test_navigation_waits_for_each_page_load, "逐页切换串行等到每页取数完成")
     await tester.test(_test_page_failure_reads_worker_error, "页面异常取 worker 错误、等待异常与页面错误状态")

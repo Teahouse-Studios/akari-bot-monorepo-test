@@ -9,9 +9,10 @@
 """
 
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from akaribot.core.builtins.session.internal import confirm_prompt_key
+from akaribot.core.builtins.session.internal import MessageSession, confirm_prompt_key
+from akaribot.core.queue.contracts import PlatformAPI
 from akaribot.testing import func_case, Tester
 
 
@@ -58,6 +59,20 @@ def _test_quick_confirm_off_keeps_button():
     return key == "message.wait.confirm.prompt.button"
 
 
+async def _test_qq_instance_uses_face_ids():
+    for platform in ("QQ", "QQBot"):
+        session = _session(support_reaction=True, client_name=f"{platform}-alt")
+        session.platform_name = platform
+        fake = SimpleNamespace(session_info=session)
+        with patch.object(PlatformAPI, "add_reaction", AsyncMock()) as add:
+            await MessageSession._add_confirm_reaction(fake, ["123"])
+        if [call.args[-1] for call in add.call_args_list] != ["11093", "10060"]:
+            return False
+        if platform == "QQ" and confirm_prompt_key(session) != "message.wait.confirm.prompt.qq":
+            return False
+    return True
+
+
 @func_case
 async def test_confirm_prompt(tester: Tester):
     """core: 确认提示文案的选择"""
@@ -68,4 +83,5 @@ async def test_confirm_prompt(tester: Tester):
     await tester.test(_test_no_quick_path, "无快速途径时只提示确认词")
     await tester.test(_test_quick_confirm_off_disables_reaction, "关闭快速确认后不提示表情反应")
     await tester.test(_test_quick_confirm_off_keeps_button, "关闭快速确认不影响按钮提示")
+    await tester.test(_test_qq_instance_uses_face_ids, "QQ 后缀实例使用平台表情编号与确认提示")
     return tester

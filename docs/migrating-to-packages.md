@@ -31,6 +31,14 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 常用开关：`--dry-run`（只输出报告不写文件）、`--skip-install`（只搬文件）、`--force`（覆盖同名文件）。
 迁移**不修改旧项目**；失败项会记入报告的「需人工处理」，可重跑续做。
 
+执行真实迁移前须停止源实例并保存配置、数据库和 `data/` 的备份。复制期间持有源 `.bot.lock`，
+SQLite 主库与已提交的 WAL 数据通过独立快照复制到目标；目标配置中的数据库地址指向该副本。
+没有 `.bot.lock` 的旧目录应先正常启动并停止一次，预演允许该锁文件缺席。MySQL 等外部数据库
+不支持自动复制迁移，须先导出到独立目标并按手工步骤处理；SQLite 外部文件的其他写入者同样须停止。
+
+迁移复制根 `data/`，历史 `assets/` 内容仅补齐缺失项。已有目标配置和数据库在未使用 `--force`
+时保留；数据库绑定冲突或目标路径含符号链接时拒绝继续。`--skip-install` 不执行数据库升级。
+
 ## 手工迁移步骤
 
 以下命令中的 `<实例目录>` 建议新建（例如 `/opt/akaribot`），**不要**在旧仓库里就地升级。
@@ -52,6 +60,9 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
    akaribot config schema --table bot_telegram      # 查看该表全部键、类型、注释与占位情况
    akaribot config set telegram_token <值> --table bot_telegram
    ```
+
+   在安装模块或升级数据库之前，将 `[secret].db_path` 改为目标副本或独立目标数据库的地址。
+   绝对 SQLite 路径和远程连接地址不得继续指向源部署。
 
 4. **搬运数据**：把旧仓库的 `database/`、`data/`、`assets/`（若你自建过）复制到实例根下。数据库
    首次启动时会自动执行迁移；旧版本号会由迁移系统转换。
@@ -127,21 +138,24 @@ akaribot doctor                                # 检测监听端口冲突与两�
 迁移前缀，需要换 ID 时按「新建实例 + 迁移数据」处理。`add` 生成的配置里 `enable` 显式为 `false`，
 填完凭据再开启。
 
-## 旧版 `~update` 的行为变化
+## 机器人内更新
 
-机器人内的 `~update` 不再执行 `git pull` 与 `uv sync`——实例里没有仓库，依赖也装在实例 venv 而非
-当前环境。现在它改为委托 `akaribot` 命令行工具执行 `module update`，并把结果回报给发起者；若更新
-了模块，按提示 `~restart` 或由运行时热装载。宿主机上也可以直接执行：
+机器人内的 `~update` 委托 CLI 执行 `module update --defer-runtime`，安装包并同步配置后回报结果。
+数据库迁移和运行代码切换在下一次启动完成，更新后按提示执行 `~restart`；`~update&restart`
+更新完成后再执行 `~restart`。宿主机上也可以直接执行：
 
 ```
 akaribot module update --all
 ```
 
+宿主机更新会执行数据库迁移和模块热装载；涉及数据结构的升级应先停止实例并保留备份。
+需要只安装包并等待后续重启时使用 `--defer-runtime`。
+
+`akaribot venv recreate` 在可重定位的新环境安装并验证后换位，最终路径验证失败时恢复旧环境。
+失败的 `.new` 目录保留供检查，已有 `.old` 备份不会自动删除。
+
 ## 已知限制
 
-- **`langconv` 相关包暂不可安装**：`akari-bot-module-langconv`、`akari-bot-module-hitokoto`、
-  `akari-bot-module-maimai` 依赖的上游库目前只有 Git 直链（上游停更，修复版 fork 尚未发版），
-  而 Git 直链依赖无法随分发包发布。这三个包要等该库正式发版后才能安装。
 - **实例 ID 一旦使用请勿更改**：改名需要跨多张核心表与模块表迁移 `target_id` 前缀，收益与风险
   不成比例，故不提供重命名。需要换 ID 时请新建实例并迁移数据。
 - **TUI 的终端兼容性**：Textual 界面目前只在 macOS 上做过无头渲染与布局验证，Windows 终端、

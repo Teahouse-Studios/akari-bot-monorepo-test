@@ -5,6 +5,7 @@ from urllib import parse
 
 import orjson
 
+from akaribot.core.api import platform_name_of
 from akaribot.core.api import Bot, MessageChain, Plain, Image, Url, I18NContext, module, Locale, get_url
 
 
@@ -111,7 +112,7 @@ wky = module("weekly", support_languages=["zh_cn", "zh_tw"], doc=True)
 @wky.command("{{I18N:weekly.help}}")
 async def _(msg: Bot.MessageSession):
     weekly = await get_weekly(
-        msg.session_info.client_name in ["QQ", "TEST", "QQBot"], zh_tw=msg.session_info.locale.locale == "zh_tw"
+        platform_name_of(msg.session_info) in ["QQ", "TEST", "QQBot"], zh_tw=msg.session_info.locale.locale == "zh_tw"
     )
     await msg.finish(weekly)
 
@@ -120,7 +121,8 @@ async def _(msg: Bot.MessageSession):
 async def _(msg: Bot.MessageSession):
     await msg.finish(
         await get_weekly_img(
-            msg.session_info.client_name in ["QQ", "TEST", "QQBot"], zh_tw=msg.session_info.locale.locale == "zh_tw"
+            platform_name_of(msg.session_info) in ["QQ", "TEST", "QQBot"],
+            zh_tw=msg.session_info.locale.locale == "zh_tw",
         )
     )
 

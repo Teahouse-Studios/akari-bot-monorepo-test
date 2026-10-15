@@ -91,7 +91,7 @@ async def _add_banned_users(ctx: MigrationContext) -> None:
     if await ctx.has_column(LEGACY_TARGET_TABLE, "banned_users"):
         return
     if ctx.db_type == "sqlite":
-        await ctx.conn.execute_script(SQLITE_TARGET_REBUILD)
+        await ctx.execute_script(SQLITE_TARGET_REBUILD)
         return
     await ctx.conn.execute_query(MYSQL_TARGET_ALTER)
 
@@ -105,6 +105,6 @@ async def _make_sender_id_nullable(ctx: MigrationContext) -> None:
     if await ctx.column_is_nullable("analytics_data", "sender_id"):
         return
     if ctx.db_type == "sqlite":
-        await ctx.conn.execute_script(SQLITE_ANALYTICS_REBUILD)
+        await ctx.execute_script(SQLITE_ANALYTICS_REBUILD)
         return
     await ctx.execute("ALTER TABLE analytics_data MODIFY sender_id VARCHAR(512) NULL;")

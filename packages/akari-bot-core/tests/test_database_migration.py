@@ -1,9 +1,10 @@
 """数据库迁移框架测试。"""
 
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import tortoise.context as tortoise_context
 from tortoise import Tortoise
@@ -16,6 +17,8 @@ from akaribot.core.database.migration import (
     MigrationError,
     MigrationModule,
     MigrationRunner,
+    core_migrations_dir,
+    load_migration,
     order_migrations,
 )
 from akaribot.core.database.models import DBVersion, SchemaMigration
@@ -142,6 +145,13 @@ async def _test_migration_context_ddl_helpers():
         checks.append(not await ctx.has_column("migration_probe", "added"))
         await ctx.rename_table("migration_probe", "migration_probe_renamed")
         checks.append(await ctx.has_table("migration_probe_renamed"))
+        await ctx.execute_script(
+            'INSERT INTO "migration_probe_renamed" ("id", "union_id") VALUES (1, \'value;with;semicolons\');'
+        )
+        checks.append(
+            (await ctx.fetch_all('SELECT "union_id" FROM "migration_probe_renamed";'))[0]["union_id"]
+            == "value;with;semicolons"
+        )
         return all(checks)
     finally:
         await ctx.execute('DROP TABLE IF EXISTS "migration_probe";')
@@ -355,6 +365,99 @@ async def _test_downgrade_requires_entry_and_known_target():
             return all(checks)
 
 
+async def _test_sqlite_upgrade_and_stamp_roll_back_together():
+    with TemporaryDirectory() as temp_dir:
+        async with _isolated_db(Path(temp_dir) / "atomic.db"):
+            await Tortoise.generate_schemas(safe=True)
+            conn = Tortoise.get_connection("default")
+
+            async def upgrade(ctx):
+                await ctx.execute('CREATE TABLE "migration_atomic_marker" (value TEXT);')
+
+            migration = replace(_module("0001_atomic"), upgrade=upgrade)
+            with patch.object(SchemaMigration, "create", AsyncMock(side_effect=RuntimeError("stamp failed"))):
+                try:
+                    await MigrationRunner._apply(migration)
+                except RuntimeError:
+                    pass
+                else:
+                    return False
+            tables = await conn.execute_query_dict(
+                "SELECT name FROM sqlite_master WHERE name = 'migration_atomic_marker';"
+            )
+            if tables or await SchemaMigration.filter(package="demo").exists():
+                return False
+            await MigrationRunner._apply(migration)
+            return (
+                bool(
+                    await conn.execute_query_dict(
+                        "SELECT name FROM sqlite_master WHERE name = 'migration_atomic_marker';"
+                    )
+                )
+                and await SchemaMigration.filter(package="demo", revision="0001_atomic").exists()
+            )
+
+
+async def _test_sqlite_downgrade_and_stamp_roll_back_together():
+    with TemporaryDirectory() as temp_dir:
+        async with _isolated_db(Path(temp_dir) / "atomic_down.db"):
+            await Tortoise.generate_schemas(safe=True)
+            conn = Tortoise.get_connection("default")
+            await conn.execute_query('CREATE TABLE "migration_atomic_marker" (value TEXT);')
+            await SchemaMigration.create(package="demo", revision="0001_atomic", checksum="")
+
+            async def downgrade(ctx):
+                await ctx.execute('DROP TABLE "migration_atomic_marker";')
+
+            migration = replace(_module("0001_atomic"), downgrade=downgrade)
+            query = SchemaMigration.filter(package="demo", revision="0001_atomic")
+            with (
+                patch.object(SchemaMigration, "filter", return_value=query),
+                patch.object(type(query), "delete", AsyncMock(side_effect=RuntimeError("delete stamp failed"))),
+            ):
+                try:
+                    await MigrationRunner._run(migration, downgrade, reverting=True)
+                except RuntimeError:
+                    pass
+                else:
+                    return False
+            return (
+                bool(
+                    await conn.execute_query_dict(
+                        "SELECT name FROM sqlite_master WHERE name = 'migration_atomic_marker';"
+                    )
+                )
+                and await SchemaMigration.filter(package="demo", revision="0001_atomic").exists()
+            )
+
+
+async def _test_sqlite_rebuild_revisions_remain_atomic():
+    with TemporaryDirectory() as temp_dir:
+        async with _isolated_db(Path(temp_dir) / "atomic_rebuild.db"):
+            await Tortoise.generate_schemas(safe=True)
+            conn = Tortoise.get_connection("default")
+            await conn.execute_query(V1_SHAPED_TARGET)
+            await conn.execute_query('DROP TABLE "analytics_data";')
+            await conn.execute_query(V1_SHAPED_ANALYTICS)
+            before = {
+                table: await conn.execute_query_dict(f'PRAGMA table_info("{table}");')
+                for table in ("target_info", "analytics_data", "job_queues")
+            }
+            for revision in ("0002_banned_users_and_nullable_sender", "0005_rebuild_job_queues"):
+                migration = load_migration("core", core_migrations_dir() / f"{revision}.py")
+                with patch.object(SchemaMigration, "create", AsyncMock(side_effect=RuntimeError("stamp failed"))):
+                    try:
+                        await MigrationRunner._apply(migration)
+                    except RuntimeError:
+                        pass
+                    else:
+                        return False
+                after = {table: await conn.execute_query_dict(f'PRAGMA table_info("{table}");') for table in before}
+                if before != after or await SchemaMigration.filter(package="core", revision=revision).exists():
+                    return False
+            return True
+
+
 @func_case
 async def test_database_migration(tester: Tester):
     await tester.test(_test_discovery_covers_legacy_map, "迁移发现结果与旧版本号对照表一致")
@@ -367,4 +470,7 @@ async def test_database_migration(tester: Tester):
     await tester.test(_test_checksum_mismatch_only_warns, "已应用迁移的 checksum 变化只告警不阻断")
     await tester.test(_test_stamp_is_idempotent, "stamp 可重复执行且允许登记未发现的 revision")
     await tester.test(_test_downgrade_requires_entry_and_known_target, "回退要求 revision 声明入口且目标存在")
+    await tester.test(_test_sqlite_upgrade_and_stamp_roll_back_together, "SQLite 升级与版本登记失败同时回滚")
+    await tester.test(_test_sqlite_downgrade_and_stamp_roll_back_together, "SQLite 回退与版本删除失败同时回滚")
+    await tester.test(_test_sqlite_rebuild_revisions_remain_atomic, "SQLite 实际表重建 revision 登记失败时完整回滚")
     return tester

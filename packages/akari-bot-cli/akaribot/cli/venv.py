@@ -38,6 +38,7 @@ from akaribot.cli.instance import (
     ok,
     step,
     venv_python_path,
+    venv_scripts_dir,
     warn,
 )
 
@@ -205,11 +206,15 @@ def uv_binary() -> str:
     raise CliError(i18n.t("cli.venv_engine.uv_not_found", env=UV_ENV_VAR))
 
 
-def create_venv_argv(venv_dir: Path, *, python: str | None = None, clear: bool = False) -> list[str]:
-    """``uv venv`` 的 argv；``clear`` 为真时覆盖已存在的环境。"""
+def create_venv_argv(
+    venv_dir: Path, *, python: str | None = None, clear: bool = False, relocatable: bool = False
+) -> list[str]:
+    """构造创建虚拟环境的 uv 命令，支持覆盖与可重定位模式。"""
     argv = [uv_binary(), "venv", str(venv_dir)]
     if clear:
         argv.append("--clear")
+    if relocatable:
+        argv.append("--relocatable")
     if python:
         argv += ["--python", str(python)]
     return argv
@@ -1584,11 +1589,13 @@ def recreate(
     if staging.exists():
         if not force:
             raise CliError(i18n.t("cli.venv_engine.staging_exists", staging=staging))
-        shutil.rmtree(staging)
+        if not runner.dry_run:
+            shutil.rmtree(staging)
     interpreter = Path(python) if python else system_python()
     console.print("  " + i18n.t("cli.venv_engine.new_interpreter", python=interpreter))
     runner.run_checked(
-        create_venv_argv(staging, python=interpreter), what=i18n.t("cli.venv_engine.what_create_new_venv")
+        create_venv_argv(staging, python=interpreter, relocatable=True),
+        what=i18n.t("cli.venv_engine.what_create_new_venv"),
     )
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(
@@ -1619,9 +1626,22 @@ def recreate(
     step(4, 4, i18n.t("cli.venv_engine.step_swap_and_cleanup"))
     retired = instance.venv_dir.with_name(instance.venv_dir.name + ".old")
     if retired.exists():
-        shutil.rmtree(retired)
-    instance.venv_dir.rename(retired)
-    staging.rename(instance.venv_dir)
+        raise CliError(i18n.t("cli.venv_engine.retired_exists", path=retired))
+    try:
+        instance.venv_dir.rename(retired)
+    except OSError as exc:
+        raise CliError(i18n.t("cli.venv_engine.swap_failed", error=exc)) from exc
+    try:
+        staging.rename(instance.venv_dir)
+        _verify_recreated_environment(instance, staging, source_dists)
+    except (OSError, CliError) as exc:
+        try:
+            if instance.venv_dir.exists():
+                instance.venv_dir.rename(staging)
+            retired.rename(instance.venv_dir)
+        except OSError as restore_error:
+            raise CliError(i18n.t("cli.venv_engine.restore_failed", path=retired, error=restore_error)) from exc
+        raise CliError(i18n.t("cli.venv_engine.swap_failed", error=exc)) from exc
     shutil.rmtree(retired, ignore_errors=True)
     instance.invalidate()
     ok(i18n.t("cli.venv_engine.venv_recreated", venv_dir=instance.venv_dir))
@@ -1633,6 +1653,30 @@ def recreate(
         (),
         i18n.t("cli.venv_engine.detail_old_venv_removed"),
     )
+
+
+def _verify_recreated_environment(instance: Instance, staging: Path, source_dists: Mapping[str, InstalledDist]) -> None:
+    installed = probe_environment(instance.python, all_distributions=True)
+    if compare_entry_points(source_dists, installed):
+        raise CliError(i18n.t("cli.venv_engine.entry_points_mismatch_new", staging=instance.venv_dir))
+    scripts = venv_scripts_dir(instance.venv_dir)
+    stale = str(staging).encode()
+    for info in installed.values():
+        for entry in info.entry_points:
+            group, _, name = entry.partition("|")
+            if group not in ("console_scripts", "gui_scripts"):
+                continue
+            script = scripts / (f"{name}.exe" if _windows_platform() else name)
+            if not script.is_file() or stale in script.read_bytes():
+                raise CliError(i18n.t("cli.venv_engine.script_invalid", path=script))
+    if any("console_scripts|akaribot" in info.entry_points for info in installed.values()):
+        script = scripts / ("akaribot.exe" if _windows_platform() else "akaribot")
+        try:
+            completed = subprocess.run([str(script), "--version"], capture_output=True, timeout=30, check=False)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise CliError(i18n.t("cli.venv_engine.script_invalid", path=script)) from exc
+        if completed.returncode != 0:
+            raise CliError(i18n.t("cli.venv_engine.script_invalid", path=script))
 
 
 def dependency_conflicts(

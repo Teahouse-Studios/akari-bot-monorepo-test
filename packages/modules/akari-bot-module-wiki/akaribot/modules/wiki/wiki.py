@@ -35,6 +35,7 @@ from akaribot.core.api import (
 from akaribot.core.builtins.session.tasks import SessionTaskManager
 from akaribot.core.builtins.parser.args import parse_argv, parse_template
 from akaribot.core.builtins.parser.command import _split_command
+from akaribot.core.api import platform_name_of
 from .database.models import WikiSiteInfo, WikiTargetInfo
 from .utils.forum import build_forum_markdown_table, build_section_markdown_table
 from .utils.disambiguation import (
@@ -390,7 +391,7 @@ def _build_disambiguation_output(msg: Bot.MessageSession, page: PageInfo, interw
     command_prefix = msg.session_info.prefixes[0]
     if is_disambiguation_overlong(blocks):
         if (
-            msg.session_info.client_name == "QQBot"
+            platform_name_of(msg.session_info) == "QQBot"
             and msg.session_info.support_markdown_extension
             and msg.session_info.support_action_text
         ):
@@ -1114,7 +1115,7 @@ async def _query_pages_impl(
                                     )
                                 )
                                 use_markdown_section = (
-                                    session.session_info.client_name == "QQBot"
+                                    platform_name_of(session.session_info) == "QQBot"
                                     and session.session_info.support_markdown
                                     and session.session_info.support_markdown_extension
                                     and session.session_info.support_action_text
@@ -1166,7 +1167,7 @@ async def _query_pages_impl(
                             if isinstance(session, Bot.MessageSession) and session.session_info.support_image:
                                 forum_data = r.forum_data
                                 use_markdown_forum = (
-                                    session.session_info.client_name == "QQBot"
+                                    platform_name_of(session.session_info) == "QQBot"
                                     and session.session_info.support_markdown
                                     and session.session_info.support_markdown_extension
                                     and session.session_info.support_action_text

@@ -832,6 +832,7 @@ def _perform_update(
     dry_run: bool,
     verbose: bool,
     json_mode: bool,
+    defer_runtime: bool = False,
 ) -> tuple[int, dict]:
     # ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout；
     # ``json_mode`` 只影响整体失败时报错还是回传载荷。
@@ -914,10 +915,14 @@ def _perform_update(
     for plan in plans:
         try:
             engine.config_sync(target_instance, plan.dist)
-            engine.db_upgrade(target_instance, plan.dist)
+            if not defer_runtime:
+                engine.db_upgrade(target_instance, plan.dist)
         except CliError as exc:
             failed.append((plan.dist, str(exc)))
             warn(str(exc))
+            continue
+        if defer_runtime:
+            continue
         if kinds.get(engine.canonical(plan.dist)) == "module":
             # 代码已在磁盘上换新，但运行中的实例仍注册着旧代际，直接热装载会被判「已注册」；
             # 先热拆卸再热装载才能换到新代码。适配器不支持整包热换，沿用重启提示。
@@ -957,6 +962,9 @@ def update(
     non_interactive: Annotated[
         bool, typer.Option("--non-interactive", help=i18n.t("cli.module.update.option_non_interactive"))
     ] = False,
+    defer_runtime: Annotated[
+        bool, typer.Option("--defer-runtime", help=i18n.t("cli.module.update.option_defer_runtime"))
+    ] = False,
     dry_run: DryRunOption = False,
     verbose: VerboseOption = False,
     as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.module.update.option_json"))] = False,
@@ -984,6 +992,7 @@ def update(
                 dry_run=dry_run,
                 verbose=False,
                 json_mode=True,
+                defer_runtime=defer_runtime,
             )
         print(json.dumps(payload, ensure_ascii=False), file=stream)
         raise typer.Exit(code)
@@ -997,6 +1006,7 @@ def update(
         dry_run=dry_run,
         verbose=verbose,
         json_mode=False,
+        defer_runtime=defer_runtime,
     )
     if code != 0:
         raise typer.Exit(code)

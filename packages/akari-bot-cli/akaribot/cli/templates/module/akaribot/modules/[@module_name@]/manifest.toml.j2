@@ -1,7 +1,7 @@
 # akari-bot-module-[@module_name@] 的包清单。
 # 字段与 core/registry.py 的 PackageManifest 一一对应，未启用的能力整行省略。
 schema = 1
-requires_core_api = ">=1"
+requires_core_api = ">=1,<2"
 locales = "locales"
 {% if has_assets | default(false) %}assets = "assets"
 {% endif %}{% if has_database | default(false) %}migrations = "migrations"

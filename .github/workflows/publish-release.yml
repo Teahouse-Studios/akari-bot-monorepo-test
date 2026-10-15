@@ -20,7 +20,19 @@ jobs:
 
       - name: Set TAG_NAME
         id: tag
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]] || \
+             [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-\.]?(a|b|rc|alpha|beta|pre|preview|dev)[-\.]?[0-9]+)?$ ]]; then
+            echo "发布必须从有效的产品版本 tag 触发。" >&2
+            exit 1
+          fi
+          echo "TAG_NAME=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "PRERELEASE=false" >> "$GITHUB_ENV"
+          else
+            echo "PRERELEASE=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Write version file
         run: |
@@ -43,11 +55,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          release_exists=$(gh release list --json tagName --jq ".[] | select(.tagName==\"$TAG_NAME\") | .tagName")
-          if [ -n "$release_exists" ]; then
-            gh release delete "$TAG_NAME" -y
+          if gh release view "$TAG_NAME" --json tagName >/dev/null 2>&1; then
+            echo "Release $TAG_NAME 已存在，保留发布记录与附件。"
+            exit 0
           fi
-
+          RELEASE_ARGS=(--verify-tag)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            RELEASE_ARGS+=(--prerelease --latest=false)
+          fi
           gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
+            "${RELEASE_ARGS[@]}" \
             "$ZIP_NAME"
