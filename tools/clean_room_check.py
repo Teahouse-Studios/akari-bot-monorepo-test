@@ -228,6 +228,74 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
     return True
 
 
+def check_index_all_combo(index_url: str, offline: bool = False) -> bool:
+    """按索引地址安装本批全部内部分发，验证索引可解析完整集合。
+
+    :param index_url: 索引根地址（静态索引或 Warehouse 均可）。
+    :param offline: 是否只用本地缓存。
+    :return: 是否通过。
+    """
+    name = "index-all"
+    modules, adapters = workspace_members()
+    targets = [CORE, *modules, *adapters, CLI]
+    with tempfile.TemporaryDirectory(prefix="akari-clean-") as tmp:
+        venv = Path(tmp) / "venv"
+        created = run(uv_cmd(["venv", str(venv), "--python", "3.12"], offline), cwd=REPO_ROOT)
+        if created.returncode != 0:
+            print(f"[{name}] 建 venv 失败：{created.stderr[-400:]}")
+            return False
+        installed = run(
+            uv_cmd(
+                [
+                    "pip",
+                    "install",
+                    "--python",
+                    str(venv_python(venv)),
+                    "--index-url",
+                    f"{index_url.rstrip('/')}/simple/",
+                    "--extra-index-url",
+                    "https://pypi.org/simple/",
+                    "--index-strategy",
+                    "unsafe-best-match",
+                    *targets,
+                ],
+                offline,
+            ),
+            cwd=REPO_ROOT,
+        )
+        if installed.returncode != 0:
+            print(f"[{name}] 从索引安装全部 {len(targets)} 个分发失败：")
+            print(installed.stderr[-2000:], file=sys.stderr)
+            return False
+        (Path(tmp) / "config").mkdir(exist_ok=True)
+        (Path(tmp) / "config" / "config.toml").write_text(MINIMAL_CONFIG, encoding="utf-8")
+        probe = run(
+            [str(venv_python(venv)), "-c", PROBE],
+            cwd=tmp,
+            env={
+                **os.environ,
+                "AKARI_INSTANCE_DIR": tmp,
+                "AKARI_CONFIG_PATH": str(Path(tmp) / "config"),
+                "AKARI_CONFIG_READONLY": "",
+            },
+        )
+        if probe.returncode != 0:
+            print(f"[{name}] 发现阶段失败：{probe.stderr[-800:]}", file=sys.stderr)
+            return False
+        data = json.loads(probe.stdout.strip().splitlines()[-1])
+        expected = {package.removeprefix("akari-bot-module-") for package in modules}
+        missing = expected - set(data["modules"])
+        cli_ok = run([str(venv_script(venv, "akaribot")), "--version"], cwd=tmp).returncode == 0
+        ok = not data["incompatible"] and not missing and cli_ok
+        print(
+            f"[{name}] 模块 {len(data['modules'])} 个、适配器 {len(data['adapters'])} 个、"
+            f"不兼容 {len(data['incompatible'])} 个、CLI {'可用' if cli_ok else '不可用'}"
+        )
+        if missing:
+            print(f"    未发现：{sorted(missing)}")
+        return ok
+
+
 def check_index_combo(index_url: str, offline: bool = False) -> bool:
     """直接从索引安装典型组合，验证索引本身可用（不借助本地 wheel）。
 
@@ -461,7 +529,9 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = argparse.ArgumentParser(description="用发布形态的 wheel 验证净室安装（T6.6）。")
     parser.add_argument(
-        "--combo", choices=["core", "core-full", "typical", "all", "random", "index", CLI_COMBO], default=None
+        "--combo",
+        choices=["core", "core-full", "typical", "all", "random", "index", "index-all", CLI_COMBO],
+        default=None,
     )
     parser.add_argument("--random-count", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
@@ -470,6 +540,11 @@ def main(argv: list[str] | None = None) -> int:
         "--index-url",
         default=None,
         help="从该索引拉取已发布产物再安装（如 https://test.pypi.org），此时不重新构建",
+    )
+    parser.add_argument(
+        "--local-index-url",
+        default=None,
+        help="静态 PEP 503 索引地址（tools/build_local_index.py 生成），不经 Warehouse JSON API",
     )
     parser.add_argument("--manifest", type=Path, help="索引模式必填：批量发行清单，用于核验远端文件 SHA256")
     parser.add_argument("--download-dir", type=Path, default=Path("dist-indexed"), help="索引产物的下载目录")
@@ -487,6 +562,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     wheel_source = DIST_DIR
+    if args.index_url and args.local_index_url:
+        print("--index-url 与 --local-index-url 只能选一个", file=sys.stderr)
+        return 1
     if args.index_url:
         if args.manifest is None:
             print("--index-url 需要同时提供 --manifest", file=sys.stderr)
@@ -496,6 +574,8 @@ def main(argv: list[str] | None = None) -> int:
         if not download_release_files(args.index_url, args.manifest, args.download_dir):
             return 1
         wheel_source = args.download_dir
+    elif args.local_index_url:
+        pass
     elif not args.keep_dist or not DIST_DIR.exists():
         if not build_all(offline=args.offline):
             return 1
@@ -518,9 +598,14 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     combos["index"] = ([CORE], "")
-    selected = [args.combo] if args.combo else [*combos, CLI_COMBO]
-    if "index" in selected and not args.index_url:
-        print("index 组合需要 --index-url", file=sys.stderr)
+    index_url = args.local_index_url or args.index_url
+    if args.local_index_url:
+        # 静态索引没有本地产物集，只能跑「按索引安装」的两种组合。
+        selected = [args.combo] if args.combo else ["index", "index-all"]
+    else:
+        selected = [args.combo] if args.combo else [*combos, CLI_COMBO]
+    if ("index" in selected or "index-all" in selected) and not index_url:
+        print("index / index-all 组合需要 --index-url 或 --local-index-url", file=sys.stderr)
         return 1
 
     if not modules and any(name != CLI_COMBO for name in selected):
@@ -533,7 +618,9 @@ def main(argv: list[str] | None = None) -> int:
             # CLI 组合只装 CLI wheel，与发现阶段的探针无关，单独走一条检查路径。
             passed = check_cli_combo(offline=args.offline, source=wheel_source)
         elif name == "index":
-            passed = check_index_combo(args.index_url, offline=args.offline)
+            passed = check_index_combo(index_url, offline=args.offline)
+        elif name == "index-all":
+            passed = check_index_all_combo(index_url, offline=args.offline)
         else:
             passed = check_combo(name, *combos[name], offline=args.offline, source=wheel_source)  # (包列表， extras)
         if not passed:

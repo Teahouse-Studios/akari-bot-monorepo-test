@@ -23,6 +23,8 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PUBLISH_REGISTRY = REPO_ROOT / "tools" / "publish_registry.py"
@@ -84,6 +86,36 @@ def stage(directory: Path, entry: dict, dist_dir: Path) -> None:
     directory.mkdir(parents=True)
     for name in entry["files"]:
         shutil.copy2(dist_dir / name, directory / name)
+
+
+def project_exists(index_url: str, name: str) -> bool:
+    """判断分发名是否已在索引上创建。
+
+    新项目配额只对首次创设计数；已存在的项目发新版本不占该配额。
+
+    :param index_url: 索引根地址。
+    :param name: 分发名。
+    :return: 已创建时为 ``True``。
+    """
+    url = f"{index_url.rstrip('/')}/pypi/{name}/json"
+    for attempt in range(4):
+        try:
+            with urlopen(url, timeout=30) as response:  # noqa: S310 - 固定 https 索引地址
+                response.read()
+                return True
+        except HTTPError as error:
+            if error.code == 404:
+                return False
+            if error.code not in {429, 500, 502, 503, 504} or attempt + 1 >= 4:
+                raise
+            header = error.headers.get("Retry-After") if error.headers else None
+            try:
+                delay = max(1.0, float(header)) if header else min(300.0, 30.0 * (2**attempt))
+            except ValueError:
+                delay = min(300.0, 30.0 * (2**attempt))
+            print(f"  项目探测返回 {error.code}，{delay:.0f}s 后重试", file=sys.stderr)
+            time.sleep(delay)
+    raise RuntimeError(f"项目探测重试耗尽：{name}")
 
 
 def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url: str) -> tuple[int, Path]:
@@ -183,7 +215,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repository-url", default="https://test.pypi.org/legacy/", help="上传端点")
     parser.add_argument("--token", default=os.environ.get("TESTPYPI_TOKEN", ""), help="API token")
     parser.add_argument("--delay", type=float, default=3.0, help="两个分发之间的等待秒数")
-    parser.add_argument("--max-dists", type=int, default=18, help="本次最多上传的分发数；0 表示不限")
+    parser.add_argument("--max-dists", type=int, default=0, help="本次最多上传的分发数；0 表示不限")
+    parser.add_argument(
+        "--max-new-projects",
+        type=int,
+        default=18,
+        help="本次最多创建的新项目数（配额单位）；已存在项目的版本上传不计入，0 表示不限",
+    )
     parser.add_argument("--max-files", type=int, default=0, help="本次最多上传的文件数；0 表示不限")
     parser.add_argument("--max-wait", type=int, default=300, help="被限速时单次最长等待秒数，超过则留待下一窗口")
     parser.add_argument("--retries", type=int, default=6, help="单个分发的最大上传尝试次数")
@@ -214,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     order = publish_order(list(dists))
     uploaded_files = 0
     uploaded_dists = 0
+    new_projects = 0
     capped = False
     with tempfile.TemporaryDirectory(prefix="akari-testpypi-") as tmp:
         base = Path(tmp)
@@ -221,6 +260,12 @@ def main(argv: list[str] | None = None) -> int:
             entry = dists[dist]
             version = entry["version"]
             try:
+                is_new = not project_exists(args.index_url, dist)
+                if is_new and args.max_new_projects and new_projects >= args.max_new_projects:
+                    summary["remaining"].append(dist)
+                    capped = True
+                    print(f"[{position}/{len(order)}] {dist}: 新项目配额已用完（本次 {new_projects} 个），留待下一窗口")
+                    continue
                 stage(base / "dist", entry, args.dist_dir)
                 count, upload_dir = missing_files(dist, version, base / "dist", entry, args.index_url)
             except RuntimeError as error:
@@ -253,6 +298,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[{position}/{len(order)}] {dist} {version}: 将上传 {count} 个文件")
                 uploaded_files += count
                 uploaded_dists += 1
+                if is_new:
+                    new_projects += 1
                 continue
             try:
                 upload(upload_dir, args.repository_url, args.token, args.retries, args.max_wait)
@@ -269,15 +316,18 @@ def main(argv: list[str] | None = None) -> int:
             summary["uploaded"].append({"dist": dist, "files": count})
             uploaded_files += count
             uploaded_dists += 1
+            if is_new:
+                new_projects += 1
             print(f"[{position}/{len(order)}] {dist} {version}: 上传 {count} 个文件")
             if args.delay:
                 time.sleep(args.delay)
 
     if args.summary:
         args.summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    summary["new_projects"] = new_projects
     print(
-        f"上传 {len(summary['uploaded'])} 个分发 / {uploaded_files} 个文件，跳过 {len(summary['skipped'])} 个，"
-        f"待续 {len(summary['remaining'])} 个，失败 {len(summary['errors'])} 个"
+        f"上传 {len(summary['uploaded'])} 个分发 / {uploaded_files} 个文件（其中新建项目 {new_projects} 个），"
+        f"跳过 {len(summary['skipped'])} 个，待续 {len(summary['remaining'])} 个，失败 {len(summary['errors'])} 个"
     )
     if capped or summary["remaining"]:
         print("本次未传完：用同一批清单再跑一次即可续传（只补缺失文件）。")

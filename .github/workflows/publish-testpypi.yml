@@ -23,8 +23,8 @@ on:
       version_override:
         description: 重复演练填 0.1.0.postN（改全部 57 个 pyproject 版本）；首次演练留空
         required: false
-      max_dists:
-        description: 本次最多上传的分发数；TestPyPI 新项目有窗口配额，默认 18
+      max_new_projects:
+        description: 本次最多创建的新项目数；TestPyPI 按窗口配额（实测约 20），默认 18
         required: false
         default: "18"
 
@@ -128,12 +128,12 @@ jobs:
       - name: Publish in dependency order
         env:
           TESTPYPI_TOKEN: ${{ secrets.TESTPYPI_TOKEN }}
-          MAX_DISTS: ${{ inputs.max_dists }}
+          MAX_NEW_PROJECTS: ${{ inputs.max_new_projects }}
         run: |
           python tools/testpypi_publish.py \
             --manifest release-batch.json --dist-dir dist \
             --index-url "$TESTPYPI_INDEX" --repository-url https://test.pypi.org/legacy/ \
-            --token "$TESTPYPI_TOKEN" --delay 3 --max-dists "$MAX_DISTS" \
+            --token "$TESTPYPI_TOKEN" --delay 3 --max-new-projects "$MAX_NEW_PROJECTS" \
             --summary publish-summary.json
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
@@ -219,6 +219,44 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: upload-dist/
 
+  verify-local-index:
+    # 不经过任何外部仓库：把本批产物建成 PEP 503 静态索引，按索引地址装全量，验证解析/元数据/entry points。
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist/
+
+      - name: Build static index and install all distributions
+        shell: bash
+        run: |
+          uv run --no-project --with packaging python tools/build_local_index.py --dist-dir dist --output local-index
+          python -m http.server 8123 --directory local-index &
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8123/simple/ >/dev/null; then break; fi
+            sleep 1
+          done
+          uv run --no-project --with packaging python tools/clean_room_check.py \
+            --local-index-url http://127.0.0.1:8123 --combo index-all
+          uv run --no-project --with packaging python tools/clean_room_check.py \
+            --local-index-url http://127.0.0.1:8123 --combo index
+
   verify:
     needs: [build, publish, publish-trusted]
     if: always() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.publish-trusted.result == 'success')
@@ -244,13 +282,47 @@ jobs:
           name: release-batch
           path: .
 
+      - name: Trim manifest to what TestPyPI already has
+        id: present
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, urllib.error, urllib.request
+          from pathlib import Path
+
+          batch = json.loads(Path("release-batch.json").read_text())
+          present = {}
+          for name, entry in batch["dists"].items():
+              try:
+                  urllib.request.urlopen(f"https://test.pypi.org/pypi/{name}/json", timeout=30).read()
+                  present[name] = entry
+              except urllib.error.HTTPError:
+                  pass
+          Path("release-batch-present.json").write_text(
+              json.dumps({**batch, "dists": present}, ensure_ascii=False), encoding="utf-8"
+          )
+          print(f"present={len(present)}")
+          print(f"complete={'true' if len(present) == len(batch['dists']) else 'false'}")
+          PY
+
       - name: Install from TestPyPI and probe
         env:
           COMBO: ${{ matrix.combo }}
+          COMPLETE: ${{ steps.present.outputs.complete }}
+        shell: bash
         run: |
+          # 部分上传阶段只跑不依赖缺失分发的组合；全量就绪后跑完整矩阵。
+          if [ "$COMPLETE" = "true" ]; then
+            SELECTED="$COMBO"
+          else
+            case "$COMBO" in
+              core|core-full) SELECTED="$COMBO" ;;
+              *) echo "TestPyPI 尚未传完（${{ steps.present.outputs.present }} 个），跳过 $COMBO"; exit 0 ;;
+            esac
+          fi
           uv run --no-project --with packaging python tools/clean_room_check.py \
-            --index-url "$TESTPYPI_INDEX" --manifest release-batch.json \
-            --download-dir indexed-files --combo "$COMBO"
+            --index-url "$TESTPYPI_INDEX" --manifest release-batch-present.json \
+            --download-dir indexed-files --combo "$SELECTED"
 
       - uses: actions/upload-artifact@v4
         if: always()
