@@ -10,10 +10,13 @@ import json
 import shutil
 import sys
 import tempfile
+import time
+import tomllib
 import zipfile
 from email.parser import BytesParser
 from pathlib import Path
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from packaging.requirements import Requirement
@@ -27,8 +30,18 @@ else:
     import build_registry
 
 
+DEFAULT_INDEX = "https://pypi.org"
+"""默认索引；TestPyPI 演练传入 ``https://test.pypi.org``。"""
+
+
 class ReleaseError(RuntimeError):
     pass
+
+
+def _api_url(index_url: str, name: str, version: str | None = None) -> str:
+    # 索引根地址 + 分发名 + 可选版本；省略版本时取该分发的最新版本。
+    base = f"{index_url.rstrip('/')}/pypi/{canonicalize_name(name)}"
+    return f"{base}/{Version(version)}/json" if version else f"{base}/json"
 
 
 def _json(path: Path) -> dict:
@@ -75,10 +88,10 @@ def _download(url: str) -> bytes:
         return response.read()
 
 
-def _prepare_upload(directory: Path, expected: dict, output: Path) -> int:
+def _prepare_upload(directory: Path, expected: dict, output: Path, index_url: str = DEFAULT_INDEX) -> int:
     if _manifest(directory, expected["dist"], expected["version"]) != expected:
         raise ReleaseError("本地产物与保存的构建清单不符")
-    url = f"https://pypi.org/pypi/{expected['dist']}/{Version(expected['version'])}/json"
+    url = _api_url(index_url, expected["dist"], expected["version"])
     try:
         payload = json.loads(_download(url))
     except HTTPError as error:
@@ -106,9 +119,41 @@ def _prepare_upload(directory: Path, expected: dict, output: Path) -> int:
     return len(missing)
 
 
-def _published(dist: str, version: str, expected: dict | None = None) -> tuple[dict, bytes]:
+def _batch_manifest(dist_dir: Path, git_sha: str, batch_id: str) -> dict:
+    # 一次构建的全部产物 → 发行清单；后续上传、下载核验与安装都对照它。
+    dists: dict[str, dict] = {}
+    for pyproject in sorted(Path("packages").glob("**/pyproject.toml")):
+        project = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {})
+        name, version = project.get("name"), project.get("version")
+        if not name or not version:
+            continue
+        files = {}
+        for path in sorted(dist_dir.iterdir()):
+            if path.suffix != ".whl" and not path.name.endswith(".tar.gz"):
+                continue
+            if _identity(path.name) != (canonicalize_name(name), Version(version)):
+                continue
+            files[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if not any(item.endswith(".whl") for item in files) or not any(item.endswith(".tar.gz") for item in files):
+            raise ReleaseError(f"{name} {version} 缺少 wheel 或 sdist")
+        dists[canonicalize_name(name)] = {"version": version, "files": files}
+    if not dists:
+        raise ReleaseError("产物目录里没有任何 workspace 分发")
+    return {
+        "schema": 1,
+        "batch_id": batch_id,
+        "git_sha": git_sha,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "python": ">=3.12,<4.0",
+        "dists": dists,
+    }
+
+
+def _published(
+    dist: str, version: str, expected: dict | None = None, index_url: str = DEFAULT_INDEX
+) -> tuple[dict, bytes]:
     name = canonicalize_name(dist)
-    payload = json.loads(_download(f"https://pypi.org/pypi/{name}/{Version(version)}/json"))
+    payload = json.loads(_download(_api_url(index_url, name, version)))
     info = payload.get("info", {})
     if canonicalize_name(info.get("name", "")) != name or Version(info.get("version", "")) != Version(version):
         raise ReleaseError("PyPI 返回的分发或版本与发布目标不符")
@@ -128,8 +173,9 @@ def _published(dist: str, version: str, expected: dict | None = None) -> tuple[d
     for item in files:
         if _identity(item["filename"]) != (name, Version(version)):
             raise ReleaseError("PyPI 文件名与发布目标不符")
-        if not item["url"].startswith("https://files.pythonhosted.org/"):
-            raise ReleaseError("PyPI 产物不在官方文件服务上")
+        host = urlparse(item["url"]).hostname or ""
+        if not host.endswith("pythonhosted.org"):
+            raise ReleaseError("索引产物不在官方文件服务上")
         contents = _download(item["url"])
         if hashlib.sha256(contents).hexdigest() != hashes[item["filename"]]:
             raise ReleaseError(f"下载产物 SHA256 不符：{item['filename']}")
@@ -316,16 +362,25 @@ def _installable(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="核验 PyPI 产物并更新发布账本")
-    parser.add_argument("action", choices=("manifest", "prepare-upload", "verify", "merge", "record"))
-    parser.add_argument("--dist", required=True)
-    parser.add_argument("--version", required=True)
+    parser = argparse.ArgumentParser(description="核验索引产物并更新发布账本")
+    parser.add_argument("action", choices=("manifest", "batch-manifest", "prepare-upload", "verify", "merge", "record"))
+    parser.add_argument("--dist")
+    parser.add_argument("--version")
     parser.add_argument("--dist-dir", type=Path, default=Path("dist"))
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--record", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--index-url", default=DEFAULT_INDEX, help="索引根地址；TestPyPI 用 https://test.pypi.org")
+    parser.add_argument("--git-sha", default="", help="batch-manifest 记录的候选提交 SHA")
+    parser.add_argument("--batch-id", default="", help="batch-manifest 的批次标识")
     args = parser.parse_args(argv)
     try:
+        if args.action == "batch-manifest":
+            _write(args.output, _batch_manifest(args.dist_dir, args.git_sha, args.batch_id))
+            print(f"批量清单：{len(_json(args.output)['dists'])} 个分发")
+            return 0
+        if not args.dist or not args.version:
+            raise ReleaseError("该操作必须提供 --dist 与 --version")
         if args.action == "manifest":
             _write(args.output, _manifest(args.dist_dir, args.dist, args.version))
         elif args.action == "prepare-upload":
@@ -336,10 +391,15 @@ def main(argv: list[str] | None = None) -> int:
                 args.version
             ):
                 raise ReleaseError("原始构建清单与上传目标不符")
-            missing = _prepare_upload(args.dist_dir, expected, args.output)
+            missing = _prepare_upload(args.dist_dir, expected, args.output, index_url=args.index_url)
             print(f"本次待上传文件：{missing}")
         elif args.action != "merge":
-            record, contents = _published(args.dist, args.version, _json(args.manifest) if args.manifest else None)
+            record, contents = _published(
+                args.dist,
+                args.version,
+                _json(args.manifest) if args.manifest else None,
+                index_url=args.index_url,
+            )
             record["section"], record["entry"] = _entry(record, contents)
             if args.action == "verify":
                 _write(args.output, record)

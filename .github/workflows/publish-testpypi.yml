@@ -1,0 +1,277 @@
+name: TestPyPI rehearsal
+
+# 首发候选演练：一次构建全部 workspace 分发，串行上传 TestPyPI，再从 TestPyPI 下载真实文件
+# 并在 Linux/Windows/macOS 上做净室安装验证。只写 TestPyPI，不碰 PyPI、gh-pages 与 Release。
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: dry-run 只构建与生成发行清单；publish 才上传 TestPyPI
+        type: choice
+        options: [dry-run, publish]
+        default: dry-run
+        required: true
+      auth:
+        description: 上传凭据方式；fork 演练用 token，官方仓库正式演练用 Trusted Publishing
+        type: choice
+        options: [token, trusted-publishing]
+        default: token
+        required: true
+      batch_id:
+        description: 批次标识，写入发行清单；留空按 run 编号生成
+        required: false
+      version_override:
+        description: 重复演练填 0.1.0.postN（改全部 57 个 pyproject 版本）；首次演练留空
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testpypi-rehearsal
+  cancel-in-progress: false
+
+env:
+  TESTPYPI_INDEX: https://test.pypi.org
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      dists: ${{ steps.release.outputs.dists }}
+      batch_id: ${{ steps.release.outputs.batch_id }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Apply batch version override
+        if: inputs.version_override != ''
+        run: python tools/set_batch_version.py "${{ inputs.version_override }}"
+
+      - name: Build all workspace distributions
+        run: |
+          rm -rf dist
+          uv build --all-packages --out-dir dist
+          test "$(ls dist | wc -l)" -ge 114
+
+      - name: Record batch manifest
+        id: release
+        env:
+          BATCH_INPUT: ${{ inputs.batch_id }}
+        run: |
+          BATCH_ID="${BATCH_INPUT:-run-$GITHUB_RUN_NUMBER}"
+          uv run --no-project --with packaging python tools/publish_registry.py batch-manifest \
+            --dist-dir dist --output release-batch.json \
+            --git-sha "$GITHUB_SHA" --batch-id "$BATCH_ID"
+          echo "batch_id=$BATCH_ID" >> "$GITHUB_OUTPUT"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          dists = sorted(json.loads(Path("release-batch.json").read_text())["dists"])
+          print(f"dists={json.dumps(dists)}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-batch
+          path: release-batch.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    # 单 job 串行上传：Token 模式下按依赖顺序逐个 twine 上传，避免 57 个 matrix job 逐个触发
+    # environment 审批；Trusted Publishing 走下面的独立 matrix job（OIDC 需要 action 逐次签发）。
+    needs: build
+    if: inputs.confirm == 'publish' && inputs.auth == 'token'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-batch
+          path: .
+
+      - name: Publish in dependency order
+        env:
+          TESTPYPI_TOKEN: ${{ secrets.TESTPYPI_TOKEN }}
+        run: |
+          python - <<'PY' > publish-order.txt
+          import json
+          from pathlib import Path
+
+          names = list(json.loads(Path("release-batch.json").read_text())["dists"])
+
+          def rank(name: str) -> int:
+              if name.startswith("akari-bot-assets-") or name == "akari-bot-html2text":
+                  return 0
+              if name == "akari-bot-core":
+                  return 1
+              if name == "akari-bot-testing":
+                  return 2
+              if name == "akari-bot-cli":
+                  return 4
+              return 3
+
+          print("\n".join(sorted(names, key=lambda item: (rank(item), item))))
+          PY
+          while read -r DIST; do
+            echo "=== $DIST ==="
+            python - "$DIST" <<'PY'
+          import json, os, shutil
+          import sys
+          from pathlib import Path
+
+          dist = sys.argv[1]
+          entry = json.loads(Path("release-batch.json").read_text())["dists"][dist]
+          staged = Path("one-dist")
+          shutil.rmtree(staged, ignore_errors=True)
+          staged.mkdir()
+          for name in entry["files"]:
+              shutil.copy2(Path("dist") / name, staged / name)
+          Path("one-expected.json").write_text(json.dumps({"dist": dist, **entry}), encoding="utf-8")
+          Path("one-version.txt").write_text(entry["version"], encoding="utf-8")
+          PY
+            VERSION=$(cat one-version.txt)
+            rm -rf upload-dist
+            uv run --no-project --with packaging python tools/publish_registry.py prepare-upload \
+              --dist "$DIST" --version "$VERSION" --dist-dir one-dist --manifest one-expected.json \
+              --index-url "$TESTPYPI_INDEX" --output upload-dist
+            COUNT=$(python -c 'from pathlib import Path; print(len(list(Path("upload-dist").iterdir())))')
+            if [ "$COUNT" = "0" ]; then
+              echo "$DIST $VERSION 已全部存在，跳过"
+              continue
+            fi
+            uv run --no-project --with twine twine upload \
+              --repository-url https://test.pypi.org/legacy/ \
+              --username __token__ --password "$TESTPYPI_TOKEN" \
+              --non-interactive upload-dist/*
+          done < publish-order.txt
+
+  publish-trusted:
+    # 官方仓库正式演练用：为 57 个项目配 pending publisher 后，由 action 逐次签发 OIDC 令牌。
+    needs: build
+    if: inputs.confirm == 'publish' && inputs.auth == 'trusted-publishing'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        dist: ${{ fromJSON(needs.build.outputs.dists) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-batch
+          path: .
+      - name: Stage this distribution
+        id: stage
+        env:
+          RELEASE_DIST: ${{ matrix.dist }}
+        run: |
+          python - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+
+          dist = os.environ["RELEASE_DIST"]
+          entry = json.loads(Path("release-batch.json").read_text())["dists"][dist]
+          staged = Path("one-dist")
+          staged.mkdir(exist_ok=True)
+          for name in entry["files"]:
+              shutil.copy2(Path("dist") / name, staged / name)
+          Path("one-expected.json").write_text(json.dumps({"dist": dist, **entry}), encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"version={entry['version']}\n")
+          PY
+          uv run --no-project --with packaging python tools/publish_registry.py prepare-upload \
+            --dist "$RELEASE_DIST" --version "${{ steps.stage.outputs.version }}" \
+            --dist-dir one-dist --manifest one-expected.json \
+            --index-url "$TESTPYPI_INDEX" --output upload-dist
+          echo "count=$(python -c 'from pathlib import Path; print(len(list(Path("upload-dist").iterdir())))')" >> "$GITHUB_OUTPUT"
+      - name: Publish to TestPyPI (Trusted Publishing)
+        if: steps.stage.outputs.count != '0'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: upload-dist/
+
+  verify:
+    needs: [build, publish, publish-trusted]
+    if: always() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.publish-trusted.result == 'success')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        combo: [core, core-full, typical, all, cli, index]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-batch
+          path: .
+
+      - name: Install from TestPyPI and probe
+        env:
+          COMBO: ${{ matrix.combo }}
+        run: |
+          uv run --no-project --with packaging python tools/clean_room_check.py \
+            --index-url "$TESTPYPI_INDEX" --manifest release-batch.json \
+            --download-dir indexed-files --combo "$COMBO"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verify-${{ matrix.os }}-${{ matrix.combo }}
+          path: indexed-files/
+          if-no-files-found: ignore
+          retention-days: 14
