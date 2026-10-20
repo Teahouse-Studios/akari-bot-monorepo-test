@@ -38,6 +38,20 @@ class RateLimited(RuntimeError):
         self.delay = delay
 
 
+def check_tools(require_twine: bool = True) -> str | None:
+    """确认发布脚本的依赖与 twine 可用。
+
+    :param require_twine: 是否需要校验 twine；dry-run 不需要。
+    :return: 缺失说明；齐备时返回 ``None``。
+    """
+    probe = subprocess.run([sys.executable, "-c", "import packaging"], capture_output=True, text=True, check=False)
+    if probe.returncode != 0:
+        return "缺少 packaging：先执行 python -m pip install packaging"
+    if require_twine and shutil.which("twine") is None:
+        return "缺少 twine：先执行 python -m pip install twine"
+    return None
+
+
 def publish_order(names: list[str]) -> list[str]:
     """按发布依赖顺序排列分发。
 
@@ -72,7 +86,7 @@ def stage(directory: Path, entry: dict, dist_dir: Path) -> None:
         shutil.copy2(dist_dir / name, directory / name)
 
 
-def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url: str) -> int:
+def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url: str) -> tuple[int, Path]:
     """调用发布清单工具计算本次待上传文件数。
 
     :param dist: 分发名。
@@ -80,7 +94,7 @@ def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url:
     :param staged: 暂存目录。
     :param entry: 清单记录。
     :param index_url: 索引根地址。
-    :return: 待上传文件数。
+    :return: 待上传文件数与暂存目录。
     """
     expected = Path(staged.parent) / "expected.json"
     expected.write_text(json.dumps({"dist": dist, **entry}), encoding="utf-8")
@@ -111,7 +125,7 @@ def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url:
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "prepare-upload 失败")
-    return len(list(output.iterdir())) if output.exists() else 0
+    return (len(list(output.iterdir())) if output.exists() else 0), output
 
 
 def upload(staged: Path, repository_url: str, token: str, retries: int, max_wait: int) -> None:
@@ -177,6 +191,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--summary", type=Path, help="把上传结果写成 JSON")
     args = parser.parse_args(argv)
 
+    problem = check_tools(require_twine=not args.dry_run)
+    if problem is not None:
+        print(problem, file=sys.stderr)
+        return 1
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     dists = manifest.get("dists") or {}
     if not dists:
@@ -204,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
             version = entry["version"]
             try:
                 stage(base / "dist", entry, args.dist_dir)
-                count = missing_files(dist, version, base / "dist", entry, args.index_url)
+                count, upload_dir = missing_files(dist, version, base / "dist", entry, args.index_url)
             except RuntimeError as error:
                 summary["errors"].append({"dist": dist, "message": str(error)})
                 print(f"[{position}/{len(order)}] {dist}: 查询失败：{error}", file=sys.stderr)
@@ -237,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
                 uploaded_dists += 1
                 continue
             try:
-                upload(base / "dist" / "upload", args.repository_url, args.token, args.retries, args.max_wait)
+                upload(upload_dir, args.repository_url, args.token, args.retries, args.max_wait)
             except RateLimited as error:
                 summary["remaining"] = order[position - 1 :]
                 summary["rate_limited_after"] = error.delay

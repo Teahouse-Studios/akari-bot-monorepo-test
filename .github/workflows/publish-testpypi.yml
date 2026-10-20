@@ -122,7 +122,8 @@ jobs:
           path: .
 
       - name: Install release tools
-        run: uv tool install twine
+        # 发布脚本由 runner 的 python 直接执行，需把 packaging 与 twine 装进同一环境。
+        run: python -m pip install --disable-pip-version-check packaging twine
 
       - name: Publish in dependency order
         env:
