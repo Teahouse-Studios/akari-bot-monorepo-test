@@ -158,6 +158,24 @@ def _convert_message_content(message: BaseMessage | Message | DirectMessage) -> 
     return msg_chain
 
 
+def _self_mention_ids(include_guild: bool = False) -> set[str]:
+    ids = {str(qqbot_openid)} if qqbot_openid else set()
+    if include_guild:
+        if QQBotConfig.qq_bot_uid:
+            ids.add(str(QQBotConfig.qq_bot_uid))
+        robot = getattr(QQBotContextManager.client, "_robot", None)
+        if robot is not None:
+            ids.add(str(robot.id))
+    return ids
+
+
+def _strip_self_mentions(content: str, ids: set[str]) -> str:
+    if not content or not ids:
+        return content
+    pattern = r"<@!?(?:" + "|".join(re.escape(identifier) for identifier in ids) + r")>"
+    return re.sub(pattern, "", content)
+
+
 class MyClient(botpy.Client):
     async def close(self) -> None:
         global initialized
@@ -233,6 +251,7 @@ class MyClient(botpy.Client):
 
         reply_id = _record_message_ids(message)
 
+        message.content = _strip_self_mentions(message.content, _self_mention_ids(include_guild=True))
         pure_content = re.sub(r"<@(.*?)>", "", message.content).strip()
         if not pure_content:
             message.content = f"{command_prefix[0]}help"
@@ -269,6 +288,7 @@ class MyClient(botpy.Client):
 
         reply_id = _record_message_ids(message)
 
+        message.content = _strip_self_mentions(message.content, _self_mention_ids(include_guild=True))
         pure_content = re.sub(r"<@(.*?)>", "", message.content).strip()
         if not pure_content:
             message.content = f"{command_prefix[0]}help"
@@ -321,6 +341,9 @@ class MyClient(botpy.Client):
                     message.content = m.group(2).strip()
                     if not message.content:
                         message.content = f"{command_prefix[0]}help"
+        message.content = _strip_self_mentions(message.content, _self_mention_ids())
+        if match_atme and not message.content.strip():
+            message.content = f"{command_prefix[0]}help"
         message.content = re.sub(r"<@(.*?)>", rf"{sender_prefix}|\1", message.content)
 
         msg_chain = _convert_message_content(message)
@@ -360,6 +383,7 @@ class MyClient(botpy.Client):
 
         reply_id = _record_message_ids(message)
 
+        message.content = _strip_self_mentions(message.content, _self_mention_ids())
         message.content = re.sub(r"^<@(.*?)>", "", message.content).strip()
         if not message.content:
             message.content = f"{command_prefix[0]}help"

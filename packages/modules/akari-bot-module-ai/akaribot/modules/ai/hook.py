@@ -5,7 +5,7 @@ from attrs import define, field
 from akaribot.core.api import Bot, Logger, MessageChain, PlainElement
 
 from .petal import count_token_petal, precount_petal
-from .setting import default_llm, get_llm_billing, llm_api_list, llm_list, llm_su_list
+from .setting import default_llm, get_llm_billing, get_llm_generation, llm_api_list, llm_list, llm_su_list
 
 STATUS_OK = "ok"
 STATUS_UNAVAILABLE = "unavailable"
@@ -92,7 +92,7 @@ async def ask_ai(ctx: Bot.ModuleHookContext) -> AiHookResult:
 
     # hook 上下文只带 SessionInfo，而模型调用与出站格式化都需要消息会话。
     session = Bot.MessageSession(session_info)
-    chain, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, _history = await ask_llm(
+    chain, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, _history, image_cost = await ask_llm(
         session,
         prompt,
         llm_info["model_name"],
@@ -101,6 +101,7 @@ async def ask_ai(ctx: Bot.ModuleHookContext) -> AiHookResult:
         endpoint=llm_info.get("endpoint", "openai"),
         use_tools=bool(args.get("use_tools", False)),
         extra_instructions=args.get("instructions"),
+        generation=get_llm_generation(llm_info),
     )
 
     Logger.info(
@@ -119,6 +120,7 @@ async def ask_ai(ctx: Bot.ModuleHookContext) -> AiHookResult:
         cache_read_tokens,
         cache_write_tokens,
         billing["call_price"],
+        extra_cost=image_cost,
     )
 
     return AiHookResult(

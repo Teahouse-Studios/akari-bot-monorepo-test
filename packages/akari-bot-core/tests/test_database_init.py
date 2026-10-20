@@ -159,7 +159,7 @@ async def _test_pre_init_mode_generates_all_schemas():
         return (
             result
             and generate_schemas.await_count == 1
-            and generate_schemas.await_args.kwargs == {"safe": True}
+            and generate_schemas.await_args.kwargs.get("safe") is True
             and run_migrations.await_count == 1
             and "akaribot.modules.example.database.models" in config["apps"]["models"]["models"]
             and config["apps"]["local_models"]["models"] == ["akaribot.core.database.local"]

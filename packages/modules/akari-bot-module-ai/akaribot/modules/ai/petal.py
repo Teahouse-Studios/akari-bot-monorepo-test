@@ -1,7 +1,9 @@
-from decimal import Decimal
-from math import ceil
-from akaribot.core.api import CoreConfig, SessionInfo
+from decimal import Decimal, ROUND_UP
 
+from akaribot.core.api import CoreConfig, SessionInfo
+from .config import AiConfig
+
+cost_to_petal = Decimal(str(max(0, AiConfig.ai_cost_to_petal)))
 PREDICT_INPUT_TOKEN = 100
 PREDICT_CACHE_READ_TOKEN = 200
 PREDICT_CACHE_WRITE_TOKEN = 0
@@ -27,12 +29,13 @@ def precount_petal(
         unit_cache_read_price = Decimal(str(cache_read_price)) / ONE_M
         unit_cache_write_price = Decimal(str(cache_write_price)) / ONE_M
 
-        input_petal = int(ceil(input_tokens * unit_input_price))
-        output_petal = int(ceil(output_tokens * unit_output_price))
-        cache_read_petal = int(ceil(cache_read_tokens * unit_cache_read_price))
-        cache_write_petal = int(ceil(cache_write_tokens * unit_cache_write_price))
-        petal = input_petal + output_petal + cache_read_petal + cache_write_petal + int(ceil(Decimal(str(call_price))))
-        petal = petal if petal > 0 else 0
+        input_cost = input_tokens * unit_input_price
+        output_cost = output_tokens * unit_output_price
+        cache_read_cost = cache_read_tokens * unit_cache_read_price
+        cache_write_cost = cache_write_tokens * unit_cache_write_price
+        cost = input_cost + output_cost + cache_read_cost + cache_write_cost + Decimal(str(call_price))
+        petal = int((cost * cost_to_petal).quantize(Decimal("1"), rounding=ROUND_UP))
+        petal = 0 if petal < 0 else petal
         if petal == 0:
             return True
         sender_union_info = session_info.sender_union_info
@@ -51,6 +54,7 @@ async def count_token_petal(
     cache_read_tokens: int,
     cache_write_tokens: int,
     call_price: float = 0,
+    extra_cost: float | int | Decimal = 0,
 ) -> int:
     if CoreConfig.enable_petal and not session_info.superuser:
         unit_input_price = Decimal(str(input_price)) / ONE_M
@@ -58,12 +62,14 @@ async def count_token_petal(
         unit_cache_read_price = Decimal(str(cache_read_price)) / ONE_M
         unit_cache_write_price = Decimal(str(cache_write_price)) / ONE_M
 
-        input_petal = int(ceil(input_tokens * unit_input_price))
-        output_petal = int(ceil(output_tokens * unit_output_price))
-        cache_read_petal = int(ceil(cache_read_tokens * unit_cache_read_price))
-        cache_write_petal = int(ceil(cache_write_tokens * unit_cache_write_price))
-        petal = input_petal + output_petal + cache_read_petal + cache_write_petal + int(ceil(Decimal(str(call_price))))
-        petal = petal if petal > 0 else 0
+        input_cost = input_tokens * unit_input_price
+        output_cost = output_tokens * unit_output_price
+        cache_read_cost = cache_read_tokens * unit_cache_read_price
+        cache_write_cost = cache_write_tokens * unit_cache_write_price
+        cost = input_cost + output_cost + cache_read_cost + cache_write_cost + Decimal(str(call_price))
+        cost += max(Decimal("0"), Decimal(str(extra_cost)))
+        petal = int((cost * cost_to_petal).quantize(Decimal("1"), rounding=ROUND_UP))
+        petal = 0 if petal < 0 else petal
         if petal != 0:
             sender_union_info = session_info.sender_union_info
             if not sender_union_info:

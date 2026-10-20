@@ -15,10 +15,11 @@ from jwt.exceptions import ExpiredSignatureError
 
 from akaribot.adapters.web.client import app, limiter, ph, jwt_secret, get_client_ip
 from akaribot.adapters.web.config import WebConfig
-from akaribot.core.constants.path import data_path
+from akaribot.adapters.web.password_state import PASSWORD_PATH, sync_password_state
 from akaribot.core.api import MaliciousLoginRecords, Logger, SecureRandom
 
-PASSWORD_PATH = data_path / "private" / "web" / ".password"
+from .notifications import notify_security_event, register_device
+
 LOGIN_BLOCK_DURATION = 3600
 
 
@@ -35,10 +36,15 @@ def _read_password_data() -> dict | None:
         return orjson.loads(f.read())
 
 
-def _write_password_data(data: dict) -> None:
+async def _write_password_data(data: dict) -> None:
     PASSWORD_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(PASSWORD_PATH, "wb") as f:
         f.write(orjson.dumps(data))
+    # 状态同步失败不影响已写入的密码文件，状态由密码监控任务重新对齐。
+    try:
+        await sync_password_state(PASSWORD_PATH)
+    except Exception:
+        Logger.exception("[WebUI] Failed to sync password state: ")
 
 
 def _is_2fa_enabled(password_data: dict | None) -> bool:
@@ -78,6 +84,10 @@ def _verify_backup_code(password_data: dict, code: str) -> bool:
         password_data["backup_codes"] = backup_codes
         return True
     return False
+
+
+async def _notify_security_event(event: str, request: Request, ip: str) -> None:
+    await notify_security_event(event, ip=ip, user_agent=request.headers.get("user-agent", ""))
 
 
 login_failed_attempts = defaultdict(list)
@@ -128,6 +138,10 @@ async def auth(request: Request):
                 "iss": "auth-api",
             }
             jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
+
+            user_agent = request.headers.get("user-agent", "")
+            if await register_device(user_agent, ip):
+                await notify_security_event("new_device_login", ip=ip, user_agent=user_agent)
 
             Logger.info(f"[WebUI] {ip} login successfully.")
             return {"data": jwt_token}
@@ -190,7 +204,7 @@ async def auth(request: Request):
                     Logger.warning(f"[WebUI] {ip} login failed: invalid backup code.")
                     raise HTTPException(status_code=403, detail="Invalid backup code")
                 # 持久化已消耗的 backup code
-                _write_password_data(password_data)
+                await _write_password_data(password_data)
             else:
                 if not totp_code:
                     raise HTTPException(status_code=401, detail="2FA code required")
@@ -213,6 +227,10 @@ async def auth(request: Request):
 
                     Logger.warning(f"[WebUI] {ip} 2FA verification failed.")
                     raise HTTPException(status_code=403, detail="Invalid 2FA code")
+
+        user_agent = request.headers.get("user-agent", "")
+        if await register_device(user_agent, ip):
+            await notify_security_event("new_device_login", ip=ip, user_agent=user_agent)
 
         payload = {"exp": datetime.now(UTC) + timedelta(hours=24), "iat": datetime.now(UTC), "iss": "auth-api"}
         jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
@@ -242,12 +260,10 @@ async def change_password(request: Request, response: Response):
             if new_password == "":
                 raise HTTPException(status_code=400, detail="New password required")
 
-            PASSWORD_PATH.parent.mkdir(parents=True, exist_ok=True)
-
             password_data = {"password": ph.hash(new_password), "last_updated": datetime.now().timestamp()}
-            with open(PASSWORD_PATH, "wb") as file:
-                file.write(orjson.dumps(password_data))
+            await _write_password_data(password_data)
             response.delete_cookie("deviceToken")
+            await _notify_security_event("password_set", request, ip)
             return Response(status_code=205)
 
         with open(PASSWORD_PATH, "rb") as file:
@@ -282,7 +298,7 @@ async def change_password(request: Request, response: Response):
                     Logger.warning(f"[WebUI] {ip} login failed: invalid backup code.")
                     raise HTTPException(status_code=403, detail="Invalid backup code")
                 # 持久化已消耗的 backup code
-                _write_password_data(password_data)
+                await _write_password_data(password_data)
             else:
                 if not totp_code:
                     raise HTTPException(status_code=400, detail="2FA code required")
@@ -293,11 +309,11 @@ async def change_password(request: Request, response: Response):
         password_data["password"] = ph.hash(new_password)
         password_data["last_updated"] = datetime.now().timestamp()
 
-        with open(PASSWORD_PATH, "wb") as file:
-            file.write(orjson.dumps(password_data))
+        await _write_password_data(password_data)
 
         # TODO 签的 jwt 存 db, 改密码时删掉
         Logger.info(f"[WebUI] {ip} has changed password.")
+        await _notify_security_event("password_changed", request, ip)
         return Response(status_code=205)
     except HTTPException as e:
         raise e
@@ -334,7 +350,9 @@ async def clear_password(request: Request):
             raise HTTPException(status_code=401, detail="Invalid password")
 
         PASSWORD_PATH.unlink()
+        await sync_password_state(PASSWORD_PATH)
         Logger.info(f"[WebUI] {ip} has deleted password.")
+        await _notify_security_event("password_removed", request, ip)
         return Response(status_code=205)
     except HTTPException as e:
         raise e
@@ -418,9 +436,10 @@ async def enable_totp(request: Request):
         backup_codes = _generate_backup_codes()
         password_data["backup_codes"] = [_hash_backup_code(c) for c in backup_codes]
 
-        _write_password_data(password_data)
+        await _write_password_data(password_data)
 
         Logger.info(f"[WebUI] {ip} enabled 2FA.")
+        await _notify_security_event("totp_enabled", request, ip)
         return {"message": "success", "backup_codes": backup_codes}
     except HTTPException as e:
         raise e
@@ -471,9 +490,10 @@ async def reset_backup_codes(request: Request):
 
         backup_codes = _generate_backup_codes()
         password_data["backup_codes"] = [_hash_backup_code(c) for c in backup_codes]
-        _write_password_data(password_data)
+        await _write_password_data(password_data)
 
         Logger.info(f"[WebUI] {ip} reset backup codes.")
+        await _notify_security_event("backup_codes_reset", request, ip)
         return {"message": "success", "backup_codes": backup_codes}
     except HTTPException as e:
         raise e
@@ -525,9 +545,10 @@ async def disable_totp(request: Request):
         password_data.pop("totp_secret", None)
         password_data.pop("totp_enabled", None)
         password_data.pop("backup_codes", None)
-        _write_password_data(password_data)
+        await _write_password_data(password_data)
 
         Logger.info(f"[WebUI] {ip} disabled 2FA.")
+        await _notify_security_event("totp_disabled", request, ip)
         return {"message": "2FA disabled successfully"}
     except HTTPException as e:
         raise e

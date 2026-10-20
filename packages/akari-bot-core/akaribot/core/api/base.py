@@ -178,6 +178,7 @@ __all__ = [
     "get_model_fields",
     "get_model_names",
     "get_stored_list",
+    "email_report_enabled",
     "get_url",
     "image_table_render",
     "init_web_render",
@@ -213,6 +214,7 @@ __all__ = [
     "rickroll",
     "run_sys_command",
     "send_report",
+    "send_email",
     "settle_petals",
     "should_yield_channel",
     "sign_get_petal",
@@ -374,7 +376,7 @@ try:
     # 进程与队列：跨进程调用服务端动作、上报错误、重启进程。
     from akaribot.core.queue.contracts import ServerAPI
     from akaribot.core.server.terminate import restart
-    from akaribot.core.smtp import send_report
+    from akaribot.core.smtp import email_report_enabled, send_email, send_report
 
     # 工具：网络、随机、缓存、图像、表格、按钮、游戏、经济与 URL 审计。
     from akaribot.core.utils.brand import find_brand_asset
@@ -557,7 +559,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.queue.errors": ("RpcError",),
     "akaribot.core.scheduler": ("AndTrigger", "CronTrigger", "DateTrigger", "IntervalTrigger", "OrTrigger"),
     "akaribot.core.server.terminate": ("restart",),
-    "akaribot.core.smtp": ("send_report",),
+    "akaribot.core.smtp": ("email_report_enabled", "send_email", "send_report"),
     "akaribot.core.types": ("Module", "Param"),
     "akaribot.core.types.module.component_meta": ("CommandMeta",),
     "akaribot.core.utils.bash": ("run_sys_command",),
