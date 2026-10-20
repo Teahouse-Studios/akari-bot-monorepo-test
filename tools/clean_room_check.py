@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from urllib.request import urlopen
@@ -154,6 +155,32 @@ def stage_fresh_wheels(tmp: Path, source: Path | None = None) -> Path:
     return staged
 
 
+def fetch_url(url: str, attempts: int = 6) -> bytes:
+    """带重试地取一个 URL，尊重 429/5xx 的 Retry-After。
+
+    :param url: 目标地址。
+    :param attempts: 最大尝试次数。
+    :return: 响应内容。
+    """
+    from urllib.error import HTTPError
+
+    for attempt in range(attempts):
+        try:
+            with urlopen(url, timeout=60) as response:
+                return response.read()
+        except HTTPError as error:
+            if error.code not in {429, 500, 502, 503, 504} or attempt + 1 >= attempts:
+                raise
+            header = error.headers.get("Retry-After") if error.headers else None
+            try:
+                delay = max(1.0, float(header)) if header else min(300.0, 30.0 * (2**attempt))
+            except ValueError:
+                delay = min(300.0, 30.0 * (2**attempt))
+            print(f"[{url}] 返回 {error.code}，{delay:.0f}s 后重试（第 {attempt + 1} 次）", file=sys.stderr)
+            time.sleep(delay)
+    raise RuntimeError(f"重试耗尽：{url}")
+
+
 def download_release_files(index_url: str, manifest_path: Path, output: Path) -> bool:
     """从索引下载一批已发布产物，并按发行清单核验名称与 SHA256。
 
@@ -176,8 +203,7 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
         version = expected["version"]
         url = f"{index_url.rstrip('/')}/pypi/{name}/{version}/json"
         try:
-            with urlopen(url, timeout=60) as response:
-                payload = json.loads(response.read())
+            payload = json.loads(fetch_url(url))
         except Exception as error:  # noqa: BLE001 - 单个分发失败记入清单后统一判定
             failures.append(f"{name}: 查询失败 {type(error).__name__}: {error}")
             continue
@@ -186,7 +212,7 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
             failures.append(f"{name}: 索引文件集合或 SHA256 与清单不符")
             continue
         for item in payload["urls"]:
-            contents = urlopen(item["url"], timeout=60).read()
+            contents = fetch_url(item["url"])
             if hashlib.sha256(contents).hexdigest() != files[item["filename"]]:
                 failures.append(f"{name}: 下载 {item['filename']} 的 SHA256 不符")
                 break

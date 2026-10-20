@@ -23,6 +23,10 @@ on:
       version_override:
         description: 重复演练填 0.1.0.postN（改全部 57 个 pyproject 版本）；首次演练留空
         required: false
+      max_dists:
+        description: 本次最多上传的分发数；TestPyPI 新项目有窗口配额，默认 18
+        required: false
+        default: "18"
 
 permissions:
   contents: read
@@ -97,7 +101,7 @@ jobs:
     if: inputs.confirm == 'publish' && inputs.auth == 'token'
     runs-on: ubuntu-latest
     environment: testpypi
-    timeout-minutes: 180
+    timeout-minutes: 120
     permissions:
       contents: read
     steps:
@@ -117,61 +121,40 @@ jobs:
           name: release-batch
           path: .
 
+      - name: Install release tools
+        run: uv tool install twine
+
       - name: Publish in dependency order
         env:
           TESTPYPI_TOKEN: ${{ secrets.TESTPYPI_TOKEN }}
+          MAX_DISTS: ${{ inputs.max_dists }}
         run: |
-          python - <<'PY' > publish-order.txt
+          python tools/testpypi_publish.py \
+            --manifest release-batch.json --dist-dir dist \
+            --index-url "$TESTPYPI_INDEX" --repository-url https://test.pypi.org/legacy/ \
+            --token "$TESTPYPI_TOKEN" --delay 3 --max-dists "$MAX_DISTS" \
+            --summary publish-summary.json
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
-
-          names = list(json.loads(Path("release-batch.json").read_text())["dists"])
-
-          def rank(name: str) -> int:
-              if name.startswith("akari-bot-assets-") or name == "akari-bot-html2text":
-                  return 0
-              if name == "akari-bot-core":
-                  return 1
-              if name == "akari-bot-testing":
-                  return 2
-              if name == "akari-bot-cli":
-                  return 4
-              return 3
-
-          print("\n".join(sorted(names, key=lambda item: (rank(item), item))))
+          summary = json.loads(Path("publish-summary.json").read_text())
+          print("### TestPyPI 上传结果")
+          print(f"- 上传 {len(summary['uploaded'])} 个分发")
+          print(f"- 已存在跳过 {len(summary['skipped'])} 个")
+          print(f"- 待续 {len(summary['remaining'])} 个：{'、'.join(summary['remaining'][:8]) or '无'}")
+          if summary.get("rate_limited_after"):
+              print(f"- 被限速，建议 {summary['rate_limited_after']}s 后重跑")
+          print()
+          print("未传完时用同一批清单再触发一次即可续传（只补缺失文件）。")
           PY
-          while read -r DIST; do
-            echo "=== $DIST ==="
-            python - "$DIST" <<'PY'
-          import json, os, shutil
-          import sys
-          from pathlib import Path
 
-          dist = sys.argv[1]
-          entry = json.loads(Path("release-batch.json").read_text())["dists"][dist]
-          staged = Path("one-dist")
-          shutil.rmtree(staged, ignore_errors=True)
-          staged.mkdir()
-          for name in entry["files"]:
-              shutil.copy2(Path("dist") / name, staged / name)
-          Path("one-expected.json").write_text(json.dumps({"dist": dist, **entry}), encoding="utf-8")
-          Path("one-version.txt").write_text(entry["version"], encoding="utf-8")
-          PY
-            VERSION=$(cat one-version.txt)
-            rm -rf upload-dist
-            uv run --no-project --with packaging python tools/publish_registry.py prepare-upload \
-              --dist "$DIST" --version "$VERSION" --dist-dir one-dist --manifest one-expected.json \
-              --index-url "$TESTPYPI_INDEX" --output upload-dist
-            COUNT=$(python -c 'from pathlib import Path; print(len(list(Path("upload-dist").iterdir())))')
-            if [ "$COUNT" = "0" ]; then
-              echo "$DIST $VERSION 已全部存在，跳过"
-              continue
-            fi
-            uv run --no-project --with twine twine upload \
-              --repository-url https://test.pypi.org/legacy/ \
-              --username __token__ --password "$TESTPYPI_TOKEN" \
-              --non-interactive upload-dist/*
-          done < publish-order.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: publish-summary
+          path: publish-summary.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   publish-trusted:
     # 官方仓库正式演练用：为 57 个项目配 pending publisher 后，由 action 逐次签发 OIDC 令牌。

@@ -81,11 +81,35 @@ def _manifest(directory: Path, dist: str, version: str) -> dict:
     return {"dist": canonicalize_name(dist), "version": version, "files": files}
 
 
-def _download(url: str) -> bytes:
+RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+"""可重试的 HTTP 状态码；索引与文件服务在限速或抖动时返回这些。"""
+
+
+def _retry_delay(error: HTTPError, attempt: int) -> float:
+    # 优先按响应头 Retry-After，缺失时用指数退避（30s 起，上限 300s）。
+    header = error.headers.get("Retry-After") if error.headers else None
+    if header:
+        try:
+            return max(1.0, float(header))
+        except ValueError:
+            pass
+    return min(300.0, 30.0 * (2**attempt))
+
+
+def _download(url: str, attempts: int = 6) -> bytes:
     if not url.startswith("https://"):
         raise ReleaseError("发布产物地址必须使用 HTTPS")
-    with urlopen(url, timeout=60) as response:
-        return response.read()
+    for attempt in range(attempts):
+        try:
+            with urlopen(url, timeout=60) as response:
+                return response.read()
+        except HTTPError as error:
+            if error.code not in RETRY_STATUS or attempt + 1 >= attempts:
+                raise
+            delay = _retry_delay(error, attempt)
+            print(f"索引返回 {error.code}，{delay:.0f}s 后重试（第 {attempt + 1} 次）：{url}", file=sys.stderr)
+            time.sleep(delay)
+    raise ReleaseError(f"重试耗尽：{url}")
 
 
 def _prepare_upload(directory: Path, expected: dict, output: Path, index_url: str = DEFAULT_INDEX) -> int:
