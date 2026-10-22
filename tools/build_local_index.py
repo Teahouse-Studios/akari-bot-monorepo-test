@@ -22,6 +22,13 @@ from pathlib import Path
 from packaging.utils import canonicalize_name, parse_sdist_filename, parse_wheel_filename
 
 
+def _ensure_utf8_stdout() -> None:
+    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
+        return
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 def file_identity(path: Path) -> tuple[str, str]:
     """返回产物的规范化分发名与版本。
 
@@ -83,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
+    _ensure_utf8_stdout()
     parser = argparse.ArgumentParser(description="由本地产物目录生成 PEP 503 静态索引。")
     parser.add_argument("--dist-dir", type=Path, default=Path("dist"), help="产物目录")
     parser.add_argument("--output", type=Path, default=Path("local-index"), help="索引输出目录")

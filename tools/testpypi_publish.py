@@ -26,6 +26,14 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
+
+def _ensure_utf8_stdout() -> None:
+    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
+        return
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PUBLISH_REGISTRY = REPO_ROOT / "tools" / "publish_registry.py"
 RETRY_HINT = re.compile(r"Retry-After[:\s]+(\d+)", re.IGNORECASE)
@@ -208,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
+    _ensure_utf8_stdout()
     parser = argparse.ArgumentParser(description="按依赖顺序串行发布一批产物，内置限速退避与限批。")
     parser.add_argument("--manifest", type=Path, required=True, help="批量发行清单")
     parser.add_argument("--dist-dir", type=Path, required=True, help="本地产物目录")

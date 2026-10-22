@@ -37,6 +37,8 @@ concurrency:
 
 env:
   TESTPYPI_INDEX: https://test.pypi.org
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
 
 jobs:
   build:
@@ -287,17 +289,30 @@ jobs:
         shell: bash
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, urllib.error, urllib.request
+          import json, time, urllib.error, urllib.request
           from pathlib import Path
 
           batch = json.loads(Path("release-batch.json").read_text())
-          present = {}
-          for name, entry in batch["dists"].items():
-              try:
-                  urllib.request.urlopen(f"https://test.pypi.org/pypi/{name}/json", timeout=30).read()
-                  present[name] = entry
-              except urllib.error.HTTPError:
-                  pass
+          expected = len(batch["dists"])
+
+
+          def probe() -> dict:
+              found = {}
+              for name, entry in batch["dists"].items():
+                  try:
+                      urllib.request.urlopen(f"https://test.pypi.org/pypi/{name}/json", timeout=30).read()
+                      found[name] = entry
+                  except urllib.error.HTTPError:
+                      pass
+              return found
+
+
+          # 同一次运行刚建的项目在索引 JSON 上有 CDN 延迟，等它追平再定「哪些还没传」。
+          deadline = time.time() + 300
+          present = probe()
+          while len(present) < expected and time.time() < deadline:
+              time.sleep(20)
+              present = probe()
           Path("release-batch-present.json").write_text(
               json.dumps({**batch, "dists": present}, ensure_ascii=False), encoding="utf-8"
           )

@@ -59,10 +59,20 @@ debug = false
 db_path = "sqlite://database/save.db"
 """
 
+
+def _ensure_utf8_stdout() -> None:
+    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
+        return
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 # 断言脚本：在新环境里执行，输出 JSON 供本工具判定。
 PROBE = """
 import json
 from akaribot.core.registry import PackageRegistry as R
+
+
 R.discover()
 print(json.dumps({
     "modules": sorted(R.modules()),
@@ -527,6 +537,7 @@ def main(argv: list[str] | None = None) -> int:
     :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
+    _ensure_utf8_stdout()
     parser = argparse.ArgumentParser(description="用发布形态的 wheel 验证净室安装（T6.6）。")
     parser.add_argument(
         "--combo",
