@@ -74,6 +74,7 @@
     #   akari-bot-testing
 -e ./packages/akari-bot-html2text
     # via
+    #   akari-bot-module-ai
     #   akari-bot-module-cytoid
     #   akari-bot-module-wiki
 -e ./packages/akari-bot-testing
@@ -658,7 +659,7 @@ pyyaml==6.0.3
     #   pre-commit
     #   qq-botpy-sdk
     #   uvicorn
-qq-botpy-sdk==2.1.1
+qq-botpy-sdk==2.2.1
     # via akari-bot-adapter-qqbot
 qrcode==8.2
     # via akari-bot-module-phigros

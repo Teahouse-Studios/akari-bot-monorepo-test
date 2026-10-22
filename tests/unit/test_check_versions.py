@@ -7,6 +7,7 @@
 import importlib.util
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,8 +18,9 @@ TOOL_PATH = REPO_ROOT / "tools" / "check_versions.py"
 TOKEN = "Skip-Version"
 # 曾把整段区间放行的提交：正文里两次提到旧标记，但从未写过独立 trailer。
 POISONED_COMMIT = "b337364d3"
-# 拆分之后的区间基准：此时各包已存在，未升版本必须被抓出来。
-MID_BRANCH_BASE = "b337364d3"
+# 版本守卫依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库夹具。
+FIXTURE_ROOT_PYPROJECT = '[tool.uv.workspace]\nmembers = ["packages/*"]\n'
+FIXTURE_MEMBER_PYPROJECT = '[project]\nname = "example"\nversion = "0.1.0"\ndependencies = []\n'
 
 PROSE_WITH_OLD_MARKER = (
     "feat(tools): 变更检测与版本守卫（T6.1/T6.2）\n"
@@ -92,17 +94,59 @@ def _test_empty_exemption_value_is_an_error():
     return False
 
 
+def _init_fixture_repo(root: Path) -> str:
+    member = root / "packages" / "example"
+    member.mkdir(parents=True)
+    (root / "pyproject.toml").write_text(FIXTURE_ROOT_PYPROJECT, encoding="utf-8")
+    (member / "pyproject.toml").write_text(FIXTURE_MEMBER_PYPROJECT, encoding="utf-8")
+    (member / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+    identity = ["-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    subprocess.run(["git", *identity, "commit", "-q", "-m", "init"], cwd=root, check=True)
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
 def _test_guard_reports_unbumped_packages_after_split():
-    if not _commit_exists(MID_BRANCH_BASE):
-        return True
+    with tempfile.TemporaryDirectory() as directory:
+        tmp_root = Path(directory)
+        return _run_fixture_guard(tmp_root)
+
+
+def _run_fixture_guard(tmp_root: Path) -> bool:
+    base = _init_fixture_repo(tmp_root)
+    member = tmp_root / "packages" / "example"
+    (member / "example.py").write_text("VALUE = 2\n", encoding="utf-8")
+    identity = ["-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "add", "-A"], cwd=tmp_root, check=True)
+    subprocess.run(["git", *identity, "commit", "-q", "-m", "fix: 改源码不升版本"], cwd=tmp_root, check=True)
+
     tool = _tool()
+    received = {}
     original = sys.argv
+    original_root = tool.PROJECT_ROOT
+    original_pyproject = tool.ROOT_PYPROJECT
     try:
-        sys.argv = ["check_versions.py", "--base", MID_BRANCH_BASE]
-        code = tool.main()
+        tool.PROJECT_ROOT = tmp_root
+        tool.ROOT_PYPROJECT = tmp_root / "pyproject.toml"
+        sys.argv = ["check_versions.py", "--base", base]
+        received["violation"] = tool.main()
+        (member / "example.py").write_text("VALUE = 3\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_root, check=True)
+        subprocess.run(
+            ["git", *identity, "commit", "-q", "-m", "fix: 改源码不升版本\n\nSkip-Version: true"],
+            cwd=tmp_root,
+            check=True,
+        )
+        sys.argv = ["check_versions.py", "--base", base]
+        received["exempt"] = tool.main()
     finally:
+        tool.PROJECT_ROOT = original_root
+        tool.ROOT_PYPROJECT = original_pyproject
         sys.argv = original
-    return code == 1
+    return received["violation"] == 1 and received["exempt"] == 0
 
 
 def _test_new_packages_do_not_count_as_unbumped():
