@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from packaging.utils import parse_wheel_filename
@@ -235,6 +237,53 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
             print(f"    {line}", file=sys.stderr)
         return False
     print(f"索引产物核验通过：{len(dists)} 个分发")
+    return True
+
+
+def verify_local_index(index_url: str) -> bool:
+    """逐跳确认静态索引可用：根页列出项目、项目页给出产物、产物可下载。
+
+    安装阶段的 404 只表现为「Failed to fetch」，看不出是索引根、项目页还是文件缺失；这一预检把
+    失败点连同地址写进日志。
+
+    :param index_url: 索引根地址。
+    :return: 三跳均可达时为真。
+    """
+    from urllib.error import HTTPError
+
+    root = index_url.rstrip("/")
+    try:
+        page = fetch_url(f"{root}/simple/", attempts=1).decode("utf-8", "replace")
+    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+        print(f"[index-preflight] 索引根不可访问：{root}/simple/（{type(error).__name__}: {error}）", file=sys.stderr)
+        return False
+    project = re.search(r'href="([^"/]+)/"', page)
+    if project is None:
+        print("[index-preflight] 索引根未列出任何项目", file=sys.stderr)
+        return False
+    name = project.group(1)
+    project_url = f"{root}/simple/{name}/"
+    try:
+        project_page = fetch_url(project_url, attempts=1).decode("utf-8", "replace")
+    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+        print(f"[index-preflight] 项目页不可访问：{project_url}（{type(error).__name__}: {error}）", file=sys.stderr)
+        return False
+    link = re.search(r'href="([^"]*files/[^"]*)"', project_page)
+    if link is None:
+        print(f"[index-preflight] 项目页没有产物链接：{project_url}", file=sys.stderr)
+        return False
+    # 链接带 #sha256 片段，取文件本身时要去掉，否则会被当成路径的一部分。
+    file_url = urljoin(project_url, link.group(1)).split("#")[0]
+    try:
+        with urlopen(file_url, timeout=60) as response:
+            size = response.headers.get("Content-Length") or "未知"
+    except HTTPError as error:
+        print(f"[index-preflight] 产物不可下载：{file_url}（HTTP {error.code}）", file=sys.stderr)
+        return False
+    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+        print(f"[index-preflight] 产物不可下载：{file_url}（{type(error).__name__}: {error}）", file=sys.stderr)
+        return False
+    print(f"[index-preflight] 索引可达：{name} 的产物 {file_url.rsplit('/', 1)[-1]}（{size} 字节）")
     return True
 
 
@@ -586,7 +635,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         wheel_source = args.download_dir
     elif args.local_index_url:
-        pass
+        if not verify_local_index(args.local_index_url):
+            return 1
     elif not args.keep_dist or not DIST_DIR.exists():
         if not build_all(offline=args.offline):
             return 1

@@ -394,6 +394,27 @@ def _test_unreadable_resources_are_not_run():
     )
 
 
+async def _test_settle_bounded_wait() -> bool:
+    class _Pilot:
+        pauses = 0
+
+        async def pause(self) -> None:
+            self.pauses += 1
+
+    pilot = _Pilot()
+    late = await tui_cmd._settle(pilot, lambda: pilot.pauses >= 3, timeout=2.0)
+    early = pilot.pauses
+    expired = await tui_cmd._settle(pilot, lambda: False, timeout=0.05)
+    return late and early >= 3 and expired is False
+
+
+async def _test_available_check_passes() -> bool:
+    _use_cli_locale()
+    # 该检查内部用 asyncio.run 起 App，须在无运行中事件循环的线程里调用。
+    result = await asyncio.to_thread(tui_cmd._check_available_and_progress)
+    return result.level == tui_cmd.LEVEL_OK and "2 行" in result.detail and "1 行" in result.detail
+
+
 @func_case
 async def test_tui_selfcheck(tester: Tester):
     """cli.tui 自检: 逐页 worker 等待与异常、未执行的产品检查"""
@@ -409,4 +430,6 @@ async def test_tui_selfcheck(tester: Tester):
     await tester.test(_test_headless_exit_code_covers_both_segments, "无头冒烟任一段失败即非零退出码")
     await tester.test(_test_report_separates_warning_from_skipped, "环境警告不影响退出码、产品检查未执行则非零")
     await tester.test(_test_unreadable_resources_are_not_run, "资源枚举不到时记未执行而非警告")
+    await tester.test(_test_settle_bounded_wait, "单帧读数不足时按条件等待，超时返回否")
+    await tester.test(_test_available_check_passes, "可安装列表与安装进度检查在静态源下通过")
     return tester

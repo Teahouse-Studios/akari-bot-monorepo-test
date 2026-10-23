@@ -475,6 +475,17 @@ async def _page_failure(page: Any, pilot: Any) -> str:
     return " ".join(failure.split())
 
 
+async def _settle(pilot: Any, done: Any, timeout: float = 5.0) -> bool:
+    # 单次 pause 只推进一帧，慢速平台上 worker 尚未回写，按读数断言会得到假失败。
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        await pilot.pause()
+        if done():
+            return True
+        await asyncio.sleep(0.02)
+    return done()
+
+
 def _check_available_and_progress() -> CheckResult:
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.app import TuiApp
@@ -499,19 +510,19 @@ def _check_available_and_progress() -> CheckResult:
         async with compat.app_test(app_instance, size=(100, 30)) as pilot:
             page = app_instance.modules_page()
             await page.wait_for_idle()
-            await pilot.pause()
+            await _settle(pilot, lambda: len(page.visible_records) == 2)
             before = len(page.visible_records)
             list_view = page.query_one("#module-list", compat.ListView)
             list_view.index = next(index for index, record in enumerate(page.visible_records) if not record.installed)
             await pilot.pause()
             page.request_install()
             await page.wait_for_idle()
-            await pilot.pause()
+            await _settle(pilot, lambda: len(page.stream_lines) >= 2)
             lines = page.stream_lines
             status = page.status_text
             page.query_one("#installed-only", compat.Checkbox).value = True
             await page.wait_for_idle()
-            await pilot.pause()
+            await _settle(pilot, lambda: len(page.visible_records) < before)
             after = len(page.visible_records)
             await pilot.press("q")
             return before, after, lines, status

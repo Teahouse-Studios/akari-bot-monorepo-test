@@ -8,6 +8,9 @@ TestPyPI 对新项目有窗口配额，57 个分发无法在一天内建齐；�
 
     python tools/build_local_index.py --dist-dir dist --output local-index
     python tools/build_local_index.py --dist-dir dist --output local-index --serve 8123
+
+``--serve`` 用构建进程自身起 ``http.server``，服务根即刚生成的索引目录；CI 里以它作后台服务，
+不必再用 ``python -m http.server --directory`` 另起进程（相对路径会随工作目录漂移）。
 """
 
 from __future__ import annotations
@@ -100,9 +103,14 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dist_dir.is_dir():
         print(f"产物目录不存在：{args.dist_dir}", file=sys.stderr)
         return 1
-    projects = build(args.dist_dir, args.output)
+    output = args.output.resolve()
+    projects = build(args.dist_dir.resolve(), output)
     total = sum(len(paths) for paths in projects.values())
-    print(f"静态索引已生成：{args.output}（{len(projects)} 个分发 / {total} 个文件）")
+    on_disk = sum(1 for _ in (output / "files").iterdir())
+    print(f"静态索引已生成：{output}（{len(projects)} 个分发 / {total} 个文件，files/ 实存 {on_disk} 个）")
+    if on_disk != total:
+        print(f"索引文件数与产物数不一致：期望 {total}，实存 {on_disk}", file=sys.stderr)
+        return 1
     print(f"索引地址：http://127.0.0.1:{args.serve or 8000}/simple/")
     if args.serve:
         from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -111,7 +119,8 @@ def main(argv: list[str] | None = None) -> int:
             def log_message(self, format, *args) -> None:  # noqa: A002 - 覆盖父类签名
                 pass
 
-        handler = lambda *a, **kw: QuietHandler(*a, directory=str(args.output), **kw)  # noqa: E731
+        # 服务根取构建时解析出的绝对路径：工作目录变化时不会悄悄指向另一棵目录树。
+        handler = lambda *a, **kw: QuietHandler(*a, directory=str(output), **kw)  # noqa: E731
         with ThreadingHTTPServer(("127.0.0.1", args.serve), handler) as server:
             print(f"正在提供静态索引：http://127.0.0.1:{args.serve}/simple/（Ctrl+C 结束）")
             server.serve_forever()

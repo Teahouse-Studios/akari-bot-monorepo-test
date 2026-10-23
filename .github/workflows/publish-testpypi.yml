@@ -248,12 +248,28 @@ jobs:
       - name: Build static index and install all distributions
         shell: bash
         run: |
-          uv run --no-project --with packaging python tools/build_local_index.py --dist-dir dist --output local-index
-          python -m http.server 8123 --directory local-index &
-          for _ in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8123/simple/ >/dev/null; then break; fi
+          # 服务由构建进程自己起，服务根就是刚生成的索引目录，不依赖相对路径的解释。
+          uv run --no-project --with packaging python tools/build_local_index.py \
+            --dist-dir dist --output local-index --serve 8123 &
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8123/simple/; then ready=1; break; fi
             sleep 1
           done
+          if [ "$ready" != 1 ]; then
+            echo "静态索引服务未就绪：cwd=$(pwd)"
+            ls -la local-index 2>&1 | head -5
+            exit 1
+          fi
+          # 自证一次产物下载：索引可达而文件取不到时，后续安装只会给出难以定位的 404。
+          probe=$(grep -m1 -ho 'files/[^"#]*\.whl' local-index/simple/*/index.html | head -1 | cut -d/ -f2-)
+          if [ -z "$probe" ] || ! curl -fsS --max-time 30 -o /dev/null "http://127.0.0.1:8123/files/$probe"; then
+            echo "索引自证失败：files/$probe"
+            ls -la local-index 2>&1 | head -5
+            ls local-index/files 2>&1 | head -5
+            exit 1
+          fi
+          echo "索引自证通过：files/$probe"
           uv run --no-project --with packaging python tools/clean_room_check.py \
             --local-index-url http://127.0.0.1:8123 --combo index-all
           uv run --no-project --with packaging python tools/clean_room_check.py \
