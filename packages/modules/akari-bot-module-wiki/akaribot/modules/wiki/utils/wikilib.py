@@ -782,6 +782,7 @@ class WikiLib:
         lang=None,
         _doc=False,
         _tried=0,
+        _explicit=0,
         _prefix="",
         _iw=False,
         _search=False,
@@ -795,6 +796,7 @@ class WikiLib:
         :param lang: 所需的对应语言版本。
         :param _doc: 是否为文档模式，仅用作内部递归调用判断。
         :param _tried: 尝试 iw 跳转的次数，仅用作内部递归调用判断。
+        :param _explicit: 其中由标题显式请求的 iw 跳转次数，仅用作内部递归调用判断。
         :param _prefix: iw 前缀，仅用作内部递归调用判断。
         :param _iw: 是否为 iw 模式，仅用作内部递归调用判断。
         :param _search: 是否为搜索模式，仅用作内部递归调用判断。
@@ -840,9 +842,14 @@ class WikiLib:
                 return revision_info
         ban = False
 
-        # if redirected too many times, raise AbuseWarning
-        if _tried > 5 and enable_tos:
+        if _explicit > 5 and enable_tos:
             raise AbuseWarning("{I18N:tos.message.reason.too_many_redirects}")
+        if _tried > 5:
+            return PageInfo(
+                title=title,
+                desc=str(I18NContext("wiki.message.too_many_redirects")),
+                info=self.wiki_info,
+            )
         selected_section = None
         query_props = ["info", "imageinfo", "langlinks", "templates"]
 
@@ -989,11 +996,14 @@ class WikiLib:
 
         # handle redirects, normalized titles, converted titles
         explicit_section = bool(selected_section) or page_info.invalid_section
+        followed_redirect = False
         for mapping in ("normalized", "converted", "redirects"):
             for item in query.get(mapping, []):
                 if item["from"] == page_info.title:
                     page_info.before_title = title
                     page_info.title = item["to"]
+                    if mapping == "redirects":
+                        followed_redirect = True
                     if item.get("tofragment") and not explicit_section:
                         selected_section = item["tofragment"].replace(" ", "_")
                         page_info.selected_section = selected_section
@@ -1426,6 +1436,7 @@ class WikiLib:
                         iw_title + urllib.parse.unquote(page_info.args or ""),
                         lang=lang,
                         _tried=_tried + 1,
+                        _explicit=_explicit + (0 if followed_redirect else 1),
                         _prefix=_prefix,
                         _iw=_iw,
                         session=session,

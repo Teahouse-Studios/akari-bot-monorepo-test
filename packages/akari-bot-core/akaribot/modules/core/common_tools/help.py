@@ -7,7 +7,7 @@ from jinja2 import FileSystemLoader, Environment
 from akaribot.core.builtins.bot import Bot
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.message.elements import ButtonRows, ImageElement
-from akaribot.core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Markdown, Plain, Url, Button
+from akaribot.core.builtins.message.internal import ActionText, ButtonFrame, I18NContext, Markdown, Plain, Url
 from akaribot.core.builtins.parser.command import CommandParser
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.component import module
@@ -17,7 +17,6 @@ from akaribot.core.loader import ModulesManager
 from akaribot.core.logger import Logger
 from akaribot.core.utils.button import arrange_buttons
 from akaribot.core.utils.cache import random_cache_path
-from akaribot.core.utils.func import is_int
 from akaribot.core.utils.image import cb64imglst
 from akaribot.core.utils.platform_scope import platform_fields, platform_name_of
 from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
@@ -33,12 +32,6 @@ use_font_mirror = CoreConfig.use_font_mirror
 regex_disable_prefixes = CoreConfig.regex_disable_prefix
 
 hlp = module("help", base=True, doc=True)
-
-QQBOT_PERMISSIONS_URL_TEMPLATE = (
-    "https://club.vip.qq.com/transfer?open_kuikly_info=%7B%22page_name%22%3A%20%22"
-    "ai_group_service_agreement_pop_page%22%2C%22groupCode%22%3A{qq_group_id}%2C%22"
-    "botUin%22%3A{bot_qq}%2C%22botUid%22%3A%22{bot_uid}%22%2C%22screen%22%3A1%7D"
-)
 
 
 @dataclass(frozen=True)
@@ -449,48 +442,10 @@ def append_qqbot_permissions_prompt(msg: Bot.MessageSession, help_msg: MessageCh
         return
     help_msg.append(
         I18NContext(
-            "core.message.help.permissions.prompt",
+            "core.message.about.permissions.prompt",
             cmd=ActionText(
-                f"{msg.session_info.prefixes[0]}help permissions",
-                show=I18NContext("core.message.help.permissions.action"),
-            ),
-        )
-    )
-
-
-def build_qqbot_permissions_url(msg: Bot.MessageSession, qq_group_id: str) -> str:
-    tmp = msg.session_info.tmp or {}
-    return QQBOT_PERMISSIONS_URL_TEMPLATE.format(
-        qq_group_id=qq_group_id,
-        bot_qq=tmp.get("qq_bot_qqnum", ""),
-        bot_uid=tmp.get("qq_bot_uid", ""),
-    )
-
-
-@hlp.command(
-    "permissions [<qq_group_id>] {{I18N:core.help.help.permissions}}",
-    available_for="QQBot",
-    priority=2,
-)
-async def qqbot_permissions(msg: Bot.MessageSession, qq_group_id: str | None = None):
-    if qq_group_id:
-        if not is_int(qq_group_id):
-            await msg.finish(I18NContext("core.message.help.permissions.invalid"))
-        url = build_qqbot_permissions_url(msg, qq_group_id)
-        await msg.finish(
-            [
-                I18NContext(
-                    "core.message.help.permissions.quick_config",
-                ),
-                Button(msg.session_info.locale.t("core.message.help.permissions.quick_config.button"), url),
-            ]
-        )
-    await msg.finish(
-        I18NContext(
-            "core.message.help.permissions",
-            cmd=ActionText(
-                f"{msg.session_info.prefixes[0]}help permissions ",
-                show_on_fallback=False,
+                f"{msg.session_info.prefixes[0]}about permissions",
+                show=I18NContext("core.message.about.permissions.action"),
             ),
         )
     )
