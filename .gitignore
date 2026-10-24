@@ -139,3 +139,6 @@ matrix_store
 
 # registry.json 由 tools/build_registry.py 生成，发布流程推送到 gh-pages，不入库
 registry.json
+
+# Nuitka 打包用的数据目录，由 .github/workflows/binary-build.yml 在构建时生成
+/bundle/

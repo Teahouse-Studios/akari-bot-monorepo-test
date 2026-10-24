@@ -158,8 +158,8 @@ def frozen_bundled_uv() -> Path | None:
 def frozen_resource_root() -> Path | None:
     """冻结产物承载包内资源的根目录，供后续内置资源复用。
 
-    当前以内置 uv 作为存在性探针：``include-data-files`` 落下的资源与二进制同层，找到可执行的
-    uv 即证明该目录就是资源根。
+    当前以内置 uv 作为存在性探针：打包进来的数据文件与二进制同层，找到可执行的 uv 即证明该
+    目录就是资源根。
 
     :return: 资源根目录；非冻结或资源未打包时为 ``None``。
     """

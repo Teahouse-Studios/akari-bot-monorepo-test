@@ -40,11 +40,39 @@ jobs:
           # 只装 CLI 自己的依赖面：不拉 core、模块与平台 SDK，冻结范围因此收敛。
           uv sync --locked --package akari-bot-cli
 
+      - name: Select workspace interpreter
+        shell: bash
+        run: |
+          # Nuitka 在后续步骤里以 PATH 上的 python 为准；不切到工作区 venv 时它拿不到依赖，
+          # 会报「failed to locate package 'akaribot.cli'」。
+          root="$(pwd -W 2>/dev/null || pwd)"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            venv_dir="$root/.venv/Scripts"
+            python_exe="$venv_dir/python.exe"
+          else
+            venv_dir="$root/.venv/bin"
+            python_exe="$venv_dir/python"
+          fi
+          echo "$venv_dir" >> "$GITHUB_PATH"
+          # uv 建的 venv 不带 pip，而构建动作后续以 `pip install` 装 Nuitka 自身；补一个 pip 进
+          # venv，否则 pip 落在 PATH 更靠后的系统解释器里，`python -m nuitka` 会找不到模块。
+          uv pip install --python "$python_exe" pip
+          "$python_exe" -c "import akaribot.cli, akari_bot_i18n, textual, rich, typer, tomlkit, httpx, packaging"
+          echo "解释器：$("$python_exe" -c 'import sys; print(sys.executable)')"
+
       - name: Bundle uv binary
         shell: bash
         run: |
-          # 内置 uv：CLI 靠它创建与维护实例 venv，用户机器上不必预装。
-          cp "$(command -v uv)" ./uv-bundled
+          # 内置 uv：CLI 靠它创建与维护实例 venv，用户机器上不必预装。拷贝时直接用包内最终名，
+          # 免去 include-data-files 的改名表达式（Windows 的可执行后缀必须是 .exe）。
+          mkdir -p bundle
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp "$(command -v uv)" bundle/uv.exe
+          else
+            cp "$(command -v uv)" bundle/uv
+            chmod +x bundle/uv
+          fi
+          ls -l bundle
 
       - name: Build CLI binary
         uses: Nuitka/Nuitka-Action@main
@@ -55,13 +83,13 @@ jobs:
           output-dir: cli-build
           # 包内资源漏掉会让 TUI 在用户机器上崩（textual 的 .tcss、rich 的内置主题）。手工列举必然
           # 会漏，唯一可靠的兜底是在**不含 Python 的环境**里跑冒烟——本仓库尚无该环境，属已知缺口。
-          include-data-files: |
-            uv-bundled=${{ runner.os == 'Windows' && 'uv.exe' || 'uv' }}
           include-data-dir: |
+            bundle=.
             packages/akari-bot-cli/akaribot/cli/locales=akaribot/cli/locales
             packages/akari-bot-cli/akaribot/cli/templates=akaribot/cli/templates
+          # CLI 包自己的资源已在上面按目录显式声明，这里重复声明只会触发「Duplicate data file」告警；
+          # i18n 包的 locales 与其他第三方包的数据文件由 package-data 收集。
           include-package-data: |
-            akaribot.cli
             akari_bot_i18n
             textual
             rich
