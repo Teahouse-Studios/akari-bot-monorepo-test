@@ -13,6 +13,7 @@ from akaribot.core.builtins.message.elements import (
     URLElement,
     VideoElement,
 )
+
 from akaribot.core.builtins.message.internal import I18NContext, Image
 from akaribot.core.builtins.session.info import SessionInfo
 from akaribot.core.builtins.session.internal import MessageSession

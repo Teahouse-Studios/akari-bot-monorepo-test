@@ -13,7 +13,7 @@ requires-python = ">=3.12,<4.0"
 dependencies = [
     "aiofile>=3.8.1,<4.0.0",
     "akari-bot-i18n==0.2.2",
-    "akari-bot-webrender==0.7.3",
+    "akari-bot-webrender==0.7.4",
     "APScheduler>=3.9.1-post.0,<4.0.0.0",
     "attrs>=26.1.0",
     "cattrs>=26.1.0,<26.2.0",
@@ -26,7 +26,7 @@ dependencies = [
     "loguru>=0.7.0,<1.0.0",
     "orjson>=3.10.9,<4.0.0",
     "packaging>=26.0",
-    "Pillow>=12.0.0,<13.0.0",
+    "Pillow>=13.0.0,<13.1.0",
     "psutil>=7.0.0,<8.0.0",
     # bundled modules/core 的 ~ping 顶层 import，按 T4.2 §3 裁决 1 留在必需依赖
     "py-cpuinfo>=9.0.0,<10.0.0",

@@ -478,6 +478,9 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
 
             if not module_._db_load:
                 await msg.finish(I18NContext("parser.module.unloaded", module=help_name))
+            # 会话缺少推送能力时订阅扩展模块无法启用，展示其帮助会误导用户
+            if module_.unsupported_reason(msg.session_info) == "rss":
+                await msg.finish(I18NContext("core.message.help.not_found"))
             # 仅在模块确实含有管理员条目时才查询平台权限，普通模块的帮助不额外付出一次接口调用
             is_admin = is_superuser or (module_has_admin_entries(module_) and await check_context_admin(msg))
             if (
@@ -534,11 +537,9 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
                             rdesc = regex.desc
                             if rdesc:
                                 rdesc = msg.session_info.locale.t_str(rdesc)
-                                mdocs.append(
-                                    f"{pattern}{str(I18NContext('core.message.help.regex.detail', msg=rdesc))}"
-                                )
+                                mdocs.append(f"{pattern} - {rdesc}")
                             else:
-                                mdocs.append(f"{pattern}{str(I18NContext('core.message.help.regex.no_information'))}")
+                                mdocs.append(pattern)
                             regex_rows.append((raw_pattern, rdesc or ""))
                     if regex_disable_prefixes:
                         mdocs.append(I18NContext("core.help.regex.disable_tip", prefixes=regex_disable_prefixes[0]))
@@ -615,6 +616,7 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
                             repattern=re.Pattern,
                             regex_disable_prefixes=regex_disable_prefixes,
                             use_font_mirror=use_font_mirror,
+                            dark_mode=msg.session_info.dark_mode,
                         )
 
                         # fname = f"{random_cache_path()}.html"
@@ -622,7 +624,9 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
                         #     fi.write(html_content)
 
                         images = await web_render.element_screenshot(
-                            ElementScreenshotOptions(content=html_content, element=[".botbox"])
+                            ElementScreenshotOptions(
+                                content=html_content, element=[".botbox"], dark_mode=msg.session_info.dark_mode
+                            )
                         )
 
                         cb: list[ImageElement] = cb64imglst(images, bot_img=True)
@@ -1001,12 +1005,15 @@ async def help_generator(
         show_disabled_modules=show_disabled_modules,
         target_enabled_list=target_enabled_list,
         use_font_mirror=use_font_mirror,
+        dark_mode=msg.session_info.dark_mode,
     )
     fname = f"{random_cache_path()}.html"
     with open(fname, "w", encoding="utf-8") as fi:
         fi.write(html_content)
 
-    images = await web_render.element_screenshot(ElementScreenshotOptions(content=html_content, element=[".botbox"]))
+    images = await web_render.element_screenshot(
+        ElementScreenshotOptions(content=html_content, element=[".botbox"], dark_mode=msg.session_info.dark_mode)
+    )
     if images:
         return cb64imglst(images, bot_img=True)
     return None

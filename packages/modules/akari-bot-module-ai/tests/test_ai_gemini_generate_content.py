@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 from google.genai import errors, types
 
-from akaribot.testing import func_case, Tester
 from akaribot.modules.ai import endpoints
+from akaribot.testing import Tester, func_case
 
 
 class _FakeAPIError(Exception):

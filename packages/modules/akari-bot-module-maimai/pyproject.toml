@@ -19,7 +19,7 @@ dependencies = [
     # best30 等成绩图的文字与符号用资源包里的 Noto Sans CJK 与 Symbols2（T3.3），缺它则出图失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
-    "Pillow>=12.0.0,<13.0.0",
+    "Pillow>=13.0.0,<13.1.0",
     "langconv==0.4.0",
     "orjson>=3.10.9,<4.0.0",
     "tortoise-orm>=1.1.2,<1.2.0",

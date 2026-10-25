@@ -15,6 +15,8 @@ from akaribot.core.builtins.message.internal import I18NContext
 from akaribot.core.builtins.parser.command import CommandParser
 from akaribot.core.builtins.parser.message import parser
 from akaribot.core.builtins.session.info import EventInfo, SessionInfo
+from akaribot.core.builtins.session.lock import ExecutionLockList
+from akaribot.core.builtins.session.tasks import SessionTaskManager
 from akaribot.core.builtins.utils import command_prefix
 from akaribot.core.constants import Info
 from akaribot.core.constants.path import assets_path
@@ -206,6 +208,7 @@ WEB_RENDER_TEST_SCREENSHOT_KEYS = (
     "stealth",
     "wait_until",
     "wait_after_load",
+    "dark_mode",
 )
 WEB_RENDER_TEST_SOURCE_KEYS = ("url", "locale", "stealth", "wait_until", "wait_after_load", "raw_text")
 
@@ -259,6 +262,11 @@ async def get_runtime_stats() -> dict:
         "command_parsed": int(Info.command_parsed or 0),
         "message_parsed": int(Info.message_parsed or 0),
     }
+
+
+@ServerAPI.get_active_session_count.bind(JobQueueServer)
+async def get_active_session_count() -> int:
+    return ExecutionLockList.count() + SessionTaskManager.active_count()
 
 
 @ServerAPI.get_process_usage.bind(JobQueueServer)

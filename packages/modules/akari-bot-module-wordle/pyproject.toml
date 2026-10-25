@@ -18,7 +18,7 @@ dependencies = [
     # 棋盘与键盘渲染用资源包里的 Noto Sans CJK Bold（T3.3），缺它则出图失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
-    "Pillow>=12.0.0,<13.0.0",
+    "Pillow>=13.0.0,<13.1.0",
     "attrs>=26.1.0",
 ]
 

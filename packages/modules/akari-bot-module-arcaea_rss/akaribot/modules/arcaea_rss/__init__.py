@@ -18,7 +18,7 @@ from akaribot.core.api import (
 arcaea_rss = module(
     "arcaea-rss",
     desc="{I18N:arcaea_rss.help.desc}",
-    alias=["arcaea_rss", "arc_rss"],
+    alias=["arc-rss", "arcaea_rss", "arc_rss"],
     doc=True,
     rss=True,
 )

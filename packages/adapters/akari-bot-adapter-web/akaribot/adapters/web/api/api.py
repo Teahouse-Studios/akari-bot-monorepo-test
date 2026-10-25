@@ -1,4 +1,3 @@
-import asyncio
 import mimetypes
 import os
 import platform
@@ -11,8 +10,9 @@ from fastapi import HTTPException, Request, Query
 from fastapi.responses import FileResponse, Response
 from tortoise.expressions import Q
 
-from akaribot.adapters.web.client import app, client_cleanup, limiter, enable_https, get_client_ip
+from akaribot.adapters.web.client import app, limiter, enable_https, get_client_ip
 from akaribot.adapters.web.config import WebConfig
+from akaribot.adapters.web.context import resolve_media_url
 from akaribot.core.api import (
     command_prefix,
     BaseConfig,
@@ -29,10 +29,8 @@ from akaribot.core.api import (
 )
 from akaribot.core.constants.path import config_path
 from .auth import verify_jwt
-from akaribot.adapters.web.context import resolve_media_url
 
 started_time = datetime.now()
-_restart_task: asyncio.Task | None = None
 
 
 default_locale = BaseConfig.default_locale
@@ -866,51 +864,3 @@ async def unload_module(request: Request, module_name: str):
     except Exception:
         Logger.exception()
         raise HTTPException(status_code=400, detail="Bad request")
-
-
-async def restart():
-    await asyncio.sleep(1)
-    try:
-        await client_cleanup()
-    except BaseException:
-        # 重启请求已经被接受，清理失败不能把进程留在半关闭状态；记录后仍交给守护进程重启。
-        Logger.exception("Failed to clean up Web client before restart: ")
-    # 33 与 akaribot/core/server/terminate.py 一致，守护进程据此重启全部 bot；旧值 233 已不被识别。
-    os._exit(33)
-
-
-def _restart_done(task: asyncio.Task) -> None:
-    global _restart_task
-    if _restart_task is task:
-        _restart_task = None
-    if task.cancelled():
-        return
-    error = task.exception()
-    if error is not None:
-        Logger.error(f"Web restart task failed: {error!r}")
-
-
-def schedule_restart() -> asyncio.Task:
-    """Schedule at most one retained Web restart task."""
-    global _restart_task
-    if _restart_task is not None and not _restart_task.done():
-        return _restart_task
-
-    awaitable = restart()
-    try:
-        _restart_task = asyncio.create_task(awaitable, name="web-restart")
-    except BaseException:
-        awaitable.close()
-        raise
-    _restart_task.add_done_callback(_restart_done)
-    return _restart_task
-
-
-@app.post("/api/restart")
-@limiter.limit("3/minute")
-async def restart_bot(request: Request):
-    ip = get_client_ip(request)
-    verify_jwt(request)
-    Logger.info(f"[WebUI] {ip} restarted bot.")
-    schedule_restart()
-    return Response(status_code=202)
