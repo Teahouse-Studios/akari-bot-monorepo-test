@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 arcaea_rss = "akaribot.modules.arcaea_rss"
 
+[project.entry-points."akaribot.docs"]
+module-arcaea_rss = "akaribot.modules.arcaea_rss"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

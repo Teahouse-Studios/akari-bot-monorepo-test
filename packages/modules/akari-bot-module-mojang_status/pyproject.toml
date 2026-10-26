@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 mojang_status = "akaribot.modules.mojang_status"
 
+[project.entry-points."akaribot.docs"]
+module-mojang_status = "akaribot.modules.mojang_status"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

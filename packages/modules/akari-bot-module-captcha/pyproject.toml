@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 captcha = "akaribot.modules.captcha"
 
+[project.entry-points."akaribot.docs"]
+module-captcha = "akaribot.modules.captcha"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

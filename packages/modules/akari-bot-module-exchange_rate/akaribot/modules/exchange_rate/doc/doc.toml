@@ -1,0 +1,10 @@
+schema = 1
+title = "汇率转换"
+summary = "按实时汇率换算货币金额。"
+order = 500
+
+[[meta.modules]]
+name = "exchange-rate"
+aliases = ["exchange", "exchange_rate", "exchangerate", "excr"]
+type = ["command", "regex"]
+permission = "public"

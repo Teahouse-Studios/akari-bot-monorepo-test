@@ -1,0 +1,70 @@
+schema = 1
+title = "Wiki 查询"
+summary = "查询 MediaWiki 页面、解析内联 Wiki 语法、管理 URL 审计与 Wiki 日志订阅。"
+order = 500
+
+[[meta.modules]]
+name = "wiki"
+aliases = ["interwiki", "wiki iw del", "wiki iw delete", "wiki iw set", "wiki_start_site"]
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "wiki-inline"
+aliases = ["wiki_inline", "wiki_regex"]
+type = ["regex"]
+permission = "public"
+
+[[meta.modules]]
+name = "ab"
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "rc"
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "newbie"
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "user"
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "weekly"
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "weekly-rss"
+aliases = ["weekly_rss", "weeklyrss"]
+type = ["rss"]
+permission = "public"
+
+[[meta.modules]]
+name = "teahouse-weekly-rss"
+aliases = ["teahouse_weekly_rss", "teahouserss", "teahouseweeklyrss"]
+type = ["rss"]
+permission = "public"
+
+[[meta.modules]]
+name = "wikilog"
+type = ["command", "rss"]
+permission = "superuser"
+
+[[meta.modules]]
+name = "wiki-bot"
+aliases = ["wbot", "wiki_bot"]
+type = ["command"]
+permission = "superuser"
+
+[[meta.modules]]
+name = "wiki-audit"
+aliases = ["wau", "wiki_audit"]
+type = ["command"]
+permission = "superuser"

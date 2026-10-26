@@ -1,0 +1,10 @@
+schema = 1
+title = "Arcaea 查询"
+summary = "查询 Arcaea 版本、曲目排行与谱面潜力值。"
+order = 500
+
+[[meta.modules]]
+name = "arcaea"
+aliases = ["arc"]
+type = ["command"]
+permission = "public"

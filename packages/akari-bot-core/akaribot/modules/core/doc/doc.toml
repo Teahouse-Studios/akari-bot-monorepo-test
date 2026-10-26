@@ -1,0 +1,4 @@
+schema = 1
+title = "内置模块"
+summary = "随 core 分发的内置模块。"
+order = 20

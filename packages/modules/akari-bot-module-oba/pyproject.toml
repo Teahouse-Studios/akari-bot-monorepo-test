@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 oba = "akaribot.modules.oba"
 
+[project.entry-points."akaribot.docs"]
+module-oba = "akaribot.modules.oba"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

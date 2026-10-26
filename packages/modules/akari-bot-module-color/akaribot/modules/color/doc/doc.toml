@@ -1,0 +1,10 @@
+schema = 1
+title = "颜色信息"
+summary = "解析颜色代码并输出色值与最接近的颜色名。"
+order = 500
+
+[[meta.modules]]
+name = "color"
+aliases = ["colour"]
+type = ["command"]
+permission = "public"

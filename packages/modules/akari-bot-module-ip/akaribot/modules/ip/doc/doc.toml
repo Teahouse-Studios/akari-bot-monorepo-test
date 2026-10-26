@@ -1,0 +1,9 @@
+schema = 1
+title = "IP 查询"
+summary = "查询 IP 地址的归属地、网络属性与反向解析结果。"
+order = 500
+
+[[meta.modules]]
+name = "ip"
+type = ["command"]
+permission = "public"

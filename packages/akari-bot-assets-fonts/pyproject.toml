@@ -14,6 +14,9 @@ license-files = ["akaribot/assets/fonts/LICENSE"]
 # 纯资源分发：包内只有字体、许可证与一个定位函数，不依赖任何分发（定位见 akaribot/assets/fonts/__init__.py）。
 dependencies = []
 
+[project.entry-points."akaribot.docs"]
+assets-fonts = "akaribot.assets.fonts"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

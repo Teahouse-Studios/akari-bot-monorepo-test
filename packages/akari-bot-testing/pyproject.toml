@@ -18,6 +18,9 @@ dependencies = [
     "tortoise-orm>=1.1.2,<1.2.0",
 ]
 
+[project.entry-points."akaribot.docs"]
+testing = "akaribot.testing"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

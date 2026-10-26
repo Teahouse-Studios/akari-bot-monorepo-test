@@ -18,6 +18,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 matrix = "akaribot.adapters.matrix"
 
+[project.entry-points."akaribot.docs"]
+adapter-matrix = "akaribot.adapters.matrix"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

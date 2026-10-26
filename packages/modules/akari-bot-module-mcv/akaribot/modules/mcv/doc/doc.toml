@@ -1,0 +1,10 @@
+schema = 1
+title = "Minecraft 版本查询"
+summary = "查询 Minecraft：Java 版与基岩版的最新版本。"
+order = 500
+
+[[meta.modules]]
+name = "mcv"
+aliases = ["mcbv", "mcev"]
+type = ["command"]
+permission = "public"

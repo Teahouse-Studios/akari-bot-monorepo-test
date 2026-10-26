@@ -87,6 +87,8 @@ jobs:
             bundle=.
             packages/akari-bot-cli/akaribot/cli/locales=akaribot/cli/locales
             packages/akari-bot-cli/akaribot/cli/templates=akaribot/cli/templates
+            packages/akari-bot-cli/akaribot/cli/doc=akaribot/cli/doc
+            packages/akari-bot-cli/akaribot/cli/docs/template=akaribot/cli/docs/template
           # CLI 包自己的资源已在上面按目录显式声明，这里重复声明只会触发「Duplicate data file」告警；
           # i18n 包的 locales 与其他第三方包的数据文件由 package-data 收集。
           include-package-data: |

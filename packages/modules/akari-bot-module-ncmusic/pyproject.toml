@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 ncmusic = "akaribot.modules.ncmusic"
 
+[project.entry-points."akaribot.docs"]
+module-ncmusic = "akaribot.modules.ncmusic"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

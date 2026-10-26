@@ -1,0 +1,10 @@
+schema = 1
+title = "Arcaea 版本推送"
+summary = "轮询 Arcaea 版本接口并在更新时推送消息。"
+order = 500
+
+[[meta.modules]]
+name = "arcaea-rss"
+aliases = ["arc-rss", "arc_rss", "arcaea_rss"]
+type = ["rss"]
+permission = "public"

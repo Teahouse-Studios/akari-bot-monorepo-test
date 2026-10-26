@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 github = "akaribot.modules.github"
 
+[project.entry-points."akaribot.docs"]
+module-github = "akaribot.modules.github"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

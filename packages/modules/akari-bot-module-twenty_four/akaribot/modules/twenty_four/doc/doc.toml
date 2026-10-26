@@ -1,0 +1,10 @@
+schema = 1
+title = "24 点"
+summary = "用四个数字与四则运算凑出 24 的小游戏。"
+order = 500
+
+[[meta.modules]]
+name = "twenty-four"
+aliases = ["24", "twenty_four", "twentyfour"]
+type = ["command"]
+permission = "public"

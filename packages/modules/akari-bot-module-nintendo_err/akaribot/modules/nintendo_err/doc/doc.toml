@@ -1,0 +1,10 @@
+schema = 1
+title = "任天堂报错码"
+summary = "解析任天堂 3DS、Wii U 与 Switch 的报错码并给出原因。"
+order = 500
+
+[[meta.modules]]
+name = "nintendo-err"
+aliases = ["err", "nintendo_err"]
+type = ["command"]
+permission = "public"

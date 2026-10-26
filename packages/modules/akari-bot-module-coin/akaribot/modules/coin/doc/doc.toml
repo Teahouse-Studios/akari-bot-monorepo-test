@@ -1,0 +1,9 @@
+schema = 1
+title = "抛硬币"
+summary = "按权重抛掷任意枚硬币。"
+order = 500
+
+[[meta.modules]]
+name = "coin"
+type = ["command"]
+permission = "public"

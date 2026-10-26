@@ -1,0 +1,4 @@
+schema = 1
+title = "CLI 与 TUI"
+summary = "AkariBot 实例管理命令行与终端界面。"
+order = 30

@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 convert = "akaribot.modules.convert"
 
+[project.entry-points."akaribot.docs"]
+module-convert = "akaribot.modules.convert"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

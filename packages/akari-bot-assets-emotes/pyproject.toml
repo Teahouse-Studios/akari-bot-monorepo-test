@@ -13,6 +13,9 @@ requires-python = ">=3.12,<4.0"
 # 纯资源分发：包内只有 GIF、README 与一个定位函数，不依赖任何分发（定位见 akaribot/assets/emotes/__init__.py）。
 dependencies = []
 
+[project.entry-points."akaribot.docs"]
+assets-emotes = "akaribot.assets.emotes"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

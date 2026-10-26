@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 exchange_rate = "akaribot.modules.exchange_rate"
 
+[project.entry-points."akaribot.docs"]
+module-exchange_rate = "akaribot.modules.exchange_rate"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

@@ -1,0 +1,10 @@
+schema = 1
+title = "GitHub 查询"
+summary = "查询 GitHub 仓库、用户与组织，并按关键词搜索仓库。"
+order = 500
+
+[[meta.modules]]
+name = "github"
+aliases = ["gh"]
+type = ["command"]
+permission = "public"

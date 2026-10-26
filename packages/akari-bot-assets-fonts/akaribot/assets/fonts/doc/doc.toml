@@ -1,0 +1,4 @@
+schema = 1
+title = "字体资源"
+summary = "图片渲染使用的 Noto Sans CJK 与 Symbols2 字体。"
+order = 62

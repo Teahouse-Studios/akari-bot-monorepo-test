@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 qqbot = "akaribot.adapters.qqbot"
 
+[project.entry-points."akaribot.docs"]
+adapter-qqbot = "akaribot.adapters.qqbot"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

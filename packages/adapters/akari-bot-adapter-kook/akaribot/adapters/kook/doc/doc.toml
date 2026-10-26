@@ -1,0 +1,4 @@
+schema = 1
+title = "KOOK"
+summary = "通过 KOOK 开放平台网关接入服务器频道与私信。"
+order = 500

@@ -26,7 +26,7 @@ CI=1 MPLCONFIGDIR=/tmp/mplconfig PYTHONIOENCODING=UTF-8 .venv/bin/python -m akar
 ```
 
 CLI：`.venv/bin/akaribot <子命令> --help`（init / run / test / module / config / adapter / db /
-instance / service / venv / logs / doctor / new / tui / migrate）。`migrate legacy` 把旧版布局的部署
+instance / service / venv / logs / doctor / new / tui / migrate / docs）。`migrate legacy` 把旧版布局的部署
 搬进新实例目录；`logs` 读实例的日志文件（界面日志页与它共用解析规则）。
 
 ## 架构脉络
@@ -73,6 +73,20 @@ packages/
 
 - 文档面向技术用户与维护者，不面向初学者。
 - 只覆盖功能概述、基本使用步骤和接口实现，不逐步讲解内部工作原理。
+
+### 包文档与文档站点
+
+- 每个分发的导入包目录下带 `doc/`：`doc.toml` 声明标题、简介与排序，Markdown 页面写当前行为；
+  在 pyproject 的 `[project.entry-points."akaribot.docs"]` 声明 `<key> = "<import path>"`。第三方包
+  以同一方式接入，目录只包含已安装的包。
+- `akaribot docs list|build|serve|deploy|status|clean`。构建需要 Node.js >= 18 与 npm；VitePress
+  版本锁定在 `packages/akari-bot-cli/akaribot/cli/docs/template/package-lock.json`。生成物在实例
+  `cache/docs/`，构建与部署记录在 `.docs/state.json`。
+- 站点配置写实例根 `docs.toml`；部署凭据只从环境变量读取，不写入配置、日志或状态文件。
+- 文档只写简体中文与当前状态；命令、配置字段与默认值以源码为准。跨包链接可写源码相对路径，
+  生成器会折算为站点 URL。
+- 模块页的属性卡来自 `doc.toml` 的 `[[meta.modules]]`，由生成器自动注入；站点主题内置
+  `ModuleMeta`、`NoticeBox`、`CommandUsage` 组件，正文仍以 Markdown 为主。
 
 ### i18n 与本地化
 

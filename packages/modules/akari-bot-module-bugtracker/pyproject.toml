@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 bugtracker = "akaribot.modules.bugtracker"
 
+[project.entry-points."akaribot.docs"]
+module-bugtracker = "akaribot.modules.bugtracker"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

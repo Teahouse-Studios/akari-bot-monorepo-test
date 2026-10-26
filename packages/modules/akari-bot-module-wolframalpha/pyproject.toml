@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 wolframalpha = "akaribot.modules.wolframalpha"
 
+[project.entry-points."akaribot.docs"]
+module-wolframalpha = "akaribot.modules.wolframalpha"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

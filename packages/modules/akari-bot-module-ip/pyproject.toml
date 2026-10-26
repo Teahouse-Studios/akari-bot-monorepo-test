@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 ip = "akaribot.modules.ip"
 
+[project.entry-points."akaribot.docs"]
+module-ip = "akaribot.modules.ip"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

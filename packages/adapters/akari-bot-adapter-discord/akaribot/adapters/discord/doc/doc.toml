@@ -1,0 +1,4 @@
+schema = 1
+title = "Discord"
+summary = "通过 Discord Bot Gateway 接入服务器频道与私信。"
+order = 500

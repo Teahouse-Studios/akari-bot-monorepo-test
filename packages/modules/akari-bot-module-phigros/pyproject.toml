@@ -30,6 +30,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 phigros = "akaribot.modules.phigros"
 
+[project.entry-points."akaribot.docs"]
+module-phigros = "akaribot.modules.phigros"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

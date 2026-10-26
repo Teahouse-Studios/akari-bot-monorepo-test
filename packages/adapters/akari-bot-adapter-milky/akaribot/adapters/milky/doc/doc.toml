@@ -1,0 +1,4 @@
+schema = 1
+title = "Milky"
+summary = "通过 Milky 协议端接入 QQ 群聊与私信。"
+order = 500

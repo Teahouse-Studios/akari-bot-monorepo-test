@@ -24,6 +24,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 mcserver = "akaribot.modules.mcserver"
 
+[project.entry-points."akaribot.docs"]
+module-mcserver = "akaribot.modules.mcserver"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

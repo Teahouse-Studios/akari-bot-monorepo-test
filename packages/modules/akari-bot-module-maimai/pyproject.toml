@@ -28,6 +28,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 maimai = "akaribot.modules.maimai"
 
+[project.entry-points."akaribot.docs"]
+module-maimai = "akaribot.modules.maimai"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

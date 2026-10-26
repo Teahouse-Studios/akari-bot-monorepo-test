@@ -1,0 +1,9 @@
+schema = 1
+title = "OpenBMCLAPI 数据"
+summary = "查询 OpenBMCLAPI 的仪表盘、节点排行与赞助商信息。"
+order = 500
+
+[[meta.modules]]
+name = "oba"
+type = ["command"]
+permission = "public"

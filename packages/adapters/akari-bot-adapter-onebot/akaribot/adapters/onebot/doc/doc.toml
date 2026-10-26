@@ -1,0 +1,4 @@
+schema = 1
+title = "OneBot"
+summary = "通过 OneBot 反向 WebSocket 接入 QQ 群聊与私信。"
+order = 500

@@ -27,6 +27,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 cytoid = "akaribot.modules.cytoid"
 
+[project.entry-points."akaribot.docs"]
+module-cytoid = "akaribot.modules.cytoid"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

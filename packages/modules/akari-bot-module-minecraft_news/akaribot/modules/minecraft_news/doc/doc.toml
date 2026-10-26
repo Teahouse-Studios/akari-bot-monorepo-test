@@ -1,0 +1,16 @@
+schema = 1
+title = "Minecraft 新闻推送"
+summary = "推送 Minecraft 官网新闻与 Feedback 更新记录。"
+order = 500
+
+[[meta.modules]]
+name = "minecraft-news"
+aliases = ["mcnews", "minecraft_news", "minecraftnews"]
+type = ["rss"]
+permission = "public"
+
+[[meta.modules]]
+name = "feedback-news"
+aliases = ["feedback_news", "feedbacknews"]
+type = ["rss"]
+permission = "public"

@@ -30,6 +30,9 @@ dependencies = [
 [project.scripts]
 akaribot = "akaribot.cli.main:app"
 
+[project.entry-points."akaribot.docs"]
+cli = "akaribot.cli"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

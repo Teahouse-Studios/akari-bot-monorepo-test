@@ -1,0 +1,10 @@
+schema = 1
+title = "Mod 下载"
+summary = "在 CurseForge 与 Modrinth 搜索 Mod 并输出下载链接。"
+order = 500
+
+[[meta.modules]]
+name = "mod-dl"
+aliases = ["mod_dl", "moddl"]
+type = ["command"]
+permission = "public"

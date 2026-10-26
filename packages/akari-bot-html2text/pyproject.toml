@@ -14,6 +14,9 @@ license-files = ["LICENCE"]
 # 只依赖标准库：包内 import 仅 html.entities/html.parser/re/urllib.parse/collections.abc/textwrap/argparse/sys。
 dependencies = []
 
+[project.entry-points."akaribot.docs"]
+html2text = "html2text"
+
 [tool.hatch.build.targets.wheel]
 packages = ["html2text"]
 

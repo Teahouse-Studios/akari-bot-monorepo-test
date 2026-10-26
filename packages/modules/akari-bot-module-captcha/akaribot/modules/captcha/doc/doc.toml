@@ -1,0 +1,10 @@
+schema = 1
+title = "入群验证码"
+summary = "为新加入 QQ 群聊的成员执行按钮验证码校验。"
+order = 500
+
+[[meta.modules]]
+name = "captcha"
+type = ["event"]
+permission = "public"
+platforms = ["QQBot|Group"]

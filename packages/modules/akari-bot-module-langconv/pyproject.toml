@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 langconv = "akaribot.modules.langconv"
 
+[project.entry-points."akaribot.docs"]
+module-langconv = "akaribot.modules.langconv"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

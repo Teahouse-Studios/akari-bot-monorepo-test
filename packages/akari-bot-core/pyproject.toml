@@ -45,6 +45,10 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 core = "akaribot.modules.core"
 
+[project.entry-points."akaribot.docs"]
+core = "akaribot.core"
+builtin = "akaribot.modules.core"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

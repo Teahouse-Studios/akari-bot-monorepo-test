@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 nbnhhsh = "akaribot.modules.nbnhhsh"
 
+[project.entry-points."akaribot.docs"]
+module-nbnhhsh = "akaribot.modules.nbnhhsh"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

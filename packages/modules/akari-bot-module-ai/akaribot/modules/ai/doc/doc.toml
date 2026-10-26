@@ -1,0 +1,9 @@
+schema = 1
+title = "AI 对话"
+summary = "调用大语言模型完成多轮对话、网页检索与图片生成。"
+order = 500
+
+[[meta.modules]]
+name = "ai"
+type = ["command"]
+permission = "public"

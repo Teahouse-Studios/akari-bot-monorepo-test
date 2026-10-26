@@ -31,6 +31,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 web = "akaribot.adapters.web"
 
+[project.entry-points."akaribot.docs"]
+adapter-web = "akaribot.adapters.web"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

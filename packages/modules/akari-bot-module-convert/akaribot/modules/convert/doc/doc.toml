@@ -1,0 +1,10 @@
+schema = 1
+title = "单位转换"
+summary = "基于 pint 的单位换算。"
+order = 500
+
+[[meta.modules]]
+name = "convert"
+aliases = ["conv", "unit"]
+type = ["command"]
+permission = "public"

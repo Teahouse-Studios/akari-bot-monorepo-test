@@ -1,0 +1,9 @@
+schema = 1
+title = "Emoji 合成"
+summary = "将两个 Emoji 合成为 Emoji Kitchen 图片。"
+order = 500
+
+[[meta.modules]]
+name = "emojimix"
+type = ["command"]
+permission = "public"

@@ -1,0 +1,22 @@
+schema = 1
+title = "舞萌 DX 与 CHUNITHM"
+summary = "查询舞萌 DX 与 CHUNITHM 的曲目、成绩、B50/B30 与玩家数据。"
+order = 500
+
+[[meta.modules]]
+name = "maimai"
+aliases = ["mai"]
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "chunithm"
+aliases = ["chu"]
+type = ["command"]
+permission = "public"
+
+[[meta.modules]]
+name = "maimai-regex"
+aliases = ["mai_regex", "maimai_regex"]
+type = ["regex"]
+permission = "public"

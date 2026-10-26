@@ -1,0 +1,4 @@
+schema = 1
+title = "Telegram"
+summary = "通过 Telegram Bot API 长轮询接入私聊与群组。"
+order = 500

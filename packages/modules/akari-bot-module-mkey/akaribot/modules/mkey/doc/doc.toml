@@ -1,0 +1,9 @@
+schema = 1
+title = "任天堂监护密码"
+summary = "计算任天堂系列主机的监护管理万能密码。"
+order = 500
+
+[[meta.modules]]
+name = "mkey"
+type = ["command"]
+permission = "public"

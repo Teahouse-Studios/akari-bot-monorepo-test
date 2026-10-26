@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 kook = "akaribot.adapters.kook"
 
+[project.entry-points."akaribot.docs"]
+adapter-kook = "akaribot.adapters.kook"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

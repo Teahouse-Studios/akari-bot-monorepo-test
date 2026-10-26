@@ -1,0 +1,10 @@
+schema = 1
+title = "Mojang 服务状态"
+summary = "检查 Mojang 与 Minecraft 后端各服务的实时在线情况。"
+order = 500
+
+[[meta.modules]]
+name = "mojang-status"
+aliases = ["mcstatus", "mjs", "mjsb", "mojang_status"]
+type = ["command"]
+permission = "public"

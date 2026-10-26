@@ -26,6 +26,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 color = "akaribot.modules.color"
 
+[project.entry-points."akaribot.docs"]
+module-color = "akaribot.modules.color"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

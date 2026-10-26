@@ -17,6 +17,7 @@ from akaribot.cli.tui.adapters import AdaptersPage
 from akaribot.cli.tui.config import ConfigPage
 from akaribot.cli.tui.dashboard import DashboardPage
 from akaribot.cli.tui.database import DatabasePage
+from akaribot.cli.tui.docs import DocsPage
 from akaribot.cli.tui.environment import EnvironmentPage
 from akaribot.cli.tui.dev import DevPage
 from akaribot.cli.tui.doctor import DoctorPage
@@ -36,6 +37,7 @@ PAGES: tuple[tuple[str, str, type], ...] = (
     ("logs", "cli.tui.nav.logs", LogsPage),
     ("run", "cli.tui.nav.run", RunPage),
     ("dev", "cli.tui.nav.dev", DevPage),
+    ("docs", "cli.tui.nav.docs", DocsPage),
     ("doctor", "cli.tui.nav.doctor", DoctorPage),
     ("misc", "cli.tui.nav.misc", MiscPage),
 )
@@ -45,7 +47,7 @@ NAV_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("cli.tui.nav.group.runtime", ("dashboard", "run", "logs", "doctor")),
     ("cli.tui.nav.group.platform", ("config", "adapters", "modules")),
     ("cli.tui.nav.group.data", ("environment", "database")),
-    ("cli.tui.nav.group.dev", ("dev", "misc")),
+    ("cli.tui.nav.group.dev", ("dev", "docs", "misc")),
 )
 
 # 页面用途说明显示在快捷键帮助中。
@@ -59,6 +61,7 @@ PAGE_BLURB: dict[str, str] = {
     "logs": "cli.tui.nav.blurb.logs",
     "run": "cli.tui.nav.blurb.run",
     "dev": "cli.tui.nav.blurb.dev",
+    "docs": "cli.tui.nav.blurb.docs",
     "doctor": "cli.tui.nav.blurb.doctor",
     "misc": "cli.tui.nav.blurb.misc",
 }

@@ -1,0 +1,10 @@
+schema = 1
+title = "Cytoid 查询"
+summary = "查询 Cytoid 用户资料与 B30、R10 成绩。"
+order = 500
+
+[[meta.modules]]
+name = "cytoid"
+aliases = ["ctd"]
+type = ["command"]
+permission = "public"

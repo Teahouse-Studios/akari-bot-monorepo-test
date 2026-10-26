@@ -1,0 +1,10 @@
+schema = 1
+title = "哔哩哔哩视频"
+summary = "解析哔哩哔哩视频编号与短链接并展示视频信息。"
+order = 500
+
+[[meta.modules]]
+name = "bilibili"
+aliases = ["bili"]
+type = ["command", "regex"]
+permission = "public"

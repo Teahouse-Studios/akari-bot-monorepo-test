@@ -1,0 +1,10 @@
+schema = 1
+title = "骰子"
+summary = "投掷各类骰子并按 DC 判定成功失败。"
+order = 500
+
+[[meta.modules]]
+name = "dice"
+aliases = ["rd", "roll"]
+type = ["command"]
+permission = "public"

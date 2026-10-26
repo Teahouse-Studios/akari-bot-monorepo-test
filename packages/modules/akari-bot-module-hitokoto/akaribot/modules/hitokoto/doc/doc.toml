@@ -1,0 +1,10 @@
+schema = 1
+title = "一言"
+summary = "从一言 API 获取随机句子，支持指定类型与繁体转换。"
+order = 500
+
+[[meta.modules]]
+name = "hitokoto"
+aliases = ["htkt", "yiyan"]
+type = ["command"]
+permission = "public"

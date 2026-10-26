@@ -22,6 +22,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 onebot = "akaribot.adapters.onebot"
 
+[project.entry-points."akaribot.docs"]
+adapter-onebot = "akaribot.adapters.onebot"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

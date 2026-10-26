@@ -14,6 +14,7 @@ from akaribot.cli.commands import (
     adapter,
     config,
     db,
+    docs,
     doctor,
     init,
     instance,
@@ -68,7 +69,24 @@ app = typer.Typer(
     add_completion=False,
 )
 
-for sub in (init, run, service, test, module, config, db, instance, adapter, venv, doctor, new, tui, logs, migrate):
+for sub in (
+    init,
+    run,
+    service,
+    test,
+    module,
+    config,
+    db,
+    instance,
+    adapter,
+    venv,
+    doctor,
+    docs,
+    new,
+    tui,
+    logs,
+    migrate,
+):
     app.add_typer(sub.app, name=sub.__name__.rsplit(".", 1)[-1])
 
 

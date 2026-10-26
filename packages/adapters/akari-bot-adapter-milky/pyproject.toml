@@ -19,6 +19,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 milky = "akaribot.adapters.milky"
 
+[project.entry-points."akaribot.docs"]
+adapter-milky = "akaribot.adapters.milky"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

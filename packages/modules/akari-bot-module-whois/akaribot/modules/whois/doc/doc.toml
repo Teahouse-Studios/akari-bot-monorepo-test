@@ -1,0 +1,9 @@
+schema = 1
+title = "WHOIS 查询"
+summary = "查询域名的注册商、日期、DNS 服务器与注册人信息。"
+order = 500
+
+[[meta.modules]]
+name = "whois"
+type = ["command"]
+permission = "public"

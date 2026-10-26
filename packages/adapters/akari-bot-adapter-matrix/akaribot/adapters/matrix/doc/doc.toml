@@ -1,0 +1,4 @@
+schema = 1
+title = "Matrix"
+summary = "通过 Matrix 客户端同步协议接入房间消息。"
+order = 500

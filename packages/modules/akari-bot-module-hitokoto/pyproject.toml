@@ -22,6 +22,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 hitokoto = "akaribot.modules.hitokoto"
 
+[project.entry-points."akaribot.docs"]
+module-hitokoto = "akaribot.modules.hitokoto"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

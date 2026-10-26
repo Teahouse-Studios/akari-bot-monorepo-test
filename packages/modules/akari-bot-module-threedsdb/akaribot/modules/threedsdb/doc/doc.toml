@@ -1,0 +1,9 @@
+schema = 1
+title = "3DS 应用数据库"
+summary = "按名称或 Title ID 搜索 3DS 应用信息。"
+order = 500
+
+[[meta.modules]]
+name = "3dsdb"
+type = ["command"]
+permission = "public"

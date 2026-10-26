@@ -50,6 +50,7 @@ def _real_sources(root) -> dict:
     from akaribot.cli.tui.config import SubprocessConfigSource
     from akaribot.cli.tui.dashboard import LocalDashboardSource
     from akaribot.cli.tui.dev import SubprocessDevSource
+    from akaribot.cli.tui.docs import StaticDocsSource
     from akaribot.cli.tui.doctor import SubprocessDoctorSource
     from akaribot.cli.tui.environment import SubprocessEnvironmentSource
     from akaribot.cli.tui.misc import StaticMiscSource
@@ -67,6 +68,8 @@ def _real_sources(root) -> dict:
         "environment": _Counting(SubprocessEnvironmentSource(root=root, query_timeout=10.0, action_timeout=10.0)),
         # 杂项页使用替身，避免启动 CLI 子进程。
         "misc": _Counting(StaticMiscSource()),
+        # 文档页同样使用替身：导航测试不应启动真实构建或预览子进程。
+        "docs": _Counting(StaticDocsSource()),
     }
 
 

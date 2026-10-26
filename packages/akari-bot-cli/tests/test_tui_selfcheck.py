@@ -25,6 +25,7 @@ from akaribot.cli.tui.dashboard import (
 )
 from akaribot.cli.tui.database import StaticDatabaseSource
 from akaribot.cli.tui.dev import StaticDevSource
+from akaribot.cli.tui.docs import StaticDocsSource
 from akaribot.cli.tui.doctor import StaticDoctorSource
 from akaribot.cli.tui.environment import StaticEnvironmentSource
 from akaribot.cli.tui.logs import StaticLogSource
@@ -74,6 +75,7 @@ def _static_sources() -> dict:
         "logs": StaticLogSource(),
         "run": StaticRunSource(),
         "dev": StaticDevSource(),
+        "docs": StaticDocsSource(),
         "doctor": StaticDoctorSource(),
         "misc": StaticMiscSource(),
     }

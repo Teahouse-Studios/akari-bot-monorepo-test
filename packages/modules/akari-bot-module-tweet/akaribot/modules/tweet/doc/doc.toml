@@ -1,0 +1,10 @@
+schema = 1
+title = "推文摘要"
+summary = "通过推文 ID 或链接获取推文摘要图片。"
+order = 500
+
+[[meta.modules]]
+name = "tweet"
+aliases = ["x"]
+type = ["command", "regex"]
+permission = "public"

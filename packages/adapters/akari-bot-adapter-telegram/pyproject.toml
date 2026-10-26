@@ -19,6 +19,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 telegram = "akaribot.adapters.telegram"
 
+[project.entry-points."akaribot.docs"]
+adapter-telegram = "akaribot.adapters.telegram"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

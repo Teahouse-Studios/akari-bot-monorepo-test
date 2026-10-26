@@ -25,6 +25,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 wordle = "akaribot.modules.wordle"
 
+[project.entry-points."akaribot.docs"]
+module-wordle = "akaribot.modules.wordle"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

@@ -1,0 +1,10 @@
+schema = 1
+title = "MC 百科查询"
+summary = "查询 MC 百科的 Mod 条目，返回首条结果的名称、链接与简介。"
+order = 500
+
+[[meta.modules]]
+name = "mcmod"
+aliases = ["moddetails"]
+type = ["command"]
+permission = "public"

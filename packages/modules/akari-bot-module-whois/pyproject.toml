@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 whois = "akaribot.modules.whois"
 
+[project.entry-points."akaribot.docs"]
+module-whois = "akaribot.modules.whois"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

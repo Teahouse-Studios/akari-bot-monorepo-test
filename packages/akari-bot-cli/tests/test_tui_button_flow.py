@@ -183,7 +183,7 @@ async def _test_dynamic_mixed_labels_keep_controls_visible():
     return await _measure(body, size=(140, 30), specs=MIXED_SPECS, breaks=())
 
 
-async def _test_navigation_still_reports_eleven_pages():
+async def _test_navigation_still_reports_all_pages():
 
     return [key for key, _, _ in PAGES] == [
         "dashboard",
@@ -195,6 +195,7 @@ async def _test_navigation_still_reports_eleven_pages():
         "logs",
         "run",
         "dev",
+        "docs",
         "doctor",
         "misc",
     ]
@@ -211,6 +212,6 @@ async def test_tui_button_flow(tester: Tester):
     await tester.test(_test_mixed_labels_fit_after_resize, "长短标签在窄宽往返缩放时无越界或重叠")
     await tester.test(_test_hidden_mixed_buttons_repack, "隐藏与恢复按钮后按可见按钮重排")
     await tester.test(_test_dynamic_mixed_labels_keep_controls_visible, "动态长标签与超宽标签不挤出控件")
-    await tester.test(_test_navigation_still_reports_eleven_pages, "页面清单不变")
+    await tester.test(_test_navigation_still_reports_all_pages, "页面清单不变")
 
     return tester

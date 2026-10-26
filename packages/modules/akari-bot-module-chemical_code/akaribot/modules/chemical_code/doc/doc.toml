@@ -1,0 +1,10 @@
+schema = 1
+title = "化学式猜谜"
+summary = "根据化合物结构图回答分子式的猜谜游戏。"
+order = 500
+
+[[meta.modules]]
+name = "chemical-code"
+aliases = ["cc", "cca", "ccaptcha", "ccode", "chemical_captcha", "chemical_code", "chemicalcaptcha", "chemicalcode"]
+type = ["command"]
+permission = "public"

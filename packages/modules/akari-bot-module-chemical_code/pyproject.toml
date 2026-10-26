@@ -24,6 +24,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 chemical_code = "akaribot.modules.chemical_code"
 
+[project.entry-points."akaribot.docs"]
+module-chemical_code = "akaribot.modules.chemical_code"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

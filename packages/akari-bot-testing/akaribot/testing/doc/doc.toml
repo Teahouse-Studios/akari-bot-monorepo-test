@@ -1,0 +1,4 @@
+schema = 1
+title = "测试框架"
+summary = "AkariBot 自研测试框架、运行入口与用例编写方式。"
+order = 40

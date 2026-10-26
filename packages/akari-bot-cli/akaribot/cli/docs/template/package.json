@@ -1,0 +1,9 @@
+{
+  "name": "akaribot-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AkariBot documentation toolchain used by the akaribot CLI.",
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

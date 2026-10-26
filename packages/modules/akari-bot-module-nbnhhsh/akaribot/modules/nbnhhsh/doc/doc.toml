@@ -1,0 +1,9 @@
+schema = 1
+title = "拼音缩写释义"
+summary = "查询拼音首字母缩写对应的中文含义。"
+order = 500
+
+[[meta.modules]]
+name = "nbnhhsh"
+type = ["command"]
+permission = "public"

@@ -1,0 +1,9 @@
+schema = 1
+title = "网易云音乐"
+summary = "搜索网易云音乐歌曲并查询歌曲详情。"
+order = 500
+
+[[meta.modules]]
+name = "ncmusic"
+type = ["command"]
+permission = "public"

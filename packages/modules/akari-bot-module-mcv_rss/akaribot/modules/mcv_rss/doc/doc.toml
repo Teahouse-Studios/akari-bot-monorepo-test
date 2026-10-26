@@ -1,0 +1,16 @@
+schema = 1
+title = "Minecraft 版本推送"
+summary = "定时检测 Minecraft 版本更新并向启用的会话推送。"
+order = 500
+
+[[meta.modules]]
+name = "mcv-rss"
+aliases = ["mcv_rss", "mcvrss"]
+type = ["rss"]
+permission = "public"
+
+[[meta.modules]]
+name = "mcbv-rss"
+aliases = ["mcbv_rss", "mcbvrss"]
+type = ["rss"]
+permission = "public"

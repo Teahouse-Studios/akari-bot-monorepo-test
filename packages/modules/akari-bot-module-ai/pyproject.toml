@@ -33,6 +33,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 ai = "akaribot.modules.ai"
 
+[project.entry-points."akaribot.docs"]
+module-ai = "akaribot.modules.ai"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

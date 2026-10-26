@@ -24,6 +24,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 mcv_rss = "akaribot.modules.mcv_rss"
 
+[project.entry-points."akaribot.docs"]
+module-mcv_rss = "akaribot.modules.mcv_rss"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

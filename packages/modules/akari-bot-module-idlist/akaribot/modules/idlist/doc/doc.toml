@@ -1,0 +1,9 @@
+schema = 1
+title = "ID 表查询"
+summary = "查询 Minecraft：基岩版的 ID 表条目。"
+order = 500
+
+[[meta.modules]]
+name = "idlist"
+type = ["command"]
+permission = "public"

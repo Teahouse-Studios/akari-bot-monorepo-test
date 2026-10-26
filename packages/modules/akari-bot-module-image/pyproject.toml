@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 image = "akaribot.modules.image"
 
+[project.entry-points."akaribot.docs"]
+module-image = "akaribot.modules.image"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

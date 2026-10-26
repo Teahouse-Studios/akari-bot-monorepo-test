@@ -1,0 +1,232 @@
+:root {
+  --vp-c-brand-1: #6b4fbb;
+  --vp-c-brand-2: #8266d4;
+  --vp-c-brand-3: #9d86e0;
+  --vp-c-brand-soft: rgba(107, 79, 187, 0.14);
+  --vp-font-family-base: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: 0.01em;
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.module-meta {
+  margin: 16px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+}
+
+.module-meta__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.module-meta__item + .module-meta__item {
+  border-top: 1px dashed var(--vp-c-divider);
+}
+
+.module-meta__name {
+  min-width: 8em;
+  font-size: 14px;
+}
+
+.module-meta__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.module-meta__note {
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+}
+
+.meta-badge {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  background: var(--vp-c-default-soft);
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.meta-badge code {
+  padding: 0;
+  background: transparent;
+  font-size: 11px;
+}
+
+.meta-badge--command {
+  border-color: rgba(68, 138, 255, 0.35);
+  background: rgba(68, 138, 255, 0.12);
+  color: #2f6feb;
+}
+
+.meta-badge--rss {
+  border-color: rgba(255, 145, 0, 0.35);
+  background: rgba(255, 145, 0, 0.12);
+  color: #b26a00;
+}
+
+.meta-badge--regex {
+  border-color: rgba(124, 77, 255, 0.35);
+  background: rgba(124, 77, 255, 0.12);
+  color: #5e35b1;
+}
+
+.meta-badge--event {
+  border-color: rgba(0, 191, 165, 0.35);
+  background: rgba(0, 191, 165, 0.12);
+  color: #00796b;
+}
+
+.meta-badge--permission-public {
+  border-color: rgba(0, 200, 83, 0.35);
+  background: rgba(0, 200, 83, 0.12);
+  color: #2e7d32;
+}
+
+.meta-badge--permission-admin {
+  border-color: rgba(255, 145, 0, 0.35);
+  background: rgba(255, 145, 0, 0.12);
+  color: #b26a00;
+}
+
+.meta-badge--permission-superuser,
+.meta-badge--permission-base_superuser {
+  border-color: rgba(255, 23, 68, 0.35);
+  background: rgba(255, 23, 68, 0.12);
+  color: #c62828;
+}
+
+.meta-badge--forced {
+  border-color: rgba(255, 145, 0, 0.35);
+  background: rgba(255, 145, 0, 0.12);
+  color: #b26a00;
+}
+
+.meta-badge--hidden {
+  color: var(--vp-c-text-3);
+  text-decoration: line-through;
+}
+
+.meta-badge--platform {
+  color: var(--vp-c-text-2);
+}
+
+.notice-box {
+  margin: 16px 0;
+  padding: 10px 16px;
+  border-left: 4px solid var(--notice-color, #448aff);
+  border-radius: 0 8px 8px 0;
+  background: var(--notice-bg, rgba(68, 138, 255, 0.1));
+}
+
+.notice-box--info {
+  --notice-color: #448aff;
+  --notice-bg: rgba(68, 138, 255, 0.1);
+}
+
+.notice-box--tip {
+  --notice-color: #00bfa5;
+  --notice-bg: rgba(0, 191, 165, 0.1);
+}
+
+.notice-box--warning {
+  --notice-color: #ff9100;
+  --notice-bg: rgba(255, 145, 0, 0.12);
+}
+
+.notice-box--danger {
+  --notice-color: #ff1744;
+  --notice-bg: rgba(255, 23, 68, 0.1);
+}
+
+.notice-box--example {
+  --notice-color: #7c4dff;
+  --notice-bg: rgba(124, 77, 255, 0.1);
+}
+
+.notice-box--help {
+  --notice-color: #64dd17;
+  --notice-bg: rgba(100, 221, 23, 0.12);
+}
+
+.notice-box--deprecated {
+  --notice-color: #9e9e9e;
+  --notice-bg: rgba(158, 158, 158, 0.12);
+}
+
+.notice-box__title {
+  margin-bottom: 4px;
+  color: var(--notice-color);
+  font-weight: 600;
+}
+
+.notice-box__body > :first-child {
+  margin-top: 0;
+}
+
+.notice-box__body > :last-child {
+  margin-bottom: 0;
+}
+
+.command-usage {
+  margin: 16px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+}
+
+.command-usage__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.command-usage__line {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.command-usage__options {
+  margin-top: 10px;
+}
+
+.command-usage__note {
+  margin: 8px 0 0;
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+}
+
+.dark .meta-badge--command,
+.dark .meta-badge--rss,
+.dark .meta-badge--regex,
+.dark .meta-badge--event,
+.dark .meta-badge--permission-public,
+.dark .meta-badge--permission-admin,
+.dark .meta-badge--permission-superuser,
+.dark .meta-badge--permission-base_superuser,
+.dark .meta-badge--forced {
+  color: var(--vp-c-text-1);
+}

@@ -1,0 +1,4 @@
+schema = 1
+title = "核心运行时"
+summary = "AkariBot 运行时、消息、配置、数据库与模块开发接口。"
+order = 10

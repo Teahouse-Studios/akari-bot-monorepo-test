@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 threedsdb = "akaribot.modules.threedsdb"
 
+[project.entry-points."akaribot.docs"]
+module-threedsdb = "akaribot.modules.threedsdb"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

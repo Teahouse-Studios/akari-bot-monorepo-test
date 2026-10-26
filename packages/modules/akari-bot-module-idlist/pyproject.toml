@@ -17,6 +17,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 idlist = "akaribot.modules.idlist"
 
+[project.entry-points."akaribot.docs"]
+module-idlist = "akaribot.modules.idlist"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

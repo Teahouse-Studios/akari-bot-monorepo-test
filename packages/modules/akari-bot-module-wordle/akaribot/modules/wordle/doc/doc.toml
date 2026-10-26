@@ -1,0 +1,9 @@
+schema = 1
+title = "Wordle 猜词"
+summary = "猜测五个字母的英文单词，六次机会内完成挑战。"
+order = 500
+
+[[meta.modules]]
+name = "wordle"
+type = ["command"]
+permission = "public"

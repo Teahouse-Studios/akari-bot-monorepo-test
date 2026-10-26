@@ -21,6 +21,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 tweet = "akaribot.modules.tweet"
 
+[project.entry-points."akaribot.docs"]
+module-tweet = "akaribot.modules.tweet"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

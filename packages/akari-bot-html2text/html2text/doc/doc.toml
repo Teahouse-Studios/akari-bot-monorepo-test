@@ -1,0 +1,4 @@
+schema = 1
+title = "html2text"
+summary = "AkariBot 维护的 HTML 转 Markdown 分支及其使用边界。"
+order = 50

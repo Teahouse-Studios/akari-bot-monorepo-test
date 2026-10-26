@@ -1,0 +1,10 @@
+schema = 1
+title = "Mojira 漏洞查询"
+summary = "查询 Mojira 漏洞并附带中文翻译与页面截图。"
+order = 500
+
+[[meta.modules]]
+name = "bugtracker"
+aliases = ["bug"]
+type = ["command", "regex"]
+permission = "public"

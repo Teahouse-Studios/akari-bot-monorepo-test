@@ -1,0 +1,10 @@
+schema = 1
+title = "Phigros 查询"
+summary = "绑定 Phigros 云存档，查询 B30、成绩、曲目与账号信息。"
+order = 500
+
+[[meta.modules]]
+name = "phigros"
+aliases = ["pgr", "phi"]
+type = ["command"]
+permission = "public"

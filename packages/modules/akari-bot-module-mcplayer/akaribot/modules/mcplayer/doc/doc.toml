@@ -1,0 +1,10 @@
+schema = 1
+title = "Minecraft 玩家查询"
+summary = "通过玩家名或 UUID 查询 Minecraft：Java 版玩家的皮肤与披风。"
+order = 500
+
+[[meta.modules]]
+name = "mcplayer"
+aliases = ["namemc"]
+type = ["command"]
+permission = "public"

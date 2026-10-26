@@ -1,0 +1,4 @@
+schema = 1
+title = "QQ 机器人（官方）"
+summary = "通过 QQ 开放平台接入群聊、私信与服务器频道。"
+order = 500

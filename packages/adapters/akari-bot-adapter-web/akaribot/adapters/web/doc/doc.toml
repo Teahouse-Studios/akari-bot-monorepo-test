@@ -1,0 +1,4 @@
+schema = 1
+title = "Web 控制台"
+summary = "提供 Web 控制台与内置 API，无需平台账号。"
+order = 500

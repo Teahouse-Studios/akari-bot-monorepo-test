@@ -1,0 +1,9 @@
+schema = 1
+title = "图片处理"
+summary = "把透明背景的图片填充为白色背景。"
+order = 500
+
+[[meta.modules]]
+name = "image"
+type = ["command"]
+permission = "superuser"

@@ -56,7 +56,7 @@ def _test_license_is_bundled_with_the_artwork():
 
 def _test_no_stray_build_artifacts_beside_the_assets():
     directory = Path(brand_dir())
-    allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__"}
+    allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__", "doc"}
     return all(child.name in allowed for child in directory.iterdir())
 
 

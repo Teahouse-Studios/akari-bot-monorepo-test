@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."akaribot.adapters"]
 discord = "akaribot.adapters.discord"
 
+[project.entry-points."akaribot.docs"]
+adapter-discord = "akaribot.adapters.discord"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

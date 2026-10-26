@@ -23,6 +23,9 @@ dependencies = [
 [project.entry-points."akaribot.modules"]
 minecraft_news = "akaribot.modules.minecraft_news"
 
+[project.entry-points."akaribot.docs"]
+module-minecraft_news = "akaribot.modules.minecraft_news"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 

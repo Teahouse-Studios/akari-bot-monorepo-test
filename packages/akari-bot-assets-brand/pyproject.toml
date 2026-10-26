@@ -15,6 +15,9 @@ license-files = ["akaribot/assets/brand/LICENSE"]
 # 纯资源分发：包内只有图片、名单、许可证与一个定位函数，不依赖任何分发。
 dependencies = []
 
+[project.entry-points."akaribot.docs"]
+assets-brand = "akaribot.assets.brand"
+
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 
