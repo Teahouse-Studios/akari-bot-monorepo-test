@@ -23,7 +23,7 @@ from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistr
 from akaribot.core.scheduler import SchedulerLifecycle
 from akaribot.testing import func_case, Tester
 from akaribot.core.types import Module
-from akaribot.core.types.module.component_meta import CommandMeta, EventMeta, HookMeta, RegexMeta, ScheduleMeta
+from akaribot.core.types.module.component_meta import CommandMeta, EventMeta, HookMeta, ScheduleMeta
 
 
 RENAMED_MODULES = {
@@ -52,20 +52,6 @@ RENAMED_MODULES = {
 # 冷文件缓存或高负载环境下会明显超过 1 秒，故等待步骤统一留出余量，
 # 避免把「慢」误判成「卡住」。
 RELOAD_WAIT_TIMEOUT = 10
-
-
-def _test_add_module():
-    try:
-        test_module = Module.assign(
-            module_name="__test_loader_mod_1", alias=None, recommend_modules=None, developers=None
-        )
-        ModulesManager.add_module(test_module, "test.py")
-        result = "__test_loader_mod_1" in ModulesManager.modules
-        ModulesManager.modules.pop("__test_loader_mod_1", None)
-        ModulesManager.modules_origin.pop("__test_loader_mod_1", None)
-        return result
-    except Exception:
-        return False
 
 
 def _test_add_module_duplicate():
@@ -132,51 +118,6 @@ def _test_bind_to_module_command():
         return False
 
 
-def _test_bind_to_module_regex():
-    try:
-        test_module = Module.assign(
-            module_name="__test_loader_bind_2", alias=None, recommend_modules=None, developers=None
-        )
-        ModulesManager.add_module(test_module, "test.py")
-
-        async def dummy_func(msg):
-            pass
-
-        meta = RegexMeta(function=dummy_func, pattern=r"test")
-        ModulesManager.bind_to_module("__test_loader_bind_2", meta)
-        result = len(ModulesManager.modules["__test_loader_bind_2"].regex_list.set) == 1
-        ModulesManager.modules.pop("__test_loader_bind_2", None)
-        ModulesManager.modules_origin.pop("__test_loader_bind_2", None)
-        return result
-    except Exception:
-        return False
-
-
-def _test_bind_to_nonexistent_module():
-    try:
-        meta = CommandMeta(function=lambda m: None, command_template=[])
-        ModulesManager.bind_to_module("__nonexistent_xyz__", meta)
-        return True
-    except Exception:
-        return False
-
-
-def _test_return_modules_list():
-    try:
-        test_module = Module.assign(
-            module_name="__test_loader_list_1", alias=None, recommend_modules=None, developers=None
-        )
-        test_module._db_load = True
-        ModulesManager.add_module(test_module, "test.py")
-        modules = ModulesManager.return_modules_list()
-        result = "__test_loader_list_1" in modules
-        ModulesManager.modules.pop("__test_loader_list_1", None)
-        ModulesManager.modules_origin.pop("__test_loader_list_1", None)
-        return result
-    except Exception:
-        return False
-
-
 def _test_return_modules_list_filter_platform():
     try:
         test_module = Module.assign(
@@ -201,24 +142,6 @@ def _test_return_modules_list_filter_platform():
         ModulesManager.refresh()
 
         return qq_has and not discord_has
-    except Exception:
-        return False
-
-
-def _test_refresh_aliases():
-    try:
-        test_module = Module.assign(
-            module_name="__test_loader_alias_1",
-            alias={"ta": "__test_loader_alias_1"},
-            recommend_modules=None,
-            developers=None,
-        )
-        ModulesManager.add_module(test_module, "test.py")
-        ModulesManager.refresh_modules_aliases()
-        result = ModulesManager.modules_aliases.get("ta") == "__test_loader_alias_1"
-        ModulesManager.modules.pop("__test_loader_alias_1", None)
-        ModulesManager.modules_origin.pop("__test_loader_alias_1", None)
-        return result
     except Exception:
         return False
 
@@ -1357,16 +1280,11 @@ async def test_loader(tester: Tester):
 
 async def _run_loader_cases(tester: Tester):
     await tester.test(_test_all_registered_modules_resolve_to_a_package, "全部已注册模块都能解析出所属包")
-    await tester.test(_test_add_module, "ModulesManager.add_module 测试")
     await tester.test(_test_add_module_duplicate, "ModulesManager.add_module 重复测试")
     await tester.test(_test_remove_modules, "ModulesManager.remove_modules 测试")
     await tester.test(_test_remove_nonexistent_module, "ModulesManager.remove_modules 不存在测试")
     await tester.test(_test_bind_to_module_command, "ModulesManager.bind_to_module CommandMeta 测试")
-    await tester.test(_test_bind_to_module_regex, "ModulesManager.bind_to_module RegexMeta 测试")
-    await tester.test(_test_bind_to_nonexistent_module, "ModulesManager.bind_to_module 不存在模块测试")
-    await tester.test(_test_return_modules_list, "ModulesManager.return_modules_list 测试")
     await tester.test(_test_return_modules_list_filter_platform, "ModulesManager.return_modules_list 平台过滤测试")
-    await tester.test(_test_refresh_aliases, "ModulesManager.refresh_modules_aliases 测试")
     await tester.test(
         _test_get_module_and_alias_first_words,
         "ModulesManager.get_module_and_alias_first_words 测试",

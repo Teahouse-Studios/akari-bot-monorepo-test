@@ -99,7 +99,7 @@ async def _test_rejected_related_confirmation_skips_reload():
 
 @func_case
 async def test_module_reload(tester: Tester):
-    """modules.core.admin_tools.modules: module reload 基础模块处理测试"""
+    """akaribot.modules.core.admin_tools.modules: module reload 基础模块处理测试"""
     await tester.test(_test_base_module_reload_is_not_blocked, "基础模块重载不再被拦截测试")
     await tester.test(_test_base_module_reload_keeps_related_confirmation, "基础模块重载保留联动模块确认测试")
     await tester.test(_test_rejected_related_confirmation_skips_reload, "拒绝联动确认时不执行重载测试")

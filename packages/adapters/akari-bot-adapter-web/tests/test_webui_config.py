@@ -1,4 +1,4 @@
-"""bots.web.api 单元测试 - 配置文件删除接口（临时目录）。"""
+"""akaribot.adapters.web.api 单元测试 - 配置文件删除接口（临时目录）。"""
 
 import inspect
 from pathlib import Path
@@ -79,7 +79,7 @@ async def _test_delete_config_file_reports_missing_config_dir():
 
 @func_case
 async def test_webui_config_delete(tester: Tester):
-    """bots.web.api: 配置文件删除接口测试"""
+    """akaribot.adapters.web.api: 配置文件删除接口测试"""
     await tester.test(_test_delete_config_file_removes_file, "删除配置文件测试")
     await tester.test(_test_delete_config_file_rejects_unsafe_names, "删除配置文件校验测试")
     await tester.test(_test_delete_config_file_reports_missing_config_dir, "配置目录缺失测试")

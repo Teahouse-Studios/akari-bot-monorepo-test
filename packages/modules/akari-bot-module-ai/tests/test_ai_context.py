@@ -1,4 +1,4 @@
-"""modules.ai.context 上下文窗口单元测试。"""
+"""akaribot.modules.ai.context 上下文窗口单元测试。"""
 
 from unittest.mock import patch
 
@@ -33,7 +33,7 @@ def _test_context_records_llm():
 
 @func_case
 async def test_ai_context(tester: Tester):
-    """modules.ai.context: 上下文窗口隔离与快照分叉测试"""
+    """akaribot.modules.ai.context: 上下文窗口隔离与快照分叉测试"""
     await tester.test(_test_context_isolated_by_context_key_and_can_branch, "上下文按场景隔离与快照分叉测试")
     await tester.test(_test_context_records_llm, "上下文记录模型名称测试")
     return tester

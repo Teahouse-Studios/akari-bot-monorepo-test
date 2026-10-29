@@ -423,7 +423,7 @@ def _test_legacy_allow_reload_base_is_removed():
 
 @func_case
 async def test_config_scan(tester: Tester):
-    """core.config.scan: 配置模板扫描测试"""
+    """akaribot.core.config.scan: 配置模板扫描测试"""
     await tester.test(_test_core_templates_are_grouped_into_domain_files, "核心配置模板独立文件与兼容导入测试")
     await tester.test(_test_fresh_process_generates_all_grouped_core_templates, "全新进程生成领域模板测试")
     await tester.test(_test_scan_covers_all_directories_with_config_templates, "平台与模块模板枚举一致性测试")
@@ -434,6 +434,6 @@ async def test_config_scan(tester: Tester):
     await tester.test(_test_scan_repairs_raw_i18n_comments, "原始 i18n 配置注释修复测试")
     await tester.test(_test_importing_daemon_does_not_load_config, "守护进程延迟导入配置系统测试")
     await tester.test(_test_legacy_slower_schedule_migrates_to_multiplier, "旧 slower_schedule 布尔值迁移测试")
-    await tester.test(_test_legacy_allow_reload_base_is_removed, "废弃的 allow_reload_base 迁移移除测试")
 
+    await tester.test(_test_legacy_allow_reload_base_is_removed, "废弃的 allow_reload_base 迁移移除测试")
     return tester

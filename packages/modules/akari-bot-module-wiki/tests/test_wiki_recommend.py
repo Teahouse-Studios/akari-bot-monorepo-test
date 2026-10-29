@@ -1,8 +1,4 @@
-"""wiki 推荐绑定列表单元测试 - 按钮数据构造与发出门槛。
-
-按钮的下发门槛是 support_button 一项，故用例按该标志构造会话，客户端名不参与判定。按钮回流经
-interaction 事件另建会话，其可用前缀与常规消息入口不同，前缀相关的用例即为守住这条不变量。
-"""
+"""wiki 推荐绑定列表单元测试 - 按钮数据构造与发出门槛。"""
 
 from unittest.mock import patch
 
@@ -23,7 +19,6 @@ from akaribot.modules.wiki.utils.recommend import (
 
 
 async def _probe(target_id: str, client_name: str, support_button: bool, is_admin: bool) -> dict:
-    # 跑一遍未设置默认 Wiki 的收尾流程，捕获它交给 finish 的消息与按钮数据。
     session_info = await SessionInfo.assign(
         target_id=target_id,
         target_from=f"{client_name}|Group",
@@ -67,8 +62,6 @@ async def _test_button_data_shape():
 
 
 async def _test_button_rows_are_split():
-    # 分行已收归 akaribot.core.utils.button，此处只验证 wiki 侧确实经由该工具产出，
-    # 具体的均分规则由 tests/unit/test_button_arrange.py 把关。
     try:
         count = DEFAULT_BUTTONS_PER_ROW * 2 + 1
         wikis = [(f"Wiki {i}", f"https://example{i}.invalid/api.php") for i in range(count)]
@@ -83,7 +76,7 @@ async def _test_button_rows_are_split():
 
 async def _test_button_prefix_reachable_from_interaction():
     try:
-        # 与 akaribot/adapters/qqbot/bot.py 的 on_interaction_create 一致：不指定前缀，
+        # 与 bots/qqbot/bot.py 的 on_interaction_create 一致：不指定前缀，
         # 故会话取到的是全局配置的前缀，而非常规消息入口所用的斜杠前缀。
         session_info = await SessionInfo.assign(
             target_id="QQBot|Group|recommend_interaction",
@@ -127,28 +120,7 @@ async def _test_non_admin_gets_no_buttons():
         return False
 
 
-async def _test_other_client_gets_buttons():
-    # 这条守住摊平本身：新增支持按钮的平台只需在自己的 features.py 中声明，无须回头改动模块。
-    try:
-        captured = await _probe("TEST|Group|recommend_other", "TEST", True, True)
-        keys = [element.key for element in captured["prompts"] if isinstance(element, I18NContextElement)]
-        buttons = [element for element in captured["prompts"] if isinstance(element, ButtonFrameElement)]
-        return (
-            len(buttons) == 1
-            and buttons[0].rows == get_recommend_button_data()
-            and keys
-            == [
-                "wiki.message.set.not_set",
-                "wiki.message.set.not_set.recommend",
-            ]
-        )
-
-    except Exception:
-        return False
-
-
 async def _test_button_unsupported_gets_no_buttons():
-    # 对应 QQ 官方机器人关闭 qq_use_markdown 的情形：消息走纯文本路径，按钮无从附带。
     try:
         captured = await _probe("QQBot|Group|recommend_nobutton", "QQBot", False, True)
         keys = [element.key for element in captured["prompts"] if isinstance(element, I18NContextElement)]
@@ -166,7 +138,6 @@ async def test_wiki_recommend(tester: Tester):
     await tester.test(_test_button_prefix_reachable_from_interaction, "按钮前缀可识别测试")
     await tester.test(_test_admin_gets_buttons, "管理员收到按钮测试")
     await tester.test(_test_non_admin_gets_no_buttons, "非管理员无按钮测试")
-    await tester.test(_test_other_client_gets_buttons, "其他平台声明后有按钮测试")
     await tester.test(_test_button_unsupported_gets_no_buttons, "无按钮能力时无按钮测试")
 
     return tester

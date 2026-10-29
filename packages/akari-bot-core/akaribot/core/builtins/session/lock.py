@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class ExecutionState:
     """仅存在于 Server 进程中的一次命令执行状态。"""
 
-    __slots__ = ("held_contexts", "lock_owner_task", "lock_subject", "lock_token")
+    __slots__ = ("held_contexts", "lock_owner_task", "lock_subject", "lock_token", "typing_owner")
 
     def __init__(self) -> None:
         self.lock_token: str | None = None
@@ -24,6 +24,9 @@ class ExecutionState:
         # wait_anyone／wait_reply(all_=True) 的结果可能来自另一名用户，
         # 执行锁仍须按最初发起命令的用户计算。
         self.lock_subject: MessageSession | None = None
+        # 输入提示按会话消息 ID 展示，恢复时须沿用最初发起提示的会话；
+        # wait_* 取得的回复会话不能用自己的 ID 重新开启。
+        self.typing_owner: MessageSession | None = None
 
 
 class ExecutionLockList:

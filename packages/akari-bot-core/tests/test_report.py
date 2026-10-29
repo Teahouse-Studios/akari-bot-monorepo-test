@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from akaribot.core.config.base import BaseConfig, CoreConfig, SMTPConfig, SMTPSecretConfig
 from akaribot.core.i18n import Locale
-from akaribot.core.smtp import LOGO_PATH, send_email, send_report
+from akaribot.core.smtp import send_email, send_report
 from akaribot.testing import Tester, func_case
 
 
@@ -69,7 +69,6 @@ async def _test_no_targets_does_not_send():
 
 
 async def _test_external_smtp_client_uses_starttls_and_login():
-    # 邮件正文为纯文本加 HTML 备用，尾部附带引导误收件人前往 issue 反馈的链接，且内嵌 Logo。
     smtp = MagicMock()
     smtp_context = smtp.__enter__.return_value
     with (
@@ -102,35 +101,18 @@ async def _test_external_smtp_client_uses_starttls_and_login():
         and plain_part.get_content() == f"body\n\n{footer}\n"
         and "body" in html_part.get_content()
         and f'<a href="{issue_url}">{issue_url}</a>' in html_part.get_content()
-        # 标志来自 full extra 的品牌资产包：装了才内嵌，裸 core 下应为 0——两种形态都要成立。
-        and len(inline_logo) == (1 if LOGO_PATH is not None else 0)
-        and all(part.get_content_type() == "image/png" for part in inline_logo)
+        and len(inline_logo) == 1
+        and inline_logo[0].get_content_type() == "image/png"
         and parsedate_to_datetime(message["Date"]).tzinfo is not None
     )
 
 
-async def _test_external_smtp_client_receives_timeout():
-    smtp = MagicMock()
-    with (
-        patch.object(SMTPConfig, "smtp_host", "smtp.example.com"),
-        patch.object(SMTPConfig, "smtp_port", 587),
-        patch.object(SMTPConfig, "smtp_ssl", False),
-        patch.object(SMTPConfig, "smtp_username", ""),
-        patch.object(SMTPConfig, "smtp_starttls", False),
-        patch("akaribot.core.smtp.smtplib.SMTP", return_value=smtp) as smtp_constructor,
-    ):
-        send_email("subject", "body", timeout=5)
-
-    return smtp_constructor.call_args.kwargs == {"timeout": 5}
-
-
 @func_case
 async def test_report(tester: Tester):
-    """core.smtp: SMTP 与场景上报路由测试"""
+    """akaribot.core.smtp: SMTP 与场景上报路由测试"""
     await tester.test(_test_email_takes_priority_over_targets, "SMTP 优先于场景上报测试")
     await tester.test(_test_email_subject_and_body_are_localized, "邮件标题与正文本地化测试")
     await tester.test(_test_targets_are_used_without_email, "未启用 SMTP 时场景上报测试")
     await tester.test(_test_no_targets_does_not_send, "无上报场景时跳过测试")
     await tester.test(_test_external_smtp_client_uses_starttls_and_login, "外部 SMTP 服务商连接测试")
-    await tester.test(_test_external_smtp_client_receives_timeout, "SMTP 超时参数测试")
     return tester

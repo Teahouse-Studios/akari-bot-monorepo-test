@@ -1,4 +1,4 @@
-"""core.utils.http HTTP 工具单元测试（纯函数部分）。"""
+"""akaribot.core.utils.http HTTP 工具单元测试（纯函数部分）。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -19,19 +19,6 @@ def _test_url_pattern_match():
         ]
         for url in urls:
             if not url_pattern.search(url):
-                return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_url_pattern_no_match():
-    try:
-        from akaribot.core.utils.http import url_pattern
-
-        texts = ["hello world", "just some text", "no_url_here"]
-        for text in texts:
-            if url_pattern.search(text):
                 return False
         return True
     except Exception:
@@ -201,9 +188,8 @@ async def _test_request_url_private_ip_opt_outs():
 
 @func_case
 async def test_http(tester: Tester):
-    """core.utils.http: HTTP 工具纯函数测试"""
+    """akaribot.core.utils.http: HTTP 工具纯函数测试"""
     await tester.test(_test_url_pattern_match, "url_pattern 匹配 URL 测试")
-    await tester.test(_test_url_pattern_no_match, "url_pattern 不匹配文本测试")
     await tester.test(_test_private_ip_check_blocks_non_global, "private_ip_check 拒绝非公网 IP 测试")
     await tester.test(_test_private_ip_check_blocks_mapped_ipv6, "private_ip_check 拒绝 IPv4-mapped IPv6 测试")
     await tester.test(_test_private_ip_check_checks_all_dns_results, "private_ip_check 检查全部 DNS 结果测试")

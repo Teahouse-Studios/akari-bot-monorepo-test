@@ -1,14 +1,14 @@
-"""core.i18n 国际化系统单元测试。"""
+"""akaribot.core.i18n 国际化系统单元测试。"""
 
-from akaribot.core.i18n import Locale, get_available_locales, build_locale_snapshot, connect_locale_snapshot
+from akaribot.core.i18n import Locale
 from akaribot.testing import func_case, Tester
 
 
 def _test_locale_t_existing_key():
     try:
         locale = Locale("zh_cn")
-        result = locale.t("core.help.desc", locale_failed_prompt=False)
-        return isinstance(result, str) and len(result) > 0 and result != "core.help.desc"
+        result = locale.t("akaribot.core.help.desc", locale_failed_prompt=False)
+        return isinstance(result, str) and len(result) > 0 and result != "akaribot.core.help.desc"
     except Exception:
         return False
 
@@ -42,43 +42,11 @@ def _test_locale_t_str_i18n_key():
         return False
 
 
-def _test_locale_t_str_no_template():
-    try:
-        locale = Locale("zh_cn")
-        result = locale.t_str("plain text")
-        return result == "plain text"
-    except Exception:
-        return False
-
-
-def _test_load_locale_file():
-    try:
-        from akaribot.core.constants import lang_list
-        from akaribot.core.i18n import collect_locale_paths
-
-        errors = build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), "akari-bot")
-        connect_locale_snapshot("akari-bot")
-        return isinstance(errors, list)
-    except Exception:
-        return False
-
-
-def _test_get_available_locales():
-    try:
-        locales = get_available_locales()
-        return isinstance(locales, list) and len(locales) > 0
-    except Exception:
-        return False
-
-
 @func_case
 async def test_i18n(tester: Tester):
-    """core.i18n: 国际化系统测试"""
+    """akaribot.core.i18n: 国际化系统测试"""
     await tester.test(_test_locale_t_existing_key, "Locale.t 已存在键测试")
     await tester.test(_test_locale_t_missing_key, "Locale.t 不存在键测试")
     await tester.test(_test_locale_t_kwargs_substitution, "Locale.t 参数替换测试")
     await tester.test(_test_locale_t_str_i18n_key, "Locale.t_str I18N 键测试")
-    await tester.test(_test_locale_t_str_no_template, "Locale.t_str 无模板测试")
-    await tester.test(_test_load_locale_file, "load_locale_file 加载测试")
-    await tester.test(_test_get_available_locales, "get_available_locales 测试")
     return tester

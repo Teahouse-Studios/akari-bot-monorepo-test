@@ -1,4 +1,4 @@
-"""modules.ai.setting 计费时间段单元测试。"""
+"""akaribot.modules.ai.setting 计费时间段单元测试。"""
 
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -44,6 +44,6 @@ def _test_time_rules_use_server_time():
 
 @func_case
 async def test_ai_billing_time_rules(tester: Tester):
-    """modules.ai.setting: LLM 计费时间段规则测试"""
+    """akaribot.modules.ai.setting: LLM 计费时间段规则测试"""
     await tester.test(_test_time_rules_use_server_time, "计费时间段按服务器本地时间匹配测试")
     return tester

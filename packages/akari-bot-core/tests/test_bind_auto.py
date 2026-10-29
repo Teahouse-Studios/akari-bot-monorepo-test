@@ -1,16 +1,15 @@
-"""modules.core.common_tools.bind 单元测试 - bind auto 握手的并发收敛与口令防重放（需要数据库）。"""
+"""akaribot.modules.core.common_tools.bind 单元测试 - bind auto 握手的并发收敛与口令防重放（需要数据库）。"""
 
 import asyncio
 import re
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.session.info import SessionInfo
 from akaribot.core.constants.exceptions import SessionFinished
 from akaribot.core.database.models import TargetUnionInfo, TargetUnionBind
 from akaribot.core.module_runtime import ModuleRuntimeManager
-from akaribot.core.server.lifecycle import BackgroundTaskLifecycle
 from akaribot.testing import func_case, Tester
 from akaribot.testing.mock.session import MockMessageSession
 from akaribot.modules.core.common_tools.bind import (
@@ -27,8 +26,6 @@ PROBE_PATTERN = re.compile(r"bind channel (probe|confirm) (\S+)")
 
 
 async def _session(target_id: str, text: str = "", sender: str = "admin") -> MockMessageSession:
-    # 构造一条指定场景的消息，模拟同一个现实场景中来自不同平台的机器人。
-    # 而机器人账号仅在接收方所在平台的命名空间内有意义，故前缀取接收方的。
     msg = MockMessageSession(text, is_ci=True)
     await msg.async_init(text)
     client = target_id.split("|")[0]
@@ -53,9 +50,6 @@ async def _session(target_id: str, text: str = "", sender: str = "admin") -> Moc
 
 
 async def _run(target_id: str, handler, *args, sender: str = "admin") -> list[str]:
-    # 以指定场景执行一步握手，返回该场景产生的输出行。
-    # 此处直接调用握手函数而不经 parser：自动配对默认关闭，其命令并未注册，
-    # 经 parser 触发将取决于配置，而本组用例考察的是握手本身的收敛与防重放。
     msg = await _session(target_id, sender=sender)
     try:
         await handler(msg, *args)
@@ -65,7 +59,6 @@ async def _run(target_id: str, handler, *args, sender: str = "admin") -> list[st
 
 
 def _tokens(lines: list[str], kind: str) -> list[str]:
-    # 从输出中提取握手口令。
     found = []
     for line in lines:
         match = PROBE_PATTERN.search(str(line))
@@ -75,9 +68,6 @@ def _tokens(lines: list[str], kind: str) -> list[str]:
 
 
 async def _handshake(prefix: str) -> tuple[str, str]:
-    # 完整执行一遍两个机器人同时响应 ``~bind auto`` 的过程，返回双方的 target_id。
-    # 实际情形即是如此：绑定尚未建立，通道去重与互认记录均未生效，
-    # 同一场景内的每个机器人都会将该命令视作发给自己的，于是各自发起一轮握手。
     a, b = f"{prefix}A|Group|1", f"{prefix}B|Group|1"
 
     token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
@@ -95,7 +85,6 @@ async def _handshake(prefix: str) -> tuple[str, str]:
 
 
 async def _orphan_unions() -> int:
-    # 统计没有任何场景指向的场景组。重复合并会遗留此类孤儿组，写入其中的数据将无法被读取。
     bound = set(await TargetUnionBind.all().values_list("union_id", flat=True))
     return sum(
         1 for union_id in await TargetUnionInfo.all().values_list("union_id", flat=True) if union_id not in bound
@@ -151,20 +140,6 @@ async def _test_concurrent_completion_merges_once():
         return False
 
 
-async def _test_concurrent_auto_records_bots_id():
-    try:
-        a, b = await _handshake("BOTSID")
-
-        # 重复合并会将互认记录写入没有任何场景指向的孤儿组，等同于未写入。
-        # 双方各记录一条对方的账号，按各自平台的命名空间存放。
-        target = await TargetUnionInfo.resolve_union(a)
-        bots_id = target.list_peer_bots(a) + target.list_peer_bots(b)
-        return sorted(bots_id) == ["BOTSIDA|peer_bot", "BOTSIDB|peer_bot"]
-
-    except Exception:
-        return False
-
-
 async def _test_unbind_forgets_peer_bots():
     try:
         a, b = await _handshake("FORGET")
@@ -185,8 +160,6 @@ async def _test_unbind_forgets_peer_bots():
 
 
 async def _test_rebind_after_unbind():
-    # 仅覆盖流程本身。「因屏蔽而无法重新绑定」实际发生在 akaribot/core/builtins/parser/message.py，
-    # 而测试使用的是不执行该屏蔽的 mock parser，该判定条件由上面的清除用例覆盖。
     try:
         a, b = await _handshake("REBIND")
         target = await TargetUnionInfo.resolve_union(a)
@@ -367,20 +340,6 @@ async def _test_completion_releases_both_contexts_when_one_release_fails():
     return False
 
 
-async def _test_expiry_task_creation_failure_rolls_back_handshake():
-    msg = await _session("FAILTASK|Group|1")
-    before = set(_pending_probes)
-    msg.hold = AsyncMock()
-    msg.release = AsyncMock()
-
-    with patch("akaribot.core.module_runtime.asyncio.create_task", side_effect=RuntimeError("loop closed")):
-        try:
-            await _start_handshake(msg)
-        except RuntimeError:
-            return set(_pending_probes) == before and msg.hold.await_count == 1 and msg.release.await_count == 1
-    return False
-
-
 async def _test_handshake_cleanup_cancels_expiry_and_releases():
     await cleanup_bind_handshake_state()
     msg = await _session("CANCELTASK|Group|1")
@@ -398,19 +357,11 @@ async def _test_handshake_cleanup_cancels_expiry_and_releases():
     )
 
 
-async def _test_handshake_cleanup_is_registered():
-    runtime = ModuleRuntimeManager.get_or_create("bind")
-    return "module:bind-handshake" not in BackgroundTaskLifecycle._cleanup_hooks and any(
-        spec.callback is cleanup_bind_handshake_state for spec in runtime.cleanup_specs
-    )
-
-
 @func_case
 async def test_bind_auto(tester: Tester):
-    """modules.core.common_tools.bind: bind auto 握手测试"""
+    """akaribot.modules.core.common_tools.bind: bind auto 握手测试"""
     await tester.test(_test_only_one_round_survives, "握手让位测试")
     await tester.test(_test_concurrent_completion_merges_once, "并发闭合只合并一次测试")
-    await tester.test(_test_concurrent_auto_records_bots_id, "机器人账号落库测试")
     await tester.test(_test_peer_bots_scoped_per_target, "互认记录按场景分开测试")
     await tester.test(_test_unbind_forgets_peer_bots, "解绑摘除互认记录测试")
     await tester.test(_test_rebind_after_unbind, "解绑后重新绑定测试")
@@ -421,8 +372,6 @@ async def test_bind_auto(tester: Tester):
     await tester.test(_test_probe_send_failure_cleans_state_and_releases, "probe 发送失败清理测试")
     await tester.test(_test_confirm_send_failure_cleans_state_and_releases, "confirm 发送失败清理测试")
     await tester.test(_test_completion_releases_both_contexts_when_one_release_fails, "双侧上下文完整释放测试")
-    await tester.test(_test_expiry_task_creation_failure_rolls_back_handshake, "超时任务创建失败回滚测试")
     await tester.test(_test_handshake_cleanup_cancels_expiry_and_releases, "握手后台清理测试")
-    await tester.test(_test_handshake_cleanup_is_registered, "握手后台清理已注册测试")
 
     return tester

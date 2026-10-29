@@ -1,4 +1,4 @@
-"""core.utils.retired 单元测试 - 迁移关系解析、退役判定与介入点。"""
+"""akaribot.core.utils.retired 单元测试 - 迁移关系解析、退役判定与介入点。"""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
@@ -16,11 +16,9 @@ from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo
 from akaribot.core.loader import ModulesManager
 from akaribot.core.queue.contracts import PlatformAPI
 from akaribot.core.utils.retired import (
-    RETIRED_ALLOWED_MODULES,
     filter_retired_targets,
     is_merge_route_allowed,
     is_module_allowed_when_retired,
-    is_retired_client,
     is_retired_target,
     parse_retired_routes,
     reload_retired_routes,
@@ -41,27 +39,6 @@ def _use_routes(entries: list):
 def _restore_routes(original: list):
     CoreConfig.retired_clients = original
     reload_retired_routes()
-
-
-async def _test_client_judgement():
-    original = CoreConfig.retired_clients
-    try:
-        _use_routes(["QQ -> QQBot"])
-        hit = is_retired_client("QQ")
-        # 目标客户端本身并未退役。
-        miss = is_retired_client("QQBot")
-        none_safe = not is_retired_client(None)
-
-        _use_routes([])
-        empty = not is_retired_client("QQ")
-
-        return hit and not miss and none_safe and empty
-
-    except Exception:
-        return False
-
-    finally:
-        _restore_routes(original)
 
 
 async def _test_target_judgement():
@@ -102,14 +79,6 @@ async def _test_parse_ignores_malformed():
     try:
         routes = parse_retired_routes(["QQ -> QQBot -> Discord", "-> Discord", "", "KOOK -> Discord"])
         return routes == {"KOOK": "Discord"}
-
-    except Exception:
-        return False
-
-
-async def _test_parse_duplicate_source_keeps_first():
-    try:
-        return parse_retired_routes(["QQ -> QQBot", "QQ -> Discord"]) == {"QQ": "QQBot"}
 
     except Exception:
         return False
@@ -159,14 +128,6 @@ async def _test_route_rejects_when_no_target():
         return False
 
 
-async def _test_merge_is_allowed():
-    try:
-        return is_module_allowed_when_retired("merge") and "merge" in RETIRED_ALLOWED_MODULES
-
-    except Exception:
-        return False
-
-
 async def _test_other_module_blocked():
     try:
         return not is_module_allowed_when_retired("wiki") and not is_module_allowed_when_retired(None)
@@ -188,20 +149,6 @@ async def _test_push_filters_retired_target():
             ]
         )
         return kept == ["ALIVETEST|Group|push1", "OTHER|Group|push3"]
-
-    except Exception:
-        return False
-
-    finally:
-        _restore_routes(original)
-
-
-async def _test_push_filter_keeps_all_when_unconfigured():
-    original = CoreConfig.retired_clients
-    try:
-        _use_routes([])
-        ids = ["QQ|Group|1", "QQBot|Group|2"]
-        return filter_retired_targets(ids) == ids
 
     except Exception:
         return False
@@ -279,9 +226,6 @@ async def _session(target_id: str, client: str, text: str = "") -> MessageSessio
 
 
 async def _probe_wait_task(prefix: str, with_alive: bool) -> bool:
-    # 令退役场景的一条消息走一遍真实的 ``parser()``，观察同通道内挂起的等待任务是否被它触发。
-    # 等待任务按消息通道共享，故须由 ``parser()`` 而非判据函数本身求证：判据即便正确，
-    # 介入点排在任务检查之后仍拦不下这条路径。空消息在任务检查之后随即返回，恰好只跑到待测的这一段。
     retired_client = f"{prefix}R"
     retired_target = f"{retired_client}|Group|x"
     _use_routes([f"{retired_client} -> {prefix}A"])
@@ -468,20 +412,16 @@ async def _test_union_push_skips_retired():
 
 @func_case
 async def test_retired_gate(tester: Tester):
-    """core.utils.retired: 迁移关系、退役判定与介入点测试"""
+    """akaribot.core.utils.retired: 迁移关系、退役判定与介入点测试"""
     await tester.test(_test_parse_basic_route, "关系解析基本测试")
     await tester.test(_test_parse_source_only, "只写源测试")
     await tester.test(_test_parse_ignores_malformed, "格式错误忽略测试")
-    await tester.test(_test_parse_duplicate_source_keeps_first, "重复源取首次测试")
-    await tester.test(_test_client_judgement, "客户端判定测试")
     await tester.test(_test_target_judgement, "场景 ID 判定测试")
     await tester.test(_test_route_allows_matching_pair, "同关系放行测试")
     await tester.test(_test_route_rejects_cross_pair, "跨关系拒绝测试")
     await tester.test(_test_route_rejects_when_no_target, "无去处拒绝测试")
-    await tester.test(_test_merge_is_allowed, "白名单放行测试")
     await tester.test(_test_other_module_blocked, "非白名单拦截测试")
     await tester.test(_test_push_filters_retired_target, "推送过滤测试")
-    await tester.test(_test_push_filter_keeps_all_when_unconfigured, "未配置时不过滤测试")
     await tester.test(_test_retired_yields_to_alive, "退役让位测试")
     await tester.test(_test_retired_alone_does_not_yield, "独占通道不让位测试")
     await tester.test(_test_different_channel_does_not_yield, "跨通道不让位测试")

@@ -88,7 +88,7 @@ async def _test_wiki_content_check_respects_dirty_word_feature():
 
 @func_case
 async def test_dirty_check_features(tester: Tester):
-    """bots.features: 平台能力开关测试"""
+    """akaribot.adapters.features: 平台能力开关测试"""
     await tester.test(_test_flag_reaches_fetched_session, "开关传递到主动推送会话测试")
     await tester.test(_test_wiki_content_check_respects_dirty_word_feature, "Wiki 内容检查开关测试")
 

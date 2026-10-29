@@ -632,7 +632,7 @@ class ModulesManager:
             if package_name in visiting:
                 return
             visiting.add(package_name)
-            for dependency in sorted(cls._dependency_graph.get(package_name, ()) & included):
+            for dependency in sorted(cls._dependency_graph.get(package_name, frozenset()) & included):
                 visit(dependency)
             visiting.discard(package_name)
             visited.add(package_name)

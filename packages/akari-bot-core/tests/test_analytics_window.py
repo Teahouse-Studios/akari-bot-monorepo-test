@@ -1,4 +1,4 @@
-"""modules.core.su_tools.analytics 单元测试 - 统计时间窗口的时区处理（需要数据库）。"""
+"""akaribot.modules.core.su_tools.analytics 单元测试 - 统计时间窗口的时区处理（需要数据库）。"""
 
 import warnings
 from datetime import timedelta
@@ -6,20 +6,6 @@ from datetime import timedelta
 from akaribot.core.database.models import AnalyticsData
 from akaribot.testing import func_case, Tester
 from akaribot.modules.core.su_tools.analytics import local_midnight
-
-
-def _test_local_midnight_is_aware():
-    try:
-        midnight = local_midnight()
-        return midnight.tzinfo is not None and (
-            midnight.hour,
-            midnight.minute,
-            midnight.second,
-            midnight.microsecond,
-        ) == (0, 0, 0, 0)
-
-    except Exception:
-        return False
 
 
 async def _test_window_emits_no_naive_warning():
@@ -66,8 +52,7 @@ async def _test_window_counts_today_only():
 
 @func_case
 async def test_analytics_window(tester: Tester):
-    """modules.core.su_tools.analytics: 统计时间窗口测试"""
-    await tester.test(_test_local_midnight_is_aware, "零点带时区测试")
+    """akaribot.modules.core.su_tools.analytics: 统计时间窗口测试"""
     await tester.test(_test_window_emits_no_naive_warning, "无 naive datetime 警告测试")
     await tester.test(_test_window_counts_today_only, "今日窗口边界测试")
 

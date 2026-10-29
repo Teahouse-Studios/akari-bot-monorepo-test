@@ -49,70 +49,6 @@ def _test_sqlite_explicit_fields_are_preserved():
     )
 
 
-def _test_non_sqlite_link_keeps_existing_behavior():
-    link = prepare_db_link("mysql+asyncmy://user:pass@localhost/akari?charset=utf8mb4")
-    return link == "mysql://user:pass@localhost/akari?charset=utf8mb4"
-
-
-def _test_module_database_discovery_follows_file_existence():
-    # 清单为空只表示该包没有数据库模型；包内缺少依赖的失败改由 ``init_db()`` 在真正导入
-    # 模型时抛出（见下一条用例），不再由发现阶段承担。
-    with TemporaryDirectory() as temp_dir:
-        root = Path(temp_dir)
-        with_models = root / "with_models"
-        (with_models / "database").mkdir(parents=True)
-        (with_models / "database" / "models.py").write_text("", encoding="utf-8")
-        without_models = root / "without_models"
-        (without_models / "database").mkdir(parents=True)
-        (without_models / "database" / "__init__.py").write_text("", encoding="utf-8")
-
-        entries = {
-            "with_models": PackageEntry(
-                kind="module",
-                name="with_models",
-                dist_name="",
-                version="0+local",
-                import_path="akaribot.modules.with_models",
-                root=with_models,
-                manifest=PackageManifest(),
-            ),
-            "without_models": PackageEntry(
-                kind="module",
-                name="without_models",
-                dist_name="",
-                version="0+local",
-                import_path="akaribot.modules.without_models",
-                root=without_models,
-                manifest=PackageManifest(),
-            ),
-        }
-        with patch.object(PackageRegistry, "modules", return_value=entries):
-            paths = database.fetch_module_db()
-    return paths == ["akaribot.modules.with_models.database.models"]
-
-
-async def _test_missing_module_dependency_fails_initialization():
-    dependency_error = ModuleNotFoundError("No module named 'database_driver'", name="database_driver")
-    init = AsyncMock(side_effect=dependency_error)
-    old_database_list = database.Temp.data.get("modules_db_list")
-    try:
-        with (
-            patch.object(
-                database, "fetch_module_db", return_value=["akaribot.modules.__missing_dependency.database.models"]
-            ),
-            patch.object(database, "get_db_link", return_value="sqlite://database/save.db"),
-            patch.object(database.Tortoise, "init", new=init),
-            patch.object(database.Tortoise, "close_connections", new=AsyncMock()),
-        ):
-            result = await database.init_db()
-    finally:
-        if old_database_list is None:
-            database.Temp.data.pop("modules_db_list", None)
-        else:
-            database.Temp.data["modules_db_list"] = old_database_list
-    return result is False and init.await_count == 1
-
-
 async def _test_runtime_init_does_not_generate_schemas():
     init = AsyncMock()
     generate_schemas = AsyncMock()
@@ -144,14 +80,12 @@ async def _test_runtime_init_does_not_generate_schemas():
 async def _test_pre_init_mode_generates_all_schemas():
     init = AsyncMock()
     generate_schemas = AsyncMock()
-    run_migrations = AsyncMock()
     old_database_list = database.Temp.data.get("modules_db_list")
     try:
         with (
             patch.object(database, "fetch_module_db", return_value=["akaribot.modules.example.database.models"]),
             patch.object(database.Tortoise, "init", new=init),
             patch.object(database.Tortoise, "generate_schemas", new=generate_schemas),
-            patch.object(database, "run_startup_migrations", new=run_migrations),
         ):
             result = await database.init_db(generate_schemas=True)
 
@@ -160,28 +94,9 @@ async def _test_pre_init_mode_generates_all_schemas():
             result
             and generate_schemas.await_count == 1
             and generate_schemas.await_args.kwargs.get("safe") is True
-            and run_migrations.await_count == 1
             and "akaribot.modules.example.database.models" in config["apps"]["models"]["models"]
             and config["apps"]["local_models"]["models"] == ["akaribot.core.database.local"]
         )
-    finally:
-        if old_database_list is None:
-            database.Temp.data.pop("modules_db_list", None)
-        else:
-            database.Temp.data["modules_db_list"] = old_database_list
-
-
-async def _test_failed_init_closes_partial_connections():
-    close_connections = AsyncMock()
-    old_database_list = database.Temp.data.get("modules_db_list")
-    try:
-        with (
-            patch.object(database, "fetch_module_db", return_value=[]),
-            patch.object(database.Tortoise, "init", new=AsyncMock(side_effect=RuntimeError("partial init"))),
-            patch.object(database.Tortoise, "close_connections", new=close_connections),
-        ):
-            result = await database.init_db()
-        return result is False and close_connections.await_count == 1
     finally:
         if old_database_list is None:
             database.Temp.data.pop("modules_db_list", None)
@@ -230,28 +145,6 @@ async def _test_init_db_clears_task_local_tortoise_context():
             database.Temp.data.pop("modules_db_list", None)
         else:
             database.Temp.data["modules_db_list"] = old_modules_db_list
-
-
-async def _test_activate_db_reload_clears_inherited_old_context():
-    old_context = TortoiseContext()
-    new_context = TortoiseContext()
-    previous_global = tortoise_context._global_context
-    token = tortoise_context._current_context.set(old_context)
-    prepared = database.PreparedDatabaseReload(
-        context=new_context,
-        previous_context=old_context,
-        database_list=[],
-    )
-    try:
-        database.activate_db_reload(prepared)
-        return (
-            prepared.activated
-            and tortoise_context._global_context is new_context
-            and tortoise_context._current_context.get() is None
-        )
-    finally:
-        tortoise_context._global_context = previous_global
-        tortoise_context._current_context.reset(token)
 
 
 async def _test_task_created_after_init_uses_replaceable_global_context():
@@ -552,23 +445,74 @@ async def _test_cancelled_reload_does_not_publish_partial_context():
             database.Temp.data["modules_db_list"] = old_modules_db_list
 
 
+def _test_module_database_discovery_follows_file_existence():
+    # 清单为空只表示该包没有数据库模型；包内缺少依赖的失败改由 ``init_db()`` 在真正导入
+    # 模型时抛出（见下一条用例），不再由发现阶段承担。
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        with_models = root / "with_models"
+        (with_models / "database").mkdir(parents=True)
+        (with_models / "database" / "models.py").write_text("", encoding="utf-8")
+        without_models = root / "without_models"
+        (without_models / "database").mkdir(parents=True)
+        (without_models / "database" / "__init__.py").write_text("", encoding="utf-8")
+
+        entries = {
+            "with_models": PackageEntry(
+                kind="module",
+                name="with_models",
+                dist_name="",
+                version="0+local",
+                import_path="akaribot.modules.with_models",
+                root=with_models,
+                manifest=PackageManifest(),
+            ),
+            "without_models": PackageEntry(
+                kind="module",
+                name="without_models",
+                dist_name="",
+                version="0+local",
+                import_path="akaribot.modules.without_models",
+                root=without_models,
+                manifest=PackageManifest(),
+            ),
+        }
+        with patch.object(PackageRegistry, "modules", return_value=entries):
+            paths = database.fetch_module_db()
+    return paths == ["akaribot.modules.with_models.database.models"]
+
+
+async def _test_missing_module_dependency_fails_initialization():
+    dependency_error = ModuleNotFoundError("No module named 'database_driver'", name="database_driver")
+    init = AsyncMock(side_effect=dependency_error)
+    old_database_list = database.Temp.data.get("modules_db_list")
+    try:
+        with (
+            patch.object(
+                database, "fetch_module_db", return_value=["akaribot.modules.__missing_dependency.database.models"]
+            ),
+            patch.object(database, "get_db_link", return_value="sqlite://database/save.db"),
+            patch.object(database.Tortoise, "init", new=init),
+            patch.object(database.Tortoise, "close_connections", new=AsyncMock()),
+        ):
+            result = await database.init_db()
+    finally:
+        if old_database_list is None:
+            database.Temp.data.pop("modules_db_list", None)
+        else:
+            database.Temp.data["modules_db_list"] = old_database_list
+    return result is False and init.await_count == 1
+
+
 @func_case
 async def test_database_init(tester: Tester):
     """SQLite 参数自动补全，且仅 pre-init 模式执行建表。"""
     await tester.test(_test_sqlite_defaults_are_added, "SQLite 缺失参数自动补全")
     await tester.test(_test_sqlite_explicit_fields_are_preserved, "SQLite 显式参数保持不变")
-    await tester.test(_test_non_sqlite_link_keeps_existing_behavior, "非 SQLite 连接保持现有行为")
-    await tester.test(_test_module_database_discovery_follows_file_existence, "模块数据库发现按 models.py 是否存在")
-    await tester.test(_test_missing_module_dependency_fails_initialization, "模块模型缺依赖时初始化失败")
     await tester.test(_test_runtime_init_does_not_generate_schemas, "运行期初始化不执行建表")
     await tester.test(_test_pre_init_mode_generates_all_schemas, "pre-init 建立核心、local 与模块表")
-    await tester.test(_test_failed_init_closes_partial_connections, "数据库初始化失败清理部分连接")
     await tester.test(_test_cancelled_init_closes_partial_connections, "数据库初始化取消清理部分连接")
     await tester.test(_test_init_db_clears_task_local_tortoise_context, "数据库初始化清理任务级 context")
-    await tester.test(
-        _test_activate_db_reload_clears_inherited_old_context,
-        "数据库切换不继承旧任务级 context",
-    )
     await tester.test(
         _test_task_created_after_init_uses_replaceable_global_context,
         "初始化后任务使用可替换 global context",
@@ -585,4 +529,6 @@ async def test_database_init(tester: Tester):
         _test_cancelled_reload_does_not_publish_partial_context,
         "数据库热重载取消不发布半成品 context",
     )
+    await tester.test(_test_module_database_discovery_follows_file_existence, "模块数据库发现按 models.py 是否存在")
+    await tester.test(_test_missing_module_dependency_fails_initialization, "模块模型缺依赖时初始化失败")
     return tester

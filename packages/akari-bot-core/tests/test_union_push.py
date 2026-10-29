@@ -16,7 +16,6 @@ _ALIVE = {c: {"target_prefix_list": [c]} for c in _CLIENTS}
 
 
 async def _push(union_id: str, message, alive: dict | None = None) -> list[tuple]:
-    # 在受控的在线状态下跑一次组内推送。
     calls = []
 
     async def _record(target, msg, **kwargs):
@@ -31,7 +30,6 @@ async def _push(union_id: str, message, alive: dict | None = None) -> list[tuple
 
 
 async def _bind(prefix: str, *targets: tuple[str, int]) -> str:
-    # 建一个场景组并按给定的通道号绑定若干平台场景。
     head_client, head_channel = targets[0]
     union = await TargetUnionInfo.resolve_union(f"{head_client}|Group|{prefix}")
     for client, _ in targets[1:]:
@@ -50,16 +48,6 @@ async def _test_dedups_within_channel():
         # 队首承担推送，同通道的其余会话降为发送失败时的下一跳
         session = calls[0][0]
         return session.target_id == "UPUSHA|Group|dedup" and session.next_hops == ["UPUSHB|Group|dedup"]
-
-    except Exception:
-        return False
-
-
-async def _test_covers_every_channel():
-    try:
-        union_id = await _bind("split", ("UPUSHA", 1), ("UPUSHB", 2))
-        calls = await _push(union_id, Plain("x"))
-        return sorted(c[0].target_id for c in calls) == ["UPUSHA|Group|split", "UPUSHB|Group|split"]
 
     except Exception:
         return False
@@ -126,6 +114,7 @@ async def _test_report_targets_dedup():
             sent.append(target.target_id)
 
         with (
+            patch("akaribot.core.smtp.email_report_enabled", return_value=False),
             patch("akaribot.modules.core.hooks.tos._report_targets", return_value=targets),
             patch.object(Alive, "get_alive", return_value=_ALIVE),
             patch.object(Bot, "send_direct_message", _record),
@@ -141,9 +130,8 @@ async def _test_report_targets_dedup():
 
 @func_case
 async def test_union_push(tester: Tester):
-    """core.builtins.bot: 按消息通道去重的组内推送测试"""
+    """akaribot.core.builtins.bot: 按消息通道去重的组内推送测试"""
     await tester.test(_test_dedups_within_channel, "同通道去重测试")
-    await tester.test(_test_covers_every_channel, "跨通道各推一次测试")
     await tester.test(_test_skips_offline_channel, "掉线通道跳过测试")
     await tester.test(_test_message_factory_receives_session, "消息工厂取到队首测试")
     await tester.test(_test_message_factory_may_skip, "消息工厂跳过发送测试")

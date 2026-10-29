@@ -17,7 +17,7 @@ RECORDS = [
     ModuleRecord(name="delta", dist="akari-bot-module-delta", version="0.9.0", state="available"),
 ]
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "modules.json"
+FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "akaribot.modules.json"
 
 
 def _use_cli_locale() -> None:

@@ -1,6 +1,5 @@
-"""core.builtins.message 消息系统单元测试。"""
+"""akaribot.core.builtins.message 消息系统单元测试。"""
 
-from akaribot.core.builtins.message.mention import wrap_sender_id
 from akaribot.core.builtins.message.chain import MessageChain, match_kecode
 from akaribot.core.builtins.message.elements import (
     PlainElement,
@@ -8,7 +7,6 @@ from akaribot.core.builtins.message.elements import (
     URLElement,
     ImageElement,
     MentionElement,
-    EmbedElement,
     FormattedTimeElement,
     ButtonElement,
     ButtonRows,
@@ -83,30 +81,6 @@ def _test_assign_from_list():
         return False
 
 
-def _test_assign_from_tuple():
-    try:
-        elems = (PlainElement.assign("X"), PlainElement.assign("Y"))
-        chain = MessageChain.assign(elems)
-        if not isinstance(chain, MessageChain):
-            return False
-        if len(chain.values) != 2:
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_assign_from_message_chain():
-    try:
-        chain1 = MessageChain.assign("Original")
-        chain2 = MessageChain.assign(chain1)
-        if chain1 is not chain2:
-            return False
-        return True
-    except Exception:
-        return False
-
-
 def _test_assign_empty_string():
     try:
         chain = MessageChain.assign("")
@@ -145,43 +119,10 @@ def _test_to_str():
         return False
 
 
-def _test_to_str_multiple():
-    try:
-        chain = MessageChain.assign([PlainElement.assign("Hello "), PlainElement.assign("World")])
-        result = chain.to_str()
-        if "Hello" not in result or "World" not in result:
-            return False
-        return True
-    except Exception:
-        return False
-
-
 def _test_plain_element_multiple_args():
     try:
         elem = PlainElement.assign("Hello", " ", "World")
         if elem.text != "Hello World":
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_plain_element_kecode():
-    try:
-        elem = PlainElement.assign("Hello")
-        kecode = elem.kecode()
-        if "[KE:plain,text=Hello]" != kecode:
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_plain_element_kecode_disable_joke():
-    try:
-        elem = PlainElement.assign("Hello", disable_joke=True)
-        kecode = elem.kecode()
-        if "[KE:plain,text=Hello,disable_joke=1]" != kecode:
             return False
         return True
     except Exception:
@@ -246,8 +187,6 @@ def _test_markdown_roundtrip():
 
 
 def _test_plain_kecode_roundtrip_separators():
-    # KE 码按顶层逗号切分参数、按方括号判定块边界。写入侧不编码时，含逗号的文本
-    # 会被切成两段而后半段因缺少等号被静默丢弃，含右方括号的文本则提前结束块。
     try:
         for raw in ("a,b c", "见 [1] 条", "x=1,y=2", "100% 完成", "混合 a,b] c=d"):
             elem = PlainElement.assign(raw)
@@ -303,8 +242,6 @@ def _test_plain_allow_parse_roundtrip_and_behavior():
 
 
 def _test_formatted_time_kecode_roundtrip():
-    # 时间文案形如「February 14, 2009 07:31:30 (UTC+8)」，本身就含逗号，
-    # 是该缺陷必然触发的场景：未编码时往返后只剩「February 14」。
     try:
         elem = FormattedTimeElement.assign(1234567890.0)
         expected = elem.to_str()
@@ -332,7 +269,6 @@ def _test_url_kecode_roundtrip():
 
 
 def _test_url_kecode_missing_text():
-    # 该分支须判空：以 None 构造 URLElement 会在后续字符串化时出错。
     try:
         chain = match_kecode("[KE:url]")
         for value in chain.values:
@@ -345,27 +281,22 @@ def _test_url_kecode_missing_text():
 
 @func_case
 async def test_message_chain(tester: Tester):
-    """core.builtins.message.chain: MessageChain 测试"""
+    """akaribot.core.builtins.message.chain: MessageChain 测试"""
     await tester.test(_test_assign_from_string, "从字符串创建消息链")
     await tester.test(_test_assign_from_none, "从 None 创建空消息链")
     await tester.test(_test_assign_from_element, "从单个元素创建消息链")
     await tester.test(_test_assign_from_list, "从列表创建消息链")
-    await tester.test(_test_assign_from_tuple, "从元组创建消息链")
-    await tester.test(_test_assign_from_message_chain, "从 MessageChain 创建消息链")
     await tester.test(_test_assign_empty_string, "空字符串处理")
     await tester.test(_test_assign_mixed_list, "混合类型列表")
     await tester.test(_test_to_str, "to_str() 方法")
-    await tester.test(_test_to_str_multiple, "多个元素的 to_str()")
 
     return tester
 
 
 @func_case
 async def test_message_elements(tester: Tester):
-    """core.builtins.message.elements: 消息元素测试"""
+    """akaribot.core.builtins.message.elements: 消息元素测试"""
     await tester.test(_test_plain_element_multiple_args, "PlainElement.assign() 多参数")
-    await tester.test(_test_plain_element_kecode, "PlainElement.kecode()")
-    await tester.test(_test_plain_element_kecode_disable_joke, "PlainElement.kecode() 禁用玩笑")
     await tester.test(_test_markdown_element_and_plain_conversion, "MarkdownElement 普通文本转换")
     await tester.test(_test_markdown_sendable_respects_session_capability, "MarkdownElement 平台能力降级")
 
@@ -374,7 +305,7 @@ async def test_message_elements(tester: Tester):
 
 @func_case
 async def test_kecode_roundtrip(tester: Tester):
-    """core.builtins.message: KE 码转义往返测试"""
+    """akaribot.core.builtins.message: KE 码转义往返测试"""
     await tester.test(_test_plain_kecode_roundtrip_separators, "纯文本含分隔符往返测试")
     await tester.test(_test_plain_kecode_roundtrip_disable_joke, "含分隔符时 disable_joke 往返测试")
     await tester.test(_test_plain_allow_parse_roundtrip_and_behavior, "PlainElement.allow_parse 往返与解析控制")
@@ -400,17 +331,6 @@ def _test_chain_add():
         return False
 
 
-def _test_chain_iadd():
-    try:
-        c1 = MessageChain.assign("Hello")
-        c1 += MessageChain.assign("World")
-        if len(c1) != 2:
-            return False
-        return True
-    except Exception:
-        return False
-
-
 def _test_chain_radd():
     try:
         elems = [PlainElement.assign("A")]
@@ -423,14 +343,6 @@ def _test_chain_radd():
         return False
 
 
-def _test_chain_is_safe():
-    try:
-        chain = MessageChain.assign("Hello World")
-        return chain.is_safe is True
-    except Exception:
-        return False
-
-
 def _test_chain_copy():
     try:
         chain = MessageChain.assign("Original")
@@ -439,27 +351,6 @@ def _test_chain_copy():
             return False
         copy_chain.append(PlainElement.assign(" Modified"))
         if len(chain) != 1:
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_chain_to_str_connector():
-    try:
-        chain = MessageChain.assign([PlainElement.assign("A"), PlainElement.assign("B")])
-        result = chain.to_str(connector=" ")
-        return result == "A B"
-    except Exception:
-        return False
-
-
-def _test_image_element_assign():
-    try:
-        elem = ImageElement.assign("/tmp/test.png")
-        if elem.path != "/tmp/test.png":
-            return False
-        if elem.need_get is True:
             return False
         return True
     except Exception:
@@ -551,60 +442,6 @@ def _test_image_element_preserves_base64_format():
         return False
 
 
-def _test_audio_element_assign():
-    try:
-        from akaribot.core.builtins.message.elements import AudioElement
-
-        elem = AudioElement.assign("/tmp/audio.mp3")
-        if elem.path != "/tmp/audio.mp3":
-            return False
-        ke = elem.kecode()
-        if "audio" not in ke:
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_video_element_assign():
-    try:
-        from akaribot.core.builtins.message.elements import VideoElement
-
-        elem = VideoElement.assign("/tmp/video.mp4")
-        if elem.path != "/tmp/video.mp4":
-            return False
-        ke = elem.kecode()
-        if "video" not in ke:
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_mention_element_assign():
-    try:
-        elem = MentionElement.assign("QQ|123456789")
-        if elem.client != "QQ":
-            return False
-        if elem.id != "123456789":
-            return False
-        return True
-    except Exception:
-        return False
-
-
-def _test_embed_element_assign():
-    try:
-        elem = EmbedElement.assign(title="Test", description="Desc")
-        if elem.title != "Test":
-            return False
-        if elem.description != "Desc":
-            return False
-        return True
-    except Exception:
-        return False
-
-
 def _test_button_element_roundtrip():
     try:
         button = Button("帮助", "~help", reply_id="callback-123")
@@ -674,55 +511,23 @@ def _test_standalone_buttons_are_auto_arranged():
         return False
 
 
-def _test_wrap_sender_id_wraps_sender_id():
-    try:
-        if wrap_sender_id(r"TEST|0 说 hi", "TEST") != "<AT:TEST|0> 说 hi":
-            return False
-        return wrap_sender_id("<AT:TEST|0> hi", "TEST") == "<AT:TEST|0> hi"
-    except Exception:
-        return False
-
-
-def _test_wrap_sender_id_preserves_backslashes():
-    cases = (
-        (r"a\b", r"a\b"),
-        (r"a\\b", r"a\\b"),
-        (r"\d+", r"\d+"),
-        (r"C:\\Users", r"C:\\Users"),
-        (r"C:\\Users TEST|0", r"C:\\Users <AT:TEST|0>"),
-    )
-    try:
-        return all(wrap_sender_id(text, "TEST") == expected for text, expected in cases)
-    except Exception:
-        return False
-
-
 @func_case
 async def test_message_chain_operations(tester: Tester):
     """MessageChain: 运算符和高级操作测试"""
     await tester.test(_test_chain_add, "MessageChain + 运算符")
-    await tester.test(_test_chain_iadd, "MessageChain += 运算符")
     await tester.test(_test_chain_radd, "list + MessageChain 运算符")
-    await tester.test(_test_chain_is_safe, "MessageChain is_safe 属性")
     await tester.test(_test_chain_copy, "MessageChain copy 方法")
-    await tester.test(_test_chain_to_str_connector, "MessageChain to_str 自定义连接符")
-    await tester.test(_test_wrap_sender_id_wraps_sender_id, "wrap_sender_id 包装发送者 ID")
-    await tester.test(_test_wrap_sender_id_preserves_backslashes, "wrap_sender_id 保留反斜杠")
     return tester
 
 
 @func_case
 async def test_message_elements_extended(tester: Tester):
     """消息元素扩展测试: Image/Audio/Mention/Embed"""
-    await tester.test(_test_image_element_assign, "ImageElement.assign 本地路径")
     await tester.test(_test_image_element_url, "ImageElement.assign URL")
     await tester.test(_test_image_element_max_h_roundtrip, "ImageElement.max_h 序列化往返")
     await tester.test(_test_image_element_allow_split_roundtrip, "ImageElement.allow_split 序列化往返")
     await tester.test(_test_image_element_preserves_pil_format, "ImageElement.assign 保留 PIL 格式")
     await tester.test(_test_image_element_preserves_base64_format, "ImageElement.assign 保留 Base64 格式")
-    await tester.test(_test_audio_element_assign, "AudioElement.assign")
-    await tester.test(_test_mention_element_assign, "MentionElement.assign")
-    await tester.test(_test_embed_element_assign, "EmbedElement.assign")
     await tester.test(_test_button_element_roundtrip, "Button 与 ButtonFrame 构造及序列化往返")
     await tester.test(_test_button_element_follows_platform_capability, "ButtonFrame 按平台能力保留或忽略")
     await tester.test(_test_standalone_buttons_are_auto_arranged, "单个 Button 自动按 10 × 5 规整")

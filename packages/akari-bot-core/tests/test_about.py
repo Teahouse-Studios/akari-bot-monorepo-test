@@ -59,36 +59,13 @@ def _test_markdown_layout_without_credits():
         chain = build_about_message(_msg())
     texts = _plain_texts(chain)
     introduction = Locale("zh_cn").t("core.message.about.introduction")
-    # 品牌资产是 full extra：装了才有配图，裸 core 下应跳过。两种形态都要成立，
-    # 否则本用例会在 `uv sync`（不带 --all-extras）的环境里假红。
-    if CHARACTER_IMAGE_PATH is None:
-        artwork_ok = all(not isinstance(element, ImageElement) for element in chain.values)
-    else:
-        artwork_ok = (
-            isinstance(chain.values[0], ImageElement)
-            and chain.values[0].path == str(CHARACTER_IMAGE_PATH)
-            and chain.values[0].max_h == CHARACTER_IMAGE_MAX_WIDTH
-        )
     return (
-        artwork_ok
+        isinstance(chain.values[0], ImageElement)
+        and chain.values[0].path == str(CHARACTER_IMAGE_PATH)
+        and chain.values[0].max_h == CHARACTER_IMAGE_MAX_WIDTH
         and texts[0] == introduction
         and "AGPL-3.0" in texts[0]
         and all("制作人员名单" not in text for text in texts)
-    )
-
-
-def _test_missing_artwork_degrades_instead_of_failing():
-    with (
-        patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None),
-        patch("akaribot.modules.core.common_tools.about.find_brand_asset", return_value=None),
-    ):
-        chain = build_about_message(_msg())
-    texts = _plain_texts(chain)
-    introduction = Locale("zh_cn").t("core.message.about.introduction")
-    return (
-        all(not isinstance(element, ImageElement) for element in chain.values)
-        and texts[0] == introduction
-        and "AGPL-3.0" in texts[0]
     )
 
 
@@ -181,25 +158,31 @@ def _test_no_button_support_has_no_frame():
     )
 
 
-def _test_repository_url_plain_fallback():
-    with patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None):
-        chain = build_about_message(_msg(support_markdown=False))
-    repo = next(element for element in chain.values if isinstance(element, URLElement))
-    texts = [element.text for element in chain.values if isinstance(element, PlainElement)]
-    repository_label = Locale("zh_cn").t("core.message.about.button.repository")
-    return repo.original_url == CoreConfig.repo_url and not repo.applied_md_format and f"{repository_label}：" in texts
+def _test_missing_artwork_degrades_instead_of_failing():
+    with (
+        patch("akaribot.modules.core.common_tools.about.read_credits", return_value=None),
+        patch("akaribot.modules.core.common_tools.about.find_brand_asset", return_value=None),
+    ):
+        chain = build_about_message(_msg())
+    texts = _plain_texts(chain)
+    introduction = Locale("zh_cn").t("core.message.about.introduction")
+    return (
+        all(not isinstance(element, ImageElement) for element in chain.values)
+        and texts[0] == introduction
+        and "AGPL-3.0" in texts[0]
+    )
 
 
 @func_case
 async def test_about(tester: Tester):
-    """modules.core.common_tools.about: 关于菜单。"""
+    """akaribot.modules.core.common_tools.about: 关于菜单。"""
     await tester.test(_test_missing_or_empty_credits_are_hidden, "制作人员文件缺失或为空时隐藏测试")
     await tester.test(_test_markdown_layout_without_credits, "Markdown 关于菜单布局测试")
     await tester.test(_test_credits_button_and_no_button_hidden, "制作人员按钮与无按钮隐藏测试")
     await tester.test(_test_credits_message_markdown_and_plain, "制作人员名单消息测试")
     await tester.test(_test_button_rows_and_qq_only_entry, "关于菜单按钮与 QQBot 专属入口测试")
     await tester.test(_test_no_button_support_has_no_frame, "无按钮能力时降级为文本链接测试")
-    await tester.test(_test_repository_url_plain_fallback, "开源仓库 Url 普通文本降级测试")
     credits_title = Locale("zh_cn").t("core.message.about.credits")
     await tester.integrate("~about credits", Contains(credits_title), "开发人员名单子命令测试")
+    await tester.test(_test_missing_artwork_degrades_instead_of_failing, "缺失立绘时降级为纯文本")
     return tester

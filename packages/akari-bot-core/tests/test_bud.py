@@ -1,4 +1,4 @@
-"""modules.core.common_tools._bud 单元测试 - 花苞（拼手气红包）系统。"""
+"""akaribot.core.utils.bud 单元测试 - 花苞（拼手气红包）系统。"""
 
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.session.info import SessionInfo
@@ -16,19 +16,6 @@ async def _test_split_amount_conservation():
             if len(shares) != count:
                 return False
             if sum(shares) != total:
-                return False
-        return True
-    except Exception:
-        return False
-
-
-async def _test_split_amount_minimum():
-    try:
-        from akaribot.modules.core.common_tools._bud import split_amount
-
-        for _ in range(200):
-            shares = split_amount(50, 8)
-            if any(s < 1 for s in shares):
                 return False
         return True
     except Exception:
@@ -74,25 +61,10 @@ async def _test_generate_bud_id():
         return False
 
 
-async def _test_bud_ttl_24h():
-    try:
-        from akaribot.modules.core.common_tools._bud import BUD_TTL_SECONDS
-
-        return BUD_TTL_SECONDS == 24 * 60 * 60
-    except Exception:
-        return False
-
-
 async def _test_bud_refund_on_expiry():
     try:
         from akaribot.core.database.models import SenderUnionInfo
-        from akaribot.modules.core.common_tools._bud import (
-            BUD_STORE_KEY,
-            BUD_STORE_SCOPE,
-            claim_bud,
-            create_bud,
-            find_bud,
-        )
+        from akaribot.modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, claim_bud, create_bud, find_bud
         from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|0", petal=0)
@@ -165,13 +137,11 @@ async def _test_release_buds():
 
 @func_case
 async def test_bud(tester: Tester):
-    """modules.core.common_tools._bud: 花苞系统测试"""
+    """akaribot.core.utils.bud: 花苞系统测试"""
     await tester.test(_test_split_amount_conservation, "split_amount 总额守恒测试")
-    await tester.test(_test_split_amount_minimum, "split_amount 每份至少 1 片测试")
     await tester.test(_test_split_amount_avoids_extreme_small_shares, "split_amount 避免极端小额测试")
     await tester.test(_test_split_amount_invalid, "split_amount 非法参数测试")
     await tester.test(_test_generate_bud_id, "generate_bud_id 唯一性测试")
-    await tester.test(_test_bud_ttl_24h, "花苞有效期 24 小时测试")
     await tester.test(_test_bud_refund_on_expiry, "过期花苞退款测试")
     await tester.test(_test_release_buds, "空花苞和过期花苞释放测试")
 

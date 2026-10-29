@@ -160,7 +160,7 @@ async def _test_navigation_sync() -> bool:
 
 @func_case
 async def test_qqbot_navigation(tester: Tester):
-    """bots.qqbot.navigation: 静态菜单与指令面板测试"""
+    """akaribot.adapters.qqbot.navigation: 静态菜单与指令面板测试"""
     await tester.test(_test_navigation_declarations, "静态导航声明测试")
     await tester.test(_test_navigation_limits, "平台容量与文本限制测试")
     await tester.test(_test_navigation_sync, "SDK 声明式同步测试")

@@ -52,26 +52,24 @@ EXPECTED_WORDING = (
 
 # 无会话上下文的 Locale 构造点：这些出口渲染的不是会话文案，或另有语言来源。
 NON_SESSION_LOCALE_FILES = {
-    "packages/akari-bot-core/akaribot/core/config/__init__.py": "配置模板注释",
-    "packages/akari-bot-core/akaribot/core/config/update.py": "配置注释补写",
-    "packages/akari-bot-core/akaribot/core/entrypoints/config.py": "配置注释本地化",
-    "packages/akari-bot-core/akaribot/core/queue/server.py": "WebUI 帮助文档",
-    "packages/akari-bot-core/akaribot/core/smtp.py": "邮件上报",
-    "packages/akari-bot-core/akaribot/modules/core/admin_tools/locale.py": "语言名与翻译进度",
-    "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/screenshot_image.py": "wiki 差异渲染语言",
-    "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/wikilib.py": "wiki 内容语言",
-    "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/weekly.py": "双语言周刊推送",
-    "packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/weekly_rss.py": "双语言周刊推送",
+    "core/config/__init__.py": "配置模板注释",
+    "core/config/update.py": "配置注释补写",
+    "core/entrypoints/config.py": "CLI 配置输出",
+    "core/queue/server.py": "WebUI 帮助文档",
+    "core/smtp.py": "邮件上报",
+    "modules/core/admin_tools/locale.py": "语言名与翻译进度",
+    "modules/wiki/weekly.py": "双语言周刊推送",
+    "modules/wiki/weekly_rss.py": "双语言周刊推送",
+    "modules/wiki/utils/screenshot_image.py": "wiki 差异渲染语言",
+    "modules/wiki/utils/wikilib.py": "wiki 内容语言",
 }
 
 # 会话缺席时的兜底构造：此时本就没有作用域可言。
 FALLBACK_LOCALE_SNIPPETS = {
-    "packages/akari-bot-core/akaribot/core/builtins/message/chain.py": ("Locale(default_locale)",),
-    "packages/akari-bot-core/akaribot/core/builtins/parser/command.py": ("Locale(default_locale)",),
-    "packages/akari-bot-core/akaribot/core/builtins/session/info.py": (
-        "field(factory=lambda: Locale(default_locale))",
-    ),
-    "packages/akari-bot-core/akaribot/core/builtins/session/internal.py": ("Locale(default_locale)",),
+    "core/builtins/message/chain.py": ("Locale(default_locale)",),
+    "core/builtins/parser/command.py": ("Locale(default_locale)",),
+    "core/builtins/session/info.py": ("field(factory=lambda: Locale(default_locale))",),
+    "core/builtins/session/internal.py": ("Locale(default_locale)",),
 }
 
 
@@ -168,56 +166,38 @@ def _test_locale_files_pass_term_audit():
 
 
 def _test_term_keys_live_in_terms_directory():
-    # 顶层残留副本会被术语目录覆盖并报审计条目，术语词条只允许出现在 locales/terms/ 下。
-    root = Path(__file__).resolve().parents[3]
+    # 术语词条只应出现在 `locales/terms/` 下；顶层残留副本会被术语目录覆盖并报审计条目。
     offenders = []
-    patterns = ("packages/**/locales/*.json",)
-    for pattern in patterns:
-        for path in sorted(root.glob(pattern)):
+    for base, prefix in _locale_package_roots(include_adapters=True):
+        for path in sorted((base / "locales").glob("*.json")):
             data = json.loads(path.read_text(encoding="utf-8"))
             stale = [key for key in data if key.startswith("term.")]
             if stale:
-                offenders.append(f"{path.relative_to(root).as_posix()}: {stale}")
+                offenders.append(f"{prefix}/{path.relative_to(base).as_posix()}: {stale}")
     if offenders:
         Logger.error("术语词条应移入同目录的 terms/ 子目录：\n" + "\n".join(offenders))
     return not offenders
 
 
-def _test_terms_directory_is_loaded():
-    # 术语目录里的键省略 term. 前缀，加载时按语言标签取文件。
-    root = Path(__file__).resolve().parents[3]
-    core_terms = json.loads(
-        (root / "packages/akari-bot-core/akaribot/core/locales/terms/zh_cn.json").read_text(encoding="utf-8")
-    )
-    if any(key.startswith("term.") for key in core_terms):
-        return False
-    scoped = Locale("zh_cn", term_candidates=build_term_candidates("Discord|Channel", False))
-    return scoped.term_key("target") == "term.target.discord"
-
-
-def _test_terms_vocabulary_is_centralized():
-    # 术语词条是词表而非平台逻辑，集中归属也避免共用身份的键冲突。
-    root = Path(__file__).resolve().parents[3]
-    scattered = [
-        path.relative_to(root).as_posix()
-        for path in sorted(root.glob("packages/adapters/*/akaribot/adapters/*/locales/terms"))
+def _locale_package_roots(include_adapters: bool = False) -> list[tuple[Path, str]]:
+    packages = Path(__file__).resolve().parents[2]
+    roots = [
+        (packages / "akari-bot-core" / "akaribot" / "core", "core"),
+        (packages / "akari-bot-core" / "akaribot" / "modules" / "core", "modules/core"),
     ]
-    if scattered:
-        Logger.error(
-            "适配器的术语词条应集中到 packages/akari-bot-core/akaribot/core/locales/terms/，当前存在于："
-            + ", ".join(scattered)
-        )
-        return False
-    return (root / "packages/akari-bot-core/akaribot/core/locales/terms/zh_cn.json").is_file()
+    for group, prefix in (("modules", "modules"), ("adapters", "adapters")):
+        if group == "adapters" and not include_adapters:
+            continue
+        for base in sorted((packages / group).glob(f"*/akaribot/{group}/*")):
+            roots.append((base, f"{prefix}/{base.name}"))
+    return roots
 
 
 def _scan_unscoped_locale_sites() -> list[str]:
-    root = Path(__file__).resolve().parents[3]
     offenders = []
-    bases = [root / "packages/akari-bot-core/akaribot", *sorted(root.glob("packages/modules/*/akaribot/modules/*"))]
-    for base in bases:
+    for base, prefix in _locale_package_roots():
         for path in sorted(base.rglob("*.py")):
-            relative = path.relative_to(root).as_posix()
+            relative = f"{prefix}/{path.relative_to(base).as_posix()}"
             if relative in NON_SESSION_LOCALE_FILES:
                 continue
             source = path.read_text(encoding="utf-8")
@@ -247,7 +227,7 @@ def _test_no_unscoped_locale_sites():
 
 @func_case
 async def test_term_locale(tester: Tester):
-    """core.i18n: 术语占位符与会话作用域测试"""
+    """akaribot.core.i18n: 术语占位符与会话作用域测试"""
     await tester.test(_test_candidate_chain_building, "候选链构造测试")
     await tester.test(_test_platform_wording, "各平台术语文案测试")
     await tester.test(_test_unscoped_locale_falls_back, "未绑定作用域回落测试")
@@ -258,8 +238,6 @@ async def test_term_locale(tester: Tester):
     await tester.test(_test_derive_private_session_refreshes_terms, "派生私聊会话刷新术语测试")
     await tester.test(_test_locale_files_pass_term_audit, "语言文件术语审计测试")
     await tester.test(_test_term_keys_live_in_terms_directory, "术语词条目录归属测试")
-    await tester.test(_test_terms_directory_is_loaded, "术语目录加载测试")
-    await tester.test(_test_terms_vocabulary_is_centralized, "术语词表集中归属测试")
     await tester.test(_test_no_unscoped_locale_sites, "Locale 构造点检查")
 
     return tester

@@ -1,4 +1,4 @@
-"""bots.web.api 单元测试 - 状态接口的运行时统计与进程内存占用。"""
+"""akaribot.adapters.web.api 单元测试 - 状态接口的运行时统计与进程内存占用。"""
 
 import inspect
 from unittest.mock import AsyncMock, patch
@@ -73,7 +73,7 @@ async def _test_server_info_degrades_without_server():
 
 @func_case
 async def test_webui_status(tester: Tester):
-    """bots.web.api: 状态接口测试"""
+    """akaribot.adapters.web.api: 状态接口测试"""
     await tester.test(_test_server_info_reports_runtime_stats, "状态接口运行时统计测试")
     await tester.test(_test_server_info_degrades_without_server, "状态接口离线降级测试")
 

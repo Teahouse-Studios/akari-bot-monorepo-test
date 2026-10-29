@@ -1,4 +1,4 @@
-"""modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版与缺依赖降级。"""
+"""akaribot.modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版与缺依赖降级。"""
 
 import subprocess
 import sys
@@ -71,7 +71,7 @@ def _test_missing_dependency_message_resolves():
 
 @func_case
 async def test_analytics_plot(tester: Tester):
-    """modules.core.su_tools.analytics: 折线图标注排版与缺依赖降级测试"""
+    """akaribot.modules.core.su_tools.analytics: 折线图标注排版与缺依赖降级测试"""
     await tester.test(_test_annotation_stays_inside_axes, "数值标注不超出坐标区测试")
     await tester.test(_test_module_imports_without_matplotlib, "缺 matplotlib 时仍可导入测试")
     await tester.test(_test_missing_dependency_message_resolves, "缺依赖提示文案可解析测试")

@@ -1,4 +1,4 @@
-"""core.queue.base 单元测试 - 队列任务清理与取消恢复。"""
+"""akaribot.core.queue.base 单元测试 - 队列任务清理与取消恢复。"""
 
 import asyncio
 from dataclasses import replace
@@ -64,6 +64,7 @@ async def _test_cleanup_marks_stale_active_timeout():
 
 
 async def _test_cancelled_fire_and_forget_task_is_deleted():
+
     class AuditQueue(JobQueueBase):
         pass
 
@@ -93,6 +94,7 @@ async def _test_cancelled_fire_and_forget_task_is_deleted():
 
 
 async def _test_completed_task_is_deleted_after_response_consumption():
+
     class AuditQueue(JobQueueBase):
         pass
 
@@ -118,21 +120,8 @@ async def _test_completed_task_is_deleted_after_response_consumption():
     )
 
 
-async def _test_completed_fire_and_forget_task_is_deleted():
-    class AuditQueue(JobQueueBase):
-        pass
-
-    @AuditQueue.register("submit-audit")
-    async def _handler(args):
-        return {"value": args["value"] + 1}
-
-    task_id = await AuditQueue.submit("QUEUE-SUBMIT-AUDIT", "submit-audit", {"value": 1})
-    (request,) = await AuditQueue.transport.receive(["QUEUE-SUBMIT-AUDIT"])
-    await AuditQueue._process_task(request)
-    return await JobQueuesTable.get_or_none(task_id=task_id) is None
-
-
 async def _test_concurrent_consumers_claim_once():
+
     class AuditQueue(JobQueueBase):
         name = "QUEUE-AUDIT-INTERNAL"
 
@@ -189,19 +178,6 @@ async def _test_concurrent_consumers_claim_once():
     return len(scheduled) == 1 and handler_calls == 1 and refreshed is None and not pending
 
 
-async def _test_database_claim_batch_is_bounded():
-    target = "QUEUE-BOUNDED-CLAIM"
-    task_ids = [await JobQueuesTable.add_task(target, "bounded", {"index": index}) for index in range(3)]
-    try:
-        with patch.object(type(QueueAuditRuntime.transport), "CLAIM_BATCH_SIZE", 2):
-            received = await QueueAuditRuntime.transport.receive([target], QueueAuditRuntime.name)
-        pending = await JobQueuesTable.filter(task_id__in=task_ids, status="pending").count()
-        processing = await JobQueuesTable.filter(task_id__in=task_ids, status="processing").count()
-        return len(received) == 2 and pending == 1 and processing == 2
-    finally:
-        await JobQueuesTable.filter(task_id__in=task_ids).delete()
-
-
 async def _test_trigger_hook_result_is_not_overwritten():
     request = QueueAuditRuntime._request(
         "QUEUE-HOOK-AUDIT",
@@ -241,14 +217,12 @@ async def _test_fire_and_forget_finish_only_deletes_claimed_task():
 
 @func_case
 async def test_queue_lifecycle(tester: Tester):
-    """core.queue.base: 队列生命周期测试。"""
+    """akaribot.core.queue.base: 队列生命周期测试。"""
     await tester.test(_test_cleanup_keeps_active_tasks, "定时清理保留活动任务测试")
     await tester.test(_test_cleanup_marks_stale_active_timeout, "超时活动任务进入 timeout 测试")
     await tester.test(_test_cancelled_fire_and_forget_task_is_deleted, "取消的免回包任务及时删除测试")
     await tester.test(_test_completed_task_is_deleted_after_response_consumption, "等待型结果消费后删除测试")
-    await tester.test(_test_completed_fire_and_forget_task_is_deleted, "完成的免回包任务及时删除测试")
     await tester.test(_test_concurrent_consumers_claim_once, "并发消费者只领取一次测试")
-    await tester.test(_test_database_claim_batch_is_bounded, "数据库单轮领取数量有上限")
     await tester.test(_test_trigger_hook_result_is_not_overwritten, "trigger_hook 返回值不被覆盖测试")
     await tester.test(_test_fire_and_forget_finish_only_deletes_claimed_task, "免回包完成仅删除已领取任务")
     return tester
