@@ -27,6 +27,8 @@ PAGE_LIMIT = 50
 # 窄屏采用两行布局，为数据项和编辑区保留可读宽度。
 SIDE_BY_SIDE_MIN_WIDTH = 92
 
+# 页面高度低于此值时按钮改为单行。
+COMPACT_MAX_HEIGHT = 30
 PAGER_BUTTONS = ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
 # 运算符按长度降序匹配，避免将 != 识别为 =。
 FILTER_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
@@ -753,12 +755,13 @@ class DatabasePage(compat.Vertical):
     DatabasePage .editor-input {
         width: 1fr;
     }
-    DatabasePage #editor-actions {
-        height: 3;
+    DatabasePage #actions {
+        height: auto;
+        padding: 0 0 0 1;
     }
-    DatabasePage #editor-actions Button {
-        width: 1fr;
-        min-width: 0;
+    DatabasePage.compact #actions Button {
+        height: 1;
+        border: none;
     }
     DatabasePage #database-status {
         height: 2;
@@ -810,16 +813,17 @@ class DatabasePage(compat.Vertical):
     # 删除使用组合键；分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.database.bind_refresh")),
-        ("s", "save", i18n.t("cli.tui.database.bind_save")),
-        ("i", "insert", i18n.t("cli.tui.database.bind_insert"), False),
+        # 保存用 ctrl+s：编辑区输入框聚焦时单字母由输入框接收，组合键在编辑中同样生效。
+        ("ctrl+s", "save", i18n.t("cli.tui.database.bind_save")),
+        ("n", "insert", i18n.t("cli.tui.database.bind_insert"), False),
         ("ctrl+d", "delete", i18n.t("cli.tui.database.bind_delete"), False),
         ("slash", "focus_search", i18n.t("cli.tui.database.bind_search")),
         ("f", "add_filter", i18n.t("cli.tui.database.bind_filter"), False),
         ("escape", "cancel", i18n.t("cli.tui.database.bind_cancel"), False),
-        ("o", "set_order", i18n.t("cli.tui.database.bind_order"), False),
+        ("m", "more", i18n.t("cli.tui.database.button_more"), False),
         ("ctrl+f", "clear_filters", i18n.t("cli.tui.database.bind_clear_filters"), False),
-        ("n", "next_page", i18n.t("cli.tui.database.bind_next_page"), False),
-        ("p", "previous_page", i18n.t("cli.tui.database.bind_previous_page"), False),
+        ("right_square_bracket", "next_page", i18n.t("cli.tui.database.bind_next_page"), False),
+        ("left_square_bracket", "previous_page", i18n.t("cli.tui.database.bind_previous_page"), False),
         ("g", "first_page", i18n.t("cli.tui.database.bind_first_page"), False),
         ("G", "last_page", i18n.t("cli.tui.database.bind_last_page"), False),
     )
@@ -870,10 +874,13 @@ class DatabasePage(compat.Vertical):
                 )
                 yield compat.ListView(id="row-list")
                 with compat.Horizontal(id="pager"):
-                    yield compat.Button(i18n.t("cli.tui.database.button_first_page"), id="db-first-page")
-                    yield compat.Button(i18n.t("cli.tui.database.button_previous_page"), id="db-previous-page")
-                    yield compat.Button(i18n.t("cli.tui.database.button_next_page"), id="db-next-page")
-                    yield compat.Button(i18n.t("cli.tui.database.button_last_page"), id="db-last-page")
+                    for button_id, label_key, key in (
+                        ("db-first-page", "button_first_page", "g"),
+                        ("db-previous-page", "button_previous_page", "left_square_bracket"),
+                        ("db-next-page", "button_next_page", "right_square_bracket"),
+                        ("db-last-page", "button_last_page", "G"),
+                    ):
+                        yield compat.Button(compat.key_hint(i18n.t(f"cli.tui.database.{label_key}"), key), id=button_id)
             with compat.Vertical(id="editor-pane"):
                 yield compat.Static(
                     compat.plain_text(i18n.t("cli.tui.database.editor_caption_empty")),
@@ -887,13 +894,17 @@ class DatabasePage(compat.Vertical):
                     yield compat.Input(
                         placeholder=i18n.t("cli.tui.database.editor_pk_placeholder"), id="editor-pk-input"
                     )
-                # 字段单独放进滚动容器：字段多时只有它滚动，编辑区底部的按钮始终留在原地。
+                # 字段单独放进滚动容器：字段多时只有它滚动，主键行保持可见。
                 yield compat.VerticalScroll(id="editor-fields")
-                with compat.Horizontal(id="editor-actions"):
-                    yield compat.Button(i18n.t("cli.tui.database.button_save"), id="db-save", variant="success")
-                    yield compat.Button(i18n.t("cli.tui.database.button_insert"), id="db-insert")
-                    yield compat.Button(i18n.t("cli.tui.database.button_delete"), id="db-delete", variant="warning")
-                    yield compat.Button(i18n.t("cli.tui.database.button_refresh"), id="db-refresh")
+        yield compat.ButtonFlow(
+            ("db-save", compat.key_hint(i18n.t("cli.tui.database.button_save"), "ctrl+s"), "primary"),
+            ("db-insert", compat.key_hint(i18n.t("cli.tui.database.button_insert"), "n")),
+            ("db-delete", compat.key_hint(i18n.t("cli.tui.database.button_delete"), "ctrl+d"), "error"),
+            ("db-filter", compat.key_hint(i18n.t("cli.tui.database.button_filter"), "f")),
+            ("db-more", compat.key_hint(i18n.t("cli.tui.database.button_more"), "m")),
+            ("db-refresh", compat.key_hint(i18n.t("cli.tui.database.button_refresh"), "r")),
+            id="actions",
+        )
         yield compat.Static(
             compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="database-status", markup=False
         )
@@ -1370,6 +1381,33 @@ class DatabasePage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.database.status_filters_cleared"))
         self.refresh_rows(reset_offset=True)
 
+    def action_more(self) -> None:
+        """键位动作：打开低频操作菜单。"""
+        self.request_more()
+
+    def request_more(self) -> None:
+        """弹出低频操作菜单：设置排序与清空筛选条件。"""
+        if not self._gate.accept("more"):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.database.more_title"),
+            hint=i18n.t("cli.tui.database.more_hint"),
+            options=(
+                ("order", i18n.t("cli.tui.database.bind_order")),
+                ("clear_filters", i18n.t("cli.tui.database.bind_clear_filters")),
+            ),
+            cancel_label=i18n.t("cli.tui.database.cancel"),
+            callback=self._on_more_chosen,
+        )
+
+    def _on_more_chosen(self, choice: str | None) -> None:
+        self._gate.reset()
+        if choice == "order":
+            self.action_set_order()
+        elif choice == "clear_filters":
+            self.action_clear_filters()
+
     def action_set_order(self) -> None:
         """键位动作：改排序方式。"""
         if self._selected is None:
@@ -1480,6 +1518,8 @@ class DatabasePage(compat.Vertical):
     def on_resize(self, event: compat.events.Resize) -> None:
         """终端尺寸变化时切换布局并按缓存重排，不重新读取数据。"""
         self._sync_layout(event.size.width)
+        # 短屏按钮改为单行，为表格与编辑区保留高度。
+        self.set_class(event.size.height < COMPACT_MAX_HEIGHT, "compact")
         if self._tables:
             self._render_tables()
         if self._page.rows:
@@ -1726,6 +1766,10 @@ class DatabasePage(compat.Vertical):
             self.request_insert()
         elif button_id == "db-delete":
             self.request_delete()
+        elif button_id == "db-filter":
+            self.action_add_filter()
+        elif button_id == "db-more":
+            self.request_more()
         elif button_id == "db-refresh":
             self.action_refresh()
         elif button_id == "db-first-page":

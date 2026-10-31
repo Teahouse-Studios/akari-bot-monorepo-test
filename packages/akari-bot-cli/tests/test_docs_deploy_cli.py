@@ -84,7 +84,7 @@ class _Provider:
 
 @contextmanager
 def _deploy_env(instance: _FakeInstance, config: DocsConfig, provider, *, built: list[bool]):
-    def fake_build(target):
+    def fake_build(target, **kwargs):
         built.append(True)
         return _build_result(instance.root)
 

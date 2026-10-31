@@ -1,7 +1,9 @@
 schema = 1
-title = "图片处理"
+title = "image"
 summary = "把透明背景的图片填充为白色背景。"
 order = 500
+category = "实用工具"
+category_order = 400
 
 [[meta.modules]]
 name = "image"

@@ -714,14 +714,11 @@ class ModulesPage(compat.Vertical):
         ("i", "install", i18n.t("cli.tui.modules.action_install")),
         ("u", "uninstall", i18n.t("cli.tui.modules.action_uninstall"), False),
         ("U", "update", i18n.t("cli.tui.modules.action_update"), False),
-        ("ctrl+u", "update", i18n.t("cli.tui.modules.action_update"), False),
-        ("l", "toggle_load", i18n.t("cli.tui.modules.bind_load"), False),
+        ("e", "toggle_load", i18n.t("cli.tui.modules.bind_load"), False),
         ("space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select")),
-        ("ctrl+space", "toggle_select", i18n.t("cli.tui.modules.bind_toggle_select"), False),
         ("shift+up", "extend_up", i18n.t("cli.tui.modules.bind_extend"), False),
         ("shift+down", "extend_down", i18n.t("cli.tui.modules.bind_extend"), False),
         ("a", "select_all", i18n.t("cli.tui.modules.bind_select_all"), False),
-        ("ctrl+a", "select_all", i18n.t("cli.tui.modules.bind_select_all"), False),
         ("c", "clear_selection", i18n.t("cli.tui.modules.bind_clear_selection"), False),
         ("escape", "clear_search", i18n.t("cli.tui.modules.bind_clear_search"), False),
     )
@@ -795,6 +792,10 @@ class ModulesPage(compat.Vertical):
     }
     ModulesPage #progress {
         height: 1;
+        display: none;
+    }
+    ModulesPage.operating #progress {
+        display: block;
     }
     ModulesPage #status {
         height: 1;
@@ -852,11 +853,11 @@ class ModulesPage(compat.Vertical):
             with compat.VerticalScroll(id="detail-pane"):
                 yield compat.Static(i18n.t("cli.tui.modules.detail_placeholder"), id="detail", markup=False)
         yield compat.ButtonFlow(
-            ("install", i18n.t("cli.tui.modules.action_install"), "primary"),
-            ("uninstall", i18n.t("cli.tui.modules.action_uninstall"), "error"),
-            ("update", i18n.t("cli.tui.modules.action_update")),
-            ("toggle-load", i18n.t("cli.tui.modules.button_load")),
-            ("refresh", i18n.t("cli.tui.modules.action_refresh")),
+            ("install", compat.key_hint(i18n.t("cli.tui.modules.action_install"), "i"), "primary"),
+            ("uninstall", compat.key_hint(i18n.t("cli.tui.modules.action_uninstall"), "u"), "error"),
+            ("update", compat.key_hint(i18n.t("cli.tui.modules.action_update"), "U")),
+            ("toggle-load", compat.key_hint(i18n.t("cli.tui.modules.button_load"), "e")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.modules.action_refresh"), "r")),
             id="actions",
         )
         yield compat.ProgressBar(total=100.0, show_eta=False, id="progress")
@@ -1199,10 +1200,7 @@ class ModulesPage(compat.Vertical):
             )
         if record.origin:
             rows.append((i18n.t("cli.tui.modules.field_origin"), record.origin))
-        lines = compat.align_rows(rows, gap=2)
-        lines.append("")
-        lines.append(i18n.t("cli.tui.modules.detail_keys"))
-        text = "\n".join(lines)
+        text = "\n".join(compat.align_rows(rows, gap=2))
         self._detail_rendered = text
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
 
@@ -1305,7 +1303,7 @@ class ModulesPage(compat.Vertical):
         """安装选区或未安装的高亮项；无可安装目标时打开安装输入框。"""
         targets = self._batch_targets("install")
         if targets:
-            self._start_operation("install", targets)
+            self._confirm_install(targets)
             return
         if self._selected:
             compat.notify(
@@ -1325,6 +1323,29 @@ class ModulesPage(compat.Vertical):
             cancel_label=i18n.t("cli.tui.modules.cancel"),
             callback=self.on_install_spec_entered,
         )
+
+    def _confirm_install(self, targets: Sequence[ModuleRecord]) -> None:
+        # 安装会改动实例环境并补写配置，单字母键触发时须先确认目标。
+        if not self._confirm.accept("install:" + ",".join(record.dist for record in targets)):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.modules.install_confirm_title", count=len(targets)),
+            hint=i18n.t(
+                "cli.tui.modules.install_confirm_hint",
+                names="\n".join(record.dist for record in targets),
+            ),
+            options=(("install", i18n.t("cli.tui.modules.action_install")),),
+            cancel_label=i18n.t("cli.tui.modules.cancel"),
+            callback=lambda choice: self._on_install_confirmed(targets, choice),
+        )
+
+    def _on_install_confirmed(self, targets: Sequence[ModuleRecord], choice: str | None) -> None:
+        self._confirm.reset()
+        if choice != "install":
+            self._set_status(i18n.t("cli.tui.modules.install_cancelled"))
+            return
+        self._start_operation("install", targets)
 
     def on_install_spec_entered(self, spec: str | None) -> None:
         """输入框回调：按输入内容给出可用的安装方式。
@@ -1702,6 +1723,7 @@ class ModulesPage(compat.Vertical):
         self._stream_line = ""
         self._stream_lines = []
         self._sync_actions()
+        self.add_class("operating")
         compat.progress_phase(self.query_one("#progress", compat.ProgressBar), 1.0, _PROGRESS_PHASES)
         first = targets[0]
         label = i18n.t(f"cli.tui.modules.label_{kind}", name=first.dist)
@@ -1806,6 +1828,7 @@ class ModulesPage(compat.Vertical):
             self._set_status(message)
             compat.notify(self.app, message, severity="information", title=message)
         self._busy = False
+        self.remove_class("operating")
         self._sync_actions()
 
     def focus_primary(self) -> None:

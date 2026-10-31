@@ -1,7 +1,9 @@
 schema = 1
-title = "Minecraft 版本推送"
+title = "mcv-rss"
 summary = "定时检测 Minecraft 版本更新并向启用的会话推送。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "mcv-rss"

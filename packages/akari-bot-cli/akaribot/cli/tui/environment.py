@@ -572,9 +572,8 @@ class EnvironmentPage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.environment.bind_search")),
         ("i", "install_package", i18n.t("cli.tui.environment.bind_install")),
         ("u", "uninstall_package", i18n.t("cli.tui.environment.bind_uninstall")),
-        ("a", "adopt", i18n.t("cli.tui.environment.bind_adopt"), False),
-        ("x", "release", i18n.t("cli.tui.environment.bind_release"), False),
-        ("ctrl+n", "recreate", i18n.t("cli.tui.environment.bind_recreate"), False),
+        ("m", "interpreter", i18n.t("cli.tui.environment.button_interpreter"), False),
+        ("escape", "clear_search", i18n.t("cli.tui.environment.bind_clear_search"), False),
     )
 
     can_focus = True
@@ -627,13 +626,10 @@ class EnvironmentPage(compat.Vertical):
         yield compat.ListView(id="package-list")
         # 包管理与解释器操作分组排列，窄屏优先在组间换行。
         yield compat.ButtonFlow(
-            ("install", i18n.t("cli.tui.environment.button_install"), "primary"),
-            ("uninstall", i18n.t("cli.tui.environment.button_uninstall"), "error"),
-            ("refresh", i18n.t("cli.tui.environment.button_refresh")),
-            ("adopt", i18n.t("cli.tui.environment.button_adopt"), "warning"),
-            ("release", i18n.t("cli.tui.environment.button_release"), "warning"),
-            ("recreate", i18n.t("cli.tui.environment.button_recreate"), "warning"),
-            breaks=("refresh",),
+            ("install", compat.key_hint(i18n.t("cli.tui.environment.button_install"), "i"), "primary"),
+            ("uninstall", compat.key_hint(i18n.t("cli.tui.environment.button_uninstall"), "u"), "error"),
+            ("interpreter", compat.key_hint(i18n.t("cli.tui.environment.button_interpreter"), "m")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.environment.button_refresh"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -713,17 +709,17 @@ class EnvironmentPage(compat.Vertical):
 
         self.request_uninstall()
 
-    def action_adopt(self) -> None:
+    def action_interpreter(self) -> None:
 
-        self.request_action("adopt")
+        self.request_interpreter()
 
-    def action_release(self) -> None:
-
-        self.request_action("release")
-
-    def action_recreate(self) -> None:
-
-        self.request_action("recreate")
+    def action_clear_search(self) -> None:
+        """键位动作：清空搜索词；已为空时聚焦包列表。"""
+        search = self.query_one("#package-search", compat.Input)
+        if search.value:
+            search.value = ""
+            return
+        self.query_one("#package-list", compat.ListView).focus()
 
     def set_query(self, value: str) -> None:
         """设置搜索词，等价于用户键入。"""
@@ -771,6 +767,36 @@ class EnvironmentPage(compat.Vertical):
 
     def _cache_age(self) -> float:
         return max(0.0, time.monotonic() - self._loaded_at)
+
+    def request_interpreter(self) -> None:
+        """弹出解释器菜单，只列当前托管方式可用的操作。"""
+        kinds = [kind for kind in ("adopt", "release", "recreate") if not self._blocker(kind)]
+        if not kinds:
+            # 忙碌、运行中或托管方式未知时三项都不可用，原因相同。
+            compat.notify(
+                self.app,
+                self._blocker("adopt"),
+                severity="warning",
+                title=i18n.t("cli.tui.environment.button_interpreter"),
+            )
+            return
+        if not self._gate.accept("interpreter"):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.environment.interpreter_title"),
+            hint=i18n.t("cli.tui.environment.interpreter_hint", mode=self._state.mode_text()),
+            options=[(kind, i18n.t(f"cli.tui.environment.button_{kind}")) for kind in kinds],
+            cancel_label=i18n.t("cli.tui.environment.cancel"),
+            callback=self._on_interpreter_chosen,
+        )
+
+    def _on_interpreter_chosen(self, kind: str | None) -> None:
+        self._gate.reset()
+        if kind is None:
+            self._set_status(i18n.t("cli.tui.environment.action_cancelled"))
+            return
+        self.request_action(kind)
 
     def request_action(self, kind: str) -> None:
         """请求解释器动作；执行重建需要输入确认，预览只读取计划。
@@ -1135,20 +1161,8 @@ class EnvironmentPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
 
-        mode = self._state.mode
-        visible = {
-            "adopt": mode == MODE_EXTERNAL,
-            "release": mode == MODE_MANAGED,
-            "recreate": mode == MODE_MANAGED,
-        }
-        for kind, shown in visible.items():
-            button = self.query_one(f"#{kind}", compat.Button)
-            button.display = shown
-            button.disabled = self._busy
-        for kind in ("install", "uninstall", "refresh"):
+        for kind in ("install", "uninstall", "interpreter", "refresh"):
             self.query_one(f"#{kind}", compat.Button).disabled = self._busy
-        # 隐藏按钮不占空间，显示状态变化后需重新计算列数。
-        self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
         self._status_rendered = text
@@ -1178,8 +1192,8 @@ class EnvironmentPage(compat.Vertical):
     @compat.on(compat.Button.Pressed)
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         button_id = event.button.id
-        if button_id in ("adopt", "release", "recreate"):
-            self.request_action(str(button_id))
+        if button_id == "interpreter":
+            self.request_interpreter()
         elif button_id == "install":
             self.request_install()
         elif button_id == "uninstall":

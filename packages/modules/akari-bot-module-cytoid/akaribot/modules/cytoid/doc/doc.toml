@@ -1,7 +1,9 @@
 schema = 1
-title = "Cytoid 查询"
+title = "cytoid"
 summary = "查询 Cytoid 用户资料与 B30、R10 成绩。"
 order = 500
+category = "音游查询"
+category_order = 100
 
 [[meta.modules]]
 name = "cytoid"

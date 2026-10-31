@@ -18,7 +18,7 @@ dependencies = [
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "Pillow>=13.0.0,<13.1.0",
-    "numpy<2.5.3",
+    "numpy>=2.0.0,<3.0.0",
     "orjson>=3.10.9,<4.0.0",
     "webcolors>=25.0.0,<26.0.0",
 ]

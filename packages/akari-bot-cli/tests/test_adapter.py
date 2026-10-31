@@ -1,4 +1,4 @@
-"""``akaribot adapter instance remove``：只删除适配器实例的配置文件。
+"""``akaribot adapter``：实例移除只删除配置文件，``list --json`` 给界面提供完整的已安装平台。
 
 移除入口一旦让用户以为不可逆数据已被清除，命令的成功返回就是假的。当前实现只删除该实例的配置
 文件，场景与用户数据留在库里，故 ``--purge-data`` 不作为可执行选项存在；本文件守住这条契约与
@@ -6,6 +6,7 @@
 """
 
 import io
+import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -89,6 +90,28 @@ def _test_purge_data_is_not_an_option():
     )
 
 
+def _test_list_json_reports_installed_platforms():
+    # 界面新增实例时只能从 JSON 得知尚无实例配置的已安装平台。
+    registry = adapter_command.AdapterRegistry(
+        adapters={name: adapter_command.InstalledAdapter(name=name) for name in ("telegram", "kook")},
+        available=True,
+    )
+    with TemporaryDirectory(prefix="akari-adapter-list-") as raw:
+        instance = _make_instance(Path(raw) / "instance")
+        with (
+            patch.dict(os.environ, {adapter_command.CONFIG_ENV: ""}),
+            patch.object(adapter_command, "open_instance", return_value=instance),
+            patch.object(adapter_command, "fetch_adapters", return_value=registry),
+        ):
+            result = CliRunner().invoke(adapter_command.app, ["list", "--json"])
+    payload = json.loads(result.stdout)
+    return (
+        result.exit_code == 0
+        and payload["installed_platforms"] == ["kook", "telegram"]
+        and [row["platform"] for row in payload["instances"]] == ["telegram"]
+    )
+
+
 @func_case
 async def test_adapter_instance_remove(tester: Tester):
     """cli.commands.adapter: 实例移除只删配置测试"""
@@ -96,4 +119,5 @@ async def test_adapter_instance_remove(tester: Tester):
     await tester.test(_test_remove_deletes_config_and_keeps_data, "默认只删除配置文件")
     await tester.test(_test_dry_run_keeps_config, "--dry-run 不改动文件")
     await tester.test(_test_purge_data_is_not_an_option, "--purge-data 不再是可执行选项")
+    await tester.test(_test_list_json_reports_installed_platforms, "list --json 列出全部已安装平台")
     return tester

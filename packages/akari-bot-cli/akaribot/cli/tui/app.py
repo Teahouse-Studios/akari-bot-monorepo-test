@@ -79,6 +79,38 @@ def _nav_position(key: str) -> int:
     return next((position for position, entry in enumerate(NAV_PLAN) if entry == ("page", key)), 0)
 
 
+def _group_position(position: int) -> int:
+    # 返回条目所属分组标题在 NAV_PLAN 中的下标，分组标题返回自身。
+    return next(index for index in range(position, -1, -1) if NAV_PLAN[index][0] == "group")
+
+
+def _group_members(header: int) -> range:
+    end = next((index for index in range(header + 1, len(NAV_PLAN)) if NAV_PLAN[index][0] == "group"), len(NAV_PLAN))
+    return range(header + 1, end)
+
+
+def _group_label(group_key: str, collapsed: bool) -> str:
+    return f"{'▸' if collapsed else '▾'} {i18n.t(group_key)}"
+
+
+class _NavList(compat.ListView):
+    # 左右键沿用树形导航习惯：在页面条目上按左键同样折叠其所属分组。
+    BINDINGS = compat.bindings(
+        ("left", "fold_group", i18n.t("cli.tui.app.bind_fold_group"), False),
+        ("right", "unfold_group", i18n.t("cli.tui.app.bind_unfold_group"), False),
+    )
+
+    def action_fold_group(self) -> None:
+        """键位动作：折叠高亮条目所属的分组。"""
+        if self.index is not None:
+            self.app.set_nav_group(self.index, collapsed=True)
+
+    def action_unfold_group(self) -> None:
+        """键位动作：展开高亮的分组标题。"""
+        if self.index is not None and NAV_PLAN[self.index][0] == "group":
+            self.app.set_nav_group(self.index, collapsed=False)
+
+
 INLINE_CSS = """
 Screen {
     layout: vertical;
@@ -114,6 +146,14 @@ TuiApp #nav Label {
 TuiApp #nav .nav-group {
     color: $text-muted;
     text-style: bold;
+}
+
+TuiApp #nav ListItem.-highlight .nav-group {
+    color: $block-cursor-blurred-foreground;
+}
+
+TuiApp #nav:focus ListItem.-highlight .nav-group {
+    color: $block-cursor-foreground;
 }
 
 TuiApp #content {
@@ -191,6 +231,8 @@ class TuiApp(compat.App[int]):
         self.first_paint_ms: float = 0.0
         self._quit_confirming = False
         self._quit_gate = compat.PendingConfirm()
+        # 折叠状态仅在本次会话内有效，切换实例不重建侧栏，状态随之保留。
+        self._collapsed_groups: set[str] = set()
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
 
     def _instance_label(self) -> str:
@@ -273,22 +315,21 @@ class TuiApp(compat.App[int]):
         """装配侧栏与全部页面。"""
         yield compat.Header()
         with compat.Horizontal(id="shell"):
-            yield compat.ListView(*self._nav_items(), id="nav")
+            yield _NavList(*self._nav_items(), id="nav")
             with compat.Vertical(id="content"):
                 for key, _, page_class in PAGES:
                     yield self._build_page(key, page_class)
         yield compat.Footer()
 
     def _nav_items(self) -> list[compat.ListItem]:
-        # 分组标题不可选中，避免导航操作将其作为页面。
+        # 分组标题可高亮，选中时折叠或展开本组，不切换页面。
         items: list[compat.ListItem] = []
         for position, (kind, value) in enumerate(NAV_PLAN):
             if kind == "group":
                 items.append(
                     compat.ListItem(
-                        compat.Label(i18n.t(value), markup=False, classes="nav-group"),
+                        compat.Label(_group_label(value, False), markup=False, classes="nav-group"),
                         id=f"navgroup-{position}",
-                        disabled=True,
                     )
                 )
                 continue
@@ -435,17 +476,46 @@ class TuiApp(compat.App[int]):
         # 仅在索引变化时更新，避免侧栏事件重复触发页面同步。
         nav = self.query_one("#nav", compat.ListView)
         index = _nav_position(key)
+        header = _group_position(index)
+        # 当前页所在分组已折叠时高亮分组标题，不擅自展开用户折叠的分组。
+        if NAV_PLAN[header][1] in self._collapsed_groups:
+            index = header
         if compat.highlighted_index(nav) != index:
             nav.index = index
 
+    def set_nav_group(self, position: int, *, collapsed: bool | None = None) -> None:
+        """折叠或展开侧栏分组，并将高亮移至分组标题。
+
+        :param position: 分组标题或组内页面条目在侧栏中的下标。
+        :param collapsed: 目标状态；``None`` 表示切换当前状态。
+        """
+        header = _group_position(position)
+        group_key = NAV_PLAN[header][1]
+        if collapsed is None:
+            collapsed = group_key not in self._collapsed_groups
+        if collapsed:
+            self._collapsed_groups.add(group_key)
+        else:
+            self._collapsed_groups.discard(group_key)
+        nav = self.query_one("#nav", compat.ListView)
+        # 先移走高亮再禁用条目，避免高亮停留在隐藏的页面条目上。
+        nav.index = header
+        nav.children[header].query_one(compat.Label).update(_group_label(group_key, collapsed))
+        # 禁用的条目会被方向键跳过，隐藏不足以阻止高亮落在其上。
+        for member in _group_members(header):
+            item = nav.children[member]
+            item.display = not collapsed
+            item.disabled = collapsed
+
     @compat.on(compat.ListView.Selected, "#nav")
     def _on_nav_selected(self, event: compat.ListView.Selected) -> None:
-        key = (event.item.id or "").removeprefix("nav-")
+        item_id = event.item.id or ""
+        if item_id.startswith("navgroup-"):
+            self.set_nav_group(int(item_id.removeprefix("navgroup-")))
+            return
+        key = item_id.removeprefix("nav-")
         if any(key == page_key for page_key, _, _ in PAGES):
             self.show_page(key)
-        else:
-            # 鼠标点击分组标题仍可能产生 Selected，须恢复当前页高亮。
-            self._sync_nav(self.active_page)
 
     def page(self, key: str) -> compat.Widget:
         """按 key 取页面控件，供测试与键位动作使用。"""

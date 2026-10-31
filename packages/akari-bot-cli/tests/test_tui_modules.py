@@ -170,21 +170,28 @@ async def _test_install_streams_output_to_status():
     return ok
 
 
-async def _test_install_highlighted_record_without_dialog():
-    # 未安装的高亮项直接作为安装目标。
+async def _test_install_highlighted_record_after_confirm():
+    # 未安装的高亮项作为安装目标，确认框列出目标；取消不执行，确认后安装。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2
         await pilot.pause()
         page.request_install()
+        await pilot.pause()
+        hint = str(app.screen.query_one("#choice-hint", compat.Static).render())
+        await pilot.press("escape")
+        await pilot.pause()
+        cancelled = list(app.module_source.installed)
+        page.request_install()
+        await pilot.pause()
+        await _pick_choice(app, pilot, 0)
         await page.wait_for_idle()
         await pilot.pause()
-        dialog = app.screen is not page.screen
         await pilot.press("q")
-        return dialog, app.module_source.installed
+        return hint, cancelled, app.module_source.installed
 
-    dialog, installed = await _with_app(_source(), body)
-    return dialog is False and installed == ["akari-bot-module-wiki"]
+    hint, cancelled, installed = await _with_app(_source(), body)
+    return "akari-bot-module-wiki" in hint and cancelled == [] and installed == ["akari-bot-module-wiki"]
 
 
 async def _test_install_search_term_prefills_dialog():
@@ -495,15 +502,14 @@ async def _test_update_only_targets_installed():
 
 
 async def _test_update_entry_points_open_choice():
-    # U、ctrl+u 与按钮共用范围选择流程。
+    # U 与按钮共用范围选择流程。
     async def body(app, page, pilot):
         seen: list[list[str]] = []
-        for trigger in ("U", "ctrl+u"):
-            await pilot.press(trigger)
-            await pilot.pause()
-            seen.append(_choice_labels(app))
-            await pilot.press("escape")
-            await pilot.pause()
+        await pilot.press("U")
+        await pilot.pause()
+        seen.append(_choice_labels(app))
+        await pilot.press("escape")
+        await pilot.pause()
         page.query_one("#update", compat.Button).press()
         await pilot.pause()
         seen.append(_choice_labels(app))
@@ -518,7 +524,7 @@ async def _test_update_entry_points_open_choice():
         i18n.t("cli.tui.modules.update_all"),
         i18n.t("cli.tui.modules.cancel"),
     ]
-    return seen == [expected, expected, expected]
+    return seen == [expected, expected]
 
 
 async def _test_update_all_dispatches_all_flag():
@@ -799,7 +805,7 @@ async def _test_toggle_load_loads_when_partly_unloaded():
     async def body(app, page, pilot):
         _select_package(page, LOADED_PKG.dist)
         await pilot.pause()
-        await pilot.press("l")
+        await pilot.press("e")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -815,7 +821,7 @@ async def _test_toggle_load_unloads_when_all_loaded():
     async def body(app, page, pilot):
         _select_package(page, LOADED_PKG.dist)
         await pilot.pause()
-        await pilot.press("l")
+        await pilot.press("e")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -1010,12 +1016,9 @@ def _test_low_frequency_bindings_stay_out_of_footer():
         "a",
         "u",
         "U",
-        "ctrl+u",
-        "l",
-        "ctrl+space",
+        "e",
         "shift+up",
         "shift+down",
-        "ctrl+a",
         "c",
         "escape",
     }
@@ -1098,7 +1101,7 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_toggle_filters_to_installed, "开关在全部与只看已装之间切换")
         await tester.test(_test_uninstalled_record_is_installable, "未装项可安装")
         await tester.test(_test_install_streams_output_to_status, "安装先问名字再选来源并逐行回显")
-        await tester.test(_test_install_highlighted_record_without_dialog, "光标停在未装项上直接安装")
+        await tester.test(_test_install_highlighted_record_after_confirm, "光标停在未装项上确认后安装，取消不执行")
         await tester.test(_test_install_search_term_prefills_dialog, "搜索词预填安装输入框")
         await tester.test(_test_install_cancelled_by_empty_spec, "安装输入框取消后不动列表")
         await tester.test(_test_install_git_spec_offers_git_source, "仓库地址只给 git 来源")
@@ -1110,7 +1113,7 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_failed_install_reports_detail, "失败时展示输出尾部")
         await tester.test(_test_available_failure_keeps_installed_list, "可安装集合失败不清空列表")
         await tester.test(_test_stream_operation_failure_becomes_result, "数据源异常转成结果展示")
-        await tester.test(_test_update_entry_points_open_choice, "U、ctrl+u 与按钮都弹出更新范围选择")
+        await tester.test(_test_update_entry_points_open_choice, "U 与按钮都弹出更新范围选择")
         await tester.test(_test_update_covers_installed_selection, "选「更新选中项」逐个更新已装项")
         await tester.test(_test_update_only_targets_installed, "更新只作用于已装项")
         await tester.test(_test_update_all_dispatches_all_flag, "选「更新全部」下发 --all")
@@ -1126,8 +1129,8 @@ async def test_tui_modules_available(tester: Tester):
         await tester.test(_test_detail_shows_manifest_metadata, "详情展示 manifest 元数据")
         await tester.test(_test_detail_falls_back_when_manifest_missing, "manifest 缺失才显示未声明")
         await tester.test(_test_load_cell_counts_loaded_modules, "列表按模块数展示装载状态")
-        await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 l 装载整包")
-        await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 l 卸载整包")
+        await tester.test(_test_toggle_load_loads_when_partly_unloaded, "有未装载模块时按 e 装载整包")
+        await tester.test(_test_toggle_load_unloads_when_all_loaded, "全部已装载时按 e 卸载整包")
         await tester.test(_test_toggle_load_ignores_uninstalled, "未装项不参与装载")
         await tester.test(_test_columns_header_aligns_with_rows, "列表表头与行对齐")
         await tester.test(_test_action_buttons_fit_narrow_screen, "80 列下五个动作按钮都在页内")

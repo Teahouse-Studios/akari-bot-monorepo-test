@@ -1,7 +1,9 @@
 schema = 1
-title = "Wiki 查询"
+title = "wiki"
 summary = "查询 MediaWiki 页面、解析内联 Wiki 语法、管理 URL 审计与 Wiki 日志订阅。"
 order = 500
+category = "知识查询"
+category_order = 600
 
 [[meta.modules]]
 name = "wiki"

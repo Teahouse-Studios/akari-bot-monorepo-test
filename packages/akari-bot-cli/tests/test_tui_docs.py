@@ -4,7 +4,9 @@
 """
 
 import asyncio
+import json
 import time
+from pathlib import Path
 from unittest import mock
 
 from akaribot.cli import i18n
@@ -15,6 +17,7 @@ from akaribot.cli.tui.docs import (
     DocsPageRow,
     DocsView,
     StaticDocsSource,
+    SubprocessDocsSource,
     ToolchainInfo,
 )
 from akaribot.cli.tui.modules import OperationResult
@@ -44,6 +47,7 @@ def _pages() -> tuple[DocsPackageRow, ...]:
             ),
             doc_path="/tmp/docs/core",
             editable=True,
+            category="核心文档",
         ),
         DocsPackageRow(
             key="dice",
@@ -86,6 +90,14 @@ async def _wait_until(predicate, timeout: float = 1.5) -> bool:
             return True
         await asyncio.sleep(0.01)
     return False
+
+
+async def _more(app, pilot, index: int) -> None:
+    # 部署、同步主题、安装依赖与任务日志都收在 m 菜单里，按菜单顺序选择。
+    await pilot.press("m")
+    await pilot.pause()
+    app.screen.query_one(f"#choice-{index}", compat.Button).press()
+    await pilot.pause()
 
 
 async def _with_page(body, source=None, *, size=(120, 34)):
@@ -136,6 +148,8 @@ async def _test_list_and_detail_show_package_fields():
         and "/tmp/docs/core" in detail
         and i18n.t("cli.tui.docs.version") in detail
         and "v20.11.0" in detail
+        and i18n.t("cli.tui.docs.category") in detail
+        and "核心文档" in detail
         and "API" in detail
         and i18n.t("cli.tui.docs.status_loaded", count=2) == status
     )
@@ -184,6 +198,47 @@ async def _test_space_select_all_and_clear():
     return one == ("core",) and every == ("core", "dice") and marked == 2 and none == ()
 
 
+class _Stream:
+    def __init__(self, chunks: list[bytes]) -> None:
+        self._chunks = chunks
+
+    async def read(self) -> bytes:
+        return b"".join(self._chunks)
+
+    def __aiter__(self):
+        self._iterator = iter(self._chunks)
+        return self
+
+    async def __anext__(self) -> bytes:
+        try:
+            return next(self._iterator)
+        except StopIteration:
+            raise StopAsyncIteration from None
+
+
+class _BuildProcess:
+    def __init__(self, payload: dict) -> None:
+        self.stdout = _Stream([json.dumps(payload).encode()])
+        self.stderr = _Stream([])
+        self.returncode = None
+
+    async def wait(self) -> int:
+        self.returncode = 0
+        return 0
+
+
+async def _test_build_reuses_cached_output():
+    process = _BuildProcess({"reused": True, "packages": ["core"], "duration_ms": 5, "log": "cached\n"})
+    source = SubprocessDocsSource(root=Path("/tmp"))
+    lines: list[str] = []
+    with mock.patch(
+        "akaribot.cli.tui.docs.asyncio.create_subprocess_exec",
+        new=mock.AsyncMock(return_value=process),
+    ):
+        result = await source.build((), lines.append)
+    return result.ok and result.message == i18n.t("cli.tui.docs.build_reused", count=1, duration=5) and lines == []
+
+
 async def _test_build_passes_selected_keys_or_none():
     async def body(app, page, pilot, source):
         await pilot.press("space")
@@ -210,9 +265,109 @@ async def _test_build_passes_selected_keys_or_none():
     )
 
 
+async def _test_build_streams_logs_into_panel():
+    source = StaticDocsSource(
+        _view(build=BUILT),
+        build_result=OperationResult(True, i18n.t("cli.tui.docs.build_done", count=2, duration=42), "built"),
+        stream_lines=("正在准备 Node 工具链…", "npm install output", "✓ built in 512ms"),
+    )
+
+    async def body(app, page, pilot, chosen):
+        pane = page.query_one("#log-pane", compat.VerticalScroll)
+        before = pane.display
+        await pilot.press("b")
+        await page.wait_for_idle()
+        await pilot.pause()
+        text = page.log_text
+        visible = pane.display
+        await _more(app, pilot, 3)
+        hidden = pane.display
+        await _more(app, pilot, 3)
+        shown = pane.display
+        await pilot.press("q")
+        return before, text, visible, hidden, shown
+
+    before, text, visible, hidden, shown = await _with_page(body, source, size=(80, 24))
+    return not before and all(line in text for line in source.stream_lines) and visible and not hidden and shown
+
+
+async def _test_theme_sync_and_dependency_actions():
+    source = StaticDocsSource(
+        _view(build=BUILT),
+        sync_result=OperationResult(
+            True,
+            i18n.t("cli.tui.docs.theme_synced", before="a" * 12, after="b" * 12),
+            "git-sync",
+        ),
+        install_result=OperationResult(
+            True,
+            i18n.t("cli.tui.docs.deps_ready", version="2.0.0"),
+            "npm-install",
+        ),
+    )
+
+    async def body(app, page, pilot, chosen):
+        ids = ("build", "serve", "open", "more", "refresh")
+        buttons = [page.query_one(f"#{button_id}", compat.Button) for button_id in ids]
+        visible = all(page.region.contains_region(button.region) for button in buttons)
+        await _more(app, pilot, 1)
+        await page.wait_for_idle()
+        await pilot.pause()
+        synced = (page.status_text, page.log_text, chosen.calls["sync_theme"])
+        await _more(app, pilot, 2)
+        await page.wait_for_idle()
+        await pilot.pause()
+        installed = (page.status_text, page.log_text, chosen.calls["install_deps"])
+        await pilot.press("q")
+        return visible, synced, installed
+
+    visible, synced, installed = await _with_page(body, source, size=(80, 24))
+    return (
+        visible
+        and synced
+        == (
+            i18n.t("cli.tui.docs.theme_synced", before="a" * 12, after="b" * 12),
+            "git-sync",
+            1,
+        )
+        and installed
+        == (
+            i18n.t("cli.tui.docs.deps_ready", version="2.0.0"),
+            "npm-install",
+            1,
+        )
+    )
+
+
+async def _test_subprocess_theme_sync_and_dependency_messages():
+    source = SubprocessDocsSource(root=Path("/tmp"))
+    sync_process = _BuildProcess(
+        {
+            "ok": True,
+            "before": "a" * 40,
+            "after": "b" * 40,
+            "changed": True,
+            "log": "synced\n",
+        }
+    )
+    install_process = _BuildProcess({"ok": True, "vitepress": "2.0.0", "path": "/tmp/cache/docs"})
+    with mock.patch(
+        "akaribot.cli.tui.docs.asyncio.create_subprocess_exec",
+        new=mock.AsyncMock(side_effect=[sync_process, install_process]),
+    ):
+        synced = await source.sync_theme()
+        installed = await source.install_dependencies()
+    return (
+        synced.ok
+        and synced.message == i18n.t("cli.tui.docs.theme_synced", before="a" * 12, after="b" * 12)
+        and installed.ok
+        and installed.message == i18n.t("cli.tui.docs.deps_ready", version="2.0.0")
+    )
+
+
 async def _test_preview_start_stop_and_open():
     async def body(app, page, pilot, source):
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         running = page.server_running
@@ -222,7 +377,7 @@ async def _test_preview_start_stop_and_open():
             await pilot.press("o")
             await pilot.pause()
             opened = list(opener.call_args_list)
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         stopped = page.server_running
@@ -245,18 +400,18 @@ async def _test_preview_requires_build_first():
     source = StaticDocsSource(_view(build=None), url=PREVIEW_URL)
 
     async def body(app, page, pilot, chosen):
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         blocked = (page.status_text, chosen.calls["serve"], page.server_running)
         await pilot.press("b")
         await page.wait_for_idle()
         await pilot.pause()
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         served = (page.status_text, chosen.calls["serve"], page.server_running)
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.press("q")
         return blocked, served
@@ -280,7 +435,7 @@ async def _test_missing_toolchain_blocks_build_and_preview():
         await page.wait_for_idle()
         await pilot.pause()
         build_status = page.status_text
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         serve_status = page.status_text
@@ -294,8 +449,7 @@ async def _test_missing_toolchain_blocks_build_and_preview():
 
 async def _test_deploy_modal_defaults_to_dry_run():
     async def body(app, page, pilot, source):
-        await pilot.press("ctrl+p")
-        await pilot.pause()
+        await _more(app, pilot, 0)
         screen = app.screen
         opened = type(screen).__name__
         labels = [str(screen.query_one(f"#choice-{index}", compat.Button).label) for index in range(2)]
@@ -352,7 +506,7 @@ async def _test_deploy_failure_keeps_page_usable():
 
 async def _test_leaving_page_stops_preview():
     async def body(app, page, pilot, source):
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         note = page.dirty_note()
@@ -389,7 +543,7 @@ async def _test_preview_start_failure_is_reported():
     source = StaticDocsSource(_view(build=BUILT), serve_error="端口被占用")
 
     async def body(app, page, pilot, chosen):
-        await pilot.press("s")
+        await pilot.press("p")
         await page.wait_for_idle()
         await pilot.pause()
         status = page.status_text
@@ -423,6 +577,10 @@ async def test_tui_docs(tester: Tester):
     await tester.test(_test_search_filters_and_escape_clears, "搜索过滤与 Esc 清空")
     await tester.test(_test_space_select_all_and_clear, "空格选择、全选与清空")
     await tester.test(_test_build_passes_selected_keys_or_none, "构建只传选中 key，无选中时构建全部")
+    await tester.test(_test_build_reuses_cached_output, "复用构建时状态栏明确说明")
+    await tester.test(_test_build_streams_logs_into_panel, "构建日志逐行写入面板并可切换显示")
+    await tester.test(_test_theme_sync_and_dependency_actions, "同步主题与安装依赖按钮写入状态与日志")
+    await tester.test(_test_subprocess_theme_sync_and_dependency_messages, "子进程同步与依赖安装结果映射")
     await tester.test(_test_preview_start_stop_and_open, "预览启停、URL 与浏览器打开")
     await tester.test(_test_preview_requires_build_first, "未构建时先提示构建")
     await tester.test(_test_missing_toolchain_blocks_build_and_preview, "Node 不可用时阻止构建与预览")

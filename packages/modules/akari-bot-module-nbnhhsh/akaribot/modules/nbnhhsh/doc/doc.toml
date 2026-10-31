@@ -1,7 +1,9 @@
 schema = 1
-title = "拼音缩写释义"
+title = "nbnhhsh"
 summary = "查询拼音首字母缩写对应的中文含义。"
 order = 500
+category = "实用工具"
+category_order = 400
 
 [[meta.modules]]
 name = "nbnhhsh"

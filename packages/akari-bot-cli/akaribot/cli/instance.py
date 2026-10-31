@@ -894,7 +894,7 @@ class Instance:
         """已装 core 的公共 API 版本；取不到时返回 ``None``。
 
         优先读 ``registry --json`` 的 ``core.api_version``；缺失时在实例解释器里读取
-        ``akaribot.core.version.__api_version__``（仍是子进程，不在 CLI 进程内 import core）。
+        ``akaribot.core.registry.CORE_API_VERSION``（仍是子进程，不在 CLI 进程内 import core）。
         """
         payload = self._registry_payload
         if payload is None:
@@ -910,7 +910,7 @@ class Instance:
                 value = core.get("api_version")
                 if isinstance(value, int):
                     return value
-        code = "from akaribot.core.version import __api_version__ as v; print(v)"
+        code = "from akaribot.core.registry import CORE_API_VERSION as v; print(v)"
         try:
             proc = self._capture(self.python_argv("-c", code), timeout=30.0)
         except CliError:

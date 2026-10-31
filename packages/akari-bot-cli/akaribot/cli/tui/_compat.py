@@ -29,6 +29,7 @@ from textual.css.stylesheet import Stylesheet
 from textual.pilot import Pilot
 from textual.reactive import reactive
 from textual.css.query import NoMatches
+from textual.keys import format_key
 from textual.screen import Screen
 from textual.theme import Theme
 from textual.worker import WorkerFailed
@@ -71,12 +72,15 @@ __all__ = [
     "VerticalScroll",
     "Widget",
     "TextPromptScreen",
+    "PickTextScreen",
     "align_rows",
     "CONFIRM_DEBOUNCE_SECONDS",
     "PendingConfirm",
     "ButtonFlow",
     "HelpScreen",
     "ask_choice",
+    "ask_pick",
+    "ask_pick_text",
     "button_width",
     "guard_renders",
     "mounted",
@@ -84,6 +88,8 @@ __all__ = [
     "app_test",
     "bind",
     "bindings",
+    "key_display",
+    "key_hint",
     "build_theme",
     "cell_width",
     "check_textual_version",
@@ -388,6 +394,21 @@ def bind(key: str, action: str, description: str, *, show: bool = True) -> Bindi
     :return: Textual 绑定对象。
     """
     return Binding(KEY_ALIASES.get(key, key), action, description, show=show)
+
+
+def key_display(key: str) -> str:
+    """返回快捷键的显示写法，与页脚一致（``ctrl+d`` 写作 ``^d``）。"""
+    modifiers, name = Binding(KEY_ALIASES.get(key, key), "", "").parse_key()
+    name = format_key(name)
+    if "ctrl" in modifiers:
+        modifiers.remove("ctrl")
+        name = f"^{name}"
+    return "+".join([*modifiers, name])
+
+
+def key_hint(label: str, key: str) -> str:
+    """按钮文字后附快捷键，如「安装 i」。"""
+    return f"{label} {key_display(key)}"
 
 
 def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[BindingType]:
@@ -806,6 +827,258 @@ def ask_choice(
 ) -> None:
     """弹出多选一的模态框，把选中的取值交给回调；取消时为 ``None``。"""
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
+
+
+class _PickList(ListView):
+    # 回车提交对话框；单击只移动高亮，避免误点直接执行。
+    BINDINGS = [Binding("enter", "submit_pick", show=False)]
+
+    def action_submit_pick(self) -> None:
+        """键位动作：提交所在对话框。"""
+        screen = self.screen
+        if isinstance(screen, PickTextScreen):
+            screen.submit()
+
+
+class PickTextScreen(Screen[tuple[str, str] | None]):
+    """列表选一项并输入一行文本的模态框：确认返回 ``(取值, 文本)``，Esc 或「取消」返回 ``None``。
+
+    输入框获得焦点时 ``↑`` / ``↓`` 仍移动列表高亮，便于边输入边改选。``with_input`` 为假时只选不输，
+    文本恒为空串。
+
+    :param title: 标题。
+    :param hint: 操作说明。
+    :param options: ``(取值, 显示文字)`` 列表，按给出顺序排列。
+    :param confirm_label: 确认按钮文字。
+    :param cancel_label: 取消按钮文字。
+    :param placeholder: 输入框占位符。
+    :param selected: 初始高亮的取值；不在选项中时高亮首项。
+    :param validate: 接收取值与去除首尾空白的文本，返回错误说明；非空时显示在输入框下方且不关闭。
+    :param with_input: 是否显示输入框。
+    """
+
+    LIST_ROWS = 6
+
+    BINDINGS = [
+        Binding("up", "move_pick(-1)", show=False),
+        Binding("down", "move_pick(1)", show=False),
+    ]
+
+    DEFAULT_CSS = """
+    PickTextScreen {
+        align: center middle;
+    }
+    PickTextScreen #pick-box {
+        width: 72;
+        max-width: 90%;
+        height: auto;
+        max-height: 90%;
+        border: round $primary;
+        background: $surface;
+        padding: 1 1;
+    }
+    PickTextScreen #pick-title {
+        text-style: bold;
+    }
+    PickTextScreen #pick-hint {
+        color: $text-muted;
+    }
+    PickTextScreen #pick-description {
+        height: 1fr;
+        min-height: 1;
+        overflow-x: hidden;
+    }
+    PickTextScreen #pick-list {
+        border: round $panel;
+    }
+    PickTextScreen #pick-list Static {
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    PickTextScreen #pick-error {
+        height: auto;
+        min-height: 1;
+        color: $error;
+    }
+    PickTextScreen #pick-actions {
+        height: auto;
+    }
+    """
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        options: Sequence[tuple[str, str]],
+        confirm_label: str,
+        cancel_label: str,
+        hint: str = "",
+        placeholder: str = "",
+        selected: str = "",
+        validate: Callable[[str, str], str] | None = None,
+        with_input: bool = True,
+        id: str | None = None,
+    ) -> None:
+        super().__init__(id=id)
+        self.pick_title = title
+        self.pick_hint = hint
+        self.options = tuple(options)
+        self.confirm_label = confirm_label
+        self.cancel_label = cancel_label
+        self.placeholder = placeholder
+        self.selected = selected
+        self.validate = validate
+        self.with_input = with_input
+
+    def compose(self) -> ComposeResult:
+        """装配说明、选项列表、输入框、错误提示与两个按钮。"""
+        values = [value for value, _ in self.options]
+        initial = values.index(self.selected) if self.selected in values else 0
+        with Vertical(id="pick-box"):
+            with VerticalScroll(id="pick-description"):
+                yield Static(plain_text(self.pick_title), id="pick-title", markup=False)
+                if self.pick_hint:
+                    yield Static(plain_text(self.pick_hint), id="pick-hint", markup=False)
+            yield _PickList(
+                *(ListItem(Static(plain_text(label), markup=False)) for _, label in self.options),
+                initial_index=initial,
+                id="pick-list",
+            )
+            if self.with_input:
+                yield Input(placeholder=self.placeholder, id="pick-input")
+            yield Static("", id="pick-error", markup=False)
+            yield ButtonFlow(
+                ("pick-confirm", self.confirm_label, "primary"),
+                ("pick-cancel", self.cancel_label),
+                id="pick-actions",
+            )
+
+    def on_mount(self) -> None:
+        """限定列表高度，有输入框时聚焦输入框，否则聚焦列表。"""
+        self.query_one("#pick-list", ListView).styles.height = self._list_height()
+        focus_now(self._entry())
+        self.call_after_refresh(self._fit)
+
+    def _entry(self) -> Widget:
+        return self.query_one("#pick-input" if self.with_input else "#pick-list")
+
+    def on_resize(self, event: events.Resize) -> None:
+        self.call_after_refresh(self._fit)
+
+    def _list_height(self) -> int:
+        # 列表边框占两行。
+        return min(max(len(self.options), 1), self.LIST_ROWS) + 2
+
+    def _fit(self) -> None:
+        if not self.is_mounted:
+            return
+        # 输入框占三行；错误提示在窄屏下可能折行，按实际内容计高。
+        error = self.query_one("#pick-error", Static)
+        width = max(self.query_one("#pick-box").content_region.width, 1)
+        error_rows = max(error.get_content_height(self.size, self.size, width), 1)
+        _fit_dialog(self, "pick", self._list_height() + (3 if self.with_input else 0) + error_rows)
+
+    def action_move_pick(self, delta: int) -> None:
+        """键位动作：在输入框或按钮上移动列表高亮。"""
+        pick_list = self.query_one("#pick-list", ListView)
+        if delta < 0:
+            pick_list.action_cursor_up()
+        else:
+            pick_list.action_cursor_down()
+
+    @on(ListView.Selected, "#pick-list")
+    def _on_picked(self, event: ListView.Selected) -> None:
+        # 单击选项后回到输入框继续填写。
+        if self.with_input:
+            focus_now(self._entry())
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """改动输入时清除上次的错误提示。"""
+        error = self.query_one("#pick-error", Static)
+        if str(error.content):
+            error.update("")
+            self.call_after_refresh(self._fit)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """回车提交。"""
+        self.submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """按钮提交或取消。"""
+        if event.button.id == "pick-confirm":
+            self.submit()
+        elif event.button.id == "pick-cancel":
+            self.dismiss(None)
+
+    def key_escape(self) -> None:
+        """Esc 取消。"""
+        self.dismiss(None)
+
+    def submit(self) -> None:
+        """校验并提交高亮项与输入文本；校验失败时显示原因且不关闭。"""
+        index = highlighted_index(self.query_one("#pick-list", ListView))
+        if index is None or index >= len(self.options):
+            return
+        value = self.options[index][0]
+        text = self.query_one("#pick-input", Input).value.strip() if self.with_input else ""
+        error = self.validate(value, text) if self.validate is not None else ""
+        if error:
+            self.query_one("#pick-error", Static).update(plain_text(error))
+            focus_now(self._entry())
+            self.call_after_refresh(self._fit)
+            return
+        self.dismiss((value, text))
+
+
+def ask_pick_text(
+    app: App[Any],
+    *,
+    title: str,
+    options: Sequence[tuple[str, str]],
+    confirm_label: str,
+    cancel_label: str,
+    callback: Callable[[tuple[str, str] | None], None],
+    hint: str = "",
+    placeholder: str = "",
+    selected: str = "",
+    validate: Callable[[str, str], str] | None = None,
+) -> None:
+    """弹出「选一项并输入文本」的模态框，把 ``(取值, 文本)`` 交给回调；取消时为 ``None``。"""
+    screen = PickTextScreen(
+        title=title,
+        options=options,
+        confirm_label=confirm_label,
+        cancel_label=cancel_label,
+        hint=hint,
+        placeholder=placeholder,
+        selected=selected,
+        validate=validate,
+    )
+    push_screen(app, screen, callback)
+
+
+def ask_pick(
+    app: App[Any],
+    *,
+    title: str,
+    options: Sequence[tuple[str, str]],
+    confirm_label: str,
+    cancel_label: str,
+    callback: Callable[[str | None], None],
+    hint: str = "",
+    selected: str = "",
+) -> None:
+    """弹出列表单选的模态框，把选中的取值交给回调；取消时为 ``None``。"""
+    screen = PickTextScreen(
+        title=title,
+        options=options,
+        confirm_label=confirm_label,
+        cancel_label=cancel_label,
+        hint=hint,
+        selected=selected,
+        with_input=False,
+    )
+    push_screen(app, screen, lambda result: callback(None if result is None else result[0]))
 
 
 def _fit_dialog(screen: Screen[Any], prefix: str, input_height: int = 0) -> None:

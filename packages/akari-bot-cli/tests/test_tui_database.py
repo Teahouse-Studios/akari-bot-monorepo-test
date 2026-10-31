@@ -208,7 +208,7 @@ async def _test_write_keeps_the_page_and_recounts():
         await pilot.pause()
         await _select_row(pilot, page, 0)
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         await _confirm_write(app, pilot)
         await page.wait_for_idle()
@@ -244,7 +244,7 @@ async def _test_save_asks_for_confirmation():
         await _select_row(pilot, page, 0)
         before = page.status_text
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await page.wait_for_idle()
         await pilot.pause()
         asked, pending = list(source.writes), page.pending
@@ -272,7 +272,7 @@ async def _test_multi_column_save_is_one_call():
         await _select_table(pilot, page, "stored_data")
         await _select_row(pilot, page, 0)
         page.set_editor_value("value", '{"a": 2}')
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         pending = page.pending
         await _confirm_write(app, pilot)
@@ -295,7 +295,7 @@ async def _test_unchanged_editor_writes_nothing():
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
         await _select_row(pilot, page, 0)
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
 
         opened = type(app.screen).__name__
@@ -351,13 +351,13 @@ async def _test_insert_asks_for_confirmation():
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
         await _select_row(pilot, page, 0)
-        await pilot.press("i")
+        await pilot.press("n")
         await pilot.pause()
         mode = page.insert_mode
         empty = page.editor_values()
         key = page.selected_key
         page.set_editor_value("load", "true")
-        await pilot.press("i")
+        await pilot.press("n")
         await pilot.pause()
         asked = list(source.inserted)
         await _confirm_write(app, pilot)
@@ -382,14 +382,14 @@ async def _test_insert_can_set_primary_key():
 
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
-        await pilot.press("i")
+        await pilot.press("n")
         await pilot.pause()
         pk_input = page.query_one("#editor-pk-input", compat.Input)
         editable = pk_input.display
         readonly = page.query_one("#editor-pk", compat.Static).display
         pk_input.value = "wordle"
         page.set_editor_value("load", "true")
-        await pilot.press("i")
+        await pilot.press("n")
         await pilot.pause()
         await _confirm_write(app, pilot)
         await page.wait_for_idle()
@@ -500,7 +500,7 @@ async def _test_cancel_clears_pending():
         await _select_table(pilot, page, "module_status")
         await _select_row(pilot, page, 0)
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         pending = page.pending is not None
         await pilot.press("escape")
@@ -508,7 +508,7 @@ async def _test_cancel_clears_pending():
         cleared = page.pending is None
         restored = page.editor_values()
 
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         reopened = type(app.screen).__name__
         status = page.status_text
@@ -538,7 +538,7 @@ async def _test_write_failure_reports_reason():
         await _select_row(pilot, page, 0)
         before = page.status_text
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         await _confirm_write(app, pilot)
         await page.wait_for_idle()
@@ -575,7 +575,7 @@ async def _test_page_still_usable_after_failure():
         await _select_table(pilot, page, "module_status")
         await _select_row(pilot, page, 0)
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         await _confirm_write(app, pilot)
         await page.wait_for_idle()
@@ -589,7 +589,7 @@ async def _test_page_still_usable_after_failure():
         await _select_row(pilot, page, 0)
         filled = page.editor_values()
         page.set_editor_value("load", "false")
-        await pilot.press("s")
+        await pilot.press("ctrl+s")
         await pilot.pause()
         await _confirm_write(app, pilot)
         await page.wait_for_idle()
@@ -669,7 +669,7 @@ async def _test_paging_walks_pages():
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
         first = (page.page.page_number, page.page.pages, len(page.row_texts()), page.pager_states())
-        await pilot.press("n")
+        await pilot.press("right_square_bracket")
         await page.wait_for_idle()
         await pilot.pause()
         second = (page.page.page_number, page.offset, len(page.row_texts()))
@@ -714,10 +714,10 @@ async def _test_page_turns_skip_the_count():
 
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
-        await pilot.press("n")
+        await pilot.press("right_square_bracket")
         await page.wait_for_idle()
         await pilot.pause()
-        await pilot.press("n")
+        await pilot.press("right_square_bracket")
         await page.wait_for_idle()
         await pilot.pause()
         caption = page.caption_text()
@@ -741,7 +741,7 @@ async def _test_paging_stops_at_last_page():
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
         before = len(source.reads)
-        await pilot.press("n")
+        await pilot.press("right_square_bracket")
         await page.wait_for_idle()
         await pilot.pause()
         status = page.status_text
@@ -763,7 +763,7 @@ async def _test_filter_narrows_rows():
 
     async def body(app, page, pilot, source):
         await _select_table(pilot, page, "module_status")
-        await pilot.press("n")
+        await pilot.press("right_square_bracket")
         await page.wait_for_idle()
         await pilot.pause()
         page.action_add_filter()
@@ -1003,10 +1003,11 @@ async def _test_offset_clamps_to_last_page():
 
 
 # 各终端尺寸下控件可用区域的最小宽高；窄屏纵向排列，宽屏横向排列。
+# 按钮栏在页底，编辑区只含标题、主键行与字段区。
 GEOMETRY_CASES = {
-    (60, 20): {"#row-list": (20, 5), "#editor-pane": (40, 8), "#editor-fields": (36, 1)},
-    (80, 24): {"#row-list": (30, 6), "#editor-pane": (60, 10), "#editor-fields": (56, 3)},
-    (120, 34): {"#row-list": (40, 20), "#editor-pane": (32, 28), "#editor-fields": (28, 20)},
+    (60, 20): {"#row-list": (20, 4), "#editor-pane": (40, 7), "#editor-fields": (36, 3)},
+    (80, 24): {"#row-list": (30, 6), "#editor-pane": (60, 10), "#editor-fields": (56, 5)},
+    (120, 34): {"#row-list": (40, 20), "#editor-pane": (32, 26), "#editor-fields": (28, 22)},
 }
 
 

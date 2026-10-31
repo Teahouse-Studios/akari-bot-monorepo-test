@@ -319,6 +319,30 @@ async def _test_form_hint_reads_widget_text():
     return hint == i18n.t("cli.tui.config.hint_table_empty")
 
 
+async def _test_bool_field_toggles_and_saves():
+    # 适配器配置表都带 enable：布尔行须能切换、读取并写入，且切换不触发页面动作。
+    table = "bot_demo"
+    source = StaticConfigSource(
+        (table,),
+        {table: (ConfigField(key="enable", table=table, kind="bool", type_name="bool", value=False),)},
+    )
+
+    async def body(app, page, pilot, chosen):
+        await page.wait_for_idle()
+        await pilot.pause()
+        row = page.row_for("enable")
+        before = row.text
+        row.query_one(compat.Button).press()
+        await pilot.pause()
+        after = row.text
+        saved = await page.save()
+        await pilot.press("q")
+        return before, after, saved, list(chosen.applied)
+
+    before, after, saved, applied = await _with_page(body, source)
+    return before == "false" and after == "true" and saved and applied == [(table, "enable", "true")]
+
+
 async def _test_low_frequency_bindings_stay_out_of_footer():
     # 工具栏操作从页脚隐藏，为 80 列终端保留全局快捷键空间。
     async def body(app, page, pilot, source):
@@ -337,8 +361,8 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
         count == 1
         and width <= 80
         and "open-editor" in buttons
-        and visible == ("s",)
-        and hidden == ("o", "f", "t", "ctrl+r", "escape")
+        and visible == ("ctrl+s",)
+        and hidden == ("o", "f", "t", "r", "escape")
     )
 
 
@@ -577,6 +601,7 @@ async def test_tui_config(tester: Tester):
         await tester.test(_test_mode_switch_asks_before_switching, "切模式前先问")
         await tester.test(_test_raw_edits_count_as_dirty, "原始文本的编辑也算脏值")
         await tester.test(_test_form_hint_reads_widget_text, "表单区提示可按纯文本读回")
+        await tester.test(_test_bool_field_toggles_and_saves, "布尔项可切换并写入")
         await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
         await tester.test(_test_editor_command_resolution, "编辑器命令按 VISUAL 与 EDITOR 解析")
         await tester.test(_test_derived_instance_table_keeps_its_own_file, "实例表按派生表名定位文件")

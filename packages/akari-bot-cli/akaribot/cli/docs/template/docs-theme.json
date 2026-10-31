@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "name": "bundled",
+  "version": "1.0.0",
+  "theme_dir": "theme",
+  "vitepress": "1.6.4",
+  "node": ">=18",
+  "install_mode": "ci",
+  "config": {
+    "search": {
+      "provider": "local"
+    }
+  }
+}

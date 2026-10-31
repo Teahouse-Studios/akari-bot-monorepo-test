@@ -10,19 +10,26 @@ import json
 import os
 import re
 import shutil
+import textwrap
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
-from .config import DocsConfig
-from .model import DocCatalog, DocPackage, DocsError, page_url
+from .config import DocsConfig, site_asset_path
+from .model import DocCatalog, DocPackage, DocPage, DocsError, page_url
+from .theme import ThemeSpec, bundled_theme
 
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"})
 ATTACHMENT_SUFFIXES = frozenset({".txt", ".pdf"})
 ALLOWED_SUFFIXES = frozenset({".md"}) | IMAGE_SUFFIXES | ATTACHMENT_SUFFIXES
-TEMPLATE_DIR = Path(__file__).resolve().parent / "template"
 CONFIG_HEADER = "// 由 akaribot docs 生成，请勿手工修改。"
 # 文档里的 ``{{I18N:key}}`` 是机器人模板语法；Vue 会把双花括号当插值，行内代码需显式 v-pre。
+V_PRE_RULE = """const render = md.renderer.rules.code_inline
+if (!render) return
+md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
+  const html = render(tokens, idx, options, env, self)
+  return tokens[idx].content.includes("{{") ? html.replace("<code", "<code v-pre") : html
+}"""
 MARKDOWN_CONFIG = """  markdown: {
     config(md) {
       const render = md.renderer.rules.code_inline
@@ -59,6 +66,7 @@ def generate(
     src_dir: Path,
     config: DocsConfig,
     *,
+    theme: ThemeSpec | None = None,
     link_packages: Iterable[DocPackage] | None = None,
 ) -> None:
     """按目录与配置生成整个站点源目录。
@@ -66,10 +74,12 @@ def generate(
     :param catalog: 参与构建的文档目录。
     :param src_dir: 目标源目录，必须位于实例的 ``cache/docs`` 下。
     :param config: 实例文档配置。
+    :param theme: 主题；缺省使用 CLI 内置主题。
     :param link_packages: 用于跨包链接重写的全部包；缺省只用 ``catalog``。子集构建时传入完整目录，
         使指向未选包的源码相对链接仍能折算成站点地址。
     :raises DocsError: 目标路径越界、包 key 非法或源文件经符号链接逃逸。
     """
+    spec = theme or bundled_theme()
     source = _checked_source_dir(src_dir, config)
     if source.exists():
         shutil.rmtree(source)
@@ -82,8 +92,9 @@ def generate(
         _write_group_page(source, group, packages)
     for package in catalog.packages:
         _copy_package(source, package, roots)
-    _write_vitepress_config(source, catalog.packages, groups, config)
-    _write_theme(source)
+    assets = _prepare_site_assets(source, config)
+    _write_vitepress_config(source, catalog.packages, groups, config, spec, assets)
+    _write_theme(source, spec)
 
 
 def collect_files(doc_path: Path) -> list[tuple[str, Path]]:
@@ -259,52 +270,263 @@ def _write_group_page(source: Path, group: str, packages: Sequence[DocPackage]) 
     (directory / f"{group_slug(group)}.md").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def _prepare_site_assets(source: Path, config: DocsConfig) -> tuple[str, str]:
+    return (
+        _site_asset_url(source, config, config.site.logo, "site-logo"),
+        _site_asset_url(source, config, config.site.favicon, "site-favicon"),
+    )
+
+
+def _site_asset_url(source: Path, config: DocsConfig, value: str, stem: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    path = site_asset_path(config.root, text)
+    if path is None:
+        if text.startswith("/"):
+            base = config.base
+            if base == "/" or text.startswith(base):
+                return text
+            return f"{base.rstrip('/')}{text}"
+        return text
+    name = f"{stem}{path.suffix.lower()}"
+    target = source / "public" / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, target)
+    return f"{config.base}{name}"
+
+
 def _write_vitepress_config(
-    source: Path, packages: Sequence[DocPackage], groups: dict[str, list[DocPackage]], config: DocsConfig
+    source: Path,
+    packages: Sequence[DocPackage],
+    groups: dict[str, list[DocPackage]],
+    config: DocsConfig,
+    theme: ThemeSpec,
+    assets: tuple[str, str],
 ) -> None:
     directory = source / ".vitepress"
     directory.mkdir(parents=True, exist_ok=True)
+    logo, favicon = assets
+    color = config.theme.color
     nav = [{"text": _group_title(group), "link": page_url(items[0].key, "index.md")} for group, items in groups.items()]
+    theme_key = str(theme.config.get("theme_config_key") or "")
     sidebar: dict[str, list[dict[str, object]]] = {}
     for package in packages:
-        items = [{"text": page.title, "link": page_url(package.key, page.path)} for page in package.pages]
-        if not items:
-            items = [{"text": "概览", "link": page_url(package.key, "index.md")}]
-        sidebar[f"/{package.key}/"] = [{"text": package.title, "collapsed": False, "items": items}]
-    payload = {
+        items = _native_page_items(package, akari=bool(theme_key))
+        sidebar[f"/{package.key}/"] = [
+            {
+                "text": package.title,
+                "link": page_url(package.key, "index.md"),
+                "collapsed": False,
+                "items": items,
+            }
+        ]
+    search = theme.config.get("search")
+    if not isinstance(search, Mapping):
+        search = {"provider": "local"}
+    theme_config: dict[str, object] = {
+        "nav": nav,
+        "sidebar": sidebar,
+        "search": dict(search),
+    }
+    if theme_key:
+        app_bar: dict[str, object] = {"title": config.site.title}
+        if logo:
+            app_bar["logo"] = logo
+        akari: dict[str, object] = {
+            "appBar": app_bar,
+            "sidebar": {"items": _akari_sidebar(groups, config)},
+            "footer": {"message": "由 AkariBot 文档引擎生成"},
+            "search": {"enabled": True},
+        }
+        if color:
+            akari["settings"] = {"defaults": {"color": color}}
+        theme_config[theme_key] = akari
+    elif logo:
+        theme_config["logo"] = logo
+    head_tags: list[list[object]] = []
+    if favicon:
+        head_tags.append(["link", {"rel": "icon", "href": favicon}])
+    if color and not theme_key:
+        head_tags.append(["style", {}, _brand_css(color)])
+    payload: dict[str, object] = {
         "title": config.site.title,
         "description": config.site.title,
         "lang": config.site.lang,
         "base": config.base,
-        "cleanUrls": True,
+        "cleanUrls": bool(theme.config.get("clean_urls", True)),
         "lastUpdated": False,
         "ignoreDeadLinks": True,
-        "themeConfig": {
-            "nav": nav,
-            "sidebar": sidebar,
-            "search": {"provider": "local"},
-        },
+        "themeConfig": theme_config,
     }
-    text = (
-        f"{CONFIG_HEADER}\n"
-        'import { defineConfig } from "vitepress"\n\n'
-        "export default defineConfig({\n"
-        f"  ...{json.dumps(payload, ensure_ascii=False, indent=2)},\n"
-        f"{MARKDOWN_CONFIG}\n"
-        "})\n"
+    if "appearance" in theme.config:
+        payload["appearance"] = bool(theme.config["appearance"])
+
+    imports = ['import { defineConfig } from "vitepress"']
+    head_export = _theme_module(theme, "head", imports)
+    markdown_export = _theme_module(theme, "markdown", imports)
+    parts = [
+        CONFIG_HEADER,
+        *imports,
+        "",
+        "export default defineConfig({",
+        f"  ...{json.dumps(payload, ensure_ascii=False, indent=2)},",
+    ]
+    if head_export and head_tags:
+        parts.append(f"  head: [...{head_export}(), ...{json.dumps(head_tags, ensure_ascii=False)}],")
+    elif head_export:
+        parts.append(f"  head: {head_export}(),")
+    elif head_tags:
+        parts.append(f"  head: [...{json.dumps(head_tags, ensure_ascii=False)}],")
+    if markdown_export:
+        parts.append(_markdown_block(markdown_export))
+    else:
+        parts.append(MARKDOWN_CONFIG)
+    prefixes = theme.config.get("custom_element_prefixes")
+    if isinstance(prefixes, list) and prefixes:
+        prefix_json = json.dumps([str(prefix) for prefix in prefixes], ensure_ascii=False)
+        parts.append(
+            "  vue: {\n"
+            "    template: { compilerOptions: { isCustomElement: (tag) => "
+            f"{prefix_json}.some((prefix) => tag.startsWith(prefix)) }} }},\n"
+            "  },"
+        )
+    parts.append("})")
+    (directory / "config.mts").write_text("\n".join(parts) + "\n", encoding="utf-8")
+
+
+def _brand_css(color: str) -> str:
+    return (
+        ":root{"
+        f"--vp-c-brand-1:{color};--vp-c-brand-2:{color};--vp-c-brand-3:{color};"
+        f"--vp-c-brand-soft:color-mix(in srgb,{color} 16%,transparent)"
+        "}"
     )
-    (directory / "config.mts").write_text(text, encoding="utf-8")
 
 
-def _write_theme(source: Path) -> None:
+def _theme_module(theme: ThemeSpec, kind: str, imports: list[str]) -> str:
+    module = str(theme.config.get(f"{kind}_module") or "").strip()
+    export = str(theme.config.get(f"{kind}_export") or "").strip()
+    if not module or not export:
+        return ""
+    imports.append(f'import {{ {export} }} from "./theme/{module}"')
+    return export
+
+
+def _markdown_block(export: str) -> str:
+    rule = textwrap.indent(V_PRE_RULE, " " * 8)
+    return (
+        "  markdown: {\n"
+        '    theme: { light: "github-light", dark: "github-dark" },\n'
+        "    headers: { level: [2, 3] },\n"
+        "    config: (md) => {\n"
+        f"      {export}(md)\n"
+        f"{rule}\n"
+        "    },\n"
+        "  },"
+    )
+
+
+def _akari_sidebar(groups: dict[str, list[DocPackage]], config: DocsConfig) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = [{"text": "首页", "link": "/", "icon": config.icons.get("home") or "home"}]
+    for group, packages in groups.items():
+        item: dict[str, object] = {
+            "text": _group_title(group),
+            "collapsed": False,
+            "items": _sidebar_children(packages),
+        }
+        icon = config.icons.get(group)
+        if icon:
+            item["icon"] = icon
+        result.append(item)
+    return result
+
+
+def _sidebar_children(packages: Sequence[DocPackage]) -> list[dict[str, object]]:
+    categorized: dict[str, list[DocPackage]] = {}
+    direct: list[DocPackage] = []
+    for package in packages:
+        if package.category:
+            categorized.setdefault(package.category, []).append(package)
+        else:
+            direct.append(package)
+    children = [
+        {
+            "text": category,
+            "collapsed": False,
+            "items": [_sidebar_package(package) for package in items],
+        }
+        for category, items in sorted(categorized.items(), key=_category_sort_key)
+    ]
+    children.extend(_sidebar_package(package) for package in direct)
+    return children
+
+
+def _category_sort_key(item: tuple[str, list[DocPackage]]) -> tuple[int, str]:
+    category, packages = item
+    return (min(package.category_order for package in packages), category)
+
+
+def _sidebar_package(package: DocPackage) -> dict[str, object]:
+    if _uses_parallel_tabs(package):
+        tabs = _package_tabs(package)
+        return {"text": package.title, "link": tabs[0]["link"], "tabs": tabs}
+    items = [{"text": page.title, "link": page_url(package.key, page.path)} for page in package.pages]
+    if not items:
+        items = [{"text": "概览", "link": page_url(package.key, "index.md")}]
+    return {
+        "text": package.title,
+        "link": page_url(package.key, "index.md"),
+        "collapsed": False,
+        "items": items,
+    }
+
+
+def _uses_parallel_tabs(package: DocPackage) -> bool:
+    # 模块统一使用平行页面；其他包只要提供 development.md 也按同一结构处理。
+    if len(package.pages) <= 1:
+        return False
+    return package.group == "module" or any(Path(page.path).name == "development.md" for page in package.pages)
+
+
+def _package_tabs(package: DocPackage) -> list[dict[str, object]]:
+    tabs = [{"text": _page_tab_title(page), "link": page_url(package.key, page.path)} for page in package.pages]
+    if not tabs:
+        tabs = [{"text": "使用方法", "link": page_url(package.key, "index.md")}]
+    return tabs
+
+
+def _native_page_items(package: DocPackage, *, akari: bool) -> list[dict[str, object]]:
+    pages = list(package.pages)
+    parallel = akari and _uses_parallel_tabs(package)
+    if parallel:
+        # Akari 主题用标签切换开发页，开发页不进入侧栏；其他主题保留全部页面。
+        pages = [page for page in pages if Path(page.path).name != "development.md"]
+    items = [
+        {
+            "text": _page_tab_title(page) if parallel else page.title,
+            "link": page_url(package.key, page.path),
+        }
+        for page in pages
+    ]
+    if not items:
+        label = "使用方法" if parallel else "概览"
+        items = [{"text": label, "link": page_url(package.key, "index.md")}]
+    return items
+
+
+def _page_tab_title(page: DocPage) -> str:
+    path = Path(page.path)
+    if path.name == "index.md":
+        return "使用方法"
+    if path.name == "development.md":
+        return "安装与开发"
+    return page.title or path.stem
+
+
+def _write_theme(source: Path, theme: ThemeSpec) -> None:
     directory = source / ".vitepress" / "theme"
-    template = TEMPLATE_DIR / "theme"
-    if template.is_dir():
-        shutil.copytree(template, directory, dirs_exist_ok=True)
-        return
-    directory.mkdir(parents=True, exist_ok=True)
-    for name in ("index.ts", "custom.css"):
-        (directory / name).write_text("", encoding="utf-8")
+    shutil.copytree(theme.theme_dir, directory, dirs_exist_ok=True)
 
 
 def _grouped(packages: Iterable[DocPackage]) -> dict[str, list[DocPackage]]:

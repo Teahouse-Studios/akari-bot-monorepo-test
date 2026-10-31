@@ -1,7 +1,9 @@
 schema = 1
-title = "Mojira 漏洞查询"
+title = "bugtracker"
 summary = "查询 Mojira 漏洞并附带中文翻译与页面截图。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "bugtracker"

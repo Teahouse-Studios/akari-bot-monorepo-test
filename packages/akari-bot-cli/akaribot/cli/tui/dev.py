@@ -691,6 +691,134 @@ class PackageLayout:
         )
 
 
+class NewPackageScreen(compat.Screen):
+    """新建包对话框：名称、类型、目录与生成选项。
+
+    确认时校验名称，合法则返回 ``akaribot new`` 的参数，非法时在对话框内提示且不关闭；
+    Esc 或「关闭」返回 ``None``。
+
+    :param kind: 初始脚手架类型，``module`` 或 ``adapter``。
+    """
+
+    DEFAULT_CSS = """
+    NewPackageScreen {
+        align: center middle;
+    }
+    NewPackageScreen #new-box {
+        width: 76;
+        max-width: 95%;
+        height: auto;
+        max-height: 95%;
+        border: round $primary;
+        background: $surface;
+        padding: 1 1;
+    }
+    NewPackageScreen #new-title {
+        text-style: bold;
+    }
+    NewPackageScreen #new-fields, NewPackageScreen #new-switches {
+        height: 3;
+    }
+    NewPackageScreen #new-name, NewPackageScreen #new-dir {
+        width: 1fr;
+    }
+    NewPackageScreen #new-kind {
+        width: auto;
+        margin: 0 1;
+    }
+    NewPackageScreen #new-config, NewPackageScreen #new-database, NewPackageScreen #new-tests {
+        width: auto;
+        padding: 1 0 0 1;
+    }
+    NewPackageScreen #new-hint {
+        height: auto;
+        padding: 0 1;
+        color: $text-muted;
+    }
+    NewPackageScreen #new-buttons {
+        height: auto;
+    }
+    """
+
+    def __init__(self, kind: str = TARGET_MODULE) -> None:
+        super().__init__()
+        self.kind = kind
+        self.hint_text = i18n.t("cli.tui.dev.new_skeleton_hint")
+
+    def compose(self) -> compat.ComposeResult:
+        """装配名称、类型、目录、开关、提示与按钮。"""
+        with compat.Vertical(id="new-box"):
+            yield compat.Static(compat.plain_text(i18n.t("cli.tui.dev.new_title")), id="new-title", markup=False)
+            with compat.Horizontal(id="new-fields"):
+                yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_name_placeholder"), id="new-name")
+                yield compat.Button(self._kind_label(), id="new-kind")
+                yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_dir_placeholder"), id="new-dir")
+            with compat.Horizontal(id="new-switches"):
+                yield compat.Checkbox(i18n.t("cli.tui.dev.new_config"), id="new-config")
+                yield compat.Checkbox(i18n.t("cli.tui.dev.new_database"), id="new-database")
+                yield compat.Checkbox(i18n.t("cli.tui.dev.new_tests"), value=True, id="new-tests")
+            yield compat.Static(compat.plain_text(self.hint_text, style="dim"), id="new-hint", markup=False)
+            yield compat.ButtonFlow(
+                ("new-confirm", i18n.t("cli.tui.dev.new_confirm"), "primary"),
+                ("new-close", i18n.t("cli.tui.dev.new_close")),
+                id="new-buttons",
+            )
+
+    def on_mount(self) -> None:
+        """同步类型相关选项并聚焦名称输入框。"""
+        self._sync_kind()
+        compat.focus_now(self.query_one("#new-name", compat.Input))
+
+    def _kind_label(self) -> str:
+        label_key = "cli.tui.dev.new_kind_adapter" if self.kind == TARGET_ADAPTER else "cli.tui.dev.new_kind_module"
+        return i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t(label_key))
+
+    def _sync_kind(self) -> None:
+        self.query_one("#new-kind", compat.Button).label = self._kind_label()
+        # 适配器脚手架不支持 database 与 tests 选项。
+        adapter = self.kind == TARGET_ADAPTER
+        for selector in ("#new-database", "#new-tests"):
+            self.query_one(selector, compat.Checkbox).disabled = adapter
+
+    def on_button_pressed(self, event: compat.Button.Pressed) -> None:
+        """切换类型、提交或关闭。"""
+        if event.button.id == "new-kind":
+            self.kind = TARGET_ADAPTER if self.kind == TARGET_MODULE else TARGET_MODULE
+            self._sync_kind()
+        elif event.button.id == "new-confirm":
+            self.submit()
+        elif event.button.id == "new-close":
+            self.dismiss(None)
+
+    def on_input_submitted(self, event: compat.Input.Submitted) -> None:
+        """任一输入框回车即提交。"""
+        self.submit()
+
+    def key_escape(self) -> None:
+        """Esc 关闭对话框，放弃输入。"""
+        self.dismiss(None)
+
+    def submit(self) -> None:
+        """校验名称；合法时关闭对话框并返回参数。"""
+        name = str(self.query_one("#new-name", compat.Input).value).strip()
+        rejection = _name_rejection(name)
+        if rejection:
+            self.hint_text = rejection
+            self.query_one("#new-hint", compat.Static).update(compat.plain_text(rejection, style="bold red"))
+            compat.focus_now(self.query_one("#new-name", compat.Input))
+            return
+        self.dismiss(
+            {
+                "name": name,
+                "target": self.kind,
+                "directory": str(self.query_one("#new-dir", compat.Input).value).strip(),
+                "config": bool(self.query_one("#new-config", compat.Checkbox).value),
+                "database": bool(self.query_one("#new-database", compat.Checkbox).value),
+                "tests": bool(self.query_one("#new-tests", compat.Checkbox).value),
+            }
+        )
+
+
 class DevPage(compat.Vertical):
     """开发页面，提供包清单、测试与脚手架操作。
 
@@ -739,42 +867,14 @@ class DevPage(compat.Vertical):
         text-overflow: ellipsis;
     }
     DevPage #actions {
-        height: 3;
+        height: auto;
         padding: 0 0 0 1;
     }
-    DevPage #actions Button {
-        min-width: 0;
-    }
     DevPage #test-path {
-        width: 1fr;
+        margin: 0 0 0 1;
     }
     DevPage #action-panel {
         height: auto;
-    }
-    DevPage #new-form {
-        height: auto;
-    }
-    DevPage #new-fields, DevPage #new-switches, DevPage #new-buttons {
-        height: 3;
-        padding: 0 0 0 1;
-    }
-    DevPage #new-name, DevPage #new-dir {
-        width: 1fr;
-    }
-    DevPage #new-kind {
-        width: auto;
-        margin: 0 0 0 1;
-    }
-    DevPage #new-config, DevPage #new-database, DevPage #new-tests {
-        width: auto;
-        padding: 1 0 0 1;
-    }
-    DevPage #new-hint {
-        width: 1fr;
-        padding: 1 0 0 1;
-        color: $text-muted;
-        text-wrap: nowrap;
-        text-overflow: ellipsis;
     }
     DevPage #action-output-title {
         height: 1;
@@ -838,9 +938,7 @@ class DevPage(compat.Vertical):
         self._output_revealed: bool = False
         self._action_result: ActionResult | None = None
         self._cancel_requested: bool = False
-        self._new_form_open: bool = False
         self._new_kind: str = TARGET_MODULE
-        self._new_hint: str = ""
 
     def compose(self) -> compat.ComposeResult:
 
@@ -848,31 +946,17 @@ class DevPage(compat.Vertical):
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="package-list")
         with compat.Vertical(id="action-panel"):
-            with compat.Vertical(id="new-form"):
-                with compat.Horizontal(id="new-fields"):
-                    yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_name_placeholder"), id="new-name")
-                    yield compat.Button(
-                        i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t("cli.tui.dev.new_kind_module")),
-                        id="new-kind",
-                    )
-                    yield compat.Input(placeholder=i18n.t("cli.tui.dev.new_dir_placeholder"), id="new-dir")
-                with compat.Horizontal(id="new-switches"):
-                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_config"), id="new-config")
-                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_database"), id="new-database")
-                    yield compat.Checkbox(i18n.t("cli.tui.dev.new_tests"), value=True, id="new-tests")
-                with compat.Horizontal(id="new-buttons"):
-                    yield compat.Button(i18n.t("cli.tui.dev.new_confirm"), id="new-confirm", variant="primary")
-                    yield compat.Button(i18n.t("cli.tui.dev.new_close"), id="new-close")
-                    yield compat.Static("", id="new-hint", markup=False)
             yield compat.Static("", id="action-output-title", markup=False)
             with compat.VerticalScroll(id="action-output"):
                 yield compat.Static(i18n.t("cli.tui.dev.output_empty"), id="action-output-text", markup=False)
-        with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.dev.action_refresh"), id="refresh")
-            yield compat.Button(i18n.t("cli.tui.dev.action_run_tests"), id="run-tests")
-            yield compat.Input(placeholder=i18n.t("cli.tui.dev.test_path_placeholder"), id="test-path")
-            yield compat.Button(i18n.t("cli.tui.dev.action_new_package"), id="new-package")
-            yield compat.Button(i18n.t("cli.tui.dev.action_focus_output"), id="focus-output")
+        yield compat.Input(placeholder=i18n.t("cli.tui.dev.test_path_placeholder"), id="test-path")
+        yield compat.ButtonFlow(
+            ("run-tests", compat.key_hint(i18n.t("cli.tui.dev.action_run_tests"), "t"), "primary"),
+            ("new-package", compat.key_hint(i18n.t("cli.tui.dev.action_new_package"), "n")),
+            ("focus-output", compat.key_hint(i18n.t("cli.tui.dev.action_focus_output"), "o")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.dev.action_refresh"), "r")),
+            id="actions",
+        )
         yield compat.Static(i18n.t("cli.tui.dev.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -969,13 +1053,14 @@ class DevPage(compat.Vertical):
 
     @property
     def new_form_open(self) -> bool:
-        """返回新建包表单是否展开。"""
-        return self._new_form_open
+        """返回新建包对话框是否打开。"""
+        return isinstance(self.app.screen, NewPackageScreen)
 
     @property
     def new_hint_text(self) -> str:
-        """返回新建包表单的校验提示。"""
-        return self._new_hint
+        """返回新建包对话框的提示；对话框未打开时为空串。"""
+        screen = self.app.screen
+        return screen.hint_text if isinstance(screen, NewPackageScreen) else ""
 
     def action_lines(self) -> tuple[str, ...]:
 
@@ -1051,71 +1136,22 @@ class DevPage(compat.Vertical):
         self._start_action(ACTION_TEST, {"args": tokens, "cwd": self._snapshot.workspace_root})
 
     def open_new_form(self) -> None:
-        """展开新建包表单并聚焦名称输入框；操作运行期间不可用。"""
+        """打开新建包对话框；操作运行期间不可用。"""
         if self._action_kind:
             self._set_status(i18n.t("cli.tui.dev.status_action_busy", label=_action_label(self._action_kind)))
             return
-        self._new_form_open = True
-        self._sync_new_kind()
-        self._show_new_hint(i18n.t("cli.tui.dev.new_skeleton_hint"))
-        self._render_action_panel()
-        compat.focus_now(self.query_one("#new-name", compat.Input))
+        compat.push_screen(self.app, NewPackageScreen(self._new_kind), self._on_new_package)
 
-    def close_new_form(self) -> None:
-        """收起新建包表单，放弃未提交的输入。"""
-        if not self._new_form_open:
+    def _on_new_package(self, payload: dict[str, Any] | None) -> None:
+        if payload is None:
+            self.focus_primary()
             return
-        self._new_form_open = False
-        self._clear_new_hint()
-        self._render_action_panel()
-        self.focus_primary()
-
-    def submit_new_form(self) -> None:
-        """校验表单后启动 ``akaribot new``；名称非法时只提示，不执行。"""
+        # 记住上次选的类型，下次打开对话框时沿用。
+        self._new_kind = str(payload["target"])
         if not self._action_ready():
             return
-        name = self._input_text("#new-name")
-        rejection = _name_rejection(name)
-        if rejection:
-            self._show_new_hint(rejection, warning=True)
-            return
-        self._new_form_open = False
-        self._clear_new_hint()
-        self._start_action(
-            ACTION_NEW,
-            {
-                "name": name,
-                "target": self._new_kind,
-                "directory": self._input_text("#new-dir"),
-                "config": self._switch_value("#new-config"),
-                "database": self._switch_value("#new-database"),
-                "tests": self._switch_value("#new-tests"),
-                "cwd": self._snapshot.workspace_root,
-            },
-        )
-        # 隐藏表单后需转移焦点，避免键盘输入仍作用于隐藏控件。
+        self._start_action(ACTION_NEW, {**payload, "cwd": self._snapshot.workspace_root})
         self.focus_primary()
-
-    def toggle_new_kind(self) -> None:
-        """切换模块或适配器脚手架类型。"""
-        self._new_kind = TARGET_ADAPTER if self._new_kind == TARGET_MODULE else TARGET_MODULE
-        self._sync_new_kind()
-
-    def _sync_new_kind(self) -> None:
-        label_key = (
-            "cli.tui.dev.new_kind_adapter" if self._new_kind == TARGET_ADAPTER else "cli.tui.dev.new_kind_module"
-        )
-        self.query_one("#new-kind", compat.Button).label = i18n.t("cli.tui.dev.new_kind_toggle", kind=i18n.t(label_key))
-        # 适配器脚手架不支持 database 与 tests 选项，切换类型时清除对应值。
-        adapter = self._new_kind == TARGET_ADAPTER
-        for selector in ("#new-database", "#new-tests"):
-            self.query_one(selector, compat.Checkbox).disabled = adapter
-
-    def _switch_value(self, selector: str) -> bool:
-        try:
-            return bool(self.query_one(selector, compat.Checkbox).value)
-        except Exception:  # noqa: BLE001 - 控件缺失时按未勾选处理
-            return False
 
     def cancel_running_action(self) -> None:
         """请求终止运行中的操作；空闲时不调用数据源。"""
@@ -1191,19 +1227,6 @@ class DevPage(compat.Vertical):
             key = "cli.tui.dev.status_action_done" if result.ok else "cli.tui.dev.status_action_failed"
             conclusion = i18n.t(key, code=result.returncode)
         return i18n.t("cli.tui.dev.status_separator").join((conclusion, i18n.t("cli.tui.dev.status_next_step")))
-
-    def _show_new_hint(self, message: str, *, warning: bool = False) -> None:
-        self._new_hint = message
-        style = "bold red" if warning else "dim"
-        self.query_one("#new-hint", compat.Static).update(compat.plain_text(message, style=style))
-        if warning:
-            self._set_status(message)
-
-    def _clear_new_hint(self) -> None:
-        self._new_hint = ""
-        hint = self._action_widget("#new-hint")
-        if hint is not None:
-            hint.update(compat.plain_text(""))
 
     def _input_text(self, selector: str) -> str:
         try:
@@ -1366,9 +1389,6 @@ class DevPage(compat.Vertical):
 
     def _render_action_panel(self) -> None:
 
-        form = self._action_widget("#new-form")
-        if form is not None:
-            form.display = self._new_form_open
         visible = bool(self._action_kind or self._action_lines or self._output_revealed)
         for selector in ("#action-output-title", "#action-output"):
             widget = self._action_widget(selector)
@@ -1456,16 +1476,6 @@ class DevPage(compat.Vertical):
             self.open_new_form()
         elif button_id == "focus-output":
             self.focus_output()
-        elif button_id == "new-kind":
-            self.toggle_new_kind()
-        elif button_id == "new-confirm":
-            self.submit_new_form()
-        elif button_id == "new-close":
-            self.close_new_form()
-
-    @compat.on(compat.Input.Submitted, "#new-name")
-    def _on_new_name_submitted(self, event: compat.Input.Submitted) -> None:
-        self.submit_new_form()
 
     @compat.on(compat.Input.Submitted, "#test-path")
     def _on_test_path_submitted(self, event: compat.Input.Submitted) -> None:
@@ -1503,8 +1513,6 @@ class DevPage(compat.Vertical):
 
         if self._action_kind:
             self.cancel_running_action()
-        elif self._new_form_open:
-            self.close_new_form()
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

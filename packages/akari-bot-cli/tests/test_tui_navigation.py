@@ -216,7 +216,11 @@ async def _test_subtitle_names_the_current_instance():
 
 async def _test_page_step_keys_walk_the_sidebar():
     async def body(app, pilot):
-        keys = [(child.id or "").removeprefix("nav-") for child in app.query_one("#nav").children if not child.disabled]
+        keys = [
+            (child.id or "").removeprefix("nav-")
+            for child in app.query_one("#nav").children
+            if (child.id or "").startswith("nav-")
+        ]
         app.show_page(keys[0])
         visited = []
         for _ in keys:
@@ -391,13 +395,13 @@ async def _test_sidebar_browse_does_not_switch():
         nav.focus()
         await pilot.pause()
         before = (app.active_page, _nav_index(app))
-        await pilot.press("down")
+        await pilot.press("up")
         await pilot.pause()
         after = (app.active_page, _nav_index(app))
         await pilot.press("q")
         return before, after
 
-    # 侧栏顺序由 NAV_PLAN 决定；此处验证方向键仅移动高亮，不切换页面。
+    # 侧栏顺序由 NAV_PLAN 决定；模块页上方是同组页面，此处验证方向键仅移动高亮，不切换页面。
     before, after = await _with_app(body)
     return (
         before == ("modules", _page_index("modules"))
@@ -412,7 +416,7 @@ async def _test_sidebar_selection_switches_page():
         nav = app.query_one("#nav", compat.ListView)
         nav.focus()
         await pilot.pause()
-        await pilot.press("down")
+        await pilot.press("up")
         await pilot.pause()
         highlighted = _nav_index(app)
         await pilot.press("enter")
@@ -436,11 +440,11 @@ async def _test_sidebar_selection_switches_page():
 
 
 async def _test_sidebar_groups_follow_the_plan():
-    # 侧栏按 NAV_GROUPS 分四组：分组标题禁用且不可高亮，页面条目仍覆盖 PAGES 的全部页面。
+    # 侧栏按 NAV_GROUPS 分四组：分组标题带展开标记，页面条目覆盖 PAGES 的全部页面。
     async def body(app, pilot):
         nav = app.query_one("#nav", compat.ListView)
         items = [
-            (child.id or "", child.disabled, tuple(str(label.render()) for label in child.query(compat.Label)))
+            (child.id or "", tuple(str(label.render()) for label in child.query(compat.Label)))
             for child in nav.children
         ]
         await pilot.press("q")
@@ -448,15 +452,58 @@ async def _test_sidebar_groups_follow_the_plan():
 
     items = await _with_app(body)
     expected = [
-        (f"navgroup-{position}" if kind == "group" else f"nav-{value}", kind == "group")
-        for position, (kind, value) in enumerate(NAV_PLAN)
+        f"navgroup-{position}" if kind == "group" else f"nav-{value}" for position, (kind, value) in enumerate(NAV_PLAN)
     ]
-    observed = [(item_id, disabled) for item_id, disabled, _ in items]
     titles = {key: i18n.t(title_key) for key, title_key, _ in PAGES}
-    group_texts = [labels[0] for item_id, disabled, labels in items if disabled and labels]
-    plan_groups = [i18n.t(value) for kind, value in NAV_PLAN if kind == "group"]
-    pages = {item_id.removeprefix("nav-") for item_id, disabled, _ in items if not disabled}
-    return observed == expected and len(NAV_GROUPS) == 4 and pages == set(titles) and group_texts == plan_groups
+    group_texts = [labels[0] for item_id, labels in items if item_id.startswith("navgroup-") and labels]
+    plan_groups = [f"▾ {i18n.t(value)}" for kind, value in NAV_PLAN if kind == "group"]
+    pages = {item_id.removeprefix("nav-") for item_id, _ in items if item_id.startswith("nav-")}
+    return (
+        [item_id for item_id, _ in items] == expected
+        and len(NAV_GROUPS) == 4
+        and pages == set(titles)
+        and group_texts == plan_groups
+    )
+
+
+async def _test_sidebar_groups_fold():
+    # 折叠后组内页面隐藏且方向键跳过；当前页在折叠组内时高亮落在分组标题，展开后恢复。
+    page_position = NAV_PLAN.index(("page", "modules"))
+    header = max(position for position in range(page_position) if NAV_PLAN[position][0] == "group")
+    end = next(position for position in range(header + 1, len(NAV_PLAN)) if NAV_PLAN[position][0] == "group")
+    members = [f"#nav-{value}" for _, value in NAV_PLAN[header + 1 : end]]
+
+    async def body(app, pilot):
+        nav = app.query_one("#nav", compat.ListView)
+
+        async def press(key):
+            await pilot.press(key)
+            await pilot.pause()
+            return compat.highlighted_index(nav), [app.query_one(member).display for member in members]
+
+        nav.focus()
+        await pilot.pause()
+        folded = await press("left")
+        skipped = (await press("down"))[0]
+        app.show_page("modules")
+        await pilot.pause()
+        revealed = compat.highlighted_index(nav)
+        nav.focus()
+        await pilot.pause()
+        unfolded = await press("right")
+        toggled = await press("enter")
+        await pilot.press("q")
+        return folded, skipped, revealed, unfolded, toggled
+
+    folded, skipped, revealed, unfolded, toggled = await _with_app(body)
+    hidden = [False] * len(members)
+    return (
+        folded == (header, hidden)
+        and skipped == end
+        and revealed == header
+        and unfolded == (header, [True] * len(members))
+        and toggled == (header, hidden)
+    )
 
 
 async def _test_sidebar_items_have_single_label():
@@ -532,6 +579,7 @@ async def test_tui_navigation(tester: Tester):
     await tester.test(_test_subtitle_names_the_current_instance, "标题栏写明当前实例")
     await tester.test(_test_page_step_keys_walk_the_sidebar, "翻页键逐页走且越界折返")
     await tester.test(_test_sidebar_groups_follow_the_plan, "侧栏按四组归类且页面齐全")
+    await tester.test(_test_sidebar_groups_fold, "侧栏分组可折叠展开且方向键跳过折叠页面")
     await tester.test(_test_sidebar_items_have_single_label, "侧栏选项只显示页面名称")
     await tester.test(_test_sidebar_fits_eighty_by_twenty_four, "80 列 24 行下侧栏一次显示全部页面")
     await tester.test(_test_help_overlay_lists_page_keys, "帮助浮层列出本页键位")

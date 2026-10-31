@@ -1,7 +1,9 @@
 schema = 1
-title = "Wordle 猜词"
+title = "wordle"
 summary = "猜测五个字母的英文单词，六次机会内完成挑战。"
 order = 500
+category = "娱乐互动"
+category_order = 500
 
 [[meta.modules]]
 name = "wordle"

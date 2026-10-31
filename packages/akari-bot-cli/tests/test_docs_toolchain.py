@@ -2,12 +2,14 @@
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from akaribot.cli.docs import toolchain
 from akaribot.cli.docs.model import DocsError
+from akaribot.cli.docs.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
 
 
@@ -22,14 +24,16 @@ def _template(base: Path) -> Path:
     return directory
 
 
-def _installer(calls: list[tuple[list[str], Path]]):
+def _installer(calls: list[tuple[list[str], Path]], version: str | None = None):
+    installed_version = version or toolchain.VITEPRESS_VERSION
+
     def run(argv, cwd: Path):
         calls.append((list(argv), Path(cwd)))
         binary = Path(cwd) / toolchain.VITEPRESS_BIN
         binary.parent.mkdir(parents=True, exist_ok=True)
         binary.write_text("", encoding="utf-8")
         (Path(cwd) / toolchain.VITEPRESS_PACKAGE).write_text(
-            json.dumps({"version": toolchain.VITEPRESS_VERSION}), encoding="utf-8"
+            json.dumps({"version": installed_version}), encoding="utf-8"
         )
         return subprocess.CompletedProcess(list(argv), 0, "installed\n", "")
 
@@ -183,6 +187,25 @@ async def _test_run_build_argv_and_failure():
     )
 
 
+async def _test_run_build_streams_output_lines():
+    with TemporaryDirectory(prefix="akari-docs-tc-") as raw:
+        base = Path(raw)
+        docs = base / "docs"
+        binary = docs / toolchain.VITEPRESS_BIN
+        binary.parent.mkdir(parents=True)
+        binary.write_text("", encoding="utf-8")
+        script = "import sys; print('line one', flush=True); print('line two', file=sys.stderr); sys.exit(3)"
+        lines: list[str] = []
+        with patch.object(toolchain, "build_argv", return_value=[sys.executable, "-c", script]):
+            try:
+                toolchain.run_build(docs, base / "src", base / "out", log=lines.append)
+            except DocsError as exc:
+                error = str(exc)
+            else:
+                error = ""
+    return lines == ["line one", "line two"] and error == "cli.docs.error.build_failed"
+
+
 async def _test_run_build_requires_vitepress_binary():
     with TemporaryDirectory(prefix="akari-docs-tc-") as raw:
         base = Path(raw)
@@ -195,17 +218,64 @@ async def _test_run_build_requires_vitepress_binary():
     return error == "cli.docs.error.install_failed"
 
 
+async def _test_theme_node_requirement():
+    with patch.object(toolchain.shutil, "which", side_effect=lambda name: f"/usr/bin/{name}"):
+        with patch.object(
+            toolchain,
+            "_probe",
+            side_effect=lambda executable, flag: "v20.11.0" if executable.endswith("node") else "10.0.0",
+        ):
+            old = toolchain.detect(22)
+            accepted = toolchain.detect(18)
+    return not old.ready and accepted.ready and "< 22" in old.detail
+
+
+async def _test_external_theme_installs_dependencies():
+    with TemporaryDirectory(prefix="akari-docs-tc-") as raw:
+        base = Path(raw)
+        root = base / "template"
+        theme_dir = root / "docs/.vitepress/theme"
+        theme_dir.mkdir(parents=True)
+        theme = ThemeSpec(
+            name="demo",
+            version="1.0.0",
+            source="file:template",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=None,
+            vitepress_version="2.0.0-alpha.21",
+            node_major=22,
+            dependencies={"vitepress": "2.0.0-alpha.21", "vue": "^3.5.43", "@m3e/web": "2.10.2"},
+            install_mode="install",
+            config={},
+            digest="theme-digest",
+        )
+        calls: list[tuple[list[str], Path]] = []
+        target = toolchain.ensure_toolchain(base / "cache", theme=theme, runner=_installer(calls, "2.0.0-alpha.21"))
+        package = json.loads((target / "package.json").read_text(encoding="utf-8"))
+        stamp = json.loads((target / toolchain.THEME_STAMP).read_text(encoding="utf-8"))
+    return (
+        target == base / "cache" / "docs"
+        and calls[0][0] == ["npm", "install", "--no-audit", "--no-fund"]
+        and package["dependencies"] == theme.dependencies
+        and stamp["digest"] == "theme-digest"
+    )
+
+
 @func_case
 async def test_docs_toolchain(tester: Tester):
     """cli.docs.toolchain: Node 工具链探测与命令组装"""
     await tester.test(_test_node_version_parsing, "解析 node 主版本号")
     await tester.test(_test_detect_requires_node_eighteen, "node 主版本低于 18 时不可用")
     await tester.test(_test_detect_reports_missing_node, "缺少 node 时报告原因")
+    await tester.test(_test_theme_node_requirement, "主题可要求更高的 Node 主版本")
     await tester.test(_test_ensure_toolchain_runs_npm_ci, "复制模板并执行 npm ci")
     await tester.test(_test_ensure_toolchain_offline_without_dependencies, "离线且无依赖时失败")
     await tester.test(_test_ensure_toolchain_reuses_installed_modules, "已装依赖且版本一致时不重复安装")
     await tester.test(_test_ensure_toolchain_reinstalls_on_version_mismatch, "VitePress 版本不一致时重装")
+    await tester.test(_test_external_theme_installs_dependencies, "外部主题生成依赖并执行 npm install")
     await tester.test(_test_package_argv_wraps_npm_on_windows, "Windows 下经 cmd /c 启动 npm")
     await tester.test(_test_run_build_argv_and_failure, "构建命令参数与失败映射")
+    await tester.test(_test_run_build_streams_output_lines, "构建输出逐行交给日志回调")
     await tester.test(_test_run_build_requires_vitepress_binary, "缺少 VitePress 入口时失败")
     return tester

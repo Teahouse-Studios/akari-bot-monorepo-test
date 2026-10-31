@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -935,14 +935,34 @@ class BoolToggle(compat.Horizontal):
     :param classes: 附加的 CSS 类。
     """
 
+    DEFAULT_CSS = """
+    BoolToggle {
+        height: 3;
+    }
+    BoolToggle Button {
+        min-width: 10;
+    }
+    BoolToggle Static {
+        width: 1fr;
+        height: 3;
+        padding: 1 1 0 1;
+        color: $text-muted;
+    }
+    """
+
     def __init__(self, value: bool, *, classes: str | None = None, id: str | None = None) -> None:
         super().__init__(id=id, classes=classes)
         self._value = bool(value)
 
     def compose(self) -> compat.ComposeResult:
         """装配开关按钮与状态说明。"""
-        yield compat.Button(self.label_text(), classes="bool-button")
+        yield compat.Button(self.label_text(), classes="bool-button", variant="success" if self._value else "default")
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.config.bool_hint")), markup=False)
+
+    def on_button_pressed(self, event: compat.Button.Pressed) -> None:
+        """切换开关；事件不再上传，避免被所在页面当作动作按钮处理。"""
+        event.stop()
+        self.toggle()
 
     @property
     def value(self) -> bool:
@@ -980,6 +1000,32 @@ class FieldRow(compat.Vertical):
     :param header: 已按显示宽度对齐的表头文本。
     """
 
+    DEFAULT_CSS = """
+    FieldRow {
+        height: auto;
+        margin: 0 0 1 0;
+    }
+    FieldRow .field-header {
+        height: 1;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+        text-style: bold;
+    }
+    FieldRow .field-help {
+        height: auto;
+        color: $text-muted;
+    }
+    FieldRow .field-placeholder {
+        height: auto;
+    }
+    FieldRow .field-error {
+        height: auto;
+    }
+    FieldRow .field-input {
+        width: 1fr;
+    }
+    """
+
     def __init__(self, field: ConfigField, header: str, *, id: str | None = None) -> None:
         super().__init__(id=id)
         self.field = field
@@ -1011,7 +1057,7 @@ class FieldRow(compat.Vertical):
             switch = _optional_widget("Switch")
             if switch is not None:
                 return switch(value=bool(self.field.value), classes="field-control")
-            return BoolToggle(bool(self.field.value))
+            return BoolToggle(bool(self.field.value), classes="field-control")
         placeholder = i18n.t("cli.tui.config.list_placeholder") if self.field.kind == KIND_LIST else ""
         return compat.Input(
             self.field.edit_value,
@@ -1052,7 +1098,9 @@ class FieldRow(compat.Vertical):
 
     def focus_control(self) -> None:
         """聚焦本行控件。"""
-        self.control().focus()
+        control = self.control()
+        target = control.query_one(compat.Button) if isinstance(control, BoolToggle) else control
+        target.focus()
 
     def show_error(self, message: str) -> None:
         """在行内显示校验错误。"""
@@ -1066,6 +1114,221 @@ class FieldRow(compat.Vertical):
 
     def _error_widget(self) -> compat.Static:
         return self.query_one(".field-error", compat.Static)
+
+
+def plan_form_rows(rows: Sequence[FieldRow]) -> tuple[list[RawEntry], list[str]]:
+    """校验表单行并列出被更改的写入项，校验失败的行显示行内错误。
+
+    :param rows: 表单行。
+    :return: 写入项与错误说明。
+    """
+    # 未更改的字段保留原值，避免将表单不支持的嵌套结构提交给 ``config set``。
+    plan: list[RawEntry] = []
+    errors: list[str] = []
+    for row in rows:
+        row.clear_error()
+        field = row.field
+        if row.text == field.edit_value:
+            continue
+        ok, text, message = parse_field(field, row.text)
+        if not ok:
+            row.show_error(message)
+            errors.append(i18n.t("cli.tui.config.err_field", name=field.key, message=message))
+            continue
+        plan.append(RawEntry(section=field.section, key=field.key, text=text))
+    return plan, errors
+
+
+def _form_order(field: ConfigField) -> tuple[bool, bool, str]:
+    return (field.key == "enable", not field.is_placeholder, field.key)
+
+
+class ConfigFormScreen(compat.Screen):
+    """逐项填写一张配置表的模态框。
+
+    待填写项排在最前并以空输入框呈现，留空不写入；``enable`` 排在最后，保证凭据先于启用写入。
+    写入失败时停在出错项，已写入的项不重复提交。关闭时返回已写入的项数。
+
+    :param title: 标题。
+    :param hint: 操作说明。
+    :param fields: 配置项。
+    :param apply: 写入一项，签名同 :meth:`ConfigSource.set_value`。
+    """
+
+    BINDINGS = [compat.bind("ctrl+s", "save", i18n.t("cli.tui.config.action_save"), show=False)]
+
+    DEFAULT_CSS = """
+    ConfigFormScreen {
+        align: center middle;
+    }
+    ConfigFormScreen #form-box {
+        width: 84;
+        max-width: 95%;
+        height: 95%;
+        border: round $primary;
+        background: $surface;
+        padding: 0 1;
+    }
+    ConfigFormScreen #form-title {
+        text-style: bold;
+    }
+    ConfigFormScreen #form-hint {
+        color: $text-muted;
+    }
+    ConfigFormScreen #form-fields {
+        height: 1fr;
+        min-height: 3;
+        margin: 1 0 0 0;
+    }
+    ConfigFormScreen #form-status {
+        height: auto;
+        color: $text-muted;
+    }
+    ConfigFormScreen #form-actions {
+        height: auto;
+    }
+    """
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        hint: str,
+        fields: Sequence[ConfigField],
+        apply: Callable[[str, str, str], SetResult],
+    ) -> None:
+        super().__init__()
+        self.form_title = title
+        self.form_hint = hint
+        self.fields = tuple(sorted(fields, key=_form_order))
+        self.apply = apply
+        self._saving = False
+        self._written: dict[str, str] = {}
+        self._gate = compat.PendingConfirm()
+
+    def compose(self) -> compat.ComposeResult:
+        """装配说明、可滚动的字段区、状态行与按钮。"""
+        headers = aligned_headers(self.fields)
+        with compat.Vertical(id="form-box"):
+            yield compat.Static(compat.plain_text(self.form_title), id="form-title", markup=False)
+            yield compat.Static(compat.plain_text(self.form_hint), id="form-hint", markup=False)
+            with compat.VerticalScroll(id="form-fields"):
+                for field in self.fields:
+                    yield FieldRow(self._editable(field), headers[field.key])
+            yield compat.Static("", id="form-status", markup=False)
+            yield compat.ButtonFlow(
+                ("form-save", compat.key_hint(i18n.t("cli.tui.config.action_save"), "ctrl+s"), "primary"),
+                ("form-later", compat.key_hint(i18n.t("cli.tui.config.form_later"), "escape")),
+                id="form-actions",
+            )
+
+    @staticmethod
+    def _editable(field: ConfigField) -> ConfigField:
+        # 占位符不进输入框：留空即未填写，不必先删除模板文字，也不会把占位符写回配置。
+        if not field.is_placeholder:
+            return field
+        return replace(field, value=bool(field.default) if field.kind == KIND_BOOL else "", is_placeholder=False)
+
+    def on_mount(self) -> None:
+        """聚焦首个字段。"""
+        rows = self.rows()
+        if rows:
+            rows[0].focus_control()
+
+    def rows(self) -> tuple[FieldRow, ...]:
+        """返回全部表单行。"""
+        return tuple(self.query(FieldRow))
+
+    @property
+    def status_text(self) -> str:
+        """返回状态行当前文本。"""
+        return str(self.query_one("#form-status", compat.Static).render())
+
+    def _set_status(self, text: str) -> None:
+        self.query_one("#form-status", compat.Static).update(compat.plain_text(text))
+
+    def on_input_submitted(self, event: compat.Input.Submitted) -> None:
+        """回车移到下一项；保存须明确触发，避免填到一半就写入。"""
+        self.focus_next()
+
+    def on_button_pressed(self, event: compat.Button.Pressed) -> None:
+        """保存或稍后填写。"""
+        if event.button.id == "form-save":
+            self.action_save()
+        elif event.button.id == "form-later":
+            self.request_close()
+
+    def key_escape(self) -> None:
+        """Esc 等同稍后填写。"""
+        self.request_close()
+
+    def action_save(self) -> None:
+        """校验并写入被更改的项；全部成功后关闭。"""
+        if self._saving:
+            return
+        plan, errors = plan_form_rows(self.rows())
+        if errors:
+            self._set_status(i18n.t("cli.tui.config.form_invalid", count=len(errors)))
+            return
+        pending = [entry for entry in plan if self._written.get(entry.key) != entry.text]
+        if not pending:
+            self.dismiss(len(self._written))
+            return
+        self._saving = True
+        self.query_one("#form-save", compat.Button).disabled = True
+        self._set_status(i18n.t("cli.tui.config.form_saving", count=len(pending)))
+        self.run_worker(self._write(pending), group="config-form", exclusive=True)
+
+    async def _write(self, plan: Sequence[RawEntry]) -> None:
+        secret_keys = {field.key for field in self.fields if field.secret}
+        for entry in plan:
+            try:
+                result = await asyncio.to_thread(self.apply, entry.section, entry.key, entry.text)
+            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成行内错误
+                result = SetResult(False, i18n.t("cli.tui.config.form_write_failed", name=entry.key), str(error))
+            if result.ok:
+                self._written[entry.key] = entry.text
+                continue
+            # 密钥项只给概括说明：命令输出可能回显写入的值。
+            detail = result.message if entry.key in secret_keys else (result.detail or result.message)
+            self._show_failure(entry.key, detail)
+            return
+        self.dismiss(len(self._written))
+
+    def _show_failure(self, key: str, detail: str) -> None:
+        self._saving = False
+        self.query_one("#form-save", compat.Button).disabled = False
+        self._set_status(i18n.t("cli.tui.config.form_failed", name=key, count=len(self._written)))
+        row = next(row for row in self.rows() if row.field.key == key)
+        row.show_error(detail)
+        row.focus_control()
+        row.scroll_visible(animate=False)
+
+    def request_close(self) -> None:
+        """关闭对话框；有未写入的内容时先确认放弃。"""
+        if self._saving:
+            return
+        unsaved = any(
+            row.text != row.field.edit_value and row.text != self._written.get(row.field.key) for row in self.rows()
+        )
+        if not unsaved:
+            self.dismiss(len(self._written))
+            return
+        if not self._gate.accept("close"):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.config.form_discard_title"),
+            hint=i18n.t("cli.tui.config.form_discard_hint"),
+            options=(("discard", i18n.t("cli.tui.config.form_discard_confirm")),),
+            cancel_label=i18n.t("cli.tui.config.form_discard_cancel"),
+            callback=self._on_discard,
+        )
+
+    def _on_discard(self, choice: str | None) -> None:
+        self._gate.reset()
+        if choice == "discard":
+            self.dismiss(len(self._written))
 
 
 class RawTextEditor(compat.VerticalScroll):
@@ -1211,40 +1474,6 @@ class ConfigPage(compat.Vertical):
     ConfigPage .hidden {
         display: none;
     }
-    ConfigPage FieldRow {
-        height: auto;
-        margin: 0 0 1 0;
-    }
-    ConfigPage .field-header {
-        height: 1;
-        text-wrap: nowrap;
-        text-overflow: ellipsis;
-        text-style: bold;
-    }
-    ConfigPage .field-help {
-        height: auto;
-        color: $text-muted;
-    }
-    ConfigPage .field-placeholder {
-        height: auto;
-    }
-    ConfigPage .field-error {
-        height: auto;
-    }
-    ConfigPage .field-input {
-        width: 1fr;
-    }
-    ConfigPage BoolToggle {
-        height: 3;
-    }
-    ConfigPage BoolToggle Button {
-        min-width: 10;
-    }
-    ConfigPage BoolToggle Static {
-        height: 3;
-        padding: 1 1 0 1;
-        color: $text-muted;
-    }
     ConfigPage RawTextEditor Input {
         width: 1fr;
     }
@@ -1255,6 +1484,10 @@ class ConfigPage(compat.Vertical):
         height: 3;
         padding: 1 1 0 1;
         color: $text-muted;
+    }
+    ConfigPage #actions {
+        height: auto;
+        padding: 0 0 0 1;
     }
     ConfigPage #config-status {
         height: 2;
@@ -1268,13 +1501,14 @@ class ConfigPage(compat.Vertical):
     # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
     can_focus = True
 
-    # 低频操作由工具栏提供入口，页脚为全局键位保留空间。
+    # 低频操作由底部按钮栏提供入口，页脚为全局键位保留空间。
     BINDINGS = compat.bindings(
-        ("s", "save", i18n.t("cli.tui.config.action_save")),
+        # 保存用 ctrl+s：表单输入框聚焦时单字母由输入框接收，组合键在编辑中同样生效。
+        ("ctrl+s", "save", i18n.t("cli.tui.config.action_save")),
         ("o", "open_editor", i18n.t("cli.tui.config.action_open_editor"), False),
         ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form"), False),
         ("t", "mode_raw", i18n.t("cli.tui.config.action_mode_raw"), False),
-        ("ctrl+r", "reload", i18n.t("cli.tui.config.action_reload"), False),
+        ("r", "reload", i18n.t("cli.tui.config.action_reload"), False),
         ("escape", "focus_tables", i18n.t("cli.tui.config.action_focus_tables"), False),
     )
 
@@ -1312,15 +1546,15 @@ class ConfigPage(compat.Vertical):
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树：工具条、配置表列表、表单区、文本区、状态栏。"""
+        # 顶部只放视图切换与表概况，动作统一在底部按钮栏。
         with compat.Horizontal(id="config-toolbar"):
-            yield compat.Button(i18n.t("cli.tui.config.action_mode_form"), id="mode-form", variant="primary")
-            yield compat.Button(i18n.t("cli.tui.config.action_mode_raw"), id="mode-raw")
-            yield compat.Button(i18n.t("cli.tui.config.action_open_editor"), id="open-editor")
+            yield compat.Button(
+                compat.key_hint(i18n.t("cli.tui.config.action_mode_form"), "f"), id="mode-form", variant="primary"
+            )
+            yield compat.Button(compat.key_hint(i18n.t("cli.tui.config.action_mode_raw"), "t"), id="mode-raw")
             yield compat.Static(
                 compat.plain_text(i18n.t("cli.tui.config.caption_unloaded")), id="config-caption", markup=False
             )
-            yield compat.Button(i18n.t("cli.tui.config.action_save"), id="save", variant="success")
-            yield compat.Button(i18n.t("cli.tui.config.action_reload"), id="reload")
         with compat.Horizontal(id="config-body"):
             yield compat.ListView(id="table-list")
             with compat.VerticalScroll(id="form-pane"):
@@ -1329,6 +1563,12 @@ class ConfigPage(compat.Vertical):
                 )
             with compat.VerticalScroll(id="raw-pane", classes="hidden"):
                 yield RawTextEditor("", id="raw-editor")
+        yield compat.ButtonFlow(
+            ("save", compat.key_hint(i18n.t("cli.tui.config.action_save"), "ctrl+s"), "primary"),
+            ("open-editor", compat.key_hint(i18n.t("cli.tui.config.action_open_editor"), "o")),
+            ("reload", compat.key_hint(i18n.t("cli.tui.config.action_reload"), "r")),
+            id="actions",
+        )
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
@@ -1715,21 +1955,7 @@ class ConfigPage(compat.Vertical):
         return await self._apply(plan)
 
     def _plan_form_save(self) -> tuple[list[RawEntry], list[str]]:
-        # 未更改的字段保留原值，避免将表单不支持的嵌套结构提交给 ``config set``。
-        plan: list[RawEntry] = []
-        errors: list[str] = []
-        for row in self.field_rows():
-            row.clear_error()
-            field = row.field
-            if row.text == field.edit_value:
-                continue
-            ok, text, message = parse_field(field, row.text)
-            if not ok:
-                row.show_error(message)
-                errors.append(i18n.t("cli.tui.config.err_field", name=field.key, message=message))
-                continue
-            plan.append(RawEntry(section=field.section, key=field.key, text=text))
-        return plan, errors
+        return plan_form_rows(self.field_rows())
 
     async def _plan_raw_save(self) -> list[RawEntry] | None:
         parsed = parse_toml_text(self.raw_editor().text)

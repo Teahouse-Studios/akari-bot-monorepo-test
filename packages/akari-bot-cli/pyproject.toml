@@ -20,7 +20,7 @@ dependencies = [
     "jinja2>=3.1.6,<4.0.0",
     "packaging>=26.0",
     "psutil>=7.0.0,<8.0.0",
-    "rich>=13.0.0,<15.0.0",
+    "rich>=13.0.0,<16.0.0",
     # 紧钉：Textual 跨大版本有 API 变动史，全部调用经 akaribot.cli.tui._compat 收口
     "textual==8.2.8",
     "tomlkit>=0.14.0,<1.0.0",

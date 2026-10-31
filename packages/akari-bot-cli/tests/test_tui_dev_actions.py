@@ -36,12 +36,18 @@ FOLLOW_OUTPUT = tuple(f"line {index:03d}" for index in range(1, 41))
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dev.json"
 # 使用独立命名空间，避免其他测试重新发布语言快照后覆盖本用例的固定文案。
 LOCALE_NAMESPACE = "akaribot-cli-dev-actions"
-FORM_CONTROLS = (
+PAGE_CONTROLS = (
     "refresh",
     "run-tests",
     "test-path",
     "new-package",
     "focus-output",
+    "action-output-title",
+    "action-output",
+    "action-output-text",
+)
+# 新建包的输入都在 n 打开的对话框里。
+DIALOG_CONTROLS = (
     "new-name",
     "new-kind",
     "new-config",
@@ -50,9 +56,6 @@ FORM_CONTROLS = (
     "new-dir",
     "new-confirm",
     "new-close",
-    "action-output-title",
-    "action-output",
-    "action-output-text",
 )
 _KEEP_ALIVE: list[TemporaryDirectory] = []
 
@@ -127,8 +130,13 @@ async def _test_keys_and_controls_are_present():
     async def body(app, page, pilot, source):
         keys = {binding.key for binding in DevPage.BINDINGS}
         shown = {binding.key for binding in DevPage.BINDINGS if binding.show}
-        missing = [name for name in FORM_CONTROLS if len(page.query(f"#{name}")) != 1]
+        missing = [name for name in PAGE_CONTROLS if len(page.query(f"#{name}")) != 1]
         active = set(app.screen.active_bindings)
+        await pilot.press("n")
+        await pilot.pause()
+        missing += [name for name in DIALOG_CONTROLS if len(app.screen.query(f"#{name}")) != 1]
+        await pilot.press("escape")
+        await pilot.pause()
         await pilot.press("q")
         return keys, shown, missing, active
 
@@ -495,7 +503,7 @@ async def _test_new_form_rejects_invalid_names():
         opened = page.new_form_open
         rejected = []
         for candidate in ("", "bad name", "bad/name", "bad\\name"):
-            _set_input(page, "#new-name", candidate)
+            _set_input(app.screen, "#new-name", candidate)
             await pilot.press("enter")
             await pilot.pause()
             rejected.append((bool(page.new_hint_text), page.new_form_open))
@@ -511,7 +519,7 @@ async def _test_new_form_shows_skeleton_hint():
         await pilot.press("n")
         await pilot.pause()
         hint = page.new_hint_text
-        label = str(page.query_one("#new-kind", compat.Button).label)
+        label = str(app.screen.query_one("#new-kind", compat.Button).label)
         await pilot.press("escape")
         await pilot.pause()
         await pilot.press("q")
@@ -529,15 +537,15 @@ async def _test_kind_toggle_switches_label():
     async def body(app, page, pilot, source):
         await pilot.press("n")
         await pilot.pause()
-        module_label = str(page.query_one("#new-kind", compat.Button).label)
-        page.query_one("#new-kind", compat.Button).press()
+        module_label = str(app.screen.query_one("#new-kind", compat.Button).label)
+        app.screen.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
-        adapter_label = str(page.query_one("#new-kind", compat.Button).label)
-        adapter_disabled = page.query_one("#new-database", compat.Checkbox).disabled
-        page.query_one("#new-kind", compat.Button).press()
+        adapter_label = str(app.screen.query_one("#new-kind", compat.Button).label)
+        adapter_disabled = app.screen.query_one("#new-database", compat.Checkbox).disabled
+        app.screen.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
-        back = str(page.query_one("#new-kind", compat.Button).label)
-        module_disabled = page.query_one("#new-database", compat.Checkbox).disabled
+        back = str(app.screen.query_one("#new-kind", compat.Button).label)
+        module_disabled = app.screen.query_one("#new-database", compat.Checkbox).disabled
         await pilot.press("q")
         return module_label, adapter_label, adapter_disabled, back, module_disabled
 
@@ -555,19 +563,20 @@ async def _test_new_form_submits_adapter():
     async def body(app, page, pilot, source):
         await pilot.press("n")
         await pilot.pause()
-        _set_input(page, "#new-name", "demo")
-        page.query_one("#new-kind", compat.Button).press()
+        _set_input(app.screen, "#new-name", "demo")
+        app.screen.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
-        adapter_label = str(page.query_one("#new-kind", compat.Button).label)
+        adapter_label = str(app.screen.query_one("#new-kind", compat.Button).label)
         # 切换类型后焦点仍在按钮上，须聚焦名称输入框后再按回车提交。
-        compat.focus_now(page.query_one("#new-name", compat.Input))
+        compat.focus_now(app.screen.query_one("#new-name", compat.Input))
         await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
         actions = source.actions
         form_open = page.new_form_open
+        # 对话框关闭后焦点回到页面内，不悬空。
         focused = app.focused
-        hidden_focus = focused is None or page.query_one("#new-form") in focused.ancestors_with_self
+        hidden_focus = focused is None or page not in focused.ancestors_with_self
         await pilot.press("q")
         return actions, adapter_label, form_open, hidden_focus
 
@@ -598,10 +607,10 @@ async def _test_new_form_carries_switches():
     async def body(app, page, pilot, source):
         await pilot.press("n")
         await pilot.pause()
-        _set_input(page, "#new-name", "demo")
-        page.query_one("#new-config", compat.Checkbox).value = True
-        page.query_one("#new-database", compat.Checkbox).value = True
-        page.query_one("#new-tests", compat.Checkbox).value = False
+        _set_input(app.screen, "#new-name", "demo")
+        app.screen.query_one("#new-config", compat.Checkbox).value = True
+        app.screen.query_one("#new-database", compat.Checkbox).value = True
+        app.screen.query_one("#new-tests", compat.Checkbox).value = False
         await pilot.pause()
         await pilot.press("enter")
         await page.wait_for_idle()
@@ -670,7 +679,7 @@ async def _test_new_success_reloads_packages():
         before = source.calls["load"]
         await pilot.press("n")
         await pilot.pause()
-        _set_input(page, "#new-name", "demo")
+        _set_input(app.screen, "#new-name", "demo")
         await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
@@ -691,7 +700,7 @@ async def _test_new_failure_keeps_cache():
         before = chosen.calls["load"]
         await pilot.press("n")
         await pilot.pause()
-        _set_input(page, "#new-name", "demo")
+        _set_input(app.screen, "#new-name", "demo")
         await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()

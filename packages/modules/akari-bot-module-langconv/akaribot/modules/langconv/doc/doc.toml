@@ -1,7 +1,9 @@
 schema = 1
-title = "简繁转换"
+title = "langconv"
 summary = "在简体中文、繁体（香港）与繁体（台湾）之间转换文本。"
 order = 500
+category = "实用工具"
+category_order = 400
 
 [[meta.modules]]
 name = "langconv"

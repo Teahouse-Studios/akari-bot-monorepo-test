@@ -13,11 +13,12 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from .catalog import load_catalog
-from .config import DocsConfig, load_config
+from .config import DocsConfig, load_config, site_asset_path
 from .generator import collect_files, generate
 from .model import BuildResult, DocCatalog, DocsError
 from .state import load_state, save_build_state
-from .toolchain import TEMPLATE_DIR, VITEPRESS_VERSION, detect, ensure_toolchain, run_build, template_version
+from .theme import ThemeSpec, bundled_theme, resolve_theme
+from .toolchain import LogSink, detect, ensure_toolchain, run_build
 
 Reporter = Callable[[str], None]
 
@@ -28,6 +29,7 @@ def build(
     force: bool = False,
     offline: bool = False,
     reporter: Reporter | None = None,
+    log: LogSink | None = None,
 ) -> BuildResult:
     """构建实例的文档站点。
 
@@ -36,6 +38,7 @@ def build(
     :param force: 为真时忽略指纹与既有输出。
     :param offline: 为真时禁止安装 Node 依赖。
     :param reporter: 阶段回调，参数为 ``toolchain`` / ``generate`` / ``build`` / ``done``。
+    :param log: 子进程输出行的回调，覆盖依赖安装与 VitePress 构建。
     :return: 构建结果。
     :raises DocsError: 目录过滤失败、工具链不可用或构建失败。
     """
@@ -46,8 +49,9 @@ def build(
     if keys:
         catalog = catalog.select(keys)
     config = load_config(instance)
+    theme = resolve_theme(config)
     out_dir = config.out_dir
-    fingerprint = fingerprint_catalog(catalog, config)
+    fingerprint = fingerprint_catalog(catalog, config, theme)
 
     previous = (load_state(instance).get("build") or {}).get("fingerprint")
     if not force and previous == fingerprint and (out_dir / "index.html").is_file():
@@ -59,18 +63,18 @@ def build(
             duration_ms=_elapsed_ms(started),
         )
 
-    toolchain = detect()
+    toolchain = detect(theme.node_major)
     if not toolchain.ready:
         raise DocsError("cli.docs.error.toolchain_missing", detail=toolchain.detail)
 
     notify("toolchain")
     cache_dir = Path(instance.root) / "cache"
-    docs_dir = ensure_toolchain(cache_dir, TEMPLATE_DIR, offline=offline)
+    docs_dir = ensure_toolchain(cache_dir, offline=offline, theme=theme, log=log)
     notify("generate")
     src_dir = config.cache_docs_dir / "src"
-    generate(catalog, src_dir, config, link_packages=full_catalog.packages)
+    generate(catalog, src_dir, config, theme=theme, link_packages=full_catalog.packages)
     notify("build")
-    log = run_build(docs_dir, src_dir, out_dir)
+    output = run_build(docs_dir, src_dir, out_dir, log=log)
     if not (out_dir / "index.html").is_file():
         raise DocsError("cli.docs.error.build_failed", reason="index.html is missing after build", path=str(out_dir))
     save_build_state(
@@ -87,25 +91,37 @@ def build(
         fingerprint=fingerprint,
         reused=False,
         duration_ms=_elapsed_ms(started),
-        log=log,
+        log=output,
     )
 
 
-def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig) -> str:
+def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpec | None = None) -> str:
     """计算构建输入指纹。
 
-    文档文件按内容参与摘要，因此改写页面、增删图片或调整基路径都会触发重建。
+    文档文件按内容参与摘要，因此改写页面、增删图片、切换主题或调整基路径都会触发重建。
     """
+    spec = theme or bundled_theme()
     digest = hashlib.sha256()
     head = {
         "schema": 1,
-        "template": template_version(TEMPLATE_DIR),
-        "vitepress": VITEPRESS_VERSION,
+        "theme": spec.name,
+        "theme_version": spec.version,
+        "theme_digest": spec.digest,
+        "vitepress": spec.vitepress_version,
         "base": config.base,
         "title": config.site.title,
         "lang": config.site.lang,
+        "logo": config.site.logo,
+        "favicon": config.site.favicon,
+        "icons": dict(sorted(config.icons.items())),
+        "theme_color": config.theme.color,
     }
     digest.update(json.dumps(head, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    for field in ("logo", "favicon"):
+        asset = site_asset_path(config.root, getattr(config.site, field))
+        if asset is not None:
+            digest.update(f"site-asset\0{field}\0{asset.name}\n".encode("utf-8"))
+            digest.update(_file_digest(asset))
     for package in sorted(catalog.packages, key=lambda item: item.key):
         digest.update(f"package\0{package.key}\0{package.version}\0{package.title}\n".encode("utf-8"))
         meta_path = package.doc_path / "doc.toml"

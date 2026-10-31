@@ -17,7 +17,7 @@ async def _test_run_buttons_remain_visible_after_resize():
             await pilot.resize_terminal(width, height)
             await pilot.pause()
             buttons = tuple(page.query("#actions Button"))
-            if len(buttons) != 6 or any(not page.region.contains_region(button.region) for button in buttons):
+            if len(buttons) != 5 or any(not page.region.contains_region(button.region) for button in buttons):
                 return False
             if page.query_one("#table-pane", compat.VerticalScroll).content_region.height < 3:
                 return False

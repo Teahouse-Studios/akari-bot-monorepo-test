@@ -217,6 +217,66 @@ def _test_doc_meta_defaults_and_corruption():
     )
 
 
+def _test_category_is_single_string():
+    with TemporaryDirectory(prefix="akari-docs-") as raw:
+        root = Path(raw)
+        specs = {
+            "akaribot.modules.one": _make_package(
+                root,
+                "akaribot.modules.one",
+                {
+                    "doc/index.md": "# One\n",
+                    "doc/doc.toml": 'category = "知识查询"\ncategory_order = 20\n',
+                },
+            ),
+            "akaribot.modules.many": _make_package(
+                root,
+                "akaribot.modules.many",
+                {
+                    "doc/index.md": "# Many\n",
+                    "doc/doc.toml": 'category = ["知识查询", "实用工具"]\n',
+                },
+            ),
+        }
+        payload = docs.collect(
+            entry_points=lambda: [
+                _EntryPoint("module-one", "akaribot.modules.one"),
+                _EntryPoint("module-many", "akaribot.modules.many"),
+            ],
+            find_spec=_locator(specs),
+        )
+    one = _item(payload, "module-one")
+    many = _item(payload, "module-many")
+    return (
+        one["category"] == "知识查询"
+        and one["category_order"] == 20
+        and many["category"] == ""
+        and any("category" in warning and "module-many" in warning for warning in payload["warnings"])
+    )
+
+
+def _test_development_page_sorts_last():
+    with TemporaryDirectory(prefix="akari-docs-") as raw:
+        root = Path(raw)
+        specs = {
+            "akaribot.modules.demo": _make_package(
+                root,
+                "akaribot.modules.demo",
+                {
+                    "doc/index.md": "# Demo\n",
+                    "doc/guide.md": "---\norder: 1\n---\n# 指南\n",
+                    "doc/development.md": "---\norder: 0\n---\n# 安装与开发\n",
+                },
+            )
+        }
+        payload = docs.collect(
+            entry_points=lambda: [_EntryPoint("module-demo", "akaribot.modules.demo")],
+            find_spec=_locator(specs),
+        )
+    pages = _item(payload, "module-demo")["pages"]
+    return [Path(page["path"]).name for page in pages] == ["index.md", "guide.md", "development.md"]
+
+
 def _test_hidden_package_is_skipped():
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
@@ -326,6 +386,41 @@ def _test_directory_scan_fallback():
     )
 
 
+def _test_stale_editable_metadata_is_supplemented():
+    # 可编辑安装的元数据早于源码新增的 akaribot.docs 声明时按源码补入并告警；普通安装不按源码补入。
+    with TemporaryDirectory(prefix="akari-docs-") as raw:
+        root = Path(raw)
+        core_spec = _make_package(root / "src", "akaribot.core", {"doc/index.md": "# Core\n"})
+        specs = {"akaribot.core": core_spec}
+        dists = []
+        for name, editable in (("coin", True), ("dice", False)):
+            source = root / f"akari-bot-module-{name}"
+            import_path = f"akaribot.modules.{name}"
+            specs[import_path] = _make_package(source, import_path, {"doc/index.md": f"# {name}\n"})
+            (source / "pyproject.toml").write_text(
+                f'[project]\nname = "akari-bot-module-{name}"\n\n'
+                f'[project.entry-points."akaribot.docs"]\nmodule-{name} = "{import_path}"\n',
+                encoding="utf-8",
+            )
+            direct_url = json.dumps({"url": source.as_uri(), "dir_info": {"editable": editable}})
+            dist = _Dist(f"akari-bot-module-{name}", "0.1.0", direct_url=direct_url)
+            dist.entry_points = []
+            dists.append(dist)
+        with patch.object(docs.importlib.metadata, "distributions", return_value=dists):
+            payload = docs.collect(
+                entry_points=lambda: [_EntryPoint("core", "akaribot.core", _Dist("akari-bot-core", "0.1.0"))],
+                find_spec=_locator(specs),
+                stale_entries=docs._stale_docs_entries,
+            )
+
+    keys = [item["key"] for item in payload["packages"]]
+    return (
+        keys == ["core", "module-coin"]
+        and _item(payload, "module-coin")["editable"] is True
+        and any(warning.startswith("module-coin:") for warning in payload["warnings"])
+    )
+
+
 def _test_main_output_contract():
     payload = {
         "schema": 1,
@@ -378,9 +473,12 @@ async def test_docs_entrypoint(tester: Tester):
     await tester.test(_test_metadata_and_sorting, "元数据字段与分组排序")
     await tester.test(_test_front_matter_overrides_titles, "front matter 覆盖标题与页面排序")
     await tester.test(_test_doc_meta_defaults_and_corruption, "doc.toml 缺省、覆盖与损坏告警")
+    await tester.test(_test_category_is_single_string, "分类只接受单个字符串")
+    await tester.test(_test_development_page_sorts_last, "开发页固定在页面列表末尾")
     await tester.test(_test_hidden_package_is_skipped, "hidden 包被跳过")
     await tester.test(_test_missing_documentation_is_reported, "无文档与无法定位的包产生告警")
     await tester.test(_test_symlink_escape_is_skipped, "符号链接逃逸被拒绝")
     await tester.test(_test_directory_scan_fallback, "entry point 为空时回退目录扫描")
+    await tester.test(_test_stale_editable_metadata_is_supplemented, "可编辑安装元数据过期时按源码声明补入并告警")
     await tester.test(_test_main_output_contract, "命令行 JSON、人类可读输出与参数错误")
     return tester

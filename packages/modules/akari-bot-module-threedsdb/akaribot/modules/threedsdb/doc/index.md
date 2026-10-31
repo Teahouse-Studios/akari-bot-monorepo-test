@@ -1,16 +1,8 @@
-# 3DS 应用数据库
+# 3dsdb
 
 在随包分发的 3DS 应用清单中按名称或 Title ID 检索，返回应用名称、UID、Title ID、版本、体积、产品编号与发行商。
 
 模块名 `3dsdb`，没有别名。
-
-## 安装
-
-```bash
-akaribot module add akari-bot-module-threedsdb
-```
-
-安装后在会话中由管理员用 `module enable 3dsdb` 开启。
 
 ## 命令
 
@@ -29,22 +21,3 @@ akaribot module add akari-bot-module-threedsdb
 - 没有任何命中时返回未找到提示。
 
 每个条目包含 `Name`、`UID`、`TitleID`、`Version`、`Size`、`Product Code`、`Publisher` 字段，按清单原值展示。
-
-## 配置项
-
-无。本包没有 `config.py`，`manifest.toml` 也未声明配置表。
-
-## 权限与平台能力
-
-- 命令对普通用户开放，不要求管理员或超级用户权限。
-- 未声明平台限制，所有已接入平台可用。
-- 结果以文本消息返回，不依赖图片或网络。
-
-## 数据表
-
-无。manifest 未声明 `owned_tables`。应用清单以只读 JSON 随包分发，位于 `assets/data/list_JP.json`、`list_TW.json`、`list_KR.json`、`list_US.json` 与 `list_GB.json`。
-
-## 依赖与外部服务
-
-- 依赖：`akari-bot-core`、`orjson`。
-- 不使用外部网络服务。

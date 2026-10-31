@@ -73,9 +73,13 @@ def _localized_comment(table: str, key: str, secret: bool) -> str | None:
     secret_table = "secret" if table == "config" else f"{table}_secret"
     candidates = [COMMENT_KEY.format(table=secret_table if secret else table, key=key)]
     candidates.append(COMMENT_KEY.format(table=table, key=key))
+    # 各适配器的 enable 共用一条注释，与配置写入路径的取键规则一致。
+    if table.startswith("bot_") and key == "enable" and not secret:
+        candidates.append(COMMENT_KEY.format(table="bot", key=key))
     for candidate in candidates:
         text = locale.t(candidate, locale_failed_prompt=False)
-        if text != candidate:
+        # 缺失的键可能回退为键名，也可能回退为 ``{I18N:键名}`` 标记。
+        if text not in (candidate, f"{{I18N:{candidate}}}"):
             return text
     return None
 

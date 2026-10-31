@@ -180,8 +180,8 @@ class MiscPage(compat.Vertical):
     """
 
     BINDINGS = compat.bindings(
-        ("m", "migrate", i18n.t("cli.tui.misc.bind_migrate")),
-        ("p", "dry_run", i18n.t("cli.tui.misc.bind_dry_run"), False),
+        ("enter", "migrate", i18n.t("cli.tui.misc.bind_migrate")),
+        ("p", "dry_run", i18n.t("cli.tui.misc.bind_dry_run")),
     )
 
     can_focus = True
@@ -205,7 +205,10 @@ class MiscPage(compat.Vertical):
             for flag, label_key in MIGRATE_SWITCHES:
                 yield compat.Checkbox(i18n.t(label_key), id=_option_id(flag))
         with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.misc.button_migrate"), id="migrate", variant="primary")
+            yield compat.Button(
+                compat.key_hint(i18n.t("cli.tui.misc.button_migrate"), "enter"), id="migrate", variant="primary"
+            )
+            yield compat.Button(compat.key_hint(i18n.t("cli.tui.misc.bind_dry_run"), "p"), id="dry-run")
         yield compat.Static("", id="migrate-output", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
@@ -213,6 +216,7 @@ class MiscPage(compat.Vertical):
 
         compat.set_text_selection(self, False)
         self._sync_output()
+        self._sync_actions()
 
     def activate(self) -> None:
         """本页没有需要预取的数据。"""
@@ -250,6 +254,7 @@ class MiscPage(compat.Vertical):
         """作废待确认的迁移；切页时由 :meth:`TuiApp.show_page` 调用。"""
         self._confirm.reset()
         self._pending_project = ""
+        self._sync_actions()
 
     def action_migrate(self) -> None:
 
@@ -293,6 +298,7 @@ class MiscPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.misc.cancelled"))
             return
         self._pending_project = project
+        self._sync_actions()
         # 输入框与确认框均响应回车，记录提交时刻以防止连续按键误确认。
         self._confirm.reset()
         self._confirm.accept(project)
@@ -385,6 +391,8 @@ class MiscPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         self.query_one("#migrate", compat.Button).disabled = self._busy
+        # 预演沿用最近一次预览或迁移的源目录；没有可用源目录时禁用。
+        self.query_one("#dry-run", compat.Button).disabled = self._busy or not self._pending_project
 
     def _sync_output(self) -> None:
         widget = self._action_widget("#migrate-output")
@@ -421,6 +429,8 @@ class MiscPage(compat.Vertical):
     def _on_button_pressed(self, event: compat.Button.Pressed) -> None:
         if event.button.id == "migrate":
             self.request_migrate()
+        elif event.button.id == "dry-run":
+            self.action_dry_run()
 
     async def wait_for_idle(self) -> None:
         """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""

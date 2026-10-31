@@ -1,16 +1,8 @@
-# 24 点
+# twenty-four
 
 随机给出四个 1 到 13 的整数，要求用加、减、乘、除与括号使结果为 24。也可以先判断组合是否无解，或直接查询全部解。
 
 模块名 `twenty-four`，别名 `twenty_four`、`twentyfour`、`24`。
-
-## 安装
-
-```bash
-akaribot module add akari-bot-module-twenty_four
-```
-
-安装后在会话中由管理员用 `module enable twenty-four` 开启。
 
 ## 命令
 
@@ -33,21 +25,3 @@ akaribot module add akari-bot-module-twenty_four
 `solve` 要求四个数字均在 1 到 13 之间，存在进行中的对局时拒绝执行；非超级用户需支付 4 花瓣，未开启花瓣系统时不扣除，余额不足时终止。存在解时逐条列出，不存在解时返回无解提示。
 
 游戏状态按会话保存在进程内，1 小时后自动过期；服务重启后状态丢失。
-
-## 配置项
-
-无。本包没有 `config.py`，`manifest.toml` 也未声明配置表。
-
-## 权限与平台能力
-
-- 命令对普通用户开放，不要求管理员或超级用户权限。
-- 未声明平台限制，所有已接入平台可用。
-
-## 数据表
-
-无。manifest 未声明 `owned_tables`，对局状态保存在进程内。
-
-## 依赖与外部服务
-
-- 依赖：`akari-bot-core`、`simpleeval`。
-- 不使用外部网络服务。

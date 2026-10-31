@@ -71,16 +71,23 @@ async def _choose(app, pilot, index: int) -> None:
     await pilot.pause()
 
 
-async def _test_page_offers_one_button():
-
+async def _test_page_offers_migrate_and_dry_run():
+    # 预演沿用最近一次预览或迁移的源目录，没有可用源目录时禁用；页面本身不放输入框。
     async def body(app, page, pilot, source):
         buttons = [child.id for child in page.query(compat.Button)]
         inputs = len(page.query(compat.Input))
+        disabled = page.query_one("#dry-run", compat.Button).disabled
+        page.on_project_entered("/tmp/legacy-bot")
+        await pilot.pause()
+        app.screen.query_one("#choice-0", compat.Button).press()
+        await page.wait_for_idle()
+        await pilot.pause()
+        enabled = not page.query_one("#dry-run", compat.Button).disabled
         await pilot.press("q")
-        return buttons, inputs
+        return buttons, inputs, disabled, enabled
 
-    buttons, inputs = await _with_page(body)
-    return buttons == ["migrate"] and inputs == 0
+    buttons, inputs, disabled, enabled = await _with_page(body)
+    return buttons == ["migrate", "dry-run"] and inputs == 0 and disabled and enabled
 
 
 async def _test_click_opens_prompt_and_cancel_is_safe():
@@ -390,7 +397,7 @@ async def test_tui_misc(tester: Tester):
     _use_cli_locale()
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
-        await tester.test(_test_page_offers_one_button, "页面只放一个按钮")
+        await tester.test(_test_page_offers_migrate_and_dry_run, "页面放迁移与预演按钮，预演在首次预览前不可用")
         await tester.test(_test_click_opens_prompt_and_cancel_is_safe, "点击弹出输入框且取消安全")
         await tester.test(_test_prompt_asks_before_migrating, "输入路径后仍需确认")
         await tester.test(_test_enter_key_submits_prompt, "回车提交输入框")

@@ -8,7 +8,8 @@ from unittest.mock import patch
 
 from akaribot.cli.docs import builder
 from akaribot.cli.docs import catalog as docs_catalog
-from akaribot.cli.docs.model import DocsError, ToolchainInfo
+from akaribot.cli.docs.config import DocsConfig, DocsSiteConfig
+from akaribot.cli.docs.model import DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
 from akaribot.testing import Tester, func_case
 
 
@@ -56,18 +57,21 @@ async def _test_build_reuses_fingerprint_and_force():
         counters = {"ensure": 0, "build": 0, "detect": 0}
         offline_flags: list[bool] = []
         stages: list[str] = []
+        captured: list[str] = []
 
-        def fake_detect():
+        def fake_detect(min_major=18):
             counters["detect"] += 1
             return ToolchainInfo("/bin/node", "/bin/npm", "v24.21.0", "11.19.0", True, "")
 
-        def fake_ensure(cache_dir, template_dir, offline=False):
+        def fake_ensure(cache_dir, template_dir=None, offline=False, **kwargs):
             counters["ensure"] += 1
             offline_flags.append(offline)
             return Path(cache_dir) / "docs"
 
-        def fake_build(docs_dir, src_dir, out_dir):
+        def fake_build(docs_dir, src_dir, out_dir, log=None):
             counters["build"] += 1
+            if log is not None:
+                log("vitepress output")
             Path(out_dir).mkdir(parents=True, exist_ok=True)
             (Path(out_dir) / "index.html").write_text("site", encoding="utf-8")
             return "built\n"
@@ -78,7 +82,7 @@ async def _test_build_reuses_fingerprint_and_force():
             patch.object(builder, "run_build", side_effect=fake_build),
             patch.object(docs_catalog, "CLI_DOC_PATH", root / "absent-cli-doc"),
         ):
-            first = builder.build(instance, reporter=stages.append)
+            first = builder.build(instance, reporter=stages.append, log=captured.append)
             second = builder.build(instance)
             after_second = counters["build"]
             (doc / "guide.md").write_text("# 指南（更新）\n", encoding="utf-8")
@@ -106,6 +110,7 @@ async def _test_build_reuses_fingerprint_and_force():
         and first.packages == ("demo",)
         and first.log == "built\n"
         and stages == ["toolchain", "generate", "build", "done"]
+        and captured == ["vitepress output"]
         and out_exists
         and generated_exists
         and second.reused
@@ -147,9 +152,41 @@ async def _test_build_reports_missing_toolchain():
     return error == ("cli.docs.error.toolchain_missing", "node not found")
 
 
+async def _test_fingerprint_tracks_site_assets_and_icons():
+    with TemporaryDirectory(prefix="akari-docs-build-") as raw:
+        root = Path(raw)
+        doc = root / "doc-demo"
+        doc.mkdir()
+        (doc / "index.md").write_text("# Demo\n", encoding="utf-8")
+        package = DocPackage(
+            key="demo",
+            group="module",
+            dist="akari-bot-module-demo",
+            name="demo",
+            version="1.0.0",
+            title="demo",
+            summary="",
+            doc_path=doc,
+            pages=(DocPage("index.md", "demo", 0),),
+        )
+        catalog = DocCatalog(packages=(package,))
+        logo = root / "logo.svg"
+        logo.write_text("<svg>a</svg>\n", encoding="utf-8")
+        config = DocsConfig(root=root, site=DocsSiteConfig(logo="logo.svg"))
+        first = builder.fingerprint_catalog(catalog, config)
+        logo.write_text("<svg>b</svg>\n", encoding="utf-8")
+        second = builder.fingerprint_catalog(catalog, config)
+        third = builder.fingerprint_catalog(
+            catalog,
+            DocsConfig(root=root, site=DocsSiteConfig(logo="logo.svg"), icons={"home": "dashboard"}),
+        )
+    return first != second and second != third
+
+
 @func_case
 async def test_docs_builder(tester: Tester):
     """cli.docs.builder: 构建编排与缓存复用"""
     await tester.test(_test_build_reuses_fingerprint_and_force, "指纹复用、内容变更、force 与未知 key")
     await tester.test(_test_build_reports_missing_toolchain, "工具链不可用时报错")
+    await tester.test(_test_fingerprint_tracks_site_assets_and_icons, "Logo 内容与一级图标参与指纹")
     return tester

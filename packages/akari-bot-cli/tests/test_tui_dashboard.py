@@ -48,16 +48,7 @@ SNAPSHOT = DashboardSnapshot(
 )
 
 # 页底按钮按 ButtonFlow 的排列顺序列出。
-BUTTON_IDS = (
-    "switch",
-    "new-instance",
-    "add-instance",
-    "remove-instance",
-    "autostart",
-    "crash-restart",
-    "service-toggle",
-    "refresh",
-)
+BUTTON_IDS = ("switch", "add-menu", "remove-instance", "service-menu", "refresh")
 
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dashboard.json"
 _KEEP_ALIVE: list[TemporaryDirectory] = []
@@ -65,6 +56,27 @@ _KEEP_ALIVE: list[TemporaryDirectory] = []
 
 def _button(page, button_id: str) -> compat.Button:
     return page.query_one(f"#{button_id}", compat.Button)
+
+
+async def _open_menu(page, pilot, button_id: str, index: int) -> None:
+    # 添加实例与服务策略都先弹菜单，再进入原有流程。
+    _button(page, button_id).press()
+    await pilot.pause()
+    assert await pilot.click(f"#choice-{index}")
+    await pilot.pause()
+
+
+async def _service_menu_labels(app, page, pilot) -> list[str]:
+    page.request_service_menu()
+    await pilot.pause()
+    if app.screen is page.screen:
+        return []
+    labels = [
+        str(button.label) for button in app.screen.query("#choice-actions Button") if button.id != "choice-cancel"
+    ]
+    await pilot.press("escape")
+    await pilot.pause()
+    return labels
 
 
 def _labels(page) -> dict[str, str]:
@@ -1234,13 +1246,14 @@ async def _test_accept_window():
 
 
 async def _test_bindings_follow_key_convention():
-    # 破坏性操作使用组合键；隐藏低频键位以保证 80 列页脚可见。
+    # 破坏性操作使用组合键；有副作用的策略与服务不占单字母键，收进 m 菜单。
     shown = {binding.key: binding.show for binding in DashboardPage.BINDINGS}
     return (
         "d" not in shown
         and shown.get("ctrl+d") is False
-        and shown.get("ctrl+n") is True
-        and all(shown.get(key) is False for key in ("a", "c", "n", "i"))
+        and shown.get("n") is True
+        and shown.get("m") is False
+        and not any(key in shown for key in ("a", "c", "i", "s", "ctrl+n"))
     )
 
 
@@ -1277,7 +1290,7 @@ async def _test_button_switch_matches_key():
 
 
 async def _test_button_new_instance_runs_init():
-    # 新建按钮与 ctrl+n 共用目录输入、环境选择和 init 流程。
+    # 添加实例菜单的「新建实例」走目录输入、环境选择和 init 流程。
     runner = StaticInitRunner()
 
     with TemporaryDirectory(prefix="akari-btn-new-") as raw:
@@ -1289,8 +1302,7 @@ async def _test_button_new_instance_runs_init():
 
         async def body(app, page, pilot, source, listed, control):
             page.init_runner = runner
-            _button(page, "new-instance").press()
-            await pilot.pause()
+            await _open_menu(page, pilot, "add-menu", 0)
             opened = len(app.screen_stack) > 1
             prefilled = app.screen.query_one("#prompt-input", compat.Input).value
             app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/btn-new"
@@ -1315,12 +1327,11 @@ async def _test_button_new_instance_runs_init():
 
 
 async def _test_button_add_instance_registers_directory():
-    # 登记按钮与 n 共用目录输入及 instance add 流程。
+    # 添加实例菜单的「登记目录」走目录输入及 instance add 流程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
-        _button(page, "add-instance").press()
-        await pilot.pause()
+        await _open_menu(page, pilot, "add-menu", 1)
         opened = len(app.screen_stack) > 1
         app.screen.query_one("#prompt-input", compat.Input).value = "/tmp/btn-gamma"
         await pilot.press("enter")
@@ -1364,16 +1375,16 @@ async def _test_button_remove_instance_opens_confirm_modal():
 
 
 async def _test_button_policy_toggles_send_cli_flags():
-    # 策略按钮与 a / c 共用 instance policy 流程，按当前值切换。
+    # 服务与策略菜单按当前值切换，走 instance policy 流程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
-        _button(page, "autostart").press()
+        await _open_menu(page, pilot, "service-menu", 0)
         await page.wait_for_idle()
         await pilot.pause()
-        _button(page, "crash-restart").press()
+        await _open_menu(page, pilot, "service-menu", 1)
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -1387,7 +1398,7 @@ async def _test_button_policy_toggles_send_cli_flags():
 
 
 async def _test_button_service_opens_confirm_modal():
-    # 服务按钮与 i 均打开包含执行和预览选项的确认框。
+    # 服务与策略菜单里的服务项打开包含执行和预览选项的确认框。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
     runner = _RecordingRunner(
         on_run=lambda _args: control.set_status(
@@ -1398,8 +1409,7 @@ async def _test_button_service_opens_confirm_modal():
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
-        _button(page, "service-toggle").press()
-        await pilot.pause()
+        await _open_menu(page, pilot, "service-menu", 2)
         opened = len(app.screen_stack) > 1
         labels = [str(button.label) for button in app.screen.query("#choice-actions Button")]
         await _pick_choice(app, pilot, 0)
@@ -1436,7 +1446,7 @@ async def _test_button_refresh_rereads_snapshot():
 
 
 async def _test_action_buttons_follow_state():
-    # 按钮状态与实例登记、策略和服务状态一致；未登记时禁用注册表写操作。
+    # 按钮禁用状态与实例登记一致；服务与策略菜单按当前策略与服务状态给出操作，未登记实例不弹菜单。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
     listed = StaticInstanceListSource(
         (
@@ -1451,18 +1461,18 @@ async def _test_action_buttons_follow_state():
         list_view = page.query_one("#instance-list", compat.ListView)
         list_view.index = 0
         await pilot.pause()
-        current = (_labels(page), _disabled(page))
+        current = (_disabled(page), await _service_menu_labels(app, page, pilot))
         control.set_status(ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist")))
         page.refresh_service()
         await pilot.pause()
-        installed = (_labels(page)["service-toggle"], _disabled(page)["service-toggle"])
+        installed = await _service_menu_labels(app, page, pilot)
         control.set_status(ServiceRow(backend="unsupported", detail="未支持"))
         page.refresh_service()
         await pilot.pause()
-        unsupported = _disabled(page)["service-toggle"]
+        unsupported = await _service_menu_labels(app, page, pilot)
         list_view.index = 1
         await pilot.pause()
-        unregistered = (_labels(page), _disabled(page))
+        unregistered = (_disabled(page), await _service_menu_labels(app, page, pilot))
         await pilot.press("q")
         return current, installed, unsupported, unregistered
 
@@ -1470,38 +1480,16 @@ async def _test_action_buttons_follow_state():
         current, installed, unsupported, unregistered = await _with_page(body, instances=listed, service=control)
     finally:
         context.set_active_root(previous)
-    current_labels, current_disabled = current
-    unregistered_labels, unregistered_disabled = unregistered
+    policy = [i18n.t("cli.tui.dashboard.menu_autostart_off"), i18n.t("cli.tui.dashboard.menu_crash_on")]
     return (
-        current_disabled
-        == {
-            "switch": True,
-            "new-instance": False,
-            "add-instance": False,
-            "remove-instance": False,
-            "autostart": False,
-            "crash-restart": False,
-            "service-toggle": False,
-            "refresh": False,
-        }
-        and current_labels["autostart"] == i18n.t("cli.tui.dashboard.button_autostart_on")
-        and current_labels["crash-restart"] == i18n.t("cli.tui.dashboard.button_crash_off")
-        and current_labels["service-toggle"] == i18n.t("cli.tui.dashboard.button_service_install")
-        and installed == (i18n.t("cli.tui.dashboard.button_service_uninstall"), False)
-        and unsupported is True
-        and unregistered_disabled
-        == {
-            "switch": False,
-            "new-instance": False,
-            "add-instance": False,
-            "remove-instance": True,
-            "autostart": True,
-            "crash-restart": True,
-            "service-toggle": True,
-            "refresh": False,
-        }
-        and unregistered_labels["autostart"] == i18n.t("cli.tui.dashboard.button_autostart_off")
-        and unregistered_labels["crash-restart"] == i18n.t("cli.tui.dashboard.button_crash_off")
+        current[0]
+        == {"switch": True, "add-menu": False, "remove-instance": False, "service-menu": False, "refresh": False}
+        and current[1] == [*policy, i18n.t("cli.tui.dashboard.button_service_install")]
+        and installed == [*policy, i18n.t("cli.tui.dashboard.button_service_uninstall")]
+        and unsupported == policy
+        and unregistered[0]
+        == {"switch": False, "add-menu": False, "remove-instance": True, "service-menu": True, "refresh": False}
+        and unregistered[1] == []
     )
 
 
@@ -1515,7 +1503,7 @@ async def _test_action_buttons_disable_while_busy():
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
-        _button(page, "autostart").press()
+        await _open_menu(page, pilot, "service-menu", 0)
         started = await _wait_until(lambda: page._busy)
         busy = _disabled(page)
         gate.set()
@@ -1559,8 +1547,8 @@ async def _test_action_buttons_share_one_row_when_wide():
     )
 
 
-async def _test_action_buttons_wrap_after_remove_instance():
-    # 80 列下折成两行，断点落在 remove-instance 之后：实例操作与策略服务各占一行。
+async def _test_action_buttons_fit_eighty_columns():
+    # 80 列下五个按钮都在页面内，文字附带各自的快捷键。
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
@@ -1568,39 +1556,21 @@ async def _test_action_buttons_wrap_after_remove_instance():
         fields = page.query_one("#fields-pane").region
         status = page.query_one("#status", compat.Static).region
         boxes = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
-        # 服务安装状态改变标签后，需重新验证按钮边界。
-        control.set_status(ServiceRow(backend="launchd", installed=True, enabled=True, path=Path("/tmp/agent.plist")))
-        page.refresh_service()
-        await pilot.pause()
-        rewritten = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
         labels = _labels(page)
         await pilot.press("q")
-        return page_region, boxes, rewritten, labels, fields, status
+        return page_region, boxes, labels, fields, status
 
-    page_region, boxes, rewritten, labels, fields, status = await _with_page(body, size=(80, 24))
-    rows = {button_id: box.y for button_id, box in boxes.items()}
-    instance_rows = {rows[button_id] for button_id in BUTTON_IDS[:4]}
-    policy_rows = {rows[button_id] for button_id in BUTTON_IDS[4:]}
+    page_region, boxes, labels, fields, status = await _with_page(body, size=(80, 24))
     expected_labels = {
-        "switch": i18n.t("cli.tui.dashboard.button_switch"),
-        "new-instance": i18n.t("cli.tui.dashboard.button_new_instance"),
-        "add-instance": i18n.t("cli.tui.dashboard.button_add_instance"),
-        "remove-instance": i18n.t("cli.tui.dashboard.button_remove_instance"),
-        "autostart": i18n.t("cli.tui.dashboard.button_autostart_on"),
-        "crash-restart": i18n.t("cli.tui.dashboard.button_crash_off"),
-        "service-toggle": i18n.t("cli.tui.dashboard.button_service_uninstall"),
-        "refresh": i18n.t("cli.tui.dashboard.action_refresh"),
+        "switch": compat.key_hint(i18n.t("cli.tui.dashboard.button_switch"), "enter"),
+        "add-menu": compat.key_hint(i18n.t("cli.tui.dashboard.button_add_menu"), "n"),
+        "remove-instance": compat.key_hint(i18n.t("cli.tui.dashboard.button_remove_instance"), "ctrl+d"),
+        "service-menu": compat.key_hint(i18n.t("cli.tui.dashboard.button_service_menu"), "m"),
+        "refresh": compat.key_hint(i18n.t("cli.tui.dashboard.action_refresh"), "r"),
     }
     return (
-        all(
-            box.width > 0 and box.x >= page_region.x and box.right <= page_region.right
-            for box in (*boxes.values(), *rewritten.values())
-        )
-        and len(instance_rows) == 1
-        and len(policy_rows) == 1
-        and len(set(rows.values())) == 2
-        and max(instance_rows) < min(policy_rows)
-        and min(rows.values()) >= fields.bottom
+        all(box.width > 0 and box.x >= page_region.x and box.right <= page_region.right for box in boxes.values())
+        and min(box.y for box in boxes.values()) >= fields.bottom
         and status.y >= max(box.bottom for box in boxes.values())
         and labels == expected_labels
     )
@@ -2144,7 +2114,7 @@ async def _test_setup_actions_follow_busy_state():
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
-        _button(page, "autostart").press()
+        await _open_menu(page, pilot, "service-menu", 0)
         started = await _wait_until(lambda: page._busy)
         disabled = {button_id: page.query_one(f"#{button_id}", compat.Button).disabled for button_id in SETUP_IDS}
         gate.set()
@@ -2206,16 +2176,16 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_service_confirmation_offers_dry_run, "确认框可先预演再决定")
         await tester.test(_test_service_uninstall_when_installed, "已安装时按键走卸载")
         await tester.test(_test_button_switch_matches_key, "按钮切换实例与键位同效")
-        await tester.test(_test_button_new_instance_runs_init, "按钮新建实例弹输入框并执行 init")
-        await tester.test(_test_button_add_instance_registers_directory, "按钮登记目录弹输入框并下发")
+        await tester.test(_test_button_new_instance_runs_init, "添加实例菜单的新建项弹输入框并执行 init")
+        await tester.test(_test_button_add_instance_registers_directory, "添加实例菜单的登记项弹输入框并下发")
         await tester.test(_test_button_remove_instance_opens_confirm_modal, "按钮移除登记一次触发即弹确认框")
-        await tester.test(_test_button_policy_toggles_send_cli_flags, "按钮翻转自启与崩溃重启")
-        await tester.test(_test_button_service_opens_confirm_modal, "按钮装卸服务一次触发即弹确认框")
+        await tester.test(_test_button_policy_toggles_send_cli_flags, "服务与策略菜单翻转自启与崩溃重启")
+        await tester.test(_test_button_service_opens_confirm_modal, "服务与策略菜单的服务项弹确认框")
         await tester.test(_test_button_refresh_rereads_snapshot, "按钮刷新重新读取快照")
-        await tester.test(_test_action_buttons_follow_state, "按钮禁用与标签跟着数据走")
+        await tester.test(_test_action_buttons_follow_state, "按钮禁用与服务菜单选项跟着数据走")
         await tester.test(_test_action_buttons_disable_while_busy, "忙时禁用全部按钮")
         await tester.test(_test_action_buttons_share_one_row_when_wide, "宽终端下按钮只占一行")
-        await tester.test(_test_action_buttons_wrap_after_remove_instance, "80 列下在移除登记后折行")
+        await tester.test(_test_action_buttons_fit_eighty_columns, "80 列下按钮都在页面内且附带快捷键")
         await tester.test(_test_instances_caption_points_to_buttons, "说明行按条数插值后指向按钮")
         await tester.test(_test_instances_caption_drops_key_list, "说明行新文案不再逐条列键位")
         await tester.test(_test_setup_summary_renders_four_items, "首次使用摘要四项各自渲染")

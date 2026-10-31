@@ -1,7 +1,9 @@
 schema = 1
-title = "Arcaea 版本推送"
+title = "arcaea-rss"
 summary = "轮询 Arcaea 版本接口并在更新时推送消息。"
 order = 500
+category = "音游查询"
+category_order = 100
 
 [[meta.modules]]
 name = "arcaea-rss"

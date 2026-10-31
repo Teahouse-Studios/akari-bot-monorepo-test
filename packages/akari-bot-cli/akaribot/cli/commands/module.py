@@ -134,6 +134,7 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
         warn(i18n.t("cli.module.precheck.api_unknown"))
 
     problems.extend(engine.dependency_conflicts(target, installed_env))
+    problems.extend(_plan_conflicts(instance, target, engine.unmet_dependencies(target, installed_env)))
     if problems:
         for problem in problems:
             console.print(f"[red]  × {escape(str(problem))}[/red]")
@@ -146,6 +147,56 @@ def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) 
         warn(i18n.t("cli.module.precheck.force"))
     else:
         ok(i18n.t("cli.module.precheck.ok"))
+
+
+def _plan_conflicts(
+    instance: Instance,
+    target: engine.InstallTarget,
+    unmet: Sequence[tuple[Requirement, engine.InstalledDist]],
+) -> list[str]:
+    # 安装会连带升降依赖（含传递依赖），而 uv 求解不看其他已装包的依赖，故按其安装计划逐条核对。
+    try:
+        completed = engine.CommandRunner().run(engine.dry_run_confirm_argv(instance.python, target.specs))
+    except CliError as exc:
+        fail(str(exc))
+    if completed.returncode != 0:
+        reason = engine.summarize_uv_error(completed.stderr or completed.stdout or "")
+        return [*(_unmet_text(target, requirement, info) for requirement, info in unmet), reason]
+    changes = engine.planned_versions(f"{completed.stdout or ''}\n{completed.stderr or ''}")
+    # 已装包对待装包本身的要求由 dependency_conflicts 报告，这里不重复。
+    changes.pop(engine.canonical(target.dist), None)
+    try:
+        everything = engine.probe_environment(instance.python, all_distributions=True)
+    except CliError as exc:
+        fail(str(exc))
+    broken = engine.requirements_broken_by(changes, everything)
+    if broken:
+        return [*(_unmet_text(target, requirement, info) for requirement, info in unmet), *broken]
+    for requirement, info in unmet:
+        console.print(
+            "  ~ "
+            + escape(
+                i18n.t(
+                    "cli.module.precheck.adjust",
+                    dist=target.dist,
+                    requirement=requirement.name,
+                    specifier=requirement.specifier,
+                    current=info.version,
+                    version=changes.get(engine.canonical(requirement.name), "?"),
+                )
+            )
+        )
+    return []
+
+
+def _unmet_text(target: engine.InstallTarget, requirement: Requirement, info: engine.InstalledDist) -> str:
+    return i18n.t(
+        "cli.venv_engine.conflict_candidate_needs",
+        dist=target.dist,
+        requirement=requirement.name,
+        specifier=requirement.specifier,
+        version=info.version,
+    )
 
 
 def _resolve_git(

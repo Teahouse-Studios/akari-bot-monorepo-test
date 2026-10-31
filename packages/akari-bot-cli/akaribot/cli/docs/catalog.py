@@ -54,6 +54,9 @@ def _package_sort_key(package: DocPackage) -> tuple[int, int, str, str]:
 def _load_remote(instance: Any, warnings: list[str]) -> list[DocPackage]:
     payload = _fetch_docs(instance, warnings)
     if payload is not None:
+        reported = payload.get("warnings")
+        if isinstance(reported, list):
+            warnings.extend(text for item in reported if (text := str(item).strip()))
         return _parse_packages(payload, Path(instance.root))
     return _fallback_registry(instance, warnings)
 
@@ -101,6 +104,8 @@ def _parse_packages(payload: Mapping[str, Any], root: Path) -> list[DocPackage]:
                 pages=pages,
                 order=_int_value(item.get("order")),
                 editable=bool(item.get("editable", False)),
+                category=_text(item, "category"),
+                category_order=_int_value(item.get("category_order")),
             )
         )
     return packages
@@ -152,6 +157,7 @@ def _fallback_registry(instance: Any, warnings: list[str]) -> list[DocPackage]:
         if not key:
             continue
         pages = _scan_pages(doc_path)
+        meta = _read_local_meta(doc_path)
         packages.append(
             DocPackage(
                 key=key,
@@ -159,11 +165,13 @@ def _fallback_registry(instance: Any, warnings: list[str]) -> list[DocPackage]:
                 dist=_text(item, "dist", "distribution") or key,
                 name=key,
                 version=_text(item, "version"),
-                title=key,
+                title=_text(meta, "title") or key,
                 summary=_text(item, "summary"),
                 doc_path=doc_path,
                 pages=pages,
                 editable=bool(item.get("editable", False)),
+                category=_text(meta, "category"),
+                category_order=_int_value(meta.get("category_order")),
             )
         )
     return packages
@@ -207,6 +215,8 @@ def _load_local_cli() -> DocPackage | None:
         doc_path=CLI_DOC_PATH,
         pages=_scan_pages(CLI_DOC_PATH),
         order=_int_value(meta.get("order")),
+        category=_text(meta, "category"),
+        category_order=_int_value(meta.get("category_order")),
     )
 
 
@@ -253,8 +263,10 @@ def _read_title(path: Path, relative: str) -> str:
 
 
 def _page_sort_key(page: DocPage) -> tuple[int, int, str]:
-    # core 的清单把首页排在最前但不改写 order，这里按同一口径复算，侧栏才与清单一致。
-    return (0 if Path(page.path).name == "index.md" else 1, page.order, page.path)
+    # 首页与开发页固定首尾，其余页面按 order 与路径排序，侧栏标签顺序才稳定。
+    name = Path(page.path).name
+    role = 0 if name == "index.md" else 2 if name == "development.md" else 1
+    return (role, page.order, page.path)
 
 
 def _page_title_from_path(relative: str) -> str:

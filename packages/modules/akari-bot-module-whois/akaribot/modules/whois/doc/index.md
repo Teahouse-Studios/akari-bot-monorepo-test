@@ -1,16 +1,8 @@
-# WHOIS 查询
+# whois
 
 向域名的 WHOIS 服务器查询注册信息，按可用字段逐项展示域名名称、注册商、日期、DNS 服务器、邮箱、注册人与位置。
 
 模块名 `whois`，没有别名。
-
-## 安装
-
-```bash
-akaribot module add akari-bot-module-whois
-```
-
-安装后在会话中由管理员用 `module enable whois` 开启。
 
 ## 命令
 
@@ -39,22 +31,3 @@ akaribot module add akari-bot-module-whois
 | 邮编 | 注册人邮政编码 |
 
 日期字段在接口返回列表时取第一项，并按 UTC 解释后转换。任一字段缺失时跳过该项；域名名称为空或查询抛出异常时返回获取失败提示。
-
-## 配置项
-
-无。本包没有 `config.py`，`manifest.toml` 也未声明配置表。
-
-## 权限与平台能力
-
-- 命令对普通用户开放，不要求管理员或超级用户权限。
-- 未声明平台限制，所有已接入平台可用。
-- 查询结果为文本，字段数量取决于注册局实际返回的数据。
-
-## 数据表
-
-无。manifest 未声明 `owned_tables`，查询结果不落库。
-
-## 依赖与外部服务
-
-- 依赖：`akari-bot-core`、`python-whois`。
-- 外部服务：由 `python-whois` 按域名后缀连接的各级 WHOIS 服务器。

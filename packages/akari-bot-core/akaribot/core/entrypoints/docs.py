@@ -15,7 +15,10 @@ import sys
 import tomllib
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 DOCS_GROUP = "akaribot.docs"
 DOCS_DIR = "doc"
@@ -53,6 +56,15 @@ def _as_order(value: Any, label: str, warnings: list[str]) -> int:
     except (TypeError, ValueError):
         warnings.append(f"{label}: 排序值 {value!r} 不是整数，按 {DEFAULT_ORDER} 处理。")
         return DEFAULT_ORDER
+
+
+def _as_category(value: Any, label: str, warnings: list[str]) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        warnings.append(f"{label}: category 必须是单个字符串，已忽略。")
+        return ""
+    return value.strip()
 
 
 def _dist_from_path(import_path: str) -> str:
@@ -147,7 +159,11 @@ def _read_doc_meta(doc_dir: Path, label: str, warnings: list[str]) -> dict[str, 
     if schema != DOC_META_SCHEMA:
         warnings.append(f"{label}: {DOC_META_FILE} 的 schema 为 {schema}，当前为 {DOC_META_SCHEMA}，已忽略该文件。")
         return {}
-    return {name: data[name] for name in ("title", "summary", "order", "hidden", "kind") if name in data}
+    return {
+        name: data[name]
+        for name in ("title", "summary", "order", "hidden", "kind", "category", "category_order")
+        if name in data
+    }
 
 
 def _split_front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -207,7 +223,9 @@ def _read_page(path: Path, relative: Path, label: str, warnings: list[str]) -> d
 
 
 def _page_sort_key(page: dict[str, Any]) -> tuple[int, int, str]:
-    return (0 if Path(page["path"]).name == "index.md" else 1, int(page["order"]), str(page["path"]))
+    name = Path(page["path"]).name
+    role = 0 if name == "index.md" else 2 if name == "development.md" else 1
+    return (role, int(page["order"]), str(page["path"]))
 
 
 def _collect_pages(doc_dir: Path, label: str, warnings: list[str]) -> list[dict[str, Any]]:
@@ -261,6 +279,8 @@ def _build_package(
         "title": _as_text(meta.get("title")) or name,
         "summary": _as_text(meta.get("summary")) or summary,
         "order": _as_order(meta.get("order", DEFAULT_ORDER), key, warnings),
+        "category": _as_category(meta.get("category"), key, warnings),
+        "category_order": _as_order(meta.get("category_order", DEFAULT_ORDER), f"{key}.category_order", warnings),
         "doc_path": str(doc_dir),
         "editable": editable,
         "pages": pages,
@@ -328,6 +348,39 @@ def _docs_entry_points() -> Iterable[Any]:
     return importlib.metadata.entry_points(group=DOCS_GROUP)
 
 
+def _editable_source(dist: Any) -> Path | None:
+    try:
+        payload = json.loads(dist.read_text("direct_url.json") or "{}")
+    except Exception:  # noqa: BLE001 - 安装记录缺失或损坏时视为非可编辑安装
+        return None
+    if not payload.get("dir_info", {}).get("editable"):
+        return None
+    url = urlparse(str(payload.get("url") or ""))
+    return Path(url2pathname(url.path)) if url.scheme == "file" else None
+
+
+def _stale_docs_entries() -> Iterable[Any]:
+    # 可编辑安装的入口只在安装时写入元数据，源码 pyproject 之后新增的 akaribot.docs 声明要重装才生效。
+    for dist in importlib.metadata.distributions():
+        try:
+            if any(entry.group == DOCS_GROUP for entry in dist.entry_points):
+                continue
+        except Exception:  # noqa: BLE001 - 元数据残缺的分发不参与补入
+            continue
+        source = _editable_source(dist)
+        if source is None:
+            continue
+        try:
+            project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8")).get("project", {})
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+            continue
+        declared = project.get("entry-points", {}).get(DOCS_GROUP, {}) if isinstance(project, dict) else {}
+        if not isinstance(declared, dict):
+            continue
+        for name, value in declared.items():
+            yield SimpleNamespace(name=str(name), value=str(value), dist=dist)
+
+
 def _package_sort_key(item: dict[str, Any]) -> tuple[int, int, str, str]:
     return (_GROUP_RANK.get(item["group"], len(GROUP_ORDER)), item["order"], item["title"], item["key"])
 
@@ -335,15 +388,19 @@ def _package_sort_key(item: dict[str, Any]) -> tuple[int, int, str, str]:
 def collect(
     entry_points: Callable[[], Iterable[Any]] | None = None,
     find_spec: Callable[[str], Any] | None = None,
+    stale_entries: Callable[[], Iterable[Any]] | None = None,
 ) -> dict[str, Any]:
     """收集各包的文档清单。
 
     :param entry_points: 返回 ``akaribot.docs`` 条目的可调用对象；缺省读取已安装元数据。
     :param find_spec: 按导入路径定位包的可调用对象；缺省使用 :func:`importlib.util.find_spec`。
+    :param stale_entries: 返回「源码已声明、可编辑安装元数据未登记」条目的可调用对象；缺省在读取
+        已安装元数据时扫描可编辑安装，注入 ``entry_points`` 时不扫描。
     :return: ``{"schema": 1, "packages": [...], "warnings": [...]}``。
     """
     locate = find_spec or importlib.util.find_spec
     load = entry_points or _docs_entry_points
+    stale = stale_entries or (_stale_docs_entries if entry_points is None else None)
     warnings: list[str] = []
     try:
         discovered = sorted(load(), key=lambda item: str(getattr(item, "name", "")))
@@ -362,6 +419,21 @@ def collect(
                 continue
             seen.add(item["key"])
             packages.append(item)
+        refreshed: list[str] = []
+        for entry_point in stale() if stale is not None else ():
+            if entry_point.name in seen:
+                continue
+            item = _package_from_entry_point(entry_point, locate, warnings)
+            if item is None:
+                continue
+            seen.add(item["key"])
+            packages.append(item)
+            refreshed.append(item["key"])
+        if refreshed:
+            warnings.append(
+                f"{'、'.join(sorted(refreshed))}: 源码已声明 {DOCS_GROUP} 入口，但可编辑安装的元数据未登记，"
+                "已按源码声明补入；重新安装这些包以刷新元数据（工作区实例可执行 akaribot module update --all）。"
+            )
     else:
         for key, import_path in _scan_sources(locate):
             item = _build_package(

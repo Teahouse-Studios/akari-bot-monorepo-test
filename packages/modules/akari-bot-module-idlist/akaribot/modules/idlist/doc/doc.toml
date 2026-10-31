@@ -1,7 +1,9 @@
 schema = 1
-title = "ID 表查询"
+title = "idlist"
 summary = "查询 Minecraft：基岩版的 ID 表条目。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "idlist"

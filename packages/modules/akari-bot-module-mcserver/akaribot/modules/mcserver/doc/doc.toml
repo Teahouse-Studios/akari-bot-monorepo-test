@@ -1,7 +1,9 @@
 schema = 1
-title = "Minecraft 服务器状态"
+title = "mcserver"
 summary = "查询 Minecraft：Java 版与基岩版服务器的 MOTD 与在线状态。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "mcserver"

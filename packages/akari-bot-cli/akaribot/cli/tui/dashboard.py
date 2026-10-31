@@ -1112,13 +1112,9 @@ class DashboardPage(compat.Vertical):
     # 低频键位通过按钮和帮助提供，避免页脚超出 80 列。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
-        ("s", "switch_instance", i18n.t("cli.tui.dashboard.bind_switch")),
-        ("ctrl+n", "new_instance", i18n.t("cli.tui.dashboard.bind_new_instance")),
-        ("a", "toggle_autostart", i18n.t("cli.tui.dashboard.bind_autostart"), False),
-        ("c", "toggle_crash_restart", i18n.t("cli.tui.dashboard.bind_crash_restart"), False),
-        ("n", "add_instance", i18n.t("cli.tui.dashboard.bind_add_instance"), False),
+        ("n", "add_menu", i18n.t("cli.tui.dashboard.button_add_menu")),
         ("ctrl+d", "remove_instance", i18n.t("cli.tui.dashboard.bind_remove_instance"), False),
-        ("i", "toggle_service", i18n.t("cli.tui.dashboard.bind_service"), False),
+        ("m", "service_menu", i18n.t("cli.tui.dashboard.button_service_menu"), False),
     )
 
     can_focus = True
@@ -1157,6 +1153,7 @@ class DashboardPage(compat.Vertical):
         self._instance_rows: tuple[InstanceRow, ...] = ()
         self._highlighted_key = ""
         self._pending_remove = compat.PendingConfirm()
+        self._pending_menu = compat.PendingConfirm()
         self.cache_ttl = cache_ttl
         self.refresh_interval = refresh_interval
         self.last_error: str = ""
@@ -1180,15 +1177,11 @@ class DashboardPage(compat.Vertical):
         with compat.VerticalScroll(id="fields-pane"):
             yield compat.Static(i18n.t("cli.tui.dashboard.fields_placeholder"), id="fields", markup=False)
         yield compat.ButtonFlow(
-            ("switch", i18n.t("cli.tui.dashboard.button_switch")),
-            ("new-instance", i18n.t("cli.tui.dashboard.button_new_instance")),
-            ("add-instance", i18n.t("cli.tui.dashboard.button_add_instance")),
-            ("remove-instance", i18n.t("cli.tui.dashboard.button_remove_instance"), "error"),
-            ("autostart", i18n.t("cli.tui.dashboard.button_autostart_off")),
-            ("crash-restart", i18n.t("cli.tui.dashboard.button_crash_off")),
-            ("service-toggle", i18n.t("cli.tui.dashboard.button_service_install")),
-            ("refresh", i18n.t("cli.tui.dashboard.action_refresh"), "primary"),
-            breaks=("remove-instance",),
+            ("switch", compat.key_hint(i18n.t("cli.tui.dashboard.button_switch"), "enter"), "primary"),
+            ("add-menu", compat.key_hint(i18n.t("cli.tui.dashboard.button_add_menu"), "n")),
+            ("remove-instance", compat.key_hint(i18n.t("cli.tui.dashboard.button_remove_instance"), "ctrl+d"), "error"),
+            ("service-menu", compat.key_hint(i18n.t("cli.tui.dashboard.button_service_menu"), "m")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.dashboard.action_refresh"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -1452,30 +1445,85 @@ class DashboardPage(compat.Vertical):
         row = self.selected_instance()
         registered = row is not None and row.registered
         self.query_one("#switch", compat.Button).disabled = self._busy or row is None or self._is_active_instance(row)
-        for button_id in ("new-instance", "add-instance", "refresh"):
+        for button_id in ("add-menu", "refresh"):
             self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
         self.query_one("#remove-instance", compat.Button).disabled = self._busy or not registered
-        self._sync_policy_button("autostart", "autostart", row)
-        self._sync_policy_button("crash-restart", "restart_on_crash", row)
-        service = self.query_one("#service-toggle", compat.Button)
-        # 策略依赖已登记实例；服务操作还须有可用的平台后端。
-        service.disabled = self._busy or not registered or self._service.backend == "unsupported"
-        service.label = i18n.t(
-            "cli.tui.dashboard.button_service_uninstall"
-            if self._service.installed
-            else "cli.tui.dashboard.button_service_install"
-        )
-        self.query_one("#actions", compat.ButtonFlow).relayout()
+        # 策略与服务都依赖已登记实例。
+        self.query_one("#service-menu", compat.Button).disabled = self._busy or not registered
 
-    def _sync_policy_button(self, button_id: str, field_name: str, row: InstanceRow | None) -> None:
-        enabled = row is not None and (row.autostart if field_name == "autostart" else row.restart_on_crash)
-        state = "on" if enabled else "off"
-        prefix = "autostart" if field_name == "autostart" else "crash"
-        button = self.query_one(f"#{button_id}", compat.Button)
-        button.disabled = self._busy or row is None or not row.registered
-        button.label = i18n.t(f"cli.tui.dashboard.button_{prefix}_{state}")
-        # 标签变化可能影响按钮宽度，须重新计算布局。
-        self.query_one("#actions", compat.ButtonFlow).relayout()
+    def request_add_menu(self) -> None:
+        """弹出添加实例菜单：新建实例或登记已有目录。"""
+        if not self._pending_menu.accept("add"):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.dashboard.add_menu_title"),
+            hint=i18n.t("cli.tui.dashboard.add_menu_hint"),
+            options=(
+                ("new", i18n.t("cli.tui.dashboard.button_new_instance")),
+                ("register", i18n.t("cli.tui.dashboard.button_add_instance")),
+            ),
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=self._on_add_menu,
+        )
+
+    def _on_add_menu(self, choice: str | None) -> None:
+        self._pending_menu.reset()
+        if choice == "new":
+            self.request_new_instance()
+        elif choice == "register":
+            self.request_add_instance()
+
+    def request_service_menu(self) -> None:
+        """弹出服务与策略菜单，只列所选实例可用的操作。"""
+        row = self.selected_instance()
+        if self._busy or row is None or not row.registered:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.dashboard.service_menu_unavailable"),
+                severity="warning",
+                title=i18n.t("cli.tui.dashboard.button_service_menu"),
+            )
+            return
+        options = [
+            ("autostart", i18n.t(f"cli.tui.dashboard.menu_autostart_{'off' if row.autostart else 'on'}")),
+            ("crash", i18n.t(f"cli.tui.dashboard.menu_crash_{'off' if row.restart_on_crash else 'on'}")),
+        ]
+        if self._service.backend != "unsupported":
+            options.append(
+                (
+                    "service",
+                    i18n.t(
+                        "cli.tui.dashboard.button_service_uninstall"
+                        if self._service.installed
+                        else "cli.tui.dashboard.button_service_install"
+                    ),
+                )
+            )
+        if not self._pending_menu.accept(f"service:{row.name}"):
+            return
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.dashboard.service_menu_title", name=row.name),
+            hint=i18n.t(
+                "cli.tui.dashboard.service_menu_hint",
+                autostart=i18n.t(f"cli.tui.dashboard.button_autostart_{'on' if row.autostart else 'off'}"),
+                crash=i18n.t(f"cli.tui.dashboard.button_crash_{'on' if row.restart_on_crash else 'off'}"),
+                service=self._service_text,
+            ),
+            options=options,
+            cancel_label=i18n.t("cli.tui.dashboard.add_cancel"),
+            callback=self._on_service_menu,
+        )
+
+    def _on_service_menu(self, choice: str | None) -> None:
+        self._pending_menu.reset()
+        if choice == "autostart":
+            self.toggle_policy("autostart")
+        elif choice == "crash":
+            self.toggle_policy("restart_on_crash")
+        elif choice == "service":
+            self.request_toggle_service()
 
     def request_toggle_service(self) -> None:
         """请求安装或卸载服务，提供执行与预览选项。"""
@@ -1613,9 +1661,6 @@ class DashboardPage(compat.Vertical):
             self._busy = False
             self._sync_actions()
         on_done(result)
-
-    def action_toggle_service(self) -> None:
-        self.request_toggle_service()
 
     def request_add_instance(self) -> None:
         """请求输入实例目录并登记。"""
@@ -1764,20 +1809,11 @@ class DashboardPage(compat.Vertical):
         self.refresh_instances()
         self._set_status(i18n.t("cli.tui.dashboard.remove_done", name=row.name))
 
-    def action_switch_instance(self) -> None:
-        self.switch_to_selected()
+    def action_add_menu(self) -> None:
+        self.request_add_menu()
 
-    def action_toggle_autostart(self) -> None:
-        self.toggle_policy("autostart")
-
-    def action_toggle_crash_restart(self) -> None:
-        self.toggle_policy("restart_on_crash")
-
-    def action_add_instance(self) -> None:
-        self.request_add_instance()
-
-    def action_new_instance(self) -> None:
-        self.request_new_instance()
+    def action_service_menu(self) -> None:
+        self.request_service_menu()
 
     def action_remove_instance(self) -> None:
         self.request_remove_instance()
@@ -2021,6 +2057,7 @@ class DashboardPage(compat.Vertical):
         """作废本页的待确认状态；切页、刷新与更换选中项后须重新确认。"""
         self._pending_service.reset()
         self._pending_remove.reset()
+        self._pending_menu.reset()
 
     @compat.on(compat.ListView.Selected, "#instance-list")
     def _on_instance_selected(self, event: compat.ListView.Selected) -> None:
@@ -2046,18 +2083,12 @@ class DashboardPage(compat.Vertical):
         button_id = event.button.id
         if button_id == "switch":
             self.switch_to_selected()
-        elif button_id == "new-instance":
-            self.request_new_instance()
-        elif button_id == "add-instance":
-            self.request_add_instance()
+        elif button_id == "add-menu":
+            self.request_add_menu()
         elif button_id == "remove-instance":
             self.request_remove_instance()
-        elif button_id == "autostart":
-            self.toggle_policy("autostart")
-        elif button_id == "crash-restart":
-            self.toggle_policy("restart_on_crash")
-        elif button_id == "service-toggle":
-            self.request_toggle_service()
+        elif button_id == "service-menu":
+            self.request_service_menu()
         elif button_id == "refresh":
             self.refresh_snapshot(force=True)
             self.refresh_setup()

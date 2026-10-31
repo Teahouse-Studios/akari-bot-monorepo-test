@@ -463,8 +463,7 @@ class RunPage(compat.Vertical):
         ("x", "stop", i18n.t("cli.tui.run.label_stop")),
         ("ctrl+r", "restart", i18n.t("cli.tui.run.label_restart"), False),
         ("r", "refresh", i18n.t("cli.tui.run.bind_refresh")),
-        ("a", "adapter_start", i18n.t("cli.tui.run.bind_adapter_start"), False),
-        ("f", "foreground", i18n.t("cli.tui.run.label_foreground"), False),
+        ("m", "more", i18n.t("cli.tui.run.label_more"), False),
     )
 
     can_focus = True
@@ -493,13 +492,11 @@ class RunPage(compat.Vertical):
         with compat.VerticalScroll(id="table-pane"):
             yield compat.Static(i18n.t("cli.tui.run.table_loading"), id="table", markup=False)
         yield compat.ButtonFlow(
-            ("start", i18n.t("cli.tui.run.label_start"), "primary"),
-            ("stop", i18n.t("cli.tui.run.label_stop"), "error"),
-            ("restart", i18n.t("cli.tui.run.label_restart"), "warning"),
-            ("adapter-start", i18n.t("cli.tui.run.label_adapter_start")),
-            ("foreground", i18n.t("cli.tui.run.label_foreground")),
-            ("refresh", i18n.t("cli.tui.run.label_refresh")),
-            breaks=("restart",),
+            ("start", compat.key_hint(i18n.t("cli.tui.run.label_start"), "s"), "primary"),
+            ("stop", compat.key_hint(i18n.t("cli.tui.run.label_stop"), "x"), "error"),
+            ("restart", compat.key_hint(i18n.t("cli.tui.run.label_restart"), "ctrl+r"), "warning"),
+            ("more", compat.key_hint(i18n.t("cli.tui.run.label_more"), "m")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.run.label_refresh"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -801,7 +798,7 @@ class RunPage(compat.Vertical):
         self.query_one("#start", compat.Button).disabled = self._busy or running
         self.query_one("#stop", compat.Button).disabled = self._busy or not running
         self.query_one("#restart", compat.Button).disabled = self._busy
-        self.query_one("#adapter-start", compat.Button).disabled = self._busy or running
+        self.query_one("#more", compat.Button).disabled = self._busy
         self.query_one("#refresh", compat.Button).disabled = self._busy
 
     def _set_status(self, text: str) -> None:
@@ -822,10 +819,8 @@ class RunPage(compat.Vertical):
             self.request_stop()
         elif button_id == "restart":
             self.request_restart()
-        elif button_id == "adapter-start":
-            self.request_adapter_start()
-        elif button_id == "foreground":
-            self.action_foreground()
+        elif button_id == "more":
+            self.request_more()
         elif button_id == "refresh":
             self.refresh_status(manual=True)
 
@@ -838,10 +833,35 @@ class RunPage(compat.Vertical):
     def action_restart(self) -> None:
         self.request_restart()
 
-    def action_adapter_start(self) -> None:
-        self.request_adapter_start()
+    def action_more(self) -> None:
+        self.request_more()
 
-    def action_foreground(self) -> None:
+    def request_more(self) -> None:
+        """弹出低频操作菜单：启动指定适配器与前台运行说明。"""
+        if not self._pending.accept("more"):
+            return
+        options = [("foreground", i18n.t("cli.tui.run.label_foreground"))]
+        # 实例运行时不能再启动指定适配器，菜单不列这一项。
+        if not self.running:
+            options.insert(0, ("adapter-start", i18n.t("cli.tui.run.bind_adapter_start")))
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.run.more_title"),
+            hint=i18n.t("cli.tui.run.more_hint"),
+            options=options,
+            cancel_label=i18n.t("cli.tui.run.choice_cancel"),
+            callback=self._on_more_chosen,
+        )
+
+    def _on_more_chosen(self, choice: str | None) -> None:
+        self._pending.reset()
+        if choice == "adapter-start":
+            self.request_adapter_start()
+        elif choice == "foreground":
+            self.show_foreground_hint()
+
+    def show_foreground_hint(self) -> None:
+        """前台运行会占用终端，界面内只给出命令。"""
         text = i18n.t("cli.tui.run.foreground_hint", command=self._foreground_command())
         compat.notify(self.app, text, severity="warning", title=i18n.t("cli.tui.run.label_foreground"))
         self._set_status(text)

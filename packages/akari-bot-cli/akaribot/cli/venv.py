@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -604,7 +605,7 @@ def probe_api_version(python: Path) -> int | None:
     """在目标解释器里读取 core 的公共 API 版本。"""
     if not Path(python).is_file():
         return None
-    code = "from akaribot.core.version import __api_version__ as v; print(v)"
+    code = "from akaribot.core.registry import CORE_API_VERSION as v; print(v)"
     try:
         completed = subprocess.run(  # noqa: S603
             [str(python), "-c", code], check=False, capture_output=True, text=True, timeout=60.0
@@ -1679,21 +1680,20 @@ def _verify_recreated_environment(instance: Instance, staging: Path, source_dist
             raise CliError(i18n.t("cli.venv_engine.script_invalid", path=script))
 
 
-def dependency_conflicts(
+def unmet_dependencies(
     candidate: InstallTarget,
     installed: Mapping[str, InstalledDist],
-) -> list[str]:
-    """在下载前把待装包与已装环境做一次依赖对称检查。
+) -> list[tuple[Requirement, InstalledDist]]:
+    """列出待装包要求、但已装版本不满足的依赖。
 
-    两侧都查：待装包的依赖是否被已装版本满足，以及已装包的依赖是否被待装版本满足。
-    发现的矛盾以「谁要求什么、实际是什么」的可读形式返回，不把 uv 解析器原始报错抛给用户。
+    这类依赖由 uv 在安装时升降版本，本身不构成冲突；是否会破坏其他已装包由
+    :func:`requirements_broken_by` 按 uv 给出的安装计划判断。
 
-    :param candidate: 待装目标；``dependencies`` 与 ``version`` 仅在本地模式可读。
+    :param candidate: 待装目标；``dependencies`` 仅在本地模式可读。
     :param installed: 目标环境的已装包。
-    :return: 冲突说明列表；为空表示预检通过。
+    :return: ``(依赖要求, 当前已装分发)`` 列表。
     """
-    problems: list[str] = []
-    candidate_key = canonical(candidate.dist)
+    unmet: list[tuple[Requirement, InstalledDist]] = []
     for text in candidate.dependencies:
         try:
             requirement = Requirement(text)
@@ -1705,15 +1705,25 @@ def dependency_conflicts(
             and requirement.specifier
             and not requirement.specifier.contains(info.version, prereleases=True)
         ):
-            problems.append(
-                i18n.t(
-                    "cli.venv_engine.conflict_candidate_needs",
-                    dist=candidate.dist,
-                    requirement=requirement.name,
-                    specifier=requirement.specifier,
-                    version=info.version,
-                )
-            )
+            unmet.append((requirement, info))
+    return unmet
+
+
+def dependency_conflicts(
+    candidate: InstallTarget,
+    installed: Mapping[str, InstalledDist],
+) -> list[str]:
+    """检查已装包对待装包本身的版本要求。
+
+    发现的矛盾以「谁要求什么、实际是什么」的可读形式返回，不把 uv 解析器原始报错抛给用户。
+    待装包自身依赖的版本调整见 :func:`unmet_dependencies`。
+
+    :param candidate: 待装目标；``version`` 仅在本地模式可读。
+    :param installed: 目标环境的已装包。
+    :return: 冲突说明列表；为空表示预检通过。
+    """
+    problems: list[str] = []
+    candidate_key = canonical(candidate.dist)
     for info in installed.values():
         for text in info.requires:
             try:
@@ -1746,6 +1756,80 @@ def dependency_conflicts(
                         specifier=requirement.specifier,
                     )
                 )
+    return problems
+
+
+_PLANNED_INSTALL = re.compile(r"^\s*\+\s+(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==(?P<version>\S+)\s*$")
+
+
+def planned_versions(output: str) -> dict[str, str]:
+    """从 ``uv pip install --dry-run`` 的输出读出将装入的版本。
+
+    直引用与可编辑安装的行不带版本号，不计入结果。
+
+    :param output: uv 的标准输出与标准错误。
+    :return: 规范化分发名到版本。
+    """
+    planned: dict[str, str] = {}
+    for line in output.splitlines():
+        match = _PLANNED_INSTALL.match(line)
+        if match:
+            planned[canonical(match.group("name"))] = match.group("version")
+    return planned
+
+
+def current_requires(info: InstalledDist) -> tuple[str, ...]:
+    """返回已装包当前生效的依赖串。
+
+    可编辑安装的元数据只在安装时生成，运行的却是源码；源码 ``pyproject.toml`` 之后改动的依赖要重装
+    才进元数据，故以源码声明为准，读不到或依赖为动态字段时退回元数据。
+    """
+    if info.editable and info.path is not None:
+        try:
+            project = tomllib.loads((info.path / "pyproject.toml").read_text(encoding="utf-8")).get("project")
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+            project = None
+        if isinstance(project, Mapping) and isinstance(project.get("dependencies"), list):
+            return tuple(str(item) for item in project["dependencies"])
+    return info.requires
+
+
+def requirements_broken_by(changes: Mapping[str, str], installed: Mapping[str, InstalledDist]) -> list[str]:
+    """列出安装计划会破坏的已装包依赖。
+
+    ``uv pip install`` 求解时不考虑其他已装包的依赖，版本调整须在此逐条核对。依赖取自
+    :func:`current_requires`，只对未请求 extra 时生效的依赖判断；会被一并替换的包按新版本处理，
+    不核对其旧依赖。
+
+    :param changes: 规范化分发名到计划版本，取自 :func:`planned_versions`。
+    :param installed: 目标环境的全部已装包。
+    :return: 冲突说明列表；为空表示调整不影响其他已装包。
+    """
+    problems: list[str] = []
+    for info in installed.values():
+        if canonical(info.dist) in changes:
+            continue
+        for text in current_requires(info):
+            try:
+                requirement = Requirement(text)
+            except InvalidRequirement:
+                continue
+            version = changes.get(canonical(requirement.name))
+            if version is None or not requirement.specifier:
+                continue
+            if requirement.marker is not None and not requirement.marker.evaluate({"extra": ""}):
+                continue
+            if requirement.specifier.contains(version, prereleases=True):
+                continue
+            problems.append(
+                i18n.t(
+                    "cli.venv_engine.conflict_change_breaks",
+                    installed=info.dist,
+                    requirement=requirement.name,
+                    specifier=requirement.specifier,
+                    version=version,
+                )
+            )
     return problems
 
 

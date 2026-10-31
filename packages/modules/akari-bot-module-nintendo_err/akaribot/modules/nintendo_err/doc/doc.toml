@@ -1,7 +1,9 @@
 schema = 1
-title = "任天堂报错码"
+title = "nintendo-err"
 summary = "解析任天堂 3DS、Wii U 与 Switch 的报错码并给出原因。"
 order = 500
+category = "任天堂与主机"
+category_order = 300
 
 [[meta.modules]]
 name = "nintendo-err"

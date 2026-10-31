@@ -550,8 +550,10 @@ class DoctorPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.doctor.verdict_pending"), id="verdict", markup=False)
         yield _ConflictListView(id="conflict-list")
         with compat.Horizontal(id="actions"):
-            yield compat.Button(i18n.t("cli.tui.doctor.action_refresh"), id="refresh", variant="primary")
-            yield compat.Button(i18n.t("cli.tui.doctor.action_open"), id="open-conflict")
+            yield compat.Button(
+                compat.key_hint(i18n.t("cli.tui.doctor.action_open"), "enter"), id="open-conflict", variant="primary"
+            )
+            yield compat.Button(compat.key_hint(i18n.t("cli.tui.doctor.action_refresh"), "r"), id="refresh")
             yield compat.Checkbox(i18n.t("cli.tui.doctor.strict_option"), id="strict")
         yield compat.Static(i18n.t("cli.tui.doctor.detail_placeholder"), id="detail", markup=False)
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)

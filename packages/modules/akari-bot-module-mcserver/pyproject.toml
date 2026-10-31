@@ -17,7 +17,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
-    "mcstatus>=14.1.0,<14.2.0",
+    "mcstatus>=14.1.0,<15.0.0",
     "orjson>=3.10.9,<4.0.0",
 ]
 

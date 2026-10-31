@@ -48,8 +48,14 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "version": "1.2.0",
                 "title": "Wiki 查询",
                 "summary": "查询 MediaWiki",
+                "category": "知识查询",
+                "category_order": 20,
                 "doc_path": str(root / "doc" / "wiki"),
-                "pages": [_page("guide/setup.md", "安装", 20), _page("index.md", "概览", 0)],
+                "pages": [
+                    _page("guide/setup.md", "安装", 20),
+                    _page("development.md", "安装与开发", 5),
+                    _page("index.md", "概览", 0),
+                ],
                 "editable": True,
             },
             {
@@ -64,6 +70,7 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "pages": [],
             },
         ],
+        "warnings": ["module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未登记"],
     }
 
 
@@ -94,10 +101,13 @@ async def _test_parse_docs_payload():
     return (
         keys == ("wiki",)
         and first.title == "Wiki 查询"
+        and first.category == "知识查询"
+        and first.category_order == 20
         and first.version == "1.2.0"
         and first.editable
-        and pages == [("index.md", "概览"), ("guide/setup.md", "安装")]
+        and pages == [("index.md", "概览"), ("guide/setup.md", "安装"), ("development.md", "安装与开发")]
         and calls == [("docs", "list", "--json")]
+        and catalog.warnings == ("module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未登记",)
     )
 
 
@@ -164,6 +174,7 @@ async def _test_registry_fallback_builds_minimal_entries():
         doc.mkdir(parents=True)
         (doc / "index.md").write_text("# 包首页\n", encoding="utf-8")
         (doc / "notes.md").write_text("正文\n", encoding="utf-8")
+        (doc / "doc.toml").write_text('title = "wiki"\ncategory = "知识查询"\ncategory_order = 20\n', encoding="utf-8")
         registry = {
             "packages": [
                 {
@@ -195,6 +206,9 @@ async def _test_registry_fallback_builds_minimal_entries():
     return (
         catalog.keys() == ("wiki",)
         and package.doc_path == doc
+        and package.title == "wiki"
+        and package.category == "知识查询"
+        and package.category_order == 20
         and titles == [("index.md", "概览"), ("notes.md", "notes")]
         and len(catalog.warnings) == 1
         and "registry" in catalog.warnings[0]
@@ -233,7 +247,7 @@ async def _test_registry_failure_keeps_warnings():
 @func_case
 async def test_docs_catalog(tester: Tester):
     """cli.docs.catalog: 文档目录解析与回退"""
-    await tester.test(_test_parse_docs_payload, "解析 docs list 清单并按 order 排序")
+    await tester.test(_test_parse_docs_payload, "解析 docs list 清单与告警并按 order 排序")
     await tester.test(_test_select_filters_and_rejects_unknown, "select 过滤并拒绝未知 key")
     await tester.test(_test_local_cli_docs_merge, "CLI 本地文档覆盖同名远端条目")
     await tester.test(_test_registry_fallback_builds_minimal_entries, "docs 入口不可用时回退 registry")

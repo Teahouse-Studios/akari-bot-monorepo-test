@@ -63,8 +63,18 @@ async def _with_page(body, source=None, size=(120, 34)):
         return await body(app, page, pilot, chosen)
 
 
-def _shown(page) -> list[str]:
-    return [kind for kind in ("adopt", "release", "recreate") if page.query_one(f"#{kind}", compat.Button).display]
+async def _interpreter_options(app, page, pilot) -> list[str]:
+    # m 打开解释器菜单，返回其中的操作文案；托管方式未知时不弹菜单。
+    await pilot.press("m")
+    await pilot.pause()
+    if app.screen is page.screen:
+        return []
+    labels = [
+        str(button.label) for button in app.screen.query("#choice-actions Button") if button.id != "choice-cancel"
+    ]
+    await pilot.press("escape")
+    await pilot.pause()
+    return labels
 
 
 def _select(page, dist: str) -> None:
@@ -327,7 +337,9 @@ async def _test_selected_package_shows_dependents():
 
 async def _test_only_applicable_action_is_offered():
     async def body(app, page, pilot, source):
-        shown = _shown(page)
+        page.focus_primary()
+        await pilot.pause()
+        shown = await _interpreter_options(app, page, pilot)
         await pilot.press("q")
         return shown
 
@@ -344,9 +356,13 @@ async def _test_only_applicable_action_is_offered():
 
     # 无法识别管理模式时应标记未知，避免误导用户执行接管。
     text = await _with_page(fields_body, _source(state=EnvironmentState()))
+
+    def labels(*kinds):
+        return [i18n.t(f"cli.tui.environment.button_{kind}") for kind in kinds]
+
     return (
-        managed == ["release", "recreate"]
-        and external == ["adopt"]
+        managed == labels("release", "recreate")
+        and external == labels("adopt")
         and unknown == []
         and i18n.t("cli.tui.environment.mode_unknown") in text
     )
@@ -562,7 +578,7 @@ async def test_tui_environment(tester: Tester):
         await tester.test(_test_uninstall_needs_selection, "没有选中项时拒绝卸载")
         await tester.test(_test_package_change_while_running_notes_restart, "运行期间装卸提示重启生效")
         await tester.test(_test_selected_package_shows_dependents, "选中项显示被谁依赖")
-        await tester.test(_test_only_applicable_action_is_offered, "只放出当前模式适用的动作")
+        await tester.test(_test_only_applicable_action_is_offered, "解释器菜单只列当前模式适用的动作")
         await tester.test(_test_action_asks_before_running, "重建环境须先选择执行，再输入确认")
         await tester.test(_test_recreate_rejects_unconfirmed_input, "重建输入错误或取消均不执行")
         await tester.test(_test_recreate_rechecks_runtime_after_confirmation, "输入确认后重新检查运行状态")

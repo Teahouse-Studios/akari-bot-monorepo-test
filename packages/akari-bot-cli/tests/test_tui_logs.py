@@ -204,10 +204,39 @@ async def _test_keyword_filter_limits_display_only():
     )
 
 
+async def _test_debug_menu_switches_preference():
+    # m 打开日志级别菜单，只列当前以外的偏好；选择后生效，取消不改动。
+    async def body(app, page, pilot, source):
+        page.focus_primary()
+        await pilot.pause()
+        await pilot.press("m")
+        await pilot.pause()
+        offered = [
+            str(button.label) for button in app.screen.query("#choice-actions Button") if button.id != "choice-cancel"
+        ]
+        app.screen.query_one("#choice-1", compat.Button).press()
+        await pilot.pause()
+        chosen = page.debug_preference
+        await pilot.press("m")
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        kept = page.debug_preference
+        await pilot.press("q")
+        return offered, chosen, kept
+
+    offered, chosen, kept = await _with_page(body)
+    return (
+        offered == [i18n.t("cli.tui.logs.debug_info"), i18n.t("cli.tui.logs.debug_debug")]
+        and chosen == "debug"
+        and kept == "debug"
+    )
+
+
 async def _test_low_frequency_bindings_stay_out_of_footer():
     hidden = {binding.key for binding in LogsPage.BINDINGS if not binding.show}
     shown = {binding.key for binding in LogsPage.BINDINGS if binding.show}
-    return {"d", "r", "escape"} <= hidden and {"space", "c", "slash"} <= shown
+    return {"m", "r", "escape"} <= hidden and {"space", "c", "slash"} <= shown and "d" not in hidden | shown
 
 
 async def _test_action_buttons_fit_after_resize_and_label_changes():
@@ -216,7 +245,6 @@ async def _test_action_buttons_fit_after_resize_and_label_changes():
         for width, height in ((80, 24), (60, 20), (50, 24), (120, 40)):
             await pilot.resize_terminal(width, height)
             for _ in range(3):
-                page.cycle_debug_preference()
                 page.toggle_pause()
                 await pilot.pause()
                 actions = page.query_one("#actions", compat.ButtonFlow)
@@ -252,6 +280,7 @@ async def test_tui_logs(tester: Tester):
     await tester.test(_test_rescan_picks_up_new_file, "重新枚举后计数随目录更新")
     await tester.test(_test_scroll_back_is_not_yanked_to_end, "上滚后不被跟随拽回底部，上滚即暂停")
     await tester.test(_test_keyword_filter_limits_display_only, "关键词过滤只改显示并报出命中行数")
+    await tester.test(_test_debug_menu_switches_preference, "日志级别菜单切换 debug 偏好，取消不改动")
     await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
     await tester.test(_test_action_buttons_fit_after_resize_and_label_changes, "缩放与切换日志状态后全部按钮可见")
     return tester

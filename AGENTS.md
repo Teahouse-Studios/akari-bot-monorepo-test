@@ -96,14 +96,18 @@ packages/
 - 每个分发的导入包目录下带 `doc/`：`doc.toml` 声明标题、简介与排序，Markdown 页面写当前行为；
   在 pyproject 的 `[project.entry-points."akaribot.docs"]` 声明 `<key> = "<import path>"`。第三方包
   以同一方式接入，目录只包含已安装的包。
-- `akaribot docs list|build|serve|deploy|status|clean`。构建需要 Node.js >= 18 与 npm；VitePress
-  版本锁定在 `packages/akari-bot-cli/akaribot/cli/docs/template/package-lock.json`。生成物在实例
-  `cache/docs/`，构建与部署记录在 `.docs/state.json`。
-- 站点配置写实例根 `docs.toml`；部署凭据只从环境变量读取，不写入配置、日志或状态文件。
+- `akaribot docs list|build|serve|deploy|status|clean`。工具链要求由主题清单决定：内置主题为
+  Node.js >= 18 与 VitePress 1.6.4，`akari-bot-docs-template` 为 Node.js >= 22.12 与 VitePress
+  2.0.0-alpha.21。生成物在实例 `cache/docs/`，构建与部署记录在 `.docs/state.json`。
+- 站点配置写实例根 `docs.toml`；主题用 `[theme].source` 选择，外部主题只通过根目录的
+  `docs-theme.json` 声明主题目录、依赖、VitePress/Node 要求与生成选项，引擎不导入主题代码。
+  本仓库的主题是 `vendor/akari-bot-docs-template` submodule，克隆后须初始化 submodule。
+  部署凭据只从环境变量读取，不写入配置、日志或状态文件。
 - 文档只写简体中文与当前状态；命令、配置字段与默认值以源码为准。跨包链接可写源码相对路径，
   生成器会折算为站点 URL。
-- 模块页的属性卡来自 `doc.toml` 的 `[[meta.modules]]`，由生成器自动注入；站点主题内置
-  `ModuleMeta`、`NoticeBox`、`CommandUsage` 组件，正文仍以 Markdown 为主。
+- 模块页的属性卡来自 `doc.toml` 的 `[[meta.modules]]`，由生成器自动注入。`ModuleMeta`、
+  `NoticeBox`、`CommandUsage` 组件的正式位置是 `akari-bot-docs-template`，内置主题保留同名回退；
+  正文仍以 Markdown 为主。
 
 ### i18n 与本地化
 
@@ -125,13 +129,15 @@ packages/
 - **破坏性动作不用单字母键，且必须弹模态确认。** 删除、移除、清数据一类动作走 `ctrl+<字母>`
   或专用字母键（卸载用 `u`）；不可逆动作（清空实例数据、重建 venv、迁移旧项目）额外要求
   **打字确认**或「先预演」。
-- **单字母键只留给浏览与无副作用的切换**（`r` 刷新、`/` 搜索、`space` 选择、`n`/`p` 翻页等）。
-  `d` 只保留给无害动作（日志页切换 debug）。
+- **单字母键只留给浏览与无副作用的切换**（`r` 刷新、`/` 搜索、`space` 选择等）；有副作用的单字母键须先弹确认框。
 - **确认一律弹模态框**：不再用状态栏「再按一次 X 确认」——它既容易被鼠标双击与键盘连发穿透，
   也让人看不清将改动什么。弹框前过 `_compat.PendingConfirm.accept(key)`：防抖窗口内忽略连发，
   避免叠出两层模态。切页、刷新、换选中项调用页面的 `reset_pending()` 复位。
 - **页脚只放高频键位**：低频与危险动作在 `compat.bindings()` 里用四元组第 4 项 `False` 隐藏，
   由按钮或页内提示承载；80 列下页脚不得溢出。
+- **键位遵循统一语法**（表见 `akaribot/cli/tui/README.md`「键位语法」）：同一语义各页只用一个键，
+  调整页面键位时不得另起新义。按钮文字用 `compat.key_hint()` 附快捷键；低频操作收进 `m` 菜单，
+  不占按钮栏。
 
 ### CLI 与 TUI 的分工
 

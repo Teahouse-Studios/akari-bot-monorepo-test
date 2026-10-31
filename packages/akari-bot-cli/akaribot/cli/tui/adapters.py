@@ -5,7 +5,7 @@ import json
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +16,7 @@ from akaribot.cli.instance import INSTANCE_ID_PATTERN
 from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
+from akaribot.cli.tui.config import ConfigField, ConfigFormScreen, SetResult, SubprocessConfigSource
 from akaribot.cli.tui.modules import ModuleRecord, OperationResult, SubprocessModuleSource
 
 
@@ -111,6 +112,11 @@ class AdapterRecord:
         return not self.installed
 
     @property
+    def listed(self) -> bool:
+        """是否显示在实例列表中；未安装且未启用的平台只在安装对话框中列出。"""
+        return self.installed or self.enabled
+
+    @property
     def enable_label(self) -> str:
         """返回启用状态文本；未安装的适配器显示安装状态。"""
         if self.installable:
@@ -170,6 +176,7 @@ class AdapterSnapshot:
     :param registry_note: 清单不可用或形状异常时的说明。
     :param legacy_layout: 是否含扁平布局配置。
     :param errors: 配置文件的解析错误。
+    :param installed_platforms: core 清单中已安装的平台，含尚无实例配置的平台。
     """
 
     instances: tuple[AdapterRecord, ...] = ()
@@ -178,6 +185,7 @@ class AdapterSnapshot:
     registry_note: str = ""
     legacy_layout: bool = False
     errors: tuple[str, ...] = ()
+    installed_platforms: tuple[str, ...] = ()
 
     def grouped(self) -> tuple[tuple[str, tuple[AdapterRecord, ...]], ...]:
         """按平台名分组，组内保持实例顺序，组间按平台名升序。"""
@@ -233,6 +241,8 @@ class StaticAdapterSource:
     :param peers: ``peer_status`` 的返回值；默认表示快照不可用。
     :param toggle_result: ``set_enable`` 的返回值；默认为成功。
     :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值；默认为成功。
+    :param config_fields: 表名到配置项的映射，``config_fields`` 的返回值；缺失的表返回空序列。
+    :param config_result: 按键名指定 ``set_config`` 的返回值；缺失的键写入成功。
     """
 
     def __init__(
@@ -245,7 +255,12 @@ class StaticAdapterSource:
         install_result: OperationResult | None = None,
         install_lines: Sequence[str] = (),
         instance_result: OperationResult | None = None,
+        config_fields: Mapping[str, Sequence[ConfigField]] | None = None,
+        config_result: Mapping[str, SetResult] | None = None,
     ) -> None:
+        self._config_fields = dict(config_fields or {})
+        self._config_result = dict(config_result or {})
+        self.config_written: list[tuple[str, str, str]] = []
         self._snapshot = snapshot or AdapterSnapshot()
         self._available = tuple(available)
         self._install_result = install_result or OperationResult(
@@ -306,6 +321,17 @@ class StaticAdapterSource:
         self.removed.append((record.platform, record.instance_id))
         return self._instance_result
 
+    def config_fields(self, table: str) -> Sequence[ConfigField]:
+        """见 :meth:`AdapterSource.config_fields`。"""
+        return self._config_fields.get(table, ())
+
+    def set_config(self, section: str, key: str, value: str) -> SetResult:
+        """见 :meth:`AdapterSource.set_config`。"""
+        result = self._config_result.get(key, SetResult(True, "stub"))
+        if result.ok:
+            self.config_written.append((section, key, value))
+        return result
+
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
         """见 :meth:`AdapterSource.set_enable`；成功后替换缓存中的该条记录。"""
         self.calls["set_enable"] += 1
@@ -336,6 +362,18 @@ class AdapterSource(Protocol):
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
         """通过 CLI 设置实例的 ``enable``。"""
+
+    def add_instance(self, platform: str, instance_id: str) -> OperationResult:
+        """通过 CLI 为已安装的平台新建实例配置。"""
+
+    def remove_instance(self, record: AdapterRecord) -> OperationResult:
+        """通过 CLI 移除实例配置，保留实例数据。"""
+
+    def config_fields(self, table: str) -> Sequence[ConfigField]:
+        """返回实例配置表的全部配置项。"""
+
+    def set_config(self, section: str, key: str, value: str) -> SetResult:
+        """通过 CLI 写入一项配置；``section`` 为 ``config set --table`` 的表引用。"""
 
 
 def _text(value: Any) -> str:
@@ -451,6 +489,7 @@ def normalize_snapshot(payload: Any) -> AdapterSnapshot:
         registry_note=_text(payload.get("registry_note")),
         legacy_layout=_flag(payload.get("legacy_layout", False)),
         errors=_string_tuple(payload.get("errors")),
+        installed_platforms=_string_tuple(payload.get("installed_platforms")),
     )
 
 
@@ -584,9 +623,29 @@ class SubprocessAdapterSource:
         # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
-        self.calls = {"list": 0, "available": 0, "install": 0, "peers": 0, "set_enable": 0}
+        self.calls = {
+            "list": 0,
+            "available": 0,
+            "install": 0,
+            "peers": 0,
+            "set_enable": 0,
+            "add_instance": 0,
+            "remove_instance": 0,
+        }
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
+        # 配置读写与配置页共用一套实现，CLI 调用规则只有一份。
+        self._config = SubprocessConfigSource(
+            root=self._root_override, timeout=timeout, runner=self._runner, instance_factory=instance_factory
+        )
+
+    def config_fields(self, table: str) -> Sequence[ConfigField]:
+        """见 :meth:`AdapterSource.config_fields`。"""
+        return self._config.schema(table)
+
+    def set_config(self, section: str, key: str, value: str) -> SetResult:
+        """见 :meth:`AdapterSource.set_config`。"""
+        return self._config.set_value(section, key, value)
 
     @property
     def root(self) -> Path:
@@ -823,7 +882,7 @@ class AdaptersPage(compat.Vertical):
         ("r", "refresh", i18n.t("cli.tui.adapters.action_refresh")),
         ("e", "toggle_enable", i18n.t("cli.tui.adapters.bind_toggle_enable"), False),
         ("i", "install", i18n.t("cli.tui.adapters.action_install")),
-        ("a", "add_instance", i18n.t("cli.tui.adapters.bind_add_instance"), False),
+        ("n", "add_instance", i18n.t("cli.tui.adapters.bind_add_instance"), False),
         ("ctrl+d", "remove_instance", i18n.t("cli.tui.adapters.bind_remove_instance"), False),
     )
 
@@ -859,13 +918,6 @@ class AdaptersPage(compat.Vertical):
     }
     AdaptersPage #adapter-list > ListItem.group-header {
         color: $accent;
-    }
-    AdaptersPage #instance-row {
-        height: 3;
-        padding: 0 0 0 1;
-    }
-    AdaptersPage #new-instance {
-        width: 1fr;
     }
     AdaptersPage #actions {
         height: auto;
@@ -923,13 +975,12 @@ class AdaptersPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.adapters.summary_pending"), id="summary", markup=False)
         yield compat.Static("", id="columns", markup=False)
         yield compat.ListView(id="adapter-list")
-        with compat.Horizontal(id="instance-row"):
-            yield compat.Input(placeholder=i18n.t("cli.tui.adapters.instance_placeholder"), id="new-instance")
         yield compat.ButtonFlow(
-            ("toggle", i18n.t("cli.tui.adapters.action_toggle"), "primary"),
-            ("add-instance", i18n.t("cli.tui.adapters.action_add_instance")),
-            ("remove-instance", i18n.t("cli.tui.adapters.action_remove_instance"), "error"),
-            ("refresh", i18n.t("cli.tui.adapters.action_refresh")),
+            ("toggle", compat.key_hint(i18n.t("cli.tui.adapters.action_toggle"), "e"), "primary"),
+            ("add-instance", compat.key_hint(i18n.t("cli.tui.adapters.action_add_instance"), "n")),
+            ("remove-instance", compat.key_hint(i18n.t("cli.tui.adapters.action_remove_instance"), "ctrl+d"), "error"),
+            ("install", compat.key_hint(i18n.t("cli.tui.adapters.action_install_adapter"), "i")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.adapters.action_refresh"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.adapters.detail_placeholder"), id="detail", markup=False)
@@ -1096,8 +1147,12 @@ class AdaptersPage(compat.Vertical):
         self._loaded_at = 0.0
         self._snapshot = AdapterSnapshot()
 
+    def _listed_groups(self) -> tuple[tuple[str, tuple[AdapterRecord, ...]], ...]:
+        listed = tuple(record for record in self._snapshot.instances if record.listed)
+        return replace(self._snapshot, instances=listed).grouped()
+
     def _records_in_row_order(self) -> tuple[AdapterRecord, ...]:
-        return tuple(record for _, group in self._snapshot.grouped() for record in group)
+        return tuple(record for _, group in self._listed_groups() for record in group)
 
     def _render_all(self) -> None:
         list_view = self.query_one("#adapter-list", compat.ListView)
@@ -1109,7 +1164,7 @@ class AdaptersPage(compat.Vertical):
         kinds: list[str] = []
         cells: list[tuple[str, ...]] = []
         titles: list[str] = []
-        for platform, group in self._snapshot.grouped():
+        for platform, group in self._listed_groups():
             title = self._group_row(platform, group, inner_width)
             lines.append(title)
             kinds.append("header")
@@ -1153,7 +1208,7 @@ class AdaptersPage(compat.Vertical):
         return max(outer - 4, 8)
 
     def _build_layout(self, inner_width: int) -> ColumnLayout:
-        records = self._snapshot.instances
+        records = self._records_in_row_order()
         titles = _column_titles()
         id_width = min(
             max(compat.column_width(record.display_id for record in records), compat.display_width(titles[0]), 6),
@@ -1298,7 +1353,7 @@ class AdaptersPage(compat.Vertical):
         if record is None:
             text = (
                 i18n.t("cli.tui.adapters.detail_hint")
-                if self._snapshot.instances
+                if self._records_in_row_order()
                 else i18n.t("cli.tui.adapters.detail_empty")
             )
             self._detail_rendered = text
@@ -1349,18 +1404,18 @@ class AdaptersPage(compat.Vertical):
         toggle = self.query_one("#toggle", compat.Button)
         toggle.disabled = self._busy or self.selected_record is None
         record = self.selected_record
-        self.query_one("#add-instance", compat.Button).disabled = self._busy or record is None
+        self.query_one("#add-instance", compat.Button).disabled = self._busy or not self._installed_platforms()
+        self.query_one("#install", compat.Button).disabled = self._busy or not self._installable_records()
         self.query_one("#remove-instance", compat.Button).disabled = (
             self._busy or record is None or not record.configured
         )
         if record is None:
-            toggle.label = i18n.t("cli.tui.adapters.action_toggle")
+            label = i18n.t("cli.tui.adapters.action_toggle")
         elif record.installable:
-            toggle.label = i18n.t("cli.tui.adapters.action_install")
+            label = i18n.t("cli.tui.adapters.action_install")
         else:
-            toggle.label = i18n.t(
-                "cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable"
-            )
+            label = i18n.t("cli.tui.adapters.action_disable" if record.enabled else "cli.tui.adapters.action_enable")
+        toggle.label = compat.key_hint(label, "e")
         self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:
@@ -1393,43 +1448,133 @@ class AdaptersPage(compat.Vertical):
             self.request_add_instance()
         elif event.button.id == "remove-instance":
             self.request_remove_instance()
+        elif event.button.id == "install":
+            self.request_install()
         elif event.button.id == "refresh":
             self.refresh_instances(force=True)
 
     def request_add_instance(self) -> None:
-        """使用输入的实例 ID，为所选平台创建实例。"""
+        """弹出新增实例对话框：选择已安装的平台并填写实例 ID。"""
+        platforms = self._installed_platforms()
+        if not platforms:
+            compat.notify(
+                self.app,
+                i18n.t("cli.tui.adapters.add_no_installed"),
+                severity="warning",
+                title=i18n.t("cli.tui.adapters.action_add_instance"),
+            )
+            return
+        if not self._gate.accept("add"):
+            return
         record = self.selected_record
-        if record is None:
-            compat.notify(
-                self.app,
-                i18n.t("cli.tui.adapters.pick_platform"),
-                severity="warning",
-                title=i18n.t("cli.tui.adapters.action_add_instance"),
-            )
-            return
-        # 实例 ID 参与 target_id 前缀，必须由用户指定，创建后不可更改。
-        instance_id = self.query_one("#new-instance", compat.Input).value.strip()
-        if not instance_id:
-            compat.notify(
-                self.app,
-                i18n.t("cli.tui.adapters.instance_id_required"),
-                severity="warning",
-                title=i18n.t("cli.tui.adapters.action_add_instance"),
-            )
-            return
-        if not INSTANCE_ID_PATTERN.fullmatch(instance_id):
-            compat.notify(
-                self.app,
-                i18n.t("cli.tui.adapters.instance_id_invalid", instance_id=instance_id),
-                severity="warning",
-                title=i18n.t("cli.tui.adapters.action_add_instance"),
-            )
-            return
-        self._start_instance_op(
-            i18n.t("cli.tui.adapters.label_instance_add", name=f"{record.platform}/{instance_id}"),
-            lambda: self.source.add_instance(record.platform, instance_id),
-            clear_input=True,
+        compat.ask_pick_text(
+            self.app,
+            title=i18n.t("cli.tui.adapters.add_title"),
+            hint=i18n.t("cli.tui.adapters.add_hint"),
+            options=[(platform, self._platform_option(platform)) for platform in platforms],
+            selected=record.platform if record is not None else "",
+            placeholder=i18n.t("cli.tui.adapters.instance_placeholder"),
+            confirm_label=i18n.t("cli.tui.adapters.add_confirm"),
+            cancel_label=i18n.t("cli.tui.adapters.cancel"),
+            validate=self._validate_new_instance,
+            callback=self.on_add_chosen,
         )
+
+    def on_add_chosen(self, choice: tuple[str, str] | None) -> None:
+
+        self.reset_pending()
+        if choice is None:
+            self._set_status(i18n.t("cli.tui.adapters.add_cancelled"))
+            return
+        platform, instance_id = choice
+        self._start_instance_op(
+            i18n.t("cli.tui.adapters.label_instance_add", name=f"{platform}/{instance_id}"),
+            lambda: self.source.add_instance(platform, instance_id),
+            after=lambda: self._open_config_form(platform, instance_id),
+        )
+
+    def _instance_table(self, platform: str, instance_id: str) -> str:
+        for record in self._snapshot.instances:
+            if record.platform == platform and record.instance_id == instance_id and record.table:
+                return record.table
+        return f"bot_{platform}-{instance_id}"
+
+    async def _open_config_form(self, platform: str, instance_id: str) -> None:
+        # 实例此时已创建：配置项读不到只影响填写入口，不算新增失败。
+        name = f"{platform}/{instance_id}"
+        table = self._instance_table(platform, instance_id)
+        self._set_status(i18n.t("cli.tui.adapters.config_form_loading", name=name))
+        try:
+            fields = tuple(await asyncio.to_thread(self.source.config_fields, table))
+        except Exception as error:  # noqa: BLE001 - 数据源异常只影响表单，转成状态说明
+            self.last_error = str(error)
+            self._set_status(i18n.t("cli.tui.adapters.config_form_unavailable", name=name, error=error))
+            return
+        if not compat.mounted(self):
+            return
+        if not fields:
+            self._set_status(i18n.t("cli.tui.adapters.config_form_empty", name=name))
+            return
+        compat.push_screen(
+            self.app,
+            ConfigFormScreen(
+                title=i18n.t("cli.tui.adapters.config_form_title", name=name),
+                hint=i18n.t("cli.tui.adapters.config_form_hint"),
+                fields=fields,
+                apply=self.source.set_config,
+            ),
+            lambda count: self.on_config_form_closed(name, table, count),
+        )
+
+    def on_config_form_closed(self, name: str, table: str, count: int) -> None:
+
+        # 表单打开前的重绘会用旧高亮覆盖选中键，须在关闭时再指向新实例。
+        self._selected_key = table
+        if count:
+            message = i18n.t("cli.tui.adapters.config_form_saved", name=name, count=count)
+            self.run_worker(self._reload_with_status(message), group="adapters-load", exclusive=True)
+            return
+        self._render_all()
+        self._set_status(i18n.t("cli.tui.adapters.config_form_skipped", name=name))
+
+    async def _reload_with_status(self, message: str) -> None:
+        # 表单可能改了 enable，列表须重新读取。
+        self.invalidate_cache()
+        await self._load()
+        self.last_result = message
+        self._set_status(message)
+
+    def _installed_platforms(self) -> tuple[str, ...]:
+        # 可安装清单依赖 registry 来源，读取失败时仍以 core 清单为准列出已安装平台。
+        installed = {record.platform for record in self._snapshot.instances if record.installed}
+        return tuple(sorted(installed | set(self._snapshot.installed_platforms)))
+
+    def _existing_ids(self, platform: str) -> tuple[str, ...]:
+        return tuple(
+            record.instance_id
+            for record in self._snapshot.instances
+            if record.platform == platform and record.configured
+        )
+
+    def _platform_option(self, platform: str) -> str:
+        names = [instance_id or i18n.t("cli.tui.adapters.default_id") for instance_id in self._existing_ids(platform)]
+        if not names:
+            return i18n.t("cli.tui.adapters.add_option_empty", platform=platform)
+        return i18n.t(
+            "cli.tui.adapters.add_option",
+            platform=platform,
+            instances=i18n.t("cli.tui.common.list_separator").join(names),
+        )
+
+    def _validate_new_instance(self, platform: str, instance_id: str) -> str:
+        # 实例 ID 参与 target_id 前缀，必须由用户指定，创建后不可更改。
+        if not instance_id:
+            return i18n.t("cli.tui.adapters.instance_id_required")
+        if not INSTANCE_ID_PATTERN.fullmatch(instance_id):
+            return i18n.t("cli.tui.adapters.instance_id_invalid", instance_id=instance_id)
+        if instance_id in self._existing_ids(platform):
+            return i18n.t("cli.tui.adapters.instance_id_exists", platform=platform, instance_id=instance_id)
+        return ""
 
     def request_remove_instance(self) -> None:
         """请求确认移除实例配置，忽略防抖窗口内的重复请求。"""
@@ -1481,14 +1626,20 @@ class AdaptersPage(compat.Vertical):
             result = self.source.remove_instance(record)
             return replace(result, message=kept) if result.ok else result
 
-        self._start_instance_op(label, remove, clear_input=False)
+        self._start_instance_op(label, remove)
 
     def _instance_display(self, record: AdapterRecord) -> str:
         return (
             f"{record.platform}/{record.instance_id}" if record.instance_id else i18n.t("cli.tui.adapters.default_id")
         )
 
-    def _start_instance_op(self, label: str, func: Callable[[], OperationResult], *, clear_input: bool) -> None:
+    def _start_instance_op(
+        self,
+        label: str,
+        func: Callable[[], OperationResult],
+        *,
+        after: Callable[[], Awaitable[None]] | None = None,
+    ) -> None:
         if self._busy:
             compat.notify(
                 self.app,
@@ -1500,9 +1651,14 @@ class AdaptersPage(compat.Vertical):
         self._busy = True
         self._sync_actions()
         self._set_status(i18n.t("cli.tui.adapters.calling", label=label))
-        self.run_worker(self._instance_op(label, func, clear_input), group="adapters-instance", exclusive=True)
+        self.run_worker(self._instance_op(label, func, after), group="adapters-instance", exclusive=True)
 
-    async def _instance_op(self, label: str, func: Callable[[], OperationResult], clear_input: bool) -> None:
+    async def _instance_op(
+        self,
+        label: str,
+        func: Callable[[], OperationResult],
+        after: Callable[[], Awaitable[None]] | None = None,
+    ) -> None:
         try:
             result = await asyncio.to_thread(func)
         except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
@@ -1512,14 +1668,14 @@ class AdaptersPage(compat.Vertical):
                 f"{type(error).__name__}: {error}",
             )
         if result.ok:
-            if clear_input:
-                self.query_one("#new-instance", compat.Input).value = ""
             self._set_status(i18n.t("cli.tui.adapters.refreshing", message=result.message))
             self.invalidate_cache()
             await self._load()
             self.last_result = result.message
             self._set_status(self.last_result)
             compat.notify(self.app, result.message, severity="information", title=label)
+            if after is not None:
+                await after()
         else:
             self.last_error = result.detail or result.message
             tail = result.detail.splitlines()[-1] if result.detail else i18n.t("cli.tui.common.no_output")
@@ -1546,17 +1702,56 @@ class AdaptersPage(compat.Vertical):
         self._start_toggle(record, not record.enabled)
 
     def request_install(self) -> None:
-        """安装所选平台的适配器；已安装或无选中项时显示提示。"""
-        record = self.selected_record
-        if record is None or not record.installable:
+        """弹出安装对话框，列出尚未安装的适配器；当前行未安装时预选该平台。"""
+        candidates = self._installable_records()
+        if not candidates:
             compat.notify(
                 self.app,
-                i18n.t("cli.tui.adapters.pick_install"),
+                self._available_error or i18n.t("cli.tui.adapters.install_none"),
                 severity="warning",
                 title=i18n.t("cli.tui.adapters.action_install"),
             )
             return
+        if not self._gate.accept("install"):
+            return
+        record = self.selected_record
+        compat.ask_pick(
+            self.app,
+            title=i18n.t("cli.tui.adapters.install_title"),
+            hint=i18n.t("cli.tui.adapters.install_hint"),
+            options=[(item.platform, self._install_option(item)) for item in candidates],
+            selected=record.platform if record is not None else "",
+            confirm_label=i18n.t("cli.tui.adapters.action_install"),
+            cancel_label=i18n.t("cli.tui.adapters.cancel"),
+            callback=self.on_install_chosen,
+        )
+
+    def on_install_chosen(self, platform: str | None) -> None:
+
+        self.reset_pending()
+        record = next((item for item in self._installable_records() if item.platform == platform), None)
+        if record is None:
+            self._set_status(i18n.t("cli.tui.adapters.install_cancelled"))
+            return
         self._start_install(record)
+
+    def _installable_records(self) -> tuple[AdapterRecord, ...]:
+        # 每个平台取一条记录，可安装清单的记录带作者信息。
+        picked: dict[str, AdapterRecord] = {}
+        for record in self._snapshot.instances:
+            if record.installable and (record.platform not in picked or record.developers):
+                picked[record.platform] = record
+        return tuple(picked[platform] for platform in sorted(picked))
+
+    @staticmethod
+    def _install_option(record: AdapterRecord) -> str:
+        if not record.developers:
+            return record.platform
+        return i18n.t(
+            "cli.tui.adapters.install_option",
+            platform=record.platform,
+            names=i18n.t("cli.tui.common.list_separator").join(record.developers),
+        )
 
     def _start_install(self, record: AdapterRecord) -> None:
         if self._busy:

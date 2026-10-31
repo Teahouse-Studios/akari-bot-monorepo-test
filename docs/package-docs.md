@@ -22,11 +22,16 @@ Markdown、图片、`.txt`/`.pdf` 附件与 `doc.toml`，不要提交构建产�
 | 字段 | 说明 |
 | --- | --- |
 | `schema` | 固定为 `1`；缺省按 1 处理，其他值使整个文件被忽略 |
-| `title` | 站点标题与侧栏名；缺省取导入路径最后一段 |
+| `title` | 站点标题与侧栏名；缺省取导入路径最后一段。模块文档使用模块名，不使用描述性标题 |
 | `summary` | 一句话简介；缺省取分发元数据的 Summary |
 | `order` | 排序权重，自小到大；缺省 500，非整数按 500 处理并告警 |
 | `hidden` | 为 `true` 时该包不进入目录 |
 | `kind` | 覆盖分组：`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset` 等 |
+| `category` | 侧栏分类，只接受一个字符串；缺省不分类 |
+| `category_order` | 分类在侧栏中的排序权重，自小到大；同一分类的文档取各自声明 |
+
+`category` 写成数组或其他类型时整项被忽略并告警。同一分类的包在侧栏放入同一个二级分组；
+`category_order` 只决定分类之间的先后，包在分类内仍按 `order`、标题与 key 排序。
 
 不写 `kind` 时按 key 推断：`core` / `builtin` / `cli` / `testing` 原样；`module-*` 归模块，
 `adapter-*` 归适配器，`assets-*` 归资源，其余归 `library`。分组决定导航与分组页。第三方模块包与
@@ -63,8 +68,26 @@ permission = "public"
 
 属性卡描述模块级信息；命令级权限仍写在命令表里。一个包注册多个模块时按声明顺序列出。
 
-## 站点组件
-CLI 的 VitePress 主题内置以下组件，所有包文档都可直接使用：
+## 站点主题与组件
+
+站点主题由实例 `docs.toml` 的 `[theme].source` 选择：
+
+```toml
+[theme]
+source = "auto"   # auto | bundled | file:<模板路径>
+```
+
+`auto` 会在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`；
+从仓库源码运行 CLI 时还会使用仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用
+CLI 内置的最小主题。外部模板在根目录提供 `docs-theme.json`，声明主题目录、VitePress 版本、Node
+要求、npm 依赖与生成配置选项；引擎只复制主题目录，不导入主题代码。`akari-bot-docs-template`
+当前要求 Node.js 22.12 与 VitePress 2.0.0-alpha.21。
+
+从源码检出运行 CLI 时，`akaribot docs sync-theme` 把 submodule 更新到远端最新提交，
+`akaribot docs install-deps` 安装或刷新主题依赖。实例可用 `[theme].color = "#rrggbb"` 设置站点
+主题色；留空使用主题默认值。
+
+`akari-bot-docs-template` 的主题内置以下组件，所有包文档都可直接使用：
 
 | 组件 | 用途 |
 | --- | --- |
@@ -72,8 +95,21 @@ CLI 的 VitePress 主题内置以下组件，所有包文档都可直接使用�
 | `<NoticeBox type="warning" title="...">…</NoticeBox>` | 提示框，类型取 `info`、`tip`、`warning`、`danger`、`example`、`help` |
 | `<CommandUsage usage="..." permission="..." :options="[...]" />` | 命令用法与选项表 |
 
-组件只在构建后的站点中渲染；直接在 Markdown 阅读器里会显示为标签。属性卡由生成器注入，其它
-组件按需使用，正文仍以 Markdown 为主。
+内置的 `bundled` 主题保留同名组件作为回退。外部模板的组件使用 M3E 颜色令牌，外观随读者的种子色、
+明暗模式与对比度设置变化。组件只在构建后的站点中渲染；直接在 Markdown 阅读器里会显示为标签。
+属性卡由生成器注入，其它组件按需使用，正文仍以 Markdown 为主。
+
+## 模块页面结构
+模块文档分为“使用方法”和“安装与开发”两部分：
+
+- `index.md` 是使用方法，先给出命令列表表格，再逐条说明参数、行为与权限。
+- `development.md` 是安装与开发，放安装步骤、配置字段、权限与平台能力、数据表与依赖。
+- 其余页面作为补充用法，与上述两页一起出现。
+
+生成器把同一模块目录下的页面作为平行页面：使用 `akari-bot-docs-template` 时，侧栏只显示一个
+模块条目，条目名称取模块名；默认打开使用方法，`development.md` 的标签固定为“安装与开发”，不
+单独出现在侧栏。内置回退主题没有标签栏，开发页仍作为普通侧栏页面列出。页面顺序由 `order` 与
+文件名决定，`index.md` 始终在最前，`development.md` 始终在最后。
 
 ## 页面与 front matter
 每个 `.md` 是一个页面，文件名小写、用连字符分词。页面可带简单 front matter：
@@ -107,6 +143,9 @@ module-my-module = "akaribot.modules.my_module"
 - 值只取 `:` 之前的导入路径；写成 `akaribot.modules.my_module:app` 也按包路径处理。
 - key 重复时排序靠后的条目被忽略并告警；包已安装但 `doc/` 不存在或没有 Markdown 页面时，
   该包被跳过并记入警告。
+- entry point 只在安装时写入包元数据。可编辑安装的包若在安装之后才声明 `akaribot.docs`，
+  发现过程按源码 `pyproject.toml` 的声明补入该包并告警；重新安装即可刷新元数据，工作区实例可执行
+  `akaribot module update --all`。普通安装的包不按源码补入。
 
 `akaribot.core` 与 `akaribot.modules.core` 分别以 `core`、`builtin` 提供文档；CLI 的 `cli`
 条目由命令行工具自身合并。
@@ -153,10 +192,13 @@ packages = ["akaribot"]
 
 ```toml
 schema = 1
-title = "我的模块"
+title = "my-module"
+category = "实用工具"
+category_order = 400
 summary = "示例模块的功能与命令。"
 order = 100
 ```
 
-`index.md` 以 `# 我的模块` 开头，说明安装、配置与命令入口即可。新增页面后运行
-`python -m akaribot.core.entrypoints.docs --json` 核对清单与告警，再构建站点。
+`index.md` 以 `# my-module` 开头，先给出命令表再逐条说明；安装、配置与依赖写入
+`development.md`。新增页面后运行 `python -m akaribot.core.entrypoints.docs --json` 核对清单与告警，
+再构建站点。

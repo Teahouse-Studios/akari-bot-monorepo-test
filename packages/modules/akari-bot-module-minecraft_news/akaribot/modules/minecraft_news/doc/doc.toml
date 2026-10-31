@@ -1,7 +1,9 @@
 schema = 1
-title = "Minecraft 新闻推送"
+title = "minecraft-news"
 summary = "推送 Minecraft 官网新闻与 Feedback 更新记录。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "minecraft-news"

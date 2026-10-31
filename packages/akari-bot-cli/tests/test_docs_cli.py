@@ -8,6 +8,7 @@ import json
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -17,6 +18,7 @@ from akaribot.cli.commands import docs as docs_command
 from akaribot.cli.docs.config import DocsBuildConfig, DocsConfig, DocsSiteConfig
 from akaribot.cli.docs.model import BuildResult, DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
 from akaribot.cli.docs.state import record_deploy, save_build_state
+from akaribot.cli.docs.theme_sync import ThemeSyncResult
 from akaribot.testing import Tester, func_case
 
 
@@ -127,10 +129,19 @@ async def _test_list_json_contract():
             "instance_warnings",
         }
         and payload["instance"] == str(root)
-        and set(payload["config"]) == {"path", "site", "out_dir"}
+        and set(payload["config"]) == {"path", "site", "out_dir", "theme", "icons"}
         and payload["config"]["path"] is None
-        and payload["config"]["site"] == {"title": "Akari 文档", "lang": "zh-CN", "base": "/docs/"}
+        and payload["config"]["site"]
+        == {
+            "title": "Akari 文档",
+            "lang": "zh-CN",
+            "base": "/docs/",
+            "logo": "",
+            "favicon": "",
+        }
+        and payload["config"]["icons"] == {}
         and payload["config"]["out_dir"] == str(root / "cache" / "docs" / "site")
+        and payload["config"]["theme"] == {"source": "auto", "color": ""}
         and set(payload["toolchain"]) == {"node", "npm", "node_version", "npm_version", "ready", "detail"}
         and payload["toolchain"]["ready"] is True
         and payload["packages"][0]
@@ -143,6 +154,8 @@ async def _test_list_json_contract():
             "title": "示例",
             "summary": "演示包",
             "order": 10,
+            "category": "",
+            "category_order": 500,
             "doc_path": str(Path("/tmp/doc") / "demo"),
             "editable": False,
             "pages": [{"path": "index.md", "title": "概览", "order": 0, "description": "首页"}],
@@ -184,8 +197,17 @@ async def _test_build_passes_options_and_outputs_json():
         instance = _FakeInstance(root)
         calls: list[dict] = []
 
-        def fake_build(target, keys=None, force=False, offline=False, reporter=None):
-            calls.append({"target": target, "keys": keys, "force": force, "offline": offline})
+        def fake_build(target, keys=None, force=False, offline=False, reporter=None, log=None):
+            calls.append(
+                {
+                    "target": target,
+                    "keys": keys,
+                    "force": force,
+                    "offline": offline,
+                    "reporter": callable(reporter),
+                    "log": callable(log),
+                }
+            )
             return _build_result(root, packages=("a", "b", "c"))
 
         with _engine(instance), patch.object(docs_command, "build", side_effect=fake_build):
@@ -198,6 +220,8 @@ async def _test_build_passes_options_and_outputs_json():
         and calls[0]["keys"] == ["a", "b", "c"]
         and calls[0]["force"] is True
         and calls[0]["offline"] is True
+        and calls[0]["reporter"]
+        and calls[0]["log"]
         and calls[1]["keys"] is None
         and payload
         == {
@@ -228,6 +252,117 @@ async def _test_build_human_reports_reuse():
     )
 
 
+async def _test_build_streams_stages_and_logs():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+
+        def fake_build(target, keys=None, force=False, offline=False, reporter=None, log=None):
+            reporter("toolchain")
+            log("npm install output")
+            reporter("build")
+            log("✓ built in 512ms")
+            return _build_result(root)
+
+        with _engine(instance), patch.object(docs_command, "build", side_effect=fake_build):
+            human = _invoke(["build"])
+            as_json = _invoke(["build", "--json"])
+        payload = json.loads(as_json.stdout)
+    human_flat = _flat(human.stdout)
+    stderr_flat = _flat(as_json.stderr)
+    return (
+        human.exit_code == 0
+        and _flat(i18n.t("cli.docs.build.stage_toolchain")) in human_flat
+        and _flat(i18n.t("cli.docs.build.stage_build")) in human_flat
+        and "npm install output" in human.stdout
+        and "✓ built in 512ms" in human.stdout
+        and as_json.exit_code == 0
+        and payload["ok"] is True
+        and len(as_json.stdout.strip().splitlines()) == 1
+        and _flat(i18n.t("cli.docs.build.stage_toolchain")) in stderr_flat
+        and "npm install output" in as_json.stderr
+    )
+
+
+async def _test_sync_theme_json_and_human():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        result = ThemeSyncResult(
+            repo=root,
+            path=root / "vendor" / "akari-bot-docs-template",
+            before="a" * 40,
+            after="b" * 40,
+            changed=True,
+            log="synced\n",
+        )
+        with _engine(instance), patch.object(docs_command, "sync_theme_submodule", return_value=result):
+            as_json = _invoke(["sync-theme", "--json"])
+            human = _invoke(["sync-theme"])
+        payload = json.loads(as_json.stdout)
+        flat = _flat(human.stdout)
+    return (
+        as_json.exit_code == 0
+        and payload
+        == {
+            "ok": True,
+            "repo": str(root),
+            "path": str(root / "vendor" / "akari-bot-docs-template"),
+            "before": "a" * 40,
+            "after": "b" * 40,
+            "changed": True,
+            "log": "synced\n",
+        }
+        and len(as_json.stdout.strip().splitlines()) == 1
+        and human.exit_code == 0
+        and _flat(i18n.t("cli.docs.sync_theme.repo", path=root)) in flat
+        and _flat(i18n.t("cli.docs.sync_theme.before", commit="a" * 12)) in flat
+        and _flat(i18n.t("cli.docs.sync_theme.after", commit="b" * 12)) in flat
+        and _flat(i18n.t("cli.docs.sync_theme.updated")) in flat
+    )
+
+
+async def _test_install_deps_json_and_human():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        theme = SimpleNamespace(name="akari-docs", version="1.0.0", vitepress_version="2.0.0", node_major=22)
+        installed: list[dict] = []
+
+        def fake_ensure(cache_dir, template_dir=None, offline=False, runner=None, *, theme=None, log=None):
+            installed.append({"cache_dir": cache_dir, "theme": theme, "offline": offline, "log": callable(log)})
+            return Path(cache_dir) / "docs"
+
+        with (
+            _engine(instance),
+            patch.object(docs_command, "resolve_theme", return_value=theme),
+            patch.object(docs_command, "ensure_toolchain", side_effect=fake_ensure),
+        ):
+            as_json = _invoke(["install-deps", "--json"])
+            human = _invoke(["install-deps"])
+        payload = json.loads(as_json.stdout)
+        flat = _flat(human.stdout)
+    return (
+        as_json.exit_code == 0
+        and payload
+        == {
+            "ok": True,
+            "theme": "akari-docs",
+            "vitepress": "2.0.0",
+            "path": str(root / "cache" / "docs"),
+            "toolchain": "node v20.0.0, npm 10.0.0",
+        }
+        and len(as_json.stdout.strip().splitlines()) == 1
+        and installed[0]["cache_dir"] == root / "cache"
+        and installed[0]["theme"] is theme
+        and installed[0]["offline"] is False
+        and installed[0]["log"]
+        and human.exit_code == 0
+        and _flat(i18n.t("cli.docs.install_deps.done", version="2.0.0")) in flat
+        and _flat(i18n.t("cli.docs.install_deps.summary", path=root / "cache" / "docs")) in flat
+    )
+
+
 class _FakeServer:
     def __init__(self, directory, host="127.0.0.1", port=0) -> None:
         self.directory = Path(directory)
@@ -250,7 +385,7 @@ class _FakeServer:
 
 
 def _serve_env(instance: _FakeInstance, config: DocsConfig, *, build_called: list[bool]):
-    def fake_build(target):
+    def fake_build(target, **kwargs):
         build_called.append(True)
         return _build_result(instance.root)
 
@@ -352,14 +487,26 @@ async def _test_status_json_and_human():
             result = _invoke(["status", "--json"])
             human = _invoke(["status"])
         payload = json.loads(result.stdout)
+    theme = payload["theme"]
+    expected_theme = i18n.t(
+        "cli.docs.status.theme_resolved",
+        name=theme["name"],
+        version=theme["version"] or "-",
+        path=theme["root"],
+        digest=theme["digest"][:12],
+    )
     return (
         result.exit_code == 0
         and payload["instance"] == str(root)
+        and set(theme) == {"source", "name", "version", "root", "digest"}
+        and theme["name"]
+        and theme["source"]
         and payload["packages"] == {"count": 2, "keys": ["demo", "hook"]}
         and payload["build"]["fingerprint"] == "a" * 64
         and payload["deploys"][-1]["target"] == "s3://bucket/site/"
         and human.exit_code == 0
         and _flat(i18n.t("cli.docs.status.title")) in _flat(human.stdout)
+        and _flat(expected_theme) in _flat(human.stdout)
         and _flat(i18n.t("cli.docs.status.packages", count=2)) in _flat(human.stdout)
     )
 
@@ -462,7 +609,10 @@ async def test_docs_cli(tester: Tester):
     await tester.test(_test_list_json_contract, "list --json 输出稳定契约")
     await tester.test(_test_list_filters_and_human_output, "list 支持 query 与 kind 过滤")
     await tester.test(_test_build_passes_options_and_outputs_json, "build 转交包选择与构建选项")
+    await tester.test(_test_build_streams_stages_and_logs, "build 实时输出阶段与子进程日志")
     await tester.test(_test_build_human_reports_reuse, "build 人类输出报告复用与摘要")
+    await tester.test(_test_sync_theme_json_and_human, "sync-theme 输出同步前后提交与结果")
+    await tester.test(_test_install_deps_json_and_human, "install-deps 安装主题依赖")
     await tester.test(_test_serve_json_ready_and_stopped, "serve --json 输出 ready 与 stopped")
     await tester.test(_test_serve_keyboard_interrupt_stops_server, "serve 捕获 Ctrl+C 并停止服务")
     await tester.test(_test_serve_requires_existing_site_without_build, "--no-build 且站点缺失时报错")

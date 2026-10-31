@@ -323,7 +323,10 @@ def _check_multi_select() -> CheckResult:
             await pilot.press("shift+down")
             await pilot.pause()
             selected = len(page._selected)
+            # 安装前弹出确认框，焦点落在确认按钮上。
             page.request_install()
+            await pilot.pause()
+            await pilot.press("enter")
             await page.wait_for_idle()
             await pilot.pause()
             await pilot.press("q")
@@ -518,6 +521,8 @@ def _check_available_and_progress() -> CheckResult:
             list_view.index = next(index for index, record in enumerate(page.visible_records) if not record.installed)
             await pilot.pause()
             page.request_install()
+            await pilot.pause()
+            await pilot.press("enter")
             await page.wait_for_idle()
             await _settle(pilot, lambda: len(page.stream_lines) >= 2)
             lines = page.stream_lines
@@ -610,13 +615,11 @@ def _check_adapter_install() -> CheckResult:
             await page.wait_for_idle()
             await pilot.pause()
             order = page._records_in_row_order()
-            rows = [index for index, kind in enumerate(page._row_kinds) if kind == "instance"]
-            page.query_one("#adapter-list", compat.ListView).index = rows[
-                next(index for index, record in enumerate(order) if record.platform == "discord")
-            ]
-            await pilot.pause()
-            label = str(page.query_one("#toggle", compat.Button).label)
+            label = str(page.query_one("#install", compat.Button).label)
+            # 未安装且未启用的平台不进实例列表，经安装对话框选择后安装。
             await pilot.press("i")
+            await pilot.pause()
+            await pilot.press("enter")
             await page.wait_for_idle()
             await pilot.pause()
             await pilot.press("q")
@@ -626,7 +629,7 @@ def _check_adapter_install() -> CheckResult:
         platforms, label, installed_now = asyncio.run(probe())
     except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_adapter_install"), f"{type(error).__name__}: {error}")
-    if platforms != ["discord", "telegram"] or installed_now != ["discord"]:
+    if platforms != ["telegram"] or installed_now != ["discord"]:
         return CheckResult(
             LEVEL_FAIL,
             i18n.t("cli.tui_cmd.check_adapter_install"),

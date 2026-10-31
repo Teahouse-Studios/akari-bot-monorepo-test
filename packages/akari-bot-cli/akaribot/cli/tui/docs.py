@@ -12,7 +12,8 @@ import json
 import subprocess
 import time
 import webbrowser
-from collections.abc import Mapping, Sequence
+from collections import deque
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -29,6 +30,8 @@ SERVE_READY_SECONDS = 60.0
 SERVE_STOP_SECONDS = 10.0
 DEFAULT_PREVIEW_URL = "http://127.0.0.1:4173/"
 OUTPUT_LIMIT = 600
+LOG_LINE_LIMIT = 400
+STREAM_TAIL_LINES = 40
 
 CHOICE_DRY_RUN = "dry"
 CHOICE_DEPLOY = "deploy"
@@ -46,6 +49,13 @@ def _text(value: Any) -> str:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _int_of(value: Any, default: int = 500) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _tail(text: str | None, limit: int = OUTPUT_LIMIT) -> str:
@@ -87,6 +97,8 @@ class DocsPackageRow:
     :param doc_path: 包内文档目录。
     :param editable: 是否为可编辑安装。
     :param order: 排序权重。
+    :param category: 侧栏分类，空串表示不分类。
+    :param category_order: 分类排序权重。
     """
 
     key: str
@@ -99,6 +111,8 @@ class DocsPackageRow:
     doc_path: str = ""
     editable: bool = False
     order: int = 500
+    category: str = ""
+    category_order: int = 500
 
     @property
     def display_title(self) -> str:
@@ -169,14 +183,10 @@ def _page_from(value: Any) -> DocsPageRow:
         return DocsPageRow(path=value)
     info = _mapping(value)
     path = _text(info.get("path"))
-    try:
-        order = int(info.get("order", 500))
-    except (TypeError, ValueError):
-        order = 500
     return DocsPageRow(
         path=path,
         title=_text(info.get("title")),
-        order=order,
+        order=_int_of(info.get("order")),
         description=_text(info.get("description")),
     )
 
@@ -184,10 +194,6 @@ def _page_from(value: Any) -> DocsPageRow:
 def _package_from(value: Any) -> DocsPackageRow:
     info = _mapping(value)
     pages = tuple(_page_from(item) for item in info.get("pages") or () if item)
-    try:
-        order = int(info.get("order", 500))
-    except (TypeError, ValueError):
-        order = 500
     editable = info.get("editable")
     return DocsPackageRow(
         key=_text(info.get("key")),
@@ -199,7 +205,9 @@ def _package_from(value: Any) -> DocsPackageRow:
         pages=pages,
         doc_path=_text(info.get("doc_path")),
         editable=bool(editable) if isinstance(editable, bool) else _text(editable).casefold() in {"1", "true", "yes"},
-        order=order,
+        order=_int_of(info.get("order")),
+        category=_text(info.get("category")),
+        category_order=_int_of(info.get("category_order")),
     )
 
 
@@ -243,8 +251,14 @@ class DocsSource(Protocol):
     def load(self) -> DocsView:
         """返回文档包、工具链与最近状态。"""
 
-    def build(self, keys: Sequence[str]) -> OperationResult:
-        """构建指定包；``keys`` 为空时构建全部。"""
+    async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """构建指定包；``keys`` 为空时构建全部，输出行逐条交给 ``on_line``。"""
+
+    async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """同步主题模板 submodule，git 输出行逐条交给 ``on_line``。"""
+
+    async def install_dependencies(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """安装主题依赖，npm 输出行逐条交给 ``on_line``。"""
 
     async def start_server(self) -> str:
         """启动预览服务并返回站点 URL。"""
@@ -261,6 +275,9 @@ class StaticDocsSource:
 
     :param view: ``load`` 直接返回的视图。
     :param build_result: 构建返回值；默认按包数量返回成功。
+    :param stream_lines: 构建期间逐行回放的内容。
+    :param sync_result: 主题同步返回值。
+    :param install_result: 依赖安装返回值。
     :param deploy_result: 部署返回值；默认按部署方式返回成功。
     :param url: 预览服务返回的地址。
     :param serve_error: 非空时 ``start_server`` 抛出该错误。
@@ -271,16 +288,22 @@ class StaticDocsSource:
         view: DocsView | None = None,
         *,
         build_result: OperationResult | None = None,
+        stream_lines: Sequence[str] = (),
+        sync_result: OperationResult | None = None,
+        install_result: OperationResult | None = None,
         deploy_result: OperationResult | None = None,
         url: str = DEFAULT_PREVIEW_URL,
         serve_error: str = "",
     ) -> None:
         self._view = view or DocsView()
         self._build_result = build_result
+        self.stream_lines = tuple(stream_lines)
+        self._sync_result = sync_result
+        self._install_result = install_result
         self._deploy_result = deploy_result
         self.url = url
         self.serve_error = serve_error
-        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0}
+        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0, "sync_theme": 0, "install_deps": 0}
         self.build_keys: list[tuple[str, ...]] = []
         self.deploys: list[tuple[str | None, bool]] = []
         self.serving = False
@@ -299,14 +322,31 @@ class StaticDocsSource:
         self.calls["load"] += 1
         return self._view
 
-    def build(self, keys: Sequence[str]) -> OperationResult:
+    async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
         """见 :meth:`DocsSource.build`。"""
         self.calls["build"] += 1
         self.build_keys.append(tuple(keys))
+        if on_line is not None:
+            for line in self.stream_lines:
+                on_line(line)
         if self._build_result is not None:
             return self._build_result
         count = len(keys) or len(self._view.packages)
         return OperationResult(True, i18n.t("cli.tui.docs.build_done", count=count, duration=0), "stub")
+
+    async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """见 :meth:`DocsSource.sync_theme`。"""
+        self.calls["sync_theme"] += 1
+        if self._sync_result is not None:
+            return self._sync_result
+        return OperationResult(True, i18n.t("cli.tui.docs.theme_current", after="-"), "stub")
+
+    async def install_dependencies(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """见 :meth:`DocsSource.install_dependencies`。"""
+        self.calls["install_deps"] += 1
+        if self._install_result is not None:
+            return self._install_result
+        return OperationResult(True, i18n.t("cli.tui.docs.deps_ready", version="-"), "stub")
 
     async def start_server(self) -> str:
         """见 :meth:`DocsSource.start_server`。"""
@@ -357,7 +397,7 @@ class SubprocessDocsSource:
         self.query_timeout = query_timeout
         self.action_timeout = action_timeout
         self.serve_timeout = serve_timeout
-        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0}
+        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0, "sync_theme": 0, "install_deps": 0}
         self._runner = runner or subprocess.run
         self._process: asyncio.subprocess.Process | None = None
         self._atexit_registered = False
@@ -379,13 +419,13 @@ class SubprocessDocsSource:
         payload = self._invoke(("docs", "list", "--json"), timeout=self.query_timeout)
         return normalize_view(payload)
 
-    def build(self, keys: Sequence[str]) -> OperationResult:
-        """见 :meth:`DocsSource.build`；``--json`` 输出构建摘要。"""
+    async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """见 :meth:`DocsSource.build`；``--json`` 输出构建摘要，stderr 逐行回传日志。"""
         self.calls["build"] += 1
         argv = ["docs", "build", "--json"]
         for key in keys:
             argv += ["--package", str(key)]
-        return self._action(argv, self.action_timeout, "build")
+        return await self._stream_action(argv, self.action_timeout, on_line)
 
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
         """见 :meth:`DocsSource.deploy`；界面已确认，子进程带 ``--yes``。"""
@@ -395,7 +435,7 @@ class SubprocessDocsSource:
             argv += ["--provider", provider]
         if dry_run:
             argv.append("--dry-run")
-        return self._action(argv, self.action_timeout, "deploy")
+        return self._action(argv, self.action_timeout)
 
     async def start_server(self) -> str:
         """启动 ``docs serve --json --no-build`` 并等待首行就绪事件。"""
@@ -522,9 +562,148 @@ class SubprocessDocsSource:
         payload = self._parse(completed.stdout, " ".join(args))
         return payload
 
-    def _action(self, args: Sequence[str], timeout: float, kind: str) -> OperationResult:
+    async def _stream_command(
+        self,
+        args: Sequence[str],
+        timeout: float,
+        on_line: Callable[[str], None] | None,
+    ) -> tuple[int, str, str]:
         argv = cli_process.cli_argv(*args)
-        fail_key = "cli.tui.docs.build_failed" if kind == "build" else "cli.tui.docs.deploy_failed"
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *argv,
+                cwd=str(self.root),
+                stdin=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=self._env(),
+            )
+        except FileNotFoundError as error:
+            raise DocsSourceError(i18n.t("cli.tui.docs.src_exe_missing", path=argv[0], error=error)) from error
+        except OSError as error:
+            raise DocsSourceError(i18n.t("cli.tui.docs.src_oserror", cmd=" ".join(args), error=error)) from error
+        stdout_chunks: list[bytes] = []
+        stderr_tail: deque[str] = deque(maxlen=STREAM_TAIL_LINES)
+        try:
+            returncode = await asyncio.wait_for(
+                self._pump_process(process, stdout_chunks, stderr_tail, on_line),
+                timeout=timeout,
+            )
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            raise DocsSourceError(
+                i18n.t("cli.tui.docs.src_timeout", cmd=" ".join(args), seconds=f"{timeout:g}")
+            ) from None
+        stdout = b"".join(stdout_chunks).decode("utf-8", errors="replace")
+        detail = _tail("\n".join(stderr_tail))
+        return returncode, stdout, detail
+
+    async def _stream_action(
+        self,
+        args: Sequence[str],
+        timeout: float,
+        on_line: Callable[[str], None] | None,
+    ) -> OperationResult:
+        try:
+            returncode, stdout, detail = await self._stream_command(args, timeout, on_line)
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.build_failed", detail=str(error)), str(error))
+        if returncode != 0:
+            detail = detail or _tail(stdout) or i18n.t("cli.tui.common.no_output")
+            return OperationResult(False, i18n.t("cli.tui.docs.build_failed", detail=detail), detail)
+        try:
+            payload = self._parse(stdout, " ".join(args))
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.build_failed", detail=str(error)), str(error))
+        packages = payload.get("packages")
+        count = len(packages) if isinstance(packages, (list, tuple)) else 0
+        try:
+            duration = int(payload.get("duration_ms") or 0)
+        except (TypeError, ValueError):
+            duration = 0
+        key = "cli.tui.docs.build_reused" if bool(payload.get("reused")) else "cli.tui.docs.build_done"
+        return OperationResult(
+            True,
+            i18n.t(key, count=count, duration=duration),
+            detail or _tail(_text(payload.get("log"))),
+        )
+
+    async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """见 :meth:`DocsSource.sync_theme`；git 输出逐行回传。"""
+        self.calls["sync_theme"] += 1
+        args = ("docs", "sync-theme", "--json")
+        try:
+            returncode, stdout, detail = await self._stream_command(args, self.action_timeout, on_line)
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.theme_sync_failed", detail=str(error)), str(error))
+        if returncode != 0:
+            detail = detail or _tail(stdout) or i18n.t("cli.tui.common.no_output")
+            return OperationResult(False, i18n.t("cli.tui.docs.theme_sync_failed", detail=detail), detail)
+        try:
+            payload = self._parse(stdout, " ".join(args))
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.theme_sync_failed", detail=str(error)), str(error))
+        before = _text(payload.get("before"))[:12] or i18n.t("cli.docs.sync_theme.uninitialized")
+        after = _text(payload.get("after"))[:12] or "-"
+        if bool(payload.get("changed")):
+            message = i18n.t("cli.tui.docs.theme_synced", before=before, after=after)
+        else:
+            message = i18n.t("cli.tui.docs.theme_current", after=after)
+        return OperationResult(True, message, detail or _tail(_text(payload.get("log"))))
+
+    async def install_dependencies(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
+        """见 :meth:`DocsSource.install_dependencies`；npm 输出逐行回传。"""
+        self.calls["install_deps"] += 1
+        args = ("docs", "install-deps", "--json")
+        try:
+            returncode, stdout, detail = await self._stream_command(args, self.action_timeout, on_line)
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.deps_failed", detail=str(error)), str(error))
+        if returncode != 0:
+            detail = detail or _tail(stdout) or i18n.t("cli.tui.common.no_output")
+            return OperationResult(False, i18n.t("cli.tui.docs.deps_failed", detail=detail), detail)
+        try:
+            payload = self._parse(stdout, " ".join(args))
+        except DocsSourceError as error:
+            return OperationResult(False, i18n.t("cli.tui.docs.deps_failed", detail=str(error)), str(error))
+        version = _text(payload.get("vitepress")) or "-"
+        return OperationResult(
+            True,
+            i18n.t("cli.tui.docs.deps_ready", version=version),
+            detail or _tail(_text(payload.get("path"))),
+        )
+
+    @staticmethod
+    async def _pump_process(
+        process: asyncio.subprocess.Process,
+        stdout_chunks: list[bytes],
+        stderr_tail: deque[str],
+        on_line: Callable[[str], None] | None,
+    ) -> int:
+        async def collect_stdout() -> None:
+            stream = process.stdout
+            if stream is not None:
+                stdout_chunks.append(await stream.read())
+
+        async def pump_stderr() -> None:
+            stream = process.stderr
+            if stream is None:
+                return
+            async for raw in stream:
+                line = raw.decode("utf-8", errors="replace").rstrip()
+                if not line:
+                    continue
+                stderr_tail.append(line)
+                if on_line is not None:
+                    on_line(line)
+
+        await asyncio.gather(collect_stdout(), pump_stderr())
+        return await process.wait()
+
+    def _action(self, args: Sequence[str], timeout: float) -> OperationResult:
+        argv = cli_process.cli_argv(*args)
+        fail_key = "cli.tui.docs.deploy_failed"
         try:
             completed = self._runner(
                 list(argv),
@@ -553,18 +732,6 @@ class SubprocessDocsSource:
             payload = self._parse(completed.stdout, " ".join(args))
         except DocsSourceError as error:
             return OperationResult(False, i18n.t(fail_key, detail=str(error)), str(error))
-        if kind == "build":
-            packages = payload.get("packages")
-            count = len(packages) if isinstance(packages, (list, tuple)) else 0
-            try:
-                duration = int(payload.get("duration_ms") or 0)
-            except (TypeError, ValueError):
-                duration = 0
-            return OperationResult(
-                True,
-                i18n.t("cli.tui.docs.build_done", count=count, duration=duration),
-                _tail(_text(payload.get("log"))),
-            )
         if bool(payload.get("dry_run")):
             message = i18n.t(
                 "cli.docs.deploy.dry_run",
@@ -627,11 +794,11 @@ class DocsPage(compat.Vertical):
         ("slash", "focus_search", i18n.t("cli.tui.docs.bind_search")),
         ("space", "toggle_select", i18n.t("cli.tui.docs.bind_toggle")),
         ("b", "build", i18n.t("cli.tui.docs.action_build")),
-        ("s", "serve", i18n.t("cli.tui.docs.action_serve")),
+        ("p", "serve", i18n.t("cli.tui.docs.action_serve")),
         ("o", "open", i18n.t("cli.tui.docs.action_open"), False),
+        ("m", "more", i18n.t("cli.tui.docs.button_more"), False),
         ("a", "select_all", i18n.t("cli.tui.docs.bind_select_all"), False),
         ("c", "clear_selection", i18n.t("cli.tui.docs.bind_clear"), False),
-        ("ctrl+p", "deploy", i18n.t("cli.tui.docs.action_deploy"), False),
         ("escape", "clear_search", i18n.t("cli.tui.docs.bind_clear_search"), False),
     )
 
@@ -690,6 +857,13 @@ class DocsPage(compat.Vertical):
     DocsPage #detail {
         width: 1fr;
     }
+    DocsPage #log-pane {
+        height: 7;
+        min-height: 4;
+        border: round $primary;
+        padding: 0 1;
+        display: none;
+    }
     DocsPage #actions {
         height: auto;
         padding: 0 0 0 1;
@@ -733,6 +907,8 @@ class DocsPage(compat.Vertical):
         self._columns_rendered: str = ""
         self._detail_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.docs.status_ready")
+        self._log_lines: list[str] = []
+        self._log_visible = False
 
     def compose(self) -> compat.ComposeResult:
         """装配页面控件树。"""
@@ -745,14 +921,14 @@ class DocsPage(compat.Vertical):
                 yield compat.ListView(id="docs-list")
             with compat.VerticalScroll(id="detail-pane"):
                 yield compat.Static(i18n.t("cli.tui.docs.detail_placeholder"), id="detail", markup=False)
+        with compat.VerticalScroll(id="log-pane"):
+            yield compat.Static("", id="log", markup=False)
         yield compat.ButtonFlow(
-            ("build", i18n.t("cli.tui.docs.action_build"), "primary"),
-            ("serve", i18n.t("cli.tui.docs.action_serve")),
-            ("stop", i18n.t("cli.tui.docs.action_stop")),
-            ("open", i18n.t("cli.tui.docs.action_open")),
-            ("deploy", i18n.t("cli.tui.docs.action_deploy")),
-            ("refresh", i18n.t("cli.tui.docs.action_refresh")),
-            breaks=("stop",),
+            ("build", compat.key_hint(i18n.t("cli.tui.docs.action_build"), "b"), "primary"),
+            ("serve", compat.key_hint(i18n.t("cli.tui.docs.action_serve"), "p")),
+            ("open", compat.key_hint(i18n.t("cli.tui.docs.action_open"), "o")),
+            ("more", compat.key_hint(i18n.t("cli.tui.docs.button_more"), "m")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.docs.action_refresh"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.docs.status_ready"), id="status", markup=False)
@@ -760,6 +936,7 @@ class DocsPage(compat.Vertical):
     def on_mount(self) -> None:
         """挂载后只装配控件；读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
+        self.query_one("#log-pane", compat.VerticalScroll).border_title = i18n.t("cli.tui.docs.log_title")
 
     def activate(self) -> None:
         """首次显示时读取文档目录。"""
@@ -826,6 +1003,16 @@ class DocsPage(compat.Vertical):
     def status_text(self) -> str:
         """返回状态栏当前文本。"""
         return self._status_rendered
+
+    @property
+    def log_text(self) -> str:
+        """返回日志面板当前文本。"""
+        return "\n".join(self._log_lines)
+
+    @property
+    def log_visible(self) -> bool:
+        """返回日志面板是否可见。"""
+        return self._log_visible
 
     @property
     def preview_url(self) -> str:
@@ -1030,6 +1217,7 @@ class DocsPage(compat.Vertical):
             (i18n.t("cli.tui.docs.field_dist"), package.dist or none),
             (i18n.t("cli.tui.docs.version"), package.version or i18n.t("cli.tui.common.unknown")),
             (i18n.t("cli.tui.docs.group"), package.group or i18n.t("cli.tui.common.undeclared")),
+            (i18n.t("cli.tui.docs.category"), package.category or none),
             (i18n.t("cli.tui.docs.pages"), i18n.t("cli.tui.docs.page_count", count=len(package.pages))),
             (i18n.t("cli.tui.docs.doc_path"), package.doc_path or none),
             (
@@ -1052,17 +1240,17 @@ class DocsPage(compat.Vertical):
         if warnings:
             lines.append("")
             lines.extend(i18n.t("cli.tui.docs.warning", message=message) for message in warnings)
-        lines.append("")
-        lines.append(i18n.t("cli.tui.docs.detail_keys"))
         text = "\n".join(lines)
         self._detail_rendered = text
         self.query_one("#detail", compat.Static).update(compat.plain_text(text))
 
     def _sync_actions(self) -> None:
         try:
-            for button_id in ("build", "serve", "deploy", "refresh"):
+            for button_id in ("build", "serve", "more", "refresh"):
                 self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
-            self.query_one("#stop", compat.Button).disabled = self._busy or not self._serving
+            # 预览按钮在启停之间切换文字，键位不变。
+            serve_label = "cli.tui.docs.action_stop" if self._serving else "cli.tui.docs.action_serve"
+            self.query_one("#serve", compat.Button).label = compat.key_hint(i18n.t(serve_label), "p")
             self.query_one("#open", compat.Button).disabled = self._busy or not self._serving
             self.query_one("#actions", compat.ButtonFlow).relayout()
         except Exception:  # noqa: BLE001 - 尚未挂载时没有按钮可更新
@@ -1072,6 +1260,25 @@ class DocsPage(compat.Vertical):
         self._status_rendered = text
         self.last_result = text
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
+
+    def _set_log_visible(self, visible: bool) -> None:
+        self._log_visible = visible
+        self.query_one("#log-pane", compat.VerticalScroll).display = visible
+
+    def _render_log(self) -> None:
+        pane = self.query_one("#log-pane", compat.VerticalScroll)
+        self.query_one("#log", compat.Static).update(compat.plain_text("\n".join(self._log_lines)))
+        pane.scroll_end(animate=False)
+
+    def _on_log_line(self, line: str) -> None:
+        text = line.rstrip()
+        if not text:
+            return
+        self._log_lines.append(text)
+        if len(self._log_lines) > LOG_LINE_LIMIT:
+            del self._log_lines[: len(self._log_lines) - LOG_LINE_LIMIT]
+        if self._log_visible:
+            self._render_log()
 
     def on_resize(self, event: compat.events.Resize) -> None:
         """终端尺寸变化时按缓存重排，不重新读取数据。"""
@@ -1101,12 +1308,10 @@ class DocsPage(compat.Vertical):
             self.request_build()
         elif button_id == "serve":
             self.toggle_serve()
-        elif button_id == "stop":
-            self.stop_preview()
         elif button_id == "open":
             self.open_preview()
-        elif button_id == "deploy":
-            self.request_deploy()
+        elif button_id == "more":
+            self.request_more()
         elif button_id == "refresh":
             self.refresh_view(force=True)
 
@@ -1143,6 +1348,31 @@ class DocsPage(compat.Vertical):
         detail = view.toolchain.detail or view.toolchain.node or "-"
         return i18n.t("cli.tui.docs.toolchain_missing", detail=detail)
 
+    def _start_task(self, status: str, task: Any, group: str) -> None:
+        self._busy = True
+        self._log_lines = []
+        self._set_log_visible(True)
+        self._render_log()
+        self._sync_actions()
+        self._set_status(status)
+        self.run_worker(task, group=group, exclusive=True)
+
+    def _finish_task(self, result: OperationResult, title: str) -> None:
+        if result.detail and not self._log_lines:
+            for line in result.detail.splitlines():
+                self._on_log_line(line)
+        self._render_log()
+        if result.ok:
+            self.last_result = result.message
+            self._set_status(result.message)
+            compat.notify(self.app, result.message, severity="information", title=title)
+        else:
+            self.last_error = result.detail or result.message
+            self._set_status(result.message)
+            compat.notify(self.app, result.message, severity="error", title=title)
+        self._busy = False
+        self._sync_actions()
+
     def request_build(self) -> None:
         """构建选区中的包；没有选区时构建全部。"""
         if self._busy:
@@ -1156,14 +1386,15 @@ class DocsPage(compat.Vertical):
         keys = self.selected_keys
         label = i18n.t("cli.tui.common.list_separator").join(keys) or i18n.t("cli.tui.docs.all_packages")
         self._confirm.reset()
-        self._busy = True
-        self._sync_actions()
-        self._set_status(i18n.t("cli.tui.docs.build_started", label=label))
-        self.run_worker(self._build(keys), group="docs-build", exclusive=True)
+        self._start_task(
+            i18n.t("cli.tui.docs.build_started", label=label),
+            self._build(keys),
+            "docs-build",
+        )
 
     async def _build(self, keys: tuple[str, ...]) -> None:
         try:
-            result = await asyncio.to_thread(self.source.build, keys)
+            result = await self.source.build(keys, self._on_log_line)
         except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             result = OperationResult(
                 False,
@@ -1172,15 +1403,53 @@ class DocsPage(compat.Vertical):
             )
         if result.ok:
             self._built = True
-            self.last_result = result.message
-            self._set_status(result.message)
-            compat.notify(self.app, result.message, severity="information", title=i18n.t("cli.tui.docs.action_build"))
-        else:
-            self.last_error = result.detail or result.message
-            self._set_status(i18n.t("cli.tui.docs.build_failed", detail=result.detail or result.message))
-            compat.notify(self.app, result.message, severity="error", title=i18n.t("cli.tui.docs.action_build"))
-        self._busy = False
-        self._sync_actions()
+        self._finish_task(result, i18n.t("cli.tui.docs.action_build"))
+
+    def request_sync_theme(self) -> None:
+        """同步主题模板 submodule。"""
+        if self._busy:
+            self._notify_busy()
+            return
+        self._confirm.reset()
+        self._start_task(
+            i18n.t("cli.tui.docs.theme_sync_started"),
+            self._run_theme_sync(),
+            "docs-theme-sync",
+        )
+
+    async def _run_theme_sync(self) -> None:
+        try:
+            result = await self.source.sync_theme(self._on_log_line)
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.docs.theme_sync_failed", detail=f"{type(error).__name__}: {error}"),
+                "",
+            )
+        self._finish_task(result, i18n.t("cli.tui.docs.action_sync_theme"))
+
+    def request_install_dependencies(self) -> None:
+        """安装主题所需的 Node 依赖。"""
+        if self._busy:
+            self._notify_busy()
+            return
+        self._confirm.reset()
+        self._start_task(
+            i18n.t("cli.tui.docs.deps_started"),
+            self._run_dependency_install(),
+            "docs-install-deps",
+        )
+
+    async def _run_dependency_install(self) -> None:
+        try:
+            result = await self.source.install_dependencies(self._on_log_line)
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+            result = OperationResult(
+                False,
+                i18n.t("cli.tui.docs.deps_failed", detail=f"{type(error).__name__}: {error}"),
+                "",
+            )
+        self._finish_task(result, i18n.t("cli.tui.docs.action_install_deps"))
 
     def toggle_serve(self) -> None:
         """启动或停止预览服务。"""
@@ -1412,6 +1681,49 @@ class DocsPage(compat.Vertical):
         """键位动作：构建选中包或全部包。"""
         self.request_build()
 
+    def action_more(self) -> None:
+        """键位动作：打开低频操作菜单。"""
+        self.request_more()
+
+    def request_more(self) -> None:
+        """弹出低频操作菜单：部署、同步主题、安装依赖与任务日志。"""
+        if self._busy:
+            self._notify_busy()
+            return
+        if not self._confirm.accept("more"):
+            return
+        log_label = "cli.tui.docs.more_log_hide" if self._log_visible else "cli.tui.docs.more_log_show"
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.docs.more_title"),
+            hint=i18n.t("cli.tui.docs.more_hint"),
+            options=(
+                ("deploy", i18n.t("cli.tui.docs.action_deploy")),
+                ("sync_theme", i18n.t("cli.tui.docs.action_sync_theme")),
+                ("install_deps", i18n.t("cli.tui.docs.action_install_deps")),
+                ("log", i18n.t(log_label)),
+            ),
+            cancel_label=i18n.t("cli.tui.docs.cancel"),
+            callback=self._on_more_chosen,
+        )
+
+    def _on_more_chosen(self, choice: str | None) -> None:
+        self._confirm.reset()
+        if choice == "deploy":
+            self.request_deploy()
+        elif choice == "sync_theme":
+            self.request_sync_theme()
+        elif choice == "install_deps":
+            self.request_install_dependencies()
+        elif choice == "log":
+            self.toggle_log()
+
+    def toggle_log(self) -> None:
+        """显示或隐藏任务日志面板。"""
+        self._set_log_visible(not self._log_visible)
+        if self._log_visible:
+            self._render_log()
+
     def action_serve(self) -> None:
         """键位动作：启动或停止预览服务。"""
         self.toggle_serve()
@@ -1419,10 +1731,6 @@ class DocsPage(compat.Vertical):
     def action_open(self) -> None:
         """键位动作：在浏览器中打开预览地址。"""
         self.open_preview()
-
-    def action_deploy(self) -> None:
-        """键位动作：请求部署确认。"""
-        self.request_deploy()
 
     def action_clear_search(self) -> None:
         """键位动作：清空搜索框。"""

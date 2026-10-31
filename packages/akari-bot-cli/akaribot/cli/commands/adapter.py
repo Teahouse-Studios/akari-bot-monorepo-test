@@ -1151,6 +1151,8 @@ def list_instances(
             "config_root": str(config_root(instance)),
             "registry_available": registry.available,
             "registry_note": registry.note,
+            # 已安装但尚无实例配置的平台不出现在 instances 中，新增实例时需要完整的已安装清单。
+            "installed_platforms": sorted(registry.adapters),
             "platform_name_missing": any(row["installed"] and row["client_name_inferred"] for row in rows),
             "legacy_layout": scan.legacy_layout,
             "instances": rows,

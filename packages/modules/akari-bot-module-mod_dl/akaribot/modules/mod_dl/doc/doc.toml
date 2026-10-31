@@ -1,7 +1,9 @@
 schema = 1
-title = "Mod 下载"
+title = "mod-dl"
 summary = "在 CurseForge 与 Modrinth 搜索 Mod 并输出下载链接。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "mod-dl"

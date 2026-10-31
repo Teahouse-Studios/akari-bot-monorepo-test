@@ -418,8 +418,9 @@ async def _test_four_paths_confirm_through_modal():
         await pilot.press("escape")
         await pilot.pause()
         cancelled = page.status_text
-        await pilot.press("a")
+        await pilot.press("m")
         await pilot.pause()
+        await _choose(app, pilot, 0)
         app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
         await pilot.press("enter")
         await _wait_choice(app)
@@ -573,13 +574,14 @@ async def _test_poll_keeps_confirmation():
 
 
 async def _test_adapter_start_collects_platform():
-    # `a` 先弹输入框收平台，提交后再弹确认框；选「执行」才把平台交给数据源。
+    # 「更多」菜单的启动指定适配器先弹输入框收平台，提交后再弹确认框；选「执行」才把平台交给数据源。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import StaticRunSource
 
     async def body(app, page, pilot, source):
-        await pilot.press("a")
+        await pilot.press("m")
         await pilot.pause()
+        await _choose(app, pilot, 0)
         opened = len(app.screen_stack) > 1
         app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
         await pilot.press("enter")
@@ -603,16 +605,18 @@ async def _test_foreground_only_prints_command():
     from akaribot.cli.tui.run import StaticRunSource
 
     async def body(app, page, pilot, source):
-        await pilot.press("a")
+        await pilot.press("m")
         await pilot.pause()
+        await _choose(app, pilot, 0)
         app.screen.query_one("#prompt-input", compat.Input).value = "telegram"
         await pilot.press("enter")
         await _wait_choice(app)
         await pilot.press("escape")
         await pilot.pause()
         with mock.patch.object(compat, "notify") as notify:
-            page.action_foreground()
+            await pilot.press("m")
             await pilot.pause()
+            await _choose(app, pilot, 1)
             message = notify.call_args.args[1] if notify.call_args else ""
         hint = (message, page.status_text, dict(source.calls))
         await pilot.press("q")
@@ -653,7 +657,7 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
 
     async def body(app, page, pilot, source):
         footer = app.query_one(compat.Footer)
-        actions = {"start", "stop", "restart", "adapter_start", "foreground", "refresh"}
+        actions = {"start", "stop", "restart", "more", "refresh"}
         keys = [child for child in footer.children if getattr(child, "action", "") in actions]
         width = sum(compat.widget_cells(child)[0] for child in keys)
         await pilot.press("q")
@@ -662,7 +666,7 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
     count, width = await _with_run_page(body, size=(80, 24))
     visible = tuple(binding.key for binding in RunPage.BINDINGS if binding.show)
     hidden = tuple(binding.key for binding in RunPage.BINDINGS if not binding.show)
-    return count == 3 and width <= 80 and visible == ("s", "x", "r") and hidden == ("ctrl+r", "a", "f")
+    return count == 3 and width <= 80 and visible == ("s", "x", "r") and hidden == ("ctrl+r", "m")
 
 
 @func_case

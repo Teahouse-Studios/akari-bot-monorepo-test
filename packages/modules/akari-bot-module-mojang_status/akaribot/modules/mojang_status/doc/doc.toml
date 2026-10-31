@@ -1,7 +1,9 @@
 schema = 1
-title = "Mojang 服务状态"
+title = "mojang-status"
 summary = "检查 Mojang 与 Minecraft 后端各服务的实时在线情况。"
 order = 500
+category = "Minecraft"
+category_order = 200
 
 [[meta.modules]]
 name = "mojang-status"

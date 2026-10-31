@@ -1,0 +1,3 @@
+[submodule "vendor/akari-bot-docs-template"]
+	path = vendor/akari-bot-docs-template
+	url = https://github.com/Teahouse-Studios/akari-bot-docs-template.git

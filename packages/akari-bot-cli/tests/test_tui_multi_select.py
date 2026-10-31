@@ -67,14 +67,11 @@ async def _test_space_toggles_selection():
         await pilot.press("space")
         await pilot.pause()
         second = _positions(page)
-        await pilot.press("ctrl+space")
-        await pilot.pause()
-        third = _positions(page)
         await pilot.press("q")
-        return first, second, third
+        return first, second
 
-    first, second, third = await _with_page(body)
-    return first == [0] and second == [] and third == [0]
+    first, second = await _with_page(body)
+    return first == [0] and second == []
 
 
 async def _test_shift_extends_and_replaces_range():
@@ -155,6 +152,8 @@ async def _test_batch_install_covers_selection():
         await pilot.press("a")
         await pilot.pause()
         page.request_install()
+        await pilot.pause()
+        await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -434,6 +433,8 @@ async def _test_batch_continues_after_failure():
         await pilot.press("a")
         await pilot.pause()
         page.request_install()
+        await pilot.pause()
+        await pilot.press("enter")
         await page.wait_for_idle()
         await pilot.pause()
         await pilot.press("q")
@@ -490,7 +491,7 @@ async def test_tui_multi_select(tester: Tester):
     _use_cli_locale()
     # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
-        await tester.test(_test_space_toggles_selection, "Space/Ctrl+Space 切换选中")
+        await tester.test(_test_space_toggles_selection, "Space 切换选中")
         await tester.test(_test_shift_extends_and_replaces_range, "Shift+↑/↓ 扩选且重算范围")
         await tester.test(_test_select_all_and_clear, "全选可见与清空")
         await tester.test(_test_mouse_modifiers, "鼠标 Ctrl/Shift/普通点击")

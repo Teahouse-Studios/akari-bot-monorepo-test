@@ -4,7 +4,8 @@
 逐表给出，注释与字符串里的同形文本不计入，损坏或读不到的表进 ``failed``。用例在隔离子进程里跑
 真实入口，断言计数边界与失败归集。
 
-未覆盖：``schema`` / ``set`` 等既有子命令的行为，那些由配置文件与 CLI 侧用例覆盖。
+另覆盖 ``schema`` 对适配器 ``enable`` 的注释取键。未覆盖：``schema`` / ``set`` 的其余行为，那些由配置文件
+与 CLI 侧用例覆盖。
 """
 
 import json
@@ -142,6 +143,28 @@ async def _test_default_scan_covers_every_table():
     )
 
 
+async def _test_adapter_enable_comment_is_localized():
+    # 实例配置文件的注释取自 schema：缺专属注释时用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。
+    with _instance() as root:
+        (root / "config" / "config.toml").write_text('default_locale = "zh_cn"\n', encoding="utf-8")
+        (root / "config" / "bot_demo-alt.toml").write_text("[bot_demo-alt]\nenable = false\n", encoding="utf-8")
+        env = dict(os.environ, AKARI_INSTANCE_DIR=str(root))
+        env.pop("AKARI_CONFIG_PATH", None)
+        result = subprocess.run(
+            [sys.executable, "-m", ENTRYPOINT, "schema", "--table", "bot_demo-alt", "--json"],
+            cwd=str(root),
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+            check=False,
+        )
+    rows = json.loads(result.stdout) if result.stdout.strip() else []
+    comment = next((row["comment"] for row in rows if row["key"] == "enable"), None)
+    return result.returncode == 0 and comment and "I18N" not in comment and "config.comments" not in comment
+
+
 @func_case
 async def test_entrypoint_config(tester: Tester):
     """core.entrypoints.config: 占位符统计入口测试"""
@@ -150,4 +173,5 @@ async def test_entrypoint_config(tester: Tester):
     await tester.test(_test_broken_table_is_reported_not_skipped, "解析失败与乱码表进 failed")
     await tester.test(_test_missing_table_and_separator_are_rejected, "缺表与含分隔符的表名进 failed")
     await tester.test(_test_default_scan_covers_every_table, "缺省遍历配置目录下的全部表")
+    await tester.test(_test_adapter_enable_comment_is_localized, "schema 给适配器 enable 输出已翻译的注释")
     return tester

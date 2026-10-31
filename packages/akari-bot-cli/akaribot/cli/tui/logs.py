@@ -278,8 +278,8 @@ class LogsPage(compat.Vertical):
         ("c", "clear", i18n.t("cli.tui.logs.bind_clear")),
         ("slash", "focus_filter", i18n.t("cli.tui.logs.bind_filter")),
         # 低频操作通过按钮或输入提示提供，避免页脚超出 80 列。
-        ("d", "cycle_debug", i18n.t("cli.tui.logs.bind_cycle_debug"), False),
         ("r", "rescan", i18n.t("cli.tui.logs.bind_rescan"), False),
+        ("m", "debug_menu", i18n.t("cli.tui.logs.button_debug_menu"), False),
         ("escape", "clear_filter", i18n.t("cli.tui.logs.bind_clear_filter"), False),
     )
 
@@ -328,10 +328,10 @@ class LogsPage(compat.Vertical):
             with compat.VerticalScroll(id="log-pane"):
                 yield compat.Static(i18n.t("cli.tui.logs.reading"), id="log-view", markup=False)
         yield compat.ButtonFlow(
-            ("pause", i18n.t("cli.tui.logs.action_pause")),
-            ("clear", i18n.t("cli.tui.logs.action_clear")),
-            ("debug", i18n.t("cli.tui.logs.debug_button", label=self.debug_label)),
-            ("refresh", i18n.t("cli.tui.logs.action_rescan")),
+            ("pause", compat.key_hint(i18n.t("cli.tui.logs.action_pause"), "space"), "primary"),
+            ("clear", compat.key_hint(i18n.t("cli.tui.logs.action_clear"), "c")),
+            ("debug-menu", compat.key_hint(i18n.t("cli.tui.logs.button_debug_menu"), "m")),
+            ("refresh", compat.key_hint(i18n.t("cli.tui.logs.action_rescan"), "r")),
             id="actions",
         )
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
@@ -610,14 +610,26 @@ class LogsPage(compat.Vertical):
             return
         compat.focus_first(self, "#process-list")
 
-    def cycle_debug_preference(self) -> None:
-        """在「自动 → 仅 INFO → 仅 debug」之间循环切换。"""
-        index = DEBUG_MODES.index(self._prefer_debug)
-        self._prefer_debug = DEBUG_MODES[(index + 1) % len(DEBUG_MODES)]
-        button = self.query_one("#debug", compat.Button)
-        button.label = i18n.t("cli.tui.logs.debug_button", label=self.debug_label)
-        self.query_one("#actions", compat.ButtonFlow).relayout()
+    def set_debug_preference(self, mode: str | None) -> None:
+        """切换 debug 偏好并重新读取日志。
+
+        :param mode: ``auto`` / ``info`` / ``debug``；``None`` 表示取消，不做更改。
+        """
+        if mode not in DEBUG_MODES:
+            return
+        self._prefer_debug = mode
         self.refresh_files()
+
+    def request_debug_menu(self) -> None:
+        """弹出日志级别菜单，列出当前以外的 debug 偏好。"""
+        compat.ask_choice(
+            self.app,
+            title=i18n.t("cli.tui.logs.debug_menu_title"),
+            hint=i18n.t("cli.tui.logs.debug_menu_hint", label=self.debug_label),
+            options=[(mode, i18n.t(_DEBUG_MODE_KEYS[mode])) for mode in DEBUG_MODES if mode != self._prefer_debug],
+            cancel_label=i18n.t("cli.tui.logs.cancel"),
+            callback=self.set_debug_preference,
+        )
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
@@ -642,8 +654,8 @@ class LogsPage(compat.Vertical):
             self.toggle_pause()
         elif button_id == "clear":
             self.clear_buffer()
-        elif button_id == "debug":
-            self.cycle_debug_preference()
+        elif button_id == "debug-menu":
+            self.request_debug_menu()
         elif button_id == "refresh":
             self.refresh_files()
 
@@ -653,8 +665,8 @@ class LogsPage(compat.Vertical):
     def action_clear(self) -> None:
         self.clear_buffer()
 
-    def action_cycle_debug(self) -> None:
-        self.cycle_debug_preference()
+    def action_debug_menu(self) -> None:
+        self.request_debug_menu()
 
     def action_focus_filter(self) -> None:
         self.focus_filter()
@@ -784,7 +796,7 @@ class LogsPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         key = "cli.tui.logs.action_resume" if self._paused else "cli.tui.logs.action_pause"
-        self.query_one("#pause", compat.Button).label = i18n.t(key)
+        self.query_one("#pause", compat.Button).label = compat.key_hint(i18n.t(key), "space")
         self.query_one("#actions", compat.ButtonFlow).relayout()
 
     def _set_status(self, text: str) -> None:

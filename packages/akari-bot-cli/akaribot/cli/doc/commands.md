@@ -47,6 +47,8 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - `list`、`available [--kind module|adapter]`、`status`：查看清单与装载状态。
 - `add <名> [-e <目录>] [--git <地址>] [--ref <引用>] [--subdir <目录>] [--dist <分发>]`：
   安装；另支持 `--version`、`--extra`、`--kind`、`--force`、`--offline`、`--dry-run`。
+  安装前的预检按 `uv pip install --dry-run` 给出的安装计划核对全部已装包的依赖：只需调整依赖版本时
+  提示后继续，计划会破坏已装包或无解时拦截，`--force` 可越过。
 - `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：默认保留配置与数据。
 - `update [名…] [--all] [--force] [--offline] [--defer-runtime] [--json]`：更新已装包。
 - `load <名>` / `unload <名>`：只改全局装载状态，不触碰配置。
@@ -76,7 +78,8 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - `policy <名> [--autostart|--no-autostart] [--restart-on-crash|--no-restart-on-crash]`。
 
 ## adapter
-- `list [--json]`：按平台分组列出适配器实例。
+- `list [--json]`：按平台分组列出适配器实例；JSON 的 `installed_platforms` 另列 core 清单中
+  全部已安装的平台，含尚无实例配置的平台。
 - `instance add <平台> [实例 ID]`：生成实例配置，`enable` 显式写 `false`，填完凭据后开启。
 - `instance remove <平台> [实例 ID] [--dry-run]`：只删配置，场景与用户数据保留。
 
@@ -99,19 +102,25 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
   `--credential-field` 等同类选项。生成后默认执行 `akaribot module add -e .`。
 
 ## docs
-汇总实例中已安装包的 `doc/`，生成并构建 VitePress 站点。构建需要 Node.js >= 18 与 npm，
-站点配置写在实例根的 `docs.toml`。
+汇总实例中已安装包的 `doc/`，生成并构建 VitePress 站点。站点配置写在实例根的 `docs.toml`；
+Node.js 与 VitePress 版本由主题清单决定：内置主题要求 Node >= 18，`akari-bot-docs-template`
+要求 Node >= 22.12。
 
-- `list [--query <词>] [--kind <分组>] [--json]`：列出参与构建的包、页面与目录警告。
+- `list [--query <词>] [--kind <分组>] [--json]`：列出参与构建的包、分类、页面与目录警告。
 - `build [--package <key>…] [--all] [--force] [--offline] [--json]`：生成站点并调用 VitePress；
+  人类模式实时打印阶段与子进程输出，`--json` 的 stdout 只保留结果行，日志写入 stderr。
   `--package` 可重复或逗号分隔。
+- `sync-theme [--repo <路径>] [--json]`：把主题模板 submodule 同步到远端最新提交；只更新工作区，
+  不暂存父仓库 gitlink。
+- `install-deps [--json]`：安装主题所需的 Node 依赖，不生成站点。
 - `serve [--host 127.0.0.1] [--port 4173] [--open] [--no-build] [--json]`：构建并启动本机静态
   预览，直到 Ctrl+C；`--json` 先输出 ready 事件行。
 - `deploy [--provider vercel|s3] [--dry-run] [--delete] [--yes] [--json]`：把构建产物部署到远端；
   凭据只从环境变量读取，`--delete` 只在 S3 下删除目标前缀内多余的对象。
 - `status [--json]`：工具链、配置、包数与最近构建/部署；`clean [--yes]`：删除 `cache/docs`。
 
-生成物位于实例根的 `cache/docs`，构建与部署记录在 `.docs/state.json`。配置与部署字段见
+生成物位于实例根的 `cache/docs`，构建与部署记录在 `.docs/state.json`。主题由
+`docs.toml` 的 `[theme].source` 选择，外部模板需在根目录提供 `docs-theme.json`；配置与部署字段见
 [文档引擎](docs-engine.md)。
 
 ## tui

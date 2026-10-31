@@ -59,6 +59,8 @@ class DocPackage:
     :param pages: 页面清单。
     :param order: 排序权重，自小到大。
     :param editable: 是否为可编辑安装。
+    :param category: 侧栏分类，空串表示不分类。
+    :param category_order: 分类在侧栏中的排序权重，自小到大。
     """
 
     key: str
@@ -72,6 +74,8 @@ class DocPackage:
     pages: tuple[DocPage, ...]
     order: int = DEFAULT_ORDER
     editable: bool = False
+    category: str = ""
+    category_order: int = DEFAULT_ORDER
 
 
 @dataclass(frozen=True)

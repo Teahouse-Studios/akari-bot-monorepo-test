@@ -27,7 +27,9 @@ from akaribot.cli.docs.deploy import DocsDeployError, get_provider
 from akaribot.cli.docs.model import BuildResult, DocPackage, DocsError, ToolchainInfo
 from akaribot.cli.docs.server import StaticServer
 from akaribot.cli.docs.state import load_state, record_deploy
-from akaribot.cli.docs.toolchain import detect
+from akaribot.cli.docs.theme import resolve_theme
+from akaribot.cli.docs.theme_sync import sync_theme_submodule
+from akaribot.cli.docs.toolchain import detect, ensure_toolchain
 from akaribot.cli.instance import (
     InstancePathOption,
     console,
@@ -70,8 +72,16 @@ def _config_path(instance_root: Path) -> Path | None:
 def _config_payload(config: DocsConfig) -> dict[str, Any]:
     return {
         "path": str(path) if (path := _config_path(config.root)) else None,
-        "site": {"title": config.site.title, "lang": config.site.lang, "base": config.base},
+        "site": {
+            "title": config.site.title,
+            "lang": config.site.lang,
+            "base": config.base,
+            "logo": config.site.logo,
+            "favicon": config.site.favicon,
+        },
+        "icons": dict(config.icons),
         "out_dir": str(config.out_dir),
+        "theme": {"source": config.theme.source, "color": config.theme.color},
     }
 
 
@@ -96,6 +106,8 @@ def _package_payload(package: DocPackage) -> dict[str, Any]:
         "title": package.title,
         "summary": package.summary,
         "order": package.order,
+        "category": package.category,
+        "category_order": package.category_order,
         "doc_path": str(package.doc_path),
         "editable": package.editable,
         "pages": [
@@ -160,6 +172,54 @@ def _emit_json(payload: Mapping[str, Any], *, flush: bool = False) -> None:
         sys.stdout.flush()
 
 
+_STAGE_KEYS = {
+    "toolchain": "cli.docs.build.stage_toolchain",
+    "generate": "cli.docs.build.stage_generate",
+    "build": "cli.docs.build.stage_build",
+}
+
+
+def _write_stderr(line: str) -> None:
+    sys.stderr.write(f"{line}\n")
+    sys.stderr.flush()
+
+
+def _print_stage(stage: str, *, as_json: bool) -> None:
+    key = _STAGE_KEYS.get(stage)
+    if key is None:
+        return
+    text = i18n.t(key)
+    if as_json:
+        _write_stderr(text)
+        return
+    console.print(escape(text), style="bold")
+
+
+def _print_log_line(line: str, *, as_json: bool) -> None:
+    if as_json:
+        _write_stderr(line)
+        return
+    console.print(line, markup=False, highlight=False, soft_wrap=True)
+
+
+def _build_site(
+    target: Any,
+    *,
+    as_json: bool,
+    keys: list[str] | None = None,
+    force: bool = False,
+    offline: bool = False,
+) -> BuildResult:
+    return build(
+        target,
+        keys=keys,
+        force=force,
+        offline=offline,
+        reporter=lambda stage: _print_stage(stage, as_json=as_json),
+        log=lambda line: _print_log_line(line, as_json=as_json),
+    )
+
+
 def _confirm(text: str, *, as_json: bool) -> None:
     # click 会把读入的答案回显到 stdout；JSON 模式下整段改道 stderr，保证结果行不被污染。
     if as_json:
@@ -187,6 +247,7 @@ def _print_package_table(packages: list[DocPackage]) -> None:
     table = Table(title=i18n.t("cli.docs.list.header", count=len(packages)))
     table.add_column(i18n.t("cli.docs.list.column_key"))
     table.add_column(i18n.t("cli.docs.list.column_group"))
+    table.add_column(i18n.t("cli.docs.list.column_category"))
     table.add_column(i18n.t("cli.docs.list.column_title"))
     table.add_column(i18n.t("cli.docs.list.column_version"))
     table.add_column(i18n.t("cli.docs.list.column_pages"))
@@ -194,6 +255,7 @@ def _print_package_table(packages: list[DocPackage]) -> None:
         table.add_row(
             escape(package.key),
             escape(package.group),
+            escape(package.category or "-"),
             escape(package.title),
             escape(package.version or "-"),
             str(len(package.pages)),
@@ -219,8 +281,9 @@ def list_docs(
     target = require_instance(instance)
     try:
         config = load_config(target)
+        theme = resolve_theme(config)
         catalog = load_catalog(target)
-        toolchain = detect()
+        toolchain = detect(theme.node_major)
     except DocsError as error:
         _fail(error)
     selected = _filter_packages(catalog.packages, query, kind)
@@ -256,13 +319,13 @@ def build_docs(
 ) -> None:
     """生成站点源文件并调用 VitePress 构建。
 
-    默认构建全部包；``--package`` 可重复或逗号分隔，指定后只构建列出的包。``--json`` 的 stdout
-    只输出一行结果，构建日志放在 ``log`` 字段。
+    默认构建全部包；``--package`` 可重复或逗号分隔，指定后只构建列出的包。人类模式实时打印阶段与
+    子进程输出；``--json`` 的 stdout 只输出一行结果，构建日志放在 ``log`` 字段并同步写入 stderr。
     """
     target = require_instance(instance)
     keys = None if all_packages else (split_names(package) or None)
     try:
-        result = build(target, keys=keys, force=force, offline=offline)
+        result = _build_site(target, as_json=as_json, keys=keys, force=force, offline=offline)
     except DocsError as error:
         _fail(error)
     if as_json:
@@ -273,6 +336,78 @@ def build_docs(
     else:
         ok(i18n.t("cli.docs.build.done", count=len(result.packages)))
     console.print(escape(i18n.t("cli.docs.build.summary", out_dir=result.out_dir, duration=result.duration_ms)))
+
+
+@app.command("sync-theme", help=i18n.t("cli.docs.sync_theme.help"))
+def sync_theme_docs(
+    repo: Annotated[str | None, typer.Option("--repo", help=i18n.t("cli.docs.option_repo"))] = None,
+    as_json: JsonOption = False,
+    instance: InstancePathOption = None,
+) -> None:
+    """把主题模板 submodule 同步到远端最新提交。"""
+    target = require_instance(instance)
+    try:
+        result = sync_theme_submodule(
+            target.root,
+            explicit_repo=repo,
+            log=lambda line: _print_log_line(line, as_json=as_json),
+        )
+    except DocsError as error:
+        _fail(error)
+    if as_json:
+        _emit_json(
+            {
+                "ok": True,
+                "repo": str(result.repo),
+                "path": str(result.path),
+                "before": result.before,
+                "after": result.after,
+                "changed": result.changed,
+                "log": result.log,
+            }
+        )
+        return
+    console.print(escape(i18n.t("cli.docs.sync_theme.repo", path=result.repo)))
+    before = result.before[:12] if result.before else i18n.t("cli.docs.sync_theme.uninitialized")
+    console.print(escape(i18n.t("cli.docs.sync_theme.before", commit=before)))
+    console.print(escape(i18n.t("cli.docs.sync_theme.after", commit=result.after[:12] or "-")))
+    key = "cli.docs.sync_theme.updated" if result.changed else "cli.docs.sync_theme.current"
+    ok(i18n.t(key))
+
+
+@app.command("install-deps", help=i18n.t("cli.docs.install_deps.help"))
+def install_deps_docs(
+    as_json: JsonOption = False,
+    instance: InstancePathOption = None,
+) -> None:
+    """安装主题所需的 Node 依赖，不生成站点。"""
+    target = require_instance(instance)
+    try:
+        config = load_config(target)
+        theme = resolve_theme(config)
+        toolchain = detect(theme.node_major)
+        if not toolchain.ready:
+            raise DocsError("cli.docs.error.toolchain_missing", detail=toolchain.detail)
+        docs_dir = ensure_toolchain(
+            Path(target.root) / "cache",
+            offline=False,
+            theme=theme,
+            log=lambda line: _print_log_line(line, as_json=as_json),
+        )
+    except DocsError as error:
+        _fail(error)
+    payload = {
+        "ok": True,
+        "theme": theme.name,
+        "vitepress": theme.vitepress_version,
+        "path": str(docs_dir),
+        "toolchain": toolchain.detail,
+    }
+    if as_json:
+        _emit_json(payload)
+        return
+    ok(i18n.t("cli.docs.install_deps.done", version=theme.vitepress_version))
+    console.print(escape(i18n.t("cli.docs.install_deps.summary", path=docs_dir)))
 
 
 @app.command("serve", help=i18n.t("cli.docs.serve.help"))
@@ -292,7 +427,7 @@ def serve_docs(
         _fail(error)
     if not no_build:
         try:
-            build(target)
+            _build_site(target, as_json=as_json)
         except DocsError as error:
             _fail(error)
     site_dir = config.out_dir
@@ -356,7 +491,7 @@ def deploy_docs(
     name = (provider or "").strip().lower() or _provider_name(config)
     if not no_build:
         try:
-            build(target)
+            _build_site(target, as_json=as_json)
         except DocsError as error:
             _fail(error)
     site_dir = config.out_dir
@@ -431,8 +566,9 @@ def status_docs(
     target = require_instance(instance)
     try:
         config = load_config(target)
+        theme = resolve_theme(config)
         catalog = load_catalog(target)
-        toolchain = detect()
+        toolchain = detect(theme.node_major)
     except DocsError as error:
         _fail(error)
     build_state, deploys = _state_parts(target)
@@ -442,6 +578,13 @@ def status_docs(
             {
                 "instance": str(target.root),
                 "config": _config_payload(config),
+                "theme": {
+                    "source": theme.source,
+                    "name": theme.name,
+                    "version": theme.version,
+                    "root": str(theme.root),
+                    "digest": theme.digest,
+                },
                 "toolchain": _toolchain_payload(toolchain),
                 "packages": {"count": len(keys), "keys": keys},
                 "build": dict(build_state) if build_state else None,
@@ -455,6 +598,18 @@ def status_docs(
     config_path = _config_path(target.root)
     console.print(escape(i18n.t("cli.docs.status.config", path=config_path or i18n.t("cli.docs.status.none"))))
     console.print(escape(i18n.t("cli.docs.status.site", title=config.site.title, lang=config.site.lang)))
+    console.print(escape(i18n.t("cli.docs.status.theme", source=config.theme.source)))
+    console.print(
+        escape(
+            i18n.t(
+                "cli.docs.status.theme_resolved",
+                name=theme.name,
+                version=theme.version or "-",
+                path=theme.root,
+                digest=theme.digest[:12],
+            )
+        )
+    )
     console.print(escape(i18n.t("cli.docs.status.base", base=config.base)))
     console.print(escape(i18n.t("cli.docs.status.out_dir", path=config.out_dir)))
     console.print(i18n.t("cli.docs.status.packages", count=len(keys)))

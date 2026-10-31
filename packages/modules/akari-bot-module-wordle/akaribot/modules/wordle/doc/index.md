@@ -1,16 +1,8 @@
-# Wordle 猜词
+# wordle
 
 猜一个五个字母的英文单词，最多六次机会。每次提交后按字母与位置给出绿、黄、灰三色反馈。
 
 模块名 `wordle`，没有别名。
-
-## 安装
-
-```bash
-akaribot module add akari-bot-module-wordle
-```
-
-安装后在会话中由管理员用 `module enable wordle` 开启。
 
 ## 命令
 
@@ -33,29 +25,3 @@ akaribot module add akari-bot-module-wordle
 - 对局状态保存在进程内，1 小时后自动过期。
 
 `wordle stop` 在没有进行中的对局时返回停止失败提示；存在对局时公布答案并同样附上词典链接。
-
-## 配置项
-
-配置表 `module_wordle`（`config/module_wordle.toml`）。
-
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `wordle_disable_image` | bool | false | 是否禁用图片并使用文本棋盘 |
-
-启用后开局与每次提交都发送文本棋盘，不发送棋盘与键盘图片。
-
-## 权限与平台能力
-
-- 命令对普通用户开放，不要求管理员或超级用户权限。
-- 未声明平台限制，所有已接入平台可用。
-- 图片模式依赖 `akari-bot-assets-fonts` 提供的字体；开启 `wordle_disable_image` 时使用文本棋盘。
-- 花瓣奖励仅在实例开启花瓣系统时生效。
-
-## 数据表
-
-无。manifest 未声明 `owned_tables`，对局状态与冷却均保存在进程内。
-
-## 依赖与外部服务
-
-- 依赖：`akari-bot-core`、`akari-bot-assets-fonts`、`Pillow`、`attrs`。
-- 不使用外部数据接口；答案与可提交词表随包分发在 `assets/answers.txt` 与 `assets/words.txt`，词典链接指向剑桥词典网站。

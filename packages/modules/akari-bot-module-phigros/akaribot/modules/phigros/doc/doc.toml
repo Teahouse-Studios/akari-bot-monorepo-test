@@ -1,7 +1,9 @@
 schema = 1
-title = "Phigros 查询"
+title = "phigros"
 summary = "绑定 Phigros 云存档，查询 B30、成绩、曲目与账号信息。"
 order = 500
+category = "音游查询"
+category_order = 100
 
 [[meta.modules]]
 name = "phigros"
