@@ -1,16 +1,15 @@
 # 贡献指南
-首先，感谢你对小可（及其衍生项目）的关注。
 
-我们欢迎任何形式的贡献。关于不同的参与方式及处理流程的详细说明，请参阅下方[目录](#目录)。
+感谢你对小可及其衍生项目的关注。
 
-在开始贡献之前，请务必阅读相关章节。这将大幅减轻维护者的负担，并为所有参与者带来更顺畅的协作体验。
+本项目接受各种形式的贡献，各类参与方式与处理流程见下方[目录](#目录)。参与前请阅读对应章节，以减少维护者的沟通成本。
 
 > [!NOTE]
-> 如果你喜欢本项目，但暂时不打算贡献代码，也完全没关系。你仍然可以通过以下方式支持我们：
-> - 为本项目点 Star
-> - 在你的项目 README 中引用本项目
-> - 将机器人加入你的群聊 / 服务器
-> - 向他人分享或推荐本项目 / 机器人
+> 不打算贡献代码时，也可以通过以下方式支持本项目：
+> - 为本仓库点 Star
+> - 在自己项目的 README 中引用本项目
+> - 将机器人加入群聊或服务器
+> - 向他人推荐本项目
 
 ## 目录
 
@@ -31,97 +30,105 @@
 - [文字排版](#文字排版)
 
 ## 提出问题
+
 > [!NOTE]
-> 建议先阅读[《提问的智慧》](https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/main/README-zh_CN.md)，以避免带来不必要的困扰。
-> 
-> 提示：本指南不提供此项目的实际支持服务！
-> 
-> （本提示由指南建议声明）
+> 建议先阅读[《提问的智慧》](https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/main/README-zh_CN.md)。
+>
+> 本指南不提供本项目的实际支持服务。
 
-在开始之前，请先搜索是否已有相关 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。一些显而易见的问题，建议优先通过搜索引擎自行查找答案。
+提问前请先搜索是否已有同类 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。能在搜索引擎中找到答案的问题，不建议提交 Issue。
 
-如果你仍有疑问需要联系开发者，我们支持以下方法：
+需要联系开发者时，可通过以下渠道：
 
 - 在 Issue 中[创建新问题](https://github.com/Teahouse-Studios/akari-bot/issues/new)
 - 加入 QQ 平台的[小可公共实例测试群（738829671）](https://qm.qq.com/q/Rmuo5ORYgq)或[茶馆工作室聊天群（979982065）](https://qm.qq.com/q/sjwFNX1NVC)
 
-不管使用什么方法，请**尽可能详细地描述**你遇到的问题。
+无论通过哪种渠道，都请**尽可能详细地描述**问题。
 
 ## 做出贡献
 
 ### 报告错误
+
 > [!WARNING]
 > **绝对不要**在 Issue 或其他任何公开渠道报告或复现包含敏感信息的安全问题或漏洞。
 > 
 > 涉及敏感内容的问题必须通过电子邮件或私聊联系开发者，详见 [`SECURITY.md`](/SECURITY.md)。
 >
-> 违反本条规则的内容将被删除；若执意违反，后果自负。
+> 违反本条规则的内容将被删除，由此产生的后果由发布者承担。
 
-提交错误报告前，请先确认是否已有相关 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
+提交前请确认是否已有同类 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
 
-如果没有类似问题，请使用[错误报告模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=report_bug.yaml)创建新的 Issue，并提供以下信息：
+若没有，请使用[错误报告模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=report_bug.yaml)创建新的 Issue，并提供以下信息：
 - 错误的简要描述
 - 复现步骤
 - 预期结果和实际结果
 - 错误信息（若有）
 
-一个优秀的错误报告不应让他人反复追问细节。请尽可能提供完整信息。
+报告应包含上述信息，避免维护者反复追问细节。
 
 ### 提出建议
-提交建议前，请先确认是否已有相关 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
 
-如果没有类似的内容，请使用[功能建议模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=feature_request.yaml)创建新的 Issue，并提供：
+提交前请确认是否已有同类 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
+
+若没有，请使用[功能建议模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=feature_request.yaml)创建新的 Issue，并提供：
 - 建议的简要描述
 - 可能的实现方案（若有）
 - 建议对项目有益的理由（推荐）
 
-如果你已经完成了对应功能的开发，仍建议先提交 Issue 进行讨论，再创建 PR，以便充分沟通。
+已完成开发的改动同样建议先提交 Issue 讨论，再创建 PR。
 
 ### 本地化
-本项目的多语言内容由 Weblate 托管，你可以前往[这里](https://hosted.weblate.org/engage/akaribot)参与翻译改进。
 
-为避免不必要的 Issue 堆积，除简体中文外，不建议在 Issue 中提交翻译相关问题。
+多语言内容由 Weblate 托管，翻译改进请前往 [Weblate](https://hosted.weblate.org/engage/akaribot)。
 
-如果你没有 Weblate 账号，可以联系开发者代为提交翻译内容。
+除简体中文外，翻译问题请在 Weblate 讨论，不提交到 Issue。
+
+没有 Weblate 账号时可联系开发者代为提交。
 
 ## 提交代码更改
-如果你希望提交更“硬核”的贡献……
 
-本项目在规范层面并没有太多限制（毕竟我们自己也不一定总是严格遵守各种条条框框）。但请至少遵守基本规范，避免“帮倒忙”。
+本节面向准备提交代码的贡献者。本项目对代码改动的限制较少，但下列约定须遵守。
 
 ### 快速开始
-1. Fork 本项目储存库
-2. Clone 你的 Fork 至本地
-3. 创建新的分支
-4. 做出你的更改
+
+1. Fork 本仓库
+2. 克隆 Fork 到本地
+3. 创建新分支
+4. 完成改动
 5. 向本项目提交 PR
 
-省流（？）助手：[《🐧你为啥直接 commit 到我的 master 分支啊》](https://bilibili.com/video/BV1pwC6BxEeb)
+提交规范见视频[《🐧你为啥直接 commit 到我的 master 分支啊》](https://bilibili.com/video/BV1pwC6BxEeb)。
 
 ### 开发环境
-本项目基于 Python 开发。
-Python 环境是必要的，注意最低版本要求（见 [README](/README.md)）。
 
-推荐搭配 IDE 使用，例如 [PyCharm](https://www.jetbrains.com/pycharm) 或 [VS Code](https://code.visualstudio.com)。
+本项目使用 Python，最低版本要求见 [README](/README.md)。推荐使用 [PyCharm](https://www.jetbrains.com/pycharm) 或
+[VS Code](https://code.visualstudio.com)。
 
-本项目使用 [uv](https://docs.astral.sh/uv) 管理依赖。在安装后使用以下命令安装依赖：
-```
+本项目使用 [uv](https://docs.astral.sh/uv) 管理依赖，安装依赖：
+
+```sh
 uv sync
 ```
-如果你需要安装新依赖，请使用以下命令：
-```
+
+新增依赖：
+
+```sh
 uv add <包名>
 ```
-请将新增依赖移动至 `pyproject.toml` 中对应注释分组下，并按字母顺序排列。
 
-最后，别忘了使用以下命令锁定依赖：
-```
+新增依赖须放入 `pyproject.toml` 中对应的注释分组，并按字母顺序排列。
+
+改动依赖后更新锁文件：
+
+```sh
 uv lock
 ```
 
 ### 依赖冲突与联合求解
+
 本项目已拆分为 uv workspace，全部官方包共用根目录下的单一 `uv.lock`。该文件对全部成员包做一次**联合求解**，因而各包声明的第三方依赖若互相排斥，`uv lock` 会立即失败，例如两个包对 `packaging` 的可接受区间没有交集：
-```
+
+```sh
   × No solution found when resolving dependencies:
   ╰─▶ Because pkg-a depends on packaging>=24,<25 and pkg-b depends
       on packaging>=25,<26, we can conclude that pkg-a and pkg-b are
@@ -130,52 +137,54 @@ uv lock
       that your workspace's requirements are unsatisfiable.
 ```
 
-CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不再等到用户安装时；多仓库布局下不存在任何一处会做这样的联合求解，这是采用 monorepo 最实在的收益。
+CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不必等到用户安装时；多仓库布局下不存在任何一处会做这样的联合求解，这是 monorepo 布局的主要收益。
 
 该防线有两处边界：仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移（例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布出的 wheel），后者由 `uv run python tools/lint_versions.py` 负责；也不覆盖第三方模块，它们不在 workspace 内，依赖互斥只能靠净室验证与 `akaribot module add` 的安装前预检拦截。
 
-遇到 `uv lock` 变红时应回到 `pyproject.toml` 调整约束，使相关包的区间重新相容并说明原因。不要用 `--no-verify` 绕过检查，不要手工编辑 `uv.lock`，也不要为了通过检查而降低或放宽约束；这些做法只会把冲突推迟到用户安装现场才暴露。
+`uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手工编辑 `uv.lock` 或放宽约束来通过检查，这些做法只会把冲突推迟到用户安装现场。
 
-本项目已配置 Pre-commit Hook，使用以下命令安装：
-```
+仓库已配置 pre-commit 钩子，安装方式：
+
+```sh
 pre-commit install
 ```
-提交代码时将自动执行代码格式化、静态分析、依赖导出等操作。
+
+提交时自动执行格式化、静态分析与依赖导出。
 
 ### 分支命名
-本项目中所有关于新功能或改动的分支使用 `dev/` 前缀，修复错误的分支使用 `fix/` 前缀。
-（虽然实际上大多还是会直接 push 到 `master`。）
 
-分支的命名必须使用英文。建议采用简短的描述或直接使用 Issue 编号。
+新功能与改动分支使用 `dev/` 前缀，缺陷修复分支使用 `fix/` 前缀。分支名必须使用英文，建议使用简短描述或
+Issue 编号。
 
 ### 提交规范
-Commit message 必须使用英文或简体中文描述，除此之外没有硬性要求。
 
-能够遵循 Conventional Commits 规范则更佳。
+提交信息使用英文或简体中文。遵循 Conventional Commits 规范更佳。
 
 ### PR 描述
-PR 标题请参考 [Commit message](#提交规范)，正文请根据 PR 模板完善对应内容。
 
-建议在描述中[关联 Issue](#提出建议)，输入 `#<编号>` 即可关联。
+PR 标题参考[提交规范](#提交规范)，正文按 PR 模板填写。描述中可用 `#<编号>` [关联
+Issue](#提出建议)。
 
-一个 PR 必须通过所有 CI 测试，并得到至少 1 名开发者的 LGTM（看起来不错）后方可合并。
-
-重大更改*原则上*不应该直接 push 到 `master`，须提交 PR 进行审查。
+PR 须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM 方可合并。重大更改须提交 PR 审查，不得直接
+push 到 `master`。
 
 ### 代码风格
-本项目使用 [Ruff](https://docs.astral.sh/ruff) 作为代码格式化和静态分析工具。在提交代码之前，请运行以下命令以确保代码符合规范：
-```
+
+本项目使用 [Ruff](https://docs.astral.sh/ruff) 格式化与静态分析。提交前运行：
+
+```sh
 ruff format .
 ruff check .
 ```
-如果你使用 VS Code，可以安装 Ruff 插件。
+
+VS Code 用户可安装 Ruff 扩展。
 
 ### 新增模块包
 
 仓库已按包拆分，官方模块各占一个 workspace 成员（`packages/modules/akari-bot-module-<名>/`）。
-新增模块建议用脚手架生成，再按需修改：
+新增模块用脚手架生成后按需修改：
 
-```
+```sh
 akaribot new module <名>          # 交互问卷；也可用 --non-interactive 配合逐项参数
 akaribot module add -e .          # 在生成的包目录内执行；脚手架 --add 默认已代跑
 ```
@@ -201,16 +210,16 @@ akaribot module add -e .          # 在生成的包目录内执行；脚手架 -
 
 - 代码一律 `from akaribot.core.api import ...`，不要写 `akaribot.core.builtins.*` 这类深路径。
 - `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate；键名前缀须与模块名一致。
-- 对 core 的约束写 `akari-bot-core>=0.1.0,<1.0`——全部 first-party 包的这一串必须**字面一致**，
+- 对 core 的约束写 `akari-bot-core>=0.1.0,<1.0`：全部 first-party 包的这一串必须**字面一致**，
   `python tools/lint_versions.py` 会检查。
 - 模块之间不要互相依赖：官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
 - 若模块要建表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条 revision 是否已应用只看
   `schema_migrations` 表）。
 - 包内不要出现 `akaribot/__init__.py`：`akaribot` 是命名空间包（B7）。
 
-提交前请跑全部门禁：
+提交前运行全部门禁：
 
-```
+```sh
 uv run ruff check . && uv run ruff format --check .
 uv run python tools/lint_comments.py      # 注释书面语与块长
 uv run python tools/lint_boundaries.py    # 分层、命名空间、依赖声明
@@ -218,6 +227,7 @@ uv run python tools/lint_versions.py      # 内部版本约束一致性
 ```
 
 ## 文字排版
+
 > “有研究显示，打字的时候不喜欢在中文和英文之间加空格的人，感情路都走得很辛苦，有七成的比例会在 34 岁的时候跟自己不爱的人结婚，而其余三成的人最后只能把遗产留给自己的猫。毕竟爱情跟书写都需要适时地留白。
 >
 > 与大家共勉之。”
@@ -226,19 +236,19 @@ uv run python tools/lint_versions.py      # 内部版本约束一致性
 
 本项目的所有中文文字排版（包括本文）参考[中文文案排版指北](https://github.com/sparanoid/chinese-copywriting-guidelines/blob/master/README.zh-Hans.md)。
 
-包括但不限于：
+规则包括：
 - 中英文之间需要增加空格
 - 使用全角中文标点
 - 专有名词使用正确的大小写
 
-但以下情况为例外：
+以下情况例外：
 - 简体中文使用弯引号
 - 链接之间不额外增加空格
 
-此外，还有一些额外补充规范：
+补充约定：
 - 称呼用户须使用“你”，而不是“您”
 - 机器人自称时避免使用“我”，统一使用“机器人”
-- 尽可能避免使用第一人称进行描述
+- 尽可能避免使用第一人称描述
 - 机器人的第三人称统一为“它”
 
 ---
@@ -288,7 +298,7 @@ If you still need to reach the developers, you can use these channels:
 
 - Create a new [issue](https://github.com/Teahouse-Studios/akari-bot/issues/new)
 - Join the QQ group for [public instance testing (738829671)](https://qm.qq.com/q/Rmuo5ORYgq) or the [Teahouse Studios chat group (979982065)](https://qm.qq.com/q/sjwFNX1NVC)
-- We are not able to be online with Discord frequently, so we do not have a Discord server at the moment. sorry :(
+- We are not online on Discord frequently, so there is no Discord server at present.
 
 No matter which method you choose, please **describe your problem in as much detail as possible**.
 
@@ -299,7 +309,7 @@ No matter which method you choose, please **describe your problem in as much det
 > [!WARNING]
 > **Never** report or reproduce security issues / vulnerabilities that involve sensitive information in Issues or any public channels.
 >
-> Such issues must be reported privately via email or direct message to the developers. See [`SECURITY.md`](/SECURITY.md))
+> Such issues must be reported privately via email or direct message to the developers. See [`SECURITY.md`](/SECURITY.md).
 >
 > Content that violates this rule will be removed. Persistent violation may have consequences.
 
@@ -336,9 +346,8 @@ If you do not have a Weblate account, feel free to contact the developers and we
 
 ## Submitting Code Changes
 
-If you'd like to make more hardcore contributions...
-
-This project doesn't enforce too many strict rules (after all, we don't always follow every convention ourselves). Still, please at least follow basic good practices so your contribution helps rather than creates extra work.
+This section covers code contributions. The project does not impose many restrictions on code changes, but the
+conventions below are required.
 
 ### Quick Start
 
@@ -348,7 +357,7 @@ This project doesn't enforce too many strict rules (after all, we don't always f
 4. Make your changes
 5. Open a pull request to this repository
 
-tl;dr: don't commit directly to someone else's `master` / `main` branch plzzz
+Never commit directly to another repository's `master` / `main` branch.
 
 ### Development Environment
 
@@ -386,10 +395,7 @@ They will automatically run formatting, linting, dependency export, etc. on comm
 
 ### Branch Naming
 
-Branches for new features or changes should use the `dev/` prefix.  
-Bugfix branches should use the `fix/` prefix.
-
-(Although in practice many changes still go straight to `master`...)
+Branches for new features or changes use the `dev/` prefix; bugfix branches use the `fix/` prefix.
 
 Branch names must be in English. Short descriptive names or Issue numbers (e.g. `dev/add-xxx-command`, `fix/123`) are recommended.
 

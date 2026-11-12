@@ -1,6 +1,6 @@
 # 消息 API 参考
 
-本页列出模块处理函数可用的消息接口、参数与边界，不重复模块声明与命令模板的教程；那部分见[模块开发](module-development.md)。文中名字均从 `akaribot.core.api` 导入。
+模块处理函数使用的消息接口与参数均从 `akaribot.core.api` 导入；模块声明与命令模板的写法见[模块开发](module-development.md)。
 
 ## 会话对象
 
@@ -45,7 +45,9 @@ async def show(msg: Bot.MessageSession):
 ```
 
 <NoticeBox type="warning">
+
 `disable_secret_check=True` 会跳过 `MessageChain.is_safe` 的敏感信息扫描。仅对已确认安全的内容使用；否则框架会把整条链替换为 `error.message.chain.unsafe`。
+
 </NoticeBox>
 
 ## 等待用户输入
@@ -72,10 +74,13 @@ async def choose(msg: Bot.MessageSession):
 ```
 
 <NoticeBox type="warning">
+
 `WaitCancelException` 与 `SessionFinished` 都继承 `BaseException`，`except Exception` 捕获不到。不要用裸 `except` 包裹包含 `wait_*()` 或 `finish()` 的代码，否则等待取消或会话结束会被吞掉。
+
 </NoticeBox>
 
 ## 权限
+
 | 方法 | 参数 | 说明 |
 | --- | --- | --- |
 | `check_super_user()` | 无，同步 | 发送者是否为超级用户 |
@@ -88,6 +93,7 @@ async def manage(msg: Bot.MessageSession):
     if not msg.check_super_user() and not await msg.check_permission():
         await msg.finish("权限不足")
 ```
+
 ## 其他操作
 
 | 方法 | 关键参数（默认值） | 说明 |
@@ -157,7 +163,9 @@ async def card(msg: Bot.MessageSession):
 ```
 
 <NoticeBox type="warning">
+
 `Plain`、`Image`、`Embed` 等名字绑定的是对应元素的 `assign` 类方法，不是元素类。类型判断应使用 `PlainElement`、`ImageElement`、`EmbedElement` 等真实类，`isinstance(x, Plain)` 会报错。
+
 </NoticeBox>
 
 ## 消息节点与渲染

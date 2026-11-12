@@ -1,7 +1,7 @@
 """删去非公开符号上的 docstring，并把其中的说明上提为行注释。
 
 规范要求 docstring 只出现在公开 API 上：私有函数、私有类与模块内部实现不需要 docstring，
-它们的「为什么」由行注释承担（见 `.agents/skills/akaribot-dev/references/workflow-and-style.md`）。
+它们的「为什么」由行注释承担（见 `AGENTS.md` 的「注释」一节）。
 本工具按该规范机械处理，并把 docstring 里**除首行概括与 `:param:` / `:return:` 之外**的散文
 上提为行注释——那些内容往往正是读代码读不出来的约束，直接删掉会丢信息。
 

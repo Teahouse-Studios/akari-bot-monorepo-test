@@ -4,8 +4,3 @@ summary = "查询域名的注册商、日期、DNS 服务器与注册人信息�
 order = 500
 category = "实用工具"
 category_order = 400
-
-[[meta.modules]]
-name = "whois"
-type = ["command"]
-permission = "public"

@@ -1,10 +1,10 @@
 # akari-bot-html2text
 
-AkariBot 维护的 html2text 分支：HTML 转 Markdown 文本
+AkariBot 维护的 html2text 分支，将 HTML 转换为 Markdown 文本。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-html2text

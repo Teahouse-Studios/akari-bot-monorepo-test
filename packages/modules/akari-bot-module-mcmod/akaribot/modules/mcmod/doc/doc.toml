@@ -4,9 +4,3 @@ summary = "查询 MC 百科的 Mod 条目，返回首条结果的名称、链接
 order = 500
 category = "Minecraft"
 category_order = 200
-
-[[meta.modules]]
-name = "mcmod"
-aliases = ["moddetails"]
-type = ["command"]
-permission = "public"

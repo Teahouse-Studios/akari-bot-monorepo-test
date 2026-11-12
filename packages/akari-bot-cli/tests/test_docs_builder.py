@@ -1,6 +1,7 @@
 """``akaribot.cli.docs.builder``：构建编排、指纹复用与强制重建。"""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -180,7 +181,39 @@ async def _test_fingerprint_tracks_site_assets_and_icons():
             catalog,
             DocsConfig(root=root, site=DocsSiteConfig(logo="logo.svg"), icons={"home": "dashboard"}),
         )
-    return first != second and second != third
+        fourth = builder.fingerprint_catalog(
+            catalog,
+            DocsConfig(root=root, site=DocsSiteConfig(logo="logo.svg"), labels={"home": "主页"}),
+        )
+        fifth = builder.fingerprint_catalog(
+            catalog,
+            DocsConfig(root=root, site=DocsSiteConfig(logo="logo.svg"), group_titles={"module": "功能"}),
+        )
+        sixth = builder.fingerprint_catalog(
+            catalog,
+            DocsConfig(
+                root=root,
+                site=DocsSiteConfig(logo="logo.svg"),
+                group_titles={"module": "功能"},
+                assets={"favicon": "custom.ico"},
+            ),
+        )
+        brand_logo = root / "brand.png"
+        brand_logo.write_bytes(b"png-1")
+        branded = DocCatalog(
+            packages=(replace(package, logo=str(brand_logo)),),
+        )
+        seventh = builder.fingerprint_catalog(branded, DocsConfig(root=root))
+        brand_logo.write_bytes(b"png-2")
+        eighth = builder.fingerprint_catalog(branded, DocsConfig(root=root))
+    return (
+        first != second
+        and second != third
+        and second != fourth
+        and second != fifth
+        and fifth != sixth
+        and seventh != eighth
+    )
 
 
 @func_case
@@ -188,5 +221,5 @@ async def test_docs_builder(tester: Tester):
     """cli.docs.builder: 构建编排与缓存复用"""
     await tester.test(_test_build_reuses_fingerprint_and_force, "指纹复用、内容变更、force 与未知 key")
     await tester.test(_test_build_reports_missing_toolchain, "工具链不可用时报错")
-    await tester.test(_test_fingerprint_tracks_site_assets_and_icons, "Logo 内容与一级图标参与指纹")
+    await tester.test(_test_fingerprint_tracks_site_assets_and_icons, "Logo 内容、文案、图标与包标志参与指纹")
     return tester

@@ -14,6 +14,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from akaribot.cli import __version__
 
+from .config import default_labels
 from .model import DEFAULT_ORDER, DocCatalog, DocPackage, DocPage
 
 CLI_DIST = "akari-bot-cli"
@@ -25,17 +26,26 @@ _GROUP_RANK = {name: index for index, name in enumerate(GROUP_ORDER)}
 _PAGE_SUFFIXES = (".md",)
 
 
-def load_catalog(instance: Any, include_cli: bool = True) -> DocCatalog:
+def load_catalog(
+    instance: Any,
+    include_cli: bool = True,
+    labels: Mapping[str, str] | None = None,
+    locales: Sequence[str] = (),
+) -> DocCatalog:
     """读取实例可用的文档目录。
 
     :param instance: 带 ``root`` 与 ``run_core_capture`` 的实例。
     :param include_cli: 是否合并 CLI 自身文档。
+    :param labels: 界面文案，用于首页与开发页的默认标题；缺省取随包默认值。
+    :param locales: 非默认语言标签，其目录不进入默认语言的页面清单。
     :return: 已按 ``order`` 排序的目录。
     """
+    labels = dict(labels or default_labels())
+    tags = tuple(str(tag) for tag in locales)
     warnings: list[str] = []
-    packages = _load_remote(instance, warnings)
+    packages = _load_remote(instance, warnings, labels, tags)
     if include_cli:
-        local = _load_local_cli()
+        local = _load_local_cli(labels, tags)
         if local is not None:
             packages = [package for package in packages if package.key != local.key]
             packages.append(local)
@@ -51,14 +61,16 @@ def _package_sort_key(package: DocPackage) -> tuple[int, int, str, str]:
     return (_GROUP_RANK.get(package.group, len(GROUP_ORDER)), package.order, package.title, package.key)
 
 
-def _load_remote(instance: Any, warnings: list[str]) -> list[DocPackage]:
+def _load_remote(
+    instance: Any, warnings: list[str], labels: Mapping[str, str], tags: Sequence[str]
+) -> list[DocPackage]:
     payload = _fetch_docs(instance, warnings)
     if payload is not None:
         reported = payload.get("warnings")
         if isinstance(reported, list):
             warnings.extend(text for item in reported if (text := str(item).strip()))
-        return _parse_packages(payload, Path(instance.root))
-    return _fallback_registry(instance, warnings)
+        return _parse_packages(payload, Path(instance.root), labels, tags)
+    return _fallback_registry(instance, warnings, labels, tags)
 
 
 def _fetch_docs(instance: Any, warnings: list[str]) -> Mapping[str, Any] | None:
@@ -80,7 +92,9 @@ def _fetch_docs(instance: Any, warnings: list[str]) -> Mapping[str, Any] | None:
     return payload
 
 
-def _parse_packages(payload: Mapping[str, Any], root: Path) -> list[DocPackage]:
+def _parse_packages(
+    payload: Mapping[str, Any], root: Path, labels: Mapping[str, str], tags: Sequence[str]
+) -> list[DocPackage]:
     packages: list[DocPackage] = []
     for item in payload.get("packages", []):
         if not isinstance(item, Mapping):
@@ -90,7 +104,7 @@ def _parse_packages(payload: Mapping[str, Any], root: Path) -> list[DocPackage]:
             continue
         dist = _text(item, "dist", "distribution") or key
         doc_path = _path_value(item, root)
-        pages = _parse_pages(item.get("pages"))
+        pages = _parse_pages(item.get("pages"), labels, tags)
         packages.append(
             DocPackage(
                 key=key,
@@ -102,6 +116,7 @@ def _parse_packages(payload: Mapping[str, Any], root: Path) -> list[DocPackage]:
                 summary=_text(item, "summary", "description"),
                 doc_path=doc_path,
                 pages=pages,
+                logo=_text(item, "logo"),
                 order=_int_value(item.get("order")),
                 editable=bool(item.get("editable", False)),
                 category=_text(item, "category"),
@@ -111,23 +126,24 @@ def _parse_packages(payload: Mapping[str, Any], root: Path) -> list[DocPackage]:
     return packages
 
 
-def _parse_pages(value: Any) -> tuple[DocPage, ...]:
+def _parse_pages(value: Any, labels: Mapping[str, str], tags: Sequence[str]) -> tuple[DocPage, ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         return ()
     pages: list[DocPage] = []
     for entry in value:
         if isinstance(entry, str):
-            pages.append(DocPage(path=entry, title=_page_title_from_path(entry)))
+            if not _locale_page(entry, tags):
+                pages.append(DocPage(path=entry, title=_page_title_from_path(entry, labels)))
             continue
         if not isinstance(entry, Mapping):
             continue
         path = _text(entry, "path", "file")
-        if not path:
+        if not path or _locale_page(path, tags):
             continue
         pages.append(
             DocPage(
                 path=path,
-                title=_text(entry, "title") or _page_title_from_path(path),
+                title=_text(entry, "title") or _page_title_from_path(path, labels),
                 order=_int_value(entry.get("order")),
                 description=_text(entry, "description", "summary"),
             )
@@ -135,7 +151,14 @@ def _parse_pages(value: Any) -> tuple[DocPage, ...]:
     return tuple(sorted(pages, key=_page_sort_key))
 
 
-def _fallback_registry(instance: Any, warnings: list[str]) -> list[DocPackage]:
+def _locale_page(path: str, tags: Sequence[str]) -> bool:
+    first = Path(path).parts[0] if Path(path).parts else ""
+    return first in tags
+
+
+def _fallback_registry(
+    instance: Any, warnings: list[str], labels: Mapping[str, str], tags: Sequence[str]
+) -> list[DocPackage]:
     try:
         proc = instance.run_core_capture("registry", "--json")
     except Exception as exc:  # noqa: BLE001 - 回退本身失败时目录为空，由警告说明原因
@@ -156,7 +179,7 @@ def _fallback_registry(instance: Any, warnings: list[str]) -> list[DocPackage]:
         key = _text(item, "name") or _short_name(_text(item, "dist", "package"))
         if not key:
             continue
-        pages = _scan_pages(doc_path)
+        pages = _scan_pages(doc_path, labels, tags)
         meta = _read_local_meta(doc_path)
         packages.append(
             DocPackage(
@@ -169,12 +192,21 @@ def _fallback_registry(instance: Any, warnings: list[str]) -> list[DocPackage]:
                 summary=_text(item, "summary"),
                 doc_path=doc_path,
                 pages=pages,
+                logo=_local_logo(doc_path, meta),
                 editable=bool(item.get("editable", False)),
                 category=_text(meta, "category"),
                 category_order=_int_value(meta.get("category_order")),
             )
         )
     return packages
+
+
+def _local_logo(doc_path: Path, meta: Mapping[str, Any]) -> str:
+    value = _text(meta, "logo")
+    if not value:
+        return ""
+    candidate = (doc_path.parent / value).resolve()
+    return str(candidate) if candidate.is_file() else ""
 
 
 def _iter_package_items(payload: Any) -> Iterable[Mapping[str, Any]]:
@@ -194,7 +226,7 @@ def _iter_package_items(payload: Any) -> Iterable[Mapping[str, Any]]:
     return items
 
 
-def _load_local_cli() -> DocPackage | None:
+def _load_local_cli(labels: Mapping[str, str], tags: Sequence[str]) -> DocPackage | None:
     if not CLI_DOC_PATH.is_dir():
         return None
     meta = _read_local_meta(CLI_DOC_PATH)
@@ -210,10 +242,10 @@ def _load_local_cli() -> DocPackage | None:
         dist=CLI_DIST,
         name=CLI_KEY,
         version=version,
-        title=_text(meta, "title") or "AkariBot CLI",
-        summary=_text(meta, "summary") or "实例管理命令行与界面",
+        title=_text(meta, "title") or CLI_KEY,
+        summary=_text(meta, "summary"),
         doc_path=CLI_DOC_PATH,
-        pages=_scan_pages(CLI_DOC_PATH),
+        pages=_scan_pages(CLI_DOC_PATH, labels, tags),
         order=_int_value(meta.get("order")),
         category=_text(meta, "category"),
         category_order=_int_value(meta.get("category_order")),
@@ -228,27 +260,27 @@ def _read_local_meta(doc_path: Path) -> Mapping[str, Any]:
     return payload if isinstance(payload, Mapping) else {}
 
 
-def _scan_pages(doc_path: Path) -> tuple[DocPage, ...]:
+def _scan_pages(doc_path: Path, labels: Mapping[str, str], tags: Sequence[str]) -> tuple[DocPage, ...]:
     pages: list[DocPage] = []
     for path in sorted(doc_path.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in _PAGE_SUFFIXES:
             continue
         relative = path.relative_to(doc_path)
-        if any(part.startswith(".") for part in relative.parts):
+        if any(part.startswith(".") for part in relative.parts) or _locale_page(relative.as_posix(), tags):
             continue
         pages.append(
             DocPage(
                 path=relative.as_posix(),
-                title=_read_title(path, relative.as_posix()),
+                title=_read_title(path, relative.as_posix(), labels),
                 order=0 if relative.as_posix() == "index.md" else DEFAULT_ORDER,
             )
         )
     return tuple(sorted(pages, key=_page_sort_key))
 
 
-def _read_title(path: Path, relative: str) -> str:
+def _read_title(path: Path, relative: str, labels: Mapping[str, str]) -> str:
     if relative == "index.md":
-        return "概览"
+        return labels["overview"]
     try:
         with path.open(encoding="utf-8") as handle:
             for _ in range(20):
@@ -259,7 +291,7 @@ def _read_title(path: Path, relative: str) -> str:
                     return line[2:].strip()
     except (OSError, UnicodeDecodeError):
         pass
-    return _page_title_from_path(relative)
+    return _page_title_from_path(relative, labels)
 
 
 def _page_sort_key(page: DocPage) -> tuple[int, int, str]:
@@ -269,9 +301,9 @@ def _page_sort_key(page: DocPage) -> tuple[int, int, str]:
     return (role, page.order, page.path)
 
 
-def _page_title_from_path(relative: str) -> str:
+def _page_title_from_path(relative: str, labels: Mapping[str, str]) -> str:
     stem = Path(relative).stem
-    return "概览" if stem == "index" else stem.replace("-", " ").replace("_", " ")
+    return labels["overview"] if stem == "index" else stem.replace("-", " ").replace("_", " ")
 
 
 def _path_value(item: Mapping[str, Any], root: Path) -> Path:

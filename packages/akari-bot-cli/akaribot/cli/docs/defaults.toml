@@ -1,0 +1,68 @@
+# 站点标题、输出位置、界面文案与侧栏导航的出厂默认值。
+# 实例的 docs.toml 可以逐键覆盖这里的取值，未覆盖的键沿用本文件。
+
+[site]
+title = "小可 · 文档"
+lang = "zh-CN"
+base = "/"
+out_dir = "cache/docs/site"
+
+[labels]
+home = "首页"
+overview = "概览"
+usage = "使用方法"
+development = "安装与开发"
+index_intro = "本页汇总当前实例中已安装包的文档。"
+footer = "由 AkariBot 文档引擎生成"
+generated_header = "// 由 akaribot docs 生成，请勿手工修改。"
+
+[group_titles]
+core = "核心"
+builtin = "内置模块"
+cli = "命令行"
+module = "模块"
+modules = "模块"
+adapter = "适配器"
+adapters = "适配器"
+testing = "测试"
+assets = "资源"
+asset = "资源"
+library = "库"
+docs = "文档"
+
+[icons]
+home = "home"
+core = "dashboard"
+builtin = "layers"
+cli = "article"
+module = "widgets"
+modules = "widgets"
+adapter = "package_2"
+adapters = "package_2"
+testing = "check"
+assets = "palette"
+asset = "palette"
+library = "category"
+docs = "article"
+
+[category_icons]
+"音游查询" = "music_note"
+"任天堂与主机" = "sports_esports"
+Minecraft = "view_in_ar"
+"娱乐互动" = "celebration"
+"实用工具" = "handyman"
+"知识查询" = "quiz"
+"群组管理" = "groups"
+"开发与 AI" = "smart_toy"
+
+# 站点素材：文件名相对随包的 assets/ 目录，缺失时按无素材处理。
+# 实例 docs.toml 的 [site] favicon 与 logo 优先于这里的默认值。
+# favicon.ico 与仓库根的 assets/favicon.ico 保持一致。
+[assets]
+favicon = "favicon.ico"
+
+# 语言清单：键为语言标签，值为语言选择器里的显示名称。
+# 默认语言由 [site] lang 指定；实例在 docs.toml 的 [site] locales 列出更多语言，
+# 并在 [locales.<标签>] 中给出各自的名称与文案覆盖。
+[locales.zh-CN]
+label = "简体中文"

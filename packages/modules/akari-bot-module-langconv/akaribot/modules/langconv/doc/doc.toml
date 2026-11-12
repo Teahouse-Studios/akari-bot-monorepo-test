@@ -4,9 +4,3 @@ summary = "在简体中文、繁体（香港）与繁体（台湾）之间转换
 order = 500
 category = "实用工具"
 category_order = 400
-
-[[meta.modules]]
-name = "langconv"
-aliases = ["lc"]
-type = ["command"]
-permission = "public"

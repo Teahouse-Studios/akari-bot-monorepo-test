@@ -1,13 +1,13 @@
 # akari-bot-module-nbnhhsh
 
-能不能好好说话？拼音首字母缩写转义工具。
+查询拼音首字母缩写对应的中文含义。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-module-nbnhhsh
 ```
 
-运行、配置与模块管理参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。

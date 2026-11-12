@@ -1,13 +1,13 @@
 # akari-bot-module-wiki
 
-查询一个 Wiki 页面。
+查询 MediaWiki 页面、解析内联 Wiki 语法、管理 URL 审计与 Wiki 日志订阅。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-module-wiki
 ```
 
-运行、配置与模块管理参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。

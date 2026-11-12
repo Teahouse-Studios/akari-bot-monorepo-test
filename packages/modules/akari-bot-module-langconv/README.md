@@ -1,13 +1,13 @@
 # akari-bot-module-langconv
 
-简繁转换。
+在简体中文、繁体（香港）与繁体（台湾）之间转换文本。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-module-langconv
 ```
 
-运行、配置与模块管理参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。

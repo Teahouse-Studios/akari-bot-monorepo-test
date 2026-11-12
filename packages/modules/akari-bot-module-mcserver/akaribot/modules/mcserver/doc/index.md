@@ -1,21 +1,17 @@
 # mcserver
 
-查询 Minecraft：Java 版与基岩版服务器的 MOTD、在线人数、版本与游戏模式。模块名 `mcserver`，别名
-`server`。
+查询 Minecraft：Java 版与基岩版服务器的 MOTD、在线人数、版本与游戏模式。
 
 ## 命令
 
-| 命令 | 说明 | 权限 |
-| --- | --- | --- |
-| `mcserver <address:port> [-r] [-p]` | 查询服务器状态 | 所有用户 |
+<ModuleAlias names="server" />
 
-- `<address:port>` 为服务器地址，可带端口；省略端口时 Java 版使用 25565，基岩版使用 19132。
-- `-r` 保留原始格式，返回内容不去除 `§` 颜色代码。
-- `-p` 在 Java 版结果中附加在线玩家名单；基岩版查询不返回名单。
+### `mcserver`
+
+<CommandUsage usage="mcserver <address:port> [-r] [-p]" :params="['address:port=服务器地址，可带端口']" permission="public" :options="[{flag: '-r', desc: '保留原始格式，返回内容不去除 § 颜色代码。'}, {flag: '-p', desc: '在 Java 版结果中附加在线玩家名单；基岩版查询不返回名单。'}]" />
+
+查询指定服务器的 MOTD、在线人数、版本与游戏模式。`<address:port>` 为服务器地址，可带端口；省略端口时 Java 版使用 25565，基岩版使用 19132。
 
 命令并行查询 Java 版与基岩版，任一版本有响应就发送该版本结果；两个版本都没有响应时返回未找到。
-Java 版查询会解析 SRV 记录，并在超时后改用 `motd.wd-api.com` 的 HTTP 接口；基岩版同样在超时后回落
-该服务。`localhost`、`192.168.*`、`172.16.*` 至 `172.31.*`、`10.*`、`127.*` 与 `0.0.0.0` 被视
-为本地地址并直接拒绝。
 
-发送前，Java 版与基岩版的结果分别经过 core 的内容安全检查。
+`localhost`、`192.168.*`、`172.16.*` 至 `172.31.*`、`10.*`、`127.*` 与 `0.0.0.0` 被视为本地地址并直接拒绝。

@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from akaribot.cli.docs.config import DocsConfig, DocsSiteConfig, DocsThemeConfig
+from akaribot.cli.docs.config import DocsConfig, DocsLocaleConfig, DocsSiteConfig, DocsThemeConfig
 from akaribot.cli.docs.generator import generate
 from akaribot.cli.docs.model import DocCatalog, DocPackage, DocPage, DocsError
 from akaribot.cli.docs.theme import ThemeSpec
@@ -33,6 +33,7 @@ def _package(
     title: str = "Demo",
     category: str = "",
     category_order: int = 500,
+    logo: str = "",
 ) -> DocPackage:
     doc_path = base / f"doc-{key}"
     doc_path.mkdir(parents=True, exist_ok=True)
@@ -49,6 +50,7 @@ def _package(
         pages=pages,
         category=category,
         category_order=category_order,
+        logo=logo,
     )
 
 
@@ -117,7 +119,7 @@ async def _test_generate_site_layout():
         and '"/demo/guide/setup"' in config
         and '"/demo/development"' in config
         and '"text": "Demo"' in config
-        and "# AkariBot 文档" in index
+        and "# 小可 · 文档" in index
         and "[Demo](/demo/)" in index
         and "示例包" in group
         and "DefaultTheme" in theme
@@ -362,7 +364,12 @@ async def _test_module_categories_and_parallel_tabs():
             node_major=18,
             config={"theme_config_key": "akari"},
         )
-        generate(DocCatalog(packages=(alpha, beta, gamma, core)), source, _docs(root), theme=theme)
+        generate(
+            DocCatalog(packages=(alpha, beta, gamma, core)),
+            source,
+            DocsConfig(root=root, category_icons={"实用工具": "casino"}),
+            theme=theme,
+        )
         config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
         start = config.index('"themeConfig": {')
         theme_config, _ = json.JSONDecoder().raw_decode(config[config.index("{", start) :])
@@ -384,6 +391,8 @@ async def _test_module_categories_and_parallel_tabs():
         ]
         and [item["text"] for item in native] == ["使用方法", "表达式详解"]
         and all(item["link"] != "/alpha/development" for item in native)
+        and gaming["icon"] == "music_note"
+        and tools["icon"] == "casino"
         and "tabs" not in core_group["items"][0]
         and [item["text"] for item in core_group["items"][0]["items"]] == ["概览", "指南"]
         and tools["items"][0]["text"] == "gamma"
@@ -486,13 +495,170 @@ async def _test_external_theme_config():
         copied
         and 'import { akariHead } from "./theme/head.ts"' in config
         and 'import { akariMarkdown } from "./theme/markdown.ts"' in config
-        and "head: akariHead()" in config
+        and "head: [...akariHead(), ..." in config
+        and '"rel": "icon"' in config
         and "akariMarkdown(md)" in config
         and '"akari":' in config
         and '"appBar"' in config
         and '"items"' in config
         and "isCustomElement" in config
         and '"appearance": false' in config
+    )
+
+
+async def _test_site_favicon_and_logo_defaults():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        brand_logo = root / "brand-logo.png"
+        brand_logo.write_bytes(b"\x89PNG\r\n")
+        package = _package(
+            root,
+            {"index.md": "# 用法\n"},
+            pages=(DocPage("index.md", "用法", 0),),
+            logo=str(brand_logo),
+        )
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root))
+        favicon_copied = (source / "public" / "site-favicon.ico").is_file()
+        logo_copied = (source / "public" / "site-logo.png").is_file()
+        theme_config = _theme_config(source)
+        plain = _package(root, {"index.md": "# 用法\n"}, key="plain", pages=(DocPage("index.md", "用法", 0),))
+        generate(DocCatalog(packages=(plain,)), source, DocsConfig(root=root))
+        fallback = _theme_config(source)
+        generate(
+            DocCatalog(packages=(package,)),
+            source,
+            DocsConfig(root=root, site=DocsSiteConfig(logo="brand-logo.png", favicon="/static/icon.svg")),
+        )
+        override = _theme_config(source)
+        head = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+    return (
+        favicon_copied
+        and logo_copied
+        and theme_config["logo"] == "/site-logo.png"
+        and fallback["logo"] == "/site-favicon.ico"
+        and override["logo"] == "/site-logo.png"
+        and "/static/icon.svg" in head
+    )
+
+
+def _theme_config(source: Path) -> dict:
+    raw = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+    start = raw.index('"themeConfig": {')
+    value, _ = json.JSONDecoder().raw_decode(raw[raw.index("{", start) :])
+    return value
+
+
+async def _test_labels_come_from_config():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(
+            root,
+            {"index.md": "# 用法\n", "development.md": "# 开发\n"},
+            pages=(DocPage("index.md", "用法", 0), DocPage("development.md", "开发", 20)),
+            group="module",
+        )
+        source = root / "cache" / "docs" / "src"
+        config = DocsConfig(
+            root=root,
+            labels={"home": "主页", "overview": "总览", "usage": "用法", "development": "开发"},
+            group_titles={"module": "功能"},
+        )
+        generate(DocCatalog(packages=(package,)), source, config)
+        raw = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = raw.index('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(raw[raw.index("{", start) :])
+        native = theme_config["sidebar"]["/demo/"][0]["items"]
+        index_text = (source / "index.md").read_text(encoding="utf-8")
+    return native[0]["text"] == "用法" and theme_config["nav"][0]["text"] == "功能" and "## 功能" in index_text
+
+
+async def _test_command_prefix_reaches_theme_config():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(root, {"index.md": "# 用法\n"}, pages=(DocPage("index.md", "用法", 0),))
+        source = root / "cache" / "docs" / "src"
+        theme_dir = root / "theme"
+        theme_dir.mkdir()
+        theme = ThemeSpec(
+            name="test",
+            version="1.0.0",
+            source="file:test",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=root,
+            vitepress_version="2.0.0-alpha.21",
+            node_major=22,
+            config={"theme_config_key": "akari"},
+        )
+        config = DocsConfig(root=root, site=DocsSiteConfig(command_prefix="!"))
+        generate(DocCatalog(packages=(package,)), source, config, theme=theme)
+        raw = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = raw.index('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(raw[raw.index("{", start) :])
+        prefix = theme_config["akari"]["commandPrefix"]
+        plain = DocsConfig(root=root)
+        generate(DocCatalog(packages=(package,)), source, plain, theme=theme)
+        raw = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = raw.index('"themeConfig": {')
+        absent, _ = json.JSONDecoder().raw_decode(raw[raw.index("{", start) :])
+    return prefix == "!" and "commandPrefix" not in absent["akari"]
+
+
+async def _test_locales_generate_translated_tree_and_links():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        files = {
+            "index.md": "# Demo\n",
+            "development.md": "# 开发\n",
+            "en-US/index.md": "# Docs\n\nSee [development](development.md).\n",
+        }
+        pages = (
+            DocPage("index.md", "概览", 0),
+            DocPage("development.md", "开发", 20),
+            DocPage("en-US/index.md", "Docs", 0),
+        )
+        package = _package(root, files, pages=pages)
+        source = root / "cache" / "docs" / "src"
+        config = DocsConfig(
+            root=root,
+            site=DocsSiteConfig(title="站"),
+            locales=(
+                DocsLocaleConfig(tag="zh-CN", label="简体中文"),
+                DocsLocaleConfig(tag="en-US", label="English", title="Docs"),
+            ),
+        )
+        generate(DocCatalog(packages=(package,)), source, config)
+        raw_config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = raw_config.index('"locales": {')
+        locales, _ = json.JSONDecoder().raw_decode(raw_config[raw_config.index("{", start) :])
+        default = (source / "index.md").read_text(encoding="utf-8")
+        localized = (source / "en-US" / "demo" / "index.md").read_text(encoding="utf-8")
+        generated = {
+            "default_page": (source / "demo" / "index.md").is_file(),
+            "locale_dir_excluded": not (source / "demo" / "en-US").exists(),
+            "localized_page": (source / "en-US" / "demo" / "index.md").is_file(),
+            "fallback_page": (source / "en-US" / "demo" / "development.md").is_file(),
+            "localized_index": (source / "en-US" / "index.md").is_file(),
+        }
+        translated = locales["en-US"]["themeConfig"]
+    return (
+        generated
+        == {
+            "default_page": True,
+            "locale_dir_excluded": True,
+            "localized_page": True,
+            "fallback_page": True,
+            "localized_index": True,
+        }
+        and locales["root"]["lang"] == "zh-CN"
+        and locales["en-US"]["link"] == "/en-US/"
+        and locales["en-US"]["label"] == "English"
+        and translated["nav"][0]["link"] == "/en-US/demo/"
+        and "/en-US/demo/" in translated["sidebar"]
+        and default.startswith("# 站")
+        and "en-US" not in default
+        and localized.startswith("# Docs")
     )
 
 
@@ -508,8 +674,12 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_cross_package_links_are_rewritten, "跨包相对链接折算为站点 URL")
     await tester.test(_test_module_meta_is_injected_from_doc_toml, "doc.toml 元数据注入模块属性卡")
     await tester.test(_test_package_without_meta_has_no_component, "无元数据的包不注入属性卡")
-    await tester.test(_test_module_categories_and_parallel_tabs, "模块分类与平行页面侧栏")
+    await tester.test(_test_module_categories_and_parallel_tabs, "模块分类、分类图标与平行页面侧栏")
     await tester.test(_test_site_branding_home_and_group_icons, "站点 Logo、favicon、首页与一级图标")
     await tester.test(_test_bundled_theme_color_injects_css, "内置主题注入主题色变量")
     await tester.test(_test_external_theme_config, "外部主题生成 head、markdown 与侧栏配置")
+    await tester.test(_test_labels_come_from_config, "侧栏与导航文案取自配置")
+    await tester.test(_test_command_prefix_reaches_theme_config, "命令前缀写入主题配置，缺失时不写")
+    await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，顶栏标志取包声明并可回退")
+    await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
     return tester

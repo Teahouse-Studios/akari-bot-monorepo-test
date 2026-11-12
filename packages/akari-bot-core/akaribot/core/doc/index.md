@@ -1,19 +1,12 @@
 # 核心运行时
 
-`akaribot.core` 是 AkariBot 的运行时与公共设施，随 `akari-bot-core` 分发。同一分发还包含内置模块包
-`akaribot.modules.core`，其文档见[内置模块](../../modules/core/doc/index.md)。
+`akaribot.core` 是 AkariBot 的运行时与公共设施，随 `akari-bot-core` 分发。同一分发还包含内置模块包 `akaribot.modules.core`，其文档见[内置模块](../../modules/core/doc/index.md)。
 
 ## 定位
 
-- 提供守护进程入口、Server 进程、消息解析、会话模型与平台进程的公共契约。
-- 提供模块与适配器依赖的公共 API 门面：模块导入 `akaribot.core.api`，适配器额外导入
-  `akaribot.core.api.adapters`。
-- 维护包发现（entry points）、配置、数据库、计划任务、JobQueue 与本地化快照。
-- 内置模块本身只依赖公共 API，与外部模块包地位相同。
+`akaribot.core` 提供守护进程入口、Server 进程、消息解析、会话模型与平台进程的公共契约，并维护包发现（entry points）、配置、数据库、计划任务、JobQueue 与本地化快照。模块与适配器经公共 API 门面接入：模块导入 `akaribot.core.api`，适配器额外导入 `akaribot.core.api.adapters`。内置模块同样只依赖公共 API，与外部模块包地位相同。
 
-`akaribot`、`akaribot.modules`、`akaribot.adapters` 是 PEP 420 命名空间目录；`akaribot.core` 是常规包。
-公共 API 版本常量是 `CORE_API_VERSION = 1`，门面以 `__api_version__` 暴露，模块包在 `manifest.toml`
-的 `requires_core_api` 中声明兼容区间。
+`akaribot`、`akaribot.modules`、`akaribot.adapters` 是 PEP 420 命名空间目录；`akaribot.core` 是常规包。公共 API 版本常量是 `CORE_API_VERSION = 1`，门面以 `__api_version__` 暴露，模块包在 `manifest.toml` 的 `requires_core_api` 中声明兼容区间。
 
 ## 依赖关系
 
@@ -45,14 +38,14 @@
 | Server | 解析消息、执行模块、运行计划任务 |
 | jobqueue-hub | WebSocket 后端的内置 Hub，可选 |
 
-实例根由 `AKARI_INSTANCE_DIR` 决定，未设置时取进程当前目录。配置目录可用 `AKARI_CONFIG_PATH` 单独指定。
-详情见[架构](architecture.md)。
+实例根由 `AKARI_INSTANCE_DIR` 决定，未设置时取进程当前目录。配置目录可用 `AKARI_CONFIG_PATH` 单独指定。详情见[架构](architecture.md)。
 
 ## 文档导航
 
 | 页面 | 内容 |
 | --- | --- |
-| [架构](architecture.md) | 进程拓扑、启动与重启、消息收发链路、计划任务 |
+| [架构](architecture.md) | 代码结构、进程拓扑、启动与重启、消息收发链路、计划任务 |
+| [开发流程](development-workflow.md) | 环境、日常命令、门禁、代码风格、分支与提交、文档工具链 |
 | [JobQueue](queue.md) | 后端选择、Peer 注册、RPC 与信号、超时与关闭 |
 | [配置](config.md) | 配置模板、表布局、字段注释、只读约束 |
 | [数据库](database.md) | 双连接、模型、union 数据、迁移 |

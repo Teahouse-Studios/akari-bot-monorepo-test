@@ -1,7 +1,6 @@
 # 表情资源
 
-`akari-bot-assets-emotes` 分发 AkariBot 使用的表情 GIF，按场景分为三组。`akari-bot-core[full]`
-默认安装本包；`akaribot init --minimal` 不安装，相关功能按缺省降级。
+`akari-bot-assets-emotes` 分发 AkariBot 使用的表情 GIF，按场景分为三组。`akari-bot-core[full]` 默认安装本包；`akaribot init --minimal` 不安装，相关功能按缺省降级。
 
 ## 内容物
 
@@ -11,8 +10,7 @@
 | `captcha_held/` | 25 个 GIF | 按钮验证码的表情模式，手持物作为答案依据 |
 | `typing/` | 30 个 GIF | QQBot 群聊输入状态提示 |
 
-表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 为发送速度做过尺寸缩小与减帧，
-单图约 500 KB 上限；`common/` 没有这一限制。
+表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 为发送速度做过尺寸缩小与减帧，单图约 500 KB 上限；`common/` 没有这一限制。
 
 ## 安装与定位
 
@@ -38,12 +36,10 @@ captcha = emotes_dir() / "captcha_held"
 
 ## 维护约定
 
-- 新增或替换 GIF 时保持目录语义：验证码素材必须能通过手持物区分答案，输入状态素材必须控制
-  单图体积与帧数。
+- 新增或替换 GIF 时保持目录语义：验证码素材必须能通过手持物区分答案，输入状态素材必须控制单图体积与帧数。
 - 文件名是调用方拼接的资源名，改名会影响使用侧；调整前搜索 `emotes_dir()` 的调用点。
 - 表情是二进制资源，不通过代码生成；仓库不为压体积统一转码，各目录按自身发送速率要求处理。
 
 ## 许可证
 
-本包以 AGPL-3.0 分发，许可证文件为包根的 `LICENSE`。表情制作来源见包内 `README.md`；再分发或
-修改素材时保留该说明。
+本包以 AGPL-3.0 分发，许可证文件为包根的 `LICENSE`。表情制作来源见包内 `README.md`；再分发或修改素材时保留该说明。

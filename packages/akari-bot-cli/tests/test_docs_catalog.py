@@ -157,7 +157,7 @@ async def _test_local_cli_docs_merge():
         pages = [page.path for page in cli[0].pages] if cli else []
     return (
         len(cli) == 1
-        and cli[0].title == "AkariBot CLI"
+        and cli[0].title == "cli"
         and cli[0].version == _local_version()
         and pages == ["index.md", "commands.md"]
         and "cli" in merged.keys()
@@ -244,10 +244,24 @@ async def _test_registry_failure_keeps_warnings():
     return catalog.keys() == () and len(catalog.warnings) == 2 and "no interpreter" in catalog.warnings[0]
 
 
+async def _test_locale_pages_are_excluded_from_default_catalog():
+    with TemporaryDirectory(prefix="akari-docs-") as raw:
+        root = Path(raw)
+        payload = _docs_payload(root)
+        payload["packages"][0]["pages"].append(_page("en-US/index.md", "Docs", 0))
+        instance = _FakeInstance(root, {"docs": _proc(payload)})
+        default = docs_catalog.load_catalog(instance, include_cli=False, locales=("en-US",))
+        plain = docs_catalog.load_catalog(instance, include_cli=False)
+    return "en-US/index.md" not in [page.path for page in default.packages[0].pages] and "en-US/index.md" in [
+        page.path for page in plain.packages[0].pages
+    ]
+
+
 @func_case
 async def test_docs_catalog(tester: Tester):
     """cli.docs.catalog: 文档目录解析与回退"""
     await tester.test(_test_parse_docs_payload, "解析 docs list 清单与告警并按 order 排序")
+    await tester.test(_test_locale_pages_are_excluded_from_default_catalog, "语言目录不进入默认页面清单")
     await tester.test(_test_select_filters_and_rejects_unknown, "select 过滤并拒绝未知 key")
     await tester.test(_test_local_cli_docs_merge, "CLI 本地文档覆盖同名远端条目")
     await tester.test(_test_registry_fallback_builds_minimal_entries, "docs 入口不可用时回退 registry")

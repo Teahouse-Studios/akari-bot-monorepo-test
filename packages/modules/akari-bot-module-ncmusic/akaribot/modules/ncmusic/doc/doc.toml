@@ -4,8 +4,3 @@ summary = "搜索网易云音乐歌曲并查询歌曲详情。"
 order = 500
 category = "娱乐互动"
 category_order = 500
-
-[[meta.modules]]
-name = "ncmusic"
-type = ["command"]
-permission = "public"

@@ -1,13 +1,13 @@
 # akari-bot-module-ai
 
-有事为什么不问问小可呢？
+调用大语言模型完成多轮对话、网页检索与图片生成。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-module-ai
 ```
 
-运行、配置与模块管理参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。

@@ -4,9 +4,3 @@ summary = "查询 GitHub 仓库、用户与组织，并按关键词搜索仓库�
 order = 500
 category = "开发与 AI"
 category_order = 700
-
-[[meta.modules]]
-name = "github"
-aliases = ["gh"]
-type = ["command"]
-permission = "public"

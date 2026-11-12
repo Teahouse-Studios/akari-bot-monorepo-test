@@ -4,8 +4,6 @@ title: 安装与开发
 
 # wordle：安装与开发
 
-本页说明 `wordle` 模块的安装、配置、权限、数据表与依赖。
-
 ## 安装
 
 ```bash
@@ -16,7 +14,7 @@ akaribot module add akari-bot-module-wordle
 
 ## 配置项
 
-配置表 `module_wordle`（`config/module_wordle.toml`）。
+<ModuleConfig table="module_wordle" />
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -26,16 +24,14 @@ akaribot module add akari-bot-module-wordle
 
 ## 权限与平台能力
 
-- 命令对普通用户开放，不要求管理员或超级用户权限。
-- 未声明平台限制，所有已接入平台可用。
-- 图片模式依赖 `akari-bot-assets-fonts` 提供的字体；开启 `wordle_disable_image` 时使用文本棋盘。
-- 花瓣奖励仅在实例开启花瓣系统时生效。
+命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入平台可用。图片模式依赖 `akari-bot-assets-fonts` 提供的字体，开启 `wordle_disable_image` 时使用文本棋盘。花瓣奖励仅在实例开启花瓣系统时生效。
 
 ## 数据表
 
-无。manifest 未声明 `owned_tables`，对局状态与冷却均保存在进程内。
+<ModuleData />
+
+对局状态与冷却均保存在进程内。
 
 ## 依赖与外部服务
 
-- 依赖：`akari-bot-core`、`akari-bot-assets-fonts`、`Pillow`、`attrs`。
-- 不使用外部数据接口；答案与可提交词表随包分发在 `assets/answers.txt` 与 `assets/words.txt`，词典链接指向剑桥词典网站。
+依赖 `akari-bot-core`、`akari-bot-assets-fonts`、`Pillow` 与 `attrs`。模块不使用外部数据接口；答案与可提交词表随包分发在 `assets/answers.txt` 与 `assets/words.txt`，词典链接指向剑桥词典网站。

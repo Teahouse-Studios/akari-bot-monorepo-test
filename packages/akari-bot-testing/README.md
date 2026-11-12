@@ -1,10 +1,10 @@
 # akari-bot-testing
 
-AkariBot 自研测试框架与运行器
+提供 AkariBot 的测试框架与运行器。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 pip install akari-bot-testing

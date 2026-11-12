@@ -8,7 +8,7 @@
 
 ### 基础配置示例
 
-对于仅需要按照 Token 数量计费的模型，可以继续使用旧版配置格式。
+仅按 Token 数量计费的模型，价格字段直接写在模型配置的顶层。
 
 ```yaml
 llm_api_list:
@@ -24,9 +24,9 @@ llm_api_list:
     superuser: false
 ```
 
-### 新版计费配置示例
+### 计费配置示例
 
-对于需要按次计费、混合计费、阶梯计费或峰谷计费的模型，可以使用 `billing` 配置。
+按次计费、混合计费、阶梯计费或峰谷计费的模型，价格字段写在 `billing` 中。
 
 ```yaml
 llm_api_list:
@@ -125,7 +125,7 @@ llm_api_list:
 
 ## 计费配置
 
-新版配置可以通过 `billing` 指定模型的计费方式：
+`billing` 指定模型的计费方式：
 
 ```yaml
 billing:
@@ -194,7 +194,7 @@ billing:
 * `price_cache_write`：百万输入缓存写入 Token 所需的花瓣数量。
 * `price_out`：百万输出 Token 所需的花瓣数量。
 
-旧版的 `price_cache` 等同于 `price_cache_read`，仍可继续使用。缓存写入价格只有在模型 API 返回缓存写入 token 数量时才会应用。
+`price_cache` 是 `price_cache_read` 的别名。缓存写入价格只在模型 API 返回缓存写入 token 数量时应用。
 
 如果未设置，默认值为 `0`。
 
@@ -228,7 +228,7 @@ billing:
 
 ## 阶梯计费
 
-可以通过 `tiers` 根据上下文长度设置不同的 Token 单价。
+`tiers` 按上下文长度设置不同的 Token 单价。
 
 ```yaml
 tiers:
@@ -265,7 +265,7 @@ context_threshold: 131072
 
 ## 峰谷/时段计费
 
-可以通过 `time_rules` 根据 UTC 时间和星期设置不同的 Token 单价。
+`time_rules` 按 UTC 时间与星期设置不同的 Token 单价。
 
 ```yaml
 time_rules:
@@ -313,15 +313,15 @@ week: [1, 2, 3, 4, 5, 6, 7]
 
 `tiers` 和 `time_rules` **不能同时生效**。
 
-如果同一个模型同时配置了 `tiers` 和 `time_rules`，则 `tiers` 和 `time_rules` **均不生效**，不会按照优先级选择其中一种，也不会进行价格叠加。
+如果同一个模型同时配置了 `tiers` 和 `time_rules`，则 `tiers` 和 `time_rules` **均不生效**，不按优先级择一，也不叠加价格。
 
 因此，如果需要使用阶梯计费，请不要同时配置 `time_rules`；如果需要使用峰谷计费，请不要同时配置 `tiers`。
 
 ---
 
-## 向下兼容
+## 顶层价格字段
 
-为了兼容旧版配置，可以直接在模型配置的顶层使用：
+价格字段也可直接写在模型配置的顶层：
 
 ```yaml
 price_in: 50
@@ -354,15 +354,13 @@ billing:
   price_cache_write: 40
 ```
 
-如果使用新的 `billing` 配置，建议优先使用新版结构，以便支持更多计费方式和计费规则。
+`billing` 结构支持全部计费方式与计费规则。
 
 ---
 
-## 如何计算 `price` 相关参数？
+## `price` 参数的计算
 
-建议按照服务商的实际定价计算 `price` 值，通常可以按照：
-
-**1 花瓣 = ¥0.01**
+`price` 参数按服务商实际定价换算，比例为 **1 花瓣 = ¥0.01**。
 
 例如 `deepseek-v4-pro` 模型的价格如下：
 
@@ -376,7 +374,7 @@ billing:
 * **缓存成本：** ¥0.3 / 1M token = 30 花瓣 / 1M token
 * **输出成本：** ¥27 / 1M token = 2700 花瓣 / 1M token
 
-因此可以设置：
+据此设置：
 
 ```yaml
 billing:
@@ -386,7 +384,7 @@ billing:
   price_cache_read: 30
 ```
 
-请根据自身情况与服务商定价合理设置 `price`，以进行成本控制。
+请按实际用量与服务商定价设置 `price`，以控制成本。
 
 ---
 
@@ -408,7 +406,7 @@ image_api:
 ```
 
 * `base_url`、`api_key` 留空时沿用当前对话模型的地址与密钥。
-* `costs` 以调用费用为单位，可以是固定数值，也可以是按参数查找的对照表；查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
+* `costs` 以调用费用为单位，取固定数值或按参数查找的对照表；查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
 * 修改配置后需重启机器人或重载 `ai` 模块。
 
 ---

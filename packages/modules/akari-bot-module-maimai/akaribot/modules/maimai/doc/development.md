@@ -4,23 +4,21 @@ title: 安装与开发
 
 # maimai：安装与开发
 
-本页说明 `maimai` 模块的安装、配置、权限、数据表与依赖。
-
 ## 安装
 
 ```bash
 akaribot module add akari-bot-module-maimai
 ```
 
-| 模块 | 命令前缀 | 别名 | 说明 |
+| 模块 | 命令首词 | 别名 | 说明 |
 | --- | --- | --- | --- |
 | `maimai` | `maimai` | `mai` | 舞萌 DX 查询 |
 | `chunithm` | `chunithm` | `chu` | CHUNITHM 查询 |
-| `maimai-regex` | 无命令前缀 | `maimai_regex`、`mai_regex` | 以自然语言句式触发的正则模块 |
+| `maimai-regex` | 无 | `maimai_regex`、`mai_regex` | 以自然语言句式触发的正则模块 |
 
 ## 配置项
 
-配置文件为 `config/module_maimai.toml`。
+<ModuleConfig table="module_maimai" />
 
 | 表 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -34,12 +32,11 @@ akaribot module add akari-bot-module-maimai
 
 ## 权限与平台能力
 
-- `maimai switch`、`maimai update`、`chunithm update` 要求机器人超级用户，其余命令对普通用户开放。
-- `maimai-regex` 声明为正则模块，启用该模块的平台需允许机器人读取全部消息。
-- 声明支持语言：`maimai`、`chunithm` 为 `zh_cn`，`maimai-regex` 为 `zh_cn`、`zh_tw`。
-- B50、B30、名牌板与进度图由 Pillow 生成，平台需支持图片消息；无图片能力时部分命令退化为文本列表。
+`maimai switch`、`maimai update`、`chunithm update` 要求机器人超级用户，其余命令对普通用户开放。`maimai-regex` 声明为正则模块，启用该模块的平台需允许机器人读取全部消息。声明支持语言：`maimai`、`chunithm` 为 `zh_cn`，`maimai-regex` 为 `zh_cn`、`zh_tw`。B50、B30、名牌板与进度图由 Pillow 生成，平台需支持图片消息；无图片能力时部分命令退化为文本列表。
 
 ## 数据表
+
+<ModuleData tables="module_maimai_diving_prober_bind_info,module_maimai_lxns_prober_bind_info" :list="false" />
 
 | 表 | 用途 |
 | --- | --- |
@@ -50,9 +47,4 @@ akaribot module add akari-bot-module-maimai
 
 ## 依赖与外部服务
 
-- 运行依赖：`akari-bot-core`、`akari-bot-assets-fonts`、`Pillow`、`langconv`、`orjson`、`tortoise-orm`。
-- 水鱼查分器：`https://www.diving-fish.com`，用于成绩、排行与曲绘。
-- 落雪咖啡屋：`https://maimai.lxns.net`，用于成绩查询与 OAuth 授权。
-- 别名数据：`https://www.yuzuchan.moe`。
-- 包内 `assets/` 存放段位认定与宴会场资料，`migrations/` 存放绑定表迁移。
-- 每日 0 点通过定时任务更新曲目别名。
+运行依赖 `akari-bot-core`、`akari-bot-assets-fonts`、`Pillow`、`langconv`、`orjson`、`tortoise-orm`。水鱼查分器：`https://www.diving-fish.com`，用于成绩、排行与曲绘。落雪咖啡屋：`https://maimai.lxns.net`，用于成绩查询与 OAuth 授权。别名数据：`https://www.yuzuchan.moe`。包内 `assets/` 存放段位认定与宴会场资料，`migrations/` 存放绑定表迁移。每日 0 点通过定时任务更新曲目别名。

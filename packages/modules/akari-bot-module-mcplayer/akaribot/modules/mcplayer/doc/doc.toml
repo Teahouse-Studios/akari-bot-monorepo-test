@@ -4,9 +4,3 @@ summary = "通过玩家名或 UUID 查询 Minecraft：Java 版玩家的皮肤与
 order = 500
 category = "Minecraft"
 category_order = 200
-
-[[meta.modules]]
-name = "mcplayer"
-aliases = ["namemc"]
-type = ["command"]
-permission = "public"

@@ -63,7 +63,7 @@ akaribot module add akari-bot-adapter-milky
 ## 私信与群聊
 
 - 群聊目标前缀为 `QQ|Group`，私信为 `QQ|Private`；临时会话由 `qq_enable_temp_session` 控制。
-- 群聊是否必须 @机器人 由 core 配置 `mention_required` 决定。
+- 群聊是否必须 @机器人，由 core 配置 `mention_required` 决定。
 - 机器人默认不处理自身发送的消息，开启 `qq_enable_listening_self_message` 后一并处理。
 - 好友请求与群邀请默认仅对超级管理员与受信用户自动同意，其余请求分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。
 

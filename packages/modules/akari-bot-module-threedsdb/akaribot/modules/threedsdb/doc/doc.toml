@@ -4,8 +4,3 @@ summary = "按名称或 Title ID 搜索 3DS 应用信息。"
 order = 500
 category = "任天堂与主机"
 category_order = 300
-
-[[meta.modules]]
-name = "3dsdb"
-type = ["command"]
-permission = "public"

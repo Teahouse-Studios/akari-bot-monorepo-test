@@ -1,10 +1,10 @@
 # akari-bot-cli
 
-AkariBot 实例管理 CLI 与 TUI
+提供 AkariBot 实例管理 CLI 与 TUI。
 
-本分发是 [AkariBot](https://github.com/Teahouse-Studios/akari-bot) 的组成部分，要求 Python 3.12 或更高版本。
+## 安装
 
-安装命令：
+要求 Python 3.12 或更高版本。
 
 ```sh
 uv tool install akari-bot-cli

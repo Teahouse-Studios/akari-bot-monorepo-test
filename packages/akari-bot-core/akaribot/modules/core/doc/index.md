@@ -1,17 +1,14 @@
 # 内置模块
 
-`akaribot.modules.core` 随 `akari-bot-core` 分发，模块清单以
-`packages/akari-bot-core/akaribot/modules/core/manifest.toml` 的 `provides_modules` 为准，共 37 个。
+`akaribot.modules.core` 随 `akari-bot-core` 分发，模块清单以 `packages/akari-bot-core/akaribot/modules/core/manifest.toml` 的 `provides_modules` 为准，共 37 个。
 
 ## 约定
 
 - 所有内置模块都声明为 `base=True`，在任意场景强制开启，无需 `~module enable`。
-- 命令默认以 `~` 或 `～` 开头，前缀可在 `config.toml` 的 `command_prefix` 与场景的 `setup prefix`
-  中调整。
-- 权限分三级：场景管理员（`required_admin`）、超级用户（`required_superuser`）、基础超级用户
-  （`required_base_superuser`）。超级用户可在场景内由 `~superuser add` 授权。
+- 命令默认以 `~` 或 `～` 开头，前缀可在 `config.toml` 的 `command_prefix` 与场景的 `setup prefix` 中调整。
+- 权限分三级：场景管理员（`required_admin`）、超级用户（`required_superuser`）、基础超级用户（`required_base_superuser`）。超级用户可在场景内由 `~superuser add` 授权。
 - 隐藏模块（`hidden=True`）不出现在帮助列表，只由 hook、事件或内部调用触发。
-- 标为「仅开发模式」的模块只在 `dev_mode` 下注册。
+- 标为“仅开发模式”的模块只在 `dev_mode` 下注册。
 
 ## 分组导航
 
@@ -53,6 +50,4 @@
 
 ## 相关文档
 
-模块框架本身（`module()`、命令模板、权限模型）见[模块开发](../../../core/doc/module-development.md)；
-内置模块使用的配置、数据库与本地化机制见[配置](../../../core/doc/config.md)、
-[数据库](../../../core/doc/database.md) 与 [本地化](../../../core/doc/i18n.md)。
+模块框架本身（`module()`、命令模板、权限模型）见[模块开发](../../../core/doc/module-development.md)；内置模块使用的配置、数据库与本地化机制见[配置](../../../core/doc/config.md)、[数据库](../../../core/doc/database.md) 与 [本地化](../../../core/doc/i18n.md)。

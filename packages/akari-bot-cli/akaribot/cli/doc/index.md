@@ -1,7 +1,6 @@
 # CLI 与 TUI
 
-`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它运行在实例的
-venv 之外，用系统解释器或独立工具安装都能工作；实例内的机器人、模块与适配器由子进程驱动。
+`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它运行在实例的 venv 之外，用系统解释器或独立工具安装都能工作；实例内的机器人、模块与适配器由子进程驱动。
 
 自建实例的安装、运行与维护流程见 [自建实例](self-hosting.md)。
 
@@ -12,8 +11,7 @@ uv tool install akari-bot-cli
 akaribot --version
 ```
 
-要求 Python 3.12 或更高版本。CLI 不依赖 `akaribot.core`，实例需要的 core、适配器与模块由
-`akaribot init` 装进实例自己的 venv。
+要求 Python 3.12 或更高版本。CLI 不依赖 `akaribot.core`，实例需要的 core、适配器与模块由 `akaribot init` 装进实例自己的 venv。
 
 ## 实例解析
 
@@ -23,9 +21,7 @@ akaribot --version
 2. 环境变量 `AKARI_INSTANCE_DIR`；
 3. 自当前目录向上查找 `akaribot.toml`。
 
-上述三级都取不到实例时，命令报错并提示先初始化或指定实例根。裸运行 `akaribot` 或 `akaribot tui`
-例外：界面在三级都落空时还会回落到注册表里的缺省实例，因为那正是「这台机器上要管哪一个」的
-答案。注册表位于 `~/.akaribot/instances.toml`，由 `akaribot instance` 子命令维护。
+上述三级都取不到实例时，命令报错并提示先初始化或指定实例根。裸运行 `akaribot` 或 `akaribot tui` 例外：界面在三级都落空时还会回落到注册表里的缺省实例，因为那正是“这台机器上要管哪一个”的答案。注册表位于 `~/.akaribot/instances.toml`，由 `akaribot instance` 子命令维护。
 
 ## 目录结构
 
@@ -72,19 +68,14 @@ CLI 进程不 import core。需要 core 参与的读写一律经实例解释器�
 <实例>/.venv/bin/python -m akaribot.core.entrypoints.<入口> ...
 ```
 
-子进程环境注入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH`，标准输出与退出码由命令层解释。
-读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件；涉及配置 schema、模块清单、
-数据库或体检的判断都在子进程内完成。
+子进程环境注入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH`，标准输出与退出码由命令层解释。读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件；涉及配置 schema、模块清单、数据库或体检的判断都在子进程内完成。
 
-冻结分发（Nuitka）下 `sys.executable` 指向二进制自身，CLI 因此不拿它启动实例进程；非托管
-模式需要的解释器由 `system_python()` 解析，可用 `AKARIBOT_PYTHON` 覆盖。
+冻结分发（Nuitka）下 `sys.executable` 指向二进制自身，CLI 因此不拿它启动实例进程；非托管模式需要的解释器由 `system_python()` 解析，可用 `AKARIBOT_PYTHON` 覆盖。
 
 ## 界面与命令的关系
 
-直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写操作同样以
-`akaribot <子命令>` 子进程执行，不复制命令层的校验与确认逻辑；详情见 [终端界面](tui.md)。
+直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写操作同样以 `akaribot <子命令>` 子进程执行，不复制命令层的校验与确认逻辑；详情见 [终端界面](tui.md)。
 
 ## 本地化
 
-界面文案由 CLI 自带的语言文件提供，`--lang zh_cn` / `--lang en_us` 指定本次调用的语言。
-实例的默认语言在 `akaribot init --locale` 时写入元数据，两者互不覆盖。
+界面文案由 CLI 自带的语言文件提供，`--lang zh_cn` / `--lang en_us` 指定本次调用的语言。实例的默认语言在 `akaribot init --locale` 时写入元数据，两者互不覆盖。

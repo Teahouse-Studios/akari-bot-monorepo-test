@@ -1,57 +1,156 @@
 # 配置
 
-本组包含配置维护与场景设置：`config`、`database`、`eval`、`setup`。前三个面向超级用户，`setup` 面向
-普通用户与场景管理员。
+本组包含配置维护与场景设置：`config`、`database`、`eval`、`setup`。前三者面向超级用户，`setup` 面向普通用户与场景管理员。
 
 ## config
 
-模块级权限为超级用户，别名 `cfg`。
+<ModuleAlias names="cfg" />
 
-| 命令 | 说明 |
-| --- | --- |
-| `~config get <k> [<table_name>]` | 读取配置项 |
-| `~config write <k> <v> [<table_name>] [-s]` | 写入配置项 |
-| `~config delete <k> [<table_name>]` | 删除配置项 |
+模块级权限为超级用户。
 
-- `write` 把 `true`、`false` 转为布尔值，整数与浮点转为对应数值，`[...]` 形式按 JSON 解析为列表，其余
-  按字符串写入。
-- `-s` 表示按密钥项处理：核心配置写入 `[secret]`，平台与模块配置写入对应的 `_secret` 表。
-- 新增尚不存在的键会改变配置文件结构，执行前要求确认。
-- 表名为 `bot_<平台>`、`module_<模块>` 等，省略时在 `config.toml` 的表内查找。
-- 配置为只读的进程不能直接写入，该命令经 `CFGManager.edit_write()` 与 `edit_delete()` 授权执行。
+### `config get`
 
-字段布局、只读约束与版本机制见[配置](../../../core/doc/config.md)。
+<CommandUsage usage="config get <k> [<table_name>]" :params="['k=配置项键名', 'table_name=配置表名，省略时查主表']" permission="superuser" />
+
+读取配置项的值。省略表名时在 `config.toml` 的主表内查找。
+
+### `config write`
+
+<CommandUsage usage="config write <k> <v> [<table_name>] [-s]" :params="['k=配置项键名', 'v=配置值，按类型解析', 'table_name=配置表名，省略时写主表']" permission="superuser" :options="[{flag: '-s', desc: '是否为密钥配置项'}]" />
+
+写入配置项。`true`、`false` 转为布尔值，整数与浮点转为对应数值，`[...]` 形式按 JSON 解析为列表，其余按字符串写入；`-s` 表示按密钥项处理，核心配置写入 `[secret]`，平台与模块配置写入对应的 `_secret` 表。新增尚不存在的键会改变配置文件结构，执行前要求确认。
+
+### `config delete`
+
+<CommandUsage usage="config delete <k> [<table_name>]" :params="['k=配置项键名', 'table_name=配置表名，省略时查主表']" permission="superuser" />
+
+删除配置项，经 `CFGManager.edit_delete()` 授权执行，返回成功或失败。
+
+表名为 `bot_<平台>`、`module_<模块>` 等，省略时在 `config.toml` 的表内查找。配置为只读的进程不能直接写入，写入与删除经 `CFGManager.edit_write()` 与 `edit_delete()` 授权执行。字段布局、只读约束与版本机制见[配置](../../../core/doc/config.md)。
 
 ## setup
 
-模块为基础模块，别名 `toggle`、`prefix`、`locale`、`lang`、`alias` 分别指向对应子命令。命令同时作用于
-场景域与个人域，`~setup list` 可查看全部设置项。
+模块为基础模块，别名 `toggle`、`prefix`、`locale`、`lang`、`alias` 分别指向对应子命令。命令同时作用于场景域与个人域，`setup list` 展示全部设置项。
 
-| 命令 | 权限 | 说明 |
-| --- | --- | --- |
-| `~setup typing` | 所有人 | 切换「正在输入」提示 |
-| `~setup check` | 所有人 | 切换命令拼写检查 |
-| `~setup markdown` | 所有人 | 切换 Markdown 渲染，需平台支持 |
-| `~setup dark` | 所有人 | 切换暗色模式 |
-| `~setup list [target|sender]` | 所有人 | 展示设置面板；修改入口按管理员权限显示 |
-| `~setup prefix list` | 所有人 | 列出默认前缀与场景自定义前缀 |
-| `~setup prefix add <prefix>` | 管理员 | 增加场景命令前缀 |
-| `~setup prefix remove <prefix>` | 管理员 | 移除场景命令前缀 |
-| `~setup prefix reset` | 管理员 | 清空场景自定义前缀 |
-| `~setup locale` | 所有人 | 展示可用语言 |
-| `~setup locale <lang>` | 管理员 | 设置场景语言 |
-| `~setup locale reload` | 超级用户 | 重新加载语言文件 |
-| `~setup alias list [--legacy]` | 所有人 | 列出场景自定义命令别名 |
-| `~setup alias add <alias> <command>` | 管理员 | 增加别名，替换文本须以命令前缀开头 |
-| `~setup alias remove <alias>` | 管理员 | 移除别名 |
-| `~setup alias reset` | 管理员 | 清空别名 |
-| `~setup timeoffset <offset>` | 管理员 | 设置场景时区偏移，如 `8`、`-5:30` |
-| `~setup cooldown <second>` | 管理员 | 设置命令冷却秒数，负数按 0 处理 |
-| `~setup invalid-module-prompt` | 管理员 | 切换未知模块的提示 |
-| `~setup sign` | 管理员 | 切换签到开关，仅在 `enable_petal` 时注册 |
-| `~setup emote` | 管理员 | 切换表情开关，仅在 `use_emote` 时注册 |
+### `setup typing`
 
-别名支持 `${名称}` 占位符，按占位符数量选择最长匹配；`--legacy` 以文本表格代替图片。
+<CommandUsage usage="setup typing" permission="public" />
+
+切换“正在输入”提示，缺省开启，设置保存在个人域。
+
+### `setup check`
+
+<CommandUsage usage="setup check" permission="public" />
+
+切换命令拼写检查，缺省开启，设置保存在个人域。
+
+### `setup markdown`
+
+<CommandUsage usage="setup markdown" permission="public" />
+
+切换 Markdown 渲染，设置保存在个人域。平台不支持该开关时返回提示，配置不变。
+
+### `setup dark`
+
+<CommandUsage usage="setup dark" permission="public" />
+
+切换暗色模式，设置保存在个人域。
+
+### `setup list`
+
+<CommandUsage :usage="['setup list', 'setup list target', 'setup list sender']" permission="public" />
+
+展示设置面板。省略域参数时同时列出场景域与个人域；场景域的修改入口按场景管理员权限显示，个人域对所有人开放。
+
+### `setup prefix list`
+
+<CommandUsage usage="setup prefix list" permission="public" />
+
+列出默认命令前缀与本场景的自定义前缀。
+
+### `setup prefix add`
+
+<CommandUsage usage="setup prefix add <prefix>" :params="['prefix=要添加的命令前缀']" permission="admin" />
+
+增加场景命令前缀。前缀已存在时返回重复提示。
+
+### `setup prefix remove`
+
+<CommandUsage usage="setup prefix remove <prefix>" :params="['prefix=要移除的命令前缀']" permission="admin" />
+
+移除场景命令前缀，前缀不存在时返回未找到提示。
+
+### `setup prefix reset`
+
+<CommandUsage usage="setup prefix reset" permission="admin" />
+
+清空场景自定义前缀。
+
+### `setup locale`
+
+<CommandUsage :usage="['setup locale', 'setup locale [<lang>]']" :params="['lang=语言代码，如 zh_cn']" permission="public" />
+
+省略语言代码时列出可用语言与翻译进度；给出语言代码时设置场景语言，该形式要求场景管理员权限。语言代码不在可用列表内时返回提示并列出可选值。
+
+### `setup locale reload`
+
+<CommandUsage usage="setup locale reload" permission="superuser" />
+
+重新加载语言文件。加载失败时返回提示并列出出错的文件。
+
+### `setup alias list`
+
+<CommandUsage usage="setup alias list [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式'}]" />
+
+列出场景自定义命令别名，默认渲染为图片表格，`--legacy` 改用文本表格。
+
+### `setup alias add`
+
+<CommandUsage usage="setup alias add <alias> <command>" :params="['alias=自定义命令别名', 'command=替换文本，须以命令前缀开头']" permission="admin" />
+
+增加场景命令别名。替换文本须以命令前缀开头，别名与替换文本都须含占位符之外的文字，占位符写作 `${名称}`；不满足时返回对应提示。别名重复时返回已存在提示。
+
+### `setup alias remove`
+
+<CommandUsage usage="setup alias remove <alias>" :params="['alias=自定义命令别名']" permission="admin" />
+
+移除场景命令别名。
+
+### `setup alias reset`
+
+<CommandUsage usage="setup alias reset" permission="admin" />
+
+清空场景命令别名。
+
+### `setup timeoffset`
+
+<CommandUsage usage="setup timeoffset <offset>" :params="['offset=时区偏移，如 8、-5:30']" permission="admin" />
+
+设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时提示格式错误；写入时规范化为 `+8`、`-5:30` 形式。
+
+### `setup cooldown`
+
+<CommandUsage usage="setup cooldown <second>" :params="['second=命令冷却秒数']" permission="admin" />
+
+设置场景命令冷却秒数，负数按 0 处理。
+
+### `setup invalid-module-prompt`
+
+<CommandUsage usage="setup invalid-module-prompt" permission="admin" />
+
+切换未知模块的提示。
+
+### `setup sign`
+
+<CommandUsage usage="setup sign" permission="admin" />
+
+仅在 enable_petal 为真时注册。切换场景签到开关，缺省开启，由 `petal` 模块的签到命令读取。
+
+### `setup emote`
+
+<CommandUsage usage="setup emote" permission="admin" />
+
+仅在 use_emote 为真时注册。切换场景表情开关。
 
 ## 数据键
 
@@ -73,22 +172,34 @@
 
 ## database
 
-仅在开发模式加载，模块级权限为超级用户，别名 `db`。
+<ModuleAlias names="db" />
 
-| 命令 | 说明 |
-| --- | --- |
-| `~database model` | 列出全部表 |
-| `~database field <model> [--legacy]` | 列出表的字段、类型与可空性 |
-| `~database exec <sql> [-p <page>] [--legacy]` | 执行 SQL，按每页 10 行展示结果 |
+仅在开发模式加载，模块级权限为超级用户。该模块直接操作数据库，用于调试与排障。
 
-`--legacy` 以文本表格输出，否则优先渲染为图片。该模块直接操作数据库，仅用于调试与排障。
+### `database model`
+
+<CommandUsage usage="database model" permission="superuser" />
+
+列出核心与各模块注册的数据表名。
+
+### `database field`
+
+<CommandUsage usage="database field <model> [--legacy]" :params="['model=数据表名']" permission="superuser" :options="[{flag: '--legacy', desc: '强制使用文本模式'}]" />
+
+列出表的字段、类型与可空性。默认渲染为图片表格，`--legacy` 或平台不支持图片时改用文本表格；表名不存在时返回无结果提示。
+
+### `database exec`
+
+<CommandUsage usage="database exec <sql> [-p <page>] [--legacy]" :params="['sql=要执行的 SQL 语句', 'page=结果页码，每页 10 行']" permission="superuser" :options="[{flag: '-p', desc: '指定页码，每页 10 行'}, {flag: '--legacy', desc: '强制使用文本模式'}]" />
+
+执行 SQL 语句。`SELECT` 查询按每页 10 行展示，页码超出范围时取最近的有效页；其它语句直接执行并返回影响行数。默认渲染为图片表格，`--legacy` 或平台不支持图片时改用文本表格。
 
 ## eval
 
 仅在开发模式加载，模块级权限为超级用户。
 
-| 命令 | 说明 |
-| --- | --- |
-| `~eval <expr>` | 在包含 `msg` 与 `Bot` 的命名空间中执行表达式 |
+### `eval`
 
-结果以纯文本返回并跳过敏感内容检查；异常包装为 `NoReportException` 后回显，不进入错误上报流程。
+<CommandUsage usage="eval <expr>" :params="['expr=要执行的 Python 表达式']" permission="superuser" />
+
+在包含 `msg` 与 `Bot` 的命名空间中执行表达式。结果以纯文本返回并跳过敏感内容检查；异常包装为 `NoReportException` 后回显，不进入错误上报流程。

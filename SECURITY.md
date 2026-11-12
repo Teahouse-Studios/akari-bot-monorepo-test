@@ -15,6 +15,7 @@ We actively provide security updates for the following versions. Unlike traditio
 > If you are self-hosting a legacy version (`v4` or below), please migrate to the latest release, as legacy versions are no longer supported and do not receive security backports.
 
 ## Security Scope
+
 We define the security scope based on the direct impact on our service infrastructure and operational integrity.
 
 ### In Scope
@@ -41,9 +42,11 @@ The following areas are explicitly excluded from our security response and will 
 We take the security of our project seriously. If you believe you have found a security vulnerability, please report it to us using one of the following methods. **DO NOT open a public issue for security vulnerabilities.**
 
 ### 1. Instant Messaging (QQ)
+
 For immediate discussion, you may contact the developers directly via **QQ Direct Message** for a more immediate discussion regarding the vulnerability. Note that sensitive technical details should still ideally be sent via more secure way.
 
 ### 2. Email
+
 You can report vulnerabilities directly via email to the core team members:
 
 - **Project Founder:** OasisAkari <oasisakari@gmail.com>
@@ -58,6 +61,7 @@ Please include the following information in your report:
 > **Note:** The maintainers do not check email frequently. If possible, please drop us a quick message via instant messaging after sending your email to ensure it is noticed.
 
 ### What to Expect
+
 - **Acknowledgement:** You will receive an acknowledgement of your report within 24–72 hours.
   - Please note that response times may occasionally be delayed due to *force majeure* factors beyond our control.
 - **Validation**: We will investigate and notify you if the finding is valid.

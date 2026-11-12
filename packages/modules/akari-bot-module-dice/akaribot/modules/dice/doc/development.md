@@ -4,8 +4,6 @@ title: 安装与开发
 
 # dice：安装与开发
 
-本页说明 `dice` 模块的安装、配置、权限、数据表与依赖。
-
 ## 安装
 
 ```bash
@@ -14,9 +12,9 @@ akaribot module add akari-bot-module-dice
 
 安装后在会话中由管理员用 `module enable dice` 开启。
 
-## 配置
+## 配置项
 
-配置表 `module_dice`（`config/module_dice.toml`）。
+<ModuleConfig table="module_dice" />
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -32,15 +30,14 @@ akaribot module add akari-bot-module-dice
 
 ## 权限与平台能力
 
-- `set` 与 `rule` 需要会话管理员权限。
-- 默认面数存于会话数据 `dice_default_sides`，判定方向存于 `dice_dc_reversed`。
-- 表达式中的 `*` 在支持 Markdown 的平台会转义，避免被渲染为格式标记。
+`set` 与 `rule` 需要会话管理员权限。默认面数存于会话数据 `dice_default_sides`，判定方向存于 `dice_dc_reversed`。表达式中的 `*` 在支持 Markdown 的平台会转义，避免被渲染为格式标记。
 
 ## 数据表
 
-manifest 未声明 `owned_tables`；会话设置存于 core 的 Union 数据。
+<ModuleData />
+
+会话设置保存在 core 的 Union 数据中。
 
 ## 依赖与外部服务
 
-- 依赖：`numpy`（取高与取低排序）、`simpleeval`（表达式求值）、`akari-bot-core`。
-- 不使用外部网络服务。
+依赖 `numpy`（取高与取低排序）、`simpleeval`（表达式求值）、`akari-bot-core`。不使用外部网络服务。

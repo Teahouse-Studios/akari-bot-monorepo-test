@@ -1,13 +1,13 @@
 # langconv
 
-在简体中文、繁体（香港）与繁体（台湾）之间转换文本，转换由 langconv 库完成。
+在简体中文、繁体（香港）与繁体（台湾）之间转换文本。
 
 ## 命令
 
-| 命令 | 说明 |
-| --- | --- |
-| `langconv <language> <content>` | 把文本转换为指定目标语言 |
+<ModuleAlias names="lc" />
 
-`<language>` 接受 `zh-cn`、`zh-hk`、`zh-tw`，也可省略 `zh` 前缀直接写 `cn`、`hk`、`tw`。参数会统一转小写并把下划线替换为连字符，因此 `zh_cn`、`zh_TW` 等写法同样可用。目标语言不在支持范围内时返回不支持提示。
+### `langconv`
 
-`<content>` 为待转换文本，转换结果直接作为消息正文返回。
+<CommandUsage usage="langconv <language> <content>" :params="['language=目标语言，如 zh-tw', 'content=待转换文本']" permission="public" />
+
+把文本转换为指定目标语言。`<language>` 接受 `zh-cn`、`zh-hk` 与 `zh-tw`，省略 `zh` 前缀时按 `cn`、`hk`、`tw` 处理，下划线与大小写不影响解析；目标语言不在支持范围内时返回不支持提示。`<content>` 为待转换文本，转换结果直接作为消息正文返回。

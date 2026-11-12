@@ -14,8 +14,7 @@
 
 ## `@func_case`
 
-一个被 `@func_case` 标记的 async 函数就是一个用例，参数是 `Tester`。现有用例通常在末尾
-`return tester`，框架也会从传入对象收集结果。
+一个被 `@func_case` 标记的 async 函数就是一个用例，参数是 `Tester`。现有用例通常在末尾 `return tester`，框架也会从传入对象收集结果。
 
 ```python
 from akaribot.testing import Contains, Tester, func_case
@@ -29,10 +28,8 @@ async def test_version(tester: Tester):
 
 `Tester` 只有两个下断言的方法：
 
-- `await tester.integrate(input_, expected=None, note=None, timeout=None)`：发送一条命令并校验
-  输出。`input_` 为字符串列表时表示连续多条消息，用于交互式命令。
-- `await tester.test(func, note=None)`：调用纯函数或谓词，返回真值即通过，支持同步与异步。
-  没有 `tester.expect()`。
+- `await tester.integrate(input_, expected=None, note=None, timeout=None)`：发送一条命令并校验输出。`input_` 为字符串列表时表示连续多条消息，用于交互式命令。
+- `await tester.test(func, note=None)`：调用纯函数或谓词，返回真值即通过，支持同步与异步。没有 `tester.expect()`。
 
 `expected` 传 `Expectation`；传 `None` 表示人工复核，只能在交互式全量运行中使用。
 
@@ -94,9 +91,7 @@ async def _(msg: Bot.MessageSession, word: str):
 
 ## Fixture
 
-`load_modules()` 自动加载 `tests/fixtures/http/` 下的全部 JSON。新增网络模块用例时，先用
-`tests/capture_http_fixtures.py` 录制真实响应，再让测试离线回放；手工构造可用
-`save_fixture()`。文件名是 URL、方法与请求体摘要的哈希，同一 URL 上不同请求体各自成文件。
+`load_modules()` 自动加载 `tests/fixtures/http/` 下的全部 JSON。新增网络模块用例时，先用 `tests/capture_http_fixtures.py` 录制真实响应，再让测试离线回放；手工构造可用 `save_fixture()`。文件名是 URL、方法与请求体摘要的哈希，同一 URL 上不同请求体各自成文件。
 
 ## 常见陷阱
 

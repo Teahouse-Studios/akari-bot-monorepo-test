@@ -64,7 +64,13 @@ async def _test_generate_bud_id():
 async def _test_bud_refund_on_expiry():
     try:
         from akaribot.core.database.models import SenderUnionInfo
-        from akaribot.modules.core.common_tools._bud import BUD_STORE_KEY, BUD_STORE_SCOPE, claim_bud, create_bud, find_bud
+        from akaribot.modules.core.common_tools._bud import (
+            BUD_STORE_KEY,
+            BUD_STORE_SCOPE,
+            claim_bud,
+            create_bud,
+            find_bud,
+        )
         from akaribot.core.utils.storedata import get_stored_list, update_stored_list
 
         sender = await TestDataFactory.ensure_sender(sender_id="TEST|0", petal=0)

@@ -22,20 +22,14 @@ _多功能、跨平台、可自由扩展的异步聊天机器人助手_
 
 ## 运行
 
-小可目前支持以下平台：
-- [X] QQ
-  - [X] 官方机器人
-  - [X] 第三方协议
-- [X] Discord
-- [X] Telegram
-- [X] KOOK（开黑啦）
-- [X] Matrix
+支持 QQ（官方机器人与第三方协议）、Discord、Telegram、KOOK（开黑啦）与 Matrix。
 
 ### 公共实例
 
 茶馆工作室和问谛居共同提供小可的公共实例。
 
 #### QQ
+
 <!--##### 官方机器人-->
 <div align="left">
   <img width="200" src="./assets/qqbot_qr_guild.png" alt="guild qr">
@@ -46,7 +40,8 @@ _多功能、跨平台、可自由扩展的异步聊天机器人助手_
 由于腾讯风控问题，请[在此提交](https://github.com/Teahouse-Studios/akari-bot/issues/new?assignees=OasisAkari&labels=New&template=add_new_group.yaml&title=%5BNEW%5D%3A+)入群申请。
 -->
 
-你也可以加入我们的 QQ 公共实例反馈群：[738829671](https://qm.qq.com/q/Rmuo5ORYgq)
+QQ 公共实例反馈群：[738829671](https://qm.qq.com/q/Rmuo5ORYgq)
+
 #### Discord
 
 邀请链接：<https://discord.com/oauth2/authorize?client_id=879379218209861712&scope=bot&permissions=71605695277126>
@@ -83,28 +78,34 @@ CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安�
 `init --minimal` 选择核心最小依赖。源码开发与发行包安装的工作区约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，
 旧部署的备份、预演和迁移见 [迁移指南](docs/migrating-to-packages.md)。
 
-你可以参考[此处](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）来尝试搭建。
+完整的搭建步骤见[自搭建指南](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）。
 
-若遇到问题，可以通过 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues/new) 或其他方式咨询开发者。
+问题反馈见 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues/new)。
 
 ### 本地化
-本项目的本地化内容由 Weblate 托管，你可以前往[这里](https://hosted.weblate.org/engage/akaribot)参与翻译改进。
+
+本地化内容由 Weblate 托管，翻译改进请前往 [Weblate](https://hosted.weblate.org/engage/akaribot)。
 
 ### 贡献
-如你想为我们做出贡献，可以看看[这里](/CONTRIBUTING.md)。
+
+贡献流程与提交约定见 [CONTRIBUTING.md](/CONTRIBUTING.md)。
 
 ## 相关项目
+
 - [`AkariBot I18N`](https://github.com/Teahouse-Studios/akari-bot-i18n)
 - [`AkariBot WebRender`](https://github.com/Teahouse-Studios/akari-bot-webrender)
 - [`AkariBot WebUI`](https://github.com/Teahouse-Studios/akari-bot-webui)
 
 ## 鸣谢
+
 - [`Graia`](https://github.com/GraiaProject/Application) — 小可曾基于此项目开发
 
 ## 许可
+
 除另有说明外，本项目的所有代码与资源均使用 [AGPL-3.0](./LICENSE) 协议授权。
 
 ## 赞助者
+
 <p align="center">
   <a href="https://afdian.com/a/teahouse">
     <img src='https://fe.wd-ljt.com/m3me/sP0ns0r5/sP0ns0r5.svg'>

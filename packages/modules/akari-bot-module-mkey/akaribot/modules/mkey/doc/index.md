@@ -1,25 +1,21 @@
 # mkey
 
-根据主机类型、日期与确认代码计算任天堂系列主机的监护管理万能密码。模块名 `mkey`，无别名。
+根据主机类型、日期与确认代码计算任天堂系列主机的监护管理万能密码。
 
 ## 命令
 
-| 命令 | 说明 | 权限 |
-| --- | --- | --- |
-| `mkey <device> <month> <day> <inquiry_num> [<device_id>]` | 计算万能密码 | 所有用户 |
+### `mkey`
 
-`device` 不区分大小写，取值如下：
+<CommandUsage usage="mkey <device> <month> <day> <inquiry_num> [<device_id>]" :params="['device=主机类型，如 3ds 或 switch', 'month=月份，取值 1 至 12', 'day=日期，取值 1 至 31', 'inquiry_num=6、8 或 10 位确认代码', 'device_id=Switch 的 16 位主机 ID']" permission="public" />
 
-| 值 | 主机 | 内部代号 |
-| --- | --- | --- |
-| `3ds` | Nintendo 3DS | CTR |
-| `dsi` | Nintendo DSi | TWL |
-| `wii` | Wii | RVL |
-| `wiiu` | Wii U | WUP |
-| `switch` | Nintendo Switch | HAC |
+计算监护管理万能密码。`device` 不区分大小写，可选值如下：
 
-`month` 取 1 至 12，`day` 取 1 至 31。`inquiry_num` 为 6、8 或 10 位十进制确认代码。`switch`
-必须额外提供 `device_id`，生成器按 16 位十六进制字符串解析该参数。
+- `3ds`：Nintendo 3DS
+- `dsi`：Nintendo DSi
+- `wii`：Wii
+- `wiiu`：Wii U
+- `switch`：Nintendo Switch
 
-3DS、DSi、Wii 与 Wii U 的结果为 5 位数字，Switch 的结果为 8 位数字。月份、日期、主机类型或确认
-代码长度不合法时返回对应错误提示；Switch 缺少主机 ID 时单独提示。
+`month` 取 1 至 12，`day` 取 1 至 31；`inquiry_num` 为 6、8 或 10 位十进制确认代码，取值越界或长度不符时返回对应错误提示。`switch` 必须提供 `device_id`，按 16 位十六进制字符串解析，缺少时单独提示。
+
+8 位确认代码的结果为 5 位数字；10 位确认代码与 Switch 的 6 位确认代码的结果为 8 位数字。6 位确认代码只适用于 Switch。

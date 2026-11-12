@@ -4,9 +4,3 @@ summary = "按实时汇率换算货币金额。"
 order = 500
 category = "实用工具"
 category_order = 400
-
-[[meta.modules]]
-name = "exchange-rate"
-aliases = ["exchange", "exchange_rate", "exchangerate", "excr"]
-type = ["command", "regex"]
-permission = "public"

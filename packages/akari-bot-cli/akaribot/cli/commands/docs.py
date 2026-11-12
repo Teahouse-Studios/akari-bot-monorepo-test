@@ -78,8 +78,14 @@ def _config_payload(config: DocsConfig) -> dict[str, Any]:
             "base": config.base,
             "logo": config.site.logo,
             "favicon": config.site.favicon,
+            "command_prefix": config.site.command_prefix,
         },
+        "locales": [{"tag": locale.tag, "label": locale.label, "title": locale.title} for locale in config.locales],
+        "labels": dict(config.labels),
+        "group_titles": dict(config.group_titles),
         "icons": dict(config.icons),
+        "category_icons": dict(config.category_icons),
+        "assets": dict(config.assets),
         "out_dir": str(config.out_dir),
         "theme": {"source": config.theme.source, "color": config.theme.color},
     }
@@ -109,6 +115,7 @@ def _package_payload(package: DocPackage) -> dict[str, Any]:
         "category": package.category,
         "category_order": package.category_order,
         "doc_path": str(package.doc_path),
+        "logo": package.logo,
         "editable": package.editable,
         "pages": [
             {
@@ -282,7 +289,7 @@ def list_docs(
     try:
         config = load_config(target)
         theme = resolve_theme(config)
-        catalog = load_catalog(target)
+        catalog = load_catalog(target, labels=config.labels, locales=[locale.tag for locale in config.locales])
         toolchain = detect(theme.node_major)
     except DocsError as error:
         _fail(error)
@@ -567,7 +574,7 @@ def status_docs(
     try:
         config = load_config(target)
         theme = resolve_theme(config)
-        catalog = load_catalog(target)
+        catalog = load_catalog(target, labels=config.labels, locales=[locale.tag for locale in config.locales])
         toolchain = detect(theme.node_major)
     except DocsError as error:
         _fail(error)

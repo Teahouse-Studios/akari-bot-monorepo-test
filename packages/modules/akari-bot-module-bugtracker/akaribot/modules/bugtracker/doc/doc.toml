@@ -4,9 +4,3 @@ summary = "查询 Mojira 漏洞并附带中文翻译与页面截图。"
 order = 500
 category = "Minecraft"
 category_order = 200
-
-[[meta.modules]]
-name = "bugtracker"
-aliases = ["bug"]
-type = ["command", "regex"]
-permission = "public"

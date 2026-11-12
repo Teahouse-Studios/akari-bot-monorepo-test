@@ -4,8 +4,3 @@ summary = "计算任天堂系列主机的监护管理万能密码。"
 order = 500
 category = "任天堂与主机"
 category_order = 300
-
-[[meta.modules]]
-name = "mkey"
-type = ["command"]
-permission = "public"

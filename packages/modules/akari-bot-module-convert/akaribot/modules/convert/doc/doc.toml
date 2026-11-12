@@ -4,9 +4,3 @@ summary = "基于 pint 的单位换算。"
 order = 500
 category = "实用工具"
 category_order = 400
-
-[[meta.modules]]
-name = "convert"
-aliases = ["conv", "unit"]
-type = ["command"]
-permission = "public"

@@ -4,9 +4,3 @@ summary = "检查 Mojang 与 Minecraft 后端各服务的实时在线情况。"
 order = 500
 category = "Minecraft"
 category_order = 200
-
-[[meta.modules]]
-name = "mojang-status"
-aliases = ["mcstatus", "mjs", "mjsb", "mojang_status"]
-type = ["command"]
-permission = "public"

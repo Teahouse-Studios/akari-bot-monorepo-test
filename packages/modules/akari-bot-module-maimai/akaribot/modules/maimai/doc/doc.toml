@@ -4,21 +4,3 @@ summary = "查询舞萌 DX 与 CHUNITHM 的曲目、成绩、B50/B30 与玩家�
 order = 500
 category = "音游查询"
 category_order = 100
-
-[[meta.modules]]
-name = "maimai"
-aliases = ["mai"]
-type = ["command"]
-permission = "public"
-
-[[meta.modules]]
-name = "chunithm"
-aliases = ["chu"]
-type = ["command"]
-permission = "public"
-
-[[meta.modules]]
-name = "maimai-regex"
-aliases = ["mai_regex", "maimai_regex"]
-type = ["regex"]
-permission = "public"

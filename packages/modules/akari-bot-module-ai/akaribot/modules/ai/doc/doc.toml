@@ -4,8 +4,3 @@ summary = "调用大语言模型完成多轮对话、网页检索与图片生成
 order = 500
 category = "开发与 AI"
 category_order = 700
-
-[[meta.modules]]
-name = "ai"
-type = ["command"]
-permission = "public"

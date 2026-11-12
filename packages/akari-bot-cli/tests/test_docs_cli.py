@@ -129,7 +129,19 @@ async def _test_list_json_contract():
             "instance_warnings",
         }
         and payload["instance"] == str(root)
-        and set(payload["config"]) == {"path", "site", "out_dir", "theme", "icons"}
+        and set(payload["config"])
+        == {
+            "path",
+            "site",
+            "locales",
+            "labels",
+            "group_titles",
+            "icons",
+            "category_icons",
+            "assets",
+            "out_dir",
+            "theme",
+        }
         and payload["config"]["path"] is None
         and payload["config"]["site"]
         == {
@@ -138,8 +150,13 @@ async def _test_list_json_contract():
             "base": "/docs/",
             "logo": "",
             "favicon": "",
+            "command_prefix": "",
         }
-        and payload["config"]["icons"] == {}
+        and payload["config"]["labels"]["overview"] == "概览"
+        and payload["config"]["group_titles"]["core"] == "核心"
+        and payload["config"]["icons"]["home"] == "home"
+        and payload["config"]["category_icons"]["音游查询"] == "music_note"
+        and payload["config"]["assets"]["favicon"] == "favicon.ico"
         and payload["config"]["out_dir"] == str(root / "cache" / "docs" / "site")
         and payload["config"]["theme"] == {"source": "auto", "color": ""}
         and set(payload["toolchain"]) == {"node", "npm", "node_version", "npm_version", "ready", "detail"}
@@ -157,6 +174,7 @@ async def _test_list_json_contract():
             "category": "",
             "category_order": 500,
             "doc_path": str(Path("/tmp/doc") / "demo"),
+            "logo": "",
             "editable": False,
             "pages": [{"path": "index.md", "title": "概览", "order": 0, "description": "首页"}],
         }

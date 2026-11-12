@@ -217,6 +217,40 @@ def _test_doc_meta_defaults_and_corruption():
     )
 
 
+def _test_doc_logo_metadata():
+    with TemporaryDirectory(prefix="akari-docs-") as raw:
+        root = Path(raw)
+        brand = _make_package(
+            root,
+            "akaribot.assets.brand",
+            {
+                "doc/index.md": "# 品牌\n",
+                "doc/doc.toml": 'logo = "akaribot_logo.png"\n',
+                "akaribot_logo.png": "png",
+            },
+        )
+        escaped = _make_package(
+            root,
+            "akaribot.assets.other",
+            {"doc/index.md": "# 其他\n", "doc/doc.toml": 'logo = "../../outside.png"\n'},
+        )
+        entry_points = [
+            _EntryPoint("assets-brand", "akaribot.assets.brand"),
+            _EntryPoint("assets-other", "akaribot.assets.other"),
+        ]
+        payload = docs.collect(
+            entry_points=lambda: entry_points,
+            find_spec=_locator({"akaribot.assets.brand": brand, "akaribot.assets.other": escaped}),
+        )
+    brand_item = _item(payload, "assets-brand")
+    other_item = _item(payload, "assets-other")
+    return (
+        brand_item["logo"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_logo.png").resolve())
+        and other_item["logo"] == ""
+        and any("logo 指向包目录之外" in warning for warning in payload["warnings"])
+    )
+
+
 def _test_category_is_single_string():
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
@@ -473,6 +507,7 @@ async def test_docs_entrypoint(tester: Tester):
     await tester.test(_test_metadata_and_sorting, "元数据字段与分组排序")
     await tester.test(_test_front_matter_overrides_titles, "front matter 覆盖标题与页面排序")
     await tester.test(_test_doc_meta_defaults_and_corruption, "doc.toml 缺省、覆盖与损坏告警")
+    await tester.test(_test_doc_logo_metadata, "doc.toml 声明的站点标志按包目录解析并拒绝越界")
     await tester.test(_test_category_is_single_string, "分类只接受单个字符串")
     await tester.test(_test_development_page_sorts_last, "开发页固定在页面列表末尾")
     await tester.test(_test_hidden_package_is_skipped, "hidden 包被跳过")

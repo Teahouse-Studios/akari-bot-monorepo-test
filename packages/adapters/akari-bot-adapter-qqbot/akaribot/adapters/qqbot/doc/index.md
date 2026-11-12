@@ -36,7 +36,7 @@ akaribot module add akari-bot-adapter-qqbot
 ## 必填凭据
 
 - `qq_bot_appid` 与 `qq_bot_secret`：在 QQ 开放平台机器人管理页获取，两者共同确定一个机器人账号。
-- `qq_bot_openid`：选填；机器人自身的 OpenID，群聊中识别 @机器人 时使用。
+- `qq_bot_openid`：选填；机器人自身的 OpenID，群聊中识别 @机器人时使用。
 - `qq_bot_certified`：选填；机器人是否已通过企业或个人认证，未认证时主动消息配额更低。
 - `qq_bot_uid` 与 `qq_bot_qqnum`：选填；会话数据中携带的机器人 UID 与 QQ 号，按平台提供的信息填写。
 
@@ -70,7 +70,7 @@ Webhook 模式由平台回调驱动，适配器只提供 HTTP，公网 HTTPS 由
 ## 私信与群聊
 
 - 群聊目标前缀为 `QQBot|Group`，C2C 私信为 `QQBot|C2C`，服务器频道为 `QQBot|Guild`，频道私信为 `QQBot|Direct`。
-- 群聊中 @机器人 的消息始终处理；未获「读取全部消息」权限时平台不推送其他群消息，获得权限后普通群消息同样处理。
+- 群聊中被 @机器人 提及的消息始终处理；未获“读取全部消息”权限时平台不推送其他群消息，获得权限后普通群消息同样处理。
 - 群聊 @ 消息使用受限能力集，关闭 RSS 与全量消息读取。
 - 开启 Markdown 后，用户仍可在会话中关闭 Markdown 渲染，届时按钮、动作文本与消息节点一并停用。
 - `qq_private_bot = true` 时按私域机器人订阅服务器全量消息事件。

@@ -44,11 +44,11 @@ def build(
     """
     started = time.monotonic()
     notify = reporter or _ignore
-    catalog = load_catalog(instance)
+    config = load_config(instance)
+    catalog = load_catalog(instance, labels=config.labels, locales=[locale.tag for locale in config.locales])
     full_catalog = catalog
     if keys:
         catalog = catalog.select(keys)
-    config = load_config(instance)
     theme = resolve_theme(config)
     out_dir = config.out_dir
     fingerprint = fingerprint_catalog(catalog, config, theme)
@@ -111,9 +111,23 @@ def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpe
         "base": config.base,
         "title": config.site.title,
         "lang": config.site.lang,
+        "locales": [
+            {
+                "tag": locale.tag,
+                "label": locale.label,
+                "title": locale.title,
+                "labels": dict(sorted(locale.labels.items())),
+                "group_titles": dict(sorted(locale.group_titles.items())),
+            }
+            for locale in config.locales
+        ],
         "logo": config.site.logo,
         "favicon": config.site.favicon,
+        "labels": dict(sorted(config.labels.items())),
+        "group_titles": dict(sorted(config.group_titles.items())),
         "icons": dict(sorted(config.icons.items())),
+        "category_icons": dict(sorted(config.category_icons.items())),
+        "assets": dict(sorted(config.assets.items())),
         "theme_color": config.theme.color,
     }
     digest.update(json.dumps(head, ensure_ascii=False, sort_keys=True).encode("utf-8"))
@@ -128,6 +142,11 @@ def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpe
         if meta_path.is_file():
             digest.update(b"meta\0")
             digest.update(_file_digest(meta_path))
+        if package.logo:
+            logo_path = Path(package.logo)
+            digest.update(f"logo\0{package.logo}\0".encode("utf-8"))
+            if logo_path.is_file():
+                digest.update(_file_digest(logo_path))
         for relative, path in collect_files(package.doc_path):
             digest.update(f"file\0{relative}\0".encode("utf-8"))
             digest.update(_file_digest(path))

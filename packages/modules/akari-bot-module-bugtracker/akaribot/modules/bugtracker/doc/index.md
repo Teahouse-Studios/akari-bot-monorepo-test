@@ -1,20 +1,16 @@
 # bugtracker
 
-按漏洞编号查询 Mojira（Mojang 漏洞追踪器）中的记录，输出标题、类型、状态、项目、优先级、
-解决状态与关联版本，并附上原文链接与页面截图。简体中文会话还会附带 spx 社区翻译。
-
-模块名 `bugtracker`，别名 `bug`；模块包含正则命令。
+按漏洞编号查询 Mojira（Mojang 漏洞追踪器）中的记录，输出标题、类型、状态、项目、优先级、解决状态与关联版本，并附上原文链接与页面截图。简体中文会话还会附带 spx 社区翻译。
 
 ## 命令
 
-下表省略命令前缀，前缀由实例配置决定。
+<ModuleAlias names="bug" />
 
-| 命令 | 说明 | 权限 |
-| --- | --- | --- |
-| `bugtracker <mojiraid>` | 查询漏洞编号对应的内容 | 所有用户 |
+### `bugtracker`
 
-`<mojiraid>` 须为「项目前缀-数字」的形式，例如 `MCPE-123456`。无法解析时返回格式错误提示；
-项目或漏洞不存在时返回查询失败提示。
+<CommandUsage usage="bugtracker <mojiraid>" :params="['mojiraid=Mojira 漏洞编号，含项目前缀']" permission="public" />
+
+查询漏洞编号对应的记录。`<mojiraid>` 须为“项目前缀-数字”的形式，例如 `MCPE-123456`。无法解析时返回无效编号提示；项目或漏洞不存在时返回查询失败提示。
 
 ## 正则触发
 
@@ -24,5 +20,4 @@
 - 方括号包裹的编号，如 `[MCPE-123456]`。
 - 完整链接，如 `https://bugs.mojang.com/browse/MCPE/issues/MCPE-123456`。
 
-可识别的项目前缀为 `BDS`、`MCPE`、`MCD`、`MCL`、`MCLG`、`REALMS`、`MC`、`WEB`，大小写不敏感。
-单条消息最多处理前 5 个匹配。
+可识别的项目前缀为 `BDS`、`MCPE`、`MCD`、`MCL`、`MCLG`、`REALMS`、`MC`、`WEB`，大小写不敏感。单条消息最多处理前 5 个匹配。

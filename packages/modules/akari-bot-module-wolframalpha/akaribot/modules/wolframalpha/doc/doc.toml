@@ -4,9 +4,3 @@ summary = "向 WolframAlpha 提交问题，返回图片或简短文本答案。"
 order = 500
 category = "实用工具"
 category_order = 400
-
-[[meta.modules]]
-name = "wolframalpha"
-aliases = ["wa", "wolfram"]
-type = ["command"]
-permission = "public"

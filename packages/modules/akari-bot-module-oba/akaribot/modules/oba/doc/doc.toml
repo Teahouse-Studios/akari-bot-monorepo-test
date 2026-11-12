@@ -4,8 +4,3 @@ summary = "查询 OpenBMCLAPI 的仪表盘、节点排行与赞助商信息。"
 order = 500
 category = "Minecraft"
 category_order = 200
-
-[[meta.modules]]
-name = "oba"
-type = ["command"]
-permission = "public"

@@ -1,7 +1,6 @@
 # 配置
 
-配置由 `core.config.CFGManager` 统一读写，配置模板类在导入期为每个字段登记读取参数。所有配置文件
-平铺在 `config/` 下，`CFGManager.load()` 只扫描 `config/*.toml`。
+配置由 `core.config.CFGManager` 统一读写，配置模板类在导入期为每个字段登记读取参数。所有配置文件平铺在 `config/` 下，`CFGManager.load()` 只扫描 `config/*.toml`。
 
 ## 文件与表布局
 
@@ -15,8 +14,7 @@
 | `bot_<平台>.toml` | `[bot_<平台>]`、`[bot_<平台>_secret]` | 适配器配置 |
 | `module_<模块>.toml` | `[module_<模块>]`、`[module_<模块>_secret]` | 模块配置 |
 
-密钥始终与公开配置同文件，以 `_secret` 后缀区分。多实例部署下适配器表名带实例后缀，例如
-`bot_telegram-alt`；读取时若实例表缺失可回退到基表，写入一律落到实例表，避免串改另一个实例。
+密钥始终与公开配置同文件，以 `_secret` 后缀区分。多实例部署下适配器表名带实例后缀，例如 `bot_telegram-alt`；读取时若实例表缺失可回退到基表，写入一律落到实例表，避免串改另一个实例。
 
 ## 模板声明
 
@@ -68,16 +66,12 @@ if CoreConfig.enable_analytics:
 config.comments.<表名>.<字段名>
 ```
 
-表名取值：核心公开项与密钥项分别为 `config`、`secret`；适配器为 `bot_<平台>`，密钥为
-`bot_<平台>_secret`；模块为 `module_<模块>`，密钥为 `module_<模块>_secret`。注释只描述用途，
-不描述实现细节。生成配置时注释随字段写入，切换 `default_locale` 后由
-`CFGManager.repair_i18n_comments()` 按新语言重写。
+表名取值：核心公开项与密钥项分别为 `config`、`secret`；适配器为 `bot_<平台>`，密钥为 `bot_<平台>_secret`；模块为 `module_<模块>`，密钥为 `module_<模块>_secret`。注释只描述用途，不描述实现细节。生成配置时注释随字段写入，切换 `default_locale` 后由 `CFGManager.repair_i18n_comments()` 按新语言重写。
 
 ## 只读约束
 
 - 守护进程在派生子进程前置位 `AKARI_CONFIG_READONLY`，平台进程与 Server 均只读。
-- 只读进程调用 `write()` 或 `save()` 抛出 `ConfigOperationError`；`edit_write()`、`edit_delete()`
-  在显式授权范围内放行，供 `~config` 与启动期密钥自举使用。
+- 只读进程调用 `write()` 或 `save()` 抛出 `ConfigOperationError`；`edit_write()`、`edit_delete()` 在显式授权范围内放行，供 `~config` 与启动期密钥自举使用。
 - 缺失项只在 pre-init 阶段补写，普通进程不会因读取而改写磁盘。
 - 读改写以 `config/.config.lock` 做进程间互斥，等待上限 10 秒，锁文件超过 60 秒视为陈旧。
 - 写入使用临时文件加 `os.replace` 原子替换。
@@ -85,7 +79,4 @@ config.comments.<表名>.<字段名>
 
 ## 配置版本
 
-`config.toml` 的 `config_version` 当前为 6，由 `core.config.update` 执行升级。其余配置文件的版本随包
-维护：迁移脚本放在包的 `config_migrations/`，文件名以四位号段开头，升级后把号段写回该文件的
-`config_version`。新生成的配置写入 `manifest.toml` 的 `config_schema_version`，首个迁移号段须从
-该值加一开始，号段不得复用或跳号。
+`config.toml` 的 `config_version` 当前为 6，由 `core.config.update` 执行升级。其余配置文件的版本随包维护：迁移脚本放在包的 `config_migrations/`，文件名以四位号段开头，升级后把号段写回该文件的 `config_version`。新生成的配置写入 `manifest.toml` 的 `config_schema_version`，首个迁移号段须从该值加一开始，号段不得复用或跳号。

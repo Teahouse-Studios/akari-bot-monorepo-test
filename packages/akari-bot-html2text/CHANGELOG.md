@@ -22,7 +22,7 @@
 
 - 解除 `Url` 耦合：`HTML2Text.__init__` 与模块级 `html2text()` 新增
   `url_formatter: Callable[[str], str] = str`，原四处 `str(Url(...))` 调用改为 `self.url_formatter(...)`。
-  默认 `str` 即上游语义「不做额外处理」，包内不再 import 任何 `akaribot` 代码。
+  默认 `str` 即上游语义“不做额外处理”，包内不再 import 任何 `akaribot` 代码。
   注入点共四处：行内链接、`<img>` 的 alt 文本、`<img>` 的 URL、引用式链接定义；调用次数取决于选项组合。
 
 ### 断言与类型
