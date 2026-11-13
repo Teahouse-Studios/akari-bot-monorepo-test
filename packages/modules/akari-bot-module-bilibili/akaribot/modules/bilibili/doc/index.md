@@ -10,7 +10,12 @@
 
 <CommandUsage :usage="['bilibili <bid> [-i]', 'bilibili <bid>']" :params="['bid=视频 BV 号或 AV 号']" permission="public" :options="[{flag: '-i', desc: '获取详细信息。'}]" />
 
-按 BV 号或 AV 号查询视频，输出标题、简介、UP 主与播放、弹幕、点赞等统计数据。`<bid>` 须以 `BV` 或 `AV` 开头，`AV` 号可写作 `av123456`。视频简介截断到 100 字符；多分 P 的视频在标题后标注分 P 数量；视频不存在或请求被风控拦截时分别返回对应提示。Discord 频道会话不支持 `-i`，以 Embed 卡片输出；其余平台输出纯文本。
+- 按 BV 号或 AV 号查询视频，输出标题、简介、UP 主与播放、弹幕、点赞等统计数据。
+- `<bid>` 须以 `BV` 或 `AV` 开头；`AV` 号可写作 `av123456`。
+- 视频简介截断到 100 字符。
+- 多分 P 的视频在标题后标注分 P 数量。
+- 视频不存在或请求被风控拦截时，分别返回对应提示。
+- Discord 频道会话不支持 `-i`，以 Embed 卡片输出；其余平台输出纯文本。
 
 <ChatExample
   :log="[

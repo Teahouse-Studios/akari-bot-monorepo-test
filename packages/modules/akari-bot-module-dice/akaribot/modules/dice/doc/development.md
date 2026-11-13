@@ -24,7 +24,7 @@ akaribot module add akari-bot-module-dice
 | `dice_output_count` | int | 50 | 单次输出的数据量上限 |
 | `dice_output_len` | int | 200 | 输出最大长度 |
 | `dice_output_digit` | int | 9 | 输出数位上限，超过时使用科学计数法 |
-| `dice_detail_count` | int | 5 | 投掷总量超过该值时不显示详细信息 |
+| `dice_detail_count` | int | 5 | 投掷总量达到该值时不显示详细信息 |
 
 任一项不大于 0 时命令抛出配置错误提示。完整清单见配置模板 `akaribot/modules/dice/config.py`。
 

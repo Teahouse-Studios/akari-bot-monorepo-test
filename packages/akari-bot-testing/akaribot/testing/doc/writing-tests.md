@@ -83,7 +83,7 @@ async def _(msg: Bot.MessageSession, word: str):
 
 - `mock/database.py`：内存 SQLite，用例入口前重建。
 - `mock/loader.py`：加载全部已发现模块，可注入 monkey patch。
-- `mock/random.py`：固定种子，保证随机相关输出可复现。
+- `mock/random.py`：固定种子，随机输出可复现。
 - `mock/http.py` 与 `mock/fixtures.py`：按 URL、方法、请求体摘要回放 HTTP 响应。
 - `mock/session.py`：记录 `sent`、`action` 与按钮数据。
 

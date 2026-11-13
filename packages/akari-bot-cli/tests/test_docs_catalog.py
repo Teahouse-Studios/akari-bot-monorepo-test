@@ -32,8 +32,8 @@ def _proc(payload: object = None, *, returncode: int = 0, stderr: str = "") -> S
     return SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
 
 
-def _page(path: str, title: str, order: int) -> dict[str, object]:
-    return {"path": path, "title": title, "order": order}
+def _page(path: str, title: str, order: int, submenu: str = "") -> dict[str, object]:
+    return {"path": path, "title": title, "order": order, "submenu": submenu}
 
 
 def _docs_payload(root: Path) -> dict[str, object]:
@@ -52,7 +52,7 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "category_order": 20,
                 "doc_path": str(root / "doc" / "wiki"),
                 "pages": [
-                    _page("guide/setup.md", "安装", 20),
+                    _page("guide/setup.md", "安装", 20, submenu="钩子"),
                     _page("development.md", "安装与开发", 5),
                     _page("index.md", "概览", 0),
                 ],
@@ -106,6 +106,7 @@ async def _test_parse_docs_payload():
         and first.version == "1.2.0"
         and first.editable
         and pages == [("index.md", "概览"), ("guide/setup.md", "安装"), ("development.md", "安装与开发")]
+        and first.pages[1].submenu == "钩子"
         and calls == [("docs", "list", "--json")]
         and catalog.warnings == ("module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未登记",)
     )

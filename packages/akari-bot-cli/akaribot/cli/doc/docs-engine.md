@@ -31,7 +31,7 @@ Node 缺失、版本低于主题要求或 npm 不可用时，构建以工具链�
 
 `build` 以及 `serve` / `deploy` 触发的构建在人类模式实时打印工具链、生成与 VitePress 三个阶段，并转发 npm 与 VitePress 的逐行输出；`--json` 时 stdout 只保留最终结果行，同样的日志写入 stderr，供 TUI 与脚本采集。TUI 的文档页在构建期间展示同一份日志，`l` 切换面板显示。
 
-模块文档在侧栏按 `doc.toml` 的 `category` 分组，条目名称取模块名。同一模块目录内的页面作为平行页面显示为页内标签：`index.md` 是默认的“使用方法”，`development.md` 是“安装与开发”，开发页不单独出现在侧栏；其余页面按 `order` 与路径排在两者之间。内置回退主题没有标签栏，开发页仍作为普通侧栏页面列出。
+模块文档在侧栏按 `doc.toml` 的 `category` 分组，条目名称取模块名。同一模块目录内的页面作为平行页面显示为页内标签：`index.md` 是默认的“使用方法”，`development.md` 是“安装与开发”，开发页不单独出现在侧栏；其余页面按 `order` 与路径排在两者之间。内置回退主题没有标签栏，开发页仍作为普通侧栏页面列出。包声明 `overview = false` 时不生成包级概览，入口取第一页，侧栏直接列出页面；页面 front matter 写 `submenu` 时，同值的页面收进该名称的二级分组，普通页面仍平铺在前面。
 
 侧栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标：分组图标写在 `docs.toml` 的 `[icons]`，键为分组名或 `home`；分类图标写在 `[category_icons]`，键为 `doc.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
 
@@ -160,7 +160,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的凭据只从 `A
 
 构建结束后必须存在 `index.html`，否则按构建失败处理。
 
-站点开启 `cleanUrls`：`a.md` 对应 `/a`，`index.md` 对应 `/<包 key>/`。首页按分组汇总各包，每个分组另有汇总页；侧栏按包与页面清单生成，页面顺序取自 front matter 的 `order`。
+站点开启 `cleanUrls`：`a.md` 对应 `/a`，`index.md` 对应 `/<包 key>/`。首页按分组汇总各包，每个分组另有汇总页；侧栏按包与页面清单生成，页面顺序取自 front matter 的 `order`，相同 `submenu` 的页面在包内组成二级分组。包的 `doc.toml` 写 `overview = false` 时不生成 `/<包 key>/` 概览页，导航与分组页改指第一页，侧栏不再给包标题加链接。
 
 ## 预览
 
@@ -190,7 +190,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的凭据只从 `A
 
 外部模板的 `.vitepress/theme` 内置 `ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）、`CommandUsage`（命令用法）与 `ChatExample`（命令对话示例）七个全局组件，并针对主题的 M3E 调色板适配。生成器读取包内 `doc.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`；本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
 
-组件只在 VitePress 构建产物中渲染；包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。内置 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名回退，`ChatExample` 将图片渲染为缩略图并在新标签页打开，外部模板提供从缩略图展开的查看叠层与按钮交互；`ChatExample` 中只含三个以上波浪号的行渲染为时间分隔线，尾部图片另起气泡、多张尾部图片共用一个气泡，图片地址后的 `{natural}` 表示按原始尺寸展示，`image-width` 固定示例内图片宽度；按钮项的 `buttons` 可挂二级按钮，`dismiss: true` 删除所属回复组；`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单、`platforms` / `excluded` 平台徽章需要外部模板。
+组件只在 VitePress 构建产物中渲染；包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。内置 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名回退，`ChatExample` 将图片渲染为缩略图并在新标签页打开，气泡文本按纯文本渲染；外部模板的 `ChatExample` 只在 `messages` 消息显式设置 `markdown: true` 时按 Markdown 渲染（原始 HTML 不执行），其余消息按纯文本处理，并提供从缩略图展开的查看叠层与按钮交互；`ChatExample` 中只含三个以上波浪号的行渲染为时间分隔线，尾部图片另起气泡、多张尾部图片共用一个气泡，图片地址后的 `{natural}` 表示按原始尺寸展示，超过视口高度时等比缩小，`image-width` 固定示例内图片宽度，`:card` 在对话末尾渲染机器人卡片；按钮项的 `buttons` 可挂二级按钮，`dismiss: true` 删除所属回复组，`:one-shot="true"` 在任一按钮点击后禁用同组按钮；`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单、`platforms` / `excluded` 平台徽章需要外部模板。
 
 ## 文档编写约定
 

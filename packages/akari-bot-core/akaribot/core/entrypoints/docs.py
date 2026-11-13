@@ -31,7 +31,7 @@ GROUP_ORDER = ("core", "builtin", "cli", "testing", "module", "adapter", "asset"
 _GROUP_RANK = {name: index for index, name in enumerate(GROUP_ORDER)}
 _KEY_GROUPS = {"core": "core", "builtin": "builtin", "cli": "cli", "testing": "testing"}
 _KEY_PREFIX_GROUPS = (("module-", "module"), ("adapter-", "adapter"), ("assets-", "asset"))
-_FRONT_MATTER_KEYS = frozenset({"title", "order", "description"})
+_FRONT_MATTER_KEYS = frozenset({"title", "order", "description", "submenu"})
 _HEADING = re.compile(r"^#\s+(?P<title>.+?)\s*#*\s*$")
 _FENCE = re.compile(r"^\s*(?:```|~~~)")
 _NAMESPACES = (("akaribot.modules", "module"), ("akaribot.adapters", "adapter"))
@@ -161,7 +161,18 @@ def _read_doc_meta(doc_dir: Path, label: str, warnings: list[str]) -> dict[str, 
         return {}
     return {
         name: data[name]
-        for name in ("title", "summary", "order", "hidden", "kind", "category", "category_order", "logo", "avatar")
+        for name in (
+            "title",
+            "summary",
+            "order",
+            "hidden",
+            "kind",
+            "category",
+            "category_order",
+            "logo",
+            "avatar",
+            "overview",
+        )
         if name in data
     }
 
@@ -219,6 +230,7 @@ def _read_page(path: Path, relative: Path, label: str, warnings: list[str]) -> d
         "path": relative.as_posix(),
         "order": order,
         "summary": _as_text(front.get("description")),
+        "submenu": _as_text(front.get("submenu")),
     }
 
 
@@ -311,6 +323,7 @@ def _build_package(
         "logo": str(logo) if logo is not None else "",
         "avatar": str(avatar) if avatar is not None else "",
         "editable": editable,
+        "overview": meta.get("overview", True) is not False,
         "pages": pages,
     }
 

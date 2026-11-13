@@ -10,7 +10,10 @@
 
 <CommandUsage usage="mod-dl <mod_name> [<version>]" :params="['mod_name=Mod 名称，作为搜索关键词', 'version=游戏版本号，如 1.20.1']" permission="public" />
 
-按 Mod 名称搜索并给出下载链接。`<version>` 符合 `x.y.z`、`x.y` 或 `xwxxa` 一类版本格式时作为版本过滤条件，否则并入 Mod 名称一同搜索；省略时在选定 Mod 后列出候选版本并要求再次回复。
+- 按 Mod 名称搜索并给出下载链接。
+- `<version>` 符合 `x.y.z`、`x.y` 或 `xwxxa` 一类版本格式时，作为版本过滤条件。
+- 不符合版本格式时，并入 Mod 名称一同搜索。
+- 省略时在选定 Mod 后列出候选版本，并要求再次回复。
 
 交互流程：
 

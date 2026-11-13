@@ -2,6 +2,7 @@
 
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -718,6 +719,69 @@ async def _test_locales_generate_translated_tree_and_links():
     )
 
 
+async def _test_package_without_overview_uses_first_page_as_entry():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(
+            root,
+            {"about.md": "# about\n", "admin.md": "# admin\n"},
+            pages=(DocPage("about.md", "about", 10), DocPage("admin.md", "admin", 20)),
+        )
+        package = replace(package, overview=False)
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root))
+        config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = config.index('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(config[config.index("{", start) :])
+        home = (source / "index.md").read_text(encoding="utf-8")
+        group = (source / "groups" / "module.md").read_text(encoding="utf-8")
+        native = theme_config["sidebar"]["/demo/"][0]
+        return (
+            not (source / "demo" / "index.md").exists()
+            and (source / "demo" / "about.md").is_file()
+            and "[Demo](/demo/about)" in home
+            and "## Demo" not in group
+            and "[about](/demo/about)" in group
+            and "link" not in native
+            and [item["text"] for item in native["items"]] == ["about", "admin"]
+            and theme_config["nav"][0]["link"] == "/demo/about"
+        )
+
+
+async def _test_pages_with_submenu_are_nested_in_sidebar():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(
+            root,
+            {
+                "admin.md": "# admin\n",
+                "parser_policies.md": "# parser_policies\n",
+                "typo.md": "# typo\n",
+            },
+            pages=(
+                DocPage("admin.md", "admin", 10),
+                DocPage("parser_policies.md", "parser_policies", 20, submenu="钩子"),
+                DocPage("typo.md", "typo", 30, submenu="钩子"),
+            ),
+        )
+        package = replace(package, overview=False)
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root))
+        config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = config.index('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(config[config.index("{", start) :])
+        native = theme_config["sidebar"]["/demo/"][0]
+        items = native["items"]
+    return (
+        "link" not in native
+        and items[0] == {"text": "admin", "link": "/demo/admin"}
+        and items[1]["text"] == "钩子"
+        and items[1]["collapsed"] is False
+        and [item["text"] for item in items[1]["items"]] == ["parser_policies", "typo"]
+        and [item["link"] for item in items[1]["items"]] == ["/demo/parser_policies", "/demo/typo"]
+    )
+
+
 @func_case
 async def test_docs_generator(tester: Tester):
     """cli.docs.generator: 站点生成与路径约束"""
@@ -739,4 +803,6 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，顶栏标志取包声明并可回退")
     await tester.test(_test_chat_avatar_from_package_and_favicon, "对话头像取包声明，缺少时回退站点图标")
     await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
+    await tester.test(_test_package_without_overview_uses_first_page_as_entry, "无概览页的包以第一页作为入口")
+    await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")
     return tester

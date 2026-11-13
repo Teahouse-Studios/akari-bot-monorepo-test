@@ -36,12 +36,14 @@ class DocPage:
     :param title: 侧栏与索引里显示的标题。
     :param order: 排序权重，自小到大。
     :param description: 一句话说明，可为空。
+    :param submenu: 侧栏子菜单名，空串表示直接列在包下。
     """
 
     path: str
     title: str
     order: int = DEFAULT_ORDER
     description: str = ""
+    submenu: str = ""
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,7 @@ class DocPackage:
     :param editable: 是否为可编辑安装。
     :param category: 侧栏分类，空串表示不分类。
     :param category_order: 分类在侧栏中的排序权重，自小到大。
+    :param overview: 是否生成包级概览页；为假时包只作为页面容器。
     """
 
     key: str
@@ -80,6 +83,7 @@ class DocPackage:
     editable: bool = False
     category: str = ""
     category_order: int = DEFAULT_ORDER
+    overview: bool = True
 
 
 @dataclass(frozen=True)

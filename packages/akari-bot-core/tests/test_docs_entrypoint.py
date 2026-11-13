@@ -69,7 +69,9 @@ def _test_metadata_and_sorting():
                 root, "akaribot.core", {"doc/index.md": "# 核心\n", "doc/guide.md": "# 指南\n"}
             ),
             "akaribot.modules.alpha": _make_package(
-                root, "akaribot.modules.alpha", {"doc/index.md": "# Alpha\n", "doc/doc.toml": "order = 10\n"}
+                root,
+                "akaribot.modules.alpha",
+                {"doc/index.md": "# Alpha\n", "doc/doc.toml": "order = 10\noverview = false\n"},
             ),
             "akaribot.modules.beta": _make_package(
                 root, "akaribot.modules.beta", {"doc/index.md": "# Beta\n", "doc/doc.toml": "order = 10\n"}
@@ -122,6 +124,8 @@ def _test_metadata_and_sorting():
         and core["title"] == "core"
         and core["order"] == 500
         and core["editable"] is False
+        and core["overview"] is True
+        and _item(payload, "module-alpha")["overview"] is False
         and core["doc_path"] == str((root / "akaribot" / "core" / "doc").resolve())
         and [Path(page["path"]).name for page in core["pages"]] == ["index.md", "guide.md"]
         and core["pages"][0]["title"] == "核心"
@@ -144,7 +148,7 @@ def _test_front_matter_overrides_titles():
                 {
                     "doc/index.md": "没有标题\n",
                     "doc/a.md": (
-                        '---\ntitle: "自定义标题"\norder: 2\ndescription: 页面摘要\ntags: 忽略\n---\n# 正文标题\n'
+                        '---\ntitle: "自定义标题"\norder: 2\ndescription: 页面摘要\nsubmenu: 钩子\ntags: 忽略\n---\n# 正文标题\n'
                     ),
                     "doc/b.md": "# 正文标题\n",
                     "doc/c.md": "```\n# 代码块内标题\n```\n",
@@ -166,6 +170,7 @@ def _test_front_matter_overrides_titles():
         and titles["a.md"] == "自定义标题"
         and pages[1]["summary"] == "页面摘要"
         and pages[1]["order"] == 2
+        and pages[1]["submenu"] == "钩子"
         and titles["b.md"] == "正文标题"
         and titles["c.md"] == "c"
         and ".hidden.md" not in titles

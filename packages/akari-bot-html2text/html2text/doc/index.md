@@ -37,7 +37,7 @@ python -m html2text --ignore-links --body-width 0 page.html
 - **`</script>` 处理**：转义写法被改回真正的 `</script>`，结束标签因此变成 `</ignore>`，`HTMLParser` 无法退出 script 的 CDATA 模式，第一个 `<script>` 之后的正文会丢失。含脚本的 HTML 应先移除 `<script>` 块再交给本库。
 - **URL 解耦**：不再依赖 `akaribot.core` 的 `Url` 类型，改为 `url_formatter` 注入；注入点包括行内链接、图片 alt、图片 URL 与引用式链接定义。
 - **断言移除**：内部 `assert ... is not None` 已删除，异常类型在异常输入下可能是 `TypeError` 或 `AttributeError`，而不是 `AssertionError`。
-- **类型与格式**：`OutCallback` 的方法体改为 `raise NotImplementedError`，注解使用内建泛型，部分辅助函数做了语义等价的改写。
+- **类型与格式**：`OutCallback` 的方法体改为 `raise NotImplementedError`，注解使用内建泛型，部分辅助函数经过语义等价的改写。
 
 本分支尚未合并上游 2024 与 2025 版本。需要 2025 版行为（例如保留链接 title）的调用方不应把本包当作上游替代。
 

@@ -122,6 +122,7 @@ def _parse_packages(
                 editable=bool(item.get("editable", False)),
                 category=_text(item, "category"),
                 category_order=_int_value(item.get("category_order")),
+                overview=bool(item.get("overview", True)),
             )
         )
     return packages
@@ -147,6 +148,7 @@ def _parse_pages(value: Any, labels: Mapping[str, str], tags: Sequence[str]) -> 
                 title=_text(entry, "title") or _page_title_from_path(path, labels),
                 order=_int_value(entry.get("order")),
                 description=_text(entry, "description", "summary"),
+                submenu=_text(entry, "submenu"),
             )
         )
     return tuple(sorted(pages, key=_page_sort_key))
@@ -198,6 +200,7 @@ def _fallback_registry(
                 editable=bool(item.get("editable", False)),
                 category=_text(meta, "category"),
                 category_order=_int_value(meta.get("category_order")),
+                overview=meta.get("overview", True) is not False,
             )
         )
     return packages
@@ -251,6 +254,7 @@ def _load_local_cli(labels: Mapping[str, str], tags: Sequence[str]) -> DocPackag
         order=_int_value(meta.get("order")),
         category=_text(meta, "category"),
         category_order=_int_value(meta.get("category_order")),
+        overview=meta.get("overview", True) is not False,
     )
 
 
@@ -275,6 +279,7 @@ def _scan_pages(doc_path: Path, labels: Mapping[str, str], tags: Sequence[str]) 
                 path=relative.as_posix(),
                 title=_read_title(path, relative.as_posix(), labels),
                 order=0 if relative.as_posix() == "index.md" else DEFAULT_ORDER,
+                submenu=_read_submenu(path),
             )
         )
     return tuple(sorted(pages, key=_page_sort_key))
@@ -294,6 +299,27 @@ def _read_title(path: Path, relative: str, labels: Mapping[str, str]) -> str:
     except (OSError, UnicodeDecodeError):
         pass
     return _page_title_from_path(relative, labels)
+
+
+def _read_submenu(path: Path) -> str:
+    """读取页面 front matter 的 ``submenu``，用于侧栏二级分组。"""
+    try:
+        with path.open(encoding="utf-8") as handle:
+            if handle.readline().strip() != "---":
+                return ""
+            for _ in range(40):
+                line = handle.readline()
+                if not line or line.strip() == "---":
+                    break
+                name, separator, value = line.partition(":")
+                if separator and name.strip() == "submenu":
+                    text = value.strip()
+                    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+                        text = text[1:-1]
+                    return text
+    except (OSError, UnicodeDecodeError):
+        pass
+    return ""
 
 
 def _page_sort_key(page: DocPage) -> tuple[int, int, str]:

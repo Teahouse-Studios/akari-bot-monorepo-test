@@ -8,7 +8,11 @@
 
 <CommandUsage :usage="['emojimix', 'emojimix <emoji1> [<emoji2>]']" :params="['emoji1=参与合成的第一个 Emoji', 'emoji2=可省略，参与合成的另一个 Emoji']" permission="public" />
 
-合成两个 Emoji；省略参数时随机取一对可合成的 Emoji，只给一个时随机搭配另一半，也可写作 `emoji1+emoji2`。参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。任一参数不是 Emoji，或不在支持列表中时，返回不支持提示并列出具体的 Emoji；组合存在但图片缺失时返回未找到提示。
+- 合成两个 Emoji。
+- 省略参数时随机取一对可合成的 Emoji；只给一个时随机搭配另一半；也可写作 `emoji1+emoji2`。
+- 参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。
+- 任一参数不是 Emoji，或不在支持列表中时，返回不支持提示并列出具体的 Emoji。
+- 组合存在但图片缺失时返回未找到提示。
 
 <ChatExample
   :log="[

@@ -12,7 +12,7 @@ import re
 import shutil
 import textwrap
 import tomllib
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -210,6 +210,13 @@ def _locale_meta(doc_dir: Path, tag: str) -> tuple[str, str]:
     return _text(entry, "title"), _text(entry, "summary")
 
 
+def _package_entry(package: DocPackage) -> str:
+    # 没有概览页的包以第一页作为入口，供首页、分组页与顶栏链接复用。
+    if package.overview:
+        return "index.md"
+    return package.pages[0].path if package.pages else "index.md"
+
+
 def _copy_package(
     source: Path,
     target: Path,
@@ -268,7 +275,7 @@ def _copy_package(
                 page.write_text(text, encoding="utf-8")
             else:
                 shutil.copy2(path, page)
-    if "index.md" not in copied:
+    if package.overview and "index.md" not in copied:
         page = destination / "index.md"
         page.write_text(f"# {package.title}\n\n{package.summary or package.name}\n", encoding="utf-8")
 
@@ -370,7 +377,7 @@ def _write_index(source: Path, packages: Sequence[DocPackage], config: DocsConfi
         lines.extend([f"## {_group_title(group, locale.group_titles)}", ""])
         for package in items:
             summary = f"：{package.summary}" if package.summary else ""
-            lines.append(f"- [{package.title}]({_site_link(prefix, package.key, 'index.md')}){summary}")
+            lines.append(f"- [{package.title}]({_site_link(prefix, package.key, _package_entry(package))}){summary}")
         lines.append("")
     (source / "index.md").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -386,8 +393,12 @@ def _write_group_page(
     directory.mkdir(parents=True, exist_ok=True)
     prefix = _prefix_for(locale, config)
     lines = [f"# {_group_title(group, locale.group_titles)}", ""]
+    flattened = len(packages) == 1 and not packages[0].overview
     for package in packages:
-        lines.extend([f"## [{package.title}]({_site_link(prefix, package.key, 'index.md')})", ""])
+        if package.overview:
+            lines.extend([f"## [{package.title}]({_site_link(prefix, package.key, _package_entry(package))})", ""])
+        elif not flattened:
+            lines.extend([f"## {package.title}", ""])
         if package.summary:
             lines.extend([package.summary, ""])
         for page in package.pages:
@@ -551,20 +562,23 @@ def _locale_theme(
     locale = view.locale
     prefix = view.prefix
     nav = [
-        {"text": _group_title(group, locale.group_titles), "link": f"{prefix}/{items[0].key}/"}
+        {
+            "text": _group_title(group, locale.group_titles),
+            "link": _site_link(prefix, items[0].key, _package_entry(items[0])),
+        }
         for group, items in view.groups.items()
     ]
     sidebar: dict[str, list[dict[str, object]]] = {}
     for package in view.packages:
         items = _native_page_items(package, akari=bool(theme_key), labels=locale.labels, prefix=prefix)
-        sidebar[f"{prefix}/{package.key}/"] = [
-            {
-                "text": package.title,
-                "link": f"{prefix}/{package.key}/",
-                "collapsed": False,
-                "items": items,
-            }
-        ]
+        entry: dict[str, object] = {
+            "text": package.title,
+            "collapsed": False,
+            "items": items,
+        }
+        if package.overview:
+            entry["link"] = f"{prefix}/{package.key}/"
+        sidebar[f"{prefix}/{package.key}/"] = [entry]
     theme_config: dict[str, object] = {
         "siteTitle": locale.title or config.site.title,
         "nav": nav,
@@ -648,6 +662,8 @@ def _akari_sidebar(
 def _sidebar_children(
     packages: Sequence[DocPackage], config: DocsConfig, locale: DocsLocaleConfig, prefix: str
 ) -> list[dict[str, object]]:
+    if len(packages) == 1 and not packages[0].overview and not packages[0].category:
+        return list(_sidebar_package(packages[0], locale, prefix).get("items", []))
     categorized: dict[str, list[DocPackage]] = {}
     direct: list[DocPackage] = []
     for package in packages:
@@ -675,11 +691,37 @@ def _category_sort_key(item: tuple[str, list[DocPackage]]) -> tuple[int, str]:
     return (min(package.category_order for package in packages), category)
 
 
+def _page_menu_items(
+    pages: Sequence[DocPage], make_item: Callable[[DocPage], dict[str, object]]
+) -> list[dict[str, object]]:
+    """按页面的 ``submenu`` 生成平铺条目与二级分组，普通页面保持在前面。"""
+    direct: list[dict[str, object]] = []
+    submenus: dict[str, list[dict[str, object]]] = {}
+    for page in pages:
+        item = make_item(page)
+        if page.submenu:
+            submenus.setdefault(page.submenu, []).append(item)
+        else:
+            direct.append(item)
+    for title, items in submenus.items():
+        direct.append({"text": title, "collapsed": False, "items": items})
+    return direct
+
+
 def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str) -> dict[str, object]:
+    def page_item(page: DocPage) -> dict[str, object]:
+        return {"text": page.title, "link": _site_link(prefix, package.key, page.path)}
+
+    if not package.overview:
+        return {
+            "text": package.title,
+            "collapsed": False,
+            "items": _page_menu_items(package.pages, page_item),
+        }
     if _uses_parallel_tabs(package):
         tabs = _package_tabs(package, locale.labels, prefix)
         return {"text": package.title, "link": tabs[0]["link"], "tabs": tabs}
-    items = [{"text": page.title, "link": _site_link(prefix, package.key, page.path)} for page in package.pages]
+    items = _page_menu_items(package.pages, page_item)
     if not items:
         items = [{"text": locale.labels["overview"], "link": _site_link(prefix, package.key, "index.md")}]
     return {
@@ -692,7 +734,7 @@ def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str)
 
 def _uses_parallel_tabs(package: DocPackage) -> bool:
     # 模块统一使用平行页面；其他包只要提供 development.md 也按同一结构处理。
-    if len(package.pages) <= 1:
+    if not package.overview or len(package.pages) <= 1:
         return False
     return package.group == "module" or any(Path(page.path).name == "development.md" for page in package.pages)
 
@@ -703,7 +745,7 @@ def _package_tabs(package: DocPackage, labels: Mapping[str, str], prefix: str) -
         for page in package.pages
     ]
     if not tabs:
-        tabs = [{"text": labels["usage"], "link": _site_link(prefix, package.key, "index.md")}]
+        tabs = [{"text": labels["usage"], "link": _site_link(prefix, package.key, _package_entry(package))}]
     return tabs
 
 
@@ -715,13 +757,14 @@ def _native_page_items(
     if parallel:
         # Akari 主题用标签切换开发页，开发页不进入侧栏；其他主题保留全部页面。
         pages = [page for page in pages if Path(page.path).name != "development.md"]
-    items = [
-        {
+
+    def page_item(page: DocPage) -> dict[str, object]:
+        return {
             "text": _page_tab_title(page, labels) if parallel else page.title,
             "link": _site_link(prefix, package.key, page.path),
         }
-        for page in pages
-    ]
+
+    items = _page_menu_items(pages, page_item)
     if not items:
         label = labels["usage"] if parallel else labels["overview"]
         items = [{"text": label, "link": _site_link(prefix, package.key, "index.md")}]

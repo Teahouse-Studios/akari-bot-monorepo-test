@@ -2,7 +2,7 @@
 
 本文面向**使用旧版 AkariBot 的部署者**。旧版把机器人与全部模块放在同一个仓库里，靠 `git pull` 更新；新版把 core、模块与适配器拆成互相独立的分发包，用 `akaribot` 命令行工具管理实例。
 
-迁移可直接用 `akaribot migrate legacy <旧项目路径>` 完成（见下节）；下面另附手工步骤，供需要逐项控制或排查问题的场合使用。
+迁移可直接用 `akaribot migrate legacy <旧项目路径>` 完成（见下节）；下面另附手工步骤，供需要逐项控制或排查问题时使用。
 
 ## 变化概览
 
@@ -85,7 +85,7 @@ akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 
    额外要用的运行库（第三方 SDK、自己打的包）用 `akaribot venv add <需求串>` 装进实例环境：`--save`（缺省）同时记进 `akaribot.toml` 的 `runtime.requirements`，`venv recreate` 与 `venv adopt` 会按它补装；`--no-save` 只装进当前环境，重建后不保留。卸载用 `akaribot venv remove <分发名>`，`--no-save` 卸载但保留记录。界面环境页做同样的事，并列出环境里的**全部**已装包（含 httpx 这类传递依赖）与每条记录的去处。
 
-   要让实例随机器启动、崩了自动重启，先装常驻服务：`akaribot service install`（macOS 写 `~/Library/LaunchAgents`，Linux 写 systemd 用户单元），再用 `akaribot instance policy <名>--autostart --restart-on-crash` 逐实例开策略。服务启动时只恢复**开了开机自启**且上次在跑的实例，停电前在跑但没开自启的实例不会自己回来；崩溃重启是另一个独立开关。
+   要让实例随机器启动、崩了自动重启，先装常驻服务：`akaribot service install`（macOS 写 `~/Library/LaunchAgents`，Linux 写 systemd 用户单元），再用 `akaribot instance policy <名> --autostart --restart-on-crash` 逐实例开策略。服务启动时只恢复**开了开机自启**且上次在跑的实例，停电前在跑但没开自启的实例不会自己回来；崩溃重启是另一个独立开关。
 
 ## 同一个平台跑多个账号
 

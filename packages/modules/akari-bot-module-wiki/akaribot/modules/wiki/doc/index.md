@@ -1,6 +1,6 @@
 # wiki
 
-面向 MediaWiki 站点的综合工具包：查询页面与模板、按 InterWiki 跳转、自定义请求头与前缀、审核 Wiki API 地址、管理 Wiki 机器人账号、监控滥用日志与最近更改，以及订阅中文 Minecraft Wiki 的每周页面与茶馆周报。
+面向 MediaWiki 站点的工具包：查询页面与模板、按 InterWiki 跳转、自定义请求头与前缀、审核 Wiki API 地址、管理 Wiki 机器人账号、监控滥用日志与最近更改，以及订阅中文 Minecraft Wiki 的每周页面与茶馆周报。
 
 `wiki`、`ab`、`rc`、`newbie`、`user` 的查询使用当前场景设置的默认 Wiki；`wiki-audit` 与 `wiki-bot` 不依赖默认 Wiki。
 
@@ -197,13 +197,29 @@
 
 <CommandUsage usage="wiki style <mode>" :params="['mode=消息样式 text 或 card']" permission="admin" />
 
-切换 Wiki 消息样式，缺省为 `text`，仅在 QQ 群与 QQ 私聊注册。`card` 把页面回复渲染为图文卡片：标题取页面标题、摘要取页面描述，配图取页面代表图的 100 像素缩略图；页面没有代表图、查询目标带修订号或差异内容时卡片不带配图。卡片消息不支持按钮，`button` 预览模式因此回落为 `auto`。
+- 切换 Wiki 消息样式，缺省为 `text`，仅在 QQ 群与 QQ 私聊注册。
+- `card` 把页面回复渲染为图文卡片：标题取页面标题，摘要取页面描述，配图取页面代表图的 100 像素缩略图。
+- 页面没有代表图、查询目标带修订号或差异内容时，卡片不带配图。
+- 卡片消息不支持按钮，`button` 预览模式因此回落为 `auto`。
 
 <ChatExample
+  caption="切换后页面查询改用卡片消息；卡片消息不支持按钮，button 预览模式回落为 auto。"
   :log="[
     '用户：~wiki style card',
     '机器人：已切换为卡片消息样式。卡片消息不支持按钮，button 预览模式将回落为 auto（自动渲染）模式。',
   ]"
+/>
+
+<ChatExample
+  caption="卡片样式：查询「石头」时返回的图文卡片。"
+  :log="['用户：~wiki 石头']"
+  :card="{
+    title: '石头',
+    description: '石头（Stone）是在主世界中大量存在的方块。',
+    url: 'https://zh.minecraft.wiki/w/石头',
+    image: 'wiki-card-stone.png',
+    domain: 'zh.minecraft.wiki',
+  }"
 />
 
 ### `wiki set`
