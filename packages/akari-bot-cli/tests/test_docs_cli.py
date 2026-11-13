@@ -149,6 +149,7 @@ async def _test_list_json_contract():
             "lang": "zh-CN",
             "base": "/docs/",
             "logo": "",
+            "avatar": "",
             "favicon": "",
             "command_prefix": "",
         }
@@ -175,6 +176,7 @@ async def _test_list_json_contract():
             "category_order": 500,
             "doc_path": str(Path("/tmp/doc") / "demo"),
             "logo": "",
+            "avatar": "",
             "editable": False,
             "pages": [{"path": "index.md", "title": "概览", "order": 0, "description": "首页"}],
         }

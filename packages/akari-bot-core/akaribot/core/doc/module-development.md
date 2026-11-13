@@ -130,7 +130,7 @@ async def _(ctx): ...
 ## 常用工具
 
 - `CoolDown(key, msg, delay, whole_target=False)`：按用户或整个场景记录冷却，`check()` 返回剩余秒数。
-- `gained_petal()`、`lost_petal()`、`cost_petal()`、`sign_get_petal()`、`settle_petals()`：读写花瓣余额并在消息中提示。
+- `gained_petal()`、`lost_petal()`、`cost_petal()`、`sign_get_petal()`、`reset_petals_if_due()`：读写花瓣余额并在消息中提示。
 - `PlayState(game, msg)`：按会话保存小游戏状态，默认 `GAME_EXPIRED`（3600 秒）后过期，`running()` 以上下文管理器标记进行中。
 
 ## 运行期资源

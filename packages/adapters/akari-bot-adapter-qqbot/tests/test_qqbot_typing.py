@@ -12,8 +12,10 @@ from akaribot.adapters.qqbot.info import target_c2c_prefix, target_group_prefix
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.message.elements import I18NContextElement, ImageElement, PlainElement
 from akaribot.core.builtins.session.info import SessionInfo
+from akaribot.core.config.base import CoreConfig
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.config import mock_config
 
 # 压缩生产默认的等待秒数，使各用例得以在毫秒级跑完
 TEST_DELAY = 0.05
@@ -368,7 +370,7 @@ async def _test_group_typing_uses_emote_when_enabled() -> bool:
         return False
 
     with (
-        patch("akaribot.adapters.qqbot.context.CoreConfig", new=SimpleNamespace(use_emote=True)),
+        mock_config(CoreConfig, use_emote=True),
         patch(
             "akaribot.adapters.qqbot.context.Random.choice",
             return_value=TYPING_EMOTES[0],
@@ -401,7 +403,7 @@ async def _test_group_typing_uses_emote_when_enabled() -> bool:
 
 
 async def _test_group_typing_omits_emote_when_disabled() -> bool:
-    with patch("akaribot.adapters.qqbot.context.CoreConfig", new=SimpleNamespace(use_emote=False)), _Recorder() as rec:
+    with mock_config(CoreConfig, use_emote=False), _Recorder() as rec:
         async with _Session("typing-emote-disabled") as session:
             await QQBotContextManager.start_typing(session)
             if not await _wait_prompt_sent(rec):
@@ -456,7 +458,7 @@ async def _test_group_typing_preuploads_emote_immediately() -> bool:
     cm.context[session.session_id] = object()
     try:
         with (
-            patch("akaribot.adapters.qqbot.context.CoreConfig", new=SimpleNamespace(use_emote=True)),
+            mock_config(CoreConfig, use_emote=True),
             patch("akaribot.adapters.qqbot.context.Random.choice", return_value=TYPING_EMOTES[0]),
         ):
             await cm.start_typing(session)

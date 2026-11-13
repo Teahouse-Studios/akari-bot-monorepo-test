@@ -85,7 +85,8 @@ async def _ensure_channel_ids(ctx: MigrationContext) -> None:
         binds = await TargetUnionBind.filter(union_id=union_id).order_by("bound_at")
         for channel_id, bind in enumerate(binds, start=1):
             bind.channel_id = channel_id
-            await bind.save()
+            # 后续 revision 追加的列此时尚不存在，整行保存会因缺列被判为 partial。
+            await bind.save(update_fields=["channel_id"])
 
 
 async def _drop_legacy_bots_id() -> None:

@@ -13,6 +13,9 @@
 # 旧库升级用例的样本库：二进制且不可由当前代码生成，须随仓库分发
 !packages/akari-bot-core/fixtures/db/*.db
 
+# AkariBot I18N
+akari_bot_i18n/*
+
 # Python
 __pycache__/
 
@@ -105,6 +108,7 @@ packages/modules/*/akaribot/modules/phigros/assets/song_info.json
 /data/retired/*
 
 # WebUI
+/data/webui/*
 webui/*
 
 # ==========
@@ -116,6 +120,8 @@ packages/adapters/*/akaribot/adapters/test/*
 packages/modules/*/akaribot/modules/test/*
 
 # Test Files
+akari_test_config_*
+akari_test_union_merge_logs_*
 /test*.*
 /test/**
 !tester.py

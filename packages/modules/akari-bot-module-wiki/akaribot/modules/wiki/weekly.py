@@ -1,5 +1,4 @@
 import re
-from datetime import date
 from html import unescape
 from urllib import parse
 
@@ -7,6 +6,7 @@ import orjson
 
 from akaribot.core.api import platform_name_of
 from akaribot.core.api import Bot, MessageChain, Plain, Image, Url, I18NContext, module, Locale, get_url
+from akaribot.core.utils.timezone import core_today
 
 
 async def get_weekly(with_img=False, zh_tw=False):
@@ -45,7 +45,7 @@ async def get_weekly(with_img=False, zh_tw=False):
         if get_image.status:
             imglink = get_image.file
 
-    iso_year, iso_week, _ = date.today().isocalendar()
+    iso_year, iso_week, _ = core_today().isocalendar()
 
     msg_list.append(
         I18NContext(

@@ -25,6 +25,7 @@ from akaribot.core.config.network import proxy, ssl_verify
 from akaribot.core.i18n import safe_strftime
 from akaribot.core.logger import Logger
 from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.timezone import core_offset_text, core_tz
 
 if TYPE_CHECKING:
     from akaribot.core.builtins.session.info import SessionInfo
@@ -283,58 +284,26 @@ class FormattedTimeElement(BaseElement):
         """
         ftime_template = []
         if session_info:
-            dt = datetime.fromtimestamp(self.timestamp, UTC) + session_info.timezone_offset
+            locale = session_info.locale
+            tz = session_info.display_tz
+            tz_label = session_info.display_tz_label
+            date_key = "time.date.simple.format" if self.simple else "time.date.format"
+            time_key = "time.time.format" if self.seconds else "time.time.nosec.format"
+        else:
+            locale = None
+            tz = core_tz()
+            tz_label = core_offset_text()
+            date_key = "%Y-%m-%d" if self.simple else "%B %d, %Y"
+            time_key = "%H:%M:%S" if self.seconds else "%H:%M"
 
-            if self.date:
-                if self.simple:
-                    ftime_template.append(session_info.locale.t("time.date.simple.format"))
-                else:
-                    ftime_template.append(session_info.locale.t("time.date.format"))
-
-            if self.time:
-                if self.seconds:
-                    ftime_template.append(session_info.locale.t("time.time.format"))
-                else:
-                    ftime_template.append(session_info.locale.t("time.time.nosec.format"))
-
-            if self.timezone:
-                if session_info._tz_offset == "+0":
-                    ftime_template.append("(UTC)")
-                else:
-                    ftime_template.append(f"(UTC{session_info._tz_offset})")
-
-            return safe_strftime(dt, " ".join(ftime_template))
-
+        dt = datetime.fromtimestamp(self.timestamp, UTC).astimezone(tz)
         if self.date:
-            if self.simple:
-                ftime_template.append("%Y-%m-%d")
-            else:
-                ftime_template.append("%B %d, %Y")
-
+            ftime_template.append(locale.t(date_key) if locale else date_key)
         if self.time:
-            if self.seconds:
-                ftime_template.append("%H:%M:%S")
-            else:
-                ftime_template.append("%H:%M")
-
+            ftime_template.append(locale.t(time_key) if locale else time_key)
         if self.timezone:
-            tz_template = "(UTC)"
-            offset = datetime.now().astimezone().utcoffset()
-            if offset:
-                total_min = int(offset.total_seconds() // 60)
-                sign = "+" if total_min >= 0 else "-"
-                abs_min = abs(total_min)
-                hours = abs_min // 60
-                mins = abs_min % 60
-
-                if mins == 0:
-                    tz_template = f"(UTC{sign}{hours})" if hours != 0 else "(UTC)"
-                else:
-                    tz_template = f"(UTC{sign}{hours}:{mins:02d})"
-
-            ftime_template.append(tz_template)
-
-        return safe_strftime(datetime.fromtimestamp(self.timestamp), " ".join(ftime_template))
+            ftime_template.append("(UTC)" if tz_label == "+0" else f"(UTC{tz_label})")
+        return safe_strftime(dt, " ".join(ftime_template))
 
     def kecode(self, session_info: SessionInfo | None = None):
         """转换为 KE 码格式。
@@ -734,6 +703,75 @@ class MentionElement(BaseElement):
         return f"<AT:{self.client}|{self.id}>"
 
 
+@define
+class CardElement(BaseElement):
+    """图文卡片消息元素。"""
+
+    title: str | None = None
+    description: str | None = None
+    url: str | None = None
+    pic_url: str | None = None
+
+    @classmethod
+    def assign(
+        cls,
+        title: str | None = None,
+        description: str | None = None,
+        url: str | None = None,
+        pic_url: str | None = None,
+    ):
+        """创建图文卡片消息。"""
+        return deepcopy(
+            cls(
+                title=str(title) if title is not None else None,
+                description=str(description) if description is not None else None,
+                url=str(url) if url is not None else None,
+                pic_url=str(pic_url) if pic_url is not None else None,
+            )
+        )
+
+    def to_card(self) -> dict[str, Any]:
+        """转换为 QQ Bot 图文卡片载荷。"""
+        content = {
+            key: value
+            for key, value in (
+                ("title", self.title),
+                ("description", self.description),
+                ("url", self.url),
+                ("pic_url", self.pic_url),
+            )
+            if value is not None
+        }
+        return {"type": "tuwen", "content": content}
+
+    def to_message_chain(self) -> list[BaseElement]:
+        """在不支持卡片的平台上转换为可读消息。"""
+        values: list[BaseElement] = [
+            PlainElement.assign(text, disable_joke=True) for text in (self.title, self.description) if text
+        ]
+        if self.url:
+            values.append(URLElement.assign(self.url))
+        return values
+
+    def kecode(self):
+        """转换为 KE 码格式。"""
+        params = [
+            f"{key}={parse.quote(value, safe='')}"
+            for key, value in (
+                ("title", self.title),
+                ("description", self.description),
+                ("url", self.url),
+                ("pic_url", self.pic_url),
+            )
+            if value is not None
+        ]
+        return f"[KE:card,{','.join(params)}]" if params else "[KE:card]"
+
+    def __str__(self):
+        """返回 KE 码格式。"""
+        return self.kecode()
+
+
 def _as_inner_element(value: str | PlainElement | I18NContextElement) -> PlainElement | I18NContextElement:
     # 将指令操作的文案入参规范化为消息元素。
     if isinstance(value, str):
@@ -953,6 +991,7 @@ class ButtonElement(BaseElement):
     reply_id: str | None = None
     permission: ButtonPermission = ButtonPermission.OWNER
     click_limit: int | None = 1
+    small: bool = True
 
     @classmethod
     def assign(
@@ -962,6 +1001,7 @@ class ButtonElement(BaseElement):
         reply_id: str | None = None,
         permission: ButtonPermission | str | bool | None = ButtonPermission.OWNER,
         click_limit: int | None = 1,
+        small: bool = True,
     ):
         """创建单个按钮，show 为展示文本，value 为点击数据，permission 可设为 ``"all"``。"""
         payload = ButtonPayload.parse(value, reply_id, permission, click_limit)
@@ -972,6 +1012,7 @@ class ButtonElement(BaseElement):
                 reply_id=payload.reply_id,
                 permission=payload.permission,
                 click_limit=payload.click_limit,
+                small=bool(small),
             )
         )
 
@@ -991,6 +1032,8 @@ class ButtonElement(BaseElement):
             params.append("permission=all")
         if self.click_limit != 1:
             params.append(f"click_limit={self.click_limit or 0}")
+        if not self.small:
+            params.append("small=0")
         return f"[KE:button,{','.join(params)}]"
 
     def __str__(self):
@@ -1048,6 +1091,7 @@ class ButtonFrameElement(BaseElement):
                         else {}
                     ),
                     **({"click_limit": button.click_limit or 0} if button.click_limit != 1 else {}),
+                    **({"small": False} if not button.small else {}),
                 }
                 for button in row.buttons
             ]
@@ -1251,6 +1295,7 @@ __all__ = [
     "EmbedFieldElement",
     "EmbedElement",
     "MentionElement",
+    "CardElement",
     "ActionTextElement",
     "ButtonPermission",
     "normalize_button_click_limit",

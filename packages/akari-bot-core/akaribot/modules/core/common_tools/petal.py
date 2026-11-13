@@ -4,20 +4,13 @@ from akaribot.core.builtins.message.internal import ActionText, I18NContext
 from akaribot.core.component import module
 from akaribot.core.config.base import CoreConfig
 from akaribot.core.database.models import SenderUnionInfo
-from akaribot.core.scheduler import CronTrigger
 from akaribot.core.utils.petal import sign_get_petal, cost_petal
-from akaribot.core.utils.petal import settle_petals
 from akaribot.modules.core.common_tools._bud import claim_bud, create_bud, find_bud, release_buds
 
 
 petal_ = module(
     "petal", alias={"petals": "petal", "sign": "petal sign"}, base=True, doc=True, load=CoreConfig.enable_petal
 )
-
-
-@petal_.schedule(CronTrigger.from_crontab(CoreConfig.petal_reset_crontab))
-async def _reset_petals():
-    await settle_petals()
 
 
 @petal_.command("{{I18N:core.help.petal}}")

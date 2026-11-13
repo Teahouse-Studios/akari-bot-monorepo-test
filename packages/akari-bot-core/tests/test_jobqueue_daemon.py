@@ -13,6 +13,7 @@ import bot as daemon
 from akaribot.core.config.jobqueue import JobQueueConfig, JobQueueSecretConfig
 from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
 from akaribot.testing import func_case, Tester
+from akaribot.testing.mock.config import mock_config
 
 
 class _FakeEvent:
@@ -120,8 +121,8 @@ async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
         with (
             patch.object(daemon.multiprocessing, "get_context", return_value=context),
             patch.object(PackageRegistry, "adapters", side_effect=_fake_adapters),
-            # 实例发现改由 bot_* 配置表驱动，而合成适配器没有配置表。本用例只验证守护进程
-            # 的编排顺序，直接给出一个已启用实例，不为它铺一份配置。
+            # 实例发现由 bot_* 配置表驱动，合成适配器没有配置表。本用例只验证守护进程的
+            # 编排顺序，直接给出一个已启用实例，不为它铺一份配置。
             patch.object(
                 daemon,
                 "discover_adapter_instances",
@@ -134,13 +135,16 @@ async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
                     )
                 ],
             ),
-            patch.object(JobQueueConfig, "jobqueue_backend", backend),
-            patch.object(JobQueueConfig, "jobqueue_websocket_mode", mode),
-            patch.object(JobQueueConfig, "jobqueue_websocket_url", "ws://127.0.0.1:8765/jobqueue"),
-            patch.object(JobQueueConfig, "jobqueue_websocket_queue_size", 1000),
-            patch.object(JobQueueConfig, "jobqueue_websocket_max_message_bytes", 1048576),
-            patch.object(JobQueueConfig, "jobqueue_websocket_command_timeout", 10),
-            patch.object(JobQueueSecretConfig, "jobqueue_websocket_token", ""),
+            mock_config(
+                JobQueueConfig,
+                jobqueue_backend=backend,
+                jobqueue_websocket_mode=mode,
+                jobqueue_websocket_url="ws://127.0.0.1:8765/jobqueue",
+                jobqueue_websocket_queue_size=1000,
+                jobqueue_websocket_max_message_bytes=1048576,
+                jobqueue_websocket_command_timeout=10,
+            ),
+            mock_config(JobQueueSecretConfig, jobqueue_websocket_token=""),
         ):
             try:
                 await daemon.run_bot()

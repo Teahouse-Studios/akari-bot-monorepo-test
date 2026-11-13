@@ -18,6 +18,7 @@ members = [
     "akari-bot-adapter-milky",
     "akari-bot-adapter-onebot",
     "akari-bot-adapter-qqbot",
+    "akari-bot-adapter-satori",
     "akari-bot-adapter-telegram",
     "akari-bot-adapter-web",
     "akari-bot-assets-brand",
@@ -381,7 +382,24 @@ requires-dist = [
     { name = "akari-bot-core", extras = ["s3"], editable = "packages/akari-bot-core" },
     { name = "attrs", specifier = ">=26.1.0" },
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
-    { name = "qq-botpy-sdk", specifier = "==2.2.1" },
+    { name = "qq-botpy-sdk", specifier = "==2.3.0" },
+]
+
+[[package]]
+name = "akari-bot-adapter-satori"
+version = "0.1.0"
+source = { editable = "packages/adapters/akari-bot-adapter-satori" }
+dependencies = [
+    { name = "akari-bot-core" },
+    { name = "attrs" },
+    { name = "satori-python-client" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "akari-bot-core", editable = "packages/akari-bot-core" },
+    { name = "attrs", specifier = ">=26.1.0" },
+    { name = "satori-python-client", specifier = ">=1.3.11" },
 ]
 
 [[package]]
@@ -1957,6 +1975,18 @@ wheels = [
 ]
 
 [[package]]
+name = "creart"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-metadata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fa/41/3c649c472a5c6a2011403f33b9105d0c7446551a38df6520347d1b46aaeb/creart-0.3.0.tar.gz", hash = "sha256:39fea77476d26d2bd5891aa3b5f16cab5567b37b855483e37f094ba005bf0d1f", size = 3427, upload-time = "2023-08-05T09:46:17.044Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/85/139928c82a270ab0326c6cdef7809b665bd0b4d5295f75eec6ac1e52b4e6/creart-0.3.0-py3-none-any.whl", hash = "sha256:43074f6f59430f41b72d3c04ba4d268af0f32842fbc94bbda4b81ae464be0ee1", size = 4787, upload-time = "2023-08-05T09:46:15.675Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "50.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2444,6 +2474,19 @@ wheels = [
 ]
 
 [[package]]
+name = "graia-amnesia"
+version = "0.11.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "launart" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/24/72/55c7b64d4c420b36dace78a5c9c3ee08eaa46539376a1e0496058399913a/graia_amnesia-0.11.6.tar.gz", hash = "sha256:56969bdcdc29b96a76a253d4330f57e9e4cf120eac3b4661ec1eb09862b522b7", size = 21081, upload-time = "2026-10-10T02:49:18.428Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/85/d994bd88ef584f79d8d65c804ea750361b5a9827e4a6e3237ccbf99a73ce/graia_amnesia-0.11.6-py3-none-any.whl", hash = "sha256:af678c15f21e8a5e209fd7925af6366ac340d1e7cddee17abd40eef37eafb2a8", size = 27184, upload-time = "2026-10-10T02:49:17.327Z" },
+]
+
+[[package]]
 name = "graphql-core"
 version = "3.2.7"
 source = { registry = "https://pypi.org/simple" }
@@ -2693,6 +2736,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5f/f7/abb373e5757eaec4b922b92f97ec8d6d7e057cf06778247604fbc4e7c3f3/idna-3.19.tar.gz", hash = "sha256:5e0811a4383b21dc5838069f801c4fb62113b7447663d2530d2bd6e77b49bf15", size = 215237, upload-time = "2026-08-18T05:14:24.27Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/b0/0e52c878c53f245edd3a11020f20979b3f490f245af532c7cae3027754b5/idna-3.19-py3-none-any.whl", hash = "sha256:815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4", size = 68550, upload-time = "2026-08-18T05:14:22.343Z" },
+]
+
+[[package]]
+name = "importlib-metadata"
+version = "10.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lazy-importer", marker = "python_full_version < '3.15'" },
+    { name = "zipp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/91/0ef39e4ef4407de276289a3759977ac3a8cc546f59c55d725750eae3f41b/importlib_metadata-10.2.0.tar.gz", hash = "sha256:9413a2029fd9ca5669d27f1386071bbfe3c7ebca0545692ec975088241fe1d79", size = 72457, upload-time = "2026-11-09T19:09:10.915Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/61/0c0fae37eb561d8fddb788cbae0f227051628d70d67498a8a116c1f547d7/importlib_metadata-10.2.0-py3-none-any.whl", hash = "sha256:c7a4bf1c7479601f6b8e437cfc14f4f77028ba62a8f34ae95cd93d9774dfba51", size = 34109, upload-time = "2026-11-09T19:09:09.942Z" },
 ]
 
 [[package]]
@@ -2956,6 +3012,29 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f8/4b/301b7452c55fdfbf33d89396538fd0b321688b62977c8d1878d91613bf85/langconv-0.4.0.tar.gz", hash = "sha256:50740a4e1ea5ed29b4a1e0593dfa2147db759ee1b248f4740d95e1fcf6703b95", size = 161315, upload-time = "2026-10-13T04:47:59.432Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/74/4b/392253c36670be6b41821e46f4cb259086c518b96319eb4e0e60201bdb92/langconv-0.4.0-py3-none-any.whl", hash = "sha256:e2482011b3842f1fd90049177458564c1a7986a005a02af01c78ca07f56ff85a", size = 158981, upload-time = "2026-10-13T04:47:57.577Z" },
+]
+
+[[package]]
+name = "launart"
+version = "0.8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "creart" },
+    { name = "loguru" },
+    { name = "statv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/0f/2aa5f2fedf9650ab07bd9f9fd714ca403481fb1db33972def1bc98780d35/launart-0.8.2.tar.gz", hash = "sha256:b1ba35d79a7cb6e3cb09195ef3b7cdf47ecaefb7838020607a0c371e188cc96c", size = 14077, upload-time = "2023-11-12T14:32:08.994Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/b9/387b759164a13152a96e060ccf18b596f83025981ac84dc68efa0ef5cac6/launart-0.8.2-py3-none-any.whl", hash = "sha256:081bcfdeb6db747cd96e479dae23c3c918ad4d570c4078a8adffcf81aeecea0c", size = 12838, upload-time = "2023-11-12T14:31:59.134Z" },
+]
+
+[[package]]
+name = "lazy-importer"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/23/d2c8308466a6831043ac3518e480c2e1a06b21a13e0a8f6542ab29cf592a/lazy_importer-0.1.0.tar.gz", hash = "sha256:b2e296716ce015c0cd80e57b940e52727c5b934b34b8656d5ce06bdd0ee5fbdd", size = 84008, upload-time = "2026-10-20T00:36:58.369Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/28/7ded071d0975dcc6d5d106ffbf7b3ca420f7caa3b8a235fa604b6e37032a/lazy_importer-0.1.0-py3-none-any.whl", hash = "sha256:bd93fab7bef18e842eea02b839410954d37889140dc64ca4d9680aec6880c739", size = 12580, upload-time = "2026-10-20T00:36:57.176Z" },
 ]
 
 [[package]]
@@ -4284,7 +4363,7 @@ wheels = [
 
 [[package]]
 name = "qq-botpy-sdk"
-version = "2.2.1"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
@@ -4293,9 +4372,9 @@ dependencies = [
     { name = "httpx-ws" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/7f/585bec64cee2ad648a91ed50330e3e2e832777f1aef4dd638386603df2a1/qq_botpy_sdk-2.2.1.tar.gz", hash = "sha256:9a34ff8e8617a9364598e8470067dc1b66ca532895d4268cdce335340758c159", size = 166106, upload-time = "2026-10-22T07:10:35.185Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/19/9aef7717b2e37b2bf523eded67ded0467bc42751bf37ec6bd0904084345b/qq_botpy_sdk-2.3.0.tar.gz", hash = "sha256:4fb934ebcfa7d01fed04a15b2f4c6d07b5ab6b8dd3968e1022820cb6bcc4585c", size = 167514, upload-time = "2026-11-12T01:00:24.328Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/fe/d28d1fecc64e398db183d7e87553993666b8413727d04efeaa9a58d8b9f5/qq_botpy_sdk-2.2.1-py3-none-any.whl", hash = "sha256:233229f23cde498aef384561e08920136b5e0d6b242967712328bc984801760a", size = 195957, upload-time = "2026-10-22T07:10:33.647Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/49/3c42f8250fc3f76723c9fa8ca3afbe945d15d22ace178e9c016ff3a4a673/qq_botpy_sdk-2.3.0-py3-none-any.whl", hash = "sha256:6002e49a2d94fd5c174e850807bb4d6eb0b0c2815e2d94fe672e5c40e3d3ebd3", size = 197374, upload-time = "2026-11-12T01:00:22.643Z" },
 ]
 
 [[package]]
@@ -4669,6 +4748,35 @@ wheels = [
 ]
 
 [[package]]
+name = "satori-python-client"
+version = "1.3.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "graia-amnesia" },
+    { name = "launart" },
+    { name = "loguru" },
+    { name = "satori-python-core" },
+    { name = "yarl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/d4/f50625771f86b2d1550591d4cc86a5903628d76ddac5b7643897ca6094bd/satori_python_client-1.3.11.tar.gz", hash = "sha256:5015efa3f2a0e3f4182620f50b2f4170547c98496e832af164d326fa854d072d", size = 21153, upload-time = "2026-10-26T03:22:14.571Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/6d/831a61a4193f914b10ae0c5f3d66b21be8858f22b6335a0dccf86f3d9aa2/satori_python_client-1.3.11-py3-none-any.whl", hash = "sha256:390e6b024d572f768131281db50f25ce3ae17cfa495985bfbfc12b8dd2049206", size = 24191, upload-time = "2026-10-26T03:22:13.583Z" },
+]
+
+[[package]]
+name = "satori-python-core"
+version = "1.3.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b4/78/1cc3236e22da7f8bfe477b243a2ddaa000749a8d8e9cfaec49be1ed60035/satori_python_core-1.3.11.tar.gz", hash = "sha256:3a13537f80dae47cee4800642741a2947ccce1b471b6bb18fbbf88238f55a76b", size = 24203, upload-time = "2026-10-26T03:22:02.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/a9/6b6be8b5c9c8bbf714c1795aefb08f2d28e886c4bafb65711c064107e168/satori_python_core-1.3.11-py3-none-any.whl", hash = "sha256:05e796df4b548667d9b12dcebb3b8f2bb8d3b6c43ef2a3fa7a066d931af32eab", size = 25440, upload-time = "2026-10-26T03:22:01.371Z" },
+]
+
+[[package]]
 name = "sgmllib3k"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4742,6 +4850,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/0d/13d1d239a25cbfb19e740db83143e95c772a1fe10202dda4b76792b114dd/starlette-0.52.1-py3-none-any.whl", hash = "sha256:0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74", size = 74272, upload-time = "2026-01-18T13:34:09.188Z" },
+]
+
+[[package]]
+name = "statv"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/34/55f3fde006d8d6c1f8d2422856360a9fde6a3f81dcd79f9203cfeac5b9dc/statv-0.3.2.tar.gz", hash = "sha256:fb4df2a37bf7a792e36a6e657c74cbdef9e2cdb8de3a0762b28b35c9e13f0fdd", size = 4345, upload-time = "2022-08-12T12:09:37.826Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/94/90af52fbb882f7d5a86f75b8f151fabb3540a01b592d5c12646b55712266/statv-0.3.2-py3-none-any.whl", hash = "sha256:32e430b21ab6a62695c67ab6cae3dba6e01e9c3fdbc9344e3236ad7a1f51d0c7", size = 4696, upload-time = "2022-08-12T12:09:36.548Z" },
 ]
 
 [[package]]
@@ -5340,4 +5457,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/86/0f0dccb6e59a9e7f122c5afd43568b1d31b8ab7dda5f1b01fb5c7025c9a9/yarl-1.22.0-cp314-cp314t-win_amd64.whl", hash = "sha256:9fb17ea16e972c63d25d4a97f016d235c78dd2344820eb35bc034bc32012ee27", size = 96292, upload-time = "2025-10-06T14:12:15.398Z" },
     { url = "https://files.pythonhosted.org/packages/48/b7/503c98092fb3b344a179579f55814b613c1fbb1c23b3ec14a7b008a66a6e/yarl-1.22.0-cp314-cp314t-win_arm64.whl", hash = "sha256:9f6d73c1436b934e3f01df1e1b21ff765cd1d28c77dfb9ace207f746d4610ee1", size = 85171, upload-time = "2025-10-06T14:12:16.935Z" },
     { url = "https://files.pythonhosted.org/packages/73/ae/b48f95715333080afb75a4504487cbe142cae1268afc482d06692d605ae6/yarl-1.22.0-py3-none-any.whl", hash = "sha256:1380560bdba02b6b6c90de54133c81c9f2a453dee9912fe58c1dcced1edb7cff", size = 46814, upload-time = "2025-10-06T14:12:53.872Z" },
+]
+
+[[package]]
+name = "zipp"
+version = "4.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/05/ba1458dee0ac485b2a01071c1b88f5199fe878a485df482e10e1ef2205cc/zipp-4.1.2.tar.gz", hash = "sha256:cf474b90b07ea932637e17c6b9479de2b2882900b0d311bdaf4f5c000a15a97f", size = 27864, upload-time = "2026-10-21T18:57:04.743Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl", hash = "sha256:b30cb6cd253122169c47de245ca24a86bac2a5d3802ba15bf7ba6414eb9e144d", size = 10581, upload-time = "2026-10-21T18:57:03.79Z" },
 ]

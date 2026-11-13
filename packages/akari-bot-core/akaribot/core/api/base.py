@@ -35,9 +35,11 @@ __all__ = [
     "ButtonElement",
     "ButtonFrame",
     "ButtonFrameElement",
+    "Card",
     "ButtonPayload",
     "ButtonPermission",
     "ButtonRows",
+    "CardElement",
     "CFGManager",
     "Chainable",
     "CommandMeta",
@@ -200,7 +202,6 @@ __all__ = [
     "normalize_button_click_limit",
     "on_bot_config",
     "on_module_config",
-    "parse_time_string",
     "patch_url",
     "post_url",
     "proxy",
@@ -215,7 +216,7 @@ __all__ = [
     "run_sys_command",
     "send_report",
     "send_email",
-    "settle_petals",
+    "reset_petals_if_due",
     "should_yield_channel",
     "sign_get_petal",
     "ssl_verify",
@@ -263,7 +264,7 @@ try:
     from akaribot.core.utils.bash import run_sys_command
     from akaribot.core.utils.cache import random_cache_path
     from akaribot.core.utils.container import ExpiringTempDict, TokenBucket
-    from akaribot.core.utils.func import chunk_list, is_float, is_int, parse_time_string, truncate_text
+    from akaribot.core.utils.func import chunk_list, is_float, is_int, truncate_text
     from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 
     # 机器人与会话：模块函数的入参与运行环境。
@@ -300,6 +301,7 @@ try:
         ButtonPayload,
         ButtonPermission,
         ButtonRows,
+        CardElement,
         EmbedElement,
         EmbedFieldElement,
         FormattedTimeElement,
@@ -319,6 +321,7 @@ try:
         Audio,
         Button,
         ButtonFrame,
+        Card,
         Embed,
         EmbedField,
         FormattedTime,
@@ -397,7 +400,7 @@ try:
     )
     from akaribot.core.utils.image import cb64imglst, get_fontsize, msgchain2image, svg_render
     from akaribot.core.utils.image_table import ImageTable, image_table_render
-    from akaribot.core.utils.petal import cost_petal, gained_petal, lost_petal, settle_petals, sign_get_petal
+    from akaribot.core.utils.petal import cost_petal, gained_petal, lost_petal, reset_petals_if_due, sign_get_petal
     from akaribot.core.utils.platform_scope import platform_name_of
     from akaribot.core.utils.random import Random, SecureRandom
     from akaribot.core.utils.retired import (
@@ -459,6 +462,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "ButtonPayload",
         "ButtonPermission",
         "ButtonRows",
+        "CardElement",
         "EmbedElement",
         "EmbedFieldElement",
         "FormattedTimeElement",
@@ -478,6 +482,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
         "Audio",
         "Button",
         "ButtonFrame",
+        "Card",
         "Embed",
         "EmbedField",
         "FormattedTime",
@@ -570,7 +575,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     "akaribot.core.utils.cooldown": ("CoolDown",),
     "akaribot.core.utils.dirty_check": ("check", "check_bool", "rickroll"),
     "akaribot.core.utils.font": ("FontNotFoundError", "find_font"),
-    "akaribot.core.utils.func": ("chunk_list", "is_float", "is_int", "parse_time_string", "truncate_text"),
+    "akaribot.core.utils.func": ("chunk_list", "is_float", "is_int", "truncate_text"),
     "akaribot.core.utils.game": ("GAME_EXPIRED", "PlayState"),
     "akaribot.core.utils.http": (
         "delete_url",
@@ -584,7 +589,7 @@ LAZY_MODULES: dict[str, tuple[str, ...]] = {
     ),
     "akaribot.core.utils.image": ("cb64imglst", "get_fontsize", "msgchain2image", "svg_render"),
     "akaribot.core.utils.image_table": ("ImageTable", "image_table_render"),
-    "akaribot.core.utils.petal": ("cost_petal", "gained_petal", "lost_petal", "settle_petals", "sign_get_petal"),
+    "akaribot.core.utils.petal": ("cost_petal", "gained_petal", "lost_petal", "reset_petals_if_due", "sign_get_petal"),
     "akaribot.core.utils.platform_scope": ("platform_name_of",),
     "akaribot.core.utils.random": ("Random", "SecureRandom"),
     "akaribot.core.utils.retired": (

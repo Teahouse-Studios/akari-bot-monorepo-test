@@ -16,7 +16,15 @@ from akaribot.modules.wiki.config import WikiConfig
 from . import wiki
 from .database.models import WikiTargetInfo
 from .utils.wikilib import WikiLib
-from .wiki import WIKI_RENDER_MODE_AUTO, WIKI_RENDER_MODE_BUTTON, WIKI_RENDER_MODE_KEY, WIKI_RENDER_MODE_OFF
+from .wiki import (
+    WIKI_MESSAGE_STYLE_CARD,
+    WIKI_MESSAGE_STYLE_KEY,
+    WIKI_MESSAGE_STYLE_TEXT,
+    WIKI_RENDER_MODE_AUTO,
+    WIKI_RENDER_MODE_BUTTON,
+    WIKI_RENDER_MODE_KEY,
+    WIKI_RENDER_MODE_OFF,
+)
 
 wiki_allowlist_url = WikiConfig.wiki_allowlist_url
 
@@ -34,6 +42,20 @@ async def _(msg: Bot.MessageSession, mode: str):
         await msg.finish(I18NContext("wiki.message.render.invalid"))
     if await msg.session_info.target_union_info.edit_target_data(WIKI_RENDER_MODE_KEY, mode):
         await msg.finish(I18NContext(f"wiki.message.render.{mode}"))
+    await msg.finish(I18NContext("message.failed"))
+
+
+@wiki.command(
+    "style <mode> {{I18N:wiki.help.style}}",
+    required_admin=True,
+    available_for=["QQBot|Group", "QQBot|C2C"],
+)
+async def _(msg: Bot.MessageSession, mode: str):
+    mode = mode.casefold()
+    if mode not in {WIKI_MESSAGE_STYLE_TEXT, WIKI_MESSAGE_STYLE_CARD}:
+        await msg.finish(I18NContext("wiki.message.style.invalid"))
+    if await msg.session_info.target_union_info.edit_target_data(WIKI_MESSAGE_STYLE_KEY, mode):
+        await msg.finish(I18NContext(f"wiki.message.style.{mode}"))
     await msg.finish(I18NContext("message.failed"))
 
 

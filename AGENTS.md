@@ -34,6 +34,12 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 
 测试数量是维护成本：每个用例都要随代码演进同步修改，冗余用例会拖慢 CI 并稀释真正的失败信号。**新增测试前先问「删掉它，哪个真实缺陷会漏过去」**，答不出来就不要写。
 
+- 本地只跑与改动相关的入口（`tests/run_one.py <包内用例路径> [入口名]`），全量留给 CI。
+- **`CI=1` 必需**：无 `Expectation` 的用例否则走 `input()` 等人工复核；`CI=1` 下转为 SKIP 并输出 `junit.xml`。
+- 测试不读本机配置：`akaribot.testing` 把配置模板铺到临时目录（`AKARI_CONFIG_PATH`）再叠加测试覆盖项。
+- 需要非默认配置值时用 `mock_config(CoreConfig, 字段=值)`：进程内覆盖，不读写配置文件，字段须是模板类声明过的项。
+- 测试走 `akaribot/testing/mock/parser.py` 的简化解析器：不检查模块是否启用，并把测试发送者建成 superuser——「测试通过」不代表命令在真实平台可达。HTTP 由 `tests/fixtures/http/` 录制回放。
+
 - **先搜后写。** 新增前用 `grep` 查现有测试是否已覆盖同一行为；已覆盖则扩展原用例，不要另起一个。
 - **改行为就替换旧测试**，不要新旧并存；**删功能必须同时删对应测试与 `tests/fixtures/` 中不再被引用的 fixture**。
 - **只断言可观察行为**：返回值、发出的消息、持久化结果、权限与安全判定。不要断言 mock 的调用次数、私有属性与私有函数、日志原文。
@@ -165,6 +171,13 @@ packages/
 - 全量测试的失败集合须与基线**逐名一致**（`tools/test_baseline.txt`，用
   `tools/check_test_baseline.py` 对拍）。
 - 内部依赖约束必须**字面一致**（`akari-bot-core>=0.1.0,<1.0`）；官方模块包之间不得互相依赖。
+- Ruff：行宽 120、双引号，忽略 E402/F405/F403/E741/E721。
+- 中文排版：中英文之间加空格、全角标点、称呼用户用「你」、机器人自称用「机器人」而非「我」、
+  第三人称用「它」。
+- 默认命令前缀 `~` / `～`。
+- **获取时间统一走 `akaribot.core.utils.timezone` 或 `SessionInfo.now()` / `today()`**：业务代码中
+  不得直接使用 `datetime.datetime.now()`、`date.today()`、`time.localtime()`；面向用户展示用
+  `msg.format_time()` / `FormattedTime`。
 
 ## 陷阱
 

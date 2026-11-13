@@ -45,6 +45,8 @@ EXPECTED_WORDING = (
     ("Telegram|Supergroup", False, "超级群组"),
     ("Telegram|Channel", False, "频道"),
     ("Telegram|Private", True, "私聊"),
+    ("Satori|Channel", False, "频道"),
+    ("Satori|Private", True, "私聊"),
     ("Matrix|Room", False, "聊天室"),
     ("Web|Console", True, "控制台"),
     ("TEST|Console", False, "场景"),
@@ -92,7 +94,7 @@ def _test_candidate_chain_building():
 
 def _test_platform_wording():
     for target_from, is_private, expected in EXPECTED_WORDING:
-        if _wording(target_from, is_private) != f"查看当前{expected}的消息通道。":
+        if _wording(target_from, is_private) != f"查看当前{expected}的消息通道与主动推送优先级。":
             return False
     return True
 
@@ -102,7 +104,7 @@ def _test_unscoped_locale_falls_back():
     return (
         unscoped.term_scoped is False
         and unscoped.term_candidates is None
-        and unscoped.t(TERM_DOC_KEY) == "查看当前场景的消息通道。"
+        and unscoped.t(TERM_DOC_KEY) == "查看当前场景的消息通道与主动推送优先级。"
     )
 
 
@@ -133,7 +135,7 @@ async def _test_scope_survives_serialization():
     return (
         raw["locale"]["term_candidates"] == ["qq.group", "qq"]
         and restored_locale.term_scoped is True
-        and restored_locale.t(TERM_DOC_KEY) == "查看当前群聊的消息通道。"
+        and restored_locale.t(TERM_DOC_KEY) == "查看当前群聊的消息通道与主动推送优先级。"
     )
 
 
@@ -154,7 +156,7 @@ async def _test_derive_private_session_refreshes_terms():
     return (
         private_session.is_private is True
         and private_session.locale.term_candidates == ("qq.private", "private", "qq")
-        and private_session.locale.t(TERM_DOC_KEY) == "查看当前私聊的消息通道。"
+        and private_session.locale.t(TERM_DOC_KEY) == "查看当前私聊的消息通道与主动推送优先级。"
     )
 
 

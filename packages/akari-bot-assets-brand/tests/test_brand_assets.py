@@ -16,7 +16,7 @@ CHARACTER_MODE = "RGBA"
 # 体积下限取原件的约七成：正常的重新导出会落在这个区间之上，有损压缩则远低于它。
 CHARACTER_MIN_BYTES = 2 * 1024 * 1024
 
-REQUIRED_FILES = ("character_marked.png", "akaribot_logo.png", "credits.txt", "LICENSE")
+REQUIRED_FILES = ("character_marked.png", "akaribot_logo.png", "akaribot_avatar.jpg", "credits.txt", "LICENSE")
 
 
 def _test_brand_dir_holds_every_asset():
@@ -56,7 +56,8 @@ def _test_license_is_bundled_with_the_artwork():
 
 def _test_no_stray_build_artifacts_beside_the_assets():
     directory = Path(brand_dir())
-    allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__", "doc"}
+    # `.DS_Store` 由访达写入，不属于打包产物，不应让用例随本机文件系统变成红。
+    allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__", "doc", ".DS_Store"}
     return all(child.name in allowed for child in directory.iterdir())
 
 

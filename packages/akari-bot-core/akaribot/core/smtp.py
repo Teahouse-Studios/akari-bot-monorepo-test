@@ -11,6 +11,7 @@ from akaribot.core.exports import exports
 from akaribot.core.i18n import Locale, safe_strftime
 from akaribot.core.logger import Logger
 from akaribot.core.utils.brand import find_brand_asset
+from akaribot.core.utils.timezone import core_now
 
 locale = Locale(BaseConfig.default_locale)
 # 品牌资产包优先，实例 assets/ 可覆盖；两处都没有时为 None，此时不内嵌标志。
@@ -42,7 +43,7 @@ def _build_email_html(body: str, footer: str) -> str:
         <div>{body.replace(chr(10), "<br>")}</div>
         <div style="margin-top:24px">
           <img src="cid:akaribot_logo" height="64" alt="AkariBot Logo"><br>
-          <span>{safe_strftime(datetime.now(), locale.t_str("{I18N:time.date.format} {I18N:time.time.format}"))}</span>
+          <span>{safe_strftime(core_now(), locale.t_str("{I18N:time.date.format} {I18N:time.time.format}"))}</span>
         </div>
         <div style="margin-top:20px;font-size:12px;color:#808080">{footer}</div>
       </body>

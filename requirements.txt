@@ -6,6 +6,7 @@
 -e ./packages/adapters/akari-bot-adapter-milky
 -e ./packages/adapters/akari-bot-adapter-onebot
 -e ./packages/adapters/akari-bot-adapter-qqbot
+-e ./packages/adapters/akari-bot-adapter-satori
 -e ./packages/adapters/akari-bot-adapter-telegram
 -e ./packages/adapters/akari-bot-adapter-web
 -e ./packages/akari-bot-assets-brand
@@ -27,6 +28,7 @@
     #   akari-bot-adapter-milky
     #   akari-bot-adapter-onebot
     #   akari-bot-adapter-qqbot
+    #   akari-bot-adapter-satori
     #   akari-bot-adapter-telegram
     #   akari-bot-adapter-web
     #   akari-bot-module-ai
@@ -142,6 +144,7 @@ aiohttp==3.14.3
     #   khl-py
     #   matrix-nio
     #   py-cord
+    #   satori-python-client
 aiohttp-socks==0.11.0
     # via matrix-nio
 aiosignal==1.4.0
@@ -194,6 +197,7 @@ attrs==26.1.0
     #   aiohttp
     #   akari-bot-adapter-discord
     #   akari-bot-adapter-qqbot
+    #   akari-bot-adapter-satori
     #   akari-bot-adapter-telegram
     #   akari-bot-core
     #   akari-bot-module-wiki
@@ -227,7 +231,7 @@ bracex==2.6
     # via wcmatch
 caio==0.9.25
     # via aiofile
-cattrs==26.1.0
+cattrs==26.2.1
     # via akari-bot-core
 certifi==2026.1.4
     # via
@@ -266,6 +270,8 @@ contourpy==1.3.3
 courlan==1.3.2
     # via trafilatura
 coverage==7.16.1
+creart==0.3.0
+    # via launart
 cryptography==50.0.0
     # via
     #   akari-bot-adapter-web
@@ -280,7 +286,7 @@ ddgs==9.14.2
     # via akari-bot-module-ai
 defusedxml==0.7.1
     # via akari-bot-testing
-deprecated==1.3.1
+deprecated==3.0.1
     # via
     #   akari-bot-core
     #   limits
@@ -343,6 +349,8 @@ google-play-scraper==1.2.7
     #   akari-bot-module-mcv-rss
 gql==4.0.0
     # via akari-bot-module-cytoid
+graia-amnesia==0.11.6
+    # via satori-python-client
 graphql-core==3.2.7
     # via gql
 greenlet==3.3.1
@@ -415,6 +423,8 @@ idna==3.19
     #   httpx2
     #   requests
     #   yarl
+importlib-metadata==10.2.0
+    # via creart
 iniconfig==2.3.0
     # via pytest
 iso639-lang==2.6.3
@@ -456,6 +466,12 @@ langconv==0.4.0
     #   akari-bot-module-hitokoto
     #   akari-bot-module-langconv
     #   akari-bot-module-maimai
+launart==0.8.2
+    # via
+    #   graia-amnesia
+    #   satori-python-client
+lazy-importer==0.1.0 ; python_full_version < '3.15'
+    # via importlib-metadata
 limits==5.8.0
     # via slowapi
 linkify-it-py==2.2.0
@@ -465,6 +481,8 @@ loguru==0.7.3
     #   akari-bot-core
     #   akari-bot-testing
     #   akari-bot-webrender
+    #   launart
+    #   satori-python-client
 lxml==6.1.0
     # via
     #   ddgs
@@ -489,9 +507,9 @@ markupsafe==3.0.3
     #   werkzeug
 matplotlib==3.10.8
     # via akari-bot-module-ai
-matrix-nio==0.25.2
+matrix-nio==0.26.0
     # via akari-bot-adapter-matrix
-mcstatus==14.1.0
+mcstatus==14.2.0
     # via akari-bot-module-mcserver
 mdit-py-plugins==0.6.1
     # via textual
@@ -505,14 +523,14 @@ multidict==6.7.1
     #   yarl
 nodeenv==1.10.0
     # via pre-commit
-numpy==2.5.2
+numpy==2.5.4
     # via
     #   akari-bot-module-color
     #   akari-bot-module-dice
     #   contourpy
     #   matplotlib
     #   rdkit
-openai==3.6.0
+openai==3.41.0
     # via akari-bot-module-ai
 orjson==3.11.7
     # via
@@ -608,7 +626,7 @@ pyasn1-modules==0.4.2
     # via google-auth
 pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
-pycryptodome==3.23.0
+pycryptodome==4.2.0
     # via
     #   akari-bot-module-mkey
     #   akari-bot-module-phigros
@@ -676,7 +694,7 @@ pyyaml==6.0.3
     #   pre-commit
     #   qq-botpy-sdk
     #   uvicorn
-qq-botpy-sdk==2.2.1
+qq-botpy-sdk==2.3.0
     # via akari-bot-adapter-qqbot
 qrcode==8.2
     # via akari-bot-module-phigros
@@ -684,7 +702,7 @@ quart==0.20.0
     # via aiocqhttp
 rapidfuzz==3.14.5
     # via akari-bot-core
-rdkit==2026.3.1
+rdkit==2026.9.1
     # via akari-bot-module-chemical-code
 referencing==0.37.0
     # via
@@ -699,7 +717,7 @@ requests==2.34.2
     # via
     #   google-auth
     #   google-genai
-rich==14.3.4
+rich==15.0.0
     # via
     #   akari-bot-cli
     #   e2b
@@ -712,6 +730,10 @@ rpds-py==0.30.0
 ruff==0.15.1
 s3transfer==0.19.1
     # via boto3
+satori-python-client==1.3.11
+    # via akari-bot-adapter-satori
+satori-python-core==1.3.11
+    # via satori-python-client
 sgmllib3k==1.0.0
     # via feedparser
 shellingham==1.5.4
@@ -733,6 +755,8 @@ soupsieve==2.8.3
     # via beautifulsoup4
 starlette==0.52.1
     # via fastapi
+statv==0.3.2
+    # via launart
 tabulate==0.9.0
     # via akari-bot-core
 tenacity==9.1.4
@@ -784,6 +808,7 @@ typing-extensions==4.15.0
     #   flexcache
     #   flexparser
     #   google-genai
+    #   graia-amnesia
     #   httpx2
     #   limits
     #   openai
@@ -794,6 +819,7 @@ typing-extensions==4.15.0
     #   pyee
     #   pytest-asyncio
     #   referencing
+    #   satori-python-core
     #   starlette
     #   textual
     #   typing-inspection
@@ -855,3 +881,6 @@ yarl==1.22.0
     # via
     #   aiohttp
     #   gql
+    #   satori-python-client
+zipp==4.1.2
+    # via importlib-metadata

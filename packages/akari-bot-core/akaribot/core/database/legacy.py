@@ -317,6 +317,19 @@ async def drop_indexes_on_missing_columns(conn) -> None:
             await conn.execute_query(f"DROP INDEX IF EXISTS {quote_ident(index['name'])};")
 
 
+async def update_database_to_v7(conn):
+    """为场景绑定表补充主动推送优先级列；列已存在时跳过。
+
+    :param conn: 数据库连接。
+    """
+    if await has_column(conn, "target_union_bind", "push_priority"):
+        return
+    await conn.execute_query(
+        f"ALTER TABLE {quote_ident('target_union_bind')} "
+        f"ADD COLUMN {quote_ident('push_priority')} INT NOT NULL DEFAULT 0;"
+    )
+
+
 async def legacy_upgrade_to_v6(conn=None) -> int | None:
     """
     按旧版本号把既有库逐级升级到 v6，返回升级前的版本号。

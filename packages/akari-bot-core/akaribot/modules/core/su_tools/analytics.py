@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import timedelta, UTC
 
 from dateutil.relativedelta import relativedelta
 from tortoise.exceptions import DoesNotExist
@@ -10,6 +10,7 @@ from akaribot.core.config.base import CoreConfig
 from akaribot.core.database.models import AnalyticsData
 from akaribot.core.logger import Logger
 from akaribot.core.utils.cache import random_cache_path
+from akaribot.core.utils.timezone import core_midnight
 
 enable_analytics = CoreConfig.enable_analytics
 
@@ -23,14 +24,6 @@ async def get_first_record():
         return None
     except Exception:
         Logger.exception()
-
-
-def local_midnight() -> datetime:
-    """取本地时区的今日零点，且带上时区信息。
-
-    :return: 带本地时区的今日零点。
-    """
-    return datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def _pyplot():
@@ -90,7 +83,7 @@ async def _(msg: Bot.MessageSession):
             await msg.finish(I18NContext("core.message.analytics.none"))
         get_counts = await AnalyticsData.all().count()
 
-        old = local_midnight()
+        old = core_midnight()
         new = old + timedelta(days=1)
         get_counts_today = await AnalyticsData.get_count_by_times(new, old)
 
@@ -125,7 +118,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
             )
         data_ = {}
         # 零点在循环外取一次：逐次取会在跨零点时把前后两天的边界混在一起
-        midnight = local_midnight()
+        midnight = core_midnight()
         for d in range(30):
             old = midnight - timedelta(days=29 - d)
             new = old + timedelta(days=1)
@@ -172,7 +165,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
             )
         data_ = {}
         # 本月一日在循环外取一次：逐次取会在跨零点时把前后两个月的边界混在一起
-        first_day = local_midnight().replace(day=1)
+        first_day = core_midnight().replace(day=1)
         for m in range(12):
             old = first_day - relativedelta(months=11 - m)
             new = old + relativedelta(months=1)

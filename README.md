@@ -22,7 +22,8 @@ _多功能、跨平台、可自由扩展的异步聊天机器人助手_
 
 ## 运行
 
-支持 QQ（官方机器人与第三方协议）、Discord、Telegram、KOOK（开黑啦）与 Matrix。
+支持 QQ（官方机器人与第三方协议）、Discord、Telegram、KOOK（开黑啦）、
+Matrix 与 Satori（Beta）。
 
 ### 公共实例
 

@@ -82,7 +82,8 @@ async def _test_discovery_covers_legacy_map():
     expected = {(package, revision) for entries in LEGACY_MAP.values() for package, revision in entries}
     actual = {(package, module.revision) for package, modules in discovered.items() for module in modules}
     order = MigrationRunner._order(discovered, None)
-    return actual == expected and order[0] == "core" and set(order) == set(discovered) and len(order) == 5
+    # 旧版本号只登记到 LATEST_LEGACY_VERSION，其后追加的 revision 由常规升级执行，故用包含关系。
+    return expected <= actual and order[0] == "core" and set(order) == set(discovered) and len(order) == 5
 
 
 async def _noop_upgrade(ctx: MigrationContext) -> None:
@@ -231,6 +232,7 @@ async def _test_core_revisions_upgrade_v1_shaped_tables():
                     "0002_banned_users_and_nullable_sender",
                     "0003_union_core",
                     "0005_rebuild_job_queues",
+                    "0006_push_priority",
                 ]
                 and [row["union_id"] for row in targets] == ["target|9"]
                 and [row["sender_id"] for row in analytics] == ["sender|9"]

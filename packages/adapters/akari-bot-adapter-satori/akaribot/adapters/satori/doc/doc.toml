@@ -1,0 +1,4 @@
+schema = 1
+title = "Satori"
+summary = "通过 Satori 协议接入其下的各平台会话。"
+order = 560

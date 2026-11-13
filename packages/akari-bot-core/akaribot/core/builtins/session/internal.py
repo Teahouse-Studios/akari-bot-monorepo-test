@@ -15,7 +15,7 @@ from deprecated import deprecated
 
 from akaribot.core.builtins.filter import filter_badwords
 from akaribot.core.builtins.message.chain import MessageChain, get_message_chain, Chainable, MessageNodes
-from akaribot.core.builtins.message.internal import Button, I18NContext, I18NContextElement, PlainElement
+from akaribot.core.builtins.message.internal import Button, CardElement, I18NContext, I18NContextElement, PlainElement
 from akaribot.core.builtins.session.info import SessionInfo, FetchedSessionInfo
 from akaribot.core.builtins.session.bot_state import BotState
 from akaribot.core.builtins.session.lock import ExecutionLockList, ExecutionState
@@ -90,6 +90,10 @@ def _filter_message_chain_badwords(
     for element in chain.values:
         if isinstance(element, PlainElement):
             element.text = session_info.locale.t_str(filter_badwords(element.text))
+        elif isinstance(element, CardElement):
+            for attribute in ("title", "description"):
+                if text := getattr(element, attribute):
+                    setattr(element, attribute, session_info.locale.t_str(filter_badwords(text)))
     return chain
 
 
@@ -1026,13 +1030,11 @@ class MessageSession:
                 ftime_template.append(self.session_info.locale.t("time.time.format"))
             else:
                 ftime_template.append(self.session_info.locale.t("time.time.nosec.format"))
+        tz_label = self.session_info.display_tz_label
         if timezone:
-            if self.session_info._tz_offset == "+0":
-                ftime_template.append("(UTC)")
-            else:
-                ftime_template.append(f"(UTC{self.session_info._tz_offset})")
+            ftime_template.append("(UTC)" if tz_label == "+0" else f"(UTC{tz_label})")
         return safe_strftime(
-            datetime.fromtimestamp(timestamp, UTC) + self.session_info.timezone_offset,
+            datetime.fromtimestamp(timestamp, UTC).astimezone(self.session_info.display_tz),
             " ".join(ftime_template),
         )
 
