@@ -14,11 +14,28 @@
 
 按定数或定数范围搜索谱面。`<constant>` 为定数下限，`<constant_max>` 可省略；定数须大于 0，范围写反时以较小值为下限并提示实际区间。结果超过一页时输出图片。
 
+<ChatExample
+  :log="[
+    '用户：~maimai base 15',
+    '机器人：以下为定数 15.0 的曲目列表：',
+    '834 - PANDORA PARADOXXX [Re:MASTER] 15 (15.0)',
+    '11663 - 系ぎて (DX) [Re:MASTER] 15 (15.0)',
+  ]"
+/>
+
 ### `maimai level`
 
 <CommandUsage usage="maimai level <level> [-p <page>]" :params="['level=等级，如 13+ 或 15', 'page=页码，缺省为 1']" permission="public" :options="[{flag: '-p', desc: '指定页数，默认为 1。'}]" />
 
 按等级搜索谱面。`<level>` 取 `1` 至 `15`，加号等级只有 `7+` 至 `14+`。结果超过一页时输出图片。
+
+<ChatExample
+  :log="[
+    '用户：~maimai level 14+',
+    '机器人：以下为 14+ 级的曲目列表：',
+    '22 - In Chaos [Re:MASTER] 14+ (14.8)',
+  ]"
+/>
 
 ### `maimai new`
 
@@ -26,11 +43,29 @@
 
 查看当前版本的新曲。结果超过一页时输出图片。
 
+<ChatExample
+  :log="[
+    '用户：~maimai new',
+    '机器人：以下为当前版本最新歌曲：',
+    '1736 - プリズム△▽リズム',
+    '1819 - AFTER PANDORA',
+  ]"
+/>
+
 ### `maimai search`
 
 <CommandUsage usage="maimai search <keyword> [-p <page>]" :params="['keyword=歌名或其中的一部分', 'page=页码，缺省为 1']" permission="public" :options="[{flag: '-p', desc: '指定页数，默认为 1。'}]" />
 
 按歌名搜索，`<keyword>` 可只给歌名的一部分；只匹配歌名，不查询别名。结果超过一页时输出图片，`-p` 指定页数，缺省为 1。
+
+<ChatExample
+  :log="[
+    '用户：~maimai search PANDORA',
+    '机器人：“PANDORA”的搜索结果：',
+    '834 - PANDORA PARADOXXX',
+    '1819 - AFTER PANDORA',
+  ]"
+/>
 
 ### `maimai id`
 
@@ -38,17 +73,44 @@
 
 按 ID 查询歌曲信息与各难度谱面。`<id>` 可直接写数字，也可加 `id` 前缀；ID 大于 100000 的宴谱读取宴会场数据，输出会场信息与物量。
 
+<ChatExample
+  :log="[
+    '用户：~maimai id 834',
+    '机器人：834 - PANDORA PARADOXXX',
+    '艺术家：削除',
+    '难度：7.7/11.5/13.9/14.9/15.0',
+  ]"
+/>
+
 ### `maimai song`
 
 <CommandUsage usage="maimai song <id_or_alias>" :params="['id_or_alias=歌曲 ID 或歌名、别名']" permission="public" />
 
 按 ID 或别名查询歌曲信息与各难度谱面。`<id_or_alias>` 加 `id` 前缀时按 ID 直查，否则按歌名或别名解析；命中多首时列出候选并要求用完整命令重发。
 
+<ChatExample
+  :log="[
+    '用户：~maimai song id11207',
+    '机器人：11207 - Ether Strike (DX)',
+    '艺术家：Akira Complex',
+    '分类：GAME & VARIETY',
+  ]"
+/>
+
 ### `maimai chart`
 
 <CommandUsage usage="maimai chart <id_or_alias>" :params="['id_or_alias=歌曲 ID 或歌名、别名']" permission="public" />
 
 查询各难度谱面的物量、定数与谱师，`<id_or_alias>` 的解析方式同 `maimai song`。宴谱输出宴会场信息与左右谱面物量。命中多首时列出候选并要求用完整命令重发。
+
+<ChatExample
+  :log="[
+    '用户：~maimai chart id834',
+    '机器人：834 - PANDORA PARADOXXX',
+    'Basic 7+ (7.7)',
+    'TAP：257/HOLD：29/SLIDE：15/BREAK：6',
+  ]"
+/>
 
 ### `maimai alias`
 
@@ -62,11 +124,27 @@
 
 从全部曲目中随机一首，返回歌曲信息与各难度定数。
 
+<ChatExample
+  :log="[
+    '用户：~maimai random',
+    '机器人：11810 - ATLAS RUSH (DX)',
+    '5.0/7.8/12.6/14.7',
+  ]"
+/>
+
 ### `maimai random <diff+level>`
 
 <CommandUsage usage="maimai random <diff+level> [<dx_type>]" :params="['diff+level=难度与等级组合，如紫14+，* 为不限', 'dx_type=谱面类型 dx 或 sd，也可写中文']" permission="public" />
 
 按难度、等级与类型随机。`<diff+level>` 不分隔书写，例如 `紫14+`、`14+`，写 `*` 表示不限难度与等级；`<dx_type>` 取 `dx`、`sd`、`标准` 或 `標準`，缺省不筛选类型。条件无法解析或无匹配曲目时返回失败提示。
+
+<ChatExample
+  :log="[
+    '用户：~maimai random 紫14+ dx',
+    '机器人：11026 - TEmPTaTiON (DX)',
+    '6.0/8.5/12.6/14.7',
+  ]"
+/>
 
 ### `maimai scoreline`
 
@@ -74,17 +152,42 @@
 
 查询谱面分数线，输出 101% 的目标分表与单个 BREAK 2550、2000 的换算。`<diff>` 接受难度全称、三字母缩写与中文；谱面不存在时返回未找到提示。
 
+<ChatExample
+  :log="[
+    '用户：~maimai scoreline id834 Master',
+    '机器人：834 - PANDORA PARADOXXX [Master]',
+    'BREAK 2550 相当于 0.316 个 TAP GREAT',
+    'BREAK 2000 相当于 5.759 个 TAP GREAT',
+  ]"
+/>
+
 ### `maimai calc`
 
 <CommandUsage usage="maimai calc <base> <score>" :params="['base=谱面定数', 'score=达成率，如 100.5']" permission="public" />
 
 按谱面定数与达成率计算单曲 Rating。`<base>` 为定数，`<score>` 为达成率。
 
+<ChatExample
+  :log="[
+    '用户：~maimai calc 13.9 100.5',
+    '机器人：312',
+  ]"
+/>
+
 ### `maimai grade`
 
 <CommandUsage usage="maimai grade <grade>" :params="['grade=段位名称，如十段、真初段']" permission="public" />
 
 查询段位认定列表。`<grade>` 支持普通段位、真段位与 EXPERT／MASTER 各级，例如 `十段`、`真初段`、`MASTER超上级`。
+
+<ChatExample
+  :log="[
+    '用户：~maimai grade 十段',
+    '机器人：以下为“十段”段位认定列表：',
+    '840 - Imperishable Night 2006 (2016 Refine) [Master] 13+',
+    '11207 - Ether Strike (DX) [Master] 13+',
+  ]"
+/>
 
 ## 成绩与绑定
 
@@ -161,6 +264,13 @@
 <CommandUsage usage="maimai update [--no-cover]" permission="superuser" :options="[{flag: '--no-cover', desc: '跳过曲绘下载。'}]" />
 
 更新曲目库与别名库，缺省同时下载曲绘；`--no-cover` 跳过曲绘。失败时返回更新失败提示。每日 0 点的定时任务只更新别名。
+
+<ChatExample
+  :log="[
+    '用户：~maimai update',
+    '机器人：成功。',
+  ]"
+/>
 
 ## 正则句式
 

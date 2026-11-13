@@ -225,14 +225,18 @@ def _test_doc_logo_metadata():
             "akaribot.assets.brand",
             {
                 "doc/index.md": "# 品牌\n",
-                "doc/doc.toml": 'logo = "akaribot_logo.png"\n',
+                "doc/doc.toml": 'logo = "akaribot_logo.png"\navatar = "akaribot_avatar.jpg"\n',
                 "akaribot_logo.png": "png",
+                "akaribot_avatar.jpg": "jpg",
             },
         )
         escaped = _make_package(
             root,
             "akaribot.assets.other",
-            {"doc/index.md": "# 其他\n", "doc/doc.toml": 'logo = "../../outside.png"\n'},
+            {
+                "doc/index.md": "# 其他\n",
+                "doc/doc.toml": 'logo = "../../outside.png"\navatar = "../../outside.jpg"\n',
+            },
         )
         entry_points = [
             _EntryPoint("assets-brand", "akaribot.assets.brand"),
@@ -246,8 +250,11 @@ def _test_doc_logo_metadata():
     other_item = _item(payload, "assets-other")
     return (
         brand_item["logo"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_logo.png").resolve())
+        and brand_item["avatar"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_avatar.jpg").resolve())
         and other_item["logo"] == ""
+        and other_item["avatar"] == ""
         and any("logo 指向包目录之外" in warning for warning in payload["warnings"])
+        and any("avatar 指向包目录之外" in warning for warning in payload["warnings"])
     )
 
 

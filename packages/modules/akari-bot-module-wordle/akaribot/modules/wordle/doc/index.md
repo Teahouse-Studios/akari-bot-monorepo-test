@@ -10,11 +10,41 @@
 
 开始新游戏，最多六次机会。`--hard` 与 `--trial` 分别开启困难模式与挑战模式，两者可同时使用。
 
+<ChatExample
+  caption="答案 cigar，三次猜中；图片为实际渲染结果。"
+  :image-width="320"
+  :log="[
+    '用户：~wordle',
+    '机器人：![棋盘](wordle-start-board.png)',
+    '![键盘](wordle-start-keyboard.png)',
+    '游戏开始，你需要猜一个由 5 个字母组成的单词，你有 6 次机会。',
+    '绿色表示字母和位置都正确，黄色代表字母正确但位置不正确，灰色代表单词中没有这个字母。',
+    '用户：crane',
+    '机器人：![棋盘](wordle-guess1-board.png)',
+    '![键盘](wordle-guess1-keyboard.png)',
+    '用户：shine',
+    '机器人：![棋盘](wordle-guess2-board.png)',
+    '![键盘](wordle-guess2-keyboard.png)',
+    '用户：cigar',
+    '机器人：![棋盘](wordle-guess3-board.png)',
+    '![键盘](wordle-guess3-keyboard.png)',
+    '祝贺！你在 3 回合内完成了游戏。',
+  ]"
+/>
+
 ### `wordle stop`
 
 <CommandUsage usage="wordle stop" permission="public" />
 
 结束当前对局并公布答案，同时附上剑桥词典链接；没有进行中的对局时返回停止失败提示。
+
+<ChatExample
+  :log="[
+    '用户：~wordle stop',
+    '机器人：已停止，答案为：cigar。',
+    '查询词典：',
+  ]"
+/>
 
 ## 游戏规则
 

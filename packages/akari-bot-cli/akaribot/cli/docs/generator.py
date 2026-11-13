@@ -230,15 +230,16 @@ def _copy_package(
     copied: set[str] = set()
     for relative, path in collect_files(doc_dir, exclude=exclude):
         suffix = path.suffix.lower()
-        if suffix in ATTACHMENT_SUFFIXES:
+        if suffix in ATTACHMENT_SUFFIXES or suffix in IMAGE_SUFFIXES:
             if target == source:
                 attachment = source / "public" / key / relative
             else:
                 attachment = source / "public" / locale.tag / key / relative
             attachment.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, attachment)
-            copied.add(relative)
-            continue
+            if suffix in ATTACHMENT_SUFFIXES:
+                copied.add(relative)
+                continue
         page = destination / relative
         page.parent.mkdir(parents=True, exist_ok=True)
         if suffix == ".md":
@@ -254,11 +255,12 @@ def _copy_package(
         for relative, path in collect_files(package.doc_path, exclude=tags):
             if relative in copied or path.suffix.lower() not in ALLOWED_SUFFIXES:
                 continue
-            if path.suffix.lower() in ATTACHMENT_SUFFIXES:
+            if path.suffix.lower() in ATTACHMENT_SUFFIXES or path.suffix.lower() in IMAGE_SUFFIXES:
                 attachment = source / "public" / locale.tag / key / relative
                 attachment.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, attachment)
-                continue
+                if path.suffix.lower() in ATTACHMENT_SUFFIXES:
+                    continue
             page = destination / relative
             page.parent.mkdir(parents=True, exist_ok=True)
             if path.suffix.lower() == ".md":
@@ -394,15 +396,22 @@ def _write_group_page(
     (directory / f"{group_slug(group)}.md").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
-def _prepare_site_assets(source: Path, config: DocsConfig, packages: Sequence[DocPackage]) -> tuple[str, str]:
-    # 顶栏标志的优先级：site.logo > 包声明的 logo > 站点图标。
+def _prepare_site_assets(
+    source: Path,
+    config: DocsConfig,
+    packages: Sequence[DocPackage],
+) -> tuple[str, str, str]:
+    # 顶栏标志与对话头像的优先级：站点配置 > 包声明 > 站点图标。
     favicon = _site_asset_url(source, config, config.site.favicon, "site-favicon")
     if not favicon:
         favicon = _bundled_asset(source, config, "favicon", "site-favicon")
     logo = _site_asset_url(source, config, config.site.logo, "site-logo")
     if not logo:
-        logo = _package_logo(source, config, packages)
-    return logo or favicon, favicon
+        logo = _package_asset(source, config, packages, "logo", "site-logo")
+    avatar = _site_asset_url(source, config, config.site.avatar, "site-avatar")
+    if not avatar:
+        avatar = _package_asset(source, config, packages, "avatar", "site-avatar")
+    return logo or favicon, favicon, avatar or favicon
 
 
 def _bundled_asset(source: Path, config: DocsConfig, key: str, stem: str) -> str:
@@ -413,14 +422,20 @@ def _bundled_asset(source: Path, config: DocsConfig, key: str, stem: str) -> str
     return _publish_asset(source, config, path, stem) if path.is_file() else ""
 
 
-def _package_logo(source: Path, config: DocsConfig, packages: Sequence[DocPackage]) -> str:
+def _package_asset(
+    source: Path,
+    config: DocsConfig,
+    packages: Sequence[DocPackage],
+    field: str,
+    stem: str,
+) -> str:
     for package in packages:
-        text = package.logo.strip()
+        text = str(getattr(package, field, "") or "").strip()
         if not text:
             continue
         path = Path(text)
         if path.is_file():
-            return _publish_asset(source, config, path, "site-logo")
+            return _publish_asset(source, config, path, stem)
     return ""
 
 
@@ -452,18 +467,18 @@ def _write_vitepress_config(
     views: Sequence[_LocaleView],
     config: DocsConfig,
     theme: ThemeSpec,
-    assets: tuple[str, str],
+    assets: tuple[str, str, str],
 ) -> None:
     directory = source / ".vitepress"
     directory.mkdir(parents=True, exist_ok=True)
-    logo, favicon = assets
+    logo, favicon, avatar = assets
     color = config.theme.color
     theme_key = str(theme.config.get("theme_config_key") or "")
     search = theme.config.get("search")
     if not isinstance(search, Mapping):
         search = {"provider": "local"}
     default_view = views[0]
-    theme_config = _locale_theme(default_view, config, theme_key, logo, color, dict(search))
+    theme_config = _locale_theme(default_view, config, theme_key, logo, avatar, color, dict(search))
     head_tags: list[list[object]] = []
     if favicon:
         head_tags.append(["link", {"rel": "icon", "href": favicon}])
@@ -475,7 +490,7 @@ def _write_vitepress_config(
             "label": view.locale.label,
             "lang": view.locale.tag,
             "link": f"/{view.locale.tag}/",
-            "themeConfig": _locale_theme(view, config, theme_key, logo, color, dict(search)),
+            "themeConfig": _locale_theme(view, config, theme_key, logo, avatar, color, dict(search)),
         }
     payload: dict[str, object] = {
         "title": default_view.locale.title or config.site.title,
@@ -529,6 +544,7 @@ def _locale_theme(
     config: DocsConfig,
     theme_key: str,
     logo: str,
+    avatar: str,
     color: str,
     search: dict[str, object],
 ) -> dict[str, object]:
@@ -569,6 +585,8 @@ def _locale_theme(
             akari["settings"] = {"defaults": {"color": color}}
         if config.site.command_prefix:
             akari["commandPrefix"] = config.site.command_prefix
+        if avatar:
+            akari["chatAvatar"] = avatar
         theme_config[theme_key] = akari
     elif logo:
         theme_config["logo"] = logo

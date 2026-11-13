@@ -23,14 +23,36 @@
 
 多次投掷且带 DC 时，末尾汇总成功与失败次数。详细投掷明细在总量较小时展示，总量较大时只显示汇总结果。
 
+<ChatExample
+  :log="[
+    '用户：~dice 2d6',
+    '机器人：你掷得的结果是：',
+    '2d6=(2D6=[4+5]=9)=9',
+  ]"
+/>
+
 ### `dice set`
 
 <CommandUsage usage="dice set <sides>" :params="['sides=会话默认骰子的面数']" permission="admin" />
 
 设置当前会话的默认骰子面数。面数大于 1 时保存为会话默认值，`0` 表示清除默认值，其余取值返回无效提示；设置只对当前会话生效。
 
+<ChatExample
+  :log="[
+    '用户：~dice set 20',
+    '机器人：成功设置骰子默认面数为 20。',
+  ]"
+/>
+
 ### `dice rule`
 
 <CommandUsage usage="dice rule" permission="admin" />
 
 切换当前会话的 DC 判定方向。默认按“结果不小于 DC 为成功”判定，切换后改为“结果不大于 DC 为成功”。
+
+<ChatExample
+  :log="[
+    '用户：~dice rule',
+    '机器人：判定规则已更改为反向。',
+  ]"
+/>

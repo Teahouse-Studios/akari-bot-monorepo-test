@@ -57,6 +57,7 @@ class DocPackage:
     :param summary: 一句话简介。
     :param doc_path: 包内文档目录。
     :param logo: 该包声明给文档站点使用的标志文件，未声明时为空串。
+    :param avatar: 该包声明给对话示例使用的机器人头像，未声明时为空串。
     :param pages: 页面清单。
     :param order: 排序权重，自小到大。
     :param editable: 是否为可编辑安装。
@@ -74,6 +75,7 @@ class DocPackage:
     doc_path: Path
     pages: tuple[DocPage, ...]
     logo: str = ""
+    avatar: str = ""
     order: int = DEFAULT_ORDER
     editable: bool = False
     category: str = ""

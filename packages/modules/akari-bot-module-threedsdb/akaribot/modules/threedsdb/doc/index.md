@@ -17,3 +17,12 @@
 - 没有任何命中时返回未找到提示。
 
 每个条目包含 `Name`、`UID`、`TitleID`、`Version`、`Size`、`Product Code`、`Publisher` 字段，按清单原值展示。
+
+<ChatExample
+  :log="[
+    '用户：~3dsdb 000400000008C400',
+    '机器人：Name: Tomodachi Life™',
+    'UID: 50010000021615',
+    'TitleID: 000400000008C400',
+  ]"
+/>

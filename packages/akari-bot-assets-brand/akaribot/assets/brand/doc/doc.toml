@@ -5,3 +5,6 @@ order = 60
 
 # 文档站点使用的标志文件，相对包目录
 logo = "akaribot_logo.png"
+
+# 命令对话示例使用的机器人头像，相对包目录
+avatar = "akaribot_avatar.jpg"

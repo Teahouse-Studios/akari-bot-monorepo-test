@@ -24,6 +24,13 @@
 
 解除当前用户的绑定。
 
+<ChatExample
+  :log="[
+    '用户：~phigros unbind',
+    '机器人：解绑成功。',
+  ]"
+/>
+
 ### `phigros refresh`
 
 <CommandUsage usage="phigros refresh" permission="public" />
@@ -66,16 +73,46 @@
 
 查询歌曲资料与谱面信息，曲绘存在时附带曲绘。
 
+<ChatExample
+  :log="[
+    '用户：~phigros song Dlyrotz',
+    '机器人：Dlyrotz － Likey',
+    '画师：DoublePian',
+    'EZ 4.0｜谱师：Su1fuR',
+    'HD 9.1｜谱师：Su1fuR',
+    'IN 13.7｜谱师：XMT小咩兔 vs. Barbarianerman',
+  ]"
+/>
+
 ### `phigros random`
 
 <CommandUsage usage="phigros random" permission="public" />
 
 随机展示一首歌曲，曲绘存在时附带曲绘。
 
+<ChatExample
+  :log="[
+    '用户：~phigros random',
+    '机器人：Cthugha － USAO',
+    '画师：谷地（青鸟 modified）',
+    'EZ 6.0｜谱师：Barbarianerman',
+    'HD 10.4｜谱师：Barbarianerman',
+    'IN 16.0｜谱师：Gausbon',
+    'AT 16.1｜谱师：百九十八 feat. NerSAN',
+  ]"
+/>
+
 ### `phigros update`
 
 <CommandUsage usage="phigros update [--no-illus]" permission="superuser" :options="[{flag: '--no-illus', desc: '跳过曲绘下载。'}]" />
 
 更新曲目信息与曲绘。资源由模块每小时自动检查一次，也可用此命令手动更新。
+
+<ChatExample
+  :log="[
+    '用户：~phigros update',
+    '机器人：成功。',
+  ]"
+/>
 
 依赖曲目信息的命令在文件缺失或结构过旧时提示先执行 `phigros update`。令牌失效时提示重新绑定，云存档读取失败时返回统一的获取失败提示。

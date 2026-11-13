@@ -14,7 +14,7 @@
 
 ### `ncmusic <sid>`
 
-<CommandUsage usage="ncmusic <sid>" :params="['sid=网易云音乐歌曲 ID']" permission="public" />
+<CommandUsage usage="ncmusic <sid>" :params="['sid=网易云音乐歌曲 ID']" permission="public" platforms="QQ 群聊 / QQ 私聊" />
 
 只在 QQ 群聊与 QQ 私聊可用。按歌曲 ID 获取音乐：实例开启音乐卡片时发送音乐卡片，未开启时输出与 `ncmusic info` 一致的歌曲详情。
 

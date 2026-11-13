@@ -34,6 +34,7 @@ def _package(
     category: str = "",
     category_order: int = 500,
     logo: str = "",
+    avatar: str = "",
 ) -> DocPackage:
     doc_path = base / f"doc-{key}"
     doc_path.mkdir(parents=True, exist_ok=True)
@@ -51,6 +52,7 @@ def _package(
         category=category,
         category_order=category_order,
         logo=logo,
+        avatar=avatar,
     )
 
 
@@ -89,6 +91,7 @@ async def _test_generate_site_layout():
             "index": (source / "demo" / "index.md").is_file(),
             "guide": (source / "demo" / "guide" / "setup.md").is_file(),
             "image": (source / "demo" / "images" / "logo.png").is_file(),
+            "public_image": (source / "public" / "demo" / "images" / "logo.png").is_file(),
             "text": (source / "public" / "demo" / "notes.txt").is_file(),
             "pdf": (source / "public" / "demo" / "manual.pdf").is_file(),
             "binary": (source / "demo" / "payload.bin").exists(),
@@ -105,6 +108,7 @@ async def _test_generate_site_layout():
             "index": True,
             "guide": True,
             "image": True,
+            "public_image": True,
             "text": True,
             "pdf": True,
             "binary": False,
@@ -511,11 +515,14 @@ async def _test_site_favicon_and_logo_defaults():
         root = Path(raw)
         brand_logo = root / "brand-logo.png"
         brand_logo.write_bytes(b"\x89PNG\r\n")
+        brand_avatar = root / "brand-avatar.jpg"
+        brand_avatar.write_bytes(b"\xff\xd8\xff")
         package = _package(
             root,
             {"index.md": "# 用法\n"},
             pages=(DocPage("index.md", "用法", 0),),
             logo=str(brand_logo),
+            avatar=str(brand_avatar),
         )
         source = root / "cache" / "docs" / "src"
         generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root))
@@ -539,6 +546,52 @@ async def _test_site_favicon_and_logo_defaults():
         and fallback["logo"] == "/site-favicon.ico"
         and override["logo"] == "/site-logo.png"
         and "/static/icon.svg" in head
+    )
+
+
+async def _test_chat_avatar_from_package_and_favicon():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        avatar = root / "brand-avatar.jpg"
+        avatar.write_bytes(b"\xff\xd8\xff")
+        package = _package(
+            root,
+            {"index.md": "# 用法\n"},
+            pages=(DocPage("index.md", "用法", 0),),
+            avatar=str(avatar),
+        )
+        theme_dir = root / "theme"
+        theme_dir.mkdir()
+        theme = ThemeSpec(
+            name="test",
+            version="1.0.0",
+            source="file:test",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=root,
+            vitepress_version="2.0.0-alpha.21",
+            node_major=22,
+            config={"theme_config_key": "akari"},
+        )
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root), theme=theme)
+        copied = (source / "public" / "site-avatar.jpg").is_file()
+        config = _theme_config(source)
+        generate(
+            DocCatalog(
+                packages=(
+                    _package(root, {"index.md": "# 用法\n"}, key="plain", pages=(DocPage("index.md", "用法", 0),)),
+                )
+            ),
+            source,
+            DocsConfig(root=root),
+            theme=theme,
+        )
+        fallback = _theme_config(source)
+    return (
+        copied
+        and config["akari"]["chatAvatar"] == "/site-avatar.jpg"
+        and fallback["akari"]["chatAvatar"] == "/site-favicon.ico"
     )
 
 
@@ -612,6 +665,7 @@ async def _test_locales_generate_translated_tree_and_links():
             "index.md": "# Demo\n",
             "development.md": "# 开发\n",
             "en-US/index.md": "# Docs\n\nSee [development](development.md).\n",
+            "en-US/card.png": b"\x89PNG\r\n",
         }
         pages = (
             DocPage("index.md", "概览", 0),
@@ -640,6 +694,7 @@ async def _test_locales_generate_translated_tree_and_links():
             "localized_page": (source / "en-US" / "demo" / "index.md").is_file(),
             "fallback_page": (source / "en-US" / "demo" / "development.md").is_file(),
             "localized_index": (source / "en-US" / "index.md").is_file(),
+            "localized_image": (source / "public" / "en-US" / "demo" / "card.png").is_file(),
         }
         translated = locales["en-US"]["themeConfig"]
     return (
@@ -650,6 +705,7 @@ async def _test_locales_generate_translated_tree_and_links():
             "localized_page": True,
             "fallback_page": True,
             "localized_index": True,
+            "localized_image": True,
         }
         and locales["root"]["lang"] == "zh-CN"
         and locales["en-US"]["link"] == "/en-US/"
@@ -681,5 +737,6 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_labels_come_from_config, "侧栏与导航文案取自配置")
     await tester.test(_test_command_prefix_reaches_theme_config, "命令前缀写入主题配置，缺失时不写")
     await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，顶栏标志取包声明并可回退")
+    await tester.test(_test_chat_avatar_from_package_and_favicon, "对话头像取包声明，缺少时回退站点图标")
     await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
     return tester

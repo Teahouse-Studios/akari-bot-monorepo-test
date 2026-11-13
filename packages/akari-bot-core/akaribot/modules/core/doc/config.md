@@ -14,11 +14,25 @@
 
 读取配置项的值。省略表名时在 `config.toml` 的主表内查找。
 
+<ChatExample
+  :log="[
+    '用户：~config get auto_purge_crontab',
+    '机器人：0 0 * * *',
+  ]"
+/>
+
 ### `config write`
 
 <CommandUsage usage="config write <k> <v> [<table_name>] [-s]" :params="['k=配置项键名', 'v=配置值，按类型解析', 'table_name=配置表名，省略时写主表']" permission="superuser" :options="[{flag: '-s', desc: '是否为密钥配置项'}]" />
 
 写入配置项。`true`、`false` 转为布尔值，整数与浮点转为对应数值，`[...]` 形式按 JSON 解析为列表，其余按字符串写入；`-s` 表示按密钥项处理，核心配置写入 `[secret]`，平台与模块配置写入对应的 `_secret` 表。新增尚不存在的键会改变配置文件结构，执行前要求确认。
+
+<ChatExample
+  :log="[
+    '用户：~config write enable_joke false',
+    '机器人：成功。',
+  ]"
+/>
 
 ### `config delete`
 
@@ -27,6 +41,13 @@
 删除配置项，经 `CFGManager.edit_delete()` 授权执行，返回成功或失败。
 
 表名为 `bot_<平台>`、`module_<模块>` 等，省略时在 `config.toml` 的表内查找。配置为只读的进程不能直接写入，写入与删除经 `CFGManager.edit_write()` 与 `edit_delete()` 授权执行。字段布局、只读约束与版本机制见[配置](../../../core/doc/config.md)。
+
+<ChatExample
+  :log="[
+    '用户：~config delete enable_joke',
+    '机器人：成功。',
+  ]"
+/>
 
 ## setup
 
@@ -38,11 +59,25 @@
 
 切换“正在输入”提示，缺省开启，设置保存在个人域。
 
+<ChatExample
+  :log="[
+    '用户：~setup typing',
+    '机器人：已关闭输入提示。',
+  ]"
+/>
+
 ### `setup check`
 
 <CommandUsage usage="setup check" permission="public" />
 
 切换命令拼写检查，缺省开启，设置保存在个人域。
+
+<ChatExample
+  :log="[
+    '用户：~setup check',
+    '机器人：已关闭命令语法检查提示。',
+  ]"
+/>
 
 ### `setup markdown`
 
@@ -50,11 +85,25 @@
 
 切换 Markdown 渲染，设置保存在个人域。平台不支持该开关时返回提示，配置不变。
 
+<ChatExample
+  :log="[
+    '用户：~setup markdown',
+    '机器人：此平台不支持 Markdown 消息。',
+  ]"
+/>
+
 ### `setup dark`
 
 <CommandUsage usage="setup dark" permission="public" />
 
 切换暗色模式，设置保存在个人域。
+
+<ChatExample
+  :log="[
+    '用户：~setup dark',
+    '机器人：已开启深色模式。',
+  ]"
+/>
 
 ### `setup list`
 
@@ -62,11 +111,28 @@
 
 展示设置面板。省略域参数时同时列出场景域与个人域；场景域的修改入口按场景管理员权限显示，个人域对所有人开放。
 
+<ChatExample
+  :log="[
+    '用户：~setup list',
+    '机器人：【群聊设置】',
+    '语言：简体中文 修改（`~setup locale zh_cn`）',
+    '静音：已关闭 开启（`~mute`）',
+  ]"
+/>
+
 ### `setup prefix list`
 
 <CommandUsage usage="setup prefix list" permission="public" />
 
 列出默认命令前缀与本场景的自定义前缀。
+
+<ChatExample
+  :log="[
+    '用户：~setup prefix list',
+    '机器人：默认命令前缀：~, ～',
+    '自定义命令前缀为空。',
+  ]"
+/>
 
 ### `setup prefix add`
 
@@ -74,11 +140,25 @@
 
 增加场景命令前缀。前缀已存在时返回重复提示。
 
+<ChatExample
+  :log="[
+    '用户：~setup prefix add !',
+    '机器人：已添加自定义命令前缀：!',
+  ]"
+/>
+
 ### `setup prefix remove`
 
 <CommandUsage usage="setup prefix remove <prefix>" :params="['prefix=要移除的命令前缀']" permission="admin" />
 
 移除场景命令前缀，前缀不存在时返回未找到提示。
+
+<ChatExample
+  :log="[
+    '用户：~setup prefix remove !',
+    '机器人：已移除自定义命令前缀：!',
+  ]"
+/>
 
 ### `setup prefix reset`
 
@@ -86,11 +166,27 @@
 
 清空场景自定义前缀。
 
+<ChatExample
+  :log="[
+    '用户：~setup prefix reset',
+    '机器人：已重置自定义命令前缀列表。',
+  ]"
+/>
+
 ### `setup locale`
 
 <CommandUsage :usage="['setup locale', 'setup locale [<lang>]']" :params="['lang=语言代码，如 zh_cn']" permission="public" />
 
 省略语言代码时列出可用语言与翻译进度；给出语言代码时设置场景语言，该形式要求场景管理员权限。语言代码不在可用列表内时返回提示并列出可选值。
+
+<ChatExample
+  :log="[
+    '用户：~setup locale',
+    '机器人：当前使用的语言：简体中文',
+    '使用“`~setup locale <语言代码>`”设置语言。',
+    '支持的语言列表：\n简体中文\n繁體中文\nEnglish\n日本語\n한국어',
+  ]"
+/>
 
 ### `setup locale reload`
 
@@ -98,11 +194,26 @@
 
 重新加载语言文件。加载失败时返回提示并列出出错的文件。
 
+<ChatExample
+  :log="[
+    '用户：~setup locale reload',
+    '机器人：成功。',
+  ]"
+/>
+
 ### `setup alias list`
 
 <CommandUsage usage="setup alias list [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式'}]" />
 
 列出场景自定义命令别名，默认渲染为图片表格，`--legacy` 改用文本表格。
+
+<ChatExample
+  :log="[
+    '用户：~setup alias list --legacy',
+    '机器人：自定义命令别名列表：',
+    'wk -> ~wiki',
+  ]"
+/>
 
 ### `setup alias add`
 
@@ -110,11 +221,25 @@
 
 增加场景命令别名。替换文本须以命令前缀开头，别名与替换文本都须含占位符之外的文字，占位符写作 `${名称}`；不满足时返回对应提示。别名重复时返回已存在提示。
 
+<ChatExample
+  :log="[
+    '用户：~setup alias add wk ~wiki',
+    '机器人：已添加自定义命令别名：wk -> ~wiki',
+  ]"
+/>
+
 ### `setup alias remove`
 
 <CommandUsage usage="setup alias remove <alias>" :params="['alias=自定义命令别名']" permission="admin" />
 
 移除场景命令别名。
+
+<ChatExample
+  :log="[
+    '用户：~setup alias remove wk',
+    '机器人：已移除自定义命令别名：wk',
+  ]"
+/>
 
 ### `setup alias reset`
 
@@ -122,11 +247,25 @@
 
 清空场景命令别名。
 
+<ChatExample
+  :log="[
+    '用户：~setup alias reset',
+    '机器人：已重置自定义命令别名列表。',
+  ]"
+/>
+
 ### `setup timeoffset`
 
 <CommandUsage usage="setup timeoffset <offset>" :params="['offset=时区偏移，如 8、-5:30']" permission="admin" />
 
 设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时提示格式错误；写入时规范化为 `+8`、`-5:30` 形式。
+
+<ChatExample
+  :log="[
+    '用户：~setup timeoffset 8',
+    '机器人：已将时间偏移量设置为 UTC+8。',
+  ]"
+/>
 
 ### `setup cooldown`
 
@@ -134,11 +273,25 @@
 
 设置场景命令冷却秒数，负数按 0 处理。
 
+<ChatExample
+  :log="[
+    '用户：~setup cooldown 5',
+    '机器人：已将命令冷却时间设置为 5 秒。',
+  ]"
+/>
+
 ### `setup invalid-module-prompt`
 
 <CommandUsage usage="setup invalid-module-prompt" permission="admin" />
 
 切换未知模块的提示。
+
+<ChatExample
+  :log="[
+    '用户：~setup invalid-module-prompt',
+    '机器人：已关闭“模块不存在”提示。',
+  ]"
+/>
 
 ### `setup sign`
 

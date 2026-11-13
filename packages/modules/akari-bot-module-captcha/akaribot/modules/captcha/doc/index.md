@@ -6,9 +6,9 @@
 
 ### `token`
 
-<CommandUsage usage="token <token> [<answer>]" :params="['token=入群验证的令牌', 'answer=所选答案，点击按钮时自动附带']" permission="public" />
+<CommandUsage usage="token <token> [<answer>]" :params="['token=入群验证的令牌', 'answer=所选答案，点击按钮时自动附带']" permission="public" platforms="QQBot" />
 
-提交验证令牌；点击入群消息的按钮时自动附带所选答案。命令仅在 QQ 平台可用，属基础命令与隐藏命令，不在帮助列表中显示，也不能被关闭。验证码仅限被禁言的成员本人使用，令牌不存在、已使用或不属于发送者时分别返回对应提示。
+提交验证令牌；点击入群消息的按钮时自动附带所选答案。命令仅在 QQBot 平台可用，属基础命令与隐藏命令，不在帮助列表中显示，也不能被关闭。验证码仅限被禁言的成员本人使用，令牌不存在、已使用或不属于发送者时分别返回对应提示。
 
 ## 验证流程
 

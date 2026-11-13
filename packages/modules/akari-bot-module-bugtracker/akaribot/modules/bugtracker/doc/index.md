@@ -12,12 +12,19 @@
 
 查询漏洞编号对应的记录。`<mojiraid>` 须为“项目前缀-数字”的形式，例如 `MCPE-123456`。无法解析时返回无效编号提示；项目或漏洞不存在时返回查询失败提示。
 
+<ChatExample
+  :log="[
+    '用户：~bugtracker MCPE-123456',
+    '机器人：[MCPE-123456] Large Mouse Input Lag.',
+    'Type: Bug | Status: Resolved',
+    'Resolution: Duplicate',
+    '![漏洞页面截图](bugtracker-example.webp)',
+  ]"
+/>
+
 ## 正则触发
-
 消息以漏洞编号开头时自动查询，支持以下写法：
-
 - 裸编号，如 `MCPE-123456`。
 - 方括号包裹的编号，如 `[MCPE-123456]`。
 - 完整链接，如 `https://bugs.mojang.com/browse/MCPE/issues/MCPE-123456`。
-
 可识别的项目前缀为 `BDS`、`MCPE`、`MCD`、`MCL`、`MCLG`、`REALMS`、`MC`、`WEB`，大小写不敏感。单条消息最多处理前 5 个匹配。

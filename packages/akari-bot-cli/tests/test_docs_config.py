@@ -20,6 +20,7 @@ async def _test_loads_branding_and_icons():
             "[site]\n"
             'title = "文档"\n'
             'logo = "assets/logo.svg"\n'
+            'avatar = "assets/avatar.jpg"\n'
             'favicon = "assets/favicon.ico"\n'
             "\n[icons]\n"
             'home = "home"\n'
@@ -35,6 +36,7 @@ async def _test_loads_branding_and_icons():
     return (
         config.site.title == "文档"
         and config.site.logo == "assets/logo.svg"
+        and config.site.avatar == "assets/avatar.jpg"
         and config.site.favicon == "assets/favicon.ico"
         and config.site.lang == "zh-CN"
         and config.site.base == "/"

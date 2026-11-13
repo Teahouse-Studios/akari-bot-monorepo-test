@@ -77,6 +77,7 @@ def _config_payload(config: DocsConfig) -> dict[str, Any]:
             "lang": config.site.lang,
             "base": config.base,
             "logo": config.site.logo,
+            "avatar": config.site.avatar,
             "favicon": config.site.favicon,
             "command_prefix": config.site.command_prefix,
         },
@@ -116,6 +117,7 @@ def _package_payload(package: DocPackage) -> dict[str, Any]:
         "category_order": package.category_order,
         "doc_path": str(package.doc_path),
         "logo": package.logo,
+        "avatar": package.avatar,
         "editable": package.editable,
         "pages": [
             {

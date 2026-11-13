@@ -230,3 +230,117 @@
 .dark .meta-badge--forced {
   color: var(--vp-c-text-1);
 }
+
+/* 对话示例：内置主题的简化呈现，不含头像与主题色采样 */
+.chat-example {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 24px;
+}
+
+.chat-example__row {
+  display: flex;
+}
+
+.chat-example__divider {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 2px 12px;
+  color: var(--vp-c-text-3);
+  user-select: none;
+}
+
+.chat-example__divider-rule {
+  flex: 1;
+  block-size: 1px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.chat-example__divider-wave {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.chat-example__row--user {
+  justify-content: flex-end;
+}
+
+.chat-example__bubble {
+  max-inline-size: 560px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: var(--vp-c-bg-soft);
+  font-size: 14px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.chat-example__row--user .chat-example__bubble {
+  background: var(--vp-c-brand-soft);
+}
+.chat-example__bubble.chat-example__bubble--image {
+  max-inline-size: min(320px, 100%);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.chat-example__bubble--image .chat-example__role {
+  display: none;
+}
+
+.chat-example__bubble--image .chat-example__image {
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block: 0 8px;
+}
+
+.chat-example__bubble--image .chat-example__image img {
+  margin-inline: 0;
+}
+
+.chat-example__role {
+  margin-inline-end: 6px;
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+}
+
+.chat-example__bubble code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--vp-c-bg-alt);
+  font-size: 13px;
+}
+
+.chat-example__image {
+  display: block;
+  inline-size: 320px;
+  max-inline-size: 100%;
+  margin-block: 8px 4px;
+}
+
+.chat-example__image img {
+  display: block;
+  inline-size: auto;
+  max-inline-size: 100%;
+  block-size: auto;
+  max-block-size: 200px;
+  margin-inline: auto;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.chat-example__image--natural {
+  inline-size: fit-content;
+  max-inline-size: min(320px, 100%);
+  margin-inline: 0;
+}
+
+.chat-example__image--natural img {
+  max-block-size: none;
+  margin-inline: 0;
+}

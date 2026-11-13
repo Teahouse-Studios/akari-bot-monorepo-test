@@ -117,6 +117,7 @@ def _parse_packages(
                 doc_path=doc_path,
                 pages=pages,
                 logo=_text(item, "logo"),
+                avatar=_text(item, "avatar"),
                 order=_int_value(item.get("order")),
                 editable=bool(item.get("editable", False)),
                 category=_text(item, "category"),
@@ -192,7 +193,8 @@ def _fallback_registry(
                 summary=_text(item, "summary"),
                 doc_path=doc_path,
                 pages=pages,
-                logo=_local_logo(doc_path, meta),
+                logo=_local_asset(doc_path, meta, "logo"),
+                avatar=_local_asset(doc_path, meta, "avatar"),
                 editable=bool(item.get("editable", False)),
                 category=_text(meta, "category"),
                 category_order=_int_value(meta.get("category_order")),
@@ -201,8 +203,8 @@ def _fallback_registry(
     return packages
 
 
-def _local_logo(doc_path: Path, meta: Mapping[str, Any]) -> str:
-    value = _text(meta, "logo")
+def _local_asset(doc_path: Path, meta: Mapping[str, Any], field: str) -> str:
+    value = _text(meta, field)
     if not value:
         return ""
     candidate = (doc_path.parent / value).resolve()

@@ -25,3 +25,12 @@
 - 组织：注册人组织。
 - 位置：由地址、城市、州或省、国家拼接。
 - 邮编：注册人邮政编码。
+
+<ChatExample
+  :log="[
+    '用户：~whois example.com',
+    '机器人：域名名称：example.com',
+    '注册商：RESERVED-Internet Assigned Numbers Authority',
+    'WHOIS 服务器：whois.iana.org',
+  ]"
+/>

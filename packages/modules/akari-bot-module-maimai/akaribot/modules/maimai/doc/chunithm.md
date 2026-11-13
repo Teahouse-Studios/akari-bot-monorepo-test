@@ -26,11 +26,27 @@ CHUNITHM 的曲目资料来自落雪咖啡屋的曲目表，封面从落雪下�
 
 按定数搜索谱面，给出 `constant_max` 时按定数范围搜索，两端顺序相反时自动交换。定数不大于 0 时返回无效等级提示。结果按歌曲 ID 排序，逐条列出 ID、歌名、难度、等级与定数；结果超出一页时渲染为图片，渲染失败时发送文本并附页码提示。
 
+<ChatExample
+  :log="[
+    '用户：~chunithm base 14.8',
+    '机器人：以下为定数 14.8 的曲目列表：',
+    '118 - 腐れ外道とチョコレゐト Ultima 14+ (14.8)',
+  ]"
+/>
+
 ### `chunithm level`
 
 <CommandUsage usage="chunithm level <level> [-p <page>]" :params="['level=等级，如 14+', 'page=页码']" permission="public" :options="[{flag: '-p <page>', desc: '指定页数，默认为 1。'}]" />
 
 按等级搜索谱面，等级写作 `14+` 一类形式。无匹配曲目时返回未找到提示，分页与输出格式同 `chunithm base`。
+
+<ChatExample
+  :log="[
+    '用户：~chunithm level 14+',
+    '机器人：以下为 14+ 级的曲目列表：',
+    '7 - 初音ミクの消失 Master 14+ (14.5)',
+  ]"
+/>
 
 ### `chunithm search`
 
@@ -38,11 +54,28 @@ CHUNITHM 的曲目资料来自落雪咖啡屋的曲目表，封面从落雪下�
 
 按歌名搜索，关键词可为歌名的一部分，只匹配歌名、不查询别名库。无匹配曲目时返回未找到提示，分页与输出格式同 `chunithm base`。
 
+<ChatExample
+  :log="[
+    '用户：~chunithm search Grievous',
+    '机器人：“Grievous”的搜索结果：',
+    '751 - Grievous Lady',
+  ]"
+/>
+
 ### `chunithm chart`
 
 <CommandUsage usage="chunithm chart <song>" :params="['song=歌曲 ID 或完整歌名']" permission="public" />
 
 查询各难度谱面，逐难度给出等级、定数、TAP／HOLD／SLIDE／AIR／FLICK 物量与谱师，并附曲绘。参数为纯数字或带 `id` 前缀时按 ID 解析，否则按完整歌名匹配，不查询别名库，例如 `chunithm chart id1086`。只有一档难度的 WORLD'S END 谱面以星级展示定数。
+
+<ChatExample
+  :log="[
+    '用户：~chunithm chart 751',
+    '机器人：751 - Grievous Lady',
+    'Basic 4 (4.0)',
+    'TAP：205/HOLD：144/SLIDE：168/AIR：52/FLICK：0',
+  ]"
+/>
 
 ### `chunithm id`
 
@@ -50,17 +83,43 @@ CHUNITHM 的曲目资料来自落雪咖啡屋的曲目表，封面从落雪下�
 
 按 ID 查询歌曲，输出艺术家、分类、BPM、版本与各难度定数，并附曲绘。歌曲不存在时返回未找到提示。
 
+<ChatExample
+  :log="[
+    '用户：~chunithm id 751',
+    '机器人：751 - Grievous Lady',
+    '艺术家：Team Grimoire vs Laur「Arcaea」',
+    '难度：4.0/9.0/12.4/14.8',
+  ]"
+/>
+
 ### `chunithm song`
 
 <CommandUsage usage="chunithm song <song>" :params="['song=歌曲 ID 或完整歌名']" permission="public" />
 
 按 ID 或完整歌名查询歌曲，与 `chunithm id` 共用同一处理器，输出格式一致，例如 `chunithm song 1086`。纯数字或 `id` 前缀按 ID 解析，其余按完整歌名匹配。
 
+<ChatExample
+  :log="[
+    '用户：~chunithm song 7',
+    '机器人：7 - 初音ミクの消失',
+    '艺术家：cosMo＠暴走P',
+    '分类：niconico',
+  ]"
+/>
+
 ### `chunithm random`
 
 <CommandUsage usage="chunithm random [<diff+level>]" :params="['diff+level=难度与等级连写，如 紫14+']" permission="public" />
 
 不填参数时从全部曲目随机，填写时按难度与等级筛选。`<diff+level>` 把二者连写，例如 `紫14+`、`14+`；难度接受全称、三字母缩写与中文（绿、黄、红、紫、黑），大小写不敏感，CHUNITHM 的难度包含 Ultima。只给难度而不给等级或无法解析时返回随机失败提示，无匹配曲目时返回未找到提示；不支持 DX／标准类型筛选与 `*` 无条件写法。
+
+<ChatExample
+  :log="[
+    '用户：~chunithm random 紫14+',
+    '机器人：33 - Blue Noise',
+    '2/7/10.1/14.5',
+  ]"
+/>
 
 ## B30 与账号
 
@@ -105,6 +164,13 @@ CHUNITHM 的曲目资料来自落雪咖啡屋的曲目表，封面从落雪下�
 <CommandUsage usage="chunithm update [--no-cover]" permission="superuser" :options="[{flag: '--no-cover', desc: '跳过封面下载。'}]" />
 
 从落雪重新拉取曲目表与封面。`--no-cover` 跳过封面下载，只更新曲目表；更新失败时返回失败提示。
+
+<ChatExample
+  :log="[
+    '用户：~chunithm update',
+    '机器人：成功。',
+  ]"
+/>
 
 ## 与舞萌 DX 的差异
 

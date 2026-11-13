@@ -8,7 +8,7 @@
 
 <CommandUsage usage="mcmod <mod_name>" :params="['mod_name=Mod 名称或无歧义缩写']" permission="public" />
 
-按 Mod 名称检索百科条目，`<mod_name>` 接受无歧义缩写或准确名称。
+按 Mod 名称检索百科条目，`<mod_name>` 接受无歧义缩写或准确名称。两条命令都依赖 WebRender 抓取页面，未启用时返回未找到结果。
 
 ### `mcmod details`
 

@@ -36,8 +36,24 @@
 
 设置大语言模型的自定义命令，省略参数则清除。
 
+<ChatExample
+  :log="[
+    '用户：~ai llm instruct 用简体中文回答',
+    '机器人：已设置自定义命令。',
+    '用户：~ai llm instruct',
+    '机器人：已清除自定义命令。',
+  ]"
+/>
+
 ### `ai llm persona`
 
 <CommandUsage usage="ai llm persona" permission="public" />
 
 设置是否开启人格化，效果因模型而异。
+
+<ChatExample
+  :log="[
+    '用户：~ai llm persona',
+    '机器人：已开启人格化。',
+  ]"
+/>

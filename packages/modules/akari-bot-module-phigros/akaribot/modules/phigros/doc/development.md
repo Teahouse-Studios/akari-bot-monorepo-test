@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-phigros
 
 ## 权限与平台能力
 
-`update` 仅超级用户可执行。`login` 仅限私聊；`bind` 在 Discord 频道、KOOK 群组、Matrix 房间、QQ 群聊、QQBot 群聊与频道、Telegram 群组与超级群组中会先告警并撤回消息。`login` 在平台支持图片时展示二维码，否则给出授权链接；`b30` 生成图片，`song` 与 `random` 在曲绘存在时附带曲绘。曲绘渲染依赖 `akari-bot-assets-fonts` 提供的字体资源。
+`update` 仅超级用户授权使用。`login` 仅限私聊；`bind` 在 Discord 频道、KOOK 群组、Matrix 房间、QQ 群聊、QQBot 群聊与频道、Telegram 群组与超级群组中会先告警并撤回消息。`login` 在平台支持图片时展示二维码，否则给出授权链接；`b30` 生成图片，`song` 与 `random` 在曲绘存在时附带曲绘。曲绘渲染依赖 `akari-bot-assets-fonts` 提供的字体资源。
 
 ## 数据表
 

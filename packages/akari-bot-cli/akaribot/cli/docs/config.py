@@ -115,6 +115,7 @@ class DocsSiteConfig:
     :param lang: 页面语言标签；留空时取 ``defaults.toml`` 的 ``[site] lang``。
     :param base: 部署基路径；留空时取 ``defaults.toml`` 的 ``[site] base``。
     :param logo: 顶栏 Logo；相对路径按实例根解析，也可写 URL 或站点路径。
+    :param avatar: 对话示例的机器人头像；相对路径按实例根解析，也可写 URL 或站点路径。
     :param favicon: 站点图标；相对路径按实例根解析，也可写 URL 或站点路径。
     :param command_prefix: 命令用法行使用的前缀；留空时取实例核心配置的首个前缀。
     """
@@ -123,6 +124,7 @@ class DocsSiteConfig:
     lang: str = ""
     base: str = ""
     logo: str = ""
+    avatar: str = ""
     favicon: str = ""
     command_prefix: str = ""
 
@@ -292,6 +294,7 @@ def load_config(instance: Any) -> DocsConfig:
             lang=_text(site, "lang", ""),
             base=_text(site, "base", ""),
             logo=_text(site, "logo", ""),
+            avatar=_text(site, "avatar", ""),
             favicon=_text(site, "favicon", ""),
             command_prefix=_text(site, "command_prefix", "").strip() or read_command_prefix(root),
         ),

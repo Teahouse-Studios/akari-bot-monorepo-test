@@ -122,6 +122,7 @@ def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpe
             for locale in config.locales
         ],
         "logo": config.site.logo,
+        "avatar": config.site.avatar,
         "favicon": config.site.favicon,
         "labels": dict(sorted(config.labels.items())),
         "group_titles": dict(sorted(config.group_titles.items())),
@@ -131,7 +132,7 @@ def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpe
         "theme_color": config.theme.color,
     }
     digest.update(json.dumps(head, ensure_ascii=False, sort_keys=True).encode("utf-8"))
-    for field in ("logo", "favicon"):
+    for field in ("logo", "avatar", "favicon"):
         asset = site_asset_path(config.root, getattr(config.site, field))
         if asset is not None:
             digest.update(f"site-asset\0{field}\0{asset.name}\n".encode("utf-8"))
@@ -142,11 +143,14 @@ def fingerprint_catalog(catalog: DocCatalog, config: DocsConfig, theme: ThemeSpe
         if meta_path.is_file():
             digest.update(b"meta\0")
             digest.update(_file_digest(meta_path))
-        if package.logo:
-            logo_path = Path(package.logo)
-            digest.update(f"logo\0{package.logo}\0".encode("utf-8"))
-            if logo_path.is_file():
-                digest.update(_file_digest(logo_path))
+        for field in ("logo", "avatar"):
+            value = str(getattr(package, field, "") or "")
+            if not value:
+                continue
+            asset_path = Path(value)
+            digest.update(f"{field}\0{value}\0".encode("utf-8"))
+            if asset_path.is_file():
+                digest.update(_file_digest(asset_path))
         for relative, path in collect_files(package.doc_path):
             digest.update(f"file\0{relative}\0".encode("utf-8"))
             digest.update(_file_digest(path))

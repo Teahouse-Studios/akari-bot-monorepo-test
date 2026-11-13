@@ -23,3 +23,13 @@
 - `hsl(0, 100%, 50%)` 与带角度单位的形式 `hsl(0deg, 100%, 50%)`。
 
 颜色名与 Material Design 名称需要精确命中，十六进制中的字母不区分大小写。
+
+<ChatExample
+  :log="[
+    '用户：~color #ff0000',
+    '机器人：HEX：`#ff0000`',
+    'RGB：`rgb(255, 0, 0)`',
+    'HSL：`hsl(0, 100%, 50%)`',
+    '![颜色卡](color-example.png)',
+  ]"
+/>

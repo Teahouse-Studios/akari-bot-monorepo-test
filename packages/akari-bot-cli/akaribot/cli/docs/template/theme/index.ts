@@ -1,4 +1,5 @@
 import DefaultTheme from "vitepress/theme"
+import ChatExample from "./components/ChatExample.vue"
 import CommandUsage from "./components/CommandUsage.vue"
 import ModuleMeta from "./components/ModuleMeta.vue"
 import NoticeBox from "./components/NoticeBox.vue"
@@ -10,5 +11,6 @@ export default {
     app.component("ModuleMeta", ModuleMeta)
     app.component("NoticeBox", NoticeBox)
     app.component("CommandUsage", CommandUsage)
+    app.component("ChatExample", ChatExample)
   },
 }

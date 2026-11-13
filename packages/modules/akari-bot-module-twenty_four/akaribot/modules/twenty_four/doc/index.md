@@ -12,17 +12,41 @@
 
 开始新游戏，随机给出四个 1 到 13 的整数。存在进行中的对局时返回对局进行中提示。
 
+<ChatExample
+  :log="[
+    '用户：~twenty-four',
+    '机器人：给出的数字组合：(3, 8, 3, 1)',
+    '用户：3*(8+1)-3',
+    '机器人：回答正确。',
+  ]"
+/>
+
 ### `twenty-four stop`
 
 <CommandUsage usage="twenty-four stop" permission="public" />
 
 结束当前对局；没有进行中的对局时返回停止失败提示。
 
+<ChatExample
+  :log="[
+    '用户：~twenty-four stop',
+    '机器人：已停止。',
+  ]"
+/>
+
 ### `twenty-four solve`
 
 <CommandUsage usage="twenty-four solve <num1> <num2> <num3> <num4>" :params="['num1=第一个数，取值 1 到 13', 'num2=第二个数，取值 1 到 13', 'num3=第三个数，取值 1 到 13', 'num4=第四个数，取值 1 到 13']" permission="public" />
 
 列出四个数字的全部解。四个数字均须在 1 到 13 之间，存在进行中的对局时拒绝执行。非超级用户需支付 4 花瓣，实例未开启花瓣系统时不扣除，余额不足时终止；存在解时逐条列出，不存在解时返回无解提示。
+
+<ChatExample
+  :log="[
+    '用户：~twenty-four solve 1 5 5 5',
+    '机器人：数字组合 (1, 5, 5, 5) 的所有解为：',
+    '5*(5-1/5)',
+  ]"
+/>
 
 ## 游戏规则
 

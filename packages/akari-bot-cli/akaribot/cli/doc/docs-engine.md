@@ -45,6 +45,7 @@ title = "小可 · 文档"
 lang = "zh-CN"
 base = "/"
 logo = ""
+avatar = ""  # 对话示例的机器人头像，留空时取包声明的 avatar
 favicon = ""
 command_prefix = ""  # 留空时取实例核心配置的首个命令前缀
 locales = ["zh-CN"]  # 首项为默认语言；只列一项时等同于单语言站点
@@ -101,7 +102,7 @@ color = "#d69cdd"
 - `site.command_prefix`：命令用法行使用的前缀，留空时取 `config/config.toml` 中 `[config]` 的 `command_prefix` 首项；核心配置缺失或为空时不加前缀。
 - `site.locales`：站点语言清单，首项为默认语言，标签形如 `zh-CN`；留空时只有 `site.lang` 一种语言。`site.lang` 与首项不一致时按配置错误终止，未写 `site.lang` 时取首项。清单中的标签要么在 `[locales.<标签>]` 下给出配置，要么已有随包默认值。
 - `locales.<标签>`：该语言的显示名称 `label`、站点标题 `title`，以及逐键覆盖界面文案的 `labels`、覆盖分组标题的 `group_titles`。未写的项沿用 `defaults.toml` 与默认语言的值。
-- `site.logo` / `site.favicon`：顶栏标志与站点图标。相对路径按实例根解析，文件会复制到 `public/site-logo.<扩展名>` 与 `public/site-favicon.<扩展名>` 并自动带上基路径；HTTP(S) URL 与 `/` 开头的站点路径原样使用。相对路径必须位于实例根内且文件存在。两项留空时按下列顺序取默认值：顶栏标志取第一个声明了 `logo` 的包所提供的图片（品牌资源包声明其标志），没有这样的包时沿用站点图标；站点图标取 `[assets] favicon` 指向的随包文件。
+- `site.logo` / `site.avatar` / `site.favicon`：顶栏标志、对话示例头像与站点图标。相对路径按实例根解析，文件会复制到 `public/site-logo.<扩展名>`、`public/site-avatar.<扩展名>` 与 `public/site-favicon.<扩展名>` 并自动带上基路径；HTTP(S) URL 与 `/` 开头的站点路径原样使用。相对路径必须位于实例根内且文件存在。三项留空时按下列顺序取默认值：顶栏标志取第一个声明了 `logo` 的包所提供的图片（品牌资源包声明其标志），没有这样的包时沿用站点图标；对话头像取第一个声明了 `avatar` 的包所提供的图片（品牌资源包声明其头像），没有这样的包时沿用站点图标；站点图标取 `[assets] favicon` 指向的随包文件。
 - `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称，`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。
 - `group_titles`：侧栏一级分组的标题，键为包分组。
 - `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册有限图标集，未注册的名称不会显示图标。
@@ -187,13 +188,13 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的凭据只从 `A
 
 ### 主题组件
 
-外部模板的 `.vitepress/theme` 内置 `ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）与 `CommandUsage`（命令用法）六个全局组件，并针对主题的 M3E 调色板适配。生成器读取包内 `doc.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`；本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
+外部模板的 `.vitepress/theme` 内置 `ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）、`CommandUsage`（命令用法）与 `ChatExample`（命令对话示例）七个全局组件，并针对主题的 M3E 调色板适配。生成器读取包内 `doc.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`；本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
 
-组件只在 VitePress 构建产物中渲染；包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。内置 `bundled` 主题为 `ModuleMeta`、`NoticeBox` 与 `CommandUsage` 保留同名回退，`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单需要外部模板。
+组件只在 VitePress 构建产物中渲染；包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。内置 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名回退，`ChatExample` 将图片渲染为缩略图并在新标签页打开，外部模板提供从缩略图展开的查看叠层与按钮交互；`ChatExample` 中只含三个以上波浪号的行渲染为时间分隔线，尾部图片另起气泡、多张尾部图片共用一个气泡，图片地址后的 `{natural}` 表示按原始尺寸展示，`image-width` 固定示例内图片宽度；按钮项的 `buttons` 可挂二级按钮，`dismiss: true` 删除所属回复组；`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单、`platforms` / `excluded` 平台徽章需要外部模板。
 
 ## 文档编写约定
 
 - 包内文档使用简体中文；面向用户的固定文案仍走 `I18NContext`，不要为了文档新增其它语言的 locale 文件。
-- 页面以一级标题开头，文件名使用小写英文与连字符；图片放在 `doc/` 下随页面一起复制。
+- 页面以一级标题开头，文件名使用小写英文与连字符；图片放在 `doc/` 下随页面一起复制，并同步发布到 `/<包 key>/` 供组件按相对路径引用。
 - 站内链接使用 `cleanUrls` 形式（`/包 key/页面`），跨包链接以包 key 开头。
 - 页面正文只描述当前行为；变更历史由 git 承担。

@@ -10,10 +10,25 @@
 
 合成两个 Emoji；省略参数时随机取一对可合成的 Emoji，只给一个时随机搭配另一半，也可写作 `emoji1+emoji2`。参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。任一参数不是 Emoji，或不在支持列表中时，返回不支持提示并列出具体的 Emoji；组合存在但图片缺失时返回未找到提示。
 
+<ChatExample
+  :log="[
+    '用户：~emojimix 😀 😍',
+    '机器人：😀+😍',
+    '![合成图](emojimix-example.png)',
+  ]"
+/>
+
 ### `emojimix list`
 
 <CommandUsage usage="emojimix list [<emoji>]" :params="['emoji=要查询搭档的 Emoji']" permission="public" />
 
 列出全部受支持的 Emoji，或指定 Emoji 的搭档。列表较长时在 Discord 按每 200 个一批分条发送，其余平台合并为一条消息。
+
+<ChatExample
+  :log="[
+    '用户：~emojimix list 😀',
+    '机器人：支持“😀”的 Emoji 组合：😍🤣🥰😘😎🥳……',
+  ]"
+/>
 
 输出首行为“左 Emoji + 右 Emoji”，随后是合成图。

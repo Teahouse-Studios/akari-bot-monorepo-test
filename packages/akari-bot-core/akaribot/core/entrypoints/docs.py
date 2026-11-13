@@ -161,7 +161,7 @@ def _read_doc_meta(doc_dir: Path, label: str, warnings: list[str]) -> dict[str, 
         return {}
     return {
         name: data[name]
-        for name in ("title", "summary", "order", "hidden", "kind", "category", "category_order", "logo")
+        for name in ("title", "summary", "order", "hidden", "kind", "category", "category_order", "logo", "avatar")
         if name in data
     }
 
@@ -246,20 +246,26 @@ def _collect_pages(doc_dir: Path, label: str, warnings: list[str]) -> list[dict[
     return pages
 
 
-def _doc_logo(doc_dir: Path, meta: Mapping[str, Any], label: str, warnings: list[str]) -> Path | None:
-    value = meta.get("logo")
+def _doc_asset(
+    doc_dir: Path,
+    meta: Mapping[str, Any],
+    field: str,
+    label: str,
+    warnings: list[str],
+) -> Path | None:
+    value = meta.get(field)
     if value is None or value == "":
         return None
     if not isinstance(value, str):
-        warnings.append(f"{label}: {DOC_META_FILE} 的 logo 必须是相对路径字符串，已忽略。")
+        warnings.append(f"{label}: {DOC_META_FILE} 的 {field} 必须是相对路径字符串，已忽略。")
         return None
     package_dir = doc_dir.parent.resolve()
     candidate = (package_dir / value.strip()).resolve()
     if not candidate.is_relative_to(package_dir):
-        warnings.append(f"{label}: {DOC_META_FILE} 的 logo 指向包目录之外，已忽略。")
+        warnings.append(f"{label}: {DOC_META_FILE} 的 {field} 指向包目录之外，已忽略。")
         return None
     if not candidate.is_file():
-        warnings.append(f"{label}: {DOC_META_FILE} 声明的 logo 不存在（{candidate}），已忽略。")
+        warnings.append(f"{label}: {DOC_META_FILE} 声明的 {field} 不存在（{candidate}），已忽略。")
         return None
     return candidate
 
@@ -288,7 +294,8 @@ def _build_package(
         warnings.append(f"{key}: {doc_dir} 下没有 Markdown 文档，已跳过。")
         return None
     name = import_path.rpartition(".")[2] or import_path
-    logo = _doc_logo(doc_dir, meta, key, warnings) if meta else None
+    logo = _doc_asset(doc_dir, meta, "logo", key, warnings) if meta else None
+    avatar = _doc_asset(doc_dir, meta, "avatar", key, warnings) if meta else None
     return {
         "key": key,
         "dist": dist_name,
@@ -302,6 +309,7 @@ def _build_package(
         "category_order": _as_order(meta.get("category_order", DEFAULT_ORDER), f"{key}.category_order", warnings),
         "doc_path": str(doc_dir),
         "logo": str(logo) if logo is not None else "",
+        "avatar": str(avatar) if avatar is not None else "",
         "editable": editable,
         "pages": pages,
     }

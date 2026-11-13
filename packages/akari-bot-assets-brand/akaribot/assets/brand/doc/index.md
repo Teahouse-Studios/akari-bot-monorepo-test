@@ -8,6 +8,7 @@
 | --- | --- |
 | `character_marked.png` | 角色立绘，用于 `~about` 等展示场景 |
 | `akaribot_logo.png` | 标志，用于邮件报告、界面配图与文档站点顶栏 |
+| `akaribot_avatar.jpg` | 机器人头像，用于文档站点的命令对话示例 |
 | `credits.txt` | 制作人员名单，含主开发者、功能协助、画师与 Logo 设计 |
 | `LICENSE` | 品牌资产许可证 |
 | `manifest.toml` | 分发自述清单；本包不是模块或适配器，没有 registry 条目 |
@@ -28,7 +29,7 @@ from akaribot.assets.brand import brand_dir
 path = brand_dir() / "character_marked.png"
 ```
 
-`doc/doc.toml` 的 `logo` 指向 `akaribot_logo.png`，文档引擎据此把标志设为站点顶栏图片；实例在 `docs.toml` 里配置 `site.logo` 时以实例配置为准。
+`doc/doc.toml` 的 `logo` 指向 `akaribot_logo.png`，`avatar` 指向 `akaribot_avatar.jpg`，文档引擎据此把标志与对话头像设为站点素材；实例在 `docs.toml` 里配置 `site.logo` 或 `site.avatar` 时以实例配置为准。
 
 `brand_dir()` 返回包内资源根。core 的 `find_brand_asset(name)` 按“资源包 → 实例 `assets/`”的顺序查找，两处都没有时返回 `None`，由调用方降级：`~about` 少一张图不会让整条命令失败，SMTP 报告没有标志也照常发送。实例 `assets/` 中的同名文件覆盖包内资产，供部署者替换标志。
 
