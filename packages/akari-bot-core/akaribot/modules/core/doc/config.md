@@ -256,14 +256,41 @@
 
 ### `setup timeoffset`
 
-<CommandUsage usage="setup timeoffset <offset>" :params="['offset=时区偏移，如 8、-5:30']" permission="admin" />
+<CommandUsage usage="setup timeoffset <offset>" :params="['offset=时区偏移，如 8、-5:30；reset 恢复默认值']" permission="admin" />
 
-设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时提示格式错误；写入时规范化为 `+8`、`-5:30` 形式。
+设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时提示格式错误；写入时规范化为 `+8`、`-5:30` 形式。参数为 `reset` 时清除场景偏移，恢复为未设置。
 
 <ChatExample
   :log="[
     '用户：~setup timeoffset 8',
-    '机器人：已将时间偏移量设置为 UTC+8。',
+    '机器人：已将群聊时区设置为 UTC+8。',
+  ]"
+/>
+
+<ChatExample
+  :log="[
+    '用户：~setup timeoffset reset',
+    '机器人：已将群聊时区恢复为默认值。',
+  ]"
+/>
+
+### `setup timezone`
+
+<CommandUsage usage="setup timezone <offset>" :params="['offset=显示时区偏移，如 8、-5:30；reset 跟随场景时区']" permission="public" />
+
+设置个人显示时区偏移，覆盖场景时区，格式与 `setup timeoffset` 相同。参数为 `reset` 时清除个人偏移，恢复为跟随场景时区。
+
+<ChatExample
+  :log="[
+    '用户：~setup timezone +3',
+    '机器人：已将用户显示时区设置为 UTC+3。',
+  ]"
+/>
+
+<ChatExample
+  :log="[
+    '用户：~setup timezone reset',
+    '机器人：已恢复跟随群聊时区。',
   ]"
 />
 
@@ -322,6 +349,7 @@
 | 个人 | `typo_check` | 拼写检查 |
 | 个人 | `use_markdown` | Markdown 渲染 |
 | 个人 | `dark_mode` | 暗色模式 |
+| 个人 | `timezone_offset` | 显示时区偏移 |
 
 ## database
 

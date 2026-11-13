@@ -15,7 +15,7 @@ from akaribot.core.i18n import Locale, audit_terms
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 
-# 该键的文案为「查看当前{TERM:target}的消息通道。」
+# 该键的文案为「查看当前{TERM:target}的消息通道与主动推送优先级。」
 TERM_DOC_KEY = "core.help.bind.channel"
 
 EXPECTED_CANDIDATES = (

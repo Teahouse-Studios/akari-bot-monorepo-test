@@ -1,4 +1,4 @@
-"""modules.core.common_tools.bind 单元测试 - 消息通道的主动推送优先级（需要数据库）。"""
+"""akaribot.modules.core.common_tools.bind 单元测试 - 消息通道的主动推送优先级（需要数据库）。"""
 
 from unittest.mock import patch
 
@@ -104,7 +104,7 @@ async def _test_channel_view_lists_push_order():
 
 @func_case
 async def test_bind_channel(tester: Tester):
-    """modules.core.common_tools.bind: 消息通道推送优先级命令测试"""
+    """akaribot.modules.core.common_tools.bind: 消息通道推送优先级命令测试"""
     await tester.test(_test_set_priority_persists, "推送优先级设置持久化测试")
     await tester.test(_test_invalid_priority_is_rejected, "推送优先级越界拒绝测试")
     await tester.test(_test_reset_priority, "推送优先级重置测试")

@@ -21,8 +21,11 @@
 | `sender_id`、`sender_from`、`sender_name` | 发送者信息；主动会话可能为空 |
 | `message_id`、`reply_id`、`messages`、`session_id`、`timestamp` | 触发消息、回复目标、原始消息链、会话 UUID 与时间戳 |
 | `prefixes`、`muted`、`custom_admins`、`enabled_modules` | 可用命令前缀、静音状态、自定义管理员 union ID 与已启用模块 |
-| `locale`、`timezone_offset`、`tmp` | `Locale` 对象（语言代码取 `locale.locale`）、`timedelta` 时区偏移与临时字典 |
+| `locale`、`timezone_offset`、`display_timezone_offset`、`tmp` | `Locale` 对象（语言代码取 `locale.locale`）、场景与个人显示时区偏移（`timedelta`，未设置为 `None`）与临时字典 |
+| `tz`、`display_tz`、`tz_label`、`display_tz_label` | 场景时区与展示时区（`tzinfo`）及其规范偏移字符串；展示时区未设置时跟随场景时区 |
 | `bot_name`、`bot_id`、`is_private`、`fetch`、`support_*` | 本地化机器人名称与 ID；私聊、主动会话与平台能力标志 |
+
+`now()` 与 `today()` 返回场景时区的当前时间与日期，业务代码取时间用它，不直接用 `datetime.now()`；展示用 `format_time()`。
 
 ## 发送消息
 
