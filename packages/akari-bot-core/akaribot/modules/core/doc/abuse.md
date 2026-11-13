@@ -6,13 +6,13 @@ order: 15
 
 <ModuleAlias names="ae" />
 
-模块级权限为超级用户。
+此模块用于管理用户的警告次数、临时封禁与黑白名单，也可以屏蔽指定的场景。模块级权限为超级用户。
 
 ### `abuse check`
 
 <CommandUsage usage="abuse check <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-查看用户的警告次数、临时封禁与黑白名单状态。用户尚无 union 时先确认再创建。
+此命令查看用户的警告次数、临时封禁与黑白名单状态。用户还没有 union 记录时，机器人先要求确认，再创建记录。
 
 <ChatExample
   :log="[
@@ -24,9 +24,9 @@ order: 15
 
 ### `abuse warn`
 
-<CommandUsage usage="abuse warn <user> [<count>]" :params="['user=带平台前缀的用户完整 ID', 'count=增加的警告次数，缺省为 1']" permission="superuser" />
+<CommandUsage usage="abuse warn <user> [<count>]" :params="['user=带平台前缀的用户完整 ID', 'count=增加的警告次数，默认为 1']" permission="superuser" />
 
-增加警告次数，`<count>` 缺省为 1。累计次数超过 `tos_warning_counts` 且用户不在白名单时，用户转入黑名单。临时封禁的时长取自 `tos_temp_ban_time`，由 `tos` 钩子执行，见[tos](tos.md)。
+此命令增加警告次数，`<count>` 默认为 1。累计警告次数超过 `tos_warning_counts`，且用户不在白名单时，机器人将其转入黑名单。临时封禁的时长取自 `tos_temp_ban_time`，封禁动作由 `tos` 钩子执行，见[tos](tos.md)。
 
 <ChatExample
   :log="[
@@ -37,9 +37,9 @@ order: 15
 
 ### `abuse revoke`
 
-<CommandUsage usage="abuse revoke <user> [<count>]" :params="['user=带平台前缀的用户完整 ID', 'count=减少的警告次数，缺省为 1']" permission="superuser" />
+<CommandUsage usage="abuse revoke <user> [<count>]" :params="['user=带平台前缀的用户完整 ID', 'count=减少的警告次数，默认为 1']" permission="superuser" />
 
-减少警告次数，`<count>` 缺省为 1。
+此命令减少警告次数，`<count>` 默认为 1。
 
 <ChatExample
   :log="[
@@ -52,7 +52,7 @@ order: 15
 
 <CommandUsage usage="abuse clear <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-将用户的警告次数清零。
+此命令将用户的警告次数清零。
 
 <ChatExample
   :log="[
@@ -65,7 +65,7 @@ order: 15
 
 <CommandUsage usage="abuse untempban <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-解除临时封禁，交由 `tos.remove_temp_ban` 钩子处理。
+此命令解除临时封禁，具体处理交给 `tos.remove_temp_ban` 钩子。
 
 <ChatExample
   :log="[
@@ -78,7 +78,7 @@ order: 15
 
 <CommandUsage usage="abuse ban <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-将用户加入黑名单并清除白名单身份。
+此命令将用户加入黑名单，同时移出白名单。
 
 <ChatExample
   :log="[
@@ -91,7 +91,7 @@ order: 15
 
 <CommandUsage usage="abuse unban <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-将用户移出黑名单。
+此命令将用户移出黑名单。
 
 <ChatExample
   :log="[
@@ -104,7 +104,7 @@ order: 15
 
 <CommandUsage usage="abuse trust <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-将用户加入白名单并移出黑名单。白名单用户不触发警告封禁。
+此命令将用户加入白名单，同时移出黑名单。白名单中的用户不会因警告被封禁。
 
 <ChatExample
   :log="[
@@ -117,7 +117,7 @@ order: 15
 
 <CommandUsage usage="abuse distrust <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-将用户移出白名单。
+此命令将用户移出白名单。
 
 <ChatExample
   :log="[
@@ -130,7 +130,7 @@ order: 15
 
 <CommandUsage usage="abuse block <target>" :params="['target=带 QQ|Group| 前缀的场景 ID']" permission="superuser" platforms="QQ" />
 
-仅 QQ 可用。屏蔽指定场景，`<target>` 须为 `QQ|Group|` 前缀的完整 ID，且不能是当前场景。
+此命令仅在 QQ 可用，用于屏蔽指定场景。`<target>` 须为带 `QQ|Group|` 前缀的完整 ID，且不能是当前场景。
 
 <ChatExample
   :log="[
@@ -143,7 +143,7 @@ order: 15
 
 <CommandUsage usage="abuse unblock <target>" :params="['target=带 QQ|Group| 前缀的场景 ID']" permission="superuser" platforms="QQ" />
 
-仅 QQ 可用。解除对指定场景的屏蔽。
+此命令仅在 QQ 可用，用于解除对指定场景的屏蔽。
 
 <ChatExample
   :log="[

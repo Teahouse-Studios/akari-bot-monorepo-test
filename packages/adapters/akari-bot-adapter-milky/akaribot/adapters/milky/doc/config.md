@@ -1,6 +1,8 @@
 # Milky 配置项
 
-配置表为 `bot_milky`，密钥表为 `bot_milky_secret`，两张表同处 `config/bot_milky.toml`：普通项在 `[bot_milky]`，密钥项在 `[bot_milky_secret]`。
+本文整理了 Milky 适配器的配置项，以及填写时的注意事项。
+
+配置表为 `bot_milky`，密钥表为 `bot_milky_secret`，两张表同处 `config/bot_milky.toml`。普通项写在 `[bot_milky]`，密钥项写在 `[bot_milky_secret]`。
 
 ## 配置表 `bot_milky`
 
@@ -24,5 +26,5 @@
 
 ## 说明
 
-- `qq_host` 未带协议时按 `http://` 补全，末尾斜杠会被去除。
+- `qq_host` 没写协议时会在开头补上 `http://`，末尾的斜杠会被去掉。
 - 回应表情 ID 参见 [QQ 开放平台表情文档](https://bot.q.qq.com/wiki/develop/api-v2/openapi/emoji/model.html#Emoji)。

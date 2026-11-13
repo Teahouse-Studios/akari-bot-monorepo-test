@@ -10,7 +10,7 @@ order: 57
 
 <CommandUsage usage="raise [<args>]" :params="['args=异常信息，省略时用内置文案']" permission="superuser" />
 
-抛出 `TestException`，用于验证错误上报链路。参数作为异常信息，省略时使用内置文案。
+此命令抛出 `TestException`，用于验证错误上报链路。参数会作为异常信息，省略参数时使用内置文案。
 
 <ChatExample
   :log="[

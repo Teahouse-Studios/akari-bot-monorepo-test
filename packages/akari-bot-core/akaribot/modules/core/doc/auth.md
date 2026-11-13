@@ -4,13 +4,13 @@ order: 13
 
 # auth
 
-模块级权限为超级用户，只对声明了 `required_superuser` 的模块生效。
+此模块让超级用户把某个模块的超级用户权限授予其他用户。使用此模块的命令需要超级用户权限。授权只对声明了 `required_superuser` 的模块生效。
 
 ### `auth add`
 
 <CommandUsage usage="auth add <user> <module>" :params="['user=带平台前缀的用户完整 ID', 'module=声明了仅超级用户授权使用的模块名']" permission="superuser" />
 
-授权用户在指定模块中执行超级用户命令。目标模块未声明 `required_superuser` 时拒绝执行；授权记录同时保存授权者，执行前要求确认。
+此命令把指定模块的超级用户权限授予目标用户。执行前需要按提示确认，授权记录中会同时记下授权者。目标模块未声明 `required_superuser` 时，此命令会被拒绝。
 
 <ChatExample
   :log="[
@@ -25,7 +25,7 @@ order: 13
 
 <CommandUsage usage="auth remove <user> <module>" :params="['user=带平台前缀的用户完整 ID', 'module=声明了仅超级用户授权使用的模块名']" permission="superuser" />
 
-撤销授权，只删除本人授予的条目。授权者失去超级用户身份后，该条授权不再生效。
+此命令撤销授权，只删除自己授予的条目。授权者失去超级用户身份后，对应的授权不再生效。
 
 <ChatExample
   :log="[
@@ -38,7 +38,7 @@ order: 13
 
 <CommandUsage usage="auth list <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-列出用户获得的模块授权。
+此命令列出用户获得的模块授权。
 
 <ChatExample
   :log="[

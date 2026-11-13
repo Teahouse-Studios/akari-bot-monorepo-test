@@ -4,13 +4,15 @@ order: 21
 
 # setup
 
-模块为基础模块，别名 `toggle`、`prefix`、`locale`、`lang`、`alias` 分别指向对应子命令。命令同时作用于场景域与个人域，`setup list` 展示全部设置项。
+此模块用于查看和修改机器人的设置。别名 `toggle`、`prefix`、`locale`、`lang` 和 `alias` 各自指向一条子命令。
+
+这些命令分别作用于场景域和个人域。`setup list` 展示全部设置项。
 
 ### `setup typing`
 
 <CommandUsage usage="setup typing" permission="public" />
 
-切换“正在输入”提示，缺省开启，设置保存在个人域。
+切换“正在输入”提示。此开关默认开启，设置保存在个人域。
 
 <ChatExample
   :log="[
@@ -23,7 +25,7 @@ order: 21
 
 <CommandUsage usage="setup check" permission="public" />
 
-切换命令拼写检查，缺省开启，设置保存在个人域。
+切换命令拼写检查。此开关默认开启，设置保存在个人域。
 
 <ChatExample
   :log="[
@@ -36,7 +38,7 @@ order: 21
 
 <CommandUsage usage="setup markdown" permission="public" />
 
-切换 Markdown 渲染，设置保存在个人域。平台不支持该开关时返回提示，配置不变。
+切换 Markdown 渲染，设置保存在个人域。平台不支持 Markdown 时返回提示，设置保持不变。
 
 <ChatExample
   :log="[
@@ -62,14 +64,14 @@ order: 21
 
 <CommandUsage :usage="['setup list', 'setup list target', 'setup list sender']" permission="public" />
 
-展示设置面板。省略域参数时同时列出场景域与个人域；场景域的修改入口按场景管理员权限显示，个人域对所有人开放。
+展示设置面板。省略域参数时，面板同时列出场景域和个人域。场景域的修改入口只对场景管理员显示，个人域对所有用户开放。
 
 <ChatExample
   :log="[
     '用户：~setup list',
     '机器人：【群聊设置】',
     '语言：简体中文 修改（`~setup locale zh_cn`）',
-    '静音：已关闭 开启（`~mute`）',
+    '禁止发言：已关闭 开启（`~mute`）',
   ]"
 />
 
@@ -77,7 +79,7 @@ order: 21
 
 <CommandUsage usage="setup prefix list" permission="public" />
 
-列出默认命令前缀与本场景的自定义前缀。
+列出默认命令前缀和本场景的自定义前缀。
 
 <ChatExample
   :log="[
@@ -91,7 +93,7 @@ order: 21
 
 <CommandUsage usage="setup prefix add <prefix>" :params="['prefix=要添加的命令前缀']" permission="admin" />
 
-增加场景命令前缀。前缀已存在时返回重复提示。
+为当前场景增加命令前缀。前缀已存在时返回重复提示。
 
 <ChatExample
   :log="[
@@ -104,7 +106,7 @@ order: 21
 
 <CommandUsage usage="setup prefix remove <prefix>" :params="['prefix=要移除的命令前缀']" permission="admin" />
 
-移除场景命令前缀，前缀不存在时返回未找到提示。
+移除场景命令前缀。前缀不存在时返回未找到提示。
 
 <ChatExample
   :log="[
@@ -117,7 +119,7 @@ order: 21
 
 <CommandUsage usage="setup prefix reset" permission="admin" />
 
-清空场景自定义前缀。
+清空场景的自定义前缀。
 
 <ChatExample
   :log="[
@@ -130,7 +132,7 @@ order: 21
 
 <CommandUsage :usage="['setup locale', 'setup locale [<lang>]']" :params="['lang=语言代码，如 zh_cn']" permission="public" />
 
-省略语言代码时列出可用语言与翻译进度；给出语言代码时设置场景语言，该形式要求场景管理员权限。语言代码不在可用列表内时返回提示并列出可选值。
+省略语言代码时，列出可用语言和各自的翻译进度。给出语言代码时，命令设置场景的语言，这需要场景管理员权限。语言代码不在可用列表内时返回提示，并列出可选值。
 
 <ChatExample
   :log="[
@@ -145,7 +147,7 @@ order: 21
 
 <CommandUsage usage="setup locale reload" permission="superuser" />
 
-重新加载语言文件。加载失败时返回提示并列出出错的文件。
+重新加载语言文件。加载失败时返回提示，并列出出错的文件。
 
 <ChatExample
   :log="[
@@ -158,7 +160,7 @@ order: 21
 
 <CommandUsage usage="setup alias list [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式'}]" />
 
-列出场景自定义命令别名，默认渲染为图片表格，`--legacy` 改用文本表格。
+列出场景自定义命令别名。结果默认渲染为图片表格，加 `--legacy` 时改用文本表格。
 
 <ChatExample
   :log="[
@@ -172,7 +174,7 @@ order: 21
 
 <CommandUsage usage="setup alias add <alias> <command>" :params="['alias=自定义命令别名', 'command=替换文本，须以命令前缀开头']" permission="admin" />
 
-增加场景命令别名。替换文本须以命令前缀开头，别名与替换文本都须含占位符之外的文字，占位符写作 `${名称}`；不满足时返回对应提示。别名重复时返回已存在提示。
+为当前场景增加命令别名。替换文本要以命令前缀开头。别名和替换文本都不能只由占位符组成，还要有占位符之外的文字，占位符写作 `${名称}`。不满足这些条件时返回对应提示。别名重复时返回已存在提示。
 
 <ChatExample
   :log="[
@@ -185,7 +187,7 @@ order: 21
 
 <CommandUsage usage="setup alias remove <alias>" :params="['alias=自定义命令别名']" permission="admin" />
 
-移除场景命令别名。
+移除场景的自定义命令别名。
 
 <ChatExample
   :log="[
@@ -198,7 +200,7 @@ order: 21
 
 <CommandUsage usage="setup alias reset" permission="admin" />
 
-清空场景命令别名。
+清空场景的自定义命令别名。
 
 <ChatExample
   :log="[
@@ -211,7 +213,7 @@ order: 21
 
 <CommandUsage usage="setup timeoffset <offset>" :params="['offset=时区偏移，如 8、-5:30；reset 恢复默认值']" permission="admin" />
 
-设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时提示格式错误；写入时规范化为 `+8`、`-5:30` 形式。参数为 `reset` 时清除场景偏移，恢复为未设置。
+设置场景时区偏移，格式为 `8`、`-5:30`。小时超过 12 或分钟达到 60 时返回格式错误，写入时统一写成 `+8`、`-5:30` 的形式。参数为 `reset` 时清除场景偏移，恢复为未设置。
 
 <ChatExample
   :log="[
@@ -231,7 +233,7 @@ order: 21
 
 <CommandUsage usage="setup timezone <offset>" :params="['offset=显示时区偏移，如 8、-5:30；reset 跟随场景时区']" permission="public" />
 
-设置个人显示时区偏移，覆盖场景时区，格式与 `setup timeoffset` 相同。参数为 `reset` 时清除个人偏移，恢复为跟随场景时区。
+设置个人显示时区偏移，覆盖场景时区，格式与 `setup timeoffset` 相同。参数为 `reset` 时清除个人偏移，改回跟随场景时区。
 
 <ChatExample
   :log="[
@@ -251,7 +253,7 @@ order: 21
 
 <CommandUsage usage="setup cooldown <second>" :params="['second=命令冷却秒数']" permission="admin" />
 
-设置场景命令冷却秒数，负数按 0 处理。
+设置场景的命令冷却秒数。负数按 0 处理。
 
 <ChatExample
   :log="[
@@ -264,7 +266,7 @@ order: 21
 
 <CommandUsage usage="setup invalid-module-prompt" permission="admin" />
 
-切换未知模块的提示。
+切换未知模块的提示开关。
 
 <ChatExample
   :log="[
@@ -277,17 +279,17 @@ order: 21
 
 <CommandUsage usage="setup sign" permission="admin" />
 
-仅在 enable_petal 为真时注册。切换场景签到开关，缺省开启，由 `petal` 模块的签到命令读取。
+此命令只在 `enable_petal` 为真时注册，用于切换场景的签到开关。开关默认开启，`petal` 模块的签到命令会读取它。
 
 ### `setup emote`
 
 <CommandUsage usage="setup emote" permission="admin" />
 
-仅在 use_emote 为真时注册。切换场景表情开关。
+此命令只在 `use_emote` 为真时注册，用于切换场景的表情开关。
 
 ## 数据键
 
-`setup` 与 `set` 改写的键存放在 union 的 JSON 列：
+`setup` 和 `set` 写入的键存放在 union 的 JSON 列：
 
 | 域 | 键 | 用途 |
 | --- | --- | --- |

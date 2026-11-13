@@ -301,7 +301,7 @@ async def parser(msg: "Bot.MessageSession"):
                 await _try_command_recovery(msg, modules, command_first_word, identify_str)
             return msg
 
-        # 正则路由策略（禁用前缀、静音、运行中提醒）由 core policy hook 决定。
+        # 正则路由策略（禁用前缀、禁止发言、运行中提醒）由 core policy hook 决定。
         regex_route_result = await _dispatch_stage(HookPoint.REGEX_ROUTE, msg)
         if isinstance(regex_route_result, Stop):
             return msg

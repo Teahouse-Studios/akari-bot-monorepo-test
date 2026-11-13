@@ -6,13 +6,15 @@ order: 59
 
 <ModuleAlias names="u&r" />
 
-模块级权限为超级用户。
+此模块可以更新机器人，并重启进程。模块内的命令需要超级用户权限。
 
 ### `update&restart`
 
 <CommandUsage usage="update&restart [--force]" permission="superuser" excluded="Web" :options="[{flag: '--force', desc: '跳过确认，强制重置与更新源代码并强制重启'}]" />
 
-Web 平台不注册，仅在子进程模式可用。先更新再走重启流程。`--force` 跳过确认与等待，其余情形先确认并等待在途命令；更新报告发出后进程按 `restart` 的流程结束，由守护进程拉起全部子进程。
+此命令不注册到 Web 平台，只在子进程模式下可用。执行时先更新，再进入重启流程。
+
+带 `--force` 时跳过确认和等待。不带该选项时，先要求确认，确认后等待其他正在执行的命令结束。更新报告发出后，进程按 `restart` 的流程退出，由守护进程重新拉起全部子进程。
 
 <ChatExample
   :log="[

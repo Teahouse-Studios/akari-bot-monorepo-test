@@ -1,4 +1,4 @@
-"""静音策略：命令入口拦截与解除静音确认。"""
+"""禁止发言策略：命令入口拦截与解除禁止发言的确认。"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -58,7 +58,7 @@ async def _test_mute_command_still_replies():
 
 @func_case
 async def test_muted_policy(tester: Tester):
-    """parser 静音策略测试"""
-    await tester.test(_test_unmatched_command_silenced_when_muted, "静音时未匹配命令静默")
-    await tester.test(_test_mute_command_still_replies, "静音命令可执行并回复")
+    """parser 禁止发言策略测试"""
+    await tester.test(_test_unmatched_command_silenced_when_muted, "机器人被禁止发言时，未匹配的命令保持静默")
+    await tester.test(_test_mute_command_still_replies, "`mute` 命令可执行并回复")
     return tester

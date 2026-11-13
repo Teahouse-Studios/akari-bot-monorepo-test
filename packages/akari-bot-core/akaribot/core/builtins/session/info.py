@@ -393,7 +393,7 @@ class SessionInfo:
         self.platform_name, self.platform_from = resolve_platform_identity(
             self.target_from, self.client_name, self.platform_name, self.platform_from
         )
-        # SessionInfo 是入队时快照，其间权限、静音、语言与前缀可能已被改动。
+        # SessionInfo 是入队时快照，其间权限、禁止发言、语言与前缀可能已被改动。
         # 只替换 ORM 对象而保留派生字段，会让 parser 按入队时的旧状态执行。
         sender_union_info, target_union_info = await asyncio.gather(
             SenderUnionInfo.get_by_sender_id(self.sender_id, create=False) if self.sender_id else _none(),
@@ -401,7 +401,7 @@ class SessionInfo:
         )
         # assign() 已在平台进程为入站消息建立两侧映射。消息排队期间若管理员删除了
         # 对应 Union，刷新时绝不能再创建一套默认状态继续执行：那会复活已删除身份，
-        # 并可能绕过原 Union 上的封禁、静音或模块配置。
+        # 并可能绕过原 Union 上的封禁、禁止发言或模块配置。
         if self.sender_id and sender_union_info is None:
             raise ValueError(f"SenderUnionInfo not found for sender_id: {self.sender_id}")
         if self.target_id and target_union_info is None:

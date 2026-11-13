@@ -1,8 +1,10 @@
 # wiki
 
-面向 MediaWiki 站点的工具包：查询页面与模板、按 InterWiki 跳转、自定义请求头与前缀、审核 Wiki API 地址、管理 Wiki 机器人账号、监控滥用日志与最近更改，以及订阅中文 Minecraft Wiki 的每周页面与茶馆周报。
+此模块是面向 MediaWiki 站点的工具包。此模块可以查询页面与模板，按 InterWiki 前缀查询其他站点，为请求设置自定义标头与前缀。
 
-`wiki`、`ab`、`rc`、`newbie`、`user` 的查询使用当前场景设置的默认 Wiki；`wiki-audit` 与 `wiki-bot` 不依赖默认 Wiki。
+它还能维护 Wiki API 地址的允许与阻止列表，管理 Wiki 机器人账号，监控滥用日志与最近更改，并提供中文 Minecraft Wiki 的每周页面与茶馆周报订阅。
+
+`wiki`、`ab`、`rc`、`newbie` 与 `user` 的查询使用当前场景设置的默认 Wiki。`wiki-audit` 与 `wiki-bot` 不依赖默认 Wiki。
 
 ## wiki
 
@@ -10,12 +12,18 @@
 
 <CommandUsage :usage="['wiki', 'wiki <pagename> [-l <lang>]']" :params="['pagename=页面标题，可带 InterWiki 前缀', 'lang=语言代码，如 zh、en']" permission="public" :options="[{flag: '-l', desc: '查找该页面的对应语言版本；无结果时返回当前语言。'}]" />
 
-省略标题时查询默认 Wiki 的主页，未设置默认 Wiki 时返回设置提示。填写标题时查询对应页面；参数含模板或解析函数表达式时按魔术字求值查询。已配置的自定义前缀会附加在标题前，标题带已配置的 InterWiki 前缀时改查对应的 Wiki。
+省略标题时，命令查询默认 Wiki 的主页。未设置默认 Wiki 时，命令返回设置提示。
 
-平台支持按钮时，页面预览默认使用 button 模式：回复摘要与链接，并附带「渲染预览图」与「╳」按钮。点击「渲染预览图」发送页面截图；点击「╳」删除这条回复及已经发送的截图。平台不支持按钮时自动使用 auto 模式。场景用 `wiki style card` 切换为卡片样式后，页面回复改为图文卡片，不再提供按钮。
+填写标题时，命令查询对应页面。参数含模板或解析函数表达式时，命令先把参数当作魔术字求值，再用求值结果查询。
+
+已设置自定义前缀时，命令会在标题前面加上这个前缀。标题带已配置的 InterWiki 前缀时，命令改查对应的 Wiki。
+
+平台支持按钮时，页面预览默认使用 button 模式。回复内容是摘要与链接，并附带“渲染预览图”和“╳”两个按钮。点击“渲染预览图”后，机器人会发送页面截图。点击“╳”后，机器人会删除这条回复和已经发送的截图。
+
+平台不支持按钮时，页面预览自动使用 auto 模式。用 `wiki style card` 把场景切换为卡片样式后，页面回复改为图文卡片，不提供按钮。
 
 <ChatExample
-  caption="默认 button 模式；点击「渲染预览图」查看截图，点击「╳」删除回复与截图。"
+  caption="默认 button 模式。点击「渲染预览图」查看截图，点击「╳」删除回复与截图。"
   :log="[
     '用户：~wiki 泥土',
     '机器人：泥土（Dirt）是一种在主世界中大量生成的软质方块。',
@@ -59,7 +67,9 @@
 
 <CommandUsage usage="wiki magic <expression> [-p <page>]" :params="['expression=魔术字表达式，可省略花括号', 'page=求值用的页面上下文']" permission="public" :options="[{flag: '-p', desc: '指定魔术字求值时的页面上下文；含空格的标题用引号包裹。'}]" />
 
-查询目标 Wiki 注册的魔术字与扩展解析函数，返回短文本或查询链接，支持 `#expr`、字符串处理与站点变量。表达式不完整、包含未支持的魔术字、缺少页面上下文或结果过长时返回对应提示。
+此命令查询目标 Wiki 注册的魔术字与扩展解析函数，返回短文本或查询链接。表达式支持 `#expr`、字符串处理与站点变量。
+
+表达式不完整、包含未支持的魔术字、缺少页面上下文或结果过长时，命令返回对应的提示。
 
 <ChatExample
   :log="[
@@ -72,7 +82,7 @@
 
 <CommandUsage usage="wiki id <pageid> [-l <lang>]" :params="['pageid=数字页面 ID，可带 InterWiki 前缀', 'lang=语言代码，如 zh、en']" permission="public" :options="[{flag: '-l', desc: '查找该页面的对应语言版本；无结果时返回当前语言。'}]" />
 
-按页面 ID 查询。`<pageid>` 必须为数字，可带 InterWiki 前缀；非数字时返回提示。
+此命令按页面 ID 查询对应页面。`<pageid>` 可以带 InterWiki 前缀，去掉前缀后必须是数字，否则命令返回提示。
 
 <ChatExample
   :log="[
@@ -86,7 +96,7 @@
 
 <CommandUsage usage="wiki random" permission="public" />
 
-随机查询一个条目命名空间页面。
+此命令随机查询一个条目命名空间页面。
 
 <ChatExample
   :log="[
@@ -100,10 +110,10 @@
 
 <CommandUsage usage="wiki search <pagename>" :params="['pagename=搜索关键词']" permission="public" />
 
-搜索页面，至多返回 5 条结果，回复编号或点击按钮查询对应页面。
+此命令用于搜索页面，至多返回 5 条结果。回复结果前面的编号，或点击按钮，即可查询对应的页面。
 
 <ChatExample
-  caption="点击编号查询页面；页面回复同样附带预览与删除按钮。"
+  caption="点击编号查询页面。页面回复同样附带预览与删除按钮。"
   :log="[
     '用户：~wiki search 苔藓块',
     '机器人：搜索结果：',
@@ -149,7 +159,7 @@
 
 <CommandUsage usage="wiki render <mode>" :params="['mode=渲染方式 button、auto、off']" permission="admin" />
 
-切换页面渲染方式。`button` 在消息中提供预览按钮，`auto` 自动补发页面截图，`off` 关闭页面渲染。取值不在三者之内时返回错误提示。
+此命令用于切换页面渲染方式。`button` 在回复中附带预览按钮，`auto` 自动补发页面截图，`off` 关闭页面渲染。取值不在三者之内时，命令返回错误提示。
 
 <ChatExample
   caption="button：页面回复只显示摘要、链接和预览按钮。"
@@ -197,16 +207,16 @@
 
 <CommandUsage usage="wiki style <mode>" :params="['mode=消息样式 text 或 card']" permission="admin" />
 
-- 切换 Wiki 消息样式，缺省为 `text`，仅在 QQ 群与 QQ 私聊注册。
-- `card` 把页面回复渲染为图文卡片：标题取页面标题，摘要取页面描述，配图取页面代表图的 100 像素缩略图。
-- 页面没有代表图、查询目标带修订号或差异内容时，卡片不带配图。
-- 卡片消息不支持按钮，`button` 预览模式因此回落为 `auto`。
+- 此命令用于切换 Wiki 消息样式，默认为 `text`，仅在 QQ 群与 QQ 私聊注册。
+- `card` 把页面回复渲染为图文卡片。标题取页面标题，摘要取页面描述，配图取页面代表图的 100 像素缩略图。
+- 页面没有代表图时，卡片不带配图。查询目标带有修订号，或查询的是差异内容时，卡片同样不带配图。
+- 卡片消息不支持按钮，`button` 预览模式因此改用 `auto`。
 
 <ChatExample
-  caption="切换后页面查询改用卡片消息；卡片消息不支持按钮，button 预览模式回落为 auto。"
+  caption="切换后页面查询改用卡片消息；卡片消息不支持按钮，button 预览模式改用 auto。"
   :log="[
     '用户：~wiki style card',
-    '机器人：已切换为卡片消息样式。卡片消息不支持按钮，button 预览模式将回落为 auto（自动渲染）模式。',
+    '机器人：已切换为卡片消息样式。卡片消息不支持按钮，button 预览模式将改用 auto（自动渲染）模式。',
   ]"
 />
 
@@ -226,9 +236,9 @@
 
 <CommandUsage usage="wiki set <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="admin" :aliases="['wiki_start_site']" />
 
-设置场景默认 Wiki，参数为页面地址、站点地址或 API 地址。每个场景保存一个默认 Wiki，重复设置覆盖原值；地址无法解析时返回失败详情，处于全局阻止列表时拒绝设置。
+此命令用于设置场景的默认 Wiki，参数为页面地址、站点地址或 API 地址。每个场景保存一个默认 Wiki，再次设置会覆盖原来的值。地址无法解析时，命令返回失败详情。地址在全局阻止列表中时，命令拒绝设置。
 
-`wiki iw` 组的子命令均可用 `interwiki` 代替，例如 `interwiki list`。
+`wiki iw` 组的子命令都可以用 `interwiki` 代替，例如 `interwiki list`。
 
 <ChatExample
   :log="[
@@ -241,7 +251,7 @@
 
 <CommandUsage usage="wiki iw add <interwiki> <wikiurl>" :params="['interwiki=InterWiki 前缀名', 'wikiurl=站点地址，解析为 API 地址']" permission="admin" :aliases="['wiki iw set']" />
 
-添加自定义 InterWiki，`<interwiki>` 为前缀名，`<wikiurl>` 解析为 API 地址后保存。前缀已存在时覆盖原值，地址无法解析时返回失败详情。
+此命令用于添加自定义 InterWiki。`<interwiki>` 是前缀名，`<wikiurl>` 会先解析成 API 地址再保存。前缀已存在时，命令覆盖原来的值。地址无法解析时，命令返回失败详情。
 
 <ChatExample
   :log="[
@@ -255,7 +265,7 @@
 
 <CommandUsage usage="wiki iw remove <interwiki>" :params="['interwiki=InterWiki 前缀名']" permission="admin" :aliases="['wiki iw del', 'wiki iw delete']" />
 
-删除自定义 InterWiki，未设置的前缀同样返回成功。
+此命令用于删除自定义 InterWiki。前缀未设置时，命令同样返回成功。
 
 <ChatExample
   :log="[
@@ -268,7 +278,7 @@
 
 <CommandUsage usage="wiki iw list [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本列表。'}]" />
 
-列出当前设置的自定义 InterWiki，并附查看默认 Wiki InterWiki 的链接。平台支持图片时渲染为表格图片，`--legacy` 强制文本列表；没有设置时提示添加命令。
+此命令列出当前设置的自定义 InterWiki，结果附带查看默认 Wiki InterWiki 的链接。平台支持图片时，命令把列表渲染成表格图片。加上 `--legacy` 后，命令改用文本列表。没有设置自定义 InterWiki 时，命令返回添加提示。
 
 <ChatExample
   :log="[
@@ -283,7 +293,7 @@
 
 <CommandUsage usage="wiki iw get <interwiki>" :params="['interwiki=InterWiki 前缀名']" permission="public" />
 
-获取 InterWiki 对应的 API 地址。前缀未配置时返回未找到提示。
+此命令获取 InterWiki 对应的 API 地址。前缀未配置时，命令返回未找到提示。
 
 <ChatExample
   :log="[
@@ -296,7 +306,7 @@
 
 <CommandUsage usage="wiki headers show" permission="public" />
 
-列出当前场景设置的自定义请求标头，以 JSON 对象返回；未设置时返回空对象。
+此命令列出当前场景设置的自定义请求标头，结果以 JSON 对象返回。未设置时，命令返回空对象。
 
 <ChatExample
   :log="[
@@ -309,7 +319,7 @@
 
 <CommandUsage usage="wiki headers add <headers>" :params="['headers=JSON 对象，标头名与内容']" permission="admin" />
 
-添加或覆盖请求标头，`<headers>` 为 JSON 对象，键为标头名、值为对应内容。参数不是 JSON 对象时返回失败提示。
+此命令用于添加或覆盖请求标头。`<headers>` 是 JSON 对象，键是标头名，值是要写入的内容。参数不是 JSON 对象时，命令返回失败提示。
 
 <ChatExample
   :log="[
@@ -322,7 +332,7 @@
 
 <CommandUsage usage="wiki headers remove <headerkey>" :params="['headerkey=要删除的标头名']" permission="admin" />
 
-按名称删除一个请求标头，标头不存在时返回失败提示。
+此命令按名称删除一个请求标头。标头不存在时，命令返回失败提示。
 
 <ChatExample
   :log="[
@@ -335,7 +345,7 @@
 
 <CommandUsage usage="wiki headers reset" permission="admin" />
 
-清空当前场景设置的全部自定义请求标头。
+此命令用于清空当前场景设置的全部自定义请求标头。
 
 <ChatExample
   :log="[
@@ -348,7 +358,7 @@
 
 <CommandUsage usage="wiki prefix set <prefix>" :params="['prefix=拼在查询标题前的文本']" permission="admin" />
 
-设置查询标题时附加的前缀。设置后查询会把前缀拼在标题之前，用于统一命名空间或区分同名页面。
+此命令用于设置查询标题时附加的前缀。设置后，命令会把前缀拼在标题前面。这个前缀用于统一命名空间，或区分同名页面。
 
 <ChatExample
   :log="[
@@ -361,7 +371,7 @@
 
 <CommandUsage usage="wiki prefix reset" permission="admin" />
 
-清除自定义前缀，恢复按原样查询标题。
+此命令用于清除自定义前缀，恢复按原样查询标题。
 
 <ChatExample
   :log="[
@@ -374,7 +384,7 @@
 
 <CommandUsage usage="wiki redlink" permission="admin" />
 
-切换页面不存在时是否返回编辑链接，每次执行在开启与关闭之间切换。
+此命令用于切换页面不存在时是否返回编辑链接。每执行一次，命令在开启与关闭之间切换。
 
 <ChatExample
   :log="[
@@ -387,12 +397,12 @@
 
 <ModuleAlias names="wiki_inline, wiki_regex" />
 
-模块无命令，按消息内容触发。
+此模块没有命令，按消息内容触发。
 
-- `[[标题]]`：查询页面，忽略 `#` 开头的标题，去重后至多处理 5 个。
-- 双层花括号包裹的模板名：解析模板调用与解析函数。
+- `[[标题]]`：查询页面，忽略以 `#` 开头的标题。去掉重复的标题后，至多处理 5 个页面。
+- 用双层花括号包裹的模板名：解析模板调用与解析函数。
 - `≺标题≻` 或 `⧼标题⧽`：查询 MediaWiki 命名空间页面。
-- Wiki 页面 URL：生成 Infobox 预览或返回文件，行为受渲染方式影响。
+- Wiki 页面 URL：生成 Infobox 预览或返回文件，返回哪种由渲染方式决定。
 
 ## wiki-audit
 
@@ -402,7 +412,7 @@
 
 <CommandUsage usage="wiki-audit trust <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="superuser" />
 
-从 Wiki 页面、站点或 API 地址解析 API 地址，并加入全局 URL 允许列表。地址无法解析或处于阻止列表时返回失败。
+此命令从 Wiki 页面、站点或 API 地址中解析出 API 地址，再加入全局 URL 允许列表。地址无法解析，或已在阻止列表中时，命令返回失败。
 
 <ChatExample
   :log="[
@@ -415,7 +425,7 @@
 
 <CommandUsage usage="wiki-audit block <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="superuser" />
 
-从 Wiki 页面、站点或 API 地址解析 API 地址，并加入全局 URL 阻止列表。地址无法解析时返回失败。
+此命令从 Wiki 页面、站点或 API 地址中解析出 API 地址，再加入全局 URL 阻止列表。地址无法解析时，命令返回失败。
 
 <ChatExample
   :log="[
@@ -428,7 +438,7 @@
 
 <CommandUsage usage="wiki-audit distrust <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="superuser" />
 
-从全局 URL 用户允许列表移除该 API 地址。地址不在列表中时返回未找到。
+此命令从全局 URL 用户允许列表移除该 API 地址。地址不在列表中时，命令返回未找到。
 
 <ChatExample
   :log="[
@@ -441,7 +451,7 @@
 
 <CommandUsage usage="wiki-audit unblock <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="superuser" />
 
-从全局 URL 用户阻止列表移除该 API 地址。地址不在列表中时返回未找到。
+此命令从全局 URL 用户阻止列表移除该 API 地址。地址不在列表中时，命令返回未找到。
 
 <ChatExample
   :log="[
@@ -454,7 +464,7 @@
 
 <CommandUsage usage="wiki-audit query <wikiurl>" :params="['wikiurl=页面、站点或 API 地址']" permission="superuser" />
 
-解析 API 地址并查询命中的全局允许列表规则，返回规则来源。未命中时返回未授权结论。
+此命令解析 API 地址并查询命中的全局允许列表规则，返回规则来源。未命中时，命令返回未授权结论。
 
 <ChatExample
   :log="[
@@ -472,19 +482,19 @@
 
 <CommandUsage usage="wiki-bot login <apilink> <account> <password>" :params="['apilink=页面、站点或 API 地址', 'account=机器人账号用户名', 'password=账号密码']" permission="superuser" />
 
-登录 Wiki 机器人账号并保存。账号已存在时提示先登出，登录失败时返回失败原因。
+此命令用于登录 Wiki 机器人账号并保存。账号已存在时，命令提示先登出。登录失败时，命令返回失败原因。
 
 ### `wiki-bot logout`
 
 <CommandUsage usage="wiki-bot logout <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-删除已保存的机器人账号。
+此命令用于删除已保存的机器人账号。
 
 ### `wiki-bot toggle`
 
 <CommandUsage usage="wiki-bot toggle" permission="superuser" />
 
-切换当前场景是否使用机器人账号，返回开启或关闭结果。
+此命令用于切换当前场景是否使用机器人账号，返回开启或关闭结果。
 
 <ChatExample
   :log="[
@@ -499,7 +509,7 @@
 
 <CommandUsage usage="ab [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式。'}]" />
 
-获取默认 Wiki 的最近滥用日志。QQ 平台具备合并转发或渲染能力时优先返回对应结果，否则返回普通消息；获取失败或日志受查看权限限制时返回错误提示。
+此命令获取默认 Wiki 的最近滥用日志。QQ 平台具备合并转发或渲染能力时，命令优先返回合并转发消息或渲染结果，否则返回普通消息。获取失败或日志受查看权限限制时，命令返回错误提示。
 
 <ChatExample
   :log="[
@@ -512,7 +522,7 @@
 
 <CommandUsage usage="rc [--legacy]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式。'}]" />
 
-获取默认 Wiki 的最近更改。QQ 平台具备合并转发或渲染能力时优先返回对应结果，否则返回普通消息；获取失败或日志受查看权限限制时返回错误提示。
+此命令获取默认 Wiki 的最近更改。QQ 平台具备合并转发或渲染能力时，命令优先返回合并转发消息或渲染结果，否则返回普通消息。获取失败或日志受查看权限限制时，命令返回错误提示。
 
 <ChatExample
   :log="[
@@ -525,7 +535,7 @@
 
 <CommandUsage usage="newbie" permission="public" />
 
-获取默认 Wiki 的新用户日志。
+此命令获取默认 Wiki 的新用户日志。
 
 <ChatExample
   :log="[
@@ -538,7 +548,7 @@
 
 <CommandUsage usage="user <username>" :params="['username=用户名，可带 InterWiki 前缀']" permission="public" />
 
-查询 MediaWiki 用户信息。`username` 可带 InterWiki 前缀，前缀须在已配置的 InterWiki 中，否则按原名查询。
+此命令用于查询 MediaWiki 用户信息。`username` 可带 InterWiki 前缀。前缀必须是已配置的 InterWiki，否则命令按原名查询。
 
 <ChatExample
   :log="[
@@ -553,7 +563,7 @@
 
 <CommandUsage usage="wikilog add wiki <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-添加一个 Wiki 到监控列表。地址无法解析时返回失败原因，已在列表中时返回操作失败。
+此命令用于把一个 Wiki 加入监控列表。地址无法解析时，命令返回失败原因。Wiki 已在列表中时，命令返回操作失败。
 
 <ChatExample
   :log="[
@@ -566,7 +576,7 @@
 
 <CommandUsage usage="wikilog reset wiki <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-将该 Wiki 的监控配置恢复为默认值。
+此命令将该 Wiki 的监控配置恢复为默认值。
 
 <ChatExample
   :log="[
@@ -579,7 +589,7 @@
 
 <CommandUsage usage="wikilog remove wiki <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-从监控列表移除一个 Wiki。地址不在列表中时返回操作失败。
+此命令从监控列表移除一个 Wiki。地址不在列表中时，命令返回操作失败。
 
 <ChatExample
   :log="[
@@ -592,7 +602,7 @@
 
 <CommandUsage usage="wikilog enable <apilink> <logtype>" :params="['apilink=页面、站点或 API 地址', 'logtype=日志类型，ab、rc 或全名']" permission="superuser" />
 
-启用一种类型的日志监控，`logtype` 取 `ab`、`rc` 或对应全名。取值无效或 Wiki 未加入监控列表时返回失败提示。
+此命令用于启用一种类型的日志监控，`logtype` 取 `ab`、`rc` 或对应的全名。取值无效或 Wiki 未加入监控列表时，命令返回失败提示。
 
 <ChatExample
   :log="[
@@ -605,7 +615,7 @@
 
 <CommandUsage usage="wikilog disable <apilink> <logtype>" :params="['apilink=页面、站点或 API 地址', 'logtype=日志类型，ab、rc 或全名']" permission="superuser" />
 
-禁用一种类型的日志监控。
+此命令用于禁用一种类型的日志监控。
 
 <ChatExample
   :log="[
@@ -618,7 +628,7 @@
 
 <CommandUsage usage="wikilog filter set <apilink> <logtype> ..." :params="['apilink=页面、站点或 API 地址', 'logtype=日志类型，ab、rc 或全名']" permission="superuser" />
 
-为某一类型的日志设置条件过滤器，`...` 为多条正则。未给出条件时提示设置对象为空。
+此命令为某一类型的日志设置条件过滤器，`...` 处填写多条正则表达式。未给出条件时，命令提示条件为空。
 
 <ChatExample
   :log="[
@@ -632,7 +642,7 @@
 
 <CommandUsage usage="wikilog filter reset <apilink> <logtype>" :params="['apilink=页面、站点或 API 地址', 'logtype=日志类型，ab、rc 或全名']" permission="superuser" />
 
-重置某一类型日志的条件过滤器。
+此命令用于重置某一类型日志的条件过滤器。
 
 <ChatExample
   :log="[
@@ -646,7 +656,7 @@
 
 <CommandUsage usage="wikilog filter test <filters> <example>" :params="['filters=匹配样本的正则表达式', 'example=用于匹配的样例文本']" permission="superuser" />
 
-测试条件过滤器能否匹配给定样例，返回匹配位置。表达式有误时提示匹配失败。
+此命令用于测试条件过滤器能否匹配给定样例，返回匹配位置。表达式有误时，命令提示匹配失败。
 
 <ChatExample
   :log="[
@@ -659,7 +669,7 @@
 
 <CommandUsage usage="wikilog filter example <example>" :params="['example=待转换的 JSON 数据']" permission="superuser" />
 
-将数据转换为条件过滤器可识别的样例。样本不是合法 JSON 时提示格式无效。
+此命令把数据转换为条件过滤器可识别的样例。样例不是合法 JSON 时，命令提示格式无效。
 
 <ChatExample
   :log="[
@@ -672,7 +682,7 @@
 
 <CommandUsage usage="wikilog api get <apilink> <logtype>" :params="['apilink=页面、站点或 API 地址', 'logtype=日志类型，ab、rc 或全名']" permission="superuser" />
 
-获取指定 Wiki 的指定 API 数据链接。
+此命令获取指定 Wiki 上对应日志类型的 API 数据链接。
 
 <ChatExample
   :log="[
@@ -685,7 +695,7 @@
 
 <CommandUsage usage="wikilog rcshow set <apilink> ..." :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-为最近更改日志设置筛选条件，取值见下文列表。条件无效时返回提示。
+此命令为最近更改日志设置筛选条件，取值见下文列表。条件无效时，命令返回提示。
 
 <ChatExample
   :log="[
@@ -700,7 +710,7 @@
 
 <CommandUsage usage="wikilog rcshow reset <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-重置最近更改日志设置的筛选条件。
+此命令用于重置最近更改日志设置的筛选条件。
 
 <ChatExample
   :log="[
@@ -713,7 +723,7 @@
 
 <CommandUsage usage="wikilog bot enable <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-启用机器人获取日志。
+此命令用于启用机器人获取日志。
 
 <ChatExample
   :log="[
@@ -726,7 +736,7 @@
 
 <CommandUsage usage="wikilog bot disable <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-禁用机器人获取日志。
+此命令用于禁用机器人获取日志。
 
 <ChatExample
   :log="[
@@ -739,7 +749,7 @@
 
 <CommandUsage usage="wikilog keepalive enable <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-启用机器人登录状态检查。
+此命令用于启用机器人登录状态检查。
 
 <ChatExample
   :log="[
@@ -752,7 +762,7 @@
 
 <CommandUsage usage="wikilog keepalive disable <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-禁用机器人登录状态检查。
+此命令用于禁用机器人登录状态检查。
 
 <ChatExample
   :log="[
@@ -765,7 +775,7 @@
 
 <CommandUsage usage="wikilog note set <apilink> ..." :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-设置一条 Wiki 的备注，监控消息中以备注替换 Wiki 名称。Wiki 未加入监控列表时返回失败。
+此命令用于设置一条 Wiki 的备注，监控消息用这条备注代替 Wiki 名称。Wiki 未加入监控列表时，命令返回失败。
 
 <ChatExample
   :log="[
@@ -778,7 +788,7 @@
 
 <CommandUsage usage="wikilog note remove <apilink>" :params="['apilink=页面、站点或 API 地址']" permission="superuser" />
 
-移除一条 Wiki 的备注。
+此命令用于移除一条 Wiki 的备注。
 
 <ChatExample
   :log="[
@@ -791,9 +801,9 @@
 
 <CommandUsage usage="wikilog list" permission="superuser" />
 
-列出所有已设置的内容。
+此命令列出各 Wiki 的监控设置。
 
-`logtype` 接受 `ab`、`rc`、`abuselog`、`recentchanges`、`AbuseLog` 与 `RecentChanges`。最近更改筛选条件取 `!anon`、`!autopatrolled`、`!bot`、`!minor`、`!patrolled`、`!redirect`、`anon`、`autopatrolled`、`bot`、`minor`、`patrolled`、`redirect` 与 `unpatrolled`。
+上文各命令的 `logtype` 参数可以取 `ab`、`rc`、`abuselog`、`recentchanges`、`AbuseLog` 与 `RecentChanges`。最近更改的筛选条件可以取 `!anon`、`!autopatrolled`、`!bot`、`!minor`、`!patrolled`、`!redirect`、`anon`、`autopatrolled`、`bot`、`minor`、`patrolled`、`redirect` 与 `unpatrolled`。
 
 <ChatExample
   :log="[
@@ -808,7 +818,7 @@
 
 <CommandUsage usage="weekly" permission="public" />
 
-获取中文 Minecraft Wiki 的每周页面，QQ 系平台附带图片。
+此命令获取中文 Minecraft Wiki 的每周页面，QQ 平台会附带图片。
 
 <ChatExample
   :log="[
@@ -821,7 +831,7 @@
 
 <CommandUsage usage="weekly image" permission="public" />
 
-获取每周页面的截图版。
+此命令获取每周页面的截图版。
 
 <ChatExample
   :log="[
@@ -834,7 +844,7 @@
 
 <CommandUsage usage="weekly teahouse" permission="public" />
 
-获取茶馆周报。
+此命令获取茶馆周报。
 
 <ChatExample
   :log="[
@@ -847,11 +857,11 @@
 
 <CommandUsage usage="weekly teahouse image" permission="public" />
 
-获取茶馆周报的截图版。
+此命令获取茶馆周报的截图版。
 
 ## RSS
 
-`weekly-rss` 与 `teahouse-weekly-rss` 没有命令，只提供 RSS 订阅：前者在每周一 9:00 推送中文 Minecraft Wiki 每周页面，后者在每周一 9:30 推送茶馆周报。推送同时提供简体中文与繁体中文文本，QQ 平台使用图片版本。
+`weekly-rss` 与 `teahouse-weekly-rss` 没有命令，只提供 RSS 订阅。前者在每周一 9:00 推送中文 Minecraft Wiki 的每周页面，后者在每周一 9:30 推送茶馆周报。推送同时提供简体中文与繁体中文文本，QQ 平台使用图片版本。
 
 ### 每周页面订阅
 
@@ -869,7 +879,7 @@
   ]"
 />
 
-QQ 平台改为发送整条消息的图片，其它平台发送文字与链接。
+QQ 平台发送整条消息的图片，其它平台发送文字与链接。
 
 ### 茶馆周报订阅
 

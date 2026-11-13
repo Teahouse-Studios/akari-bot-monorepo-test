@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-threedsdb
 ```
 
-安装后在会话中由管理员用 `module enable 3dsdb` 开启。
+安装后，管理员在会话中执行 `module enable 3dsdb` 开启模块。
 
 ## 配置项
 
@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-threedsdb
 
 ## 权限与平台能力
 
-命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入平台可用。结果以文本消息返回，不依赖图片或网络。
+此命令对普通用户开放，不要求管理员或超级用户权限。模块没有声明平台限制，所有已接入的平台均可使用。结果以文本消息返回，不依赖图片或网络。
 
 ## 数据表
 

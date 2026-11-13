@@ -48,7 +48,7 @@ async def _(ctx: "Bot.ParserHookContext"):
 | `COMMAND_BEFORE_EXECUTE` | 模板解析后、命令函数调用前 | 命令权限与平台策略 |
 | `COMMAND_ROUTE` | 命令解析后、通道认领前 | 命令路由与迁移策略 |
 | `COMMAND_UNMATCHED` | 未找到模块/模板 | 纠错建议；可写 SessionDraft |
-| `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、静音与运行中提醒 |
+| `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、禁止发言与运行中提醒 |
 | `REGEX_CANDIDATE` | 每个正则模块匹配前 | 模块级正则路由 |
 | `CHANNEL_CLAIM` | 候选策略通过后、通道认领前 | 通道让位策略 |
 | `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临封与权限 |
@@ -56,7 +56,7 @@ async def _(ctx: "Bot.ParserHookContext"):
 | `EXECUTION_FINISHED` | 命令/正则函数执行结束 | 统计观察 |
 | `EXECUTION_ERROR` | 可分类异常 | AbuseWarning 处理 |
 | `FINISHED` | parser finally 清理后 | 消息级计数 |
-| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、静音场景拦截主动发言；可改 `ctx.outgoing.chain` |
+| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、机器人被禁止发言时拦截主动发言；可改 `ctx.outgoing.chain` |
 | `OUTGOING_SENT` | 平台返回成功 | 观察 |
 | `OUTGOING_FAILED` | 平台发送失败 | 观察 |
 
@@ -118,7 +118,7 @@ hook 不得：
 
 ## 内置订阅方
 
-- `akaribot/modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、出站静音和默认命令反馈
+- `akaribot/modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、机器人被禁止发言时拦截出站消息、默认命令反馈
 - `akaribot/modules/core/hooks/errors.py`：异常反馈与错误详情格式化
 - `akaribot/modules/core/hooks/retired.py`：退役客户端路由和通道让位
 - `akaribot/modules/core/admin_tools/alias.py`：自定义别名改写

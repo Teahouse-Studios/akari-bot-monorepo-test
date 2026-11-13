@@ -309,7 +309,7 @@ class Bot:
             if post_message is None:
                 continue
 
-            # 出站策略（如静音场景停止主动发言）与常规发送共用同一 hook 链。
+            # 出站策略（如机器人被禁止发言时停止主动发言）与常规发送共用同一 hook 链。
             outgoing_payload = OutgoingPayload(chain=post_message, quote=False)
             stop_send = await dispatch_outgoing_before_send(
                 FetchedMessageSession(session_info=session_), outgoing_payload

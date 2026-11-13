@@ -4,13 +4,13 @@ order: 10
 
 # admin
 
-模块级权限为场景管理员。别名 `ban`、`unban`、`ban list`、`leave`、`dismiss` 分别指向对应子命令。
+此模块用于管理本场景的管理员名单与封禁名单，也可以让机器人退出群聊。模块级权限为场景管理员。别名 `ban`、`unban`、`ban list`、`leave`、`dismiss` 分别指向对应的子命令，可以直接调用。
 
 ### `admin add`
 
 <CommandUsage usage="admin add <user>" :params="['user=带平台前缀的用户完整 ID']" permission="admin" />
 
-将用户加入本场景管理员。`<user>` 须为带平台前缀的完整 ID（如 `QQ|123456`），缺少前缀时提示先用 `bind whoami` 查询。平台原生管理员与已在列表中的用户无需执行该命令。
+此命令把用户加入本场景的机器人管理员名单。`<user>` 须为带平台前缀的完整 ID（如 `QQ|123456`），缺少前缀时，机器人会提示先用 `bind whoami` 查询。平台原生管理员与已在名单中的用户无需执行此命令。
 
 <ChatExample
   :log="[
@@ -23,7 +23,7 @@ order: 10
 
 <CommandUsage usage="admin remove <user>" :params="['user=带平台前缀的用户完整 ID']" permission="admin" />
 
-移除场景管理员。移除自己时须按提示输入确认内容后才执行；平台原生管理员身份不受该命令影响。
+此命令把用户移出本场景的机器人管理员名单。移除自己时，机器人会要求输入确认内容，确认后才执行。平台原生管理员无法通过此命令移除。
 
 <ChatExample
   :log="[
@@ -36,7 +36,7 @@ order: 10
 
 <CommandUsage usage="admin list" permission="admin" />
 
-列出本场景的管理员，按 union 展开为绑定的平台账号，一行对应一个 union。
+此命令列出本场景的管理员。名单按用户记录，展示时展开为该用户绑定的平台账号，一行对应一个用户。
 
 <ChatExample
   :log="[
@@ -50,7 +50,7 @@ order: 10
 
 <CommandUsage usage="admin ban <user>" :params="['user=带平台前缀的用户完整 ID']" permission="admin" />
 
-禁止用户在本场景使用机器人。不能封禁自己。封禁记录按 union 存储，同一用户绑定的其它平台账号一并生效。
+此命令禁止用户在本场景使用机器人，不能封禁自己。封禁记录按用户保存，同一用户绑定的其他平台账号一并受限。
 
 <ChatExample
   :log="[
@@ -63,7 +63,7 @@ order: 10
 
 <CommandUsage usage="admin unban <user>" :params="['user=带平台前缀的用户完整 ID']" permission="admin" />
 
-解除对用户的封禁。
+此命令解除对用户的封禁。
 
 <ChatExample
   :log="[
@@ -76,7 +76,7 @@ order: 10
 
 <CommandUsage usage="admin ban list" permission="admin" />
 
-列出本场景被禁止的用户，按 union 展开为绑定的平台账号。
+此命令列出本场景被禁止的用户。名单按用户记录，展示时展开为该用户绑定的平台账号。
 
 <ChatExample
   :log="[
@@ -90,7 +90,7 @@ order: 10
 
 <CommandUsage usage="admin leave" permission="admin" platforms="QQ 群聊" />
 
-仅 QQ 群聊可用。使机器人退出当前群聊，执行前须确认。命令只注册于 `QQ|Group` 场景。
+此命令仅在 QQ 群聊可用，用于让机器人退出当前群聊，执行前需要你确认。命令只注册于 `QQ|Group` 场景。
 
 <ChatExample
   :log="[

@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-mcmod
 ```
 
-安装后在会话中由管理员用 `module enable mcmod` 开启。
+安装后，管理员需要在会话中执行 `module enable mcmod`。
 
 ## 配置项
 
@@ -18,7 +18,9 @@ akaribot module add akari-bot-module-mcmod
 
 ## 权限与平台能力
 
-两条命令均未声明管理员或超级用户限制，普通用户可执行。模块未声明平台限制，`available_for` 取默认值 `*`；声明 `support_languages=["zh_cn"]`，在非简体中文会话中启用时框架会提示语言不受支持。搜索结果页由 WebRender 读取，运行前需在 core 配置中开启 `webrender.enable`。
+`mcmod <mod_name>` 与 `mcmod details <content>` 都没有声明管理员或超级用户限制，普通用户可以执行。模块未声明平台限制，`available_for` 取默认值 `*`。
+
+模块声明了 `support_languages=["zh_cn"]`。在非简体中文会话中启用该模块时，框架会提示语言不受支持。搜索结果页经 WebRender 抓取，运行前需要在 core 配置中开启 `webrender.enable`。
 
 ## 数据表
 

@@ -108,7 +108,7 @@ async def _command_muted(ctx: "Bot.ParserHookContext"):
 @policies.hook(point=HookPoint.OUTGOING_BEFORE_SEND, priority=10, name="muted_outgoing", server_scope=True)
 async def _outgoing_muted(ctx: "Bot.ParserHookContext"):
     # 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，这里只拦
-    # 主动获取的会话（``fetch``）；否则解除静音命令本身的确认也会被一并取消。
+    # 主动获取的会话（``fetch``）；否则 `mute` 命令本身的确认也会被一并取消。
     info = ctx.session_info
     if info.fetch and info.muted:
         Logger.debug(f"Suppressed proactive message to muted target: {info.target_id}")

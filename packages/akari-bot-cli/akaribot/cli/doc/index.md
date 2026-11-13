@@ -1,27 +1,33 @@
 # CLI 与 TUI
 
-`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它运行在实例的 venv 之外，用系统解释器或独立工具安装都能工作；实例内的机器人、模块与适配器由子进程驱动。
+本文将会介绍实例管理工具的安装方式、实例解析、目录结构与命令边界。
+
+`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它装在实例的 venv 之外，可以用系统解释器安装，也可以装成独立工具。实例里的机器人、模块与适配器，由 CLI 通过子进程启动。
 
 自建实例的安装、运行与维护流程见 [自建实例](self-hosting.md)。
 
 ## 安装
+
+先把 CLI 装成独立工具，再确认版本。
 
 ```sh
 uv tool install akari-bot-cli
 akaribot --version
 ```
 
-要求 Python 3.12 或更高版本。CLI 不依赖 `akaribot.core`，实例需要的 core、适配器与模块由 `akaribot init` 装进实例自己的 venv。
+运行需要 Python 3.12 或更高版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 装进实例自己的 venv。
 
 ## 实例解析
 
 多数子命令需要一个实例根（含 `akaribot.toml` 的目录）。解析顺序固定为：
 
-1. `--instance` / `-I` 给出的路径；
-2. 环境变量 `AKARI_INSTANCE_DIR`；
+1. `--instance` / `-I` 给出的路径。
+2. 环境变量 `AKARI_INSTANCE_DIR`。
 3. 自当前目录向上查找 `akaribot.toml`。
 
-上述三级都取不到实例时，命令报错并提示先初始化或指定实例根。裸运行 `akaribot` 或 `akaribot tui` 例外：界面在三级都落空时还会回落到注册表里的缺省实例，因为那正是“这台机器上要管哪一个”的答案。注册表位于 `~/.akaribot/instances.toml`，由 `akaribot instance` 子命令维护。
+如果上面三种方式都找不到实例，命令会报错，并提示先初始化或指定实例根。
+
+直接运行 `akaribot` 或 `akaribot tui` 时例外：三种方式都找不到实例时，界面会改用注册表里的默认实例，也就是未指定实例时要操作的那一个。注册表位于 `~/.akaribot/instances.toml`，由 `akaribot instance` 子命令维护。
 
 ## 目录结构
 
@@ -48,10 +54,10 @@ akaribot --version
 | `module` | 模块与适配器的安装、卸载、更新与全局装载 |
 | `config` | 配置表、字段、读写与外部编辑器 |
 | `db` | 浏览数据库表与数据项，按主键写入 |
-| `instance` | 本机实例登记、缺省实例与服务策略 |
-| `adapter` | 适配器实例的列出与增删 |
-| `venv` | 实例 venv 的托管、接管、交还与重建 |
-| `doctor` | 端口冲突、凭据重复与孤立配置检查 |
+| `instance` | 本机实例列表、默认实例与服务策略 |
+| `adapter` | 查看、添加和删除适配器实例 |
+| `venv` | 管理实例 venv：接管、交还或重建 |
+| `doctor` | 检查端口冲突、重复的登录信息，以及没有对应适配器的配置 |
 | `docs` | 汇总已安装包的文档，构建、预览与部署 VitePress 站点 |
 | `new` | 生成模块包或适配器包的脚手架 |
 | `tui` | 启动交互界面，或执行界面自检 |
@@ -62,20 +68,20 @@ akaribot --version
 
 ## 与 core 的子进程边界
 
-CLI 进程不 import core。需要 core 参与的读写一律经实例解释器执行：
+CLI 进程不导入 core。需要 core 参与的读写，一律交给实例的解释器执行：
 
 ```sh
 <实例>/.venv/bin/python -m akaribot.core.entrypoints.<入口> ...
 ```
 
-子进程环境注入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH`，标准输出与退出码由命令层解释。读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件；涉及配置 schema、模块清单、数据库或体检的判断都在子进程内完成。
+CLI 向子进程传入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH` 两个环境变量，标准输出与退出码由命令层解析。读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件。涉及配置结构、模块清单、数据库或环境检查的判断，则交给子进程完成。
 
-冻结分发（Nuitka）下 `sys.executable` 指向二进制自身，CLI 因此不拿它启动实例进程；非托管模式需要的解释器由 `system_python()` 解析，可用 `AKARIBOT_PYTHON` 覆盖。
+用 Nuitka 打包后，`sys.executable` 指向二进制自身，CLI 因此不用它启动实例进程。非托管模式下要用的解释器由 `system_python()` 解析，可以用 `AKARIBOT_PYTHON` 覆盖。
 
 ## 界面与命令的关系
 
-直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写操作同样以 `akaribot <子命令>` 子进程执行，不复制命令层的校验与确认逻辑；详情见 [终端界面](tui.md)。
+直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写操作同样交给 `akaribot <子命令>` 子进程执行，不重复实现命令层的校验与确认逻辑。详情见 [终端界面](tui.md)。
 
 ## 本地化
 
-界面文案由 CLI 自带的语言文件提供，`--lang zh_cn` / `--lang en_us` 指定本次调用的语言。实例的默认语言在 `akaribot init --locale` 时写入元数据，两者互不覆盖。
+界面文案由 CLI 自带的语言文件提供，`--lang zh_cn` / `--lang en_us` 指定本次调用的语言。实例的默认语言在 `akaribot init --locale` 时写入元数据，`--lang` 只影响本次调用。

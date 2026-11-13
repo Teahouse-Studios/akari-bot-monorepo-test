@@ -1,5 +1,13 @@
 # 架构
 
+本文将会介绍 AkariBot 实例的内部结构。
+
+## 介绍
+
+AkariBot 的代码按分发包拆分。core 提供运行时和公共设施，内置模块、外部模块和平台适配器各自单独打包。
+
+实例启动时，守护进程负责启动并监督子进程。这些子进程分别处理配置初始化、平台连接、消息和计划任务。
+
 ## 代码结构
 
 ```text
@@ -8,45 +16,51 @@ packages/
   akari-bot-testing/    akaribot.testing
   akari-bot-cli/        akaribot.cli
   akari-bot-html2text/  内嵌的 html2text 副本
-  akari-bot-assets-*/   字体、表情与品牌资产，各自一个分发
+  akari-bot-assets-*/   字体、表情和品牌资源，分别单独打包
   modules/…             外部模块，导入名 akaribot.modules.<名>
   adapters/…            平台适配器，导入名 akaribot.adapters.<名>
 ```
 
-- `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`；包发现以 entry point 为准，目录扫描只是兜底。
-- CLI 不依赖 core，`akaribot <子命令>` 通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
-- 兼容层保留在仓库根：`bot.py`、`tester.py` 以 `sys.modules` 别名转发，`core/database/update.py` 只保留历史升级入口的分派。
+几点说明：
+
+- `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`。查找包时，以入口声明为准，目录扫描只作为备用方式。
+- CLI 不依赖 core。执行 `akaribot <子命令>` 时，CLI 通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
+- 仓库根目录保留了旧的导入入口。`bot.py`、`tester.py` 通过 `sys.modules` 把旧模块名映射到新实现。`core/database/update.py` 只负责把旧版本的升级请求转交给当前实现。
 
 ## 进程拓扑
 
 | 进程 | 启动方式 | 职责 |
 | --- | --- | --- |
-| BotDaemon | `python -m akaribot.core.entrypoints.run` | 取实例锁、执行 pre-init、派生并监督子进程 |
-| pre-init | 守护进程以 `spawn`（Windows、macOS）或 `forkserver` 派生 | 补写配置、建表、执行数据库迁移 |
-| 平台进程 | 每个适配器实例一个，进程名为 `client_name` | 持有平台 SDK、消息上下文与按钮状态 |
-| Server | 进程名 `server` | 解析消息、执行模块、运行计划任务 |
-| jobqueue-hub | 进程名 `jobqueue-hub`，仅内置 WebSocket 后端 | 维护 Peer 连接、任播选择与信号投递 |
+| BotDaemon | `python -m akaribot.core.entrypoints.run` | 检查同一实例是否已经启动，执行 pre-init，启动并监督子进程 |
+| pre-init | 守护进程以 `spawn`（Windows、macOS）或 `forkserver` 启动 | 补充缺失的配置项，创建数据表，执行数据库迁移 |
+| 平台进程 | 每个适配器实例对应一个进程，进程名为 `client_name` | 持有平台 SDK、消息上下文和按钮状态 |
+| Server | 进程名 `server` | 解析消息，执行模块，运行计划任务 |
+| jobqueue-hub | 进程名 `jobqueue-hub`，仅内置 WebSocket 后端 | 维护节点连接，选择接收任务的节点，传递控制信号 |
 
-守护进程在任何子进程启动之前置位 `AKARI_CONFIG_READONLY=1`，此后所有子进程只读配置；pre-init 清除该标记，是唯一的配置写入者。实例锁为 `<实例根>/.bot.lock`，同实例重复启动以退出码 1 中止。
+守护进程会在任何子进程启动前设置 `AKARI_CONFIG_READONLY=1`。此后所有子进程只能读取配置。pre-init 是唯一可以写配置的进程，它会清除这个标记。
+
+`<实例根>/.bot.lock` 用来防止同一实例重复启动。同一实例第二次启动时，新进程会以退出码 1 结束。
 
 ## 启动顺序
 
-1. 守护进程选择语言、生成仅含 `default_locale` 与 `config_version` 的 `config.toml` 骨架（首次运行）。
-2. pre-init 子进程加载配置模板，补写缺失项，`init_db(generate_schemas=True)` 建表并执行迁移。
-3. 守护进程发现适配器实例，先检查同一平台是否配置了重复凭据或端口，再逐个启动平台进程。
-4. 若 JobQueue 使用 `websocket` 且模式为 `embedded`，先启动 Hub 并等待就绪事件（上限 10 秒）。
-5. 启动 Server 进程，随后每秒检查各子进程状态。
+1. 守护进程先选择语言，并生成初始 `config.toml`。这个文件只在首次运行时生成，只包含 `default_locale` 和 `config_version`。
+2. pre-init 子进程加载配置模板，补充缺失项，调用 `init_db(generate_schemas=True)` 创建数据表并执行迁移。
+3. 守护进程读取适配器实例。它先检查同一平台是否有重复的登录信息或端口配置，再逐个启动平台进程。
+4. 如果 JobQueue 使用 `websocket` 后端，且模式为 `embedded`，守护进程会先启动 Hub，等它就绪，最多等 10 秒。
+5. 启动 Server 进程。之后，守护进程每秒检查一次各子进程的状态。
 
 ## 退出码与重启
 
 | 退出码 | 含义 | 守护进程动作 |
 | --- | --- | --- |
-| `0` | 正常退出 | Server 退出则整体退出，平台进程退出则不再重启 |
-| `33` | 请求重启 | 清理导入缓存后重启全部子进程 |
-| `78` | 配置性错误，重试无意义 | 移除该进程，不再重启 |
-| 其它 | 异常退出 | 平台进程重启，同一实例 60 秒内连续三次失败后放弃 |
+| `0` | 正常退出 | Server 退出时整体退出，平台进程退出时不重启 |
+| `33` | 请求重启 | 清理导入缓存，重启全部子进程 |
+| `78` | 配置错误，重试无效 | 移除该进程，不再重启 |
+| 其它 | 异常退出 | 平台进程会重启，同一实例在 60 秒内连续失败三次后不再重启 |
 
-`~restart` 先把发起会话写入 `data/private/<client>/.cache_restart_author`，再调用 `core.server.terminate.restart()`：清理全部资源后 `os._exit(33)`。新 Server 启动后最多等待 60 秒，等目标平台进程以新的 `peer_id` 注册为 `ready`，再投递重启提示；模块加载失败信息来自 `.cache_loader`。
+`~restart` 先把发起重启的会话写入 `data/private/<client>/.cache_restart_author`，再调用 `core.server.terminate.restart()`。这个函数清理全部资源，然后调用 `os._exit(33)`。
+
+新的 Server 启动后，会等目标平台进程以新的 `peer_id` 注册为 `ready`，最多等 60 秒，然后发送重启提示。模块加载失败的信息记录在 `.cache_loader` 中。
 
 ## Server 初始化
 
@@ -55,39 +69,55 @@ packages/
 ```text
 build_locale_snapshot(...)        构建语言快照并连接
 init_async(send_prompt=False)     数据库、模块、计划任务、密钥集合
-JobQueueServer.check_job_queue()  注册 Peer 并开始领取任务
-JobQueueServer.wait_ready()       等待本实例可路由
-load_prompt(...)                  投递重启提示（best-effort）
+JobQueueServer.check_job_queue()  注册节点并开始领取任务
+JobQueueServer.wait_ready()       等待本实例可以接收任务
+load_prompt(...)                  投递重启提示（尽力而为）
 ```
 
-`init_async` 还注册 `hourly-background` 核心任务，每小时执行会话后台检查、清理过期队列记录与临时字典。主循环每秒检查队列轮询任务；轮询器异常退出会被视为致命错误，进程随即退出并由守护进程处理。
+`init_async` 还会注册 `hourly-background` 核心任务。这个任务每小时执行一次会话后台检查，清理过期的队列记录和临时字典。
 
-## 消息收发链路
+主循环每秒检查一次队列轮询任务是否仍在运行。轮询器异常退出会被视为致命错误。此时进程立即退出，由守护进程处理。
 
-入站：
+## 消息收发
 
-1. 平台进程构造 `SessionInfo`（平台、场景、发送者、消息链、`ctx_slot`），调用 `Bot.process_message()`。
-2. `Bot.process_message()` 以后台任务登记上下文与存活标记，经 `ServerAPI.receive_message` 投递到 Server；平台 SDK 上下文在处理结束后释放。
-3. Server 侧 `parser()` 刷新会话信息，依次经过 `SESSION_READY`、`SESSION_BEFORE_WAIT` 等 hook，尝试投递等待任务，然后判定命令前缀。
-4. 命令路径解析别名（最长匹配），获取执行锁，再由模块的命令模板匹配；正则路径在 `REGEX_ROUTE` 之后遍历候选模块。
-5. 模块函数通过 `MessageSession` 读取 `session_info`、`parsed_msg`、`trigger_msg`。
+消息分为入站和出站两条链路。平台进程负责与平台 SDK 交互，Server 负责解析消息并执行模块。
 
-出站：
+### 入站
 
-1. `MessageSession.send_message()` 规范化消息链（关键词过滤、媒体压缩、敏感内容检查），经过 `OUTGOING_BEFORE_SEND` hook 后调用 `PlatformAPI.send_message`。
-2. Server 以 `owner_peer_id` 把调用定向到接收原消息的平台进程；平台进程的 `ContextManager` 执行实际发送并返回消息 ID。
-3. 主动推送（`Bot.post_message`）按场景组与消息通道归拢会话，每个通道只选一个队首发送，失败时把剩余下一跳交回 Server。
+1. 平台进程构造 `SessionInfo`，其中包含平台、场景、发送者、消息链和 `ctx_slot`，然后调用 `Bot.process_message()`。
+2. `Bot.process_message()` 在后台保存上下文并设置存活标记，再通过 `ServerAPI.receive_message` 把消息投递给 Server。处理结束后，平台 SDK 的上下文会被释放。
+3. Server 端的 `parser()` 刷新会话信息，依次执行 `SESSION_READY`、`SESSION_BEFORE_WAIT` 等 Hook，检查是否有等待这条消息的任务，再判断命令前缀。
+4. 命令路径先解析别名，按最长匹配选中模块并获取执行锁，再由模块的命令模板完成匹配。正则路径在 `REGEX_ROUTE` Hook 之后遍历候选模块。
+5. 模块函数通过 `MessageSession` 读取 `session_info`、`parsed_msg` 和 `trigger_msg`。
+
+### 出站
+
+1. `MessageSession.send_message()` 先整理消息链，再执行关键词过滤、媒体压缩和敏感内容检查。之后经过 `OUTGOING_BEFORE_SEND` Hook，再调用 `PlatformAPI.send_message`。
+2. Server 根据 `owner_peer_id` 把调用交给接收原消息的平台进程。平台进程的 `ContextManager` 完成实际发送，并返回消息 ID。
+3. 主动推送由 `Bot.post_message` 发起。它按场景组和消息通道整理会话。每个通道只让队列中的第一个会话发送，其余会话留作备用。发送失败时，平台进程把备用会话列表交回 Server，Server 再依次尝试下一个会话。
 
 ## 计划任务
 
-`SchedulerLifecycle` 统一管理模块任务与核心任务：
+`SchedulerLifecycle` 统一管理模块任务和核心任务：
 
-- 模块任务 ID 为 `module:<模块>:<序号>`，核心任务为 `core:<名称>`。
-- `CronTrigger`、`DateTrigger` 原样使用；`IntervalTrigger` 按 `schedule_interval_multiplier` 缩放间隔。
-- 单任务 `max_instances=1`，错过触发允许 30 秒宽限。
-- 卸载、重载与关闭前进入维护窗口：暂停调度、等待启动临界区、取消并收集运行中的任务。
-- 认证失败或关闭期间提交的任务在启动临界区被拒绝。
+- 模块任务 ID 为 `module:<模块>:<序号>`，核心任务 ID 为 `core:<名称>`。
+- `CronTrigger` 和 `DateTrigger` 直接使用，`IntervalTrigger` 按 `schedule_interval_multiplier` 调整间隔。
+- 每个任务最多同时运行一个实例（`max_instances=1`）。错过触发后最多延迟 30 秒执行。
+- 卸载、重载和关闭前会进入维护时段。这段时间内先暂停调度，等正在启动的任务进入运行状态，再取消并收集正在运行的任务。
+- 维护期间提交、但还没开始执行的任务，会在启动前被拒绝。
 
 ## 关闭顺序
 
-`cleanup_sessions()` 依次停止新任务入口、等待在途队列处理、取消 handler、关闭 Scheduler、停止后台初始化、关闭模块 runtime、执行已登记的后台清理，最后在队列关闭窗口内停止轮询、关闭 WebRender 与数据库连接。守护进程按平台进程、Server、Hub 的顺序终止子进程，Hub 最后退出以便传递关闭信号与回包。
+`cleanup_sessions()` 按以下顺序收尾：
+
+1. 停止接收新任务。
+2. 等待正在处理的队列任务完成。
+3. 取消消息处理器。
+4. 关闭调度器。
+5. 停止后台初始化。
+6. 关闭模块运行环境。
+7. 执行预先安排的后台清理任务。
+
+最后，它在关闭队列前停止轮询，并关闭 WebRender 和数据库连接。
+
+守护进程按平台进程、Server、Hub 的顺序终止子进程。Hub 最后退出，以便传递关闭信号并返回结果。

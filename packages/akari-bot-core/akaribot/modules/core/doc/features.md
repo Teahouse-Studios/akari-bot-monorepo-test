@@ -4,13 +4,13 @@ order: 60
 
 # features
 
-模块级权限为超级用户。
+此模块可以查看当前会话的能力标志。模块级权限为超级用户。
 
 ### `features`
 
 <CommandUsage usage="features" permission="superuser" />
 
-逐项列出当前会话的能力标志。同时抓取该场景的会话快照作对比，差异项以 `*` 标出，抓取失败时第二列显示未知。字段来自 `Features`，见[适配器开发](../../../core/doc/adapter-development.md)。
+此命令逐项列出当前会话的能力标志，并主动获取同一场景的会话作为对照，有差异的项用 `*` 标出。主动获取失败时，主动会话一列显示未知。字段来自 `Features`，见[适配器开发](../../../core/doc/adapter-development.md)。
 
 <ChatExample
   :log="[

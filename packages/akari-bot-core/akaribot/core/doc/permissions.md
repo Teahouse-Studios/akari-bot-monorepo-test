@@ -1,6 +1,8 @@
 # 权限
 
-AkariBot 的权限分为普通用户、场景管理员、超级用户与基础超级用户四层。模块和命令通过装饰器声明所需层级，parser 在模块路由与命令执行前依次检查；`~auth` 可以在模块级把超级用户权限授予单个用户。
+本文将会介绍 AkariBot 的权限分层与检查方式。
+
+权限分为普通用户、场景管理员、超级用户与基础超级用户四层。模块和命令通过装饰器声明所需层级，parser 在匹配模块和执行命令前依次检查。`~auth` 可以把单个模块的超级用户权限授予某个用户。
 
 ## 角色
 
@@ -11,11 +13,11 @@ AkariBot 的权限分为普通用户、场景管理员、超级用户与基础�
 | 超级用户 | 数据库中的 `SenderUnionInfo.superuser` 标志 | `msg.check_super_user()` |
 | 基础超级用户 | `config.toml` 的 `[config].base_superuser` 名单 | `sender_id` 与名单精确匹配 |
 
-`check_permission()` 依次判断发送者是否为场景自定义管理员、超级用户，最后请求平台的 `check_native_permission()`。
+`check_permission()` 依次判断场景自定义管理员与超级用户，最后调用平台的 `check_native_permission()`。
 
 ### 场景管理员
 
-场景自定义管理员存放在 `TargetUnionInfo.custom_admins`，记录 union ID，因此同一用户绑定的多个平台账号共享权限。管理命令由 `admin` 模块提供：
+场景自定义管理员存放在 `TargetUnionInfo.custom_admins`，记录的是 union ID。因此同一用户绑定的多个平台账号共享权限。管理命令由 `admin` 模块提供：
 
 | 命令 | 说明 |
 | --- | --- |
@@ -23,32 +25,32 @@ AkariBot 的权限分为普通用户、场景管理员、超级用户与基础�
 | `~admin remove <user>` | 移除场景管理员；移除自己时要求确认 |
 | `~admin list` | 列出场景自定义管理员 |
 
-`admin` 模块整体声明 `required_admin=True`；平台原生管理员不写入自定义名单，`add` 与 `remove` 遇到原生管理员会直接提示无需操作。
+`admin` 模块整体声明 `required_admin=True`。平台原生管理员不会写入自定义名单，`add` 与 `remove` 遇到原生管理员时直接提示无需操作。
 
 ### 超级用户
 
-超级用户控制机器人本身的行为，权限高于场景管理员。授予与撤销由 `superuser` 模块（别名 `su`）提供：
+超级用户控制机器人本身的行为，权限高于场景管理员。授予与撤销命令由 `superuser` 模块（别名 `su`）提供：
 
 | 命令 | 说明 |
 | --- | --- |
-| `~superuser add <user>` | 将用户写入数据库并置位 `superuser` |
+| `~superuser add <user>` | 将用户写入数据库，并标记为 `superuser` |
 | `~superuser remove <user>` | 清除标志；移除自己时要求确认 |
 
-`<user>` 必须是形如 `QQ|123456` 的完整用户 ID；用户尚未建立记录时会先要求确认并初始化 union。
+`<user>` 必须是形如 `QQ|123456` 的完整用户 ID。用户尚未建立记录时，机器人先要求确认，再初始化 union。
 
 <NoticeBox type="danger" title="谨慎授予超级用户">
 
-超级用户可以执行 `~config`、`~eval`、`~restart`、`~module unload` 等高危命令，也能通过 `~auth` 转授模块权限。只应向能够合法访问机器人后端与配置的人授予。
+超级用户可以执行 `~config`、`~eval`、`~restart`、`~module unload` 等高危命令，也能通过 `~auth` 转授模块权限。此权限只应授予能够合法访问机器人后端与配置的人。
 
 </NoticeBox>
 
 ### 基础超级用户
 
-`base_superuser` 是 `[config]` 表下的用户 ID 列表，也接受单个字符串。pre-init 阶段会把名单中的用户解析为 union 并写入数据库，同时置位超级用户；`required_base_superuser` 则直接比较 `session_info.sender_id` 与配置名单。名单只能通过配置文件维护。
+`base_superuser` 是 `[config]` 表下的用户 ID 列表，也接受单个字符串。pre-init 阶段会把名单中的用户解析为 union 并写入数据库，同时把这些用户标记为超级用户。`required_base_superuser` 则直接比较 `session_info.sender_id` 与配置名单，名单只能通过配置文件维护。
 
 ## 模块级权限
 
-`module()` 接受三个布尔参数，作用于模块内全部命令：
+`module()` 接受以下三个布尔参数，对模块内的全部命令生效：
 
 ```python
 from akaribot.core.api import module
@@ -61,22 +63,24 @@ demo = module("demo", required_admin=True)
 | `required_superuser` | `False` | 要求超级用户，或持有该模块 `~auth` 授权的用户 |
 | `required_base_superuser` | `False` | 要求发送者在 `base_superuser` 名单中 |
 
-检查顺序为 `required_base_superuser`、`required_superuser`、`required_admin`，命中即拒绝，模块级要求无法被命令放宽。非基础模块还需在场景内启用，声明 `required_superuser` 的模块只有超级用户能启用。
+检查顺序为 `required_base_superuser`、`required_superuser`、`required_admin`，任一项检查不通过就拒绝。单个命令不能放宽模块级的要求。非基础模块还需在场景内启用。声明了 `required_superuser` 的模块只有超级用户能启用。
 
 ## 命令级权限
 
-`@module.command()`、`@module.regex()` 接受同名的三个参数，用于在模块级要求之上进一步收紧单个组件：
+`@module.command()`、`@module.regex()` 接受同名的三个参数，用于给单个命令或正则追加更严格的要求：
 
 ```python
 @demo.command("export <target>", required_admin=True)
 async def _(msg, target: str): ...
 ```
 
-命令级检查发生在模板解析之后、函数调用之前。由于只能收紧、不能放宽，模块已声明 `required_superuser` 时，单个命令再声明 `required_admin` 不会降低门槛。`~auth` 的授权对模块内的全部命令生效，不区分具体组件。
+命令级检查在模板解析之后、函数调用之前执行。单个命令只能追加更严格的要求，不能降低模块级的要求。
+
+例如模块已经声明 `required_superuser`，某个命令再声明 `required_admin`，要求不会降低。`~auth` 的授权作用于整个模块，模块内的命令都按同一份授权判断。
 
 ## 模块授权
 
-`auth` 模块让超级用户把某个模块的超级用户权限授予普通用户，而不必提升为全局超级用户：
+`auth` 模块让超级用户把单个模块的超级用户权限授予普通用户，不必把对方提升为全局超级用户：
 
 | 命令 | 说明 |
 | --- | --- |
@@ -84,19 +88,21 @@ async def _(msg, target: str): ...
 | `~auth remove <user> <module>` | 撤销当前发送者给出的授权 |
 | `~auth list <user>` | 列出该用户持有的模块授权 |
 
-授权记录写在 `SenderUnionInfo.sender_data["module_auth"]`，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块；模块别名同样命中。授权者不再是超级用户时，其给出的授权自动失效。`auth` 模块本身要求超级用户权限。
+授权记录写在 `SenderUnionInfo.sender_data["module_auth"]`，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块，模块别名同样有效。
+
+授权者不再是超级用户时，其给出的授权自动失效。`auth` 模块本身要求超级用户权限。
 
 ## 机器人权限
 
-`required_bot_permissions` 与用户角色无关，它约束机器人在场景中必须具备的平台权限，在 `~module enable` 时检查：
+`required_bot_permissions` 检查的不是用户角色，而是机器人在场景中必须具备的平台权限。检查在 `~module enable` 时进行：
 
 ```python
 demo = module("demo", required_bot_permissions=["can_manage_messages"])
 ```
 
-字段取 `BotState` 的属性名，例如 `can_read_all_messages`、`can_send_messages`、`can_send_proactive_messages`、`can_manage_messages`、`can_manage_members`、`can_restrict_members`、`can_react`；平台自定义权限写成 `permissions.<名称>`。`event` 与 `regex` 模块自动追加 `can_read_all_messages`，`rss` 模块自动追加 `can_send_proactive_messages`。
+字段取 `BotState` 的属性名，例如 `can_read_all_messages`、`can_send_messages`、`can_send_proactive_messages`、`can_manage_messages`、`can_manage_members`、`can_restrict_members`、`can_react`。平台自定义权限写成 `permissions.<名称>`。`event` 与 `regex` 模块会自动加入 `can_read_all_messages`，`rss` 模块会自动加入 `can_send_proactive_messages`。
 
-检查只把平台明确返回的 `False` 视为缺失；`None` 与状态查询失败都不会阻止启用，避免把临时的 RPC 错误误报为权限不足。`~module enable all` 会跳过缺少机器人权限的模块。
+检查只把平台明确返回的 `False` 视为缺失。`None` 与状态查询失败都不会阻止启用，避免把临时的 RPC 错误误报为权限不足。`~module enable all` 会跳过缺少机器人权限的模块。
 
 ## 相关文档
 

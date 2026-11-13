@@ -94,8 +94,8 @@ def _test_target_prefix_and_cooldown_defaults() -> bool:
 
 
 def _test_mute_row_wording() -> bool:
-    unmuted = _row_by_label(build_target_rows(_make_msg()), "静音")
-    muted = _row_by_label(build_target_rows(_make_msg(muted=True)), "静音")
+    unmuted = _row_by_label(build_target_rows(_make_msg()), "禁止发言")
+    muted = _row_by_label(build_target_rows(_make_msg(muted=True)), "禁止发言")
     if not unmuted or unmuted.value != "已关闭" or unmuted.action != "开启":
         Logger.error(f"An unmuted target should read 已关闭 and offer 开启, got {unmuted}")
         return False
@@ -357,7 +357,7 @@ async def test_setup_panel(tester: Tester):
     await tester.test(_test_sender_rows_default_to_enabled, "个人设置默认开启测试")
     await tester.test(_test_sender_timezone_row_carries_current_value, "显示时区预填当前值测试")
     await tester.test(_test_target_prefix_and_cooldown_defaults, "场景设置默认值测试")
-    await tester.test(_test_mute_row_wording, "静音项措辞测试")
+    await tester.test(_test_mute_row_wording, "禁止发言项措辞测试")
     await tester.test(_test_sign_row_follows_petal_config, "签到项随配置测试")
     await tester.test(_test_markdown_row_follows_capability, "markdown 项随能力测试")
     await tester.test(_test_theme_row_follows_setting, "深色模式项跟随取值测试")

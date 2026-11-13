@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-coin
 ```
 
-安装后由管理员在会话中执行 `module enable coin` 开启。
+安装后，管理员需要在会话中执行 `module enable coin`。
 
 ## 配置项
 
@@ -23,11 +23,13 @@ akaribot module add akari-bot-module-coin
 | `coin_facedown_weight` | int | 4997 | 反面的权重 |
 | `coin_stand_weight` | int | 6 | 立起的权重 |
 
-三项权重不得小于 0，`coin_limit` 须大于 0，越界时命令返回配置错误提示。完整字段见配置模板 `akaribot/modules/coin/config.py`。
+完整字段见配置模板 `akaribot/modules/coin/config.py`。
+
+`coin_limit` 是单次抛硬币的数量上限，默认 10000。该值必须大于 0，三项权重都不能小于 0。配置值超出范围时，命令会返回配置错误提示。
 
 ## 权限与平台能力
 
-模块无平台限制与权限要求，不发起网络请求。随机数取自 core 的 `Random`，按权重区间判定结果。
+模块没有平台限制和权限要求，也不会发起网络请求。随机数来自 `akari-bot-core` 的 `Random`，模块按权重区间判断结果。
 
 ## 数据表
 
@@ -35,4 +37,4 @@ akaribot module add akari-bot-module-coin
 
 ## 依赖与外部服务
 
-仅依赖 `akari-bot-core`，不使用外部服务。
+只依赖 `akari-bot-core`，不使用外部服务。

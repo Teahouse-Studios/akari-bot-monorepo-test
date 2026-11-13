@@ -1,13 +1,15 @@
 # OneBot 配置项
 
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`，两张表同处 `config/bot_onebot.toml`：普通项在 `[bot_onebot]`，密钥项在 `[bot_onebot_secret]`。
+本文整理了 OneBot 适配器的配置表项与填写时的注意事项。
+
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`，两张表同处 `config/bot_onebot.toml`。普通项写在 `[bot_onebot]`，密钥项写在 `[bot_onebot_secret]`。
 
 ## 配置表 `bot_onebot`
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `enable` | bool | `false` | 是否启动 OneBot 服务。 |
-| `qq_host` | str | `127.0.0.1:8080` | WebSocket 主服务器的地址，格式为 `host:port`；协议端使用反向 WebSocket 连接。 |
+| `qq_host` | str | `127.0.0.1:8080` | WebSocket 主服务器的地址，格式为 `host:port`。协议端使用反向 WebSocket 连接。 |
 | `qq_enable_listening_self_message` | bool | `false` | 是否开启自身消息监听。 |
 | `qq_enable_temp_session` | bool | `true` | 是否开启临时会话。 |
 | `qq_allow_approve_friend` | bool | `false` | 是否自动同意好友请求。 |

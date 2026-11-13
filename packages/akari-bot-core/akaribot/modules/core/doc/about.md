@@ -4,13 +4,13 @@ order: 50
 
 # about
 
-基础模块，别名 `version`、`ping`、`status` 指向对应子命令。
+此模块输出机器人的简介、版本、制作人员、权限配置链接与运行状态。别名 `version`、`ping`、`status` 指向对应子命令。
 
 ### `about`
 
 <CommandUsage usage="about" permission="public" />
 
-输出简介、仓库与反馈链接、制作人员入口。配图与链接按品牌资产与 `repo_url`、`issue_url`、`donate_url` 配置生成，平台支持按钮时以按钮呈现。
+此命令输出机器人简介、仓库与反馈链接，以及制作人员入口。配图取自品牌资产，链接取自 `repo_url`、`issue_url`、`donate_url` 配置。平台支持按钮时，这些入口显示为按钮。
 
 <ChatExample
   :log="[
@@ -25,7 +25,7 @@ order: 50
 
 <CommandUsage usage="about version" permission="public" />
 
-输出机器人版本。源码运行时附带对应提交链接，发行版附带发行标签链接；版本号未知时给出提示。链接由 `enable_commit_url` 控制。
+此命令输出机器人版本。从源码运行时附带对应的提交链接，发行版附带发行标签链接。版本号未知时给出提示。链接是否附带由 `enable_commit_url` 控制。
 
 <ChatExample
   :log="[
@@ -39,7 +39,7 @@ order: 50
 
 <CommandUsage usage="about credits" permission="public" />
 
-输出制作人员名单。品牌资产中缺少名单文件或内容为空时提示不可用。
+此命令输出制作人员名单。品牌资产中缺少名单文件，或名单内容为空时，机器人提示不可用。
 
 <ChatExample
   :log="[
@@ -54,7 +54,7 @@ order: 50
 
 <CommandUsage usage="about permissions [<qq_group_id>]" :params="['qq_group_id=QQ 群号，用于生成权限链接']" permission="public" platforms="QQBot" />
 
-仅 QQBot 平台可用。生成 QQBot 群聊的权限配置链接。省略群号时返回带占位提示的命令补全入口，群号非数字时返回提示。
+此命令仅在 QQBot 平台可用，用于生成群聊的权限配置链接。省略群号时返回带占位提示的命令补全入口。群号不是数字时返回提示。
 
 <ChatExample
   :log="[
@@ -67,7 +67,7 @@ order: 50
 
 <CommandUsage usage="about ping" permission="public" />
 
-返回 Pong 与运行时长、CPU、内存、磁盘占用。
+此命令返回 Pong，以及运行时长、CPU、内存与磁盘占用。
 
 <ChatExample
   :log="[
@@ -82,7 +82,7 @@ order: 50
 
 <CommandUsage usage="about status" permission="superuser" />
 
-输出系统与运行时详情，含进程占用与 WebRender 状态。
+此命令输出系统与运行时详情，包含进程占用与 WebRender 状态。
 
 <ChatExample
   :log="[

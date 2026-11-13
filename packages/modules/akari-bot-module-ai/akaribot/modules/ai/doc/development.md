@@ -10,13 +10,13 @@ title: 安装与开发
 akaribot module add akari-bot-module-ai
 ```
 
-安装后在会话中由管理员用 `module enable ai` 开启。
+安装后，管理员需要在会话中执行 `module enable ai` 开启模块。
 
 ## 配置项
 
 <ModuleConfig table="module_ai" />
 
-`e2b_api_key` 声明为敏感项，写入同一文件的 `module_ai_secret` 表。
+`e2b_api_key` 声明为敏感项，写入同一配置文件中的 `module_ai_secret` 表。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ akaribot module add akari-bot-module-ai
 | `llm_top_logprobs` | int | -1 | 候选 Token 对数概率数量，负数不传入 |
 | `e2b_api_key`（`module_ai_secret`） | str | 空 | E2B 沙箱密钥，未填写时代码执行工具不注册 |
 
-完整清单见配置模板 `akaribot/modules/ai/config.py`。模型清单位于实例数据目录 `data/module/ai/`：
+完整清单见配置模板 `akaribot/modules/ai/config.py`。模型清单放在实例数据目录 `data/module/ai/` 下：
 
 | 文件 | 内容 |
 | --- | --- |
@@ -42,14 +42,20 @@ akaribot module add akari-bot-module-ai
 
 ## 权限与平台能力
 
-命令对平台无限制；会话是否支持回复决定对话是逐条等待还是连续发送。网页抓取工具依赖 WebRender（`webrender.enable`），搜索工具使用 ddgs。花瓣计费仅在 core 开启花瓣系统时生效，余额不足时调用前即终止。会话级设置写入 Union 数据：会话默认模型 `ai_default_llm`，个人开关 `ai_enable_persona` 与 `ai_custom_instructions`。
+命令对平台没有限制。会话是否支持引用回复，决定对话是逐条等待还是连续发送。
+
+网页抓取工具依赖 WebRender（`webrender.enable`），搜索工具使用 ddgs。花瓣计费仅在 core 开启花瓣系统时生效，余额不足时，调用会在发出前终止。会话级设置写入 Union 数据，包括会话默认模型 `ai_default_llm`、个人开关 `ai_enable_persona` 与 `ai_custom_instructions`。
 
 ## 数据表
 
 <ModuleData />
 
-会话设置保存在 core 的 Union 数据中，对话上下文为进程内缓存，服务重启即失效。
+会话设置保存在 core 的 Union 数据中。对话上下文是进程内缓存，服务重启即失效。
 
 ## 依赖与外部服务
 
-依赖 `openai`、`anthropic`、`google-genai`、`e2b-code-interpreter`、`ddgs`、`trafilatura`、`matplotlib`、`Pillow`、`pyyaml`、`orjson`、`filetype`、`akari-bot-html2text`、`akari-bot-core`。外部服务：YAML 清单指定的模型接口、E2B 代码沙箱、ddgs 搜索、WebRender。模块 hook：`ai.ask`（无超时）供其他模块调用一次对话，参数含 `prompt`、`instructions`、`llm`、 `use_tools`，返回 `status`、`text`、`chain`、`petal`、`llm`。
+依赖 `openai`、`anthropic`、`google-genai`、`e2b-code-interpreter`、`ddgs`、`trafilatura`、`matplotlib`、`Pillow`、`pyyaml`、`orjson`、`filetype`、`akari-bot-html2text` 与 `akari-bot-core`。
+
+外部服务包括 YAML 清单指定的模型接口、E2B 代码沙箱、ddgs 搜索与 WebRender。
+
+模块提供 Hook `ai.ask`，其他模块可以用它发起一次对话，此 Hook 没有超时限制。参数包括 `prompt`、`instructions`、`llm` 与 `use_tools`，返回 `status`、`text`、`chain`、`petal`、`llm`。

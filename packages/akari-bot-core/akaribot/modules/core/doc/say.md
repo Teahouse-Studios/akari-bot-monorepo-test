@@ -10,7 +10,7 @@ order: 51
 
 <CommandUsage usage="say <display_msg>" :params="['display_msg=要复述的消息内容']" permission="superuser" />
 
-以消息链解析并复述给定内容，不引用原消息，发送者的平台账号标记写入文本。
+此命令把给定内容按消息链解析后发出，不引用原消息。文本中带发送者平台前缀的用户 ID 会被包装成 AT 码，发出后渲染为对该用户的提及。
 
 <ChatExample
   :log="[
@@ -23,7 +23,7 @@ order: 51
 
 <CommandUsage usage="say md <display_msg>" :params="['display_msg=要复述的消息内容']" permission="superuser" />
 
-以 Markdown 复述给定内容，并附带一个按钮示例。
+此命令按 Markdown 格式复述给定内容，并附带一个按钮示例。
 
 <ChatExample
   :log="[

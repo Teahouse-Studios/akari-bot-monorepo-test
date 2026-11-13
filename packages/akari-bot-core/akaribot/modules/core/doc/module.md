@@ -4,13 +4,15 @@ order: 12
 
 # module
 
-命令级权限按子命令区分，`list` 对所有人开放，`enable` 与 `disable` 要求场景管理员，`load`、`reload`、`unload` 要求超级用户。别名 `enable`、`disable`、`load`、`reload`、`unload` 可省略 `module`。
+此模块可以查看模块清单，也可以启用、停用、加载、重载和卸载模块。命令级权限按子命令区分。`list` 对所有人开放，`enable` 和 `disable` 要求场景管理员，`load`、`reload`、`unload` 要求超级用户。
+
+别名 `enable`、`disable`、`load`、`reload`、`unload` 可以省略 `module` 直接使用，例如 `~enable`。
 
 ### `module list`
 
 <CommandUsage usage="module list [--legacy] [--img]" permission="public" :options="[{flag: '--legacy', desc: '强制使用文本模式'}, {flag: '--img', desc: '强制使用图片模式'}]" />
 
-列出当前平台可用的模块及启用状态。默认渲染为图片表格，`--legacy` 改用文本表格。
+此命令列出当前平台可用的模块及其启用状态。默认以图片表格呈现，指定 `--legacy` 时改用文本表格。
 
 <ChatExample
   :log="[
@@ -25,7 +27,9 @@ order: 12
 
 <CommandUsage usage="module enable <module>..." :params="['module=要启用的模块名，可给出多个']" permission="admin" />
 
-在场景内启用指定模块，一次可给出多个。启用前检查平台能力（正则、事件、RSS）与机器人权限，缺失时给出具体原因；模块声明了推荐模块时，随后询问是否一并启用。
+此命令在当前场景内启用指定模块，一次可以给出多个模块名。
+
+启用前，命令检查平台能力（正则、事件、RSS）和机器人权限。平台能力或机器人权限缺失时，命令给出具体原因。模块声明了推荐模块时，命令随后询问是否一并启用。
 
 <ChatExample
   :log="[
@@ -38,7 +42,7 @@ order: 12
 
 <CommandUsage usage="module enable all" permission="admin" />
 
-启用全部可启用模块，跳过基础模块、隐藏模块、仅超级用户授权使用的模块，以及当前平台不支持或缺少机器人权限的模块。
+此命令启用全部可启用的模块。基础模块、隐藏模块、仅超级用户授权使用的模块，以及当前平台不支持或缺少机器人权限的模块会被跳过。
 
 <ChatExample
   :log="[
@@ -53,7 +57,7 @@ order: 12
 
 <CommandUsage usage="module disable <module>..." :params="['module=要停用的模块名，可给出多个']" permission="admin" />
 
-在场景内停用指定模块。基础模块不可停用，该情形返回提示而不改动场景配置。
+此命令在当前场景内停用指定模块。基础模块不能停用。指定基础模块时，命令返回提示，不改动场景配置。
 
 <ChatExample
   :log="[
@@ -66,7 +70,7 @@ order: 12
 
 <CommandUsage usage="module disable all" permission="admin" />
 
-停用全部可停用模块，跳过基础模块、隐藏模块与仅超级用户授权使用的模块。
+此命令停用全部可停用的模块。基础模块、隐藏模块和仅超级用户授权使用的模块会被跳过。
 
 <ChatExample
   :log="[
@@ -81,7 +85,7 @@ order: 12
 
 <CommandUsage usage="module load <module>..." :params="['module=要加载的模块名，可给出多个']" permission="superuser" />
 
-加载已卸载的模块，对所有场景生效。
+此命令加载已卸载的模块，对所有场景生效。
 
 <ChatExample
   :log="[
@@ -94,7 +98,7 @@ order: 12
 
 <CommandUsage usage="module reload <module>..." :params="['module=要重载的模块名，可给出多个']" permission="superuser" />
 
-重新加载指定模块。依赖该模块的其它模块一并重载，重载范围超出给定模块时执行前列出范围并要求确认。
+此命令重新加载指定模块。依赖该模块的其它模块会一并重载。重载范围超出给定模块时，命令在执行前列出范围并要求确认。
 
 <ChatExample
   :log="[
@@ -109,7 +113,7 @@ order: 12
 
 <CommandUsage usage="module unload <module>..." :params="['module=要卸载的模块名，可给出多个']" permission="superuser" />
 
-卸载已加载的模块，对所有场景生效。基础模块不可卸载。
+此命令卸载已加载的模块，对所有场景生效。基础模块不能卸载。
 
 <ChatExample
   :log="[

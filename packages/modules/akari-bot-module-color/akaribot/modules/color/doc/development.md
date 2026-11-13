@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-color
 ```
 
-安装后在会话中由管理员用 `module enable color` 开启。
+安装后，管理员需要在会话中执行 `module enable color`。
 
 ## 配置项
 
@@ -18,7 +18,9 @@ akaribot module add akari-bot-module-color
 
 ## 权限与平台能力
 
-输出为 Embed 消息，平台需支持 Embed 消息元素与图片消息。色卡文字使用资源包字体 Noto Sans CJK DemiLight，文字颜色按背景亮度在黑与白之间切换。Material Design 名称表随包分发在 `assets/material_colors.json`。
+此模块以 Embed 消息回复，平台需要支持 Embed 消息元素与图片消息。
+
+色卡文字使用资源包字体 Noto Sans CJK DemiLight，文字颜色按背景亮度在黑色与白色之间切换。Material Design 名称表随包分发，位于 `assets/material_colors.json`。
 
 ## 数据表
 
@@ -26,4 +28,6 @@ akaribot module add akari-bot-module-color
 
 ## 依赖与外部服务
 
-依赖 `Pillow`、`numpy`、`webcolors`、`orjson`、`akari-bot-assets-fonts`、`akari-bot-core`。不使用外部网络服务，颜色名称表全部随包或随依赖分发。
+依赖 `Pillow`、`numpy`、`webcolors`、`orjson`、`akari-bot-assets-fonts`、`akari-bot-core`。
+
+模块不使用外部网络服务，颜色名称表随包或随依赖分发。

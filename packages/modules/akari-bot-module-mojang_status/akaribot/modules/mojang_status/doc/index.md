@@ -1,6 +1,6 @@
 # mojang-status
 
-查询 Mojang 账号、会话与 Minecraft 服务三项的在线情况。
+此模块用于查询玩家信息、正版验证与 Mojang 服务三项的在线情况。
 
 ## 命令
 
@@ -10,13 +10,13 @@
 
 <CommandUsage usage="mojang-status" permission="public" />
 
-按固定顺序输出三项的在线情况：
+此命令按固定顺序输出三项的在线情况：
 
 - 玩家信息
 - 正版验证
 - Mojang 服务
 
-状态取值为在线、离线或未知。
+三项的状态取值为在线、离线或未知。
 
 <ChatExample
   :log="[

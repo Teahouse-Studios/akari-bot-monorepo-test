@@ -4,17 +4,17 @@ order: 58
 
 # update
 
-模块级权限为超级用户。
+此模块用于更新机器人及其依赖。模块内命令要求超级用户权限。
 
 ### `update`
 
 <CommandUsage usage="update [--force]" permission="superuser" :options="[{flag: '--force', desc: '强制重置与更新源代码'}]" />
 
-- 更新机器人及其依赖，委托 `akaribot module update --all --non-interactive --defer-runtime --json` 完成。
-- 更新由 CLI 子进程执行；机器人与 Server 进程只读配置，不直接写盘或迁移数据库。
-- 二进制封装模式下拒绝执行，并提示改用发行包。
-- 报告列出成功、失败与跳过的包。
-- 存在未热装载的包时提示执行 `restart`，否则说明已热装载。
+- 更新由 `akaribot module update --all --non-interactive --defer-runtime --json` 完成。
+- 更新在 CLI 子进程中执行。机器人和 Server 进程只读取配置，不直接写盘，也不迁移数据库。
+- 二进制封装模式下，命令会拒绝执行，并提示手动下载新版本替换。
+- 报告列出成功、失败和跳过的包。
+- 存在尚未热装载的包时，提示执行 `restart`。全部包都已热装载时，报告说明已全部热装载。
 
 <ChatExample
   :log="[

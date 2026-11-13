@@ -1,10 +1,12 @@
 # Web 控制台适配器
 
-在实例内启动 Web 服务，提供 WebUI 控制台与内置 API。
+本文将会介绍 Web 控制台适配器的安装、配置与平台能力。
 
 ## 平台概述
 
-适配器基于 FastAPI 与 uvicorn 启动 HTTP 服务，前端静态资源来自 `akari-bot-webui` 分发包或实例的 `data/webui/dist` 目录。控制台以单一会话连接机器人，可发送消息、查看配置、管理会话与文件、查看日志与统计数据。该适配器默认启用，不依赖任何平台账号。访问、认证与反向代理的完整说明见 [WebUI 控制台](webui.md)。
+适配器在实例内启动 Web 服务，提供 WebUI 控制台与内置 API。服务基于 FastAPI 与 uvicorn，前端静态资源来自 `akari-bot-webui` 分发包或实例的 `data/webui/dist` 目录。
+
+控制台以单一会话连接机器人，可以发送消息、管理会话与文件，也可以查看配置、日志与统计数据。该适配器默认启用，不依赖任何平台账号。访问、认证与反向代理的完整说明见 [WebUI 控制台](webui.md)。
 
 ## 安装
 
@@ -20,7 +22,7 @@ akaribot module add akari-bot-adapter-web
 
 配置表为 `bot_web`，密钥表为 `bot_web_secret`，两张表同处 `config/bot_web.toml`。
 
-需要多个 Web 服务实例时，用 `akaribot adapter instance add web <实例 ID>` 新增实例；实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`，两张表同处 `config/bot_web-<实例 ID>.toml`。
+若需要多个 Web 服务实例，用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`，两张表同处 `config/bot_web-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -35,18 +37,18 @@ akaribot module add akari-bot-adapter-web
 ## 监听地址与端口
 
 - 默认监听 `127.0.0.1:6485`，WebUI 地址为 `http://127.0.0.1:6485/webui`。
-- 端口被占用时从 `web_port` 起向后尝试，最多 100 个端口；没有可用端口时进程退出。
+- 端口被占用时，从 `web_port` 开始向后逐个尝试，最多 100 个端口。没有可用端口时进程退出。
 - `web_port = 0` 时直接禁用服务。
 - `enable_https = true` 只改变访问地址的协议与 WebUI 配置，TLS 由反向代理终止。
 
 ## 认证
 
-- 未设置密码时，登录接口直接签发令牌；应在首次访问后设置密码。
+- 未设置密码时，登录接口会直接返回令牌。请在首次访问后设置密码。
 - 支持 Argon2 密码哈希、TOTP 两步验证与恢复代码。
-- 令牌有效期 24 小时，修改密码后旧令牌失效。
-- `login_max_attempt` 控制 10 分钟内的登录失败上限，超限后封禁来源 IP 1 小时。
-- `jwt_secret` 为空时首次启动自动生成并写回配置。
-- `allow_origins` 控制 CORS 来源；`forwarded_allow_ips` 指定可信反向代理。
+- 令牌有效期 24 小时。修改密码后旧令牌失效。
+- `login_max_attempt` 控制 10 分钟内的登录失败上限。超过上限后，封禁来源 IP 1 小时。
+- `jwt_secret` 为空时，适配器首次启动会自动生成并写回配置。
+- `allow_origins` 控制 CORS 来源。`forwarded_allow_ips` 指定可信反向代理。
 
 ## 平台能力
 
@@ -71,9 +73,9 @@ akaribot module add akari-bot-adapter-web
 
 - 目标固定为 `Web|Console|0`，发送者固定为 `Web|0`，会话按私密处理。
 - `Web|0` 在服务启动时自动获得超级管理员身份。
-- 不存在群聊场景；所有控制台消息进入同一会话。
+- 不存在群聊场景，所有控制台消息进入同一会话。
 
 ## 外部依赖
 
-- `akari-bot-webui` 提供 WebUI 静态资源；实例内存在 `data/webui/dist` 时优先使用该目录。
-- uvicorn 提供 HTTP 服务；公网部署时由反向代理终止 TLS。
+- `akari-bot-webui` 提供 WebUI 静态资源。实例内存在 `data/webui/dist` 时优先使用该目录。
+- uvicorn 提供 HTTP 服务。公网部署时由反向代理终止 TLS。
