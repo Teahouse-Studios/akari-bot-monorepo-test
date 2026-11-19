@@ -363,7 +363,7 @@ def normalize_schema(payload: Any, table: str) -> list[ConfigField]:
                 type_name=type_name,
                 default=_pick(item, "default", "default_value", default=None),
                 secret=bool(_pick(item, "secret", "is_secret", default=False)),
-                comment=_text(_pick(item, "comment", "description", "help", "doc")),
+                comment=_text(_pick(item, "comment", "description", "help", "docs")),
                 value=value,
                 is_placeholder=bool(_pick(item, "is_placeholder", "placeholder", default=False)),
             )

@@ -20,6 +20,7 @@ from akaribot.core.queue.websocket import (
 from akaribot.core.queue.transport import RpcRequest
 from akaribot.testing import func_case, Tester
 from akaribot.testing.mock.config import mock_config
+from akaribot.testing.timing import TIME_SCALE
 
 
 @asynccontextmanager
@@ -309,7 +310,7 @@ async def _test_websocket_expired_delivery_is_released():
         await asyncio.sleep(0.02)
         async with hub._lock:
             hub._expire_locked()
-        async with asyncio.timeout(1):
+        async with asyncio.timeout(5 * TIME_SCALE):
             while not (responses := await caller.transport.consume_responses([request.task_id])):
                 await asyncio.sleep(0.001)
         receiver.pause_event.set()

@@ -12,7 +12,7 @@ from akari_bot_webrender.functions.options import (
     ReplaceElementScreenshotOptions,
 )
 
-from akaribot.core.config import format_url
+from akaribot.core.utils.func import format_url
 from akaribot.core.config.webrender import WebRenderConfig
 from akaribot.core.constants.path import logs_path
 from akaribot.core.logger import Logger

@@ -22,7 +22,7 @@ from akaribot.core.utils.platform_scope import platform_fields, platform_name_of
 from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 from akaribot.core.utils.web_render import ElementScreenshotOptions, web_render
 
-from akaribot.modules.core.common_tools.version_utils import get_version_display
+from akaribot.modules.core.common_tools.version import get_version_display
 
 env = Environment(loader=FileSystemLoader(templates_path), autoescape=True, enable_async=True)
 help_url = CoreConfig.help_url

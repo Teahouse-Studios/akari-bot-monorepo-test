@@ -1,13 +1,13 @@
-"""``akaribot.cli.docs.theme``：主题清单解析、外部模板与内置回退。"""
+"""``akaribot.cli.docs_engine.theme``：主题清单解析、外部模板与内置回退。"""
 
 import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from akaribot.cli.docs.config import DocsConfig, DocsThemeConfig
-from akaribot.cli.docs.model import DocsError
-from akaribot.cli.docs.theme import (
+from akaribot.cli.docs_engine.config import DocsConfig, DocsThemeConfig
+from akaribot.cli.docs_engine.model import DocsError
+from akaribot.cli.docs_engine.theme import (
     BUNDLED_SOURCE,
     TEMPLATE_DIR,
     THEME_ENV,

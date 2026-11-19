@@ -17,55 +17,16 @@ from akaribot.testing.mock.session import MockMessageSession
 from akaribot.core.utils.container import ExpiringTempDict
 from .decorator import CaseEntry
 from .expectations import Expectation
+from .tasks import PROGRESS_TASK_PREFIX, cancel_orphan_tasks, cancel_task
 from .timing import TIME_SCALE
 
 # 无进展看门狗随测试时限系数放大，但封顶 5 倍：慢机器上子测试可以更久，
 # 真正卡死时也不能让单个用例占用整个 CI 任务太久。
 DEFAULT_FUNCTION_TEST_TIMEOUT = 120.0 * min(TIME_SCALE, 5.0)
-FUNCTION_TEST_CANCEL_TIMEOUT = 1.0 * TIME_SCALE
 
 
 class _FunctionTestNoProgress(Exception):
     pass
-
-
-def _consume_task_result(task: asyncio.Task) -> None:
-    if task.cancelled():
-        return
-    try:
-        task.exception()
-    except asyncio.CancelledError:
-        pass
-
-
-async def _cancel_task(task: asyncio.Task) -> bool:
-    if task.done():
-        await asyncio.gather(task, return_exceptions=True)
-        return True
-    task.cancel()
-    done, _ = await asyncio.wait((task,), timeout=FUNCTION_TEST_CANCEL_TIMEOUT)
-    if task not in done:
-        task.cancel()
-        task.add_done_callback(_consume_task_result)
-        return False
-    await asyncio.gather(task, return_exceptions=True)
-    return True
-
-
-async def _cancel_orphan_tasks(baseline: set[asyncio.Task] | None = None) -> bool:
-    current = asyncio.current_task()
-    tasks = [
-        task
-        for task in asyncio.all_tasks()
-        if task is not current
-        and not task.done()
-        and not task.get_name().startswith("function-test-progress:")
-        and (baseline is None or task not in baseline)
-    ]
-    if not tasks:
-        return True
-    completed = await asyncio.gather(*(_cancel_task(task) for task in tasks))
-    return all(completed)
 
 
 def _infrastructure_error(input_, expected, message: str) -> list[dict]:
@@ -109,7 +70,7 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
     finally:
         # 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存库。
         # 游离任务不得越过其捕获的数据库上下文存活。
-        if not await _cancel_orphan_tasks(baseline_tasks):
+        if not await cancel_orphan_tasks(baseline_tasks):
             message = "Registry test left a task that did not finish cancellation cleanup."
             Logger.error(message)
             raise RuntimeError(message)
@@ -157,7 +118,7 @@ async def run_function_entry(
                 while True:
                     progress_task = asyncio.create_task(
                         tester._wait_for_progress(progress_revision),
-                        name=f"function-test-progress:{fn.__name__}",
+                        name=f"{PROGRESS_TASK_PREFIX}{fn.__name__}",
                     )
                     remaining = max(0.0, progress_deadline - asyncio.get_running_loop().time())
                     done, _ = await asyncio.wait(
@@ -183,9 +144,9 @@ async def run_function_entry(
                     raise _FunctionTestNoProgress
             finally:
                 if progress_task is not None and not progress_task.done():
-                    await _cancel_task(progress_task)
+                    await cancel_task(progress_task)
                 if not function_task.done():
-                    cleanup_pending = not await _cancel_task(function_task)
+                    cleanup_pending = not await cancel_task(function_task)
         if isinstance(returned, TesterClass):
             tester = returned
     except _FunctionTestNoProgress:
@@ -203,7 +164,7 @@ async def run_function_entry(
         if active_test:
             message += f" while running {active_test!r}"
         Logger.error(f"{message}.")
-        cleanup_pending = not await _cancel_orphan_tasks(baseline_tasks) or cleanup_pending
+        cleanup_pending = not await cancel_orphan_tasks(baseline_tasks) or cleanup_pending
         return {
             "timeout": True,
             "time_cost": elapsed,
@@ -219,10 +180,10 @@ async def run_function_entry(
     except BaseException:
         error = traceback.format_exc()
         Logger.exception(f"Error running test function {fn.__name__}:")
-        cleanup_pending = not await _cancel_orphan_tasks(baseline_tasks) or cleanup_pending
+        cleanup_pending = not await cancel_orphan_tasks(baseline_tasks) or cleanup_pending
         return {"error": error, "cleanup_pending": cleanup_pending}
 
-    cleanup_pending = not await _cancel_orphan_tasks(baseline_tasks) or cleanup_pending
+    cleanup_pending = not await cancel_orphan_tasks(baseline_tasks) or cleanup_pending
 
     elapsed = time.perf_counter() - start
     entries = tester.get_entries()

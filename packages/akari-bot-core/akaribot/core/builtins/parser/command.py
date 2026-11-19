@@ -10,7 +10,7 @@ from akaribot.core.exports import exports
 from akaribot.core.i18n import Locale
 from akaribot.core.logger import Logger
 from akaribot.core.types import Module
-from .args import parse_argv, Template, templates_to_str, ArgumentPattern, DescPattern
+from .args import parse_argv, Template, templates_to_str, ArgumentPattern, DescPattern, CommandToken
 
 if TYPE_CHECKING:
     from akaribot.core.builtins.bot import Bot
@@ -22,23 +22,28 @@ _CN_QUOTE_PATTERN = re.compile(r"[“”]")
 _QUOTE_CHARS = ('"', "'")
 
 
-def _split_command(command: str) -> list[str]:
+def _split_command(command: str) -> list[CommandToken]:
     # 与标准 shell 不同，只有整段参数被一对匹配引号包裹时引号才作分组符号去除：``'"multi word"'``
     # 得到 ``['multi word']``，而 ``'a"b"c'`` 与 ``'"a b'`` 原样保留。选项的内联值例外，
     # ``'--lang="zh cn"'`` 中的引号紧跟在 ``=`` 之后，同样作为分组符号。
     split_command = []
     index = 0
     length = len(command)
+    gap = ""
     while index < length:
         if command[index].isspace():
-            index += 1
+            gap_start = index
+            while index < length and command[index].isspace():
+                index += 1
+            gap += command[gap_start:index]
             continue
 
         quote = command[index]
         if quote in _QUOTE_CHARS:
             end = command.find(quote, index + 1)
             if end != -1 and (end + 1 == length or command[end + 1].isspace()):
-                split_command.append(command[index + 1 : end])
+                split_command.append(CommandToken(command[index + 1 : end], gap))
+                gap = ""
                 index = end + 1
                 continue
 
@@ -59,7 +64,8 @@ def _split_command(command: str) -> list[str]:
             token.append(command[index:end])
             index = end
 
-        split_command.append("".join(token))
+        split_command.append(CommandToken("".join(token), gap))
+        gap = ""
 
     return split_command
 

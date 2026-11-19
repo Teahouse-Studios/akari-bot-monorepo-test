@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs.toolchain``：版本探测、依赖安装与构建命令。"""
+"""``akaribot.cli.docs_engine.toolchain``：版本探测、依赖安装与构建命令。"""
 
 import json
 import subprocess
@@ -7,9 +7,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from akaribot.cli.docs import toolchain
-from akaribot.cli.docs.model import DocsError
-from akaribot.cli.docs.theme import ThemeSpec
+from akaribot.cli.docs_engine import toolchain
+from akaribot.cli.docs_engine.model import DocsError
+from akaribot.cli.docs_engine.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
 
 

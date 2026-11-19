@@ -95,7 +95,7 @@ def suggest_correction(msg, modules, command_first_word) -> RecoveryProposal | N
             none_template = False
             break
 
-    input_command_split = msg.trigger_msg.split(" ")
+    input_command_split = msg.trigger_msg.split()
     command_split = matched_module_target + input_command_split[1:]
     len_command_split = len(command_split)
 
@@ -227,7 +227,9 @@ async def _(ctx: "Bot.ParserHookContext"):
     if not ctx.msg.session_info.sender_union_info.sender_data.get("typo_check", True):
         return None
     modules = ModulesManager.return_modules_list(*platform_fields(ctx.msg.session_info), use_cache=False)
-    command_first_word = ctx.command_first_word or (ctx.msg.trigger_msg.split(" ", 1)[0] if ctx.msg.trigger_msg else "")
+    command_first_word = ctx.command_first_word or (
+        ctx.msg.trigger_msg.split(maxsplit=1)[0] if ctx.msg.trigger_msg else ""
+    )
     if not command_first_word:
         return None
     return suggest_correction(ctx.msg, modules, command_first_word)

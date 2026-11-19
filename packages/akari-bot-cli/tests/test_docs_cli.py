@@ -15,10 +15,10 @@ from typer.testing import CliRunner
 
 from akaribot.cli import i18n
 from akaribot.cli.commands import docs as docs_command
-from akaribot.cli.docs.config import DocsBuildConfig, DocsConfig, DocsSiteConfig
-from akaribot.cli.docs.model import BuildResult, DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
-from akaribot.cli.docs.state import record_deploy, save_build_state
-from akaribot.cli.docs.theme_sync import ThemeSyncResult
+from akaribot.cli.docs_engine.config import DocsBuildConfig, DocsConfig, DocsSiteConfig
+from akaribot.cli.docs_engine.model import BuildResult, DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
+from akaribot.cli.docs_engine.state import record_deploy, save_build_state
+from akaribot.cli.docs_engine.theme_sync import ThemeSyncResult
 from akaribot.testing import Tester, func_case
 
 
@@ -48,7 +48,7 @@ def _package(
         version="1.0.0",
         title=title or key,
         summary=summary,
-        doc_path=Path("/tmp/doc") / key,
+        doc_path=Path("/tmp/docs") / key,
         pages=pages,
         order=10,
         editable=False,
@@ -174,7 +174,7 @@ async def _test_list_json_contract():
             "order": 10,
             "category": "",
             "category_order": 500,
-            "doc_path": str(Path("/tmp/doc") / "demo"),
+            "doc_path": str(Path("/tmp/docs") / "demo"),
             "logo": "",
             "avatar": "",
             "editable": False,

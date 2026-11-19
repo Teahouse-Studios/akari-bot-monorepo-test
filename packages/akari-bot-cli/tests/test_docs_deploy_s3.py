@@ -15,9 +15,9 @@ from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 
-from akaribot.cli.docs.deploy import get_provider
-from akaribot.cli.docs.deploy.base import DocsDeployError
-from akaribot.cli.docs.deploy.s3 import IMMUTABLE_CACHE
+from akaribot.cli.docs_engine.deploy import get_provider
+from akaribot.cli.docs_engine.deploy.base import DocsDeployError
+from akaribot.cli.docs_engine.deploy.s3 import IMMUTABLE_CACHE
 from akaribot.testing import Tester, func_case
 
 ACCESS_KEY = "AKIATESTACCESS"
@@ -81,7 +81,7 @@ def _md5(value: str | bytes) -> str:
 def _list_xml(entries, truncated: bool, token: str) -> str:
     parts = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+        '<ListBucketResult xmlns="http://s3.amazonaws.com/docs/2006-03-01/">',
     ]
     for key, etag, size in entries:
         parts.append(f"<Contents><Key>{key}</Key><ETag>&quot;{etag}&quot;</ETag><Size>{size}</Size></Contents>")

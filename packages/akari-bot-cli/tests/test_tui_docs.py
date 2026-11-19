@@ -45,7 +45,7 @@ def _pages() -> tuple[DocsPackageRow, ...]:
                 DocsPageRow(path="index.md", title="概览", order=0, description="入口"),
                 DocsPageRow(path="api.md", title="API", order=10),
             ),
-            doc_path="/tmp/docs/core",
+            doc_path="/tmp/docss/core",
             editable=True,
             category="核心文档",
         ),
@@ -57,7 +57,7 @@ def _pages() -> tuple[DocsPackageRow, ...]:
             title="骰子",
             summary="骰子模块",
             pages=(DocsPageRow(path="index.md", title="概览"),),
-            doc_path="/tmp/docs/dice",
+            doc_path="/tmp/docss/dice",
         ),
     )
 
@@ -145,7 +145,7 @@ async def _test_list_and_detail_show_package_fields():
         and i18n.t("cli.tui.docs.column_key") in columns
         and i18n.t("cli.tui.docs.field_dist") in detail
         and "akari-bot-core" in detail
-        and "/tmp/docs/core" in detail
+        and "/tmp/docss/core" in detail
         and i18n.t("cli.tui.docs.version") in detail
         and "v20.11.0" in detail
         and i18n.t("cli.tui.docs.category") in detail

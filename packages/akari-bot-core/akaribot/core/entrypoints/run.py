@@ -9,7 +9,7 @@
 调用本模块，见 ``akaribot.cli.instance.Instance.run_core``。
 """
 
-from akaribot.core.version import check_python_version  # skipcq
+from akaribot.core.environment import check_python_version  # skipcq
 
 check_python_version()  # noqa
 
@@ -253,12 +253,12 @@ def discover_adapter_instances() -> list[AdapterInstance]:
 
     :return: 已启用的实例，按 ``(适配器， 实例 ID)`` 排序。
     """
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
     from akaribot.core.constants import Info
 
     adapters = PackageRegistry.adapters()
     enabled: list[AdapterInstance] = []
-    for table in sorted(CFGManager.values):
+    for table in sorted(CFGManager.iter_tables()):
         if not table.startswith("bot_") or table.endswith("_secret"):
             continue
         name = table[4:]
@@ -343,7 +343,7 @@ def _hosts_conflict(left: str, right: str) -> bool:
 
 def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
     # Milky 的 qq_host 是远端服务地址，不占用本机监听口。
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
 
     resources: list[tuple[str, int, str]] = []
     web = _split_host_port(CFGManager.get("web_port", table_name=instance.table))
@@ -366,7 +366,7 @@ def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
 def _read_credential(instance: AdapterInstance, field: str) -> object:
     # 凭据多数落在密钥表，也有落在普通表的（如 ``qq_bot_appid``），两处都试一次。
     # 未填写的占位符由 ``CFGManager.get`` 归一为 None，不会被误判为重复。
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
 
     for secret in (True, False):
         value = CFGManager.get(field, secret=secret, table_name=instance.table)
@@ -550,7 +550,22 @@ def multiprocess_run_until_complete(func):
         sys.exit(exitcode)
 
 
+def bootstrap_readonly_child() -> None:
+    """在子进程中以只读模式加载配置。
+
+    forkserver 进程在 pre_init 启动后才创建，环境变量中的只读标记可能在派生时已被清除；
+    这里在导入任何配置模板之前显式置位，避免子进程改写配置文件。
+    """
+    os.environ[CONFIG_READONLY_ENV] = "1"
+    from akaribot.core.builtins.config import CFGManager
+    from akaribot.core.builtins.config.bootstrap import bootstrap_config
+
+    CFGManager.readonly = True
+    bootstrap_config()
+
+
 def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, instance_id: str = ""):
+    bootstrap_readonly_child()
     from akaribot.core.constants import Info
     from akaribot.core.logger import Logger
 
@@ -583,6 +598,7 @@ def server_go(
     daemon_pid: int | None = None,
     hub_pid: int | None = None,
 ):
+    bootstrap_readonly_child()
     # Server 依赖树（尤其 WebRender）只应由 Server 子进程加载，守护进程不需要保留一份。
     from akaribot.core.server.run import run_async
 
@@ -591,6 +607,7 @@ def server_go(
 
 def jobqueue_hub_go(stop_event, ready_event):
     """在独立子进程中运行内置 WebSocket JobQueue Hub。"""
+    bootstrap_readonly_child()
     from akaribot.core.queue.websocket import run_websocket_hub_process
 
     run_websocket_hub_process(stop_event, ready_event)

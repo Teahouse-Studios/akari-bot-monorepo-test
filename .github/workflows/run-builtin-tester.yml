@@ -99,7 +99,16 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
-      - name: Run tests
+      - name: Run unit tests
+        timeout-minutes: 30
+        env:
+          CI: "1"
+          PYTHONIOENCODING: "UTF-8"
+          AKARI_TEST_TIME_SCALE: "10"
+        run: |
+          uv run python -m pytest tests/unit -q --junitxml=junit-unit.xml
+
+      - name: Run integration tests
         timeout-minutes: 60
         env:
           CI: "1"
@@ -151,6 +160,6 @@ jobs:
         if: always()
         with:
           name: Test report
-          path: junit-*.xml
+          path: junit*.xml
           reporter: java-junit
           fail-on-error: 'false'

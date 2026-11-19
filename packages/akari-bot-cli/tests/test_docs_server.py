@@ -1,11 +1,11 @@
-"""``akaribot.cli.docs.server``：预览服务器的 clean URL、目录索引与 404。"""
+"""``akaribot.cli.docs_engine.server``：预览服务器的 clean URL、目录索引与 404。"""
 
 import urllib.error
 import urllib.request
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from akaribot.cli.docs.server import StaticServer
+from akaribot.cli.docs_engine.server import StaticServer
 from akaribot.testing import Tester, func_case
 
 

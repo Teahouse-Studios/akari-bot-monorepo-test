@@ -67,7 +67,7 @@ class Module:
             "desc": self.desc,
             "required_admin": self.required_admin,
             "base": self.base,
-            "doc": self.doc,
+            "docs": self.doc,
             "hidden": self.hidden,
             "load": self.load,
             "rss": self.rss,

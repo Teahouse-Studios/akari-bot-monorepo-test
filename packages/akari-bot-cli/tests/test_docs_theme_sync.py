@@ -1,12 +1,12 @@
-"""``akaribot.cli.docs.theme_sync``：主题模板 submodule 同步。"""
+"""``akaribot.cli.docs_engine.theme_sync``：主题模板 submodule 同步。"""
 
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from akaribot.cli.docs import theme_sync
-from akaribot.cli.docs.model import DocsError
+from akaribot.cli.docs_engine import theme_sync
+from akaribot.cli.docs_engine.model import DocsError
 from akaribot.testing import Tester, func_case
 
 

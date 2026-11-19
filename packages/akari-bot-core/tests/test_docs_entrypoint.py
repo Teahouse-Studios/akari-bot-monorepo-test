@@ -1,6 +1,6 @@
 """``docs`` 入口的单元测试。
 
-发现过程不导入目标包，测试一律以假 entry point 与假 find_spec 注入包目录；另覆盖 doc.toml、
+发现过程不导入目标包，测试一律以假 entry point 与假 find_spec 注入包目录；另覆盖 docs.toml、
 front matter、隐藏页、无文档告警、符号链接逃逸、目录扫描回退与命令行输出。
 """
 
@@ -66,24 +66,27 @@ def _test_metadata_and_sorting():
         root = Path(raw)
         specs = {
             "akaribot.core": _make_package(
-                root, "akaribot.core", {"doc/index.md": "# 核心\n", "doc/guide.md": "# 指南\n"}
+                root, "akaribot.core", {"docs/index.md": "# 核心\n", "docs/guide.md": "# 指南\n"}
             ),
             "akaribot.modules.alpha": _make_package(
                 root,
                 "akaribot.modules.alpha",
-                {"doc/index.md": "# Alpha\n", "doc/doc.toml": "order = 10\noverview = false\n"},
+                {
+                    "docs/index.md": "# Alpha\n",
+                    "docs/config/global/docs.global.json": '{"order": 10, "overview": false}',
+                },
             ),
             "akaribot.modules.beta": _make_package(
-                root, "akaribot.modules.beta", {"doc/index.md": "# Beta\n", "doc/doc.toml": "order = 10\n"}
+                root, "akaribot.modules.beta", {"docs/index.md": "# Beta\n", "docs/config/global/docs.global.toml": "order = 10\n"}
             ),
             "akaribot.modules.zebra": _make_package(
-                root, "akaribot.modules.zebra", {"doc/index.md": "# Zebra\n", "doc/doc.toml": "order = 20\n"}
+                root, "akaribot.modules.zebra", {"docs/index.md": "# Zebra\n", "docs/config/global/docs.global.toml": "order = 20\n"}
             ),
             "akaribot.adapters.bot": _make_package(
-                root, "akaribot.adapters.bot", {"doc/index.md": "# Bot\n", "doc/doc.toml": "order = 5\n"}
+                root, "akaribot.adapters.bot", {"docs/index.md": "# Bot\n", "docs/config/global/docs.global.toml": "order = 5\n"}
             ),
-            "akaribot.assets.brand": _make_package(root, "akaribot.assets.brand", {"doc/index.md": "# 品牌\n"}),
-            "html2text": _make_package(root, "html2text", {"doc/index.md": "# HTML\n"}),
+            "akaribot.assets.brand": _make_package(root, "akaribot.assets.brand", {"docs/index.md": "# 品牌\n"}),
+            "html2text": _make_package(root, "html2text", {"docs/index.md": "# HTML\n"}),
         }
         editable = '{"dir_info": {"editable": true}}'
         entry_points = [
@@ -126,7 +129,7 @@ def _test_metadata_and_sorting():
         and core["editable"] is False
         and core["overview"] is True
         and _item(payload, "module-alpha")["overview"] is False
-        and core["doc_path"] == str((root / "akaribot" / "core" / "doc").resolve())
+        and core["doc_path"] == str((root / "akaribot" / "core" / "docs").resolve())
         and [Path(page["path"]).name for page in core["pages"]] == ["index.md", "guide.md"]
         and core["pages"][0]["title"] == "核心"
         and core["pages"][0]["path"] == "index.md"
@@ -146,14 +149,14 @@ def _test_front_matter_overrides_titles():
                 root,
                 "akaribot.modules.demo",
                 {
-                    "doc/index.md": "没有标题\n",
-                    "doc/a.md": (
+                    "docs/index.md": "没有标题\n",
+                    "docs/a.md": (
                         '---\ntitle: "自定义标题"\norder: 2\ndescription: 页面摘要\nsubmenu: 钩子\ntags: 忽略\n---\n# 正文标题\n'
                     ),
-                    "doc/b.md": "# 正文标题\n",
-                    "doc/c.md": "```\n# 代码块内标题\n```\n",
-                    "doc/.hidden.md": "# 隐藏页\n",
-                    "doc/.draft/inside.md": "# 草稿\n",
+                    "docs/b.md": "# 正文标题\n",
+                    "docs/c.md": "```\n# 代码块内标题\n```\n",
+                    "docs/.hidden.md": "# 隐藏页\n",
+                    "docs/.draft/inside.md": "# 草稿\n",
                 },
             )
         }
@@ -182,16 +185,25 @@ def _test_doc_meta_defaults_and_corruption():
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
         specs = {
-            "akaribot.modules.coin": _make_package(root, "akaribot.modules.coin", {"doc/index.md": "# 硬币\n"}),
+            "akaribot.modules.coin": _make_package(root, "akaribot.modules.coin", {"docs/index.md": "# 硬币\n"}),
             "akaribot.modules.broken": _make_package(
-                root, "akaribot.modules.broken", {"doc/index.md": "# 损坏\n", "doc/doc.toml": "[broken\n"}
+                root, "akaribot.modules.broken", {"docs/index.md": "# 损坏\n", "docs/config/global/docs.global.toml": "[broken\n"}
             ),
             "akaribot.modules.wiki": _make_package(
                 root,
                 "akaribot.modules.wiki",
                 {
-                    "doc/index.md": "# 维基\n",
-                    "doc/doc.toml": 'title = "维基"\nsummary = "文档摘要"\norder = 3\n',
+                    "docs/index.md": "# 维基\n",
+                    "docs/config/global/docs.global.toml": 'title = "维基"\nsummary = "文档摘要"\norder = 3\n',
+                    "docs/config/docs.toml": 'title = "维基覆盖"\norder = 4\n',
+                },
+            ),
+            "akaribot.modules.legacy": _make_package(
+                root,
+                "akaribot.modules.legacy",
+                {
+                    "docs/index.md": "# 旧布局\n",
+                    "docs/doc.toml": 'title = "旧布局"\nsummary = "旧路径仍可读"\norder = 7\n',
                 },
             ),
         }
@@ -201,12 +213,16 @@ def _test_doc_meta_defaults_and_corruption():
                 "module-broken", "akaribot.modules.broken", _Dist("akari-bot-module-broken", "1.0.0", "损坏模块")
             ),
             _EntryPoint("module-wiki", "akaribot.modules.wiki", _Dist("akari-bot-module-wiki", "1.0.0", "维基模块")),
+            _EntryPoint(
+                "module-legacy", "akaribot.modules.legacy", _Dist("akari-bot-module-legacy", "1.0.0", "旧布局模块")
+            ),
         ]
         payload = docs.collect(entry_points=lambda: entry_points, find_spec=_locator(specs))
 
     coin = _item(payload, "module-coin")
     broken = _item(payload, "module-broken")
     wiki = _item(payload, "module-wiki")
+    legacy = _item(payload, "module-legacy")
     return (
         coin["title"] == "coin"
         and coin["summary"] == "硬币模块"
@@ -214,11 +230,14 @@ def _test_doc_meta_defaults_and_corruption():
         and broken["title"] == "broken"
         and broken["summary"] == "损坏模块"
         and broken["order"] == 500
-        and any("doc.toml" in warning and "module-broken" in warning for warning in payload["warnings"])
-        and wiki["title"] == "维基"
+        and any("docs.global.toml" in warning and "module-broken" in warning for warning in payload["warnings"])
+        and wiki["title"] == "维基覆盖"
         and wiki["summary"] == "文档摘要"
-        and wiki["order"] == 3
-        and len(payload["packages"]) == 3
+        and wiki["order"] == 4
+        and legacy["title"] == "旧布局"
+        and legacy["summary"] == "旧路径仍可读"
+        and legacy["order"] == 7
+        and len(payload["packages"]) == 4
     )
 
 
@@ -229,18 +248,34 @@ def _test_doc_logo_metadata():
             root,
             "akaribot.assets.brand",
             {
-                "doc/index.md": "# 品牌\n",
-                "doc/doc.toml": 'logo = "akaribot_logo.png"\navatar = "akaribot_avatar.jpg"\n',
+                "docs/index.md": "# 品牌\n",
+                "docs/config/global/docs.global.toml": (
+                    "brand = true\n"
+                    'logo = "akaribot_logo.png"\n'
+                    'logo_dark = "akaribot_logo_dark.png"\n'
+                    'avatar = "akaribot_avatar.jpg"\n'
+                    'character = "character.png"\n'
+                    'credits = "credits.txt"\n'
+                ),
                 "akaribot_logo.png": "png",
+                "akaribot_logo_dark.png": "png",
                 "akaribot_avatar.jpg": "jpg",
+                "character.png": "png",
+                "credits.txt": "credits",
             },
         )
         escaped = _make_package(
             root,
             "akaribot.assets.other",
             {
-                "doc/index.md": "# 其他\n",
-                "doc/doc.toml": 'logo = "../../outside.png"\navatar = "../../outside.jpg"\n',
+                "docs/index.md": "# 其他\n",
+                "docs/config/global/docs.global.toml": (
+                    'logo = "../../outside.png"\n'
+                    'logo_dark = "../../outside-dark.png"\n'
+                    'avatar = "../../outside.jpg"\n'
+                    'character = "../../outside-character.png"\n'
+                    'credits = "../../outside-credits.txt"\n'
+                ),
             },
         )
         entry_points = [
@@ -254,12 +289,23 @@ def _test_doc_logo_metadata():
     brand_item = _item(payload, "assets-brand")
     other_item = _item(payload, "assets-other")
     return (
-        brand_item["logo"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_logo.png").resolve())
+        brand_item["brand"] is True
+        and brand_item["logo"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_logo.png").resolve())
+        and brand_item["logo_dark"]
+        == str((root / "akaribot" / "assets" / "brand" / "akaribot_logo_dark.png").resolve())
         and brand_item["avatar"] == str((root / "akaribot" / "assets" / "brand" / "akaribot_avatar.jpg").resolve())
+        and brand_item["character"] == str((root / "akaribot" / "assets" / "brand" / "character.png").resolve())
+        and brand_item["credits"] == str((root / "akaribot" / "assets" / "brand" / "credits.txt").resolve())
         and other_item["logo"] == ""
+        and other_item["logo_dark"] == ""
         and other_item["avatar"] == ""
+        and other_item["character"] == ""
+        and other_item["credits"] == ""
         and any("logo 指向包目录之外" in warning for warning in payload["warnings"])
+        and any("logo_dark 指向包目录之外" in warning for warning in payload["warnings"])
         and any("avatar 指向包目录之外" in warning for warning in payload["warnings"])
+        and any("character 指向包目录之外" in warning for warning in payload["warnings"])
+        and any("credits 指向包目录之外" in warning for warning in payload["warnings"])
     )
 
 
@@ -271,16 +317,16 @@ def _test_category_is_single_string():
                 root,
                 "akaribot.modules.one",
                 {
-                    "doc/index.md": "# One\n",
-                    "doc/doc.toml": 'category = "知识查询"\ncategory_order = 20\n',
+                    "docs/index.md": "# One\n",
+                    "docs/config/global/docs.global.toml": 'category = "知识查询"\ncategory_order = 20\n',
                 },
             ),
             "akaribot.modules.many": _make_package(
                 root,
                 "akaribot.modules.many",
                 {
-                    "doc/index.md": "# Many\n",
-                    "doc/doc.toml": 'category = ["知识查询", "实用工具"]\n',
+                    "docs/index.md": "# Many\n",
+                    "docs/config/global/docs.global.toml": 'category = ["知识查询", "实用工具"]\n',
                 },
             ),
         }
@@ -309,9 +355,9 @@ def _test_development_page_sorts_last():
                 root,
                 "akaribot.modules.demo",
                 {
-                    "doc/index.md": "# Demo\n",
-                    "doc/guide.md": "---\norder: 1\n---\n# 指南\n",
-                    "doc/development.md": "---\norder: 0\n---\n# 安装与开发\n",
+                    "docs/index.md": "# Demo\n",
+                    "docs/guide.md": "---\norder: 1\n---\n# 指南\n",
+                    "docs/development.md": "---\norder: 0\n---\n# 安装与开发\n",
                 },
             )
         }
@@ -330,9 +376,9 @@ def _test_hidden_package_is_skipped():
             "akaribot.modules.hidden": _make_package(
                 root,
                 "akaribot.modules.hidden",
-                {"doc/index.md": "# 隐藏\n", "doc/doc.toml": "hidden = true\n"},
+                {"docs/index.md": "# 隐藏\n", "docs/config/global/docs.global.toml": "hidden = true\n"},
             ),
-            "akaribot.modules.visible": _make_package(root, "akaribot.modules.visible", {"doc/index.md": "# 可见\n"}),
+            "akaribot.modules.visible": _make_package(root, "akaribot.modules.visible", {"docs/index.md": "# 可见\n"}),
         }
         payload = docs.collect(
             entry_points=lambda: [
@@ -351,7 +397,7 @@ def _test_missing_documentation_is_reported():
         root = Path(raw)
         specs = {
             "akaribot.modules.empty": _make_package(
-                root, "akaribot.modules.empty", {"doc/notes.txt": "不是 Markdown\n"}
+                root, "akaribot.modules.empty", {"docs/notes.txt": "不是 Markdown\n"}
             ),
             "akaribot.modules.absent": _make_package(root, "akaribot.modules.absent", {"__init__.py": ""}),
         }
@@ -377,8 +423,8 @@ def _test_missing_documentation_is_reported():
 def _test_symlink_escape_is_skipped():
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
-        spec = _make_package(root, "akaribot.modules.demo", {"doc/index.md": "# 可见\n"})
-        doc_dir = root / "akaribot" / "modules" / "demo" / "doc"
+        spec = _make_package(root, "akaribot.modules.demo", {"docs/index.md": "# 可见\n"})
+        doc_dir = root / "akaribot" / "modules" / "demo" / "docs"
         outside = root / "outside.md"
         outside.write_text("# 外部\n", encoding="utf-8")
         try:
@@ -401,11 +447,11 @@ def _test_directory_scan_fallback():
         core_pkg = root / "core_pkg"
         modules_ns = root / "modules_ns"
         adapters_ns = root / "adapters_ns"
-        for directory in (core_pkg / "doc", modules_ns / "coin" / "doc", modules_ns / "core" / "doc"):
+        for directory in (core_pkg / "docs", modules_ns / "coin" / "docs", modules_ns / "core" / "docs"):
             directory.mkdir(parents=True, exist_ok=True)
             (directory / "index.md").write_text("# 文档\n", encoding="utf-8")
-        (adapters_ns / "qqbot" / "doc").mkdir(parents=True, exist_ok=True)
-        (adapters_ns / "qqbot" / "doc" / "index.md").write_text("# QQ\n", encoding="utf-8")
+        (adapters_ns / "qqbot" / "docs").mkdir(parents=True, exist_ok=True)
+        (adapters_ns / "qqbot" / "docs" / "index.md").write_text("# QQ\n", encoding="utf-8")
         specs = {
             "akaribot.core": _Spec([str(core_pkg)]),
             "akaribot.modules": _Spec([str(modules_ns)]),
@@ -426,7 +472,7 @@ def _test_directory_scan_fallback():
         and coin["version"] == "0+local"
         and coin["summary"] == ""
         and coin["editable"] is True
-        and coin["doc_path"] == str((modules_ns / "coin" / "doc").resolve())
+        and coin["doc_path"] == str((modules_ns / "coin" / "docs").resolve())
         and _item(payload, "adapter-qqbot")["group"] == "adapter"
         and _item(payload, "core")["group"] == "core"
     )
@@ -436,13 +482,13 @@ def _test_stale_editable_metadata_is_supplemented():
     # 可编辑安装的元数据早于源码新增的 akaribot.docs 声明时按源码补入并告警；普通安装不按源码补入。
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
-        core_spec = _make_package(root / "src", "akaribot.core", {"doc/index.md": "# Core\n"})
+        core_spec = _make_package(root / "src", "akaribot.core", {"docs/index.md": "# Core\n"})
         specs = {"akaribot.core": core_spec}
         dists = []
         for name, editable in (("coin", True), ("dice", False)):
             source = root / f"akari-bot-module-{name}"
             import_path = f"akaribot.modules.{name}"
-            specs[import_path] = _make_package(source, import_path, {"doc/index.md": f"# {name}\n"})
+            specs[import_path] = _make_package(source, import_path, {"docs/index.md": f"# {name}\n"})
             (source / "pyproject.toml").write_text(
                 f'[project]\nname = "akari-bot-module-{name}"\n\n'
                 f'[project.entry-points."akaribot.docs"]\nmodule-{name} = "{import_path}"\n',
@@ -475,8 +521,8 @@ def _test_main_output_contract():
                 "key": "core",
                 "group": "core",
                 "title": "核心",
-                "doc_path": "/tmp/core/doc",
-                "pages": [{"title": "首页", "path": "/tmp/core/doc/index.md", "order": 500, "summary": ""}],
+                "doc_path": "/tmp/core/docs",
+                "pages": [{"title": "首页", "path": "/tmp/core/docss/index.md", "order": 500, "summary": ""}],
             }
         ],
         "warnings": ["提示"],
@@ -507,7 +553,7 @@ def _test_main_output_contract():
         and json.loads(json_text) == payload
         and json_stderr == ""
         and list_code == 0
-        and human_text.startswith("core\tcore\t核心\t1\t/tmp/core/doc")
+        and human_text.startswith("core\tcore\t核心\t1\t/tmp/core/docs")
         and "! 提示" in human_stderr
         and bad_code == 2
     )
@@ -518,8 +564,8 @@ async def test_docs_entrypoint(tester: Tester):
     """core.entrypoints.docs: 包文档清单入口测试"""
     await tester.test(_test_metadata_and_sorting, "元数据字段与分组排序")
     await tester.test(_test_front_matter_overrides_titles, "front matter 覆盖标题与页面排序")
-    await tester.test(_test_doc_meta_defaults_and_corruption, "doc.toml 缺省、覆盖与损坏告警")
-    await tester.test(_test_doc_logo_metadata, "doc.toml 声明的站点标志按包目录解析并拒绝越界")
+    await tester.test(_test_doc_meta_defaults_and_corruption, "元数据缺省、全局/用户覆盖与损坏告警")
+    await tester.test(_test_doc_logo_metadata, "docs.global.toml 声明的站点标志按包目录解析并拒绝越界")
     await tester.test(_test_category_is_single_string, "分类只接受单个字符串")
     await tester.test(_test_development_page_sorts_last, "开发页固定在页面列表末尾")
     await tester.test(_test_hidden_package_is_skipped, "hidden 包被跳过")

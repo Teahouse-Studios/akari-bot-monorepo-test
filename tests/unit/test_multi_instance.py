@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 import bot as daemon
 from akaribot.core.alive import Alive
-from akaribot.core.config import CFGManager
+from akaribot.core.builtins.config import CFGManager
 from akaribot.core.constants import Info
 from akaribot.core.loader import ModulesManager
 from akaribot.core.registry import PackageEntry, PackageManifest, PackageRegistry
@@ -84,9 +84,6 @@ CONFLICT_CONFIG_FILES = {
 @contextmanager
 def _temp_config(files: dict[str, str]):
     original_path = CFGManager.config_path
-    original_values = CFGManager.values
-    original_tss = CFGManager._tss
-    original_file_list = CFGManager.config_file_list
     original_readonly = CFGManager.readonly
     original_instance_id = Info.instance_id
 
@@ -101,10 +98,7 @@ def _temp_config(files: dict[str, str]):
     finally:
         Info.instance_id = original_instance_id
         CFGManager.readonly = original_readonly
-        CFGManager.config_path = original_path
-        CFGManager.values = original_values
-        CFGManager._tss = original_tss
-        CFGManager.config_file_list = original_file_list
+        CFGManager.switch_config_path(original_path)
         shutil.rmtree(tmp, ignore_errors=True)
 
 

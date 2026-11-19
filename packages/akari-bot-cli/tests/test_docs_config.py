@@ -1,10 +1,10 @@
-"""``akaribot.cli.docs.config``：站点品牌、分组与分类图标、资源路径。"""
+"""``akaribot.cli.docs_engine.config``：站点品牌、分组与分类图标、资源路径。"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from akaribot.cli.docs.config import DocsConfig, load_config, site_asset_path
-from akaribot.cli.docs.model import DocsError
+from akaribot.cli.docs_engine.config import DocsConfig, load_config, site_asset_path
+from akaribot.cli.docs_engine.model import DocsError
 from akaribot.testing import Tester, func_case
 
 
@@ -171,6 +171,24 @@ async def _test_command_prefix_comes_from_instance_config():
     return resolved.site.command_prefix == "!" and direct.site.command_prefix == "!"
 
 
+async def _test_command_prefix_merges_global():
+    with TemporaryDirectory(prefix="akari-docs-config-") as raw:
+        root = Path(raw)
+        (root / "config" / "global").mkdir(parents=True)
+        (root / "config" / "global" / "config.global.toml").write_text(
+            '[config]\ncommand_prefix = ["~"]\nother = 1\n',
+            encoding="utf-8",
+        )
+        (root / "config" / "config.toml").write_text(
+            '[config]\ncommand_prefix = ["!"]\n',
+            encoding="utf-8",
+        )
+        overridden = load_config(_Instance(root))
+        (root / "config" / "config.toml").unlink()
+        fallback = load_config(_Instance(root))
+    return overridden.site.command_prefix == "!" and fallback.site.command_prefix == "~"
+
+
 async def _test_command_prefix_override_and_missing_config():
     with TemporaryDirectory(prefix="akari-docs-config-") as raw:
         root = Path(raw)
@@ -291,6 +309,7 @@ async def test_docs_config(tester: Tester):
     await tester.test(_test_assets_are_overridable, "站点素材可由 docs.toml 覆盖")
     await tester.test(_test_command_prefix_comes_from_instance_config, "命令前缀取自实例核心配置")
     await tester.test(_test_command_prefix_override_and_missing_config, "站点配置覆盖前缀，缺失时为空")
+    await tester.test(_test_command_prefix_merges_global, "命令前缀先读全局默认值，再由用户配置覆盖")
     await tester.test(_test_site_title_defaults_and_override, "站点标题默认取自随包默认值，可由 docs.toml 覆盖")
     await tester.test(_test_site_defaults_cover_lang_base_and_out_dir, "语言、基路径与输出目录的默认值同样来自随包配置")
     await tester.test(_test_locales_declare_languages_and_inherit_defaults, "语言清单声明语言并继承默认文案")

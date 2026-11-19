@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs.generator``：站点源文件、侧栏与路径约束。"""
+"""``akaribot.cli.docs_engine.generator``：站点源文件、侧栏与路径约束。"""
 
 import json
 import os
@@ -7,10 +7,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from akaribot.cli.docs.config import DocsConfig, DocsLocaleConfig, DocsSiteConfig, DocsThemeConfig
-from akaribot.cli.docs.generator import generate
-from akaribot.cli.docs.model import DocCatalog, DocPackage, DocPage, DocsError
-from akaribot.cli.docs.theme import ThemeSpec
+from akaribot.cli.docs_engine.config import DocsConfig, DocsLocaleConfig, DocsSiteConfig, DocsThemeConfig
+from akaribot.cli.docs_engine.generator import generate
+from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
+from akaribot.cli.docs_engine.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
 
 
@@ -35,7 +35,11 @@ def _package(
     category: str = "",
     category_order: int = 500,
     logo: str = "",
+    logo_dark: str = "",
     avatar: str = "",
+    character: str = "",
+    credits: str = "",
+    brand: bool = False,
 ) -> DocPackage:
     doc_path = base / f"doc-{key}"
     doc_path.mkdir(parents=True, exist_ok=True)
@@ -53,7 +57,11 @@ def _package(
         category=category,
         category_order=category_order,
         logo=logo,
+        logo_dark=logo_dark,
         avatar=avatar,
+        character=character,
+        credits=credits,
+        brand=brand,
     )
 
 
@@ -212,7 +220,7 @@ async def _test_unsafe_package_key_is_rejected():
 
 async def _test_cross_package_links_are_rewritten():
     def _package_at(key: str, files: dict[str, bytes | str]) -> DocPackage:
-        doc_path = root / key / "doc"
+        doc_path = root / key / "docs"
         _write(doc_path, files)
         return DocPackage(
             key=key,
@@ -233,14 +241,14 @@ async def _test_cross_package_links_are_rewritten():
             {
                 "index.md": (
                     "# A\n"
-                    "[B 首页](../../b/doc/index.md)\n"
-                    "[B 子页](../../b/doc/guide.md#start)\n"
-                    "[B 子目录](../../b/doc/sub/index.md)\n"
-                    "[B 资源](../../b/doc/files/manual.pdf)\n"
+                    "[B 首页](../../b/docs/index.md)\n"
+                    "[B 子页](../../b/docs/guide.md#start)\n"
+                    "[B 子目录](../../b/docs/sub/index.md)\n"
+                    "[B 资源](../../b/docs/files/manual.pdf)\n"
                     "[同包](guide.md)\n"
                     "[外链](https://example.com/x.md)\n"
                     "[绝对](/b/guide)\n"
-                    "```\n[B 代码](../../b/doc/guide.md)\n```\n"
+                    "```\n[B 代码](../../b/docs/guide.md)\n```\n"
                 ),
                 "guide.md": "# A 指南\n",
             },
@@ -265,7 +273,7 @@ async def _test_cross_package_links_are_rewritten():
         and "[同包](guide.md)" in text
         and "[外链](https://example.com/x.md)" in text
         and "[绝对](/b/guide)" in text
-        and "[B 代码](../../b/doc/guide.md)" in text
+        and "[B 代码](../../b/docs/guide.md)" in text
     )
 
 
@@ -276,7 +284,7 @@ async def _test_module_meta_is_injected_from_doc_toml():
             root,
             {
                 "index.md": "# Demo\n\n简介。\n",
-                "doc.toml": (
+                "config/docs.toml": (
                     "schema = 1\n"
                     'title = "Demo"\n'
                     "[[meta.modules]]\n"
@@ -436,12 +444,12 @@ async def _test_site_branding_home_and_group_icons():
         start = generated.index('"themeConfig": {')
         theme_config, _ = json.JSONDecoder().raw_decode(generated[generated.index("{", start) :])
         sidebar = theme_config["akari"]["sidebar"]["items"]
-        logo = (source / "public" / "site-logo.svg").read_text(encoding="utf-8")
+        logo = (source / "public" / "brand-logo.svg").read_text(encoding="utf-8")
         favicon = (source / "public" / "site-favicon.ico").read_bytes()
     return (
         logo == "<svg>logo</svg>\n"
         and favicon == b"icon"
-        and theme_config["akari"]["appBar"]["logo"] == "/docs/site-logo.svg"
+        and theme_config["akari"]["appBar"]["logo"] == "/brand-logo.svg"
         and theme_config["akari"]["settings"]["defaults"]["color"] == "#d69cdd"
         and '"href": "/docs/site-favicon.ico"' in generated
         and sidebar[0] == {"text": "首页", "link": "/", "icon": "dashboard"}
@@ -528,7 +536,7 @@ async def _test_site_favicon_and_logo_defaults():
         source = root / "cache" / "docs" / "src"
         generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root))
         favicon_copied = (source / "public" / "site-favicon.ico").is_file()
-        logo_copied = (source / "public" / "site-logo.png").is_file()
+        logo_copied = (source / "public" / "brand-logo.png").is_file()
         theme_config = _theme_config(source)
         plain = _package(root, {"index.md": "# 用法\n"}, key="plain", pages=(DocPage("index.md", "用法", 0),))
         generate(DocCatalog(packages=(plain,)), source, DocsConfig(root=root))
@@ -543,9 +551,9 @@ async def _test_site_favicon_and_logo_defaults():
     return (
         favicon_copied
         and logo_copied
-        and theme_config["logo"] == "/site-logo.png"
-        and fallback["logo"] == "/site-favicon.ico"
-        and override["logo"] == "/site-logo.png"
+        and theme_config["logo"] == "/brand-logo.png"
+        and fallback["logo"] == "/brand-logo.png"
+        and override["logo"] == "/brand-logo.png"
         and "/static/icon.svg" in head
     )
 
@@ -576,7 +584,7 @@ async def _test_chat_avatar_from_package_and_favicon():
         )
         source = root / "cache" / "docs" / "src"
         generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root), theme=theme)
-        copied = (source / "public" / "site-avatar.jpg").is_file()
+        copied = (source / "public" / "brand-avatar.jpg").is_file()
         config = _theme_config(source)
         generate(
             DocCatalog(
@@ -591,8 +599,81 @@ async def _test_chat_avatar_from_package_and_favicon():
         fallback = _theme_config(source)
     return (
         copied
-        and config["akari"]["chatAvatar"] == "/site-avatar.jpg"
-        and fallback["akari"]["chatAvatar"] == "/site-favicon.ico"
+        and config["akari"]["chatAvatar"] == "/brand-avatar.jpg"
+        and fallback["akari"]["chatAvatar"] == "/brand-avatar.png"
+    )
+
+
+async def _test_brand_package_slots_and_fallback():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        files = {
+            "logo.svg": "<svg>day</svg>\n",
+            "logo-dark.svg": "<svg>night</svg>\n",
+            "avatar.jpg": b"\xff\xd8\xff",
+            "character.png": b"\x89PNG\r\n",
+            "credits.txt": "credits\n",
+        }
+        paths = {}
+        for name, content in files.items():
+            path = root / name
+            path.write_text(content, encoding="utf-8") if isinstance(content, str) else path.write_bytes(content)
+            paths[name] = str(path)
+        package = _package(
+            root,
+            {"index.md": "# 用法\n"},
+            pages=(DocPage("index.md", "用法", 0),),
+            logo=paths["logo.svg"],
+            logo_dark=paths["logo-dark.svg"],
+            avatar=paths["avatar.jpg"],
+            character=paths["character.png"],
+            credits=paths["credits.txt"],
+            brand=True,
+        )
+        theme_dir = root / "theme"
+        theme_dir.mkdir()
+        theme = ThemeSpec(
+            name="test",
+            version="1.0.0",
+            source="file:test",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=root,
+            vitepress_version="2.0.0-alpha.21",
+            node_major=22,
+            config={"theme_config_key": "akari"},
+        )
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root), theme=theme)
+        config = _theme_config(source)
+        copied = {
+            name: (source / "public" / name).is_file()
+            for name in (
+                "brand-logo.svg",
+                "brand-logo-dark.svg",
+                "brand-avatar.jpg",
+                "brand-character.png",
+                "brand-credits.txt",
+            )
+        }
+        plain = _package(root, {"index.md": "# 用法\n"}, key="plain", pages=(DocPage("index.md", "用法", 0),))
+        generate(DocCatalog(packages=(plain,)), source, DocsConfig(root=root), theme=theme)
+        fallback = _theme_config(source)
+    brand = config["akari"]["brand"]
+    return (
+        all(copied.values())
+        and brand
+        == {
+            "logo": "/brand-logo.svg",
+            "logoDark": "/brand-logo-dark.svg",
+            "avatar": "/brand-avatar.jpg",
+            "character": "/brand-character.png",
+            "credits": "/brand-credits.txt",
+        }
+        and fallback["akari"]["brand"]["logo"] == "/brand-logo.png"
+        and fallback["akari"]["brand"]["logoDark"] == "/brand-logo-dark.png"
+        and fallback["akari"]["brand"]["avatar"] == "/brand-avatar.png"
+        and fallback["akari"]["brand"]["character"] == "/brand-character.png"
     )
 
 
@@ -792,7 +873,7 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_package_without_pages_gets_placeholder, "无页面时生成占位首页")
     await tester.test(_test_unsafe_package_key_is_rejected, "拒绝含路径片段的包 key")
     await tester.test(_test_cross_package_links_are_rewritten, "跨包相对链接折算为站点 URL")
-    await tester.test(_test_module_meta_is_injected_from_doc_toml, "doc.toml 元数据注入模块属性卡")
+    await tester.test(_test_module_meta_is_injected_from_doc_toml, "docs.toml 元数据注入模块属性卡")
     await tester.test(_test_package_without_meta_has_no_component, "无元数据的包不注入属性卡")
     await tester.test(_test_module_categories_and_parallel_tabs, "模块分类、分类图标与平行页面侧栏")
     await tester.test(_test_site_branding_home_and_group_icons, "站点 Logo、favicon、首页与一级图标")
@@ -800,8 +881,9 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_external_theme_config, "外部主题生成 head、markdown 与侧栏配置")
     await tester.test(_test_labels_come_from_config, "侧栏与导航文案取自配置")
     await tester.test(_test_command_prefix_reaches_theme_config, "命令前缀写入主题配置，缺失时不写")
-    await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，顶栏标志取包声明并可回退")
-    await tester.test(_test_chat_avatar_from_package_and_favicon, "对话头像取包声明，缺少时回退站点图标")
+    await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，品牌标志与内置回退")
+    await tester.test(_test_chat_avatar_from_package_and_favicon, "对话头像取包声明，缺少时回退内置资源")
+    await tester.test(_test_brand_package_slots_and_fallback, "品牌包的五个插槽与内置回退")
     await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
     await tester.test(_test_package_without_overview_uses_first_page_as_entry, "无概览页的包以第一页作为入口")
     await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")

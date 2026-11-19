@@ -14,8 +14,8 @@ from unittest.mock import patch
 from uuid import UUID
 
 import akaribot.core
-from akaribot.core.config import CFGManager
-from akaribot.core.config.scan import scan_config_templates
+from akaribot.core.builtins.config import CFGManager
+from akaribot.core.builtins.config.scan import scan_config_templates
 from akaribot.core.constants.version import config_version
 from akaribot.core.paths import Paths
 from akaribot.testing import func_case, Tester
@@ -36,9 +36,6 @@ db_path = "sqlite://database/save.db"
 @contextmanager
 def _temp_config():
     original_path = CFGManager.config_path
-    original_values = CFGManager.values
-    original_tss = CFGManager._tss
-    original_file_list = CFGManager.config_file_list
     original_readonly = CFGManager.readonly
 
     tmp = Path(tempfile.mkdtemp(prefix="akari_cfg_scan_"))
@@ -49,10 +46,7 @@ def _temp_config():
         yield tmp
     finally:
         CFGManager.readonly = original_readonly
-        CFGManager.config_path = original_path
-        CFGManager.values = original_values
-        CFGManager._tss = original_tss
-        CFGManager.config_file_list = original_file_list
+        CFGManager.switch_config_path(original_path)
         shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -109,7 +103,9 @@ def _test_fresh_process_generates_all_grouped_core_templates():
                     "from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
                     "build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), 'akari-bot'); "
                     "connect_locale_snapshot('akari-bot'); "
-                    "from akaribot.core.config.scan import scan_config_templates; "
+                    "from akaribot.core.builtins.config.bootstrap import bootstrap_config; "
+                    "bootstrap_config(); "
+                    "from akaribot.core.builtins.config.scan import scan_config_templates; "
                     "from akaribot.core.config.jobqueue import bootstrap_jobqueue_config; "
                     "failed = scan_config_templates(); "
                     "bootstrap_jobqueue_config() if not failed else None; "
@@ -165,7 +161,7 @@ def _test_fresh_process_generates_all_grouped_core_templates():
 def _test_scan_covers_all_directories_with_config_templates():
     import akaribot.adapters
     import akaribot.modules
-    from akaribot.core.config.scan import iter_config_template_modules
+    from akaribot.core.builtins.config.scan import iter_config_template_modules
 
     listed = set(iter_config_template_modules())
     expected = set()
@@ -196,10 +192,12 @@ def _test_fresh_process_generates_bot_adapter_config():
                     "from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot; "
                     "build_locale_snapshot(list(lang_list.keys()), collect_locale_paths(), 'akari-bot'); "
                     "connect_locale_snapshot('akari-bot'); "
-                    "from akaribot.core.config.scan import scan_config_templates; "
+                    "from akaribot.core.builtins.config.bootstrap import bootstrap_config; "
+                    "bootstrap_config(); "
+                    "from akaribot.core.builtins.config.scan import scan_config_templates; "
                     "failed = scan_config_templates(); "
                     # 与守护进程 spawn 出的平台进程一致：模板导入完毕后一律只读
-                    "from akaribot.core.config import CFGManager; "
+                    "from akaribot.core.builtins.config import CFGManager; "
                     "CFGManager.readonly = True; "
                     "from akaribot.adapters.milky.config import MilkyConfig, MilkySecretConfig; "
                     "print('MILKY', failed, MilkyConfig.enable, MilkyConfig.qq_host, "
@@ -260,9 +258,9 @@ def _test_jobqueue_bootstrap_persists_missing_values_once():
 
 
 def _test_scan_writes_template_fields():
-    from akaribot.core.config.decorator import on_config
+    from akaribot.core.builtins.config.decorator import on_config
 
-    # 已被 tester 导入的模板不会再次执行 _process_class，故以此处声明的模板验证补写行为
+    # 已被 tester 导入的模板不会再次执行 process_config_class，故以此处声明的模板验证补写行为
     with _temp_config() as tmp:
 
         @on_config("config")
@@ -275,7 +273,7 @@ def _test_scan_writes_template_fields():
 
 
 def _test_standalone_comment_declaration_is_validated():
-    from akaribot.core.config.decorator import on_config
+    from akaribot.core.builtins.config.decorator import on_config
 
     with _temp_config():
         try:
@@ -363,11 +361,13 @@ def _test_legacy_slower_schedule_migrates_to_multiplier():
                 (
                     # 迁移后的 3 秒提示停顿不属于持久化行为；仅在隔离进程中跳过。
                     "from unittest.mock import patch\n"
+                    "from akaribot.core.builtins.config.bootstrap import bootstrap_config\n"
                     "with patch('time.sleep'):\n"
-                    "    from akaribot.core.config import CFGManager\n"
-                    "print(CFGManager.values['config']['config_version']); "
-                    "print(CFGManager.values['config']['config']['schedule_interval_multiplier']); "
-                    "print('slower_schedule' in CFGManager.values['config']['config'])"
+                    "    bootstrap_config()\n"
+                    "from akaribot.core.builtins.config import CFGManager\n"
+                    "print(CFGManager.document('config')['config_version']); "
+                    "print(CFGManager.document('config')['config']['schedule_interval_multiplier']); "
+                    "print('slower_schedule' in CFGManager.document('config')['config'])"
                 ),
             ],
             cwd=Paths.tests.parent,
@@ -401,10 +401,12 @@ def _test_legacy_allow_reload_base_is_removed():
                 (
                     # 迁移后的 3 秒提示停顿不属于持久化行为；仅在隔离进程中跳过。
                     "from unittest.mock import patch\n"
+                    "from akaribot.core.builtins.config.bootstrap import bootstrap_config\n"
                     "with patch('time.sleep'):\n"
-                    "    from akaribot.core.config import CFGManager\n"
-                    "print(CFGManager.values['config']['config_version']); "
-                    "print('allow_reload_base' in CFGManager.values['config']['config'])"
+                    "    bootstrap_config()\n"
+                    "from akaribot.core.builtins.config import CFGManager\n"
+                    "print(CFGManager.document('config')['config_version']); "
+                    "print('allow_reload_base' in CFGManager.document('config')['config'])"
                 ),
             ],
             cwd=Paths.tests.parent,

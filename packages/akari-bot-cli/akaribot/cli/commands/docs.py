@@ -1,6 +1,6 @@
 """文档站点命令：列目录、构建、预览、部署与清理。
 
-业务实现都在 :mod:`akaribot.cli.docs`；本模块只负责参数解析、确认、输出与退出码。
+业务实现都在 :mod:`akaribot.cli.docs_engine`；本模块只负责参数解析、确认、输出与退出码。
 ``--json`` 模式下 stdout 只承载结果 JSON，提示与警告一律走 stderr。
 """
 
@@ -20,16 +20,16 @@ from rich.markup import escape
 from rich.table import Table
 
 from akaribot.cli import i18n
-from akaribot.cli.docs.builder import build
-from akaribot.cli.docs.catalog import load_catalog
-from akaribot.cli.docs.config import CONFIG_FILENAME, DocsConfig, load_config
-from akaribot.cli.docs.deploy import DocsDeployError, get_provider
-from akaribot.cli.docs.model import BuildResult, DocPackage, DocsError, ToolchainInfo
-from akaribot.cli.docs.server import StaticServer
-from akaribot.cli.docs.state import load_state, record_deploy
-from akaribot.cli.docs.theme import resolve_theme
-from akaribot.cli.docs.theme_sync import sync_theme_submodule
-from akaribot.cli.docs.toolchain import detect, ensure_toolchain
+from akaribot.cli.docs_engine.builder import build
+from akaribot.cli.docs_engine.catalog import load_catalog
+from akaribot.cli.docs_engine.config import CONFIG_FILENAME, DocsConfig, load_config
+from akaribot.cli.docs_engine.deploy import DocsDeployError, get_provider
+from akaribot.cli.docs_engine.model import BuildResult, DocPackage, DocsError, ToolchainInfo
+from akaribot.cli.docs_engine.server import StaticServer
+from akaribot.cli.docs_engine.state import load_state, record_deploy
+from akaribot.cli.docs_engine.theme import resolve_theme
+from akaribot.cli.docs_engine.theme_sync import sync_theme_submodule
+from akaribot.cli.docs_engine.toolchain import detect, ensure_toolchain
 from akaribot.cli.instance import (
     InstancePathOption,
     console,

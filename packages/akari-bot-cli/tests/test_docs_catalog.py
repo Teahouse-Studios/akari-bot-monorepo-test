@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs.catalog``：清单解析、去重、CLI 本地合并与 registry 回退。"""
+"""``akaribot.cli.docs_engine.catalog``：清单解析、去重、CLI 本地合并与 registry 回退。"""
 
 import json
 from importlib import metadata
@@ -8,8 +8,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from akaribot.cli import __version__ as cli_version
-from akaribot.cli.docs import catalog as docs_catalog
-from akaribot.cli.docs.model import DocsError
+from akaribot.cli.docs_engine import catalog as docs_catalog
+from akaribot.cli.docs_engine.model import DocsError
 from akaribot.testing import Tester, func_case
 
 
@@ -50,7 +50,7 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "summary": "查询 MediaWiki",
                 "category": "知识查询",
                 "category_order": 20,
-                "doc_path": str(root / "doc" / "wiki"),
+                "doc_path": str(root / "docs" / "wiki"),
                 "pages": [
                     _page("guide/setup.md", "安装", 20, submenu="钩子"),
                     _page("development.md", "安装与开发", 5),
@@ -66,7 +66,7 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "version": "9.9.9",
                 "title": "重复条目",
                 "summary": "",
-                "doc_path": str(root / "doc" / "wiki"),
+                "doc_path": str(root / "docs" / "wiki"),
                 "pages": [],
             },
         ],
@@ -171,11 +171,12 @@ async def _test_registry_fallback_builds_minimal_entries():
         base = Path(raw)
         instance_root = base / "instance"
         package_root = base / "pkg"
-        doc = package_root / "doc"
+        doc = package_root / "docs"
         doc.mkdir(parents=True)
         (doc / "index.md").write_text("# 包首页\n", encoding="utf-8")
         (doc / "notes.md").write_text("正文\n", encoding="utf-8")
-        (doc / "doc.toml").write_text('title = "wiki"\ncategory = "知识查询"\ncategory_order = 20\n', encoding="utf-8")
+        (doc / "config").mkdir(exist_ok=True)
+        (doc / "config" / "docs.toml").write_text('title = "wiki"\ncategory = "知识查询"\ncategory_order = 20\n', encoding="utf-8")
         registry = {
             "packages": [
                 {

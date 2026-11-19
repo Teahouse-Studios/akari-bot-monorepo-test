@@ -9,7 +9,7 @@ from akaribot.core.builtins.converter import converter
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.message.internal import Plain, I18NContext
 from akaribot.core.builtins.session.info import SessionInfo
-from akaribot.core.config import CFGManager
+from akaribot.core.builtins.config import CFGManager
 from akaribot.core.constants import assets_path, Info, PrivateData, Secret
 from akaribot.core.database import init_db
 from akaribot.core.loader import load_modules, ModulesManager
@@ -81,16 +81,13 @@ async def init_async(start_scheduler=True, send_prompt=True) -> None:
 
 
 async def load_secret():
-    for x in CFGManager.values:
-        for y in CFGManager.values[x].keys():
-            if y == "secret" or y.endswith("_secret"):
-                for z in CFGManager.values[x][y].keys():
-                    w = CFGManager.values[x][y].get(z)
-                    if not str(w).startswith("<Replace me"):
-                        if isinstance(w, str):
-                            Secret.add(w)
-                        elif isinstance(w, list):
-                            Secret.update(w)
+    for value in CFGManager.iter_secret_values():
+        if str(value).startswith("<Replace me"):
+            continue
+        if isinstance(value, str):
+            Secret.add(value)
+        elif isinstance(value, list):
+            Secret.update(value)
 
 
 async def _wait_for_client_online(

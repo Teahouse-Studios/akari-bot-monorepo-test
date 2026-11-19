@@ -617,7 +617,7 @@ def prepare_commands(plan: ModulePlan) -> list[dict[str, object]]:
             {
                 "token": token,
                 "suffix": entry.template,
-                "doc": entry.help_text,
+                "docs": entry.help_text,
                 "help_key": help_key,
                 "message_key": message_key,
                 "message_text": entry.message_text,
@@ -645,7 +645,7 @@ def prepare_test_cases(plan: ModulePlan, commands: list[dict[str, object]]) -> l
         cases.append(
             {
                 "token": token,
-                "doc": f"{token} 命令返回预期文案。",
+                "docs": f"{token} 命令返回预期文案。",
                 "input_literal": python_literal(f"~{plan.name} {example}".strip()),
                 "expected_literal": python_literal(message_text),
                 "note_literal": python_literal(note),

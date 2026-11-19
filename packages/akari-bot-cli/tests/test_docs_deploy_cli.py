@@ -13,10 +13,10 @@ from typer.testing import CliRunner
 
 from akaribot.cli import i18n
 from akaribot.cli.commands import docs as docs_command
-from akaribot.cli.docs.config import DocsBuildConfig, DocsConfig, DocsSiteConfig
-from akaribot.cli.docs.deploy import DeployResult, DeployTarget, DocsDeployError
-from akaribot.cli.docs.model import BuildResult
-from akaribot.cli.docs.state import load_state
+from akaribot.cli.docs_engine.config import DocsBuildConfig, DocsConfig, DocsSiteConfig
+from akaribot.cli.docs_engine.deploy import DeployResult, DeployTarget, DocsDeployError
+from akaribot.cli.docs_engine.model import BuildResult
+from akaribot.cli.docs_engine.state import load_state
 from akaribot.testing import Tester, func_case
 
 

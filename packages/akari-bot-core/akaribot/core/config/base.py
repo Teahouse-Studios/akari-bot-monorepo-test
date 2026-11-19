@@ -1,6 +1,6 @@
 """表外基础配置及历史导入路径兼容层。"""
 
-from akaribot.core.config.decorator import on_base_config
+from akaribot.core.builtins.config.decorator import on_base_config
 from akaribot.core.constants.default import default_locale as default_locale_default
 from akaribot.core.constants.version import config_version as config_version_default
 

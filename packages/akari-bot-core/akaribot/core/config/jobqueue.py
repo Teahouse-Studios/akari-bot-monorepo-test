@@ -2,8 +2,8 @@
 
 from uuid import uuid4
 
-from akaribot.core.config import CFGManager
-from akaribot.core.config.decorator import on_config
+from akaribot.core.builtins.config import CFGManager
+from akaribot.core.builtins.config.decorator import on_config
 
 
 @on_config(

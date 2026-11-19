@@ -1,0 +1,209 @@
+"""配置装饰器模块。"""
+
+from collections.abc import Mapping
+import inspect
+from types import UnionType
+from typing import Any, Literal, TypeVar, get_args
+
+from akaribot.core.builtins.config.interface import ALLOWED_TYPES, get_source
+
+T = TypeVar("T")
+
+
+class ConfigMeta(type):
+    def __getattr__(cls, name: str):
+        field = cls.__dict__.get("__config_fields__", {}).get(name)
+        if field is None:
+            # 未声明的名称照常报错：键名书写有误时立即抛出异常，而非静默返回默认值
+            raise AttributeError(f"{cls.__name__} has no config field {name!r}")
+        return get_source().get(**field)
+
+
+def process_config_class(
+    cls: type[T],
+    table_name,
+    secret=False,
+    standalone_comments: Mapping[str, tuple[str, ...]] | None = None,
+) -> type[T]:
+    cls_annotations = {k: v for k, v in inspect.get_annotations(cls).items() if not k.startswith("__")}
+    # 未写类型标注时退回类属性本身，使无标注的模板仍能生成配置项
+    if not cls_annotations:
+        cls_annotations = {k: Any for k, _ in vars(cls).items() if not k.startswith("__")}
+
+    if standalone_comments is None:
+        standalone_comments = {}
+    elif not isinstance(standalone_comments, Mapping):
+        raise TypeError("Standalone comments must be a mapping of config fields to i18n key tuples.")
+    else:
+        standalone_comments = dict(standalone_comments)
+    if not all(isinstance(field_name, str) and field_name for field_name in standalone_comments):
+        raise TypeError("Standalone comment field names must be non-empty strings.")
+    unknown_comment_fields = standalone_comments.keys() - cls_annotations.keys()
+    if unknown_comment_fields:
+        fields = ", ".join(sorted(unknown_comment_fields))
+        raise ValueError(f"Standalone comments reference undeclared config fields: {fields}")
+    for field_name, comment_keys in standalone_comments.items():
+        if (
+            not isinstance(comment_keys, tuple)
+            or not comment_keys
+            or not all(isinstance(key, str) and key for key in comment_keys)
+        ):
+            raise TypeError(
+                f"Standalone comments for config field {field_name!r} must be a tuple of non-empty i18n keys."
+            )
+
+    # 各字段传给配置来源 get() 的完整参数，既供元类读取配置值，也供 __init__ 取默认值
+    config_fields: dict[str, dict[str, Any]] = {}
+
+    def __init__(self, **kwargs):
+        """自动生成的初始化方法。
+
+        :param **kwargs: `<字段名>=<值>` 的键值对，用于初始化对象属性
+        """
+        for field_name, field in config_fields.items():
+            # 默认值须取自字段登记表：cls_annotations 存放类型标注而非默认值，从中取值会让
+            # 实例属性得到类型对象本身（如 <class 'int'>）而非 181
+            setattr(self, field_name, kwargs.get(field_name, field["default"]))
+
+    def __repr__(self):
+        """自动生成的字符串表示方法，形如 ``ClassName(field1=value1, ...)``。
+
+        :return: 对象的字符串表示
+        """
+        fields_str = ", ".join(f"{name}={getattr(self, name)!r}" for name in cls_annotations)
+        return f"{cls.__name__}({fields_str})"
+
+    for attr_name, attr_type in cls_annotations.items():
+        if not attr_name.startswith("__"):
+            # 仅有类型标注而无赋值，表示该项必填且无默认值：此处取 None 交由下游处理，
+            # 生成时将填入 <Replace me with ...> 占位符，在用户填写之前读取该项一律返回 None
+            __attr = getattr(cls, attr_name, None)
+            __attr_type = attr_type
+
+            # 含不受支持成员的联合类型（如 str | None）一律置空，下游据此填入通用占位符
+            if __attr_type not in ALLOWED_TYPES and (
+                isinstance(__attr_type, UnionType) and any(k not in ALLOWED_TYPES for k in get_args(__attr_type))
+            ):
+                __attr_type = None
+
+            # 登记该字段传给配置来源 get() 的参数，供元类在属性访问时按此取值
+            config_fields[attr_name] = {
+                "q": attr_name,
+                "default": __attr,
+                "cfg_type": get_args(__attr_type) if isinstance(__attr_type, UnionType) else __attr_type,
+                "secret": secret,
+                "table_name": table_name,
+                "standalone_comment_keys": standalone_comments.get(attr_name, ()),
+            }
+
+    # 以 ConfigMeta 为元类重建该类。元类无法在类创建后更换，只能另建一个同名类。
+    namespace = {
+        k: v
+        for k, v in vars(cls).items()
+        # 声明字段必须从类命名空间中移除：类属性会先于元类的 __getattr__ 命中，
+        # 保留下来读到的将是静态默认值而非配置文件中的当前值。
+        # __dict__ 与 __weakref__ 是新建类时自动生成的描述符，一并复制将导致类创建失败。
+        if k not in config_fields and k not in ("__dict__", "__weakref__")
+    }
+    namespace.update({"__config_fields__": config_fields, "__init__": __init__, "__repr__": __repr__})
+
+    new_cls = ConfigMeta(cls.__name__, cls.__bases__, namespace)
+    new_cls.__module__ = cls.__module__
+    new_cls.__qualname__ = cls.__qualname__
+    # 缺失键在声明处补写：模板导入后可能立即有业务模块读取其属性，
+    # 若等扫描阶段再补写，先到的读取会以默认值占用该键，占位符便不再生成。
+    from akaribot.core.builtins.config.generator import ensure_fields
+
+    ensure_fields(new_cls)
+    return new_cls
+
+
+def on_config(
+    table_name: str,
+    table_type: Literal["module", "bot", ""] = "",
+    secret: bool = False,
+    standalone_comments: Mapping[str, tuple[str, ...]] | None = None,
+):
+    """配置装饰器工厂函数。
+
+    :param table_name: 配置表的基本名称。最终的表名为 "table_type_table_name" 的形式
+                   例如：`table_type="module", table_name="myconfig" -> "module_myconfig"`
+    :param table_type: 配置表的类型，用于分类和命名空间隔离（默认""）
+                   - "module": 模块配置
+                   - "bot": 机器人配置
+                   - "": 空字符串表示不添加前缀
+    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）。
+               设置为 True 时，配置值会被加密存储在配置文件中。
+    :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为按顺序排列的 i18n 键元组。
+
+    :return: 装饰器函数，接收一个类并返回处理后的类
+    """
+
+    def wrap(cls: type[T]):
+        """实际的装饰器函数。
+
+        :param cls: 要装饰的配置类
+
+        :return: 处理后的类，具有自动生成的配置管理功能
+        """
+        __type = table_type + "_" if table_type != "" else table_type
+        return process_config_class(cls, __type + table_name, secret, standalone_comments)
+
+    return wrap
+
+
+def on_base_config():
+    """表外顶层配置项的装饰器工厂函数。
+
+    :return: 装饰器函数，接收一个类并返回处理后的类
+    """
+
+    def wrap(cls: type[T]):
+        # 表名传 None：这类键不属于 [config]，也不属于其它表。补写路径不支持在表外新建键，
+        # 故这些键由 update 的版本迁移先于模板处理写入，装饰时键必定已存在。
+        return process_config_class(cls, None, False)
+
+    return wrap
+
+
+def on_bot_config(
+    bot_name: str,
+    secret: bool = False,
+    standalone_comments: Mapping[str, tuple[str, ...]] | None = None,
+):
+    """平台配置装饰器工厂函数。
+
+    :param bot_name: 平台名称，须与 `bots/` 下的目录名一致：守护进程以 ``bot_<目录名>``
+                 的表名查找该平台的 `enable` 配置。最终的表名为 "bot_平台名"
+    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）
+    :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
+
+    :return: 装饰器函数，接收一个类并返回处理后的类
+    """
+    return on_config(bot_name, "bot", secret, standalone_comments)
+
+
+def on_module_config(
+    module_name: str,
+    secret: bool = False,
+    standalone_comments: Mapping[str, tuple[str, ...]] | None = None,
+):
+    """模块配置装饰器工厂函数。
+
+    :param module_name: 模块名称，须与 `module()` 声明的名称一致。最终的表名为 "module_模块名"
+    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）
+    :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
+
+    :return: 装饰器函数，接收一个类并返回处理后的类
+    """
+    return on_config(module_name, "module", secret, standalone_comments)
+
+
+__all__ = [
+    "ConfigMeta",
+    "on_base_config",
+    "on_bot_config",
+    "on_config",
+    "on_module_config",
+    "process_config_class",
+]

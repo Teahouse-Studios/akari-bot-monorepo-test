@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "title": "AkariBot 文档",
+  "lead": "面向使用者的命令手册，面向开发者的模块与适配器参考。",
+  "sections": {
+    "searchPlaceholder": "搜索文档",
+    "statsLabel": "文档概况",
+    "start": {
+      "eyebrow": "入口",
+      "title": "快速开始"
+    },
+    "topics": {
+      "eyebrow": "浏览",
+      "title": "按主题浏览"
+    },
+    "contributeLabel": "参与贡献"
+  },
+  "actions": [
+    {
+      "label": "开始使用",
+      "icon": "terminal",
+      "tone": "filled",
+      "package": "builtin",
+      "page": "help.md"
+    },
+    {
+      "label": "模块开发",
+      "icon": "code",
+      "tone": "text",
+      "package": "core",
+      "page": "module-development.md"
+    },
+    {
+      "label": "部署实例",
+      "icon": "rocket_launch",
+      "tone": "text",
+      "package": "cli",
+      "page": "self-hosting.md"
+    }
+  ],
+  "stats": [
+    {
+      "label": "版本",
+      "icon": "sell",
+      "source": "core_version"
+    },
+    {
+      "label": "文档",
+      "icon": "article",
+      "source": "total_pages"
+    },
+    {
+      "label": "模块",
+      "icon": "widgets",
+      "source": "module_count"
+    },
+    {
+      "label": "适配器",
+      "icon": "hub",
+      "source": "adapter_count"
+    }
+  ],
+  "roles": [
+    {
+      "eyebrow": "使用者",
+      "title": "普通用户",
+      "description": "查一条命令怎么用，看某个模块能做什么，或者把机器人装到自己的群组里。",
+      "icon": "menu_book",
+      "package": "builtin",
+      "page": "help.md",
+      "links": [
+        {
+          "label": "命令帮助",
+          "icon": "terminal",
+          "package": "builtin",
+          "page": "help.md"
+        },
+        {
+          "label": "模块一览",
+          "icon": "widgets",
+          "group": "module"
+        },
+        {
+          "label": "常见问题",
+          "icon": "help",
+          "package": "core",
+          "page": "faq.md"
+        },
+        {
+          "label": "部署实例",
+          "icon": "rocket_launch",
+          "package": "cli",
+          "page": "self-hosting.md"
+        }
+      ]
+    },
+    {
+      "eyebrow": "开发者",
+      "title": "机器人开发者",
+      "description": "从第一个模块开始，读命令解析、消息接口、Hook、配置与适配器的实现约束。",
+      "icon": "code",
+      "package": "core",
+      "page": "module-development.md",
+      "links": [
+        {
+          "label": "模块开发",
+          "icon": "extension",
+          "package": "core",
+          "page": "module-development.md"
+        },
+        {
+          "label": "运行架构",
+          "icon": "account_tree",
+          "package": "core",
+          "page": "architecture.md"
+        },
+        {
+          "label": "消息 API",
+          "icon": "chat",
+          "package": "core",
+          "page": "message-api.md"
+        },
+        {
+          "label": "适配器开发",
+          "icon": "hub",
+          "package": "core",
+          "page": "adapter-development.md"
+        },
+        {
+          "label": "开发流程",
+          "icon": "checklist",
+          "package": "core",
+          "page": "development-workflow.md"
+        }
+      ]
+    }
+  ],
+  "topics": [
+    {
+      "tag": "内置",
+      "title": "内置模块",
+      "description": "随核心分发的管理、解析与工具命令。",
+      "group": "builtin",
+      "image": "/home/modules.webp"
+    },
+    {
+      "tag": "开发",
+      "title": "开发文档",
+      "description": "从第一个模块到 Hook、计划任务与适配器。",
+      "package": "core",
+      "page": "module-development.md",
+      "image": "/home/development.webp"
+    },
+    {
+      "tag": "部署",
+      "title": "部署与运维",
+      "description": "安装实例、配置平台、升级与排查。",
+      "package": "cli",
+      "page": "self-hosting.md",
+      "image": "/home/setup.webp"
+    },
+    {
+      "tag": "Minecraft",
+      "title": "Minecraft",
+      "description": "版本、服务器状态、玩家皮肤与 Mod 查询。",
+      "package": "module-mcv",
+      "image": "/home/minecraft.webp"
+    },
+    {
+      "tag": "音游",
+      "title": "音游查询",
+      "description": "maimai、CHUNITHM、Phigros 与 Cytoid 成绩。",
+      "package": "module-maimai",
+      "image": "/home/maimai.webp"
+    },
+    {
+      "tag": "工具",
+      "title": "实用工具",
+      "description": "Wiki、GitHub、WolframAlpha 与网络查询。",
+      "package": "module-wiki",
+      "image": "/home/misc.webp"
+    }
+  ],
+  "contribute": {
+    "cards": [
+      {
+        "title": "参与贡献",
+        "description": "代码、文档与问题反馈都在 GitHub 上维护。提交前先看贡献指南，确认改动范围和测试要求。",
+        "icon": "code",
+        "links": [
+          {
+            "label": "GitHub 仓库",
+            "icon": "code",
+            "url": "https://github.com/Teahouse-Studios/akari-bot"
+          },
+          {
+            "label": "反馈问题",
+            "icon": "bug_report",
+            "url": "https://github.com/Teahouse-Studios/akari-bot/issues"
+          },
+          {
+            "label": "贡献指南",
+            "icon": "article",
+            "url": "https://github.com/Teahouse-Studios/akari-bot/blob/master/CONTRIBUTING.md"
+          }
+        ]
+      },
+      {
+        "title": "参与翻译",
+        "description": "界面文案与文档翻译由 Weblate 托管。翻译进度和待审词条都在项目页上。",
+        "logo": "/home/weblate.svg",
+        "links": [
+          {
+            "label": "在 Weblate 翻译",
+            "icon": "translate",
+            "url": "https://hosted.weblate.org/engage/akaribot/"
+          }
+        ]
+      }
+    ]
+  }
+}

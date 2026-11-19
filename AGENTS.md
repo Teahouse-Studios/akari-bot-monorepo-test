@@ -5,7 +5,7 @@
 
 ## 深入文档
 
-各领域的完整手册是随源码维护的文档页：`packages/*/akaribot/**/doc/`。它们覆盖架构与进程拓扑、配置、
+各领域的完整手册是随源码维护的文档页：`packages/*/akaribot/**/docs/`。它们覆盖架构与进程拓扑、配置、
 数据库、队列、模块与适配器开发、消息 API、i18n、测试与开发流程，也是 `akaribot docs build` 的站点
 内容源。**本文件只记录高频命令、跨文件才能看清的架构脉络与强制约定**；需要 API 细节时读对应页面，
 不要在这里重复。`.agents/skills/akaribot-dev/SKILL.md` 是这些页面的路由表。
@@ -17,6 +17,7 @@ export UV_CACHE_DIR="$PWD/.uvcache"      # 缓存与 venv 都在工作区内，�
 uv sync --all-extras --dev               # 重建环境（口径与 CI 的 --locked --all-extras --dev 一致）
 
 CI=1 MPLCONFIGDIR=/tmp/mplconfig PYTHONIOENCODING=UTF-8 .venv/bin/python -m akaribot.testing   # 全量，约 80~100 秒
+.venv/bin/python -m pytest tests/unit                                                          # 单元测试，约 5 秒
 .venv/bin/python tests/run_one.py packages/akari-bot-core/tests/test_registry.py               # 单个用例文件（包内路径）
 .venv/bin/python tester.py                                                                     # 兼容层，等价于模块入口
 
@@ -100,7 +101,7 @@ packages/
 
 ### 包文档与文档站点
 
-- 每个分发的导入包目录下带 `doc/`：`doc.toml` 声明标题、简介与排序，Markdown 页面写当前行为；
+- 每个分发的导入包目录下带 `docs/`：`docs/config/global/docs.global.toml` 声明标题、简介与排序，`docs/config/docs.toml` 可覆盖默认值，Markdown 页面写当前行为；
   在 pyproject 的 `[project.entry-points."akaribot.docs"]` 声明 `<key> = "<import path>"`。第三方包
   以同一方式接入，目录只包含已安装的包。
 - `akaribot docs list|build|serve|deploy|status|clean`。工具链要求由主题清单决定：内置主题为
@@ -112,7 +113,7 @@ packages/
   部署凭据只从环境变量读取，不写入配置、日志或状态文件。
 - 文档只写简体中文与当前状态；命令、配置字段与默认值以源码为准。跨包链接可写源码相对路径，
   生成器会折算为站点 URL。
-- 模块页的属性卡来自 `doc.toml` 的 `[[meta.modules]]`，由生成器自动注入。`ModuleMeta`、
+- 模块页的属性卡来自 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，由生成器自动注入。`ModuleMeta`、
   `NoticeBox`、`CommandUsage` 组件的正式位置是 `akari-bot-docs-template`，内置主题保留同名回退；
   正文仍以 Markdown 为主。
 
@@ -189,7 +190,7 @@ packages/
   `from akaribot.testing import Any` 遮住框架自己的 `Any` 匹配器（辅助名一律下划线开头）。
 - 根 `bot.py` / `tester.py` 兼容层用 `sys.modules` **模块别名**，不要逐名再导出——用例会给模块级
   变量赋值再由同模块函数读取，逐名再导出时赋值落在兼容层上。
-- `CFGManager.load()` 只扫描 `config/*.toml`：适配器实例配置必须写**扁平路径**
+- `CFGManager.load()` 扫描 `config/*.toml` 与 `config/global/*.global.toml|.global.json`：适配器实例配置必须写**扁平路径**
   （`config/<表名>.toml`）；写到 `config/adapters/` 的表对 core 不可见。
 - `config set` 需按模板声明的类型转换，否则布尔项会被写成字符串 `"true"`；实例表名
   （`bot_telegram-alt`）由基表（`bot_telegram`）派生，查声明时要按前缀匹配。

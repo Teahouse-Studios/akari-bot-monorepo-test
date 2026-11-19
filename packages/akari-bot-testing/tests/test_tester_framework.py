@@ -1,9 +1,11 @@
 """测试框架自身的单元测试。"""
 
 import inspect
+import json
 import re
 import asyncio
 import sys
+import tempfile
 import types
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -287,7 +289,7 @@ async def _test_function_entry_bounds_cancellation_cleanup():
             patch("akaribot.testing.process.close_db", new=AsyncMock()),
             patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
             patch("akaribot.testing.process.load_modules", new=AsyncMock()),
-            patch("akaribot.testing.process.FUNCTION_TEST_CANCEL_TIMEOUT", 0.01),
+            patch("akaribot.testing.tasks.CANCEL_TIMEOUT", 0.01),
         ):
             result = await asyncio.wait_for(run_function_entry(stubborn, is_ci=True, timeout=0.01), timeout=0.1)
         return result.get("timeout") is True and result.get("cleanup_pending") is True and cleanup_started.is_set()
@@ -369,12 +371,11 @@ async def _test_unit_subtest_exception_keeps_running_and_counts_once():
         patch.object(tester_module, "load_modules", new=AsyncMock()),
         patch.object(tester_module, "get_registry", return_value=[]),
         patch.object(tester_module, "run_function_entry", new=AsyncMock(return_value=res)),
-        patch.object(tester_module.glob, "glob", return_value=[str(Path("tests/unit/_fake_case.py"))]),
+        patch.object(tester_module, "_collect_test_files", return_value=[str(Path("tests/integration/_fake_case.py"))]),
         patch.object(tester_module.importlib.util, "spec_from_file_location", return_value=fake_spec),
         patch.object(tester_module, "junit_func_suite", func_suite),
         patch.object(tester_module, "junit_registry_suite", registry_suite),
         patch.object(tester_module, "junit_report") as junit_report,
-        patch.object(tester_module.os.path, "isdir", return_value=True),
         patch.object(tester_module.importlib.util, "module_from_spec", return_value=types.SimpleNamespace()),
     ):
         sys.modules.clear()
@@ -467,6 +468,181 @@ def _test_union_merge_logs_stay_out_of_repo_data():
     return True
 
 
+def _test_load_modules_reuses_locale_snapshot():
+    from akaribot.testing.mock import loader
+
+    builds = []
+
+    with (
+        patch.object(loader, "_locale_snapshot_errors", None),
+        patch.object(loader, "build_locale_snapshot", side_effect=lambda *args, **kwargs: builds.append(1) or []),
+        patch.object(loader, "connect_locale_snapshot") as connect_snapshot,
+    ):
+        loader._load_locale_snapshot()
+        loader._load_locale_snapshot()
+
+    # 快照只建置一次，但每个入口仍要重设翻译连线的状态。
+    return len(builds) == 1 and connect_snapshot.call_count == 2
+
+
+def _test_http_fixtures_registered_once_per_directory():
+    from akaribot.testing.mock import fixtures
+    from akaribot.testing.mock.http import HTTPMock
+
+    with tempfile.TemporaryDirectory() as directory:
+        fixture_dir = Path(directory)
+        (fixture_dir / "cached.json").write_text(
+            json.dumps({"url": "https://example.com/cached-fixture", "status_code": 200, "text": "ok"}),
+            encoding="utf-8",
+        )
+        before = len(HTTPMock.get_all_responses())
+        try:
+            first = fixtures.load_http_fixtures(fixture_dir)
+            second = fixtures.load_http_fixtures(fixture_dir)
+            added = len(HTTPMock.get_all_responses()) - before
+        finally:
+            fixtures._registered_dirs.pop(fixture_dir.resolve(), None)
+
+    return first == 1 and second == 1 and added == 1
+
+
+async def _test_main_reports_registry_case_before_next_entry():
+    import tester as tester_module
+
+    events = []
+
+    class _RecordingLogger:
+        def __getattr__(self, name):
+            def record(*args, **kwargs):
+                events.append(str(args[0]) if args else "")
+
+            return record
+
+    async def fake_run_entry(entry, test_number):
+        events.append(f"RUN{test_number}")
+        return {
+            "test_number": test_number,
+            "results": [
+                {
+                    "type": "integration",
+                    "input": "~fake",
+                    "output": None,
+                    "action": [],
+                    "expected": None,
+                    "match": None,
+                }
+            ],
+            "note": None,
+        }
+
+    class _FakeSuite:
+        def __init__(self):
+            self.test_cases = []
+
+        def add_testcase(self, testcase):
+            self.test_cases.append(testcase)
+
+    async def fake_case(msg):
+        pass
+
+    registry_entry = {
+        "func": fake_case,
+        "input": "~fake",
+        "expected": None,
+        "note": None,
+        "timeout": None,
+        "file": "fake.py",
+        "line": 1,
+    }
+    registry_suite = _FakeSuite()
+    func_suite = _FakeSuite()
+
+    with (
+        patch.object(tester_module, "Logger", _RecordingLogger()),
+        patch.object(tester_module, "IS_CI", True),
+        patch.object(tester_module, "init_db", new=AsyncMock(return_value=True)),
+        patch.object(tester_module, "close_db", new=AsyncMock()),
+        patch.object(tester_module, "load_modules", new=AsyncMock()),
+        patch.object(tester_module, "get_registry", return_value=[registry_entry, registry_entry]),
+        patch.object(tester_module, "_run_registry_entry", new=fake_run_entry),
+        patch.object(tester_module, "_collect_test_files", return_value=[]),
+        patch.object(tester_module, "junit_registry_suite", registry_suite),
+        patch.object(tester_module, "junit_func_suite", func_suite),
+        patch.object(tester_module, "junit_report") as junit_report,
+    ):
+        junit_report.test_suites = []
+        exit_code = await tester_module.main()
+
+    header_one = next(index for index, event in enumerate(events) if event.startswith("TEST1:"))
+    header_two = next(index for index, event in enumerate(events) if event.startswith("TEST2:"))
+    second_run = events.index("RUN2")
+    checks = {
+        "reported_before_next_run": header_one < second_run < header_two,
+        "one_case_per_entry": len(registry_suite.test_cases) == 2,
+        "exit_ok": exit_code == 0,
+    }
+    if not all(checks.values()):
+        raise AssertionError(f"registry reporting regression: {checks}; events={events}")
+    return True
+
+
+async def _plugin_cancels_orphan_tasks_after_test():
+    from akaribot.testing.tasks import cancel_orphan_tasks, current_tasks
+
+    baseline = await current_tasks()
+    cancelled = asyncio.Event()
+
+    async def orphan():
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    task = asyncio.create_task(orphan(), name="test-plugin-orphan")
+    try:
+        completed = await cancel_orphan_tasks(baseline)
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+    return completed and task.cancelled() and cancelled.is_set()
+
+
+async def _plugin_async_timeout_is_failure():
+    from akaribot.testing.pytest_plugin import TestTimeout, run_with_timeout
+
+    cancelled = asyncio.Event()
+
+    async def stuck():
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    try:
+        await run_with_timeout(stuck(), 0.01)
+    except TestTimeout:
+        return cancelled.is_set()
+    return False
+
+
+async def _plugin_timeout_error_from_test_is_not_timeout():
+    from akaribot.testing.pytest_plugin import TestTimeout, run_with_timeout
+
+    async def inner_deadline():
+        raise TimeoutError("inner deadline")
+
+    try:
+        await run_with_timeout(inner_deadline(), 5)
+    except TestTimeout:
+        return False
+    except TimeoutError as error:
+        return str(error) == "inner deadline"
+    return False
+
+
 @func_case
 async def test_tester_framework(tester: Tester):
     """akaribot.core.tester: 测试框架自身一致性测试"""
@@ -493,6 +669,12 @@ async def test_tester_framework(tester: Tester):
         "进度等待器取消不刷新 watchdog 测试",
     )
     await tester.test(_test_unit_subtest_exception_keeps_running_and_counts_once, "unit 子测试异常续跑且计数一次测试")
+    await tester.test(_test_main_reports_registry_case_before_next_entry, "注册表用例逐条汇报测试")
+    await tester.test(_test_load_modules_reuses_locale_snapshot, "语言包快照每个进程只建置一次测试")
+    await tester.test(_test_http_fixtures_registered_once_per_directory, "HTTP 语料每个目录只注册一次测试")
+    await tester.test(_plugin_cancels_orphan_tasks_after_test, "pytest 插件在用例结束后回收遗留任务测试")
+    await tester.test(_plugin_async_timeout_is_failure, "pytest 插件将异步用例超时判定为失败测试")
+    await tester.test(_plugin_timeout_error_from_test_is_not_timeout, "用例自身抛出的 TimeoutError 不算测试超时")
     await tester.test(_test_function_entry_does_not_misclassify_test_timeout, "子测试超时不冒充 runner 超时测试")
     await tester.test(_test_function_entry_init_failure_is_error, "func_case 初始化错误不可跳过测试")
     await tester.test(_test_union_merge_logs_stay_out_of_repo_data, "合并日志不落进 data/ 测试")

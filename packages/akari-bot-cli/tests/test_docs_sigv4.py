@@ -6,8 +6,8 @@ GET Object 与 GET Bucket 示例，其余由 botocore 交叉核对后固化，�
 
 from datetime import UTC, datetime
 
-from akaribot.cli.docs.deploy.base import DocsDeployError
-from akaribot.cli.docs.deploy.sigv4 import (
+from akaribot.cli.docs_engine.deploy.base import DocsDeployError
+from akaribot.cli.docs_engine.deploy.sigv4 import (
     Credentials,
     canonical_query,
     canonical_uri,

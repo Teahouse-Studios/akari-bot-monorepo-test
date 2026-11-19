@@ -387,7 +387,7 @@ def _record_from_mapping(dist: str, info: Any) -> ModuleRecord:
         name=name,
         dist=dist_name or name,
         version=_text(_pick(info, "version", "ver", "dist_version")),
-        summary=_text(_pick(info, "summary", "description", "desc", "doc")),
+        summary=_text(_pick(info, "summary", "description", "desc", "docs")),
         state=_normalize_state(info, STATE_INSTALLED),
         requires_core_api=_text(_pick(info, "requires_core_api", "core_api", "api_version")),
         dependents=tuple(_text(item) for item in dependents),

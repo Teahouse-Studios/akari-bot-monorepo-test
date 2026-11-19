@@ -1,6 +1,6 @@
 """包文档清单入口。
 
-CLI 以子进程调用本模块列出各包 ``doc/`` 目录与页面。发现只按 entry point 的导入路径定位包目录，
+CLI 以子进程调用本模块列出各包 ``docs/`` 目录与页面。发现只按 entry point 的导入路径定位包目录，
 不导入目标包：导入会执行包内配置模板与其它导入期副作用。
 """
 
@@ -21,8 +21,13 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 DOCS_GROUP = "akaribot.docs"
-DOCS_DIR = "doc"
-DOC_META_FILE = "doc.toml"
+DOCS_DIR = "docs"
+DOC_META_DIR = "config"
+DOC_META_GLOBAL_DIR = "global"
+DOC_META_GLOBAL_FILES = ("docs.global.toml", "docs.global.json")
+DOC_META_USER_FILES = ("docs.toml", "docs.json")
+LEGACY_DOC_META_FILES = ("doc.toml", "doc.json")
+DOC_META_DISPLAY = f"{DOC_META_DIR}/{DOC_META_GLOBAL_DIR}/docs.global.toml"
 DOC_META_SCHEMA = 1
 DEFAULT_ORDER = 500
 DEFAULT_VERSION = "0+local"
@@ -146,21 +151,55 @@ def _locate_doc_dir(import_path: str, find_spec: Callable[[str], Any]) -> Path:
     return (root / DOCS_DIR).resolve()
 
 
+def _doc_meta_paths(doc_dir: Path) -> tuple[Path, ...]:
+    """返回参与合并的文档元数据文件，按全局、用户覆盖、旧布局的顺序。"""
+    global_files = tuple(
+        path
+        for path in (doc_dir / DOC_META_DIR / DOC_META_GLOBAL_DIR / name for name in DOC_META_GLOBAL_FILES)
+        if path.is_file()
+    )
+    user_files = tuple(
+        path for path in (doc_dir / DOC_META_DIR / name for name in DOC_META_USER_FILES) if path.is_file()
+    )
+    if global_files or user_files:
+        return global_files + user_files
+    return tuple(path for path in (doc_dir / name for name in LEGACY_DOC_META_FILES) if path.is_file())
+
+
+def _merge_meta(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        current = merged.get(key)
+        if isinstance(current, Mapping) and isinstance(value, Mapping):
+            merged[key] = _merge_meta(current, value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def _read_doc_meta(doc_dir: Path, label: str, warnings: list[str]) -> dict[str, Any]:
-    path = doc_dir / DOC_META_FILE
-    if not path.is_file():
+    paths = _doc_meta_paths(doc_dir)
+    if not paths:
         return {}
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
-        warnings.append(f"{label}: 无法解析 {DOC_META_FILE}（{exc}），按缺省元数据处理。")
-        return {}
-    schema = data.get("schema", DOC_META_SCHEMA)
-    if schema != DOC_META_SCHEMA:
-        warnings.append(f"{label}: {DOC_META_FILE} 的 schema 为 {schema}，当前为 {DOC_META_SCHEMA}，已忽略该文件。")
-        return {}
+    merged: dict[str, Any] = {}
+    for path in paths:
+        display = path.relative_to(doc_dir).as_posix()
+        try:
+            text = path.read_text(encoding="utf-8")
+            data = json.loads(text) if path.suffix.lower() == ".json" else tomllib.loads(text)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError) as exc:
+            warnings.append(f"{label}: 无法解析 {display}（{exc}），已忽略该文件。")
+            continue
+        if not isinstance(data, Mapping):
+            warnings.append(f"{label}: {display} 不是对象，已忽略该文件。")
+            continue
+        schema = data.get("schema", DOC_META_SCHEMA)
+        if schema != DOC_META_SCHEMA:
+            warnings.append(f"{label}: {display} 的 schema 为 {schema}，当前为 {DOC_META_SCHEMA}，已忽略该文件。")
+            continue
+        merged = _merge_meta(merged, data)
     return {
-        name: data[name]
+        name: merged[name]
         for name in (
             "title",
             "summary",
@@ -170,10 +209,14 @@ def _read_doc_meta(doc_dir: Path, label: str, warnings: list[str]) -> dict[str, 
             "category",
             "category_order",
             "logo",
+            "logo_dark",
             "avatar",
+            "character",
+            "credits",
+            "brand",
             "overview",
         )
-        if name in data
+        if name in merged
     }
 
 
@@ -269,15 +312,15 @@ def _doc_asset(
     if value is None or value == "":
         return None
     if not isinstance(value, str):
-        warnings.append(f"{label}: {DOC_META_FILE} 的 {field} 必须是相对路径字符串，已忽略。")
+        warnings.append(f"{label}: {DOC_META_DISPLAY} 的 {field} 必须是相对路径字符串，已忽略。")
         return None
     package_dir = doc_dir.parent.resolve()
     candidate = (package_dir / value.strip()).resolve()
     if not candidate.is_relative_to(package_dir):
-        warnings.append(f"{label}: {DOC_META_FILE} 的 {field} 指向包目录之外，已忽略。")
+        warnings.append(f"{label}: {DOC_META_DISPLAY} 的 {field} 指向包目录之外，已忽略。")
         return None
     if not candidate.is_file():
-        warnings.append(f"{label}: {DOC_META_FILE} 声明的 {field} 不存在（{candidate}），已忽略。")
+        warnings.append(f"{label}: {DOC_META_DISPLAY} 声明的 {field} 不存在（{candidate}），已忽略。")
         return None
     return candidate
 
@@ -306,8 +349,10 @@ def _build_package(
         warnings.append(f"{key}: {doc_dir} 下没有 Markdown 文档，已跳过。")
         return None
     name = import_path.rpartition(".")[2] or import_path
-    logo = _doc_asset(doc_dir, meta, "logo", key, warnings) if meta else None
-    avatar = _doc_asset(doc_dir, meta, "avatar", key, warnings) if meta else None
+    assets = {
+        field: _doc_asset(doc_dir, meta, field, key, warnings) if meta else None
+        for field in ("logo", "logo_dark", "avatar", "character", "credits")
+    }
     return {
         "key": key,
         "dist": dist_name,
@@ -320,8 +365,8 @@ def _build_package(
         "category": _as_category(meta.get("category"), key, warnings),
         "category_order": _as_order(meta.get("category_order", DEFAULT_ORDER), f"{key}.category_order", warnings),
         "doc_path": str(doc_dir),
-        "logo": str(logo) if logo is not None else "",
-        "avatar": str(avatar) if avatar is not None else "",
+        **{field: str(value) if value is not None else "" for field, value in assets.items()},
+        "brand": meta.get("brand") is True,
         "editable": editable,
         "overview": meta.get("overview", True) is not False,
         "pages": pages,

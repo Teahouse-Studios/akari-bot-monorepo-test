@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs.builder``：构建编排、指纹复用与强制重建。"""
+"""``akaribot.cli.docs_engine.builder``：构建编排、指纹复用与强制重建。"""
 
 import json
 from dataclasses import replace
@@ -7,10 +7,10 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from akaribot.cli.docs import builder
-from akaribot.cli.docs import catalog as docs_catalog
-from akaribot.cli.docs.config import DocsConfig, DocsSiteConfig
-from akaribot.cli.docs.model import DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
+from akaribot.cli.docs_engine import builder
+from akaribot.cli.docs_engine import catalog as docs_catalog
+from akaribot.cli.docs_engine.config import DocsConfig, DocsSiteConfig
+from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError, ToolchainInfo
 from akaribot.testing import Tester, func_case
 
 
@@ -89,7 +89,8 @@ async def _test_build_reuses_fingerprint_and_force():
             (doc / "guide.md").write_text("# 指南（更新）\n", encoding="utf-8")
             third = builder.build(instance)
             after_third = counters["build"]
-            (doc / "doc.toml").write_text('schema = 1\n[[meta.modules]]\nname = "demo"\n', encoding="utf-8")
+            (doc / "config").mkdir(exist_ok=True)
+            (doc / "config" / "docs.toml").write_text('schema = 1\n[[meta.modules]]\nname = "demo"\n', encoding="utf-8")
             fourth = builder.build(instance)
             after_fourth = counters["build"]
             forced = builder.build(instance, force=True, offline=True)

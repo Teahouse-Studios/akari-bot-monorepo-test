@@ -72,6 +72,9 @@ FALLBACK_LOCALE_SNIPPETS = {
     "core/builtins/parser/command.py": ("Locale(default_locale)",),
     "core/builtins/session/info.py": ("field(factory=lambda: Locale(default_locale))",),
     "core/builtins/session/internal.py": ("Locale(default_locale)",),
+    "core/entrypoints/config.py": ("Locale(",),
+    "core/builtins/config/generator.py": ("Locale(",),
+    "core/builtins/config/update.py": ("Locale(",),
 }
 
 

@@ -1,6 +1,6 @@
 """通用核心配置模板。"""
 
-from akaribot.core.config.decorator import on_config
+from akaribot.core.builtins.config.decorator import on_config
 from akaribot.core.constants.default import (
     base_superuser_default,
     bug_report_url_default,

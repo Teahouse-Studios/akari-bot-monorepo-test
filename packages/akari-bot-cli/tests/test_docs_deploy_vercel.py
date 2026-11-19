@@ -11,9 +11,9 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from akaribot.cli.docs.deploy import get_provider
-from akaribot.cli.docs.deploy.base import DocsDeployError
-from akaribot.cli.docs.deploy.vercel import VercelProvider
+from akaribot.cli.docs_engine.deploy import get_provider
+from akaribot.cli.docs_engine.deploy.base import DocsDeployError
+from akaribot.cli.docs_engine.deploy.vercel import VercelProvider
 from akaribot.testing import Tester, func_case
 
 TOKEN = "vercel-secret-token"

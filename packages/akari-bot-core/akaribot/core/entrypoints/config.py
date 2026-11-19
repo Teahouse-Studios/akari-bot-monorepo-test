@@ -31,6 +31,13 @@ class ConfigInputError(ValueError):
         super().__init__(field)
 
 
+def _bootstrap() -> None:
+    # 入口以子进程运行，builtins 包本身不自举：读任何配置表之前先加载（含版本迁移），重复调用无副作用。
+    from akaribot.core.builtins.config.bootstrap import bootstrap_config
+
+    bootstrap_config()
+
+
 def _base_table(table: str) -> tuple[str, bool]:
     if table == "secret":
         return "config", True
@@ -51,21 +58,21 @@ def _entry_for_dist(dist: str):
 
 
 def _table_document(table: str) -> dict[str, Any]:
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
 
     base, _ = _base_table(table)
-    document = CFGManager.values.get(base)
+    document = CFGManager.document(base)
     if document is None:
         raise KeyError(table)
     return dict(document)
 
 
 def _localized_comment(table: str, key: str, secret: bool) -> str | None:
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
     from akaribot.core.i18n import Locale
 
     _connect_locale()
-    locale_name = CFGManager.values.get("config", {}).get("default_locale") or "zh_cn"
+    locale_name = (CFGManager.document("config") or {}).get("default_locale") or "zh_cn"
     locale = Locale(locale_name)
     table, _ = _base_table(table)
     if table.startswith("bot_"):
@@ -186,7 +193,7 @@ def _placeholder_report(tables: str | None) -> dict[str, Any]:
 
 
 def _declared_defaults(table: str) -> dict[str, dict]:
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
     from akaribot.core.registry import PackageRegistry
 
     base, only_secret = _base_table(table)
@@ -283,7 +290,7 @@ def _coerce_type(cfg_type: type, value: str) -> Any:
 
 
 def _resolve_table(table: str) -> str:
-    from akaribot.core.config import CFGManager
+    from akaribot.core.builtins.config import CFGManager
 
     base, secret = _base_table(table.lower())
     resolved = CFGManager._resolve_table(base, fallback=False)
@@ -327,6 +334,10 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
+    # placeholders 只按文件统计，配置加载失败时仍要能报告损坏的表；其余命令都经配置管理器。
+    if args.command != "placeholders":
+        _bootstrap()
+
     try:
         if args.command == "placeholders":
             report = _placeholder_report(args.tables)
@@ -354,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "get":
-            from akaribot.core.config import CFGManager
+            from akaribot.core.builtins.config import CFGManager
 
             table = _resolve_table(args.table)
             meta = _declared_defaults(table).get(args.key, {})
@@ -371,7 +382,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "set":
-            from akaribot.core.config import CFGManager
+            from akaribot.core.builtins.config import CFGManager
 
             table = _resolve_table(args.table)
             value = _coerce(table, args.key, args.value)
@@ -420,11 +431,11 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  待填写：{key}")
         return 0
     except ConfigInputError as exc:
-        from akaribot.core.config import CFGManager
+        from akaribot.core.builtins.config import CFGManager
         from akaribot.core.i18n import Locale
 
         _connect_locale()
-        locale = Locale(CFGManager.values.get("config", {}).get("default_locale") or "zh_cn")
+        locale = Locale((CFGManager.document("config") or {}).get("default_locale") or "zh_cn")
         message_key = "config.error.unknown_field" if exc.unknown else "config.error.invalid_value"
         print(locale.t(message_key, field=exc.field), file=sys.stderr)
         return 2
