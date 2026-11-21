@@ -10,6 +10,7 @@ from akaribot.core.constants.version import config_version as config_version_def
 @on_base_config()
 class BaseConfig:
     """配置模板的基类。"""
+
     default_locale: str = default_locale_default
     config_version: int = config_version_default
 

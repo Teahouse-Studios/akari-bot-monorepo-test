@@ -37,6 +37,7 @@ def _server_event_target(args) -> ServiceRoute:
 
 class PlatformAPI:
     """平台适配器实现的 API 接口。"""
+
     check_native_permission = context_method(ContextManager.check_native_permission)
     check_bot_state = context_method(ContextManager.check_bot_state)
     send_message = context_method(ContextManager.send_message)
@@ -82,6 +83,7 @@ class ProcessAPI:
 
 class ServerAPI:
     """Server 与平台进程之间的 RPC 接口。"""
+
     @staticmethod
     @remote("server.report_error")
     async def report_error(method: str, details: str) -> None:

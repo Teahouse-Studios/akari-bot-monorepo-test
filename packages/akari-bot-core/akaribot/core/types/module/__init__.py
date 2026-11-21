@@ -21,6 +21,7 @@ def alias_converter(value, _self) -> dict:
 @define
 class Module:
     """已加载模块的信息。"""
+
     module_name: str
     alias: dict = field(converter=Converter(alias_converter, takes_self=True))
     recommend_modules: list = field(converter=convert_list)

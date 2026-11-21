@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 
 class TokenBucket:
     """令牌桶限流器。"""
+
     def __init__(self, capacity: int, refill_interval: int):
         self.capacity = capacity
         self.rate = capacity / float(refill_interval) if refill_interval > 0 else capacity
@@ -52,6 +53,7 @@ class TokenBucket:
 
 class ExpiringTempDict:
     """带过期时间的字典。"""
+
     __slots__ = ("exp", "ts", "data", "_lock", "__weakref__")
 
     # 存弱引用：登记表只为定期清理服务，若持强引用则任何登记过的容器都永远无法被回收，

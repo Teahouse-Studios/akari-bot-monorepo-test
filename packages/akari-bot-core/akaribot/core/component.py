@@ -20,6 +20,7 @@ from akaribot.core.types.module.component_meta import *
 
 class Bind:
     """平台消息元素与绑定键的映射表。"""
+
     class Module:
         def __init__(self, module_name: str):
             self.module_name = module_name

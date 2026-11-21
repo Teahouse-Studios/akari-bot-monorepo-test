@@ -396,6 +396,7 @@ class _GlobalURLRuleList:
 
 class GlobalURLAllowlist(_GlobalURLRuleList):
     """全局 URL 允许名单。"""
+
     directory = url_audit_data_path / "allowlist"
     builtin_path = directory / "global.txt"
     user_path = directory / "user.txt"
@@ -413,6 +414,7 @@ class GlobalURLAllowlist(_GlobalURLRuleList):
 
 class GlobalURLBlocklist(_GlobalURLRuleList):
     """全局 URL 阻止名单。"""
+
     directory = url_audit_data_path / "blocklist"
     builtin_path = directory / "global.txt"
     user_path = directory / "user.txt"

@@ -118,6 +118,7 @@ async def load_modules():
 
 class ModulesManager:
     """模块注册、加载和事件分发管理器。"""
+
     modules: dict[str, Module] = {}
     modules_aliases: dict[str, str] = {}
     modules_hooks: dict[str, Callable] = {}

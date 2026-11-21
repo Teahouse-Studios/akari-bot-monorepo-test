@@ -4,6 +4,7 @@ from typing import Iterable
 
 class Secret:
     """敏感配置值。"""
+
     data: set[str] = set()
     ip_address: str | None = None
     ip_country: str | None = None

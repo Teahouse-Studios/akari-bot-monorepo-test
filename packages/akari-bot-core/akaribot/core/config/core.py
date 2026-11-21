@@ -23,6 +23,7 @@ from akaribot.core.constants.default import (
 class CoreConfig:
     # 调试与运行
     """核心配置模板。"""
+
     debug: bool = False
     timezone_offset: str = "+8"
     allow_request_private_ip: bool = False
@@ -103,6 +104,7 @@ class CoreConfig:
 @on_config("config", secret=True)
 class CoreSecretConfig:
     """核心机密配置模板。"""
+
     db_path: str = db_path_default
     proxy: str = ""
     check_access_key_id: str = ""

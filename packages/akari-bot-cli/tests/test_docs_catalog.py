@@ -176,7 +176,9 @@ async def _test_registry_fallback_builds_minimal_entries():
         (doc / "index.md").write_text("# 包首页\n", encoding="utf-8")
         (doc / "notes.md").write_text("正文\n", encoding="utf-8")
         (doc / "config").mkdir(exist_ok=True)
-        (doc / "config" / "docs.toml").write_text('title = "wiki"\ncategory = "知识查询"\ncategory_order = 20\n', encoding="utf-8")
+        (doc / "config" / "docs.toml").write_text(
+            'title = "wiki"\ncategory = "知识查询"\ncategory_order = 20\n', encoding="utf-8"
+        )
         registry = {
             "packages": [
                 {
