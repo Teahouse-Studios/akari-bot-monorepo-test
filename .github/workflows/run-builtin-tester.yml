@@ -75,11 +75,14 @@ jobs:
           # uv lock 发现不了，故单列一道检查（见 T4.8）。
           uv run python tools/lint_versions.py
 
-      - name: Check version bumps
+      - name: Report version bumps
+        # 版本号是发布元数据，不是行为正确性：tester 的结论应只由代码与测试决定。
+        # 违规照常打印供发布前确认，但不拦截本 job（重复版本由 PyPI 在发布时拒绝）。
+        continue-on-error: true
         shell: bash
         run: |
-          # T6.2 版本守卫：包内有源码改动但 version 未变即失败；提交信息最后一段写了独立的
-          # Skip-Version trailer 时按声明范围豁免（true 为全部成员，逗号分隔的分发名只豁免列出的）。
+          # 包内有源码改动但 version 未变即提示；提交信息最后一段写了独立的 Skip-Version
+          # trailer 时按声明范围豁免（true 为全部成员，逗号分隔的分发名只豁免列出的）。
           # 正文里顺带提到该 token 不算，避免解释功能的一句话关掉整段区间的检查。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then

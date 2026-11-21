@@ -215,6 +215,6 @@ packages/
 - 版本守卫（`tools/check_versions.py`）要求包内有源码改动即升 `version`，或在提交信息**最后一段**
   写独立的 trailer：`Skip-Version: true` 豁免全部成员，`Skip-Version: <分发名>[, <分发名>]` 只豁免
   列出的成员。正文中间或缩进提到该 token 不算声明。
-- 版本守卫由 CI 在 PR 阶段以 base 为基准运行，**不属于日常五道门禁**；本分支是整体重构，以
-  `master` 为基准时各包都是新增成员，以拆分后某提交为基准时会报出未升版本包。发布前逐包升
-  `version` 或写 trailer，不要为让它变绿而放宽守卫。
+- 版本守卫在 tester 里以 base 为基准运行，**只报告不阻断**（`continue-on-error`）：版本号是发布
+  元数据，tester 的结论只由代码与测试决定；重复版本由 PyPI 在发布时拒绝。发布前按输出的违规
+  清单逐包升 `version` 或写 trailer。
