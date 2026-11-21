@@ -8,8 +8,8 @@
 
 | 字段或属性 | 说明 |
 | --- | --- |
-| `session_info` | `SessionInfo` 快照。目标、发送者、平台能力、语言与权限都在这里 |
-| `sent` / `trigger_msg` | 已发送消息链列表（默认空）。parser 归一化后的触发文本 |
+| `session_info` | `SessionInfo` 快照。目标、发送者、平台能力、语言与权限都记在这份快照里 |
+| `sent` / `trigger_msg` | 已发送消息链列表（默认空）。parser 处理后的触发文本 |
 | `matched_msg` / `parsed_msg` | 正则或事件的匹配结果。命令参数解析结果，无模板模块可能为 `None` |
 | `target` / `t` / `t_str` | `target` 已弃用，等价于 `session_info`。`t`、`t_str` 按会话语言翻译键或文本 |
 
@@ -25,8 +25,6 @@
 | `tz`、`display_tz`、`tz_label`、`display_tz_label` | 场景时区与展示时区（`tzinfo`）及其规范偏移字符串。展示时区未设置时跟随场景时区 |
 | `bot_name`、`bot_id`、`is_private`、`fetch`、`support_*` | 本地化机器人名称与 ID。私聊、主动会话与平台能力标志 |
 
-`now()` 与 `today()` 返回场景时区的当前时间与日期，业务代码需要时间时用这两个方法。展示时用 `format_time()`。
-
 ## 发送消息
 
 | 方法 | 关键参数（默认值） | 说明 |
@@ -38,11 +36,14 @@
 
 `send_message()` 的 `callback` 在用户引用或点击这条消息后执行，入参是回复的 `MessageSession`。
 
-`callback_id` 是按钮回调使用的虚拟回复 ID。省略时，框架会为缺少 `reply_id` 的按钮生成一个。没有按钮时，框架按实际消息 ID 绑定。
+`callback_id` 是按钮回调使用的虚拟回复 ID。取值规则如下：
+
+- 省略 `callback_id` 时，框架会为缺少 `reply_id` 的按钮生成一个。
+- 消息里没有按钮时，框架按实际消息 ID 绑定。
 
 `callback_timeout` 默认 1800 秒。传 `None` 表示不设置超时。`callback_once=True` 表示首次触发后失效。
 
-返回的 `FinishedSession` 提供 `message_id` 与异步的 `delete()`。平台没有返回 ID 时，`message_id` 可能是空列表。
+返回的 `FinishedSession` 提供 `message_id`。`delete()` 是异步方法，用于删除已发送的消息。平台没有返回 ID 时，`message_id` 可能是空列表。
 
 ```python
 from akaribot.core.api import Bot, I18NContext, Image, Plain
@@ -122,6 +123,8 @@ async def manage(msg: Bot.MessageSession):
 | `restrict_member()` / `unrestrict_member()` | `user_id`、`duration=None`、`reason=None`、`wait=False` / `user_id`、`wait=False` | 禁言与解除禁言，`duration=None` 表示永久 |
 | `kick_member()` / `ban_member()` / `unban_member()` | `user_id`、`reason=None`（`unban` 无 reason） | 移除、封禁、解封成员 |
 
+`now()` 与 `today()` 按场景时区返回当前时间与日期，业务代码需要时间时用这两个方法。
+
 主动会话（`FetchedMessageSession`）没有 `session_info.messages`。调用 `as_display()` 前，先检查它是否为空。
 
 - `as_display()` 的 `text_only` 默认是 `False`，`MessageChain.to_str()` 的默认是 `True`。
@@ -145,11 +148,11 @@ async def report(msg: Bot.MessageSession):
 | `as_sendable()` | `session_info=None`、`parse_message=True`、`enable_markdown=True` | 解析多语言与 KE 码，并按平台能力降级 |
 | `to_str()` / `to_list()` / `to_kecode()` | `text_only=True`、`element_filter=None`、`connector="\n"` | 转为字符串、字典列表或 KE 码 |
 | `is_safe` | 属性 | 是否不含敏感信息 |
-| `append()` / `insert()` / `remove()` | `element`（`insert` 另有 `index`） | 追加与插入会把字符串归一化为 `PlainElement`。`remove()` 按元素删除 |
+| `append()` / `insert()` / `remove()` | `element`（`insert` 另有 `index`） | 追加与插入会把字符串转成 `PlainElement`。`remove()` 按元素删除 |
 | `extend()` / `copy()` | 另一条链或元素列表 / 无 | 原地拼接或复制 |
 | `contains()` / `only()` | 元素类型或类型元组 | 是否含某类元素、是否只含某类元素 |
 
-`+` 返回新的消息链并深拷贝元素，`+=` 原地修改。两者都接受 `MessageChain`、元素列表或单个元素，不接受单独的字符串。`in` 只接受元素类型，例如 `PlainElement in chain`，传入实例会抛 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
+`+` 返回新的消息链并深拷贝元素，`+=` 原地修改。两者的参数可以是 `MessageChain`、元素列表或单个元素，不能是单独的字符串。`in` 只判断元素类型，例如 `PlainElement in chain`，传入实例会抛 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
 
 ```python
 from akaribot.core.api import Image, MessageChain, Plain
@@ -158,7 +161,7 @@ chain += Plain("\n结尾")
 text = chain.to_str(text_only=True)
 ```
 
-`PlatformMessageChain.assign()` 按 `session_info.target_from` 选择对应的链，该键缺失时改用 `default`。`I18NMessageChain.assign()` 按 `session_info.locale.locale` 选择，且必须包含 `default` 键，否则抛 `ValueError`。这两类链都由发送路径自动解析。
+`PlatformMessageChain.assign()` 按 `session_info.target_from` 选择对应的链。该键缺失时改用 `default`。`I18NMessageChain.assign()` 按 `session_info.locale.locale` 选择。这类链必须包含 `default` 键，否则抛 `ValueError`。这两类链都由发送路径自动解析。
 
 ## 消息元素
 
@@ -191,7 +194,7 @@ async def card(msg: Bot.MessageSession):
 
 ## 消息节点与渲染
 
-`MessageNodes.assign(values, name=None)` 把多条 `MessageChain` 组成转发节点列表，`name` 省略时自动生成。`send_message()` 接受 `MessageNodes`。平台未声明 `support_handle_message_nodes` 时，框架会把消息节点渲染为图片再发送。
+`MessageNodes.assign(values, name=None)` 把多条 `MessageChain` 组成转发节点列表。`name` 省略时自动生成。`send_message()` 支持 `MessageNodes`。平台未声明 `support_handle_message_nodes` 时，框架会把消息节点渲染为图片再发送。
 
 ```python
 from akaribot.core.api import MessageChain, MessageNodes, Plain

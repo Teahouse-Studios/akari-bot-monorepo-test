@@ -25,7 +25,7 @@
 | `~admin remove <user>` | 移除场景管理员；移除自己时要求确认 |
 | `~admin list` | 列出场景自定义管理员 |
 
-`admin` 模块整体声明 `required_admin=True`。自定义名单只记录非原生管理员，`add` 与 `remove` 遇到原生管理员时直接返回提示。
+`admin` 模块整体声明 `required_admin=True`。自定义名单只记录非原生管理员。`add` 与 `remove` 只处理这类管理员，目标已是平台原生管理员时返回提示。
 
 ### 超级用户
 
@@ -46,7 +46,7 @@
 
 ### 基础超级用户
 
-`base_superuser` 是 `[config]` 表下的用户 ID 列表，也接受单个字符串。pre-init 阶段会把名单中的用户解析为 union 并写入数据库，同时把这些用户标记为超级用户。`required_base_superuser` 则直接比较 `session_info.sender_id` 与配置名单，名单只能通过配置文件维护。
+`base_superuser` 是 `[config]` 表下的用户 ID 列表，也可以写单个字符串。在 pre-init 阶段，名单中的用户会被解析为 union 写入数据库，同时标记为超级用户。`required_base_superuser` 直接比较 `session_info.sender_id` 与配置名单，这份名单只能通过配置文件维护。
 
 ## 模块级权限
 
@@ -63,7 +63,7 @@ demo = module("demo", required_admin=True)
 | `required_superuser` | `False` | 要求超级用户，或持有该模块 `~auth` 授权的用户 |
 | `required_base_superuser` | `False` | 要求发送者在 `base_superuser` 名单中 |
 
-检查顺序为 `required_base_superuser`、`required_superuser`、`required_admin`，任一项检查不通过就拒绝。命令级权限只能比模块级更严格。非基础模块还需在场景内启用。声明了 `required_superuser` 的模块只有超级用户能启用。
+框架按 `required_base_superuser`、`required_superuser`、`required_admin` 的顺序检查，任一项不通过就拒绝。命令级权限只能比模块级更严格。非基础模块还需要在场景内启用，声明了 `required_superuser` 的模块只有超级用户能启用。
 
 ## 命令级权限
 
@@ -74,9 +74,9 @@ demo = module("demo", required_admin=True)
 async def _(msg, target: str): ...
 ```
 
-命令级检查在模板解析之后、函数调用之前执行。单个命令只能追加更严格的要求。
+框架先解析命令模板，再执行命令级检查，最后调用处理函数。单个命令可以提高权限要求，不能放宽模块级的限制。
 
-例如模块已经声明 `required_superuser`，某个命令再声明 `required_admin`，最终仍按模块级要求判断。`~auth` 的授权作用于整个模块，模块内的命令都按同一份授权判断。
+例如模块已经声明 `required_superuser`，某个命令再声明 `required_admin`，最终仍按模块级要求判断。`~auth` 的授权作用于整个模块，模块内的命令共用同一条授权记录。
 
 ## 模块授权
 
@@ -88,9 +88,9 @@ async def _(msg, target: str): ...
 | `~auth remove <user> <module>` | 撤销当前发送者给出的授权 |
 | `~auth list <user>` | 列出该用户持有的模块授权 |
 
-授权记录写在 `SenderUnionInfo.sender_data["module_auth"]`，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块，模块别名同样有效。
+授权记录写在 `SenderUnionInfo.sender_data["module_auth"]`，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块。授权时可以用模块别名代替模块名。
 
-授权者不再是超级用户时，其给出的授权自动失效。`auth` 模块本身要求超级用户权限。
+授权者不再是超级用户时，其给出的授权自动失效。
 
 ## 机器人权限
 
@@ -114,7 +114,7 @@ demo = module("demo", required_bot_permissions=["can_manage_messages"])
 
 `event` 与 `regex` 模块会自动加入 `can_read_all_messages`。`rss` 模块会自动加入 `can_send_proactive_messages`。
 
-检查只把平台明确返回的 `False` 视为缺失。`None` 与状态查询失败按未知处理，继续启用。`~module enable all` 会跳过缺少机器人权限的模块。
+检查只把平台明确返回的 `False` 视为缺少对应权限。`None` 与状态查询失败按未知处理，继续启用。`~module enable all` 会跳过缺少机器人权限的模块。
 
 ## 相关文档
 

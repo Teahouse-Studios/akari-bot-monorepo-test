@@ -1,10 +1,12 @@
 # QQ 机器人（官方）适配器
 
-QQ 机器人（官方）适配器用于通过 QQ 开放平台官方机器人接口接入群聊、私信与服务器频道。
+QQ 机器人（官方）适配器通过 QQ 开放平台的官方机器人接口，接入群聊、私信和服务器频道。
 
 ## 平台概述
 
-适配器使用 AppID 与 AppSecret 登录 QQ 开放平台，默认经 WebSocket Gateway 接收事件，也可以改用 Webhook，由平台发起回调。会话分为群聊、C2C 私信、服务器频道与频道私信。适配器启动时会同步全局菜单与指令面板。
+适配器使用 AppID 与 AppSecret 登录 QQ 开放平台。默认经 WebSocket Gateway 接收事件，也可以改用 Webhook，由平台发起回调。
+
+会话分为群聊、C2C 私信、服务器频道和频道私信。适配器启动时会同步全局菜单与指令面板。
 
 ## 安装
 
@@ -14,13 +16,13 @@ QQ 机器人（官方）适配器用于通过 QQ 开放平台官方机器人接�
 akaribot module add akari-bot-adapter-qqbot
 ```
 
-安装后由守护进程按配置启动。`bot_qqbot.enable` 为 `true` 时才启动。
+安装后由守护进程按配置启动。`bot_qqbot.enable` 为 `true` 时启动。
 
 ## 配置
 
-配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`，两张表同处 `config/bot_qqbot.toml`。
+配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都写在 `config/bot_qqbot.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`，两张表同处 `config/bot_qqbot-<实例 ID>.toml`。
+需要多个机器人账号时，用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`。两张表都写在 `config/bot_qqbot-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -35,10 +37,10 @@ akaribot module add akari-bot-adapter-qqbot
 
 ## 必填信息
 
-- `qq_bot_appid` 与 `qq_bot_secret`：在 QQ 开放平台机器人管理页获取，两者共同确定一个机器人账号。
+- `qq_bot_appid` 与 `qq_bot_secret`：在 QQ 开放平台的机器人管理页获取。两项共同确定一个机器人账号。
 - `qq_bot_openid`：选填。机器人自身的 OpenID，群聊中识别 @机器人时使用。
-- `qq_bot_certified`：选填。机器人是否已通过企业或个人认证，未认证时主动消息配额更低。
-- `qq_bot_uid` 与 `qq_bot_qqnum`：选填。这两项是会话数据中携带的机器人 UID 和 QQ 号，按平台提供的信息填写。
+- `qq_bot_certified`：选填。机器人是否已通过企业或个人认证。未认证时主动消息配额更低。
+- `qq_bot_uid` 与 `qq_bot_qqnum`：选填。会话数据中携带的机器人 UID 和 QQ 号，按平台提供的信息填写。
 
 ## 监听地址与端口
 
@@ -46,9 +48,9 @@ akaribot module add akari-bot-adapter-qqbot
 
 - 地址 `qq_webhook_host`，默认 `0.0.0.0`。
 - 端口 `qq_webhook_port`，默认 `8080`。
-- 路径 `qq_webhook_path`，默认 `/`，须与开放平台配置的回调地址一致。
+- 路径 `qq_webhook_path`，默认 `/`，需要与开放平台配置的回调地址一致。
 
-Webhook 模式由平台回调驱动，适配器只提供 HTTP 服务，公网的 HTTPS 由反向代理处理。
+Webhook 模式下，平台回调驱动事件。适配器提供 HTTP 服务，公网 HTTPS 由反向代理处理。
 
 ## 平台能力
 
@@ -69,10 +71,11 @@ Webhook 模式由平台回调驱动，适配器只提供 HTTP 服务，公网的
 
 ## 私信与群聊
 
-- 群聊目标前缀为 `QQBot|Group`，C2C 私信为 `QQBot|C2C`，服务器频道为 `QQBot|Guild`，频道私信为 `QQBot|Direct`。
-- 群聊中被 @机器人提及的消息始终会被处理。未获“读取全部消息”权限时，平台不推送其他群消息。获得该权限后，普通群消息同样会被处理。
-- 群聊 @ 消息使用受限的能力集，其中 RSS 与全量消息读取关闭。
-- 开启 Markdown 后，用户仍可在会话中关闭 Markdown 渲染，此时按钮、动作文本与消息节点一并停用。
+- 群聊的目标前缀是 `QQBot|Group`，C2C 私信是 `QQBot|C2C`，服务器频道是 `QQBot|Guild`，频道私信是 `QQBot|Direct`。
+- 群聊中 @机器人 的消息始终会处理。
+- 没有“读取全部消息”权限时，平台不推送其他群消息。获得该权限后，普通群消息也会处理。
+- 群聊 @ 消息使用受限的能力集，其中 RSS 和全量消息读取关闭。
+- 开启 Markdown 后，用户仍可在会话中关闭渲染。关闭时，按钮、动作文本和消息节点一并停用。
 - `qq_private_bot = true` 时按私域机器人订阅服务器全量消息事件。
 - 同一回调重复投递的消息会按消息 ID 去重。
 

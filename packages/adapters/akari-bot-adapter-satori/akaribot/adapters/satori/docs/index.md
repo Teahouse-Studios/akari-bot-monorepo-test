@@ -1,10 +1,12 @@
 # Satori 适配器
 
-Satori 适配器实现 Satori 协议，接入 Satori 服务端。具体平台的消息与会话由服务端转接。
+Satori 适配器实现 Satori 协议，连接 Satori 服务端。具体平台的消息与会话由服务端转接。
 
 ## 平台概述
 
-适配器通过 WebSocket 连接 Satori 服务端，按事件接收消息，按接口发送消息。会话标识以 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组与私聊场景。
+适配器通过 WebSocket 连接 Satori 服务端，按事件接收消息，按接口发送消息。
+
+会话标识用 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组和私聊场景。
 
 ## 安装
 
@@ -14,11 +16,11 @@ Satori 适配器实现 Satori 协议，接入 Satori 服务端。具体平台的
 akaribot module add akari-bot-adapter-satori
 ```
 
-安装后由守护进程按配置启动，启动条件为 `bot_satori.enable = true`。
+安装后由守护进程按配置启动。`bot_satori.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_satori`，密钥表为 `bot_satori_secret`，两张表同处 `config/bot_satori.toml`。
+配置表为 `bot_satori`，密钥表为 `bot_satori_secret`。两张表都写在 `config/bot_satori.toml`。
 
 配置项如下：
 

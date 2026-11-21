@@ -1,3 +1,11 @@
+---
+hero:
+  image: /module-phigros/assets/phigros.jpg
+  alt: Phigros 游戏画面
+  tagline: 绑定云存档后查询 B30、单曲成绩、解锁进度与曲目资料。
+  fit: cover
+---
+
 # phigros
 
 此模块可以在绑定 Phigros 云存档后查询 B30、单曲成绩、解锁进度、游戏设置与曲目资料。模块每小时自动检查曲目信息与曲绘的更新。

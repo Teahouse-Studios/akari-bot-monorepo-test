@@ -47,6 +47,7 @@ SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 FENCE_PATTERN = re.compile(r"^\s*(?:```|~~~)")
 HOME_DIR = Path(__file__).resolve().parent / "home"
 HOME_CONFIG = HOME_DIR / "home.json"
+FOOTER_DIR = Path(__file__).resolve().parent / "footer"
 
 
 def generate(
@@ -170,6 +171,9 @@ def _locale_package(
     else:
         lang_dir = doc_dir / locale.tag
         pages = _scan_locale_pages(lang_dir) if lang_dir.is_dir() else list(package.pages)
+    if package.key == "core" and package.api_catalog:
+        existing = {page.path for page in pages}
+        pages = list(pages) + [page for page in _api_doc_pages(package.api_catalog) if page.path not in existing]
     return replace(package, title=title or package.title, summary=summary or package.summary, pages=pages)
 
 
@@ -219,6 +223,227 @@ def _package_entry(package: DocPackage) -> str:
 
 
 API_CATALOG_PLACEHOLDER = "<!-- API_CATALOG -->"
+API_CATALOG_SUBMENU = "完整 API 导出清单"
+API_CATALOG_INDEX = "api-reference.md"
+API_CATALOG_DIR = "api"
+API_CATALOG_OTHERS = "api/functions-and-constants.md"
+
+
+def _api_page_specs(
+    catalog: Mapping[str, object],
+) -> tuple[list[dict[str, object]], dict[str, str]]:
+    """把 API 目录拆成按导出名组织的页面，并返回名字到页面的映射。"""
+    classes: list[tuple[str, Mapping[str, object]]] = []
+    others: list[tuple[str, Mapping[str, object]]] = []
+    groups = catalog.get("groups", [])
+    if isinstance(groups, list):
+        for group in groups:
+            if not isinstance(group, Mapping):
+                continue
+            group_name = str(group.get("name", "")).strip()
+            entries = group.get("entries", [])
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if not isinstance(entry, Mapping):
+                    continue
+                name = str(entry.get("name", "")).strip()
+                if not name:
+                    continue
+                item = (group_name, entry)
+                if entry.get("kind") == "class":
+                    classes.append(item)
+                else:
+                    others.append(item)
+    specs: list[dict[str, object]] = [
+        {
+            "path": API_CATALOG_INDEX,
+            "title": "API 导出索引",
+            "submenu": "",
+            "entries": [],
+            "kind": "index",
+        }
+    ]
+    used = {API_CATALOG_INDEX}
+    page_by_name: dict[str, str] = {}
+
+    def register(entry: Mapping[str, object], page: str, prefix: str = "") -> None:
+        name = str(entry.get("name", "")).strip()
+        if not name:
+            return
+        full = name if not prefix or name.startswith(f"{prefix}.") else f"{prefix}.{name}"
+        page_by_name[full] = page
+        methods = entry.get("methods", [])
+        if isinstance(methods, list):
+            for method in methods:
+                if isinstance(method, Mapping):
+                    method_name = str(method.get("name", "")).strip()
+                    if method_name:
+                        page_by_name[f"{full}.{method_name}"] = page
+        nested = entry.get("nested", [])
+        if isinstance(nested, list):
+            for child in nested:
+                if isinstance(child, Mapping):
+                    register(child, page, full)
+
+    for group_name, entry in classes:
+        module_name = str(entry.get("module") or group_name).strip()
+        name = str(entry.get("name", "")).strip()
+        slug = _api_anchor(name) or "class"
+        path = f"{API_CATALOG_DIR}/{slug}.md"
+        suffix = 2
+        while path in used:
+            path = f"{API_CATALOG_DIR}/{slug}-{suffix}.md"
+            suffix += 1
+        used.add(path)
+        specs.append(
+            {
+                "path": path,
+                "title": name,
+                "submenu": module_name,
+                "group": module_name or group_name,
+                "entries": [entry],
+                "kind": "class",
+            }
+        )
+        register(entry, path)
+    other_groups: dict[str, list[Mapping[str, object]]] = {}
+    for group_name, entry in others:
+        module_name = str(entry.get("module") or group_name).strip()
+        other_groups.setdefault(module_name or group_name, []).append(entry)
+    for group_name, entries in other_groups.items():
+        relative = group_name.removeprefix("akaribot.core.api").strip(".")
+        suffix = f"{_api_anchor(relative) or 'other'}-functions-and-constants"
+        path = API_CATALOG_OTHERS if relative == "" else f"{API_CATALOG_DIR}/{suffix}.md"
+        specs.append(
+            {
+                "path": path,
+                "title": "函数与常量",
+                "submenu": group_name,
+                "group": group_name,
+                "entries": list(entries),
+                "kind": "others",
+            }
+        )
+        for entry in entries:
+            name = str(entry.get("name", "")).strip()
+            if name:
+                page_by_name[name] = path
+    return specs, page_by_name
+
+
+def _api_body_lines(entry: Mapping[str, object], level: int, *, prefix: str = "") -> list[str]:
+    name = str(entry.get("name", "")).strip()
+    full = name if not prefix or name.startswith(f"{prefix}.") else f"{prefix}.{name}"
+    kind = str(entry.get("kind", ""))
+    labels = {"class": "类", "function": "函数", "constant": "常量"}
+    lines = [f"{'#' * level} `{full}`", "", labels.get(kind, kind) + "。", ""]
+    description = str(entry.get("description", "")).strip()
+    lines.append(description or "暂无对应描述。")
+    signature = str(entry.get("signature", "")).strip()
+    if signature:
+        lines.extend(["", f"签名：`{signature}`"])
+    parameters = entry.get("parameters", [])
+    if isinstance(parameters, list) and parameters:
+        lines.extend(["", "参数："])
+        lines.extend(_api_parameter_lines(parameters))
+    methods = entry.get("methods", [])
+    if isinstance(methods, list):
+        for method in methods:
+            if isinstance(method, Mapping):
+                lines.extend([""] + _api_method_lines(method, full, level + 1))
+    nested = entry.get("nested", [])
+    if isinstance(nested, list):
+        for child in nested:
+            if isinstance(child, Mapping):
+                lines.extend([""] + _api_body_lines(child, level + 1, prefix=full))
+    return lines
+
+
+def _api_method_lines(entry: Mapping[str, object], class_name: str, level: int) -> list[str]:
+    name = str(entry.get("name", "")).strip()
+    full = f"{class_name}.{name}"
+    lines = [f"{'#' * level} `{full}`", ""]
+    description = str(entry.get("description", "")).strip()
+    lines.append(description or "暂无对应描述。")
+    signature = str(entry.get("signature", "")).strip()
+    if signature:
+        lines.extend(["", f"签名：`{signature}`"])
+    parameters = entry.get("parameters", [])
+    if isinstance(parameters, list) and parameters:
+        lines.extend(["", "参数："])
+        lines.extend(_api_parameter_lines(parameters))
+    return lines
+
+
+def _api_landing_markdown(specs: Sequence[Mapping[str, object]]) -> str:
+    groups: dict[str, list[Mapping[str, object]]] = {}
+    for spec in specs:
+        if spec.get("kind") == "index":
+            continue
+        group_name = str(spec.get("group", "") or "其他")
+        groups.setdefault(group_name, []).append(spec)
+    lines = ["", "按导出名拆成独立页面。" if groups else "当前构建没有生成 API 目录。", ""]
+    for group_name, group_specs in groups.items():
+        lines.extend([f"## {group_name}", ""])
+        for spec in group_specs:
+            if spec.get("kind") == "others":
+                lines.append(f"- [函数与常量]({spec.get('path')})")
+                continue
+            name = str(spec.get("title", ""))
+            path = str(spec.get("path", ""))
+            lines.append(f"- [`{name}`]({path})")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _api_page_markdown(spec: Mapping[str, object]) -> str:
+    if spec.get("kind") == "others":
+        lines = ["# 函数与常量", ""]
+        for entry in spec.get("entries", []):
+            if isinstance(entry, Mapping):
+                lines.extend(_api_body_lines(entry, 2))
+                lines.append("")
+        return "\n".join(lines).rstrip() + "\n"
+    entry = next((item for item in spec.get("entries", []) if isinstance(item, Mapping)), {})
+    return "\n".join(_api_body_lines(entry, 1)).rstrip() + "\n"
+
+
+def _api_doc_pages(catalog: Mapping[str, object]) -> list[DocPage]:
+    specs, _ = _api_page_specs(catalog)
+    pages: list[DocPage] = []
+    for index, spec in enumerate(specs):
+        path = str(spec.get("path", ""))
+        if path == API_CATALOG_INDEX or not path:
+            continue
+        pages.append(
+            DocPage(
+                path=path,
+                title=str(spec.get("title", "")),
+                order=901 + index,
+                submenu=str(spec.get("submenu") or API_CATALOG_SUBMENU),
+            )
+        )
+    return pages
+
+
+def _write_api_pages(destination: Path, catalog: Mapping[str, object]) -> None:
+    specs, _ = _api_page_specs(catalog)
+    for spec in specs:
+        if spec.get("kind") == "index":
+            continue
+        path = destination / str(spec.get("path", ""))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_api_page_markdown(spec), encoding="utf-8")
+    index = destination / API_CATALOG_INDEX
+    if index.is_file():
+        text = index.read_text(encoding="utf-8")
+        landing = _api_landing_markdown(specs)
+        if API_CATALOG_PLACEHOLDER in text:
+            text = text.replace(API_CATALOG_PLACEHOLDER, landing)
+        else:
+            text = text.rstrip() + "\n" + landing
+        index.write_text(text, encoding="utf-8")
 
 
 def _api_anchor(name: str) -> str:
@@ -231,13 +456,16 @@ def _api_link_table(catalog: Mapping[str, object]) -> tuple[dict[str, str], dict
     unqualified: dict[str, str] = {}
     classes: set[str] = set()
     candidates: dict[str, list[str]] = {}
+    _, page_by_name = _api_page_specs(catalog)
 
     def add(name: str, anchor: str) -> None:
-        exact[name] = anchor
+        page = page_by_name.get(name)
+        target = f"{page}#{anchor}" if page else f"#{anchor}"
+        exact[name] = target
         if "." not in name:
             method_names = candidates.setdefault(name, [])
-            if anchor not in method_names:
-                method_names.append(anchor)
+            if target not in method_names:
+                method_names.append(target)
 
     def visit(entry: Mapping[str, object], prefix: str = "") -> None:
         name = str(entry.get("name", "")).strip()
@@ -307,7 +535,7 @@ def _link_api_code(segment: str, context: str, exact: Mapping[str, str], unquali
             anchor = unqualified.get(bare)
         if anchor is None:
             return match.group(0)
-        return f"[`{content}`](api-reference.md#{anchor})"
+        return f"[`{content}`]({anchor})"
 
     return CODE_SPAN_PATTERN.sub(replace, segment)
 
@@ -532,13 +760,8 @@ def _copy_package(
     if package.overview and "index.md" not in copied:
         page = destination / "index.md"
         page.write_text(f"# {package.title}\n\n{package.summary or package.name}\n", encoding="utf-8")
-    api_page = destination / "api-reference.md"
-    if package.key == "core" and package.api_catalog and api_page.is_file():
-        text = api_page.read_text(encoding="utf-8")
-        if API_CATALOG_PLACEHOLDER in text:
-            api_page.write_text(
-                text.replace(API_CATALOG_PLACEHOLDER, _api_catalog_markdown(package.api_catalog)), encoding="utf-8"
-            )
+    if package.key == "core" and package.api_catalog:
+        _write_api_pages(destination, package.api_catalog)
 
 
 def _rewrite_links(
@@ -1062,7 +1285,7 @@ def _write_vitepress_config(
     if not isinstance(search, Mapping):
         search = {"provider": "local"}
     default_view = views[0]
-    theme_config = _locale_theme(default_view, config, theme_key, brand, color, dict(search))
+    theme_config = _locale_theme(default_view, config, theme_key, brand, color, dict(search), source)
     head_tags: list[list[object]] = []
     if favicon:
         head_tags.append(["link", {"rel": "icon", "href": favicon}])
@@ -1074,7 +1297,7 @@ def _write_vitepress_config(
             "label": view.locale.label,
             "lang": view.locale.tag,
             "link": f"/{view.locale.tag}/",
-            "themeConfig": _locale_theme(view, config, theme_key, brand, color, dict(search)),
+            "themeConfig": _locale_theme(view, config, theme_key, brand, color, dict(search), source),
         }
     payload: dict[str, object] = {
         "title": default_view.locale.title or config.site.title,
@@ -1130,6 +1353,7 @@ def _locale_theme(
     brand: _BrandAssets,
     color: str,
     search: dict[str, object],
+    source: Path,
 ) -> dict[str, object]:
     locale = view.locale
     prefix = view.prefix
@@ -1190,7 +1414,7 @@ def _locale_theme(
                 "credits": brand.credits,
             },
             "sidebar": {"items": _akari_sidebar(view.groups, config, locale)},
-            "footer": {"message": locale.labels["footer"]},
+            "footer": _footer_section(source, config, brand, locale),
             "search": {"enabled": True},
         }
         if dependencies:
@@ -1214,7 +1438,53 @@ def _locale_theme(
     return theme_config
 
 
+BUILTIN_FOOTER_ICONS = frozenset({"afdian", "github"})
+
+
+def _footer_icon(source: Path, config: DocsConfig, value: str, stem: str) -> str:
+    text = (value or "").strip()
+    if not text or text in BUILTIN_FOOTER_ICONS:
+        return text
+    return _brand_site_url(source, config, text, stem)
+
+
+def _footer_section(
+    source: Path,
+    config: DocsConfig,
+    brand: _BrandAssets,
+    locale: DocsLocaleConfig,
+) -> dict[str, object]:
+    footer = config.footer
+    section: dict[str, object] = {"message": locale.labels["footer"]}
+    if footer.copyright:
+        section["copyright"] = footer.copyright
+    if not footer.enabled:
+        return section
+    about: dict[str, object] = {}
+    if footer.title:
+        about["title"] = footer.title
+    if footer.text:
+        about["text"] = list(footer.text)
+    image = _brand_site_url(source, config, footer.image, "footer-image") if footer.image else ""
+    # 未单独配置配图时使用角色立绘，品牌包缺失时由引擎播种的占位图接住。
+    if image or brand.character:
+        about["image"] = image or brand.character
+    if footer.links:
+        about["actions"] = [
+            {
+                "text": link.text,
+                "link": link.link,
+                **({"icon": _footer_icon(source, config, link.icon, f"footer-icon-{index}")} if link.icon else {}),
+            }
+            for index, link in enumerate(footer.links, start=1)
+        ]
+    if about:
+        section["about"] = about
+    return section
+
+
 def _brand_css(color: str) -> str:
+
     return (
         ":root{"
         f"--vp-c-brand-1:{color};--vp-c-brand-2:{color};--vp-c-brand-3:{color};"
@@ -1246,6 +1516,35 @@ def _markdown_block(export: str) -> str:
     )
 
 
+def _is_api_page(page: DocPage) -> bool:
+    return page.path == API_CATALOG_INDEX or page.path.startswith(f"{API_CATALOG_DIR}/")
+
+
+def _api_pages(packages: Sequence[DocPackage]) -> list[DocPage]:
+    for package in packages:
+        if package.key == "core":
+            return [page for page in package.pages if _is_api_page(page)]
+    return []
+
+
+def _api_sidebar_group(
+    pages: Sequence[DocPage], config: DocsConfig, locale: DocsLocaleConfig, prefix: str
+) -> dict[str, object]:
+    def page_item(page: DocPage) -> dict[str, object]:
+        return {"text": page.title, "link": _site_link(prefix, "core", page.path)}
+
+    normalized = [replace(page, submenu="") if page.path == API_CATALOG_INDEX else page for page in pages]
+    item: dict[str, object] = {
+        "text": "API",
+        "collapsed": False,
+        "items": _page_menu_items(normalized, page_item),
+    }
+    icon = config.icons.get("api", "")
+    if icon:
+        item["icon"] = icon
+    return item
+
+
 def _akari_sidebar(
     groups: dict[str, list[DocPackage]], config: DocsConfig, locale: DocsLocaleConfig
 ) -> list[dict[str, object]]:
@@ -1254,15 +1553,25 @@ def _akari_sidebar(
         {"text": locale.labels["home"], "link": f"{prefix}/" if prefix else "/", "icon": config.icons.get("home", "")}
     ]
     for group, packages in groups.items():
+        visible = packages
+        if group == "core":
+            visible = [
+                replace(package, pages=tuple(page for page in package.pages if not _is_api_page(page)))
+                for package in packages
+            ]
         item: dict[str, object] = {
             "text": _group_title(group, locale.group_titles),
             "collapsed": False,
-            "items": _sidebar_children(packages, config, locale, prefix),
+            "items": _sidebar_children(visible, config, locale, prefix),
         }
         icon = config.icons.get(group) or config.icons.get(group.lower(), "")
         if icon:
             item["icon"] = icon
         result.append(item)
+        if group == "core":
+            pages = _api_pages(packages)
+            if pages:
+                result.append(_api_sidebar_group(pages, config, locale, prefix))
     return result
 
 
@@ -1302,15 +1611,39 @@ def _page_menu_items(
     pages: Sequence[DocPage], make_item: Callable[[DocPage], dict[str, object]]
 ) -> list[dict[str, object]]:
     direct: list[dict[str, object]] = []
-    submenus: dict[str, list[dict[str, object]]] = {}
+    roots: dict[str, dict[str, object]] = {}
     for page in pages:
         item = make_item(page)
-        if page.submenu:
-            submenus.setdefault(page.submenu, []).append(item)
-        else:
+        parts = [part.strip() for part in (page.submenu or "").split("/") if part.strip()]
+        if not parts:
             direct.append(item)
-    for title, items in submenus.items():
-        direct.append({"text": title, "collapsed": False, "items": items})
+            continue
+        node = None
+        for part in parts:
+            if node is None:
+                node = roots.setdefault(part, {"text": part, "children": {}, "items": []})
+            else:
+                children = node["children"]
+                assert isinstance(children, dict)
+                node = children.setdefault(part, {"text": part, "children": {}, "items": []})
+        items = node["items"]
+        assert isinstance(items, list)
+        items.append(item)
+
+    def render(node: dict[str, object]) -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        items = node.get("items")
+        if isinstance(items, list):
+            result.extend(items)
+        children = node.get("children")
+        if isinstance(children, dict):
+            for child in children.values():
+                assert isinstance(child, dict)
+                result.append({"text": child["text"], "collapsed": False, "items": render(child)})
+        return result
+
+    for root in roots.values():
+        direct.append({"text": root["text"], "collapsed": False, "items": render(root)})
     return direct
 
 
@@ -1389,6 +1722,20 @@ def _page_tab_title(page: DocPage, labels: Mapping[str, str]) -> str:
 def _write_theme(source: Path, theme: ThemeSpec) -> None:
     directory = source / ".vitepress" / "theme"
     shutil.copytree(theme.theme_dir, directory, dirs_exist_ok=True)
+    if str(theme.config.get("theme_config_key") or "") == "akari":
+        _write_footer_theme(directory)
+
+
+def _write_footer_theme(directory: Path) -> None:
+    entry = directory / "index.ts"
+    if not (entry.is_file() and (directory / "composables" / "useAkariConfig.ts").is_file()):
+        return
+    target = directory / "footer"
+    target.mkdir(parents=True, exist_ok=True)
+    for name in ("DocsFooter.vue", "FooterIcon.vue"):
+        shutil.copy2(FOOTER_DIR / name, target / name)
+    entry.replace(directory / "theme-entry.ts")
+    shutil.copy2(FOOTER_DIR / "site-entry.ts", entry)
 
 
 def _write_home(source: Path, theme: ThemeSpec) -> None:

@@ -2,7 +2,7 @@
 
 本文整理了 Milky 适配器的配置项，以及填写时的注意事项。
 
-配置表为 `bot_milky`，密钥表为 `bot_milky_secret`，两张表同处 `config/bot_milky.toml`。普通项写在 `[bot_milky]`，密钥项写在 `[bot_milky_secret]`。
+配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都写在 `config/bot_milky.toml`。普通项写在 `[bot_milky]`，密钥项写在 `[bot_milky_secret]`。
 
 ## 配置表 `bot_milky`
 

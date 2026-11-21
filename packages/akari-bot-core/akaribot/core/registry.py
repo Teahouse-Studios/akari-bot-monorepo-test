@@ -434,8 +434,8 @@ class PackageRegistry:
         for entry_point in discovered:
             try:
                 entries.append(cls._entry_from_entry_point(kind, entry_point))
-            except Exception:
-                _logger().exception(f"Failed to resolve {kind} entry point {entry_point.name!r}, skipped.")
+            except Exception as error:
+                _logger().warning(f"Failed to resolve {kind} entry point {entry_point.name!r}, skipped: {error}")
         return entries
 
     @classmethod

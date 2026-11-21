@@ -97,6 +97,23 @@ development = "安装与开发"
 core = "核心"
 module = "模块"
 
+[footer]
+title = "关于小可"
+text = [
+    "小可是由 Teahouse Studios 出品的多功能、跨平台、可自由扩展的聊天机器人助手，基于 AGPL-3.0 协议开源。",
+    "请支持我们的工作以便持续开发与维护。",
+]
+
+[[footer.links]]
+text = "爱发电"
+link = "https://afdian.com/a/teahouse"
+icon = "afdian"
+
+[[footer.links]]
+text = "GitHub"
+link = "https://github.com/Teahouse-Studios/akari-bot"
+icon = "github"
+
 [icons]
 home = "home"
 module = "widgets"
@@ -146,6 +163,12 @@ color = "#d69cdd"
   | `credits` | 制作人员文本 |
 
   `akari.appBar.logo`、`akari.appBar.logoDark` 与 `akari.chatAvatar` 是兼容字段，分别与 `logo`、`logoDark`、`avatar` 相同。
+- `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。
+  - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。
+  - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。
+  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。
+  - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。
+  - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。
 - `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。
 - `group_titles`：侧栏一级分组的标题，键为包分组。
 - `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。
@@ -285,6 +308,8 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `dependencies` | 安装到 `<实例根>/cache/docs` 的 npm 依赖 |
 | `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |
 | `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |
+
+页脚不在主题里实现。生成器复制主题目录后，把主题入口 `index.ts` 改名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件；新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时不做这层替换，站点沿用主题自带的页脚。
 
 `akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，Node.js 与 VitePress 版本由该文件声明。本仓库用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例也可以把 `theme.source` 指向自己的模板目录。
 

@@ -39,7 +39,7 @@ akaribot config set browser_type firefox --table webrender
 
 远程地址必须是 HTTP 或 HTTPS URL，不能带查询参数或片段标识。
 
-远程服务由独立的 [`akari-bot-webrender`](https://github.com/Teahouse-Studios/akari-bot-webrender) 项目提供。浏览器与运行依赖的安装方法见该项目文档。机器人侧只需填写地址，并选择是否启用 `remote_only`。远程服务本身不由机器人部署。
+远程服务由独立的 [`akari-bot-webrender`](https://github.com/Teahouse-Studios/akari-bot-webrender) 项目提供。浏览器与运行依赖的安装方法见该项目文档。机器人侧只需填写地址，并选择是否启用 `remote_only`。
 
 ## 启动与状态
 
@@ -60,13 +60,13 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 
 ## 降级
 
-`check_web_render_status()` 返回 `false` 时，调用方不应继续请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态为不可用时改用文字或表格。
+`check_web_render_status()` 返回 `false` 时，调用方无需继续请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态为不可用时改用文字或表格。
 
-其他模块通常先检查状态，或在调用失败后改用纯文本。渲染服务在方法内处理异常，本地与远程都失败时返回 `None`。
+其他模块通常先检查状态。没有先检查的模块，会在调用失败后改用纯文本。异常由渲染服务内部处理，本地与远程都失败时返回 `None`。
 
 <NoticeBox type="info" title="远程回退">
 
-设置 `remote_web_render_url` 后，本地浏览器未初始化、渲染返回空结果或抛出一般异常时，客户端会尝试远程服务。远程也失败时返回空结果。`remote_only=true` 时只使用远程服务，远程地址必须可用。
+设置 `remote_web_render_url` 后，本地渲染失败时会改发到远程服务：本地浏览器未初始化、渲染结果为空与一般异常都算失败。远程服务也失败时，客户端返回空结果。`remote_only=true` 时只用远程服务，此时远程地址必须可用。
 
 </NoticeBox>
 
@@ -87,4 +87,11 @@ if check_web_render_status():
     )
 ```
 
-`web_render` 还提供页面截图、区域截图、页面源码与原始请求方法，参数分别由 `PageScreenshotOptions`、`SectionScreenshotOptions`、`SourceOptions` 与 `RawOptions` 描述。`init_web_render()`、`close_web_render()` 与相关选项类都从 `akaribot.core.api` 导出，完整清单见[公共 API](public-api.md)。
+`web_render` 还提供以下方法：
+
+- 页面截图
+- 区域截图
+- 页面源码
+- 原始请求
+
+这些方法的参数分别由 `PageScreenshotOptions`、`SectionScreenshotOptions`、`SourceOptions` 与 `RawOptions` 描述。`init_web_render()`、`close_web_render()` 与相关选项类都从 `akaribot.core.api` 导出，完整清单见[公共 API](public-api.md)。

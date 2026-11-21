@@ -4,7 +4,7 @@
 
 `core.config.CFGManager` 负责读写配置。配置模板类在导入时确定每个字段的读取方式。
 
-用户配置放在 `config/` 根目录，全局默认值放在 `config/global/`。`CFGManager.load()` 会同时读取这两个位置。
+用户配置放在 `config/` 根目录，全局默认值放在 `config/global/`。`CFGManager.load()` 会同时读取这两个位置。全局文件提供默认值，用户文件中的同名配置覆盖这些默认值。
 
 ## 文件与表布局
 
@@ -31,7 +31,7 @@
 
 加载时，`CFGManager` 先读全局文件，再读 `config/<表名>.toml`。
 
-两层配置递归合并。用户配置覆盖同名的标量、列表和子表。用户文件可以只写要改的键，其余键继续使用全局值。
+两层配置会递归合并。用户配置覆盖同名的标量、列表和子表。用户文件只写需要修改的字段即可，其余字段继续使用全局值。
 
 写入、删除与配置注释修复只修改用户文件，不修改 `config/global/`。
 
@@ -91,7 +91,7 @@ if CoreConfig.enable_analytics:
 | `CFGManager.edit_write(...)`、`edit_delete(...)` | 交互式编辑写入，需明确授权 |
 | `CFGManager.save()` | 仅重写内容有变化的文件 |
 
-读取到占位符时返回 `None`。值类型与模板不符时给出警告，并返回原值。
+读取到的值是模板写入的占位符（如 `<Replace me with <type> value>` 或 `<Replace me>`）时，返回 `None`。值类型与模板不符时，给出警告并返回原值。
 
 ## 字段注释
 
@@ -101,16 +101,20 @@ if CoreConfig.enable_analytics:
 config.comments.<表名>.<字段名>
 ```
 
-表名取值：核心公开表为 `config`，核心密钥表为 `secret`。适配器表为 `bot_<平台>`，密钥表为 `bot_<平台>_secret`。模块表为 `module_<模块>`，密钥表为 `module_<模块>_secret`。
+表名取值：
 
-注释只描述用途，不描述实现细节。生成配置时，注释和字段一起写入。切换 `default_locale` 后，`CFGManager.repair_i18n_comments()` 会按新语言重写注释。
+- 核心公开表为 `config`，核心密钥表为 `secret`。
+- 适配器表为 `bot_<平台>`，适配器密钥表为 `bot_<平台>_secret`。
+- 模块表为 `module_<模块>`，模块密钥表为 `module_<模块>_secret`。
+
+配置注释用于说明这个字段的作用。生成配置时，注释和字段一起写入。切换 `default_locale` 后，`CFGManager.repair_i18n_comments()` 会按新语言重写注释。
 
 ## 只读限制
 
 - 守护进程在启动子进程前把 `AKARI_CONFIG_READONLY` 设为 `1`，平台进程与 Server 均只读。
-- 只读进程中调用 `write()` 或 `save()` 会抛出 `ConfigOperationError`。`edit_write()`、`edit_delete()` 只能在明确授权的范围内使用，供 `~config` 和启动期密钥自举调用。
+- 只读进程中调用 `write()` 或 `save()` 会抛出 `ConfigOperationError`。`edit_write()`、`edit_delete()` 只能在明确授权的范围内使用。`~config` 命令和启动阶段补充缺失的配置与密钥时会调用这两个方法。
 - 缺失项只在启动前的准备阶段写入。
-- 写入时对 `config/.config.lock` 加锁，重新加载、修改与保存三步在锁内一起完成，与其他进程互斥。最多等待 10 秒；锁文件超过 60 秒视为陈旧。
+- 写入时会先获取 `config/.config.lock` 的锁。重新加载、修改与保存都在持有锁的期间完成，同一时间只有一个进程可以执行。最多等待 10 秒。锁文件超过 60 秒没有更新时，视为过期锁。
 - 写入使用临时文件加 `os.replace` 原子替换。
 - 文件 mtime 变化后，最多延迟 1 秒重新加载。磁盘文件被清空而内存仍有内容时，保留内存中的值。
 
@@ -118,6 +122,6 @@ config.comments.<表名>.<字段名>
 
 `config.toml` 的 `config_version` 当前为 6，由 `core.config.update` 执行升级。
 
-其余配置文件的版本随包维护。迁移脚本放在包的 `config_migrations/`，文件名以四位编号开头。升级执行后，编号会写回该文件的 `config_version`。
+其他配置文件的版本由所属包维护。迁移脚本放在包的 `config_migrations/` 下，文件名以四位编号开头。迁移执行后，迁移编号会写回该配置文件的 `config_version`。
 
-新生成的配置文件会把 `manifest.toml` 的 `config_schema_version` 写入自身的 `config_version`。第一次迁移的编号必须比这个值大 1，后续迁移按顺序递增。
+新生成的配置文件会把 `manifest.toml` 的 `config_schema_version` 写入自身的 `config_version`。第一次迁移的编号必须是 `config_schema_version` 的值加 1，后续每次迁移的编号依次递增。

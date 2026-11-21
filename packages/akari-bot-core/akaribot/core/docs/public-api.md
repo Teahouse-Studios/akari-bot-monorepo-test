@@ -2,8 +2,6 @@
 
 本文按类列出 `akaribot.core.api` 导出的主要名字与用途。
 
-`akaribot.core.api` 是模块与适配器唯一应依赖的公开接口。core 内部模块可以移动或改名，公开接口导出的名字保持不变。直接 import `akaribot.core.builtins.*` 这类内部路径不属于公开接口。
-
 平台适配器另有 `akaribot.core.api.adapters`，收录只有适配器使用的设施。
 
 ```python
@@ -16,9 +14,9 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 `akaribot.core.api.__api_version__` 取 `core.registry.CORE_API_VERSION`。各包在 `manifest.toml` 的 `requires_core_api` 中声明兼容范围，官方包写 `">=1,<2"`。
 
-框架在注册包之前检查这个范围。不满足要求的包会被拒绝，不进入模块或适配器清单，并记录原因。
+框架在注册包之前检查这个范围。版本不满足要求时，框架拒绝注册这个包，记录原因，这个包也不会出现在模块或适配器清单里。
 
-公开接口只读取静态声明，依赖配置的名字在首次访问时载入。因此 CLI 与框架可以在配置就绪之前读取 `__api_version__`。模块与适配器的声明方式分别见[模块开发](module-development.md)与[适配器开发](adapter-development.md)。
+公开接口只读取静态声明。配置缺失时未能绑定的名字，会在首次访问时重新解析，因此 CLI 与框架可以在配置就绪之前读取 `__api_version__`。模块与适配器的声明方式分别见[模块开发](module-development.md)与[适配器开发](adapter-development.md)。
 
 ## `Bot`
 
@@ -109,11 +107,11 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 ## `FinishedSession`
 
-已发送消息的句柄。`send_message()` 返回这个对象。
+已发送消息的封装对象。`send_message()` 返回这个对象。
 
 ### `assign()`
 
-`FinishedSession.assign(session, message_id)` 创建句柄。单个消息 ID 会转成列表。
+`FinishedSession.assign(session, message_id)` 创建这个对象。单个消息 ID 会转成列表。
 
 ### `delete()`
 
@@ -358,7 +356,7 @@ RPC 失败的基类。具体子类区分不可达、超时、取消、方法不�
 
 ## `Logger`
 
-`Logger` 提供分级日志。业务代码通过它输出调试、信息、警告与错误，不要在模块里直接配置日志器。
+`Logger` 提供分级日志。业务代码通过它输出调试、信息、警告与错误，模块不需要自己配置日志器。
 
 ## `Locale`
 

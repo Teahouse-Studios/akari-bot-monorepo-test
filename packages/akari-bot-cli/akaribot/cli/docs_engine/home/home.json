@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "title": "AkariBot 文档",
-  "lead": "面向使用者的命令手册，面向开发者的模块与适配器参考。",
+  "title": "小可（AkariBot） · 文档",
+  "lead": "多功能、跨平台、可自由扩展的聊天机器人助手",
   "sections": {
     "searchPlaceholder": "搜索文档",
     "statsLabel": "文档概况",
@@ -64,7 +64,7 @@
     {
       "eyebrow": "使用者",
       "title": "普通用户",
-      "description": "查一条命令怎么用，看某个模块能做什么，或者把机器人装到自己的群组里。",
+      "description": "想要邀请小可加入群聊或是查阅命令的用法？请看这里。",
       "icon": "menu_book",
       "package": "builtin",
       "page": "help.md",
@@ -97,7 +97,7 @@
     {
       "eyebrow": "开发者",
       "title": "机器人开发者",
-      "description": "从第一个模块开始，读命令解析、消息接口、Hook、配置与适配器的实现约束。",
+      "description": "想要自己编写模块？想要自己搭建？想为我们做出贡献？请看这里。",
       "icon": "code",
       "package": "core",
       "page": "module-development.md",
@@ -109,10 +109,10 @@
           "page": "module-development.md"
         },
         {
-          "label": "运行架构",
-          "icon": "account_tree",
-          "package": "core",
-          "page": "architecture.md"
+          "label": "自搭建指南",
+          "icon": "rocket_launch",
+          "package": "cli",
+          "page": "self-hosting.md"
         },
         {
           "label": "消息 API",
@@ -185,7 +185,7 @@
     "cards": [
       {
         "title": "参与贡献",
-        "description": "代码、文档与问题反馈都在 GitHub 上维护。提交前先看贡献指南，确认改动范围和测试要求。",
+        "description": "代码、文档和问题反馈都在 GitHub 上。想一起改点什么的话，先看看贡献指南，确认改动范围和测试要求。",
         "logo": "/home/github.svg",
         "icon": "code",
         "links": [
@@ -208,7 +208,7 @@
       },
       {
         "title": "参与翻译",
-        "description": "界面文案与文档翻译由 Weblate 托管。翻译进度和待审词条都在项目页上。",
+        "description": "界面文案和文档翻译都放在 Weblate 上。想看看进度、帮忙审一条，或者直接参与翻译，都可以从这里进。",
         "logo": "/home/weblate.svg",
         "links": [
           {

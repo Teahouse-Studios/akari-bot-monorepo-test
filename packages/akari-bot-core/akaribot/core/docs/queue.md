@@ -1,6 +1,6 @@
 # JobQueue
 
-本文介绍 JobQueue 的后端、寻址、RPC、信号与关闭流程。
+本文介绍 JobQueue 的后端、节点定位、RPC、信号与关闭流程。
 
 JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节点注册表与消息传输。业务代码通过 `PlatformAPI`、`ServerAPI` 与信号声明使用它。
 
@@ -21,7 +21,7 @@ JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节
 
 `jobqueue_websocket_token` 为空时，启动前会生成令牌并写回配置。
 
-## 节点与寻址
+## 节点身份与定位
 
 每个进程有两个身份：
 
@@ -30,9 +30,9 @@ JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节
 
 进程状态依次为 `starting`、`ready`、`maintenance`、`draining`、`stopped`。`check_job_queue()` 注册实例并切换为 `ready`。
 
-节点每 15 秒更新一次注册信息，每 10 秒与注册表核对一次。超过 45 秒没有更新，节点就被判定为离线。关闭时，节点先广播 `draining`，处理完正在执行的任务，再广播 `stopped`。
+节点每 15 秒更新一次注册信息，每 10 秒与注册表核对一次。超过 45 秒没有更新，节点就被判定为离线。关闭时，节点先广播 `draining`。处理完正在执行的任务后，节点再广播 `stopped`。
 
-`core.alive.Alive` 是进程内的同步路由缓存，只复用已由注册表确认的记录。若要让同一个业务键固定落到同一个实例，请用 `ServiceRoute` 描述 service、角色与路由键。运行时按 Rendezvous Hash 从 `ready` 实例中选出目标。
+`core.alive.Alive` 是进程内的同步路由缓存。这个缓存只复用已由注册表确认的记录。若要让同一个业务键固定落到同一个实例，请用 `ServiceRoute` 描述 service、角色与路由键。运行时按 Rendezvous Hash 从 `ready` 实例中选出目标。
 
 ## RPC
 
@@ -50,13 +50,13 @@ task_id = await PlatformAPI.post_message.submit(session_info, message, module_na
 - `ContextManager` 上的平台方法通过 `context_method()` 自动绑定，参数签名取自方法本身。
 - 默认超时：普通调用 120 秒，信号 30 秒，消息处理与发送最长 7200 秒。每个请求有独立的截止时间。
 - 失败时抛出 `RpcError` 的子类：`RpcUnavailableError`（目标不可达）、`RpcTimeoutError`、`RpcCancelledError`、`RpcMethodNotFoundError`、`RpcProtocolError`，远程异常包装为 `RpcRemoteError`，并保留 traceback。
-- 投递语义是至少一次。发送、禁言等有外部副作用的调用在超时后由调用方判断是否重试。
+- 一个请求至少会被投递一次，也可能重复投递。发送、禁言等有外部副作用的调用在超时后，由调用方判断是否重试。
 
 `PlatformAPI.post_message` 在目标通道发送失败时，把 `SessionInfo.next_hops` 交回 Server，由 Server 继续尝试下一跳。整条通道都不可用时，此方法返回空列表。
 
 ## 信号
 
-信号按发送时刻的在线实例逐条发送，各目标独立 ACK：
+信号按发送时刻的在线实例逐条发送，各目标独立确认：
 
 ```python
 from akaribot.core.queue.peer import PeerSelector
@@ -75,7 +75,7 @@ receipt = await invalidate_cache.emit(PeerSelector.role("server"), version=8)
 report = await invalidate_cache.gather(PeerSelector.service("Server"), version=8)
 ```
 
-`.emit()` 只发送，`.gather()` 逐实例等待 ACK。信号处理器须幂等，带版本号的数据以持久化状态为准。
+`.emit()` 只发送，`.gather()` 逐个实例等待确认。信号处理函数必须可以重复执行，同一个信号收到多次，结果与收到一次相同。带版本号的数据以持久化状态为准。
 
 ## 数据表
 
@@ -84,10 +84,10 @@ report = await invalidate_cache.gather(PeerSelector.service("Server"), version=8
 | `job_queues` | 任务记录：目标、来源、动作、参数、状态、领取者与结果 |
 | `job_queue_peers` | 节点注册表：角色、service、状态、能力、元数据与注册有效期 |
 
-`database` 后端以 `pending` 为条件原子领取任务，每轮候选上限 100 条。终态记录在调用方读取后删除，遗漏的记录由每小时运行的后台任务清理。`websocket` 后端不持久化任务与终态。
+`database` 后端以 `pending` 为条件原子领取任务，每轮候选上限 100 条。已经结束的任务，其记录在调用方读取后删除。遗漏的记录由每小时运行的后台任务清理。`websocket` 后端不保存任务记录和结束状态。
 
 ## 关闭与维护
 
-维护窗口先停止领取新任务，再等待已经开始的处理完成。数据库热重载在维护窗口内独占连接。
+进入维护窗口后，节点先停止领取新任务，再等待已经开始的处理完成。数据库热重载在维护窗口内进行，期间独占数据库连接。
 
-关闭期间结果接收器继续运行，直到会话与后台任务清理完毕才停止。轮询器异常退出时，实例会撤销注册并释放本地等待方。
+关闭期间，结果接收器继续运行。会话与后台任务清理完毕后，它才停止。轮询器异常退出时，实例会撤销注册，并释放本地等待方。

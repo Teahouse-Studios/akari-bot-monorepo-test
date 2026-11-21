@@ -6,6 +6,7 @@
 """
 
 import io
+import os
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -94,6 +95,25 @@ def _test_verbose_echoes_the_command():
     return "first line" in text and "-c" in text
 
 
+def _test_uv_environment_uses_instance_cache():
+    # 受限环境里家目录缓存可能不可写；未显式指定 UV_CACHE_DIR 时改用实例自己的缓存目录。
+    with TemporaryDirectory(prefix="akari-uv-env-") as raw:
+        root = Path(raw) / "instance"
+        instance = engine.Instance.detached(root)
+        previous = os.environ.pop("UV_CACHE_DIR", None)
+        try:
+            env = engine.uv_environment(instance)
+            expected = (root / "cache" / "uv").resolve()
+            used_instance_cache = Path(env["UV_CACHE_DIR"]).resolve() == expected and expected.is_dir()
+            os.environ["UV_CACHE_DIR"] = str(Path(raw) / "custom")
+            overridden = engine.uv_environment(instance)["UV_CACHE_DIR"] == str(Path(raw) / "custom")
+        finally:
+            os.environ.pop("UV_CACHE_DIR", None)
+            if previous is not None:
+                os.environ["UV_CACHE_DIR"] = previous
+    return used_instance_cache and overridden
+
+
 def _test_missing_executable_raises_cli_error():
     try:
         engine.CommandRunner().run_streaming(["/nonexistent/akaribot-uv", "--version"])
@@ -113,4 +133,5 @@ async def test_command_runner_streaming(tester: Tester):
     await tester.test(_test_dry_run_does_not_execute, "dry-run 只回显不执行")
     await tester.test(_test_verbose_echoes_the_command, "verbose 额外回显命令")
     await tester.test(_test_missing_executable_raises_cli_error, "可执行文件缺失抛 CliError")
+    await tester.test(_test_uv_environment_uses_instance_cache, "uv 缓存默认落在实例目录")
     return tester

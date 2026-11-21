@@ -29,6 +29,40 @@ LOCALE_PATTERN = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$")
 
 
 @dataclass(frozen=True)
+class DocsFooterLink:
+    """页脚关于区块的按钮。
+
+    :param text: 按钮文字，同时作为无障碍名称。
+    :param link: 按钮指向的地址，可以是 URL 或站内路径。
+    :param icon: 内置图标名（``afdian``、``github``）或图片路径；相对路径按实例根解析。
+    """
+
+    text: str
+    link: str
+    icon: str = ""
+
+
+@dataclass(frozen=True)
+class DocsFooterConfig:
+    """页脚关于区块。
+
+    :param enabled: 是否显示该区块。
+    :param title: 标题；留空时取 ``defaults.toml`` 的 ``[footer] title``。
+    :param text: 正文段落；``None`` 取默认段落，空元组不显示正文。
+    :param image: 配图；相对路径按实例根解析，也可写 URL 或站点路径；留空时使用角色立绘。
+    :param links: 按钮；``None`` 取默认按钮，空元组不显示按钮。
+    :param copyright: 版权行；留空时取 ``defaults.toml`` 的 ``[footer] copyright``。
+    """
+
+    enabled: bool = True
+    title: str = ""
+    text: tuple[str, ...] | None = None
+    image: str = ""
+    links: tuple[DocsFooterLink, ...] | None = None
+    copyright: str = ""
+
+
+@dataclass(frozen=True)
 class DocsDefaults:
     """随包分发的默认文案与图标。
 
@@ -48,6 +82,7 @@ class DocsDefaults:
     assets: Mapping[str, str] = field(default_factory=dict)
     site: Mapping[str, str] = field(default_factory=dict)
     locales: Mapping[str, str] = field(default_factory=dict)
+    footer: DocsFooterConfig = field(default_factory=DocsFooterConfig)
 
 
 @lru_cache(maxsize=1)
@@ -70,6 +105,7 @@ def load_defaults() -> DocsDefaults:
         assets=_string_map(data, path, "assets"),
         site=_string_map(data, path, "site"),
         locales=_locale_labels(data, path),
+        footer=_footer_config(data, path),
     )
 
 
@@ -160,6 +196,7 @@ class DocsConfig:
     :param category_icons: 侧栏分类的图标名，键为 ``docs.toml`` 的 ``category``。
     :param assets: 随包站点素材，``defaults.toml`` 提供默认值。
     :param locales: 站点语言，首项为默认语言；留空时由 ``site.lang`` 推导。
+    :param footer: 页脚关于区块，``defaults.toml`` 提供默认文案与按钮。
     :param deploy: 部署设置，由命令层解释，引擎只透传。
     """
 
@@ -173,6 +210,7 @@ class DocsConfig:
     category_icons: Mapping[str, str] = field(default_factory=lambda: dict(load_defaults().category_icons))
     assets: Mapping[str, str] = field(default_factory=lambda: dict(load_defaults().assets))
     locales: tuple[DocsLocaleConfig, ...] = ()
+    footer: DocsFooterConfig = field(default_factory=DocsFooterConfig)
     deploy: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -190,6 +228,7 @@ class DocsConfig:
         if not self.build.out_dir and "out_dir" in defaults.site:
             object.__setattr__(self, "build", replace(self.build, out_dir=defaults.site["out_dir"]))
         object.__setattr__(self, "locales", self._resolved_locales(defaults, explicit_lang))
+        object.__setattr__(self, "footer", _merge_footer(self.footer, defaults.footer))
         for name, source in (
             ("labels", defaults.labels),
             ("group_titles", defaults.group_titles),
@@ -319,6 +358,7 @@ def load_config(instance: Any) -> DocsConfig:
         category_icons=_string_map(data, path, "category_icons"),
         assets=_string_map(data, path, "assets"),
         locales=locales,
+        footer=_footer_config(data, path),
         deploy=dict(deploy),
     )
 
@@ -367,6 +407,93 @@ def read_command_prefix(root: Path) -> str:
         if isinstance(prefix, str) and prefix.strip():
             return prefix.strip()
     return ""
+
+
+def _footer_config(data: Mapping[str, Any], path: Path) -> DocsFooterConfig:
+    section = data.get("footer")
+    if section is None:
+        return DocsFooterConfig()
+    if not isinstance(section, Mapping):
+        raise DocsError("cli.docs.error.bad_config", path=str(path), reason="[footer] is not a table")
+    return DocsFooterConfig(
+        enabled=_footer_bool(section, "enabled", path),
+        title=_text(section, "title", "").strip(),
+        text=_footer_text(section, path),
+        image=_text(section, "image", "").strip(),
+        links=_footer_links(section, path),
+        copyright=_text(section, "copyright", "").strip(),
+    )
+
+
+def _merge_footer(configured: DocsFooterConfig, defaults: DocsFooterConfig) -> DocsFooterConfig:
+    # 正文与按钮区分“未配置”和“配置为空”：空元组表示有意不显示该类内容。
+    return DocsFooterConfig(
+        enabled=configured.enabled,
+        title=configured.title or defaults.title,
+        text=defaults.text if configured.text is None else configured.text,
+        image=configured.image or defaults.image,
+        links=defaults.links if configured.links is None else configured.links,
+        copyright=configured.copyright or defaults.copyright,
+    )
+
+
+def _footer_bool(data: Mapping[str, Any], name: str, path: Path) -> bool:
+    value = data.get(name)
+    if value is None:
+        return True
+    if not isinstance(value, bool):
+        raise DocsError("cli.docs.error.bad_config", path=str(path), reason=f"[footer] {name} must be a boolean")
+    return value
+
+
+def _footer_text(data: Mapping[str, Any], path: Path) -> tuple[str, ...] | None:
+    value = data.get("text")
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return (value.strip(),) if value.strip() else ()
+    if not isinstance(value, list) or not all(isinstance(line, str) for line in value):
+        raise DocsError(
+            "cli.docs.error.bad_config",
+            path=str(path),
+            reason="[footer] text must be a string or an array of strings",
+        )
+    return tuple(line.strip() for line in value if line.strip())
+
+
+def _footer_links(data: Mapping[str, Any], path: Path) -> tuple[DocsFooterLink, ...] | None:
+    value = data.get("links")
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise DocsError(
+            "cli.docs.error.bad_config",
+            path=str(path),
+            reason="[footer] links must be an array of tables",
+        )
+    links: list[DocsFooterLink] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            raise DocsError(
+                "cli.docs.error.bad_config",
+                path=str(path),
+                reason="[[footer.links]] must be a table",
+            )
+        link = _text(item, "link", "").strip()
+        if not link:
+            raise DocsError(
+                "cli.docs.error.bad_config",
+                path=str(path),
+                reason="[[footer.links]] is missing link",
+            )
+        links.append(
+            DocsFooterLink(
+                text=_text(item, "text", "").strip() or link,
+                link=link,
+                icon=_text(item, "icon", "").strip(),
+            )
+        )
+    return tuple(links)
 
 
 def _theme_color(data: Mapping[str, Any], path: Path) -> str:

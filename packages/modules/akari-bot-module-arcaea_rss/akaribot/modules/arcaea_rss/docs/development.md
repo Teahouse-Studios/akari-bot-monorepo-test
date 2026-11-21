@@ -22,6 +22,8 @@ akaribot module add akari-bot-module-arcaea_rss
 
 机器人每 60 秒轮询一次 `https://webapi.lowiro.com/webapi/serve/static/bin/arcaea/apk/`。接口请求只尝试一次，失败后等待下一个周期，调试模式下记录异常堆栈。
 
+机器人启动后的第一次检查只记录当前版本。之后出现新版本时，推送版本号与下载地址。同一版本只推送一次。
+
 已推送的版本号按客户端分别写入 core 的 `stored_data`。同一实例内的多个客户端各自维护记录。
 
 ## 数据表

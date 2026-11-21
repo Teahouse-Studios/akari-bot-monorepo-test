@@ -23,7 +23,7 @@ packages/
 
 补充说明：
 
-- `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`。查找包时以入口声明为准，目录扫描只在入口声明缺失时使用。
+- `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`。查找包时以 `pyproject.toml` 中声明的入口为准，只有入口缺失时才扫描目录。
 - 执行 `akaribot <子命令>` 时，CLI 通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
 - 仓库根目录保留旧导入入口。`bot.py`、`tester.py` 通过 `sys.modules` 把旧模块名映射到新实现。`core/database/update.py` 只负责把旧版本留下的升级操作交给当前实现处理。
 
@@ -33,11 +33,11 @@ packages/
 | --- | --- | --- |
 | BotDaemon | `python -m akaribot.core.entrypoints.run` | 检查同一实例是否已经启动，执行 pre-init，启动并监控子进程 |
 | pre-init | 守护进程以 `spawn`（Windows、macOS）或 `forkserver` 启动 | 补充缺失的配置项，创建数据表，执行数据库迁移 |
-| 平台进程 | 每个适配器实例对应一个进程，进程名为 `client_name` | 持有平台 SDK、消息上下文和按钮状态 |
+| 平台进程 | 每个适配器实例对应一个进程，进程名为 `client_name` | 维护平台 SDK 连接，保存消息上下文和按钮状态 |
 | Server | 进程名 `server` | 解析消息，执行模块，运行计划任务 |
 | jobqueue-hub | 进程名 `jobqueue-hub`，仅内置 WebSocket 后端 | 维护节点连接，选择接收任务的节点，传递控制信号 |
 
-任何子进程启动前，守护进程都会设置 `AKARI_CONFIG_READONLY=1`。此后所有子进程只能读取配置。pre-init 是唯一可以写配置的进程，它会清除这个标记。
+任何子进程启动前，守护进程都会设置 `AKARI_CONFIG_READONLY=1`。此后所有子进程只能读取配置。只有 pre-init 进程可以写配置，它会清除这个标记。
 
 `<实例根>/.bot.lock` 用来防止同一实例重复启动。同一实例第二次启动时，新进程会以退出码 1 结束。
 
@@ -45,7 +45,7 @@ packages/
 
 1. 守护进程先选择语言，并生成初始 `config.toml`。这个文件只在首次运行时生成，只包含 `default_locale` 和 `config_version`。
 2. pre-init 子进程加载配置模板，补充缺失项，调用 `init_db(generate_schemas=True)` 创建数据表并执行迁移。
-3. 守护进程读取适配器实例。它先检查同一平台是否有重复的登录信息或端口配置，再逐个启动平台进程。
+3. 守护进程读取适配器实例。它会先检查同一平台是否有重复的登录信息或端口配置，再逐个启动平台进程。
 4. 如果 JobQueue 使用 `websocket` 后端，且模式为 `embedded`，守护进程会先启动 Hub，等待它进入就绪状态，最多等待 10 秒。
 5. 启动 Server 进程。之后，守护进程每秒检查一次各子进程的状态。
 
@@ -95,7 +95,7 @@ load_prompt(...)                       投递重启提示，失败不阻塞启�
 
 1. `MessageSession.send_message()` 先整理消息链，再执行关键词过滤、媒体压缩和敏感内容检查。之后经过 `OUTGOING_BEFORE_SEND` Hook，再调用 `PlatformAPI.send_message`。
 2. Server 根据 `owner_peer_id` 把调用交给接收原消息的平台进程。平台进程的 `ContextManager` 完成实际发送，并返回消息 ID。
-3. 主动推送由 `Bot.post_message` 发起。它按场景组和消息通道选出候选会话。每个通道先由队首会话发送，其余会话留作备用。发送失败时，平台进程把备用会话列表交回 Server，Server 再依次尝试下一个会话。
+3. 主动推送由 `Bot.post_message` 发起。它按场景组和消息通道选出候选会话。每个通道先由队首会话发送，其余会话留作备用。发送失败时，平台进程把备用会话列表交回 Server。Server 再依次尝试下一个会话。
 
 ## 计划任务
 
@@ -104,7 +104,7 @@ load_prompt(...)                       投递重启提示，失败不阻塞启�
 - 模块任务 ID 为 `module:<模块>:<序号>`，核心任务 ID 为 `core:<名称>`。
 - `CronTrigger` 和 `DateTrigger` 直接使用，`IntervalTrigger` 按 `schedule_interval_multiplier` 调整间隔。
 - 每个任务最多同时运行一个实例（`max_instances=1`）。错过触发后最多延迟 30 秒执行。
-- 卸载、重载和关闭前会进入维护时段。这段时间内先暂停调度，等正在启动的任务进入运行状态，再取消并收集正在运行的任务。
+- 卸载、重载和关闭前会进入维护时段。这期间内调度器会先停止接受新任务，等待正在启动的任务进入运行状态，再取消并收集正在运行的任务。
 - 维护期间提交、但还没开始执行的任务，会在启动前被拒绝。
 
 ## 关闭顺序

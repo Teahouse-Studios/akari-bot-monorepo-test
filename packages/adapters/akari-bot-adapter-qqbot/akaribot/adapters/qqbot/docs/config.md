@@ -2,7 +2,7 @@
 
 本文整理了 QQ 机器人（官方）适配器的配置项与填写时的注意事项。
 
-配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`，两张表同处 `config/bot_qqbot.toml`。普通项写在 `[bot_qqbot]`，密钥项写在 `[bot_qqbot_secret]`。
+配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都写在 `config/bot_qqbot.toml`。普通项写在 `[bot_qqbot]`，密钥项写在 `[bot_qqbot_secret]`。
 
 ## 配置表 `bot_qqbot`
 
@@ -21,7 +21,7 @@
 | `qq_use_webhook` | bool | `false` | 是否使用 Webhook 接收事件，关闭则连接 Gateway。 |
 | `qq_webhook_host` | str | `0.0.0.0` | Webhook 监听地址。 |
 | `qq_webhook_port` | int | `8080` | Webhook 监听端口。 |
-| `qq_webhook_path` | str | `/` | Webhook 回调路径，须与开放平台配置一致。 |
+| `qq_webhook_path` | str | `/` | Webhook 回调路径，需要与开放平台配置一致。 |
 | `qq_bot_uid` | str | `""` | 机器人 UID。 |
 | `qq_bot_qqnum` | str | `""` | 机器人 QQ 号。 |
 | `qq_api_url` | str | `""` | 自定义 API 基地址，留空使用官方地址。 |
@@ -34,7 +34,7 @@
 
 ## 说明
 
-- 两个实例的 `qq_bot_appid` 与 `qq_bot_secret` 均相同时，视为同一机器人账号。守护进程据此检查是否有多个实例使用同一个账号。
-- `qq_use_markdown` 同时决定按钮、动作文本与消息节点能力。服务器频道不受该配置影响。
+- 两个实例的 `qq_bot_appid` 与 `qq_bot_secret` 都相同时，视为同一个机器人账号。守护进程据此检查是否有多个实例使用同一个账号。
+- `qq_use_markdown` 同时控制按钮、动作文本和消息节点能力。服务器频道不受该配置影响。
 - 回应表情 ID 参见 [QQ 开放平台表情文档](https://bot.q.qq.com/wiki/develop/api-v2/openapi/emoji/model.html#Emoji)。
-- Webhook 模式只监听 HTTP，TLS 由反向代理终止。
+- Webhook 模式提供 HTTP 监听。需要 HTTPS 时，由反向代理处理 TLS。

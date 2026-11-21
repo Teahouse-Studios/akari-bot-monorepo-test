@@ -4,7 +4,7 @@ title: 安装与开发
 
 # minecraft-news：安装与开发
 
-本文将会介绍这两个模块的安装、配置、数据表与运行依赖。
+本页说明这两个模块的安装、配置、数据表与运行依赖。
 
 ## 安装
 
@@ -28,6 +28,10 @@ akaribot module add akari-bot-module-minecraft_news
 两个模块都没有命令，推送目标是启用了对应模块的会话，启用操作由场景管理员完成。两个模块都声明了 `rss=True`，未声明平台限制。
 
 `minecraft-news` 读取文章 JSON 与封面图需要开启 `webrender.enable`，平台还需要支持图片消息才能显示封面。`feedback-news` 使用普通 HTTP 请求，每个分区只尝试一次，失败后等待下一周期。
+
+`minecraft-news` 第一次检查时，把现有文章标题记为起点，此后只推送新文章。`feedback-news` 没有这个起点，第一次检查时尚未记录的条目会直接推送。
+
+`minecraft-news` 读取封面图失败时，只发送标题、摘要和链接。
 
 ## 数据表
 

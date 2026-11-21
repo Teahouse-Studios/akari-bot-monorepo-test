@@ -1,8 +1,10 @@
 # WebUI 控制台
 
-本文将会介绍 WebUI 控制台的启用、访问、登录与反向代理配置。
+WebUI 控制台随 Web 适配器启动，通过浏览器管理实例。
 
-Web 适配器在实例内启动 FastAPI 与 uvicorn 服务，提供浏览器控制台和内置 API。控制台使用单一会话连接机器人，可发送消息、管理配置、查看日志与统计数据。适配器不依赖任何平台账号。
+Web 适配器在实例内启动 FastAPI 与 uvicorn 服务，提供控制台和内置 API。控制台通过一个会话连接机器人，可以发送消息、管理配置、查看日志和统计数据。
+
+适配器默认启用，使用实例内服务，不需要平台账号。
 
 ## 启用与安装
 
@@ -20,15 +22,17 @@ akaribot module add akari-bot-adapter-web
 
 服务默认监听 `127.0.0.1:6485`，控制台地址为 `http://127.0.0.1:6485/webui`。服务启动时会把实际地址写入日志。`web_host` 为 `0.0.0.0` 时，服务还会列出本机网络地址。
 
-`web_port` 被占用时，服务从该端口开始，在 `127.0.0.1` 上依次尝试后面的端口，最多尝试 100 个。全部不可用时，服务记录 `API port is disabled.` 并结束 Web 适配器进程。
+`web_port` 被占用时，服务从该端口开始，在 `127.0.0.1` 上依次尝试后面的端口，最多 100 个。没有可用端口时，服务记录 `API port is disabled.` 并结束 Web 适配器进程。
 
 `web_port = 0` 表示禁用服务。服务改用其他端口后，应以日志中的实际端口访问。
 
-`enable_https = true` 只会把日志与 `/api/init` 返回的访问协议改成 `https`。服务本身不加载证书，TLS 需要由反向代理终止。
+`enable_https = true` 只会把日志与 `/api/init` 返回的访问协议改成 `https`。TLS 由反向代理终止。
 
 ## 配置
 
-配置表为 `bot_web`，密钥表为 `bot_web_secret`，两张表都位于 `config/bot_web.toml`。服务在启动时读取 `web_host`、`web_port`、`enable`、`enable_https`、`allow_origins`、`forwarded_allow_ips` 与 `login_max_attempt`，修改后需重启实例。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都位于 `config/bot_web.toml`。
+
+服务启动时读取 `web_host`、`web_port`、`enable`、`enable_https`、`allow_origins`、`forwarded_allow_ips` 与 `login_max_attempt`。修改这些字段后需重启实例。
 
 | 字段 | 表 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -48,9 +52,9 @@ akaribot module add akari-bot-adapter-web
 
 ## 登录与密码
 
-未设置密码时，`POST /api/login` 不校验口令，直接发出令牌。首次登录后应立刻在控制台设置强口令。把服务暴露到公网前必须先设置密码。
+未设置密码时，`POST /api/login` 无需口令，会直接发出令牌。首次登录后应立即在控制台设置强口令。把服务暴露到公网前必须先设置密码。
 
-密码以 Argon2 哈希保存在 `data/private/web/.password`。删除该文件即可重置密码，两步验证与恢复代码会一并失效，之后可以再次免密登录并设置新密码。运行中的服务每 30 秒检查一次文件，发现被删除时记录安全事件。
+密码以 Argon2 哈希保存在 `data/private/web/.password`。删除该文件即可重置密码，两步验证和恢复代码会一并失效。之后可以再次免密登录，并设置新密码。运行中的服务每 30 秒检查一次文件，发现被删除时记录安全事件。
 
 <NoticeBox type="danger">
 
@@ -67,8 +71,9 @@ akaribot module add akari-bot-adapter-web
 ## 反向代理与 HTTPS
 
 - `forwarded_allow_ips` 会传给 uvicorn。只有来自这些地址的 `X-Forwarded-For` 才会被采信，默认仅信任本机。代理不在本机时，填入代理地址。`["*"]` 信任所有来源，不建议在不可控网络中使用。
-- `allow_origins` 控制浏览器跨域访问，留空表示不向其它来源开放 CORS。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
-- 在反向代理上终止 TLS，再把请求转发到 `127.0.0.1:6485`。同时把 `enable_https` 设为 `true`，让日志与前端拿到正确的访问协议。直接对外监听时，需要在防火墙中放行公网端口，并先设置密码。
+- `allow_origins` 控制浏览器跨域访问。留空表示不向其他来源开放 CORS。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
+- 在反向代理上终止 TLS，再把请求转发到 `127.0.0.1:6485`。同时把 `enable_https` 设为 `true`，让日志和前端拿到正确的访问协议。
+- 直接对外监听时，需要在防火墙中放行公网端口，并先设置密码。
 
 ## 功能范围
 
@@ -80,7 +85,7 @@ akaribot module add akari-bot-adapter-web
 - 日志：通过 `/ws/logs` 推送当天 `logs/*_<日期>.log` 的新增内容。
 - 聊天：通过 `/ws/chat` 发送文本与图片、添加表情回应，并处理按钮回调与心跳。
 - 会话与用户：查询和修改场景、用户数据，调整屏蔽、禁止发言、信任、超级管理员与模块启用状态。
-- 模块：模块列表、说明文档、关联模块，以及重载、装载与卸载。
+- 模块：模块列表、说明文档、关联模块，以及重载、加载与卸载。
 - 文件：浏览与编辑实例的 `assets/`、`data/`、`cache/` 及模块的 `assets/` 与 `data/`，支持上传、新建、重命名、下载与删除。媒体文件通过 `/api/media/{token}` 读取。
 - WebRender：查看状态，启动或停止服务，并执行测试渲染。
 - 更新与重启：`/api/update` 与 `/api/restart`。

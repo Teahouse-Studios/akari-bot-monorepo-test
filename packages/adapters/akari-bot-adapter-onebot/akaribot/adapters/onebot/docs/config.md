@@ -2,7 +2,7 @@
 
 本文整理了 OneBot 适配器的配置表项与填写时的注意事项。
 
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`，两张表同处 `config/bot_onebot.toml`。普通项写在 `[bot_onebot]`，密钥项写在 `[bot_onebot_secret]`。
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都写在 `config/bot_onebot.toml`。普通项写在 `[bot_onebot]`，密钥项写在 `[bot_onebot_secret]`。
 
 ## 配置表 `bot_onebot`
 
@@ -22,7 +22,7 @@
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `qq_access_token` | str | `""` | 连接 WebSocket 服务器的 Access Token。 |
+| `qq_access_token` | str | `""` | 连接 WebSocket 服务器的访问令牌。 |
 
 ## 说明
 

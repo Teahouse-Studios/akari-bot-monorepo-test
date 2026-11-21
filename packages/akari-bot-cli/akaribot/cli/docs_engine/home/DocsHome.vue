@@ -2,7 +2,8 @@
 import { computed } from "vue";
 import { useData, withBase } from "vitepress";
 import { useAkariColorScheme } from "../../composables/useColorScheme";
-import { useBrandAsset } from "../../composables/useBrandAsset";
+
+const BRAND_EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 
 type HomeAction = {
   label: string;
@@ -80,56 +81,69 @@ const isDark = computed(() => resolved.value === "dark");
 const logo = useBrandAsset("logo", "/home/logo.png");
 const logoDark = useBrandAsset("logoDark", "/home/logo-night.png");
 
+/** 读 ``themeConfig.akari.brand`` 的品牌插槽；未配置的位置回退到随包内置图片。 */
+function useBrandAsset(key: string, fallback: string) {
+  const { theme } = useData();
+  return computed(() => {
+    const akari = (theme.value as { akari?: unknown }).akari;
+    const brand = akari && typeof akari === "object" ? (akari as { brand?: unknown }).brand : undefined;
+    const raw = brand && typeof brand === "object" ? (brand as Record<string, unknown>)[key] : undefined;
+    const path = (typeof raw === "string" && raw.trim()) || fallback;
+    if (BRAND_EXTERNAL.test(path)) return path;
+    return withBase(path.startsWith("/") ? path : `/${path}`);
+  });
+}
+
 const lightVineColors = {
-  leaf: "#ff3fae",
-  flower: "#ff9fd6",
-  flowerStem: "#ff7fc8",
-  bud: "#ffc9e6",
-  base: "#f7a8d6",
-  fill: "#ff3fae",
-  tint: "#ffd9ee",
-  halo: "#ffe8f4",
-  edge: "#f7a8d6",
-  fine: "#ffd9ee",
+  leaf: "#a855f7",
+  flower: "#c9a2fb",
+  flowerStem: "#b47ceb",
+  bud: "#dcc3f8",
+  base: "#c49cf0",
+  fill: "#a03cf0",
+  tint: "#e2d3fb",
+  halo: "#f1e8ff",
+  edge: "#a877e8",
+  fine: "#d6c0f7",
 };
 
 const darkVineColors = {
-  leaf: "#480436",
-  flower: "#f0b7e1",
-  flowerStem: "#e684cc",
-  bud: "#c577b0",
-  base: "#e69ed3",
-  fill: "#870d6d",
-  tint: "#f07fd2",
-  halo: "#e580ca",
-  edge: "#c346a2",
-  fine: "#d841b0",
+  leaf: "#2a0a4a",
+  flower: "#d9bcf7",
+  flowerStem: "#b892ec",
+  bud: "#a98ad6",
+  base: "#c9a6f2",
+  fill: "#5a1f9e",
+  tint: "#c79cf5",
+  halo: "#b98af0",
+  edge: "#9a6ae0",
+  fine: "#b57ef0",
 };
 
 const lightPopoutColors = {
-  leaf: "#ff3fae",
-  flower: "#ff9fd6",
-  flowerStem: "#ff7fc8",
-  bud: "#ffc9e6",
-  base: "#f7a8d6",
-  fill: "#ff3fae",
-  tint: "#ffd9ee",
-  halo: "#ffe8f4",
-  edge: "#f7a8d6",
-  fine: "#ffd9ee",
+  leaf: "#a855f7",
+  flower: "#c9a2fb",
+  flowerStem: "#b47ceb",
+  bud: "#dcc3f8",
+  base: "#c49cf0",
+  fill: "#a03cf0",
+  tint: "#e2d3fb",
+  halo: "#f1e8ff",
+  edge: "#a877e8",
+  fine: "#d6c0f7",
 };
 
 const darkPopoutColors = {
-  leaf: "#5c0a46",
-  flower: "#a16891",
-  flowerStem: "#8e2572",
-  bud: "#902373",
-  base: "#9a4c85",
-  fill: "#912173",
-  tint: "#74255f",
-  halo: "#6f1557",
-  edge: "#7b1e62",
-  fine: "#832168",
+  leaf: "#33105c",
+  flower: "#8a6cb0",
+  flowerStem: "#6a3f9e",
+  bud: "#6f45a8",
+  base: "#7d58a8",
+  fill: "#5f2b9e",
+  tint: "#4a2a78",
+  halo: "#452468",
+  edge: "#56307f",
+  fine: "#5c3488",
 };
 
 

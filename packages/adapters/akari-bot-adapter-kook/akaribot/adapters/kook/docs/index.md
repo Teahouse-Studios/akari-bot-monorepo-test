@@ -1,10 +1,12 @@
 # KOOK 适配器
 
-此适配器以机器人身份连接 KOOK 开放平台，接入服务器频道、私聊与成员事件。
+KOOK 适配器以机器人身份连接 KOOK 开放平台，接入服务器频道、私聊和成员事件。
 
 ## 平台概述
 
-适配器通过 KOOK 开放平台网关建立长连接，不监听本地端口。消息来自服务器频道或私聊，频道消息按 KOOK Markdown（KMD）解析。服务器成员加入与退出等事件由网关推送。
+适配器通过 KOOK 开放平台网关建立长连接。消息来自服务器频道或私聊，频道消息按 KOOK Markdown（KMD）解析。
+
+服务器成员的加入和退出事件由网关推送。
 
 ## 安装
 
@@ -14,13 +16,13 @@
 akaribot module add akari-bot-adapter-kook
 ```
 
-安装后，适配器由守护进程按配置启动，启动条件为 `bot_kook.enable = true`。
+安装后，守护进程按配置启动适配器。`bot_kook.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_kook`，密钥表为 `bot_kook_secret`，两张表同处 `config/bot_kook.toml`。
+配置表为 `bot_kook`，密钥表为 `bot_kook_secret`。两张表都写在 `config/bot_kook.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`，两张表同处 `config/bot_kook-<实例 ID>.toml`。
+需要多个机器人账号时，用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`。两张表都写在 `config/bot_kook-<实例 ID>.toml`。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -42,7 +44,7 @@ akaribot config set kook_token <令牌> --table bot_kook_secret
 ## 必填信息
 
 - `kook_token`：在 KOOK 开发者平台的机器人页面获取。
-- 需要先把机器人邀请至目标服务器，并授予读取消息、发送消息与撤回消息的权限。
+- 先把机器人邀请到目标服务器。机器人需要读取消息、发送消息和撤回消息的权限。
 
 ## 平台能力
 
@@ -65,9 +67,11 @@ akaribot config set kook_token <令牌> --table bot_kook_secret
 
 ## 私信与群聊
 
-- 服务器频道目标前缀为 `KOOK|Group`，私聊为 `KOOK|Person`，服务器事件使用 `KOOK|Guild`。
-- 私聊不要求 @机器人。频道消息是否必须 @机器人，由 core 配置 `config.mention_required` 决定。
-- 频道消息仅处理文本与图片类型。
+- 服务器频道的目标前缀是 `KOOK|Group`。
+- 私聊的目标前缀是 `KOOK|Person`。
+- 服务器事件的目标前缀是 `KOOK|Guild`。
+- 私聊不需要 @机器人。频道消息是否必须 @机器人由 core 的 `config.mention_required` 控制。
+- 频道消息只处理文本和图片。
 
 ## 外部依赖
 

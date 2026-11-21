@@ -1,12 +1,12 @@
 # Discord 适配器
 
-Discord 适配器用于以机器人身份连接 Discord，接收服务器频道消息、私信、表情回应与成员变动事件。
+Discord 适配器以机器人身份连接 Discord，接收服务器频道消息、私信、表情回应和成员变动事件。
 
 ## 平台概述
 
-适配器通过 Discord Bot Gateway 建立长连接，不监听本地端口。消息以频道为场景，私信会话标记为私密。
+适配器通过 Discord Bot Gateway 建立长连接。消息按频道划分场景，私信会话标记为私密。
 
-斜杠命令在机器人启动时注册。用户在频道或私信中使用斜杠命令，机器人按普通命令处理。
+机器人启动时注册斜杠命令。用户在频道或私信中使用斜杠命令，机器人按普通命令处理。
 
 ## 安装
 
@@ -16,13 +16,13 @@ Discord 适配器用于以机器人身份连接 Discord，接收服务器频道�
 akaribot module add akari-bot-adapter-discord
 ```
 
-安装后由守护进程按配置启动，启动条件为 `bot_discord.enable = true`。
+安装后由守护进程按配置启动。`bot_discord.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_discord`，密钥表为 `bot_discord_secret`，两张表都写在 `config/bot_discord.toml` 中。
+配置表为 `bot_discord`，密钥表为 `bot_discord_secret`。两张表都写在 `config/bot_discord.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add discord <实例 ID>` 新增实例。实例表名为 `bot_discord-<实例 ID>`，密钥表名为 `bot_discord-<实例 ID>_secret`，两张表都写在 `config/bot_discord-<实例 ID>.toml` 中。
+需要多个机器人账号时，用 `akaribot adapter instance add discord <实例 ID>` 新增实例。实例表名为 `bot_discord-<实例 ID>`，密钥表名为 `bot_discord-<实例 ID>_secret`。两张表都写在 `config/bot_discord-<实例 ID>.toml`。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -44,8 +44,8 @@ akaribot config set discord_token <令牌> --table bot_discord_secret
 ## 必填信息
 
 - `discord_token`：在 Discord Developer Portal 的 Bot 页面获取。
-- 开发者门户中须开启 Message Content Intent 与 Server Members Intent。未开启时机器人收不到消息正文与成员事件。
-- 机器人需具备读取频道、发送消息、管理消息与添加表情回应的权限。
+- 在开发者门户的 Bot 页面开启 Message Content Intent 与 Server Members Intent。不开时机器人收不到消息正文与成员事件。
+- 机器人需要读取频道、发送消息、管理消息和添加表情回应的权限。
 
 ## 平台能力
 
@@ -66,9 +66,11 @@ akaribot config set discord_token <令牌> --table bot_discord_secret
 
 ## 私信与群聊
 
-- 服务器频道、私信与服务器事件的目标前缀分别为 `Discord|Channel`、`Discord|DM|Channel` 与 `Discord|Guild`。
-- 私信不要求 @机器人。频道消息是否必须 @机器人，由 core 的配置项 `mention_required` 决定。
-- 机器人忽略自身与其他机器人发送的消息。
+- 服务器频道的目标前缀是 `Discord|Channel`。
+- 私信的目标前缀是 `Discord|DM|Channel`。
+- 服务器事件的目标前缀是 `Discord|Guild`。
+- 私信不需要 @机器人。频道消息是否必须 @机器人由 core 的 `mention_required` 控制。
+- 机器人忽略自身和其他机器人发送的消息。
 
 ## 外部依赖
 

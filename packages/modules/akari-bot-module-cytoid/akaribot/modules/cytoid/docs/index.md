@@ -1,3 +1,11 @@
+---
+hero:
+  image: /module-cytoid/assets/cytoid.jpg
+  alt: Cytoid 游戏画面
+  tagline: 查询玩家资料，生成 B30 与 R10 成绩图。
+  fit: cover
+---
+
 # cytoid
 
 此模块用于查询 Cytoid 玩家资料，生成 B30（最佳 30 首）与 R10（最近 10 首）成绩图，并记录发送者的账号绑定。

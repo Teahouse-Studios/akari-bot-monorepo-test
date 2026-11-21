@@ -10,12 +10,12 @@
 
 `init_db()` 注册两个连接与两个应用：
 
-| 连接 | 默认连接串 | 应用 | 内容 |
+| 连接 | 默认连接字符串 | 应用 | 内容 |
 | --- | --- | --- | --- |
 | `default` | `sqlite://database/save.db` | `models` | 核心模型与各包的模型 |
 | `local` | `sqlite://database/local.db` | `local_models` | 本机缓存表 |
 
-`default` 的连接串取自 `CoreSecretConfig.db_path`。SQLite 的相对路径以实例根为基准解析，进程可以从任意目录启动。
+`default` 的连接字符串由 `CoreSecretConfig.db_path` 提供。SQLite 的相对路径以实例根为基准解析，进程可以从任意目录启动。
 
 连接参数先设置 `busy_timeout=30000`，然后启用 WAL。并发启动时，等待写锁的时间也受这个超时约束。
 
@@ -37,7 +37,7 @@ class MyModuleData(DBModel):
 
 框架从各包的发现信息里收集模型文件。`PackageRegistry.db_model_paths()` 给出导入路径。
 
-`init_db()` 把这些路径追加到 `models` 应用。`get_model_names()` 与 `get_model_fields()` 供 `~database` 命令枚举表和字段。
+`init_db()` 把这些模型路径加入 `models` 应用。`get_model_names()` 与 `get_model_fields()` 供 `~database` 命令列出数据表与字段。
 
 ## union 数据
 
@@ -48,7 +48,7 @@ class MyModuleData(DBModel):
 | `sender_union_info` | `union_id` | 用户数据：`blocked`、`trusted`、`superuser`、`warns`、`petal`、`sender_data` |
 | `sender_union_bind` | `sender_id` → `union_id` | 平台账号到用户 union 的映射 |
 | `target_union_info` | `union_id` | 场景数据：`muted`、`locale`、`modules`、`custom_admins`、`banned_users`、`target_data` |
-| `target_union_bind` | `target_id` → `union_id`，`channel_id` | 平台场景到场景 union 的映射与消息通道号 |
+| `target_union_bind` | `target_id` → `union_id`，`channel_id` | 平台场景到场景 union 的映射与消息通道编号 |
 
 `resolve_union(id, create)` 返回记录所属的 union。`create` 为真且记录不存在时，它会新建。
 
@@ -56,9 +56,9 @@ class MyModuleData(DBModel):
 
 同一 union 下 `channel_id` 相同的场景被视为同一条消息通道。主动推送按通道只发送一次。
 
-`delete_union()` 会先校验引用，再级联清理该 union 所在域的全部表。
+`delete_union()` 先校验引用，再清理该 union 所在域的全部表。
 
-跨表写入同一 union 时，先调用 `union_mutation()`，再在 `default` 事务里锁住 union 行：
+跨表写入同一 union 时，先调用 `union_mutation()`，再在 `default` 事务中对该 union 的行加锁：
 
 ```python
 from tortoise.transactions import in_transaction
@@ -87,7 +87,7 @@ async def bind(union_id: str, username: str) -> bool:
 
 查询与写入必须共用同一个 `connection`，否则 `select_for_update()` 的行锁不覆盖后续写入。
 
-核心包在 `manifest.toml` 的 `owned_tables` 中声明自己拥有的表，数据清理时据此判断表的归属。分发包的模型与表由各自的 `manifest.toml` 声明。
+核心包在 `manifest.toml` 的 `owned_tables` 中声明自己拥有的表，数据清理时据此判断数据表属于哪个包。各包的模型与表由自己的 `manifest.toml` 声明。
 
 ## 迁移
 
@@ -108,14 +108,14 @@ async def upgrade(ctx):
 - 每条 revision 必须可重复执行：MySQL 的 DDL 自动提交，无法与版本记录写入同一事务，因此每一步先探测再执行。SQLite 支持事务性 DDL，Runner 把单条 revision 与版本记录包进同一事务。
 - `MigrationContext` 提供 `execute()`、`execute_script()`、`fetch_all()`、`has_table()`、`has_column()`、`rename_table()`、`rename_column()`，按方言生成 SQL。
 
-迁移只在创建数据表的写入进程中执行。pre-init 以 `generate_schemas=True` 调用 `init_db()`，随后运行 `run_startup_migrations()`。平台进程与 Server 不创建数据表，也不修改表结构。
+迁移只在创建数据表的写入进程中执行。pre-init 以 `generate_schemas=True` 调用 `init_db()`，随后运行 `run_startup_migrations()`。平台进程与 Server 只读写已有的数据，数据表与表结构的创建和修改都在写入进程中进行。
 
 ## 热重载
 
 模块安装、卸载或数据库维护会重建连接：
 
 1. `prepare_db_reload()` 在旧 context 仍可用时初始化新 context。
-2. 激活前先等待 JobQueue 排空，并让 Scheduler 进入维护窗口，停止领取新任务并取消运行中的计划任务。
+2. 激活前先等待 JobQueue 处理完队列中的任务，并让 Scheduler 进入维护窗口：停止接收新任务，取消正在运行的计划任务。
 3. `activate_db_reload()` 原子替换全局 context，随后关闭旧 context。
 4. 失败时 `close_prepared_db_reload()` 丢弃未激活的 context，旧连接保持可用。
 

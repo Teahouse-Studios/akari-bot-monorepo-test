@@ -221,6 +221,23 @@ def create_venv_argv(
     return argv
 
 
+def uv_environment(instance: Instance) -> dict[str, str] | None:
+    """为 uv 子进程准备环境变量。
+
+    默认缓存位于用户家目录；受限环境里该目录可能不可写，导致安装前检查就失败。实例已有
+    ``cache`` 目录，未显式设置 ``UV_CACHE_DIR`` 时改用它，安装不再依赖家目录权限。
+    """
+    root = getattr(instance, "root", None)
+    if root is None:
+        return None
+    env = dict(os.environ)
+    if not env.get("UV_CACHE_DIR"):
+        cache = root / "cache" / "uv"
+        cache.mkdir(parents=True, exist_ok=True)
+        env["UV_CACHE_DIR"] = str(cache)
+    return env
+
+
 def install_argv(python: Path, specs: Sequence[str], *, upgrade: bool = False) -> list[str]:
     """``uv pip install --python <解释器>`` 的 argv。"""
     argv = [uv_binary(), "pip", "install", "--python", str(python)]

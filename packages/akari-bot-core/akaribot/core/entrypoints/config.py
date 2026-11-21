@@ -405,6 +405,10 @@ def main(argv: list[str] | None = None) -> int:
         module_name = f"{entry.import_path}.config"
         try:
             importlib.import_module(module_name)
+            # 配置模板在导入时写盘；当前进程启动时还没有这张表，必须重新加载后再读 schema。
+            from akaribot.core.builtins.config import CFGManager
+
+            CFGManager.load()
         except ModuleNotFoundError as exc:
             # 包没有模块配置模板（bundled core 即如此，其配置由首次运行扫描生成），不是失败。
             if exc.name != module_name:

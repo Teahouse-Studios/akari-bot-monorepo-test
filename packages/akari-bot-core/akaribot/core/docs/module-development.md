@@ -14,6 +14,8 @@ akaribot tui
 
 开发页列出当前实例与工作区的包。按 `n` 打开“新建包”对话框。
 
+![开发页列出的包](assets/tui-dev-packages.png)
+
 ## 生成第一个模块
 
 在“新建包”对话框中填写以下内容：
@@ -135,7 +137,7 @@ async def test_greet_default(tester: Tester):
 
 如果实例正在运行，新模块会直接加载。实例未运行时，模块会在下次启动时加载。
 
-安装只是把模块放进实例。普通模块还需要在场景内启用。场景管理员在会话中执行：
+安装只负责让实例能加载这个模块。普通模块还需要在场景内启用。场景管理员在会话中执行：
 
 ```text
 ~module enable greet
@@ -207,7 +209,7 @@ config_table = "module_dice"
 provides_modules = ["dice"]
 ```
 
-示例只写包名。实际的版本范围从包根 `pyproject.toml` 的 `dependencies` 读取，文档不重复具体约束。
+示例只写包名。实际的版本范围从包目录下的 `pyproject.toml` 的 `dependencies` 读取，文档不重复具体约束。
 
 清单字段如下：
 
@@ -222,15 +224,15 @@ provides_modules = ["dice"]
 | `owned_tables` | 数据清理时归属本包的表 |
 | `credential_fields` | 启动前用于多实例查重的登录信息字段 |
 
-未识别的键只会给出告警，不影响加载。
+未识别的键只会记录警告，不影响加载。
 
 ## 发现与加载
 
-`PackageRegistry` 读取已安装分发包声明的模块入口，`load_order()` 按依赖关系给出激活顺序。模块只依赖 `akaribot.core.api` 的公开接口。分发包缺少模块声明时，框架才用目录扫描发现模块。
+`PackageRegistry` 读取已安装分发包声明的模块入口，`load_order()` 按依赖关系确定加载顺序。模块只依赖 `akaribot.core.api` 的公开接口。分发包缺少模块声明时，框架才用目录扫描发现模块。
 
-JobQueue 处理完现有任务、Scheduler 进入维护时段后，框架才会执行安装、卸载和重载。框架会替换原有注册项，但要等正在运行的任务退出后才生效。
+JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执行安装、卸载和重载。框架会替换原有的注册项，新注册项在正在运行的任务退出后生效。
 
-加载失败原因写入 `.cache_loader`。`ModulesManager.reload_module()` 返回 `(状态, 重载次数)`。命令 `~module reload` 失败时会给出提示。
+模块加载失败或不兼容时，失败原因写入 `.cache_loader`，启动提示会读取这个文件。`ModulesManager.reload_module()` 返回 `(状态, 重载次数)`。命令 `~module reload` 失败时会给出提示。
 
 ## 声明模块
 
@@ -339,7 +341,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.rename.done", name=name))
 ```
 
-`wait_next_message()` 只接受触发命令的用户发来的下一条消息。这条消息仍会走常规解析流程。如果用户发的是一条命令，那条命令也可能被执行。`delete=True` 会在等待结束后删除机器人发出的提示。
+`wait_next_message()` 等待下一条消息。这条消息必须来自触发命令的用户。这条消息仍会走常规解析流程。如果用户发的是一条命令，那条命令也可能被执行。`delete=True` 会在等待结束后删除机器人发出的提示。
 
 ### 等待引用回复
 
@@ -358,7 +360,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.apply.done", note=note))
 ```
 
-`wait_reply()` 要求用户引用机器人发出的那条提示再回复。平台不支持引用时，它会改为等待下一条消息。传 `all_=True` 时改为等待场景内任意成员。
+`wait_reply()` 等待用户引用机器人发出的那条提示再回复。用户需要引用这条提示。平台不支持引用时，它会改为等待下一条消息。传 `all_=True` 时改为等待场景内任意成员。
 
 ### 等待任何人回答
 
@@ -377,12 +379,14 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.quiz.result", answer=answer))
 ```
 
-`wait_anyone()` 等待场景内第一个回答的成员，可直接回答，也可引用提示。适合抢答、投票和多人协作。它的提示需要在 `greet.message.quiz.prompt` 里写清楚怎么回答。
+`wait_anyone()` 等待场景内第一个回答的成员。成员可以直接回答，也可以引用提示。适合抢答、投票和多人协作。它的提示需要在 `greet.message.quiz.prompt` 里写清楚怎么回答。
 
 只需要暂停几秒时，用 `await msg.sleep(3)`。它和等待方法一样，会在暂停期间释放执行锁。
 
 <NoticeBox type="warning" title="等待异常">
+
 `WaitCancelException` 和 `SessionFinished` 继承 `BaseException`，`except Exception` 捕获不到。等待超时、用户取消、会话结束要分别处理。
+
 </NoticeBox>
 
 ## 正则匹配
@@ -409,7 +413,7 @@ async def _(msg: Bot.MessageSession):
         await msg.send_message(f"找到 av{video_id}")
 ```
 
-`mode="A"` 使用 `findall`，找出消息里的全部匹配并去重。`msg.matched_msg` 是匹配文本组成的元组。例子只取前 5 个，避免一条消息触发太多次回复。这里的回复文本只是演示，实际模块应换成查询到的视频信息。
+`mode="A"` 使用 `findall` 找出消息里的全部匹配。匹配结果会去重。`msg.matched_msg` 是匹配文本组成的元组。例子只取前 5 个，避免一条消息触发太多次回复。这里的回复文本只是演示，实际模块应换成查询到的视频信息。
 
 `mode="M"` 使用 `re.match`，只从文本开头匹配。命中后 `msg.matched_msg` 是正则的 Match 对象，可以用 `group()` 取分组：
 
@@ -556,7 +560,7 @@ async def _(event: Bot.EventInfo):
 
 运行期可以调用 `await msg.check_permission()` 判断当前用户是否为场景管理员，调用 `msg.check_super_user()` 判断是否为超级用户。
 
-基础模块始终开启。普通模块需要在场景内执行 `~module enable`。`~auth` 可以给单个用户授予模块级超级用户权限。
+基础模块始终开启，普通模块要先在场景内执行 `~module enable` 才能使用。`~auth` 可以给单个用户授予模块级超级用户权限。
 
 ## 配置、数据库与本地化
 
@@ -585,7 +589,7 @@ async def _(event: Bot.EventInfo):
 
 ## 会话接口
 
-`send_message()` 发送消息并返回 `FinishedSession`。`finish()` 发送后抛出 `SessionFinished`。
+`send_message()` 发送消息，返回 `FinishedSession`。`finish()` 发送消息后结束当前处理，并抛出 `SessionFinished`。
 
 `wait_confirm()`、`wait_next_message()`、`wait_reply()`、`wait_anyone()` 的用法见上文“等待用户交互”。`sleep()` 在暂停期间释放执行锁。
 

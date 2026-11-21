@@ -165,6 +165,45 @@ async def _test_adapter_enable_comment_is_localized():
     return result.returncode == 0 and comment and "I18N" not in comment and "config.comments" not in comment
 
 
+async def _test_sync_reloads_new_adapter_table():
+    # 适配器配置模板在 import 时写盘；入口必须在读取 schema 前重新加载配置。
+    # 否则首次安装时表还不存在，配置补全会以“配置表不存在”失败。
+    with _instance() as root:
+        (root / "config" / "config.toml").write_text('default_locale = "zh_cn"\n', encoding="utf-8")
+        fake = root / "fake-site"
+        adapter = fake / "fakeadapter"
+        adapter.mkdir(parents=True)
+        (adapter / "__init__.py").write_text("", encoding="utf-8")
+        (adapter / "manifest.toml").write_text(
+            'schema = 1\nrequires_core_api = ">=1"\nconfig_table = "bot_demo"\n', encoding="utf-8"
+        )
+        (adapter / "config.py").write_text(
+            "from pathlib import Path\n"
+            "from akaribot.core.paths import Paths\n"
+            "(Path(Paths.config) / 'bot_demo.toml').write_text("
+            "'[bot_demo]\\nenable = false\\n[bot_demo_secret]\\ntoken = \"<Replace me with str value>\"\\n',"
+            " encoding='utf-8')\n",
+            encoding="utf-8",
+        )
+        dist = fake / "fake_adapter-0.1.0.dist-info"
+        dist.mkdir()
+        (dist / "METADATA").write_text("Metadata-Version: 2.1\nName: fake-adapter\nVersion: 0.1.0\n", encoding="utf-8")
+        (dist / "entry_points.txt").write_text("[akaribot.adapters]\ndemo = fakeadapter\n", encoding="utf-8")
+        env = dict(os.environ, AKARI_INSTANCE_DIR=str(root), PYTHONPATH=str(fake))
+        env.pop("AKARI_CONFIG_PATH", None)
+        result = subprocess.run(
+            [sys.executable, "-m", ENTRYPOINT, "sync", "--package", "fake-adapter"],
+            cwd=str(root),
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+            check=False,
+        )
+    return result.returncode == 0 and "bot_demo" in result.stdout and "占位 1 项" in result.stdout
+
+
 @func_case
 async def test_entrypoint_config(tester: Tester):
     """core.entrypoints.config: 占位符统计入口测试"""
@@ -174,4 +213,5 @@ async def test_entrypoint_config(tester: Tester):
     await tester.test(_test_missing_table_and_separator_are_rejected, "缺表与含分隔符的表名进 failed")
     await tester.test(_test_default_scan_covers_every_table, "缺省遍历配置目录下的全部表")
     await tester.test(_test_adapter_enable_comment_is_localized, "schema 给适配器 enable 输出已翻译的注释")
+    await tester.test(_test_sync_reloads_new_adapter_table, "config sync 在导入新适配器后重新加载配置")
     return tester

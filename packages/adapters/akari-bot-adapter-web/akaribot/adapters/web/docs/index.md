@@ -1,14 +1,14 @@
 # Web 控制台适配器
 
-本文将会介绍 Web 控制台适配器的安装、配置与平台能力。
+Web 控制台适配器在实例内启动 Web 服务，提供 WebUI 控制台和内置 API。
 
 ## 平台概述
 
-适配器在实例内启动 Web 服务，提供 WebUI 控制台与内置 API。服务基于 FastAPI 与 uvicorn，前端静态资源来自 `akari-bot-webui` 分发包或实例的 `data/webui/dist` 目录。
+服务基于 FastAPI 与 uvicorn。前端静态资源来自 `akari-bot-webui` 分发包，或实例的 `data/webui/dist` 目录。
 
-控制台以单一会话连接机器人，可以发送消息、管理会话与文件，也可以查看配置、日志与统计数据。
+控制台通过一个会话连接机器人，可以发送消息、管理会话和文件，也可以查看配置、日志和统计数据。
 
-该适配器默认启用，不依赖任何平台账号。访问、认证与反向代理的完整说明见 [WebUI 控制台](webui.md)。
+适配器默认启用，使用实例内服务，不需要平台账号。访问、认证和反向代理的完整说明见 [WebUI 控制台](webui.md)。
 
 ## 安装
 
@@ -22,9 +22,9 @@ akaribot module add akari-bot-adapter-web
 
 ## 配置
 
-配置表为 `bot_web`，密钥表为 `bot_web_secret`，两张表同处 `config/bot_web.toml`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都写在 `config/bot_web.toml`。
 
-若需要多个 Web 服务实例，用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`，两张表同处 `config/bot_web-<实例 ID>.toml`。
+需要多个 Web 服务实例时，用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`。两张表都写在 `config/bot_web-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -41,7 +41,7 @@ akaribot module add akari-bot-adapter-web
 - 默认监听 `127.0.0.1:6485`，WebUI 地址为 `http://127.0.0.1:6485/webui`。
 - 端口被占用时，从 `web_port` 开始向后逐个尝试，最多 100 个端口。没有可用端口时进程退出。
 - `web_port = 0` 时直接禁用服务。
-- `enable_https = true` 只改变访问地址的协议与 WebUI 配置，TLS 由反向代理终止。
+- `enable_https = true` 只改变日志与 `/api/init` 返回的访问协议。TLS 由反向代理终止。
 
 ## 认证
 
@@ -56,7 +56,7 @@ akaribot module add akari-bot-adapter-web
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| 图片、音频、视频 | 支持 | 发送支持三类媒体；入站支持文本与图片。 |
+| 图片、音频、视频 | 支持 | 发送支持三类媒体。入站支持文本与图片。 |
 | Markdown | 支持 | 支持渲染，用户可切换 Markdown 渲染。 |
 | 按钮与动作文本 | 支持 | 控制台内交互。 |
 | 表情回应 | 支持 | 控制台内回应。 |
@@ -69,13 +69,13 @@ akaribot module add akari-bot-adapter-web
 | 私信 | 支持 | 控制台会话为私密会话。 |
 | RSS 推送 | 不支持 | — |
 
-控制台不受场景级模块开关限制，`require_enable_modules` 为 `false`。
+控制台始终可用，`require_enable_modules` 为 `false`。
 
 ## 私信与群聊
 
 - 目标固定为 `Web|Console|0`，发送者固定为 `Web|0`，会话按私密处理。
 - `Web|0` 在服务启动时自动获得超级管理员身份。
-- 不存在群聊场景，所有控制台消息进入同一会话。
+- 所有控制台消息进入同一会话。
 
 ## 外部依赖
 

@@ -1,10 +1,10 @@
 # Milky 适配器
 
-Milky 适配器通过 Milky 协议端连接 QQ，接入群聊与私信，并处理好友请求和群邀请事件。
+Milky 适配器通过 Milky 协议端连接 QQ，接入群聊和私信。好友请求和群邀请也由适配器处理。
 
 ## 平台概述
 
-适配器作为 HTTP 客户端连接 Milky 协议端，订阅事件流并调用协议端接口收发消息。适配器不监听本地端口。事件流断开后每隔 5 秒重连。
+适配器作为 HTTP 客户端连接 Milky 协议端，订阅事件流并调用协议端接口收发消息。事件流断开后，适配器每隔 5 秒重连一次。
 
 ## 安装
 
@@ -14,13 +14,13 @@ Milky 适配器通过 Milky 协议端连接 QQ，接入群聊与私信，并处�
 akaribot module add akari-bot-adapter-milky
 ```
 
-安装后由守护进程按配置启动。`bot_milky.enable` 为 `true` 时才启动。
+安装后由守护进程按配置启动。`bot_milky.enable` 为 `true` 时启动。
 
 ## 配置
 
-配置表为 `bot_milky`，密钥表为 `bot_milky_secret`，两张表同处 `config/bot_milky.toml`。
+配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都写在 `config/bot_milky.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add milky <实例 ID>` 新增实例。实例表名为 `bot_milky-<实例 ID>`，密钥表名为 `bot_milky-<实例 ID>_secret`，两张表同处 `config/bot_milky-<实例 ID>.toml`。
+需要多个机器人账号时，用 `akaribot adapter instance add milky <实例 ID>` 新增实例。实例表名为 `bot_milky-<实例 ID>`，密钥表名为 `bot_milky-<实例 ID>_secret`。两张表都写在 `config/bot_milky-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -37,9 +37,9 @@ akaribot module add akari-bot-adapter-milky
 - `qq_host`：Milky 协议端 HTTP 服务的基地址，未写协议时按 `http://` 处理。
 - `qq_access_token`：协议端要求鉴权时填写，与协议端配置一致。
 
-## 监听地址与端口
+## 连接方式
 
-适配器不监听端口，所有连接都由适配器主动发起，目标为 `qq_host`。
+适配器主动连接 `qq_host`，不提供本地监听端口。
 
 ## 平台能力
 
@@ -62,10 +62,12 @@ akaribot module add akari-bot-adapter-milky
 
 ## 私信与群聊
 
-- 群聊目标前缀为 `QQ|Group`，私信为 `QQ|Private`，两个前缀同属 `QQ` 客户端身份。临时会话由 `qq_enable_temp_session` 控制。
-- 群聊是否必须 @机器人，由 core 配置 `mention_required` 决定。
-- 机器人默认不处理自身发送的消息，开启 `qq_enable_listening_self_message` 后一并处理。
-- 好友请求与群邀请默认只自动同意超级管理员与白名单用户发来的请求。其他用户发来的请求分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。
+- 群聊的目标前缀是 `QQ|Group`，私信的目标前缀是 `QQ|Private`。两个前缀同属 `QQ` 客户端身份。
+- 临时会话由 `qq_enable_temp_session` 控制。
+- 群聊是否必须 @机器人由 core 的 `mention_required` 控制。
+- 机器人默认不处理自身发送的消息。开启 `qq_enable_listening_self_message` 后，自身消息也会处理。
+- 好友请求和群邀请默认只自动同意超级管理员和白名单用户发来的请求。
+- 其他用户发来的好友请求和群邀请，分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。
 
 ## 外部依赖
 

@@ -156,7 +156,10 @@ def _plan_conflicts(
 ) -> list[str]:
     # 安装会连带升降依赖（含传递依赖），而 uv 求解不看其他已装包的依赖，故按其安装计划逐条核对。
     try:
-        completed = engine.CommandRunner().run(engine.dry_run_confirm_argv(instance.python, target.specs))
+        completed = engine.CommandRunner().run(
+            engine.dry_run_confirm_argv(instance.python, target.specs),
+            env=engine.uv_environment(instance),
+        )
     except CliError as exc:
         fail(str(exc))
     if completed.returncode != 0:
@@ -348,6 +351,7 @@ def _install(
         runner.run_checked(
             engine.install_argv(instance.python, target.specs, upgrade=upgrade),
             what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist or target.specs[0]),
+            env=engine.uv_environment(instance),
             stream=True,
         )
     except CliError as exc:
@@ -946,7 +950,7 @@ def _perform_update(
     if not assume_yes:
         typer.confirm(i18n.t("cli.module.update.confirm", count=len(plans)), abort=True)
 
-    completed = engine.CommandRunner(verbose=verbose).run(argv)
+    completed = engine.CommandRunner(verbose=verbose).run(argv, env=engine.uv_environment(target_instance))
     if completed.returncode != 0:
         summary = engine.summarize_uv_error(completed.stderr or completed.stdout or "")
         # failed_details[].reason 是 --json 契约的一部分，保持原文；人类可读提示另行本地化。

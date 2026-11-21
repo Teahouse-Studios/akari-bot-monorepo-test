@@ -1,10 +1,12 @@
 # OneBot 适配器
 
-OneBot 适配器用于通过 OneBot 反向 WebSocket 接入 QQ，处理群聊、私信与通知事件。
+OneBot 适配器通过 OneBot 反向 WebSocket 接入 QQ，处理群聊、私信和通知事件。
 
 ## 平台概述
 
-适配器在本地启动 WebSocket 服务，由 OneBot 协议端反向连接。消息按 CQ 码或消息段解析。群聊与私信分别以 `QQ|Group` 与 `QQ|Private` 作为目标前缀，两个前缀同属 `QQ` 客户端身份。
+适配器在本地启动 WebSocket 服务，由 OneBot 协议端反向连接。消息按 CQ 码或消息段解析。
+
+群聊目标前缀为 `QQ|Group`，私信目标前缀为 `QQ|Private`。两个前缀同属 `QQ` 客户端身份。
 
 除消息外，适配器还处理戳一戳、群消息表情点赞、好友请求、群邀请，以及机器人被禁言和被移出群聊等通知。
 
@@ -16,13 +18,13 @@ OneBot 适配器用于通过 OneBot 反向 WebSocket 接入 QQ，处理群聊、
 akaribot module add akari-bot-adapter-onebot
 ```
 
-安装后由守护进程按配置启动，需要 `bot_onebot.enable = true`。
+安装后由守护进程按配置启动。`bot_onebot.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`，两张表同处 `config/bot_onebot.toml`。
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都写在 `config/bot_onebot.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add onebot <实例 ID>` 新增实例。实例表名为 `bot_onebot-<实例 ID>`，密钥表名为 `bot_onebot-<实例 ID>_secret`，两张表同处 `config/bot_onebot-<实例 ID>.toml`。
+需要多个机器人账号时，用 `akaribot adapter instance add onebot <实例 ID>` 新增实例。实例表名为 `bot_onebot-<实例 ID>`，密钥表名为 `bot_onebot-<实例 ID>_secret`。两张表都写在 `config/bot_onebot-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -41,7 +43,7 @@ akaribot module add akari-bot-adapter-onebot
 ## 监听地址与端口
 
 - 适配器默认监听 `127.0.0.1:8080`，可通过 `qq_host` 改为其他 `host:port`。
-- OneBot 协议端须使用反向 WebSocket 连接，可用路径为 `/ws`、`/ws/event` 与 `/ws/api`。
+- OneBot 协议端需要使用反向 WebSocket 连接，可用路径为 `/ws`、`/ws/event` 与 `/ws/api`。
 - 服务启动超时时间为 120 秒。
 
 ## 平台能力
@@ -65,12 +67,14 @@ akaribot module add akari-bot-adapter-onebot
 
 ## 私信与群聊
 
-- 群聊目标前缀为 `QQ|Group`，私信为 `QQ|Private`。临时会话由 `qq_enable_temp_session` 控制。
-- 群聊是否必须 @机器人，由 core 配置 `mention_required` 决定。
-- 机器人默认不处理自身发送的消息，开启 `qq_enable_listening_self_message` 后一并处理。
-- 开启 core 配置 `config.quick_confirm` 时，戳一戳会触发确认命令。
-- 好友请求与群邀请默认只对超级管理员与白名单用户自动同意。其余请求是否自动同意，分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。
-- 开启 core 配置 `config.enable_tos` 时，机器人被禁言或被移出群聊的情况会记入违规记录，相关场景也会被封禁。
+- 群聊的目标前缀是 `QQ|Group`，私信的目标前缀是 `QQ|Private`。
+- 临时会话由 `qq_enable_temp_session` 控制。
+- 群聊是否必须 @机器人由 core 的 `mention_required` 控制。
+- 机器人默认不处理自身发送的消息。开启 `qq_enable_listening_self_message` 后，自身消息也会处理。
+- 开启 core 的 `config.quick_confirm` 时，戳一戳会触发确认命令。
+- 好友请求和群邀请默认只自动同意超级管理员和白名单用户发来的请求。
+- 其他用户发来的请求是否自动同意，分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。
+- 开启 core 的 `config.enable_tos` 后，机器人被禁言或被移出群聊会记入违规记录，相关场景也会被封禁。
 
 ## 外部依赖
 

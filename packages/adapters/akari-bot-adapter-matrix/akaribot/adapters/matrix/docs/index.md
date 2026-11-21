@@ -4,7 +4,9 @@ Matrix 适配器以机器人账号登录 Matrix 家庭服务器，通过客户�
 
 ## 平台概述
 
-适配器使用访问令牌恢复登录，持续同步房间事件，不监听本地端口。房间邀请会自动接受，房间消息、成员变动与表情回应都会转换为会话事件。消息编辑与 `m.notice` 消息会被忽略。
+适配器使用访问令牌恢复登录，持续同步房间事件。房间邀请会自动接受，房间消息、成员变动和表情回应都会转换为会话事件。
+
+消息编辑和 `m.notice` 消息会被忽略。
 
 ## 安装
 
@@ -14,13 +16,13 @@ Matrix 适配器以机器人账号登录 Matrix 家庭服务器，通过客户�
 akaribot module add akari-bot-adapter-matrix
 ```
 
-安装后由守护进程按配置启动，需要 `bot_matrix.enable = true`。
+安装后由守护进程按配置启动。`bot_matrix.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`，两张表同处 `config/bot_matrix.toml`。
+配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都写在 `config/bot_matrix.toml`。
 
-需要多个机器人账号时，请用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`，两张表同处 `config/bot_matrix-<实例 ID>.toml`。
+需要多个机器人账号时，用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表都写在 `config/bot_matrix-<实例 ID>.toml`。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
@@ -36,8 +38,8 @@ akaribot module add akari-bot-adapter-matrix
 
 - `matrix_homeserver`：机器人账号所属家庭服务器，末尾不要带斜杠。
 - `matrix_user`：形如 `@name:server` 的完全限定用户 ID。
-- `matrix_token` 与 `matrix_device_id`：同一登录会话的访问令牌与设备 ID，两者须来自同一设备。
-- `matrix_device_name` 可以任意填写，启动时会设为设备的显示名。
+- `matrix_token` 与 `matrix_device_id`：同一登录会话的访问令牌与设备 ID，两者必须来自同一设备。
+- `matrix_device_name` 可以任意填写。启动时它会被设为设备的显示名。
 
 ## 平台能力
 
@@ -58,12 +60,12 @@ akaribot module add akari-bot-adapter-matrix
 
 ## 私信与群聊
 
-- 所有入站消息的目标前缀均为 `Matrix|Room`，按房间场景处理。
-- 私信没有独立通道。发送私信时先查找与该用户的私聊房间，若不存在则创建。
-- 房间消息以机器人完全限定用户 ID 开头时视为 @机器人。是否必须 @机器人，由 core 配置 `mention_required` 决定。
+- 所有入站消息的目标前缀都是 `Matrix|Room`，按房间场景处理。
+- 私信使用只包含双方的房间。发送私信时先查找与该用户的私聊房间，没有则创建。
+- 房间消息以机器人完全限定用户 ID 开头时，视为 @机器人。是否必须 @机器人由 core 的 `mention_required` 控制。
 
 ## 外部依赖
 
 - Matrix 家庭服务器。
-- 可选端到端加密，运行环境安装 olm 后才会启用。设置 `matrix_megolm_backup_passphrase` 后，关闭客户端时会导出 Megolm 密钥备份至 `data/private/matrix/megolm_backup/`。
-- 出站连接遵循 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 设置。
+- 端到端加密可选。运行环境安装 olm 后才会启用。设置 `matrix_megolm_backup_passphrase` 后，关闭客户端时会把 Megolm 密钥备份导出到 `data/private/matrix/megolm_backup/`。
+- 出站连接读取 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 设置。

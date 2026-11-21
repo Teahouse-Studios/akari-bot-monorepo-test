@@ -44,6 +44,7 @@ assets = "palette"
 asset = "palette"
 library = "category"
 docs = "article"
+api = "integration_instructions"
 
 [category_icons]
 "音游查询" = "music_note"
@@ -66,3 +67,23 @@ favicon = "favicon.ico"
 # 并在 [locales.<标签>] 中给出各自的名称与文案覆盖。
 [locales.zh-CN]
 label = "简体中文"
+
+# 页脚关于区块：配图默认使用品牌立绘，按钮图标可用内置名 afdian、github。
+# 实例 docs.toml 写 [footer] 覆盖文字，写 [[footer.links]] 覆盖按钮；
+# text 与 links 写空数组表示不显示该部分。
+[footer]
+title = "关于小可"
+text = [
+  "小可是由 Teahouse Studios 出品的多功能、跨平台、可自由扩展的聊天机器人助手，基于 AGPL-3.0 协议开源。",
+  "请支持我们的工作以便持续开发与维护。",
+]
+
+[[footer.links]]
+text = "爱发电"
+link = "https://afdian.com/a/teahouse"
+icon = "afdian"
+
+[[footer.links]]
+text = "GitHub"
+link = "https://github.com/Teahouse-Studios/akari-bot"
+icon = "github"

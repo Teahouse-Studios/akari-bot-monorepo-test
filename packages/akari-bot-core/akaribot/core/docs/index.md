@@ -2,7 +2,7 @@
 
 本文介绍核心运行时的定位、依赖与进程模型，并列出其余文档页。
 
-`akaribot.core` 是 AkariBot 的核心运行时，提供公共接口和基础功能，由 `akari-bot-core` 这个分发包提供。这个包还包含内置模块 `akaribot.modules.core`，文档见[内置模块](../../modules/core/docs/index.md)。
+`akaribot.core` 是 AkariBot 的核心运行时，提供公共接口和基础功能，由 `akari-bot-core` 分发包提供。`akari-bot-core` 同时提供内置模块 `akaribot.modules.core`，文档见[内置模块](../../modules/core/docs/index.md)。
 
 ## 定位
 
@@ -10,7 +10,7 @@
 
 模块和适配器都通过公共 API 使用 core。模块导入 `akaribot.core.api`，适配器再导入 `akaribot.core.api.adapters`。内置模块也使用这套 API。
 
-- `akaribot`、`akaribot.modules`、`akaribot.adapters` 使用 PEP 420 命名空间目录，没有 `__init__.py`。
+- `akaribot`、`akaribot.modules`、`akaribot.adapters` 使用 [PEP 420](https://peps.python.org/pep-0420/) 命名空间目录，没有 `__init__.py`。
 - `akaribot.core` 是常规包。
 - `CORE_API_VERSION` 定义公共 API 的版本号，运行时通过 `__api_version__` 暴露这个值。
 - 模块包在 `manifest.toml` 的 `requires_core_api` 中声明支持的版本范围。
@@ -45,7 +45,7 @@
 | Server | 解析消息、执行模块、运行计划任务 |
 | jobqueue-hub | WebSocket 后端的内置 Hub，可选 |
 
-实例根取 `AKARI_INSTANCE_DIR`，未设置时取进程当前目录。配置目录可用 `AKARI_CONFIG_PATH` 单独指定。详情见[架构](architecture.md)。
+实例根目录由 `AKARI_INSTANCE_DIR` 指定，未设置时取进程的当前目录。配置目录可以用 `AKARI_CONFIG_PATH` 单独指定。详情见[架构](architecture.md)。
 
 ## 文档导航
 

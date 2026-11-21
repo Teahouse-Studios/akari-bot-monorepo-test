@@ -297,6 +297,80 @@ async def _test_locales_reject_undefined_and_invalid_tags():
     )
 
 
+async def _test_footer_defaults():
+    with TemporaryDirectory(prefix="akari-docs-config-") as raw:
+        footer = DocsConfig(root=Path(raw)).footer
+    return (
+        footer.enabled
+        and footer.title == "关于小可"
+        and footer.text
+        == (
+            "小可是由 Teahouse Studios 出品的多功能、跨平台、可自由扩展的聊天机器人助手，基于 AGPL-3.0 协议开源。",
+            "请支持我们的工作以便持续开发与维护。",
+        )
+        and tuple((link.text, link.link, link.icon) for link in footer.links or ())
+        == (
+            ("爱发电", "https://afdian.com/a/teahouse", "afdian"),
+            ("GitHub", "https://github.com/Teahouse-Studios/akari-bot", "github"),
+        )
+    )
+
+
+async def _test_footer_sections_override_and_can_be_emptied():
+    with TemporaryDirectory(prefix="akari-docs-config-") as raw:
+        root = Path(raw)
+        (root / "docs.toml").write_text(
+            "[footer]\n"
+            'title = "关于项目"\n'
+            'text = "一段说明"\n'
+            'image = "assets/art.png"\n'
+            'copyright = "版权所有"\n'
+            "\n[[footer.links]]\n"
+            'link = "https://example.test/sponsor"\n'
+            'icon = "sponsor.svg"\n',
+            encoding="utf-8",
+        )
+        overridden = load_config(_Instance(root))
+        (root / "docs.toml").write_text("[footer]\ntext = []\nlinks = []\n", encoding="utf-8")
+        emptied = load_config(_Instance(root))
+    return (
+        overridden.footer.title == "关于项目"
+        and overridden.footer.text == ("一段说明",)
+        and overridden.footer.image == "assets/art.png"
+        and overridden.footer.copyright == "版权所有"
+        and tuple((link.text, link.link, link.icon) for link in overridden.footer.links or ())
+        == (("https://example.test/sponsor", "https://example.test/sponsor", "sponsor.svg"),)
+        and emptied.footer.text == ()
+        and emptied.footer.links == ()
+        and emptied.footer.title == "关于小可"
+    )
+
+
+async def _test_footer_rejects_bad_values():
+    with TemporaryDirectory(prefix="akari-docs-config-") as raw:
+        root = Path(raw)
+        reasons: list[str | None] = []
+        for body in (
+            "[footer]\ntext = 1\n",
+            '[footer]\nlinks = ["afdian"]\n',
+            '[[footer.links]]\ntext = "爱发电"\n',
+            '[footer]\nenabled = "yes"\n',
+        ):
+            (root / "docs.toml").write_text(body, encoding="utf-8")
+            try:
+                load_config(_Instance(root))
+            except DocsError as exc:
+                reasons.append(exc.params.get("reason"))
+            else:
+                reasons.append(None)
+    return reasons == [
+        "[footer] text must be a string or an array of strings",
+        "[[footer.links]] must be a table",
+        "[[footer.links]] is missing link",
+        "[footer] enabled must be a boolean",
+    ]
+
+
 @func_case
 async def test_docs_config(tester: Tester):
     """cli.docs.config: 站点品牌、分组与分类图标、资源路径"""
@@ -314,4 +388,9 @@ async def test_docs_config(tester: Tester):
     await tester.test(_test_site_defaults_cover_lang_base_and_out_dir, "语言、基路径与输出目录的默认值同样来自随包配置")
     await tester.test(_test_locales_declare_languages_and_inherit_defaults, "语言清单声明语言并继承默认文案")
     await tester.test(_test_locales_reject_undefined_and_invalid_tags, "语言缺少配置或标签非法时报错")
+    await tester.test(_test_footer_defaults, "页脚关于区块的出厂文案与按钮来自随包默认值")
+    await tester.test(
+        _test_footer_sections_override_and_can_be_emptied, "页脚文字与按钮可由 docs.toml 覆盖，空数组表示不显示"
+    )
+    await tester.test(_test_footer_rejects_bad_values, "页脚取值类型错误时报错并指出位置")
     return tester

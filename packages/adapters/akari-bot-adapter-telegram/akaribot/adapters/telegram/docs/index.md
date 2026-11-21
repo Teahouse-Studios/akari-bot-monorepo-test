@@ -1,12 +1,12 @@
 # Telegram 适配器
 
-本文将会介绍 Telegram 适配器的接入方式、配置字段与平台能力。
+Telegram 适配器以机器人身份接入 Telegram 私聊、群组、超级群组和频道。
 
 ## 平台概述
 
-适配器以机器人身份接入 Telegram 私聊、群组、超级群组与频道。它通过 Telegram Bot API 长轮询接收更新，不监听本地端口，也不要求公网地址。
+适配器通过 Telegram Bot API 长轮询接收更新，不需要公网地址或本地端口。
 
-消息按聊天类型区分场景，支持文本、图片、音频、视频与文档。按钮回调与行内查询都会作为命令处理。
+消息按聊天类型区分场景，支持文本、图片、音频、视频和文档。按钮回调和行内查询都会作为命令处理。
 
 ## 安装
 
@@ -16,13 +16,13 @@
 akaribot module add akari-bot-adapter-telegram
 ```
 
-安装后，守护进程按配置启动适配器。启动条件为 `bot_telegram.enable = true`。
+安装后由守护进程按配置启动。`bot_telegram.enable = true` 时启动。
 
 ## 配置
 
-配置表为 `bot_telegram`，密钥表为 `bot_telegram_secret`，两张表都在 `config/bot_telegram.toml` 中。
+配置表为 `bot_telegram`，密钥表为 `bot_telegram_secret`。两张表都写在 `config/bot_telegram.toml`。
 
-若需要多个机器人账号，用 `akaribot adapter instance add telegram <实例 ID>` 新增实例。实例表名为 `bot_telegram-<实例 ID>`，密钥表名为 `bot_telegram-<实例 ID>_secret`，两张表都在 `config/bot_telegram-<实例 ID>.toml` 中。
+需要多个机器人账号时，用 `akaribot adapter instance add telegram <实例 ID>` 新增实例。实例表名为 `bot_telegram-<实例 ID>`，密钥表名为 `bot_telegram-<实例 ID>_secret`。两张表都写在 `config/bot_telegram-<实例 ID>.toml`。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -45,7 +45,7 @@ akaribot config set telegram_token <令牌> --table bot_telegram_secret
 ## 必填信息
 
 - `telegram_token`：由 BotFather 创建机器人后获得。
-- 机器人须在目标群组内，并具备读取消息、发送消息、删除消息与限制成员的权限。
+- 机器人需要在目标群组内，并具备读取消息、发送消息、删除消息和限制成员的权限。
 - 使用自建 Bot API 服务时填写 `telegram_api_url`，该地址作为 API 基地址。
 
 ## 平台能力
@@ -67,11 +67,11 @@ akaribot config set telegram_token <令牌> --table bot_telegram_secret
 
 ## 私信与群聊
 
-- 私聊的目标前缀为 `Telegram|Private`，群组为 `Telegram|Group`，超级群组为 `Telegram|Supergroup`，频道为 `Telegram|Channel`。
-- 私聊不要求 @ 机器人。其他聊天是否必须 @ 由 core 配置 `mention_required` 决定。
-- 匿名管理员的消息与以频道身份发言的消息都没有用户来源，适配器直接忽略。
+- 私聊的目标前缀是 `Telegram|Private`，群组是 `Telegram|Group`，超级群组是 `Telegram|Supergroup`，频道是 `Telegram|Channel`。
+- 私聊不需要 @机器人。其他聊天是否必须 @机器人由 core 的 `mention_required` 控制。
+- 匿名管理员的消息和以频道身份发言的消息都没有用户来源，适配器会直接忽略。
 
 ## 外部依赖
 
 - Telegram Bot API，或通过 `telegram_api_url` 指定的自建 Bot API 服务。
-- 出站连接由 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 两项设置决定。
+- 出站连接读取 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 设置。

@@ -2,7 +2,9 @@
 
 本文介绍适配器的包结构、能力声明与平台入口。
 
-适配器负责把平台消息和操作接到 core。适配器在 `akaribot.adapters` 中声明入口点，目录名使用平台键。
+适配器连接平台与 core。它接收平台消息，转换成 core 的会话对象后交给 Server 处理。适配器还会把 core 发出的消息和操作交给平台 SDK 执行。
+
+适配器在 `pyproject.toml` 的 `akaribot.adapters` 分组中写入平台键与包路径的对应关系。目录名使用平台键。
 
 ## 包结构
 
@@ -23,7 +25,7 @@ akari-bot-adapter-<平台>/
 telegram = "akaribot.adapters.telegram"
 ```
 
-`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。守护进程在启动前读取这两个字段，检查同一平台的多个实例是否使用了相同的账号或令牌。
+`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。启动实例前，守护进程会读取这两个字段。守护进程再检查同一平台的多个实例是否使用了相同的账号或令牌。
 
 ## info.py
 
@@ -42,7 +44,7 @@ target_prefix_list = [f"{client_name}|Private", f"{client_name}|Group"]
 
 `platform_name` 是平台展示名，`client_name` 由它生成，多实例时带实例后缀（如 `Telegram-alt`）。两个前缀列表传给 `client_init()`，由它校验会话 ID 并建立平台路由。
 
-守护进程会在导入适配器之前设置 `instance_id`。`bot_<平台>.toml` 的 `enable` 为真时启动实例。
+守护进程会在导入适配器之前设置 `instance_id`。`bot_<平台>.toml` 中 `enable` 的值为 `true` 时，守护进程启动该实例。
 
 ## 多实例
 
@@ -78,7 +80,7 @@ features = Features(support_image=True, support_delete=True, support_private_msg
 - `check_bot_state()` 返回 `BotState`。
 - `can_*` 字段记录机器人能否执行对应操作，`permissions` 保存平台返回的权限。
 - 结果写进 `SessionInfo`。
-- `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。缺少权限时，它阻止模块启用。
+- `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。机器人缺少模块要求的权限时，这个模块不会启用。
 
 ## 平台入口
 
@@ -99,7 +101,7 @@ async def on_shutdown():
     await client_cleanup()
 ```
 
-- `Bot.register_bot()` 设置 `PrivateData` 目录与 `Info.client_name`。`register_context_manager()` 返回 `ctx_slot`，这个值要写进 `SessionInfo`。`fetch_session=True` 的管理器用于主动抓取会话。
+- `Bot.register_bot()` 设置 `PrivateData` 目录与 `Info.client_name`。`register_context_manager()` 返回 `ctx_slot`，构造 `SessionInfo` 时要把 `ctx_slot` 一并填入。`fetch_session=True` 的管理器用于主动抓取会话。
 - 收到消息时构造 `SessionInfo`（场景、发送者、`message_id`、`reply_id`、`messages`、`ctx_slot`、`bot_id`），再调用 `Bot.process_message(session, ctx)`。平台事件用 `EventInfo.assign(...)` 与 `Bot.process_event()` 投递。
 - `client_init()` 初始化数据库连接（可选 `load_module_db=True`）、连接语言快照并注册节点。`client_cleanup()` 取消轮询、释放上下文并关闭连接。
 
@@ -108,7 +110,7 @@ async def on_shutdown():
 `ContextManager` 以类属性保存 `session_id` 到平台上下文的映射：
 
 - `add_context()`、`del_context()` 添加与移除上下文。
-- `activate_context()`、`deactivate_context()` 标记入站处理区间，区间内不删除上下文。
+- `activate_context()`、`deactivate_context()` 标记入站消息的处理区间，在这个区间内不删除上下文。
 - `hold_context()`、`release_context()` 跨消息保持上下文，支持嵌套。
 
 须实现的抽象方法：
@@ -128,4 +130,4 @@ async def on_shutdown():
 - 适配器配置用 `@on_bot_config("<平台>")` 声明，表名是 `bot_<平台>`。
 - 密钥写入 `[bot_<平台>_secret]`。
 - 字段注释写成 `config.comments.bot_<平台>.<字段名>`。密钥表的注释键要带 `_secret` 后缀。
-- 面向用户的文案只在包内 `locales/zh_cn.json` 中创建，具体见[配置](config.md)与[本地化](i18n.md)。
+- 面向用户的文案只在适配器包的 `locales/zh_cn.json` 中创建，具体见[配置](config.md)与[本地化](i18n.md)。

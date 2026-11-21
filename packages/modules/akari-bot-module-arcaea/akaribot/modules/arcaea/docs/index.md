@@ -1,3 +1,11 @@
+---
+hero:
+  image: /module-arcaea/assets/arcaea.jpg
+  alt: Arcaea 游戏画面
+  tagline: 查询最新版本、游玩排行，随机抽曲并计算单曲潜力值。
+  fit: cover
+---
+
 # arcaea
 
 此模块可以查询 Arcaea 的最新版本与下载地址、官方游玩排行，随机抽取一首曲目，并按分数与谱面定数计算单曲潜力值。

@@ -18,7 +18,7 @@ akaribot docs build
 akaribot docs serve
 ```
 
-构建需要 Node.js 与 npm，版本以主题清单为准。生成物写在实例的 `cache/docs/`，不影响仓库。`~help` 底部的在线文档入口来自 `config.toml` 的 `help_url` 与 `help_page_url`。
+构建需要 Node.js 与 npm，版本以主题清单为准。生成物写在实例的 `cache/docs/`。`~help` 底部的在线文档入口来自 `config.toml` 的 `help_url` 与 `help_page_url`。
 
 ## 模块没有反应或未启用
 
@@ -70,9 +70,9 @@ akaribot docs serve
 
 ## 许可证
 
-core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1，品牌资产使用专有许可，`akari-bot-html2text` 使用 GPL-3.0。每个分发的 `pyproject.toml` 与包内 LICENSE 是最终依据。
+core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1，品牌资产使用专有许可，`akari-bot-html2text` 使用 GPL-3.0。每个包具体适用哪个许可证，以该包的 `pyproject.toml` 与包内 LICENSE 中写明的为准。
 
-修改并分发本项目时须遵守对应许可证，AGPL-3.0 还要求向网络用户提供对应源码。
+修改并分发本项目时，要遵守对应的许可证。AGPL-3.0 还要求向网络用户提供对应的源码。
 
 ## 更新实例
 
@@ -82,9 +82,9 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 akaribot module update --all
 ```
 
-机器人执行 `~update` 时会调用 CLI 的 `module update --defer-runtime`，安装完成后按提示执行 `~restart`。`--defer-runtime` 只安装包并同步配置，数据库迁移与代码切换留到下次启动。
+机器人执行 `~update` 时，会调用 CLI 的 `module update --defer-runtime`。安装完成后，按提示执行 `~restart`。加上 `--defer-runtime` 时，这一步只安装包并同步配置，数据库迁移与代码切换要等下一次启动才执行。
 
-在宿主机上直接更新会立即执行迁移并载入新代码。涉及数据结构的升级，应先停止实例，备份数据库与配置。CLI 本身按 `uv tool` 的安装方式升级。
+直接在宿主机上更新时，迁移立即执行，新代码也立即生效。升级涉及数据结构变化时，先停止实例，再备份数据库与配置。CLI 本身按 `uv tool` 的安装方式升级。
 
 ## 自建实例
 
@@ -99,6 +99,6 @@ akaribot doctor
 akaribot run
 ```
 
-按 `config schema` 的结果填写适配器的登录信息后再启动。`akaribot config set <字段> <值> --table <表名>` 会按模板类型转换。
+按 `config schema` 列出的字段填写适配器的登录信息，然后启动实例。用 `akaribot config set <字段> <值> --table <表名>` 写入的值，会按模板声明的类型转换。
 
-`akaribot init --minimal` 选择核心最小依赖，不加该参数时默认安装品牌、表情与常规可选依赖。模块用 `akaribot module add <名>` 安装。旧部署的备份、试运行与迁移见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。
+`akaribot init` 默认安装品牌资产、表情与常规可选依赖。加上 `--minimal` 时只安装核心所需的最小依赖。模块用 `akaribot module add <名>` 安装。旧部署的备份、试运行与迁移见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。

@@ -1,3 +1,12 @@
+---
+hero:
+  image: /module-wiki/assets/mediawiki.svg
+  alt: MediaWiki 标志
+  tagline: 查询 MediaWiki 页面、模板与最近更改。
+  fit: contain
+  background: "#f8f9fa"
+---
+
 # wiki
 
 此模块提供一组操作 MediaWiki 站点的命令。此模块可以查询页面与模板，按 InterWiki 前缀查询其他站点，为请求设置自定义标头与前缀。

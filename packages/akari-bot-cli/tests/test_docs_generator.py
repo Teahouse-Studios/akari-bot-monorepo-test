@@ -7,7 +7,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from akaribot.cli.docs_engine.config import DocsConfig, DocsLocaleConfig, DocsSiteConfig, DocsThemeConfig
+from akaribot.cli.docs_engine.config import (
+    DocsConfig,
+    DocsFooterConfig,
+    DocsFooterLink,
+    DocsLocaleConfig,
+    DocsSiteConfig,
+    DocsThemeConfig,
+)
 from akaribot.cli.docs_engine.generator import _link_api_references, generate
 from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
 from akaribot.cli.docs_engine.theme import ThemeSpec
@@ -717,6 +724,137 @@ async def _test_brand_package_slots_and_fallback():
     )
 
 
+def _footer_theme(
+    root: Path,
+    brand: dict[str, str] | None = None,
+    footer: DocsFooterConfig | None = None,
+) -> tuple[dict, Path]:
+    package = _package(
+        root,
+        {"index.md": "# 用法\n"},
+        pages=(DocPage("index.md", "用法", 0),),
+        **(brand or {}),
+    )
+    theme_dir = root / "theme"
+    theme_dir.mkdir(exist_ok=True)
+    theme = ThemeSpec(
+        name="test",
+        version="1.0.0",
+        source="file:test",
+        root=root,
+        theme_dir=theme_dir,
+        package_dir=root,
+        vitepress_version="2.0.0-alpha.21",
+        node_major=22,
+        config={"theme_config_key": "akari"},
+    )
+    source = root / "cache" / "docs" / "src"
+    config = DocsConfig(root=root, footer=footer) if footer is not None else DocsConfig(root=root)
+    generate(DocCatalog(packages=(package,)), source, config, theme=theme)
+    return _theme_config(source)["akari"]["footer"], source
+
+
+async def _test_footer_about_defaults():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        character = root / "character.png"
+        character.write_bytes(b"\x89PNG\r\n")
+        footer, _ = _footer_theme(root, {"character": str(character), "brand": "true"})
+    about = footer.get("about") or {}
+    return (
+        footer["message"] == "由 AkariBot 文档引擎生成"
+        and about.get("title") == "关于小可"
+        and len(about.get("text") or ()) == 2
+        and about.get("image") == "/brand-character.png"
+        and [action["icon"] for action in about.get("actions") or ()] == ["afdian", "github"]
+        and [action["link"] for action in about.get("actions") or ()]
+        == ["https://afdian.com/a/teahouse", "https://github.com/Teahouse-Studios/akari-bot"]
+    )
+
+
+async def _test_footer_image_and_icons_are_published():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        art = root / "art.png"
+        art.write_bytes(b"\x89PNG\r\n")
+        icon = root / "sponsor.svg"
+        icon.write_text("<svg/>", encoding="utf-8")
+        footer, source = _footer_theme(
+            root,
+            footer=DocsFooterConfig(
+                image="art.png",
+                text=("自定义说明",),
+                links=(DocsFooterLink(text="赞助", link="https://example.test/sponsor", icon="sponsor.svg"),),
+            ),
+        )
+        about = footer.get("about") or {}
+        published = (
+            (source / "public" / "footer-image.png").is_file(),
+            (source / "public" / "footer-icon-1.svg").is_file(),
+        )
+    return (
+        all(published)
+        and about.get("image") == "/footer-image.png"
+        and about.get("text") == ["自定义说明"]
+        and about.get("actions")
+        == [{"text": "赞助", "link": "https://example.test/sponsor", "icon": "/footer-icon-1.svg"}]
+    )
+
+
+async def _test_footer_disabled_hides_about():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        footer, _ = _footer_theme(root, footer=DocsFooterConfig(enabled=False))
+    return "about" not in footer and footer["message"] == "由 AkariBot 文档引擎生成"
+
+
+def _footer_site(root: Path, *, hook: bool) -> Path:
+    package = _package(root, {"index.md": "# 用法\n"}, pages=(DocPage("index.md", "用法", 0),))
+    theme_dir = root / "theme"
+    _write(theme_dir, {"index.ts": "export default { enhanceApp() {} };\n"})
+    if hook:
+        _write(theme_dir, {"composables/useAkariConfig.ts": "export {};\n"})
+    theme = ThemeSpec(
+        name="test",
+        version="1.0.0",
+        source="file:test",
+        root=root,
+        theme_dir=theme_dir,
+        package_dir=root,
+        vitepress_version="2.0.0-alpha.21",
+        node_major=22,
+        config={"theme_config_key": "akari"},
+    )
+    source = root / "cache" / "docs" / "src"
+    generate(DocCatalog(packages=(package,)), source, DocsConfig(root=root), theme=theme)
+    return source / ".vitepress" / "theme"
+
+
+async def _test_footer_component_wraps_theme_entry():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        directory = _footer_site(Path(raw), hook=True)
+        entry = (directory / "index.ts").read_text(encoding="utf-8")
+        original = (directory / "theme-entry.ts").read_text(encoding="utf-8")
+        component = (directory / "footer" / "DocsFooter.vue").read_text(encoding="utf-8")
+    return (
+        original == "export default { enhanceApp() {} };\n"
+        and 'from "./theme-entry"' in entry
+        and "provideAkariComponents(context.app, { Footer: DocsFooter })" in entry
+        and "akari-docs-footer" in component
+    )
+
+
+async def _test_footer_component_skips_theme_without_slot_hook():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        directory = _footer_site(Path(raw), hook=False)
+        entry = (directory / "index.ts").read_text(encoding="utf-8")
+        return (
+            entry == "export default { enhanceApp() {} };\n"
+            and not (directory / "theme-entry.ts").exists()
+            and not (directory / "footer").exists()
+        )
+
+
 def _theme_config(source: Path) -> dict:
     raw = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
     start = raw.index('"themeConfig": {')
@@ -935,9 +1073,9 @@ async def _test_api_links_are_inserted_at_build_time():
     text = "## `Bind.Module`\n### `command()`\n\n## `Bot`\n\n`post_message()`\n\n```python\n`command()`\n```\n\n[`Bot`](https://example.com)"
     result = _link_api_references(text, catalog)
     return (
-        "## [`Bind.Module`](api-reference.md#bind-module)" in result
-        and "### [`command()`](api-reference.md#bind-module-command)" in result
-        and "[`post_message()`](api-reference.md#bot-post-message)" in result
+        "## [`Bind.Module`](api/bind.md#bind-module)" in result
+        and "### [`command()`](api/bind.md#bind-module-command)" in result
+        and "[`post_message()`](api/bot.md#bot-post-message)" in result
         and "```python\n`command()`\n```" in result
         and "[`Bot`](https://example.com)" in result
     )
@@ -965,6 +1103,11 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，品牌标志与内置回退")
     await tester.test(_test_chat_avatar_from_package_and_favicon, "对话头像取包声明，缺少时回退内置资源")
     await tester.test(_test_brand_package_slots_and_fallback, "品牌包的五个插槽与内置回退")
+    await tester.test(_test_footer_about_defaults, "页脚关于区块取默认文案，配图取角色立绘")
+    await tester.test(_test_footer_image_and_icons_are_published, "页脚配图与自定义图标复制到站点 public")
+    await tester.test(_test_footer_disabled_hides_about, "关闭页脚关于区块时只保留落款")
+    await tester.test(_test_footer_component_wraps_theme_entry, "站点主题入口保留模板主题并替换页脚插槽")
+    await tester.test(_test_footer_component_skips_theme_without_slot_hook, "主题没有插槽钩子时保持模板主题原样")
     await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
     await tester.test(_test_package_without_overview_uses_first_page_as_entry, "无概览页的包以第一页作为入口")
     await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")

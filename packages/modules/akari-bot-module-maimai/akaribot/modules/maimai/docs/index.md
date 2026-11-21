@@ -1,3 +1,11 @@
+---
+hero:
+  image: /module-maimai/assets/maimai.jpg
+  alt: maimai 游戏画面
+  tagline: 查询舞萌 DX 与 CHUNITHM 的曲目、成绩、B50/B30 与评级进度。
+  fit: cover
+---
+
 # maimai
 
 此模块用于查询舞萌 DX 与 CHUNITHM 的曲目资料、谱面成绩、B50/B30、名牌板、段位与评级进度。它也支持绑定水鱼查分器与落雪咖啡屋账号。
