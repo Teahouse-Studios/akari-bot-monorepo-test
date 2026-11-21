@@ -255,6 +255,7 @@ def init(
                 runner.run_checked(
                     engine.create_venv_argv(instance.venv_dir, python=python or str(system_python()), clear=force),
                     what=i18n.t("cli.venv_engine.what_create_venv"),
+                    env=engine.uv_environment(instance),
                 )
             except CliError as exc:
                 fail(i18n.t("cli.init.venv_failed", error=exc))
@@ -267,7 +268,11 @@ def init(
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         what = i18n.t("cli.init.what_install")
-        runner.run_checked(engine.install_argv(instance.python, _install_specs(targets)), what=what)
+        runner.run_checked(
+            engine.install_argv(instance.python, _install_specs(targets)),
+            what=what,
+            env=engine.uv_environment(instance),
+        )
     except CliError as exc:
         fail(str(exc))
 

@@ -48,8 +48,9 @@ def _fixture(root: Path):
     instance = Instance(instance_root)
     python = engine.system_python()
     runner = _LocalWheelRunner(wheel)
-    runner.run_checked(engine.create_venv_argv(instance.venv_dir, python=str(python)), what="venv")
-    runner.run_checked(engine.install_argv(instance.python, [str(wheel)]), what="wheel")
+    env = engine.uv_environment(instance)
+    runner.run_checked(engine.create_venv_argv(instance.venv_dir, python=str(python)), what="venv", env=env)
+    runner.run_checked(engine.install_argv(instance.python, [str(wheel)]), what="wheel", env=env)
     (instance.venv_dir / "old-marker").write_text("old", encoding="utf-8")
     return instance, runner, python
 

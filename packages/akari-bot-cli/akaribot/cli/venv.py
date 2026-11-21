@@ -1337,6 +1337,7 @@ def install_runtime_requirements(
         install_argv(python, specs),
         what=i18n.t("cli.venv_engine.what_install_runtime"),
         stream=True,
+        env=uv_environment(instance),
     )
     return specs
 
@@ -1430,10 +1431,14 @@ def adopt(
     runner.run_checked(
         create_venv_argv(instance.venv_dir, python=python or str(source_python), clear=force),
         what=i18n.t("cli.venv_engine.what_create_venv"),
+        env=uv_environment(instance),
     )
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(
-        install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_venv"), stream=True
+        install_argv(target_python, specs),
+        what=i18n.t("cli.venv_engine.what_install_to_venv"),
+        stream=True,
+        env=uv_environment(instance),
     )
     install_runtime_requirements(instance, target_python, runner=runner)
 
@@ -1471,6 +1476,7 @@ def adopt(
                 uninstall_argv(source_python, removable),
                 what=i18n.t("cli.venv_engine.what_uninstall_from_source"),
                 stream=True,
+                env=uv_environment(instance),
             )
             removed = tuple(removable)
 
@@ -1524,7 +1530,10 @@ def release(
     step(2, 4, i18n.t("cli.venv_engine.step_install_current", python=target_python))
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(
-        install_argv(target_python, specs), what=i18n.t("cli.venv_engine.what_install_to_current"), stream=True
+        install_argv(target_python, specs),
+        what=i18n.t("cli.venv_engine.what_install_to_current"),
+        stream=True,
+        env=uv_environment(instance),
     )
     install_runtime_requirements(instance, target_python, runner=runner)
 
@@ -1563,6 +1572,7 @@ def release(
                 uninstall_argv(source_python, removable),
                 what=i18n.t("cli.venv_engine.what_uninstall_from_venv"),
                 stream=True,
+                env=uv_environment(instance),
             )
             removed = tuple(removable)
     instance.meta.set_venv("")
@@ -1614,12 +1624,14 @@ def recreate(
     runner.run_checked(
         create_venv_argv(staging, python=interpreter, relocatable=True),
         what=i18n.t("cli.venv_engine.what_create_new_venv"),
+        env=uv_environment(instance),
     )
     specs = [info.requirement() for info in source_dists.values()]
     runner.run_checked(
         install_argv(venv_python_path(staging), specs),
         what=i18n.t("cli.venv_engine.what_install_to_new_venv"),
         stream=True,
+        env=uv_environment(instance),
     )
     install_runtime_requirements(instance, venv_python_path(staging), runner=runner)
 

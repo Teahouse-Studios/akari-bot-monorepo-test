@@ -91,7 +91,12 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
         console.print(i18n.t("cli.module.install.config_restored", paths=paths))
     try:
         what = i18n.t("cli.venv_engine.what_uninstall_dist", dist=dist)
-        runner.run_checked(engine.uninstall_argv(instance.python, [dist]), what=what, stream=True)
+        runner.run_checked(
+            engine.uninstall_argv(instance.python, [dist]),
+            what=what,
+            stream=True,
+            env=engine.uv_environment(instance),
+        )
     except CliError as exc:
         warn(str(exc))
     instance.invalidate()
@@ -840,7 +845,12 @@ def remove(
     try:
         # 同上：what 由 venv.py 拼接「完成/失败」，保持原文。
         what = i18n.t("cli.venv_engine.what_uninstall_packages")
-        runner.run_checked(engine.uninstall_argv(target.python, [item.dist for item in order]), what=what, stream=True)
+        runner.run_checked(
+            engine.uninstall_argv(target.python, [item.dist for item in order]),
+            what=what,
+            stream=True,
+            env=engine.uv_environment(target),
+        )
     except CliError as exc:
         fail(str(exc))
     target.invalidate()

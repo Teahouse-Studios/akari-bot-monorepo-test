@@ -937,6 +937,7 @@ def legacy(
                 runner.run_checked(
                     engine.create_venv_argv(instance.venv_dir, python=str(system_python())),
                     what=i18n.t("cli.venv_engine.what_create_venv"),
+                    env=engine.uv_environment(instance),
                 )
             except CliError as exc:
                 fail(i18n.t("cli.migrate.venv_failed", error=exc))

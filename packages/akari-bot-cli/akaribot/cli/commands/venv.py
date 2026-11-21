@@ -219,6 +219,7 @@ def add(
             engine.install_argv(target.python, [text], upgrade=upgrade),
             what=i18n.t("cli.venv_engine.what_install_dist", dist=text),
             stream=True,
+            env=engine.uv_environment(target),
         )
     except CliError as exc:
         fail(str(exc))
@@ -257,6 +258,7 @@ def remove(
                 engine.uninstall_argv(target.python, [dist]),
                 what=i18n.t("cli.venv_engine.what_uninstall_dist", dist=dist),
                 stream=True,
+                env=engine.uv_environment(target),
             )
         except CliError as exc:
             fail(str(exc))
