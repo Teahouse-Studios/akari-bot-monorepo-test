@@ -24,7 +24,9 @@ description: 自然语言句式的触发方式、查询内容与账号要求。
 
 <CommandUsage usage="<ID或别名>是什么歌" :params="['ID或别名=歌曲数字 ID 或别名，可带 id 前缀']" permission="public" type="regex" />
 
-查询歌曲的艺术家、分类、BPM、版本与难度。名称以 `id` 开头时按 ID 解析，其余按歌名或别名解析。命中多个别名时返回候选 ID 列表。查询不需要绑定账号，结果与 `maimai song` 一致。示例：`834是什么歌`、`id834是什么歌`、`PANDORA PARADOXXX是什么歌`。
+查询歌曲的艺术家、分类、BPM、版本与难度。名称以 `id` 开头时按 ID 解析，其余按歌名或别名解析。命中多个别名时返回候选 ID 列表。
+
+查询不需要绑定账号，结果与 `maimai song` 一致。示例：`834是什么歌`、`id834是什么歌`、`PANDORA PARADOXXX是什么歌`。
 
 <ChatExample
   :log="[
@@ -106,7 +108,9 @@ description: 自然语言句式的触发方式、查询内容与账号要求。
 
 <CommandUsage usage="<段位>段位[认定][列]表" :params="['段位=段位名称，如十段']" permission="public" type="regex" />
 
-查询段位认定的曲目与通关条件。段位资料随包分发，不访问查分器。段位支持普通段位、真段位以及 EXPERT／MASTER 各级，填写时必须使用资料中的名称。示例：`十段段位表`、`真初段段位认定表`、`MASTER超上级段位列表`。
+查询段位认定的曲目与通关条件。段位资料随包分发，不访问查分器。段位支持普通段位、真段位以及 EXPERT／MASTER 各级，填写时必须使用资料中的名称。
+
+示例：`十段段位表`、`真初段段位认定表`、`MASTER超上级段位列表`。
 
 <ChatExample
   :log="[

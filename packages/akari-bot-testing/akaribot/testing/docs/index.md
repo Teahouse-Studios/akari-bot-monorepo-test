@@ -12,7 +12,7 @@
 CI=1 PYTHONIOENCODING=UTF-8 .venv/bin/python -m akaribot.testing
 ```
 
-根目录的 `tester.py` 是兼容层，转发到同一个运行器，参数与行为一致。包安装到实例后，也可以用 CLI：
+根目录的 `tester.py` 是兼容实现，转发到同一个运行器，参数与行为一致。包安装到实例后，也可以用 CLI：
 
 ```sh
 akaribot test --ci
@@ -29,7 +29,7 @@ akaribot test packages/akari-bot-core/tests/test_registry.py --ci
 - `--ci`：CI 模式，跳过需要人工复核的用例。非 CI 模式下，缺少期望值的用例可能等待输入。
 - `--coverage`：收集覆盖率，入口脚本需要安装 `coverage`。
 
-测试文件放在 `tests/unit/`（纯函数）、`tests/integration/`（完整命令链路）与 `packages/*/tests/`（包内自测）。跨包共享的 HTTP 测试数据放在 `tests/fixtures/http/`。
+测试文件放在 `tests/unit/`（纯函数）、`tests/integration/`（完整命令流程）与 `packages/*/tests/`（包内自测）。跨包共享的 HTTP 测试数据放在 `tests/fixtures/http/`。
 
 ## CI 模式
 

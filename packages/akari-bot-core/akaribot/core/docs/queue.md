@@ -2,20 +2,24 @@
 
 本文介绍 JobQueue 的后端、寻址、RPC、信号与关闭流程。
 
-JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节点注册表与消息传输。业务代码通过 `PlatformAPI`、`ServerAPI` 与信号声明使用它，不直接操作队列表。
+JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节点注册表与消息传输。业务代码通过 `PlatformAPI`、`ServerAPI` 与信号声明使用它。
 
 ## 后端
 
-配置位于 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 取 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，运行期间不支持切换。
+配置位于 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 取 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，切换后端需要重启进程。
 
 | 比较项 | `database` | `websocket` |
 | --- | --- | --- |
 | 传输 | 轮询 `job_queues` 表 | Hub 内实时路由 |
 | 离线任务 | 保留待领取记录 | 不保留，目标离线即不可用 |
 | 额外组件 | 无 | Hub 进程或外部 Hub |
-| 适用场景 | 可并发写入的共享数据库 | 默认选项，SQLite 与高频 RPC |
+| 适用场景 | 支持并发写入的共享数据库 | 默认选项，SQLite 与高频 RPC |
 
-`jobqueue_websocket_mode` 区分 `embedded` 与 `external`。内置模式从 `jobqueue_websocket_url` 解析监听地址，仅接受回环地址上的 `ws`。连接外部 Hub 须使用 `wss`，并配置共享令牌。`jobqueue_node_id` 是节点标签，为空时 pre-init 会生成 UUID 并写回配置。`jobqueue_websocket_token` 为空时，启动前会生成令牌并写回配置。
+`jobqueue_websocket_mode` 区分 `embedded` 与 `external`。内置模式从 `jobqueue_websocket_url` 解析监听地址，仅接受回环地址上的 `ws`。连接外部 Hub 须使用 `wss`，并配置共享令牌。
+
+`jobqueue_node_id` 是节点标签，为空时 pre-init 会生成 UUID 并写回配置。
+
+`jobqueue_websocket_token` 为空时，启动前会生成令牌并写回配置。
 
 ## 节点与寻址
 
@@ -46,7 +50,7 @@ task_id = await PlatformAPI.post_message.submit(session_info, message, module_na
 - `ContextManager` 上的平台方法通过 `context_method()` 自动绑定，参数签名取自方法本身。
 - 默认超时：普通调用 120 秒，信号 30 秒，消息处理与发送最长 7200 秒。每个请求有独立的截止时间。
 - 失败时抛出 `RpcError` 的子类：`RpcUnavailableError`（目标不可达）、`RpcTimeoutError`、`RpcCancelledError`、`RpcMethodNotFoundError`、`RpcProtocolError`，远程异常包装为 `RpcRemoteError`，并保留 traceback。
-- 不提供 exactly-once。发送、禁言等有外部副作用的调用不得因超时自动重试。
+- 投递语义是至少一次。发送、禁言等有外部副作用的调用在超时后由调用方判断是否重试。
 
 `PlatformAPI.post_message` 在目标通道发送失败时，把 `SessionInfo.next_hops` 交回 Server，由 Server 继续尝试下一跳。整条通道都不可用时，此方法返回空列表。
 
@@ -71,7 +75,7 @@ receipt = await invalidate_cache.emit(PeerSelector.role("server"), version=8)
 report = await invalidate_cache.gather(PeerSelector.service("Server"), version=8)
 ```
 
-`.emit()` 不要求返回结果，`.gather()` 逐实例等待 ACK。信号处理器须幂等，带版本号的数据以持久化状态为准。
+`.emit()` 只发送，`.gather()` 逐实例等待 ACK。信号处理器须幂等，带版本号的数据以持久化状态为准。
 
 ## 数据表
 
@@ -86,4 +90,4 @@ report = await invalidate_cache.gather(PeerSelector.service("Server"), version=8
 
 维护窗口先停止领取新任务，再等待已经开始的处理完成。数据库热重载在维护窗口内独占连接。
 
-关闭期间结果接收器继续运行，直到会话与后台任务清理完毕才停止。轮询器异常退出时，实例会撤销注册并释放本地等待方，避免以“可路由但无法收发”的状态存活。
+关闭期间结果接收器继续运行，直到会话与后台任务清理完毕才停止。轮询器异常退出时，实例会撤销注册并释放本地等待方。

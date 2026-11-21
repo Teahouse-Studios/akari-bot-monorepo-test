@@ -208,6 +208,7 @@ class MessageSession:
 
     @property
     def t(self):
+        """返回当前会话的翻译函数。"""
         if self.session_info:
             return self.session_info.locale.t
         Logger.warning("SessionInfo is not available, returning default language for translation function.")
@@ -215,6 +216,7 @@ class MessageSession:
 
     @property
     def t_str(self):
+        """返回当前会话的字符串翻译函数。"""
         if self.session_info:
             return self.session_info.locale.t_str
         Logger.warning("SessionInfo is not available, returning default language for translation function.")
@@ -637,7 +639,9 @@ class MessageSession:
 
     async def check_bot_state(self) -> BotState:
         """Return the bot's context membership and native permission state."""
-        return await PlatformAPI.check_bot_state(self.session_info)
+        state = await PlatformAPI.check_bot_state(self.session_info)
+        self.session_info.bot_state = state
+        return state
 
     async def handle_error_signal(self):
         """用于处理错误信号。"""
@@ -985,6 +989,7 @@ class MessageSession:
 
     @deprecated(reason="Use `call_onebot_api` instead.")
     async def call_api(self, api_name: str, **kwargs):
+        """调用平台 API。"""
         return await self.call_onebot_api(api_name, **kwargs)
 
     waitConfirm = wait_confirm

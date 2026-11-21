@@ -1,8 +1,10 @@
 # WebRender
 
-本文将会介绍 WebRender 的配置、运行模式与降级行为。
+本文介绍 WebRender 的配置、运行模式与降级行为。
 
-WebRender 把 HTML、网页或页面元素渲染为图片，供帮助菜单、Wiki infobox、图片表格与其他截图功能使用。core 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，或把请求转发到远程渲染服务。渲染不可用时，依赖此功能的命令按各自的策略降级。
+WebRender 把 HTML、网页或页面元素渲染为图片，供帮助菜单、Wiki infobox、图片表格与其他截图功能使用。
+
+core 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，或把请求转发到远程渲染服务。渲染不可用时，相关命令改用其他输出方式，例如帮助菜单改用文字或表格。
 
 ## 配置
 
@@ -41,9 +43,9 @@ akaribot config set browser_type firefox --table webrender
 
 ## 启动与状态
 
-Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_web_render_status()` 的结果写入 `Bot.Info.web_render_status`。初始化失败时只写日志，并把状态设为不可用，不会阻止机器人启动。
+Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_web_render_status()` 的结果写入 `Bot.Info.web_render_status`。初始化失败时只写日志，并把状态设为不可用。
 
-`close_web_render()` 在进程退出时关闭本地浏览器，`remote_only` 模式没有本地浏览器需要关闭。
+`close_web_render()` 在进程退出时关闭本地浏览器。`remote_only` 模式只使用远程服务。
 
 `webrender` 是基础模块，命令要求超级用户：
 
@@ -60,11 +62,11 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 
 `check_web_render_status()` 返回 `false` 时，调用方不应继续请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态为不可用时改用文字或表格。
 
-其他模块通常先检查状态，或在调用失败后回退到纯文本。渲染服务的异常不会向外抛出，`web_render` 的各方法在本地与远程都失败时返回 `None`。
+其他模块通常先检查状态，或在调用失败后改用纯文本。渲染服务在方法内处理异常，本地与远程都失败时返回 `None`。
 
 <NoticeBox type="info" title="远程回退">
 
-设置 `remote_web_render_url` 后，本地浏览器未初始化、渲染返回空结果或抛出一般异常时，客户端会尝试远程服务。远程也失败时返回空结果。`remote_only=true` 时不会尝试本地浏览器，因此远程地址必须可用。
+设置 `remote_web_render_url` 后，本地浏览器未初始化、渲染返回空结果或抛出一般异常时，客户端会尝试远程服务。远程也失败时返回空结果。`remote_only=true` 时只使用远程服务，远程地址必须可用。
 
 </NoticeBox>
 

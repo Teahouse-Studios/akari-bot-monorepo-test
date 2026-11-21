@@ -62,7 +62,7 @@ QQ 公共实例反馈群：[738829671](https://qm.qq.com/q/Rmuo5ORYgq)
 ### 自搭建
 
 机器人使用独立实例目录，CLI 管理实例虚拟环境、适配器、模块、配置和运行状态。
-需要 Python 3.12 或更高版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
+需要仓库 `pyproject.toml` 声明的 Python 版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
 
 ```sh
 uv tool install akari-bot-cli
@@ -74,10 +74,10 @@ akaribot doctor
 akaribot run
 ```
 
-填写适配器凭据后再启用实例；`akaribot config set <字段> <值> --table <表名>` 按模板类型写入。
+填写适配器登录信息后再启用实例；`akaribot config set <字段> <值> --table <表名>` 按模板类型写入。
 CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安装包含品牌、表情和常规可选依赖，
 `init --minimal` 选择核心最小依赖。源码开发与发行包安装的工作区约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，
-旧部署的备份、预演和迁移见 [迁移指南](docs/migrating-to-packages.md)。
+旧部署的备份、试运行和迁移见 [迁移指南](docs/migrating-to-packages.md)。
 
 完整的搭建步骤见[自搭建指南](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）。
 

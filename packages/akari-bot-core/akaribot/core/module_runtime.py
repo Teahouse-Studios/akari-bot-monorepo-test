@@ -307,6 +307,7 @@ class ModuleRuntimeManager:
 
     @classmethod
     def get_or_create(cls, module_name: str) -> ModuleRuntime:
+        """获取或创建模块运行时。"""
         runtime = cls._staging.get(module_name)
         if runtime is None:
             runtime = cls._current.get(module_name)
@@ -329,6 +330,7 @@ class ModuleRuntimeManager:
         version: int = 1,
         migrate: Callable[[Any], T] | None = None,
     ) -> T:
+        """返回模块状态。"""
         if default is not None and default_factory is not None:
             raise ValueError("Specify either default or default_factory, not both.")
         if default_factory is None:
@@ -354,12 +356,14 @@ class ModuleRuntimeManager:
         *,
         timeout: float = 10,
     ) -> RuntimeResource[T]:
+        """返回模块资源。"""
         if timeout <= 0:
             raise ValueError("Resource timeout must be positive.")
         return cls.get_or_create(module_name).declare_resource(name, factory, close, timeout=timeout)
 
     @classmethod
     def cache_path(cls, module_name: str, name: str, version: int = 1) -> Path:
+        """返回模块缓存路径。"""
         return cls.get_or_create(module_name).declare_cache_path(name, version)
 
     @classmethod
@@ -371,6 +375,7 @@ class ModuleRuntimeManager:
         name: str | None = None,
         timeout: float = 10,
     ) -> None:
+        """清理运行时资源。"""
         cls.get_or_create(module_name).declare_cleanup(callback, name=name, timeout=timeout)
 
     @classmethod
@@ -382,10 +387,12 @@ class ModuleRuntimeManager:
         name: str | None = None,
         suppress_errors: tuple[type[BaseException], ...] = (),
     ) -> asyncio.Task[T]:
+        """创建模块运行时。"""
         return cls.get_or_create(module_name).spawn(awaitable, name=name, suppress_errors=suppress_errors)
 
     @classmethod
     def current(cls) -> ModuleRuntime:
+        """返回当前运行时。"""
         runtime = current_runtime.get()
         if runtime is None:
             raise RuntimeError("No module runtime is active in this context.")
@@ -394,6 +401,7 @@ class ModuleRuntimeManager:
     @classmethod
     @asynccontextmanager
     async def use(cls, module_name: str):
+        """在指定模块的运行时上下文中执行代码，退出时恢复之前的运行时。"""
         token = current_runtime.set(cls.get_or_create(module_name))
         try:
             yield current_runtime.get()
@@ -402,6 +410,7 @@ class ModuleRuntimeManager:
 
     @classmethod
     def prepare_reload(cls, module_names: set[str]) -> dict[str, ModuleRuntime]:
+        """准备重载。"""
         snapshot: dict[str, ModuleRuntime] = {}
         cls._reload_in_progress = True
         cls._reload_created.clear()
@@ -419,6 +428,7 @@ class ModuleRuntimeManager:
         snapshot: dict[str, ModuleRuntime],
         module_names: set[str],
     ) -> None:
+        """中止重载。"""
         try:
             for module_name in set(cls._staging) | module_names:
                 staged = cls._staging.pop(module_name, None)
@@ -442,6 +452,7 @@ class ModuleRuntimeManager:
         active_modules: set[str],
         registered_modules: set[str] | None = None,
     ) -> None:
+        """提交重载结果。"""
         registered = set(module_names) if registered_modules is None else set(registered_modules)
         removed_modules = set(module_names) - registered
         try:
@@ -479,16 +490,19 @@ class ModuleRuntimeManager:
 
     @classmethod
     def activate(cls, module_name: str) -> None:
+        """激活模块。"""
         cls.get_or_create(module_name).activate()
 
     @classmethod
     async def suspend(cls, module_name: str) -> None:
+        """挂起运行时。"""
         runtime = cls._current.get(module_name)
         if runtime is not None:
             await runtime.stop("disable")
 
     @classmethod
     async def shutdown(cls) -> None:
+        """关闭运行时。"""
         for runtime in tuple(cls._current.values()):
             await runtime.stop("shutdown")
         for runtime in tuple(cls._staging.values()):

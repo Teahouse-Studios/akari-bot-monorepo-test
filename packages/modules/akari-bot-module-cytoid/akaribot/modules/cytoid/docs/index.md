@@ -10,7 +10,9 @@
 
 <CommandUsage usage="cytoid profile [<username>]" :params="['username=Cytoid 用户名']" permission="public" />
 
-此命令查询用户资料，返回头像图片，以及经验、等级、Rating 和评级分布。省略用户名时，机器人查询发送者绑定的账号。没有绑定时，命令提示先执行 `cytoid bind`。用户不存在时返回未找到提示。
+此命令查询用户资料，返回头像图片，以及经验、等级、Rating 和评级分布。省略用户名时，机器人查询发送者绑定的账号。
+
+没有绑定时，命令提示先执行 `cytoid bind`。用户不存在时返回未找到提示。
 
 <ChatExample
   :log="[
@@ -23,7 +25,9 @@
 
 <CommandUsage usage="cytoid b30 [<username>]" :params="['username=Cytoid 用户名']" permission="public" />
 
-此命令生成 B30 成绩图。省略用户名时，机器人查询发送者绑定的账号。没有绑定时，命令提示先执行 `cytoid bind`。拉取成绩失败时，命令返回获取失败提示。
+此命令生成 B30 成绩图。省略用户名时，机器人查询发送者绑定的账号。
+
+没有绑定时，命令提示先执行 `cytoid bind`。拉取成绩失败时，命令返回获取失败提示。
 
 <ChatExample
   :log="[

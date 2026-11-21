@@ -43,13 +43,17 @@ packages/akari-bot-module-my/
 
 同一分类的包在侧栏放入同一个二级分组；`category_order` 只决定分类之间的先后，包在分类内仍按 `order`、标题与 key 排序。
 
-`overview = false` 用于以页面集合呈现的包。生成器不补 `index.md`，也不把包根路径作为链接；`nav`、分组页与包入口取该包按 `order`、路径排序后的第一页，侧栏只列出页面。分组内只有一个无概览包时，侧栏省略重复的包标题。
+`overview = false` 用于以页面集合呈现的包。生成器不补 `index.md`，也不把包根路径作为链接。
+
+`nav`、分组页与包入口取该包按 `order`、路径排序后的第一页，侧栏只列出页面。分组内只有一个无概览包时，侧栏省略重复的包标题。
 
 不写 `kind` 时按 key 推断：`core` / `builtin` / `cli` / `testing` 原样；`module-*` 归模块，`adapter-*` 归适配器，`assets-*` 归资源，其余归 `library`。分组决定导航与分组页。第三方模块包与适配器包分别使用 `module-`、`adapter-` 前缀，避免落进 `library` 分组。
 
 ## 模块属性卡
 
-`docs/config/global/docs.global.toml` 支持用 `[[meta.modules]]` 声明页首属性卡，生成器会把它渲染成 `ModuleMeta` 组件，不需要在 Markdown 里手写标签。本仓库的模块文档不声明该表：模块名、别名与权限写在每条命令的 `CommandUsage` 上，页首不再重复。第三方包需要一览表时仍可使用：
+`docs/config/global/docs.global.toml` 支持用 `[[meta.modules]]` 声明页首属性卡，生成器会把它渲染成 `ModuleMeta` 组件，不需要在 Markdown 里手写标签。
+
+本仓库的模块文档不声明该表：模块名、别名与权限写在每条命令的 `CommandUsage` 上，页首不再重复。第三方包需要一览表时仍可使用：
 
 ```toml
 [[meta.modules]]
@@ -87,7 +91,9 @@ permission = "public"
 source = "auto"   # auto | bundled | file:<模板路径>
 ```
 
-`auto` 会在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`；从仓库源码运行 CLI 时还会使用仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 CLI 内置的最小主题。外部模板在根目录提供 `docs-theme.json`，声明主题目录、VitePress 版本、Node 要求、npm 依赖与生成配置选项；引擎只复制主题目录，不导入主题代码。`akari-bot-docs-template` 当前要求 Node.js 22.12 与 VitePress 2.0.0-alpha.21。
+`auto` 会在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会使用仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 CLI 内置的最小主题。
+
+外部模板在根目录提供 `docs-theme.json`，声明主题目录、VitePress 版本、Node 要求、npm 依赖与生成配置选项。引擎只复制主题目录，不导入主题代码。`akari-bot-docs-template` 的要求由它自己的 `docs-theme.json` 声明。
 
 从源码检出运行 CLI 时，`akaribot docs sync-theme` 把 submodule 更新到远端最新提交，`akaribot docs install-deps` 安装或刷新主题依赖。实例可用 `[theme].color = "#rrggbb"` 设置站点主题色；留空使用主题默认值。
 
@@ -113,20 +119,36 @@ source = "auto"   # auto | bundled | file:<模板路径>
 <ChatExample :messages="[{ role: 'bot', text: '**成功**', markdown: true }]" />
 ```
 
-内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名组件（`ChatExample` 将图片渲染为缩略图、点击在新标签页打开，不含头像与主题色，气泡文本按纯文本渲染），`ModuleAlias`、`ModuleConfig`、`ModuleData` 只在外部模板中渲染；`CommandUsage` 的 `params` 参数清单、悬浮提示与 `platforms` / `excluded` 平台徽章同样由外部模板渲染，内置主题只显示用法行。外部模板的组件使用 M3E 颜色令牌，外观随读者的种子色、明暗模式与对比度设置变化。组件只在构建后的站点中渲染；直接在 Markdown 阅读器里会显示为标签。属性卡由生成器注入，其它组件按需使用，正文仍以 Markdown 为主。数据去向、进程内状态这类补充说明写在卡片之后的正段落里。
+内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名组件（`ChatExample` 将图片渲染为缩略图、点击在新标签页打开，不含头像与主题色，气泡文本按纯文本渲染），`ModuleAlias`、`ModuleConfig`、`ModuleData` 只在外部模板中渲染；`CommandUsage` 的 `params` 参数清单、悬浮提示与 `platforms` / `excluded` 平台徽章同样由外部模板渲染，内置主题只显示用法行。
+
+外部模板的组件使用 M3E 颜色令牌，外观随读者的种子色、明暗模式与对比度设置变化。组件只在构建后的站点中渲染；直接在 Markdown 阅读器里会显示为标签。属性卡由生成器注入，其它组件按需使用，正文仍以 Markdown 为主。数据去向、进程内状态这类补充说明写在卡片之后的正段落里。
 
 ## 模块页面结构
 
-模块文档通常分为“使用方法”和“安装与开发”两部分，按读者划分内容。内置模块不设包级概览页：37 个模块各占一页，页面文件名取模块名，`update&restart` 写作 `update-restart.md`；导航进入第一页。侧栏平铺命令模块与配置、工具页面，7 个非命令钩子页面收进「钩子」子菜单。
+模块文档通常分为“使用方法”和“安装与开发”两部分，按读者划分内容。
 
-- `index.md` 是使用方法，面向使用者。只写模块做什么、怎么触发、会得到什么，以及用户可见的限制与提示；不写安装命令、配置字段、数据表、依赖与内部实现。每条命令一个 `###` 章节：标题写命令名，下面接一行 `CommandUsage` 交代权限与别名，再写一至三句说明参数与行为；需要展示实际往返时，在说明后接一个 `ChatExample`。模块有多个子命令组时用 `##` 分组，命令仍写 `###`；命令不再单独成页。
-- 命令不用表格罗列。用法行由 `CommandUsage` 按实例配置的命令前缀渲染，未配置前缀时不加；用法里的参数用 `params` 逐项说明，格式为 `['名字=说明', …]`，名字不带尖括号，占位名是中文时照写；选项写在 `options` 上，渲染为列表；字段说明这类小表改成列表，长对照表（颜色名、谱面定数等）保留表格。对话示例使用默认前缀 `~`，只展示仓库默认配置下可直接使用的结果；需要图片结果时用 `![说明](相对路径)` 引用包内图片，图片放在包内 `docs/` 目录下；图片位于消息尾部时另起气泡，多张尾部图片共用一个气泡；竖长图缩到 200px 高后宽度过小时在地址后加 `{natural}`，按原始尺寸展示，超过视口高度时等比缩小；同一气泡内的多张图需要等宽时，在 `ChatExample` 上写 `:image-width="320"`。需要展示平台卡片消息时，在 `ChatExample` 上写 `:card="{ title, description, url, image, domain }"`。订阅类模块的示例按「开启成功 → 时间分隔线 → 实际推送」组织，分隔线写 `〰〰〰`。需要模拟消息按钮时，在 `ChatExample` 上写 `buttons`，每项用 `label` 与 `reply` 描述按钮和点击后的回复；回复需要继续挂按钮时在按钮项上再写 `buttons`，关闭类按钮写 `dismiss: true`；图片会在点击后才开始加载。
-- `development.md` 是安装与开发，面向部署者与维护者。放安装步骤、配置字段、权限与平台能力、数据表与依赖；不写玩法规则与命令用法。配置与数据表两节用 `ModuleConfig`、`ModuleData` 说明事实，模块级别名用 `ModuleAlias`；每项只写一次，不在每条命令上重复。
+内置模块不设包级概览页：每个模块各占一页，页面文件名取模块名，`update&restart` 写作 `update-restart.md`。导航进入第一页。侧栏平铺命令模块与配置、工具页面，非命令钩子页面收进「钩子」子菜单。
+
+- `index.md` 是使用方法，面向使用者。只写模块做什么、怎么触发、会得到什么，以及用户可见的限制与提示。不写安装命令、配置字段、数据表、依赖与内部实现。
+- 每条命令一个 `###` 章节：标题写命令名，下面接一行 `CommandUsage` 交代权限与别名，再写一至三句说明参数与行为。需要展示实际往返时，在说明后接一个 `ChatExample`。
+- 模块有多个子命令组时用 `##` 分组，命令仍写 `###`，不再单独成页。
+- 命令不用表格罗列。用法行由 `CommandUsage` 按实例配置的命令前缀渲染，未配置前缀时不加。
+- 用法里的参数用 `params` 逐项说明，格式为 `['名字=说明', …]`。名字不带尖括号，占位名是中文时照写。
+- 选项写在 `options` 上，渲染为列表。字段说明这类小表改成列表，长对照表（颜色名、谱面定数等）保留表格。
+- 对话示例使用默认前缀 `~`，只展示仓库默认配置下可直接使用的结果。需要图片结果时用 `![说明](相对路径)` 引用包内图片，图片放在包内 `docs/` 目录下。
+- 图片位于消息尾部时另起气泡，多张尾部图片共用一个气泡。竖长图缩到 200px 高后宽度过小时在地址后加 `{natural}`，按原始尺寸展示，超过视口高度时等比缩小。同一气泡内的多张图需要等宽时，在 `ChatExample` 上写 `:image-width="320"`。
+- 需要展示平台卡片消息时，在 `ChatExample` 上写 `:card="{ title, description, url, image, domain }"`。
+- 订阅类模块的示例按「开启成功 → 时间分隔线 → 实际推送」组织，分隔线写 `〰〰〰`。
+- 需要模拟消息按钮时，在 `ChatExample` 上写 `buttons`，每项用 `label` 与 `reply` 描述按钮和点击后的回复。回复需要继续挂按钮时在按钮项上再写 `buttons`，关闭类按钮写 `dismiss: true`。图片会在点击后才开始加载。
+- `development.md` 是安装与开发，面向部署者与维护者。放安装步骤、配置字段、权限与平台能力、数据表与依赖。不写玩法规则与命令用法。
+- 配置与数据表两节用 `ModuleConfig`、`ModuleData` 说明事实，模块级别名用 `ModuleAlias`。每项只写一次，不在每条命令上重复。
 - `docs/config/global/docs.global.toml` 不声明 `[[meta.modules]]`，页面顶部不再出现模块清单表。声明该表的能力仍然保留，供第三方包使用。
 - 其余页面作为补充用法，与上述两页一起出现。内置模块每页对应一个模块，命令仍按 `###` 组织，不按管理、配置、解析器、会话、工具等分类拆页。
 - 译文放在 `docs/<语言标签>/` 下，文件名与默认语言一致；某个语言缺少页面时生成器复制默认语言的同名页面，不产生空链接。`docs/config/global/docs.global.toml` 用 `[locales.<标签>]` 覆盖该语言的标题与简介。
 
-生成器把同一模块目录下的页面作为平行页面：使用 `akari-bot-docs-template` 时，侧栏只显示一个模块条目，条目名称取模块名；有概览页时默认打开使用方法，无概览页时默认打开第一页；`development.md` 的标签固定为“安装与开发”，不单独出现在侧栏。内置回退主题没有标签栏，开发页仍作为普通侧栏页面列出。页面顺序由 `order` 与文件名决定；有概览页时 `index.md` 在最前，`development.md` 始终在最后。
+生成器把同一模块目录下的页面作为平行页面。使用 `akari-bot-docs-template` 时，侧栏只显示一个模块条目，条目名称取模块名。有概览页时默认打开使用方法，无概览页时默认打开第一页。`development.md` 的标签固定为“安装与开发”，不单独出现在侧栏。
+
+内置回退主题没有标签栏，开发页仍作为普通侧栏页面列出。页面顺序由 `order` 与文件名决定：有概览页时 `index.md` 在最前，`development.md` 始终在最后。
 
 ## 页面与 front matter
 
@@ -143,7 +165,9 @@ submenu: 钩子
 # 命令
 ```
 
-只识别 `title`、`order`、`description`、`submenu` 四个单行标量键，不支持列表或嵌套结构。标题缺省取正文第一个一级标题（跳过代码块），再缺省取文件名。包有概览页时 `index.md` 始终排在最前；无概览页的包按 `order`、路径排序。`submenu` 把同一包内取值相同的页面收进一个无链接的二级分组，分组名即字段值；未设置该字段的页面仍直接列在包下，分组排在平铺页面之后。
+只识别 `title`、`order`、`description`、`submenu` 四个单行标量键，不支持列表或嵌套结构。标题缺省取正文第一个一级标题（跳过代码块），再缺省取文件名。
+
+包有概览页时 `index.md` 始终排在最前。无概览页的包按 `order`、路径排序。`submenu` 把同一包内取值相同的页面收进一个无链接的二级分组，分组名即字段值。未设置该字段的页面仍直接列在包下，分组排在平铺页面之后。
 
 页面可携带 `.md`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.svg`、`.webp`、`.avif`、`.txt`、`.pdf`；其他后缀不进入站点。文档目录中的符号链接不得指向目录之外。
 
@@ -165,9 +189,16 @@ module-my-module = "akaribot.modules.my_module"
 
 ## 命令与生成物
 
-`akaribot docs` 提供 `list`、`build`、`serve`、`deploy`、`status`、`clean`：`list` 经实例的 core 入口读取已装包目录，入口不可用时退回注册表清单；`build` 生成站点并调用 VitePress；`serve` 在本机预览产物；`deploy` 发布到 Vercel 或 S3；`status` 读取构建与部署状态；`clean` 清理生成目录。
+`akaribot docs` 提供 `list`、`build`、`serve`、`deploy`、`status`、`clean`：
 
-构建需要 Node.js >= 18 与 `npm`，VitePress 固定为 1.6.4，依赖由 `npm ci` 安装。生成物位于实例根的 `cache/docs/src`（站点源）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）；构建指纹与部署记录在 `.docs/state.json`。
+- `list`：经实例的 core 入口读取已装包目录，入口不可用时退回注册表清单。
+- `build`：生成站点并调用 VitePress。
+- `serve`：在本机预览产物。
+- `deploy`：发布到 Vercel 或 S3。
+- `status`：读取构建与部署状态。
+- `clean`：清理生成目录。
+
+构建需要 Node.js 与 `npm`，版本要求由主题清单决定；依赖由 `npm ci` 安装。生成物位于实例根的 `cache/docs/src`（站点源）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）；构建指纹与部署记录在 `.docs/state.json`。
 
 部署目标写在实例根 `docs.toml` 的 `[deploy]` 段，凭据只从环境变量读取，不写入配置文件与状态文件。基路径默认 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。
 
@@ -178,7 +209,8 @@ module-my-module = "akaribot.modules.my_module"
 - **段落不按列硬换行**：一个段落写在同一行，由渲染器换行；中文没有词间空格，源码里的软换行会在页面上留下空格。
 - **一级标题开头**：每页以 `# 标题` 开始，标题与 front matter 的 `title` 一致。
 - **篇幅**：单页 40 至 120 行，只覆盖功能概述、基本使用与接口行为。
-- **链接与图片**：同包页面使用相对路径；跨包页面按源码目录写相对路径，生成器会折算成站点 URL，也可直接写 `/<包 key>/<页面>`。图片与附件放在 `docs/` 下用相对路径引用；图片、`.txt` 与 `.pdf` 都会发布到 `/<包 key>/` 路径下，组件内的相对路径同样可用。
+- **链接**：同包页面使用相对路径。跨包页面按源码目录写相对路径，生成器会折算成站点 URL，也可直接写 `/<包 key>/<页面>`。
+- **图片与附件**：放在 `docs/` 下用相对路径引用。图片、`.txt` 与 `.pdf` 都会发布到 `/<包 key>/` 路径下，组件内的相对路径同样可用。
 
 ## 最小示例
 
@@ -187,7 +219,7 @@ module-my-module = "akaribot.modules.my_module"
 ```toml
 [project]
 name = "akari-bot-module-my"
-version = "0.1.0"
+version = "x.y.z"
 
 [project.entry-points."akaribot.docs"]
 module-my-module = "akaribot.modules.my_module"

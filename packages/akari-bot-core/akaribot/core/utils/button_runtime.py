@@ -15,6 +15,7 @@ BUTTON_EXPIRES = 3600
 
 @define
 class ButtonState:
+    """按钮的当前状态。"""
     payload: str
     reply_id: str | None
     allowed_sender_id: str | None
@@ -25,6 +26,7 @@ class ButtonState:
 
 @define(frozen=True)
 class RegisteredButton:
+    """已注册的按钮。"""
     label: str
     token: str | None = None
     url: str | None = None
@@ -42,6 +44,7 @@ class ButtonConsumeStatus(Enum):
 
 @define(frozen=True)
 class ButtonConsumeResult:
+    """按钮回调的消费结果。"""
     status: ButtonConsumeStatus
     payload: str | None = None
     reply_id: str | None = None

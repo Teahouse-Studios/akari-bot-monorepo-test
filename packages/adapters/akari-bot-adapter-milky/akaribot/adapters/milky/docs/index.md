@@ -4,7 +4,7 @@ Milky 适配器通过 Milky 协议端连接 QQ，接入群聊与私信，并处�
 
 ## 平台概述
 
-适配器作为 HTTP 客户端连接 Milky 协议端，订阅事件流并调用协议端接口收发消息。适配器不监听本地端口。事件流断开后每隔 5 秒重连。群聊与私信分别使用 `QQ|Group` 与 `QQ|Private` 前缀，两个前缀同属 `QQ` 客户端身份。
+适配器作为 HTTP 客户端连接 Milky 协议端，订阅事件流并调用协议端接口收发消息。适配器不监听本地端口。事件流断开后每隔 5 秒重连。
 
 ## 安装
 
@@ -62,7 +62,7 @@ akaribot module add akari-bot-adapter-milky
 
 ## 私信与群聊
 
-- 群聊目标前缀为 `QQ|Group`，私信为 `QQ|Private`。临时会话由 `qq_enable_temp_session` 控制。
+- 群聊目标前缀为 `QQ|Group`，私信为 `QQ|Private`，两个前缀同属 `QQ` 客户端身份。临时会话由 `qq_enable_temp_session` 控制。
 - 群聊是否必须 @机器人，由 core 配置 `mention_required` 决定。
 - 机器人默认不处理自身发送的消息，开启 `qq_enable_listening_self_message` 后一并处理。
 - 好友请求与群邀请默认只自动同意超级管理员与白名单用户发来的请求。其他用户发来的请求分别由 `qq_allow_approve_friend` 与 `qq_allow_approve_group_invite` 控制。

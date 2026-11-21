@@ -81,16 +81,16 @@ const logo = useBrandAsset("logo", "/home/logo.png");
 const logoDark = useBrandAsset("logoDark", "/home/logo-night.png");
 
 const lightVineColors = {
-  leaf: "#ea71ca",
-  flower: "#f4c3e6",
-  flowerStem: "#d71da6",
-  bud: "#e873c9",
-  base: "#d025a2",
-  fill: "#dd46b5",
-  tint: "#ea7bcd",
-  halo: "#e83bba",
-  edge: "#f042c1",
-  fine: "#d02fa5",
+  leaf: "#ff3fae",
+  flower: "#ff9fd6",
+  flowerStem: "#ff7fc8",
+  bud: "#ffc9e6",
+  base: "#f7a8d6",
+  fill: "#ff3fae",
+  tint: "#ffd9ee",
+  halo: "#ffe8f4",
+  edge: "#f7a8d6",
+  fine: "#ffd9ee",
 };
 
 const darkVineColors = {
@@ -107,16 +107,16 @@ const darkVineColors = {
 };
 
 const lightPopoutColors = {
-  leaf: "#ff80dd",
-  flower: "#f5ade1",
-  flowerStem: "#e52eb4",
-  bud: "#b41389",
-  base: "#f051c6",
-  fill: "#ee17b4",
-  tint: "#eb37bb",
-  halo: "#d714a3",
-  edge: "#f22cbd",
-  fine: "#a91481",
+  leaf: "#ff3fae",
+  flower: "#ff9fd6",
+  flowerStem: "#ff7fc8",
+  bud: "#ffc9e6",
+  base: "#f7a8d6",
+  fill: "#ff3fae",
+  tint: "#ffd9ee",
+  halo: "#ffe8f4",
+  edge: "#f7a8d6",
+  fine: "#ffd9ee",
 };
 
 const darkPopoutColors = {
@@ -161,6 +161,7 @@ function asset(value: string): string {
       <section class="akari-home__hero" aria-labelledby="akari-home-title">
       <AkariFluidWall
         class="akari-home__fluid"
+        placement="center"
         variant="blossom"
         texture="vine"
         :ripple="1.55"
@@ -168,25 +169,32 @@ function asset(value: string): string {
         :ripple-rings="3.2"
         :ripple-sway="1.55"
         :vine-glow="0.9"
-        :shadow="0.45"
-        shadow-color="#8a4bd2"
-        :wall-shadow="0.45"
+        :shadow="1"
+        :shadow-color="isDark ? '#8a4bd2' : '#d4147d'"
+        :wall-shadow="1"
         :wall-shadow-size="0.9"
-        wall-shadow-color="#a443f4"
+        :wall-shadow-color="isDark ? '#a443f4' : '#e85bb5'"
         :wall-shadow-angle="162"
         :wall-shadow-blur="5"
-        :underlay-color="isDark ? '#3c2a2a' : '#a510a8'"
-        :underlay-opacity="isDark ? 0.25 : 1"
-        mote-blend="additive"
+        :wall-vines-in-safe-zone="false"
+        :underlay-color="isDark ? '#3c2a2a' : '#ff3fae'"
+        :underlay-opacity="isDark ? 0.25 : 0.28"
+        :underlay-blend="isDark ? 'additive' : 'normal'"
         height="300px"
-        :texture-opacity="0.55"
+        :texture-opacity="3.2"
+        :vine-density="0.55"
         :vine-colors="isDark ? darkVineColors : lightVineColors"
         :vine-popout-colors="isDark ? darkPopoutColors : lightPopoutColors"
         popout
         inward
         :style="{
-          '--md-sys-color-primary': isDark ? '#e69ed3' : '#60154c',
-          '--md-sys-color-primary-container': isDark ? '#480436' : '#e3cedd',
+          '--md-sys-color-primary': isDark ? '#e69ed3' : '#e6007a',
+          '--md-sys-color-primary-container': isDark ? '#480436' : '#ffd6ec',
+          '--md-sys-color-secondary-container': isDark ? undefined : '#e8d9ff',
+          '--md-sys-color-tertiary': isDark ? undefined : '#ff5c8a',
+          '--md-sys-color-tertiary-container': isDark ? undefined : '#ffe0ea',
+          '--md-sys-color-surface': isDark ? undefined : '#fff8fc',
+          '--md-sys-color-surface-container-lowest': isDark ? undefined : '#fff8fc',
         }"
       >
         <h1 id="akari-home-title" class="akari-home__title">{{ home.title }}</h1>
@@ -237,11 +245,6 @@ function asset(value: string): string {
               <h3><a :href="href(role.href)">{{ role.title }}</a></h3>
               <p class="akari-home__role-description">{{ role.description }}</p>
 
-              <div v-if="role.links.length > 2" class="akari-home__role-extra">
-                <a v-for="link in role.links.slice(2)" :key="link.label" :href="href(link.href)">
-                  {{ link.label }}
-                </a>
-              </div>
             </div>
 
             <div class="akari-home__role-actions">
@@ -282,12 +285,13 @@ function asset(value: string): string {
     <section class="akari-home__contribute" :aria-label="home.sections.contributeLabel">
       <article v-for="card in home.contribute.cards" :key="card.title" class="akari-home__contribute-card">
         <div class="akari-home__contribute-head">
-          <img
-            v-if="card.logo"
-            class="akari-home__contribute-logo"
-            :src="asset(card.logo)"
-            :alt="card.title"
-          />
+          <span v-if="card.logo" class="akari-home__contribute-logo-frame">
+            <img
+              class="akari-home__contribute-logo"
+              :src="asset(card.logo)"
+              :alt="card.title"
+            />
+          </span>
           <span v-else class="akari-home__contribute-icon">
             <m3e-icon :name="card.icon || 'code'" aria-hidden="true"></m3e-icon>
           </span>
@@ -338,6 +342,10 @@ function asset(value: string): string {
   text-decoration: none;
 }
 
+.akari-home p {
+  margin-inline-start: 0;
+}
+
 .akari-home a::before {
   content: none !important;
   display: none !important;
@@ -375,6 +383,10 @@ function asset(value: string): string {
 
 .akari-home__fluid {
   inline-size: 100%;
+}
+
+.akari-home :deep(.akari-fluid-wall__veil) {
+  opacity: 0.42;
 }
 
 .akari-home :deep(.akari-fluid-wall) {
@@ -573,29 +585,18 @@ function asset(value: string): string {
 }
 
 .akari-home__role-button m3e-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
   color: var(--md-sys-color-primary);
   font-size: 1rem;
+  line-height: 1;
 }
 
-.akari-home__role-extra {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 10px;
-}
-
-.akari-home__role-extra a {
-  border-bottom: 1px solid transparent;
-  color: var(--md-sys-color-on-secondary-container);
-  font-size: 0.76rem;
-  opacity: 0.72;
-  transition: border-color 180ms ease, opacity 180ms ease;
-}
-
-.akari-home__role-extra a:hover {
-  border-color: currentColor;
-  opacity: 1;
-}
 
 .akari-home__section-head {
   display: flex;
@@ -678,9 +679,28 @@ function asset(value: string): string {
   color: var(--md-sys-color-primary);
 }
 
+.akari-home__contribute-logo-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 8px 12px;
+  line-height: 0;
+  border-radius: 12px;
+  background-color: transparent;
+}
+
 .akari-home__contribute-logo {
+  display: block;
   width: 112px;
   height: auto;
+  margin: 0;
+}
+
+html.dark .akari-home__contribute-logo-frame {
+  background-color: var(--md-sys-color-inverse-surface);
 }
 
 .akari-home__contribute-card > p {

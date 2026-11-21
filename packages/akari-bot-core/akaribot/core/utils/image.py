@@ -26,6 +26,7 @@ use_font_mirror = CoreConfig.use_font_mirror
 
 
 def get_fontsize(font, text):
+    """计算图片文字字号。"""
     left, top, right, bottom = font.getbbox(text)
     return right - left, bottom - top
 

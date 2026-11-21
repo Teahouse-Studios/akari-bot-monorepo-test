@@ -34,6 +34,7 @@ web_render = WebRender(
 
 
 async def init_web_render():
+    """初始化网页渲染器。"""
     if not enable_web_render:
         Logger.info("WebRender is disabled in the configuration.")
         return False
@@ -59,6 +60,7 @@ async def check_web_render_status() -> bool:
 
 
 async def close_web_render():
+    """关闭网页渲染器。"""
     if not enable_web_render:
         return False
     if remote_only:

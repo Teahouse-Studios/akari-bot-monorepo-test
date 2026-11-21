@@ -113,6 +113,7 @@ async def client_init(
     load_module_db=False,
     rename_logger: bool = True,
 ) -> None:
+    """初始化平台客户端。"""
     global _initialization_task
 
     task = _initialization_task

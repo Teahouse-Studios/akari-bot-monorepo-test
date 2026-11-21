@@ -24,6 +24,15 @@ from akaribot.cli.docs_engine.builder import build
 from akaribot.cli.docs_engine.catalog import load_catalog
 from akaribot.cli.docs_engine.config import CONFIG_FILENAME, DocsConfig, load_config
 from akaribot.cli.docs_engine.deploy import DocsDeployError, get_provider
+from akaribot.cli.docs_engine.dev import (
+    DEBOUNCE_SECONDS,
+    DEFAULT_DEV_PORT,
+    LOCK_FILENAME,
+    DevSession,
+    lock_active,
+    read_lock,
+    read_lock_at,
+)
 from akaribot.cli.docs_engine.model import BuildResult, DocPackage, DocsError, ToolchainInfo
 from akaribot.cli.docs_engine.server import StaticServer
 from akaribot.cli.docs_engine.state import load_state, record_deploy
@@ -165,6 +174,16 @@ def _deploy_detail(deploy: Mapping[str, Any] | None) -> str:
     )
 
 
+def _dev_detail(lock: Any, running: bool) -> str:
+    if not running or lock is None:
+        return i18n.t("cli.docs.status.dev_idle")
+    return i18n.t(
+        "cli.docs.status.dev_running",
+        pid=lock.pid,
+        url=f"http://{lock.host}:{lock.port}{lock.base}",
+    )
+
+
 def _state_parts(instance: Any) -> tuple[Mapping[str, Any] | None, list[Any]]:
     state = load_state(instance)
     build_state = state.get("build")
@@ -185,6 +204,7 @@ _STAGE_KEYS = {
     "toolchain": "cli.docs.build.stage_toolchain",
     "generate": "cli.docs.build.stage_generate",
     "build": "cli.docs.build.stage_build",
+    "server": "cli.docs.dev.stage_server",
 }
 
 
@@ -209,6 +229,50 @@ def _print_log_line(line: str, *, as_json: bool) -> None:
         _write_stderr(line)
         return
     console.print(line, markup=False, highlight=False, soft_wrap=True)
+
+
+def _render_event_error(payload: Any) -> str:
+    if not isinstance(payload, Mapping):
+        return i18n.t("cli.docs.error.dev_failed", reason="-")
+    params = dict(payload.get("params") or {})
+    return _render_error(DocsError(str(payload.get("key") or "cli.docs.error.dev_failed"), **params))
+
+
+def _emit_dev_event(event: Mapping[str, Any], *, as_json: bool) -> None:
+    if as_json:
+        _emit_json(event, flush=True)
+        return
+    name = event.get("event")
+    if name == "stage":
+        _print_stage(str(event.get("stage")), as_json=False)
+        return
+    if name == "ready":
+        console.print(escape(i18n.t("cli.docs.dev.ready", url=event.get("url"))))
+        console.print(i18n.t("cli.docs.dev.watching"))
+        return
+    if name == "sync":
+        written = int(event.get("written") or 0)
+        removed = int(event.get("removed") or 0)
+        if written or removed:
+            console.print(
+                escape(
+                    i18n.t(
+                        "cli.docs.dev.sync",
+                        written=written,
+                        removed=removed,
+                        duration=int(event.get("duration_ms") or 0),
+                    )
+                )
+            )
+        return
+    if name == "warn":
+        _write_stderr(escape(i18n.t(f"cli.docs.dev.warn.{event.get('code')}", path=event.get("path", "-"))))
+        return
+    if name == "error":
+        _write_stderr(escape(i18n.t("cli.docs.dev.warn.sync_failed", detail=_render_event_error(event.get("error")))))
+        return
+    if name == "stopped":
+        console.print(i18n.t("cli.docs.dev.stopped"))
 
 
 def _build_site(
@@ -393,6 +457,9 @@ def install_deps_docs(
     target = require_instance(instance)
     try:
         config = load_config(target)
+        lock = read_lock(config)
+        if lock_active(lock):
+            raise DocsError("cli.docs.error.dev_locked", pid=lock.pid, port=lock.port)
         theme = resolve_theme(config)
         toolchain = detect(theme.node_major)
         if not toolchain.ready:
@@ -464,6 +531,42 @@ def serve_docs(
         _emit_json({"event": "stopped"})
     else:
         console.print(i18n.t("cli.docs.serve.stopped"))
+
+
+@app.command("dev", help=i18n.t("cli.docs.dev.help"))
+def dev_docs(
+    host: Annotated[str, typer.Option("--host", help=i18n.t("cli.docs.option_host"))] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option("--port", help=i18n.t("cli.docs.option_port"))] = DEFAULT_DEV_PORT,
+    open_browser: Annotated[bool, typer.Option("--open", help=i18n.t("cli.docs.option_open"))] = False,
+    offline: Annotated[bool, typer.Option("--offline", help=i18n.t("cli.docs.option_offline"))] = False,
+    interval: Annotated[float, typer.Option("--interval", help=i18n.t("cli.docs.option_interval"))] = DEBOUNCE_SECONDS,
+    package: Annotated[list[str] | None, typer.Option("--package", help=i18n.t("cli.docs.option_package"))] = None,
+    as_json: JsonOption = False,
+    instance: InstancePathOption = None,
+) -> None:
+    """监听文档与主题改动，在临时目录里运行 VitePress dev，直到 Ctrl+C。
+
+    ``--package`` 只监听列出的包；``--port`` 被占用时自动改用系统分配的端口。``--json`` 输出
+    逐行事件（``stage`` / ``sync`` / ``ready`` / ``warn`` / ``error`` / ``stopped``），子进程日志
+    写入 stderr。
+    """
+    target = require_instance(instance)
+    keys = split_names(package) or None
+    session = DevSession(
+        target,
+        host=host,
+        port=port,
+        open_browser=open_browser,
+        offline=offline,
+        keys=keys,
+        debounce=interval,
+        emit=lambda event: _emit_dev_event(event, as_json=as_json),
+        log=lambda line: _print_log_line(line, as_json=as_json),
+    )
+    try:
+        session.run()
+    except DocsError as error:
+        _fail(error)
 
 
 def _provider_name(config: DocsConfig) -> str:
@@ -581,6 +684,8 @@ def status_docs(
     except DocsError as error:
         _fail(error)
     build_state, deploys = _state_parts(target)
+    dev_lock = read_lock(config)
+    dev_running = lock_active(dev_lock)
     keys = list(catalog.keys())
     if as_json:
         _emit_json(
@@ -598,6 +703,12 @@ def status_docs(
                 "packages": {"count": len(keys), "keys": keys},
                 "build": dict(build_state) if build_state else None,
                 "deploys": deploys,
+                "dev": {
+                    "running": dev_running,
+                    "pid": dev_lock.pid if dev_lock else None,
+                    "port": dev_lock.port if dev_lock else None,
+                    "base": dev_lock.base if dev_lock else None,
+                },
             }
         )
         return
@@ -621,6 +732,7 @@ def status_docs(
     )
     console.print(escape(i18n.t("cli.docs.status.base", base=config.base)))
     console.print(escape(i18n.t("cli.docs.status.out_dir", path=config.out_dir)))
+    console.print(escape(i18n.t("cli.docs.status.dev", detail=_dev_detail(dev_lock, dev_running))))
     console.print(i18n.t("cli.docs.status.packages", count=len(keys)))
     console.print(escape(i18n.t("cli.docs.status.build", detail=_build_detail(build_state))))
     latest = deploys[-1] if deploys and isinstance(deploys[-1], Mapping) else None
@@ -636,6 +748,9 @@ def clean_docs(
     """删除实例的文档缓存目录 ``cache/docs``。"""
     target = require_instance(instance)
     path = target.root / "cache" / "docs"
+    lock = read_lock_at(path / LOCK_FILENAME)
+    if lock_active(lock):
+        fail(escape(i18n.t("cli.docs.error.dev_locked", pid=lock.pid, port=lock.port)))
     if not path.exists():
         if as_json:
             _emit_json({"ok": True, "removed": False, "path": str(path)})

@@ -11,6 +11,8 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from packaging.requirements import InvalidRequirement, Requirement
+
 from akaribot.cli import __version__
 
 from .config import default_labels
@@ -115,6 +117,9 @@ def _parse_packages(
                 summary=_text(item, "summary", "description"),
                 doc_path=doc_path,
                 pages=pages,
+                dependencies=_string_tuple(item.get("dependencies")),
+                languages=_language_pairs(item.get("languages")),
+                api_catalog=item.get("api_catalog") if isinstance(item.get("api_catalog"), Mapping) else {},
                 logo=_text(item, "logo"),
                 logo_dark=_text(item, "logo_dark"),
                 avatar=_text(item, "avatar"),
@@ -187,17 +192,19 @@ def _fallback_registry(
             continue
         pages = _scan_pages(doc_path, labels, tags)
         meta = _read_local_meta(doc_path)
+        dist_name = _text(item, "dist", "distribution") or key
         packages.append(
             DocPackage(
                 key=key,
                 group=_text(item, "kind", "type") or "module",
-                dist=_text(item, "dist", "distribution") or key,
+                dist=dist_name,
                 name=key,
                 version=_text(item, "version"),
                 title=_text(meta, "title") or key,
                 summary=_text(item, "summary"),
                 doc_path=doc_path,
                 pages=pages,
+                dependencies=tuple(_dist_dependencies(dist_name)),
                 logo=_local_asset(doc_path, meta, "logo"),
                 avatar=_local_asset(doc_path, meta, "avatar"),
                 editable=bool(item.get("editable", False)),
@@ -254,6 +261,7 @@ def _load_local_cli(labels: Mapping[str, str], tags: Sequence[str]) -> DocPackag
         summary=_text(meta, "summary"),
         doc_path=CLI_DOC_PATH,
         pages=_scan_pages(CLI_DOC_PATH, labels, tags),
+        dependencies=tuple(_dist_dependencies(CLI_DIST)),
         order=_int_value(meta.get("order")),
         category=_text(meta, "category"),
         category_order=_int_value(meta.get("category_order")),
@@ -367,6 +375,64 @@ def _reason(value: Any) -> str:
         return stderr.strip().splitlines()[-1][:200]
     text = str(value).strip()
     return text[:200] if text else type(value).__name__
+
+
+def _language_pairs(value: Any) -> tuple[tuple[str, str], ...]:
+    if not isinstance(value, Mapping):
+        return ()
+    pairs: list[tuple[str, str]] = []
+    for code, label in value.items():
+        key = str(code).strip()
+        text = str(label).strip()
+        if key and text:
+            pairs.append((key, text))
+    return tuple(pairs)
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    return tuple(text for item in value if (text := str(item).strip()))
+
+
+_SPECIFIER_ORDER = {"===": 0, "==": 1, "~=": 2, ">=": 3, ">": 4, "<=": 5, "<": 6, "!=": 7}
+
+
+def _format_dependency(text: str) -> str:
+    try:
+        requirement = Requirement(text)
+    except InvalidRequirement:
+        return text
+    if requirement.marker is not None and "extra" in str(requirement.marker):
+        return ""
+    base = requirement.name
+    if requirement.extras:
+        base += f"[{','.join(sorted(requirement.extras))}]"
+    specifiers = sorted(
+        requirement.specifier,
+        key=lambda specifier: (_SPECIFIER_ORDER.get(specifier.operator, 99), specifier.version),
+    )
+    rendered = ",".join(str(specifier) for specifier in specifiers)
+    if rendered:
+        base += rendered
+    elif requirement.url:
+        return f"{base} @ {requirement.url}"
+    if requirement.marker is not None:
+        base += f"; {requirement.marker}"
+    return base
+
+
+def _dist_dependencies(dist: str) -> list[str]:
+    try:
+        requires = metadata.requires(dist) or []
+    except Exception:  # noqa: BLE001 - 缺少元数据时按无依赖处理
+        return []
+    dependencies: list[str] = []
+    for item in requires:
+        dependency = _format_dependency(str(item).strip())
+        if dependency:
+            dependencies.append(dependency)
+    return dependencies
 
 
 def _text(item: Mapping[str, Any], *names: str) -> str:

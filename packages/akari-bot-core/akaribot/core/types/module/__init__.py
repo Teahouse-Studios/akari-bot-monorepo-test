@@ -20,6 +20,7 @@ def alias_converter(value, _self) -> dict:
 
 @define
 class Module:
+    """已加载模块的信息。"""
     module_name: str
     alias: dict = field(converter=Converter(alias_converter, takes_self=True))
     recommend_modules: list = field(converter=convert_list)
@@ -50,12 +51,14 @@ class Module:
 
     @classmethod
     def assign(cls, **kwargs):
+        """复制模块字段。"""
         obj = cls(**{k: v for k, v in kwargs.items() if not k.startswith("_")})
         obj._py_module_name = kwargs.get("_py_module_name", "")
         obj._db_load = kwargs.get("_db_load", False)
         return deepcopy(obj)
 
     def to_dict(self):
+        """返回模块字典。"""
         return {
             "module_name": self.module_name,
             "alias": self.alias,

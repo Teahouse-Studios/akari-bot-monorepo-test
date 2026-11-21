@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from akaribot.cli.docs_engine.config import DocsConfig, DocsLocaleConfig, DocsSiteConfig, DocsThemeConfig
-from akaribot.cli.docs_engine.generator import generate
+from akaribot.cli.docs_engine.generator import _link_api_references, generate
 from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
 from akaribot.cli.docs_engine.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
@@ -40,6 +40,7 @@ def _package(
     character: str = "",
     credits: str = "",
     brand: bool = False,
+    dependencies: tuple[str, ...] = (),
 ) -> DocPackage:
     doc_path = base / f"doc-{key}"
     doc_path.mkdir(parents=True, exist_ok=True)
@@ -62,6 +63,7 @@ def _package(
         character=character,
         credits=credits,
         brand=brand,
+        dependencies=dependencies,
     )
 
 
@@ -409,6 +411,44 @@ async def _test_module_categories_and_parallel_tabs():
         and "tabs" not in core_group["items"][0]
         and [item["text"] for item in core_group["items"][0]["items"]] == ["概览", "指南"]
         and tools["items"][0]["text"] == "gamma"
+    )
+
+
+async def _test_dependencies_reach_theme_config():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(
+            root,
+            {"index.md": "# Demo\n"},
+            pages=(DocPage("index.md", "概览", 0),),
+            dependencies=(
+                "akari-bot-core>=0.1.0,<1.0",
+                "orjson>=3.10.9,<4.0.0",
+            ),
+        )
+        source = root / "cache" / "docs" / "src"
+        theme_dir = root / "theme"
+        theme_dir.mkdir()
+        theme = ThemeSpec(
+            name="test",
+            version="1.0.0",
+            source="file:test",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=root,
+            vitepress_version="1.6.4",
+            node_major=18,
+            config={"theme_config_key": "akari"},
+        )
+        generate(DocCatalog(packages=(package,)), source, _docs(root), theme=theme)
+        config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        start = config.index('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(config[config.index("{", start) :])
+
+    dependencies = theme_config["akari"]["dependencies"]
+    return (
+        dependencies["demo"] == ["akari-bot-core>=0.1.0,<1.0", "orjson>=3.10.9,<4.0.0"]
+        and dependencies["akari-bot-module-demo"] == dependencies["demo"]
     )
 
 
@@ -863,6 +903,46 @@ async def _test_pages_with_submenu_are_nested_in_sidebar():
     )
 
 
+async def _test_api_links_are_inserted_at_build_time():
+    catalog = {
+        "groups": [
+            {
+                "name": "akaribot.core.api",
+                "entries": [
+                    {
+                        "name": "Bot",
+                        "kind": "class",
+                        "methods": [{"name": "post_message", "kind": "method"}],
+                        "nested": [],
+                    },
+                    {
+                        "name": "Bind",
+                        "kind": "class",
+                        "methods": [],
+                        "nested": [
+                            {
+                                "name": "Bind.Module",
+                                "kind": "class",
+                                "methods": [{"name": "command", "kind": "method"}],
+                                "nested": [],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+    }
+    text = "## `Bind.Module`\n### `command()`\n\n## `Bot`\n\n`post_message()`\n\n```python\n`command()`\n```\n\n[`Bot`](https://example.com)"
+    result = _link_api_references(text, catalog)
+    return (
+        "## [`Bind.Module`](api-reference.md#bind-module)" in result
+        and "### [`command()`](api-reference.md#bind-module-command)" in result
+        and "[`post_message()`](api-reference.md#bot-post-message)" in result
+        and "```python\n`command()`\n```" in result
+        and "[`Bot`](https://example.com)" in result
+    )
+
+
 @func_case
 async def test_docs_generator(tester: Tester):
     """cli.docs.generator: 站点生成与路径约束"""
@@ -876,6 +956,7 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_module_meta_is_injected_from_doc_toml, "docs.toml 元数据注入模块属性卡")
     await tester.test(_test_package_without_meta_has_no_component, "无元数据的包不注入属性卡")
     await tester.test(_test_module_categories_and_parallel_tabs, "模块分类、分类图标与平行页面侧栏")
+    await tester.test(_test_dependencies_reach_theme_config, "包依赖写入主题配置并同时按 key 与分发名索引")
     await tester.test(_test_site_branding_home_and_group_icons, "站点 Logo、favicon、首页与一级图标")
     await tester.test(_test_bundled_theme_color_injects_css, "内置主题注入主题色变量")
     await tester.test(_test_external_theme_config, "外部主题生成 head、markdown 与侧栏配置")
@@ -887,4 +968,5 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_locales_generate_translated_tree_and_links, "多语言生成独立目录、回退页与带前缀链接")
     await tester.test(_test_package_without_overview_uses_first_page_as_entry, "无概览页的包以第一页作为入口")
     await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")
+    await tester.test(_test_api_links_are_inserted_at_build_time, "正文 API 名称在构建时自动链到导出清单")
     return tester

@@ -1,8 +1,8 @@
 # 适配器开发
 
-本文将会介绍适配器的包结构、能力声明与平台入口。
+本文介绍适配器的包结构、能力声明与平台入口。
 
-适配器包把平台消息与操作接入 core。入口点在 `akaribot.adapters` 中声明，目录名就是平台键。
+适配器负责把平台消息和操作接到 core。适配器在 `akaribot.adapters` 中声明入口点，目录名使用平台键。
 
 ## 包结构
 
@@ -23,7 +23,7 @@ akari-bot-adapter-<平台>/
 telegram = "akaribot.adapters.telegram"
 ```
 
-`manifest.toml` 声明 `config_table = "bot_telegram"` 与 `credential_fields = ["telegram_token"]`。前者指向 `config.py` 中的配置表，后者供守护进程在启动前检查同一平台的多个实例是否配置了相同账号或令牌。
+`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。守护进程在启动前读取这两个字段，检查同一平台的多个实例是否使用了相同的账号或令牌。
 
 ## info.py
 
@@ -40,15 +40,21 @@ target_prefix = client_name
 target_prefix_list = [f"{client_name}|Private", f"{client_name}|Group"]
 ```
 
-`platform_name` 是平台展示名，`client_name` 由它生成，多实例时带实例后缀（如 `Telegram-alt`）。两个前缀列表传给 `client_init()`，由它校验会话 ID 并建立平台路由。守护进程会在导入适配器之前设置 `instance_id`。`bot_<平台>.toml` 的 `enable` 决定实例是否启动。
+`platform_name` 是平台展示名，`client_name` 由它生成，多实例时带实例后缀（如 `Telegram-alt`）。两个前缀列表传给 `client_init()`，由它校验会话 ID 并建立平台路由。
+
+守护进程会在导入适配器之前设置 `instance_id`。`bot_<平台>.toml` 的 `enable` 为真时启动实例。
 
 ## 多实例
 
 同一适配器可以启动多个实例。实例 ID 匹配 `[a-z0-9_]{1,24}`，配置表名为 `bot_<平台>-<实例ID>`，例如 `bot_telegram-alt`。
 
-实例 ID 存在时，`Info.resolve_client_name(platform_name)` 返回 `平台-实例ID`，`platform_name` 本身不变。`enable` 只从实例表读取，不读平台基础表。
+有实例 ID 时，`Info.resolve_client_name(platform_name)` 返回 `平台-实例ID`（例如 `Telegram-alt`）。`platform_name` 本身不变。
 
-守护进程启动前按 `manifest.toml` 的 `credential_fields` 与监听端口检查同一平台的实例。出现重复的登录信息或端口时，它拒绝启动该实例。
+实例表控制实例是否启用，平台基础表保存该平台的默认配置。
+
+启动实例前，守护进程会读取 `manifest.toml` 的 `credential_fields`，并检查同一平台其他实例的登录信息和监听端口。
+
+如果同一平台已有相同的登录信息或监听端口，守护进程会提示冲突，并停止启动该实例。
 
 ## 能力声明
 
@@ -67,7 +73,12 @@ features = Features(support_image=True, support_delete=True, support_private_msg
 | 管理 | `support_delete`、`support_manage`、`support_permission_group` |
 | 消息范围与开关 | `read_all_messages`、`support_rss`、`support_handle_message_nodes`、`require_enable_modules`、`require_check_dirty_words` |
 
-`client_init()` 注册节点时，把这些能力标志一并写进 `capabilities`。`Module.unsupported_reason()` 依据 `read_all_messages` 与 `support_rss` 判定正则、事件与 RSS 模块在本会话中是否受支持。`check_bot_state()` 返回的 `BotState` 用 `can_*` 与 `permissions` 描述实际权限，`Module.unsupported_bot_permissions()` 据此阻止启用缺失权限的模块。
+- `client_init()` 注册节点时，把这些能力标志写进 `capabilities`。
+- `Module.unsupported_reason()` 根据 `read_all_messages` 和 `support_rss`，判断正则、事件、RSS 模块在当前会话中是否可用。
+- `check_bot_state()` 返回 `BotState`。
+- `can_*` 字段记录机器人能否执行对应操作，`permissions` 保存平台返回的权限。
+- 结果写进 `SessionInfo`。
+- `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。缺少权限时，它阻止模块启用。
 
 ## 平台入口
 
@@ -110,8 +121,11 @@ async def on_shutdown():
 | `ban_member()`、`unban_member()`、`grant_permission_group()`、`revoke_permission_group()` | 封禁与权限组 |
 | `add_reaction()`、`remove_reaction()`、`error_signal()`、`start_typing()`、`end_typing()` | 表情、错误提示与输入状态 |
 
-这些方法由 `PlatformAPI` 的 `context_method()` 自动绑定，Server 跨进程调用时按 `SessionInfo` 选择上下文管理器。平台自有扩展接口须在 `PlatformAPI` 中显式声明并绑定实现。适配器不直接调用 Server 内部函数，也不写配置文件。
+这些方法由 `PlatformAPI` 的 `context_method()` 自动绑定。Server 跨进程调用时，会按 `SessionInfo` 选择上下文管理器。平台扩展接口由 `PlatformAPI` 声明，再由适配器绑定实现。
 
 ## 配置与本地化
 
-适配器配置用 `@on_bot_config("<平台>")` 声明，表名为 `bot_<平台>`，密钥写入 `[bot_<平台>_secret]`，字段注释写成 `config.comments.bot_<平台>.<字段名>`（密钥表带 `_secret`）。用户文案只在包内 `locales/zh_cn.json` 中创建条目，详见[配置](config.md)与[本地化](i18n.md)。
+- 适配器配置用 `@on_bot_config("<平台>")` 声明，表名是 `bot_<平台>`。
+- 密钥写入 `[bot_<平台>_secret]`。
+- 字段注释写成 `config.comments.bot_<平台>.<字段名>`。密钥表的注释键要带 `_secret` 后缀。
+- 面向用户的文案只在包内 `locales/zh_cn.json` 中创建，具体见[配置](config.md)与[本地化](i18n.md)。

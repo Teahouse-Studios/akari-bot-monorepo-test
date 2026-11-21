@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import importlib.util
+import inspect
 import json
 import re
 import sys
@@ -17,8 +18,13 @@ from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+
+from packaging.requirements import InvalidRequirement, Requirement
 from urllib.parse import urlparse
 from urllib.request import url2pathname
+
+from akaribot.core.constants.default import lang_list
+
 
 DOCS_GROUP = "akaribot.docs"
 DOCS_DIR = "docs"
@@ -119,6 +125,56 @@ def _dist_summary(dist: Any) -> str:
         return str(metadata.get("Summary", "") or "") if metadata is not None else ""
     except Exception:  # noqa: BLE001 - Summary 缺失不影响清单
         return ""
+
+
+_SPECIFIER_ORDER = {"===": 0, "==": 1, "~=": 2, ">=": 3, ">": 4, "<=": 5, "<": 6, "!=": 7}
+
+
+def _format_dependency(text: str) -> str:
+    """按项目声明顺序显示依赖，并跳过 extra 的可选依赖。"""
+    try:
+        requirement = Requirement(text)
+    except InvalidRequirement:
+        return text
+    if requirement.marker is not None and "extra" in str(requirement.marker):
+        return ""
+    base = requirement.name
+    if requirement.extras:
+        base += f"[{','.join(sorted(requirement.extras))}]"
+    specifiers = sorted(
+        requirement.specifier,
+        key=lambda specifier: (_SPECIFIER_ORDER.get(specifier.operator, 99), specifier.version),
+    )
+    rendered = ",".join(str(specifier) for specifier in specifiers)
+    if rendered:
+        base += rendered
+    elif requirement.url:
+        return f"{base} @ {requirement.url}"
+    if requirement.marker is not None:
+        base += f"; {requirement.marker}"
+    return base
+
+
+def _dist_dependencies(dist: Any) -> list[str]:
+    """读取运行依赖，跳过 extra 的可选依赖。"""
+    try:
+        requires = getattr(dist, "requires", None) or []
+    except Exception:  # noqa: BLE001 - 元数据残缺时按无依赖处理
+        return []
+    dependencies: list[str] = []
+    for item in requires:
+        dependency = _format_dependency(str(item).strip())
+        if dependency:
+            dependencies.append(dependency)
+    return dependencies
+
+
+def _dist_dependencies_by_name(name: str) -> list[str]:
+    try:
+        dist = importlib.metadata.distribution(name)
+    except importlib.metadata.PackageNotFoundError:
+        return []
+    return _dist_dependencies(dist)
 
 
 def _is_editable(dist: Any) -> bool:
@@ -325,6 +381,185 @@ def _doc_asset(
     return candidate
 
 
+_PARAM_LINE = re.compile(r"^\s*:param\s+(?P<name>[^:]+):\s*(?P<text>.*)$")
+
+
+def _doc_summary(obj: Any) -> str:
+    text = inspect.getdoc(obj) or ""
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            return line
+    return ""
+
+
+def _doc_params(obj: Any) -> dict[str, str]:
+    result: dict[str, str] = {}
+    text = inspect.getdoc(obj) or ""
+    current: str | None = None
+    for line in text.splitlines():
+        match = _PARAM_LINE.match(line)
+        if match:
+            current = match.group("name").strip()
+            segment = re.split(r"\s*:(?:returns?|rtype|raises)\b", match.group("text"), maxsplit=1)[0]
+            result[current] = segment.strip()
+        elif current and line.strip():
+            if re.match(r"\s*:(?:returns?|rtype|raises)\b", line):
+                current = None
+                continue
+            result[current] = f"{result[current]} {line.strip()}".strip()
+        elif current and not line.strip():
+            current = None
+    return result
+
+
+def _annotation(value: Any) -> str:
+    if value is inspect.Parameter.empty:
+        return ""
+    if isinstance(value, type):
+        return value.__name__
+    text = str(value).replace("typing.", "").replace("NoneType", "None")
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+        text = text[1:-1]
+    return re.sub(r"(['\"])([^'\"]*)\1", r"\2", text)
+
+
+def _default(value: Any) -> str:
+    if value is inspect.Parameter.empty:
+        return ""
+    text = repr(value)
+    return text if len(text) <= 40 else text[:37] + "..."
+
+
+def _parameter_payload(obj: Any) -> list[dict[str, str]]:
+    try:
+        signature = inspect.signature(obj)
+    except (TypeError, ValueError):
+        return []
+    descriptions = _doc_params(obj)
+    result: list[dict[str, str]] = []
+    for parameter in signature.parameters.values():
+        if parameter.name in {"self", "cls"}:
+            continue
+        if parameter.kind is inspect.Parameter.VAR_POSITIONAL:
+            name = f"*{parameter.name}"
+        elif parameter.kind is inspect.Parameter.VAR_KEYWORD:
+            name = f"**{parameter.name}"
+        else:
+            name = parameter.name
+        result.append(
+            {
+                "name": name,
+                "type": _annotation(parameter.annotation),
+                "default": _default(parameter.default),
+                "description": descriptions.get(parameter.name, ""),
+            }
+        )
+    return result
+
+
+def _source_name(obj: Any) -> str:
+    module = getattr(obj, "__module__", "")
+    return "core" if module.startswith("akaribot.") else "external"
+
+
+def _callable_payload(name: str, obj: Any, kind: str) -> dict[str, Any]:
+    try:
+        signature = _annotation(str(inspect.signature(obj)))
+    except (TypeError, ValueError):
+        signature = ""
+    return {
+        "name": name,
+        "kind": kind,
+        "source": _source_name(obj),
+        "description": _doc_summary(obj),
+        "signature": signature,
+        "parameters": _parameter_payload(obj),
+    }
+
+
+def _class_payload(name: str, cls: type) -> dict[str, Any]:
+    methods: list[dict[str, Any]] = []
+    nested: list[dict[str, Any]] = []
+    try:
+        members = inspect.getmembers(cls)
+    except Exception:  # noqa: BLE001 - 单个类不可内省时仍保留类说明
+        members = []
+    for member_name, member in members:
+        if member_name.startswith("_"):
+            continue
+        if isinstance(member, property):
+            source = _source_name(member.fget) if member.fget else "external"
+            description = _doc_summary(member.fget) if member.fget else ""
+            methods.append(
+                {
+                    "name": member_name,
+                    "kind": "property",
+                    "source": source,
+                    "description": description,
+                    "signature": "",
+                    "parameters": [],
+                }
+            )
+        elif inspect.isfunction(member) or inspect.ismethod(member):
+            qualname = getattr(member, "__qualname__", "")
+            owner = qualname.split(".", 1)[0]
+            if owner in {"BaseModel", "dict", "Mapping", "MutableMapping", "Sequence"}:
+                continue
+            methods.append(_callable_payload(member_name, member, "method"))
+        elif inspect.isclass(member) and member is not cls:
+            qualname = getattr(member, "__qualname__", "")
+            if qualname.startswith(f"{cls.__qualname__}."):
+                nested.append(_class_payload(f"{name}.{member_name}", member))
+    try:
+        signature = _annotation(str(inspect.signature(cls)))
+    except (TypeError, ValueError):
+        signature = ""
+    return {
+        "name": name,
+        "kind": "class",
+        "source": _source_name(cls),
+        "description": _doc_summary(cls),
+        "signature": signature,
+        "parameters": _parameter_payload(cls),
+        "methods": methods,
+        "nested": nested,
+    }
+
+
+def _api_catalog() -> dict[str, Any]:
+    try:
+        from akaribot.core import api
+        from akaribot.core.api import adapters
+    except Exception:
+        return {}
+    groups: list[dict[str, Any]] = []
+    for title, module in (("akaribot.core.api", api), ("akaribot.core.api.adapters", adapters)):
+        entries: list[dict[str, Any]] = []
+        for name in getattr(module, "__all__", ()):  # noqa: B007 - 只遍历公开承诺
+            try:
+                obj = getattr(module, name)
+            except Exception:
+                continue
+            if inspect.isclass(obj):
+                entries.append(_class_payload(name, obj))
+            elif inspect.isfunction(obj) or inspect.ismethod(obj):
+                entries.append(_callable_payload(name, obj, "function"))
+            else:
+                entries.append(
+                    {
+                        "name": name,
+                        "kind": "constant",
+                        "source": _source_name(obj),
+                        "description": _doc_summary(obj),
+                        "signature": "",
+                        "parameters": [],
+                    }
+                )
+        groups.append({"name": title, "entries": entries})
+    return {"groups": groups}
+
+
 def _build_package(
     key: str,
     import_path: str,
@@ -332,6 +567,7 @@ def _build_package(
     dist_name: str,
     version: str,
     summary: str,
+    dependencies: list[str],
     editable: bool,
     find_spec: Callable[[str], Any],
     warnings: list[str],
@@ -359,6 +595,9 @@ def _build_package(
         "name": name,
         "group": _as_text(meta.get("kind")) or _group_of(key),
         "version": version,
+        "dependencies": list(dependencies),
+        "languages": dict(lang_list) if key == "core" else {},
+        "api_catalog": _api_catalog() if key == "core" else {},
         "title": _as_text(meta.get("title")) or name,
         "summary": _as_text(meta.get("summary")) or summary,
         "order": _as_order(meta.get("order", DEFAULT_ORDER), key, warnings),
@@ -389,6 +628,7 @@ def _package_from_entry_point(
         dist_name=_dist_name(dist, import_path),
         version=_dist_version(dist),
         summary=_dist_summary(dist),
+        dependencies=_dist_dependencies(dist),
         editable=_is_editable(dist),
         find_spec=find_spec,
         warnings=warnings,
@@ -528,6 +768,7 @@ def collect(
                 dist_name=_dist_from_path(import_path),
                 version=DEFAULT_VERSION,
                 summary="",
+                dependencies=_dist_dependencies_by_name(_dist_from_path(import_path)),
                 editable=True,
                 find_spec=locate,
                 warnings=warnings,

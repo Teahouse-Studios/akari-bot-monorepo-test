@@ -14,7 +14,9 @@
 
 <CommandUsage usage="maimai base <constant> [<constant_max>] [-p <page>]" :params="['constant=定数下限', 'constant_max=定数上限，省略时只查单一定数', 'page=页码，默认为 1']" permission="public" :options="[{flag: '-p', desc: '指定页数，默认为 1。'}]" />
 
-按定数或定数范围搜索谱面。`<constant>` 为定数下限，`<constant_max>` 可以省略。定数必须大于 0。范围写反时，机器人以较小值作为下限，并提示实际区间。结果超过一页时输出图片。
+按定数或定数范围搜索谱面。`<constant>` 为定数下限，`<constant_max>` 可以省略。定数必须大于 0。
+
+范围写反时，机器人以较小值作为下限，并提示实际区间。结果超过一页时输出图片。
 
 <ChatExample
   :log="[
@@ -103,7 +105,9 @@
 
 <CommandUsage usage="maimai chart <id_or_alias>" :params="['id_or_alias=歌曲 ID 或歌名、别名']" permission="public" />
 
-查询各难度谱面的物量、定数与谱师。`<id_or_alias>` 的解析方式同 `maimai song`。宴谱输出宴会场信息与左右谱面的物量。命中多首时列出候选，并提示在命令后补上 ID 重新查询。
+查询各难度谱面的物量、定数与谱师。`<id_or_alias>` 的解析方式同 `maimai song`。宴谱输出宴会场信息与左右谱面的物量。
+
+命中多首时列出候选，并提示在命令后补上 ID 重新查询。
 
 <ChatExample
   :log="[
@@ -138,7 +142,9 @@
 
 <CommandUsage usage="maimai random <diff+level> [<dx_type>]" :params="['diff+level=难度与等级组合，如紫14+，* 为不限', 'dx_type=谱面类型 dx 或 sd，也可写中文']" permission="public" />
 
-按难度、等级与类型随机。`<diff+level>` 连续书写，例如 `紫14+`、`14+`，写 `*` 表示不限难度与等级。`<dx_type>` 取 `dx`、`sd`、`标准` 或 `標準`，不填时不筛选类型。条件无法解析或无匹配曲目时返回失败提示。
+按难度、等级与类型随机。`<diff+level>` 连续书写，例如 `紫14+`、`14+`，写 `*` 表示不限难度与等级。`<dx_type>` 取 `dx`、`sd`、`标准` 或 `標準`，不填时不筛选类型。
+
+条件无法解析或无匹配曲目时返回失败提示。
 
 <ChatExample
   :log="[
@@ -197,7 +203,11 @@
 
 <CommandUsage usage="maimai b50 [<user>]" :params="['user=水鱼用户名或落雪好友码']" permission="public" />
 
-查询玩家的 B50 列表并生成图片。数据源为水鱼时，`<user>` 为查分器用户名，留空则查询绑定账号。QQ 平台未绑定时，改为按 QQ 号查询。数据源为落雪时，`<user>` 为好友码，留空则使用绑定账号的令牌。
+查询玩家的 B50 列表并生成图片。
+
+数据源为水鱼时，`<user>` 为查分器用户名，留空则查询绑定账号。QQ 平台未绑定时，改为按 QQ 号查询。
+
+数据源为落雪时，`<user>` 为好友码，留空则使用绑定账号的令牌。
 
 ### `maimai score`
 
@@ -209,7 +219,9 @@
 
 <CommandUsage usage="maimai plate <plate> [-l]" :params="['plate=名牌板名称，如舞神']" permission="public" :options="[{flag: '-l', desc: '输出完成表图片。'}]" />
 
-查看绑定账号的名牌板完成进度。`<plate>` 按游戏内的名牌板名称填写，例如“舞神”。`-l` 输出完成表图片。以下名牌板不能查询：真将，以及除“霸者”“覇者”以外的“者”类名牌板。
+查看绑定账号的名牌板完成进度。`<plate>` 按游戏内的名牌板名称填写，例如“舞神”。`-l` 输出完成表图片。
+
+以下名牌板不能查询：真将，以及除“霸者”“覇者”以外的“者”类名牌板。
 
 ### `maimai process`
 
@@ -276,7 +288,9 @@
 
 ## 正则句式
 
-以“是什么歌”结尾的句子，机器人会自动识别并查询。`<ID 或别名>是什么歌` 按 ID 或别名查询歌曲信息，ID 需要加 `id` 前缀。同类句式还有“有什么别名”“有什么分”“段位表”“进度”与“完成表”。完整句式见 [正则句式](regex.md)。
+以“是什么歌”结尾的句子，机器人会自动识别并查询。`<ID 或别名>是什么歌` 按 ID 或别名查询歌曲信息，ID 需要加 `id` 前缀。
+
+同类句式还有“有什么别名”“有什么分”“段位表”“进度”与“完成表”。完整句式见 [正则句式](regex.md)。
 
 ## CHUNITHM
 

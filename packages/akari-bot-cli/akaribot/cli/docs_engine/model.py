@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import tomllib
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -115,6 +115,7 @@ class DocPackage:
     :param dist: 分发名。
     :param name: 包短名。
     :param version: 已装版本。
+    :param dependencies: 运行时依赖约束，来自包元数据。
     :param title: 展示标题。
     :param summary: 一句话简介。
     :param doc_path: 包内文档目录。
@@ -141,6 +142,9 @@ class DocPackage:
     summary: str
     doc_path: Path
     pages: tuple[DocPage, ...]
+    dependencies: tuple[str, ...] = ()
+    languages: tuple[tuple[str, str], ...] = ()
+    api_catalog: Mapping[str, Any] = field(default_factory=dict)
     logo: str = ""
     logo_dark: str = ""
     avatar: str = ""

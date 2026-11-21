@@ -24,7 +24,7 @@ uv pip install akari-bot-assets-brand
 
 `akari-bot-core[full]` 已包含本包。`akaribot init` 默认会安装这个 extra。使用 `--minimal` 时不安装本包。
 
-包内只暴露一个定位函数：
+包内只暴露一个函数：
 
 ```python
 from akaribot.assets.brand import brand_dir

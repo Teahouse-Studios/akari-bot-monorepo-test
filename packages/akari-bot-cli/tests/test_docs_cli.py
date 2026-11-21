@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -622,6 +623,165 @@ async def _test_list_warns_and_empty_state():
     )
 
 
+class _FakeDevSession:
+    def __init__(self, instance, **kwargs) -> None:
+        self.instance = instance
+        self.kwargs = kwargs
+        self.started = 0
+
+    def run(self) -> None:
+        self.started += 1
+        emit = self.kwargs["emit"]
+        emit({"event": "stage", "stage": "toolchain"})
+        emit(
+            {
+                "event": "sync",
+                "initial": True,
+                "written": 2,
+                "removed": 0,
+                "duration_ms": 12,
+                "files": ["a.md", "b.md"],
+            }
+        )
+        emit({"event": "ready", "url": "http://127.0.0.1:5174/", "mode": "dev", "packages": ["demo"]})
+        emit({"event": "warn", "code": "theme_manifest", "path": "/tmp/docs-theme.json"})
+        emit({"event": "stopped"})
+
+
+@contextmanager
+def _dev_engine(instance: _FakeInstance, sessions: list[_FakeDevSession], *, config: DocsConfig | None = None):
+    def fake_session(target, **kwargs):
+        session = _FakeDevSession(target, **kwargs)
+        sessions.append(session)
+        return session
+
+    with _engine(instance, config=config), patch.object(docs_command, "DevSession", side_effect=fake_session):
+        yield
+
+
+async def _test_dev_json_emits_ndjson_events():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        sessions: list[_FakeDevSession] = []
+        with _dev_engine(instance, sessions):
+            result = _invoke(
+                [
+                    "dev",
+                    "--json",
+                    "--host",
+                    "0.0.0.0",
+                    "--port",
+                    "5174",
+                    "--open",
+                    "--offline",
+                    "--interval",
+                    "0.25",
+                    "--package",
+                    "demo, hook",
+                ]
+            )
+        lines = [json.loads(line) for line in result.stdout.strip().splitlines()]
+        call = sessions[0]
+    return (
+        result.exit_code == 0
+        and call.instance is instance
+        and call.started == 1
+        and (call.kwargs["host"], call.kwargs["port"]) == ("0.0.0.0", 5174)
+        and call.kwargs["open_browser"] is True
+        and call.kwargs["offline"] is True
+        and call.kwargs["keys"] == ["demo", "hook"]
+        and call.kwargs["debounce"] == 0.25
+        and [line["event"] for line in lines] == ["stage", "sync", "ready", "warn", "stopped"]
+        and lines[1]["written"] == 2
+        and lines[2]["url"] == "http://127.0.0.1:5174/"
+    )
+
+
+async def _test_dev_human_reports_sync_and_warnings():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        sessions: list[_FakeDevSession] = []
+        with _dev_engine(instance, sessions):
+            result = _invoke(["dev"])
+    expected_ready = i18n.t("cli.docs.dev.ready", url="http://127.0.0.1:5174/")
+    expected_sync = i18n.t("cli.docs.dev.sync", written=2, removed=0, duration=12)
+    expected_warn = i18n.t("cli.docs.dev.warn.theme_manifest", path="/tmp/docs-theme.json")
+    return (
+        result.exit_code == 0
+        and _flat(expected_ready) in _flat(result.stdout)
+        and _flat(expected_sync) in _flat(result.stdout)
+        and _flat(i18n.t("cli.docs.dev.watching")) in _flat(result.stdout)
+        and _flat(i18n.t("cli.docs.dev.stopped")) in _flat(result.stdout)
+        and _flat(expected_warn) in _flat(result.stderr)
+    )
+
+
+class _LockedDevSession:
+    def __init__(self, target, **kwargs) -> None:
+        self.target = target
+
+    def run(self) -> None:
+        raise DocsError("cli.docs.error.dev_locked", pid=4321, port=5173)
+
+
+async def _test_dev_lock_conflict_is_rendered():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        with _engine(instance), patch.object(docs_command, "DevSession", _LockedDevSession):
+            result = _invoke(["dev", "--json"])
+    expected = i18n.t("cli.docs.error.dev_locked", pid=4321, port=5173)
+    return result.exit_code == 1 and result.stdout == "" and _flat(expected) in _flat(result.stderr)
+
+
+async def _test_status_and_clean_respect_dev_lock():
+    with TemporaryDirectory(prefix="akari-docs-cli-") as raw:
+        root = Path(raw)
+        instance = _FakeInstance(root)
+        config = _config(root)
+        cache = root / "cache" / "docs"
+        cache.mkdir(parents=True)
+        lock = cache / ".dev.lock"
+        lock.write_text(
+            json.dumps(
+                {
+                    "pid": os.getpid(),
+                    "host": "127.0.0.1",
+                    "port": 5173,
+                    "base": "/docs/",
+                    "started_at": 0,
+                }
+            ),
+            encoding="utf-8",
+        )
+        with _engine(instance, config=config):
+            status = _invoke(["status", "--json"])
+            human = _invoke(["status"])
+            clean = _invoke(["clean", "--yes", "--json"])
+            kept = cache.is_dir()
+        payload = json.loads(status.stdout)
+        expected_running = i18n.t("cli.docs.status.dev_running", pid=os.getpid(), url="http://127.0.0.1:5173/docs/")
+        expected_locked = i18n.t("cli.docs.error.dev_locked", pid=os.getpid(), port=5173)
+        lock.write_text(
+            json.dumps({"pid": 1_000_000_000, "host": "h", "port": 1, "base": "/", "started_at": 0}), encoding="utf-8"
+        )
+        with _engine(instance, config=config):
+            stale = _invoke(["status", "--json"])
+        stale_payload = json.loads(stale.stdout)
+    return (
+        status.exit_code == 0
+        and payload["dev"] == {"running": True, "pid": os.getpid(), "port": 5173, "base": "/docs/"}
+        and _flat(expected_running) in _flat(human.stdout)
+        and clean.exit_code == 1
+        and clean.stdout == ""
+        and _flat(expected_locked) in _flat(clean.stderr)
+        and kept
+        and stale_payload["dev"]["running"] is False
+    )
+
+
 @func_case
 async def test_docs_cli(tester: Tester):
     """cli.docs: 目录、构建、预览、状态与清理"""
@@ -637,6 +797,10 @@ async def test_docs_cli(tester: Tester):
     await tester.test(_test_serve_keyboard_interrupt_stops_server, "serve 捕获 Ctrl+C 并停止服务")
     await tester.test(_test_serve_requires_existing_site_without_build, "--no-build 且站点缺失时报错")
     await tester.test(_test_status_json_and_human, "status 输出工具链、包与最近构建部署")
+    await tester.test(_test_dev_json_emits_ndjson_events, "dev --json 输出逐行事件并转交选项")
+    await tester.test(_test_dev_human_reports_sync_and_warnings, "dev 人类输出报告同步与警告")
+    await tester.test(_test_dev_lock_conflict_is_rendered, "dev 锁冲突渲染为文案")
+    await tester.test(_test_status_and_clean_respect_dev_lock, "status 与 clean 感知开发模式运行锁")
     await tester.test(_test_clean_confirms_and_reports_json, "clean 确认与 JSON 输出")
     await tester.test(_test_clean_yes_skips_prompt_without_json, "clean --yes 跳过确认")
     await tester.test(_test_errors_are_rendered_from_engine_keys, "引擎错误键渲染为文案")

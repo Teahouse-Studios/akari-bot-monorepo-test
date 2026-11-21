@@ -12,6 +12,7 @@ from attrs import define, field
 
 from akaribot.core.alive import Alive
 from akaribot.core.builtins.message.chain import MessageChain
+from akaribot.core.builtins.session.bot_state import BotState
 from akaribot.core.builtins.session.event_types import EventName
 from akaribot.core.builtins.session.features import Features
 from akaribot.core.builtins.session.terms import build_term_candidates
@@ -98,6 +99,7 @@ class EventInfo:
         sender_from: str | None = None,
         create: bool = True,
     ) -> Self:
+        """把上下文字段复制到当前对象。"""
         if target_id and target_from is None:
             target_from = Alive.determine_target_from(target_id)
         if target_from and not client_name:
@@ -218,6 +220,8 @@ class SessionInfo:
     display_timezone_offset: timedelta | None = None
     bot_name: str | None = None
     bot_id: str | None = None
+    # 平台按当前场景返回的权限快照；由 MessageSession.check_bot_state() 写入。
+    bot_state: BotState | None = None
     muted: bool | None = None
     enabled_modules: list | None = None
     petal: int | None = None

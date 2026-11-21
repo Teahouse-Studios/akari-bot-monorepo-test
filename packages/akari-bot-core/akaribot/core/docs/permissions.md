@@ -1,8 +1,8 @@
 # 权限
 
-本文将会介绍 AkariBot 的权限分层与检查方式。
+本文介绍 AkariBot 的权限分层与检查方式。
 
-权限分为普通用户、场景管理员、超级用户与基础超级用户四层。模块和命令通过装饰器声明所需层级，parser 在匹配模块和执行命令前依次检查。`~auth` 可以把单个模块的超级用户权限授予某个用户。
+权限分为普通用户、场景管理员、超级用户与基础超级用户四层。模块和命令通过装饰器声明所需层级，parser 在匹配模块和执行命令前检查。`~auth` 可以把单个模块的超级用户权限授予某个用户。
 
 ## 角色
 
@@ -25,7 +25,7 @@
 | `~admin remove <user>` | 移除场景管理员；移除自己时要求确认 |
 | `~admin list` | 列出场景自定义管理员 |
 
-`admin` 模块整体声明 `required_admin=True`。平台原生管理员不会写入自定义名单，`add` 与 `remove` 遇到原生管理员时直接提示无需操作。
+`admin` 模块整体声明 `required_admin=True`。自定义名单只记录非原生管理员，`add` 与 `remove` 遇到原生管理员时直接返回提示。
 
 ### 超级用户
 
@@ -63,7 +63,7 @@ demo = module("demo", required_admin=True)
 | `required_superuser` | `False` | 要求超级用户，或持有该模块 `~auth` 授权的用户 |
 | `required_base_superuser` | `False` | 要求发送者在 `base_superuser` 名单中 |
 
-检查顺序为 `required_base_superuser`、`required_superuser`、`required_admin`，任一项检查不通过就拒绝。单个命令不能放宽模块级的要求。非基础模块还需在场景内启用。声明了 `required_superuser` 的模块只有超级用户能启用。
+检查顺序为 `required_base_superuser`、`required_superuser`、`required_admin`，任一项检查不通过就拒绝。命令级权限只能比模块级更严格。非基础模块还需在场景内启用。声明了 `required_superuser` 的模块只有超级用户能启用。
 
 ## 命令级权限
 
@@ -74,13 +74,13 @@ demo = module("demo", required_admin=True)
 async def _(msg, target: str): ...
 ```
 
-命令级检查在模板解析之后、函数调用之前执行。单个命令只能追加更严格的要求，不能降低模块级的要求。
+命令级检查在模板解析之后、函数调用之前执行。单个命令只能追加更严格的要求。
 
-例如模块已经声明 `required_superuser`，某个命令再声明 `required_admin`，要求不会降低。`~auth` 的授权作用于整个模块，模块内的命令都按同一份授权判断。
+例如模块已经声明 `required_superuser`，某个命令再声明 `required_admin`，最终仍按模块级要求判断。`~auth` 的授权作用于整个模块，模块内的命令都按同一份授权判断。
 
 ## 模块授权
 
-`auth` 模块让超级用户把单个模块的超级用户权限授予普通用户，不必把对方提升为全局超级用户：
+`auth` 模块让超级用户把单个模块的超级用户权限授予普通用户：
 
 | 命令 | 说明 |
 | --- | --- |
@@ -94,16 +94,28 @@ async def _(msg, target: str): ...
 
 ## 机器人权限
 
-`required_bot_permissions` 检查的不是用户角色，而是机器人在场景中必须具备的平台权限。检查在 `~module enable` 时进行：
+`required_bot_permissions` 检查机器人在场景中必须具备的平台权限。检查在 `~module enable` 时进行：
 
 ```python
 demo = module("demo", required_bot_permissions=["can_manage_messages"])
 ```
 
-字段取 `BotState` 的属性名，例如 `can_read_all_messages`、`can_send_messages`、`can_send_proactive_messages`、`can_manage_messages`、`can_manage_members`、`can_restrict_members`、`can_react`。平台自定义权限写成 `permissions.<名称>`。`event` 与 `regex` 模块会自动加入 `can_read_all_messages`，`rss` 模块会自动加入 `can_send_proactive_messages`。
+字段取 `BotState` 的属性名：
 
-检查只把平台明确返回的 `False` 视为缺失。`None` 与状态查询失败都不会阻止启用，避免把临时的 RPC 错误误报为权限不足。`~module enable all` 会跳过缺少机器人权限的模块。
+- `can_read_all_messages`
+- `can_send_messages`
+- `can_send_proactive_messages`
+- `can_manage_messages`
+- `can_manage_members`
+- `can_restrict_members`
+- `can_react`
+
+平台自定义权限写成 `permissions.<名称>`。
+
+`event` 与 `regex` 模块会自动加入 `can_read_all_messages`。`rss` 模块会自动加入 `can_send_proactive_messages`。
+
+检查只把平台明确返回的 `False` 视为缺失。`None` 与状态查询失败按未知处理，继续启用。`~module enable all` 会跳过缺少机器人权限的模块。
 
 ## 相关文档
 
-模块声明与命令模板见[模块开发](module-development.md)，平台权限查询与能力声明见 [适配器开发](adapter-development.md)，内置管理模块见[内置模块](../../modules/core/docs/index.md)。
+模块声明与命令模板见[模块开发](module-development.md)。平台权限查询与能力声明见 [适配器开发](adapter-development.md)。内置管理模块见[内置模块](../../modules/core/docs/index.md)。

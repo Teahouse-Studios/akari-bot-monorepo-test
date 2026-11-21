@@ -75,6 +75,23 @@ async def _test_features_inject_action_text():
         return False
 
 
+async def _test_check_bot_state_records_session_info():
+    from akaribot.core.builtins.session.bot_state import BotState
+    from akaribot.core.builtins.session.internal import MessageSession
+
+    session_info = await SessionInfo.assign(
+        target_id="TEST|Group|bot-state",
+        target_from="TEST|Group",
+        client_name="TEST",
+        sender_id="TEST|1",
+    )
+    session = MessageSession(session_info)
+    state = BotState(can_send_messages=True)
+    with patch.object(PlatformAPI, "check_bot_state", new=AsyncMock(return_value=state)):
+        result = await session.check_bot_state()
+    return result is state and session_info.bot_state is state
+
+
 async def _test_release_context_tolerates_prior_platform_cleanup():
     session_id = "session-release-after-platform-cleanup"
     session = SimpleNamespace(session_id=session_id)
@@ -2970,6 +2987,7 @@ async def _test_mock_strict_confirm_rejects_other_reply():
 async def test_features(tester: Tester):
     """akaribot.core.builtins.session.features: Features 测试"""
     await tester.test(_test_features_inject_action_text, "support_action_text 注入测试")
+    await tester.test(_test_check_bot_state_records_session_info, "BotState 写入 SessionInfo 测试")
     await tester.test(_test_release_context_tolerates_prior_platform_cleanup, "平台先清理后的上下文释放测试")
     await tester.test(_test_hold_normalizes_remote_context_unavailable, "跨进程 hold 上下文缺失归一化测试")
     await tester.test(_test_session_refresh_updates_derived_union_state, "SessionInfo 刷新派生状态测试")

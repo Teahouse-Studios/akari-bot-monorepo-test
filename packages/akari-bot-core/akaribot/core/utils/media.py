@@ -61,6 +61,7 @@ async def resolve_media_base64(element: ImageElement | AudioElement | VideoEleme
 
 
 def compress_image(element: ImageElement, threshold_bytes: int) -> ImageElement:
+    """压缩图片文件。"""
     source = Path(element.path)
     try:
         source_size = source.stat().st_size
@@ -98,6 +99,7 @@ def compress_image(element: ImageElement, threshold_bytes: int) -> ImageElement:
 
 
 async def compress_audio_video(element: AudioElement | VideoElement, ffmpeg_path: str) -> AudioElement | VideoElement:
+    """压缩音视频文件。"""
     source = Path(element.path)
     output = Path(f"{random_cache_path()}{'.mp3' if isinstance(element, AudioElement) else '.mp4'}")
     command = [ffmpeg_path, "-y", "-i", str(source)]
@@ -155,6 +157,7 @@ async def compress_audio_video(element: AudioElement | VideoElement, ffmpeg_path
 
 
 async def compress_media_chain(chain: MessageChain) -> MessageChain:
+    """压缩消息链中的媒体。"""
     if threshold <= 0:
         return chain
 

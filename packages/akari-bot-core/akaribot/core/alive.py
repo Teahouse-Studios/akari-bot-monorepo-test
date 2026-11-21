@@ -30,6 +30,7 @@ class Alive:
         lease_until: datetime | None = None,
         force: bool = False,
     ) -> None:
+        """刷新指定对端的状态。"""
         current = cls.values.get(peer_id)
         if (
             not force
@@ -60,6 +61,7 @@ class Alive:
 
     @classmethod
     def replace_peers(cls, peers: list[PeerRecord]) -> None:
+        """替换全部对端记录。"""
         previous = cls.values
         values = {}
         for peer in peers:
@@ -89,6 +91,7 @@ class Alive:
 
     @classmethod
     def get_alive(cls) -> dict[str, dict]:
+        """返回在线状态记录。"""
         now = datetime.now(UTC)
         result = {}
         for peer_id, data in cls.values.items():
@@ -106,6 +109,7 @@ class Alive:
 
     @classmethod
     def is_alive(cls, identifier: str) -> bool:
+        """判断对象是否在线。"""
         return any(
             identifier in (peer_id, data.get("service"), data.get("client_name"))
             for peer_id, data in cls.get_alive().items()
@@ -113,6 +117,7 @@ class Alive:
 
     @classmethod
     def peer_ids(cls, service: str | None = None, role: str | None = None) -> list[str]:
+        """返回对端 ID 列表。"""
         return sorted(
             peer_id
             for peer_id, data in cls.get_alive().items()
@@ -122,6 +127,7 @@ class Alive:
 
     @classmethod
     def determine_target_from(cls, target_id: str):
+        """确定消息目标的来源。"""
         matches = [
             prefix
             for data in cls.get_alive().values()
@@ -132,6 +138,7 @@ class Alive:
 
     @classmethod
     def determine_sender_from(cls, sender_id: str):
+        """确定消息发送者的来源。"""
         matches = [
             prefix
             for data in cls.get_alive().values()
@@ -142,6 +149,7 @@ class Alive:
 
     @classmethod
     def determine_client(cls, id: str):
+        """根据平台键和客户端信息确定平台客户端。"""
         candidates = []
         for peer_id, data in cls.get_alive().items():
             for prefix in data.get("target_prefix_list", []) + data.get("sender_prefix_list", []):

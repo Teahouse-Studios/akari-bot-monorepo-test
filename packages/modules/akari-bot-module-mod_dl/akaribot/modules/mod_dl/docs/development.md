@@ -22,7 +22,7 @@ akaribot module add akari-bot-module-mod_dl
 | --- | --- | --- | --- |
 | `curseforge_api_key` | str | 空 | CurseForge API 密钥 |
 
-未填写密钥时，CurseForge 请求改走 `https://mcim.z0z0r4.top` 镜像。填写密钥后，请求直连官方接口并携带 `x-api-key`。`manifest.toml` 把该字段列进 `credential_fields`，启动时据此检查凭据是否重复。
+未填写密钥时，CurseForge 请求改走 `https://mcim.z0z0r4.top` 镜像。填写密钥后，请求直连官方接口并携带 `x-api-key`。`manifest.toml` 把该字段列进 `credential_fields`，启动时据此检查密钥是否重复。
 
 ## 权限与平台能力
 

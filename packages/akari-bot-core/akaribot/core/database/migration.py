@@ -266,6 +266,7 @@ class MigrationContext:
         await self.execute(f"CREATE INDEX {self.quote(name)} ON {self.quote(table)} ({column_sql});")
 
     async def generate_schemas(self) -> None:
+        """生成迁移用的表结构。"""
         if self.db_type != "sqlite":
             await Tortoise.generate_schemas(safe=True)
             return

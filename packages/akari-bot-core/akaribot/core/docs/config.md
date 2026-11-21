@@ -2,7 +2,9 @@
 
 本文介绍配置文件与表的布局、模板声明、读写接口与只读限制。
 
-配置由 `core.config.CFGManager` 统一读写，配置模板类在导入期为每个字段设置读取参数。用户配置放在 `config/` 根目录，全局默认值镜像放在 `config/global/`，`CFGManager.load()` 会同时读取这两处。
+`core.config.CFGManager` 负责读写配置。配置模板类在导入时确定每个字段的读取方式。
+
+用户配置放在 `config/` 根目录，全局默认值放在 `config/global/`。`CFGManager.load()` 会同时读取这两个位置。
 
 ## 文件与表布局
 
@@ -27,9 +29,15 @@
 | `<表名>.global.toml` | TOML 格式的全局默认值 |
 | `<表名>.global.json` | JSON 格式的全局默认值 |
 
-加载时先读全局文件，再读 `config/<表名>.toml`。两层按表递归合并，用户配置覆盖同名的标量、列表与子表。用户文件可以只写要改的键，没有写的键继续使用全局值。
+加载时，`CFGManager` 先读全局文件，再读 `config/<表名>.toml`。
 
-写入、删除与配置注释修复只修改用户文件，不修改 `config/global/`。删除用户文件里的某个键后，该键回到全局默认值；删除整个用户文件后，该表完全由全局文件提供。全局文件缺失不影响启动。
+两层配置递归合并。用户配置覆盖同名的标量、列表和子表。用户文件可以只写要改的键，其余键继续使用全局值。
+
+写入、删除与配置注释修复只修改用户文件，不修改 `config/global/`。
+
+删除用户文件里的某个键后，这个键会回到全局默认值。
+
+删除整个用户文件后，这个表只使用全局文件。全局文件缺失时，启动不受影响。
 
 ```toml
 # config/global/config.global.toml
@@ -41,11 +49,11 @@ command_prefix = ["~"]
 command_prefix = ["!"]  # 只覆盖这一项，其余键仍取全局值
 ```
 
-多实例部署下，适配器表名带实例后缀，例如 `bot_telegram-alt`。如果实例表不存在，读取时会改用该平台的基础表。写入只落到实例表，避免一个实例的改动影响另一个实例。
+多实例部署下，适配器表名带实例后缀，例如 `bot_telegram-alt`。如果实例表不存在，读取时会改用该平台的基础表。写入只落到实例表。
 
 ## 模板声明
 
-模板类在所属包内声明，装饰器决定表名：
+模板类在所属包内声明，装饰器用来指定表名：
 
 | 装饰器 | 表名 | 使用方 |
 | --- | --- | --- |
@@ -55,12 +63,12 @@ command_prefix = ["!"]  # 只覆盖这一项，其余键仍取全局值
 | `@on_bot_config("telegram")` | `bot_telegram` | 适配器 |
 | `@on_module_config("dice")` | `module_dice` | 模块 |
 
-字段的类型标注与默认值决定生成内容：
+生成的内容取决于字段的类型标注与默认值：
 
 - 支持的类型为 `bool`、`datetime`、`date`、`float`、`int`、`list`、`str`。列表默认值写成 `[]`。
-- 无默认值的必填项生成 `<Replace me with <type> value>` 占位符，读取时统一返回 `None`。
+- 无默认值的必填项生成 `<Replace me with <type> value>` 占位符，读取时返回 `None`。
 - 联合类型中含不受支持的成员时（如 `str | None`），生成通用占位符 `<Replace me>`。
-- 键名统一转为小写后存取。
+- 键名会先转成小写，再读写。
 
 ## 读取与写入
 
@@ -80,10 +88,10 @@ if CoreConfig.enable_analytics:
 | `CFGManager.get(q, default=None, cfg_type=None, secret=False, table_name=None)` | 读值，缺失时按默认值写入 |
 | `CFGManager.has(q, secret=False, table_name=None)` | 判断键是否存在 |
 | `CFGManager.write(...)` | 写入，受只读限制 |
-| `CFGManager.edit_write(...)`、`edit_delete(...)` | 交互式编辑写入，需显式授权 |
+| `CFGManager.edit_write(...)`、`edit_delete(...)` | 交互式编辑写入，需明确授权 |
 | `CFGManager.save()` | 仅重写内容有变化的文件 |
 
-读取到占位符时返回 `None`。值类型与模板不符时给出警告，并原样返回。
+读取到占位符时返回 `None`。值类型与模板不符时给出警告，并返回原值。
 
 ## 字段注释
 
@@ -100,9 +108,9 @@ config.comments.<表名>.<字段名>
 ## 只读限制
 
 - 守护进程在启动子进程前把 `AKARI_CONFIG_READONLY` 设为 `1`，平台进程与 Server 均只读。
-- 只读进程中调用 `write()` 或 `save()` 会抛出 `ConfigOperationError`。`edit_write()`、`edit_delete()` 在显式授权范围内放行，供 `~config` 与启动期密钥自举使用。
-- 缺失项只在启动前的准备阶段写入，普通进程不会因读取而改写磁盘。
-- 写入时对 `config/.config.lock` 加锁，重新加载、修改与保存三步在锁内一起完成，与其他进程互斥。等待上限 10 秒，锁文件超过 60 秒视为陈旧。
+- 只读进程中调用 `write()` 或 `save()` 会抛出 `ConfigOperationError`。`edit_write()`、`edit_delete()` 只能在明确授权的范围内使用，供 `~config` 和启动期密钥自举调用。
+- 缺失项只在启动前的准备阶段写入。
+- 写入时对 `config/.config.lock` 加锁，重新加载、修改与保存三步在锁内一起完成，与其他进程互斥。最多等待 10 秒；锁文件超过 60 秒视为陈旧。
 - 写入使用临时文件加 `os.replace` 原子替换。
 - 文件 mtime 变化后，最多延迟 1 秒重新加载。磁盘文件被清空而内存仍有内容时，保留内存中的值。
 
@@ -110,6 +118,6 @@ config.comments.<表名>.<字段名>
 
 `config.toml` 的 `config_version` 当前为 6，由 `core.config.update` 执行升级。
 
-其余配置文件的版本随包维护。迁移脚本放在包的 `config_migrations/`，文件名以四位号段开头。升级执行后，号段会写回该文件的 `config_version`。
+其余配置文件的版本随包维护。迁移脚本放在包的 `config_migrations/`，文件名以四位编号开头。升级执行后，编号会写回该文件的 `config_version`。
 
-新生成的配置文件把 `manifest.toml` 的 `config_schema_version` 写入自身的 `config_version`。首个迁移的号段须比该值大 1，号段不得复用或跳号。
+新生成的配置文件会把 `manifest.toml` 的 `config_schema_version` 写入自身的 `config_version`。第一次迁移的编号必须比这个值大 1，后续迁移按顺序递增。

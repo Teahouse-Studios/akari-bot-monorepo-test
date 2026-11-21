@@ -1,17 +1,17 @@
 # 文档引擎
 
-本文将会介绍文档引擎的目录收集、站点生成、构建缓存、预览与部署。
+本文将会介绍文档引擎的目录收集、站点生成、构建缓存、开发预览、预览与部署。
 
-文档引擎把已安装包的 `docs/` 目录汇总成一个 VitePress 站点：读取目录、生成站点源文件、调用 VitePress 构建、提供本机预览，并记录构建与部署状态。
+文档引擎把已安装包的 `docs/` 目录汇总成一个 VitePress 站点：读取目录、生成站点源文件、调用 VitePress 构建、提供静态预览与开发预览，并记录构建与部署状态。
 
 ## 当前状态
 
-引擎实现在 `akaribot/cli/docs/`，包含目录收集、源文件生成、跨包链接折算、构建缓存、静态预览与状态持久化。`akaribot docs` 已注册进 `akaribot` 主命令表。命令见下表。
+引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接折算、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册进 `akaribot` 主命令表。命令见下表。
 
 ## 前置条件
 
-- Node.js 与 `npm` 需要在 `PATH` 中。内置主题要求 Node.js 18 及以上。外部主题的要求由主题清单声明，`akari-bot-docs-template` 当前要求 Node.js 22.12 及以上。
-- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里（VitePress 1.6.4），安装执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装执行 `npm install`，VitePress 版本同样来自清单。
+- Node.js 与 `npm` 需要在 `PATH` 中。内置主题与外部主题的 Node.js 版本要求在各自的主题清单中声明。
+- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装执行 `npm install`，VitePress 版本来自清单。
 - 首次构建需要联网安装依赖。离线模式要求 `<实例根>/cache/docs/node_modules` 已包含主题所需版本。
 
 Node.js 缺失、版本低于主题要求或 npm 不可用时，构建以工具链错误终止，不会改用其它渲染器。
@@ -25,24 +25,35 @@ Node.js 缺失、版本低于主题要求或 npm 不可用时，构建以工具�
 | `akaribot docs sync-theme` | 把主题模板 submodule 同步到远端最新提交，只更新工作区 |
 | `akaribot docs install-deps` | 安装主题所需的 Node 依赖，不生成站点 |
 | `akaribot docs serve` | 启动本机静态服务器预览构建产物 |
+| `akaribot docs dev` | 监听文档与主题改动，在 `cache/docs/dev` 上运行 VitePress 开发服务器 |
 | `akaribot docs deploy` | 把构建产物发布到 Vercel 或 S3 |
 | `akaribot docs status` | 显示实际主题、最近一次构建的指纹、包清单、输出目录与部署记录 |
 | `akaribot docs clean` | 清理生成目录，使下次构建从头开始 |
 
 `list` 优先经实例的 core 入口读取包清单。入口不可用时，改用注册表里的已装包清单，并在警告中说明原因。CLI 自身的文档始终合并进目录。
 
-`build`、`serve` 与 `deploy` 都会触发构建。不加 `--json` 时，命令实时打印工具链、生成与 VitePress 三个阶段，并转发 npm 与 VitePress 的逐行输出。加 `--json` 时，stdout 只保留最终结果行，日志写入 stderr。TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。
+`build`、`serve` 与 `deploy` 都会触发构建。不加 `--json` 时，命令实时打印工具链、生成与 VitePress 三个阶段，并转发 npm 与 VitePress 的逐行输出。
+
+加 `--json` 时，stdout 只保留最终结果行，日志写入 stderr。
+
+TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`dev` 不加 `--json` 时打印阶段、同步结果与提示，加 `--json` 时输出逐行事件，子进程日志写入 stderr。
 
 模块文档在侧栏按 `docs/config/global/docs.global.toml` 的 `category` 分组，条目名称取模块名。
 
-包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放 `docs/config/docs.toml`，按同名键覆盖默认值。两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退到旧的 `docs/doc.toml`，兼容尚未迁移的包。
+包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放 `docs/config/docs.toml`，按同名键覆盖默认值。
+
+两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退到旧的 `docs/doc.toml`，兼容尚未迁移的包。
 
 
 同一模块目录内的页面显示为页内标签：`index.md` 是“使用方法”，`development.md` 是“安装与开发”。开发页不单独出现在侧栏。其余页面按 `order` 与路径排在两者之间。
 
 内置 `bundled` 主题没有标签栏，开发页仍作为普通侧栏页面列出。包声明 `overview = false` 时不生成包级概览页，包入口指向第一页，侧栏直接列出页面。页面 front matter 写 `submenu` 时，同值的页面收进该名称的二级分组，普通页面仍平铺在前面。
 
-侧栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标。分组图标写在 `docs.toml` 的 `[icons]` 里，键为分组名或 `home`。分类图标写在 `[category_icons]` 里，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
+侧栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标。
+
+分组图标写在 `docs.toml` 的 `[icons]` 里，键为分组名或 `home`。
+
+分类图标写在 `[category_icons]` 里，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
 
 ## 配置
 
@@ -182,6 +193,9 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `cache/docs/src` | 生成的 VitePress 源目录，每次构建前清空 |
 | `cache/docs` | Node 工具链与 `node_modules` |
 | `cache/docs/site` | 默认站点输出，可用 `build.out_dir` 改写 |
+| `cache/docs/dev` | 开发模式使用的 VitePress 源目录，其中 `node_modules` 由同步保留 |
+| `cache/docs/.dev-staging` | 开发模式同步用的暂存目录 |
+| `cache/docs/.dev.lock` | 开发模式运行锁，记录进程、端口与基路径 |
 | `.docs/state.json` | 构建指纹、包清单与最近 50 条部署记录 |
 
 生成器只接受位于 `cache/docs` 内的目标路径。包 key 必须匹配 `[A-Za-z0-9][A-Za-z0-9._-]*`，文档目录中的符号链接不得指向目录之外。文档目录可以包含 `.md`、常见图片、`.txt` 与 `.pdf`，其它后缀的文件会被忽略。
@@ -220,7 +234,37 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 
 ## 预览
 
-`serve` 使用内置静态服务器，默认只绑定回环地址，端口由调用方指定或交由系统分配。解析规则与 `cleanUrls` 一致：`/foo` 找不到文件时改为返回 `foo.html`。目录请求改为返回 `index.html`。其余请求交给 `404.html`。所有响应一律带 `Cache-Control: no-store`。
+`serve` 使用内置静态服务器，默认只绑定回环地址，端口由调用方指定或交由系统分配。
+
+解析规则与 `cleanUrls` 一致：`/foo` 找不到文件时改为返回 `foo.html`。目录请求改为返回 `index.html`。
+
+其余请求交给 `404.html`。所有响应一律带 `Cache-Control: no-store`。
+
+## 开发模式
+
+`dev` 持续监听参与构建的文档目录、主题目录与站点配置，把改动同步到实例的 `cache/docs/dev`，并在该目录上运行 VitePress 的开发服务器。浏览器端的更新由 Vite 的热更新完成，不经过 VitePress 的构建。
+
+监听范围与处理方式：
+
+| 目标 | 变化后的处理 |
+| --- | --- |
+| 参与包的 `docs/` 目录 | 页面增删时重新读取包清单，其余改动只重新生成与同步 |
+| 主题目录 | 重新解析主题并同步主题组件 |
+| `docs.toml`、`docs-theme.json`、首页组件与站点素材 | 重新读取配置，`site.base` 变化时重启开发服务器 |
+| 主题清单的 `dependencies` 或 `install_mode` | 输出提示，需停止开发模式并执行 `install-deps` |
+
+生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 承载依赖，`.vitepress/cache` 承载 Vite 的预构建产物，两者都在同步范围之外。生成器每次清空并重写全部源文件，因此必须差分同步：直接改写镜像会让 Vite 在每批改动上全量失效。
+
+运行行为：
+
+- 变更在 0.6 秒的静默窗口内合并为一批，间隔由 `--interval` 调整。
+- `--package` 只监听指定包，其余包仍参与生成与跨包链接折算。
+- 默认端口 5173，被占用时改用系统分配的端口；`--port 0` 直接把端口选择交给系统。
+- 启动时写入 `cache/docs/.dev.lock`。同一实例上 `dev` 与 `clean`、`install-deps` 互斥，`status` 据此报告开发模式状态。
+- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行；在 TUI 中启动其一即停止另一。
+- `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。
+
+开发模式不写 `.docs/state.json`，也不改动 `cache/docs/site`。
 
 ## 部署
 
@@ -230,31 +274,37 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 
 ## 主题
 
-主题与引擎解耦：引擎只读取主题根目录的 `docs-theme.json`，复制清单声明的 `theme_dir`，按清单生成 VitePress 配置与依赖，不导入主题代码。清单字段：
+引擎只读取主题根目录的 `docs-theme.json`，复制清单声明的 `theme_dir`，按清单生成 VitePress 配置与依赖，不导入主题代码。清单字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `name` / `version` | 主题标识与版本，参与构建指纹 |
 | `theme_dir` | 相对主题根的主题目录，复制为站点 `.vitepress/theme` |
 | `vitepress` | 该主题要求的 VitePress 版本 |
-| `node` | Node.js 版本要求，如 `>=22.12.0` |
+| `node` | Node.js 版本要求，如 `>=x.y.z` |
 | `dependencies` | 安装到 `<实例根>/cache/docs` 的 npm 依赖 |
 | `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |
 | `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |
 
-`akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，要求 Node.js 22.12 与 VitePress 2.0.0-alpha.21。本仓库用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例也可以把 `theme.source` 指向自己的模板目录。
+`akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，Node.js 与 VitePress 版本由该文件声明。本仓库用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例也可以把 `theme.source` 指向自己的模板目录。
 
-更新主题用 `akaribot docs sync-theme`。它拉取远程最新提交，只更新 submodule 工作区，父仓库的 gitlink 需要自行暂存。主题依赖变化后，用 `akaribot docs install-deps` 重装 npm 依赖。内置的 `bundled` 主题是同一约定的最小实现，在没有外部模板时使用它。
+更新主题用 `akaribot docs sync-theme`。它拉取远程最新提交，只更新 submodule 工作区，父仓库的 gitlink 需要自行暂存。
+
+主题依赖变化后，用 `akaribot docs install-deps` 重装 npm 依赖。
+
+内置的 `bundled` 主题是同一约定的最小实现，在没有外部模板时使用它。
 
 ### 主题组件
 
-外部模板的 `.vitepress/theme` 内置七个全局组件，并适配主题的 M3E 调色板：`ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）、`CommandUsage`（命令用法）与 `ChatExample`（命令对话示例）。
+外部模板的 `.vitepress/theme` 提供以下全局组件，并适配主题的 M3E 调色板：`ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）、`CommandUsage`（命令用法）、`ChatExample`（命令对话示例）与 `PackageDependencies`（运行依赖）。
 
 生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
 
+依赖段落用 `<PackageDependencies package="<包 key 或分发名>" />`。生成器读取已装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写进 `themeConfig.akari.dependencies`；组件按包 key 与分发名取列表，文档不写版本范围。
+
 组件只在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。
 
-内置 `bundled` 主题也提供 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 的同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开，气泡文本按纯文本处理。
+内置 `bundled` 主题也提供 `ModuleMeta`、`NoticeBox`、`CommandUsage`、`ChatExample` 与 `PackageDependencies` 的同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开，气泡文本按纯文本处理。
 
 外部模板的 `ChatExample` 行为如下：
 

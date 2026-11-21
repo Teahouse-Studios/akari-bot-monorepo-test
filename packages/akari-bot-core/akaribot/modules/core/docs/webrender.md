@@ -37,4 +37,4 @@ order: 63
 
 先关闭再启动渲染服务，用于加载新的配置。
 
-服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 和 `remote_web_render_url`。渲染不可用时，依赖截图的命令按各自的策略降级。
+服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 和 `remote_web_render_url`。渲染不可用时，依赖截图的命令自行处理失败结果，例如退回文字，或直接结束、不发图。

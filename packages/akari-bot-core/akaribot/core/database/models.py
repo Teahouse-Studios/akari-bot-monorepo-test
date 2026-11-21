@@ -292,6 +292,7 @@ class UnionBind(DBModel):
 
     @classmethod
     async def list_ids(cls, union_id: str | list[str] | tuple[str, ...]) -> list[str]:
+        """列出绑定到给定 union ID 的平台账号。"""
         return list(await cls.filter(union_id__in=convert_list(union_id)).values_list(cls.id_field, flat=True))
 
 
@@ -404,6 +405,7 @@ class UnionInfo(DBModel):
 
     @classmethod
     async def resolve_union(cls, platform_id: str, create: bool = True) -> Self | None:
+        """按平台账号查找 union 记录，缺失时按需创建。"""
         bind_model = cls.bind_model
         bind = await bind_model.get_or_none(**{bind_model.id_field: platform_id})
         if bind:
@@ -433,6 +435,7 @@ class UnionInfo(DBModel):
             return union
 
     async def list_bound_ids(self) -> list[str]:
+        """列出该 union 记录绑定的平台账号。"""
         return await self.bind_model.list_ids(self.union_id)
 
     @overload
@@ -456,6 +459,7 @@ class UnionInfo(DBModel):
         return await cls.resolve_union(platform_id, create)
 
     async def edit_attr(self, key: str, value: Any) -> bool:
+        """修改 union 记录中除主键外的指定字段。"""
         if key not in self._meta.fields_map or key == self._meta.pk_attr:
             raise ValueError(f"Unsupported Union field: {key}")
         async with union_mutation():
@@ -466,6 +470,7 @@ class UnionInfo(DBModel):
             return True
 
     async def delete_union(self) -> bool:
+        """删除 union 记录及其关联的映射和会话数据。"""
         async with union_mutation():
             async with in_transaction("default"):
                 current = await type(self).filter(union_id=self.union_id).select_for_update().first()
@@ -1308,6 +1313,7 @@ class AnalyticsData(DBModel):
 
     @classmethod
     async def get_data_by_times(cls, new, old, module_name=None):
+        """按时间范围取统计数据。"""
         query = cls.filter(timestamp__gte=old, timestamp__lte=new)
         if module_name is not None:
             query = query.filter(module_name=module_name)
@@ -1315,6 +1321,7 @@ class AnalyticsData(DBModel):
 
     @classmethod
     async def get_values_by_times(cls, new, old, module_name=None):
+        """按时间范围取数值。"""
         query = cls.filter(timestamp__gte=old, timestamp__lte=new)
         if module_name is not None:
             query = query.filter(module_name=module_name)
@@ -1322,6 +1329,7 @@ class AnalyticsData(DBModel):
 
     @classmethod
     async def get_count_by_times(cls, new, old, module_name=None):
+        """按时间范围统计数量。"""
         query = cls.filter(timestamp__gte=old, timestamp__lte=new)
         if module_name is not None:
             query = query.filter(module_name=module_name)
@@ -1329,6 +1337,7 @@ class AnalyticsData(DBModel):
 
     @classmethod
     async def get_modules_count(cls):
+        """返回按模块统计的数量。"""
         analytics = await cls.all().values("module_name")
         module_counter = Counter([entry["module_name"] for entry in analytics])
         return dict(module_counter)
@@ -1366,6 +1375,7 @@ class ModuleStatus(DBModel):
 
     @classmethod
     async def init_modules(cls, modules_list: list[str], module_aliases: dict[str, list[str]] | None = None):
+        """初始化模块状态记录。"""
         async with in_transaction("default"):
             existing = dict(await cls.all().values_list("module_name", "load"))
             existing_set = set(existing)
@@ -1388,6 +1398,7 @@ class ModuleStatus(DBModel):
 
     @classmethod
     async def set_module_loaded(cls, module_name: str, load: bool = True):
+        """设置模块的加载状态。"""
         module = await cls.filter(module_name=module_name).first()
         if module:
             module.load = load
@@ -1397,14 +1408,17 @@ class ModuleStatus(DBModel):
 
     @classmethod
     async def get_all_modules(cls) -> list[str]:
+        """返回全部模块状态。"""
         return await cls.all().values_list("module_name", flat=True)
 
     @classmethod
     async def get_loaded_modules(cls) -> list[str]:
+        """返回已加载的模块。"""
         return await cls.filter(load=True).values_list("module_name", flat=True)
 
     @classmethod
     async def get_unloaded_modules(cls) -> list[str]:
+        """返回未加载的模块。"""
         return await cls.filter(load=False).values_list("module_name", flat=True)
 
 
@@ -1518,17 +1532,20 @@ class JobQueuesTable(DBModel):
 
     @classmethod
     async def add_task(cls, target_peer: str, action: str, args: dict) -> str:
+        """加入任务。"""
         task_id = str(uuid.uuid4())
         await cls.create(task_id=task_id, target_peer=target_peer, action=action, args=args)
         return task_id
 
     async def set_val(self, value, status) -> bool:
+        """设置任务值。"""
         self.result = value
         self.status = status
         await self.save()
         return True
 
     async def set_status(self, status):
+        """设置任务状态。"""
         self.status = status
         await self.save()
         return True
@@ -1548,6 +1565,7 @@ class JobQueuesTable(DBModel):
 
     @classmethod
     async def clear_task(cls, time=3600, include_active=False) -> bool:
+        """删除任务。"""
         now = datetime.now(UTC)
         timestamp = now - timedelta(seconds=time)
         Logger.debug(f"Clearing tasks older than {timestamp}...")
@@ -1570,12 +1588,14 @@ class JobQueuesTable(DBModel):
 
     @classmethod
     async def get_first(cls, target_peers: str | list[str]):
+        """返回第一个任务。"""
         if isinstance(target_peers, str):
             target_peers = [target_peers]
         return await cls.filter(target_peer__in=target_peers, status="pending").first()
 
     @classmethod
     async def get_all(cls, target_peers: str | list[str], limit: int | None = None):
+        """返回全部任务。"""
         if isinstance(target_peers, str):
             target_peers = [target_peers]
         # 不附加排序：现有 (target_peer, status) 索引可在达到 limit 后停止扫描；
@@ -1629,6 +1649,7 @@ class MaliciousLoginRecords(DBModel):
 
     @classmethod
     async def check_blocked(cls, ip_address: str) -> bool:
+        """检查登录来源是否被阻止。"""
         return await cls.filter(ip_address=ip_address, blocked_until__gt=datetime.now(UTC)).exists()
 
 

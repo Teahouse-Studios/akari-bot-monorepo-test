@@ -32,4 +32,6 @@ akaribot module add akari-bot-module-mojang_status
 - `https://sessionserver.mojang.com`：正版验证
 - `https://api.minecraftservices.com`：Mojang 服务
 
-每个接口只请求一次，失败不重试。应答为 200 或 400 至 409 时判定为在线。异常信息以 50 开头时显示离线，其余可识别的异常显示未知。常规 HTTP 5xx 应答由框架按外部服务错误处理。
+每个接口只请求一次，失败不重试。
+
+应答为 200 或 400 至 409 时判定为在线。异常信息以 50 开头时显示离线，其余可识别的异常显示未知。常规 HTTP 5xx 应答由框架按外部服务错误处理。

@@ -37,6 +37,6 @@ akaribot module add akari-bot-module-mcv_rss
 
 ## 依赖与外部服务
 
-运行依赖 `akari-bot-core`、`beautifulsoup4>=4.11.1,<5.0.0`、`google-play-scraper>=1.2.2,<2.0.0` 与 `orjson>=3.10.9,<4.0.0`。外部服务为 `piston-meta.mojang.com`、`www.minecraft.net` 与 Google Play。
+运行依赖 <PackageDependencies package="akari-bot-module-mcv_rss" />。外部服务为 `piston-meta.mojang.com`、`www.minecraft.net` 与 Google Play。
 
 `piston-meta.mojang.com` 提供版本清单，`www.minecraft.net` 的更新日志页面由 WebRender 抓取，`com.mojang.minecraftpe` 的版本号来自 Google Play。`mcv-rss` 每 60 秒读取一次版本清单，`mcbv-rss` 每 180 秒读取一次 Google Play 版本号。

@@ -25,6 +25,8 @@ dependencies = [
     "textual==8.2.8",
     "tomlkit>=0.14.0,<1.0.0",
     "typer>=0.21.0,<1.0.0",
+    # 文档开发模式监听各包文档目录与主题目录；watchdog 提供跨平台原生事件源
+    "watchdog>=7.1.0,<8.0.0",
 ]
 
 [project.scripts]

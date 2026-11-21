@@ -22,6 +22,7 @@ DirectSender = Callable[[object, Chainable], Awaitable[None]]
 
 
 def email_report_enabled() -> bool:
+    """检查邮件报告是否启用。"""
     return bool(SMTPConfig.enable_email_report and SMTPConfig.smtp_host and SMTPConfig.smtp_recipients)
 
 
@@ -52,6 +53,7 @@ def _build_email_html(body: str, footer: str) -> str:
 
 
 def send_email(subject: str, body: str, timeout: float | None = None) -> None:
+    """发送邮件报告。"""
     emailmsg = EmailMessage()
 
     emailmsg["Date"] = format_datetime(datetime.now(UTC), usegmt=True)

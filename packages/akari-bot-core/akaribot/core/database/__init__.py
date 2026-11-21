@@ -31,6 +31,7 @@ class PreparedDatabaseReload:
 
 
 def fetch_module_db():
+    """获取模块数据库。"""
     from akaribot.core.registry import PackageRegistry
 
     database_list = PackageRegistry.db_model_paths()
@@ -40,6 +41,7 @@ def fetch_module_db():
 
 
 def get_model_names(models_path: list[str]) -> list[str]:
+    """返回模型名。"""
     table_names = []
     for p in models_path:
         m = importlib.import_module(p)
@@ -53,6 +55,7 @@ def get_model_names(models_path: list[str]) -> list[str]:
 
 
 def get_model_fields(models_path: list[str], table_name: str) -> list[dict[str, Any]]:
+    """返回模型字段。"""
     for p in models_path:
         m = importlib.import_module(p)
         for _, obj in inspect.getmembers(m, inspect.isclass):

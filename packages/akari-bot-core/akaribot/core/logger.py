@@ -28,6 +28,8 @@ def basic_logger_format(bot_name: str):
 
 
 class LoggingLogger:
+    """兼容标准库 logging.Logger 的项目日志类。"""
+
     def __init__(self, name):
 
         self.log = logger

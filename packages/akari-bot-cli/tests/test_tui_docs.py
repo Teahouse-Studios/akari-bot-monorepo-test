@@ -6,6 +6,7 @@
 import asyncio
 import json
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from unittest import mock
 
@@ -568,6 +569,219 @@ async def _test_footer_fits_eighty_columns():
     return inside and {i18n.t("cli.tui.app.bind_quit"), i18n.t("cli.tui.app.bind_help")} <= descriptions
 
 
+DEV_URL = "http://127.0.0.1:5199/"
+
+
+class _Lines:
+    def __init__(self, lines: Sequence[str] = ()) -> None:
+        self._lines = [line.encode() for line in lines]
+
+    async def readline(self) -> bytes:
+        return self._lines.pop(0) if self._lines else b""
+
+    async def read(self) -> bytes:
+        return b"".join(self._lines)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> bytes:
+        if not self._lines:
+            raise StopAsyncIteration
+        return self._lines.pop(0)
+
+
+class _DevProcess:
+    def __init__(self, stdout: Sequence[str] = (), stderr: Sequence[str] = ()) -> None:
+        self.stdout = _Lines(stdout)
+        self.stderr = _Lines(stderr)
+        self.returncode = None
+
+    def terminate(self) -> None:
+        self.returncode = 0
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+    async def wait(self) -> int:
+        self.returncode = 0
+        return 0
+
+
+async def _test_dev_start_stop_and_open():
+    source = StaticDocsSource(_view(build=BUILT), url=PREVIEW_URL, dev_url=DEV_URL)
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        running = page.dev_running
+        status = page.status_text
+        url = page.preview_url
+        with mock.patch("akaribot.cli.tui.docs.webbrowser.open", return_value=True) as opener:
+            await pilot.press("o")
+            await pilot.pause()
+            opened = [call.args for call in opener.call_args_list]
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        stopped = page.dev_running
+        await pilot.press("q")
+        return running, status, url, opened, stopped, dict(chosen.calls)
+
+    running, status, url, opened, stopped, calls = await _with_page(body, source)
+    return (
+        running
+        and status == i18n.t("cli.tui.docs.dev_ready", url=DEV_URL)
+        and url == DEV_URL
+        and opened == [(DEV_URL,)]
+        and not stopped
+        and calls["dev"] == 1
+        and calls["stop_dev"] == 1
+    )
+
+
+async def _test_dev_and_preview_are_exclusive():
+    source = StaticDocsSource(_view(build=BUILT), url=PREVIEW_URL, dev_url=DEV_URL)
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("p")
+        await page.wait_for_idle()
+        await pilot.pause()
+        served = page.server_running
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        switched = (page.dev_running, page.server_running, dict(chosen.calls))
+        await pilot.press("p")
+        await page.wait_for_idle()
+        await pilot.pause()
+        back = (page.dev_running, page.server_running, dict(chosen.calls))
+        await pilot.press("q")
+        return served, switched, back
+
+    served, switched, back = await _with_page(body, source)
+    return (
+        served
+        and switched[0]
+        and not switched[1]
+        and switched[2]["stop"] == 1
+        and not back[0]
+        and back[1]
+        and back[2]["stop_dev"] == 1
+    )
+
+
+async def _test_dev_events_fill_log_panel():
+    source = StaticDocsSource(
+        _view(build=BUILT),
+        dev_url=DEV_URL,
+        dev_events=(
+            {"event": "stage", "stage": "server"},
+            {"event": "sync", "initial": True, "written": 3, "removed": 1, "duration_ms": 8},
+            {"event": "warn", "code": "theme_manifest", "path": "/tmp/docs-theme.json"},
+        ),
+    )
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        text = page.log_text
+        synced = page.dev_synced
+        pane = page.query_one("#log-pane", compat.VerticalScroll)
+        visible = pane.display
+        await pilot.press("q")
+        return text, synced, visible
+
+    text, synced, visible = await _with_page(body, source)
+    return (
+        i18n.t("cli.docs.dev.stage_server") in text
+        and i18n.t("cli.tui.docs.dev_synced", count=4) in text
+        and i18n.t("cli.docs.dev.warn.theme_manifest", path="/tmp/docs-theme.json") in text
+        and synced == 4
+        and visible
+    )
+
+
+async def _test_dev_start_failure_is_reported():
+    source = StaticDocsSource(_view(build=BUILT), dev_url=DEV_URL, dev_error="端口被占用")
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        running = page.dev_running
+        await pilot.press("q")
+        return status, running, chosen.calls["dev"]
+
+    status, running, calls = await _with_page(body, source)
+    return i18n.t("cli.tui.docs.dev_failed", detail="端口被占用") == status and not running and calls == 1
+
+
+async def _test_dev_requires_toolchain():
+    source = StaticDocsSource(_view(ready=False, build=BUILT), dev_url=DEV_URL)
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        status = page.status_text
+        calls = chosen.calls["dev"]
+        await pilot.press("q")
+        return status, calls
+
+    status, calls = await _with_page(body, source)
+    return status == i18n.t("cli.tui.docs.toolchain_missing", detail="未找到 npm") and calls == 0
+
+
+async def _test_leaving_page_stops_dev():
+    source = StaticDocsSource(_view(build=BUILT), dev_url=DEV_URL)
+
+    async def body(app, page, pilot, chosen):
+        await pilot.press("e")
+        await page.wait_for_idle()
+        await pilot.pause()
+        note = page.dirty_note()
+        app.show_page("dashboard")
+        stopped = await _wait_until(lambda: chosen.calls["stop_dev"] >= 1)
+        await pilot.pause()
+        await pilot.press("q")
+        return note, stopped, page.dev_running
+
+    note, stopped, running = await _with_page(body, source)
+    return note != "" and stopped and not running
+
+
+async def _test_subprocess_dev_streams_events():
+    process = _DevProcess(
+        [
+            json.dumps({"event": "stage", "stage": "toolchain"}),
+            json.dumps({"event": "sync", "initial": True, "written": 2, "removed": 0, "duration_ms": 5}),
+            json.dumps({"event": "ready", "url": DEV_URL, "mode": "dev", "packages": ["core"]}),
+            "vite ready",
+        ]
+    )
+    source = SubprocessDocsSource(root=Path("/tmp"))
+    events: list[dict] = []
+    with mock.patch(
+        "akaribot.cli.tui.docs.asyncio.create_subprocess_exec",
+        new=mock.AsyncMock(return_value=process),
+    ):
+        url = await source.start_dev(events.append)
+        await _wait_until(lambda: any(event.get("event") == "log" for event in events))
+        await source.stop_dev()
+    names = [event["event"] for event in events]
+    return (
+        url == DEV_URL
+        and source.calls["dev"] == 1
+        and source.calls["stop_dev"] == 1
+        and names[:2] == ["stage", "sync"]
+        and sum(1 for event in events if event.get("event") == "log") == 1
+    )
+
+
 @func_case
 async def test_tui_docs(tester: Tester):
     """cli.tui.docs: 文档包的列表、构建、预览与部署测试"""
@@ -590,4 +804,11 @@ async def test_tui_docs(tester: Tester):
     await tester.test(_test_reset_pending_reopens_modal, "reset_pending 清除防抖状态")
     await tester.test(_test_preview_start_failure_is_reported, "预览启动失败写入状态栏")
     await tester.test(_test_footer_fits_eighty_columns, "80 列下页脚不溢出")
+    await tester.test(_test_dev_start_stop_and_open, "开发预览启停、URL 与浏览器打开")
+    await tester.test(_test_dev_and_preview_are_exclusive, "开发预览与静态预览互斥")
+    await tester.test(_test_dev_events_fill_log_panel, "开发模式事件写入日志面板与状态")
+    await tester.test(_test_dev_start_failure_is_reported, "开发预览启动失败写入状态栏")
+    await tester.test(_test_dev_requires_toolchain, "Node 不可用时阻止开发预览")
+    await tester.test(_test_leaving_page_stops_dev, "离开页面停止开发预览")
+    await tester.test(_test_subprocess_dev_streams_events, "子进程开发模式转发事件与就绪地址")
     return tester

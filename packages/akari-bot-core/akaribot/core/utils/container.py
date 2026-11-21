@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 
 
 class TokenBucket:
+    """令牌桶限流器。"""
     def __init__(self, capacity: int, refill_interval: int):
         self.capacity = capacity
         self.rate = capacity / float(refill_interval) if refill_interval > 0 else capacity
@@ -18,6 +19,7 @@ class TokenBucket:
         self.ts = now
 
     def consume(self, amount: int = 1) -> bool:
+        """消耗令牌。"""
         self._refill()
         if self.tokens >= amount:
             self.tokens -= amount
@@ -25,16 +27,19 @@ class TokenBucket:
         return False
 
     def peek(self) -> float:
+        """查看当前令牌数。"""
         now = time.time()
         return min(self.capacity, self.tokens + (now - self.ts) * self.rate)
 
     def wait_time(self, amount: int = 1) -> float:
+        """返回等待下一个令牌的秒数。"""
         self._refill()
         if self.tokens >= amount:
             return 0.0
         return (amount - self.tokens) / self.rate
 
     def refill(self, amount: int | float = 1):
+        """补充令牌。"""
         self._refill()
         self.tokens = min(self.capacity, self.tokens + amount)
 
@@ -46,6 +51,7 @@ class TokenBucket:
 
 
 class ExpiringTempDict:
+    """带过期时间的字典。"""
     __slots__ = ("exp", "ts", "data", "_lock", "__weakref__")
 
     # 存弱引用：登记表只为定期清理服务，若持强引用则任何登记过的容器都永远无法被回收，
@@ -99,10 +105,12 @@ class ExpiringTempDict:
             del self.data[key]
 
     def is_expired(self, now: float | None = None) -> bool:
+        """判断键是否过期。"""
         now = now or time.time()
         return (now - self.ts) > self.exp
 
     def refresh(self):
+        """刷新键的过期时间。"""
         with self._lock:
             self.ts = time.time()
 
@@ -129,6 +137,7 @@ class ExpiringTempDict:
 
     @classmethod
     async def clear_all(cls, now: float | None = None):
+        """删除所有键并清空过期时间。"""
         now = now or time.time()
 
         async with cls._clear_lock:
@@ -148,6 +157,7 @@ class ExpiringTempDict:
                 pass
 
     def to_dict(self) -> dict:
+        """返回普通字典。"""
         with self._lock:
             result = {}
             for k, v in self.data.items():
@@ -161,6 +171,7 @@ class ExpiringTempDict:
 
     @classmethod
     def from_dict(cls, d: dict) -> "ExpiringTempDict":
+        """从字典构造实例。"""
         obj = cls(ts=d.get("_ts", time.time()), exp=d.get("_exp", 86400))
         for k, v in d.items():
             if k in ("_ts", "_exp"):
@@ -172,10 +183,12 @@ class ExpiringTempDict:
         return obj
 
     def clear(self):
+        """删除所有键。"""
         with self._lock:
             self.data.clear()
 
     def copy(self):
+        """返回浅拷贝。"""
         with self._lock:
             new_obj = ExpiringTempDict(exp=self.exp, ts=self.ts)
             for k, v in self.data.items():
@@ -183,6 +196,7 @@ class ExpiringTempDict:
             return new_obj
 
     def fromkeys(self, keys, value=None):
+        """按给定键创建实例。"""
         with self._lock:
             new_obj = ExpiringTempDict(exp=self.exp)
             for key in keys:
@@ -190,6 +204,7 @@ class ExpiringTempDict:
             return new_obj
 
     def get(self, key, default=None):
+        """按键读取值。"""
         v = self.data.get(key, default)
 
         if isinstance(v, ExpiringTempDict):
@@ -204,27 +219,34 @@ class ExpiringTempDict:
         return v
 
     def keys(self):
+        """返回键视图。"""
         return self.data.keys()
 
     def values(self):
+        """返回值视图。"""
         return self.data.values()
 
     def items(self):
+        """返回键值对视图。"""
         return self.data.items()
 
     def pop(self, key, default=None):
+        """按键删除并返回值。"""
         with self._lock:
             return self.data.pop(key, default)
 
     def popitem(self):
+        """删除并返回最后一个键值对。"""
         with self._lock:
             return self.data.popitem()
 
     def setdefault(self, key, default=None):
+        """读取键，不存在时写入默认值。"""
         with self._lock:
             return self.data.setdefault(key, default)
 
     def update(self, other=(), **kwargs):
+        """批量写入键值对。"""
         with self._lock:
             if isinstance(other, ExpiringTempDict):
                 other = other.data

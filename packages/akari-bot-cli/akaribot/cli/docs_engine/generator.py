@@ -218,6 +218,257 @@ def _package_entry(package: DocPackage) -> str:
     return package.pages[0].path if package.pages else "index.md"
 
 
+API_CATALOG_PLACEHOLDER = "<!-- API_CATALOG -->"
+
+
+def _api_anchor(name: str) -> str:
+    text = name.lower().replace(".", "-").replace("_", "-")
+    return re.sub(r"[^a-z0-9-]+", "", text).strip("-")
+
+
+def _api_link_table(catalog: Mapping[str, object]) -> tuple[dict[str, str], dict[str, str], set[str]]:
+    exact: dict[str, str] = {}
+    unqualified: dict[str, str] = {}
+    classes: set[str] = set()
+    candidates: dict[str, list[str]] = {}
+
+    def add(name: str, anchor: str) -> None:
+        exact[name] = anchor
+        if "." not in name:
+            method_names = candidates.setdefault(name, [])
+            if anchor not in method_names:
+                method_names.append(anchor)
+
+    def visit(entry: Mapping[str, object], prefix: str = "") -> None:
+        name = str(entry.get("name", "")).strip()
+        if not name:
+            return
+        full = name if not prefix or name.startswith(f"{prefix}.") else f"{prefix}.{name}"
+        anchor = _api_anchor(full)
+        add(full, anchor)
+        if entry.get("kind") == "class":
+            classes.add(full)
+            methods = entry.get("methods", [])
+            if isinstance(methods, list):
+                for method in methods:
+                    if isinstance(method, Mapping):
+                        method_name = str(method.get("name", "")).strip()
+                        if method_name:
+                            add(f"{full}.{method_name}", _api_anchor(f"{full}.{method_name}"))
+            nested = entry.get("nested", [])
+            if isinstance(nested, list):
+                for child in nested:
+                    if isinstance(child, Mapping):
+                        visit(child, full)
+
+    groups = catalog.get("groups", [])
+    if isinstance(groups, list):
+        for group in groups:
+            if not isinstance(group, Mapping):
+                continue
+            entries = group.get("entries", [])
+            if isinstance(entries, list):
+                for entry in entries:
+                    if isinstance(entry, Mapping):
+                        visit(entry)
+    for name, anchors in candidates.items():
+        unique = {anchor for anchor in anchors}
+        if len(unique) == 1:
+            unqualified[name] = next(iter(unique))
+    return exact, unqualified, classes
+
+
+CODE_SPAN_PATTERN = re.compile(r"`([^`\n]+)`")
+HEADING_PATTERN = re.compile(r"^(#{2,3})\s+(.+)$")
+API_LINK_PATTERN = re.compile(r"\[[^\]]*\]\([^)]*\)")
+
+
+def _api_heading_context(line: str) -> tuple[bool, str | None]:
+    match = HEADING_PATTERN.match(line)
+    if not match:
+        return False, None
+    text = match.group(2).strip()
+    text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    text = text.replace("`", "").strip()
+    text = re.sub(r"\(\)$", "", text)
+    return True, text
+
+
+def _link_api_code(segment: str, context: str, exact: Mapping[str, str], unqualified: Mapping[str, str]) -> str:
+    def replace(match: re.Match[str]) -> str:
+        content = match.group(1).strip()
+        if not content or " " in content:
+            return match.group(0)
+        bare = content[:-2] if content.endswith("()") else content
+        anchor = exact.get(bare)
+        if anchor is None and context:
+            anchor = exact.get(f"{context}.{bare}")
+        if anchor is None and "." not in bare:
+            anchor = unqualified.get(bare)
+        if anchor is None:
+            return match.group(0)
+        return f"[`{content}`](api-reference.md#{anchor})"
+
+    return CODE_SPAN_PATTERN.sub(replace, segment)
+
+
+def _link_api_references(text: str, catalog: Mapping[str, object]) -> str:
+    exact, unqualified, classes = _api_link_table(catalog)
+    if not exact:
+        return text
+    lines = text.splitlines()
+    result: list[str] = []
+    context = ""
+    in_fence = False
+    in_frontmatter = False
+    for index, line in enumerate(lines):
+        if index == 0 and line.strip() == "---":
+            in_frontmatter = True
+            result.append(line)
+            continue
+        if in_frontmatter:
+            result.append(line)
+            if line.strip() == "---":
+                in_frontmatter = False
+            continue
+        if FENCE_PATTERN.match(line):
+            in_fence = not in_fence
+            result.append(line)
+            continue
+        if in_fence:
+            result.append(line)
+            continue
+        is_heading, heading = _api_heading_context(line)
+        if is_heading:
+            if heading in classes:
+                context = heading
+            elif line.startswith("## "):
+                context = ""
+        parts: list[str] = []
+        cursor = 0
+        for link in API_LINK_PATTERN.finditer(line):
+            parts.append(_link_api_code(line[cursor : link.start()], context, exact, unqualified))
+            parts.append(link.group(0))
+            cursor = link.end()
+        parts.append(_link_api_code(line[cursor:], context, exact, unqualified))
+        result.append("".join(parts))
+    return "\n".join(result) + ("\n" if text.endswith("\n") else "")
+
+
+def _api_catalog_markdown(catalog: Mapping[str, object]) -> str:
+    groups = catalog.get("groups", [])
+    if not isinstance(groups, list) or not groups:
+        return "当前构建没有生成 API 目录。\n"
+    lines: list[str] = []
+    kind_labels = {"class": "类", "function": "函数", "constant": "常量"}
+    for group in groups:
+        if not isinstance(group, Mapping):
+            continue
+        lines.append(f"## {group.get('name', '')}")
+        lines.append("")
+        entries = group.get("entries", [])
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                continue
+            name = str(entry.get("name", ""))
+            kind = str(entry.get("kind", ""))
+            lines.append(f"### `{name}`")
+            lines.append("")
+            lines.append(kind_labels.get(kind, kind) + "。")
+            description = str(entry.get("description", "")).strip()
+            lines.append("")
+            lines.append(description or "暂无对应描述。")
+            signature = str(entry.get("signature", "")).strip()
+            if signature:
+                lines.append("")
+                lines.append(f"签名：`{signature}`")
+            parameters = entry.get("parameters", [])
+            if isinstance(parameters, list) and parameters:
+                lines.append("")
+                lines.append("参数：")
+                lines.extend(_api_parameter_lines(parameters))
+            methods = entry.get("methods", [])
+            if isinstance(methods, list) and methods:
+                for method in methods:
+                    if not isinstance(method, Mapping):
+                        continue
+                    method_name = str(method.get("name", ""))
+                    lines.append("")
+                    lines.append(f"#### `{name}.{method_name}`")
+                    lines.append("")
+                    method_description = str(method.get("description", "")).strip()
+                    lines.append(method_description or "暂无对应描述。")
+                    lines.append("")
+                    method_signature = str(method.get("signature", "")).strip()
+                    if method_signature:
+                        lines.append(f"签名：`{method_signature}`")
+                        lines.append("")
+                    method_parameters = method.get("parameters", [])
+                    if isinstance(method_parameters, list) and method_parameters:
+                        lines.append("参数：")
+                        lines.extend(_api_parameter_lines(method_parameters))
+            nested_entries = entry.get("nested", [])
+            if isinstance(nested_entries, list) and nested_entries:
+                for nested in nested_entries:
+                    if not isinstance(nested, Mapping):
+                        continue
+                    nested_name = str(nested.get("name", ""))
+                    lines.append("")
+                    lines.append(f'<a id="{_api_anchor(nested_name)}"></a>')
+                    lines.append(f"### `{nested_name}`")
+                    lines.append("")
+                    nested_description = str(nested.get("description", "")).strip()
+                    lines.append(nested_description or "暂无对应描述。")
+                    nested_methods = nested.get("methods", [])
+                    if isinstance(nested_methods, list):
+                        for method in nested_methods:
+                            if not isinstance(method, Mapping):
+                                continue
+                            method_name = str(method.get("name", ""))
+                            anchor = _api_anchor(f"{nested_name}.{method_name}")
+                            lines.append("")
+                            lines.append(f'<a id="{anchor}"></a>')
+                            lines.append(f"#### `{nested_name}.{method_name}`")
+                            lines.append("")
+                            method_description = str(method.get("description", "")).strip()
+                            lines.append(method_description or "暂无对应描述。")
+                            lines.append("")
+                            method_signature = str(method.get("signature", "")).strip()
+                            if method_signature:
+                                lines.append(f"签名：`{method_signature}`")
+                                lines.append("")
+                            method_parameters = method.get("parameters", [])
+                            if isinstance(method_parameters, list) and method_parameters:
+                                lines.append("参数：")
+                                lines.extend(_api_parameter_lines(method_parameters))
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _api_parameter_lines(parameters: Iterable[object]) -> list[str]:
+    lines: list[str] = []
+    for parameter in parameters:
+        if not isinstance(parameter, Mapping):
+            continue
+        name = str(parameter.get("name", ""))
+        type_name = str(parameter.get("type", "")).strip()
+        default = str(parameter.get("default", "")).strip()
+        description = str(parameter.get("description", "")).strip()
+        detail = ""
+        if type_name:
+            detail += f"`{type_name}`"
+        if default:
+            detail += ("，" if detail else "") + f"默认 `{default}`"
+        suffix = f"（{detail}）" if detail else ""
+        line = f"- `{name}`{suffix}"
+        if description:
+            line += f"：{description}"
+        lines.append(line)
+    return lines
+
+
 def _copy_package(
     source: Path,
     target: Path,
@@ -255,6 +506,8 @@ def _copy_package(
             text = _rewrite_links(text, path, package, roots, prefix="" if target == source else f"/{locale.tag}")
             if relative == "index.md" and doc_dir == Path(package.doc_path):
                 text = _inject_module_meta(text, package.doc_path)
+            if package.key == "core" and relative != "api-reference.md":
+                text = _link_api_references(text, package.api_catalog)
             page.write_text(text, encoding="utf-8")
         else:
             shutil.copy2(path, page)
@@ -279,6 +532,13 @@ def _copy_package(
     if package.overview and "index.md" not in copied:
         page = destination / "index.md"
         page.write_text(f"# {package.title}\n\n{package.summary or package.name}\n", encoding="utf-8")
+    api_page = destination / "api-reference.md"
+    if package.key == "core" and package.api_catalog and api_page.is_file():
+        text = api_page.read_text(encoding="utf-8")
+        if API_CATALOG_PLACEHOLDER in text:
+            api_page.write_text(
+                text.replace(API_CATALOG_PLACEHOLDER, _api_catalog_markdown(package.api_catalog)), encoding="utf-8"
+            )
 
 
 def _rewrite_links(
@@ -891,6 +1151,23 @@ def _locale_theme(
         if package.overview:
             entry["link"] = f"{prefix}/{package.key}/"
         sidebar[f"{prefix}/{package.key}/"] = [entry]
+    dependencies: dict[str, list[str]] = {}
+    for package in view.packages:
+        if not package.dependencies:
+            continue
+        values = list(package.dependencies)
+        dependencies[package.key] = values
+        dependencies[package.dist] = values
+    languages: dict[str, str] = {}
+    for package in view.packages:
+        if package.languages:
+            languages = dict(package.languages)
+            break
+    api_catalog: dict[str, object] = {}
+    for package in view.packages:
+        if package.api_catalog:
+            api_catalog = dict(package.api_catalog)
+            break
     theme_config: dict[str, object] = {
         "siteTitle": locale.title or config.site.title,
         "nav": nav,
@@ -916,6 +1193,12 @@ def _locale_theme(
             "footer": {"message": locale.labels["footer"]},
             "search": {"enabled": True},
         }
+        if dependencies:
+            akari["dependencies"] = dependencies
+        if languages:
+            akari["languages"] = languages
+        if api_catalog:
+            akari["apiCatalog"] = api_catalog
         if color:
             akari["settings"] = {"defaults": {"color": color}}
         if config.site.command_prefix:
@@ -923,8 +1206,11 @@ def _locale_theme(
         if brand.avatar:
             akari["chatAvatar"] = brand.avatar
         theme_config[theme_key] = akari
-    elif brand.logo:
-        theme_config["logo"] = brand.logo
+    else:
+        if brand.logo:
+            theme_config["logo"] = brand.logo
+        if dependencies:
+            theme_config["akari"] = {"dependencies": dependencies}
     return theme_config
 
 

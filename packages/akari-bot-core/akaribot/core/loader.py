@@ -117,6 +117,7 @@ async def load_modules():
 
 
 class ModulesManager:
+    """模块注册、加载和事件分发管理器。"""
     modules: dict[str, Module] = {}
     modules_aliases: dict[str, str] = {}
     modules_hooks: dict[str, Callable] = {}
@@ -260,6 +261,7 @@ class ModulesManager:
 
     @classmethod
     def add_module(cls, module: Module, py_module_name: str):
+        """加入模块。"""
         if module.module_name not in cls.modules:
             cls.modules[module.module_name] = module
             cls.modules_origin[module.module_name] = py_module_name
@@ -276,6 +278,7 @@ class ModulesManager:
 
     @classmethod
     def remove_modules(cls, modules):
+        """移除模块。"""
         for module in modules:
             if module in cls.modules:
                 cls.modules.pop(module)
@@ -285,6 +288,7 @@ class ModulesManager:
 
     @classmethod
     def refresh_modules_aliases(cls):
+        """刷新模块别名。"""
         cls.modules_aliases.clear()
         for m in cls.modules:
             module = cls.modules[m]
@@ -320,6 +324,7 @@ class ModulesManager:
 
     @classmethod
     def refresh_modules_hooks(cls):
+        """刷新模块 Hook。"""
         from akaribot.core.builtins.parser.hooks import HookPoint, build_subscription
 
         cls.modules_hooks.clear()
@@ -353,6 +358,7 @@ class ModulesManager:
 
     @classmethod
     def refresh_modules_events(cls):
+        """刷新模块事件。"""
         cls.modules_events.clear()
         for module_name, module in cls.modules.items():
             for event in module.events_list.set:
@@ -360,6 +366,7 @@ class ModulesManager:
 
     @classmethod
     def refresh(cls):
+        """刷新模块状态。"""
         cls.refresh_modules_aliases()
         cls.refresh_modules_hooks()
         cls.refresh_modules_events()
@@ -367,6 +374,7 @@ class ModulesManager:
 
     @classmethod
     async def dispatch_event(cls, event_info: EventInfo):
+        """分发平台事件。"""
         if not isinstance(event_info, EventInfo):
             raise TypeError("event_info must be an EventInfo")
 
@@ -415,6 +423,7 @@ class ModulesManager:
 
     @classmethod
     def search_related_module(cls, module, include_self=True):
+        """查找相关模块。"""
         if module in cls.modules_origin:
             modules = []
             py_module = cls.return_py_module(module)
@@ -656,6 +665,7 @@ class ModulesManager:
         module_name: str,
         meta: CommandMeta | RegexMeta | ScheduleMeta | HookMeta | EventMeta,
     ):
+        """绑定模块到运行时。"""
         if module_name in cls.modules:
             if isinstance(meta, CommandMeta):
                 cls.modules[module_name].command_list.add(meta)

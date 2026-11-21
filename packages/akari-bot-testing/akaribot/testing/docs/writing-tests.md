@@ -90,7 +90,7 @@ async def _(msg: Bot.MessageSession, word: str):
 
 其余模拟组件：
 
-- `mock/database.py`：内存 SQLite，用例入口前重建。
+- `mock/database.py`：内存 SQLite，跑用例前重建。
 - `mock/loader.py`：加载全部已发现模块，可注入 monkey patch。
 - `mock/random.py`：固定种子，随机输出可复现。
 - `mock/http.py` 与 `mock/fixtures.py`：按 URL、方法、请求体摘要回放 HTTP 响应。
@@ -107,7 +107,7 @@ async def _(msg: Bot.MessageSession, word: str):
 ## 常见陷阱
 
 - 自动化运行必须设置 `CI=1`。否则人工复核与交互输入会挂起。
-- `tests/run_one.py` 强制 CI 模式，不适用于需要人工复核的用例。收尾 `os._exit` 会跳过常规清理。
+- `tests/run_one.py` 强制 CI 模式，不适用于需要人工复核的用例。结束时调用的 `os._exit` 会跳过常规清理。
 - 只检查对外行为：不要检查私有属性、调用次数、日志条数或提示文案的完整措辞。
 - 比较结构化返回值时优先声明必需字段，避免新增字段让既有用例失败。
 - 集成用例会启动队列轮询与后台任务。用例结束前让会话正常结束，不要留下未完成任务。

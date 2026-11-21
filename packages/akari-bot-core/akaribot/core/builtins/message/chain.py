@@ -488,6 +488,7 @@ class MessageChain:
         return [converter.unstructure(x, MessageElement) for x in self.values if x is not None]
 
     def to_kecode(self) -> str:
+        """转换为 KECode 文本。"""
         _t = ""
         for x in self.values:
             _t += x.kecode()
@@ -551,12 +552,15 @@ class MessageChain:
         return MessageChain.assign(self.values.copy())
 
     def contains(self, types: type[MessageElement] | tuple[MessageElement]) -> bool:
+        """判断消息链是否包含元素。"""
         return any(isinstance(x, types) for x in self.values)
 
     def only(self, types: type[MessageElement] | tuple[MessageElement]) -> bool:
+        """只保留指定类型的元素。"""
         return all(isinstance(x, types) for x in self.values)
 
     def extend(self, other: MessageChain):
+        """追加另一个消息链。"""
         return self.__iadd__(other)
 
     def __str__(self):

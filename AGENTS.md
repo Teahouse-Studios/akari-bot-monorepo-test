@@ -7,7 +7,9 @@
 
 各领域的完整手册是随源码维护的文档页：`packages/*/akaribot/**/docs/`。它们覆盖架构与进程拓扑、配置、
 数据库、队列、模块与适配器开发、消息 API、i18n、测试与开发流程，也是 `akaribot docs build` 的站点
-内容源。**本文件只记录高频命令、跨文件才能看清的架构脉络与强制约定**；需要 API 细节时读对应页面，
+内容源。
+
+**本文件只记录高频命令、跨文件才能看清的架构脉络与强制约定**；需要 API 细节时读对应页面，
 不要在这里重复。`.agents/skills/akaribot-dev/SKILL.md` 是这些页面的路由表。
 
 ## 常用命令
@@ -71,7 +73,7 @@ packages/
   （不得有 `__init__.py`）；`akaribot.core`、`akaribot.testing`、各模块/适配器/资源包是常规包。
 - 包发现走 entry points（`akaribot.modules` / `akaribot.adapters`），目录扫描只是兜底；每个包在
   自己的导入包目录下有 `manifest.toml`，locales、assets、migrations 都相对它解析。
-- 模块只应 import `akaribot.core.api` 的公共面；适配器另有 `akaribot.core.api.adapters`。
+- 模块只应 import `akaribot.core.api` 的公开接口；适配器另有 `akaribot.core.api.adapters`。
 - CLI 与 core 之间**只经子进程**：`python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
 
 ## 项目约定
@@ -80,7 +82,7 @@ packages/
 
 - **文档、注释和配置说明只描述当前状态，不记录「从前如何」。** 不写「原本是 X，现在改为 Y」
   「已迁移到 Z」「不再使用 W」这类对照式表述，直接陈述当下的事实与约束。
-- 变更历史由 git 承载。需要解释设计取舍时，说明当前为何如此，而不是叙述它从什么演变而来。
+- 变更历史由 git 记录。需要解释设计取舍时，说明当前为何如此，而不是叙述它从什么演变而来。
 - **例外**：为迁移历史数据而保留的兼容逻辑（旧配置表名、数据库版本升级路径、退役客户端的数据
   迁移）应当保留，并注明适用范围——这类兼容是当前行为的一部分。标注某个 API 已弃用同样属于
   陈述当前状态，可以保留。
@@ -104,9 +106,9 @@ packages/
 - 每个分发的导入包目录下带 `docs/`：`docs/config/global/docs.global.toml` 声明标题、简介与排序，`docs/config/docs.toml` 可覆盖默认值，Markdown 页面写当前行为；
   在 pyproject 的 `[project.entry-points."akaribot.docs"]` 声明 `<key> = "<import path>"`。第三方包
   以同一方式接入，目录只包含已安装的包。
-- `akaribot docs list|build|serve|deploy|status|clean`。工具链要求由主题清单决定：内置主题为
-  Node.js >= 18 与 VitePress 1.6.4，`akari-bot-docs-template` 为 Node.js >= 22.12 与 VitePress
-  2.0.0-alpha.21。生成物在实例 `cache/docs/`，构建与部署记录在 `.docs/state.json`。
+- `akaribot docs list|build|serve|deploy|status|clean`。工具链要求由主题清单决定：内置主题与
+  `akari-bot-docs-template` 各自在 `docs-theme.json` 里声明 Node.js 与 VitePress 版本范围。
+  生成物在实例 `cache/docs/`，构建与部署记录在 `.docs/state.json`。
 - 站点配置写实例根 `docs.toml`；主题用 `[theme].source` 选择，外部主题只通过根目录的
   `docs-theme.json` 声明主题目录、依赖、VitePress/Node 要求与生成选项，引擎不导入主题代码。
   本仓库的主题是 `vendor/akari-bot-docs-template` submodule，克隆后须初始化 submodule。
@@ -136,7 +138,7 @@ packages/
 
 - **破坏性动作不用单字母键，且必须弹模态确认。** 删除、移除、清数据一类动作走 `ctrl+<字母>`
   或专用字母键（卸载用 `u`）；不可逆动作（清空实例数据、重建 venv、迁移旧项目）额外要求
-  **打字确认**或「先预演」。
+  **打字确认**或「先试运行」。
 - **单字母键只留给浏览与无副作用的切换**（`r` 刷新、`/` 搜索、`space` 选择等）；有副作用的单字母键须先弹确认框。
 - **确认一律弹模态框**：不再用状态栏「再按一次 X 确认」——它既容易被鼠标双击与键盘连发穿透，
   也让人看不清将改动什么。弹框前过 `_compat.PendingConfirm.accept(key)`：防抖窗口内忽略连发，

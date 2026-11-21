@@ -3,17 +3,20 @@ from typing import Iterable
 
 
 class Secret:
+    """敏感配置值。"""
     data: set[str] = set()
     ip_address: str | None = None
     ip_country: str | None = None
 
     @classmethod
     def add(cls, secret: str):
+        """加入敏感值。"""
         if secret:
             cls.data.add(secret.upper())
 
     @classmethod
     def check(cls, text: str) -> str | bool:
+        """检查敏感值是否存在。"""
         for secret in cls.data:
             if secret in text.upper():
                 return secret
@@ -21,11 +24,13 @@ class Secret:
 
     @classmethod
     def remove(cls, secret: str):
+        """删除敏感值。"""
         if secret and cls.check(secret):
             cls.data.discard(secret.upper())
 
     @classmethod
     def update(cls, secret: Iterable):
+        """替换敏感值。"""
         if secret:
             # union 返回新集合、并不就地修改，此处必须用 update 才能登记批量密钥
             cls.data.update({s.upper() for s in secret})

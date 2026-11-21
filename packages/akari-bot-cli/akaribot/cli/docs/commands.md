@@ -16,7 +16,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 - `path`：实例目录，默认为当前目录。`--adapter` / `--module` 可重复，默认适配器为 `telegram`。
 - `--minimal`：不装 core extras 与表情资源包。`--extra` 追加 extra，两者互斥。
-- `--no-venv`：不托管 venv。`--workspace-root` / `--dev`：从本地源码安装。`--python`：创建 venv 时使用的解释器。
+- `--no-venv`：不由 CLI 管理 venv。`--workspace-root` / `--dev`：从本地源码安装。`--python`：创建 venv 时使用的解释器。
 - `--non-interactive` 不提问。还支持 `--offline`、`--dry-run`、`--force`、`--verbose` / `-v`。
 
 ## run
@@ -30,7 +30,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 ## service
 
-把 CLI 装成系统常驻服务，由服务按注册表策略守护实例。
+把 CLI 装成系统常驻服务，由服务按注册表里的自启与崩溃重启设置守护实例。
 
 - `install [--dry-run] [--force]`：写入并注册服务单元。`uninstall`：注销并删除单元文件。
 - `status [--json]`：查看是否安装、是否已注册。
@@ -81,7 +81,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 管理本机注册表，不移动实例目录。
 
-- `list [--json]`：列出本机实例、运行状态与服务策略。
+- `list [--json]`：列出本机实例、运行状态与服务设置。
 - `add <目录> [--name <名>] [--locale <语言>]`：只记录位置。
 - `remove <名> [--yes]`：从注册表移除条目，目录保留。
 - `use <名>`：设为默认实例。
@@ -99,12 +99,12 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 ## venv
 
-管理实例 venv：接管、放弃托管或重建。
+管理实例 venv：改为由 CLI 管理、改回你自己管理，或重建。
 
 - `status`：查看当前模式、解释器路径与已装包数量。
 - `add <需求串> [--no-save] [--upgrade]`：装入实例环境，默认记进实例清单。
 - `remove <分发名> [--no-save]`：卸载，默认同时删掉实例清单里的记录。
-- `adopt`：改为由 CLI 托管 venv，把当前环境里的包迁进实例 venv。`release`：取消托管，把实例 venv 里的包迁到当前环境。`recreate`：重建实例 venv。
+- `adopt`：改为由 CLI 管理 venv，把当前环境里的包迁进实例 venv。`release`：改回由你自己管理，把实例 venv 里的包迁到当前环境。`recreate`：重建实例 venv。
 
 ## doctor
 
@@ -117,17 +117,18 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 ## docs
 
-汇总实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根的 `docs.toml`。Node.js 与 VitePress 版本由主题清单决定，内置主题要求 Node >= 18，`akari-bot-docs-template` 要求 Node >= 22.12。
+收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根的 `docs.toml`。Node.js 与 VitePress 版本由主题清单决定。
 
 - `list [--query <词>] [--kind <分组>] [--json]`：列出参与构建的包、分类、页面与目录警告。
 - `build [--package <key>…] [--all] [--force] [--offline] [--json]`：生成站点并调用 VitePress。不加 `--json` 时，命令实时打印各阶段进度与子进程输出。加 `--json` 时，stdout 只保留结果行，日志写入 stderr。`--package` 可重复或逗号分隔。
 - `sync-theme [--repo <路径>] [--json]`：把主题模板 submodule 同步到远端最新提交。只更新工作区，不暂存父仓库 gitlink。
 - `install-deps [--json]`：安装主题所需的 Node 依赖，不生成站点。
 - `serve [--host 127.0.0.1] [--port 4173] [--open] [--no-build] [--json]`：构建并启动本机静态预览，直到 Ctrl+C。`--json` 先输出 ready 事件行。
+- `dev [--host 127.0.0.1] [--port 5173] [--open] [--offline] [--interval 0.6] [--package <key>…] [--json]`：监听文档与主题改动，同步到 `cache/docs/dev` 并运行 VitePress 开发服务器，直到 Ctrl+C。`--json` 输出逐行事件。
 - `deploy [--provider vercel|s3] [--dry-run] [--delete] [--yes] [--json]`：把构建产物部署到远端。部署用的密钥只从环境变量读取，`--delete` 只在 S3 下删除目标前缀内多余的对象。
 - `status [--json]`：查看工具链、配置、包数与最近一次构建或部署。`clean [--yes]`：删除 `cache/docs`。
 
-生成结果位于实例根目录的 `cache/docs`，构建与部署记录在 `.docs/state.json`。主题由 `docs.toml` 的 `[theme].source` 选择，外部模板需在根目录提供 `docs-theme.json`。配置与部署字段见 [文档引擎](docs-engine.md)。
+生成结果位于实例根目录的 `cache/docs`，开发模式使用其中的 `cache/docs/dev`，构建与部署记录在 `.docs/state.json`。主题由 `docs.toml` 的 `[theme].source` 选择，外部模板需在根目录提供 `docs-theme.json`。配置与部署字段见 [文档引擎](docs-engine.md)。
 
 ## tui
 
@@ -139,7 +140,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 - `--process <进程>`：限定进程前缀。`--info` / `--debug`：限定日志级别文件。
 - `--lines <N>`：首次输出的末尾行数，默认 50。`--follow`：持续输出新增行，直到 Ctrl+C。
-- `--path`：只打印文件路径。`--json`：结构化输出。
+- `--path`：只打印文件路径。`--json`：输出单行 JSON。
 
 ## migrate
 

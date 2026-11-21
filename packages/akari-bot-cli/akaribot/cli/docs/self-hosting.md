@@ -6,9 +6,9 @@
 
 ## 前置条件
 
-- Python 3.12 或更高版本（CLI 与实例环境的要求相同）。
+- Python 版本要求见仓库 `pyproject.toml` 的 `requires-python`（CLI 与实例环境的要求相同）。
 - [uv](https://docs.astral.sh/uv/)：创建实例 venv 并安装分发包。
-- Node.js 18 或更高版本：仅构建文档站点时需要，且 `npm` 须在 `PATH` 中。
+- Node.js 与 `npm`：仅构建文档站点时需要，版本由主题清单决定，且 `npm` 须在 `PATH` 中。
 
 默认数据库为 SQLite，连接串 `sqlite://database/save.db`。默认安装的 core 已带 MySQL 驱动，可在密钥表中把 `db_path` 换成 MySQL 连接串。
 
@@ -80,7 +80,11 @@ akaribot service install
 
 ## venv 管理
 
-默认由 CLI 托管实例的 `.venv`。`venv status` 显示模式与已装包。`venv recreate` 先在新环境安装并验证，通过后才替换旧目录，升级 Python 之后可以这样重建环境。`venv adopt` 接管当前环境，`venv release` 把包迁回当前环境。`venv add <需求串>` 装入额外的运行库，`--save` 会记入 `akaribot.toml` 供重建时补装。
+默认由 CLI 托管实例的 `.venv`。`venv status` 显示模式与已装包。
+
+`venv recreate` 先在新环境安装并验证，通过后才替换旧目录，升级 Python 之后可以这样重建环境。
+
+`venv adopt` 接管当前环境，`venv release` 把包迁回当前环境。`venv add <需求串>` 装入额外的运行库，`--save` 会记入 `akaribot.toml` 供重建时补装。
 
 ## 检查与日志
 

@@ -70,10 +70,10 @@
       "page": "help.md",
       "links": [
         {
-          "label": "命令帮助",
+          "label": "开始使用",
           "icon": "terminal",
-          "package": "builtin",
-          "page": "help.md"
+          "package": "assets-brand",
+          "page": "public-instance.md"
         },
         {
           "label": "模块一览",
@@ -186,6 +186,7 @@
       {
         "title": "参与贡献",
         "description": "代码、文档与问题反馈都在 GitHub 上维护。提交前先看贡献指南，确认改动范围和测试要求。",
+        "logo": "/home/github.svg",
         "icon": "code",
         "links": [
           {

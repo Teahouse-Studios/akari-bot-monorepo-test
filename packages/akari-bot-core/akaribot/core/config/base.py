@@ -9,6 +9,7 @@ from akaribot.core.constants.version import config_version as config_version_def
 # 并由 akaribot/core/config/update.py 的版本迁移维护，声明在此仅为提供一个带类型的读取入口。
 @on_base_config()
 class BaseConfig:
+    """配置模板的基类。"""
     default_locale: str = default_locale_default
     config_version: int = config_version_default
 

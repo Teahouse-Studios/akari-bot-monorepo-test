@@ -150,3 +150,4 @@ registry.json
 # Nuitka 打包用的数据目录，由 .github/workflows/binary-build.yml 在构建时生成
 /bundle/
 /.dsh-tmp
+/generated-images

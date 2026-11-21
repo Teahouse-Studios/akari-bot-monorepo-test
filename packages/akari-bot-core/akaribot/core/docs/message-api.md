@@ -1,6 +1,6 @@
 # 消息 API 参考
 
-本文整理了模块处理函数可用的消息接口、消息链与消息元素。接口与参数均从 `akaribot.core.api` 导入，模块声明与命令模板的写法见[模块开发](module-development.md)。
+本文列出模块处理函数可用的消息接口、消息链与消息元素。接口与参数均从 `akaribot.core.api` 导入，模块声明与命令模板的写法见[模块开发](module-development.md)。
 
 ## 会话对象
 
@@ -25,7 +25,7 @@
 | `tz`、`display_tz`、`tz_label`、`display_tz_label` | 场景时区与展示时区（`tzinfo`）及其规范偏移字符串。展示时区未设置时跟随场景时区 |
 | `bot_name`、`bot_id`、`is_private`、`fetch`、`support_*` | 本地化机器人名称与 ID。私聊、主动会话与平台能力标志 |
 
-`now()` 与 `today()` 返回场景时区的当前时间与日期，业务代码需要时间时用它，不要直接调用 `datetime.now()`。展示时用 `format_time()`。
+`now()` 与 `today()` 返回场景时区的当前时间与日期，业务代码需要时间时用这两个方法。展示时用 `format_time()`。
 
 ## 发送消息
 
@@ -33,14 +33,14 @@
 | --- | --- | --- |
 | `send_message()` | `message_chain`、`quote=True`、`disable_secret_check=False`、`callback=None`、`callback_id=None`、`callback_timeout=1800`、`callback_once=False` | 发送并返回 `FinishedSession` |
 | `finish()` | 参数同 `send_message()`，`message_chain` 可省略 | 发送后抛出 `SessionFinished`。不传链时只结束会话 |
-| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交投递后立即返回 `None`，不等待平台回执，也不提供消息 ID |
+| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交后立即返回 `None`；消息 ID 由其他接口提供 |
 | `send_private_message()` | `message_chain`、`user_id=None`、`disable_secret_check=False` | 私聊发送，返回消息 ID 列表。空列表表示失败 |
 
-`send_message()` 的 `callback` 不是发送完成回调。它在用户引用或点击这条消息后执行，入参是回复的 `MessageSession`。
+`send_message()` 的 `callback` 在用户引用或点击这条消息后执行，入参是回复的 `MessageSession`。
 
 `callback_id` 是按钮回调使用的虚拟回复 ID。省略时，框架会为缺少 `reply_id` 的按钮生成一个。没有按钮时，框架按实际消息 ID 绑定。
 
-`callback_timeout` 默认 1800 秒。传 `None` 时不会自动过期。`callback_once=True` 表示首次触发后失效。
+`callback_timeout` 默认 1800 秒。传 `None` 表示不设置超时。`callback_once=True` 表示首次触发后失效。
 
 返回的 `FinishedSession` 提供 `message_id` 与异步的 `delete()`。平台没有返回 ID 时，`message_id` 可能是空列表。
 
@@ -55,7 +55,7 @@ async def show(msg: Bot.MessageSession):
 
 <NoticeBox type="warning">
 
-`disable_secret_check=True` 会跳过 `MessageChain.is_safe` 的敏感信息扫描。仅对已确认安全的内容使用，否则框架会把整条链替换为 `error.message.chain.unsafe`。
+发送路径默认会执行 `MessageChain.is_safe` 的敏感信息扫描。检查不通过时，整条消息链会被替换成 `error.message.chain.unsafe`。只有确认内容安全时，才可以传 `disable_secret_check=True` 跳过检查。
 
 </NoticeBox>
 
@@ -68,11 +68,16 @@ async def show(msg: Bot.MessageSession):
 | `wait_reply()` | `message_chain`、`quote=True`、`delete=False`、`timeout=120`、`all_=False`、`append_instruction=True` | 等待对该消息的引用回复 |
 | `wait_anyone()` | `message_chain=None`、`quote=False`、`delete=False`、`timeout=120` | 等待场景内任意成员的消息 |
 
-等待方法都返回新的 `MessageSession`（`wait_confirm()` 返回 `bool`）。默认超时 120 秒，传 `None` 关闭超时。超时、取消或无法取得结果时抛出 `WaitCancelException`。等待期间默认释放执行锁，方法返回前再重新获取。重新获取失败时同样按取消处理。
+等待方法都返回新的 `MessageSession`。`wait_confirm()` 返回 `bool`。
 
-`wait_confirm()` 在 `confirm_token` 非 `None` 时进入严格确认模式，只有完整回复该口令才算确认。普通模式接受 `confirm_command` 中的确认词，用户发送 `no` 会得到 `False`。`consume_any_message=True` 时任意消息都会结束等待，返回值仍按其是否为确认词判定。全局 `no_confirm` 开启时直接返回 `no_confirm_action`。
-
-`wait_reply()` 在平台不支持引用回复时改用 `wait_next_message()` 或 `wait_anyone()`，并以 `quote=False` 发送提示。`all_=True` 时接受任意成员的回复。`wait_next_message()` 与 `wait_anyone()` 命中的消息仍会继续进入常规 parser，`wait_confirm()` 与 `wait_reply()` 会消费命中的消息。
+- 默认超时 120 秒。传 `None` 关闭超时。
+- 超时、取消或无法取得结果时抛出 `WaitCancelException`。
+- 等待期间默认释放执行锁。方法返回前重新获取；重新获取失败按取消处理。
+- `wait_confirm()` 在 `confirm_token` 非 `None` 时进入严格确认模式，必须原样回复这个口令，才算确认。普通模式接受 `confirm_command` 中的确认词；发送 `no` 返回 `False`。
+- `consume_any_message=True` 时，任意消息都会结束等待，返回值仍按是否为确认词判断。
+- 全局 `no_confirm` 开启时，直接返回 `no_confirm_action`。
+- 平台不支持引用回复时，`wait_reply()` 改用 `wait_next_message()` 或 `wait_anyone()`，并以 `quote=False` 发送提示。`all_=True` 时接受任意成员的回复。
+- `wait_next_message()` 与 `wait_anyone()` 命中的消息仍进入常规 parser。`wait_confirm()` 与 `wait_reply()` 会取走命中的消息，不再交给常规 parser。
 
 ```python
 from akaribot.core.api import Bot, WaitCancelException
@@ -86,7 +91,7 @@ async def choose(msg: Bot.MessageSession):
 
 <NoticeBox type="warning">
 
-`WaitCancelException` 与 `SessionFinished` 都继承 `BaseException`，`except Exception` 捕获不到。不要用不带异常类型的 `except` 包裹包含 `wait_*()` 或 `finish()` 的代码，否则等待取消或会话结束会被吞掉。
+`WaitCancelException` 与 `SessionFinished` 都继承 `BaseException`，`except Exception` 捕获不到。
 
 </NoticeBox>
 
@@ -110,14 +115,19 @@ async def manage(msg: Bot.MessageSession):
 | 方法 | 关键参数（默认值） | 说明 |
 | --- | --- | --- |
 | `as_display()` | `text_only=False`、`element_filter=None`、`connector="\n"` | 把触发消息转为字符串。`text_only=True` 只保留 `PlainElement` 文本，非文本元素按 KE 码、AT 码等字符串表示 |
-| `delete()` | `reason=None` | 删除触发消息，不是删除已发送消息 |
+| `delete()` | `reason=None` | 删除触发消息 |
 | `sleep()` / `hold()` / `release()` / `start_typing()` / `end_typing()` | `s` / 无 | 暂停并释放执行锁（恢复失败抛 `WaitCancelException`）。保持或释放平台上下文。开始或结束输入状态 |
 | `format_time()` / `format_num()` | `timestamp`、`date=True`、`simple=False`、`time=True`、`seconds=True`、`timezone=True` / `number`、`precision=0` | 按会话时区与语言格式化时间 / 按语言缩放数字（万、亿、兆或 k、M、G） |
-| `call_onebot_api()` / `call_api()` | `api_name`、`**kwargs` | 透传 OneBot 扩展接口。`call_api()` 已弃用。平台不支持时返回 `{"success": False, "error": ...}` |
+| `call_onebot_api()` / `call_api()` | `api_name`、`**kwargs` | 转发到 OneBot 扩展接口。`call_api()` 已弃用。平台不支持时返回 `{"success": False, "error": ...}` |
 | `restrict_member()` / `unrestrict_member()` | `user_id`、`duration=None`、`reason=None`、`wait=False` / `user_id`、`wait=False` | 禁言与解除禁言，`duration=None` 表示永久 |
 | `kick_member()` / `ban_member()` / `unban_member()` | `user_id`、`reason=None`（`unban` 无 reason） | 移除、封禁、解封成员 |
 
-主动会话（`FetchedMessageSession`）没有 `session_info.messages`，调用 `as_display()` 前先检查是否为空。`as_display()` 的 `text_only` 默认是 `False`，而 `MessageChain.to_str()` 的默认是 `True`。`add_reaction()`、`remove_reaction()` 作用于触发消息。`grant_permission_group()`、`revoke_permission_group()` 管理平台权限组。`handle_error_signal()` 提交错误信号。
+主动会话（`FetchedMessageSession`）没有 `session_info.messages`。调用 `as_display()` 前，先检查它是否为空。
+
+- `as_display()` 的 `text_only` 默认是 `False`，`MessageChain.to_str()` 的默认是 `True`。
+- `add_reaction()`、`remove_reaction()` 作用于触发消息。
+- `grant_permission_group()`、`revoke_permission_group()` 管理平台权限组。
+- `handle_error_signal()` 提交错误信号。
 
 ```python
 from akaribot.core.api import Bot
@@ -139,7 +149,7 @@ async def report(msg: Bot.MessageSession):
 | `extend()` / `copy()` | 另一条链或元素列表 / 无 | 原地拼接或复制 |
 | `contains()` / `only()` | 元素类型或类型元组 | 是否含某类元素、是否只含某类元素 |
 
-`+` 返回新链并深拷贝元素，`+=` 原地修改。两者都接受 `MessageChain`、元素列表或单个元素，不接受单独的字符串。`in` 只接受元素类型，例如 `PlainElement in chain`，传入实例会抛 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
+`+` 返回新的消息链并深拷贝元素，`+=` 原地修改。两者都接受 `MessageChain`、元素列表或单个元素，不接受单独的字符串。`in` 只接受元素类型，例如 `PlainElement in chain`，传入实例会抛 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
 
 ```python
 from akaribot.core.api import Image, MessageChain, Plain
@@ -175,7 +185,7 @@ async def card(msg: Bot.MessageSession):
 
 <NoticeBox type="warning">
 
-`Plain`、`Image`、`Embed` 等名字绑定的是对应元素的 `assign` 类方法，不是元素类。类型判断应使用 `PlainElement`、`ImageElement`、`EmbedElement` 等真实类，`isinstance(x, Plain)` 会报错。
+`Plain`、`Image`、`Embed` 等名字绑定的是对应元素的 `assign` 类方法。类型判断使用 `PlainElement`、`ImageElement`、`EmbedElement` 等真实类。
 
 </NoticeBox>
 
@@ -192,8 +202,8 @@ nodes = MessageNodes.assign([
 await msg.send_message(nodes)
 ```
 
-发送路径统一处理以下情况：
+发送路径会处理以下情况：
 
 - `I18NContext` 按会话语言解析。`Markdown` 在平台不支持 `support_markdown` 时转为纯文本。
 - `Embed` 在平台不支持 `support_embed` 时转为文本与图片。`ActionText` 在平台不支持 `support_action_text` 时转为纯文本。`Button` 与 `ButtonFrame` 在平台不支持 `support_button` 时丢弃。
-- 空链会被替换为 `error.message.chain.empty`。未通过 `is_safe` 的链会被替换为 `error.message.chain.unsafe`，除非发送时传入 `disable_secret_check=True`。
+- 空链会被替换为 `error.message.chain.empty`。未通过 `is_safe` 的整条消息链会被替换为 `error.message.chain.unsafe`，除非发送时传入 `disable_secret_check=True`。

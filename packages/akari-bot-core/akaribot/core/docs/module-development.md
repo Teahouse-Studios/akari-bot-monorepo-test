@@ -1,6 +1,6 @@
 # 模块开发
 
-本文将会带你生成、安装并运行第一个模块，同时说明模块的包结构、命令、Hook、配置和运行期资源。阅读前，你需要了解 Python 异步编程，并熟悉本仓库的包管理方式。
+本文从生成、安装到运行，说明第一个模块的完整流程。后面介绍模块的包结构、命令、Hook、配置和运行期资源。阅读前，你需要了解 Python 异步编程，并熟悉本仓库的包管理方式。
 
 ## 准备工作
 
@@ -29,7 +29,7 @@ akaribot tui
 
 用 Tab 在名称、类型、目标目录和三个复选项之间移动。空格切换复选项状态。最后把焦点移到“生成包”，按 Enter。
 
-按 Esc 或选择“关闭”会放弃本次填写，不会创建文件。
+按 Esc 或选择“关闭”会放弃本次填写。
 
 生成过程中的输出会显示在输出区。完成后状态栏提示生成成功，按 `o` 查看完整输出。新包会出现在开发页的包列表中。
 
@@ -46,7 +46,7 @@ akari-modules/akari-bot-module-greet/
   tests/test_greet.py
 ```
 
-生成配置和生成数据库两项没有勾选，所以没有 `config.py`、`database/` 等目录。需要时再添加。
+生成配置和生成数据库两项未勾选。需要时再添加对应的 `config.py` 与 `database/`。
 
 ### 生成的文件
 
@@ -85,7 +85,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.hello"))
 ```
 
-`@mod.command()` 没有写模板，注册的是模块的默认命令。它的调用形式是 `~greet default`，不是 `~greet hello`。
+`@mod.command()` 未提供模板时，注册的是模块的默认命令。它的调用形式是 `~greet default`。
 
 `module()` 的 `desc` 指向模块说明。处理函数调用 `msg.finish()`，把 `I18NContext` 对应的文案发送到当前会话。
 
@@ -127,13 +127,13 @@ async def test_greet_default(tester: Tester):
 
 ## 安装并启用
 
-生成的文件还在目标目录里，TUI 不会自动把它装进实例。切到侧栏的“模块”页，先按 `c` 清除选择，再按 `i` 打开安装对话框。
+生成的文件留在目标目录。切到侧栏的“模块”页，先按 `c` 清除选择，再按 `i` 打开安装对话框。
 
 在输入框里填入刚才生成的包目录，路径用输出区显示的完整路径。按“下一步”。TUI 识别到目录后，安装方式里会出现“可编辑安装本地目录”。选中它，安装就开始。
 
-可编辑安装直接使用这份源码，改代码后不需要重新打包。安装完成后，模块页会刷新列表，`greet` 出现在列表里。
+可编辑安装直接使用这份源码。安装完成后，模块页会刷新列表，`greet` 出现在列表里。
 
-如果实例正在运行，新模块会直接加载，不需要重启。实例未运行时，模块会在下次启动时加载。
+如果实例正在运行，新模块会直接加载。实例未运行时，模块会在下次启动时加载。
 
 安装只是把模块放进实例。普通模块还需要在场景内启用。场景管理员在会话中执行：
 
@@ -141,7 +141,7 @@ async def test_greet_default(tester: Tester):
 ~module enable greet
 ```
 
-基础模块始终开启，不需要这一步。`greet` 是普通模块，所以要先启用。修改代码后，重启实例，或者由超级用户在会话中执行：
+基础模块始终开启。`greet` 是普通模块，要先启用。修改代码后，重启实例，或者由超级用户在会话中执行：
 
 ```text
 ~module reload greet
@@ -195,7 +195,7 @@ akari-bot-module-<name>/
 
 ```toml
 # pyproject.toml
-dependencies = ["akari-bot-core>=0.1.0,<1.0"]
+dependencies = ["akari-bot-core"]
 
 [project.entry-points."akaribot.modules"]
 dice = "akaribot.modules.dice"
@@ -206,6 +206,8 @@ requires_core_api = ">=1,<2"
 config_table = "module_dice"
 provides_modules = ["dice"]
 ```
+
+示例只写包名。实际的版本范围从包根 `pyproject.toml` 的 `dependencies` 读取，文档不重复具体约束。
 
 清单字段如下：
 
@@ -224,9 +226,11 @@ provides_modules = ["dice"]
 
 ## 发现与加载
 
-`PackageRegistry` 读取已安装分发包声明的模块入口，`load_order()` 按依赖关系给出激活顺序。模块只依赖 `akaribot.core.api` 的公开接口，包之间不直接导入。分发包缺少模块声明时，框架才用目录扫描发现模块。
+`PackageRegistry` 读取已安装分发包声明的模块入口，`load_order()` 按依赖关系给出激活顺序。模块只依赖 `akaribot.core.api` 的公开接口。分发包缺少模块声明时，框架才用目录扫描发现模块。
 
-JobQueue 处理完现有任务、Scheduler 进入维护时段后，框架才会执行安装、卸载和重载。框架会替换原有注册项，但要等正在运行的任务退出后才生效。加载失败原因写入 `.cache_loader`。`ModulesManager.reload_module()` 返回 `(状态, 重载次数)`。命令 `~module reload` 失败时会给出提示。
+JobQueue 处理完现有任务、Scheduler 进入维护时段后，框架才会执行安装、卸载和重载。框架会替换原有注册项，但要等正在运行的任务退出后才生效。
+
+加载失败原因写入 `.cache_loader`。`ModulesManager.reload_module()` 返回 `(状态, 重载次数)`。命令 `~module reload` 失败时会给出提示。
 
 ## 声明模块
 
@@ -244,7 +248,7 @@ dice = module("dice", alias=["rd", "roll"], desc="{I18N:dice.help.desc}", doc=Tr
 | `alias` | 别名，可传字符串、列表或 `{别名: 完整命令}` 映射 |
 | `desc` / `doc` / `hidden` | 帮助简介、线上说明与隐藏开关 |
 | `recommend_modules` / `base` / `load` | 推荐模块、强制开启与加载开关 |
-| `rss` / `regex` / `event` | 声明所需平台能力，决定模块能否在该场景启用 |
+| `rss` / `regex` / `event` | 声明所需平台能力，影响模块能否在该场景启用 |
 | `required_admin` / `required_superuser` / `required_base_superuser` | 模块级权限 |
 | `required_bot_permissions` | 开启前要求机器人具备的平台权限 |
 | `suppress_invalid_prompt` / `available_for` / `exclude_from` | 提示开关与平台范围 |
@@ -312,7 +316,7 @@ async def _(msg: Bot.MessageSession):
 
 `wait_confirm()` 默认引用原消息，并在收到回答后删除机器人发出的提示。它只把确认词当作回答，用户发送其他内容时会继续等待。
 
-删除数据、解绑账号这类不可逆操作，可以传 `confirm_token` 要求用户完整输入口令，避免用户只点一下按钮就通过确认。
+删除数据、解绑账号这类不可逆操作，可以传 `confirm_token`，要求用户完整输入口令。
 
 ### 收集下一条消息
 
@@ -373,7 +377,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.quiz.result", answer=answer))
 ```
 
-`wait_anyone()` 不要求引用，等待场景内第一个回答的成员。适合抢答、投票和多人协作。它的提示不会自动附加操作说明，需要在 `greet.message.quiz.prompt` 里写清楚怎么回答。
+`wait_anyone()` 等待场景内第一个回答的成员，可直接回答，也可引用提示。适合抢答、投票和多人协作。它的提示需要在 `greet.message.quiz.prompt` 里写清楚怎么回答。
 
 只需要暂停几秒时，用 `await msg.sleep(3)`。它和等待方法一样，会在暂停期间释放执行锁。
 
@@ -383,7 +387,7 @@ async def _(msg: Bot.MessageSession):
 
 ## 正则匹配
 
-命令需要先写命令前缀才能触发，正则匹配没有这个要求。只要消息里出现符合正则的文本，对应的处理函数就会执行。它适合识别链接、编号和固定格式的句子。
+命令必须先写命令前缀才能触发。只要消息里出现符合正则的文本，对应的处理函数就会执行。它适合识别链接、编号和固定格式的句子。
 
 下面用 bilibili 模块识别 av 号。`bili` 是它的模块实例，换成自己的模块变量即可：
 
@@ -427,7 +431,7 @@ async def _(msg: Bot.MessageSession):
 - `skip_long_message_confirm=True` 跳过超长消息确认。只在对匹配结果有把握时使用。
 - `element_filter=(PlainElement,)` 只匹配纯文本，避免把图片说明或提及当成正文。
 
-正则处理函数会在每条消息上运行，不要在里面做网络请求或遍历大量数据。耗时的操作放到后台任务里。
+正则处理函数会在每条消息上运行，应保持轻量。网络请求和大量遍历放到后台任务里。
 
 ## 定时任务
 
@@ -466,7 +470,7 @@ async def weekly_report():
     await Bot.post_message("greet", I18NContext("greet.message.weekly"))
 ```
 
-`Bot.post_message()` 只发送到启用了 `greet` 的场景。没有场景启用模块时，它不会发送任何消息。
+`Bot.post_message()` 只发送到启用了 `greet` 的场景。
 
 定时任务还接受 `DateTrigger`，也可以用 `AndTrigger`、`OrTrigger` 组合多个触发器。同一个函数可以叠加多个 `@schedule`，每个装饰器注册一个任务。
 
@@ -474,7 +478,7 @@ async def weekly_report():
 
 ## Hook 与事件
 
-Hook 挂在消息处理链的固定位置，用来观察或改变处理结果。它不替代命令，适合做统计、拦截、统一错误提示和平台事件响应。
+Hook 挂在消息处理链的固定位置，用来观察或改变处理结果。它不替代命令，适合做统计、拦截、错误提示和平台事件响应。
 
 ### 命令执行后统计
 
@@ -488,9 +492,9 @@ async def _(ctx: Bot.ParserHookContext):
     Logger.info(f"greet 执行完成: {ctx.command_first_word}")
 ```
 
-在 `EXECUTION_FINISHED` 阶段，Hook 只能继续执行，不能改写结果。`priority` 越小越先执行，默认 100。`timeout` 默认 5 秒，`<=0` 表示不限时。
+在 `EXECUTION_FINISHED` 阶段，Hook 的返回值会被忽略。`priority` 越小越先执行，默认 100。`timeout` 默认 5 秒，`<=0` 表示不限时。
 
-`server_scope=True` 让 Hook 不受场景模块开关限制，但仍受全局停用状态和平台范围限制。
+`server_scope=True` 的 Hook 不受场景内模块开关限制，但全局停用状态与平台范围仍会拦下它。
 
 ### 拦截出站消息
 
@@ -501,9 +505,9 @@ async def _(ctx: Bot.ParserHookContext):
         return ctx.Stop()
 ```
 
-`OUTGOING_BEFORE_SEND` 在平台发送前执行。返回 `ctx.Stop()` 可以取消这次发送，也可以修改 `ctx.outgoing.chain` 改写内容。它同时作用于命令回复和 `Bot.post_message()` 的主动推送，适合在机器人被禁止发言的场景里统一拦下出站消息。
+`OUTGOING_BEFORE_SEND` 在平台发送前执行。返回 `ctx.Stop()` 可以取消这次发送，也可以修改 `ctx.outgoing.chain` 改写内容。它同时作用于命令回复和 `Bot.post_message()` 的主动推送，适合在机器人被禁止发言的场景里拦下出站消息。
 
-### 统一处理执行错误
+### 处理执行错误
 
 ```python
 @greet.hook(point=HookPoint.EXECUTION_ERROR, priority=90, name="friendly_error", timeout=0)
@@ -532,9 +536,9 @@ async def _(event: Bot.EventInfo):
 
 `@greet.event("事件名")` 订阅适配器上报的事件，不经过命令解析，也没有 `msg`。`available_for` 限定平台与场景类型。例如 QQBot 群聊会上报 `member_joined` 和 `member_left`。
 
-事件字段由适配器决定，常用 `target_id`、`sender_id` 和 `data`。需要发欢迎语时，先把事件目标转成会话，再调用发送方法。
+事件字段由适配器提供，常用 `target_id`、`sender_id` 和 `data`。需要发欢迎语时，先把事件目标转成会话，再调用发送方法。
 
-`HookPoint` 覆盖消息生命周期的以下阶段：
+`HookPoint` 有以下阶段：
 
 - 会话与消息：`SESSION_READY`、`SESSION_BEFORE_WAIT`、`MESSAGE_NORMALIZED`。
 - 命令处理：`COMMAND_PREPARE`、`COMMAND_BEFORE_PARSE`、`COMMAND_BEFORE_EXECUTE`、`COMMAND_ROUTE`、`COMMAND_UNMATCHED`。
@@ -548,7 +552,7 @@ async def _(event: Bot.EventInfo):
 
 ## 权限
 
-模块级 `required_*` 对所有命令生效。命令上配置的权限只能比模块级更严，不能放宽。
+模块级 `required_*` 对所有命令生效。命令上配置的权限只能比模块级更严格。
 
 运行期可以调用 `await msg.check_permission()` 判断当前用户是否为场景管理员，调用 `msg.check_super_user()` 判断是否为超级用户。
 
@@ -581,10 +585,10 @@ async def _(event: Bot.EventInfo):
 
 ## 会话接口
 
-`send_message()` 发送消息并返回消息 ID。`finish()` 发送后抛出 `SessionFinished`。
+`send_message()` 发送消息并返回 `FinishedSession`。`finish()` 发送后抛出 `SessionFinished`。
 
 `wait_confirm()`、`wait_next_message()`、`wait_reply()`、`wait_anyone()` 的用法见上文“等待用户交互”。`sleep()` 在暂停期间释放执行锁。
 
 `delete()` 删除触发消息。`hold()`、`release()` 保持和释放平台上下文。
 
-同一个用户已有命令正在执行时，新命令不会执行，机器人会回复“当前有命令正在执行，请稍后再试。”
+同一个用户已有命令正在执行时，新命令会被拒绝。机器人回复“当前有命令正在执行，请稍后再试。”

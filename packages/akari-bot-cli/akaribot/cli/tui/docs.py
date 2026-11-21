@@ -29,6 +29,8 @@ ACTION_TIMEOUT_SECONDS = 1800.0
 SERVE_READY_SECONDS = 60.0
 SERVE_STOP_SECONDS = 10.0
 DEFAULT_PREVIEW_URL = "http://127.0.0.1:4173/"
+DEFAULT_DEV_URL = "http://127.0.0.1:5173/"
+DEV_READY_SECONDS = 600.0
 OUTPUT_LIMIT = 600
 LOG_LINE_LIMIT = 400
 STREAM_TAIL_LINES = 40
@@ -49,6 +51,25 @@ def _text(value: Any) -> str:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _parse_event(line: str) -> Mapping[str, Any]:
+    if not line:
+        return {}
+    try:
+        payload = json.loads(line)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, Mapping) else {}
+
+
+def _event_detail(value: Any) -> str:
+    payload = _mapping(value)
+    key = _text(payload.get("key"))
+    if not key:
+        return "-"
+    params = {("name" if name == "key" else name): item for name, item in _mapping(payload.get("params")).items()}
+    return i18n.t(key, **params)
 
 
 def _int_of(value: Any, default: int = 500) -> int:
@@ -266,6 +287,12 @@ class DocsSource(Protocol):
     async def stop_server(self) -> None:
         """停止预览服务。"""
 
+    async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
+        """启动开发模式预览并返回站点 URL；就绪后的事件逐条交给 ``on_event``。"""
+
+    async def stop_dev(self) -> None:
+        """停止开发模式预览。"""
+
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
         """部署站点；``dry_run`` 为真时只统计将更改的文件。"""
 
@@ -294,6 +321,9 @@ class StaticDocsSource:
         deploy_result: OperationResult | None = None,
         url: str = DEFAULT_PREVIEW_URL,
         serve_error: str = "",
+        dev_url: str = DEFAULT_DEV_URL,
+        dev_error: str = "",
+        dev_events: Sequence[Mapping[str, Any]] = (),
     ) -> None:
         self._view = view or DocsView()
         self._build_result = build_result
@@ -303,10 +333,24 @@ class StaticDocsSource:
         self._deploy_result = deploy_result
         self.url = url
         self.serve_error = serve_error
-        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0, "sync_theme": 0, "install_deps": 0}
+        self.dev_url = dev_url
+        self.dev_error = dev_error
+        self.dev_events = tuple(dev_events)
+        self.calls = {
+            "load": 0,
+            "build": 0,
+            "serve": 0,
+            "stop": 0,
+            "deploy": 0,
+            "sync_theme": 0,
+            "install_deps": 0,
+            "dev": 0,
+            "stop_dev": 0,
+        }
         self.build_keys: list[tuple[str, ...]] = []
         self.deploys: list[tuple[str | None, bool]] = []
         self.serving = False
+        self.dev_serving = False
 
     @property
     def server_running(self) -> bool:
@@ -361,6 +405,27 @@ class StaticDocsSource:
         self.calls["stop"] += 1
         self.serving = False
 
+    @property
+    def dev_running(self) -> bool:
+        """返回开发模式预览是否处于运行状态。"""
+        return self.dev_serving
+
+    async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
+        """见 :meth:`DocsSource.start_dev`。"""
+        self.calls["dev"] += 1
+        if self.dev_error:
+            raise DocsSourceError(self.dev_error)
+        if on_event is not None:
+            for event in self.dev_events:
+                on_event(event)
+        self.dev_serving = True
+        return self.dev_url
+
+    async def stop_dev(self) -> None:
+        """见 :meth:`DocsSource.stop_dev`。"""
+        self.calls["stop_dev"] += 1
+        self.dev_serving = False
+
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
         """见 :meth:`DocsSource.deploy`。"""
         self.calls["deploy"] += 1
@@ -380,6 +445,7 @@ class SubprocessDocsSource:
     :param query_timeout: 查询类调用的秒数上限。
     :param action_timeout: 构建与部署的秒数上限。
     :param serve_timeout: 等待预览服务就绪的秒数上限。
+    :param dev_timeout: 等待开发模式就绪的秒数上限；首次运行可能先安装依赖。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
@@ -390,6 +456,7 @@ class SubprocessDocsSource:
         query_timeout: float = QUERY_TIMEOUT_SECONDS,
         action_timeout: float = ACTION_TIMEOUT_SECONDS,
         serve_timeout: float = SERVE_READY_SECONDS,
+        dev_timeout: float = DEV_READY_SECONDS,
         runner: Any | None = None,
     ) -> None:
         # 每次请求都解析当前实例，确保切换实例后子进程使用新目录。
@@ -397,9 +464,22 @@ class SubprocessDocsSource:
         self.query_timeout = query_timeout
         self.action_timeout = action_timeout
         self.serve_timeout = serve_timeout
-        self.calls = {"load": 0, "build": 0, "serve": 0, "stop": 0, "deploy": 0, "sync_theme": 0, "install_deps": 0}
+        self.dev_timeout = dev_timeout
+        self.calls = {
+            "load": 0,
+            "build": 0,
+            "serve": 0,
+            "stop": 0,
+            "deploy": 0,
+            "sync_theme": 0,
+            "install_deps": 0,
+            "dev": 0,
+            "stop_dev": 0,
+        }
         self._runner = runner or subprocess.run
         self._process: asyncio.subprocess.Process | None = None
+        self._dev_process: asyncio.subprocess.Process | None = None
+        self._dev_task: asyncio.Task[None] | None = None
         self._atexit_registered = False
 
     @property
@@ -411,6 +491,12 @@ class SubprocessDocsSource:
     def server_running(self) -> bool:
         """返回预览服务子进程是否仍在运行。"""
         process = self._process
+        return process is not None and process.returncode is None
+
+    @property
+    def dev_running(self) -> bool:
+        """返回开发模式子进程是否仍在运行。"""
+        process = self._dev_process
         return process is not None and process.returncode is None
 
     def load(self) -> DocsView:
@@ -496,6 +582,96 @@ class SubprocessDocsSource:
             return
         await self._terminate(process)
 
+    async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
+        """启动 ``docs dev --json`` 并读到就绪事件；其余事件交给 ``on_event``。"""
+        argv = cli_process.cli_argv("docs", "dev", "--json", "--port", "0")
+        self.calls["dev"] += 1
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *argv,
+                cwd=str(self.root),
+                stdin=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=self._env(),
+            )
+        except FileNotFoundError as error:
+            raise DocsSourceError(i18n.t("cli.tui.docs.src_exe_missing", path=argv[0], error=error)) from error
+        except OSError as error:
+            raise DocsSourceError(i18n.t("cli.tui.docs.src_oserror", cmd=" ".join(argv), error=error)) from error
+        self._dev_process = process
+        self._register_exit_hook()
+        stream = process.stdout
+        deadline = time.monotonic() + self.dev_timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            try:
+                raw = await asyncio.wait_for(
+                    stream.readline() if stream is not None else _empty(), timeout=max(0.1, remaining)
+                )
+            except TimeoutError:
+                await self._terminate(process)
+                self._dev_process = None
+                raise DocsSourceError(
+                    i18n.t("cli.tui.docs.src_serve_timeout", seconds=f"{self.dev_timeout:g}")
+                ) from None
+            line = raw.decode("utf-8", errors="replace").strip()
+            event = _parse_event(line)
+            if event.get("event") == "ready":
+                url = _text(event.get("url"))
+                if url:
+                    self._dev_task = asyncio.create_task(self._pump_dev(process, on_event))
+                    return url
+            if on_event is not None and line:
+                on_event(event or {"event": "log", "line": line})
+            if not line and process.returncode is not None:
+                detail = await self._drain_stderr(process)
+                code = await process.wait()
+                self._dev_process = None
+                raise DocsSourceError(i18n.t("cli.tui.docs.src_dev_exit", code=code, detail=detail))
+
+    async def stop_dev(self) -> None:
+        """见 :meth:`DocsSource.stop_dev`；先终止，超时后强制结束。"""
+        self.calls["stop_dev"] += 1
+        task, self._dev_task = self._dev_task, None
+        if task is not None and not task.done():
+            task.cancel()
+        process = self._dev_process
+        self._dev_process = None
+        if process is None or process.returncode is not None:
+            return
+        await self._terminate(process)
+
+    async def _pump_dev(
+        self,
+        process: asyncio.subprocess.Process,
+        on_event: Callable[[Mapping[str, Any]], None] | None,
+    ) -> None:
+        async def forward(stream: asyncio.StreamReader | None, from_stdout: bool) -> None:
+            if stream is None:
+                return
+            while True:
+                raw = await stream.readline()
+                if not raw:
+                    return
+                line = raw.decode("utf-8", errors="replace").strip()
+                if not line:
+                    continue
+                if on_event is not None:
+                    event = _parse_event(line) if from_stdout else {}
+                    on_event(event or {"event": "log", "line": line})
+
+        try:
+            await asyncio.gather(forward(process.stdout, True), forward(process.stderr, False))
+        except asyncio.CancelledError:
+            raise
+        finally:
+            code = await process.wait()
+            if self._dev_process is process:
+                self._dev_process = None
+            if on_event is not None:
+                on_event({"event": "exit", "code": code})
+
     def _register_exit_hook(self) -> None:
         # 界面异常退出时事件循环可能先关闭，进程必须在解释器退出前终止。
         if self._atexit_registered:
@@ -504,9 +680,9 @@ class SubprocessDocsSource:
         atexit.register(self._terminate_at_exit)
 
     def _terminate_at_exit(self) -> None:
-        process = self._process
-        if process is not None and process.returncode is None:
-            process.terminate()
+        for process in (self._process, self._dev_process):
+            if process is not None and process.returncode is None:
+                process.terminate()
 
     async def _terminate(self, process: asyncio.subprocess.Process) -> None:
         if process.returncode is not None:
@@ -795,6 +971,7 @@ class DocsPage(compat.Vertical):
         ("space", "toggle_select", i18n.t("cli.tui.docs.bind_toggle")),
         ("b", "build", i18n.t("cli.tui.docs.action_build")),
         ("p", "serve", i18n.t("cli.tui.docs.action_serve")),
+        ("e", "dev", i18n.t("cli.tui.docs.action_dev")),
         ("o", "open", i18n.t("cli.tui.docs.action_open"), False),
         ("m", "more", i18n.t("cli.tui.docs.button_more"), False),
         ("a", "select_all", i18n.t("cli.tui.docs.bind_select_all"), False),
@@ -901,6 +1078,9 @@ class DocsPage(compat.Vertical):
         self._busy = False
         self._serving = False
         self._url = ""
+        self._dev = False
+        self._dev_url = ""
+        self._dev_synced = 0
         self._built = False
         self._confirm = compat.PendingConfirm()
         self._rendered_rows: tuple[str, ...] = ()
@@ -926,6 +1106,7 @@ class DocsPage(compat.Vertical):
         yield compat.ButtonFlow(
             ("build", compat.key_hint(i18n.t("cli.tui.docs.action_build"), "b"), "primary"),
             ("serve", compat.key_hint(i18n.t("cli.tui.docs.action_serve"), "p")),
+            ("dev", compat.key_hint(i18n.t("cli.tui.docs.action_dev"), "e")),
             ("open", compat.key_hint(i18n.t("cli.tui.docs.action_open"), "o")),
             ("more", compat.key_hint(i18n.t("cli.tui.docs.button_more"), "m")),
             ("refresh", compat.key_hint(i18n.t("cli.tui.docs.action_refresh"), "r")),
@@ -1016,13 +1197,25 @@ class DocsPage(compat.Vertical):
 
     @property
     def preview_url(self) -> str:
-        """返回运行中的预览服务地址；未运行时为空串。"""
+        """返回运行中的预览地址（开发模式优先）；未运行时为空串。"""
+        if self._dev:
+            return self._dev_url
         return self._url if self._serving else ""
 
     @property
     def server_running(self) -> bool:
-        """返回预览服务是否处于运行状态。"""
+        """返回静态预览服务是否处于运行状态。"""
         return self._serving
+
+    @property
+    def dev_running(self) -> bool:
+        """返回开发模式预览是否处于运行状态。"""
+        return self._dev
+
+    @property
+    def dev_synced(self) -> int:
+        """返回最近一次同步涉及的文件数。"""
+        return self._dev_synced
 
     def row_texts(self) -> tuple[str, ...]:
         """返回最近一次渲染出的列表行文本，供自动化断言核对宽度。"""
@@ -1246,12 +1439,14 @@ class DocsPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         try:
-            for button_id in ("build", "serve", "more", "refresh"):
+            for button_id in ("build", "serve", "dev", "more", "refresh"):
                 self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
             # 预览按钮在启停之间切换文字，键位不变。
             serve_label = "cli.tui.docs.action_stop" if self._serving else "cli.tui.docs.action_serve"
             self.query_one("#serve", compat.Button).label = compat.key_hint(i18n.t(serve_label), "p")
-            self.query_one("#open", compat.Button).disabled = self._busy or not self._serving
+            dev_label = "cli.tui.docs.action_dev_stop" if self._dev else "cli.tui.docs.action_dev"
+            self.query_one("#dev", compat.Button).label = compat.key_hint(i18n.t(dev_label), "e")
+            self.query_one("#open", compat.Button).disabled = self._busy or not (self._serving or self._dev)
             self.query_one("#actions", compat.ButtonFlow).relayout()
         except Exception:  # noqa: BLE001 - 尚未挂载时没有按钮可更新
             return
@@ -1308,6 +1503,8 @@ class DocsPage(compat.Vertical):
             self.request_build()
         elif button_id == "serve":
             self.toggle_serve()
+        elif button_id == "dev":
+            self.toggle_dev()
         elif button_id == "open":
             self.open_preview()
         elif button_id == "more":
@@ -1480,6 +1677,10 @@ class DocsPage(compat.Vertical):
 
     async def _start_server(self) -> None:
         try:
+            if self._dev:
+                await self.source.stop_dev()
+                self._dev = False
+                self._dev_url = ""
             url = await self.source.start_server()
         except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
             self._serving = False
@@ -1531,18 +1732,133 @@ class DocsPage(compat.Vertical):
 
     def open_preview(self) -> None:
         """在运行中的预览服务上打开浏览器。"""
-        if not self._serving or not self._url:
+        url = self.preview_url
+        if not url:
             self._set_status(i18n.t("cli.tui.docs.need_serve"))
             return
         try:
-            opened = webbrowser.open(self._url)
+            opened = webbrowser.open(url)
         except Exception as error:  # noqa: BLE001 - 浏览器调用失败只作为状态展示
             opened = False
             self.last_error = f"{type(error).__name__}: {error}"
         if opened:
-            self._set_status(i18n.t("cli.tui.docs.server_running", url=self._url))
+            self._set_status(i18n.t("cli.tui.docs.server_running", url=url))
             return
-        self._set_status(i18n.t("cli.tui.docs.open_failed", detail=self.last_error or self._url))
+        self._set_status(i18n.t("cli.tui.docs.open_failed", detail=self.last_error or url))
+
+    def toggle_dev(self) -> None:
+        """启动或停止开发模式预览。"""
+        if self._busy:
+            self._notify_busy()
+            return
+        if self._dev:
+            self.stop_dev()
+            return
+        reason = self._toolchain_blocker()
+        if reason:
+            self._set_status(reason)
+            compat.notify(self.app, reason, severity="warning", title=i18n.t("cli.tui.docs.action_dev"))
+            return
+        self._start_task(i18n.t("cli.tui.docs.dev_started"), self._start_dev(), "docs-dev")
+
+    async def _start_dev(self) -> None:
+        try:
+            if self._serving:
+                await self.source.stop_server()
+                self._serving = False
+                self._url = ""
+            url = await self.source.start_dev(self._on_dev_event)
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为状态展示
+            self._dev = False
+            self._dev_url = ""
+            self.last_error = f"{type(error).__name__}: {error}"
+            message = i18n.t("cli.tui.docs.dev_failed", detail=error)
+            self._set_status(message)
+            compat.notify(self.app, message, severity="error", title=i18n.t("cli.tui.docs.action_dev"))
+        else:
+            self._dev = True
+            self._dev_url = url
+            # 启动期间页面可能已切走，此时立即停止，避免留下无人管理的服务。
+            if not self.display:
+                await self._quiet_stop_dev()
+                self._dev = False
+                self._dev_url = ""
+            else:
+                message = i18n.t("cli.tui.docs.dev_ready", url=url)
+                self._set_status(message)
+                compat.notify(self.app, message, severity="information", title=i18n.t("cli.tui.docs.action_dev"))
+        self._busy = False
+        self._sync_detail()
+        self._sync_actions()
+
+    def _on_dev_event(self, event: Mapping[str, Any]) -> None:
+        name = event.get("event")
+        if name == "sync":
+            count = int(event.get("written") or 0) + int(event.get("removed") or 0)
+            self._dev_synced = count
+            if count:
+                self._on_log_line(i18n.t("cli.tui.docs.dev_synced", count=count))
+            return
+        if name == "stage":
+            stage = str(event.get("stage") or "")
+            key = (
+                f"cli.docs.build.stage_{stage}"
+                if stage in {"toolchain", "generate", "build"}
+                else "cli.docs.dev.stage_server"
+            )
+            self._on_log_line(i18n.t(key))
+            return
+        if name == "warn":
+            code = _text(event.get("code")) or "-"
+            self._on_log_line(i18n.t(f"cli.docs.dev.warn.{code}", path=event.get("path", "-")))
+            return
+        if name == "error":
+            self._on_log_line(i18n.t("cli.docs.dev.warn.sync_failed", detail=_event_detail(event.get("error"))))
+            return
+        if name == "ready":
+            self._on_log_line(i18n.t("cli.tui.docs.dev_ready", url=event.get("url")))
+            return
+        if name == "exit":
+            self._dev = False
+            self._dev_url = ""
+            message = i18n.t("cli.tui.docs.src_dev_exit", code=event.get("code"))
+            self._set_status(message)
+            self._sync_actions()
+            return
+        line = event.get("line")
+        if line:
+            self._on_log_line(str(line))
+
+    def stop_dev(self) -> None:
+        """停止开发模式预览；未运行时只更新状态。"""
+        if self._busy:
+            self._notify_busy()
+            return
+        if not self._dev:
+            self._set_status(i18n.t("cli.tui.docs.dev_stopped"))
+            self._sync_actions()
+            return
+        self._busy = True
+        self._sync_actions()
+        self.run_worker(self._stop_dev(), group="docs-dev", exclusive=True)
+
+    async def _stop_dev(self) -> None:
+        try:
+            await self.source.stop_dev()
+        except Exception as error:  # noqa: BLE001 - 停止失败仍需复位界面状态
+            self.last_error = f"{type(error).__name__}: {error}"
+        self._dev = False
+        self._dev_url = ""
+        self._busy = False
+        self._set_status(i18n.t("cli.tui.docs.dev_stopped"))
+        self._sync_detail()
+        self._sync_actions()
+
+    async def _quiet_stop_dev(self) -> None:
+        try:
+            await self.source.stop_dev()
+        except Exception:  # noqa: BLE001 - 退出路径上不再报告停止失败
+            return
 
     def request_deploy(self) -> None:
         """弹出部署方式选择框；默认聚焦只读的试运行。"""
@@ -1611,9 +1927,10 @@ class DocsPage(compat.Vertical):
 
     def dirty_note(self) -> str:
         """返回未结束的预览服务摘要，供退出与切换实例确认。"""
-        if not self._serving:
+        url = self.preview_url
+        if not url:
             return ""
-        return i18n.t("cli.tui.docs.dirty_note", url=self._url or "-")
+        return i18n.t("cli.tui.docs.dirty_note", url=url)
 
     def on_hide(self, event: compat.events.Hide) -> None:
         """离开页面时停止预览服务，避免后台子进程残留。"""
@@ -1624,15 +1941,18 @@ class DocsPage(compat.Vertical):
         self._stop_in_background()
 
     def _stop_in_background(self) -> None:
-        if not self._serving:
+        if not self._serving and not self._dev:
             return
         self._serving = False
         self._url = ""
+        self._dev = False
+        self._dev_url = ""
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return
         loop.create_task(self._quiet_stop())
+        loop.create_task(self._quiet_stop_dev())
 
     async def _quiet_stop(self) -> None:
         try:
@@ -1723,6 +2043,10 @@ class DocsPage(compat.Vertical):
         self._set_log_visible(not self._log_visible)
         if self._log_visible:
             self._render_log()
+
+    def action_dev(self) -> None:
+        """键位动作：启动或停止开发模式预览。"""
+        self.toggle_dev()
 
     def action_serve(self) -> None:
         """键位动作：启动或停止预览服务。"""

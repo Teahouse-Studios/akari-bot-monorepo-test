@@ -1,6 +1,6 @@
 # CLI 与 TUI
 
-本文将会介绍实例管理工具的安装方式、实例解析、目录结构与命令边界。
+本文将会介绍实例管理工具的安装方式、实例解析、目录结构，以及哪些操作交给 core 执行。
 
 `akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它装在实例的 venv 之外，可以用系统解释器安装，也可以装成独立工具。实例里的机器人、模块与适配器，由 CLI 通过子进程启动。
 
@@ -15,7 +15,7 @@ uv tool install akari-bot-cli
 akaribot --version
 ```
 
-运行需要 Python 3.12 或更高版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 装进实例自己的 venv。
+运行需要仓库 `pyproject.toml` 声明的 Python 版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 装进实例自己的 venv。
 
 ## 实例解析
 
@@ -74,7 +74,11 @@ CLI 进程不导入 core。需要 core 参与的读写，一律交给实例的�
 <实例>/.venv/bin/python -m akaribot.core.entrypoints.<入口> ...
 ```
 
-CLI 向子进程传入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH` 两个环境变量，标准输出与退出码由命令层解析。读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件。涉及配置结构、模块清单、数据库或环境检查的判断，则交给子进程完成。
+CLI 向子进程传入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH` 两个环境变量，标准输出与退出码由命令层解析。
+
+读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件。
+
+涉及配置结构、模块清单、数据库或环境检查的判断，则交给子进程完成。
 
 用 Nuitka 打包后，`sys.executable` 指向二进制自身，CLI 因此不用它启动实例进程。非托管模式下要用的解释器由 `system_python()` 解析，可以用 `AKARIBOT_PYTHON` 覆盖。
 

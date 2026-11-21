@@ -180,6 +180,7 @@ async def cost_petal(msg: Bot.MessageSession, amount: int, send_prompt: bool = T
 
 
 async def sign_get_petal(msg: Bot.MessageSession) -> int | None:
+    """执行签到并返回花瓣。"""
     if CoreConfig.enable_petal:
         petal_sign_min = CoreConfig.petal_sign_min
         petal_sign_max = CoreConfig.petal_sign_max
@@ -251,6 +252,7 @@ def _decode_reset_due(stored: StoredData | None) -> datetime | None:
 
 
 async def reset_petals_if_due() -> int:
+    """检查并重置到期的花瓣。"""
     if not CoreConfig.enable_petal:
         return 0
     try:

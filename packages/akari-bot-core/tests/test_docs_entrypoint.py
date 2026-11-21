@@ -22,11 +22,19 @@ class _Spec:
 
 
 class _Dist:
-    def __init__(self, name: str, version: str, summary: str = "", direct_url: str | None = None):
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        summary: str = "",
+        direct_url: str | None = None,
+        requires: list[str] | None = None,
+    ):
         self.name = name
         self.version = version
         self.metadata = {"Summary": summary}
         self._direct_url = direct_url
+        self.requires = requires or []
 
     def read_text(self, filename: str) -> str | None:
         return self._direct_url if filename == "direct_url.json" else None
@@ -77,13 +85,19 @@ def _test_metadata_and_sorting():
                 },
             ),
             "akaribot.modules.beta": _make_package(
-                root, "akaribot.modules.beta", {"docs/index.md": "# Beta\n", "docs/config/global/docs.global.toml": "order = 10\n"}
+                root,
+                "akaribot.modules.beta",
+                {"docs/index.md": "# Beta\n", "docs/config/global/docs.global.toml": "order = 10\n"},
             ),
             "akaribot.modules.zebra": _make_package(
-                root, "akaribot.modules.zebra", {"docs/index.md": "# Zebra\n", "docs/config/global/docs.global.toml": "order = 20\n"}
+                root,
+                "akaribot.modules.zebra",
+                {"docs/index.md": "# Zebra\n", "docs/config/global/docs.global.toml": "order = 20\n"},
             ),
             "akaribot.adapters.bot": _make_package(
-                root, "akaribot.adapters.bot", {"docs/index.md": "# Bot\n", "docs/config/global/docs.global.toml": "order = 5\n"}
+                root,
+                "akaribot.adapters.bot",
+                {"docs/index.md": "# Bot\n", "docs/config/global/docs.global.toml": "order = 5\n"},
             ),
             "akaribot.assets.brand": _make_package(root, "akaribot.assets.brand", {"docs/index.md": "# 品牌\n"}),
             "html2text": _make_package(root, "html2text", {"docs/index.md": "# HTML\n"}),
@@ -96,7 +110,19 @@ def _test_metadata_and_sorting():
                 "module-zebra", "akaribot.modules.zebra", _Dist("akari-bot-module-zebra", "1.0.0", "", editable)
             ),
             _EntryPoint("module-beta", "akaribot.modules.beta"),
-            _EntryPoint("module-alpha", "akaribot.modules.alpha", _Dist("akari-bot-module-alpha", "1.0.0")),
+            _EntryPoint(
+                "module-alpha",
+                "akaribot.modules.alpha",
+                _Dist(
+                    "akari-bot-module-alpha",
+                    "1.0.0",
+                    requires=[
+                        "akari-bot-core>=0.1.0,<1.0",
+                        "orjson>=3.10.9,<4.0.0",
+                        "beautifulsoup4>=4.11.1,<5.0.0; extra == 'docs'",
+                    ],
+                ),
+            ),
             _EntryPoint("adapter-bot", "akaribot.adapters.bot", _Dist("akari-bot-adapter-bot", "1.0.0")),
             _EntryPoint("assets-brand", "akaribot.assets.brand", _Dist("akari-bot-assets-brand", "1.0.0")),
         ]
@@ -105,6 +131,7 @@ def _test_metadata_and_sorting():
     keys = [item["key"] for item in payload["packages"]]
     groups = [item["group"] for item in payload["packages"]]
     core = _item(payload, "core")
+    alpha = _item(payload, "module-alpha")
     beta = _item(payload, "module-beta")
     zebra = _item(payload, "module-zebra")
     return (
@@ -130,9 +157,18 @@ def _test_metadata_and_sorting():
         and core["overview"] is True
         and _item(payload, "module-alpha")["overview"] is False
         and core["doc_path"] == str((root / "akaribot" / "core" / "docs").resolve())
+        and core["languages"]
+        == {
+            "zh_cn": "简体中文",
+            "zh_tw": "繁體中文",
+            "en_us": "English",
+            "ja_jp": "日本語",
+            "ko_kr": "한국어",
+        }
         and [Path(page["path"]).name for page in core["pages"]] == ["index.md", "guide.md"]
         and core["pages"][0]["title"] == "核心"
         and core["pages"][0]["path"] == "index.md"
+        and alpha["dependencies"] == ["akari-bot-core>=0.1.0,<1.0", "orjson>=3.10.9,<4.0.0"]
         and beta["dist"] == "akari-bot-module-beta"
         and beta["version"] == "0+local"
         and beta["summary"] == ""
@@ -187,7 +223,9 @@ def _test_doc_meta_defaults_and_corruption():
         specs = {
             "akaribot.modules.coin": _make_package(root, "akaribot.modules.coin", {"docs/index.md": "# 硬币\n"}),
             "akaribot.modules.broken": _make_package(
-                root, "akaribot.modules.broken", {"docs/index.md": "# 损坏\n", "docs/config/global/docs.global.toml": "[broken\n"}
+                root,
+                "akaribot.modules.broken",
+                {"docs/index.md": "# 损坏\n", "docs/config/global/docs.global.toml": "[broken\n"},
             ),
             "akaribot.modules.wiki": _make_package(
                 root,
@@ -559,6 +597,28 @@ def _test_main_output_contract():
     )
 
 
+def _test_api_catalog_covers_public_exports():
+    from akaribot.core import api
+    from akaribot.core.api import adapters
+    from akaribot.core.entrypoints.docs import _api_catalog
+
+    catalog = _api_catalog()
+    groups = {group["name"]: group for group in catalog.get("groups", [])}
+    assert set(groups) == {"akaribot.core.api", "akaribot.core.api.adapters"}
+    for name, module in (("akaribot.core.api", api), ("akaribot.core.api.adapters", adapters)):
+        entries = {entry["name"]: entry for entry in groups[name]["entries"]}
+        assert set(entries) == set(module.__all__)
+        assert all(entry["kind"] in {"class", "function", "constant"} for entry in entries.values())
+        assert all(entry["description"] for entry in entries.values() if entry.get("source") == "core")
+        assert all(
+            method["description"]
+            for entry in entries.values()
+            for method in entry.get("methods", [])
+            if method.get("source") == "core"
+        )
+    return True
+
+
 @func_case
 async def test_docs_entrypoint(tester: Tester):
     """core.entrypoints.docs: 包文档清单入口测试"""
@@ -574,4 +634,5 @@ async def test_docs_entrypoint(tester: Tester):
     await tester.test(_test_directory_scan_fallback, "entry point 为空时回退目录扫描")
     await tester.test(_test_stale_editable_metadata_is_supplemented, "可编辑安装元数据过期时按源码声明补入并告警")
     await tester.test(_test_main_output_contract, "命令行 JSON、人类可读输出与参数错误")
+    await tester.test(_test_api_catalog_covers_public_exports, "自动 API 目录覆盖全部公开导出")
     return tester

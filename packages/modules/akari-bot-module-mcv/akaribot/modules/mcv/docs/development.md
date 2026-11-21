@@ -30,6 +30,6 @@ akaribot module add akari-bot-module-mcv
 
 ## 依赖与外部服务
 
-运行依赖 `akari-bot-core`、`google-play-scraper>=1.2.2,<2.0.0` 与 `orjson>=3.10.9,<4.0.0`。外部服务为 `piston-meta.mojang.com`、Google Play 与 `store.rg-adguard.net`。
+运行依赖 <PackageDependencies package="akari-bot-module-mcv" />。外部服务为 `piston-meta.mojang.com`、Google Play 与 `store.rg-adguard.net`。
 
 `piston-meta.mojang.com` 提供 Java 版版本清单，Google Play 提供 `com.mojang.minecraftpe` 的版本号。`store.rg-adguard.net` 用于查询 Microsoft Store 商品 `9NBLGGH2JHXJ` 的 RP 环安装包版本。

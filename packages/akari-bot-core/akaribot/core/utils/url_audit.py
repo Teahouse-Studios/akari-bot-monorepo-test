@@ -43,6 +43,7 @@ class URLRule:
 
     @property
     def serialized(self) -> str:
+        """返回规则的序列化文本。"""
         return f"{REGEX_RULE_PREFIX}{self.value}" if self.is_regex else self.value
 
 
@@ -156,6 +157,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def clear_cache(cls) -> None:
+        """清空当前名单的内存缓存。"""
         cls._cache_key = None
         cls._snapshot = _RuleSnapshot(frozenset(), (), ())
 
@@ -222,6 +224,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def matching_rules(cls, url: str) -> list[URLRule]:
+        """返回匹配该 URL 的规则列表。"""
         try:
             normalized = normalize_url(url)
         except URLRuleError:
@@ -243,6 +246,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def contains(cls, url: str, *, fail_closed: bool = False) -> bool:
+        """检查 URL 是否命中当前名单。"""
         try:
             normalized = normalize_url(url)
         except URLRuleError:
@@ -267,18 +271,22 @@ class _GlobalURLRuleList:
 
     @classmethod
     def rules(cls) -> tuple[URLRule, ...]:
+        """返回名单中的全部规则。"""
         return cls._load().rules
 
     @classmethod
     def user_rules(cls) -> tuple[URLRule, ...]:
+        """返回本地用户规则。"""
         return tuple(rule for rule, _ in cls._read_rules(cls.user_path, "user"))
 
     @classmethod
     def file_signature(cls, path: Path) -> tuple[str, int | None, int | None]:
+        """返回文件路径、修改时间和大小组成的签名。"""
         return cls._path_signature(path)
 
     @classmethod
     def replace_user_rules(cls, serialized_rules: Iterable[str]) -> list[str]:
+        """用给定规则整体替换本地用户规则。"""
         parsed: list[URLRule] = []
         seen: set[str] = set()
         for serialized in serialized_rules:
@@ -326,6 +334,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def add_user_rule(cls, value: str, is_regex: bool = False) -> bool:
+        """添加一条本地用户规则。"""
         serialized = serialize_rule(value, is_regex=is_regex)
         with cls._write_lock:
             existing = {rule.serialized for rule in cls._load().rules}
@@ -349,6 +358,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def import_user_rules(cls, serialized_rules: Iterable[str]) -> int:
+        """批量导入规则，返回新增条数。"""
         imported = 0
         for serialized in serialized_rules:
             rule, _ = parse_rule(serialized)
@@ -358,6 +368,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def remove_user_rule(cls, value: str, is_regex: bool = False) -> bool:
+        """删除一条本地用户规则。"""
         serialized = serialize_rule(value, is_regex=is_regex)
         with cls._write_lock:
             try:
@@ -384,6 +395,7 @@ class _GlobalURLRuleList:
 
 
 class GlobalURLAllowlist(_GlobalURLRuleList):
+    """全局 URL 允许名单。"""
     directory = url_audit_data_path / "allowlist"
     builtin_path = directory / "global.txt"
     user_path = directory / "user.txt"
@@ -395,10 +407,12 @@ class GlobalURLAllowlist(_GlobalURLRuleList):
 
     @classmethod
     def is_allowed(cls, url: str) -> bool:
+        """判断 URL 是否允许。"""
         return cls.contains(url)
 
 
 class GlobalURLBlocklist(_GlobalURLRuleList):
+    """全局 URL 阻止名单。"""
     directory = url_audit_data_path / "blocklist"
     builtin_path = directory / "global.txt"
     user_path = directory / "user.txt"
@@ -410,6 +424,7 @@ class GlobalURLBlocklist(_GlobalURLRuleList):
 
     @classmethod
     def is_blocked(cls, url: str) -> bool:
+        """判断 URL 是否阻止。"""
         return cls.contains(url, fail_closed=True)
 
 

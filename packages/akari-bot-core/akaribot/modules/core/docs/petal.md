@@ -78,7 +78,13 @@ order: 42
 
 <CommandUsage usage="petal bud send <petal> <count> <passcode>" :params="['petal=红包的花瓣总额', 'count=红包份数', 'passcode=领取口令']" permission="public" />
 
-此命令用于发放花瓣红包，执行前要求确认。`<petal>` 为总额，`<count>` 为份数，`<passcode>` 为领取口令。总额不能小于份数。口令重复时退回已扣除的花瓣。成功时返回红包 ID。
+此命令用于发放花瓣红包，执行前要求确认。
+
+- `<petal>` 为总额。
+- `<count>` 为份数。
+- `<passcode>` 为领取口令。
+
+总额不能小于份数。口令重复时退回已扣除的花瓣。成功时返回红包 ID。
 
 <ChatExample
   :log="[

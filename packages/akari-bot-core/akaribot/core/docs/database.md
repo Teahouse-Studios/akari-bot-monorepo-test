@@ -1,8 +1,10 @@
 # 数据库
 
-本文将会介绍数据库的连接划分、union 数据、迁移执行与热重载。
+本文介绍数据库的 `default` 与 `local` 两个连接、union 数据、迁移执行与热重载。
 
-数据库层基于 Tortoise ORM，负责连接管理、模型注册、启动迁移与热重载。业务模型继承 `akaribot.core.api.DBModel`，通过 `get_by_target_id()`、`get_by_sender_id()` 关联到会话或 union。
+数据库层基于 Tortoise ORM。它负责连接管理、模型注册、启动迁移与热重载。
+
+业务模型继承 `akaribot.core.api.DBModel`，通过 `get_by_target_id()`、`get_by_sender_id()` 关联到会话或 union。
 
 ## 双连接
 
@@ -15,9 +17,9 @@
 
 `default` 的连接串取自 `CoreSecretConfig.db_path`。SQLite 的相对路径以实例根为基准解析，进程可以从任意目录启动。
 
-连接参数先设置 `busy_timeout=30000`，再启用 WAL。并发启动时，等待写锁的时间也受这个超时约束。
+连接参数先设置 `busy_timeout=30000`，然后启用 WAL。并发启动时，等待写锁的时间也受这个超时约束。
 
-`local` 存放可随时重建的本机数据，例如关键词检测缓存和外部平台活动记录。这些数据与业务表分开，不会争用同一把写锁。
+`local` 存放可随时重建的本机数据，例如关键词检测缓存和外部平台活动记录。这些数据存放在单独的数据库文件里。
 
 ```python
 from tortoise import fields
@@ -33,11 +35,13 @@ class MyModuleData(DBModel):
         table = "module_my_data"
 ```
 
-包的模型文件由发现层收集：`PackageRegistry.db_model_paths()` 给出导入路径，`init_db()` 把它们追加到 `models` 应用。`get_model_names()` 与 `get_model_fields()` 供 `~database` 命令枚举表与字段。
+框架从各包的发现信息里收集模型文件。`PackageRegistry.db_model_paths()` 给出导入路径。
+
+`init_db()` 把这些路径追加到 `models` 应用。`get_model_names()` 与 `get_model_fields()` 供 `~database` 命令枚举表和字段。
 
 ## union 数据
 
-平台账号与场景的 ID 会变化，业务数据统一关联到 union：
+平台账号与场景的 ID 会变化，业务数据都关联到 union：
 
 | 表 | 关键列 | 说明 |
 | --- | --- | --- |
@@ -46,11 +50,15 @@ class MyModuleData(DBModel):
 | `target_union_info` | `union_id` | 场景数据：`muted`、`locale`、`modules`、`custom_admins`、`banned_users`、`target_data` |
 | `target_union_bind` | `target_id` → `union_id`，`channel_id` | 平台场景到场景 union 的映射与消息通道号 |
 
-`resolve_union(id, create)` 返回所属 union，必要时新建。`TargetUnionInfo.config_module()`、`switch_mute()`、`edit_target_data()`、`SenderUnionInfo.edit_sender_data()` 在事务内以 `select_for_update()` 改写 JSON 列。
+`resolve_union(id, create)` 返回记录所属的 union。`create` 为真且记录不存在时，它会新建。
 
-同一 union 下 `channel_id` 相同的场景被视为同一条消息通道，主动推送按通道只发送一次。`delete_union()` 会先校验引用，再级联清理该 union 所在域的全部表。
+`TargetUnionInfo.config_module()`、`switch_mute()`、`edit_target_data()` 和 `SenderUnionInfo.edit_sender_data()` 都在事务中运行。它们通过 `select_for_update()` 改写 JSON 列。
 
-跨表写入同一 union 时，先进入 `union_mutation()`，再在 `default` 事务里锁住 union 行：
+同一 union 下 `channel_id` 相同的场景被视为同一条消息通道。主动推送按通道只发送一次。
+
+`delete_union()` 会先校验引用，再级联清理该 union 所在域的全部表。
+
+跨表写入同一 union 时，先调用 `union_mutation()`，再在 `default` 事务里锁住 union 行：
 
 ```python
 from tortoise.transactions import in_transaction
@@ -79,7 +87,7 @@ async def bind(union_id: str, username: str) -> bool:
 
 查询与写入必须共用同一个 `connection`，否则 `select_for_update()` 的行锁不覆盖后续写入。
 
-核心包在 `manifest.toml` 的 `owned_tables` 中声明自己拥有的表，数据清理时据此判断表的归属。分发包的模型与表由各自的 `manifest.toml` 声明。模块包目录内没有 `database/models.py` 时不拥有独立表。
+核心包在 `manifest.toml` 的 `owned_tables` 中声明自己拥有的表，数据清理时据此判断表的归属。分发包的模型与表由各自的 `manifest.toml` 声明。
 
 ## 迁移
 
@@ -95,7 +103,7 @@ async def upgrade(ctx):
 ```
 
 - `REVISION` 非空，`DEPENDS_ON` 只能指向同包 revision。`DEPENDS_ON` 未声明时，按 revision 字典序执行。
-- 执行顺序固定为 core 的全部待应用 revision，再按包名执行各包。不支持跨包依赖。
+- 执行顺序固定为 core 的全部待应用 revision，再按包名执行各包。
 - 已应用记录写入 `schema_migrations`（`package`、`revision`、`applied_at`、`checksum`），以 `(package, revision)` 唯一。revision 文件改动后 checksum 随之变化，可以据此发现文件已被修改。
 - 每条 revision 必须可重复执行：MySQL 的 DDL 自动提交，无法与版本记录写入同一事务，因此每一步先探测再执行。SQLite 支持事务性 DDL，Runner 把单条 revision 与版本记录包进同一事务。
 - `MigrationContext` 提供 `execute()`、`execute_script()`、`fetch_all()`、`has_table()`、`has_column()`、`rename_table()`、`rename_column()`，按方言生成 SQL。
@@ -104,11 +112,11 @@ async def upgrade(ctx):
 
 ## 热重载
 
-模块安装、卸载或数据库维护会替换连接：
+模块安装、卸载或数据库维护会重建连接：
 
 1. `prepare_db_reload()` 在旧 context 仍可用时初始化新 context。
-2. 激活前先进入 JobQueue 排空与 Scheduler 维护窗口，停止领取新任务并取消运行中的计划任务。
+2. 激活前先等待 JobQueue 排空，并让 Scheduler 进入维护窗口，停止领取新任务并取消运行中的计划任务。
 3. `activate_db_reload()` 原子替换全局 context，随后关闭旧 context。
 4. 失败时 `close_prepared_db_reload()` 丢弃未激活的 context，旧连接保持可用。
 
-`close_db()` 关闭连接并清除 Tortoise 的全局与任务级 context，使后续初始化从干净状态开始。
+`close_db()` 关闭连接并清除 Tortoise 的全局与任务级 context，使下一次初始化从空状态开始。

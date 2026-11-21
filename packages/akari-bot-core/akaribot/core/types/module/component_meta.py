@@ -20,6 +20,7 @@ class ModuleMeta:
 @define
 class CommandMeta(ModuleMeta):
     # 注册组件时必定传入处理函数，默认值仅为满足 attrs 的字段顺序要求
+    """命令的元数据。"""
     function: Callable = field(default=None)
     command_template: list[Template] = field(default=[], converter=convert_list)
     options_desc: dict | None = None

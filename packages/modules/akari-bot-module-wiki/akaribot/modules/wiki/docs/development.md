@@ -14,7 +14,7 @@ akaribot module add akari-bot-module-wiki
 
 ## 模块
 
-包内注册 12 个模块，覆盖页面查询、内联解析、URL 审核、机器人账号、日志订阅与周报推送。各模块的命令、别名与权限见[使用方法](index.md)。
+包内注册页面查询、内联解析、URL 审核、机器人账号、日志订阅与周报推送等模块。各模块的命令、别名与权限见[使用方法](index.md)。
 
 ## 配置项
 
@@ -28,13 +28,21 @@ akaribot module add akari-bot-module-wiki
 
 ## 权限与平台能力
 
-`wiki` 的查询、搜索、随机、魔术字、InterWiki 查看与请求头查看对普通用户开放。`set`、`iw add`、`iw remove`、`headers add`、`headers remove`、`headers reset`、`prefix set`、`prefix reset`、`redlink` 与 `render` 需要会话管理员权限。`wiki-audit`、`wiki-bot` 与 `wikilog` 需要超级用户权限。`wikilog` 同时声明管理员权限，超级用户可以直接使用。`wiki-inline` 由正则匹配触发，不需要命令前缀。
+`wiki` 的查询、搜索、随机、魔术字、InterWiki 查看与请求头查看对普通用户开放。
+
+`set`、`iw add`、`iw remove`、`headers add`、`headers remove`、`headers reset`、`prefix set`、`prefix reset`、`redlink` 与 `render` 需要会话管理员权限。
+
+`wiki-audit`、`wiki-bot` 与 `wikilog` 需要超级用户权限。`wikilog` 同时声明管理员权限，超级用户可以直接使用。
+
+`wiki-inline` 由正则匹配触发，不需要命令前缀。
 
 页面截图与部分 Infobox 预览依赖 WebRender。未启用 WebRender 时，页面回复改用文本或链接。
 
 QQ 平台的 `rc` 与 `ab` 在支持消息节点或 WebRender 可用时，优先返回合并转发或渲染结果。否则以文本返回。
 
-URL 允许列表与阻止列表由 core 的全局规则管理。未通过检查的 Wiki 会被阻止，或被标记为不信任。`wikilog` 每 60 秒轮询一次已加入监控列表的 Wiki。全局 URL 策略生效时，被监控 Wiki 的地址必须在允许列表内。
+URL 允许列表与阻止列表由 core 的全局规则管理。未通过检查的 Wiki 会被阻止，或被标记为不信任。
+
+`wikilog` 每 60 秒轮询一次已加入监控列表的 Wiki。全局 URL 策略生效时，被监控 Wiki 的地址必须在允许列表内。
 
 `weekly` 支持简体中文与繁体中文，繁体请求使用 `variant=zh-tw`。
 
