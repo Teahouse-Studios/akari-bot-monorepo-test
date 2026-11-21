@@ -295,6 +295,11 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 
 每次部署向状态文件追加一条记录，包含目标、结果与时间。
 
+仓库自带的 `Builtin Tester` 工作流在 tester 通过后发布文档站：默认分支的 push 与手动触发会全量构建
+所有包的文档，产物交给 GitHub Pages 发布，PR 与其它的分支不发布。构建在临时实例 `.ci-docs` 里进行，
+基路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
+仓库在 Settings → Pages 的 Source 须为 GitHub Actions；工作流在 Pages 尚未启用时会自动打开它。
+
 ## 主题
 
 引擎只读取主题根目录的 `docs-theme.json`，复制清单声明的 `theme_dir`，按清单生成 VitePress 配置与依赖，不导入主题代码。清单字段：

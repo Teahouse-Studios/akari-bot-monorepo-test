@@ -163,3 +163,83 @@ jobs:
           path: junit*.xml
           reporter: java-junit
           fail-on-error: 'false'
+
+  docs:
+    # 文档站在 tester 通过后构建全部包的文档并发布到 GitHub Pages。只在默认分支的 push 与手动触发
+    # 时发布：PR 与其它分支的产物不是发布物，也不该拿到 Pages 权限。
+    # 仓库 Settings → Pages 的 Source 须为 GitHub Actions；enablement 会在尚未启用时自动打开。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: docs-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # 主题是 submodule：构建要复制它的 theme_dir，并按它的 docs-theme.json 决定依赖与 VitePress 版本。
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # 主题清单要求 Node >= 22.12，引擎据此选 VitePress 2 与其依赖。
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: vendor/akari-bot-docs-template/package-lock.json
+
+      - name: Install dependencies
+        shell: bash
+        run: uv sync --locked --all-extras --dev
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Build documentation site
+        shell: bash
+        env:
+          # 项目站点的基路径由此决定，构建期写入侧栏与资源地址，构建后再改要重跑。
+          AKARIBOT_DOCS_BASE: ${{ steps.pages.outputs.base_path }}/
+          # 非托管实例用系统解释器跑 core 入口；锁到工作区 venv，避免 runner 上另有 python3 抢先。
+          AKARIBOT_PYTHON: ${{ github.workspace }}/.venv/bin/python
+        run: |
+          # 引擎以「实例」为单位工作：这里只需要一个最小的实例根，产物落在它的 cache/docs/site。
+          mkdir -p .ci-docs
+          printf 'schema = 1\n' > .ci-docs/akaribot.toml
+          uv run akaribot docs build -I .ci-docs --force
+          test -f .ci-docs/cache/docs/site/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .ci-docs/cache/docs/site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
