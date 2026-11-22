@@ -94,12 +94,12 @@
 守护本机实例，对期望运行的执行恢复或重启，期望停止的保持不动。
 <<< END U001505 >>>
 <<< UNIT U001506 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/test.py:25-27 >>>
-# ``init`` 默认只安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发期依赖。
+# ``init`` 默认只安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发阶段依赖。
 # 缺少依赖包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该安装什么。此处给出明确的
 # 下一步提示。
 <<< END U001506 >>>
 <<< UNIT U001507 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/test.py:57-58 >>>
-# 模式必须经环境变量传递，因为 runner 在导入期读取 CI / COVERAGE，argv 里的开关生效过晚（这正是
+# 模式必须通过环境变量传递，因为 runner 在导入阶段读取 CI / COVERAGE，argv 里的开关生效过晚（这正是
 # “--ci 仍是非 CI 模式”的原因）。argv 里也留一份，让两条入口语义一致。
 <<< END U001507 >>>
 <<< UNIT U001508 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/test.py:1-1 | ctx=<module> >>>
@@ -124,7 +124,7 @@
 # 首屏必查控件缺失表示页面未完整装配。
 <<< END U001514 >>>
 <<< UNIT U001515 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/tui.py:136-136 >>>
-# 隐藏页采用惰性加载，因此使用独立应用实例检查模块页的数据读取。
+# 隐藏页面采用按需加载，因此使用独立应用实例检查模块页的数据读取。
 <<< END U001515 >>>
 <<< UNIT U001516 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/commands/tui.py:183-183 >>>
 # noqa: BLE001 - 检查失败必须转为非零退出码
@@ -181,7 +181,7 @@
 # noqa: BLE001 - 诊断结果需保留解析异常详情
 <<< END U001533 >>>
 <<< UNIT U001534 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/tui.py:725-725 >>>
-# 缺少可读资源时无法完成检查，须记为未执行。打包产物需包含包数据。
+# 缺少可读资源时无法完成检查，须标记为未执行。打包产物需包含包数据。
 <<< END U001534 >>>
 <<< UNIT U001535 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/commands/tui.py:793-793 >>>
 # noqa: BLE001 - 诊断结果需保留启动异常详情
@@ -199,7 +199,7 @@
 # 纯仓库地址按这些主机名与 .git 后缀判定为 git 直接引用。其余 http(s) 地址按普通直接引用交给 uv。
 <<< END U001539 >>>
 <<< UNIT U001540 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/venv.py:69-69 >>>
-# 界面按这份清单管理环境，包括已安装的包、属于 AkariBot 的包以及记在实例清单里的项。
+# 界面按这份清单管理环境，包括已安装的包、属于 AkariBot 的包以及记录在实例清单中的项。
 <<< END U001540 >>>
 <<< UNIT U001541 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/venv.py:120-120 >>>
 # 依赖记录都能解析出包名。无法解析时返回空字符串，调用方据此保留它。
@@ -250,10 +250,10 @@
 本文整理了各子命令的用途与选项。
 <<< END U001556 >>>
 <<< UNIT U001557 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:5-5 | ctx=命令参考 >>>
-全局选项写在子命令前。例如：
+全局选项放在子命令前。例如：
 <<< END U001557 >>>
 <<< UNIT U001558 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:12-12 | ctx=命令参考 >>>
-`--lang zh_cn|en_us` 只影响本次调用的界面文案，不改变实例默认语言。把它写在子命令后会被当成未知选项。
+`--lang zh_cn|en_us` 只影响本次调用的界面文案，不改变实例默认语言。如果放在子命令后面，会被当成未知选项。
 <<< END U001558 >>>
 <<< UNIT U001559 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:14-14 | ctx=命令参考 >>>
 需要实例的命令接受 `--instance` / `-I`，查找顺序依次为显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上查找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根目录。
@@ -262,7 +262,7 @@
 `--json` 让脚本读取结果。多数命令输出一行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 只输出结果或事件，进度与警告输出到 stderr。
 <<< END U001560 >>>
 <<< UNIT U001561 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:18-18 | ctx=命令参考 >>>
-会删除内容的写操作还接受 `--yes` / `-y`，用来跳过确认。只打印操作计划的命令使用 `--dry-run`，不会写文件，也不会调用安装器。
+会删除内容的写入操作还接受 `--yes` / `-y`，用来跳过确认。只打印操作计划的命令使用 `--dry-run`，不会写文件，也不会调用安装器。
 <<< END U001561 >>>
 <<< UNIT U001562 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:22-22 | ctx=init >>>
 创建实例目录、写入 `akaribot.toml`、安装 core 与适配器，并生成最小配置。
@@ -278,11 +278,11 @@
 启动、停止、重启或查看实例状态。未知参数原样传给 core 的 `run` 命令。
 <<< END U001564 >>>
 <<< UNIT U001565 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:38-42 | ctx=run >>>
-- `-a` / `--adapter`：只启动指定适配器，可重复。
-- 默认在前台运行。`-d` / `--detach` 后台启动，等实例取得 `.bot.lock` 后才报告成功。
+- `-a` / `--adapter`：只启动指定适配器，可多次指定。
+- 默认在前台运行。`-d` / `--detach` 后台启动，等实例获取 `.bot.lock` 后才报告成功。
 - `--stop`、`--restart`、`--status` 互斥。`--restart` 等价于停止后后台启动，`--timeout` 为停止时等待退出的秒数，默认 20。
 - `--no-auto-migrate`：启动时跳过数据库结构升级。`--foreground` 显式保持前台，与 `--detach` 互斥。
-- 后台控制台输出写入 `logs/RunConsole_<日期>.log`，进程号记在 `.bot.lock`。`--status --json` 输出运行状态、锁文件和控制台日志路径。
+- 后台控制台输出写入 `logs/RunConsole_<日期>.log`，进程号记录在 `.bot.lock` 中。`--status --json` 输出运行状态、锁文件和控制台日志路径。
 <<< END U001565 >>>
 <<< UNIT U001566 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:46-46 | ctx=service >>>
 将 CLI 安装为系统常驻服务，由服务按注册表里的自启与崩溃重启设置守护实例。
@@ -302,7 +302,7 @@
 <<< UNIT U001570 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:59-62 | ctx=test >>>
 - `path`：测试文件或目录，省略时运行全部默认根目录。
 - `--ci`：非交互模式，跳过需要人工复核的用例，同时设置 `CI=1`。CI 里不会停在 `input()` 等待输入。
-- `--coverage`：收集覆盖率。`--case`：只运行名称含该子串的用例，可重复。
+- `--coverage`：收集覆盖率。`--case`：只运行名称包含该子串的用例，可多次指定。
 - 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺少该包时命令会给出安装提示。
 <<< END U001570 >>>
 <<< UNIT U001571 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:64-64 | ctx=test >>>
@@ -373,7 +373,7 @@
 - `instance remove <平台> [实例 ID] [--dry-run]`：只删除配置文件，场景与用户数据保留。
 <<< END U001584 >>>
 <<< UNIT U001585 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:127-127 | ctx=adapter >>>
-实例 ID 只能使用小写字母、数字和下划线，长度为 1–24 个字符。省略表示默认实例。它是 `target_id` 前缀的一部分，一旦使用不可更改。命令不提供改名。改名要迁移多张表和消息前缀。
+实例 ID 只能使用小写字母、数字和下划线，长度为 1–24 个字符。省略表示默认实例。它是 `target_id` 前缀的一部分，一旦使用不可更改。命令不提供重命名功能，因为修改名称需要迁移多张表和消息前缀。
 <<< END U001585 >>>
 <<< UNIT U001586 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:131-131 | ctx=venv >>>
 管理实例 venv，可改为由 CLI 管理、改回自行管理或重建。
@@ -394,7 +394,7 @@
 - 生成目录下的包名带 `akari-bot-module-` / `akari-bot-adapter-` 前缀。`--add` 默认开启。只想生成文件时传入 `--no-add`。
 <<< END U001589 >>>
 <<< UNIT U001590 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:151-151 | ctx=docs >>>
-收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根目录的 `docs.toml`。Node.js 与 VitePress 版本由主题清单声明。
+收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置保存在实例根目录的 `docs.toml` 中。Node.js 与 VitePress 版本由主题清单声明。
 <<< END U001590 >>>
 <<< UNIT U001591 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:153-160 | ctx=docs >>>
 - `list [--query <词>] [--kind <分组>] [--json]`：列出参与构建的包、分类、页面与目录警告。
@@ -502,7 +502,7 @@ Node.js 缺失、版本低于主题要求或 npm 不可用时，构建以工具�
 | `akaribot docs serve` | 启动本机静态服务器预览构建产物 |
 | `akaribot docs dev` | 监听文档与主题改动，在 `cache/docs/dev` 上运行 VitePress 开发服务器 |
 | `akaribot docs deploy` | 把构建产物发布到 Vercel 或 S3 |
-| `akaribot docs status` | 显示实际主题、最近一次构建的指纹、包清单、输出目录与部署记录 |
+| `akaribot docs status` | 显示实际主题、最近一次构建的校验信息、包清单、输出目录与部署记录 |
 | `akaribot docs clean` | 清理生成目录，使下次构建从头开始 |
 <<< END U001617 >>>
 <<< UNIT U001618 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:31-31 | ctx=命令 >>>
@@ -521,7 +521,7 @@ TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`d
 模块文档在侧栏按 `docs/config/global/docs.global.toml` 的 `category` 分组，条目名称取模块名。
 <<< END U001622 >>>
 <<< UNIT U001623 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:41-41 | ctx=命令 >>>
-包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放置 `docs/config/docs.toml`，按同名键覆盖默认值。
+包内的标题、简介、分类与品牌插槽配置在 `docs/config/global/docs.global.toml` 中。同一包可以再放置 `docs/config/docs.toml`，按同名键覆盖默认值。
 <<< END U001623 >>>
 <<< UNIT U001624 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:43-43 | ctx=命令 >>>
 两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退到旧的 `docs/doc.toml`，兼容尚未迁移的包。
@@ -536,10 +536,10 @@ TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`d
 侧栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标。
 <<< END U001627 >>>
 <<< UNIT U001628 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:52-52 | ctx=命令 >>>
-分组图标写在 `docs.toml` 的 `[icons]` 里，键为分组名或 `home`。
+分组图标配置在 `docs.toml` 的 `[icons]` 中，键为分组名或 `home`。
 <<< END U001628 >>>
 <<< UNIT U001629 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:54-54 | ctx=命令 >>>
-分类图标写在 `[category_icons]` 里，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
+分类图标配置在 `[category_icons]` 中，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
 <<< END U001629 >>>
 <<< UNIT U001630 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:56-56 | ctx=配置 >>>
 ## 配置
@@ -585,14 +585,14 @@ TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`d
   - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。
   - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。
   - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。
-- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。
+- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是同级标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。
 - `group_titles`：侧栏一级分组的标题，键为包分组。
-- `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。
-- `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。
+- `icons`：侧栏一级分组的图标名，键使用分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。
+- `category_icons`：侧栏分类的图标名，键使用 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。
 - `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。
-- `build.out_dir`：输出目录，相对路径以实例根目录为基准。留空时取 `defaults.toml` 的 `[site] out_dir`。
+- `build.out_dir`：输出目录，相对路径以实例根目录为基准。留空时使用 `defaults.toml` 的 `[site] out_dir`。
 - `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。
-- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
+- `theme.color`：主题色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
 - `deploy`：部署目标配置，引擎不解释这些字段。
 <<< END U001635 >>>
 <<< UNIT U001636 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:180-180 | ctx=配置 >>>
@@ -701,7 +701,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | 主题清单的 `dependencies` 或 `install_mode` | 输出提示，需停止开发模式并执行 `install-deps` |
 <<< END U001663 >>>
 <<< UNIT U001664 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:277-277 | ctx=开发模式 >>>
-生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 承载依赖，`.vitepress/cache` 承载 Vite 的预构建产物，两者都在同步范围之外。
+生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 存放依赖，`.vitepress/cache` 存放 Vite 的预构建产物，两者都在同步范围之外。
 <<< END U001664 >>>
 <<< UNIT U001665 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:279-279 | ctx=开发模式 >>>
 生成器每次清空并重写全部源文件，因此必须差分同步，否则直接改写镜像会让 Vite 在每批改动上全量失效。
@@ -718,7 +718,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 - `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。
 <<< END U001667 >>>
 <<< UNIT U001668 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:290-290 | ctx=开发模式 >>>
-开发模式不写 `.docs/state.json`，也不改动 `cache/docs/site`。
+开发模式不写入 `.docs/state.json`，也不改动 `cache/docs/site`。
 <<< END U001668 >>>
 <<< UNIT U001669 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:292-292 | ctx=部署 >>>
 ## 部署
@@ -735,7 +735,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 <<< END U001672 >>>
 <<< UNIT U001673 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:301-302 | ctx=部署 >>>
 构建在临时实例 `.ci-docs` 里进行，
-基础路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
+基础路径使用 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），因此站内链接与资源地址在构建阶段就会带上该前缀。
 <<< END U001673 >>>
 <<< UNIT U001674 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:304-304 | ctx=部署 >>>
 仓库在 Settings → Pages 的 Source 须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
@@ -758,7 +758,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |
 <<< END U001677 >>>
 <<< UNIT U001678 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:320-320 | ctx=主题 >>>
-页脚不在主题里实现。生成器复制主题目录后，把主题入口 `index.ts` 改名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件。新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。
+页脚不在主题里实现。生成器复制主题目录后，将主题入口 `index.ts` 重命名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件。新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。
 <<< END U001678 >>>
 <<< UNIT U001679 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:322-322 | ctx=主题 >>>
 模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时不做这层替换，站点沿用主题自带的页脚。
@@ -785,7 +785,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根目录 `docs/package-docs.md`。
 <<< END U001686 >>>
 <<< UNIT U001687 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:338-338 | ctx=主题组件 >>>
-依赖段落用 `<PackageDependencies package="<包 key 或包名>" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名取列表，文档不写版本范围。
+依赖段落用 `<PackageDependencies package="<包 key 或包名>" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名读取列表，文档中不填写版本范围。
 <<< END U001687 >>>
 <<< UNIT U001688 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:340-340 | ctx=主题组件 >>>
 组件只在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。
@@ -800,7 +800,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 - `messages` 中的消息显式设置 `markdown: true` 时按 Markdown 渲染，原始 HTML 不执行。其余消息按纯文本处理。
 - 缩略图可以展开成图片预览浮层，浮层上的按钮交互可用。
 - 整行只有三个以上波浪号时，渲染为时间分隔线。
-- 尾部图片另起气泡，多张尾部图片共用一个气泡。
+- 尾部图片单独成气泡，多张尾部图片共用一个气泡。
 - 图片地址后的 `{natural}` 表示按原始尺寸展示，超过视口高度时等比缩小。
 - `image-width` 用于固定示例内图片宽度。
 - `:card` 在对话末尾渲染机器人卡片。
@@ -867,7 +867,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `data/` | 模块数据与实例私有资产 |
 | `database/` | 默认 SQLite 数据库 |
 | `logs/` | 进程日志，文件名形如 `<进程>[_debug]_<日期>.log` |
-| `cache/` | 可丢弃的缓存，包括文档站点生成物 |
+| `cache/` | 可丢弃的缓存，包括文档站点生成产物 |
 | `.bot.lock` | 运行锁，记录持锁进程与启动参数 |
 <<< END U001708 >>>
 <<< UNIT U001709 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/index.md:44-44 | ctx=命令总览 >>>
@@ -918,7 +918,7 @@ CLI 向子进程传入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH` 两个环境
 ## 界面与命令的关系
 <<< END U001718 >>>
 <<< UNIT U001719 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/index.md:85-85 | ctx=界面与命令的关系 >>>
-直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写操作同样交给 `akaribot <子命令>` 子进程执行，不重复实现命令层的校验与确认逻辑。详情见 [终端界面](tui.md)。
+直接运行 `akaribot`（可交互终端）或 `akaribot tui` 进入界面。界面的写入操作同样交给 `akaribot <子命令>` 子进程执行，不重复实现命令层的校验与确认逻辑。详情见 [终端界面](tui.md)。
 <<< END U001719 >>>
 <<< UNIT U001720 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/index.md:87-87 | ctx=本地化 >>>
 ## 本地化
@@ -1038,7 +1038,7 @@ CLI 通过 core 的子进程入口读写实例。实例可以单独升级，CLI 
 5. 将 `enable` 设为开启，按 `Ctrl+S` 保存。
 <<< END U001753 >>>
 <<< UNIT U001754 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:94-94 | ctx=创建适配器实例 >>>
-实例 ID 只能使用小写字母、数字和下划线，长度 1 到 24。实例配置写在 `config/bot_telegram-main.toml` 这样的文件里。
+实例 ID 只能使用小写字母、数字和下划线，长度 1 到 24。实例配置保存在 `config/bot_telegram-main.toml` 这样的文件中。
 <<< END U001754 >>>
 <<< UNIT U001755 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:96-96 | ctx=创建适配器实例 >>>
 需要 Web、Discord 或别的平台时：
@@ -1208,7 +1208,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 - 旧项目迁移
 <<< END U001799 >>>
 <<< UNIT U001800 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:16-16 | ctx=终端界面 >>>
-所有写操作都由 CLI 子进程完成，参数与确认只在命令层实现。对应的命令见 [命令参考](commands.md)。
+所有写入操作都由 CLI 子进程完成，参数与确认只在命令层实现。对应的命令见 [命令参考](commands.md)。
 <<< END U001800 >>>
 <<< UNIT U001801 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:18-18 | ctx=启动 >>>
 ## 启动
@@ -1392,7 +1392,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 页面首次显示时才读取数据，之后由 `r` 手动刷新或操作完成触发。模块清单默认缓存 30 秒，搜索、缩放和重绘不启动子进程。
 <<< END U001842 >>>
 <<< UNIT U001843 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:163-163 | ctx=数据刷新与后台任务 >>>
-安装、更新、构建和迁移在后台执行，进度写在页内输出区。页面卸载后返回的结果会被丢弃，不会更新已经不存在的控件。
+安装、更新、构建和迁移在后台执行，进度显示在页内输出区。页面卸载后返回的结果会被丢弃，不会更新已经不存在的控件。
 <<< END U001843 >>>
 <<< UNIT U001844 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:165-165 | ctx=数据刷新与后台任务 >>>
 退出界面时如果有未保存内容或后台任务，会先列出影响范围，再询问是否退出。
@@ -1417,7 +1417,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 ## 与 CLI 的写操作关系
 <<< END U001849 >>>
 <<< UNIT U001850 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:181-181 | ctx=与 CLI 的写操作关系 >>>
-界面的写操作统一通过 `akaribot <子命令>` 子进程执行。用 Nuitka 打包时直接调用二进制文件。参数与确认的逻辑只在命令层实现一份。需要让命令层自动确认时传入 `--yes`。子进程环境注入 `AKARI_INSTANCE_DIR` 和 `AKARI_CONFIG_PATH`，输出统一按 UTF-8 解析。
+界面的写入操作统一通过 `akaribot <子命令>` 子进程执行。用 Nuitka 打包时直接调用二进制文件。参数与确认的逻辑只在命令层实现一份。需要让命令层自动确认时传入 `--yes`。子进程环境注入 `AKARI_INSTANCE_DIR` 和 `AKARI_CONFIG_PATH`，输出统一按 UTF-8 解析。
 <<< END U001850 >>>
 <<< UNIT U001851 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:183-183 | ctx=与 CLI 的写操作关系 >>>
 读操作允许在进程内完成，但限于注册表、锁文件、日志文件等本机状态。日志页与 `akaribot logs` 共用 `akaribot/cli/logs.py` 的解析与增量读取规则。配置结构、模块清单、数据库与环境检查结果都通过子进程读取。

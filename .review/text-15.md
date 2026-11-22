@@ -222,7 +222,7 @@ WebSocket JobQueue 完整后端测试。
 <<< END U010133 >>>
 <<< UNIT U010134 | py-comment | packages/akari-bot-core/tests/test_loader.py:708-710 >>>
 # ``return_py_module()`` 返回 ``None`` 会让热重载、locale 指纹、依赖图与模块卸载
-# 四处静默失效且不报错。这条检查是“包装成 wheel 后功能未损坏”的哨兵，
+# 四处悄然失效且不报错。这条检查是“打包成 wheel 后功能未损坏”的关键防线，
 # 必须常驻。
 <<< END U010134 >>>
 <<< UNIT U010135 | py-docstring | packages/akari-bot-core/tests/test_loader.py:1-1 | ctx=<module> >>>
@@ -406,7 +406,7 @@ akaribot.modules.core.admin_tools.alias 单元测试 - 自定义别名改写。
 # Paths.tests。后者正是本用例要检查的取值。
 <<< END U010193 >>>
 <<< UNIT U010194 | py-comment | packages/akari-bot-core/tests/test_paths.py:27-27 >>>
-# 子进程脚本，取出实例目录相关取值并打印，用于验证环境变量在导入期生效。
+# 子进程脚本，取出实例目录相关取值并打印，用于验证环境变量在导入阶段生效。
 <<< END U010194 >>>
 <<< UNIT U010195 | py-comment | packages/akari-bot-core/tests/test_paths.py:68-69 >>>
 # config 的检查只在未设置 AKARI_CONFIG_PATH 时成立。测试框架会为该变量指向一份临时
@@ -786,7 +786,7 @@ core.types.module: 命令语法错误提示开关测试
 # 会话缺失时的默认构造，此时本就没有作用域可言。
 <<< END U010314 >>>
 <<< UNIT U010315 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:90-90 >>>
-# 前缀格式由平台侧确定，非法字符会被剔除；剔除后为空的整条链改用基础术语，流程不中断。
+# 前缀格式由平台侧确定，非法字符会被剔除。剔除后为空的整条消息链改用基础术语，流程不中断。
 <<< END U010315 >>>
 <<< UNIT U010316 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:120-120 >>>
 # 术语缺失时原样保留占位符，不抛出异常
@@ -1001,7 +1001,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 运行器默认收集仓库根目录的 `tests/`，在源码仓库中还会收集 `packages/*/tests` 与 `packages/*/*/tests`。给出位置参数时只运行这些文件或目录，相对路径按仓库根目录解析。
 <<< END U010381 >>>
 <<< UNIT U010382 | md-list | packages/akari-bot-testing/akaribot/testing/docs/index.md:26-28 | ctx=测试范围 >>>
-- `--case <子串>`：只运行名字含该子串的 `@func_case`，可重复。
+- `--case <子串>`：只运行名称包含该子串的 `@func_case`，可多次指定。
 - `--ci`：CI 模式，跳过需要人工复核的用例。非 CI 模式下，缺少期望值的用例可能等待输入。
 - `--coverage`：收集覆盖率，入口脚本需要安装 `coverage`。
 <<< END U010382 >>>
@@ -1015,7 +1015,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 自动化运行必须设置 `CI=1` 或传 `--ci`。没有 `expected` 的用例，以及交互输入耗尽的用例，在非 CI 模式下会调用 `input()`，在非交互终端里挂起。
 <<< END U010385 >>>
 <<< UNIT U010386 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:36-36 | ctx=CI 模式 >>>
-CI 模式跳过人工复核，交互输入不足直接判定失败。`--ci` 还会把 CI 开关写入环境变量，因为运行器在导入期就读取它。
+CI 模式跳过人工复核，交互输入不足直接判定失败。`--ci` 还会把 CI 开关写入环境变量，因为运行器在导入阶段就读取它。
 <<< END U010386 >>>
 <<< UNIT U010387 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:38-38 | ctx=CI 模式 >>>
 CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 `junit.xml`。覆盖率开启时另生成 `htmlcov/index.html` 与 `coverage.xml`。
@@ -1024,7 +1024,7 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 ## 单入口运行
 <<< END U010388 >>>
 <<< UNIT U010389 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:42-42 | ctx=单入口运行 >>>
-开发期只运行一个文件或一个入口。示例：
+开发阶段只运行一个文件或一个入口。示例：
 <<< END U010389 >>>
 <<< UNIT U010390 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:49-49 | ctx=单入口运行 >>>
 第二个参数是入口函数名，省略时运行该文件中所有以 `test_` 开头的入口函数。脚本强制 CI 模式，收尾用 `os._exit` 退出，避免框架遗留的后台任务阻塞进程。
@@ -1036,7 +1036,7 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 ## 环境隔离
 <<< END U010392 >>>
 <<< UNIT U010393 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:55-55 | ctx=环境隔离 >>>
-运行器在导入期建立隔离环境，这一步必须先于任何 `akaribot.core` 导入：
+运行器在导入阶段建立隔离环境，这一步必须先于任何 `akaribot.core` 导入：
 <<< END U010393 >>>
 <<< UNIT U010394 | md-list | packages/akari-bot-testing/akaribot/testing/docs/index.md:57-60 | ctx=环境隔离 >>>
 - 配置来自临时目录，环境变量 `AKARI_CONFIG_PATH` 指向它，测试结束后删除。
@@ -1555,8 +1555,8 @@ web_render 数据获取方法的模拟管理器。
 # 留在 data/ 里只会随每次测试运行越积越多。
 <<< END U010534 >>>
 <<< UNIT U010535 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:31-33 >>>
-# 语言快照缓存目录。用例会导入 bot，而守护进程在导入期把该变量 setdefault 到 data/i18n_cache。
-# 测试进程须先把环境变量固定为自有的临时目录，否则框架启动时发布的快照与之后的读取方（包括 spawn 出的
+# 语言快照缓存目录。用例会导入 bot，而守护进程在导入阶段把该变量默认设为 data/i18n_cache。
+# 测试进程须先把环境变量固定为自有的临时目录，否则框架启动时发布的快照与之后的读取方（包括新启动的
 # 子进程）会指向不同位置。
 <<< END U010535 >>>
 <<< UNIT U010536 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:36-37 >>>
@@ -1569,7 +1569,7 @@ web_render 数据获取方法的模拟管理器。
 <<< END U010537 >>>
 <<< UNIT U010538 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:47-49 >>>
 # 注释先以 i18n 标记写入磁盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值，因为
-# core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。
+# core/config/update.py 的迁移在导入阶段执行，低于目标版本会被逐级升级。
 # 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固定配置目录。
 <<< END U010538 >>>
 <<< UNIT U010539 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:77-78 >>>
@@ -1592,7 +1592,7 @@ web_render 数据获取方法的模拟管理器。
 # i18n 快照须先接上，因为模板生成的注释取自配置文件声明的语言，未接上时全部退化为 i18n 键名。
 <<< END U010543 >>>
 <<< UNIT U010544 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:129-130 >>>
-# 覆盖项通过配置管理器的写入路径处理，使磁盘与内存副本保持一致；直接改写文件时，
+# 覆盖项通过配置管理器的写入路径处理，使磁盘与内存副本保持一致。直接改写文件时，
 # 同一文件系统时间戳精度内的改动可能绕过 watch() 的重载判定。
 <<< END U010544 >>>
 <<< UNIT U010545 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:156-157 >>>
@@ -1603,7 +1603,7 @@ web_render 数据获取方法的模拟管理器。
 # 源码克隆形态下的仓库根目录由根目录兼容实现 tester.py 在导入本模块前设置，取值须与它一致。
 <<< END U010546 >>>
 <<< UNIT U010547 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:235-236 >>>
-# 完整解析留到 :func:`run`，因为本模块也会被 ``tester.py`` 等入口以各自的 argv 导入，在导入期做
+# 完整解析留到 :func:`run`，因为本模块也会被 ``tester.py`` 等入口以各自的 argv 导入，在导入阶段做
 # 严格解析会让那些入口因为不相干的参数直接退出。这里只做包含判断，不认识的一律忽略。
 <<< END U010547 >>>
 <<< UNIT U010548 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:240-240 >>>
@@ -1619,7 +1619,7 @@ web_render 数据获取方法的模拟管理器。
 <<< END U010550 >>>
 <<< UNIT U010551 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:264-266 >>>
 # 各包源码存放在 ``packages[/<类>]/<包名>``（源码根目录即包根目录，不再有 ``src`` 一层），仓库根目录本身不再有可导入的 ``akaribot``。
-# 判断依据只看目录是否存在，不依赖已安装包的 metadata。仓库根目录不可知时返回空列表，此时
+# 判断依据只检查目录是否存在，不依赖已安装包的 metadata。仓库根目录不可知时返回空列表，此时
 # ``akaribot`` 由已安装包提供，无须也不应改写 ``PYTHONPATH``。
 <<< END U010551 >>>
 <<< UNIT U010552 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:271-271 >>>
@@ -1676,7 +1676,7 @@ web_render 数据获取方法的模拟管理器。
 删除本次运行创建的临时目录。由环境变量显式指定的目录保留。
 <<< END U010567 >>>
 <<< UNIT U010568 | py-docstring | packages/akari-bot-testing/akaribot/testing/runner.py:145-145 | ctx=prepare_test_environment >>>
-返回本次测试运行的输出文件路径。环境初始化已在本模块导入期完成，重复调用返回同一份路径。
+返回本次测试运行的输出文件路径。环境初始化已在本模块导入阶段完成，重复调用返回同一份路径。
 <<< END U010568 >>>
 <<< UNIT U010569 | py-docstring | packages/akari-bot-testing/akaribot/testing/runner.py:460-460 | ctx=FuncTestResult >>>
 单个 @func_case 测试的运行结果。
@@ -1779,13 +1779,13 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ### 基础配置示例
 <<< END U010598 >>>
 <<< UNIT U010599 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:11-11 | ctx=基础配置示例 >>>
-仅按 Token 数量计费的模型，价格字段直接写在模型配置的顶层。
+仅按 Token 数量计费的模型，价格字段直接配置在模型配置的顶层。
 <<< END U010599 >>>
 <<< UNIT U010600 | md-heading | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:27-27 | ctx=计费配置示例 >>>
 ### 计费配置示例
 <<< END U010600 >>>
 <<< UNIT U010601 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:29-29 | ctx=计费配置示例 >>>
-按次计费、混合计费、阶梯计费或峰谷计费的模型，价格字段写在 `billing` 中。
+按次计费、混合计费、阶梯计费或峰谷计费的模型，价格字段配置在 `billing` 中。
 <<< END U010601 >>>
 <<< UNIT U010602 | md-heading | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:67-67 | ctx=参数说明 >>>
 ## 参数说明
@@ -1969,7 +1969,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 顶层价格字段
 <<< END U010653 >>>
 <<< UNIT U010654 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:324-324 | ctx=顶层价格字段 >>>
-价格字段也可直接写在模型配置的顶层：
+价格字段也可直接配置在模型配置的顶层：
 <<< END U010654 >>>
 <<< UNIT U010655 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:332-332 | ctx=顶层价格字段 >>>
 例如：

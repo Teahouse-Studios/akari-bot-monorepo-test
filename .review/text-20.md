@@ -1875,7 +1875,7 @@ ${rcshows}
 # 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
 <<< END U013468 >>>
 <<< UNIT U013469 | py-docstring | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/migrations/0002_union_id.py:17-21 | ctx=upgrade >>>
-把场景设置表的主键列改名为 union_id。
+把场景设置表的主键列重命名为 union_id。
 
 :param ctx: 迁移上下文。
 <<< END U013469 >>>
@@ -1948,7 +1948,7 @@ Wiki 讨论页列表的消息渲染工具。
 # 这两类链接不出现在渲染后的正文中，但 plain_text() 会把它们还原成链接目标文本
 <<< END U013490 >>>
 <<< UNIT U013491 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:42-44 >>>
-# 语义属性链接 [[属性：值：]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
+# 语义属性链接 [[属性：值：]]，在页面上渲染为其值。值中可能包含嵌套的内外链接，故须放行一层。
 # 须在解析前以文本替换处理，因为将 WikiLink 的 string 改写成非链接文本会令该对象失效，
 # 其后 plain_text() 遍历到它便会抛出 AttributeError
 <<< END U013491 >>>
@@ -1992,8 +1992,8 @@ Wiki 讨论页列表的消息渲染工具。
 # wikitextparser 的首个章节即引言段，其 title 为 None
 <<< END U013502 >>>
 <<< UNIT U013503 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:125-127 >>>
-# 模板文档页的说明常整个写在 <templatedata> 的 description 字段里，而其外层的
-# {{TemplateData|...}} 会被当作模板剥离，正文遂无从取得。取回的说明仍是 Wikitext，
+# 模板文档页的说明常完整写在 <templatedata> 的 description 字段中，而其外层的
+# {{TemplateData|...}} 会被当作模板剥离，正文遂无从获取。取回的说明仍是 Wikitext，
 # 须由调用方再行清理。
 <<< END U013503 >>>
 <<< UNIT U013504 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:134-134 >>>
@@ -2493,7 +2493,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U013645 >>>
 <<< UNIT U013646 | py-comment | tests/build_synthetic_fixtures.py:49-50 >>>
 # 需要预置变更日志语料的版本号。线上版本推进后需同步更新，
-# 缺失时 mcv_rss 无法取得文章标题，但不影响版本推送的检查。
+# 缺失时 mcv_rss 无法获取文章标题，但不影响版本推送的检查。
 <<< END U013646 >>>
 <<< UNIT U013647 | py-comment | tests/build_synthetic_fixtures.py:54-56 >>>
 # 稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会改用真实网络，
@@ -2758,7 +2758,7 @@ wiki-audit 向全局 URL 允许列表添加规范 Wiki API URL。
 # 框架加载的模块会留下未完成的后台任务，正常返回会挂起，故强制退出
 <<< END U013732 >>>
 <<< UNIT U013733 | py-docstring | tests/run_one.py:1-1 | ctx=<module> >>>
-临时的单元测试运行脚本，仅用于开发期运行单个测试入口。
+临时的单元测试运行脚本，仅用于开发阶段运行单个测试入口。
 <<< END U013733 >>>
 <<< UNIT U013734 | py-docstring | tests/unit/test_bind_channel.py:1-1 | ctx=<module> >>>
 akaribot.modules.core.common_tools.bind 单元测试 - 消息通道的主动推送优先级（需要数据库）。
@@ -2792,7 +2792,7 @@ BotDaemon 日志过滤测试。
 <<< END U013743 >>>
 <<< UNIT U013744 | py-comment | tests/unit/test_i18n_cmd_params.py:11-13 >>>
 # 以键名作为参数传入、由被调方统一补上 cmd 的调用点。
-# issue_code() 接收 prompt_key 后在内部构造 ActionText，调用侧只写键名，
+# issue_code() 接收 prompt_key 后在内部构造 ActionText，调用方只传入键名，
 # 逐调用点扫描无从分辨，故列为已知例外。
 <<< END U013744 >>>
 <<< UNIT U013745 | py-comment | tests/unit/test_i18n_cmd_params.py:21-21 >>>
@@ -2857,7 +2857,7 @@ i18n: ${cmd} 参数传递一致性测试
 # 登录信息字段必须存在于某个配置模板类上，否则重复检查会静默失效
 <<< END U013764 >>>
 <<< UNIT U013765 | py-comment | tests/unit/test_multi_instance.py:386-386 >>>
-# 缺少平台两段时只看前两项，平台级声明对该实例不生效，实例级声明仍然命中
+# 缺少平台两段时只检查前两项，平台级声明对该实例不生效，实例级声明仍然命中
 <<< END U013765 >>>
 <<< UNIT U013766 | py-comment | tests/unit/test_multi_instance.py:391-391 >>>
 # exclude_from 的平台级声明同样覆盖实例
@@ -3035,7 +3035,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 获取 `git diff --name-only base..head` 的改动路径，仓库根目录相对 POSIX 形式。
 <<< END U013823 >>>
 <<< UNIT U013824 | py-docstring | tools/changed_packages.py:163-163 | ctx=package_directory >>>
-从 packages/ 下的路径推断包目录，用于已不在 workspace 的包（删除、改名）。
+从 packages/ 下的路径推断包目录，用于已不在 workspace 的包（已删除或已重命名）。
 <<< END U013824 >>>
 <<< UNIT U013825 | py-docstring | tools/changed_packages.py:244-244 | ctx=print_matrix >>>
 人类可读输出。
@@ -3139,7 +3139,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # 适配器另有自己的公开接口，其中的符号只供适配器使用，模块包导入它会被 B3 拦截。
 <<< END U013857 >>>
 <<< UNIT U013858 | py-comment | tools/codemod_core_api.py:34-35 >>>
-# 必须保持窄导入的文件不改写，因为公开接口导入期即展开，会把 web_render 连同 playwright 引入
+# 必须保持最小范围导入的文件不改写，因为公开接口在导入阶段即展开，会把 web_render 连同 playwright 引入
 # ``sys.modules``，而 Telegram 适配器专门保证“只导入 message_builder 不连带引入 web_render”。
 <<< END U013858 >>>
 <<< UNIT U013859 | py-inline-comment | tools/codemod_core_api.py:94-94 >>>
@@ -3257,7 +3257,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # 命名空间根与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按“akaribot 之后的目录后缀”禁。
 <<< END U013896 >>>
 <<< UNIT U013897 | py-comment | tools/lint_boundaries.py:70-70 >>>
-# 官方模块包的判定前缀，T4.6 #2 的 error 升级与 #7 都只看这一层目录。
+# 官方模块包的判定前缀，T4.6 #2 的 error 升级与 #7 都只检查这一层目录。
 <<< END U013897 >>>
 <<< UNIT U013898 | py-comment | tools/lint_boundaries.py:76-76 >>>
 # core 包自身的目录。其 bundled 模块不计入“模块包是否经过公开接口”的观察值。

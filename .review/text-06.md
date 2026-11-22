@@ -3309,7 +3309,7 @@ AkariBot 实例管理工具。
 # 部分 macOS 版本的 launchctl 只实现 load。bootstrap 失败时回退到 load，两者语义一致。
 <<< END U004297 >>>
 <<< UNIT U004298 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:446-446 >>>
-# 系统工具的失败原因写在 stderr，截取尾部供排查。
+# 系统工具的失败原因输出在 stderr 中，截取尾部供排查。
 <<< END U004298 >>>
 <<< UNIT U004299 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:519-519 >>>
 # 就绪时限与控制台日志路径都以 run --detach 为准，故直接复用它的实现，避免两处判断标准分叉。
@@ -3369,7 +3369,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 <<< UNIT U004316 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/README.md:8-10 >>>
 模板文件的语法由 ``tools/render_templates.py`` 校验，它会用样例值渲染全部模板并检查产物
 是否为合法 Python、JSON 或 TOML。模板带 ``.j2`` 后缀，ruff 与其他工具默认跳过，
-因此该脚本是模板的语法闸门，改动模板后必须运行。
+因此该脚本是模板的语法检查关卡，改动模板后必须运行。
 <<< END U004316 >>>
 <<< UNIT U004317 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/README.md:12-13 >>>
 占位符
@@ -3468,7 +3468,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
    内部路径。该公开接口在公共 API 约定阶段（P5）建立。
 <<< END U004340 >>>
 <<< UNIT U004341 | md-list | packages/akari-bot-cli/akaribot/cli/templates/README.md:96-96 >>>
-3. ``config.py`` 中的字段名以模块名作前缀，字段注释写在 ``locales/zh_cn.json`` 的
+3. ``config.py`` 中的字段名以模块名作前缀，字段注释保存在 ``locales/zh_cn.json`` 的
 <<< END U004341 >>>
 <<< UNIT U004342 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/README.md:97-97 >>>
    ``config.comments.module_[@module_name@].<字段名>``。
@@ -3497,8 +3497,8 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 ===============  ==========================================
 <<< END U004346 >>>
 <<< UNIT U004347 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/adapter/TEMPLATE.md:17-18 >>>
-复用同一套占位符名是为了让 ``tools/render_templates.py`` 的样例渲染无需改动即可覆盖本目录：
-它只认识上述五个名字，其余取值一律经 Jinja 变量传入并带 ``default``，因此样例渲染不会失败。
+复用同一套占位符名称是为了让 ``tools/render_templates.py`` 的样例渲染无需改动即可覆盖本目录：
+它只认识上述五个名字，其余取值一律通过 Jinja 变量传入并带 ``default``，因此样例渲染不会失败。
 <<< END U004347 >>>
 <<< UNIT U004348 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/adapter/TEMPLATE.md:20-21 >>>
 目录与正文的分工
@@ -3513,7 +3513,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 --------
 <<< END U004350 >>>
 <<< UNIT U004351 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/adapter/TEMPLATE.md:29-29 >>>
-`TEMPLATE.md` 与 `selfcheck.py` 由生成器跳过，不随生成物分发。改动模板后运行一次自检：
+`TEMPLATE.md` 与 `selfcheck.py` 由生成器跳过，不随生成产物分发。改动模板后运行一次自检：
 <<< END U004351 >>>
 <<< UNIT U004352 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/adapter/TEMPLATE.md:35-36 >>>
 它对该目录下的每个 `akari-bot-adapter-*` 运行 ruff check / ruff format（仓库配置与 ruff 默认配置
@@ -3549,7 +3549,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 <<< END U004361 >>>
 <<< UNIT U004362 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:3-4 | ctx=AkariBot TUI（Textual） >>>
 TUI 提供实例、模块、适配器、配置与运行环境的管理界面。Textual 的导入与兼容处理集中在
-`_compat.py`。页面通过数据源读取状态，写操作通过 CLI 子进程执行。
+`_compat.py`。页面通过数据源读取状态，写入操作通过 CLI 子进程执行。
 <<< END U004362 >>>
 <<< UNIT U004363 | md-heading | packages/akari-bot-cli/akaribot/cli/tui/README.md:6-6 | ctx=文件职责 >>>
 ## 文件职责
@@ -3778,8 +3778,8 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 ### 环境
 <<< END U004420 >>>
 <<< UNIT U004421 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:138-139 | ctx=环境 >>>
-环境页管理实例解释器与运行库。模块的安装与运行时装载在模块页管理。包清单包含全部已安装包、
-传递依赖及实例清单中的未安装记录。
+环境页管理实例解释器与运行库。模块的安装与运行时加载在模块页管理。包清单包含全部已安装包、
+间接依赖及实例清单中的未安装记录。
 <<< END U004421 >>>
 <<< UNIT U004422 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:141-141 | ctx=环境 >>>
 - `●` 表示包已记录在 `akaribot.toml` 的 `runtime.requirements` 中，`○` 表示仅存在于当前环境。
@@ -3897,7 +3897,7 @@ INFO、debug 文件。日志解析规则由 `akaribot/cli/logs.py` 提供，CLI 
 <<< END U004454 >>>
 <<< UNIT U004455 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:204-206 | ctx=开发与迁移 >>>
 文档页 `r` 刷新、`/` 搜索、`space` 选择、`b` 构建、`p` 静态预览、`e` 开发预览、`o` 打开浏览器，
-部署、同步主题、安装依赖与任务日志收在 `m` 菜单。开发预览经 `docs dev --json --port 0` 取得就绪
+部署、同步主题、安装依赖与任务日志收在 `m` 菜单。开发预览通过 `docs dev --json --port 0` 获取就绪
 地址，之后继续读取事件流更新状态与日志。
 <<< END U004455 >>>
 <<< UNIT U004456 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:208-209 | ctx=开发与迁移 >>>
@@ -3920,7 +3920,7 @@ INFO、debug 文件。日志解析规则由 `akaribot/cli/logs.py` 提供，CLI 
 | `plain_text()`、`markup=False` | 外部文本按普通文本显示，避免方括号被解释为标记语法 |
 | `notify(app, ..., severity=...)` | 统一通知参数与未挂载状态处理 |
 | `ListView.Highlighted`、`ListView.Selected`、`list_view.index` | 读取列表高亮与选择状态 |
-| `app_test(app, size=...)` | 统一无头测试入口，显式指定终端尺寸 |
+| `app_test(app, size=...)` | 统一无界面测试入口，显式指定终端尺寸 |
 | `ButtonFlow` | 按标签宽度和可用空间计算列数，窄屏自动换行 |
 <<< END U004458 >>>
 <<< UNIT U004459 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:228-229 | ctx=实现约定 >>>
@@ -3943,7 +3943,7 @@ INFO、debug 文件。日志解析规则由 `akaribot/cli/logs.py` 提供，CLI 
 ### CLI 边界
 <<< END U004463 >>>
 <<< UNIT U004464 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:242-242 | ctx=CLI 边界 >>>
-- 写操作必须经过 `akaribot <子命令>` 子进程，参数由 `cli_process.cli_argv()` 与 `cli_env()` 构造。
+- 写入操作必须通过 `akaribot <子命令>` 子进程，参数由 `cli_process.cli_argv()` 与 `cli_env()` 构造。
 <<< END U004464 >>>
 <<< UNIT U004465 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:243-243 | ctx=CLI 边界 >>>
   界面使用 CLI 已有的 `--yes` 等参数传递确认结果，避免子进程等待交互输入。

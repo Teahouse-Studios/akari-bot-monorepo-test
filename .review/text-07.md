@@ -294,10 +294,10 @@
 返回 peer 连接状态。入口不可用时返回原因。
 <<< END U004628 >>>
 <<< UNIT U004629 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:720-720 | ctx=SubprocessAdapterSource.set_enable >>>
-见 :meth:`AdapterSource.set_enable`。经 ``akaribot config set`` 写入。
+见 :meth:`AdapterSource.set_enable`。通过 ``akaribot config set`` 写入。
 <<< END U004629 >>>
 <<< UNIT U004630 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:738-738 | ctx=SubprocessAdapterSource.add_instance >>>
-见 :meth:`AdapterSource.add_instance`。经 ``akaribot adapter instance add`` 新建。
+见 :meth:`AdapterSource.add_instance`。通过 ``akaribot adapter instance add`` 新建。
 <<< END U004630 >>>
 <<< UNIT U004631 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:754-754 | ctx=SubprocessAdapterSource.remove_instance >>>
 通过 CLI 移除适配器配置，保留实例数据。
@@ -411,7 +411,7 @@
 # 首次解析样式表前必须注册主题，以提供 $primary 等变量。
 <<< END U004667 >>>
 <<< UNIT U004668 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:223-223 >>>
-# 数据源支持注入，以便在无头测试中隔离子进程。
+# 数据源支持注入，以便在无界面测试中隔离子进程。
 <<< END U004668 >>>
 <<< UNIT U004669 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:234-234 >>>
 # 折叠状态仅在本次会话内有效，切换实例不重建侧栏，状态随之保留。
@@ -531,7 +531,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # 类型标签保存文案键，按当前语言解析。
 <<< END U004707 >>>
 <<< UNIT U004708 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:51-51 >>>
-# 类型名归一化时，由于 schema 的 type 取自运行期值的 __name__ 且会随模板写法变化，故按子串匹配。
+# 类型名归一化时，由于 schema 的 type 取自运行时值的 __name__ 且会随模板写法变化，故按子串匹配。
 <<< END U004708 >>>
 <<< UNIT U004709 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:68-68 >>>
 # 表名与配置文件一一对应，config.toml 同时承载 config 与 secret 两段。
@@ -675,7 +675,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # noqa: BLE001 - 文件定位失败由调用方显示错误
 <<< END U004755 >>>
 <<< UNIT U004756 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:133-133 | ctx=kind_of_value >>>
-按运行期值的 Python 类型推断归一化类型。
+按运行时值的 Python 类型推断归一化类型。
 <<< END U004756 >>>
 <<< UNIT U004757 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:188-188 | ctx=edit_text >>>
 把值渲染为输入框中的文本，列表按中英文逗号分隔，其余同 :func:`write_text`。
@@ -1048,7 +1048,7 @@ Esc 等同稍后填写。
 # noqa: BLE001 - 刷新失败按缓存状态处理，执行时不带 force
 <<< END U004879 >>>
 <<< UNIT U004880 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1625-1625 >>>
-# 串行执行写操作，避免多个子进程同时修改注册表。
+# 串行执行写入操作，避免多个子进程同时修改注册表。
 <<< END U004880 >>>
 <<< UNIT U004881 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1653-1653 >>>
 # noqa: BLE001 - 执行器异常仅显示错误说明
@@ -1057,7 +1057,7 @@ Esc 等同稍后填写。
 # 仅由设置忙状态的操作负责清除该状态。
 <<< END U004882 >>>
 <<< UNIT U004883 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1702-1702 >>>
-# 注册名由 CLI 生成。刷新后无法取得时使用目录名。
+# 注册名由 CLI 生成。刷新后无法获取时使用目录名。
 <<< END U004883 >>>
 <<< UNIT U004884 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1765-1765 >>>
 # init 负责实例注册，创建成功后刷新清单。
@@ -1120,13 +1120,13 @@ Esc 等同稍后填写。
 替换模拟对象记录的服务状态，模拟单元文件在界面之外出现或消失。
 <<< END U004903 >>>
 <<< UNIT U004904 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:346-346 | ctx=CliRunner >>>
-写操作的执行接口，对应一次 ``akaribot <子命令>`` 调用。
+写入操作的执行接口，对应一次 ``akaribot <子命令>`` 调用。
 <<< END U004904 >>>
 <<< UNIT U004905 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:386-386 | ctx=InitRunner >>>
 新建实例的执行接口。测试注入模拟对象，生产环境经 ``akaribot init`` 子进程。
 <<< END U004905 >>>
 <<< UNIT U004906 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:445-445 | ctx=InstanceListSource >>>
-本机实例清单的数据源接口。写操作经 :class:`CliRunner` 交给命令层。
+本机实例清单的数据源接口。写入操作通过 :class:`CliRunner` 交给命令层。
 <<< END U004906 >>>
 <<< UNIT U004907 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:448-448 | ctx=InstanceListSource.list_instances >>>
 返回注册表中的实例，附带实时运行状态。
@@ -1397,7 +1397,7 @@ Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系�
 返回状态栏用的一行说明，列出将更改的列与新旧值。
 <<< END U004995 >>>
 <<< UNIT U004996 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:365-365 | ctx=normalize_page >>>
-把 ``db rows --json`` 的输出归一化为一页数据项。
+把 ``db rows --json`` 的输出规范化为一页数据项。
 <<< END U004996 >>>
 <<< UNIT U004997 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:382-382 | ctx=DatabaseSourceError >>>
 数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。
@@ -2862,7 +2862,7 @@ Esc 关闭对话框，放弃输入。
 # 列表加载后恢复列表焦点，仅在焦点仍位于页面容器时执行，避免中断搜索输入。
 <<< END U005483 >>>
 <<< UNIT U005484 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:995-995 >>>
-# 装载状态表可能不存在，读取失败时仍展示安装列表。
+# 加载状态表可能不存在，读取失败时仍展示安装列表。
 <<< END U005484 >>>
 <<< UNIT U005485 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:998-998 >>>
 # noqa: BLE001 - 数据源任意异常都只降级
@@ -2886,13 +2886,13 @@ Esc 关闭对话框，放弃输入。
 # noqa: BLE001 - 未挂载时按保守宽度排版
 <<< END U005491 >>>
 <<< UNIT U005492 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1091-1091 >>>
-# 仅已安装且声明模块的包具有装载状态。
+# 仅已安装且声明模块的包具有加载状态。
 <<< END U005492 >>>
 <<< UNIT U005493 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1096-1096 >>>
 # 空间不足时隐藏简介列，优先保证名称可读。
 <<< END U005493 >>>
 <<< UNIT U005494 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1104-1104 >>>
-# 装载列宽不足 4 时隐藏该列，避免显示无法识别的截断状态。
+# 加载状态列宽不足 4 时隐藏该列，避免显示无法识别的截断状态。
 <<< END U005494 >>>
 <<< UNIT U005495 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1115-1115 >>>
 # 首列是选中位，高亮条只表示光标所在，选中集合才是批量操作的操作对象。
@@ -2934,7 +2934,7 @@ Esc 关闭对话框，放弃输入。
 # 反向依赖由 CLI 返回。只有存在依赖时才提供级联卸载。
 <<< END U005507 >>>
 <<< UNIT U005508 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1596-1596 >>>
-# 装载仅适用于已安装且声明模块的包。
+# 加载操作仅适用于已安装且声明模块的包。
 <<< END U005508 >>>
 <<< UNIT U005509 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1604-1604 >>>
 # 批量目标按安装状态筛选，避免对同一选区执行无效操作。
@@ -3015,7 +3015,7 @@ Esc 关闭对话框，放弃输入。
 返回可安装的模块记录，含尚未安装的项。
 <<< END U005534 >>>
 <<< UNIT U005535 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:258-258 | ctx=ModuleSource.load_states >>>
-返回模块名到全局装载状态的映射。``None`` 表示尚无记录。
+返回模块名到全局加载状态的映射。``None`` 表示尚无记录。
 <<< END U005535 >>>
 <<< UNIT U005536 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:261-261 | ctx=ModuleSource.install >>>
 安装给定记录。
@@ -3048,7 +3048,7 @@ Esc 关闭对话框，放弃输入。
 构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。
 <<< END U005545 >>>
 <<< UNIT U005546 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:588-588 | ctx=SubprocessModuleSource.load_states >>>
-通过 ``module status --json`` 读取装载状态。实例未运行时仍可读取已有记录。
+通过 ``module status --json`` 读取加载状态。实例未运行时仍可读取已有记录。
 <<< END U005546 >>>
 <<< UNIT U005547 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:844-844 | ctx=ModulesPage.compose >>>
 装配页面控件树。
@@ -3084,7 +3084,7 @@ Esc 关闭对话框，放弃输入。
 返回缓存自上次读取以来的秒数。从未读取时为无穷大。
 <<< END U005557 >>>
 <<< UNIT U005558 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1006-1006 | ctx=ModulesPage.load_state_text >>>
-返回某条记录的装载状态文本，供列表与详情展示。
+返回某条记录的加载状态文本，供列表与详情展示。
 <<< END U005558 >>>
 <<< UNIT U005559 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1031-1031 | ctx=ModulesPage.invalidate_cache >>>
 使缓存立即失效，下一次读取必定通过数据源获取。
@@ -3114,7 +3114,7 @@ Esc 关闭对话框，放弃输入。
 发起更新，弹出选择框决定更新选中项还是全部已安装包。
 <<< END U005567 >>>
 <<< UNIT U005568 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1580-1580 | ctx=ModulesPage.request_toggle_load >>>
-装载选中包的模块。全部已装载时取消装载。
+加载选中包的模块。全部已加载时取消加载。
 <<< END U005568 >>>
 <<< UNIT U005569 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1615-1615 | ctx=ModulesPage.action_toggle_select >>>
 切换当前项选中状态的键位动作（对应 Ctrl+点击）。
@@ -3156,7 +3156,7 @@ Esc 关闭对话框，放弃输入。
 更新选中项或全部已安装包的键位动作。
 <<< END U005581 >>>
 <<< UNIT U005582 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1863-1863 | ctx=ModulesPage.action_toggle_load >>>
-装载或卸载选中项声明模块的键位动作。
+加载或卸载选中项声明模块的快捷键操作。
 <<< END U005582 >>>
 <<< UNIT U005583 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1867-1867 | ctx=ModulesPage.action_clear_search >>>
 清空搜索框的键位动作。
@@ -3291,7 +3291,7 @@ Esc 关闭对话框，放弃输入。
 # 兼容单个 packages 列表并逐项用 kind 字段分类的另一种写法。
 <<< END U005625 >>>
 <<< UNIT U005626 | py-comment | packages/akari-bot-cli/akaribot/cli/venv.py:1388-1389 >>>
-# 这里比较的是环境而不是解释器文件；uv 创建的 venv 都把 bin/python 指向同一个基础解释器，
+# 这里比较的是环境而不是解释器文件。uv 创建的 venv 都把 bin/python 指向同一个基础解释器，
 # 按 resolve() 后的文件比较会把两个不同的 venv 判定为同一个环境，导致操作全部被拒绝。
 <<< END U005626 >>>
 <<< UNIT U005627 | py-docstring | packages/akari-bot-cli/akaribot/cli/venv.py:75-75 | ctx=canonical >>>
@@ -3571,7 +3571,7 @@ cli.venv: 打包产物内置 uv 解析测试
 # ``Locale`` 按当前快照读取键，不切换回来就只会拿到键名。生产环境里 CLI 进程不加载 core，无此问题。
 <<< END U005717 >>>
 <<< UNIT U005718 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:85-85 >>>
-# 只看 returncode 既给不出“远端拒绝”的状态，也丢失了 core 给出的具体原因。
+# 只检查 returncode 既给不出“远端拒绝”的状态，也丢失了 core 给出的具体原因。
 <<< END U005718 >>>
 <<< UNIT U005719 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:152-152 >>>
 # 实例确实未运行时没有可卸载的对象，卸载必须继续而不是被自己的保护条件挡住。
@@ -3718,7 +3718,7 @@ cli.commands.module: git 直接引用安装测试
 # 可编辑安装的元数据停在安装那一刻。源码已放宽的约束不应再拦截依赖升级。
 <<< END U005764 >>>
 <<< UNIT U005765 | py-comment | packages/akari-bot-cli/tests/test_module_precheck.py:99-99 >>>
-# 直接依赖与传递依赖的调整都要核对。uv 无解时同样拦截并给出原因。
+# 直接依赖与间接依赖的调整都要核对。uv 无解时同样拦截并给出原因。
 <<< END U005765 >>>
 <<< UNIT U005766 | py-comment | packages/akari-bot-cli/tests/test_module_precheck.py:143-143 >>>
 # 兼容性检查据此判断 requires_core_api。读错位置时恒为 None，检查会被静默跳过。

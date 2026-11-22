@@ -179,10 +179,10 @@ QQ 机器人（官方）适配器通过 QQ 开放平台的官方机器人接口�
 ## 配置
 <<< END U000877 >>>
 <<< UNIT U000878 | md-paragraph | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都写在 `config/bot_qqbot.toml`。
+配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都保存在 `config/bot_qqbot.toml` 中。
 <<< END U000878 >>>
 <<< UNIT U000879 | md-paragraph | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/index.md:25-25 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`。两张表都写在 `config/bot_qqbot-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`。两张表都保存在 `config/bot_qqbot-<实例 ID>.toml` 中。
 <<< END U000879 >>>
 <<< UNIT U000880 | md-paragraph | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/index.md:27-27 | ctx=配置 >>>
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
@@ -231,7 +231,7 @@ Webhook 模式下，平台回调驱动事件。适配器提供 HTTP 服务，公
 | 按钮与动作文本 | 视配置 | 仅在启用 Markdown 时可用。 |
 | 表情回应 | 不支持 | — |
 | 引用回复 | 支持 | — |
-| 输入状态 | 支持 | 通过挂载回应表情表示正在处理。 |
+| 输入状态 | 支持 | 通过添加回应表情表示正在处理。 |
 | 消息撤回 | 支持 | — |
 | 群组管理 | 不支持 | — |
 | 权限组 | 部分支持 | 服务器频道支持，群聊与私信不支持。 |
@@ -342,7 +342,7 @@ Webhook 监听端口。
 构造 QQ 平台的静态全局菜单与指令面板。
 <<< END U000917 >>>
 <<< UNIT U000918 | cfg-comment | packages/adapters/akari-bot-adapter-qqbot/pyproject.toml:14-14 >>>
-    # s3 extra 依据 plan:498 / tasks:1382。core/utils/s3.py 采用惰性导入，该 extra 因此可用（T4.2 §6）
+    # s3 extra 依据 plan:498 / tasks:1382。core/utils/s3.py 采用按需导入，该 extra 因此可用（T4.2 §6）
 <<< END U000918 >>>
 <<< UNIT U000919 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_markdown_toggle.py:24-26 >>>
 # 平台能力集在导入时即依配置定型，在 qq_use_markdown 为假的部署上，markdown 相关能力全为假，
@@ -374,7 +374,7 @@ akaribot.adapters.qqbot.context: 指令操作标签渲染测试
 # 平台先撤销上下文时，处理记录期间的 hold 仍须可用。
 <<< END U000927 >>>
 <<< UNIT U000928 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_context_lifecycle.py:111-111 >>>
-# 平台侧发送路径可能先撤销上下文，处理记录尚未结束。
+# 平台端发送路径可能先撤销上下文，处理记录尚未结束。
 <<< END U000928 >>>
 <<< UNIT U000929 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_context_lifecycle.py:124-124 >>>
 # 记录结束并回收后，hold 须报告上下文不可用。
@@ -445,7 +445,7 @@ akaribot.adapters.qqbot.bot: 客户端构造配置测试
 <<< END U000950 >>>
 <<< UNIT U000951 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_typing.py:203-204 >>>
 # botpy 的上层调用被取消时，底层 HTTP 请求仍可能已由平台受理并继续完成。
-# shield 用于复现消息已发送、但调用方无法取得结果的时间窗口。
+# shield 用于复现消息已发送、但调用方无法获取结果的时间窗口。
 <<< END U000951 >>>
 <<< UNIT U000952 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_typing.py:263-263 >>>
 # 模拟 release_context / del_context 先一步执行
@@ -477,7 +477,7 @@ Satori 协议适配器。以 WebSocket 连接 Satori 服务端，接入其下的
 # 以 @ 他人开头的消息视为与机器人无关
 <<< END U000960 >>>
 <<< UNIT U000961 | py-comment | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/bot.py:210-210 >>>
-# 自主退群或协议端未提供操作者时无法归因，不视为不友好行为
+# 自主退群或协议端未提供操作者时无法确定责任人，不视为不友好行为
 <<< END U000961 >>>
 <<< UNIT U000962 | py-comment | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/bot.py:267-267 >>>
 # SDK 在鉴权失败、服务端下线或重连次数耗尽后不再重连，交由守护进程重启本进程
@@ -520,7 +520,7 @@ Satori 适配器实现 Satori 协议，连接 Satori 服务端。具体平台的
 适配器通过 WebSocket 连接 Satori 服务端，按事件接收消息，按接口发送消息。
 <<< END U000974 >>>
 <<< UNIT U000975 | md-paragraph | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/docs/index.md:9-9 | ctx=平台概述 >>>
-会话标识用 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组和私聊场景。
+会话标识使用 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组和私聊场景。
 <<< END U000975 >>>
 <<< UNIT U000976 | md-heading | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/docs/index.md:11-11 | ctx=安装 >>>
 ## 安装
@@ -535,7 +535,7 @@ Satori 适配器实现 Satori 协议，连接 Satori 服务端。具体平台的
 ## 配置
 <<< END U000979 >>>
 <<< UNIT U000980 | md-paragraph | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_satori`，密钥表为 `bot_satori_secret`。两张表都写在 `config/bot_satori.toml`。
+配置表为 `bot_satori`，密钥表为 `bot_satori_secret`。两张表都保存在 `config/bot_satori.toml` 中。
 <<< END U000980 >>>
 <<< UNIT U000981 | md-paragraph | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/docs/index.md:25-25 | ctx=配置 >>>
 配置项如下：
@@ -592,7 +592,7 @@ Satori 服务端的端口。
 # 自定义元素没有统一语义，仅保留其中可读的文本，避免把标记原样传递给解析器
 <<< END U000995 >>>
 <<< UNIT U000996 | py-comment | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/utils.py:243-243 >>>
-# Satori 会把标签边界处含换行的空白当作排版空白丢弃，行内换行改用 <br> 表达。
+# Satori 会把标签边界处包含换行的空白当作排版空白丢弃，行内换行改用 <br> 表达。
 <<< END U000996 >>>
 <<< UNIT U000997 | py-docstring | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/utils.py:46-46 | ctx=TargetAddress >>>
 场景 ID 中记录的定位信息。
@@ -616,7 +616,7 @@ Satori 服务端的端口。
 解析用户 ID，返回平台名与底层用户 ID。
 <<< END U001003 >>>
 <<< UNIT U001004 | py-docstring | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/utils.py:108-108 | ctx=common_id >>>
-取带前缀 ID 的最后一段，即平台侧原始 ID。
+截取带前缀 ID 的最后一段，即平台端原始 ID。
 <<< END U001004 >>>
 <<< UNIT U001005 | py-docstring | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/utils.py:135-135 | ctx=parse_inbound >>>
 把 Satori 消息内容解析为消息链，并判定首位提及与引用。
@@ -680,7 +680,7 @@ Telegram 按钮组件构建。
 从键盘中只移除指定 callback_data 的按钮。
 <<< END U001024 >>>
 <<< UNIT U001025 | py-docstring | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/buttons.py:77-77 | ctx=get_telegram_context_chat_and_user >>>
-取得 Telegram 消息或回调中的聊天与实际操作用户。
+获取 Telegram 消息或回调中的聊天与实际操作用户。
 <<< END U001025 >>>
 <<< UNIT U001026 | py-comment | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/client.py:19-19 >>>
 # aiogram 未提供关闭证书校验的参数，只能改写它在建立连接时使用的连接器配置。
@@ -728,10 +728,10 @@ Telegram 适配器以机器人身份接入 Telegram 私聊、群组、超级群�
 ## 配置
 <<< END U001040 >>>
 <<< UNIT U001041 | md-paragraph | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_telegram`，密钥表为 `bot_telegram_secret`。两张表都写在 `config/bot_telegram.toml`。
+配置表为 `bot_telegram`，密钥表为 `bot_telegram_secret`。两张表都保存在 `config/bot_telegram.toml` 中。
 <<< END U001041 >>>
 <<< UNIT U001042 | md-paragraph | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/docs/index.md:25-25 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add telegram <实例 ID>` 新增实例。实例表名为 `bot_telegram-<实例 ID>`，密钥表名为 `bot_telegram-<实例 ID>_secret`。两张表都写在 `config/bot_telegram-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add telegram <实例 ID>` 新增实例。实例表名为 `bot_telegram-<实例 ID>`，密钥表名为 `bot_telegram-<实例 ID>_secret`。两张表都保存在 `config/bot_telegram-<实例 ID>.toml` 中。
 <<< END U001042 >>>
 <<< UNIT U001043 | md-table | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/docs/index.md:27-30 | ctx=配置 >>>
 | 字段 | 类型 | 默认值 | 说明 |
@@ -771,7 +771,7 @@ Telegram 适配器以机器人身份接入 Telegram 私聊、群组、超级群�
 | 引用回复 | 支持 | 保留被回复消息的 ID。 |
 | 输入状态 | 不支持 | — |
 | 消息撤回 | 支持 | — |
-| 群组管理 | 支持 | 含禁言、踢出与封禁。 |
+| 群组管理 | 支持 | 包含禁言、踢出与封禁。 |
 | 权限组 | 不支持 | — |
 | 消息节点 | 不支持 | — |
 | 私信 | 支持 | 私聊标记为私密。 |
@@ -805,7 +805,7 @@ Telegram 适配器以机器人身份接入 Telegram 私聊、群组、超级群�
 分发 Telegram 群组成员离开服务消息。
 <<< END U001058 >>>
 <<< UNIT U001059 | py-docstring | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/interactions.py:1-1 | ctx=<module> >>>
-Telegram 按钮点击回流。
+Telegram 按钮点击回调处理。
 <<< END U001059 >>>
 <<< UNIT U001060 | py-docstring | packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/interactions.py:31-31 | ctx=handle_button_callback >>>
 处理 Telegram 按钮点击并重新进入消息流程。
@@ -1029,7 +1029,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 本文整理了 Web 控制台的配置字段与默认值。
 <<< END U001128 >>>
 <<< UNIT U001129 | md-paragraph | packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/docs/config.md:5-5 | ctx=Web 控制台配置项 >>>
-配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都写在 `config/bot_web.toml`。普通项写在 `[bot_web]`，密钥项写在 `[bot_web_secret]`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都保存在 `config/bot_web.toml` 中，普通项配置在 `[bot_web]`，密钥项配置在 `[bot_web_secret]`。
 <<< END U001129 >>>
 <<< UNIT U001130 | md-heading | packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/docs/config.md:7-7 | ctx=配置表 `bot_web` >>>
 ## 配置表 `bot_web`
@@ -1096,10 +1096,10 @@ Web 控制台适配器在实例内启动 Web 服务，提供 WebUI 控制台和�
 ## 配置
 <<< END U001145 >>>
 <<< UNIT U001146 | md-paragraph | packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/docs/index.md:25-25 | ctx=配置 >>>
-配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都写在 `config/bot_web.toml`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都保存在 `config/bot_web.toml` 中。
 <<< END U001146 >>>
 <<< UNIT U001147 | md-paragraph | packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/docs/index.md:27-27 | ctx=配置 >>>
-需要多个 Web 服务实例时，用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`。两张表都写在 `config/bot_web-<实例 ID>.toml`。
+需要多个 Web 服务实例时，可使用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`。两张表都保存在 `config/bot_web-<实例 ID>.toml` 中。
 <<< END U001147 >>>
 <<< UNIT U001148 | md-paragraph | packages/adapters/akari-bot-adapter-web/akaribot/adapters/web/docs/index.md:29-29 | ctx=配置 >>>
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
@@ -1433,7 +1433,7 @@ akaribot.adapters.web.api 单元测试 - 状态接口的运行时统计与进程
 akaribot.adapters.web.api: 状态接口测试
 <<< END U001235 >>>
 <<< UNIT U001236 | py-comment | packages/adapters/akari-bot-adapter-web/tests/test_webui_storage.py:338-338 >>>
-# 根目录按真实路径解析，临时目录在部分平台上本身是符号链接，比较前需归一化。
+# 根目录按真实路径解析，临时目录在部分平台上本身是符号链接，比较前需规范化。
 <<< END U001236 >>>
 <<< UNIT U001237 | py-docstring | packages/adapters/akari-bot-adapter-web/tests/test_webui_storage.py:1-1 | ctx=<module> >>>
 akaribot.adapters.web.api.files 单元测试 - assets 与 data 文件管理接口。
@@ -1472,7 +1472,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 获取 brand 资源根目录（立绘、标志、名单都在其下）。
 <<< END U001248 >>>
 <<< UNIT U001249 | cfg-comment | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/config/global/docs.global.toml:6-7 >>>
-# 本包向文档站点提供品牌资源。构建时只取第一个 brand = true 的包。
+# 本包向文档站点提供品牌资源。构建时只选取第一个 brand = true 的包。
 # 每个字段都是相对包根目录的路径，缺失的字段会回退到文档站内置资源。
 <<< END U001249 >>>
 <<< UNIT U001250 | cfg-comment | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/config/global/docs.global.toml:10-10 >>>
@@ -1509,7 +1509,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `akaribot_logo.png` | 日间标志，用于邮件报告、界面配图与文档站点 |
 | `akaribot_logo_dark.png` | 夜间标志，用于深色模式的文档站点 |
 | `akaribot_avatar.jpg` | 机器人头像，用于文档站点的命令对话示例 |
-| `credits.txt` | 制作人员名单，含主开发者、功能协助、画师与 Logo 设计 |
+| `credits.txt` | 制作人员名单，包含主开发者、功能协助、画师与 Logo 设计 |
 | `LICENSE` | 品牌资产许可证 |
 | `manifest.toml` | 包说明清单。本包不是模块或适配器，没有 registry 条目 |
 <<< END U001259 >>>
@@ -1517,7 +1517,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 安装与定位
 <<< END U001260 >>>
 <<< UNIT U001261 | md-paragraph | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:25-25 | ctx=安装与定位 >>>
-`akari-bot-core[full]` 已包含本包。`akaribot init` 默认会安装这个 extra。使用 `--minimal` 时不安装本包。
+`akari-bot-core[full]` 已包含本包。`akaribot init` 默认会安装这个可选依赖组（extra）。使用 `--minimal` 时不安装本包。
 <<< END U001261 >>>
 <<< UNIT U001262 | md-paragraph | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:27-27 | ctx=安装与定位 >>>
 包内只暴露一个函数：
@@ -1606,7 +1606,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 许可证
 <<< END U001285 >>>
 <<< UNIT U001286 | md-paragraph | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:128-128 | ctx=许可证 >>>
-立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证写在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发时必须原样携带 `LICENSE`，不得套用仓库根目录许可证，也不得把资产单独再分发。
+立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证保存在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发时必须原样携带 `LICENSE`，不得套用仓库根目录许可证，也不得把资产单独再分发。
 <<< END U001286 >>>
 <<< UNIT U001287 | md-heading | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:130-130 | ctx=不得重新编码 >>>
 ## 不得重新编码
@@ -1616,7 +1616,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U001288 >>>
 <<< UNIT U001289 | md-list | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:134-136 | ctx=不得重新编码 >>>
 - 不得为压缩体积而重新压缩、降采样或转换格式。降采样或转调色板会让画面明显变糊。
-- 需要控制体积或显示尺寸时，调整使用侧的展示宽度或缩放，而不是修改文件本身。
+- 需要控制体积或显示尺寸时，调整使用方的展示宽度或缩放，而不是修改文件本身。
 - 包内测试会核对资产与许可证齐全、立绘保持原件规格、标志可解码且非空。替换文件前先确认这些要求仍成立。
 <<< END U001289 >>>
 <<< UNIT U001290 | md-paragraph | packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md:138-138 | ctx=不得重新编码 >>>
@@ -1688,7 +1688,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 `captcha_held` 用于按钮验证码的表情模式，以表情中手持的物品作为判定答案的依据。
 <<< END U001311 >>>
 <<< UNIT U001312 | md-paragraph | packages/akari-bot-assets-emotes/akaribot/assets/emotes/README.md:5-5 >>>
-`typing` 用于 QQBot 侧群聊输入状态提示。为保证发送速度，图片经过尺寸缩小与减帧处理，单图体积上限约 500 KB。
+`typing` 用于 QQBot 端群聊输入状态提示。为保证发送速度，图片经过尺寸缩小与减帧处理，单图体积上限约 500 KB。
 <<< END U001312 >>>
 <<< UNIT U001313 | md-paragraph | packages/akari-bot-assets-emotes/akaribot/assets/emotes/README.md:7-7 >>>
 `common` 用于对发送速率不敏感的场景，可视情况增大体积以保证发送效果。
@@ -1725,9 +1725,9 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 主要调用方：
 <<< END U001322 >>>
 <<< UNIT U001323 | md-list | packages/akari-bot-assets-emotes/akaribot/assets/emotes/docs/index.md:31-33 | ctx=安装与定位 >>>
-- core 的错误钩子用 `common/` 为错误提示配图。
-- `akari-bot-module-captcha` 用 `captcha_held/` 生成按钮验证码。
-- `akari-bot-adapter-qqbot` 用 `typing/` 发送输入状态。
+- core 的错误钩子使用 `common/` 为错误提示配图。
+- `akari-bot-module-captcha` 使用 `captcha_held/` 生成按钮验证码。
+- `akari-bot-adapter-qqbot` 使用 `typing/` 发送输入状态。
 <<< END U001323 >>>
 <<< UNIT U001324 | md-paragraph | packages/akari-bot-assets-emotes/akaribot/assets/emotes/docs/index.md:35-35 | ctx=安装与定位 >>>
 资源包缺失时，调用方跳过配图或输入状态，不阻断命令本身。
@@ -1737,7 +1737,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U001325 >>>
 <<< UNIT U001326 | md-list | packages/akari-bot-assets-emotes/akaribot/assets/emotes/docs/index.md:39-41 | ctx=维护约定 >>>
 - 新增或替换 GIF 时，请保持各目录的用途不变。验证码素材必须能通过手持物区分答案，输入状态素材必须控制单图体积与帧数。
-- 文件名是调用方拼接的资源名，改名会影响调用方。调整前请先搜索 `emotes_dir()` 的调用位置。
+- 文件名是调用方拼接的资源名，重命名会影响调用方。调整前请先搜索 `emotes_dir()` 的调用位置。
 - 表情是二进制资源，不通过代码生成。仓库不会为了压缩体积统一转码，各目录按自身的发送速率要求处理。
 <<< END U001326 >>>
 <<< UNIT U001327 | md-heading | packages/akari-bot-assets-emotes/akaribot/assets/emotes/docs/index.md:43-43 | ctx=许可证 >>>
@@ -1772,7 +1772,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 字体资源
 <<< END U001336 >>>
 <<< UNIT U001337 | md-paragraph | packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md:3-3 | ctx=字体资源 >>>
-`akari-bot-assets-fonts` 提供绘制图片所需的字体文件，避免调用方依赖仓库里 `assets/fonts` 的固定路径。克隆仓库与 wheel 安装时，字体所在目录不同，调用方一律用 `fonts_dir()` 获取路径。
+`akari-bot-assets-fonts` 提供绘制图片所需的字体文件，避免调用方依赖仓库里 `assets/fonts` 的固定路径。克隆仓库与 wheel 安装时，字体所在目录不同，调用方一律使用 `fonts_dir()` 获取路径。
 <<< END U001337 >>>
 <<< UNIT U001338 | md-heading | packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md:5-5 | ctx=内容物 >>>
 ## 内容物
@@ -1818,7 +1818,7 @@ Docker 镜像已安装 `fonts-noto-cjk` 等系统字体，第三级可以命中�
 <<< UNIT U001349 | md-list | packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md:45-48 | ctx=维护约定 >>>
 - 字体按原样分发，不重新编码，也不做子集化。渲染兼容性依赖原始字形表。
 - 新增字体时同时更新 `find_font` 的已知字族映射（`core/utils/font.py` 的 `SYSTEM_FAMILIES`）。否则系统字体这一级查不到。
-- `find_font` 按文件名查找字体，改名会影响所有调用方。
+- `find_font` 按文件名查找字体，重命名会影响所有调用方。
 - `LICENSE` 必须随资源一同分发。
 <<< END U001349 >>>
 <<< UNIT U001350 | md-heading | packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md:50-50 | ctx=许可证 >>>
@@ -1878,7 +1878,7 @@ CLI 子命令集合，每个模块导出一个 Typer 子应用。
 # 此处推断，匹配 ``web_host`` / ``web_port`` / ``qq_host`` 这类字段名，其余平台不受影响。
 <<< END U001367 >>>
 <<< UNIT U001368 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/adapter.py:987-987 >>>
-# enable 写在非密钥表首位，与 core 的模板声明顺序一致，模板缺失该项时补充一个显式的 false
+# enable 放在非密钥表首位，与 core 的模板声明顺序一致，模板缺失该项时补充一个显式的 false
 <<< END U001368 >>>
 <<< UNIT U001369 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/adapter.py:1087-1087 >>>
 # registry.note 同时进入 --json 的 registry_note 字段，属机器可读格式约定，保持原文。
@@ -1890,7 +1890,7 @@ CLI 子命令集合，每个模块导出一个 Typer 子应用。
 # 路径、平台名与注释里可能出现方括号（IPv6 地址、TOML 表名），故先 escape 再进入 rich 标记解析
 <<< END U001371 >>>
 <<< UNIT U001372 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/adapter.py:1178-1178 >>>
-# 只有“平台已安装但清单未给出展示名”才值得提示。孤立配置的展示名本就无从取得
+# 只有“平台已安装但清单未给出展示名”才值得提示。孤立配置的展示名本就无从获取
 <<< END U001372 >>>
 <<< UNIT U001373 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/adapter.py:1185-1185 >>>
 # 清单不可用时无从判断平台是否已安装，不能标记为“未安装”
@@ -1959,7 +1959,7 @@ core 入口调用失败，或其输出无法解析。
 读取单个配置项。
 <<< END U001394 >>>
 <<< UNIT U001395 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/config.py:163-163 | ctx=set_value >>>
-写入单个配置项（经 core 的原子写入路径）。
+写入单个配置项（通过 core 的原子写入路径）。
 <<< END U001395 >>>
 <<< UNIT U001396 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/config.py:176-176 | ctx=open_in_editor >>>
 用外部编辑器打开配置文件（第三种编辑模式）。
@@ -1968,7 +1968,7 @@ core 入口调用失败，或其输出无法解析。
 提示三种编辑方式（表单与文本模式在 TUI 里）。
 <<< END U001397 >>>
 <<< UNIT U001398 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/db.py:34-34 >>>
-# 与 core 入口的默认值保持一致。上限由 core 侧收窄，这里只做展示。
+# 与 core 入口的默认值保持一致。上限由 core 端限制，这里只做展示。
 <<< END U001398 >>>
 <<< UNIT U001399 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/db.py:39-39 >>>
 # core 把失败原因也写入 stdout 的 JSON，故先解析再按退出码判定。无法解析时按原始输出报错。
@@ -2044,7 +2044,7 @@ core 入口调用失败，或其输出无法解析。
 # 花括号在 str.format 里需写成双写。写入后的单写 {I18N:...} 由 core 按所选语言翻译。
 <<< END U001422 >>>
 <<< UNIT U001423 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/init.py:49-49 >>>
-# 默认安装的 core extra 为 full（含 emotes 表情资源包），--minimal 仅安装最小 core 时跳过。
+# 默认安装的 core extra 为 full（包含 emotes 表情资源包），--minimal 仅安装最小 core 时跳过。
 <<< END U001423 >>>
 <<< UNIT U001424 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/init.py:269-269 >>>
 # 同上，what 由 venv.py 拼接“完成/失败”，保持原文。
@@ -2092,7 +2092,7 @@ core 入口调用失败，或其输出无法解析。
 # 数据库转换状态取 none / done / failed / skipped，报告的人工清单按状态判断，不看文案。
 <<< END U001438 >>>
 <<< UNIT U001439 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:242-242 >>>
-# 带实例 ID 的表（bot_telegram-alt）是生成物，迁移只识别基础配置表。
+# 带实例 ID 的表（bot_telegram-alt）是生成产物，迁移只识别基础配置表。
 <<< END U001439 >>>
 <<< UNIT U001440 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:314-315 >>>
 # 读取失败与“读到了但没有启用项”必须分开，前者不能推出“用户没启用过模块”，此时按空清单
@@ -2102,7 +2102,7 @@ core 入口调用失败，或其输出无法解析。
 # SQLite 的只读 WAL 连接仍可改写共享内存文件，故读取使用已停止源数据库的临时副本。
 <<< END U001441 >>>
 <<< UNIT U001442 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:384-385 >>>
-# 安装候选只取旧数据库 ``module_status.load = 1`` 的模块；``modules/`` 含全部官方模块，按目录确定
+# 安装候选只选取旧数据库 ``module_status.load = 1`` 的模块。``modules/`` 包含全部官方模块，按目录确定
 # 安装列表会把从未启用的模块连同大型依赖一并安装到新实例，还会把“未映射”与“未启用”混成同一类诊断。
 <<< END U001442 >>>
 <<< UNIT U001443 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:649-649 >>>
@@ -2127,7 +2127,7 @@ core 入口调用失败，或其输出无法解析。
 # 冲突说明写成“谁要求什么、实际是什么”，不把 uv 解析器的原始报错抛给用户。
 <<< END U001449 >>>
 <<< UNIT U001450 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:162-162 >>>
-# 安装会连带升降依赖（含传递依赖），而 uv 求解不看其他已安装包的依赖，故按其安装计划逐条核对。
+# 安装会连带升降依赖（包含间接依赖），而 uv 求解不考虑其他已安装包的依赖，故按其安装计划逐条核对。
 <<< END U001450 >>>
 <<< UNIT U001451 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:174-174 >>>
 # 已安装包对待安装包的依赖要求由 dependency_conflicts 报告，这里不重复。
@@ -2164,7 +2164,7 @@ core 入口调用失败，或其输出无法解析。
 # 工作区来源的 detail 是包路径，会放入 origin，供调用方（TUI、脚本）据此定位源码。
 <<< END U001461 >>>
 <<< UNIT U001462 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:665-665 >>>
-# 给出名称才可能提前查重。未提供名称时无从查起，只能安装完成后再由差集识别。
+# 给出名称才可能提前查重。未提供名称时无从查起，只能安装完成后再通过对比安装前后的包列表识别。
 <<< END U001462 >>>
 <<< UNIT U001463 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:708-709 >>>
 # 基础配置表取 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 只扫描 ``config/*.toml``，
@@ -2238,7 +2238,7 @@ core 入口调用失败，或其输出无法解析。
 # 适配器模板的定位顺序与模块一致，只是相对目录与 README 里的取值含义不同。
 <<< END U001483 >>>
 <<< UNIT U001484 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/new.py:67-67 >>>
-# 模板维护说明与自检脚本留在仓库内，不随生成物分发。
+# 模板维护说明与自检脚本留在仓库内，不随生成产物分发。
 <<< END U001484 >>>
 <<< UNIT U001485 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/new.py:70-70 >>>
 # 由问卷选项控制的适配器模板文件，未启用时不渲染。
@@ -2250,7 +2250,7 @@ core 入口调用失败，或其输出无法解析。
 # 给出字段即隐含启用配置，避免 --field / --credential-field 被静默丢弃。
 <<< END U001487 >>>
 <<< UNIT U001488 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/new.py:1187-1187 >>>
-# 失败提示（含手动命令）由 run_module_add 打印，此处不再重复输出命令。
+# 失败提示（包含手动命令）由 run_module_add 打印，此处不再重复输出命令。
 <<< END U001488 >>>
 <<< UNIT U001489 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/new.py:105-105 | ctx=CommandEntry.token >>>
 命令在 locale 键与测试名中使用的简称，取自模板的第一个字面量词。

@@ -88,7 +88,7 @@
 # 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
 <<< END U007873 >>>
 <<< UNIT U007874 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:62-63 >>>
-# 判定规则只看目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根目录脚本
+# 判定规则只检查目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根目录脚本
 # 在子进程中仍可导入。仓库根目录不可知时返回空列表，此时 ``akaribot`` 由已安装包提供。
 <<< END U007874 >>>
 <<< UNIT U007875 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:71-72 >>>
@@ -147,7 +147,7 @@
 # pre_init 是唯一被允许写入配置的进程，须清除 RestartBot 重启循环中残留的只读标记
 <<< END U007889 >>>
 <<< UNIT U007890 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:572-572 >>>
-# instance_id 必须在导入适配器之前设置，因为 akaribot.adapters.<x>.info 在导入期依它生成 client_name。
+# instance_id 必须在导入适配器之前设置，因为 akaribot.adapters.<x>.info 在导入阶段依它生成 client_name。
 <<< END U007890 >>>
 <<< UNIT U007891 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:581-581 >>>
 # 平台展示名供会话构造使用，多实例下 client_name 带实例后缀，平台名不带。
@@ -163,11 +163,11 @@
 # 两种解释器形态的 argv[0] 都是脚本文件路径，故判断依据不变。
 <<< END U007894 >>>
 <<< UNIT U007895 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:624-625 >>>
-# 自此起 spawn 出的子进程一律只读，配置的生成已在 pre_init 中完成。
-# 须在任何 mp.Process 之前设置，spawn 会继承环境。restart_bot_process() 后续重启子进程时同样适用。
+# 自此起通过 spawn 启动的子进程一律只读，配置的生成已在 pre_init 中完成。
+# 须在任何 mp.Process 之前设置，子进程会继承环境变量。restart_bot_process() 后续重启子进程时同样适用。
 <<< END U007895 >>>
 <<< UNIT U007896 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:629-629 >>>
-# CONFIG_READONLY_ENV 必须先于 core.config 的首次导入设置。后者会在导入期执行配置版本迁移。
+# CONFIG_READONLY_ENV 必须先于 core.config 的首次导入设置。后者会在导入阶段执行配置版本迁移。
 <<< END U007896 >>>
 <<< UNIT U007897 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:633-634 >>>
 # 守护进程与 Hub 不是 JobQueue 节点，Server 无从 Registry 获知其 PID。此处随 Process
@@ -225,17 +225,17 @@
 <<< END U007912 >>>
 <<< UNIT U007913 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:46-47 >>>
 # 不兼容 core API 的包与依赖不满足的包都在发现阶段一并剔除（core.registry.PackageRegistry.discover）。
-# 依赖校验必须与 API 校验同源，才能把“依赖被 API 门槛拒绝的包”一起剔除，避免其导入期注册的模块进入索引。
+# 依赖校验必须与 API 校验同源，才能把“依赖被 API 门槛拒绝的包”一起剔除，避免其导入阶段注册的模块进入索引。
 <<< END U007913 >>>
 <<< UNIT U007914 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:49-49 >>>
-# 按声明依赖的拓扑序导入，让被依赖的包先完成注册，依赖它的包才能在导入期取用其公开接口。
+# 按声明依赖的拓扑序导入，让被依赖的包先完成注册，依赖它的包才能在导入阶段取用其公开接口。
 <<< END U007914 >>>
 <<< UNIT U007915 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:68-69 >>>
 # 只忽略配置模块本身不存在。配置文件内部缺少依赖同样表现为
 # ModuleNotFoundError，若一概忽略会让模块在缺少必要配置时处于部分加载状态。
 <<< END U007915 >>>
 <<< UNIT U007916 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:75-76 >>>
-# module() 与各组件装饰器都在导入期记录。若文件在记录一部分内容后
+# module() 与各组件装饰器都在导入阶段记录。若文件在记录一部分内容后
 # 才抛出异常，必须撤销该包本轮产生的注册，否则报错模块仍可能接收命令。
 <<< END U007916 >>>
 <<< UNIT U007917 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:88-88 >>>
@@ -357,8 +357,8 @@
 # 卸载 RPC 先于 uv pip uninstall 执行，重新运行 discover() 依旧会看到该包，故直接改写索引缓存。
 <<< END U007948 >>>
 <<< UNIT U007949 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1149-1150 >>>
-# 只读进程只认启动时列出的文件，新表必须经 load() 重新枚举才会出现。此处失败不阻断安装，
-# 导入期读取新配置项时会触发只读检查报错。
+# 只读进程只认启动时列出的文件，新表必须通过 load() 重新枚举才会出现。此处失败不阻断安装，
+# 导入阶段读取新配置项时会触发只读检查报错。
 <<< END U007949 >>>
 <<< UNIT U007950 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1187-1187 >>>
 # 与 reload_module 同策略，忙碌时直接失败，不把等待锁的时间算进 RPC 超时。
@@ -655,7 +655,7 @@ WebSocket Hub 部署模式，可选 embedded 或 external。embedded 由守护�
 每个 WebSocket 节点的最大待发送帧数量，队列满时新投递将被拒绝。
 <<< END U008046 >>>
 <<< UNIT U008047 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:71-71 | ctx=config.comments.jobqueue.jobqueue_websocket_url >>>
-WebSocket JobQueue Hub 的统一地址。embedded 模式同时从该地址取得监听主机、端口和路径。external 模式将其作为客户端连接地址。
+WebSocket JobQueue Hub 的统一地址。embedded 模式同时从该地址获取监听主机、端口和路径。external 模式将其作为客户端连接地址。
 <<< END U008047 >>>
 <<< UNIT U008048 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:72-72 | ctx=config.comments.s3_secret.s3_access_key >>>
 S3 兼容 API 的 AccessKey。
@@ -1456,7 +1456,7 @@ JobQueue 的任务投递、原子
 配置文件后再继续启动。
 <<< END U008294 >>>
 <<< UNIT U008295 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:116-117 | ctx=实例身份、定位与发现 >>>
-因此，共用同一配置目录的进程会取得相同且可跨重启保持稳定的 `node_id`，而每个进程
+因此，共用同一配置目录的进程会获取相同且可跨重启保持稳定的 `node_id`，而每个进程
 实例仍由独立的 `peer_id` 唯一标识。系统不会从计算机名、宿主机环境或其他设备信息中读取或推导该值。
 <<< END U008295 >>>
 <<< UNIT U008296 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:119-120 | ctx=实例身份、定位与发现 >>>
@@ -1498,7 +1498,7 @@ JobQueue 的任务投递、原子
 <<< END U008304 >>>
 <<< UNIT U008305 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:147-149 | ctx=实例身份、定位与发现 >>>
 同一进程内的
-轮询器异常重启并以原 `peer_id` 重新取得有效租约时，则允许经 Registry 确认的新 `ready` 状态覆盖本地
+轮询器异常重启并以原 `peer_id` 重新获取有效租约时，则允许通过 Registry 确认的新 `ready` 状态覆盖本地
 `stopped` 缓存。
 <<< END U008305 >>>
 <<< UNIT U008306 | md-heading | packages/akari-bot-core/akaribot/core/queue/README.md:151-151 | ctx=WebSocket Hub 部署 >>>
@@ -1736,7 +1736,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 - 调用方取消等待时会调用后端的 `abandon()` 尽力清理本地及尚可撤销的传输状态，但不保证撤销已经开始的
 <<< END U008364 >>>
 <<< UNIT U008365 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:383-383 | ctx=错误、超时与关闭语义 >>>
-  远端副作用。远端处理仍受该请求自身 deadline 的约束，其最终完成状态可能无法再由调用方取得。
+  远端副作用。远端处理仍受该请求自身 deadline 的约束，其最终完成状态可能无法再由调用方获取。
 <<< END U008365 >>>
 <<< UNIT U008366 | md-list | packages/akari-bot-core/akaribot/core/queue/README.md:384-384 | ctx=错误、超时与关闭语义 >>>
 - 投递操作可能在后端已经接受消息后才报告取消或连接异常。等待型调用在此情况下按“投递结果未知”处理，
@@ -1902,7 +1902,7 @@ JobQueue 后端组合与配置工厂。
 平台进程 RPC 消费者及其生命周期。
 <<< END U008412 >>>
 <<< UNIT U008413 | py-docstring | packages/akari-bot-core/akaribot/core/queue/client.py:46-46 | ctx=post_message >>>
-主动消息未取得消息 ID 时，将剩余下一跳交回服务端。
+主动消息未获取消息 ID 时，将剩余下一跳交回服务端。
 <<< END U008413 >>>
 <<< UNIT U008414 | py-docstring | packages/akari-bot-core/akaribot/core/queue/client.py:69-69 | ctx=send_private_msg >>>
 保留私信发送失败返回空列表的领域约定。
@@ -1999,7 +1999,7 @@ JobQueue 的数据库后端实现。
 单个进程的内存占用。``memory`` 为字节，``metric`` 说明统计方式。
 <<< END U008444 >>>
 <<< UNIT U008445 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:40-40 | ctx=ProcessUnavailable >>>
-未能取得内存占用的进程及其原因。
+未能获取内存占用的进程及其原因。
 <<< END U008445 >>>
 <<< UNIT U008446 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:47-47 | ctx=collect_self_usage >>>
 采集当前进程的内存指标。``uss`` 不可得时不写入该键，由调用方改用 ``rss``。
@@ -2122,8 +2122,8 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 参与运行时依赖图的包名前缀。其余 Requires-Dist 是普通 PyPI 依赖，由安装器负责解析。
 <<< END U008483 >>>
 <<< UNIT U008484 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:64-66 >>>
-# 不能在模块层导入 core.logger，因为 core.logger 会经 core.config.base 引入整个配置系统，
-# 而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
+# 不能在模块层导入 core.logger，因为 core.logger 会通过 core.config.base 引入整个配置系统，
+# 而配置系统在导入阶段校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
 # （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要记录日志时。
 <<< END U008484 >>>
 <<< UNIT U008485 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:73-73 >>>
@@ -2196,7 +2196,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 <<< END U008503 >>>
 <<< UNIT U008504 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:916-917 >>>
 # 级联剔除，因为依赖一个已被拒绝的包与依赖一个未安装的包同样注定失败，只按 metadata 判断会让
-# 依赖方以“依赖已安装”为由留下，最终在导入期抛出与配置无关的错误。逐个剔除至不动点。
+# 依赖方以“依赖已安装”为由留下，最终在导入阶段抛出与配置无关的错误。反复剔除直到不再变化。
 <<< END U008504 >>>
 <<< UNIT U008505 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:940-940 >>>
 # 它可能仍安装在环境里，但不会完成注册。
@@ -2242,7 +2242,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 全部包，键为 ``种类:包名``。
 <<< END U008516 >>>
 <<< UNIT U008517 | py-comment | packages/akari-bot-core/akaribot/core/scheduler.py:124-125 >>>
-# maintenance 先关闭入口，再取得本锁作为提交屏障。已经 submit 但尚未
+# maintenance 先关闭入口，再获取本锁作为提交屏障。已经提交但尚未
 # 开始执行业务函数的 coroutine 会在此检测关闭状态并退出。
 <<< END U008517 >>>
 <<< UNIT U008518 | py-comment | packages/akari-bot-core/akaribot/core/scheduler.py:320-320 >>>

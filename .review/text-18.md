@@ -184,7 +184,7 @@
 ## 命令
 <<< END U011226 >>>
 <<< UNIT U011227 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:13-13 | ctx=`convert` >>>
-此命令用于把带单位的数值转换为目标单位。`<from_val>` 中数值和单位连写，`<to_unit>` 只写单位。例如 `convert 100km m`。
+此命令用于把带单位的数值转换为目标单位。`<from_val>` 中数值和单位连写，`<to_unit>` 只填写单位。例如 `convert 100km m`。
 <<< END U011227 >>>
 <<< UNIT U011228 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:15-15 | ctx=`convert` >>>
 表达式与单位名称都按单位库的规则解析，区分大小写，`km` 与 `KM` 含义不同。表达式无法解析、量纲不匹配或单位无法识别时，统一返回转换失败提示。
@@ -253,7 +253,7 @@ Cytoid 用户绑定信息。
 | `module_cytoid_bind_info` | 发送者 Union ID（主键）与绑定的 Cytoid 用户名 |
 <<< END U011246 >>>
 <<< UNIT U011247 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:31-31 | ctx=数据表 >>>
-版本迁移 `0002_union_id` 把绑定表的主键列改名为 `union_id`，沿用原平台 ID 的值。manifest 声明了 `migrations` 目录，升级时自动执行其中的迁移。
+版本迁移 `0002_union_id` 把绑定表的主键列重命名为 `union_id`，沿用原平台 ID 的值。manifest 声明了 `migrations` 目录，升级时自动执行其中的迁移。
 <<< END U011247 >>>
 <<< UNIT U011248 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:33-33 | ctx=依赖与外部服务 >>>
 ## 依赖与外部服务
@@ -366,7 +366,7 @@ Cytoid 用户绑定信息。
 # 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
 <<< END U011277 >>>
 <<< UNIT U011278 | py-docstring | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/migrations/0002_union_id.py:16-20 | ctx=upgrade >>>
-把绑定表主键列改名为 union_id。
+把绑定表主键列重命名为 union_id。
 
 :param ctx: 迁移上下文。
 <<< END U011278 >>>
@@ -461,7 +461,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `D%` | 1 枚百分骰，等价于 `D100` | `D%=42` |
 <<< END U011304 >>>
 <<< UNIT U011305 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:21-21 | ctx=标准骰 XdY >>>
-只写 `D` 或 `nD` 时使用当前会话的默认面数，该值由 `dice set` 设置。未设置时这类表达式报错。解析时会填入默认面数，输出里的表达式带有面数，如 `D20=17`。
+只填写 `D` 或 `nD` 时使用当前会话的默认面数，该值由 `dice set` 设置。未设置时这类表达式报错。解析时会填入默认面数，输出里的表达式带有面数，如 `D20=17`。
 <<< END U011305 >>>
 <<< UNIT U011306 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:23-23 | ctx=优劣势骰 XdYKn 与 XdYQn >>>
 ## 优劣势骰 XdYKn 与 XdYQn
@@ -1282,7 +1282,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 命令
 <<< END U011544 >>>
 <<< UNIT U011545 | md-paragraph | packages/modules/akari-bot-module-idlist/akaribot/modules/idlist/docs/index.md:11-11 | ctx=`idlist` >>>
-按关键词查询 ID 表。每条结果显示为“枚举名：键 -> 值”，值只取首行。单次最多展示 5 条。命中总数超过 5 条时，再给出折叠提示与完整结果页链接。无命中时返回未找到提示。
+按关键词查询 ID 表。每条结果显示为“枚举名：键 -> 值”，值只截取首行。单次最多展示 5 条。命中总数超过 5 条时，再给出折叠提示与完整结果页链接。无命中时返回未找到提示。
 <<< END U011545 >>>
 <<< UNIT U011546 | md-paragraph | packages/modules/akari-bot-module-idlist/akaribot/modules/idlist/docs/index.md:14-20 | ctx=`idlist` >>>
   :log="[
@@ -2202,10 +2202,10 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 新曲版本标识的缓存时长（秒）。
 <<< END U011786 >>>
 <<< UNIT U011787 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:184-184 >>>
-# 该端点把玩家名记在 `username` 下，与 OAuth 端点的 `nickname` 不同。
+# 该端点把玩家名记录在 `username` 字段下，与 OAuth 端点的 `nickname` 不同。
 <<< END U011787 >>>
 <<< UNIT U011788 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:210-210 >>>
-# 按用户名查到的成绩属于他人，与这位用户自己写在缓存里的成绩并非同一份，故不读写缓存。
+# 按用户名查到的成绩属于他人，与这位用户自己保存在缓存里的成绩并非同一份，故不读写缓存。
 <<< END U011788 >>>
 <<< UNIT U011789 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:213-213 >>>
 # 查询绑定账号必须要有 OAuth 应用。按用户名查询走的是公开端点，不需要授权。
@@ -2247,7 +2247,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 绿
 <<< END U011801 >>>
 <<< UNIT U011802 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:13-13 >>>
-# 授权服务器根地址。端点路径直接写在下面，不读取发现文档。
+# 授权服务器根地址。端点路径直接定义在下面，不读取发现文档。
 <<< END U011802 >>>
 <<< UNIT U011803 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:25-25 >>>
 # 控制台把应用设为机密客户端时会另外生成 client_secret，配置里填了它就说明该应用属于这一形态。
@@ -2306,7 +2306,7 @@ refresh token 已失效，可能是用户撤销了授权，或令牌链因并发
 # 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
 <<< END U011820 >>>
 <<< UNIT U011821 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_apidata.py:31-32 >>>
-# 落雪把标准与 DX 谱面记在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换时在这个
+# 落雪把标准与 DX 谱面记录在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换时在这个
 # 偏移量上加减即可。宴会场曲目（ID 大于等于 100000）不分谱面类型，不参与换算。
 <<< END U011821 >>>
 <<< UNIT U011822 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_apidata.py:36-36 >>>
@@ -2343,7 +2343,7 @@ refresh token 已失效，可能是用户撤销了授权，或令牌链因并发
 # 401 表示令牌无效、已过期，或 Authorization 头格式有误，刷新一次后重试。
 <<< END U011831 >>>
 <<< UNIT U011832 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_oauth.py:327-327 >>>
-# 令牌里的 `sub` 仅作显示账号的备用来源，落雪侧不写入数据库（落雪靠 refresh token 自行轮换）。
+# 令牌里的 `sub` 仅作显示账号的备用来源，落雪端不写入数据库（落雪通过 refresh token 自行轮换）。
 <<< END U011832 >>>
 <<< UNIT U011833 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_oauth.py:329-329 >>>
 # 令牌已获取，且同一授权码无法再次换取，须先写入磁盘再执行其他操作。
@@ -3141,7 +3141,7 @@ API 数据源已切换为${source}。
 # 查重用的登录信息字段，对应舞萌查分服务密钥与令牌。
 <<< END U012088 >>>
 <<< UNIT U012089 | py-docstring | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/migrations/0002_union_id.py:17-21 | ctx=upgrade >>>
-把两张查分绑定表的主键列改名为 union_id。
+把两张查分绑定表的主键列重命名为 union_id。
 
 :param ctx: 迁移上下文。
 <<< END U012089 >>>
@@ -3241,7 +3241,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 按 Mod 内容检索百科条目。`<content>` 接受物品、方块或实体的 ID 或准确名称。
 <<< END U012120 >>>
 <<< UNIT U012121 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/index.md:19-19 | ctx=`mcmod details` >>>
-两条命令都依赖 WebRender 抓取页面，结果只取第一条，输出名称、链接与简介。未启用 WebRender、页面为空或没有匹配条目时，都返回未找到结果。
+两条命令都依赖 WebRender 抓取页面，结果只选取第一条，输出名称、链接与简介。未启用 WebRender、页面为空或没有匹配条目时，都返回未找到结果。
 <<< END U012121 >>>
 <<< UNIT U012122 | json-value | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/locales/zh_cn.json:2-2 | ctx=mcmod.help.desc >>>
 从 MC 百科获取 Minecraft Mod 信息。

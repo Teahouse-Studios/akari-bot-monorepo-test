@@ -223,7 +223,7 @@
 `pyproject.toml` 声明依赖和入口，`manifest.toml` 声明清单字段。
 <<< END U007432 >>>
 <<< UNIT U007433 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:212-212 | ctx=包结构与清单 >>>
-示例只写包名。实际的版本范围从包目录下的 `pyproject.toml` 的 `dependencies` 读取，文档不重复具体约束。
+示例只列出包名。实际的版本范围从包目录下的 `pyproject.toml` 的 `dependencies` 读取，文档不重复具体约束。
 <<< END U007433 >>>
 <<< UNIT U007434 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:214-214 | ctx=包结构与清单 >>>
 清单字段如下：
@@ -477,7 +477,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 ## 配置、数据库与本地化
 <<< END U007505 >>>
 <<< UNIT U007506 | md-list | packages/akari-bot-core/akaribot/core/docs/module-development.md:567-569 | ctx=配置、数据库与本地化 >>>
-- 配置在 `config.py` 中用 `@on_module_config("<模块>")` 声明，表名为 `module_<模块>`。配置注释写在 `config.comments.module_<模块>.<字段名>` 下。详见[配置](config.md)。
+- 配置在 `config.py` 中用 `@on_module_config("<模块>")` 声明，表名为 `module_<模块>`。配置注释保存在 `config.comments.module_<模块>.<字段名>` 下。详见[配置](config.md)。
 - 模型放在 `database/models.py`，继承 `DBModel`，表名在 `Meta.table` 声明。新增表要写入 `owned_tables`。结构变更用 `migrations/` 下的脚本完成。详见[数据库](database.md)。
 - 文案一律用 `I18NContext("key", **参数)`，并且只在包内 `locales/zh_cn.json` 中创建对应条目。详见[本地化](i18n.md)。
 <<< END U007506 >>>
@@ -626,7 +626,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 | `~auth list <user>` | 列出该用户持有的模块授权 |
 <<< END U007545 >>>
 <<< UNIT U007546 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/permissions.md:91-91 | ctx=模块授权 >>>
-授权记录写在 `SenderUnionInfo.sender_data["module_auth"]`，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块。授权时可以用模块别名代替模块名。
+授权记录保存在 `SenderUnionInfo.sender_data["module_auth"]` 中，每项包含模块名与授权者 ID。授权只对声明了 `required_superuser` 的模块有效，`auth add` 会拒绝其他模块。授权时可以用模块别名代替模块名。
 <<< END U007546 >>>
 <<< UNIT U007547 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/permissions.md:93-93 | ctx=模块授权 >>>
 授权者不再是超级用户时，其给出的授权自动失效。
@@ -995,7 +995,7 @@ Hook 可以返回：
 删除用户层里的键。删除后，该键回退到全局默认值。
 <<< END U007658 >>>
 <<< UNIT U007659 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:257-257 | ctx=`edit_write()`、`edit_delete()` >>>
-交互式编辑写入与删除。只在明确授权的范围内使用，供 `~config` 与启动期密钥自举调用。
+交互式编辑写入与删除。只在明确授权的范围内使用，供 `~config` 与启动阶段密钥初始化调用。
 <<< END U007659 >>>
 <<< UNIT U007660 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:259-259 | ctx=`edit_write()`、`edit_delete()` >>>
 `CoreConfig`、`BaseConfig` 与 `CoreSecretConfig` 是配置模板类。`on_module_config()` 与 `on_bot_config()` 用来声明模块配置与适配器配置。
@@ -1401,7 +1401,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 配置注释的键前缀，与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
 <<< END U007773 >>>
 <<< UNIT U007774 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:35-35 >>>
-# 入口以子进程运行，builtins 包本身不自举，读任何配置表之前先加载（含版本迁移），重复调用无副作用。
+# 入口以子进程运行，builtins 包本身不自动初始化，读取任何配置表之前先加载（含版本迁移），重复调用无副作用。
 <<< END U007774 >>>
 <<< UNIT U007775 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:83-83 >>>
 # 各适配器的 enable 共用一条注释，与配置写入路径的键查找规则一致。
@@ -1639,7 +1639,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 一次性 RPC 调用方。只发送一次请求，不绑定任何远端处理器。
 <<< END U007849 >>>
 <<< UNIT U007850 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/peers.py:18-18 >>>
-# 导入本身就可能在实例配置缺失时抛出异常（core 的配置在导入期加载），故一并纳入降级路径。
+# 导入本身就可能在实例配置缺失时抛出异常（core 的配置在导入阶段加载），故一并纳入降级路径。
 <<< END U007850 >>>
 <<< UNIT U007851 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/peers.py:24-24 >>>
 # noqa: BLE001 - 数据库不可用属可降级状态

@@ -306,7 +306,7 @@
 提供带有随机 UUID 文件名的缓存路径。
 <<< END U008648 >>>
 <<< UNIT U008649 | py-comment | packages/akari-bot-core/akaribot/core/utils/container.py:59-60 >>>
-# 这里仅存弱引用，因为记录表只为定期清理服务；若持强引用，任何已记录的容器都永远无法被回收，
+# 这里仅存弱引用，因为记录表只为定期清理服务。若持强引用，任何已记录的容器都永远无法被回收，
 # 冷却、绑定码这类按“场景 × 键”不断新建的容器会让它无上限增长。
 <<< END U008649 >>>
 <<< UNIT U008650 | py-comment | packages/akari-bot-core/akaribot/core/utils/container.py:147-147 >>>
@@ -392,7 +392,7 @@
 # 对于 whole_target，返回 channel_key -> key 的结构。
 <<< END U008675 >>>
 <<< UNIT U008676 | py-comment | packages/akari-bot-core/akaribot/core/utils/cooldown.py:34-34 >>>
-# 这些容器嵌在 _cd_dict 之下，清理由根容器递归下来，不必各自记为根项
+# 这些容器嵌在 _cd_dict 之下，清理由根容器递归下来，不必各自记录为根项
 <<< END U008676 >>>
 <<< UNIT U008677 | py-comment | packages/akari-bot-core/akaribot/core/utils/cooldown.py:46-47 >>>
 # 与 :meth:`_get_cd_dict` 不同，这里不创建缺失的层级，故能区分“从未使用过”与“冷却已结束”。
@@ -741,7 +741,7 @@
 # 加载已发送公告的场景记录，首次调用时从存储读入并转为字典。
 <<< END U008768 >>>
 <<< UNIT U008769 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:190-190 >>>
-# 等锁期间可能已由另一协程完成加载，取得锁后须重新确认。
+# 等锁期间可能已由另一协程完成加载，获取锁后须重新确认。
 <<< END U008769 >>>
 <<< UNIT U008770 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:234-235 >>>
 # 内存态是后续排队判断的数据来源。持久化失败时若不回滚，本进程会误以为已经投递，
@@ -765,7 +765,7 @@
 只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写
 ``"Telegram-alt -> QQBot"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。
 
-只写源时目标为 None，表示该客户端退役但不提供迁移目标。格式错误的项一律跳过并记录警告，
+只填写源客户端时目标为 None，表示该客户端退役但不提供迁移目标。格式错误的项一律跳过并记录警告，
 不使解析失败，因为退役属于运营配置，一处笔误不应阻断整个实例的启动。
 
 :param entries: 配置中的原始条目。
@@ -827,7 +827,7 @@
 # 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未安装时只在构造处抛出。
 <<< END U008786 >>>
 <<< UNIT U008787 | py-comment | packages/akari-bot-core/akaribot/core/utils/s3.py:38-38 >>>
-# 默认可不安装 boto3（extra ``s3``），故导入期不引入。只有真正创建客户端时才需要。
+# 默认可不安装 boto3（extra ``s3``），故导入阶段不引入。只有真正创建客户端时才需要。
 <<< END U008787 >>>
 <<< UNIT U008788 | py-comment | packages/akari-bot-core/akaribot/core/utils/s3.py:49-49 >>>
 # 只在异常冒泡到处理分支时求值，那时客户端已创建完成，botocore 必然可以导入。
@@ -1032,7 +1032,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 领取花苞，返回 ``(状态, 花苞, 领取数量)``。
 <<< END U008851 >>>
 <<< UNIT U008852 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:24-25 >>>
-# 下面几个名字没有纳入 core.api。表名工具是否成为第三方公开接口待 P5 复核；日志路径常量只是兼容入口，
+# 下面几个名字没有纳入 core.api。表名工具是否成为第三方公开接口待 P5 复核。日志路径常量只是兼容入口，
 # 计划在阶段 4 删除，纳入公开接口会把待删除的名字写入稳定接口清单。
 <<< END U008852 >>>
 <<< UNIT U008853 | py-inline-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:29-29 >>>
@@ -1044,10 +1044,10 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 可点击的标签自带视觉边界，仅降级后的命令原文才需要它
 <<< END U008854 >>>
 <<< UNIT U008855 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:120-120 >>>
-# 平台仅在消息实际投递成功时返回消息 ID，未取得即表示该条私信未送达。
+# 平台仅在消息实际投递成功时返回消息 ID，未获取即表示该条私信未送达。
 <<< END U008855 >>>
 <<< UNIT U008856 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:156-156 >>>
-# 文件内容自带这几项，日志文件即便被改名或移走仍可辨认。
+# 文件内容自带这几项，日志文件即便被重命名或移走仍可辨认。
 <<< END U008856 >>>
 <<< UNIT U008857 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:164-165 >>>
 # 时间置于文件名开头，目录按名称排序即为时间顺序。微秒一并带上，同一秒内的两次合并不会重名。
@@ -1187,7 +1187,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008887 >>>
 <<< UNIT U008888 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:328-329 >>>
 # 绑定码的生成与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，
-# 会把一个群的数据合并到对方的私聊；群码在私聊里兑换同理。
+# 会把一个群的数据合并到对方的私聊，群码在私聊里兑换同理。
 <<< END U008888 >>>
 <<< UNIT U008889 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:336-336 >>>
 # 场景组绑定会改动整个场景的数据，与 bind start 一样需要管理员权限。
@@ -1209,7 +1209,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # probe 口令既已过期，由它换来的 confirm 口令不应继续有效。
 <<< END U008894 >>>
 <<< UNIT U008895 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:458-459 >>>
-# 口令在场景中以明文出现，任何人都能原样复制，故认领是一次性的，一经认领即作废；其后携带
+# 口令在场景中以明文出现，任何人都能原样复制，故认领是一次性的，一经认领即作废。其后携带
 # 同一串口令的消息一律丢弃，否则复制该命令的用户会被当成对端机器人，其发言将被忽略。
 <<< END U008895 >>>
 <<< UNIT U008896 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:464-464 >>>
@@ -1224,7 +1224,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 自身这一轮口令更小，由对方响应本轮即可，不再应答对方。
 <<< END U008898 >>>
 <<< UNIT U008899 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:484-484 >>>
-# 自身这一轮已被对方认领并等待闭合，无须再另起一轮。
+# 自身这一轮已被对方认领并等待闭合，无须再发起新一轮。
 <<< END U008899 >>>
 <<< UNIT U008900 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:490-490 >>>
 # 避让过程中已交出控制权，其间该口令可能已被另一个机器人认领，认领前须再确认一次。
@@ -1247,7 +1247,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 统一消息通道编号（命令与推送去重），并互相记录对方的机器人账号（屏蔽对方发出的消息）。
 <<< END U008904 >>>
 <<< UNIT U008905 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:563-563 >>>
-# 取得锁之后再读取组信息，因为若先读取再加锁，读到的仍是并发方修改前的数据，加锁将失去意义。
+# 获取锁之后再读取组信息，因为若先读取再加锁，读到的仍是并发方修改前的数据，加锁将失去意义。
 <<< END U008905 >>>
 <<< UNIT U008906 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:578-578 >>>
 # 另一轮握手已完成同样的处理，无需重复向管理员确认，也无需重复写入数据库。
@@ -1399,7 +1399,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008938 >>>
 <<< UNIT U008939 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:185-186 >>>
 # 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作命令路径会被 bind token 抢先匹配
-# （``<code>`` 匹配并消耗 "merge"），源平台便不再避让。用户侧命令不变，经别名映射到这里。
+# （``<code>`` 匹配并消耗 "merge"），源平台便不再避让。用户端命令不变，通过别名映射到这里。
 <<< END U008939 >>>
 <<< UNIT U008940 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:199-200 >>>
 # 迁移码只能在其所属迁移关系的目标平台兑换。命令级 available_for 只能表明本平台是
@@ -1407,7 +1407,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008940 >>>
 <<< UNIT U008941 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:204-205 >>>
 # 迁移码的签发与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，
-# 会把一段私聊的数据合并到群场景；群码在私聊里兑换同理。
+# 会把一段私聊的数据合并到群场景，群码在私聊里兑换同理。
 <<< END U008941 >>>
 <<< UNIT U008942 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:212-212 >>>
 # 场景迁移会改动整个场景的数据，与签发迁移码时一样需要管理员权限。

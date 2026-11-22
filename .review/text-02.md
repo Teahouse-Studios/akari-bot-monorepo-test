@@ -658,7 +658,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 Discord 按钮组件构建。
 <<< END U000500 >>>
 <<< UNIT U000501 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/buttons.py:22-22 | ctx=DiscordButton >>>
-将点击委托给适配器入口的按钮。
+将点击事件交由适配器入口处理的按钮。
 <<< END U000501 >>>
 <<< UNIT U000502 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/buttons.py:78-78 | ctx=DiscordActionTextButton >>>
 点击后打开预填命令 Modal 的 ActionText 按钮。
@@ -691,7 +691,7 @@ ActionText 较多时使用下拉菜单节省组件行。
 # 私聊不存在服务器成员与频道权限对象，不能先访问 channel.guild 或 permissions_for。
 <<< END U000511 >>>
 <<< UNIT U000512 | py-comment | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:82-82 >>>
-# Raw Reaction 在成员缓存缺失时只能先取得 User。频道权限计算需要完整 Member。
+# Raw Reaction 在成员缓存缺失时只能先获取 User。频道权限计算需要完整 Member。
 <<< END U000512 >>>
 <<< UNIT U000513 | py-comment | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:223-223 >>>
 # 私信频道须先创建才会生成 ID，对方关闭私信时 create_dm 会抛出 Forbidden
@@ -706,7 +706,7 @@ ActionText 较多时使用下拉菜单节省组件行。
 Raw reaction 事件恢复出的最小平台上下文。
 <<< END U000516 >>>
 <<< UNIT U000517 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:29-29 | ctx=resolve_discord_reference >>>
-取得 Discord 普通消息或交互所引用的平台消息。
+获取 Discord 普通消息或交互所引用的平台消息。
 <<< END U000517 >>>
 <<< UNIT U000518 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:549-549 | ctx=DiscordContextManager.shutdown >>>
 释放当前 Discord 上下文管理器持有的输入状态任务。
@@ -739,10 +739,10 @@ Discord 适配器以机器人身份连接 Discord，接收服务器频道消息�
 ## 配置
 <<< END U000527 >>>
 <<< UNIT U000528 | md-paragraph | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_discord`，密钥表为 `bot_discord_secret`。两张表都写在 `config/bot_discord.toml`。
+配置表为 `bot_discord`，密钥表为 `bot_discord_secret`。两张表都保存在 `config/bot_discord.toml` 中。
 <<< END U000528 >>>
 <<< UNIT U000529 | md-paragraph | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/docs/index.md:25-25 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add discord <实例 ID>` 新增实例。实例表名为 `bot_discord-<实例 ID>`，密钥表名为 `bot_discord-<实例 ID>_secret`。两张表都写在 `config/bot_discord-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add discord <实例 ID>` 新增实例。实例表名为 `bot_discord-<实例 ID>`，密钥表名为 `bot_discord-<实例 ID>_secret`。两张表都保存在 `config/bot_discord-<实例 ID>.toml` 中。
 <<< END U000529 >>>
 <<< UNIT U000530 | md-table | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/docs/index.md:27-29 | ctx=配置 >>>
 | 字段 | 类型 | 默认值 | 说明 |
@@ -781,7 +781,7 @@ Discord 适配器以机器人身份连接 Discord，接收服务器频道消息�
 | 引用回复 | 支持 | 保留被回复消息的 ID。 |
 | 输入状态 | 支持 | 处理期间显示正在输入。 |
 | 消息撤回 | 支持 | 按消息 ID 删除。 |
-| 群组管理 | 支持 | 含禁言、踢出与封禁。 |
+| 群组管理 | 支持 | 包含禁言、踢出与封禁。 |
 | 权限组 | 支持 | — |
 | 消息节点 | 不支持 | — |
 | 私信 | 支持 | 私信会话标记为私密。 |
@@ -811,7 +811,7 @@ Discord 适配器以机器人身份连接 Discord，接收服务器频道消息�
 将 Discord 服务器成员离开通知转换为核心事件。
 <<< END U000543 >>>
 <<< UNIT U000544 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/interactions.py:1-1 | ctx=<module> >>>
-Discord 按钮点击回流。
+Discord 按钮点击回调处理。
 <<< END U000544 >>>
 <<< UNIT U000545 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/interactions.py:22-22 | ctx=DiscordActionTextContext >>>
 保留 Modal 操作用户，并按需携带原消息引用。
@@ -886,7 +886,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 被查询的成员可能已不在服务器中，平台查不到成员记录时会直接报错，按无权限处理。
 <<< END U000567 >>>
 <<< UNIT U000568 | py-comment | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/context.py:333-333 >>>
-# KOOK 的私聊场景以用户为频道，get_channel 据此取得 User 对象
+# KOOK 的私聊场景以用户为频道，get_channel 据此获取 User 对象
 <<< END U000568 >>>
 <<< UNIT U000569 | py-comment | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/context.py:341-341 >>>
 # 接口未返回 msg_id 时上游会填入空字符串，此处过滤以免将失败判定为成功
@@ -895,7 +895,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 KOOK Reaction 事件中执行回复与删除所需的平台字段。
 <<< END U000570 >>>
 <<< UNIT U000571 | py-docstring | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/context.py:70-70 | ctx=get_guild >>>
-从 KOOK 频道会话或服务器事件会话取得 Guild。
+从 KOOK 频道会话或服务器事件会话获取 Guild。
 <<< END U000571 >>>
 <<< UNIT U000572 | md-heading | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/docs/index.md:1-1 | ctx=KOOK 适配器 >>>
 # KOOK 适配器
@@ -925,10 +925,10 @@ KOOK 适配器以机器人身份连接 KOOK 开放平台，接入服务器频道
 ## 配置
 <<< END U000580 >>>
 <<< UNIT U000581 | md-paragraph | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_kook`，密钥表为 `bot_kook_secret`。两张表都写在 `config/bot_kook.toml`。
+配置表为 `bot_kook`，密钥表为 `bot_kook_secret`。两张表都保存在 `config/bot_kook.toml` 中。
 <<< END U000581 >>>
 <<< UNIT U000582 | md-paragraph | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/docs/index.md:25-25 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`。两张表都写在 `config/bot_kook-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`。两张表都保存在 `config/bot_kook-<实例 ID>.toml` 中。
 <<< END U000582 >>>
 <<< UNIT U000583 | md-table | packages/adapters/akari-bot-adapter-kook/akaribot/adapters/kook/docs/index.md:27-29 | ctx=配置 >>>
 | 字段 | 类型 | 默认值 | 说明 |
@@ -1065,7 +1065,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 本文整理了 Matrix 适配器的配置表项与填写时的注意事项。
 <<< END U000617 >>>
 <<< UNIT U000618 | md-paragraph | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/config.md:5-5 | ctx=Matrix 配置项 >>>
-配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都写在 `config/bot_matrix.toml`。普通项写在 `[bot_matrix]`，密钥项写在 `[bot_matrix_secret]`。
+配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都保存在 `config/bot_matrix.toml` 中，普通项配置在 `[bot_matrix]`，密钥项配置在 `[bot_matrix_secret]`。
 <<< END U000618 >>>
 <<< UNIT U000619 | md-heading | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/config.md:7-7 | ctx=配置表 `bot_matrix` >>>
 ## 配置表 `bot_matrix`
@@ -1125,10 +1125,10 @@ Matrix 适配器以机器人账号登录 Matrix 主服务器（Homeserver），�
 ## 配置
 <<< END U000633 >>>
 <<< UNIT U000634 | md-paragraph | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/index.md:23-23 | ctx=配置 >>>
-配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都写在 `config/bot_matrix.toml`。
+配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都保存在 `config/bot_matrix.toml` 中。
 <<< END U000634 >>>
 <<< UNIT U000635 | md-paragraph | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/index.md:25-25 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表都写在 `config/bot_matrix-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表都保存在 `config/bot_matrix-<实例 ID>.toml` 中。
 <<< END U000635 >>>
 <<< UNIT U000636 | md-paragraph | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/index.md:27-27 | ctx=配置 >>>
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
@@ -1163,11 +1163,11 @@ Matrix 适配器以机器人账号登录 Matrix 主服务器（Homeserver），�
 | 表情回应 | 支持 | `m.reaction` 触发命令处理。 |
 | 引用回复 | 支持 | 支持富回复与线程根消息。 |
 | 输入状态 | 不支持 | — |
-| 消息撤回 | 支持 | 通过 redact 删除消息。 |
+| 消息撤回 | 支持 | 通过撤回接口（redact）删除消息。 |
 | 群组管理 | 不支持 | — |
 | 权限组 | 不支持 | — |
 | 消息节点 | 不支持 | — |
-| 私信 | 支持 | 私信通过仅含双方的房间发送。 |
+| 私信 | 支持 | 私信通过仅包含双方的房间发送。 |
 | RSS 推送 | 支持 | — |
 <<< END U000641 >>>
 <<< UNIT U000642 | md-heading | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/docs/index.md:61-61 | ctx=私信与群聊 >>>
@@ -1248,7 +1248,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 用户在新平台上的身份，把一次合理的清退变成误封。
 <<< END U000664 >>>
 <<< UNIT U000665 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/bot.py:43-43 >>>
-# 事件流断开后的重连间隔，避免协议端未就绪时形成空转
+# 事件流断开后的重连间隔，避免协议端未就绪时频繁空轮询
 <<< END U000665 >>>
 <<< UNIT U000666 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/bot.py:181-181 >>>
 # 消息以 @ 他人开头时视为与机器人无关
@@ -1263,7 +1263,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # Milky SDK 未提供删除好友接口，无法像 OneBot 一样同时解除好友关系
 <<< END U000669 >>>
 <<< UNIT U000670 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/bot.py:330-330 >>>
-# 自主退群或协议端未提供操作者时无法归因，不视为不友好行为
+# 自主退群或协议端未提供操作者时无法确定责任人，不视为不友好行为
 <<< END U000670 >>>
 <<< UNIT U000671 | py-docstring | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/bot.py:162-162 | ctx=message_handler >>>
 处理消息接收事件。
@@ -1303,7 +1303,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # Milky 仅支持群聊消息表情回应，且 SDK 固定以 `face` 类型发送回应
 <<< END U000682 >>>
 <<< UNIT U000683 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/context.py:549-550 >>>
-# 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本次发送是否送达，
+# 主动消息须按冷却排队发出，但调用方需要获取真实的消息 ID 才能判断本次发送是否送达，
 # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
 <<< END U000683 >>>
 <<< UNIT U000684 | py-docstring | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/context.py:44-44 | ctx=MilkyContextManager.shutdown >>>
@@ -1328,7 +1328,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 本文整理了 Milky 适配器的配置项，以及填写时的注意事项。
 <<< END U000690 >>>
 <<< UNIT U000691 | md-paragraph | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/config.md:5-5 | ctx=Milky 配置项 >>>
-配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都写在 `config/bot_milky.toml`。普通项写在 `[bot_milky]`，密钥项写在 `[bot_milky_secret]`。
+配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都保存在 `config/bot_milky.toml` 中，普通项配置在 `[bot_milky]`，密钥项配置在 `[bot_milky_secret]`。
 <<< END U000691 >>>
 <<< UNIT U000692 | md-heading | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/config.md:7-7 | ctx=配置表 `bot_milky` >>>
 ## 配置表 `bot_milky`
@@ -1342,8 +1342,8 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `qq_enable_temp_session` | bool | `true` | 是否开启临时会话。 |
 | `qq_allow_approve_friend` | bool | `false` | 是否自动同意好友请求。 |
 | `qq_allow_approve_group_invite` | bool | `false` | 是否自动同意群邀请。 |
-| `qq_typing_emoji` | int | `181` | 正在处理消息时挂载的回应表情 ID，需协议端支持。 |
-| `qq_limited_emoji` | int | `10060` | 消息处理失败时挂载的回应表情 ID，需协议端支持。 |
+| `qq_typing_emoji` | int | `181` | 正在处理消息时添加的回应表情 ID，需协议端支持。 |
+| `qq_limited_emoji` | int | `10060` | 消息处理失败时添加的回应表情 ID，需协议端支持。 |
 | `qq_initiative_msg_cooldown` | int | `10` | 主动消息发送的冷却时间，单位为秒。 |
 <<< END U000693 >>>
 <<< UNIT U000694 | md-heading | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/config.md:21-21 | ctx=密钥表 `bot_milky_secret` >>>
@@ -1386,10 +1386,10 @@ Milky 适配器通过 Milky 协议端连接 QQ，接入群聊和私信。好友�
 ## 配置
 <<< END U000705 >>>
 <<< UNIT U000706 | md-paragraph | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/index.md:21-21 | ctx=配置 >>>
-配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都写在 `config/bot_milky.toml`。
+配置表为 `bot_milky`，密钥表为 `bot_milky_secret`。两张表都保存在 `config/bot_milky.toml` 中。
 <<< END U000706 >>>
 <<< UNIT U000707 | md-paragraph | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/index.md:23-23 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add milky <实例 ID>` 新增实例。实例表名为 `bot_milky-<实例 ID>`，密钥表名为 `bot_milky-<实例 ID>_secret`。两张表都写在 `config/bot_milky-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add milky <实例 ID>` 新增实例。实例表名为 `bot_milky-<实例 ID>`，密钥表名为 `bot_milky-<实例 ID>_secret`。两张表都保存在 `config/bot_milky-<实例 ID>.toml` 中。
 <<< END U000707 >>>
 <<< UNIT U000708 | md-paragraph | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/docs/index.md:25-25 | ctx=配置 >>>
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
@@ -1427,9 +1427,9 @@ Milky 适配器通过 Milky 协议端连接 QQ，接入群聊和私信。好友�
 | 按钮与动作文本 | 不支持 | — |
 | 表情回应 | 支持 | 仅群聊可用。 |
 | 引用回复 | 支持 | — |
-| 输入状态 | 支持 | 通过挂载回应表情表示正在处理。 |
+| 输入状态 | 支持 | 通过添加回应表情表示正在处理。 |
 | 消息撤回 | 支持 | 群聊与私信均可撤回。 |
-| 群组管理 | 支持 | 含禁言、踢出与管理员设置。 |
+| 群组管理 | 支持 | 包含禁言、踢出与管理员设置。 |
 | 权限组 | 支持 | — |
 | 消息节点 | 支持 | 合并转发按消息节点处理。 |
 | 私信 | 支持 | — |
@@ -1543,10 +1543,10 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的约定。
 <<< END U000747 >>>
 <<< UNIT U000748 | py-comment | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/context.py:425-425 >>>
-# 显式指定基类，因为主动消息所用的子类会将发送放入冷却队列并返回 None，无法取得消息 ID
+# 显式指定基类，因为主动消息所用的子类会将发送放入冷却队列并返回 None，无法获取消息 ID
 <<< END U000748 >>>
 <<< UNIT U000749 | py-comment | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/context.py:805-806 >>>
-# 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本次发送是否送达，
+# 主动消息须按冷却排队发出，但调用方需要获取真实的消息 ID 才能判断本次发送是否送达，
 # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
 <<< END U000749 >>>
 <<< UNIT U000750 | py-docstring | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/context.py:116-120 | ctx=get_available_group_list >>>
@@ -1572,7 +1572,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 本文整理了 OneBot 适配器的配置表项与填写时的注意事项。
 <<< END U000755 >>>
 <<< UNIT U000756 | md-paragraph | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/config.md:5-5 | ctx=OneBot 配置项 >>>
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都写在 `config/bot_onebot.toml`。普通项写在 `[bot_onebot]`，密钥项写在 `[bot_onebot_secret]`。
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都保存在 `config/bot_onebot.toml` 中，普通项配置在 `[bot_onebot]`，密钥项配置在 `[bot_onebot_secret]`。
 <<< END U000756 >>>
 <<< UNIT U000757 | md-heading | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/config.md:7-7 | ctx=配置表 `bot_onebot` >>>
 ## 配置表 `bot_onebot`
@@ -1586,8 +1586,8 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `qq_enable_temp_session` | bool | `true` | 是否开启临时会话。 |
 | `qq_allow_approve_friend` | bool | `false` | 是否自动同意好友请求。 |
 | `qq_allow_approve_group_invite` | bool | `false` | 是否自动同意群邀请。 |
-| `qq_typing_emoji` | int | `181` | 正在处理消息时挂载的回应表情 ID，需协议端支持。 |
-| `qq_limited_emoji` | int | `10060` | 消息处理失败时挂载的回应表情 ID，需协议端支持。 |
+| `qq_typing_emoji` | int | `181` | 正在处理消息时添加的回应表情 ID，需协议端支持。 |
+| `qq_limited_emoji` | int | `10060` | 消息处理失败时添加的回应表情 ID，需协议端支持。 |
 | `qq_initiative_msg_cooldown` | int | `10` | 主动消息发送的冷却时间，单位为秒。 |
 <<< END U000758 >>>
 <<< UNIT U000759 | md-heading | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/config.md:21-21 | ctx=密钥表 `bot_onebot_secret` >>>
@@ -1637,10 +1637,10 @@ OneBot 适配器通过 OneBot 反向 WebSocket 接入 QQ，处理群聊、私信
 ## 配置
 <<< END U000772 >>>
 <<< UNIT U000773 | md-paragraph | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/index.md:25-25 | ctx=配置 >>>
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都写在 `config/bot_onebot.toml`。
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都保存在 `config/bot_onebot.toml` 中。
 <<< END U000773 >>>
 <<< UNIT U000774 | md-paragraph | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/index.md:27-27 | ctx=配置 >>>
-需要多个机器人账号时，用 `akaribot adapter instance add onebot <实例 ID>` 新增实例。实例表名为 `bot_onebot-<实例 ID>`，密钥表名为 `bot_onebot-<实例 ID>_secret`。两张表都写在 `config/bot_onebot-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add onebot <实例 ID>` 新增实例。实例表名为 `bot_onebot-<实例 ID>`，密钥表名为 `bot_onebot-<实例 ID>_secret`。两张表都保存在 `config/bot_onebot-<实例 ID>.toml` 中。
 <<< END U000774 >>>
 <<< UNIT U000775 | md-paragraph | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/docs/index.md:29-29 | ctx=配置 >>>
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
@@ -1679,9 +1679,9 @@ OneBot 适配器通过 OneBot 反向 WebSocket 接入 QQ，处理群聊、私信
 | 按钮与动作文本 | 不支持 | — |
 | 表情回应 | 支持 | 通过群消息表情点赞实现。 |
 | 引用回复 | 支持 | — |
-| 输入状态 | 支持 | 通过挂载回应表情表示正在处理。 |
+| 输入状态 | 支持 | 通过添加回应表情表示正在处理。 |
 | 消息撤回 | 支持 | 群聊与私信均可撤回。 |
-| 群组管理 | 支持 | 含禁言、踢出与管理员设置。 |
+| 群组管理 | 支持 | 包含禁言、踢出与管理员设置。 |
 | 权限组 | 支持 | — |
 | 消息节点 | 支持 | 合并转发按消息节点处理。 |
 | 私信 | 支持 | — |
@@ -1870,7 +1870,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 平台只在消息事件中给出成员身份，其他成员的管理身份只能取消息处理时写入的缓存。
 <<< END U000834 >>>
 <<< UNIT U000835 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:682-682 >>>
-# 平台限制属于运行期常态，静默放弃本条消息的剩余部分，不升级为模块错误。
+# 平台限制属于运行阶段常态，静默放弃本条消息的剩余部分，不升级为模块错误。
 <<< END U000835 >>>
 <<< UNIT U000836 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:742-742 >>>
 # 底层文件不可用（文件缺失或为空）时跳过该元素

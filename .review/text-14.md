@@ -2708,7 +2708,7 @@ ${rules}
 # 只读标记与实例根目录的环境变量名。二者不在 core 公开接口内，故按引导代码的做法写为字面量。
 <<< END U009907 >>>
 <<< UNIT U009908 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/update.py:34-34 >>>
-# 委托参数固定且不接受用户输入拼接，其中 --all 覆盖全部已安装包，--json 让结果可解析。
+# 传递给 CLI 的参数固定且不接受用户输入拼接，其中 --all 覆盖全部已安装包，--json 让结果可解析。
 <<< END U009908 >>>
 <<< UNIT U009909 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/update.py:37-37 >>>
 # 更新由子进程执行 uv 下载、补全配置与数据库迁移，等待上限按分钟计。
@@ -2804,7 +2804,7 @@ akaribot.core.builtins.converter: ActionTextElement 跨进程序列化测试
 # 标注按像素偏移放置，不参与坐标轴自动缩放，因此要覆盖不同数据量级与图幅。
 <<< END U009938 >>>
 <<< UNIT U009939 | py-comment | packages/akari-bot-core/tests/test_analytics_plot.py:53-54 >>>
-# 子进程里把 matplotlib 置为缺失，验证核心包不会因可选依赖缺失而在导入期失败，
+# 子进程里把 matplotlib 置为缺失，验证核心包不会因可选依赖缺失而在导入阶段失败，
 # 否则整个 bundled 模块会随之一并消失。
 <<< END U009939 >>>
 <<< UNIT U009940 | py-docstring | packages/akari-bot-core/tests/test_analytics_plot.py:1-1 | ctx=<module> >>>
@@ -3034,13 +3034,13 @@ core.config: 配置只读语义测试
 # core 自带的语言文件以包位置定位，因为本用例随包发布，按测试文件上溯会在包布局下失准。
 <<< END U010013 >>>
 <<< UNIT U010014 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:169-169 >>>
-# 命名空间包横跨多个 distribution，__path__ 的每一项都要遍历，只看首项会漏包
+# 命名空间包横跨多个 distribution，__path__ 的每一项都要遍历，只检查首项会漏包
 <<< END U010014 >>>
 <<< UNIT U010015 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:174-174 >>>
 # 按包枚举的代码依赖 __init__.py，缺少该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）
 <<< END U010015 >>>
 <<< UNIT U010016 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:199-199 >>>
-# 与守护进程 spawn 出的平台进程一致，模板导入完毕后一律只读
+# 与守护进程启动的平台进程一致，模板导入完毕后一律只读
 <<< END U010016 >>>
 <<< UNIT U010017 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:263-263 >>>
 # 已被 tester 导入的模板不会再次执行 process_config_class，故以此处声明的模板验证补充行为

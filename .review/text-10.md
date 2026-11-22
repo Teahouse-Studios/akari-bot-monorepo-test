@@ -167,7 +167,7 @@
 <<< END U007064 >>>
 <<< UNIT U007065 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:1581-1582 >>>
 # 超过全局执行上限的活动任务已不可能合法完成，无需响应的任务直接删除，
-# 等待型任务先标 timeout 供轮询取得终态。终态删除须在本步之前完成。
+# 等待型任务先标 timeout 供轮询获取终态。终态删除须在本步之前完成。
 <<< END U007065 >>>
 <<< UNIT U007066 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:1601-1602 >>>
 # 不附加排序，现有 (target_peer, status) 索引可在达到 limit 后停止扫描。
@@ -446,7 +446,7 @@ JobQueue 进程注册表。租约是在线状态的唯一事实来源。
 
 每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动
 提交，无法把“执行 DDL”与“写入版本记录”放入同一事务，因此判断某条 revision 是否已应用
-只看本表，迁移必须自行保证可重复执行。
+只查询本表，迁移必须自行保证可重复执行。
 
 :param package: 包名，``core`` 或其他包名。
 :param revision: revision 标识符。
@@ -1032,8 +1032,8 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 <<< UNIT U007281 | md-list | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:67-71 | ctx=分支与提交 >>>
 - 新功能用 `dev/` 前缀，修复用 `fix/` 前缀，分支名使用英文。
 - 未经授权不执行 `git commit`、`git add`、`git push`、`git reset` 或 `git checkout -- <文件>`。授权只对当次请求有效。
-- 提交信息用英文书面语，正文写清实际运行输出、失败用例的对比与检查结果等证据。
-- 移动文件用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不记为 rename，按“先纯移动、再改内容”两段提交。
+- 提交信息用英文书面语，正文写明实际运行输出、失败用例的对比与检查结果等证据。
+- 移动文件用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不会识别为重命名（rename），需拆分为“先移动文件、再修改内容”两次提交。
 - 包内有源码改动时，要提升该包的 `version`。不升级版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。
 <<< END U007281 >>>
 <<< UNIT U007282 | md-heading | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:73-73 | ctx=文档 >>>
@@ -1043,7 +1043,7 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 每个包的导入包目录下都有 `docs/`。目录中的 `docs/config/global/docs.global.toml` 声明文档的标题、简介与排序。包在 `pyproject.toml` 的 `[project.entry-points."akaribot.docs"]` 中声明文档所在的导入路径，站点按这条声明收录该包的文档。
 <<< END U007283 >>>
 <<< UNIT U007284 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:77-77 | ctx=文档 >>>
-文档站的命令为 `akaribot docs list|build|serve|deploy|status|clean`。站点配置写在实例根目录的 `docs.toml`，生成的文件放在实例的 `cache/docs/` 目录。包文档需要哪些字段、目录如何组织，见仓库根目录的 `docs/package-docs.md`。
+文档站的命令为 `akaribot docs list|build|serve|deploy|status|clean`。站点配置保存在实例根目录的 `docs.toml` 中，生成的文件放在实例的 `cache/docs/` 目录。包文档需要哪些字段、目录如何组织，见仓库根目录的 `docs/package-docs.md`。
 <<< END U007284 >>>
 <<< UNIT U007285 | md-heading | packages/akari-bot-core/akaribot/core/docs/faq.md:1-1 | ctx=常见问题 >>>
 # 常见问题
@@ -1066,7 +1066,7 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 文档站点由已安装包内的 `docs/` 汇总生成，常用命令：
 <<< END U007290 >>>
 <<< UNIT U007291 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:21-21 | ctx=查看帮助与文档 >>>
-构建需要 Node.js 与 npm，版本以主题清单为准。生成物写在实例的 `cache/docs/`。`~help` 底部的在线文档入口来自 `config.toml` 的 `help_url` 与 `help_page_url`。
+构建需要 Node.js 与 npm，版本以主题清单为准。生成产物位于实例的 `cache/docs/`。`~help` 底部的在线文档入口来自 `config.toml` 的 `help_url` 与 `help_page_url`。
 <<< END U007291 >>>
 <<< UNIT U007292 | md-heading | packages/akari-bot-core/akaribot/core/docs/faq.md:23-23 | ctx=模块没有反应或未启用 >>>
 ## 模块没有反应或未启用
@@ -1213,7 +1213,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 <<< END U007331 >>>
 <<< UNIT U007332 | md-list | packages/akari-bot-core/akaribot/core/docs/i18n.md:54-56 | ctx=语言文件维护 >>>
 - 只编辑 `locales/zh_cn.json`。其他语言文件由 Weblate 自动提交，请不要自行创建、修改或补齐。
-- `assets/config_store/<语言>/` 由配置模板生成，非 `zh_cn` 版本同样由自动化流程产出。
+- `assets/config_store/<语言>/` 由配置模板生成，非 `zh_cn` 版本同样由自动化流程生成。
 - 文案面向用户，保持书面语，不写口语或语气词。
 <<< END U007332 >>>
 <<< UNIT U007333 | md-heading | packages/akari-bot-core/akaribot/core/docs/i18n.md:58-58 | ctx=会话语言 >>>
@@ -1324,7 +1324,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 <<< UNIT U007355 | md-table | packages/akari-bot-core/akaribot/core/docs/message-api.md:9-14 | ctx=会话对象 >>>
 | 字段或属性 | 说明 |
 | --- | --- |
-| `session_info` | `SessionInfo` 快照。目标、发送者、平台能力、语言与权限都记在这份快照里 |
+| `session_info` | `SessionInfo` 快照。目标、发送者、平台能力、语言与权限都记录在这份快照中 |
 | `sent` / `trigger_msg` | 已发送消息链列表（默认空）。parser 处理后的触发文本 |
 | `matched_msg` / `parsed_msg` | 正则或事件的匹配结果。命令参数解析结果，无模板模块可能为 `None` |
 | `target` / `t` / `t_str` | `target` 已弃用，等价于 `session_info`。`t`、`t_str` 按会话语言翻译键或文本 |
@@ -1389,7 +1389,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 <<< END U007368 >>>
 <<< UNIT U007369 | md-list | packages/akari-bot-core/akaribot/core/docs/message-api.md:74-81 | ctx=等待用户输入 >>>
 - 默认超时 120 秒。传 `None` 关闭超时。
-- 超时、取消或无法取得结果时抛出 `WaitCancelException`。
+- 超时、取消或无法获取结果时抛出 `WaitCancelException`。
 - 等待期间默认释放执行锁。方法返回前重新获取该锁，获取失败按取消处理。
 - `wait_confirm()` 在 `confirm_token` 非 `None` 时进入严格确认模式，必须原样回复这个口令，才算确认。普通模式接受 `confirm_command` 中的确认词。发送 `no` 返回 `False`。
 - `consume_any_message=True` 时，任意消息都会结束等待，返回值仍按是否为确认词判断。
