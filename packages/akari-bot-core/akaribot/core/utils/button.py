@@ -44,7 +44,7 @@ def arrange_buttons(
     :param buttons: （标签， 命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
     :param per_row: 每行按钮数量的可读性上限。
     :param small: 是否使用紧凑按钮样式。
-    :return: 按钮行列表；输入为空时返回空列表。
+    :return: 按钮行列表。输入为空时返回空列表。
     """
     if not buttons:
         return []

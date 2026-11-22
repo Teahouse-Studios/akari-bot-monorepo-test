@@ -1,7 +1,7 @@
 """实例进程的定位与终止。
 
 运行中的实例在 ``<实例根>/.bot.lock`` 上持锁，锁文件里写有进程号与启动时间。控制器据此找到
-进程：先向主进程发温和信号，让它按自身顺序收拢适配器与 Server；主进程退出后再清掉它自建的
+进程：先向主进程发温和信号，让它按自身顺序收拢适配器与 Server。主进程退出后再清掉它自建的
 进程组里可能残留的子进程。由终端前台启动的实例与控制器同组，此时只按进程号发信号，不对整组
 发信号——那会连控制器自己一起终止。
 """
@@ -48,7 +48,7 @@ class LockRecord:
 
     @classmethod
     def parse(cls, text: str) -> LockRecord | None:
-        """解析锁文件内容；内容缺失或不是本模块写下的记录时返回 ``None``。"""
+        """解析锁文件内容。内容缺失或不是本模块写下的记录时返回 ``None``。"""
         raw = text.strip()
         if not raw:
             return None
@@ -94,7 +94,7 @@ def pid_alive(pid: int) -> bool:
 
 
 def read_lock_record(path: Path) -> LockRecord | None:
-    """读取锁文件里的进程记录；文件不存在或不可读时返回 ``None``。"""
+    """读取锁文件里的进程记录。文件不存在或不可读时返回 ``None``。"""
     try:
         with path.open("rb", buffering=0) as handle:
             # Windows 的首字节被排他锁保护，记录读取须避开锁区。
@@ -126,7 +126,7 @@ class ProcessControl(Protocol):
     """进程控制原语，测试可注入替身。"""
 
     def process_group(self, pid: int) -> int | None:
-        """返回进程所在进程组，且仅当该进程是组长时；否则返回 ``None``。"""
+        """仅当该进程是组长时返回其所在进程组，否则返回 ``None``。"""
         ...
 
     def group_alive(self, pgid: int) -> bool:
@@ -296,7 +296,7 @@ def wait_until(predicate: Callable[[], bool], *, timeout: float, control: Proces
 
     :param predicate: 条件。
     :param timeout: 最长等待秒数。
-    :param control: 进程控制原语，提供等待实现；缺省用系统实现。
+    :param control: 进程控制原语，提供等待实现，默认用系统实现。
     :return: 条件是否在超时前成立。
     """
     worker = control or SYSTEM_CONTROL
@@ -323,7 +323,7 @@ def stop_process(
     :param running: 返回实例是否仍在运行的探测函数（通常是锁是否仍被持有）。
     :param timeout: 等待主进程退出的秒数。
     :param reap_grace: 主进程退出后清收子进程的宽限秒数。
-    :param control: 进程控制原语，缺省用系统实现。
+    :param control: 进程控制原语，默认用系统实现。
     :return: 停止结果。
     """
     worker = control or SYSTEM_CONTROL
@@ -363,7 +363,7 @@ def stop_process(
 
 
 def _reap_group(pgid: int, *, grace: float, control: ProcessControl) -> tuple[bool, bool]:
-    # 主进程已按自身顺序收拢过子进程，这里只处理残留：先温和，宽限期内没退干净再强杀。
+    # 主进程已按自身顺序处理过子进程，这里只处理残留：先按正常终止，宽限期内未退出再强制终止。
     if not control.group_alive(pgid):
         return True, False
     control.terminate_group(pgid, force=False)

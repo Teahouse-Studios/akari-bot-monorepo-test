@@ -35,7 +35,7 @@ _S3_DEPENDENCY_HINT = (
 
 
 def _load_sdk() -> tuple[Any, Any, type[Exception]]:
-    # 默认可不装 boto3（extra ``s3``），故导入期不引入；只有真正创建客户端时才需要。
+    # 默认可不装 boto3（extra ``s3``），故导入期不引入。只有真正创建客户端时才需要。
     try:
         import boto3
         from botocore.config import Config as botocore_config
@@ -212,7 +212,7 @@ class S3StorageAPI:
         await self._run_sync(self._write_manifest_sync, prefix, files)
 
     async def _update_manifest(self, prefix: str, updater):
-        # updater 可为同步或异步函数；返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
+        # updater 可为同步或异步函数。返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
         lock = self._manifest_locks.setdefault(prefix, asyncio.Lock())
         async with lock:
             files = await self._read_manifest(prefix)

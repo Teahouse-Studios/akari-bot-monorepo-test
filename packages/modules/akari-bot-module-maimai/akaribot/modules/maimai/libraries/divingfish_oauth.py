@@ -10,7 +10,7 @@ from akaribot.core.api import MessageChain, I18NContext, Url, Logger, get_url, p
 from akaribot.modules.maimai.config import MaimaiConfig, MaimaiSecretConfig
 from ..database.models import DivingProberBindInfo
 
-# 授权服务器根地址。各端点路径本应从发现文档读取，此处直接写死以简化实现。
+# 授权服务器根地址。端点路径直接写在下面，不读取发现文档。
 DF_AUTH_SERVER = "https://auth.diving-fish.com"
 DF_TOKEN_URL = f"{DF_AUTH_SERVER}/oauth/token"
 DF_DEVICE_AUTHORIZATION_URL = f"{DF_AUTH_SERVER}/oauth/device_authorization"
@@ -22,7 +22,7 @@ DF_MAIMAI_RECORDS_URL = f"{DF_API_BASE}/maimaidxprober/player/records"
 DF_CLIENT_ID = MaimaiConfig.diving_fish_client_id
 DF_OAUTH_ENABLED = bool(DF_CLIENT_ID)
 DF_CLIENT_SECRET = MaimaiSecretConfig.diving_fish_client_secret
-# 登记为机密客户端时控制台会另外生成 client_secret，配置里填了它就说明该应用属于这一形态。
+# 控制台把应用设为机密客户端时会另外生成 client_secret，配置里填了它就说明该应用属于这一形态。
 DF_CONFIDENTIAL_CLIENT = bool(DF_CLIENT_SECRET)
 
 DF_SCOPE_MAIMAI = "prober.records.read"
@@ -183,7 +183,7 @@ async def poll_device_token(device_code: str) -> dict | None:
     """轮询一次设备码，尝试取得该用户的令牌。
 
     :param device_code: 设备码端点返回的设备码。
-    :return: 令牌响应；用户尚未完成授权时返回 `None`。
+    :return: 令牌响应。用户尚未完成授权时返回 `None`。
     :raise DivingFishSlowDown: 轮询过快，调用方应延长间隔后继续。
     :raise DivingFishAuthorizationDenied: 用户拒绝授权。
     :raise DivingFishDeviceCodeExpired: 设备码已过期。
@@ -252,13 +252,13 @@ async def refresh_access_token(refresh_token: str) -> dict:
 
 
 async def exchange_on_behalf_of(subject: str) -> dict:
-    """换票：以应用凭据换取一张代表指定用户的短期令牌。
+    """换票：用应用的登录信息换取一张代表指定用户的短期令牌。
 
     :param subject: 用户标识，写法为 `sub:<水鱼用户 ID>`。
     :return: 令牌响应，含 `access_token` 与 `expires_in`，不含 refresh token。
     :raise DivingFishConsentRequired: 该用户未授权本应用，需引导其重新绑定。
     :raise DivingFishRateLimited: 换票过于频繁。
-    :raise DivingFishOAuthError: 其它换票错误，如客户端凭据有误。
+    :raise DivingFishOAuthError: 其它换票错误，如客户端登录信息有误。
     """
     resp = await _post_form(
         DF_TOKEN_URL,
@@ -308,7 +308,7 @@ async def get_access_token(bind_info: DivingProberBindInfo) -> str:
 
     :param bind_info: 该用户的绑定记录。
     :return: access token。
-    :raise DivingFishTokenRevoked: 凭据已失效或用户不再授权，用户需要重新绑定。
+    :raise DivingFishTokenRevoked: 登录信息已失效或用户不再授权，用户需要重新绑定。
     :raise DivingFishOAuthError: 其它刷新或换票错误。
     """
     union_id = bind_info.union_id
@@ -318,7 +318,7 @@ async def get_access_token(bind_info: DivingProberBindInfo) -> str:
 
     lock = _refresh_locks.setdefault(union_id, asyncio.Lock())
     async with lock:
-        # 等待期间可能已有一次取令牌完成，复查缓存以免白白再换一张。
+        # 等待期间可能已有一次取令牌完成，复查缓存以免重复换取。
         cached = _cached_access_token(union_id)
         if cached:
             return cached
@@ -404,7 +404,7 @@ async def fill_bind_username(bind_info: DivingProberBindInfo) -> str:
     """补全绑定记录中的水鱼用户名，并返回昵称。
 
     :param bind_info: 该用户的绑定记录。
-    :return: 昵称；获取失败时返回空字符串。
+    :return: 昵称。获取失败时返回空字符串。
     :raise DivingFishTokenRevoked: 令牌已失效，用户需要重新绑定。
     """
     try:

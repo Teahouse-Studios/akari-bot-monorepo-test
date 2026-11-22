@@ -1,6 +1,6 @@
 """实例数据浏览与按主键写入入口。
 
-供 CLI 的 ``db`` 子命令与 TUI 的数据库页以子进程调用；读 ``AKARI_INSTANCE_DIR`` 决定实例。
+供 CLI 的 ``db`` 子命令与 TUI 的数据库页以子进程调用。读 ``AKARI_INSTANCE_DIR`` 决定实例。
 表与列只认 Tortoise 已注册模型声明过的标识：不接受原始 SQL，也不接受调用方给出的任意表名。
 """
 
@@ -22,10 +22,11 @@ MAX_LIMIT = 200
 _INT_FIELDS = frozenset({"IntField", "BigIntField", "SmallIntField"})
 _TRUE_WORDS = frozenset({"true", "1", "yes", "y", "on"})
 _FALSE_WORDS = frozenset({"false", "0", "no", "n", "off"})
-# 文本列才能做包含与前后缀匹配；其余类型只支持等值与大小比较。
+# 文本列才能做包含与前后缀匹配。其余类型只支持等值与大小比较。
 _TEXT_FIELDS = frozenset({"CharField", "TextField"})
 _NULL_WORDS = frozenset({"null", "none"})
-# 运算符按「先长后短」排列：!= 必须先于 = 命中，否则 a!=b 会被切成列 a! 加 =b。
+# 运算符按“先长后短”排列：双字符运算符先命中，否则不等号与取反包含符会被当成单字符运算符拆开，
+# 导致列名与取值错位。
 _CONDITION_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
 _COMPARISON_LOOKUPS = {"=": "exact", "!=": "exact", ">": "gt", ">=": "gte", "<": "lt", "<=": "lte"}
 _TEXT_LOOKUPS = {"~": "icontains", "!~": "icontains", "^": "istartswith", "$": "iendswith"}
@@ -104,7 +105,7 @@ def _json_safe(value: Any) -> Any:
 
 
 def _default_text(value: Any) -> Any:
-    # 可调用默认值（uuid4、list 等）要运行期才知道结果，用 null 表示「由模型自行决定」。
+    # 可调用默认值（uuid4、list 等）的结果要到运行期才能确定，用 null 表示“由模型自行决定”。
     return None if callable(value) else _json_safe(value)
 
 
@@ -159,7 +160,7 @@ def _parse_assignment(raw: str, *, table: str) -> tuple[str, str]:
     return column, value
 
 
-# 把 ``<列><运算符><值>`` 拆成三段；运算符与值都可省（省了按等值处理）。
+# 把 ``<列><运算符><值>`` 拆成三段。运算符与值都可以省略（省略时按等值处理）。
 def _split_condition(raw: str, *, table: str) -> tuple[str, str, str]:
     text = raw.strip()
     if not text:
@@ -171,7 +172,7 @@ def _split_condition(raw: str, *, table: str) -> tuple[str, str, str]:
             if not column:
                 raise DataError(f"表 {table} 的筛选条件 {raw!r} 缺少列名。")
             return column, operator, value
-    # 只有列名：按「该列非空」理解，比默默当成等值空串更符合预期。
+    # 只有列名：按“该列非空”理解，比默默当成等值空串更符合预期。
     return text, "!=", "null"
 
 
@@ -194,7 +195,7 @@ def _condition_query(fields: Mapping[str, Any], table: str, raw: str) -> Any:
     return ~condition if operator.startswith("!") else condition
 
 
-# 在所有文本列上做不区分大小写的包含匹配；表里没有文本列时拒绝。
+# 在所有文本列上做不区分大小写的包含匹配。表里没有文本列时拒绝。
 def _search_query(fields: Mapping[str, Any], table: str, keyword: str) -> Any:
     from tortoise.expressions import Q
 
@@ -242,7 +243,7 @@ async def _write(coro: Any, table: str) -> Any:
 
 
 async def _table_rows(model: Any) -> int | None:
-    # 包已装但实例尚未建出该表时读不到条数；此时保留表并如实回报「未知」，不让一张表拖垮整份清单。
+    # 包已装但实例尚未建出该表时读不到条数。此时保留表并如实回报“未知”，不让一张表拖垮整份清单。
     try:
         return await model.all().count()
     except Exception:  # noqa: BLE001 - 不同后端的缺表报错类型不同，统一按未知处理
@@ -293,14 +294,14 @@ async def _rows(
     if search.strip():
         conditions.append(_search_query(fields, table, search))
     query = model.filter(*conditions)
-    # 大表上 COUNT 是一次全表扫描，故翻页可以只取本页；不数时 total 回 null，由调用方沿用上次的值。
+    # 大表上 COUNT 是一次全表扫描，故翻页可以只取本页。不数时 total 回 null，由调用方沿用上次的值。
     total = await query.count() if count else None
     rows = await query.order_by(*terms).limit(limit).offset(offset).values(*fields)
     return {
         "table": table,
         "total": total,
         "rows": [_row_payload(fields, row) for row in rows],
-        # 回显分页与筛选状态：调用方据此显示「第几页 / 共几条 / 当前条件」，不必自己记。
+        # 回显分页与筛选状态：调用方据此显示“第几页 / 共几条 / 当前条件”，不必自己记。
         "limit": limit,
         "offset": offset,
         "order_by": order_by or f"-{_pk_name(model)}",
@@ -311,7 +312,7 @@ async def _rows(
 
 
 async def _set(table_name: str, *, key: str, assignments: Sequence[str]) -> dict[str, Any]:
-    # 一行多列：所有取值先转换完再下发，且在同一次 UPDATE 里写入，不会出现「改了一半」的行。
+    # 一行多列：所有取值先转换完再下发，且在同一次 UPDATE 里写入，不会出现“改了一半”的行。
     table, model = _table_or_fail(table_name)
     fields = _fields(model)
     pk_name = _pk_name(model)
@@ -412,7 +413,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--limit", type=int, default=DEFAULT_LIMIT, help=f"每页条数，默认 {DEFAULT_LIMIT}，上限 {MAX_LIMIT}"
     )
     rows.add_argument("--offset", type=int, default=0, help="起始偏移，默认 0")
-    rows.add_argument("--order-by", default=None, help="排序列，可带 :asc 或 :desc 后缀；缺省按主键倒序")
+    rows.add_argument("--order-by", default=None, help="排序列，可带 :asc 或 :desc 后缀。默认按主键倒序")
     rows.add_argument(
         "--filter",
         action="append",
@@ -455,7 +456,7 @@ def _emit(payload: Any) -> None:
 
 
 def _fail(message: str, code: int) -> int:
-    # 失败原因同时进 stdout 的 JSON：调用方（CLI 与界面）只解析 stdout，仅给 stderr 拿不到结构化原因。
+    # 失败原因同时进 stdout 的 JSON：调用方（CLI 与界面）只解析 stdout，只写 stderr 则拿不到结构化原因。
     _emit({"error": message})
     print(f"数据操作失败：{message}", file=sys.stderr)
     return code
@@ -464,7 +465,7 @@ def _fail(message: str, code: int) -> int:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码，0 成功、1 运行期失败、2 用户错误。
     """
     parser = _build_parser()
@@ -473,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = asyncio.run(_dispatch(args))
     except DataError as exc:
         return _fail(str(exc), 2)
-    except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
         return _fail(f"{type(exc).__name__}: {exc}", 1)
     _emit(payload)
     return 0

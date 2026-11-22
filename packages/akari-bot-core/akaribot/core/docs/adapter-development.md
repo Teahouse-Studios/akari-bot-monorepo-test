@@ -25,7 +25,7 @@ akari-bot-adapter-<平台>/
 telegram = "akaribot.adapters.telegram"
 ```
 
-`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。启动实例前，守护进程会读取这两个字段。守护进程再检查同一平台的多个实例是否使用了相同的账号或令牌。
+`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。启动实例前，守护进程会读取这两个字段，再检查同一平台的多个实例是否使用了相同的账号或令牌。
 
 ## info.py
 
@@ -56,7 +56,7 @@ target_prefix_list = [f"{client_name}|Private", f"{client_name}|Group"]
 
 启动实例前，守护进程会读取 `manifest.toml` 的 `credential_fields`，并检查同一平台其他实例的登录信息和监听端口。
 
-如果同一平台已有相同的登录信息或监听端口，守护进程会提示冲突，并停止启动该实例。
+如果同一平台已有相同的登录信息或监听端口，守护进程会提示冲突，并拒绝启动该实例。
 
 ## 能力声明
 
@@ -79,7 +79,7 @@ features = Features(support_image=True, support_delete=True, support_private_msg
 - `Module.unsupported_reason()` 根据 `read_all_messages` 和 `support_rss`，判断正则、事件、RSS 模块在当前会话中是否可用。
 - `check_bot_state()` 返回 `BotState`。
 - `can_*` 字段记录机器人能否执行对应操作，`permissions` 保存平台返回的权限。
-- 结果写进 `SessionInfo`。
+- 检查结果写进 `SessionInfo`。
 - `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。机器人缺少模块要求的权限时，这个模块不会启用。
 
 ## 平台入口
@@ -129,5 +129,5 @@ async def on_shutdown():
 
 - 适配器配置用 `@on_bot_config("<平台>")` 声明，表名是 `bot_<平台>`。
 - 密钥写入 `[bot_<平台>_secret]`。
-- 字段注释写成 `config.comments.bot_<平台>.<字段名>`。密钥表的注释键要带 `_secret` 后缀。
+- 字段注释写成 `config.comments.bot_<平台>.<字段名>`。密钥表的配置注释要带 `_secret` 后缀。
 - 面向用户的文案只在适配器包的 `locales/zh_cn.json` 中创建，具体见[配置](config.md)与[本地化](i18n.md)。

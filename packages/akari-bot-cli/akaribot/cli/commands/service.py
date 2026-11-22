@@ -1,6 +1,6 @@
 """服务化：把本 CLI 装成常驻服务，并由它守护实例。
 
-``service install`` 写入系统服务单元并注册；``service supervise`` 是单元真正执行的常驻进程，每轮读
+``service install`` 写入系统服务单元并注册。``service supervise`` 是单元真正执行的常驻进程，每轮读
 实例注册表，按记录里的策略恢复、重启或跳过各个实例。CLI 进程不 import core，本模块同样只经注册表
 与 :class:`akaribot.cli.instance.Instance` 工作。
 """
@@ -40,8 +40,8 @@ JsonOption = Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json
 def build_backend(*, kind: str | None = None, home: Path | None = None) -> ServiceBackend:
     """构造系统服务管理器后端。
 
-    :param kind: 后端名；缺省按当前平台判定。
-    :param home: 家目录；缺省用当前用户的家目录。
+    :param kind: 后端名。默认按当前平台判定。
+    :param home: 家目录。默认用当前用户的家目录。
     :return: 可直接执行安装、卸载与状态查询的后端。
     """
     return ServiceBackend(kind=kind or detect_backend(), home=Path(home) if home is not None else Path.home())
@@ -95,7 +95,7 @@ def _serve(supervisor: Supervisor, interval: float) -> None:
         signal.signal(sig, _on_signal)
     while not stop.is_set():
         _report_round(supervisor.run_once(), summary=False)
-        # 等待期间收到信号也能立刻收工，不必睡满一个间隔。
+        # 等待期间收到信号也能立即结束本轮，不必等满一个间隔。
         stop.wait(interval)
     name = signal.Signals(received[0]).name if received else ""
     typer.echo(i18n.t("cli.service.supervise.stopped", signal=name))
@@ -106,7 +106,7 @@ def install(
     dry_run: DryRunOption = False,
     force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.service.install.option_force"))] = False,
 ) -> None:
-    """写入系统服务单元并注册服务；``--dry-run`` 只打印将写入的内容。"""
+    """写入系统服务单元并注册服务。``--dry-run`` 只打印将写入的内容。"""
     backend = build_backend()
     report = _guard(lambda: backend.install(dry_run=dry_run, force=force))
     if dry_run:
@@ -124,7 +124,7 @@ def install(
 
 @app.command("uninstall", help=i18n.t("cli.service.uninstall.help"))
 def uninstall(dry_run: DryRunOption = False) -> None:
-    """注销服务并删除单元文件；本来就没装时如实说明，不算失败。"""
+    """注销服务并删除单元文件。未安装时如实说明，不算失败。"""
     backend = build_backend()
     report = _guard(lambda: backend.uninstall(dry_run=dry_run))
     if dry_run:

@@ -7,7 +7,7 @@ from akaribot.modules.core.common_tools.about import about
 
 
 def get_version_display() -> str | None:
-    """返回面向用户展示的版本号；未知版本时返回 None。"""
+    """返回面向用户展示的版本号。未知版本时返回 None。"""
     if not Bot.Info.version:
         return None
     version = str(Bot.Info.version)

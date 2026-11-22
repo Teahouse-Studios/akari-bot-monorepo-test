@@ -34,7 +34,7 @@ path = brand_dir() / "character_marked.png"
 
 `brand_dir()` 返回本包资源的根目录。core 的 `find_brand_asset(name)` 按“资源包 → 实例 `assets/`”的顺序查找。
 
-资源包与实例 `assets/` 都没有同名文件时，`find_brand_asset()` 返回 `None`，由调用方降级处理。`~about` 少一张图不会让整条命令失败，SMTP 报告缺少标志时也照常发送。实例 `assets/` 中的同名文件会覆盖包内资产，供部署者替换标志。
+资源包与实例 `assets/` 都没有同名文件时，`find_brand_asset()` 返回 `None`，由调用方降级处理。`~about` 少一张图不会让整条命令失败，SMTP（简单邮件传输协议）报告缺少标志时也照常发送。实例 `assets/` 中的同名文件会覆盖包内资产，供部署者替换标志。
 
 ## 文档站点的品牌插槽
 
@@ -125,7 +125,7 @@ credits = "assets/credits.txt"
 
 ## 许可证
 
-立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证写在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发包必须原样携带 `LICENSE`，不得套用仓库根许可证，也不得把资产单独再分发。
+立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证写在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发时必须原样携带 `LICENSE`，不得套用仓库根许可证，也不得把资产单独再分发。
 
 ## 不得重新编码
 

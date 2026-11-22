@@ -26,7 +26,7 @@ from akaribot.core.registry import PackageRegistry
 from akaribot.testing import Tester, func_case
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 样本库随 core 包分发，与本用例同属一个分发包，按测试文件位置定位即可。
+# 样本库随 core 包分发，与本用例同属一个包，按测试文件位置定位即可。
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "db"
 
 MAIMAI_PACKAGE = "akari-bot-module-maimai"
@@ -35,7 +35,7 @@ LXNS_TABLE = "module_maimai_lxns_prober_bind_info"
 
 
 class _isolated_db:
-    # 样本库与测试进程自带的库不能共用连接：升级会改动表结构，必须落在文件副本上。
+    # 样本库与测试进程自带的库不能共用连接：升级会改动表结构，因此连接必须指向文件副本。
     def __init__(self, path: Path) -> None:
         self.path = path
         self.context = TortoiseContext()
@@ -82,7 +82,7 @@ async def _test_discovery_covers_legacy_map():
     expected = {(package, revision) for entries in LEGACY_MAP.values() for package, revision in entries}
     actual = {(package, module.revision) for package, modules in discovered.items() for module in modules}
     order = MigrationRunner._order(discovered, None)
-    # 旧版本号只登记到 LATEST_LEGACY_VERSION，其后追加的 revision 由常规升级执行，故用包含关系。
+    # 旧版本号只记录到 LATEST_LEGACY_VERSION，其后追加的 revision 由常规升级执行，故用包含关系。
     return expected <= actual and order[0] == "core" and set(order) == set(discovered) and len(order) == 5
 
 
@@ -465,14 +465,14 @@ async def test_database_migration(tester: Tester):
     await tester.test(_test_discovery_covers_legacy_map, "迁移发现结果与旧版本号对照表一致")
     await tester.test(_test_revision_order_follows_dependencies, "迁移按依赖排序且拒绝重名、缺依赖与成环")
     await tester.test(_test_migration_context_ddl_helpers, "迁移上下文的探测与 DDL 在 SQLite 上自洽")
-    await tester.test(_test_new_database_applies_all_revisions, "新库执行全部 revision 并留下完整登记")
+    await tester.test(_test_new_database_applies_all_revisions, "新库执行全部 revision 并留下完整版本记录")
     await tester.test(_test_core_revisions_upgrade_v1_shaped_tables, "core revision 在 v2 之前的结构上实际生效")
     await tester.test(_test_legacy_fixtures_reach_latest_schema, "六个旧版本样本库均升到最新结构且重跑为 no-op")
     await tester.test(_test_missing_module_package_is_skipped, "模块包缺席时跳过其 revision 且不触碰其表")
     await tester.test(_test_checksum_mismatch_only_warns, "已应用迁移的 checksum 变化只告警不阻断")
-    await tester.test(_test_stamp_is_idempotent, "stamp 可重复执行且允许登记未发现的 revision")
+    await tester.test(_test_stamp_is_idempotent, "stamp 可重复执行且允许记录未发现的 revision")
     await tester.test(_test_downgrade_requires_entry_and_known_target, "回退要求 revision 声明入口且目标存在")
-    await tester.test(_test_sqlite_upgrade_and_stamp_roll_back_together, "SQLite 升级与版本登记失败同时回滚")
+    await tester.test(_test_sqlite_upgrade_and_stamp_roll_back_together, "SQLite 升级与版本记录失败同时回滚")
     await tester.test(_test_sqlite_downgrade_and_stamp_roll_back_together, "SQLite 回退与版本删除失败同时回滚")
-    await tester.test(_test_sqlite_rebuild_revisions_remain_atomic, "SQLite 实际表重建 revision 登记失败时完整回滚")
+    await tester.test(_test_sqlite_rebuild_revisions_remain_atomic, "SQLite 实际表重建 revision 记录失败时完整回滚")
     return tester

@@ -1,7 +1,7 @@
 """按依赖顺序把一批产物串行发布到索引，并对限速做退避与限批。
 
 索引对上传有速率限制（429）。本工具把三件事固定下来：一批只传一个分发、尊重响应里的
-``Retry-After``、按「本次最多上传文件数」限批；中断后用同一批清单重跑即可续传（只补缺失文件）。
+``Retry-After``、按“本次最多上传文件数”限批。中断后用同一批清单重跑即可续传（只补缺失文件）。
 
 用法：::
 
@@ -51,8 +51,8 @@ class RateLimited(RuntimeError):
 def check_tools(require_twine: bool = True) -> str | None:
     """确认发布脚本的依赖与 twine 可用。
 
-    :param require_twine: 是否需要校验 twine；dry-run 不需要。
-    :return: 缺失说明；齐备时返回 ``None``。
+    :param require_twine: 是否需要校验 twine。dry-run 不需要。
+    :return: 缺失说明。齐备时返回 ``None``。
     """
     probe = subprocess.run([sys.executable, "-c", "import packaging"], capture_output=True, text=True, check=False)
     if probe.returncode != 0:
@@ -99,7 +99,7 @@ def stage(directory: Path, entry: dict, dist_dir: Path) -> None:
 def project_exists(index_url: str, name: str) -> bool:
     """判断分发名是否已在索引上创建。
 
-    新项目配额只对首次创设计数；已存在的项目发新版本不占该配额。
+    新项目配额只对首次创设计数。已存在的项目发新版本不占该配额。
 
     :param index_url: 索引根地址。
     :param name: 分发名。
@@ -175,7 +175,7 @@ def upload(staged: Path, repository_url: str, token: str, retries: int, max_wait
     :param repository_url: 上传端点。
     :param token: API token。
     :param retries: 最大尝试次数。
-    :param max_wait: 单次可接受的最长等待秒数；超过则留待下一窗口。
+    :param max_wait: 单次可接受的最长等待秒数。超过则留待下一窗口。
     """
     for attempt in range(retries):
         result = subprocess.run(
@@ -213,7 +213,7 @@ def upload(staged: Path, repository_url: str, token: str, retries: int, max_wait
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     _ensure_utf8_stdout()

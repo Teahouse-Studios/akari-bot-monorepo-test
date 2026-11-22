@@ -7,7 +7,7 @@
     locales/<code>.json  ``<entry point 名>.help.desc``，缺失时退回 ``<entry point 名>.help``
     core/registry.py     CORE_API_VERSION，registry 顶层 core.api_version 的取值来源
 
-成员清单与分发名口径与 tools/lint_versions.py 一致：根 pyproject 的 [tool.uv.workspace].members glob
+成员清单与分发名的口径同 tools/lint_versions.py 保持一致：根 pyproject 的 [tool.uv.workspace].members glob
 展开，不硬编码包名。工具只读文件、不 import akaribot，未配置的实例与裸 CI 环境都能运行。
 
 generated_at 默认取 HEAD 提交时间（SOURCE_DATE_EPOCH 与 --generated-at 可覆盖），因此输入未变时两次
@@ -19,7 +19,7 @@ generated_at 默认取 HEAD 提交时间（SOURCE_DATE_EPOCH 与 --generated-at 
     uv run python tools/build_registry.py --dist-dir dist --dist-base-url https://host/wheels
     uv run python tools/build_registry.py --verify-against-installed --python .venv/bin/python
 
-退出码：0 正常；2 输入不满足生成前提，或自检与交叉核对发现不一致。
+退出码：0 正常，2 表示输入不满足生成前提，或自检与交叉核对发现不一致。
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ ADAPTER_GROUP = "akaribot.adapters"
 CORE_DISTRIBUTION = "akari-bot-core"
 CORE_NAME = canonicalize_name(CORE_DISTRIBUTION)
 
-# manifest 的 schema 与分发默认值，与 core.registry 的 PackageManifest、MANIFEST_SCHEMA 对齐。
+# manifest 的 schema 与分发默认值，与 core.registry 的 PackageManifest、MANIFEST_SCHEMA 一致。
 MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
 DEFAULT_REQUIRES_CORE_API = ">=1,<2"
@@ -58,7 +58,7 @@ DEFAULT_LOCALES_DIR = "locales"
 
 REGISTRY_SCHEMA = 1
 DEFAULT_LOCALE = "zh_cn"
-# 模块简介的 locale 键，按序取首个命中：desc 是 module() 的 desc= 指向，help 是模块级帮助首行。
+# 模块简介的 locale 键，按序取首个命中：desc 是 module() 的 desc= 所指向的键，help 是模块级帮助首行。
 SUMMARY_KEY_TEMPLATES = ("{name}.help.desc", "{name}.help")
 
 # manifest 未进 PackageManifest 的字段：清单里写了就照读，没写则留空。
@@ -106,7 +106,7 @@ class Package:
     :param import_path: entry point 指向的导入路径。
     :param path: 该包 pyproject.toml 的仓库根相对 POSIX 路径，报告用。
     :param root: import_path 对应的包目录。
-    :param manifest: manifest.toml 的原始内容；文件缺失时为空字典。
+    :param manifest: manifest.toml 的原始内容。文件缺失时为空字典。
     """
 
     kind: PackageKind
@@ -149,7 +149,7 @@ def entry_points(project: dict[str, Any], group: str, path: str) -> dict[str, st
     :param project: 解析后的 ``[project]`` 表。
     :param group: 分组名，如 ``akaribot.modules``。
     :param path: 出错信息里用于定位的 pyproject 路径。
-    :return: 名字到导入路径的映射；分组不存在时为空字典。
+    :return: 名字到导入路径的映射。分组不存在时为空字典。
     """
     groups = project.get("entry-points", {})
     found = groups.get(group)
@@ -164,7 +164,7 @@ def package_root(pyproject: Path, import_path: str) -> Path:
     """由 entry point 的导入路径定位包目录。
 
     源码根优先取分发根本身，其次取分发根下的 ``src``——按固定层级拼接会在另一种布局下
-    静默落空或直接报「目录不存在」。
+    静默落空或直接报“目录不存在”。
 
     :param pyproject: 该分发的 pyproject.toml。
     :param import_path: entry point 的导入路径。
@@ -180,7 +180,7 @@ def package_root(pyproject: Path, import_path: str) -> Path:
 
 
 def read_manifest(package_path: str, root: Path) -> dict[str, Any]:
-    """读包内 manifest.toml；缺文件时按运行期口径取全默认值。
+    """读包内 manifest.toml。缺文件时按运行期口径取全默认值。
 
     schema 不认识时直接失败：运行期会退回默认值，生成期必须报出来，否则清单字段会被静默忽略。
     """
@@ -197,7 +197,7 @@ def read_manifest(package_path: str, root: Path) -> dict[str, Any]:
 def discover_packages() -> tuple[list[Package], list[str]]:
     """遍历全部成员，按 entry point 分组归类为模块包与适配器包。
 
-    :return: 二元组——包清单（按分发名规范化排序）；无模块与适配器 entry point 的分发名。
+    :return: 二元组——包清单（按分发名规范化排序），以及无模块与适配器 entry point 的分发名。
     """
     packages: list[Package] = []
     skipped: list[str] = []
@@ -283,7 +283,7 @@ def order_summaries(summaries: dict[str, str]) -> dict[str, str]:
 def entry_summary(package: Package) -> dict[str, str]:
     """按 manifest 简介、locales 描述键、pyproject description 的顺序合成一句话简介。
 
-    pyproject 的 description 只有一种语言，落在默认 locale；其余语言的缺项留空不补，
+    pyproject 的 description 只有一种语言，进默认 locale。其余语言的缺项留空不补，
     以免把中文塞进 en_us 之类的键。
     """
     declared = package.manifest.get("summary")
@@ -302,7 +302,7 @@ def entry_summary(package: Package) -> dict[str, str]:
 def legacy_module_map(package: Package) -> list[str]:
     """旧模块名映射：把提供的模块名的连字符换成下划线，未改名的模块得到同名映射。
 
-    旧版按模块目录名索引（``weekly_rss``），拆包后部分模块名改用连字符（``weekly-rss``）；
+    旧名按模块目录名书写（``weekly_rss``），现行模块名部分带连字符（``weekly-rss``）。
     T7.1 的迁移需要旧名到新分发的完整映射，故同名项也保留。
     """
     return [name.replace("-", "_") for name in provides(package)]
@@ -325,7 +325,7 @@ def wheel_artifact(package: Package, dist_dir: Path, base_url: str | None) -> tu
 
     :param package: 目标包。
     :param dist_dir: wheel 所在目录。
-    :param base_url: 托管地址前缀；缺省时用 wheel 的 ``file://`` 绝对路径。
+    :param base_url: 托管地址前缀。未给出时用 wheel 的 ``file://`` 绝对路径。
     :return: 二元组——下载地址与 sha256 十六进制摘要。
     """
     escaped = WHEEL_NAME_ESCAPE_PATTERN.sub("_", package.dist)
@@ -429,7 +429,7 @@ def build_registry(
 def source_module_names(package: Package) -> set[str]:
     """AST 扫描包源码里 ``module()`` 注册的名字，支持位置参数与 ``module_name=`` 两种写法。
 
-    名字写成非常量表达式时扫不到，此时会报成「清单声明但源码未注册」，须改为字面量。
+    名字写成非常量表达式时扫不到，此时会报成“清单声明但源码未注册”，须改为字面量。
     """
     found: set[str] = set()
     for path in sorted(package.root.rglob("*.py")):
@@ -570,7 +570,7 @@ def collect_artifacts(
 
     core 不参与：A.3 的 core 段只承载分发名、版本与 API 版本，无处安放产物信息。
 
-    :return: 二元组——分发名到（地址， sha256）的映射；缺 wheel 的分发名列表。
+    :return: 二元组——分发名到（地址， sha256）的映射，以及缺 wheel 的分发名列表。
     """
     artifacts: dict[str, tuple[str, str]] = {}
     missing: list[str] = []
@@ -609,7 +609,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", metavar="PATH", type=Path, help="输出路径，默认仓库根的 registry.json")
     parser.add_argument("--json", action="store_true", help="打印到 stdout；同时给出 --output 时两处都写")
     parser.add_argument("--dist-dir", metavar="DIR", type=Path, help="wheel 所在目录，用于填下载地址与 sha256")
-    parser.add_argument("--dist-base-url", metavar="URL", help="wheel 的托管地址前缀，缺省用 file:// 绝对路径")
+    parser.add_argument("--dist-base-url", metavar="URL", help="wheel 的托管地址前缀，默认用 file:// 绝对路径")
     parser.add_argument(
         "--allow-missing-artifacts",
         action="store_true",

@@ -37,7 +37,7 @@ TYPING_SHUTDOWN_TIMEOUT = 1.0
 
 
 def select_account(platform: str | None, bot_id: str | None = None) -> Account | None:
-    """按平台与机器人账号选择 Satori 账号；无法精确匹配时退回该平台的首个账号。"""
+    """按平台与机器人账号选择 Satori 账号。无法精确匹配时退回该平台的首个账号。"""
     accounts = list(satori_app.accounts.values())
     if bot_id:
         for account in accounts:

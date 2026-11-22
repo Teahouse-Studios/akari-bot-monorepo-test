@@ -577,7 +577,7 @@ async def _(msg: Bot.MessageSession):
 async def _(msg: Bot.MessageSession, user: str | None = None):
     friend_code = ""
     if pick_source(msg, GAME_MAIMAI) == SOURCE_LXNS:
-        # 落雪的查询对象是好友码；不填参数时由令牌认出账号，无需绑定信息以外的输入。
+        # 落雪的查询对象是好友码。不填参数时由令牌认出账号，无需绑定信息以外的输入。
         if user and not is_int(user):
             await msg.finish(I18NContext("maimai.message.friend_code_invalid"))
         token = None if user else await get_bind_info(msg)
@@ -586,7 +586,7 @@ async def _(msg: Bot.MessageSession, user: str | None = None):
         source = SOURCE_NAME_LXNS
     else:
         token = None
-        # 填了用户名便查这个玩家，无需绑定；否则查绑定账号（或按 QQ 查）。
+        # 填了用户名便查这个玩家，无需绑定。否则查绑定账号（或按 QQ 查）。
         payload = {"username": user, "b50": True} if user else await get_diving_prober_bind_info(msg, b50=True)
         source = SOURCE_NAME_DIVING_FISH
     img = await generate_b50(msg, payload, token, source, friend_code, use_cache=not user)

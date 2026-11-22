@@ -34,7 +34,7 @@ def _load_module_models() -> None:
 _load_module_models()
 
 
-# 这些类定义旧数据库的模式，用于连接到旧的数据库表进行数据迁移
+# 这些类定义旧数据库的模式，用于连接旧数据库表并完成数据迁移
 
 
 class SenderInfoL(Model):
@@ -219,7 +219,7 @@ class WikiLogTargetSetInfoL(Model):
 async def rename_old_tables():
     """重命名旧数据库表，为新表让位。
 
-    将所有旧版本的表添加"_old"前缀，以便在创建新表时不产生冲突。
+    为所有旧版本的表添加"_old"前缀，以便在创建新表时不产生冲突。
     这一步是必要的：须同时保留旧数据并创建新架构。
 
     表重命名映射：
@@ -237,7 +237,7 @@ async def rename_old_tables():
     conn = Tortoise.get_connection("default")
 
     # 重命名旧表以避免冲突
-    # 使用"_old"前缀排序在列表末尾，便于管理
+    # 带"_old"前缀的表名排在列表末尾，便于管理
     try:
         await conn.execute_query("ALTER TABLE SenderUnionInfo RENAME TO _old_SenderInfo;")
         await conn.execute_query("ALTER TABLE TargetUnionInfo RENAME TO _old_TargetInfo;")
@@ -509,14 +509,14 @@ async def convert_database():
 
     Logger.info("Converting WikiAllowList to the global URL allowlist...")
 
-    # 旧 Wiki API 白名单已并入全局 URL 规则文件；全部写入成功后才删除旧表。
+    # 旧 Wiki API 白名单已并入全局 URL 规则文件。全部写入成功后才删除旧表。
     wiki_allow_list_record = await WikiAllowListL.all()
     GlobalURLAllowlist.import_user_rules(r.apiLink for r in wiki_allow_list_record)
     await conn.execute_query("DROP TABLE IF EXISTS _old_module_wiki_WikiAllowList;")
 
     Logger.info("Converting WikiBlockList to the global URL blocklist...")
 
-    # 旧 Wiki API 黑名单同样保留精确规则或 regex: 前缀的正则规则。
+    # 旧 Wiki API 黑名单同样保留为精确规则或带 regex: 前缀的正则规则。
     wiki_block_list_record = await WikiBlockListL.all()
     GlobalURLBlocklist.import_user_rules(r.apiLink for r in wiki_block_list_record)
     await conn.execute_query("DROP TABLE IF EXISTS _old_module_wiki_WikiBlockList;")

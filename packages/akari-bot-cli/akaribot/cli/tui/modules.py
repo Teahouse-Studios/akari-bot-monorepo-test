@@ -26,7 +26,7 @@ STATE_INSTALLED = "installed"
 STATE_AVAILABLE = "available"
 STATE_UNKNOWN = "unknown"
 
-# 状态与包类型保存文案键，以便按当前语言解析标签。
+# 状态与包类型保存为文案键，以便按当前语言解析标签。
 _STATE_KEYS = {
     STATE_INSTALLED: "cli.tui.modules.state_installed",
     STATE_AVAILABLE: "cli.tui.modules.state_available",
@@ -60,7 +60,7 @@ _UNINSTALL_MODE_ARGS = {"purge": ("--purge-data",), "cascade": ("--cascade",)}
 _UPDATE_SELECTED = "selected"
 _UPDATE_ALL = "all"
 
-# 进度条按阶段推进：解析、执行、重载、完成；阶段内的细粒度进度由子进程输出行承担。
+# 进度条按阶段推进：解析、执行、重载、完成。阶段内的细粒度进度由子进程输出行承担。
 _PROGRESS_PHASES = 4.0
 # 实时转发时保留的末尾行数，失败时作为详情展示。
 _STREAM_TAIL_LINES = 40
@@ -82,7 +82,7 @@ class ModuleRecord:
     :param developers: 模块作者，取自包的 ``pyproject.toml``。
     :param provides_modules: 该包注册的模块名。
     :param owned_tables: 该包拥有的数据表。
-    :param config_table: 该包在 ``config/`` 下的扁平配置表名；无配置时为空串。
+    :param config_table: 该包在 ``config/`` 下的扁平配置表名。无配置时为空串。
     """
 
     name: str
@@ -112,7 +112,7 @@ class ModuleRecord:
 
     @property
     def kind_label(self) -> str:
-        """返回包类型的本地化标签，未知时给出「未声明」。"""
+        """返回该类型的本地化标签，未知时给出“未声明”。"""
         key = _KIND_KEYS.get(self.kind)
         return i18n.t(key) if key else i18n.t("cli.tui.common.undeclared")
 
@@ -132,7 +132,7 @@ class ModuleRecord:
     def matches(self, query: str) -> bool:
         """按空白分词的子串匹配，全部词命中才算匹配。
 
-        :param query: 搜索词；中文按子串处理，无需分词。
+        :param query: 搜索词。中文按子串处理，无需分词。
         :return: 是否命中。
         """
         tokens = query.casefold().split()
@@ -161,12 +161,12 @@ class ModuleSourceError(RuntimeError):
 
 
 class StaticModuleSource:
-    """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
+    """固定数据的替身数据源，供自动化检查与自检使用，不产生任何子进程。
 
     :param records: ``list_modules`` 直接返回的记录序列。
     :param available: ``list_available`` 直接返回的记录序列。
-    :param install_result: 安装返回值；默认为成功。
-    :param uninstall_result: 卸载返回值；默认为成功。
+    :param install_result: 安装返回值。默认为成功。
+    :param uninstall_result: 卸载返回值。默认为成功。
     :param stream_lines: ``stream_operation`` 逐行上报的假输出。
     :param load_states: ``load_states`` 返回的模块装载状态。
     """
@@ -233,7 +233,7 @@ class StaticModuleSource:
         extra_args: Sequence[str] = (),
         positional: bool = True,
     ) -> OperationResult:
-        """见 :meth:`ModuleSource.stream_operation`；替身直接回放固定输出。"""
+        """见 :meth:`ModuleSource.stream_operation`。替身直接回放固定输出。"""
         self.stream_calls.append((kind, record.dist or record.name, tuple(extra_args), positional))
         for line in self._stream_lines:
             on_line(line)
@@ -246,7 +246,7 @@ class StaticModuleSource:
 
 @runtime_checkable
 class ModuleSource(Protocol):
-    """模块数据源接口；测试注入替身，实际运行通过子进程访问。"""
+    """模块数据源接口。测试注入替身，实际运行通过子进程访问。"""
 
     def list_modules(self) -> Sequence[ModuleRecord]:
         """返回全部模块记录。"""
@@ -255,7 +255,7 @@ class ModuleSource(Protocol):
         """返回可安装的模块记录，含尚未安装的项。"""
 
     def load_states(self) -> Mapping[str, bool | None]:
-        """返回模块名到全局装载状态的映射；``None`` 表示尚无记录。"""
+        """返回模块名到全局装载状态的映射。``None`` 表示尚无记录。"""
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """安装给定记录。"""
@@ -278,7 +278,7 @@ class ModuleSource(Protocol):
         :param record: 目标记录。
         :param on_line: 输出行回调，供界面显示进度。
         :param extra_args: 追加在目标名之后的 CLI 参数，如卸载的 ``--purge-data``。
-        :param positional: 是否把记录的分发名作为位置参数；``False`` 表示目标完全由 ``extra_args``
+        :param positional: 是否把记录的分发名作为位置参数。``False`` 表示目标完全由 ``extra_args``
             描述（git 与可编辑安装）。
         :return: 操作结果。
         """
@@ -290,7 +290,7 @@ def _operation_action(kind: str) -> str:
 
 
 def _is_git_address(text: str) -> bool:
-    # ``module add`` 只接受名字或 git 直引用：含协议头的输入一律按仓库地址交给 CLI 的 ``--git``。
+    # ``module add`` 只接受名字或 git 直接引用：含协议头的输入一律按仓库地址交给 CLI 的 ``--git``。
     return text.startswith(("git+", "git@", "ssh://", "git://")) or "://" in text
 
 
@@ -407,7 +407,7 @@ def normalize_records(payload: Any) -> list[ModuleRecord]:
     记录默认视为已安装，与列表命令的输出范围一致。
 
     :param payload: ``json.loads`` 的结果。
-    :return: 按「已安装在前、名称升序」排序的记录列表。
+    :return: 按“已安装在前、名称升序”排序的记录列表。
     """
     if payload is None:
         return []
@@ -430,7 +430,7 @@ def normalize_records(payload: Any) -> list[ModuleRecord]:
 
 
 class SubprocessModuleSource:
-    """通过 CLI 子进程读取模块数据；读取失败时使用实例清单。
+    """通过 CLI 子进程读取模块数据。读取失败时使用实例清单。
 
     :param root: 实例根目录，默认当前工作目录。
     :param timeout: 单个子进程的超时秒数。
@@ -585,7 +585,7 @@ class SubprocessModuleSource:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def load_states(self) -> Mapping[str, bool | None]:
-        """通过 ``module status --json`` 读取装载状态；实例未运行时仍可读取已有记录。"""
+        """通过 ``module status --json`` 读取装载状态。实例未运行时仍可读取已有记录。"""
         self.calls["status"] = self.calls.get("status", 0) + 1
         argv = self.cli_argv("module", "status", "--json")
         completed = self._run(argv)
@@ -690,7 +690,7 @@ class ModuleLayout:
 
     :param name_width: 名称列宽。
     :param version_width: 版本列宽。
-    :param load_width: 装载列宽；``0`` 表示本屏没有这一列。
+    :param load_width: 装载列宽。``0`` 表示本屏没有这一列。
     :param show_summary: 是否显示简介列。
     """
 
@@ -704,10 +704,10 @@ class ModulesPage(compat.Vertical):
     """模块页控件。
 
     :param source: 数据源，默认为 :class:`SubprocessModuleSource`。
-    :param cache_ttl: 缓存有效期秒数；安装/卸载成功后立即失效，与有效期无关。
+    :param cache_ttl: 缓存有效期秒数。安装/卸载成功后立即失效，与有效期无关。
     """
 
-    # 页面键位仅在本页生效，避免隐藏页响应操作；低频键位由详情区提示以控制页脚宽度。
+    # 页面键位仅在本页生效，避免隐藏页响应操作。低频键位由详情区提示以控制页脚宽度。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.modules.action_refresh")),
         ("slash", "focus_search", i18n.t("cli.tui.modules.bind_search")),
@@ -825,7 +825,7 @@ class ModulesPage(compat.Vertical):
         self._selected_key: str | None = None
         self._busy: bool = False
         self._installed_only: bool = False
-        # 多选：按分发名记录选区，刷新后只保留仍然存在的项；_anchor 是 Shift 扩选的起点。
+        # 多选：按分发名记录选区，刷新后只保留仍然存在的项。_anchor 是 Shift 扩选的起点。
         self._selected: set[str] = set()
         self._anchor: str | None = None
         # 确认框使用防抖，避免鼠标双击或键盘连发产生重复弹窗。
@@ -864,7 +864,7 @@ class ModulesPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；读取数据推迟到首次显示。"""
+        """挂载后只装配控件。读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -925,7 +925,7 @@ class ModulesPage(compat.Vertical):
         return tuple(self._stream_lines)
 
     def cache_age(self) -> float:
-        """返回缓存自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回缓存自上次读取以来的秒数。从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -937,7 +937,7 @@ class ModulesPage(compat.Vertical):
     def refresh_records(self, *, force: bool = False) -> None:
         """读取模块列表。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
+        :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
         # 刷新可能改变目标集合，必须清除待确认状态。
         self._confirm.reset()
@@ -966,7 +966,7 @@ class ModulesPage(compat.Vertical):
             self._render_list()
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
-        # 适配器由独立页面管理；保留类型未知的记录，避免隐藏可管理的包。
+        # 适配器由独立页面管理。保留类型未知的记录，避免隐藏可管理的包。
         records = [record for record in records if record.kind != "adapter"]
         if not self._installed_only:
             records = await self._merge_available(records)
@@ -1011,7 +1011,7 @@ class ModulesPage(compat.Vertical):
         return i18n.t("cli.tui.modules.load_cell", loaded=loaded, total=len(modules))
 
     async def _merge_available(self, installed: Sequence[ModuleRecord]) -> list[ModuleRecord]:
-        # 已安装记录包含本地版本与依赖信息，合并时优先保留；软件源读取失败不影响已安装列表。
+        # 已安装记录包含本地版本与依赖信息，合并时优先保留。软件源读取失败不影响已安装列表。
         self._available_error = ""
         try:
             available = await asyncio.to_thread(self.source.list_available)
@@ -1050,7 +1050,7 @@ class ModulesPage(compat.Vertical):
         self._sync_actions()
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的列表行文本，供自动化断言核对宽度。"""
+        """返回最近一次渲染出的列表行文本，供自动化检查核对宽度。"""
         return self._rendered_rows
 
     def column_text(self) -> str:
@@ -1101,7 +1101,7 @@ class ModulesPage(compat.Vertical):
         show_summary = inner_width - fixed - name_width - 1 >= 6
         if not show_summary:
             name_width = max(inner_width - fixed, 4)
-        # 装载列不足 4 列时隐藏该列，避免显示无法识别的截断状态。
+        # 装载列宽不足 4 时隐藏该列，避免显示无法识别的截断状态。
         budget = inner_width - 6 - name_width - version_width
         if load_width and budget < load_width:
             load_width = budget if budget >= 4 else 0
@@ -1274,7 +1274,7 @@ class ModulesPage(compat.Vertical):
         self.query_one("#search", compat.Input).focus()
 
     def clear_search(self) -> None:
-        """清空搜索框；已为空时聚焦列表。"""
+        """清空搜索框。已为空时聚焦列表。"""
         search = self.query_one("#search", compat.Input)
         if search.value:
             search.value = ""
@@ -1282,7 +1282,7 @@ class ModulesPage(compat.Vertical):
         self.query_one("#module-list", compat.ListView).focus()
 
     def _install_target(self) -> ModuleRecord | None:
-        # 未安装的高亮项可直接作为目标；其他情况使用搜索词预填安装输入框。
+        # 未安装的高亮项可直接作为目标。其他情况使用搜索词预填安装输入框。
         record = self.selected_record
         if record is not None and not record.installed:
             return record
@@ -1300,7 +1300,7 @@ class ModulesPage(compat.Vertical):
         return None
 
     def request_install(self) -> None:
-        """安装选区或未安装的高亮项；无可安装目标时打开安装输入框。"""
+        """安装选区或未安装的高亮项。无可安装目标时打开安装输入框。"""
         targets = self._batch_targets("install")
         if targets:
             self._confirm_install(targets)
@@ -1325,7 +1325,7 @@ class ModulesPage(compat.Vertical):
         )
 
     def _confirm_install(self, targets: Sequence[ModuleRecord]) -> None:
-        # 安装会改动实例环境并补写配置，单字母键触发时须先确认目标。
+        # 安装会改动实例环境并补充配置，单字母键触发时须先确认目标。
         if not self._confirm.accept("install:" + ",".join(record.dist for record in targets)):
             return
         compat.ask_choice(
@@ -1350,7 +1350,7 @@ class ModulesPage(compat.Vertical):
     def on_install_spec_entered(self, spec: str | None) -> None:
         """输入框回调：按输入内容给出可用的安装方式。
 
-        :param spec: 用户输入的模块名、仓库地址或目录；取消时为 ``None``。
+        :param spec: 用户输入的模块名、仓库地址或目录。取消时为 ``None``。
         """
         text = (spec or "").strip()
         if not text:
@@ -1391,7 +1391,7 @@ class ModulesPage(compat.Vertical):
         """按选定的方式安装输入的名字、地址或目录。
 
         :param spec: 输入框中的内容。
-        :param mode: ``registry`` / ``git`` / ``editable``；``None`` 表示取消。
+        :param mode: ``registry`` / ``git`` / ``editable``。``None`` 表示取消。
         """
         extra: tuple[str, ...] = ()
         if mode == "git" and _is_git_address(spec):
@@ -1434,8 +1434,8 @@ class ModulesPage(compat.Vertical):
     def start_update(self, targets: Sequence[ModuleRecord], mode: str | None) -> None:
         """按选定范围更新。
 
-        :param targets: 选区（没有选区时为当前项）中的已安装包；为空表示只能全量更新。
-        :param mode: ``selected`` / ``all``；``None`` 表示取消。
+        :param targets: 选区（没有选区时为当前项）中的已安装包。为空表示只能全量更新。
+        :param mode: ``selected`` / ``all``。``None`` 表示取消。
         """
         # 关闭确认框后清除防抖记录，允许重新发起操作。
         self._confirm.reset()
@@ -1457,7 +1457,7 @@ class ModulesPage(compat.Vertical):
     def request_uninstall(self) -> None:
         """发起卸载：弹出确认框选择数据与依赖的处置方式。
 
-        大批量操作要求输入目标数量；清理配置与数据表另需输入确认文字。
+        大批量操作要求输入目标数量。清理配置与数据表另需输入确认文字。
         """
         targets = self._batch_targets("uninstall")
         if not targets:
@@ -1495,7 +1495,7 @@ class ModulesPage(compat.Vertical):
         """数量输入回调：输入与目标数量一致才继续。
 
         :param targets: 待卸载的目标。
-        :param value: 用户输入的数量；取消时为 ``None``。
+        :param value: 用户输入的数量。取消时为 ``None``。
         """
         self._confirm.reset()
         text = (value or "").strip()
@@ -1508,7 +1508,7 @@ class ModulesPage(compat.Vertical):
         self._open_uninstall_options(targets)
 
     def _open_uninstall_options(self, targets: Sequence[ModuleRecord]) -> None:
-        # 反向依赖由 CLI 回报；只有存在依赖时才提供级联卸载。
+        # 反向依赖由 CLI 回报。只有存在依赖时才提供级联卸载。
         options = [
             ("keep", i18n.t("cli.tui.modules.uninstall_keep_data")),
             ("purge", i18n.t("cli.tui.modules.uninstall_purge_data")),
@@ -1532,7 +1532,7 @@ class ModulesPage(compat.Vertical):
         """按选定的处置方式卸载。
 
         :param targets: 目标记录。
-        :param mode: ``keep`` / ``purge`` / ``cascade``；``None`` 表示取消。
+        :param mode: ``keep`` / ``purge`` / ``cascade``。``None`` 表示取消。
         """
         self._confirm.reset()
         if mode != "keep" and mode not in _UNINSTALL_MODE_ARGS:
@@ -1577,7 +1577,7 @@ class ModulesPage(compat.Vertical):
         self._start_operation("uninstall", targets, extra_args=_UNINSTALL_MODE_ARGS["purge"])
 
     def request_toggle_load(self) -> None:
-        """装载选中包的模块；全部已装载时取消装载。"""
+        """装载选中包的模块。全部已装载时取消装载。"""
         targets = self._load_targets()
         if not targets:
             compat.notify(
@@ -1832,11 +1832,11 @@ class ModulesPage(compat.Vertical):
         self._sync_actions()
 
     def focus_primary(self) -> None:
-        """聚焦列表；列表为空时聚焦页面容器，加载后恢复列表焦点。"""
+        """聚焦列表。列表为空时聚焦页面容器，加载后恢复列表焦点。"""
         compat.focus_first(self, "#module-list")
 
     def reset_pending(self) -> None:
-        """作废待确认状态；切页与本页状态变化时调用。"""
+        """作废待确认状态。切页与本页状态变化时调用。"""
         self._confirm.reset()
 
     def action_refresh(self) -> None:
@@ -1870,5 +1870,5 @@ class ModulesPage(compat.Vertical):
     # endregion
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)

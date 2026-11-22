@@ -143,5 +143,5 @@ async def test_venv_recreate(tester: Tester):
     await tester.test(_test_first_rename_failure_keeps_old_environment, "备份换位失败时旧环境可执行")
     await tester.test(_test_second_rename_failure_restores_old_environment, "新环境换位失败时恢复旧环境")
     await tester.test(_test_final_verification_failure_restores_old_environment, "最终路径验证失败时恢复旧环境")
-    await tester.test(_test_dry_run_keeps_existing_staging, "重建预演保留已有临时环境")
+    await tester.test(_test_dry_run_keeps_existing_staging, "重建试运行保留已有临时环境")
     return tester

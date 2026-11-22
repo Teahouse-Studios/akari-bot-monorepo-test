@@ -1,6 +1,6 @@
 """Node 工具链：探测、依赖安装与 VitePress 构建。
 
-依赖固定在模板的 ``package-lock.json`` 里，安装只执行 ``npm ci``；构建直接调用 VitePress 的
+依赖固定在模板的 ``package-lock.json`` 里，安装只执行 ``npm ci``。构建直接调用 VitePress 的
 入口脚本，不经过 shell，参数顺序与日志都可预测。
 """
 
@@ -72,10 +72,10 @@ def ensure_toolchain(
     """准备 ``<cache>/docs`` 下的 Node 依赖，返回该目录。
 
     :param cache_dir: 实例缓存目录，依赖装在它的 ``docs`` 子目录。
-    :param template_dir: 兼容参数；未给 ``theme`` 时以该目录构造内置主题。
+    :param template_dir: 兼容参数，未给 ``theme`` 时以该目录构造内置主题。
     :param offline: 只接受已装依赖，不执行安装。
     :param runner: 子进程执行器，测试可注入。
-    :param theme: 主题；决定 VitePress 版本、Node 下限与依赖清单。
+    :param theme: 主题，决定 VitePress 版本、Node 下限与依赖清单。
     :param log: 子进程输出行的回调，用于实时展示安装进度。
     :raises DocsError: 主题缺文件、离线且依赖缺失，或安装失败。
     """
@@ -234,7 +234,7 @@ def template_version(template_dir: Path = TEMPLATE_DIR) -> str:
 
 
 def package_argv(executable: str, *args: str, windows: bool | None = None) -> list[str]:
-    """组装包管理器命令；Windows 下 npm 是批处理脚本，须经 ``cmd /c`` 启动。"""
+    """组装包管理器命令。Windows 下 npm 是批处理脚本，须经 ``cmd /c`` 启动。"""
     if (os.name == "nt" if windows is None else windows) and executable == "npm":
         return ["cmd", "/c", executable, *args]
     return [executable, *args]
@@ -268,7 +268,7 @@ def _execute(
     runner: Runner | None,
     log: LogSink | None,
 ) -> subprocess.CompletedProcess[str]:
-    # 测试注入的 runner 优先，保证调用参数可断言且不启动真实子进程。
+    # 测试注入的 runner 优先，保证调用参数可检查且不启动真实子进程。
     if runner is not None:
         return runner(argv, cwd)
     if log is None:

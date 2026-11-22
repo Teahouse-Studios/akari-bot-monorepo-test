@@ -4,7 +4,7 @@ Web 控制台适配器在实例内启动 Web 服务，提供 WebUI 控制台和�
 
 ## 平台概述
 
-服务基于 FastAPI 与 uvicorn。前端静态资源来自 `akari-bot-webui` 分发包，或实例的 `data/webui/dist` 目录。
+服务基于 FastAPI 与 uvicorn。前端静态资源来自 `akari-bot-webui` 包，或实例的 `data/webui/dist` 目录。
 
 控制台通过一个会话连接机器人，可以发送消息、管理会话和文件，也可以查看配置、日志和统计数据。
 

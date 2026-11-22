@@ -279,7 +279,7 @@ def _test_disjoint_cycles_are_all_rejected():
 
 
 def _test_dependency_on_api_rejected_package_cascades():
-    # 条目顺序刻意让依赖方先出现：初始判定时被依赖方尚未登记为拒绝，只有级联才能拦住它。
+    # 条目顺序刻意让依赖方先出现：初始判定时被依赖方还没被标记为拒绝，只有级联才能拦住它。
     alpha = _entry("module", "alpha", "akari-bot-module-alpha")
     beta = PackageEntry(
         kind="module",

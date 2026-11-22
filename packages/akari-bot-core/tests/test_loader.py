@@ -50,7 +50,7 @@ RENAMED_MODULES = {
 
 # 每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），
 # 冷文件缓存或高负载环境下会明显超过 1 秒，故等待步骤统一留出余量，
-# 避免把「慢」误判成「卡住」。
+# 避免把“慢”误判成“卡住”。
 RELOAD_WAIT_TIMEOUT = 10
 
 
@@ -254,8 +254,8 @@ async def _cancel_reload_task(task: asyncio.Task | None):
     await asyncio.gather(task, return_exceptions=True)
 
 
-# 用例以 `akaribot.modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后这些
-# 名字不再解析得到包，故在用例入口统一给出合成条目；真实包名仍交回注册表本身解析。
+# 用例以 `akaribot.modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后，
+# 这些名字解析不到包，故在用例入口统一给出合成条目。真实包名仍交回注册表本身解析。
 SYNTHETIC_PACKAGE_PREFIX = "akaribot.modules.__test"
 SYNTHETIC_PACKAGE_PATTERN = re.compile(rf"^{re.escape(SYNTHETIC_PACKAGE_PREFIX)}[._]")
 _real_by_import_path = PackageRegistry.by_import_path
@@ -706,7 +706,7 @@ def _test_reload_defers_cross_module_bindings():
 
 def _test_all_registered_modules_resolve_to_a_package():
     # ``return_py_module()`` 返回 ``None`` 会让热重载、locale 指纹、依赖图与模块卸载
-    # 四处静默失效且不报错。这条断言是拆包之后「包装成 wheel 是否真的没坏」的哨兵，
+    # 四处静默失效且不报错。这条检查是“包装成 wheel 后功能未损坏”的哨兵，
     # 必须常驻。
     missing = [name for name in ModulesManager.modules if ModulesManager.return_py_module(name) is None]
     if missing:
@@ -1295,7 +1295,7 @@ async def _run_loader_cases(tester: Tester):
     await tester.test(_test_reload_accepts_new_aliasless_module, "模块重载接受无别名的新模块")
     await tester.test(
         _test_reload_drains_queue_before_scheduler_maintenance,
-        "模块重载先排空队列再进入 Scheduler 维护",
+        "模块重载先处理完队列再进入 Scheduler 维护",
     )
     await tester.test(_test_reload_python_failure_restores_all_registries, "Python 重载失败恢复完整注册表")
     await tester.test(_test_reload_reports_database_reinitialization_failure, "数据库重载失败恢复旧状态")

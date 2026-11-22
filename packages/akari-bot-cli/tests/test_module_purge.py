@@ -1,9 +1,9 @@
 """``module remove --purge-data`` 的配置定位与清理顺序。
 
-旧实现按 ``provides_modules`` 猜 ``config/modules/<名>.toml``，而 ``CFGManager.load()`` 只扫描
-``config/*.toml``（扁平路径），那条路径下永远没有文件，于是 ``--purge-data`` 从不删配置；清理还
-排在 uv uninstall 之后，那时清单已随分发消失，连该删什么表都解析不出来。此处固定：按
-``manifest.config_table`` 定位扁平文件、适配器实例表按前缀覆盖、任一步失败即返回 False。
+``CFGManager.load()`` 只扫描 ``config/*.toml``（扁平路径），``provides_modules`` 推出的
+``config/modules/<名>.toml`` 路径下没有文件。清理须排在 uv uninstall 之前，否则清单已随分发消失，
+解析不出该删的表。此处固定：按 ``manifest.config_table`` 定位扁平文件、适配器实例表按前缀覆盖、
+任一步失败即返回 False。
 """
 
 import contextlib
@@ -157,7 +157,7 @@ def _test_file_removal_failure_is_reported():
         def failing_unlink(self, *args: Any, **kwargs: Any):
             raise OSError("read-only")
 
-        # 表这一步固定成功：本用例只针对「文件删不掉」，让结果不被真实子进程的成败左右。
+        # 表这一步固定成功：本用例只针对“文件删不掉”，让结果不被真实子进程的成败左右。
         engine.db_purge = lambda inst, dist: True
         Path.unlink = failing_unlink
         try:

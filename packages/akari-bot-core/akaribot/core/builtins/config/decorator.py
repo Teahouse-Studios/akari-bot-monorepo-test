@@ -61,7 +61,7 @@ def process_config_class(
         :param **kwargs: `<字段名>=<值>` 的键值对，用于初始化对象属性
         """
         for field_name, field in config_fields.items():
-            # 默认值须取自字段登记表：cls_annotations 存放类型标注而非默认值，从中取值会让
+            # 默认值须取自字段记录表：cls_annotations 存放类型标注而非默认值，从中取值会让
             # 实例属性得到类型对象本身（如 <class 'int'>）而非 181
             setattr(self, field_name, kwargs.get(field_name, field["default"]))
 
@@ -86,7 +86,7 @@ def process_config_class(
             ):
                 __attr_type = None
 
-            # 登记该字段传给配置来源 get() 的参数，供元类在属性访问时按此取值
+            # 记录该字段传给配置来源 get() 的参数，供元类在属性访问时按此取值
             config_fields[attr_name] = {
                 "q": attr_name,
                 "default": __attr,
@@ -110,8 +110,8 @@ def process_config_class(
     new_cls = ConfigMeta(cls.__name__, cls.__bases__, namespace)
     new_cls.__module__ = cls.__module__
     new_cls.__qualname__ = cls.__qualname__
-    # 缺失键在声明处补写：模板导入后可能立即有业务模块读取其属性，
-    # 若等扫描阶段再补写，先到的读取会以默认值占用该键，占位符便不再生成。
+    # 缺失键在声明处补充：模板导入后可能立即有业务模块读取其属性，
+    # 若等扫描阶段再补充，先到的读取会以默认值占用该键，占位符便不再生成。
     from akaribot.core.builtins.config.generator import ensure_fields
 
     ensure_fields(new_cls)
@@ -132,7 +132,7 @@ def on_config(
                    - "module": 模块配置
                    - "bot": 机器人配置
                    - "": 空字符串表示不添加前缀
-    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）。
+    :param secret: 是否将此配置中的所有值视为敏感信息并加密存储（默认 False）。
                设置为 True 时，配置值会被加密存储在配置文件中。
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为按顺序排列的 i18n 键元组。
 
@@ -159,8 +159,8 @@ def on_base_config():
     """
 
     def wrap(cls: type[T]):
-        # 表名传 None：这类键不属于 [config]，也不属于其它表。补写路径不支持在表外新建键，
-        # 故这些键由 update 的版本迁移先于模板处理写入，装饰时键必定已存在。
+        # 表名传 None：这类键不属于 [config]，也不属于其它表。补充路径不支持在表外新建键，
+        # 故这些键由 update 的版本迁移在模板处理之前写入，装饰时键必定已存在。
         return process_config_class(cls, None, False)
 
     return wrap
@@ -175,7 +175,7 @@ def on_bot_config(
 
     :param bot_name: 平台名称，须与 `bots/` 下的目录名一致：守护进程以 ``bot_<目录名>``
                  的表名查找该平台的 `enable` 配置。最终的表名为 "bot_平台名"
-    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）
+    :param secret: 是否将此配置中的所有值视为敏感信息并加密存储（默认 False）
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
 
     :return: 装饰器函数，接收一个类并返回处理后的类
@@ -191,7 +191,7 @@ def on_module_config(
     """模块配置装饰器工厂函数。
 
     :param module_name: 模块名称，须与 `module()` 声明的名称一致。最终的表名为 "module_模块名"
-    :param secret: 是否将此配置中的所有值视为敏感信息进行加密存储（默认 False）
+    :param secret: 是否将此配置中的所有值视为敏感信息并加密存储（默认 False）
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
 
     :return: 装饰器函数，接收一个类并返回处理后的类

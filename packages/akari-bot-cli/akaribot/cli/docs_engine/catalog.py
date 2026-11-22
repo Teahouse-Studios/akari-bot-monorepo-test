@@ -1,6 +1,6 @@
 """文档目录：从实例取包清单，合并 CLI 自身文档。
 
-目录优先使用 core 的 ``docs list`` 入口；该入口不可用时退回 ``registry`` 的已装包清单，
+目录优先使用 core 的 ``docs list`` 入口。该入口不可用时退回 ``registry`` 的已装包清单，
 用 ``<包根>/docs`` 构造最小条目，并把降级原因记入警告。
 """
 
@@ -37,7 +37,7 @@ def load_catalog(
 
     :param instance: 带 ``root`` 与 ``run_core_capture`` 的实例。
     :param include_cli: 是否合并 CLI 自身文档。
-    :param labels: 界面文案，用于首页与开发页的默认标题；缺省取随包默认值。
+    :param labels: 界面文案，用于首页与开发页的默认标题，默认取随包默认值。
     :param locales: 非默认语言标签，其目录不进入默认语言的页面清单。
     :return: 已按 ``order`` 排序的目录。
     """

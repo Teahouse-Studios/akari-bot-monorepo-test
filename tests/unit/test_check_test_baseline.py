@@ -1,7 +1,7 @@
-"""tools/check_test_baseline.py 的失败集合对拍测试。
+"""tools/check_test_baseline.py 的失败的用例清单对比测试。
 
-失败集合必须与基线逐名对拍，故此处固定四种判定：一致才通过，新增、消失、错误文本变化都
-必须失败——只比数量会让「修好一个、坏掉一个」蒙混过关，也会让第二轮测试因退出码直接变红而
+失败的用例清单必须与基准按名称一一对应，故此处固定四种判定：一致才通过，新增、消失、错误文本变化都
+必须失败。只比数量会让“修好一个、坏掉一个”蒙混过关，也会让第二轮测试因退出码直接变红而
 根本不被执行。
 """
 
@@ -130,7 +130,7 @@ def _test_malformed_baseline_line_is_an_input_error():
 
 @func_case
 async def test_check_test_baseline(tester: Tester):
-    """tools.check_test_baseline: 失败集合对拍测试"""
+    """tools.check_test_baseline: 失败的用例清单对比测试"""
     await tester.test(_test_identical_sets_pass, "逐名一致时通过")
     await tester.test(_test_new_failure_fails, "新增失败判失败")
     await tester.test(_test_vanished_failure_fails, "基线残留判失败")

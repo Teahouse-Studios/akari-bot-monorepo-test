@@ -80,7 +80,7 @@ def get_client_ip(request: Request) -> str:
     取请求方地址，用于限流、封禁与访问记录。
 
     :param request: 当前请求。
-    :return: 请求方地址；ASGI 传输未提供来源信息时返回 ``unknown``。
+    :return: 请求方地址。ASGI 传输未提供来源信息时返回 ``unknown``。
     """
     if request.client and request.client.host:
         return request.client.host

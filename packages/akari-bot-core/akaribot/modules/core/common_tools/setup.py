@@ -79,7 +79,7 @@ async def _(msg: Bot.MessageSession, offset: str):
 
 
 # 不加 available_for：框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，
-# 将来其他平台声明了 support_markdown_toggle，面板会出现「有此行、命令却不可用」的死行。
+# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的死行。
 # 以能力标志作唯一判据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。
 @setup.command("markdown {{I18N:core.help.setup.markdown}}")
 async def _(msg: Bot.MessageSession):
@@ -318,7 +318,7 @@ def render_rows(
     将设置行渲染为消息元素。
 
     每一行都在行尾挂上指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮：
-    按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应；把入口一律放回各自
+    按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自
     那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，
     模块侧无须再分支。
 
@@ -347,7 +347,7 @@ def render_rows(
 
     for row in rows:
         text = locale.t("core.message.setup.list.row", name=row.label, value=row.value)
-        # 首行紧随标题，标题不是行内入口，不会被并行；其后各行才需要自带换行
+        # 首行紧随标题，标题不是行内入口，不会被并入。其后各行才需要自带换行
         lead = "\n" if manual_newline and _ends_with_inline_entry(elements) else ""
         # 行尾空格：指令操作无论以元素形态并入还是降级为纯文本，都不会自行补分隔符。
         # disable_joke 亦不可省：降级后的命令原文会并入本元素，被替换后就无法照抄了。
@@ -363,7 +363,7 @@ def build_jump_buttons(msg: Bot.MessageSession, show_target: bool, show_sender: 
     :param msg: 消息会话。
     :param show_target: 本次是否列出了场景域。
     :param show_sender: 本次是否列出了个人域。
-    :return: （标签， 命令）序列。
+    :return: （标签，命令）序列。
     """
     if not msg.session_info.support_button or show_target == show_sender:
         return []

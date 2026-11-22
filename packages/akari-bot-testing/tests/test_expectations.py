@@ -1,4 +1,4 @@
-"""直接验证匹配器的正反例；命令执行由 integration 用例覆盖。"""
+"""直接验证匹配器的正反例。命令执行由 integration 用例覆盖。"""
 
 from akaribot.core.builtins.message.elements import PlainElement
 from akaribot.testing import (
@@ -89,7 +89,7 @@ async def _test_combinators():
 
 @func_case
 async def test_expectations(tester: Tester):
-    """Expectation：文本、空输出、异常、自定义断言与组合条件。"""
+    """Expectation：文本、空输出、异常、自定义检查与组合条件。"""
     await tester.test(_test_text_matchers, "文本匹配器正反例与大小写敏感测试")
     await tester.test(_test_output_matchers, "输出数量、空输出和异常匹配测试")
     await tester.test(_test_predicate_matcher, "同步与异步 Predicate 正反例测试")

@@ -1,6 +1,6 @@
 """``cli.docs.deploy.vercel``：Vercel 部署 provider。
 
-用例注入子进程执行器，确认命令落在实例 ``.docs/vercel``、令牌只经环境变量传递，
+用例注入子进程执行器，确认命令在实例 ``.docs/vercel`` 下执行、令牌只经环境变量传递，
 并覆盖项目链接、失败脱敏与 Windows 命令包装。全程不执行 vercel。
 """
 

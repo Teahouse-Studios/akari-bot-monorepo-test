@@ -1,7 +1,7 @@
 """tools/check_versions.py 的跳过豁免解析测试。
 
-此处固定两条语义：正文里提到 token 不算声明，只有独立 trailer 才算；豁免绑定到具体分发，
-而不是一个标记放行整个区间——否则解释功能的一句话就能关掉整段区间的检查。
+此处固定两条语义：正文里提到 token 不算声明，只有独立 trailer 才算。豁免绑定到具体分发，
+而不是一个标记放行整个区间——否则正文里一句解释功能的话就能关掉整段区间的检查。
 """
 
 import importlib.util
@@ -16,9 +16,9 @@ from akaribot.testing import func_case, Tester
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_PATH = REPO_ROOT / "tools" / "check_versions.py"
 TOKEN = "Skip-Version"
-# 曾把整段区间放行的提交：正文里两次提到旧标记，但从未写过独立 trailer。
+# 整段区间被放行的提交：正文里两次提到旧标记，但从未写过独立 trailer。
 POISONED_COMMIT = "b337364d3"
-# 版本守卫依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库夹具。
+# 版本守卫依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库测试数据。
 FIXTURE_ROOT_PYPROJECT = '[tool.uv.workspace]\nmembers = ["packages/*"]\n'
 FIXTURE_MEMBER_PYPROJECT = '[project]\nname = "example"\nversion = "0.1.0"\ndependencies = []\n'
 

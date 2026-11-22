@@ -171,7 +171,7 @@ def _test_scan_covers_all_directories_with_config_templates():
             for entry in Path(root).iterdir():
                 if entry.is_dir() and not entry.name.startswith((".", "_")) and (entry / "config.py").is_file():
                     expected.add(f"{package.__name__}.{entry.name}.config")
-    # akaribot/adapters/milky 曾因缺少 __init__.py 而不被按包枚举的代码收录，配置因而从未生成
+    # 按包枚举的代码依赖 __init__.py：缺该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）
     return bool(expected) and expected <= listed and "akaribot.adapters.milky.config" in listed
 
 
@@ -260,7 +260,7 @@ def _test_jobqueue_bootstrap_persists_missing_values_once():
 def _test_scan_writes_template_fields():
     from akaribot.core.builtins.config.decorator import on_config
 
-    # 已被 tester 导入的模板不会再次执行 process_config_class，故以此处声明的模板验证补写行为
+    # 已被 tester 导入的模板不会再次执行 process_config_class，故以此处声明的模板验证补充行为
     with _temp_config() as tmp:
 
         @on_config("config")
@@ -359,7 +359,7 @@ def _test_legacy_slower_schedule_migrates_to_multiplier():
                 sys.executable,
                 "-c",
                 (
-                    # 迁移后的 3 秒提示停顿不属于持久化行为；仅在隔离进程中跳过。
+                    # 迁移后的 3 秒提示停顿不属于持久化行为。仅在隔离进程中跳过。
                     "from unittest.mock import patch\n"
                     "from akaribot.core.builtins.config.bootstrap import bootstrap_config\n"
                     "with patch('time.sleep'):\n"
@@ -399,7 +399,7 @@ def _test_legacy_allow_reload_base_is_removed():
                 sys.executable,
                 "-c",
                 (
-                    # 迁移后的 3 秒提示停顿不属于持久化行为；仅在隔离进程中跳过。
+                    # 迁移后的 3 秒提示停顿不属于持久化行为。仅在隔离进程中跳过。
                     "from unittest.mock import patch\n"
                     "from akaribot.core.builtins.config.bootstrap import bootstrap_config\n"
                     "with patch('time.sleep'):\n"

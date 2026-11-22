@@ -1,9 +1,9 @@
 """模块全局装载入口。
 
-供 CLI 与 TUI 以子进程调用：``list`` 读 ``module_status``；``load`` / ``unload`` 经 JobQueue RPC
+供 CLI 与 TUI 以子进程调用。``list`` 读 ``module_status``。``load`` / ``unload`` 经 JobQueue RPC
 交给运行中的 Server 执行 ``ModulesManager.load_module()`` / ``unload_module()``。这两个函数要在
 队列与调度器的维护窗口内改本进程的模块索引，独立进程里索引为空，直接调用只会返回 False。
-stdout 只放结果，提示与日志走 stderr；退出码 0 成功、1 运行期失败、2 用户错误。
+stdout 只放结果，提示与日志走 stderr。退出码 0 成功、1 运行期失败、2 用户错误。
 """
 
 from __future__ import annotations
@@ -13,10 +13,10 @@ import asyncio
 import json
 import sys
 
-# 等 Server 确认的秒数上限。热装载要排空队列并让出调度器窗口，故高于普通查询。
+# 等 Server 确认的秒数上限。热装载要处理完队列任务并让出调度器窗口，故高于普通查询。
 RPC_TIMEOUT_SECONDS = 60
 
-# peer 注册与就绪的秒数上限；超时说明实例的 JobQueue 不可达。
+# peer 注册与就绪的秒数上限。超时说明实例的 JobQueue 不可达。
 PEER_READY_TIMEOUT_SECONDS = 15
 
 # 实例未运行时的统一提示，与 CLI 侧同文案，避免两处说法不一致。
@@ -36,7 +36,7 @@ async def _status() -> dict[str, bool]:
     try:
         try:
             return dict(await ModuleStatus.all().values_list("module_name", "load"))
-        except Exception as exc:  # noqa: BLE001 - 状态表不可读时降级为「无记录」，原因照实输出
+        except Exception as exc:  # noqa: BLE001 - 状态表不可读时降级为“无记录”，原因照实输出
             print(f"模块状态表不可读（{exc}），只列出发现层声明的模块。", file=sys.stderr)
             return {}
     finally:
@@ -44,7 +44,7 @@ async def _status() -> dict[str, bool]:
 
 
 def _declared() -> dict[str, str]:
-    # 清单里的 ``provides_modules`` 覆盖 bundled 模块与已装模块包；它声明为空的包只有运行期才
+    # 清单里的 ``provides_modules`` 覆盖内置模块与已装模块包。它声明为空的包只有运行期才
     # 知道注册名，这类包不产生条目，其模块名由状态表补上，分发名留空。
     from akaribot.core.registry import PackageRegistry
 
@@ -60,10 +60,10 @@ def _declared() -> dict[str, str]:
 def collect() -> tuple[list[dict], str]:
     """汇总各注册模块的全局装载状态。
 
-    模块名取「发现层声明」与「状态表已有记录」的并集：前者覆盖已装模块包，后者覆盖 bundled
-    模块；``loaded`` 只在状态表有记录时才是布尔值，无记录用 ``null`` 表示尚未初始化。
+    模块名取“发现层声明”与“状态表已有记录”的并集：前者覆盖已装模块包，后者覆盖内置
+    模块。``loaded`` 只在状态表有记录时才是布尔值，无记录用 ``null`` 表示尚未初始化。
 
-    :return: 二元组——按名字排序的 ``{name, loaded, installed_dist}`` 列表；需要提示给操作者的说明。
+    :return: 二元组：按名字排序的 ``{name, loaded, installed_dist}`` 列表，以及需要提示给操作者的说明。
     """
     declared = _declared()
     status = asyncio.run(_status())
@@ -93,13 +93,13 @@ async def _notify_server(module: str, action: str) -> bool:
     from akaribot.core.queue.peer import PeerSelector
 
     class CliPeer(JobQueueBase):
-        """一次性 RPC 调用方；只发一次请求，不绑定任何远端处理器。"""
+        """一次性 RPC 调用方。只发一次请求，不绑定任何远端处理器。"""
 
     poller = None
     database_connected = False
     try:
         try:
-            # 后端与 peer 的装配失败与「连不上」对操作者是同一件事：实例的 JobQueue 用不了。
+            # 后端与 peer 的装配失败与“连不上”对操作者是同一件事：实例的 JobQueue 用不了。
             database_connected = await _connect_database_if_needed()
             CliPeer.configure_backend(create_jobqueue_backend())
             CliPeer.configure_peer(role="cli", service="CLI", capabilities=["rpc"])
@@ -163,7 +163,7 @@ def _load_or_unload(module: str, action: str) -> int:
     except RpcError as exc:
         print(f"热装载通知失败：{exc}", file=sys.stderr)
         return 1
-    except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
         print(f"热装载通知失败：{exc}", file=sys.stderr)
         return 1
 
@@ -178,7 +178,7 @@ def _load_or_unload(module: str, action: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(
@@ -201,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list":
         try:
             items, note = collect()
-        except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+        except Exception as exc:  # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
             print(f"读取模块状态失败：{exc}", file=sys.stderr)
             return 1
         if note:

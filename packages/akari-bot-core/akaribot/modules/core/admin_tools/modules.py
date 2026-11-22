@@ -18,7 +18,7 @@ UNSUPPORTED_PROMPTS = {
     "event": "core.message.module.enable.unsupported_event",
 }
 
-# 机器人平台权限到中文名称的映射；未登记的权限直接回退为字段名，避免误报为其他能力。
+# 机器人平台权限到中文名称的映射。未记录的权限直接回退为字段名，避免误报为其他能力。
 BOT_PERMISSION_PROMPTS = {
     "can_read_all_messages": "core.message.module.bot_permission.read_all_messages",
     "can_send_messages": "core.message.module.bot_permission.send_messages",
@@ -118,8 +118,8 @@ async def config_modules(msg: Bot.MessageSession):
                 try:
                     bot_state = await msg.check_bot_state()
                 except Exception:
-                    # 状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
-                    # 只有平台明确返回 False 才会阻止开启，查询失败仍按既有能力声明处理。
+                    # RPC 与网络故障不能当成机器人无权限。
+                    # 只有平台明确返回 False 才阻止开启，查询失败按能力声明处理。
                     Logger.exception(
                         f"Failed to check bot state before enabling modules in {msg.session_info.target_id}: "
                     )

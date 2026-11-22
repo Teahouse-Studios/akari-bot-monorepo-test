@@ -179,7 +179,7 @@ def markdown_to_plain_text(text: str) -> str:
 
 @define
 class MarkdownElement(PlainElement):
-    """Markdown 文本元素；不支持 Markdown 时可降级为普通文本。"""
+    """Markdown 文本元素。不支持 Markdown 时可降级为普通文本。"""
 
     def to_plain(self) -> PlainElement:
         """移除 Markdown 标记并保留可读内容。"""
@@ -928,7 +928,7 @@ class ButtonPermission(str, Enum):
 
 
 def normalize_button_click_limit(value: int | None) -> int | None:
-    """归一化按钮点击次数；``None`` / ``0`` 表示不限次数。"""
+    """归一化按钮点击次数，``None`` / ``0`` 表示不限次数。"""
     if value is None or value == 0:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
@@ -1018,7 +1018,7 @@ class ButtonElement(BaseElement):
 
     @property
     def payload(self) -> ButtonPayload:
-        """返回按钮点击数据；同时兼容反序列化得到的旧版内嵌编码。"""
+        """返回按钮点击数据，同时兼容反序列化得到的旧版内嵌编码。"""
         return ButtonPayload.parse(self.value, self.reply_id, self.permission, self.click_limit)
 
     def kecode(self):

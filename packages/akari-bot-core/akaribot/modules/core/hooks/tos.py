@@ -64,7 +64,7 @@ def _enforce_tos(function):
     return enforced
 
 
-# 同版本 reload 保留限流与临封状态；版本变化时重建
+# 同版本 reload 保留限流与临时封禁状态。版本变化时重建
 _buckets_same = tos.state(
     "buckets_same",
     default_factory=ExpiringTempDict,
@@ -77,7 +77,7 @@ _buckets_all = tos.state(
     preserve=True,
     version=1,
 )
-# 临封计数：同版本热重载时保留，版本变化时重建。
+# 临时封禁计数：同版本热重载时保留，版本变化时重建。
 temp_ban_counter = tos.state(
     "temp_ban_counter",
     default_factory=lambda: ExpiringTempDict(exp=_temp_ban_time()),
@@ -246,7 +246,7 @@ async def _apply_abuse_safely(msg, reason: str):
     try:
         await _apply_abuse(msg, reason)
     except (Exception, SendMessageFailed, SessionFinished, WaitCancelException):
-        # 发送失败等框架控制流继承 BaseException；拒绝已形成，不能让 executor
+        # 发送失败等框架控制流继承 BaseException。拒绝已形成，不能让 executor
         # 把通知失败视为检查失败后放行。外部取消与进程退出仍必须传播。
         Logger.exception("Failed to deliver ToS penalty notification; rejection still applies.")
 
@@ -262,7 +262,7 @@ async def _apply_abuse(msg, reason: str):
     await _send_generic_abuse_error(msg, reason)
 
 
-# 强制检查沿用旧 parser 的无超时语义；外部取消仍传播，不能因 hook 超时降级放行。
+# 强制检查不设超时（``timeout=0``）。外部取消仍传播，不能因 hook 超时降级放行。
 @tos.hook(point=HookPoint.COMMAND_PREPARE, priority=10, name="temp_ban", server_scope=True, timeout=0)
 @_enforce_tos
 async def _(ctx: "Bot.ParserHookContext"):

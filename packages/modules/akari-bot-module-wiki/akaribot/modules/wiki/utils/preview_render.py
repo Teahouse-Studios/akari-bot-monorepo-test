@@ -463,7 +463,7 @@ async def _local_shell_render(fragment, parsed, page_url, requests, locale):
 
         async def initialized_screenshot(**options):
             page = options["page"]
-            # 替换接口插入的 script 保持惰性；仅显式执行机器人自带的初始化代码。
+            # 替换接口插入的 script 保持惰性。仅显式执行机器人自带的初始化代码。
             await page.evaluate(_PREVIEW_SCRIPTS["watermark"])
             await page.evaluate(_PREVIEW_SCRIPTS["css"])
             config = parsed.get("jsconfigvars", {})

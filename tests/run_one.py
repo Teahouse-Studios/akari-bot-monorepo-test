@@ -7,7 +7,7 @@ import sys
 import traceback
 from pathlib import Path
 
-# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上项目根；akaribot 本身
+# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上项目根。akaribot 本身
 # 由已安装分发解析，此处仅为与 tester.py 保持一致的导入环境。
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

@@ -68,7 +68,7 @@ async def _websocket_peers(
             peers.append(WebSocketPeer)
         pollers = [asyncio.create_task(peer.check_job_queue()) for peer in peers]
         await asyncio.gather(*(peer.wait_ready(timeout=2) for peer in peers))
-        # wait_ready 只保证各 Peer 已注册；ready/welcome 握手仍可能在其它 Peer 的
+        # wait_ready 只保证各 Peer 已注册。ready/welcome 握手仍可能在其它 Peer 的
         # 处理任务或 Hub 出站队列中。测试开始前等待控制面静默，避免 queue_size=1
         # 的背压用例与启动握手竞争同一个命令槽位。
         async with asyncio.timeout(2):
@@ -289,7 +289,7 @@ async def _test_websocket_frame_size_limit_cleans_waiter():
             await caller.call(receiver.name, "websocket.large", "x" * 4096, timeout=1)
             return False
         except RpcProtocolError as exc:
-            # Peer ready/welcome 信号可能仍在同一 Hub 中异步收尾；这里只验证超限调用
+            # Peer ready/welcome 信号可能仍在同一 Hub 中异步收尾。这里只验证超限调用
             # 自身没有遗留等待方或投递，避免把无关生命周期投递误判为泄漏。
             return not caller._pending and exc.task_id not in hub.deliveries
 
@@ -412,7 +412,7 @@ async def test_jobqueue_websocket_backend(tester: Tester):
     )
     await tester.test(
         _test_websocket_expired_delivery_is_released,
-        "WebSocket 过期投递关联释放与超时回包",
+        "WebSocket 过期投递关联释放与超时响应",
     )
     await tester.test(
         _test_websocket_independent_process_roundtrip,

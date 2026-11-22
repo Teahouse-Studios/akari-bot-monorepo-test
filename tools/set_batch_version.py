@@ -57,7 +57,7 @@ def set_version(path: Path, version: str, dry_run: bool) -> str:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(description="把全部分发切到同一批次版本。")

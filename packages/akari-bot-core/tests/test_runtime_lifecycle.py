@@ -356,7 +356,7 @@ async def _test_shutdown_prevents_new_queue_claims() -> bool:
 
     async def close_web_render():
         cleanup_started.set()
-        # 给轮询器多次调度机会；正确实现会因 shutdown_window 持有轮询锁而无法进入。
+        # 给轮询器多次调度机会。正确实现会因 shutdown_window 持有轮询锁而无法进入。
         for _ in range(5):
             await asyncio.sleep(0)
         allow_cleanup.set()
@@ -580,7 +580,7 @@ async def test_runtime_lifecycle(tester: Tester):
     await tester.test(_test_client_queue_poller_recovers_from_transient_failure, "客户端队列轮询异常后恢复")
     await tester.test(_test_message_background_failure_is_observed_and_cleaned, "消息后台异常被记录并清理")
     await tester.test(_test_shutdown_waits_for_inflight_queue_handlers, "关闭时等待在途队列处理器")
-    await tester.test(_test_shutdown_prevents_new_queue_claims, "关闭期间停止领取新的队列任务")
+    await tester.test(_test_shutdown_prevents_new_queue_claims, "关闭期间停止认领新的队列任务")
     await tester.test(_test_background_cleanup_registry_is_generic_and_reload_safe, "后台清理注册与热重载替换")
     await tester.test(_test_background_cleanup_isolates_failure_and_timeout, "后台清理异常与超时隔离")
     await tester.test(

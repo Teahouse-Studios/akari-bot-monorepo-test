@@ -296,7 +296,7 @@ async def shutdown() -> None:
 
     for connection in getattr(satori_app, "connections", []):
         # SDK 把网络层作为 sideload 组件注入，它持有的是局部的 manager 状态，
-        # 只有同时置位该状态并关闭连接，重连循环才会退出而不是再次连接。
+        # 只有同时设置该状态并关闭连接，重连循环才会退出而不是再次连接。
         local_manager = getattr(connection, "manager", None)
         if local_manager is not None:
             local_manager.status.exiting = True

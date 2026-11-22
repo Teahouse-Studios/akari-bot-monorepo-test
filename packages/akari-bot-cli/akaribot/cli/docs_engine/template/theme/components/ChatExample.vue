@@ -5,7 +5,7 @@ const props = withDefaults(
   defineProps<{
     log?: string[]
     caption?: string
-    // 按钮交互由外部模板提供；这里声明属性以避免透传到根元素。
+    // 按钮交互由外部模板提供。这里声明属性以避免透传到根元素。
     buttons?: unknown[]
   }>(),
   { log: () => [], caption: "", buttons: () => [] },

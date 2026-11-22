@@ -1,10 +1,10 @@
 """字体查找：资源包、实例 data、系统字体三级回退。
 
-模块包经 :func:`find_font` 取字体路径，不再依赖 ``assets/fonts`` 这类相对仓库布局的常量：字体由
-``akari-bot-assets-fonts`` 分发，源码检出与 wheel 安装两种形态下的位置不同。
+模块包经 :func:`find_font` 取字体路径，不依赖 ``assets/fonts`` 这类相对仓库布局的常量：字体由
+``akari-bot-assets-fonts`` 分发，源码克隆与 wheel 安装两种形态下的位置不同。
 
-三级顺序固定为资源包、``Paths.data/fonts``（部署者自备）、系统字体；三级都取不到时抛
-:class:`FontNotFoundError`，其消息给出三条修复路径，而不是让 ``ImageFont.truetype`` 抛裸 ``OSError``。
+三级顺序固定为资源包、``Paths.data/fonts``（部署者自备）、系统字体。三级都取不到时抛
+:class:`FontNotFoundError`，其消息给出三条修复路径，而不是让 ``ImageFont.truetype`` 抛出未包装的 ``OSError``。
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ _CJK_FAMILIES = (
 # 符号字族候选。候选只收同类字族：回退到缺汉字字形的默认字族会把中文渲染成方框。
 _SYMBOL_FAMILIES = ("Noto Sans Symbols 2", "Noto Sans Symbols2", "Apple Symbols", "Segoe UI Symbol")
 
-# 已知字体名到系统字族候选的映射；未收录的名字只在资源包与实例 data 两级查找。
+# 已知字体名到系统字族候选的映射。未收录的名字只在资源包与实例 data 两级查找。
 SYSTEM_FAMILIES: dict[str, tuple[str, ...]] = {
     "Noto Sans CJK Bold.otf": _CJK_FAMILIES,
     "Noto Sans CJK DemiLight.otf": _CJK_FAMILIES,
@@ -48,7 +48,7 @@ class FontNotFoundError(FileNotFoundError):
     """三级回退都没有取到字体。
 
     继承 ``FileNotFoundError`` 是为了兼容既有调用方：它同时是 ``OSError``，``except OSError``
-    照常捕获；消息含修复指引，这一点是裸 ``ImageFont.truetype`` 的 ``OSError`` 不具备的。
+    照常捕获。消息含修复指引，这一点是 ``ImageFont.truetype`` 抛出的 ``OSError`` 不具备的。
     """
 
 
@@ -88,7 +88,7 @@ def _from_system_fonts(name: str) -> Path | None:
 def find_font(name: str) -> Path:
     """取字体文件路径，按资源包、实例 data、系统字体三级回退。
 
-    :param name: 字体文件名，如 ``"Noto Sans CJK DemiLight.otf"``；系统一级只认 :data:`SYSTEM_FAMILIES`
+    :param name: 字体文件名，如 ``"Noto Sans CJK DemiLight.otf"``，系统一级只认 :data:`SYSTEM_FAMILIES`
         收录的名字，未收录的名字仅前两级可命中。
     :return: 字体文件路径。
     :raises FontNotFoundError: 三级都没有该字体。

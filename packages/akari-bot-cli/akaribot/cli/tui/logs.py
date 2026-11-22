@@ -23,7 +23,7 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import context
 
 ALL_PROCESSES = "all"
-"""全部进程的内部标识；显示文案按当前语言解析。"""
+"""全部进程的内部标识。显示文案按当前语言解析。"""
 
 DEFAULT_FOLLOW_SECONDS = 1.0
 """默认跟随周期（秒）。"""
@@ -52,7 +52,7 @@ class LogSourceError(RuntimeError):
 
 @runtime_checkable
 class LogSource(Protocol):
-    """日志数据源接口；测试注入替身，生产直接读文件系统。"""
+    """日志数据源接口。测试注入替身，生产直接读文件系统。"""
 
     def list_processes(self) -> Sequence[str]:
         """返回日志目录中出现过的进程名。"""
@@ -68,10 +68,10 @@ class LogSource(Protocol):
 
 
 class StaticLogSource:
-    """替身数据源：按「文件名 → 行列表」登记内容，``offset`` 即行号游标。
+    """替身数据源：按“文件名 → 行列表”记录内容，``offset`` 即行号游标。
 
     :param files: 文件名到初始行列表的映射，文件名须符合 ``<进程>[_debug]_<日期>.log``。
-    :param mtimes: 文件名到最后修改时间的映射，默认按登记顺序递增，用于断言「取最新文件」。
+    :param mtimes: 文件名到最后修改时间的映射，默认按记录顺序递增，用于检查“取最新文件”。
     """
 
     def __init__(
@@ -148,8 +148,8 @@ class StaticLogSource:
 class FileLogSource:
     """默认数据源：直接读实例 ``logs/`` 目录，不启动子进程。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
-    :param logs_dir: 直接指定日志目录；给定后不再解析实例根。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param logs_dir: 直接指定日志目录。给定后不再解析实例根。
     """
 
     def __init__(self, *, root: Path | str | None = None, logs_dir: Path | str | None = None) -> None:
@@ -157,7 +157,7 @@ class FileLogSource:
         self.logs_dir = Path(logs_dir) if logs_dir is not None else None
 
     def logs_path(self) -> Path:
-        """返回日志目录；未显式指定时按实例根拼接 ``logs``。"""
+        """返回日志目录。未显式指定时按实例根拼接 ``logs``。"""
         if self.logs_dir is not None:
             return self.logs_dir
         found = context.active_root()
@@ -212,7 +212,7 @@ class LogsPage(compat.Vertical):
     """日志页控件。
 
     :param source: 数据源，默认为 :class:`FileLogSource`。
-    :param follow_interval: 跟随周期（秒）；``None`` 或非正数表示不自动跟随，只手动刷新。
+    :param follow_interval: 跟随周期（秒）。``None`` 或非正数表示不自动跟随，只手动刷新。
     :param rescan_seconds: 重新枚举日志目录的间隔（秒），用于跨日轮转时切换文件。
     :param buffer_lines: 显示缓冲的行数上限，超出后丢弃最早的行。
     :param chunk_bytes: 单次增量读取的字节上限。
@@ -354,7 +354,7 @@ class LogsPage(compat.Vertical):
 
     @property
     def processes(self) -> tuple[str, ...]:
-        """返回可选的进程名，不含「全部进程」。"""
+        """返回可选的进程名，不含“全部进程”。"""
         return self._processes
 
     @property
@@ -371,7 +371,7 @@ class LogsPage(compat.Vertical):
 
     @property
     def selected_process(self) -> str | None:
-        """返回当前过滤的进程；``None`` 表示不过滤。"""
+        """返回当前过滤的进程。``None`` 表示不过滤。"""
         return self._selected
 
     @property
@@ -380,12 +380,12 @@ class LogsPage(compat.Vertical):
         return self._followed
 
     def process_labels(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的进程行文本，供自动化断言核对计数。"""
+        """返回最近一次渲染出的进程行文本，供自动化检查核对计数。"""
         return self._process_labels
 
     @property
     def read_offset(self) -> int:
-        """返回当前读取偏移；文件数据源以字节为单位。"""
+        """返回当前读取偏移。文件数据源以字节为单位。"""
         # Widget.offset 表示控件位置，不能用于日志游标。
         return self._offset
 
@@ -407,7 +407,7 @@ class LogsPage(compat.Vertical):
 
     @property
     def last_chunk(self) -> LogChunk | None:
-        """返回最近一次增量读取结果，供断言 offset 是否生效。"""
+        """返回最近一次增量读取结果，供检查 offset 是否生效。"""
         return self._last_chunk
 
     @property
@@ -422,12 +422,12 @@ class LogsPage(compat.Vertical):
 
     @property
     def filter_keyword(self) -> str:
-        """返回关键词过滤；空串表示不过滤。"""
+        """返回关键词过滤。空串表示不过滤。"""
         return self._filter
 
     @property
     def filter_hits(self) -> int:
-        """返回关键词在当前缓冲中的命中行数；未启用过滤时为 0。"""
+        """返回关键词在当前缓冲中的命中行数。未启用过滤时为 0。"""
         return len(self._matched_lines()) if self._filter else 0
 
     @property
@@ -513,15 +513,15 @@ class LogsPage(compat.Vertical):
     def select_process(self, process: str | None) -> None:
         """切换进程过滤，并重新枚举与对齐跟随目标。
 
-        :param process: 进程名；``None`` 表示不过滤。
+        :param process: 进程名。``None`` 表示不过滤。
         """
         self._selected = process
         self.refresh_files()
 
     def follow_once(self) -> LogChunk | None:
-        """执行一次增量跟随；暂停中或没有目标时返回 ``None``。
+        """执行一次增量跟随。暂停中或没有目标时返回 ``None``。
 
-        :return: 本次读取结果；确实读到新行时才重绘。
+        :return: 本次读取结果。确实读到新行时才重绘。
         """
         if self._paused:
             return None
@@ -567,7 +567,7 @@ class LogsPage(compat.Vertical):
         return True
 
     def pause(self) -> None:
-        """暂停跟随；offset 保持不变，恢复后从暂停位置继续。"""
+        """暂停跟随。offset 保持不变，恢复后从暂停位置继续。"""
         self._paused = True
         self._sync_actions()
         self._set_status(self._status_line())
@@ -603,7 +603,7 @@ class LogsPage(compat.Vertical):
         self.query_one("#filter", compat.Input).focus()
 
     def clear_filter(self) -> None:
-        """清空关键词过滤；已为空时聚焦进程列表。"""
+        """清空关键词过滤。已为空时聚焦进程列表。"""
         field = self.query_one("#filter", compat.Input)
         if field.value:
             field.value = ""
@@ -613,7 +613,7 @@ class LogsPage(compat.Vertical):
     def set_debug_preference(self, mode: str | None) -> None:
         """切换 debug 偏好并重新读取日志。
 
-        :param mode: ``auto`` / ``info`` / ``debug``；``None`` 表示取消，不做更改。
+        :param mode: ``auto`` / ``info`` / ``debug``。``None`` 表示取消，不做更改。
         """
         if mode not in DEBUG_MODES:
             return
@@ -621,7 +621,7 @@ class LogsPage(compat.Vertical):
         self.refresh_files()
 
     def request_debug_menu(self) -> None:
-        """弹出日志级别菜单，列出当前以外的 debug 偏好。"""
+        """弹出日志级别菜单，列出除当前偏好以外的模式。"""
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.logs.debug_menu_title"),
@@ -635,7 +635,7 @@ class LogsPage(compat.Vertical):
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
         index = compat.highlighted_index(event.list_view)
         if index is None:
-            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按「不变」处理。
+            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按“不变”处理。
             return
         process = self._process_at(index)
         if process != self._selected:
@@ -807,11 +807,11 @@ class LogsPage(compat.Vertical):
     def on_resize(self, event: compat.events.Resize) -> None:
         self._render_target()
         self._render_log()
-        # 视口高度改变后，跟随状态须重新定位末尾；暂停时保留阅读位置。
+        # 视口高度改变后，跟随状态须重新定位末尾。暂停时保留阅读位置。
         if not self._paused:
             self._pin_to_end()
         self._set_status(self._status_line())
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await self.app.workers.wait_for_complete()

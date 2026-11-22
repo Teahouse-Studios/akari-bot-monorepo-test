@@ -59,14 +59,15 @@ WORKSPACE_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pypro
 MANIFEST_FILENAME = "manifest.toml"
 # 判定目录是否为 venv 的标志文件。
 VENV_MARKER_FILENAME = "pyvenv.cfg"
-# 清单未声明 requires_core_api 时的默认区间；与 core.registry.PackageManifest 及
+# 清单未声明 requires_core_api 时的默认区间。与 core.registry.PackageManifest 及
 # tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 同口径，工作区视图与 registry 视图必须一致。
 DEFAULT_REQUIRES_CORE_API = ">=1"
 # 内置 uv 的文件名：Windows 上必须是带 .exe 的完整名，CreateProcess 不接受无扩展名的可执行文件。
 UV_BUNDLED_NAME = "uv"
 UV_BUNDLED_WINDOWS_NAME = "uv.exe"
 UV_WINDOWS_SUFFIXES = (".exe", ".com", ".bat", ".cmd")
-# 冻结后本文件落在解包目录内的包层级里，资源根只在上面若干级；设上限以免把无关祖先目录当成资源根。
+# 冻结后本文件位于解包目录内的包层级里，资源根只在上面若干级。
+# 设上限以免把无关祖先目录当成资源根。
 FROZEN_ROOT_MAX_DEPTH = 6
 
 
@@ -89,7 +90,7 @@ def bundled_uv_names() -> tuple[str, ...]:
 def is_executable(path: Path) -> bool:
     """判断路径是否为可执行文件。
 
-    Windows 按扩展名判定；POSIX 按可执行位判定，并在缺失时补一次权限位——Nuitka onefile 解包
+    Windows 按扩展名判定。POSIX 按可执行位判定，并在缺失时补一次权限位——Nuitka onefile 解包
     不保证保留数据文件的可执行位，只看权限位会让内置 uv 被静默跳过。
 
     :param path: 待判定的路径。
@@ -120,8 +121,8 @@ def frozen_candidate_dirs() -> tuple[Path, ...]:
     """冻结产物里可能承载包内资源的目录，按可信度排序。
 
     三个探测点都取自 Nuitka 的既有机制，不依赖任何绝对路径：``__compiled__.containing_dir`` 是
-    Nuitka 直接给出的产物目录；``sys.argv[0]`` 在 standalone 下与资源同目录；本文件 ``__file__``
-    在 onefile 下落在解包目录内，其父目录里必有资源根。
+    Nuitka 直接给出的产物目录。``sys.argv[0]`` 在 standalone 下与资源同目录。本文件 ``__file__``
+    在 onefile 下位于解包目录内，其父目录里必有资源根。
 
     :return: 去重后的候选目录。
     """
@@ -142,7 +143,7 @@ def frozen_candidate_dirs() -> tuple[Path, ...]:
 
 
 def frozen_bundled_uv() -> Path | None:
-    """定位冻结产物内置的 uv；非冻结或资源未打包时返回 ``None``。
+    """定位冻结产物内置的 uv。非冻结或资源未打包时返回 ``None``。
 
     :return: 内置 uv 的路径。
     """
@@ -162,14 +163,14 @@ def frozen_resource_root() -> Path | None:
     当前以内置 uv 作为存在性探针：打包进来的数据文件与二进制同层，找到可执行的 uv 即证明该
     目录就是资源根。
 
-    :return: 资源根目录；非冻结或资源未打包时为 ``None``。
+    :return: 资源根目录，非冻结或资源未打包时为 ``None``。
     """
     bundled = frozen_bundled_uv()
     return bundled.parent if bundled is not None else None
 
 
 def _override_uv(value: str) -> Path | None:
-    # 取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）；不可用时返回 ``None``，
+    # 取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）。不可用时返回 ``None``，
     # 由调用方回退到内置资源或 PATH。
     candidate = Path(value).expanduser()
     if is_executable(candidate):
@@ -224,7 +225,7 @@ def create_venv_argv(
 def uv_environment(instance: Instance) -> dict[str, str] | None:
     """为 uv 子进程准备环境变量。
 
-    默认缓存位于用户家目录；受限环境里该目录可能不可写，导致安装前检查就失败。实例已有
+    默认缓存位于用户家目录。受限环境里该目录可能不可写，导致安装前检查就失败。实例已有
     ``cache`` 目录，未显式设置 ``UV_CACHE_DIR`` 时改用它，安装不再依赖家目录权限。
     """
     root = getattr(instance, "root", None)
@@ -254,10 +255,10 @@ SUBDIRECTORY_FRAGMENT = "#subdirectory="
 def package_authors(package_root: Path) -> tuple[str, ...]:
     """读包目录 ``pyproject.toml`` 里的 ``[project] authors``。
 
-    工作区模式下包就在磁盘上，直接读声明处；registry 模式下没有本地源码，作者随 registry 条目下发。
+    工作区模式下包就在磁盘上，直接读声明处。registry 模式下没有本地源码，作者随 registry 条目下发。
 
     :param package_root: 包根目录（含 pyproject.toml）。
-    :return: 作者名列表；文件缺失或字段为空时返回空元组。
+    :return: 作者名列表，文件缺失或字段为空时返回空元组。
     """
     path = package_root / "pyproject.toml"
     if not path.is_file():
@@ -285,7 +286,7 @@ def git_spec(url: str, *, ref: str = "", subdir: str = "", dist: str = "") -> st
     :param url: 仓库地址。
     :param ref: 分支、标签或提交。
     :param subdir: 包在仓库中的子目录。
-    :param dist: 分发名；给定时写成 ``name @`` 形式，否则由 uv 从仓库的 pyproject 推断。
+    :param dist: 分发名，给定时写成 ``name @`` 形式，否则由 uv 从仓库的 pyproject 推断。
     :return: 交给 ``uv pip install`` 的参数 token。
     :raises CliError: 地址为空，或地址里已带 ref／片段而参数又给了同一个。
     """
@@ -323,7 +324,7 @@ def dry_run_confirm_argv(python: Path, specs: Sequence[str]) -> list[str]:
 def summarize_uv_error(stderr: str, *, limit: int = 3) -> str:
     """把 uv 解析器的原始报错压缩成可读说明。
 
-    uv 的冲突说明以 ``Because ...`` 起句，逐条列出约束来源；取前若干条即可说明矛盾，
+    uv 的冲突说明以 ``Because ...`` 起句，逐条列出约束来源。取前若干条即可说明矛盾，
     完整输出留给 ``--verbose``。
 
     :param stderr: uv 的标准错误。
@@ -377,10 +378,10 @@ class CommandRunner:
         """执行命令并实时转发输出。
 
         安装与卸载可能跑上几分钟（解析依赖、下载 wheel、写 venv）。若沿用 ``capture_output``，
-        这段时间界面上没有任何变化，操作者无法区分「正在装」与「卡住了」。故逐行转发：uv 即使
+        这段时间界面上没有任何变化，操作者无法区分“正在装”与“卡住了”。故逐行转发：uv 即使
         输出被重定向也会打印 ``Resolved … / Installed …`` 这类进度行，转发即可见。
 
-        输出走 stderr，``--json`` 的 stdout 因此保持干净；同时保留末尾若干行供失败时摘要。
+        输出走 stderr，``--json`` 的 stdout 因此保持干净，同时保留末尾若干行供失败时摘要。
         """
         if self.dry_run:
             console.print(f"[dim]$ {escape(' '.join(argv))}[/dim]")
@@ -497,7 +498,7 @@ class InstalledDist:
     :param editable: 是否为可编辑安装。
     :param requires: metadata 里的依赖串。
     :param entry_points: ``"<group>|<name>" -> value``。
-    :param url: 直引用的来源地址（``direct_url.json`` 的 ``url``）；非直引用安装时为空串。
+    :param url: 直引用的来源地址（``direct_url.json`` 的 ``url``），非直引用安装时为空串。
     """
 
     dist: str
@@ -604,7 +605,7 @@ def compare_entry_points(source: Mapping[str, InstalledDist], target: Mapping[st
 
     :param source: 源环境的已装包。
     :param target: 目标环境的已装包。
-    :return: 差异列表；为空表示一致。
+    :return: 差异列表，为空表示一致。
     """
     source_points = entry_point_map(source)
     target_points = entry_point_map(target)
@@ -675,11 +676,11 @@ def package_root_from_entry_point(pyproject: Path, import_path: str) -> Path | N
 
     源码根优先取分发根，其次取分发根下的 ``src``：与 ``tools/build_registry.py`` 的
     ``package_root()`` 同一口径。CLI 既不能 import core 内部，也不该在运行时依赖仓库工具，
-    故按同一规则实现，并由用例与工具对拍，避免分化出第三套规则。
+    故按同一规则实现，并由用例与工具对比，避免分化出第三套规则。
 
     :param pyproject: 该分发的 pyproject.toml。
     :param import_path: entry point 的取值，如 ``akaribot.modules.wiki``。
-    :return: 导入包目录；两种布局都不存在时为 ``None``。
+    :return: 导入包目录，两种布局都不存在时为 ``None``。
     """
     for base in (pyproject.parent, pyproject.parent / "src"):
         root = base
@@ -695,11 +696,11 @@ def entry_point_manifest(pyproject: Path, entry_points: Mapping[str, Any]) -> di
 
     仓库契约是 manifest 位于 entry point 指向的导入包目录，分发根下的同名文件不是清单：发现层与
     registry 生成工具都按导入路径定位包根，locales、assets、migrations 也相对它解析。多个入口点时
-    取第一个能定位到包目录的清单，与生成工具「每个分发恰好一个模块或适配器入口点」的口径一致。
+    取第一个能定位到包目录的清单，与生成工具“每个分发恰好一个模块或适配器入口点”的口径一致。
 
     :param pyproject: 该分发的 pyproject.toml。
     :param entry_points: ``[project.entry-points]`` 表。
-    :return: 清单内容；定位不到包目录或文件缺失时为空字典。
+    :return: 清单内容，定位不到包目录或文件缺失时为空字典。
     """
     for group in AKARIBOT_ENTRY_POINT_GROUPS:
         targets = entry_points.get(group)
@@ -821,7 +822,7 @@ class InstallTarget:
     """事先解析好的安装目标。
 
     :param dist: 分发名。
-    :param version: 目标版本；本地路径模式下取自 pyproject。
+    :param version: 目标版本，本地路径模式下取自 pyproject。
     :param specs: 直接交给 uv 的参数 token。
     :param requires_core_api: 声明的 core API 区间。
     :param provides_modules: 该包提供的模块名。
@@ -847,12 +848,12 @@ class InstallTarget:
 def path_target(
     path: Path, *, editable: bool = True, extra: Sequence[str] = (), workspace_root: Path | None = None
 ) -> InstallTarget:
-    """由本地目录构造安装目标；目录位于工作区内时补齐本地依赖闭包。
+    """由本地目录构造安装目标。目录位于工作区内时补齐本地依赖闭包。
 
     :param path: 包根目录。
     :param editable: 是否以可编辑方式安装。
     :param extra: 该包要装的 extra。
-    :param workspace_root: 已知的工作区根；缺省时自动向上查找。
+    :param workspace_root: 已知的工作区根。默认为自动向上查找。
     :return: 安装目标。
     :raises CliError: 目录里没有可识别的 pyproject.toml。
     """
@@ -914,7 +915,7 @@ def workspace_target(
     :param workspace_root: 工作区根目录。
     :param name: 分发名、短名或 entry point 名。
     :param kind: ``module`` 或 ``adapter``，用于按前缀约束查找。
-    :return: 安装目标；工作区里没有该包时为 ``None``。
+    :return: 安装目标，工作区里没有该包时为 ``None``。
     """
     index = workspace_index(workspace_root)
     package = workspace_lookup(index, name, kind=kind)
@@ -1009,10 +1010,10 @@ class RegistryCatalog:
         ttl: float = REGISTRY_CACHE_TTL,
         offline: bool = False,
     ) -> RegistryCatalog:
-        """拉取 registry.json，带 ETag 缓存；失败时回退到本地缓存。
+        """拉取 registry.json，带 ETag 缓存。失败时回退到本地缓存。
 
         :param sources: 来源 URL 列表，按序尝试。
-        :param cache_dir: 缓存目录，缺省为 ``$AKARIBOT_CACHE_DIR`` 或 ``~/.cache/akaribot``。
+        :param cache_dir: 缓存目录，默认为 ``$AKARIBOT_CACHE_DIR`` 或 ``~/.cache/akaribot``。
         :param ttl: 缓存的软过期秒数。
         :param offline: 为真时只用缓存。
         :return: catalog。
@@ -1148,13 +1149,13 @@ def available_names(
     kind: str | None = None,
     limit: int = 24,
 ) -> list[str]:
-    """列出该来源下可安装的短名，供「找不到包」时直接给出候选。
+    """列出该来源下可安装的短名，供“找不到包”时直接给出候选。
 
     只报名字，不解释来源差异：调用方已经知道自己走的是哪条路径。
 
-    :param workspace_root: 工作区根；非空时取本地成员。
+    :param workspace_root: 工作区根。非空时取本地成员。
     :param catalog: 已加载的 registry。
-    :param kind: ``module`` 或 ``adapter``；``None`` 表示两者都要。
+    :param kind: ``module`` 或 ``adapter``。``None`` 表示两者都要。
     :param limit: 最多返回多少个名字。
     :return: 排序后的短名列表。
     """
@@ -1192,8 +1193,8 @@ def resolve_target(
     解析优先级：``-e/--editable`` 的本地目录 → 工作区本地源码 → registry → 分发名约定。
 
     :param name: 包名（短名或分发名）。
-    :param workspace_root: 本地工作区根；非空时优先本地路径。
-    :param catalog: 已加载的 registry；为 ``None`` 时跳过 registry 解析。
+    :param workspace_root: 本地工作区根，非空时优先本地路径。
+    :param catalog: 已加载的 registry，为 ``None`` 时跳过 registry 解析。
     :param dist: 直接指定分发名，跳过 registry 查名。
     :param version: 版本或版本区间。
     :param editable_path: ``-e`` 给出的本地目录。
@@ -1243,9 +1244,9 @@ class VenvStatus:
     :param venv_dir: 托管 venv 的目标目录。
     :param python: 当前生效的解释器。
     :param exists: 解释器是否存在。
-    :param packages: 已装 akaribot 包；探测失败时为 ``None``。
+    :param packages: 已装 akaribot 包，探测失败时为 ``None``。
     :param error: 探测失败的原因。
-    :param installed: 环境里的全部分发（含传递依赖）；未探测时为 ``None``。
+    :param installed: 环境里的全部分发（含传递依赖），未探测时为 ``None``。
     :param requirements: 实例清单里记录的运行库需求串。
     """
 
@@ -1265,18 +1266,18 @@ class VenvStatus:
 
     @property
     def installed_count(self) -> int:
-        """环境里的全部已装分发数量；未探测时为 ``-1``。"""
+        """环境里的全部已装分发数量。未探测时为 ``-1``。"""
         return -1 if self.installed is None else len(self.installed)
 
     @property
     def core_version(self) -> str | None:
-        """core 的版本；未装时为 ``None``。"""
+        """core 的版本。未装时为 ``None``。"""
         info = (self.packages or {}).get(CORE_DIST)
         return info.version if info else None
 
 
 def venv_status(instance: Instance, *, all_distributions: bool = True) -> VenvStatus:
-    """采集 venv 状态；解释器缺失或探测失败都不抛异常，交命令层展示。
+    """采集 venv 状态。解释器缺失或探测失败都不抛异常，交命令层展示。
 
     :param instance: 目标实例。
     :param all_distributions: 为真时一并带回环境里的全部分发，供界面列清单。
@@ -1304,7 +1305,7 @@ def venv_status(instance: Instance, *, all_distributions: bool = True) -> VenvSt
 
 
 def requirement_names(specs: Sequence[str]) -> dict[str, str]:
-    """把记录的需求串映射到分发名；认不出分发名的写法（裸地址）跳过。
+    """把记录的需求串映射到分发名。认不出分发名的写法（裸地址）跳过。
 
     :param specs: 需求串列表。
     :return: 规范化分发名到原始需求串的映射。
@@ -1327,7 +1328,7 @@ def install_runtime_requirements(
 ) -> tuple[str, ...]:
     """把实例清单里记录的运行库装进目标环境，返回实际交给 uv 的需求串。
 
-    adopt / recreate 会另建一个环境，只有记录在清单里的运行库才会跟过去；「仅装进环境」的那部分
+    adopt / recreate 会另建一个环境，只有记录在清单里的运行库才会跟过去。“仅装进环境”的那部分
     按定义留在旧环境里。
     """
     specs = instance.meta.requirements
@@ -1366,7 +1367,7 @@ def environment_root(python: Path) -> Path:
     """返回解释器所属的环境根目录。
 
     venv 里的解释器是 ``<环境>/bin/python``（Windows 为 ``<环境>\\Scripts\\python.exe``），
-    只有目录里有 ``pyvenv.cfg`` 才算一个环境；裸解释器按自身真实路径归到一个唯一位置。
+    只有目录里有 ``pyvenv.cfg`` 才算一个环境。裸解释器按自身真实路径归到一个唯一位置。
 
     :param python: 解释器路径。
     :return: 环境根目录。
@@ -1399,7 +1400,7 @@ def adopt(
     keep_source: bool = False,
     force: bool = False,
 ) -> HostingReport:
-    """从「使用当前环境」切换为「CLI 托管 venv」。
+    """从“使用当前环境”切换为“CLI 托管 venv”。
 
     步骤顺序不可颠倒：枚举源环境已装的 akaribot 包与版本 → 目标环境全部装好 →
     验证 entry points 与源环境一致 → 最后才卸载源环境的包。先删后装一旦中途失败，
@@ -1407,8 +1408,8 @@ def adopt(
 
     :param instance: 目标实例。
     :param runner: 命令执行者。
-    :param host_python: 源解释器，缺省为当前解释器。
-    :param python: 建 venv 用的解释器，缺省与源解释器相同，以保持版本一致。
+    :param host_python: 源解释器，默认为当前解释器。
+    :param python: 建 venv 用的解释器，默认与源解释器相同，以保持版本一致。
     :param keep_source: 为真时不卸载源环境的包。
     :param force: 目标 venv 已存在时是否覆盖重建。
     :return: 结果报告。
@@ -1715,10 +1716,10 @@ def unmet_dependencies(
 ) -> list[tuple[Requirement, InstalledDist]]:
     """列出待装包要求、但已装版本不满足的依赖。
 
-    这类依赖由 uv 在安装时升降版本，本身不构成冲突；是否会破坏其他已装包由
+    这类依赖由 uv 在安装时升降版本，本身不构成冲突。是否会破坏其他已装包由
     :func:`requirements_broken_by` 按 uv 给出的安装计划判断。
 
-    :param candidate: 待装目标；``dependencies`` 仅在本地模式可读。
+    :param candidate: 待装目标，``dependencies`` 仅在本地模式可读。
     :param installed: 目标环境的已装包。
     :return: ``(依赖要求, 当前已装分发)`` 列表。
     """
@@ -1744,12 +1745,12 @@ def dependency_conflicts(
 ) -> list[str]:
     """检查已装包对待装包本身的版本要求。
 
-    发现的矛盾以「谁要求什么、实际是什么」的可读形式返回，不把 uv 解析器原始报错抛给用户。
+    发现的矛盾以“谁要求什么、实际是什么”的可读形式返回，不把 uv 解析器原始报错抛给用户。
     待装包自身依赖的版本调整见 :func:`unmet_dependencies`。
 
-    :param candidate: 待装目标；``version`` 仅在本地模式可读。
+    :param candidate: 待装目标，``version`` 仅在本地模式可读。
     :param installed: 目标环境的已装包。
-    :return: 冲突说明列表；为空表示预检通过。
+    :return: 冲突说明列表，为空表示检查通过。
     """
     problems: list[str] = []
     candidate_key = canonical(candidate.dist)
@@ -1810,7 +1811,7 @@ def planned_versions(output: str) -> dict[str, str]:
 def current_requires(info: InstalledDist) -> tuple[str, ...]:
     """返回已装包当前生效的依赖串。
 
-    可编辑安装的元数据只在安装时生成，运行的却是源码；源码 ``pyproject.toml`` 之后改动的依赖要重装
+    可编辑安装的元数据只在安装时生成，运行的却是源码。源码 ``pyproject.toml`` 之后改动的依赖要重装
     才进元数据，故以源码声明为准，读不到或依赖为动态字段时退回元数据。
     """
     if info.editable and info.path is not None:
@@ -1827,12 +1828,12 @@ def requirements_broken_by(changes: Mapping[str, str], installed: Mapping[str, I
     """列出安装计划会破坏的已装包依赖。
 
     ``uv pip install`` 求解时不考虑其他已装包的依赖，版本调整须在此逐条核对。依赖取自
-    :func:`current_requires`，只对未请求 extra 时生效的依赖判断；会被一并替换的包按新版本处理，
+    :func:`current_requires`，只对未请求 extra 时生效的依赖判断。会被一并替换的包按新版本处理，
     不核对其旧依赖。
 
     :param changes: 规范化分发名到计划版本，取自 :func:`planned_versions`。
     :param installed: 目标环境的全部已装包。
-    :return: 冲突说明列表；为空表示调整不影响其他已装包。
+    :return: 冲突说明列表，为空表示调整不影响其他已装包。
     """
     problems: list[str] = []
     for info in installed.values():
@@ -1863,7 +1864,7 @@ def requirements_broken_by(changes: Mapping[str, str], installed: Mapping[str, I
 
 
 def installed_api_requirements(candidate: InstallTarget, installed: Mapping[str, InstalledDist]) -> list[str]:
-    """列出已装包中要求「待装分发」的那些依赖串，供冲突说明引用。"""
+    """列出已装包中要求“待装分发”的那些依赖串，供冲突说明引用。"""
     candidate_key = canonical(candidate.dist)
     result: list[str] = []
     for info in installed.values():
@@ -1967,9 +1968,9 @@ def count_placeholders(paths: Sequence[Path]) -> int:
 
 
 def config_sync(instance: Instance, dist: str) -> None:
-    """第 4 步：补写该包的配置。
+    """第 4 步：写入该包的配置。
 
-    补写必须发生在 CLI 子进程：机器人与 server 一律以只读配置运行，
+    写入必须发生在 CLI 子进程：机器人与 server 一律以只读配置运行，
     ``CFGManager._ensure_writable()`` 会拒绝它们写入（tasks T5.2 的硬约束）。
     调用方应在调用前抓取 :class:`ConfigSnapshot`，以便失败时回滚本次写入。
     """
@@ -2003,7 +2004,7 @@ def _text_of(value: Any) -> str:
 def purge_failure_reasons(payload: Any) -> tuple[str, ...]:
     """从 ``db purge --json`` 的回传里提取逐项失败原因。
 
-    结构化错误的键名与嵌套形状由 core 侧定义，此处按「整体错误 → 逐表错误」的顺序收敛成可读行，
+    结构化错误的键名与嵌套形状由 core 侧定义，此处按“整体错误 → 逐表错误”的顺序收敛成可读行，
     认不出的结构一律忽略，由调用方退回 stderr 摘要，避免把不可读的原始输出抛给用户。
 
     :param payload: ``--json`` 回传解析出的对象。
@@ -2037,7 +2038,7 @@ def db_purge(instance: Instance, dist: str) -> bool:
     """删除该包拥有的数据表，返回是否成功。
 
     core 侧以 ``db purge --package <分发> --json`` 执行：失败时非零退出并回传结构化原因，这里把
-    原因逐条打印出来，命令层才能逐项显示成功与失败，而不是只留一句「退出码 1」。
+    原因逐条打印出来，命令层才能逐项显示成功与失败，而不是只留一句“退出码 1”。
 
     :param instance: 目标实例。
     :param dist: 分发名。

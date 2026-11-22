@@ -12,7 +12,7 @@ from typing import Any
 from akaribot.core.paths import Paths
 from akaribot.testing.mock.http import HTTPMock, MockHTTPResponse, digest_request_body
 
-# 语料目录属源码仓库，与 Paths.tests 同源；按本文件深度推算会在包布局调整后失准。
+# 语料目录属源码仓库，与 Paths.tests 同源。按本文件深度推算会在包布局调整后失准。
 FIXTURE_DIR = Paths.tests / "fixtures" / "http"
 
 
@@ -103,13 +103,13 @@ def load_http_fixtures(fixture_dir: Path | None = None) -> int:
     if not fixture_dir.exists():
         return 0
 
-    # 默认禁止回落到真实网络：未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）
+    # 默认禁止回退到真实网络：未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）
     # 拖慢用例，并让结果随外部服务状态漂移。录制新语料时以环境变量放行。
     # 每次调用都重设策略，使中途停用 mock 的用例不会波及后续入口。
     HTTPMock.enable(strict=os.environ.get("AKARI_TEST_ALLOW_LIVE_HTTP") != "1")
 
     resolved_dir = fixture_dir.resolve()
-    # 语料在同一进程内不变；重复注册只会让比对清单随入口数量膨胀。
+    # 语料在同一进程内不变。重复注册只会让比对清单随入口数量膨胀。
     if resolved_dir in _registered_dirs:
         return _registered_dirs[resolved_dir]
 
@@ -147,7 +147,7 @@ def load_http_fixtures(fixture_dir: Path | None = None) -> int:
                 try:
                     response._json = json.loads(data["text"])
                 except (json.JSONDecodeError, TypeError):
-                    # text 不是合法 JSON（或类型不匹配）时，保持 _json 未设置；
+                    # text 不是合法 JSON（或类型不匹配）时，保持 _json 未设置。
                     # 调用方仍可通过 text/content 使用响应内容。
                     pass
 

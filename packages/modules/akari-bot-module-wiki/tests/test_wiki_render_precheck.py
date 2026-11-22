@@ -1,4 +1,4 @@
-"""Wiki WebRender 预检查在跨 wiki 跳转后的传递测试。"""
+"""Wiki WebRender 检查在跨 wiki 跳转后的传递测试。"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -237,7 +237,7 @@ async def _test_interwiki_invalid_section_stays_unrenderable():
 
 
 async def _run_langlinks_section_query(query: str):
-    # 主站 en 语言版本指向 minecraft.wiki，目标页面无信息框；章节按目标 wiki 的章节表校验。
+    # 主站 en 语言版本指向 minecraft.wiki，目标页面无信息框。章节按目标 wiki 的章节表校验。
     source = _source_wiki({"en": MINECRAFT_ARTICLE_PATH})
     captured = {"render_checks": []}
 

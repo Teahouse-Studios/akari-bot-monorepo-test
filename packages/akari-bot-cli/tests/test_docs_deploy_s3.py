@@ -1,7 +1,7 @@
 """``cli.docs.deploy.s3``：S3 兼容存储部署 provider。
 
 用例用 ``httpx.MockTransport`` 模拟 ListObjectsV2、PUT 与 DELETE，覆盖分页、跳过未变、
-上传、删除、试运行、前缀隔离、寻址方式、区域回退与错误汇总；全程不访问网络。
+上传、删除、试运行、前缀隔离、定位方式、区域回退与错误汇总。全程不访问网络。
 """
 
 import hashlib
@@ -392,7 +392,7 @@ async def test_docs_deploy_s3(tester: Tester):
     await tester.test(_test_lists_pages_and_uploads_changes, "分页列取、跳过未变并上传变化文件")
     await tester.test(_test_delete_only_touches_prefix, "删除只触及前缀内的多余键")
     await tester.test(_test_dry_run_counts_without_writes, "试运行只统计不写入")
-    await tester.test(_test_virtual_host_and_auto_addressing, "path-style、virtual-host 与自动寻址")
+    await tester.test(_test_virtual_host_and_auto_addressing, "path-style、virtual-host 与自动定位")
     await tester.test(_test_config_is_validated, "端点、存储桶与 provider 名称校验")
     await tester.test(_test_missing_credentials_are_reported, "缺少凭据时报错")
     await tester.test(_test_http_failures_are_summarized, "列取、上传、删除与响应解析失败")

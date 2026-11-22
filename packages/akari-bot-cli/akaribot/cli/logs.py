@@ -83,7 +83,7 @@ class LogChunk:
     :param lines: 本次读到的完整行，可能为空。
     :param offset: 下次读取的起点字节偏移。
     :param reset: 文件被截断或轮转，本次从头读取。
-    :param pending: 文件末尾仍有未消费字节（半行未写完，或本次触到读取上限）。
+    :param pending: 文件末尾仍有未消费字节（半行未写完，或本次达到读取上限）。
     :param truncated: 因字节上限没有回看到所需内容，更早的行未读取。
     :param path: 所属文件名，供状态栏与报告展示。
     """
@@ -101,7 +101,7 @@ class LogReadError(RuntimeError):
 
     :param path: 出错的目录或文件。
     :param reason: ``dir_missing`` / ``dir_unreadable`` / ``stat`` / ``read``。
-    :param error: 原始 ``OSError``；目录缺失时为 ``None``。
+    :param error: 原始 ``OSError``。目录缺失时为 ``None``。
     """
 
     def __init__(self, path: Path | str, reason: str, error: OSError | None = None) -> None:
@@ -145,10 +145,10 @@ class LogRingBuffer:
 
 
 def parse_log_name(name: str) -> LogName | None:
-    """把日志文件名解析为进程名、debug 标记与日期；不符合命名规则时返回 ``None``。
+    """把日志文件名解析为进程名、debug 标记与日期。不符合命名规则时返回 ``None``。
 
     :param name: 文件名，形如 ``BotDaemon_2026-09-21.log`` 或 ``Server_debug_2026-09-21.log``。
-    :return: 解析结果；不是日志文件时为 ``None``。
+    :return: 解析结果。不是日志文件时为 ``None``。
     """
     match = _LOG_NAME_PATTERN.match(name)
     if match is None:
@@ -164,7 +164,7 @@ def list_log_files(directory: Path | str, process: str | None = None) -> tuple[L
     """枚举日志目录里的日志文件，最新的排在前面。
 
     :param directory: 日志目录。
-    :param process: 只保留该进程的文件；``None`` 表示不过滤。
+    :param process: 只保留该进程的文件。``None`` 表示不过滤。
     :return: 文件信息元组。
     :raises LogReadError: 目录缺失或不可读。
     """
@@ -205,7 +205,7 @@ def read_since(path: Path | str, offset: int, *, max_bytes: int = READ_CHUNK_BYT
     :param path: 日志文件。
     :param offset: 上次读取到的字节偏移。
     :param max_bytes: 单次读取的字节上限。
-    :return: 读取结果；``reset`` 为真表示文件被截断或轮转，本次从头读取。
+    :return: 读取结果。``reset`` 为真表示文件被截断或轮转，本次从头读取。
     """
     target = Path(path)
     size = _stat_size(target)
@@ -223,7 +223,7 @@ def read_since(path: Path | str, offset: int, *, max_bytes: int = READ_CHUNK_BYT
 
 
 def read_tail(path: Path | str, *, max_bytes: int = TAIL_CHUNK_BYTES) -> LogChunk:
-    """读取文件尾部的若干行，并把 offset 对齐到已读位置。
+    """读取文件尾部的若干行，并把 offset 移到已读位置。
 
     :param path: 日志文件。
     :param max_bytes: 回看的字节上限。
@@ -258,10 +258,10 @@ def read_last_lines(
     """读取文件末尾的若干完整行。
 
     :param path: 日志文件。
-    :param count: 期望的行数；非正数表示不读取内容。
+    :param count: 期望的行数。非正数表示不读取内容。
     :param max_bytes: 向前回看的字节上限。
     :param chunk_bytes: 单次回看的字节数。
-    :return: 读取结果，``offset`` 对齐到已读内容的末尾；``truncated`` 为真表示受字节上限所限，
+    :return: 读取结果，``offset`` 指向已读内容的末尾。``truncated`` 为真表示受字节上限所限，
         更早的行没有读取。
     """
     target = Path(path)

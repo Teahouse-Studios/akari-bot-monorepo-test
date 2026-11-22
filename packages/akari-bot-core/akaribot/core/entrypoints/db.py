@@ -1,6 +1,6 @@
 """数据库迁移入口。
 
-供 CLI 在安装/升级/卸载包后以子进程调用；读 ``AKARI_INSTANCE_DIR`` 决定实例，不依赖仓库根作为 cwd。
+供 CLI 在安装/升级/卸载包后以子进程调用。读 ``AKARI_INSTANCE_DIR`` 决定实例，不依赖仓库根作为 cwd。
 """
 
 from __future__ import annotations
@@ -84,18 +84,18 @@ async def _upgrade(package: str | None) -> dict:
 
     await init_db(generate_schemas=False)
     try:
-        # 迁移登记表由模型建表负责：写进程的启动路径同样是「先 generate_schemas 再迁移」，
-        # 否则全新实例上第一条迁移就会因 schema_migrations 不存在而失败。
+        # 迁移记录表由创建数据表负责。写进程同样先执行 generate_schemas 再迁移，
+        # 否则全新实例上第一条迁移会因 schema_migrations 不存在而失败。
         from tortoise import Tortoise
 
         await Tortoise.generate_schemas(safe=True)
         if package is not None:
             discovered = await MigrationRunner.discover()
-            # 迁移按包名登记：core 的迁移登记为 "core"，而 CLI 传的是分发名 akari-bot-core。
+            # 迁移按包名记录：core 的迁移记录为 "core"，而 CLI 传的是分发名 akari-bot-core。
             if package not in discovered and package == "akari-bot-core" and "core" in discovered:
                 package = "core"
             if package not in discovered:
-                # 没有迁移目录是合法状态：本仓库 39 个模块包不建表。只有包根本没装才算用户错误。
+                # 没有迁移目录是合法状态：本仓库 39 个模块包不创建数据表。只有包根本没装才算用户错误。
                 if not _is_installed(package):
                     print(f"未安装分发包 {package!r}。", file=sys.stderr)
                     raise SystemExit(2)
@@ -110,7 +110,7 @@ async def _upgrade(package: str | None) -> dict:
 
 
 async def _purge(package: str) -> dict:
-    # 表已不存在时按**幂等成功**处理：本命令的契约是「这些表不再存在」，重跑或手工删过之后再跑
+    # 表已不存在时按**幂等成功**处理：本命令的契约是“这些表不再存在”，重跑或手工删过之后再跑
     # 都满足该契约，报成失败只会让卸载流程卡在一个已经达成的目标上。缺失的表名照实回报，操作者
     # 据此判断是不是清单漂移。
     from tortoise import Tortoise
@@ -151,7 +151,7 @@ def _emit_purge(payload: dict, as_json: bool) -> None:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(
@@ -202,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
         return int(exc.code or 0)
     except PurgeError as exc:
         # --json 时把原因也写进 stdout：调用方（CLI 的 db_purge）解析的是 stdout，
-        # 只给 stderr 的话它拿不到结构化原因，只能退回「退出码 1」这种无用信息。
+        # 只写 stderr 则拿不到结构化原因，只能退回“退出码 1”这种无用信息。
         if getattr(args, "json", False):
             json.dump(
                 {"dist": args.package, "error": str(exc), "dropped": [], "missing": []}, sys.stdout, ensure_ascii=False
@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write("\n")
         print(f"清理失败：{exc}", file=sys.stderr)
         return 2
-    except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
         if getattr(args, "json", False):
             json.dump(
                 {"dist": args.package, "error": str(exc), "dropped": [], "missing": []}, sys.stdout, ensure_ascii=False

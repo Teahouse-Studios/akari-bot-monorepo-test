@@ -88,7 +88,7 @@ async def _release_restriction_after_delivery_failure(
     challenge: CaptchaChallenge,
 ) -> bool:
     # 先写成活跃失败状态：若解禁调用抛错、取消或进程在结果落库前退出，Union 删除和
-    # 解绑逻辑仍会保留这条真实平台限制的归属，不会把受限成员遗失在无引用状态。
+    # 解绑逻辑仍会保留这条真实平台限制的归属，受限成员不会停留在无引用状态。
     challenge.status = "failed"
     await challenge.save(update_fields=["status"])
     try:
@@ -109,7 +109,7 @@ async def _release_restriction_after_delivery_failure(
 async def member_left(event: EventInfo):
     async with union_mutation():
         async with in_transaction("default") as connection:
-            # 解绑与事件可能并发；锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
+            # 解绑与事件可能并发。锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
             # Challenge 与 Trust 必须一起删除，避免后一步异常留下无法再由退群事件清理的半状态。
             # 事务内只有一条连接，避免 EventInfo.refresh_info() 用 gather 同时占用它。
             target = await TargetUnionInfo.resolve_union(event.target_id, create=False)
@@ -142,8 +142,8 @@ async def member_left(event: EventInfo):
 
 @captcha.event("member_joined", available_for="QQBot|Group")
 async def member_joined(event: EventInfo):
-    # 只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内；平台禁言、
-    # 发消息等网络操作在锁外执行。这样解绑不会在旧 EventInfo 与建行之间插入，也不会
+    # 只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、
+    # 发消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会
     # 因等待平台响应而阻塞其它 Union 管理操作。
     async with union_mutation():
         await event.refresh_info()

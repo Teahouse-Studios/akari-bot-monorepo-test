@@ -8,7 +8,7 @@ class [@module_class@]Config:
     字段名一律以模块名作前缀，默认值即配置文件首次生成时写入的值。字段注释取自 locale 的
     ``config.comments.module_[@module_name@].<字段名>``，缺少该键时该字段没有注释。
 
-    凭据字段另起一个类，并把 ``secret=True`` 传给装饰器：该表不进入 ``~config`` 的明文输出。
+    登录信息字段另起一个类，并把 ``secret=True`` 传给装饰器：该表不进入 ``~config`` 的明文输出。
     """
 
     [@module_name@]_example: str = ""

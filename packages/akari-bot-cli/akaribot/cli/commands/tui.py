@@ -31,7 +31,7 @@ BLOCKING_LEVELS = (LEVEL_SKIP, LEVEL_FAIL)
 class CheckResult:
     """一条诊断结果。
 
-    :param level: ``ok``、``warn``、``skip`` 或 ``fail``；``warn`` 表示环境提示，``skip`` 表示检查未执行。
+    :param level: ``ok``、``warn``、``skip`` 或 ``fail``。``warn`` 表示环境提示，``skip`` 表示检查未执行。
     :param name: 检查项名称。
     :param detail: 实测结果说明。
     """
@@ -79,9 +79,9 @@ def run_interactive(*, mouse: bool = True) -> None:
 
 
 def register_active() -> str:
-    """登记当前目录对应的实例，或发现并切换到唯一的下级实例。
+    """记录当前目录对应的实例，或发现并切换到唯一的下级实例。
 
-    :return: 提示文案；无需登记也无需切换时为空串。
+    :return: 提示文案。无需记录也无需切换时为空串。
     """
     from akaribot.cli.instance import resolve_instance_root
     from akaribot.cli.instances import InstanceRegistry, child_instances, register_existing
@@ -98,7 +98,7 @@ def register_active() -> str:
             return ""
         root = found[0]
         adopted = True
-    # 登记失败不阻止界面启动，错误由通知呈现。
+    # 记录失败不阻止界面启动，错误由通知呈现。
     try:
         entry = register_existing(root)
     except Exception as error:  # noqa: BLE001
@@ -253,7 +253,7 @@ def _source_calls(app_instance: object) -> int:
 def run_self_check() -> int:
     """执行界面诊断并返回进程退出码。
 
-    :return: 0 表示全部检查通过或仅有警告；1 表示存在 ``fail`` 项或 ``skip`` 项。
+    :return: 0 表示全部检查通过或仅有警告。1 表示存在 ``fail`` 项或 ``skip`` 项。
     """
     results: list[CheckResult] = []
     results.extend(_check_environment())
@@ -323,7 +323,7 @@ def _check_multi_select() -> CheckResult:
             await pilot.press("shift+down")
             await pilot.pause()
             selected = len(page._selected)
-            # 安装前弹出确认框，焦点落在确认按钮上。
+            # 安装前弹出确认框，焦点位于确认按钮上。
             page.request_install()
             await pilot.pause()
             await pilot.press("enter")
@@ -383,7 +383,7 @@ def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult
                     broken.append(f"{i18n.t(title_key)}：{failure}")
                 nav = app_instance.query_one("#nav", compat.ListView)
                 visible = app_instance.query_one(f"#page-{key}").display
-                # 侧栏包含分组标题，高亮下标须使用应用的导航位置映射。
+                # 侧栏包含分组标题，高亮下标须按应用的导航位置映射计算。
                 if (
                     app_instance.active_page != key
                     or compat.highlighted_index(nav) != _nav_position(key)
@@ -481,7 +481,7 @@ async def _page_failure(page: Any, pilot: Any) -> str:
 
 
 async def _settle(pilot: Any, done: Any, timeout: float = 5.0) -> bool:
-    # 单次 pause 只推进一帧，慢速平台上 worker 尚未回写，按读数断言会得到假失败。
+    # 单次 pause 只推进一帧，慢速平台上 worker 尚未回写，此时按读数检查会误判为失败。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         await pilot.pause()
@@ -722,7 +722,7 @@ def _check_resources() -> list[CheckResult]:
             )
         )
     else:
-        # 缺少可读资源时无法完成检查，须记为未执行；冻结产物需包含包数据。
+        # 缺少可读资源时无法完成检查，须记为未执行。冻结产物需包含包数据。
         results.append(
             CheckResult(
                 LEVEL_SKIP,

@@ -1,6 +1,6 @@
 """CLI 文档引擎：目录、生成、构建、预览。
 
-对外契约集中在 :mod:`akaribot.cli.docs_engine.model`；命令层只经由本包入口调用，不直接操作 VitePress。
+对外契约集中在 :mod:`akaribot.cli.docs_engine.model`。命令层只经由本包入口调用，不直接操作 VitePress。
 """
 
 from .builder import build, fingerprint_catalog

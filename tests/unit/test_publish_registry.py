@@ -359,7 +359,7 @@ async def test_publish_registry(tester: Tester):
         (_test_verified_artifacts_provide_metadata, "索引元数据取自哈希核验后的 wheel"),
         (_test_partial_upload_is_rejected, "部分上传不进入发布账本"),
         (_test_corrupt_download_is_rejected, "下载文件哈希不符时拒绝发布记录"),
-        (_test_non_registry_distribution_is_recorded, "CLI 分发可以核验和登记"),
+        (_test_non_registry_distribution_is_recorded, "CLI 分发可以核验并记录"),
         (_test_neighbor_release_is_preserved, "增量发布保留其他分发记录"),
         (_test_old_version_and_changed_hash_are_rejected, "旧版本与同版本异哈希不能覆盖账本"),
         (_test_same_release_is_idempotent, "同一发布记录重复执行不产生变更"),

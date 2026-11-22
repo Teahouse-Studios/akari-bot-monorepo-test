@@ -1,4 +1,4 @@
-"""平台 RPC 实现；普通 ContextManager 方法由共享契约自动绑定。"""
+"""平台 RPC 实现。普通 ContextManager 方法由共享契约自动绑定。"""
 
 import asyncio
 from typing import Any

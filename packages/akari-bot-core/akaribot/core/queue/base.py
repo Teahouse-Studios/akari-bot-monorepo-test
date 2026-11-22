@@ -56,7 +56,7 @@ _RPC_CALLER_TRACEBACK_MARKER = "caller traceback (originating process):"
 
 
 class QueueDrainTimeout(TimeoutError):
-    """维护窗口未能在预算内排空在途 handler；调用方应放弃本轮维护。"""
+    """维护窗口未能在预算内处理完在途 handler。调用方应放弃本轮维护。"""
 
     def __init__(self, peer_name: str, pending: list[asyncio.Task]):
         blocked = ", ".join(task.get_name() for task in pending)
@@ -202,7 +202,7 @@ class JobQueueBase:
             node_id = JobQueueConfig.jobqueue_node_id
             if isinstance(node_id, str):
                 node_id = node_id.strip() or None
-        # 正常启动会在 pre_init 中持久化缺失值；此回退仅供绕过守护进程的独立入口和测试使用。
+        # 正常启动会在 pre_init 中持久化缺失值。此回退仅供绕过守护进程的独立入口和测试使用。
         resolved_node_id = str(uuid4()) if node_id is None else node_id
         if not isinstance(resolved_node_id, str) or not resolved_node_id or len(resolved_node_id) > 128:
             raise ValueError("Peer node ID must be a nonempty string no longer than 128 characters")
@@ -599,7 +599,7 @@ class JobQueueBase:
             if future is not None and not future.done():
                 future.cancel()
             # send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
-            # 本地 waiter，就按“投递结果未知”处理并尝试删除该任务；删除不存在的 ID
+            # 本地 waiter，就按“投递结果未知”处理并尝试删除该任务。删除不存在的 ID
             # 是安全的，且不会取消已经开始的远端处理器。
             if future is not None and not response_received:
                 try:
@@ -1168,7 +1168,7 @@ class JobQueueBase:
             if not announced:
                 return []
             signal_payload = announced[0].snapshot()
-            # Registry 已确认该实例重新处于 ready；允许同一进程内的轮询器重启
+            # Registry 已确认该实例重新处于 ready。允许同一进程内的轮询器重启
             # 覆盖先前 stopped 缓存，同时仍拒绝没有权威租约的迟到 ready 信号。
             cls._update_peer_cache(signal_payload, force=True)
             if request.method == "peer.ready" and request.source_peer_id and cls.identity is not None:
@@ -1499,8 +1499,8 @@ class JobQueueBase:
         deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         while True:
             current = asyncio.current_task()
-            # 等维护锁的任务只有在本窗口释放后才会继续，等它们必然互锁；它们在
-            # 此之前也不会执行模块代码，因此不计入排空范围。
+            # 等维护锁的任务只有在本窗口释放后才会继续，等它们必然互锁。它们在此
+            # 之前也不会执行模块代码，因此不纳入本轮等待范围。
             tasks = [
                 task
                 for task in cls._process_tasks
@@ -1599,7 +1599,7 @@ class JobQueueBase:
                     if poll_lock_acquired:
                         cls._poll_lock.release()
             else:
-                # asyncio.Lock 不可重入；嵌套窗口复用同一任务已有的范围。
+                # asyncio.Lock 不可重入。嵌套窗口复用同一任务已有的范围。
                 yield
             return
         cls._maintenance_waiters.add(current)

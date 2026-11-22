@@ -55,7 +55,7 @@ async def _(ctx: "Bot.ParserHookContext"):
     token = f"{union_id}|{channel_id}|{hashlib.sha256(claim_key.encode('utf-8')).hexdigest()}"
     now = time.time()
 
-    # 查询与写入之间不得 await；依靠单线程事件循环维持抢占原子性。
+    # 查询与写入之间不得使用 await。依赖单线程事件循环维持抢占原子性。
     claimed = channel_claim_cache.get(token)
     claimed_at = claimed.get("timestamp") if claimed else None
     claimed_by = claimed.get("target_id") if claimed else None

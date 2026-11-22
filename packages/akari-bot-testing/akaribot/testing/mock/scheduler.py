@@ -161,7 +161,7 @@ async def force_run_schedule(
 
 
 def get_module_hooks(module_name: str | None = None) -> dict[str, Callable]:
-    """获取已注册的具名钩子。
+    """获取已注册的带名称 Hook。
 
     :param module_name: 指定模块名，None 则返回全部钩子。
     :returns: {钩子全名： 钩子函数} 字典。
@@ -179,7 +179,7 @@ def get_module_hooks(module_name: str | None = None) -> dict[str, Callable]:
 
 
 async def run_hook(hook_name: str, args: dict | None = None, session_info=None, timeout: float = 30) -> dict:
-    """按名手动触发一个具名钩子。
+    """按名手动触发一个带名称的 Hook。
 
     :param hook_name: 钩子全名，形如 ``wikilog.keepalive``。
     :param args: 传递给钩子的参数字典。

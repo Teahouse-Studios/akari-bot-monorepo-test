@@ -60,7 +60,7 @@ def is_outgoing_dispatching() -> bool:
 
 
 async def dispatch_outgoing_before_send(msg: "Bot.MessageSession", payload: OutgoingPayload) -> Stop | None:
-    """出站改写；返回 Stop 表示取消本次发送。"""
+    """出站改写。返回 Stop 表示取消本次发送。"""
     if is_outgoing_dispatching() or not has_hook_subscribers(HookPoint.OUTGOING_BEFORE_SEND):
         return None
     token = _outgoing_dispatching.set(True)
@@ -83,7 +83,7 @@ async def dispatch_outgoing_result(
     ok: bool,
     message_ids: list | str | int | None = None,
 ) -> None:
-    """隔离快照与观察失败，保留实际发送结果；取消与进程退出仍向外传播。"""
+    """隔离快照与观察失败，保留实际发送结果。取消与进程退出仍向外传播。"""
     point = HookPoint.OUTGOING_SENT if ok else HookPoint.OUTGOING_FAILED
     if _outgoing_observing.get():
         return

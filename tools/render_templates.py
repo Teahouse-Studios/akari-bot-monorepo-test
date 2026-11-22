@@ -49,7 +49,7 @@ def fill_placeholders(text: str) -> str:
     """还原模板转义并替换占位符，未声明的名称原样保留。
 
     模板中的命令语法标记写成 HTML 实体（``&#123;&#123;I18N:...&#125;&#125;``），
-    以免被 Jinja2 当作变量表达式；此处统一还原为 ``{{I18N:...}}``。
+    以免被 Jinja2 当作变量表达式。此处统一还原为 ``{{I18N:...}}``。
 
     :param text: 模板路径或渲染后的文本。
     :return: 还原并替换后的文本。
@@ -77,7 +77,7 @@ def template_names() -> list[str]:
 def describe_error(name: str, error: Exception) -> str:
     """把校验异常转成一行可读说明。
 
-    行号只认语法错误自带的 ``lineno``，不能用 ``getattr`` 的默认值兜底：
+    行号只认语法错误自带的 ``lineno``，不使用 ``getattr`` 的默认值：
     ``AssertionError`` 等异常继承 ``str.msg``，会把整段说明当成行号打印出来。
 
     :param name: 模板路径。
@@ -107,7 +107,7 @@ class RenderError(Exception):
 def unresolved_placeholders(rendered: str) -> list[str]:
     """列出产物中没有被替换掉的占位符。
 
-    语法校验不足以发现漏替换：一个拼错的占位符若落在字符串里，产物仍是合法的 Python，
+    语法校验不足以发现漏替换：一个拼错的占位符若出现在字符串里，产物仍是合法的 Python，
     会静默交付给模块作者。此处单独把它们找出来。
 
     :param rendered: 渲染并还原后的文本。
@@ -142,7 +142,7 @@ def main() -> int:
     environment = Environment(
         loader=FileSystemLoader(str(TEMPLATE_ROOT)),
         undefined=StrictUndefined,
-        # 默认会吞掉模板末尾的换行，产物将不符合本项目的 ruff format 结果。
+        # 默认会吞掉模板末尾的换行，产物将与本项目的 ruff format 结果不符。
         keep_trailing_newline=True,
     )
 

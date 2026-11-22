@@ -116,7 +116,7 @@ def _instance_rows() -> tuple[InstanceRow, ...]:
 
 
 async def _wait_until(predicate, timeout: float = 1.0) -> bool:
-    # 后台任务完成时间不确定，轮询条件以避免固定延迟导致误判。
+    # 后台任务完成时间不确定，以轮询条件代替固定延迟，避免误判。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
@@ -125,7 +125,7 @@ async def _wait_until(predicate, timeout: float = 1.0) -> bool:
     return False
 
 
-# 记录写操作的 argv；on_run 暂停首条命令，用于验证忙碌状态。
+# 记录写操作的 argv。on_run 暂停首条命令，用于验证忙碌状态。
 class _RecordingRunner:
     def __init__(self, result: OperationResult | None = None, on_run=None) -> None:
         self.calls: list[tuple[str, ...]] = []
@@ -265,7 +265,7 @@ async def _test_refresh_rereads_snapshot():
 
 
 async def _test_refresh_keeps_instance_highlighted():
-    # 关键回归：重建实例清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归：重建实例清单后选中行必须仍然亮着——ListView 只在 index 变化时刷新高亮。
     with TemporaryDirectory(prefix="akari-dashboard-highlight-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
         rows = (
@@ -299,7 +299,7 @@ async def _test_refresh_keeps_instance_highlighted():
 
 async def _test_load_failure_degrades_to_status():
     class Failing:
-        """快照读取必定失败的数据源，用于断言降级行为。"""
+        """快照读取必定失败的数据源，用于检查降级行为。"""
 
         calls = {"snapshot": 0, "probe": 0}
 
@@ -320,7 +320,7 @@ async def _test_load_failure_degrades_to_status():
 
 
 async def _test_instance_list_marks_state_and_policy():
-    # 当前实例即使未登记也应显示，确保用户能够识别操作目标。
+    # 当前实例即使未记录也应显示，确保用户能够识别操作目标。
     async def body(app, page, pilot, source, listed, control):
         context.set_active_root("/tmp/alpha")
         page.refresh_instances()
@@ -400,7 +400,7 @@ async def _test_switch_sends_default_write():
 
 
 async def _test_switch_does_not_wait_for_cli():
-    # 实例上下文即时切换，默认实例异步保存；同一目标不重复提交。
+    # 实例上下文即时切换，默认实例异步保存。同一目标不重复提交。
     gate = threading.Event()
     runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
     with TemporaryDirectory(prefix="akari-async-") as raw:
@@ -444,7 +444,7 @@ async def _test_switch_does_not_wait_for_cli():
 
 
 async def _test_switch_default_rewrites_after_return():
-    # 默认实例记录与当前选择一致，切换返回同一实例时仍需更新。
+    # 默认实例记录与当前选择一致，切回同一实例时仍需更新。
     runner = _RecordingRunner()
     with TemporaryDirectory(prefix="akari-back-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
@@ -534,7 +534,7 @@ async def _test_switch_default_result_is_notified():
 
 async def _test_switch_default_failure_is_reported():
     # 写入失败时显示 CLI 结果和输出尾部，并清除记录以允许重试。
-    runner = _RecordingRunner(OperationResult(False, "把 beta 设为缺省实例失败（退出码 1）", "registry down"))
+    runner = _RecordingRunner(OperationResult(False, "把 beta 设为默认实例失败（退出码 1）", "registry down"))
     with TemporaryDirectory(prefix="akari-badreg-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
         listed = StaticInstanceListSource(
@@ -573,7 +573,7 @@ async def _test_switch_default_failure_is_reported():
     separator = i18n.t("cli.tui.common.error_separator")
     expected = i18n.t(
         "cli.tui.dashboard.switch_default_failed",
-        error=f"把 beta 设为缺省实例失败（退出码 1）{separator}registry down",
+        error=f"把 beta 设为默认实例失败（退出码 1）{separator}registry down",
     )
     label = i18n.t("cli.tui.dashboard.use_label", name="beta")
     return calls == [("instance", "use", "beta"), ("instance", "use", "beta")] and seen == [
@@ -649,7 +649,7 @@ async def _test_busy_rejects_second_action():
 
 async def _test_cli_failure_is_reported():
     # 子进程报错时状态栏给出 CLI 的结论与输出尾部。
-    runner = _RecordingRunner(OperationResult(False, "移除 alpha 的登记失败（退出码 1）", "instance not found"))
+    runner = _RecordingRunner(OperationResult(False, "移出 alpha 失败（退出码 1）", "instance not found"))
 
     async def body(app, page, pilot, source, listed, control):
         list_view = page.query_one("#instance-list", compat.ListView)
@@ -668,7 +668,7 @@ async def _test_cli_failure_is_reported():
     separator = i18n.t("cli.tui.common.error_separator")
     expected = i18n.t(
         "cli.tui.dashboard.remove_failed",
-        error=f"移除 alpha 的登记失败（退出码 1）{separator}instance not found",
+        error=f"移出 alpha 失败（退出码 1）{separator}instance not found",
     )
     return status == expected
 
@@ -696,7 +696,7 @@ async def _test_register_instance_from_prompt():
 
 
 async def _test_add_prompt_prefills_active_root():
-    # 从实例目录启动界面时，登记框预填当前实例路径。
+    # 从实例目录启动界面时，目录输入框预填当前实例路径。
     with TemporaryDirectory(prefix="akari-add-") as raw:
         root = Path(raw) / "inst"
         root.mkdir()
@@ -750,7 +750,7 @@ async def _test_local_source_follows_switched_instance():
 
 
 async def _test_unregister_opens_confirm_modal():
-    # 移除登记的确认框应说明实例目录保留。
+    # 移除记录的确认框应说明实例目录保留。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1189,7 +1189,7 @@ async def _test_new_instance_failure_is_reported():
 
 
 async def _test_subprocess_init_runner_builds_argv():
-    # --non-interactive 使用默认选项；--no-venv 指定安装到当前环境。
+    # --non-interactive 使用默认选项。--no-venv 指定安装到当前环境。
     calls: list[tuple[list[str], dict]] = []
 
     def runner(argv, **kwargs):
@@ -1246,7 +1246,7 @@ async def _test_accept_window():
 
 
 async def _test_bindings_follow_key_convention():
-    # 破坏性操作使用组合键；有副作用的策略与服务不占单字母键，收进 m 菜单。
+    # 破坏性操作使用组合键。有副作用的策略与服务不占单字母键，收进 m 菜单。
     shown = {binding.key: binding.show for binding in DashboardPage.BINDINGS}
     return (
         "d" not in shown
@@ -1290,7 +1290,7 @@ async def _test_button_switch_matches_key():
 
 
 async def _test_button_new_instance_runs_init():
-    # 添加实例菜单的「新建实例」走目录输入、环境选择和 init 流程。
+    # 添加实例菜单的“新建实例”走目录输入、环境选择和 init 流程。
     runner = StaticInitRunner()
 
     with TemporaryDirectory(prefix="akari-btn-new-") as raw:
@@ -1327,7 +1327,7 @@ async def _test_button_new_instance_runs_init():
 
 
 async def _test_button_add_instance_registers_directory():
-    # 添加实例菜单的「登记目录」走目录输入及 instance add 流程。
+    # 添加实例菜单的“添加目录”走目录输入及 instance add 流程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1446,7 +1446,7 @@ async def _test_button_refresh_rereads_snapshot():
 
 
 async def _test_action_buttons_follow_state():
-    # 按钮禁用状态与实例登记一致；服务与策略菜单按当前策略与服务状态给出操作，未登记实例不弹菜单。
+    # 按钮禁用状态与实例记录一致。服务与策略菜单按当前策略与服务状态给出操作，无记录的实例不弹菜单。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
     listed = StaticInstanceListSource(
         (
@@ -1800,7 +1800,7 @@ async def _test_setup_buttons_jump_pages():
 
 
 async def _test_setup_buttons_disabled_rules():
-    # 缺少实例时禁用全部按钮；实例运行时禁用启动按钮，标签注明原因。
+    # 缺少实例时禁用全部按钮。实例运行时禁用启动按钮，标签注明原因。
     brief = StaticSetupSummarySource(SETUP)
     empty = StaticInstanceListSource(())
     previous = context.active_root()
@@ -1849,7 +1849,7 @@ async def _test_setup_buttons_disabled_rules():
 
 
 async def _test_setup_buttons_enabled_when_stopped():
-    # 实例已登记且停止运行时，三个按钮均可用并显示操作名称。
+    # 实例已记录且停止运行时，三个按钮均可用并显示操作名称。
     async def body(app, page, pilot, source, listed, control):
         state = _setup_button_state(page)
         await pilot.press("q")
@@ -2019,7 +2019,7 @@ async def _test_local_setup_source_falls_back_to_estimate():
         garbled_summary = LocalSetupSummarySource(root=root, runner=garbled).summary()
     timeout_detail = i18n.t("cli.tui.dashboard.setup_placeholders_timeout", seconds="60")
     unreadable = i18n.t("cli.tui.dashboard.setup_placeholders_unreadable", code=0)
-    # 文本估算包含配置值、字符串和注释中的标记，因此计数为 3；core 仅计入有效配置值。
+    # 文本估算包含配置值、字符串和注释中的标记，因此计数为 3。core 仅计入有效配置值。
     return (
         all(summary.pending_placeholders == 3 and summary.placeholders_estimated is True for summary in summaries)
         and summaries[0].placeholders_reason
@@ -2063,7 +2063,7 @@ async def _test_local_setup_source_marks_uncounted_tables():
 
 
 async def _test_local_setup_source_degrades_per_item():
-    # 子进程、输出解析或清单读取失败时分别报告原因；占位符使用注明依据的估算值。
+    # 子进程、输出解析或清单读取失败时分别报告原因。占位符使用注明依据的估算值。
     def unreachable(argv, **kwargs):
         raise OSError("no cli")
 
@@ -2107,7 +2107,7 @@ async def _test_local_setup_source_degrades_per_item():
 
 
 async def _test_setup_actions_follow_busy_state():
-    # 写操作不影响摘要展示；导航按钮按目标是否可用决定禁用状态。
+    # 写操作不影响摘要展示。导航按钮按目标是否可用决定禁用状态。
     gate = threading.Event()
     runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
 
@@ -2137,8 +2137,8 @@ async def test_tui_dashboard(tester: Tester):
     await tester.test(_test_bindings_follow_key_convention, "键位约定：破坏性动作带修饰键")
     await tester.test(_test_service_repeat_press_keeps_single_modal, "连发第二次不叠模态框")
     await tester.test(_test_service_confirm_resets_on_status_reread, "服务状态重读后闸门作废")
-    await tester.test(_test_remove_repeat_press_keeps_single_modal, "移除登记连发第二次不叠模态框")
-    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
+    await tester.test(_test_remove_repeat_press_keeps_single_modal, "移出列表连发第二次不叠模态框")
+    # 关闭防抖延迟，使交互用例无需等待。防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_fields_show_instance_facts, "展示实例根、名称与版本")
         await tester.test(_test_state_follows_probe, "运行状态跟着探测结果")
@@ -2147,38 +2147,38 @@ async def test_tui_dashboard(tester: Tester):
         await tester.test(_test_load_failure_degrades_to_status, "读取失败只降级到状态栏")
         await tester.test(_test_instance_list_marks_state_and_policy, "实例清单带状态与策略标记")
         await tester.test(_test_enter_switches_instance, "在清单里切换实例")
-        await tester.test(_test_switch_sends_default_write, "切换实例下发缺省项写入")
+        await tester.test(_test_switch_sends_default_write, "切换实例下发默认项写入")
         await tester.test(_test_switch_does_not_wait_for_cli, "切换不等子进程且不占忙标志")
-        await tester.test(_test_switch_default_rewrites_after_return, "切回原实例仍写缺省项")
-        await tester.test(_test_switch_skips_default_for_unregistered, "未登记实例不改写缺省项")
-        await tester.test(_test_switch_default_result_is_notified, "缺省项成功以通知报出")
-        await tester.test(_test_switch_default_failure_is_reported, "缺省项失败以通知报出并允许重试")
+        await tester.test(_test_switch_default_rewrites_after_return, "切回原实例仍写默认项")
+        await tester.test(_test_switch_skips_default_for_unregistered, "未添加实例不改写默认项")
+        await tester.test(_test_switch_default_result_is_notified, "默认项成功以通知报出")
+        await tester.test(_test_switch_default_failure_is_reported, "默认项失败以通知报出并允许重试")
         await tester.test(_test_switch_refused_for_missing_directory, "目录无 akaribot.toml 时拒绝切换")
         await tester.test(_test_policy_toggle_sends_cli_flags, "自启与崩溃重启经 CLI 下发")
         await tester.test(_test_busy_rejects_second_action, "上一条命令未完成时拒绝新动作")
-        await tester.test(_test_register_instance_from_prompt, "输入框登记实例")
-        await tester.test(_test_add_prompt_prefills_active_root, "登记框预填当前实例目录")
+        await tester.test(_test_register_instance_from_prompt, "输入框添加实例")
+        await tester.test(_test_add_prompt_prefills_active_root, "添加框预填当前实例目录")
         await tester.test(_test_new_instance_runs_init, "新建实例经 init 并刷新清单")
         await tester.test(_test_new_instance_current_env_skips_managed_venv, "用当前环境时不建托管 venv")
-        await tester.test(_test_new_instance_failure_is_reported, "新建失败不登记且报出原因")
-        await tester.test(_test_boot_note_is_announced, "进界面时的自动登记以通知报出")
+        await tester.test(_test_new_instance_failure_is_reported, "新建失败不添加且报出原因")
+        await tester.test(_test_boot_note_is_announced, "进界面时的自动添加以通知报出")
         await tester.test(_test_local_source_follows_switched_instance, "概览页描述跟着切换后的实例")
-        await tester.test(_test_unregister_opens_confirm_modal, "移除登记一次触发即弹确认框")
-        await tester.test(_test_remove_modal_cancel_keeps_registry, "取消移除登记不动注册表")
+        await tester.test(_test_unregister_opens_confirm_modal, "移出列表一次触发即弹确认框")
+        await tester.test(_test_remove_modal_cancel_keeps_registry, "取消移出列表不动注册表")
         await tester.test(_test_cli_failure_is_reported, "CLI 报错时状态栏给出原因")
         await tester.test(_test_remove_modal_resets_on_highlight_change, "高亮换过再回来要重新弹框")
         await tester.test(_test_polling_keeps_pending_confirm, "周期轮询不作废待确认")
-        await tester.test(_test_policy_refused_for_unregistered, "未登记实例不设策略")
+        await tester.test(_test_policy_refused_for_unregistered, "未添加实例不设策略")
         await tester.test(_test_service_row_reports_state, "服务行展示后端与单元文件")
         await tester.test(_test_service_row_reports_unsupported, "平台不支持时如实说明")
         await tester.test(_test_service_install_opens_confirm_modal, "一次触发即弹服务确认框")
         await tester.test(_test_service_install_confirms_overwrite_before_force, "单元文件已存在时写明覆盖")
-        await tester.test(_test_service_confirmation_offers_dry_run, "确认框可先预演再决定")
+        await tester.test(_test_service_confirmation_offers_dry_run, "确认框可先试运行再决定")
         await tester.test(_test_service_uninstall_when_installed, "已安装时按键走卸载")
         await tester.test(_test_button_switch_matches_key, "按钮切换实例与键位同效")
         await tester.test(_test_button_new_instance_runs_init, "添加实例菜单的新建项弹输入框并执行 init")
-        await tester.test(_test_button_add_instance_registers_directory, "添加实例菜单的登记项弹输入框并下发")
-        await tester.test(_test_button_remove_instance_opens_confirm_modal, "按钮移除登记一次触发即弹确认框")
+        await tester.test(_test_button_add_instance_registers_directory, "添加实例菜单的添加项弹输入框并下发")
+        await tester.test(_test_button_remove_instance_opens_confirm_modal, "按钮移出列表一次触发即弹确认框")
         await tester.test(_test_button_policy_toggles_send_cli_flags, "服务与策略菜单翻转自启与崩溃重启")
         await tester.test(_test_button_service_opens_confirm_modal, "服务与策略菜单的服务项弹确认框")
         await tester.test(_test_button_refresh_rereads_snapshot, "按钮刷新重新读取快照")

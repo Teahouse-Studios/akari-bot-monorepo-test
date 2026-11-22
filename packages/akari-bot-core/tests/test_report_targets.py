@@ -1,7 +1,7 @@
 """上报场景展开单元测试（需要数据库）。
 
 `report_targets` 配置的是场景组，上报须落到该组下的全部平台场景：同一现实场景的多个
-平台入口由 pick_channel_heads 归拢为一条并互为后备，配置项所指的那个客户端掉线时仍有
+平台入口由 pick_channel_heads 汇总为一条并互为后备，配置项所指的那个客户端掉线时仍有
 下一跳可换。配置值不能直接当作平台场景 ID 去取会话：组内其余成员不参与时 next_hops 恒为空，
 该客户端一掉线整条上报即静默丢失。
 
@@ -20,7 +20,7 @@ _CLIENT = "REPORTTEST"
 
 
 async def _register_client():
-    # 取会话时须由拓扑缓存反查场景所属的客户端，未登记者取不出会话。缓存非空时
+    # 取会话时须由拓扑缓存反查场景所属的客户端，未注册者取不出会话。缓存非空时
     # ``Alive.determine_client(None)`` 还会直接抛错，而 ``fetch_target`` 会将其吞下，
     # 表现为无声地少了几个会话。
     metadata = {
@@ -94,7 +94,7 @@ async def test_report_targets(tester: Tester):
     try:
         await tester.test(_test_resolves_platform_id_to_union, "平台场景 ID 归一为场景组")
         await tester.test(_test_union_id_leaves_no_stray_bind, "归一组 ID 不留脏映射行")
-        await tester.test(_test_unbound_target_dropped, "未登记场景略去")
+        await tester.test(_test_unbound_target_dropped, "未绑定目标略去")
         await tester.test(_test_deduplicates_same_union, "同组配置值去重")
         await tester.test(_test_fetch_covers_all_union_members, "取会话覆盖组内成员")
         await tester.test(_test_fetch_accepts_single_value, "接受单个场景 ID")

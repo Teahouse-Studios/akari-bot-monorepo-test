@@ -30,7 +30,7 @@ class BackgroundTaskLifecycle:
         label: str | None = None,
         timeout: float = 10,
     ) -> None:
-        """注册一项幂等清理；相同稳定 key 的热重载会原位替换旧回调。"""
+        """注册一项幂等清理。相同稳定 key 的热重载会原位替换旧回调。"""
         if not key:
             raise ValueError("Background cleanup key cannot be empty.")
         if timeout <= 0:

@@ -1,7 +1,7 @@
-"""根目录兼容层：把 ``python tester.py`` 转发到 :mod:`akaribot.testing.runner`。
+"""根目录兼容实现：把 ``python tester.py`` 转发到 :mod:`akaribot.testing.runner`。
 
 既有 CI 与文档仍以根目录脚本为入口（.github/workflows/run-builtin-tester.yml、CONTRIBUTING.md），
-故保留本文件。它只做两件事：把自身所在的仓库根显式告知 runner，再转到同一份实现；新脚本与
+故保留本文件。它只做两件事：把自身所在的仓库根显式告知 runner，再转到同一份实现。新脚本与
 安装形态请改用 ``python -m akaribot.testing``。
 """
 

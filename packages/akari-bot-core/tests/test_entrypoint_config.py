@@ -1,8 +1,8 @@
 """配置入口的占位符统计（``entrypoints/config.py`` 的 ``placeholders`` 子命令）。
 
 概览页与 ``akaribot config placeholders`` 共用这一份判定：计数按 core 的 ``PLACEHOLDER_PATTERN``
-逐表给出，注释与字符串里的同形文本不计入，损坏或读不到的表进 ``failed``。用例在隔离子进程里跑
-真实入口，断言计数边界与失败归集。
+逐表给出，注释与字符串里的同形文本不计入，损坏或读不到的表进 ``failed``。用例在隔离子进程中运行
+真实入口，检查计数边界与失败归集。
 
 另覆盖 ``schema`` 对适配器 ``enable`` 的注释取键。未覆盖：``schema`` / ``set`` 的其余行为，那些由配置文件
 与 CLI 侧用例覆盖。
@@ -166,7 +166,7 @@ async def _test_adapter_enable_comment_is_localized():
 
 
 async def _test_sync_reloads_new_adapter_table():
-    # 适配器配置模板在 import 时写盘；入口必须在读取 schema 前重新加载配置。
+    # 适配器配置模板在导入时写盘。入口必须在读取 schema 前重新加载配置。
     # 否则首次安装时表还不存在，配置补全会以“配置表不存在”失败。
     with _instance() as root:
         (root / "config" / "config.toml").write_text('default_locale = "zh_cn"\n', encoding="utf-8")
@@ -211,7 +211,7 @@ async def test_entrypoint_config(tester: Tester):
     await tester.test(_test_suffixed_marker_variants_are_counted, "带后缀的标记按项计入")
     await tester.test(_test_broken_table_is_reported_not_skipped, "解析失败与乱码表进 failed")
     await tester.test(_test_missing_table_and_separator_are_rejected, "缺表与含分隔符的表名进 failed")
-    await tester.test(_test_default_scan_covers_every_table, "缺省遍历配置目录下的全部表")
+    await tester.test(_test_default_scan_covers_every_table, "默认遍历配置目录下的全部表")
     await tester.test(_test_adapter_enable_comment_is_localized, "schema 给适配器 enable 输出已翻译的注释")
     await tester.test(_test_sync_reloads_new_adapter_table, "config sync 在导入新适配器后重新加载配置")
     return tester

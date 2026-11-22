@@ -4,8 +4,8 @@
 ``target_from``（场景前缀）、``client_name``（客户端身份，含实例后缀）、``platform_from``
 （平台级场景前缀）、``platform_name``（平台展示名）。
 
-默认实例下后两段分别等于前两段，判据退化为改造前的两段。``target_from`` 为空表示平台未知，
-判为允许——改造前整段跳过平台判分，此语义须保持。
+默认实例下后两段分别等于前两段，判据等同于只看前两段。``target_from`` 为空表示平台未知，
+判为允许——目标未知时跳过平台判分，此语义须保持。
 """
 
 from typing import Iterable
@@ -17,7 +17,7 @@ def platform_name_of(session_info) -> str:
     """读取会话的平台名称，缺少平台字段时使用客户端名称。
 
     :param session_info: 会话信息对象。
-    :return: 平台名称；身份未知时为空字符串。
+    :return: 平台名称，身份未知时为空字符串。
     """
     return getattr(session_info, "platform_name", "") or getattr(session_info, "client_name", "") or ""
 
@@ -30,14 +30,14 @@ def resolve_platform_identity(
 ) -> tuple[str, str]:
     """补齐会话的平台两段。
 
-    入站会话在平台进程内构造，此时 ``Info.platform_name`` 由 ``bot.py`` 的 ``go()`` 置位；
+    入站会话在平台进程内构造，此时 ``Info.platform_name`` 由 ``bot.py`` 的 ``go()`` 设置。
     出站会话与跨进程反序列化的旧消息取不到它，退回 ``client_name`` / ``target_from``，
-    即旧的两段判据，不会因缺字段而误伤。
+    即只看前两段，不会因缺字段而误判。
 
     :param target_from: 场景前缀。
     :param client_name: 客户端身份。
-    :param platform_name: 已有的平台展示名；缺省时按上述规则推导。
-    :param platform_from: 已有的平台场景前缀；缺省时由 ``target_from`` 的客户端段替换而来。
+    :param platform_name: 已有的平台展示名，未提供时按上述规则推导。
+    :param platform_from: 已有的平台场景前缀，未提供时由 ``target_from`` 的客户端段替换而来。
     :return: ``(platform_name, platform_from)``。
     """
     if not client_name and target_from:
@@ -61,7 +61,7 @@ def platform_fields(session_info) -> tuple[str | None, str | None, str | None, s
 
     会话对象可能来自核心之外：测试替身只提供它真正用到的字段，跨进程反序列化的旧结构也
     可能缺少平台两段。缺字段按 None 处理（平台未知），由 :func:`platform_scope` 与
-    :func:`scope_allows` 判为允许，与改造前整段跳过平台判分的行为一致。
+    :func:`scope_allows` 判为允许，与目标未知时跳过平台判分的行为一致。
 
     :param session_info: 会话信息对象。
     :return: 四段字段，缺失者为 None。
@@ -75,7 +75,7 @@ def platform_fields(session_info) -> tuple[str | None, str | None, str | None, s
 
 
 def scope_of(session_info) -> set[str]:
-    """从会话信息取出平台判据；缺字段时判据为空，即平台未知。
+    """从会话信息取出平台判据，缺字段时判据为空，即平台未知。
 
     :param session_info: 会话信息对象。
     :return: 判据集合。
@@ -92,7 +92,7 @@ def platform_scope(
     """构造平台匹配的判据集合。
 
     :param target_from: 场景前缀。
-    :param client_name: 客户端身份；缺省时取 ``target_from`` 的首段。
+    :param client_name: 客户端身份，未提供时取 ``target_from`` 的首段。
     :param platform_from: 平台场景前缀。
     :param platform_name: 平台展示名。
     :return: 判据集合，已剔除空值。

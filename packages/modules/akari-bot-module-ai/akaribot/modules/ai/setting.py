@@ -14,7 +14,7 @@ ai_data_path = PackageRegistry.package_data("ai")
 
 
 class _InstructionsTemplate(Template):
-    # 指令文本含 LaTeX 的 $$，标准 Template 会把它折叠成 $；该模式只识别 ${name}，其余 $ 原样保留。
+    # 指令文本含 LaTeX 的 $$，标准 Template 会把它折叠成 $。该模式只识别 ${name}，其余 $ 原样保留。
     pattern = r"\$\{(?P<braced>[_a-z][_a-z0-9]*)\}|(?P<named>(?!))|(?P<escaped>(?!))|(?P<invalid>(?!))"
 
 
@@ -169,8 +169,8 @@ def get_llm_billing(llm: dict, context_tokens: int = 0, now: datetime | None = N
 def get_llm_generation(llm: dict) -> dict:
     """返回模型自定义的生成参数。
 
-    采样参数显式设为 null 时会被保留，供端点在调用时省略对应请求字段；
-    未配置的键不会出现，由端点在调用时回落到模块默认值。
+    采样参数显式设为 null 时会被保留，供端点在调用时省略对应请求字段。
+    未配置的键不会出现，由端点在调用时改用模块默认值。
 
     :param llm: 模型配置。
     :return: temperature、top_p、top_logprobs、reasoning_effort 中已配置项的字典。

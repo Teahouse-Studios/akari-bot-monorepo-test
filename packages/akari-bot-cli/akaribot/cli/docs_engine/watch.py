@@ -86,7 +86,7 @@ class PathWatcher:
         self._observer: Observer | None = None
 
     def start(self) -> None:
-        """启动观察者；目标路径不存在时跳过。"""
+        """启动观察者。目标路径不存在时跳过。"""
         if self._observer is not None:
             return
         observer = Observer()
@@ -130,7 +130,7 @@ class PathWatcher:
             self._ready.set()
 
     def poll(self, timeout: float = 0.5) -> tuple[Change, ...]:
-        """等待一批改动；超时返回空元组。"""
+        """等待一批改动。超时返回空元组。"""
         if not self._ready.wait(max(0.0, float(timeout))):
             return ()
         deadline = time.monotonic() + MAX_BATCH_SECONDS

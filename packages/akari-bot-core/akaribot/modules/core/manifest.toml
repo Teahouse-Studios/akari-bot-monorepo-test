@@ -2,7 +2,7 @@
 schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
-# bundled 于 core 的模块注册名，取自包内全部 module() 调用。
+# 随 core 一并分发的模块注册名，取自包内全部 module() 调用。
 provides_modules = [
     "about",
     "abuse",
@@ -42,8 +42,8 @@ provides_modules = [
     "url-audit",
     "webrender",
 ]
-# 核心分发拥有的数据表，取自 akaribot/core/database/models.py 的 Meta.table；
-# bundled 模块目录内没有 database/models.py。
+# 核心分发拥有的数据表，取自 akaribot/core/database/models.py 的 Meta.table。
+# 随 core 分发的模块目录内没有 database/models.py。
 owned_tables = [
     "analytics_data",
     "database_version",

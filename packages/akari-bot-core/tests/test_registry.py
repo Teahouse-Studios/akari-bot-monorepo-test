@@ -91,8 +91,8 @@ def _test_modules_and_adapters_are_separated():
 
 
 def _test_directory_scan_finds_repository_packages():
-    # 已安装分发的 entry point 会先于兜底收录条目，故须显式屏蔽该路径：本用例断言的是
-    # 兜底本身，结论不应取决于当前环境装没装包。
+    # 已安装分发的 entry point 会先于目录回退收录，故须显式屏蔽该路径。本用例检查的是
+    # 目录回退本身，结论不应取决于当前环境装没装包。
     try:
         with patch.object(PackageRegistry, "_from_entry_points", return_value=[]):
             PackageRegistry.discover(force=True)

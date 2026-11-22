@@ -1,7 +1,7 @@
 """``akaribot config placeholders``：表名清单来自实例，计数与失败明细原样来自 core。
 
-CLI 不 import core，统计一律经 ``python -m akaribot.core.entrypoints.config placeholders``；用例
-注入替身实例，断言下发的表名、``--json`` 的结构透出与失败路径。
+CLI 不 import core，统计一律经 ``python -m akaribot.core.entrypoints.config placeholders``。用例
+注入替身实例，检查下发的表名、``--json`` 的结构透出与失败路径。
 """
 
 import io
@@ -36,7 +36,7 @@ PAYLOAD = {
 
 
 def _merged_locale_dir() -> Path:
-    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，断言才取到真实渲染结果。
+    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，检查才取到真实渲染结果。
     holder = TemporaryDirectory(prefix="akari-config-placeholders-locale-")
     _KEEP_ALIVE.append(holder)
     root = Path(holder.name)
@@ -50,7 +50,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # CLI 的首次取文案会用包内 locales 重建快照，把合并目录顶掉；先取一次把它顶过，再建合并快照。
+    # CLI 首次取文案时用包内 locales 重建快照，会覆盖合并目录。先取一次完成重建，再建合并快照。
     i18n.t("cli.common.error_label")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")

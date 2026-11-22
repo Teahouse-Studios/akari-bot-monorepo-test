@@ -1,8 +1,8 @@
 """``akaribot adapter``：实例移除只删除配置文件，``list --json`` 给界面提供完整的已安装平台。
 
-移除入口一旦让用户以为不可逆数据已被清除，命令的成功返回就是假的。当前实现只删除该实例的配置
-文件，场景与用户数据留在库里，故 ``--purge-data`` 不作为可执行选项存在；本文件守住这条契约与
-「默认只删配置」的行为。
+移除入口不能让用户以为不可逆数据已被清除，否则命令的成功返回并不成立。当前实现只删除该实例的配置
+文件，场景与用户数据留在库里，故 ``--purge-data`` 不作为可执行选项存在。本文件守住这条契约与
+“默认只删配置”的行为。
 """
 
 import io
@@ -79,7 +79,7 @@ def _test_purge_data_is_not_an_option():
     runner = CliRunner()
     helped = runner.invoke(adapter_command.app, ["instance", "remove", "--help"])
     rejected = runner.invoke(adapter_command.app, ["instance", "remove", "telegram", "--purge-data"])
-    # 说明段落由 locales 提供，这里只认选项表：它才是「该旗标是否存在」的判据。
+    # 说明段落由 locales 提供，这里只认选项表：它才是“该旗标是否存在”的判据。
     options_block = helped.stdout.split("Options", 1)[-1]
     return (
         helped.exit_code == 0

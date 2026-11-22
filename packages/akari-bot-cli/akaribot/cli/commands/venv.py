@@ -27,7 +27,7 @@ app = typer.Typer(help=i18n.t("cli.venv.help"))
 
 DryRunOption = Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.venv.option_dry_run"))]
 
-# 裸仓库地址按这些主机名与 .git 后缀判定为 git 直引用；其余 http(s) 地址按普通直引用交给 uv。
+# 裸仓库地址按这些主机名与 .git 后缀判定为 git 直引用。其余 http(s) 地址按普通直引用交给 uv。
 GIT_HOSTS = ("github.com", "gitlab.com", "bitbucket.org", "codeberg.org", "gitee.com", "git.sr.ht")
 
 
@@ -117,7 +117,7 @@ def status(
 
 
 def _recorded_name(spec: str) -> str:
-    # 记录串都能解析出分发名；解析不出时返回空串，调用方据此保留它。
+    # 记录串都能解析出分发名。解析不出时返回空串，调用方据此保留它。
     names = engine.requirement_names([spec])
     return next(iter(names), "")
 
@@ -173,7 +173,7 @@ def _direct_reference(spec: str) -> str:
     return text.removeprefix("git+").split("#", 1)[0].rstrip("/")
 
 
-# 给直接引用补上分发名：装完之后按 ``direct_url`` 反查是谁装的。
+# 给直接引用补上分发名：装完后按 ``direct_url`` 反查对应的分发。
 def _named_direct_spec(python: Path, spec: str) -> str:
     address = _direct_reference(spec)
     target = spec if spec.startswith("git+") else address
@@ -208,7 +208,7 @@ def add(
     dry_run: DryRunOption = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """把运行库装进实例环境；``--save`` 同时记进实例清单，环境重建时按它补装。"""
+    """把运行库装进实例环境。``--save`` 同时记进实例清单，环境重建时按它补装。"""
     target = require_instance(instance)
     text = _resolve_spec(spec)
     if not text:
@@ -246,7 +246,7 @@ def remove(
     dry_run: DryRunOption = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """从实例环境卸载运行库；``--save`` 同时删掉清单里的记录。"""
+    """从实例环境卸载运行库。``--save`` 同时删掉清单里的记录。"""
     target = require_instance(instance)
     name = engine.canonical(dist)
     recorded = engine.requirement_names(target.meta.requirements)

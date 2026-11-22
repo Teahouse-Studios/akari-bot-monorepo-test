@@ -1,8 +1,8 @@
 """本机实例注册表：记住这台机器上有哪些 AkariBot 环境。
 
-CLI 与界面都能管理多个实例，故「有哪些实例」必须落在一处：默认在 ``~/.akaribot/instances.toml``
+CLI 与界面都能管理多个实例，故“有哪些实例”必须放在一处：默认在 ``~/.akaribot/instances.toml``
 （``AKARIBOT_HOME`` 可改），每条记录含实例根、语言、加入时间，以及服务相关的策略——是否随服务启动、
-崩溃后是否重启、最后已知的期望状态（用于「恢复到上次停电前的状态」）。
+崩溃后是否重启、最后已知的期望状态（用于“恢复到上次停电前的状态”）。
 
 注册表只记位置与策略，不碰实例本身：删掉一条记录不会动实例目录。
 """
@@ -55,7 +55,7 @@ def suggested_name(root: Path) -> str:
     """按目录名推一个合法实例名。
 
     :param root: 实例根目录。
-    :return: 小写、只含字母数字与连字符的名称；推不出时返回 ``instance``。
+    :return: 小写、只含字母数字与连字符的名称，推不出时返回 ``instance``。
     """
     text = re.sub(r"[^a-z0-9]+", "-", root.name.strip().lower()).strip("-")
     return text[:32] or "instance"
@@ -64,11 +64,11 @@ def suggested_name(root: Path) -> str:
 def child_instances(root: Path, *, limit: int | None = 4) -> tuple[Path, ...]:
     """列出目录下第一层的实例目录。
 
-    登记时常被指向「装着实例的项目目录」而不是实例本身，报错时列出这些候选比只说缺文件有用。
+    添加实例时，指定的路径常常是“装着实例的项目目录”，而不是实例本身。报错时列出这些候选，比只提示缺文件更有用。
 
     :param root: 要检查的目录。
-    :param limit: 最多列出几个候选；``None`` 表示不限。
-    :return: 含 ``akaribot.toml`` 的直接子目录；``root`` 本身就是实例时为空。
+    :param limit: 最多列出几个候选，``None`` 表示不限。
+    :return: 含 ``akaribot.toml`` 的直接子目录，``root`` 本身就是实例时为空。
     """
     if (root / INSTANCE_META_FILENAME).is_file():
         return ()
@@ -80,12 +80,12 @@ def child_instances(root: Path, *, limit: int | None = 4) -> tuple[Path, ...]:
 
 
 def register_existing(root: Path) -> InstanceEntry | None:
-    """登记目录对应的实例；已登记或目录不是实例时返回 ``None``。
+    """添加目录对应的实例。已有记录或目录不是实例时返回 ``None``。
 
-    站在实例目录里启动界面时自动走这一步，省掉「先手动登记才能管理」的前置动作。
+    在实例目录里启动界面时自动走这一步，省掉“先手动添加才能管理”的前置动作。
 
     :param root: 实例根目录。
-    :return: 新登记的记录；无需登记时为 ``None``。
+    :return: 新写入的记录。无需添加时为 ``None``。
     :raises RegistryError: 名称冲突或注册表写入失败。
     """
     resolved = _resolve(root)
@@ -97,7 +97,7 @@ def register_existing(root: Path) -> InstanceEntry | None:
     locale = ""
     try:
         locale = InstanceMeta.load(resolved).locale
-    except Exception:  # noqa: BLE001 - 读不出语言不影响登记
+    except Exception:  # noqa: BLE001 - 读不出语言不影响添加
         locale = ""
     return registry.add(resolved, locale=locale)
 
@@ -108,7 +108,7 @@ class InstanceEntry:
 
     :param name: 注册名，命令行与界面都用它引用实例。
     :param root: 实例根目录绝对路径。
-    :param locale: 实例默认语言；空串表示未记录。
+    :param locale: 实例默认语言，空串表示未记录。
     :param added_at: 加入时间，ISO 8601 字符串。
     :param autostart: 是否随服务启动而拉起（开机自启）。
     :param restart_on_crash: 崩溃后是否自动重启。
@@ -143,7 +143,7 @@ class InstanceEntry:
 class InstanceRegistry:
     """注册表读写。
 
-    :param path: 注册表文件路径；缺省为 :func:`registry_path`。
+    :param path: 注册表文件路径。默认为 :func:`registry_path`。
     """
 
     def __init__(self, path: Path | None = None) -> None:
@@ -183,24 +183,24 @@ class InstanceRegistry:
         return tuple(sorted(entries, key=lambda entry: entry.name))
 
     def default_name(self) -> str:
-        """返回缺省实例名；未设置时为空串。"""
+        """返回默认实例名。未设置时为空串。"""
         if not self.path.is_file():
             return ""
         try:
             document = tomlkit.parse(self.path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001 - 读不出缺省名时按未设置处理
+        except Exception:  # noqa: BLE001 - 读不出默认名时按未设置处理
             return ""
         return str(document.get("default") or "")
 
     def get(self, name: str) -> InstanceEntry | None:
-        """按名称取一条记录；不存在时返回 ``None``。"""
+        """按名称取一条记录。不存在时返回 ``None``。"""
         for entry in self.load():
             if entry.name == name:
                 return entry
         return None
 
     def find_by_root(self, root: Path) -> InstanceEntry | None:
-        """按实例根取记录；比较真实路径，软链接与相对写法都能命中。"""
+        """按实例根取记录。比较真实路径，软链接与相对写法都能命中。"""
         wanted = _resolve(root)
         for entry in self.load():
             if _resolve(entry.root) == wanted:
@@ -216,10 +216,10 @@ class InstanceRegistry:
         autostart: bool = False,
         restart_on_crash: bool = False,
     ) -> InstanceEntry:
-        """登记一个实例；已登记过同一目录时原样返回既有记录。
+        """添加一个实例。同一目录已有记录时原样返回既有记录。
 
         :param root: 实例根目录，须含 ``akaribot.toml``。
-        :param name: 注册名；缺省按目录名推一个不冲突的名字。
+        :param name: 注册名。默认为按目录名推一个不冲突的名字。
         :param locale: 实例默认语言。
         :param autostart: 是否随服务启动而拉起。
         :param restart_on_crash: 崩溃后是否自动重启。
@@ -251,7 +251,7 @@ class InstanceRegistry:
         return entry
 
     def remove(self, name: str) -> bool:
-        """删除一条记录；目录本身不动。
+        """删除一条记录。目录本身不动。
 
         :param name: 注册名。
         :return: 是否确实删掉了一条。
@@ -269,7 +269,7 @@ class InstanceRegistry:
 
         :param name: 注册名。
         :param fields: 要改写的字段，取值同 :class:`InstanceEntry`。
-        :raises RegistryError: 实例未登记。
+        :raises RegistryError: 实例没有记录。
         """
         entries = {entry.name: entry for entry in self.load()}
         entry = entries.get(name)
@@ -281,10 +281,10 @@ class InstanceRegistry:
         return updated
 
     def set_default(self, name: str) -> None:
-        """设置缺省实例。
+        """设置默认实例。
 
         :param name: 注册名。
-        :raises RegistryError: 实例未登记。
+        :raises RegistryError: 实例没有记录。
         """
         entries = {entry.name: entry for entry in self.load()}
         if name not in entries:
@@ -316,10 +316,10 @@ class InstanceRegistry:
 
 
 def probe_running(root: Path) -> bool | None:
-    """探测实例是否在运行；探测机制不可用时返回 ``None``。
+    """探测实例是否在运行。探测机制不可用时返回 ``None``。
 
     :param root: 实例根目录。
-    :return: 是否在运行；无法判定时为 ``None``。
+    :return: 是否在运行，无法判定时为 ``None``。
     """
     from akaribot.cli.instance import Instance, system_python
 

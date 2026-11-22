@@ -25,12 +25,12 @@ LXNS_CLIENT_ID = MaimaiConfig.lxns_client_id
 LXNS_CLIENT_SECRET = MaimaiSecretConfig.lxns_client_secret
 LXNS_OAUTH_ENABLED = bool(LXNS_CLIENT_ID)
 
-# 开发者密钥是应用自己的凭据，与任何用户无关，故不随 OAuth 绑定变化；有了它才能按好友码
+# 开发者密钥属于应用本身，与任何用户无关，故不随 OAuth 绑定变化。有了它才能按好友码
 # 查询任意玩家的成绩。
 LXNS_DEVELOPER_TOKEN = MaimaiSecretConfig.lxns_developer_token
 LXNS_DEVELOPER_ENABLED = bool(LXNS_DEVELOPER_TOKEN)
 
-# 应用登记为「无回调地址」时，授权页在自身页面里显示授权码；OAuth 规范把这种用法记作 oob。
+# 应用设为“无回调地址”时，授权页在自身页面里显示授权码。OAuth 规范把这种用法记作 oob。
 LXNS_OOB_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
 
 _TOKEN_EXPIRE_MARGIN = 30
@@ -66,7 +66,7 @@ def build_authorize_url() -> str:
 
 
 def _extract_bind_code(text: str) -> str:
-    # 用户可能直接粘贴授权码，也可能把回调地址整串复制过来；后者要从中取出 `code` 参数。
+    # 用户可能直接粘贴授权码，也可能把回调地址整串复制过来。后者要从中取出 `code` 参数。
     text = text.strip().strip("\"'“”‘’`")
     match = re.search(r"[?&#]code=([^&\s]+)", text)
     if match:
@@ -81,7 +81,7 @@ def unwrap(resp: Any) -> Any:
     """取出落雪接口响应中被 `data` 包裹的结果。
 
     :param resp: 响应体。
-    :return: `data` 字段的内容；响应未被包裹时原样返回。
+    :return: `data` 字段的内容。响应未被包裹时原样返回。
     """
     if isinstance(resp, dict) and "data" in resp:
         return resp["data"]
@@ -195,7 +195,7 @@ async def get_access_token(bind_info: LxnsProberBindInfo) -> str:
 
     lock = _refresh_locks.setdefault(union_id, asyncio.Lock())
     async with lock:
-        # 等待期间可能已有一次刷新完成，复查缓存以免白白轮换一次令牌。
+        # 等待期间可能已有一次刷新完成，复查缓存以免再轮换一次令牌。
         cached = _access_token_cache.get(union_id)
         if cached and cached[1] > time.monotonic():
             return cached[0]
@@ -277,7 +277,7 @@ async def fetch_player_field(bind_info: LxnsProberBindInfo, field: str, url: str
     :param bind_info: 该用户的绑定记录。
     :param field: 字段名，如 `name`、`friend_code`。
     :param url: 舞萌或中二的玩家信息端点。
-    :return: 字段值的字符串形式；获取失败或字段缺失时返回空字符串。
+    :return: 字段值的字符串形式。获取失败或字段缺失时返回空字符串。
     """
     try:
         profile = unwrap(await request_player_data(bind_info, url))
@@ -298,7 +298,7 @@ async def bind_account(msg, code: str | None = None, cmd=None) -> None:
     """以授权码流程完成一次落雪账号绑定。
 
     :param msg: 消息会话。
-    :param code: 用户发来的授权码，或含授权码的回调地址；为空时只给出授权链接。
+    :param code: 用户发来的授权码，或含授权码的回调地址。为空时只给出授权链接。
     :param cmd: 发回授权码所用的命令（`ActionText`），用于提示用户。
     """
     if not LXNS_OAUTH_ENABLED:
@@ -324,7 +324,7 @@ async def bind_account(msg, code: str | None = None, cmd=None) -> None:
         await msg.finish(I18NContext("maimai.message.oauth.failed"))
 
     union_id = msg.session_info.sender_union_id
-    # 令牌里的 `sub` 只用于兜底显示账号，落雪侧不落库（落雪靠 refresh token 自行轮换）。
+    # 令牌里的 `sub` 仅作显示账号的备用来源，落雪侧不落库（落雪靠 refresh token 自行轮换）。
     subject = token.get("sub")
     # 令牌此刻已经在手，而同一授权码无法换取第二次：先落盘，再做其它事情。
     if not await LxnsProberBindInfo.set_bind_info(

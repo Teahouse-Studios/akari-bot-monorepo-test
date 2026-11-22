@@ -12,7 +12,7 @@
     python tools/codemod_core_api.py            # 只报告，不改文件
     python tools/codemod_core_api.py --write    # 落盘
 
-退出码：0 正常；2 有文件无法解析。
+退出码：0 正常，2 表示有文件无法解析。
 """
 
 from __future__ import annotations
@@ -28,11 +28,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_GLOBS = ("packages/modules/*/akaribot/modules", "packages/adapters/*/akaribot/adapters")
 CORE_ROOT = "akaribot.core"
 FACADE = "akaribot.core.api"
-# 适配器另有自己的面：其中的符号只供适配器使用，模块包 import 它会被 B3 拦下。
+# 适配器另有自己的面：其中的符号只供适配器使用，模块包导入它会被 B3 拦下。
 ADAPTER_FACADE = "akaribot.core.api.adapters"
 
 # 必须保持窄 import 的文件，不改写：门面导入期即展开，会把 web_render 连同 playwright 拉进
-# ``sys.modules``，而 Telegram 适配器专门守住「只导入 message_builder 不带出 web_render」。
+# ``sys.modules``，而 Telegram 适配器专门守住“只导入 message_builder 不带出 web_render”。
 KEEP_DEEP_IMPORTS = frozenset(
     {
         "packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/info.py",
@@ -48,7 +48,7 @@ class FilePlan:
     :param path: 文件路径。
     :param moved: 迁移到门面的符号数。
     :param kept: 因门面未收录或对象不同而保留的符号数。
-    :param text: 改写后的全文；无需改写时为 ``None``。
+    :param text: 改写后的全文。无需改写时为 ``None``。
     """
 
     path: Path
@@ -71,7 +71,7 @@ def facade_names(module: str = FACADE) -> dict[str, object]:
 def target_facade(path: Path) -> str:
     """该文件应当改走哪个门面。
 
-    适配器优先走 ``api.adapters``：那里的符号只供适配器使用，模块包 import 会被 B3 判错。
+    适配器优先走 ``api.adapters``：那里的符号只供适配器使用，模块包导入会被 B3 判错。
 
     :param path: 源码文件。
     :return: 门面模块名。
@@ -127,8 +127,8 @@ def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
     """算出一个文件的改写方案。
 
     :param path: 源码文件。
-    :param facades: 门面模块名到「名字 → 对象」的映射。
-    :return: 改写计划；无需改写时 ``text`` 为 ``None``。
+    :param facades: 门面模块名到“名字 → 对象”的映射。
+    :return: 改写计划。无需改写时 ``text`` 为 ``None``。
     :raises SyntaxError: 文件无法解析。
     """
     source = path.read_text(encoding="utf-8")
@@ -144,7 +144,7 @@ def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
     replacements: list[tuple[int, int, str]] = []
 
     def destination(module: str, symbol: str) -> str | None:
-        """该符号应改走哪个门面；两个门面都没有时返回 None。"""
+        """该符号应改走哪个门面。两个门面都没有时返回 None。"""
         for candidate in (primary, FACADE):
             if is_same_object(module, symbol, facades[candidate]):
                 return candidate
@@ -204,7 +204,7 @@ def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
 def main(argv: list[str] | None = None) -> int:
     """入口。返回进程退出码。"""
     parser = argparse.ArgumentParser(description="把 core 深路径 import 改走 akaribot.core.api 门面")
-    parser.add_argument("--write", action="store_true", help="落盘；缺省只报告")
+    parser.add_argument("--write", action="store_true", help="写入磁盘。默认只报告")
     args = parser.parse_args(argv)
 
     facades = {FACADE: facade_names(FACADE), ADAPTER_FACADE: facade_names(ADAPTER_FACADE)}

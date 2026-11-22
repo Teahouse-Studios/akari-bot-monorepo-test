@@ -1,15 +1,15 @@
 """按包管理的配置版本与配置迁移。
 
-core 只维护 ``config.toml`` 的版本（见 akaribot/core/builtins/config/update.py）；其余配置文件的版本随包走：包把
+core 只维护 ``config.toml`` 的版本（见 akaribot/core/builtins/config/update.py）。其余配置文件的版本随包走：包把
 迁移脚本放在 ``config_migrations/`` 下，脚本文件名以四位号段开头，负责把文件从 ``N-1`` 号升到
 ``N`` 号，已应用到哪一号记在文件自身的 ``config_version`` 里。
 
 版本记在文件而非数据库：模块可能被单独升级、降级或移出部署，core 无从知道某个包的表结构经历过
-哪些改动，号段一旦记在数据库，文件与记录脱节后便无法对齐。
+哪些改动，号段一旦记在数据库，文件与记录脱节便无法对齐。
 
 号段约定：``config_version = N`` 表示已应用至第 N 号迁移。新生成的配置由
 :func:`stamp_config_versions` 写入 ``manifest.config_schema_version``，因此首个迁移脚本须从
-``config_schema_version + 1`` 起编号；号段一经发布不得复用、重排或跳号。
+``config_schema_version + 1`` 起编号。号段一经发布不得复用、重排或跳号。
 """
 
 import asyncio
@@ -43,7 +43,7 @@ class ConfigRevision:
     """一条包内配置迁移。
 
     :param package: 包名，取自发现层。
-    :param number: 目标号段，取自文件名前缀；应用后文件的 config_version 即为该值。
+    :param number: 目标号段，取自文件名前缀，应用后文件的 config_version 即为该值。
     :param revision: 修订标识，取自文件名（含号段、不含扩展名）。
     :param path: 迁移脚本路径。
     """
@@ -63,7 +63,7 @@ def _config_root() -> Path:
 
 
 def _config_file(table: str) -> Path:
-    # 现行扁平布局下非核心表一名一文件；P4.4 的 ConfigLayout 落地后改由
+    # 现行扁平布局下非核心表一名一文件。ConfigLayout 落地后改由
     # ConfigLayout.file_for() 提供同一映射。
     return _config_root() / f"{table}.toml"
 
@@ -83,7 +83,7 @@ def iter_config_tables() -> list[tuple["PackageEntry", str]]:
     核心配置不出现在结果中：它由 akaribot/core/builtins/config/update.py 单独维护版本。清单的判定与
     ``PackageRegistry.config_template_paths()`` 同源，均以 ``config.py`` 是否存在为准。
 
-    :return: (包条目， 配置表名) 列表，按包名排序。
+    :return: (包条目，配置表名) 列表，按包名排序。
     """
     from akaribot.core.registry import PackageRegistry
 
@@ -151,7 +151,7 @@ def _document_version(document: "TOMLDocument") -> int | None:
 
 
 def _baseline_version(entry: "PackageEntry", revisions: list[ConfigRevision]) -> int:
-    # 这类文件生成于本机制落地之前，其内容等价于该包首个迁移之前的状态；包尚无迁移脚本时，
+    # 这类文件生成于本机制落地之前，其内容等价于该包首个迁移之前的状态。包尚无迁移脚本时，
     # 直接取清单声明的表结构版本。
     if revisions:
         return revisions[0].number - 1
@@ -182,7 +182,7 @@ def _load_revision_hook(revision: ConfigRevision):
 
 
 def _run_awaitable(awaitable) -> None:
-    # 调用方可能是同步的启动流程，也可能处在事件循环内；后者不能再执行 ``asyncio.run``，
+    # 调用方可能是同步的启动流程，也可能处在事件循环内。后者不能再执行 ``asyncio.run``，
     # 故另起线程驱动。
     async def _drive():
         return await awaitable
@@ -267,11 +267,11 @@ class ConfigMigrationRunner:
     def upgrade(cls, package: str | None = None) -> list[tuple[str, str]]:
         """应用待办的配置迁移。
 
-        单个包失败时记录异常并跳过该包，其余包继续处理；失败包的文件保持原样，
+        单个包失败时记录异常并跳过该包，其余包继续处理。失败包的文件保持原样，
         ``pending()`` 会在下一次调用时重新列出它。
 
-        :param package: 限定包名；``None`` 表示全部包。
-        :return: 实际写入磁盘的 (包名， 修订标识) 列表。
+        :param package: 限定包名，``None`` 表示全部包。
+        :return: 实际写入磁盘的 (包名，修订标识) 列表。
         """
         revisions_by_package = iter_config_revisions()
         applied: list[tuple[str, str]] = []

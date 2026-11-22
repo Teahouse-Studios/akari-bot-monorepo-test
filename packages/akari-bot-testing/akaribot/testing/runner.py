@@ -1,8 +1,8 @@
-"""自研测试框架的运行器，原根目录 ``tester.py`` 的主体。
+"""自研测试框架的运行器，根目录兼容实现 ``tester.py`` 的主体。
 
-入口有两个：``python -m akaribot.testing`` 与根目录的兼容层 ``tester.py``。测试配置的铺设
+入口有两个：``python -m akaribot.testing`` 与根目录的兼容实现 ``tester.py``。测试配置的铺设
 发生在本模块导入期，且必须早于任何 ``akaribot.core`` 导入，故本模块的导入顺序不可调整。
-迁入包内后不再按自身位置回推仓库根，改由 ``AKARI_REPO_ROOT`` 或 :func:`_resolve_repo_root` 确定。
+仓库根由 ``AKARI_REPO_ROOT`` 或 :func:`_resolve_repo_root` 确定，不按本文件位置回推。
 """
 
 from akaribot.core.environment import check_python_version  # skipcq
@@ -28,9 +28,9 @@ TEST_CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"  # 须与 core.constants.path.CONFIG_
 # 留在 data/ 里只会随每次测试运行越积越多。
 TEST_UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
-# 语言快照缓存目录。用例会导入 bot，而守护进程在导入期把该变量 setdefault 到 data/i18n_cache；
-# 测试进程须先固定为自有的临时目录，否则框架启动时发布的快照与之后的读取方（包括 spawn 出的
-# 子进程）会落在不同位置。
+# 语言快照缓存目录。用例会导入 bot，而守护进程在导入期把该变量 setdefault 到 data/i18n_cache。
+# 测试进程须先把环境变量固定为自有的临时目录，否则框架启动时发布的快照与之后的读取方（包括 spawn 出的
+# 子进程）会指向不同位置。
 TEST_I18N_CACHE_DIR_ENV = "AKARI_BOT_I18N_CACHE_DIR"
 
 # 测试所需的配置覆盖项，格式为 (表名， 键名， 值)。文件名不再逐项硬编码：现行扁平布局下
@@ -38,7 +38,7 @@ TEST_I18N_CACHE_DIR_ENV = "AKARI_BOT_I18N_CACHE_DIR"
 TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
     ("config", "enable_petal", True),
     # 通用测试进程不启动守护进程所管理的 WebSocket Hub。数据库后端
-    # 作为自包含测试基座；WebSocket 的真实连接行为由专项用例显式建立 Hub 验证。
+    # 作为自包含测试基座。WebSocket 的真实连接行为由专项用例显式建立 Hub 验证。
     ("jobqueue", "jobqueue_backend", "database"),
 ]
 
@@ -46,7 +46,7 @@ TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
 def _write_minimal_config(path: Path, locale: str, version: int) -> None:
     # 注释先以 i18n 标记落盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值：
     # core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。
-    # 本函数须在 ``AKARI_CONFIG_PATH`` 置位之后调用，其内的 core.constants 导入会固化配置目录。
+    # 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固化配置目录。
     from akaribot.core.constants import config_filename
 
     (path / config_filename).write_text(
@@ -74,7 +74,7 @@ _created_paths: list[Path] = []
 
 
 def _install_test_union_merge_logs() -> Path:
-    # 日志写入仍被完整走到，产物随进程退出一并删除；需要留存时设置 ``AKARI_UNION_MERGE_LOGS_PATH``。
+    # 日志写入仍会被完整执行，产物随进程退出一并删除。需要留存时设置 ``AKARI_UNION_MERGE_LOGS_PATH``。
     # 已显式设置过的运行器（如 tests/run_one.py）直接沿用，不再另建目录。
     configured = os.environ.get(TEST_UNION_MERGE_LOGS_PATH_ENV)
     if configured:
@@ -100,12 +100,12 @@ def _install_test_i18n_cache() -> Path:
 
 def _install_test_config() -> Path:
     # 铺好一份测试专用配置，并令其后的导入一律指向它。
-    # 配置不再取自仓库内的配置快照：只写最小骨架，其余键由配置模板扫描补全，
-    # 因此仓库里不存在需要与代码同步维护的派生配置。
+    # 配置不取自仓库内的配置快照：只写最小结构，其余键由配置模板扫描补全，
+    # 因此仓库里不存在需要与代码同步维护的生成配置。
     path = Path(tempfile.mkdtemp(prefix="akari_test_config_"))
 
     # 顺序约束：AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。
-    # 二者分别固化为配置目录与合并日志目录，未置位时都会落到真实的 config/ 与 data/。
+    # 二者分别固化为配置目录与合并日志目录。未设置时都会指向真实的 config/ 与 data/。
     os.environ[TEST_CONFIG_PATH_ENV] = str(path)
 
     from akaribot.core.constants import default_locale
@@ -136,7 +136,7 @@ def _install_test_config() -> Path:
 
 
 def cleanup_test_environment() -> None:
-    """删除本次运行创建的临时目录；由环境变量显式指定的目录保留。"""
+    """删除本次运行创建的临时目录。由环境变量显式指定的目录保留。"""
     while _created_paths:
         shutil.rmtree(_created_paths.pop(), ignore_errors=True)
 
@@ -154,7 +154,7 @@ def prepare_test_environment() -> TestEnvironment:
 
 
 # 三项引导都必须早于本模块后续的 core.* 导入。合并日志目录与语言快照缓存在前：它们的取值只依赖
-# 环境变量，而配置引导内部会导入 core.constants 并建置语言快照，届时未置位的变量即被永久固化。
+# 环境变量，而配置引导内部会导入 core.constants 并建置语言快照，届时未设置的变量即被永久固化。
 test_union_merge_logs_path = _install_test_union_merge_logs()
 test_i18n_cache_path = _install_test_i18n_cache()
 test_config_path = _install_test_config()
@@ -184,7 +184,7 @@ from akaribot.testing.process import run_case_entry, run_function_entry
 
 Logger = TestLoggingLogger("TEST")
 
-# 源码检出形态下的仓库根：根目录兼容层 tester.py 在导入本模块前置位，取值须与它一致。
+# 源码克隆形态下的仓库根：根目录兼容实现 tester.py 在导入本模块前设置，取值须与它一致。
 REPO_ROOT_ENV = "AKARI_REPO_ROOT"
 
 
@@ -192,8 +192,8 @@ REPO_ROOT_ENV = "AKARI_REPO_ROOT"
 class RunOptions:
     """本次运行的选择项。
 
-    :param paths: 只跑这些测试文件或目录；空元组表示按默认根收集。
-    :param cases: 只跑名字里含这些子串的 ``func_case``；空元组表示全部。
+    :param paths: 只跑这些测试文件或目录。空元组表示按默认根收集。
+    :param cases: 只跑名字里含这些子串的 ``func_case``。空元组表示全部。
     :param ci: 是否按 CI 模式运行（无 Expectation 的用例跳过而不是等待人工输入）。
     :param coverage: 是否启用覆盖率收集。
     """
@@ -207,10 +207,10 @@ class RunOptions:
 def parse_options(argv: Sequence[str] | None = None) -> RunOptions:
     """解析命令行选项。
 
-    ``--ci`` 与 ``--coverage`` 必须在这里就被识别：``IS_CI`` / ``ENABLE_COVERAGE`` 在**导入期**
-    读取环境变量，等 ``main()`` 再解析已经太晚——这正是「选项拼进了 argv 却完全不生效」的原因。
+    ``--ci`` 与 ``--coverage`` 必须在这里识别：``IS_CI`` / ``ENABLE_COVERAGE`` 在**导入期**
+    读取环境变量，等 ``main()`` 再解析已经太晚——这正是“选项拼进了 argv 却完全不生效”的原因。
 
-    :param argv: 参数列表；缺省取 ``sys.argv[1:]``。
+    :param argv: 参数列表。默认取 ``sys.argv[1:]``。
     :return: 解析结果。
     :raises SystemExit: ``--help`` 或参数不合法。
     """
@@ -218,7 +218,7 @@ def parse_options(argv: Sequence[str] | None = None) -> RunOptions:
         prog="python -m akaribot.testing",
         description="运行 AkariBot 自研测试框架的全部或部分用例。",
     )
-    parser.add_argument("paths", nargs="*", help="只跑这些测试文件或目录，缺省跑全部默认根")
+    parser.add_argument("paths", nargs="*", help="只跑这些测试文件或目录，默认跑全部根目录")
     parser.add_argument("--case", action="append", default=[], metavar="NAME", help="只跑名字含该子串的用例，可重复")
     parser.add_argument("--ci", action="store_true", help="按 CI 模式运行，跳过需要人工复核的用例")
     parser.add_argument("--coverage", action="store_true", help="启用覆盖率收集")
@@ -237,15 +237,15 @@ def _prescan_mode_flags(argv: Sequence[str]) -> tuple[bool, bool]:
     return "--ci" in argv, "--coverage" in argv
 
 
-# 本次运行的选择项；由 run() 严格解析后覆盖。main() 里的收集与筛选都在其之后读它。
+# 本次运行的选择项。由 run() 严格解析后覆盖。main() 里的收集与筛选都在其之后读它。
 OPTIONS = RunOptions()
 
 _MODE_CI, _MODE_COVERAGE = _prescan_mode_flags(sys.argv[1:])
 
 
 def _resolve_repo_root() -> Path | None:
-    # 不按本文件位置回推：本模块已在包内，回推只会落到 site-packages。优先取 ``AKARI_REPO_ROOT``；
-    # 否则取 ``Paths.tests`` 的父目录——源码检出下 ``tests/`` 位于仓库根，再以 ``packages/``
+    # 不按本文件位置回推：本模块已在包内，回推只会指向 site-packages。优先取 ``AKARI_REPO_ROOT``。
+    # 否则取 ``Paths.tests`` 的父目录——源码克隆下 ``tests/`` 位于仓库根，再以 ``packages/``
     # 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
     explicit = os.environ.get(REPO_ROOT_ENV)
     if explicit:
@@ -256,7 +256,7 @@ def _resolve_repo_root() -> Path | None:
 
 REPO_ROOT = _resolve_repo_root()
 
-# 报告落点与用例发现同源：源码检出下固定在仓库根，安装形态下退回调用目录。
+# 报告落点与用例发现同源：源码克隆下固定在仓库根，安装形态下改用调用目录。
 OUTPUT_ROOT = REPO_ROOT if REPO_ROOT is not None else Path.cwd()
 
 
@@ -279,7 +279,7 @@ def _source_import_roots() -> list[Path]:
 
 load_dotenv()
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-# 空列表时不置位：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
+# 空列表时不设置：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
 if source_import_roots := _source_import_roots():
     os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in source_import_roots))
 
@@ -473,8 +473,8 @@ class FuncTestStats:
 
 
 def _test_roots() -> list[Path]:
-    # 仓库根的 ``tests/`` 承载跨包用例与共享夹具，各成员包自带的 ``tests/`` 随包分发。后者只在
-    # 源码检出下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。
+    # 仓库根的 ``tests/`` 承载跨包用例与共享测试数据，各成员包自带的 ``tests/`` 随包分发。后者只在
+    # 源码克隆下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。
     roots = [Path(tests_path)]
     if REPO_ROOT is not None:
         for pattern in ("packages/*/tests", "packages/*/*/tests"):
@@ -495,8 +495,8 @@ def _test_module_key(path: str) -> str:
 
 
 def _explicit_test_files() -> list[str]:
-    # 目录递归取 ``*.py``，文件按原样收；路径按仓库根解析，相对路径因此与 ``tests/run_one.py``
-    # 的写法一致。给错路径时返回空列表，由调用方报「没有匹配的测试文件」——静默跑全量会让
+    # 目录递归取 ``*.py``，文件按原样收。路径按仓库根解析，相对路径因此与 ``tests/run_one.py``
+    # 的写法一致。给错路径时返回空列表，由调用方报“没有匹配的测试文件”——静默跑全量会让
     # ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
     files: list[str] = []
     for raw in OPTIONS.paths:
@@ -522,7 +522,7 @@ def _iter_integration_files() -> list[str]:
 
 
 def _collect_test_files() -> list[str]:
-    # 给了位置参数就只跑这些路径；否则按默认根收集，仓库根的整合用例由 _iter_integration_files
+    # 给了位置参数就只跑这些路径。否则按默认根收集，仓库根的整合用例由 _iter_integration_files
     # 单独列出，其目录内的辅助模块不参与收集。两种情形都按路径排序且去重。
     if OPTIONS.paths:
         return _explicit_test_files()

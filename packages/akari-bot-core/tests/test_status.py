@@ -37,7 +37,7 @@ async def _test_process_usage_lines_use_status_keys():
     if len(lines) != 2:
         return False
     usage_line, failure_line = lines
-    # 语言键缺失时会回落为键名或提示，故一律断言不含 "core.message"。
+    # 语言键缺失时会改用键名或提示，故一律检查不含 "core.message"。
     return (
         "core.message" not in usage_line
         and "12" in usage_line

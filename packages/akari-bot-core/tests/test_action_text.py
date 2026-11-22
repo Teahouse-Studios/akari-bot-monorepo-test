@@ -199,7 +199,7 @@ async def _test_i18n_inner_resolved():
 async def _test_inline_in_i18n_kwargs_supported():
     try:
         session_info = await _session("at_inline_keep", True)
-        # message.brackets 的值为「（${msg}）」，借它构造一个前后都有文本的现成句子
+        # message.brackets 的值为“（${msg}）”，借它构造一个前后都有文本的现成句子
         chain = MessageChain.assign([I18NContext("message.brackets", msg=ActionText("~wiki 沙盒", show="沙盒"))])
         sendable = chain.as_sendable(session_info)
         if not any(isinstance(v, ActionTextElement) for v in sendable.values):

@@ -1,7 +1,5 @@
 # 编写用例
 
-本文将会教你编写测试用例，并说明用例的声明方式、可用的匹配器、测试环境的差异与常见陷阱。
-
 ## 文件位置
 
 | 目录 | 内容 |
@@ -10,7 +8,7 @@
 | `tests/integration/` | 走完整命令链路的集成测试 |
 | `tests/fixtures/http/` | 录制的 HTTP 响应 |
 | `tests/helpers/` | RPC worker 等辅助进程 |
-| `packages/*/tests/` | 分发包自带的测试 |
+| `packages/*/tests/` | 包自带的测试 |
 
 文件名以 `test_` 开头。不同包可以存在同名文件，运行器按仓库相对路径生成模块名。
 
@@ -33,7 +31,7 @@ async def test_version(tester: Tester):
 `Tester` 只有两个用于检查的方法：
 
 - `await tester.integrate(input_, expected=None, note=None, timeout=None)`：发送一条命令并校验输出。`input_` 为字符串列表时表示连续多条消息，用于交互式命令。
-- `await tester.test(func, note=None)`：调用纯函数或谓词，返回真值即通过，支持同步与异步。没有 `tester.expect()`。
+- `await tester.test(func, note=None)`：调用纯函数或谓词，返回真值即通过，支持同步与异步。框架不提供 `tester.expect()`。
 
 `expected` 传 `Expectation`。传 `None` 表示人工复核，只能在交互式全量运行中使用。
 
@@ -68,7 +66,7 @@ async def _(msg: Bot.MessageSession, word: str):
 | `Equal(message)` | 可发送消息链完全相等 |
 | `Contains` / `ContainsAll` / `ContainsAny` | 包含一个 / 全部 / 任一字符串 |
 | `StartsWith` / `EndsWith` / `Regex` | 前缀、后缀、正则 |
-| `InOrder` / `StructureEqual` | 元素类型顺序 / 数量、顺序与类型严格一致 |
+| `InOrder` / `StructureEqual` | 元素按给定类型的顺序出现 / 数量、顺序与类型严格一致 |
 | `Length` / `Count` / `OutputCount` | 元素总数 / 某类型数量 / 平台动作条目数 |
 | `Exist` | 存在指定类型的元素 |
 | `Empty` / `AnyOutput` | 无输出 / 有输出 |

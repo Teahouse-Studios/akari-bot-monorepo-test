@@ -71,7 +71,7 @@ async def _test_equal_priority_keeps_binding_order():
     try:
         # 先绑定的 UPUSHB 场景 ID 在字典序上更大，同分时仍应先发送。
         union_id = await _bind("priority-tie", ("UPUSHB", 1), ("UPUSHA", 1))
-        # 绑定时间由时钟写入，粗粒度时钟上两次绑定会落在同一微秒。按绑定顺序显式落值。
+        # 绑定时间由时钟写入，粗粒度时钟上两次绑定会处于同一微秒。按绑定顺序显式赋值。
         base = datetime(2024, 1, 1, tzinfo=UTC)
         for index, target in enumerate(("UPUSHB|Group|priority-tie", "UPUSHA|Group|priority-tie")):
             await TargetUnionBind.filter(target_id=target).update(bound_at=base + timedelta(seconds=index))

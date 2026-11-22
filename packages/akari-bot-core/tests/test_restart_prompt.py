@@ -97,7 +97,7 @@ async def _test_ignores_previous_client_lease():
 
 
 async def _test_waits_for_client_to_come_online():
-    # server 与各 bot 子进程一同重启，`load_prompt` 执行时本地拓扑缓存必然为空；
+    # server 与各 bot 子进程一同重启，`load_prompt` 执行时本地拓扑缓存必然为空。
     # 客户端须先在 Peer Registry 注册带有效租约的 ready 实例。若不等待即发送，
     # RPC 的掉线检查会拒绝提示请求。
     client = "RESTARTA"

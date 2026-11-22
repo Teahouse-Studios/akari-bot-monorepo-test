@@ -2,7 +2,7 @@
 
 供 CLI 与 TUI 以子进程调用：连接状态的权威来源是数据库表 ``job_queue_peers`` 的租约，
 ``Alive`` 只是进程内缓存。取不到数据属于可降级状态（输出 ``available: false`` 与原因、
-以 0 退出），不是错误——调用方据此显示「未知」。
+以 0 退出），调用方据此显示“未知”。
 """
 
 from __future__ import annotations
@@ -54,14 +54,14 @@ async def _snapshot() -> dict:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数，默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(
         prog="python -m akaribot.core.entrypoints.peers",
         description="输出 JobQueue peer 快照（连接状态的权威来源）。",
     )
-    # 默认即 JSON；--json 显式写法与 TUI 数据源的调用一致，必须接受。
+    # 默认即 JSON，--json 显式写法与 TUI 数据源的调用一致，必须接受。
     parser.add_argument("--json", action="store_true", help="以 JSON 输出（默认）")
     parser.add_argument("--text", action="store_true", help="以人类可读文本输出")
     args = parser.parse_args(argv)

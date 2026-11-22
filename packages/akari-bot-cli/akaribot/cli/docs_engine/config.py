@@ -34,7 +34,7 @@ class DocsFooterLink:
 
     :param text: 按钮文字，同时作为无障碍名称。
     :param link: 按钮指向的地址，可以是 URL 或站内路径。
-    :param icon: 内置图标名（``afdian``、``github``）或图片路径；相对路径按实例根解析。
+    :param icon: 内置图标名（``afdian``、``github``）或图片路径。相对路径按实例根解析。
     """
 
     text: str
@@ -47,11 +47,11 @@ class DocsFooterConfig:
     """页脚关于区块。
 
     :param enabled: 是否显示该区块。
-    :param title: 标题；留空时取 ``defaults.toml`` 的 ``[footer] title``。
-    :param text: 正文段落；``None`` 取默认段落，空元组不显示正文。
-    :param image: 配图；相对路径按实例根解析，也可写 URL 或站点路径；留空时使用角色立绘。
-    :param links: 按钮；``None`` 取默认按钮，空元组不显示按钮。
-    :param copyright: 版权行；留空时取 ``defaults.toml`` 的 ``[footer] copyright``。
+    :param title: 标题。留空时取 ``defaults.toml`` 的 ``[footer] title``。
+    :param text: 正文段落。``None`` 取默认段落，空元组不显示正文。
+    :param image: 配图。相对路径按实例根解析，也可写 URL 或站点路径。留空时使用角色立绘。
+    :param links: 按钮。``None`` 取默认按钮，空元组不显示按钮。
+    :param copyright: 版权行。留空时取 ``defaults.toml`` 的 ``[footer] copyright``。
     """
 
     enabled: bool = True
@@ -120,7 +120,7 @@ class DocsLocaleConfig:
 
     :param tag: 语言标签，同时作为非默认语言的目录名与 URL 前缀。
     :param label: 语言选择器里的显示名称。
-    :param title: 该语言的站点标题；留空时取默认语言的标题。
+    :param title: 该语言的站点标题。留空时取默认语言的标题。
     :param labels: 该语言的界面文案，逐键覆盖默认值。
     :param group_titles: 该语言的侧栏分组标题，逐键覆盖默认值。
     """
@@ -137,7 +137,7 @@ class DocsThemeConfig:
     """站点主题设置。
 
     :param source: 主题来源：``auto``、``bundled``、``file:<路径>`` 或实例内的相对路径。
-    :param color: M3E 种子色，格式为 ``#rrggbb``；空串使用主题默认值。
+    :param color: M3E 种子色，格式为 ``#rrggbb``。空串使用主题默认值。
     """
 
     source: str = DEFAULT_THEME_SOURCE
@@ -148,16 +148,16 @@ class DocsThemeConfig:
 class DocsSiteConfig:
     """站点展示设置。
 
-    :param title: 站点标题；留空时取 ``defaults.toml`` 的 ``[site] title``。
-    :param lang: 页面语言标签；留空时取 ``defaults.toml`` 的 ``[site] lang``。
-    :param base: 部署基路径；留空时取 ``defaults.toml`` 的 ``[site] base``。
-    :param logo: 日间标志；相对路径按实例根解析，也可写 URL 或站点路径。
-    :param logo_dark: 夜间标志；留空时使用品牌包或内置资源。
-    :param avatar: 对话示例的机器人头像；相对路径按实例根解析，也可写 URL 或站点路径。
-    :param character: 角色立绘；留空时使用品牌包或内置资源。
-    :param credits: 制作人员名单文件；留空时使用品牌包资源。
-    :param favicon: 站点图标；相对路径按实例根解析，也可写 URL 或站点路径。
-    :param command_prefix: 命令用法行使用的前缀；留空时取实例核心配置的首个前缀。
+    :param title: 站点标题。留空时取 ``defaults.toml`` 的 ``[site] title``。
+    :param lang: 页面语言标签。留空时取 ``defaults.toml`` 的 ``[site] lang``。
+    :param base: 部署基路径。留空时取 ``defaults.toml`` 的 ``[site] base``。
+    :param logo: 日间标志。相对路径按实例根解析，也可写 URL 或站点路径。
+    :param logo_dark: 夜间标志。留空时使用品牌包或内置资源。
+    :param avatar: 对话示例的机器人头像。相对路径按实例根解析，也可写 URL 或站点路径。
+    :param character: 角色立绘。留空时使用品牌包或内置资源。
+    :param credits: 制作人员名单文件。留空时使用品牌包资源。
+    :param favicon: 站点图标。相对路径按实例根解析，也可写 URL 或站点路径。
+    :param command_prefix: 命令用法行使用的前缀。留空时取实例核心配置的首个前缀。
     """
 
     title: str = ""
@@ -176,7 +176,7 @@ class DocsSiteConfig:
 class DocsBuildConfig:
     """构建输出设置。
 
-    :param out_dir: 输出目录，相对实例根或绝对路径；留空时取 ``defaults.toml`` 的 ``[site] out_dir``。
+    :param out_dir: 输出目录，相对实例根或绝对路径。留空时取 ``defaults.toml`` 的 ``[site] out_dir``。
     """
 
     out_dir: str = ""
@@ -195,7 +195,7 @@ class DocsConfig:
     :param icons: 侧栏一级项的图标名，键为分组或 ``home``。
     :param category_icons: 侧栏分类的图标名，键为 ``docs.toml`` 的 ``category``。
     :param assets: 随包站点素材，``defaults.toml`` 提供默认值。
-    :param locales: 站点语言，首项为默认语言；留空时由 ``site.lang`` 推导。
+    :param locales: 站点语言，首项为默认语言。留空时由 ``site.lang`` 推导。
     :param footer: 页脚关于区块，``defaults.toml`` 提供默认文案与按钮。
     :param deploy: 部署设置，由命令层解释，引擎只透传。
     """
@@ -290,7 +290,7 @@ class DocsConfig:
 
     @property
     def out_dir(self) -> Path:
-        """输出目录的绝对路径；配置为相对路径时锚定实例根。"""
+        """输出目录的绝对路径。配置为相对路径时锚定实例根。"""
         configured = Path(self.build.out_dir).expanduser()
         return configured if configured.is_absolute() else self.root / configured
 
@@ -589,7 +589,7 @@ def _string_map(data: Mapping[str, Any], path: Path, table: str) -> dict[str, st
 def site_asset_path(root: Path, value: str) -> Path | None:
     """把 ``site.logo`` / ``site.favicon`` 解析成本地文件。
 
-    URL 与站点绝对路径（``/`` 开头）返回 ``None``；相对路径必须位于实例根内且文件存在。
+    URL 与站点绝对路径（``/`` 开头）返回 ``None``。相对路径必须位于实例根内且文件存在。
 
     :param root: 实例根。
     :param value: 配置值。

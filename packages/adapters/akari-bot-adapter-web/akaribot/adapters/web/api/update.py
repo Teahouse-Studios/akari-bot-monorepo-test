@@ -16,8 +16,8 @@ from akaribot.core.api import Info, Logger, ServerAPI
 from akaribot.core.paths import Paths
 from .auth import verify_jwt
 
-# 更新流程的工作目录，取实例目录：源码检出下即仓库根，独立部署下即部署者维护的实例树。
-# 按文件深度反推仓库根在 wheel 形态下会落到 site-packages 之外。
+# 更新流程的工作目录，取实例目录：源码克隆形态下即仓库根，独立部署下即部署者维护的实例树。
+# 按文件深度反推仓库根时，wheel 形态下会落到 site-packages 之外。
 ROOT_DIR = Paths.instance
 
 GIT_TIMEOUT = 120
@@ -264,7 +264,7 @@ async def restart(force: bool = False) -> None:
     try:
         await client_cleanup()
     except BaseException:
-        # 重启请求已经被接受，清理失败不能把进程留在半关闭状态；记录后仍交给守护进程重启。
+        # 重启请求已经被接受，清理失败不能把进程留在半关闭状态。记录后仍交给守护进程重启。
         Logger.exception("Failed to clean up Web client before restart: ")
     os._exit(33)
 

@@ -1,8 +1,8 @@
 """``CommandRunner`` 的实时转发。
 
 安装与卸载可能跑上几分钟。沿用 ``capture_output`` 时这段时间界面上没有任何变化，操作者无法
-区分「正在装」与「卡住了」；uv 即使输出被重定向也会打印 ``Resolved … / Installed …`` 这类进度行，
-转发即可见。本文件固定三件事：逐行转发、失败仍能摘要、转发走 stderr 以免污染 ``--json`` 的 stdout。
+区分“正在装”与“卡住了”。uv 即使输出被重定向也会打印 ``Resolved … / Installed …`` 这类进度行，
+转发即可见。本文件固定三件事：逐行转发、失败时仍给出摘要、转发走 stderr 以免污染 ``--json`` 的 stdout。
 """
 
 import io
@@ -96,7 +96,7 @@ def _test_verbose_echoes_the_command():
 
 
 def _test_uv_environment_uses_instance_cache():
-    # 受限环境里家目录缓存可能不可写；未显式指定 UV_CACHE_DIR 时改用实例自己的缓存目录。
+    # 受限环境里家目录缓存可能不可写。未显式指定 UV_CACHE_DIR 时取实例自己的缓存目录。
     with TemporaryDirectory(prefix="akari-uv-env-") as raw:
         root = Path(raw) / "instance"
         instance = engine.Instance.detached(root)

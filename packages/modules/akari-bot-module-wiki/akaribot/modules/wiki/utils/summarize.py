@@ -49,7 +49,7 @@ _SEMANTIC_LINK = re.compile(r"\[\[[^\[\]|]*?::((?:[^\[\]]|\[\[[^\[\]]*?\]\]|\[[^
 _RESIDUAL_TAG = re.compile(r"</?[a-zA-Z][a-zA-Z0-9_:-]*(?:\s[^>]*?)?/?>")
 
 # 正文中不应残留的 Wikitext 结构标记。构造一旦不成对或不被识别，这些标记便会原样
-# 留在输出里；与其把半段源码充作摘要，不如舍去所在的行，没有正文时宁可不给摘要
+# 留在输出里。与其把半段源码充作摘要，不如舍去所在的行，没有正文时宁可不给摘要
 _UNPARSED_MARKUP = re.compile(r"\{\{|\}\}|\{\||\|\}|\[\[|\]\]")
 
 # TemplateData 扩展的标签，其内容为描述模板用法的 JSON
@@ -61,8 +61,8 @@ _SENTENCE_END = r"(.*?(?:!\s|\?\s|\.\s|！|？|。)).*"
 _SENTENCE_END_AFTER_BRACKET = r"(.*?[)}\]>\"\'》】’”」）].*?(?:!\s|\?\s|\.\s|！|？|。)).*"
 _OPEN_BRACKET = r"[({\[>\"\'《【‘“「（]"
 
-# 首句短于此长度时补上第二句。「石头（Stone）是在主世界中大量存在的方块。」为 23 字符，
-# 属应当补充的一档；首句本身已逾此长度的条目不再追加
+# 首句短于此长度时补上第二句。“石头（Stone）是在主世界中大量存在的方块。”为 23 字符，
+# 属应当补充的一档。首句本身已逾此长度的条目不再追加
 MIN_FIRST_SENTENCE_LENGTH = 40
 MAX_SUMMARY_LENGTH = 250
 MAX_SUMMARY_LINES = 5
@@ -176,7 +176,7 @@ def extract_summary(wikitext: str, section: str | None = None) -> str:
 
     :param wikitext: 页面的原始 Wikitext。
     :param section: 章节名。为 None 时取引言段。
-    :returns: 清理后的纯文本；解析失败或未匹配到章节时返回空字符串。
+    :returns: 清理后的纯文本。解析失败或未匹配到章节时返回空字符串。
     """
     if not wikitext:
         return ""

@@ -1,10 +1,10 @@
-"""按包登记的数据库迁移。
+"""按包注册的数据库迁移。
 
 每个包在 ``migrations/`` 下声明 revision。Runner 固定先执行 core 的全部待应用 revision，再按
 包名依次执行各模块包——core 的改名与回填须先完成，模块包的列改名随后进行，这条跨包顺序无法用
 ``DEPENDS_ON`` 表达，故固定在执行顺序里。
 
-硬规则是幂等：MySQL 的 DDL 自动提交，无法把「执行 DDL」与「写 schema_migrations」放进同一事务，
+硬规则是幂等：MySQL 的 DDL 自动提交，无法把“执行 DDL”与“写 schema_migrations”放进同一事务，
 中途失败重跑时非幂等的迁移会重复施加变更。每条 revision 的每一步都要先探测再执行。SQLite 支持
 事务性 DDL，Runner 在此额外把单条 revision 连同版本记录包进一个事务。
 """
@@ -31,7 +31,7 @@ CORE_PACKAGE = "core"
 # 包内迁移目录的约定名。包若在 manifest 中声明了 migrations，则以声明为准。
 MIGRATIONS_DIRNAME = "migrations"
 
-# 支持事务性 DDL 的方言；其余方言只按先探测再执行的方式保证可重跑。
+# 支持事务性 DDL 的方言。其余方言只按先探测再执行的方式保证可重跑。
 TRANSACTIONAL_DIALECTS = ("sqlite",)
 
 _LOADED: dict[tuple[str, str], "MigrationModule"] = {}
@@ -56,7 +56,7 @@ class MigrationContext:
     探测与 DDL 均按当前方言生成，revision 只描述要达成什么，不必自行分支 SQLite 与 MySQL。
 
     :param conn: 数据库连接。
-    :param db_type: 方言名；省略时由连接推断。
+    :param db_type: 方言名，省略时由连接推断。
     """
 
     def __init__(self, conn, db_type: str | None = None) -> None:
@@ -92,7 +92,7 @@ class MigrationContext:
         if self.db_type != "sqlite":
             await self.conn.execute_script(script)
             return
-        # SQLite executescript 会隐式提交；完整语句逐条执行以保留 revision 的事务边界。
+        # SQLite executescript 会隐式提交。完整语句逐条执行以保留 revision 的事务边界。
         statement = ""
         for fragment in script.split(";"):
             statement += fragment + ";"
@@ -154,7 +154,7 @@ class MigrationContext:
         """
         判断列是否可为空。
 
-        用于「收紧或放宽约束」这类无法靠列名判断是否已完成的步骤。
+        用于“收紧或放宽约束”这类无法靠列名判断是否已完成的步骤。
 
         :param table: 表名。
         :param column: 列名。
@@ -175,10 +175,10 @@ class MigrationContext:
 
     async def has_index(self, table: str, column: str) -> bool:
         """
-        判断指定列上是否已有索引，作为任意索引的首列即算。
+        判断指定列上是否已有索引：该列是任一索引的首列即算。
 
         按列而非按索引名判断：新建的库由 ``generate_schemas`` 依模型声明建索引，索引名由 ORM
-        生成，与迁移里显式指定的名字不同；按名字判断会为已有索引的库重复建一份。
+        生成，与迁移里显式指定的名字不同。按名字判断会为已有索引的库重复建一份。
 
         :param table: 表名。
         :param column: 列名。
@@ -208,7 +208,7 @@ class MigrationContext:
         :param column: 列名。
         :param ddl_type: 列类型，如 ``VARCHAR(1024)``。
         :param null: 是否允许为空。
-        :param default: 默认值表达式；省略时不写 ``DEFAULT``。
+        :param default: 默认值表达式，省略时不写 ``DEFAULT``。
         """
         statement = f"ALTER TABLE {self.quote(table)} ADD COLUMN {self.quote(column)} {ddl_type}"
         statement += " NULL" if null else " NOT NULL"
@@ -286,7 +286,7 @@ class MigrationModule:
     :param checksum: 文件源码的 sha256。
     :param depends_on: 同包内须先执行的 revision。
     :param upgrade: 升级函数。
-    :param downgrade: 回退函数；未声明时为 ``None``。
+    :param downgrade: 回退函数，未声明时为 ``None``。
     """
 
     package: str
@@ -390,7 +390,7 @@ def order_migrations(package: str, modules: list[MigrationModule]) -> list[Migra
 
 
 class MigrationRunner:
-    """迁移的发现、登记与执行。"""
+    """迁移的发现、注册与执行。"""
 
     @classmethod
     async def discover(cls) -> dict[str, list[MigrationModule]]:
@@ -419,7 +419,7 @@ class MigrationRunner:
 
     @classmethod
     async def _applied(cls) -> dict[tuple[str, str], str | None]:
-        # 取已登记的 revision。
+        # 取已记录的 revision。
         rows = await SchemaMigration.all()
         return {(row.package, row.revision): row.checksum for row in rows}
 
@@ -456,8 +456,8 @@ class MigrationRunner:
     @classmethod
     def _order(cls, discovered: dict[str, list[MigrationModule]], package: str | None) -> list[str]:
         # 取包的执行顺序。
-        # core 的全部 revision 先跑完，再按包名依次执行各模块包：模块侧的绑定回填依赖 core 的
-        # 改名与回填已完成，且各包的 revision 无法互相声明依赖。
+        # core 的全部 revision 先跑完，再按包名依次执行各模块包：模块侧的绑定回填以 core 的
+        # 改名与回填已完成为前提，且各包的 revision 无法互相声明依赖。
         if package is not None:
             if package not in discovered:
                 Logger.warning(f"No migrations discovered for package {package!r}.")
@@ -470,7 +470,7 @@ class MigrationRunner:
         """
         执行待应用的 revision。
 
-        :param package: 只执行该包；省略时执行全部包。
+        :param package: 只执行该包，省略时执行全部包。
         :return: 已应用的 ``(包名， revision)`` 列表。
         """
         discovered = await cls.discover()
@@ -492,7 +492,7 @@ class MigrationRunner:
         回退该包已应用的 revision。
 
         :param package: 包名。
-        :param to: 回退到该 revision 为止（保留它）；省略时全部回退。
+        :param to: 回退到该 revision 为止（保留它），省略时全部回退。
         :return: 已回退的 ``(包名， revision)`` 列表。
         :raises MigrationError: revision 未声明 ``downgrade``，或 ``to`` 不存在。
         """
@@ -522,7 +522,7 @@ class MigrationRunner:
         """
         标记 revision 为已应用而不执行。
 
-        供旧库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常登记，
+        供旧库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常写入记录，
         以便日后装上该包时不再重放这些历史步骤。
 
         :param package: 包名。
@@ -546,7 +546,7 @@ class MigrationRunner:
 
     @classmethod
     async def _apply(cls, migration: MigrationModule) -> None:
-        # 执行并登记一条迁移。
+        # 执行并记录一条迁移。
         Logger.info(f"Applying migration {migration.package}/{migration.revision}.")
         await cls._run(migration, migration.upgrade)
 
@@ -558,7 +558,7 @@ class MigrationRunner:
             await entry(MigrationContext(conn))
             await cls._record(migration, reverting=reverting)
             return
-        # 事务内取到的连接由事务上下文登记，模型查询与裸 SQL 都会走同一连接。
+        # 事务内取到的连接由事务上下文持有，模型查询与裸 SQL 都会走同一连接。
         async with in_transaction("default") as transaction:
             await entry(MigrationContext(transaction))
             await cls._record(migration, reverting=reverting)

@@ -3,7 +3,7 @@
 对 monorepo 布局（packages[/<group>]/<dist>/akaribot/{core,modules,adapters}）做 AST 静态检查，
 规格见 generated_docs/monorepo_refactor_tasks.md 的 T4.6（#n 即该节表格的条号）：
 
-    B1  warn/error  模块包 import 其它模块包的非 .api 内部路径（#2；packages/modules 下的官方包为 error）
+    B1  warn/error  模块包 import 其它模块包的非 .api 内部路径（#2，packages/modules 下的官方包为 error）
     B2  error       模块包 import akaribot.adapters.*（#3，平台能力只能经 SessionInfo / Features 声明式获取）
     B3  error       模块包 import akaribot.core.api.adapters（该面只供适配器使用，T4.7(d)）
     B4  error       akaribot.core.* import akaribot.modules.* 或 akaribot.adapters.*（core 不依赖可能缺席的包）
@@ -22,20 +22,20 @@ B8 按被 import 的符号判定，不按模块路径：符号面取 api/__init_
 __all__ 的字面量并集（AST 解析，不导入 core）。走门面的写法（akaribot.core.api[.*]）一律不报，深路径
 取到门面已承诺的符号也不报 —— 那只是尚未改成门面写法，属于迁移工作，不是本规则的对象。
 
-规则 1 与 7 并存：B6 是「用了就得声明」，对扫描到的所有模块包生效；B10 是「官方包不许互相依赖」，
+规则 1 与 7 并存：B6 是“用了就得声明”，对扫描到的所有模块包生效。B10 是“官方包不许互相依赖”，
 只约束 packages/modules/ 下的包。B6 把 akaribot.modules.<x> 按源码目录与 entry point 双重索引映射到
-分发名，映射不到的（第三方装进 site-packages）跳过；声明解析支持 `akari-bot-core[s3]` 这类 extra 写法
+分发名，映射不到的（第三方装进 site-packages）跳过。声明解析支持 `akari-bot-core[s3]` 这类 extra 写法
 与 `>=` / `==` / 直接引用等描述符。`from x import *` 不逐个计名，动态 import（importlib / __import__）
 不产生 ast.Import 节点，均不检查。
 
-既有违规由 tools/boundary_lint_baseline.txt 豁免，检查只对新增与修改的行生效；基线键为
+既有违规由 tools/boundary_lint_baseline.txt 豁免，检查只对新增与修改的行生效。基准键为
 `<路径>\t<规则>\t<被 import 的路径或名字>`，不含行号。
 
 用法：
-    uv run python tools/lint_boundaries.py                      # 全量，仅报基线外违规
+    uv run python tools/lint_boundaries.py                      # 全量，仅报基准外违规
     uv run python tools/lint_boundaries.py --diff HEAD~1        # 只查该基准之后的新增/修改行
-    uv run python tools/lint_boundaries.py --generate-baseline  # 重建基线
-    uv run python tools/lint_boundaries.py --show-baseline      # 同时打印基线内违规
+    uv run python tools/lint_boundaries.py --generate-baseline  # 重建基准
+    uv run python tools/lint_boundaries.py --show-baseline      # 同时打印基准内违规
 """
 
 from __future__ import annotations
@@ -56,16 +56,16 @@ BASELINE_PATH = PROJECT_ROOT / "tools" / "boundary_lint_baseline.txt"
 # 收录范围：packages/ 下的全部分发源码。tests/ 与 tools/ 依赖全部层，不在约束内。
 SCAN_DIRS = ("packages",)
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
-# 分发清单：packages/<dist>/ 与 packages/<group>/<dist>/ 两层；容器目录（adapters、modules）无 pyproject。
+# 分发清单：packages/<dist>/ 与 packages/<group>/<dist>/ 两层。容器目录（adapters、modules）无 pyproject。
 DIST_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pyproject.toml")
 
 # 命名空间根标志：源码位于 <dist>/akaribot/<layer>/…，据此定位分层与包路径。
 NAMESPACE_ROOT = "akaribot"
-# 分层取命名空间根之后的第一段目录名；akaribot.testing 不在受约束的三层内，规则不适用。
+# 分层取命名空间根之后的第一段目录名。akaribot.testing 不在受约束的三层内，规则不适用。
 LAYER_CORE = "core"
 LAYER_MODULES = "modules"
 LAYER_ADAPTERS = "adapters"
-# 命名空间根与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按「akaribot 之后的目录后缀」禁。
+# 命名空间根与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按“akaribot 之后的目录后缀”禁。
 NAMESPACE_FORBIDDEN_INIT = {(), ("modules",), ("adapters",)}
 # 官方模块包的判定前缀：T4.6 #2 的 error 升级与 #7 都只看这一层目录。
 OFFICIAL_MODULES_PREFIX = ("packages", "modules")
@@ -73,7 +73,7 @@ OFFICIAL_MODULES_PREFIX = ("packages", "modules")
 MODULES_ROOT = "akaribot.modules"
 ADAPTERS_ROOT = "akaribot.adapters"
 CORE_ROOT = "akaribot.core"
-# core 分发自身的目录；其 bundled 模块不计入「模块包走没走门面」的观察值。
+# core 分发自身的目录。其 bundled 模块不计入“模块包是否经过门面”的观察值。
 CORE_DIST_RELATIVE = "packages/akari-bot-core"
 CORE_API_ROOT = "akaribot.core.api"
 # 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根与其余子路径都算内部实现。
@@ -125,10 +125,10 @@ class Location:
 
     :param relative: 仓库根相对 POSIX 路径。路径一律相对仓库根计算，绝对路径中的
         `.worktrees/` 等目录名不参与判断。
-    :param layer: 分层名，取 LAYER_CORE / LAYER_MODULES / LAYER_ADAPTERS；不在命名空间内为空串。
-    :param owner: akaribot.modules.<x> 或 akaribot.adapters.<x> 的 <x>；不属这两层时为 None。
+    :param layer: 分层名，取 LAYER_CORE / LAYER_MODULES / LAYER_ADAPTERS。不在命名空间内为空串。
+    :param owner: akaribot.modules.<x> 或 akaribot.adapters.<x> 的 <x>。不属这两层时为 None。
     :param package: 文件所属的点分包路径，用于解析相对 import。
-    :param dist_relative: 文件所属分发的目录（仓库根相对）；不在任何分发内时为 None。
+    :param dist_relative: 文件所属分发的目录（仓库根相对）。不在任何分发内时为 None。
     :param official: 文件所属分发是否官方模块包（packages/modules/<dist>）。
     """
 
@@ -162,10 +162,10 @@ class Violation:
     """一处分层违规。
 
     :param path: 仓库根相对 POSIX 路径。
-    :param line: 行号，从 1 开始；B7 固定在文件第 1 行。
+    :param line: 行号，从 1 开始。B7 固定在文件第 1 行。
     :param rule: 规则编号。
     :param target: 被 import 的绝对点分路径、entry point 名或命名空间路径。
-    :param level: 该条的级别；B1 随包归属变化，故由命中携带而非查 RULE_LEVELS。
+    :param level: 该条的级别。B1 随包归属变化，因此由命中的记录携带，不查 RULE_LEVELS。
     :param detail: 追加说明，例如 B8 命中的符号名与深路径来源。
     """
 
@@ -177,7 +177,7 @@ class Violation:
     detail: str = ""
 
     def key(self) -> str:
-        """基线文件的稳定键。不含行号，代码移动后仍能命中豁免。"""
+        """基准文件的稳定键。不含行号，代码移动后仍能命中豁免。"""
         return f"{self.path}\t{self.rule}\t{self.target}"
 
     def __str__(self) -> str:
@@ -207,14 +207,14 @@ class Dist:
 
 @dataclass(frozen=True)
 class Workspace:
-    """一次检查共用的全仓索引。"""
+    """一次检查共用的整个仓库索引。"""
 
     dists: tuple[Dist, ...]
     owner_to_dists: dict[str, tuple[Dist, ...]]
     core_api_names: frozenset[str]
 
     def dist_for(self, relative: str) -> Dist | None:
-        """取包含该文件的分发；嵌套时取最长匹配的分发目录。"""
+        """取包含该文件的分发。嵌套时取最长匹配的分发目录。"""
         best: Dist | None = None
         for dist in self.dists:
             if relative.startswith(f"{dist.relative}/") and (best is None or len(dist.relative) > len(best.relative)):
@@ -262,7 +262,7 @@ def dependency_name(raw: str) -> str | None:
 def find_key_line(text: str, header: str, key: str) -> int:
     """在 TOML 文本里定位某个 section 下某个键的行号，找不到时返回 1。
 
-    tomllib 不提供位置信息，故按文本扫描；entry point 名可能含 '-'，匹配前须转义。
+    tomllib 不提供位置信息，故按文本扫描。entry point 名可能含 '-'，匹配前须转义。
     """
     pattern = re.compile(rf"^\s*(?:\"{re.escape(key)}\"|'{re.escape(key)}'|{re.escape(key)})\s*=")
     inside = False
@@ -328,7 +328,7 @@ def load_distributions() -> tuple[Dist, ...]:
 
 
 def extract_all_names(tree: ast.AST) -> set[str]:
-    """取模块级 `__all__ = [...]` 中的字符串字面量；`*_base.__all__` 这类星号元素由调用方并入。"""
+    """取模块级 `__all__ = [...]` 中的字符串字面量。`*_base.__all__` 这类星号元素由调用方并入。"""
     names: set[str] = set()
     for node in tree.body:
         if not isinstance(node, ast.Assign) or not isinstance(node.value, (ast.List, ast.Tuple)):
@@ -342,9 +342,9 @@ def extract_all_names(tree: ast.AST) -> set[str]:
 
 
 def source_root(dist_relative: str) -> Path:
-    """分发源码根：优先 ``<dist>/akaribot``，退回 ``<dist>/akaribot``。
+    """分发源码根：优先 ``<dist>/akaribot``，退回 ``<dist>/src/akaribot``。
 
-    源码根从 ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后，按固定层级拼接的路径会静默落空
+    源码根从 ``<dist>/src/akaribot`` 压成 ``<dist>/akaribot`` 后，按固定层级拼接的路径会静默落空
     （B8 的符号面会变空、规则不再生效），故两种布局都认。
 
     :param dist_relative: 分发目录的仓库根相对路径。
@@ -398,7 +398,7 @@ def locate(path: Path, workspace: Workspace) -> Location:
     """计算文件的分层归属。
 
     以路径中的 NAMESPACE_ROOT 段定位源码根：其后第一段是分层名，第二段是模块包或适配器包名。
-    package 一律取点分导入路径，供相对 import 折算使用；dist 由 Workspace 的最长前缀匹配给出。
+    package 一律取点分导入路径，供相对 import 折算使用。dist 由 Workspace 的最长前缀匹配给出。
     """
     relative = path.relative_to(PROJECT_ROOT).as_posix()
     dist = workspace.dist_for(relative)
@@ -423,7 +423,7 @@ def resolve_relative(node: ast.ImportFrom, package: str) -> str:
 
     :param node: ImportFrom 节点。
     :param package: 文件所属的点分包路径。
-    :return: 绝对包路径；层级超出包根时返回空串。
+    :return: 绝对包路径。层级超出包根时返回空串。
     """
     if not node.level:
         return node.module or ""
@@ -440,8 +440,8 @@ def resolve_relative(node: ast.ImportFrom, package: str) -> str:
 def resolve_imports(tree: ast.AST, package: str) -> list[ImportRef]:
     """把文件内的 import 全部归一到绝对点分路径与绑定名。
 
-    `from a.b import c` 记为 `a.b.c`：c 既可能是子模块也可能是属性，两种情形下「触取了
-    a.b 内部」的结论一致。`from … import c as d` 的本地别名不改变被取用的名字 c。
+    `from a.b import c` 记为 `a.b.c`：c 既可能是子模块也可能是属性，两种情形下“触取了
+    a.b 内部”的结论一致。`from … import c as d` 的本地别名不改变被取用的名字 c。
 
     :param tree: 已解析的语法树。
     :param package: 文件所属的点分包路径。
@@ -468,7 +468,7 @@ def under(path: str, prefix: str) -> bool:
 
 
 def module_owner(target: str) -> str | None:
-    """取 akaribot.modules.<x> 中的 <x>；不在该前缀下时返回 None。"""
+    """取 akaribot.modules.<x> 中的 <x>。不在该前缀下时返回 None。"""
     if not target.startswith(f"{MODULES_ROOT}."):
         return None
     return target[len(MODULES_ROOT) + 1 :].split(".")[0] or None
@@ -545,7 +545,7 @@ def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> li
     return []
 
 
-# 允许的位置是**冻结感知的 CLI 自调用**（冻结时它是二进制、非冻结时是解释器加 -m 模块名）；
+# 允许的位置是**冻结感知的 CLI 自调用**（冻结时它是二进制、非冻结时是解释器加 -m 模块名）。
 # 反之把它当解释器启动实例进程，冻结后会重新调起 CLI，必须经 system_python()。
 SYS_EXECUTABLE_ALLOWED = (
     "akaribot/cli/tui/",  # 各页的 cli_argv 构造
@@ -560,7 +560,7 @@ def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violatio
     """规则 B11：CLI 包内不得用 sys.executable 启动实例进程。
 
     Nuitka onefile 冻结后 sys.executable 指向 CLI 二进制自身，用它启动实例进程会重新调起 CLI
-    而不是 Python；启动实例一律经 ``Instance.python``（实例 venv 解释器或系统 Python）。
+    而不是 Python。启动实例一律经 ``Instance.python``（实例 venv 解释器或系统 Python）。
 
     :param location: 文件位置。
     :param tree: 已解析的语法树。
@@ -594,7 +594,7 @@ def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violatio
 def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool, int]:
     """检查单个文件。
 
-    :return: 三元组——违规列表；文件是否成功解析；未走门面的 core 深路径 import 处数（观察值，
+    :return: 三元组，包含违规列表、文件是否成功解析、未走门面的 core 深路径 import 处数（观察值，
         不构成规则，供迁移进度参考）。
     """
     location = locate(path, workspace)
@@ -609,7 +609,7 @@ def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool,
     for ref in resolve_imports(tree, location.package):
         found.extend(check_import(location, ref, workspace))
         # core 自带的 bundled 模块在路径上也属模块层，但它们随 core 同版本发布、与 core 内部同步
-        # 重构，不是「模块包绑定 core 内部目录」这件事；算进来会让观察值长期停在几百。
+        # 重构，不属于“模块包绑定 core 内部目录”。算进来会让观察值长期停在几百。
         if location.layer != LAYER_MODULES or location.dist_relative == CORE_DIST_RELATIVE:
             continue
         if under(ref.target, CORE_ROOT) and not under(ref.target, CORE_API_ROOT):
@@ -659,7 +659,7 @@ def check_adapter_entry_points(workspace: Workspace) -> list[Violation]:
 def check_files(files: list[Path], workspace: Workspace) -> tuple[list[Violation], int, int]:
     """检查全部文件。
 
-    :return: 三元组——违规列表；因无法解析而跳过的文件数；core 深路径 import 处数（观察值）。
+    :return: 三元组，包含违规列表、因无法解析而跳过的文件数、core 深路径 import 处数（观察值）。
     """
     violations: list[Violation] = []
     unparsed = 0
@@ -673,7 +673,7 @@ def check_files(files: list[Path], workspace: Workspace) -> tuple[list[Violation
 
 
 def load_baseline() -> set[str]:
-    """读取基线豁免键。"""
+    """读取基准豁免键。"""
     if not BASELINE_PATH.is_file():
         return set()
     keys: set[str] = set()
@@ -692,7 +692,7 @@ def diff_scope(base_ref: str) -> set[tuple[str, int]] | None:
     B9 的违规位置在 entry point 定义行上。
 
     :param base_ref: 比较基准，如 `HEAD~1` 或提交 SHA。
-    :return: (仓库根相对 POSIX 路径， 行号) 集合；git 调用失败时返回 None，调用方回退为
+    :return: (仓库根相对 POSIX 路径， 行号) 集合。git 调用失败时返回 None，调用方回退为
         全量检查。返回空集表示基准之后确实没有任何改动。
     """
     try:
@@ -766,7 +766,7 @@ def level_label(rule: str, violations: list[Violation]) -> str:
 
 
 def generate_baseline(violations: list[Violation]) -> None:
-    """把当前全部违规写入基线文件。"""
+    """把当前全部违规写入基准文件。"""
     keys = sorted({v.key() for v in violations})
     counts = collections.Counter(key.split("\t")[1] for key in keys)
     header = [
@@ -785,7 +785,7 @@ def generate_baseline(violations: list[Violation]) -> None:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示无基线外的违规。"""
+    """入口。返回进程退出码，0 表示无基准外的违规。"""
     parser = argparse.ArgumentParser(description="import 分层检查")
     parser.add_argument("--diff", metavar="BASE_REF", help="只检查该基准之后新增或修改的行")
     parser.add_argument("--generate-baseline", action="store_true", help="重建基线豁免文件")

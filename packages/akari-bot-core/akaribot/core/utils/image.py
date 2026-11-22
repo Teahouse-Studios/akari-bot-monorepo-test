@@ -84,7 +84,7 @@ async def msgchain2image(
     if isinstance(message_chain, list):
         message_chain = MessageChain.assign(message_chain)
 
-    # MessageSession 本身不持有 locale，需先取出其 session_info；
+    # MessageSession 本身不持有 locale，需先取出其 session_info。
     # SessionInfo 没有该属性，原样返回
     session = getattr(session, "session_info", session)
 

@@ -31,7 +31,7 @@ async def handle_message(
 ) -> None:
     """把平台事件转成会话后交给 core 处理。
 
-    target_id / sender_id 须带前缀与平台内 ID，形如 ``<target_prefix>|<群 ID>``；target_from 与
+    target_id / sender_id 须带前缀与平台内 ID，形如 ``<target_prefix>|<群 ID>``。target_from 与
     sender_from 默认取 info.py 的单一场景前缀，多场景平台按实际场景传入。raw_event 原样传给模块
     侧，作为该会话的上下文对象。
     """
@@ -54,7 +54,7 @@ async def handle_message(
 async def main() -> None:
     """启动平台 SDK 并接收事件。
 
-    ``client_init()`` 要早于 SDK 启动：它把 target / sender 前缀登记进实例数据。
+    ``client_init()`` 要早于 SDK 启动：它把 target / sender 前缀写进实例数据。
     """
     await client_init(target_prefix_list, sender_prefix_list)
     try:

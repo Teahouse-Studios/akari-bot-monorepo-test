@@ -78,13 +78,13 @@ class HookMeta(ModuleMeta):
 
     function: Callable = field(default=None)
     name: str | None = None
-    # 入口订阅字段；具名 hook 保持默认即可
+    # 入口订阅字段。具名 hook 保持默认即可
     point: str | None = None
     priority: int = 100
     available_for: list = field(default=["*"], converter=convert_list)
     exclude_from: list = field(default=[], converter=convert_list)
     load: bool = True
-    # 单次执行预算（秒）；<=0 表示不限时
+    # 单次执行预算（秒）。<=0 表示不限时
     timeout: float = 5.0
     # server 作用域：免场景 enabled_modules，仍遵守全局停用与平台约束
     server_scope: bool = False

@@ -57,7 +57,7 @@ def run(
     timeout: Annotated[float, typer.Option("--timeout", help=i18n.t("cli.run.option_timeout"))] = 20.0,
     instance: InstancePathOption = None,
 ) -> None:
-    """启动、停止或查看实例；未知参数原样透传给 core。"""
+    """启动、停止或查看实例。未知参数原样透传给 core。"""
     target = require_instance(instance)
     chosen = [name for name, picked in (("--stop", stop), ("--restart", restart), ("--status", status)) if picked]
     if detach:
@@ -177,7 +177,7 @@ def _log_tail(path: Path, limit: int = LOG_TAIL_CHARS) -> str:
 
 
 def _remember_desired(target, state: str) -> None:
-    # 服务守护循环按这里的 desired 恢复上次的运行状态；未登记的实例与不可用的注册表都不该让
+    # 服务守护循环按这里的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表都不该让
     # 启动或停止失败，故静默跳过。
     try:
         registry = InstanceRegistry()

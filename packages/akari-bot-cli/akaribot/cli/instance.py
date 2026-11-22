@@ -57,7 +57,7 @@ InstancePathOption = Annotated[
 class FlatCommandGroup(TyperGroup):
     """单命令子应用的分组：位置参数之后仍解析选项，usage 里不出现 COMMAND。
 
-    Typer 的子应用默认是多命令分组，`akaribot init` 会退化成 `akaribot init init`；
+    Typer 的子应用默认是多命令分组，`akaribot init` 会退化成 `akaribot init init`。
     本类让唯一命令直接在分组层生效。多余 token 默认报错，子类可改为透传。
     """
 
@@ -69,10 +69,10 @@ class FlatCommandGroup(TyperGroup):
         return super(TyperGroup, self).collect_usage_pieces(ctx)
 
     def parse_args(self, ctx: ClickContext, args: list[str]) -> list[str]:
-        """把剩余 token 交给唯一的命令；不支持透传时按多余参数报错。
+        """把剩余 token 交给唯一的命令。不支持透传时按多余参数报错。
 
-        剩余 token 存在上下文私有字段 ``_protected_args``（click 8.4 与 typer 0.27 均如此），
-        取空后分组即视为「没有子命令」，回调照常执行。
+        剩余 token 存在上下文私有字段 ``_protected_args``（click 8.4 与 typer 0.27 均如此）。
+        取空后分组即视为“没有子命令”，回调照常执行。
         """
         rest = super().parse_args(ctx, args)
         pending = list(getattr(ctx, "_protected_args", None) or ())
@@ -92,7 +92,7 @@ class PassthroughCommandGroup(FlatCommandGroup):
 
 
 INSTANCE_META_FILENAME = "akaribot.toml"
-# 非托管模式要用的解释器路径；冻结产物下没有可用的 sys.executable。
+# 非托管模式要用的解释器路径。冻结产物下没有可用的 sys.executable。
 PYTHON_ENV = "AKARIBOT_PYTHON"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 CORE_ENTRYPOINT_PREFIX = "akaribot.core.entrypoints"
@@ -102,7 +102,7 @@ INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 DEFAULT_VENV = ".venv"
 DEFAULT_LOCALE = "zh_cn"
 DEFAULT_REGISTRY_SOURCE = "https://akaribot.teahou.se/registry.json"
-# 实例目录结构见 monorepo_refactor_plan.md §2.3；config 的子树由 config sync 按需补齐。
+# 实例目录结构见 monorepo_refactor_plan.md §2.3。config 的子树由 config sync 按需补齐。
 INSTANCE_DIRS = (
     "config",
     "config/core",
@@ -117,7 +117,7 @@ INSTANCE_DIRS = (
 
 
 def no_instance_hint() -> str:
-    """不在任何实例内时的可执行提示；运行期取值，不冻结语言。"""
+    """不在任何实例内时的可执行提示。运行期取值，不冻结语言。"""
     return i18n.t("cli.error.not_instance_hint")
 
 
@@ -133,7 +133,7 @@ class CoreInvocationError(CliError):
     """经子进程调用 core 失败。
 
     :param message: 面向用户的原因说明。
-    :param returncode: 子进程退出码；未执行时为 ``None``。
+    :param returncode: 子进程退出码，未执行时为 ``None``。
     :param stderr: 子进程标准错误，供 ``--verbose`` 展示。
     """
 
@@ -197,8 +197,9 @@ def system_python() -> Path:
         if candidate.is_file():
             return candidate
         raise CliError(i18n.t("cli.instance.python_env_missing", env=PYTHON_ENV, path=candidate))
-    # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致；冻结后 sys.executable 指向
-    # CLI 二进制自身，才需要回退到系统搜索。回退时优先带版本号的名字，避免拿到过旧的 python3。
+    # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致。
+    # 冻结后 sys.executable 指向 CLI 二进制自身，才需要回退到系统搜索。
+    # 回退时优先带版本号的名字，避免拿到过旧的 python3。
     if not (getattr(sys, "frozen", False) or "__compiled__" in globals()):
         return Path(sys.executable)
     for name in ("python3.13", "python3.12", "python3", "python"):
@@ -225,7 +226,7 @@ class RunState:
     """实例运行状态。
 
     :param running: 锁是否被持有。
-    :param pid: 持锁进程号；锁文件里没有记录时为空。
+    :param pid: 持锁进程号，锁文件里没有记录时为空。
     :param started_at: 启动时间，ISO 8601 字符串。
     :param argv: 启动参数。
     :param detail: 面向用户的补充说明。
@@ -257,9 +258,9 @@ class DependencyInfo:
     """一个分发在 metadata 里声明的依赖项。
 
     :param dist: 依赖的分发名，已规范化。
-    :param specifier: 版本描述符，如 ``>=1.0,<2.0``；未限定时为空串。
+    :param specifier: 版本描述符，如 ``>=1.0,<2.0``，未限定时为空串。
     :param satisfied: 已装版本是否满足该描述符。
-    :param installed_version: 已装版本；未安装时为 ``None``。
+    :param installed_version: 已装版本，未安装时为 ``None``。
     """
 
     dist: str
@@ -284,12 +285,12 @@ class PackageInfo:
     :param requires_core_api: 声明的 core API 区间。
     :param provides_modules: 该包注册的模块名。
     :param owned_tables: 该包拥有的数据表，供 ``--purge-data`` 使用。
-    :param config_table: 该包在 ``config/`` 下的配置表名（``module_wiki`` 之类）；无配置时为空串。
+    :param config_table: 该包在 ``config/`` 下的配置表名（``module_wiki`` 之类），无配置时为空串。
         ``--purge-data`` 靠它定位扁平配置文件，不能由 ``provides_modules`` 猜文件名。
     :param dependencies: 该包声明的依赖项。
-    :param dependents: 依赖该包的分发名，core 侧可缺省。
-    :param summary: 一句话简介，取自分发包元数据；取不到时为空串。
-    :param developers: 模块作者，取自包的 ``pyproject.toml``；取不到时为空。
+    :param dependents: 依赖该包的分发名，core 侧可以不提供。
+    :param summary: 一句话简介，取自包元数据，取不到时为空串。
+    :param developers: 模块作者，取自包的 ``pyproject.toml``，取不到时为空。
     """
 
     dist: str
@@ -341,7 +342,7 @@ class PackageInfo:
             or "",
             summary=_first_str(data, ("summary", "description")) or _first_str(manifest, ("summary",)) or "",
             developers=_as_tuple(data.get("developers")) or _as_tuple(manifest.get("developers")),
-            # registry --json 用 ``modules`` 作键名；``provides_modules`` 是 manifest 与 module list 的写法。
+            # registry --json 用 ``modules`` 作键名。``provides_modules`` 是 manifest 与 module list 的写法。
             provides_modules=_as_tuple(data.get("provides_modules"))
             or _as_tuple(data.get("modules"))
             or _as_tuple(manifest.get("provides_modules")),
@@ -368,7 +369,7 @@ def _as_tuple(value: Any) -> tuple[str, ...]:
     return ()
 
 
-# 按分发名去重需求串，保留首次出现的写法；认不出名字的写法按整串比较。
+# 按分发名去重需求串，保留首次出现的写法。认不出名字的写法按整串比较。
 def _dedupe_specs(values: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -580,7 +581,7 @@ class InstanceMeta:
 
     @property
     def venv(self) -> str:
-        """实例 venv 的相对路径；空串表示不托管、使用当前环境。"""
+        """实例 venv 的相对路径。空串表示不托管、使用当前环境。"""
         return str(self._section("runtime").get("venv", ""))
 
     @property
@@ -590,7 +591,7 @@ class InstanceMeta:
 
     @property
     def workspace_root(self) -> str:
-        """本地工作区根；非空时安装取本地路径。"""
+        """本地工作区根。非空时安装取本地路径。"""
         return str(self._section("dev").get("workspace_root", ""))
 
     @property
@@ -600,7 +601,7 @@ class InstanceMeta:
         return _as_tuple(value)
 
     def set_venv(self, value: str) -> None:
-        """设置 venv 相对路径；空串表示释放托管。"""
+        """设置 venv 相对路径。空串表示释放托管。"""
         self._section("runtime")["venv"] = value
 
     def set_requirements(self, values: Sequence[str]) -> None:
@@ -640,7 +641,7 @@ class NotifyResult:
     :param delivered: 实例是否已确认完成变更。
     :param detail: 面向用户的说明。
     :param status: core 入口回传的状态：``delivered`` / ``rejected`` / ``not_running`` / ``timeout`` /
-        ``error``；未尝试投递（实例未运行）时为空串。
+        ``error``，未尝试投递（实例未运行）时为空串。
     """
 
     attempted: bool
@@ -660,7 +661,7 @@ class NotifyResult:
 
 def _parse_notify_payload(stdout: str | None) -> Mapping[str, Any] | None:
     # 入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
-    # ``status`` 的对象；找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
+    # ``status`` 的对象。找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
     for line in reversed((stdout or "").splitlines()):
         text = line.strip()
         if not text:
@@ -678,8 +679,8 @@ class Instance:
     """一个 AkariBot 实例。根目录下必须有 ``akaribot.toml``。
 
     :param root: 实例根目录。
-    :param python_override: 指定解释器，用于测试替身；缺省按托管模式解析。
-    :param meta: 元数据视图；缺省自磁盘读取。写盘前的规划用 :meth:`detached` 传入。
+    :param python_override: 指定解释器，用于测试替身，默认按托管模式解析。
+    :param meta: 元数据视图，默认自磁盘读取。写盘前的规划用 :meth:`detached` 传入。
     """
 
     def __init__(self, root: Path, *, python_override: Path | None = None, meta: InstanceMeta | None = None) -> None:
@@ -726,7 +727,7 @@ class Instance:
 
     @property
     def venv_dir(self) -> Path:
-        """实例 venv 目录；未托管时返回默认位置，仅供展示。"""
+        """实例 venv 目录。未托管时返回默认位置，仅供展示。"""
         return self.root / (self.meta.venv or DEFAULT_VENV)
 
     @property
@@ -750,7 +751,7 @@ class Instance:
 
     @property
     def workspace_root(self) -> Path | None:
-        """本地工作区根；未配置时为 ``None``。"""
+        """本地工作区根。未配置时为 ``None``。"""
         value = self.meta.workspace_root
         return Path(value).expanduser().resolve() if value else None
 
@@ -760,7 +761,7 @@ class Instance:
         return self.root / "config"
 
     def core_module(self, entrypoint: str) -> str:
-        """把入口名补成完整模块路径；已含点号者原样返回。"""
+        """把入口名补成完整模块路径。已含点号者原样返回。"""
         if "." in entrypoint:
             return entrypoint
         return f"{CORE_ENTRYPOINT_PREFIX}.{entrypoint}"
@@ -817,7 +818,7 @@ class Instance:
     ) -> subprocess.CompletedProcess[str]:
         """执行任意模块并捕获输出。
 
-        :param timeout: 超时秒数；``None`` 表示不设限（热装载 RPC 用）。
+        :param timeout: 超时秒数，``None`` 表示不设限（热装载 RPC 用）。
         """
         return self._capture(self.module_argv(module, *args), timeout=timeout, **env)
 
@@ -830,7 +831,7 @@ class Instance:
     def installed(self, *, refresh: bool = False) -> dict[str, PackageInfo]:
         """经 ``registry --json`` 取得已装包清单，按规范化分发名索引。
 
-        子进程开销可观，结果缓存在实例对象上；安装或卸载后调用 :meth:`invalidate` 失效。
+        子进程开销可观，结果缓存在实例对象上。安装或卸载后调用 :meth:`invalidate` 失效。
 
         :param refresh: 为真时忽略缓存重新询问。
         :return: 分发名到包信息的映射。
@@ -876,7 +877,7 @@ class Instance:
     def dependents_of(self, dist: str) -> list[PackageInfo]:
         """列出直接依赖该分发的已装包，用于卸载前的反向依赖检查。
 
-        优先采用 core 回传的 ``dependents`` 字段；缺失时按各包声明的依赖名自行推算。
+        优先采用 core 回传的 ``dependents`` 字段，缺失时按各包声明的依赖名自行推算。
         """
         target = _canonical(dist)
         result: dict[str, PackageInfo] = {}
@@ -891,9 +892,9 @@ class Instance:
         return list(result.values())
 
     def api_version(self) -> int | None:
-        """已装 core 的公共 API 版本；取不到时返回 ``None``。
+        """已装 core 的公共 API 版本。取不到时返回 ``None``。
 
-        优先读 ``registry --json`` 的 ``core.api_version``；缺失时在实例解释器里读取
+        优先读 ``registry --json`` 的 ``core.api_version``，缺失时在实例解释器里读取
         ``akaribot.core.registry.CORE_API_VERSION``（仍是子进程，不在 CLI 进程内 import core）。
         """
         payload = self._registry_payload
@@ -958,14 +959,14 @@ class Instance:
             return False
 
     def lock_path(self) -> Path:
-        """返回实例锁文件路径。"""
+        """返回实例级锁文件路径。"""
         return self.root / LOCK_FILENAME
 
     def run_state(self) -> RunState:
         """读取实例运行状态与持锁进程记录。
 
         运行与否以锁为准，进程号取自锁文件内容。由旧版本或第三方启动的实例可能没有记录，
-        此时状态仍是「运行中」，但没有可用于停止的进程号。
+        此时状态仍是“运行中”，但没有可用于停止的进程号。
         """
         running = self.is_running()
         if not running:
@@ -992,8 +993,8 @@ class Instance:
 
         :param timeout: 等待主进程退出的秒数。
         :param reap_grace: 主进程退出后清收子进程的宽限秒数。
-        :param control: 进程控制原语，缺省用系统实现。
-        :return: 停止结果；实例本来就没运行时视为成功。
+        :param control: 进程控制原语，默认用系统实现。
+        :return: 停止结果，实例本来就没运行时视为成功。
         """
         state = self.run_state()
         if not state.running:
@@ -1020,11 +1021,11 @@ class Instance:
     ) -> DetachedRun:
         """以脱离当前会话的方式启动实例，进程由 CLI 记录在锁文件里。
 
-        进程自建会话，因此启动它的界面或终端退出后实例继续运行；控制权落在实例锁与锁文件记录上，
+        进程自建会话，因此启动它的界面或终端退出后实例继续运行。控制权放在实例级锁与锁文件记录上，
         任何控制器都能重新接管。
 
         :param args: 传给 core ``run`` 入口的参数。
-        :param log_path: 控制台输出的落盘路径；缺省为 ``<实例根>/logs/RunConsole_<日期>.log``。
+        :param log_path: 控制台输出的落盘路径，默认为 ``<实例根>/logs/RunConsole_<日期>.log``。
         :param env: 额外的环境变量。
         :return: 启动结果，含进程号与日志路径。
         """
@@ -1052,9 +1053,9 @@ class Instance:
     def notify_package_change(self, action: str, dist: str) -> NotifyResult:
         """把安装或卸载事件通知运行中的机器人，触发热装载或热拆卸。
 
-        经固定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 送达 T5.3 的 RPC 契约
+        经固定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 调用 T5.3 的 RPC 契约
         ``server.post_package_install`` / ``server.post_package_remove``，并解析其回传 JSON 区分
-        「未运行」「投递失败」「远端拒绝」「超时」。未运行时跳过；入口缺失或投递失败只告警，安装
+        “未运行”“投递失败”“远端拒绝”“超时”。未运行时跳过。入口缺失或投递失败只告警，安装
         结果不回滚，卸载方须先看 :attr:`NotifyResult.blocks_uninstall`。
 
         :param action: ``install`` 或 ``remove``。
@@ -1162,7 +1163,7 @@ def _canonical(name: str) -> str:
 
 def _iter_package_items(payload: Any) -> list[Mapping[str, Any]]:
     # 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``
-    # 分组，以及「分发名到对象」的映射四种形态，core 侧只需命中其一。
+    # 分组，以及“分发名到对象”的映射四种形态，core 侧只需命中其一。
     if isinstance(payload, list):
         return [item for item in payload if isinstance(item, Mapping)]
     if not isinstance(payload, Mapping):
@@ -1200,8 +1201,8 @@ def _mapping_items(value: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 def find_instance_root(start: Path | None = None) -> Path | None:
     """定位实例根：优先环境变量 ``AKARI_INSTANCE_DIR``，否则自起点向上找 ``akaribot.toml``。
 
-    :param start: 起点目录，缺省为当前工作目录。
-    :return: 实例根；未找到时为 ``None``。
+    :param start: 起点目录，默认为当前工作目录。
+    :return: 实例根，未找到时为 ``None``。
     """
     override = os.environ.get(INSTANCE_DIR_ENV)
     if override:
@@ -1217,9 +1218,9 @@ def find_instance_root(start: Path | None = None) -> Path | None:
 
 
 def registry_default_root() -> Path | None:
-    """返回本机注册表里的缺省实例根；没登记或目录已失效时为 ``None``。
+    """返回本机注册表里的默认实例根。注册表没有记录或目录已失效时为 ``None``。
 
-    注册表损坏、读不出来时同样返回 ``None``：实例解析不该被一份坏掉的注册表拖住。
+    注册表损坏、读不出来时同样返回 ``None``。实例解析不应被一份坏掉的注册表阻断。
     """
     from akaribot.cli.instances import InstanceRegistry
 
@@ -1227,7 +1228,7 @@ def registry_default_root() -> Path | None:
         registry = InstanceRegistry()
         name = registry.default_name()
         entry = registry.get(name) if name else None
-    except Exception:  # noqa: BLE001 - 注册表不可用按「没有缺省实例」处理
+    except Exception:  # noqa: BLE001 - 注册表不可用按“没有默认实例”处理
         return None
     if entry is None or not entry.exists:
         return None
@@ -1235,15 +1236,15 @@ def registry_default_root() -> Path | None:
 
 
 def resolve_instance_root(start: Path | None = None) -> Path | None:
-    """定位实例根并转成绝对路径；未找到时为 ``None``。
+    """定位实例根并转成绝对路径。未找到时为 ``None``。
 
     各页数据源都经此解析：子进程以实例根为 cwd 又把它写进 ``AKARI_INSTANCE_DIR``，相对值会在
-    子进程里二次拼接而失效；只认 ``Path.cwd()`` 则会忽略 ``AKARI_INSTANCE_DIR``，在仓库根运行
-    TUI 时静默读到另一个实例的配置与日志。站在任何实例之外时回落到注册表里的缺省实例——那正是
-    「这台机器上要管哪一个」的答案。
+    子进程里二次拼接而失效。只认 ``Path.cwd()`` 则会忽略 ``AKARI_INSTANCE_DIR``，在仓库根运行
+    TUI 时静默读到另一个实例的配置与日志。在任何实例之外时改用注册表里的默认实例，那正是
+    “这台机器上要管哪一个”的答案。
 
-    :param start: 查找起点，缺省为当前工作目录。
-    :return: 实例根绝对路径；未找到时为 ``None``。
+    :param start: 查找起点，默认为当前工作目录。
+    :return: 实例根绝对路径。未找到时为 ``None``。
     """
     found = find_instance_root(start)
     if found is not None:
@@ -1252,7 +1253,7 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
 
 
 def default_instance_root() -> Path:
-    """缺省实例根；未定位到时退回当前工作目录，供各页数据源构造子进程用。"""
+    """默认实例根。未定位到时退回当前工作目录，供各页数据源构造子进程用。"""
     return resolve_instance_root() or Path.cwd().resolve()
 
 
@@ -1261,7 +1262,7 @@ def resolve_instance(
 ) -> Instance | None:
     """解析实例。
 
-    :param path: 显式实例根；缺省时按环境变量与向上查找定位。
+    :param path: 显式实例根，省略时按环境变量与向上查找定位。
     :param required: 为假时未找到返回 ``None``，为真时抛出带提示的错误。
     :param python_override: 解释器替身，供测试使用。
     :return: 实例对象。
@@ -1289,7 +1290,7 @@ def resolve_instance(
                     "cli.instance.not_instance_env", env=INSTANCE_DIR_ENV, path=override, meta=INSTANCE_META_FILENAME
                 )
             )
-        # 这条是「既没给路径也没设环境变量」的独立场景，需要完整诊断句而不只是操作提示。
+        # 这条是“既没给路径也没设环境变量”的独立场景，需要完整诊断句而不只是操作提示。
         raise InstanceNotFound(i18n.t("cli.error.not_instance"))
     return Instance(root, python_override=python_override)
 

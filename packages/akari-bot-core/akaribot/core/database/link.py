@@ -53,7 +53,7 @@ db_path = database_path
 _sqlite_file = _resolve_sqlite_path(db_link)
 if _sqlite_file is not None:
     db_path = _sqlite_file.parent
-# 内存库没有文件可建，保持不预建目录的既有行为；其余后端先建好目录，驱动不会代建。
+# 内存库没有文件可建，故不预建目录。其余后端先建好目录，驱动不会代建。
 if _sqlite_file is not None or db_type != "sqlite":
     db_path.mkdir(parents=True, exist_ok=True)
 
@@ -70,7 +70,7 @@ def prepare_db_link(link: str) -> str:
     query = parse_qsl(parsed.query, keep_blank_values=True)
     existing_fields = {key.lower() for key, _ in query}
     query.extend((key, value) for key, value in SQLITE_CONNECTION_DEFAULTS.items() if key not in existing_fields)
-    # busy_timeout 必须在可能取得写锁的 PRAGMA（尤其 journal_mode）之前生效；
+    # busy_timeout 必须在可能取得写锁的 PRAGMA（尤其 journal_mode）之前生效。
     # 即使调用方显式提供了参数并采用其它排列，也统一提前执行等待策略。
     query.sort(key=lambda item: item[0].lower() != "busy_timeout")
     return urlunsplit(parsed._replace(query=urlencode(query)))

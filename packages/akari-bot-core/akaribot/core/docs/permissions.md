@@ -21,8 +21,8 @@
 
 | 命令 | 说明 |
 | --- | --- |
-| `~admin add <user>` | 添加场景管理员；目标须与发送者同平台，已是平台原生管理员时拒绝 |
-| `~admin remove <user>` | 移除场景管理员；移除自己时要求确认 |
+| `~admin add <user>` | 添加场景管理员。目标须与发送者同平台，已是平台原生管理员时拒绝 |
+| `~admin remove <user>` | 移除场景管理员。移除自己时要求确认 |
 | `~admin list` | 列出场景自定义管理员 |
 
 `admin` 模块整体声明 `required_admin=True`。自定义名单只记录非原生管理员。`add` 与 `remove` 只处理这类管理员，目标已是平台原生管理员时返回提示。
@@ -34,7 +34,7 @@
 | 命令 | 说明 |
 | --- | --- |
 | `~superuser add <user>` | 将用户写入数据库，并标记为 `superuser` |
-| `~superuser remove <user>` | 清除标志；移除自己时要求确认 |
+| `~superuser remove <user>` | 清除标志。移除自己时要求确认 |
 
 `<user>` 必须是形如 `QQ|123456` 的完整用户 ID。用户尚未建立记录时，机器人先要求确认，再初始化 union。
 
@@ -59,7 +59,7 @@ demo = module("demo", required_admin=True)
 
 | 参数 | 默认 | 作用 |
 | --- | --- | --- |
-| `required_admin` | `False` | 要求场景管理员；拒绝时提示该场景的管理员 |
+| `required_admin` | `False` | 要求场景管理员。拒绝时提示该场景的管理员 |
 | `required_superuser` | `False` | 要求超级用户，或持有该模块 `~auth` 授权的用户 |
 | `required_base_superuser` | `False` | 要求发送者在 `base_superuser` 名单中 |
 
@@ -84,7 +84,7 @@ async def _(msg, target: str): ...
 
 | 命令 | 说明 |
 | --- | --- |
-| `~auth add <user> <module>` | 授权；要求确认口令，同一授权者重复授权会提示已存在 |
+| `~auth add <user> <module>` | 授权。要求确认口令，同一授权者重复授权会提示已存在 |
 | `~auth remove <user> <module>` | 撤销当前发送者给出的授权 |
 | `~auth list <user>` | 列出该用户持有的模块授权 |
 

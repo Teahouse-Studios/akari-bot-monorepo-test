@@ -1,10 +1,6 @@
 # 注释书面语检查的基线豁免清单。
 # 每行一条，格式：<路径>\t<规则编号>\t<注释文本>。不含行号，代码移动后豁免仍然有效。
 # 键由 tools/lint_comments.py --generate-baseline 生成，随清理逐步缩小。
-# 生成时的违规总数：5
+# 生成时的违规总数：1
 
-packages/akari-bot-core/akaribot/core/builtins/parser/args.py	R6	无标志的可选参数暂时存储到 afters，后续处理
-packages/akari-bot-core/akaribot/core/builtins/parser/args.py	R6	暂时将其添加到 afters 列表，在剩余参数处理时再处理
-packages/akari-bot-core/akaribot/modules/core/admin_tools/modules.py	R6	状态查询失败不能把暂时的 RPC 或网络问题误报为机器人无权限；
-packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py	R4	授权服务器根地址。各端点路径本应从发现文档读取，此处直接写死以简化实现。
 packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/generator.py	R7	

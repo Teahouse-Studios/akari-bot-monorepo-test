@@ -55,7 +55,7 @@ def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
     figure.canvas.draw()
 
     axes_height = ax.get_window_extent().height
-    # 标注相对其数据点向上占去的像素高度，另留 4 磅间距避免标注正好贴住顶边框
+    # 标注相对其数据点向上占用的像素高度，另留 4 磅间距避免标注正好贴住顶边框
     headroom = (
         max(
             annotation.get_window_extent().y1 - ax.transData.transform((0, y))[1]
@@ -67,7 +67,7 @@ def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
         return
 
     bottom, top = ax.get_ylim()
-    # 令最高点落在「坐标区顶端往下 headroom 像素」处；取较大者以保证只抬高、不压缩
+    # 令最高点放在“坐标区顶端往下 headroom 像素”处。取较大者以保证只抬高、不压缩
     needed_top = bottom + (max(data_y) - bottom) * axes_height / (axes_height - headroom)
     ax.set_ylim(bottom, max(top, needed_top))
 

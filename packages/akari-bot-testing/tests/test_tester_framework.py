@@ -461,7 +461,7 @@ def _test_union_merge_logs_stay_out_of_repo_data():
         Logger.error(f"Merge logs leaked into {repo_logs_dir}: {sorted(path.name for path in leaked)}")
         return False
 
-    # 写入本身仍须发生，只是落在隔离目录中；若日志改为空操作，泄漏检查会假通过。
+    # 写入本身仍须发生，只是放在隔离目录中。若日志改为空操作，泄漏检查会假通过。
     if not list(union_merge_logs_path.glob(f"*_{new_union.replace('|', '-')}.json")):
         Logger.error(f"Expected a merge log under {union_merge_logs_path}, found none")
         return False

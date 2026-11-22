@@ -84,12 +84,12 @@ def lock_file(config: DocsConfig) -> Path:
 
 
 def read_lock(config: DocsConfig) -> DevLock | None:
-    """读取实例的运行锁；文件缺失或内容损坏时返回 ``None``。"""
+    """读取实例的运行锁。文件缺失或内容损坏时返回 ``None``。"""
     return read_lock_at(lock_file(config))
 
 
 def read_lock_at(path: Path) -> DevLock | None:
-    """读取指定路径的运行锁；文件缺失或内容损坏时返回 ``None``。"""
+    """读取指定路径的运行锁。文件缺失或内容损坏时返回 ``None``。"""
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -119,7 +119,7 @@ def lock_active(lock: DevLock | None) -> bool:
 def sync_tree(source: Path, target: Path) -> SyncResult:
     """按内容把 ``source`` 同步到 ``target``。
 
-    只写内容不同的文件，先写临时文件再原子替换；``target`` 中不在 ``source`` 里的文件会被删除，
+    只写内容不同的文件，先写临时文件再原子替换。``target`` 中不在 ``source`` 里的文件会被删除，
     ``node_modules`` 目录保持不变。
     """
     started = time.monotonic()
@@ -179,7 +179,7 @@ class DevSession:
     :param port: 首选端口，``0`` 表示每轮都由系统分配。
     :param open_browser: 就绪后打开浏览器。
     :param offline: 为真时禁止安装 Node 依赖。
-    :param keys: 只监听这些包；``None`` 表示全部。
+    :param keys: 只监听这些包，``None`` 表示全部。
     :param debounce: 改动静默多久后开始同步。
     :param emit: 结构化事件回调。
     :param log: 子进程输出行回调。
@@ -228,7 +228,7 @@ class DevSession:
 
     @property
     def url(self) -> str:
-        """当前 dev 服务器地址；未就绪时为空字符串。"""
+        """当前 dev 服务器地址。未就绪时为空字符串。"""
         return self._url
 
     def run(self) -> None:
@@ -245,7 +245,7 @@ class DevSession:
             self._shutdown()
 
     def stop(self) -> None:
-        """请求停止；可从其他线程调用。"""
+        """请求停止。可从其他线程调用。"""
         self._stop.set()
         watcher, self._watcher = self._watcher, None
         if watcher is not None:

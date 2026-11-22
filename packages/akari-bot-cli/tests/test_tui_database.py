@@ -135,7 +135,7 @@ async def _test_selecting_row_fills_editor():
 
 
 async def _test_refresh_keeps_highlighted_rows():
-    # 关键回归：重建表清单与数据行后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归：重建数据表清单与数据行后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
     async def body(app, page, pilot, source):
         table_list = page.query_one("#table-list", compat.ListView)
         await _select_table(pilot, page, "stored_data")
@@ -1002,7 +1002,7 @@ async def _test_offset_clamps_to_last_page():
     )
 
 
-# 各终端尺寸下控件可用区域的最小宽高；窄屏纵向排列，宽屏横向排列。
+# 各终端尺寸下控件可用区域的最小宽高。窄屏纵向排列，宽屏横向排列。
 # 按钮栏在页底，编辑区只含标题、主键行与字段区。
 GEOMETRY_CASES = {
     (60, 20): {"#row-list": (20, 4), "#editor-pane": (40, 7), "#editor-fields": (36, 3)},
@@ -1041,7 +1041,7 @@ def _geometry_case(size: tuple[int, int]):
         async def body(app, page, pilot, source):
             page.focus_primary()
             await pilot.pause()
-            # region 包含边框与内边距；须在退出前读取，卸载后该值归零。
+            # region 包含边框与内边距。须在退出前读取，卸载后该值归零。
             regions = {selector: page.query_one(selector).region for selector in limits}
             measured = {selector: (region.width, region.height) for selector, region in regions.items()}
             status = page.query_one("#database-status", compat.Static)
@@ -1168,7 +1168,7 @@ async def test_tui_database(tester: Tester):
         await tester.test(_test_multi_column_save_is_one_call, "多列改动合并成一次写入")
         await tester.test(_test_unchanged_editor_writes_nothing, "未改动不写入")
         await tester.test(_test_save_passes_argv_to_cli, "保存以正确 argv 调用 CLI")
-        await tester.test(_test_insert_asks_for_confirmation, "新建先弹确认框再 insert")
+        await tester.test(_test_insert_asks_for_confirmation, "新建先弹确认框再写入")
         await tester.test(_test_insert_can_set_primary_key, "新建时可填非自增主键")
         await tester.test(_test_insert_passes_argv_to_cli, "新建以正确 argv 调用 CLI")
         await tester.test(_test_delete_asks_for_confirmation, "删除先弹确认框")
@@ -1188,7 +1188,7 @@ async def test_tui_database(tester: Tester):
         await tester.test(_test_search_word_with_operator_chars_stays_search, "带运算符字符的搜索词仍是搜索")
         await tester.test(_test_conditions_are_anded_and_clearable, "多条条件是 AND 且可一键清空")
         await tester.test(_test_sort_dialog_sets_order, "排序对话框把列与方向下推")
-        await tester.test(_test_empty_order_falls_back_to_default, "清空排序回到缺省主键倒序")
+        await tester.test(_test_empty_order_falls_back_to_default, "清空排序回到默认主键倒序")
         await tester.test(_test_switching_table_clears_filters, "换表清空条件")
         await tester.test(_test_subprocess_source_passes_query_argv, "条件与排序拼成 db rows 的 argv")
         await tester.test(_geometry_case((60, 20)), "60×20 无水平溢出且控件保底宽度")

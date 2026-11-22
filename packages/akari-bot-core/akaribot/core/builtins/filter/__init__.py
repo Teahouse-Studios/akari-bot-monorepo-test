@@ -10,7 +10,7 @@ from akaribot.core.builtins.message.internal import I18NContext
 from akaribot.core.constants.path import filter_words_path
 from akaribot.core.logger import Logger
 
-# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人读不动的文件放进目录。
+# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人无法读取的文件放进目录。
 FILTER_WORD_SUFFIX = ".txt"
 MAX_FILTER_CATEGORIES = 64
 MAX_FILTER_WORDS_PER_CATEGORY = 20000
@@ -65,7 +65,7 @@ badword_rules = _load_badword_rules()
 
 
 def reload_filter_words() -> dict[str, list[str]]:
-    """重新读取词库并原地替换已加载规则，供写入后立即生效。"""
+    """重新读取词库并原地替换已加载规则，使写入的词条立即生效。"""
     rules = _load_badword_rules()
     badword_rules.clear()
     badword_rules.update(rules)
@@ -137,7 +137,7 @@ def _check_category_quota(path: Path) -> None:
 
 
 def write_filter_words(category: str, words: Iterable[str]) -> list[str]:
-    """整体替换分类词条，空列表表示删除该分类；写入后立即重载词库。"""
+    """整体替换分类词条，空列表表示删除该分类。写入后立即重载词库。"""
     path = category_path(category)
     normalized = normalize_words(words)
 
@@ -176,7 +176,7 @@ def remove_filter_words(category: str, words: Iterable[str]) -> tuple[list[str],
 
 
 def delete_filter_category(category: str) -> bool:
-    """删除分类文件并重载词库；文件不存在时返回 False。"""
+    """删除分类文件并重载词库。文件不存在时返回 False。"""
     path = category_path(category)
 
     with _write_lock:

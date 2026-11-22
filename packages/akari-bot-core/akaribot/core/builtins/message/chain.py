@@ -237,7 +237,7 @@ class MessageChain:
         support_card = True
 
         if session_info:
-            # 传入 MessageSession 时取出其 session_info；SessionInfo 自身没有该属性，原样返回。
+            # 传入 MessageSession 时取出其 session_info。SessionInfo 自身没有该属性，原样返回。
             # 不经 exports 判类型，以免受注册时机影响。
             session_info = getattr(session_info, "session_info", session_info)
 
@@ -341,7 +341,7 @@ class MessageChain:
                         if parse_message and x.allow_parse:
                             x.text = session_info.locale.t_str(x.text)
                             element_chain = match_kecode(x.text, x.disable_joke)
-                            # 指令操作是行内元素：其产物与紧随的纯文本都须并入上一行，否则同出一个字符串的一句话
+                            # 指令操作是行内元素：其产物与紧随的纯文本都须并入上一行，否则出自同一个字符串的一句话
                             # 会被平台的换行拼接拆成数行。其余元素各自追加，以保住 KE 码往返的元素数约定。
                             append_parsed_elements(element_chain)
                             continue
@@ -374,7 +374,7 @@ class MessageChain:
                         # 结构化并编码成可嵌入模板的内部标记，翻译后再还原。
                         x.kwargs[k] = _serialize_i18n_message(v)
                     if isinstance(v, ActionTextElement):
-                        # 指令操作同样需要保留元素类型；先解析内层多语言元素再序列化。
+                        # 指令操作同样需要保留元素类型。先解析内层多语言元素再序列化。
                         x.kwargs[k] = _serialize_i18n_message(v.resolve(session_info))
 
                 t_value = locale.t(x.key, x.fallback, x.locale_failed_prompt, **x.kwargs)
@@ -390,7 +390,7 @@ class MessageChain:
                 globally_trusted = bool(
                     session_info and session_info.use_url_manager and x.trusted is None and url_policy.allowed
                 )
-                # 链接须按未认证处理的两种来源：模块显式标记为不可信，或未表态而会话启用了 URLManager
+                # 链接须按未认证处理的有两种来源：模块显式标记为不可信，或未表态而会话启用了 URLManager
                 needs_guard = bool(
                     session_info
                     and not globally_trusted
@@ -784,7 +784,7 @@ def get_message_chain(session: SessionInfo, chain: Chainable) -> MessageChain | 
 
     :param session: 会话信息，包含平台、语言等配置
     :param chain: 可链接的消息对象（支持多种类型）
-    :return: 处理后的 MessageChain 实例；传入合并转发消息时原样返回 MessageNodes
+    :return: 处理后的 MessageChain 实例，传入合并转发消息时原样返回 MessageNodes
     :raises TypeError: 如果传入不支持的链类型
 
     示例：

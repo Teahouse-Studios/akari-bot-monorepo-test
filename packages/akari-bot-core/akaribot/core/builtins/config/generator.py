@@ -1,6 +1,6 @@
 """配置项的生成与注释维护。
 
-缺失配置项的补写、i18n 注释解析与 ``{I18N:}`` 标记修复集中在此模块，
+缺失配置项的补充、i18n 注释解析与 ``{I18N:}`` 标记修复集中在此模块，
 存取层与模板层均不直接依赖 i18n。
 """
 
@@ -17,7 +17,7 @@ from akaribot.core.i18n import Locale
 
 I18N_COMMENT_PATTERN = re.compile(r"^#\s*\{I18N:(?P<key>[^}]+)}\s*$")
 
-# 已补写过缺失键的模板。同一模板在进程内只处理一次，避免重复扫描全部字段。
+# 已补充过缺失键的模板。同一模板在进程内只处理一次，避免重复扫描全部字段。
 _ensured: set[type] = set()
 
 
@@ -107,7 +107,7 @@ def resolve_generated_value(value: Any, cfg_type: type | tuple | None) -> Any:
 
     :param value: 调用方提供的默认值。
     :param cfg_type: 配置项类型。
-    :return: 待写入的值；默认值为 ``None`` 时返回形如 ``<Replace me ...>`` 的占位符。
+    :return: 待写入的值，默认值为 ``None`` 时返回形如 ``<Replace me ...>`` 的占位符。
     """
     if value is not None:
         return value
@@ -134,7 +134,7 @@ def repair_i18n_comments(values: dict[str, TOMLDocument]) -> int:
     :return: 被替换或清空的注释数量。
     """
     locale = Locale(values.get("config", {}).get("default_locale") or default_locale)
-    # 该方法也可能被独立脚本调用。若调用方尚未连接 i18n 快照，所有键都会表现为未翻译；
+    # 该方法也可能被独立脚本调用。若调用方尚未连接 i18n 快照，所有键都会表现为未翻译。
     # 此时不得把已有标记误判为过时内容并批量清空。
     if localized_config_text(locale, "config.header.line.1") is None:
         return 0
@@ -169,7 +169,7 @@ def repair_i18n_comments(values: dict[str, TOMLDocument]) -> int:
 
 
 def ensure_fields(cls: type) -> None:
-    """为模板类补写配置文件中缺失的键。
+    """为模板类补充配置文件中缺失的键。
 
     :param cls: 由配置装饰器处理过的模板类。
     """
@@ -178,7 +178,7 @@ def ensure_fields(cls: type) -> None:
         return
     if cls in _ensured:
         return
-    # 模板类在导入期即补写缺失键，导入方未必已自举（如单独导入某包的 config 模块）。
+    # 模板类在导入期即补充缺失键，导入方未必已自举（如单独导入某包的 config 模块）。
     from akaribot.core.builtins.config.bootstrap import bootstrap_config
 
     bootstrap_config()

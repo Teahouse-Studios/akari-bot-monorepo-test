@@ -3,7 +3,7 @@ schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
 migrations = "migrations"
-# config.py 的 on_module_config("wiki") 登记的表。
+# config.py 的 on_module_config("wiki") 声明的表。
 config_table = "module_wiki"
 config_schema_version = 1
 # 本包 module() 注册的全部模块名。
@@ -21,7 +21,7 @@ provides_modules = [
     "wiki-inline",
     "wikilog",
 ]
-# 供 --purge-data 使用；取自 database/models.py 的 Meta.table。
+# 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
 owned_tables = [
     "module_wiki_bot_account_list",
     "module_wiki_site_info",

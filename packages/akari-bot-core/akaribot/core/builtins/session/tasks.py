@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
 
 class SessionTaskManager:
-    """管理等待任务与消息回调。任务以稳定的物理 ID 索引，命中时再按当前 Union 拓扑展开；回调使用独立注册 token，并在发送完成后绑定物理消息 ID。"""
+    """管理等待任务与消息回调。任务以稳定的物理 ID 索引，命中时再按当前 Union 拓扑展开。回调使用独立注册 token，并在发送完成后绑定物理消息 ID。"""
 
-    # 索引只使用登记时不可变的物理场景／账号 ID：union ID 与 channel_id 会在等待期间因合并、
+    # 索引只使用记录时不可变的物理场景／账号 ID：union ID 与 channel_id 会在等待期间因合并、
     # 解绑或重新分配通道而变化，拿快照作永久索引会让原物理用户失去 waiter，甚至被旧组成员接管。
     _task_list = {}
     _task_sequence = 0
@@ -47,15 +47,15 @@ class SessionTaskManager:
 
         :param msg: 消息会话对象
         :param flag: 用于同步的 asyncio.Event 对象，任务完成时将被触发
-        :param all_: 如果为 True，任务对所有用户生效；否则只对当前用户生效
+        :param all_: 如果为 True，任务对所有用户生效。否则只对当前用户生效
         :param reply: 期望的回复消息 ID（可以是整数、字符串或列表）
-                     如果为 None，表示等待任何回复；否则只等待特定 ID 的回复
+                     如果为 None，表示等待任何回复。否则只等待特定 ID 的回复
         :param timeout: 任务超时时间（秒），默认 120 秒
         :param task_type: 覆盖自动推断的任务类型（如 ``wait_next``）
-        :param matcher: 可选的消息匹配器；不匹配时任务继续等待
+        :param matcher: 可选的消息匹配器。不匹配时任务继续等待
         :param allow_fallthrough: 命中后是否允许当前消息继续进入普通 parser
         """
-        # 使用物理 ID 建立稳定索引；Union／channel 都允许在等待期间变化。
+        # 使用物理 ID 建立稳定索引。Union／channel 都允许在等待期间变化。
         target = msg.session_info.target_id
         sender = msg.session_info.sender_id
         task_type = task_type or ("reply" if reply or reply_pending else "wait")
@@ -67,7 +67,7 @@ class SessionTaskManager:
         if sender not in cls._task_list[target]:
             cls._task_list[target][sender] = {}
 
-        # 使用字符串元组保存回复 ID；平台 ID 自身可能包含逗号，不能依赖分隔符拼接。
+        # 使用字符串元组保存回复 ID。平台 ID 自身可能包含逗号，不能依赖分隔符拼接。
         if isinstance(reply, list):
             reply = tuple(str(mid) for mid in reply)
         elif reply is not None:
@@ -83,8 +83,8 @@ class SessionTaskManager:
             "reply_ready": asyncio.Event(),  # 平台发送完成后才能确定的物理消息 ID
             "ts": time.time(),
             "timeout": timeout,
-            "order": cls._task_sequence,  # 跨用户专属／all 索引的稳定登记顺序
-            # reply 的物理 message_id 只在发送它的客户端／平台场景中有意义；
+            "order": cls._task_sequence,  # 跨用户专属／all 索引的稳定记录顺序
+            # reply 的物理 message_id 只在发送它的客户端／平台场景中有意义。
             # 即使两个入口属于同一现实通道，也不能跨平台用碰巧相同的 ID 命中。
             "reply_scope": cls._callback_scope(msg) if task_type == "reply" else None,
             "matcher": matcher,
@@ -102,7 +102,7 @@ class SessionTaskManager:
         *,
         all_: bool = False,
     ) -> bool:
-        """为发送前预登记的 reply 等待任务补全物理消息 ID。"""
+        """为发送前记录的 reply 等待任务补全物理消息 ID。"""
         target_tasks = cls._task_list.get(msg.session_info.target_id, {})
         sender_tasks = target_tasks.get("all" if all_ else msg.session_info.sender_id, {})
         task_info = sender_tasks.get(msg)
@@ -132,13 +132,13 @@ class SessionTaskManager:
         :param message_id: 消息 ID（可以是整数、字符串或列表）
         :param callback: 回调协程函数，当回复到达时执行
         :param fallback_ids: 无法取得精确消息 ID 时使用的后备 ID
-        :param timeout: callback 有效秒数；默认为 30 分钟，None 表示不自动过期
+        :param timeout: callback 有效秒数，默认为 30 分钟，None 表示不自动过期
         :param once: 是否在首次命中后立即失效
         :param allow_all_reply_ids: 允许非原发送者触发的按钮 reply ID
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("Callback timeout must be positive or None.")
-        # 将同一次发送的全部消息 ID／虚拟按钮 ID／fallback ID 合并为一组；tuple
+        # 将同一次发送的全部消息 ID／虚拟按钮 ID／fallback ID 合并为一组。元组
         # 不会像逗号拼接字符串那样在平台 ID 自身含逗号时产生歧义。
         if isinstance(message_id, list):
             primary_ids = tuple(str(mid) for mid in message_id)
@@ -159,7 +159,7 @@ class SessionTaskManager:
             "once": once,
             "allow_all_reply_ids": frozenset(str(reply_id) for reply_id in (allow_all_reply_ids or set())),
             # 可重复 callback 必须串行执行，避免同一消息的快速连续操作并发
-            # 修改模块状态；一次性 callback 仍会在 await 用户代码前原子删除。
+            # 修改模块状态。一次性 callback 仍会在 await 用户代码前原子删除。
             "lock": asyncio.Lock(),
             "owner_sender_id": msg.session_info.sender_id,
             "primary_ids": tuple(dict.fromkeys(primary_ids)),
@@ -344,7 +344,7 @@ class SessionTaskManager:
             Logger.exception("Failed to hold the context of a wait-task result.")
             return False
 
-        # hold_context 会跨进程让出执行权；其间等待命令可能已超时或被取消。
+        # hold_context 会跨进程让出执行权。其间等待命令可能已超时或被取消。
         # 此时不能把结果发布给失效任务，也不能遗留刚取得的 context hold。
         if not task_info["active"]:
             try:
@@ -367,8 +367,8 @@ class SessionTaskManager:
         """
         handled = False
 
-        # 先找已 ready 的精确引用目标；没有则同时等待所有 pending 任务中的任意一个。
-        # 避免登记早但发送卡住的任务阻塞后续 ready 任务。
+        # 先找已 ready 的精确引用目标。没有则同时等待所有 pending 任务中的任意一个。
+        # 避免记录早但发送卡住的任务阻塞后续 ready 任务。
         while True:
             active_tasks = await cls._active_tasks(session)
             if not active_tasks:
@@ -419,7 +419,7 @@ class SessionTaskManager:
                     handled = False
             break
 
-        # 已完成的独占等待任务优先消费消息；允许 fallthrough 的 wait_next 任务除外。
+        # 已完成的独占等待任务优先消费消息。允许 fallthrough 的 wait_next 任务除外。
         if handled:
             return True
 
@@ -428,7 +428,7 @@ class SessionTaskManager:
         if session.session_info.reply_id is None:
             return False
 
-        # 先按真实／虚拟消息 ID 精确匹配；bot_id fallback 仅在当前作用域与发送者下唯一时可用，
+        # 先按真实／虚拟消息 ID 精确匹配。bot_id fallback 仅在当前作用域与发送者下唯一时可用，
         # 否则不能按注册顺序猜测用户引用的是哪一次发送。
         exact_matches = []
         fallback_matches = []
@@ -454,7 +454,7 @@ class SessionTaskManager:
             elif reply_id in callback_info.get("fallback_ids", ()):
                 fallback_matches.append(candidate)
 
-        # 真实／虚拟主 ID 比 bot_id fallback 强；但同等级有多个候选时无法
+        # 真实／虚拟主 ID 比 bot_id fallback 强。但同等级有多个候选时无法
         # 确定用户操作的是哪次发送，必须保留全部注册而不是按字典顺序猜测。
         matched = None
         if len(exact_matches) == 1:
@@ -472,7 +472,7 @@ class SessionTaskManager:
                     try:
                         await callback(session)
                     except SessionFinished:
-                        # callback 使用 msg.finish() 正常结束当前交互；这是控制流信号，不能
+                        # callback 使用 msg.finish() 正常结束当前交互，这是控制流信号，不能
                         # 逸出到 JobQueue action 令任务停在 processing 直到两小时超时。
                         pass
                 return True

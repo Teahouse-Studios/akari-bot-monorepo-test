@@ -44,7 +44,7 @@ class ProcessUnavailable:
 
 
 def collect_self_usage() -> dict[str, int]:
-    """采集当前进程的内存指标；``uss`` 不可得时不写该键，由调用方回落至 ``rss``。"""
+    """采集当前进程的内存指标。``uss`` 不可得时不写该键，由调用方改用 ``rss``。"""
     process = psutil.Process()
     usage = {
         "pid": process.pid,
@@ -54,13 +54,13 @@ def collect_self_usage() -> dict[str, int]:
     try:
         usage["uss"] = process.memory_full_info().uss
     except (psutil.Error, OSError):
-        # 容器内 smaps 缺失等场景下自测亦可能失败，回落而非报错。
+        # 容器内 smaps 缺失等场景下自测亦可能失败，改用 ``rss`` 而不报错。
         pass
     return usage
 
 
 def collect_external_usage(pid: int | None) -> dict[str, int] | None:
-    """按 PID 读取同机其他进程的内存指标；进程不存在或不可读时返回 None。"""
+    """按 PID 读取同机其他进程的内存指标，进程不存在或不可读时返回 None。"""
     if not pid:
         return None
     try:
@@ -75,7 +75,7 @@ def collect_external_usage(pid: int | None) -> dict[str, int] | None:
 
 
 def build_usage(name: str, usage: dict[str, int]) -> ProcessUsage | None:
-    """将原始指标转为展示行；缺少可用指标的载荷视为无效。"""
+    """将原始指标转为展示行，缺少可用指标的载荷视为无效。"""
     memory = usage.get("uss")
     metric = "USS"
     if not isinstance(memory, int):
@@ -99,11 +99,11 @@ def summarize_process_usage(
     errors: dict[str, str],
     peers: dict[str, dict],
 ) -> tuple[list[ProcessUsage], list[ProcessUnavailable]]:
-    """将信号扇出的逐实例结果整理为按 service 名排序的展示行。
+    """将信号扇出的逐实例结果整理为按服务名排序的展示行。
 
     :param results: ``SignalReport.results``，即 ``peer_id`` 到各本地订阅者返回值的映射
     :param errors: ``SignalReport.errors``，即 ``peer_id`` 到失败原因的映射
-    :param peers: ``Alive.values`` 快照，用于将 ``peer_id`` 还原为 service 名
+    :param peers: ``Alive.values`` 快照，用于将 ``peer_id`` 还原为服务名
     """
 
     def display_name(peer_id: str) -> str:

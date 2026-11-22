@@ -141,7 +141,7 @@ def _convert_qqbot_image(local_path: str) -> str:
                 shutil.copyfile(source, output)
                 return str(output)
 
-            # QQBot 支持 PNG、JPEG 和 GIF；其他动画格式仅发送首帧，透明区域使用白色背景。
+            # QQBot 支持 PNG、JPEG 和 GIF。其他动画格式仅发送首帧，透明区域使用白色背景。
             image.seek(0)
             if "A" in image.getbands() or image.info.get("transparency") is not None:
                 with image.convert("RGBA") as rgba:
@@ -211,7 +211,7 @@ def _build_qqbot_keyboard(rows: list[ButtonRows], session_info: SessionInfo, tar
         )
         keyboard_rows_data = keyboard_rows_data[:QQBOT_MAX_KEYBOARD_ROWS]
 
-    # QQ 已弃用原生 click_limit；所有按钮点击次数统一由框架运行时 token 控制。
+    # QQ 已弃用原生 click_limit。所有按钮点击次数统一由框架运行时 token 控制。
     registered_rows = register_button_rows(
         [ButtonRows.assign(row_buttons) for row_buttons in keyboard_rows_data],
         session_info.sender_id or session_info.get_common_sender_id(),
@@ -289,7 +289,7 @@ def nodes_to_table(session_info: SessionInfo, nodes: MessageNodes) -> str:
 
     :param session_info: 会话信息，用于把各节点的消息链转为可发送形态。
     :param nodes: 消息节点。
-    :return: 整张表格的 markdown 文本；无节点时返回节点组名称。
+    :return: 整张表格的 markdown 文本。无节点时返回节点组名称。
     """
     cells = []
     for node in nodes.values:
@@ -312,7 +312,7 @@ def nodes_to_table(session_info: SessionInfo, nodes: MessageNodes) -> str:
     return "\n".join(lines)
 
 
-# 用户权限缓存，用于部分场景接口未返回群聊内身份使用。只缓存管理员，缺失时安全退化为无权限。
+# 用户权限缓存，供接口未返回群聊内身份的部分场景使用。只缓存管理员，缺失时安全退化为无权限。
 permission_cache: OrderedDict[str, float] = OrderedDict()
 message_id_cache: OrderedDict[str, str] = OrderedDict()
 
@@ -532,7 +532,7 @@ class QQBotContextManager(ContextManager):
         cls.typing_states.clear()
         cls.typing_tasks.clear()
 
-        # Typing 已尽量完成撤回后，再停止实际发送队列。worker 的取消分支会把当前
+        # Typing 已尽量完成撤回后，再停止实际发送队列。worker 的取消分支会把当前的
         # 与尚未开始的 Future 解析为 []，维持 ContextManager 的发送失败约定。
         queues = list(dict.fromkeys(cls.message_send_queues.values()))
         workers = [queue.worker for queue in queues if queue.worker is not None]
@@ -1061,8 +1061,8 @@ class QQBotContextManager(ContextManager):
 
             return _PreparedMessage(target, send_markdown_message, has_payload=bool(texts or prepared_media or cards))
 
-        # 会话的 support_markdown 由 resolve_features() 按用户偏好置定，用户关闭 markdown 后
-        # 走纯文本路径；全局配置关闭时同样如此。
+        # 会话的 support_markdown 由 resolve_features() 按用户偏好确定，用户关闭 markdown 后
+        # 走纯文本路径。全局配置关闭时同样如此。
         if _force_plain or not qq_use_markdown or not session_info.support_markdown:
             return await prepare_plain_message()
         return await prepare_markdown_message()
@@ -1467,7 +1467,7 @@ class QQBotContextManager(ContextManager):
         except TimeoutError:
             Logger.debug(f"Typing state expired in session: {session_info.session_id}")
         finally:
-            # 结束信号若始终未至，状态不应长期滞留；仅回收本轮，避免误删后来者
+            # 结束信号若始终未至，状态不应长期滞留。仅回收本轮，避免误删后来者
             if cls.typing_states.get(session_info.session_id) is state:
                 del cls.typing_states[session_info.session_id]
             current_task = asyncio.current_task()
@@ -1500,7 +1500,7 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def end_typing(cls, session_info: SessionInfo) -> None:
-        # 结束输入状态属于清理动作，须幂等且容错：此时上下文可能已被回收，
+        # 结束输入状态属于清理动作，须幂等且容错：此时上下文可能已被回收。
         state = cls.typing_states.pop(session_info.session_id, None)
         if state:
             state.finished.set()
@@ -1663,7 +1663,7 @@ class QQBotFetchedContextManager(QQBotContextManager):
         _typing_prompt: bool = False,
         _force_plain: bool = False,
     ) -> list[str]:
-        # 调用方需要取得真实的消息 ID 才能判断本跳是否送达，因此入队的是「任务 + future」，
+        # 调用方需要取得真实的消息 ID 才能判断本跳是否送达，因此入队的是“任务 + future”，
         # 待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)

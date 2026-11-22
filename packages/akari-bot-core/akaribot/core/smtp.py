@@ -14,7 +14,7 @@ from akaribot.core.utils.brand import find_brand_asset
 from akaribot.core.utils.timezone import core_now
 
 locale = Locale(BaseConfig.default_locale)
-# 品牌资产包优先，实例 assets/ 可覆盖；两处都没有时为 None，此时不内嵌标志。
+# 品牌资产包优先，实例 assets/ 可覆盖。两处都没有时为 None，此时不内嵌标志。
 LOGO_PATH = find_brand_asset("akaribot_logo.png")
 
 
@@ -71,7 +71,7 @@ def send_email(subject: str, body: str, timeout: float | None = None) -> None:
     # HTML 版本
     emailmsg.add_alternative(_build_email_html(body, _report_footer_html(issue_url)), subtype="html")
 
-    # 内嵌 Logo；品牌资产缺失时跳过，邮件正文本身照常发出。
+    # 内嵌 Logo。品牌资产缺失时跳过，邮件正文本身照常发出。
     if LOGO_PATH is not None and LOGO_PATH.is_file():
         with LOGO_PATH.open("rb") as fp:
             logo_data = fp.read()

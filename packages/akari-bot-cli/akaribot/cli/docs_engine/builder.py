@@ -1,6 +1,6 @@
 """构建编排：目录 → 配置 → 工具链 → 生成 → VitePress。
 
-构建指纹覆盖所选文档内容、模板版本、VitePress 版本与基路径；指纹未变且输出仍在时直接复用，
+构建指纹覆盖所选文档内容、模板版本、VitePress 版本与基路径。指纹未变且输出仍在时直接复用，
 避免每次预览都重跑一次完整构建。
 """
 
@@ -34,7 +34,7 @@ def build(
     """构建实例的文档站点。
 
     :param instance: 带 ``root`` 与 ``run_core_capture`` 的实例。
-    :param keys: 只构建这些包；``None`` 表示全部。
+    :param keys: 只构建这些包，``None`` 表示全部。
     :param force: 为真时忽略指纹与既有输出。
     :param offline: 为真时禁止安装 Node 依赖。
     :param reporter: 阶段回调，参数为 ``toolchain`` / ``generate`` / ``build`` / ``done``。

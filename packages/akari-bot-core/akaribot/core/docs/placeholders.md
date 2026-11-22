@@ -28,16 +28,16 @@ KE 元素会作为独立的消息元素插入，通常与相邻文本分行。
 
 | 类型 | 参数 |
 | --- | --- |
-| `plain` | `text` 必填；可选 `disable_joke=1`、`allow_parse=0` |
+| `plain` | `text` 必填。可选 `disable_joke=1`、`allow_parse=0` |
 | `markdown` | 与 `plain` 相同，按 Markdown 渲染，平台不支持时降级为纯文本 |
-| `image` | `path` 必填，支持 URL、`file://` 路径、`base64://` 与 data URI；可选 `headers`（Base64 编码的 JSON）、`max_h`、`allow_split=0` |
+| `image` | `path` 必填，支持 URL、`file://` 路径、`base64://` 与 data URI。可选 `headers`（Base64 编码的 JSON）、`max_h`、`allow_split=0` |
 | `audio` | `path` 必填，本地文件路径 |
 | `video` | `path` 必填，本地文件路径 |
-| `i18n` | `i18nkey` 必填；其余键作为翻译参数；可选 `fallback=0`、`locale_failed_prompt=0`、`disable_joke=1` |
+| `i18n` | `i18nkey` 必填。其余键作为翻译参数。可选 `fallback=0`、`locale_failed_prompt=0`、`disable_joke=1` |
 | `mention` | `userid` 必填，格式为 `客户端\|用户 ID` |
-| `url` | `text` 必填；可选 `trusted=1` 或 `trusted=0` |
-| `action_text` | `text` 必填，点击后插入输入框；可选 `show`、`reference=1`、`show_on_fallback=0`、`quote_on_fallback=1` |
-| `button` | `show`、`value` 必填；可选 `reply_id`、`permission=all`、`click_limit` |
+| `url` | `text` 必填。可选 `trusted=1` 或 `trusted=0` |
+| `action_text` | `text` 必填，点击后插入输入框。可选 `show`、`reference=1`、`show_on_fallback=0`、`quote_on_fallback=1` |
+| `button` | `show`、`value` 必填。可选 `reply_id`、`permission=all`、`click_limit` |
 | `button_frame` | `data` 必填，按钮行数组的 URL 编码 JSON |
 
 ```text

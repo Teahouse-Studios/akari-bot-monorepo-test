@@ -327,7 +327,7 @@ async def test_wiki_styled_render(tester: Tester):
     await tester.test(_test_original_timeout_uses_concurrent_api_result, "原有渲染超时后复用并发 API 结果")
     await tester.test(_test_legacy_and_special_pages, "特殊站点使用 v1，特殊页面跳过 API")
     await tester.test(
-        _test_legacy_timeout_uses_skin_api_fallback, "v1 渲染也受 15 秒限制，超时使用并发的 parse + useskin 兜底"
+        _test_legacy_timeout_uses_skin_api_fallback, "v1 渲染也受 15 秒限制，超时使用并发的 parse + useskin 回退"
     )
     await tester.test(_test_cancel_propagates, "任务取消不触发 fallback")
     return tester

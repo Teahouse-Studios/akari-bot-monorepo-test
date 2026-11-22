@@ -1,12 +1,12 @@
 """消息链原地修改的归一化单元测试。
 
-values 的声明类型是 list[MessageElement]，而 append 一类原地修改的方法此前直接写入
-入参。裸字符串遂能一路活到 JobQueue 的序列化阶段，才以「'str' object is not a
-mapping」暴露——彼时调用栈已深入 cattrs 内部，难以追溯是哪一处放进去的。
+values 的声明类型是 list[MessageElement]。append 一类原地修改的方法直接写入入参，故裸字符串
+能一路进到 JobQueue 的序列化阶段，直到 cattrs 内部才以“'str' object is not a mapping”暴露，
+调用栈已难以追溯来源。
 
-assign() 一向会把字符串转作文本元素，原地修改的方法却不会。两者行为不一致，正是
-akaribot/modules/wiki/wiki.py 与 akaribot/modules/idlist 等处出错的由来：那些地方以
-MessageChain.create() 起手，其后 append 的却是裸字符串。
+assign() 会把字符串转作文本元素，原地修改的方法不会。两者行为不一致：以
+MessageChain.create() 起手、随后 append 裸字符串的写法（如 akaribot/modules/wiki/wiki.py 与
+akaribot/modules/idlist）由此出错。
 """
 
 from akaribot.core.builtins.converter import converter

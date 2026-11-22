@@ -64,7 +64,7 @@ async def _with_page(body, source=None, size=(120, 34)):
 
 
 async def _interpreter_options(app, page, pilot) -> list[str]:
-    # m 打开解释器菜单，返回其中的操作文案；托管方式未知时不弹菜单。
+    # m 打开解释器菜单，返回其中的操作文案。托管方式未知时不弹菜单。
     await pilot.press("m")
     await pilot.pause()
     if app.screen is page.screen:
@@ -126,7 +126,7 @@ async def _test_search_and_filter_narrow_the_list():
 
 
 async def _test_list_keeps_a_highlight_after_rebuild():
-    # 关键回归：过滤会重建列表，ListView 的 clear() 是异步移除，顺序错了就一行都不亮。
+    # 关键回归：过滤会重建列表，ListView 的 clear() 是异步移除，顺序有误时所有行都不高亮。
     async def body(app, page, pilot, source):
         list_view = page.query_one("#package-list", compat.ListView)
         first = [bool(item.highlighted) for item in list_view.children]
@@ -260,7 +260,7 @@ async def _test_uninstall_recorded_package_offers_modes():
 
 
 async def _test_uninstall_plain_package_opens_confirm():
-    # 未登记在实例清单中的包仍需确认卸载。
+    # 没有记录在实例清单中的包仍需确认卸载。
     async def body(app, page, pilot, source):
         _select(page, "certifi")
         await pilot.pause()
@@ -518,7 +518,7 @@ async def _test_failure_reports_detail_and_reloads():
         await _submit_recreate_confirmation(app, pilot)
         await page.wait_for_idle()
         await pilot.pause()
-        # 操作结束后重新读取；轮询计数以等待后台任务完成。
+        # 操作结束后重新读取，轮询计数等待后台任务完成。
         deadline = time.monotonic() + 5.0
         while source.calls["state"] <= before and time.monotonic() < deadline:
             await pilot.pause()
@@ -583,7 +583,7 @@ async def test_tui_environment(tester: Tester):
         await tester.test(_test_recreate_rejects_unconfirmed_input, "重建输入错误或取消均不执行")
         await tester.test(_test_recreate_rechecks_runtime_after_confirmation, "输入确认后重新检查运行状态")
         await tester.test(_test_narrow_layout_keeps_package_list_usable, "窄屏保留包列表、搜索框与所有操作按钮")
-        await tester.test(_test_action_dry_run_option, "预演选项把 --dry-run 交给 CLI")
+        await tester.test(_test_action_dry_run_option, "试运行选项把 --dry-run 交给 CLI")
         await tester.test(_test_cancelled_action_does_nothing, "取消后不动作，再按仍先问")
         await tester.test(_test_refused_while_running, "实例运行中拒绝环境动作")
         await tester.test(_test_inapplicable_action_refused, "不适用的动作被拒绝")

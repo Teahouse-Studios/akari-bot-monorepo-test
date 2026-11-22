@@ -1,8 +1,8 @@
 """更新并重启：更新委托 CLI，重启沿用既有逻辑。
 
-``git pull`` + ``uv sync`` 在拆包后失去意义（实例里装的是分发包，不是仓库工作树，且 uv 该同步的是
-实例 venv 而非源码目录），故更新部分与 ``~update`` 共用 :func:`delegate_update`；本模块只保留重启
-编排：确认、写重启缓存、触发 :func:`restart`。
+实例里装的是包，没有仓库工作树；``uv sync`` 同步的是实例 venv，``git pull`` 无从执行。更新部分
+因此与 ``~update`` 共用 :func:`delegate_update`。本模块只负责重启编排：确认、写重启缓存、
+触发 :func:`restart`。
 """
 
 import time

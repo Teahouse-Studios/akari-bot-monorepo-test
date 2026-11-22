@@ -10,10 +10,10 @@ on:
         description: 分发名，如 akari-bot-module-wiki
         required: true
       version:
-        description: 发布版本；registry-only 必填，publish 留空时取 pyproject 版本
+        description: 发布版本。registry-only 必填，publish 留空时取 pyproject 版本
         required: false
       confirm:
-        description: publish 上传产物；registry-only 核验 PyPI 并修复发布记录
+        description: publish 上传产物。registry-only 核验 PyPI 并修复发布记录
         type: choice
         options: [publish, registry-only]
         required: true
@@ -249,5 +249,5 @@ jobs:
               exit 0
             fi
           done
-          echo "索引写入失败；请以相同分发和版本运行 registry-only。" >&2
+          echo "索引写入失败。请以相同分发和版本运行 registry-only。" >&2
           exit 1

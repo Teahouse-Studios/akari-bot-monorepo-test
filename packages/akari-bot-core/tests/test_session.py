@@ -3023,7 +3023,7 @@ async def test_execution_lock(tester: Tester):
 async def test_session_task(tester: Tester):
     """akaribot.core.builtins.session.tasks: SessionTaskManager 测试"""
     await tester.test(_test_send_message_binds_button_callback_reply_id, "按钮 callback 虚拟回复 ID 绑定测试")
-    await tester.test(_test_button_callback_registered_before_send_returns, "按钮 callback 发送前登记测试")
+    await tester.test(_test_button_callback_registered_before_send_returns, "按钮 callback 发送前注册测试")
     await tester.test(_test_send_failure_does_not_leave_callback, "callback 发送失败清理测试")
     await tester.test(_test_virtual_reply_id_triggers_callback, "虚拟 reply_id 复用 callback 匹配测试")
     await tester.test(_test_public_button_callback_accepts_other_sender, "公开按钮 callback 允许其他用户测试")
@@ -3032,7 +3032,7 @@ async def test_session_task(tester: Tester):
     await tester.test(_test_shared_callback_fallback_is_not_guessed, "callback 共享 fallback 消歧测试")
     await tester.test(
         _test_pending_plain_callbacks_make_bot_fallback_ambiguous,
-        "无按钮 callback 发送前登记与 fallback 消歧测试",
+        "无按钮 callback 发送前注册与 fallback 消歧测试",
     )
     await tester.test(_test_callback_primary_id_beats_fallback, "callback 主 ID 优先于 fallback 测试")
     await tester.test(_test_callback_ignores_missing_reply_id, "callback 忽略无 reply_id 消息测试")
@@ -3087,7 +3087,7 @@ async def test_message_session_lifecycle(tester: Tester):
     await tester.test(_test_wait_confirm_restores_typing_prompt, "确认成功后恢复输入提示测试")
     await tester.test(_test_wait_confirm_keeps_typing_off_without_active_prompt, "未展示提示时等待不触发输入状态测试")
     await tester.test(_test_waits_restore_typing_prompt_after_timeout, "等待超时后恢复输入提示测试")
-    await tester.test(_test_wait_reply_registers_before_send_returns, "引用回复发送前登记测试")
+    await tester.test(_test_wait_reply_registers_before_send_returns, "引用回复发送前注册测试")
     await tester.test(_test_wait_reply_timeout_covers_pending_send, "reply 发送阶段受统一超时约束测试")
     await tester.test(_test_wait_reply_none_timeout_keeps_pending_send, "reply 无限超时保留测试")
     await tester.test(_test_cancelled_wait_reply_deletes_sent_prompt, "reply 外部取消撤回提示测试")

@@ -446,8 +446,8 @@ async def _test_cancelled_reload_does_not_publish_partial_context():
 
 
 def _test_module_database_discovery_follows_file_existence():
-    # 清单为空只表示该包没有数据库模型；包内缺少依赖的失败改由 ``init_db()`` 在真正导入
-    # 模型时抛出（见下一条用例），不再由发现阶段承担。
+    # 清单为空只表示该包没有数据库模型。包内缺少依赖的失败由 ``init_db()`` 在真正导入
+    # 模型时抛出（见下一条用例），发现阶段不处理。
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         with_models = root / "with_models"
@@ -506,10 +506,10 @@ async def _test_missing_module_dependency_fails_initialization():
 
 @func_case
 async def test_database_init(tester: Tester):
-    """SQLite 参数自动补全，且仅 pre-init 模式执行建表。"""
+    """SQLite 参数自动补全，且仅 pre-init 模式创建数据表。"""
     await tester.test(_test_sqlite_defaults_are_added, "SQLite 缺失参数自动补全")
     await tester.test(_test_sqlite_explicit_fields_are_preserved, "SQLite 显式参数保持不变")
-    await tester.test(_test_runtime_init_does_not_generate_schemas, "运行期初始化不执行建表")
+    await tester.test(_test_runtime_init_does_not_generate_schemas, "运行期初始化不创建数据表")
     await tester.test(_test_pre_init_mode_generates_all_schemas, "pre-init 建立核心、local 与模块表")
     await tester.test(_test_cancelled_init_closes_partial_connections, "数据库初始化取消清理部分连接")
     await tester.test(_test_init_db_clears_task_local_tortoise_context, "数据库初始化清理任务级 context")

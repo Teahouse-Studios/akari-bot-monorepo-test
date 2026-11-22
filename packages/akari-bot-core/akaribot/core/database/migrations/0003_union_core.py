@@ -1,7 +1,7 @@
 """核心表的 v3 变更：数据挂载点由平台 ID 改为 union。
 
-平台场景会换号，数据若以平台 ID 为主键，换号即等于换人；改挂 union 后多个平台身份可以共享
-同一份数据。核心两张表随之改名以对齐模型名，统计与审计表则保留原始 ID 另增 union 列，历史
+平台场景会换号，数据若以平台 ID 为主键，换号即等于换人。改挂 union 后多个平台身份可以共享
+同一份数据。核心两张表随之改名以与模型名一致，统计与审计表则保留原始 ID 另增 union 列，历史
 记录不受影响。
 """
 
@@ -29,7 +29,7 @@ CORE_RENAME_COLUMNS = {
 UNION_RECORD_TABLES = ["analytics_data", "unfriendly_actions"]
 
 # 轮询与区间统计所需的索引：job_queues 每 100 毫秒被轮询，analytics_data 要按区间反复聚合，
-# 两者都随行数增长退化为全表扫描。v5 已重建 job_queues，故建索引前须确认目标列仍在。
+# 两者都会随行数增长退化为全表扫描。v5 已重建 job_queues，故建索引前须确认目标列仍在。
 CORE_INDEXES = (
     ("job_queues", ("target_client", "status"), "idx_job_queues_client_status"),
     ("analytics_data", ("timestamp",), "idx_analytics_data_timestamp"),
@@ -40,7 +40,7 @@ async def upgrade(ctx: MigrationContext) -> None:
     """
     执行 v3 的核心变更。
 
-    模块表的列改名由各模块包自己的 revision 完成，core 不再登记模块表名。
+    模块表的列改名由各模块包自己的 revision 完成，core 不记录模块表名。
 
     :param ctx: 迁移上下文。
     """
@@ -54,7 +54,7 @@ async def upgrade(ctx: MigrationContext) -> None:
 
 
 async def _rename_tables(ctx: MigrationContext) -> None:
-    # 把核心表改名为 union 命名。
+    # 核心表改用 union 命名。
     for old_table, new_table in CORE_RENAME_TABLES.items():
         if not await ctx.has_table(old_table):
             continue

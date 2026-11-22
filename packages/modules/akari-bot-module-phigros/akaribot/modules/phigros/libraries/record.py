@@ -12,7 +12,7 @@ from .client import phigros_cloud
 def cache_files(union_id: str) -> tuple[Path, Path]:
     """取指定用户的存档缓存路径与元数据路径。
 
-    与其余运行时资源同置于模块 data 目录；不放 cache 目录是因为后者每次启动会被
+    与其余运行时资源同置于模块 data 目录。不放 cache 目录是因为后者每次启动会被
     整体删除，置于其下的回退副本仅在单次运行内有效。
 
     :param union_id: 用户联合 ID。
@@ -44,7 +44,7 @@ def get_records(save_data: bytes, song_info: dict | None = None) -> dict:
 
 
 async def get_save(msg: Bot.MessageSession, bind_info) -> tuple[bytes, dict]:
-    """取存档原始数据与 summary，云端不可用时回落到缓存。
+    """取存档原始数据与 summary，云端不可用时改用缓存。
 
     :param msg: 消息会话，用于在使用缓存时告知用户。
     :param bind_info: 绑定信息记录。

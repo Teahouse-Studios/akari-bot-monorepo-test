@@ -73,11 +73,11 @@ class LegacyProject:
 
     :param root: 旧项目根目录。
     :param config_files: ``config/*.toml``。
-    :param database_files: SQLite 主库文件；快照同时包含已提交的 WAL 数据。
+    :param database_files: SQLite 主库文件，快照同时包含已提交的 WAL 数据。
     :param database_file: 配置指定的主数据库文件。
     :param module_dirs: ``modules/`` 下的模块目录名。
     :param enabled_modules: 旧库 ``module_status`` 里 ``load = 1`` 的模块名。
-    :param module_status_readable: 旧库是否至少有一个读成功；为假时「没启用任何模块」不可信。
+    :param module_status_readable: 旧库是否至少有一个文件读成功，为假时“没启用任何模块”不可信。
     :param adapters: 旧配置里 ``enable = true`` 的平台名。
     :param locale: 旧配置的 ``default_locale``。
     :param db_path: 旧配置的 ``db_path``。
@@ -101,10 +101,10 @@ class LegacyProject:
 class MigrationPlan:
     """迁移计划：模块映射结果与要安装的包。
 
-    :param modules: ``(旧模块名， 新分发名， 名字来源)`` 三元组。
-    :param unmapped: 没有对应分发包的旧模块名。
+    :param modules: ``(旧模块名，新分发名，名字来源)`` 三元组。
+    :param unmapped: 没有对应包的旧模块名。
     :param skipped: 旧 ``modules/`` 里有目录、但旧库显示从未装载的模块名。
-    :param status_readable: 旧库是否可读；为假时跳过清单不代表「用户没启用过」。
+    :param status_readable: 旧库是否可读，为假时跳过清单不代表“用户没启用过”。
     :param adapters: 由旧配置推导出的适配器分发名。
     :param missing_adapters: registry 中没有对应条目的适配器分发名。
     """
@@ -126,7 +126,7 @@ class MigrationPlan:
 class CopyTally:
     """一类内容的复制结果，供报告计数。
 
-    :param name: 类别名，如「配置文件」。
+    :param name: 类别名，如“配置文件”。
     :param copied: 本次复制或计划复制的相对路径。
     :param unchanged: 目标已存在且内容一致、无需复制的相对路径。
     :param kept: 目标已存在且内容不同、保留目标的相对路径。
@@ -152,7 +152,7 @@ class MigrationLog:
     credential_files: list[str] = field(default_factory=list)
     database_note: str = ""
     db_result: str = ""
-    # 数据库转换状态：none / done / failed / skipped；报告的人工清单按状态判断，不看文案。
+    # 数据库转换状态：none / done / failed / skipped。报告的人工清单按状态判断，不看文案。
     db_status: str = "none"
 
 
@@ -239,7 +239,7 @@ def _read_config_facts(root: Path) -> _ConfigFacts:
         if not table.startswith("bot_"):
             continue
         platform = table[len("bot_") :]
-        # 带实例 ID 的表（bot_telegram-alt）是派生物，迁移只认基表。
+        # 带实例 ID 的表（bot_telegram-alt）是生成物，迁移只认基表。
         if platform and "-" not in platform and value.get("enable") is True:
             adapters.append(platform)
     return _ConfigFacts(
@@ -311,7 +311,7 @@ def _module_dirs(modules_root: Path) -> tuple[str, ...]:
 
 
 def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...], bool]:
-    # 读不成功与「读到了但没有启用项」必须分开：前者不能推出「用户没启用过模块」，此时按空清单
+    # 读不成功与“读到了但没有启用项”必须分开：前者不能推出“用户没启用过模块”，此时按空清单
     # 安装会静默丢掉用户的模块，只能要求人工选择。
     names: list[str] = []
     readable = False
@@ -382,7 +382,7 @@ def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
 
 def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engine.RegistryCatalog) -> MigrationPlan:
     # 安装候选只取旧库 ``module_status.load = 1`` 的模块：``modules/`` 含全部官方模块，按目录决定
-    # 安装会把从未启用的模块连同重依赖一并装进新实例，还会把「未映射」与「未启用」混成同一类诊断。
+    # 安装会把从未启用的模块连同重依赖一并装进新实例，还会把“未映射”与“未启用”混成同一类诊断。
     known_adapters = {engine.canonical(entry.dist) for entry in catalog.entries.values() if entry.kind == "adapter"}
     plan = MigrationPlan(status_readable=legacy.module_status_readable)
     for platform in legacy.adapters:
@@ -656,7 +656,7 @@ def _install_packages(
             install_package(instance, target, force=force, dry_run=dry_run, verbose=verbose)
             log.installed.append(target.dist)
         except typer.Exit as exc:
-            # 安装流水线失败时自行回滚并以退出码结束；迁移继续，失败项交报告提示人工重试。
+            # 安装流水线失败时自行回滚并以退出码结束。迁移继续，失败项交报告提示人工重试。
             log.install_failed.append((target.dist, f"安装流水线以退出码 {exc.exit_code} 结束"))
             warn(i18n.t("cli.migrate.install_failed", dist=target.dist))
 
@@ -769,7 +769,7 @@ def _render_report(
     ]
     manual: list[str] = []
     if not plan.status_readable:
-        # 库读不到时「没启用任何模块」不可信：不能替用户决定装什么，只能把目录清单交给他核对。
+        # 库读不到时“没启用任何模块”不可信：不能替用户决定装什么，只能把目录清单交给他核对。
         manual.append(i18n.t("cli.migrate.report.manual_status_unreadable"))
     if plan.unmapped:
         items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in plan.unmapped)
@@ -843,7 +843,7 @@ def legacy(
 ) -> None:
     """把旧版项目迁移为新实例：搬配置与数据、装映射到的适配器与模块、转换数据库版本。
 
-    旧目录只读；迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。
+    旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。
     """
     root = project.expanduser().resolve()
     step(1, 6, i18n.t("cli.migrate.step.inspect"))

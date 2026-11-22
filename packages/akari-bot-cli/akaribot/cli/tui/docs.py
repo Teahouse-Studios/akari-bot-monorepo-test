@@ -100,7 +100,7 @@ class DocsPageRow:
 
     @property
     def display_title(self) -> str:
-        """返回页面标题，缺省时使用路径。"""
+        """返回页面标题，默认使用路径。"""
         return self.title or self.path
 
 
@@ -137,7 +137,7 @@ class DocsPackageRow:
 
     @property
     def display_title(self) -> str:
-        """返回展示标题，缺省时使用 key。"""
+        """返回展示标题，默认使用 key。"""
         return self.title or self.key
 
     def haystack(self) -> str:
@@ -267,13 +267,13 @@ class DocsSourceError(RuntimeError):
 
 @runtime_checkable
 class DocsSource(Protocol):
-    """文档数据源接口；测试注入替身，实际运行通过子进程访问。"""
+    """文档数据源接口。测试注入替身，实际运行通过子进程访问。"""
 
     def load(self) -> DocsView:
         """返回文档包、工具链与最近状态。"""
 
     async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """构建指定包；``keys`` 为空时构建全部，输出行逐条交给 ``on_line``。"""
+        """构建指定包。``keys`` 为空时构建全部，输出行逐条交给 ``on_line``。"""
 
     async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
         """同步主题模板 submodule，git 输出行逐条交给 ``on_line``。"""
@@ -288,24 +288,24 @@ class DocsSource(Protocol):
         """停止预览服务。"""
 
     async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
-        """启动开发模式预览并返回站点 URL；就绪后的事件逐条交给 ``on_event``。"""
+        """启动开发模式预览并返回站点 URL。就绪后的事件逐条交给 ``on_event``。"""
 
     async def stop_dev(self) -> None:
         """停止开发模式预览。"""
 
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
-        """部署站点；``dry_run`` 为真时只统计将更改的文件。"""
+        """部署站点。``dry_run`` 为真时只统计将更改的文件。"""
 
 
 class StaticDocsSource:
-    """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
+    """固定数据的替身数据源，供自动化检查与自检使用，不产生任何子进程。
 
     :param view: ``load`` 直接返回的视图。
-    :param build_result: 构建返回值；默认按包数量返回成功。
+    :param build_result: 构建返回值。默认按包数量返回成功。
     :param stream_lines: 构建期间逐行回放的内容。
     :param sync_result: 主题同步返回值。
     :param install_result: 依赖安装返回值。
-    :param deploy_result: 部署返回值；默认按部署方式返回成功。
+    :param deploy_result: 部署返回值。默认按部署方式返回成功。
     :param url: 预览服务返回的地址。
     :param serve_error: 非空时 ``start_server`` 抛出该错误。
     """
@@ -441,11 +441,11 @@ class StaticDocsSource:
 class SubprocessDocsSource:
     """通过 ``akaribot docs ...`` 子进程读取状态并执行操作。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param query_timeout: 查询类调用的秒数上限。
     :param action_timeout: 构建与部署的秒数上限。
     :param serve_timeout: 等待预览服务就绪的秒数上限。
-    :param dev_timeout: 等待开发模式就绪的秒数上限；首次运行可能先安装依赖。
+    :param dev_timeout: 等待开发模式就绪的秒数上限。首次运行可能先安装依赖。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
@@ -506,7 +506,7 @@ class SubprocessDocsSource:
         return normalize_view(payload)
 
     async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """见 :meth:`DocsSource.build`；``--json`` 输出构建摘要，stderr 逐行回传日志。"""
+        """见 :meth:`DocsSource.build`。``--json`` 输出构建摘要，stderr 逐行回传日志。"""
         self.calls["build"] += 1
         argv = ["docs", "build", "--json"]
         for key in keys:
@@ -514,7 +514,7 @@ class SubprocessDocsSource:
         return await self._stream_action(argv, self.action_timeout, on_line)
 
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
-        """见 :meth:`DocsSource.deploy`；界面已确认，子进程带 ``--yes``。"""
+        """见 :meth:`DocsSource.deploy`。界面已确认，子进程带 ``--yes``。"""
         self.calls["deploy"] += 1
         argv = ["docs", "deploy", "--json", "--yes"]
         if provider:
@@ -574,7 +574,7 @@ class SubprocessDocsSource:
         return url
 
     async def stop_server(self) -> None:
-        """见 :meth:`DocsSource.stop_server`；先终止，超时后强制结束。"""
+        """见 :meth:`DocsSource.stop_server`。先终止，超时后强制结束。"""
         self.calls["stop"] += 1
         process = self._process
         self._process = None
@@ -583,7 +583,7 @@ class SubprocessDocsSource:
         await self._terminate(process)
 
     async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
-        """启动 ``docs dev --json`` 并读到就绪事件；其余事件交给 ``on_event``。"""
+        """启动 ``docs dev --json`` 并读到就绪事件。其余事件交给 ``on_event``。"""
         argv = cli_process.cli_argv("docs", "dev", "--json", "--port", "0")
         self.calls["dev"] += 1
         try:
@@ -631,7 +631,7 @@ class SubprocessDocsSource:
                 raise DocsSourceError(i18n.t("cli.tui.docs.src_dev_exit", code=code, detail=detail))
 
     async def stop_dev(self) -> None:
-        """见 :meth:`DocsSource.stop_dev`；先终止，超时后强制结束。"""
+        """见 :meth:`DocsSource.stop_dev`。先终止，超时后强制结束。"""
         self.calls["stop_dev"] += 1
         task, self._dev_task = self._dev_task, None
         if task is not None and not task.done():
@@ -806,7 +806,7 @@ class SubprocessDocsSource:
         )
 
     async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """见 :meth:`DocsSource.sync_theme`；git 输出逐行回传。"""
+        """见 :meth:`DocsSource.sync_theme`。git 输出逐行回传。"""
         self.calls["sync_theme"] += 1
         args = ("docs", "sync-theme", "--json")
         try:
@@ -829,7 +829,7 @@ class SubprocessDocsSource:
         return OperationResult(True, message, detail or _tail(_text(payload.get("log"))))
 
     async def install_dependencies(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """见 :meth:`DocsSource.install_dependencies`；npm 输出逐行回传。"""
+        """见 :meth:`DocsSource.install_dependencies`。npm 输出逐行回传。"""
         self.calls["install_deps"] += 1
         args = ("docs", "install-deps", "--json")
         try:
@@ -948,7 +948,7 @@ class DocsLayout:
     :param key_width: key 列宽。
     :param version_width: 版本列宽。
     :param title_width: 标题列宽。
-    :param group_width: 分组列宽；``0`` 表示本屏没有这一列。
+    :param group_width: 分组列宽。``0`` 表示本屏没有这一列。
     """
 
     key_width: int
@@ -961,10 +961,10 @@ class DocsPage(compat.Vertical):
     """文档页控件。
 
     :param source: 数据源，默认为 :class:`SubprocessDocsSource`。
-    :param cache_ttl: 缓存有效期秒数；构建成功后立即标记站点可用。
+    :param cache_ttl: 缓存有效期秒数。构建成功后立即标记站点可用。
     """
 
-    # 页脚只保留高频键；部署与打开浏览器等低频动作由按钮与详情提示承载。
+    # 页脚只保留高频键。部署与打开浏览器等低频动作由按钮与详情提示承载。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.docs.action_refresh")),
         ("slash", "focus_search", i18n.t("cli.tui.docs.bind_search")),
@@ -1115,7 +1115,7 @@ class DocsPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.docs.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；读取数据推迟到首次显示。"""
+        """挂载后只装配控件。读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
         self.query_one("#log-pane", compat.VerticalScroll).border_title = i18n.t("cli.tui.docs.log_title")
 
@@ -1127,7 +1127,7 @@ class DocsPage(compat.Vertical):
         self.refresh_view(force=True)
 
     def focus_primary(self) -> None:
-        """聚焦包列表；列表为空时聚焦页面容器，以保留全局键位。"""
+        """聚焦包列表。列表为空时聚焦页面容器，以保留全局键位。"""
         compat.focus_first(self, "#docs-list")
 
     # region 状态读取（供测试与 App 使用）
@@ -1197,7 +1197,7 @@ class DocsPage(compat.Vertical):
 
     @property
     def preview_url(self) -> str:
-        """返回运行中的预览地址（开发模式优先）；未运行时为空串。"""
+        """返回运行中的预览地址（开发模式优先）。未运行时为空串。"""
         if self._dev:
             return self._dev_url
         return self._url if self._serving else ""
@@ -1218,7 +1218,7 @@ class DocsPage(compat.Vertical):
         return self._dev_synced
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的列表行文本，供自动化断言核对宽度。"""
+        """返回最近一次渲染出的列表行文本，供自动化检查核对宽度。"""
         return self._rendered_rows
 
     def column_text(self) -> str:
@@ -1266,7 +1266,7 @@ class DocsPage(compat.Vertical):
         self._selected &= known
         if self._selected_key not in known:
             self._selected_key = None
-        # 构建记录存在即视为已有可预览站点；本会话内的成功构建另由 _built 标记。
+        # 构建记录存在即视为已有可预览站点。本会话内的成功构建另由 _built 标记。
         self._built = self._built or view.build is not None
         self.last_result = i18n.t("cli.tui.docs.status_loaded", count=len(view.packages))
         self._render_list()
@@ -1521,7 +1521,7 @@ class DocsPage(compat.Vertical):
         self.query_one("#search", compat.Input).focus()
 
     def clear_search(self) -> None:
-        """清空搜索框；已为空时聚焦列表。"""
+        """清空搜索框。已为空时聚焦列表。"""
         search = self.query_one("#search", compat.Input)
         if search.value:
             search.value = ""
@@ -1571,7 +1571,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def request_build(self) -> None:
-        """构建选区中的包；没有选区时构建全部。"""
+        """构建选区中的包。没有选区时构建全部。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1706,7 +1706,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def stop_preview(self) -> None:
-        """停止预览服务；未运行时只更新状态。"""
+        """停止预览服务。未运行时只更新状态。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1830,7 +1830,7 @@ class DocsPage(compat.Vertical):
             self._on_log_line(str(line))
 
     def stop_dev(self) -> None:
-        """停止开发模式预览；未运行时只更新状态。"""
+        """停止开发模式预览。未运行时只更新状态。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1861,7 +1861,7 @@ class DocsPage(compat.Vertical):
             return
 
     def request_deploy(self) -> None:
-        """弹出部署方式选择框；默认聚焦只读的试运行。"""
+        """弹出部署方式选择框。默认聚焦只读的试运行。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1883,7 +1883,7 @@ class DocsPage(compat.Vertical):
     def start_deploy(self, choice: str | None) -> None:
         """按选择执行试运行或真实部署。
 
-        :param choice: ``dry`` 只统计，``deploy`` 发布；``None`` 表示取消。
+        :param choice: ``dry`` 只统计，``deploy`` 发布。``None`` 表示取消。
         """
         # 关闭确认框后清除防抖记录，允许重新发起操作。
         self._confirm.reset()
@@ -1922,7 +1922,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def reset_pending(self) -> None:
-        """作废待确认状态；切页与本页状态变化时调用。"""
+        """作废待确认状态。切页与本页状态变化时调用。"""
         self._confirm.reset()
 
     def dirty_note(self) -> str:
@@ -2063,5 +2063,5 @@ class DocsPage(compat.Vertical):
     # endregion
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)

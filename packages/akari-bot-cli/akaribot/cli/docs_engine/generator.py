@@ -1,6 +1,6 @@
 """VitePress 站点源文件生成。
 
-生成器只读取目录、配置与各包文档目录，产物全部落在 ``<实例根>/cache/docs/src`` 下；重建前先清空
+生成器只读取目录、配置与各包文档目录，产物全部放在 ``<实例根>/cache/docs/src`` 下。重建前先清空
 该目录，且只接受位于 ``<实例根>/cache/docs`` 内的目标路径。
 """
 
@@ -23,7 +23,7 @@ from .theme import ThemeSpec, bundled_theme
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"})
 ATTACHMENT_SUFFIXES = frozenset({".txt", ".pdf"})
 ALLOWED_SUFFIXES = frozenset({".md"}) | IMAGE_SUFFIXES | ATTACHMENT_SUFFIXES
-# 文档里的 ``{{I18N:key}}`` 是机器人模板语法；Vue 会把双花括号当插值，行内代码需显式 v-pre。
+# 文档里的 ``{{I18N:key}}`` 是机器人模板语法。Vue 会把双花括号当插值，行内代码需显式 v-pre。
 V_PRE_RULE = """const render = md.renderer.rules.code_inline
 if (!render) return
 md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
@@ -63,8 +63,8 @@ def generate(
     :param catalog: 参与构建的文档目录。
     :param src_dir: 目标源目录，必须位于实例的 ``cache/docs`` 下。
     :param config: 实例文档配置。
-    :param theme: 主题；缺省使用 CLI 内置主题。
-    :param link_packages: 用于跨包链接重写的全部包；缺省只用 ``catalog``。子集构建时传入完整目录，
+    :param theme: 主题。默认使用 CLI 内置主题。
+    :param link_packages: 用于跨包链接重写的全部包。默认只用 ``catalog``。子集构建时传入完整目录，
         使指向未选包的源码相对链接仍能折算成站点地址。
     :raises DocsError: 目标路径越界、包 key 非法或源文件经符号链接逃逸。
     """
@@ -232,7 +232,6 @@ API_CATALOG_OTHERS = "api/functions-and-constants.md"
 def _api_page_specs(
     catalog: Mapping[str, object],
 ) -> tuple[list[dict[str, object]], dict[str, str]]:
-    """把 API 目录拆成按导出名组织的页面，并返回名字到页面的映射。"""
     classes: list[tuple[str, Mapping[str, object]]] = []
     others: list[tuple[str, Mapping[str, object]]] = []
     groups = catalog.get("groups", [])
@@ -772,7 +771,7 @@ def _rewrite_links(
     *,
     prefix: str = "",
 ) -> str:
-    # 文档在源码树里用相对路径互相引用；落到站点后包目录已重排，跨包链接须折算成 URL。
+    # 文档在源码树里用相对路径互相引用。生成站点时包目录已重排，跨包链接须折算成 URL。
     lines = text.splitlines(keepends=True)
     fenced = False
     for index, line in enumerate(lines):
@@ -1126,7 +1125,7 @@ def _brand_provider(packages: Sequence[DocPackage]) -> DocPackage | None:
     for package in packages:
         if package.brand:
             return package
-    # 兼容仍用旧字段声明站点标志的包；显式 brand 提供者始终优先。
+    # 兼容仍用旧字段声明站点标志的包。显式 brand 提供者始终优先。
     for package in packages:
         if package.logo or package.avatar:
             return package
@@ -1466,7 +1465,7 @@ def _footer_section(
     if footer.text:
         about["text"] = list(footer.text)
     image = _brand_site_url(source, config, footer.image, "footer-image") if footer.image else ""
-    # 未单独配置配图时使用角色立绘，品牌包缺失时由引擎播种的占位图接住。
+    # 未单独配置配图时使用角色立绘，品牌包缺失时由引擎预置的占位图代替。
     if image or brand.character:
         about["image"] = image or brand.character
     if footer.links:
@@ -1672,7 +1671,7 @@ def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str)
 
 
 def _uses_parallel_tabs(package: DocPackage) -> bool:
-    # 模块统一使用平行页面；其他包只要提供 development.md 也按同一结构处理。
+    # 模块统一使用平行页面。其他包只要提供 development.md 也按同一结构处理。
     if not package.overview or len(package.pages) <= 1:
         return False
     return package.group == "module" or any(Path(page.path).name == "development.md" for page in package.pages)
@@ -1694,7 +1693,7 @@ def _native_page_items(
     pages = list(package.pages)
     parallel = akari and _uses_parallel_tabs(package)
     if parallel:
-        # Akari 主题用标签切换开发页，开发页不进入侧栏；其他主题保留全部页面。
+        # Akari 主题用标签切换开发页，开发页不进入侧栏。其他主题保留全部页面。
         pages = [page for page in pages if Path(page.path).name != "development.md"]
 
     def page_item(page: DocPage) -> dict[str, object]:

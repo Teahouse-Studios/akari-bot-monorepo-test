@@ -61,7 +61,7 @@ class SessionDraft:
 
     @property
     def session_info(self):
-        """只读视图；正式对象请勿经此写入。"""
+        """只读视图。正式对象请勿经此写入。"""
         from .context import SessionInfoView
 
         return SessionInfoView(self._source)
@@ -212,11 +212,11 @@ class SessionDraft:
             return self._source
         prepared = self._prepare_commit()
         target = self._source
-        # Locale 对象也先构造，与字段校验同属"准备"阶段；构造失败则整次提交不发布，
+        # Locale 对象也先构造，与字段校验同属“准备”阶段。构造失败则整次提交不发布，
         # 避免其余字段已写回而 locale 静默降级造成的半提交。
         new_locale = None
         if "locale_lang" in self._dirty:
-            # 走派生接口以保留术语作用域；新建 Locale 会让本会话之后的渲染退回基础术语。
+            # 走生成接口以保留术语作用域。新建 Locale 会让本会话之后的渲染退回基础术语。
             new_locale = target.locale.with_locale(prepared["locale_lang"])
         if "tmp" in self._dirty:
             if not hasattr(target, "tmp") or target.tmp is None:

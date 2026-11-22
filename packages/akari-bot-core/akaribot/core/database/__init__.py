@@ -106,7 +106,7 @@ async def init_db(
 
         if generate_schemas:
             await Tortoise.generate_schemas(safe=True)
-            # 迁移只在建表的写入进程中执行：读进程不建表，也不该改动库结构。
+            # 迁移只在创建数据表的写入进程中执行：读进程不创建数据表，也不该改动库结构。
             await run_startup_migrations()
 
         Temp.data["modules_db_list"] = database_list
@@ -131,7 +131,7 @@ async def init_db(
         return False
     finally:
         # Tortoise.init() 在无当前 context 时会把初始化 context 写入当前任务。
-        # 这会复制给 Queue poller 等后续任务，reload 替换全局 context 后它们
+        # 该 context 会被复制给 Queue poller 等后续任务，reload 替换全局 context 后它们
         # 仍会持有旧对象。初始化完成后恢复为“仅使用 global fallback”。
         if isinstance(context, TortoiseContext):
             context.__exit__(None, None, None)
@@ -233,8 +233,8 @@ async def reload_db(db_models: list[str] | None = None):
         from akaribot.core.queue.server import JobQueueServer
         from akaribot.core.scheduler import SchedulerLifecycle
 
-        # 先排空 Queue handler，再停止新 Job 并取消运行中的 Job；新 context
-        # 的构建不触碰旧连接，激活与旧 context 关闭在准备完成后完成。
+        # 先让 Queue handler 处理完队列中的任务，再停止新 Job 并取消运行中的 Job。新 context
+        # 的构建不触碰旧连接，准备完成后才激活新 context 并关闭旧 context。
         async with JobQueueServer.maintenance_window(exclusive=True), SchedulerLifecycle.maintenance_window():
             prepared = await prepare_db_reload(db_models)
             if prepared is None:

@@ -1,12 +1,12 @@
 """数据库升级的旧路径与版本号转换。
 
 v1→v6 的升级步骤已被生产验证，本模块原样保留这套逻辑，不把其中的步骤拆成 revision 重放：
-重放等于用新代码重新推导一遍历史结构，风险远高于直接沿用。新库与已登记的库走
-:mod:`core.database.migration` 的按包 revision，旧库则先由本模块升到 v6，再把结果登记进
+重放等于用新代码重新推导一遍历史结构，风险远高于直接沿用。新库与已记录版本的库走
+:mod:`core.database.migration` 的按包 revision，旧库则先由本模块升到 v6，再把结果记录到
 ``schema_migrations``，之后不再进入本模块。
 
-模块表结构在此仍有登记，这是兼容层的必要代价：旧库升级必须先于版本登记完成，而模块包可能
-未安装。该兼容层至少保留两个大版本周期，之后连同 :data:`LEGACY_MAP` 一并删除。
+模块表结构在此仍有记录，这是兼容实现的必要代价：旧库升级必须先于版本记录完成，而模块包可能
+未安装。该兼容实现至少保留两个大版本周期，之后连同 :data:`LEGACY_MAP` 一并删除。
 """
 
 from tortoise import Tortoise
@@ -23,11 +23,11 @@ from akaribot.core.database.models import (
 from akaribot.core.logger import Logger
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需登记 revision。
+# 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需记录 revision。
 LATEST_LEGACY_VERSION = 6
 
 # 旧版本号到 ``(包名， revision)`` 的对照表。包名取分发名，与 PackageRegistry.migration_dirs()
-# 的键一致；旧库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。
+# 的键一致。旧库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。
 LEGACY_MAP: dict[int, list[tuple[str, str]]] = {
     1: [("core", "0001_initial")],
     2: [("core", "0002_banned_users_and_nullable_sender")],
@@ -43,8 +43,8 @@ LEGACY_MAP: dict[int, list[tuple[str, str]]] = {
     6: [("akari-bot-module-maimai", "0003_oauth_columns")],
 }
 
-# v3：原本以平台 ID 为主键的两张核心表改挂 union，表名一并对齐模型名，
-# 以免「target_info」这类旧名继续读作「平台场景信息」。
+# v3：原本以平台 ID 为主键的两张核心表改挂 union，表名与模型名一致，
+# 以免“target_info”这类旧名继续读作“平台场景信息”。
 UNION_RENAME_CORE_TABLES = {
     "sender_info": "sender_union_info",
     "target_info": "target_union_info",
@@ -83,7 +83,7 @@ OAUTH_BIND_COLUMNS = (
 )
 
 # v6：绑定方式换代后不再读写的历史列。落雪好友码曾用于免授权的查分接口，现已改为上传 OAuth 令牌，
-# 模型也不再声明该列；留着它只会让库结构与模型长期不一致（旧列带 NOT NULL 且无默认值，新写入会直接失败）。
+# 模型也不再声明该列。留着它只会让库结构与模型长期不一致（旧列带 NOT NULL 且无默认值，新写入会直接失败）。
 OBSOLETE_BIND_COLUMNS = (("module_maimai_lxns_prober_bind_info", "friend_code"),)
 
 
@@ -178,7 +178,7 @@ async def update_database_to_v3(conn):
     # 账号级封禁保持关闭，原有的封禁状态已记在 union 上。
     await backfill_union_binds()
 
-    # 消息通道号。target_union_bind 由 generate_schemas() 新建时已包含该列，正常升级路径不会执行此段；
+    # 消息通道号。target_union_bind 由 generate_schemas() 新建时已包含该列，正常升级路径不会执行此段。
     if not await has_column(conn, "target_union_bind", "channel_id"):
         if db_type == "sqlite":
             await conn.execute_query('ALTER TABLE "target_union_bind" ADD COLUMN "channel_id" INT NOT NULL DEFAULT 1;')
@@ -271,8 +271,8 @@ async def update_database_to_v5(conn):
 async def update_database_to_v6(conn):
     """将数据库升级至 v6：为绑定表调整 OAuth 授权所需的列。
 
-    水鱼的应用属公开客户端，换票接口不可用，只能逐用户保存 refresh token；落雪侧改存授权令牌。
-    由 ``generate_schemas()`` 新建的表已有这些列，跳过即可；旧行没有 refresh token，在用户重新
+    水鱼的应用属公开客户端，换票接口不可用，只能逐用户保存 refresh token。落雪侧改存授权令牌。
+    由 ``generate_schemas()`` 新建的表已有这些列，跳过即可。旧行没有 refresh token，在用户重新
     绑定前不可用。
 
     同时删掉落雪的旧好友码列：该字段已退出模型，旧表上却是 NOT NULL 且无默认值，不删会让新绑定
@@ -318,7 +318,7 @@ async def drop_indexes_on_missing_columns(conn) -> None:
 
 
 async def update_database_to_v7(conn):
-    """为场景绑定表补充主动推送优先级列；列已存在时跳过。
+    """为场景绑定表补充主动推送优先级列。列已存在时跳过。
 
     :param conn: 数据库连接。
     """
@@ -334,11 +334,11 @@ async def legacy_upgrade_to_v6(conn=None) -> int | None:
     """
     按旧版本号把既有库逐级升级到 v6，返回升级前的版本号。
 
-    调用方须已完成数据库初始化；本函数不建连也不关连接，以便在 ``init_db()`` 的连接上直接
+    调用方须已完成数据库初始化。本函数不建连也不关连接，以便在 ``init_db()`` 的连接上直接
     执行。每一步都先探测再执行，中途失败后重跑不会重复施加变更。
 
-    :param conn: 数据库连接；省略时取默认连接。
-    :return: 升级前的版本号；无版本记录时为 ``None``。
+    :param conn: 数据库连接，省略时取默认连接。
+    :return: 升级前的版本号，无版本记录时为 ``None``。
     """
     conn = conn if conn is not None else Tortoise.get_connection("default")
     await drop_indexes_on_missing_columns(conn)
@@ -460,10 +460,10 @@ async def convert_legacy_version() -> int | None:
     把旧版本号转换为 ``schema_migrations`` 记录。
 
     只在 ``schema_migrations`` 为空且 ``database_version`` 有记录时执行一次：前者为空说明该
-    库尚未登记过 revision，后者有记录说明库来自旧版本。版本低于 v6 时先按旧逻辑升级到 v6，
-    再把不超过该版本的 revision 全部登记为已应用，避免重放已验证的升级步骤。
+    库尚未记录过 revision，后者有记录说明库来自旧版本。版本低于 v6 时先按旧逻辑升级到 v6，
+    再把不超过该版本的 revision 全部记录为已应用，避免重放已验证的升级步骤。
 
-    :return: 转换前的旧版本号；无需转换时为 ``None``。
+    :return: 转换前的旧版本号，无需转换时为 ``None``。
     """
     if await SchemaMigration.all().exists():
         return None

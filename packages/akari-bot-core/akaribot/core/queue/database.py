@@ -27,7 +27,7 @@ class DatabaseMessageTransport:
     """通过 ``JobQueuesTable`` 传递请求与响应。"""
 
     # SQLite 只能同时执行一个写事务。限制单轮候选数量可避免积压时一次轮询
-    # 对全部记录连续执行领取 UPDATE，并为业务表写入留下获得写锁的机会。
+    # 对全部记录连续执行认领 UPDATE，并为业务表写入留下获得写锁的机会。
     CLAIM_BATCH_SIZE = 100
 
     @staticmethod
@@ -288,5 +288,5 @@ class DatabaseJobQueueBackend:
         self._ready = False
 
 
-# 旧名称仅作为数据库实现的导入兼容层保留。
+# 旧名称仅作为数据库实现的导入兼容实现保留。
 DatabaseTransport = DatabaseMessageTransport

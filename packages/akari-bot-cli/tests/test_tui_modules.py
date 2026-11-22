@@ -80,7 +80,7 @@ async def _test_lists_everything_by_default():
 
 
 async def _test_refresh_keeps_row_highlighted():
-    # 关键回归：重建模块列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归：重建模块列表后选中行必须保持高亮——ListView 只在 index 变化时刷新高亮。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 1
@@ -171,7 +171,7 @@ async def _test_install_streams_output_to_status():
 
 
 async def _test_install_highlighted_record_after_confirm():
-    # 未安装的高亮项作为安装目标，确认框列出目标；取消不执行，确认后安装。
+    # 未安装的高亮项作为安装目标，确认框列出目标。取消不执行，确认后安装。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 2
@@ -285,7 +285,7 @@ async def _test_install_unknown_spec_is_rejected():
 
 
 def _test_git_address_split():
-    # 地址末段的 @ 分隔 ref；``git@host`` 中的 @ 属于 userinfo。
+    # 地址末段的 @ 分隔 ref。``git@host`` 中的 @ 属于 userinfo。
     return (
         _split_git_address("git+https://github.com/oasis/akari@v2") == ("git+https://github.com/oasis/akari", "v2", "")
         and _split_git_address("git@github.com:oasis/akari.git") == ("git@github.com:oasis/akari.git", "", "")
@@ -295,7 +295,7 @@ def _test_git_address_split():
 
 
 async def _uninstall_confirmed(app: TuiApp, page, pilot, choice: int = 0) -> str:
-    # 卸载需先选择处置方式；交互用例关闭防抖延迟。
+    # 卸载需先选择处置方式。交互用例关闭防抖延迟。
     page.request_uninstall()
     await pilot.pause()
     title = str(app.screen.query_one("#choice-title", compat.Static).render())
@@ -757,7 +757,7 @@ PARTIAL_PKG = ModuleRecord(
 
 
 def _select_package(page, dist: str) -> None:
-    # 直接指定选中项，以独立于页面的默认选择策略验证目标记录。
+    # 直接指定选中项，以独立于页面默认选择策略的方式验证目标记录。
     page._selected_key = dist
     page._selected = {dist}
     page._render_list()
@@ -792,7 +792,7 @@ async def _test_load_cell_counts_loaded_modules():
         return rows
 
     rows = await _with_app(source, body)
-    # 已安装包优先，其次按名称排序；arcaea 先于 wiki。
+    # 已安装包优先，其次按名称排序。arcaea 先于 wiki。
     return (
         i18n.t("cli.tui.modules.load_cell", loaded=1, total=2) in rows[0]
         and i18n.t("cli.tui.modules.load_cell", loaded=2, total=2) in rows[1]
@@ -1009,7 +1009,7 @@ async def _test_install_argv_for_git_and_editable():
 
 
 def _test_low_frequency_bindings_stay_out_of_footer():
-    # 80 列下页脚只留高频键位；其余键位仍可用，只是不占页脚。
+    # 80 列下页脚只留高频键位。其余键位仍然可用，只是不在页脚显示。
     shown = {binding.key for binding in ModulesPage.BINDINGS if binding.show}
     hidden = {binding.key for binding in ModulesPage.BINDINGS if not binding.show}
     return shown == {"r", "slash", "i", "space"} and hidden == {
@@ -1094,7 +1094,7 @@ async def test_tui_modules_available(tester: Tester):
     _use_cli_locale()
     # 防抖专项用例使用实际窗口，与关闭延迟的交互用例分开运行。
     await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并在窗口外放行")
-    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
+    # 关闭防抖延迟，使交互用例无需等待。防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_lists_everything_by_default, "默认列出已装与未装")
         await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中行仍然高亮")

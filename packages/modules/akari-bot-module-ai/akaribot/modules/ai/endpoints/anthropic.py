@@ -52,7 +52,7 @@ def _messages_to_anthropic(messages: list[dict]) -> tuple[str, list[dict]]:
             system.append(base._content_to_text(content))
         elif role == "user":
             blocks = _content_to_anthropic_blocks(content)
-            # Anthropic 要求 user/assistant 交替；工具结果之后的图片等补充消息需并入同一轮。
+            # Anthropic 要求 user/assistant 交替。工具结果之后的图片等补充消息需并入同一轮。
             if anthropic_messages and anthropic_messages[-1]["role"] == "user":
                 anthropic_messages[-1]["content"].extend(blocks)
             else:

@@ -1,7 +1,7 @@
 """发布后核对 registry.json 里本次分发的版本。
 
-publish 与 registry 是两个 job：包已上 PyPI、索引却仍旧的部分成功状态最难排查，因为它同时
-「看起来成功」又「用户装不到」。索引生成之后、push 到 gh-pages 之前，必须确认本次发布的分发在
+publish 与 registry 是两个 job：包已上 PyPI、索引却仍是旧版本的部分成功状态最难排查——
+对发布方看起来成功，对用户却装不到。索引生成之后、push 到 gh-pages 之前，必须确认本次发布的分发在
 索引里的 ``latest`` 就是刚发布的版本，否则宁可让 job 失败，也不要推一份指向旧版本的索引。
 
 工具只读文件、不 import akaribot，未配置的实例与裸 CI 环境都能运行。
@@ -10,7 +10,7 @@ publish 与 registry 是两个 job：包已上 PyPI、索引却仍旧的部分�
     python tools/verify_registry_release.py --registry registry.json \\
         --dist akari-bot-module-wiki --version 0.2.0
 
-退出码：0 一致；2 索引里找不到该分发、或 latest 与本次版本不符。
+退出码：0 一致。2 表示索引里找不到该分发，或 latest 与本次版本不符。
 """
 
 from __future__ import annotations

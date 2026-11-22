@@ -13,14 +13,14 @@ _active_root: Path | None = None
 
 
 def active_root() -> Path | None:
-    """返回界面当前选中的实例根；未选过时为 ``None``。"""
+    """返回界面当前选中的实例根。未选过时为 ``None``。"""
     return _active_root
 
 
 def set_active_root(root: Path | str | None) -> None:
     """设置界面当前操作的实例。
 
-    :param root: 实例根；``None`` 表示回到自动定位。
+    :param root: 实例根。``None`` 表示回到自动定位。
     """
     global _active_root
     _active_root = Path(root).expanduser().resolve() if root is not None else None

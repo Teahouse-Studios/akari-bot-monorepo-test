@@ -1,7 +1,7 @@
 """品牌主题：调色板、默认主题与切换。
 
 主题色取自品牌立绘 character_marked.png（浅紫与粉色为主、暗部是深紫褐）。界面默认用深色版，
-`ctrl+t` 在深色与浅色之间切换；两套主题都注册在应用上，样式表里的 ``$primary`` 等变量据此解析。
+`ctrl+t` 在深色与浅色之间切换。两套主题都注册在应用上，样式表里的 ``$primary`` 等变量据此解析。
 """
 
 import time
@@ -12,7 +12,7 @@ from akaribot.cli.tui.app import STYLESHEET, TuiApp
 from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 from akaribot.testing import Tester, func_case
 
-# 立绘不透明部分的主色与暗部，深色版据此取色；改主题时这里先失败，避免悄悄换掉品牌色。
+# 立绘不透明部分的主色与暗部，深色版据此取色。改主题时这里先失败，避免悄悄换掉品牌色。
 BRAND_COLORS = ("#d69cdd", "#f6d5f3", "#fbd8ec", "#40333f", "#2b002a")
 
 
@@ -49,7 +49,7 @@ async def _test_dark_theme_is_default():
 
 
 async def _test_palette_stays_in_the_brand_family():
-    # 强调色与前景色必须落在立绘的色系里（浅紫 / 粉 / 深紫褐），语义色另配。
+    # 强调色与前景色必须属于立绘的色系（浅紫 / 粉 / 深紫褐），语义色另配。
     dark = compat.AKARI_DARK_PALETTE
     light = compat.AKARI_LIGHT_PALETTE
     branded = {dark["primary"], dark["secondary"], dark["accent"], dark["foreground"]}
@@ -57,7 +57,7 @@ async def _test_palette_stays_in_the_brand_family():
         len(branded) == 4
         and all(value.startswith("#") and len(value) == 7 for value in {*dark.values(), *light.values()})
         and dark["primary"] == BRAND_COLORS[0]
-        # 深色版以暗部作底，浅色版用立绘的浅底；两套主题的明暗标记相反。
+        # 深色版以暗部作底，浅色版用立绘的浅底。两套主题的明暗标记相反。
         and dark["background"] != light["background"]
         and compat.build_theme("probe", dark, dark=True).dark
         and not compat.build_theme("probe", light, dark=False).dark

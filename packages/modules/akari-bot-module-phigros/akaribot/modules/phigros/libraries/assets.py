@@ -41,7 +41,7 @@ def remove_punctuations(text: str) -> str:
 
 
 def _rows(text: str) -> list[list[str]]:
-    # 不使用 csv 模块：曲名中可能含有引号，会被 csv 的引用规则误解。
+    # 不使用 csv 模块：曲名中可能含有引号，会被 csv 的引用规则误解析。
     return [line.split("\t") for line in text.splitlines() if line.strip()]
 
 
@@ -197,7 +197,7 @@ def _missing_illustrations(song_info: dict[str, dict]) -> bool:
 async def _download_illustrations(song_ids: list[str]) -> None:
     illustration_dir.mkdir(parents=True, exist_ok=True)
     known = set(song_ids)
-    # 旧版本按归一化的小写 id 命名，与新键无法对应；此处按新键集合清理，旧文件自然落入待删之列。
+    # 旧版本按归一化的小写 id 命名，与新键无法对应。此处按新键集合清理，旧文件自然落入待删之列。
     for path in illustration_dir.iterdir():
         if path.is_file() and path.stem not in known:
             path.unlink()
@@ -268,7 +268,7 @@ async def check_and_update_assets(update_illustration: bool = True) -> bool | No
     """检查远端资源版本并在需要时更新。
 
     :param update_illustration: 是否一并更新曲绘。
-    :return: 执行更新的结果；无需更新时返回 ``None``。
+    :return: 执行更新的结果。无需更新时返回 ``None``。
     """
     async with _asset_update_lock:
         try:

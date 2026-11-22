@@ -28,7 +28,7 @@ class ThemeSyncResult:
 
     :param repo: 执行 git 的仓库根。
     :param path: 主题 submodule 目录。
-    :param before: 同步前的工作区提交；未初始化时为空串，回退为父仓库记录的提交。
+    :param before: 同步前的工作区提交，未初始化时为空串，回退为父仓库记录的提交。
     :param after: 同步后的工作区提交。
     :param changed: 提交是否变化或是否为首次初始化。
     :param log: git 输出。
@@ -43,7 +43,7 @@ class ThemeSyncResult:
 
 
 def source_repository() -> Path | None:
-    """返回包含本 CLI 源码的仓库根；安装形态没有源码仓库时返回 ``None``。"""
+    """返回本 CLI 源码所在的仓库根。安装形态没有源码仓库时返回 ``None``。"""
     for parent in Path(__file__).resolve().parents:
         if (parent / "packages" / "akari-bot-cli" / "pyproject.toml").is_file():
             return parent
@@ -78,7 +78,7 @@ def sync_theme_submodule(
     """同步主题模板 submodule 到远端最新提交。
 
     :param instance_root: 实例根。
-    :param explicit_repo: 显式仓库路径；缺省从 CLI 源码检出或实例根定位。
+    :param explicit_repo: 显式仓库路径，默认从 CLI 源码检出或实例根定位。
     :param runner: git 执行器，测试可注入。
     :param log: git 输出行回调。
     :return: 同步结果。

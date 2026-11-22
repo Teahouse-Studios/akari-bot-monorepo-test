@@ -5,7 +5,7 @@ requires_core_api = ">=1,<2"
 locales = "locales"
 {% if has_assets | default(false) %}assets = "assets"
 {% endif %}{% if has_database | default(false) %}migrations = "migrations"
-{% endif %}{% if has_config | default(false) %}# config.py 的 on_module_config("[@module_name@]") 登记的表。
+{% endif %}{% if has_config | default(false) %}# config.py 的 on_module_config("[@module_name@]") 注册的表。
 config_table = "module_[@module_name@]"
 config_schema_version = 1
 {% endif %}provides_modules = ["[@module_name@]"]

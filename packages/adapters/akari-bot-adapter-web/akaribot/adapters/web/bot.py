@@ -99,8 +99,8 @@ async def websocket_chat(websocket: WebSocket):
         _connected_web_chat_websockets[:] = [
             connected for connected in _connected_web_chat_websockets if connected is not websocket
         ]
-        # 多个控制台连接可能短暂重叠。非当前连接退出时不能清理新连接；当前连接
-        # 退出时则恢复到最近一个仍在线的连接，供主动消息继续使用。
+        # 多个控制台连接可能短暂重叠。非当前连接退出时不能清理新连接。
+        # 当前连接退出时则恢复到最近一个仍在线的连接，供主动消息继续使用。
         if Temp.data.get("web_chat_websocket") is websocket:
             if _connected_web_chat_websockets:
                 Temp.data["web_chat_websocket"] = _connected_web_chat_websockets[-1]

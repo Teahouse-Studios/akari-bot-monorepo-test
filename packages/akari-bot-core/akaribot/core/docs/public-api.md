@@ -14,7 +14,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 `akaribot.core.api.__api_version__` 取 `core.registry.CORE_API_VERSION`。各包在 `manifest.toml` 的 `requires_core_api` 中声明兼容范围，官方包写 `">=1,<2"`。
 
-框架在注册包之前检查这个范围。版本不满足要求时，框架拒绝注册这个包，记录原因，这个包也不会出现在模块或适配器清单里。
+框架在注册包之前检查这个范围。版本不满足要求时，框架拒绝注册这个包并记录原因。这个包因此不会出现在模块或适配器清单里。
 
 公开接口只读取静态声明。配置缺失时未能绑定的名字，会在首次访问时重新解析，因此 CLI 与框架可以在配置就绪之前读取 `__api_version__`。模块与适配器的声明方式分别见[模块开发](module-development.md)与[适配器开发](adapter-development.md)。
 
@@ -30,7 +30,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 `Bot.post_message(module_name, message, session_list=None, **kwargs)` 向启用了模块的场景推送消息。`session_list` 为空时，按模块启用状态自动获取目标。
 
-同一条消息通道只推送一次，其余会话留作发送失败时的备用。
+同一条消息通道只推送一次，其余会话留作发送失败时的后备。
 
 ### `fetch_target()`
 
@@ -101,7 +101,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 ## `FetchedMessageSession`
 
-主动获取的会话。用 `FetchedMessageSession.from_session_info()` 创建；`Bot.fetch_target()` 返回的快照可以直接传入。
+主动获取的会话。用 `FetchedMessageSession.from_session_info()` 创建。`Bot.fetch_target()` 返回的快照可以直接传入。
 
 它继承 `MessageSession` 的发送与等待方法，但没有 `session_info.messages`。调用 `as_display()` 前要先检查消息列表是否为空。
 
@@ -141,7 +141,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 按语言选择消息链。`I18NMessageChain.assign(values)` 的 `values` 以语言代码为键，必须包含 `default`。
 
-发送时按会话语言选一条；没有匹配语言时使用 `default`。
+发送时按会话语言选一条。没有匹配语言时使用 `default`。
 
 ## `PlatformMessageChain`
 
@@ -281,7 +281,7 @@ Hook 可以返回：
 
 ### `union_mutation()`
 
-跨表写入同一 union 时，先调用它，再在 `default` 事务里锁住 union 行。
+跨表写入同一 union 时，先调用它，再在 `default` 事务里给 union 行加锁。
 
 ### `get_model_names()`、`get_model_fields()`
 
@@ -356,7 +356,7 @@ RPC 失败的基类。具体子类区分不可达、超时、取消、方法不�
 
 ## `Logger`
 
-`Logger` 提供分级日志。业务代码通过它输出调试、信息、警告与错误，模块不需要自己配置日志器。
+`Logger` 提供分级日志。业务代码通过它输出调试、信息、警告与错误级别的日志，模块不需要自己配置日志器。
 
 ## `Locale`
 

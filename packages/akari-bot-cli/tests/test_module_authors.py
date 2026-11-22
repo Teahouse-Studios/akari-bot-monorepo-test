@@ -1,8 +1,8 @@
 """模块作者的声明处与读取路径。
 
-作者写在各包 ``pyproject.toml`` 的 ``[project] authors``，不再出现在 ``module()`` 定义里；运行时
-由发现层按包根目录读回。本文件固定：解析器认得出正确的 pyproject、不被无关文件误取、wheel 场景
-退回分发元数据，以及定义层确实不再接受 ``developers``。
+作者写在各包 ``pyproject.toml`` 的 ``[project] authors``。运行时由发现层按包根目录读回。本文件
+固定：解析器认得出正确的 pyproject、不误取无关文件、wheel 场景退回分发元数据，以及
+``module()`` 不接受 ``developers``。
 """
 
 import inspect
@@ -117,7 +117,7 @@ def _test_tui_record_and_detail_use_authors():
 
 
 def _test_defined_module_resolves_its_own_package():
-    # ``module()`` 从调用帧取模块名再交给发现层；多退一层会取到 ``importlib._bootstrap``，
+    # ``module()`` 从调用帧取模块名再交给发现层。多退一层会取到 ``importlib._bootstrap``，
     # ``_py_module_name`` 与作者一起变成空串，热重载、locale 指纹与依赖图同样失去依据。
     import akaribot.modules.coin  # noqa: F401 - 导入即执行 module() 注册
     from akaribot.core.loader import ModulesManager

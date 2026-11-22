@@ -44,7 +44,7 @@ async def load_modules():
     Logger.info("Attempting to load modules...")
 
     # 不兼容 core API 的包与依赖不满足的包都在发现阶段一并剔除（core.registry.PackageRegistry.discover）：
-    # 依赖校验必须与 API 校验同源，才能把「依赖被 API 门槛拒绝的包」一起剔除，避免其导入期注册的模块进入索引。
+    # 依赖校验必须与 API 校验同源，才能把“依赖被 API 门槛拒绝的包”一起剔除，避免其导入期注册的模块进入索引。
 
     # 按声明依赖的拓扑序导入：被依赖的包先完成注册，依赖它的包才能在导入期取用其公共面。
     for entry in PackageRegistry.load_order():
@@ -72,7 +72,7 @@ async def load_modules():
                 Logger.debug(f"Module {module_py_name}'s config definition not found, skipped.")
 
         except Exception:
-            # module() 与各组件装饰器都在导入期登记。若文件在登记一部分内容后
+            # module() 与各组件装饰器都在导入期记录。若文件在记录一部分内容后
             # 才抛异常，必须撤销该包本轮产生的注册，否则报错模块仍可能接收命令。
             ModulesManager._restore_module_registrations(module_py_name, old_modules, old_origins)
             errmsg = f"Failed to load {module_py_name}: \n{traceback.format_exc()}"
@@ -126,7 +126,7 @@ class ModulesManager:
     # 具名 hook 与 parser hook 统一建立订阅索引，复用共享执行基础的资格与代际机制。
     modules_hook_subscriptions: dict[str, list] = {}
     module_hook_subscriptions: dict[str, list] = {}
-    # parser 入口订阅：HookPoint -> 已排序订阅列表；与具名 hook 分索引
+    # parser 入口订阅：HookPoint -> 已排序订阅列表。与具名 hook 分索引
     parser_hook_subscriptions: dict = {}
     modules_events: dict[str, list[tuple[str, EventMeta]]] = {}
     modules_origin: dict[str, str] = {}
@@ -135,7 +135,7 @@ class ModulesManager:
     _reload_package: str | None = None
     _locale_fingerprints: dict[str, tuple[tuple[str, str], ...]] = {}
     _dependency_graph: dict[str, set[str]] = {}
-    # 已告警过的「包对」，避免每次重建依赖图都重复告警同一处未声明依赖。
+    # 已告警过的“包对”，避免每次重建依赖图都重复告警同一处未声明依赖。
     _undeclared_dependency_warned: set[tuple[str, str]] = set()
 
     @classmethod
@@ -467,7 +467,7 @@ class ModulesManager:
         """取模块所属的包导入路径。
 
         :param module: 模块注册名。
-        :return: 包导入路径；该模块未注册或所属包未知时为 ``None``。
+        :return: 包导入路径。该模块未注册或所属包未知时为 ``None``。
         """
         origin = cls.modules_origin.get(module)
         if not origin:
@@ -580,7 +580,7 @@ class ModulesManager:
 
     @classmethod
     def _declared_package_dependencies(cls, package_name: str) -> set[str]:
-        # 取已注册条目的声明依赖，而非 AST 扫描结果；目录扫描的包没有 metadata，
+        # 取已注册条目的声明依赖。目录扫描的包没有 metadata，
         # 返回空集，其依赖全部落到 :meth:`_scan_package_dependencies` 补充探测。
         entry = PackageRegistry.by_import_path(package_name)
         if entry is None:
@@ -589,7 +589,7 @@ class ModulesManager:
 
     @classmethod
     def _rebuild_dependency_graph(cls):
-        # AST 扫出而 metadata 未声明的耦合仍然计入并告警：静默忽略会让 reload 漏掉该重载
+        # AST 扫出而 metadata 未声明的耦合仍然计入并告警：静默忽略会让热重载漏掉本应重载
         # 的包，比多一条告警危险。
         packages = {py_module for m in cls.modules if (py_module := cls.return_py_module(m))}
         graph: dict[str, set[str]] = {}
@@ -602,7 +602,7 @@ class ModulesManager:
 
     @classmethod
     def _warn_undeclared_dependencies(cls, package_name: str, undeclared: set[str]) -> None:
-        # 热重载每次都会重建依赖图，逐次重复告警会淹没日志，故按「包对」在进程内去重。
+        # 热重载每次都会重建依赖图，逐次重复告警会淹没日志，故按“包对”在进程内去重。
         for dependency in sorted(undeclared):
             pair = (package_name, dependency)
             if pair in cls._undeclared_dependency_warned:
@@ -615,7 +615,7 @@ class ModulesManager:
 
     @classmethod
     def _reload_closure(cls, py_module: str) -> list[str]:
-        # 图源为「声明的依赖图 ∪ AST 扫描结果」。成环的包在 discover() 阶段已被拒绝注册，
+        # 图源为“声明的依赖图 ∪ AST 扫描结果”。成环的包在 discover() 阶段已被拒绝注册，
         # 能走到此处的图必然无环，闭包内的遇环跳过只作防御。
         cls._rebuild_dependency_graph()
         dependents: dict[str, set[str]] = {package_name: set() for package_name in cls._dependency_graph}
@@ -698,8 +698,8 @@ class ModulesManager:
 
         :param target_from: 场景前缀，如 ``Telegram|Group``。
         :param client_name: 客户端身份，如 ``Telegram`` / ``Telegram-alt``。
-        :param platform_from: 平台场景前缀，如 ``Telegram|Group``；缺省时按 target_from 推导。
-        :param platform_name: 平台展示名，如 ``Telegram``；缺省时按 client_name 推导。
+        :param platform_from: 平台场景前缀，如 ``Telegram|Group``。默认按 target_from 推导。
+        :param platform_name: 平台展示名，如 ``Telegram``。默认按 client_name 推导。
         :param use_cache: 是否复用按四元组缓存的结果。
         :return: 模块名到模块的映射。
         """
@@ -764,7 +764,7 @@ class ModulesManager:
 
             module = cls.modules[module_name]
             old_load = module._db_load
-            # 与 reload 保持相同顺序：先排空 Queue handler，再进入 Scheduler 维护。
+            # 与 reload 保持相同顺序：先处理完 Queue handler 中的任务，再进入 Scheduler 维护。
             # 非独占 Queue 窗口仍允许轮询器回收模块清理产生的响应。
             try:
                 async with JobQueueServer.maintenance_window(exclusive=False):
@@ -798,19 +798,19 @@ class ModulesManager:
         重载该机器人模块（以及该模块所在文件的其它模块）
         """
         # 此处不能等待另一个重载释放锁，双方会形成死锁。
-        # 忙碌时直接失败，保证第二次请求尚未改动模块注册表。
+        # 忙碌时直接失败，保证第二次请求不会改动模块注册表。
         if cls._reload_lock.locked():
             Logger.warning(f"Another module reload is already in progress, skipped {module_name}.")
             return False, 0
 
         async with cls._reload_lock:
-            # 先排空 Queue handler，再进入 Scheduler 维护。反序会形成永久互锁：
+            # 先处理完 Queue handler 中的任务，再进入 Scheduler 维护。反序会形成永久互锁：
             # 执行 load/unload 的 handler 卡在 Scheduler 锁上，而 reload 在等它收尾。
             # Scheduler 窗口仍须覆盖 importlib.reload()，旧函数的 __globals__ 指向原地更新的模块字典。
             from akaribot.core.queue.base import QueueDrainTimeout
             from akaribot.core.queue.server import JobQueueServer
 
-            # 长时间保持非独占窗口：停止领取新 action，但让轮询器继续回收
+            # 长时间保持非独占窗口：停止接收新 action，但让轮询器继续回收
             # 响应、续租与执行模块清理 RPC。数据库替换会在内部再嵌套独占窗口。
             try:
                 async with JobQueueServer.maintenance_window(exclusive=False):
@@ -958,8 +958,8 @@ class ModulesManager:
 
             status_names_to_replace.update(reloaded_modules)
             scheduler_names_to_replace.update(reloaded_modules)
-            # 在首个会修改持久化状态的 await 之前置位。协程可能恰好在 delete()
-            # 提交后收到取消；若等 await 返回才置位，取消路径会误判为无需回滚。
+            # 在首个会修改持久化状态的 await 之前设置。协程可能恰好在 delete()
+            # 提交后收到取消。若等 await 返回才设置，取消路径会误判为无需回滚。
             statuses_replaced = True
             await ModuleStatus.filter(module_name__in=status_names_to_replace).delete()
             if new_statuses:
@@ -967,12 +967,12 @@ class ModulesManager:
                     [ModuleStatus(module_name=name, load=load) for name, load in new_statuses.items()]
                 )
 
-            # Scheduler 当前仍处于维护窗口，先把新 Job 准备好但不允许执行；数据库
+            # Scheduler 当前仍处于维护窗口，先把新 Job 准备好但不允许执行。数据库
             # 重载失败时可连同 ModuleStatus 与注册表一起恢复旧 Job。
             SchedulerLifecycle.reconcile_modules(scheduler_names_to_replace, cls.modules)
             schedules_replaced = True
 
-            # 先构建可独立失败的数据库 context；旧 context 和旧 runtime 此时都
+            # 先构建可独立失败的数据库 context。旧 context 和旧 runtime 此时都
             # 保持可用。只有全部校验成功后才进入不可逆 commit。
             prepared_db = await prepare_db_reload()
             if prepared_db is None:
@@ -993,7 +993,7 @@ class ModulesManager:
                 if name in cls.modules and cls.modules[name]._db_load and cls.modules[name].load
             }
             # commit 是代际切换的不可逆边界。取消可以中断构建阶段，但不能在
-            # runtime 已切换、旧 generation 已停止后再回滚注册表和数据库。
+            # runtime 已切换、旧代际已停止后再回滚注册表和数据库。
             from akaribot.core.queue.server import JobQueueServer
 
             commit_task = asyncio.create_task(
@@ -1168,11 +1168,11 @@ class ModulesManager:
         """把已装好但尚未接入的模块包热装载进当前进程。
 
         与 reload_module 的区别：reload_module 替换已注册模块的代码（importlib.reload 加代际切换，
-        因此需要回滚快照）；本方法只做首次接入，是纯新增，没有旧代际可回滚，但必须替换数据库
+        因此需要回滚快照）。本方法只做首次接入，是纯新增，没有旧代际可回滚，但必须替换数据库
         context 才能纳入新包的模型。两者共用维护窗口与索引刷新，回滚路径完全不同，故不合并。
 
         :param entry: 发现层给出的模块包条目。
-        :return: 是否接入成功；包已注册、正在重载或被发现层拒绝时返回 ``False``。
+        :return: 是否接入成功。包已注册、正在重载或被发现层拒绝时返回 ``False``。
         :raises Exception: 导入及其后续步骤的异常在完成回滚后继续向上抛出。
         """
         from akaribot.core.queue.server import JobQueueServer
@@ -1190,7 +1190,7 @@ class ModulesManager:
             return False
 
         async with cls._reload_lock:
-            # 先排空 Queue handler，再进入 Scheduler 维护；数据库替换会在内部再嵌套独占窗口。
+            # 先处理完 Queue handler 中的任务，再进入 Scheduler 维护。数据库替换会在内部再嵌套独占窗口。
             async with JobQueueServer.maintenance_window(exclusive=False):
                 async with SchedulerLifecycle.maintenance_window():
                     return await cls._install_package(entry)
@@ -1207,7 +1207,7 @@ class ModulesManager:
         statuses_created = False
 
         async def rollback():
-            """撤销本次导入的写入与索引；已切换的数据库 context 不回退。"""
+            """撤销本次导入的写入与索引。已切换的数据库 context 不回退。"""
             for name in list(sys.modules):
                 if cls._origin_belongs_to(name, py_module):
                     sys.modules.pop(name, None)
@@ -1228,7 +1228,7 @@ class ModulesManager:
                 await close_prepared_db_reload(prepared_db)
             cls.refresh()
 
-        # 新装的 entry point 只有重跑发现才会出现；requires_core_api 与声明依赖的校验已内建于
+        # 新装的 entry point 只有重跑发现才会出现。requires_core_api 与声明依赖的校验已内建于
         # discover()，被它剔除的包在此以拒绝原因报出。
         importlib.invalidate_caches()
         PackageRegistry.discover(force=True)
@@ -1242,7 +1242,7 @@ class ModulesManager:
             return False
         entry = fresh
 
-        # 新包的配置由 CLI 在可写子进程里补写，本进程须在导入之前重读配置目录。
+        # 新包的配置由 CLI 在可写子进程里补充，本进程须在导入之前重读配置目录。
         cls._reload_config_view()
 
         try:
@@ -1251,7 +1251,7 @@ class ModulesManager:
             if not new_names:
                 raise RuntimeError(f"{py_module} imported but registered no module.")
 
-            # discover() 已把新包并入索引，故新 context 覆盖「现有 + 新包」的模型。
+            # discover() 已把新包并入索引，故新 context 覆盖“现有 + 新包”的模型。
             prepared_db = await cls._swap_package_database(py_module, "including")
             if prepared_db is None:
                 raise RuntimeError(f"Failed to prepare a database context including {py_module}.")
@@ -1286,12 +1286,12 @@ class ModulesManager:
     async def remove_package(cls, entry: PackageEntry) -> bool:
         """把一个模块包从运行中的进程里拆下来，供 CLI 随后真正卸载分发。
 
-        与 reload_module 的区别：reload_module 替换已注册模块的代码并可回滚到旧代际；本方法处理
+        与 reload_module 的区别：reload_module 替换已注册模块的代码并可回滚到旧代际。本方法处理
         整包退出，先停用全部注册名，再从索引移除、重挂不含该包模型的数据库 context，最后清掉
         sys.modules。两者共用维护窗口与索引刷新，回滚路径完全不同，故不合并。
 
         :param entry: 发现层给出的模块包条目。
-        :return: 数据库 context 是否重挂成功；拆除本身按单向操作走完，失败只如实回报。
+        :return: 数据库 context 是否重挂成功。拆除本身按单向操作走完，失败只如实回报。
         """
         from akaribot.core.queue.server import JobQueueServer
 
@@ -1333,7 +1333,7 @@ class ModulesManager:
 
     @classmethod
     async def _swap_package_database(cls, py_module: str, note: str) -> PreparedDatabaseReload | None:
-        # 旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口；
+        # 旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口。
         # ``note`` 只用于日志措辞（新 context 是纳入还是去掉该包的模型）。
         from akaribot.core.queue.server import JobQueueServer
 

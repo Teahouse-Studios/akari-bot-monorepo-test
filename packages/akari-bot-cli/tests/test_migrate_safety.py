@@ -329,7 +329,7 @@ async def test_migrate_safety(tester: Tester):
     await tester.test(_test_external_backend_rejected_before_writes, "外部数据库在写入与安装前被拒绝")
     await tester.test(_test_running_source_rejected_before_writes, "运行中的源项目在写入前被拒绝")
     await tester.test(_test_skip_install_does_not_upgrade, "只搬文件时不安装或升级数据库")
-    await tester.test(_test_dry_run_is_read_only, "迁移预演不修改源或目标")
+    await tester.test(_test_dry_run_is_read_only, "迁移试运行不修改源或目标")
     await tester.test(_test_existing_target_database_is_preserved, "重复迁移保留目标数据库")
     await tester.test(_test_database_symlink_to_source_is_rejected, "目标数据库指向源库时拒绝迁移")
     await tester.test(_test_source_lock_held_during_snapshot, "数据库快照期间持有源项目排他锁")

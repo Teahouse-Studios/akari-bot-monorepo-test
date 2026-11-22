@@ -4,8 +4,6 @@ title: 安装与开发
 
 # mcv-rss：安装与开发
 
-本文将会介绍 `mcv-rss` 与 `mcbv-rss` 的安装、配置、数据表与运行依赖。
-
 ## 安装
 
 ```bash

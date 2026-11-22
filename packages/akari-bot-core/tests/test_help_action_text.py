@@ -50,7 +50,7 @@ def _render_lines(session_info, parts) -> list[str]:
         if isinstance(x, ButtonFrameElement):
             continue
         if isinstance(x, ActionTextElement):
-            # show 为选填，缺省时平台取 text 展示
+            # show 为选填，默认由平台取 text 展示
             tag = f"[{x.show.text if x.show else x.text.text}]"
             if texts:
                 texts[-1] += tag
@@ -894,7 +894,7 @@ async def _test_table_shape():
     session_info = await _session("help_table_shape")
     msg = _FakeSession(session_info)
     cases = {
-        # 模块数: (列数, 行数)。列数取「按高度上限反算」与「最少列数」之较大者
+        # 模块数：（列数，行数）。列数取按高度上限反算的列数与最少列数中的较大者
         1: (1, 1),
         2: (2, 1),
         3: (3, 1),
@@ -989,7 +989,7 @@ async def _test_strip_command_arguments():
     cases = {
         # 不带参数的原样返回，点击后可直接发出
         "~setup list target": "~setup list target",
-        # 带参数的留一个尾随空格，光标即落在参数位置
+        # 带参数的留一个尾随空格，光标即停在参数位置
         "~3dsdb <keywords>": "~3dsdb ",
         "~coin [<amount>]": "~coin ",
         "~ab [--legacy]": "~ab ",

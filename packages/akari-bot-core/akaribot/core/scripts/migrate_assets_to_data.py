@@ -1,7 +1,7 @@
 """
 assets / data 布局迁移脚本。
 
-旧版把可写内容与只读资源一并放在 ``assets`` 下。新版按「只读留 assets、可写进 data」
+旧版把可写内容与只读资源一并放在 ``assets`` 下。新版按“只读留 assets、可写进 data”
 拆分：运行时产物、部署者提供的内容以及模块的下载资源改放 ``data`` 目录。模块包的可写数据
 再进一步改挂实例目录，位置由 ``PackageRegistry.package_data()`` 决定。
 
@@ -11,7 +11,7 @@ assets / data 布局迁移脚本。
 
 实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根，未设置时取当前目录。
 
-脚本只做移动，不覆盖目标位置已存在的文件，因而可以重复执行；已经迁移过的条目会被跳过。
+脚本只做移动，不覆盖目标位置已存在的文件，因而可以重复执行。已经迁移过的条目会被跳过。
 """
 
 import os
@@ -48,7 +48,7 @@ INSTANCE_MOVES = [
 def instance_root() -> Path:
     """实例根目录，取值口径与 :class:`akaribot.core.paths.Paths` 一致。
 
-    :return: ``AKARI_INSTANCE_DIR`` 指向的目录；未设置时为当前目录。
+    :return: ``AKARI_INSTANCE_DIR`` 指向的目录。未设置时为当前目录。
     """
     return Path(os.environ.get("AKARI_INSTANCE_DIR") or ".").expanduser().resolve()
 

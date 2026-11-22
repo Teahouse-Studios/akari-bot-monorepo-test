@@ -6,25 +6,25 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: dry-run 只构建与生成发行清单；publish 才上传 TestPyPI
+        description: dry-run 只构建与生成发行清单，publish 才上传到 TestPyPI
         type: choice
         options: [dry-run, publish]
         default: dry-run
         required: true
       auth:
-        description: 上传凭据方式；fork 演练用 token，官方仓库正式演练用 Trusted Publishing
+        description: 上传认证方式：fork 演练用 token，官方仓库正式演练用 Trusted Publishing
         type: choice
         options: [token, trusted-publishing]
         default: token
         required: true
       batch_id:
-        description: 批次标识，写入发行清单；留空按 run 编号生成
+        description: 批次标识，写入发行清单。留空按 run 编号生成
         required: false
       version_override:
-        description: 重复演练填 0.1.0.postN（改全部 57 个 pyproject 版本）；首次演练留空
+        description: 重复演练填 0.1.0.postN（改全部 57 个 pyproject 版本），首次演练留空
         required: false
       max_new_projects:
-        description: 本次最多创建的新项目数；TestPyPI 按窗口配额（实测约 20），默认 18
+        description: 本次最多创建的新项目数。TestPyPI 按窗口配额（实测约 20），默认 18
         required: false
         default: "18"
 
@@ -98,7 +98,7 @@ jobs:
 
   publish:
     # 单 job 串行上传：Token 模式下按依赖顺序逐个 twine 上传，避免 57 个 matrix job 逐个触发
-    # environment 审批；Trusted Publishing 走下面的独立 matrix job（OIDC 需要 action 逐次签发）。
+    # environment 审批。Trusted Publishing 走下面的独立 matrix job（OIDC 需要 action 逐次签发）。
     needs: build
     if: inputs.confirm == 'publish' && inputs.auth == 'token'
     runs-on: ubuntu-latest
@@ -248,7 +248,7 @@ jobs:
       - name: Build static index and install all distributions
         shell: bash
         run: |
-          # 服务由构建进程自己起，服务根就是刚生成的索引目录，不依赖相对路径的解释。
+          # 服务由构建进程自己起，服务根就是刚生成的索引目录，不依赖相对路径的解析。
           uv run --no-project --with packaging python tools/build_local_index.py \
             --dist-dir dist --output local-index --serve 8123 &
           ready=0
@@ -323,7 +323,7 @@ jobs:
               return found
 
 
-          # 同一次运行刚建的项目在索引 JSON 上有 CDN 延迟，等它追平再定「哪些还没传」。
+          # 同一次运行刚建的项目在索引 JSON 上有 CDN 延迟，等它追平再定“哪些还没传”。
           deadline = time.time() + 300
           present = probe()
           while len(present) < expected and time.time() < deadline:
@@ -342,7 +342,7 @@ jobs:
           COMPLETE: ${{ steps.present.outputs.complete }}
         shell: bash
         run: |
-          # 部分上传阶段只跑不依赖缺失分发的组合；全量就绪后跑完整矩阵。
+          # 部分上传阶段只跑不依赖缺失分发的组合。全量就绪后跑完整矩阵。
           if [ "$COMPLETE" = "true" ]; then
             SELECTED="$COMBO"
           else

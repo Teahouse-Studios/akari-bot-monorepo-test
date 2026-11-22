@@ -29,7 +29,7 @@ class CQCodeHandler:
         过滤 CQ 码，返回支持的 CQ 码。
 
         :param s: 正则匹配对象，包含 CQ 码的字符串消息。
-        :return: 如果 CQ 类型在支持列表中，返回原 CQ 码；否则返回空字符串。
+        :return: 如果 CQ 类型在支持列表中，返回原 CQ 码。否则返回空字符串。
         """
         return CQCodeHandler.pattern.sub(lambda m: m.group(0) if m.group(1) in CQCodeHandler.get_supported else "", s)
 
@@ -39,7 +39,7 @@ class CQCodeHandler:
         生成 CQ 码字符串。
 
         :param data: 包含 CQ 类型和参数的字典，必须包含 `type` 和 `data` 字段。
-        :return: 生成的 CQ 码字符串；如果输入数据无效，返回 None。
+        :return: 生成的 CQ 码字符串。输入数据无效时返回 None。
         """
         if "type" in data and "data" in data:
             cq_type = data["type"]
@@ -54,10 +54,10 @@ class CQCodeHandler:
     @staticmethod
     def parse_cq(cq_code: str) -> dict[str, str | dict[str, Any]] | None:
         """
-        解析 CQ 码字符串，返回包含类型和参数的字典。
+        解析 CQ 码字符串，返回由类型和参数组成的字典。
 
         :param cq_code: CQ 码字符串。
-        :return: 包含 CQ 类型和参数的字典；如果 CQ 码格式不正确，返回 None。
+        :return: 包含 CQ 类型和参数的字典。CQ 码格式不正确时返回 None。
         """
         kwargs = {}
         match = re.match(r"\[CQ:([^\s,\]]+)(?:,([^\]]+))?\]", cq_code)

@@ -1,7 +1,7 @@
 """构建产物的本机静态服务器。
 
-预览只绑定调用方显式给出的地址，默认回环地址；解析规则与 VitePress 的 ``cleanUrls`` 一致，
-``/foo`` 找不到文件时回落到 ``foo.html``，目录请求回落到 ``index.html``，其余交给 ``404.html``。
+预览只绑定调用方显式给出的地址，默认回环地址。解析规则与 VitePress 的 ``cleanUrls`` 一致，
+``/foo`` 找不到文件时改用 ``foo.html``，目录请求改用 ``index.html``，其余交给 ``404.html``。
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ class StaticServer:
 
     @property
     def url(self) -> str:
-        """服务根 URL；未启动时抛出 ``RuntimeError``。"""
+        """服务根 URL。未启动时抛出 ``RuntimeError``。"""
         if self._httpd is None:
             raise RuntimeError("server is not started")
         address = self._httpd.server_address
@@ -45,7 +45,7 @@ class StaticServer:
         return f"http://{display}:{address[1]}/"
 
     def start(self) -> str:
-        """启动服务并返回根 URL；重复调用返回同一地址。"""
+        """启动服务并返回根 URL。重复调用返回同一地址。"""
         if self._httpd is not None:
             return self.url
         handler = partial(_DocsRequestHandler, directory=self.directory)

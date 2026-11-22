@@ -20,7 +20,7 @@ async def cleanup_sessions():
     # get_wait_list = SessionTaskManager.get()
     Logger.warning("Cleaning up sessions...")
     SchedulerLifecycle.begin_shutdown()
-    # 先关闭新 action 入口并与已经开始领取的一轮轮询建立屏障。轮询器仍继续回收
+    # 先关闭新 action 入口并与已经开始认领的一轮轮询建立屏障。轮询器仍继续回收
     # 在途 RPC 的远端结果，供下面取消任务时释放平台 context。
     await JobQueueServer.begin_shutdown()
     # Queue handler 可能持有 Scheduler 维护锁，也可能在退出路径创建 detached task。
@@ -39,7 +39,7 @@ async def cleanup_sessions():
     # 只有实际导入过的组件会注册，关闭阶段不为清理额外导入模块。
     await BackgroundTaskLifecycle.run_cleanup()
     # restart() 可能由 Queue action 自身触发，此时主循环的轮询器仍在运行。关闭窗口
-    # 必须先阻止它继续领取任务，再取消其它 handler，并在独占轮询锁时关闭资源。
+    # 必须先阻止它继续认领任务，再取消其它 handler，并在独占轮询锁时关闭资源。
     # 不能清空全局队列表：同一 service 的其它 Server 实例仍可能依赖其中的任务。
     async with JobQueueServer.shutdown_window():
         # detached task 的 context 已经释放，此后不再需要轮询远端结果。先停止轮询器，

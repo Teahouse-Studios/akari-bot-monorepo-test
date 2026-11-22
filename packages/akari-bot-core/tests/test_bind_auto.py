@@ -1,4 +1,4 @@
-"""akaribot.modules.core.common_tools.bind 单元测试 - bind auto 握手的并发收敛与口令防重放（需要数据库）。"""
+"""akaribot.modules.core.common_tools.bind 单元测试 - bind auto 握手的并发正确性与口令防重放（需要数据库）。"""
 
 import asyncio
 import re
@@ -40,7 +40,7 @@ async def _session(target_id: str, text: str = "", sender: str = "admin") -> Moc
     msg.session_info.superuser = True
 
     async def _yes(message_chain=None, **kwargs):
-        # 实际的确认需等待用户回复，中间必然让出控制权；此处同样让出一次，以便并发用例能够真正交错。
+        # 实际的确认需等待用户回复，中间必然让出控制权。此处同样让出一次，以便并发用例能够真正交错。
         await asyncio.sleep(0)
         return True
 
@@ -73,7 +73,7 @@ async def _handshake(prefix: str) -> tuple[str, str]:
     token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
     token_b = _tokens(await _run(b, _start_handshake), "probe")[0]
 
-    # 两轮 probe 交叉送达；让位机制应使其中一轮退出，仅剩一轮进入 confirm。
+    # 两轮 probe 交叉送达。让位机制应使其中一轮退出，仅剩一轮进入 confirm。
     confirms = [(b, t) for t in _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")]
     confirms += [(a, t) for t in _tokens(await _run(a, _respond_probe, token_b, sender="peer_bot"), "confirm")]
 
@@ -113,7 +113,7 @@ async def _test_concurrent_completion_merges_once():
         await TargetUnionInfo.resolve_union(b)
         before = await _orphan_unions()
 
-        # 绕过让位机制直接构造两轮，模拟让位未生效（如某一平台的 probe 投递延迟）的最坏情况。
+        # 绕过让位机制直接构造两轮，模拟让位未生效的最坏情况（如某一平台的 probe 投递延迟）。
         rounds = []
         for initiator_id, responder_id in ((a, b), (b, a)):
             rounds.append(
@@ -149,7 +149,7 @@ async def _test_unbind_forgets_peer_bots():
 
         await target.unbind_id(b)
 
-        # parser 即依据这份名单屏蔽对端机器人。保留的一侧若仍记录着对方，
+        # 解析器即依据这份名单屏蔽对端机器人。保留的一侧若仍记录着对方，
         # 重新配对所用的 probe / confirm 会被直接丢弃，握手无法闭合，双方也就无法重新建立关联。
         stayed = await TargetUnionInfo.resolve_union(a)
         left = await TargetUnionInfo.resolve_union(b)
@@ -213,7 +213,7 @@ async def _test_probe_token_single_use():
         a, b = "REPLAY1|Group|1", "REPLAY2|Group|1"
         token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
 
-        # 对端机器人正常认领，换出一枚 confirm 口令。
+        # 对端机器人正常认领，返回一枚 confirm 口令。
         claimed = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")
         # 用户照抄场景中出现的同一条命令粘贴。口令若仍被受理，此人将被记作对端机器人。
         replayed = _tokens(await _run(b, _respond_probe, token_a, sender="human"), "confirm")
@@ -229,7 +229,7 @@ async def _test_confirm_rejects_other_session():
         token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
         confirm_token = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")[0]
 
-        # 口令被转贴到另一个场景。响应方发出的口令必然落在双方共处的那个场景里，出现在别处即不作数。
+        # 口令被转贴到另一个场景。响应方发出的口令只会出现在双方共处的那个场景里，出现在别处即不生效。
         await _run(outsider, _close_handshake, confirm_token, sender="human")
         if (await TargetUnionInfo.resolve_union(a)).union_id == (await TargetUnionInfo.resolve_union(b)).union_id:
             return False
@@ -253,7 +253,7 @@ async def _test_replayed_token_not_recorded_as_bot():
         await _run(b, _respond_probe, token_a, sender="human")
         await _run(a, _close_handshake, confirm_token, sender="human")
 
-        # 互认名单即 parser 的屏蔽依据，粘贴口令的用户一旦混入，其发言将被整个忽略。
+        # 互认名单即解析器的屏蔽依据，粘贴口令的用户一旦混入，其发言将被整个忽略。
         target = await TargetUnionInfo.resolve_union(a)
         recorded = target.list_peer_bots(a) + target.list_peer_bots(b)
         return sorted(recorded) == ["IMPOST1|peer_bot", "IMPOST2|peer_bot"]

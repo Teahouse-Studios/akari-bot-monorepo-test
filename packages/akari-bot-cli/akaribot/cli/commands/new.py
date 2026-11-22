@@ -1,11 +1,11 @@
 """脚手架。
 
 `akaribot new module <name>` 按问卷生成模块包：分发元数据、包清单、包内代码、locale、可选的
-配置与数据库骨架、可选的测试，以及第三方作者用的发布工作流。问卷每一项都对应一个命令行选项，
+配置与数据库文件、可选的测试，以及供第三方作者使用的发布工作流。问卷每一项都对应一个命令行选项，
 `--non-interactive` 下只取选项值与默认值，全程不提问。
 
 `akaribot new adapter <name>` 用同一套问卷与渲染机制生成平台适配器包：info / features / context /
-bot 四个骨架文件，加可选的配置模板，对照 `packages/adapters/` 下既有适配器的文件构成。
+bot 四个基础文件，加可选的配置模板，对照 `packages/adapters/` 下既有适配器的文件构成。
 
 模板取自仓库内的 `templates/module/` 与 `templates/adapter/`，渲染契约见 `templates/README.md`：
 路径与正文中的 `[@name@]` 占位符在 Jinja2 渲染之后替换。
@@ -76,7 +76,7 @@ PLATFORM_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,47}$")
 FEATURE_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?:=(true|false))?$")
 FIELD_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?::([a-z]+))?(?:=(.*))?$", re.DOTALL)
 FIELD_TYPES = ("str", "bool", "int", "float", "list")
-# 默认能力集是聊天平台的常见能力；未实现的由作者在 features.py 中改回 False。
+# 默认能力集是聊天平台的常见能力。未实现的由作者在 features.py 中改回 False。
 ADAPTER_DEFAULT_FEATURES = ("support_image", "support_mention", "support_quote", "support_delete")
 CREDENTIAL_DEFAULT_SUFFIX = "_token"
 TRUTHY_VALUES = ("true", "1", "yes")
@@ -93,7 +93,7 @@ class CommandEntry:
 
     :param template: 命令模板，空串表示模块的默认命令。
     :param help_text: 写入 locale 的帮助文本。
-    :param message_text: 回复文案，同时作为生成测试的断言值。
+    :param message_text: 回复文案，同时作为生成测试的期望值。
     """
 
     template: str
@@ -139,8 +139,8 @@ class ModulePlan:
     :param exclude_from: 排除平台。
     :param components: 勾选的组件。
     :param commands: 命令列表，仅在勾选 command 组件时非空。
-    :param has_config: 是否生成配置骨架。
-    :param has_database: 是否生成数据库骨架与迁移。
+    :param has_config: 是否生成配置文件。
+    :param has_database: 是否生成数据库文件与迁移。
     :param has_assets: 是否生成包内只读资源目录。
     :param has_data_dir: 是否生成运行时数据目录示例。
     :param with_tests: 是否生成测试。
@@ -166,7 +166,7 @@ class ModulePlan:
 class ConfigField:
     """一条平台配置字段声明。
 
-    :param name: 字段名，同时用作配置表的键与 locale 注释键的后半段。
+    :param name: 字段名，同时用作配置表的键与 locale 配置注释键的后半段。
     :param annotation: 类型标注，取值来自 ``FIELD_TYPES``。
     :param default: 默认值字面量，直接写进 config.py。
     """
@@ -181,14 +181,14 @@ class AdapterPlan:
     """一次适配器生成的问卷答案。
 
     :param name: 适配器名，同时用作目录名、entry point 名、配置表后缀与 locale 键前缀。
-    :param platform_name: 平台显示名，写入 info.py 并经 ``Info.resolve_client_name()`` 派生前缀。
+    :param platform_name: 平台显示名，写入 info.py 并经 ``Info.resolve_client_name()`` 生成前缀。
     :param desc: 适配器的一句话说明。
     :param author: 作者名。
     :param license: 许可证标识。
     :param features: 平台能力开关，按录入顺序排列。
     :param has_config: 是否生成 config.py 与 manifest 的配置表声明。
     :param config_fields: 非机密的配置字段。
-    :param credential_fields: 凭据字段，写入 secret 表与 manifest 的 credential_fields。
+    :param credential_fields: 登录信息字段，写入 secret 表与 manifest 的 credential_fields。
     """
 
     name: str
@@ -342,7 +342,7 @@ def split_entries(answer: str) -> list[str]:
 def split_platforms(answer: str) -> tuple[list[str], list[str]]:
     """把一份平台作答拆成支持与排除两组。
 
-    ``*`` 表示全部平台，等价于不限制；以 ``-`` 开头的条目进入排除组，如 ``-web``。
+    ``*`` 表示全部平台，等价于不限制。以 ``-`` 开头的条目进入排除组，如 ``-web``。
 
     :param answer: 原始作答。
     :return: 二元组——available_for 与 exclude_from。
@@ -362,7 +362,7 @@ def split_platforms(answer: str) -> tuple[list[str], list[str]]:
 def parse_command_option(value: str) -> CommandEntry:
     """解析一个 ``--command`` 取值。
 
-    形态为 ``模板`` 或 ``模板 :: 说明``；模板留空表示模块的默认命令。
+    形态为 ``模板`` 或 ``模板 :: 说明``。模板留空表示模块的默认命令。
 
     :param value: 命令行取值。
     :return: 命令条目。
@@ -560,7 +560,7 @@ def collect_plan(
 
 
 def detect_author() -> str:
-    """取默认作者名：优先本机 git 配置，取不到时回落到固定值。"""
+    """取默认作者名：优先本机 git 配置，取不到时改用固定值。"""
     try:
         result = subprocess.run(
             ["git", "config", "--get", "user.name"],
@@ -634,7 +634,7 @@ def prepare_test_cases(plan: ModulePlan, commands: list[dict[str, object]]) -> l
 
     :param plan: 问卷答案。
     :param commands: :func:`prepare_commands` 的结果。
-    :return: 每个用例的短名、输入、断言文案与说明。
+    :return: 每个用例的短名、输入、期望文案与说明。
     """
     cases: list[dict[str, str]] = []
     for command in commands:
@@ -754,7 +754,7 @@ def render_tree(
     :param target: 包目录。
     :param values: 占位符取值，用于路径与正文的明文替换。
     :param context: Jinja2 渲染上下文。
-    :param enabled: 相对路径到「是否生成」的判定，``None`` 表示全部生成。
+    :param enabled: 相对路径到“是否生成”的判定，``None`` 表示全部生成。
     :param skip: 只留在模板仓库内、不随生成物分发的相对路径。
     :param force: 目标目录非空时是否覆盖。
     :param conflict_message: 目标目录非空且未加 ``--force`` 时的报错文本，空串表示用默认文本。
@@ -817,8 +817,8 @@ def run_module_add(target: Path, failure_message: str | None = None) -> bool:
     """尝试执行一次 ``akaribot module add -e .``。
 
     :param target: 包目录。
-    :param failure_message: 未成功时的完整提示，含手动命令；空表示沿用模块脚手架的既有文本。
-    :return: 成功返回 ``True``；该子命令尚未实现或执行失败时返回 ``False``。
+    :param failure_message: 未成功时的完整提示，含手动命令。空表示沿用模块结构的既有文本。
+    :return: 成功返回 ``True``。该子命令尚未实现或执行失败时返回 ``False``。
     """
     command = [*cli_command(), "module", "add", "-e", "."]
     try:
@@ -944,7 +944,7 @@ def parse_credential_field(value: str) -> ConfigField:
     """解析一个 ``--credential-field`` 取值，只接受字段名。
 
     :param value: 命令行取值。
-    :return: 凭据字段声明，类型固定为 ``str``，默认空串。
+    :return: 登录信息字段声明，类型固定为 ``str``，默认空串。
     :raises typer.BadParameter: 字段名不合规。
     """
     name = value.strip()
@@ -954,7 +954,7 @@ def parse_credential_field(value: str) -> ConfigField:
 
 
 def resolve_adapter_features(values: list[str]) -> list[tuple[str, bool]]:
-    """解析能力勾选：同名取最后一条，结果为空时回落到默认能力集。
+    """解析能力勾选：同名取最后一条，结果为空时改用默认能力集。
 
     :param values: ``--feature`` 取值或问卷作答拆出的条目。
     :return: 能力名与开关，按首次出现顺序排列。
@@ -1059,7 +1059,7 @@ def collect_adapter_plan(
 def config_field_entries(fields: list[ConfigField]) -> list[dict[str, str]]:
     """把配置字段装配成模板可直接拼进源码的结构。
 
-    :param fields: 普通字段或凭据字段。
+    :param fields: 普通字段或登录信息字段。
     :return: 每项的字段名、类型标注与默认值字面量。
     """
     return [{"name": item.name, "annotation": item.annotation, "default": item.default} for item in fields]
@@ -1068,7 +1068,7 @@ def config_field_entries(fields: list[ConfigField]) -> list[dict[str, str]]:
 def adapter_locale_entries(plan: AdapterPlan) -> dict[str, str]:
     """装配 ``locales/zh_cn.json`` 的全部键值，只含简体中文。
 
-    普通字段的注释键落在基表上，凭据字段的表名由 ``CFGManager`` 加 ``_secret`` 后缀派生。
+    普通字段的配置注释键放在基表上，登录信息字段的表名由 ``CFGManager`` 加 ``_secret`` 后缀生成。
 
     :param plan: 问卷答案。
     :return: 键到文案的映射，键按字面序排列后写入文件。
@@ -1077,7 +1077,7 @@ def adapter_locale_entries(plan: AdapterPlan) -> dict[str, str]:
     for item in plan.config_fields:
         entries[f"config.comments.bot_{plan.name}.{item.name}"] = f"{plan.platform_name} 平台的 {item.name} 配置项。"
     for item in plan.credential_fields:
-        entries[f"config.comments.bot_{plan.name}_secret.{item.name}"] = f"{plan.platform_name} 平台的凭据。"
+        entries[f"config.comments.bot_{plan.name}_secret.{item.name}"] = f"{plan.platform_name} 平台的登录信息。"
     return dict(sorted(entries.items()))
 
 

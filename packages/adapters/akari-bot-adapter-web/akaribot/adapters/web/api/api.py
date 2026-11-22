@@ -197,7 +197,7 @@ async def server_info(request: Request):
     try:
         runtime_stats = await ServerAPI.get_runtime_stats()
     except Exception:
-        # 服务端不可用时仍交付本机信息，只让该项目为空，前端据此显示「不可用」。
+        # 服务端不可用时仍交付本机信息，只让该项目为空，前端据此显示“不可用”。
         Logger.exception("Failed to read runtime stats for WebUI.")
         runtime_stats = {"jobqueue_backend": None, "command_parsed": None, "message_parsed": None}
     try:
@@ -217,7 +217,7 @@ async def server_info(request: Request):
             "python_version": platform.python_version(),
             "version": await ServerAPI.get_bot_version(),
             "web_render_status": await ServerAPI.get_web_render_status(),
-            # 自服务端启动以来的累计值；与 ~status 命令同源。
+            # 自服务端启动以来的累计值。与 ~status 命令同源。
             "jobqueue_backend": runtime_stats.get("jobqueue_backend"),
             "command_parsed": runtime_stats.get("command_parsed"),
             "message_parsed": runtime_stats.get("message_parsed"),
@@ -244,7 +244,7 @@ async def get_analytics(request: Request, days: int = Query(1)):
     verify_jwt(request)
     try:
         # 时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
-        # 传 Unix 时间戳会被原样绑定成数字与日期时间比较，任何记录都落不进区间；
+        # 传 Unix 时间戳会被原样绑定成数字与日期时间比较，任何记录都落不进区间。
         # 传不带时区的本地时间则会被当作 UTC 处理，窗口整体偏移一个时区差。
         now = datetime.now(UTC)
         past = now - timedelta(days=days)
@@ -270,7 +270,7 @@ async def get_analytics_modules(
     request: Request,
     days: int = Query(1, ge=1),
 ):
-    """按模块汇总调用次数，供统计页的「模块调用数量」图表使用。"""
+    """按模块汇总调用次数，供统计页的“模块调用数量”图表使用。"""
     verify_jwt(request)
     try:
         # 与 /api/analytics 相同：窗口必须以带时区的 datetime 传入，且 days 为整数天。

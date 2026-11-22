@@ -21,11 +21,11 @@ dependencies = [
     "packaging>=26.0",
     "psutil>=7.0.0,<8.0.0",
     "rich>=13.0.0,<16.0.0",
-    # 紧钉：Textual 跨大版本有 API 变动史，全部调用经 akaribot.cli.tui._compat 收口
+    # 紧钉：Textual 跨大版本常有 API 变动，全部调用统一经 akaribot.cli.tui._compat 转接
     "textual==8.2.8",
     "tomlkit>=0.14.0,<1.0.0",
     "typer>=0.21.0,<1.0.0",
-    # 文档开发模式监听各包文档目录与主题目录；watchdog 提供跨平台原生事件源
+    # 文档开发模式监听各包文档目录与主题目录，watchdog 提供跨平台原生事件源
     "watchdog>=7.1.0,<8.0.0",
 ]
 
@@ -38,7 +38,7 @@ cli = "akaribot.cli"
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 
-# 语言文件由 packages = ["akaribot"] 一并收录，不要再 force-include（重复收录会让 hatchling 报
+# 语言文件由 packages = ["akaribot"] 一并收录，无需 force-include（重复收录会让 hatchling 报
 # "A second file is being added to the wheel archive at the same path"）。
 
 [project.urls]

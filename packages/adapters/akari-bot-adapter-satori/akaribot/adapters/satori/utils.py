@@ -77,7 +77,7 @@ def build_sender_id(platform: str, user_id: str) -> str:
 
 
 def parse_target_id(target_id: str | None) -> TargetAddress | None:
-    """解析场景 ID；不属于本适配器时返回 None。"""
+    """解析场景 ID。不属于本适配器时返回 None。"""
     if not target_id:
         return None
     parts = target_id.split("|")

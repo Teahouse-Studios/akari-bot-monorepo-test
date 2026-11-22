@@ -1,11 +1,11 @@
 """路径常量。
 
-取值一律由 :class:`core.paths.Paths` 提供 —— 那里是「实例目录在哪里」的唯一答案。
-本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动；
+取值一律由 :class:`core.paths.Paths` 提供 —— 那里是“实例目录在哪里”的唯一答案。
+本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动。
 新增代码应直接使用 :class:`core.paths.Paths`。
 
 取值在**导入期**完成，故 ``AKARI_INSTANCE_DIR``、``AKARI_CONFIG_PATH``、
-``AKARI_UNION_MERGE_LOGS_PATH`` 须在任何 ``core.*`` 导入之前置位，否则被固化为默认值且不报错。
+``AKARI_UNION_MERGE_LOGS_PATH`` 须在任何 ``core.*`` 导入之前设置，否则被固化为默认值且不报错。
 引导代码只能以字面量重复这些名称，``tester.py`` / ``tests/run_one.py`` / ``conftest.py`` 即如此。
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from akaribot.core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
 
-# 配置只读模式的环境变量名：守护进程 spawn 子进程前置位，pre-init 进程清除。
+# 配置只读模式的环境变量名：守护进程在创建子进程前设置，pre-init 进程清除。
 # 该常量须位于不依赖 core.config 的模块，以免提前触发导入期版本迁移。
 CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 
@@ -34,12 +34,12 @@ logs_path = Paths.logs
 modules_path = Paths.instance / "modules"
 tests_path = Paths.tests
 
-# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写进 data。目录创建不在
-# 此处发生，否则只读取版本号的调用也会在当前目录留下副作用；使用方经 Paths.ensure() 创建。
+# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写进 data。此处不创建
+# 目录，否则只读取版本号的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 创建。
 
 # assets 子路径（只读）
 fonts_path = assets_path / "fonts"
-# 模板随 core wheel 分发（akaribot/core/assets/templates）；实例的 assets/templates 存在时优先，
+# 模板随 core wheel 分发（akaribot/core/assets/templates）。实例的 assets/templates 存在时优先，
 # 便于部署者覆盖。打包形态下 __file__ 与包内资源都可用，故直接由包位置推导。
 _PACKAGE_TEMPLATES_PATH = Path(__file__).resolve().parents[1] / "assets" / "templates"
 templates_path = assets_path / "templates" if (assets_path / "templates").is_dir() else _PACKAGE_TEMPLATES_PATH
@@ -83,7 +83,7 @@ def __getattr__(name: str) -> Path:
 class PrivateData:
     """客户端私有资源目录，存放需要跨重启保留的运行时文件。
 
-    ``path`` 是普通类属性，首次使用前须调用 :meth:`ensure`；不设访问器属性是为了让
+    ``path`` 是普通类属性，首次使用前须调用 :meth:`ensure`。不设访问器属性是为了让
     检测工具能从 ``path`` 的赋值处看到它是目录。使用方包括 ``bot.py`` 的
     ``pre_init()``（启动时创建）与 :meth:`set`。
     """
@@ -106,8 +106,8 @@ class PrivateData:
 def module_data_path(module_dir: str | Path) -> Path:
     """取模块的可写数据目录，不创建它。
 
-    已弃用：模块包的可写数据一律经 :meth:`core.registry.PackageRegistry.package_data` 取实例
-    ``data`` 目录；包内 ``data`` 在只读部署与 wheel 安装下均不可写。本函数仅为兼容既有调用保留。
+    已弃用：模块包的可写数据一律经 :meth:`core.registry.PackageRegistry.package_data` 取实例的
+    ``data`` 目录。包内 ``data`` 在只读部署与 wheel 安装下均不可写。本函数仅为兼容既有调用保留。
 
     不在此处建目录：调用方常在导入期取路径，而导入期建目录会让只读安装（``chmod a-w`` 或
     wheel）下的 ``import`` 本身抛 ``PermissionError``。目录由写入方在使用时创建。

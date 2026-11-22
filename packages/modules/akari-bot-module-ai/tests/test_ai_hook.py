@@ -43,7 +43,7 @@ def _test_resolve_llm_priority():
         assert hook.resolve_llm("ALPHA", _session_info("beta"))["name"] == "alpha"
         assert hook.resolve_llm(None, _session_info("beta"))["name"] == "beta"
         assert hook.resolve_llm(None, _session_info())["name"] == "alpha"
-        # 显式指定的模型不可用时不替换，场景默认模型离线时回落模块默认
+        # 显式指定的模型不可用时不替换，场景默认模型离线时改用模块默认
         assert hook.resolve_llm("gamma", _session_info("beta")) is None
         assert hook.resolve_llm(None, _session_info("gamma"))["name"] == "alpha"
     return True

@@ -11,12 +11,12 @@
 - 配置模板：``python -m akaribot.core.entrypoints.config schema --table <表名> --json``。
 
 不提供 ``instance rename``：实例 ID 是 ``target_id`` 前缀的一部分（如 ``Telegram-alt|Group|12345``），
-改名要跨 ``target_union_info``、``target_union_bind``、``sender_union_info``、``analytics_data``、
-``unfriendly_actions`` 这 5 张核心表与各模块表迁移 ``target_id`` / ``sender_id`` 前缀，收益与风险严重
-不成比例。**实例 ID 一旦使用请勿更改**；确需更换时按「新建实例 + 迁移数据」处理。
+改名要迁移 ``target_union_info``、``target_union_bind``、``sender_union_info``、
+``analytics_data``、``unfriendly_actions`` 这 5 张核心表与各模块表中的 ``target_id`` /
+``sender_id`` 前缀，收益与风险严重不成比例。**实例 ID 一旦使用请勿更改**。确需更换时按“新建实例 + 迁移数据”处理。
 
-实例定位见 :func:`load_instance`。命令只依赖最小的 ``Instance`` 协议（``root`` / ``meta`` / ``python``）；
-:class:`LocalInstance` 是该协议在 ``akaribot.cli.instance`` 落地之前的顶替实现，本节的公共件同时供
+实例定位见 :func:`load_instance`。命令只依赖最小的 ``Instance`` 协议（``root`` / ``meta`` / ``python``）。
+:class:`LocalInstance` 是该协议在 :mod:`akaribot.cli.instance` 中的实现，本节的公共件同时供
 :mod:`akaribot.cli.commands.doctor` 复用。
 """
 
@@ -56,7 +56,7 @@ SECRET_TABLE_SUFFIX = "_secret"
 
 EXIT_FAILURE = 1
 
-# 适配器包在 registry --json 中的 kind 取值；缺 kind 时按 import_path 判定。
+# 适配器包在 registry --json 中的 kind 取值。缺 kind 时按 import_path 判定。
 ADAPTER_KINDS = frozenset({"adapter", "adapters", "bot", "bot_adapter"})
 MODULE_KINDS = frozenset({"module", "modules"})
 
@@ -102,7 +102,7 @@ def warn(message: str) -> None:
 class InstanceLike(Protocol):
     """命令依赖的最小实例协议。
 
-    ``akaribot.cli.instance.Instance`` 满足该协议；本模块只使用 ``root`` / ``meta`` / ``python`` 三项，
+    ``akaribot.cli.instance.Instance`` 满足该协议。本模块只使用 ``root`` / ``meta`` / ``python`` 三项，
     不触碰其内部实现。``meta`` 既可以是映射（``akaribot.toml`` 的解析结果），也可以是带同名属性的对象。
     """
 
@@ -129,7 +129,7 @@ class LocalInstance:
 
     @property
     def python(self) -> Path:
-        """实例 venv 的解释器；``runtime.venv`` 为空或解释器缺失时回退到当前解释器。"""
+        """实例 venv 的解释器。``runtime.venv`` 为空或解释器缺失时回退到当前解释器。"""
         venv_setting = meta_get(meta_get(self.meta, "runtime"), "venv")
         venv_dir = DEFAULT_VENV_DIR if venv_setting is None else str(venv_setting).strip()
         if not venv_dir:
@@ -145,7 +145,7 @@ def meta_get(container: Any, key: str) -> Any:
 
     :param container: 映射或带同名属性的对象。
     :param key: 键名或属性名。
-    :return: 取到的值；容器为空或不存在该项时返回 ``None``。
+    :return: 取到的值，容器为空或不存在该项时返回 ``None``。
     """
     if container is None:
         return None
@@ -158,7 +158,7 @@ def venv_python(venv_dir: Path) -> Path:
     """由 venv 目录推出解释器路径。
 
     :param venv_dir: venv 目录。
-    :return: 存在的解释器路径；不存在时回退到当前解释器。
+    :return: venv 目录下的解释器路径，未找到时回退到当前解释器。
     """
     candidates = (venv_dir / "bin" / "python", venv_dir / "Scripts" / "python.exe")
     for candidate in candidates:
@@ -171,7 +171,7 @@ def read_instance_meta(root: Path) -> dict[str, Any]:
     """读取实例的 ``akaribot.toml``。
 
     :param root: 实例根目录。
-    :return: 解析结果；文件缺失或损坏时返回空映射。
+    :return: 解析结果，文件缺失或损坏时返回空映射。
     """
     path = root / INSTANCE_META_FILE
     if not path.is_file():
@@ -197,7 +197,7 @@ def config_root(instance: InstanceLike) -> Path:
 def instance_module() -> Any | None:
     """取 ``akaribot.cli.instance`` 模块。
 
-    :return: 模块对象；该模块不可用时返回 ``None``。
+    :return: 模块对象，该模块不可用时返回 ``None``。
     """
     try:
         return __import__("akaribot.cli.instance", fromlist=["Instance"])
@@ -206,7 +206,7 @@ def instance_module() -> Any | None:
 
 
 def system_python() -> Path:
-    """解析非托管模式要用的系统 Python。
+    """解析非托管模式所用的系统 Python。
 
     不得用 ``sys.executable``：Nuitka onefile 冻结后它指向 CLI 二进制自身。优先复用
     ``akaribot.cli.instance.system_python``，该模块不可用时退回本模块的等价实现。
@@ -229,12 +229,12 @@ def system_python() -> Path:
 def find_instance_root(start: Path | None = None) -> Path | None:
     """定位实例根目录。
 
-    ``akaribot.cli.instance`` 提供 ``find_instance_root`` 时以它为准，避免两处发现规则分叉；否则用本
-    函数的兜底实现：``AKARI_INSTANCE_DIR`` 指向含 ``akaribot.toml`` 的目录时直接采用，其余情况自
+    ``akaribot.cli.instance`` 提供 ``find_instance_root`` 时以它为准，避免两处发现规则分叉，否则用本
+    函数的备用实现：``AKARI_INSTANCE_DIR`` 指向含 ``akaribot.toml`` 的目录时直接采用，其余情况自
     ``start`` 逐级向上查找 ``akaribot.toml``。
 
     :param start: 起始目录，默认为当前工作目录。
-    :return: 实例根目录；未找到时返回 ``None``。
+    :return: 实例根目录，未找到时返回 ``None``。
     """
     module = instance_module()
     finder = getattr(module, "find_instance_root", None) if module is not None else None
@@ -271,7 +271,7 @@ def _colleague_instance(root: Path) -> InstanceLike | None:
         except TypeError:
             continue
         except Exception:
-            # 同事实现的入口可能以自身异常类型报错；此处只做定位，失败时退回本地实例对象
+            # 同事实现的入口可能以自身异常类型报错。此处只做定位，失败时退回本地实例对象
             break
         if candidate is not None:
             return candidate
@@ -315,7 +315,7 @@ def instance_python(instance: InstanceLike) -> Path:
     """取实例解释器。
 
     :param instance: 目标实例。
-    :return: 解释器路径；实例未给出可用解释器时回退到当前解释器。
+    :return: 解释器路径，实例未给出可用解释器时回退到当前解释器。
     """
     try:
         candidate = Path(instance.python)
@@ -373,7 +373,7 @@ def spawn_core(instance: InstanceLike, *args: str, timeout: float = CORE_TIMEOUT
     ``<解释器> -m akaribot.core.entrypoints.config schema --table bot_telegram --json``。
 
     启动逻辑以实例对象为准：``akaribot.cli.instance.Instance`` 提供 ``run_core_capture``，解释器、环境
-    变量与编码都由它决定；只有该能力缺失时才自行启动子进程（``run_core`` 只回传退出码，取不到
+    变量与编码都由它决定。只有该能力缺失时才自行启动子进程（``run_core`` 只回传退出码，取不到
     ``--json`` 输出，不足以支撑本命令的数据通道）。
 
     :param instance: 目标实例。
@@ -426,9 +426,9 @@ class InstalledAdapter:
     :param dist: 分发名。
     :param version: 已安装版本。
     :param import_path: 导入路径。
-    :param config_table: 基表表名，如 ``bot_telegram``；registry 未提供时为空。
-    :param platform_name: 平台展示名，如 ``Telegram``；registry 未提供时为空。
-    :param credential_fields: manifest 声明的凭据字段，供重复凭据检查使用。
+    :param config_table: 基表表名，如 ``bot_telegram``，registry 未提供时为空。
+    :param platform_name: 平台展示名，如 ``Telegram``，registry 未提供时为空。
+    :param credential_fields: manifest 声明的登录信息字段，供重复登录信息检查使用。
     :param listen_fields: manifest 声明的监听字段，供端口冲突检查使用。
     """
 
@@ -443,7 +443,7 @@ class InstalledAdapter:
 
     @property
     def base_table(self) -> str:
-        """基表表名；registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。"""
+        """基表表名。registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。"""
         return self.config_table or f"{BOT_TABLE_PREFIX}{self.name}"
 
     @property
@@ -453,7 +453,7 @@ class InstalledAdapter:
 
     @property
     def display_name(self) -> str:
-        """平台展示名；registry 未提供时按平台名首字母大写推断。"""
+        """平台展示名。registry 未提供时按平台名首字母大写推断。"""
         return self.platform_name or self.name.capitalize()
 
 
@@ -534,7 +534,7 @@ def fetch_adapters(instance: InstanceLike) -> AdapterRegistry:
     """询问 core 本实例已安装的适配器。
 
     :param instance: 目标实例。
-    :return: 已装适配器清单；入口不可用时 ``available`` 为 False 并带失败原因。
+    :return: 已装适配器清单，入口不可用时 ``available`` 为 False 并带失败原因。
     """
     try:
         call = spawn_core(instance, "registry", "--json")
@@ -569,7 +569,7 @@ class AdapterInstanceConfig:
     :param path: 配置文件路径。
     :param table: 非密钥表名，如 ``bot_telegram-alt``。
     :param platform: 平台名（entry point 名），如 ``telegram``。
-    :param instance_id: 实例 ID；默认实例为空串。
+    :param instance_id: 实例 ID，默认实例为空串。
     :param values: 非密钥表的键值。
     :param secrets: 密钥表的键值。
     :param legacy_layout: 配置是否来自尚未迁移的扁平布局。
@@ -590,7 +590,7 @@ class AdapterInstanceConfig:
 
     @property
     def enable(self) -> bool | None:
-        """实例的 ``enable``；键缺失时返回 ``None``（按 T1B.3 不回退，视为未启用）。"""
+        """实例的 ``enable``。键缺失时返回 ``None``（按 T1B.3 不回退，视为未启用）。"""
         value = self.values.get("enable")
         return None if value is None else bool(value)
 
@@ -611,7 +611,7 @@ class AdapterScan:
 
     :param instances: 识别到的实例配置。
     :param errors: 无法解析的文件及原因。
-    :param legacy_layout: 是否使用了扁平布局兜底。
+    :param legacy_layout: 是否使用了扁平布局回退。
     """
 
     instances: tuple[AdapterInstanceConfig, ...] = ()
@@ -625,7 +625,7 @@ def parse_bot_table(table: str) -> tuple[str, str] | None:
     平台名不含 ``-``（T1B.1 的 CI 约束），故首个 ``-`` 之后即实例 ID。
 
     :param table: 表名，如 ``bot_telegram`` / ``bot_telegram-alt``。
-    :return: 二元组（平台名，实例 ID）；不是 ``bot_`` 表时返回 ``None``。
+    :return: 二元组（平台名，实例 ID），不是 ``bot_`` 表时返回 ``None``。
     """
     if not table.startswith(BOT_TABLE_PREFIX):
         return None
@@ -712,7 +712,7 @@ def resolve_client_name(platform_display: str, instance_id: str) -> str:
     """按 T1B.1 的规则拼接 ``client_name``。
 
     :param platform_display: 平台展示名，如 ``Telegram``。
-    :param instance_id: 实例 ID；默认实例为空串。
+    :param instance_id: 实例 ID，默认实例为空串。
     :return: ``client_name``，如 ``Telegram-alt``。
     """
     return platform_display if not instance_id else f"{platform_display}-{instance_id}"
@@ -736,7 +736,7 @@ class ListenEndpoint:
     """实例声明的一处监听地址。
 
     :param host: 主机部分。
-    :param port: 端口；未给出时为 ``None``。
+    :param port: 端口，未给出时为 ``None``。
     :param raw: 配置中的原值。
     :param local: 是否为本机监听。带协议头的地址是外连目标（如 milky 的 ``qq_host``），不参与冲突比对。
     """
@@ -800,11 +800,11 @@ def _guess_listen_fields(values: Mapping[str, Any]) -> tuple[str, ...]:
 def listen_endpoints(values: Mapping[str, Any], declared: Iterable[str] = ()) -> list[ListenEndpoint]:
     """解析实例声明的监听地址。
 
-    ``<前缀>_host`` 与 ``<前缀>_port`` 成对合并为 ``host:port``；只有 ``_host`` 时按 ``host:port``
+    ``<前缀>_host`` 与 ``<前缀>_port`` 成对合并为 ``host:port``。只有 ``_host`` 时按 ``host:port``
     字面量解析（onebot 的 ``qq_host`` 即此形式）。
 
     :param values: 非密钥表的键值。
-    :param declared: 适配器 manifest 声明的监听字段；为空时按字段名推断。
+    :param declared: 适配器 manifest 声明的监听字段，为空时按字段名推断。
     :return: 端点列表。
     """
     declared_names = [str(name) for name in declared]
@@ -871,7 +871,7 @@ class SchemaField:
 
     :param key: 键名。
     :param type_name: 类型名，如 ``str`` / ``(str, int)`` / ``list``。
-    :param default: 模板默认值；无默认值时为 ``None``。
+    :param default: 模板默认值，无默认值时为 ``None``。
     :param secret: 是否属于密钥表。
     :param comment: i18n 注释。
     :param placeholder: 该键在模板中是否为待填写占位符。
@@ -890,7 +890,7 @@ class SchemaField:
         """生成文件时该键应写入的值。
 
         ``enable`` 一律显式写 ``false``：实例文件的 ``enable`` 不回退到基表，新实例必须由用户确认后
-        自行开启，否则「新建实例文件」等同于「立即上线一个机器人」。
+        自行开启，否则“新建实例文件”等同于“立即上线一个机器人”。
 
         :return: 写入值。
         """
@@ -1047,11 +1047,11 @@ def base_table_stem(base_table: str) -> str:
 def base_header_lines(instance: InstanceLike, base_table: str) -> list[str]:
     """取基表配置文件的文件头注释，供新实例文件复用。
 
-    分层布局优先；布局迁移尚未执行时回退到扁平的 ``config/bot_<平台>.toml``。
+    分层布局优先，布局迁移尚未执行时回退到扁平的 ``config/bot_<平台>.toml``。
 
     :param instance: 目标实例。
     :param base_table: 基表表名。
-    :return: 注释行；两处都不存在时为空列表。
+    :return: 注释行，两处都不存在时为空列表。
     """
     root = config_root(instance)
     stem = base_table_stem(base_table)
@@ -1138,7 +1138,7 @@ def list_instances(
 ) -> None:
     """按平台分组列出全部适配器实例。
 
-    实例 ID、``client_name``、``enable``、监听地址来自 ``config/adapters/*.toml``；平台是否已安装来自
+    实例 ID、``client_name``、``enable``、监听地址来自 ``config/adapters/*.toml``。平台是否已安装来自
     ``registry --json``。
     """
     instance = open_instance()
@@ -1175,14 +1175,14 @@ def list_instances(
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[row["platform"]].append(row)
-    # 只有「平台已安装但清单未给出展示名」才值得提示；孤立配置的展示名本就无从取得
+    # 只有“平台已安装但清单未给出展示名”才值得提示。孤立配置的展示名本就无从取得
     inferred_any = any(row["installed"] and row["client_name_inferred"] for row in rows)
     for platform in sorted(grouped):
         adapter = registry.adapters.get(platform)
         if adapter is not None:
             suffix = i18n.t("cli.adapter.list.platform_suffix", name=adapter.display_name)
         else:
-            # 清单不可用时无从判断平台是否已安装，不能标成「未安装」
+            # 清单不可用时无从判断平台是否已安装，不能标成“未安装”
             suffix = (
                 i18n.t("cli.adapter.list.not_installed")
                 if registry.available
@@ -1227,8 +1227,8 @@ def instance_add(
 ) -> None:
     """新建适配器实例配置。
 
-    实例 ID 一旦使用请勿更改：它是 ``target_id`` 前缀的一部分，改名要跨核心表与模块表迁移数据。
-    生成的配置文件里 ``enable`` 显式写 ``false``，填完凭据后自行开启。
+    实例 ID 一旦使用请勿更改：它是 ``target_id`` 前缀的一部分，改名要迁移核心表与模块表中的数据。
+    生成的配置文件里 ``enable`` 显式写 ``false``，填完登录信息后自行开启。
     """
     instance = open_instance()
     platform = platform.strip().lower()
@@ -1334,7 +1334,7 @@ def instance_add(
 def remove_instance_config(config: AdapterInstanceConfig) -> bool:
     """移除一个实例的配置。
 
-    文件中若还有其它表，只摘除该实例的表；否则删除整个文件。
+    文件中若还有其它表，只摘除该实例的表。否则删除整个文件。
 
     :param config: 目标实例配置。
     :raises OSError: 文件读写失败。

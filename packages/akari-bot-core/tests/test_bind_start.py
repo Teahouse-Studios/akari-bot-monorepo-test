@@ -47,7 +47,7 @@ async def _test_private_binds_both_unions():
         entry = _issue_private_code(initiator)
         send = AsyncMock(return_value=["bind-success"])
         try:
-            # 本用例验证真实数据库合并；模拟平台接收最终成功提示。
+            # 本用例验证真实数据库合并。模拟平台接收最终成功提示。
             with _answer_confirm(True), patch.object(PlatformAPI, "send_message", new=send):
                 await bind._bind_private(await _session("BINDB", True), entry)
         except SessionFinished:

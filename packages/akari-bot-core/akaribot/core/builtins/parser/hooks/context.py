@@ -48,7 +48,7 @@ def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
     from akaribot.core.i18n import Locale
 
     if isinstance(value, (MessageChain, MessageNodes, Locale)):
-        # 这些值对象允许在独立副本上使用翻译/消息 API；复制失败必须拒绝读取，不能退回源引用。
+        # 这些值对象允许在独立副本上使用翻译/消息 API。复制失败必须拒绝读取，不能退回源引用。
         return deepcopy(value)
     return _ReadOnlyObjectView(value)
 
@@ -116,7 +116,7 @@ class OutgoingPayload:
             return chain
         if isinstance(chain, list):
             return [OutgoingPayload._clone_chain(item) for item in chain]
-        # 其他带 copy 的元素级对象按自身语义复制；失败则拒绝快照，避免共享引用
+        # 其他带 copy 的元素级对象按自身语义复制。失败则拒绝快照，避免共享引用
         if hasattr(chain, "copy"):
             return chain.copy()
         return deepcopy(chain)
@@ -156,7 +156,7 @@ class ParserHookContext:
 
     @property
     def session_info(self) -> SessionInfoView:
-        """只读视图；可写字段请用 ``draft``。"""
+        """只读视图。可写字段请用 ``draft``。"""
         if self._session_view is None:
             self._session_view = SessionInfoView(self.msg.session_info)
         return self._session_view

@@ -1,6 +1,6 @@
 """Vercel 部署 provider。
 
-命令固定在实例的 ``.docs/vercel`` 目录执行，使 ``vercel link`` 记住的项目配置落在实例内；
+命令固定在实例的 ``.docs/vercel`` 目录执行，使 ``vercel link`` 记住的项目配置放在实例内。
 令牌与项目标识只经环境变量传入，不出现在命令行、日志或异常消息里。
 """
 
@@ -35,7 +35,7 @@ class VercelProvider:
     :param instance_root: 实例根目录，命令状态目录位于其 ``.docs/vercel``。
     :param runner: 子进程执行器，测试可注入。
     :param which: 可执行文件查找函数，测试可注入。
-    :param windows: 是否按 Windows 规则包装命令；缺省按当前平台判断。
+    :param windows: 是否按 Windows 规则包装命令，默认按当前平台判断。
     """
 
     name = "vercel"
@@ -160,7 +160,7 @@ def _default_runner(
     cwd: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603 - 命令由本模块组装，凭据只经环境变量传递
+    return subprocess.run(  # noqa: S603 - 命令由本模块组装，登录信息只经环境变量传递
         list(argv),
         cwd=str(cwd),
         env=dict(environment),

@@ -55,7 +55,7 @@ class EnvironmentPackage:
     :param groups: 该分发提供的入口点分组。
     :param requires: 分发元数据中的依赖声明。
     :param url: 直引用的来源地址。
-    :param installed: 是否已安装；``False`` 表示仅有清单记录。
+    :param installed: 是否已安装。``False`` 表示仅有清单记录。
     """
 
     dist: str
@@ -110,7 +110,7 @@ class EnvironmentLayout:
 
     :param name_width: 名称列宽。
     :param version_width: 版本列宽。
-    :param tag_width: 标记列宽；``0`` 表示隐藏该列。
+    :param tag_width: 标记列宽。``0`` 表示隐藏该列。
     """
 
     name_width: int
@@ -126,7 +126,7 @@ class EnvironmentState:
     :param python: 当前生效的解释器。
     :param venv_dir: 托管 venv 的目标目录。
     :param ready: 解释器是否存在。
-    :param packages: 环境中已安装的分发；探测失败时为 ``None``。
+    :param packages: 环境中已安装的包。探测失败时为 ``None``。
     :param core_version: core 版本号。
     :param error: 读取失败的原因。
     :param requirements: 实例清单中的运行库需求声明。
@@ -150,11 +150,11 @@ class EnvironmentState:
         return i18n.t("cli.tui.environment.mode_unknown")
 
     def package_count(self) -> int:
-        """返回已安装分发数量；探测失败时为 ``-1``。"""
+        """返回已安装的包数量。探测失败时为 ``-1``。"""
         return -1 if self.packages is None else len(self.packages)
 
     def count_text(self) -> str:
-        """返回包数量的展示文本。"""
+        """返回已安装包数量的展示文本。"""
         if self.error:
             return i18n.t("cli.tui.environment.value_unknown")
         if self.packages is None:
@@ -180,7 +180,7 @@ class EnvironmentState:
 
 
 def recorded_name(spec: str) -> str:
-    """提取清单记录中的分发名；无法解析时返回空字符串。"""
+    """提取清单记录中的包名。无法解析时返回空字符串。"""
     text = str(spec).split(" @ ", 1)[0].strip()
     for separator in ("==", ">=", "<=", "!=", "~=", ">", "<", "["):
         text = text.split(separator, 1)[0]
@@ -213,16 +213,16 @@ class EnvironmentSource(Protocol):
         """返回环境快照。"""
 
     def running(self) -> bool | None:
-        """返回实例是否在运行；探测失败时返回 ``None``。"""
+        """返回实例是否在运行。探测失败时返回 ``None``。"""
 
     def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
-        """执行 ``adopt`` / ``release`` / ``recreate``；``dry_run`` 为真时只预览。"""
+        """执行 ``adopt`` / ``release`` / ``recreate``。``dry_run`` 为真时只预览。"""
 
     def add_package(self, spec: str, *, save: bool, upgrade: bool = False) -> OperationResult:
-        """安装运行库；``save`` 为真时同时写入实例清单。"""
+        """安装运行库。``save`` 为真时同时写入实例清单。"""
 
     def remove_package(self, dist: str, *, save: bool) -> OperationResult:
-        """卸载运行库；``save`` 为真时同时删除清单记录。"""
+        """卸载运行库。``save`` 为真时同时删除清单记录。"""
 
 
 @dataclass(frozen=True)
@@ -246,8 +246,8 @@ class StaticEnvironmentSource:
 
     :param state: ``state`` 的返回值。
     :param running: ``running`` 的返回值。
-    :param action_result: ``action`` 的返回值；默认为成功。
-    :param package_result: ``add_package`` / ``remove_package`` 的返回值；默认为成功。
+    :param action_result: ``action`` 的返回值，默认为成功。
+    :param package_result: ``add_package`` / ``remove_package`` 的返回值，默认为成功。
     """
 
     def __init__(
@@ -318,7 +318,7 @@ class StaticEnvironmentSource:
 class SubprocessEnvironmentSource:
     """通过 ``akaribot`` 子进程读取环境状态并执行操作。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根，默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param query_timeout: 查询类调用的秒数上限。
     :param action_timeout: 环境动作的秒数上限。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
@@ -387,7 +387,7 @@ class SubprocessEnvironmentSource:
         return bool(payload.get("running"))
 
     def action(self, kind: str, *, dry_run: bool = False) -> OperationResult:
-        """见 :meth:`EnvironmentSource.action`；``--yes`` 由界面代答。"""
+        """见 :meth:`EnvironmentSource.action`。``--yes`` 由界面代答。"""
         self.calls["action"] = self.calls.get("action", 0) + 1
         label = i18n.t(f"cli.tui.environment.label_{kind}")
         argv = ["venv", kind, "--yes"]
@@ -646,7 +646,7 @@ class EnvironmentPage(compat.Vertical):
         self.refresh_state(force=True)
 
     def focus_primary(self) -> None:
-        """聚焦包列表；列表为空时聚焦页面容器。"""
+        """聚焦包列表。列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#package-list")
 
     @property
@@ -666,7 +666,7 @@ class EnvironmentPage(compat.Vertical):
 
     @property
     def visible_packages(self) -> tuple[EnvironmentPackage, ...]:
-        """返回应用搜索词与过滤后的分发。"""
+        """返回按搜索词与过滤条件筛选后的分发。"""
         packages = self._packages
         if self._recorded_only:
             packages = tuple(package for package in packages if package.recorded)
@@ -714,7 +714,7 @@ class EnvironmentPage(compat.Vertical):
         self.request_interpreter()
 
     def action_clear_search(self) -> None:
-        """键位动作：清空搜索词；已为空时聚焦包列表。"""
+        """键位动作：清空搜索词。已为空时聚焦包列表。"""
         search = self.query_one("#package-search", compat.Input)
         if search.value:
             search.value = ""
@@ -799,7 +799,7 @@ class EnvironmentPage(compat.Vertical):
         self.request_action(kind)
 
     def request_action(self, kind: str) -> None:
-        """请求解释器动作；执行重建需要输入确认，预览只读取计划。
+        """请求解释器动作。执行重建需要输入确认，预览只读取计划。
 
         :param kind: ``adopt`` / ``release`` / ``recreate``。
         """
@@ -866,7 +866,7 @@ class EnvironmentPage(compat.Vertical):
         self.run_worker(self._operate(kind, label, dry_run=dry_run), group="environment-action", exclusive=True)
 
     def reset_pending(self) -> None:
-        """作废待确认的解释器动作；切页时由 :meth:`TuiApp.show_page` 调用。"""
+        """作废待确认的解释器动作。切页时由 :meth:`TuiApp.show_page` 调用。"""
         self._gate.reset()
 
     def _blocker(self, kind: str) -> str:
@@ -945,7 +945,7 @@ class EnvironmentPage(compat.Vertical):
         """按所选方式安装运行库。
 
         :param spec: 需求串。
-        :param mode: ``save`` 同时写入清单，``once`` 仅安装到当前环境；``None`` 表示取消。
+        :param mode: ``save`` 同时写入清单，``once`` 仅安装到当前环境。``None`` 表示取消。
         """
         if mode not in (*SAVE_MODES, "upgrade"):
             self._set_status(i18n.t("cli.tui.environment.install_cancelled"))
@@ -999,7 +999,7 @@ class EnvironmentPage(compat.Vertical):
         """按所选方式卸载运行库。
 
         :param package: 目标记录。
-        :param mode: ``save`` 同时删除清单记录，``once`` 仅从环境卸载；``None`` 表示取消。
+        :param mode: ``save`` 同时删除清单记录，``once`` 仅从环境卸载。``None`` 表示取消。
         """
         if mode not in SAVE_MODES:
             self._set_status(i18n.t("cli.tui.environment.uninstall_cancelled"))
@@ -1202,5 +1202,5 @@ class EnvironmentPage(compat.Vertical):
             self.refresh_state(force=True)
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)

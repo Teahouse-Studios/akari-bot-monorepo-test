@@ -81,7 +81,7 @@ class CaptchaChallenge(DBModel):
         field = "sender_union_id" if scope == UNION_SCOPE_SENDER else "target_union_id"
         if scope in {UNION_SCOPE_SENDER, UNION_SCOPE_TARGET}:
             # challenge_id 只作为稳定记录 ID 使用。迁移后可能有多条历史挑战落到同一组合，
-            # 保留原主键可避免碰撞；新事件按两个 Union 字段查询，不再假定主键等于组合哈希。
+            # 保留原主键可避免碰撞。新事件按两个 Union 字段查询，不假定主键等于组合哈希。
             await cls.filter(**{field: from_union}).update(**{field: to_union})
 
     @classmethod
@@ -92,7 +92,7 @@ class CaptchaChallenge(DBModel):
         from_union: str,
         to_union: str,
     ) -> None:
-        """把被拆出平台成员仍需处理的挑战改挂到其新 Union。"""
+        """把被拆出平台的成员仍需处理的挑战改挂到其新 Union。"""
         if scope == UNION_SCOPE_SENDER:
             await cls.filter(
                 sender_union_id=from_union,

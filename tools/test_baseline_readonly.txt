@@ -1,7 +1,7 @@
 # 期望失败的测试：<用例名>\t<failure|error>\t<消息>，由 tools/check_test_baseline.py --update 生成。
 #
 # 只读挂载轮（chmod -R a-w packages）专用：比 tools/test_baseline.txt 多出 test_database_migration
-# 的三条。该用例在只读包目录下会以 OperationalError 失败，属测试自身的写盘行为，不是产品缺陷；
+# 的三条。该用例在只读包目录下会以 OperationalError 失败，属测试自身的写盘行为，不是产品缺陷。
 # 修好测试的写盘路径后应当同步删除这三条。普通轮当前为全绿。
 test_database_migration	failure	Function test failed
 test_database_migration::六个旧版本样本库均升到最新结构且重跑为 no-op	failure	Subtest raised OperationalError

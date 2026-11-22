@@ -33,11 +33,11 @@ class AiHookResult:
 def resolve_llm(name: str | None, session_info) -> dict | None:
     """按调用方指定、场景默认、模块默认的顺序确定模型。
 
-    调用方显式指定模型时不做替换；场景默认模型已下线时回落到模块默认模型。
+    调用方显式指定模型时不做替换。场景默认模型已下线时改用模块默认模型。
 
     :param name: 调用方指定的模型名称。
     :param session_info: 调用方所在会话。
-    :return: 模型配置；不可用时返回 None。
+    :return: 模型配置。不可用时返回 None。
     """
     available_llms = llm_list + (llm_su_list if session_info.superuser else [])
     target_union_info = session_info.target_union_info
@@ -58,11 +58,11 @@ async def ask_ai(ctx: Bot.ModuleHookContext) -> AiHookResult:
 
     - ``prompt``：用户输入，字符串或 ``MessageChain``。
     - ``instructions``：追加在系统提示之后的任务说明，用于约束本次输出。
-    - ``llm``：指定模型名称，缺省时依次取场景默认模型与模块默认模型。
+    - ``llm``：指定模型名称；未指定时依次取场景默认模型与模块默认模型。
     - ``use_tools``：是否允许工具调用，默认为关闭。
 
     :param ctx: 模块 hook 上下文。
-    :return: 调用结果；``status`` 非 ``ok`` 时不含回答内容。
+    :return: 调用结果。``status`` 非 ``ok`` 时不含回答内容。
     """
     args = ctx.args
     session_info = ctx.session_info

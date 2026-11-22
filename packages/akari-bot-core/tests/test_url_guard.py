@@ -18,7 +18,7 @@ from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 跳板服务的域名，用以断言某条路径确实未走跳板
+# 跳板服务的域名，用以检查某条路径确实未走跳板
 _MM_HOST = "mm.teahouse.team"
 _URL = "https://example.com/wiki/Page"
 
@@ -302,11 +302,11 @@ async def _test_global_blocklist_fails_closed_on_regex_budget_exhaustion():
 
 
 async def _test_markdown_toggle_keeps_url_manager():
-    # 关闭 markdown 只应令呈现退回跳板；若连 use_url_manager 一并关闭，未认证链接便
+    # 关闭 markdown 只应令呈现退回跳板。若连 use_url_manager 一并关闭，未认证链接便
     # 完全不再被标记，等同于取消保护。
     try:
-        # 平台能力集在导入时即依配置定型，故另建一份「markdown 与 URLManager 均已开启」
-        # 的基准并打桩该开关，使断言只考察覆盖逻辑本身，不受本地配置左右
+        # 平台能力集在导入时即依配置定型，故另建一份“markdown 与 URLManager 均已开启”
+        # 的基准并打桩该开关，使检查只考察覆盖逻辑本身，不受本地配置左右
         session_info = _session(
             sender_union_info=SenderUnionInfo(union_id="USID|1", sender_data={"use_markdown": False})
         )
@@ -342,7 +342,7 @@ async def _test_trusted_survives_kecode_roundtrip():
 
 
 async def _test_untrusted_not_double_wrapped_by_kecode():
-    # trusted 为 False 时 url 字段已是跳板地址，故 kecode 须编码 original_url；
+    # trusted 为 False 时 url 字段已是跳板地址，故 kecode 须编码 original_url。
     # 若照搬 url，还原时会在跳板地址之上再套一层跳板。
     try:
         session_info = _session(use_url_manager=True, support_markdown=False)

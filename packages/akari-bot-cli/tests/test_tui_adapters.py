@@ -153,7 +153,7 @@ async def _test_button_follows_state():
 
 
 async def _test_install_action_streams_output():
-    # 按 i 打开安装对话框，只列未安装的平台；回车安装高亮项并显示进度。
+    # 按 i 打开安装对话框，只列未安装的平台。回车安装高亮项并显示进度。
     async def body(app, page, pilot, source):
         await pilot.press("i")
         await pilot.pause()
@@ -319,7 +319,7 @@ def _peer_source(payload) -> tuple[SubprocessAdapterSource, list[tuple[str, ...]
 
 def _test_peer_status_reads_core_snapshot():
     # 数据结构与 ``python -m akaribot.core.entrypoints.peers --json`` 保持一致。
-    # 顶层包含 available/note；peer 记录同时包含页面未使用的 role/online。
+    # 顶层包含 available/note。peer 记录同时包含页面未使用的 role/online。
     payload = {
         "peers": [
             {
@@ -464,7 +464,7 @@ async def _test_add_instance_dialog_creates_on_chosen_platform():
 
 
 async def _test_add_instance_rejects_invalid_ids():
-    # 空、非法与重名的实例 ID 都在对话框内提示且不关闭；取消后不执行。
+    # 空、非法与重名的实例 ID 都在对话框内提示且不关闭。取消后不执行。
     source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE)))
 
     async def body(app, page, pilot, chosen):
@@ -526,7 +526,7 @@ def _form_row(screen, key: str):
 
 
 async def _test_add_instance_form_writes_filled_fields():
-    # 待填写项排最前且为空，留空不写入；密钥写入 _secret 段，enable 排最后、最后写入；关闭后高亮新实例。
+    # 待填写项排最前且为空，留空不写入。密钥写入 _secret 段，enable 排最后、最后写入。关闭后高亮新实例。
     source = _form_source()
 
     async def body(app, page, pilot, chosen):
@@ -570,7 +570,7 @@ async def _test_add_instance_form_writes_filled_fields():
 
 
 async def _test_add_instance_form_stops_at_failure_and_resumes():
-    # 校验失败不写入；写入失败停在出错项且不启用，密钥项不显示命令输出；重试不重复已写入的项。
+    # 校验失败不写入。写入失败停在出错项且不启用，密钥项不显示命令输出。重试不重复已写入的项。
     source = _form_source(config_result={"token": SetResult(False, "写入失败", "boom tok-value")})
 
     async def body(app, page, pilot, chosen):
@@ -606,7 +606,7 @@ async def _test_add_instance_form_stops_at_failure_and_resumes():
 
 
 async def _test_add_instance_form_can_be_skipped():
-    # 未保存内容关闭前先确认，取消后内容保留；读不到配置项时实例仍算创建成功，不弹表单。
+    # 有未保存内容时，关闭前先确认，取消后内容保留。读不到配置项时实例仍算创建成功，不弹表单。
     class _Broken(StaticAdapterSource):
         def config_fields(self, table):
             raise AdapterSourceError("schema 不可用")
@@ -864,7 +864,7 @@ async def _test_remove_message_states_data_kept():
 
 
 def _test_pending_confirm_gate_debounce_and_reset():
-    # 防抖窗口内忽略重复请求；窗口结束或复位后允许重新触发。
+    # 防抖窗口内忽略重复请求。窗口结束或复位后允许重新触发。
     gate = compat.PendingConfirm()
     accepted = gate.accept("x", now=100.0)
     burst = gate.accept("x", now=100.1)
@@ -941,7 +941,7 @@ async def test_tui_adapters(tester: Tester):
     # 放大防抖窗口，避免执行速度影响重复请求的判断。
     with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
         await tester.test(_test_remove_repeat_within_debounce_opens_one_modal, "连发两次请求不叠模态框")
-    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
+    # 关闭防抖延迟，使交互用例无需等待。防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_list_hides_uninstalled_disabled, "未安装且未启用的平台不进列表")
         await tester.test(_test_uninstalled_row_marked, "未安装行标注状态与详情")

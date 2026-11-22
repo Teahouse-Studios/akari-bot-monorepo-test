@@ -54,7 +54,7 @@ _OBSERVER_POINTS = frozenset(
     }
 )
 
-# 每入口允许的结果类型；未列出的入口允许全部
+# 每入口允许的结果类型。未列出的入口允许全部
 _ALLOWED_RESULTS: dict[HookPoint, tuple[type, ...]] = {
     HookPoint.SESSION_READY: (Continue, Stop),
     HookPoint.SESSION_BEFORE_WAIT: (Continue, Stop),
@@ -177,7 +177,7 @@ class ParserHookExecutor(HookExecutor):
             is_observer = point in _OBSERVER_POINTS
             shared_data = dict(data or {})
             for sub in subscriptions:
-                # 前序 hook 等待期间可能停用或重载后续订阅方；调用前必须按最新状态复核。
+                # 前序 hook 等待期间可能停用或重载后续订阅方。调用前必须按最新状态复核。
                 eligible, is_stale = self._subscription_eligible(
                     sub,
                     session_info.target_from,

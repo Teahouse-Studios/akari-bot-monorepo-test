@@ -35,9 +35,9 @@ class ExternalException(Exception):
 
 
 class OptionalDependencyMissing(ImportError):
-    """可选依赖（extra）未安装；消息应给出安装指引。
+    """可选依赖（extra）未安装，消息应给出安装指引。
 
-    继承 ImportError，使既有的 ``except ImportError`` 兜底逻辑（如 API 门面的延迟导入）继续生效。
+    继承 ImportError，使既有的 ``except ImportError`` 回退逻辑（如 API 门面的延迟导入）继续生效。
     """
 
 

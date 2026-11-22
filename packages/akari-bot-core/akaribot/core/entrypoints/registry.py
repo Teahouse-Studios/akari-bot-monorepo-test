@@ -1,6 +1,6 @@
 """已装包清单入口。
 
-CLI 进程不 import core，一切经本入口的子进程输出获取；故 stdout 只允许出现结果本身，
+CLI 进程不 import core，一切经本入口的子进程输出获取。故 stdout 只允许出现结果本身，
 日志与进度一律走 stderr。``modules`` 取自包清单的 ``provides_modules``，不为此加载模块。
 """
 
@@ -43,7 +43,7 @@ def collect() -> dict:
                     "import_path": entry.import_path,
                     "root": str(entry.root),
                     "modules": list(entry.manifest.provides_modules),
-                    # 兼容性诊断要用：缺了它，消费方只能显示「未声明」，与 manifest 实际内容不符。
+                    # 兼容性诊断要用：缺了它，消费方只能显示“未声明”，与 manifest 实际内容不符。
                     "requires_core_api": entry.manifest.requires_core_api,
                     # 卸载清理要用：表名决定删哪些表，config_table 决定删哪个扁平配置文件。
                     # 缺这两项时 CLI 只能靠 provides_modules 猜文件名，而现行布局是扁平路径。
@@ -59,7 +59,7 @@ def collect() -> dict:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(

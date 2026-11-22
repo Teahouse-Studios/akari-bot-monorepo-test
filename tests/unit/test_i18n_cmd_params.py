@@ -90,7 +90,7 @@ def _test_every_call_passes_cmd():
 
 def _test_indirect_keys_have_provider():
     # 白名单会掩盖真实的漏传，故要求其对应的补参代码仍在位：issue_code() 一旦不再构造 ActionText，
-    # 此处即失守。逐条报明缘由而不笼统吞异常——读不到文件若被收成断言不成立，白名单便形同虚设。
+    # 此处即失守。逐条报明缘由而不笼统吞异常——读不到文件若被收成检查不成立，白名单便形同虚设。
     try:
         with open(INDIRECT_PROVIDER, encoding="utf-8") as f:
             provider = f.read()

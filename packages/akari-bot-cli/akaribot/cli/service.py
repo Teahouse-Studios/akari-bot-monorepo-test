@@ -36,7 +36,7 @@ LAUNCHD_UNIT_FILENAME = f"{LAUNCHD_LABEL}.plist"
 LAUNCHD_TOOL = "launchctl"
 SYSTEMD_UNIT_NAME = "akaribot.service"
 SYSTEMD_TOOL = "systemctl"
-# 单元文件里要执行的子命令；render_unit 只负责拼装，不关心它的含义。
+# 单元文件里要执行的子命令。render_unit 只负责拼装，不关心它的含义。
 SERVICE_COMMAND = ("service", "supervise")
 
 DEFAULT_INTERVAL = 5.0
@@ -64,7 +64,7 @@ class ServiceError(RuntimeError):
 def detect_backend(platform_name: str | None = None) -> str:
     """按平台名判定系统服务管理器。
 
-    :param platform_name: ``sys.platform`` 风格的平台名；缺省用当前平台。
+    :param platform_name: ``sys.platform`` 风格的平台名，默认用当前平台。
     :return: ``launchd`` / ``systemd`` / ``unsupported``。
     """
     name = platform_name or sys.platform
@@ -76,7 +76,7 @@ def detect_backend(platform_name: str | None = None) -> str:
 
 
 def current_uid() -> int:
-    """当前用户号；Windows 上没有该概念，返回 0 供展示。"""
+    """当前用户号。Windows 上没有该概念，返回 0 供展示。"""
     getter = getattr(os, "getuid", None)
     return getter() if getter is not None else 0
 
@@ -100,7 +100,7 @@ def unit_path(backend: str, *, home: Path | None = None) -> Path:
     """单元文件路径。
 
     :param backend: :func:`detect_backend` 的返回值之一。
-    :param home: 家目录；缺省用当前用户的家目录。
+    :param home: 家目录，默认用当前用户的家目录。
     :return: 单元文件的绝对路径。
     :raises ServiceError: 平台不受支持。
     """
@@ -130,7 +130,7 @@ def service_env() -> dict[str, str]:
 
     launchd 与 systemd 都不继承登录 shell 的环境：注册表位置若只存在于安装时的 shell 里，守护
     进程会退回 ``~/.akaribot`` 去读另一份注册表，一个实例都恢复不了。安装时把注册表位置写进
-    单元，服务读到的注册表与 ``service status`` 读到的就是同一份。
+    单元，服务读到的注册表与 ``service status`` 读到的是同一份。
     """
     return {HOME_ENV: str(registry_home())}
 
@@ -146,10 +146,10 @@ def render_unit(
     """渲染服务单元文件的内容。
 
     :param backend: :func:`detect_backend` 的返回值之一。
-    :param cli_argv: 调用本 CLI 的 argv 前缀；子命令由本函数追加。
-    :param workdir: 服务工作目录；``None`` 表示不在单元里声明。
+    :param cli_argv: 调用本 CLI 的 argv 前缀，子命令由本函数追加。
+    :param workdir: 服务工作目录，``None`` 表示不在单元里声明。
     :param log_dir: 控制台输出的落盘目录。
-    :param env: 服务进程的环境变量；``None`` 或空表示不在单元里声明。
+    :param env: 服务进程的环境变量，``None`` 或空表示不在单元里声明。
     :return: 单元文件的完整文本。
     :raises ServiceError: 平台不受支持。
     """
@@ -167,7 +167,7 @@ def _render_launchd(
     payload: dict[str, Any] = {
         "Label": LAUNCHD_LABEL,
         "ProgramArguments": list(command),
-        # 崩溃（非零退出）才拉起：正常退出说明守护循环按信号收工，不该被立刻重启。
+        # 崩溃（非零退出）才拉起：正常退出说明守护循环按信号退出，不该被立刻重启。
         "KeepAlive": {"SuccessfulExit": False},
         "RunAtLoad": True,
         "ProcessType": "Background",
@@ -245,8 +245,8 @@ class ServiceStatus:
 
     :param backend: ``launchd`` / ``systemd`` / ``unsupported``。
     :param installed: 单元文件是否存在。
-    :param enabled: 系统是否已注册该服务；探测不到时为 ``None``。
-    :param path: 单元文件路径；平台不受支持时为 ``None``。
+    :param enabled: 系统是否已注册该服务，探测不到时为 ``None``。
+    :param path: 单元文件路径，平台不受支持时为 ``None``。
     :param detail: 面向用户的一句话说明。
     """
 
@@ -273,8 +273,8 @@ class ServiceBackend:
 
     :param kind: ``launchd`` / ``systemd`` / ``unsupported``。
     :param home: 家目录，单元文件与默认日志目录都相对它定位。
-    :param workdir: 服务的工作目录；缺省用注册表目录，``None`` 表示不在单元里声明。
-    :param env: 服务进程的环境变量；缺省带上当前注册表位置。
+    :param workdir: 服务的工作目录，默认用注册表目录，``None`` 表示不在单元里声明。
+    :param env: 服务进程的环境变量，默认带上当前注册表位置。
     :param runner: 系统命令执行器，测试注入替身后不会真的调用系统工具。
     :param which: 系统工具查找器。
     :param cli_argv: 调用本 CLI 的 argv 前缀。
@@ -283,7 +283,7 @@ class ServiceBackend:
 
     kind: str = field(default_factory=detect_backend)
     home: Path = field(default_factory=Path.home)
-    # 缺省工作目录取注册表目录：界面与命令行走同一个缺省，装出来的单元才一致。
+    # 默认工作目录取注册表目录：界面与命令行共用同一个默认值，装出来的单元才一致。
     workdir: Path | None = field(default_factory=registry_home)
     env: Mapping[str, str] = field(default_factory=service_env)
     runner: CommandRunner = system_runner
@@ -320,7 +320,7 @@ class ServiceBackend:
 
         :param dry_run: 只生成内容，不落盘也不调用系统工具。
         :param force: 单元文件已存在时覆盖它。
-        :return: 安装后的状态；``enabled`` 为 ``None`` 表示系统工具不可用、尚未注册。
+        :return: 安装后的状态，``enabled`` 为 ``None`` 表示系统工具不可用、尚未注册。
         :raises ServiceError: 平台不受支持，或单元文件已存在而未指定 ``force``。
         """
         self._require_supported()
@@ -344,7 +344,7 @@ class ServiceBackend:
         """注销服务并删除单元文件。
 
         :param dry_run: 只报告将要做什么，不注销也不删除。
-        :return: 卸载后的状态；本来就没装时 ``installed`` 为假且不视为失败。
+        :return: 卸载后的状态，本来就没装时 ``installed`` 为假且不视为失败。
         :raises ServiceError: 平台不受支持。
         """
         self._require_supported()
@@ -391,7 +391,7 @@ class ServiceBackend:
             first = self._call([LAUNCHD_TOOL, "bootstrap", domain, str(path)])
             if first is not None and first.returncode == 0:
                 return True, i18n.t("cli.service.install.registered", tool=tool)
-            # 部分 macOS 版本的 launchctl 只实现 load；bootstrap 失败时退回它，两者语义一致。
+            # 部分 macOS 版本的 launchctl 只实现 load。bootstrap 失败时退回它，两者语义一致。
             second = self._call([LAUNCHD_TOOL, "load", "-w", str(path)])
             if second is not None and second.returncode == 0:
                 return True, i18n.t("cli.service.install.registered", tool=tool)
@@ -455,7 +455,7 @@ class SuperviseEvent:
     """守护循环里的一处状态变化。
 
     :param kind: 事件类型，见 ``KIND_*``。
-    :param name: 实例注册名；注册表读取失败时为空串。
+    :param name: 实例注册名，注册表读取失败时为空串。
     :param message: 面向用户的一句话说明。
     """
 
@@ -468,7 +468,7 @@ class SuperviseEvent:
 class SuperviseRound:
     """一轮守护的结论。
 
-    :param events: 本轮发生的变化；状态没变时为空。
+    :param events: 本轮发生的变化，状态没变时为空。
     :param checked: 本轮检查的实例数。
     :param running: 观察到正在运行的实例数。
     :param started: 恢复拉起的实例数。
@@ -546,8 +546,8 @@ class Supervisor:
     """按注册表里的策略守护本机实例。
 
     :param registry: 实例注册表。
-    :param open_instance: 由实例根构造控制器；测试可注入替身。
-    :param spawn: 拉起实例并返回进程号；测试可注入替身。
+    :param open_instance: 由实例根构造控制器，测试可注入替身。
+    :param spawn: 拉起实例并返回进程号，测试可注入替身。
     :param clock: 单调时钟，退避判定与用例时间推进都用它。
     :param max_restarts: 单个实例允许的自动重启次数上限。
     :param backoff: 指数退避的基数秒数。
@@ -575,7 +575,7 @@ class Supervisor:
     def run_once(self) -> SuperviseRound:
         """跑一轮守护并返回本轮结论。
 
-        观测表只活在进程内：注册表存策略，重启计数与「见过它在跑」都是本次服务运行期的判断依据。
+        观测表只存在于进程内：注册表存策略，重启计数与“见过它在跑”都是本次服务运行期的判断依据。
         """
         now = self.clock()
         events: list[SuperviseEvent] = []
@@ -607,7 +607,7 @@ class Supervisor:
         running = bool(controller.is_running())
         if entry.desired != STATE_RUNNING:
             if running:
-                # 用户可能正在前台跑着，守护循环不动它，只说明现状。
+                # 用户可能正在前台运行，守护循环不干预，只说明现状。
                 tally.skipped += 1
                 state = controller.run_state()
                 self._note(
@@ -638,7 +638,7 @@ class Supervisor:
         self, entry: Any, watch: _Watch, controller: Any, now: float, events: list[SuperviseEvent], tally: _Tally
     ) -> None:
         # 本次服务启动后还没见过它运行，说明是掉电或退出后的恢复：只有开了开机自启的实例才恢复，
-        # 「上次在跑」本身不构成自启的理由。见过它运行过的才按崩溃处理。
+        # “上次在跑”本身不构成自启的理由。只有见过它运行的实例，才按崩溃处理。
         if not watch.seen_running and not watch.recovery_done:
             watch.recovery_done = True
             if not entry.autostart:

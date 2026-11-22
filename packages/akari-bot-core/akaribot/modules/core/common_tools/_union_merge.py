@@ -21,8 +21,8 @@ from akaribot.core.api import (
     WaitCancelException,
 )
 
-# 下面几个名字尚未纳入 core.api：表名工具是否成为第三方契约待 P5 复核；日志路径常量在 T0.1 后
-# 只剩兼容 shim、阶段 4 删除，纳入门面会把待删的名字写进契约。
+# 下面几个名字没有纳入 core.api：表名工具是否成为第三方契约待 P5 复核。日志路径常量只是兼容入口，
+# 计划在阶段 4 删除，纳入门面会把待删的名字写进契约。
 from akaribot.core.constants.path import union_merge_logs_path
 from akaribot.core.database.models import collect_union_conflicts, get_table_name, get_union_module_name
 
@@ -107,7 +107,7 @@ async def issue_code(
                 prompt_key,
                 minute=BIND_CODE_EXPIRED // 60,
                 code=generated,
-                # 标签仍须显示实际命令，操作提示仅作为附注；
+                # 标签仍须显示实际命令，操作提示仅作为附注。
                 # 该提示离开可点击的平台便无意义，故不随降级带往其他平台。引号同理，
                 # 可点击的标签自带视觉边界，仅降级后的命令原文才需要它
                 cmd=ActionText(
@@ -149,7 +149,7 @@ def write_merge_log(new_union: str, scope: str, snapshot: dict, directory: Path 
     :param new_union: 合并后新建的组 ID。
     :param scope: union 域。
     :param snapshot: 合并前的双方数据快照。
-    :param directory: 日志目录，缺省为 :data:`union_merge_logs_path`。测试可传入临时目录。
+    :param directory: 日志目录，默认取 :data:`union_merge_logs_path`。测试可传入临时目录。
     """
     logs_dir = directory or union_merge_logs_path
     timestamp = datetime.now(UTC)
@@ -161,11 +161,11 @@ def write_merge_log(new_union: str, scope: str, snapshot: dict, directory: Path 
         **snapshot,
     }
 
-    # 时间置于文件名开头，目录按名称排序即为时间顺序；微秒一并带上，同一秒内的两次合并不会撞名。
+    # 时间置于文件名开头，目录按名称排序即为时间顺序。微秒一并带上，同一秒内的两次合并不会撞名。
     # union ID 中的 "|" 须换成 "-"：Windows 不接受该字符出现在文件名中。
     log_path = logs_dir / f"{timestamp.strftime('%Y%m%d-%H%M%S-%f')}_{new_union.replace('|', '-')}.json"
     # 先写临时文件再原子替换：直接落盘若在中途被强制结束，留下的是一份半截内容的日志，
-    # 读取时才发现损坏；经此一步，该文件要么完整要么不存在。
+    # 读取时才发现损坏。经此一步，该文件要么完整要么不存在。
     tmp_path = log_path.with_name(f"{log_path.name}.{os.getpid()}.tmp")
     try:
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -255,8 +255,8 @@ async def reserve_sender_merge(msg: Bot.MessageSession, plan: dict) -> dict:
     if not plan["initiator_ids"] or not plan["current_ids"]:
         raise WaitCancelException
 
-    # 旧 Union 行可能在等待其它活跃命令期间被第三方合并并删除；以双方稳定的
-    # 物理 ID 为锚点重新解析，不能对旧 ORM 对象直接 refresh_from_db()。
+    # 旧 Union 行可能在等待其它活跃命令期间被第三方合并并删除。以双方稳定的
+    # 物理 ID 为锚点重新解析，不能对旧 ORM（对象关系映射）对象直接 refresh_from_db()。
     initiator_id = plan["initiator_ids"][0]
     current_id = plan["current_ids"][0]
     reservation = {
@@ -355,7 +355,7 @@ async def plan_target_merge(
 
     :param initiator: 发起方（生成绑定码或发起通道握手的一方）。
     :param current: 另一方。
-    :param inherit_key: 继承说明的 i18n 键。绑定码流程仅合并场景组，消息通道保持独立；
+    :param inherit_key: 继承说明的 i18n 键。绑定码流程仅合并场景组，消息通道保持独立。
                         ``bind auto`` 会同时将双方并入同一条消息通道，两者的说明需分开。
     :return: 合并计划。
     """
@@ -464,7 +464,7 @@ async def target_lines(msg, union_id: str, ids: list[str]) -> list:
     for target_id in ids:
         channel_id = channels.get(target_id)
         if channel_id is None:
-            # 缺少绑定行的场景理论上不会出现；该分支用于保证展示流程连续。
+            # 缺少绑定行的场景理论上不会出现。该分支用于保证展示流程连续。
             lines.append(Plain(target_id, disable_joke=True))
         else:
             lines.append(

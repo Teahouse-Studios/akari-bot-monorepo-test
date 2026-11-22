@@ -1,4 +1,4 @@
-"""TUI 自检与无头冒烟的异步等待、异常处理和退出码测试。"""
+"""TUI 自检与无头基本检查的异步等待、异常处理和退出码测试。"""
 
 import asyncio
 import json
@@ -35,7 +35,7 @@ from akaribot.cli.tui.run import StaticRunSource
 from akaribot.testing import Tester, func_case
 
 INJECTED_ERROR = "注入的取数异常"
-# 迁移页无需预加载，不参与数据源调用次数断言。
+# 迁移页无需预加载，不参与数据源调用次数检查。
 NO_PREFETCH = ("misc",)
 # 模块页首次加载发生在导航循环前，不计入导航请求顺序。
 PRELOADED = ("modules",)
@@ -82,7 +82,7 @@ def _static_sources() -> dict:
 
 
 class _Counting:
-    # 数据返回后再记录调用次数，确保断言验证的是已完成的请求。
+    # 数据返回后再记录调用次数，确保检查验证的是已完成的请求。
     def __init__(self, inner, delay: float = 0.05) -> None:
         self._inner = inner
         self._delay = delay
@@ -155,7 +155,7 @@ class _StubApp:
 
 
 class _FakeApp:
-    # 记录构造参数，用于验证模块页冒烟显式注入数据源并指定初始页。
+    # 记录构造参数，用于验证模块页基本检查显式注入数据源并指定初始页。
     def __init__(self, *args: object, **kwargs: object) -> None:
         self.args = args
         self.kwargs = dict(kwargs)
@@ -298,7 +298,7 @@ async def _test_headless_modules_smoke_requires_fetch():
         failure = await tui_cmd._modules_failure(app_instance, page, pilot)
         rows = len(page.visible_records)
         await pilot.press("q")
-    # 数据源未被调用时，模块页冒烟必须失败。
+    # 数据源未被调用时，模块页基本检查必须失败。
     uncalled = await tui_cmd._modules_failure(
         _StubApp(active_page=tui_cmd.MODULES_PAGE, calls=0), _FakePage(), _FakePilot()
     )
@@ -338,21 +338,21 @@ def _headless_exit_code_checks() -> bool:
         and ok_lines[0] != modules
         and ok_lines[1] == modules
         and ok_lines[2] == summary
-        # 空清单不代表读取失败；调用数据源后返回零行也应通过。
+        # 空清单不代表读取失败。调用数据源后返回零行也应通过。
         and empty_code == 0
         and empty_lines[1] == i18n.t("cli.tui_cmd.headless_modules_empty", calls=1)
         and first_code == 1
         and any("概览页缺关键控件" in line for line in first_lines)
         and modules_code == 1
         and any("模块页未取数" in line for line in modules_lines)
-        # 验证测试快照中的冒烟文案可区分概览页与模块页。
+        # 验证测试快照中的基本检查文案可区分概览页与模块页。
         and "概览页" in copy["cli.tui_cmd.headless_first_ok"]
         and "模块页" in copy["cli.tui_cmd.headless_modules_ok"]
     )
 
 
 async def _test_headless_exit_code_covers_both_segments():
-    # 冒烟入口使用同步替身，可直接在测试事件循环中执行。
+    # 基本检查入口使用同步替身，可直接在测试事件循环中执行。
     return _headless_exit_code_checks()
 
 
@@ -426,10 +426,12 @@ async def test_tui_selfcheck(tester: Tester):
     await tester.test(_test_navigation_reports_page_source_failure, "页面数据源抛异常时导航检查失败")
     await tester.test(_test_navigation_waits_for_each_page_load, "逐页切换串行等到每页取数完成")
     await tester.test(_test_page_failure_reads_worker_error, "页面异常取 worker 错误、等待异常与页面错误状态")
-    await tester.test(_test_headless_first_screen_mounts_default_page, "无头冒烟默认首屏停在概览页且三个关键控件已挂载")
+    await tester.test(
+        _test_headless_first_screen_mounts_default_page, "无头基本检查默认首屏停在概览页且三个关键控件已挂载"
+    )
     await tester.test(_test_headless_first_screen_requires_widgets, "首屏缺关键控件或焦点为空即判失败")
-    await tester.test(_test_headless_modules_smoke_requires_fetch, "模块页冒烟要求数据源实际取数")
-    await tester.test(_test_headless_exit_code_covers_both_segments, "无头冒烟任一段失败即非零退出码")
+    await tester.test(_test_headless_modules_smoke_requires_fetch, "模块页基本检查要求数据源实际取数")
+    await tester.test(_test_headless_exit_code_covers_both_segments, "无头基本检查任一段失败即非零退出码")
     await tester.test(_test_report_separates_warning_from_skipped, "环境警告不影响退出码、产品检查未执行则非零")
     await tester.test(_test_unreadable_resources_are_not_run, "资源枚举不到时记未执行而非警告")
     await tester.test(_test_settle_bounded_wait, "单帧读数不足时按条件等待，超时返回否")

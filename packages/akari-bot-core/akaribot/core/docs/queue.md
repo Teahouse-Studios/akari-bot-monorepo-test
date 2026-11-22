@@ -1,17 +1,17 @@
 # JobQueue
 
-本文介绍 JobQueue 的后端、节点定位、RPC、信号与关闭流程。
+本文介绍 JobQueue 的后端、节点定位、远程过程调用（RPC）、信号与关闭流程。
 
 JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节点注册表与消息传输。业务代码通过 `PlatformAPI`、`ServerAPI` 与信号声明使用它。
 
 ## 后端
 
-配置位于 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 取 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，切换后端需要重启进程。
+配置在 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 取 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，切换后端需要重启进程。
 
 | 比较项 | `database` | `websocket` |
 | --- | --- | --- |
 | 传输 | 轮询 `job_queues` 表 | Hub 内实时路由 |
-| 离线任务 | 保留待领取记录 | 不保留，目标离线即不可用 |
+| 离线任务 | 保留待认领记录 | 不保留，目标离线即不可用 |
 | 额外组件 | 无 | Hub 进程或外部 Hub |
 | 适用场景 | 支持并发写入的共享数据库 | 默认选项，SQLite 与高频 RPC |
 
@@ -25,14 +25,14 @@ JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节
 
 每个进程有两个身份：
 
-- `peer_id`：进程启动时生成，用于把请求直接发给这个进程。
-- `service`：按名称固定的服务组标识（如 `Server`、`QQ`）。同组成员竞争领取普通 RPC 请求，每个请求由一个节点接收。
+- `peer_id`：进程启动时生成，用于把请求直接发给该进程。
+- `service`：按名称固定的服务组标识（如 `Server`、`QQ`）。同组成员竞争认领普通 RPC 请求，每个请求由一个节点接收。
 
 进程状态依次为 `starting`、`ready`、`maintenance`、`draining`、`stopped`。`check_job_queue()` 注册实例并切换为 `ready`。
 
 节点每 15 秒更新一次注册信息，每 10 秒与注册表核对一次。超过 45 秒没有更新，节点就被判定为离线。关闭时，节点先广播 `draining`。处理完正在执行的任务后，节点再广播 `stopped`。
 
-`core.alive.Alive` 是进程内的同步路由缓存。这个缓存只复用已由注册表确认的记录。若要让同一个业务键固定落到同一个实例，请用 `ServiceRoute` 描述 service、角色与路由键。运行时按 Rendezvous Hash 从 `ready` 实例中选出目标。
+`core.alive.Alive` 是进程内的同步路由缓存。该缓存只复用已由注册表确认的记录。若要让同一个业务键固定路由到同一个实例，请用 `ServiceRoute` 描述 service、角色与路由键。运行时按 Rendezvous Hash 从 `ready` 实例中选出目标。
 
 ## RPC
 
@@ -49,7 +49,7 @@ task_id = await PlatformAPI.post_message.submit(session_info, message, module_na
 - 直接 `await` 会等待远程结果。`.submit()` 只等待后端接受任务。
 - `ContextManager` 上的平台方法通过 `context_method()` 自动绑定，参数签名取自方法本身。
 - 默认超时：普通调用 120 秒，信号 30 秒，消息处理与发送最长 7200 秒。每个请求有独立的截止时间。
-- 失败时抛出 `RpcError` 的子类：`RpcUnavailableError`（目标不可达）、`RpcTimeoutError`、`RpcCancelledError`、`RpcMethodNotFoundError`、`RpcProtocolError`，远程异常包装为 `RpcRemoteError`，并保留 traceback。
+- 失败时抛出 `RpcError` 的子类：`RpcUnavailableError`（目标不可达）、`RpcTimeoutError`、`RpcCancelledError`、`RpcMethodNotFoundError`、`RpcProtocolError`，远程异常会包装为 `RpcRemoteError`，并保留 traceback。
 - 一个请求至少会被投递一次，也可能重复投递。发送、禁言等有外部副作用的调用在超时后，由调用方判断是否重试。
 
 `PlatformAPI.post_message` 在目标通道发送失败时，把 `SessionInfo.next_hops` 交回 Server，由 Server 继续尝试下一跳。整条通道都不可用时，此方法返回空列表。
@@ -75,19 +75,19 @@ receipt = await invalidate_cache.emit(PeerSelector.role("server"), version=8)
 report = await invalidate_cache.gather(PeerSelector.service("Server"), version=8)
 ```
 
-`.emit()` 只发送，`.gather()` 逐个实例等待确认。信号处理函数必须可以重复执行，同一个信号收到多次，结果与收到一次相同。带版本号的数据以持久化状态为准。
+`.emit()` 只发送，`.gather()` 逐个实例等待确认。信号处理函数必须可以重复执行，同一个信号收到多次时，结果与收到一次相同。带版本号的数据以持久化状态为准。
 
 ## 数据表
 
 | 表 | 内容 |
 | --- | --- |
-| `job_queues` | 任务记录：目标、来源、动作、参数、状态、领取者与结果 |
+| `job_queues` | 任务记录：目标、来源、动作、参数、状态、认领者与结果 |
 | `job_queue_peers` | 节点注册表：角色、service、状态、能力、元数据与注册有效期 |
 
-`database` 后端以 `pending` 为条件原子领取任务，每轮候选上限 100 条。已经结束的任务，其记录在调用方读取后删除。遗漏的记录由每小时运行的后台任务清理。`websocket` 后端不保存任务记录和结束状态。
+`database` 后端以 `pending` 为条件原子认领任务，每轮候选上限 100 条。已经结束的任务，其记录在调用方读取后删除。遗漏的记录由每小时运行的后台任务清理。`websocket` 后端不保存任务记录和结束状态。
 
 ## 关闭与维护
 
-进入维护窗口后，节点先停止领取新任务，再等待已经开始的处理完成。数据库热重载在维护窗口内进行，期间独占数据库连接。
+进入维护窗口后，节点先停止认领新任务，再等待已经开始的处理完成。数据库热重载在维护窗口内进行，期间独占数据库连接。
 
 关闭期间，结果接收器继续运行。会话与后台任务清理完毕后，它才停止。轮询器异常退出时，实例会撤销注册，并释放本地等待方。

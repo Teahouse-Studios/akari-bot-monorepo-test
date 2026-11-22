@@ -3,7 +3,7 @@ schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
 assets = "assets"
-# config.py 的 on_module_config("wordle") 登记的表。
+# config.py 的 on_module_config("wordle") 声明的表。
 config_table = "module_wordle"
 config_schema_version = 1
 provides_modules = ["wordle"]

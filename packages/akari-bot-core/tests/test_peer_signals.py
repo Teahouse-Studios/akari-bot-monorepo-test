@@ -855,7 +855,7 @@ async def test_peer_signals(tester: Tester):
     await tester.test(_test_route_resolution_obeys_rpc_deadline, "稳定路由查询计入 RPC deadline")
     await tester.test(
         _test_expired_instance_discards_fire_and_forget_delivery,
-        "租约过期删除免回包实例直投任务",
+        "租约过期删除免响应实例直投任务",
     )
     await tester.test(_test_expiration_rolls_back_when_delivery_finalization_fails, "租约失效与任务终结事务回滚")
     await tester.test(_test_unexpected_poller_failure_unregisters_peer, "轮询器异常退出注销实例")

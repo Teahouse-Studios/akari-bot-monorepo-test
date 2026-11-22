@@ -140,7 +140,7 @@ async def _test_concurrent_consumers_claim_once():
 
     async def _get_same_pending_snapshot(target_clients, limit=None):
         # 补丁作用于进程级的 JobQueuesTable，同一事件循环中其它 Peer 的轮询器也会命中。
-        # 非本测试目标须原样放行，否则外部轮询器会占用会合名额，使本测试的协程永久等待。
+        # 非本测试目标的调用须原样放行，否则外部轮询器会占用会合名额，使本测试的协程永久等待。
         if "QUEUE-AUDIT-CLAIM" not in target_clients:
             return await original_get_all(target_clients, limit=limit)
         nonlocal readers
@@ -158,7 +158,7 @@ async def _test_concurrent_consumers_claim_once():
 
     def _capture_task(coro, **kwargs):
         task = asyncio.get_running_loop().create_task(coro, **kwargs)
-        # 同上：只登记本任务派发的处理协程，避免等待其它轮询器的在途任务。
+        # 同上：只记录本任务派发的处理协程，避免等待其它轮询器的在途任务。
         if str(kwargs.get("name", "")).endswith(str(task_id)):
             scheduled.append(task)
         return task
@@ -220,9 +220,9 @@ async def test_queue_lifecycle(tester: Tester):
     """akaribot.core.queue.base: 队列生命周期测试。"""
     await tester.test(_test_cleanup_keeps_active_tasks, "定时清理保留活动任务测试")
     await tester.test(_test_cleanup_marks_stale_active_timeout, "超时活动任务进入 timeout 测试")
-    await tester.test(_test_cancelled_fire_and_forget_task_is_deleted, "取消的免回包任务及时删除测试")
+    await tester.test(_test_cancelled_fire_and_forget_task_is_deleted, "取消的免响应任务及时删除测试")
     await tester.test(_test_completed_task_is_deleted_after_response_consumption, "等待型结果消费后删除测试")
-    await tester.test(_test_concurrent_consumers_claim_once, "并发消费者只领取一次测试")
+    await tester.test(_test_concurrent_consumers_claim_once, "并发消费者只认领一次任务")
     await tester.test(_test_trigger_hook_result_is_not_overwritten, "trigger_hook 返回值不被覆盖测试")
-    await tester.test(_test_fire_and_forget_finish_only_deletes_claimed_task, "免回包完成仅删除已领取任务")
+    await tester.test(_test_fire_and_forget_finish_only_deletes_claimed_task, "免响应完成仅删除已认领任务")
     return tester

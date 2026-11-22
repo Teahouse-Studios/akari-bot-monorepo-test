@@ -48,8 +48,8 @@ match_hash_cache = ExpiringTempDict()
 
 LONG_REGEX_MESSAGE_LENGTH = 75
 
-# 标记为单次触发的正则，其「模块名 + 正则序号 + 场景 ID」在此登记，登记后不再参与匹配。
-# 仅存于进程内存，重启即清空；条目数上限为「触发过的场景数 × 单次触发正则条数」，有界。
+# 标记为单次触发的正则，其“模块名 + 正则序号 + 场景 ID”在此记录，记录后不再参与匹配。
+# 仅存于进程内存，重启即清空。条目数上限为“触发过的场景数 × 单次触发正则条数”，有界。
 regex_once_cache: set[tuple[str, int, str]] = set()
 
 
@@ -115,7 +115,7 @@ async def _validate_recovery_target(
     if module is None or not module._db_load:
         return False
     has_template = any(func.command_template for func in module.command_list.get(msg.session_info.target_from))
-    # 有命令模板但当前客户端解析不出可用命令，视为过期建议；无模板模块允许透传
+    # 有命令模板但当前客户端解析不出可用命令，视为过期建议。无模板模块允许透传
     if has_template and not _command_available_for_current_session(msg, module, command_first_word):
         return False
     # 场景启用：非 base 且要求启用时，确认期间被禁用则放弃
@@ -161,7 +161,7 @@ async def _try_command_recovery(
                 fresh_modules = ModulesManager.return_modules_list(*platform_fields(msg.session_info), use_cache=False)
                 msg.trigger_msg = proposal.trigger_msg
                 new_word = proposal.command_first_word
-                # 等待期间模块状态可能已变，刷新 Union 派生状态，
+                # 等待期间模块状态可能已变，刷新 Union 生成状态，
                 # 同时保留本次消息已生效的前缀与 hook 草稿修改。
                 try:
                     await msg.session_info.refresh_info()
@@ -213,7 +213,7 @@ async def parser(msg: "Bot.MessageSession"):
             isinstance(wait_result, Continue) and wait_result.data.get("skip_wait_tasks", False)
         )
         if not skip_wait_tasks:
-            # 独占等待任务或 callback 会消费消息；允许并行路由的等待任务则在完成等待后
+            # 独占等待任务或 callback 会消费消息。允许并行路由的等待任务则在完成等待后
             # 继续进入命令/正则路由。
             if await SessionTaskManager.check(msg, allow_wait_fallthrough=True):
                 return
@@ -322,7 +322,7 @@ async def parser(msg: "Bot.MessageSession"):
         try:
             await msg.release_execution_resources()
         finally:
-            # wait_* 的回复会话共享根命令的 ExecutionState，但无最终清理所有权；
+            # wait_* 的回复会话共享根命令的 ExecutionState，但无最终清理所有权。
             # 最终 lease 只能由原始 parser 释放。
             if getattr(msg, "_execution_state_owner", True):
                 ExecutionLockList.remove(msg)
@@ -475,7 +475,7 @@ async def _execute_module(
         if isinstance(before_parse_result, Stop):
             return
 
-        none_templates = True  # 标记模块是否有命令模板
+        none_templates = True  # 标记模块是否缺少命令模板
         # 模块是否按模板路由与查看者的权限无关，受限命令同样算作模板命令
         for func in module.command_list.get(
             msg.session_info.target_from,
@@ -492,9 +492,9 @@ async def _execute_module(
             command_result = await _execute_module_command(msg, module, command_first_word)
             if command_result is not False:
                 # ``None`` 表示命令已被入口策略处理（例如权限拒绝或参数错误），
-                # 不应伪装成成功执行；正常命令会在 helper 内抛出 SessionFinished。
+                # 不应伪装成成功执行。正常命令会在 helper 内抛出 SessionFinished。
                 return
-            # 仅模板匹配失败进入恢复；参数转换或已开始执行的命令报错不能重试。
+            # 仅模板匹配失败进入恢复。参数转换或已开始执行的命令报错不能重试。
             if module.suppress_invalid_prompt:
                 return
         else:
@@ -579,7 +579,7 @@ def regex_once_triggered(module_name: str, index: int, target_id: str) -> bool:
 
 def mark_regex_once(module_name: str, index: int, target_id: str) -> None:
     """
-    登记一条单次触发的正则已在该场景中跑过。
+    记录一条单次触发的正则已在该场景中跑过。
 
     :param module_name: 所属模块名称。
     :param index: 该正则在模块 ``regex_list`` 中的序号。
@@ -827,7 +827,7 @@ async def _execute_regex(msg: "Bot.MessageSession", modules, identify_str):
                                     return
                                 continue
 
-                            # 正则由消息内容隐式触发，锁被占用时静默跳过；
+                            # 正则由消息内容隐式触发，锁被占用时静默跳过。
                             # 此处若发出提示并 return，还会连带中断后续模块的正则遍历。
                             if not await try_acquire_execution_lock(msg):
                                 continue
@@ -906,7 +906,7 @@ def _unwrap_optional(annotation):
 def _unwrap_option_value(value):
     # 带子参数的选项（如 ``[--foo <bar>]``）在 ``msg.parsed_msg`` 中会被解析为字典
     # （形如 ``{"<bar>": "value"}``）。恰好只有一个子参数时解包为该子参数的值，
-    # 使函数参数可以直接拿到 ``"value"``；其余情况原样返回。
+    # 使函数参数可以直接拿到 ``"value"``。其余情况原样返回。
     if isinstance(value, dict) and len(value) == 1:
         return next(iter(value.values()))
     return value

@@ -141,7 +141,7 @@ async def _test_device_poll_follows_client_form():
         and confidential_payload["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
         and confidential_payload["client_secret"] == "app-secret"
         and "client_secret" not in public_calls[0][1]
-        # 设备码只能换取一次，重发可能把第一次已签发的令牌扫掉，故不重试。
+        # 设备码只能换取一次，重发可能把第一次已签发的令牌作废，故不重试。
         and attempt == 1
     )
 
@@ -344,7 +344,7 @@ async def _test_unbind_revokes_available_token():
         stranger_msg = _MessageSession("stranger")
         await unbind_account(stranger_msg)
 
-        # 撤销失败也要删掉本地记录：否则用户会卡在「已解绑却仍显示已绑定」的状态里。
+        # 撤销失败也要删除本地记录，否则用户会处于“已解绑却仍显示已绑定”的状态。
         holder["bind"] = DivingProberBindInfo(union_id="failing-union", refresh_token="rt", subject=None)
         with patch.object(divingfish_oauth, "revoke_token", failing_revoke):
             failing_msg = _MessageSession("failing-union")

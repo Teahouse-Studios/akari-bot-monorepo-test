@@ -1,7 +1,7 @@
 """CLI 根命令的入口行为测试（P1-9）。
 
-锁定三件事：``--version`` 只把 metadata 里的版本号写到 stdout 并以 0 退出；裸调用打印帮助而不是
-``Missing command.`` 错误；冻结产物取不到分发 metadata 时版本查询仍不抛异常。用例只经
+锁定三件事：``--version`` 只把 metadata 里的版本号写到 stdout 并以 0 退出。裸调用打印帮助而不是
+``Missing command.`` 错误。冻结产物取不到分发 metadata 时版本查询仍不抛异常。用例只经
 :class:`typer.testing.CliRunner` 调用根应用，不起子进程，也不碰任何实例目录。
 """
 
@@ -151,7 +151,7 @@ async def _test_bare_invocation_enters_tui_on_terminal():
 
 
 async def _test_bare_invocation_guides_init_without_instance():
-    # 没有实例时先问一句，复用 init 本体初始化，再进界面。
+    # 没有实例时先询问，复用 init 本体初始化，再进界面。
     calls: list[tuple] = []
     found = {"count": 0}
 
@@ -195,7 +195,7 @@ async def _test_bare_invocation_aborts_when_init_declined():
 async def _test_init_is_callable_with_defaults():
     # ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填
     # （或默认值变成 typer 的 OptionInfo），裸调用入口会在运行时失败，而 ``akaribot init`` 子命令
-    # 仍然正常，这条守卫专门盯住这个差值。
+    # 仍然正常，这条守卫专门针对这一差异。
     try:
         signature = inspect.signature(init_command)
         required = [
@@ -214,7 +214,7 @@ async def _test_init_is_callable_with_defaults():
 
 
 async def _test_tui_entry_registers_active_instance():
-    # 站在实例目录里进界面时自动补登记：本机清单与自启策略随后才有对象可管。
+    # 在实例目录里进界面时自动补充记录：本机清单与自启策略随后才有对象可管。
     from akaribot.cli.commands import tui as tui_cmd
     from akaribot.cli.instances import InstanceRegistry
 
@@ -243,7 +243,7 @@ async def _test_tui_entry_registers_active_instance():
 
 
 async def _test_tui_entry_hands_the_note_to_the_ui():
-    # 自动登记的结论要交给界面报出来，否则用户看不到注册表被动过。
+    # 自动记录的结论由界面提示，否则用户看不到注册表已被改动。
     from akaribot.cli.commands import tui as tui_cmd
 
     seen: list[str] = []
@@ -261,7 +261,7 @@ async def _test_tui_entry_hands_the_note_to_the_ui():
     with (
         mock.patch("akaribot.cli.tui._compat.is_interactive_terminal", return_value=True),
         mock.patch("akaribot.cli.tui.app.run_tui", side_effect=_run_tui),
-        mock.patch.object(tui_cmd, "register_active", return_value="已自动登记 demo"),
+        mock.patch.object(tui_cmd, "register_active", return_value="已自动添加 demo"),
     ):
         try:
             tui_cmd.run_interactive()
@@ -269,11 +269,11 @@ async def _test_tui_entry_hands_the_note_to_the_ui():
             code = getattr(error, "exit_code", None)
             if code not in (0, None):
                 return False
-    return seen == ["已自动登记 demo"]
+    return seen == ["已自动添加 demo"]
 
 
 async def _test_tui_entry_adopts_the_only_child_instance():
-    # 站在仓库根这类「装着实例的目录」时，唯一的下级实例就是要管的那个：登记并切换过去。
+    # 在仓库根这类存放实例的目录下，唯一的下级实例就是当前要管的实例：记录并切换过去。
     from akaribot.cli.commands import tui as tui_cmd
     from akaribot.cli.tui import context
 
@@ -292,7 +292,7 @@ async def _test_tui_entry_adopts_the_only_child_instance():
                 with mock.patch("akaribot.cli.instance.Path.cwd", return_value=project):
                     single = tui_cmd.register_active()
                     switched = context.active_root()
-                # 再放一个实例进去，并换一份空注册表：下级有两个实例时不猜，只报候选。
+                # 再放一个实例进去，并换一份空注册表：下级有两个实例时不作选择，只报候选。
                 second = project / "second"
                 second.mkdir()
                 (second / "akaribot.toml").write_text("[instance]\n", encoding="utf-8")
@@ -315,10 +315,10 @@ async def _test_tui_entry_adopts_the_only_child_instance():
 
 @func_case
 async def test_cli_main(tester: Tester):
-    """CLI 根命令：版本查询、裸调用帮助、参数顺序与冻结兜底"""
+    """CLI 根命令：版本查询、裸调用帮助、参数顺序与冻结回退"""
     _use_cli_locale()
-    # 实例解析会回落到注册表里的缺省实例，故整轮都指向一份空注册表：否则这几条用例的结果取决于
-    # 跑测试这台机器上登记过什么。
+    # 实例解析会改用注册表里的默认实例，故整轮都指向一份空注册表：否则这几条用例的结果取决于
+    # 运行测试的机器上记录过什么。
     with TemporaryDirectory(prefix="akari-main-") as raw:
         with mock.patch.dict(os.environ, {"AKARIBOT_HOME": str(Path(raw) / "home"), "AKARI_INSTANCE_DIR": ""}):
             await _run_cli_main_cases(tester)
@@ -335,7 +335,7 @@ async def _run_cli_main_cases(tester: Tester) -> None:
     await tester.test(_test_bare_invocation_enters_tui_on_terminal, "终端下裸调用进界面")
     await tester.test(_test_bare_invocation_guides_init_without_instance, "无实例时引导初始化")
     await tester.test(_test_bare_invocation_aborts_when_init_declined, "拒绝初始化时不进界面")
-    await tester.test(_test_init_is_callable_with_defaults, "init 参数均有默认值可直调")
-    await tester.test(_test_tui_entry_registers_active_instance, "进界面时自动登记所在实例")
-    await tester.test(_test_tui_entry_hands_the_note_to_the_ui, "自动登记的结论交给界面报出")
+    await tester.test(_test_init_is_callable_with_defaults, "init 参数均有默认值可直接调用")
+    await tester.test(_test_tui_entry_registers_active_instance, "进界面时自动添加所在实例")
+    await tester.test(_test_tui_entry_hands_the_note_to_the_ui, "自动添加的结论交给界面报出")
     await tester.test(_test_tui_entry_adopts_the_only_child_instance, "唯一的下级实例被发现并切换")

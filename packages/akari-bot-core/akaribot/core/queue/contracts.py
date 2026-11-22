@@ -133,7 +133,7 @@ class ServerAPI:
     @staticmethod
     @remote("server.get_process_usage", timeout=15)
     async def get_process_usage() -> dict:
-        """汇总各进程内存占用；扇出失败时以 failures 说明，而非抛出异常。"""
+        """汇总各进程内存占用。扇出失败时以 failures 说明，不抛出异常。"""
         ...
 
     @staticmethod

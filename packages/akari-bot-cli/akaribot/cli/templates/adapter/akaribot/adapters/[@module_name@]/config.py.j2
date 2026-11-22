@@ -14,6 +14,6 @@ class [@module_class@]Config:
 
 @on_bot_config("[@module_name@]", secret=True)
 class [@module_class@]SecretConfig:
-    """凭据项。本表不进入 ``~config`` 的明文输出。"""
+    """登录信息。本表不进入 ``~config`` 的明文输出。"""
 {% for field in credential_fields | default([]) %}
-    {{ field.name }}: str = ""{% endfor %}{% endif %}{% else %}# 未生成配置模板：需要 enable 开关或平台凭据时，重新生成并加 --config。{% endif %}
+    {{ field.name }}: str = ""{% endfor %}{% endif %}{% else %}# 未生成配置模板：需要 enable 开关或平台登录信息时，重新生成并加 --config。{% endif %}

@@ -1,7 +1,7 @@
-"""环境（venv）归属判定：区分「同一个环境」与「同一个基础解释器」。
+"""环境（venv）归属判定：区分“同一个环境”与“同一个基础解释器”。
 
 uv 建的 venv 都把 ``bin/python`` 指向同一个基础解释器，按 ``resolve()`` 后的文件比较会把两个
-不同的 venv 判成同一个环境，``venv adopt`` / ``venv release`` 因此被误拒。判据改为比环境根目录。
+不同的 venv 判成同一个环境，``venv adopt`` / ``venv release`` 因此被误拒。判据因此取环境根目录。
 """
 
 from pathlib import Path

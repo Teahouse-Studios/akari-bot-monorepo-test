@@ -66,7 +66,7 @@ class DBModel(Model):
             return None
         if create:
             # resolve_union 返回后到模块行创建前，另一个进程可能删除整个 Union。
-            # 在 mutation 域内重新锁住核心行，确保「核心行存在」与「模块行创建」同属一个事务。
+            # 在 mutation 域内重新锁定核心行，确保“核心行存在”与“模块行创建”同属一个事务。
             async with union_mutation():
                 async with in_transaction("default") as connection:
                     current = await (

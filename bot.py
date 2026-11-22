@@ -1,12 +1,12 @@
-"""根目录兼容层：``bot`` 转发到 :mod:`akaribot.core.entrypoints.run`。
+"""根目录兼容实现：``bot`` 转发到 :mod:`akaribot.core.entrypoints.run`。
 
-机器人入口已迁入 core 包，本文件只保留两个历史用法：
+机器人入口在 core 包内，本文件只保留两个兼容用法：
 
 - ``import bot``：把 ``sys.modules["bot"]`` 换成 run 模块本身，旧模块的全部名字（含私有名）
   因此原样可见。不做逐个再导出：``packages/akari-bot-core/tests/test_jobqueue_daemon.py`` 与
   ``tests/unit/test_multi_instance.py`` 会给 ``daemon.server_stop_event`` 等模块级变量赋值后再调
   ``daemon.cleanup_processes()``，只有同一模块对象才能让这类赋值被函数读到。
-- ``python bot.py``：转发到 run 模块的 ``main()``，实例锁与守护循环都在那里。
+- ``python bot.py``：转发到 run 模块的 ``main()``，实例级锁与守护循环都在那里。
 
 新代码请改用 ``python -m akaribot.core.entrypoints.run``。
 """

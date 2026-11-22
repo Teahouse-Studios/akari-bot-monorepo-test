@@ -68,7 +68,7 @@ def _trim_devices(devices: dict) -> dict:
 
 async def register_device(user_agent: str, ip: str) -> bool:
     user_agent = _sanitize_text(user_agent)
-    # 以 UA 作为设备指纹；不纳入 IP，避免移动网络或代理切换导致误报。
+    # 以 UA 作为设备指纹。不纳入 IP，避免移动网络或代理切换导致误报。
     fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()
     now = datetime.now(UTC).timestamp()
 

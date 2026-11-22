@@ -51,9 +51,9 @@ class ProcessRecord:
     """状态表中的一行。
 
     :param label: 目标名，通常是 ``akaribot run``。
-    :param pid: 进程号；未启动或由外部进程持锁时为空。
+    :param pid: 进程号。未启动或由外部进程持锁时为空。
     :param started_at: 启动时间，展示用本地时间字符串。
-    :param exit_code: 退出码；仍在运行或未曾启动时为空。
+    :param exit_code: 退出码。仍在运行或未曾启动时为空。
     :param state: ``running`` / ``stopped`` / ``exited`` / ``unknown``。
     :param origin: 记录来源：``本界面启动`` / ``外部进程`` / ``替身`` 等。
     :param detail: 备注，通常是启动命令或锁文件路径。
@@ -96,13 +96,13 @@ class RunResult:
 
 @runtime_checkable
 class RunSource(Protocol):
-    """运行控制数据源接口；测试注入替身，运行时通过子进程执行。"""
+    """运行控制数据源接口。测试注入替身，运行时通过子进程执行。"""
 
     def status(self) -> Sequence[ProcessRecord]:
         """返回状态表，至少一行。"""
 
     def start(self, *, adapter: str = "") -> RunResult:
-        """启动实例；``adapter`` 非空时只启动该平台的适配器。"""
+        """启动实例。``adapter`` 非空时只启动该平台的适配器。"""
 
     def stop(self) -> RunResult:
         """停止当前实例。"""
@@ -114,10 +114,10 @@ class RunSource(Protocol):
 class StaticRunSource:
     """替身数据源：不产生任何子进程，启停只累加调用次数并更新状态。
 
-    :param records: 初始状态表；默认给一行「已停止」。
+    :param records: 初始状态表。默认生成一行“已停止”。
     :param running_pid: 启动成功后上报的 PID。
     :param stop_exit_code: 停止后上报的退出码。
-    :param results: 覆盖 ``start`` / ``stop`` / ``restart`` 的返回值；指定结果时保留现有状态表。
+    :param results: 覆盖 ``start`` / ``stop`` / ``restart`` 的返回值。指定结果时保留现有状态表。
     """
 
     def __init__(
@@ -224,7 +224,7 @@ class SubprocessRunSource:
 
     实例进程使用独立会话，界面退出后继续运行。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param start: 向上查找的起点，默认为当前工作目录。
     :param timeout: 单次 CLI 调用的秒数上限。
     :param stop_timeout: 交给 CLI 的停止等待秒数。
@@ -307,7 +307,7 @@ class SubprocessRunSource:
         return RunResult(True, i18n.t("cli.tui.run.msg_restarted_with", message=started.message), started.detail)
 
     def probe_running(self) -> bool | None:
-        """探测实例是否在运行；探测失败返回 ``None``。"""
+        """探测实例是否在运行。探测失败返回 ``None``。"""
         try:
             state = self._state()
         except RunSourceError as error:
@@ -428,7 +428,7 @@ class RunPage(compat.Vertical):
     启停操作经模态确认后执行。
 
     :param source: 数据源，默认为 :class:`SubprocessRunSource`。
-    :param status_interval: 状态表刷新周期（秒）；``None`` 或非正数表示只手动刷新。
+    :param status_interval: 状态表刷新周期（秒）。``None`` 或非正数表示只手动刷新。
     """
 
     DEFAULT_CSS = """
@@ -540,7 +540,7 @@ class RunPage(compat.Vertical):
     def refresh_status(self, *, manual: bool = False) -> None:
         """后台刷新运行状态，同一时刻只保留最新请求。
 
-        :param manual: 是否由用户显式刷新；轮询不作废待确认，手动刷新才作废。
+        :param manual: 是否由用户显式刷新。轮询不作废待确认，手动刷新才作废。
         """
         self.run_worker(partial(self._refresh, manual=manual), group="run-status", exclusive=True)
 
@@ -571,11 +571,11 @@ class RunPage(compat.Vertical):
         self.refresh_status()
 
     def reset_pending(self) -> None:
-        """作废待确认状态；切页时由 App 调用。"""
+        """作废待确认状态。切页时由 App 调用。"""
         self._pending.reset()
 
     def request_start(self) -> None:
-        """请求启动当前实例；已运行时显示提示。"""
+        """请求启动当前实例。已运行时显示提示。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -587,7 +587,7 @@ class RunPage(compat.Vertical):
         self._request_start(self._adapter)
 
     def request_stop(self) -> None:
-        """请求停止当前实例；未运行时显示提示。"""
+        """请求停止当前实例。未运行时显示提示。"""
         if not self.running:
             compat.notify(
                 self.app,
@@ -870,5 +870,5 @@ class RunPage(compat.Vertical):
         self.refresh_status(manual=True)
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await self.app.workers.wait_for_complete()

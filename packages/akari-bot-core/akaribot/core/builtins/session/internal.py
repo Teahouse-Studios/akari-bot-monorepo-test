@@ -45,7 +45,7 @@ def _is_confirmation_message(msg: MessageSession) -> bool:
 
 
 def _is_remote_context_unavailable(exc: RpcRemoteError) -> bool:
-    # 平台进程可能只回报 ValueError 文本，此时按消息内容兜底。
+    # 平台进程可能只回报 ValueError 文本，此时按消息内容回退。
     if exc.remote_type == SessionContextUnavailable.__name__:
         return True
     return exc.remote_type == ValueError.__name__ and str(exc) == "Session not found in context"
@@ -170,7 +170,7 @@ class MessageSession:
             return
         pending = held_contexts
         failures: list[tuple[MessageSession, BaseException]] = []
-        # release_context 是跨进程动作；一次瞬时 Queue／平台异常不应把已经
+        # release_context 是跨进程动作。一次瞬时 Queue／平台异常不应把已经
         # hold 的 context 永久遗留。成功项只释放一次，失败项让出一拍后重试。
         for attempt in range(2):
             results = await asyncio.gather(*(result.release() for result in pending), return_exceptions=True)
@@ -238,9 +238,9 @@ class MessageSession:
         :param quote: 是否引用原始消息（默认为 True）
         :param disable_secret_check: 是否禁用消息安全检查（默认为 False）
         :param callback: 回调函数，在消息发送完成后执行（可选）
-        :param callback_id: 按钮交互使用的虚拟回复 ID；通常由框架自动生成（可选）
-        :param callback_timeout: callback 有效秒数；默认为 30 分钟，None 表示不自动过期
-        :param callback_once: 是否在首次触发后立即失效；默认为 False
+        :param callback_id: 按钮交互使用的虚拟回复 ID，通常由框架自动生成（可选）
+        :param callback_timeout: callback 有效秒数，默认为 30 分钟，None 表示不自动过期
+        :param callback_once: 是否在首次触发后立即失效，默认为 False
         :return: FinishedSession 对象，包含消息 ID，可用于后续操作
 
         :raises SessionFinished: 如果发送过程中抛出异常
@@ -262,7 +262,7 @@ class MessageSession:
         if not chain.is_safe and not disable_secret_check:
             chain = MessageChain.assign(I18NContext("error.message.chain.unsafe"))
 
-        # 在 callback 登记之前，避免取消时遗留 pending 注册
+        # 在 callback 注册之前，避免取消时遗留 pending 注册
         from akaribot.core.builtins.parser.hooks import (
             OutgoingPayload,
             Stop,
@@ -329,8 +329,8 @@ class MessageSession:
 
                 if callback_targets:
                     if callback_handle is not None:
-                        # callback 可能已在发送回包前被主动撤销、过期或作为一次性
-                        # callback 消费；此时 extend 返回 None，不能重新注册。
+                        # callback 可能已在发送响应前被主动撤销、过期或作为一次性
+                        # callback 消费。此时 extend 返回 None，不能重新注册。
                         callback_handle = SessionTaskManager.extend_callback(callback_handle, callback_targets)
                     else:
                         callback_targets.extend(
@@ -349,7 +349,7 @@ class MessageSession:
                     # 空 ID 表示平台发送失败，不能只凭 bot_id 为不存在的消息留下 callback。
                     SessionTaskManager.remove_callback(callback_handle)
 
-            # 观察快照带真实消息 ID 与最终发送内容；慢观察者不会延长 callback 未绑定窗口
+            # 观察快照带真实消息 ID 与最终发送内容。慢观察者不会延长 callback 未绑定窗口
             await dispatch_outgoing_result(self, outgoing_payload, ok=True, message_ids=return_val)
             return FinishedSession(self.session_info, return_val)
         SessionTaskManager.remove_callback(callback_handle)
@@ -372,9 +372,9 @@ class MessageSession:
         :param quote: 是否引用原始消息（默认为 True）
         :param disable_secret_check: 是否禁用消息安全检查（默认为 False）
         :param callback: 回调函数，在消息发送完成后执行（可选）
-        :param callback_id: 按钮交互使用的虚拟回复 ID；通常由框架自动生成（可选）
-        :param callback_timeout: callback 有效秒数；默认为 30 分钟，None 表示不自动过期
-        :param callback_once: 是否在首次触发后立即失效；默认为 False
+        :param callback_id: 按钮交互使用的虚拟回复 ID，通常由框架自动生成（可选）
+        :param callback_timeout: callback 有效秒数，默认为 30 分钟，None 表示不自动过期
+        :param callback_once: 是否在首次触发后立即失效，默认为 False
         :raises SessionFinished: 总是抛出此异常来终止会话处理
         """
         f = None
@@ -395,7 +395,7 @@ class MessageSession:
         message_chain: Chainable,
         disable_secret_check: bool = False,
     ):
-        """用于向消息用户直接发送消息。
+        """用于直接向消息用户发送消息。
 
         :param message_chain: 消息链，若传入 str 则自动创建一条带有 PlainElement 的消息链
         :param disable_secret_check: 是否禁用消息安全检查（默认为 False）
@@ -547,7 +547,7 @@ class MessageSession:
 
     async def unrestrict_member(self, user_id: str | list[str], wait: bool = False):
         """
-        用于解除禁言成员，可能需要该场景的管理员权限。
+        用于解除成员的禁言，可能需要该场景的管理员权限。
 
         :param user_id: 用户 ID 或 ID 列表
         """
@@ -574,7 +574,7 @@ class MessageSession:
 
     async def unban_member(self, user_id: str | list[str]):
         """
-        用于解除封禁成员，可能需要该场景的管理员权限。
+        用于解除成员的封禁，可能需要该场景的管理员权限。
 
         :param user_id: 用户 ID 或 ID 列表
         """
@@ -648,7 +648,7 @@ class MessageSession:
         await PlatformAPI.error_signal.submit(self.session_info)
 
     async def hold(self):
-        """用于持久化会话上下文，用于手动控制会话的生命周期，避免会话结束后资源被释放。"""
+        """用于持久化会话上下文，手动控制会话的生命周期，避免会话结束后资源被释放。"""
         try:
             await PlatformAPI.hold_context(self.session_info)
         except RpcRemoteError as exc:
@@ -674,7 +674,7 @@ class MessageSession:
 
     @asynccontextmanager
     async def _typing_paused(self) -> AsyncIterator[None]:
-        # 恢复时须沿用最初展示提示的会话；等待取得的回复会话没有对应的平台提示。
+        # 恢复时须沿用最初展示提示的会话。等待取得的回复会话没有对应的平台提示。
         owner = ExecutionLockList.state(self).typing_owner
         if owner is not None:
             await owner.end_typing()
@@ -718,8 +718,8 @@ class MessageSession:
         :param timeout: 超时时间（秒），默认为 120 秒
         :param append_instruction: 是否在发送的消息中附加提示（默认为 True）
         :param no_confirm_action: 在 `no_confirm` 配置项启用后的默认行为（默认为 True）
-        :param release_execution_lock: 等待期间是否释放执行锁。Union 合并在建立
-                                       双方 barrier 后须保持锁，避免冲突选择期间重新并发。
+        :param release_execution_lock: 等待期间是否释放执行锁。Union 合并在双方建立
+                                       barrier 后须保持锁，避免冲突选择期间重新并发。
         :param consume_any_message: 是否将下一条任意消息作为否定结果消费，而不是仅消费确认词。
         :param confirm_token: 要求完整回复的口令，不为 None 时启用严格确认模式。
         :return: 若对象发送确认指令返回 True，反之返回 False
@@ -766,7 +766,7 @@ class MessageSession:
                 matcher=matcher,
             )
             try:
-                # 等待任务须在跨进程发送提示前登记；平台可能已展示消息并收到用户操作，
+                # 等待任务须在跨进程发送提示前就位。平台可能已展示消息并收到用户操作，
                 # 而发送 action 的结果尚未回到 Server。
                 send = await self.send_message(chain, quote)
                 if quick_confirm and not strict_mode and not self.session_info.support_button:

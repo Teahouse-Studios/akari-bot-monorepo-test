@@ -43,7 +43,7 @@ class Bot:
 
     ModuleHookContext = ModuleHookContext
 
-    # Parser 入口 hook 上下文；控制结果类型可通过 ``ctx.Stop`` 等访问。
+    # Parser 入口 hook 上下文。控制结果类型可通过 ``ctx.Stop`` 等访问。
     ParserHookContext = ParserHookContext
 
     EventInfo = EventInfo
@@ -60,7 +60,7 @@ class Bot:
 
     fetched_session_ctx_slot = 0
 
-    # 平台 SDK 的消息回调不可被 Server 处理耗时阻塞，因此消息以后台任务投递；
+    # 平台 SDK 的消息回调不可被 Server 的处理耗时阻塞，因此消息以后台任务投递。
     # 显式持有任务既避免异常无人取回，也便于平台关闭时统一取消。
     _message_tasks: set[asyncio.Task[None]] = set()
 
@@ -89,7 +89,7 @@ class Bot:
         async def _process_msg():
             # 添加上下文到管理器（存储 session_id 和对应的上下文对象）
             ctx_manager.add_context(session_info, ctx)
-            # 处理期间登记存活标记，Server 侧的 hold／send 因此不会与删除竞速。
+            # 处理期间设置存活标记，Server 侧的 hold／send 因此不会与删除竞速。
             ctx_manager.activate_context(session_info)
             try:
                 await ServerAPI.receive_message(session_info)
@@ -154,7 +154,7 @@ class Bot:
         :param sender_id: 用户 ID（可选）
         :param create: 如果场景不存在是否创建
         :param is_private: 该场景是否为私聊。主动获取的会话没有平台事件可依据，
-                           核心也不掌握各平台对私聊前缀的表达，故须由调用方指明，缺省按非私聊处理
+                           核心也不掌握各平台如何表示私聊前缀，故须由调用方指明，默认按非私聊处理
         :return: 抓取的会话信息，或 None（获取失败）
         """
         try:
@@ -223,7 +223,7 @@ class Bot:
     async def group_sessions_by_channel(
         session_list: list[FetchedSessionInfo],
     ) -> list[list[FetchedSessionInfo]]:
-        """将待推送的会话按「场景组 + 消息通道」归拢。
+        """将待推送的会话按“场景组 + 消息通道”合并。
 
         :param session_list: 待推送的会话列表
         :return: 分组后的会话列表，每组内部按推送优先级排列
@@ -252,14 +252,14 @@ class Bot:
 
     @classmethod
     async def pick_channel_heads(cls, session_list: list[FetchedSessionInfo]) -> list[FetchedSessionInfo]:
-        """按消息通道归拢一批会话，取出各通道实际承担发送的那一个。
+        """按消息通道合并一批会话，取出各通道实际承担发送的那一个。
 
         :param session_list: 待发送的会话列表。
         :return: 各通道的队首会话，全员掉线的通道不在其中。
         """
         heads = []
         for hops in await cls.group_sessions_by_channel(session_list):
-            # 掉线客户端的任务无人认领，换跳也就无从触发，整条通道将不再有消息送达，因此预先将其剔出跳表
+            # 掉线客户端的任务无人认领，换跳无从触发，整条通道将不再有消息送达，因此预先将其剔出跳表
             hops = [hop for hop in hops if Alive.is_alive(hop.client_name)]
             if not hops:
                 Logger.warning("Every client of this channel is offline, skipped sending message.")
@@ -304,7 +304,7 @@ class Bot:
                 post_message = chain
 
             # 主动推送也要经过与常规发送一致的出站规范化：过滤关键词并拦截敏感信息，
-            # 不能依赖客户端在渲染阶段补检，此时内容已越过服务端唯一能看到的检查点。
+            # 不能依赖客户端在渲染阶段补检，内容此时已越过服务端唯一能看到的检查点。
             post_message = await normalize_outgoing_chain(session_, post_message, False)
             if post_message is None:
                 continue
@@ -316,7 +316,7 @@ class Bot:
             )
             if isinstance(stop_send, Stop):
                 continue
-            # 改写后的最终消息须重新过完整发送规范化，语义同 MessageSession.send_message。
+            # 改写后的最终消息须重新过一遍完整的发送规范化，语义同 MessageSession.send_message。
             post_message = await normalize_outgoing_chain(session_, outgoing_payload.chain, False)
             if post_message is None:
                 continue
@@ -445,7 +445,7 @@ class Bot:
         :param message: 消息内容，或接受队首会话、返回消息内容的异步工厂，工厂返回 None 表示不发送。
         :param disable_secret_check: 是否禁用敏感内容检查。
         """
-        # 退役客户端停止一切主动推送，滤除与场景组展开一并由 fetch_union_target_list 承担
+        # 退役客户端停止一切主动推送：滤除动作与场景组展开一并由 fetch_union_target_list 承担
         for session in await cls.pick_channel_heads(await cls.fetch_union_target_list(union_id)):
             # 消息链类型均无 __call__，可据此与消息工厂相区分
             chain = await message(session) if callable(message) else message
@@ -491,7 +491,7 @@ class Bot:
     @classmethod
     async def get_enabled_this_module(cls, module: str) -> list[FetchedSessionInfo]:
         """
-        获取开启了指定模块的所有场景的会话列表。
+        获取所有开启了指定模块的场景的会话列表。
 
         :param module: 模块名称
         :return: 开启了该模块的会话列表
@@ -521,10 +521,10 @@ class Bot:
             """触发模块钩子或自定义钩子。
 
             :param module_or_hook_name: 模块名称或钩子名称
-                                      如果包含 `.`，视为自定义钩子名；否则视为模块名
+                                      如果包含 `.`，视为自定义钩子名，否则视为模块名
             :param session_info: 会话信息（可选）
             :param args: 传递给钩子的参数字典
-            :param timeout: 覆盖订阅默认执行预算；``<=0`` 表示不限时
+            :param timeout: 覆盖订阅默认执行预算，``<=0`` 表示不限时
             :return: 钩子函数的返回值
             :raises ValueError: 如果模块或钩子名称无效
             """

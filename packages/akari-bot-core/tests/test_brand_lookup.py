@@ -1,6 +1,6 @@
 """品牌资产定位的回退链：资源包 → 实例 assets → 无。
 
-品牌资产进的是 core 的 ``full`` extra，裸 core（``akaribot init --minimal``）下资源包根本不存在；
+品牌资产属于 core 的 ``full`` extra，裸 core（``akaribot init --minimal``）下资源包根本不存在。
 部署者还可能把图放在实例 ``assets/`` 里覆盖默认值。这两条路径都要能走通，且两处都没有时必须
 返回 ``None`` 让调用方降级——`~about` 少一张图不该让整条命令失败，SMTP 报告少个标志也不该让
 邮件发不出去。

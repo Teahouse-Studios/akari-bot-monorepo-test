@@ -11,16 +11,16 @@ SOURCE_LXNS = "lxns"
 GAME_MAIMAI = "maimai"
 GAME_CHUNITHM = "chunithm"
 
-# 舞萌以水鱼为准，中二以落雪为准；两者都允许用户自行切换。
+# 舞萌以水鱼为准，中二以落雪为准。两者都允许用户自行切换。
 SOURCE_DEFAULT = {
     GAME_MAIMAI: SOURCE_DIVING_FISH,
     GAME_CHUNITHM: SOURCE_LXNS,
 }
 
-# 落雪未登记 OAuth 应用时，落雪那一侧根本取不到数据。
+# 落雪 OAuth 应用未配置时，落雪一侧无从取到数据。
 _LXNS_AVAILABLE = bool(MaimaiConfig.lxns_client_id)
 
-# 中二的历史键名把 chunithm 写成了 chunithum，旧值须继续可读；写回时改用正确拼写。
+# 中二的历史键名把 chunithm 写成了 chunithum，旧值须继续可读。写回时改用正确拼写。
 SOURCE_KEYS = {
     GAME_MAIMAI: ("maimaidx_record_source",),
     GAME_CHUNITHM: ("chunithm_record_source", "chunithum_record_source"),
@@ -70,7 +70,7 @@ def lxns_bind_usable(refresh_token: str | None, lxns_available: bool = _LXNS_AVA
     """判断一条落雪绑定记录是否可用。
 
     :param refresh_token: 该绑定记录的 refresh token。
-    :param lxns_available: 落雪是否已登记 OAuth 应用。
+    :param lxns_available: 落雪 OAuth 应用是否已配置。
     :return: 是否可用。
     """
     return bool(refresh_token) and lxns_available

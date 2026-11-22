@@ -13,16 +13,16 @@
 [tool.uv.workspace].members 展开，分发名读成员自己的 [project].name，不按目录名推断。
 `--json` 输出的 packages 在 full 为真时同样是全部成员，CI 的 matrix 消费方式无需分支。
 
-`--base` 缺省或无法解析时输出全部成员并置 full=true，对应 workflow_dispatch 一类手动触发。
+`--base` 未给出或无法解析时输出全部成员并置 full=true，对应 workflow_dispatch 一类手动触发。
 PR 与 push 事件传入的基准是分支尖端而非共同祖先，故先取 merge-base 再比对：直接两点对比会把
-基准分支自身的改动算成头部的改动（反向误报）。基准是头部祖先时 merge-base 即基准，结果与两点等价。
+目标分支自身的改动算成头部的改动（反向误报）。基准是头部祖先时 merge-base 即基准，结果与两点等价。
 
 用法：
     uv run python tools/changed_packages.py --base <sha> --json   # PR base / push before
     uv run python tools/changed_packages.py --base <sha>          # 人类可读
     uv run python tools/changed_packages.py --json                # 无基准：全部成员，full=true
 
-退出码：正常 0；workspace 成员无法解析时 2。git 调用失败按全量处理并返回 0。
+退出码：正常 0，workspace 成员无法解析时 2。git 调用失败按全量处理并返回 0。
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ ROOT_PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 CORE_DISTRIBUTION = "akari-bot-core"
 PACKAGES_ROOT = "packages"
 
-# 全局变更：根配置与锁文件、全仓工具都会改变每个包的构建与测试前提。
+# 全局变更：根配置与锁文件、整个仓库共用的工具都会改变每个包的构建与测试前提。
 GLOBAL_FILES = {"pyproject.toml", "uv.lock"}
 GLOBAL_PREFIXES = ("tools/",)
 
@@ -64,7 +64,7 @@ class Member:
     """一个 workspace 成员。
 
     :param name: [project].name 书写形式的分发名，即 CI 的构建单元。
-    :param directory: 包目录的仓库根相对 POSIX 路径，无尾斜杠。
+    :param directory: 包目录相对仓库根的 POSIX 路径，无尾斜杠。
     """
 
     name: str
@@ -75,13 +75,13 @@ class Member:
 class Matrix:
     """一次变更检测的结果。
 
-    :param packages: 需要构建的分发名，按包目录排序；full 为真时即全部成员。
+    :param packages: 需要构建的分发名，按包目录排序。full 为真时即全部成员。
     :param full: 是否需要全量构建。
     :param reasons: 触发全量的触发点与原因，供人类可读输出。
     :param member_files: 分发名到包内改动文件数的映射，仅定向构建时有意义。
     :param doc_files: 判定为无构建影响的文档类路径数。
     :param total_files: 改动路径总数。
-    :param base: 实际使用的比较基准 SHA；未比对时为 None。
+    :param base: 实际使用的比较基准 SHA。未比对时为 None。
     :param head: 比较终点引用。
     """
 
@@ -126,9 +126,9 @@ def discover_members() -> list[Member]:
 
 
 def git_output(arguments: list[str], *, nul: bool = False) -> list[str]:
-    """运行 git 并返回输出项；nul 为真时按 NUL 分隔。
+    """运行 git 并返回输出项。nul 为真时按 NUL 分隔。
 
-    统一关闭 core.quotePath，含中文的路径不会变成八进制转义；NUL 分隔使含空格的路径不被切断。
+    统一关闭 core.quotePath，含中文的路径不会变成八进制转义。NUL 分隔使含空格的路径不被切断。
     """
     command = ["git", "-c", "core.quotePath=false", *arguments]
     result = subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)
@@ -137,7 +137,7 @@ def git_output(arguments: list[str], *, nul: bool = False) -> list[str]:
 
 
 def resolve_commit(ref: str) -> str | None:
-    """把引用解析为提交 SHA；解析不了返回 None。"""
+    """把引用解析为提交 SHA。解析不了返回 None。"""
     try:
         lines = git_output(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"])
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -146,7 +146,7 @@ def resolve_commit(ref: str) -> str | None:
 
 
 def resolve_base(base: str, head: str) -> str:
-    """取 base 与 head 的共同祖先；取不到时退回 base 本身。"""
+    """取 base 与 head 的共同祖先。取不到时退回 base 本身。"""
     try:
         lines = git_output(["merge-base", base, head])
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -160,7 +160,7 @@ def changed_files(base: str, head: str) -> list[str]:
 
 
 def package_directory(path: str) -> str | None:
-    """从 packages/ 下的路径推断包目录，供已不在 workspace 的包（删除、改名）兜底。"""
+    """从 packages/ 下的路径推断包目录，用于已不在 workspace 的包（删除、改名）。"""
     parts = path.split("/")
     if len(parts) >= 2 and parts[0] == PACKAGES_ROOT and parts[1].startswith("akari-bot-"):
         return "/".join(parts[:2])
@@ -196,7 +196,7 @@ def build_matrix(paths: list[str], members: list[Member], note: str | None, base
 
     :param paths: 改动路径清单。
     :param members: workspace 成员清单。
-    :param note: 未比对的原因（缺省基准、基准无法解析、git 失败）；非空即全量。
+    :param note: 未比对的原因（未给出基准、基准无法解析、git 失败）。非空即全量。
     :param base: 实际使用的比较基准 SHA，未比对时为 None。
     :param head: 比较终点引用。
     :return: 构建矩阵。
@@ -269,7 +269,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--base", metavar="REV", help="比较基准；缺省或无法解析时输出全部成员并置 full=true")
+    parser.add_argument("--base", metavar="REV", help="比较基准。缺失或无法解析时输出全部成员并设置 full=true")
     parser.add_argument("--head", metavar="REV", default="HEAD", help="比较终点，默认 HEAD")
     parser.add_argument("--json", action="store_true", help='输出 {"packages": [...], "full": bool}')
     return parser

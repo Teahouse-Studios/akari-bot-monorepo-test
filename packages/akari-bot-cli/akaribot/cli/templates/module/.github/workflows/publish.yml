@@ -1,5 +1,5 @@
 # 第三方模块包的发布工作流：推送 v* 标签后构建 wheel，并以 Trusted Publishing 发布到 PyPI。
-# 使用前需在 PyPI 侧登记本仓库与该工作流文件，见 https://docs.pypi.org/trusted-publishers/
+# 使用前需在 PyPI 为本仓库添加受信发布者与该工作流文件，见 https://docs.pypi.org/trusted-publishers/
 name: publish
 
 on:

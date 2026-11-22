@@ -1,7 +1,7 @@
 """渲染守卫的契约：页面不可用时跳过并记账，页面可用时选择器错误照常抛出。
 
-守卫在页面构造时统一包装 `_render*` / `_sync*` / `_set_*` / `_paint*`：页面卸载后落地的取数与
-轮询没有可写的控件，跳过并记进 `RenderGuard`；页面仍在运行时的 `NoMatches` 原样上抛，否则
+守卫在页面构造时统一包装 `_render*` / `_sync*` / `_set_*` / `_paint*`：页面卸载后触发的取数与
+轮询没有可写的控件，跳过并记进 `RenderGuard`。页面仍在运行时的 `NoMatches` 原样上抛，否则
 worker 表面成功、页面只保留旧内容。用例用真实 `TuiApp` 与替身数据源，只给页面类补探针方法。
 """
 
@@ -138,7 +138,7 @@ async def _test_guard_wraps_only_render_entry_prefixes():
 async def _test_exited_app_skips_and_counts():
     async def body(app, pilot):
         page = app.page("modules")
-        # 与 mounted() 的判据一致：应用已请求退出后页面不再可用；不经 app.exit() 以免终止本次运行。
+        # 与 mounted() 的判据一致：应用已请求退出后页面不再可用。不经 app.exit() 以免终止本次运行。
         app._exit = True
         values = (
             page._render_guard_probe(),
@@ -301,7 +301,7 @@ async def test_tui_render_guard(tester: Tester):
         await tester.test(_test_exited_app_skips_and_counts, "应用退出后跳过渲染并记账")
         await tester.test(_test_detached_page_skips_and_counts, "页面卸下后跳过渲染并记账")
         await tester.test(_test_removing_or_stopped_page_skips_and_counts, "页面移除中与应用停止后跳过渲染并记账")
-        await tester.test(_test_race_no_matches_is_skipped, "卸载瞬间的 NoMatches 兜底并记账")
+        await tester.test(_test_race_no_matches_is_skipped, "卸载瞬间的 NoMatches 回退并记账")
         await tester.test(_test_skip_logs_at_debug_level, "跳过时记一条 debug 日志")
         await tester.test(_test_diagnostics_are_read_only, "诊断属性只读")
         await tester.test(_test_remounted_pages_keep_the_guard, "切实例重建的页面仍受守卫保护")

@@ -40,7 +40,7 @@ jobs:
             fi
           else
             if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF_NAME" != "master" ]]; then
-              echo "手动 nightly 构建必须选 master；候选发行必须选版本 tag。" >&2
+              echo "手动 nightly 构建必须选 master。候选发行必须选版本 tag。" >&2
               exit 1
             fi
             IMAGE_TAG="nightly-$(date +'%Y%m%d')"

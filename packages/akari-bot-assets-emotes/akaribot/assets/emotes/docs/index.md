@@ -1,7 +1,5 @@
 # 表情资源
 
-本文将会介绍表情资源包的内容、调用方与维护约定。
-
 `akari-bot-assets-emotes` 分发 AkariBot 使用的表情 GIF，按场景分为三组。`akari-bot-core[full]` 默认安装本包。`akaribot init --minimal` 不安装本包，配图与输入状态按默认行为降级。
 
 ## 内容物
@@ -12,7 +10,7 @@
 | `captcha_held/` | 按钮验证码的表情模式，手持物作为答案依据 |
 | `typing/` | QQBot 群聊输入状态提示 |
 
-表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 为加快发送速度，缩小了尺寸并减少了帧数，单图上限约 500 KB。`common/` 没有这一限制。
+表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 下的素材为加快发送速度缩小了尺寸并减少了帧数，单图上限约 500 KB。`common/` 没有这一限制。
 
 ## 安装与定位
 

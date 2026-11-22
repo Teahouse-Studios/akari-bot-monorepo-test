@@ -28,7 +28,7 @@ _ALIVE_KEYS = {True: "cli.tui.adapters.online", False: "cli.tui.adapters.offline
 _ENABLE_KEYS = {True: "cli.tui.adapters.enable_on", False: "cli.tui.adapters.enable_off"}
 _ENABLE_MISSING_KEY = "cli.tui.adapters.enable_missing"
 
-# 此值用于解析 CLI 输出；显示文本使用 default_id 文案键。
+# 此值用于解析 CLI 输出。显示文本使用 default_id 文案键。
 DEFAULT_ID_LABEL = "（默认）"
 EMPTY_CELL = "—"
 
@@ -66,18 +66,18 @@ class AdapterRecord:
     """一个适配器实例。
 
     :param platform: 平台名（entry point 名），如 ``telegram``。
-    :param instance_id: 实例 ID；默认实例为空串。
+    :param instance_id: 实例 ID。默认实例为空串。
     :param client_name: 路由用的 ``client_name``，如 ``Telegram-alt``。
     :param table: 配置表名，如 ``bot_telegram-alt``。
     :param config_file: 配置文件路径文本。
-    :param enable: ``enable`` 原值；配置缺该键时为 ``None``。
+    :param enable: ``enable`` 原值。配置缺该键时为 ``None``。
     :param enabled: 是否已启用。
     :param listen: 监听地址的展示文本。
     :param installed: 对应平台的适配器包是否已安装。
     :param legacy_layout: 配置是否采用扁平布局。
     :param client_name_inferred: ``client_name`` 是否为按平台名推断的结果。
     :param issues: ``adapter list`` 给出的备注。
-    :param developers: 适配器作者，取自包的 ``pyproject.toml``；仅可安装清单提供。
+    :param developers: 适配器作者，取自包的 ``pyproject.toml``。仅可安装清单提供。
     """
 
     platform: str
@@ -101,7 +101,7 @@ class AdapterRecord:
 
     @property
     def display_id(self) -> str:
-        """返回实例列文本；未配置实例的平台为空。"""
+        """返回实例列文本。未配置实例的平台为空。"""
         if self.installable and not self.configured:
             return EMPTY_CELL
         return self.instance_id or i18n.t("cli.tui.adapters.default_id")
@@ -113,12 +113,12 @@ class AdapterRecord:
 
     @property
     def listed(self) -> bool:
-        """是否显示在实例列表中；未安装且未启用的平台只在安装对话框中列出。"""
+        """是否显示在实例列表中。未安装且未启用的平台只在安装对话框中列出。"""
         return self.installed or self.enabled
 
     @property
     def enable_label(self) -> str:
-        """返回启用状态文本；未安装的适配器显示安装状态。"""
+        """返回启用状态文本。未安装的适配器显示安装状态。"""
         if self.installable:
             return i18n.t("cli.tui.adapters.state_not_installed")
         if self.enable is None:
@@ -127,7 +127,7 @@ class AdapterRecord:
 
     @property
     def configured(self) -> bool:
-        """是否已有配置表；由可安装清单合成的记录没有配置。"""
+        """是否已有配置表。由可安装清单合成的记录没有配置。"""
         return bool(self.table)
 
     @property
@@ -146,8 +146,8 @@ class PeerStatus:
     """一个 ``client_name`` 的连接状态，取自 peer 记录。
 
     :param client_name: 该记录声明的 ``client_name``。
-    :param state: peer 的原始状态，如 ``ready``；无记录时为空串。
-    :param alive: 是否在线；无法判定时为 ``None``。
+    :param state: peer 的原始状态，如 ``ready``。无记录时为空串。
+    :param alive: 是否在线。无法判定时为 ``None``。
     :param error: peer 元数据中的最近错误。
     :param detail: 无法判定或状态异常时的说明。
     """
@@ -218,7 +218,7 @@ class PeerSnapshot:
     note: str = ""
 
     def status_for(self, client_name: str) -> PeerStatus:
-        """返回指定 ``client_name`` 的连接状态；无记录时返回未知状态与原因。"""
+        """返回指定 ``client_name`` 的连接状态。无记录时返回未知状态与原因。"""
         found = self.statuses.get(client_name)
         if found is not None:
             return found
@@ -238,11 +238,11 @@ class StaticAdapterSource:
 
     :param snapshot: ``list_instances`` 的返回值。
     :param available: ``list_available`` 的返回值。
-    :param peers: ``peer_status`` 的返回值；默认表示快照不可用。
-    :param toggle_result: ``set_enable`` 的返回值；默认为成功。
-    :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值；默认为成功。
-    :param config_fields: 表名到配置项的映射，``config_fields`` 的返回值；缺失的表返回空序列。
-    :param config_result: 按键名指定 ``set_config`` 的返回值；缺失的键写入成功。
+    :param peers: ``peer_status`` 的返回值。默认表示快照不可用。
+    :param toggle_result: ``set_enable`` 的返回值。默认为成功。
+    :param instance_result: ``add_instance`` / ``remove_instance`` 的返回值。默认为成功。
+    :param config_fields: 表名到配置项的映射，``config_fields`` 的返回值。缺失的表返回空序列。
+    :param config_result: 按键名指定 ``set_config`` 的返回值。缺失的键写入成功。
     """
 
     def __init__(
@@ -297,7 +297,7 @@ class StaticAdapterSource:
         return self._available
 
     async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
-        """见 :meth:`AdapterSource.stream_install`；替身直接回放固定输出。"""
+        """见 :meth:`AdapterSource.stream_install`。替身直接回放固定输出。"""
         self.calls["install"] += 1
         self.installed.append(record.platform)
         for line in self._install_lines:
@@ -333,7 +333,7 @@ class StaticAdapterSource:
         return result
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.set_enable`；成功后替换缓存中的该条记录。"""
+        """见 :meth:`AdapterSource.set_enable`。成功后替换缓存中的该条记录。"""
         self.calls["set_enable"] += 1
         self.toggles.append((record.table or record.client_name, enabled))
         records = [
@@ -358,7 +358,7 @@ class AdapterSource(Protocol):
         """安装适配器包，通过 ``on_line`` 逐行返回输出。"""
 
     def peer_status(self) -> PeerSnapshot:
-        """返回 peer 连接状态快照；不可用时以 ``available=False`` 上报原因，不抛异常。"""
+        """返回 peer 连接状态快照。不可用时以 ``available=False`` 上报原因，不抛异常。"""
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
         """通过 CLI 设置实例的 ``enable``。"""
@@ -373,7 +373,7 @@ class AdapterSource(Protocol):
         """返回实例配置表的全部配置项。"""
 
     def set_config(self, section: str, key: str, value: str) -> SetResult:
-        """通过 CLI 写入一项配置；``section`` 为 ``config set --table`` 的表引用。"""
+        """通过 CLI 写入一项配置。``section`` 为 ``config set --table`` 的表引用。"""
 
 
 def _text(value: Any) -> str:
@@ -450,7 +450,7 @@ def _rows(payload: Any, *keys: str) -> list[Any]:
 def normalize_snapshot(payload: Any) -> AdapterSnapshot:
     """将适配器清单输出转换为 :class:`AdapterSnapshot`。
 
-    :param payload: ``json.loads`` 的结果；支持对象与数组。
+    :param payload: ``json.loads`` 的结果。支持对象与数组。
     :return: 按平台名与实例 ID 排序的实例快照。
     """
     records: list[AdapterRecord] = []
@@ -530,7 +530,7 @@ def normalize_peer_snapshot(payload: Any, now: float | None = None) -> PeerSnaps
 
     :param payload: ``json.loads`` 的结果。
     :param now: 判定租约用的当前时刻，默认取 :func:`time.time`。
-    :return: 连接状态快照；状态为 ready 且租约有效时判定为在线。
+    :return: 连接状态快照。状态为 ready 且租约有效时判定为在线。
     """
     if not isinstance(payload, Mapping):
         return PeerSnapshot(available=False, note=i18n.t("cli.tui.adapters.peer_not_object"))
@@ -606,7 +606,7 @@ def group_display(records: Sequence[AdapterRecord], registry_available: bool) ->
 class SubprocessAdapterSource:
     """通过子进程读取适配器状态并执行操作。
 
-    :param root: 实例根目录；默认取当前实例。
+    :param root: 实例根目录。默认取当前实例。
     :param timeout: 单个子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     :param instance_factory: ``Instance`` 的构造回调，测试可注入以避开实例发现。
@@ -669,7 +669,7 @@ class SubprocessAdapterSource:
         return normalize_snapshot(self._parse_json(completed.stdout, "adapter list --json"))
 
     def list_available(self) -> tuple[AdapterRecord, ...]:
-        """见 :meth:`AdapterSource.list_available`；复用 ``module available`` 的可安装集合。"""
+        """见 :meth:`AdapterSource.list_available`。复用 ``module available`` 的可安装集合。"""
         self.calls["available"] += 1
         argv = self.cli_argv("module", "available", "--json", "--kind", "adapter")
         completed = self._run(argv)
@@ -691,7 +691,7 @@ class SubprocessAdapterSource:
         return await installer.stream_operation("install", ModuleRecord(name=record.platform), on_line)
 
     def peer_status(self) -> PeerSnapshot:
-        """返回 peer 连接状态；入口不可用时返回原因。"""
+        """返回 peer 连接状态。入口不可用时返回原因。"""
         self.calls["peers"] += 1
         argv = self.peer_argv()
         try:
@@ -717,7 +717,7 @@ class SubprocessAdapterSource:
         return normalize_peer_snapshot(payload)
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.set_enable`；经 ``akaribot config set`` 写入。"""
+        """见 :meth:`AdapterSource.set_enable`。经 ``akaribot config set`` 写入。"""
         self.calls["set_enable"] += 1
         table = record.table or f"bot_{record.platform}" + (f"-{record.instance_id}" if record.instance_id else "")
         label = i18n.t(
@@ -735,7 +735,7 @@ class SubprocessAdapterSource:
         )
 
     def add_instance(self, platform: str, instance_id: str) -> OperationResult:
-        """见 :meth:`AdapterSource.add_instance`；经 ``akaribot adapter instance add`` 新建。"""
+        """见 :meth:`AdapterSource.add_instance`。经 ``akaribot adapter instance add`` 新建。"""
         self.calls["add_instance"] += 1
         label = i18n.t("cli.tui.adapters.label_instance_add", name=self._instance_display(platform, instance_id))
         args = ["adapter", "instance", "add", platform]
@@ -840,7 +840,7 @@ class SubprocessAdapterSource:
 
 @dataclass(frozen=True)
 class ColumnLayout:
-    """列表列宽，单位终端列；宽度为 0 的列不渲染。
+    """列表列宽，单位终端列。宽度为 0 的列不渲染。
 
     :param id_width: 实例列。
     :param client_width: ``client_name`` 列。
@@ -873,7 +873,7 @@ class AdaptersPage(compat.Vertical):
     """适配器页面。
 
     :param source: 数据源，默认为 :class:`SubprocessAdapterSource`。
-    :param cache_ttl: 缓存有效期秒数；enable 切换成功后立即失效，与有效期无关。
+    :param cache_ttl: 缓存有效期秒数。enable 切换成功后立即失效，与有效期无关。
     """
 
     can_focus = True
@@ -1019,7 +1019,7 @@ class AdaptersPage(compat.Vertical):
 
     @property
     def selected_record(self) -> AdapterRecord | None:
-        """返回列表当前高亮项对应的记录；停在分组标题上时为 ``None``。"""
+        """返回列表当前高亮项对应的记录。停在分组标题上时为 ``None``。"""
         records = self._records_in_row_order()
         if not records:
             return None
@@ -1069,7 +1069,7 @@ class AdaptersPage(compat.Vertical):
         return self._instance_rows
 
     def cache_age(self) -> float:
-        """返回缓存自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回缓存自上次读取以来的秒数。从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -1077,7 +1077,7 @@ class AdaptersPage(compat.Vertical):
     def refresh_instances(self, *, force: bool = False) -> None:
         """读取实例清单与 peer 快照。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
+        :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
         self.reset_pending()
         if not force and self._snapshot.instances and self.cache_age() < self.cache_ttl:
@@ -1192,7 +1192,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     async def _rebuild_rows(self, items: Sequence[compat.ListItem], index: int) -> None:
-        # 分组标题行带禁用与样式，条目只能自建；clear() 的移除是异步的，须等移除完成再落高亮。
+        # 分组标题行带禁用与样式，条目只能自建。clear() 的移除是异步的，须等移除完成再落高亮。
         if not compat.mounted(self):
             return
         list_view = self.query_one("#adapter-list", compat.ListView)
@@ -1602,7 +1602,7 @@ class AdaptersPage(compat.Vertical):
         self._start_remove(record)
 
     def reset_pending(self) -> None:
-        """作废待确认的移除；切页、刷新与换选中项时调用。"""
+        """作废待确认的移除。切页、刷新与换选中项时调用。"""
         self._gate.reset()
 
     def _removal_target(self) -> AdapterRecord | None:
@@ -1685,7 +1685,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def request_toggle(self) -> None:
-        """切换所选实例的启用状态；无选中项时显示提示。"""
+        """切换所选实例的启用状态。无选中项时显示提示。"""
         record = self.selected_record
         if record is None:
             compat.notify(
@@ -1702,7 +1702,7 @@ class AdaptersPage(compat.Vertical):
         self._start_toggle(record, not record.enabled)
 
     def request_install(self) -> None:
-        """弹出安装对话框，列出尚未安装的适配器；当前行未安装时预选该平台。"""
+        """弹出安装对话框，列出尚未安装的适配器。当前行未安装时预选该平台。"""
         candidates = self._installable_records()
         if not candidates:
             compat.notify(
@@ -1846,7 +1846,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def focus_primary(self) -> None:
-        """聚焦适配器列表；列表为空时聚焦页面容器。"""
+        """聚焦适配器列表。列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#adapter-list")
 
     def action_refresh(self) -> None:
@@ -1870,5 +1870,5 @@ class AdaptersPage(compat.Vertical):
         self.request_toggle()
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await self.app.workers.wait_for_complete()

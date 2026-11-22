@@ -62,7 +62,7 @@ _inbound_message_cache: OrderedDict[tuple[str, ...], float] = OrderedDict()
 _ignored_msg_startswith = [
     re.compile(r"^\[.*?聊天记录]\n.*"),
     re.compile(r"^\[卡片消息].*"),
-]  # 暂不解析这些消息，没有实际用途
+]  # 这些消息没有实际用途，暂不解析
 
 
 def _inbound_message_key(message) -> tuple[str, ...] | None:
@@ -508,7 +508,7 @@ class MyClient(botpy.Client):
             return
         if sender_id in ignored_sender:
             return
-        # QQBot 的交互事件不会可靠返回按钮所属消息的 ID；发送阶段把框架生成的虚拟
+        # QQBot 的交互事件不会可靠返回按钮所属消息的 ID。发送阶段把框架生成的虚拟
         # reply_id 编进 button data，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
         if send_msg.startswith(BUTTON_TOKEN_PREFIX):
             result = consume_button(send_msg, sender_id)
@@ -550,7 +550,7 @@ def _build_client() -> MyClient:
     if QQBotConfig.qq_private_bot:
         intents.guild_messages = True
 
-    # Webhook 模式由平台回调驱动，须在本机监听；SDK 只提供 HTTP，公网 HTTPS 交由反向代理终止。
+    # Webhook 模式由平台回调驱动，须在本机监听。SDK 只提供 HTTP，公网 HTTPS 交由反向代理终止。
     transport_options: dict[str, object] = {"transport": "websocket"}
     if QQBotConfig.qq_use_webhook:
         transport_options = {

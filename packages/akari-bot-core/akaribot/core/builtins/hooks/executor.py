@@ -60,7 +60,7 @@ def platform_allows(
     platform_from: str | None = None,
     platform_name: str | None = None,
 ) -> bool:
-    """按四元组判据判分一组平台声明；语义与模块、命令的 ``available_for`` 一致。"""
+    """按四元组判据判分一组平台声明。语义与模块、命令的 ``available_for`` 一致。"""
     if not target_from:
         return True
     return scope_allows(
@@ -85,7 +85,7 @@ def _module_context_enabled(module: "Module", module_name: str, session_info) ->
 
 
 class HookExecutor:
-    """共享订阅资格判断；具体 hook 系统只实现自身的结果协议。"""
+    """共享订阅资格判断。具体 hook 系统只实现自身的结果协议。"""
 
     def __init__(self, modules_manager: Any):
         self._modules_manager = modules_manager
@@ -110,7 +110,7 @@ class HookExecutor:
         *,
         check_context: bool = True,
     ) -> tuple[bool, bool]:
-        """返回 ``(可执行, 代际过期)``。"""
+        """返回是否可执行与是否代际过期。"""
         if not sub.load:
             return False, False
         module = self._modules_manager.modules.get(sub.module_name)
@@ -120,7 +120,7 @@ class HookExecutor:
             return False, True
         if session_info is None and ("*" not in tuple(module.available_for) or "*" not in tuple(sub.available_for)):
             return False, False
-        # 平台两段只存在于会话对象上；拿不到会话时（如 server_scope 的具名分发）退化为两段判据。
+        # 平台两段只存在于会话对象上。拿不到会话时（如 server_scope 的具名分发）退化为两段判据。
         platform_from = getattr(session_info, "platform_from", None) if session_info is not None else None
         platform_name = getattr(session_info, "platform_name", None) if session_info is not None else None
         if not platform_allows(

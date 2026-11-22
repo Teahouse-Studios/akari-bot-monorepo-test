@@ -14,8 +14,8 @@ from akaribot.core.logger import Logger
 from akaribot.core.utils.random import Random
 from akaribot.core.utils.timezone import core_now, core_tz
 
-# 花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不按客户端分桶；
-# 桶内亦按 union 而非平台账号索引，否则一个人绑几个平台就能领几倍的每日上限；
+# 花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不按客户端分桶。
+# 桶内亦按 union 而非平台账号索引，否则一个人绑几个平台就能领到数倍的每日额度。
 # 每日周期按触发场景的时区计算，记录内保存周期偏移，跨场景共用同一条记录。
 PETAL_STORE_SCOPE = "Union"
 PETAL_CYCLE_STORE_KEY = f"{PETAL_STORE_SCOPE}|petalcycle"
@@ -261,7 +261,7 @@ async def reset_petals_if_due() -> int:
         Logger.exception(f"Invalid petal_reset_crontab {CoreConfig.petal_reset_crontab!r}, skipped reset.")
         return 0
     now = core_now(trigger.timezone)
-    # 取严格晚于当前时刻的下一次触发时间：当前恰好落在触发点上时也不会重复结算。
+    # 取严格晚于当前时刻的下一次触发时间：当前时刻恰好等于触发点时也不会重复结算。
     following = trigger.get_next_fire_time(now, now)
     if following is None:
         Logger.warning("Petal reset crontab has no future fire time, skipped reset.")

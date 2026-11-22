@@ -11,9 +11,9 @@ requires-python = ">=3.12,<4.0"
 license = "[@license@]"
 authors = [{ name = "[@author@]" }]
 dependencies = [
-    # 与仓库内其它包写法一致，core 升大版本时全仓一次改动。
+    # 与仓库内其它包写法一致，core 升大版本时一并调整。
     "akari-bot-core>=0.1.0,<1.0",
-{% if has_database | default(false) %}    # database/models.py 直接 import tortoise，故显式声明。
+{% if has_database | default(false) %}    # database/models.py 直接导入 tortoise，故显式声明。
     "tortoise-orm>=1.1.2,<1.2.0",
 {% endif %}]
 {% if with_tests | default(false) %}
@@ -27,5 +27,5 @@ test = ["akari-bot-testing>=0.1.0,<1.0"]
 packages = ["akaribot"]
 
 # locales 与 assets / migrations 位于导入包目录内，随 wheel 一并分发。
-# locales/assets/migrations 已由上面的 packages 收录，不要再 force-include（重复收录会让
+# locales/assets/migrations 已由上面的 packages 收录，无需 force-include（重复收录会让
 # hatchling 报 'A second file is being added to the wheel archive at the same path'）。

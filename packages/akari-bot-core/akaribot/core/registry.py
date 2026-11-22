@@ -1,10 +1,10 @@
 """模块与适配器的统一发现层。
 
-「系统里有哪些模块与适配器」的唯一答案来源，按下列顺序合成：
+“系统里有哪些模块与适配器”的唯一答案来源，按下列顺序合成：
 
-1. 存在 ``akaribot/core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）；
-2. 枚举已安装分发的 entry point；
-3. 兜底扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``，合成 ``dist_name`` 为空的条目；
+1. 存在 ``akaribot/core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）。
+2. 枚举已安装分发的 entry point。
+3. 回退扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``，合成 ``dist_name`` 为空的条目。
 4. 按条目名去重，entry point 胜出，冲突时记录警告。
 
 拆包前以第 3 条为主，拆包后各包以 wheel 安装，第 2 条接管，本模块之外的代码无需改动。
@@ -35,7 +35,7 @@ MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
 
 # core 公共 API 的版本。模块与适配器以 manifest 的 requires_core_api 声明所需区间，不满足者由
-# reject_incompatible() 拒绝注册。本常量是单一真源，core.api 取其值；此处不得反向导入 core.api。
+# reject_incompatible() 拒绝注册。本常量是唯一来源，core.api 取其值。此处不得反向导入 core.api。
 CORE_API_VERSION = 1
 
 # 参与运行时依赖图的分发名前缀。其余 Requires-Dist 是普通 PyPI 依赖，由安装器负责解析。
@@ -70,28 +70,28 @@ def _logger():
 
 
 def _canonicalize(name: str) -> str:
-    # 依赖声明的写法允许大小写与下划线差异，比较前统归一形式，等价名字才能命中同一个包。
+    # 依赖声明的写法允许大小写与下划线差异，比较前归一为同一形式，等价名字才能命中同一个包。
     from packaging.utils import canonicalize_name
 
     return canonicalize_name(name)
 
 
 PYPROJECT_FILENAME = "pyproject.toml"
-# 从包目录向上找 pyproject.toml 的层数上限；wheel 安装下不存在，靠这个上限尽快收手。
+# 从包目录向上找 pyproject.toml 的层数上限。wheel 安装下不存在，以上限尽快结束查找。
 AUTHOR_SEARCH_DEPTH = 6
 
 
 def declared_authors(root: Path | None, dist_name: str = "") -> list[str]:
-    """读分发包声明的作者列表。
+    """读取包声明的作者列表。
 
     作者写在包的 ``pyproject.toml`` 的 ``[project] authors`` 里。wheel 不带 pyproject，此时退回
     分发元数据的 ``Author``——它正是构建时从同一字段生成的，代价是构建后端只保留第一位作者的
     名字（多作者列表会被压成 ``Author: <首位>``）。因此源码工作区读到的是完整列表，wheel 安装
     只读到首位，两者都不会给出错误的人名。
 
-    :param root: 包根目录；``None`` 时只走元数据。
+    :param root: 包根目录。``None`` 时只走元数据。
     :param dist_name: 分发名，用于确认找到的 pyproject 确实属于该分发。
-    :return: 作者名列表；无从得知时为空列表。
+    :return: 作者名列表。无从得知时为空列表。
     """
     target = _canonicalize(dist_name) if dist_name else ""
     for directory in _author_search_roots(root):
@@ -99,7 +99,7 @@ def declared_authors(root: Path | None, dist_name: str = "") -> list[str]:
         if project is None:
             continue
         if target and _canonicalize(str(project.get("name") or "")) != target:
-            # 向上可能撞见无关的 pyproject；名字对不上就继续找，不据此判断作者。
+            # 向上可能遇到无关的 pyproject。名字对不上就继续找，不据此判断作者。
             continue
         names = _author_names(project)
         if names:
@@ -159,15 +159,15 @@ class PackageManifest:
 
     :param schema: manifest 自身的结构版本。
     :param requires_core_api: 所需的 core 公共 API 区间，PEP 440 描述符。
-    :param locales: 包内 locale 目录的相对路径；``None`` 表示该包不提供文案。
-    :param assets: 包内只读静态资源的相对路径；``None`` 表示不提供。
-    :param migrations: 数据库迁移目录的相对路径；``None`` 表示无迁移。
-    :param config_migrations: 配置迁移目录的相对路径；``None`` 表示无配置迁移。
-    :param config_table: 配置文件中的表名，如 ``module_wiki``；``None`` 表示无配置。
+    :param locales: 包内 locale 目录的相对路径。``None`` 表示该包不提供文案。
+    :param assets: 包内只读静态资源的相对路径。``None`` 表示不提供。
+    :param migrations: 数据库迁移目录的相对路径。``None`` 表示无迁移。
+    :param config_migrations: 配置迁移目录的相对路径。``None`` 表示无配置迁移。
+    :param config_table: 配置文件中的表名，如 ``module_wiki``。``None`` 表示无配置。
     :param config_schema_version: 该包配置的表结构版本。核心配置的版本另记于 config.toml。
-    :param provides_modules: 该包注册的模块名；空元组表示只有运行时才知道。
+    :param provides_modules: 该包注册的模块名。空元组表示只有运行时才知道。
     :param owned_tables: 该包拥有的数据表，供数据清理使用。
-    :param credential_fields: 该包配置中属于凭据的字段名，供重复凭据检查使用。
+    :param credential_fields: 该包配置中属于登录信息的字段名，供重复登录信息检查使用。
     """
 
     schema: int = MANIFEST_SCHEMA
@@ -207,8 +207,8 @@ class PackageEntry:
 
     :param kind: 包的种类。
     :param name: 包名，取自 entry point 名或目录名，如 ``wiki`` / ``qqbot``。
-    :param dist_name: 分发名，如 ``akari-bot-module-wiki``；目录扫描兜底时为空串。
-    :param version: 已安装分发的版本；目录扫描兜底时为 ``0+local``。
+    :param dist_name: 分发名，如 ``akari-bot-module-wiki``。目录扫描回退时为空串。
+    :param version: 已安装分发的版本。目录扫描回退时为 ``0+local``。
     :param import_path: 导入路径，如 ``akaribot.modules.wiki``。
     :param root: 包根目录。
     :param manifest: 包元数据。
@@ -235,9 +235,9 @@ class PackageDependency:
     """一个包在分发 metadata 里声明的模块包依赖。
 
     :param dist_name: 依赖的分发名，已规范化为小写连字符形式。
-    :param specifier: 版本描述符，如 ``>=1.0,<2.0``；未限定版本时为空串。
+    :param specifier: 版本描述符，如 ``>=1.0,<2.0``。未限定版本时为空串。
     :param satisfied: 已装版本是否满足描述符。
-    :param installed_version: 已装版本；未安装时为 ``None``。
+    :param installed_version: 已装版本。未安装时为 ``None``。
     """
 
     dist_name: str
@@ -257,7 +257,7 @@ class PackageRegistry:
     _discovered: bool = False
     # core API 不兼容的包：展示用标签到原因。
     _incompatible: dict[str, str] = {}
-    # 同一批包：规范化分发名到原因，供依赖校验把「依赖被 API 门槛拒绝的包」判为不可用。
+    # 同一批包：规范化分发名到原因，供依赖校验把“依赖被 API 门槛拒绝的包”判为不可用。
     _api_refused: dict[str, str] = {}
     _dependency_rejected: dict[str, str] = {}
 
@@ -267,7 +267,7 @@ class PackageRegistry:
 
         收尾依次校验 core API 兼容性与声明依赖（缺失、版本不满足、成环、依赖了被 API 门槛拒绝的
         包），两道都通过的包才注册。顺序不可颠倒：依赖校验须知道哪些包已被 API 门槛拒绝，否则
-        依赖它们的包会以「发行版已安装」为由留下，直到导入期才失败。原因经 :meth:`incompatible`
+        依赖它们的包会以“发行版已安装”为由留下，直到导入期才失败。原因经 :meth:`incompatible`
         与 :meth:`report_lines` 报出。
 
         :param force: 为真时忽略缓存并重新发现。
@@ -285,7 +285,7 @@ class PackageRegistry:
                     cls._insert(entries, entry, source="entry point")
             known = {entry.import_path for entry in entries.values()}
             for entry in cls._from_directory_scan():
-                # 目录扫描是兜底：entry point 已提供的包不再重复登记，也不产生冲突告警。
+                # 目录扫描是回退路径：entry point 已提供的包不再重复记录，也不产生冲突告警。
                 if entry.import_path in known:
                     continue
                 cls._insert(entries, entry, source="directory scan")
@@ -343,7 +343,7 @@ class PackageRegistry:
     def incompatible(cls) -> dict[str, str]:
         """不能注册的包及其原因。
 
-        收录两类：core 公共 API 不兼容的包，与声明依赖不满足的包。仅覆盖已发现的包；
+        收录两类：core 公共 API 不兼容的包，与声明依赖不满足的包。仅覆盖已发现的包。
         被拒绝注册的包不进入 :meth:`modules` 与 :meth:`adapters`，但在此可见，供启动
         提示与 ``~module list`` 展示。
 
@@ -381,9 +381,9 @@ class PackageRegistry:
     def _reject_core_api_incompatible(
         cls, entries: dict[str, PackageEntry]
     ) -> tuple[dict[str, PackageEntry], dict[str, str], dict[str, str]]:
-        # 结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出；
-        # 规范化分发名到原因，供依赖校验把「依赖一个已被拒绝的包」判为不可用。本方法不改动
-        # 类状态，由调用方决定如何登记。
+        # 结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出。
+        # 规范化分发名到原因，供依赖校验把“依赖一个已被拒绝的包”判为不可用。本方法不改动
+        # 类状态，由调用方决定如何记录。
         from packaging.specifiers import InvalidSpecifier, SpecifierSet
         from packaging.version import InvalidVersion, Version
 
@@ -487,7 +487,7 @@ class PackageRegistry:
 
     @classmethod
     def _from_directory_scan(cls) -> list[PackageEntry]:
-        # 未安装分发的源码检出依赖这条路径，因此扫描对象是真实存在的包目录，而非硬编码的路径常量。
+        # 未安装分发的源码克隆依赖这条路径，因此扫描对象是真实存在的包目录，不用硬编码的路径常量。
         entries: list[PackageEntry] = []
         for kind, package_name in (("module", "akaribot.modules"), ("adapter", "akaribot.adapters")):
             package = sys.modules.get(package_name) or cls._import_optional(package_name)
@@ -512,9 +512,9 @@ class PackageRegistry:
 
     @classmethod
     def _entry_from_directory(cls, kind: str, package_name: str, root: Path) -> PackageEntry:
-        # 条目根取**导入包目录**而非分发包目录：manifest、locales、assets、migrations 都相对它
-        # 解析，entry point 路径下两者同为导入包目录，此处对齐。源码布局为 ``src`` 时按导入路径
-        # 下推；不是该布局时退回传入目录。
+        # 条目根取**导入包目录**：manifest、locales、assets、migrations 都相对它
+        # 解析，entry point 路径下两者同为导入包目录，此处按同一规则处理。源码布局为 ``src`` 时按导入路径
+        # 下推。不是该布局时退回传入目录。
         import_path = f"{package_name}.{root.name}"
         package_root = root / "src" / Path(*import_path.split("."))
         if not package_root.is_dir():
@@ -568,7 +568,7 @@ class PackageRegistry:
 
         :param kind: 包种类。
         :param name: 包名。
-        :return: 条目；不存在时为 ``None``。
+        :return: 条目。不存在时为 ``None``。
         """
         cls.discover()
         return cls._entries.get(f"{kind}:{name}")
@@ -580,7 +580,7 @@ class PackageRegistry:
         ``'akaribot.modules.wiki.utils.wikilib'`` 解析为 ``wiki`` 包的条目。
 
         :param path: 导入路径。
-        :return: 条目；无任何包的导入路径是其前缀时为 ``None``。
+        :return: 条目。无任何包的导入路径是其前缀时为 ``None``。
         """
         cls.discover()
         candidate = path
@@ -596,10 +596,10 @@ class PackageRegistry:
         """某一类包所属的命名空间前缀。
 
         包导入路径形如 ``akaribot.modules.wiki``，命名空间是去掉包名那一段。该前缀是 loader
-        归约导入路径的界：取「命名空间 + 包名」三段。2 段布局时代的顶层段语义不再成立。
+        归约导入路径的界：取“命名空间 + 包名”三段，顶层段不承载包语义。
 
         :param kind: 包种类。
-        :return: 命名空间前缀集合；该类无包时为空集。
+        :return: 命名空间前缀集合。该类无包时为空集。
         """
         cls.discover()
         # 命名空间与 entry point 组同名（见 ENTRY_POINT_GROUPS），但取值仍由条目导出：
@@ -648,8 +648,8 @@ class PackageRegistry:
         """全部配置模板的模块名，核心配置排在最前。
 
         按包名排序以固定生成顺序，避免同一批配置项反复改写配置文件。以文件是否存在判断模板有无，
-        不导入包：捕获 ``ModuleNotFoundError`` 无法区分「未提供 config.py」与「模板自身缺依赖」，
-        后者会被静默跳过形成漏键；``find_spec()`` 为取 ``__path__`` 会导入父包，失去叶子模块的优势。
+        不导入包：捕获 ``ModuleNotFoundError`` 无法区分“未提供 config.py”与“模板自身缺依赖”，
+        后者会被静默跳过形成漏键。``find_spec()`` 为取 ``__path__`` 会导入父包，失去叶子模块的优势。
 
         :return: 配置模板的模块名列表。
         """
@@ -664,7 +664,7 @@ class PackageRegistry:
                 if not (entry.root / "config.py").is_file():
                     continue
                 if not (entry.root / "__init__.py").is_file():
-                    # 目录形式的命名空间包仍可导入，配置照常补全；但其它按包枚举的代码
+                    # 目录形式的命名空间包仍可导入，配置照常补全，但其它按包枚举的代码
                     # 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。
                     _logger().warning(
                         f"[Config] {entry.import_path} provides config.py without __init__.py; "
@@ -695,9 +695,8 @@ class PackageRegistry:
     def migration_dirs(cls) -> list[tuple[str, Path]]:
         """全部模块包的数据库迁移目录。
 
-        键取分发名：迁移记录长期存放，包名在拆包前后会变化而分发名不变，用裸包名会让旧库已登记的
-        revision 在拆包后重新变为待应用。目录以 ``manifest.migrations`` 为准，未声明时回落包内
-        ``migrations/``，否则拆包前没有任何包带 manifest，迁移目录会全部不可见。
+        键取分发名：包名随拆包变化，而分发名不变，用裸包名会让已记录的 revision 重新变为待应用。
+        目录以 ``manifest.migrations`` 为准，未声明时改用包内 ``migrations/``，否则迁移目录会完全不可见。
 
         :return: ``(包名， 目录)`` 列表，按包名排序。
         """
@@ -717,7 +716,7 @@ class PackageRegistry:
     def package_data(cls, name_or_entry: str | PackageEntry) -> Path:
         """包在实例内的可写数据目录。
 
-        运行时下载、索引与用户配置写在此处，不写回包目录：包目录在只读挂载与 wheel
+        运行时下载、索引与用户配置写在此处，不写入包目录：包目录在只读挂载与 wheel
         安装两种形态下都不可写。目录须由调用方经 :meth:`Paths.ensure` 创建。
 
         :param name_or_entry: 包名或条目。
@@ -764,9 +763,9 @@ class PackageRegistry:
     def dependencies(cls, entry: PackageEntry) -> tuple[PackageDependency, ...]:
         """包在分发 metadata 里声明的模块包依赖。
 
-        只收录 ``akari-bot-module-`` 与 ``akari-bot-adapter-`` 前缀的 ``Requires-Dist``；其余是
-        普通 PyPI 依赖，由安装器负责。目录扫描兜底时无分发 metadata，返回空元组。带 extra 标记的
-        条目按「该 extra 已装」判断（见 :meth:`_installed_extras`），未装 extra 的依赖不计入。
+        只收录 ``akari-bot-module-`` 与 ``akari-bot-adapter-`` 前缀的 ``Requires-Dist``。其余是
+        普通 PyPI 依赖，由安装器负责。目录扫描回退时无分发 metadata，返回空元组。带 extra 标记的
+        条目按“该 extra 已装”判断（见 :meth:`_installed_extras`），未装 extra 的依赖不计入。
 
         :param entry: 待查询的包。
         :return: 依赖元组，按分发名排序。
@@ -803,8 +802,8 @@ class PackageRegistry:
     def dependents(cls, entry: PackageEntry) -> tuple[PackageEntry, ...]:
         """反向依赖：声明依赖 ``entry`` 的全部包，供卸载保护使用。
 
-        匹配按分发名的规范化形式进行；条目没有分发名时按 ``akari-bot-<种类>-<包名>``
-        合成，与 :meth:`migration_dirs` 同一约定，使依赖声明在拆包前后指向同一个包。
+        匹配按分发名的规范化形式进行。条目没有分发名时按 ``akari-bot-<种类>-<包名>``
+        合成，与 :meth:`migration_dirs` 同一约定，依赖声明因此不随拆包变化。
 
         :param entry: 目标包。
         :return: 依赖它的包，按注册表键排序。
@@ -876,7 +875,7 @@ class PackageRegistry:
                 if not degree[dependent]:
                     heapq.heappush(ready, dependent)
         if len(ordered) != len(edges):
-            # 环检测已在上方拦截，此处只作兜底：宁可报错，也不静默少加载包。
+            # 环检测已在上方拦截。剩余节点仍须报错，不得静默少加载包。
             remaining = tuple(sorted(set(edges) - set(ordered)))
             raise CircularDependencyError((cls._cycle_path(remaining, edges),))
         return [cls._entries[key] for key in ordered]
@@ -885,7 +884,7 @@ class PackageRegistry:
     def _record_rejection(
         cls, entry: PackageEntry, reason: str, rejected: dict[str, str], refused: dict[str, str]
     ) -> None:
-        # 登记一次拒绝。
+        # 记录一次拒绝。
         label = cls._package_label(entry)
         rejected[label] = reason
         for dist_name in cls._distribution_names(entry):
@@ -915,7 +914,7 @@ class PackageRegistry:
             _logger().warning(f"Skipped {len(cycle)} package(s): circular dependency {labels}.")
 
         # 级联：依赖一个已被拒绝的包与依赖一个未安装的包同样注定失败，只按 metadata 判断会让
-        # 依赖方以「依赖已安装」为由留下，最终在导入期抛出与配置无关的错误。逐个剔除至不动点。
+        # 依赖方以“依赖已安装”为由留下，最终在导入期抛出与配置无关的错误。逐个剔除至不动点。
         declared = {key: cls.dependencies(entry) for key, entry in kept.items()}
         while True:
             cascade: list[tuple[str, PackageEntry, str]] = []
@@ -995,8 +994,8 @@ class PackageRegistry:
 
     @classmethod
     def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
-        # 分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取「该 extra 下属
-        # 的依赖都能解析为已装分发」为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
+        # 分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属
+        # 的依赖都能解析为已装分发”为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
         # 误判为已装，代价是多记一条依赖边。既有测试固化此判据。
         declared = {_canonicalize(name) for name in distribution.metadata.get_all("Provides-Extra") or []}
         installed = set()
@@ -1009,7 +1008,7 @@ class PackageRegistry:
     @classmethod
     def _marker_applies(cls, marker: Any, extras: frozenset[str] | tuple[str, ...]) -> bool:
         # extra 未指定时 packaging 代入空串，带 ``extra`` 子句的标记因此先判为假，再逐个
-        # 代入候选 extra 重判；只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
+        # 代入候选 extra 重判。只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
         # 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
         if marker is None:
             return True
@@ -1052,7 +1051,7 @@ class PackageRegistry:
     @staticmethod
     def _cycles(edges: dict[str, tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
         # 以 Tarjan 算法求强连通分量：成员多于一个的分量即为环。返回的是分量成员而非
-        # 某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径；这样两个互不相交的环
+        # 某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径。这样两个互不相交的环
         # 都会被发现，不会被只找首个环的写法漏掉。
         index: dict[str, int] = {}
         low: dict[str, int] = {}

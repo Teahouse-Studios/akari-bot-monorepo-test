@@ -1,11 +1,11 @@
-"""表外基础配置及历史导入路径兼容层。"""
+"""表外基础配置及历史导入路径兼容实现。"""
 
 from akaribot.core.builtins.config.decorator import on_base_config
 from akaribot.core.constants.default import default_locale as default_locale_default
 from akaribot.core.constants.version import config_version as config_version_default
 
 
-# 位于 config.toml 中任何表之外的顶层键值对。它们在首次运行时由 bot.py 写出骨架，
+# 以下是位于 config.toml 中任何表之外的顶层键值对。它们在首次运行时由 bot.py 写出结构，
 # 并由 akaribot/core/config/update.py 的版本迁移维护，声明在此仅为提供一个带类型的读取入口。
 @on_base_config()
 class BaseConfig:

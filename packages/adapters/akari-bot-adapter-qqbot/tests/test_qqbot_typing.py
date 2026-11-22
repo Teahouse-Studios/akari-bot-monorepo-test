@@ -1,4 +1,4 @@
-"""QQBot 群聊「正在输入中」提示的撤回时机测试。"""
+"""QQBot 群聊“正在输入中”提示的撤回时机测试。"""
 
 import asyncio
 from pathlib import Path
@@ -286,7 +286,7 @@ async def _test_prompt_recalled_on_repeated_start() -> bool:
                 return False
             first_prompt = rec.prompts[0]
 
-            # 后一轮尚在进行，其自身的提示还未到撤回时机，故只针对前一轮断言
+            # 后一轮尚在进行，其自身的提示还未到撤回时机，故只针对前一轮检查
             await QQBotContextManager.start_typing(session)
             await asyncio.sleep(TEST_DELAY * 3)
 
@@ -339,7 +339,7 @@ async def _test_in_flight_prompt_recalled_after_response() -> bool:
             await QQBotContextManager.start_typing(session)
             await asyncio.wait_for(rec.prompt_started.wait(), timeout=TEST_DELAY * 10)
 
-            # 正常回复先发送成功；随后 parser 会调用 end_typing。此时 typing 请求已经
+            # 正常回复先发送成功。随后 parser 会调用 end_typing。此时 typing 请求已经
             # 被平台受理，但 SDK 还没有返回其消息 ID。
             await QQBotContextManager.send_message(session, None)
             end_task = asyncio.create_task(QQBotContextManager.end_typing(session))
@@ -655,8 +655,8 @@ async def test_qqbot_typing(tester: Tester):
     await tester.test(_test_group_typing_omits_emote_when_disabled, "关闭表情后的群聊输入提示测试")
     await tester.test(_test_group_typing_preuploads_emote_immediately, "群聊输入提示立即预上传图片测试")
     await tester.test(_test_send_queue_drops_stale_typing_prompt, "发送队列取消过期输入提示测试")
-    await tester.test(_test_marked_after_send_succeeds, "发送成功后登记发言测试")
-    await tester.test(_test_not_marked_when_send_fails, "发送失败的阶段登记测试")
-    await tester.test(_test_not_marked_while_converting_image, "图片预上传期间不登记发送测试")
+    await tester.test(_test_marked_after_send_succeeds, "发送成功后标记发言")
+    await tester.test(_test_not_marked_when_send_fails, "发送失败时不标记发言")
+    await tester.test(_test_not_marked_while_converting_image, "图片预上传期间不标记发言")
 
     return tester

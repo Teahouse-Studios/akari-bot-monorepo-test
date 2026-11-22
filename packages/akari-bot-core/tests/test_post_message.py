@@ -1,4 +1,4 @@
-"""core.builtins.bot 单元测试 - 主动推送的通道归拢与掉线避让（需要数据库）。"""
+"""core.builtins.bot 单元测试 - 主动推送的通道合并与掉线避让（需要数据库）。"""
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -17,7 +17,7 @@ from akaribot.testing import func_case, Tester
 
 
 async def _build_channel(prefix: str) -> list[FetchedSessionInfo]:
-    # 构造一组「同一条消息通道、分属两个平台」的会话。
+    # 构造一组“同一条消息通道、分属两个平台”的会话。
     union = await TargetUnionInfo.resolve_union(f"{prefix}1|Group|a")
     await union.bind_id(f"{prefix}2|Group|b")
     await TargetUnionBind.filter(union_id=union.union_id).update(channel_id=1)

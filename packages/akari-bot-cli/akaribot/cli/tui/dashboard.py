@@ -63,7 +63,7 @@ SETUP_BUTTONS: tuple[tuple[str, str], ...] = (
     ("run", "goto-run"),
     ("doctor", "goto-doctor"),
 )
-"""首次使用行动区的三个按钮：页面键与控件 id，文案键按 ``setup_button_<页面键>`` 派生。"""
+"""首次使用行动区的三个按钮：页面键与控件 id，文案键为 ``setup_button_<页面键>``。"""
 
 
 def _tail(text: str | None, limit: int = 400) -> str:
@@ -163,11 +163,11 @@ class DashboardSnapshot:
     :param instance_name: ``[instance] name``。
     :param instance_mode: ``installed`` 或 ``workspace``。
     :param locale: 实例默认语言。
-    :param core_version: core 版本号；无法获取时为空串。
+    :param core_version: core 版本号。无法获取时为空串。
     :param core_origin: core 版本的来源说明（``akaribot.toml`` 或 ``module list --json``）。
-    :param running: 运行状态；``None`` 表示锁文件探测不可用。
+    :param running: 运行状态。``None`` 表示锁文件探测不可用。
     :param running_detail: 运行状态的判据说明，含锁文件路径与降级原因。
-    :param update_hint: 更新提示；空串表示无更新提示。
+    :param update_hint: 更新提示。空串表示无更新提示。
     :param update_source: 更新提示的来源说明。
     :param error: 读取过程中的非致命错误，供界面在末行展示。
     """
@@ -202,10 +202,10 @@ class DashboardSnapshot:
 class InstanceRow:
     """实例清单记录。
 
-    :param name: 注册名；未登记的当前实例用空串。
+    :param name: 注册名。未注册的当前实例用空串。
     :param root: 实例根目录。
     :param locale: 实例默认语言。
-    :param running: 是否在运行；探测失败时为 ``None``。
+    :param running: 是否在运行。探测失败时为 ``None``。
     :param autostart: 是否在服务启动时自动启动。
     :param restart_on_crash: 崩溃后是否自动重启。
     :param registered: 是否已在注册表中。
@@ -242,7 +242,7 @@ class ServiceRow:
 
     :param backend: ``launchd`` / ``systemd`` / ``unsupported``。
     :param installed: 单元文件是否存在。
-    :param enabled: 系统是否已注册；无法探测时为 ``None``。
+    :param enabled: 系统是否已注册。无法探测时为 ``None``。
     :param path: 单元文件路径。
     :param detail: 面向用户的简要说明。
     """
@@ -256,7 +256,7 @@ class ServiceRow:
 
 @runtime_checkable
 class ServiceControl(Protocol):
-    """读取服务状态并执行预览；装卸经 :class:`CliRunner` 执行。"""
+    """读取服务状态并执行预览。装卸经 :class:`CliRunner` 执行。"""
 
     def service_status(self) -> ServiceRow:
         """返回服务单元状态。"""
@@ -271,7 +271,7 @@ class ServiceControl(Protocol):
 class SystemServiceControl:
     """通过 CLI 服务模块读取状态并执行预览。
 
-    :param backend: 服务后端；默认按平台探测。
+    :param backend: 服务后端。默认按平台探测。
     """
 
     def __init__(self, backend: Any | None = None) -> None:
@@ -308,10 +308,10 @@ class SystemServiceControl:
 
 
 class StaticServiceControl:
-    """固定服务状态的替身，供自动化断言使用。
+    """固定服务状态的替身，供自动化检查使用。
 
     :param status: ``service_status`` 的返回值。
-    :param preview_result: ``preview_service`` 的返回值；默认为成功。
+    :param preview_result: ``preview_service`` 的返回值。默认为成功。
     """
 
     def __init__(
@@ -383,13 +383,13 @@ class SubprocessCliRunner:
 
 @runtime_checkable
 class InitRunner(Protocol):
-    """新建实例的执行接口；测试注入替身，生产经 ``akaribot init`` 子进程。"""
+    """新建实例的执行接口。测试注入替身，生产环境经 ``akaribot init`` 子进程。"""
 
     def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
         """创建实例并返回操作结果。
 
         :param root: 新实例根目录。
-        :param managed_venv: 是否创建托管 venv；为假时用当前环境。
+        :param managed_venv: 是否创建托管 venv。为假时用当前环境。
         :param locale: 实例默认语言。
         """
 
@@ -397,7 +397,7 @@ class InitRunner(Protocol):
 class SubprocessInitRunner:
     """默认实现：经 ``akaribot init`` 子进程创建实例。
 
-    :param timeout: 子进程超时秒数；包含 core 与适配器的安装时间。
+    :param timeout: 子进程超时秒数。包含 core 与适配器的安装时间。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
 
@@ -426,9 +426,9 @@ class SubprocessInitRunner:
 
 
 class StaticInitRunner:
-    """固定结果的替身执行器，供自动化断言使用。
+    """固定结果的替身执行器，供自动化检查使用。
 
-    :param result: ``create`` 的返回值；默认为成功。
+    :param result: ``create`` 的返回值。默认为成功。
     """
 
     def __init__(self, result: OperationResult | None = None) -> None:
@@ -442,7 +442,7 @@ class StaticInitRunner:
 
 @runtime_checkable
 class InstanceListSource(Protocol):
-    """本机实例清单的数据源接口；写操作经 :class:`CliRunner` 交给命令层。"""
+    """本机实例清单的数据源接口。写操作经 :class:`CliRunner` 交给命令层。"""
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
         """返回注册表中的实例，附带实时运行状态。"""
@@ -451,7 +451,7 @@ class InstanceListSource(Protocol):
 class RegistryInstanceListSource:
     """读取本机注册表，逐条探测锁文件。
 
-    :param registry: 注册表；默认用默认位置。
+    :param registry: 注册表。默认用默认位置。
     :param probe: 探测运行状态的函数 ``(root) -> bool | None``，测试可注入。
     """
 
@@ -481,13 +481,13 @@ class RegistryInstanceListSource:
             )
         active = context.active_root()
         if active is not None and self.registry.find_by_root(active) is None:
-            # 当前实例可能尚未登记，清单须包含该实例。
+            # 当前实例可能尚未注册，清单须包含该实例。
             rows.append(InstanceRow(name="", root=active, running=self._probe(active), registered=False))
         return tuple(rows)
 
 
 class StaticInstanceListSource:
-    """固定清单的替身数据源，供自动化断言使用。
+    """固定清单的替身数据源，供自动化检查使用。
 
     :param rows: 清单内容。
     """
@@ -505,13 +505,13 @@ class StaticInstanceListSource:
 class SetupSummary:
     """首次使用摘要。
 
-    :param unconfigured_adapters: 已安装但未配置的适配器数量；``None`` 表示未获取。
-    :param pending_placeholders: 待填写的占位符数量；``None`` 表示未获取。
-    :param doctor_errors: 最近一次诊断的错误级结论数；``None`` 表示未获取。
-    :param doctor_warnings: 最近一次诊断的告警级结论数；``None`` 表示未获取。
-    :param adapters_reason: 适配器数量未获取的原因；获取成功时为空串。
-    :param placeholders_reason: 占位符数量的口径说明；core 返回完整统计时为空串。
-    :param doctor_reason: 诊断结论未获取的原因；获取成功时为空串。
+    :param unconfigured_adapters: 已安装但未配置的适配器数量。``None`` 表示未获取。
+    :param pending_placeholders: 待填写的占位符数量。``None`` 表示未获取。
+    :param doctor_errors: 最近一次诊断的错误级结论数。``None`` 表示未获取。
+    :param doctor_warnings: 最近一次诊断的告警级结论数。``None`` 表示未获取。
+    :param adapters_reason: 适配器数量未获取的原因。获取成功时为空串。
+    :param placeholders_reason: 占位符数量的口径说明。core 返回完整统计时为空串。
+    :param doctor_reason: 诊断结论未获取的原因。获取成功时为空串。
     :param placeholders_estimated: 占位符数量是否来自配置文本标记的估算。
     """
 
@@ -539,16 +539,16 @@ def _placeholders_text(summary: SetupSummary) -> str:
 
 @runtime_checkable
 class SetupSummarySource(Protocol):
-    """首次使用摘要的数据源接口；测试注入替身，生产经子进程与本机配置文件。"""
+    """首次使用摘要的数据源接口。测试注入替身，生产环境经子进程与本机配置文件。"""
 
     def summary(self) -> SetupSummary:
         """返回摘要数据。"""
 
 
 class StaticSetupSummarySource:
-    """固定摘要的替身数据源，供自动化断言使用。
+    """固定摘要的替身数据源，供自动化检查使用。
 
-    :param summary: ``summary`` 的返回值；默认提供完整的模拟摘要。
+    :param summary: ``summary`` 的返回值。默认提供完整的模拟摘要。
     :param error: 指定后每次读取均抛出该异常，用于验证读取失败时的处理。
     """
 
@@ -569,9 +569,9 @@ class StaticSetupSummarySource:
 
 
 class LocalSetupSummarySource:
-    """通过 CLI 获取诊断与占位符统计；占位符命令失败时按配置标记估算并注明原因。
+    """通过 CLI 获取诊断与占位符统计。占位符命令失败时按配置标记估算并注明原因。
 
-    :param root: 实例根；默认在读取数据时按界面当前实例解析。
+    :param root: 实例根。默认在读取数据时按界面当前实例解析。
     :param timeout: 子进程超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
@@ -719,7 +719,7 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
     依次查询当前实例、起点及其父目录、注册表中的默认实例。
 
     :param start: 查找起点，默认为当前工作目录。
-    :return: 实例根；未找到时为 ``None``。
+    :return: 实例根。未找到时为 ``None``。
     """
     active = context.active_root()
     if active is not None:
@@ -738,7 +738,7 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
 def lock_held(lock_path: Path) -> bool | None:
     """探测锁文件是否被排他锁持有，供概览与运行页共用。
 
-    只读打开文件，不截断运行中进程持有的锁；``Instance.is_running()`` 不可用时作为备用实现。
+    只读打开文件，不截断运行中进程持有的锁。``Instance.is_running()`` 不可用时作为备用实现。
 
     :param lock_path: 锁文件路径，通常是 ``<实例根>/.bot.lock``。
     :return: ``True`` 运行中、``False`` 未运行、``None`` 平台或权限不支持探测。
@@ -785,7 +785,7 @@ def meta_core_version(doc: Any) -> str:
 
 @runtime_checkable
 class DashboardSource(Protocol):
-    """Dashboard 数据源接口；测试注入替身，运行时通过文件系统与子进程读取。"""
+    """Dashboard 数据源接口。测试注入替身，运行时通过文件系统与子进程读取。"""
 
     def snapshot(self) -> DashboardSnapshot:
         """返回完整快照，包括版本查询结果。"""
@@ -797,9 +797,9 @@ class DashboardSource(Protocol):
 class StaticDashboardSource:
     """固定快照的替身数据源，不产生任何子进程与文件访问。
 
-    :param snapshot: 初始快照；默认提供合成实例。
-    :param running: 初始运行状态；为 ``None`` 时沿用快照自身的取值，构造后可经
-        :meth:`set_running` 改成 ``True`` / ``False`` / ``None`` 以断言界面随之变化。
+    :param snapshot: 初始快照。默认提供合成实例。
+    :param running: 初始运行状态。为 ``None`` 时沿用快照自身的取值，构造后可经
+        :meth:`set_running` 改成 ``True`` / ``False`` / ``None`` 以检查界面随之变化。
     """
 
     def __init__(
@@ -841,13 +841,13 @@ class StaticDashboardSource:
 class LocalDashboardSource:
     """通过文件系统与子进程读取实例信息。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param start: 向上查找的起点，默认为当前工作目录。
     :param timeout: 子进程超时秒数，仅在需要补取版本时使用。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     :param instance_factory: 构造 ``Instance`` 的回调，测试可注入。
-    :param module_source: 取版本用的模块数据源；默认复用 Modules 页的子进程实现。
-    :param update_probe: 返回更新提示的回调；未注入时更新提示留空。
+    :param module_source: 取版本用的模块数据源。默认复用 Modules 页的子进程实现。
+    :param update_probe: 返回更新提示的回调。未注入时更新提示留空。
     """
 
     def __init__(
@@ -1026,12 +1026,12 @@ class DashboardPage(compat.Vertical):
     :param source: 数据源，默认为 :class:`LocalDashboardSource`。
     :param instances: 实例清单数据源，默认读本机注册表。
     :param service_control: 服务状态与预览接口，默认直接用 CLI 侧的 service 模块。
-    :param setup: 首次使用摘要的数据源；默认取应用注入的 ``dashboard_setup``，没有时用
+    :param setup: 首次使用摘要的数据源。默认取应用注入的 ``dashboard_setup``，没有时用
         :class:`LocalSetupSummarySource`。
     :param init_runner: 新建实例的执行接口，默认经 ``akaribot init`` 子进程。
     :param cli_runner: 写动作的执行接口，默认经 ``akaribot <子命令>`` 子进程。
-    :param cache_ttl: 快照缓存有效期（秒）；缓存内刷新只重绘，不取版本。
-    :param refresh_interval: 锁文件探测周期（秒）；自动化断言可调大以避免定时刷新干扰。
+    :param cache_ttl: 快照缓存有效期（秒）。缓存内刷新只重绘，不取版本。
+    :param refresh_interval: 锁文件探测周期（秒）。自动化检查可调大以避免定时刷新干扰。
     """
 
     DEFAULT_CSS = """
@@ -1206,7 +1206,7 @@ class DashboardPage(compat.Vertical):
             self.set_interval(self.refresh_interval, self._on_tick)
 
     def focus_primary(self) -> None:
-        """聚焦实例清单；为空时聚焦页面。"""
+        """聚焦实例清单。为空时聚焦页面。"""
         compat.focus_first(self, "#instance-list")
 
     @property
@@ -1434,7 +1434,7 @@ class DashboardPage(compat.Vertical):
             )
         else:
             text = i18n.t("cli.tui.dashboard.service_missing", backend=row.backend)
-        # 首次激活时布局可能未完成；保留原文，渲染时按当前宽度截断。
+        # 首次激活时布局可能未完成。保留原文，渲染时按当前宽度截断。
         self._service_text = text
         self.query_one("#service", compat.Static).update(
             compat.plain_text(compat.truncate_cells(text, self._inner_width()))
@@ -1448,11 +1448,11 @@ class DashboardPage(compat.Vertical):
         for button_id in ("add-menu", "refresh"):
             self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
         self.query_one("#remove-instance", compat.Button).disabled = self._busy or not registered
-        # 策略与服务都依赖已登记实例。
+        # 策略与服务都依赖已注册的实例。
         self.query_one("#service-menu", compat.Button).disabled = self._busy or not registered
 
     def request_add_menu(self) -> None:
-        """弹出添加实例菜单：新建实例或登记已有目录。"""
+        """弹出添加实例菜单：新建实例或注册已有目录。"""
         if not self._pending_menu.accept("add"):
             return
         compat.ask_choice(
@@ -1663,7 +1663,7 @@ class DashboardPage(compat.Vertical):
         on_done(result)
 
     def request_add_instance(self) -> None:
-        """请求输入实例目录并登记。"""
+        """请求输入实例目录并注册。"""
         compat.ask_text(
             self.app,
             title=i18n.t("cli.tui.dashboard.add_title"),
@@ -1699,7 +1699,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.dashboard.add_done", name=self._registered_name(root), root=root))
 
     def _registered_name(self, root: Path) -> str:
-        # 注册名由 CLI 生成；刷新后无法取得时使用目录名。
+        # 注册名由 CLI 生成。刷新后无法取得时使用目录名。
         wanted = root.expanduser().resolve()
         for row in self._instance_rows:
             if row.root.expanduser().resolve() == wanted:
@@ -1762,12 +1762,12 @@ class DashboardPage(compat.Vertical):
         if not result.ok:
             self._set_status(i18n.t("cli.tui.dashboard.new_failed", error=_result_summary(result)))
             return
-        # init 负责实例登记，创建成功后刷新清单。
+        # init 负责实例注册，创建成功后刷新清单。
         self.refresh_instances()
         self._set_status(i18n.t("cli.tui.dashboard.new_done", name=self._registered_name(root), root=root))
 
     def request_remove_instance(self) -> None:
-        """请求确认移除高亮实例的登记，保留实例目录。"""
+        """请求确认取消高亮实例的注册，保留实例目录。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1825,7 +1825,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def rows(self) -> tuple[tuple[str, str], ...]:
-        """返回最近一次渲染使用的标签与值，供自动化断言逐字段核对。"""
+        """返回最近一次渲染使用的标签与值，供自动化检查逐字段核对。"""
         return self._rows
 
     @property
@@ -1840,7 +1840,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def setup_rows(self) -> tuple[tuple[str, str], ...]:
-        """返回首次使用摘要最近一次渲染的标签与值，供自动化断言逐项核对。"""
+        """返回首次使用摘要最近一次渲染的标签与值，供自动化检查逐项核对。"""
         return self._setup_rows
 
     @property
@@ -1854,7 +1854,7 @@ class DashboardPage(compat.Vertical):
         return self._status_rendered
 
     def cache_age(self) -> float:
-        """返回快照自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回快照自上次读取以来的秒数。从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -1862,7 +1862,7 @@ class DashboardPage(compat.Vertical):
     def refresh_snapshot(self, *, force: bool = False) -> None:
         """读取快照。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
+        :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
         # 手动刷新使待确认目标失效，须重新确认。
         self.reset_pending()
@@ -1897,7 +1897,7 @@ class DashboardPage(compat.Vertical):
         """只探测运行状态并就地更新该行，返回探测结果。
 
         判据与 :meth:`DashboardSource.probe_running` 一致：读锁文件或询问实例对象，
-        不启动子进程、不重取版本；探测结果与缓存相同时不重绘。
+        不启动子进程、不重取版本。探测结果与缓存相同时不重绘。
         """
         try:
             value = self.source.probe_running()
@@ -1919,7 +1919,7 @@ class DashboardPage(compat.Vertical):
         self.refresh_instances(polling=True)
 
     def refresh_setup(self) -> None:
-        """读取首次使用摘要；失败时显示原因。"""
+        """读取首次使用摘要。失败时显示原因。"""
         source = self._resolve_setup_source()
         self.run_worker(self._load_setup(source), group="dashboard-setup", exclusive=True)
 
@@ -1943,7 +1943,7 @@ class DashboardPage(compat.Vertical):
     def _render_setup(self) -> None:
         rows = self._setup_rows_for_render()
         self._setup_rows = rows
-        # 摘要限高两行，为列表与详情保留空间；原文保留完整取值，由控件按宽度截断。
+        # 摘要限高两行，为列表与详情保留空间。原文保留完整取值，由控件按宽度截断。
         cells = [f"{label} {value}" for label, value in rows]
         text = "\n".join("  ".join(cells[index : index + 2]) for index in range(0, len(cells), 2))
         self._setup_rendered = text
@@ -2054,7 +2054,7 @@ class DashboardPage(compat.Vertical):
             button.styles.line_pad = 0 if compact else 1
 
     def reset_pending(self) -> None:
-        """作废本页的待确认状态；切页、刷新与更换选中项后须重新确认。"""
+        """作废本页的待确认状态。切页、刷新与更换选中项后须重新确认。"""
         self._pending_service.reset()
         self._pending_remove.reset()
         self._pending_menu.reset()
@@ -2066,7 +2066,7 @@ class DashboardPage(compat.Vertical):
     @compat.on(compat.ListView.Highlighted, "#instance-list")
     def _on_instance_highlighted(self, event: compat.ListView.Highlighted) -> None:
         if compat.highlighted_index(event.list_view) is None:
-            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按「不变」处理。
+            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按“不变”处理。
             return
         # 重建列表也会触发高亮事件，须比较目标以排除显示刷新。
         key = self._highlight_key(self.selected_instance())
@@ -2119,7 +2119,7 @@ class DashboardPage(compat.Vertical):
         return bool(self._instance_rows) or context.active_root() is not None
 
     def open_setup_page(self, page_key: str) -> None:
-        """切到首次使用行动区指向的页面；前提不满足时只在状态栏说明原因。
+        """切到首次使用行动区指向的页面。前提不满足时只在状态栏说明原因。
 
         :param page_key: 页面键，取自 :data:`SETUP_BUTTONS`。
         """
@@ -2140,7 +2140,7 @@ class DashboardPage(compat.Vertical):
         self.refresh_setup()
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await self.app.workers.wait_for_complete()
 
 

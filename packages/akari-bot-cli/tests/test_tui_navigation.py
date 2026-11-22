@@ -1,6 +1,6 @@
 """页面切换契约：侧栏高亮、可见页面、焦点与键位归属。
 
-四者必须一致，以保证页级键位作用于当前可见页面。本文件逐页断言交互归属与隐藏页不取数的行为。
+四者必须一致，以保证页级键位作用于当前可见页面。本文件逐页检查交互归属与隐藏页不取数的行为。
 侧栏分组与键盘翻页顺序由 NAV_PLAN 决定，高亮下标按条目 id 折算回 PAGES 的页面创建顺序。
 """
 
@@ -401,7 +401,7 @@ async def _test_sidebar_browse_does_not_switch():
         await pilot.press("q")
         return before, after
 
-    # 侧栏顺序由 NAV_PLAN 决定；模块页上方是同组页面，此处验证方向键仅移动高亮，不切换页面。
+    # 侧栏顺序由 NAV_PLAN 决定。模块页上方是同组页面，此处验证方向键仅移动高亮，不切换页面。
     before, after = await _with_app(body)
     return (
         before == ("modules", _page_index("modules"))
@@ -467,7 +467,7 @@ async def _test_sidebar_groups_follow_the_plan():
 
 
 async def _test_sidebar_groups_fold():
-    # 折叠后组内页面隐藏且方向键跳过；当前页在折叠组内时高亮落在分组标题，展开后恢复。
+    # 折叠后组内页面隐藏且方向键跳过。当前页在折叠组内时高亮位于分组标题，展开后恢复。
     page_position = NAV_PLAN.index(("page", "modules"))
     header = max(position for position in range(page_position) if NAV_PLAN[position][0] == "group")
     end = next(position for position in range(header + 1, len(NAV_PLAN)) if NAV_PLAN[position][0] == "group")

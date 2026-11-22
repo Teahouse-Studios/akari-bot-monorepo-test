@@ -292,7 +292,7 @@ def _test_draft_locale_requires_nonempty_string():
     draft.commit()
     assert msg.session_info.locale.locale == "en_us"
 
-    # 缺省语言仍可读取为 None，修改其它字段不要求补写语言。
+    # 默认语言仍可读取为 None，修改其它字段不要求补充语言。
     msg.session_info.locale = None
     untouched_locale = SessionDraft(msg.session_info)
     assert untouched_locale.locale_lang is None

@@ -18,7 +18,7 @@ QUEUE_RESTART_DELAY = 0.1
 
 
 async def check_queue() -> None:
-    """监督客户端队列轮询；瞬时异常后退避并重新启动。"""
+    """监督客户端队列轮询。瞬时异常后退避并重新启动。"""
     while True:
         try:
             await JobQueueClient.check_job_queue()

@@ -2,7 +2,7 @@
 
 本文介绍核心运行时的定位、依赖与进程模型，并列出其余文档页。
 
-`akaribot.core` 是 AkariBot 的核心运行时，提供公共接口和基础功能，由 `akari-bot-core` 分发包提供。`akari-bot-core` 同时提供内置模块 `akaribot.modules.core`，文档见[内置模块](../../modules/core/docs/index.md)。
+`akaribot.core` 是 AkariBot 的核心运行时，提供公共接口和基础功能，由 `akari-bot-core` 包提供。`akari-bot-core` 同时提供内置模块 `akaribot.modules.core`，文档见[内置模块](../../modules/core/docs/index.md)。
 
 ## 定位
 

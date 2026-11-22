@@ -559,7 +559,7 @@ async def _test_maintenance_drain_timeout_names_blocking_handlers():
 @func_case
 async def test_rpc_transport(tester: Tester):
     await tester.test(_test_roundtrip_preserves_json_and_registry_isolation, "RPC 空值与 peer 状态隔离")
-    await tester.test(_test_bidirectional_nested_calls, "双向嵌套 RPC 并发回包")
+    await tester.test(_test_bidirectional_nested_calls, "双向嵌套 RPC 并发响应")
     await tester.test(_test_remote_errors_and_invalid_method_are_distinct, "远端异常与未知方法独立错误")
     await tester.test(_test_remote_error_keeps_originating_call_context, "远端异常保留调用方上下文")
     await tester.test(_test_error_details_stay_within_protocol_limit, "错误详情遵守协议长度上限")
@@ -575,7 +575,7 @@ async def test_rpc_transport(tester: Tester):
     await tester.test(_test_nested_maintenance_window_is_reentrant_for_owner, "同任务嵌套维护窗口不会自锁")
     await tester.test(_test_concurrent_maintenance_windows_are_serialized, "并发维护窗口串行执行")
     await tester.test(
-        _test_maintenance_drain_ignores_tasks_waiting_for_the_window, "排空不等待同样在等维护锁的 handler"
+        _test_maintenance_drain_ignores_tasks_waiting_for_the_window, "处理完队列不等待同样在等维护锁的 handler"
     )
     await tester.test(_test_maintenance_drain_timeout_names_blocking_handlers, "排空超时报告阻塞的 handler")
     return tester

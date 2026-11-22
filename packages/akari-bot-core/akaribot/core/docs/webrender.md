@@ -14,10 +14,10 @@ core 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，�
 | --- | --- | --- | --- |
 | `enable` | `bool` | `false` | 是否开启 WebRender |
 | `browser_type` | `str` | `"chrome"` | 浏览器类型，支持 `chrome` 与 `firefox` |
-| `browser_executable_path` | `str` | `""` | 浏览器可执行文件路径；为空时使用 Playwright 安装的浏览器 |
+| `browser_executable_path` | `str` | `""` | 浏览器可执行文件路径。为空时使用 Playwright 安装的浏览器 |
 | `headless` | `bool` | `true` | 是否以无头模式运行浏览器 |
 | `remote_only` | `bool` | `false` | 是否仅使用远程服务，跳过本地浏览器 |
-| `remote_web_render_url` | `str` | `""` | 远程服务地址；本地渲染失败时尝试，`remote_only` 时必需 |
+| `remote_web_render_url` | `str` | `""` | 远程服务地址。本地渲染失败时尝试，`remote_only` 时必需 |
 
 ```sh
 akaribot config schema --table webrender
@@ -33,7 +33,7 @@ akaribot config set browser_type firefox --table webrender
 | --- | --- |
 | `enable=false` | 不初始化浏览器，状态检查返回不可用 |
 | `enable=true`、`remote_only=false`、URL 为空 | 使用本地 Playwright 浏览器 |
-| `enable=true`、`remote_only=false`、URL 非空 | 优先本地；浏览器未初始化或渲染失败时转发到远程 |
+| `enable=true`、`remote_only=false`、URL 非空 | 优先本地。浏览器未初始化或渲染失败时转发到远程 |
 | `enable=true`、`remote_only=true`、URL 非空 | 不启动本地浏览器，所有请求（含状态查询）走远程 |
 | `enable=true`、`remote_only=true`、URL 为空 | 远程未配置，渲染不可用 |
 
@@ -52,8 +52,8 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 | 命令 | 说明 |
 | --- | --- |
 | `~webrender status` | 输出渲染服务状态 |
-| `~webrender start` | 按当前配置初始化；`remote_only` 时只检查远程服务 |
-| `~webrender stop` | 关闭本地浏览器；`remote_only` 时只更新状态 |
+| `~webrender start` | 按当前配置初始化。`remote_only` 时只检查远程服务 |
+| `~webrender stop` | 关闭本地浏览器。`remote_only` 时只更新状态 |
 | `~webrender reload` | 先关闭再重新初始化 |
 
 命令清单与权限见[内置工具](../../modules/core/docs/tools.md)。
@@ -62,7 +62,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 
 `check_web_render_status()` 返回 `false` 时，调用方无需继续请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态为不可用时改用文字或表格。
 
-其他模块通常先检查状态。没有先检查的模块，会在调用失败后改用纯文本。异常由渲染服务内部处理，本地与远程都失败时返回 `None`。
+其他模块通常先检查状态。没有先检查的模块会在调用失败后改用纯文本。异常由渲染服务内部处理，本地与远程都失败时返回 `None`。
 
 <NoticeBox type="info" title="远程回退">
 

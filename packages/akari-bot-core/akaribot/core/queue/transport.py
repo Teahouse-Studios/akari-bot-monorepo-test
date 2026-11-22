@@ -73,5 +73,5 @@ class MessageTransport(Protocol):
     async def respond(self, request: RpcRequest, response: RpcResponse) -> None: ...
 
 
-# 兼容现有扩展的类型名称；新实现应使用 MessageTransport。
+# 兼容现有扩展的类型名称。新实现应使用 MessageTransport。
 RpcTransport = MessageTransport

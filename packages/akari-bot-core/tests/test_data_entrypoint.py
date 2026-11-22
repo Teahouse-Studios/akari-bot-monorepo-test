@@ -1,7 +1,7 @@
 """``data`` 入口的单元测试。
 
 入口只按主键读写，表名与列名只认已注册模型声明过的标识：未知表、未知列、缺必填字段、改动主键列都
-必须在入口层被拒，用户错误一律退出码 2。另有一次 sqlite 上的最小 round-trip，覆盖新建、读取、
+必须在入口层被拒，用户错误一律退出码 2。另有一次在 sqlite 上的最小往返读写，覆盖新建、读取、
 改写、删除与重复删除，并核对读回的值是 JSON 安全的。
 """
 
@@ -49,7 +49,7 @@ def _run(args: list[str]) -> tuple[int, object]:
 
 
 async def _call(*args: str) -> tuple[int, object]:
-    # 入口内部用 asyncio.run()，而用例跑在事件循环里，故放回无循环的线程执行。
+    # 入口内部用 asyncio.run()，而用例运行在事件循环里，故放回无循环的线程执行。
     return await asyncio.to_thread(_run, list(args))
 
 
@@ -277,7 +277,7 @@ async def _test_condition_operators():
         and negated["total"] == 0
         and empty["total"] == 0
         and not_empty["total"] == 20
-        # 造数据时 load 等于「名字以 0 结尾」，故 load=true 且名字含 mod-01 的只有 mod-010。
+        # 造数据时 load 等于“名字以 0 结尾”，故 load=true 且名字含 mod-01 的只有 mod-010。
         and combined["total"] == 1
     )
 
@@ -302,7 +302,7 @@ async def _test_bad_conditions_are_rejected():
         unknown_code, unknown = await _call("rows", TABLE, "--filter", "no_such=1")
         text_code, text_op = await _call("rows", TABLE, "--filter", "load~true")
         empty_code, empty = await _call("rows", TABLE, "--filter", "   ")
-        # 空白搜索词按「没给」处理：界面清空搜索框后不必再区分空串与缺省。
+        # 空白搜索词按“没给”处理：界面清空搜索框后不必再区分空串与默认值。
         blank_code, blank = await _call("rows", TABLE, "--search", "   ")
     return (
         unknown_code == 2
@@ -318,7 +318,7 @@ async def _test_bad_conditions_are_rejected():
 
 async def _test_tables_payload_shape():
     with _temp_instance():
-        # 尚未建表时也要给得出清单：条数按未知回报，而不是整份清单失败。
+        # 尚未创建数据表时也要返回清单。条数以未知回报，清单照常返回。
         empty_code, empty_payload = await _call("tables", "--json")
         await _create_schema()
         code, payload = await _call("tables", "--json")
@@ -397,5 +397,5 @@ async def test_data_entrypoint(tester: Tester):
     await tester.test(_test_bad_conditions_are_rejected, "非法条件在入口层被拒")
     await tester.test(_test_tables_payload_shape, "表清单载荷形状")
     await tester.test(_test_values_are_json_safe, "时间值以 ISO 文本回传")
-    await tester.test(_test_plain_output_is_json, "缺省输出与 --json 一致")
+    await tester.test(_test_plain_output_is_json, "默认输出与 --json 一致")
     return tester

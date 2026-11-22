@@ -44,11 +44,11 @@ DF_CHUNITHM_QUERY_URL = "https://www.diving-fish.com/api/chunithmprober/query/pl
 DF_CHUNITHM_LATEST_VERSION_URL = "https://www.diving-fish.com/api/chunithmprober/latest_version"
 LXNS_CHUNITHM_BESTS_URL = f"{LXNS_API_BASE}/user/chunithm/player/bests"
 
-# 开发者端点按好友码寻址，能查询任意玩家；好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
 LXNS_CHUNITHM_PLAYER_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/chunithm/player/{{friend_code}}"
 LXNS_CHUNITHM_BESTS_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/chunithm/player/{{friend_code}}/bests"
 
-# 水鱼的成绩只给难度标级，而绘图按难度序号取色，故按标级补一个序号；标级无法识别时记 0。
+# 水鱼的成绩只给难度标级，而绘图按难度序号取色，故按标级补一个序号。标级无法识别时记 0。
 _DF_LEVEL_INDEX = {label.lower(): index for index, label in enumerate(diff_list)}
 
 # 新曲版本标识的缓存时长（秒）。
@@ -200,8 +200,8 @@ async def get_record_df(
     """取得中二的 B30 / N20。
 
     :param msg: 消息会话。
-    :param bind_info: 该用户的水鱼绑定记录；按用户名查询时无需给出。
-    :param username: 要查询的水鱼用户名；为空时查询绑定账号。
+    :param bind_info: 该用户的水鱼绑定记录。按用户名查询时无需给出。
+    :param username: 要查询的水鱼用户名。为空时查询绑定账号。
     :param use_cache: 是否读写本地缓存。
     :return: 含 `nickname`、`rating` 与 `records.b30` / `records.n20` 的成绩字典。
     """
@@ -210,7 +210,7 @@ async def get_record_df(
         # 按用户名查到的成绩属于他人，与这位用户自己写在缓存里的成绩并非同一份，故不读写缓存。
         use_cache = False
     elif not DF_OAUTH_ENABLED:
-        # 查询绑定账号必须要有 OAuth 应用；按用户名查询走的是公开端点，不需要授权。
+        # 查询绑定账号必须要有 OAuth 应用。按用户名查询走的是公开端点，不需要授权。
         raise ConfigValueError("{I18N:error.config.secret.not_found}")
 
     async def fetch():
@@ -314,8 +314,8 @@ async def get_record_lx(
     """取得中二的 B30 / N20。
 
     :param msg: 消息会话。
-    :param bind_info: 该用户的落雪绑定记录；按好友码查询时无需给出。
-    :param friend_code: 要查询的好友码；为空时查询绑定账号。
+    :param bind_info: 该用户的落雪绑定记录。按好友码查询时无需给出。
+    :param friend_code: 要查询的好友码。为空时查询绑定账号。
     :param use_cache: 是否读写本地缓存。
     :return: 含 `nickname`、`rating` 与 `records.b30` / `records.n20` 的成绩字典。
     """

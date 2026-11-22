@@ -51,9 +51,9 @@ def logs(
     as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """打印日志文件末尾的若干行；``--follow`` 持续输出新增行，直到 Ctrl+C。
+    """打印日志文件末尾的若干行。``--follow`` 持续输出新增行，直到 Ctrl+C。
 
-    ``--path`` 只打印选中的文件路径，便于脚本自行处理；``--json`` 输出结构化结果，
+    ``--path`` 只打印选中的文件路径，便于脚本自行处理。``--json`` 输出结构化结果，
     跟随模式下每批新增行输出一行 JSON。
     """
     target = require_instance(instance)
@@ -115,8 +115,8 @@ def follow_file(
     :param path: 日志文件。
     :param offset: 起始字节偏移。
     :param emit: 每批新增行的回调。
-    :param interval: 两轮读取之间的间隔秒数；非正数表示不等待。
-    :param should_stop: 停止判据；``None`` 表示一直跟随。
+    :param interval: 两轮读取之间的间隔秒数。非正数表示不等待。
+    :param should_stop: 停止判据。``None`` 表示一直跟随。
     :param sleep: 等待实现，测试用它避免真实等待。
     :return: 结束时的字节偏移。
     """

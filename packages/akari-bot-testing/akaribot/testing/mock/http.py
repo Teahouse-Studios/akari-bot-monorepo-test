@@ -14,7 +14,7 @@ def digest_request_body(data: Any) -> str | None:
     """计算请求体的摘要，用于区分同一 URL 上的不同请求。
 
     :param data: 请求体，可能为 bytes、str 或可转为字符串的对象。
-    :return: 请求体的 SHA256 摘要；请求体为空时返回 None。
+    :return: 请求体的 SHA256 摘要。请求体为空时返回 None。
     """
     if data is None:
         return None
@@ -50,9 +50,9 @@ class MockHTTPResponse:
         return self._json
 
     def read(self) -> bytes:
-        """返回响应的二进制内容，对齐 `httpx.Response.read` 的语义。
+        """返回响应的二进制内容，与 `httpx.Response.read` 的语义一致。
 
-        :return: 响应正文的二进制内容；未录制二进制内容时回退为 text 的 UTF-8 编码。
+        :return: 响应正文的二进制内容。未录制二进制内容时改用 text 的 UTF-8 编码。
         """
         if self.content:
             return self.content
@@ -135,7 +135,7 @@ class HTTPMock:
     def enable(cls, strict: bool | None = None):
         """启用 HTTP mock。
 
-        :param strict: 是否禁止未命中的请求回落到真实网络。None 表示保持当前设置。
+        :param strict: 是否禁止未命中的请求回退到真实网络。None 表示保持当前设置。
         """
         Info.http_mock_enabled = True
         if strict is not None:

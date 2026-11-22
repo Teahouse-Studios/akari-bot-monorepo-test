@@ -97,7 +97,7 @@ llm_api_list:
 
 * `temperature`：模型的温度采样。
 * `top_p`：模型的核采样。
-* `top_logprobs`：模型返回的候选 Token 对数概率数量，范围 0 到 20。
+* `top_logprobs`：模型返回对数概率的候选 Token 数量，范围 0 到 20。
 * `reasoning_effort`：模型的思考强度，若为 `none` 则不启用思维链。
 
 `temperature`、`top_p` 与 `top_logprobs` 可显式设为 `null`，表示不向模型传入该参数，适用于不支持相应参数的模型。
@@ -165,7 +165,7 @@ billing:
   call_price: 10
 ```
 
-每次调用扣除 `call_price` 数量的花瓣。
+每次调用扣除 `call_price` 个花瓣。
 
 ### `hybrid`
 
@@ -194,7 +194,7 @@ billing:
 * `price_cache_write`：百万输入缓存写入 Token 所需的花瓣数量。
 * `price_out`：百万输出 Token 所需的花瓣数量。
 
-`price_cache` 是 `price_cache_read` 的别名。缓存写入价格只在模型 API 返回缓存写入 token 数量时应用。
+`price_cache` 是 `price_cache_read` 的别名。缓存写入价格只在模型 API 返回缓存写入 Token 数量时生效。
 
 如果未设置，默认值为 `0`。
 
@@ -249,7 +249,7 @@ tiers:
 context_threshold: 131072
 ```
 
-表示超过 128K Token 后进入该阶梯价格。
+表示超过 128K Token 后适用该阶梯价格。
 
 阶梯规则中的：
 
@@ -315,7 +315,7 @@ week: [1, 2, 3, 4, 5, 6, 7]
 
 如果同一个模型同时配置了 `tiers` 和 `time_rules`，则 `tiers` 和 `time_rules` **均不生效**，不按优先级择一，也不叠加价格。
 
-因此，如果需要使用阶梯计费，请不要同时配置 `time_rules`；如果需要使用峰谷计费，请不要同时配置 `tiers`。
+因此，如果需要使用阶梯计费，请不要同时配置 `time_rules`。如果需要使用峰谷计费，请不要同时配置 `tiers`。
 
 ---
 
@@ -406,7 +406,7 @@ image_api:
 ```
 
 * `base_url`、`api_key` 留空时沿用当前对话模型的地址与密钥。
-* `costs` 以调用费用为单位，取固定数值或按参数查找的对照表；查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
+* `costs` 以调用费用为单位，取固定数值或按参数查找的对照表。查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
 * 修改配置后需重启机器人或重载 `ai` 模块。
 
 ---

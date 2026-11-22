@@ -75,7 +75,7 @@
 - 可能的实现方案（若有）
 - 建议对项目有益的理由（推荐）
 
-已完成开发的改动同样建议先提交 Issue 讨论，再创建 PR。
+已经开发完成的改动，同样建议先提交 Issue 讨论，再创建 PR（拉取请求）。
 
 ### 本地化
 
@@ -92,7 +92,7 @@
 ### 快速开始
 
 1. Fork 本仓库
-2. 克隆 Fork 到本地
+2. 克隆 Fork 出的仓库到本地
 3. 创建新分支
 4. 完成改动
 5. 向本项目提交 PR
@@ -126,7 +126,7 @@ uv lock
 
 ### 依赖冲突与联合求解
 
-本项目已拆分为 uv workspace，全部官方包共用根目录下的单一 `uv.lock`。该文件对全部成员包做一次**联合求解**，因而各包声明的第三方依赖若互相排斥，`uv lock` 会立即失败，例如两个包对 `packaging` 的可接受区间没有交集：
+本项目是 uv workspace，全部官方包共用根目录下的单一 `uv.lock`。该文件对全部成员包做一次**联合求解**，因而各包声明的第三方依赖若互相排斥，`uv lock` 会立即失败，例如两个包对 `packaging` 的可接受区间没有交集：
 
 ```sh
   × No solution found when resolving dependencies:
@@ -137,9 +137,15 @@ uv lock
       that your workspace's requirements are unsatisfiable.
 ```
 
-CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不必等到用户安装时；多仓库布局下不存在任何一处会做这样的联合求解，这是 monorepo 布局的主要收益。
+CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不必等到用户安装时。
 
-该防线有两处边界：仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移（例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布出的 wheel），后者由 `uv run python tools/lint_versions.py` 负责；也不覆盖第三方模块，它们不在 workspace 内，依赖互斥只能靠净室验证与 `akaribot module add` 的安装前预检拦截。
+多仓库布局下没有任何一处会做这样的联合求解，这是 monorepo 布局的主要收益。
+
+这条检查有两处边界。
+
+其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。
+
+其二，不覆盖第三方模块。它们不在 workspace 内，依赖互斥只能靠净室验证与 `akaribot module add` 的安装前检查拦截。
 
 `uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手工编辑 `uv.lock` 或放宽约束来通过检查，这些做法只会把冲突推迟到用户安装现场。
 
@@ -165,7 +171,7 @@ Issue 编号。
 PR 标题参考[提交规范](#提交规范)，正文按 PR 模板填写。描述中可用 `#<编号>` [关联
 Issue](#提出建议)。
 
-PR 须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM 方可合并。重大更改须提交 PR 审查，不得直接
+PR 须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM（Looks Good To Me）方可合并。重大更改须提交 PR 审查，不得直接
 push 到 `master`。
 
 ### 代码风格
@@ -192,7 +198,7 @@ akaribot module add -e .          # 在生成的包目录内执行；脚手架 -
 脚手架产出 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 同构：
 `pyproject.toml`、`manifest.toml`、`README.md`、`akaribot/modules/<名>/`（含 `config.py`、
 `database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
-`--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`；若要手工执行，先进入包目录。
+`--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`。若要手工执行，先进入包目录。
 
 `manifest.toml` 放在导入包目录内，字段与 `akaribot/core/registry.py` 的 `PackageManifest` 一一对应，
 未启用的能力整行省略：
@@ -202,22 +208,22 @@ akaribot module add -e .          # 在生成的包目录内执行；脚手架 -
 | `schema` | 清单版本，当前为 `1` |
 | `requires_core_api` | 兼容的 core 公共 API 区间，当前写 `">=1,<2"` |
 | `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根的路径，没有的能力省略 |
-| `config_table` / `config_schema_version` | `config.py` 中 `on_module_config("<名>")` 登记的表名与配置版本 |
+| `config_table` / `config_schema_version` | `config.py` 中 `on_module_config("<名>")` 声明的表名与配置版本 |
 | `provides_modules` | 本包 `module()` 注册的全部模块名 |
 | `owned_tables` | 本包拥有的数据库表，供 `akaribot module remove --purge-data` 使用 |
 
-清单里**不写版本号与依赖清单**：两者的真源是 distribution metadata。生成后请核对几条硬性约定：
+清单里**不写版本号与依赖清单**：两者的来源是 distribution metadata。生成后请核对几条硬性约定：
 
 - 代码一律 `from akaribot.core.api import ...`，不要写 `akaribot.core.builtins.*` 这类深路径。
-- `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate；键名前缀须与模块名一致。
+- `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate。键名前缀须与模块名一致。
 - 对 core 的约束写 `akari-bot-core>=0.1.0,<1.0`：全部 first-party 包的这一串必须**字面一致**，
   `python tools/lint_versions.py` 会检查。
 - 模块之间不要互相依赖：官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
-- 若模块要建表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条 revision 是否已应用只看
+- 若模块要创建数据表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条 revision 是否已应用只看
   `schema_migrations` 表）。
 - 包内不要出现 `akaribot/__init__.py`：`akaribot` 是命名空间包（B7）。
 
-提交前运行全部门禁：
+提交前运行全部检查：
 
 ```sh
 uv run ruff check . && uv run ruff format --check .
@@ -246,7 +252,7 @@ uv run python tools/lint_versions.py      # 内部版本约束一致性
 - 链接之间不额外增加空格
 
 补充约定：
-- 称呼用户须使用“你”，而不是“您”
+- 称呼用户统一使用“你”
 - 机器人自称时避免使用“我”，统一使用“机器人”
 - 尽可能避免使用第一人称描述
 - 机器人的第三人称统一为“它”
@@ -494,7 +500,7 @@ Exceptions:
 
 Additional project-specific conventions:
 
-- Address users with “你” (informal/casual “you”), not “您” (polite/formal)
+- Address users with “你” (informal/casual “you”) and avoid the polite variant
 - When the bot refers to itself, avoid “我” (I / me); use “机器人” (the Bot / this Bot) instead
 - Avoid first-person descriptions whenever possible
 - The bot's third-person pronoun is uniformly “它” (it / it)

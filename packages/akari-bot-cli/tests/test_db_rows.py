@@ -1,7 +1,7 @@
 """``akaribot db rows``：把筛选、搜索与排序透传给 core，并把页码显示出来。
 
-CLI 不 import core，读数据一律经 ``python -m akaribot.core.entrypoints.data``；用例注入替身实例，
-断言下发的 argv、单行 JSON 输出与失败时的退出码，不真的连库。
+CLI 不 import core，读数据一律经 ``python -m akaribot.core.entrypoints.data``。用例注入替身实例，
+检查下发的 argv、单行 JSON 输出与失败时的退出码，不真的连库。
 """
 
 import io
@@ -136,7 +136,7 @@ def _test_rows_without_conditions():
 
 
 def _test_rows_core_error_is_reported():
-    # core 把原因写进 stdout 的 JSON，退出码 2 表示用户错误；CLI 保持该退出码。
+    # core 把原因写进 stdout 的 JSON，退出码 2 表示用户错误。CLI 保持该退出码。
     instance = _FakeInstance({"error": "表 module_status 没有列 'nosuch'。"}, returncode=2)
     result, _text = _invoke(instance, ["rows", "module_status", "--filter", "nosuch=1"])
     return result.exit_code == 2 and "nosuch" in result.output

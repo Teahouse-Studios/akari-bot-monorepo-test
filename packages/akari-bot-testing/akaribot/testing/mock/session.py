@@ -32,7 +32,7 @@ class MockMessageSession(MessageSession):
         self.matched_msg = None
         self.sent = []
         self.action = []
-        # 记录随消息下发的按钮数据，供测试断言使用；不计入 action 以免影响数量类断言。
+        # 记录随消息下发的按钮数据，供测试检查使用。不计入 action 以免影响数量类检查。
         self.buttons = []
         self.parent_session = parent_session
 

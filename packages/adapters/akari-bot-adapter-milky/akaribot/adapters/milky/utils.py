@@ -55,7 +55,7 @@ def _bot_ids(session_info: SessionInfo) -> set[str]:
 async def get_milky_implementation() -> str | None:
     """获取 Milky 协议端实现名。
 
-    :return: 协议端实现名（小写）；查询失败时返回 None。
+    :return: 协议端实现名（小写）。查询失败时返回 None。
     """
     try:
         impl_info = await milky_bot.get_impl_info()
@@ -69,7 +69,7 @@ async def get_milky_implementation() -> str | None:
 async def get_available_group_list() -> list[int]:
     """获取机器人所在群组列表。
 
-    :return: 群号列表；查询失败时返回空列表。
+    :return: 群号列表。查询失败时返回空列表。
     """
     try:
         groups = await milky_bot.get_group_list()
@@ -82,7 +82,7 @@ async def get_available_group_list() -> list[int]:
 async def get_available_private_list() -> list[int]:
     """获取机器人好友列表。
 
-    :return: 好友 QQ 号列表；查询失败时返回空列表。
+    :return: 好友 QQ 号列表。查询失败时返回空列表。
     """
     try:
         friends = await milky_bot.get_friend_list()
@@ -268,7 +268,7 @@ async def convert_msg_nodes(session_info: SessionInfo, msg_node: MessageNodes) -
 
     :param session_info: 会话信息。
     :param msg_node: 待发送的消息节点。
-    :return: 合并转发消息段；登录信息不可用或所有节点均为空时返回 None。
+    :return: 合并转发消息段。登录信息不可用或所有节点均为空时返回 None。
     """
     account = Temp.data.get("qq_account")
     if account is None:

@@ -339,10 +339,10 @@ async def generate(
     :param msg: 消息会话。
     :param token: 该用户的水鱼或落雪绑定记录。
     :param source: 数据源名称，决定走哪一侧的取数流程。
-    :param username: 水鱼用户名；查询他人时由调用方给出。
-    :param friend_code: 落雪好友码；查询他人时由调用方给出。
+    :param username: 水鱼用户名。查询他人时由调用方给出。
+    :param friend_code: 落雪好友码。查询他人时由调用方给出。
     :param use_cache: 是否读写本地缓存。
-    :return: 绘制结果；无数据时为 None。
+    :return: 绘制结果。无数据时为 None。
     """
     if source == "Lxns":
         resp = await get_record_lx(msg, token, friend_code, use_cache)

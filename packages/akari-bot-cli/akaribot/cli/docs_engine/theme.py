@@ -1,7 +1,7 @@
 """文档主题清单与解析。
 
-引擎只读取主题清单、复制主题目录并生成 VitePress 配置，不导入主题代码。主题可以是 CLI 内置的
-最小主题，也可以是与项目解耦的外部模板；两者都通过根目录的 ``docs-theme.json`` 描述依赖、入口与
+文档引擎只读取主题清单、复制主题目录并生成 VitePress 配置，不导入主题代码。主题可以是 CLI 内置的
+最小主题，也可以是与项目解耦的外部模板。两者都通过根目录的 ``docs-theme.json`` 描述依赖、入口与
 VitePress 版本。
 """
 
@@ -39,9 +39,9 @@ class ThemeSpec:
     :param name: 主题名。
     :param version: 主题版本，用于构建指纹。
     :param source: 解析来源，``bundled``、``file:…`` 或 ``auto:…``。
-    :param root: 主题所在目录；内置主题为 CLI 模板目录。
+    :param root: 主题所在目录，内置主题为 CLI 模板目录。
     :param theme_dir: 复制到生成站点 ``.vitepress/theme`` 的目录。
-    :param package_dir: 含 ``package.json`` 与 ``package-lock.json`` 的目录；外部主题可为 ``None``。
+    :param package_dir: 含 ``package.json`` 与 ``package-lock.json`` 的目录，外部主题可为 ``None``。
     :param vitepress_version: 该主题要求的 VitePress 版本。
     :param node_major: 运行该主题所需的 Node 主版本。
     :param dependencies: 外部主题需要安装的 npm 依赖。
@@ -73,11 +73,11 @@ def resolve_theme(config: DocsConfig, *, environ: Mapping[str, str] | None = Non
     """按配置、环境变量与实例目录解析主题。
 
     解析顺序：``AKARIBOT_DOCS_THEME`` > ``docs.toml`` 的 ``[theme].source``。``auto`` 在实例根查找
-    ``akari-bot-docs-template``、``vendor/akari-bot-docs-template`` 与 ``docs-theme``；从仓库源码
+    ``akari-bot-docs-template``、``vendor/akari-bot-docs-template`` 与 ``docs-theme``。从仓库源码
     运行时还会查找仓库内的 ``vendor/akari-bot-docs-template`` submodule。都找不到时使用内置主题。
 
     :param config: 实例文档配置。
-    :param environ: 环境变量；缺省读取进程环境。
+    :param environ: 环境变量，默认读取进程环境。
     :return: 解析后的主题。
     :raises DocsError: 外部主题路径不存在或清单无效。
     """
@@ -108,7 +108,7 @@ def resolve_theme(config: DocsConfig, *, environ: Mapping[str, str] | None = Non
 
 
 def bundled_theme(root: Path = TEMPLATE_DIR) -> ThemeSpec:
-    """读取 CLI 内置主题清单；清单缺失时使用默认值。
+    """读取 CLI 内置主题清单。清单缺失时使用默认值。
 
     :param root: 内置模板目录。
     :return: 内置主题。
@@ -117,7 +117,7 @@ def bundled_theme(root: Path = TEMPLATE_DIR) -> ThemeSpec:
 
 
 def _auto_candidates(root: Path) -> list[Path]:
-    # 实例根优先；从源码检出运行 CLI 时，再找仓库内 vendor/ 下的模板 submodule。
+    # 实例根优先。从源码检出运行 CLI 时，再找仓库内 vendor/ 下的模板 submodule。
     candidates = [
         root / "akari-bot-docs-template",
         root / "vendor" / "akari-bot-docs-template",

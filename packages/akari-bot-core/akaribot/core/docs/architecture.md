@@ -4,7 +4,7 @@
 
 ## 介绍
 
-AkariBot 的代码按分发包拆分。core 提供运行时和公共设施。内置模块、外部模块、平台适配器分别打包。
+AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模块、外部模块、平台适配器分别打包。
 
 实例启动时，守护进程负责启动并监控子进程。这些子进程分别负责配置初始化、平台连接、消息处理与计划任务。
 
@@ -24,7 +24,7 @@ packages/
 补充说明：
 
 - `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`。查找包时以 `pyproject.toml` 中声明的入口为准，只有入口缺失时才扫描目录。
-- 执行 `akaribot <子命令>` 时，CLI 通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
+- 执行 `akaribot <子命令>` 时，命令行工具（CLI）通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
 - 仓库根目录保留旧导入入口。`bot.py`、`tester.py` 通过 `sys.modules` 把旧模块名映射到新实现。`core/database/update.py` 只负责把旧版本留下的升级操作交给当前实现处理。
 
 ## 进程拓扑
@@ -104,7 +104,7 @@ load_prompt(...)                       投递重启提示，失败不阻塞启�
 - 模块任务 ID 为 `module:<模块>:<序号>`，核心任务 ID 为 `core:<名称>`。
 - `CronTrigger` 和 `DateTrigger` 直接使用，`IntervalTrigger` 按 `schedule_interval_multiplier` 调整间隔。
 - 每个任务最多同时运行一个实例（`max_instances=1`）。错过触发后最多延迟 30 秒执行。
-- 卸载、重载和关闭前会进入维护时段。这期间内调度器会先停止接受新任务，等待正在启动的任务进入运行状态，再取消并收集正在运行的任务。
+- 卸载、重载和关闭前会进入维护时段。这期间调度器会先停止接受新任务，等待正在启动的任务进入运行状态，再取消并收集正在运行的任务。
 - 维护期间提交、但还没开始执行的任务，会在启动前被拒绝。
 
 ## 关闭顺序

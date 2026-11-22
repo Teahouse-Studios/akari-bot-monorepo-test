@@ -21,7 +21,7 @@ from akaribot.cli.tui import _compat as compat
 from akaribot.cli.tui import cli_process
 from akaribot.cli.tui import context
 
-# 仅加载当前页，避免一次读取大量数据；分页与总数由 core 计算。
+# 仅加载当前页，避免一次读取大量数据。分页与总数由 core 计算。
 PAGE_LIMIT = 50
 # 三栏并排所需的最小内容宽度：表清单 26 列、数据项 32 列（四个翻页按钮的自然宽度）、编辑区 34 列。
 # 窄屏采用两行布局，为数据项和编辑区保留可读宽度。
@@ -30,7 +30,7 @@ SIDE_BY_SIDE_MIN_WIDTH = 92
 # 页面高度低于此值时按钮改为单行。
 COMPACT_MAX_HEIGHT = 30
 PAGER_BUTTONS = ("db-first-page", "db-previous-page", "db-next-page", "db-last-page")
-# 运算符按长度降序匹配，避免将 != 识别为 =。
+# 运算符按长度降序匹配，长运算符优先，避免短运算符抢占前缀。
 FILTER_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
 # 筛选条件必须包含列名，避免将搜索词中的运算符识别为条件。
 CONDITION_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\s*(?:!=|>=|<=|!~|~|\^|\$|=|>|<)")
@@ -57,7 +57,7 @@ class ColumnInfo:
     :param type: 模型字段的类型名，如 ``CharField``。
     :param null: 是否允许空值。
     :param pk: 是否为主键列。
-    :param default: 模型声明的默认值；由模型自行决定时为 ``None``。
+    :param default: 模型声明的默认值。由模型自行决定时为 ``None``。
     """
 
     name: str
@@ -68,7 +68,7 @@ class ColumnInfo:
 
     @property
     def label(self) -> str:
-        """返回包含类型的字段名标签。"""
+        """返回字段名标签，含类型。"""
         if not self.type:
             return self.name
         return i18n.t("cli.tui.database.field_label", column=self.name, kind=self.type)
@@ -81,7 +81,7 @@ class TableInfo:
     :param name: 表标识，如 ``module_status``。
     :param model: 模型类名。
     :param rows: 表内数据项条数。
-    :param package: 声明该表的已安装分发包；无法获取时为空串。
+    :param package: 声明该表的已安装包。无法获取时为空串。
     :param columns: 列信息，顺序同模型声明。
     """
 
@@ -106,7 +106,7 @@ class TableInfo:
         return column.name if column is not None else ""
 
     def editable_columns(self) -> tuple[ColumnInfo, ...]:
-        """返回可编辑的列，主键只能只读展示。"""
+        """返回可编辑的列，主键仅作只读展示。"""
         return tuple(column for column in self.columns if not column.pk)
 
 
@@ -114,9 +114,9 @@ class TableInfo:
 class RowQuery:
     """数据项查询的筛选条件与排序。
 
-    :param filters: 筛选条件，形如 ``<列><运算符><值>``；多条之间是 AND。
+    :param filters: 筛选条件，形如 ``<列><运算符><值>``。多条之间是 AND。
     :param search: 全表搜索词，在所有文本列上做包含匹配。
-    :param order_by: 排序列，可带 ``:asc`` / ``:desc``；空串表示用 core 的默认顺序。
+    :param order_by: 排序列，可带 ``:asc`` / ``:desc``。空串表示用 core 的默认顺序。
     """
 
     filters: tuple[str, ...] = ()
@@ -128,7 +128,7 @@ class RowQuery:
         return not self.filters and not self.search
 
     def with_filter(self, condition: str) -> RowQuery:
-        """追加一条筛选条件；重复的条件不重复添加。"""
+        """追加一条筛选条件。重复的条件不重复添加。"""
         text = condition.strip()
         if not text or text in self.filters:
             return self
@@ -152,7 +152,7 @@ class RowPage:
     """一页数据项。
 
     :param table: 表标识。
-    :param total: 满足当前条件的数据项总数；未统计时为 ``None``（调用方沿用上次的值）。
+    :param total: 满足当前条件的数据项总数。未统计时为 ``None``（调用方沿用上次的值）。
     :param rows: 本页数据项，键为列名。
     :param offset: 本页起始偏移。
     :param limit: 本页条数上限。
@@ -166,7 +166,7 @@ class RowPage:
 
     @property
     def rows_total(self) -> int:
-        """返回已知的总条数；未统计时按 0 处理。"""
+        """返回已知的总条数。未统计时按 0 处理。"""
         return int(self.total or 0)
 
     @property
@@ -205,7 +205,7 @@ class WritePlan:
 
     :param kind: ``set`` / ``insert`` / ``delete``。
     :param table: 表标识。
-    :param key: 主键值；新建时为空串。
+    :param key: 主键值。新建时为空串。
     :param changes: ``set`` 的 ``(列, 旧值, 新值)`` 序列。
     :param values: ``insert`` 的 ``(列, 值)`` 序列。
     """
@@ -272,7 +272,7 @@ def _matches(row: Mapping[str, Any], query: RowQuery) -> bool:
     return True
 
 
-# 拆分 ``<列><运算符><值>``；只有列名时按「非空」处理。
+# 拆分 ``<列><运算符><值>``。只有列名时按“非空”处理。
 def _split_filter(condition: str) -> tuple[str, str, str]:
     text = condition.strip()
     for operator in FILTER_OPERATORS:
@@ -384,7 +384,7 @@ class DatabaseSourceError(RuntimeError):
 
 @runtime_checkable
 class DatabaseSource(Protocol):
-    """数据库数据源接口；测试注入替身，实际运行通过子进程访问。"""
+    """数据库数据源接口。测试注入替身，实际运行通过子进程访问。"""
 
     def tables(self) -> Sequence[TableInfo]:
         """返回实例数据库中已注册模型的表。"""
@@ -392,10 +392,10 @@ class DatabaseSource(Protocol):
     def rows(
         self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
     ) -> RowPage:
-        """返回一张表的一页数据项；``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。"""
+        """返回一张表的一页数据项。``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。"""
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
-        """按主键更新数据项的指定列；多列更改通过一次调用提交。"""
+        """按主键更新数据项的指定列。多列更改通过一次调用提交。"""
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
         """新建一条数据项。"""
@@ -405,13 +405,13 @@ class DatabaseSource(Protocol):
 
 
 class StaticDatabaseSource:
-    """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
+    """固定数据的替身数据源，供自动化检查与自检使用，不产生任何子进程。
 
     :param tables: 表清单。
-    :param pages: 表名到数据项的映射；未指定时返回空页。
-    :param write_result: 写入返回值；默认为成功。
-    :param delete_result: 删除返回值；默认为成功。
-    :param insert_result: 新建返回值；默认为成功。
+    :param pages: 表名到数据项的映射。未指定时返回空页。
+    :param write_result: 写入返回值。默认为成功。
+    :param delete_result: 删除返回值。默认为成功。
+    :param insert_result: 新建返回值。默认为成功。
     """
 
     def __init__(
@@ -478,7 +478,7 @@ class StaticDatabaseSource:
 class SubprocessDatabaseSource:
     """默认数据源：一律经 ``akaribot db`` 子进程，CLI 进程内不 import core。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param timeout: 单个子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
@@ -648,7 +648,7 @@ class DatabasePage(compat.Vertical):
     """数据库页控件。
 
     :param source: 数据源，默认为 :class:`SubprocessDatabaseSource`。
-    :param cache_ttl: 表清单缓存有效期秒数；重新读取与写入成功后立即失效。
+    :param cache_ttl: 表清单缓存有效期秒数。重新读取与写入成功后立即失效。
     """
 
     DEFAULT_CSS = """
@@ -810,7 +810,7 @@ class DatabasePage(compat.Vertical):
 
     can_focus = True
 
-    # 删除使用组合键；分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
+    # 删除使用组合键。分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.database.bind_refresh")),
         # 保存用 ctrl+s：编辑区输入框聚焦时单字母由输入框接收，组合键在编辑中同样生效。
@@ -910,14 +910,14 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；读取数据推迟到首次显示。"""
+        """挂载后只装配控件。读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
         self._sync_layout(self.size.width)
         # 加载前禁用不可用的分页操作，避免首帧出现无效按钮。
         self._sync_pager()
 
     def _sync_layout(self, width: int) -> None:
-        # 切换的是容器上的类，三栏的构成与控件 id 都不变；并排所需宽度见 SIDE_BY_SIDE_MIN_WIDTH。
+        # 切换的是容器上的类，三栏的构成与控件 id 都不变。并排所需宽度见 SIDE_BY_SIDE_MIN_WIDTH。
         if width <= 0:
             return
         body = self.query_one("#database-body", compat.Horizontal)
@@ -931,7 +931,7 @@ class DatabasePage(compat.Vertical):
         self.refresh_tables(force=True)
 
     def focus_primary(self) -> None:
-        """聚焦表清单；列表为空时聚焦页面容器，保持页面键位可用。"""
+        """聚焦表清单。列表为空时聚焦页面容器，保持页面键位可用。"""
         compat.focus_first(self, "#table-list")
 
     def _adopt_focus(self) -> None:
@@ -940,7 +940,7 @@ class DatabasePage(compat.Vertical):
             compat.focus_first(self, "#table-list")
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)
 
     # region 状态读取（供测试与 App 使用）
@@ -994,7 +994,7 @@ class DatabasePage(compat.Vertical):
 
     @property
     def selected_key(self) -> str:
-        """返回当前数据项的主键值文本；未选中时为空串。"""
+        """返回当前数据项的主键值文本。未选中时为空串。"""
         return self._row_key
 
     @property
@@ -1043,7 +1043,7 @@ class DatabasePage(compat.Vertical):
         return _static_text(self.query_one("#filter-bar", compat.Static))
 
     def pager_states(self) -> dict[str, bool]:
-        """返回四个翻页按钮的禁用状态，供自动化断言。"""
+        """返回四个翻页按钮的禁用状态，供自动化检查。"""
         return {button_id: bool(self.query_one(f"#{button_id}", compat.Button).disabled) for button_id in PAGER_BUTTONS}
 
     def editor_caption(self) -> str:
@@ -1061,7 +1061,7 @@ class DatabasePage(compat.Vertical):
     def refresh_tables(self, *, force: bool = False) -> None:
         """读取表清单。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
+        :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
         if not force and self._tables and self.cache_age() < self.cache_ttl:
             self._render_tables()
@@ -1071,7 +1071,7 @@ class DatabasePage(compat.Vertical):
         self.run_worker(self.reload_tables(), group="database-tables", exclusive=True)
 
     def cache_age(self) -> float:
-        """返回表清单缓存自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回表清单缓存自上次读取以来的秒数。从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -1111,7 +1111,7 @@ class DatabasePage(compat.Vertical):
     async def select_table(self, table: str | None, *, force: bool = False) -> bool:
         """切换当前表并加载第一页数据项。
 
-        :param table: 目标表名；``None`` 表示清空。
+        :param table: 目标表名。``None`` 表示清空。
         :param force: 为 ``True`` 时忽略缓存重新读取。
         :return: 是否成功。
         """
@@ -1140,7 +1140,7 @@ class DatabasePage(compat.Vertical):
         """读取当前表的数据项并重绘列表。
 
         :param reset_offset: 为 ``True`` 时恢复为第一页。
-        :param count: 是否重算总条数；``None`` 表示按需决定（换页不数，其余都数）。
+        :param count: 是否重算总条数。``None`` 表示按需决定：翻页时不重算，其余情况都重算。
         :return: 是否成功。
         """
         if self._selected is None:
@@ -1354,9 +1354,9 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_filter_entered(self, text: str | None) -> None:
-        """输入框回调：带运算符的按条件下发，只写一个词的按全表搜索下发。
+        """输入框回调：含运算符的输入按筛选条件下发，只有一个词的输入按全表搜索下发。
 
-        :param text: 用户输入的文本；取消时为 ``None``。
+        :param text: 用户输入的文本。取消时为 ``None``。
         """
         value = (text or "").strip()
         if not value:
@@ -1427,9 +1427,9 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_order_entered(self, text: str | None) -> None:
-        """输入框回调：设定排序；空输入恢复为默认（主键倒序）。
+        """输入框回调：设定排序。空输入恢复为默认（主键倒序）。
 
-        :param text: 用户输入的排序方式；取消时为 ``None``。
+        :param text: 用户输入的排序方式。取消时为 ``None``。
         """
         if text is None:
             self._set_status(i18n.t("cli.tui.database.order_cancelled"))
@@ -1535,7 +1535,7 @@ class DatabasePage(compat.Vertical):
         self.refresh_tables(force=True)
 
     def action_save(self) -> None:
-        """键位动作：保存编辑区的更改；新建模式下等价于写入新数据项。"""
+        """键位动作：保存编辑区的更改。新建模式下等价于写入新数据项。"""
         self.request_save()
 
     def action_insert(self) -> None:
@@ -1547,7 +1547,7 @@ class DatabasePage(compat.Vertical):
         self.request_delete()
 
     def action_cancel(self) -> None:
-        """键位动作：退出新建模式并清空待确认状态；焦点在搜索框时先清空搜索。"""
+        """键位动作：退出新建模式并清空待确认状态。焦点在搜索框时先清空搜索。"""
         search = self.query_one("#database-search", compat.Input)
         if getattr(self.app, "focused", None) is search:
             if search.value:
@@ -1582,7 +1582,7 @@ class DatabasePage(compat.Vertical):
         self._request(WritePlan(kind="set", table=info.name, key=self._row_key, changes=changes))
 
     def request_insert(self) -> None:
-        """进入新建模式；已处于新建模式时打开写入确认框。"""
+        """进入新建模式。已处于新建模式时打开写入确认框。"""
         info = self.selected_info
         if info is None:
             self._set_status(i18n.t("cli.tui.database.status_no_table"))
@@ -1608,12 +1608,12 @@ class DatabasePage(compat.Vertical):
         self._request(WritePlan(kind="delete", table=info.name, key=self._row_key))
 
     def reset_pending(self) -> None:
-        """作废待确认的写入；切页、刷新、换表与换行时调用。"""
+        """作废待确认的写入。切页、刷新、换表与换行时调用。"""
         self._gate.reset()
         self._pending = None
 
     def dirty_note(self) -> str:
-        """返回未保存更改的说明；没有更改时返回空字符串。"""
+        """返回未保存更改的说明。没有更改时返回空字符串。"""
         if self._insert_mode:
             filled = [name for name, text in self.editor_values().items() if text != ""]
             if filled:
@@ -1716,7 +1716,7 @@ class DatabasePage(compat.Vertical):
             return [WriteResult(False, f"{type(error).__name__}: {error}", "")]
 
     async def reload_tables_after_write(self, plan: WritePlan) -> None:
-        """写入后重新加载数据项和记录总数；编辑与删除保留当前页，新建返回第一页。"""
+        """写入后重新加载数据项和记录总数。编辑与删除保留当前页，新建返回第一页。"""
         previous = self._row_key
         self._loaded_at = 0.0
         await self.reload_rows(reset_offset=plan.kind == "insert", count=True)

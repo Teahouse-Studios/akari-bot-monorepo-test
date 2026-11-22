@@ -15,7 +15,7 @@ from akaribot.core.i18n import Locale, audit_terms
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 
-# 该键的文案为「查看当前{TERM:target}的消息通道与主动推送优先级。」
+# 该键的文案为“查看当前{TERM:target}的消息通道与主动推送优先级。”
 TERM_DOC_KEY = "core.help.bind.channel"
 
 EXPECTED_CANDIDATES = (
@@ -66,7 +66,7 @@ NON_SESSION_LOCALE_FILES = {
     "modules/wiki/utils/wikilib.py": "wiki 内容语言",
 }
 
-# 会话缺席时的兜底构造：此时本就没有作用域可言。
+# 会话缺席时的默认构造：此时本就没有作用域可言。
 FALLBACK_LOCALE_SNIPPETS = {
     "core/builtins/message/chain.py": ("Locale(default_locale)",),
     "core/builtins/parser/command.py": ("Locale(default_locale)",),
@@ -87,7 +87,7 @@ def _test_candidate_chain_building():
     for target_from, is_private, expected in EXPECTED_CANDIDATES:
         if build_term_candidates(target_from, is_private) != expected:
             return False
-    # 前缀形状由平台侧决定：非法字符被剔除，剔除后为空的整条链回落到基础术语而非中断。
+    # 前缀形状由平台侧决定：非法字符被剔除。剔除后为空的整条链改用基础术语，流程不中断。
     if build_term_candidates("Bad.Prefix|X", False) != ("badprefix.x", "badprefix"):
         return False
     if build_term_candidates("QQ||Group", False) != ():
@@ -171,7 +171,7 @@ def _test_locale_files_pass_term_audit():
 
 
 def _test_term_keys_live_in_terms_directory():
-    # 术语词条只应出现在 `locales/terms/` 下；顶层残留副本会被术语目录覆盖并报审计条目。
+    # 术语词条只应出现在 `locales/terms/` 下。顶层残留副本会被术语目录覆盖并报审计条目。
     offenders = []
     for base, prefix in _locale_package_roots(include_adapters=True):
         for path in sorted((base / "locales").glob("*.json")):

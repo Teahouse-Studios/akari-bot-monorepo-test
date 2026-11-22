@@ -225,7 +225,7 @@ class MatrixContextManager(ContextManager):
                 reply_to = None
                 reply_to_user = None
                 if quote and not msg_ids:
-                    # Reaction 自身的 event_id 仍须保留为当前消息 ID，供删除 Reaction 等操作使用；
+                    # Reaction 自身的 event_id 仍须保留为当前消息 ID，供删除 Reaction 等操作使用。
                     # 但回复应引用被反应的原消息，即 Reaction 入口写入的 reply_id。
                     reply_to = (
                         session_info.reply_id if reaction_event and session_info.reply_id else session_info.message_id
@@ -489,7 +489,7 @@ class MatrixContextManager(ContextManager):
                     return None
                 room_id = resp.room_id
                 Logger.info(f"Created private messaging room for {target_id}: {room_id}")
-                # room_create 的响应不会立刻写入 AsyncClient.rooms；新房间要到下一次 sync
+                # room_create 的响应不会立刻写入 AsyncClient.rooms。新房间要到下一次 sync
                 # 才会出现。首次私信只需要 room_id，先构造轻量 MatrixRoom 即可立即发送。
                 return matrix_bot.rooms.get(room_id) or nio.MatrixRoom(room_id, matrix_bot.user_id)
             except Exception as e:

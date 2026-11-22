@@ -53,11 +53,11 @@ regex:https://[a-z-]+\.example\.org/w/api\.php
 ~wiki-audit query https://wiki.example.org/wiki/Example_Page
 ```
 
-`distrust` 和 `unblock` 优先从 Wiki 缓存还原 API URL，以便站点关闭后仍可删除规则；缓存无法识别时请直接提供 API URL。
+`distrust` 和 `unblock` 优先从 Wiki 缓存还原 API URL，以便站点关闭后仍可删除规则。缓存无法识别时请直接提供 API URL。
 
 ## 正则限制
 
-- 单条规则最长 500 字符；每份名单最多 256 条规则，其中正则最多 64 条；单个文件最大 64 KiB。
+- 单条规则最长 500 字符。每份名单最多 256 条规则，其中正则最多 64 条。单个文件最大 64 KiB。
 - 禁止递归、反向引用、回溯控制等高风险结构，能匹配探测 URL 的过宽表达式（如 `.*`）会被拒绝。
 - 正则匹配有时间限制。允许列表超时视为未命中，阻止列表超时视为命中。
 

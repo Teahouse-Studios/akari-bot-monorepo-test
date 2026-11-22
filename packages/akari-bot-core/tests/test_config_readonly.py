@@ -149,6 +149,6 @@ async def test_config_readonly(tester: Tester):
     await tester.test(_test_edit_delete_succeeds_in_readonly, "edit_delete 授权删除测试")
     await tester.test(_test_writable_scope_restores_readonly, "授权作用域退出后恢复只读测试")
     await tester.test(_test_writable_process_can_write, "非只读进程写入正常测试")
-    await tester.test(_test_readonly_template_registers_without_writing, "只读时模板登记不写入配置文件测试")
+    await tester.test(_test_readonly_template_registers_without_writing, "只读时模板注册不写入配置文件测试")
 
     return tester

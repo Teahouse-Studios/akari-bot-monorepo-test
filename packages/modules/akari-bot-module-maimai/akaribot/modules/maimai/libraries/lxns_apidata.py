@@ -24,16 +24,16 @@ from ..database.models import LxnsProberBindInfo
 LXNS_MAIMAI_BESTS_URL = f"{LXNS_API_BASE}/user/maimai/player/bests"
 LXNS_MAIMAI_SCORES_URL = f"{LXNS_API_BASE}/user/maimai/player/scores"
 
-# 开发者端点按好友码寻址，能查询任意玩家；好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
 LXNS_MAIMAI_PLAYER_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/maimai/player/{{friend_code}}"
 LXNS_MAIMAI_BESTS_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/maimai/player/{{friend_code}}/bests"
 
-# 落雪把标准与 DX 谱面记在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换即是在
-# 这个偏移量上加减。宴会场曲目（ID 大于等于 100000）不分谱面类型，不参与换算。
+# 落雪把标准与 DX 谱面记在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换时在这个
+# 偏移量上加减即可。宴会场曲目（ID 大于等于 100000）不分谱面类型，不参与换算。
 MAIMAI_DX_ID_OFFSET = 10000
 MAIMAI_UTAGE_ID_MIN = 100000
 
-# 落雪的谱面类型到水鱼展示用类型的映射；宴会场曲目不分谱面类型，按标准谱面处理。
+# 落雪的谱面类型到水鱼展示用类型的映射。宴会场曲目不分谱面类型，按标准谱面处理。
 _CHART_TYPE_DF = {"standard": "SD", "dx": "DX", "utage": "SD"}
 
 total_list = TotalList()
@@ -44,7 +44,7 @@ def lxns_to_df_id(song_id: Any, chart_type: str | None = None) -> str:
 
     :param song_id: 落雪曲目 ID。
     :param chart_type: 谱面类型，`standard` 或 `dx`。
-    :return: 水鱼风格的曲目 ID；无法解析时返回空字符串。
+    :return: 水鱼风格的曲目 ID。无法解析时返回空字符串。
     """
     try:
         sid = int(song_id)
@@ -58,10 +58,10 @@ def lxns_to_df_id(song_id: Any, chart_type: str | None = None) -> str:
 
 
 def df_to_lxns_id(song_id: Any) -> str:
-    """把水鱼风格的曲目 ID 换算回落雪曲目 ID。
+    """把水鱼风格的曲目 ID 还原为落雪曲目 ID。
 
     :param song_id: 水鱼风格的曲目 ID。
-    :return: 落雪曲目 ID；无法解析时返回空字符串。
+    :return: 落雪曲目 ID。无法解析时返回空字符串。
     """
     try:
         sid = int(song_id)
@@ -144,7 +144,7 @@ def plate_versions(version: str) -> list[str]:
     """给出版本标识对应的查分器版本名，用于名牌板筛选。
 
     :param version: 名牌板的版本标识，如 `舞`、`真`。
-    :return: 版本名列表；无法识别时为空列表。
+    :return: 版本名列表。无法识别时为空列表。
     """
     if version == "真":
         return ["maimai", "maimai PLUS"]
@@ -353,7 +353,7 @@ async def get_record_lx_oauth(msg: Bot.MessageSession, bind_info: LxnsProberBind
         except LxnsTokenRevoked:
             raise
         except Exception:
-            # 该端点未见于文档，落雪调整接口时不应连带毁掉 B50，故退回全量成绩自行划分。
+            # 该端点未见于文档，落雪一旦调整接口就可能连带毁坏 B50，故退回全量成绩自行划分。
             Logger.exception()
             resp = None
         if isinstance(resp, dict) and (resp.get("standard") or resp.get("dx")):
@@ -379,8 +379,8 @@ async def get_record_lx(
     """取回 B35 与 B15，形状与水鱼的 `/query/player` 一致。
 
     :param msg: 消息会话。
-    :param token: 该用户的落雪绑定记录；为空时自行解析。
-    :param friend_code: 要查询的好友码；为空时查询绑定账号。
+    :param token: 该用户的落雪绑定记录。为空时自行解析。
+    :param friend_code: 要查询的好友码。为空时查询绑定账号。
     :param use_cache: 是否读写本地缓存。
     :return: 含 `nickname`、`rating` 与 `charts.sd` / `charts.dx` 的成绩字典。
     """
@@ -401,7 +401,7 @@ async def get_song_record_lx(msg: Bot.MessageSession, sid: str | list[str], use_
     :param msg: 消息会话。
     :param sid: 水鱼风格的曲目 ID，可为列表。
     :param use_cache: 是否读写本地缓存。
-    :return: 曲目 ID 到该曲成绩列表的映射；无成绩时为空字典。
+    :return: 曲目 ID 到该曲成绩列表的映射。无成绩时为空字典。
     """
     ids = [str(s) for s in (sid if isinstance(sid, list) else [sid])]
     data = await get_total_record_lx(msg, utage=True, use_cache=use_cache)
@@ -418,7 +418,7 @@ async def get_plate_lx(msg: Bot.MessageSession, payload: dict, version: str, use
 
     :param msg: 消息会话。
     :param payload: 承载版本列表的载荷，由调用方按名牌板填入。
-    :param version: 名牌板的版本标识；载荷未给出版本名时据此推断。
+    :param version: 名牌板的版本标识。载荷未给出版本名时据此推断。
     :param use_cache: 是否读写本地缓存。
     :return: 含 `verlist` 的成绩字典。
     """

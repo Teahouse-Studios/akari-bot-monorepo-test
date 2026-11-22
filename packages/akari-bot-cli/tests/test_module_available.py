@@ -1,8 +1,8 @@
 """``akaribot module available``：可安装集合的列举。
 
-``add`` 只认名字，而名字从哪来看不到；本命令把可安装集合连同「是否已装」列出来。工作区模式下
-安装一律取本地源码，此时 registry 不是「能装什么」的答案来源，故集合必须改取本地成员——这条
-分叉是本文件主要守住的东西。
+``add`` 只认名字，看不到名字从哪来。本命令把可安装集合连同“是否已装”列出来。工作区模式下
+安装一律取本地源码，registry 无法回答“能装什么”，集合取自本地成员——
+这条分叉是本文件主要守住的东西。
 """
 
 import io
@@ -56,8 +56,8 @@ def _instance(tmp: Path, workspace_root: Path, *, installed: tuple[str, ...] = (
 
 
 def _run(instance, **kwargs) -> str:
-    # 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须换掉 console 本身；宽度放宽，
-    # 免得表格截断长分发名而让断言失真。
+    # 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须换掉 console 本身。宽度放宽，
+    # 免得表格截断长分发名而让检查失真。
     buffer = io.StringIO()
     console = Console(file=buffer, width=200, force_terminal=False)
     with (
@@ -69,7 +69,7 @@ def _run(instance, **kwargs) -> str:
 
 
 def _dists(instance, **kwargs) -> list[str]:
-    # 表格会按终端宽度截断长名字，断言分发名只能走 JSON。
+    # 表格会按终端宽度截断长名字，检查分发名只能走 JSON。
     payload = json.loads(_run(instance, as_json=True, **kwargs))
     return sorted(item["dist"] for item in payload)
 

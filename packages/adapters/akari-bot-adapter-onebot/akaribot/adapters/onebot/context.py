@@ -803,7 +803,7 @@ class OneBotFetchedContextManager(OneBotContextManager):
         quote: bool = True,
     ) -> list[str]:
         # 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本跳是否送达，
-        # 因此入队的是「任务 + future」，待实际发送完成后再回传结果。
+        # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
         append_tsk = _tasks_high_priority if high_priority else _tasks

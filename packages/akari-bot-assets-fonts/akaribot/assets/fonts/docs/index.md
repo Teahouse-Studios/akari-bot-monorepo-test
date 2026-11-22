@@ -1,8 +1,6 @@
 # 字体资源
 
-本文将会介绍字体资源包的内容、查找顺序与维护约定。
-
-`akari-bot-assets-fonts` 提供绘制图片所需的字体文件，避免调用方依赖仓库里 `assets/fonts` 的固定路径。源码检出与 wheel 安装时，字体所在目录不同，调用方一律用 `fonts_dir()` 取路径。
+`akari-bot-assets-fonts` 提供绘制图片所需的字体文件，避免调用方依赖仓库里 `assets/fonts` 的固定路径。克隆仓库与 wheel 安装时，字体所在目录不同，调用方一律用 `fonts_dir()` 取路径。
 
 ## 内容物
 

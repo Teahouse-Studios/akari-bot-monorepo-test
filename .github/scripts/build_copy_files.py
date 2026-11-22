@@ -1,10 +1,10 @@
 """组装二进制分发的源码目录。
 
-源路径已改为 monorepo 布局（``packages/adapters``、``packages/modules`` 与 core 包内 ``locales``）；
-输出仍沿用旧根目录结构；产物形态归 tasks T6.5，本脚本届时下线，假设清单见 generated_docs/build_assumptions.md。
+源路径按 monorepo 布局（``packages/adapters``、``packages/modules`` 与 core 包内 ``locales``）。
+输出沿用旧根目录结构。产物形态归 tasks T6.5，本脚本届时下线，假设清单见 generated_docs/build_assumptions.md。
 
 ``data/`` 与 ``config/`` 是实例可写数据，包的可写数据另在实例目录的 ``data/<种类>/<名称>/``
-下，都不参与分发；此处仅保证输出目录存在，配置由首次启动写出骨架后补全。
+下，都不参与分发。此处仅保证输出目录存在，配置由首次启动写出初始结构后补全。
 """
 
 import shutil

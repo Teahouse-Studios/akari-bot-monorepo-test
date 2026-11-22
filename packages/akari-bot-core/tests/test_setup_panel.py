@@ -144,7 +144,7 @@ def _test_rows_carry_no_prefix() -> bool:
 
 
 def _test_every_row_gets_an_inline_entry() -> bool:
-    # 入口若只出现在底部键盘，用户得自行把按钮与上方的设置行对应起来；全是开关的个人设置区
+    # 入口若只出现在底部键盘，用户得自行把按钮与上方的设置行对应起来。全是开关的个人设置区
     # 更会整段读成纯状态文字。
     for support_button in (True, False):
         msg = _make_msg(support_button=support_button)
@@ -304,7 +304,7 @@ def _test_inline_commands_use_session_prefix() -> bool:
 
 def _test_rows_are_joke_proof_and_spaced() -> bool:
     # 指令操作降级为纯文本后会并入前一个文本元素，合并时既不补分隔符，也会连同命令原文
-    # 一起参与玩笑替换，两者缺一都会使降级平台上的命令抄不下来。
+    # 一起参与玩笑替换，两者缺一都会使降级平台上的命令无法复制。
     # 首个纯文本元素是分组标题，它不带入口，无须留空格
     rows = [x for x in _render() if isinstance(x, PlainElement)][1:]
     if not rows:
@@ -343,7 +343,7 @@ def _test_help_buttons_present() -> bool:
     if commands != expected:
         Logger.error(f"Help should offer both panel entries as {expected}, got {commands}")
         return False
-    # 文案须取自按钮专设的键：面板标题带有分隔用的方括号，套进按钮里并不好看
+    # 文案须取自按钮专设的键：面板标题带有分隔用的方括号，套进按钮里并不合适
     labels = [button.show for row in rows for button in row.buttons]
     if labels != ["👥 场景设置", "💬 用户设置"]:
         Logger.error(f"Help button labels should carry no bracket decoration, got {labels}")
@@ -372,6 +372,6 @@ async def test_setup_panel(tester: Tester):
     await tester.test(_test_inline_commands_use_session_prefix, "行内用会话前缀测试")
     await tester.test(_test_rows_are_joke_proof_and_spaced, "行文本防替换与留空测试")
     await tester.test(_test_jump_buttons, "跨域跳转按钮测试")
-    await tester.test(_test_help_buttons_present, "help 挂按钮测试")
+    await tester.test(_test_help_buttons_present, "help 命令附按钮测试")
 
     return tester

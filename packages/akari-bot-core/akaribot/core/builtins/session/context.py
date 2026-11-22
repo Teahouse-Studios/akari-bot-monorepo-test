@@ -38,9 +38,9 @@ class ContextManager(ABC):
 
     context_marks_hold: dict[str, int] = {}
 
-    # 入站消息处理期间不得删除上下文。平台侧在消息处理结束后才撤销登记，而
-    # Server 侧的 hold／send 是跨进程调用，抵达顺序无法由固定等待秒数保证；
-    # 这里以内联计数登记「仍在处理中的入站消息」的存活区间，避免删除早于调用。
+    # 入站消息处理期间不得删除上下文。平台侧在消息处理结束后才撤销记录，而
+    # Server 侧的 hold／send 是跨进程调用，抵达顺序无法由固定等待秒数保证。
+    # 这里以内联计数记录“仍在处理中的入站消息”的存活区间，避免删除早于调用。
     context_marks_active: dict[str, int] = {}
 
     @classmethod
@@ -64,7 +64,7 @@ class ContextManager(ABC):
 
     @classmethod
     def deactivate_context(cls, session_info: SessionInfo):
-        """结束会话的入站处理登记；登记归零后由调用方决定是否删除上下文。
+        """结束会话的入站处理记录。记录归零后由调用方决定是否删除上下文。
 
         :param session_info: 会话信息对象
         """
@@ -122,10 +122,10 @@ class ContextManager(ABC):
         cls.context_marks_hold[session_id] -= 1
         if cls.context_marks_hold[session_id]:
             return
-        # 平台关闭流程可能已先清空上下文字典；release 仍须移除 hold 计数，
+        # 平台关闭流程可能已先清空上下文字典。release 仍须移除 hold 计数，
         # 不能因重复清理抛 KeyError 而让后台任务以未取回异常结束。
         del cls.context_marks_hold[session_id]
-        # 平台侧可能已撤销本次消息的上下文；此时不能把同 session_id 重建的
+        # 平台侧可能已撤销本次消息的上下文。此时不能把同 session_id 重建的
         # 入站上下文一并删掉。
         if session_id not in cls.context_marks_active:
             cls.context.pop(session_id, None)
@@ -138,8 +138,8 @@ class ContextManager(ABC):
         检查权限。
 
         :param session_info: 会话信息
-        :param user_id: 指定成员的平台 ID，留空则检查发话者本人
-        :return: 是否具备权限；指定成员时，不含场景成员的上下文一律返回 False
+        :param user_id: 指定成员的平台 ID，留空则检查发送者本人
+        :return: 是否具备权限，指定成员时，不含场景成员的上下文一律返回 False
         """
         if session_info.session_id not in cls.context:
             raise ValueError("Session not found in context")
@@ -175,7 +175,7 @@ class ContextManager(ABC):
 
     @classmethod
     def derive_private_session(cls, session_info: SessionInfo, target_id: str, target_from: str) -> SessionInfo:
-        """由当前会话派生出一份指向私聊场景的会话信息，供 :meth:`send_private_msg` 复用发送逻辑。
+        """由当前会话生成一份指向私聊场景的会话信息，供 :meth:`send_private_msg` 复用发送逻辑。
 
         :param session_info: 当前会话信息
         :param target_id: 私聊场景 ID

@@ -23,7 +23,7 @@ async def resolve_media_path(element: ImageElement | AudioElement | VideoElement
     """取得媒体元素对应的本地文件路径，无法取得时返回 None。
 
     :param element: 待解析的媒体元素。
-    :return: 本地文件路径；无法取得时返回 None。
+    :return: 本地文件路径。无法取得时返回 None。
     """
     if isinstance(element, ImageElement):
         try:
@@ -47,7 +47,7 @@ async def resolve_media_base64(element: ImageElement | AudioElement | VideoEleme
     """取得媒体元素内容的 Base64 编码，无法取得时返回 None。
 
     :param element: 待解析的媒体元素。
-    :return: 不带 MIME 前缀的 Base64 字符串；无法取得时返回 None。
+    :return: 不带 MIME 前缀的 Base64 字符串。无法取得时返回 None。
     """
     path = await resolve_media_path(element)
     if path is None:

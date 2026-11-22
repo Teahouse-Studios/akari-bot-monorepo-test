@@ -226,5 +226,5 @@ async def test_secret_filter(tester: Tester):
     await tester.test(_test_post_message_replaces_leaking_chains, "post_message 拦截敏感信息")
     await tester.test(_test_bot_send_private_message_replaces_leaking_chains, "Bot.send_private_message 拦截敏感信息")
     await tester.test(_test_card_text_is_filtered_and_localized, "卡片文案过滤词库并解析本地化，链接保持完整")
-    await tester.test(_test_secret_update_registers_batch, "Secret.update 登记批量密钥")
+    await tester.test(_test_secret_update_registers_batch, "Secret.update 记录批量密钥")
     return tester

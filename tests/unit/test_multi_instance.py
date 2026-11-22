@@ -2,9 +2,9 @@
 
 覆盖阶段 1B：
 
-- 身份派生（T1B.1 / T1B.2）：默认实例的 client_name 逐字节不变，实例名带 ``-<实例 ID>``；
-- 配置的实例作用域（T1B.3）：实例表存在时接管读取、``enable`` 不回退、写入只落实例表；
-- 守护进程的实例发现与前置冲突检查（T1B.4）：孤立配置只告警，端口与凭据冲突中止启动；
+- 身份生成（T1B.1 / T1B.2）：默认实例的 client_name 逐字节不变，实例名带 ``-<实例 ID>``。
+- 配置的实例作用域（T1B.3）：实例表存在时接管读取、``enable`` 不回退、写入只落到实例表。
+- 守护进程的实例发现与前置冲突检查（T1B.4）：孤立配置只告警，端口与登录信息冲突中止启动。
 - 四元组平台判据（T1B.5）：``available_for="Telegram"`` 覆盖全部 Telegram 实例，
   ``_return_cache`` 不把两个实例的结果混在一起。
 
@@ -137,7 +137,7 @@ def _test_default_instance_names_are_byte_identical():
                 return False
             if not expected.startswith(info.target_prefix_list[0].split("|")[0]):
                 return False
-        # 显式传参派生实例名，且不得改动类属性
+        # 显式传参生成实例名，不得改动类属性
         if Info.resolve_client_name("Telegram", "alt") != "Telegram-alt":
             return False
         if Info.resolve_client_name("QQBot", "alt") != "QQBot-alt":
@@ -196,7 +196,7 @@ def _test_instance_config_scope():
         if not CFGManager.has("telegram_token", secret=True, table_name="bot_telegram"):
             return False
 
-        # 实例表不存在时回退基表；enable 例外，不回退
+        # 实例表不存在时回退基表。enable 例外，不回退
         if CFGManager.get("kook_token", secret=True, table_name="bot_kook") != "kook-token":
             return False
         if CFGManager.get("enable", table_name="bot_kook", _fallback=False) is not None:
@@ -213,7 +213,7 @@ def _test_instance_config_scope():
         if CFGManager._resolve_table("bot_telegram-alt") != "bot_telegram-alt":
             return False
 
-        # 写入与删除都只动实例表
+        # 写入与删除都只作用于实例表
         CFGManager.write("telegram_api_url", "https://written.example", str, False, "bot_telegram")
         Info.instance_id = ""
         if CFGManager.get("telegram_api_url", table_name="bot_telegram") != "https://base.example":
@@ -363,7 +363,7 @@ def _test_adapter_manifests_match_config_templates():
         config_source = (entry.root / "config.py").read_text(encoding="utf-8")
         if _declared_bot_tables(config_source) != {entry.manifest.config_table}:
             return False
-        # 凭据字段必须真的存在于某个配置模板类上，否则重复凭据检查会静默失效
+        # 登录信息字段必须存在于某个配置模板类上，否则重复检查会静默失效
         if not set(entry.manifest.credential_fields) <= _declared_field_names(config_source):
             return False
     return True
@@ -383,7 +383,7 @@ def _test_four_way_scope_matches():
 
         if "__test_mi_platform" not in base or "__test_mi_platform" not in alt_scoped:
             return False
-        # 缺平台两段时退化为旧的两段判据：平台级声明落不到该实例上，实例级声明仍然命中
+        # 缺平台两段时只看前两项：平台级声明对该实例不生效，实例级声明仍然命中
         if "__test_mi_platform" in alt_legacy or "__test_mi_instance" not in alt_legacy:
             return False
         if "__test_mi_instance" in base or "__test_mi_instance" not in alt_scoped:
@@ -473,7 +473,7 @@ async def test_multi_instance(tester: Tester):
     )
     await tester.test(_test_adapter_manifests_match_config_templates, "适配器清单与配置模板一致")
     await tester.test(_test_four_way_scope_matches, "四元组平台判据")
-    await tester.test(_test_return_cache_does_not_collide, "return_modules_list 缓存键不串")
+    await tester.test(_test_return_cache_does_not_collide, "return_modules_list 缓存键互相隔离")
     await tester.test(_test_session_info_platform_fields, "会话的平台两段填充与退化")
     await tester.test(_test_alive_prefix_disambiguation, "实例前缀不被平台前缀抢占")
     return tester

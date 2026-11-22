@@ -23,7 +23,7 @@ RETIRED_NOTIFY_DELAY_MIN = 300
 RETIRED_NOTIFY_DELAY_MAX = 86400
 
 # 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。
-# 仅存于进程内存，重启即清空；因已发送记录只在推送成功后落库，重启后会自然重排。
+# 仅存于进程内存，重启即清空。因已发送记录只在推送成功后落库，重启后会自然重排。
 pending_notices: set[str] = set()
 _notice_tasks: set[asyncio.Task] = globals().get("_notice_tasks", set())
 
@@ -35,7 +35,7 @@ _notice_enqueue_lock = asyncio.Lock()
 # 若改为逐次读库-追加-写回，两个场景并发触发时先写的记录会被覆盖，对应场景将重复收到公告。
 _notified: dict[str, str] | None = None
 _notified_lock = asyncio.Lock()
-# 公告投递任务可能并发完成。每次持久化都从共享内存字典生成一份快照；若两个 save
+# 公告投递任务可能并发完成。每次持久化都从共享内存字典生成一份快照，若两个 save
 # 写入顺序交错时，较早生成的旧快照可能最后落库，使后完成的场景在重启后再次收到公告。
 _notified_write_lock = asyncio.Lock()
 _MISSING_NOTIFIED = object()
@@ -44,7 +44,7 @@ _MISSING_NOTIFIED = object()
 RETIRED_ROUTE_SEPARATOR = "->"
 
 # 退役实例上仍可执行的模块，命令路径与正则路径共用这一份判据。
-# 白名单按用户输入的首词匹配；解析出的模块名不在白名单时回退到改写前的首词。
+# 白名单按用户输入的首词匹配。解析出的模块名不在白名单时回退到改写前的首词。
 RETIRED_ALLOWED_MODULES = {"merge"}
 
 
@@ -53,7 +53,7 @@ def parse_retired_routes(entries: list) -> dict[str, str | None]:
     把 ``"源 -> 目标"`` 形式的配置解析为映射。
 
     两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类：``"Telegram -> QQBot"``
-    只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响；要退役某个实例就写
+    只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写
     ``"Telegram-alt -> QQBot"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。
 
     只写源时目标为 None，表示该客户端退役但不提供迁移去处。格式错误的项一律跳过并记录警告，
@@ -139,7 +139,7 @@ def is_module_allowed_when_retired(module_name: str | None) -> bool:
 
 
 def is_merge_route_allowed(source_client: str | None, current_client: str | None) -> bool:
-    """判断一枚迁移码能否在当前客户端兑换。
+    """判断一个迁移码能否在当前客户端兑换。
 
     :param source_client: 签发迁移码的客户端。
     :param current_client: 兑换所在的客户端。
@@ -164,7 +164,7 @@ def should_yield_channel(target_id: str, channels: dict[str, int], channel_id: i
     """判断一个退役场景是否应当把消息让给同通道内的其他场景处理。
 
     :param target_id: 当前场景 ID。
-    :param channels: 同组内「场景 ID → 通道号」的映射。
+    :param channels: 同组内“场景 ID → 通道号”的映射。
     :param channel_id: 当前场景的通道号。
     :return: 是否应当让位。
     """
@@ -245,7 +245,7 @@ def read_notice(client_name: str, locale: str, base_path: Path | None = None) ->
 
     :param client_name: 客户端名称，用于定位目录，匹配时转为小写。
     :param locale: 当前会话的语言。
-    :param base_path: 公告文案的基础目录，缺省为 ``data/retired``。测试可传入临时目录。
+    :param base_path: 公告文案的基础目录，默认为 ``data/retired``。测试可传入临时目录。
     :return: 公告正文，无可用文案时为 None。
     """
     base = base_path or retired_path
@@ -318,7 +318,7 @@ async def _deliver_notice(session_info, delay: int) -> None:
             session_info.locale.locale,
             session_info.prefixes[0] if session_info.prefixes else "~",
         )
-        # 传入单元素会话列表，使按通道归拢只分出一组，公告不会被转投至同通道的其他平台。
+        # 传入单元素会话列表，使按通道合并只分出一组，公告不会被转投至同通道的其他平台。
         await bot.post_message("*", message, session_list=[session_info])
         await mark_notified(target_id)
         Logger.info(f"Delivered retired notice to {target_id}.")

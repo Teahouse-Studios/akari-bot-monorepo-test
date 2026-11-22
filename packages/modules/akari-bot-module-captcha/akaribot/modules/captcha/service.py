@@ -39,7 +39,7 @@ async def trust_challenge(challenge: CaptchaChallenge) -> bool:
         async with union_mutation():
             # 平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，
             # 避免旧 ORM 实例把信任写给旧 Union，或用整行 save 撤销解绑 hook 的改挂。
-            # Trust 与 Challenge 状态必须属于同一事务；否则后一步失败会留下“已信任但仍待验证”的半状态。
+            # Trust 与 Challenge 状态必须属于同一事务。否则后一步失败会留下“已信任但仍待验证”的半状态。
             async with in_transaction("default"):
                 fresh = await CaptchaChallenge.get_or_none(challenge_id=challenge.challenge_id)
                 if not fresh or fresh.status != "pending":
@@ -63,7 +63,7 @@ async def trust_challenge(challenge: CaptchaChallenge) -> bool:
                 fresh.verified_at = datetime.now(UTC)
                 await fresh.save(update_fields=["target_union_id", "sender_union_id", "status", "verified_at"])
 
-        # 只在事务成功提交后更新调用方持有的旧实例；提交失败时它仍应反映可重试的原状态。
+        # 只在事务成功提交后更新调用方持有的旧实例。提交失败时它仍应反映可重试的原状态。
         challenge.target_union_id = fresh.target_union_id
         challenge.sender_union_id = fresh.sender_union_id
         challenge.status = fresh.status

@@ -40,7 +40,7 @@ async def _write_password_data(data: dict) -> None:
     PASSWORD_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(PASSWORD_PATH, "wb") as f:
         f.write(orjson.dumps(data))
-    # 状态同步失败不影响已写入的密码文件，状态由密码监控任务重新对齐。
+    # 状态同步失败不影响已写入的密码文件，状态由密码监控任务重新同步。
     try:
         await sync_password_state(PASSWORD_PATH)
     except Exception:
@@ -311,7 +311,7 @@ async def change_password(request: Request, response: Response):
 
         await _write_password_data(password_data)
 
-        # TODO 签的 jwt 存 db, 改密码时删掉
+        # TODO 签发的 JWT 存入数据库，改密码时删除
         Logger.info(f"[WebUI] {ip} has changed password.")
         await _notify_security_event("password_changed", request, ip)
         return Response(status_code=205)

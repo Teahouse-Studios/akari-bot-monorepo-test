@@ -14,10 +14,10 @@ from typing import Any
 
 from akari_bot_i18n.i18n import Locale, build_locale_snapshot, connect_locale_snapshot
 
-# 与 core 的 lang_list 同集合；新增语言时两边一起加。
+# 与 core 的 lang_list 同集合。新增语言时两边一起加。
 SUPPORTED_LOCALES = ("zh_cn", "zh_tw", "en_us", "ja_jp", "ko_kr")
 DEFAULT_LOCALE = "zh_cn"
-# 缺键时的回退顺序：先英文，再真源。
+# 缺键时按英文、中文的顺序回退。
 FALLBACK_LOCALES = ("en_us", "zh_cn")
 
 LOCALE_ENV = "AKARIBOT_LANG"
@@ -41,7 +41,7 @@ def normalize(value: str | None) -> str:
     接受 ``zh-CN``、``zh_CN.UTF-8``、``en`` 这类系统 locale 写法。
 
     :param value: 原始语言标识。
-    :return: 受支持的语言码；无法识别时返回默认语言。
+    :return: 受支持的语言码。无法识别时返回默认语言。
     """
     if not value:
         return DEFAULT_LOCALE
@@ -93,7 +93,7 @@ def _connect() -> None:
 def locale(code: str | None = None) -> Locale:
     """取指定语言的 :class:`Locale`。
 
-    :param code: 语言码；缺省用当前解析结果。
+    :param code: 语言码。默认用当前解析结果。
     :return: 可直接 ``.t()`` 的对象。
     """
     _connect()
@@ -146,6 +146,6 @@ def t(key: str, **kwargs: Any) -> str:
 
     :param key: 文案键，形如 ``cli.module.add.help``。
     :param kwargs: 插值参数。
-    :return: 本地化后的文本；键不存在时回退链仍取不到则返回键名。
+    :return: 本地化后的文本。键不存在时按回退链取，仍取不到则返回键名。
     """
     return locale().t(key, **kwargs)

@@ -44,12 +44,12 @@ class Bind:
             命令模板语法参见 :func:`core.builtins.parser.args.parse_template`。
             模板中的参数与选项可直接映射为被装饰函数的参数：
 
-            - ``<name>``：位置参数，对应同名函数参数；未提供时使用默认值或 ``None``；
-            - ``[flag]``：标志选项，对应同名函数参数，标注为 ``bool`` 时直接得到选项是否传入；
-            - ``[-b]`` / ``[--foo <bar>]``：带杠选项，对应同名函数参数，参数名中的
-              下划线按连字符匹配（如参数 ``no_cover`` 对应 ``--no-cover``）；
-              带子参数且仅有一个子参数时，直接将该子参数的值传入；
-            - 也可直接使用选项的子参数名，如 ``[-p <page>]`` 对应函数参数 ``page``；
+            - ``<name>``：位置参数，对应同名函数参数。未提供时使用默认值或 ``None``。
+            - ``[flag]``：标志选项，对应同名函数参数，标注为 ``bool`` 时直接得到选项是否传入。
+            - ``[-b]`` / ``[--foo <bar>]``：以连字符开头的选项，对应同名函数参数，参数名中的
+              下划线按连字符匹配（如参数 ``no_cover`` 对应 ``--no-cover``）。
+              带子参数且仅有一个子参数时，直接将该子参数的值传入。
+            - 也可直接使用选项的子参数名，如 ``[-p <page>]`` 对应函数参数 ``page``。
             - ``-i``、``<address:port>`` 等无法作为函数参数名的模板元素，可用 ``Param``
               标注指定对应的模板元素，如 ``data: Param("-i", bool) = False``。
 
@@ -175,14 +175,14 @@ class Bind:
         ):
             """注册具名 hook 或 parser 入口订阅。
 
-            :param name: 具名能力名；入口订阅时可作为稳定订阅 ID 后缀。
-            :param point: ``HookPoint`` 入口常量或其字符串值；与 name 同时给出时走入口索引。
+            :param name: 带名称的能力名。入口订阅时可作为稳定订阅 ID 后缀。
+            :param point: ``HookPoint`` 入口常量或其字符串值。与 name 同时给出时走入口索引。
             :param priority: 入口订阅优先级，升序执行。
             :param available_for: 入口订阅的平台限制，语义同 command。
             :param exclude_from: 入口订阅的平台排除，语义同 command。
             :param load: 入口订阅开关。
-            :param timeout: 入口订阅单次执行预算（秒）；<=0 不限时。
-            :param server_scope: 系统扩展作用域，免场景 enabled_modules。
+            :param timeout: 入口订阅单次执行预算（秒）。<=0 表示不限时。
+            :param server_scope: 系统扩展作用域，不受场景 enabled_modules 限制。
             """
 
             def decorator(function):
@@ -361,7 +361,7 @@ class Bind:
                 同包内任何文件在顶层读取该模板都会与包的初始化互相等待而形成循环导入。
 
             :param cls: 要装饰的配置类，为 None 时返回装饰器。
-            :param secret: 是否将该配置的值视为敏感信息进行加密存储。
+            :param secret: 是否将该配置的值视为敏感信息并加密存储。
             """
 
             def wrap(cls):
@@ -398,23 +398,23 @@ def module(
 
     :param module_name: 绑定的命令前缀。
     :param alias: 此命令的别名。
-    同时被用作命令解析，当此项不为空时将会尝试解析其中的语法并储存结果在 MessageSession.parsed_msg 中。
+    同时用于命令解析。此项不为空时会尝试解析其中的语法，并将结果存入 MessageSession.parsed_msg。
     :param desc: 此命令的简介。
     :param recommend_modules: 推荐打开的其他模块。
     :param required_admin: 此命令是否需要场景管理员权限。
     :param base: 将此命令设为基础命令。设为基础命令后此命令将被强制开启。（默认为 False）
     :param doc: 此命令是否存在线上说明文件。（默认为 False）
-    :param hidden: 将此命令设为隐藏命令。设为隐藏命令后此命令在帮助列表不可见。（默认为 False）
-    :param load: 将此命令设置是否加载。（默认为 True）
+    :param hidden: 将此命令设为隐藏命令。设为隐藏命令后此命令在帮助列表中不可见。（默认为 False）
+    :param load: 设置此命令是否加载。（默认为 True）
     :param rss: 将此命令设为 RSS 命令。（默认为 False）
     :param regex: 将此命令设为正则命令。（默认为 False）
     :param event: 将此命令设为事件模块。事件模块要求平台可读取全部消息。（默认为 False）
-    :param required_superuser: 将此命令设为机器人的超级用户才可执行。（默认为 False）
-    :param required_base_superuser: 将此命令设为机器人的基础超级用户才可执行。（默认为 False）
+    :param required_superuser: 将此命令设为仅机器人的超级用户可执行。（默认为 False）
+    :param required_base_superuser: 将此命令设为仅机器人的基础超级用户可执行。（默认为 False）
     :param required_bot_permissions: 开启模块前要求机器人具备的平台权限字段。
     :param suppress_invalid_prompt: 命令未能匹配任何模板时是否抑制语法错误提示。
     适用于命令按平台分流、匹配不上属于预期结果的模块。（默认为 False）
-    :param available_for: 此命令支持的平台列表。（默认为`*`）
+    :param available_for: 此命令支持的平台列表。（默认为 `*`）
     :param exclude_from: 此命令排除的平台列表。
     :param support_languages: 此命令支持的语言列表。
     """
@@ -423,7 +423,7 @@ def module(
     frame = inspect.currentframe().f_back
     caller_module = frame.f_globals["__name__"]
 
-    # 包名由发现层解析，不再从调用方的文件路径推导：路径推导在目录布局变化时
+    # 包名由发现层解析：按调用方文件路径推导时，目录布局变化
     # 会静默得到空串，连带使热重载、locale 指纹、依赖图与模块卸载失去依据。
     entry = PackageRegistry.by_import_path(caller_module)
     py_module_name = entry.stem if entry and entry.kind == "module" else ""

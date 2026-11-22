@@ -43,7 +43,7 @@ async def _():
 
 @mod.hook(point=HookPoint.MESSAGE_NORMALIZED)
 async def _(ctx: Bot.ModuleHookContext):
-    # 返回 None 表示不干预；需要截断或改写消息时返回 HookResult 类型化结果。
+    # 返回 None 表示不干预。需要截断或改写消息时返回 HookResult 类型化结果。
     return None
 {% endif -%}
 {% if has_event | default(false) %}

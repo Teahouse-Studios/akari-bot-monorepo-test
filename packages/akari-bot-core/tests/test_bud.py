@@ -107,7 +107,7 @@ async def _test_bud_refund_on_expiry():
         await find_bud(bud["id"])
 
         refreshed = await SenderUnionInfo.get(union_id=sender.union_id)
-        # 发送者未领取的部分（100 - amount）应退回
+        # 发送者未接收的部分（100 - amount）应退回
         return refreshed.petal == 100 - amount
     except Exception:
         return False

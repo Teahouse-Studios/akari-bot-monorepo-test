@@ -121,8 +121,8 @@ class SchedulerLifecycle:
             if current is None:
                 return None
 
-            # maintenance 先关闭入口，再取得本锁作为提交屏障。已经 submit、但尚未
-            # 尚未开始业务函数的 coroutine 会在此检测关闭状态并退出。
+            # maintenance 先关闭入口，再取得本锁作为提交屏障。已经 submit 但尚未
+            # 开始执行业务函数的 coroutine 会在此检测关闭状态并退出。
             async with cls._launch_lock:
                 if not cls._accepting_jobs:
                     return None
@@ -255,7 +255,7 @@ class SchedulerLifecycle:
 
     @classmethod
     def start(cls) -> None:
-        """启动全局 Scheduler；重复调用保持幂等。"""
+        """启动全局 Scheduler。重复调用保持幂等。"""
         cls.prepare()
         try:
             Scheduler.start()
@@ -264,7 +264,7 @@ class SchedulerLifecycle:
 
     @classmethod
     def begin_shutdown(cls) -> None:
-        """同步关闭新 Job 入口；实际取消和等待由 :meth:`shutdown` 完成。"""
+        """同步关闭新 Job 入口。实际取消和等待由 :meth:`shutdown` 完成。"""
         cls._shutting_down = True
         cls._accepting_jobs = False
         if Scheduler.state == STATE_RUNNING:
@@ -331,7 +331,7 @@ class SchedulerLifecycle:
 
     @classmethod
     async def shutdown(cls) -> None:
-        """真正停止 Scheduler，并等待所有运行中业务 coroutine 完成取消。"""
+        """真正停止 Scheduler，并等待所有运行中的业务 coroutine 退出。"""
         current = asyncio.current_task()
         if current in cls._active_tasks:
             raise RuntimeError("A scheduled job cannot shut down its own scheduler.")
@@ -350,7 +350,7 @@ class SchedulerLifecycle:
 
                 Scheduler.add_listener(on_shutdown, EVENT_SCHEDULER_SHUTDOWN)
                 try:
-                    # AsyncIOScheduler.shutdown() 只把真正的关闭回调排进事件循环；
+                    # AsyncIOScheduler.shutdown() 只把真正的关闭回调排进事件循环。
                     # 等待 shutdown event 才能保证回调已经执行，而非仅“调用过”。
                     Scheduler.shutdown(wait=False)
                     await stopped.wait()

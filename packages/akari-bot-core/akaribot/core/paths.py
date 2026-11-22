@@ -1,6 +1,6 @@
 """实例目录抽象。
 
-进程在哪个实例里运行的唯一答案。产物路径由实例目录派生，而非相对 cwd 解析，故进程可在任意
+进程在哪个实例里运行的唯一答案。产物路径由实例目录生成，与进程的 cwd 无关，故进程可在任意
 目录启动。取值在导入期完成一次，之后只读。
 
 导入期不创建目录，创建由 :meth:`Paths.ensure` 显式触发。
@@ -27,9 +27,9 @@ def _env_path(name: str) -> Path | None:
 
 
 def _repository_root() -> Path:
-    # 判据是「含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先」，不按层数推算——源码根从
-    # ``<dist>/akaribot`` 压成 ``<dist>/akaribot`` 后层数会变，数层数会静默指到仓库之外。
-    # 打包形态下找不到这样的祖先，退回包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
+    # 判据是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根从
+    # ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。
+    # 打包形态下找不到这样的祖先，回退到包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
     current = Path(__file__).resolve()
     for candidate in current.parents:
         if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():
@@ -40,7 +40,7 @@ def _repository_root() -> Path:
 class Paths:
     """实例目录及其子目录。"""
 
-    # as_dict() 面向「实例目录」清单；锁是文件，故显式排除。
+    # as_dict() 面向“实例目录”清单。锁是文件，故显式排除。
     _FILES = ("lock",)
 
     instance: Path = _env_path(INSTANCE_DIR_ENV) or Path(".").resolve()
@@ -50,7 +50,7 @@ class Paths:
     """配置目录。"""
 
     assets: Path = instance / "assets"
-    """随仓库或分发包提供的只读资源。"""
+    """随仓库或包提供的只读资源。"""
 
     data: Path = instance / "data"
     """运行时与部署者产生的可写数据。"""
@@ -65,7 +65,7 @@ class Paths:
     """日志目录。"""
 
     lock: Path = instance / ".bot.lock"
-    """单实例锁文件，供入口进程互斥与 CLI 探测运行状态。"""
+    """实例级锁文件，供入口进程互斥与 CLI 探测运行状态。"""
 
     tests: Path = _env_path(TESTS_PATH_ENV) or _repository_root() / "tests"
     """测试用例目录，属源码仓库而非实例。"""

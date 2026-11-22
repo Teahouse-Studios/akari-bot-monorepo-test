@@ -1,9 +1,8 @@
 """配置迁移设施的端到端用例（合成包，不接启动链）。
 
-``config/migration.py`` 有近四百行从未被任何用例执行过：``ConfigMigrationRunner``、
-``iter_config_revisions()``、``stamp_config_versions()`` 在测试目录零引用。风险不是「现在坏了」，
-而是首个真实消费者出现时它已经与 registry、扁平配置布局或原子写入路径脱节——那时才发现的代价
-要大得多。
+``config/migration.py`` 现有近四百行，在启动链上没有消费者，``ConfigMigrationRunner``、
+``iter_config_revisions()``、``stamp_config_versions()`` 也无其他用例执行。它若与 registry、
+扁平配置布局或原子写入路径脱节，应在此处即时报出，而非等首个消费者接入后才暴露。
 
 按既有裁决**不接启动链**（首个声明 ``config_migrations`` 的包出现时再接），只固化行为：
 合成包 → revision 升级 → 版本递增 → 重载后可见 → 二次执行 no-op。

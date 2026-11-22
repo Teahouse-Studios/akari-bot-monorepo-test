@@ -134,7 +134,7 @@ async def _test_worker_marks_stop_after_unmount():
 
 
 async def _test_refresh_keeps_table_highlighted():
-    # 关键回归：重建表清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归：重建数据表清单后选中行必须仍然高亮——ListView 只在 index 变化时更新高亮。
     async def body(app, page, pilot, source):
         table_list = page.query_one("#table-list", compat.ListView)
         table_list.index = 1
@@ -344,7 +344,7 @@ async def _test_bool_field_toggles_and_saves():
 
 
 async def _test_low_frequency_bindings_stay_out_of_footer():
-    # 工具栏操作从页脚隐藏，为 80 列终端保留全局快捷键空间。
+    # 工具栏操作不进页脚，为 80 列终端保留全局快捷键空间。
     async def body(app, page, pilot, source):
         footer = app.query_one(compat.Footer)
         actions = {"save", "mode_form", "mode_raw", "open_editor", "reload", "focus_tables"}
@@ -388,7 +388,7 @@ def _test_editor_command_resolution():
 
 
 def _test_derived_instance_table_keeps_its_own_file():
-    # 派生实例表按完整表名定位文件，文件缺失时仍返回候选路径。
+    # 生成的实例表按完整表名定位文件，文件缺失时仍返回候选路径。
     with TemporaryDirectory(prefix="akari-config-file-") as raw:
         root = Path(raw).resolve()
         (root / "akaribot.toml").write_text("", encoding="utf-8")
@@ -604,7 +604,7 @@ async def test_tui_config(tester: Tester):
         await tester.test(_test_bool_field_toggles_and_saves, "布尔项可切换并写入")
         await tester.test(_test_low_frequency_bindings_stay_out_of_footer, "低频键位不进页脚")
         await tester.test(_test_editor_command_resolution, "编辑器命令按 VISUAL 与 EDITOR 解析")
-        await tester.test(_test_derived_instance_table_keeps_its_own_file, "实例表按派生表名定位文件")
+        await tester.test(_test_derived_instance_table_keeps_its_own_file, "实例表按生成的表名定位文件")
         await tester.test(_test_editor_button_reports_command_outside_terminal, "非交互终端只报路径与命令")
         await tester.test(_test_editor_action_suspends_and_rereads, "交互终端下挂起界面并重读")
         await tester.test(_test_editor_action_reports_missing_table_or_file, "拿不到表或文件只说状态栏")

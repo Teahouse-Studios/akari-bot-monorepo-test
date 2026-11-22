@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from akaribot.core.logger import Logger
 from akaribot.core.paths import Paths
 
-# 语料目录属源码仓库，与 Paths.tests 同源；按本文件深度推算会在包布局调整后失准。
+# 语料目录属源码仓库，与 Paths.tests 同源。按本文件深度推算会在包布局调整后失准。
 FIXTURE_DIR = Paths.tests / "fixtures" / "webrender"
 
 # 1x1 透明 PNG 的 base64 文本。截图类方法返回的是 base64 字符串而非二进制，

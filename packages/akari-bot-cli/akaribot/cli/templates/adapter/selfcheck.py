@@ -70,11 +70,11 @@ def core_imports(tree: ast.AST) -> list[str]:
 
 
 def check_layout(package: Path) -> Path:
-    """断言骨架文件齐全，返回导入包目录。"""
+    """检查结构文件齐全，返回导入包目录。"""
     stem = package.name.removeprefix("akari-bot-adapter-")
     source = package / "akaribot/adapters" / stem
     missing = [name for name in SKELETON_FILES if not (source / name).is_file()]
-    report(f"{package.name} 骨架文件齐全", not missing, ",".join(missing))
+    report(f"{package.name} 结构文件齐全", not missing, ",".join(missing))
     return source
 
 

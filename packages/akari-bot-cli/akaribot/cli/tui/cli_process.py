@@ -1,6 +1,6 @@
 """TUI 调用 CLI 子进程的统一入口。
 
-冻结可执行文件直接接受子命令；实例根目录同时用于工作目录和 AKARI_INSTANCE_DIR。
+冻结可执行文件直接接受子命令。实例根目录同时用于工作目录和 AKARI_INSTANCE_DIR。
 """
 
 from __future__ import annotations

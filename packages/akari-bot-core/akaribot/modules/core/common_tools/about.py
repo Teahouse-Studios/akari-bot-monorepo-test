@@ -41,10 +41,10 @@ QQBOT_PERMISSIONS_URL_TEMPLATE = (
 
 
 def read_credits(path: Path | None = None) -> str | None:
-    """读取制作人员名单；文件不存在、不可读或内容为空时不展示。
+    """读取制作人员名单。文件不存在、不可读或内容为空时不展示。
 
-    :param path: 名单文件；缺省按品牌资产顺序查找，两处都没有时为 ``None``。
-    :return: 名单正文；取不到时返回 ``None``。
+    :param path: 名单文件。默认按品牌资产顺序查找，两处都没有时为 ``None``。
+    :return: 名单正文。取不到时返回 ``None``。
     """
     resolved = find_brand_asset("credits.txt") if path is None else path
     if resolved is None or not resolved.is_file():
@@ -69,7 +69,7 @@ def build_credits_message(msg: Bot.MessageSession) -> MessageChain:
 
 
 def build_about_message(msg: Bot.MessageSession) -> MessageChain:
-    """根据平台能力构造关于菜单。"""
+    """根据平台能力构造 `~about` 菜单。"""
     locale = msg.session_info.locale
     support_markdown = msg.session_info.support_markdown
     result = MessageChain.create()

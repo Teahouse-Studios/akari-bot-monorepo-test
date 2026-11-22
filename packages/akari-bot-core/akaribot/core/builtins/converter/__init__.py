@@ -90,17 +90,17 @@ def kwargs_to_elements(o):
 
 converter.register_structure_hook(MessageElement, lambda o, _: kwargs_to_elements(o))
 
-# 从字典恢复为 TargetUnionInfo 对象（由于需要从数据库异步获取信息，这里实际只返回一个类本身用于占位，信息会在某个流程重新被刷新）
+# 从字典恢复为 TargetUnionInfo 对象。信息需从数据库异步获取，此处只返回类型本身占位，字段随后续流程重新填充。
 converter.register_structure_hook(TargetUnionInfo, lambda o, _: TargetUnionInfo)
 
-# 从字典恢复为 SenderUnionInfo 对象（由于需要从数据库异步获取信息，这里实际只返回一个类本身用于占位，信息会在某个流程重新被刷新）
+# 从字典恢复为 SenderUnionInfo 对象。信息需从数据库异步获取，此处只返回类型本身占位，字段随后续流程重新填充。
 converter.register_structure_hook(SenderUnionInfo, lambda o, _: SenderUnionInfo)
 
 converter.register_structure_hook(Locale, lambda o, _: Locale.from_state(o))
 
 converter.register_structure_hook(timedelta, lambda o, _: timedelta(seconds=o["seconds"]))
 
-# EventName 的 Literal 分支只用于类型提示；反序列化时保留任意自定义事件名。
+# EventName 的 Literal 分支只用于类型提示。反序列化时保留任意自定义事件名。
 converter.register_structure_hook(EventName, lambda o, _: o)
 
 

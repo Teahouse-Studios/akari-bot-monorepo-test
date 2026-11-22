@@ -29,7 +29,7 @@ const EXTERNAL_PATTERN = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 const { site, theme } = useData();
 
 /**
- * 主题按 ``themeConfig.akari`` 读站点配置，页脚只取其中的页脚与顶栏两段；其余字段由主题自己处理。
+ * 主题按 ``themeConfig.akari`` 读站点配置，页脚只取其中的页脚与顶栏两段。其余字段由主题自己处理。
  */
 const akari = computed<Record<string, unknown>>(() => {
   const value = (theme.value as { akari?: unknown }).akari;

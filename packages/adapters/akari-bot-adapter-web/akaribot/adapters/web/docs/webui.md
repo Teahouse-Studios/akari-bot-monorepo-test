@@ -16,7 +16,7 @@ akaribot module add akari-bot-adapter-web
 
 也可以在 `akaribot init` 时加 `--adapter web`。`bot_web.enable` 默认为 `true`，安装后随实例启动。
 
-前端静态资源优先从实例的 `data/webui/dist` 读取，该目录不存在时使用 `akari-bot-webui` 分发包。
+前端静态资源优先从实例的 `data/webui/dist` 读取，该目录不存在时使用 `akari-bot-webui` 包。
 
 ## 访问地址
 
@@ -66,12 +66,12 @@ akaribot module add akari-bot-adapter-web
 
 令牌有效期 24 小时。修改密码会更新密码文件的 `last_updated`，此前发出的令牌随即失效。
 
-控制台支持 TOTP 两步验证，启用时会生成 8 个一次性恢复代码。开启两步验证后不能通过 API 清除密码，需要先关闭两步验证。
+控制台支持 TOTP（基于时间的一次性密码）两步验证，启用时会生成 8 个一次性恢复代码。开启两步验证后不能通过 API 清除密码，需要先关闭两步验证。
 
 ## 反向代理与 HTTPS
 
 - `forwarded_allow_ips` 会传给 uvicorn。只有来自这些地址的 `X-Forwarded-For` 才会被采信，默认仅信任本机。代理不在本机时，填入代理地址。`["*"]` 信任所有来源，不建议在不可控网络中使用。
-- `allow_origins` 控制浏览器跨域访问。留空表示不向其他来源开放 CORS。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
+- `allow_origins` 控制浏览器跨域访问。留空表示不向其他来源开放 CORS（跨域资源共享）。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
 - 在反向代理上终止 TLS，再把请求转发到 `127.0.0.1:6485`。同时把 `enable_https` 设为 `true`，让日志和前端拿到正确的访问协议。
 - 直接对外监听时，需要在防火墙中放行公网端口，并先设置密码。
 

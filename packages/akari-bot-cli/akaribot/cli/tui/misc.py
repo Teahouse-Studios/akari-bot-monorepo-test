@@ -40,13 +40,13 @@ class MiscSource(Protocol):
     """项目迁移数据源接口。"""
 
     def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
-        """迁移旧版项目到当前实例；``dry_run`` 为真时仅预览，``flags`` 为附加的 CLI 参数。"""
+        """迁移旧版项目到当前实例。``dry_run`` 为真时仅预览，``flags`` 为附加的 CLI 参数。"""
 
 
 class StaticMiscSource:
     """用于测试的静态数据源。
 
-    :param result: ``migrate_legacy`` 的返回值；默认为成功。
+    :param result: ``migrate_legacy`` 的返回值。默认为成功。
     """
 
     def __init__(self, result: OperationResult | None = None) -> None:
@@ -64,7 +64,7 @@ class StaticMiscSource:
 class SubprocessMiscSource:
     """通过 ``akaribot migrate legacy`` 执行项目迁移。
 
-    :param root: 实例根；默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
+    :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param timeout: 迁移子进程的超时秒数。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
     """
@@ -84,7 +84,7 @@ class SubprocessMiscSource:
 
     @property
     def root(self) -> Path:
-        """返回实例根目录，依次采用显式路径、当前实例或自动定位结果。"""
+        """返回实例根目录，依次采用显式路径、当前实例与自动定位结果。"""
         return context.resolve_root(self._root_override)
 
     def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
@@ -251,7 +251,7 @@ class MiscPage(compat.Vertical):
         return tuple(chosen)
 
     def reset_pending(self) -> None:
-        """作废待确认的迁移；切页时由 :meth:`TuiApp.show_page` 调用。"""
+        """作废待确认的迁移。切页时由 :meth:`TuiApp.show_page` 调用。"""
         self._confirm.reset()
         self._pending_project = ""
         self._sync_actions()
@@ -271,7 +271,7 @@ class MiscPage(compat.Vertical):
         self._start_migration(self._pending_project, dry_run=True)
 
     def request_migrate(self) -> None:
-        """请求迁移；未指定路径时先请求输入，再显示确认框。"""
+        """请求迁移。未指定路径时先请求输入，再显示确认框。"""
         if self._busy:
             self._notify_busy()
             return
@@ -391,7 +391,7 @@ class MiscPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         self.query_one("#migrate", compat.Button).disabled = self._busy
-        # 预演沿用最近一次预览或迁移的源目录；没有可用源目录时禁用。
+        # 试运行沿用最近一次预览或迁移的源目录。没有可用源目录时禁用。
         self.query_one("#dry-run", compat.Button).disabled = self._busy or not self._pending_project
 
     def _sync_output(self) -> None:
@@ -433,5 +433,5 @@ class MiscPage(compat.Vertical):
             self.action_dry_run()
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)

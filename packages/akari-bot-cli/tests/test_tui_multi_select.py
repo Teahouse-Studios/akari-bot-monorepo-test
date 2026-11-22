@@ -76,7 +76,7 @@ async def _test_space_toggles_selection():
 
 async def _test_shift_extends_and_replaces_range():
     async def body(app, page, pilot, source):
-        await pilot.press("space")  # 锚点落在第 0 行
+        await pilot.press("space")  # 锚点在第 0 行
         await pilot.pause()
         for _ in range(3):
             await pilot.press("down")
@@ -489,7 +489,7 @@ async def _test_rows_show_selection_marker():
 async def test_tui_multi_select(tester: Tester):
     """cli.tui.modules: 多选与批量操作测试"""
     _use_cli_locale()
-    # 关闭防抖延迟，使交互用例无需等待；防抖行为由专项用例验证。
+    # 关闭防抖延迟，使交互用例无需等待。防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_space_toggles_selection, "Space 切换选中")
         await tester.test(_test_shift_extends_and_replaces_range, "Shift+↑/↓ 扩选且重算范围")

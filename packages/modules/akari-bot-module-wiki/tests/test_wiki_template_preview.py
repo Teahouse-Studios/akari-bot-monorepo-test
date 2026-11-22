@@ -745,7 +745,7 @@ async def test_wiki_template_preview(tester: Tester):
         (_test_deletion_cancels_pending_render, "删除结果取消正在渲染的任务，禁止发送晚到图片"),
         (
             _test_dual_render_uses_shell_or_concurrent_fallback,
-            "双路并发：优先真实外壳，失败或超时复用 API 兜底，取消未选中的任务",
+            "双路并发：优先真实外壳，失败或超时复用 API 回退，取消未选中的任务",
         ),
         (_test_cancel_cleans_both_template_renderers, "取消模板预览时收尾两条渲染链并释放发送者状态"),
         (_test_template_preload_is_cached_until_clicked, "预载只缓存图片，点击才发送且不重复渲染"),

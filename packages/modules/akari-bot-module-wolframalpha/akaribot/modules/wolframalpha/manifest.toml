@@ -2,9 +2,9 @@
 schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
-# config.py 的 on_module_config("wolframalpha") 登记的表。
+# config.py 的 on_module_config("wolframalpha") 声明的表。
 config_table = "module_wolframalpha"
 config_schema_version = 1
 provides_modules = ["wolframalpha"]
-# 重复凭据检查字段：WolframAlpha 应用 ID。
+# 查重用的登录信息字段：WolframAlpha 应用 ID。
 credential_fields = ["wolfram_alpha_appid"]

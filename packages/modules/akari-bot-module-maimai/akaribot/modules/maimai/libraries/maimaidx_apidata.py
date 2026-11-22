@@ -166,7 +166,7 @@ async def get_alias(msg: Bot.MessageSession, sid: str) -> list:
     result = []
     for song in data:
         if str(song["song_id"]) == sid:
-            result = sorted(song["alias"])  # 此处的列表是歌曲别名列表
+            result = sorted(song["alias"])  # 此处列出的是歌曲别名
             break
 
     return result
@@ -197,7 +197,7 @@ async def search_by_alias(input_: str) -> list:
     for song in data:
         aliases = [alias.lower() for alias in song["alias"]]
         if input_.lower() in aliases or convinput.lower() in aliases:
-            result.append(str(song["song_id"]))  # 此处的列表是歌曲 ID 列表
+            result.append(str(song["song_id"]))  # 此处列出的是歌曲 ID
 
     return list(set(result))
 
@@ -212,7 +212,7 @@ async def get_record(
 
     :param msg: 消息会话。
     :param payload: 水鱼查询载荷，含 `qq` 或 `username`。
-    :param friend_code: 落雪好友码；查询他人时由调用方给出。
+    :param friend_code: 落雪好友码。查询他人时由调用方给出。
     :param use_cache: 是否读写本地缓存。
     :return: 含 `nickname`、`rating` 与 `charts` 的成绩字典。
     """

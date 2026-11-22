@@ -272,7 +272,7 @@ async def _test_timeout_discards_result():
             },
         )
         outcome = await ParserHookExecutor(mm).dispatch(HookPoint.FINISHED, _FakeMsg(), timeout=0.01)
-        # after 仍应执行；slow 的 Stop 不被采纳
+        # after 仍应执行，slow 的 Stop 不被采纳
         assert "after" in called
         assert isinstance(outcome.result, Continue)
         return True

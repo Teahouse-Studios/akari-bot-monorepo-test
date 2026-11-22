@@ -157,7 +157,7 @@ class TapTapLogin:
             raise TapTapLoginError("TapTap returned incomplete device-code data.") from e
 
     async def check_qrcode_result(self, qrcode_data: TapTapQRCode) -> dict[str, Any] | None:
-        """轮询设备码；尚未授权时返回 ``None``。"""
+        """轮询设备码。尚未授权时返回 ``None``。"""
         response = await self.client.post(
             TOKEN_URL,
             data={

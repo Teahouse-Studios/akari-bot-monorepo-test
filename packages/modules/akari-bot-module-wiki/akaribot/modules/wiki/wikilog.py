@@ -392,7 +392,7 @@ async def _(msg: Bot.MessageSession, apilink: str, note_words: Param("...", list
         await msg.finish(I18NContext("wikilog.message.config.wiki.failed", message=status.message))
 
 
-# 保活需逐个查询订阅的 wiki，耗时远超 hook 默认执行预算；单个 wiki 的失败在循环内就地转为会话消息。
+# 保活需逐个查询订阅的 wiki，耗时远超 hook 默认执行预算。单个 wiki 的失败在循环内就地转为会话消息。
 @wikilog.hook("keepalive", timeout=0)
 async def _(ctx: Bot.ModuleHookContext):
     data_ = await WikiLogTargetSetInfo.return_all_data()

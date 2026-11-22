@@ -1,6 +1,6 @@
 """``akaribot logs``：文件名解析、增量读取与命令输出。
 
-日志文件名约定与 offset 增量读取都在 ``akaribot.cli.logs``，界面日志页与命令共用同一份实现；
+日志文件名约定与 offset 增量读取都在 ``akaribot.cli.logs``，界面日志页与命令共用同一份实现。
 用例锁定约定本身、环形缓冲的丢弃统计，以及命令层在进程过滤、级别选择、``--json`` / ``--path``
 与跟随上的行为。整份用例不起实例进程，也不连 core。
 """
@@ -204,7 +204,7 @@ async def _test_command_selects_level_and_emits_json():
 
 
 def _flat(text: str) -> str:
-    # 临时目录路径很长，rich 会在终端宽度处折行；比对时去掉全部空白，避免断言依赖路径长度。
+    # 临时目录路径很长，rich 会在终端宽度处折行。比对时去掉全部空白，避免检查依赖路径长度。
     return "".join(text.split())
 
 
@@ -266,7 +266,7 @@ async def _test_follow_file_emits_new_lines():
                 path.write_text("first\nsecond\nthird\n", encoding="utf-8")
 
         def stop() -> bool:
-            # 上限同时兜住「跟随不再前进」的回归：那种情况下循环不会自己退出。
+            # 上限同时覆盖“跟随不再前进”的回归：那种情况下循环不会自己退出。
             rounds["count"] += 1
             return len(batches) >= 2 or rounds["count"] > 10
 

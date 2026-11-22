@@ -1,10 +1,10 @@
 """模块面公共 API 的实现模块。
 
-门面把「模块可以依赖什么」与实现位置解耦：模块包只 import ``akaribot.core.api``，core 内部
-模块的移动与改名不再波及模块。全部具体 import 集中在本模块，``akaribot/core/api/__init__.py`` 只做转发。
+门面把“模块可以依赖什么”与实现位置解耦：模块包只 import ``akaribot.core.api``，core 内部
+模块的移动与改名不影响模块。全部具体 import 集中在本模块，``akaribot/core/api/__init__.py`` 只做转发。
 
-导入分两层。不依赖配置系统的名字在模块层直接导入；其余名字记录在 ``LAZY_MODULES`` 中，由
-``__getattr__`` 在首次访问时导入。原因是 ``akaribot.core.config`` 会在导入期校验配置文件存在并执行版本
+导入分两层。不依赖配置系统的名字在模块层直接导入。其余名字记录在 ``LAZY_MODULES`` 中，由
+``__getattr__`` 在首次访问时导入。原因是 ``akaribot.core.config`` 会在导入期校验配置文件是否存在并执行版本
 迁移，而门面必须能在配置就绪之前导入：CLI 读取 API 版本、发现层收集 locale 目录都发生在配置
 加载之前。``__all__`` 是门面承诺的完整清单，与 ``LAZY_MODULES`` 收录的名字一致。
 """
@@ -351,7 +351,7 @@ try:
     from akaribot.core.config.decorator import on_bot_config, on_module_config
     from akaribot.core.config.network import proxy, ssl_verify
 
-    # 数据库：定义模块模型、声明包内迁移与使用核心数据表。
+    # 数据库：定义模块模型、声明包内迁移、使用核心数据表。
     from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
     from akaribot.core.database.base import DBModel
     from akaribot.core.database.migration import MigrationContext
@@ -435,7 +435,7 @@ try:
         web_render,
     )
 except ConfigFileNotFound:
-    # 配置缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试；其余异常照常抛出。
+    # 配置缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。其余异常照常抛出。
     pass
 
 # 名称到来源模块的映射。仅在配置缺失导致上面的导入中断时使用。
@@ -633,7 +633,7 @@ def __getattr__(name: str) -> Any:
     """
     按来源索引导入单个门面名字。
 
-        配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试；重试仍失败则原样抛出
+        配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出
         ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
         经过本函数。
 
@@ -641,7 +641,7 @@ def __getattr__(name: str) -> Any:
         :return: 名字对应的对象。
         :raises AttributeError: 该名字不在门面承诺的清单内。
     """
-    # 配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试；重试仍失败则原样抛出
+    # 配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出
     # ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
     # 经过本函数。
     module_path = _LAZY_INDEX.get(name)

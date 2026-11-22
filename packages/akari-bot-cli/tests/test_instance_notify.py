@@ -1,8 +1,8 @@
 """CLI 侧包变更通知：结果解析与卸载顺序。
 
-``Instance.notify_package_change`` 只解析 core 入口回传的 JSON，不 import core；本文件把子进程
-结果替换成固定的 ``CompletedProcess``，在不启动真实实例的前提下断言「未运行 / 投递失败 / 远端
-拒绝 / 超时」的分支、卸载阻塞判定，以及 ``module remove`` 在热拆卸未确认时不得执行 uv uninstall。
+``Instance.notify_package_change`` 只解析 core 入口回传的 JSON，不导入 core。本文件把子进程
+结果替换成固定的 ``CompletedProcess``，在不启动真实实例的前提下检查“未运行 / 投递失败 / 远端
+拒绝 / 超时”的分支、卸载阻塞判定，以及 ``module remove`` 在热拆卸未确认时不得执行 uv uninstall。
 """
 
 import contextlib
@@ -25,7 +25,7 @@ DIST = "akari-bot-module-dice"
 
 
 def _use_cli_locale() -> None:
-    # 测试框架在每个用例前重跑 ``load_modules()``，它会把当前快照连到 core 的命名空间；而 CLI 的
+    # 测试框架在每个用例前重跑 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的
     # ``Locale`` 按当前快照取键，不切回来就只会拿到键名。生产里 CLI 进程不加载 core，无此问题。
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
@@ -82,7 +82,7 @@ async def _test_rejected_surfaces_reason_and_blocks():
             },
             returncode=4,
         )
-    # 只看 returncode 既给不出「远端拒绝」的状态，也丢掉了 core 给出的具体原因。
+    # 只看 returncode 既给不出“远端拒绝”的状态，也丢掉了 core 给出的具体原因。
     return (
         result.attempted
         and not result.delivered
@@ -259,7 +259,7 @@ async def _test_remove_uninstalls_after_confirmed_detach():
         {"ok": True, "status": "delivered", "remote": "server.post_package_remove", "result": True, "detail": ""},
         0,
     )
-    # 卸载可能跑上几分钟，必须走实时转发，否则界面上看不出「正在卸」还是「卡住了」。
+    # 卸载可能持续几分钟，必须走实时转发，否则界面上看不出“正在卸”还是“卡住了”。
     return code is None and len(calls) == 1 and DIST in calls[0] and "uninstall" in calls[0] and streamed == [True]
 
 
@@ -350,7 +350,7 @@ async def _test_update_detaches_before_reloading():
         _notify_payload("delivered", "server.post_package_remove"),
         _notify_payload("delivered", "server.post_package_install"),
     )
-    # 先热拆卸旧代际再热装载，否则服务端会以「包已注册」拒绝，更新永远落不到运行态。
+    # 先热拆卸旧代际再热装载，否则服务端会以“包已注册”拒绝，更新永远落不到运行态。
     return (
         remotes == ["server.post_package_remove", "server.post_package_install"]
         and payload["updated"] == [DIST]
@@ -364,7 +364,7 @@ async def _test_update_skips_reload_when_detach_unconfirmed():
         _notify_payload("rejected", "server.post_package_remove"),
         _notify_payload("delivered", "server.post_package_install"),
     )
-    # 旧代际没拆掉就不必再投递热装载（必被拒），但要把「需要重启」如实写进结果。
+    # 旧代际没拆掉就不必再投递热装载（必被拒），但要把“需要重启”如实写进结果。
     return (
         remotes == ["server.post_package_remove"]
         and payload["updated"] == [DIST]
@@ -379,7 +379,7 @@ async def _test_update_does_not_detach_adapters():
         _notify_payload("delivered", "server.post_package_install"),
         kind="adapter",
     )
-    # 适配器不支持整包热换，沿用「装好后提示重启」的既有语义，不投递拆卸。
+    # 适配器不支持整包热换，沿用“装好后提示重启”的既有语义，不投递拆卸。
     return remotes == ["server.post_package_install"] and payload["restart_required"] is False
 
 

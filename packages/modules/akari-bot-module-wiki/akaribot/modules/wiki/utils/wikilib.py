@@ -396,8 +396,8 @@ class WikiLib:
                 message += "\n" + str(I18NContext("wiki.message.utils.wikilib.get_failed.moegirl"))
             return WikiStatus(available=False, value=False, message=message)
         get_cache_info.site_info = get_json
-        # 须带时区：不带时区的时间会被 Tortoise 当作 UTC 存入，缓存时间凭空提前一个时区差，
-        # 上面的 43200 秒过期判断会因此多留缓存整整一个时区差的时长
+        # 须带时区：不带时区的时间会被 Tortoise 当作 UTC 存入，缓存时间因此提前一个时区差，
+        # 上面的 43200 秒过期判断会多留一个时区差的缓存
         get_cache_info.timestamp = datetime.now(UTC)
         await get_cache_info.save()
         return WikiStatus(
@@ -553,7 +553,7 @@ class WikiLib:
     def _get_revision_content(page_raw: dict) -> str:
         # 从查询结果中取出页面的 Wikitext。
         # MediaWiki 1.32 起内容置于 slots 结构下，更低版本直接置于 revision 上，
-        # 两种结构都要认。
+        # 两种结构都要兼容。
         revisions = page_raw.get("revisions")
         if not revisions:
             return ""
@@ -824,8 +824,8 @@ class WikiLib:
         :param _prefix: iw 前缀，仅用作内部递归调用判断。
         :param _iw: 是否为 iw 模式，仅用作内部递归调用判断。
         :param _search: 是否为搜索模式，仅用作内部递归调用判断。
-        :param session: 消息会话，用作检查结果时使用。
-        :param check_render: 是否使用 MediaWiki parse API 预检查 WebRender 目标。
+        :param session: 消息会话，用于检查结果。
+        :param check_render: 是否使用 MediaWiki parse API 检查 WebRender 目标。
         """
         if title:
             if m := re.match(r"w:c:.*?:(.*)", title) and self.wiki_info.api.find("fandom.com") != -1:
@@ -985,7 +985,7 @@ class WikiLib:
         else:
             # 摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
             # rvslots 自 MediaWiki 1.32 起提供，更低版本会忽略该参数并返回旧式结构，
-            # 故读取时两种结构都要认。
+            # 故读取时要兼容两种结构。
             query_props += ["revisions", "pageprops"]
             query_string.update(
                 {

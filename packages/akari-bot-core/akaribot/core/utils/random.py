@@ -1,5 +1,5 @@
 """机器人内置的随机生成工具。``Random`` 由 ``use_secrets_random`` 配置选择后端，
-``SecureRandom`` 始终使用 ``secrets``，用于密码、令牌和绑定口令等安全凭据。
+``SecureRandom`` 始终使用 ``secrets``，用于密码、令牌和绑定口令等机密信息。
 """
 
 import base64
@@ -176,7 +176,7 @@ class Random:
 
         :param start: 开始值。
         :param stop: 结束值，不包含在范围内。
-        :param step: 递增次数。
+        :param step: 步长。
         :return: 符合条件的随机整数。
         """
         return cls._backend.randrange(start, stop, step)

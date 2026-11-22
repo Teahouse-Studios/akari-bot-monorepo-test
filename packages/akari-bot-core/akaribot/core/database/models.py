@@ -34,19 +34,19 @@ UNION_ID_PREFIXES = {
 }
 
 # Union 的绑定、合并、删除与更新属同一 mutation 域，共用一把进程内锁。
-# MySQL 路径仍在事务内锁住核心行，覆盖 Web 与 Server 分属进程的情况。
+# MySQL 路径仍在事务内锁定核心行，覆盖 Web 与 Server 分属进程的情况。
 _union_mutation_lock = asyncio.Lock()
 
 
 @asynccontextmanager
 async def union_mutation():
-    """串行执行一段 Union 状态变更；调用方不得在内部再次进入本上下文。"""
+    """串行执行一段 Union 状态变更。调用方不得在内部再次进入本上下文。"""
     async with _union_mutation_lock:
         yield
 
 
 class UnionDeleteBlocked(RuntimeError):
-    """Union 仍被需要先解除外部状态的模块记录引用，不能直接删除。"""
+    """Union 仍被模块记录引用，须先解除外部状态才能删除。"""
 
     def __init__(self, union_id: str, model: type[Model], reason: str):
         self.union_id = union_id
@@ -219,7 +219,7 @@ async def migrate_union_tables(
 
 
 async def rewrite_sender_union_refs(from_union: str, to_union: str) -> None:
-    # 调用方位于 Union mutation 事务中。锁住权限列表所属的 Target 行，避免 Web 与 Server
+    # 调用方位于 Union mutation 事务中。锁定权限列表所属的 Target 行，避免 Web 与 Server
     # 分属不同进程时，一边改写 Union 引用、一边添加管理员而互相覆盖整份 JSON 列表。
     for target in await TargetUnionInfo.all().order_by("union_id").select_for_update():
         changed = False
@@ -341,7 +341,7 @@ class TargetUnionBind(UnionBind):
     @classmethod
     async def list_channels(cls, union_id: str) -> dict[str, int]:
         """
-        取该 union 下「平台场景 ID → 消息通道号」的映射。
+        取该 union 下“平台场景 ID → 消息通道号”的映射。
 
         :param union_id: 场景 union ID。
         """
@@ -353,7 +353,7 @@ class TargetUnionBind(UnionBind):
         """取该 union 下各场景按主动推送顺序排列的绑定行。
 
         :param union_id: 场景 union ID。
-        :return: ``(场景 ID, 消息通道号, 推送优先级)`` 列表，顺序即推送顺序。
+        :return: 由场景 ID、消息通道号与推送优先级构成的列表，顺序即推送顺序。
         """
         rows = await (
             cls.filter(union_id=union_id)
@@ -418,7 +418,7 @@ class UnionInfo(DBModel):
         elif not create:
             return None
 
-        # 只有缺失或损坏的映射路径才进入 mutation 域；正常消息解析仍是无锁查询。
+        # 只有缺失或损坏的映射路径才进入 mutation 域。正常消息解析仍是无锁查询。
         async with union_mutation():
             bind = await bind_model.get_or_none(**{bind_model.id_field: platform_id})
             if not bind:
@@ -632,7 +632,7 @@ class SenderUnionInfo(UnionInfo):
         :return: 拆出后该账号所属的新 union，若无法解绑则为 None。
         """
         async with union_mutation():
-            # 创建新组、改挂映射和继承场景限制名单必须原子完成；否则最后一步失败会留下
+            # 创建新组、改挂映射和继承场景限制名单必须原子完成。否则最后一步失败会留下
             # 一个孤立的新 union，并使账号已经脱离原组但尚未继承全部处罚状态。
             async with in_transaction("default"):
                 current = await SenderUnionInfo.filter(union_id=self.union_id).select_for_update().first()
@@ -647,7 +647,7 @@ class SenderUnionInfo(UnionInfo):
                     blocked=current.blocked,
                     warns=current.warns,
                 )
-                # 先建新组再改挂映射行，全程不出现「账号没有映射行」的中间态。
+                # 先建新组再改挂映射行，全程不出现“账号没有映射行”的中间态。
                 # union_id 不是主键，可通过单条 UPDATE 改挂。
                 await SenderUnionBind.filter(sender_id=sender_id, union_id=self.union_id).update(
                     union_id=union.union_id
@@ -701,7 +701,7 @@ class SenderUnionInfo(UnionInfo):
                     using_db=connection,
                 )
 
-                # 先按冲突取舍将两侧模块数据归拢至一处，再整体改挂到新组；新组为空，第二步不会再产生冲突。
+                # 先按冲突取舍将两侧模块数据合并至一处，再整体改挂到新组。新组为空，第二步不会再产生冲突。
                 await migrate_union_tables(
                     fresh_other.union_id,
                     fresh_self.union_id,
@@ -790,7 +790,7 @@ class TargetUnionInfo(UnionInfo):
 
     async def link_peer_bots(self, links: dict[str, dict[str, str]]) -> bool:
         """
-        登记机器人互认记录。
+        记录机器人互认关系。
 
         :param links: ``{观察方场景 ID: {对端场景 ID: 对端机器人在观察方平台的账号}}``。
         """
@@ -838,12 +838,12 @@ class TargetUnionInfo(UnionInfo):
         """原子地把单个平台场景移到另一条消息通道。
 
         :param target_id: 要移动的平台场景 ID。
-        :param channel_id: 目标通道号；为 ``None`` 时新建一条通道。
-        :return: 实际通道号；场景或所属 Union 已不存在时为 ``None``。
+        :param channel_id: 目标通道号，为 ``None`` 时新建一条通道。
+        :return: 实际通道号，场景或所属 Union 已不存在时为 ``None``。
         """
         async with union_mutation():
             # Union 事务统一先锁核心行、再锁映射行，反序会在 MySQL 下形成死锁环。
-            # 锁住核心行后必须重读映射并验证它未改挂。
+            # 锁定核心行后必须重读映射并验证它未改挂。
             for _attempt in range(2):
                 candidate = await TargetUnionBind.get_or_none(target_id=target_id)
                 if not candidate:
@@ -893,7 +893,7 @@ class TargetUnionInfo(UnionInfo):
 
         :param anchor_target_id: 保留其通道号的平台场景 ID。
         :param other_target_id: 将其完整通道并入锚点通道的平台场景 ID。
-        :return: 合并后的通道号；任一绑定或所属 Union 已不存在、或两者不同组时为 ``None``。
+        :return: 合并后的通道号，任一绑定或所属 Union 已不存在、或两者不同组时为 ``None``。
         """
         target_ids = list(dict.fromkeys([anchor_target_id, other_target_id]))
         async with union_mutation():
@@ -931,7 +931,7 @@ class TargetUnionInfo(UnionInfo):
         """
         async with union_mutation():
             async with in_transaction("default") as connection:
-                # MySQL 下锁住 union 数据行，使不同 server 进程也不能同时从相同最大通道号分配。
+                # MySQL 下锁定 union 数据行，使不同 server 进程也不能同时从相同最大通道号分配。
                 # SQLite 会忽略行锁语义，由外层 asyncio.Lock 保证单 server 进程内的顺序。
                 current = await (
                     TargetUnionInfo.filter(union_id=self.union_id).using_db(connection).select_for_update().first()
@@ -964,7 +964,7 @@ class TargetUnionInfo(UnionInfo):
         :return: 拆出后该场景所属的新 union，若无法解绑则为 None。
         """
         async with union_mutation():
-            # 新组、平台映射和互认记录属于同一次解绑；任一步失败均不能让数据库停在半迁移状态。
+            # 新组、平台映射和互认记录属于同一次解绑。任一步失败均不能让数据库停在半迁移状态。
             async with in_transaction("default") as connection:
                 current = await (
                     TargetUnionInfo.filter(union_id=self.union_id).using_db(connection).select_for_update().first()
@@ -986,7 +986,7 @@ class TargetUnionInfo(UnionInfo):
                     locale=current.locale,
                     using_db=connection,
                 )
-                # 先建新组再改挂映射行，全程不出现「场景没有映射行」的中间态。
+                # 先建新组再改挂映射行，全程不出现“场景没有映射行”的中间态。
                 # 新组仅含该场景，通道号复位为 1。
                 moved = await (
                     TargetUnionBind.filter(target_id=target_id, union_id=self.union_id)
@@ -1056,7 +1056,7 @@ class TargetUnionInfo(UnionInfo):
                     using_db=connection,
                 )
 
-                # 先按冲突取舍将两侧模块数据归拢至一处，再整体改挂到新组；新组为空，第二步不会再产生冲突。
+                # 先按冲突取舍将两侧模块数据合并至一处，再整体改挂到新组。新组为空，第二步不会再产生冲突。
                 await migrate_union_tables(
                     fresh_other.union_id,
                     fresh_self.union_id,
@@ -1551,7 +1551,7 @@ class JobQueuesTable(DBModel):
         return True
 
     async def claim(self, peer_id: str | None = None) -> bool:
-        """原子地将 pending 任务领取为 processing。"""
+        """原子地将 pending 任务认领为 processing。"""
         updated = (
             await type(self)
             .filter(task_id=self.task_id, status="pending")
@@ -1578,7 +1578,7 @@ class JobQueuesTable(DBModel):
         # 若沿用无条件删除，它们会在等待方和执行方自己的超时机制生效前一小时就消失。
         await cls.filter(timestamp__lt=timestamp, status__in=["done", "failed", "timeout"]).delete()
 
-        # 超过全局执行上限的活动任务已不可能合法完成：免回包任务直接删除，
+        # 超过全局执行上限的活动任务已不可能合法完成：无需响应的任务直接删除，
         # 等待型任务先标 timeout 供轮询取得终态。终态删除须在本步之前完成。
         active_timeout = now - timedelta(seconds=cls.ACTIVE_TIMEOUT_SECONDS)
         stale_active = cls.filter(timestamp__lt=active_timeout, status__in=["pending", "processing"])
@@ -1598,7 +1598,7 @@ class JobQueuesTable(DBModel):
         """返回全部任务。"""
         if isinstance(target_peers, str):
             target_peers = [target_peers]
-        # 不附加排序：现有 (target_peer, status) 索引可在达到 limit 后停止扫描；
+        # 不附加排序：现有 (target_peer, status) 索引可在达到 limit 后停止扫描。
         # JobQueue 本身不承诺严格 FIFO，避免为候选批次对全部积压记录建立临时排序表。
         query = cls.filter(target_peer__in=target_peers, status="pending")
         if limit is not None:
@@ -1607,7 +1607,7 @@ class JobQueuesTable(DBModel):
 
 
 class JobQueuePeersTable(DBModel):
-    """JobQueue 进程注册表；租约是在线状态的唯一事实来源。"""
+    """JobQueue 进程注册表。租约是在线状态的唯一事实来源。"""
 
     peer_id = fields.CharField(max_length=128, primary_key=True)
     node_id = fields.CharField(max_length=128, null=True, index=True)
@@ -1658,10 +1658,10 @@ class SchemaMigration(DBModel):
     已应用的数据库迁移记录。
 
     每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动
-    提交，无法把「执行 DDL」与「写版本记录」放进同一事务，因此判断某条 revision 是否已应用
+    提交，无法把“执行 DDL”与“写版本记录”放进同一事务，因此判断某条 revision 是否已应用
     只看本表：迁移必须自行保证可重复执行。
 
-    :param package: 包名，``core`` 或分发包名。
+    :param package: 包名，``core`` 或其他包名。
     :param revision: revision 标识符。
     :param applied_at: 应用时间。
     :param checksum: 迁移文件源码的 sha256，用于发现已应用的迁移被改写。

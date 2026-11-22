@@ -1,6 +1,6 @@
 """``akaribot docs deploy``：provider 解析、确认流程、结果契约与部署记录。
 
-provider 与构建全部替身化；用例不读取真实凭据，也不连接 Vercel 或 S3。
+provider 与构建全部替身化。用例不读取真实登录信息，也不连接 Vercel 或 S3。
 """
 
 import json

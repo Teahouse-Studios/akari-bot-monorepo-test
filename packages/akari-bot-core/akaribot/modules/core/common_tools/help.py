@@ -138,7 +138,7 @@ def build_clickable_modules(msg: Bot.MessageSession, groups: list[tuple[str, lis
 
     :param msg: 消息会话。
     :param groups: (标题多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
-    :return: 消息元素列表；所有组皆空时返回空片段，空态文案由调用方负责。
+    :return: 消息元素列表。所有组皆空时返回空片段，空态文案由调用方负责。
     """
     prefix = msg.session_info.prefixes[0]
     parts = []
@@ -168,7 +168,7 @@ def end_inline_run(chain: MessageChain) -> None:
 
     可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行
     （见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。
-    该规则本是为「文字 + 标签 + 收尾文字」这类同出一句话的场合而设，跨消息元素时却会
+    该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会
     把调用方随后追加的提示语粘在最后一个模块名之后。补一个纯文本片段即可断开连排。
 
     片段取一个空格而非空串：消息链会把空文本换成错误提示（见
@@ -191,14 +191,14 @@ def build_module_table(
     """
     把若干组模块名排成一张 markdown 表。
 
-    各组同处一张表，组与组之间以一行只填组名的区隔行分开；首组的组名即表头。表格至多
+    各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多
     :data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，
     模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。
 
     ``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。
     此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。
 
-    模块名做成指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能落在单元格
+    模块名做成指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格
     中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
     ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``）：整张表因此累积成一个文本块，
     竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**
@@ -209,7 +209,7 @@ def build_module_table(
     :param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
     :param include_help_header: 是否在模块表格内加入 help 顶栏。
     :param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。
-    :return: 消息元素列表；所有组皆空时返回空片段，空态文案由调用方负责。
+    :return: 消息元素列表。所有组皆空时返回空片段，空态文案由调用方负责。
     """
     locale = msg.session_info.locale
     prefix = msg.session_info.prefixes[0]
@@ -331,13 +331,13 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
     :param msg: 消息会话。
     :param help_doc: :meth:`CommandParser.return_json_help_doc` 的产出。
     :param regex_rows: (正则表达式， 说明) 序列。
-    :return: 消息元素列表；无任何内容时返回空片段。
+    :return: 消息元素列表。无任何内容时返回空片段。
     """
     locale = msg.session_info.locale
     args = help_doc.get("args") or []
     options = help_doc.get("options") or []
 
-    # 每节为 (区隔行文案， [(种类， 首列， 次列), ...])；命令一节不带区隔行。
+    # 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。
     # 种类决定首列如何落到单元格里：command 做成指令操作，code 已是成型的行内代码，
     # text 则照常转义。
     sections = []
@@ -390,7 +390,7 @@ def get_help_link_buttons(msg: Bot.MessageSession, include_modules: bool = True)
     """构造帮助菜单底部的三个入口按钮：模块列表、在线文档、关于我们。
 
     :param msg: 消息会话。
-    :return: （标签， 命令）序列；会话不具备按钮能力时为空列表。
+    :return: （标签， 命令）序列。会话不具备按钮能力时为空列表。
     """
     if not msg.session_info.support_button:
         return []
@@ -414,7 +414,7 @@ def get_setup_button_data(msg: Bot.MessageSession) -> list[ButtonRows]:
     """构造帮助菜单底部直达设置面板的按钮。
 
     :param msg: 消息会话。
-    :return: 按钮数据；会话不具备按钮能力时为空列表。
+    :return: 按钮数据。会话不具备按钮能力时为空列表。
     """
     if not msg.session_info.support_button:
         return []
@@ -739,7 +739,7 @@ async def help_overview(msg: Bot.MessageSession, img: bool = False, legacy: bool
             ]
 
         if use_table:
-            # 各类模块同处一张表，以一行区隔行分开；表格以纯文本收尾，无须 end_inline_run()
+            # 各类模块同处一张表，以一行区隔行分开。表格以纯文本收尾，无须 end_inline_run()
             help_msg = MessageChain.assign(
                 build_module_table(
                     msg,

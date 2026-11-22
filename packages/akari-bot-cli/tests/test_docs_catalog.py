@@ -70,7 +70,7 @@ def _docs_payload(root: Path) -> dict[str, object]:
                 "pages": [],
             },
         ],
-        "warnings": ["module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未登记"],
+        "warnings": ["module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未记录"],
     }
 
 
@@ -108,7 +108,7 @@ async def _test_parse_docs_payload():
         and pages == [("index.md", "概览"), ("guide/setup.md", "安装"), ("development.md", "安装与开发")]
         and first.pages[1].submenu == "钩子"
         and calls == [("docs", "list", "--json")]
-        and catalog.warnings == ("module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未登记",)
+        and catalog.warnings == ("module-coin: 源码已声明 akaribot.docs 入口，但可编辑安装的元数据未记录",)
     )
 
 

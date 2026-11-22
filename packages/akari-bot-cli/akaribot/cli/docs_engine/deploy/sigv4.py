@@ -1,7 +1,7 @@
 """AWS Signature Version 4 的最小实现。
 
 只覆盖 S3 需要的请求签名：固定签名 ``host``、``x-amz-content-sha256``、``x-amz-date``
-与会话令牌；查询参数按编码后的键值排序，路径段只编码一次。
+与会话令牌。查询参数按编码后的键值排序，路径段只编码一次。
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ _UNRESERVED = "-_.~"
 
 @dataclass(frozen=True)
 class Credentials:
-    """一组 AWS 凭据。
+    """一组 AWS 登录信息。
 
     :param access_key: Access Key ID。
     :param secret_key: Secret Access Key。
-    :param session_token: 临时凭据的会话令牌，长期凭据为空串。
+    :param session_token: 临时登录信息的会话令牌，长期登录信息为空串。
     """
 
     access_key: str
@@ -36,10 +36,10 @@ class Credentials:
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> Credentials:
-        """从环境变量读取凭据。
+        """从环境变量读取登录信息。
 
-        :param environ: 环境变量映射；缺省读取 ``os.environ``。
-        :return: 凭据。
+        :param environ: 环境变量映射。默认为读取 ``os.environ``。
+        :return: 登录信息。
         :raises DocsDeployError: Access Key ID 或 Secret Access Key 缺失。
         """
         source = os.environ if environ is None else environ
@@ -67,7 +67,7 @@ def canonical_uri(path: str) -> str:
 def canonical_query(pairs: Iterable[tuple[str, str]]) -> str:
     """把查询参数编码并按 AWS 规则排序。
 
-    排序依据是编码后的键与值；空值保留为 ``key=``。
+    排序依据是编码后的键与值，空值保留为 ``key=``。
     """
     encoded = sorted((quote(str(key), safe=_UNRESERVED), quote(str(value), safe=_UNRESERVED)) for key, value in pairs)
     return "&".join(f"{key}={value}" for key, value in encoded)
@@ -88,12 +88,12 @@ def sign_request(
 
     :param method: HTTP 方法。
     :param url: 完整请求地址，路径可以已编码。
-    :param credentials: 签名凭据。
+    :param credentials: 签名登录信息。
     :param region: 区域。
     :param service: 服务名，S3 固定为 ``s3``。
     :param headers: 参与签名的附加请求头。
-    :param payload_hash: 请求体的 SHA-256 摘要；缺省按空请求体处理。
-    :param now: 签名时间，缺省取当前 UTC 时间。
+    :param payload_hash: 请求体的 SHA-256 摘要，默认按空请求体处理。
+    :param now: 签名时间，默认取当前 UTC 时间。
     :return: 可直接发送的请求头，含 ``Authorization``、``Host`` 与 ``x-amz-*``。
     """
     parsed = urlsplit(url)

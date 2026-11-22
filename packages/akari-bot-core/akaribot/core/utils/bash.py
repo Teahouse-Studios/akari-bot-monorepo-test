@@ -3,7 +3,7 @@ import locale
 
 
 async def run_sys_command(command: list[str], timeout: float = 10) -> tuple[int, str, str]:
-    """执行系统命令并返回执行结果。此函数仅在安全环境中调用，确保知道你正在干什么。
+    """执行系统命令并返回执行结果。此函数仅在安全环境中调用，调用方须清楚命令的作用。
 
     :param command: 需要执行的命令（List），禁止直接使用用户输入。
     :param timeout: 命令的最大执行时间（默认为 10）。
@@ -15,7 +15,7 @@ async def run_sys_command(command: list[str], timeout: float = 10) -> tuple[int,
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
         encoding = locale.getpreferredencoding(False)
-        # communicate() 返回后进程已结束；默认值仅用于满足返回类型约定。
+        # communicate() 返回后进程已结束。默认值仅用于满足返回类型约定。
         return (
             process.returncode if process.returncode is not None else -1,
             stdout.decode(encoding, errors="ignore").strip(),

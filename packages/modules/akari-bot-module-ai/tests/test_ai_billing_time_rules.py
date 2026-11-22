@@ -18,7 +18,7 @@ def _test_time_rules_use_core_offset():
             "price_cache_read": 20,
             "price_cache_write": 21,
             "price_out": 30,
-            # 23:30 UTC 在核心默认时区 +8 下是周二 07:30，命中该时段；直接按 UTC 判定则不命中。
+            # 23:30 UTC 在核心默认时区 +8 下是周二 07:30，命中该时段。直接按 UTC 判定则不命中。
             "time_rules": [
                 {"time_range": "00:00-08:30", "week": [2], "price_in": 99},
             ],

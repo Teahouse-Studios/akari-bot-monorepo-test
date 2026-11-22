@@ -34,7 +34,7 @@ async def _test_analytics_counts_records_in_window():
 
             await _add_record(hours_ago=1)
             await _add_record(hours_ago=20)
-            # 落在一天窗口之外，不应被计入。
+            # 超出一天窗口，不应被计入。
             await _add_record(hours_ago=30)
 
             after = await endpoint(None, days=1)
@@ -65,7 +65,7 @@ async def _test_analytics_modules_counts_in_window():
             before = await endpoint(None, days=1)
 
             await _add_record(hours_ago=1)
-            # 落在一天窗口之外，不应被计入。
+            # 超出一天窗口，不应被计入。
             await _add_record(hours_ago=30)
 
             after = await endpoint(None, days=1)

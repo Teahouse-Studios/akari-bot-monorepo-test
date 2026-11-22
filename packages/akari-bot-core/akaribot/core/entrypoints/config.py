@@ -1,6 +1,6 @@
 """配置读写入口。
 
-供 CLI 以子进程调用：CLI 不 import core，配置的读取、写入与安装后的补全都在这里完成。
+供 CLI 以子进程调用：CLI 不导入 core，配置的读取、写入与安装后的补全都在这里完成。
 JSON 走 stdout，日志与进度走 stderr。写入一律经 ``CFGManager.edit_write()`` 的原子路径。
 """
 
@@ -20,7 +20,7 @@ PLACEHOLDER_PATTERN = re.compile(r"^<Replace me.*?>$")
 # i18n 快照是否已接上：子进程只在需要注释时接一次。
 _LOCALE_READY = False
 
-# 注释键前缀：与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
+# 配置注释的键前缀：与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
 COMMENT_KEY = "config.comments.{table}.{key}"
 
 
@@ -106,7 +106,7 @@ def _connect_locale() -> None:
 
 
 def _table_values(table: str, document: Mapping[str, Any]) -> list[dict[str, Any]]:
-    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）；占位判定是 schema 与
+    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）。占位判定是 schema 与
     # placeholders 共用的口径，只在这里出现一次。
     table, only_secret = _base_table(table)
     plain = {} if only_secret else document.get(table) or {}
@@ -172,7 +172,7 @@ def _placeholder_report(tables: str | None) -> dict[str, Any]:
     scanned: list[str] = []
     count = 0
     for table in dict.fromkeys(requested):
-        # 表名只用于拼接配置目录下的文件名；含分隔符的名字一律拒绝，读不到目录之外。
+        # 表名只用于拼接配置目录下的文件名。含分隔符的名字一律拒绝，读不到目录之外。
         if "/" in table or "\\" in table:
             failed[table] = "表名含路径分隔符"
             continue
@@ -300,7 +300,7 @@ def _resolve_table(table: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(
@@ -329,12 +329,12 @@ def main(argv: list[str] | None = None) -> int:
     sync.add_argument("--json", action="store_true")
 
     placeholders = sub.add_parser("placeholders", help="统计各表的待填写占位符")
-    placeholders.add_argument("--tables", help="逗号分隔的表名；缺省统计配置目录下的全部表")
+    placeholders.add_argument("--tables", help="逗号分隔的表名。默认统计配置目录下的全部表")
     placeholders.add_argument("--json", action="store_true")
 
     args = parser.parse_args(argv)
 
-    # placeholders 只按文件统计，配置加载失败时仍要能报告损坏的表；其余命令都经配置管理器。
+    # placeholders 只按文件统计，配置加载失败时仍要能报告损坏的表。其余命令都经配置管理器。
     if args.command != "placeholders":
         _bootstrap()
 
@@ -405,12 +405,12 @@ def main(argv: list[str] | None = None) -> int:
         module_name = f"{entry.import_path}.config"
         try:
             importlib.import_module(module_name)
-            # 配置模板在导入时写盘；当前进程启动时还没有这张表，必须重新加载后再读 schema。
+            # 配置模板在导入时写盘。当前进程启动时还没有这张表，必须重新加载后再读 schema。
             from akaribot.core.builtins.config import CFGManager
 
             CFGManager.load()
         except ModuleNotFoundError as exc:
-            # 包没有模块配置模板（bundled core 即如此，其配置由首次运行扫描生成），不是失败。
+            # 包没有模块配置模板（core 内置模块即如此，其配置由首次运行扫描生成），不是失败。
             if exc.name != module_name:
                 raise
             print(f"{args.package} 没有模块配置模板，无需补写。", file=sys.stderr)
@@ -446,7 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyError as exc:
         print(f"配置表不存在：{exc}", file=sys.stderr)
         return 2
-    except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
         print(f"配置操作失败：{exc}", file=sys.stderr)
         return 1
 

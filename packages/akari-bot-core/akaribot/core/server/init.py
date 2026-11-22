@@ -21,7 +21,7 @@ from akaribot.core.utils.bash import run_sys_command
 from .background_tasks import hourly_background_task, start_background_task
 
 # 等待发起重启的客户端重新注册为 ready 的秒数上限。server 与各 bot 子进程一同重启，
-# 提示投递时客户端往往尚未就绪；但重启提示并非关键路径，客户端确已掉线时不应无限等待。
+# 提示投递时客户端往往尚未就绪。但重启提示并非关键路径，客户端确已掉线时不应无限等待。
 RESTART_PROMPT_TIMEOUT = 60
 
 
@@ -54,7 +54,7 @@ async def init_async(start_scheduler=True, send_prompt=True) -> None:
             Logger.warning("Failed to get Git commit hash, is it a Git repository?")
     Logger.info("Initializing database...")
     if not await init_db(generate_schemas=False):
-        # pre-init 已统一完成建表；Server 初始化只负责注册连接和全部模块模型。
+        # pre-init 已统一创建数据表。Server 初始化只负责注册连接和全部模块模型。
         raise RuntimeError("Failed to initialize server database.")
     Logger.success("Database initialized successfully.")
 
@@ -176,8 +176,8 @@ async def load_prompt(locale_load_error, timeout: float | None = None) -> None:
         except asyncio.CancelledError:
             raise
         except Exception:
-            # 重启提示是 best-effort 的辅助信息，不能因为刷新旧会话或平台投递失败
-            # 阻止 Server 完成启动。
+            # 重启提示是尽力而为的辅助信息，刷新旧会话或平台投递失败
+            # 不应阻止 Server 完成启动。
             Logger.exception("Failed to deliver restart prompt.")
 
 

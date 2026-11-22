@@ -1,8 +1,8 @@
 """TOML/JSON 配置文件的存储层。
 
-用户配置文件位于配置目录根部，保持原有 ``<表名>.toml`` 布局。全局默认值镜像存放在
+用户配置文件位于配置目录根部，文件名是 ``<表名>.toml``。全局默认值镜像存放在
 ``global/`` 子目录：文件名可以是 ``<表名>.global.toml`` 或 ``<表名>.global.json``。
-读取时按表递归合并，用户配置覆盖全局默认值；写回只写用户文件，不修改全局默认值。
+读取时按表递归合并，用户配置覆盖全局默认值。写回只写用户文件，不修改全局默认值。
 """
 
 import json
@@ -37,7 +37,7 @@ class TomlStore:
     def __init__(self, path: Path):
         self.path = path
         self.global_path = path / "global"
-        # values 是合并后的只读视图；user_values 才是可写回磁盘的用户配置。
+        # values 是合并后的只读视图，user_values 才是可写回磁盘的用户配置。
         self.values: dict[str, TOMLDocument] = {}
         self.user_values: dict[str, TOMLDocument] = {}
         self._mtimes: dict[str, float] = {}
@@ -177,7 +177,7 @@ class TomlStore:
         if self._watch_lock:
             return
         # 若每次读取配置都对全部文件执行 stat，单次属性访问将产生数十次系统调用，
-        # 代价与「读一个已在内存里的值」完全不成比例。配置改动晚至多 WATCH_INTERVAL 秒生效即可。
+        # 代价与读取一个已在内存里的值完全不成比例。配置改动晚至多 WATCH_INTERVAL 秒生效即可。
         now = time.monotonic()
         if now - self._last_watch < self.WATCH_INTERVAL:
             return
@@ -237,8 +237,9 @@ def _global_table_name(path: Path) -> str:
     return ""
 
 
+# 递归合并全局默认值与用户配置，后者优先。
 def _merge_documents(base: TOMLDocument | None, override: TOMLDocument | None) -> TOMLDocument:
-    """递归合并全局默认值与用户配置，后者优先。"""
+    ""
     if base is None and override is None:
         return document()
     if base is None:

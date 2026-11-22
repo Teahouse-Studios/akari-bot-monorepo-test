@@ -1,4 +1,4 @@
-"""服务端 RPC 实现；调用签名与编码由共享契约统一管理。"""
+"""服务端 RPC 实现。调用签名与编码由共享契约统一管理。"""
 
 import asyncio
 import re
@@ -54,7 +54,7 @@ class JobQueueServer(JobQueueBase):
 
     @classmethod
     async def ensure_target_available(cls, target: str, route: "ServiceRoute | None" = None) -> None:
-        """以权威 Peer Registry 判断 Client 或实例是否仍可接收新任务。"""
+        """以 Peer Registry 为准判断 Client 或实例是否仍可接收新任务。"""
         if target in ("Server", cls.name):
             return
         from .peer import PeerSelector
@@ -125,7 +125,7 @@ async def report_error(method: str, details: str) -> None:
 
 @ServerAPI.post_next_hop.bind(JobQueueServer)
 async def post_next_hop(next_hops: list[str], message: MessageChain | MessageNodes, module_name: str = "") -> bool:
-    """解析下一跳并交给对应平台；跳表值会缩短。"""
+    """解析下一跳并交给对应平台。每次转发后候选项减少一项。"""
     bot = exports["Bot"]
     remaining = list(next_hops)
     while remaining:
@@ -194,7 +194,7 @@ async def get_web_render_status() -> bool:
 # 撑到 WebUI 无法处理的量级。超限只截断，不视为失败。
 WEB_RENDER_TEST_MAX_IMAGES = 16
 WEB_RENDER_TEST_MAX_SOURCE_CHARS = 200_000
-# 渲染测试允许透传的字段；未列出的键一律忽略，避免任意参数进入依赖库的选项模型。
+# 渲染测试允许透传的字段。未列出的键一律忽略，避免任意参数进入依赖库的选项模型。
 WEB_RENDER_TEST_SCREENSHOT_KEYS = (
     "url",
     "content",
@@ -249,8 +249,8 @@ async def _web_render_status_detail() -> dict | None:
     except Exception:
         Logger.exception("Failed to read WebRender status for WebUI.")
         return None
-    # 本地浏览器未就绪且未配置远端时，依赖库直接返回 None；此时仍给出未就绪的状态，
-    # 让前端能区分「读不到状态」与「浏览器没起来」。
+    # 本地浏览器未就绪且未配置远端时，依赖库直接返回 None。此时仍给出未就绪的状态，
+    # 让前端能区分“读不到状态”与“浏览器未启动”。
     return _web_render_status_payload(status if status is not None else {"browser_initialized": False})
 
 
@@ -295,7 +295,7 @@ async def control_web_render(action: Literal["start", "stop", "restart"]) -> dic
     try:
         if action in ("stop", "restart"):
             await close_web_render()
-        # stop 只需浏览器已按请求关闭；start / restart 则以依赖库的初始化结果为准。
+        # stop 只需浏览器已按请求关闭。start / restart 则以依赖库的初始化结果为准。
         ok = True
         if action in ("start", "restart"):
             ok = bool(await init_web_render())
@@ -344,7 +344,7 @@ async def test_web_render(options: dict) -> dict:
 
     status = await _web_render_status_detail()
     if mode == "status":
-        # 只探测可用性：不渲染任何页面，供前端的「测试连接」按钮使用。
+        # 只探测可用性：不渲染任何页面，供前端的“测试连接”按钮使用。
         ok = bool(status and status.get("available"))
         return {
             "ok": ok,
@@ -423,7 +423,7 @@ async def reload_filter_words() -> bool:
     try:
         reload_badword_rules()
     except Exception:
-        # 词库文件可能正被手工编辑；失败时保留旧词库并如实回报，不中断服务端。
+        # 词库文件可能正被手工编辑。失败时保留旧词库并如实回报，不中断服务端。
         Logger.exception("Failed to reload filter words: ")
         return False
     return True
@@ -505,7 +505,7 @@ def _explain_missing_package(dist: str) -> str:
 
 @ServerAPI.post_package_install.bind(JobQueueServer)
 async def post_package_install(dist: str) -> bool:
-    """热装载刚安装好的模块包；未装或被发现层拒绝时返回 False。"""
+    """热装载刚安装好的模块包。未装或被发现层拒绝时返回 False。"""
     entry = _module_package(dist)
     if entry is None:
         Logger.warning(f"Cannot hot install {dist}: {_explain_missing_package(dist)}.")

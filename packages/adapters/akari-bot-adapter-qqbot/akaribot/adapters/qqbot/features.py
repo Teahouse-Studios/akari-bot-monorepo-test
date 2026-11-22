@@ -38,7 +38,7 @@ features = Features(
     use_url_manager=CoreConfig.enable_urlmanager,
 )
 
-# 群主未开启「读取全部消息」权限时，机器人只收到提及自身的消息。
+# 群主未开启“读取全部消息”权限时，机器人只收到提及自身的消息。
 group_disable_read_all_message_features = evolve(
     features,
     support_rss=False,
@@ -63,8 +63,8 @@ def resolve_features(session_info: "SessionInfo", base: Features = features) -> 
     按用户的 markdown 偏好调整平台能力。
 
     :param session_info: 会话信息，其用户 union 承载该偏好。
-    :param base: 覆盖所基于的能力集，供与其他覆盖叠加。
-    :return: 调整后的能力集；无须调整时原样返回 base。
+    :param base: 覆盖所基于的能力集，以便与其他覆盖叠加。
+    :return: 调整后的能力集。无须调整时原样返回 base。
     """
     if not qq_use_markdown or not session_info.sender_union_info:
         return base

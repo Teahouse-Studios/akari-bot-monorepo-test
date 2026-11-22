@@ -96,7 +96,7 @@ def wrap_sender_id(text: str, sender_prefix: str) -> str:
     """
     # 转义前缀中的特殊字符（如 `|`），避免其被当作正则元字符
     sender_prefix = re.escape(sender_prefix)
-    # 负向后瞻断言确保不会重复包装已有的 AT 码；\g<0> 引用整个匹配的字符串
+    # 负向后瞻确保不会重复包装已有的 AT 码。\g<0> 引用整个匹配的字符串
     return re.sub(rf"(?<!<AT:)(?<!<@:){sender_prefix}\|\w+", r"<AT:\g<0>>", text)
 
 

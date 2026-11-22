@@ -1,4 +1,4 @@
-"""管理本机登记过的 AkariBot 实例。"""
+"""管理本机已记录的 AkariBot 实例。"""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def _payload(entry: InstanceEntry, *, default: str) -> dict[str, object]:
 def list_instances(
     as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
 ) -> None:
-    """列出本机登记过的实例及其运行状态与服务策略。"""
+    """列出本机已记录的实例及其运行状态与服务策略。"""
     try:
         registry = _registry()
         entries = registry.load()
@@ -90,7 +90,7 @@ def add_instance(
     name: Annotated[str | None, typer.Option("--name", help=i18n.t("cli.instance_cmd.add.option_name"))] = None,
     locale: Annotated[str | None, typer.Option("--locale", help=i18n.t("cli.instance_cmd.add.option_locale"))] = None,
 ) -> None:
-    """登记一个已存在的实例目录；只记位置，不动实例本身。"""
+    """添加一个已存在的实例目录。只记位置，不动实例本身。"""
     try:
         entry = _registry().add(path, name=name, locale=locale or "")
     except RegistryError as error:
@@ -103,7 +103,7 @@ def remove_instance(
     name: Annotated[str, typer.Argument(help=i18n.t("cli.instance_cmd.arg_name"))],
     yes: Annotated[bool, typer.Option("--yes", "-y", help=i18n.t("cli.common.yes_option"))] = False,
 ) -> None:
-    """删除一条登记；实例目录本身保留。"""
+    """删除一条记录。实例目录本身保留。"""
     if not yes:
         typer.confirm(i18n.t("cli.instance_cmd.remove.confirm", name=name), abort=True)
     try:
@@ -119,7 +119,7 @@ def remove_instance(
 def use_instance(
     name: Annotated[str, typer.Argument(help=i18n.t("cli.instance_cmd.arg_name"))],
 ) -> None:
-    """把某个实例设为缺省：站在实例之外时，命令与界面都按它执行。"""
+    """把某个实例设为默认：在实例之外时，命令与界面都按它执行。"""
     try:
         _registry().set_default(name)
     except RegistryError as error:

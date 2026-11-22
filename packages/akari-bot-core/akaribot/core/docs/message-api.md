@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | `send_message()` | `message_chain`、`quote=True`、`disable_secret_check=False`、`callback=None`、`callback_id=None`、`callback_timeout=1800`、`callback_once=False` | 发送并返回 `FinishedSession` |
 | `finish()` | 参数同 `send_message()`，`message_chain` 可省略 | 发送后抛出 `SessionFinished`。不传链时只结束会话 |
-| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交后立即返回 `None`；消息 ID 由其他接口提供 |
+| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交后立即返回 `None`。消息 ID 由其他接口提供 |
 | `send_private_message()` | `message_chain`、`user_id=None`、`disable_secret_check=False` | 私聊发送，返回消息 ID 列表。空列表表示失败 |
 
 `send_message()` 的 `callback` 在用户引用或点击这条消息后执行，入参是回复的 `MessageSession`。
@@ -69,16 +69,16 @@ async def show(msg: Bot.MessageSession):
 | `wait_reply()` | `message_chain`、`quote=True`、`delete=False`、`timeout=120`、`all_=False`、`append_instruction=True` | 等待对该消息的引用回复 |
 | `wait_anyone()` | `message_chain=None`、`quote=False`、`delete=False`、`timeout=120` | 等待场景内任意成员的消息 |
 
-等待方法都返回新的 `MessageSession`。`wait_confirm()` 返回 `bool`。
+等待消息的方法返回新的 `MessageSession`，`wait_confirm()` 例外，只返回 `bool`。
 
 - 默认超时 120 秒。传 `None` 关闭超时。
 - 超时、取消或无法取得结果时抛出 `WaitCancelException`。
-- 等待期间默认释放执行锁。方法返回前重新获取；重新获取失败按取消处理。
-- `wait_confirm()` 在 `confirm_token` 非 `None` 时进入严格确认模式，必须原样回复这个口令，才算确认。普通模式接受 `confirm_command` 中的确认词；发送 `no` 返回 `False`。
+- 等待期间默认释放执行锁。方法返回前重新获取该锁，获取失败按取消处理。
+- `wait_confirm()` 在 `confirm_token` 非 `None` 时进入严格确认模式，必须原样回复这个口令，才算确认。普通模式接受 `confirm_command` 中的确认词。发送 `no` 返回 `False`。
 - `consume_any_message=True` 时，任意消息都会结束等待，返回值仍按是否为确认词判断。
 - 全局 `no_confirm` 开启时，直接返回 `no_confirm_action`。
 - 平台不支持引用回复时，`wait_reply()` 改用 `wait_next_message()` 或 `wait_anyone()`，并以 `quote=False` 发送提示。`all_=True` 时接受任意成员的回复。
-- `wait_next_message()` 与 `wait_anyone()` 命中的消息仍进入常规 parser。`wait_confirm()` 与 `wait_reply()` 会取走命中的消息，不再交给常规 parser。
+- `wait_next_message()` 与 `wait_anyone()` 命中的消息仍交常规 parser 处理。`wait_confirm()` 与 `wait_reply()` 会取走命中的消息，不再交给常规 parser。
 
 ```python
 from akaribot.core.api import Bot, WaitCancelException
@@ -127,7 +127,7 @@ async def manage(msg: Bot.MessageSession):
 
 主动会话（`FetchedMessageSession`）没有 `session_info.messages`。调用 `as_display()` 前，先检查它是否为空。
 
-- `as_display()` 的 `text_only` 默认是 `False`，`MessageChain.to_str()` 的默认是 `True`。
+- `as_display()` 的 `text_only` 默认是 `False`，`MessageChain.to_str()` 则为 `True`。
 - `add_reaction()`、`remove_reaction()` 作用于触发消息。
 - `grant_permission_group()`、`revoke_permission_group()` 管理平台权限组。
 - `handle_error_signal()` 提交错误信号。

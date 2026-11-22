@@ -1,8 +1,8 @@
 """净室安装验证：用发布形态的 wheel 验证用户侧安装体验（T6.6）。
 
 workspace 的开发期覆盖会丢弃内部版本约束（`[tool.uv.sources]` 让任何约束都能装上），
-因此必须有一处跑「从 wheel 装」的路径：本工具构建全部包，再在全新 venv 里按组合安装，
-最后用 ``PackageRegistry.discover()`` 断言发现结果与兼容性。发布前必跑。
+因此必须有一处走“从 wheel 装”的路径：本工具构建全部包，再在全新 venv 里按组合安装，
+最后用 ``PackageRegistry.discover()`` 检查发现结果与兼容性。发布前必跑。
 
 用法：:
 
@@ -38,8 +38,8 @@ DIST_DIR = REPO_ROOT / "dist"
 CORE = "akari-bot-core"
 CLI = "akari-bot-cli"
 
-# CLI 组合名：只装 CLI wheel，装完逐条跑冒烟命令。这条守的是 P1-1（wheel 干净安装后不得缺依赖）
-# 与 P1-9（--version 可用）；tui --self-check 覆盖包内资源与样式表，冻结产物最容易在这里失败。
+# CLI 组合名：只装 CLI wheel，装完逐条跑基本检查命令。这条守的是 P1-1（wheel 干净安装后不得缺依赖）
+# 与 P1-9（--version 可用）。tui --self-check 覆盖包内资源与样式表，冻结产物最容易在这里失败。
 CLI_COMBO = "cli"
 CLI_SMOKE_COMMANDS: tuple[tuple[str, ...], ...] = (
     ("--version",),
@@ -69,7 +69,7 @@ def _ensure_utf8_stdout() -> None:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
-# 断言脚本：在新环境里执行，输出 JSON 供本工具判定。
+# 检查脚本：在新环境里执行，输出 JSON 供本工具判定。
 PROBE = """
 import json
 from akaribot.core.registry import PackageRegistry as R
@@ -88,7 +88,7 @@ def venv_python(venv: Path) -> Path:
     """返回 venv 里的解释器路径。
 
     :param venv: venv 根目录。
-    :return: 解释器路径；Windows 为 ``Scripts/python.exe``。
+    :return: 解释器路径。Windows 为 ``Scripts/python.exe``。
     """
     if os.name == "nt":
         return venv / "Scripts" / "python.exe"
@@ -100,7 +100,7 @@ def venv_script(venv: Path, name: str) -> Path:
 
     :param venv: venv 根目录。
     :param name: 脚本名，如 ``akaribot``。
-    :return: 脚本路径；Windows 带 ``.exe`` 后缀。
+    :return: 脚本路径。Windows 带 ``.exe`` 后缀。
     """
     if os.name == "nt":
         return venv / "Scripts" / f"{name}.exe"
@@ -129,7 +129,7 @@ def uv_cmd(arguments: list[str], offline: bool) -> list[str]:
 def workspace_members() -> tuple[list[str], list[str]]:
     """列出 workspace 的模块包与适配器包。
 
-    :return: ``(模块分发包名， 适配器分发包名)``。
+    :return: ``(模块包名， 适配器包名)``。
     """
     modules: list[str] = []
     adapters: list[str] = []
@@ -148,11 +148,11 @@ def stage_fresh_wheels(tmp: Path, source: Path | None = None) -> Path:
 
     uv 对 ``--find-links`` 的本地 wheel 按来源路径缓存：同一路径上重建的同名同版本 wheel 会命中
     旧缓存，净室检查因此可能装到上一次的产物（实测把修好的 instance.py 装成了旧内容，检查结果
-    既可能假绿也可能假红）。每次跑换一个全新目录即可绕开缓存；不封索引，依赖仍走 UV_CACHE_DIR，
+    既可能假绿也可能假红）。每次运行时换一个全新目录即可绕开缓存。不封索引，依赖仍走 UV_CACHE_DIR，
     故离线可用。
 
     :param tmp: 本次组合的临时目录。
-    :param source: wheel 来源目录；缺省为本仓库的 ``dist/``，TestPyPI 演练传下载目录。
+    :param source: wheel 来源目录。默认为本仓库的 ``dist/``，TestPyPI 演练传下载目录。
     :return: 存放 wheel 的目录。
     """
     staged = tmp / "wheels"
@@ -168,7 +168,7 @@ def stage_fresh_wheels(tmp: Path, source: Path | None = None) -> Path:
 
 
 def fetch_url(url: str, attempts: int = 6) -> bytes:
-    """带重试地取一个 URL，尊重 429/5xx 的 Retry-After。
+    """取一个 URL，失败时重试，并尊重 429/5xx 的 Retry-After。
 
     :param url: 目标地址。
     :param attempts: 最大尝试次数。
@@ -196,7 +196,7 @@ def fetch_url(url: str, attempts: int = 6) -> bytes:
 def download_release_files(index_url: str, manifest_path: Path, output: Path) -> bool:
     """从索引下载一批已发布产物，并按发行清单核验名称与 SHA256。
 
-    这是「从索引取真实文件再安装」的前半段：TestPyPI 演练必须先证明远端文件与本次构建逐字节一致，
+    这是“从索引取真实文件再安装”的前半段：TestPyPI 演练必须先证明远端文件与本次构建逐字节一致，
     否则后续安装验证的可能是别的产物。
 
     :param index_url: 索引根地址，如 ``https://test.pypi.org``。
@@ -243,7 +243,7 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
 def verify_local_index(index_url: str) -> bool:
     """逐跳确认静态索引可用：根页列出项目、项目页给出产物、产物可下载。
 
-    安装阶段的 404 只表现为「Failed to fetch」，看不出是索引根、项目页还是文件缺失；这一预检把
+    安装阶段的 404 只表现为“Failed to fetch”，看不出是索引根、项目页还是文件缺失。这一步检查把
     失败点连同地址写进日志。
 
     :param index_url: 索引根地址。
@@ -254,7 +254,7 @@ def verify_local_index(index_url: str) -> bool:
     root = index_url.rstrip("/")
     try:
         page = fetch_url(f"{root}/simple/", attempts=1).decode("utf-8", "replace")
-    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
         print(f"[index-preflight] 索引根不可访问：{root}/simple/（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     project = re.search(r'href="([^"/]+)/"', page)
@@ -265,7 +265,7 @@ def verify_local_index(index_url: str) -> bool:
     project_url = f"{root}/simple/{name}/"
     try:
         project_page = fetch_url(project_url, attempts=1).decode("utf-8", "replace")
-    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
         print(f"[index-preflight] 项目页不可访问：{project_url}（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     link = re.search(r'href="([^"]*files/[^"]*)"', project_page)
@@ -280,7 +280,7 @@ def verify_local_index(index_url: str) -> bool:
     except HTTPError as error:
         print(f"[index-preflight] 产物不可下载：{file_url}（HTTP {error.code}）", file=sys.stderr)
         return False
-    except Exception as error:  # noqa: BLE001 - 预检只需打印失败点
+    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
         print(f"[index-preflight] 产物不可下载：{file_url}（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     print(f"[index-preflight] 索引可达：{name} 的产物 {file_url.rsplit('/', 1)[-1]}（{size} 字节）")
@@ -359,7 +359,7 @@ def check_index_combo(index_url: str, offline: bool = False) -> bool:
     """直接从索引安装典型组合，验证索引本身可用（不借助本地 wheel）。
 
     :param index_url: 索引根地址。
-    :param offline: 是否只用本地缓存；对索引安装无意义，保留以统一签名。
+    :param offline: 是否只用本地缓存。对索引安装无意义，保留以统一签名。
     :return: 是否通过。
     """
     name = "index"
@@ -376,7 +376,7 @@ def check_index_combo(index_url: str, offline: bool = False) -> bool:
                     "install",
                     "--python",
                     str(venv_python(venv)),
-                    # 内部包来自被测索引，第三方依赖仍走正式 PyPI；同名冲突时按索引优先级解析。
+                    # 内部包来自被测索引，第三方依赖仍走正式 PyPI。同名冲突时按索引优先级解析。
                     "--index-url",
                     f"{index_url.rstrip('/')}/simple/",
                     "--extra-index-url",
@@ -437,13 +437,13 @@ def build_all(offline: bool = False) -> bool:
 def check_combo(
     name: str, packages: list[str], extras: str = "", offline: bool = False, source: Path | None = None
 ) -> bool:
-    """在全新 venv 里安装一组包并断言发现结果。
+    """在全新 venv 里安装一组包并检查发现结果。
 
     :param name: 组合名，用于输出。
-    :param packages: 要安装的分发包名。
+    :param packages: 要安装的包名。
     :param extras: 追加在 core 上的 extras，如 ``[s3]``。
     :param offline: 是否只用本地缓存，无外网时用。
-    :param source: wheel 来源目录；缺省取本仓库 ``dist/``。
+    :param source: wheel 来源目录。默认取本仓库 ``dist/``。
     :return: 是否通过。
     """
     with tempfile.TemporaryDirectory(prefix="akari-clean-") as tmp:
@@ -513,14 +513,14 @@ def check_combo(
 
 
 def check_cli_combo(offline: bool = False, source: Path | None = None) -> bool:
-    """只装 CLI wheel，跑命令冒烟并做依赖一致性检查。
+    """只装 CLI wheel，跑命令做基本检查，并核对依赖一致性。
 
-    这条与其它组合不同：CLI 不依赖 core，验证点是「干净环境里 CLI 自己能不能跑起来」，
-    安装时缺哪个依赖都会在这里暴露（P1-1 的 click 缺失即此类）。冒烟命令都在临时实例
+    这条与其它组合不同：CLI 不依赖 core，验证点是“干净环境里 CLI 自己能不能跑起来”，
+    安装时缺哪个依赖都会在这里暴露（P1-1 的 click 缺失即此类）。基本检查命令都在临时实例
     目录下执行，不读运行者的真实实例配置。
 
     :param offline: 是否只用本地缓存，无外网时用。
-    :param source: wheel 来源目录；缺省取本仓库 ``dist/``。
+    :param source: wheel 来源目录。默认取本仓库 ``dist/``。
     :return: 是否通过。
     """
     name = CLI_COMBO
@@ -576,14 +576,14 @@ def check_cli_combo(offline: bool = False, source: Path | None = None) -> bool:
             print(checked.stderr[-800:], file=sys.stderr)
             return False
 
-    print(f"[{name}] CLI wheel 冒烟 {len(CLI_SMOKE_COMMANDS)} 条全部退出 0，uv pip check 通过")
+    print(f"[{name}] CLI wheel 基本检查 {len(CLI_SMOKE_COMMANDS)} 条全部退出 0，uv pip check 通过")
     return True
 
 
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     _ensure_utf8_stdout()
@@ -661,7 +661,7 @@ def main(argv: list[str] | None = None) -> int:
     combos["index"] = ([CORE], "")
     index_url = args.local_index_url or args.index_url
     if args.local_index_url:
-        # 静态索引没有本地产物集，只能跑「按索引安装」的两种组合。
+        # 静态索引没有本地产物集，只能跑“按索引安装”的两种组合。
         selected = [args.combo] if args.combo else ["index", "index-all"]
     else:
         selected = [args.combo] if args.combo else [*combos, CLI_COMBO]

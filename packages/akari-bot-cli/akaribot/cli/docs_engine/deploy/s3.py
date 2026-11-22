@@ -1,6 +1,6 @@
 """S3 兼容存储的部署 provider。
 
-同步只比较 ``prefix`` 下的键：本地文件的 MD5 与大小对上远端 ETag 即跳过，其余 PUT 上传；
+同步只比较 ``prefix`` 下的键：本地文件的 MD5 与大小对上远端 ETag 即跳过，其余 PUT 上传。
 ``delete`` 为真时再删除远端多出的键。上传并发执行，单个失败不中断其余文件，最后汇总成一个错误。
 """
 
@@ -107,7 +107,7 @@ class S3Provider:
     ) -> DeployResult:
         """把站点目录同步到存储桶。
 
-        试运行仍会列出一遍远端对象，以便给出准确的上传与删除数量；除列取外不写入远端。
+        试运行仍会列出一遍远端对象，以便给出准确的上传与删除数量。除列取外不写入远端。
         """
         site = _require_site(site_dir)
         local = {item.key: item for item in _scan(site, self._prefix)}

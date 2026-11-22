@@ -7,7 +7,7 @@ from akaribot.core.builtins.config.manager import CFGManager
 
 
 def bootstrap_config() -> None:
-    """加载配置文件；非只读进程先执行版本迁移。
+    """加载配置文件。非只读进程先执行版本迁移。
 
     须在导入任何配置模板之前调用，重复调用无副作用。
     """

@@ -30,7 +30,7 @@ PROJECT = "/tmp/old-project"
 
 
 async def _wait_until(predicate, timeout: float = 1.0) -> bool:
-    # 模态关闭与后台任务完成时间独立，须等待断言条件成立。
+    # 模态关闭与后台任务完成时间独立，须等待检查条件成立。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
@@ -72,7 +72,7 @@ async def _choose(app, pilot, index: int) -> None:
 
 
 async def _test_page_offers_migrate_and_dry_run():
-    # 预演沿用最近一次预览或迁移的源目录，没有可用源目录时禁用；页面本身不放输入框。
+    # 试运行沿用最近一次预览或迁移的源目录，没有可用源目录时禁用。页面本身不放输入框。
     async def body(app, page, pilot, source):
         buttons = [child.id for child in page.query(compat.Button)]
         inputs = len(page.query(compat.Input))
@@ -397,19 +397,19 @@ async def test_tui_misc(tester: Tester):
     _use_cli_locale()
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
-        await tester.test(_test_page_offers_migrate_and_dry_run, "页面放迁移与预演按钮，预演在首次预览前不可用")
+        await tester.test(_test_page_offers_migrate_and_dry_run, "页面放迁移与试运行按钮，试运行在首次预览前不可用")
         await tester.test(_test_click_opens_prompt_and_cancel_is_safe, "点击弹出输入框且取消安全")
         await tester.test(_test_prompt_asks_before_migrating, "输入路径后仍需确认")
         await tester.test(_test_enter_key_submits_prompt, "回车提交输入框")
         await tester.test(_test_cancel_choice_clears_pending, "确认框取消后路径作废")
         await tester.test(_test_switch_page_clears_pending_path, "切页作废待确认的路径")
-        await tester.test(_test_dry_run_option_prints_plan, "先预演只回显计划")
+        await tester.test(_test_dry_run_option_prints_plan, "先试运行只回显计划")
         await tester.test(_test_confirm_within_debounce_is_ignored, "防抖窗口内的确认被忽略")
         await tester.test(_test_failure_keeps_page_usable, "迁移失败后界面仍可用")
         await tester.test(_test_output_panel_hidden_until_output, "无输出时输出区不占屏幕")
         await tester.test(_test_option_row_lists_switches, "开关行默认全不勾且在 80 列内完整可见")
         await tester.test(_test_confirm_hint_lists_switches, "确认框列出本次将下发的开关")
-        await tester.test(_test_switches_ride_along_with_dispatch, "勾选的开关随预演与迁移一起下发")
+        await tester.test(_test_switches_ride_along_with_dispatch, "勾选的开关随试运行与迁移一起下发")
         await tester.test(_test_subprocess_source_appends_dry_run_and_switches, "生产数据源追加 --dry-run 与勾选的开关")
     await tester.test(_test_pending_confirm_windows, "确认闸门的防抖与超时窗口")
     return tester

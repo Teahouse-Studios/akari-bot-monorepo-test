@@ -21,7 +21,7 @@ class CommandToken(str):
 class ArgumentPattern:
     """参数模式类 - 表示命令中的一个参数占位符。
 
-    :param name: 参数的名称，用于标识和匹配结果中引用
+    :param name: 参数的名称，用于标识，并在匹配结果中引用
     """
 
     def __init__(self, name):
@@ -176,8 +176,8 @@ def parse_template(argv: list[str], depth: int = 0) -> list[Template]:
     Template 对象。支持递归处理嵌套的可选参数。
 
     模板语法：
-        - <arg>: 必需参数，用 < > 包括
-        - [option]: 可选参数，用 [ ] 包括
+        - <arg>: 必需参数，用 < > 括起
+        - [option]: 可选参数，用 [ ] 括起
         - [flag <arg>]: 带标志的可选参数
         - {description}: 描述信息，用于生成帮助文本
 
@@ -410,7 +410,7 @@ OPTION_TERMINATOR = "--"
 
 def _split_option_terminator(argv: list[str]) -> tuple[list[str], list[str]]:
     # POSIX 约定（Utility Syntax Guideline 10）：第一个 ``--`` 之后的 token 即使以 ``-`` 开头也
-    # 应视作操作数，故选项匹配只在 ``--`` 之前进行；``--`` 本身不进入任何参数值。
+    # 应视作操作数，故选项匹配只在 ``--`` 之前进行。``--`` 本身不进入任何参数值。
     if OPTION_TERMINATOR in argv:
         index = argv.index(OPTION_TERMINATOR)
         return argv[:index], argv[index + 1 :]
@@ -419,7 +419,7 @@ def _split_option_terminator(argv: list[str]) -> tuple[list[str], list[str]]:
 
 def _find_option(argv: list[str], flag: str, allow_inline: bool = True) -> tuple[int, str | None] | None:
     # 内联值 ``--flag=value`` 仅当 ``allow_inline`` 为真且标志以 ``-`` 开头时启用，按第一个 ``=``
-    # 切分，允许值为空串或自身包含 ``=``；非 ``-`` 开头的标志（如子命令名）只做精确匹配。
+    # 切分，允许值为空串或自身包含 ``=``。非 ``-`` 开头的标志（如子命令名）只做精确匹配。
     if not flag:
         return None
 
@@ -474,8 +474,8 @@ def parse_argv(argv: list[str], templates: list["Template"]) -> MatchedResult:
 
     POSIX 兼容行为：
     - ``--``: 选项终止符，其后的 token 一律按操作数处理（不再作为选项），``--`` 本身丢弃
-    - ``--flag=value`` / ``-p=value``: 带子参数的选项支持内联值，等价于 ``--flag value``；
-      值按第一个 ``=`` 切分，可为空或自身包含 ``=``；无子参数的布尔标志不接受该形式
+    - ``--flag=value`` / ``-p=value``: 带子参数的选项支持内联值，等价于 ``--flag value``。
+      值按第一个 ``=`` 切分，可为空或自身包含 ``=``。无子参数的布尔标志不接受该形式
     - 选项可出现在操作数之间的任意位置（GNU 风格排列），仅第一个 ``--`` 具有特殊含义
 
     示例：
@@ -548,7 +548,7 @@ def parse_argv(argv: list[str], templates: list["Template"]) -> MatchedResult:
 
                     elif a.name == "...":
                         # 可变长参数：可以消耗 0 个或多个参数
-                        # 暂时将其添加到 afters 列表，在剩余参数处理时再处理
+                        # 记入 afters 列表，留待处理剩余参数时一并解析
                         afters.append(Template([a]))
 
                     else:

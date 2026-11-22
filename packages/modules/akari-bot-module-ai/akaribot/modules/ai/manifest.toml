@@ -3,9 +3,9 @@ schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
 assets = "assets"
-# config.py 的 on_module_config("ai") 登记的表。
+# config.py 的 on_module_config("ai") 声明的表。
 config_table = "module_ai"
 config_schema_version = 1
 provides_modules = ["ai"]
-# 重复凭据检查字段：E2B 沙箱服务密钥。
+# 查重用的登录信息字段：E2B 沙箱服务密钥。
 credential_fields = ["e2b_api_key"]

@@ -1,9 +1,9 @@
 """删去非公开符号上的 docstring，并把其中的说明上提为行注释。
 
 规范要求 docstring 只出现在公开 API 上：私有函数、私有类与模块内部实现不需要 docstring，
-它们的「为什么」由行注释承担（见 `AGENTS.md` 的「注释」一节）。
+它们的“为什么”由行注释承担（见 `AGENTS.md` 的“注释”一节）。
 本工具按该规范机械处理，并把 docstring 里**除首行概括与 `:param:` / `:return:` 之外**的散文
-上提为行注释——那些内容往往正是读代码读不出来的约束，直接删掉会丢信息。
+上提为行注释——那些内容往往正是只看代码看不出来的约束，直接删掉会丢信息。
 
 保留不动的：模块级 docstring、`test_*` 入口的 docstring（测试框架把它作为 `DOC:` 输出）、
 以及名字不以 `_` 开头的符号。
@@ -12,7 +12,7 @@
     python tools/codemod_private_docstrings.py            # 只报告
     python tools/codemod_private_docstrings.py --write    # 落盘
 
-退出码：0 正常；2 有文件无法解析。
+退出码：0 正常，2 表示有文件无法解析。
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class FilePlan:
     :param path: 文件路径。
     :param removals: 删除的 docstring 数。
     :param hoisted: 上提为行注释的散文行数。
-    :param text: 改写后的全文；无需改写时为 ``None``。
+    :param text: 改写后的全文。无需改写时为 ``None``。
     """
 
     path: Path
@@ -94,8 +94,8 @@ def docstring_node(node: ast.AST) -> ast.Expr | None:
 def prose_lines(text: str) -> list[str]:
     """取 docstring 中值得保留的散文行。
 
-    首行是概括，`:param:` / `:return:` 等是签名已经表达的信息，都不保留；其余非空行是
-    读代码读不出来的约束，上提为行注释。
+    首行是概括，`:param:` / `:return:` 等是签名已经表达的信息，都不保留。其余非空行是
+    只看代码看不出来的约束，上提为行注释。
 
     :param text: docstring 正文。
     :return: 散文行列表。
@@ -135,14 +135,14 @@ def plan_file(path: Path) -> FilePlan:
             end += 1
         anchor = node.decorator_list[0].lineno if node.decorator_list else node.lineno
         indent = lines[anchor - 1][: len(lines[anchor - 1]) - len(lines[anchor - 1].lstrip())]
-        # 注释落在 docstring 原来的位置（函数体内），缩进取函数体而非 def 行。
+        # 注释放在 docstring 原来的位置（函数体内），缩进取函数体而非 def 行。
         body_indent = f"{indent}    "
         replacement = [f"{body_indent}# {line}\n" for line in prose_lines(doc.value.value)]
         plan.hoisted += len(replacement)
         plan.removals += 1
         plan.details.append(f"{node.name}@{node.lineno}")
         if len(getattr(node, "body", [])) == 1:
-            # 只剩 docstring 的定义删空后会语法错误，补 pass；缩进取函数体而非 def 行。
+            # 只剩 docstring 的定义删空后会语法错误，补 pass。缩进取函数体而非 def 行。
             replacement.append(f"{body_indent}pass\n")
         edits.append((start, end, replacement))
 
@@ -157,7 +157,7 @@ def plan_file(path: Path) -> FilePlan:
 def main(argv: list[str] | None = None) -> int:
     """入口。返回进程退出码。"""
     parser = argparse.ArgumentParser(description="删去非公开符号的 docstring")
-    parser.add_argument("--write", action="store_true", help="落盘；缺省只报告")
+    parser.add_argument("--write", action="store_true", help="写入磁盘。默认只报告")
     args = parser.parse_args(argv)
 
     plans: list[FilePlan] = []

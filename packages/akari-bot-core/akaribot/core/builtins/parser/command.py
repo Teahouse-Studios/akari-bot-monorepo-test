@@ -104,10 +104,10 @@ class CommandParser:
         :param module_name: 模块名称
         :param msg: 消息会话对象（用于权限检查）
         :param is_superuser: 是否为超级用户（如为 None 则从会话自动检测）
-        :param is_admin: 是否为场景管理员。为 None 时不过滤管理员命令，保持命令解析行为；
+        :param is_admin: 是否为场景管理员。为 None 时不过滤管理员命令，保持命令解析行为。
             传入布尔值则据其过滤 ``required_admin`` 命令，供帮助文档按权限展示
         :param include_restricted: 是否保留当前会话无权使用的命令。执行命令时保留，由
-            ``COMMAND_BEFORE_EXECUTE`` 策略判定权限；帮助展示与可用性判断需要过滤
+            ``COMMAND_BEFORE_EXECUTE`` 策略判定权限。帮助展示与可用性判断需要过滤
         """
         self.command_prefixes = command_prefixes
 
@@ -184,7 +184,7 @@ class CommandParser:
             return ""
 
         if locale:
-            # 换语言渲染仍须保留会话的术语作用域，故用派生接口而非新建 Locale。
+            # 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
             locale = self.lang.with_locale(locale)
         else:
             locale = self.lang
@@ -248,7 +248,7 @@ class CommandParser:
             return {}
 
         if locale:
-            # 换语言渲染仍须保留会话的术语作用域，故用派生接口而非新建 Locale。
+            # 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
             locale = self.lang.with_locale(locale)
         else:
             locale = self.lang
@@ -311,7 +311,7 @@ class CommandParser:
         :param command: 用户输入的完整命令字符串（不包括前缀）
         :return: (CommandMeta, 参数字典) 元组
                  - CommandMeta: 匹配的命令元数据
-                 - 参数字典： 解析后的参数，如果无参数则为 None
+                 - 参数字典：解析后的参数，如果无参数则为 None
         :raises InvalidCommandFormatError: 如果命令格式不正确或无法匹配任何模板
         """
         if not self.args:

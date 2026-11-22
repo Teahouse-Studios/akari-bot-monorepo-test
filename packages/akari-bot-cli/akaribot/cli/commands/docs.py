@@ -1,6 +1,6 @@
 """文档站点命令：列目录、构建、预览、部署与清理。
 
-业务实现都在 :mod:`akaribot.cli.docs_engine`；本模块只负责参数解析、确认、输出与退出码。
+业务实现都在 :mod:`akaribot.cli.docs_engine`。本模块只负责参数解析、确认、输出与退出码。
 ``--json`` 模式下 stdout 只承载结果 JSON，提示与警告一律走 stderr。
 """
 
@@ -62,7 +62,7 @@ app = typer.Typer(help=i18n.t("cli.docs.help"))
 
 
 def _render_error(error: DocsError) -> str:
-    # ``i18n.t`` 的形参名为 ``key``；引擎的 unknown_key 以 ``key=`` 传参，直接展开会与形参重名。
+    # ``i18n.t`` 的形参名为 ``key``。引擎的 unknown_key 以 ``key=`` 传参，直接展开会与形参重名。
     params = dict(error.params)
     if "key" in params:
         params["name"] = params.pop("key")
@@ -294,7 +294,7 @@ def _build_site(
 
 
 def _confirm(text: str, *, as_json: bool) -> None:
-    # click 会把读入的答案回显到 stdout；JSON 模式下整段改道 stderr，保证结果行不被污染。
+    # click 会把读入的答案回显到 stdout。JSON 模式下整段改道 stderr，保证结果行不被污染。
     if as_json:
         with contextlib.redirect_stdout(sys.stderr):
             typer.confirm(text, abort=True)
@@ -350,7 +350,7 @@ def list_docs(
     as_json: JsonOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """列出参与构建的包与页面；``--json`` 同时给出配置、工具链与最近状态。"""
+    """列出参与构建的包与页面。``--json`` 同时给出配置、工具链与最近状态。"""
     target = require_instance(instance)
     try:
         config = load_config(target)
@@ -392,8 +392,8 @@ def build_docs(
 ) -> None:
     """生成站点源文件并调用 VitePress 构建。
 
-    默认构建全部包；``--package`` 可重复或逗号分隔，指定后只构建列出的包。人类模式实时打印阶段与
-    子进程输出；``--json`` 的 stdout 只输出一行结果，构建日志放在 ``log`` 字段并同步写入 stderr。
+    默认构建全部包。``--package`` 可重复或逗号分隔，指定后只构建列出的包。人类可读模式实时打印阶段与
+    子进程输出。``--json`` 的 stdout 只输出一行结果，构建日志放在 ``log`` 字段并同步写入 stderr。
     """
     target = require_instance(instance)
     keys = None if all_packages else (split_names(package) or None)
@@ -546,7 +546,7 @@ def dev_docs(
 ) -> None:
     """监听文档与主题改动，在临时目录里运行 VitePress dev，直到 Ctrl+C。
 
-    ``--package`` 只监听列出的包；``--port`` 被占用时自动改用系统分配的端口。``--json`` 输出
+    ``--package`` 只监听列出的包。``--port`` 被占用时自动改用系统分配的端口。``--json`` 输出
     逐行事件（``stage`` / ``sync`` / ``ready`` / ``warn`` / ``error`` / ``stopped``），子进程日志
     写入 stderr。
     """

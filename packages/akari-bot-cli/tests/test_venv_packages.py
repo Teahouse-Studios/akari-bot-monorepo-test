@@ -1,8 +1,8 @@
 """``akaribot venv add/remove/status``：环境里的全部包与清单记录的运行库。
 
-这一组命令是 uv 的薄封装：``add`` / ``remove`` 装卸运行库，``--save`` 决定要不要记进实例清单
-（``akaribot.toml`` 的 ``runtime.requirements``，环境重建时按它补装）。用例不真的跑 uv：命令执行器
-与探测结果都注入替身，只断言 argv、清单写回与 JSON 形态。
+这一组命令是 uv 的薄封装：``add`` / ``remove`` 装卸运行库，``--save`` 决定是否记进实例清单
+（``akaribot.toml`` 的 ``runtime.requirements``，环境重建时按它补装）。用例不实际执行 uv：命令执行器
+与探测结果都注入替身，只检查 argv、清单写回与 JSON 形态。
 """
 
 import io
@@ -26,7 +26,7 @@ def _use_cli_locale() -> None:
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
-# 记录 uv 调用，不真的执行；dry_run 与 verbose 与真实执行器同名，命令层会原样传进来。
+# 记录 uv 调用，不实际执行。dry_run 与 verbose 与真实执行器同名，命令层会原样传进来。
 class _FakeRunner:
     # 命令层自行构造执行器，故按构造顺序留一份引用，供用例读回实际 argv。
     created: list["_FakeRunner"] = []
@@ -208,7 +208,7 @@ def _test_remove_absent_fails():
 
 
 def _test_recreate_reinstalls_recorded_requirements():
-    # 记录在清单里的运行库要跟着环境重建走；没有记录时不多发一次 uv 调用。
+    # 清单里记录的运行库随环境重建一并补装。没有记录时不额外调用 uv。
     with TemporaryDirectory(prefix="akari-venv-") as raw:
         root = Path(raw)
         instance = _instance(root, requirements=("httpx>=0.27", "git+https://github.com/psf/requests"))

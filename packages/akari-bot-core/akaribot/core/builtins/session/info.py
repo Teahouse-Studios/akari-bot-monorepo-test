@@ -74,7 +74,7 @@ class EventInfo:
     target_id: str | None = None
     target_from: str | None = None
     client_name: str | None = None
-    # 多实例的平台两段，语义同 SessionInfo；默认实例下分别等于 client_name 与 target_from。
+    # 多实例的平台两段，语义同 SessionInfo。默认实例下分别等于 client_name 与 target_from。
     platform_name: str = ""
     platform_from: str = ""
     owner_peer_id: str | None = None
@@ -165,10 +165,10 @@ class SessionInfo:
     target_from: str
     client_name: str
     # 多实例的平台两段（纯字符串以便跨进程序列化）：默认实例下分别等于 client_name 与
-    # target_from，四元组判据退化为改造前的两段；缺失时按同一规则补齐。
+    # target_from，四元组判据退化为两段。缺失时按同一规则补齐。
     platform_name: str = ""
     platform_from: str = ""
-    # 与平台 SDK 上下文绑定的入站会话必须回到原始 Client 实例；
+    # 与平台 SDK 上下文绑定的入站会话必须回到原始 Client 实例。
     # 主动会话留空以使用服务组 anycast。
     owner_peer_id: str | None = None
     sender_id: str | None = None
@@ -201,7 +201,7 @@ class SessionInfo:
     support_markdown_toggle: bool = False
     timestamp: float | None = None
     session_id: str | None = None
-    # 场景 union 由 assign() 解析，解析不出即抛错，故此后必定有值；
+    # 场景 union 由 assign() 解析，解析不出即抛错，故此后必定有值。
     # 用户 union 则不同，没有 sender_id 的会话（如主动推送）本就没有它。
     target_union_info: TargetUnionInfo = field(default=None)
     sender_union_info: SenderUnionInfo | None = None
@@ -211,8 +211,8 @@ class SessionInfo:
     target_channel_id: int = 1
     banned_users: list | None = None
     custom_admins: list | None = None
-    # 会话一律经 assign() 建立，其中必定按场景语言赋值；此处的默认值仅用于
-    # 反序列化等缺省情形，故声明为非可选，免去各调用点无谓的判空。
+    # 会话一律经 assign() 建立，其中必定按场景语言赋值。此处的默认值仅用于
+    # 反序列化等未赋值情形，故声明为非可选，免去各调用点无谓的判空。
     locale: Locale = field(factory=lambda: Locale(default_locale))
     _tz_offset: str | None = None
     timezone_offset: timedelta | None = None
@@ -220,7 +220,7 @@ class SessionInfo:
     display_timezone_offset: timedelta | None = None
     bot_name: str | None = None
     bot_id: str | None = None
-    # 平台按当前场景返回的权限快照；由 MessageSession.check_bot_state() 写入。
+    # 平台按当前场景返回的权限快照。由 MessageSession.check_bot_state() 写入。
     bot_state: BotState | None = None
     muted: bool | None = None
     enabled_modules: list | None = None
@@ -233,7 +233,7 @@ class SessionInfo:
     next_hops: list[str] = field(factory=list)
     ctx_slot: int | None = 0
     fetch: bool = False
-    # 是否为私聊场景。由平台适配器在构造会话时判定，各平台对「私聊」的表达互不相同
+    # 是否为私聊场景。由平台适配器在构造会话时判定，各平台对“私聊”的表达互不相同
     # （QQ 为 Private、Discord 为 DM 频道、QQ 官方分 C2C 与频道私信等），核心不作推断。
     is_private: bool = False
     require_enable_modules: bool = True
@@ -272,13 +272,13 @@ class SessionInfo:
         """
         用于将参数传入 SessionInfo 对象中。
 
-        :param platform_name: 平台展示名；缺省时取当前进程的 Info.platform_name（平台进程内可用）。
-        :param platform_from: 平台场景前缀；缺省时由 target_from 的客户端段替换而来。
+        :param platform_name: 平台展示名，未提供时取当前进程的 Info.platform_name（平台进程内可用）。
+        :param platform_from: 平台场景前缀，未提供时由 target_from 的客户端段替换而来。
         :return: SessionInfo 对象。
         """
         if target_from is None:
             target_from = Alive.determine_target_from(target_id)
-        # 场景与用户的 union 解析互不依赖，并发发出可省去一半的往返等待；
+        # 场景与用户的 union 解析互不依赖，并发发出可省去一半的往返等待。
         # 主库在远端时这一项按每次往返的网络延迟计。
         target_union_info, sender_union_info = await asyncio.gather(
             TargetUnionInfo.get_by_target_id(target_id, create),
@@ -375,7 +375,7 @@ class SessionInfo:
                 _c.ctx_slot = get_params.get("ctx_slot_index", 999)
                 routed_platform_name = get_params.get("platform_name")
                 if routed_platform_name:
-                    # 主动会话在 server 进程构造，本进程的 Info.platform_name 是 "Server"；
+                    # 主动会话在 server 进程构造，本进程的 Info.platform_name 是 "Server"。
                     # 平台名只能取自被路由到的客户端元数据，否则平台级声明落不到这个会话上。
                     _c.platform_name, _c.platform_from = resolve_platform_identity(
                         _c.target_from, _c.client_name, str(routed_platform_name)
@@ -398,7 +398,7 @@ class SessionInfo:
             self.target_from, self.client_name, self.platform_name, self.platform_from
         )
         # SessionInfo 是入队时快照，其间权限、禁止发言、语言与前缀可能已被改动。
-        # 只替换 ORM 对象而保留派生字段，会让 parser 按入队时的旧状态执行。
+        # 只替换 ORM（对象关系映射）对象而保留生成字段，会让 parser 按入队时的旧状态执行。
         sender_union_info, target_union_info = await asyncio.gather(
             SenderUnionInfo.get_by_sender_id(self.sender_id, create=False) if self.sender_id else _none(),
             TargetUnionInfo.get_by_target_id(self.target_id, create=False) if self.target_id else _none(),
@@ -463,9 +463,9 @@ class SessionInfo:
 
     @property
     def typing_prompt_enabled(self) -> bool:
-        """本会话是否应显示「正在输入……」提示。
+        """本会话是否应显示“正在输入……”提示。
 
-        :return: 是否显示输入提示；无从得知用户偏好时不显示。
+        :return: 是否显示输入提示，无从得知用户偏好时不显示。
         """
         if not self.sender_union_info:
             return False
@@ -475,7 +475,7 @@ class SessionInfo:
     def invalid_module_prompt_enabled(self) -> bool:
         """本会话是否应提示所输入的模块不存在。
 
-        :return: 是否发出提示；场景未设置过时默认发出。
+        :return: 是否发出提示，场景未设置过时默认发出。
         """
         return self.target_union_info.target_data.get("invalid_module_prompt", True)
 
@@ -489,7 +489,7 @@ class SessionInfo:
     def dark_mode(self) -> bool:
         """本会话是否使用深色模式渲染图片。
 
-        :return: 是否使用深色模式；用户未设置过或会话无用户信息时为浅色。
+        :return: 是否使用深色模式，用户未设置过或会话无用户信息时为浅色。
         """
         if not self.sender_union_info:
             return False

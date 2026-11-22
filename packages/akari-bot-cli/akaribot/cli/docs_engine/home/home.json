@@ -97,7 +97,7 @@
     {
       "eyebrow": "开发者",
       "title": "机器人开发者",
-      "description": "想要自己编写模块？想要自己搭建？想为我们做出贡献？请看这里。",
+      "description": "想要自己编写模块？想要自己搭建？想为项目做出贡献？请看这里。",
       "icon": "code",
       "package": "core",
       "page": "module-development.md",

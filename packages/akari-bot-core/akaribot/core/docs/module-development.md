@@ -54,7 +54,7 @@ akari-modules/akari-bot-module-greet/
 
 | 文件 | 用途 |
 | --- | --- |
-| `pyproject.toml` | 分发包名、依赖与 `akaribot.modules` 入口 |
+| `pyproject.toml` | 包名、依赖与 `akaribot.modules` 入口 |
 | `manifest.toml` | 包清单，声明语言目录与提供的模块名 |
 | `akaribot/modules/greet/__init__.py` | 模块声明与命令实现 |
 | `locales/zh_cn.json` | 帮助文本与回复文案 |
@@ -131,7 +131,7 @@ async def test_greet_default(tester: Tester):
 
 生成的文件留在目标目录。切到侧栏的“模块”页，先按 `c` 清除选择，再按 `i` 打开安装对话框。
 
-在输入框里填入刚才生成的包目录，路径用输出区显示的完整路径。按“下一步”。TUI 识别到目录后，安装方式里会出现“可编辑安装本地目录”。选中它，安装就开始。
+在输入框里填入刚才生成的包目录，路径用输出区显示的完整路径。按“下一步”。终端界面（TUI）识别到目录后，安装方式里会出现“可编辑安装本地目录”。选中它，安装就开始。
 
 可编辑安装直接使用这份源码。安装完成后，模块页会刷新列表，`greet` 出现在列表里。
 
@@ -220,7 +220,7 @@ provides_modules = ["dice"]
 | `locales`、`assets` | 语言文件与资源目录，默认 `locales`，相对导入包目录解析 |
 | `migrations`、`config_migrations` | 数据库迁移与配置迁移目录 |
 | `config_table`、`config_schema_version` | 配置表名，新生成配置写入的结构版本，默认 `1` |
-| `provides_modules` | 分发包提供的模块名 |
+| `provides_modules` | 包提供的模块名 |
 | `owned_tables` | 数据清理时归属本包的表 |
 | `credential_fields` | 启动前用于多实例查重的登录信息字段 |
 
@@ -228,7 +228,7 @@ provides_modules = ["dice"]
 
 ## 发现与加载
 
-`PackageRegistry` 读取已安装分发包声明的模块入口，`load_order()` 按依赖关系确定加载顺序。模块只依赖 `akaribot.core.api` 的公开接口。分发包缺少模块声明时，框架才用目录扫描发现模块。
+`PackageRegistry` 读取已安装包声明的模块入口，`load_order()` 按依赖关系确定加载顺序。模块只依赖 `akaribot.core.api` 的公开接口。包缺少模块声明时，框架才用目录扫描发现模块。
 
 JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执行安装、卸载和重载。框架会替换原有的注册项，新注册项在正在运行的任务退出后生效。
 
@@ -391,7 +391,7 @@ async def _(msg: Bot.MessageSession):
 
 ## 正则匹配
 
-命令必须先写命令前缀才能触发。只要消息里出现符合正则的文本，对应的处理函数就会执行。它适合识别链接、编号和固定格式的句子。
+命令必须先写命令前缀才能触发。只要消息里出现符合正则的文本，对应的处理函数就会执行。正则适合识别链接、编号和固定格式的句子。
 
 下面用 bilibili 模块识别 av 号。`bili` 是它的模块实例，换成自己的模块变量即可：
 

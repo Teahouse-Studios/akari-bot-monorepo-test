@@ -20,8 +20,8 @@ SKIPPED = {
     "weekly-rss": "抓取页数多且需图片渲染，耗时过长",
     # 依赖 Google Play 抓取，且在 ip_country 未配置时直接早退。
     "mcbv-rss": "依赖 Google Play 抓取，测试环境直接早退",
-    # 需要真实 wiki 机器人账号凭据。
-    "wiki-bot": "需要真实 wiki 账号凭据",
+    # 需要真实 wiki 机器人账号的登录信息。
+    "wiki-bot": "需要真实 wiki 账号登录信息",
 }
 
 _http: dict[tuple, dict] = {}

@@ -1,9 +1,9 @@
 """自检。
 
-``akaribot doctor`` 的多实例三查：端口冲突、凭据重复、孤立配置（T5.7、上位文档 §3.6）。
+``akaribot doctor`` 的多实例三查：端口冲突、登录信息重复、孤立配置（T5.7、上位文档 §3.6）。
 
-与 T1B.4 的 daemon 前置检查共用同一份实现：优先调用 core 的 ``config conflicts`` 入口，该入口应由
-``bot.py`` 的启动前检查与 CLI 同时调用，判据只有一份；入口不可用时回退到本模块的本地实现，并在输出
+与 T1B.4 的守护进程前置检查共用同一份实现：优先调用 core 的 ``config conflicts`` 入口，该入口应由
+``bot.py`` 的启动前检查与 CLI 同时调用，判据只有一份。入口不可用时回退到本模块的本地实现，并在输出
 中标注实际使用的实现，避免两处判据悄悄分叉。推荐的 core 侧接口：
 
     python -m akaribot.core.entrypoints.config conflicts --json
@@ -14,9 +14,9 @@
                       "message": "…",
                       "detail": {…}}]}
 
-本地判据与 core 一致：只比较已启用实例；凭据比较限定同平台、由 manifest 的 ``credential_fields``
-声明，并豁免空值与 ``<Replace me>`` 占位符；孤立配置只告警不报错。已装包清单不可用时，孤立配置检查
-跳过，凭据检查保守地覆盖全部密钥字段。
+本地判据与 core 一致：只比较已启用实例。登录信息比较限定同平台、由 manifest 的 ``credential_fields``
+声明，并豁免空值与 ``<Replace me>`` 占位符。孤立配置只告警不报错。已装包清单不可用时，孤立配置检查
+跳过，登录信息检查保守地覆盖全部密钥字段。
 
 环境诊断的其余项（Python 版本、venv、缺失配置、迁移未应用、字体）不在本任务范围内。
 """
@@ -55,7 +55,7 @@ from akaribot.cli.commands.adapter import (
 
 CONFLICT_KINDS = frozenset({"port", "credential", "orphan", "config"})
 DEFAULT_LEVELS = {"port": "error", "credential": "error", "orphan": "warning", "config": "error"}
-# 凭据比对不看这些键：它们不是账号凭据，取值相同属于正常。
+# 登录信息比对不看这些键：它们不是账号登录信息，取值相同属于正常。
 CREDENTIAL_EXCLUDED_KEYS = frozenset({"enable"})
 CORE_CONFLICTS_ARGS = ("config", "conflicts", "--json")
 
@@ -67,10 +67,10 @@ class Conflict:
     :param kind: ``port`` / ``credential`` / ``orphan`` / ``config``。
     :param level: ``error`` 会以非零码退出，``warning`` 只提示。
     :param message: 面向用户的一句话结论。
-    :param platform: 相关平台名；跨平台时为多个平台。
+    :param platform: 相关平台名。跨平台时为多个平台。
     :param instances: 相关表名。
     :param detail: 结构化细节，供 ``--json`` 输出。
-    :param render_key: 报告展示用的文案键；空串表示直接用 ``message``（如 core 入口给的结论）。
+    :param render_key: 报告展示用的文案键。空串表示直接用 ``message``（如 core 入口给的结论）。
     :param render_params: 渲染 ``render_key`` 的插值参数。
     """
 
@@ -165,7 +165,7 @@ def _credential_items(
     for name in fields:
         if name in CREDENTIAL_EXCLUDED_KEYS:
             continue
-        # 凭据字段可能落在非密钥表：qqbot 的 qq_bot_appid 就在明文表中
+        # 登录信息字段可能位于非密钥表：qqbot 的 qq_bot_appid 就在明文表中
         value = config.secrets.get(name, config.values.get(name))
         if value is None or is_placeholder(value):
             continue
@@ -197,7 +197,7 @@ def _check_credentials(scan: AdapterScan, registry: AdapterRegistry) -> list[Con
                 level="error" if all_enabled else "warning",
                 platform=platform,
                 message=(
-                    f"凭据重复：{labels}的 {name} 取值相同（已隐藏，长度 {len(normalized)}）{note}"
+                    f"登录信息重复：{labels}的 {name} 取值相同（已隐藏，长度 {len(normalized)}）{note}"
                     "；两个进程会争抢同一账号的消息。"
                 ),
                 instances=tuple(member.table for member in members),
@@ -254,7 +254,7 @@ def fetch_core_conflicts(instance: InstanceLike) -> list[Conflict] | None:
     """调用 core 的 ``config conflicts`` 入口。
 
     :param instance: 目标实例。
-    :return: 结论列表；入口不可用、退出码非零或输出结构不符时返回 ``None``，由调用方回退到本地实现。
+    :return: 结论列表。入口不可用、退出码非零或输出结构不符时返回 ``None``，由调用方回退到本地实现。
     """
     try:
         call = spawn_core(instance, *CORE_CONFLICTS_ARGS)
@@ -297,9 +297,9 @@ def run_checks(
     json_output: bool = typer.Option(False, "--json", help=i18n.t("cli.doctor.option_json")),
     strict: bool = typer.Option(False, "--strict", help=i18n.t("cli.doctor.option_strict")),
 ) -> None:
-    """检查多实例部署的三类冲突：端口冲突、凭据重复、孤立配置。
+    """检查多实例部署的三类冲突：端口冲突、登录信息重复、孤立配置。
 
-    判据优先来自 core 的 ``config conflicts`` 入口（与 daemon 启动前检查共用同一份实现）；入口不可用时
+    判据优先来自 core 的 ``config conflicts`` 入口（与守护进程启动前检查共用同一份实现）。入口不可用时
     使用 CLI 本地实现，输出中会标注实际使用的实现。存在 error 级结论时以非零码退出。
     """
     instance = open_instance()

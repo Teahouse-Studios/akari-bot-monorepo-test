@@ -1,7 +1,7 @@
 """核心表的 v2 变更。
 
 ``target_info`` 增设 ``banned_users``：把封禁状态从 ``target_data.ban`` 拆为独立列，使其可
-单独建索引，并能区分「未封禁」与「字段缺失」，封禁判定无须解析整份场景数据。``analytics_data.sender_id`` 同时改为可空，以容纳无发送者的记录。
+单独建索引，并能区分“未封禁”与“字段缺失”，封禁判定无须解析整份场景数据。``analytics_data.sender_id`` 同时改为可空，以容纳无发送者的记录。
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from akaribot.core.database.migration import MigrationContext
 REVISION = "0002_banned_users_and_nullable_sender"
 DEPENDS_ON = "0001_initial"
 
-# 旧库此时仍是 target_info；若表已改名为 target_union_info，说明库已越过本步骤。
+# 旧库此时仍是 target_info。若表已改名为 target_union_info，说明库已越过本步骤。
 LEGACY_TARGET_TABLE = "target_info"
 
 SQLITE_TARGET_REBUILD = """

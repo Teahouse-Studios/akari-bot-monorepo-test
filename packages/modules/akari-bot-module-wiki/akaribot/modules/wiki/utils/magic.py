@@ -72,7 +72,7 @@ _COLON_FUNCTIONS = {
     "displaytitle",
 }
 _URL_FUNCTIONS = {"fullurl", "canonicalurl", "localurl", "fullurle", "canonicalurle", "localurle", "filepath"}
-# 扩展注册信息只有名称与别名；仅启用已确认不写入 Wiki 的解析函数。
+# 扩展注册信息只有名称与别名。仅启用已确认不写入 Wiki 的解析函数。
 _QUERY_FUNCTIONS = (
     _TITLE_VARIABLES
     | _URL_FUNCTIONS

@@ -1,7 +1,7 @@
 """本机实例注册表与 `akaribot instance` 子命令。
 
-注册表只记位置与策略（开机自启、崩溃重启、最后已知的期望状态），删记录不动实例目录；实例解析在
-站在任何实例之外时回落到注册表里的缺省实例——那正是「这台机器上要管哪一个」的答案。
+注册表只记位置与策略（开机自启、崩溃重启、最后已知的期望状态），删记录不动实例目录。实例解析在任何
+实例之外时回落到注册表里的默认实例——那正是“这台机器上要管哪一个”的答案。
 """
 
 import json
@@ -68,7 +68,7 @@ async def _test_add_list_remove():
 
 
 async def _test_duplicate_root_keeps_existing_entry():
-    # 同一个目录登记两次不该产生两条记录，也不该改掉已有策略。
+    # 同一个目录记录两次不该产生两条记录，也不该改掉已有策略。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         target = _make_instance(base / "one")
@@ -96,7 +96,7 @@ async def _test_add_rejects_non_instance():
 
 
 async def _test_add_parent_lists_child_instances():
-    # 常被指向「装着实例的项目目录」，报错要直接给出可登记的子目录。
+    # 常被指向“装着实例的项目目录”，报错要直接给出可添加的子目录。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         project = base / "project"
@@ -119,7 +119,7 @@ async def _test_add_parent_lists_child_instances():
 
 
 async def _test_register_existing_is_idempotent():
-    # 界面在实例目录里启动时自动登记：重复调用与指向非实例都要原样返回 None，不重复写。
+    # 界面在实例目录里启动时自动记录：重复调用与指向非实例都要原样返回 None，不重复写。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         home = base / "home"
@@ -171,7 +171,7 @@ async def _test_policy_and_default():
 
 
 async def _test_resolution_falls_back_to_default():
-    # 站在任何实例之外时，缺省实例就是「要管哪一个」的答案。
+    # 在任何实例之外时，默认实例就是“要管哪一个”的答案。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         home = base / "home"
@@ -181,7 +181,7 @@ async def _test_resolution_falls_back_to_default():
         with patch.dict(os.environ, {"AKARIBOT_HOME": str(home), "AKARI_INSTANCE_DIR": ""}):
             registry = InstanceRegistry()
             entry = registry.add(target)
-            # add() 会把第一个实例设为缺省，这里直接核对解析结果。
+            # add() 会把第一个实例设为默认，这里直接核对解析结果。
             found = resolve_instance_root(elsewhere)
             registry.remove(entry.name)
             empty = resolve_instance_root(elsewhere)
@@ -236,14 +236,14 @@ async def _test_probe_running_reports_unknown_when_unreadable():
 async def test_instance_registry(tester: Tester):
     """cli.instances: 注册表与 instance 子命令测试"""
     _use_cli_locale()
-    await tester.test(_test_add_list_remove, "登记、列出与移除")
-    await tester.test(_test_duplicate_root_keeps_existing_entry, "同目录重复登记不产生第二条")
-    await tester.test(_test_add_rejects_non_instance, "非实例目录拒绝登记")
-    await tester.test(_test_add_parent_lists_child_instances, "登记父目录时列出可登记的子实例")
-    await tester.test(_test_register_existing_is_idempotent, "自动登记幂等，非实例与重复调用不改注册表")
-    await tester.test(_test_register_existing_keeps_locale, "自动登记沿用实例自身的语言")
-    await tester.test(_test_policy_and_default, "策略与缺省实例写回注册表")
-    await tester.test(_test_resolution_falls_back_to_default, "实例解析回落到缺省实例")
+    await tester.test(_test_add_list_remove, "添加、列出与移除")
+    await tester.test(_test_duplicate_root_keeps_existing_entry, "同目录重复添加不产生第二条")
+    await tester.test(_test_add_rejects_non_instance, "非实例目录拒绝添加")
+    await tester.test(_test_add_parent_lists_child_instances, "添加父目录时列出可添加的子实例")
+    await tester.test(_test_register_existing_is_idempotent, "自动添加幂等，非实例与重复调用不改注册表")
+    await tester.test(_test_register_existing_keeps_locale, "自动添加沿用实例自身的语言")
+    await tester.test(_test_policy_and_default, "策略与默认实例写回注册表")
+    await tester.test(_test_resolution_falls_back_to_default, "实例解析回落到默认实例")
     await tester.test(_test_cli_add_use_policy_remove, "instance 子命令增删改查")
     await tester.test(_test_policy_requires_a_flag, "policy 未给参数时报错")
     await tester.test(_test_probe_running_reports_unknown_when_unreadable, "探测失败按未知处理")

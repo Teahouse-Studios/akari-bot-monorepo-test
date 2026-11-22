@@ -162,7 +162,7 @@ def check_textual_version(pin: str = TEXTUAL_PIN) -> tuple[bool, str]:
 
 # region 宽度计算（中文宽字符对齐）
 
-# 码点数量与终端列宽不同；宽度计算使用与 Textual 一致的 rich.cells。
+# 码点数量与终端列宽不同。宽度计算使用与 Textual 一致的 rich.cells。
 
 
 def cell_width(char: str) -> int:
@@ -176,7 +176,7 @@ def display_width(text: str) -> int:
 
 
 def truncate_cells(text: str, width: int, ellipsis: str = "…") -> str:
-    """按终端列宽截断，保持宽字符完整；被截断时补省略号。
+    """按终端列宽截断，保持宽字符完整。被截断时补省略号。
 
     :param text: 原始文本。
     :param width: 可用的终端列数，小于等于 0 时返回空串。
@@ -242,7 +242,7 @@ def align_rows(rows: Sequence[tuple[str, str]], gap: int = 2, align: str = "left
 
 # region 包内资源与样式表
 
-# 冻结环境中的源文件路径不可用，样式表通过包内资源读取；资源缺失时使用内联样式。
+# 冻结环境中的源文件路径不可用，样式表通过包内资源读取。资源缺失时使用内联样式。
 
 
 def read_resource_text(package: str, resource: str) -> str | None:
@@ -250,7 +250,7 @@ def read_resource_text(package: str, resource: str) -> str | None:
 
     :param package: 包名，如 ``akaribot.cli.tui``。
     :param resource: 包内相对路径，如 ``app.tcss``。
-    :return: 资源文本；资源缺失或当前打包形态不提供可读资源时返回 ``None``。
+    :return: 资源文本。资源缺失或当前打包形态不提供可读资源时返回 ``None``。
     """
     try:
         target = importlib.resources.files(package).joinpath(resource)
@@ -407,7 +407,7 @@ def key_display(key: str) -> str:
 
 
 def key_hint(label: str, key: str) -> str:
-    """按钮文字后附快捷键，如「安装 i」。"""
+    """按钮文字后附快捷键，如“安装 i”。"""
     return f"{label} {key_display(key)}"
 
 
@@ -415,7 +415,7 @@ def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[
     """批量构造快捷键绑定。
 
     :param items: 三元组 ``(key, action, description)`` 或含 ``show`` 的四元组。
-    :return: 绑定列表；``show=False`` 的快捷键不在页脚显示。
+    :return: 绑定列表。``show=False`` 的快捷键不在页脚显示。
     """
     result: list[BindingType] = []
     for item in items:
@@ -431,7 +431,7 @@ CONFIRM_DEBOUNCE_SECONDS = 0.4
 class PendingConfirm:
     """确认请求的防抖记录。
 
-    同一目标在防抖窗口内仅接受一次请求；切页、刷新或选择变化时应清除记录。
+    同一目标在防抖窗口内仅接受一次请求。切页、刷新或选择变化时应清除记录。
     """
 
     # 允许测试调整防抖窗口，避免依赖固定的实际等待时间。
@@ -465,13 +465,13 @@ def rebuild_rows(list_view: ListView, labels: Sequence[str], index: int | None) 
     """重建列表条目并把高亮落到 ``index`` 行。
 
     页面直接 ``clear()`` + ``extend()`` + 设 ``index`` 有一个时序陷阱：``clear()`` 的移除是异步的，
-    不 await 就挂新条目时 ``ListView._nodes`` 里仍是待删除的旧条目，``index`` 的赋值会把高亮打在旧行上；
+    不 await 就挂新条目时 ``ListView._nodes`` 里仍是待删除的旧条目，``index`` 的赋值会把高亮打在旧行上。
     移除完成后的新条目一个高亮都没有——切换选中项后那一行就不再亮起。这里把三步放进 worker 串起来，
     并复用 :func:`highlight_row`。
 
     :param list_view: 目标列表。
     :param labels: 新的条目文本，按显示顺序。
-    :param index: 要高亮的行下标；``None`` 表示不高亮。
+    :param index: 要高亮的行下标。``None`` 表示不高亮。
     """
     list_view.run_worker(_rebuild_rows(list_view, labels, index), group="rebuild-rows", exclusive=True)
 
@@ -488,11 +488,11 @@ def highlight_row(list_view: ListView, index: int | None) -> None:
     """把高亮落到指定行，供重建列表之后调用。
 
     ``ListView`` 只在 ``index`` **变化**时更新高亮（``watch_index``）。页面重建列表（``clear()`` 之后
-    ``extend()``）时新条目一个高亮都没有，而重建后的下标常与重建前相同（刷新、重扫、内容变化），
-    于是选中行不再亮起。这里显式设置目标条目的 ``highlighted``，并同步 ``index``；下标越界按未选中处理。
+    ``extend()``）时新条目都没有高亮，而重建后的下标常与重建前相同（刷新、重扫、内容变化），
+    于是选中行不再亮起。这里显式设置目标条目的 ``highlighted``，并同步 ``index``。下标越界按未选中处理。
 
     :param list_view: 目标列表。
-    :param index: 要高亮的行下标；``None`` 表示不高亮任何行。
+    :param index: 要高亮的行下标。``None`` 表示不高亮任何行。
     """
     items = [child for child in list_view.children if isinstance(child, ListItem)]
     if index is not None and not 0 <= index < len(items):
@@ -531,7 +531,7 @@ def focus_now(widget: Widget) -> bool:
     """同步设置控件焦点。
 
     :param widget: 目标控件。
-    :return: 是否同步设置成功；失败时使用异步聚焦。
+    :return: 是否同步设置成功。失败时使用异步聚焦。
     """
     # 同步聚焦可避免切页时 Textual 将焦点分配给隐藏页面。
     try:
@@ -543,7 +543,7 @@ def focus_now(widget: Widget) -> bool:
 
 
 def focus_first(page: Widget, *selectors: str) -> bool:
-    """聚焦首个可用的候选控件；无可用候选时聚焦页面容器。
+    """聚焦首个可用的候选控件。无可用候选时聚焦页面容器。
 
     :param page: 页面控件。
     :param selectors: 按优先级排列的 CSS 选择器。
@@ -579,7 +579,7 @@ def escape_markup(value: str) -> str:
 
 
 def notify(app: App[Any], message: str, *, severity: str = "information", title: str = "") -> None:
-    """显示通知；未挂载或不支持通知时返回。"""
+    """显示通知。未挂载或不支持通知时返回。"""
     notify_fn = getattr(app, "notify", None)
     if notify_fn is None:
         return
@@ -597,7 +597,7 @@ def push_screen(app: App[Any], screen: Screen[Any] | str, callback: Callable[[An
 
 
 class TextPromptScreen(Screen[str | None]):
-    """单行文本输入的模态框：回车或「确认」提交，「取消」或 Esc 返回 ``None``。
+    """单行文本输入的模态框：回车或“确认”提交，“取消”或 Esc 返回 ``None``。
 
     :param title: 标题。
     :param hint: 操作后果说明。
@@ -708,7 +708,7 @@ def ask_text(
     initial: str = "",
     callback: Callable[[str | None], None],
 ) -> None:
-    """打开单行输入框，通过回调返回输入值；取消时返回 ``None``。"""
+    """打开单行输入框，通过回调返回输入值。取消时返回 ``None``。"""
     screen = TextPromptScreen(
         title=title,
         hint=hint,
@@ -721,7 +721,7 @@ def ask_text(
 
 
 class ChoiceScreen(Screen[str | None]):
-    """多选一的模态框：每个选项一个按钮，Esc 或「取消」返回 ``None``。
+    """多选一的模态框：每个选项一个按钮，Esc 或“取消”返回 ``None``。
 
     :param title: 标题。
     :param hint: 选项说明。
@@ -790,7 +790,7 @@ class ChoiceScreen(Screen[str | None]):
             )
 
     def on_mount(self) -> None:
-        """聚焦首个选项；无选项时聚焦取消按钮。"""
+        """聚焦首个选项。无选项时聚焦取消按钮。"""
         if self.options:
             focus_now(self.query_one("#choice-0", Button))
         else:
@@ -801,7 +801,7 @@ class ChoiceScreen(Screen[str | None]):
         self.call_after_refresh(_fit_dialog, self, "choice")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """返回选项值；取消按钮返回 ``None``。"""
+        """返回选项值。取消按钮返回 ``None``。"""
         button_id = event.button.id or ""
         if button_id == "choice-cancel":
             self.dismiss(None)
@@ -825,12 +825,12 @@ def ask_choice(
     callback: Callable[[str | None], None],
     hint: str = "",
 ) -> None:
-    """弹出多选一的模态框，把选中的取值交给回调；取消时为 ``None``。"""
+    """弹出多选一的模态框，把选中的取值交给回调。取消时为 ``None``。"""
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
 
 
 class _PickList(ListView):
-    # 回车提交对话框；单击只移动高亮，避免误点直接执行。
+    # 回车提交对话框。单击只移动高亮，避免误点直接执行。
     BINDINGS = [Binding("enter", "submit_pick", show=False)]
 
     def action_submit_pick(self) -> None:
@@ -841,7 +841,7 @@ class _PickList(ListView):
 
 
 class PickTextScreen(Screen[tuple[str, str] | None]):
-    """列表选一项并输入一行文本的模态框：确认返回 ``(取值, 文本)``，Esc 或「取消」返回 ``None``。
+    """列表选一项并输入一行文本的模态框：确认返回 ``(取值, 文本)``，Esc 或“取消”返回 ``None``。
 
     输入框获得焦点时 ``↑`` / ``↓`` 仍移动列表高亮，便于边输入边改选。``with_input`` 为假时只选不输，
     文本恒为空串。
@@ -852,8 +852,8 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
     :param confirm_label: 确认按钮文字。
     :param cancel_label: 取消按钮文字。
     :param placeholder: 输入框占位符。
-    :param selected: 初始高亮的取值；不在选项中时高亮首项。
-    :param validate: 接收取值与去除首尾空白的文本，返回错误说明；非空时显示在输入框下方且不关闭。
+    :param selected: 初始高亮的取值。不在选项中时高亮首项。
+    :param validate: 接收取值与去除首尾空白的文本，返回错误说明。非空时显示在输入框下方且不关闭。
     :param with_input: 是否显示输入框。
     """
 
@@ -972,7 +972,7 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
     def _fit(self) -> None:
         if not self.is_mounted:
             return
-        # 输入框占三行；错误提示在窄屏下可能折行，按实际内容计高。
+        # 输入框占三行。错误提示在窄屏下可能折行，按实际内容计高。
         error = self.query_one("#pick-error", Static)
         width = max(self.query_one("#pick-box").content_region.width, 1)
         error_rows = max(error.get_content_height(self.size, self.size, width), 1)
@@ -1015,7 +1015,7 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
         self.dismiss(None)
 
     def submit(self) -> None:
-        """校验并提交高亮项与输入文本；校验失败时显示原因且不关闭。"""
+        """校验并提交高亮项与输入文本。校验失败时显示原因且不关闭。"""
         index = highlighted_index(self.query_one("#pick-list", ListView))
         if index is None or index >= len(self.options):
             return
@@ -1043,7 +1043,7 @@ def ask_pick_text(
     selected: str = "",
     validate: Callable[[str, str], str] | None = None,
 ) -> None:
-    """弹出「选一项并输入文本」的模态框，把 ``(取值, 文本)`` 交给回调；取消时为 ``None``。"""
+    """弹出“选一项并输入文本”的模态框，把 ``(取值, 文本)`` 交给回调。取消时为 ``None``。"""
     screen = PickTextScreen(
         title=title,
         options=options,
@@ -1068,7 +1068,7 @@ def ask_pick(
     hint: str = "",
     selected: str = "",
 ) -> None:
-    """弹出列表单选的模态框，把选中的取值交给回调；取消时为 ``None``。"""
+    """弹出列表单选的模态框，把选中的取值交给回调。取消时为 ``None``。"""
     screen = PickTextScreen(
         title=title,
         options=options,
@@ -1103,7 +1103,7 @@ ButtonSpec = tuple[str, str] | tuple[str, str, str]
 def mounted(widget: Widget) -> bool:
     """判断控件当前是否允许访问子控件。
 
-    应用退出、控件正在移除或已卸载时返回 ``False``；首次挂载期间允许访问。
+    应用退出、控件正在移除或已卸载时返回 ``False``。首次挂载期间允许访问。
     """
     # Textual 先卸载子控件，父控件的 is_mounted 可能尚未更新。
     app = getattr(widget, "app", None)
@@ -1141,7 +1141,7 @@ class RenderGuard:
 def guard_renders(page: Widget) -> None:
     """为页面渲染方法添加生命周期检查。
 
-    页面不可用时跳过渲染并记录统计；页面可用时保留选择器异常。
+    页面不可用时跳过渲染并记录统计。页面可用时保留选择器异常。
     """
     page._tui_mounted_once = False
     page.render_guard = RenderGuard()
@@ -1248,7 +1248,7 @@ class ButtonFlow(Grid):
     def relayout(self, width: int | None = None) -> None:
         """按 ``width`` 重算列数与列宽。
 
-        :param width: 可用列数；缺省取当前控件宽度。
+        :param width: 可用列数。默认取当前控件宽度。
         """
         available = self.size.width if width is None else width
         if available <= 0:
@@ -1275,7 +1275,7 @@ class ButtonFlow(Grid):
         return widest
 
     def _pack(self, width: int) -> tuple[tuple[str, ...], ...]:
-        # 优先保留语义分组；单组超宽时允许在组内换行。
+        # 优先保留语义分组。单组超宽时允许在组内换行。
         rows: list[list[str]] = []
         current: list[str] = []
         used = 0
@@ -1484,7 +1484,7 @@ def run_app(app: App[Any], *, mouse: bool = True, headless: bool = False) -> Any
     """运行应用。
 
     :param app: 应用实例。
-    :param mouse: 是否请求鼠标追踪；哑终端或 tmux 下可关闭以规避转义序列残留。
+    :param mouse: 是否请求鼠标追踪。哑终端或 tmux 下可关闭以规避转义序列残留。
     :param headless: 是否无头运行，供自检使用。
     :return: ``App.run`` 的返回值。
     """

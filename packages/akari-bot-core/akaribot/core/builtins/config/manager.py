@@ -18,7 +18,7 @@ from akaribot.core.builtins.config.store import TomlStore
 from akaribot.core.constants.exceptions import ConfigNotInitializedError, ConfigOperationError
 from akaribot.core.constants.path import CONFIG_READONLY_ENV, config_path as default_config_path
 
-# 守护进程在 spawn 子进程之前置位，spawn 会继承环境。
+# 守护进程在 spawn 子进程之前设置，spawn 会继承环境。
 CONFIG_READONLY = bool(os.environ.get(CONFIG_READONLY_ENV))
 
 
@@ -27,7 +27,7 @@ def normalize_table(table_name: str | None, secret: bool) -> tuple[str | None, b
 
     :param table_name: 调用方传入的表名。
     :param secret: 调用方传入的密钥标志。
-    :return: (归一化后的表名, 归一化后的密钥标志)。
+    :return: 归一化后的表名与密钥标志。
     """
     if not table_name:
         return table_name, secret
@@ -69,8 +69,8 @@ class ConfigManager:
 
     @classmethod
     def _resolve_table(cls, table_name: str | None, *, fallback: bool = True) -> str | None:
-        # ``Info.instance_id`` 为空时原样返回；多实例下 ``bot_telegram`` 解析为 ``bot_telegram-alt``，
-        # 复用同一份模板。读取取 True，写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
+        # ``Info.instance_id`` 为空时原样返回。多实例下 ``bot_telegram`` 解析为 ``bot_telegram-alt``，
+        # 复用同一份模板。读取时取 True，写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
         from akaribot.core.constants.info import Info
 
         if not table_name or not Info.instance_id or not table_name.startswith("bot_"):
@@ -97,7 +97,7 @@ class ConfigManager:
         """取配置文件名对应的 TOML 文档。
 
         :param name: 配置文件名，不含扩展名。
-        :return: TOML 文档；文件不存在时为 None。
+        :return: TOML 文档，文件不存在时为 None。
         """
         return cls._store.values.get(name)
 
@@ -119,7 +119,7 @@ class ConfigManager:
         """读取平台配置中的 enable 开关。
 
         :param name: 平台名，与 ``bots/`` 下的目录名一致。
-        :return: 开关取值；对应的配置文件或 enable 键不存在时为 None。
+        :return: 开关取值，对应的配置文件或 enable 键不存在时为 None。
         """
         document = cls._store.values.get(f"bot_{name}")
         if not document:
@@ -241,7 +241,7 @@ class ConfigManager:
         :param _generate: 内部变量，生成配置文件时使用。（默认为 False）
         :param _fallback: 内部变量，实例表不存在时是否回退到基表。实例发现读 ``enable`` 时取 False：
             回退会让某个实例看到另一个实例的开关。
-        :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键
+        :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。
 
         :return: 配置文件中对应配置项的值。
         """
@@ -429,7 +429,7 @@ class ConfigManager:
             # 而 CLI 明确知道自己在操作哪个实例。回退会把改动写进基表，串给另一个实例。
             table_name = cls._resolve_table(table_name, fallback=False)
 
-        # 「重新加载 → 修改 → 保存」须在同一个临界区内完整完成。
+        # “重新加载 → 修改 → 保存”须在同一个临界区内完整完成。
         # 否则本进程会以过时的内存副本整体覆盖磁盘，致使其它进程期间写入的配置项丢失。
         with cls._store.exclusive():
             if not _generate:

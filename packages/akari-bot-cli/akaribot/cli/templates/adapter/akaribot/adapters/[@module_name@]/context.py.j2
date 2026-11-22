@@ -9,7 +9,7 @@ from .features import features as platform_features
 class [@module_class@]ContextManager(ContextManager):
     """[@module_class@] 平台的上下文管理器。
 
-    17 个抽象方法一个都不能少；不支持的能力在 features.py 里保持 False，方法体留空即可。
+    17 个抽象方法一个都不能少。不支持的能力在 features.py 里保持 False，方法体留空即可。
     """
 
     context: dict[str, Any] = {}
@@ -42,7 +42,7 @@ class [@module_class@]ContextManager(ContextManager):
         user_id: str,
         message: MessageChain | MessageNodes,
     ) -> list[str]:
-        """向指定用户私聊发送消息；失败时吞掉平台异常并返回空列表。"""
+        """向指定用户私聊发送消息。失败时吞掉平台异常并返回空列表。"""
         ...
 
     @classmethod

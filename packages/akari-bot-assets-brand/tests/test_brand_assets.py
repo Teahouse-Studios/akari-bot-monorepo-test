@@ -1,8 +1,8 @@
 """品牌资产包的内容与保真度守卫。
 
-这些文件是**画师提供的原件**，不是可重新导出的构建产物：立绘曾被降采样成 1024px/128 色以压进
-core wheel，用户一眼就看出糊了。体积该由使用侧（展示宽度、是否内嵌）来控，不能靠改这些文件。
-故此处把「尺寸、色彩模式、体积下限」钉住——允许画师换图，但挡住任何一次静默重新编码。
+这些文件是**画师提供的原件**，不是可重新导出的构建产物：降采样或转调色板都会明显降低画面
+清晰度。体积由使用侧（展示宽度、是否内嵌）控制，不能靠改这些文件。故此处把“尺寸、色彩模式、
+体积下限”钉住——允许画师换图，但挡住任何一次静默重新编码。
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ from akaribot.testing import Tester, func_case
 # 原件规格：2000×2000 全彩 RGBA。降采样或转调色板都会让画面明显变糊。
 CHARACTER_SIZE = (2000, 2000)
 CHARACTER_MODE = "RGBA"
-# 体积下限取原件的约七成：正常的重新导出会落在这个区间之上，有损压缩则远低于它。
+# 体积下限取原件的约七成：正常的重新导出会高于这个值，有损压缩则远低于它。
 CHARACTER_MIN_BYTES = 2 * 1024 * 1024
 
 REQUIRED_FILES = (
@@ -73,7 +73,7 @@ def _test_license_is_bundled_with_the_artwork():
 
 def _test_no_stray_build_artifacts_beside_the_assets():
     directory = Path(brand_dir())
-    # `.DS_Store` 由访达写入，不属于打包产物，不应让用例随本机文件系统变成红。
+    # `.DS_Store` 由访达写入，不属于打包产物，其存在不应让用例失败。
     allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__", "docs", ".DS_Store"}
     return all(child.name in allowed for child in directory.iterdir())
 

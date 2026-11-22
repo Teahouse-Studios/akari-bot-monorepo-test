@@ -1,6 +1,6 @@
 """T4.1 命名空间改写：把旧顶层命名空间 core/modules/bots 改写为 akaribot.* 形式。
 
-import 语句按前缀映射全自动改写；字符串字面量只在命中真实模块路径白名单时改写，
+import 语句按前缀映射全自动改写。字符串字面量只在命中真实模块路径白名单时改写，
 i18n 文案键与目录名因此不受影响。改动逐条写入仓库根的报告，供人工逐行过目。
 
 用法：
@@ -131,7 +131,7 @@ def build_known(root: Path) -> frozenset[str]:
 
 
 def longest_known_prefix(text: str, known: frozenset[str]) -> str | None:
-    """取 text 落在白名单里的最长点分前缀，无命中返回 None。"""
+    """取 text 中命中白名单的最长点分前缀，无命中返回 None。"""
     segments = text.split(".")
     for depth in range(len(segments), 0, -1):
         candidate = ".".join(segments[:depth])
@@ -351,7 +351,7 @@ def iter_target_files(root: Path, self_path: Path) -> list[Path]:
 
 
 def process_file(path: Path, root: Path, known: frozenset[str], dry_run: bool) -> FileOutcome:
-    """改写单个文件；解析失败记入 outcome.failure 并跳过。"""
+    """改写单个文件。解析失败记入 outcome.failure 并跳过。"""
     label = path.relative_to(root).as_posix()
     try:
         source = _read_source(path)

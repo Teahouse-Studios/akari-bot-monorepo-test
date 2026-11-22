@@ -38,8 +38,8 @@ class StopScope(StrEnum):
 class Stop(HookResult):
     """业务拒绝：停止当前候选组件或整条消息。
 
-    :param message: 可选的用户可见提示；由 parser 统一发送。
-    :param scope: ``candidate`` 停止当前命令/正则候选；``message`` 停止整条消息处理。
+    :param message: 可选的用户可见提示，由 parser 统一发送。
+    :param scope: ``candidate`` 停止当前命令/正则候选，``message`` 停止整条消息处理。
     :param data: 供后续策略或观察入口使用的附加数据。
     """
 
@@ -75,7 +75,7 @@ class Handled(HookResult):
 
 
 def normalize_result(raw: object) -> HookResult:
-    """把 hook 返回值归一化为类型化结果；``None`` 视为 Continue。"""
+    """把 hook 返回值归一化为类型化结果，``None`` 视为 Continue。"""
     if raw is None:
         return Continue()
     if isinstance(raw, HookResult):

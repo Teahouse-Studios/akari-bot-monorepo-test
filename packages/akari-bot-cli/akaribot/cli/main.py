@@ -1,7 +1,7 @@
 """CLI 入口：注册全部子命令。
 
-命令实现分散在 :mod:`akaribot.cli.commands` 下，各自导出一个 Typer 子应用；本模块只做装配，
-不承载业务逻辑。实例操作一律经 :class:`akaribot.cli.instance.Instance`，CLI 进程内不 import core。
+命令实现分散在 :mod:`akaribot.cli.commands` 下，各自导出一个 Typer 子应用。本模块只做装配，
+不承载业务逻辑。实例操作一律经 :class:`akaribot.cli.instance.Instance`，CLI 进程内不导入 core。
 """
 
 from importlib import metadata
@@ -31,7 +31,7 @@ from akaribot.cli.commands import (
 
 DIST_NAME = "akari-bot-cli"
 # 无子命令时的退出码。click ≥8.2 把 no_args_is_help 实现为 NoArgsIsHelpError（UsageError，退出码 2），
-# 语义是「参数不足」而非成功；这里沿用该码，同时把帮助文本留在正常输出通道，不落进错误面板。
+# 语义是“参数不足”而非成功。这里沿用该码，同时把帮助文本留在正常输出通道，不落进错误面板。
 NO_COMMAND_EXIT_CODE = 2
 
 
@@ -39,20 +39,20 @@ def version_string() -> str:
     """返回 CLI 版本号。
 
     版本号以分发 metadata 为真源，``pyproject.toml`` 只需维护一处。Nuitka onefile 冻结后
-    ``.dist-info`` 可能未随产物保留，查询会抛 PackageNotFoundError；此时回退到包内常量，
+    ``.dist-info`` 可能未随产物保留，查询会抛 PackageNotFoundError，此时回退到包内常量，
     再取不到则返回 ``unknown``——版本查询是只读旁路，不应成为 CLI 的失败点，故冻结环境下
-    metadata 的其它失败形态（文件缺失、路径扫描异常）同样走兜底。
+    metadata 的其它失败形态（文件缺失、路径扫描异常）同样按回退处理。
 
     :return: 版本号字符串。
     """
     try:
         return metadata.version(DIST_NAME)
-    except Exception:  # noqa: BLE001 - 兜底必须覆盖冻结产物的全部 metadata 读取失败
+    except Exception:  # noqa: BLE001 - 回退必须覆盖冻结产物的全部 metadata 读取失败
         return __version__ or "unknown"
 
 
 def _version_callback(value: bool) -> None:
-    # eager 是必需的：click 先解析完参数、再判定「有没有子命令」，非 eager 的回调排在该判定之后，
+    # eager 是必需的：click 先解析完参数、再判定“有没有子命令”，非 eager 的回调排在该判定之后，
     # ``akaribot --version`` 会被 ``Missing command.`` 抢先。``--help`` 同为 eager，两者同时给出时
     # 按命令行顺序先出现的先生效（click 对 eager 参数的既定处理），且都以 0 退出。
     if value:
@@ -100,7 +100,7 @@ def main(
     i18n.set_locale(lang)
     if ctx.invoked_subcommand is not None:
         return
-    # 裸调用在可交互终端下直接进界面；没有实例就先引导初始化。非终端（管道、CI、重定向）仍打印
+    # 裸调用在可交互终端下直接进界面。没有实例就先引导初始化。非终端（管道、CI、重定向）仍打印
     # 帮助：那种环境下界面起不来，把帮助塞进错误面板只会让人以为出错了。
     if not _tui_available():
         typer.echo(ctx.get_help())
@@ -120,11 +120,11 @@ def _tui_available() -> bool:
 
 
 def _ensure_instance(lang: str | None) -> Path | None:
-    # 初始化直接调用 ``akaribot init`` 的命令本体，不复制它建目录、装包、写元数据的流程；问答也由
+    # 初始化直接调用 ``akaribot init`` 的命令本体，不复制它建目录、装包、写元数据的流程。问答也由
     # init 自己完成，两边不会各问一套。返回实例根，用户放弃或初始化未成功时为 ``None``。
     from akaribot.cli.instance import resolve_instance_root
 
-    # 站在实例之外时按注册表里的缺省实例进入：这台机器上登记过就管它，而不是每次都问要不要初始化。
+    # 在实例之外时按注册表里的默认实例进入：这台机器上记录过就沿用该实例，而不是每次都问要不要初始化。
     found = resolve_instance_root()
     if found is not None:
         return found

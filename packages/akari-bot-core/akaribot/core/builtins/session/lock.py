@@ -24,7 +24,7 @@ class ExecutionState:
         # wait_anyone／wait_reply(all_=True) 的结果可能来自另一名用户，
         # 执行锁仍须按最初发起命令的用户计算。
         self.lock_subject: MessageSession | None = None
-        # 输入提示按会话消息 ID 展示，恢复时须沿用最初发起提示的会话；
+        # 输入提示按会话消息 ID 展示，恢复时须沿用最初发起提示的会话。
         # wait_* 取得的回复会话不能用自己的 ID 重新开启。
         self.typing_owner: MessageSession | None = None
 
@@ -106,7 +106,7 @@ class ExecutionLockList:
         if task is None or state.lock_owner_task is task:
             return
         if state.lock_owner_task is not None and not state.lock_owner_task.done():
-            # wait_* 的内部辅助 Task 可能共享根执行状态；lease 生命周期仍应由
+            # wait_* 的内部辅助 Task 可能共享根执行状态。lease 生命周期仍应由
             # 最初取得它的 parser Task 管理，不能被短命辅助 Task 提前回收。
             return
         state.lock_owner_task = task
@@ -139,7 +139,7 @@ class ExecutionLockList:
 
         :param msg: 要串行化的会话。
         :param wait: 冲突时是否等待现有 lease 释放。
-        :return: 成功获取时返回 True；已持有 lease 或非等待模式下存在冲突时
+        :return: 成功获取时返回 True，已持有 lease 或非等待模式下存在冲突时
             返回 False。
         """
         if cls._owns_active_lease(msg):
@@ -151,7 +151,7 @@ class ExecutionLockList:
 
         while True:
             keys = await cls._current_keys(msg)
-            # _current_keys() 的数据库查询会让出执行权；其间同一执行域的另一协程
+            # _current_keys() 的数据库查询会让出执行权。其间同一执行域的另一协程
             # （被等待任务消费的回复会话）可能已把 token 装上。必须在判定冲突前
             # 重新确认所有权，否则根命令会等待自己持有的 lease 永久自锁。
             if cls._owns_active_lease(msg):
@@ -187,7 +187,7 @@ class ExecutionLockList:
         cls._reservations.intersection_update(cls._list)
         reservation = frozenset(set(cls._list[token]).union(keys))
         # 两个合并命令的扩展域只要相交，后进入 reservation 的命令必须让出。
-        # 只检查「完整覆盖」挡不住 A+B 与 B+C 这类部分重叠，双方将相互等待。
+        # 只检查“完整覆盖”挡不住 A+B 与 B+C 这类部分重叠，双方将相互等待。
         if any(
             other_token != token
             and other_token in cls._reservations
@@ -243,7 +243,7 @@ class ExecutionLockList:
 
     @classmethod
     def check(cls, msg: "MessageSession") -> bool:
-        """无 I/O 的兼容检查；生产 parser 应使用 :meth:`is_locked`。"""
+        """无 I/O 的兼容检查，生产 parser 应使用 :meth:`is_locked`。"""
         if cls._owns_active_lease(msg):
             return True
         return cls._conflicts(cls._local_keys(msg))

@@ -178,7 +178,7 @@ async def _(
     available_llms = llm_list + (llm_su_list if is_superuser else [])
 
     if not selected_llm:
-        # 续接上下文时沿用其原本使用的模型；该模型当前不可用时回落到默认模型。
+        # 续接上下文时沿用其原本使用的模型。该模型当前不可用时改用默认模型。
         context_llm = get_context_llm(turn_id, context_key) if turn_id else None
         context_llm = context_llm.lower() if context_llm else None
         if context_llm in available_llms:

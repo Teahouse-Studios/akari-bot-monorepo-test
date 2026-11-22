@@ -91,7 +91,7 @@ async def init_background_task():
         await reset_petals_if_due()
 
     # 各项初始化并行执行，并保持结构化并发语义：任一任务意外失败时，TaskGroup
-    # 会取消并等待其余任务，避免父任务已经结束、浏览器初始化却仍在后台继续。
+    # 会取消并等待其余任务，避免父任务结束后浏览器初始化仍在后台继续。
     async with asyncio.TaskGroup() as group:
         group.create_task(fetch_ip_info(), name="server-ip-info-init")
         group.create_task(_init_web_render(), name="server-web-render-init")
@@ -108,7 +108,7 @@ def _background_task_done(task: asyncio.Task[None]) -> None:
 
 
 def start_background_task() -> asyncio.Task[None]:
-    """启动并持有 Server 后台初始化任务；重复调用时复用仍在运行的任务。"""
+    """启动并持有 Server 后台初始化任务。重复调用时复用仍在运行的任务。"""
     global _background_task
     if _background_task is None or _background_task.done():
         _background_task = asyncio.create_task(init_background_task(), name="server-background-init")

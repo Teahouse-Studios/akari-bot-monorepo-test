@@ -116,9 +116,9 @@ async def test_process_usage_metrics(tester: Tester):
 @func_case
 async def test_process_usage_summary(tester: Tester):
     """core.queue.diagnostics: 逐实例结果汇总测试"""
-    await tester.test(_test_summarize_resolves_service_names, "service 名还原与排序测试")
+    await tester.test(_test_summarize_resolves_service_names, "服务名还原与排序测试")
     await tester.test(_test_summarize_falls_back_to_peer_id, "快照缺失回退 peer_id 测试")
-    await tester.test(_test_summarize_reports_errors, "未回包实例可见测试")
+    await tester.test(_test_summarize_reports_errors, "未响应实例可见测试")
     await tester.test(_test_summarize_reports_invalid_payload, "无效载荷可见测试")
 
     return tester

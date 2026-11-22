@@ -236,7 +236,7 @@ class TuiApp(compat.App[int]):
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
 
     def _instance_label(self) -> str:
-        # 名称优先采用注册表记录，未登记时使用目录名。
+        # 名称优先采用注册表记录，未记录时使用目录名。
         root = self.instance_root or context.active_root()
         if root is None:
             return i18n.t("cli.tui.app.instance_unknown")
@@ -487,7 +487,7 @@ class TuiApp(compat.App[int]):
         """折叠或展开侧栏分组，并将高亮移至分组标题。
 
         :param position: 分组标题或组内页面条目在侧栏中的下标。
-        :param collapsed: 目标状态；``None`` 表示切换当前状态。
+        :param collapsed: 目标状态。``None`` 表示切换当前状态。
         """
         header = _group_position(position)
         group_key = NAV_PLAN[header][1]
@@ -501,7 +501,7 @@ class TuiApp(compat.App[int]):
         # 先移走高亮再禁用条目，避免高亮停留在隐藏的页面条目上。
         nav.index = header
         nav.children[header].query_one(compat.Label).update(_group_label(group_key, collapsed))
-        # 禁用的条目会被方向键跳过，隐藏不足以阻止高亮落在其上。
+        # 禁用的条目会被方向键跳过，隐藏不足以阻止高亮移到其上。
         for member in _group_members(header):
             item = nav.children[member]
             item.display = not collapsed
@@ -529,7 +529,7 @@ class TuiApp(compat.App[int]):
         return self.query_one(ModulesPage)
 
     def action_quit(self) -> None:
-        """退出应用；未保存更改或后台任务存在时请求确认。"""
+        """退出应用。未保存更改或后台任务存在时请求确认。"""
         if self._quit_confirming:
             return
         notes = self._dirty_notes()
@@ -584,7 +584,7 @@ class TuiRunResult:
     """一次 TUI 运行的统计。
 
     :param exit_code: 进程退出码。
-    :param startup_ms: 从调用运行到 ``on_mount`` 的毫秒数，含 Textual 导入与样式解析。
+    :param startup_ms: 从进入 ``run_tui`` 到 ``on_mount`` 的毫秒数，含 Textual 导入与样式解析。
     :param first_paint_ms: 到首帧渲染完成的毫秒数。
     :param total_ms: 应用运行的总毫秒数。
     """
@@ -621,7 +621,7 @@ def run_tui(
     :param initial_page: 初始页面标识。
     :param mouse: 是否启用鼠标追踪。
     :param headless: 是否以无头模式运行，用于自检。
-    :param boot_note: 启动通知；空字符串表示不显示通知。
+    :param boot_note: 启动通知。空字符串表示不显示通知。
     :return: 运行统计。
     """
     started = time.monotonic()

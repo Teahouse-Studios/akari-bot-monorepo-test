@@ -165,7 +165,7 @@ async def _test_scroll_back_is_not_yanked_to_end():
 
 
 async def _test_keyword_filter_limits_display_only():
-    # 筛选仅影响显示，不改变缓冲、offset 或跟随状态；清空后恢复全文。
+    # 筛选仅影响显示，不改变缓冲、offset 或跟随状态。清空后恢复全文。
     async def body(app, page, pilot, source):
         await pilot.press("slash")
         await pilot.pause()
@@ -205,7 +205,7 @@ async def _test_keyword_filter_limits_display_only():
 
 
 async def _test_debug_menu_switches_preference():
-    # m 打开日志级别菜单，只列当前以外的偏好；选择后生效，取消不改动。
+    # m 打开日志级别菜单，只列当前以外的偏好。选择后生效，取消不改动。
     async def body(app, page, pilot, source):
         page.focus_primary()
         await pilot.pause()

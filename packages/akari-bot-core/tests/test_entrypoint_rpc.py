@@ -1,7 +1,7 @@
 """包变更 RPC 入口（``entrypoints/rpc.py``）的白名单、真实投递与失败分类。
 
 热装载与热拆卸本身由 core 既有的 ``post_package_install`` / ``post_package_remove`` 实现，本文件
-验证 CLI 经该入口把请求投递到运行中的 Server 并拿到可区分的结果：白名单在导入 core 之前生效，
+验证 CLI 经该入口把请求投递到运行中的 Server 并得到可区分的结果：白名单在导入 core 之前生效，
 投递走真实契约与真实处理器，端到端用例另起一个真实 Server 进程在隔离实例里做完整热装载与热拆卸。
 
 未覆盖：``ModulesManager.install_package`` 自身失败与取消时的回滚路径。
@@ -38,7 +38,7 @@ def _production_handlers() -> dict:
 
 @asynccontextmanager
 async def _stack(*, server: bool = True, handlers: dict | None = None):
-    # 入口按实例配置选择后端；测试改用共享内存后端，并让「是否需要连数据库」的分支落在非 database
+    # 入口按实例配置选择后端。测试改用共享内存后端，并让“是否需要连数据库”的分支走非 database
     # 一侧，避免触碰测试进程已初始化的内存库。
     from akaribot.core.config.jobqueue import JobQueueConfig
     from akaribot.core.queue import backend as backend_module
@@ -95,7 +95,7 @@ async def _test_usage_rejects_unknown_remote():
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         code = rpc.main(["server.post_package_nuke", "akari-bot-module-dice"])
-    # 白名单若失效，main 会在运行中的事件循环里调 asyncio.run 而抛错，本用例随之变红。
+    # 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛错，本用例随之失败。
     direct = await rpc._run("server.post_package_nuke", "akari-bot-module-dice")
     return (
         code == rpc.EXIT_USAGE
@@ -172,7 +172,7 @@ async def _test_delivered_to_production_handlers():
     finally:
         ModulesManager.install_package, ModulesManager.remove_package = originals
 
-    # 断言处理器收到的是调用方给的分发，而不是把 dist 丢在路上的空结果。
+    # 检查处理器收到的是调用方传入的分发，dist 不会在中途丢失。
     return (
         install.status == rpc.STATUS_DELIVERED
         and install.result is True
@@ -219,7 +219,7 @@ async def _test_timeout_is_distinct():
 
 
 def _pick_hot_install_target() -> PackageEntry | None:
-    # 优先 arcaea_rss：它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除；缺失时退回任意
+    # 优先 arcaea_rss：它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除。缺失时退回任意
     # 声明了 ``provides_modules`` 的模块包，用例对包名保持无关。
     PackageRegistry.discover(force=True)
     candidates = [
@@ -296,7 +296,7 @@ async def _test_end_to_end_hot_install_and_remove():
     entry = _pick_hot_install_target()
     source_config = Paths.instance / "config"
     if entry is None or not source_config.is_dir():
-        # 环境缺少已装模块包或仓库实例配置时无法搭建隔离实例，明确告警而不是假装通过。
+        # 环境缺少已装模块包或仓库实例配置时无法搭建隔离实例，明确告警，不视为通过。
         print("跳过端到端热装载用例：缺少已装模块包或仓库 config/ 目录。", file=sys.stderr)
         return True
 
@@ -317,7 +317,7 @@ async def _test_end_to_end_hot_install_and_remove():
         finally:
             await server.close()
 
-    # 安装后注册表、sys.modules、Scheduler 与 module_status 必须与包声明一致；拆除后必须全部复原。
+    # 安装后注册表、sys.modules、Scheduler 与 module_status 必须与包声明一致。拆除后必须全部复原。
     return (
         before["registered"] == []
         and before["sys_modules"] == []

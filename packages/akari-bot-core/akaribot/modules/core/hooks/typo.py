@@ -40,7 +40,7 @@ def _get_close_matches(word, possibilities, n=1, cutoff=0.6):
 
 
 def suggest_correction(msg, modules, command_first_word) -> RecoveryProposal | None:
-    """计算纠错建议；无建议时返回 None。不做用户确认。"""
+    """计算纠错建议。无建议时返回 None。不做用户确认。"""
     bot = exports["Bot"]
     is_base_superuser = msg.session_info.sender_id in bot.base_superuser_list
     is_superuser = msg.check_super_user()

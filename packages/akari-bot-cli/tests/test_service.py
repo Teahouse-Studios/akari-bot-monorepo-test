@@ -1,8 +1,8 @@
 """服务化：单元文件渲染、安装卸载、状态探测与实例守护。
 
 系统命令一律经注入的 runner 记录，文件写在临时 home 下，故用例不调用 ``launchctl`` /
-``systemctl``，也不启动任何实例进程。守护循环用假控制器与可推进的假时钟驱动，观测「恢复」「崩溃
-重启」「退避与上限」「跳过」四类分支。
+``systemctl``，也不启动任何实例进程。守护循环用假控制器与可推进的假时钟驱动，观测“恢复”“崩溃
+重启”“退避与上限”“跳过”四类分支。
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ CLI_BIN = ("/usr/bin/python3", "-m", "akaribot.cli.main")
 
 
 class _FakeRunner:
-    # 记录被调用的命令，并按前缀回放预设退出码；没有预设前缀的命令按成功处理。
+    # 记录被调用的命令，并按前缀回放预设退出码。没有预设前缀的命令按成功处理。
     def __init__(self, results=None):
         self.calls: list[list[str]] = []
         self.results: dict[tuple[str, ...], int] = dict(results or {})
@@ -628,5 +628,5 @@ async def test_service(tester: Tester):
     await tester.test(_test_cli_supervise_once_prints_summary, "service supervise --once 透传策略并打印摘要")
     await tester.test(_test_cli_supervise_rejects_bad_options, "非法的间隔与上限被拒绝")
     await tester.test(_test_run_detach_and_stop_sync_desired, "run --detach / --stop 同步注册表 desired")
-    await tester.test(_test_run_without_registry_entry_skips_silently, "实例未登记时静默跳过")
+    await tester.test(_test_run_without_registry_entry_skips_silently, "实例未添加时静默跳过")
     return tester

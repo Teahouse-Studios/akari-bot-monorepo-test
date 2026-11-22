@@ -1,7 +1,7 @@
 """文档站点部署 provider 的公共契约。
 
 部署分两步：先给出目标摘要供命令层确认，再按站点目录同步。失败一律抛
-:class:`DocsDeployError`，由命令层把键与参数渲染成文案；凭据只从环境变量读取，
+:class:`DocsDeployError`，由命令层把键与参数渲染成文案。登录信息只从环境变量读取，
 不进入命令行、日志或异常消息。
 """
 
@@ -18,7 +18,7 @@ Reporter = Callable[[str], None]
 
 
 class DocsDeployError(DocsError):
-    """部署失败；``str()`` 返回本地化键。"""
+    """部署失败。``str()`` 返回本地化键。"""
 
 
 @dataclass(frozen=True)
@@ -45,8 +45,8 @@ class DeployResult:
     :param provider: provider 名称。
     :param url: 站点地址，未知时为空串。
     :param detail: 目标说明，供部署历史记录。
-    :param uploaded: 上传的对象数；试运行时为计划上传数。
-    :param deleted: 删除的对象数；试运行时为计划删除数。
+    :param uploaded: 上传的对象数。试运行时为计划上传数。
+    :param deleted: 删除的对象数。试运行时为计划删除数。
     :param skipped: 内容未变而跳过的对象数。
     :param dry_run: 是否为试运行。
     """
@@ -85,7 +85,7 @@ class DeployProvider(Protocol):
         :param delete: 删除远端在目标前缀下多余的对象。
         :param reporter: 阶段回调，取值为 ``list`` / ``link`` / ``upload`` / ``delete`` / ``deploy`` / ``done``。
         :return: 部署结果。
-        :raises DocsDeployError: 凭据、配置或远端操作失败。
+        :raises DocsDeployError: 登录信息、配置或远端操作失败。
         """
         ...
 

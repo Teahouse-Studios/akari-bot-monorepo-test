@@ -166,7 +166,7 @@ class MilkyContextManager(ContextManager):
             segments = await convert_chain_to_segments(session_info, message, quote=quote)
 
         if not segments:
-            # 元素均因底层媒体不可得被跳过时不发送空消息
+            # 元素因底层媒体不可用而被跳过时不发送空消息
             return []
 
         try:
@@ -391,7 +391,7 @@ class MilkyContextManager(ContextManager):
 
         if session_info.target_from != target_group_prefix:
             return
-        # Milky 只暴露「管理员」这一原生权限组，其它权限组在本平台没有对应实现
+        # Milky 只暴露“管理员”这一原生权限组，其它权限组在本平台没有对应实现
         if "admin" not in {str(x).lower() for x in permission_group_id}:
             Logger.warning(f"Milky does not support permission group(s) {permission_group_id}, skipping.")
             return
@@ -547,7 +547,7 @@ class MilkyFetchedContextManager(MilkyContextManager):
         quote: bool = True,
     ) -> list[str]:
         # 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本跳是否送达，
-        # 因此入队的是「任务 + future」，待实际发送完成后再回传结果。
+        # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
         append_tsk = _tasks_high_priority if high_priority else _tasks

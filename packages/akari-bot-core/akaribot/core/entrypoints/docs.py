@@ -1,6 +1,6 @@
 """包文档清单入口。
 
-CLI 以子进程调用本模块列出各包 ``docs/`` 目录与页面。发现只按 entry point 的导入路径定位包目录，
+CLI 以子进程调用本模块列出各包 ``docs/`` 目录与页面。包发现只按 entry point 的导入路径定位包目录，
 不导入目标包：导入会执行包内配置模板与其它导入期副作用。
 """
 
@@ -115,7 +115,7 @@ def _dist_version(dist: Any) -> str:
         return DEFAULT_VERSION
     try:
         return str(dist.version)
-    except Exception:  # noqa: BLE001 - 元数据残缺时按源码检出处理
+    except Exception:  # noqa: BLE001 - 元数据残缺时按源码克隆处理
         return DEFAULT_VERSION
 
 
@@ -130,8 +130,9 @@ def _dist_summary(dist: Any) -> str:
 _SPECIFIER_ORDER = {"===": 0, "==": 1, "~=": 2, ">=": 3, ">": 4, "<=": 5, "<": 6, "!=": 7}
 
 
+# 按项目声明顺序显示依赖，跳过 extra 的可选依赖。
 def _format_dependency(text: str) -> str:
-    """按项目声明顺序显示依赖，并跳过 extra 的可选依赖。"""
+    ""
     try:
         requirement = Requirement(text)
     except InvalidRequirement:
@@ -155,8 +156,9 @@ def _format_dependency(text: str) -> str:
     return base
 
 
+# 读取运行依赖，跳过 extra 的可选依赖。
 def _dist_dependencies(dist: Any) -> list[str]:
-    """读取运行依赖，跳过 extra 的可选依赖。"""
+    ""
     try:
         requires = getattr(dist, "requires", None) or []
     except Exception:  # noqa: BLE001 - 元数据残缺时按无依赖处理
@@ -207,8 +209,9 @@ def _locate_doc_dir(import_path: str, find_spec: Callable[[str], Any]) -> Path:
     return (root / DOCS_DIR).resolve()
 
 
+# 依次返回全局、用户覆盖与迁移兼容的文档元数据文件。
 def _doc_meta_paths(doc_dir: Path) -> tuple[Path, ...]:
-    """返回参与合并的文档元数据文件，按全局、用户覆盖、旧布局的顺序。"""
+    ""
     global_files = tuple(
         path
         for path in (doc_dir / DOC_META_DIR / DOC_META_GLOBAL_DIR / name for name in DOC_META_GLOBAL_FILES)
@@ -721,9 +724,9 @@ def collect(
 ) -> dict[str, Any]:
     """收集各包的文档清单。
 
-    :param entry_points: 返回 ``akaribot.docs`` 条目的可调用对象；缺省读取已安装元数据。
-    :param find_spec: 按导入路径定位包的可调用对象；缺省使用 :func:`importlib.util.find_spec`。
-    :param stale_entries: 返回「源码已声明、可编辑安装元数据未登记」条目的可调用对象；缺省在读取
+    :param entry_points: 返回 ``akaribot.docs`` 条目的可调用对象。默认读取已安装元数据。
+    :param find_spec: 按导入路径定位包的可调用对象。默认使用 :func:`importlib.util.find_spec`。
+    :param stale_entries: 返回“源码已声明、可编辑安装元数据未记录”条目的可调用对象。默认在读取
         已安装元数据时扫描可编辑安装，注入 ``entry_points`` 时不扫描。
     :return: ``{"schema": 1, "packages": [...], "warnings": [...]}``。
     """
@@ -760,7 +763,7 @@ def collect(
             refreshed.append(item["key"])
         if refreshed:
             warnings.append(
-                f"{'、'.join(sorted(refreshed))}: 源码已声明 {DOCS_GROUP} 入口，但可编辑安装的元数据未登记，"
+                f"{'、'.join(sorted(refreshed))}: 源码已声明 {DOCS_GROUP} 入口，但可编辑安装的元数据未记录，"
                 "已按源码声明补入；重新安装这些包以刷新元数据（工作区实例可执行 akaribot module update --all）。"
             )
     else:
@@ -795,7 +798,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数。默认取 ``sys.argv[1:]``。
     :return: 进程退出码，0 成功、2 参数错误。
     """
     args = _build_parser().parse_args(argv)

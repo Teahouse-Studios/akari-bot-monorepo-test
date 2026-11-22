@@ -81,7 +81,7 @@ const isDark = computed(() => resolved.value === "dark");
 const logo = useBrandAsset("logo", "/home/logo.png");
 const logoDark = useBrandAsset("logoDark", "/home/logo-night.png");
 
-/** 读 ``themeConfig.akari.brand`` 的品牌插槽；未配置的位置回退到随包内置图片。 */
+/** 读 ``themeConfig.akari.brand`` 的品牌插槽。未配置的位置回退到随包内置图片。 */
 function useBrandAsset(key: string, fallback: string) {
   const { theme } = useData();
   return computed(() => {

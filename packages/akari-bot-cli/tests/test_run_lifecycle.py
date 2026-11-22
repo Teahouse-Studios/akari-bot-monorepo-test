@@ -1,8 +1,8 @@
 """实例生命周期：后台启动、状态读取与跨进程停止。
 
-固定三条链路：``run --detach`` 启动的进程脱离当前会话并写下进程记录；``run --status`` 从锁与
-记录推出状态；``run --stop`` 按记录终止进程——**包括不是本次启动、甚至不是本控制器启动的实例**。
-运行页的启动、停止、重启与「只启动指定适配器」都先弹一次模态确认框，选「执行」才调用数据源。
+固定三条链路：``run --detach`` 启动的进程脱离当前会话并写下进程记录。``run --status`` 从锁与
+记录推出状态。``run --stop`` 按记录终止进程——**包括不是本次启动、甚至不是本控制器启动的实例**。
+运行页的启动、停止、重启与“只启动指定适配器”都先弹一次模态确认框，选“执行”才调用数据源。
 """
 
 import asyncio
@@ -23,7 +23,7 @@ from akaribot.cli.instance import Instance, InstanceMeta
 from akaribot.cli.main import app
 from akaribot.testing import Tester, func_case
 
-# 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，断言才比对得到真实文案。
+# 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，检查才能比对到真实文案。
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_run.json"
 
 # 假实例进程：取锁、写下进程记录、按参数决定是否响应 SIGTERM，然后一直等待。
@@ -212,7 +212,7 @@ def _test_json_stop_failure_prevents_restart():
 
 
 async def _test_stop_refuses_without_record():
-    # 锁被持有但文件里没有进程记录时不能瞎猜进程号，如实报「无法停止」。
+    # 锁被持有但文件里没有进程记录时不猜测进程号，如实报“无法停止”。
     with TemporaryDirectory(prefix="akari-life-") as raw:
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
@@ -241,7 +241,7 @@ async def _test_conflicting_actions_rejected():
 
 
 async def _test_stop_process_primitive_skips_own_group():
-    # 与控制器同组的实例只能按进程号发信号：对整组发信号会把控制器自己一起终止。
+    # 与控制器同组的实例只能按进程号发信号：对整组发信号会连同控制器一起终止。
     from akaribot.cli.process import SystemProcessControl
 
     control = SystemProcessControl()
@@ -255,7 +255,7 @@ async def _test_stop_process_primitive_skips_own_group():
         start_new_session=True,
     )
     try:
-        # 同组但非组长的进程只按进程号处理；自建会话的组长可以整组处理。
+        # 同组但非组长的进程只按进程号处理。自建会话的组长可以整组处理。
         return control.process_group(sibling.pid) is None and control.process_group(leader.pid) == leader.pid
     finally:
         for process in (sibling, leader):
@@ -327,7 +327,7 @@ def _choice_labels(app) -> list[str]:
 
 
 async def _wait_choice(app, timeout: float = 5.0) -> bool:
-    # 输入框提交后确认框由回调推入，等到它真的出现再断言。
+    # 输入框提交后确认框由回调推入，等到它真的出现再检查。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if app.screen.query("#choice-0"):
@@ -360,7 +360,7 @@ async def _with_run_page(body, source=None, size=(110, 32)):
 
 
 def _test_pending_confirm_gate():
-    # 闸门本身：同一动作在防抖窗口内只放行一次，窗口外与换动作立即放行，复位后立即可用。
+    # 闸门本身：同一动作在防抖窗口内只放行一次，窗口外或换动作时立即放行，复位后立即可用。
     from akaribot.cli.tui import _compat as compat
 
     gate = compat.PendingConfirm()
@@ -407,7 +407,7 @@ async def _test_run_page_renders_cli_state():
 
 
 async def _test_four_paths_confirm_through_modal():
-    # 四条路径都是「一次触发弹模态、选执行才动手」：模态展示期间数据源未被调用，取消不调用。
+    # 四条路径都是“一次触发弹模态、选执行才动手”：模态展示期间数据源未被调用，取消不调用。
     from akaribot.cli.tui import _compat as compat
 
     async def body(app, page, pilot, source):
@@ -450,7 +450,7 @@ async def _test_four_paths_confirm_through_modal():
             "restart_hint": restart_hint,
             "stop_hint": stop_hint,
             "labels": labels,
-            # 文案里不得残留未替换的占位符：「再按一次」那套提示已由模态框取代。
+            # 文案里不得残留未替换的占位符。二次确认由模态框承担，不用“再按一次”式提示。
             "texts": (start_hint, cancelled, *adapter, restart_hint, stop_hint, *labels),
             "calls": dict(source.calls),
             "adapters": list(source.adapters),
@@ -479,7 +479,7 @@ async def _test_four_paths_confirm_through_modal():
 
 
 async def _test_repeat_trigger_keeps_one_modal():
-    # 同一动作连发只弹一层模态；换动作会重新弹，两个动作都不执行。
+    # 同一动作连发只弹一层模态。换动作会重新弹，两个动作都不执行。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -574,7 +574,7 @@ async def _test_poll_keeps_confirmation():
 
 
 async def _test_adapter_start_collects_platform():
-    # 「更多」菜单的启动指定适配器先弹输入框收平台，提交后再弹确认框；选「执行」才把平台交给数据源。
+    # “更多”菜单的启动指定适配器先弹输入框收平台，提交后再弹确认框。选“执行”才把平台交给数据源。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import StaticRunSource
 
@@ -676,7 +676,7 @@ async def test_run_lifecycle(tester: Tester):
 
     _use_cli_locale()
     if os.name == "nt":
-        # 假实例进程依赖 fcntl 取锁，Windows 上跳过；生产代码的 Windows 分支另行实机验证。
+        # 假实例进程依赖 fcntl 取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
         return tester
     await tester.test(_test_status_reports_stopped_without_lock, "未运行时状态为空")
     await tester.test(_test_detach_records_pid_and_survives_parent, "后台启动写下进程记录并可被读到")
@@ -690,7 +690,7 @@ async def test_run_lifecycle(tester: Tester):
     await tester.test(_test_tui_source_takes_over_foreign_process, "界面数据源接管别的控制器启动的实例")
     await tester.test(_test_subprocess_start_passes_adapter, "只启动指定适配器时 argv 带 --adapter")
     await tester.test(_test_pending_confirm_gate, "确认闸门的防抖与复位")
-    # 放大防抖窗口，使「连发同一动作」与「刷新后重新确认」不依赖两次调用之间的真实耗时。
+    # 放大防抖窗口，使“连发同一动作”与“刷新后重新确认”不依赖两次调用之间的真实耗时。
     with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
         await tester.test(_test_repeat_trigger_keeps_one_modal, "连发同一动作不叠模态，换动作重新弹")
         await tester.test(_test_show_page_resets_confirmation, "切页作废待确认")

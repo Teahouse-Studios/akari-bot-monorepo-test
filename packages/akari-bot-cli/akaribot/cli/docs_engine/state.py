@@ -1,6 +1,6 @@
 """文档构建与部署状态的持久化。
 
-状态写在实例根的 ``.docs/state.json``，只记录构建指纹与部署历史；缓存复用与实际部署都以它为准，
+状态写在实例根的 ``.docs/state.json``，只记录构建指纹与部署历史。缓存复用与实际部署都以它为准，
 写入一律原子替换，避免中断留下半截 JSON。
 """
 
@@ -24,7 +24,7 @@ def state_path(instance: Any) -> Path:
 
 
 def load_state(instance: Any) -> dict[str, Any]:
-    """读取状态；文件缺失或损坏时返回空状态，构建据此重新生成。"""
+    """读取状态。文件缺失或损坏时返回空状态，构建据此重新生成。"""
     path = state_path(instance)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))

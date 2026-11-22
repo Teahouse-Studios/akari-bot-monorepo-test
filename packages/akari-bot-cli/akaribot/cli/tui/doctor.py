@@ -39,7 +39,7 @@ _IMPLEMENTATION_KEYS = {
     IMPLEMENTATION_UNKNOWN: "cli.tui.doctor.impl_unknown",
 }
 _ORPHAN_KEYS = {ORPHAN_RAN: "cli.tui.doctor.orphan_ran", ORPHAN_SKIPPED: "cli.tui.doctor.orphan_skipped"}
-# 结论默认级别与 CLI 侧判据一致：端口与凭据重复报错，孤立配置只告警。
+# 结论默认级别与 CLI 侧判据一致：端口与登录信息出现重复时报错，孤立配置只告警。
 _DEFAULT_LEVELS = {"port": LEVEL_ERROR, "credential": LEVEL_ERROR, "orphan": LEVEL_WARNING, "config": LEVEL_ERROR}
 
 PAGE_DASHBOARD = "dashboard"
@@ -144,7 +144,7 @@ class DoctorConflict:
     :param kind: ``port`` / ``credential`` / ``orphan`` / ``config``。
     :param level: ``error`` 或 ``warning``。
     :param message: 面向用户的诊断结论。
-    :param platform: 相关平台名；跨平台时为空串。
+    :param platform: 相关平台名。跨平台时为空串。
     :param instances: 相关表名。
     :param detail: CLI 返回的结构化详情。
     """
@@ -158,18 +158,18 @@ class DoctorConflict:
 
     @property
     def mark(self) -> str:
-        """级别标记；未知级别用问号。"""
+        """级别标记。未知级别用问号。"""
         return _LEVEL_MARKS.get(self.level, "?")
 
     @property
     def level_label(self) -> str:
-        """级别的本地化标签；未知级别直接显示原值。"""
+        """级别的本地化标签。未知级别直接显示原值。"""
         key = _LEVEL_KEYS.get(self.level)
         return i18n.t(key) if key else self.level
 
     @property
     def target_page(self) -> str:
-        """返回处理页面键；无专用页面时按平台信息选择适配器页或概览页。"""
+        """返回处理页面键。无专用页面时按平台信息选择适配器页或概览页。"""
         page = _PAGE_BY_KIND.get(self.kind.strip().casefold())
         if page:
             return page
@@ -196,7 +196,7 @@ class DoctorChecks:
     :param installed_adapters: 已安装适配器的平台名。
     :param unconfigured_adapters: 已安装但未配置实例的平台名。
     :param orphan_check: 孤立配置检查的执行状态，``ran`` 或 ``skipped``。
-    :param credential_scope: CLI 返回的凭据比较字段范围。
+    :param credential_scope: CLI 返回的登录信息比较字段范围。
     """
 
     instances: int = 0
@@ -225,7 +225,7 @@ class DoctorSnapshot:
     :param error_count: error 级结论数。
     :param warning_count: warning 级结论数。
     :param checks: 检查项统计。
-    :param errors: 数据读取错误；有值时结论不完整。
+    :param errors: 数据读取错误。有值时结论不完整。
     """
 
     instance_root: str = ""
@@ -262,7 +262,7 @@ def normalize_snapshot(payload: Any) -> DoctorSnapshot:
     """将 ``doctor --json`` 输出转换为诊断快照。
 
     :param payload: ``json.loads`` 的结果。
-    :return: 诊断快照；缺字段按默认值处理。
+    :return: 诊断快照。缺字段按默认值处理。
     :raises DoctorSourceError: 负载不是 JSON 对象。
     """
     if not isinstance(payload, Mapping):
@@ -331,7 +331,7 @@ class DoctorSource(Protocol):
     """诊断数据源接口。"""
 
     def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
-        """返回诊断结果；严格模式下警告视为失败，读取错误记录在快照的 ``errors`` 中。"""
+        """返回诊断结果。严格模式下警告视为失败，读取错误记录在快照的 ``errors`` 中。"""
 
 
 class StaticDoctorSource:
@@ -570,7 +570,7 @@ class DoctorPage(compat.Vertical):
         self.refresh_report()
 
     def focus_primary(self) -> None:
-        """聚焦冲突列表；列表为空时聚焦页面容器。"""
+        """聚焦冲突列表。列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#conflict-list")
 
     @property
@@ -637,7 +637,7 @@ class DoctorPage(compat.Vertical):
         return self._conflict_rows
 
     def refresh_report(self) -> None:
-        """执行诊断并更新页面；读取期间禁用刷新按钮。"""
+        """执行诊断并更新页面。读取期间禁用刷新按钮。"""
         if self._busy:
             return
         self._start_load()
@@ -854,5 +854,5 @@ class DoctorPage(compat.Vertical):
         compat.notify(self.app, self._status_rendered, title=i18n.t("cli.tui.doctor.bind_open"))
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await compat.wait_for_idle(self.app, lambda: self._busy)

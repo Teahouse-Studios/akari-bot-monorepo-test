@@ -24,7 +24,7 @@ def _existing(doc_path: Path, paths: Iterable[Path]) -> tuple[Path, ...]:
 
 
 def doc_meta_paths(doc_path: Path) -> tuple[Path, ...]:
-    """返回参与合并的文档元数据文件，按全局、用户覆盖、旧布局的顺序。"""
+    """返回参与合并的文档元数据文件，按全局配置、用户覆盖、文档根目录兼容文件的顺序。"""
     global_files = _existing(doc_path, DOC_META_GLOBAL_FILES)
     user_files = _existing(doc_path, DOC_META_USER_FILES)
     if global_files or user_files:
@@ -33,7 +33,7 @@ def doc_meta_paths(doc_path: Path) -> tuple[Path, ...]:
 
 
 def doc_meta_path(doc_path: Path) -> Path:
-    """返回用于文件指纹与提示的元数据文件；没有文件时返回全局默认路径。"""
+    """返回用于文件指纹与提示的元数据文件。没有文件时返回全局默认路径。"""
     paths = doc_meta_paths(doc_path)
     if paths:
         return paths[-1]
@@ -61,7 +61,7 @@ def _merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, An
 
 
 def read_doc_meta(doc_path: Path) -> Mapping[str, Any]:
-    """读取并合并全局默认与用户覆盖；解析失败时跳过对应文件。"""
+    """读取并合并全局默认与用户覆盖。解析失败时跳过对应文件。"""
     merged: dict[str, Any] = {}
     for path in doc_meta_paths(doc_path):
         try:
@@ -93,7 +93,7 @@ class DocPage:
     """一个文档页面。
 
     :param path: 相对包文档目录的路径，以 ``.md`` 结尾。
-    :param title: 侧栏与索引里显示的标题。
+    :param title: 在侧栏与索引里显示的标题。
     :param order: 排序权重，自小到大。
     :param description: 一句话说明，可为空。
     :param submenu: 侧栏子菜单名，空串表示直接列在包下。
@@ -119,18 +119,18 @@ class DocPackage:
     :param title: 展示标题。
     :param summary: 一句话简介。
     :param doc_path: 包内文档目录。
-    :param logo: 该包声明给文档站点使用的日间标志文件，未声明时为空串。
-    :param logo_dark: 该包声明给文档站点使用的夜间标志文件，未声明时为空串。
-    :param avatar: 该包声明给对话示例使用的机器人头像，未声明时为空串。
+    :param logo: 该包声明供文档站点使用的日间标志文件，未声明时为空串。
+    :param logo_dark: 该包声明供文档站点使用的夜间标志文件，未声明时为空串。
+    :param avatar: 该包声明供对话示例使用的机器人头像，未声明时为空串。
     :param character: 该包声明的角色立绘，未声明时为空串。
     :param credits: 该包声明的制作人员名单文件，未声明时为空串。
-    :param brand: 是否为品牌资源提供者；构建时只取第一个提供者。
+    :param brand: 是否为品牌资源提供者。构建时只取第一个提供者。
     :param pages: 页面清单。
     :param order: 排序权重，自小到大。
     :param editable: 是否为可编辑安装。
     :param category: 侧栏分类，空串表示不分类。
     :param category_order: 分类在侧栏中的排序权重，自小到大。
-    :param overview: 是否生成包级概览页；为假时包只作为页面容器。
+    :param overview: 是否生成包级概览页。为假时包只作为页面容器。
     """
 
     key: str
@@ -176,7 +176,7 @@ class DocCatalog:
     def select(self, keys: Sequence[str] | None) -> DocCatalog:
         """按 key 过滤目录，保持目录原有顺序。
 
-        :param keys: 需要的 key；``None`` 或空序列表示全选。
+        :param keys: 需要的 key。``None`` 或空序列表示全选。
         :return: 过滤后的目录，警告原样保留。
         :raises DocsError: ``keys`` 含目录里没有的 key。
         """
@@ -236,7 +236,7 @@ class BuildResult:
 def page_url(key: str, path: str) -> str:
     """把包内页面路径折算成站点 URL。
 
-    站点开启 ``cleanUrls``，页面文件 ``a.md`` 对应 ``/a``；``index.md`` 对应包的目录首页。
+    站点开启 ``cleanUrls``，页面文件 ``a.md`` 对应 ``/a``。``index.md`` 对应包的目录首页。
     """
     normalized = path.replace("\\", "/").strip("/")
     if normalized == "index.md":

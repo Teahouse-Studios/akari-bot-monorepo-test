@@ -1,8 +1,8 @@
 """``migrate legacy`` 的安装候选与跳过诊断测试。
 
 旧版单仓库的 ``modules/`` 本来就含全部官方模块，按目录决定安装会把四十余个用户从未启用的模块
-连同重依赖一起装进新实例，还会把「未映射」与「未启用」混成同一类诊断。此处固定：候选只取旧库
-``module_status.load = 1``，目录只用于诊断；库读不到时不得退化成「安装全部目录」。
+连同重依赖一起装进新实例，还会把“未映射”与“未启用”混成同一类诊断。此处固定：候选只取旧库
+``module_status.load = 1``，目录只用于诊断。库读不到时不得退化成“安装全部目录”。
 """
 
 import sqlite3
@@ -61,8 +61,8 @@ ALL_DIRS = (
 
 
 def _catalog() -> RegistryCatalog:
-    # 未装载的模块也要在 registry 里有映射：否则「不安装」可能只是因为查不到分发，用例就分不清
-    # 「按启用状态筛选」与「碰巧映射不到」。
+    # 未装载的模块也要在 registry 里有映射：否则“不安装”可能只是因为查不到分发，用例就分不清
+    # “按启用状态筛选”与“碰巧映射不到”。
     entries = {}
     for name in ("dice", "wiki", "maimai", "phigros"):
         provides = ("wiki", "wikilog") if name == "wiki" else (name,)

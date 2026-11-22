@@ -79,7 +79,7 @@ class DiscordContextManager(ContextManager):
                     and not isinstance(author, discord.Member)
                     and getattr(channel, "guild", None) is not None
                 ):
-                    # Raw Reaction 在成员缓存缺失时只能先取得 User；频道权限计算需要完整 Member。
+                    # Raw Reaction 在成员缓存缺失时只能先取得 User。频道权限计算需要完整 Member。
                     author = await channel.guild.fetch_member(author.id)
             if isinstance(channel, discord.DMChannel) or channel.permissions_for(author).administrator:
                 return True
@@ -568,4 +568,4 @@ class DiscordContextManager(ContextManager):
 
 
 class DiscordFetchedContextManager(DiscordContextManager):
-    pass  # 由于 DiscordContextManager 已具备无 ctx 时主动获取的特性，因此不需要额外实现，此处继承为后续可能的扩展备用
+    pass  # DiscordContextManager 已支持无 ctx 时主动获取，此处仅保留子类以备扩展。

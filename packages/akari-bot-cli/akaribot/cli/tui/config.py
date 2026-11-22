@@ -1,7 +1,7 @@
 """配置页：配置表浏览、表单编辑与原始文本编辑。
 
 数据通过 :class:`ConfigSource` 读取，保存通过 ``akaribot config set`` 执行。
-密钥写入 ``<表>_secret`` 段；``config`` 表的密钥段为 ``secret``。
+密钥写入 ``<表>_secret`` 段。``config`` 表的密钥段为 ``secret``。
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def editor_setting(env: Mapping[str, str] | None = None) -> str:
     """返回外部编辑器命令文本，取值顺序与 ``akaribot config open`` 一致。
 
     :param env: 环境变量映射，默认取 ``os.environ``。
-    :return: ``VISUAL`` / ``EDITOR`` 的取值；两者都为空时按平台取默认命令。
+    :return: ``VISUAL`` / ``EDITOR`` 的取值。两者都为空时按平台取默认命令。
     """
     source = os.environ if env is None else env
     chosen = source.get("VISUAL") or source.get("EDITOR")
@@ -92,7 +92,7 @@ def editor_argv(env: Mapping[str, str] | None = None) -> list[str] | None:
     """把编辑器命令文本拆成 argv，无法获取可执行文件时返回 ``None``。
 
     :param env: 环境变量映射，默认取 ``os.environ``。
-    :return: 命令 argv；引号不配对或首个词不是可执行文件时为 ``None``。
+    :return: 命令 argv。引号不配对或首个词不是可执行文件时为 ``None``。
     """
     try:
         parts = shlex.split(editor_setting(env))
@@ -118,7 +118,7 @@ def kind_of_type(type_name: str) -> str:
     """把对端给的类型名归一到 :data:`KIND_BOOL` 等六种取值。
 
     :param type_name: ``akaribot config schema --json`` 中的 ``type`` 字段。
-    :return: 归一化类型；无法识别时为 :data:`KIND_OTHER`。
+    :return: 归一化类型。无法识别时为 :data:`KIND_OTHER`。
     """
     raw = (type_name or "").strip().casefold()
     if not raw:
@@ -167,7 +167,7 @@ def write_text(value: Any, kind: str = "") -> str:
     """把值渲染为可交给 ``config set`` 的规范文本。
 
     :param value: 运行期值。
-    :param kind: 归一化类型；默认按值推断。
+    :param kind: 归一化类型。默认按值推断。
     :return: 布尔为 ``true`` / ``false``，列表为 TOML 数组字面量，字符串不加引号。
     """
     if value is None:
@@ -234,7 +234,7 @@ class ConfigField:
 
     @property
     def kind_label(self) -> str:
-        """返回类型的本地化标签；未知类型附带原始类型名。"""
+        """返回类型的本地化标签。未知类型附带原始类型名。"""
         label = i18n.t(_KIND_KEYS.get(self.kind, _KIND_KEYS[KIND_OTHER]))
         if self.kind == KIND_OTHER and self.type_name:
             return i18n.t("cli.tui.config.kind_with_type", label=label, name=_short(self.type_name, 12))
@@ -259,7 +259,7 @@ class ConfigField:
 
     @property
     def help_text(self) -> str:
-        """返回帮助文本；优先使用注释，空值时补充默认值。"""
+        """返回帮助文本。优先使用注释，空值时补充默认值。"""
         parts = [self.comment.strip()] if self.comment.strip() else []
         if self.value in (None, "") and self.default not in (None, ""):
             parts.append(i18n.t("cli.tui.config.default_value", value=_short(edit_text(self.default), 40)))
@@ -281,7 +281,7 @@ def parse_field(field: ConfigField, text: str) -> tuple[bool, str, str]:
 
     :param field: 配置项，提供类型。
     :param text: 用户输入的文本。
-    :return: 三元组——是否通过；写入文本（通过时有效）；错误说明（通过时为空串）。
+    :return: 三元组——是否通过，写入文本（通过时有效），错误说明（通过时为空串）。
     """
     raw = text.strip()
     if field.kind == KIND_BOOL:
@@ -426,7 +426,7 @@ class RawEntry:
 
     @property
     def label(self) -> str:
-        """返回「表.键=值」形式的一行说明。"""
+        """返回“表.键=值”形式的一行说明。"""
         return f"{self.section}.{self.key}={self.text}"
 
 
@@ -450,7 +450,7 @@ def parse_toml_text(text: str) -> RawParseResult:
     """解析原始 TOML 文本，失败时给出可定位到行的说明。
 
     :param text: 编辑区中的全文。
-    :return: 解析结果；失败时 ``message`` 形如「TOML 解析失败（第 2 行第 5 列）：…」。
+    :return: 解析结果。失败时 ``message`` 形如“TOML 解析失败（第 2 行第 5 列）：…”。
     """
     try:
         return RawParseResult(True, tomlkit.parse(text))
@@ -492,11 +492,11 @@ def _section_matches(section: str, table: str) -> bool:
 def flatten_document(document: Any, table: str) -> tuple[list[RawEntry], list[str]]:
     """把 TOML 文档摊平为可经 ``config set`` 写入的条目。
 
-    嵌套表与顶层键无法表达为一次 ``config set``（写路径仅支持「段 + 键」两层），故跳过并给出原因。
+    嵌套表与顶层键无法表达为一次 ``config set``（写路径仅支持“段 + 键”两层），故跳过并给出原因。
 
     :param document: ``tomlkit.parse`` 的结果。
     :param table: 当前编辑的表名。
-    :return: 二元组——条目列表；跳过项的说明列表。
+    :return: 二元组——条目列表，跳过项的说明列表。
     """
     entries: list[RawEntry] = []
     skipped: list[str] = []
@@ -534,7 +534,7 @@ def diff_document(
     :param document: 解析后的文档。
     :param fields: 当前表的字段，提供各键的类型与当前值。
     :param table: 表名。
-    :return: 三元组——更改条目；跳过说明；值未变的键名。
+    :return: 三元组——更改条目，跳过说明，值未变的键名。
     """
     entries, skipped = flatten_document(document, table)
     current = {(field.section, field.key): field.write_value for field in fields}
@@ -573,13 +573,13 @@ class SetResult:
 
 
 class StaticConfigSource:
-    """固定数据的替身数据源，供自动化断言与自检使用，不产生任何子进程。
+    """固定数据的替身数据源，供自动化检查与自检使用，不产生任何子进程。
 
     :param tables: 配置表列表。
     :param fields: 表名到字段序列的映射。
     :param raw: 表名到原始 TOML 文本的映射。
     :param files: 表名到配置文件路径的映射，供编辑器动作定位文件。
-    :param set_result: 写入返回值；默认为成功。
+    :param set_result: 写入返回值。默认为成功。
     """
 
     def __init__(
@@ -627,7 +627,7 @@ class StaticConfigSource:
 
 @runtime_checkable
 class ConfigSource(Protocol):
-    """配置数据源接口；测试注入替身，实际运行通过子进程访问。"""
+    """配置数据源接口。测试注入替身，实际运行通过子进程访问。"""
 
     def list_tables(self) -> Sequence[str]:
         """返回实例内的全部配置表名。"""
@@ -639,10 +639,10 @@ class ConfigSource(Protocol):
         """返回一张表的原始 TOML 文本，只供展示与编辑。"""
 
     def set_value(self, section: str, key: str, value: str) -> SetResult:
-        """写入一项；``section`` 为 ``config set --table`` 的表引用。"""
+        """写入一项。``section`` 为 ``config set --table`` 的表引用。"""
 
     def config_file(self, table: str) -> Path | None:
-        """返回一张表对应的配置文件路径；定位不到实例时返回 ``None``。"""
+        """返回一张表对应的配置文件路径。定位不到实例时返回 ``None``。"""
 
 
 class SubprocessConfigSource:
@@ -738,9 +738,9 @@ class SubprocessConfigSource:
         return cli_process.cli_argv(*args)
 
     def config_file(self, table: str) -> Path | None:
-        """定位配置表对应的文件；实例未找到时返回 ``None``。
+        """定位配置表对应的文件。实例未找到时返回 ``None``。
 
-        :param table: 表引用（可能带 ``_secret`` 后缀；与基表同文件）。
+        :param table: 表引用（可能带 ``_secret`` 后缀，与基表同文件）。
         :return: 配置文件路径（未必存在）。
         """
         root = self._instance_root()
@@ -803,7 +803,7 @@ class SubprocessConfigSource:
             return None
         try:
             return find_instance_root(self.root)
-        except Exception:  # noqa: BLE001 - 定位失败按「没有实例」处理，由调用方给出提示
+        except Exception:  # noqa: BLE001 - 定位失败按“没有实例”处理，由调用方给出提示
             return None
 
     def _instance(self) -> Any:
@@ -885,7 +885,7 @@ def normalize_tables(payload: Any) -> list[str]:
 def rebuild_raw_text(fields: Sequence[ConfigField]) -> str:
     """由字段重建一份可解析的 TOML 文本，供未找到配置文件时展示。
 
-    仅在文件缺失时使用；保存通过 ``config set`` 执行。
+    仅在文件缺失时使用。保存通过 ``config set`` 执行。
 
     :param fields: 字段序列。
     :return: TOML 文本。
@@ -924,7 +924,7 @@ def _toml_literal(value: Any, kind: str) -> str:
 
 
 def _optional_widget(name: str) -> Any | None:
-    # 原生控件是否可用由兼容层决定，页面通过属性检测选择实现。
+    # 原生控件是否可用由兼容实现决定，页面通过属性检测选择实现。
     return getattr(compat, name, None)
 
 
@@ -960,7 +960,7 @@ class BoolToggle(compat.Horizontal):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.config.bool_hint")), markup=False)
 
     def on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """切换开关；事件不再上传，避免被所在页面当作动作按钮处理。"""
+        """切换开关。事件不再上传，避免被所在页面当作动作按钮处理。"""
         event.stop()
         self.toggle()
 
@@ -970,7 +970,7 @@ class BoolToggle(compat.Horizontal):
         return self._value
 
     def label_text(self) -> str:
-        """返回按钮文字，开与关配符号区分。"""
+        """返回按钮文字，开与关以符号区分。"""
         return i18n.t("cli.tui.config.bool_on") if self._value else i18n.t("cli.tui.config.bool_off")
 
     def set_value(self, value: bool) -> None:
@@ -1039,7 +1039,7 @@ class FieldRow(compat.Vertical):
         self.error_text = ""
 
     def compose(self) -> compat.ComposeResult:
-        """按字段类型装配控件；密钥用密码框，占位符另起一行高亮提示。"""
+        """按字段类型装配控件。密钥用密码框，占位符另起一行高亮提示。"""
         yield compat.Static(compat.plain_text(self.header), classes="field-header", markup=False)
         if self.help_text:
             yield compat.Static(compat.plain_text(self.help_text), classes="field-help", markup=False)
@@ -1091,7 +1091,7 @@ class FieldRow(compat.Vertical):
             control.value = text.strip().casefold() in _TRUE_WORDS
 
     def toggle(self) -> None:
-        """切换布尔控件；非布尔行不执行操作。"""
+        """切换布尔控件。非布尔行不执行操作。"""
         control = self.control()
         if isinstance(control, BoolToggle):
             control.toggle()
@@ -1146,7 +1146,7 @@ def _form_order(field: ConfigField) -> tuple[bool, bool, str]:
 class ConfigFormScreen(compat.Screen):
     """逐项填写一张配置表的模态框。
 
-    待填写项排在最前并以空输入框呈现，留空不写入；``enable`` 排在最后，保证凭据先于启用写入。
+    待填写项排在最前并以空输入框呈现，留空不写入。``enable`` 排在最后，保证登录信息先于启用写入。
     写入失败时停在出错项，已写入的项不重复提交。关闭时返回已写入的项数。
 
     :param title: 标题。
@@ -1248,7 +1248,7 @@ class ConfigFormScreen(compat.Screen):
         self.query_one("#form-status", compat.Static).update(compat.plain_text(text))
 
     def on_input_submitted(self, event: compat.Input.Submitted) -> None:
-        """回车移到下一项；保存须明确触发，避免填到一半就写入。"""
+        """回车移到下一项。保存须明确触发，避免填到一半就写入。"""
         self.focus_next()
 
     def on_button_pressed(self, event: compat.Button.Pressed) -> None:
@@ -1263,7 +1263,7 @@ class ConfigFormScreen(compat.Screen):
         self.request_close()
 
     def action_save(self) -> None:
-        """校验并写入被更改的项；全部成功后关闭。"""
+        """校验并写入被更改的项。全部成功后关闭。"""
         if self._saving:
             return
         plan, errors = plan_form_rows(self.rows())
@@ -1305,7 +1305,7 @@ class ConfigFormScreen(compat.Screen):
         row.scroll_visible(animate=False)
 
     def request_close(self) -> None:
-        """关闭对话框；有未写入的内容时先确认放弃。"""
+        """关闭对话框。有未写入的内容时先确认放弃。"""
         if self._saving:
             return
         unsaved = any(
@@ -1348,7 +1348,7 @@ class RawTextEditor(compat.VerticalScroll):
         return self._textarea_cls is None
 
     def compose(self) -> compat.ComposeResult:
-        """装配编辑区：原生 ``TextArea`` 或「操作按钮 + 逐行输入框」。"""
+        """装配编辑区：原生 ``TextArea`` 或“操作按钮 + 逐行输入框”。"""
         if self._textarea_cls is not None:
             yield self._textarea_cls("\n".join(self._lines), language="toml", id="raw-textarea")
             return
@@ -1390,7 +1390,7 @@ class RawTextEditor(compat.VerticalScroll):
         await self._remount_lines()
 
     async def remove_last_line(self) -> None:
-        """删除末尾一行；只剩一行时清空该行。"""
+        """删除末尾一行。只剩一行时清空该行。"""
         textarea = self._textarea()
         if textarea is not None:
             lines = str(textarea.text).split("\n")
@@ -1425,7 +1425,7 @@ class ConfigPage(compat.Vertical):
     """配置页控件。
 
     :param source: 数据源，默认为 :class:`SubprocessConfigSource`。
-    :param cache_ttl: 配置表列表缓存有效期秒数；保存与重新加载会立即失效。
+    :param cache_ttl: 配置表列表缓存有效期秒数。保存与重新加载会立即失效。
     """
 
     # 限制按钮最小宽度，确保 80 列终端能够显示全部操作。
@@ -1572,7 +1572,7 @@ class ConfigPage(compat.Vertical):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件；读取数据推迟到首次显示。"""
+        """挂载后只装配控件。读取数据推迟到首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -1616,7 +1616,7 @@ class ConfigPage(compat.Vertical):
 
     @property
     def saved_entries(self) -> tuple[str, ...]:
-        """返回最近一次保存写入的「表.键=值」列表。"""
+        """返回最近一次保存写入的“表.键=值”列表。"""
         return self._saved
 
     @property
@@ -1625,7 +1625,7 @@ class ConfigPage(compat.Vertical):
         return self._skipped
 
     def cache_age(self) -> float:
-        """返回配置表列表缓存自上次读取以来的秒数；从未读取时为无穷大。"""
+        """返回配置表列表缓存自上次读取以来的秒数。从未读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -1649,7 +1649,7 @@ class ConfigPage(compat.Vertical):
         return self._raw_table is not None and self.raw_editor().text != self._raw_original
 
     def dirty_note(self) -> str:
-        """返回未保存更改的说明；没有更改时为空串。"""
+        """返回未保存更改的说明。没有更改时为空串。"""
         if not self.is_dirty():
             return ""
         return i18n.t("cli.tui.config.dirty_note", table=self._selected or i18n.t("cli.tui.common.none"))
@@ -1666,11 +1666,11 @@ class ConfigPage(compat.Vertical):
         return self.query_one("#raw-editor", RawTextEditor)
 
     def table_row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的配置表列表行文本，供自动化断言核对宽度。"""
+        """返回最近一次渲染出的配置表列表行文本，供自动化检查核对宽度。"""
         return self._rendered_tables
 
     def header_texts(self) -> tuple[str, ...]:
-        """返回各字段行的表头文本，供自动化断言核对列对齐。"""
+        """返回各字段行的表头文本，供自动化检查核对列对齐。"""
         return tuple(row.header for row in self.field_rows())
 
     def help_texts(self) -> tuple[str, ...]:
@@ -1678,7 +1678,7 @@ class ConfigPage(compat.Vertical):
         return tuple(row.help_text for row in self.field_rows())
 
     def form_hint(self) -> str:
-        """返回表单区当前显示的提示文本；正在显示字段时为空串。"""
+        """返回表单区当前显示的提示文本。正在显示字段时为空串。"""
         try:
             hint = self.query_one("#form-hint", compat.Static)
         except Exception:  # noqa: BLE001 - 没有提示控件时按空串处理
@@ -1694,7 +1694,7 @@ class ConfigPage(compat.Vertical):
     def refresh_tables(self, *, force: bool = False) -> None:
         """读取配置表列表。
 
-        :param force: 为 ``True`` 时忽略缓存；否则缓存有效期内只重绘不读取数据。
+        :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
         # 强制刷新会重建编辑区，必须确认未保存更改的处理方式。
         if force and self.is_dirty():
@@ -1742,7 +1742,7 @@ class ConfigPage(compat.Vertical):
     async def select_table(self, table: str | None, *, force: bool = False) -> bool:
         """切换当前表：读取字段（有缓存）并重建右侧面板。
 
-        :param table: 目标表名；``None`` 表示清空。
+        :param table: 目标表名。``None`` 表示清空。
         :param force: 为 ``True`` 时忽略字段缓存。
         :return: 是否成功。
         """
@@ -1777,7 +1777,7 @@ class ConfigPage(compat.Vertical):
     async def load_raw(self, table: str | None = None, *, force: bool = False) -> bool:
         """读取并展示某表的原始 TOML 文本。
 
-        :param table: 目标表；默认为当前表。
+        :param table: 目标表。默认为当前表。
         :param force: 为 ``True`` 时即使已载入也重新加载。
         :return: 是否成功。
         """
@@ -1800,7 +1800,7 @@ class ConfigPage(compat.Vertical):
     async def set_mode(self, mode: str) -> None:
         """切换编辑模式：表单模式与原始文本模式。
 
-        :param mode: ``form`` 或 ``raw``；其他取值不执行操作。
+        :param mode: ``form`` 或 ``raw``。其他取值不执行操作。
         """
         if mode not in (MODE_FORM, MODE_RAW):
             return
@@ -1825,7 +1825,7 @@ class ConfigPage(compat.Vertical):
         return fields
 
     def invalidate_cache(self, table: str | None = None) -> None:
-        """使字段缓存失效；``table`` 为 ``None`` 时清空全部。"""
+        """使字段缓存失效。``table`` 为 ``None`` 时清空全部。"""
         if table is None:
             self._schemas.clear()
             self._loaded_at = 0.0
@@ -1916,7 +1916,7 @@ class ConfigPage(compat.Vertical):
     async def save(self) -> bool:
         """保存当前表，返回是否全部写入成功。
 
-        表单模式逐项校验类型后只写入被更改的键；原始文本模式先用 ``tomlkit.parse()``
+        表单模式逐项校验类型后只写入被更改的键。原始文本模式先用 ``tomlkit.parse()``
         校验全文，解析失败直接拒绝保存并给出出错行，不发出任何写入调用。
         """
         if self._selected is None:
@@ -2152,8 +2152,8 @@ class ConfigPage(compat.Vertical):
     def config_path(self, table: str | None = None) -> Path | None:
         """返回表的配置文件路径，沿用本页数据源的定位规则。
 
-        :param table: 表名；默认取当前选中的表。
-        :return: 配置文件路径；没有选中表或数据源定位不到实例时为 ``None``。
+        :param table: 表名。默认取当前选中的表。
+        :return: 配置文件路径。没有选中表或数据源定位不到实例时为 ``None``。
         """
         name = table if table is not None else self._selected
         if name is None:
@@ -2167,7 +2167,7 @@ class ConfigPage(compat.Vertical):
     async def open_in_editor(self) -> bool:
         """使用外部编辑器编辑当前配置文件，退出后重新加载配置。
 
-        :return: 是否启动编辑器并完成重新加载；非交互终端返回 ``False``。
+        :return: 是否启动编辑器并完成重新加载。非交互终端返回 ``False``。
         """
         table = self._selected
         if table is None:
@@ -2214,7 +2214,7 @@ class ConfigPage(compat.Vertical):
         self._confirm_discard(self.open_in_editor)
 
     def focus_primary(self) -> None:
-        """聚焦配置表列表；列表为空时聚焦页面容器。"""
+        """聚焦配置表列表。列表为空时聚焦页面容器。"""
         compat.focus_first(self, "#table-list")
 
     def action_focus_tables(self) -> None:
@@ -2222,7 +2222,7 @@ class ConfigPage(compat.Vertical):
         self.query_one("#table-list", compat.ListView).focus()
 
     async def wait_for_idle(self) -> None:
-        """等待本页发起的后台任务结束，供自动化断言与脚本使用。"""
+        """等待本页发起的后台任务结束，供自动化检查与脚本使用。"""
         await self.app.workers.wait_for_complete()
 
     # endregion

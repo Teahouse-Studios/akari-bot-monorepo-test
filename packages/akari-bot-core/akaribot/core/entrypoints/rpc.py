@@ -2,7 +2,7 @@
 
 供 CLI 以子进程调用：``python -m akaribot.core.entrypoints.rpc <remote> <dist>``。``remote`` 只接受
 ``server.post_package_install`` 与 ``server.post_package_remove``，即 ``ServerAPI`` 上已有的两个固定
-契约；方法名由本模块的白名单给出，不接受调用方拼接任意 RPC 名。
+契约。方法名由本模块的白名单给出，不接受调用方拼接任意 RPC 名。
 
 热装载与热拆卸都必须在运行中的 Server 内执行（独立进程里没有模块索引、调度器与数据库 context），
 故本进程只做一次 RPC 并等待确认。stdout 只放一行结果 JSON，说明与日志走 stderr。
@@ -19,13 +19,13 @@ import sys
 from dataclasses import dataclass
 
 # 等 Server 确认的秒数上限。契约声明的是 7200 秒（热装载要导入依赖并重挂数据库 context），但
-# Server 掉线而租约未过期时无人认领消息，按契约等下去会把 CLI 挂住两小时，故在此收紧。
+# Server 掉线而租约未过期时无人认领消息，按契约等下去会让 CLI 阻塞两小时，故在此收紧。
 RPC_TIMEOUT_SECONDS = 300
 
-# peer 注册与就绪的秒数上限；超时说明实例的 JobQueue 不可达。
+# peer 注册与就绪的秒数上限。超时说明实例的 JobQueue 不可达。
 PEER_READY_TIMEOUT_SECONDS = 15
 
-# 白名单：remote 到固定契约的对应关系。新增包变更动作时必须在此登记，不得由调用方拼方法名。
+# 白名单：remote 到固定契约的对应关系。新增包变更动作时必须在此记录，不得由调用方拼方法名。
 REMOTE_METHODS = {
     "server.post_package_install": "install",
     "server.post_package_remove": "remove",
@@ -66,7 +66,7 @@ class Outcome:
     :param remote: 契约名。
     :param dist: 分发名。
     :param status: :data:`STATUS_DELIVERED` 等状态之一。
-    :param result: 远端返回值；未取得结果时为 ``None``。
+    :param result: 远端返回值，未取得结果时为 ``None``。
     :param detail: 面向调用者的原因说明。
     """
 
@@ -116,13 +116,13 @@ async def _deliver(remote: str, dist: str, timeout: float) -> bool:
     }
 
     class CliPeer(JobQueueBase):
-        """一次性 RPC 调用方；只发一次请求，不绑定任何远端处理器。"""
+        """一次性 RPC 调用方。只发一次请求，不绑定任何远端处理器。"""
 
     poller = None
     database_connected = False
     try:
         try:
-            # 后端与 peer 的装配失败与「连不上」对操作者是同一件事：实例的 JobQueue 用不了。
+            # 后端与 peer 的装配失败与“连不上”对操作者是同一件事：实例的 JobQueue 用不了。
             database_connected = await _connect_database_if_needed()
             CliPeer.configure_backend(create_jobqueue_backend())
             CliPeer.configure_peer(role="cli", service="CLI", capabilities=["rpc"])
@@ -158,11 +158,11 @@ async def _run(remote: str, dist: str, *, timeout: float = RPC_TIMEOUT_SECONDS) 
     except InstanceUnreachable as exc:
         return Outcome(remote, dist, STATUS_NOT_RUNNING, None, f"实例未运行：{exc}")
     except RpcTimeoutError as exc:
-        # 超时是「结果未知」：远端可能已经改了状态，调用方不得当作未发生。
+        # 超时是“结果未知”：远端可能已经改了状态，调用方不得当作未发生。
         return Outcome(remote, dist, STATUS_TIMEOUT, None, f"已投递，但 {timeout:g} 秒内未收到实例确认：{exc}")
     except RpcError as exc:
         return Outcome(remote, dist, STATUS_ERROR, None, f"投递失败：{exc}")
-    except Exception as exc:  # noqa: BLE001 - 入口层兜底，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
         return Outcome(remote, dist, STATUS_ERROR, None, f"投递失败：{exc.__class__.__name__}: {exc}")
 
     if not result:
@@ -180,7 +180,7 @@ def _emit(outcome: Outcome) -> int:
 def main(argv: list[str] | None = None) -> int:
     """入口。
 
-    :param argv: 命令行参数；缺省取 ``sys.argv[1:]``。
+    :param argv: 命令行参数，默认取 ``sys.argv[1:]``。
     :return: 进程退出码。
     """
     parser = argparse.ArgumentParser(

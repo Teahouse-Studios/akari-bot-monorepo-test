@@ -1,7 +1,5 @@
 # 文档引擎
 
-本文将会介绍文档引擎的目录收集、站点生成、构建缓存、开发预览、预览与部署。
-
 文档引擎把已安装包的 `docs/` 目录汇总成一个 VitePress 站点：读取目录、生成站点源文件、调用 VitePress 构建、提供静态预览与开发预览，并记录构建与部署状态。
 
 ## 当前状态
@@ -11,7 +9,7 @@
 ## 前置条件
 
 - Node.js 与 `npm` 需要在 `PATH` 中。内置主题与外部主题的 Node.js 版本要求在各自的主题清单中声明。
-- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装执行 `npm install`，VitePress 版本来自清单。
+- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装时执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装时执行 `npm install`，VitePress 版本来自清单。
 - 首次构建需要联网安装依赖。离线模式要求 `<实例根>/cache/docs/node_modules` 已包含主题所需版本。
 
 Node.js 缺失、版本低于主题要求或 npm 不可用时，构建以工具链错误终止，不会改用其它渲染器。
@@ -149,7 +147,7 @@ color = "#d69cdd"
     1. `docs.toml` 的 `[site]` 字段。
     2. 第一个 `brand = true` 的文档包在 `docs/config/global/docs.global.toml` 中声明的同名字段。
     3. 内置资源。
-  - 没有 `brand = true` 的包时，兼容第一个声明 `logo` 或 `avatar` 的包。
+  - 没有 `brand = true` 的包时，回退到第一个声明 `logo` 或 `avatar` 的包。
   - 内置回退为 `logo.png`、`logo-night.png`、`logo.png`、`placeholder.png`。`credits` 没有内置文件时为空。品牌包缺失不会让构建失败。
   - 站点图标取 `[assets] favicon` 指向的随包文件。
 - `themeConfig.akari.brand`：生成器输出的品牌插槽，供主题组件读取。
@@ -176,7 +174,7 @@ color = "#d69cdd"
 - `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其它文件名，或改用 `site.favicon` 指向实例内的文件。
 - `build.out_dir`：输出目录，相对路径锚定实例根。留空时取 `defaults.toml` 的 `[site] out_dir`。
 - `theme.source`：主题来源。`auto` 在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。
-- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
+- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
 - `deploy`：部署目标配置，引擎不解释这些字段。
 
 内容按语言分目录：默认语言读取包文档目录，其他语言读取 `docs/<标签>/`。某个语言缺少页面时，生成器复制默认语言的同名页面，访问者不会遇到空链接。跨包链接、侧栏与导航按语言加 `/<标签>/` 前缀。
@@ -276,15 +274,17 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `docs.toml`、`docs-theme.json`、首页组件与站点素材 | 重新读取配置，`site.base` 变化时重启开发服务器 |
 | 主题清单的 `dependencies` 或 `install_mode` | 输出提示，需停止开发模式并执行 `install-deps` |
 
-生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 承载依赖，`.vitepress/cache` 承载 Vite 的预构建产物，两者都在同步范围之外。生成器每次清空并重写全部源文件，因此必须差分同步：直接改写镜像会让 Vite 在每批改动上全量失效。
+生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 承载依赖，`.vitepress/cache` 承载 Vite 的预构建产物，两者都在同步范围之外。
+
+生成器每次清空并重写全部源文件，因此必须差分同步：直接改写镜像会让 Vite 在每批改动上全量失效。
 
 运行行为：
 
 - 变更在 0.6 秒的静默窗口内合并为一批，间隔由 `--interval` 调整。
 - `--package` 只监听指定包，其余包仍参与生成与跨包链接折算。
-- 默认端口 5173，被占用时改用系统分配的端口；`--port 0` 直接把端口选择交给系统。
+- 默认端口 5173，被占用时改用系统分配的端口。`--port 0` 直接把端口选择交给系统。
 - 启动时写入 `cache/docs/.dev.lock`。同一实例上 `dev` 与 `clean`、`install-deps` 互斥，`status` 据此报告开发模式状态。
-- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行；在 TUI 中启动其一即停止另一。
+- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行。在 TUI 中启动其一即停止另一。
 - `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。
 
 开发模式不写 `.docs/state.json`，也不改动 `cache/docs/site`。
@@ -296,9 +296,12 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 每次部署向状态文件追加一条记录，包含目标、结果与时间。
 
 仓库自带的 `Builtin Tester` 工作流在 tester 通过后发布文档站：默认分支的 push 与手动触发会全量构建
-所有包的文档，产物交给 GitHub Pages 发布，PR 与其它的分支不发布。构建在临时实例 `.ci-docs` 里进行，
+所有包的文档，产物交给 GitHub Pages 发布。PR（拉取请求）与其他分支不发布。
+
+构建在临时实例 `.ci-docs` 里进行，
 基路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
-仓库在 Settings → Pages 的 Source 须为 GitHub Actions；工作流在 Pages 尚未启用时会自动打开它。
+
+仓库在 Settings → Pages 的 Source 须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
 
 ## 主题
 
@@ -314,7 +317,9 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |
 | `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |
 
-页脚不在主题里实现。生成器复制主题目录后，把主题入口 `index.ts` 改名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件；新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时不做这层替换，站点沿用主题自带的页脚。
+页脚不在主题里实现。生成器复制主题目录后，把主题入口 `index.ts` 改名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件。新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。
+
+模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时不做这层替换，站点沿用主题自带的页脚。
 
 `akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，Node.js 与 VitePress 版本由该文件声明。本仓库用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例也可以把 `theme.source` 指向自己的模板目录。
 
@@ -330,7 +335,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 
 生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
 
-依赖段落用 `<PackageDependencies package="<包 key 或分发名>" />`。生成器读取已装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写进 `themeConfig.akari.dependencies`；组件按包 key 与分发名取列表，文档不写版本范围。
+依赖段落用 `<PackageDependencies package="<包 key 或分发名>" />`。生成器读取已装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写进 `themeConfig.akari.dependencies`。组件按包 key 与分发名取列表，文档不写版本范围。
 
 组件只在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。
 

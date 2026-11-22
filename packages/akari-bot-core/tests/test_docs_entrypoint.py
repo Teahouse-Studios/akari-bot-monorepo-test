@@ -1,6 +1,6 @@
 """``docs`` 入口的单元测试。
 
-发现过程不导入目标包，测试一律以假 entry point 与假 find_spec 注入包目录；另覆盖 docs.toml、
+发现过程不导入目标包，测试一律以假 entry point 与假 find_spec 注入包目录。另覆盖 docs.toml、
 front matter、隐藏页、无文档告警、符号链接逃逸、目录扫描回退与命令行输出。
 """
 
@@ -517,7 +517,7 @@ def _test_directory_scan_fallback():
 
 
 def _test_stale_editable_metadata_is_supplemented():
-    # 可编辑安装的元数据早于源码新增的 akaribot.docs 声明时按源码补入并告警；普通安装不按源码补入。
+    # 可编辑安装的元数据缺少源码里的 akaribot.docs 声明时按源码补入并告警。普通安装不按源码补入。
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
         core_spec = _make_package(root / "src", "akaribot.core", {"docs/index.md": "# Core\n"})
@@ -624,7 +624,7 @@ async def test_docs_entrypoint(tester: Tester):
     """core.entrypoints.docs: 包文档清单入口测试"""
     await tester.test(_test_metadata_and_sorting, "元数据字段与分组排序")
     await tester.test(_test_front_matter_overrides_titles, "front matter 覆盖标题与页面排序")
-    await tester.test(_test_doc_meta_defaults_and_corruption, "元数据缺省、全局/用户覆盖与损坏告警")
+    await tester.test(_test_doc_meta_defaults_and_corruption, "元数据默认、全局/用户覆盖与损坏告警")
     await tester.test(_test_doc_logo_metadata, "docs.global.toml 声明的站点标志按包目录解析并拒绝越界")
     await tester.test(_test_category_is_single_string, "分类只接受单个字符串")
     await tester.test(_test_development_page_sorts_last, "开发页固定在页面列表末尾")

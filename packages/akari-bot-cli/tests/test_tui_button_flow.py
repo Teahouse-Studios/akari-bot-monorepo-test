@@ -8,7 +8,7 @@ from akaribot.testing import Tester, func_case
 
 RECORD = ModuleRecord(name="coin", dist="akari-bot-module-coin", version="0.1.0", state="installed")
 
-# 每个标签四个汉字（八格）加两格内边距，故每个按钮十格；八个按钮一行需要 80 格。
+# 每个标签四个汉字（八格）加两格内边距，故每个按钮十格。八个按钮一行需要 80 格。
 SPECS = tuple((f"b{index}", "切换实例") for index in range(8))
 MIXED_SPECS = (
     ("b0", "安装"),

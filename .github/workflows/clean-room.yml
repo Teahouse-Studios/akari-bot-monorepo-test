@@ -1,7 +1,7 @@
 name: Clean room install check
 
 # T6.6：用发布形态的 wheel 验证用户侧安装体验。workspace 的开发期覆盖会丢弃内部版本约束，
-# 只有从 wheel 装才会真正走解析器，故发布前必须跑这一道。
+# 只有从 wheel 装才会真正走解析器，故发布前必须执行这项检查。
 on:
   workflow_dispatch:
   pull_request:
@@ -48,7 +48,7 @@ jobs:
       - name: Report changed packages
         shell: bash
         run: |
-          # T6.1：打印本次改动映射到的分发名矩阵；core 或全局文件改动时标记 full。
+          # T6.1：打印本次改动映射到的分发名矩阵。core 或全局文件改动时标记 full。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"

@@ -20,7 +20,7 @@
 目录与正文的分工
 ----------------
 
-- **路径**：`akaribot/adapters/[@module_name@]/` 的目录名在复制时替换；
+- **路径**：`akaribot/adapters/[@module_name@]/` 的目录名在复制时替换。
 - **正文**：Jinja 变量负责能力清单、配置字段等结构化取值，占位符负责名字与文案。
 
 维护工具
@@ -33,4 +33,4 @@
 ```
 
 它对该目录下的每个 `akari-bot-adapter-*` 跑 ruff check / ruff format（仓库配置与 ruff 默认配置
-各一遍）、tomllib 解析、entry point 名与 core 约束断言，以及导入面检查。
+各一遍）、tomllib 解析、entry point 名与 core 约束检查，以及导入面检查。
