@@ -1325,7 +1325,7 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 # 大响应的语料体积翻倍。此时只保留 json_data，读取时再还原出 text。
 <<< END U010461 >>>
 <<< UNIT U010462 | py-comment | packages/akari-bot-testing/akaribot/testing/mock/fixtures.py:106-108 >>>
-# 默认禁止回退到真实网络，因为未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）
+# 默认禁止回退到真实网络，因为未录制的 URL 会触发重试与超时（默认 3 次 × 20 秒）
 # 拖慢用例，并让结果随外部服务状态波动。录制新语料时以环境变量放行。
 # 每次调用都重置策略，使中途停用 mock 的用例不会波及后续入口。
 <<< END U010462 >>>
@@ -1499,7 +1499,7 @@ web_render 数据获取方法的模拟管理器。
 # 模块注册表与 hook 订阅是进程级状态，用例可能将其改写或关闭。
 <<< END U010516 >>>
 <<< UNIT U010517 | py-comment | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:128-128 >>>
-# 未完成取消收尾的任务会带着已关闭的数据库上下文继续运行，后续用例不再可信。
+# 未完成取消收尾的任务会携带已关闭的数据库上下文继续运行，后续用例不再可信。
 <<< END U010517 >>>
 <<< UNIT U010518 | py-comment | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:158-158 >>>
 # 测试自己抛出的 TimeoutError 不是测试超时，只有本上下文到期才判定。
@@ -1648,7 +1648,7 @@ web_render 数据获取方法的模拟管理器。
 # ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
 <<< END U010558 >>>
 <<< UNIT U010559 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:525-526 >>>
-# 给了位置参数就只运行这些路径。否则按默认根目录收集，仓库根目录的集成用例由 _iter_integration_files
+# 传入位置参数时只运行这些路径。否则按默认根目录收集，仓库根目录的集成用例由 _iter_integration_files
 # 单独列出，其目录内的辅助模块不参与收集。两种情形都按路径排序且去重。
 <<< END U010559 >>>
 <<< UNIT U010560 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:772-772 >>>
@@ -2435,7 +2435,7 @@ E2B 的 API key。
 # 优先抽取正文，正文识别失败时转为无标记的纯文本，保证模型无法获取 HTML 标记。
 <<< END U010797 >>>
 <<< UNIT U010798 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/tools/fetch_webpage.py:72-72 >>>
-# WebRender 由机器人自身发起请求，需补做内网校验，否则会绕过 get_url 的地址限制。
+# WebRender 由机器人自身发起请求，需补充内网校验，否则会绕过 get_url 的地址限制。
 <<< END U010798 >>>
 <<< UNIT U010799 | py-comment | packages/modules/akari-bot-module-ai/tests/test_ai_anthropic_tool_choice.py:10-10 >>>
 # 捕获请求参数后中断 create 流程。

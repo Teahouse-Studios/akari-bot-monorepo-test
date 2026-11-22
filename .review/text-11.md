@@ -1430,7 +1430,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 解析错误类型取决于 tomlkit，逐表归集后继续
 <<< END U007782 >>>
 <<< UNIT U007783 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:241-242 >>>
-# 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``，导致文件里类型不对，重新读取虽是 ``true``
+# 不做转换会把 `enable` 这类布尔项写成字符串 ``"true"``，导致文件里类型不对，重新读取虽是 ``true``
 # 但任何按布尔取用的代码都会获取到真值字符串。
 <<< END U007783 >>>
 <<< UNIT U007784 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:337-337 >>>
@@ -1495,7 +1495,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 一行多列更新时，所有取值先转换完再下发，且在同一次 UPDATE 里写入，不会出现“改了一半”的行。
 <<< END U007803 >>>
 <<< UNIT U007804 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:333-333 >>>
-# 连接名必须显式给出，因为实例同时挂着 default 与 local 两个库，省略会被 Tortoise 拒绝。
+# 连接名必须显式给出，因为实例同时挂载 default 与 local 两个数据库，省略会被 Tortoise 拒绝。
 <<< END U007804 >>>
 <<< UNIT U007805 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:403-403 >>>
 # 输出恒为 JSON，``--json`` 只为与其他入口的命令行形态保持一致。

@@ -2497,7 +2497,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U013646 >>>
 <<< UNIT U013647 | py-comment | tests/build_synthetic_fixtures.py:54-56 >>>
 # 稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会改用真实网络，
-# 带着重试与超时耗掉数十秒，且结果随对方服务状态波动。此处以其真实状态码固定下来，
+# 携带重试与超时耗费数十秒，且结果随对方服务状态波动。此处以其真实状态码固定下来，
 # 使模块进入与线上一致的错误分支，同时把耗时降为零。
 <<< END U013647 >>>
 <<< UNIT U013648 | py-comment | tests/build_synthetic_fixtures.py:58-58 >>>

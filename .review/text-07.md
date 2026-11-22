@@ -3663,7 +3663,7 @@ cli.logs: 日志解析、增量读取与命令输出测试
 # typer.Exit 是正常收尾
 <<< END U005747 >>>
 <<< UNIT U005748 | py-comment | packages/akari-bot-cli/tests/test_main.py:276-276 >>>
-# 在仓库根目录这类存放实例的目录下，唯一的下级实例就是当前要管理的实例，直接记录并切换过去。
+# 在仓库根目录这类存放实例的目录下，唯一的下级实例就是当前要管理的实例，直接记录并切换到该实例。
 <<< END U005748 >>>
 <<< UNIT U005749 | py-comment | packages/akari-bot-cli/tests/test_main.py:295-295 >>>
 # 再放入一个实例并更换为空注册表，下级有两个实例时不作选择，只报告候选。

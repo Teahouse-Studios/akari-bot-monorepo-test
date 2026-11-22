@@ -3193,7 +3193,7 @@ ${env} 指向的 uv 不可用（${path}），改用其他来源。
 <<< END U004260 >>>
 <<< UNIT U004261 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:33-34 >>>
 # 无子命令时的退出码。click ≥8.2 把 no_args_is_help 实现为 NoArgsIsHelpError（UsageError，退出码 2），
-# 语义是“参数不足”而非成功。这里沿用该退出码，同时把帮助文本留在正常输出通道，不落进错误面板。
+# 语义是“参数不足”而非成功。这里沿用该退出码，同时把帮助文本留在正常输出通道，不进入错误面板。
 <<< END U004261 >>>
 <<< UNIT U004262 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/main.py:50-50 >>>
 # noqa: BLE001 - 回退必须覆盖冻结产物的全部 metadata 读取失败

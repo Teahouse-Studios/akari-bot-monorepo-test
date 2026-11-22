@@ -467,7 +467,7 @@
 判断对象是否是字符串以外的可迭代对象。
 <<< END U008698 >>>
 <<< UNIT U008699 | py-docstring | packages/akari-bot-core/akaribot/core/utils/func.py:47-47 | ctx=is_json_serializable >>>
-检查对象是否可以被 JSON 序列化。
+检查对象能否序列化为 JSON。
 <<< END U008699 >>>
 <<< UNIT U008700 | py-docstring | packages/akari-bot-core/akaribot/core/utils/func.py:56-56 | ctx=chunk_list >>>
 将可迭代对象分块，返回生成器。
@@ -1186,7 +1186,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # lease。sender barrier 建立后，冲突选择保持 lease，直到合并写入结束。
 <<< END U008887 >>>
 <<< UNIT U008888 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:328-329 >>>
-# 绑定码的生成与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，
+# 绑定码的生成与使用须处于同类场景。私聊码绑定发起方的场景组，若在群里兑换，
 # 会把一个群的数据合并到对方的私聊，群码在私聊里兑换同理。
 <<< END U008888 >>>
 <<< UNIT U008889 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:336-336 >>>
@@ -1297,7 +1297,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 仅在模块确实含有管理员条目时才查询平台权限，普通模块的帮助不额外付出一次接口调用
 <<< END U008919 >>>
 <<< UNIT U008920 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:532-533 >>>
-# 表格版把正则包进行内代码，不需要也不能要这层反斜杠转义，
+# 表格版把正则包裹为行内代码，不需要也不能要这层反斜杠转义，
 # 故在转义前先留一份原样的
 <<< END U008920 >>>
 <<< UNIT U008921 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:575-575 >>>
@@ -1406,7 +1406,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 某条关系的目标，配置多条关系时挡不住用甲关系的码在乙关系的目标上兑换。
 <<< END U008940 >>>
 <<< UNIT U008941 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:204-205 >>>
-# 迁移码的签发与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，
+# 迁移码的签发与使用须处于同类场景。私聊码绑定发起方的场景组，若在群里兑换，
 # 会把一段私聊的数据合并到群场景，群码在私聊里兑换同理。
 <<< END U008941 >>>
 <<< UNIT U008942 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:212-212 >>>

@@ -935,7 +935,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 - `REVISION` 非空，`DEPENDS_ON` 只能指向同包 revision。`DEPENDS_ON` 未声明时，按 revision 字典序执行。
 - 执行顺序固定为 core 的全部待应用 revision，再按包名执行各包。
 - 已应用记录写入 `schema_migrations`（`package`、`revision`、`applied_at`、`checksum`），以 `(package, revision)` 唯一。revision 文件改动后 checksum 随之变化，可以据此发现文件已被修改。
-- 每条 revision 必须可重复执行，因为 MySQL 的 DDL 自动提交，无法与版本记录写入同一事务，因此每一步先探测再执行。SQLite 支持事务性 DDL，Runner 把单条 revision 与版本记录包进同一事务。
+- 每条 revision 必须可重复执行，因为 MySQL 的 DDL 自动提交，无法与版本记录写入同一事务，因此每一步先探测再执行。SQLite 支持事务性 DDL，Runner 把单条 revision 与版本记录纳入同一事务。
 - `MigrationContext` 提供 `execute()`、`execute_script()`、`fetch_all()`、`has_table()`、`has_column()`、`rename_table()`、`rename_column()`，按方言生成 SQL。
 <<< END U007253 >>>
 <<< UNIT U007254 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/database.md:111-111 | ctx=迁移 >>>

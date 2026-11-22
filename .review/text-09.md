@@ -571,7 +571,7 @@ Parser 入口 hook 的类型化结果。
 # 模块是否按模板路由与查看者的权限无关，受限命令同样算作模板命令
 <<< END U006638 >>>
 <<< UNIT U006639 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:491-491 >>>
-# 有命令模板，进行命令解析
+# 有命令模板，解析命令
 <<< END U006639 >>>
 <<< UNIT U006640 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:494-495 >>>
 # ``None`` 表示命令已被入口策略处理（例如权限拒绝或参数错误），
@@ -1207,7 +1207,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 <<< UNIT U006794 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:1047-1062 | ctx=MessageSession.format_num >>>
 格式化数字为本地化的表示。
 
-根据地区设置进行本地化处理，包括数字分隔符和单位符号的翻译。
+根据地区设置本地化数字格式，包括数字分隔符和单位符号的翻译。
 支持自动缩放大数字（如 100 万 -> 1 百万 或 1M）。
 
 :param number: 要格式化的数字
@@ -1493,7 +1493,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 <<< END U006867 >>>
 <<< UNIT U006868 | py-comment | packages/akari-bot-core/akaribot/core/builtins/utils/__init__.py:17-18 >>>
 # 命令前缀列表 - 触发命令的前缀符号，如 "/" 或 "~"
-# 从配置中加载，进行去重处理
+# 从配置中加载并去重
 <<< END U006868 >>>
 <<< UNIT U006869 | py-inline-comment | packages/akari-bot-core/akaribot/core/builtins/utils/__init__.py:19-19 >>>
 # 命令前缀

@@ -1727,7 +1727,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 解除水鱼账号绑定，同时撤销授权。
 <<< END U011669 >>>
 <<< UNIT U011670 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:164-164 | ctx=`chunithm bind lx` >>>
-绑定落雪咖啡屋账号。不带参数时，命令返回授权链接，并提示用本命令回传授权码。参数是授权码或含授权码的回调地址时，命令直接完成绑定。授权码无效时返回提示。
+绑定落雪咖啡屋账号。不带参数时，命令返回授权链接，并提示用本命令回传授权码。参数是授权码或包含授权码的回调地址时，命令直接完成绑定。授权码无效时返回提示。
 <<< END U011670 >>>
 <<< UNIT U011671 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:170-170 | ctx=`chunithm unbind lx` >>>
 解除落雪账号绑定。
@@ -2448,7 +2448,7 @@ refresh token 已失效，可能是用户撤销了授权，或令牌链因并发
 # 半透明黑色
 <<< END U011866 >>>
 <<< UNIT U011867 | py-inline-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/maimaidx_platelist.py:206-206 >>>
-# 使用 overlay 进行粘贴
+# 使用 overlay 粘贴
 <<< END U011867 >>>
 <<< UNIT U011868 | py-inline-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/maimaidx_platelist.py:253-253 >>>
 # 真代为无印版本

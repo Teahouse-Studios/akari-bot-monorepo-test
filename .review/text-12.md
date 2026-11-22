@@ -1647,8 +1647,8 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 - 为具有外部副作用的业务处理器设计幂等键，因为队列仅保证原子认领，不提供 exactly-once 语义。
 <<< END U008339 >>>
 <<< UNIT U008340 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:312-313 | ctx=多实例支持范围与约束 >>>
-在同类型 Client 并行运行时，JobQueue 可以将入站会话相关操作定向返回原实例，并在同一 service 内对
-主动任务进行稳定分流。
+在同类型 Client 并行运行时，JobQueue 可以将入站会话相关操作定向返回原实例，并在同一 service 内稳定分流
+主动任务。
 <<< END U008340 >>>
 <<< UNIT U008341 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:315-316 | ctx=多实例支持范围与约束 >>>
 但是，如果多个实例连接同一个平台账号，则平台 SDK 入口处的重复消费、分片租约或主备接管仍须由适配器层
@@ -2153,7 +2153,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 <<< END U008492 >>>
 <<< UNIT U008493 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:314-316 >>>
 # 同名导入路径可能同时来自 entry point 与目录扫描，取带分发 metadata 者。发现阶段与
-# :meth:`reject_incompatible` 的补做必须共用本方法，避免两处各写一遍取舍规则时，同一批数据
+# :meth:`reject_incompatible` 的补充处理必须共用本方法，避免两处各写一遍取舍规则时，同一批数据
 # 因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
 <<< END U008493 >>>
 <<< UNIT U008494 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:372-372 >>>
