@@ -797,7 +797,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 `device` 的取值会映射到内部型号代号，其中 `3ds` 为 CTR、`dsi` 为 TWL、`wii` 为 RVL、`wiiu` 为 WUP、`switch` 为 HAC。8 位确认代码按 CRC 算法计算，10 位与 6 位确认代码按 HMAC 算法计算。
 <<< END U012320 >>>
 <<< UNIT U012321 | md-paragraph | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/index.md:3-3 | ctx=mkey >>>
-此模块用于计算任天堂系列主机的监护管理万能密码。密码由主机类型、日期与确认代码算出。
+此模块用于计算任天堂系列主机的监护管理万能密码。密码由主机类型、日期与确认代码计算得出。
 <<< END U012321 >>>
 <<< UNIT U012322 | md-heading | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/index.md:5-5 | ctx=命令 >>>
 ## 命令
@@ -811,7 +811,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 - `switch` 必须提供 `device_id`，该参数按 16 位十六进制字符串解析。缺少 `device_id` 时单独提示。
 <<< END U012324 >>>
 <<< UNIT U012325 | md-paragraph | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/index.md:23-23 | ctx=`mkey` >>>
-8 位确认代码算出 5 位密码，10 位确认代码算出 8 位密码。6 位确认代码只适用于 Switch，同样算出 8 位密码。
+8 位确认代码计算得出 5 位密码，10 位确认代码计算得出 8 位密码。6 位确认代码只适用于 Switch，同样算出 8 位密码。
 <<< END U012325 >>>
 <<< UNIT U012326 | md-paragraph | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/index.md:26-30 | ctx=`mkey` >>>
   :log="[

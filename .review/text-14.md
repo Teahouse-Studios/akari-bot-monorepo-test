@@ -221,7 +221,7 @@
 <<< UNIT U009177 | md-list | packages/akari-bot-core/akaribot/modules/core/docs/retired_policy.md:10-12 | ctx=retired_policy >>>
 - 退役客户端的消息只放行 `merge` 白名单中的命令。模块别名改写前，用户实际输入的首词同样参与判定。
 - 同一消息通道存在未退役场景时，退役场景不再等待任务，也不参与命令认领。命令交给未退役场景处理。
-- `retired_clients` 为空时策略不生效。非空时，`merge` 模块按此配置加载，见[merge](merge.md)。
+- `retired_clients` 为空时策略不生效。非空时，`merge` 模块按此配置加载，见 [merge](merge.md)。
 <<< END U009177 >>>
 <<< UNIT U009178 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/retired_policy.md:14-14 | ctx=retired_policy >>>
 配置格式为 `<源客户端> -> <目标客户端>`。只填写源客户端时，表示该客户端已退役，但没有迁移目标。
@@ -858,7 +858,7 @@ parser 执行异常的默认用户反馈与报告策略。
 <<< END U009309 >>>
 <<< UNIT U009310 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/policies.py:101-102 >>>
 # 必须在候选模块匹配阶段拦截，因为未匹配的模块会进入纠错与默认提示，那些路径不会
-# 经过 :attr:`HookPoint.COMMAND_PREPARE`，放到模板解析前就拦不干净。
+# 经过 :attr:`HookPoint.COMMAND_PREPARE`，放在模板解析前就无法拦截完整。
 <<< END U009310 >>>
 <<< UNIT U009311 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/policies.py:110-111 >>>
 # 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，这里只拦截
@@ -913,7 +913,7 @@ parser 执行异常的默认用户反馈与报告策略。
 # 把通知失败视为检查失败后放行。外部取消与进程退出仍必须传播。
 <<< END U009326 >>>
 <<< UNIT U009327 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:265-265 >>>
-# 强制检查不设超时（``timeout=0``）。外部取消仍传播，不能因 hook 超时降级放行。
+# 强制检查不设置超时（``timeout=0``）。外部取消仍传播，不能因 hook 超时降级放行。
 <<< END U009327 >>>
 <<< UNIT U009328 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:314-314 >>>
 # ---- 供管理命令与 Client RPC（OneBot 等）使用的带名称能力 ----
@@ -3171,7 +3171,7 @@ SQLite 参数自动补全，且仅 pre-init 模式创建数据表。
 # 原有记录行没有 refresh token，需由用户重新完成一次绑定。
 <<< END U010058 >>>
 <<< UNIT U010059 | py-comment | packages/akari-bot-core/tests/test_database_update.py:200-200 >>>
-# 落雪侧的令牌不需要额外保存用户标识，故这里只补 refresh token 一列，不涉及 `subject`。
+# 落雪的令牌不需要额外保存用户标识，故这里只补 refresh token 一列，不涉及 `subject`。
 <<< END U010059 >>>
 <<< UNIT U010060 | py-comment | packages/akari-bot-core/tests/test_database_update.py:203-203 >>>
 # 先还原成升级前的表结构，只保留旧好友码列，且带一行旧数据。
@@ -3255,8 +3255,8 @@ core.entrypoints.config: 占位符统计入口测试
 core.entrypoints.db: 卸载清理入口测试
 <<< END U010085 >>>
 <<< UNIT U010086 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:41-42 >>>
-# 入口按实例配置选择后端。测试改用共享内存后端，并让“是否需要连数据库”的分支走非 database
-# 一侧，避免触碰测试进程已初始化的内存数据库。
+# 入口按实例配置选择后端。测试改用共享内存后端，并让“是否需要连接数据库”的分支进入非 database
+# 路径，避免触碰测试进程已初始化的内存数据库。
 <<< END U010086 >>>
 <<< UNIT U010087 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:98-98 >>>
 # 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛出异常，本用例随之失败。

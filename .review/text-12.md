@@ -191,7 +191,7 @@
 # 先停止平台入口，再停止 Server。WebSocket Hub 最后退出，以便其他进程完成关闭信号与响应。
 <<< END U007902 >>>
 <<< UNIT U007903 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:828-829 >>>
-# 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程。获取锁失败的进程不会走到这里，
+# 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程。获取锁失败的进程不会执行到这里，
 # 因此文件内容始终属于当前持锁者。
 <<< END U007903 >>>
 <<< UNIT U007904 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:833-833 >>>
@@ -201,7 +201,7 @@
 # 信号处理器在主线程的两个字节码之间执行，异常通过 asyncio.run() 向外传播，与 Ctrl+C 使用同一条路径。
 <<< END U007905 >>>
 <<< UNIT U007906 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:869-870 >>>
-# 不截断打开，确保获取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
+# 不截断打开，确保获取锁失败的第二个进程不得覆盖持有者写入的进程记录。锁的语义仍由 flock / msvcrt
 # 确定，文件内容只用于让控制器定位进程。
 <<< END U007906 >>>
 <<< UNIT U007907 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:888-889 >>>
@@ -271,12 +271,12 @@
 # 命名空间只是容器（akaribot.modules 无 __init__.py），不是可注册的包。
 <<< END U007926 >>>
 <<< UNIT U007927 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:510-512 >>>
-# 用于识别 ``from akaribot.modules import x`` 这类裸包导入，其 AST 只给出
+# 用于识别 ``from akaribot.modules import x`` 这类直接包导入，其 AST 只给出
 # ``akaribot.modules``，子模块名在 ``node.names`` 中，需展开成 ``akaribot.modules.x``
 # 后才可能匹配到具体包。
 <<< END U007927 >>>
 <<< UNIT U007928 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:545-545 >>>
-# 裸包导入的 AST 只给出命名空间或其子路径，子模块名在 node.names 中。
+# 直接包导入的 AST 只给出命名空间或其子路径，子模块名在 node.names 中。
 <<< END U007928 >>>
 <<< UNIT U007929 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:583-584 >>>
 # 获取已注册条目的声明依赖。目录扫描的包没有 metadata，
@@ -291,7 +291,7 @@
 <<< END U007931 >>>
 <<< UNIT U007932 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:618-619 >>>
 # 图源为“声明的依赖图 ∪ AST 扫描结果”。成环的包在 discover() 阶段已被拒绝注册，
-# 能走到此处的图必然无环，闭包内的遇环跳过只作防御。
+# 能执行到此处的图必然无环，闭包内的遇环跳过只作防御。
 <<< END U007932 >>>
 <<< UNIT U007933 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:682-683 >>>
 # 子模块按 sys.modules 顺序重载，扩展兄弟模块的装饰器可能先于目标模块执行。
@@ -361,7 +361,7 @@
 # 导入阶段读取新配置项时会触发只读检查报错。
 <<< END U007949 >>>
 <<< UNIT U007950 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1187-1187 >>>
-# 与 reload_module 同策略，忙碌时直接失败，不把等待锁的时间算进 RPC 超时。
+# 与 reload_module 同策略，忙碌时直接失败，不把等待锁的时间计入 RPC 超时。
 <<< END U007950 >>>
 <<< UNIT U007951 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1193-1193 >>>
 # 先处理完 Queue handler 中的任务，再进入 Scheduler 维护。数据库替换会在内部再嵌套独占窗口。
@@ -383,10 +383,10 @@
 # init_modules 以传入清单为准删除缺失行，故带上全部已注册模块，而不只是新增名。
 <<< END U007956 >>>
 <<< UNIT U007957 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1299-1299 >>>
-# 与 reload_module 同策略，忙碌时直接失败，不把等待锁的时间算进 RPC 超时。
+# 与 reload_module 同策略，忙碌时直接失败，不把等待锁的时间计入 RPC 超时。
 <<< END U007957 >>>
 <<< UNIT U007958 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1312-1312 >>>
-# 拆除是单向操作，单个模块停用失败不应留下半拆状态，继续走完索引与 context 清理。
+# 拆除是单向操作，单个模块停用失败不应留下不完整状态，继续完成索引与 context 清理。
 <<< END U007958 >>>
 <<< UNIT U007959 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1315-1316 >>>
 # 卸载 RPC 先于 uv pip uninstall，重新运行 discover() 仍会看到该包，
@@ -1860,7 +1860,7 @@ JobQueue 后端组合与配置工厂。
 # 正常启动会在 pre_init 中持久化缺失值。此回退仅供绕过守护进程的独立入口和测试使用。
 <<< END U008400 >>>
 <<< UNIT U008401 | py-comment | packages/akari-bot-core/akaribot/core/queue/base.py:217-217 >>>
-# 所有可能失败的验证完成后再切换类级生命周期状态，避免半配置污染。
+# 所有可能失败的验证完成后再切换类级生命周期状态，避免不完整配置污染。
 <<< END U008401 >>>
 <<< UNIT U008402 | py-comment | packages/akari-bot-core/akaribot/core/queue/base.py:458-459 >>>
 # 当前接收方发送完整诊断，须用本地捕获的调用栈重建，
@@ -1877,7 +1877,7 @@ JobQueue 后端组合与配置工厂。
 <<< END U008404 >>>
 <<< UNIT U008405 | py-comment | packages/akari-bot-core/akaribot/core/queue/base.py:1399-1400 >>>
 # register() 也可能在事务已提交后才因取消或连接状态异常返回。
-# 以唯一 peer_id 尝试回滚，不让半注册实例保留到租约自然过期。
+# 以唯一 peer_id 尝试回滚，不让未完成注册的实例保留到租约自然过期。
 <<< END U008405 >>>
 <<< UNIT U008406 | py-comment | packages/akari-bot-core/akaribot/core/queue/base.py:1502-1503 >>>
 # 等维护锁的任务只有在本窗口释放后才会继续，等它们必然互锁。它们在此
@@ -2062,7 +2062,7 @@ JobQueue 的数据库后端实现。
 # 只探测可用性而不渲染任何页面，供前端的“测试连接”按钮使用。
 <<< END U008464 >>>
 <<< UNIT U008465 | py-comment | packages/akari-bot-core/akaribot/core/queue/server.py:412-412 >>>
-# 与依赖库一致，images 为裸 base64，data URL 前缀由前端自行拼接。
+# 与依赖库一致，images 为纯 base64，data URL 前缀由前端自行拼接。
 <<< END U008465 >>>
 <<< UNIT U008466 | py-comment | packages/akari-bot-core/akaribot/core/queue/server.py:426-426 >>>
 # 词库文件可能正被手工编辑。失败时保留旧词库并如实返回，不中断服务端。
@@ -2172,7 +2172,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 未安装包的源码克隆依赖这条路径，因此扫描对象是真实存在的包目录，不用硬编码的路径常量。
 <<< END U008497 >>>
 <<< UNIT U008498 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:515-517 >>>
-# 条目根取导入包目录，manifest、locales、assets、migrations 都相对它
+# 条目根目录取导入包目录，manifest、locales、assets、migrations 都相对它
 # 解析，entry point 路径下两者同为导入包目录，此处按同一规则处理。源码布局为 ``src`` 时按导入路径
 # 下推。不是该布局时回退到传入目录。
 <<< END U008498 >>>

@@ -103,10 +103,10 @@
 # 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，检查才能比对到真实文案。
 <<< END U005770 >>>
 <<< UNIT U005771 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:29-29 >>>
-# 假实例进程会获取锁、写下进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
+# 模拟实例进程会获取锁、写入进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
 <<< END U005771 >>>
 <<< UNIT U005772 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:56-56 >>>
-# 非托管实例的解释器由 AKARIBOT_PYTHON 指定，测试据此把假实例进程当作解释器启动。
+# 非托管实例的解释器由 AKARIBOT_PYTHON 指定，测试据此把模拟实例进程当作解释器启动。
 <<< END U005772 >>>
 <<< UNIT U005773 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:108-108 >>>
 # 后台启动后控制器立即返回，进程记录保存在锁文件中，界面/终端退出不影响它。
@@ -136,7 +136,7 @@
 # 同组但非组长的进程只按进程号处理。自建会话的组长可以整组处理。
 <<< END U005781 >>>
 <<< UNIT U005782 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:267-267 >>>
-# 界面侧走同一条链路，状态与停止都通过 CLI 执行，因此新开的界面能接管别的控制器启动的实例。
+# 界面使用同一条链路，状态与停止都通过 CLI 执行，因此新开的界面能接管别的控制器启动的实例。
 <<< END U005782 >>>
 <<< UNIT U005783 | py-inline-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:274-274 >>>
 # noqa: S603 - 测试模拟对象，参数固定
@@ -181,7 +181,7 @@
 # 操作行上都有按钮的动作不显示在页脚，80 列下才能容纳全局键位。
 <<< END U005796 >>>
 <<< UNIT U005797 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:679-679 >>>
-# 假实例进程依赖 fcntl 获取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
+# 模拟实例进程依赖 fcntl 获取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
 <<< END U005797 >>>
 <<< UNIT U005798 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:693-693 >>>
 # 放大防抖窗口，使“连续触发同一操作”与“刷新后重新确认”不依赖两次调用之间的真实耗时。
@@ -196,10 +196,10 @@ cli.run: 实例生命周期（后台启动、状态、跨进程停止）测试
 # 记录被调用的命令，并按前缀回放预设退出码。没有预设前缀的命令按成功处理。
 <<< END U005801 >>>
 <<< UNIT U005802 | py-comment | packages/akari-bot-cli/tests/test_service.py:67-67 >>>
-# 守护循环的假控制器只回答运行状态与进程信息，启动由外部函数记账。
+# 守护循环的模拟控制器只返回运行状态与进程信息，启动由外部函数记账。
 <<< END U005802 >>>
 <<< UNIT U005803 | py-comment | packages/akari-bot-cli/tests/test_service.py:81-81 >>>
-# 一轮守护所需的假注册表、假控制器、假时钟与启动记账。
+# 一轮守护所需的模拟注册表、模拟控制器、模拟时钟与启动记录。
 <<< END U005803 >>>
 <<< UNIT U005804 | py-comment | packages/akari-bot-cli/tests/test_service.py:99-99 >>>
 # 恢复用例默认开启自启，自启关闭的实例不应被服务启动。
@@ -1151,7 +1151,7 @@ cli.tui 自检: 逐页 worker 等待与异常、未执行的产品检查
 # 深色版以暗部作底，浅色版用立绘的浅底。两套主题的明暗标记相反。
 <<< END U006117 >>>
 <<< UNIT U006118 | py-comment | packages/akari-bot-cli/tests/test_tui_theme.py:68-68 >>>
-# 样式表里的 $变量 全部由品牌主题提供，少了任何一个都会在解析期报未定义变量。
+# 样式表里的 $变量 全部由品牌主题提供，少了任何一个都会在解析阶段报未定义变量。
 <<< END U006118 >>>
 <<< UNIT U006119 | py-inline-comment | packages/akari-bot-cli/tests/test_tui_theme.py:73-73 >>>
 # noqa: BLE001 - 解析失败即用例失败
@@ -1163,10 +1163,10 @@ cli.tui.theme: 品牌主题与切换测试
 # 创建一个带 pyvenv.cfg 的模拟 venv，返回其中的解释器路径。
 <<< END U006121 >>>
 <<< UNIT U006122 | py-comment | packages/akari-bot-cli/tests/test_venv_identity.py:29-29 >>>
-# 使用 resolve() 处理，因为 macOS 的临时目录本身是软链接，环境根按真实路径返回。
+# 使用 resolve() 处理，因为 macOS 的临时目录本身是软链接，环境根目录按真实路径返回。
 <<< END U006122 >>>
 <<< UNIT U006123 | py-comment | packages/akari-bot-cli/tests/test_venv_identity.py:47-47 >>>
-# 没有 pyvenv.cfg 时不是环境，按解释器自身位置归组，以免把系统 python 当成某个 venv。
+# 没有 pyvenv.cfg 时不是环境，按解释器自身位置归组，以免把系统 python 视为某个 venv。
 <<< END U006123 >>>
 <<< UNIT U006124 | py-docstring | packages/akari-bot-cli/tests/test_venv_identity.py:58-58 | ctx=test_venv_identity >>>
 cli.venv: 环境归属判定测试
@@ -1698,7 +1698,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 若不置于 finally 中，一旦加载抛出异常，此后 watch() 将永久空轮询，磁盘上的改动无法再被读取。
 <<< END U006263 >>>
 <<< UNIT U006264 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/store.py:224-224 >>>
-# 切换目录后必须立刻重新检查，不能让上一份目录的节流状态把首次检查挡掉
+# 切换目录后必须立刻重新检查，不能让上一份目录的节流状态拦截首次检查
 <<< END U006264 >>>
 <<< UNIT U006265 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/store.py:240-240 >>>
 # 递归合并全局默认值与用户配置，后者优先。
@@ -1914,7 +1914,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 需要换行时，在前一个纯文本元素末尾显式写入换行符即可。
 <<< END U006332 >>>
 <<< UNIT U006333 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:946-947 >>>
-# 写入侧已 urlencode，此处解码还原。手写的 KE 码不含百分号转义时，
+# 写入方已 urlencode，此处解码还原。手写的 KE 码不含百分号转义时，
 # 解码为恒等变换，故不影响既有的手写用法
 <<< END U006333 >>>
 <<< UNIT U006334 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:1051-1051 >>>

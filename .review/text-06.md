@@ -3243,7 +3243,7 @@ AkariBot 实例管理工具。
 当前平台是否为 Windows。
 <<< END U004275 >>>
 <<< UNIT U004276 | py-docstring | packages/akari-bot-cli/akaribot/cli/process.py:51-51 | ctx=LockRecord.parse >>>
-解析锁文件内容。内容缺失或不是本模块写下的记录时返回 ``None``。
+解析锁文件内容。内容缺失或不是本模块写入的记录时返回 ``None``。
 <<< END U004276 >>>
 <<< UNIT U004277 | py-docstring | packages/akari-bot-cli/akaribot/cli/process.py:97-97 | ctx=read_lock_record >>>
 读取锁文件里的进程记录。文件不存在或不可读时返回 ``None``。

@@ -415,7 +415,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 消息以漏洞编号开头时，机器人自动查询，支持以下写法：
 <<< END U010961 >>>
 <<< UNIT U010962 | md-list | packages/modules/akari-bot-module-bugtracker/akaribot/modules/bugtracker/docs/index.md:31-33 | ctx=正则触发 >>>
-- 裸编号，如 `MCPE-123456`。
+- 纯编号，如 `MCPE-123456`。
 - 方括号包裹的编号，如 `[MCPE-123456]`。
 - 完整链接，如 `https://bugs.mojang.com/browse/MCPE/issues/MCPE-123456`。
 <<< END U010962 >>>

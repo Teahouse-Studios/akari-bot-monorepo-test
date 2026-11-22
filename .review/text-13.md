@@ -260,7 +260,7 @@
 <<< UNIT U008636 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button.py:37-48 | ctx=arrange_buttons >>>
 将（展示文本，点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
 
-行数由 ``per_row`` 算出后即固定，再把按钮均分到各行，使各行的数量至多相差一个——
+行数由 ``per_row`` 计算后即固定，再把按钮均分到各行，使各行的数量至多相差一个——
 直接按 ``per_row`` 切片会得到 ``[3, 3, 3, 1]`` 这样参差的末行。行数超出平台上限时
 压回上限，此时每行的数量将突破 ``per_row``，至多到 ``MAX_BUTTONS_PER_ROW``。
 
@@ -998,7 +998,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 机器人平台权限到中文名称的映射。未记录的权限直接回退为字段名，避免误报为其他能力。
 <<< END U008840 >>>
 <<< UNIT U008841 | py-comment | packages/akari-bot-core/akaribot/modules/core/admin_tools/modules.py:121-122 >>>
-# RPC 与网络故障不能当成机器人无权限。
+# RPC 与网络故障不能视为机器人无权限。
 # 只有平台明确返回 False 才阻止开启，查询失败按能力声明处理。
 <<< END U008841 >>>
 <<< UNIT U008842 | py-docstring | packages/akari-bot-core/akaribot/modules/core/admin_tools/modules.py:34-34 | ctx=format_bot_permissions >>>
@@ -1182,7 +1182,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 一侧已同组时只合并另一侧。两侧都已同组说明这枚码来自本方，无需绑定。
 <<< END U008886 >>>
 <<< UNIT U008887 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:290-291 >>>
-# 场景侧选择须在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
+# 场景选择须在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
 # lease。sender barrier 建立后，冲突选择保持 lease，直到合并写入结束。
 <<< END U008887 >>>
 <<< UNIT U008888 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:328-329 >>>
@@ -1210,7 +1210,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008894 >>>
 <<< UNIT U008895 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:458-459 >>>
 # 口令在场景中以明文出现，任何人都能原样复制，故认领是一次性的，一经认领即作废。其后携带
-# 同一串口令的消息一律丢弃，否则复制该命令的用户会被当成对端机器人，其发言将被忽略。
+# 同一串口令的消息一律丢弃，否则复制该命令的用户会被视为对端机器人，其发言将被忽略。
 <<< END U008895 >>>
 <<< UNIT U008896 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:464-464 >>>
 # 部分平台会将机器人自身发出的消息回送，遇到自身发起的握手直接忽略。
@@ -1256,7 +1256,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 合并场景组、统一通道编号、互记机器人账号。调用方需持有 :data:`_handshake_lock`。
 <<< END U008907 >>>
 <<< UNIT U008908 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:593-593 >>>
-# 合并确认在发起侧进行，因为执行该命令的管理员位于发起侧。
+# 合并确认在发起方进行，因为执行该命令的管理员位于发起方。
 <<< END U008908 >>>
 <<< UNIT U008909 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:601-602 >>>
 # 将对方所在的完整通道并入本场景通道。若只修改响应方这一行，它原通道中的第三个平台入口
@@ -1394,7 +1394,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 签发迁移码的一方为发起方，冲突数据默认以发起方为准。
 <<< END U008937 >>>
 <<< UNIT U008938 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:152-153 >>>
-# 场景侧选择须在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
+# 场景选择须在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
 # lease。sender barrier 建立后，其冲突选择则保持 lease，直到合并写入结束。
 <<< END U008938 >>>
 <<< UNIT U008939 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:185-186 >>>
@@ -1576,7 +1576,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 />
 <<< END U008973 >>>
 <<< UNIT U008974 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/abuse.md:29-29 | ctx=`abuse warn` >>>
-此命令增加警告次数，`<count>` 默认为 1。累计警告次数超过 `tos_warning_counts`，且用户不在白名单时，机器人将其转入黑名单。临时封禁的时长取自 `tos_temp_ban_time`，封禁动作由 `tos` 钩子执行，见[tos](tos.md)。
+此命令增加警告次数，`<count>` 默认为 1。累计警告次数超过 `tos_warning_counts`，且用户不在白名单时，机器人将其转入黑名单。临时封禁的时长取自 `tos_temp_ban_time`，封禁动作由 `tos` 钩子执行，见 [tos](tos.md)。
 <<< END U008974 >>>
 <<< UNIT U008975 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/abuse.md:32-36 | ctx=`abuse warn` >>>
   :log="[
@@ -1797,7 +1797,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 />
 <<< END U009017 >>>
 <<< UNIT U009018 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/analytics.md:64-64 | ctx=`analytics modules` >>>
-统计功能关闭时，机器人提示该功能已停用。缺少 `matplotlib` 时，机器人提示安装 `image` extra，不生成图表。统计数据由 `telemetry` 写入，见[telemetry](telemetry.md)。
+统计功能关闭时，机器人提示该功能已停用。缺少 `matplotlib` 时，机器人提示安装 `image` extra，不生成图表。统计数据由 `telemetry` 写入，见 [telemetry](telemetry.md)。
 <<< END U009018 >>>
 <<< UNIT U009019 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/auth.md:7-7 | ctx=auth >>>
 此模块让超级用户把某个模块的超级用户权限授予其他用户。使用此模块的命令需要超级用户权限。授权只对声明了 `required_superuser` 的模块生效。

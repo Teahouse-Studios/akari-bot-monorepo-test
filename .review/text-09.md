@@ -721,7 +721,7 @@ base 模块注册的正则据此也能触发。
 
 判定规则与 :meth:`RegexMatches.get` 一致，按 target_from / client_name / platform_from /
 platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Telegram 实例有效。
-只校验模块级的 ``available_for`` 会让注册时写下的 ``@module.regex(available_for=...)``
+只校验模块级的 ``available_for`` 会让注册时写入的 ``@module.regex(available_for=...)``
 形同虚设，故正则级的平台声明同样参与匹配。
 
 :param rfunc: 正则处理函数的元数据。
@@ -1507,7 +1507,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 <<< END U006871 >>>
 <<< UNIT U006872 | py-comment | packages/akari-bot-core/akaribot/core/client/init.py:88-89 >>>
 # 初始化应当具备事务性，后半段失败时撤销本轮刚启动的任务并关闭连接，
-# 使下一次重试从干净状态开始，而不是叠加一组半初始化资源。
+# 使下一次重试从干净状态开始，而不是叠加一组未完成初始化的资源。
 <<< END U006872 >>>
 <<< UNIT U006873 | py-docstring | packages/akari-bot-core/akaribot/core/client/init.py:21-21 | ctx=check_queue >>>
 监控客户端队列轮询。瞬时异常后退避并重新启动。
@@ -1792,14 +1792,14 @@ WebRender 配置模板。
 创建私有目录并返回其路径。
 <<< END U006936 >>>
 <<< UNIT U006937 | py-comment | packages/akari-bot-core/akaribot/core/database/__init__.py:109-109 >>>
-# 迁移只在创建数据表的写入进程中执行，读进程不创建数据表，也不应改动数据库结构。
+# 迁移只在创建数据表的写入进程中执行，读取进程不创建数据表，也不应改动数据库结构。
 <<< END U006937 >>>
 <<< UNIT U006938 | py-comment | packages/akari-bot-core/akaribot/core/database/__init__.py:115-116 >>>
 # 初始化可能在部分连接建立后被取消。清理完成后保留取消语义，
 # 让上层生命周期控制能够正常停止。
 <<< END U006938 >>>
 <<< UNIT U006939 | py-comment | packages/akari-bot-core/akaribot/core/database/__init__.py:124-126 >>>
-# Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
+# Tortoise.init() 可能在部分连接已经建立后才失败。若把未完成初始化的
 # 全局状态留给调用方，随后重试会复用或覆盖一套不完整的连接注册表。
 # init_db() 对外以 False 表示失败，因此也应在返回前完成自身回滚。
 <<< END U006939 >>>
@@ -2003,7 +2003,7 @@ Tortoise ORM 兼容补丁。
 # 在方言允许时以事务执行迁移入口。
 <<< END U006989 >>>
 <<< UNIT U006990 | py-comment | packages/akari-bot-core/akaribot/core/database/migration.py:561-561 >>>
-# 事务内取到的连接由事务上下文持有，模型查询与裸 SQL 都会走同一连接。
+# 事务内取到的连接由事务上下文持有，模型查询与原始 SQL 都会使用同一连接。
 <<< END U006990 >>>
 <<< UNIT U006991 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:41-41 | ctx=MigrationError >>>
 迁移定义或执行不符合接口约定。

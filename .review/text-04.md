@@ -253,7 +253,7 @@
 全局选项放在子命令前。例如：
 <<< END U001557 >>>
 <<< UNIT U001558 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:12-12 | ctx=命令参考 >>>
-`--lang zh_cn|en_us` 只影响本次调用的界面文案，不改变实例默认语言。如果放在子命令后面，会被当成未知选项。
+`--lang zh_cn|en_us` 只影响本次调用的界面文案，不改变实例默认语言。如果放在子命令后面，会被视为未知选项。
 <<< END U001558 >>>
 <<< UNIT U001559 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:14-14 | ctx=命令参考 >>>
 需要实例的命令接受 `--instance` / `-I`，查找顺序依次为显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上查找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根目录。
@@ -785,7 +785,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根目录 `docs/package-docs.md`。
 <<< END U001686 >>>
 <<< UNIT U001687 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:338-338 | ctx=主题组件 >>>
-依赖段落用 `<PackageDependencies package="<包 key 或包名>" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名读取列表，文档中不填写版本范围。
+依赖段落用 `<PackageDependencies package="<包 key 或包名>" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名读取列表，文档中不填写版本范围。
 <<< END U001687 >>>
 <<< UNIT U001688 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:340-340 | ctx=主题组件 >>>
 组件只在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。

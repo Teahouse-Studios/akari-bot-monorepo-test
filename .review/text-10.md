@@ -130,7 +130,7 @@
 # SQLite 会忽略行锁语义，由外层 asyncio.Lock 保证单 server 进程内的顺序。
 <<< END U007054 >>>
 <<< UNIT U007055 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:967-967 >>>
-# 新组、平台映射和互认记录属于同一次解绑。任一步失败均不能让数据库停在半迁移状态。
+# 新组、平台映射和互认记录属于同一次解绑。任一步失败均不能让数据库停在部分迁移状态。
 <<< END U007055 >>>
 <<< UNIT U007056 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:982-982 >>>
 # 封禁状态随场景一并转移，避免通过解绑规避处罚。

@@ -1551,7 +1551,7 @@ web_render 数据获取方法的模拟管理器。
 <<< END U010533 >>>
 <<< UNIT U010534 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:26-28 >>>
 # union 合并日志目录，须与 core.constants.path.UNION_MERGE_LOGS_PATH_ENV 一致。
-# 用例会真实走到合并流程，逐次写下的快照日志只在人工回溯真实合并时才有意义，
+# 用例会真实执行到合并流程，逐次写入的快照日志只在人工回溯真实合并时才有意义，
 # 留在 data/ 里只会随每次测试运行越积越多。
 <<< END U010534 >>>
 <<< UNIT U010535 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:31-33 >>>

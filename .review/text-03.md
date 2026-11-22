@@ -1375,7 +1375,7 @@ WebUI 两步验证已开启
 # 密码是否存在的变化记录在 StoredData 的单个键中，避免为单个状态创建数据表。
 <<< END U001216 >>>
 <<< UNIT U001217 | cfg-comment | packages/adapters/akari-bot-adapter-web/pyproject.toml:27-27 >>>
-    # 整个仓库不导入 python-multipart，但 FastAPI Form/File 在路由定义期强制要求（T4.2 §6）
+    # 整个仓库不导入 python-multipart，但 FastAPI Form/File 在路由定义阶段强制要求（T4.2 §6）
 <<< END U001217 >>>
 <<< UNIT U001218 | py-docstring | packages/adapters/akari-bot-adapter-web/tests/test_web_adapter.py:1-1 | ctx=<module> >>>
 Web 平台会话 Socket 绑定与私信失败语义测试。

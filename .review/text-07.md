@@ -1093,7 +1093,7 @@ Esc 等同稍后填写。
 # 重建列表也会触发高亮事件，须比较目标以排除显示刷新。
 <<< END U004894 >>>
 <<< UNIT U004895 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:2074-2074 >>>
-# 重建后按钮状态可能仍是按空列表算出的，须按当前高亮刷新。
+# 重建后按钮状态可能仍是按空列表计算的，须按当前高亮刷新。
 <<< END U004895 >>>
 <<< UNIT U004896 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:2106-2106 >>>
 # 禁用状态可能改变标签宽度，须重新计算布局。
@@ -3277,8 +3277,8 @@ Esc 关闭对话框，放弃输入。
 # 内置 uv 在 Windows 上必须是带 .exe 的完整文件名，因为 CreateProcess 不接受无扩展名的可执行文件。
 <<< END U005621 >>>
 <<< UNIT U005622 | py-comment | packages/akari-bot-cli/akaribot/cli/venv.py:69-70 >>>
-# 打包后本文件位于解包目录内的包层级里，资源根只在上面若干级。
-# 设上限以免把无关祖先目录当成资源根。
+# 打包后本文件位于解包目录内的包层级里，资源根目录只在上面若干级。
+# 设置上限，以免把无关祖先目录视为资源根目录。
 <<< END U005622 >>>
 <<< UNIT U005623 | py-comment | packages/akari-bot-cli/akaribot/cli/venv.py:173-174 >>>
 # 取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）。不可用时返回 ``None``，

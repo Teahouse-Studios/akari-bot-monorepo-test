@@ -374,7 +374,7 @@ JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执�
 - `logging=False` 不记录每次命中，`show_typing=False` 不显示正在输入。
 - `trigger_once_startup=True` 让每个场景只在启动后命中一次，适合发送迁移提示或一次性公告。
 - `skip_long_message_confirm=True` 跳过超长消息确认。只在对匹配结果有把握时使用。
-- `element_filter=(PlainElement,)` 只匹配纯文本，避免把图片说明或提及当成正文。
+- `element_filter=(PlainElement,)` 只匹配纯文本，避免把图片说明或提及视为正文。
 <<< END U007473 >>>
 <<< UNIT U007474 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:438-438 | ctx=正则匹配 >>>
 正则处理函数会在每条消息上运行，应保持轻量。网络请求和大量遍历放到后台任务里。
@@ -1339,7 +1339,7 @@ core 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，�
 远程地址必须是 HTTP 或 HTTPS URL，不能带查询参数或片段标识。
 <<< END U007755 >>>
 <<< UNIT U007756 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/webrender.md:42-42 | ctx=运行模式 >>>
-远程服务由独立的 [`akari-bot-webrender`](https://github.com/Teahouse-Studios/akari-bot-webrender) 项目提供。浏览器与运行依赖的安装方法见该项目文档。机器人侧只需填写地址，并选择是否启用 `remote_only`。
+远程服务由独立的 [`akari-bot-webrender`](https://github.com/Teahouse-Studios/akari-bot-webrender) 项目提供。浏览器与运行依赖的安装方法见该项目文档。机器人端只需填写地址，并选择是否启用 `remote_only`。
 <<< END U007756 >>>
 <<< UNIT U007757 | md-heading | packages/akari-bot-core/akaribot/core/docs/webrender.md:44-44 | ctx=启动与状态 >>>
 ## 启动与状态
@@ -1398,7 +1398,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 标记 i18n 快照是否已接上，子进程只在需要注释时接一次。
 <<< END U007772 >>>
 <<< UNIT U007773 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:23-23 >>>
-# 配置注释的键前缀，与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
+# 配置注释的键前缀，与配置模板写入阶段使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
 <<< END U007773 >>>
 <<< UNIT U007774 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:35-35 >>>
 # 入口以子进程运行，builtins 包本身不自动初始化，读取任何配置表之前先加载（含版本迁移），重复调用无副作用。
@@ -1414,7 +1414,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # ``{I18N:...}`` 标记）。只做一次。
 <<< END U007777 >>>
 <<< UNIT U007778 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:109-110 >>>
-# 键清单以配置文件为准（模板在生成期已把声明字段全部写入磁盘）。占位判定是 schema 与
+# 键清单以配置文件为准（模板在生成阶段已把声明字段全部写入磁盘）。占位判定是 schema 与
 # placeholders 共用的判定标准，只在这里出现一次。
 <<< END U007778 >>>
 <<< UNIT U007779 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:131-131 >>>
@@ -1449,7 +1449,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 文本列才能做包含与前后缀匹配。其余类型只支持等值与大小比较。
 <<< END U007788 >>>
 <<< UNIT U007789 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:28-29 >>>
-# 运算符按“先长后短”排列，确保双字符运算符先命中，否则不等号与取反包含符会被当成单字符运算符拆开，
+# 运算符按“先长后短”排列，确保双字符运算符先命中，否则不等号与取反包含符会被视为单字符运算符拆开，
 # 导致列名与取值错位。
 <<< END U007789 >>>
 <<< UNIT U007790 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:79-79 >>>
@@ -1462,7 +1462,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 把 ``<列><运算符><值>`` 拆成三段。运算符与值都可以省略（省略时按等值处理）。
 <<< END U007792 >>>
 <<< UNIT U007793 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:175-175 >>>
-# 只有列名时按“该列非空”理解，比默默当成等值空字符串更符合预期。
+# 只有列名时按“该列非空”理解，比默默视为等值空字符串更符合预期。
 <<< END U007793 >>>
 <<< UNIT U007794 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:191-191 >>>
 # Tortoise 的等值筛选不支持 ``__exact`` 后缀，直接写列名。
@@ -1514,7 +1514,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删除未声明的表。
 <<< END U007809 >>>
 <<< UNIT U007810 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/db.py:87-88 >>>
-# 迁移记录表由创建数据表负责。写进程同样先执行 generate_schemas 再迁移，
+# 迁移记录表由创建数据表负责。写入进程同样先执行 generate_schemas 再迁移，
 # 否则全新实例上第一条迁移会因 schema_migrations 不存在而失败。
 <<< END U007810 >>>
 <<< UNIT U007811 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/db.py:94-94 >>>
@@ -1657,7 +1657,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 元数据缺失不应让清单输出失败
 <<< END U007855 >>>
 <<< UNIT U007856 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/registry.py:46-46 >>>
-# 供兼容性诊断使用，缺了它消费方只能显示“未声明”，与 manifest 实际内容不符。
+# 供兼容性诊断使用，缺少它时消费方只能显示“未声明”，与 manifest 实际内容不符。
 <<< END U007856 >>>
 <<< UNIT U007857 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/registry.py:48-49 >>>
 # 供卸载清理使用，表名确定要删除的表，config_table 确定要删除的扁平配置文件。

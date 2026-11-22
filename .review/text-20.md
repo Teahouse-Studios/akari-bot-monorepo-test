@@ -2118,7 +2118,7 @@ Wikitext 离线摘要提取。
 # 保活结果与目标会话无关，每个 wiki 只查询一次，再交由组内推送按通道分发
 <<< END U013535 >>>
 <<< UNIT U013536 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/wikilog.py:529-531 >>>
-# 在承担推送的会话上算出并逐条发出该组的日志。
+# 在承担推送的会话上生成并逐条发送该组的日志。
 # 日志文本须按目标会话现算，因为敏感词检查取决于该会话所在平台是否要求，同组的不同平台
 # 未必一致。逐条发送故在此处完成，工厂随即返回 None，不再交由外层发送。
 <<< END U013536 >>>
@@ -2936,7 +2936,7 @@ tools.verify_registry_release: 发布索引核对测试
 # wheel 文件名按 PEP 427 把包名里的非字母数字字符替换为下划线。
 <<< END U013790 >>>
 <<< UNIT U013791 | py-comment | tools/build_registry.py:378-378 >>>
-# import_path 末段是包名，其上各级依次是 modules 与 akaribot 命名空间根。
+# import_path 末段是包名，其上各级依次是 modules 与 akaribot 命名空间根目录。
 <<< END U013791 >>>
 <<< UNIT U013792 | py-comment | tools/build_registry.py:489-489 >>>
 # name 取 entry point 名，与注册名可以无关（threedsdb 包注册的是 3dsdb）。
@@ -2951,7 +2951,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 读取 TOML 文件。
 <<< END U013795 >>>
 <<< UNIT U013796 | py-docstring | tools/build_registry.py:130-130 | ctx=workspace_pyprojects >>>
-按根 pyproject 的 members glob 展开成员清单，排除 exclude。
+按根目录 pyproject 的 members glob 展开成员清单，排除 exclude。
 <<< END U013796 >>>
 <<< UNIT U013797 | py-docstring | tools/build_registry.py:240-240 | ctx=provides >>>
 条目声明的可安装单元，模块包取清单的 provides_modules，适配器取自身名字。
@@ -2993,7 +2993,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 序列化为稳定文本，固定缩进、不转义非 ASCII、末尾换行。
 <<< END U013809 >>>
 <<< UNIT U013810 | py-docstring | tools/build_registry.py:551-551 | ctx=write_output >>>
-原子写入文件，避免 CI 中途失败留下半份 registry.json。
+原子写入文件，避免 CI 中途失败留下不完整的 registry.json。
 <<< END U013810 >>>
 <<< UNIT U013811 | py-docstring | tools/build_registry.py:594-594 | ctx=describe >>>
 生成一行运行摘要，供 stderr 使用。
@@ -3023,7 +3023,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 读取 TOML 文件。
 <<< END U013819 >>>
 <<< UNIT U013820 | py-docstring | tools/changed_packages.py:105-105 | ctx=discover_members >>>
-按根 pyproject 的 members glob 展开成员，包名取各成员自己的 [project].name。
+按根目录 pyproject 的 members glob 展开成员，包名取各成员自己的 [project].name。
 <<< END U013820 >>>
 <<< UNIT U013821 | py-docstring | tools/changed_packages.py:140-140 | ctx=resolve_commit >>>
 把引用解析为提交 SHA。解析不了返回 None。
@@ -3075,7 +3075,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 读取 TOML 文件。
 <<< END U013836 >>>
 <<< UNIT U013837 | py-docstring | tools/check_versions.py:96-96 | ctx=discover_members >>>
-按根 pyproject 的 members glob 展开成员，读取各成员自己的 [project] 名字与版本。
+按根目录 pyproject 的 members glob 展开成员，读取各成员自己的 [project] 名字与版本。
 <<< END U013837 >>>
 <<< UNIT U013838 | py-docstring | tools/check_versions.py:137-137 | ctx=resolve_commit >>>
 把引用解析为提交 SHA。解析不了返回 None。
@@ -3115,7 +3115,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # noqa: BLE001 - 检查只需打印失败点
 <<< END U013849 >>>
 <<< UNIT U013850 | py-comment | tools/clean_room_check.py:275-275 >>>
-# 链接带 #sha256 片段，取文件本身时要去掉，否则会被当成路径的一部分。
+# 链接带 #sha256 片段，获取文件本身时要去掉，否则会被视为路径的一部分。
 <<< END U013850 >>>
 <<< UNIT U013851 | py-inline-comment | tools/clean_room_check.py:283-283 >>>
 # noqa: BLE001 - 检查只需打印失败点
@@ -3248,13 +3248,13 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # 分发清单涵盖 packages/<dist>/ 与 packages/<group>/<dist>/ 两层。容器目录（adapters、modules）无 pyproject。
 <<< END U013893 >>>
 <<< UNIT U013894 | py-comment | tools/lint_boundaries.py:62-62 >>>
-# 命名空间根标志对应位于 <dist>/akaribot/<layer>/… 的源码，据此定位分层与包路径。
+# 命名空间根目录标志对应位于 <dist>/akaribot/<layer>/… 的源码，据此定位分层与包路径。
 <<< END U013894 >>>
 <<< UNIT U013895 | py-comment | tools/lint_boundaries.py:64-64 >>>
-# 分层取命名空间根之后的第一段目录名。akaribot.testing 不在受约束的三层内，规则不适用。
+# 分层取命名空间根目录之后的第一段目录名。akaribot.testing 不在受约束的三层内，规则不适用。
 <<< END U013895 >>>
 <<< UNIT U013896 | py-comment | tools/lint_boundaries.py:68-68 >>>
-# 命名空间根与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按“akaribot 之后的目录后缀”禁。
+# 命名空间根目录与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按“akaribot 之后的目录后缀”禁。
 <<< END U013896 >>>
 <<< UNIT U013897 | py-comment | tools/lint_boundaries.py:70-70 >>>
 # 官方模块包的判定前缀，T4.6 #2 的 error 升级与 #7 都只检查这一层目录。
@@ -3296,7 +3296,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 <<< END U013908 >>>
 <<< UNIT U013909 | py-comment | tools/lint_boundaries.py:611-612 >>>
 # core 自带的 bundled 模块在路径上也属模块层，但它们随 core 同版本发布、与 core 内部同步
-# 重构，不属于“模块包绑定 core 内部目录”。算进来会让观察值长期停在几百。
+# 重构，不属于“模块包绑定 core 内部目录”。计入后会让观察值长期停在几百。
 <<< END U013909 >>>
 <<< UNIT U013910 | py-comment | tools/lint_boundaries.py:700-701 >>>
 # git 的 pathspec 里不含斜杠的模式按全路径通配，如 `*.py` 能命中任意深度，
@@ -3348,7 +3348,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 规则 B6，要求跨模块导入须在自身 pyproject 的 dependencies 中声明目标包。
 <<< END U013925 >>>
 <<< UNIT U013926 | py-docstring | tools/lint_boundaries.py:513-513 | ctx=check_module_import >>>
-规则 B1、B2、B3、B6、B8、B10，定义模块包侧的导入限制。
+规则 B1、B2、B3、B6、B8、B10，定义模块包的导入限制。
 <<< END U013926 >>>
 <<< UNIT U013927 | py-docstring | tools/lint_boundaries.py:538-538 | ctx=check_import >>>
 对单个导入语句施加全部规则。
@@ -3489,7 +3489,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 读取 TOML 文件。
 <<< END U013970 >>>
 <<< UNIT U013971 | py-docstring | tools/lint_versions.py:142-142 | ctx=member_pyprojects >>>
-按根 pyproject 的 members glob 展开成员清单，排除 exclude。
+按根目录 pyproject 的 members glob 展开成员清单，排除 exclude。
 <<< END U013971 >>>
 <<< UNIT U013972 | py-docstring | tools/lint_versions.py:159-159 | ctx=discover_members >>>
 读取全部成员的 [project] 名字与版本，返回规范化名到成员的映射。

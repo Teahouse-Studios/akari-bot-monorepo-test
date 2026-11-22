@@ -2193,7 +2193,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 正则句式没有命令前缀，任何匹配到的消息都会触发查询。若平台不允许读取全部消息，或不需要自然语言触发，只使用命令形式即可。
 <<< END U011783 >>>
 <<< UNIT U011784 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:47-47 >>>
-# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人使用同一逻辑。
 <<< END U011784 >>>
 <<< UNIT U011785 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:51-51 >>>
 # 水鱼的成绩只给难度标级，而绘图按难度序号选取颜色，故按标级补一个序号。标级无法识别时记 0。
@@ -2264,7 +2264,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # `status_code=None`，使 4xx 也正常返回响应体。重发可能使第一次已签发的令牌失效。
 <<< END U011806 >>>
 <<< UNIT U011807 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:208-208 >>>
-# 机密客户端靠换票续期，用不到 refresh token，但必须获取用户标识。
+# 机密客户端通过重新换取令牌续期，不需要 refresh token，但必须获取用户标识。
 <<< END U011807 >>>
 <<< UNIT U011808 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:321-321 >>>
 # 等待期间可能已有一次获取令牌完成，复查缓存以免重复换取。
@@ -2303,7 +2303,7 @@ refresh token 已失效，可能是用户撤销了授权，或令牌链因并发
 请求过于频繁，授权服务器要求稍后再试。
 <<< END U011819 >>>
 <<< UNIT U011820 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_apidata.py:27-27 >>>
-# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人使用同一逻辑。
 <<< END U011820 >>>
 <<< UNIT U011821 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/lxns_apidata.py:31-32 >>>
 # 落雪把标准与 DX 谱面记录在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换时在这个

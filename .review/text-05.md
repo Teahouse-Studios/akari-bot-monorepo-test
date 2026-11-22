@@ -1414,7 +1414,7 @@ ${at}（${count} 个包，校验值 ${fingerprint}）
 [yellow]孤立配置检查跳过。登录信息检查退化为全部密钥字段。[/yellow]
 <<< END U002291 >>>
 <<< UNIT U002292 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:285-285 | ctx=cli.doctor.report.config_root >>>
-配置根：${path}
+配置根目录：${path}
 <<< END U002292 >>>
 <<< UNIT U002293 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:286-286 | ctx=cli.doctor.report.implementation >>>
 冲突检查实现：${implementation}
