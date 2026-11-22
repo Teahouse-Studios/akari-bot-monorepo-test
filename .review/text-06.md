@@ -2724,22 +2724,22 @@ ${message}，要求版本 ${pin}
 诊断通过：${passed} 项通过，${warnings} 项警告
 <<< END U004104 >>>
 <<< UNIT U004105 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2140-2140 | ctx=cli.venv.add.arg_spec >>>
-要安装的需求串，可填 PyPI 包名（可带版本区间）、仓库地址或 git+ 直引用。
+要安装的需求串，可填写 PyPI 包名（可带版本区间）、仓库地址或 git+ 直接引用。
 <<< END U004105 >>>
 <<< UNIT U004106 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2141-2141 | ctx=cli.venv.add.dry_run >>>
-试运行，只打印将执行的命令，不改环境也不改清单。
+试运行，只打印将执行的命令，不改动环境也不修改清单。
 <<< END U004106 >>>
 <<< UNIT U004107 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2142-2142 | ctx=cli.venv.add.empty_spec >>>
 需求串不能为空。
 <<< END U004107 >>>
 <<< UNIT U004108 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2143-2143 | ctx=cli.venv.add.help >>>
-安装运行库到实例环境。--save 记进实例清单，环境重建时按它补装。
+安装运行库到实例环境。--save 会记入实例清单，环境重建时按此补装。
 <<< END U004108 >>>
 <<< UNIT U004109 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2144-2144 | ctx=cli.venv.add.not_saved >>>
 已安装到当前环境但未记入实例清单，环境重建后不会保留。
 <<< END U004109 >>>
 <<< UNIT U004110 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2145-2145 | ctx=cli.venv.add.option_save >>>
-把这次安装记进实例清单（akaribot.toml 的 runtime.requirements）。
+将这次安装记入实例清单（akaribot.toml 的 runtime.requirements）。
 <<< END U004110 >>>
 <<< UNIT U004111 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2146-2146 | ctx=cli.venv.add.option_upgrade >>>
 允许升级已安装版本。
@@ -2751,7 +2751,7 @@ ${message}，要求版本 ${pin}
 已安装到环境，但无法识别这个 git 直接引用的包名，未记入清单：${spec}
 <<< END U004113 >>>
 <<< UNIT U004114 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2149-2149 | ctx=cli.venv.adopt.confirm >>>
-将把当前环境的 akaribot 包迁入 ${venv}，随后从源环境卸载。继续
+将把当前环境的 akaribot 包迁移至 ${venv}，随后从源环境卸载。继续
 <<< END U004114 >>>
 <<< UNIT U004115 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2150-2150 | ctx=cli.venv.adopt.help >>>
 切换为 CLI 托管 venv，先安装并验证通过，最后才卸载源环境的包。
@@ -2763,7 +2763,7 @@ ${message}，要求版本 ${pin}
 不卸载源环境的包，只做迁移副本
 <<< END U004117 >>>
 <<< UNIT U004118 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2153-2153 | ctx=cli.venv.adopt.option_python >>>
-建 venv 用的解释器，默认与当前解释器一致
+创建 venv 用的解释器，默认与当前解释器一致
 <<< END U004118 >>>
 <<< UNIT U004119 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2154-2154 | ctx=cli.venv.help >>>
 实例 venv 托管（status / adopt / release / recreate）
@@ -2790,10 +2790,10 @@ ${message}，要求版本 ${pin}
 新 venv 用的解释器，默认为当前解释器
 <<< END U004126 >>>
 <<< UNIT U004127 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2162-2162 | ctx=cli.venv.release.confirm >>>
-将把实例 venv 的包装入当前环境，随后从实例 venv 卸载。继续
+将把实例 venv 的包安装到当前环境，随后从实例 venv 卸载。继续
 <<< END U004127 >>>
 <<< UNIT U004128 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2163-2163 | ctx=cli.venv.release.help >>>
-放弃托管，把实例 venv 的包迁回当前环境。
+放弃托管，将实例 venv 的包迁移回当前环境。
 <<< END U004128 >>>
 <<< UNIT U004129 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2164-2164 | ctx=cli.venv.release.option_keep_source >>>
 保留实例 venv 里的包，只做迁移副本
@@ -3193,7 +3193,7 @@ ${env} 指向的 uv 不可用（${path}），改用其他来源。
 <<< END U004260 >>>
 <<< UNIT U004261 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:33-34 >>>
 # 无子命令时的退出码。click ≥8.2 把 no_args_is_help 实现为 NoArgsIsHelpError（UsageError，退出码 2），
-# 语义是“参数不足”而非成功。这里沿用该码，同时把帮助文本留在正常输出通道，不落进错误面板。
+# 语义是“参数不足”而非成功。这里沿用该退出码，同时把帮助文本留在正常输出通道，不落进错误面板。
 <<< END U004261 >>>
 <<< UNIT U004262 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/main.py:50-50 >>>
 # noqa: BLE001 - 回退必须覆盖冻结产物的全部 metadata 读取失败
@@ -3212,10 +3212,10 @@ ${env} 指向的 uv 不可用（${path}），改用其他来源。
 # 帮助，因为那种环境下界面无法启动，把帮助放入错误面板只会让人以为出错了。
 <<< END U004265 >>>
 <<< UNIT U004266 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:118-118 >>>
-# 界面需要能读键、能画全屏，管道与重定向下不可用。
+# 界面需要读取按键并绘制全屏内容，在管道与重定向环境下不可用。
 <<< END U004266 >>>
 <<< UNIT U004267 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:123-124 >>>
-# 初始化直接调用 ``akaribot init`` 的命令本体，不复制它创建目录、安装包、写入元数据的流程。问答也由
+# 初始化直接调用 ``akaribot init`` 的命令本体，不复制创建目录、安装包、写入元数据的流程。交互问答也由
 # init 自己完成，两边不会各问一套。返回实例根目录，用户放弃或初始化未成功时为 ``None``。
 <<< END U004267 >>>
 <<< UNIT U004268 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:127-127 >>>
@@ -3231,7 +3231,7 @@ AkariBot 实例管理工具。
 # Windows 的首字节被排他锁保护，记录读取须避开锁区。
 <<< END U004271 >>>
 <<< UNIT U004272 | py-comment | packages/akari-bot-cli/akaribot/cli/process.py:172-172 >>>
-# 与控制器同组的实例只能按进程号处理，对整组发信号会连控制器一起终止。
+# 与控制器同组的实例只能按进程号处理，对整组发送信号会连同控制器一起终止。
 <<< END U004272 >>>
 <<< UNIT U004273 | py-comment | packages/akari-bot-cli/akaribot/cli/process.py:190-190 >>>
 # macOS 对已退出但尚未回收的组长可返回 EPERM，须继续核对可运行成员。
@@ -3258,10 +3258,10 @@ AkariBot 实例管理工具。
 进程组内是否仍有进程。
 <<< END U004280 >>>
 <<< UNIT U004281 | py-docstring | packages/akari-bot-cli/akaribot/cli/process.py:137-137 | ctx=ProcessControl.terminate >>>
-向单个进程发终止信号。
+向单个进程发送终止信号。
 <<< END U004281 >>>
 <<< UNIT U004282 | py-docstring | packages/akari-bot-cli/akaribot/cli/process.py:141-141 | ctx=ProcessControl.terminate_group >>>
-向整个进程组发终止信号。
+向整个进程组发送终止信号。
 <<< END U004282 >>>
 <<< UNIT U004283 | py-docstring | packages/akari-bot-cli/akaribot/cli/process.py:145-145 | ctx=ProcessControl.sleep >>>
 等待若干秒。
@@ -3303,13 +3303,13 @@ AkariBot 实例管理工具。
 # noqa: S603 - 参数由本模块拼装
 <<< END U004295 >>>
 <<< UNIT U004296 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:286-286 >>>
-# 默认工作目录取注册表目录，让界面与命令行共用同一个默认值，装出来的单元才一致。
+# 默认工作目录取注册表目录，让界面与命令行共用同一个默认值，安装生成的单元才一致。
 <<< END U004296 >>>
 <<< UNIT U004297 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:394-394 >>>
 # 部分 macOS 版本的 launchctl 只实现 load。bootstrap 失败时回退到 load，两者语义一致。
 <<< END U004297 >>>
 <<< UNIT U004298 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:446-446 >>>
-# 系统工具的失败原因写在 stderr，取尾部供排障。
+# 系统工具的失败原因写在 stderr，截取尾部供排查。
 <<< END U004298 >>>
 <<< UNIT U004299 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:519-519 >>>
 # 就绪时限与控制台日志路径都以 run --detach 为准，故直接复用它的实现，避免两处判断标准分叉。
@@ -3523,7 +3523,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 打印一条检查结果并记录失败项。
 <<< END U004353 >>>
 <<< UNIT U004354 | py-docstring | packages/akari-bot-cli/akaribot/cli/templates/adapter/selfcheck.py:41-41 | ctx=ruff_binary >>>
-取 ruff 可执行文件，优先仓库虚拟环境内的那份。
+获取 ruff 可执行文件，优先使用仓库虚拟环境中的版本。
 <<< END U004354 >>>
 <<< UNIT U004355 | py-docstring | packages/akari-bot-cli/akaribot/cli/templates/adapter/selfcheck.py:46-46 | ctx=ruff >>>
 对一组文件运行 ruff，返回是否通过与合并后的输出。
@@ -3563,7 +3563,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 | `app.py` | 应用装配、侧栏与页面注册、全局快捷键、退出检查 |
 | `dashboard.py` | 本机实例清单、启动准备状态、服务管理与当前实例详情 |
 | `environment.py` | 环境包清单、运行库安装与卸载、解释器管理 |
-| `database.py` | 库表与数据项浏览、筛选、排序、分页与编辑 |
+| `database.py` | 数据表与数据项浏览、筛选、排序、分页与编辑 |
 | `modules.py` | 模块安装、卸载、更新、装载切换与批量操作 |
 | `adapters.py` | 适配器安装、启用状态与实例配置管理 |
 | `config.py` | 配置表、表单编辑、原始文本编辑与外部编辑器 |
@@ -3611,12 +3611,12 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 | --- | --- |
 | 刷新 | `r` |
 | 搜索 / 过滤 | `/` |
-| 返回一级：清空搜索，搜索已空时焦点回列表 | `Esc` |
+| 返回一级（清空搜索，搜索已空时焦点回到列表） | `Esc` |
 | 列表项默认动作 | `Enter` |
 | 选择 / 全选 / 清空选择（多选页） | `Space` / `a` / `c` |
 | 新建 / 新增 | `n` |
 | 安装 / 卸载 / 更新 | `i` / `u` / `U` |
-| 删除 / 移除（弹确认） | `ctrl+d` |
+| 删除 / 移除（弹出确认） | `ctrl+d` |
 | 保存 | `ctrl+s` |
 | 在外部打开 | `o` |
 | 开关切换（启用、加载） | `e` |
@@ -3627,7 +3627,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 <<< UNIT U004375 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:67-69 | ctx=键位语法 >>>
 按钮文字经 `compat.key_hint()` 附上快捷键（如“安装 i”“移除实例 ^d”），写法与页脚一致。
 按钮栏依次为主操作（唯一的 primary）、次要操作、破坏性操作（error）、低频菜单、刷新。
-低频操作不占按钮，收进 `m` 打开的菜单，菜单只列当前状态下可用的项。
+低频操作不占用按钮，收纳在 `m` 打开的菜单中，菜单只列出当前状态下可用的项。
 <<< END U004375 >>>
 <<< UNIT U004376 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:71-71 | ctx=键位语法 >>>
 - 删除、移除、卸载等操作必须弹出模态确认框，列出目标、更改范围及可选项。删除和移除使用
@@ -3693,7 +3693,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 - `m` 打开所选已收录实例的服务与策略菜单，可开启或关闭开机自启与崩溃重启，或安装与卸载服务。平台不支持
 <<< END U004395 >>>
 <<< UNIT U004396 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:97-97 | ctx=概览 >>>
-  服务时不列服务项。服务恢复实例时同时要求启用自启且实例上次处于运行状态。
+  服务时不列出服务项。服务恢复实例时同时要求启用自启且实例上次处于运行状态。
 <<< END U004396 >>>
 <<< UNIT U004397 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:98-98 | ctx=概览 >>>
 - 服务安装或卸载另有确认框，可选择执行、预览或取消。覆盖已有服务文件时明确列出覆盖范围。
@@ -3810,7 +3810,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 - `m` 或“解释器…”按钮打开解释器菜单，包括改用由框架管理的 venv、改用系统解释器与重建实例 venv，
 <<< END U004430 >>>
 <<< UNIT U004431 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:151-151 | ctx=环境 >>>
-  只列当前模式适用的操作。未知模式显示原因。实例运行期间拒绝更改解释器。
+  只列出当前模式适用的操作。未知模式显示原因。实例运行期间拒绝更改解释器。
 <<< END U004431 >>>
 <<< UNIT U004432 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:152-154 | ctx=环境 >>>
 - 解释器确认框提供执行、预览与取消。执行重建前须输入“重建”。取消或输入不匹配均不执行。
@@ -3824,7 +3824,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 ### 数据库
 <<< END U004434 >>>
 <<< UNIT U004435 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:159-160 | ctx=数据库 >>>
-数据库页提供库表清单、分页数据项与编辑区，窄屏改为纵向排列。数据通过 `akaribot db tables/rows`
+数据库页提供数据表清单、分页数据项与编辑区，窄屏改为纵向排列。数据通过 `akaribot db tables/rows`
 读取，写入通过 `db set/insert/delete` 执行，仅接受 core 注册的 ORM 表与列。
 <<< END U004435 >>>
 <<< UNIT U004436 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:162-162 | ctx=数据库 >>>
@@ -4053,7 +4053,7 @@ Textual 界面。
 # 列表边框占两行。
 <<< END U004495 >>>
 <<< UNIT U004496 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:975-975 >>>
-# 输入框占三行。错误提示在窄屏下可能折行，按实际内容计高。
+# 输入框占三行。错误提示在窄屏下可能折行，按实际内容计算高度。
 <<< END U004496 >>>
 <<< UNIT U004497 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:991-991 >>>
 # 单击选项后回到输入框继续填写。
@@ -4098,7 +4098,7 @@ Textual 界面。
 返回单个字符占用的终端列数。
 <<< END U004510 >>>
 <<< UNIT U004511 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:174-174 | ctx=display_width >>>
-返回字符串占用的终端列数，中文与 emoji 按 2 列计。
+返回字符串占用的终端列数，中文与 emoji 按 2 列计算。
 <<< END U004511 >>>
 <<< UNIT U004512 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:219-219 | ctx=fit_cells >>>
 先按列宽截断再补齐，用于定宽列。
@@ -4212,7 +4212,7 @@ Esc 取消。
 按声明顺序创建按钮。
 <<< END U004548 >>>
 <<< UNIT U004549 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:1241-1241 | ctx=ButtonFlow.on_mount >>>
-首次排布前算一次列数。
+首次排布前计算一次列数。
 <<< END U004549 >>>
 <<< UNIT U004550 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:1245-1245 | ctx=ButtonFlow.on_resize >>>
 宽度变化后重新计算列数。

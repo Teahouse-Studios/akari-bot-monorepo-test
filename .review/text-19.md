@@ -241,7 +241,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U012163 >>>
 <<< UNIT U012164 | md-paragraph | packages/modules/akari-bot-module-mcserver/akaribot/modules/mcserver/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-此模块的命令未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 取默认值 `*`。
+此模块的命令未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 使用默认值 `*`。
 <<< END U012164 >>>
 <<< UNIT U012165 | md-paragraph | packages/modules/akari-bot-module-mcserver/akaribot/modules/mcserver/docs/development.md:23-23 | ctx=权限与平台能力 >>>
 查询会直接连接目标服务器，需要网络允许访问对应端口。Java 版查询会解析 SRV 记录，超时后改用 `motd.wd-api.com` 的 HTTP 接口。基岩版查询在超时后同样改用 `motd.wd-api.com` 的接口。
@@ -349,7 +349,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U012197 >>>
 <<< UNIT U012198 | md-paragraph | packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/docs/development.md:25-25 | ctx=权限与平台能力 >>>
-`mcv` 与 `mcv mcbv` 两条命令都未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 取默认值 `*`。执行查询时需要能访问 Mojang、Google Play 与 `store.rg-adguard.net`。
+`mcv` 与 `mcv mcbv` 两条命令都未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 使用默认值 `*`。执行查询时需要能访问 Mojang、Google Play 与 `store.rg-adguard.net`。
 <<< END U012198 >>>
 <<< UNIT U012199 | md-heading | packages/modules/akari-bot-module-mcv/akaribot/modules/mcv/docs/development.md:27-27 | ctx=数据表 >>>
 ## 数据表
@@ -782,7 +782,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U012315 >>>
 <<< UNIT U012316 | md-paragraph | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-此模块的命令对普通用户开放，不要求管理员或超级用户权限。模块没有声明平台限制，`available_for` 取默认值 `*`。密码计算全部在本地完成，不访问网络，也不依赖平台能力。
+此模块的命令对普通用户开放，不要求管理员或超级用户权限。模块没有声明平台限制，`available_for` 使用默认值 `*`。密码计算全部在本地完成，不访问网络，也不依赖平台能力。
 <<< END U012316 >>>
 <<< UNIT U012317 | md-heading | packages/modules/akari-bot-module-mkey/akaribot/modules/mkey/docs/development.md:23-23 | ctx=数据表 >>>
 ## 数据表
@@ -895,7 +895,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `curseforge_api_key` | str | 空 | CurseForge API 密钥 |
 <<< END U012350 >>>
 <<< UNIT U012351 | md-paragraph | packages/modules/akari-bot-module-mod_dl/akaribot/modules/mod_dl/docs/development.md:25-25 | ctx=配置项 >>>
-未填写密钥时，CurseForge 请求改走 `https://mcim.z0z0r4.top` 镜像。填写密钥后，请求直连官方接口并携带 `x-api-key`。`manifest.toml` 把该字段列进 `credential_fields`，启动时据此检查密钥是否重复。
+未填写密钥时，CurseForge 请求改用 `https://mcim.z0z0r4.top` 镜像。填写密钥后，请求直连官方接口并携带 `x-api-key`。`manifest.toml` 把该字段列进 `credential_fields`，启动时据此检查密钥是否重复。
 <<< END U012351 >>>
 <<< UNIT U012352 | md-heading | packages/modules/akari-bot-module-mod_dl/akaribot/modules/mod_dl/docs/development.md:27-27 | ctx=权限与平台能力 >>>
 ## 权限与平台能力
@@ -1476,7 +1476,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 - 当日全网总流量
 <<< END U012529 >>>
 <<< UNIT U012530 | md-paragraph | packages/modules/akari-bot-module-oba/akaribot/modules/oba/docs/index.md:20-20 | ctx=`oba status` >>>
-消息另外附带 OpenBMCLAPI 版本与查询时间，取不到版本号时省略版本一项。
+消息另外附带 OpenBMCLAPI 版本与查询时间，无法获取版本号时省略版本一项。
 <<< END U012530 >>>
 <<< UNIT U012531 | md-paragraph | packages/modules/akari-bot-module-oba/akaribot/modules/oba/docs/index.md:23-34 | ctx=`oba status` >>>
   :log="[
@@ -1872,7 +1872,7 @@ AES CBC 解密
 # 遍历每首歌的所有难度记录
 <<< END U012627 >>>
 <<< UNIT U012628 | py-inline-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/ActionLib.py:229-229 >>>
-# 取歌名添加进原数据中
+# 获取歌名并添加到原数据中
 <<< END U012628 >>>
 <<< UNIT U012629 | py-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/ActionLib.py:231-231 >>>
 # 将难度等级添加进原数据中
@@ -2292,7 +2292,7 @@ AES CBC 解密
 <<< UNIT U012722 | py-docstring | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:532-538 | ctx=Reader.__init__ >>>
 反序列化存档数据的操作类
 
-        参数:
+        参数：
             data (bytes | bytearray): 要读取的二进制数据
             pos (int): 当前读写位置。默认为 0
 <<< END U012722 >>>
@@ -2326,7 +2326,7 @@ AES CBC 解密
 <<< UNIT U012727 | py-docstring | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:619-624 | ctx=Writer.__init__ >>>
 序列化存档数据的操作类
 
-        参数:
+        参数：
             data (bytes | bytearray | None): 若不为空，则基于此数据向后拼接序列化数据
 <<< END U012727 >>>
 <<< UNIT U012728 | py-docstring | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:643-649 | ctx=Writer.type_write >>>
@@ -2685,7 +2685,7 @@ SessionToken 已失效，请使用“${cmd}”重新绑定。
 # 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
 <<< END U012836 >>>
 <<< UNIT U012837 | py-docstring | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/migrations/0002_union_id.py:17-21 | ctx=upgrade >>>
-改主键列名并补上国际服标记。
+修改主键列名并补充国际服标记。
 
 :param ctx: 迁移上下文。
 <<< END U012837 >>>

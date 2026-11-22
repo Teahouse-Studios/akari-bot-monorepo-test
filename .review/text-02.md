@@ -694,7 +694,7 @@ ActionText 较多时使用下拉菜单节省组件行。
 # Raw Reaction 在成员缓存缺失时只能先取得 User。频道权限计算需要完整 Member。
 <<< END U000512 >>>
 <<< UNIT U000513 | py-comment | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:223-223 >>>
-# 私信频道须先建立才具有 ID，对方关闭私信时 create_dm 会抛出 Forbidden
+# 私信频道须先创建才会生成 ID，对方关闭私信时 create_dm 会抛出 Forbidden
 <<< END U000513 >>>
 <<< UNIT U000514 | py-comment | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/context.py:225-225 >>>
 # 显式指定基类，因为 Slash 子类只能回应交互，无法向任意频道发送消息
@@ -846,7 +846,7 @@ Discord 消息聚合负载构建。
 将完整消息链聚合为受平台限制约束的 Discord 负载。
 <<< END U000554 >>>
 <<< UNIT U000555 | py-docstring | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/message_builder.py:142-142 | ctx=execute_discord_payloads >>>
-依次发送 Discord 负载，引用仅首条、按钮仅末条。
+依次发送 Discord 负载，仅在首条消息附带引用、仅在末条消息附带按钮。
 <<< END U000555 >>>
 <<< UNIT U000556 | py-comment | packages/adapters/akari-bot-adapter-discord/akaribot/adapters/discord/slash_context.py:76-77 >>>
 # py-cord 的首次 Interaction 响应返回 Interaction 本身，其 id 是交互 ID，
@@ -1310,7 +1310,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 释放 Milky 适配器持有的输入状态任务。
 <<< END U000684 >>>
 <<< UNIT U000685 | py-docstring | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/context.py:61-61 | ctx=MilkyContextManager.check_native_permission >>>
-检查指定成员（默认发话者）是否具备群管理权限。
+检查指定成员（默认发送者）是否具备群管理权限。
 <<< END U000685 >>>
 <<< UNIT U000686 | py-docstring | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/context.py:88-88 | ctx=MilkyContextManager.check_bot_state >>>
 查询机器人在当前场景中的成员与权限状态。
@@ -1489,7 +1489,7 @@ Milky 协议端 HTTP 服务的地址。
 # credential_fields 供守护进程在启动前检查同一平台的两个实例是否配置了同一账号。
 <<< END U000730 >>>
 <<< UNIT U000731 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/utils.py:195-195 >>>
-# 标记是否已写入过元素内容，首个元素直接落段，其后元素均先补齐换行
+# 标记是否已写入过元素内容，首个元素直接写入，其后元素均先补充换行
 <<< END U000731 >>>
 <<< UNIT U000732 | py-comment | packages/adapters/akari-bot-adapter-milky/akaribot/adapters/milky/utils.py:201-201 >>>
 # AT 码与前后文本同属一条文本，需在文本流内按出现顺序转换为提及段
@@ -1533,7 +1533,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 被查询的成员可能已退群，平台查不到成员记录时会直接报错，按无权限处理。
 <<< END U000744 >>>
 <<< UNIT U000745 | py-comment | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/context.py:300-300 >>>
-# CQ 码消息段相连会导致自动转义，故使用零宽字符`\u200B`隔开
+# CQ 码消息段相连会导致自动转义，故使用零宽字符 `\u200B` 隔开
 <<< END U000745 >>>
 <<< UNIT U000746 | py-comment | packages/adapters/akari-bot-adapter-onebot/akaribot/adapters/onebot/context.py:374-374 >>>
 # 元素均因底层媒体不可用被跳过时不发送空消息
@@ -1799,7 +1799,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U000811 >>>
 <<< UNIT U000812 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/bot.py:511-512 >>>
 # QQBot 的交互事件不会可靠返回按钮所属消息的 ID。发送阶段把框架生成的虚拟
-# reply_id 编进 button data，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
+# reply_id 编码进 button data，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
 <<< END U000812 >>>
 <<< UNIT U000813 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/bot.py:553-553 >>>
 # Webhook 模式由平台回调驱动，须在本机监听。SDK 只提供 HTTP，公网 HTTPS 交由反向代理终止。
@@ -1841,7 +1841,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 节点表格的高度上限，每多一对，列数减半、单行长度随之减半。
 <<< END U000825 >>>
 <<< UNIT U000826 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:308-308 >>>
-# 末对补空单元格，markdown 要求各行的列数一致
+# 末行不足时补充空单元格，因为 markdown 要求各行的列数一致
 <<< END U000826 >>>
 <<< UNIT U000827 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:315-315 >>>
 # 用户权限缓存，供接口未返回群聊内身份的部分场景使用。只缓存管理员，缺失时安全回退为无权限。
@@ -1853,14 +1853,14 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 真实平台的 ROBOT ID 只能用于接口调用，不能作为 wait_reply 等应用层标识。
 <<< END U000829 >>>
 <<< UNIT U000830 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:481-481 >>>
-# 机器人沉默满此秒数后，才在群聊中补发输入提示
+# 机器人无响应满此秒数后，才在群聊中补发输入提示
 <<< END U000830 >>>
 <<< UNIT U000831 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:483-483 >>>
 # 输入提示的最长存活时间，用于在结束信号丢失时强制撤回。
 <<< END U000831 >>>
 <<< UNIT U000832 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:517-518 >>>
 # 不直接取消 Typing 任务，因为平台可能已经接受提示消息但 SDK 尚未返回其消息 ID。
-# 先发结束信号并等待正常收尾，使任务有机会在 finally 中撤回提示。
+# 先发送结束信号并等待其正常结束，使任务有机会在 finally 中撤回提示。
 <<< END U000832 >>>
 <<< UNIT U000833 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:535-536 >>>
 # Typing 已尽量完成撤回后，再停止实际发送队列。worker 的取消分支会把当前的
@@ -1927,7 +1927,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 待实际发送完成后再回传结果。
 <<< END U000852 >>>
 <<< UNIT U000853 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:1707-1707 >>>
-# 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后插播一条普通任务，避免普通目标饥饿。
+# 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后穿插一条普通任务，避免普通目标长期得不到发送。
 <<< END U000853 >>>
 <<< UNIT U000854 | py-docstring | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:343-343 | ctx=cache_message_id_pair >>>
 缓存应用层消息 ID 到平台接口消息 ID 的映射。
@@ -1942,7 +1942,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 保持原有公开行为，准备资源并等待实际发送完成后返回消息 ID。
 <<< END U000857 >>>
 <<< UNIT U000858 | py-docstring | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:1652-1652 | ctx=QQBotFetchedContextManager >>>
-主动消息上下文管理器，按 in_post_whitelist 排序发送，发送节奏由 SDK 整流器控制。
+主动消息上下文管理器，按 in_post_whitelist 排序发送，发送节奏由 SDK 限流器控制。
 <<< END U000858 >>>
 <<< UNIT U000859 | py-docstring | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:1726-1726 | ctx=QQBotFetchedContextManager.stop_task_processor >>>
 停止主动消息 worker，并让尚未处理的调用方收到发送失败。
@@ -1978,7 +1978,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `qq_webhook_path` | str | `/` | Webhook 回调路径，需要与开放平台配置一致。 |
 | `qq_bot_uid` | str | `""` | 机器人 UID。 |
 | `qq_bot_qqnum` | str | `""` | 机器人 QQ 号。 |
-| `qq_api_url` | str | `""` | 自定义 API 基地址，留空使用官方地址。 |
+| `qq_api_url` | str | `""` | 自定义 API 基础地址，留空使用官方地址。 |
 <<< END U000864 >>>
 <<< UNIT U000865 | md-heading | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/config.md:29-29 | ctx=密钥表 `bot_qqbot_secret` >>>
 ## 密钥表 `bot_qqbot_secret`

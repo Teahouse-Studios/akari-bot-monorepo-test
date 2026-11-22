@@ -103,10 +103,10 @@
 输出目录的绝对路径。配置为相对路径时以实例根目录为基准。
 <<< END U001862 >>>
 <<< UNIT U001863 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/config.py:299-299 | ctx=DocsConfig.base >>>
-当前生效的基路径，环境变量优先于配置文件。
+当前生效的基础路径，环境变量优先于配置文件。
 <<< END U001863 >>>
 <<< UNIT U001864 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/config.py:304-304 | ctx=normalize_base >>>
-把基路径规范成以 ``/`` 开头并结尾的形式。
+将基础路径规范为以 ``/`` 开头并结尾的形式。
 <<< END U001864 >>>
 <<< UNIT U001865 | cfg-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml:1-2 >>>
 # 站点标题、输出位置、界面文案与侧栏导航的出厂默认值。
@@ -124,8 +124,8 @@
 <<< END U001867 >>>
 <<< UNIT U001868 | cfg-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml:71-73 >>>
 # 页脚关于区块的配图默认使用品牌立绘，按钮图标可用内置名 afdian、github。
-# 实例 docs.toml 写 [footer] 覆盖文字，写 [[footer.links]] 覆盖按钮。
-# text 与 links 写空数组表示不显示该部分。
+# 实例 docs.toml 中配置 [footer] 可覆盖文字，配置 [[footer.links]] 可覆盖按钮。
+# text 与 links 设为空数组表示不显示该部分。
 <<< END U001868 >>>
 <<< UNIT U001869 | py-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/deploy/base.py:125-125 >>>
 # 命令层可以传入整个 [deploy] 表，也可以只传入对应子表。
@@ -155,7 +155,7 @@
 返回目标摘要，不启动子进程。
 <<< END U001877 >>>
 <<< UNIT U001878 | py-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/dev.py:52-52 >>>
-# VitePress dev 在镜像里写依赖预构建与输出缓存，同步时既不同步也不清理。
+# VitePress dev 在镜像里写入依赖预构建与输出缓存，同步时既不同步也不清理。
 <<< END U001878 >>>
 <<< UNIT U001879 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/dev.py:392-392 >>>
 # noqa: S603 - argv 由固定组件拼接而成
@@ -290,7 +290,7 @@
 # noqa: S603 - 命令由本模块组装，不含用户输入
 <<< END U001922 >>>
 <<< UNIT U001923 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/toolchain.py:58-58 | ctx=parse_node_major >>>
-从 ``v24.21.0`` 形式的输出里取主版本号。
+从 ``v24.21.0`` 形式的输出里提取主版本号。
 <<< END U001923 >>>
 <<< UNIT U001924 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/toolchain.py:192-192 | ctx=build_argv >>>
 组装 VitePress 构建命令。
@@ -320,17 +320,17 @@
 让阻塞在 :meth:`poll` 上的调用方立即返回。
 <<< END U001932 >>>
 <<< UNIT U001933 | py-comment | packages/akari-bot-cli/akaribot/cli/i18n.py:17-17 >>>
-# 与 core 的 lang_list 同集合。新增语言时两边一起加。
+# 与 core 的 lang_list 保持一致。新增语言时两边一起添加。
 <<< END U001933 >>>
 <<< UNIT U001934 | py-comment | packages/akari-bot-cli/akaribot/cli/i18n.py:20-20 >>>
 # 缺少对应键时按英文、中文的顺序回退。
 <<< END U001934 >>>
 <<< UNIT U001935 | py-comment | packages/akari-bot-cli/akaribot/cli/i18n.py:55-55 >>>
-# 只给了主语言时取该语言的第一个变体（en → en_us，zh → zh_cn）。
+# 只给出主语言时获取该语言的第一个变体（en → en_us，zh → zh_cn）。
 <<< END U001935 >>>
 <<< UNIT U001936 | py-comment | packages/akari-bot-cli/akaribot/cli/i18n.py:126-127 >>>
 # typer 的 ``help=`` 在导入期求值，而根回调要等参数解析完才执行，故只靠 ``set_locale()``
-# 无法本地化 ``--help``。这里提前读一次 argv，使导入期取到的就是用户要的语言。
+# 无法本地化 ``--help``。这里提前读取一次 argv，使导入期获取到用户指定的语言。
 <<< END U001936 >>>
 <<< UNIT U001937 | py-docstring | packages/akari-bot-cli/akaribot/cli/i18n.py:121-121 | ctx=current_locale >>>
 返回当前语言码。
@@ -363,7 +363,7 @@
 # 按包名去重依赖声明，保留首次出现的写法。无法识别包名的声明按整串比较。
 <<< END U001945 >>>
 <<< UNIT U001946 | py-comment | packages/akari-bot-cli/akaribot/cli/instance.py:663-664 >>>
-# 入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
+# 入口只输出一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
 # ``status`` 的对象。找不到时返回 ``None``，由调用方回退到退出码与 stderr 的解释。
 <<< END U001946 >>>
 <<< UNIT U001947 | py-comment | packages/akari-bot-cli/akaribot/cli/instance.py:1094-1094 >>>
@@ -455,7 +455,7 @@ usage 里不追加子命令占位符。
 实例清单里记录的运行库需求串，按记录顺序。
 <<< END U001975 >>>
 <<< UNIT U001976 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:594-594 | ctx=InstanceMeta.workspace_root >>>
-本地工作区根目录。非空时安装取本地路径。
+本地工作区根目录。非空时从本地路径安装。
 <<< END U001976 >>>
 <<< UNIT U001977 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:599-599 | ctx=InstanceMeta.registry_sources >>>
 registry.json 的来源列表。
@@ -479,7 +479,7 @@ registry.json 的来源列表。
 原子写回 ``akaribot.toml``，未知键与注释一并保留。
 <<< END U001983 >>>
 <<< UNIT U001984 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:703-703 | ctx=Instance.detached >>>
-构造不读磁盘的实例对象，供写入磁盘前的解析与 ``--dry-run`` 使用。
+构造不读取磁盘的实例对象，供写入磁盘前的解析与 ``--dry-run`` 使用。
 <<< END U001984 >>>
 <<< UNIT U001985 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:725-725 | ctx=Instance.managed >>>
 是否由 CLI 托管 venv。
@@ -497,7 +497,7 @@ registry.json 的来源列表。
 配置目录。
 <<< END U001989 >>>
 <<< UNIT U001990 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:764-764 | ctx=Instance.core_module >>>
-把入口名补成完整模块路径。已含点号者原样返回。
+将入口名补全为完整模块路径。已含点号者原样返回。
 <<< END U001990 >>>
 <<< UNIT U001991 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:770-770 | ctx=Instance.python_argv >>>
 以实例解释器执行任意参数。
@@ -566,10 +566,10 @@ venv 路径的展示形式，托管模式显示相对路径，非托管模式显
 返回默认实例名。未设置时为空字符串。
 <<< END U002012 >>>
 <<< UNIT U002013 | py-docstring | packages/akari-bot-cli/akaribot/cli/instances.py:196-196 | ctx=InstanceRegistry.get >>>
-按名称取一条记录。不存在时返回 ``None``。
+按名称获取一条记录。不存在时返回 ``None``。
 <<< END U002013 >>>
 <<< UNIT U002014 | py-docstring | packages/akari-bot-cli/akaribot/cli/instances.py:203-203 | ctx=InstanceRegistry.find_by_root >>>
-按实例根目录取记录。比较真实路径，软链接与相对写法都能命中。
+按实例根目录获取记录。比较真实路径，软链接与相对路径都能命中。
 <<< END U002014 >>>
 <<< UNIT U002015 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2-2 | ctx=cli.adapter.fail_prefix >>>
 错误：${message}
@@ -608,7 +608,7 @@ venv 路径的展示形式，托管模式显示相对路径，非托管模式显
   akaribot config set enable true --table ${table}    # 确认登录信息无误后再开启
 <<< END U002026 >>>
 <<< UNIT U002027 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:15-15 | ctx=cli.adapter.instance.add.enable_line >>>
-  enable：false（已显式写入，填完登录信息后自行开启）
+  enable：false（已显式写入，填写完登录信息后自行开启）
 <<< END U002027 >>>
 <<< UNIT U002028 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:16-16 | ctx=cli.adapter.instance.add.exists >>>
 实例已存在：${table}（${path}）
@@ -620,7 +620,7 @@ venv 路径的展示形式，托管模式显示相对路径，非托管模式显
 新建适配器实例配置。
 
 实例 ID 一旦使用请勿更改，它是 ``target_id`` 前缀的一部分，改名要跨核心表与模块表迁移数据。
-生成的配置文件里 ``enable`` 显式写 ``false``，填完登录信息后自行开启。
+生成的配置文件里 ``enable`` 显式设为 ``false``，填写完登录信息后自行开启。
 <<< END U002030 >>>
 <<< UNIT U002031 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:19-19 | ctx=cli.adapter.instance.add.inferred_note >>>
   注：registry 未提供 platform_name，client_name 按平台名推断。
@@ -748,7 +748,7 @@ venv 路径的展示形式，托管模式显示相对路径，非托管模式显
 可用 `akaribot adapter instance add <平台> [实例 ID]` 新建实例配置。
 <<< END U002071 >>>
 <<< UNIT U002072 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:61-61 | ctx=cli.adapter.list.enable_missing >>>
-[yellow]缺 enable[/yellow]
+[yellow]缺少 enable[/yellow]
 <<< END U002072 >>>
 <<< UNIT U002073 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:62-62 | ctx=cli.adapter.list.help >>>
 按平台分组列出全部适配器实例。
@@ -763,7 +763,7 @@ venv 路径的展示形式，托管模式显示相对路径，非托管模式显
 实例根目录：${path}
 <<< END U002075 >>>
 <<< UNIT U002076 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:65-65 | ctx=cli.adapter.list.issue_enable_missing >>>
-缺 enable 键（视为未启用）
+缺少 enable 键（视为未启用）
 <<< END U002076 >>>
 <<< UNIT U002077 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:66-66 | ctx=cli.adapter.list.issue_instance_id >>>
 实例 ID 不符合 [a-z0-9_]{1,24}
@@ -820,13 +820,13 @@ ${what}失败：${detail}
 错误
 <<< END U002093 >>>
 <<< UNIT U002094 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:85-85 | ctx=cli.common.instance_option >>>
-实例根目录。默认自当前目录向上查找 akaribot.toml，或读环境变量 AKARI_INSTANCE_DIR
+实例根目录。默认自当前目录向上查找 akaribot.toml，或读取环境变量 AKARI_INSTANCE_DIR
 <<< END U002094 >>>
 <<< UNIT U002095 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:86-86 | ctx=cli.common.json_option >>>
 以 JSON 输出，供脚本消费
 <<< END U002095 >>>
 <<< UNIT U002096 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:87-87 | ctx=cli.common.lang_option >>>
-界面语言，如 zh_cn / en_us。默认读 AKARIBOT_LANG、实例配置与系统语言
+界面语言，如 zh_cn / en_us。默认读取 AKARIBOT_LANG、实例配置与系统语言
 <<< END U002096 >>>
 <<< UNIT U002097 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:89-89 | ctx=cli.common.no_output >>>
 无输出
@@ -982,7 +982,7 @@ data 入口的输出不是 JSON：${output}
 每页条数，默认 20，上限 200
 <<< END U002147 >>>
 <<< UNIT U002148 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:140-140 | ctx=cli.db.rows.option_no_count >>>
-不统计总条数，翻页时省掉一次全表扫描，输出里的总条数显示为未统计。
+不统计总条数，翻页时避免一次全表扫描，输出里的总条数显示为未统计。
 <<< END U002148 >>>
 <<< UNIT U002149 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:141-141 | ctx=cli.db.rows.option_offset >>>
 起始偏移，默认 0
@@ -1312,7 +1312,7 @@ Node 依赖已就绪：VitePress ${version}。
 按 Ctrl+C 停止预览。
 <<< END U002257 >>>
 <<< UNIT U002258 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:250-250 | ctx=cli.docs.status.base >>>
-基路径：${base}
+基础路径：${base}
 <<< END U002258 >>>
 <<< UNIT U002259 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:251-251 | ctx=cli.docs.status.build >>>
 最近构建：${detail}
@@ -1447,7 +1447,7 @@ ${at}（${count} 个包，指纹 ${fingerprint}）
 先运行 `akaribot init` 创建实例，或用 `--instance <实例根目录>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。
 <<< END U002302 >>>
 <<< UNIT U002303 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:296-296 | ctx=cli.init.already_instance >>>
-${root} 已是 AkariBot 实例（存在 ${meta}）。要改配置请用 `akaribot config`，确认覆盖加 --force。
+${root} 已是 AkariBot 实例（存在 ${meta}）。修改配置请用 `akaribot config`，确认覆盖请加 --force。
 <<< END U002303 >>>
 <<< UNIT U002304 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:297-297 | ctx=cli.init.arg_path >>>
 实例目录，默认为当前目录
@@ -1474,7 +1474,7 @@ ${root} 已是 AkariBot 实例（存在 ${meta}）。要改配置请用 `akaribo
 已跳过 config sync，配置项需在 core 侧入口就绪后运行 `akaribot config sync --package <dist>` 补齐。
 <<< END U002311 >>>
 <<< UNIT U002312 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:305-305 | ctx=cli.init.config_version_unknown >>>
-未能从 core 读取 config_version，暂写默认值 1。首次启动会由核心配置迁移修正。
+未能从 core 读取 config_version，暂写入默认值 1。首次启动会由核心配置迁移修正。
 <<< END U002312 >>>
 <<< UNIT U002313 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:306-306 | ctx=cli.init.db_upgrade_failed >>>
 ${error}。机器人启动时会自动迁移。
@@ -1507,7 +1507,7 @@ core 在实例环境中可导入（config_version=${version}）
 已写入 ${path}
 <<< END U002322 >>>
 <<< UNIT U002323 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:316-316 | ctx=cli.init.minimal_conflict >>>
---minimal 与 --extra 互斥，前者不装任何 extras。
+--minimal 与 --extra 互斥，前者不安装任何 extras。
 <<< END U002323 >>>
 <<< UNIT U002324 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:317-317 | ctx=cli.init.next_config_edit >>>
   akaribot config edit          # 填写 <Replace me> 占位符
@@ -1538,7 +1538,7 @@ ${root} 下没有 packages 目录，不像是 monorepo 工作区根目录。
 要安装的适配器，可重复
 <<< END U002332 >>>
 <<< UNIT U002333 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:326-326 | ctx=cli.init.option_dry_run >>>
-只打印将执行的命令，不写任何文件
+只打印将执行的命令，不写入任何文件
 <<< END U002333 >>>
 <<< UNIT U002334 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:327-327 | ctx=cli.init.option_extra >>>
 在默认的 core[full] 之外追加 extras，可重复
@@ -1550,7 +1550,7 @@ ${root} 下没有 packages 目录，不像是 monorepo 工作区根目录。
 实例默认语言，如 zh_cn / en_us
 <<< END U002336 >>>
 <<< UNIT U002337 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:330-330 | ctx=cli.init.option_minimal >>>
-不装任何 extras，跳过 akari-bot-assets-emotes 表情资源包
+不安装任何 extras，跳过 akari-bot-assets-emotes 表情资源包
 <<< END U002337 >>>
 <<< UNIT U002338 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:331-331 | ctx=cli.init.option_module >>>
 要额外安装的初始模块，可重复
@@ -1565,7 +1565,7 @@ ${root} 下没有 packages 目录，不像是 monorepo 工作区根目录。
 registry 只用本地缓存，不联网
 <<< END U002341 >>>
 <<< UNIT U002342 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:335-335 | ctx=cli.init.option_python >>>
-建 venv 用的解释器，默认与当前解释器一致
+创建 venv 用的解释器，默认与当前解释器一致
 <<< END U002342 >>>
 <<< UNIT U002343 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:336-336 | ctx=cli.init.option_skip_config_sync >>>
 跳过 config sync（core 侧入口未就绪时使用）
@@ -1598,7 +1598,7 @@ registry 只用本地缓存，不联网
 工作区
 <<< END U002352 >>>
 <<< UNIT U002353 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:347-347 | ctx=cli.init.plan.workspace_none >>>
-不使用（走 registry/PyPI）
+不使用（从 registry/PyPI 获取）
 <<< END U002353 >>>
 <<< UNIT U002354 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:348-348 | ctx=cli.init.registry_failed >>>
 写入本机实例列表失败（不影响使用）：${error}
@@ -1637,7 +1637,7 @@ registry 只用本地缓存，不联网
 非托管模式会改动当前 Python 环境，请确认该环境就是实例的运行环境。
 <<< END U002365 >>>
 <<< UNIT U002366 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:360-360 | ctx=cli.init.venv_failed >>>
-${error}。若本机没有 uv，可安装后重试，或用 --no-venv 直接装到当前环境。
+${error}。若本机没有 uv，可安装后重试，或用 --no-venv 直接安装到当前环境。
 <<< END U002366 >>>
 <<< UNIT U002367 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:361-361 | ctx=cli.init.what_install >>>
 安装 core 与适配器
@@ -1727,13 +1727,13 @@ ${env} 指向的解释器不存在：${path}
 已添加实例 ${name}（${root}）
 <<< END U002395 >>>
 <<< UNIT U002396 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:390-390 | ctx=cli.instance_cmd.add.help >>>
-添加一个已存在的实例目录。只记位置，不动实例本身
+添加一个已存在的实例目录。只记录位置，不改动实例本身
 <<< END U002396 >>>
 <<< UNIT U002397 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:391-391 | ctx=cli.instance_cmd.add.option_locale >>>
 实例默认语言，仅作记录
 <<< END U002397 >>>
 <<< UNIT U002398 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:392-392 | ctx=cli.instance_cmd.add.option_name >>>
-注册名。默认按目录名推一个不冲突的名字
+注册名。默认按目录名生成一个不冲突的名字
 <<< END U002398 >>>
 <<< UNIT U002399 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:393-393 | ctx=cli.instance_cmd.arg_name >>>
 注册名，见 `akaribot instance list`
@@ -1757,7 +1757,7 @@ ${env} 指向的解释器不存在：${path}
 （默认）
 <<< END U002405 >>>
 <<< UNIT U002406 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:400-400 | ctx=cli.instance_cmd.help >>>
-管理本机已添加的实例，支持列出、添加、移除、设默认与配置服务策略
+管理本机已添加的实例，支持列出、添加、移除、设为默认与配置服务策略
 <<< END U002406 >>>
 <<< UNIT U002407 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:401-401 | ctx=cli.instance_cmd.list.empty >>>
 还没有添加任何实例，可在有实例的目录里运行 `akaribot init`，或用 `akaribot instance add <目录>` 添加已有实例。
@@ -1832,10 +1832,10 @@ ${env} 指向的解释器不存在：${path}
 实例名 ${name} 已被 ${root} 占用，换一个名字
 <<< END U002430 >>>
 <<< UNIT U002431 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:425-425 | ctx=cli.instance_registry.not_instance >>>
-${path} 不是实例目录（缺 ${meta}），先用 `akaribot init` 创建
+${path} 不是实例目录（缺少 ${meta}），先用 `akaribot init` 创建
 <<< END U002431 >>>
 <<< UNIT U002432 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:426-426 | ctx=cli.instance_registry.not_instance_with_children >>>
-${path} 不是实例目录（缺 ${meta}）。它的子目录里已有实例：${found}，请添加其中之一
+${path} 不是实例目录（缺少 ${meta}）。它的子目录里已有实例：${found}，请添加其中之一
 <<< END U002432 >>>
 <<< UNIT U002433 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:427-427 | ctx=cli.instance_registry.unknown >>>
 注册表里没有实例 ${name}，用 `akaribot instance list` 查看已添加的实例
@@ -1877,13 +1877,13 @@ ${path} 不是实例目录（缺 ${meta}）。它的子目录里已有实例：$
 日志目录 ${path} 里没有 ${process} 的日志文件
 <<< END U002445 >>>
 <<< UNIT U002446 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:440-440 | ctx=cli.logs.option_debug >>>
-只看 debug 级别的日志文件
+只查看 debug 级别的日志文件
 <<< END U002446 >>>
 <<< UNIT U002447 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:441-441 | ctx=cli.logs.option_follow >>>
 持续输出新增行，直到 Ctrl+C
 <<< END U002447 >>>
 <<< UNIT U002448 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:442-442 | ctx=cli.logs.option_info >>>
-只看 INFO 级别的日志文件
+只查看 INFO 级别的日志文件
 <<< END U002448 >>>
 <<< UNIT U002449 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:443-443 | ctx=cli.logs.option_lines >>>
 首次输出的末尾行数
@@ -1892,7 +1892,7 @@ ${path} 不是实例目录（缺 ${meta}）。它的子目录里已有实例：$
 只打印选中的日志文件路径，便于脚本自行处理
 <<< END U002450 >>>
 <<< UNIT U002451 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:445-445 | ctx=cli.logs.option_process >>>
-只看指定进程的日志文件
+只查看指定进程的日志文件
 <<< END U002451 >>>
 <<< UNIT U002452 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:446-446 | ctx=cli.logs.truncated >>>
 文件较大，只输出末尾 ${count} 行，更早的内容未读取
@@ -2009,7 +2009,7 @@ ${path} 的机器人正在运行。请先停止运行再迁移。
 ${path} 非空且不是 AkariBot 实例。换一个空目录，或确认可写入后加 --force。
 <<< END U002489 >>>
 <<< UNIT U002490 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:484-484 | ctx=cli.migrate.help >>>
-旧项目迁移，把旧版布局的项目搬进实例目录（migrate legacy）
+旧项目迁移，将旧版布局的项目迁移至实例目录（migrate legacy）
 <<< END U002490 >>>
 <<< UNIT U002491 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:485-485 | ctx=cli.migrate.inspected >>>
 旧项目 ${root}：配置 ${configs} 个、数据库 ${databases} 个、模块目录 ${modules} 个、启用模块记录 ${enabled} 条
@@ -2018,7 +2018,7 @@ ${path} 非空且不是 AkariBot 实例。换一个空目录，或确认可写�
 ${dist} 安装失败，已记入报告。可重新运行本命令或手动执行 `akaribot module add ${dist}`。
 <<< END U002492 >>>
 <<< UNIT U002493 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:487-487 | ctx=cli.migrate.instance_created >>>
-已建实例 ${root}（新建目录 ${count} 个，语言 ${locale}）
+已创建实例 ${root}（新建目录 ${count} 个，语言 ${locale}）
 <<< END U002493 >>>
 <<< UNIT U002494 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:488-488 | ctx=cli.migrate.legacy.arg_project >>>
 旧项目根目录，须含 bot.py、core/、modules/、config/config.toml
@@ -2029,7 +2029,7 @@ ${dist} 安装失败，已记入报告。可重新运行本命令或手动执行
 旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根目录的 migration-report.md。
 <<< END U002495 >>>
 <<< UNIT U002496 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:490-490 | ctx=cli.migrate.legacy.option_dry_run >>>
-只输出迁移报告，不写任何文件
+只输出迁移报告，不写入任何文件
 <<< END U002496 >>>
 <<< UNIT U002497 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:491-491 | ctx=cli.migrate.legacy.option_force >>>
 覆盖目标已存在的同名文件，并允许写入非空目录
@@ -2038,13 +2038,13 @@ ${dist} 安装失败，已记入报告。可重新运行本命令或手动执行
 新实例根目录。默认为旧项目同级的 <旧项目名>-instance
 <<< END U002498 >>>
 <<< UNIT U002499 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:493-493 | ctx=cli.migrate.legacy.option_no_venv >>>
-不托管 venv，装到当前环境
+不托管 venv，安装到当前环境
 <<< END U002499 >>>
 <<< UNIT U002500 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:494-494 | ctx=cli.migrate.legacy.option_offline >>>
 registry 只用本地缓存，不联网
 <<< END U002500 >>>
 <<< UNIT U002501 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:495-495 | ctx=cli.migrate.legacy.option_skip_install >>>
-不安装 core、适配器与模块，只搬文件
+不安装 core、适配器与模块，只迁移文件
 <<< END U002501 >>>
 <<< UNIT U002502 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:496-496 | ctx=cli.migrate.legacy.option_verbose >>>
 回显 uv 的全部输出
@@ -2116,7 +2116,7 @@ monorepo 工作区根目录，从本地源码安装并读取其中的 registry.j
 以下旧配置无法解析，需人工检查并手工复制：${items}
 <<< END U002524 >>>
 <<< UNIT U002525 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:522-522 | ctx=cli.migrate.report.manual_credentials >>>
-缺登录信息的适配器（配置里仍是占位符）：${items}。运行 `akaribot config edit` 填写。
+缺少登录信息的适配器（配置里仍是占位符）：${items}。运行 `akaribot config edit` 填写。
 <<< END U002525 >>>
 <<< UNIT U002526 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:523-523 | ctx=cli.migrate.report.manual_db_result >>>
 数据库版本转换：${result}
@@ -2134,7 +2134,7 @@ registry 中没有对应条目，需先发布或改用 `akaribot module add -e`�
 无需人工处理。
 <<< END U002530 >>>
 <<< UNIT U002531 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:529-529 | ctx=cli.migrate.report.manual_placeholders >>>
-未填占位符共 ${total} 项，分布在：${items}
+未填写占位符共 ${total} 项，分布在：${items}
 <<< END U002531 >>>
 <<< UNIT U002532 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:530-530 | ctx=cli.migrate.report.manual_status_unreadable >>>
 旧数据库的 module_status 读取失败，无法判断哪些模块真正加载过，因此本次没有安装任何普通模块。请核对下方目录清单后，用 `akaribot module add <模块名>` 逐个安装。
@@ -2158,7 +2158,7 @@ dry-run（未写入任何文件）
 ## 模块映射
 <<< END U002538 >>>
 <<< UNIT U002539 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:537-537 | ctx=cli.migrate.report.modules_note >>>
-映射取 registry 的 `legacy_module_map`。多个旧模块名可指向同一分发（如 wiki 家族）。
+映射来自 registry 的 `legacy_module_map`。多个旧模块名可指向同一分发（如 wiki 家族）。
 <<< END U002539 >>>
 <<< UNIT U002540 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:540-540 | ctx=cli.migrate.report.multi_heading >>>
 ## 多实例
@@ -2166,7 +2166,7 @@ dry-run（未写入任何文件）
 <<< UNIT U002541 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:541-541 | ctx=cli.migrate.report.multi_note >>>
 迁移一律生成默认实例（实例 ID 为空，`client_name` 与旧项目相同），因此 `target_id` 前缀不变，
 全部场景数据原样可用，无需改写数据库。如需第二个账号，用
-`akaribot adapter instance add <平台> <实例 ID>` 新建实例后再填其登录信息。
+`akaribot adapter instance add <平台> <实例 ID>` 新建实例后再填写其登录信息。
 <<< END U002541 >>>
 <<< UNIT U002542 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:542-542 | ctx=cli.migrate.report.new_instance >>>
 - 新实例：`${path}`
@@ -2250,7 +2250,7 @@ ${dist} 已安装（${version}）。升级请用 `akaribot module update ${name}
 ${dist} 已安装（${version}），--force 将覆盖重新安装。
 <<< END U002568 >>>
 <<< UNIT U002569 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:569-569 | ctx=cli.module.add.help >>>
-安装模块或适配器，依次执行解析、检查、安装、补配置、迁移、热装载与报告。
+安装模块或适配器，依次执行解析、检查、安装、补充配置、迁移、热装载与报告。
 <<< END U002569 >>>
 <<< UNIT U002570 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:570-570 | ctx=cli.module.add.next_steps >>>
 
@@ -2287,7 +2287,7 @@ ${dist} 已安装（${version}），--force 将覆盖重新安装。
 --ref / --subdir 只在 --git 模式下有意义。
 <<< END U002580 >>>
 <<< UNIT U002581 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:581-581 | ctx=cli.module.available.cached_hint >>>
-列表来自本地缓存。要拿最新索引加 --refresh。
+列表来自本地缓存。获取最新索引请加 --refresh。
 <<< END U002581 >>>
 <<< UNIT U002582 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:582-582 | ctx=cli.module.available.column_developers >>>
 作者
@@ -2323,10 +2323,10 @@ ${dist} 已安装（${version}），--force 将覆盖重新安装。
 没有匹配的包（搜索词“${search}”）。
 <<< END U002592 >>>
 <<< UNIT U002593 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:593-593 | ctx=cli.module.available.none_hint >>>
-去掉 --search 或 --kind 再看全部。索引过旧时加 --refresh。
+去掉 --search 或 --kind 查看全部。索引过旧时请加 --refresh。
 <<< END U002593 >>>
 <<< UNIT U002594 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:594-594 | ctx=cli.module.available.option_kind >>>
-只看 module 或 adapter
+只查看 module 或 adapter
 <<< END U002594 >>>
 <<< UNIT U002595 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:595-595 | ctx=cli.module.available.option_refresh >>>
 忽略缓存，重新校验 registry
@@ -2380,7 +2380,7 @@ ${dist} 声明的 core API 与本实例不符，已卸载回滚。
 --git 需要一个仓库地址。
 <<< END U002611 >>>
 <<< UNIT U002612 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:612-612 | ctx=cli.module.git.version_conflict >>>
---git 与 --version 互斥，git 直引用的版本由 --ref 决定。
+--git 与 --version 互斥，git 直接引用的版本由 --ref 决定。
 <<< END U002612 >>>
 <<< UNIT U002613 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:613-613 | ctx=cli.module.help >>>
 模块安装与全局加载（list / add / remove / update / load / unload）
@@ -2400,7 +2400,7 @@ ${dist} 的配置补充失败，安装已回滚。
 ${dist} 的数据库迁移失败，安装已回滚。
 <<< END U002617 >>>
 <<< UNIT U002618 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:618-618 | ctx=cli.module.install.no_placeholders >>>
-没有待填的占位符
+没有待填写的占位符
 <<< END U002618 >>>
 <<< UNIT U002619 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:619-619 | ctx=cli.module.install.placeholders_left >>>
 [yellow]有 ${count} 项仍是 <Replace me> 占位符，运行 `akaribot config edit` 填写。[/yellow]
@@ -2412,7 +2412,7 @@ ${dist} 的数据库迁移失败，安装已回滚。
 模块已安装完成，但需要 `~restart` 或重启进程后才会加载。
 <<< END U002621 >>>
 <<< UNIT U002622 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:622-622 | ctx=cli.module.install.rollback_migration_kept >>>
-数据库迁移不回滚，已建的表将保留，属幂等且向前的变更。
+数据库迁移不回滚，已创建的表将保留，属幂等且向前的变更。
 <<< END U002622 >>>
 <<< UNIT U002623 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:623-623 | ctx=cli.module.install.rollback_start >>>
 开始回滚安装
@@ -2466,7 +2466,7 @@ ${dist} 的数据库迁移失败，安装已回滚。
 列出已安装的模块与适配器。
 <<< END U002639 >>>
 <<< UNIT U002640 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:640-640 | ctx=cli.module.list.option_kind >>>
-只看 module 或 adapter
+只查看 module 或 adapter
 <<< END U002640 >>>
 <<< UNIT U002641 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:641-641 | ctx=cli.module.list.source_dist >>>
 发行版
@@ -2480,7 +2480,7 @@ ${dist} 的数据库迁移失败，安装已回滚。
 <<< UNIT U002644 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:644-644 | ctx=cli.module.load.help >>>
 全局装载模块，使其参与命令匹配（与安装、场景启用是两回事）。
 
-“实例 ID 一旦使用请勿更改”这条约束**不适用于本命令**，它只改全局装载状态，不触碰任何配置。
+“实例 ID 一旦使用请勿更改”这条约束**不适用于本命令**，它只修改全局装载状态，不触碰任何配置。
 <<< END U002644 >>>
 <<< UNIT U002645 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:645-645 | ctx=cli.module.not_installed >>>
 ${name} 未安装。用 `akaribot module list` 查看已安装包。
@@ -2629,7 +2629,7 @@ ${dist} 未能确认热拆卸：${detail}
 <<< UNIT U002693 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:694-694 | ctx=cli.module.unload.help >>>
 全局卸载模块，使其退出命令匹配，代码与配置都保留。
 
-“实例 ID 一旦使用请勿更改”这条约束**不适用于本命令**，它只改全局装载状态，不触碰任何配置。
+“实例 ID 一旦使用请勿更改”这条约束**不适用于本命令**，它只修改全局装载状态，不触碰任何配置。
 <<< END U002693 >>>
 <<< UNIT U002694 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:695-695 | ctx=cli.module.update.arg_name >>>
 要更新的包名，可给多个。默认配合 --all
@@ -2678,7 +2678,7 @@ ${dist} 未能确认热拆卸：${detail}。已跳过它的热装载，需 `~res
 已是最新版本时也重新安装
 <<< END U002707 >>>
 <<< UNIT U002708 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:709-709 | ctx=cli.module.update.option_json >>>
-stdout 只输出一行结果 JSON，进度与警告走 stderr
+stdout 只输出一行结果 JSON，进度与警告输出到 stderr
 <<< END U002708 >>>
 <<< UNIT U002709 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:710-710 | ctx=cli.module.update.option_non_interactive >>>
 不提问，等同 --yes。供机器人内的 ~update 委托调用
@@ -2913,7 +2913,7 @@ ${name} 平台适配器。
 锁被持有（${path}）但不是本版本写入的记录，请手动结束持锁进程
 <<< END U002785 >>>
 <<< UNIT U002786 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:787-787 | ctx=cli.service.help >>>
-把 CLI 装成常驻服务，并由该服务守护本机实例。
+将 CLI 安装为常驻服务，并由该服务守护本机实例。
 <<< END U002786 >>>
 <<< UNIT U002787 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:788-788 | ctx=cli.service.install.dry_run >>>
 试运行：将写入 ${path}，不调用 ${tool}。
@@ -3030,7 +3030,7 @@ ${name} 未开启开机自启，不恢复上次的运行状态
 实例 ${name} 已自动重启 ${count} 次（上限 ${max}）。
 <<< END U002824 >>>
 <<< UNIT U002825 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:826-826 | ctx=cli.service.supervise.start_failed >>>
-实例进程 pid ${pid} 未在就绪时限内取到锁，日志：${log}，末尾输出：${tail}
+实例进程 pid ${pid} 未在就绪时限内获取到锁，日志：${log}，末尾输出：${tail}
 <<< END U002825 >>>
 <<< UNIT U002826 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:827-827 | ctx=cli.service.supervise.stopped >>>
 收到 ${signal}，守护循环已退出。
@@ -3090,7 +3090,7 @@ CI 模式（非交互、失败即退出）
 无法在实例里探测测试框架：${error}
 <<< END U002844 >>>
 <<< UNIT U002845 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:846-846 | ctx=cli.test.testing_missing >>>
-实例里没有测试框架（${dist}）。它是开发期依赖，`akaribot init` 默认不装。请运行 `akaribot module add ${dist}` 安装后重试。
+实例里没有测试框架（${dist}）。它是开发期依赖，`akaribot init` 默认不安装。请运行 `akaribot module add ${dist}` 安装后重试。
 <<< END U002845 >>>
 <<< UNIT U002846 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:847-847 | ctx=cli.tui.adapters.action_add_instance >>>
 新增实例

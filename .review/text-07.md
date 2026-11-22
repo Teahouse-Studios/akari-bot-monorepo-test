@@ -141,7 +141,7 @@
 # noqa: BLE001 - 未挂载时按保守宽度排版
 <<< END U004577 >>>
 <<< UNIT U004578 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1503-1503 >>>
-# 实例此时已创建，配置项读不到只影响填写入口，不算新增失败。
+# 实例此时已创建，无法读取配置项时只影响填写入口，不算新增失败。
 <<< END U004578 >>>
 <<< UNIT U004579 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1509-1509 >>>
 # noqa: BLE001 - 数据源异常只影响表单，转成状态说明
@@ -150,7 +150,7 @@
 # 表单打开前的重绘会用旧高亮覆盖选中键，须在关闭时再指向新实例。
 <<< END U004580 >>>
 <<< UNIT U004581 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1541-1541 >>>
-# 表单可能改了 enable，列表须重新读取。
+# 表单可能修改了 enable，列表须重新读取。
 <<< END U004581 >>>
 <<< UNIT U004582 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1548-1548 >>>
 # 可安装清单依赖 registry 来源，读取失败时仍以 core 清单为准列出已安装平台。
@@ -255,7 +255,7 @@
 安装适配器包，通过 ``on_line`` 逐行返回输出。
 <<< END U004615 >>>
 <<< UNIT U004616 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:361-361 | ctx=AdapterSource.peer_status >>>
-返回 peer 连接状态快照。不可用时以 ``available=False`` 上报原因，不抛异常。
+返回 peer 连接状态快照。不可用时以 ``available=False`` 上报原因，不抛出异常。
 <<< END U004616 >>>
 <<< UNIT U004617 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:364-364 | ctx=AdapterSource.set_enable >>>
 通过 CLI 设置实例的 ``enable``。
@@ -510,7 +510,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 将焦点移至当前页的主控件。
 <<< END U004700 >>>
 <<< UNIT U004701 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/app.py:521-521 | ctx=TuiApp.page >>>
-按 key 取页面控件，供测试与键位动作使用。
+按 key 获取页面控件，供测试与键位动作使用。
 <<< END U004701 >>>
 <<< UNIT U004702 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/app.py:528-528 | ctx=TuiApp.modules_page >>>
 返回 Modules 页控件。
@@ -591,7 +591,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # noqa: BLE001 - 数据源任意异常都转成行内错误
 <<< END U004727 >>>
 <<< UNIT U004728 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:1292-1292 >>>
-# 密钥项只给概括说明，避免命令输出回显写入的值。
+# 密钥项只提供概括说明，避免命令输出回显写入的值。
 <<< END U004728 >>>
 <<< UNIT U004729 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:1408-1408 >>>
 # noqa: BLE001 - 未挂载时按无 TextArea 处理
@@ -882,7 +882,7 @@ Esc 等同稍后填写。
 返回表单区中的全部字段行（按渲染顺序）。
 <<< END U004824 >>>
 <<< UNIT U004825 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:1638-1638 | ctx=ConfigPage.row_for >>>
-按键名取字段行，未找到时返回 ``None``。
+按键名获取字段行，未找到时返回 ``None``。
 <<< END U004825 >>>
 <<< UNIT U004826 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:1645-1645 | ctx=ConfigPage.is_dirty >>>
 判断是否存在未保存的编辑，表单行与原始文本任一与载入值不同即为真。
@@ -1111,7 +1111,7 @@ Esc 等同稍后填写。
 返回自启与崩溃重启策略标记。
 <<< END U004900 >>>
 <<< UNIT U004901 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:259-259 | ctx=ServiceControl >>>
-读取服务状态并执行预览。装卸经 :class:`CliRunner` 执行。
+读取服务状态并执行预览。安装与卸载经 :class:`CliRunner` 执行。
 <<< END U004901 >>>
 <<< UNIT U004902 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:262-262 | ctx=ServiceControl.service_status >>>
 返回服务单元状态。
@@ -1141,7 +1141,7 @@ Esc 等同稍后填写。
 替换模拟对象记录的摘要，模拟配置或诊断结论在界面之外变化。
 <<< END U004910 >>>
 <<< UNIT U004911 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:776-776 | ctx=meta_core_version >>>
-从 ``akaribot.toml`` 的候选位置取 core 版本，缺失时返回空字符串。
+从 ``akaribot.toml`` 的候选位置获取 core 版本，缺失时返回空字符串。
 <<< END U004911 >>>
 <<< UNIT U004912 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:788-788 | ctx=DashboardSource >>>
 Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系统与子进程读取。
@@ -1150,7 +1150,7 @@ Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系�
 返回完整快照，包括版本查询结果。
 <<< END U004913 >>>
 <<< UNIT U004914 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:794-794 | ctx=DashboardSource.probe_running >>>
-只探测运行状态，代价须与读一个锁文件相当。
+只探测运行状态，代价须与读取一个锁文件相当。
 <<< END U004914 >>>
 <<< UNIT U004915 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:833-833 | ctx=StaticDashboardSource.set_running >>>
 改写模拟对象的运行状态，模拟实例启动与停止。
@@ -1186,7 +1186,7 @@ Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系�
 弹出添加实例菜单，供新建实例或注册已有目录。
 <<< END U004925 >>>
 <<< UNIT U004926 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1478-1478 | ctx=DashboardPage.request_service_menu >>>
-弹出服务与策略菜单，只列所选实例可用的操作。
+弹出服务与策略菜单，只列出所选实例可用的操作。
 <<< END U004926 >>>
 <<< UNIT U004927 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:1529-1529 | ctx=DashboardPage.request_toggle_service >>>
 请求安装或卸载服务，提供执行与预览选项。
@@ -1610,7 +1610,7 @@ Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系�
 通过模态框确认并删除当前数据项。
 <<< END U005066 >>>
 <<< UNIT U005067 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:1611-1611 | ctx=DatabasePage.reset_pending >>>
-作废待确认的写入。切换页面、刷新、换表与换行时调用。
+作废待确认的写入。切换页面、刷新、切换数据表或数据项时调用。
 <<< END U005067 >>>
 <<< UNIT U005068 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:1616-1616 | ctx=DatabasePage.dirty_note >>>
 返回未保存更改的说明。没有更改时返回空字符串。
@@ -1754,7 +1754,7 @@ editable 列的展示文本。
 异步执行 CLI 操作，逐行返回输出并支持终止请求。
 <<< END U005114 >>>
 <<< UNIT U005115 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dev.py:517-517 | ctx=SubprocessDevSource.cancel_action >>>
-见 :meth:`DevSource.cancel_action`。向动作子进程发终止信号。
+见 :meth:`DevSource.cancel_action`。向动作子进程发送终止信号。
 <<< END U005115 >>>
 <<< UNIT U005116 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dev.py:623-623 | ctx=SubprocessDevSource.cli_argv >>>
 构造调用本 CLI 的 argv，规则见 :mod:`akaribot.cli.tui.cli_process`。
@@ -2042,7 +2042,7 @@ Esc 关闭对话框，放弃输入。
 见 :meth:`DocsSource.stop_server`。先终止，超时后强制结束。
 <<< END U005210 >>>
 <<< UNIT U005211 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/docs.py:586-586 | ctx=SubprocessDocsSource.start_dev >>>
-启动 ``docs dev --json`` 并读到就绪事件。其余事件交给 ``on_event``。
+启动 ``docs dev --json`` 并读取就绪事件。其余事件交给 ``on_event``。
 <<< END U005211 >>>
 <<< UNIT U005212 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/docs.py:634-634 | ctx=SubprocessDocsSource.stop_dev >>>
 见 :meth:`DocsSource.stop_dev`。先终止，超时后强制结束。
@@ -2522,7 +2522,7 @@ Esc 关闭对话框，放弃输入。
 设置是否仅显示清单中的包。
 <<< END U005370 >>>
 <<< UNIT U005371 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:772-772 | ctx=EnvironmentPage.request_interpreter >>>
-弹出解释器菜单，只列当前托管方式可用的操作。
+弹出解释器菜单，只列出当前托管方式可用的操作。
 <<< END U005371 >>>
 <<< UNIT U005372 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:869-869 | ctx=EnvironmentPage.reset_pending >>>
 作废待确认的解释器动作。切换页面时由 :meth:`TuiApp.show_page` 调用。
@@ -2916,7 +2916,7 @@ Esc 关闭对话框，放弃输入。
 # 安装会改动实例环境并补充配置，单字母键触发时须先确认目标。
 <<< END U005501 >>>
 <<< UNIT U005502 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1384-1384 >>>
-# 子进程的 cwd 是实例根目录，相对路径按它解析才能与 CLI 的 -e 取到同一个目录。
+# 子进程的 cwd 是实例根目录，相对路径按它解析才能与 CLI 的 -e 获取到同一个目录。
 <<< END U005502 >>>
 <<< UNIT U005503 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1408-1408 >>>
 # Git 与可编辑安装的目标由选项指定，记录仅提供状态栏中的名称。
@@ -2967,7 +2967,7 @@ Esc 关闭对话框，放弃输入。
 # noqa: BLE001 - 数据源任意异常都转成结果展示
 <<< END U005518 >>>
 <<< UNIT U005519 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1778-1778 >>>
-# 回调由工作线程之外的异步读取循环调用，因此只写字段并直接刷新控件，不触发读取数据。
+# 回调由工作线程之外的异步读取循环调用，因此只写入字段并直接刷新控件，不触发读取数据。
 <<< END U005519 >>>
 <<< UNIT U005520 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1794-1794 >>>
 # 操作成功的目标退出选区，保留失败目标以便重试。
@@ -3087,7 +3087,7 @@ Esc 关闭对话框，放弃输入。
 返回某条记录的装载状态文本，供列表与详情展示。
 <<< END U005558 >>>
 <<< UNIT U005559 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1031-1031 | ctx=ModulesPage.invalidate_cache >>>
-使缓存立即失效，下一次读取必定走数据源。
+使缓存立即失效，下一次读取必定通过数据源获取。
 <<< END U005559 >>>
 <<< UNIT U005560 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1053-1053 | ctx=ModulesPage.row_texts >>>
 返回最近一次渲染出的列表行文本，供自动化检查核对宽度。
@@ -3192,7 +3192,7 @@ Esc 关闭对话框，放弃输入。
 # noqa: BLE001 - 未挂载时按保守宽度排版
 <<< END U005593 >>>
 <<< UNIT U005594 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/run.py:844-844 >>>
-# 实例运行时不能再启动指定适配器，菜单不列这一项。
+# 实例运行时不能再启动指定适配器，菜单不列出这一项。
 <<< END U005594 >>>
 <<< UNIT U005595 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/run.py:72-72 | ctx=ProcessRecord.state_label >>>
 返回带状态标记的本地化状态标签。
@@ -3291,8 +3291,8 @@ Esc 关闭对话框，放弃输入。
 # 兼容单个 packages 列表并逐项用 kind 字段分类的另一种写法。
 <<< END U005625 >>>
 <<< UNIT U005626 | py-comment | packages/akari-bot-cli/akaribot/cli/venv.py:1388-1389 >>>
-# 这里比较的是环境而不是解释器文件；uv 建的 venv 都把 bin/python 指向同一个基础解释器，
-# 按 resolve() 后的文件比较会把两个不同的 venv 判成同一个环境，导致操作全被拒。
+# 这里比较的是环境而不是解释器文件；uv 创建的 venv 都把 bin/python 指向同一个基础解释器，
+# 按 resolve() 后的文件比较会把两个不同的 venv 判定为同一个环境，导致操作全部被拒绝。
 <<< END U005626 >>>
 <<< UNIT U005627 | py-docstring | packages/akari-bot-cli/akaribot/cli/venv.py:75-75 | ctx=canonical >>>
 将包名规范化为小写，并把下划线与点号统一为连字符。
@@ -3404,7 +3404,7 @@ Windows 实例停止协议。
     # 用于脚手架渲染（T5.5），core 也依赖它，但 CLI 不依赖 core，故自带
 <<< END U005662 >>>
 <<< UNIT U005663 | cfg-comment | packages/akari-bot-cli/pyproject.toml:24-24 >>>
-    # 紧钉版本，因为 Textual 跨大版本常有 API 变动，全部调用统一经 akaribot.cli.tui._compat 转接
+    # 固定版本，因为 Textual 跨大版本常有 API 变动，全部调用统一经 akaribot.cli.tui._compat 转接
 <<< END U005663 >>>
 <<< UNIT U005664 | cfg-comment | packages/akari-bot-cli/pyproject.toml:28-28 >>>
     # 文档开发模式监听各包文档目录与主题目录，watchdog 提供跨平台原生事件源
@@ -3423,7 +3423,7 @@ Windows 实例停止协议。
 # 界面新增实例时只能从 JSON 得知尚无实例配置的已安装平台。
 <<< END U005668 >>>
 <<< UNIT U005669 | py-docstring | packages/akari-bot-cli/tests/test_adapter.py:117-117 | ctx=test_adapter_instance_remove >>>
-cli.commands.adapter: 实例移除只删配置测试
+cli.commands.adapter: 实例移除只删除配置测试
 <<< END U005669 >>>
 <<< UNIT U005670 | py-comment | packages/akari-bot-cli/tests/test_command_runner_streaming.py:99-99 >>>
 # 受限环境里家目录缓存可能不可写。未显式指定 UV_CACHE_DIR 时取实例自己的缓存目录。
@@ -3589,7 +3589,7 @@ cli.venv: 打包产物内置 uv 解析测试
 # 先热卸载旧版本再热加载，否则服务端会以“包已注册”拒绝，更新永远无法生效。
 <<< END U005723 >>>
 <<< UNIT U005724 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:367-367 >>>
-# 旧版本未卸载成功就不必再触发热加载（必被拒），但要把“需要重启”如实写入结果。
+# 旧版本未卸载成功就不必再触发热加载（必定被拒绝），但要把“需要重启”如实写入结果。
 <<< END U005724 >>>
 <<< UNIT U005725 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:382-382 >>>
 # 适配器不支持整包热替换，沿用“安装后提示重启”的既有语义，不触发卸载。
@@ -3604,7 +3604,7 @@ cli.venv: 打包产物内置 uv 解析测试
 # 常被指向“装着实例的项目目录”，报错要直接给出可添加的子目录。
 <<< END U005728 >>>
 <<< UNIT U005729 | py-comment | packages/akari-bot-cli/tests/test_instance_registry.py:122-122 >>>
-# 界面在实例目录里启动时自动记录，重复调用与指向非实例都要原样返回 None，不重复写。
+# 界面在实例目录里启动时自动记录，重复调用与指向非实例都要原样返回 None，不重复写入。
 <<< END U005729 >>>
 <<< UNIT U005730 | py-comment | packages/akari-bot-cli/tests/test_instance_registry.py:174-174 >>>
 # 在任何实例之外时，默认实例就是“要管哪一个”的答案。
@@ -3613,13 +3613,13 @@ cli.venv: 打包产物内置 uv 解析测试
 # add() 会把第一个实例设为默认，这里直接核对解析结果。
 <<< END U005731 >>>
 <<< UNIT U005732 | py-comment | packages/akari-bot-cli/tests/test_instance_registry.py:226-226 >>>
-# 探测失败时返回 None 而不是抛异常，清单里一格未知不应影响整页显示。
+# 探测失败时返回 None 而不是抛出异常，清单里一格未知不应影响整页显示。
 <<< END U005732 >>>
 <<< UNIT U005733 | py-docstring | packages/akari-bot-cli/tests/test_instance_registry.py:237-237 | ctx=test_instance_registry >>>
 cli.instances: 注册表与 instance 子命令测试
 <<< END U005733 >>>
 <<< UNIT U005734 | py-comment | packages/akari-bot-cli/tests/test_logs_cli.py:26-26 >>>
-# 命令只读实例根目录的 ``logs`` 子目录，模拟对象只需提供一个 root。
+# 命令只读取实例根目录的 ``logs`` 子目录，模拟对象只需提供一个 root。
 <<< END U005734 >>>
 <<< UNIT U005735 | py-comment | packages/akari-bot-cli/tests/test_logs_cli.py:207-207 >>>
 # 临时目录路径很长，rich 会在终端宽度处折行。比对时去掉全部空白，避免检查依赖路径长度。
@@ -3666,7 +3666,7 @@ cli.logs: 日志解析、增量读取与命令输出测试
 # 在仓库根目录这类存放实例的目录下，唯一的下级实例就是当前要管理的实例，直接记录并切换过去。
 <<< END U005748 >>>
 <<< UNIT U005749 | py-comment | packages/akari-bot-cli/tests/test_main.py:295-295 >>>
-# 再放一个实例进去并换一份空注册表，下级有两个实例时不作选择，只报候选。
+# 再放入一个实例并更换为空注册表，下级有两个实例时不作选择，只报告候选。
 <<< END U005749 >>>
 <<< UNIT U005750 | py-comment | packages/akari-bot-cli/tests/test_main.py:320-321 >>>
 # 实例解析会改用注册表里的默认实例，故整轮都指向一份空注册表，否则这几条用例的结果会取决于
@@ -3706,10 +3706,10 @@ cli.commands.migrate: 迁移候选与跳过诊断测试
 cli.commands.module: 可安装包列举测试
 <<< END U005760 >>>
 <<< UNIT U005761 | py-inline-comment | packages/akari-bot-cli/tests/test_module_git.py:153-153 >>>
-# noqa: BLE001 - fail() 抛 typer.Exit
+# noqa: BLE001 - fail() 抛出 typer.Exit
 <<< END U005761 >>>
 <<< UNIT U005762 | py-docstring | packages/akari-bot-cli/tests/test_module_git.py:211-211 | ctx=test_module_git >>>
-cli.commands.module: git 直引安装测试
+cli.commands.module: git 直接引用安装测试
 <<< END U005762 >>>
 <<< UNIT U005763 | py-comment | packages/akari-bot-cli/tests/test_module_precheck.py:61-61 >>>
 # 已安装包对 numpy 的要求在新版本下仍满足。只在请求 extra 时生效的依赖不参与判断。
@@ -3727,7 +3727,7 @@ cli.commands.module: git 直引安装测试
 cli.commands.module: 安装前兼容性检查测试
 <<< END U005767 >>>
 <<< UNIT U005768 | py-comment | packages/akari-bot-cli/tests/test_module_purge.py:160-160 >>>
-# 表这一步固定成功，本用例只针对“文件删不掉”，让结果不被真实子进程的成败左右。
+# 表这一步固定成功，本用例只针对“文件无法删除”，让结果不被真实子进程的成败左右。
 <<< END U005768 >>>
 <<< UNIT U005769 | py-docstring | packages/akari-bot-cli/tests/test_module_purge.py:195-195 | ctx=test_cli_module_purge >>>
 cli.commands.module: 卸载清理的配置定位与顺序测试

@@ -351,7 +351,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U010942 >>>
 <<< UNIT U010943 | py-comment | packages/modules/akari-bot-module-bugtracker/akaribot/modules/bugtracker/bugtracker.py:90-91 >>>
 # 须判断是否非空而非仅判断键是否存在，因为未关联版本的漏洞该字段为空列表，
-# 空列表上取首尾元素会抛 IndexError
+# 空列表上获取首尾元素会抛出 IndexError
 <<< END U010943 >>>
 <<< UNIT U010944 | md-heading | packages/modules/akari-bot-module-bugtracker/akaribot/modules/bugtracker/docs/development.md:5-5 | ctx=bugtracker：安装与开发 >>>
 # bugtracker：安装与开发
@@ -448,7 +448,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U010971 >>>
 <<< UNIT U010972 | py-comment | packages/modules/akari-bot-module-bugtracker/tests/test_bugtracker_empty_result.py:60-61 >>>
 # versions 键在而值为空列表时不能取 verlist[0]，同文件的 fixVersions 一向判断过非空，
-# 此处遗漏判断会抛 IndexError。
+# 此处遗漏判断会抛出 IndexError。
 <<< END U010972 >>>
 <<< UNIT U010973 | py-docstring | packages/modules/akari-bot-module-bugtracker/tests/test_bugtracker_empty_result.py:1-1 | ctx=<module> >>>
 bugtracker 空查询结果单元测试。
@@ -469,7 +469,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U010978 >>>
 <<< UNIT U010979 | py-comment | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py:90-91 >>>
-# 先写成活跃失败状态，确保若解禁调用抛错、取消或进程在结果写入数据库前退出，Union 删除和
+# 先写成活跃失败状态，确保若解禁调用抛出异常、取消或进程在结果写入数据库前退出，Union 删除和
 # 解绑逻辑仍会保留这条真实平台限制的归属，受限成员不会停留在无引用状态。
 <<< END U010979 >>>
 <<< UNIT U010980 | py-comment | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py:102-102 >>>
@@ -482,7 +482,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U010981 >>>
 <<< UNIT U010982 | py-comment | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py:145-147 >>>
 # 只把事件的 Union 重新解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、
-# 发消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会
+# 发送消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会
 # 因等待平台响应而阻塞其他 Union 管理操作。
 <<< END U010982 >>>
 <<< UNIT U010983 | py-comment | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py:224-224 >>>
@@ -533,7 +533,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 `captcha` 是事件模块，只在 `QQBot` 群聊中生效，并要求平台可以读取全部消息。机器人需要具备 `can_send_messages`、`can_send_proactive_messages`、`can_manage_members`、`can_restrict_members` 四项平台权限。
 <<< END U010997 >>>
 <<< UNIT U010998 | md-paragraph | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:25-25 | ctx=权限与平台能力 >>>
-禁言、发消息等平台操作在 Union 变更锁之外执行。解禁失败时保留 `failed` 状态，便于管理员清理。发送验证消息失败时，机器人立即尝试解禁，解禁成功后把挑战标记为 `error`。
+禁言、发送消息等平台操作在 Union 变更锁之外执行。解禁失败时保留 `failed` 状态，便于管理员清理。发送验证消息失败时，机器人立即尝试解禁，解禁成功后把挑战标记为 `error`。
 <<< END U010998 >>>
 <<< UNIT U010999 | md-heading | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:27-27 | ctx=数据表 >>>
 ## 数据表
@@ -831,7 +831,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U011080 >>>
 <<< UNIT U011081 | md-paragraph | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-出题区间为 1 至 200000000。每次从区间内随机取一个 CID，再向 PubChem 请求该化合物的 SMILES 属性。
+出题区间为 1 至 200000000。每次从区间内随机选取一个 CID，再向 PubChem 请求该化合物的 SMILES 属性。
 <<< END U011081 >>>
 <<< UNIT U011082 | md-paragraph | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/development.md:23-23 | ctx=权限与平台能力 >>>
 结构图由 rdkit 绘制，颜色表随代码分发。图片写入临时缓存目录后，作为图片消息发送。对局状态保存在 `PlayState`（键 `chemical_code`），按会话隔离。
@@ -849,13 +849,13 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 `rdkit` 与 `Pillow` 在首次出题时导入，未使用该模块时不加载。
 <<< END U011086 >>>
 <<< UNIT U011087 | md-paragraph | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/index.md:3-3 | ctx=chemical-code >>>
-此模块随机取一个化合物，绘制结构图让玩家回答分子式。答错时按元素组成给出提示，答对后按模式发放花瓣。
+此模块随机选取一个化合物，绘制结构图让玩家回答分子式。答错时按元素组成给出提示，答对后按模式发放花瓣。
 <<< END U011087 >>>
 <<< UNIT U011088 | md-heading | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/index.md:5-5 | ctx=命令 >>>
 ## 命令
 <<< END U011088 >>>
 <<< UNIT U011089 | md-paragraph | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/index.md:11-11 | ctx=`chemical-code` >>>
-经典模式随机取一个化合物出题，答对获得 1 花瓣。填写 PubChem CID 时，机器人按该 CID 出题，`0` 表示随机，负数返回无效提示。指定 CID 出题不发花瓣。
+经典模式随机选取一个化合物出题，答对获得 1 花瓣。填写 PubChem CID 时，机器人按该 CID 出题，`0` 表示随机，负数返回无效提示。指定 CID 出题不发放花瓣。
 <<< END U011089 >>>
 <<< UNIT U011090 | md-paragraph | packages/modules/akari-bot-module-chemical_code/akaribot/modules/chemical_code/docs/index.md:14-21 | ctx=`chemical-code` >>>
   :log="[
@@ -1123,7 +1123,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 百分比换算结果须取整，色值保持整数才能供后续的十六进制格式化使用
 <<< END U011166 >>>
 <<< UNIT U011167 | py-comment | packages/modules/akari-bot-module-color/akaribot/modules/color/__init__.py:169-169 >>>
-# 颜色名表正常情况下非空。数据异常时取空字符串。
+# 颜色名表正常情况下非空。数据异常时使用空字符串。
 <<< END U011167 >>>
 <<< UNIT U011168 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:1-1 | ctx=颜色名称表 >>>
 # 颜色名称表
@@ -1142,7 +1142,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 - `hsl(0, 100%, 50%)` 与带角度单位的形式 `hsl(0deg, 100%, 50%)`。
 <<< END U011171 >>>
 <<< UNIT U011172 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:13-13 | ctx=颜色名称表 >>>
-省略参数时，此命令随机取一个颜色。
+省略参数时，此命令随机选取一个颜色。
 <<< END U011172 >>>
 <<< UNIT U011173 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:15-15 | ctx=颜色名称表 >>>
 颜色名称区分大小写。输入的名称必须与表中的拼写完全一致。十六进制色值中的字母不区分大小写。

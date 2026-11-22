@@ -224,7 +224,7 @@
 - `retired_clients` 为空时策略不生效。非空时，`merge` 模块按此配置加载，见[merge](merge.md)。
 <<< END U009177 >>>
 <<< UNIT U009178 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/retired_policy.md:14-14 | ctx=retired_policy >>>
-配置格式为 `<源客户端> -> <目标客户端>`。只写源客户端时，表示该客户端已退役，但没有迁移目标。
+配置格式为 `<源客户端> -> <目标客户端>`。只填写源客户端时，表示该客户端已退役，但没有迁移目标。
 <<< END U009178 >>>
 <<< UNIT U009179 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/say.md:7-7 | ctx=say >>>
 模块级权限为超级用户。
@@ -838,7 +838,7 @@
 先关闭再启动渲染服务，用于加载新的配置。
 <<< END U009303 >>>
 <<< UNIT U009304 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/webrender.md:40-40 | ctx=`webrender reload` >>>
-服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 和 `remote_web_render_url`。渲染不可用时，依赖截图的命令自行处理失败结果，例如回退到文字，或直接结束、不发图。
+服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 和 `remote_web_render_url`。渲染不可用时，依赖截图的命令自行处理失败结果，例如回退到文字，或直接结束、不发送图片。
 <<< END U009304 >>>
 <<< UNIT U009305 | py-docstring | packages/akari-bot-core/akaribot/modules/core/hooks/__init__.py:1-1 | ctx=<module> >>>
 Parser 生命周期策略与观察 hook。
@@ -861,7 +861,7 @@ parser 执行异常的默认用户反馈与报告策略。
 # 经过 :attr:`HookPoint.COMMAND_PREPARE`，放到模板解析前就拦不干净。
 <<< END U009310 >>>
 <<< UNIT U009311 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/policies.py:110-111 >>>
-# 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，这里只拦
+# 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，这里只拦截
 # 主动获取的会话（``fetch``）。否则 `mute` 命令本身的确认也会被一并取消。
 <<< END U009311 >>>
 <<< UNIT U009312 | py-docstring | packages/akari-bot-core/akaribot/modules/core/hooks/policies.py:1-1 | ctx=<module> >>>
@@ -899,7 +899,7 @@ parser 执行异常的默认用户反馈与报告策略。
 # 没有用户 union 的会话（如主动推送）不存在可警告的对象，直接跳过
 <<< END U009322 >>>
 <<< UNIT U009323 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:197-197 >>>
-# 升级处罚时拒绝决定已经形成，通知失败不得把它丢成"放行"
+# 升级处罚时拒绝决定已经形成，通知失败不得把它误判为“放行”
 <<< END U009323 >>>
 <<< UNIT U009324 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:227-228 >>>
 # 超限是已确定的业务拒绝，须先固定 Stop 再尽力完成处罚通知，
@@ -2222,7 +2222,7 @@ ID：${id}
 你不可以将花瓣给自己！
 <<< END U009750 >>>
 <<< UNIT U009751 | json-value | packages/akari-bot-core/akaribot/modules/core/locales/zh_cn.json:420-420 | ctx=core.message.petal.give.success >>>
-已将 ${give_petal} 花瓣给予用户 ${sender} ，当前花瓣数为：${petal}。
+已将 ${give_petal} 花瓣给予用户 ${sender}，当前花瓣数为：${petal}。
 <<< END U009751 >>>
 <<< UNIT U009752 | json-value | packages/akari-bot-core/akaribot/modules/core/locales/zh_cn.json:421-421 | ctx=core.message.petal.modify >>>
 已为用户 ${sender} 修改了 ${add_petal} 花瓣，当前花瓣数为：${petal}。
@@ -2676,10 +2676,10 @@ ${rules}
 # 令最高点放在“坐标区顶端往下 headroom 像素”处。取较大者以保证只抬高、不压缩
 <<< END U009899 >>>
 <<< UNIT U009900 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/analytics.py:120-120 >>>
-# 零点在循环外取一次，避免逐次取值在跨零点时把前后两天的边界混在一起
+# 零点在循环外获取一次，避免逐次取值在跨零点时把前后两天的边界混在一起
 <<< END U009900 >>>
 <<< UNIT U009901 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/analytics.py:167-167 >>>
-# 本月一日在循环外取一次，避免逐次取值在跨零点时把前后两个月的边界混在一起
+# 本月一日在循环外获取一次，避免逐次取值在跨零点时把前后两个月的边界混在一起
 <<< END U009901 >>>
 <<< UNIT U009902 | py-docstring | packages/akari-bot-core/akaribot/modules/core/su_tools/analytics.py:39-49 | ctx=annotate_points >>>
 在折线的各数据点上方标注数值，并按需抬高 y 轴上限。
@@ -2717,7 +2717,7 @@ ${rules}
 # 返回结果附带的错误输出行数上限，避免把 CLI 的整段日志刷进会话。
 <<< END U009910 >>>
 <<< UNIT U009911 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/update.py:112-112 >>>
-# 只读标记只约束 Server 自身，因为更新要写配置，须让子进程按宿主机 CLI 的权限运行。
+# 只读标记只约束 Server 自身，因为更新要写入配置，须让子进程按宿主机 CLI 的权限运行。
 <<< END U009911 >>>
 <<< UNIT U009912 | py-comment | packages/akari-bot-core/akaribot/modules/core/su_tools/update.py:219-220 >>>
 # 新版 CLI 直接回传 ``reload_pending``。旧版只回传 ``notified`` 明细，据此推导。
@@ -2741,7 +2741,7 @@ ${rules}
 # core，跳过这一整套——此时 ~about 不带配图、SMTP 报告不带标志，其余功能正常（见 core/utils/brand.py）。
 <<< END U009917 >>>
 <<< UNIT U009918 | py-comment | packages/akari-bot-core/tests/test_about.py:25-25 >>>
-# 立绘由 akari-bot-assets-brand 资源包分发。实例 assets/ 可覆盖，故按同一入口取期望路径。
+# 立绘由 akari-bot-assets-brand 资源包分发。实例 assets/ 可覆盖，故按同一入口获取期望路径。
 <<< END U009918 >>>
 <<< UNIT U009919 | py-docstring | packages/akari-bot-core/tests/test_about.py:178-178 | ctx=test_about >>>
 akaribot.modules.core.common_tools.about: ~about 菜单。
@@ -2948,7 +2948,7 @@ core.utils.cache: 缓存工具测试
 <<< END U009985 >>>
 <<< UNIT U009986 | py-comment | packages/akari-bot-core/tests/test_chain_normalize.py:34-36 >>>
 # 这一条直接复现线上报错——finish() 收到的若已是 MessageChain，get_message_chain()
-# 便原样返回、跳过 assign 的归一化，纯字符串一路传至 cattrs 才抛
+# 便原样返回、跳过 assign 的归一化，纯字符串一路传至 cattrs 才抛出
 # TypeError: 'str' object is not a mapping。
 <<< END U009986 >>>
 <<< UNIT U009987 | py-docstring | packages/akari-bot-core/tests/test_chain_normalize.py:71-71 | ctx=test_chain_normalize >>>
@@ -3015,7 +3015,7 @@ akaribot.testing.mock.config: 配置项模拟对象测试
 core.config: 全局默认配置与用户覆盖测试
 <<< END U010007 >>>
 <<< UNIT U010008 | py-comment | packages/akari-bot-core/tests/test_config_migration.py:61-62 >>>
-# ``PackageRegistry.modules()`` 的键是包名（不是 ``种类：包名``），因为迁移运行器按 ``entry.name``
+# ``PackageRegistry.modules()`` 的键是包名（不是 ``种类:包名``），因为迁移运行器按 ``entry.name``
 # 取回自己的 revision，键写错会让整条链路静默查不到迁移。
 <<< END U010008 >>>
 <<< UNIT U010009 | py-docstring | packages/akari-bot-core/tests/test_config_migration.py:177-177 | ctx=test_config_migration >>>
@@ -3037,7 +3037,7 @@ core.config: 配置只读语义测试
 # 命名空间包横跨多个 distribution，__path__ 的每一项都要遍历，只看首项会漏包
 <<< END U010014 >>>
 <<< UNIT U010015 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:174-174 >>>
-# 按包枚举的代码依赖 __init__.py，缺该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）
+# 按包枚举的代码依赖 __init__.py，缺少该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）
 <<< END U010015 >>>
 <<< UNIT U010016 | py-comment | packages/akari-bot-core/tests/test_config_scan.py:199-199 >>>
 # 与守护进程 spawn 出的平台进程一致，模板导入完毕后一律只读
@@ -3113,10 +3113,10 @@ akaribot.core.utils.cooldown: CoolDown 冷却系统测试
 # 条件与分页都在 core 侧统一处理，界面只报条件，条数按筛选后计算，offset 只影响本页。
 <<< END U010039 >>>
 <<< UNIT U010040 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:243-243 >>>
-# 大表上 COUNT 会触发全表扫描，因此翻页可以只取本页，total 回 null，由调用方沿用上次的条数。
+# 大表上 COUNT 会触发全表扫描，因此翻页可以只获取本页，total 返回 null，由调用方沿用上次的条数。
 <<< END U010040 >>>
 <<< UNIT U010041 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:280-280 >>>
-# 造数据时 load 等于“名字以 0 结尾”，故 load=true 且名字含 mod-01 的只有 mod-010。
+# 构造测试数据时 load 等于“名字以 0 结尾”，故 load=true 且名字含 mod-01 的只有 mod-010。
 <<< END U010041 >>>
 <<< UNIT U010042 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:293-293 >>>
 # 被搜索的三行 load 都是 false，故与 load=false 取交集的条数不变。
@@ -3189,7 +3189,7 @@ SQLite 参数自动补全，且仅 pre-init 模式创建数据表。
 # 条目顺序刻意让依赖方先出现，这样初始判定时被依赖方还没被标记为拒绝，只有级联才能拦截它。
 <<< END U010064 >>>
 <<< UNIT U010065 | py-comment | packages/akari-bot-core/tests/test_dependency_graph.py:351-351 >>>
-# optional 本身已安装，但其所属的 dev extra 缺 ruff，仍视为未安装
+# optional 本身已安装，但其所属的 dev extra 缺少 ruff，仍视为未安装
 <<< END U010065 >>>
 <<< UNIT U010066 | py-docstring | packages/akari-bot-core/tests/test_dependency_graph.py:389-389 | ctx=test_dependency_graph >>>
 core.registry: 模块依赖图测试
@@ -3239,7 +3239,7 @@ core.entrypoints.docs: 包文档清单入口测试
 # 缺少文件与含路径分隔符的表名各留一条原因，因为表名只用于拼接配置目录下的文件名。
 <<< END U010080 >>>
 <<< UNIT U010081 | py-comment | packages/akari-bot-core/tests/test_entrypoint_config.py:129-129 >>>
-# 缺 --tables 时遍历配置目录下的全部表，逐表给出占位与总项数，并汇总总数。
+# 缺少 --tables 时遍历配置目录下的全部表，逐表给出占位与总项数，并汇总总数。
 <<< END U010081 >>>
 <<< UNIT U010082 | py-comment | packages/akari-bot-core/tests/test_entrypoint_config.py:147-147 >>>
 # 实例配置文件的注释取自 schema，缺少专属注释时用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。
@@ -3259,7 +3259,7 @@ core.entrypoints.db: 卸载清理入口测试
 # 一侧，避免触碰测试进程已初始化的内存库。
 <<< END U010086 >>>
 <<< UNIT U010087 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:98-98 >>>
-# 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛错，本用例随之失败。
+# 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛出异常，本用例随之失败。
 <<< END U010087 >>>
 <<< UNIT U010088 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:175-175 >>>
 # 检查处理器收到的是调用方传入的包，dist 不会在中途丢失。

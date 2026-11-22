@@ -114,7 +114,7 @@
 - 带名称的 hook 的 `available_for` / `exclude_from` 会基于传入的 `session_info` 检查。没有会话时只执行全平台订阅。
 <<< END U006502 >>>
 <<< UNIT U006503 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:15-15 | ctx=具名 Module Hook >>>
-测试和计划任务 mock 也调用同一分发入口，不应直接取 `ModulesManager.modules_hooks` 调函数。
+测试和计划任务 mock 也调用同一分发入口，不应直接获取 `ModulesManager.modules_hooks` 并调用函数。
 <<< END U006503 >>>
 <<< UNIT U006504 | md-heading | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:17-17 | ctx=快速开始 >>>
 ## 快速开始
@@ -125,23 +125,23 @@
 <<< UNIT U006506 | md-table | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:41-61 | ctx=入口一览 >>>
 | HookPoint | 时机 | 典型用途 |
 | --- | --- | --- |
-| `SESSION_READY` | 会话刷新后、等待任务前 | 入站过滤、补充 tmp，可写 SessionDraft |
+| `SESSION_READY` | 会话刷新后、等待任务前 | 入站过滤、补充 tmp，可写入 SessionDraft |
 | `SESSION_BEFORE_WAIT` | 入站策略后、等待任务投递前 | 调整等待任务路由 |
 | `MESSAGE_NORMALIZED` | 消息文本规范化后、前缀判断前 | 自定义别名等触发文本改写 |
-| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、ToS 临封，可写 SessionDraft |
-| `COMMAND_BEFORE_PARSE` | 模块策略后、模板解析前 | ToS 计数，可写 SessionDraft |
+| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、ToS 临封，可写入 SessionDraft |
+| `COMMAND_BEFORE_PARSE` | 模块策略后、模板解析前 | ToS 计数，可写入 SessionDraft |
 | `COMMAND_BEFORE_EXECUTE` | 模板解析后、命令函数调用前 | 命令权限与平台策略 |
 | `COMMAND_ROUTE` | 命令解析后、通道认领前 | 命令路由与迁移策略 |
-| `COMMAND_UNMATCHED` | 未找到模块/模板 | 纠错建议，可写 SessionDraft |
+| `COMMAND_UNMATCHED` | 未找到模块/模板 | 纠错建议，可写入 SessionDraft |
 | `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、禁止发言与运行中提醒 |
 | `REGEX_CANDIDATE` | 每个正则模块匹配前 | 模块级正则路由 |
 | `CHANNEL_CLAIM` | 候选策略通过后、通道认领前 | 通道避让策略 |
 | `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临封与权限 |
-| `REGEX_BEFORE_EXECUTE` | regex 冷却后、取锁前 | regex 计数 |
+| `REGEX_BEFORE_EXECUTE` | regex 冷却后、获取锁前 | regex 计数 |
 | `EXECUTION_FINISHED` | 命令/正则函数执行结束 | 统计观察 |
 | `EXECUTION_ERROR` | 可分类异常 | AbuseWarning 处理 |
 | `FINISHED` | parser finally 清理后 | 消息级计数 |
-| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、机器人被禁止发言时拦截主动发言，可改 `ctx.outgoing.chain` |
+| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、机器人被禁止发言时拦截主动发言，可修改 `ctx.outgoing.chain` |
 | `OUTGOING_SENT` | 平台返回成功 | 观察 |
 | `OUTGOING_FAILED` | 平台发送失败 | 观察 |
 <<< END U006506 >>>
@@ -182,7 +182,7 @@
 结果观察中的 `chain` 是改写后经过滤、平台转换与安全检查的实际发送内容，`message_ids` 来自平台返回值。
 <<< END U006516 >>>
 <<< UNIT U006517 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:98-98 | ctx=出站 >>>
-构建快照或运行观察者失败只记日志，不影响已发送消息的返回结果，也不遮蔽原始发送异常。外部取消与进程退出仍传播。
+构建快照或运行观察者失败只记录日志，不影响已发送消息的返回结果，也不遮蔽原始发送异常。外部取消与进程退出仍传播。
 <<< END U006517 >>>
 <<< UNIT U006518 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:100-100 | ctx=出站 >>>
 `send_direct_message()` 的 `submit` 成功仅表示队列接受投递，因此不发布 `OUTGOING_SENT`。投递本身失败时发布 `OUTGOING_FAILED`。
@@ -207,7 +207,7 @@
 hook 不得：
 <<< END U006522 >>>
 <<< UNIT U006523 | md-list | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:117-119 | ctx=故障边界 >>>
-- 用 `msg.finish()` / 抛 `SessionFinished` 表达业务拒绝（请用 `Stop`）
+- 使用 `msg.finish()` 或抛出 `SessionFinished` 表达业务拒绝（请用 `Stop`）
 - 在观察入口忽略原异常或改写执行结果
 - 依赖对 SessionInfo 身份字段的写入（可写字段必须经 `SessionDraft` 提交）
 <<< END U006523 >>>
@@ -436,13 +436,13 @@ Parser 入口 hook 的类型化结果。
 # 检查场景启用状态，非 base 且要求启用时，若确认期间被禁用则放弃
 <<< END U006595 >>>
 <<< UNIT U006596 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:143-143 >>>
-# 扩展已处理，不再发默认提示
+# 扩展已处理，不再发送默认提示
 <<< END U006596 >>>
 <<< UNIT U006597 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:146-146 >>>
 # message 已由 _dispatch_stage 发送
 <<< END U006597 >>>
 <<< UNIT U006598 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:160-160 >>>
-# 确认期间可能发生热重载或权限变化，从最新注册表取模块并重校验
+# 确认期间可能发生热重载或权限变化，从最新注册表获取模块并重新校验
 <<< END U006598 >>>
 <<< UNIT U006599 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:164-165 >>>
 # 等待期间模块状态可能已变，刷新 Union 生成状态，
@@ -649,7 +649,7 @@ Parser 入口 hook 的类型化结果。
 <<< END U006662 >>>
 <<< UNIT U006663 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:835-836 >>>
 # 标记须在处理函数执行前落下，否则同场景下条消息会重复触发。
-# 抛异常时同样保留标记。
+# 抛出异常时同样保留标记。
 <<< END U006663 >>>
 <<< UNIT U006664 | py-inline-comment | packages/akari-bot-core/akaribot/core/builtins/parser/message.py:844-844 >>>
 # 将 msg 传入下游模块
@@ -743,7 +743,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 <<< END U006679 >>>
 <<< UNIT U006680 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/context.py:125-126 >>>
 # 平台关闭流程可能已先清空上下文字典。release 仍须移除 hold 计数，
-# 不能因重复清理抛 KeyError 而让后台任务以未取回异常结束。
+# 不能因重复清理抛出 KeyError 而让后台任务以未取回异常结束。
 <<< END U006680 >>>
 <<< UNIT U006681 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/context.py:128-129 >>>
 # 平台侧可能已撤销本次消息的上下文。此时不能把同 session_id 重建的
@@ -891,7 +891,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 # 主动会话留空以使用服务组 anycast。
 <<< END U006708 >>>
 <<< UNIT U006709 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/info.py:204-205 >>>
-# 场景 union 由 assign() 解析，解析不出即抛错，故此后必定有值。
+# 场景 union 由 assign() 解析，无法解析时即抛出异常，故此后必定有值。
 # 用户 union 则不同，没有 sender_id 的会话（如主动推送）本就没有它。
 <<< END U006709 >>>
 <<< UNIT U006710 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/info.py:210-210 >>>
@@ -992,10 +992,10 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 展示偏移量的规范字符串。
 <<< END U006737 >>>
 <<< UNIT U006738 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/info.py:541-541 | ctx=SessionInfo.now >>>
-取场景时区的当前时间。
+获取场景时区的当前时间。
 <<< END U006738 >>>
 <<< UNIT U006739 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/info.py:545-545 | ctx=SessionInfo.today >>>
-取场景时区的当前日期。
+获取场景时区的当前日期。
 <<< END U006739 >>>
 <<< UNIT U006740 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/info.py:551-551 | ctx=FetchedSessionInfo >>>
 主动获取的消息会话信息。
@@ -1004,7 +1004,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 模块任务上下文。主要用于传递模块任务的参数。
 <<< END U006741 >>>
 <<< UNIT U006742 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:37-37 >>>
-# 会话相关配置在导入期取一次快照，避免每次取文案都去读配置
+# 会话相关配置在导入期获取一次快照，避免每次获取文案都读取配置
 <<< END U006742 >>>
 <<< UNIT U006743 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:48-48 >>>
 # 平台进程可能只返回 ValueError 文本，此时按消息内容回退。
@@ -1060,7 +1060,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 # 私信接口没有引用参数，观察内容始终反映实际的不引用发送。
 <<< END U006758 >>>
 <<< UNIT U006759 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:507-507 >>>
-# 观察入口拿快照，不能改写正式返回值
+# 观察入口获取快照，不能改写正式返回值
 <<< END U006759 >>>
 <<< UNIT U006760 | py-comment | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:677-677 >>>
 # 恢复时须沿用最初展示提示的会话。等待取得的回复会话没有对应的平台提示。
@@ -1096,7 +1096,7 @@ platform_name 的四元组匹配，使 ``available_for="Telegram"`` 对全部 Te
 消息会话内部模块 - 提供消息会话的核心实现和方法。
 <<< END U006769 >>>
 <<< UNIT U006770 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:55-55 | ctx=normalize_confirm_token >>>
-把严格确认的口令归一为待比对文本，I18N 模板按会话语言解析其占位符。
+将严格确认的口令归一化为待比对文本，I18N 模板按会话语言解析其占位符。
 <<< END U006770 >>>
 <<< UNIT U006771 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/session/internal.py:101-101 | ctx=normalize_outgoing_chain >>>
 对 hook 改写后的最终出站链完整执行发送规范化。
@@ -1663,7 +1663,7 @@ JobQueue 配置模板。
 <<< END U006904 >>>
 <<< UNIT U006905 | py-comment | packages/akari-bot-core/akaribot/core/config/migration.py:154-155 >>>
 # 这类文件生成于本机制启用之前，其内容等价于该包首个迁移之前的状态。包尚无迁移脚本时，
-# 直接取清单声明的表结构版本。
+# 直接采用清单声明的表结构版本。
 <<< END U006905 >>>
 <<< UNIT U006906 | py-comment | packages/akari-bot-core/akaribot/core/config/migration.py:167-168 >>>
 # 不经 ``importlib.import_module`` 加载，因为以迁移编号开头的模块名不是合法标识符，且重复加载会在
@@ -1772,7 +1772,7 @@ WebRender 配置模板。
 <<< END U006932 >>>
 <<< UNIT U006933 | py-comment | packages/akari-bot-core/akaribot/core/constants/path.py:53-54 >>>
 # 字体文件路径的三个常量已弃用，字体随 akari-bot-assets-fonts 分发，路径不再固定，取值一律改用
-# akaribot.core.api.find_font()。下面的映射只为兼容既有导入保留，取用时才查找，找不到即抛错。
+# akaribot.core.api.find_font()。下面的映射只为兼容既有导入保留，取用时才查找，找不到时即抛出异常。
 <<< END U006933 >>>
 <<< UNIT U006934 | py-comment | packages/akari-bot-core/akaribot/core/constants/path.py:73-74 >>>
 # 惰性导入避免导入期多拉一层依赖，因为字体查找要用 importlib.resources 与 matplotlib，而本模块
@@ -1856,7 +1856,7 @@ Tortoise ORM 兼容补丁。
 # 旧版本号的终点。到达该版本后旧数据库不再需要逐级升级，只需记录 revision。
 <<< END U006953 >>>
 <<< UNIT U006954 | py-comment | packages/akari-bot-core/akaribot/core/database/legacy.py:29-30 >>>
-# 旧版本号到 ``(包名， revision)`` 的对照表。使用包名，与 PackageRegistry.migration_dirs()
+# 旧版本号到 ``(包名, revision)`` 的对照表。使用包名，与 PackageRegistry.migration_dirs()
 # 的键一致。旧数据库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。
 <<< END U006954 >>>
 <<< UNIT U006955 | py-comment | packages/akari-bot-core/akaribot/core/database/legacy.py:46-47 >>>
@@ -1931,10 +1931,10 @@ Tortoise ORM 兼容补丁。
 <<< UNIT U006973 | py-docstring | packages/akari-bot-core/akaribot/core/database/legacy.py:334-342 | ctx=legacy_upgrade_to_v6 >>>
 按旧版本号把既有库逐级升级到 v6，返回升级前的版本号。
 
-调用方须已完成数据库初始化。本函数不建连也不关连接，以便在 ``init_db()`` 的连接上直接
+调用方须已完成数据库初始化。本函数不建立也不关闭连接，以便在 ``init_db()`` 的连接上直接
 执行。每一步都先探测再执行，中途失败后重新执行不会重复施加变更。
 
-:param conn: 数据库连接，省略时取默认连接。
+:param conn: 数据库连接，省略时使用默认连接。
 :return: 升级前的版本号，无版本记录时为 ``None``。
 <<< END U006973 >>>
 <<< UNIT U006974 | py-docstring | packages/akari-bot-core/akaribot/core/database/legacy.py:459-467 | ctx=convert_legacy_version >>>
@@ -1973,7 +1973,7 @@ Tortoise ORM 兼容补丁。
 # 支持事务性 DDL 的方言。其余方言只按先探测再执行的方式保证可重复执行。
 <<< END U006981 >>>
 <<< UNIT U006982 | py-comment | packages/akari-bot-core/akaribot/core/database/migration.py:45-47 >>>
-# 取连接的方言名。
+# 获取连接的方言名。
 # 以连接自身的能力为准而不是模块级配置，因为测试与转换脚本会在同一进程内使用与配置不同的
 # 连接，按配置判断会生成错误的 DDL。
 <<< END U006982 >>>
@@ -1984,7 +1984,7 @@ Tortoise ORM 兼容补丁。
 # 跨包依赖无法表达，Runner 已固定 core 先于各包执行。
 <<< END U006984 >>>
 <<< UNIT U006985 | py-comment | packages/akari-bot-core/akaribot/core/database/migration.py:422-422 >>>
-# 取已记录的 revision。
+# 获取已记录的 revision。
 <<< END U006985 >>>
 <<< UNIT U006986 | py-comment | packages/akari-bot-core/akaribot/core/database/migration.py:444-446 >>>
 # 提示已应用的迁移文件被改写。
@@ -1992,7 +1992,7 @@ Tortoise ORM 兼容补丁。
 # 值得一条告警。
 <<< END U006986 >>>
 <<< UNIT U006987 | py-comment | packages/akari-bot-core/akaribot/core/database/migration.py:458-460 >>>
-# 取包的执行顺序。
+# 获取包的执行顺序。
 # core 的全部 revision 先执行完，再按包名依次执行各模块包，因为模块侧的绑定回填以 core 的
 # 改名与回填已完成为前提，且各包的 revision 无法互相声明依赖。
 <<< END U006987 >>>
@@ -2060,15 +2060,15 @@ Tortoise ORM 兼容补丁。
 <<< UNIT U006999 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:177-186 | ctx=MigrationContext.has_index >>>
 判断指定列上是否已有索引，该列是任一索引的首列即算。
 
-按列而非按索引名判断，因为新建的库由 ``generate_schemas`` 依模型声明建索引，索引名由 ORM
-生成，与迁移里显式指定的名字不同。按名字判断会为已有索引的库重复建一份。
+按列而非按索引名判断，因为新建的库由 ``generate_schemas`` 依模型声明创建索引，索引名由 ORM
+生成，与迁移里显式指定的名字不同。按名字判断会为已有索引的库重复创建一份。
 
 :param table: 表名。
 :param column: 列名。
 :return: 是否存在。
 <<< END U006999 >>>
 <<< UNIT U007000 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:204-212 | ctx=MigrationContext.add_column >>>
-增列。
+新增列。
 
 :param table: 表名。
 :param column: 列名。
@@ -2077,13 +2077,13 @@ Tortoise ORM 兼容补丁。
 :param default: 默认值表达式，省略时不写 ``DEFAULT``。
 <<< END U007000 >>>
 <<< UNIT U007001 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:220-225 | ctx=MigrationContext.drop_column >>>
-删列。
+删除列。
 
 :param table: 表名。
 :param column: 列名。
 <<< END U007001 >>>
 <<< UNIT U007002 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:229-238 | ctx=MigrationContext.rename_column >>>
-改列名。
+修改列名。
 
 MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以下版本，故统一使用它。
 
@@ -2093,13 +2093,13 @@ MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以�
 :param ddl_type: 新列在 MySQL 上的完整类型，如 ``VARCHAR(512) NOT NULL``。
 <<< END U007002 >>>
 <<< UNIT U007003 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:247-252 | ctx=MigrationContext.rename_table >>>
-改表名。
+修改表名。
 
 :param old: 旧表名。
 :param new: 新表名。
 <<< END U007003 >>>
 <<< UNIT U007004 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:256-264 | ctx=MigrationContext.create_index >>>
-建索引。
+创建索引。
 
 调用方须先以 :meth:`has_index` 探测，因为 MySQL 不支持 ``CREATE INDEX IF NOT EXISTS``。
 
@@ -2150,7 +2150,7 @@ MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以�
 :return: 包名到有序迁移列表的映射。
 <<< END U007010 >>>
 <<< UNIT U007011 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:428-432 | ctx=MigrationRunner.pending >>>
-取尚未应用的 revision。
+获取尚未应用的 revision。
 
 :return: 包名到待应用 revision 的映射，无待应用项时为空字典。
 <<< END U007011 >>>
@@ -2158,14 +2158,14 @@ MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以�
 执行待应用的 revision。
 
 :param package: 只执行该包，省略时执行全部包。
-:return: 已应用的 ``(包名， revision)`` 列表。
+:return: 已应用的 ``(包名, revision)`` 列表。
 <<< END U007012 >>>
 <<< UNIT U007013 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:491-498 | ctx=MigrationRunner.downgrade >>>
 回退该包已应用的 revision。
 
 :param package: 包名。
 :param to: 回退到该 revision 为止（保留它），省略时全部回退。
-:return: 已回退的 ``(包名， revision)`` 列表。
+:return: 已回退的 ``(包名, revision)`` 列表。
 :raises MigrationError: revision 未声明 ``downgrade``，或 ``to`` 不存在。
 <<< END U007013 >>>
 <<< UNIT U007014 | py-docstring | packages/akari-bot-core/akaribot/core/database/migration.py:522-530 | ctx=MigrationRunner.stamp >>>
@@ -2210,7 +2210,7 @@ MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以�
 <<< END U007023 >>>
 <<< UNIT U007024 | py-comment | packages/akari-bot-core/akaribot/core/database/migrations/0003_union_core.py:31-32 >>>
 # 轮询与区间统计所需的索引，因为 job_queues 每 100 毫秒被轮询，analytics_data 要按区间反复聚合，
-# 两者都会随行数增长退化为全表扫描。v5 已重建 job_queues，故建索引前须确认目标列仍在。
+# 两者都会随行数增长退化为全表扫描。v5 已重建 job_queues，故创建索引前须确认目标列仍在。
 <<< END U007024 >>>
 <<< UNIT U007025 | py-comment | packages/akari-bot-core/akaribot/core/database/migrations/0003_union_core.py:57-57 >>>
 # 核心表改用 union 命名。

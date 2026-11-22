@@ -103,7 +103,7 @@
 # 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，检查才能比对到真实文案。
 <<< END U005770 >>>
 <<< UNIT U005771 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:29-29 >>>
-# 假实例进程会取锁、写下进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
+# 假实例进程会获取锁、写下进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
 <<< END U005771 >>>
 <<< UNIT U005772 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:56-56 >>>
 # 非托管实例的解释器由 AKARIBOT_PYTHON 指定，测试据此把假实例进程当作解释器启动。
@@ -124,7 +124,7 @@
 # 锁被持有但文件里没有进程记录时不猜测进程号，如实报“无法停止”。
 <<< END U005777 >>>
 <<< UNIT U005778 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:244-244 >>>
-# 与控制器同组的实例只能按进程号发信号，对整组发信号会连同控制器一起终止。
+# 与控制器同组的实例只能按进程号发送信号，对整组发送信号会连同控制器一起终止。
 <<< END U005778 >>>
 <<< UNIT U005779 | py-inline-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:250-250 >>>
 # noqa: S603 - 测试替身，参数固定
@@ -151,7 +151,7 @@
 # 验证防抖闸门本身，同一动作在防抖窗口内只放行一次，窗口外或换动作时立即放行，复位后立即可用。
 <<< END U005786 >>>
 <<< UNIT U005787 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:410-410 >>>
-# 四条路径都遵循“一次触发弹出模态框、选执行才动手”，模态框展示期间数据源未被调用，取消不调用。
+# 四条路径都遵循“一次触发弹出模态框、选择执行后才真正操作”，模态框展示期间数据源未被调用，取消不调用。
 <<< END U005787 >>>
 <<< UNIT U005788 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:453-453 >>>
 # 文案里不得残留未替换的占位符。二次确认由模态框承担，不用“再按一次”式提示。
@@ -166,13 +166,13 @@
 # 手动刷新后状态可能已变，待确认作废，同一个动作重新弹出一层模态框。
 <<< END U005791 >>>
 <<< UNIT U005792 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:554-554 >>>
-# 轮询不作废待确认，周期刷新后同一个动作仍在防抖窗口内，不叠第二层模态框，确认正常执行。
+# 轮询不作废待确认，周期刷新后同一个动作仍在防抖窗口内，不叠加第二层模态框，确认正常执行。
 <<< END U005792 >>>
 <<< UNIT U005793 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:577-577 >>>
-# “更多”菜单的启动指定适配器先弹出输入框收平台，提交后再弹出确认框。选“执行”才把平台交给数据源。
+# “更多”菜单的启动指定适配器先弹出输入框接收平台名，提交后再弹出确认框。选择“执行”才把平台交给数据源。
 <<< END U005793 >>>
 <<< UNIT U005794 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:603-603 >>>
-# `--foreground` 会占住终端，界面只给命令与说明，绝不代为执行。
+# `--foreground` 会占住终端，界面只给出命令与说明，绝不代为执行。
 <<< END U005794 >>>
 <<< UNIT U005795 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:636-636 >>>
 # 只启动指定适配器时，argv 里必须带上 `--adapter <平台>`。
@@ -181,7 +181,7 @@
 # 操作行上都有按钮的动作不显示在页脚，80 列下才能容纳全局键位。
 <<< END U005796 >>>
 <<< UNIT U005797 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:679-679 >>>
-# 假实例进程依赖 fcntl 取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
+# 假实例进程依赖 fcntl 获取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
 <<< END U005797 >>>
 <<< UNIT U005798 | py-comment | packages/akari-bot-cli/tests/test_run_lifecycle.py:693-693 >>>
 # 放大防抖窗口，使“连发同一动作”与“刷新后重新确认”不依赖两次调用之间的真实耗时。
@@ -223,7 +223,7 @@ cli.service: 服务单元渲染、安装卸载、状态与守护循环测试
 # 按钮文字随所选行切换，并带上切换键 e。
 <<< END U005810 >>>
 <<< UNIT U005811 | py-comment | packages/akari-bot-cli/tests/test_tui_adapters.py:156-156 >>>
-# 按 i 打开安装对话框，只列未安装的平台。回车安装高亮项并显示进度。
+# 按 i 打开安装对话框，只列出未安装的平台。回车安装高亮项并显示进度。
 <<< END U005811 >>>
 <<< UNIT U005812 | py-comment | packages/akari-bot-cli/tests/test_tui_adapters.py:177-177 >>>
 # 缺少依赖包的已启用配置按 e 进入安装对话框并预选该平台，不改动启用状态。
@@ -255,7 +255,7 @@ cli.service: 服务单元渲染、安装卸载、状态与守护循环测试
 # 校验失败不写入。写入失败停在出错项且不启用，密钥项不显示命令输出。重试不重复已写入的项。
 <<< END U005820 >>>
 <<< UNIT U005821 | py-comment | packages/akari-bot-cli/tests/test_tui_adapters.py:609-609 >>>
-# 有未保存内容时，关闭前先确认，取消后内容保留。读不到配置项时实例仍算创建成功，不弹表单。
+# 有未保存内容时，关闭前先确认，取消后内容保留。无法读取配置项时实例仍算创建成功，不弹出表单。
 <<< END U005821 >>>
 <<< UNIT U005822 | py-comment | packages/akari-bot-cli/tests/test_tui_adapters.py:658-658 >>>
 # 新增与移除经 adapter instance 子命令执行，成败取决于退出码。
@@ -369,7 +369,7 @@ cli.tui.config: 未保存更改的拦截与外部编辑器动作
 # 页底按钮按 ButtonFlow 的排列顺序列出。
 <<< END U005858 >>>
 <<< UNIT U005859 | py-comment | packages/akari-bot-cli/tests/test_tui_dashboard.py:62-62 >>>
-# 添加实例与服务策略都先弹菜单，再进入原有流程。
+# 添加实例与服务策略都先弹出菜单，再进入原有流程。
 <<< END U005859 >>>
 <<< UNIT U005860 | py-comment | packages/akari-bot-cli/tests/test_tui_dashboard.py:91-91 >>>
 # 测试片段覆盖包内语言文件，以核对实际渲染文案。
@@ -519,7 +519,7 @@ cli.tui.config: 未保存更改的拦截与外部编辑器动作
 # 刷新按钮与 r 均忽略缓存重新读取快照。
 <<< END U005908 >>>
 <<< UNIT U005909 | py-comment | packages/akari-bot-cli/tests/test_tui_dashboard.py:1449-1449 >>>
-# 按钮禁用状态与实例记录一致。服务与策略菜单按当前策略与服务状态给出操作，无记录的实例不弹菜单。
+# 按钮禁用状态与实例记录一致。服务与策略菜单按当前策略与服务状态给出操作，无记录的实例不弹出菜单。
 <<< END U005909 >>>
 <<< UNIT U005910 | py-comment | packages/akari-bot-cli/tests/test_tui_dashboard.py:1497-1497 >>>
 # 写操作执行期间禁用按钮，避免多个子进程同时修改注册表。
@@ -753,7 +753,7 @@ cli.tui.docs: 文档包的列表、构建、预览与部署测试
 cli.tui.doctor: 诊断页结论、统计、重新诊断与跳转测试
 <<< END U005985 >>>
 <<< UNIT U005986 | py-comment | packages/akari-bot-cli/tests/test_tui_environment.py:67-67 >>>
-# m 打开解释器菜单，返回其中的操作文案。托管方式未知时不弹菜单。
+# m 打开解释器菜单，返回其中的操作文案。托管方式未知时不弹出菜单。
 <<< END U005986 >>>
 <<< UNIT U005987 | py-comment | packages/akari-bot-cli/tests/test_tui_environment.py:86-86 >>>
 # 包列表包含 httpx 等传递依赖，并区分实例清单记录。
@@ -795,7 +795,7 @@ cli.tui.doctor: 诊断页结论、统计、重新诊断与跳转测试
 环境页的包列表、安装方式、实例清单与解释器操作测试。
 <<< END U005999 >>>
 <<< UNIT U006000 | py-docstring | packages/akari-bot-cli/tests/test_tui_environment.py:564-564 | ctx=test_tui_environment >>>
-cli.tui.environment: 环境清单、包装卸与环境动作测试
+cli.tui.environment: 环境清单、包安装卸载与环境动作测试
 <<< END U006000 >>>
 <<< UNIT U006001 | py-comment | packages/akari-bot-cli/tests/test_tui_logs.py:50-50 >>>
 # 进程计数为日志文件数，“全部进程”显示文件总数。
@@ -820,7 +820,7 @@ cli.tui.environment: 环境清单、包装卸与环境动作测试
 # 筛选仅影响显示，不改变缓冲、offset 或跟随状态。清空后恢复全文。
 <<< END U006007 >>>
 <<< UNIT U006008 | py-comment | packages/akari-bot-cli/tests/test_tui_logs.py:208-208 >>>
-# m 打开日志级别菜单，只列当前以外的偏好。选择后生效，取消不改动。
+# m 打开日志级别菜单，只列出当前以外的偏好。选择后生效，取消不改动。
 <<< END U006008 >>>
 <<< UNIT U006009 | py-docstring | packages/akari-bot-cli/tests/test_tui_logs.py:1-1 | ctx=<module> >>>
 日志页的文件计数、底部跟随与关键词筛选测试。
@@ -943,7 +943,7 @@ cli.tui.misc: 迁移项目的按钮、确认与预览测试
 # CLI 参数包含选定的卸载方式和 --yes，避免重复交互。
 <<< END U006048 >>>
 <<< UNIT U006049 | py-comment | packages/akari-bot-cli/tests/test_tui_modules.py:1012-1012 >>>
-# 80 列下页脚只留高频键位。其余键位仍然可用，只是不在页脚显示。
+# 80 列下页脚只保留高频键位。其余键位仍然可用，只是不在页脚显示。
 <<< END U006049 >>>
 <<< UNIT U006050 | py-comment | packages/akari-bot-cli/tests/test_tui_modules.py:1028-1028 >>>
 # 防抖窗口内忽略同一目标的重复请求，其他目标和超时请求正常处理。
@@ -1051,7 +1051,7 @@ cli.tui.modules: 多选与批量操作测试
 cli.tui.app: 页面切换、焦点与键位归属测试
 <<< END U006084 >>>
 <<< UNIT U006085 | py-comment | packages/akari-bot-cli/tests/test_tui_pending.py:20-20 >>>
-# 模拟鼠标双击与键盘连发，两次请求挨得极近时，第二次不开第二层确认框。
+# 模拟鼠标双击与键盘连发，两次请求挨得极近时，第二次不再打开第二层确认框。
 <<< END U006085 >>>
 <<< UNIT U006086 | py-comment | packages/akari-bot-cli/tests/test_tui_pending.py:34-34 >>>
 # 换目标就是另一次动作，立即放行，不受上一个目标的防抖窗口影响。
@@ -1073,7 +1073,7 @@ cli.tui._compat: 确认框连发闸门测试
 # 页面挂载过又被卸下的状态，事后恢复以免影响本次运行的收尾。
 <<< END U006091 >>>
 <<< UNIT U006092 | py-comment | packages/akari-bot-cli/tests/test_tui_render_guard.py:182-182 >>>
-# 模拟界面仍在运行时切实例重挂载，旧页进入移除流程，子控件正在被卸下。
+# 模拟界面仍在运行时切换实例重新挂载，旧页进入移除流程，子控件正在被卸下。
 <<< END U006092 >>>
 <<< UNIT U006093 | py-comment | packages/akari-bot-cli/tests/test_tui_render_guard.py:187-187 >>>
 # 退出流程里应用已停止运行但尚未请求退出，子控件先一步被卸下。
@@ -1160,7 +1160,7 @@ cli.tui 自检: 逐页 worker 等待与异常、未执行的产品检查
 cli.tui.theme: 品牌主题与切换测试
 <<< END U006120 >>>
 <<< UNIT U006121 | py-comment | packages/akari-bot-cli/tests/test_venv_identity.py:15-15 >>>
-# 造一个带 pyvenv.cfg 的假 venv，返回其中的解释器路径。
+# 创建一个带 pyvenv.cfg 的模拟 venv，返回其中的解释器路径。
 <<< END U006121 >>>
 <<< UNIT U006122 | py-comment | packages/akari-bot-cli/tests/test_venv_identity.py:29-29 >>>
 # 使用 resolve() 处理，因为 macOS 的临时目录本身是软链接，环境根按真实路径返回。
@@ -1178,10 +1178,10 @@ cli.venv: 环境归属判定测试
 # 命令层自行构造执行器，故按构造顺序留一份引用，供用例读取实际 argv。
 <<< END U006126 >>>
 <<< UNIT U006127 | py-comment | packages/akari-bot-cli/tests/test_venv_packages.py:52-52 >>>
-# 解释器存在与否只影响状态探测，写个占位文件即可。
+# 解释器存在与否只影响状态探测，写入占位文件即可。
 <<< END U006127 >>>
 <<< UNIT U006128 | py-comment | packages/akari-bot-cli/tests/test_venv_packages.py:80-80 >>>
-# 界面据此管理环境，一次取齐已安装的包、属于 AkariBot 的包以及记在清单里的项。
+# 界面据此管理环境，一次获取所有已安装的包、属于 AkariBot 的包以及记在清单里的项。
 <<< END U006128 >>>
 <<< UNIT U006129 | py-comment | packages/akari-bot-cli/tests/test_venv_packages.py:137-137 >>>
 # 试运行由执行器直接跳过，命令层仍然构造执行器并下发 argv，但不写入磁盘也不写入清单。
@@ -1193,7 +1193,7 @@ cli.venv: 环境归属判定测试
 # 警告经 stderr 输出，CliRunner 把两路合在 output 里。
 <<< END U006131 >>>
 <<< UNIT U006132 | py-comment | packages/akari-bot-cli/tests/test_venv_packages.py:193-193 >>>
-# 记录还在但环境里已经没有该包时，虽然无处可卸，但仍要能删除清单里的记录。
+# 记录还在但环境里已经没有该包时，虽然无包可卸载，但仍要能删除清单里的记录。
 <<< END U006132 >>>
 <<< UNIT U006133 | py-comment | packages/akari-bot-cli/tests/test_venv_packages.py:211-211 >>>
 # 清单里记录的运行库随环境重建一并补充安装。没有记录时不额外调用 uv。
@@ -1205,7 +1205,7 @@ cli.venv: 环境归属判定测试
 记录 argv，不执行。
 <<< END U006135 >>>
 <<< UNIT U006136 | py-docstring | packages/akari-bot-cli/tests/test_venv_packages.py:238-238 | ctx=test_venv_packages >>>
-cli.venv: 环境包清单与运行库装卸测试
+cli.venv: 环境包清单与运行库安装卸载测试
 <<< END U006136 >>>
 <<< UNIT U006137 | md-paragraph | packages/akari-bot-core/README.md:3-3 | ctx=akari-bot-core >>>
 提供 AkariBot 核心运行时，包括机器人主程序、模块加载与公共设施。
@@ -1309,7 +1309,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 机器人与会话，即模块函数的输入参数与运行环境。
 <<< END U006165 >>>
 <<< UNIT U006166 | py-comment | packages/akari-bot-core/akaribot/core/api/base.py:284-284 >>>
-# 消息元素与消息链，即模块回给用户的内容构造块。
+# 消息元素与消息链，即模块回复给用户的内容构造块。
 <<< END U006166 >>>
 <<< UNIT U006167 | py-comment | packages/akari-bot-core/akaribot/core/api/base.py:338-338 >>>
 # 模块注册与解析，用于声明模块、命令模板与解析钩子。
@@ -1381,7 +1381,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 分组顺序沿用 session_list，组内顺序确定队首与回退顺序，须与绑定行的排列一致。
 <<< END U006185 >>>
 <<< UNIT U006186 | py-comment | packages/akari-bot-core/akaribot/core/builtins/bot/__init__.py:262-262 >>>
-# 掉线客户端的任务无人认领，换跳无从触发，整条通道将不再有消息送达，因此预先将其剔出跳表
+# 掉线客户端的任务无人认领，切换节点无从触发，整条通道将不再有消息送达，因此预先将其移出跳转列表
 <<< END U006186 >>>
 <<< UNIT U006187 | py-comment | packages/akari-bot-core/akaribot/core/builtins/bot/__init__.py:294-294 >>>
 # 同一条消息通道仅推送一次，其余会话作为发送失败时的后备
@@ -1548,7 +1548,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U006226 >>>
 <<< UNIT U006227 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/generator.py:56-57 >>>
 # 此处不可再经由来源实现获取 default_locale，配置文件一旦损坏，读取同样失败，
-# 将再次进入本分支形成递归。改为直接读取顶层键，取不到则使用默认值。
+# 将再次进入本分支形成递归。改为直接读取顶层键，获取失败则使用默认值。
 <<< END U006227 >>>
 <<< UNIT U006228 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/generator.py:119-119 >>>
 # 联合类型等对象不具有 __name__，无法取得时退回通用占位符，避免生成注释的过程中断
@@ -1765,10 +1765,10 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 校验分类名，非法时抛出 :class:`FilterWordError`。
 <<< END U006285 >>>
 <<< UNIT U006286 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/filter/__init__.py:84-84 | ctx=category_path >>>
-取分类对应的词库文件路径。
+获取分类对应的词库文件路径。
 <<< END U006286 >>>
 <<< UNIT U006287 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/filter/__init__.py:89-89 | ctx=normalize_words >>>
-清洗词条，依次去空白、丢弃空行、按首次出现顺序去重，并校验长度与数量。
+清洗词条，依次去除空白、丢弃空行、按首次出现顺序去重，并校验长度与数量。
 <<< END U006287 >>>
 <<< UNIT U006288 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/filter/__init__.py:109-109 | ctx=read_filter_words >>>
 读取分类的原始词条，文件不存在时返回 None。
@@ -1856,7 +1856,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U006315 >>>
 <<< UNIT U006316 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:240-241 >>>
 # 传入 MessageSession 时取出其 session_info。SessionInfo 自身没有该属性，原样返回。
-# 不经 exports 判类型，以免受注册时机影响。
+# 不经 exports 判断类型，以免受注册时机影响。
 <<< END U006316 >>>
 <<< UNIT U006317 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:257-258 >>>
 # 该赋值原本假定 elem 是纯文本元素，指令操作降级后
@@ -2053,7 +2053,7 @@ PlatformMessageChain > I18NMessageChain > MessageChain
 # Markdown 表格的分隔行没有可读内容，纯文本降级时直接丢弃。
 <<< END U006356 >>>
 <<< UNIT U006357 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/elements.py:228-228 >>>
-# 须判 is False，因为 None 意为未表态，交由会话确定，不可在此就套上跳板
+# 须判断 is False，因为 None 意为未表态，交由会话确定，不可在此就套上跳板
 <<< END U006357 >>>
 <<< UNIT U006358 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/elements.py:230-230 >>>
 # 使用 mm.teahouse.team 的跳板服务，用于隐藏原始链接
@@ -2157,7 +2157,7 @@ URL 链接元素 - 用于在消息中包含链接。
 <<< UNIT U006383 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/message/elements.py:419-423 | ctx=I18NContextElement.__str__ >>>
 返回多语言标记表示。
 
-        :return:多语言标记格式的字符串表示
+        :return: 多语言标记格式的字符串表示
 <<< END U006383 >>>
 <<< UNIT U006384 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/message/elements.py:433-433 | ctx=ImageElement >>>
 图片消息元素。
@@ -2618,10 +2618,10 @@ POSIX 兼容行为：
 # 预计算过滤后的 args 列表（排除空字符串占位符），避免每次 parse 重建
 <<< END U006484 >>>
 <<< UNIT U006485 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/command.py:187-187 >>>
-# 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
+# 切换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
 <<< END U006485 >>>
 <<< UNIT U006486 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/command.py:251-251 >>>
-# 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
+# 切换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
 <<< END U006486 >>>
 <<< UNIT U006487 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/command.py:266-266 >>>
 # 尝试匹配纯描述格式： "- {I18N:...}"

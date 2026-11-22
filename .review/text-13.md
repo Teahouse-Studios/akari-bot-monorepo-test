@@ -210,7 +210,7 @@
 # 注册期编译好的模式，避免每条消息都去 re 模块的全局缓存里查一次
 <<< END U008619 >>>
 <<< UNIT U008620 | py-comment | packages/akari-bot-core/akaribot/core/types/module/component_meta.py:62-62 >>>
-# 已编译的模式无法再附加 flags，附加会在此后的每次匹配中抛错
+# 已编译的模式无法再附加 flags，附加会在此后的每次匹配中抛出异常
 <<< END U008620 >>>
 <<< UNIT U008621 | py-comment | packages/akari-bot-core/akaribot/core/types/module/component_meta.py:81-81 >>>
 # 入口订阅字段。带名称的 hook 保持默认即可
@@ -258,13 +258,13 @@
 按钮排布工具 - 将扁平的按钮序列整理为消息底部键盘所需的按行结构。
 <<< END U008635 >>>
 <<< UNIT U008636 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button.py:37-48 | ctx=arrange_buttons >>>
-将（展示文本， 点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
+将（展示文本，点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
 
 行数由 ``per_row`` 算出后即固定，再把按钮均分到各行，使各行的数量至多相差一个——
 直接按 ``per_row`` 切片会得到 ``[3, 3, 3, 1]`` 这样参差的末行。行数超出平台上限时
 压回上限，此时每行的数量将突破 ``per_row``，至多到 ``MAX_BUTTONS_PER_ROW``。
 
-:param buttons: （标签， 命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
+:param buttons: （标签，命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
 :param per_row: 每行按钮数量的可读性上限。
 :param small: 是否使用紧凑按钮样式。
 :return: 按钮行列表。输入为空时返回空列表。
@@ -452,7 +452,7 @@
 # 资源包是可选依赖，故按名字惰性导入，出现 ImportError 即视该级不可用，core 的依赖清单不变。
 <<< END U008693 >>>
 <<< UNIT U008694 | py-comment | packages/akari-bot-core/akaribot/core/utils/font.py:80-80 >>>
-# fallback_to_default=False 让未命中抛 ValueError，而不是静默回退到 DejaVu Sans。
+# fallback_to_default=False 让未命中时抛出 ValueError，而不是静默回退到 DejaVu Sans。
 <<< END U008694 >>>
 <<< UNIT U008695 | py-comment | packages/akari-bot-core/akaribot/core/utils/func.py:21-21 >>>
 # 取数值真假而非字符串真假，因为字符串 "0" 非空，bool() 会将其判定为真
@@ -588,7 +588,7 @@
 # 每日周期按触发场景的时区计算，记录内保存周期偏移，跨场景共用同一条记录。
 <<< END U008732 >>>
 <<< UNIT U008733 | py-comment | packages/akari-bot-core/akaribot/core/utils/petal.py:34-34 >>>
-# 场景时区变更后的首个周期按 24 小时滚动，避免改时区提前刷新。
+# 场景时区变更后的首个周期按 24 小时滚动，避免修改时区提前刷新。
 <<< END U008733 >>>
 <<< UNIT U008734 | py-comment | packages/akari-bot-core/akaribot/core/utils/petal.py:56-56 >>>
 # 无用户 union 的会话不持有花瓣，且 union_id 为空会污染存储桶的键
@@ -629,21 +629,21 @@
 :return: 随机浮点数。
 <<< END U008745 >>>
 <<< UNIT U008746 | py-docstring | packages/akari-bot-core/akaribot/core/utils/random.py:152-158 | ctx=Random.randint >>>
-返回[a, b]范围内的随机整数。
+返回 [a, b] 范围内的随机整数。
 
 :param a: 下界。
 :param b: 上界。
 :return: 符合条件的随机整数。
 <<< END U008746 >>>
 <<< UNIT U008747 | py-docstring | packages/akari-bot-core/akaribot/core/utils/random.py:163-169 | ctx=Random.uniform >>>
-返回[a, b]范围内的随机浮点数。
+返回 [a, b] 范围内的随机浮点数。
 
 :param a: 下界。
 :param b: 上界。
 :return: 符合条件的随机浮点数。
 <<< END U008747 >>>
 <<< UNIT U008748 | py-docstring | packages/akari-bot-core/akaribot/core/utils/random.py:174-181 | ctx=Random.randrange >>>
-返回范围内的随机整数，类似于`range`。
+返回范围内的随机整数，类似于 `range`。
 
 :param start: 开始值。
 :param stop: 结束值，不包含在范围内。
@@ -804,7 +804,7 @@
 清空待推送队列的内存记录。仅供测试使用。
 <<< END U008781 >>>
 <<< UNIT U008782 | py-docstring | packages/akari-bot-core/akaribot/core/utils/retired.py:278-282 | ctx=pick_notice_delay >>>
-取一个公告推送的随机延迟秒数。
+获取一个公告推送的随机延迟秒数。
 
 :return: 位于 :data:`RETIRED_NOTIFY_DELAY_MIN` 与 :data:`RETIRED_NOTIFY_DELAY_MAX` 之间的秒数。
 <<< END U008782 >>>
@@ -827,7 +827,7 @@
 # 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未安装时只在构造处抛出。
 <<< END U008786 >>>
 <<< UNIT U008787 | py-comment | packages/akari-bot-core/akaribot/core/utils/s3.py:38-38 >>>
-# 默认可不装 boto3（extra ``s3``），故导入期不引入。只有真正创建客户端时才需要。
+# 默认可不安装 boto3（extra ``s3``），故导入期不引入。只有真正创建客户端时才需要。
 <<< END U008787 >>>
 <<< UNIT U008788 | py-comment | packages/akari-bot-core/akaribot/core/utils/s3.py:49-49 >>>
 # 只在异常冒泡到处理分支时求值，那时客户端已创建完成，botocore 必然可以导入。
@@ -879,22 +879,22 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 机器人的时间工具。
 <<< END U008801 >>>
 <<< UNIT U008802 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:11-11 | ctx=core_offset >>>
-取核心默认偏移量。
+获取核心默认偏移量。
 <<< END U008802 >>>
 <<< UNIT U008803 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:21-21 | ctx=core_tz >>>
-取核心默认时区。
+获取核心默认时区。
 <<< END U008803 >>>
 <<< UNIT U008804 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:26-26 | ctx=core_offset_text >>>
-取规范化的核心默认偏移量字符串。
+获取规范化的核心默认偏移量字符串。
 <<< END U008804 >>>
 <<< UNIT U008805 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:31-31 | ctx=core_now >>>
-取核心时区（或指定时区）的当前时间。
+获取核心时区（或指定时区）的当前时间。
 <<< END U008805 >>>
 <<< UNIT U008806 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:36-36 | ctx=core_today >>>
-取核心时区（或指定时区）的当前日期。
+获取核心时区（或指定时区）的当前日期。
 <<< END U008806 >>>
 <<< UNIT U008807 | py-docstring | packages/akari-bot-core/akaribot/core/utils/timezone.py:41-41 | ctx=core_midnight >>>
-取核心时区（或指定时区）的今日零点。
+获取核心时区（或指定时区）的今日零点。
 <<< END U008807 >>>
 <<< UNIT U008808 | py-comment | packages/akari-bot-core/akaribot/core/utils/url_audit.py:148-149 >>>
 # 主仓规则 global.txt 随仓库分发，位于 data/url_audit/<名单>。
@@ -1054,7 +1054,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # union ID 中的 "|" 须换成 "-"，因为 Windows 不接受该字符出现在文件名中。
 <<< END U008857 >>>
 <<< UNIT U008858 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:167-168 >>>
-# 先写临时文件再原子替换，避免直接写入磁盘在中途被强制结束时留下不完整的日志，
+# 先写入临时文件再原子替换，避免直接写入磁盘在中途被强制结束时留下不完整的日志，
 # 导致读取时才发现损坏。经此一步，该文件要么完整要么不存在。
 <<< END U008858 >>>
 <<< UNIT U008859 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:258-259 >>>
@@ -1247,7 +1247,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 统一消息通道编号（命令与推送去重），并互相记录对方的机器人账号（屏蔽对方发出的消息）。
 <<< END U008904 >>>
 <<< UNIT U008905 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:563-563 >>>
-# 取得锁之后再读取组信息，因为若先读后锁，读到的仍是并发方修改前的数据，加锁将失去意义。
+# 取得锁之后再读取组信息，因为若先读取再加锁，读到的仍是并发方修改前的数据，加锁将失去意义。
 <<< END U008905 >>>
 <<< UNIT U008906 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:578-578 >>>
 # 另一轮握手已完成同样的处理，无需重复向管理员确认，也无需重复写入数据库。
@@ -1271,7 +1271,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 以免相邻纯文本之间被适配器补上换行
 <<< END U008911 >>>
 <<< UNIT U008912 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:340-342 >>>
-# 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。
+# 每节为 (区隔行文案, [(种类, 首列, 次列), ...])。命令一节不带区隔行。
 # 种类决定首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，
 # text 则正常转义。
 <<< END U008912 >>>
@@ -1288,7 +1288,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 末尾保留换行，理由同 build_module_table()，表格靠空行终结
 <<< END U008916 >>>
 <<< UNIT U008917 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:472-472 >>>
-# 表格版另需成对的（正则， 说明），与拼接成一行的 mdocs 并行收集
+# 表格版另需成对的（正则，说明），与拼接成一行的 mdocs 并行收集
 <<< END U008917 >>>
 <<< UNIT U008918 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:481-481 >>>
 # 会话缺少推送能力时订阅扩展模块无法启用，展示其帮助会误导用户
@@ -1349,7 +1349,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 区隔行因此与上一组的收尾同处一个元素。
 
 :param msg: 消息会话。
-:param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
+:param groups: (组名多语言键, 模块名列表) 的序列，模块名为空的组会被跳过。
 :param include_help_header: 是否在模块表格内加入 help 顶栏。
 :param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。
 :return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。
@@ -1414,7 +1414,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008942 >>>
 <<< UNIT U008943 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:255-256 >>>
 # 只做排队，不向场景发送内容，公告由延时任务在数分钟后推送。若挂载在命令拦截上，退役后用户
-# 不再发命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查询数据库。
+# 不再发送命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查询数据库。
 <<< END U008943 >>>
 <<< UNIT U008944 | py-inline-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/petal.py:42-42 >>>
 # 客户端级隔离，避免刷花瓣
@@ -2015,7 +2015,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 />
 <<< END U009061 >>>
 <<< UNIT U009062 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/database.md:9-9 | ctx=database >>>
-此模块用于调试和排障，可以直接操作数据库，只在开发模式下加载。模块级权限为超级用户。
+此模块用于调试和排查故障，可以直接操作数据库，只在开发模式下加载。模块级权限为超级用户。
 <<< END U009062 >>>
 <<< UNIT U009063 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/database.md:15-15 | ctx=`database model` >>>
 列出核心和各模块注册的数据表名。
@@ -2179,7 +2179,7 @@ Markdown 表格不可用、图片渲染失败或指定 `--legacy` 时，模块�
 迁移会改写模块表中以平台 ID 为主键的数据，并同步场景管理员、封禁列表和消息通道。
 <<< END U009100 >>>
 <<< UNIT U009101 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/merge.md:23-23 | ctx=`bind merge-token` >>>
-`retired_clients` 的格式为 `<源客户端> -> <目标客户端>`。只写源客户端表示不提供迁移，此时不注册迁移命令，只保留退役公告。
+`retired_clients` 的格式为 `<源客户端> -> <目标客户端>`。只填写源客户端表示不提供迁移，此时不注册迁移命令，只保留退役公告。
 <<< END U009101 >>>
 <<< UNIT U009102 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/module.md:7-7 | ctx=module >>>
 此模块可以查看模块清单，也可以启用、停用、加载、重载和卸载模块。命令级权限按子命令区分。`list` 对所有人开放，`enable` 和 `disable` 要求场景管理员，`load`、`reload`、`unload` 要求超级用户。

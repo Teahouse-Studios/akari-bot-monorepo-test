@@ -214,7 +214,7 @@ Union 仍被模块记录引用，须先解除外部状态才能删除。
 :param push_priority: 主动推送优先级，数值越大越优先。
 <<< END U007076 >>>
 <<< UNIT U007077 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:343-347 | ctx=TargetUnionBind.list_channels >>>
-取该 union 下“平台场景 ID → 消息通道编号”的映射。
+获取该 union 下“平台场景 ID → 消息通道编号”的映射。
 
 :param union_id: 场景 union ID。
 <<< END U007077 >>>
@@ -231,7 +231,7 @@ Union 仍被模块记录引用，须先解除外部状态才能删除。
 删除 union 记录及其关联的映射和会话数据。
 <<< END U007081 >>>
 <<< UNIT U007082 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:527-530 | ctx=SenderUnionInfo.get_by_sender_id >>>
-取平台账号所属的 union 行，是 :meth:`UnionInfo.resolve_union` 的会话友好包装，
+获取平台账号所属的 union 行，是 :meth:`UnionInfo.resolve_union` 的会话友好包装，
 额外接受 MessageSession / FetchedMessageSession，从中取出 ``sender_id``。
 <<< END U007082 >>>
 <<< UNIT U007083 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:534-539 | ctx=SenderUnionInfo.switch_identity >>>
@@ -266,11 +266,11 @@ Union 仍被模块记录引用，须先解除外部状态才能删除。
 :return: 是否绑定成功，若该账号已绑定至其他 union 则为 False。
 <<< END U007088 >>>
 <<< UNIT U007089 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:761-764 | ctx=TargetUnionInfo.get_by_target_id >>>
-取平台场景所属的 union 行，是 :meth:`UnionInfo.resolve_union` 的会话友好包装，
+获取平台场景所属的 union 行，是 :meth:`UnionInfo.resolve_union` 的会话友好包装，
 额外接受 MessageSession / FetchedMessageSession，从中取出 ``target_id``。
 <<< END U007089 >>>
 <<< UNIT U007090 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:768-772 | ctx=TargetUnionInfo.list_peer_bots >>>
-取某个平台场景眼中、同一个现实场景里其他机器人的账号。
+获取某个平台场景视角下、同一个现实场景里其他机器人的账号。
 
 :param target_id: 观察方的平台场景 ID。
 <<< END U007090 >>>
@@ -346,10 +346,10 @@ Union 仍被模块记录引用，须先解除外部状态才能删除。
 :param timestamp: 时间戳。
 <<< END U007101 >>>
 <<< UNIT U007102 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:1316-1316 | ctx=AnalyticsData.get_data_by_times >>>
-按时间范围取统计数据。
+按时间范围获取统计数据。
 <<< END U007102 >>>
 <<< UNIT U007103 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:1324-1324 | ctx=AnalyticsData.get_values_by_times >>>
-按时间范围取数值。
+按时间范围获取数值。
 <<< END U007103 >>>
 <<< UNIT U007104 | py-docstring | packages/akari-bot-core/akaribot/core/database/models.py:1332-1332 | ctx=AnalyticsData.get_count_by_times >>>
 按时间范围统计数量。
@@ -445,7 +445,7 @@ JobQueue 进程注册表。租约是在线状态的唯一事实来源。
 已应用的数据库迁移记录。
 
 每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动
-提交，无法把“执行 DDL”与“写版本记录”放入同一事务，因此判断某条 revision 是否已应用
+提交，无法把“执行 DDL”与“写入版本记录”放入同一事务，因此判断某条 revision 是否已应用
 只看本表，迁移必须自行保证可重复执行。
 
 :param package: 包名，``core`` 或其他包名。
@@ -605,7 +605,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 | jobqueue-hub | 进程名 `jobqueue-hub`，仅内置 WebSocket 后端 | 维护节点连接，选择接收任务的节点，传递控制信号 |
 <<< END U007165 >>>
 <<< UNIT U007166 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/architecture.md:40-40 | ctx=进程拓扑 >>>
-任何子进程启动前，守护进程都会设置 `AKARI_CONFIG_READONLY=1`。此后所有子进程只能读取配置。只有 pre-init 进程可以写配置，它会清除这个标记。
+任何子进程启动前，守护进程都会设置 `AKARI_CONFIG_READONLY=1`。此后所有子进程只能读取配置。只有 pre-init 进程可以写入配置，它会清除这个标记。
 <<< END U007166 >>>
 <<< UNIT U007167 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/architecture.md:42-42 | ctx=进程拓扑 >>>
 `<实例根目录>/.bot.lock` 用来防止同一实例重复启动。同一实例第二次启动时，新进程会以退出码 1 结束。
@@ -749,10 +749,10 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 | `<表名>.global.json` | JSON 格式的全局默认值 |
 <<< END U007201 >>>
 <<< UNIT U007202 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:32-32 | ctx=全局默认层 >>>
-加载时，`CFGManager` 先读全局文件，再读 `config/<表名>.toml`。
+加载时，`CFGManager` 先读取全局文件，再读取 `config/<表名>.toml`。
 <<< END U007202 >>>
 <<< UNIT U007203 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:34-34 | ctx=全局默认层 >>>
-两层配置会递归合并。用户配置覆盖同名的标量、列表和子表。用户文件只写需要修改的字段即可，其余字段继续使用全局值。
+两层配置会递归合并。用户配置覆盖同名的标量、列表和子表。用户文件只需填写需要修改的字段即可，其余字段继续使用全局值。
 <<< END U007203 >>>
 <<< UNIT U007204 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:36-36 | ctx=全局默认层 >>>
 写入、删除与配置注释修复只修改用户文件，不修改 `config/global/`。
@@ -794,7 +794,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 ## 读取与写入
 <<< END U007213 >>>
 <<< UNIT U007214 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:75-75 | ctx=读取与写入 >>>
-模板类通过元类按属性名取值，未声明的字段直接抛 `AttributeError`：
+模板类通过元类按属性名取值，未声明的字段直接抛出 `AttributeError`：
 <<< END U007214 >>>
 <<< UNIT U007215 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:84-84 | ctx=读取与写入 >>>
 底层接口：
@@ -802,7 +802,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 <<< UNIT U007216 | md-table | packages/akari-bot-core/akaribot/core/docs/config.md:86-92 | ctx=读取与写入 >>>
 | 方法 | 说明 |
 | --- | --- |
-| `CFGManager.get(q, default=None, cfg_type=None, secret=False, table_name=None)` | 读值，缺失时按默认值写入 |
+| `CFGManager.get(q, default=None, cfg_type=None, secret=False, table_name=None)` | 读取配置值，缺失时按默认值写入 |
 | `CFGManager.has(q, secret=False, table_name=None)` | 判断键是否存在 |
 | `CFGManager.write(...)` | 写入，受只读限制 |
 | `CFGManager.edit_write(...)`、`edit_delete(...)` | 交互式编辑写入，需明确授权 |
@@ -815,7 +815,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 ## 字段注释
 <<< END U007218 >>>
 <<< UNIT U007219 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:98-98 | ctx=字段注释 >>>
-字段在模板类中声明后，须在所属包的 `locales/zh_cn.json` 中为它写一条配置注释：
+字段在模板类中声明后，须在所属包的 `locales/zh_cn.json` 中为它编写一条配置注释：
 <<< END U007219 >>>
 <<< UNIT U007220 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/config.md:104-104 | ctx=字段注释 >>>
 表名取值：
@@ -1015,16 +1015,16 @@ CI 使用 `--locked --all-extras --dev` 安装。`uv.lock` 与声明的依赖不
 Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F403`、`E741`、`E721`。导入按标准库、第三方、项目内部分组。
 <<< END U007275 >>>
 <<< UNIT U007276 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:57-57 | ctx=代码风格 >>>
-模块与适配器只从 `akaribot.core.api` 取公开接口，核心内部出现循环依赖时，改用 `akaribot.core.exports` 注册，需要时按名称取回。
+模块与适配器只从 `akaribot.core.api` 获取公开接口，核心内部出现循环依赖时，改用 `akaribot.core.exports` 注册，需要时按名称取回。
 <<< END U007276 >>>
 <<< UNIT U007277 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:59-59 | ctx=代码风格 >>>
-注释写清这段代码为何这样写，单条一般不超过三行。含义清楚的代码不加注释，非公开 API 不加 docstring。
+注释说明这段代码为何这样编写，单条一般不超过三行。含义清楚的代码不加注释，非公开 API 不加 docstring。
 <<< END U007277 >>>
 <<< UNIT U007278 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:61-61 | ctx=代码风格 >>>
 注释、文档与配置说明一律用正式书面语。中文与拉丁字母之间加空格，使用全角标点与弯引号。面向用户的文案称呼对方为“你”，机器人自称“机器人”。
 <<< END U007278 >>>
 <<< UNIT U007279 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:63-63 | ctx=代码风格 >>>
-文档、注释与配置说明只描述当前状态。设计取舍写当前为何如此，变更过程交给 git 历史。为迁移历史数据保留的兼容逻辑注明适用范围。
+文档、注释与配置说明只描述当前状态。设计取舍说明当前为何如此，变更过程交给 git 历史。为迁移历史数据保留的兼容逻辑注明适用范围。
 <<< END U007279 >>>
 <<< UNIT U007280 | md-heading | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:65-65 | ctx=分支与提交 >>>
 ## 分支与提交
@@ -1106,10 +1106,10 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 权限分为普通用户、场景管理员、超级用户与基础超级用户，判定与授予方式见[权限](permissions.md)。常见处理：
 <<< END U007301 >>>
 <<< UNIT U007302 | md-list | packages/akari-bot-core/akaribot/core/docs/faq.md:50-53 | ctx=提示权限不足 >>>
-- 场景管理命令被拒：请场景管理员执行 `~admin add <用户 ID>`，或由平台原生管理员操作。
-- 超级用户命令被拒：请现有超级用户执行 `~superuser add <用户 ID>`。
-- 只有某个模块被拒：请超级用户执行 `~auth add <用户 ID> <模块>`，该授权只对声明 `required_superuser` 的模块有效。
-- 模块开启被拒：可能是模块级权限、机器人权限或平台能力不足，按提示处理。
+- 场景管理命令被拒绝：请场景管理员执行 `~admin add <用户 ID>`，或由平台原生管理员操作。
+- 超级用户命令被拒绝：请现有超级用户执行 `~superuser add <用户 ID>`。
+- 仅某个模块被拒绝：请超级用户执行 `~auth add <用户 ID> <模块>`，该授权只对声明 `required_superuser` 的模块有效。
+- 模块开启被拒绝：可能是模块级权限、机器人权限或平台能力不足，按提示处理。
 <<< END U007302 >>>
 <<< UNIT U007303 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:55-55 | ctx=提示权限不足 >>>
 `base_superuser` 只能通过 `config.toml` 维护。
@@ -1204,7 +1204,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 模板使用 `${name}` 插值：
 <<< END U007329 >>>
 <<< UNIT U007330 | md-list | packages/akari-bot-core/akaribot/core/docs/i18n.md:48-50 | ctx=插值与占位符 >>>
-- 占位符名按含义取英文名，与调用处关键字一一对应。
+- 占位符名按含义选取英文名，与调用处关键字一一对应。
 - 占位符名不得与 `t()` 的形参（`key`、`fallback`、`locale_failed_prompt`、`disable_joke`）同名。同名会在渲染时触发 `TypeError`，例如 `${key}` 配 `key=...`。
 - 修改键名或占位符后，须同时核对调用点的关键字参数。
 <<< END U007330 >>>
@@ -1286,7 +1286,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 | jobqueue-hub | WebSocket 后端的内置 Hub，可选 |
 <<< END U007347 >>>
 <<< UNIT U007348 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/index.md:48-48 | ctx=进程模型概览 >>>
-实例根目录由 `AKARI_INSTANCE_DIR` 指定，未设置时取进程的当前目录。配置目录可以用 `AKARI_CONFIG_PATH` 单独指定。详情见[架构](architecture.md)。
+实例根目录由 `AKARI_INSTANCE_DIR` 指定，未设置时使用进程的当前目录。配置目录可以用 `AKARI_CONFIG_PATH` 单独指定。详情见[架构](architecture.md)。
 <<< END U007348 >>>
 <<< UNIT U007349 | md-heading | packages/akari-bot-core/akaribot/core/docs/index.md:50-50 | ctx=文档导航 >>>
 ## 文档导航
@@ -1319,7 +1319,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 ## 会话对象
 <<< END U007353 >>>
 <<< UNIT U007354 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/message-api.md:7-7 | ctx=会话对象 >>>
-模块函数接收 `Bot.MessageSession`。对象本身只保存会话快照与本次解析状态，场景字段都通过 `session_info` 读取，例如 `msg.session_info.bot_name` 取机器人名称。
+模块函数接收 `Bot.MessageSession`。对象本身只保存会话快照与本次解析状态，场景字段都通过 `session_info` 读取，例如 `msg.session_info.bot_name` 用于获取机器人名称。
 <<< END U007354 >>>
 <<< UNIT U007355 | md-table | packages/akari-bot-core/akaribot/core/docs/message-api.md:9-14 | ctx=会话对象 >>>
 | 字段或属性 | 说明 |
@@ -1339,7 +1339,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 | `sender_id`、`sender_from`、`sender_name` | 发送者信息。主动会话可能为空 |
 | `message_id`、`reply_id`、`messages`、`session_id`、`timestamp` | 触发消息、回复目标、原始消息链、会话 UUID 与时间戳 |
 | `prefixes`、`muted`、`custom_admins`、`enabled_modules` | 可用命令前缀、禁止发言状态、自定义管理员 union ID 与已启用模块 |
-| `locale`、`timezone_offset`、`display_timezone_offset`、`tmp` | `Locale` 对象（语言代码取 `locale.locale`）、场景与个人显示时区偏移（`timedelta`，未设置为 `None`）与临时字典 |
+| `locale`、`timezone_offset`、`display_timezone_offset`、`tmp` | `Locale` 对象（语言代码通过 `locale.locale` 获取）、场景与个人显示时区偏移（`timedelta`，未设置为 `None`）与临时字典 |
 | `tz`、`display_tz`、`tz_label`、`display_tz_label` | 场景时区与展示时区（`tzinfo`）及其规范偏移字符串。展示时区未设置时跟随场景时区 |
 | `bot_name`、`bot_id`、`is_private`、`fetch`、`support_*` | 本地化机器人名称与 ID。私聊、主动会话与平台能力标志 |
 <<< END U007357 >>>
@@ -1418,7 +1418,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 | --- | --- | --- |
 | `as_display()` | `text_only=False`、`element_filter=None`、`connector="\n"` | 把触发消息转为字符串。`text_only=True` 只保留 `PlainElement` 文本，非文本元素按 KE 码、AT 码等字符串表示 |
 | `delete()` | `reason=None` | 删除触发消息 |
-| `sleep()` / `hold()` / `release()` / `start_typing()` / `end_typing()` | `s` / 无 | 暂停并释放执行锁（恢复失败抛 `WaitCancelException`）。保持或释放平台上下文。开始或结束输入状态 |
+| `sleep()` / `hold()` / `release()` / `start_typing()` / `end_typing()` | `s` / 无 | 暂停并释放执行锁（恢复失败时抛出 `WaitCancelException`）。保持或释放平台上下文。开始或结束输入状态 |
 | `format_time()` / `format_num()` | `timestamp`、`date=True`、`simple=False`、`time=True`、`seconds=True`、`timezone=True` / `number`、`precision=0` | 按会话时区与语言格式化时间 / 按语言缩放数字（万、亿、兆或 k、M、G） |
 | `call_onebot_api()` / `call_api()` | `api_name`、`**kwargs` | 转发到 OneBot 扩展接口。`call_api()` 已弃用。平台不支持时返回 `{"success": False, "error": ...}` |
 | `restrict_member()` / `unrestrict_member()` | `user_id`、`duration=None`、`reason=None`、`wait=False` / `user_id`、`wait=False` | 禁言与解除禁言，`duration=None` 表示永久 |
@@ -1451,10 +1451,10 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 | `contains()` / `only()` | 元素类型或类型元组 | 是否含某类元素、是否只含某类元素 |
 <<< END U007379 >>>
 <<< UNIT U007380 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/message-api.md:155-155 | ctx=消息链 >>>
-`+` 返回新的消息链并深拷贝元素，`+=` 原地修改。两者的参数可以是 `MessageChain`、元素列表或单个元素，不能是单独的字符串。`in` 只判断元素类型，例如 `PlainElement in chain`，传入实例会抛 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
+`+` 返回新的消息链并深拷贝元素，`+=` 原地修改。两者的参数可以是 `MessageChain`、元素列表或单个元素，不能是单独的字符串。`in` 只判断元素类型，例如 `PlainElement in chain`，传入实例会抛出 `TypeError`。`MessageChain.assign()` 传入已有链时原样返回，不复制。需要独立副本时用 `copy()`。
 <<< END U007380 >>>
 <<< UNIT U007381 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/message-api.md:164-164 | ctx=消息链 >>>
-`PlatformMessageChain.assign()` 按 `session_info.target_from` 选择对应的链。该键缺失时改用 `default`。`I18NMessageChain.assign()` 按 `session_info.locale.locale` 选择。这类链必须包含 `default` 键，否则抛 `ValueError`。这两类链都由发送路径自动解析。
+`PlatformMessageChain.assign()` 按 `session_info.target_from` 选择对应的链。该键缺失时改用 `default`。`I18NMessageChain.assign()` 按 `session_info.locale.locale` 选择。这类链必须包含 `default` 键，否则抛出 `ValueError`。这两类链都由发送路径自动解析。
 <<< END U007381 >>>
 <<< UNIT U007382 | md-heading | packages/akari-bot-core/akaribot/core/docs/message-api.md:166-166 | ctx=消息元素 >>>
 ## 消息元素

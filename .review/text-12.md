@@ -111,7 +111,7 @@
 <<< END U007879 >>>
 <<< UNIT U007880 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:301-302 >>>
 # 监听地址字段。web 的 web_port 与 onebot / milky 的 qq_host 最终都占用一个 TCP 端口，
-# 故统一解析出 (主机， 端口) 后比对，web 与 onebot 撞同一个端口同样是致命的。
+# 故统一解析出 (主机, 端口) 后比对，web 与 onebot 撞同一个端口同样是致命的。
 <<< END U007880 >>>
 <<< UNIT U007881 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:305-306 >>>
 # web_host 未指定时的绑定地址，与 WebConfig 声明的默认值一致。守护进程不能向 CFGManager.get
@@ -185,13 +185,13 @@
 # 已明确没有必要重启的进程异常退出码
 <<< END U007900 >>>
 <<< UNIT U007901 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:757-757 >>>
-# terminate_process() 会 close() 该进程对象，close 之后读取属性会抛错，故先取出实例记录。
+# terminate_process() 会 close() 该进程对象，close 之后读取属性会抛出异常，故先取出实例记录。
 <<< END U007901 >>>
 <<< UNIT U007902 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:792-792 >>>
 # 先停止平台入口，再停止 Server。WebSocket Hub 最后退出，以便其他进程完成关闭信号与响应。
 <<< END U007902 >>>
 <<< UNIT U007903 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:828-829 >>>
-# 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程。取锁失败的进程不会走到这里，
+# 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程。获取锁失败的进程不会走到这里，
 # 因此文件内容始终属于当前持锁者。
 <<< END U007903 >>>
 <<< UNIT U007904 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:833-833 >>>
@@ -201,7 +201,7 @@
 # 信号处理器在主线程的两个字节码之间执行，异常经 asyncio.run() 向外传播，与 Ctrl+C 走同一条路径。
 <<< END U007905 >>>
 <<< UNIT U007906 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:869-870 >>>
-# 不截断打开，确保取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
+# 不截断打开，确保获取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
 # 确定，文件内容只用于让控制器定位进程。
 <<< END U007906 >>>
 <<< UNIT U007907 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:888-889 >>>
@@ -236,7 +236,7 @@
 <<< END U007915 >>>
 <<< UNIT U007916 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:75-76 >>>
 # module() 与各组件装饰器都在导入期记录。若文件在记录一部分内容后
-# 才抛异常，必须撤销该包本轮产生的注册，否则报错模块仍可能接收命令。
+# 才抛出异常，必须撤销该包本轮产生的注册，否则报错模块仍可能接收命令。
 <<< END U007916 >>>
 <<< UNIT U007917 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:88-88 >>>
 # 一次取回全部状态，避免逐模块查询退化成 N 次往返，在模块多或主数据库在远端时开销可观
@@ -264,7 +264,7 @@
 # 前者不是后者的成员包，不该被归约进来。命名空间本身也在此命中，由调用方判断它是否成包。
 <<< END U007924 >>>
 <<< UNIT U007925 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:496-497 >>>
-# 纯字符串归约且不校验该包是否已注册，调用方拿它建依赖图，图上的边会在
+# 纯字符串归约且不校验该包是否已注册，调用方用它构建依赖图，图上的边会在
 # 与已注册包取交集时被过滤。校验注册状态由 :meth:`return_py_module` 负责。
 <<< END U007925 >>>
 <<< UNIT U007926 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:504-504 >>>
@@ -279,7 +279,7 @@
 # 裸包导入的 AST 只给出命名空间或其子路径，子模块名在 node.names 中。
 <<< END U007928 >>>
 <<< UNIT U007929 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:583-584 >>>
-# 取已注册条目的声明依赖。目录扫描的包没有 metadata，
+# 获取已注册条目的声明依赖。目录扫描的包没有 metadata，
 # 返回空集，其依赖全部落到 :meth:`_scan_package_dependencies` 补充探测。
 <<< END U007929 >>>
 <<< UNIT U007930 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:592-593 >>>
@@ -1226,7 +1226,7 @@ ${desc}
 # 如果没有默认的日志处理器，则忽略此错误
 <<< END U008233 >>>
 <<< UNIT U008234 | py-docstring | packages/akari-bot-core/akaribot/core/logger.py:1-1 | ctx=<module> >>>
-机器人内置的基于`loguru`的日志工具。
+机器人内置的基于 `loguru` 的日志工具。
 <<< END U008234 >>>
 <<< UNIT U008235 | py-docstring | packages/akari-bot-core/akaribot/core/logger.py:31-31 | ctx=LoggingLogger >>>
 兼容标准库 logging.Logger 的项目日志类。
@@ -1274,7 +1274,7 @@ ${desc}
 关闭运行时。
 <<< END U008249 >>>
 <<< UNIT U008250 | py-comment | packages/akari-bot-core/akaribot/core/paths.py:12-12 >>>
-# 实例目录。未设置时取进程 cwd，与历史行为一致。
+# 实例目录。未设置时使用进程 cwd，与历史行为一致。
 <<< END U008250 >>>
 <<< UNIT U008251 | py-comment | packages/akari-bot-core/akaribot/core/paths.py:15-15 >>>
 # 配置目录。优先级高于实例目录下的 config。
@@ -2002,7 +2002,7 @@ JobQueue 的数据库后端实现。
 未能取得内存占用的进程及其原因。
 <<< END U008445 >>>
 <<< UNIT U008446 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:47-47 | ctx=collect_self_usage >>>
-采集当前进程的内存指标。``uss`` 不可得时不写该键，由调用方改用 ``rss``。
+采集当前进程的内存指标。``uss`` 不可得时不写入该键，由调用方改用 ``rss``。
 <<< END U008446 >>>
 <<< UNIT U008447 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:63-63 | ctx=collect_external_usage >>>
 按 PID 读取同机其他进程的内存指标，进程不存在或不可读时返回 None。
@@ -2053,7 +2053,7 @@ JobQueue 的数据库后端实现。
 <<< END U008461 >>>
 <<< UNIT U008462 | py-comment | packages/akari-bot-core/akaribot/core/queue/server.py:252-253 >>>
 # 本地浏览器未就绪且未配置远端时，依赖库直接返回 None。此时仍给出未就绪的状态，
-# 让前端能区分“读不到状态”与“浏览器未启动”。
+# 让前端能区分“无法读取状态”与“浏览器未启动”。
 <<< END U008462 >>>
 <<< UNIT U008463 | py-comment | packages/akari-bot-core/akaribot/core/queue/server.py:298-298 >>>
 # stop 只需浏览器已按请求关闭。start / restart 则以依赖库的初始化结果为准。
@@ -2116,7 +2116,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 <<< END U008481 >>>
 <<< UNIT U008482 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:37-38 >>>
 # core 公开 API 的版本。模块与适配器以 manifest 的 requires_core_api 声明所需区间，不满足者由
-# reject_incompatible() 拒绝注册。本常量是唯一来源，core.api 取其值。此处不得反向导入 core.api。
+# reject_incompatible() 拒绝注册。本常量是唯一来源，core.api 读取其值。此处不得反向导入 core.api。
 <<< END U008482 >>>
 <<< UNIT U008483 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:41-41 >>>
 # 参与运行时依赖图的包名前缀。其余 Requires-Dist 是普通 PyPI 依赖，由安装器负责解析。
@@ -2124,7 +2124,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 <<< UNIT U008484 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:64-66 >>>
 # 不能在模块层导入 core.logger，因为 core.logger 会经 core.config.base 引入整个配置系统，
 # 而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
-# （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要写日志时。
+# （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要记录日志时。
 <<< END U008484 >>>
 <<< UNIT U008485 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:73-73 >>>
 # 依赖声明的写法允许大小写与下划线差异，比较前归一为同一形式，等价名字才能命中同一个包。
@@ -2157,7 +2157,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
 <<< END U008493 >>>
 <<< UNIT U008494 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:372-372 >>>
-# 发现阶段已检查过一遍，此时覆盖会丢失已记录的原因（被拒的包已不在 _entries 里）
+# 发现阶段已检查过一遍，此时覆盖会丢失已记录的原因（被拒绝的包已不在 _entries 里）
 <<< END U008494 >>>
 <<< UNIT U008495 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:384-386 >>>
 # 结果分两份，展示用标签到原因供 :meth:`incompatible` / :meth:`report_lines` 报出，
@@ -2185,7 +2185,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。
 <<< END U008500 >>>
 <<< UNIT U008501 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:746-747 >>>
-# 取实例的可写 data 目录，而非顶层只读的 assets，因为包的可写数据不属于随仓库分发的
+# 获取实例的可写 data 目录，而非顶层只读的 assets，因为包的可写数据不属于随仓库分发的
 # 内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
 <<< END U008501 >>>
 <<< UNIT U008502 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:878-878 >>>
@@ -2310,7 +2310,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 <<< END U008537 >>>
 <<< UNIT U008538 | py-comment | packages/akari-bot-core/akaribot/core/scripts/convert_database.py:239-240 >>>
 # 重命名旧表以避免冲突
-# 带"_old"前缀的表名排在列表末尾，便于管理
+# 带 "_old" 前缀的表名排在列表末尾，便于管理
 <<< END U008538 >>>
 <<< UNIT U008539 | py-comment | packages/akari-bot-core/akaribot/core/scripts/convert_database.py:268-268 >>>
 # 如果表不存在或其他错误，则忽略（可能已经被重命名）
@@ -2415,10 +2415,10 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 执行完整的数据库转换过程。
 <<< END U008572 >>>
 <<< UNIT U008573 | py-comment | packages/akari-bot-core/akaribot/core/scripts/migrate_assets_to_data.py:22-22 >>>
-# (旧路径， 新路径)，两者都相对仓库根目录。
+# (旧路径, 新路径)，两者都相对仓库根目录。
 <<< END U008573 >>>
 <<< UNIT U008574 | py-comment | packages/akari-bot-core/akaribot/core/scripts/migrate_assets_to_data.py:41-41 >>>
-# (仓库内旧路径， 实例内新路径)。仅收录部署者提供的文件，下载产物可重新获取，无需迁移。
+# (仓库内旧路径, 实例内新路径)。仅收录部署者提供的文件，下载产物可重新获取，无需迁移。
 <<< END U008574 >>>
 <<< UNIT U008575 | py-docstring | packages/akari-bot-core/akaribot/core/scripts/migrate_assets_to_data.py:1-15 | ctx=<module> >>>
 assets / data 布局迁移脚本。
@@ -2431,7 +2431,7 @@ assets / data 布局迁移脚本。
 
     python -m akaribot.core.scripts.migrate_assets_to_data [--dry-run]
 
-实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根目录，未设置时取当前目录。
+实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根目录，未设置时使用当前目录。
 
 脚本只做移动，不覆盖目标位置已存在的文件，因而可以重复执行。已经迁移过的条目会被跳过。
 <<< END U008575 >>>

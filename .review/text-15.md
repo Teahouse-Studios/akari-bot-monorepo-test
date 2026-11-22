@@ -374,7 +374,7 @@ akaribot.core.builtins.parser.args: 参数解析测试
 # abort 后的再次重建
 <<< END U010183 >>>
 <<< UNIT U010184 | py-comment | packages/akari-bot-core/tests/test_parser_hooks.py:767-767 >>>
-# 收尾时间超过 50ms 收尾窗口，制造"清理中父被取消"的窗口
+# 收尾时间超过 50ms 收尾窗口，制造“清理中父任务被取消”的窗口
 <<< END U010184 >>>
 <<< UNIT U010185 | py-comment | packages/akari-bot-core/tests/test_parser_hooks.py:782-782 >>>
 # 等 hook 超时并进入异步收尾
@@ -446,7 +446,7 @@ akaribot.core.utils.petal: 花瓣系统测试
 # 构造一组“同一条消息通道、分属两个平台”的会话。
 <<< END U010206 >>>
 <<< UNIT U010207 | py-comment | packages/akari-bot-core/tests/test_post_message.py:58-58 >>>
-# 取出并清空已入队的主动推送任务，返回 ``(目标会话， 下一跳列表)``。
+# 取出并清空已入队的主动推送任务，返回 ``(目标会话, 下一跳列表)``。
 <<< END U010207 >>>
 <<< UNIT U010208 | py-comment | packages/akari-bot-core/tests/test_post_message.py:77-77 >>>
 # 同一条通道对应同一个现实场景，推送两次即发出两条重复消息。
@@ -554,8 +554,8 @@ core.registry: 发现层测试
 akaribot.core.smtp: SMTP 与场景上报路由测试
 <<< END U010241 >>>
 <<< UNIT U010242 | py-comment | packages/akari-bot-core/tests/test_report_targets.py:23-25 >>>
-# 取会话时须由拓扑缓存反向查找场景所属的客户端，未注册者取不出会话。缓存非空时
-# ``Alive.determine_client(None)`` 还会直接抛错，而 ``fetch_target`` 会将其吞下，
+# 获取会话时须由拓扑缓存反向查找场景所属的客户端，未注册者无法获取会话。缓存非空时
+# ``Alive.determine_client(None)`` 还会直接抛出异常，而 ``fetch_target`` 会将其吞下，
 # 表现为无声地少了几个会话。
 <<< END U010242 >>>
 <<< UNIT U010243 | py-docstring | packages/akari-bot-core/tests/test_report_targets.py:92-92 | ctx=test_report_targets >>>
@@ -585,7 +585,7 @@ core.server.init: 重启提示送达测试
 # 并入同一通道编号，两个平台场景自此指向同一个现实场景，等待任务随之共享
 <<< END U010250 >>>
 <<< UNIT U010251 | py-comment | packages/akari-bot-core/tests/test_retired_gate.py:246-246 >>>
-# all_ 任务按物理场景建稳定 bucket，check() 再按当前消息通道展开。
+# all_ 任务按物理场景建立稳定 bucket，check() 再按当前消息通道展开。
 <<< END U010251 >>>
 <<< UNIT U010252 | py-comment | packages/akari-bot-core/tests/test_retired_gate.py:249-249 >>>
 # 这里只模拟平台成功持有上下文，parser 与等待任务路由仍执行真实逻辑。
@@ -656,10 +656,10 @@ S3 同步 SDK 的异步隔离与超时回归测试。
 <<< UNIT U010274 | py-comment | packages/akari-bot-core/tests/test_send_direct_message.py:57-59 >>>
 # send_direct_message 曾把未归一化的原始输入参数直接入队。传入 bare 元素（如
 # ``I18NContext(...)``）时，其序列化形态为 ``{"_type": "I18NContextElement", ...}``，
-# 缺少 values 字段，客户端按 MessageChain | MessageNodes 反序列化即抛 KeyError。
+# 缺少 values 字段，客户端按 MessageChain | MessageNodes 反序列化即抛出 KeyError。
 <<< END U010274 >>>
 <<< UNIT U010275 | py-comment | packages/akari-bot-core/tests/test_send_direct_message.py:63-63 >>>
-# 反序列化不抛异常，即证明入队的是完整 MessageChain 而非 bare 元素。
+# 反序列化不抛出异常，即证明入队的是完整 MessageChain 而非 bare 元素。
 <<< END U010275 >>>
 <<< UNIT U010276 | py-docstring | packages/akari-bot-core/tests/test_send_direct_message.py:1-1 | ctx=<module> >>>
 core.builtins.session.internal 单元测试 - send_direct_message 的消息归一化（需要数据库）。
@@ -686,7 +686,7 @@ akaribot.core.builtins.session.internal: 消息发送与等待生命周期测试
 akaribot.core.builtins.session.internal: 严格确认测试
 <<< END U010283 >>>
 <<< UNIT U010284 | py-comment | packages/akari-bot-core/tests/test_session_draft.py:27-27 >>>
-# 与 Locale.with_locale 一致，换语言渲染时保留其余状态并返回新对象。
+# 与 Locale.with_locale 一致，切换语言渲染时保留其余状态并返回新对象。
 <<< END U010284 >>>
 <<< UNIT U010285 | py-comment | packages/akari-bot-core/tests/test_session_draft.py:295-295 >>>
 # 默认语言仍可读取为 None，修改其他字段不要求补充语言。
@@ -789,7 +789,7 @@ core.types.module: 命令语法错误提示开关测试
 # 前缀格式由平台侧确定，非法字符会被剔除；剔除后为空的整条链改用基础术语，流程不中断。
 <<< END U010315 >>>
 <<< UNIT U010316 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:120-120 >>>
-# 术语缺失时原样保留占位符，不抛错
+# 术语缺失时原样保留占位符，不抛出异常
 <<< END U010316 >>>
 <<< UNIT U010317 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:174-174 >>>
 # 术语词条只应出现在 `locales/terms/` 下。顶层残留副本会被术语目录覆盖并报审计条目。
@@ -951,13 +951,13 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 运行、配置与模块管理参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U010367 >>>
 <<< UNIT U010368 | py-comment | packages/akari-bot-testing/akaribot/testing/__init__.py:40-41 >>>
-# 子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，
+# 子模块名直接返回子模块本身，避免为获取 ``runner`` 而先加载 ``tester``（后者依赖 core，
 # 会把路径固定在隔离环境变量就位之前）。
 <<< END U010368 >>>
 <<< UNIT U010369 | py-docstring | packages/akari-bot-testing/akaribot/testing/__init__.py:30-39 | ctx=__getattr__ >>>
 首次访问时解析公开名。
 
-    子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，
+    子模块名直接返回子模块本身，避免为获取 ``runner`` 而先加载 ``tester``（后者依赖 core，
     会把路径固定在隔离环境变量就位之前）。
 
     :param name: 属性名。
@@ -1015,7 +1015,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 自动化运行必须设置 `CI=1` 或传 `--ci`。没有 `expected` 的用例，以及交互输入耗尽的用例，在非 CI 模式下会调用 `input()`，在非交互终端里挂起。
 <<< END U010385 >>>
 <<< UNIT U010386 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:36-36 | ctx=CI 模式 >>>
-CI 模式跳过人工复核，交互输入不足直接判失败。`--ci` 还会把 CI 开关写入环境变量，因为运行器在导入期就读取它。
+CI 模式跳过人工复核，交互输入不足直接判定失败。`--ci` 还会把 CI 开关写入环境变量，因为运行器在导入期就读取它。
 <<< END U010386 >>>
 <<< UNIT U010387 | md-paragraph | packages/akari-bot-testing/akaribot/testing/docs/index.md:38-38 | ctx=CI 模式 >>>
 CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 `junit.xml`。覆盖率开启时另生成 `htmlcov/index.html` 与 `coverage.xml`。
@@ -1117,7 +1117,7 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 | `Length` / `Count` / `OutputCount` | 元素总数 / 某类型数量 / 平台动作条目数 |
 | `Exist` | 存在指定类型的元素 |
 | `Empty` / `AnyOutput` | 无输出 / 有输出 |
-| `Raise` / `NoException` | 期望异常 / 期望不抛异常 |
+| `Raise` / `NoException` | 期望异常 / 期望不抛出异常 |
 | `ActionContains` | 平台动作包含指定内容 |
 | `Predicate(func)` | 自定义判定函数 |
 <<< END U010413 >>>
@@ -1514,7 +1514,7 @@ web_render 数据获取方法的模拟管理器。
 关闭会话事件循环，并回收残留任务。
 <<< END U010521 >>>
 <<< UNIT U010522 | py-docstring | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:76-76 | ctx=resolve_timeout >>>
-取单个测试的超时秒数，标记优先于环境变量，其次为默认值。
+获取单个测试的超时秒数，标记优先于环境变量，其次为默认值。
 <<< END U010522 >>>
 <<< UNIT U010523 | py-docstring | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:106-106 | ctx=prepare_runtime >>>
 重建内存数据库与模块注册表，使每个测试项都有自己的初始状态。
@@ -1532,7 +1532,7 @@ web_render 数据获取方法的模拟管理器。
 在 pytest 下运行的 Tester，子测试失败直接成为 pytest 用例失败。
 <<< END U010527 >>>
 <<< UNIT U010528 | py-docstring | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:177-177 | ctx=PytestTester.test >>>
-运行一个纯函数子测试，返回假值或抛异常都判定为用例失败。
+运行一个纯函数子测试，返回假值或抛出异常都判定为用例失败。
 <<< END U010528 >>>
 <<< UNIT U010529 | py-docstring | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:196-196 | ctx=PytestTester.integrate >>>
 运行一条命令级子测试，明确不匹配时判定为用例失败。
@@ -1560,7 +1560,7 @@ web_render 数据获取方法的模拟管理器。
 # 子进程）会指向不同位置。
 <<< END U010535 >>>
 <<< UNIT U010536 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:36-37 >>>
-# 测试所需的配置覆盖项，格式为 (表名， 键名， 值)。文件名不再逐项硬编码，因为现行扁平布局下
+# 测试所需的配置覆盖项，格式为 (表名, 键名, 值)。文件名不再逐项硬编码，因为现行扁平布局下
 # 一个表名恰好对应一个配置文件，映射由 CFGManager 的写入路径完成（P4.4 后由 ConfigLayout 提供）。
 <<< END U010536 >>>
 <<< UNIT U010537 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:40-41 >>>
@@ -1577,11 +1577,11 @@ web_render 数据获取方法的模拟管理器。
 # 已显式设置过的运行器（如 tests/run_one.py）直接沿用，不再新建目录。
 <<< END U010539 >>>
 <<< UNIT U010540 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:90-90 >>>
-# 快照缓存的取值只依赖环境变量，故须先于配置引导，因为后者构建语言快照时会读它。
+# 快照缓存的取值只依赖环境变量，故须先于配置引导，因为后者构建语言快照时会读取它。
 <<< END U010540 >>>
 <<< UNIT U010541 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:102-104 >>>
 # 准备好一份测试专用配置，并令其后的导入一律指向它。
-# 配置不取自仓库内的配置快照，只写最小结构，其余键由配置模板扫描补全，
+# 配置不取自仓库内的配置快照，只写入最小结构，其余键由配置模板扫描补全，
 # 因此仓库里不存在需要与代码同步维护的生成配置。
 <<< END U010541 >>>
 <<< UNIT U010542 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:107-108 >>>
@@ -1607,11 +1607,11 @@ web_render 数据获取方法的模拟管理器。
 # 严格解析会让那些入口因为不相干的参数直接退出。这里只做包含判断，不认识的一律忽略。
 <<< END U010547 >>>
 <<< UNIT U010548 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:240-240 >>>
-# 本次运行的选择项。由 run() 严格解析后覆盖。main() 里的收集与筛选都在其之后读它。
+# 本次运行的选择项。由 run() 严格解析后覆盖。main() 里的收集与筛选都在其之后读取它。
 <<< END U010548 >>>
 <<< UNIT U010549 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:247-249 >>>
-# 不按本文件位置反推，因为本模块已在包内，反推只会指向 site-packages。优先取 ``AKARI_REPO_ROOT``。
-# 否则取 ``Paths.tests`` 的父目录——源码克隆下 ``tests/`` 位于仓库根目录，再以 ``packages/``
+# 不按本文件位置反推，因为本模块已在包内，反推只会指向 site-packages。优先使用 ``AKARI_REPO_ROOT``。
+# 否则使用 ``Paths.tests`` 的父目录——源码克隆下 ``tests/`` 位于仓库根目录，再以 ``packages/``
 # 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
 <<< END U010549 >>>
 <<< UNIT U010550 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:259-259 >>>
@@ -1643,7 +1643,7 @@ web_render 数据获取方法的模拟管理器。
 # 回退到原路径，模块名的唯一性由绝对路径本身保证。
 <<< END U010557 >>>
 <<< UNIT U010558 | py-comment | packages/akari-bot-testing/akaribot/testing/runner.py:498-500 >>>
-# 目录递归取 ``*.py``，文件按原样收集。路径按仓库根目录解析，相对路径因此与 ``tests/run_one.py``
+# 目录递归收集 ``*.py``，文件按原样收集。路径按仓库根目录解析，相对路径因此与 ``tests/run_one.py``
 # 的写法一致。传入错误路径时返回空列表，由调用方报“没有匹配的测试文件”——静默运行全量会让
 # ``akaribot test <路径>`` 看起来生效、实际什么都没筛。
 <<< END U010558 >>>
@@ -1767,7 +1767,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U010594 >>>
 <<< UNIT U010595 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:1-1 >>>
-在使用本模块前，请确保在实例目录下的 `data/module/ai/` 目录中创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。实例目录由环境变量 `AKARI_INSTANCE_DIR` 指定，未设置时取进程的当前工作目录。如需启用图片生成与编辑，再创建 `image_api.yaml`。
+在使用本模块前，请确保在实例目录下的 `data/module/ai/` 目录中创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。实例目录由环境变量 `AKARI_INSTANCE_DIR` 指定，未设置时使用进程的当前工作目录。如需启用图片生成与编辑，再创建 `image_api.yaml`。
 <<< END U010595 >>>
 <<< UNIT U010596 | md-heading | packages/modules/akari-bot-module-ai/akaribot/modules/ai/README.md:5-5 | ctx=`llm_api_list.yaml` 文件结构 >>>
 ## `llm_api_list.yaml` 文件结构
@@ -2278,7 +2278,7 @@ ai.ask 带名称的 hook - 供其他模块调用 AI 对话能力。
 # 延续上下文时，历史对话（不含 system 消息）会被拼接到本次请求之前。
 <<< END U010745 >>>
 <<< UNIT U010746 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/llm.py:105-105 >>>
-# 动态上下文放最后，省 Token 费用
+# 动态上下文放最后，节省 Token 费用
 <<< END U010746 >>>
 <<< UNIT U010747 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/llm.py:204-205 >>>
 # 仅保留对话部分（去掉每次动态重建的 system 消息与工具迭代警告）作为新的上下文历史。

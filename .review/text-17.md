@@ -364,7 +364,7 @@
 ## 命令
 <<< END U011194 >>>
 <<< UNIT U011195 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:13-13 | ctx=`color` >>>
-此命令用于解析颜色代码，返回色值、最接近的 CSS 与 Material Design 颜色名称以及色卡图片。省略参数时随机取一个颜色，遇到无法识别的颜色格式时给出提示。
+此命令用于解析颜色代码，返回色值、最接近的 CSS 与 Material Design 颜色名称以及色卡图片。省略参数时随机选取一个颜色，遇到无法识别的颜色格式时给出提示。
 <<< END U011195 >>>
 <<< UNIT U011196 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:15-15 | ctx=`color` >>>
 结果以 Embed 卡片输出，包含十六进制、RGB、HSL 三种色值与两个颜色名称字段。

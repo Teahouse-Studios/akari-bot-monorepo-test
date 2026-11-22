@@ -807,14 +807,14 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 依赖 `emoji`、`orjson`、`akari-bot-core`。外部服务为 `www.gstatic.com`，提供 Emoji Kitchen 静态图片。
 <<< END U011403 >>>
 <<< UNIT U011404 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:3-3 | ctx=emojimix >>>
-此模块用于把两个 Emoji 合成为一张 Emoji Kitchen 图片，也支持随机取一对 Emoji 合成，或列出某个 Emoji 的全部搭档。
+此模块用于把两个 Emoji 合成为一张 Emoji Kitchen 图片，也支持随机选取一对 Emoji 合成，或列出某个 Emoji 的全部搭档。
 <<< END U011404 >>>
 <<< UNIT U011405 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:5-5 | ctx=命令 >>>
 ## 命令
 <<< END U011405 >>>
 <<< UNIT U011406 | md-list | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:11-15 | ctx=`emojimix` >>>
 - 合成两个 Emoji。
-- 省略参数时随机取一对可合成的 Emoji。只给一个时，随机取一个能与它合成的 Emoji。也可以写作 `emoji1+emoji2`。
+- 省略参数时随机选取一对可合成的 Emoji。只给一个时，随机选取一个能与它合成的 Emoji。也可以写作 `emoji1+emoji2`。
 - 参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。
 - 参数中只要有一个不是 Emoji，或有一个不在支持列表中，就返回不支持提示，并列出这些 Emoji。
 - 组合存在但图片缺失时返回未找到提示。
@@ -1586,7 +1586,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 落雪的查询对象是好友码。不填参数时由令牌识别账号。
 <<< END U011639 >>>
 <<< UNIT U011640 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/chunithm.py:336-336 >>>
-# 填了用户名便查这个玩家，无需绑定。
+# 填写用户名便查询这个玩家，无需绑定。
 <<< END U011640 >>>
 <<< UNIT U011641 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/database/models.py:44-44 >>>
 # 未提供令牌时不得把已有令牌写成空值，因为绑定信息也会从其他路径更新。
@@ -1621,7 +1621,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 按定数搜索谱面。给出 `constant_max` 时改为按定数范围搜索。上下限顺序相反时，命令会自动交换。定数不大于 0 时返回无效等级提示。
 <<< END U011649 >>>
 <<< UNIT U011650 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:31-31 | ctx=`chunithm base` >>>
-结果按歌曲 ID 排序，逐条列出 ID、歌名、难度、等级与定数。结果超过一页时，命令渲染成图片发送。渲染失败时改发文本，并附上页码提示。
+结果按歌曲 ID 排序，逐条列出 ID、歌名、难度、等级与定数。结果超过一页时，命令渲染成图片发送。渲染失败时改用文本发送，并附上页码提示。
 <<< END U011650 >>>
 <<< UNIT U011651 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:34-39 | ctx=`chunithm base` >>>
   :log="[
@@ -2196,7 +2196,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
 <<< END U011784 >>>
 <<< UNIT U011785 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:51-51 >>>
-# 水鱼的成绩只给难度标级，而绘图按难度序号取色，故按标级补一个序号。标级无法识别时记 0。
+# 水鱼的成绩只给难度标级，而绘图按难度序号选取颜色，故按标级补一个序号。标级无法识别时记 0。
 <<< END U011785 >>>
 <<< UNIT U011786 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:54-54 >>>
 # 新曲版本标识的缓存时长（秒）。
@@ -2211,7 +2211,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 查询绑定账号必须要有 OAuth 应用。按用户名查询走的是公开端点，不需要授权。
 <<< END U011789 >>>
 <<< UNIT U011790 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:239-239 >>>
-# 查他人时 403 只会是对方的隐私设置，只有查自己才牵扯到用户协议。
+# 查询他人时 403 只会是对方的隐私设置，只有查询自己才牵扯到用户协议。
 <<< END U011790 >>>
 <<< UNIT U011791 | py-inline-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_best30.py:99-99 >>>
 # 创建空白图像
@@ -2267,7 +2267,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 机密客户端靠换票续期，用不到 refresh token，但必须拿到用户标识。
 <<< END U011807 >>>
 <<< UNIT U011808 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:321-321 >>>
-# 等待期间可能已有一次取令牌完成，复查缓存以免重复换取。
+# 等待期间可能已有一次获取令牌完成，复查缓存以免重复换取。
 <<< END U011808 >>>
 <<< UNIT U011809 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:328-328 >>>
 # 换票需要用户标识，记录里没有只可能是绑定出自旧流程，重新绑定一次即可补上。
@@ -2297,7 +2297,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 refresh token 已失效，可能是用户撤销了授权，或令牌链因并发刷新被吊销。
 <<< END U011817 >>>
 <<< UNIT U011818 | py-docstring | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:64-64 | ctx=DivingFishConsentRequired >>>
-该用户未授权本应用，换票被拒。
+该用户未授权本应用，换票被拒绝。
 <<< END U011818 >>>
 <<< UNIT U011819 | py-docstring | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:68-68 | ctx=DivingFishRateLimited >>>
 请求过于频繁，授权服务器要求稍后再试。
@@ -3120,7 +3120,7 @@ API 数据源已切换为${source}。
 # 落雪的查询对象是好友码。不填参数时由令牌识别账号，无需绑定信息以外的输入。
 <<< END U012081 >>>
 <<< UNIT U012082 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/maimaidx.py:589-589 >>>
-# 填了用户名便查这个玩家，无需绑定。否则查绑定账号（或按 QQ 查）。
+# 填写用户名便查询这个玩家，无需绑定。否则查询绑定账号（或按 QQ 号查询）。
 <<< END U012082 >>>
 <<< UNIT U012083 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/maimaidx.py:700-700 >>>
 # 落雪没有全服分数排行，只有水鱼提供。
@@ -3160,13 +3160,13 @@ maimai 的数据库迁移。
     # best30 等成绩图的文字与符号使用资源包中的 Noto Sans CJK 与 Symbols2（T3.3），缺失会导致出图失败。
 <<< END U012093 >>>
 <<< UNIT U012094 | py-comment | packages/modules/akari-bot-module-maimai/tests/test_maimai_chunithm.py:152-152 >>>
-# 未配置开发者密钥时，给出好友码照样使用开发者端点，查自己则回到用户态端点。
+# 未配置开发者密钥时，给出好友码照样使用开发者端点，查询自己则回到用户态端点。
 <<< END U012094 >>>
 <<< UNIT U012095 | py-comment | packages/modules/akari-bot-module-maimai/tests/test_maimai_chunithm.py:156-156 >>>
 # 配置了密钥则先用资料里的好友码，改用开发者端点。测试自带密钥开关，不受配置文件影响。
 <<< END U012095 >>>
 <<< UNIT U012096 | py-docstring | packages/modules/akari-bot-module-maimai/tests/test_maimai_chunithm.py:1-1 | ctx=<module> >>>
-CHUNITHM 接入的纯逻辑单元测试，覆盖水鱼公开端点的成绩换算、取分路由与开发者端点地址。
+CHUNITHM 接入的纯逻辑单元测试，覆盖水鱼公开端点的成绩换算、获取分数路由与开发者端点地址。
 <<< END U012096 >>>
 <<< UNIT U012097 | py-comment | packages/modules/akari-bot-module-maimai/tests/test_maimai_divingfish.py:144-144 >>>
 # 设备码只能换取一次，重发可能把第一次已签发的令牌作废，故不重试。
@@ -3175,10 +3175,10 @@ CHUNITHM 接入的纯逻辑单元测试，覆盖水鱼公开端点的成绩换�
 # 撤销失败也要删除本地记录，否则用户会处于“已解绑却仍显示已绑定”的状态。
 <<< END U012098 >>>
 <<< UNIT U012099 | py-docstring | packages/modules/akari-bot-module-maimai/tests/test_maimai_divingfish.py:1-1 | ctx=<module> >>>
-水鱼（Diving-Fish）OAuth 的纯逻辑单元测试，覆盖客户端形态判定、绑定持久化、取令牌与撤销。
+水鱼（Diving-Fish）OAuth 的纯逻辑单元测试，覆盖客户端形态判定、绑定持久化、获取令牌与撤销。
 <<< END U012099 >>>
 <<< UNIT U012100 | py-comment | packages/modules/akari-bot-module-maimai/tests/test_maimai_lxns.py:259-259 >>>
-# 未配置开发者密钥时，给出好友码照样使用开发者端点，查自己则回到用户态端点。
+# 未配置开发者密钥时，给出好友码照样使用开发者端点，查询自己则回到用户态端点。
 <<< END U012100 >>>
 <<< UNIT U012101 | py-comment | packages/modules/akari-bot-module-maimai/tests/test_maimai_lxns.py:263-263 >>>
 # 配置了密钥则先用资料里的好友码，改用开发者端点。测试自带密钥开关，不受配置文件影响。
@@ -3214,7 +3214,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U012111 >>>
 <<< UNIT U012112 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-`mcmod <mod_name>` 与 `mcmod details <content>` 都没有声明管理员或超级用户限制，普通用户可以执行。模块未声明平台限制，`available_for` 取默认值 `*`。
+`mcmod <mod_name>` 与 `mcmod details <content>` 都没有声明管理员或超级用户限制，普通用户可以执行。模块未声明平台限制，`available_for` 使用默认值 `*`。
 <<< END U012112 >>>
 <<< UNIT U012113 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/development.md:23-23 | ctx=权限与平台能力 >>>
 模块声明了 `support_languages=["zh_cn"]`。在非简体中文会话中启用该模块时，框架会提示语言不受支持。搜索结果页经 WebRender 抓取，运行前需要在 core 配置中开启 `webrender.enable`。
@@ -3286,7 +3286,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U012135 >>>
 <<< UNIT U012136 | md-paragraph | packages/modules/akari-bot-module-mcplayer/akaribot/modules/mcplayer/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-此模块的命令未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 取默认值 `*`。命令成功获取皮肤时会输出图片消息，因此平台需要支持发送图片。
+此模块的命令未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 使用默认值 `*`。命令成功获取皮肤时会输出图片消息，因此平台需要支持发送图片。
 <<< END U012136 >>>
 <<< UNIT U012137 | md-heading | packages/modules/akari-bot-module-mcplayer/akaribot/modules/mcplayer/docs/development.md:23-23 | ctx=数据表 >>>
 ## 数据表

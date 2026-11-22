@@ -193,7 +193,7 @@
 />
 <<< END U007424 >>>
 <<< UNIT U007425 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:165-165 | ctx=对话示例 >>>
-`~module enable greet` 只需要执行一次。之后的 `~greet default` 会命中 `@mod.command()` 注册的默认命令，返回你在 `zh_cn.json` 中写的文案。
+`~module enable greet` 只需要执行一次。之后的 `~greet default` 会命中 `@mod.command()` 注册的默认命令，返回你在 `zh_cn.json` 中编写的文案。
 <<< END U007425 >>>
 <<< UNIT U007426 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:167-167 | ctx=对话示例 >>>
 如果机器人没有响应，先检查三件事：
@@ -360,10 +360,10 @@ JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执�
 下面用 bilibili 模块识别 av 号。`bili` 是它的模块实例，换成自己的模块变量即可：
 <<< END U007469 >>>
 <<< UNIT U007470 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:416-416 | ctx=正则匹配 >>>
-`mode="A"` 使用 `findall` 找出消息里的全部匹配。匹配结果会去重。`msg.matched_msg` 是匹配文本组成的元组。例子只取前 5 个，避免一条消息触发太多次回复。这里的回复文本只是演示，实际模块应换成查询到的视频信息。
+`mode="A"` 使用 `findall` 找出消息里的全部匹配。匹配结果会去重。`msg.matched_msg` 是匹配文本组成的元组。示例只保留前 5 个，避免一条消息触发太多次回复。这里的回复文本只是演示，实际模块应换成查询到的视频信息。
 <<< END U007470 >>>
 <<< UNIT U007471 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:418-418 | ctx=正则匹配 >>>
-`mode="M"` 使用 `re.match`，只从文本开头匹配。命中后 `msg.matched_msg` 是正则的 Match 对象，可以用 `group()` 取分组：
+`mode="M"` 使用 `re.match`，只从文本开头匹配。命中后 `msg.matched_msg` 是正则的 Match 对象，可以用 `group()` 获取分组：
 <<< END U007471 >>>
 <<< UNIT U007472 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:429-429 | ctx=正则匹配 >>>
 常用选项：
@@ -372,7 +372,7 @@ JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执�
 - `flags` 传 `re.I` 等正则选项。
 - `desc` 是帮助里的说明。
 - `logging=False` 不记录每次命中，`show_typing=False` 不显示正在输入。
-- `trigger_once_startup=True` 让每个场景只在启动后命中一次，适合发迁移提示或一次性公告。
+- `trigger_once_startup=True` 让每个场景只在启动后命中一次，适合发送迁移提示或一次性公告。
 - `skip_long_message_confirm=True` 跳过超长消息确认。只在对匹配结果有把握时使用。
 - `element_filter=(PlainElement,)` 只匹配纯文本，避免把图片说明或提及当成正文。
 <<< END U007473 >>>
@@ -383,7 +383,7 @@ JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执�
 ## 定时任务
 <<< END U007475 >>>
 <<< UNIT U007476 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:442-442 | ctx=定时任务 >>>
-`@greet.schedule()` 注册后台任务。任务函数不接收 `msg`，也没有会话上下文。需要主动发消息时，用 `Bot.post_message()`。
+`@greet.schedule()` 注册后台任务。任务函数不接收 `msg`，也没有会话上下文。需要主动发送消息时，用 `Bot.post_message()`。
 <<< END U007476 >>>
 <<< UNIT U007477 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:444-444 | ctx=定时任务 >>>
 每天凌晨 4 点清理模块缓存：
@@ -443,7 +443,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 `@greet.event("事件名")` 订阅适配器上报的事件，不经过命令解析，也没有 `msg`。`available_for` 限定平台与场景类型。例如 QQBot 群聊会上报 `member_joined` 和 `member_left`。
 <<< END U007495 >>>
 <<< UNIT U007496 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:543-543 | ctx=响应平台事件 >>>
-事件字段由适配器提供，常用 `target_id`、`sender_id` 和 `data`。需要发欢迎语时，先把事件目标转成会话，再调用发送方法。
+事件字段由适配器提供，常用 `target_id`、`sender_id` 和 `data`。需要发送欢迎语时，先把事件目标转成会话，再调用发送方法。
 <<< END U007496 >>>
 <<< UNIT U007497 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:545-545 | ctx=响应平台事件 >>>
 `HookPoint` 有以下阶段：
@@ -638,7 +638,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 `required_bot_permissions` 检查机器人在场景中必须具备的平台权限。检查在 `~module enable` 时进行：
 <<< END U007549 >>>
 <<< UNIT U007550 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/permissions.md:103-103 | ctx=机器人权限 >>>
-字段取 `BotState` 的属性名：
+字段名对应 `BotState` 的属性名：
 <<< END U007550 >>>
 <<< UNIT U007551 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/permissions.md:113-113 | ctx=机器人权限 >>>
 平台自定义权限写成 `permissions.<名称>`。
@@ -662,7 +662,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 本文列出消息文本中的三种占位符，以及它们的转义规则。
 <<< END U007557 >>>
 <<< UNIT U007558 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/placeholders.md:5-5 | ctx=占位符 >>>
-`[KE:...]`、`{I18N:...}` 与 `<AT:...>` 分别在构造消息链、本地化与平台发送阶段解析。模块应优先用消息元素类构造内容。只有在文本里需要触发元素，或者内容要跨进程传递时，才写占位符。
+`[KE:...]`、`{I18N:...}` 与 `<AT:...>` 分别在构造消息链、本地化与平台发送阶段解析。模块应优先用消息元素类构造内容。只有在文本里需要触发元素，或者内容要跨进程传递时，才使用占位符。
 <<< END U007558 >>>
 <<< UNIT U007559 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/placeholders.md:9-9 | ctx=占位符 >>>
 纯文本先由 `Locale.t_str()` 替换 I18N 标记，再由 `match_kecode()` 解析 KE 码。AT 码不参与这两步，由平台适配器在发送时渲染。KE 与 I18N 可以互相嵌套，参数值中的结构字符须按本页的转义规则处理。
@@ -776,7 +776,7 @@ AT 码用于行内提及用户。语法为 `<AT:客户端|用户 ID>`，也接�
 ## 版本与兼容
 <<< END U007589 >>>
 <<< UNIT U007590 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:15-15 | ctx=版本与兼容 >>>
-`akaribot.core.api.__api_version__` 取 `core.registry.CORE_API_VERSION`。各包在 `manifest.toml` 的 `requires_core_api` 中声明兼容范围，官方包写 `">=1,<2"`。
+`akaribot.core.api.__api_version__` 读取 `core.registry.CORE_API_VERSION`。各包在 `manifest.toml` 的 `requires_core_api` 中声明兼容范围，官方包写 `">=1,<2"`。
 <<< END U007590 >>>
 <<< UNIT U007591 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:17-17 | ctx=版本与兼容 >>>
 框架在注册包之前检查这个范围。版本不满足要求时，框架拒绝注册这个包并记录原因。这个包因此不会出现在模块或适配器清单里。
@@ -797,10 +797,10 @@ AT 码用于行内提及用户。语法为 `<AT:客户端|用户 ID>`，也接�
 同一条消息通道只推送一次，其余会话留作发送失败时的后备。
 <<< END U007596 >>>
 <<< UNIT U007597 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:37-37 | ctx=`fetch_target()` >>>
-`Bot.fetch_target(...)` 按目标信息读取场景快照，返回 `FetchedSessionInfo`。需要向指定场景主动发消息时，先用 `FetchedMessageSession.from_session_info()` 把它转成会话。
+`Bot.fetch_target(...)` 按目标信息读取场景快照，返回 `FetchedSessionInfo`。需要向指定场景主动发送消息时，先用 `FetchedMessageSession.from_session_info()` 把它转成会话。
 <<< END U007597 >>>
 <<< UNIT U007598 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:41-41 | ctx=`get_enabled_this_module()` >>>
-`Bot.get_enabled_this_module(module_name)` 返回启用了指定模块的场景列表。计划任务没有消息上下文时，通常先用它取目标，再调用 `post_message()`。
+`Bot.get_enabled_this_module(module_name)` 返回启用了指定模块的场景列表。计划任务没有消息上下文时，通常先用它获取目标，再调用 `post_message()`。
 <<< END U007598 >>>
 <<< UNIT U007599 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:45-45 | ctx=`Hook.trigger()` >>>
 `Bot.Hook.trigger(name, ...)` 调用带名称的 Hook。名称在 `@module.hook(name=...)` 中声明。
@@ -954,7 +954,7 @@ AT 码用于行内提及用户。语法为 `<AT:客户端|用户 ID>`，也接�
 `ModuleRuntimeManager` 管理运行期状态。
 <<< END U007646 >>>
 <<< UNIT U007647 | md-list | packages/akari-bot-core/akaribot/core/docs/public-api.md:216-218 | ctx=`ModuleRuntimeManager` >>>
-- `get_or_create(module_name)`：取模块的 `ModuleRuntime`，没有时创建。
+- `get_or_create(module_name)`：获取模块的 `ModuleRuntime`，没有时创建。
 - `ModuleRuntime.get()`：读取模块实例。
 - `ModuleRuntime.get_state()`：读取运行状态。
 <<< END U007647 >>>
@@ -1106,7 +1106,7 @@ RPC 失败的基类。具体子类区分不可达、超时、取消、方法不�
 `Logger` 提供分级日志。业务代码通过它输出调试、信息、警告与错误级别的日志，模块不需要自己配置日志器。
 <<< END U007689 >>>
 <<< UNIT U007690 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:363-363 | ctx=`Locale` >>>
-`Locale` 负责当前语言的文案。`Locale.t()` 取文案，`Locale.t_str()` 处理已经是文案的字符串。`lang_list` 是可用语言表。
+`Locale` 负责当前语言的文案。`Locale.t()` 用于获取文案，`Locale.t_str()` 处理已经是文案的字符串。`lang_list` 是可用语言表。
 <<< END U007690 >>>
 <<< UNIT U007691 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:367-367 | ctx=`Info` >>>
 `Info` 提供实例与平台信息。
@@ -1214,7 +1214,7 @@ JobQueue 是平台进程与 Server 之间的跨进程通信层，同时提供节
 ## 后端
 <<< END U007722 >>>
 <<< UNIT U007723 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/queue.md:9-9 | ctx=后端 >>>
-配置在 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 取 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，切换后端需要重启进程。
+配置在 `config/jobqueue.toml`，`[jobqueue].jobqueue_backend` 可选 `database` 或 `websocket`。两种后端互斥。同一逻辑集群的进程必须使用相同的值，切换后端需要重启进程。
 <<< END U007723 >>>
 <<< UNIT U007724 | md-table | packages/akari-bot-core/akaribot/core/docs/queue.md:11-16 | ctx=后端 >>>
 | 比较项 | `database` | `websocket` |
@@ -1345,7 +1345,7 @@ core 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，�
 ## 启动与状态
 <<< END U007757 >>>
 <<< UNIT U007758 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/webrender.md:46-46 | ctx=启动与状态 >>>
-Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_web_render_status()` 的结果写入 `Bot.Info.web_render_status`。初始化失败时只写日志，并把状态设为不可用。
+Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_web_render_status()` 的结果写入 `Bot.Info.web_render_status`。初始化失败时只记录日志，并把状态设为不可用。
 <<< END U007758 >>>
 <<< UNIT U007759 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/webrender.md:48-48 | ctx=启动与状态 >>>
 `close_web_render()` 在进程退出时关闭本地浏览器。`remote_only` 模式只使用远程服务。
@@ -1421,10 +1421,10 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 类型与默认值优先使用模板声明，未声明的项使用配置文件中的类型。
 <<< END U007779 >>>
 <<< UNIT U007780 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:153-153 >>>
-# 任一文件损坏都会让 ``CFGManager.load()`` 整体失败，故按表读文件，未读到的表单独归集。
+# 任一文件损坏都会让 ``CFGManager.load()`` 整体失败，故按表读取文件，未能读取的表单独归集。
 <<< END U007780 >>>
 <<< UNIT U007781 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:175-175 >>>
-# 表名只用于拼接配置目录下的文件名。含分隔符的名字一律拒绝，读不到目录之外。
+# 表名只用于拼接配置目录下的文件名。含分隔符的名字一律拒绝，无法读取目录之外。
 <<< END U007781 >>>
 <<< UNIT U007782 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:184-184 >>>
 # noqa: BLE001 - 解析错误类型由 tomlkit 决定，逐表归集后继续
@@ -1477,7 +1477,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 唯一约束、外键约束这类拒绝由数据库给出，属调用方传入了错误的值，按用户错误上报。
 <<< END U007797 >>>
 <<< UNIT U007798 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:246-246 >>>
-# 包已安装但实例尚未创建该表时读不到条数。此时保留表并如实返回“未知”，不让一张表导致整份清单异常。
+# 包已安装但实例尚未创建该表时无法读取条数。此时保留表并如实返回“未知”，不让一张表导致整份清单异常。
 <<< END U007798 >>>
 <<< UNIT U007799 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:249-249 >>>
 # noqa: BLE001 - 不同后端的缺表报错类型不同，统一按未知处理
@@ -1486,7 +1486,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 用户错误先校验完成再访问数据库，未知列与非法取值不该先触发数据库报错。
 <<< END U007800 >>>
 <<< UNIT U007801 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:297-297 >>>
-# 大表上 COUNT 是一次全表扫描，故翻页可以只取本页。不数时 total 回 null，由调用方沿用上次的值。
+# 大表上 COUNT 是一次全表扫描，故翻页可以只获取本页。不统计总数时 total 返回 null，由调用方沿用上次的值。
 <<< END U007801 >>>
 <<< UNIT U007802 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:304-304 >>>
 # 回显分页与筛选状态，方便调用方据此显示“第几页 / 共几条 / 当前条件”，不必自己记。
@@ -1501,13 +1501,13 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 输出恒为 JSON，``--json`` 只为与其他入口的命令行形态保持一致。
 <<< END U007805 >>>
 <<< UNIT U007806 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:459-459 >>>
-# 失败原因同时写入 stdout 的 JSON，因为调用方（CLI 与界面）只解析 stdout，只写 stderr 则拿不到结构化原因。
+# 失败原因同时写入 stdout 的 JSON，因为调用方（CLI 与界面）只解析 stdout，只写入 stderr 则无法获取结构化原因。
 <<< END U007806 >>>
 <<< UNIT U007807 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:477-477 >>>
 # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
 <<< END U007807 >>>
 <<< UNIT U007808 | py-docstring | packages/akari-bot-core/akaribot/core/entrypoints/data.py:36-36 | ctx=DataError >>>
-用户错误（未知表或列、缺必填字段、主键不存在、值无法按列类型转换）。
+用户错误（未知表或列、缺少必填字段、主键不存在、值无法按列类型转换）。
 <<< END U007808 >>>
 <<< UNIT U007809 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/db.py:31-32 >>>
 # 表名只从 manifest 读取，**绝不接受调用方传入**，因为 purge 是破坏性操作，谁拥有哪张表只能由包自己
@@ -1533,13 +1533,13 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 <<< END U007814 >>>
 <<< UNIT U007815 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/db.py:204-205 >>>
 # --json 时把原因也写入 stdout，因为调用方（CLI 的 db_purge）解析的是 stdout，
-# 只写 stderr 则拿不到结构化原因，只能退回“退出码 1”这种无用信息。
+# 只写入 stderr 则无法获取结构化原因，只能退回“退出码 1”这种无用信息。
 <<< END U007815 >>>
 <<< UNIT U007816 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/db.py:213-213 >>>
 # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
 <<< END U007816 >>>
 <<< UNIT U007817 | py-docstring | packages/akari-bot-core/akaribot/core/entrypoints/db.py:16-16 | ctx=PurgeError >>>
-卸载清理不满足前提（包不在发现结果里，或没有可删的表）。
+卸载清理不满足前提（包不在发现结果里，或没有可删除的表）。
 <<< END U007817 >>>
 <<< UNIT U007818 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/docs.py:84-84 >>>
 # 内置模块与核心运行时同属一个包，不按模块包命名。
@@ -1609,7 +1609,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 下划线开头的是框架内部注册（解析器策略、错误处理等），不是用户可加载的模块，列出只会成为噪声。
 <<< END U007839 >>>
 <<< UNIT U007840 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:89-89 >>>
-# 本进程只做一次 RPC，注册为临时 peer 以便收结果，不改任何模块索引，也不写状态表。
+# 本进程只做一次 RPC，注册为临时 peer 以便接收结果，不修改任何模块索引，也不写入状态表。
 <<< END U007840 >>>
 <<< UNIT U007841 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:102-102 >>>
 # 后端与 peer 的装配失败与“连不上”对操作者是同一件事，都意味着实例的 JobQueue 用不了。
@@ -1624,7 +1624,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 与 list 规则一致，下划线开头是框架内部注册，不接受用户加载。
 <<< END U007844 >>>
 <<< UNIT U007845 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:136-136 >>>
-# noqa: BLE001 - 校验只是提前拦截笔误，读不到状态表不应阻断操作
+# noqa: BLE001 - 校验只是提前拦截笔误，无法读取状态表时不应阻断操作
 <<< END U007845 >>>
 <<< UNIT U007846 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:166-166 >>>
 # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
@@ -1636,10 +1636,10 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 运行中的 Server 实例不可达。
 <<< END U007848 >>>
 <<< UNIT U007849 | py-docstring | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:96-96 | ctx=_notify_server.CliPeer >>>
-一次性 RPC 调用方。只发一次请求，不绑定任何远端处理器。
+一次性 RPC 调用方。只发送一次请求，不绑定任何远端处理器。
 <<< END U007849 >>>
 <<< UNIT U007850 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/peers.py:18-18 >>>
-# 导入本身就可能在实例配置缺失时抛错（core 的配置在导入期加载），故一并纳入降级路径。
+# 导入本身就可能在实例配置缺失时抛出异常（core 的配置在导入期加载），故一并纳入降级路径。
 <<< END U007850 >>>
 <<< UNIT U007851 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/peers.py:24-24 >>>
 # noqa: BLE001 - 数据库不可用属可降级状态
@@ -1683,7 +1683,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 连不上 JobQueue 与实例未运行对操作者是同一件事
 <<< END U007863 >>>
 <<< UNIT U007864 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/rpc.py:161-161 >>>
-# 超时表示“结果未知”，远端可能已经改了状态，调用方不得当作未发生。
+# 超时表示“结果未知”，远端可能已经修改了状态，调用方不得当作未发生。
 <<< END U007864 >>>
 <<< UNIT U007865 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/rpc.py:165-165 >>>
 # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
@@ -1701,5 +1701,5 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 结果 JSON 载荷。
 <<< END U007869 >>>
 <<< UNIT U007870 | py-docstring | packages/akari-bot-core/akaribot/core/entrypoints/rpc.py:119-119 | ctx=_deliver.CliPeer >>>
-一次性 RPC 调用方。只发一次请求，不绑定任何远端处理器。
+一次性 RPC 调用方。只发送一次请求，不绑定任何远端处理器。
 <<< END U007870 >>>

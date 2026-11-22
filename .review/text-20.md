@@ -161,7 +161,7 @@
 填写标题时，命令查询对应页面。参数含模板或解析函数表达式时，命令先把参数当作魔术字求值，再用求值结果查询。
 <<< END U013018 >>>
 <<< UNIT U013019 | md-paragraph | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/docs/index.md:28-28 | ctx=`wiki` >>>
-已设置自定义前缀时，命令会在标题前面加上这个前缀。标题带已配置的 InterWiki 前缀时，命令改查对应的 Wiki。
+已设置自定义前缀时，命令会在标题前面加上这个前缀。标题带已配置的 InterWiki 前缀时，命令改为查询对应的 Wiki。
 <<< END U013019 >>>
 <<< UNIT U013020 | md-paragraph | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/docs/index.md:30-30 | ctx=`wiki` >>>
 平台支持按钮时，页面预览默认使用 button 模式。回复内容是摘要与链接，并附带“渲染预览图”和“╳”两个按钮。
@@ -1950,11 +1950,11 @@ Wiki 讨论页列表的消息渲染工具。
 <<< UNIT U013491 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:42-44 >>>
 # 语义属性链接 [[属性：值：]]，在页面上渲染为其值。值中可含嵌套的内外链接，故须放行一层。
 # 须在解析前以文本替换处理，因为将 WikiLink 的 string 改写成非链接文本会令该对象失效，
-# 其后 plain_text() 遍历到它便会抛 AttributeError
+# 其后 plain_text() 遍历到它便会抛出 AttributeError
 <<< END U013491 >>>
 <<< UNIT U013492 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:47-48 >>>
 # 未被 wikitextparser 识别的扩展标签，如 Translate 扩展的 <translate>。
-# 这类标签包裹的是正文本身，只去标签、留内容
+# 这类标签包裹的是正文本身，只去除标签、保留内容
 <<< END U013492 >>>
 <<< UNIT U013493 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:51-52 >>>
 # 正文中不应残留的 Wikitext 结构标记。构造一旦不成对或不被识别，这些标记便会原样
@@ -2021,7 +2021,7 @@ Wiki 讨论页列表的消息渲染工具。
 # 取出文本开头的一个完整句子。
 <<< END U013510 >>>
 <<< UNIT U013511 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:203-203 >>>
-# 括号未闭合时回退到首个匹配。此处若直接取下标，空列表会抛 IndexError 并导致整段摘要缺失
+# 括号未闭合时回退到首个匹配。此处若直接取下标，空列表会抛出 IndexError 并导致整段摘要缺失
 <<< END U013511 >>>
 <<< UNIT U013512 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:221-222 >>>
 # 第二句须与首句同处一段。句末标点的匹配跨换行，不加此限制会把
@@ -2115,7 +2115,7 @@ Wikitext 离线摘要提取。
 # 保活需逐个查询订阅的 wiki，耗时远超 hook 默认执行预算。单个 wiki 的失败在循环内就地转为会话消息。
 <<< END U013534 >>>
 <<< UNIT U013535 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/wikilog.py:403-403 >>>
-# 保活结果与目标会话无关，每个 wiki 只查一次，再交由组内推送按通道分发
+# 保活结果与目标会话无关，每个 wiki 只查询一次，再交由组内推送按通道分发
 <<< END U013535 >>>
 <<< UNIT U013536 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/wikilog.py:529-531 >>>
 # 在承担推送的会话上算出并逐条发出该组的日志。
@@ -2168,7 +2168,7 @@ wiki: 页面摘要按平台 Markdown 能力渲染
 # 用户回复了无法识别的文本，等待链路按取消处理，不再发起新查询。
 <<< END U013551 >>>
 <<< UNIT U013552 | py-comment | packages/modules/akari-bot-module-wiki/tests/test_wiki_message_buttons.py:129-129 >>>
-# 候选项末行的关闭按钮复用渲染按钮的删除文案，按会话语言取。
+# 候选项末行的关闭按钮复用渲染按钮的删除文案，按会话语言获取。
 <<< END U013552 >>>
 <<< UNIT U013553 | py-docstring | packages/modules/akari-bot-module-wiki/tests/test_wiki_message_buttons.py:1-1 | ctx=<module> >>>
 wiki 结果消息的交互与样式设置测试。
@@ -2696,7 +2696,7 @@ chemical_code stop 测试 - 停止未开始的游戏
 # 第二次不清空持久化列表，仅重置队列，验证去重生效。
 <<< END U013712 >>>
 <<< UNIT U013713 | py-comment | tests/integration/test_scheduled_tasks.py:125-125 >>>
-# 目录需保留（后续写缓存依赖它存在），但其中的残留文件应被清除。
+# 目录需保留（后续写入缓存依赖它存在），但其中的残留文件应被清除。
 <<< END U013713 >>>
 <<< UNIT U013714 | py-docstring | tests/integration/test_scheduled_tasks.py:1-1 | ctx=<module> >>>
 定时任务与钩子的集成测试。
@@ -2803,7 +2803,7 @@ BotDaemon 日志过滤测试。
 <<< END U013746 >>>
 <<< UNIT U013747 | py-comment | tests/unit/test_i18n_cmd_params.py:92-93 >>>
 # 白名单会掩盖真实的遗漏传参，故要求其对应的参数补充代码仍在位——issue_code() 一旦不再构造 ActionText，
-# 此处即失效。逐条报明缘由而不笼统忽略异常——读不到文件若被归类为检查不成立，白名单便形同虚设。
+# 此处即失效。逐条报明缘由而不笼统忽略异常——无法读取文件若被归类为检查不成立，白名单便形同虚设。
 <<< END U013747 >>>
 <<< UNIT U013748 | py-comment | tests/unit/test_i18n_cmd_params.py:103-103 >>>
 # 白名单中的键须确实作为 prompt_key 流向该函数，而非无人问津
@@ -2830,7 +2830,7 @@ i18n: ${cmd} 参数传递一致性测试
 # 显式给出的两段优先于推导
 <<< END U013755 >>>
 <<< UNIT U013756 | py-comment | tests/unit/test_multi_instance.py:172-172 >>>
-# 平台进程取不到平台名（server、测试桩）时回退到 client_name
+# 平台进程无法获取平台名（server、测试桩）时回退到 client_name
 <<< END U013756 >>>
 <<< UNIT U013757 | py-comment | tests/unit/test_multi_instance.py:199-199 >>>
 # 实例表不存在时回退到基础表。enable 例外，不回退
@@ -2912,7 +2912,7 @@ i18n: ${cmd} 参数传递一致性测试
 tools.verify_registry_release: 发布索引核对测试
 <<< END U013782 >>>
 <<< UNIT U013783 | py-comment | tools/build_local_index.py:29-29 >>>
-# Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+# Windows 控制台默认 cp1252，中文输出会抛出 UnicodeEncodeError。
 <<< END U013783 >>>
 <<< UNIT U013784 | py-inline-comment | tools/build_local_index.py:119-119 >>>
 # noqa: A002 - 覆盖父类签名
@@ -2963,16 +2963,16 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 把清单里的序列字段规整为字符串列表，单值按一元列表处理。
 <<< END U013799 >>>
 <<< UNIT U013800 | py-docstring | tools/build_registry.py:319-319 | ctx=manifest_sequences >>>
-读清单里可选的序列字段，缺项为空列表。
+读取清单里可选的序列字段，缺失时为空列表。
 <<< END U013800 >>>
 <<< UNIT U013801 | py-docstring | tools/build_registry.py:348-348 | ctx=build_entry >>>
 由包元数据构造一个 registry 条目，键序固定以便逐字节比较。
 <<< END U013801 >>>
 <<< UNIT U013802 | py-docstring | tools/build_registry.py:374-374 | ctx=core_api_version >>>
-从 core 源码静态取 CORE_API_VERSION，作为 ``api_version`` 的唯一来源。
+从 core 源码静态读取 CORE_API_VERSION，作为 ``api_version`` 的唯一来源。
 <<< END U013802 >>>
 <<< UNIT U013803 | py-docstring | tools/build_registry.py:390-390 | ctx=resolve_generated_at >>>
-取内容时间戳，按显式参数、SOURCE_DATE_EPOCH、HEAD 提交时间依次回退。
+获取内容时间戳，按显式参数、SOURCE_DATE_EPOCH、HEAD 提交时间依次回退。
 <<< END U013803 >>>
 <<< UNIT U013804 | py-docstring | tools/build_registry.py:415-415 | ctx=build_registry >>>
 组装完整 registry 结构。
@@ -2993,7 +2993,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 序列化为稳定文本，固定缩进、不转义非 ASCII、末尾换行。
 <<< END U013809 >>>
 <<< UNIT U013810 | py-docstring | tools/build_registry.py:551-551 | ctx=write_output >>>
-原子写文件，避免 CI 中途失败留下半份 registry.json。
+原子写入文件，避免 CI 中途失败留下半份 registry.json。
 <<< END U013810 >>>
 <<< UNIT U013811 | py-docstring | tools/build_registry.py:594-594 | ctx=describe >>>
 生成一行运行摘要，供 stderr 使用。
@@ -3029,10 +3029,10 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 把引用解析为提交 SHA。解析不了返回 None。
 <<< END U013821 >>>
 <<< UNIT U013822 | py-docstring | tools/changed_packages.py:149-149 | ctx=resolve_base >>>
-取 base 与 head 的共同祖先。取不到时回退到 base 本身。
+获取 base 与 head 的共同祖先。无法获取时回退到 base 本身。
 <<< END U013822 >>>
 <<< UNIT U013823 | py-docstring | tools/changed_packages.py:158-158 | ctx=changed_files >>>
-取 `git diff --name-only base..head` 的改动路径，仓库根目录相对 POSIX 形式。
+获取 `git diff --name-only base..head` 的改动路径，仓库根目录相对 POSIX 形式。
 <<< END U013823 >>>
 <<< UNIT U013824 | py-docstring | tools/changed_packages.py:163-163 | ctx=package_directory >>>
 从 packages/ 下的路径推断包目录，用于已不在 workspace 的包（删除、改名）。
@@ -3075,7 +3075,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 读取 TOML 文件。
 <<< END U013836 >>>
 <<< UNIT U013837 | py-docstring | tools/check_versions.py:96-96 | ctx=discover_members >>>
-按根 pyproject 的 members glob 展开成员，读各成员自己的 [project] 名字与版本。
+按根 pyproject 的 members glob 展开成员，读取各成员自己的 [project] 名字与版本。
 <<< END U013837 >>>
 <<< UNIT U013838 | py-docstring | tools/check_versions.py:137-137 | ctx=resolve_commit >>>
 把引用解析为提交 SHA。解析不了返回 None。
@@ -3100,7 +3100,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # 发现阶段需要读取实例配置（真实用户也先运行 akaribot init），故探针自带一份最小配置。
 <<< END U013844 >>>
 <<< UNIT U013845 | py-comment | tools/clean_room_check.py:66-66 >>>
-# Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+# Windows 控制台默认 cp1252，中文输出会抛出 UnicodeEncodeError。
 <<< END U013845 >>>
 <<< UNIT U013846 | py-comment | tools/clean_room_check.py:72-72 >>>
 # 检查脚本在新环境里执行，输出 JSON 供本工具判定。
@@ -3133,7 +3133,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # CLI 组合只安装 CLI wheel，与发现阶段的探针无关，单独走一条检查路径。
 <<< END U013855 >>>
 <<< UNIT U013856 | py-inline-comment | tools/clean_room_check.py:686-686 >>>
-# (包列表， extras)
+# (包列表, extras)
 <<< END U013856 >>>
 <<< UNIT U013857 | py-comment | tools/codemod_core_api.py:31-31 >>>
 # 适配器另有自己的公开接口，其中的符号只供适配器使用，模块包导入它会被 B3 拦截。
@@ -3179,7 +3179,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # 模块路径与逐级向上的包路径都算真实路径。
 <<< END U013870 >>>
 <<< UNIT U013871 | py-inline-comment | tools/codemod_namespace.py:170-170 >>>
-# noqa: BLE001 - 片段仅用于报告，取不到源码时回退到占位文本
+# noqa: BLE001 - 片段仅用于报告，无法获取源码时回退到占位文本
 <<< END U013871 >>>
 <<< UNIT U013872 | py-comment | tools/codemod_namespace.py:226-226 >>>
 # 位置元数据以原始节点为键，遍历产出的新节点不在其中。
@@ -3203,7 +3203,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 遍历 packages/**/akaribot，反推出旧点分模块路径全集。
 <<< END U013878 >>>
 <<< UNIT U013879 | py-docstring | tools/codemod_namespace.py:134-134 | ctx=longest_known_prefix >>>
-取 text 中命中白名单的最长点分前缀，无命中返回 None。
+获取 text 中命中白名单的最长点分前缀，无命中返回 None。
 <<< END U013879 >>>
 <<< UNIT U013880 | py-docstring | tools/codemod_namespace.py:178-178 | ctx=FileOutcome >>>
 单文件改写结果，字段直接进入报告与汇总。
@@ -3236,7 +3236,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 枚举待处理的 Python 文件。
 <<< END U013889 >>>
 <<< UNIT U013890 | py-docstring | tools/codemod_private_docstrings.py:84-84 | ctx=docstring_node >>>
-取该定义的首条语句——若它是 docstring 则返回，否则返回 ``None``。
+获取该定义的首条语句——若它是 docstring 则返回，否则返回 ``None``。
 <<< END U013890 >>>
 <<< UNIT U013891 | py-docstring | tools/codemod_private_docstrings.py:158-158 | ctx=main >>>
 入口。返回进程退出码。
@@ -3312,7 +3312,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 一次检查共用的整个仓库索引。
 <<< END U013913 >>>
 <<< UNIT U013914 | py-docstring | tools/lint_boundaries.py:217-217 | ctx=Workspace.dist_for >>>
-取包含该文件的分发。嵌套时取最长匹配的分发目录。
+获取包含该文件的分发。嵌套时选取最长匹配的分发目录。
 <<< END U013914 >>>
 <<< UNIT U013915 | py-docstring | tools/lint_boundaries.py:226-226 | ctx=iter_source_files >>>
 枚举需要检查的 Python 文件，按路径排序。
@@ -3327,7 +3327,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 读取各分发的名字、依赖、提供的模块段与适配器 entry point 等元数据。
 <<< END U013918 >>>
 <<< UNIT U013919 | py-docstring | tools/lint_boundaries.py:331-331 | ctx=extract_all_names >>>
-取模块级 `__all__ = [...]` 中的字符串字面量。`*_base.__all__` 这类星号元素由调用方并入。
+获取模块级 `__all__ = [...]` 中的字符串字面量。`*_base.__all__` 这类星号元素由调用方并入。
 <<< END U013919 >>>
 <<< UNIT U013920 | py-docstring | tools/lint_boundaries.py:358-358 | ctx=load_core_api_names >>>
 获取 akaribot.core.api 承诺的导出符号集合，通过 AST 解析 __all__ 字面量，不导入 core。
@@ -3339,7 +3339,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 点分路径是否等于 prefix 或位于其下。
 <<< END U013922 >>>
 <<< UNIT U013923 | py-docstring | tools/lint_boundaries.py:471-471 | ctx=module_owner >>>
-取 akaribot.modules.<x> 中的 <x>。不在该前缀下时返回 None。
+获取 akaribot.modules.<x> 中的 <x>。不在该前缀下时返回 None。
 <<< END U013923 >>>
 <<< UNIT U013924 | py-docstring | tools/lint_boundaries.py:478-478 | ctx=b1_level >>>
 B1 的级别对官方模块包升级为 error，其他（第三方在自己的仓库里复用本工具）保留 warn。
@@ -3363,7 +3363,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 未跟踪的新文件整文件计入检查范围。
 <<< END U013930 >>>
 <<< UNIT U013931 | py-docstring | tools/lint_boundaries.py:763-763 | ctx=level_label >>>
-取规则的级别标签，为静态级别或该规则命中里实际出现过的级别（B1 两种都可能）。
+获取规则的级别标签，为静态级别或该规则命中里实际出现过的级别（B1 两种都可能）。
 <<< END U013931 >>>
 <<< UNIT U013932 | py-docstring | tools/lint_boundaries.py:769-769 | ctx=generate_baseline >>>
 把当前全部违规写入基准文件。
@@ -3423,7 +3423,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 # docstring 里的示例代码整行都不是散文，不按中文排版检查。
 <<< END U013948 >>>
 <<< UNIT U013949 | py-comment | tools/lint_comments.py:102-102 >>>
-# 规则 10 检查中英文之间缺空格。数字与拉丁字母都算“西文”，但行内代码、URL、占位符先剔除。
+# 规则 10 检查中英文之间缺少空格。数字与拉丁字母都算“西文”，但行内代码、URL、占位符先剔除。
 <<< END U013949 >>>
 <<< UNIT U013950 | py-comment | tools/lint_comments.py:104-104 >>>
 # 整行不含中文时属外部引用文本（英文规范原文、英文 docstring），中文排版与长度规则都不适用。
@@ -3492,10 +3492,10 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 按根 pyproject 的 members glob 展开成员清单，排除 exclude。
 <<< END U013971 >>>
 <<< UNIT U013972 | py-docstring | tools/lint_versions.py:159-159 | ctx=discover_members >>>
-读全部成员的 [project] 名字与版本，返回规范化名到成员的映射。
+读取全部成员的 [project] 名字与版本，返回规范化名到成员的映射。
 <<< END U013972 >>>
 <<< UNIT U013973 | py-docstring | tools/lint_versions.py:195-195 | ctx=written_specifier >>>
-取条目里约束部分的书写形式，环境标记与 direct reference 不算约束。
+获取条目里约束部分的书写形式，环境标记与 direct reference 不算约束。
 <<< END U013973 >>>
 <<< UNIT U013974 | py-docstring | tools/lint_versions.py:222-222 | ctx=suggest_constraint >>>
 给出与成员实际版本相容的区间写法，下界取实际版本，上界取下一个主版本。
@@ -3510,10 +3510,10 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 解析已构建的最高稳定产品镜像及其确切摘要。
 <<< END U013977 >>>
 <<< UNIT U013978 | py-comment | tools/publish_registry.py:42-42 >>>
-# 索引根地址 + 包名 + 可选版本。省略版本时取该包的最新版本。
+# 索引根地址 + 包名 + 可选版本。省略版本时使用该包的最新版本。
 <<< END U013978 >>>
 <<< UNIT U013979 | py-comment | tools/publish_registry.py:89-89 >>>
-# 优先取响应头 Retry-After，缺失时用指数退避（30s 起，上限 300s）。
+# 优先读取响应头 Retry-After，缺失时用指数退避（30s 起，上限 300s）。
 <<< END U013979 >>>
 <<< UNIT U013980 | py-comment | tools/publish_registry.py:147-147 >>>
 # 一次构建的全部产物 → 发行清单。后续上传、下载核验与安装都对照它。
@@ -3541,7 +3541,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 入口。返回进程退出码，0 表示全部模板的渲染产物语法正确。
 <<< END U013987 >>>
 <<< UNIT U013988 | py-comment | tools/testpypi_publish.py:31-31 >>>
-# Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+# Windows 控制台默认 cp1252，中文输出会抛出 UnicodeEncodeError。
 <<< END U013988 >>>
 <<< UNIT U013989 | py-inline-comment | tools/testpypi_publish.py:111-111 >>>
 # noqa: S310 - 固定 https 索引地址

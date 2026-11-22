@@ -99,7 +99,7 @@
 # 下一步提示。
 <<< END U001506 >>>
 <<< UNIT U001507 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/test.py:57-58 >>>
-# 模式必须经环境变量传递，因为 runner 在导入期读 CI / COVERAGE，argv 里的开关到得太晚（这正是
+# 模式必须经环境变量传递，因为 runner 在导入期读取 CI / COVERAGE，argv 里的开关生效过晚（这正是
 # “--ci 仍是非 CI 模式”的原因）。argv 里也留一份，让两条入口语义一致。
 <<< END U001507 >>>
 <<< UNIT U001508 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/test.py:1-1 | ctx=<module> >>>
@@ -196,7 +196,7 @@
 启动 AkariBot 交互界面。
 <<< END U001538 >>>
 <<< UNIT U001539 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/venv.py:30-30 >>>
-# 裸仓库地址按这些主机名与 .git 后缀判定为 git 直引用。其余 http(s) 地址按普通直引用交给 uv。
+# 纯仓库地址按这些主机名与 .git 后缀判定为 git 直接引用。其余 http(s) 地址按普通直接引用交给 uv。
 <<< END U001539 >>>
 <<< UNIT U001540 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/venv.py:69-69 >>>
 # 界面按这份清单管理环境，包括已安装的包、属于 AkariBot 的包以及记在实例清单里的项。
@@ -220,7 +220,7 @@
 # 为直接引用补全包名，安装完成后按 ``direct_url`` 反向查找对应的包。
 <<< END U001546 >>>
 <<< UNIT U001547 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/venv.py:195-195 >>>
-# 把已安装的依赖声明规范化为清单里的记录，能定名就定名，能定版就定版。
+# 把已安装的依赖声明规范化为清单里的记录，尽可能确定包名与版本号。
 <<< END U001547 >>>
 <<< UNIT U001548 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/venv.py:1-1 | ctx=<module> >>>
 实例 venv 托管
@@ -238,7 +238,7 @@
 切换为 CLI 托管 venv，先安装并验证通过，最后才卸载源环境的包。
 <<< END U001552 >>>
 <<< UNIT U001553 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/venv.py:321-321 | ctx=release >>>
-放弃托管，把实例 venv 的包迁回当前环境。
+放弃托管，把实例 venv 的包迁移回当前环境。
 <<< END U001553 >>>
 <<< UNIT U001554 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/venv.py:345-345 | ctx=recreate >>>
 重建实例 venv（Python 升级后修复）。新环境安装并验证通过后才替换旧目录。
@@ -259,7 +259,7 @@
 需要实例的命令接受 `--instance` / `-I`，查找顺序依次为显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上查找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根目录。
 <<< END U001559 >>>
 <<< UNIT U001560 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:16-16 | ctx=命令参考 >>>
-`--json` 让脚本读取结果。多数命令输出一行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 只放结果或事件，进度与警告走 stderr。
+`--json` 让脚本读取结果。多数命令输出一行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 只输出结果或事件，进度与警告输出到 stderr。
 <<< END U001560 >>>
 <<< UNIT U001561 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:18-18 | ctx=命令参考 >>>
 会删除内容的写操作还接受 `--yes` / `-y`，用来跳过确认。只打印操作计划的命令使用 `--dry-run`，不会写文件，也不会调用安装器。
@@ -285,10 +285,10 @@
 - 后台控制台输出写入 `logs/RunConsole_<日期>.log`，进程号记在 `.bot.lock`。`--status --json` 输出运行状态、锁文件和控制台日志路径。
 <<< END U001565 >>>
 <<< UNIT U001566 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:46-46 | ctx=service >>>
-把 CLI 装成系统常驻服务，由服务按注册表里的自启与崩溃重启设置守护实例。
+将 CLI 安装为系统常驻服务，由服务按注册表里的自启与崩溃重启设置守护实例。
 <<< END U001566 >>>
 <<< UNIT U001567 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:48-51 | ctx=service >>>
-- `install [--dry-run] [--force]`：写入并注册服务单元。macOS 写 launchd 单元，Linux 写 systemd 用户单元。Windows 没有受支持的后端。
+- `install [--dry-run] [--force]`：写入并注册服务单元。macOS 写入 launchd 单元，Linux 写入 systemd 用户单元。Windows 没有受支持的后端。
 - `uninstall`：注销服务并删除单元文件。
 - `status [--json]`：查看是否安装、是否已注册。
 - `supervise [--once] [--interval 5] [--max-restarts 5] [--backoff 2]`：守护循环本身，由服务单元调用。默认每 5 秒检查一次，单个实例最多连续重启 5 次，重启间隔从 2 秒起逐次翻倍。`--once` 只运行一轮。
@@ -297,7 +297,7 @@
 服务恢复实例时同时检查注册表里的自启策略和上次运行状态。只开启崩溃重启、未开启自启的实例不会在开机时被自动启动。
 <<< END U001568 >>>
 <<< UNIT U001569 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:57-57 | ctx=test >>>
-在实例环境里运行 `akaribot.testing`，缺测试包时提示安装 `akari-bot-testing`。
+在实例环境里运行 `akaribot.testing`，缺少测试包时提示安装 `akari-bot-testing`。
 <<< END U001569 >>>
 <<< UNIT U001570 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:59-62 | ctx=test >>>
 - `path`：测试文件或目录，省略时运行全部默认根目录。
@@ -306,7 +306,7 @@
 - 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺少该包时命令会给出安装提示。
 <<< END U001570 >>>
 <<< UNIT U001571 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:64-64 | ctx=test >>>
-测试由 `tester.py` 启动，和实例里的模块共用配置与临时数据目录。运行单个文件时传包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
+测试由 `tester.py` 启动，和实例里的模块共用配置与临时数据目录。运行单个文件时传入包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
 <<< END U001571 >>>
 <<< UNIT U001572 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:68-68 | ctx=module >>>
 模块与适配器的安装、卸载、更新与全局加载。
@@ -330,7 +330,7 @@
 - `load <名>` / `unload <名>`：只改全局加载状态，不改安装状态和场景启用状态。
 <<< END U001575 >>>
 <<< UNIT U001576 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:85-85 | ctx=module >>>
-`--json` 的 `update` 只在 stdout 输出一行结果，进度与警告走 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
+`--json` 的 `update` 只在 stdout 输出一行结果，进度与警告输出到 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
 <<< END U001576 >>>
 <<< UNIT U001577 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:89-89 | ctx=config >>>
 读取、写入与编辑配置。写入由 core 以原子方式完成，值按模板声明的类型转换。
@@ -349,7 +349,7 @@
 - `tables [--json]`：列出数据表。
 - `rows <表> [--limit 20] [--offset 0] [-f <条件>] [-q <搜索>][--order-by <列[:asc|desc]>] [--no-count]`：分页读取。每页最多 200 条。筛选可以重复，多个条件之间是 AND 关系。`-q` 在所有文本列上做包含匹配，不区分大小写。
 - `-f` 的条件形如 `<列><运算符><值>`，支持 `=`、`!=`、`>`、`>=`、`<`、`<=`、`~`（包含）、`!~`（不包含）、`^`（前缀）、`$`（后缀）。`null` 表示空值。
-- `--no-count` 不统计总条数，翻页时省掉全表扫描。输出里不带总数。
+- `--no-count` 不统计总条数，翻页时避免全表扫描。输出里不带总数。
 - `set <表> --key <主键> --set <列>=<值>…`：在一次 UPDATE 中写入多列。
 - `insert <表> --set <列>=<值>…`、`delete <表> --key <主键> [--yes]`。
 <<< END U001580 >>>
@@ -369,8 +369,8 @@
 <<< END U001583 >>>
 <<< UNIT U001584 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:123-125 | ctx=adapter >>>
 - `list [--json]`：按平台分组列出适配器实例。JSON 里的 `installed_platforms` 还会列出 core 清单中全部已安装的平台，包括还没有实例配置的平台。
-- `instance add <平台> [实例 ID]`：生成 `config/bot_<平台>[-<实例 ID>].toml`，`enable` 显式写 `false`，填完平台要求的账号信息后再开启。
-- `instance remove <平台> [实例 ID] [--dry-run]`：只删配置文件，场景与用户数据保留。
+- `instance add <平台> [实例 ID]`：生成 `config/bot_<平台>[-<实例 ID>].toml`，`enable` 显式设为 `false`，填写完平台要求的账号信息后再开启。
+- `instance remove <平台> [实例 ID] [--dry-run]`：只删除配置文件，场景与用户数据保留。
 <<< END U001584 >>>
 <<< UNIT U001585 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:127-127 | ctx=adapter >>>
 实例 ID 只能使用小写字母、数字和下划线，长度为 1–24 个字符。省略表示默认实例。它是 `target_id` 前缀的一部分，一旦使用不可更改。命令不提供改名。改名要迁移多张表和消息前缀。
@@ -391,7 +391,7 @@
 <<< UNIT U001589 | md-list | packages/akari-bot-cli/akaribot/cli/docs/commands.md:145-147 | ctx=new >>>
 - `new module <名>`：生成模块包，支持 `--dir`、`--alias`、`--desc`、`--author`、`--license`、`--platform`、`--component`、`--command`、`--config`、`--database`、`--assets`、`--data-dir`、`--tests`、`--non-interactive`、`--add`、`--force`。
 - `new adapter <名>`：生成适配器包，支持 `--platform-name`、`--feature`、`--field`、`--credential-field` 等同类选项。生成后默认执行 `akaribot module add -e .`。
-- 生成目录下的包名带 `akari-bot-module-` / `akari-bot-adapter-` 前缀。`--add` 默认开启。只想生成文件时传 `--no-add`。
+- 生成目录下的包名带 `akari-bot-module-` / `akari-bot-adapter-` 前缀。`--add` 默认开启。只想生成文件时传入 `--no-add`。
 <<< END U001589 >>>
 <<< UNIT U001590 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:151-151 | ctx=docs >>>
 收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根目录的 `docs.toml`。Node.js 与 VitePress 版本由主题清单声明。
@@ -443,13 +443,13 @@
 ### 配置与检查
 <<< END U001602 >>>
 <<< UNIT U001603 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:216-216 | ctx=配置与检查 >>>
-`config set` 写入后是否立即生效取决于 core。需要重启的项会在命令输出里说明。`doctor` 只看端口、重复登录信息和孤立配置，不替代完整运行检查。
+`config set` 写入后是否立即生效取决于 core。需要重启的项会在命令输出里说明。`doctor` 只检查端口、重复登录信息和孤立配置，不替代完整运行检查。
 <<< END U001603 >>>
 <<< UNIT U001604 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/commands.md:218-218 | ctx=文档站点 >>>
 ### 文档站点
 <<< END U001604 >>>
 <<< UNIT U001605 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:226-226 | ctx=文档站点 >>>
-`serve` 会先构建再启动本机预览。只改文档时用 `docs dev`，它监听文件变化并在另一个端口启动开发服务器。
+`serve` 会先构建再启动本机预览。只修改文档时用 `docs dev`，它监听文件变化并在另一个端口启动开发服务器。
 <<< END U001605 >>>
 <<< UNIT U001606 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/commands.md:228-228 | ctx=环境变量 >>>
 ## 环境变量
@@ -521,7 +521,7 @@ TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`d
 模块文档在侧栏按 `docs/config/global/docs.global.toml` 的 `category` 分组，条目名称取模块名。
 <<< END U001622 >>>
 <<< UNIT U001623 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:41-41 | ctx=命令 >>>
-包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放 `docs/config/docs.toml`，按同名键覆盖默认值。
+包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放置 `docs/config/docs.toml`，按同名键覆盖默认值。
 <<< END U001623 >>>
 <<< UNIT U001624 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:43-43 | ctx=命令 >>>
 两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退到旧的 `docs/doc.toml`，兼容尚未迁移的包。
@@ -621,7 +621,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `cache/docs/site` | 默认站点输出，可用 `build.out_dir` 改写 |
 | `cache/docs/dev` | 开发模式使用的 VitePress 源目录，其中 `node_modules` 由同步保留 |
 | `cache/docs/.dev-staging` | 开发模式同步用的暂存目录 |
-| `cache/docs/.dev.lock` | 开发模式运行锁，记录进程、端口与基路径 |
+| `cache/docs/.dev.lock` | 开发模式运行锁，记录进程、端口与基础路径 |
 | `.docs/state.json` | 构建指纹、包清单与最近 50 条部署记录 |
 <<< END U001642 >>>
 <<< UNIT U001643 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:222-222 | ctx=生成物 >>>
@@ -651,7 +651,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 ## 构建与缓存
 <<< END U001648 >>>
 <<< UNIT U001649 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:242-242 | ctx=构建与缓存 >>>
-构建指纹覆盖参与包的版本与标题、每个文档文件的内容、主题清单与主题目录的文件内容、VitePress 版本、站点标题、语言与基路径。
+构建指纹覆盖参与包的版本与标题、每个文档文件的内容、主题清单与主题目录的文件内容、VitePress 版本、站点标题、语言与基础路径。
 <<< END U001649 >>>
 <<< UNIT U001650 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:244-244 | ctx=构建与缓存 >>>
 主题摘要按文件内容计算，包含 `package.json` 与 `package-lock.json`。更新 submodule 或替换主题文件后，构建指纹一定变化。
@@ -724,7 +724,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 ## 部署
 <<< END U001669 >>>
 <<< UNIT U001670 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:294-294 | ctx=部署 >>>
-`deploy` 的目标为 Vercel 与 S3。部署所需的密钥只从环境变量读取，不写入 `docs.toml`，也不进入 `.docs/state.json`。配置文件中只放仓库、项目、桶与路径这类非敏感信息。
+`deploy` 的目标为 Vercel 与 S3。部署所需的密钥只从环境变量读取，不写入 `docs.toml`，也不进入 `.docs/state.json`。配置文件中只保留仓库、项目、桶与路径这类非敏感信息。
 <<< END U001670 >>>
 <<< UNIT U001671 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:296-296 | ctx=部署 >>>
 每次部署向状态文件追加一条记录，包含目标、结果与时间。
@@ -735,7 +735,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 <<< END U001672 >>>
 <<< UNIT U001673 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:301-302 | ctx=部署 >>>
 构建在临时实例 `.ci-docs` 里进行，
-基路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
+基础路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
 <<< END U001673 >>>
 <<< UNIT U001674 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:304-304 | ctx=部署 >>>
 仓库在 Settings → Pages 的 Source 须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
@@ -831,7 +831,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 ## 安装
 <<< END U001698 >>>
 <<< UNIT U001699 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/index.md:9-9 | ctx=安装 >>>
-先把 CLI 装成独立工具，再确认版本。
+先将 CLI 安装为独立工具，再确认版本。
 <<< END U001699 >>>
 <<< UNIT U001700 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/index.md:16-16 | ctx=安装 >>>
 运行需要仓库 `pyproject.toml` 声明的 Python 版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 安装到实例自己的 venv。
@@ -876,7 +876,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 <<< UNIT U001710 | md-table | packages/akari-bot-cli/akaribot/cli/docs/index.md:46-63 | ctx=命令总览 >>>
 | 子命令 | 用途 |
 | --- | --- |
-| `init` | 创建实例、写元数据、安装 core 与适配器 |
+| `init` | 创建实例、写入元数据、安装 core 与适配器 |
 | `run` | 前台或后台启动、停止、重启、查看状态 |
 | `service` | 安装常驻服务并守护本机实例 |
 | `test` | 在实例环境里运行自研测试框架 |
@@ -885,7 +885,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `db` | 浏览数据库表与数据项，按主键写入 |
 | `instance` | 本机实例列表、默认实例与服务策略 |
 | `adapter` | 查看、添加和删除适配器实例 |
-| `venv` | 管理实例 venv：接管、交还或重建 |
+| `venv` | 管理实例 venv（接管、交还或重建） |
 | `doctor` | 检查端口冲突、重复的登录信息，以及没有对应适配器的配置 |
 | `docs` | 汇总已安装包的文档，构建、预览与部署 VitePress 站点 |
 | `new` | 生成模块包或适配器包的脚手架 |
@@ -906,7 +906,7 @@ CLI 进程不导入 core。需要 core 参与的读写，一律交给实例的�
 CLI 向子进程传入 `AKARI_INSTANCE_DIR` 与 `AKARI_CONFIG_PATH` 两个环境变量，标准输出与退出码由命令层解析。
 <<< END U001714 >>>
 <<< UNIT U001715 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/index.md:77-77 | ctx=与 core 的子进程边界 >>>
-读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读文件。
+读取目录、锁文件与注册表这类本机状态时，CLI 可以直接读取文件。
 <<< END U001715 >>>
 <<< UNIT U001716 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/index.md:79-79 | ctx=与 core 的子进程边界 >>>
 涉及配置结构、模块清单、数据库或环境检查的判断，则交给子进程完成。
@@ -1015,11 +1015,11 @@ CLI 通过 core 的子进程入口读写实例。实例可以单独升级，CLI 
 <<< END U001747 >>>
 <<< UNIT U001748 | md-list | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:76-78 | ctx=填写核心配置 >>>
 - `base_superuser`：你的发送者 ID。默认值来自上游维护者，自建实例要换成自己的账号，或者清空。
-- `db_path`：默认 SQLite 够用，暂时不用改。
+- `db_path`：默认 SQLite 够用，通常无需修改。
 - `proxy`、`ffmpeg_path` 等：没有对应环境时留空。
 <<< END U001748 >>>
 <<< UNIT U001749 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:80-80 | ctx=填写核心配置 >>>
-`secret` 表放令牌和密钥。表单会把待填项排在前面，`Enter` 进入下一项，`Ctrl+S` 保存。保存前，界面会提示还没有写入的占位符。
+`secret` 表存放令牌和密钥。表单会把待填项排在前面，`Enter` 进入下一项，`Ctrl+S` 保存。保存前，界面会提示还没有写入的占位符。
 <<< END U001749 >>>
 <<< UNIT U001750 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:82-82 | ctx=填写核心配置 >>>
 不想用表单时，按 `t` 切换到原始文本，或按 `o` 用外部编辑器打开。保存后如果提示重新加载，按页面提示操作。
@@ -1033,9 +1033,9 @@ CLI 通过 core 的子进程入口读写实例。实例可以单独升级，CLI 
 <<< UNIT U001753 | md-list | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:88-92 | ctx=创建适配器实例 >>>
 1. 按 `n` 新建实例。
 2. 选择 Telegram。
-3. 填一个实例 ID，例如 `main`。这个字段必填。
-4. 在配置表单里填 Bot Token。
-5. 把 `enable` 改成开启，按 `Ctrl+S` 保存。
+3. 填写一个实例 ID，例如 `main`。这个字段必填。
+4. 在配置表单里填写 Bot Token。
+5. 将 `enable` 设为开启，按 `Ctrl+S` 保存。
 <<< END U001753 >>>
 <<< UNIT U001754 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:94-94 | ctx=创建适配器实例 >>>
 实例 ID 只能使用小写字母、数字和下划线，长度 1 到 24。实例配置写在 `config/bot_telegram-main.toml` 这样的文件里。
@@ -1045,7 +1045,7 @@ CLI 通过 core 的子进程入口读写实例。实例可以单独升级，CLI 
 <<< END U001755 >>>
 <<< UNIT U001756 | md-list | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:98-99 | ctx=创建适配器实例 >>>
 1. 在“适配器”页按 `i`，选择要安装的平台。
-2. 安装完成后按 `n`，按上面的步骤创建实例、填配置、开启。
+2. 安装完成后按 `n`，按上面的步骤创建实例、填写配置、开启。
 <<< END U001756 >>>
 <<< UNIT U001757 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:101-101 | ctx=创建适配器实例 >>>
 平台账号、Token 和回调地址的申请方式见各适配器的文档，入口在“适配器”页或左侧文档分类里。
@@ -1057,7 +1057,7 @@ CLI 通过 core 的子进程入口读写实例。实例可以单独升级，CLI 
 进入“运行”页，按 `s` 启动当前实例。启动前会弹出确认框，确认后界面在后台启动进程，状态会自动刷新。
 <<< END U001759 >>>
 <<< UNIT U001760 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:107-107 | ctx=启动机器人 >>>
-启动后，在群里或私聊里给机器人发一条命令，例如：
+启动后，在群里或私聊里向机器人发送一条命令，例如：
 <<< END U001760 >>>
 <<< UNIT U001761 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:113-113 | ctx=启动机器人 >>>
 能看到回复，说明适配器和机器人已经接通。
@@ -1107,7 +1107,7 @@ Windows 不支持服务安装。需要开机启动时，用任务计划程序或
 在“模块”页按 `r` 刷新，再按 `U` 更新已安装的包，包括 core、适配器和模块。更新后界面会尝试重新加载。需要重启才能生效的改动，到“运行”页按 `Ctrl+R`。
 <<< END U001775 >>>
 <<< UNIT U001776 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:149-149 | ctx=更新 >>>
-更新前先备份配置、数据和数据库。更新失败时先看“日志”页的错误，再判断是否回退。
+更新前先备份配置、数据和数据库。更新失败时先查看“日志”页的错误，再判断是否回退。
 <<< END U001776 >>>
 <<< UNIT U001777 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:151-151 | ctx=备份 >>>
 ### 备份
@@ -1137,7 +1137,7 @@ Windows 不支持服务安装。需要开机启动时，用任务计划程序或
 - “运行”页：确认进程状态，必要时停止后重新启动。
 <<< END U001782 >>>
 <<< UNIT U001783 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:172-172 | ctx=排查问题 >>>
-如果启动时提示配置表不存在，先在“适配器”或“模块”页重新安装对应包，让安装流程补配置，再检查配置目录。
+如果启动时提示配置表不存在，先在“适配器”或“模块”页重新安装对应包，让安装流程补充配置，再检查配置目录。
 <<< END U001783 >>>
 <<< UNIT U001784 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md:174-174 | ctx=TUI 常用键位 >>>
 ## TUI 常用键位
@@ -1264,7 +1264,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 折叠分组内的页面不显示，方向键跳过。当前页位于折叠分组内时，侧栏高亮该分组标题。折叠状态只在本次运行内保留。
 <<< END U001811 >>>
 <<< UNIT U001812 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:66-66 | ctx=全局键位 >>>
-页脚只列高频键位，低频动作放在 `?` 帮助与页内按钮中，在 80 列终端下不溢出。
+页脚只显示高频快捷键，低频动作放在 `?` 帮助与页内按钮中，在 80 列终端下不溢出。
 <<< END U001812 >>>
 <<< UNIT U001813 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:68-68 | ctx=页面键位 >>>
 ## 页面键位
@@ -1301,10 +1301,10 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 <<< UNIT U001819 | md-list | packages/akari-bot-cli/akaribot/cli/docs/tui.md:94-99 | ctx=概览 >>>
 - 每行显示注册名、运行状态、位置和启动策略。当前实例用 `▸` 标出。当前实例未写入注册表时也会出现在列表里。
 - `Enter` 切换实例。已写入注册表的实例会同时通过 `instance use` 保存为默认实例。未写入注册表的实例只在当前会话使用。
-- `n` 打开添加实例菜单。新建实例会调用 `akaribot init`，可以选择托管 venv 或使用当前环境。把已有目录加入注册表时只写注册表。
+- `n` 打开添加实例菜单。新建实例会调用 `akaribot init`，可以选择托管 venv 或使用当前环境。把已有目录加入注册表时只写入注册表。
 - `Ctrl+D` 从注册表移除当前条目，实例目录保留。
 - `m` 打开服务与策略菜单：开机自启、崩溃重启、安装或卸载服务。平台不支持服务时，菜单不显示安装项。
-- 服务恢复实例时要求同时满足两个条件：开机自启已开启，实例上次处于运行状态。
+- 服务恢复实例时要求同时满足开机自启已开启且实例上次处于运行状态两个条件。
 <<< END U001819 >>>
 <<< UNIT U001820 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:101-101 | ctx=运行与日志 >>>
 ### 运行与日志
@@ -1379,7 +1379,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 <<< END U001838 >>>
 <<< UNIT U001839 | md-list | packages/akari-bot-cli/akaribot/cli/docs/tui.md:153-155 | ctx=开发、文档与迁移 >>>
 - `b` 构建，`p` 启动或停止静态预览，`e` 启动或停止开发预览，`o` 打开浏览器。
-- `m` 里放部署、同步主题、安装依赖和任务日志。
+- `m` 菜单中包含部署、同步主题、安装依赖和任务日志。
 - 静态预览与开发预览共用 `cache/docs/node_modules`，同时只能运行一个。离开页面时后台停止。
 <<< END U001839 >>>
 <<< UNIT U001840 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:157-157 | ctx=开发、文档与迁移 >>>
@@ -1411,13 +1411,13 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 - 存在未保存更改或后台任务未结束时，退出与切换实例都会先确认。
 <<< END U001847 >>>
 <<< UNIT U001848 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:177-177 | ctx=确认规则 >>>
-确认框打开前先调用 `PendingConfirm.accept(key)` 做防抖，同一目标在防抖窗口内的连发会被忽略，避免叠出两层模态框。切换页面、刷新、更换表或更换选中项时，调用页面的 `reset_pending()` 作废待确认状态。
+确认框打开前先调用 `PendingConfirm.accept(key)` 做防抖，同一目标在防抖窗口内的连发会被忽略，避免重复弹出多层模态框。切换页面、刷新、更换表或更换选中项时，调用页面的 `reset_pending()` 作废待确认状态。
 <<< END U001848 >>>
 <<< UNIT U001849 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:179-179 | ctx=与 CLI 的写操作关系 >>>
 ## 与 CLI 的写操作关系
 <<< END U001849 >>>
 <<< UNIT U001850 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:181-181 | ctx=与 CLI 的写操作关系 >>>
-界面的写操作统一通过 `akaribot <子命令>` 子进程执行。用 Nuitka 打包时直接调用二进制文件。参数与确认的逻辑只在命令层实现一份。需要让命令层自动确认时传 `--yes`。子进程环境注入 `AKARI_INSTANCE_DIR` 和 `AKARI_CONFIG_PATH`，输出统一按 UTF-8 解析。
+界面的写操作统一通过 `akaribot <子命令>` 子进程执行。用 Nuitka 打包时直接调用二进制文件。参数与确认的逻辑只在命令层实现一份。需要让命令层自动确认时传入 `--yes`。子进程环境注入 `AKARI_INSTANCE_DIR` 和 `AKARI_CONFIG_PATH`，输出统一按 UTF-8 解析。
 <<< END U001850 >>>
 <<< UNIT U001851 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:183-183 | ctx=与 CLI 的写操作关系 >>>
 读操作允许在进程内完成，但限于注册表、锁文件、日志文件等本机状态。日志页与 `akaribot logs` 共用 `akaribot/cli/logs.py` 的解析与增量读取规则。配置结构、模块清单、数据库与环境检查结果都通过子进程读取。
