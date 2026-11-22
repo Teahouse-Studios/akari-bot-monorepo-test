@@ -1521,7 +1521,7 @@ ${file}
 查询目标 Wiki 注册的魔术字与扩展解析函数，返回短文本或查询链接。支持 #expr、字符串处理及站点变量。
 <<< END U013352 >>>
 <<< UNIT U013353 | json-value | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/locales/zh_cn.json:213-213 | ctx=wiki.help.magic.option.p >>>
-指定魔术字的页面上下文。含空格的标题用引号包裹。
+指定魔术字的页面上下文。包含空格的标题用引号包裹。
 <<< END U013353 >>>
 <<< UNIT U013354 | json-value | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/locales/zh_cn.json:214-214 | ctx=wiki.message.magic.invalid >>>
 请输入一个完整的魔术字表达式。
@@ -1983,7 +1983,7 @@ Wiki 讨论页列表的消息渲染工具。
 <<< END U013499 >>>
 <<< UNIT U013500 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:104-105 >>>
 # 规范化章节名以供比较。
-# 章节锚点中的下划线与标题中的空格等价，wikilib 传入的章节名已将空格换作下划线。
+# 章节锚点中的下划线与标题中的空格等价，wikilib 传入的章节名已将空格替换为下划线。
 <<< END U013500 >>>
 <<< UNIT U013501 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:110-110 >>>
 # 取出目标章节。
@@ -3224,13 +3224,13 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # docstring 里属于结构化字段而非散文的行。
 <<< END U013885 >>>
 <<< UNIT U013886 | py-comment | tools/codemod_private_docstrings.py:133-133 >>>
-# 删除后紧跟的空行一并吃掉，避免函数体以空行开头。
+# 删除后紧跟的空行一并删除，避免函数体以空行开头。
 <<< END U013886 >>>
 <<< UNIT U013887 | py-comment | tools/codemod_private_docstrings.py:138-138 >>>
 # 注释放在 docstring 原来的位置（函数体内），缩进取函数体而非 def 行。
 <<< END U013887 >>>
 <<< UNIT U013888 | py-comment | tools/codemod_private_docstrings.py:145-145 >>>
-# 只剩 docstring 的定义删空后会语法错误，补 pass。缩进取函数体而非 def 行。
+# 只剩 docstring 的定义清空后会语法错误，补 pass。缩进取函数体而非 def 行。
 <<< END U013888 >>>
 <<< UNIT U013889 | py-docstring | tools/codemod_private_docstrings.py:68-68 | ctx=iter_sources >>>
 枚举待处理的 Python 文件。
@@ -3477,7 +3477,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 # 依赖字符串在 pyproject 里以字面量出现，用于反向查找行号。跨行书写时回退到 dependencies 数组行。
 <<< END U013966 >>>
 <<< UNIT U013967 | py-comment | tools/lint_versions.py:68-68 >>>
-# 报告保留原始书写形式，因为 SpecifierSet 的 str 会按字典序重排（如 >=0.1.0,<1.0 变成 <1.0,>=0.1.0）。
+# 报告保留原始书写形式，因为 SpecifierSet 的 str 会按字典序重新排列（如 >=0.1.0,<1.0 变成 <1.0,>=0.1.0）。
 <<< END U013967 >>>
 <<< UNIT U013968 | py-docstring | tools/lint_versions.py:73-73 | ctx=ConfigError >>>
 根 pyproject 或成员 pyproject 不满足检查所需的结构。

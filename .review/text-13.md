@@ -1130,7 +1130,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 :param ids: 组内的平台场景 ID。
 <<< END U008871 >>>
 <<< UNIT U008872 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/about.py:76-76 >>>
-# 品牌资产包缺失（或部署者删除了配图）时跳过配图，少一张图不该让整条 `~about` 失败。
+# 品牌资产包缺失（或部署者删除了配图）时跳过配图，少一张图不应让整条 `~about` 失败。
 <<< END U008872 >>>
 <<< UNIT U008873 | py-docstring | packages/akari-bot-core/akaribot/modules/core/common_tools/about.py:60-60 | ctx=build_credits_message >>>
 构造制作人员名单消息。
@@ -1143,7 +1143,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008875 >>>
 <<< UNIT U008876 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:40-41 >>>
 # 自动配对是为多个机器人共处同一场景的情形预留的，默认关闭。命令是否注册在导入时即已确定，
-# 因此取一份快照，改动配置须重启机器人方能生效。
+# 因此取一份快照，改动配置须重启机器人才能生效。
 <<< END U008876 >>>
 <<< UNIT U008877 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:44-45 >>>
 # 绑定码与握手状态仅保存在 server 进程内存中，重启即失效。
@@ -1173,7 +1173,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< UNIT U008884 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:256-258 >>>
 # 完成一次私聊绑定，将账号组与场景组一并合并。
 # 私聊里“这个账号”与“这段私聊”指的是同一件事。只合并其一会让另一半的数据留在原处。
-# 两者共用一次确认，确认后一起执行，避免用户在第二次确认时取消而停在只绑一半的状态。
+# 两者共用一次确认，确认后一起执行，避免用户在第二次确认时取消而停在只绑定一半的状态。
 <<< END U008884 >>>
 <<< UNIT U008885 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:263-263 >>>
 # 生成绑定码的一方为发起方，冲突数据默认以发起方为准。
@@ -1352,7 +1352,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 :param groups: (组名多语言键, 模块名列表) 的序列，模块名为空的组会被跳过。
 :param include_help_header: 是否在模块表格内加入 help 顶栏。
 :param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。
-:return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。
+:return: 消息元素列表。所有组都为空时返回空片段，空状态文案由调用方负责。
 <<< END U008927 >>>
 <<< UNIT U008928 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:32-33 >>>
 # 迁移码与 bind 的绑定码分开存放，两者不可混用，因为
@@ -1442,7 +1442,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008950 >>>
 <<< UNIT U008951 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/setup.py:352-353 >>>
 # 保留行尾空格，因为指令操作无论以元素形态并入还是降级为纯文本，都不会自行补分隔符。
-# disable_joke 亦不可省，降级后的命令原文会并入本元素，被替换后就无法直接复制了。
+# disable_joke 也不可省略，降级后的命令原文会并入本元素，被替换后就无法直接复制了。
 <<< END U008951 >>>
 <<< UNIT U008952 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/setup.py:387-387 >>>
 # 不指定域时两域同列，一条命令即可看全

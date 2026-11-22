@@ -241,7 +241,7 @@ locale 命令的语言入口与协助翻译链接测试。
 # Reader 会定期检查共享 manifest，无需恢复旧的队列广播或显式重连。
 <<< END U010139 >>>
 <<< UNIT U010140 | py-comment | packages/akari-bot-core/tests/test_locale_reload.py:53-53 >>>
-# 临时写坏语言文件时应报告错误，但不能替换已经发布的健康快照。
+# 临时损坏语言文件时应报告错误，但不能替换已经发布的健康快照。
 <<< END U010140 >>>
 <<< UNIT U010141 | py-comment | packages/akari-bot-core/tests/test_locale_reload.py:66-66 >>>
 # 后续测试仍应使用测试框架在启动时发布的项目语言快照。
@@ -486,7 +486,7 @@ core.queue.diagnostics: 进程指标采集测试
 # 非本测试目标的调用须原样放行，否则外部轮询器会占用会合名额，使本测试的协程永久等待。
 <<< END U010219 >>>
 <<< UNIT U010220 | py-comment | packages/akari-bot-core/tests/test_queue_lifecycle.py:150-150 >>>
-# 读取失败亦须放行对端，否则异常将表现为无进展挂起，掩盖真实原因。
+# 读取失败也须放行对端，否则异常将表现为无进展挂起，掩盖真实原因。
 <<< END U010220 >>>
 <<< UNIT U010221 | py-comment | packages/akari-bot-core/tests/test_queue_lifecycle.py:161-161 >>>
 # 同上，只记录本任务派发的处理协程，避免等待其他轮询器的执行中任务。
@@ -539,7 +539,7 @@ core.builtins.parser.message: 正则单次触发标记测试
 <<< END U010236 >>>
 <<< UNIT U010237 | py-comment | packages/akari-bot-core/tests/test_registry.py:331-332 >>>
 # 重建写的是全局索引，不还原会让同进程后续用例（如 test_rpc_contracts 依赖的
-# by_import_path("…wiki")）拿到残缺注册表，报出与本次改动无关的失败。
+# by_import_path("…wiki")）获取到残缺注册表，报出与本次改动无关的失败。
 <<< END U010237 >>>
 <<< UNIT U010238 | py-docstring | packages/akari-bot-core/tests/test_registry.py:1-1 | ctx=<module> >>>
 core.registry 发现层单元测试。
@@ -624,7 +624,7 @@ akaribot.core.utils.retired: 公告读取、已发送记录与排队测试
 Server、客户端与消息入口的后台任务生命周期测试。
 <<< END U010263 >>>
 <<< UNIT U010264 | py-docstring | packages/akari-bot-core/tests/test_runtime_lifecycle.py:573-573 | ctx=test_runtime_lifecycle >>>
-启动、队列、后台初始化与消息任务的失败／关闭路径。
+启动、队列、后台初始化与消息任务的失败与关闭路径。
 <<< END U010264 >>>
 <<< UNIT U010265 | py-docstring | packages/akari-bot-core/tests/test_s3_async.py:1-1 | ctx=<module> >>>
 S3 同步 SDK 的异步隔离与超时回归测试。
@@ -695,7 +695,7 @@ akaribot.core.builtins.session.internal: 严格确认测试
 # 正式 payload 的节点文本未被失败 hook 改写
 <<< END U010286 >>>
 <<< UNIT U010287 | py-comment | packages/akari-bot-core/tests/test_session_draft.py:349-349 >>>
-# h2 修改 h1 保留的草稿链，然后失败
+# h2 修改 h1 保留的草稿消息链，然后失败
 <<< END U010287 >>>
 <<< UNIT U010288 | py-comment | packages/akari-bot-core/tests/test_session_draft.py:365-365 >>>
 # h1 的改写已提交，但 h2 对保留草稿的污染没有进入正式结果
@@ -902,7 +902,7 @@ akaribot.core.builtins.bot: 按消息通道去重的组内推送测试
 <<< END U010352 >>>
 <<< UNIT U010353 | py-comment | packages/akari-bot-core/tests/test_url_guard.py:60-61 >>>
 # wikilib 在内容审查未通过时即以 trusted=False 传入，该场景须无视会话设置。
-# 此路径下 url 字段已被替换成跳板地址，须取 original_url 方能拿回原链接。
+# 此路径下 url 字段已被替换成跳板地址，须读取 original_url 才能获取原链接。
 <<< END U010353 >>>
 <<< UNIT U010354 | py-comment | packages/akari-bot-core/tests/test_url_guard.py:305-306 >>>
 # 关闭 markdown 只应令呈现回退到跳板。若连 use_url_manager 一并关闭，未认证链接便
@@ -2432,7 +2432,7 @@ E2B 的 API key。
 # 所有工具结果之后再追加图片，避免 user 消息夹在并行的 tool 消息之间。
 <<< END U010796 >>>
 <<< UNIT U010797 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/tools/fetch_webpage.py:46-46 >>>
-# 优先抽取正文，正文识别失败时转为无标记的纯文本，保证模型拿不到 HTML 标记。
+# 优先抽取正文，正文识别失败时转为无标记的纯文本，保证模型无法获取 HTML 标记。
 <<< END U010797 >>>
 <<< UNIT U010798 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/tools/fetch_webpage.py:72-72 >>>
 # WebRender 由机器人自身发起请求，需补做内网校验，否则会绕过 get_url 的地址限制。

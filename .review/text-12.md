@@ -261,7 +261,7 @@
 <<< END U007923 >>>
 <<< UNIT U007924 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:482-483 >>>
 # 按段比较而非字符串前缀，``akaribot.modules_extra`` 与 ``akaribot.modules`` 仅首段相同，
-# 前者不是后者的成员包，不该被归约进来。命名空间本身也在此命中，由调用方判断它是否成包。
+# 前者不是后者的成员包，不应被归入其中。命名空间本身也在此命中，由调用方判断它是否成包。
 <<< END U007924 >>>
 <<< UNIT U007925 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:496-497 >>>
 # 纯字符串归约且不校验该包是否已注册，调用方用它构建依赖图，图上的边会在
@@ -393,7 +393,7 @@
 # 故直接把包摘出发现层索引，下面的数据库重挂才不会带上它的模型。
 <<< END U007959 >>>
 <<< UNIT U007960 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1327-1327 >>>
-# 与启动阶段 init_modules 对缺失模块的清理一致，残留的 load=False 会误停重新安装后的模块。
+# 与启动阶段 init_modules 对缺失模块的清理一致，残留的 load=False 会误停用重新安装后的模块。
 <<< END U007960 >>>
 <<< UNIT U007961 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1336-1337 >>>
 # 旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口。
@@ -1351,11 +1351,11 @@ JobQueue 配置独立存放于 `config/jobqueue.toml`。`[jobqueue].jobqueue_bac
 <<< END U008266 >>>
 <<< UNIT U008267 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:46-48 | ctx=配置与后端选择 >>>
 未知值会明确终止初始化，
-WebSocket Hub 无法连接或鉴权失败时亦不会自动回退至数据库，以免同一集群同时形成两套互不一致的
+WebSocket Hub 无法连接或鉴权失败时也不会自动回退到数据库，以免同一集群同时形成两套互不一致的
 通信通道。
 <<< END U008267 >>>
 <<< UNIT U008268 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:50-51 | ctx=配置与后端选择 >>>
-新生成的配置默认选择 `websocket`，该后端亦是项目的推荐选项。已明确配置为 `database` 的部署不会被自动
+新生成的配置默认选择 `websocket`，该后端也是项目的推荐选项。已明确配置为 `database` 的部署不会被自动
 改写或静默切换。
 <<< END U008268 >>>
 <<< UNIT U008269 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:53-54 | ctx=配置与后端选择 >>>
@@ -1623,7 +1623,7 @@ WebSocket 后端属于实时、非持久化传输。Hub 对每个节点设置有
 与 `unknown`。其中的任务 ID 仅用于关联本次投递，不表示后端会将其持久保留。
 <<< END U008334 >>>
 <<< UNIT U008335 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:293-296 | ctx=信号广播 >>>
-同一信号可以在单个进程内注册多个本地订阅者。底层接口亦可直接调用
+同一信号可以在单个进程内注册多个本地订阅者。底层接口也可以直接调用
 `JobQueueBase.emit_signal()` 或 `JobQueueBase.gather_signal()`。业务代码原则上应优先声明强类型
 `SignalMethod`。接收端可以通过 `current_request`，或原始 `on_signal` 接口提供的 `SignalContext`，
 读取可信的 `source_peer_id`。
@@ -1655,7 +1655,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 实现。JobQueue 仅负责分流已经进入系统的任务，不负责消除平台端重复产生的事件。
 <<< END U008341 >>>
 <<< UNIT U008342 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:318-319 | ctx=多实例支持范围与约束 >>>
-信号广播仅面向发送时刻在线的实例，不提供历史事件重放。对于离线期间亦须补齐的状态，应将其持久化，
+信号广播仅面向发送时刻在线的实例，不提供历史事件重放。对于离线期间仍须补齐的状态，应将其持久化，
 并由节点在启动后依据 version 或 epoch 主动对账。信号仅用于缩短在线实例感知状态变化的延迟。
 <<< END U008342 >>>
 <<< UNIT U008343 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:321-323 | ctx=多实例支持范围与约束 >>>
@@ -1729,7 +1729,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 - timeout 与 deadline 必须为正的有限数值或有限时间戳。布尔值虽然在 Python 中属于整数子类，仍将被明确
 <<< END U008362 >>>
 <<< UNIT U008363 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:380-381 | ctx=错误、超时与关闭语义 >>>
-  拒绝。响应错误码等协议字段亦须符合约定类型，畸形数据统一转换为 `RpcProtocolError`，不得泄漏底层
+  拒绝。响应错误码等协议字段也须符合约定类型，畸形数据统一转换为 `RpcProtocolError`，不得泄漏底层
   类型异常。
 <<< END U008363 >>>
 <<< UNIT U008364 | md-list | packages/akari-bot-core/akaribot/core/queue/README.md:382-382 | ctx=错误、超时与关闭语义 >>>
@@ -1808,7 +1808,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 ORM 模型重新创建该表。
 <<< END U008386 >>>
 <<< UNIT U008387 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:414-415 | ctx=协议升级与验证 >>>
-旧表中的待认领、执行中及已完成任务均不予保留。包括 `job_queue_peers` 在内的新增表亦由当前模型统一
+旧表中的待认领、执行中及已完成任务均不予保留。包括 `job_queue_peers` 在内的新增表也由当前模型统一
 创建。
 <<< END U008387 >>>
 <<< UNIT U008388 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:417-418 | ctx=协议升级与验证 >>>
@@ -1981,7 +1981,7 @@ JobQueue 的数据库后端实现。
 # 失败原因来自远端异常消息，截断以限制单个进程对回复长度的影响。
 <<< END U008438 >>>
 <<< UNIT U008439 | py-comment | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:57-57 >>>
-# 容器内 smaps 缺失等场景下自测亦可能失败，改用 ``rss`` 而不报错。
+# 容器内 smaps 缺失等场景下自测也可能失败，改用 ``rss`` 而不报错。
 <<< END U008439 >>>
 <<< UNIT U008440 | py-comment | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:125-125 >>>
 # 载荷无效者仍须列出，否则该进程将从输出中消失。
@@ -2136,7 +2136,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 向上可能遇到无关的 pyproject。名字对不上就继续找，不据此判断作者。
 <<< END U008487 >>>
 <<< UNIT U008488 | py-inline-comment | packages/akari-bot-core/akaribot/core/registry.py:113-113 >>>
-# noqa: BLE001 - 元数据缺失不该让作者查询失败
+# noqa: BLE001 - 元数据缺失不应让作者查询失败
 <<< END U008488 >>>
 <<< UNIT U008489 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:258-258 >>>
 # 记录 core API 不兼容的包（展示用标签到原因的映射）。
@@ -2246,7 +2246,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 开始执行业务函数的 coroutine 会在此检测关闭状态并退出。
 <<< END U008517 >>>
 <<< UNIT U008518 | py-comment | packages/akari-bot-core/akaribot/core/scheduler.py:320-320 >>>
-# 与所有已经进入／正在等待 wrapper 启动临界区的任务建立屏障。
+# 与所有已经进入或正在等待 wrapper 启动临界区的任务建立屏障。
 <<< END U008518 >>>
 <<< UNIT U008519 | py-comment | packages/akari-bot-core/akaribot/core/scheduler.py:353-354 >>>
 # AsyncIOScheduler.shutdown() 只把真正的关闭回调排进事件循环。
@@ -2265,7 +2265,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 可重建的计划任务描述。
 <<< END U008523 >>>
 <<< UNIT U008524 | py-docstring | packages/akari-bot-core/akaribot/core/scheduler.py:98-98 | ctx=SchedulerLifecycle >>>
-统一管理模块计划任务、运行中实例和维护／关闭窗口。
+统一管理模块计划任务、运行中实例和维护与关闭窗口。
 <<< END U008524 >>>
 <<< UNIT U008525 | py-docstring | packages/akari-bot-core/akaribot/core/scheduler.py:113-113 | ctx=SchedulerLifecycle.module_job_id >>>
 返回模块内第 ``index`` 个计划任务的稳定 APScheduler ID。
@@ -2283,7 +2283,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 同步全部模块，并移除已经不存在的模块 Job。
 <<< END U008529 >>>
 <<< UNIT U008530 | py-docstring | packages/akari-bot-core/akaribot/core/scheduler.py:238-238 | ctx=SchedulerLifecycle.register_core_job >>>
-注册一个同样受维护／关闭窗口追踪的核心计划任务。
+注册一个同样受维护与关闭窗口追踪的核心计划任务。
 <<< END U008530 >>>
 <<< UNIT U008531 | py-docstring | packages/akari-bot-core/akaribot/core/scheduler.py:252-252 | ctx=SchedulerLifecycle.prepare >>>
 为尚未启动的本轮 Server 生命周期开放 Job 入口。

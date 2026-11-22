@@ -659,7 +659,7 @@ cli.tui.dashboard: 实例信息与运行状态测试
 # region 包含边框与内边距。须在退出前读取，卸载后该值归零。
 <<< END U005954 >>>
 <<< UNIT U005955 | py-comment | packages/akari-bot-cli/tests/test_tui_database.py:1122-1122 >>>
-# 窄屏重排不应破坏从表清单到保存按钮的键盘焦点顺序。
+# 窄屏重新排列不应破坏从表清单到保存按钮的键盘焦点顺序。
 <<< END U005955 >>>
 <<< UNIT U005956 | py-comment | packages/akari-bot-cli/tests/test_tui_database.py:1156-1156 >>>
 # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
@@ -1051,7 +1051,7 @@ cli.tui.modules: 多选与批量操作测试
 cli.tui.app: 页面切换、焦点与键位归属测试
 <<< END U006084 >>>
 <<< UNIT U006085 | py-comment | packages/akari-bot-cli/tests/test_tui_pending.py:20-20 >>>
-# 模拟鼠标双击与键盘连续触发，两次请求挨得极近时，第二次不再打开第二层确认框。
+# 模拟鼠标双击与键盘连续触发，两次请求间隔极短时，第二次不再打开第二层确认框。
 <<< END U006085 >>>
 <<< UNIT U006086 | py-comment | packages/akari-bot-cli/tests/test_tui_pending.py:34-34 >>>
 # 换目标就是另一次动作，立即放行，不受上一个目标的防抖窗口影响。
@@ -1362,7 +1362,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 添加上下文到管理器（存储 session_id 和对应的上下文对象）
 <<< END U006179 >>>
 <<< UNIT U006180 | py-comment | packages/akari-bot-core/akaribot/core/builtins/bot/__init__.py:92-92 >>>
-# 处理期间设置存活标记，Server 端的 hold／send 因此不会与删除竞速。
+# 处理期间设置存活标记，Server 端的 hold / send 因此不会与删除竞速。
 <<< END U006180 >>>
 <<< UNIT U006181 | py-comment | packages/akari-bot-core/akaribot/core/builtins/bot/__init__.py:97-97 >>>
 # 队列异常或任务被取消时也必须释放平台 SDK 消息对象。
@@ -1812,13 +1812,13 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 返回带名称的 hook 的执行摘要，供诊断和测试使用。
 <<< END U006301 >>>
 <<< UNIT U006302 | py-comment | packages/akari-bot-core/akaribot/core/builtins/hooks/executor.py:123-123 >>>
-# 平台两段只存在于会话对象上。拿不到会话时（如 server_scope 的带名称分发）回退为两段判定条件。
+# 平台两段只存在于会话对象上。无法获取会话时（如 server_scope 的带名称分发）回退为两段判定条件。
 <<< END U006302 >>>
 <<< UNIT U006303 | py-comment | packages/akari-bot-core/akaribot/core/builtins/hooks/executor.py:193-193 >>>
 # 带名称的能力由显式名称调用，不要求目标场景启用该模块。
 <<< END U006303 >>>
 <<< UNIT U006304 | py-comment | packages/akari-bot-core/akaribot/core/builtins/hooks/executor.py:230-230 >>>
-# 每个回调拿到独立参数字典，广播 hook 的就地修改不会污染后续回调。
+# 每个回调获取独立参数字典，广播 hook 的就地修改不会污染后续回调。
 <<< END U006304 >>>
 <<< UNIT U006305 | py-docstring | packages/akari-bot-core/akaribot/core/builtins/hooks/executor.py:1-1 | ctx=<module> >>>
 模块 hook 共用的订阅、资格过滤、runtime 调用与带名称的分发。

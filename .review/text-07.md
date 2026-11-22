@@ -129,7 +129,7 @@
 # noqa: BLE001 - 连接状态读取失败不应中断页面
 <<< END U004573 >>>
 <<< UNIT U004574 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1195-1195 >>>
-# 分组标题行带禁用与样式，条目只能自建。clear() 的移除是异步的，须等移除完成再落高亮。
+# 分组标题行带禁用与样式，条目只能自建。clear() 的移除是异步的，须等待移除完成后再恢复高亮。
 <<< END U004574 >>>
 <<< UNIT U004575 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/adapters.py:1206-1206 >>>
 # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -2396,7 +2396,7 @@ Esc 关闭对话框，放弃输入。
 # 窄屏优先隐藏标记列，保留包名宽度。
 <<< END U005328 >>>
 <<< UNIT U005329 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/environment.py:1134-1134 >>>
-# 重建与落高亮交给 _compat.rebuild_rows，因为 clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
+# 重建与恢复高亮交给 _compat.rebuild_rows，因为 clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
 <<< END U005329 >>>
 <<< UNIT U005330 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/environment.py:1158-1158 >>>
 # noqa: BLE001 - 未挂载时按保守宽度排版
@@ -2564,7 +2564,7 @@ Esc 关闭对话框，放弃输入。
 # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按“不变”处理。
 <<< END U005384 >>>
 <<< UNIT U005385 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/logs.py:691-691 >>>
-# 重建与落高亮交给 _compat.rebuild_rows，因为 clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
+# 重建与恢复高亮交给 _compat.rebuild_rows，因为 clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
 <<< END U005385 >>>
 <<< UNIT U005386 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/logs.py:695-695 >>>
 # 文件计数基于完整清单，避免其他进程的计数随过滤条件变化。
@@ -2675,7 +2675,7 @@ Esc 关闭对话框，放弃输入。
 暂停跟随。offset 保持不变，恢复后从暂停位置继续。
 <<< END U005421 >>>
 <<< UNIT U005422 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/logs.py:576-576 | ctx=LogsPage.resume >>>
-恢复跟随，补读暂停期间新增的行并返回缓冲末尾。
+恢复跟随，补充读取暂停期间新增的行并返回缓冲末尾。
 <<< END U005422 >>>
 <<< UNIT U005423 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/logs.py:584-584 | ctx=LogsPage.toggle_pause >>>
 在暂停与恢复之间切换。
@@ -3319,7 +3319,7 @@ Esc 关闭对话框，放弃输入。
 重新安装到另一环境时使用的 uv 参数 token。
 <<< END U005634 >>>
 <<< UNIT U005635 | py-docstring | packages/akari-bot-cli/akaribot/cli/venv.py:536-536 | ctx=is_akari_dist >>>
-判断一个已安装包是否属于 AkariBot（名字带前缀，或提供了模块／适配器入口点）。
+判断一个已安装包是否属于 AkariBot（名字带前缀，或提供了模块或适配器入口点）。
 <<< END U005635 >>>
 <<< UNIT U005636 | py-docstring | packages/akari-bot-cli/akaribot/cli/venv.py:595-595 | ctx=entry_point_map >>>
 把多个包的 entry points 摊平成 ``"<dist>|group|name" -> value``。
@@ -3568,7 +3568,7 @@ cli.venv: 打包产物内置 uv 解析测试
 <<< END U005716 >>>
 <<< UNIT U005717 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:28-29 >>>
 # 测试框架在每个用例前重新运行 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的
-# ``Locale`` 按当前快照读取键，不切换回来就只会拿到键名。生产环境里 CLI 进程不加载 core，无此问题。
+# ``Locale`` 按当前快照读取键，不切换回来就只会获取到键名。生产环境里 CLI 进程不加载 core，无此问题。
 <<< END U005717 >>>
 <<< UNIT U005718 | py-comment | packages/akari-bot-cli/tests/test_instance_notify.py:85-85 >>>
 # 只检查 returncode 既给不出“远端拒绝”的状态，也丢失了 core 给出的具体原因。
@@ -3598,7 +3598,7 @@ cli.venv: 打包产物内置 uv 解析测试
 包变更通知的结果解析与卸载顺序。
 <<< END U005726 >>>
 <<< UNIT U005727 | py-comment | packages/akari-bot-cli/tests/test_instance_registry.py:71-71 >>>
-# 同一个目录记录两次不该产生两条记录，也不该修改已有策略。
+# 同一个目录记录两次不应产生两条记录，也不应修改已有策略。
 <<< END U005727 >>>
 <<< UNIT U005728 | py-comment | packages/akari-bot-cli/tests/test_instance_registry.py:99-99 >>>
 # 常被指向“装着实例的项目目录”，报错要直接给出可添加的子目录。

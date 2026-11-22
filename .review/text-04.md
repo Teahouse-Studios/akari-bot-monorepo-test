@@ -66,7 +66,7 @@
 # 取到锁才算启动成功，因为进程可能在 pre-init 阶段就因配置或数据库问题退出。
 <<< END U001496 >>>
 <<< UNIT U001497 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/run.py:180-181 >>>
-# 服务守护循环按这里的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表都不该让
+# 服务守护循环按这里的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表都不应让
 # 启动或停止失败，故静默跳过。
 <<< END U001497 >>>
 <<< UNIT U001498 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/run.py:1-1 | ctx=<module> >>>

@@ -1431,7 +1431,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 <<< END U007782 >>>
 <<< UNIT U007783 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:241-242 >>>
 # 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``，导致文件里类型不对，重新读取虽是 ``true``
-# 但任何按布尔取用的代码都会拿到真值字符串。
+# 但任何按布尔取用的代码都会获取到真值字符串。
 <<< END U007783 >>>
 <<< UNIT U007784 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:337-337 >>>
 # placeholders 只按文件统计，配置加载失败时仍要能报告损坏的表。其余命令都经配置管理器。
@@ -1483,7 +1483,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 不同后端的缺表报错类型不同，统一按未知处理
 <<< END U007799 >>>
 <<< UNIT U007800 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:291-291 >>>
-# 用户错误先校验完成再访问数据库，未知列与非法取值不该先触发数据库报错。
+# 用户错误先校验完成再访问数据库，未知列与非法取值不应先触发数据库报错。
 <<< END U007800 >>>
 <<< UNIT U007801 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:297-297 >>>
 # 大表上 COUNT 是一次全表扫描，故翻页可以只获取本页。不统计总数时 total 返回 null，由调用方沿用上次的值。
@@ -1654,7 +1654,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 默认即 JSON，--json 显式写法与 TUI 数据源的调用一致，必须接受。
 <<< END U007854 >>>
 <<< UNIT U007855 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/registry.py:23-23 >>>
-# noqa: BLE001 - 元数据缺失不该让清单输出失败
+# noqa: BLE001 - 元数据缺失不应让清单输出失败
 <<< END U007855 >>>
 <<< UNIT U007856 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/registry.py:46-46 >>>
 # 供兼容性诊断使用，缺了它消费方只能显示“未声明”，与 manifest 实际内容不符。

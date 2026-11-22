@@ -2053,7 +2053,7 @@ core 入口调用失败，或其输出无法解析。
 # 写入本机注册表，供界面与 `instance` 子命令列出这台机器上的实例。注册表不可用不影响初始化。
 <<< END U001425 >>>
 <<< UNIT U001426 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/commands/init.py:315-315 >>>
-# noqa: BLE001 - 注册失败只是少一条记录，不该让初始化失败
+# noqa: BLE001 - 注册失败只是少一条记录，不应让初始化失败
 <<< END U001426 >>>
 <<< UNIT U001427 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/init.py:1-1 | ctx=<module> >>>
 初始化实例
@@ -2186,7 +2186,7 @@ core 入口调用失败，或其输出无法解析。
 <<< END U001467 >>>
 <<< UNIT U001468 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:870-871 >>>
 # ``updated`` / ``failed`` / ``skipped`` 保持纯名字列表以兼容既有消费者，明细另置 ``*_details``。
-# ``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update`` 判断要不要提示 ``~restart``。
+# ``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update`` 判断是否提示 ``~restart``。
 <<< END U001468 >>>
 <<< UNIT U001469 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:901-902 >>>
 # ``--json`` 的 stdout 重定向由调用方完成，本函数正常把人类可读输出写到当前 stdout。
@@ -2210,7 +2210,7 @@ core 入口调用失败，或其输出无法解析。
 # target_union_info.modules。本命令只控制第二级，故用 load/unload 而非场景级的 enable/disable。
 <<< END U001474 >>>
 <<< UNIT U001475 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:1136-1137 >>>
-# 实例未运行时 core 端要等 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件提前返回。
+# 实例未运行时 core 端需要等待 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件提前返回。
 # 为 True 时仍通过子进程执行，由 core 判定 Server 是否在线。
 <<< END U001475 >>>
 <<< UNIT U001476 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/module.py:413-413 | ctx=list_packages >>>

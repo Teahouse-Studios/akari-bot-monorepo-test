@@ -1345,7 +1345,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 运行依赖 `akari-bot-core` 与 `Pillow>=13.0.0,<13.1.0`。此模块不访问外部服务。
 <<< END U011563 >>>
 <<< UNIT U011564 | md-paragraph | packages/modules/akari-bot-module-image/akaribot/modules/image/docs/index.md:3-3 | ctx=image >>>
-此模块把透明背景的图片填充为白色背景，处理对象取自当前消息。当前消息不含图片时，机器人先提示发送图片，再等待下一条消息。
+此模块把透明背景的图片填充为白色背景，处理对象取自当前消息。当前消息不包含图片时，机器人先提示发送图片，再等待下一条消息。
 <<< END U011564 >>>
 <<< UNIT U011565 | md-heading | packages/modules/akari-bot-module-image/akaribot/modules/image/docs/index.md:5-5 | ctx=命令 >>>
 ## 命令
@@ -1654,7 +1654,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 />
 <<< END U011655 >>>
 <<< UNIT U011656 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:73-73 | ctx=`chunithm chart` >>>
-查询各难度的谱面，逐个难度给出等级、定数、TAP／HOLD／SLIDE／AIR／FLICK 物量与谱师，并附曲绘。参数为纯数字或带 `id` 前缀时按 ID 解析，其余情况按完整歌名匹配，不查询别名库。例如 `chunithm chart id1086`。WORLD'S END 谱面只有一档难度，定数用星级表示。
+查询各难度的谱面，逐个难度给出等级、定数、TAP / HOLD / SLIDE / AIR / FLICK 物量与谱师，并附曲绘。参数为纯数字或带 `id` 前缀时按 ID 解析，其余情况按完整歌名匹配，不查询别名库。例如 `chunithm chart id1086`。WORLD'S END 谱面只有一档难度，定数用星级表示。
 <<< END U011656 >>>
 <<< UNIT U011657 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:76-82 | ctx=`chunithm chart` >>>
   :log="[
@@ -1697,7 +1697,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 - 参数 `<diff+level>` 连续书写，例如 `紫14+`、`14+`。
 - 难度接受全称、三字母缩写与中文（绿、黄、红、紫、黑），不区分大小写。CHUNITHM 的难度包含 Ultima。
 - 只给难度而不给等级，或参数无法解析时返回随机失败提示。无匹配曲目时返回未找到提示。
-- 不支持 DX／标准类型筛选与 `*` 无条件写法。
+- 不支持 DX / 标准类型筛选与 `*` 无条件写法。
 <<< END U011663 >>>
 <<< UNIT U011664 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:127-132 | ctx=`chunithm random` >>>
   :log="[
@@ -1754,7 +1754,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 | 默认数据源 | 落雪。未配置落雪 OAuth 时改用水鱼 | 水鱼 |
 | 成绩图片 | B30，附 N20 | B50 |
 | 曲目资料 | 落雪曲目表 | 水鱼曲目库 |
-| 别名 | 无别名命令，`chart`／`song` 按完整歌名匹配 | 支持别名查询与别名库 |
+| 别名 | 无别名命令，`chart` / `song` 按完整歌名匹配 | 支持别名查询与别名库 |
 | 数据源切换权限 | 普通用户 | 超级用户 |
 | 更新内容 | 曲目表与封面 | 曲目库、别名与封面 |
 <<< END U011676 >>>
@@ -1977,7 +1977,7 @@ B50、B30、名牌板与进度图由 Pillow 生成，平台需要支持图片消
 />
 <<< END U011724 >>>
 <<< UNIT U011725 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:197-197 | ctx=`maimai grade` >>>
-查询段位认定列表。`<grade>` 支持普通段位、真段位与 EXPERT／MASTER 各级，例如 `十段`、`真初段`、`MASTER超上级`。
+查询段位认定列表。`<grade>` 支持普通段位、真段位与 EXPERT / MASTER 各级，例如 `十段`、`真初段`、`MASTER超上级`。
 <<< END U011725 >>>
 <<< UNIT U011726 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:200-206 | ctx=`maimai grade` >>>
   :log="[
@@ -2065,7 +2065,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 正则句式直接匹配聊天消息，不需要命令前缀。
 <<< END U011750 >>>
 <<< UNIT U011751 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/regex.md:11-11 | ctx=正则句式 >>>
-句式中的常用字同时接受简体与繁体写法，例如“什么／什麼”“进度／進度”。所有句式都对普通用户开放。
+句式中的常用字同时接受简体与繁体写法，例如“什么 / 什麼”“进度 / 進度”。所有句式都对普通用户开放。
 <<< END U011751 >>>
 <<< UNIT U011752 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/regex.md:17-17 | ctx=正则句式 >>>
 曲目信息、别名、随机歌曲与段位资料不要求账号。成绩、进度与名牌板句式会读取玩家当前选择的数据源，因此必须先绑定水鱼（`maimai bind df`）或落雪（`maimai bind lx`）账号。
@@ -2264,7 +2264,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # `status_code=None`，使 4xx 也正常返回响应体。重发可能使第一次已签发的令牌失效。
 <<< END U011806 >>>
 <<< UNIT U011807 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:208-208 >>>
-# 机密客户端靠换票续期，用不到 refresh token，但必须拿到用户标识。
+# 机密客户端靠换票续期，用不到 refresh token，但必须获取用户标识。
 <<< END U011807 >>>
 <<< UNIT U011808 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:321-321 >>>
 # 等待期间可能已有一次获取令牌完成，复查缓存以免重复换取。

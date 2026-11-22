@@ -524,7 +524,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 启用后的首轮轮询不会补发已经发布的版本。
 <<< END U012249 >>>
 <<< UNIT U012250 | md-paragraph | packages/modules/akari-bot-module-mcv_rss/akaribot/modules/mcv_rss/docs/index.md:16-16 | ctx=推送 >>>
-`mcv-rss` 首轮只记录当前版本，不补记旧版本，也不发送消息。更新日志标题会另行缓存，但不推送。
+`mcv-rss` 首轮只记录当前版本，不补充记录旧版本，也不发送消息。更新日志标题会另行缓存，但不推送。
 <<< END U012250 >>>
 <<< UNIT U012251 | md-paragraph | packages/modules/akari-bot-module-mcv_rss/akaribot/modules/mcv_rss/docs/index.md:18-18 | ctx=推送 >>>
 `mcbv-rss` 首轮既不记录也不推送，下一轮仍检测到未记录版本时才发送。

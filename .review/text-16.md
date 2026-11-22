@@ -481,7 +481,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 事务内只有一条连接，避免 EventInfo.refresh_info() 用 gather 同时占用它。
 <<< END U010981 >>>
 <<< UNIT U010982 | py-comment | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/__init__.py:145-147 >>>
-# 只把事件的 Union 重新解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、
+# 只把事件的 Union 重新解析和 challenge 的创建与重置放在 mutation 锁内。平台禁言、
 # 发送消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会
 # 因等待平台响应而阻塞其他 Union 管理操作。
 <<< END U010982 >>>
@@ -541,7 +541,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< UNIT U011000 | md-table | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:31-34 | ctx=数据表 >>>
 | 表 | 内容 |
 | --- | --- |
-| `module_captcha_challenge` | 挑战记录，含令牌、答案、选项、状态（`preparing`、`pending`、`failed`、`verified`、`error`）、平台 ID 与 Union ID |
+| `module_captcha_challenge` | 挑战记录，包含令牌、答案、选项、状态（`preparing`、`pending`、`failed`、`verified`、`error`）、平台 ID 与 Union ID |
 | `module_captcha_trust` | 已通过验证的成员与场景组合，按两个 Union ID 唯一 |
 <<< END U011000 >>>
 <<< UNIT U011001 | md-paragraph | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:36-36 | ctx=数据表 >>>

@@ -1052,7 +1052,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 才会出现。首次私信只需要 room_id，先构造轻量 MatrixRoom 即可立即发送。
 <<< END U000613 >>>
 <<< UNIT U000614 | py-comment | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/context.py:506-506 >>>
-# Matrix 没有独立的私聊通道，私信实为仅含双方的房间，此处先查找该房间，不存在则创建
+# Matrix 没有独立的私聊通道，私信实际是仅包含双方的房间，此处先查找该房间，不存在则创建
 <<< END U000614 >>>
 <<< UNIT U000615 | py-docstring | packages/adapters/akari-bot-adapter-matrix/akaribot/adapters/matrix/context.py:703-706 | ctx=MatrixFetchedContextManager >>>
 用于获取会话信息的上下文管理器。

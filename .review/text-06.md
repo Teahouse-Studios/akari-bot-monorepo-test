@@ -2733,7 +2733,7 @@ ${message}，要求版本 ${pin}
 需求串不能为空。
 <<< END U004107 >>>
 <<< UNIT U004108 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2143-2143 | ctx=cli.venv.add.help >>>
-安装运行库到实例环境。--save 会记入实例清单，环境重建时按此补装。
+安装运行库到实例环境。--save 会记入实例清单，环境重建时按此补充安装。
 <<< END U004108 >>>
 <<< UNIT U004109 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:2144-2144 | ctx=cli.venv.add.not_saved >>>
 已安装到当前环境但未记入实例清单，环境重建后不会保留。
@@ -3219,7 +3219,7 @@ ${env} 指向的 uv 不可用（${path}），改用其他来源。
 # init 自己完成，两边不会各问一套。返回实例根目录，用户放弃或初始化未成功时为 ``None``。
 <<< END U004267 >>>
 <<< UNIT U004268 | py-comment | packages/akari-bot-cli/akaribot/cli/main.py:127-127 >>>
-# 在实例之外时按注册表里的默认实例进入，这台机器上记录过就沿用该实例，而不是每次都问要不要初始化。
+# 在实例之外时按注册表里的默认实例进入，这台机器上记录过就沿用该实例，而不是每次都询问是否初始化。
 <<< END U004268 >>>
 <<< UNIT U004269 | py-docstring | packages/akari-bot-cli/akaribot/cli/main.py:99-99 | ctx=main >>>
 AkariBot 实例管理工具。
@@ -3291,7 +3291,7 @@ AkariBot 实例管理工具。
 # 单元文件里要执行的子命令。render_unit 只负责拼装，不关心它的含义。
 <<< END U004291 >>>
 <<< UNIT U004292 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:170-170 >>>
-# 仅在崩溃（非零退出）时重启，因为正常退出说明守护循环按信号退出，不该被立刻重启。
+# 仅在崩溃（非零退出）时重启，因为正常退出说明守护循环按信号退出，不应被立刻重启。
 <<< END U004292 >>>
 <<< UNIT U004293 | py-comment | packages/akari-bot-cli/akaribot/cli/service.py:209-209 >>>
 # Environment= 按空白切分赋值，值里含空白或引号时整个赋值要加引号并转义。

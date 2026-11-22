@@ -329,7 +329,7 @@
 # 只给出主语言时获取该语言的第一个变体（en → en_us，zh → zh_cn）。
 <<< END U001935 >>>
 <<< UNIT U001936 | py-comment | packages/akari-bot-cli/akaribot/cli/i18n.py:126-127 >>>
-# typer 的 ``help=`` 在导入阶段求值，而根回调要等参数解析完才执行，因此仅通过 ``set_locale()``
+# typer 的 ``help=`` 在导入阶段求值，而根回调需要等待参数解析完成才执行，因此仅通过 ``set_locale()``
 # 无法本地化 ``--help``。这里提前读取一次 argv，使导入阶段获取到用户指定的语言。
 <<< END U001936 >>>
 <<< UNIT U001937 | py-docstring | packages/akari-bot-cli/akaribot/cli/i18n.py:121-121 | ctx=current_locale >>>
@@ -354,7 +354,7 @@
 <<< UNIT U001943 | py-comment | packages/akari-bot-cli/akaribot/cli/instance.py:200-202 >>>
 # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致。
 # 冻结后 sys.executable 指向 CLI 二进制自身，才需要回退到系统搜索。
-# 回退时优先带版本号的名字，避免拿到过旧的 python3。
+# 回退时优先带版本号的名字，避免获取到过旧的 python3。
 <<< END U001943 >>>
 <<< UNIT U001944 | py-comment | packages/akari-bot-cli/akaribot/cli/instance.py:345-345 >>>
 # registry --json 用 ``modules`` 作键名。``provides_modules`` 是 manifest 与 module list 的写法。
@@ -2158,7 +2158,7 @@ dry-run（未写入任何文件）
 ## 模块映射
 <<< END U002538 >>>
 <<< UNIT U002539 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:537-537 | ctx=cli.migrate.report.modules_note >>>
-映射来自 registry 的 `legacy_module_map`。多个旧模块名可指向同一分发（如 wiki 家族）。
+映射来自 registry 的 `legacy_module_map`。多个旧模块名可指向同一个包（如 wiki 家族）。
 <<< END U002539 >>>
 <<< UNIT U002540 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:540-540 | ctx=cli.migrate.report.multi_heading >>>
 ## 多实例
@@ -3147,7 +3147,7 @@ ${platform}（尚无实例）
 移除实例
 <<< END U002863 >>>
 <<< UNIT U002864 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:865-865 | ctx=cli.tui.adapters.bind_toggle_enable >>>
-启用／停用
+启用 / 停用
 <<< END U002864 >>>
 <<< UNIT U002865 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:866-866 | ctx=cli.tui.adapters.busy >>>
 正在更改启用状态

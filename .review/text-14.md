@@ -2792,7 +2792,7 @@ akaribot.core.builtins.converter: ActionTextElement 跨进程序列化测试
 # 峰值出现在末尾
 <<< END U009934 >>>
 <<< UNIT U009935 | py-inline-comment | packages/akari-bot-core/tests/test_analytics_plot.py:20-20 >>>
-# 全零，此时不该反过来压缩坐标区
+# 全零，此时不应反过来压缩坐标区
 <<< END U009935 >>>
 <<< UNIT U009936 | py-inline-comment | packages/akari-bot-core/tests/test_analytics_plot.py:21-21 >>>
 # year 分支的 12 个点
@@ -2817,7 +2817,7 @@ akaribot.modules.core.su_tools.analytics: 折线图标注排版与缺少依赖�
 # 不带时区的时间会被 Tortoise 当作 UTC，除了刷警告还会让窗口整体偏移一个时区差。
 <<< END U009942 >>>
 <<< UNIT U009943 | py-comment | packages/akari-bot-core/tests/test_analytics_window.py:37-37 >>>
-# 昨天与明天各一条，都不该被今日窗口计入
+# 昨天与明天各一条，都不应被今日窗口计入
 <<< END U009943 >>>
 <<< UNIT U009944 | py-docstring | packages/akari-bot-core/tests/test_analytics_window.py:1-1 | ctx=<module> >>>
 akaribot.modules.core.su_tools.analytics 单元测试 - 统计时间窗口的时区处理（需要数据库）。
@@ -2899,7 +2899,7 @@ akaribot.modules.core.common_tools.bind: bind auto 握手测试
 # 私聊中的用户身份与私聊场景应同时合并，否则部分数据仍会保留在原组。
 <<< END U009969 >>>
 <<< UNIT U009970 | py-comment | packages/akari-bot-core/tests/test_bind_start.py:88-88 >>>
-# 两次合并共用一次确认，取消后不该停在只绑一半的状态
+# 两次合并共用一次确认，取消后不应停在只绑定一半的状态
 <<< END U009970 >>>
 <<< UNIT U009971 | py-docstring | packages/akari-bot-core/tests/test_bind_start.py:1-1 | ctx=<module> >>>
 akaribot.modules.core.common_tools.bind 单元测试 - bind start 的私聊与群组分支（需要数据库）。
@@ -3074,7 +3074,7 @@ core.utils.container: TokenBucket 和 ExpiringTempDict 测试
 <<< END U010026 >>>
 <<< UNIT U010027 | py-comment | packages/akari-bot-core/tests/test_cooldown.py:15-16 >>>
 # 场景维度按消息通道、用户维度按 union，确保换个平台账号仍受同一份冷却约束，
-# 但仅共享 union 而通道编号不同的场景不该互相牵连。
+# 但仅共享 union 而通道编号不同的场景不应互相牵连。
 <<< END U010027 >>>
 <<< UNIT U010028 | py-comment | packages/akari-bot-core/tests/test_cooldown.py:49-49 >>>
 # 模块每次进入命令都会新建 CoolDown 实例，冷却必须跨实例生效
@@ -3110,7 +3110,7 @@ akaribot.core.utils.cooldown: CoolDown 冷却系统测试
 # 分页与筛选需要一批可控的数据，因此直接创建测试行，绕开逐条子进程调用。
 <<< END U010038 >>>
 <<< UNIT U010039 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:217-217 >>>
-# 条件与分页都在 core 中统一处理，界面只报条件，条数按筛选后计算，offset 只影响本页。
+# 条件与分页都在 core 中统一处理，界面只传递条件，条数按筛选后计算，offset 只影响本页。
 <<< END U010039 >>>
 <<< UNIT U010040 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:243-243 >>>
 # 大表上 COUNT 会触发全表扫描，因此翻页可以只获取本页，total 返回 null，由调用方沿用上次的条数。
@@ -3209,7 +3209,7 @@ akaribot.core.utils.dirty_check: 内容审核系统测试
 <<< END U010070 >>>
 <<< UNIT U010071 | py-comment | packages/akari-bot-core/tests/test_dirty_check_features.py:20-21 >>>
 # 主动推送的会话没有触发消息，能力标志只能从进程注册元数据里带过来，
-# wikilog 等模块的 check() 正是据此判断要不要过滤。
+# wikilog 等模块的 check() 正是据此判断是否过滤。
 <<< END U010071 >>>
 <<< UNIT U010072 | py-docstring | packages/akari-bot-core/tests/test_dirty_check_features.py:1-1 | ctx=<module> >>>
 akaribot/adapters/*/features 单元测试 - 平台能力开关的传递（需要数据库）。
@@ -3335,7 +3335,7 @@ core.utils.func: 所有工具函数测试
 # 嵌套场景，选项自带参数
 <<< END U010111 >>>
 <<< UNIT U010112 | py-comment | packages/akari-bot-core/tests/test_help_action_text.py:1000-1000 >>>
-# 变长参数同样不该留下
+# 变长参数同样不应留下
 <<< END U010112 >>>
 <<< UNIT U010113 | py-comment | packages/akari-bot-core/tests/test_help_action_text.py:1071-1071 >>>
 # 竖线仍须转义，因为表格先按竖线切分单元格，代码块拦不住它

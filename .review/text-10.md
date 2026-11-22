@@ -137,7 +137,7 @@
 <<< END U007056 >>>
 <<< UNIT U007057 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:989-990 >>>
 # 先创建新组再重新关联映射行，全程不出现“场景没有映射行”的中间状态。
-# 新组仅含该场景，通道编号重置为 1。
+# 新组仅包含该场景，通道编号重置为 1。
 <<< END U007057 >>>
 <<< UNIT U007058 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:1005-1006 >>>
 # 拆出的场景与原组内的机器人不再对应同一个现实场景，互认记录须一并清除。
@@ -1145,7 +1145,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 实例内的 core、模块与适配器由 CLI 更新：
 <<< END U007313 >>>
 <<< UNIT U007314 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:85-85 | ctx=更新实例 >>>
-机器人执行 `~update` 时，会调用 CLI 的 `module update --defer-runtime`。安装完成后，按提示执行 `~restart`。加上 `--defer-runtime` 时，这一步只安装包并同步配置，数据库迁移与代码切换要等下一次启动才执行。
+机器人执行 `~update` 时，会调用 CLI 的 `module update --defer-runtime`。安装完成后，按提示执行 `~restart`。加上 `--defer-runtime` 时，这一步只安装包并同步配置，数据库迁移与代码切换会在下一次启动时执行。
 <<< END U007314 >>>
 <<< UNIT U007315 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:87-87 | ctx=更新实例 >>>
 直接在宿主机上更新时，迁移立即执行，新代码也立即生效。升级涉及数据结构变化时，先停止实例，再备份数据库与配置。CLI 本身按 `uv tool` 的安装方式升级。
@@ -1442,7 +1442,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 <<< UNIT U007379 | md-table | packages/akari-bot-core/akaribot/core/docs/message-api.md:145-153 | ctx=消息链 >>>
 | 方法或属性 | 关键参数（默认值） | 说明 |
 | --- | --- | --- |
-| `MessageChain.assign()` / `create()` / `from_list()` | `elements=None` / 无 / `lst` | 由字符串、元素、元素列表或元组构造。创建空链。从 `to_list()` 结果还原 |
+| `MessageChain.assign()` / `create()` / `from_list()` | `elements=None` / 无 / `lst` | 由字符串、元素、元素列表或元组构造。创建空消息链。从 `to_list()` 结果还原 |
 | `as_sendable()` | `session_info=None`、`parse_message=True`、`enable_markdown=True` | 解析多语言与 KE 码，并按平台能力降级 |
 | `to_str()` / `to_list()` / `to_kecode()` | `text_only=True`、`element_filter=None`、`connector="\n"` | 转为字符串、字典列表或 KE 码 |
 | `is_safe` | 属性 | 是否不含敏感信息 |
@@ -1487,5 +1487,5 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 <<< UNIT U007388 | md-list | packages/akari-bot-core/akaribot/core/docs/message-api.md:210-212 | ctx=消息节点与渲染 >>>
 - `I18NContext` 按会话语言解析。`Markdown` 在平台不支持 `support_markdown` 时转为纯文本。
 - `Embed` 在平台不支持 `support_embed` 时转为文本与图片。`ActionText` 在平台不支持 `support_action_text` 时转为纯文本。`Button` 与 `ButtonFrame` 在平台不支持 `support_button` 时丢弃。
-- 空链会被替换为 `error.message.chain.empty`。未通过 `is_safe` 的整条消息链会被替换为 `error.message.chain.unsafe`，除非发送时传入 `disable_secret_check=True`。
+- 空消息链会被替换为 `error.message.chain.empty`。未通过 `is_safe` 的整条消息链会被替换为 `error.message.chain.unsafe`，除非发送时传入 `disable_secret_check=True`。
 <<< END U007388 >>>
