@@ -296,7 +296,7 @@
 组装 VitePress 构建命令。
 <<< END U001924 >>>
 <<< UNIT U001925 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/toolchain.py:228-228 | ctx=template_version >>>
-读取模板 ``package.json`` 的版本号，供构建指纹使用。
+读取模板 ``package.json`` 的版本号，供构建校验信息使用。
 <<< END U001925 >>>
 <<< UNIT U001926 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/toolchain.py:237-237 | ctx=package_argv >>>
 组装包管理器命令。Windows 下 npm 是批处理脚本，须经 ``cmd /c`` 启动。
@@ -931,7 +931,7 @@ ${what}失败：${detail}
 ${table}（${count} 项）
 <<< END U002130 >>>
 <<< UNIT U002131 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:123-123 | ctx=cli.config.set.help >>>
-写入单个配置项（经 core 的原子写入路径）。
+写入单个配置项（通过 core 的原子写入路径）。
 <<< END U002131 >>>
 <<< UNIT U002132 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:124-124 | ctx=cli.db.cell_null >>>
 空
@@ -1261,7 +1261,7 @@ Node 依赖已就绪：VitePress ${version}。
 只统计将上传与删除的文件，不写入远端
 <<< END U002240 >>>
 <<< UNIT U002241 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:233-233 | ctx=cli.docs.option_force >>>
-忽略构建指纹，强制重建
+忽略构建校验信息，强制重建
 <<< END U002241 >>>
 <<< UNIT U002242 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:234-234 | ctx=cli.docs.option_host >>>
 预览服务绑定地址
@@ -1318,7 +1318,7 @@ Node 依赖已就绪：VitePress ${version}。
 最近构建：${detail}
 <<< END U002259 >>>
 <<< UNIT U002260 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:252-252 | ctx=cli.docs.status.build_detail >>>
-${at}（${count} 个包，指纹 ${fingerprint}）
+${at}（${count} 个包，校验值 ${fingerprint}）
 <<< END U002260 >>>
 <<< UNIT U002261 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:253-253 | ctx=cli.docs.status.config >>>
 配置：${path}

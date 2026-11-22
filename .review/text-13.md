@@ -1471,7 +1471,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 每一行都在行尾附加指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮，
 因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自
 那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，
-模块侧无须再分支。
+模块方无须再分支。
 
 换行的写法随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把
 紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），
@@ -1483,7 +1483,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 :param title_key: 分组标题的多语言键。
 :param rows: 设置行列表。
 :param can_edit: 当前用户是否可以修改这一组设置。
-:param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。
+:param after_inline: 本组之前是否紧跟着一个行内入口，为 True 时标题须自带换行。
 :return: 消息元素列表。
 <<< END U008956 >>>
 <<< UNIT U008957 | py-docstring | packages/akari-bot-core/akaribot/modules/core/common_tools/version.py:10-10 | ctx=get_version_display >>>
@@ -2343,7 +2343,7 @@ Markdown 表格不可用、图片渲染失败或指定 `--legacy` 时，模块�
 - 认领记录 30 秒后过期，进程重启后清空。
 <<< END U009133 >>>
 <<< UNIT U009134 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/petal.md:7-7 | ctx=petal >>>
-花瓣是跨平台的积分。此模块只在 `enable_petal` 为真时加载。别名 `petals`、`sign` 分别指向 `petal` 与 `petal sign`。
+花瓣是跨平台的积分。此模块只在 `enable_petal` 为 `true` 时加载。别名 `petals`、`sign` 分别指向 `petal` 与 `petal sign`。
 <<< END U009134 >>>
 <<< UNIT U009135 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/petal.md:13-13 | ctx=`petal` >>>
 此命令用于查询花瓣数量。不指定用户时，查询发送者本人。指定用户时要求超级用户权限。目标用户尚未初始化时，先确认再创建。

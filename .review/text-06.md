@@ -3928,8 +3928,8 @@ INFO、debug 文件。日志解析规则由 `akaribot/cli/logs.py` 提供，CLI 
 布局验证须检查控件内容与可见边界，不能以渲染对象的字符串表示代替实际显示宽度。
 <<< END U004459 >>>
 <<< UNIT U004460 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:231-232 | ctx=实现约定 >>>
-页面自有属性与方法不得占用 Textual 基类名称，如 `_render`、`offset`、`refresh`、`display` 与
-`styles`。渲染方法使用 `_render_fields` 等独立名称。定时轮询在 `self.display` 为假时跳过。
+页面自有属性与方法不得与 Textual 基类成员同名，如 `_render`、`offset`、`refresh`、`display` 与
+`styles`。渲染方法使用 `_render_fields` 等独立名称。定时轮询在 `self.display` 为 `False` 时跳过。
 <<< END U004460 >>>
 <<< UNIT U004461 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:234-235 | ctx=实现约定 >>>
 数据源通过接口注入，渲染路径只读取缓存。模块默认缓存有效期为 30 秒，搜索、重绘、缩放与详情更新

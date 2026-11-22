@@ -563,10 +563,10 @@
 />
 <<< END U009245 >>>
 <<< UNIT U009246 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/setup.md:284-284 | ctx=`setup sign` >>>
-此命令只在 `enable_petal` 为真时注册，用于切换场景的签到开关。开关默认开启，`petal` 模块的签到命令会读取它。
+此命令只在 `enable_petal` 为 `true` 时注册，用于切换场景的签到开关。开关默认开启，`petal` 模块的签到命令会读取它。
 <<< END U009246 >>>
 <<< UNIT U009247 | md-paragraph | packages/akari-bot-core/akaribot/modules/core/docs/setup.md:290-290 | ctx=`setup emote` >>>
-此命令只在 `use_emote` 为真时注册，用于切换场景的表情开关。
+此命令只在 `use_emote` 为 `true` 时注册，用于切换场景的表情开关。
 <<< END U009247 >>>
 <<< UNIT U009248 | md-heading | packages/akari-bot-core/akaribot/modules/core/docs/setup.md:292-292 | ctx=数据键 >>>
 ## 数据键

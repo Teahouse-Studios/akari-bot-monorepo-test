@@ -745,7 +745,7 @@ WebRender 使用的浏览器类型。（支持“chrome”与“firefox”）
 是否开启 WebRender。
 <<< END U008076 >>>
 <<< UNIT U008077 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:101-101 | ctx=config.comments.webrender.headless >>>
-是否以无头模式运行浏览器。
+是否以无界面模式（headless）运行浏览器。
 <<< END U008077 >>>
 <<< UNIT U008078 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:102-102 | ctx=config.comments.webrender.remote_only >>>
 是否仅允许使用远程 WebRender 服务。
@@ -769,7 +769,7 @@ database：无需额外部署 Hub，且可在共享数据库中保留尚未过�
 机器人客户端与服务端的通信依赖于 JobQueue，实例部署必须在 database 与 websocket 中选择一套完整后端。一般情况下你无需关注这些配置。（如遇 websocket 端口冲突可调整使用后端或端口）
 <<< END U008084 >>>
 <<< UNIT U008085 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:110-110 | ctx=config.notes.jobqueue.backend.websocket >>>
-websocket：经 Hub 实时路由，延迟较低，且可以避免 JobQueue 对业务数据库的轮询和写入竞争，但需要维护 Hub、长连接以及远程连接所需的令牌和 TLS。
+websocket：通过 Hub 实时路由，延迟较低，且可以避免 JobQueue 对业务数据库的轮询和写入竞争，但需要维护 Hub、长连接以及远程连接所需的令牌和 TLS。
 <<< END U008085 >>>
 <<< UNIT U008086 | json-value | packages/akari-bot-core/akaribot/core/locales/zh_cn.json:111-111 | ctx=config.table.config >>>
 一些基础的配置部分，此处填写的值可在消息中以明文形式展示。请不要在此部分填写敏感信息。

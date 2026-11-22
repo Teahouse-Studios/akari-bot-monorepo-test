@@ -2430,7 +2430,7 @@ Embed 消息元素 - 用于创建富文本嵌入式消息。
 # 应视作操作数，故选项匹配只在 ``--`` 之前进行。``--`` 本身不进入任何参数值。
 <<< END U006456 >>>
 <<< UNIT U006457 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/args.py:421-422 >>>
-# 内联值 ``--flag=value`` 仅当 ``allow_inline`` 为真且标志以 ``-`` 开头时启用，按第一个 ``=``
+# 内联值 ``--flag=value`` 仅当 ``allow_inline`` 为 True 且标志以 ``-`` 开头时启用，按第一个 ``=``
 # 切分，允许值为空字符串或自身包含 ``=``。非 ``-`` 开头的标志（如子命令名）只做精确匹配。
 <<< END U006457 >>>
 <<< UNIT U006458 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/args.py:438-438 >>>

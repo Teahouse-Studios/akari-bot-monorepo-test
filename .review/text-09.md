@@ -128,7 +128,7 @@
 | `SESSION_READY` | 会话刷新后、等待任务前 | 入站过滤、补充 tmp，可写入 SessionDraft |
 | `SESSION_BEFORE_WAIT` | 入站策略后、等待任务投递前 | 调整等待任务路由 |
 | `MESSAGE_NORMALIZED` | 消息文本规范化后、前缀判断前 | 自定义别名等触发文本改写 |
-| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、ToS 临封，可写入 SessionDraft |
+| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、服务条款（ToS）临时封禁，可写入 SessionDraft |
 | `COMMAND_BEFORE_PARSE` | 模块策略后、模板解析前 | ToS 计数，可写入 SessionDraft |
 | `COMMAND_BEFORE_EXECUTE` | 模板解析后、命令函数调用前 | 命令权限与平台策略 |
 | `COMMAND_ROUTE` | 命令解析后、通道认领前 | 命令路由与迁移策略 |
@@ -136,7 +136,7 @@
 | `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、禁止发言与运行中提醒 |
 | `REGEX_CANDIDATE` | 每个正则模块匹配前 | 模块级正则路由 |
 | `CHANNEL_CLAIM` | 候选策略通过后、通道认领前 | 通道避让策略 |
-| `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临封与权限 |
+| `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临时封禁与权限 |
 | `REGEX_BEFORE_EXECUTE` | regex 冷却后、获取锁前 | regex 计数 |
 | `EXECUTION_FINISHED` | 命令/正则函数执行结束 | 统计观察 |
 | `EXECUTION_ERROR` | 可分类异常 | AbuseWarning 处理 |
@@ -176,7 +176,7 @@
 ## 出站
 <<< END U006514 >>>
 <<< UNIT U006515 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:94-94 | ctx=出站 >>>
-`before_send` 通过 `ctx.outgoing` 改写 `chain` / `quote`。递归 send 跳过嵌套改写。`sent`/`failed` 只观察，不改写原结果。
+`before_send` 通过 `ctx.outgoing` 改写 `chain` / `quote`。递归发送时跳过嵌套改写。`sent`/`failed` 只观察，不改写原结果。
 <<< END U006515 >>>
 <<< UNIT U006516 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:96-96 | ctx=出站 >>>
 结果观察中的 `chain` 是改写后经过滤、平台转换与安全检查的实际发送内容，`message_ids` 来自平台返回值。
@@ -192,9 +192,9 @@
 <<< END U006519 >>>
 <<< UNIT U006520 | md-list | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:104-111 | ctx=执行契约 >>>
 - 串行。优先级升序 → 模块名 → 订阅 ID
-- 单 hook 异常 / 超时 / SessionFinished 等协议异常：丢弃并继续
+- 单个 hook 异常 / 超时 / SessionFinished 等协议异常：丢弃并继续
 - 外部 `CancelledError` / `SystemExit` / `KeyboardInterrupt` 传播
-- 模块 `_db_load` / `load` 为假时不执行
+- 模块 `_db_load` 或 `load` 为 `False` 时不执行
 - 订阅绑定到构建时的 module generation。热重载后旧版本回调跳过
 - `timeout` 默认 5s，可按订阅覆盖。`<=0` 不限时
 - `available_for` / `exclude_from` 语义同 command
@@ -209,7 +209,7 @@ hook 不得：
 <<< UNIT U006523 | md-list | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:117-119 | ctx=故障边界 >>>
 - 使用 `msg.finish()` 或抛出 `SessionFinished` 表达业务拒绝（请用 `Stop`）
 - 在观察入口忽略原异常或改写执行结果
-- 依赖对 SessionInfo 身份字段的写入（可写字段必须经 `SessionDraft` 提交）
+- 依赖对 SessionInfo 身份字段的写入（可写字段必须通过 `SessionDraft` 提交）
 <<< END U006523 >>>
 <<< UNIT U006524 | md-heading | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:121-121 | ctx=内置订阅方 >>>
 ## 内置订阅方
@@ -220,7 +220,7 @@ hook 不得：
 - `akaribot/modules/core/hooks/retired.py`：退役客户端路由和通道避让
 - `akaribot/modules/core/admin_tools/alias.py`：自定义别名改写
 - `akaribot/modules/core/hooks/routing.py`：同通道消息认领
-- `akaribot/modules/core/hooks/tos.py`：临封、令牌桶、上报。四个强制检查不限时，检查故障时按消息级 `Stop` 处理，
+- `akaribot/modules/core/hooks/tos.py`：临时封禁、令牌桶、上报。四个强制检查不限时，检查故障时按消息级 `Stop` 处理，
 <<< END U006525 >>>
 <<< UNIT U006526 | md-paragraph | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md:129-129 | ctx=内置订阅方 >>>
   避免失败放行。带名称的能力 `tos.check_temp_ban` / `tos.remove_temp_ban` / `tos.report`
@@ -339,7 +339,7 @@ Parser / 出站入口 hook 执行器。
 # 消息文本规范化后、前缀判断前。允许重写触发文本
 <<< END U006563 >>>
 <<< UNIT U006564 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/points.py:15-15 >>>
-# 命令候选选定后、模块处理前。冷却、临封和模块策略
+# 命令候选选定后、模块处理前。冷却、临时封禁和模块策略
 <<< END U006564 >>>
 <<< UNIT U006565 | py-comment | packages/akari-bot-core/akaribot/core/builtins/parser/hooks/points.py:17-17 >>>
 # 模块权限处理后、模板解析前。ToS 令牌桶计数
@@ -1779,7 +1779,7 @@ WebRender 配置模板。
 # 在引导阶段就被读入。
 <<< END U006934 >>>
 <<< UNIT U006935 | py-docstring | packages/akari-bot-core/akaribot/core/constants/path.py:63-72 | ctx=__getattr__ >>>
-已弃用字体常量的取用口，替代品为 ``akaribot.core.api.find_font``。
+已弃用字体常量的兼容访问入口，替代品为 ``akaribot.core.api.find_font``。
 
     按需导入避免导入阶段额外引入一层依赖，因为字体查找要用 importlib.resources 与 matplotlib，而本模块
     在引导阶段就被读入。

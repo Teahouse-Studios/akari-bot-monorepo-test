@@ -469,7 +469,7 @@ JobQueue 进程注册表。租约是在线状态的唯一事实来源。
 ## 包结构
 <<< END U007130 >>>
 <<< UNIT U007131 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/adapter-development.md:28-28 | ctx=包结构 >>>
-`manifest.toml` 用 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。启动实例前，守护进程会读取这两个字段，再检查同一平台的多个实例是否使用了相同的账号或令牌。
+`manifest.toml` 通过 `config_table = "bot_telegram"` 指向 `config.py` 中的配置表。`credential_fields = ["telegram_token"]` 列出登录字段。启动实例前，守护进程会读取这两个字段，再检查同一平台的多个实例是否使用了相同的账号或令牌。
 <<< END U007131 >>>
 <<< UNIT U007132 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/adapter-development.md:45-45 | ctx=info.py >>>
 `platform_name` 是平台展示名，`client_name` 由它生成，多实例时带实例后缀（如 `Telegram-alt`）。两个前缀列表传给 `client_init()`，由它校验会话 ID 并建立平台路由。
@@ -554,7 +554,7 @@ JobQueue 进程注册表。租约是在线状态的唯一事实来源。
 <<< UNIT U007152 | md-list | packages/akari-bot-core/akaribot/core/docs/adapter-development.md:130-133 | ctx=配置与本地化 >>>
 - 适配器配置用 `@on_bot_config("<平台>")` 声明，表名是 `bot_<平台>`。
 - 密钥写入 `[bot_<平台>_secret]`。
-- 字段注释写成 `config.comments.bot_<平台>.<字段名>`。密钥表的配置注释要带 `_secret` 后缀。
+- 字段注释键名为 `config.comments.bot_<平台>.<字段名>`。密钥表的配置注释要带 `_secret` 后缀。
 - 面向用户的文案只在适配器包的 `locales/zh_cn.json` 中创建，具体见[配置](config.md)与[本地化](i18n.md)。
 <<< END U007152 >>>
 <<< UNIT U007153 | md-heading | packages/akari-bot-core/akaribot/core/docs/api-reference.md:8-8 | ctx=API 导出索引 >>>
@@ -624,7 +624,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 ## 退出码与重启
 <<< END U007170 >>>
 <<< UNIT U007171 | md-table | packages/akari-bot-core/akaribot/core/docs/architecture.md:54-59 | ctx=退出码与重启 >>>
-| 退出码 | 含义 | 守护进程动作 |
+| 退出码 | 含义 | 守护进程操作 |
 | --- | --- | --- |
 | `0` | 正常退出 | Server 退出时整体退出，平台进程退出时不重启 |
 | `33` | 请求重启 | 清理导入缓存，重启全部子进程 |
@@ -905,7 +905,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 | `target_union_bind` | `target_id` → `union_id`，`channel_id` | 平台场景到场景 union 的映射与消息通道编号 |
 <<< END U007243 >>>
 <<< UNIT U007244 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/database.md:53-53 | ctx=union 数据 >>>
-`resolve_union(id, create)` 返回记录所属的 union。`create` 为真且记录不存在时，它会新建。
+`resolve_union(id, create)` 返回记录所属的 union。`create` 为 `True` 且记录不存在时，它会新建记录。
 <<< END U007244 >>>
 <<< UNIT U007245 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/database.md:55-55 | ctx=union 数据 >>>
 `TargetUnionInfo.config_module()`、`switch_mute()`、`edit_target_data()` 和 `SenderUnionInfo.edit_sender_data()` 都在事务中运行。它们通过 `select_for_update()` 改写 JSON 列。
@@ -1030,10 +1030,10 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 ## 分支与提交
 <<< END U007280 >>>
 <<< UNIT U007281 | md-list | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:67-71 | ctx=分支与提交 >>>
-- 新功能用 `dev/` 前缀，修复用 `fix/` 前缀，分支名使用英文。
+- 新功能分支使用 `dev/` 前缀，修复分支使用 `fix/` 前缀，分支名使用英文。
 - 未经授权不执行 `git commit`、`git add`、`git push`、`git reset` 或 `git checkout -- <文件>`。授权只对当次请求有效。
-- 提交信息用英文书面语，正文写明实际运行输出、失败用例的对比与检查结果等证据。
-- 移动文件用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不会识别为重命名（rename），需拆分为“先移动文件、再修改内容”两次提交。
+- 提交信息使用英文书面语，正文写明实际运行输出、失败用例的对比与检查结果等证据。
+- 移动文件应使用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不会识别为重命名（rename），需拆分为“先移动文件、再修改内容”两次提交。
 - 包内有源码改动时，要提升该包的 `version`。不升级版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。
 <<< END U007281 >>>
 <<< UNIT U007282 | md-heading | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:73-73 | ctx=文档 >>>
@@ -1121,10 +1121,10 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 提交 Issue 前先搜索是否已有相同问题。错误报告应包含简要描述、复现步骤、预期结果、实际结果与日志。功能建议应说明用途与可能的实现方式。仓库地址见 [CONTRIBUTING.md](https://github.com/Teahouse-Studios/akari-bot/blob/master/CONTRIBUTING.md)。Issue 模板见该文件。
 <<< END U007305 >>>
 <<< UNIT U007306 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:61-61 | ctx=报告问题与贡献 >>>
-贡献代码的流程为先 Fork 仓库，再创建分支、修改并提交 PR。分支名使用英文，新功能用 `dev/`，修复用 `fix/`。提交前运行 Ruff、注释检查、边界检查与版本检查，具体命令见贡献指南。
+贡献代码的流程为先 Fork 仓库，再创建分支、修改并提交 PR。分支名使用英文，新功能分支使用 `dev/` 前缀，修复分支使用 `fix/` 前缀。提交前运行 Ruff、注释检查、边界检查与版本检查，具体命令见贡献指南。
 <<< END U007306 >>>
 <<< UNIT U007307 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:63-63 | ctx=报告问题与贡献 >>>
-翻译经 Weblate 提交。简体中文以外的翻译问题，不建议在 Issue 里讨论。
+翻译通过 Weblate 提交。简体中文以外的翻译问题，不建议在 Issue 里讨论。
 <<< END U007307 >>>
 <<< UNIT U007308 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:67-67 | ctx=报告问题与贡献 >>>
 涉及敏感信息的安全问题不要提交到 Issue 或其他公开渠道，应按 `SECURITY.md` 的方式私下联系维护者。
@@ -1160,7 +1160,7 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 按 `config schema` 列出的字段填写适配器的登录信息，然后启动实例。用 `akaribot config set <字段> <值> --table <表名>` 写入的值，会按模板声明的类型转换。
 <<< END U007318 >>>
 <<< UNIT U007319 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/faq.md:104-104 | ctx=自建实例 >>>
-`akaribot init` 默认安装品牌资产、表情与常规可选依赖。加上 `--minimal` 时只安装核心所需的最小依赖。模块用 `akaribot module add <名>` 安装。旧部署的备份、试运行与迁移见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。
+`akaribot init` 默认安装品牌资产、表情与常规可选依赖。加上 `--minimal` 时只安装核心所需的最小依赖。模块通过 `akaribot module add <名>` 安装。旧部署的备份、试运行与迁移见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。
 <<< END U007319 >>>
 <<< UNIT U007320 | md-heading | packages/akari-bot-core/akaribot/core/docs/i18n.md:1-1 | ctx=本地化 >>>
 # 本地化

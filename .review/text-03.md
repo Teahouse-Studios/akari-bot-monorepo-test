@@ -161,7 +161,7 @@ QQ 机器人（官方）适配器通过 QQ 开放平台的官方机器人接口�
 ## 平台概述
 <<< END U000871 >>>
 <<< UNIT U000872 | md-paragraph | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/index.md:7-7 | ctx=平台概述 >>>
-适配器使用 AppID 与 AppSecret 登录 QQ 开放平台。默认经 WebSocket Gateway 接收事件，也可以改用 Webhook，由平台发起回调。
+适配器使用 AppID 与 AppSecret 登录 QQ 开放平台。默认通过 WebSocket Gateway 接收事件，也可以改用 Webhook，由平台发起回调。
 <<< END U000872 >>>
 <<< UNIT U000873 | md-paragraph | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/docs/index.md:9-9 | ctx=平台概述 >>>
 会话分为群聊、C2C 私信、服务器频道和频道私信。适配器启动时会同步全局菜单与指令面板。
@@ -345,7 +345,7 @@ Webhook 监听端口。
     # s3 extra 依据 plan:498 / tasks:1382。core/utils/s3.py 采用按需导入，该 extra 因此可用（T4.2 §6）
 <<< END U000918 >>>
 <<< UNIT U000919 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_markdown_toggle.py:24-26 >>>
-# 平台能力集在导入时即依配置定型，在 qq_use_markdown 为假的部署上，markdown 相关能力全为假，
+# 平台能力集在导入时即依配置定型，在 qq_use_markdown 为 False 的部署上，markdown 相关能力全为 False，
 # 因此无法验证覆盖逻辑。各用例新建一份启用 Markdown 的基准并替换该开关，
 # 使检查只考察覆盖逻辑本身，不受本地配置左右。
 <<< END U000919 >>>
@@ -547,7 +547,7 @@ Satori 适配器实现 Satori 协议，连接 Satori 服务端。具体平台的
 | `satori_port` | 服务端端口，默认 `5140` |
 | `satori_path` | 连接路径，为空时按协议默认值 |
 | `satori_secure` | 是否使用 TLS 连接 |
-| `satori_token` | 访问令牌，写入 secret 表 |
+| `satori_token` | 访问令牌，位于密钥表 |
 | `satori_admin_roles` | 视为管理员的角色名，默认 `admin`、`owner` |
 <<< END U000982 >>>
 <<< UNIT U000983 | json-value | packages/adapters/akari-bot-adapter-satori/akaribot/adapters/satori/locales/zh_cn.json:2-2 | ctx=config.comments.bot_satori_secret.satori_token >>>
@@ -2210,8 +2210,8 @@ core 入口调用失败，或其输出无法解析。
 # target_union_info.modules。本命令只控制第二级，故用 load/unload 而非场景级的 enable/disable。
 <<< END U001474 >>>
 <<< UNIT U001475 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:1136-1137 >>>
-# 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件提前返回。
-# 为真时仍通过子进程执行，由 core 判定 Server 是否在线。
+# 实例未运行时 core 端要等 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件提前返回。
+# 为 True 时仍通过子进程执行，由 core 判定 Server 是否在线。
 <<< END U001475 >>>
 <<< UNIT U001476 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/module.py:413-413 | ctx=list_packages >>>
 列出已安装的模块与适配器。

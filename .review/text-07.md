@@ -885,7 +885,7 @@ Esc 等同稍后填写。
 按键名获取字段行，未找到时返回 ``None``。
 <<< END U004825 >>>
 <<< UNIT U004826 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:1645-1645 | ctx=ConfigPage.is_dirty >>>
-判断是否存在未保存的编辑，表单行与原始文本任一与载入值不同即为真。
+判断是否存在未保存的编辑，表单行与原始文本任一与载入值不同即返回 True。
 <<< END U004826 >>>
 <<< UNIT U004827 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:1652-1652 | ctx=ConfigPage.dirty_note >>>
 返回未保存更改的说明。没有更改时为空字符串。
@@ -1409,7 +1409,7 @@ Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系�
 返回实例数据库中已注册模型的表。
 <<< END U004999 >>>
 <<< UNIT U005000 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:395-395 | ctx=DatabaseSource.rows >>>
-返回一张表的一页数据项。``query`` 提供筛选条件与排序，``count`` 为假时不重新计算总条数。
+返回一张表的一页数据项。``query`` 提供筛选条件与排序，``count`` 为 False 时不重新计算总条数。
 <<< END U005000 >>>
 <<< UNIT U005001 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/database.py:398-398 | ctx=DatabaseSource.set_values >>>
 按主键更新数据项的指定列。多列更改通过一次调用提交。
@@ -1979,7 +1979,7 @@ Esc 关闭对话框，放弃输入。
 停止开发模式预览。
 <<< END U005189 >>>
 <<< UNIT U005190 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/docs.py:297-297 | ctx=DocsSource.deploy >>>
-部署站点。``dry_run`` 为真时只统计将更改的文件。
+部署站点。``dry_run`` 为 True 时只统计将更改的文件。
 <<< END U005190 >>>
 <<< UNIT U005191 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/docs.py:357-357 | ctx=StaticDocsSource.server_running >>>
 返回预览服务是否处于运行状态。
@@ -2441,13 +2441,13 @@ Esc 关闭对话框，放弃输入。
 返回实例是否在运行。探测失败时返回 ``None``。
 <<< END U005343 >>>
 <<< UNIT U005344 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:219-219 | ctx=EnvironmentSource.action >>>
-执行 ``adopt`` / ``release`` / ``recreate``。``dry_run`` 为真时只预览。
+执行 ``adopt`` / ``release`` / ``recreate``。``dry_run`` 为 True 时只预览。
 <<< END U005344 >>>
 <<< UNIT U005345 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:222-222 | ctx=EnvironmentSource.add_package >>>
-安装运行库。``save`` 为真时同时写入实例清单。
+安装运行库。``save`` 为 True 时同时写入实例清单。
 <<< END U005345 >>>
 <<< UNIT U005346 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:225-225 | ctx=EnvironmentSource.remove_package >>>
-卸载运行库。``save`` 为真时同时删除清单记录。
+卸载运行库。``save`` 为 True 时同时删除清单记录。
 <<< END U005346 >>>
 <<< UNIT U005347 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:286-286 | ctx=StaticEnvironmentSource.state >>>
 见 :meth:`EnvironmentSource.state`。
@@ -2750,7 +2750,7 @@ Esc 关闭对话框，放弃输入。
 项目迁移数据源接口。
 <<< END U005446 >>>
 <<< UNIT U005447 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/misc.py:43-43 | ctx=MiscSource.migrate_legacy >>>
-迁移旧版项目到当前实例。``dry_run`` 为真时仅预览，``flags`` 为附加的 CLI 参数。
+迁移旧版项目到当前实例。``dry_run`` 为 True 时仅预览，``flags`` 为附加的 CLI 参数。
 <<< END U005447 >>>
 <<< UNIT U005448 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/misc.py:58-58 | ctx=StaticMiscSource.migrate_legacy >>>
 见 :meth:`MiscSource.migrate_legacy`。

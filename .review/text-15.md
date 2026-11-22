@@ -413,7 +413,7 @@ akaribot.modules.core.admin_tools.alias 单元测试 - 自定义别名改写。
 # 配置，此处显式清空它，避免用例结论取决于外层环境。
 <<< END U010195 >>>
 <<< UNIT U010196 | py-comment | packages/akari-bot-core/tests/test_paths.py:151-151 >>>
-# 判定须在临时目录销毁之前完成，否则退出 with 后 is_dir() 必然为假。
+# 判定须在临时目录销毁之前完成，否则退出 with 后 is_dir() 必然为 False。
 <<< END U010196 >>>
 <<< UNIT U010197 | py-comment | packages/akari-bot-core/tests/test_paths.py:163-163 >>>
 # 末级目录名取决于当前客户端（default 或 client_name 的小写）。其取值不在此检查。
