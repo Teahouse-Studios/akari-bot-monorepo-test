@@ -1890,7 +1890,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 改用纯文本路径。全局配置关闭时同样如此。
 <<< END U000840 >>>
 <<< UNIT U000841 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:1195-1195 >>>
-# 客户端解析也可能在初始化失败或关闭期间抛错，仍应遵守私信失败返回空 ID 的约定。
+# 客户端解析也可能在初始化失败或关闭期间抛出异常，仍应遵守私信失败返回空 ID 的约定。
 <<< END U000841 >>>
 <<< UNIT U000842 | py-comment | packages/adapters/akari-bot-adapter-qqbot/akaribot/adapters/qqbot/context.py:1198-1198 >>>
 # 当前已处于私信场景中，无需另行创建

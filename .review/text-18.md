@@ -451,7 +451,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 标准骰 XdY
 <<< END U011302 >>>
 <<< UNIT U011303 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:13-13 | ctx=标准骰 XdY >>>
-投掷 X 枚 Y 面骰并求点数总和。X 省略时为 1，Y 不得小于 2。单次投掷的骰子数量上限由 `dice_limit` 决定。
+投掷 X 枚 Y 面骰并求点数总和。X 省略时为 1，Y 不得小于 2。单次投掷的骰子数量上限由 `dice_limit` 控制。
 <<< END U011303 >>>
 <<< UNIT U011304 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:15-19 | ctx=标准骰 XdY >>>
 | 表达式 | 含义 | 明细示例 |
@@ -544,7 +544,7 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 ## 多轮投掷 N# 表达式
 <<< END U011324 >>>
 <<< UNIT U011325 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:84-84 | ctx=多轮投掷 N# 表达式 >>>
-在表达式最前面写 `N#`，把同一表达式重复投掷 N 次，每次单独输出一行结果。N 须为大于 0 的整数，上限由 `dice_roll_limit` 决定。省略 `N#` 时投掷 1 次。
+在表达式最前面写 `N#`，把同一表达式重复投掷 N 次，每次单独输出一行结果。N 须为大于 0 的整数，上限由 `dice_roll_limit` 控制。省略 `N#` 时投掷 1 次。
 <<< END U011325 >>>
 <<< UNIT U011326 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:90-90 | ctx=多轮投掷 N# 表达式 >>>
 `3#D6` 依次输出 3 行 `D6=(D6=点数)=结果`。带 DC 时每行分别判定，并在末尾汇总成功与失败次数。
@@ -1531,7 +1531,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 命令对普通用户开放，不要求管理员或超级用户权限。模块没有声明平台限制，所有已接入的平台都可以使用。
 <<< END U011622 >>>
 <<< UNIT U011623 | md-paragraph | packages/modules/akari-bot-module-langconv/akaribot/modules/langconv/docs/development.md:23-23 | ctx=权限与平台能力 >>>
-模块没有声明支持的语言，转换目标由命令参数决定，与会话语言无关。三个转换器在首次使用时加载，之后在进程内复用。
+模块没有声明支持的语言，转换目标取决于命令参数，与会话语言无关。三个转换器在首次使用时加载，之后在进程内复用。
 <<< END U011623 >>>
 <<< UNIT U011624 | md-heading | packages/modules/akari-bot-module-langconv/akaribot/modules/langconv/docs/development.md:25-25 | ctx=数据表 >>>
 ## 数据表
@@ -1759,7 +1759,7 @@ CHUNITHM 的成绩绑定与水鱼、落雪共用同一份记录，舞萌绑定�
 | 更新内容 | 曲目表与封面 | 曲目库、别名与封面 |
 <<< END U011676 >>>
 <<< UNIT U011677 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/chunithm.md:202-202 | ctx=与舞萌 DX 的差异 >>>
-CHUNITHM 没有 `new`、`alias`、`grade`、`scoreline`、`calc`、`plate`、`process`、`rank`、`scorelist`、`score` 与 `b50` 命令，这些命令只在舞萌 DX 侧提供。曲目资料来自落雪，不由水鱼提供，舞萌的曲目更新不会改变 CHUNITHM 的曲目表。
+CHUNITHM 没有 `new`、`alias`、`grade`、`scoreline`、`calc`、`plate`、`process`、`rank`、`scorelist`、`score` 与 `b50` 命令，这些命令只在舞萌 DX 中提供。曲目资料来自落雪，不由水鱼提供，舞萌的曲目更新不会改变 CHUNITHM 的曲目表。
 <<< END U011677 >>>
 <<< UNIT U011678 | md-heading | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/development.md:5-5 | ctx=maimai：安装与开发 >>>
 # maimai：安装与开发
@@ -1853,7 +1853,7 @@ B50、B30、名牌板与进度图由 Pillow 生成，平台需要支持图片消
 />
 <<< END U011701 >>>
 <<< UNIT U011702 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:42-42 | ctx=`maimai level` >>>
-按等级搜索谱面。`<level>` 取 `1` 至 `15`，带加号的等级只有 `7+` 至 `14+`。结果超过一页时输出图片。
+按等级搜索谱面。`<level>` 可选 `1` 至 `15`，带加号的等级只有 `7+` 至 `14+`。结果超过一页时输出图片。
 <<< END U011702 >>>
 <<< UNIT U011703 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:45-50 | ctx=`maimai level` >>>
   :log="[
@@ -2010,7 +2010,7 @@ B50、B30、名牌板与进度图由 Pillow 生成，平台需要支持图片消
 真将以及除“霸者”“覇者”以外的“者”类名牌板均不能查询。
 <<< END U011733 >>>
 <<< UNIT U011734 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:238-238 | ctx=`maimai process` >>>
-查看玩家在指定等级的目标评价完成进度。`<level>` 取 `1` 至 `15`，带加号的等级只有 `7+` 至 `14+`。`<goal>` 取 `A` 至 `SSS+`、`FC`、`FC+`、`AP`、`AP+`、`SYNC`、`FS`、`FS+`、`FDX`、`FDX+`。`-l` 输出完成表图片。
+查看玩家在指定等级的目标评价完成进度。`<level>` 可选 `1` 至 `15`，带加号的等级只有 `7+` 至 `14+`。`<goal>` 可选 `A` 至 `SSS+`、`FC`、`FC+`、`AP`、`AP+`、`SYNC`、`FS`、`FS+`、`FDX`、`FDX+`。`-l` 输出完成表图片。
 <<< END U011734 >>>
 <<< UNIT U011735 | md-paragraph | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md:244-244 | ctx=`maimai scorelist` >>>
 查看绑定账号在指定等级的分数列表。`-p` 不是数字时，机器人按第 1 页处理。
@@ -2257,7 +2257,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 <<< END U011804 >>>
 <<< UNIT U011805 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:110-111 >>>
 # 令牌端点严格比对认证方式，机密客户端缺少 client_secret、公开客户端多余传入，得到的都是
-# `401 invalid_client`，且两种情形的响应完全相同，故只能由配置里有无 client_secret 决定。
+# `401 invalid_client`，且两种情形的响应完全相同，故只能根据配置里有无 client_secret 确定。
 <<< END U011805 >>>
 <<< UNIT U011806 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/divingfish_oauth.py:118-119 >>>
 # OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），故传入
@@ -2367,7 +2367,7 @@ refresh token 已失效，可能是用户撤销了授权，或令牌链因并发
 # 过滤宴谱
 <<< END U011839 >>>
 <<< UNIT U011840 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/maimaidx_apidata.py:365-365 >>>
-# OAuth 下查询对象由令牌决定，此处的载荷只用于携带版本列表。
+# OAuth 下查询对象由令牌确定，此处的载荷只用于携带版本列表。
 <<< END U011840 >>>
 <<< UNIT U011841 | py-inline-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/maimaidx_apidata.py:368-368 >>>
 # “覇者”属于舞代
@@ -3217,7 +3217,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 `mcmod <mod_name>` 与 `mcmod details <content>` 都没有声明管理员或超级用户限制，普通用户可以执行。模块未声明平台限制，`available_for` 使用默认值 `*`。
 <<< END U012112 >>>
 <<< UNIT U012113 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/development.md:23-23 | ctx=权限与平台能力 >>>
-模块声明了 `support_languages=["zh_cn"]`。在非简体中文会话中启用该模块时，框架会提示语言不受支持。搜索结果页经 WebRender 抓取，运行前需要在 core 配置中开启 `webrender.enable`。
+模块声明了 `support_languages=["zh_cn"]`。在非简体中文会话中启用该模块时，框架会提示语言不受支持。搜索结果页通过 WebRender 抓取，运行前需要在 core 配置中开启 `webrender.enable`。
 <<< END U012113 >>>
 <<< UNIT U012114 | md-heading | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/development.md:25-25 | ctx=数据表 >>>
 ## 数据表
@@ -3226,7 +3226,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 依赖与外部服务
 <<< END U012115 >>>
 <<< UNIT U012116 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/development.md:31-31 | ctx=依赖与外部服务 >>>
-运行依赖 `akari-bot-core` 与 `beautifulsoup4>=4.11.1,<5.0.0`。外部服务为 `search.mcmod.cn`。名称搜索使用 `https://search.mcmod.cn/s?key=`，内容搜索使用 `https://search.mcmod.cn/s?filter=3&key=`。页面经 WebRender 抓取后用 BeautifulSoup 解析。
+运行依赖 `akari-bot-core` 与 `beautifulsoup4>=4.11.1,<5.0.0`。外部服务为 `search.mcmod.cn`。名称搜索使用 `https://search.mcmod.cn/s?key=`，内容搜索使用 `https://search.mcmod.cn/s?filter=3&key=`。页面通过 WebRender 抓取后用 BeautifulSoup 解析。
 <<< END U012116 >>>
 <<< UNIT U012117 | md-paragraph | packages/modules/akari-bot-module-mcmod/akaribot/modules/mcmod/docs/index.md:3-3 | ctx=mcmod >>>
 此模块用于检索 MC 百科（mcmod.cn）的 Mod 条目，返回搜索结果中第一条的名称、链接与简介。

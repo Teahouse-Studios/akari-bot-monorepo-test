@@ -118,7 +118,7 @@
 
 ## 正文
 <<< UNIT U008594 | py-comment | packages/akari-bot-core/akaribot/core/server/run.py:43-44 >>>
-# 重启提示须等发起者所在客户端完成 Peer 注册，且投递自身依赖队列结果泵，
+# 重启提示须等待发起者所在客户端完成节点注册，且投递自身依赖队列结果泵，
 # 故置于当前 Server 注册 ready 并开始轮询之后。
 <<< END U008594 >>>
 <<< UNIT U008595 | py-comment | packages/akari-bot-core/akaribot/core/server/run.py:47-48 >>>
@@ -207,7 +207,7 @@
 # 注册组件时必定传入处理函数，默认值仅为满足 attrs 的字段顺序要求
 <<< END U008618 >>>
 <<< UNIT U008619 | py-comment | packages/akari-bot-core/akaribot/core/types/module/component_meta.py:56-56 >>>
-# 注册期编译好的模式，避免每条消息都去 re 模块的全局缓存里查一次
+# 注册阶段编译好的模式，避免每条消息都去 re 模块的全局缓存里查一次
 <<< END U008619 >>>
 <<< UNIT U008620 | py-comment | packages/akari-bot-core/akaribot/core/types/module/component_meta.py:62-62 >>>
 # 已编译的模式无法再附加 flags，附加会在此后的每次匹配中抛出异常
@@ -249,7 +249,7 @@
 # 余数均摊到靠前的几行，使各行数量至多相差一个
 <<< END U008632 >>>
 <<< UNIT U008633 | py-comment | packages/akari-bot-core/akaribot/core/utils/button.py:105-105 >>>
-# 将旧版内嵌编码立即归一化，之后各平台只消费语义字段。
+# 将旧版内嵌编码立即规范化，之后各平台只读取语义字段。
 <<< END U008633 >>>
 <<< UNIT U008634 | py-comment | packages/akari-bot-core/akaribot/core/utils/button.py:124-124 >>>
 # 兼容显式 callback_id 但消息内没有按钮的既有调用。
@@ -288,16 +288,16 @@
 已注册的按钮。
 <<< END U008642 >>>
 <<< UNIT U008643 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button_runtime.py:38-38 | ctx=ButtonConsumeStatus >>>
-按钮消费结果。
+按钮回调处理结果。
 <<< END U008643 >>>
 <<< UNIT U008644 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button_runtime.py:49-49 | ctx=ButtonConsumeResult >>>
-按钮回调的消费结果。
+按钮回调的处理结果。
 <<< END U008644 >>>
 <<< UNIT U008645 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button_runtime.py:68-68 | ctx=register_button_rows >>>
 注册按钮行并返回平台可用的短 token。
 <<< END U008645 >>>
 <<< UNIT U008646 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button_runtime.py:97-97 | ctx=consume_button >>>
-校验并消费一个按钮 token。
+校验并核销一个按钮 token。
 <<< END U008646 >>>
 <<< UNIT U008647 | py-docstring | packages/akari-bot-core/akaribot/core/utils/button_runtime.py:121-121 | ctx=normalize_button_payload >>>
 将平台确认按钮转换为现有确认文本。
@@ -449,7 +449,7 @@
 # 已知字体名到系统字族候选的映射。未收录的名字只在资源包与实例 data 两级查找。
 <<< END U008692 >>>
 <<< UNIT U008693 | py-comment | packages/akari-bot-core/akaribot/core/utils/font.py:56-56 >>>
-# 资源包是可选依赖，故按名字惰性导入，出现 ImportError 即视该级不可用，core 的依赖清单不变。
+# 资源包是可选依赖，故按名称按需导入，出现 ImportError 即视该级不可用，core 的依赖清单不变。
 <<< END U008693 >>>
 <<< UNIT U008694 | py-comment | packages/akari-bot-core/akaribot/core/utils/font.py:80-80 >>>
 # fallback_to_default=False 让未命中时抛出 ValueError，而不是静默回退到 DejaVu Sans。
@@ -712,7 +712,7 @@
 # 固定延迟会让公告集中在同一瞬间涌出，触发平台频率限制。
 <<< END U008760 >>>
 <<< UNIT U008761 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:25-26 >>>
-# 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。
+# 已排入延时队列、尚未推送的场景。防止用户在等待期间连续发送消息导致重复排队。
 # 仅存于进程内存，重启即清空。因已发送记录只在推送成功后写入数据库，重启后会自然重新排队。
 <<< END U008761 >>>
 <<< UNIT U008762 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:30-31 >>>
@@ -721,7 +721,7 @@
 <<< END U008762 >>>
 <<< UNIT U008763 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:34-35 >>>
 # 内存态是唯一来源，判断与写入均以内存为准，写入数据库时全量覆盖。
-# 若改为逐次读取数据库、追加再写回，两个场景并发触发时先写的记录会被覆盖，对应场景将重复收到公告。
+# 若改为逐次读取数据库、追加再写回，两个场景并发触发时先写入的记录会被覆盖，对应场景将重复收到公告。
 <<< END U008763 >>>
 <<< UNIT U008764 | py-comment | packages/akari-bot-core/akaribot/core/utils/retired.py:38-39 >>>
 # 公告投递任务可能并发完成。每次持久化都从共享内存字典生成一份快照，若两个 save
@@ -1151,14 +1151,14 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008877 >>>
 <<< UNIT U008878 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:58-59 >>>
 # 握手分待认领的 probe 与待闭合的 confirm 两段记录。口令一经发出即出现在场景中，
-# 任何人都能原样复制，故两段各自的口令都只能被消费一次。
+# 任何人都能原样复制，故两段各自的口令都只能使用一次。
 <<< END U008878 >>>
 <<< UNIT U008879 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:62-63 >>>
 # 握手闭合串行执行。若避让机制未生效（如某一平台的 probe 投递延迟），
 # 两轮并发执行至“是否同组”判定时会同时读到合并前的数据，各自新建一个组，合并即告失败。
 <<< END U008879 >>>
 <<< UNIT U008880 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:105-105 >>>
-# 取出并消费一枚由 ``bind`` 签发的绑定码。
+# 取出并核销一枚由 ``bind`` 签发的绑定码。
 <<< END U008880 >>>
 <<< UNIT U008881 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:113-113 >>>
 # 当前场景的消息通道信息，含同通道的其他场景。
@@ -1238,7 +1238,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008902 >>>
 <<< UNIT U008903 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:526-528 >>>
 # 闭合一轮握手。
-# confirm 口令同样只能消费一次，且只在发起场景中生效。响应方发出的口令必然出现在双方共处的
+# confirm 口令同样只能使用一次，且只在发起场景中生效。响应方发出的口令必然出现在双方共处的
 # 那个场景里，出现在别处即说明它是被转贴过去的，据此可拒绝跨场景的冒用。
 <<< END U008903 >>>
 <<< UNIT U008904 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/bind.py:557-559 >>>
@@ -1272,7 +1272,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< END U008911 >>>
 <<< UNIT U008912 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:340-342 >>>
 # 每节为 (区隔行文案, [(种类, 首列, 次列), ...])。命令一节不带区隔行。
-# 种类决定首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，
+# 种类控制首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，
 # text 则正常转义。
 <<< END U008912 >>>
 <<< UNIT U008913 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/help.py:350-350 >>>
@@ -1345,7 +1345,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 中间，依赖的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，
 竖线与换行均由此处显式写出。也正因如此，本函数生成的元素中**不得出现相邻的两个纯文本**
-—— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被拆成两半。
+—— 适配器只在指令操作之后才会合并，两个纯文本之间会被补上换行，表格随即被拆成两半。
 区隔行因此与上一组的收尾同处一个元素。
 
 :param msg: 消息会话。
@@ -1355,7 +1355,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 :return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。
 <<< END U008927 >>>
 <<< UNIT U008928 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:32-33 >>>
-# 迁移码与 bind 的绑定码分开存放，两者不可互相消费，因为
+# 迁移码与 bind 的绑定码分开存放，两者不可混用，因为
 # 迁移码用于把退役实例上的数据迁移到新实例，与常规的跨平台绑定不是同一件事。
 <<< END U008928 >>>
 <<< UNIT U008929 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:37-38 >>>
@@ -1363,7 +1363,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 # 退役策略的白名单按模块名放行，公告正则须挂载在白名单模块上才能在退役场景继续匹配。
 <<< END U008929 >>>
 <<< UNIT U008930 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:43-43 >>>
-# 取出并消费一枚由 ``merge`` 签发的迁移码。
+# 取出并核销一枚由 ``merge`` 签发的迁移码。
 <<< END U008930 >>>
 <<< UNIT U008931 | py-comment | packages/akari-bot-core/akaribot/modules/core/common_tools/merge.py:51-53 >>>
 # 两个场景并入同一条通道，使命令执行与消息推送只由其中一方承担。若两个机器人回到共作状态，

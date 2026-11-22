@@ -67,7 +67,7 @@
 # 模块开发
 <<< END U007389 >>>
 <<< UNIT U007390 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:3-3 | ctx=模块开发 >>>
-本文从生成、安装到运行，说明第一个模块的完整流程。后面介绍模块的包结构、命令、Hook、配置和运行期资源。阅读前，你需要了解 Python 异步编程，并熟悉本仓库的包管理方式。
+本文从生成、安装到运行，说明第一个模块的完整流程。后面介绍模块的包结构、命令、Hook、配置和运行时资源。阅读前，你需要了解 Python 异步编程，并熟悉本仓库的包管理方式。
 <<< END U007390 >>>
 <<< UNIT U007391 | md-heading | packages/akari-bot-core/akaribot/core/docs/module-development.md:5-5 | ctx=准备工作 >>>
 ## 准备工作
@@ -354,7 +354,7 @@ JobQueue 处理完现有任务、Scheduler 进入维护状态后，框架才执�
 ## 正则匹配
 <<< END U007467 >>>
 <<< UNIT U007468 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:394-394 | ctx=正则匹配 >>>
-命令必须先写命令前缀才能触发。只要消息里出现符合正则的文本，对应的处理函数就会执行。正则适合识别链接、编号和固定格式的句子。
+命令必须先输入命令前缀才能触发。只要消息里出现符合正则的文本，对应的处理函数就会执行。正则适合识别链接、编号和固定格式的句子。
 <<< END U007468 >>>
 <<< UNIT U007469 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:396-396 | ctx=正则匹配 >>>
 下面用 bilibili 模块识别 av 号。`bili` 是它的模块实例，换成自己的模块变量即可：
@@ -468,7 +468,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 模块级 `required_*` 对所有命令生效。命令上配置的权限只能比模块级更严格。
 <<< END U007502 >>>
 <<< UNIT U007503 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:561-561 | ctx=权限 >>>
-运行期可以调用 `await msg.check_permission()` 判断当前用户是否为场景管理员，调用 `msg.check_super_user()` 判断是否为超级用户。
+运行时可以调用 `await msg.check_permission()` 判断当前用户是否为场景管理员，调用 `msg.check_super_user()` 判断是否为超级用户。
 <<< END U007503 >>>
 <<< UNIT U007504 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:563-563 | ctx=权限 >>>
 基础模块始终开启，普通模块要先在场景内执行 `~module enable` 才能使用。`~auth` 可以给单个用户授予模块级超级用户权限。
@@ -490,7 +490,7 @@ Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果
 - `PlayState(game, msg)`：按会话保存小游戏状态。默认在 3600 秒（`GAME_EXPIRED`）后过期。`running()` 作为上下文管理器标记进行中状态。
 <<< END U007508 >>>
 <<< UNIT U007509 | md-heading | packages/akari-bot-core/akaribot/core/docs/module-development.md:577-577 | ctx=运行期资源 >>>
-## 运行期资源
+## 运行时资源
 <<< END U007509 >>>
 <<< UNIT U007510 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/module-development.md:579-579 | ctx=运行期资源 >>>
 `Bind.Module` 提供由框架管理的资源接口：
@@ -951,7 +951,7 @@ AT 码用于行内提及用户。语法为 `<AT:客户端|用户 ID>`，也接�
 - `get_module_and_alias_first_words(module_or_alias)`：返回模块名与别名对应的首词。
 <<< END U007645 >>>
 <<< UNIT U007646 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:214-214 | ctx=`ModuleRuntimeManager` >>>
-`ModuleRuntimeManager` 管理运行期状态。
+`ModuleRuntimeManager` 管理运行时状态。
 <<< END U007646 >>>
 <<< UNIT U007647 | md-list | packages/akari-bot-core/akaribot/core/docs/public-api.md:216-218 | ctx=`ModuleRuntimeManager` >>>
 - `get_or_create(module_name)`：获取模块的 `ModuleRuntime`，没有时创建。
@@ -1169,7 +1169,7 @@ RPC 失败的基类。具体子类区分不可达、超时、取消、方法不�
 平台上下文管理器。它实现发送、删除、禁言、权限组、表情与输入状态等平台动作。
 <<< END U007707 >>>
 <<< UNIT U007708 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:424-424 | ctx=`PlatformAPI` >>>
-适配器侧的 RPC 接口。`context_method()` 把 `ContextManager` 的方法绑定成可远程调用的动作。
+适配器端的 RPC 接口。`context_method()` 把 `ContextManager` 的方法绑定成可远程调用的动作。
 <<< END U007708 >>>
 <<< UNIT U007709 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/public-api.md:428-428 | ctx=`Features` >>>
 声明平台能力。`client_init()` 注册节点时，把这些标志写入 `capabilities`。
@@ -1374,7 +1374,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 其他模块通常先检查状态。没有先检查的模块会在调用失败后改用纯文本。异常由渲染服务内部处理，本地与远程都失败时返回 `None`。
 <<< END U007765 >>>
 <<< UNIT U007766 | md-paragraph | packages/akari-bot-core/akaribot/core/docs/webrender.md:69-69 | ctx=降级 >>>
-设置 `remote_web_render_url` 后，本地渲染失败时会改发到远程服务，本地浏览器未初始化、渲染结果为空与一般异常都算失败。远程服务也失败时，客户端返回空结果。`remote_only=true` 时只用远程服务，此时远程地址必须可用。
+设置 `remote_web_render_url` 后，本地渲染失败时会改用远程服务，本地浏览器未初始化、渲染结果为空与一般异常都算失败。远程服务也失败时，客户端返回空结果。`remote_only=true` 时只用远程服务，此时远程地址必须可用。
 <<< END U007766 >>>
 <<< UNIT U007767 | md-heading | packages/akari-bot-core/akaribot/core/docs/webrender.md:73-73 | ctx=程序接口 >>>
 ## 程序接口
@@ -1410,7 +1410,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 缺失的键可能回退为键名，也可能回退为 ``{I18N:键名}`` 标记。
 <<< END U007776 >>>
 <<< UNIT U007777 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:95-96 >>>
-# 子进程没有 bot 启动期的快照，不接上时 ``Locale.t`` 一律回退为键名（注释会显示成
+# 子进程没有 bot 启动阶段的快照，不接上时 ``Locale.t`` 一律回退为键名（注释会显示成
 # ``{I18N:...}`` 标记）。只做一次。
 <<< END U007777 >>>
 <<< UNIT U007778 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:109-110 >>>
@@ -1427,7 +1427,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # 表名只用于拼接配置目录下的文件名。含分隔符的名字一律拒绝，无法读取目录之外。
 <<< END U007781 >>>
 <<< UNIT U007782 | py-inline-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:184-184 >>>
-# noqa: BLE001 - 解析错误类型由 tomlkit 决定，逐表归集后继续
+# noqa: BLE001 - 解析错误类型取决于 tomlkit，逐表归集后继续
 <<< END U007782 >>>
 <<< UNIT U007783 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/config.py:241-242 >>>
 # 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``，导致文件里类型不对，重新读取虽是 ``true``
@@ -1456,7 +1456,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 清单读取失败只让 package 一栏留空，不应阻断浏览
 <<< END U007790 >>>
 <<< UNIT U007791 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:108-108 >>>
-# 可调用默认值（uuid4、list 等）的结果要到运行期才能确定，用 null 表示由模型自行确定。
+# 可调用默认值（uuid4、list 等）的结果要到运行时才能确定，用 null 表示由模型自行确定。
 <<< END U007791 >>>
 <<< UNIT U007792 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/data.py:163-163 >>>
 # 把 ``<列><运算符><值>`` 拆成三段。运算符与值都可以省略（省略时按等值处理）。
@@ -1593,7 +1593,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # peer 注册与就绪的秒数上限。超时说明实例的 JobQueue 不可达。
 <<< END U007834 >>>
 <<< UNIT U007835 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:22-22 >>>
-# 实例未运行时的统一提示，与 CLI 侧同文案，避免两处说法不一致。
+# 实例未运行时的统一提示，与 CLI 文案一致，避免两处说法不一致。
 <<< END U007835 >>>
 <<< UNIT U007836 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:31-31 >>>
 # 表不存在表示实例尚未完成过一次启动，与状态为空对操作者是同一件事，故一并返回空映射。
@@ -1602,7 +1602,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后把 `check_
 # noqa: BLE001 - 状态表不可读时降级为“无记录”，原因如实输出
 <<< END U007837 >>>
 <<< UNIT U007838 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:47-48 >>>
-# 清单里的 ``provides_modules`` 覆盖内置模块与已安装模块包。它声明为空的包只有运行期才
+# 清单里的 ``provides_modules`` 覆盖内置模块与已安装模块包。它声明为空的包只有运行时才
 # 知道注册名，这类包不产生条目，其模块名由状态表补上，包名留空。
 <<< END U007838 >>>
 <<< UNIT U007839 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/modules.py:70-70 >>>

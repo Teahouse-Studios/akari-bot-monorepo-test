@@ -1974,7 +1974,7 @@ core 入口调用失败，或其输出无法解析。
 # core 把失败原因也写入 stdout 的 JSON，故先解析再按退出码判定。无法解析时按原始输出报错。
 <<< END U001399 >>>
 <<< UNIT U001400 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/db.py:71-71 >>>
-# 用户错误在 core 侧是退出码 2，CLI 保持相同的退出码，脚本才能区分“用法错误”与“运行失败”。
+# 用户错误在 core 中是退出码 2，CLI 保持相同的退出码，脚本才能区分“用法错误”与“运行失败”。
 <<< END U001400 >>>
 <<< UNIT U001401 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/db.py:79-79 >>>
 # 界面按行解析 stdout，故 JSON 必须是单行且不被终端宽度折行。
@@ -1992,7 +1992,7 @@ core 入口调用失败，或其输出无法解析。
 按主键改写一行的若干列。各列在同一次 UPDATE 里下发，主键列不可修改。
 <<< END U001405 >>>
 <<< UNIT U001406 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/db.py:221-221 | ctx=insert_row >>>
-新建一条数据项。必填字段由 core 侧的模型声明判定。
+新建一条数据项。必填字段由 core 的模型声明判定。
 <<< END U001406 >>>
 <<< UNIT U001407 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/db.py:241-241 | ctx=delete_row >>>
 按主键删除一条数据项。
@@ -2031,7 +2031,7 @@ core 入口调用失败，或其输出无法解析。
 # 登录信息字段可能位于非密钥表，例如 qqbot 的 qq_bot_appid 就在明文表中
 <<< END U001418 >>>
 <<< UNIT U001419 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/doctor.py:368-368 >>>
-# 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），故经 escape 再进入 rich 标记解析
+# 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），故先通过 escape 转义再进入 rich 标记解析
 <<< END U001419 >>>
 <<< UNIT U001420 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/doctor.py:87-87 | ctx=Conflict.render >>>
 报告展示的本地化文案，缺少对应键时回退到 ``message``。
@@ -2089,7 +2089,7 @@ core 入口调用失败，或其输出无法解析。
 # 旧 assets 布局到新实例 data 布局的对照，与 core/scripts/migrate_assets_to_data.py 的 MOVES 一致。
 <<< END U001437 >>>
 <<< UNIT U001438 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:155-155 >>>
-# 数据库转换状态取 none / done / failed / skipped，报告的人工清单按状态判断，不看文案。
+# 数据库转换状态取 none / done / failed / skipped，报告的人工清单按状态判断，不依赖文案。
 <<< END U001438 >>>
 <<< UNIT U001439 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:242-242 >>>
 # 带实例 ID 的表（bot_telegram-alt）是生成产物，迁移只识别基础配置表。
@@ -2112,7 +2112,7 @@ core 入口调用失败，或其输出无法解析。
 # 安装流水线失败时自行回滚并以退出码结束。迁移继续，失败项交报告提示人工重试。
 <<< END U001444 >>>
 <<< UNIT U001445 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:772-772 >>>
-# 数据库无法读取时“没启用任何模块”并不可信，不能替用户决定安装哪些模块，只能把目录清单交给他核对。
+# 数据库无法读取时“没启用任何模块”并不可信，不能替用户选择安装哪些模块，只能把目录清单交给他核对。
 <<< END U001445 >>>
 <<< UNIT U001446 | py-docstring | packages/akari-bot-cli/akaribot/cli/commands/migrate.py:121-121 | ctx=MigrationPlan.module_dists >>>
 去重后的模块包名，保持首次出现顺序。
@@ -2136,13 +2136,13 @@ core 入口调用失败，或其输出无法解析。
 # git 来源在安装完成前无法获取 manifest，因此除名字以外的字段留空，由 :func:`_install` 在安装后补齐。
 <<< END U001452 >>>
 <<< UNIT U001453 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:271-271 >>>
-# git 直接引用无法预先获知包名，只能通过安装前后的差集识别新安装的包，故安装前先记录一份。
+# git 直接引用无法预先获知包名，只能通过对比安装前后的包列表识别新安装的包，故安装前先记录一份。
 <<< END U001453 >>>
 <<< UNIT U001454 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:296-296 >>>
 # 检查阶段无法获取 manifest。若省略这一步，不兼容的包会直接安装到实例，运行时才报错。
 <<< END U001454 >>>
 <<< UNIT U001455 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:339-339 >>>
-# git 直接引用可能没有名字，此时用 spec 自身作为展示对象，免得出现“解析 （来源：git）”。
+# git 直接引用可能没有名字，此时用 spec 自身作为展示对象，以免出现“解析 （来源：git）”。
 <<< END U001455 >>>
 <<< UNIT U001456 | py-comment | packages/akari-bot-cli/akaribot/cli/commands/module.py:347-347 >>>
 # git 直接引用需安装完成后才能解析出包名与 manifest，此时无从检查，改为安装后校验 core API。

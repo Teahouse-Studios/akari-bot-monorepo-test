@@ -197,12 +197,12 @@ JobQueue WebSocket Hub 守护进程编排测试。
 在不访问 JobQueue ORM 表的情况下验证共享运行时接口约定。
 <<< END U010127 >>>
 <<< UNIT U010128 | py-comment | packages/akari-bot-core/tests/test_jobqueue_websocket_backend.py:71-73 >>>
-# wait_ready 只保证各 Peer 已注册。ready/welcome 握手仍可能在其他 Peer 的
+# wait_ready 只保证各节点已注册。ready/welcome 握手仍可能在其他节点的
 # 处理任务或 Hub 出站队列中。测试开始前等待控制面静默，避免 queue_size=1
 # 的背压用例与启动握手竞争同一个命令槽位。
 <<< END U010128 >>>
 <<< UNIT U010129 | py-comment | packages/akari-bot-core/tests/test_jobqueue_websocket_backend.py:292-293 >>>
-# Peer ready/welcome 信号可能仍在同一 Hub 中异步收尾。这里只验证超限调用
+# 节点的 ready/welcome 信号可能仍在同一 Hub 中异步收尾。这里只验证超限调用
 # 自身没有遗留等待方或投递，避免把无关生命周期投递误判为泄漏。
 <<< END U010129 >>>
 <<< UNIT U010130 | py-docstring | packages/akari-bot-core/tests/test_jobqueue_websocket_backend.py:1-1 | ctx=<module> >>>
@@ -277,7 +277,7 @@ core.i18n: 语言快照重载测试。
 akaribot.modules.core.common_tools.merge 单元测试 - 迁移码的签发与消费。
 <<< END U010151 >>>
 <<< UNIT U010152 | py-docstring | packages/akari-bot-core/tests/test_merge_code.py:110-110 | ctx=test_merge_code >>>
-akaribot.modules.core.common_tools.merge: 迁移码签发与消费测试
+akaribot.modules.core.common_tools.merge: 迁移码签发与核销测试
 <<< END U010152 >>>
 <<< UNIT U010153 | py-comment | packages/akari-bot-core/tests/test_message.py:254-254 >>>
 # 逗号后的部分不应丢失
@@ -402,7 +402,7 @@ akaribot.modules.core.admin_tools.alias 单元测试 - 自定义别名改写。
 # 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。
 <<< END U010192 >>>
 <<< UNIT U010193 | py-comment | packages/akari-bot-core/tests/test_paths.py:17-18 >>>
-# 不按层数推算（源码根目录从 <dist>/src/akaribot 扁平化为 <dist>/akaribot 后层数会变），也不取
+# 不按层数推算（源码根目录从 <dist>/src/akaribot 扁平化为 <dist>/akaribot 后层数会变），也不使用
 # Paths.tests。后者正是本用例要检查的取值。
 <<< END U010193 >>>
 <<< UNIT U010194 | py-comment | packages/akari-bot-core/tests/test_paths.py:27-27 >>>
@@ -455,7 +455,7 @@ akaribot.core.utils.petal: 花瓣系统测试
 # 仅第二个平台在线时，队首应换为该平台，且不再保留下一跳。
 <<< END U010209 >>>
 <<< UNIT U010210 | py-comment | packages/akari-bot-core/tests/test_post_message.py:125-125 >>>
-# 离线目的地须当场抛出错误，不创建无人消费的请求或结果等待者。
+# 离线目的地须当场抛出错误，不创建无人处理的请求或结果等待者。
 <<< END U010210 >>>
 <<< UNIT U010211 | py-docstring | packages/akari-bot-core/tests/test_post_message.py:1-1 | ctx=<module> >>>
 core.builtins.bot 单元测试 - 主动推送的通道合并与掉线避让（需要数据库）。
@@ -482,7 +482,7 @@ core.queue.diagnostics: 进程占用的可序列化载荷测试
 core.queue.diagnostics: 进程指标采集测试
 <<< END U010218 >>>
 <<< UNIT U010219 | py-comment | packages/akari-bot-core/tests/test_queue_lifecycle.py:142-143 >>>
-# 补丁作用于进程级的 JobQueuesTable，同一事件循环中其他 Peer 的轮询器也会命中。
+# 补丁作用于进程级的 JobQueuesTable，同一事件循环中其他节点的轮询器也会命中。
 # 非本测试目标的调用须原样放行，否则外部轮询器会占用会合名额，使本测试的协程永久等待。
 <<< END U010219 >>>
 <<< UNIT U010220 | py-comment | packages/akari-bot-core/tests/test_queue_lifecycle.py:150-150 >>>
@@ -566,7 +566,7 @@ core: 上报场景按场景组展开
 <<< END U010244 >>>
 <<< UNIT U010245 | py-comment | packages/akari-bot-core/tests/test_restart_prompt.py:100-102 >>>
 # server 与各 bot 子进程一同重启，`load_prompt` 执行时本地拓扑缓存必然为空。
-# 客户端须先在 Peer Registry 注册带有效租约的 ready 实例。若不等待即发送，
+# 客户端须先在节点注册表注册带有效租约的 ready 实例。若不等待即发送，
 # RPC 的掉线检查会拒绝提示请求。
 <<< END U010245 >>>
 <<< UNIT U010246 | py-comment | packages/akari-bot-core/tests/test_restart_prompt.py:124-124 >>>
@@ -612,7 +612,7 @@ akaribot.core.utils.retired: 迁移关系、退役判定与介入点测试
 akaribot.core.utils.retired 单元测试 - 公告文案读取、已发记录与排队。
 <<< END U010259 >>>
 <<< UNIT U010260 | py-docstring | packages/akari-bot-core/tests/test_retired_notice.py:234-234 | ctx=test_retired_notice >>>
-akaribot.core.utils.retired: 公告读取、已发记录与排队测试
+akaribot.core.utils.retired: 公告读取、已发送记录与排队测试
 <<< END U010260 >>>
 <<< UNIT U010261 | py-comment | packages/akari-bot-core/tests/test_rpc_contracts.py:227-227 >>>
 # 验证真实上报路径在 RPC 编解码和发送预处理之后仍保留诊断文本。
@@ -654,7 +654,7 @@ S3 同步 SDK 的异步隔离与超时回归测试。
 # 以给定输入参数调用 send_direct_message，返回其入队任务里的 message 字段。
 <<< END U010273 >>>
 <<< UNIT U010274 | py-comment | packages/akari-bot-core/tests/test_send_direct_message.py:57-59 >>>
-# send_direct_message 曾把未归一化的原始输入参数直接入队。传入 bare 元素（如
+# send_direct_message 曾把未规范化的原始输入参数直接入队。传入 bare 元素（如
 # ``I18NContext(...)``）时，其序列化形态为 ``{"_type": "I18NContextElement", ...}``，
 # 缺少 values 字段，客户端按 MessageChain | MessageNodes 反序列化即抛出 KeyError。
 <<< END U010274 >>>
@@ -665,7 +665,7 @@ S3 同步 SDK 的异步隔离与超时回归测试。
 core.builtins.session.internal 单元测试 - send_direct_message 的消息归一化（需要数据库）。
 <<< END U010276 >>>
 <<< UNIT U010277 | py-docstring | packages/akari-bot-core/tests/test_send_direct_message.py:93-93 | ctx=test_send_direct_message >>>
-core.builtins.session.internal: send_direct_message 归一化测试
+core.builtins.session.internal: send_direct_message 规范化测试
 <<< END U010277 >>>
 <<< UNIT U010278 | py-docstring | packages/akari-bot-core/tests/test_session.py:1-1 | ctx=<module> >>>
 akaribot.core.builtins.session 会话系统单元测试。
@@ -716,7 +716,7 @@ core.builtins.session 单元测试 - 私聊场景标识（需要数据库）。
 core.builtins.session.info: 私聊标识测试
 <<< END U010293 >>>
 <<< UNIT U010294 | py-comment | packages/akari-bot-core/tests/test_setup_panel.py:31-32 >>>
-# 直接构造 SessionInfo 而非经 assign()，以免用例之间共用 union 数据。tz_offset 须显式给出，因为
+# 直接构造 SessionInfo 而非通过 assign()，以免用例之间共用 union 数据。tz_offset 须显式给出，因为
 # 该字段的解析发生在 assign() 中，直接构造时取默认值 None。
 <<< END U010294 >>>
 <<< UNIT U010295 | py-comment | packages/akari-bot-core/tests/test_setup_panel.py:129-129 >>>
@@ -786,7 +786,7 @@ core.types.module: 命令语法错误提示开关测试
 # 会话缺失时的默认构造，此时本就没有作用域可言。
 <<< END U010314 >>>
 <<< UNIT U010315 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:90-90 >>>
-# 前缀格式由平台侧确定，非法字符会被剔除。剔除后为空的整条消息链改用基础术语，流程不中断。
+# 前缀格式由平台方确定，非法字符会被剔除。剔除后为空的整条消息链改用基础术语，流程不中断。
 <<< END U010315 >>>
 <<< UNIT U010316 | py-comment | packages/akari-bot-core/tests/test_term_locale.py:120-120 >>>
 # 术语缺失时原样保留占位符，不抛出异常
@@ -1294,7 +1294,7 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 # patch 由最外层上下文持有，嵌套进入时不再重复替换，也就不会被内层退出提前还原
 <<< END U010451 >>>
 <<< UNIT U010452 | py-comment | packages/akari-bot-testing/akaribot/testing/mock/config.py:26-26 >>>
-# 与 CFGManager 的表名归一化保持一致，secret 与 *_secret 都指向 config 文件的密钥表
+# 与 CFGManager 的表名规范化保持一致，secret 与 *_secret 都指向 config 文件的密钥表
 <<< END U010452 >>>
 <<< UNIT U010453 | py-comment | packages/akari-bot-testing/akaribot/testing/mock/config.py:50-50 >>>
 # 未限定表名的读取要么只在 config.toml 内查找，要么按 _global 遍历全部表
@@ -1372,7 +1372,7 @@ HTTP 请求 mock 管理器。
 # 测试显式配置默认 RPC peer，与生产入口一致，避免依赖模块导入顺序。
 <<< END U010475 >>>
 <<< UNIT U010476 | py-comment | packages/akari-bot-testing/akaribot/testing/mock/loader.py:69-70 >>>
-# 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。刻意不使用
+# 测试不检查模块是否已启用，因此直接读取发现层的清单，与生产入口同源。刻意不使用
 # load_order()，因为测试不校验跨包依赖声明，按包名字典序枚举即可，测试框架不必依赖依赖图机制。
 <<< END U010476 >>>
 <<< UNIT U010477 | py-inline-comment | packages/akari-bot-testing/akaribot/testing/mock/parser.py:40-40 >>>
@@ -1492,7 +1492,7 @@ web_render 数据获取方法的模拟管理器。
 # 真正无响应时也不能让单个用例占用整个 CI 任务太久。
 <<< END U010514 >>>
 <<< UNIT U010515 | py-comment | packages/akari-bot-testing/akaribot/testing/process.py:71-72 >>>
-# 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存库。
+# 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存数据库。
 # 游离任务不得越过其捕获的数据库上下文存活。
 <<< END U010515 >>>
 <<< UNIT U010516 | py-comment | packages/akari-bot-testing/akaribot/testing/pytest_plugin.py:113-113 >>>
@@ -2087,7 +2087,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 权限与平台能力
 <<< END U010685 >>>
 <<< UNIT U010686 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/docs/development.md:45-45 | ctx=权限与平台能力 >>>
-命令对平台没有限制。会话是否支持引用回复，决定对话是逐条等待还是连续发送。
+命令对平台没有限制。会话是否支持引用回复，控制对话是逐条等待还是连续发送。
 <<< END U010686 >>>
 <<< UNIT U010687 | md-paragraph | packages/modules/akari-bot-module-ai/akaribot/modules/ai/docs/development.md:47-47 | ctx=权限与平台能力 >>>
 网页抓取工具依赖 WebRender（`webrender.enable`），搜索工具使用 ddgs。花瓣计费仅在 core 开启花瓣系统时生效，余额不足时，调用会在发出前终止。会话级设置写入 Union 数据，包括会话默认模型 `ai_default_llm`、个人开关 `ai_enable_persona` 与 `ai_custom_instructions`。

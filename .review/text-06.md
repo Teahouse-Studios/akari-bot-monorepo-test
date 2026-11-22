@@ -3448,7 +3448,7 @@ T5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流
 其中 `assets/README.md` 会随包分发。
 <<< END U004334 >>>
 <<< UNIT U004335 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/README.md:86-87 >>>
-生成后的目录与 ``packages/modules/akari-bot-module-<实际模块名>/`` 同构，可直接
+生成后的目录与 ``packages/modules/akari-bot-module-<实际模块名>/`` 目录结构一致，可直接
 ``akaribot module add -e .``。
 <<< END U004335 >>>
 <<< UNIT U004336 | md-paragraph | packages/akari-bot-cli/akaribot/cli/templates/README.md:89-90 >>>
@@ -3625,7 +3625,7 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 | 翻页 / 首页与末页 | `[` / `]`、`g` / `G` |
 <<< END U004374 >>>
 <<< UNIT U004375 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:67-69 | ctx=键位语法 >>>
-按钮文字经 `compat.key_hint()` 附上快捷键（如“安装 i”“移除实例 ^d”），写法与页脚一致。
+按钮文字通过 `compat.key_hint()` 附上快捷键（如“安装 i”“移除实例 ^d”），写法与页脚一致。
 按钮栏依次为主操作（唯一的 primary）、次要操作、破坏性操作（error）、低频菜单、刷新。
 低频操作不占用按钮，收纳在 `m` 打开的菜单中，菜单只列出当前状态下可用的项。
 <<< END U004375 >>>
@@ -3758,15 +3758,15 @@ TUI 提供实例、模块、适配器、配置与运行环境的管理界面。T
 <<< UNIT U004415 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:126-128 | ctx=模块与适配器 >>>
   `installed_platforms`，可安装清单读取失败时仍可用），预选当前行的平台，并标出各平台已有的实例。
   输入框获得焦点时 `↑` / `↓` 仍可切换平台。实例 ID 必填，空值、非法字符与重名在对话框内提示且不关闭。
-  确认后经 `adapter instance add` 新建，配置默认未启用。
+  确认后通过 `adapter instance add` 新建，配置默认未启用。
 <<< END U004415 >>>
 <<< UNIT U004416 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:129-129 | ctx=模块与适配器 >>>
 - 新建成功后按 `config schema` 弹出配置表单，待填写项排最前且为空，留空不写入。`enable` 排最后，确保登录信息
 <<< END U004416 >>>
 <<< UNIT U004417 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:130-132 | ctx=模块与适配器 >>>
-  先于启用写入。回车移到下一项，`ctrl+s` 保存，逐项经 `config set` 写入，密钥项写入 `_secret` 段且错误
+  先于启用写入。回车移到下一项，`ctrl+s` 保存，逐项通过 `config set` 写入，密钥项写入 `_secret` 段且错误
   提示不含命令输出。写入失败时停在出错项，重试不重复已写入的项。`Esc` 稍后填写，有未保存内容时先确认。
-  实例已创建，跳过表单或读不到配置项都不影响该实例。表单为 `config.ConfigFormScreen`，与配置页共用 `FieldRow`。
+  实例已创建，跳过表单或无法读取配置项都不影响该实例。表单为 `config.ConfigFormScreen`，与配置页共用 `FieldRow`。
 <<< END U004417 >>>
 <<< UNIT U004418 | md-list | packages/akari-bot-cli/akaribot/cli/tui/README.md:133-133 | ctx=模块与适配器 >>>
 - `ctrl+d` 或移除按钮请求移除适配器实例配置，仅删除配置文件，保留场景与用户数据。
@@ -3936,7 +3936,7 @@ INFO、debug 文件。日志解析规则由 `akaribot/cli/logs.py` 提供，CLI 
 不启动子进程。
 <<< END U004461 >>>
 <<< UNIT U004462 | md-paragraph | packages/akari-bot-cli/akaribot/cli/tui/README.md:237-238 | ctx=实现约定 >>>
-首次显示、显式刷新及包操作后按需重新读取。CLI JSON 归一化支持数组、记录映射与
+首次显示、显式刷新及包操作后按需重新读取。CLI JSON 规范化支持数组、记录映射与
 包装对象，缺失可选字段使用默认值。安装与卸载通过 CLI 执行，异步读取进度并显示失败原因。
 <<< END U004462 >>>
 <<< UNIT U004463 | md-heading | packages/akari-bot-cli/akaribot/cli/tui/README.md:240-240 | ctx=CLI 边界 >>>
@@ -4023,7 +4023,7 @@ Textual 界面。
 # region 应用、键位与消息
 <<< END U004485 >>>
 <<< UNIT U004486 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:427-427 >>>
-# 双击与按键连发可能重复触发同一请求，防抖窗口用于防止确认框重复打开。
+# 双击与键盘连续触发可能重复发起同一请求，防抖窗口用于防止确认框重复打开。
 <<< END U004486 >>>
 <<< UNIT U004487 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:437-437 >>>
 # 允许测试调整防抖窗口，避免依赖固定的实际等待时间。
@@ -4092,7 +4092,7 @@ Textual 界面。
 # region 终端能力（自检报告用）
 <<< END U004508 >>>
 <<< UNIT U004509 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:148-148 | ctx=textual_version >>>
-返回运行期 Textual 版本号。
+返回运行时 Textual 版本号。
 <<< END U004509 >>>
 <<< UNIT U004510 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/_compat.py:169-169 | ctx=cell_width >>>
 返回单个字符占用的终端列数。

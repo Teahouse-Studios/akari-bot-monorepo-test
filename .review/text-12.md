@@ -141,7 +141,7 @@
 <<< END U007887 >>>
 <<< UNIT U007888 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:473-474 >>>
 # 配置的生成集中在此完成，子进程一律只读，此处遗漏的键将在子进程读取时抛出异常，
-# 因此任何模板加载失败均须中止启动，而非延至运行期才暴露。
+# 因此任何模板加载失败均须中止启动，而非延至运行时才暴露。
 <<< END U007888 >>>
 <<< UNIT U007889 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:537-537 >>>
 # pre_init 是唯一被允许写入配置的进程，须清除 RestartBot 重启循环中残留的只读标记
@@ -198,7 +198,7 @@
 # msvcrt 对 byte 0 加 mandatory lock。通过底层二进制流写入并跳过锁区。
 <<< END U007904 >>>
 <<< UNIT U007905 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:852-852 >>>
-# 信号处理器在主线程的两个字节码之间执行，异常经 asyncio.run() 向外传播，与 Ctrl+C 走同一条路径。
+# 信号处理器在主线程的两个字节码之间执行，异常通过 asyncio.run() 向外传播，与 Ctrl+C 使用同一条路径。
 <<< END U007905 >>>
 <<< UNIT U007906 | py-comment | packages/akari-bot-core/akaribot/core/entrypoints/run.py:869-870 >>>
 # 不截断打开，确保获取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
@@ -357,7 +357,7 @@
 # 卸载 RPC 先于 uv pip uninstall 执行，重新运行 discover() 依旧会看到该包，故直接改写索引缓存。
 <<< END U007948 >>>
 <<< UNIT U007949 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1149-1150 >>>
-# 只读进程只认启动时列出的文件，新表必须通过 load() 重新枚举才会出现。此处失败不阻断安装，
+# 只读进程只识别启动时列出的文件，新表必须通过 load() 重新枚举才会出现。此处失败不阻断安装，
 # 导入阶段读取新配置项时会触发只读检查报错。
 <<< END U007949 >>>
 <<< UNIT U007950 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1187-1187 >>>
@@ -393,7 +393,7 @@
 # 故直接把包摘出发现层索引，下面的数据库重挂才不会带上它的模型。
 <<< END U007959 >>>
 <<< UNIT U007960 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1327-1327 >>>
-# 与启动期 init_modules 对缺失模块的清理同向，残留的 load=False 会误停重新安装后的模块。
+# 与启动阶段 init_modules 对缺失模块的清理一致，残留的 load=False 会误停重新安装后的模块。
 <<< END U007960 >>>
 <<< UNIT U007961 | py-comment | packages/akari-bot-core/akaribot/core/loader.py:1336-1337 >>>
 # 旧连接关闭期间不得让轮询器发出查询，故与 reload 的切换路径一致地嵌套独占窗口。
@@ -1314,7 +1314,7 @@ Bot 与 Server 进程共用一套双向 RPC 与信号运行时。运行时通过
 | `contracts.py` | 声明稳定的方法名称、调用签名、路由规则与默认超时时间 |
 | `rpc.py` | 提供保留 Python 签名的调用代理、参数绑定及处理器自动注册机制 |
 | `codec.py` | 按声明类型执行编解码，并复用消息与会话对象的转换器 |
-| `base.py` | 管理 Peer 调用、结果关联、并发分发、信号扇出及生命周期 |
+| `base.py` | 管理节点调用、结果关联、并发分发、信号扇出及生命周期 |
 | `backend.py` | 定义完整后端协议，并依据配置装配相互一致的 Registry 与 Transport |
 | `transport.py` | 定义介质无关的消息信封、批量投递结果及 `MessageTransport` 协议 |
 | `peer.py` | 定义进程身份、目标选择、Registry 协议及信号发送结果 |
@@ -1368,7 +1368,7 @@ WebSocket Hub 无法连接或鉴权失败时亦不会自动回退至数据库，
 <<< UNIT U008271 | md-table | packages/akari-bot-core/akaribot/core/queue/README.md:58-64 | ctx=配置与后端选择 >>>
 | 比较项 | `database` | `websocket` |
 | --- | --- | --- |
-| 部署要求 | 复用共享数据库，无须另行部署 Hub | 需要一个独立 Hub，并维持各 Peer 的长连接 |
+| 部署要求 | 复用共享数据库，无须另行部署 Hub | 需要一个独立 Hub，并维持各节点的长连接 |
 | 投递特性 | 轮询数据库。尚未过期的队列记录可供稍后启动的消费者认领 | 实时在线路由。不持久化离线任务或处理中的结果 |
 | 资源与时延 | 轮询、写入及终态清理会增加数据库 CPU 与 I/O 负载，时延受轮询间隔影响 | 不产生数据库轮询负载，通常具有更低时延，但需承担连接、背压和 Hub 运维成本 |
 | 适用范围 | 使用 MySQL 等可并发写入的共享数据库，或明确接受写锁竞争的 SQLite 低负载部署 | 默认与推荐选项。适用于 SQLite、高频 RPC、信号广播及同类多实例并行运行 |
@@ -1391,7 +1391,7 @@ WebSocket Hub 无法连接或鉴权失败时亦不会自动回退至数据库，
 <<< END U008275 >>>
 <<< UNIT U008276 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:77-79 | ctx=SQLite 写锁边界 >>>
 JobQueue 的任务投递、原子
-认领、Peer 心跳、结果回写及清理均会与业务写入竞争该写锁。因此，以下措施只能减少锁冲突，不能承诺
+认领、节点心跳、结果回写及清理均会与业务写入竞争该写锁。因此，以下措施只能减少锁冲突，不能承诺
 消除 `database is locked` 错误：
 <<< END U008276 >>>
 <<< UNIT U008277 | md-list | packages/akari-bot-core/akaribot/core/queue/README.md:81-82 | ctx=SQLite 写锁边界 >>>
@@ -1408,10 +1408,10 @@ JobQueue 的任务投递、原子
   残留的终态记录。
 <<< END U008280 >>>
 <<< UNIT U008281 | md-list | packages/akari-bot-core/akaribot/core/queue/README.md:86-86 | ctx=SQLite 写锁边界 >>>
-- Peer 失效时的状态切换与直投任务终结仍保留在同一事务中。该路径会延长少量写锁的持有时间，但不应为缩短锁时间而
+- 节点失效时的状态切换与直投任务终结仍保留在同一事务中。该路径会延长少量写锁的持有时间，但不应为缩短锁时间而
 <<< END U008281 >>>
 <<< UNIT U008282 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:87-87 | ctx=SQLite 写锁边界 >>>
-  破坏 Peer 状态与投递结果的一致性。
+  破坏节点状态与投递结果的一致性。
 <<< END U008282 >>>
 <<< UNIT U008283 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:89-90 | ctx=SQLite 写锁边界 >>>
 需要降低 SQLite 锁竞争时，应优先将 JobQueue 切换为 `websocket`。该调整只移除 JobQueue 自身对 SQLite 的轮询与写入，
@@ -1425,7 +1425,7 @@ JobQueue 的任务投递、原子
 `PeerSelector` 支持按实例、节点、角色、service 与 capability 的交集筛选目标，并可显式排除指定实例。
 <<< END U008285 >>>
 <<< UNIT U008286 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:97-98 | ctx=SQLite 写锁边界 >>>
-`InMemoryJobQueueBackend` 由同一测试集群中的多个 Peer 共享 `InMemoryBroker`，用于验证 Runtime 不再隐式
+`InMemoryJobQueueBackend` 由同一测试集群中的多个节点共享 `InMemoryBroker`，用于验证 Runtime 不再隐式
 依赖数据库模型。该实现不提供跨进程通信、持久化或生产可靠性保证，配置工厂不会接受 `memory`。
 <<< END U008286 >>>
 <<< UNIT U008287 | md-heading | packages/akari-bot-core/akaribot/core/queue/README.md:100-100 | ctx=实例身份、定位与发现 >>>
@@ -1460,13 +1460,13 @@ JobQueue 的任务投递、原子
 实例仍由独立的 `peer_id` 唯一标识。系统不会从计算机名、宿主机环境或其他设备信息中读取或推导该值。
 <<< END U008295 >>>
 <<< UNIT U008296 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:119-120 | ctx=实例身份、定位与发现 >>>
-若需要按物理节点或部署单元选择一组 Peer，可为相关进程共用配置，也可显式设置相同且不包含敏感信息的
+若需要按物理主机或部署单元选择一组节点，可为相关进程共用配置，也可显式设置相同且不包含敏感信息的
 `jobqueue_node_id`。调用 `configure_peer()` 时显式传入的 `node_id` 具有最高优先级。
 <<< END U008296 >>>
 <<< UNIT U008297 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:122-124 | ctx=实例身份、定位与发现 >>>
 绕过正常守护进程直接
-启动单个 Peer，且配置值仍为空时，运行时仍会为该进程生成临时 UUID 作为回退，但不会将其视为常规
-部署路径。配置值最长为 128 个字符，修改后须重启相关进程才会反映到 Peer Registry。
+启动单个节点，且配置值仍为空时，运行时仍会为该进程生成临时 UUID 作为回退，但不会将其视为常规
+部署路径。配置值最长为 128 个字符，修改后须重启相关进程才会反映到节点注册表。
 <<< END U008297 >>>
 <<< UNIT U008298 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:126-127 | ctx=实例身份、定位与发现 >>>
 同一 service 表示一组能够相互替代并处理同类任务的实例。节点标签、PID、capabilities 与自定义 metadata
@@ -1505,8 +1505,8 @@ JobQueue 的任务投递、原子
 ## WebSocket Hub 部署
 <<< END U008306 >>>
 <<< UNIT U008307 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:153-154 | ctx=WebSocket Hub 部署 >>>
-WebSocket 后端由一个独立 Hub 和任意数量的 Peer 连接组成。Hub 不属于业务 Server，不执行模块逻辑，
-其职责仅限于维护连接身份、权威 Peer 状态、任播选择、逐实例信号发送和未完成响应的关联。
+WebSocket 后端由一个独立 Hub 和任意数量的节点连接组成。Hub 不属于业务 Server，不执行模块逻辑，
+其职责仅限于维护连接身份、权威节点状态、任播选择、逐实例信号发送和未完成响应的关联。
 <<< END U008307 >>>
 <<< UNIT U008308 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:156-158 | ctx=WebSocket Hub 部署 >>>
 内置部署模式下，
@@ -1515,20 +1515,20 @@ WebSocket 后端由一个独立 Hub 和任意数量的 Peer 连接组成。Hub �
 <<< END U008308 >>>
 <<< UNIT U008309 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:173-175 | ctx=WebSocket Hub 部署 >>>
 `jobqueue_websocket_mode` 明确 Hub 的部署模式，其中 `embedded` 表示由机器人守护进程启动内置 Hub，
-`external` 表示各 Peer 仅连接独立部署的外部 Hub。部署模式不得依据 URL 的主机地址推断，以免本机外部 Hub
+`external` 表示各节点仅连接独立部署的外部 Hub。部署模式不得依据 URL 的主机地址推断，以免本机外部 Hub
 被误判为内置 Hub。
 <<< END U008309 >>>
 <<< UNIT U008310 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:177-179 | ctx=WebSocket Hub 部署 >>>
 `jobqueue_websocket_url` 是 WebSocket 地址的唯一配置来源。在 `embedded` 模式下，
-Hub 的监听主机、监听端口和协议路径均从该 URL 解析，各 Peer 亦连接同一地址。在 `external` 模式下，
-该 URL 仅表示 Peer 的连接地址。
+Hub 的监听主机、监听端口和协议路径均从该 URL 解析，各节点也连接同一地址。在 `external` 模式下，
+该 URL 仅表示节点的连接地址。
 <<< END U008310 >>>
 <<< UNIT U008311 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:181-182 | ctx=WebSocket Hub 部署 >>>
 正常启动时，如果 `jobqueue_websocket_token` 不存在、仍为占位符或仅包含空白字符，`pre_init` 会生成一个
 具有 256 位随机熵的 URL-safe 密钥并写回 `[jobqueue_secret]`，随后 Hub、Bot 与 Server 子进程只读同一值。
 <<< END U008311 >>>
 <<< UNIT U008312 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:184-184 | ctx=WebSocket Hub 部署 >>>
-清空该字段会在下次启动时轮换密钥。轮换后，使用旧密钥的 Peer 将无法通过鉴权。
+清空该字段会在下次启动时轮换密钥。轮换后，使用旧密钥的节点将无法通过鉴权。
 <<< END U008312 >>>
 <<< UNIT U008313 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:186-186 | ctx=WebSocket Hub 部署 >>>
 自动生成的密钥只适用于共用同一配置目录的本机部署。使用外部 Hub 或多个独立配置目录时，必须将同一密钥安全地配置到全部参与节点。
@@ -1548,10 +1548,10 @@ Hub 的监听主机、监听端口和协议路径均从该 URL 解析，各 Peer
 <<< END U008316 >>>
 <<< UNIT U008317 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:198-199 | ctx=WebSocket Hub 部署 >>>
 Hub 在握手阶段将连接绑定至唯一 `peer_id`，此后一律以连接身份覆盖请求载荷中自行声明的 `source_peer_id`。
-重复连接同一 `peer_id`、身份越权修改、非目标 Peer 的响应及畸形协议帧均会被拒绝。
+重复连接同一 `peer_id`、身份越权修改、非目标节点的响应及畸形协议帧均会被拒绝。
 <<< END U008317 >>>
 <<< UNIT U008318 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:201-202 | ctx=WebSocket Hub 部署 >>>
-使用外部 Hub 时，应将 `jobqueue_websocket_mode` 设置为 `external`，并确保所有 Peer 配置相同的连接 URL
+使用外部 Hub 时，应将 `jobqueue_websocket_mode` 设置为 `external`，并确保所有节点配置相同的连接 URL
 与访问令牌。项目所附 Hub 可通过 `uv run python -m akaribot.core.queue.websocket` 独立启动。
 <<< END U008318 >>>
 <<< UNIT U008319 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:204-206 | ctx=WebSocket Hub 部署 >>>
@@ -1560,7 +1560,7 @@ Hub 在握手阶段将连接绑定至唯一 `peer_id`，此后一律以连接身
 在任一时刻必须连接至同一个权威 Hub。
 <<< END U008319 >>>
 <<< UNIT U008320 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:208-209 | ctx=WebSocket Hub 部署 >>>
-WebSocket 后端属于实时、非持久化传输。Hub 对每个 Peer 设置有界发送队列，并限制单帧大小。目标队列已满时，
+WebSocket 后端属于实时、非持久化传输。Hub 对每个节点设置有界发送队列，并限制单帧大小。目标队列已满时，
 新投递会被明确拒绝。
 <<< END U008320 >>>
 <<< UNIT U008321 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:211-213 | ctx=WebSocket Hub 部署 >>>
@@ -1570,13 +1570,13 @@ WebSocket 后端属于实时、非持久化传输。Hub 对每个 Peer 设置有
 <<< END U008321 >>>
 <<< UNIT U008322 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:215-216 | ctx=WebSocket Hub 部署 >>>
 超过请求 deadline 的关联状态会被及时释放，并向仍在线的来源返回 timeout。此清理不会撤销
-已经开始的远端副作用。Hub 自身重启会丢失全部 Peer 与未完成的请求，所有 Peer 必须重新连接并注册。
+已经开始的远端副作用。Hub 自身重启会丢失全部节点与未完成的请求，所有节点必须重新连接并注册。
 <<< END U008322 >>>
 <<< UNIT U008323 | md-heading | packages/akari-bot-core/akaribot/core/queue/README.md:218-218 | ctx=RPC 调用 >>>
 ## RPC 调用
 <<< END U008323 >>>
 <<< UNIT U008324 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:236-237 | ctx=RPC 调用 >>>
-同一 service 下的多个 Peer 会竞争认领普通 RPC。需要保持业务键路由亲和性的调用使用 `ServiceRoute`
+同一 service 下的多个节点会竞争认领普通 RPC。需要保持业务键路由亲和性的调用使用 `ServiceRoute`
 描述 service、角色与路由键。
 <<< END U008324 >>>
 <<< UNIT U008325 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:239-240 | ctx=RPC 调用 >>>
@@ -1619,7 +1619,7 @@ WebSocket 后端属于实时、非持久化传输。Hub 对每个 Peer 设置有
 <<< END U008333 >>>
 <<< UNIT U008334 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:289-291 | ctx=信号广播 >>>
 批量发送允许后端逐项报告 accepted、rejected 与 unknown。`SignalReceipt` 仅将明确接受的投递列入
-`deliveries`，拒绝原因和接受状态未知的 Peer 分别列入 `errors`
+`deliveries`，拒绝原因和接受状态未知的节点分别列入 `errors`
 与 `unknown`。其中的任务 ID 仅用于关联本次投递，不表示后端会将其持久保留。
 <<< END U008334 >>>
 <<< UNIT U008335 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:293-296 | ctx=信号广播 >>>
@@ -1652,11 +1652,11 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 <<< END U008340 >>>
 <<< UNIT U008341 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:315-316 | ctx=多实例支持范围与约束 >>>
 但是，如果多个实例连接同一个平台账号，则平台 SDK 入口处的重复消费、分片租约或主备接管仍须由适配器层
-实现。JobQueue 仅负责分流已经进入系统的任务，不负责消除平台侧重复产生的事件。
+实现。JobQueue 仅负责分流已经进入系统的任务，不负责消除平台端重复产生的事件。
 <<< END U008341 >>>
 <<< UNIT U008342 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:318-319 | ctx=多实例支持范围与约束 >>>
 信号广播仅面向发送时刻在线的实例，不提供历史事件重放。对于离线期间亦须补齐的状态，应将其持久化，
-并由 Peer 在启动后依据 version 或 epoch 主动对账。信号仅用于缩短在线实例感知状态变化的延迟。
+并由节点在启动后依据 version 或 epoch 主动对账。信号仅用于缩短在线实例感知状态变化的延迟。
 <<< END U008342 >>>
 <<< UNIT U008343 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:321-323 | ctx=多实例支持范围与约束 >>>
 普通模块继续使用 `MessageSession` 提供的便利方法。成员管理接口的 `wait` 参数语义不变，内部根据
@@ -1664,12 +1664,12 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 `{"success": True}`。发送接口返回消息 ID 列表，空列表仍表示平台未完成投递。
 <<< END U008343 >>>
 <<< UNIT U008344 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:325-326 | ctx=多实例支持范围与约束 >>>
-`client_init()` 与 Server 的 `main()` 会显式设置进程的默认 Peer。导入共享接口定义不会隐式确定进程角色，
+`client_init()` 与 Server 的 `main()` 会显式设置进程的默认节点。导入共享接口定义不会隐式确定进程角色，
 也不会同时导入 Server 处理器或平台 SDK。
 <<< END U008344 >>>
 <<< UNIT U008345 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:328-329 | ctx=多实例支持范围与约束 >>>
-请求处理期间，运行时通过 `ContextVar` 确定当前 Peer。嵌套反向调用继续使用同一结果接收器。测试代码
-可以通过 `method.using(TestPeer)` 显式指定 Peer。
+请求处理期间，运行时通过 `ContextVar` 确定当前节点。嵌套反向调用继续使用同一结果接收器。测试代码
+可以通过 `method.using(TestPeer)` 显式指定节点。
 <<< END U008345 >>>
 <<< UNIT U008346 | md-heading | packages/akari-bot-core/akaribot/core/queue/README.md:331-331 | ctx=扩展接口 >>>
 ## 扩展接口
@@ -1708,7 +1708,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
 - `RpcRemoteError` 保留远端异常类型。所有 RPC 异常均包含方法名称、目标与请求 ID。等待型调用的异常还会保留
 <<< END U008356 >>>
 <<< UNIT U008357 | md-paragraph | packages/akari-bot-core/akaribot/core/queue/README.md:371-373 | ctx=错误、超时与关闭语义 >>>
-  远端执行 traceback，并在其后附加请求来源、Peer 与发起进程的调用栈。`.traceback` 是合并后的诊断文本，
+  远端执行 traceback，并在其后附加请求来源、节点与发起进程的调用栈。`.traceback` 是合并后的诊断文本，
   `.remote_traceback` 尽可能保留纯远端片段。`.submit()` 和错误信号不等待响应，同样携带
   同一份调用上下文，便于在接收端定位发起位置。
 <<< END U008357 >>>
@@ -1798,7 +1798,7 @@ JobQueue 层支持同一 service 下多个 Client 或 Server 的注册、发现�
   非幂等处理器被重复执行。
 <<< END U008383 >>>
 <<< UNIT U008384 | md-list | packages/akari-bot-core/akaribot/core/queue/README.md:407-407 | ctx=错误、超时与关闭语义 >>>
-- 消息入口必须等待 Server 完成处理后再释放 Client 侧的 SDK 上下文，不得改为 `.submit()`。
+- 消息入口必须等待 Server 完成处理后再释放客户端的 SDK 上下文，不得改为 `.submit()`。
 <<< END U008384 >>>
 <<< UNIT U008385 | md-heading | packages/akari-bot-core/akaribot/core/queue/README.md:409-409 | ctx=协议升级与验证 >>>
 ## 协议升级与验证
@@ -1893,7 +1893,7 @@ JobQueue 后端组合与配置工厂。
 维护窗口未能在预算时间内处理完运行中的处理函数。调用方应放弃本轮维护。
 <<< END U008409 >>>
 <<< UNIT U008410 | py-docstring | packages/akari-bot-core/akaribot/core/queue/base.py:143-143 | ctx=JobQueueBase.configure_backend >>>
-在 Peer 启动前装配一套内部一致的控制面和数据面后端。
+在节点启动前装配一套内部一致的控制面和数据面后端。
 <<< END U008410 >>>
 <<< UNIT U008411 | py-docstring | packages/akari-bot-core/akaribot/core/queue/client.py:1-1 | ctx=<module> >>>
 平台 RPC 实现。普通 ContextManager 方法由共享接口定义自动绑定。
@@ -1963,10 +1963,10 @@ JobQueue 的数据库后端实现。
 在数据库后端内部终结发往失效实例的投递。
 <<< END U008432 >>>
 <<< UNIT U008433 | py-docstring | packages/akari-bot-core/akaribot/core/queue/database.py:151-151 | ctx=DatabasePeerRegistry >>>
-通过 ``JobQueuePeersTable`` 提供权威 Peer 目录。
+通过 ``JobQueuePeersTable`` 提供权威节点目录。
 <<< END U008433 >>>
 <<< UNIT U008434 | py-comment | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:13-13 >>>
-# 非 Peer 进程以固定标签标识，本地化由展示层处理。
+# 非节点进程以固定标签标识，本地化由展示层处理。
 <<< END U008434 >>>
 <<< UNIT U008435 | py-comment | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:16-16 >>>
 # 扇出整体失败时的占位标签，避免与进程不存在相混淆。
@@ -1990,7 +1990,7 @@ JobQueue 的数据库后端实现。
 # 等锁期间可能已有采集完成，重新判定以免重复扇出。
 <<< END U008441 >>>
 <<< UNIT U008442 | py-comment | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:195-195 >>>
-# 扇出整体失败时仍返回非 Peer 进程数据，并以一行说明 Peer 数据整体缺失。
+# 扇出整体失败时仍返回非节点进程数据，并以一行说明节点数据整体缺失。
 <<< END U008442 >>>
 <<< UNIT U008443 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:1-1 | ctx=<module> >>>
 进程内存占用采集。
@@ -2011,7 +2011,7 @@ JobQueue 的数据库后端实现。
 将原始指标转为展示行，缺少可用指标的载荷视为无效。
 <<< END U008448 >>>
 <<< UNIT U008449 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:140-140 | ctx=usage_payload >>>
-把内存占用汇总转为可经 RPC 与 JSON 传递的纯字典。
+把内存占用汇总转为可通过 RPC 与 JSON 传递的纯字典。
 <<< END U008449 >>>
 <<< UNIT U008450 | py-docstring | packages/akari-bot-core/akaribot/core/queue/diagnostics.py:163-163 | ctx=gather_process_usage >>>
 汇总各进程的内存占用。
@@ -2074,7 +2074,7 @@ JobQueue 的数据库后端实现。
 服务端 RPC 消费者及其生命周期。
 <<< END U008468 >>>
 <<< UNIT U008469 | py-docstring | packages/akari-bot-core/akaribot/core/queue/server.py:57-57 | ctx=JobQueueServer.ensure_target_available >>>
-以 Peer Registry 为准判断 Client 或实例是否仍可接收新任务。
+以节点注册表为准判断客户端或实例是否仍可接收新任务。
 <<< END U008469 >>>
 <<< UNIT U008470 | py-docstring | packages/akari-bot-core/akaribot/core/queue/server.py:128-128 | ctx=post_next_hop >>>
 解析下一跳并交给对应平台。每次转发后候选项减少一项。
@@ -2096,7 +2096,7 @@ JobQueue 的数据库后端实现。
 <<< END U008475 >>>
 <<< UNIT U008476 | py-comment | packages/akari-bot-core/akaribot/core/queue/websocket.py:403-404 >>>
 # 保留帧能容纳的尽量多远端栈，用二分查找避免长消息反复超帧。
-# 裁剪前先去掉接收侧已含的请求上下文后缀，以便调用方重建本地上下文。
+# 裁剪前先去掉接收方已包含的请求上下文后缀，以便调用方重建本地上下文。
 <<< END U008476 >>>
 <<< UNIT U008477 | py-comment | packages/akari-bot-core/akaribot/core/queue/websocket.py:422-423 >>>
 # 极小上限可能容不下原始消息。
@@ -2106,7 +2106,7 @@ JobQueue 的数据库后端实现。
 WebSocket JobQueue 后端及独立 Hub 实现。
 <<< END U008478 >>>
 <<< UNIT U008479 | py-docstring | packages/akari-bot-core/akaribot/core/queue/websocket.py:503-503 | ctx=WebSocketHub >>>
-维护连接、Peer 拓扑以及非持久化投递状态的独立 Hub。
+维护连接、节点拓扑以及非持久化投递状态的独立 Hub。
 <<< END U008479 >>>
 <<< UNIT U008480 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:30-30 >>>
 # 二进制构建产物。存在时 discover() 直接采用其中记录的清单，跳过 entry point 与目录扫描。

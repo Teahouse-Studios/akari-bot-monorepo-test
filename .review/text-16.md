@@ -524,7 +524,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 配置项
 <<< END U010994 >>>
 <<< UNIT U010995 | md-paragraph | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:19-19 | ctx=配置项 >>>
-是否使用表情题目，由 core 的 `use_emote` 与会话数据的 `use_emote` 共同决定。会话没有设置这一项时，按开启处理。
+是否使用表情题目，取决于 core 的 `use_emote` 与会话数据的 `use_emote`。会话没有设置这一项时，按开启处理。
 <<< END U010995 >>>
 <<< UNIT U010996 | md-heading | packages/modules/akari-bot-module-captcha/akaribot/modules/captcha/docs/development.md:21-21 | ctx=权限与平台能力 >>>
 ## 权限与平台能力
@@ -1011,7 +1011,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 只依赖 `akari-bot-core`，不使用外部服务。
 <<< END U011132 >>>
 <<< UNIT U011133 | md-paragraph | packages/modules/akari-bot-module-coin/akaribot/modules/coin/docs/index.md:3-3 | ctx=coin >>>
-此模块可以抛掷一枚或多枚硬币。每次抛掷的结果为正面、反面或立起，各结果的概率由配置的权重决定。
+此模块可以抛掷一枚或多枚硬币。每次抛掷的结果为正面、反面或立起，各结果的概率取决于配置的权重。
 <<< END U011133 >>>
 <<< UNIT U011134 | md-heading | packages/modules/akari-bot-module-coin/akaribot/modules/coin/docs/index.md:5-5 | ctx=命令 >>>
 ## 命令

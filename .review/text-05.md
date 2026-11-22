@@ -73,7 +73,7 @@
 # 分组顺序固定，避免首页与导航随包 key 的字母序把适配器排到模块之前。
 <<< END U001852 >>>
 <<< UNIT U001853 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/catalog.py:80-80 >>>
-# noqa: BLE001 - 子进程形态由实例实现决定，任何失败都只影响目录来源
+# noqa: BLE001 - 子进程形态取决于实例实现，任何失败都只影响目录来源
 <<< END U001853 >>>
 <<< UNIT U001854 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/docs_engine/catalog.py:175-175 >>>
 # noqa: BLE001 - 回退本身失败时目录为空，由警告说明原因
@@ -299,7 +299,7 @@
 读取模板 ``package.json`` 的版本号，供构建校验信息使用。
 <<< END U001925 >>>
 <<< UNIT U001926 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/toolchain.py:237-237 | ctx=package_argv >>>
-组装包管理器命令。Windows 下 npm 是批处理脚本，须经 ``cmd /c`` 启动。
+组装包管理器命令。Windows 下 npm 是批处理脚本，须通过 ``cmd /c`` 启动。
 <<< END U001926 >>>
 <<< UNIT U001927 | py-docstring | packages/akari-bot-cli/akaribot/cli/docs_engine/watch.py:53-53 | ctx=Change >>>
 一次文件改动。
@@ -374,7 +374,7 @@
 <<< END U001948 >>>
 <<< UNIT U001949 | py-comment | packages/akari-bot-cli/akaribot/cli/instance.py:1165-1166 >>>
 # 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``
-# 分组，以及“包名到对象”的映射四种形态，core 侧只需命中其一。
+# 分组，以及“包名到对象”的映射四种形态，core 只需命中其一。
 <<< END U001949 >>>
 <<< UNIT U001950 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/instance.py:1231-1231 >>>
 # noqa: BLE001 - 注册表不可用按“没有默认实例”处理
@@ -425,7 +425,7 @@ usage 里不追加子命令占位符。
 虚拟环境中的可执行文件目录。
 <<< END U001965 >>>
 <<< UNIT U001966 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:313-313 | ctx=PackageInfo.display_name >>>
-列表展示用的简称，取不到简称时回退到包名。
+列表展示用的简称，无法获取简称时回退到包名。
 <<< END U001966 >>>
 <<< UNIT U001967 | py-docstring | packages/akari-bot-cli/akaribot/cli/instance.py:490-490 | ctx=InstanceMeta >>>
 ``akaribot.toml`` 的内存视图。写回时保持注释与书写格式（tomlkit）。
@@ -1568,7 +1568,7 @@ registry 只用本地缓存，不联网
 创建 venv 用的解释器，默认与当前解释器一致
 <<< END U002342 >>>
 <<< UNIT U002343 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:336-336 | ctx=cli.init.option_skip_config_sync >>>
-跳过 config sync（core 侧入口未就绪时使用）
+跳过 config sync（core 入口未就绪时使用）
 <<< END U002343 >>>
 <<< UNIT U002344 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:337-337 | ctx=cli.init.option_verbose >>>
 回显 uv 的全部输出
@@ -1652,7 +1652,7 @@ core 未回传可解析的 JSON：${text}
 无法执行 ${argv0}：${error}
 <<< END U002370 >>>
 <<< UNIT U002371 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:365-365 | ctx=cli.instance.failure_core_entrypoint >>>
-${prefix}：core 里还没有 akaribot.core.entrypoints 入口（core 侧 T5.1 尚未完成）。
+${prefix}：core 里还没有 akaribot.core.entrypoints 入口（core 的 T5.1 尚未完成）。
 <<< END U002371 >>>
 <<< UNIT U002372 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:366-366 | ctx=cli.instance.failure_core_missing >>>
 ${prefix}：实例内未安装 core。先运行 `akaribot module add akari-bot-core` 或重建实例。
@@ -2380,12 +2380,12 @@ ${dist} 声明的 core API 与本实例不符，已卸载回滚。
 --git 需要一个仓库地址。
 <<< END U002611 >>>
 <<< UNIT U002612 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:612-612 | ctx=cli.module.git.version_conflict >>>
---git 与 --version 互斥，git 直接引用的版本由 --ref 决定。
+--git 与 --version 互斥，git 直接引用的版本由 --ref 指定。
 <<< END U002612 >>>
 <<< UNIT U002613 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:613-613 | ctx=cli.module.help >>>
 模块安装与全局加载（list / add / remove / update / load / unload）
 
-三级“启用”语义中，add/remove 决定代码是否安装在本实例，load/unload 决定模块是否参与命令匹配（等价于机器人内的 `~module load` / `~module unload`，超级用户）。某个群/频道能否使用是场景级开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用 enable/disable 表示全局加载。
+三级“启用”语义中，add/remove 控制代码是否安装在本实例，load/unload 控制模块是否参与命令匹配（等价于机器人内的 `~module load` / `~module unload`，超级用户）。某个群/频道能否使用是场景级开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用 enable/disable 表示全局加载。
 <<< END U002613 >>>
 <<< UNIT U002614 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:614-614 | ctx=cli.module.install.config_changed >>>
   配置文件变更：${paths}
@@ -2567,7 +2567,7 @@ ${name} 被以下包依赖：${packages}。默认拒绝卸载。确认连带卸�
 ${dist} 未能确认热拆卸：${detail}
 <<< END U002672 >>>
 <<< UNIT U002673 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:673-673 | ctx=cli.module.remove.detach_failed >>>
-已中止卸载：${reasons}。运行中的实例可能仍持有这些模块，删除包会留下指向已删除代码的运行态。请先停止实例（`akaribot run` 的进程）后重试。
+已中止卸载：${reasons}。运行中的实例可能仍持有这些模块，删除包会留下指向已删除代码的运行状态。请先停止实例（`akaribot run` 的进程）后重试。
 <<< END U002673 >>>
 <<< UNIT U002674 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:674-674 | ctx=cli.module.remove.force_warning >>>
 --force：${packages} 将因缺少依赖在 discover() 时不再注册（可恢复，不是数据损坏）。
@@ -3018,7 +3018,7 @@ ${name} 未开启开机自启，不恢复上次的运行状态
 单个实例允许的自动重启次数上限。
 <<< END U002820 >>>
 <<< UNIT U002821 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:822-822 | ctx=cli.service.supervise.option_once >>>
-只运行一轮后返回，供定时任务与排障使用。
+只运行一轮后返回，供定时任务与排查故障使用。
 <<< END U002821 >>>
 <<< UNIT U002822 | json-value | packages/akari-bot-cli/akaribot/cli/locales/zh_cn.json:823-823 | ctx=cli.service.supervise.recovered >>>
 实例 ${name} 期望运行但未在运行，已启动（pid ${pid}）。

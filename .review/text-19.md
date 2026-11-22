@@ -1881,7 +1881,7 @@ AES CBC 解密
 # 添加到全部记录列表中
 <<< END U012630 >>>
 <<< UNIT U012631 | py-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/ActionLib.py:235-235 >>>
-# 对全部记录以 rks 为准进行排序
+# 对全部记录按 rks 排序
 <<< END U012631 >>>
 <<< UNIT U012632 | py-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/ActionLib.py:238-238 >>>
 # 从按 rks 排序后的记录中取出 AP (score == 1000000) 成绩
@@ -2004,7 +2004,7 @@ AES CBC 解密
 # 低字节取低 7 位，高字节左移 7 位后拼接
 <<< END U012669 >>>
 <<< UNIT U012670 | py-inline-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:334-334 >>>
-# 大于 127 时写入两个字节，先写低 7 位并置延续标记，再写高位字节
+# 大于 127 时写入两个字节，先写入低 7 位并设置延续标记，再写入高位字节
 <<< END U012670 >>>
 <<< UNIT U012671 | py-inline-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:358-358 >>>
 # 读取当前位置的变长整数，代表后续字节长度
@@ -2013,7 +2013,7 @@ AES CBC 解密
 # 读取对应长度的字节并以 UTF-8 解码
 <<< END U012672 >>>
 <<< UNIT U012673 | py-inline-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:387-387 >>>
-# key 的总数量，决定循环次数
+# key 的总数量，控制循环次数
 <<< END U012673 >>>
 <<< UNIT U012674 | py-inline-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/PhiCloudActionAsync/Structure/DataType.py:390-390 >>>
 # key 的名称
@@ -2425,7 +2425,7 @@ AES CBC 解密
 # 5.1 之前的曲目信息将定数原样保留为字符串，缺失的难度写作 "-"，直接转换会中断整表构建。
 <<< END U012750 >>>
 <<< UNIT U012751 | py-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/assets.py:200-200 >>>
-# 旧版本按归一化的小写 id 命名，与新键名无法对应。此处按新键名集合清理，旧文件自然落入待删除范围。
+# 旧版本按规范化的小写 id 命名，与新键名无法对应。此处按新键名集合清理，旧文件自然落入待删除范围。
 <<< END U012751 >>>
 <<< UNIT U012752 | py-comment | packages/modules/akari-bot-module-phigros/akaribot/modules/phigros/libraries/assets.py:221-222 >>>
 # 版本未变且元数据已就位时跳过重建，但仍执行曲绘补全，
@@ -2702,7 +2702,7 @@ Phigros 资源自动更新测试。
 phigros 的资源版本检查与更新。
 <<< END U012841 >>>
 <<< UNIT U012842 | py-comment | packages/modules/akari-bot-module-phigros/tests/test_phigros_legacy_assets.py:17-17 >>>
-# 旧版 update.py 生成的曲目 id 归一化为小写、字段名为 composer、定数为字符串。
+# 旧版 update.py 生成的曲目 id 规范化为小写、字段名为 composer、定数为字符串。
 <<< END U012842 >>>
 <<< UNIT U012843 | py-comment | packages/modules/akari-bot-module-phigros/tests/test_phigros_legacy_assets.py:31-31 >>>
 # 现行 assets.py 生成的曲目 id 保留原始大小写与标点、定数为浮点数。
@@ -2838,7 +2838,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 命令与正则匹配对普通用户开放，不要求管理员或超级用户权限。模块没有声明平台限制，所有已接入的平台均可使用。
 <<< END U012883 >>>
 <<< UNIT U012884 | md-paragraph | packages/modules/akari-bot-module-tweet/akaribot/modules/tweet/docs/development.md:23-23 | ctx=权限与平台能力 >>>
-摘要图要求实例启用 WebRender，未启用时无法生成截图。图片发送能力由平台决定，不支持图片的平台无法展示摘要图。
+摘要图要求实例启用 WebRender，未启用时无法生成截图。图片发送能力取决于平台，不支持图片的平台无法展示摘要图。
 <<< END U012884 >>>
 <<< UNIT U012885 | md-heading | packages/modules/akari-bot-module-tweet/akaribot/modules/tweet/docs/development.md:25-25 | ctx=数据表 >>>
 ## 数据表

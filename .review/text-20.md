@@ -501,7 +501,7 @@
 - `[[标题]]`：查询页面，忽略以 `#` 开头的标题。去掉重复的标题后，至多处理 5 个页面。
 - 用双层花括号包裹的模板名：解析模板调用与解析函数。
 - `≺标题≻` 或 `⧼标题⧽`：查询 MediaWiki 命名空间页面。
-- Wiki 页面 URL：生成 Infobox 预览或返回文件，返回哪种由渲染方式决定。
+- Wiki 页面 URL：生成 Infobox 预览或返回文件，返回哪种取决于渲染方式。
 <<< END U013069 >>>
 <<< UNIT U013070 | md-paragraph | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/docs/index.md:428-428 | ctx=`wiki-audit trust` >>>
 此命令从 Wiki 页面、站点或 API 地址中解析出 API 地址，再加入全局 URL 允许列表。地址无法解析，或已在阻止列表中时，命令返回失败。
@@ -641,7 +641,7 @@
 />
 <<< END U013097 >>>
 <<< UNIT U013098 | md-paragraph | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/docs/index.md:618-618 | ctx=`wikilog enable` >>>
-此命令用于启用一种类型的日志监控，`logtype` 取 `ab`、`rc` 或对应的全名。取值无效或 Wiki 未加入监控列表时，命令返回失败提示。
+此命令用于启用一种类型的日志监控，`logtype` 可选 `ab`、`rc` 或对应的全名。取值无效或 Wiki 未加入监控列表时，命令返回失败提示。
 <<< END U013098 >>>
 <<< UNIT U013099 | md-paragraph | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/docs/index.md:621-625 | ctx=`wikilog enable` >>>
   :log="[
@@ -1982,7 +1982,7 @@ Wiki 讨论页列表的消息渲染工具。
 # 最外层构造闭合，整段一并移除
 <<< END U013499 >>>
 <<< UNIT U013500 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:104-105 >>>
-# 归一化章节名以供比较。
+# 规范化章节名以供比较。
 # 章节锚点中的下划线与标题中的空格等价，wikilib 传入的章节名已将空格换作下划线。
 <<< END U013500 >>>
 <<< UNIT U013501 | py-comment | packages/modules/akari-bot-module-wiki/akaribot/modules/wiki/utils/summarize.py:110-110 >>>
@@ -2463,7 +2463,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 本文件只声明成员、workspace 内的版本来源，以及整个仓库的工具配置。
 <<< END U013636 >>>
 <<< UNIT U013637 | cfg-comment | pyproject.toml:4-4 >>>
-# packages/* 会匹配到 adapters/ 与 modules/ 两个容器目录（它们不是包），故按前缀收窄范围。
+# packages/* 会匹配到 adapters/ 与 modules/ 两个容器目录（它们不是包），故按前缀限制范围。
 <<< END U013637 >>>
 <<< UNIT U013638 | cfg-comment | pyproject.toml:9-9 >>>
 # 资源包不在索引上，成员对它的依赖须显式指向工作区成员，uv 才会认这条依赖。
@@ -2552,7 +2552,7 @@ WebSocket JobQueue 独立进程测试工作节点。
 # 把被查询的成员一律视为平台原生管理员。
 <<< END U013664 >>>
 <<< UNIT U013665 | py-comment | tests/integration/test_core_admin.py:60-60 >>>
-# 测试进程没有平台 Peer，ID 归属校验由 mock 提供
+# 测试进程没有平台节点，ID 归属校验由 mock 提供
 <<< END U013665 >>>
 <<< UNIT U013666 | py-docstring | tests/integration/test_core_admin.py:1-1 | ctx=<module> >>>
 modules/core 管理员与模块授权命令集成测试。
@@ -2894,7 +2894,7 @@ i18n: ${cmd} 参数传递一致性测试
 平台适配器的长期缓存、主动推送队列与输入状态生命周期测试。
 <<< END U013776 >>>
 <<< UNIT U013777 | py-docstring | tests/unit/test_platform_memory.py:358-358 | ctx=test_platform_memory >>>
-平台侧长期运行内存的有界性与清理路径。
+平台端长期运行内存的有界性与清理路径。
 <<< END U013777 >>>
 <<< UNIT U013778 | py-docstring | tests/unit/test_platform_shutdown.py:1-1 | ctx=<module> >>>
 平台客户端关闭流程单元测试。
@@ -3280,7 +3280,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 <<< END U013903 >>>
 <<< UNIT U013904 | py-comment | tools/lint_boundaries.py:548-549 >>>
 # 允许的位置是冻结感知的 CLI 自调用（冻结时它是二进制、非冻结时是解释器加 -m 模块名）。
-# 反之把它当解释器启动实例进程，冻结后会重新调起 CLI，必须经 system_python()。
+# 反之把它当解释器启动实例进程，冻结后会重新调起 CLI，必须通过 system_python() 调用。
 <<< END U013904 >>>
 <<< UNIT U013905 | py-inline-comment | tools/lint_boundaries.py:551-551 >>>
 # 各页的 cli_argv 构造
@@ -3393,7 +3393,7 @@ B1 的级别对官方模块包升级为 error，其他（第三方在自己的�
 # “关于我们”是帮助菜单里的入口名，不是叙述人称。
 <<< END U013939 >>>
 <<< UNIT U013940 | py-comment | tools/lint_comments.py:67-68 >>>
-# 规则 3 检查语气词与情绪标点。省略号只认中文双省略号、四个以上英文点与行尾三点，
+# 规则 3 检查语气词与情绪标点。省略号只识别中文双省略号、四个以上英文点与行尾三点，
 # 以免把代码占位符（`<...>`、`[...]`）与引用文本里的标点算作情绪标点。
 <<< END U013940 >>>
 <<< UNIT U013941 | py-comment | tools/lint_comments.py:77-77 >>>

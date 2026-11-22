@@ -136,8 +136,8 @@
 # 封禁状态随场景一并转移，避免通过解绑规避处罚。
 <<< END U007056 >>>
 <<< UNIT U007057 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:989-990 >>>
-# 先创建新组再重新关联映射行，全程不出现“场景没有映射行”的中间态。
-# 新组仅含该场景，通道编号复位为 1。
+# 先创建新组再重新关联映射行，全程不出现“场景没有映射行”的中间状态。
+# 新组仅含该场景，通道编号重置为 1。
 <<< END U007057 >>>
 <<< UNIT U007058 | py-comment | packages/akari-bot-core/akaribot/core/database/models.py:1005-1006 >>>
 # 拆出的场景与原组内的机器人不再对应同一个现实场景，互认记录须一并清除。
@@ -775,7 +775,7 @@ AkariBot 的代码按包拆分。core 提供运行时和公共设施。内置模
 <<< UNIT U007210 | md-table | packages/akari-bot-core/akaribot/core/docs/config.md:58-64 | ctx=模板声明 >>>
 | 装饰器 | 表名 | 使用方 |
 | --- | --- | --- |
-| `@on_base_config()` | 表外顶层键 | `config.toml` 的 `default_locale`、`config_version` |
+| `@on_base_config()` | 配置表之外的顶层键 | `config.toml` 的 `default_locale`、`config_version` |
 | `@on_config("config")` | `[config]` | 核心公开配置 |
 | `@on_config("config", secret=True)` | `[secret]` | 核心密钥 |
 | `@on_bot_config("telegram")` | `bot_telegram` | 适配器 |
@@ -1034,7 +1034,7 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 - 未经授权不执行 `git commit`、`git add`、`git push`、`git reset` 或 `git checkout -- <文件>`。授权只对当次请求有效。
 - 提交信息使用英文书面语，正文写明实际运行输出、失败用例的对比与检查结果等证据。
 - 移动文件应使用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不会识别为重命名（rename），需拆分为“先移动文件、再修改内容”两次提交。
-- 包内有源码改动时，要提升该包的 `version`。不升级版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。
+- 包内有源码改动时，要提升该包的 `version`。不升级版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，填写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。
 <<< END U007281 >>>
 <<< UNIT U007282 | md-heading | packages/akari-bot-core/akaribot/core/docs/development-workflow.md:73-73 | ctx=文档 >>>
 ## 文档

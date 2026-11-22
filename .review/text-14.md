@@ -919,7 +919,7 @@ parser 执行异常的默认用户反馈与报告策略。
 # ---- 供管理命令与 Client RPC（OneBot 等）使用的带名称能力 ----
 <<< END U009328 >>>
 <<< UNIT U009329 | py-comment | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:335-336 >>>
-# Client 侧经 ``ServerAPI.trigger_hook("tos.report", ...)`` 调用，
+# 客户端通过 ``ServerAPI.trigger_hook("tos.report", ...)`` 调用，
 # 上报（SMTP 邮件或上报场景）与场景组展开在 Server 进程完成。
 <<< END U009329 >>>
 <<< UNIT U009330 | py-docstring | packages/akari-bot-core/akaribot/modules/core/hooks/tos.py:1-1 | ctx=<module> >>>
@@ -2826,7 +2826,7 @@ akaribot.modules.core.su_tools.analytics 单元测试 - 统计时间窗口的时
 akaribot.modules.core.su_tools.analytics: 统计时间窗口测试
 <<< END U009945 >>>
 <<< UNIT U009946 | py-comment | packages/akari-bot-core/tests/test_atcode.py:63-63 >>>
-# 该行为在本重构前就由各适配器共用的正则决定，此处固定下来以免无意改变线上输出。
+# 该行为在本重构前就由各适配器共用的正则确定，此处固定下来以免无意改变线上输出。
 <<< END U009946 >>>
 <<< UNIT U009947 | py-docstring | packages/akari-bot-core/tests/test_atcode.py:1-1 | ctx=<module> >>>
 core.builtins.message.mention 行内 AT 码解析与渲染单元测试。
@@ -2948,11 +2948,11 @@ core.utils.cache: 缓存工具测试
 <<< END U009985 >>>
 <<< UNIT U009986 | py-comment | packages/akari-bot-core/tests/test_chain_normalize.py:34-36 >>>
 # 这一条直接复现线上报错——finish() 收到的若已是 MessageChain，get_message_chain()
-# 便原样返回、跳过 assign 的归一化，纯字符串一路传至 cattrs 才抛出
+# 便原样返回、跳过 assign 的规范化，纯字符串一路传至 cattrs 才抛出
 # TypeError: 'str' object is not a mapping。
 <<< END U009986 >>>
 <<< UNIT U009987 | py-docstring | packages/akari-bot-core/tests/test_chain_normalize.py:71-71 | ctx=test_chain_normalize >>>
-消息链原地修改的归一化测试
+消息链原地修改的规范化测试
 <<< END U009987 >>>
 <<< UNIT U009988 | py-comment | packages/akari-bot-core/tests/test_channel_dedup.py:13-13 >>>
 # 构造一个满足通道认领 hook 所需的最小会话。
@@ -3022,7 +3022,7 @@ core.config: 全局默认配置与用户覆盖测试
 core.config.migration: 配置迁移端到端测试
 <<< END U010009 >>>
 <<< UNIT U010010 | py-comment | packages/akari-bot-core/tests/test_config_readonly.py:12-12 >>>
-# 最小可用的配置文件内容，含表外顶层键、普通表与密钥表各一
+# 最小可用的配置文件内容，包含配置表之外的顶层键、普通表与密钥表各一
 <<< END U010010 >>>
 <<< UNIT U010011 | py-docstring | packages/akari-bot-core/tests/test_config_readonly.py:1-1 | ctx=<module> >>>
 配置只读语义与授权写入的单元测试。
@@ -3110,7 +3110,7 @@ akaribot.core.utils.cooldown: CoolDown 冷却系统测试
 # 分页与筛选需要一批可控的数据，因此直接创建测试行，绕开逐条子进程调用。
 <<< END U010038 >>>
 <<< UNIT U010039 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:217-217 >>>
-# 条件与分页都在 core 侧统一处理，界面只报条件，条数按筛选后计算，offset 只影响本页。
+# 条件与分页都在 core 中统一处理，界面只报条件，条数按筛选后计算，offset 只影响本页。
 <<< END U010039 >>>
 <<< UNIT U010040 | py-comment | packages/akari-bot-core/tests/test_data_entrypoint.py:243-243 >>>
 # 大表上 COUNT 会触发全表扫描，因此翻页可以只获取本页，total 返回 null，由调用方沿用上次的条数。
@@ -3224,7 +3224,7 @@ akaribot.adapters.features: 平台能力开关测试
 core.entrypoints.docs: 包文档清单入口测试
 <<< END U010075 >>>
 <<< UNIT U010076 | py-comment | packages/akari-bot-core/tests/test_entrypoint_config.py:59-59 >>>
-# 引导代码可能为整个测试进程设过配置目录，子进程必须只认本次的实例根目录。
+# 引导代码可能为整个测试进程设过配置目录，子进程必须只使用本次的实例根目录。
 <<< END U010076 >>>
 <<< UNIT U010077 | py-comment | packages/akari-bot-core/tests/test_entrypoint_config.py:76-76 >>>
 # 注释里的示例文本与字符串值里嵌的同形文本都不构成占位项，只有整值等于标记才算。
@@ -3256,7 +3256,7 @@ core.entrypoints.db: 卸载清理入口测试
 <<< END U010085 >>>
 <<< UNIT U010086 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:41-42 >>>
 # 入口按实例配置选择后端。测试改用共享内存后端，并让“是否需要连数据库”的分支走非 database
-# 一侧，避免触碰测试进程已初始化的内存库。
+# 一侧，避免触碰测试进程已初始化的内存数据库。
 <<< END U010086 >>>
 <<< UNIT U010087 | py-comment | packages/akari-bot-core/tests/test_entrypoint_rpc.py:98-98 >>>
 # 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛出异常，本用例随之失败。

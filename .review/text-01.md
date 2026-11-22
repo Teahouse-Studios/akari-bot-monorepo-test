@@ -269,7 +269,7 @@
           # uv lock 无法检测此类约束冲突，因此单独设置一道检查（见 T4.8）。
 <<< END U000052 >>>
 <<< UNIT U000053 | cfg-comment | .github/workflows/run-builtin-tester.yml:79-80 >>>
-        # 版本号属于发布元数据而非行为正确性，tester 的结论应只由代码与测试决定。
+        # 版本号属于发布元数据而非行为正确性，tester 的结论应只取决于代码与测试。
         # 违规项仍会输出供发布前确认，但不会阻断本 job（重复版本由 PyPI 在发布时拒绝）。
 <<< END U000053 >>>
 <<< UNIT U000054 | cfg-comment | .github/workflows/run-builtin-tester.yml:84-86 >>>
@@ -950,7 +950,7 @@ VS Code 用户可安装 Ruff 扩展。
 - 对 core 的约束统一填写 `akari-bot-core>=0.1.0,<1.0`，全部官方包的这一版本约束必须**完全一致**，
 <<< END U000241 >>>
 <<< UNIT U000242 | md-paragraph | CONTRIBUTING.md:220-220 | ctx=新增模块包 >>>
-  `python tools/lint_versions.py` 会对此进行检查。
+  `python tools/lint_versions.py` 会检查这一项。
 <<< END U000242 >>>
 <<< UNIT U000243 | md-list | CONTRIBUTING.md:221-222 | ctx=新增模块包 >>>
 - 模块之间不要互相依赖，官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
@@ -1454,7 +1454,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 `akaribot.core` 与 `akaribot.modules.core` 分别以 `core`、`builtin` 提供文档。CLI 的 `cli` 条目由命令行工具自身合并。
 <<< END U000383 >>>
 <<< UNIT U000384 | md-heading | docs/package-docs.md:196-196 | ctx=命令与生成物 >>>
-## 命令与生成物
+## 命令与生成产物
 <<< END U000384 >>>
 <<< UNIT U000385 | md-paragraph | docs/package-docs.md:198-198 | ctx=命令与生成物 >>>
 `akaribot docs` 提供 `list`、`build`、`serve`、`deploy`、`status`、`clean`：

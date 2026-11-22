@@ -327,7 +327,7 @@
   - 安装前检查用 `uv pip install --dry-run` 生成安装计划，再检查它是否会破坏已安装的包。只调整依赖版本时给出提示并继续。会破坏已安装包或依赖无解时停止。`--force` 跳过这项检查。
 - `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：默认保留配置与数据。`--cascade` 连带卸载依赖它的包，先列清单再确认。`--purge-data` 同时删除该包的数据表与配置文件。
 - `update [名…] [--all] [--force] [--offline] [--defer-runtime] [--json]`：更新已安装包。工作区模式下等价于按本地源码重新安装。`--defer-runtime` 把数据库迁移留到下次启动。
-- `load <名>` / `unload <名>`：只改全局加载状态，不改安装状态和场景启用状态。
+- `load <名>` / `unload <名>`：只修改全局加载状态，不修改安装状态和场景启用状态。
 <<< END U001575 >>>
 <<< UNIT U001576 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/commands.md:85-85 | ctx=module >>>
 `--json` 的 `update` 只在 stdout 输出一行结果，进度与警告输出到 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
@@ -611,7 +611,7 @@ TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`d
 Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` 与可选的 `AWS_SESSION_TOKEN` 读取。区域默认读取 `AWS_REGION` 或 `AWS_DEFAULT_REGION`，都没有时使用 `us-east-1`。`provider` 默认按存在的子表推断，两者都存在时选用 `vercel`。
 <<< END U001640 >>>
 <<< UNIT U001641 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:210-210 | ctx=生成物 >>>
-## 生成物
+## 生成产物
 <<< END U001641 >>>
 <<< UNIT U001642 | md-table | packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md:212-220 | ctx=生成物 >>>
 | 路径 | 内容 |
@@ -1280,14 +1280,14 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
   - 新增实例时，在对话框中选择已安装的适配器并填写实例 ID。`↑` / `↓` 切换平台，`Enter` 创建。
   - 创建后弹出配置表单，待填写项排在最前。`Enter` 进入下一项，`Ctrl+S` 保存，`Esc` 稍后填写。
 - 模块：`r` 刷新，`/` 搜索，`i` 安装（先确认目标），`u` 卸载，`U` 更新，`e` 全局加载/卸载，`space` 选择，`Shift+↑/↓` 扩展选择，`a` 全选，`c` 清除选择，`Esc` 清空搜索。
-- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列当前模式可用的项），`Esc` 清空搜索。
+- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列出当前模式可用的项），`Esc` 清空搜索。
 - 数据库：`r` 刷新，`Ctrl+S` 保存，`n` 新建，`Ctrl+D` 删除，`/` 搜索，`f` 添加筛选，`Ctrl+F` 清空筛选，`m` 更多（排序、清空筛选），`[` / `]` 翻页，`g` / `G` 跳转首页和末页。
 - 开发：`r` 刷新，`t` 运行测试，`n` 新建包对话框，`o` 聚焦输出，`Esc` 终止运行中的操作。
 - 文档：`r` 刷新，`/` 搜索，`space` 选择，`b` 构建，`p` 启动或停止预览，`e` 启动或停止开发预览，`o` 打开浏览器，`m` 更多（部署、同步主题、安装依赖、任务日志），`a` 全选，`c` 清空选择。
 - 迁移：`Enter` 迁移，`p` 试运行。
 <<< END U001814 >>>
 <<< UNIT U001815 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:86-86 | ctx=页面键位 >>>
-各页按钮文字后附快捷键（如“保存 ^s”），写法与页脚一致。低频操作在 `m` 菜单中，菜单只列当前可用的项。
+各页按钮文字后附快捷键（如“保存 ^s”），写法与页脚一致。低频操作在 `m` 菜单中，菜单只列出当前可用的项。
 <<< END U001815 >>>
 <<< UNIT U001816 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:88-88 | ctx=页面操作 >>>
 ## 页面操作
@@ -1328,14 +1328,14 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 ### 配置、适配器与模块
 <<< END U001825 >>>
 <<< UNIT U001826 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:116-116 | ctx=配置、适配器与模块 >>>
-配置页有表单、原始文本和外部编辑器三种方式。表单按 `config schema` 生成，只列当前表声明的字段。保存前会标记未写入的占位符。切换表、切换模式或离开页面前，有未保存内容会先确认。
+配置页有表单、原始文本和外部编辑器三种方式。表单按 `config schema` 生成，只列出当前表声明的字段。保存前会标记未写入的占位符。切换表、切换模式或离开页面前，有未保存内容会先确认。
 <<< END U001826 >>>
 <<< UNIT U001827 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:118-118 | ctx=配置、适配器与模块 >>>
 适配器页：
 <<< END U001827 >>>
 <<< UNIT U001828 | md-list | packages/akari-bot-cli/akaribot/cli/docs/tui.md:120-123 | ctx=配置、适配器与模块 >>>
 - 列表只显示已安装或已启用的平台。未安装的平台先按 `i` 选择安装。
-- `n` 新建实例。对话框只列已安装平台，实例 ID 必填，非法字符和重名会当场提示。
+- `n` 新建实例。对话框只列出已安装平台，实例 ID 必填，非法字符和重名会当场提示。
 - 创建后弹出配置表单，待填写项排在最前，`enable` 排在最后。这样密钥先写入，再打开实例。
 - `e` 启用或停用实例。`Ctrl+D` 只删除实例配置，保留场景和用户数据。
 <<< END U001828 >>>
@@ -1411,7 +1411,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 - 存在未保存更改或后台任务未结束时，退出与切换实例都会先确认。
 <<< END U001847 >>>
 <<< UNIT U001848 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:177-177 | ctx=确认规则 >>>
-确认框打开前先调用 `PendingConfirm.accept(key)` 做防抖，同一目标在防抖窗口内的连发会被忽略，避免重复弹出多层模态框。切换页面、刷新、更换表或更换选中项时，调用页面的 `reset_pending()` 作废待确认状态。
+确认框打开前先调用 `PendingConfirm.accept(key)` 防抖，同一目标在防抖窗口内的连续触发会被忽略，避免重复弹出多层模态框。切换页面、刷新、更换表或更换选中项时，调用页面的 `reset_pending()` 作废待确认状态。
 <<< END U001848 >>>
 <<< UNIT U001849 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:179-179 | ctx=与 CLI 的写操作关系 >>>
 ## 与 CLI 的写操作关系

@@ -381,7 +381,7 @@
 # key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
 <<< END U004657 >>>
 <<< UNIT U004658 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:45-45 >>>
-# 侧栏分组同时决定阅读顺序与键盘翻页顺序。
+# 侧栏分组同时控制阅读顺序与键盘翻页顺序。
 <<< END U004658 >>>
 <<< UNIT U004659 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:53-53 >>>
 # 页面用途说明显示在快捷键帮助中。
@@ -447,7 +447,7 @@
 # 待确认状态由实现 reset_pending() 的页面管理。
 <<< END U004679 >>>
 <<< UNIT U004680 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:426-426 >>>
-# noqa: BLE001 - 页面尚未挂载时无需复位
+# noqa: BLE001 - 页面尚未挂载时无需重置状态
 <<< END U004680 >>>
 <<< UNIT U004681 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:432-432 >>>
 # 页面通过 dirty_note() 提供未保存更改摘要。
@@ -531,7 +531,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # 类型标签保存文案键，按当前语言解析。
 <<< END U004707 >>>
 <<< UNIT U004708 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:51-51 >>>
-# 类型名归一化时，由于 schema 的 type 取自运行时值的 __name__ 且会随模板写法变化，故按子串匹配。
+# 类型名规范化时，由于 schema 的 type 取自运行时值的 __name__ 且会随模板写法变化，故按子串匹配。
 <<< END U004708 >>>
 <<< UNIT U004709 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:68-68 >>>
 # 表名与配置文件一一对应，config.toml 同时承载 config 与 secret 两段。
@@ -576,7 +576,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # region 控件
 <<< END U004722 >>>
 <<< UNIT U004723 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:927-927 >>>
-# 原生控件是否可用由兼容实现决定，页面通过属性检测选择实现。
+# 原生控件是否可用取决于兼容实现，页面通过属性检测选择实现。
 <<< END U004723 >>>
 <<< UNIT U004724 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/config.py:992-992 >>>
 # noqa: BLE001 - 未挂载时按无按钮处理
@@ -675,7 +675,7 @@ TUI 应用装配、页面注册、全局快捷键与启动入口。
 # noqa: BLE001 - 文件定位失败由调用方显示错误
 <<< END U004755 >>>
 <<< UNIT U004756 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:133-133 | ctx=kind_of_value >>>
-按运行时值的 Python 类型推断归一化类型。
+按运行时值的 Python 类型推断规范化类型。
 <<< END U004756 >>>
 <<< UNIT U004757 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/config.py:188-188 | ctx=edit_text >>>
 把值渲染为输入框中的文本，列表按中英文逗号分隔，其余同 :func:`write_text`。
@@ -1123,7 +1123,7 @@ Esc 等同稍后填写。
 写入操作的执行接口，对应一次 ``akaribot <子命令>`` 调用。
 <<< END U004904 >>>
 <<< UNIT U004905 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:386-386 | ctx=InitRunner >>>
-新建实例的执行接口。测试注入模拟对象，生产环境经 ``akaribot init`` 子进程。
+新建实例的执行接口。测试注入模拟对象，生产环境通过 ``akaribot init`` 子进程执行。
 <<< END U004905 >>>
 <<< UNIT U004906 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/dashboard.py:445-445 | ctx=InstanceListSource >>>
 本机实例清单的数据源接口。写入操作通过 :class:`CliRunner` 交给命令层。
@@ -1892,7 +1892,7 @@ Esc 关闭对话框，放弃输入。
 # region 交互
 <<< END U005160 >>>
 <<< UNIT U005161 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1495-1495 >>>
-# 待确认的部署必须与当前选择无关，换选中项时仍应复位以防误触。
+# 待确认的部署必须与当前选择无关，切换选中项时仍应重置状态以防误触。
 <<< END U005161 >>>
 <<< UNIT U005162 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1595-1595 >>>
 # noqa: BLE001 - 数据源异常转换为操作结果
@@ -1910,7 +1910,7 @@ Esc 关闭对话框，放弃输入。
 # 启动期间页面可能已切走，此时立即停止，避免留下无人管理的服务。
 <<< END U005166 >>>
 <<< UNIT U005167 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1724-1724 >>>
-# noqa: BLE001 - 停止失败仍需复位界面状态
+# noqa: BLE001 - 停止失败仍需重置界面状态
 <<< END U005167 >>>
 <<< UNIT U005168 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1741-1741 >>>
 # noqa: BLE001 - 浏览器调用失败只作为状态展示
@@ -1922,7 +1922,7 @@ Esc 关闭对话框，放弃输入。
 # 启动期间页面可能已切走，此时立即停止，避免留下无人管理的服务。
 <<< END U005170 >>>
 <<< UNIT U005171 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1848-1848 >>>
-# noqa: BLE001 - 停止失败仍需复位界面状态
+# noqa: BLE001 - 停止失败仍需重置界面状态
 <<< END U005171 >>>
 <<< UNIT U005172 | py-inline-comment | packages/akari-bot-cli/akaribot/cli/tui/docs.py:1860-1860 >>>
 # noqa: BLE001 - 退出路径上不再报告停止失败
@@ -2210,7 +2210,7 @@ Esc 关闭对话框，放弃输入。
 # 文案随当前语言解析，常量仅保存文案键。
 <<< END U005266 >>>
 <<< UNIT U005267 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/doctor.py:42-42 >>>
-# 结论默认级别与 CLI 侧判定标准一致，端口与登录信息出现重复时报错，孤立配置只告警。
+# 结论默认级别与 CLI 判定标准一致，端口与登录信息出现重复时报错，孤立配置只告警。
 <<< END U005267 >>>
 <<< UNIT U005268 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/doctor.py:374-374 >>>
 # 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
@@ -2477,7 +2477,7 @@ Esc 关闭对话框，放弃输入。
 通过锁文件读取实例运行状态。
 <<< END U005355 >>>
 <<< UNIT U005356 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:390-390 | ctx=SubprocessEnvironmentSource.action >>>
-见 :meth:`EnvironmentSource.action`。``--yes`` 由界面代答。
+见 :meth:`EnvironmentSource.action`。``--yes`` 由界面自动确认。
 <<< END U005356 >>>
 <<< UNIT U005357 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/environment.py:399-399 | ctx=SubprocessEnvironmentSource.add_package >>>
 见 :meth:`EnvironmentSource.add_package`。
@@ -2832,7 +2832,7 @@ Esc 关闭对话框，放弃输入。
 # 多选按包名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩展选择的起点。
 <<< END U005473 >>>
 <<< UNIT U005474 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:831-831 >>>
-# 确认框使用防抖，避免鼠标双击或键盘连发产生重复弹窗。
+# 确认框使用防抖，避免鼠标双击或键盘连续触发产生重复弹窗。
 <<< END U005474 >>>
 <<< UNIT U005475 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:877-877 >>>
 # region 状态读取（供测试与 App 使用）
@@ -2922,7 +2922,7 @@ Esc 关闭对话框，放弃输入。
 # Git 与可编辑安装的目标由选项指定，记录仅提供状态栏中的名称。
 <<< END U005503 >>>
 <<< UNIT U005504 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1415-1415 >>>
-# 防抖用于避免鼠标双击或键盘连发产生重复确认框。
+# 防抖用于避免鼠标双击或键盘连续触发产生重复确认框。
 <<< END U005504 >>>
 <<< UNIT U005505 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1440-1440 >>>
 # 关闭确认框后清除防抖记录，允许重新发起操作。
@@ -3111,7 +3111,7 @@ Esc 关闭对话框，放弃输入。
 安装选区或未安装的高亮项。无可安装目标时打开安装输入框。
 <<< END U005566 >>>
 <<< UNIT U005567 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1413-1413 | ctx=ModulesPage.request_update >>>
-发起更新，弹出选择框决定更新选中项还是全部已安装包。
+发起更新，弹出选择框，由用户选择更新选中项还是全部已安装包。
 <<< END U005567 >>>
 <<< UNIT U005568 | py-docstring | packages/akari-bot-cli/akaribot/cli/tui/modules.py:1580-1580 | ctx=ModulesPage.request_toggle_load >>>
 加载选中包的模块。全部已加载时取消加载。
@@ -3404,7 +3404,7 @@ Windows 实例停止协议。
     # 用于脚手架渲染（T5.5），core 也依赖它，但 CLI 不依赖 core，故自带
 <<< END U005662 >>>
 <<< UNIT U005663 | cfg-comment | packages/akari-bot-cli/pyproject.toml:24-24 >>>
-    # 固定版本，因为 Textual 跨大版本常有 API 变动，全部调用统一经 akaribot.cli.tui._compat 转接
+    # 固定版本，因为 Textual 跨大版本常有 API 变动，全部调用统一通过 akaribot.cli.tui._compat 转接
 <<< END U005663 >>>
 <<< UNIT U005664 | cfg-comment | packages/akari-bot-cli/pyproject.toml:28-28 >>>
     # 文档开发模式监听各包文档目录与主题目录，watchdog 提供跨平台原生事件源
@@ -3696,8 +3696,8 @@ cli.commands.migrate: 迁移候选与跳过诊断测试
 模块作者的 pyproject 声明与读取链路测试
 <<< END U005757 >>>
 <<< UNIT U005758 | py-comment | packages/akari-bot-cli/tests/test_module_available.py:59-60 >>>
-# 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须替换 console 本身。宽度放宽，
-# 免得表格截断长包名而让检查失真。
+# 命令通过 ``rich.console.Console`` 输出，不是 stdout，故必须替换 console 本身。宽度放宽，
+# 以免表格截断长包名而让检查失真。
 <<< END U005758 >>>
 <<< UNIT U005759 | py-comment | packages/akari-bot-cli/tests/test_module_available.py:72-72 >>>
 # 表格会按终端宽度截断长名字，检查包名只能通过 JSON。
