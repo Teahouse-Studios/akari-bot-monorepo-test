@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path("/Volumes/DATA/akari-bot-monorepo-test")
 REVIEW = ROOT / ".review"
 UNIT_HDR = re.compile(r"^<<< UNIT U(\d{6}) \| [^|]+ \| (.+?):(\d+)-(\d+)(?: \| ctx=.*)? >>>$")
+COUNTER = re.compile(r"^审阅次数[：:]\s*\d*\s*$")
 
 def load_units():
     return json.loads((REVIEW / "units.json").read_text(encoding="utf-8"))
@@ -21,7 +22,10 @@ def parse_review(path: Path):
             cur = int(m.group(1)); buf = []; continue
         if line.startswith("<<< END U") and cur is not None:
             out[cur] = "\n".join(buf); cur = None; buf = []; continue
-        if cur is not None: buf.append(line)
+        if cur is not None:
+            if not buf and COUNTER.match(line):
+                continue
+            buf.append(line)
     if cur is not None: raise SystemExit(f"未闭合的单元 U{cur}")
     return out
 
@@ -129,6 +133,13 @@ def main():
             per[Path(path).name] = sum(1 for i, t in us.items() if base[i] != t)
         for name, n in per.items():
             print(f"  {name}  改动 {n}")
+        hist = {}
+        for path in reviews(sys.argv[2:]):
+            for line in Path(path).read_text(encoding="utf-8").split("\n"):
+                if COUNTER.match(line):
+                    v = line.split("：")[-1].split(":")[-1].strip() or "(空)"
+                    hist[v] = hist.get(v, 0) + 1
+        print("审阅次数分布", dict(sorted(hist.items(), key=lambda kv: kv[0])))
         for p in changed_files[:20]: print("  ", p)
         return
     if mode != "--apply":
