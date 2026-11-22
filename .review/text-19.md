@@ -1241,7 +1241,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 ## 命令
 <<< END U012456 >>>
 <<< UNIT U012457 | md-paragraph | packages/modules/akari-bot-module-ncmusic/akaribot/modules/ncmusic/docs/index.md:11-11 | ctx=`ncmusic search` >>>
-此命令用于搜索网易云音乐，结果取前 10 首。平台支持图片且未指定 `--legacy` 时，结果以表格图片展示编号、歌名、歌手、专辑与 ID。图片渲染没有产出时，回退为文本列表。
+此命令用于搜索网易云音乐，结果取前 10 首。平台支持图片且未指定 `--legacy` 时，结果以表格图片展示编号、歌名、歌手、专辑与 ID。图片渲染未生成结果时，回退为文本列表。
 <<< END U012457 >>>
 <<< UNIT U012458 | md-paragraph | packages/modules/akari-bot-module-ncmusic/akaribot/modules/ncmusic/docs/index.md:13-13 | ctx=`ncmusic search` >>>
 只有一首结果时，命令询问是否查看详情。
@@ -2702,10 +2702,10 @@ Phigros 资源自动更新测试。
 phigros 的资源版本检查与更新。
 <<< END U012841 >>>
 <<< UNIT U012842 | py-comment | packages/modules/akari-bot-module-phigros/tests/test_phigros_legacy_assets.py:17-17 >>>
-# 旧版 update.py 产出的曲目 id 归一化为小写、字段名为 composer、定数为字符串。
+# 旧版 update.py 生成的曲目 id 归一化为小写、字段名为 composer、定数为字符串。
 <<< END U012842 >>>
 <<< UNIT U012843 | py-comment | packages/modules/akari-bot-module-phigros/tests/test_phigros_legacy_assets.py:31-31 >>>
-# 现行 assets.py 产出的曲目 id 保留原始大小写与标点、定数为浮点数。
+# 现行 assets.py 生成的曲目 id 保留原始大小写与标点、定数为浮点数。
 <<< END U012843 >>>
 <<< UNIT U012844 | py-docstring | packages/modules/akari-bot-module-phigros/tests/test_phigros_legacy_assets.py:1-1 | ctx=<module> >>>
 phigros 旧版曲目信息兼容性单元测试。

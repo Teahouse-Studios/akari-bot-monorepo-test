@@ -1965,10 +1965,10 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `enable` | bool | `false` | 是否启动 QQ 机器人客户端。 |
 | `qq_bot_appid` | str \| int | `""` | 机器人 AppID。 |
 | `qq_bot_openid` | str | `""` | 机器人自身 OpenID。 |
-| `qq_bot_enable_send_url` | bool | `false` | 在服务器频道与频道私信中发送纯文本时是否保留链接，关闭时含链接的行会被丢弃。 |
+| `qq_bot_enable_send_url` | bool | `false` | 在服务器频道与频道私信中发送纯文本时是否保留链接，关闭时包含链接的行会被丢弃。 |
 | `qq_private_bot` | bool | `false` | 是否为私域机器人。 |
-| `qq_typing_emoji` | int | `181` | 正在处理消息时挂载的回应表情 ID。 |
-| `qq_limited_emoji` | int | `10060` | 消息处理失败时挂载的回应表情 ID。 |
+| `qq_typing_emoji` | int | `181` | 正在处理消息时添加的回应表情 ID。 |
+| `qq_limited_emoji` | int | `10060` | 消息处理失败时添加的回应表情 ID。 |
 | `qq_use_markdown` | bool | `false` | 是否使用 Markdown 格式消息。 |
 | `qq_bot_certified` | bool | `true` | 机器人是否已通过企业或个人认证，未认证时主动消息配额更低。 |
 | `qq_navigation_sync_strict` | bool | `false` | 全局菜单与指令面板同步失败时是否阻止启动。 |

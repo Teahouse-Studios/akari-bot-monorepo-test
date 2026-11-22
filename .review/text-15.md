@@ -955,7 +955,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 会把路径固定在隔离环境变量就位之前）。
 <<< END U010368 >>>
 <<< UNIT U010369 | py-docstring | packages/akari-bot-testing/akaribot/testing/__init__.py:30-39 | ctx=__getattr__ >>>
-首次访问时解析公开名。
+首次访问时解析公开名称。
 
     子模块名直接返回子模块本身，避免为获取 ``runner`` 而先加载 ``tester``（后者依赖 core，
     会把路径固定在隔离环境变量就位之前）。
@@ -965,7 +965,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
     :raises AttributeError: 该名字不在任何子模块的公开接口内。
 <<< END U010369 >>>
 <<< UNIT U010370 | py-docstring | packages/akari-bot-testing/akaribot/testing/__init__.py:52-54 | ctx=__dir__ >>>
-列出公开名，供交互式补全与文档工具使用。
+列出公开名称，供交互式补全与文档工具使用。
 <<< END U010370 >>>
 <<< UNIT U010371 | py-docstring | packages/akari-bot-testing/akaribot/testing/decorator.py:9-9 | ctx=CaseEntry >>>
 由 :func:`case` 注册的测试项。
@@ -2227,7 +2227,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 签名由生成它的模型签发，跨模型回放会被判定为无效签名，此时仅保留无签名的步骤。
 <<< END U010728 >>>
 <<< UNIT U010729 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/endpoints/gemini_interactions.py:74-74 >>>
-# 工具产出的图片会作为用户消息追加，Interactions 支持直接并入工具结果。
+# 工具生成的图片会作为用户消息追加，Interactions 支持直接并入工具结果。
 <<< END U010729 >>>
 <<< UNIT U010730 | py-comment | packages/modules/akari-bot-module-ai/akaribot/modules/ai/endpoints/gemini_interactions.py:80-80 >>>
 # 无状态续轮需原样回传 thought 签名与函数调用步骤。

@@ -462,7 +462,7 @@
 # 先显示并聚焦目标页，避免隐藏旧页时 Textual 将焦点分配给隐藏容器。
 <<< END U004684 >>>
 <<< UNIT U004685 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:465-465 >>>
-# 仅激活可见页面，避免隐藏页执行无关的读取与轮询。
+# 仅激活可见页面，避免隐藏页面执行无关的读取与轮询。
 <<< END U004685 >>>
 <<< UNIT U004686 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/app.py:476-476 >>>
 # 仅在索引变化时更新，避免侧栏事件重复触发页面同步。
@@ -2826,7 +2826,7 @@ Esc 关闭对话框，放弃输入。
 # noqa: BLE001 - 实例构造失败同样只作为降级原因上报
 <<< END U005471 >>>
 <<< UNIT U005472 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:710-710 >>>
-# 页面键位仅在本页生效，避免隐藏页响应操作。低频键位由详情区提示以控制页脚宽度。
+# 页面键位仅在本页生效，避免隐藏页面响应操作。低频键位由详情区提示以控制页脚宽度。
 <<< END U005472 >>>
 <<< UNIT U005473 | py-comment | packages/akari-bot-cli/akaribot/cli/tui/modules.py:828-828 >>>
 # 多选按包名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩展选择的起点。

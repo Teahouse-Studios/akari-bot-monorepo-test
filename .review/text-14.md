@@ -3350,7 +3350,7 @@ core.utils.func: 所有工具函数测试
 # 换行在代码块内无从表达，折成空格
 <<< END U010116 >>>
 <<< UNIT U010117 | py-comment | packages/akari-bot-core/tests/test_help_action_text.py:1080-1080 >>>
-# 空文本不产出空围栏
+# 空文本不生成空围栏
 <<< END U010117 >>>
 <<< UNIT U010118 | py-docstring | packages/akari-bot-core/tests/test_help_action_text.py:1-1 | ctx=<module> >>>
 帮助页布局与可点击模块列表的单元测试。

@@ -2214,7 +2214,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 误判为已安装，代价是多记一条依赖边。既有测试已验证该判断依据。
 <<< END U008508 >>>
 <<< UNIT U008509 | py-comment | packages/akari-bot-core/akaribot/core/registry.py:1010-1012 >>>
-# extra 未指定时 packaging 代入空字符串，带 ``extra`` 子句的标记因此先判定为假，再逐个
+# extra 未指定时 packaging 代入空字符串，带 ``extra`` 子句的标记因此先判定为 False，再逐个
 # 代入候选 extra 重新判断。只有已安装 extra 的子句才算成立。标记无法求值时按成立处理，因为
 # 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
 <<< END U008509 >>>
@@ -2224,7 +2224,7 @@ WebSocket JobQueue 后端及独立 Hub 实现。
 # 都会被发现，不会被只找首个环的写法漏掉。
 <<< END U008510 >>>
 <<< UNIT U008511 | py-docstring | packages/akari-bot-core/akaribot/core/registry.py:48-48 | ctx=RegistryError >>>
-发现层无法产出可用清单时抛出。
+发现层无法生成可用清单时抛出。
 <<< END U008511 >>>
 <<< UNIT U008512 | py-docstring | packages/akari-bot-core/akaribot/core/registry.py:229-229 | ctx=PackageEntry.stem >>>
 包名。目录扫描与 entry point 两条路径下取值一致。

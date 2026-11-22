@@ -368,7 +368,7 @@ akaribot.adapters.qqbot.context: 指令操作标签渲染测试
 # 替换 QQBotContextManager.client，避免测试依赖真实 botpy 客户端。
 <<< END U000925 >>>
 <<< UNIT U000926 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_context_lifecycle.py:58-58 >>>
-# 响应时上下文已被 del_context 回收，此处不应再抛异常，否则会中断 RPC 管道。
+# 响应时上下文已被 del_context 回收，此处不应再抛出异常，否则会中断 RPC 管道。
 <<< END U000926 >>>
 <<< UNIT U000927 | py-comment | packages/adapters/akari-bot-adapter-qqbot/tests/test_qqbot_context_lifecycle.py:106-106 >>>
 # 平台先撤销上下文时，处理记录期间的 hold 仍须可用。

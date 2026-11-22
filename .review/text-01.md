@@ -482,7 +482,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - **i18n 强制**：面向用户的固定文案一律使用 `I18NContext("key", **参数)`，只在所属包的
 <<< END U000108 >>>
 <<< UNIT U000109 | md-paragraph | AGENTS.md:125-125 | ctx=i18n 与本地化 >>>
-  `locales/zh_cn.json` 中创建条目。插值语法是 `${name}`，占位符名不得与 `t()` 的形参同名。
+  `locales/zh_cn.json` 中创建条目。插值语法是 `${name}`，占位符名称不得与 `t()` 的形参同名。
 <<< END U000109 >>>
 <<< UNIT U000110 | md-list | AGENTS.md:126-127 | ctx=i18n 与本地化 >>>
 - **本地化文本只使用简体中文。**

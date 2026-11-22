@@ -2957,7 +2957,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 条目声明的可安装单元，模块包取清单的 provides_modules，适配器取自身名字。
 <<< END U013797 >>>
 <<< UNIT U013798 | py-docstring | tools/build_registry.py:276-276 | ctx=order_summaries >>>
-简介按语言代码排序，默认 locale 置首，保证同一输入产出同一字节序列。
+简介按语言代码排序，默认 locale 置首，保证同一输入生成同一字节序列。
 <<< END U013798 >>>
 <<< UNIT U013799 | py-docstring | tools/build_registry.py:312-312 | ctx=as_str_list >>>
 把清单里的序列字段规整为字符串列表，单值按一元列表处理。
@@ -3182,7 +3182,7 @@ workspace 或包元数据不满足生成 registry 所需的结构。
 # noqa: BLE001 - 片段仅用于报告，无法获取源码时回退到占位文本
 <<< END U013871 >>>
 <<< UNIT U013872 | py-comment | tools/codemod_namespace.py:226-226 >>>
-# 位置元数据以原始节点为键，遍历产出的新节点不在其中。
+# 位置元数据以原始节点为键，遍历生成的新节点不在其中。
 <<< END U013872 >>>
 <<< UNIT U013873 | py-inline-comment | tools/codemod_namespace.py:286-286 >>>
 # noqa: BLE001 - 无法求值的字面量不参与改写

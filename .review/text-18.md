@@ -2208,7 +2208,7 @@ CHUNITHM 的命令、数据源，以及它与舞萌 DX 的差异，见 [CHUNITHM
 # 按用户名查到的成绩属于他人，与这位用户自己保存在缓存里的成绩并非同一份，故不读写缓存。
 <<< END U011788 >>>
 <<< UNIT U011789 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:213-213 >>>
-# 查询绑定账号必须要有 OAuth 应用。按用户名查询走的是公开端点，不需要授权。
+# 查询绑定账号必须要有 OAuth 应用。按用户名查询使用公开端点，不需要授权。
 <<< END U011789 >>>
 <<< UNIT U011790 | py-comment | packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/libraries/chunithm_apidata.py:239-239 >>>
 # 查询他人时 403 只会是对方的隐私设置，只有查询自己才牵扯到用户协议。

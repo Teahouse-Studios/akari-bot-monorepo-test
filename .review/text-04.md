@@ -1245,7 +1245,7 @@ TUI 覆盖日常操作。下面这些命令适合自动化、批量部署和无�
 | | 迁移 | 旧项目迁移与试运行 |
 <<< END U001807 >>>
 <<< UNIT U001808 | md-paragraph | packages/akari-bot-cli/akaribot/cli/docs/tui.md:51-51 | ctx=页面 >>>
-切换页面时焦点交给目标页，隐藏页停止轮询。页面未激活前不读取数据。
+切换页面时焦点交给目标页面，隐藏页面停止轮询。页面未激活前不读取数据。
 <<< END U001808 >>>
 <<< UNIT U001809 | md-heading | packages/akari-bot-cli/akaribot/cli/docs/tui.md:53-53 | ctx=全局键位 >>>
 ## 全局键位

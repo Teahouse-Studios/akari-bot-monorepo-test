@@ -455,7 +455,7 @@
 # fallback_to_default=False 让未命中时抛出 ValueError，而不是静默回退到 DejaVu Sans。
 <<< END U008694 >>>
 <<< UNIT U008695 | py-comment | packages/akari-bot-core/akaribot/core/utils/func.py:21-21 >>>
-# 取数值真假而非字符串真假，因为字符串 "0" 非空，bool() 会将其判定为真
+# 取数值真假而非字符串真假，因为字符串 "0" 非空，bool() 会将其判定为 True
 <<< END U008695 >>>
 <<< UNIT U008696 | py-docstring | packages/akari-bot-core/akaribot/core/utils/func.py:10-10 | ctx=convert_bool >>>
 将常见真值/假值转为布尔值，无法识别时返回默认值。
@@ -1092,7 +1092,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< UNIT U008866 | py-docstring | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:296-302 | ctx=apply_sender_merge >>>
 按计划执行账号组合并并记录快照。
 
-:param plan: :func:`plan_sender_merge` 产出的合并计划。
+:param plan: :func:`plan_sender_merge` 生成的合并计划。
 :param keep_other_tables: 需要保留发起方数据的表名集合。
 :return: 合并后的新账号组。
 <<< END U008866 >>>
@@ -1108,7 +1108,7 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 <<< UNIT U008868 | py-docstring | packages/akari-bot-core/akaribot/modules/core/common_tools/_union_merge.py:387-393 | ctx=apply_target_merge >>>
 按计划执行场景组合并并记录快照。
 
-:param plan: :func:`plan_target_merge` 产出的合并计划。
+:param plan: :func:`plan_target_merge` 生成的合并计划。
 :param keep_other_tables: 需要保留发起方数据的表名集合。
 :return: 合并后的新场景组。
 <<< END U008868 >>>
@@ -1342,9 +1342,9 @@ Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的�
 此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。
 
 模块名渲染为指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格
-中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
+中间，依赖的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，
-竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**
+竖线与换行均由此处显式写出。也正因如此，本函数生成的元素中**不得出现相邻的两个纯文本**
 —— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被拆成两半。
 区隔行因此与上一组的收尾同处一个元素。
 

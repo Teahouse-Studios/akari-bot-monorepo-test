@@ -1204,8 +1204,8 @@ core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1
 模板使用 `${name}` 插值：
 <<< END U007329 >>>
 <<< UNIT U007330 | md-list | packages/akari-bot-core/akaribot/core/docs/i18n.md:48-50 | ctx=插值与占位符 >>>
-- 占位符名按含义选取英文名，与调用处关键字一一对应。
-- 占位符名不得与 `t()` 的形参（`key`、`fallback`、`locale_failed_prompt`、`disable_joke`）同名。同名会在渲染时触发 `TypeError`，例如 `${key}` 配 `key=...`。
+- 占位符名称按含义选取英文名，与调用处关键字一一对应。
+- 占位符名称不得与 `t()` 的形参（`key`、`fallback`、`locale_failed_prompt`、`disable_joke`）同名。同名会在渲染时触发 `TypeError`，例如 `${key}` 配 `key=...`。
 - 修改键名或占位符后，须同时核对调用点的关键字参数。
 <<< END U007330 >>>
 <<< UNIT U007331 | md-heading | packages/akari-bot-core/akaribot/core/docs/i18n.md:52-52 | ctx=语言文件维护 >>>

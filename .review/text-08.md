@@ -1681,7 +1681,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # values 是合并后的只读视图，user_values 才是可写回磁盘的用户配置。
 <<< END U006258 >>>
 <<< UNIT U006259 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/store.py:65-65 >>>
-# 持锁进程若被强制结束会遗留锁文件，超过时限即判定为陈旧锁并予以回收。
+# 持锁进程若被强制结束会遗留锁文件，超过时限即判定为陈旧锁并直接回收。
 <<< END U006259 >>>
 <<< UNIT U006260 | py-comment | packages/akari-bot-core/akaribot/core/builtins/config/store.py:105-106 >>>
 # 空 TOML 属于合法输入，解析不会报错。若磁盘上的文件已被清空而内存中仍有内容，
@@ -1846,7 +1846,7 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 # 消息元素列表
 <<< END U006312 >>>
 <<< UNIT U006313 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:101-101 >>>
-# 单个字典即 to_list() 产出的一个元素（含 _type 判别键），整体还原为消息元素
+# 单个字典即 to_list() 生成的一个元素（含 _type 判别键），整体还原为消息元素
 <<< END U006313 >>>
 <<< UNIT U006314 | py-comment | packages/akari-bot-core/akaribot/core/builtins/message/chain.py:161-161 >>>
 # 复用元素所在链的检查逻辑，避免为每种嵌套元素重复实现分支
