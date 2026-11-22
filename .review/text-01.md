@@ -112,13 +112,13 @@
 <<< END U000009 >>>
 <<< UNIT U000010 | md-list | .agents/skills/akaribot-dev/SKILL.md:39-40 | ctx=强制规则 >>>
 - 新增配置字段须在模板类声明，并在 `config.comments.<表名>.<字段名>` 中补充注释。
-- 模块与适配器只导入 `akaribot.core.api`（适配器另加 `akaribot.core.api.adapters`）。
+- 模块与适配器只导入 `akaribot.core.api`（适配器额外导入 `akaribot.core.api.adapters`）。
 <<< END U000010 >>>
 <<< UNIT U000011 | md-paragraph | .agents/skills/akaribot-dev/SKILL.md:41-41 | ctx=强制规则 >>>
-  核心内部出现循环依赖时经 `akaribot.core.exports` 处理。
+  核心内部出现循环依赖时通过 `akaribot.core.exports` 处理。
 <<< END U000011 >>>
 <<< UNIT U000012 | md-list | .agents/skills/akaribot-dev/SKILL.md:42-42 | ctx=强制规则 >>>
-- union 数据以 `union_id` 归属，模型声明 `union_scope`。跨表写入同一 union 时使用 `union_mutation()` 与
+- union 数据按 `union_id` 划分归属，模型须声明 `union_scope`。跨表写入同一 union 时使用 `union_mutation()` 与
 <<< END U000012 >>>
 <<< UNIT U000013 | md-paragraph | .agents/skills/akaribot-dev/SKILL.md:43-43 | ctx=强制规则 >>>
   `select_for_update()` 包裹事务。
@@ -185,7 +185,7 @@
 # 可写数据已不在包目录内（见模块顶部说明），故此处无需再区分运行时产物。
 <<< END U000028 >>>
 <<< UNIT U000029 | cfg-comment | .github/workflows/binary-build.yml:3-5 >>>
-# T6.5(a) 只打包 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写）。机器人本体不打入二进制，
+# T6.5(a) 只打包 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写）。机器人本体不打包进二进制文件，
 # CLI 通过子进程调用实例 venv 里的 `python -m akaribot.core.entrypoints.run`，因此 multiprocessing、
 # Tortoise ORM、七个平台 SDK、各模块及其依赖都不进入打包范围，打包内容只剩 CLI 自身依赖，构建因此更可靠。
 <<< END U000029 >>>
@@ -202,7 +202,7 @@
 <<< END U000032 >>>
 <<< UNIT U000033 | cfg-comment | .github/workflows/binary-build.yml:66-67 >>>
           # 内置 uv，供 CLI 创建与维护实例 venv，用户机器上不必预先安装。复制时直接使用包内最终文件名，
-          # 省去 include-data-files 的改名表达式（Windows 的可执行后缀必须是 .exe）。
+          # 省去 include-data-files 的重命名表达式（Windows 的可执行后缀必须是 .exe）。
 <<< END U000033 >>>
 <<< UNIT U000034 | cfg-comment | .github/workflows/binary-build.yml:84-85 >>>
           # 缺少包内资源会让 TUI 在用户机器上崩溃（textual 的 .tcss、rich 的内置主题）。手工列举必然
@@ -230,7 +230,7 @@
 # 并在 Linux/Windows/macOS 上执行干净环境安装验证。仅写入 TestPyPI，不涉及 PyPI、gh-pages 与 Release。
 <<< END U000040 >>>
 <<< UNIT U000041 | cfg-comment | .github/workflows/publish-testpypi.yml:100-101 >>>
-    # Token 模式下在单 job 中按依赖顺序逐个用 twine 串行上传，避免 57 个 matrix job 逐一触发
+    # Token 模式下在单个 job 中按依赖顺序逐个用 twine 串行上传，避免 57 个 matrix job 逐一触发
     # environment 审批。Trusted Publishing 使用下方的独立 matrix job（OIDC 需要由 action 逐次签发）。
 <<< END U000041 >>>
 <<< UNIT U000042 | cfg-comment | .github/workflows/publish-testpypi.yml:127-127 >>>
@@ -266,16 +266,16 @@
 <<< END U000051 >>>
 <<< UNIT U000052 | cfg-comment | .github/workflows/run-builtin-tester.yml:74-75 >>>
           # workspace 覆盖会丢弃内部依赖的版本约束，而发布的 wheel 仍保留该约束，
-          # uv lock 无法发现，因此单列一道检查（见 T4.8）。
+          # uv lock 无法发现，因此单独设置一道检查（见 T4.8）。
 <<< END U000052 >>>
 <<< UNIT U000053 | cfg-comment | .github/workflows/run-builtin-tester.yml:79-80 >>>
         # 版本号属于发布元数据而非行为正确性，tester 的结论应只由代码与测试决定。
         # 违规项正常打印供发布前确认，但不拦截本 job（重复版本由 PyPI 在发布时拒绝）。
 <<< END U000053 >>>
 <<< UNIT U000054 | cfg-comment | .github/workflows/run-builtin-tester.yml:84-86 >>>
-          # 包内有源码改动但 version 未变即提示。提交信息最后一段写了独立的 Skip-Version
+          # 包内有源码改动但 version 未变即提示。提交信息最后一段包含独立的 Skip-Version
           # trailer 时按声明范围豁免（true 为全部成员，逗号分隔时只豁免列出的成员）。
-          # 正文里顺带提到该 token 不算，避免解释功能的一句话关闭整段区间的检查。
+          # 正文里顺带提到该标记不视为声明，避免解释功能的一句话关闭整段区间的检查。
 <<< END U000054 >>>
 <<< UNIT U000055 | cfg-comment | .github/workflows/run-builtin-tester.yml:102-103 >>>
           # 静态检查覆盖整个仓库，格式化则只检查本次改动的文件；历史文件是否已格式化与这轮改动无关，
@@ -290,7 +290,7 @@
           # 包目录在只读挂载与 wheel 安装下都不可写，此处以权限位复现该约束。
           # 只覆盖测试触及的代码路径。未被测试执行的下载路径由人工复核保障，
           # 见 generated_docs/monorepo_refactor_prep.md 的 P2 记录。
-          # 检查以整个 packages/ 目录作为扫描根目录。如果硬编码 core modules 路径，包再次拆分或改名即
+          # 检查以整个 packages/ 目录作为扫描根目录。如果硬编码 core modules 路径，包再次拆分或重命名就会
           # 静默失去覆盖。单一根目录不随包增减变化，代价是适配器目录也一并纳入只读。
 <<< END U000057 >>>
 <<< UNIT U000058 | cfg-comment | .github/workflows/run-builtin-tester.yml:179-179 >>>
@@ -298,7 +298,7 @@
 <<< END U000058 >>>
 <<< UNIT U000059 | cfg-comment | .github/workflows/run-builtin-tester.yml:193-195 >>>
     # 文档站在 tester 通过后构建全部包的文档并发布到 GitHub Pages，只在默认分支的推送与手动触发
-    # 时发布；PR 与其他分支的产物不是发布物，也不应获得 Pages 权限。
+    # 时发布；PR 与其他分支的构建产物不属于发布内容，也不应获得 Pages 权限。
     # 仓库 Settings → Pages 的 Source 须为 GitHub Actions。Pages 尚未启用时，`enablement: true` 会自动启用它。
 <<< END U000059 >>>
 <<< UNIT U000060 | cfg-comment | .github/workflows/run-builtin-tester.yml:218-218 >>>
@@ -321,7 +321,7 @@
 <<< END U000065 >>>
 <<< UNIT U000066 | cfg-comment | .pre-commit-config.yaml:25-26 >>>
           # 分层检查要求模块不得导入平台适配器，core 不得导入模块或适配器。
-          # 与 comment-lint 同理，只检查改动行，避免既有 B1 命中阻塞提交。
+          # 与 comment-lint 同理，只检查改动行，避免既有 B1 违规项阻塞提交。
 <<< END U000066 >>>
 <<< UNIT U000067 | md-paragraph | AGENTS.md:3-4 | ctx=AGENTS.md >>>
 本文件面向在本仓库工作的 AI 代理与协作者。仓库采用 uv workspace 结构，core、模块与适配器各自独立打包发布，
@@ -354,8 +354,8 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 测试数量本身也是维护成本，每个用例都要随代码演进同步修改，冗余用例会拖慢 CI 并掩盖真正的失败信号。**新增测试前先问“删除它，哪个真实缺陷会漏过去”**，答不出来就不要写。
 <<< END U000074 >>>
 <<< UNIT U000075 | md-list | AGENTS.md:40-44 | ctx=测试编写规范 >>>
-- 本地只运行与改动相关的入口（`tests/run_one.py <包内用例路径> [入口名]`），全量留给 CI。
-- **`CI=1` 必需**，否则无 `Expectation` 的用例会调用 `input()` 等待人工复核。`CI=1` 下转为 SKIP 并输出 `junit.xml`。
+- 本地只运行与改动相关的入口（`tests/run_one.py <包内用例路径> [入口名]`），全量测试留给 CI 执行。
+- **`CI=1` 必需**，否则无 `Expectation` 的用例会调用 `input()` 等待人工复核。设置 `CI=1` 时会转为 SKIP 并输出 `junit.xml`。
 - 测试不读取本机配置，`akaribot.testing` 会将配置模板部署到临时目录（`AKARI_CONFIG_PATH`）再叠加测试覆盖项。
 - 需要非默认配置值时用 `mock_config(CoreConfig, 字段=值)` 在进程内覆盖，不读写配置文件，字段须是模板类声明过的项。
 - 测试使用 `akaribot/testing/mock/parser.py` 的简化解析器，不检查模块是否启用，并将测试发送者设为 superuser。“测试通过”不代表命令在真实平台可达。HTTP 由 `tests/fixtures/http/` 录制回放。
@@ -387,7 +387,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - 包发现通过 entry points（`akaribot.modules` / `akaribot.adapters`）完成，目录扫描仅作备用。每个包在
 <<< END U000080 >>>
 <<< UNIT U000081 | md-paragraph | AGENTS.md:75-75 | ctx=架构脉络 >>>
-  自己的导入包目录下有 `manifest.toml`，locales、assets、migrations 都相对它解析。
+  自己的导入包目录下有 `manifest.toml`，locales、assets、migrations 都相对该文件所在目录解析。
 <<< END U000081 >>>
 <<< UNIT U000082 | md-list | AGENTS.md:76-77 | ctx=架构脉络 >>>
 - 模块只应导入 `akaribot.core.api` 的公开接口。适配器另有 `akaribot.core.api.adapters`。
@@ -420,7 +420,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - **不要为含义清楚的代码编写注释。** 注释解释“为什么”，不解释“是什么”或实现细节。只在逻辑涉及
 <<< END U000090 >>>
 <<< UNIT U000091 | md-paragraph | AGENTS.md:93-93 | ctx=注释 >>>
-  反直觉的边界情况、hack、复杂算法或特定业务规则时才写。
+  反直觉的边界情况、临时变通方案（hack）、复杂算法或特定业务规则时才编写注释。
 <<< END U000091 >>>
 <<< UNIT U000092 | md-list | AGENTS.md:94-96 | ctx=注释 >>>
 - **单条注释一般不超过三行。** 如果三行写不下，说明应当拆分函数或补充文档，不要在代码里堆砌长篇说明。
@@ -479,7 +479,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 ### i18n 与本地化
 <<< END U000107 >>>
 <<< UNIT U000108 | md-list | AGENTS.md:124-124 | ctx=i18n 与本地化 >>>
-- **i18n 强制**：面向用户的固定文案一律 `I18NContext("key", **参数)`，只在所属包的
+- **i18n 强制**：面向用户的固定文案一律使用 `I18NContext("key", **参数)`，只在所属包的
 <<< END U000108 >>>
 <<< UNIT U000109 | md-paragraph | AGENTS.md:125-125 | ctx=i18n 与本地化 >>>
   `locales/zh_cn.json` 中创建条目。插值语法是 `${name}`，占位符名不得与 `t()` 的形参同名。
@@ -508,10 +508,10 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 ### TUI 键位与交互
 <<< END U000115 >>>
 <<< UNIT U000116 | md-list | AGENTS.md:139-139 | ctx=TUI 键位与交互 >>>
-- **破坏性动作不用单字母键，且必须弹出模态确认框。** 删除、移除、清空数据一类动作使用 `ctrl+<字母>`
+- **破坏性操作不使用单字母键，且必须弹出模态确认框。** 删除、移除、清空数据一类操作使用 `ctrl+<字母>`
 <<< END U000116 >>>
 <<< UNIT U000117 | md-paragraph | AGENTS.md:140-141 | ctx=TUI 键位与交互 >>>
-  或专用字母键（卸载用 `u`）。不可逆动作（清空实例数据、重建 venv、迁移旧项目）额外要求
+  或专用字母键（卸载用 `u`）。不可逆操作（清空实例数据、重建 venv、迁移旧项目）额外要求
   **输入确认文字**或先试运行。
 <<< END U000117 >>>
 <<< UNIT U000118 | md-list | AGENTS.md:142-143 | ctx=TUI 键位与交互 >>>
@@ -519,14 +519,14 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - **确认一律弹出模态框**，不使用状态栏“再按一次 X 确认”——它既容易被鼠标双击或连续按键误触发，
 <<< END U000118 >>>
 <<< UNIT U000119 | md-paragraph | AGENTS.md:144-145 | ctx=TUI 键位与交互 >>>
-  也让人看不清将改动什么。弹窗前先经过 `_compat.PendingConfirm.accept(key)`，在防抖窗口内忽略连发，
-  避免重复弹出多层模态框。切换页面、刷新、切换选中项时调用页面的 `reset_pending()` 复位。
+  也让人看不清将改动什么。弹窗前先经过 `_compat.PendingConfirm.accept(key)`，在防抖窗口内忽略连续触发，
+  避免重复弹出多层模态框。切换页面、刷新、切换选中项时调用页面的 `reset_pending()` 重置状态。
 <<< END U000119 >>>
 <<< UNIT U000120 | md-list | AGENTS.md:146-146 | ctx=TUI 键位与交互 >>>
-- **页脚只显示高频快捷键**，低频与危险动作在 `compat.bindings()` 里用四元组第 4 项 `False` 隐藏，
+- **页脚只显示高频快捷键**，低频与危险操作在 `compat.bindings()` 里用四元组第 4 项 `False` 隐藏，
 <<< END U000120 >>>
 <<< UNIT U000121 | md-paragraph | AGENTS.md:147-147 | ctx=TUI 键位与交互 >>>
-  由按钮或页内提示承载，80 列下页脚不得溢出。
+  改为通过按钮或页内提示展示，80 列宽度下页脚不得溢出。
 <<< END U000121 >>>
 <<< UNIT U000122 | md-list | AGENTS.md:148-148 | ctx=TUI 键位与交互 >>>
 - **键位遵循统一语法**（表见 `akaribot/cli/tui/README.md`“键位语法”），同一语义各页只用一个键，
@@ -560,7 +560,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 ### 版本控制
 <<< END U000131 >>>
 <<< UNIT U000132 | md-list | AGENTS.md:163-164 | ctx=版本控制 >>>
-- **不要擅自提交。** 所有改动留在未提交的工作区，交由用户自行检视与提交。
+- **不要擅自提交。** 所有改动保留在未提交的工作区，交由用户自行审查与提交。
 - 除非用户明确授权自动提交，否则不执行 `git commit`。`git add`、`git push`、`git reset`、
 <<< END U000132 >>>
 <<< UNIT U000133 | md-paragraph | AGENTS.md:165-165 | ctx=版本控制 >>>
@@ -568,17 +568,17 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 <<< END U000133 >>>
 <<< UNIT U000134 | md-list | AGENTS.md:166-167 | ctx=版本控制 >>>
 - 授权仅对当次请求有效，不要据此推定后续改动也可以自动提交。
-- 新功能分支用 `dev/`，修复分支用 `fix/`，分支名使用英文。
+- 新功能分支使用 `dev/` 前缀，修复分支使用 `fix/` 前缀，分支名使用英文。
 <<< END U000134 >>>
 <<< UNIT U000135 | md-heading | AGENTS.md:169-169 | ctx=其他 >>>
 ### 其他
 <<< END U000135 >>>
 <<< UNIT U000136 | md-list | AGENTS.md:171-172 | ctx=其他 >>>
 - 提交信息使用英文书面语，正文写明**证据**（实际运行输出、失败的用例清单对比、检查结果）。
-- 移动文件用 `git mv` 以保留 git blame 记录。根目录同时保留同名兼容实现时 git 不记为 rename，需要
+- 移动文件用 `git mv` 以保留 git blame 记录。根目录同时保留同名兼容实现时 git 不会识别为重命名（rename），需要
 <<< END U000136 >>>
 <<< UNIT U000137 | md-paragraph | AGENTS.md:173-173 | ctx=其他 >>>
-  “先纯移动、再改内容”两段提交。
+  拆分为“先移动文件、再修改内容”两次提交。
 <<< END U000137 >>>
 <<< UNIT U000138 | md-list | AGENTS.md:174-174 | ctx=其他 >>>
 - 全量测试的失败清单须与基准**按名称一一对应**（`tools/test_baseline.txt`，用
@@ -615,10 +615,10 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
   环境变量就位之前被固定到仓库 `data/`。公开名称按需解析。
 <<< END U000147 >>>
 <<< UNIT U000148 | md-list | AGENTS.md:191-191 | ctx=陷阱 >>>
-- 惰性公开接口中**不得引入同名辅助名称**，`from typing import Any` 会经
+- 惰性公开接口中**不得引入同名辅助名称**，`from typing import Any` 会通过
 <<< END U000148 >>>
 <<< UNIT U000149 | md-paragraph | AGENTS.md:192-192 | ctx=陷阱 >>>
-  `from akaribot.testing import Any` 覆盖框架自带的 `Any` 匹配器（辅助名一律下划线开头）。
+  `from akaribot.testing import Any` 覆盖框架自带的 `Any` 匹配器（辅助名称一律以下划线开头）。
 <<< END U000149 >>>
 <<< UNIT U000150 | md-list | AGENTS.md:193-193 | ctx=陷阱 >>>
 - 根目录 `bot.py` / `tester.py` 兼容实现使用 `sys.modules` **模块别名**，不要逐个名称重新导出——用例会给模块级
@@ -630,7 +630,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - `CFGManager.load()` 扫描 `config/*.toml` 与 `config/global/*.global.toml|.global.json`，因此适配器实例配置必须使用**扁平路径**
 <<< END U000152 >>>
 <<< UNIT U000153 | md-paragraph | AGENTS.md:196-196 | ctx=陷阱 >>>
-  （`config/<表名>.toml`）。写到 `config/adapters/` 的表对 core 不可见。
+  （`config/<表名>.toml`）。放在 `config/adapters/` 下的配置表对 core 不可见。
 <<< END U000153 >>>
 <<< UNIT U000154 | md-list | AGENTS.md:197-197 | ctx=陷阱 >>>
 - `config set` 需按模板声明的类型转换，否则布尔项会被写成字符串 `"true"`。实例表名
@@ -645,7 +645,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
   解释器一律通过 `akaribot.cli.instance.system_python()` 获取。
 <<< END U000157 >>>
 <<< UNIT U000158 | md-list | AGENTS.md:201-201 | ctx=陷阱 >>>
-- 在 Textual 中，页面自有方法或属性**不得占用基类名**（`_render`、`offset` 等，覆盖 `Widget._render()`
+- 在 Textual 中，页面自有方法或属性**不得与基类成员同名**（`_render`、`offset` 等，覆盖 `Widget._render()`
 <<< END U000158 >>>
 <<< UNIT U000159 | md-paragraph | AGENTS.md:202-202 | ctx=陷阱 >>>
   会导致容器视图（visual）变为 `None`）。切换页面后要把焦点交给该页，否则页级键位不生效。隐藏页要跳过定时轮询。
@@ -654,7 +654,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - `i18n.t()` 的**占位符名不得与形参同名**，例如 `${key}` 配合 `t(key=…)` 会抛出
 <<< END U000160 >>>
 <<< UNIT U000161 | md-paragraph | AGENTS.md:204-205 | ctx=陷阱 >>>
-  `TypeError: t() got multiple values for argument 'key'`。占位符与实参一律用语义名
+  `TypeError: t() got multiple values for argument 'key'`。占位符与实参一律使用有具体含义的名称
   （`${field}` / `field=`），修改键名后运行一次“调用点关键字 ↔ 模板占位符”对比。
 <<< END U000161 >>>
 <<< UNIT U000162 | md-list | AGENTS.md:206-206 | ctx=陷阱 >>>
@@ -673,7 +673,7 @@ instance / service / venv / logs / doctor / new / tui / migrate / docs）。`mig
 - `uv.lock` 是唯一来源。workspace 覆盖会丢弃内部约束，只有从 wheel 安装才会经过真实的依赖解析器
 <<< END U000166 >>>
 <<< UNIT U000167 | md-paragraph | AGENTS.md:211-211 | ctx=陷阱 >>>
-  （`tools/clean_room_check.py` 负责这条）。
+  （由 `tools/clean_room_check.py` 负责这项检查）。
 <<< END U000167 >>>
 <<< UNIT U000168 | md-heading | AGENTS.md:213-213 | ctx=提交与验证约定 >>>
 ## 提交与验证约定
@@ -873,7 +873,7 @@ CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-
 其二，不覆盖第三方模块。它们不在 workspace 内，依赖互斥只能靠干净环境安装验证与 `akaribot module add` 的安装前检查拦截。
 <<< END U000221 >>>
 <<< UNIT U000222 | md-paragraph | CONTRIBUTING.md:150-150 | ctx=依赖冲突与联合求解 >>>
-`uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手工编辑 `uv.lock` 或放宽约束来通过检查，这些做法只会把冲突推迟到用户安装现场。
+`uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手工编辑 `uv.lock` 或放宽约束来通过检查，这些做法只会把冲突推迟到用户安装时暴露。
 <<< END U000222 >>>
 <<< UNIT U000223 | md-paragraph | CONTRIBUTING.md:152-152 | ctx=依赖冲突与联合求解 >>>
 仓库已配置 pre-commit 钩子，安装方式：
@@ -922,7 +922,7 @@ VS Code 用户可安装 Ruff 扩展。
 新增模块用脚手架生成后按需修改：
 <<< END U000236 >>>
 <<< UNIT U000237 | md-paragraph | CONTRIBUTING.md:198-201 | ctx=新增模块包 >>>
-脚手架产出 `<--dir>/akari-bot-module-<名>/`，目录结构与 `packages/modules/akari-bot-module-<名>/` 一致：
+脚手架会生成 `<--dir>/akari-bot-module-<名>/`，目录结构与 `packages/modules/akari-bot-module-<名>/` 一致：
 `pyproject.toml`、`manifest.toml`、`README.md`、`akaribot/modules/<名>/`（含 `config.py`、
 `database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
 `--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`。若要手工执行，先进入包目录。
@@ -1056,7 +1056,7 @@ QQ 公共实例反馈群：[738829671](https://qm.qq.com/q/Rmuo5ORYgq)
 <<< END U000272 >>>
 <<< UNIT U000273 | md-paragraph | README.md:64-65 | ctx=自搭建 >>>
 机器人使用独立实例目录，命令行工具（CLI）管理实例虚拟环境、适配器、模块、配置和运行状态。
-需要仓库 `pyproject.toml` 声明的 Python 版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
+需要仓库 `pyproject.toml` 声明的 Python 版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令如下：
 <<< END U000273 >>>
 <<< UNIT U000274 | md-paragraph | README.md:77-77 | ctx=自搭建 >>>
 填写适配器登录信息后再启用实例。`akaribot config set <字段> <值> --table <表名>` 会按模板声明的类型转换并写入。
@@ -1106,7 +1106,7 @@ CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安�
 ## 赞助者
 <<< END U000288 >>>
 <<< UNIT U000289 | py-comment | bot.py:18-19 >>>
-# 既有用例经 ``import bot as daemon`` 使用的兼容接口在此集中核对，缺失时导入期即报错，
+# 既有用例通过 ``import bot as daemon`` 使用的兼容接口在此集中核对，缺失时在导入阶段即报错，
 # 而不是等到用例里出现 AttributeError。
 <<< END U000289 >>>
 <<< UNIT U000290 | py-comment | conftest.py:18-18 >>>
@@ -1146,19 +1146,19 @@ CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安�
 随后创建新实例、迁移配置与数据、安装映射后的包、转换数据库版本号，最后在新实例根目录写入 `migration-report.md`。**一律生成默认实例**（实例 ID 为空、`client_name` 与旧项目相同），因此 `target_id` 前缀不变、场景数据无需改写。
 <<< END U000299 >>>
 <<< UNIT U000300 | md-paragraph | docs/migrating-to-packages.md:27-27 | ctx=自动迁移 >>>
-常用选项包括 `--dry-run`（只输出报告不写入文件）、`--skip-install`（只迁移文件）、`--force`（覆盖同名文件）。迁移**不修改旧项目**。失败项会记入报告的“需人工处理”，可重新运行继续处理。
+常用选项包括 `--dry-run`（只输出报告不写入文件）、`--skip-install`（只迁移文件）、`--force`（覆盖同名文件）。迁移**不修改旧项目**。失败项会记入报告的“需人工处理”部分，可重新运行命令继续处理。
 <<< END U000300 >>>
 <<< UNIT U000301 | md-paragraph | docs/migrating-to-packages.md:29-29 | ctx=自动迁移 >>>
 执行真实迁移前须停止源实例并保存配置、数据库和 `data/` 的备份。
 <<< END U000301 >>>
 <<< UNIT U000302 | md-paragraph | docs/migrating-to-packages.md:31-31 | ctx=自动迁移 >>>
-复制期间持有源 `.bot.lock`，SQLite 主数据库与已提交的 WAL 数据通过独立快照复制到目标。目标配置中的数据库地址指向该副本。没有 `.bot.lock` 的旧目录应先正常启动并停止一次，试运行允许该锁文件不存在。
+复制期间持有源 `.bot.lock`，SQLite 主数据库与已提交的 WAL 数据通过独立快照复制到目标。目标配置中的数据库地址指向该副本。没有 `.bot.lock` 的旧目录应先正常启动并停止一次，试运行模式下允许该锁文件不存在。
 <<< END U000302 >>>
 <<< UNIT U000303 | md-paragraph | docs/migrating-to-packages.md:33-33 | ctx=自动迁移 >>>
 MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目标并按手工步骤处理。SQLite 外部文件的其他写入者同样须停止。
 <<< END U000303 >>>
 <<< UNIT U000304 | md-paragraph | docs/migrating-to-packages.md:35-35 | ctx=自动迁移 >>>
-迁移会复制根目录的 `data/`，历史 `assets/` 内容仅补齐缺失项。已有目标配置和数据库在未使用 `--force` 时保留。数据库绑定冲突或目标路径含符号链接时拒绝继续。`--skip-install` 不执行数据库升级。
+迁移会复制根目录的 `data/`，历史 `assets/` 内容仅补齐缺失项。已有目标配置和数据库在未使用 `--force` 时保留。数据库绑定冲突或目标路径包含符号链接时会拒绝继续。`--skip-install` 不执行数据库升级。
 <<< END U000304 >>>
 <<< UNIT U000305 | md-heading | docs/migrating-to-packages.md:37-37 | ctx=手工迁移步骤 >>>
 ## 手工迁移步骤
@@ -1171,7 +1171,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 2. **创建新实例**：
 <<< END U000307 >>>
 <<< UNIT U000308 | md-paragraph | docs/migrating-to-packages.md:48-48 | ctx=手工迁移步骤 >>>
-   `--adapter` 可重复，取值如 `telegram`、`discord`、`qqbot`、`kook`、`matrix`、`onebot`、`web`、`milky`。若你的包尚未发布到 PyPI（例如自己从源码构建），加 `--workspace-root <仓库路径>` 按本地路径安装。
+   `--adapter` 可多次指定，可选值包括 `telegram`、`discord`、`qqbot`、`kook`、`matrix`、`onebot`、`web`、`milky`。若你的包尚未发布到 PyPI（例如自己从源码构建），加 `--workspace-root <仓库路径>` 按本地路径安装。
 <<< END U000308 >>>
 <<< UNIT U000309 | md-list | docs/migrating-to-packages.md:49-49 | ctx=手工迁移步骤 >>>
 3. **迁移配置**：把旧仓库 `config/` 下的文件复制到 `<实例目录>/config/`。配置表名与文件名一一对应（`config.toml`、`bot_telegram.toml`、`module_wiki.toml` …）。复制后逐项核对：
@@ -1238,13 +1238,13 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 新实例的 `client_name` 带 `-<实例 ID>` 后缀（如 `Telegram-work`），`target_id` / `sender_id` 因此带新的前缀，与默认实例的历史数据互相独立。
 <<< END U000329 >>>
 <<< UNIT U000330 | md-paragraph | docs/migrating-to-packages.md:123-123 | ctx=同一个平台跑多个账号 >>>
-实例 ID 一经使用**不可改名**，因为修改名称需要跨多张核心表与模块表迁移前缀，需要更换 ID 时按“新建实例并迁移数据”处理。`add` 生成的配置里 `enable` 显式为 `false`，填写完登录信息后再开启。
+实例 ID 一经使用**不可更改**，因为修改名称需要跨多张核心表与模块表迁移前缀，需要更换 ID 时按“新建实例并迁移数据”处理。`add` 生成的配置里 `enable` 显式为 `false`，填写完登录信息后再开启。
 <<< END U000330 >>>
 <<< UNIT U000331 | md-heading | docs/migrating-to-packages.md:125-125 | ctx=机器人内更新 >>>
 ## 机器人内更新
 <<< END U000331 >>>
 <<< UNIT U000332 | md-paragraph | docs/migrating-to-packages.md:127-127 | ctx=机器人内更新 >>>
-机器人内的 `~update` 委托 CLI 执行 `module update --defer-runtime`，安装包并同步配置后返回结果。数据库迁移和运行代码切换在下一次启动完成，更新后按提示执行 `~restart`。`~update&restart` 更新完成后再执行 `~restart`。宿主机上也可直接执行：
+机器人内的 `~update` 会交由 CLI 执行 `module update --defer-runtime`，安装包并同步配置后返回结果。数据库迁移和运行代码切换在下一次启动完成，更新后按提示执行 `~restart`。`~update&restart` 更新完成后再执行 `~restart`。宿主机上也可直接执行：
 <<< END U000332 >>>
 <<< UNIT U000333 | md-paragraph | docs/migrating-to-packages.md:133-133 | ctx=机器人内更新 >>>
 宿主机更新会执行数据库迁移和模块热加载。涉及数据结构的升级应先停止实例并保留备份。需要只安装包并等待后续重启时使用 `--defer-runtime`。
@@ -1256,9 +1256,9 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 ## 已知限制
 <<< END U000335 >>>
 <<< UNIT U000336 | md-list | docs/migrating-to-packages.md:139-141 | ctx=已知限制 >>>
-- **实例 ID 一旦使用请勿更改**：改名需要跨多张核心表与模块表迁移 `target_id` 前缀，改动成本与风险过高，故不提供重命名。需要更换 ID 时请新建实例并迁移数据。
+- **实例 ID 一旦使用请勿更改**：修改名称需要跨多张核心表与模块表迁移 `target_id` 前缀，改动成本与风险过高，故不提供重命名。需要更换 ID 时请新建实例并迁移数据。
 - **终端界面（TUI）兼容性**：Textual 界面目前只在 macOS 上做过无头渲染与布局验证，Windows 终端、旧 conhost、tmux 与 SSH 窄终端下的实际表现尚未验证。遇到显示问题请改用命令行子命令。
-- **配置文件位置**：适配器实例配置写在 `config/<表名>.toml`（扁平布局）。分层布局（`config/adapters/`）尚未启用，请勿手工移动这些文件。
+- **配置文件位置**：适配器实例配置保存在 `config/<表名>.toml`（扁平布局）。分层布局（`config/adapters/`）尚未启用，请勿手工移动这些文件。
 <<< END U000336 >>>
 <<< UNIT U000337 | md-heading | docs/migrating-to-packages.md:143-143 | ctx=遇到问题时 >>>
 ## 遇到问题时
@@ -1295,7 +1295,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 | `overview` | 为 `false` 时不生成包级概览页。导航与分组链接指向第一页，侧栏直接列出页面。默认 `true` |
 | `kind` | 覆盖分组：`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset` 等 |
 | `category` | 侧栏分类，只接受一个字符串。默认不分类 |
-| `category_order` | 分类在侧栏中的排序权重，自小到大。同一分类的文档取各自声明 |
+| `category_order` | 分类在侧栏中的排序权重，自小到大。同一分类的文档以各自声明为准 |
 | `logo` | 相对包目录的图片文件，作为站点顶栏标志的候选。多个包声明时优先采用目录顺序靠前的项 |
 | `avatar` | 相对包目录的图片文件，作为命令对话示例中的机器人头像。多个包声明时优先采用目录顺序靠前的项 |
 | `[locales.<标签>]` | 该语言的 `title` 与 `summary`。未列出的语言沿用默认值 |
@@ -1337,7 +1337,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 | `note` | 卡片上的补充说明 |
 <<< END U000354 >>>
 <<< UNIT U000355 | md-paragraph | docs/package-docs.md:83-83 | ctx=模块属性卡 >>>
-属性卡描述模块级信息。命令级权限写在每条命令的 `CommandUsage` 上。一个包注册多个模块时按声明顺序列出。
+属性卡描述模块级信息。命令级权限配置在每条命令的 `CommandUsage` 上。一个包注册多个模块时按声明顺序列出。
 <<< END U000355 >>>
 <<< UNIT U000356 | md-heading | docs/package-docs.md:85-85 | ctx=站点主题与组件 >>>
 ## 站点主题与组件
@@ -1366,7 +1366,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 | `<ModuleData />` | 模块不保存数据时使用 |
 | `<ModuleData tables="module_a,module_b" />` | 模块拥有数据表时给出表名与表结构位置 |
 | `<ModuleData tables="module_a,module_b" :list="false" />` | 同上，正文随后用表格列出表结构时只显示数量 |
-| `<ModuleAlias names="wiki_bot, wbot" />` | 模块级别名，写在章节标题下，对该节所有命令生效 |
+| `<ModuleAlias names="wiki_bot, wbot" />` | 模块级别名，放在章节标题下，对该节所有命令生效 |
 | `<NoticeBox type="warning" title="...">…</NoticeBox>` | 提示框，类型可选 `info`、`tip`、`help`、`example`、`warning`、`danger`、`deprecated` |
 | `<ChatExample :log="['用户：~whois example.com', '机器人：域名：example.com']" />` | 命令对话示例：`用户：` 与 `机器人：` 前缀区分角色，无前缀的行续接上一条。纯文本消息按行内代码与图片切分。`messages` 中显式设置 `markdown: true` 的消息才按 Markdown 渲染（粗体、斜体、列表、代码块、链接等），原始 HTML 不执行。`![说明](地址)` 在气泡内渲染为缩略图，点击后从缩略图位置展开可缩放、旋转的预览浮层，关闭时收回原位。在地址后加 `{natural}` 表示按原始尺寸展示，适合缩放后宽度过小的竖长图。图片超过视口高度时等比缩小（桌面最高 600px/70vh，移动端 480px/60vh）。`image-width` 固定示例内所有图片的宽度，适合同一气泡内多张图需要对齐的场景。`:card` 在对话末尾渲染机器人卡片，字段为 `title`、`description`、`url`、`image`、`domain`。`botAvatar` 可覆盖机器人头像。只含三个以上波浪号的行（如 `〰〰〰`）渲染为时间分隔线 |
 | `<ChatExample :log="[...]" :buttons="[{ label: '苔藓块', reply: ['机器人：…', '![苔藓块](moss.png)'] }]" />` | 在最后一条机器人初始消息下渲染按钮。`reply` 使用与 `log` 相同的写法，点击后先显示加载动画并预加载其中的图片，再把回复淡入追加到按钮下方。`loading` 可覆盖加载文案，`messages` 可直接传入结构化消息。按钮项嵌套配置 `buttons` 时，回复会带上二级按钮，可用来模拟“查询页面 → 预览/关闭”。`dismiss: true` 表示关闭按钮，点击后删除该按钮所属的整组回复（含后续二级回复），基础消息上的关闭按钮会连同初始回复一起隐藏。`:one-shot="true"` 让同组按钮在任一按钮点击后全部禁用，适合验证码这类一次性选择。尾部图片单独成气泡，多张尾部图片合并到同一气泡。右上角的重置图标清空追加内容与按钮禁用状态 |
@@ -1401,15 +1401,15 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 - 每条命令一个 `###` 章节：标题使用命令名，下面接一行 `CommandUsage` 说明权限与别名，再补充一至三句解释参数与行为。需要展示实际对话过程时，在说明后接一个 `ChatExample`。
 - 模块有多个子命令组时用 `##` 分组，命令仍使用 `###`，不再单独成页。
 - 命令不用表格罗列。用法行由 `CommandUsage` 按实例配置的命令前缀渲染，未配置前缀时不加。
-- 用法里的参数用 `params` 逐项说明，格式为 `['名字=说明', …]`。名字不带尖括号，占位名是中文时按原样填写。
-- 选项写在 `options` 上，渲染为列表。字段说明这类小表改成列表，长对照表（颜色名、谱面定数等）保留表格。
+- 用法里的参数通过 `params` 逐项说明，格式为 `['名称=说明', …]`。名称不带尖括号，占位名称是中文时按原样填写。
+- 选项配置在 `options` 中，渲染为列表。字段说明这类小表改成列表，长对照表（颜色名、谱面定数等）保留表格。
 - 对话示例使用默认前缀 `~`，只展示仓库默认配置下可直接使用的结果。需要图片结果时用 `![说明](相对路径)` 引用包内图片，图片放在包内 `docs/` 目录下。
-- 图片位于消息尾部时另起气泡，多张尾部图片共用一个气泡。竖长图缩放到 200px 高后宽度过小时，在地址后加 `{natural}` 按原始尺寸展示。超过视口高度时仍等比缩小。同一气泡内的多张图需要等宽时，在 `ChatExample` 上设置 `:image-width="320"`。
+- 图片位于消息尾部时会单独成气泡，多张尾部图片共用一个气泡。竖长图缩放到 200px 高后宽度过小时，在地址后加 `{natural}` 按原始尺寸展示。超过视口高度时仍等比缩小。同一气泡内的多张图需要等宽时，在 `ChatExample` 上设置 `:image-width="320"`。
 - 需要展示平台卡片消息时，在 `ChatExample` 上设置 `:card="{ title, description, url, image, domain }"`。
 - 订阅类模块的示例按“开启成功 → 时间分隔线 → 实际推送”组织，分隔线使用 `〰〰〰`。
 - 需要模拟消息按钮时，在 `ChatExample` 上配置 `buttons`，每项用 `label` 与 `reply` 描述按钮和点击后的回复。回复需要继续附加按钮时在按钮项上嵌套配置 `buttons`，关闭类按钮设置 `dismiss: true`。图片会在点击后才开始加载。
 - `development.md` 是安装与开发，面向部署者与维护者。放置安装步骤、配置字段、权限与平台能力、数据表与依赖。不包含玩法规则与命令用法。
-- 配置与数据表两节用 `ModuleConfig`、`ModuleData` 说明事实，模块级别名用 `ModuleAlias`。每项只写一次，不在每条命令上重复。
+- 配置与数据表两节用 `ModuleConfig`、`ModuleData` 说明事实，模块级别名用 `ModuleAlias`。每项只说明一次，不在每条命令上重复。
 - `docs/config/global/docs.global.toml` 不声明 `[[meta.modules]]`，页面顶部不再出现模块清单表。声明该表的能力仍然保留，供第三方包使用。
 - 其余页面作为补充用法，与上述两页一起出现。内置模块每页对应一个模块，命令仍按 `###` 组织，不按管理、配置、解析器、会话、工具等分类拆页。
 - 译文放在 `docs/<语言标签>/` 下，文件名与默认语言一致。某个语言缺少页面时生成器复制默认语言的同名页面，不产生空链接。`docs/config/global/docs.global.toml` 用 `[locales.<标签>]` 覆盖该语言的标题与简介。
@@ -1433,7 +1433,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 只识别 `title`、`order`、`description`、`submenu` 四个单行标量键，不支持列表或嵌套结构。标题默认提取正文中的第一个一级标题（跳过代码块），没有一级标题时使用文件名。
 <<< END U000377 >>>
 <<< UNIT U000378 | md-paragraph | docs/package-docs.md:176-176 | ctx=页面与 front matter >>>
-包有概览页时 `index.md` 始终排在最前。无概览页的包按 `order`、路径排序。`submenu` 将同一包内取值相同的页面归入一个无链接的二级分组，分组名即字段值。未设置该字段的页面仍直接列在包下，分组排在直接列出的页面之后。
+包有概览页时 `index.md` 始终排在最前。无概览页的包按 `order` 与路径排序。`submenu` 将同一包内取值相同的页面归入一个无链接的二级分组，分组名即字段值。未设置该字段的页面仍直接列在包下，分组排在直接列出的页面之后。
 <<< END U000378 >>>
 <<< UNIT U000379 | md-paragraph | docs/package-docs.md:178-178 | ctx=页面与 front matter >>>
 页面可携带的文件后缀有 `.md`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.svg`、`.webp`、`.avif`、`.txt`、`.pdf`。其他后缀不进入站点。文档目录中的符号链接不得指向目录之外。
@@ -1471,7 +1471,7 @@ MySQL 等外部数据库不支持自动复制迁移，须先导出到独立目�
 构建需要 Node.js 与 `npm`，版本要求由主题清单确定。依赖由 `npm ci` 安装。生成物位于实例根目录的 `cache/docs/src`（站点源）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）。构建校验信息与部署记录保存在 `.docs/state.json`。
 <<< END U000387 >>>
 <<< UNIT U000388 | md-paragraph | docs/package-docs.md:209-209 | ctx=命令与生成物 >>>
-部署目标写在实例根目录 `docs.toml` 的 `[deploy]` 段。登录信息只从环境变量读取，不写入配置文件与状态文件。基础路径默认为 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。
+部署目标配置在实例根目录 `docs.toml` 的 `[deploy]` 段。登录信息只从环境变量读取，不写入配置文件与状态文件。基础路径默认为 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。
 <<< END U000388 >>>
 <<< UNIT U000389 | md-heading | docs/package-docs.md:211-211 | ctx=编写规则 >>>
 ## 编写规则
