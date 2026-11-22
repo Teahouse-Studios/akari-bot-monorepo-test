@@ -30,7 +30,7 @@
 "start": 13,
 "end": 16,
 "kind": "md-list",
-"text": "1. 读仓库根 `AGENTS.md`，了解常用命令、架构脉络、陷阱与提交约定。\n2. 按下表找到对应文档页。跨域改动读多页。\n3. 改代码前先查 `tests/` 与包内 `tests/` 是否已覆盖该行为。\n4. 提交前运行五道检查，见下方“高频命令”与开发流程页。",
+"text": "1. 阅读仓库根目录 `AGENTS.md`，了解常用命令、架构脉络、陷阱与提交约定。\n2. 按下表找到对应文档页。跨域改动请阅读多页。\n3. 修改代码前先检查 `tests/` 与包内 `tests/` 是否已覆盖该行为。\n4. 提交前运行五道检查，见下方“高频命令”与开发流程页。",
 "ctx": "开始工作",
 "path": ".agents/skills/akaribot-dev/SKILL.md",
 "id": 4
@@ -288,7 +288,7 @@
 "start": 46,
 "end": 47,
 "kind": "cfg-comment",
-"text": "          # Nuitka 在后续步骤里以 PATH 上的 python 为准。不切到工作区 venv 时它拿不到依赖，\n          # 会报 \"failed to locate package 'akaribot.cli'\"。",
+"text": "          # Nuitka 在后续步骤里以 PATH 上的 python 为准。不切换到工作区 venv 时它无法获取依赖，\n          # 会报 \"failed to locate package 'akaribot.cli'\"。",
 "path": ".github/workflows/binary-build.yml",
 "id": 31
 },
@@ -296,7 +296,7 @@
 "start": 57,
 "end": 58,
 "kind": "cfg-comment",
-"text": "          # uv 创建的 venv 不带 pip，而构建动作后续以 `pip install` 安装 Nuitka 自身。需向 venv 中补充安装\n          # pip，否则 pip 会装在 PATH 更靠后的系统解释器里，导致 `python -m nuitka` 找不到模块。",
+"text": "          # uv 创建的 venv 不带 pip，而构建动作后续以 `pip install` 安装 Nuitka 自身。需向 venv 中补充安装\n          # pip，否则 pip 会安装在 PATH 更靠后的系统解释器里，导致 `python -m nuitka` 找不到模块。",
 "path": ".github/workflows/binary-build.yml",
 "id": 32
 },
@@ -304,7 +304,7 @@
 "start": 66,
 "end": 67,
 "kind": "cfg-comment",
-"text": "          # 内置 uv，供 CLI 创建与维护实例 venv，用户机器上不必预装。复制时直接使用包内最终文件名，\n          # 省去 include-data-files 的改名表达式（Windows 的可执行后缀必须是 .exe）。",
+"text": "          # 内置 uv，供 CLI 创建与维护实例 venv，用户机器上不必预先安装。复制时直接使用包内最终文件名，\n          # 省去 include-data-files 的改名表达式（Windows 的可执行后缀必须是 .exe）。",
 "path": ".github/workflows/binary-build.yml",
 "id": 33
 },
@@ -376,7 +376,7 @@
 "start": 127,
 "end": 127,
 "kind": "cfg-comment",
-"text": "        # 发布脚本由 runner 的 python 直接执行，需把 packaging 与 twine 装进同一环境。",
+"text": "        # 发布脚本由 runner 的 python 直接执行，需把 packaging 与 twine 安装到同一环境。",
 "path": ".github/workflows/publish-testpypi.yml",
 "id": 42
 },
@@ -472,7 +472,7 @@
 "start": 84,
 "end": 86,
 "kind": "cfg-comment",
-"text": "          # 包内有源码改动但 version 未变即提示。提交信息最后一段写了独立的 Skip-Version\n          # trailer 时按声明范围豁免（true 为全部成员，逗号分隔时只豁免列出的成员）。\n          # 正文里顺带提到该 token 不算，避免解释功能的一句话关掉整段区间的检查。",
+"text": "          # 包内有源码改动但 version 未变即提示。提交信息最后一段写了独立的 Skip-Version\n          # trailer 时按声明范围豁免（true 为全部成员，逗号分隔时只豁免列出的成员）。\n          # 正文里顺带提到该 token 不算，避免解释功能的一句话关闭整段区间的检查。",
 "path": ".github/workflows/run-builtin-tester.yml",
 "id": 54
 },
@@ -504,7 +504,7 @@
 "start": 179,
 "end": 179,
 "kind": "cfg-comment",
-"text": "          # 只读挂载下可能多出写盘类失败，故单独维护一份基准清单；两轮都按名称对比失败清单，且两份清单都只允许缩小。",
+"text": "          # 只读挂载下可能多出写入磁盘类失败，故单独维护一份基准清单；两轮都按名称对比失败清单，且两份清单都只允许缩小。",
 "path": ".github/workflows/run-builtin-tester.yml",
 "id": 58
 },
@@ -552,7 +552,7 @@
 "start": 257,
 "end": 257,
 "kind": "cfg-comment",
-"text": "          # 引擎以“实例”为单位工作，这里只需要一个最小的实例根，产物放在它的 cache/docs/site。",
+"text": "          # 引擎以“实例”为单位工作，这里只需要一个最小的实例根目录，产物放在它的 cache/docs/site。",
 "path": ".github/workflows/run-builtin-tester.yml",
 "id": 64
 },
@@ -639,7 +639,7 @@
 "start": 38,
 "end": 38,
 "kind": "md-paragraph",
-"text": "测试数量本身也是维护成本，每个用例都要随代码演进同步修改，冗余用例会拖慢 CI 并稀释真正的失败信号。**新增测试前先问“删掉它，哪个真实缺陷会漏过去”**，答不出来就不要写。",
+"text": "测试数量本身也是维护成本，每个用例都要随代码演进同步修改，冗余用例会拖慢 CI 并稀释真正的失败信号。**新增测试前先问“删除它，哪个真实缺陷会漏过去”**，答不出来就不要写。",
 "ctx": "测试编写规范",
 "path": "AGENTS.md",
 "id": 74
@@ -657,7 +657,7 @@
 "start": 46,
 "end": 57,
 "kind": "md-list",
-"text": "- **先搜后写。** 新增前用 `grep` 查现有测试是否已覆盖同一行为。已覆盖则扩展原用例，不要另起一个。\n- **改行为就替换旧测试**，不要新旧并存。**删功能必须同时删对应测试与 `tests/fixtures/` 中不再被引用的 fixture**。\n- **只检查可观察行为**：返回值、发出的消息、持久化结果、权限与安全判定。不要检查 mock 的调用次数、私有属性与私有函数、日志原文。\n- **不要测的东西**：构造器与默认值、常量、getter/setter、标准库或第三方库的透传、仅检查“不抛异常”的基本检查用例。\n- **一个行为一个用例。** 同一行为的输入变体用同一用例内的循环或表驱动覆盖，不要每个变体注册一个 `tester.test`。一个 bug 修复只在现有测试都覆盖不到时才补回归用例，并且放进该功能原有的测试里。\n- **不写镜像用例。** 代码路径相同的对称场景（如发送者侧与目标侧、群聊与私聊、各平台各一份“缺失媒体被跳过”）只测其一。只有代码路径确实分叉时才分别覆盖。\n- **必须保留、不得为精简而删除**：安全与权限判定、数据迁移与一致性、并发与锁、以及每个功能的主路径。\n- **每个 `_test_` 函数必须被 `tester.test` 注册**，未注册的函数永远不会运行，属于死代码。\n- **按主题组织文件。** 一个功能（模块、适配器、子系统）对应一个测试文件，在其内追加。不要新建 `test_more_*` / `test_*_more` / `test_*_fixes` 之类的增量碎片文件。包内用例放 `packages/<包名>/tests/`，命名与根 `tests/` 保持一致。\n- **集成测试**（根 `tests/integration/`）每个命令只保留一条主路径加必要的、行为不同的错误路径。能用纯函数单测覆盖的逻辑不要放进集成测试，因为它们依赖录制的 HTTP fixture。\n- 用例描述（`tester.test` 的第二个参数）写被验证的行为，不写实现细节。测试中同样遵循“只描述当前状态”的注释约定。\n- 不要用固定 `sleep` 等待。需要超时时使用 `akaribot.testing.timing.TIME_SCALE`。",
+"text": "- **先搜后写。** 新增前用 `grep` 检查现有测试是否已覆盖同一行为。已覆盖则扩展原用例，不要另起一个。\n- **改动行为就替换旧测试**，不要新旧并存。**删除功能必须同时删除对应测试与 `tests/fixtures/` 中不再被引用的 fixture**。\n- **只检查可观察行为**：返回值、发出的消息、持久化结果、权限与安全判定。不要检查 mock 的调用次数、私有属性与私有函数、日志原文。\n- **不要测的东西**：构造器与默认值、常量、getter/setter、标准库或第三方库的透传、仅检查“不抛异常”的基本检查用例。\n- **一个行为一个用例。** 同一行为的输入变体用同一用例内的循环或表驱动覆盖，不要每个变体注册一个 `tester.test`。一个 bug 修复只在现有测试都覆盖不到时才补回归用例，并且放进该功能原有的测试里。\n- **不写镜像用例。** 代码路径相同的对称场景（如发送者侧与目标侧、群聊与私聊、各平台各一份“缺失媒体被跳过”）只测其一。只有代码路径确实分叉时才分别覆盖。\n- **必须保留、不得为精简而删除**：安全与权限判定、数据迁移与一致性、并发与锁、以及每个功能的主路径。\n- **每个 `_test_` 函数必须被 `tester.test` 注册**，未注册的函数永远不会运行，属于死代码。\n- **按主题组织文件。** 一个功能（模块、适配器、子系统）对应一个测试文件，在其内追加。不要新建 `test_more_*` / `test_*_more` / `test_*_fixes` 之类的增量碎片文件。包内用例放在 `packages/<包名>/tests/`，命名与根 `tests/` 保持一致。\n- **集成测试**（根 `tests/integration/`）每个命令只保留一条主路径加必要的、行为不同的错误路径。能用纯函数单元测试覆盖的逻辑不要放进集成测试，因为它们依赖录制的 HTTP fixture。\n- 用例描述（`tester.test` 的第二个参数）写被验证的行为，不写实现细节。测试中同样遵循“只描述当前状态”的注释约定。\n- 不要用固定 `sleep` 等待。需要超时时使用 `akaribot.testing.timing.TIME_SCALE`。",
 "ctx": "测试编写规范",
 "path": "AGENTS.md",
 "id": 76
@@ -882,7 +882,7 @@
 "start": 112,
 "end": 112,
 "kind": "md-list",
-"text": "- 站点配置写实例根 `docs.toml`。主题用 `[theme].source` 选择，外部主题只通过根目录的",
+"text": "- 站点配置写入实例根目录 `docs.toml`。主题用 `[theme].source` 选择，外部主题只通过根目录的",
 "ctx": "包文档与文档站点",
 "path": "AGENTS.md",
 "id": 101
@@ -1953,7 +1953,7 @@
 "start": 146,
 "end": 146,
 "kind": "md-paragraph",
-"text": "其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。",
+"text": "其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。",
 "ctx": "依赖冲突与联合求解",
 "path": "CONTRIBUTING.md",
 "id": 220
@@ -2124,7 +2124,7 @@
 "start": 206,
 "end": 213,
 "kind": "md-table",
-"text": "| 字段 | 用途 |\n| --- | --- |\n| `schema` | 清单版本，当前为 `1` |\n| `requires_core_api` | 兼容的 core 公开 API 区间，当前写 `\">=1,<2\"` |\n| `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根的路径，没有的能力省略 |\n| `config_table` / `config_schema_version` | `config.py` 中 `on_module_config(\"<名>\")` 声明的表名与配置版本 |\n| `provides_modules` | 本包 `module()` 注册的全部模块名 |\n| `owned_tables` | 本包拥有的数据库表，供 `akaribot module remove --purge-data` 使用 |",
+"text": "| 字段 | 用途 |\n| --- | --- |\n| `schema` | 清单版本，当前为 `1` |\n| `requires_core_api` | 兼容的 core 公开 API 区间，当前写 `\">=1,<2\"` |\n| `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根目录的路径，没有的能力省略 |\n| `config_table` / `config_schema_version` | `config.py` 中 `on_module_config(\"<名>\")` 声明的表名与配置版本 |\n| `provides_modules` | 本包 `module()` 注册的全部模块名 |\n| `owned_tables` | 本包拥有的数据库表，供 `akaribot module remove --purge-data` 使用 |",
 "ctx": "新增模块包",
 "path": "CONTRIBUTING.md",
 "id": 239
@@ -2609,7 +2609,7 @@
 "start": 32,
 "end": 32,
 "kind": "py-docstring",
-"text": "纯 pytest 风格用例的运行器，子测试失败直接判为用例失败。",
+"text": "纯 pytest 风格用例的运行器，子测试失败直接判定为用例失败。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -2660,7 +2660,7 @@
 "start": 9,
 "end": 15,
 "kind": "md-table",
-"text": "| 项 | 旧版 | 新版 |\n| --- | --- | --- |\n| 获取更新 | `git pull` + `uv sync`（机器人内的 `~update`） | `akaribot module update --all`（机器人内的 `~update` 已改为委托 CLI） |\n| 模块 | 随仓库内置，全部可用 | 按需安装：`akaribot module add <名>`，代码只存在于实例 venv |\n| 依赖 | 整个仓库一份 | 每个包各自声明，实例 venv 内统一解析 |\n| 配置与数据 | 仓库根下的 `config/`、`database/`、`data/` | 实例根下的同名目录，位置不变 |\n| 多账号 | 一个平台一份配置 | 同一平台可创建多个实例：`akaribot adapter instance add <平台> <实例 ID>` |",
+"text": "| 项 | 旧版 | 新版 |\n| --- | --- | --- |\n| 获取更新 | `git pull` + `uv sync`（机器人内的 `~update`） | `akaribot module update --all`（机器人内的 `~update` 已改为委托 CLI） |\n| 模块 | 随仓库内置，全部可用 | 按需安装：`akaribot module add <名>`，代码只存在于实例 venv |\n| 依赖 | 整个仓库一份 | 每个包各自声明，实例 venv 内统一解析 |\n| 配置与数据 | 仓库根目录下的 `config/`、`database/`、`data/` | 实例根目录下的同名目录，位置不变 |\n| 多账号 | 一个平台一份配置 | 同一平台可创建多个实例：`akaribot adapter instance add <平台> <实例 ID>` |",
 "ctx": "变化概览",
 "path": "docs/migrating-to-packages.md",
 "id": 296
@@ -2795,7 +2795,7 @@
 "start": 58,
 "end": 59,
 "kind": "md-list",
-"text": "4. **搬运数据**：把旧仓库的 `database/`、`data/`、`assets/`（若曾自建）复制到实例根下。数据库首次启动时会自动执行迁移，旧版本号由迁移系统转换。\n5. **安装实际使用的模块**：",
+"text": "4. **搬运数据**：把旧仓库的 `database/`、`data/`、`assets/`（若曾自建）复制到实例根目录下。数据库首次启动时会自动执行迁移，旧版本号由迁移系统转换。\n5. **安装实际使用的模块**：",
 "ctx": "手工迁移步骤",
 "path": "docs/migrating-to-packages.md",
 "id": 311
@@ -3074,7 +3074,7 @@
 "start": 7,
 "end": 7,
 "kind": "md-paragraph",
-"text": "`docs/` 必须位于**导入包的根目录**，不是包根或仓库根的 `docs/`，也不是测试目录。发现过程按 `akaribot.docs` entry point 的导入路径定位包，不导入包本身，因此 `docs/` 必须随 wheel 分发。",
+"text": "`docs/` 必须位于**导入包的根目录**，不是包根目录或仓库根目录的 `docs/`，也不是测试目录。发现过程按 `akaribot.docs` entry point 的导入路径定位包，不导入包本身，因此 `docs/` 必须随 wheel 分发。",
 "ctx": "目录位置",
 "path": "docs/package-docs.md",
 "id": 342
@@ -3128,7 +3128,7 @@
 "start": 46,
 "end": 46,
 "kind": "md-paragraph",
-"text": "`overview = false` 用于以页面集合呈现的包。生成器不补 `index.md`，也不把包根路径作为链接。",
+"text": "`overview = false` 用于以页面集合呈现的包。生成器不补充 `index.md`，也不把包根目录路径作为链接。",
 "ctx": "`docs/config/global/docs.global.toml`",
 "path": "docs/package-docs.md",
 "id": 348
@@ -3218,7 +3218,7 @@
 "start": 94,
 "end": 94,
 "kind": "md-paragraph",
-"text": "`auto` 会在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会使用仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 CLI 内置的最小主题。",
+"text": "`auto` 会在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会使用仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 CLI 内置的最小主题。",
 "ctx": "站点主题与组件",
 "path": "docs/package-docs.md",
 "id": 358
@@ -3479,7 +3479,7 @@
 "start": 207,
 "end": 207,
 "kind": "md-paragraph",
-"text": "构建需要 Node.js 与 `npm`，版本要求由主题清单确定。依赖由 `npm ci` 安装。生成物位于实例根的 `cache/docs/src`（站点源）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）。构建指纹与部署记录在 `.docs/state.json`。",
+"text": "构建需要 Node.js 与 `npm`，版本要求由主题清单确定。依赖由 `npm ci` 安装。生成物位于实例根目录的 `cache/docs/src`（站点源）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）。构建指纹与部署记录保存在 `.docs/state.json`。",
 "ctx": "命令与生成物",
 "path": "docs/package-docs.md",
 "id": 387
@@ -3488,7 +3488,7 @@
 "start": 209,
 "end": 209,
 "kind": "md-paragraph",
-"text": "部署目标写在实例根 `docs.toml` 的 `[deploy]` 段。登录信息只从环境变量读取，不写入配置文件与状态文件。基路径默认为 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。",
+"text": "部署目标写在实例根目录 `docs.toml` 的 `[deploy]` 段。登录信息只从环境变量读取，不写入配置文件与状态文件。基础路径默认为 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。",
 "ctx": "命令与生成物",
 "path": "docs/package-docs.md",
 "id": 388
@@ -9711,7 +9711,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台能力集在导入时即依配置定型，在 qq_use_markdown 为假的部署上，markdown 相关能力全为假，\n# 因此无法验证覆盖逻辑。各用例另建一份启用 Markdown 的基准并替换该开关，\n# 使检查只考察覆盖逻辑本身，不受本地配置左右。",
+"text": "# 平台能力集在导入时即依配置定型，在 qq_use_markdown 为假的部署上，markdown 相关能力全为假，\n# 因此无法验证覆盖逻辑。各用例新建一份启用 Markdown 的基准并替换该开关，\n# 使检查只考察覆盖逻辑本身，不受本地配置左右。",
 "spans": [
 [
 24,
@@ -10454,7 +10454,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已可直链的地址原样使用，本地文件优先上传。",
+"text": "# 已可直接访问的地址原样使用，本地文件优先上传。",
 "spans": [
 [
 59,
@@ -12327,7 +12327,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 开发模式文件浏览器的沙箱根取实例目录，从源码运行时即仓库根，独立部署下即部署者维护的实例树。\n# 按本文件深度反推仓库根，在 wheel 形态下会落到 site-packages 之外（典型 venv 下为文件系统根）。",
+"text": "# 开发模式文件浏览器的沙箱根目录取实例目录，从源码运行时即仓库根目录，独立部署下即部署者维护的实例树。\n# 按本文件深度反推仓库根目录，在 wheel 形态下会落到 site-packages 之外（典型 venv 下为文件系统根目录）。",
 "spans": [
 [
 19,
@@ -12347,7 +12347,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 展示路径的基准根取实例目录，因为存储根都在实例的 assets/data/cache 之下，实例根始终是其祖先。\n# 按文件深度反推仓库根在 wheel 形态下会落到 site-packages 之外。",
+"text": "# 展示路径的基准根目录取实例目录，因为存储根目录都在实例的 assets/data/cache 之下，实例根目录始终是其祖先。\n# 按文件深度反推仓库根目录在 wheel 形态下会落到 site-packages 之外。",
 "spans": [
 [
 20,
@@ -12412,7 +12412,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 更新流程的工作目录取实例目录，源码克隆形态下即仓库根，独立部署下即部署者维护的实例树。\n# 按文件深度反推仓库根时，wheel 形态下会落到 site-packages 之外。",
+"text": "# 更新流程的工作目录取实例目录，源码克隆形态下即仓库根目录，独立部署下即部署者维护的实例树。\n# 按文件深度反推仓库根目录时，wheel 形态下会落到 site-packages 之外。",
 "spans": [
 [
 19,
@@ -14298,7 +14298,7 @@
 "start": 71,
 "end": 71,
 "kind": "md-paragraph",
-"text": "实例可以在 `docs.toml` 的 `[site]` 中逐项覆盖插槽。相对路径按实例根解析。",
+"text": "实例可以在 `docs.toml` 的 `[site]` 中逐项覆盖插槽。相对路径按实例根目录解析。",
 "ctx": "由实例覆盖",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md",
 "id": 1273
@@ -14415,7 +14415,7 @@
 "start": 128,
 "end": 128,
 "kind": "md-paragraph",
-"text": "立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证写在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发时必须原样携带 `LICENSE`，不得套用仓库根许可证，也不得把资产单独再分发。",
+"text": "立绘由 OasisAkari 提供，标志由 SAWARATSUKI 提供，二者保留全部权利，许可证写在同目录的 `LICENSE` 中。本包**不是** AGPL-3.0，与本仓库主体不同。分发时必须原样携带 `LICENSE`，不得套用仓库根目录许可证，也不得把资产单独再分发。",
 "ctx": "许可证",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md",
 "id": 1286
@@ -14532,7 +14532,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-brand 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根即包根。",
+"text": "# akari-bot-assets-brand 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/manifest.toml",
 "id": 1299
 },
@@ -14540,7 +14540,7 @@
 "start": 11,
 "end": 12,
 "kind": "cfg-comment",
-"text": "# 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时须原样携带\n# LICENSE，不得套用仓库根许可证。",
+"text": "# 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时须原样携带\n# LICENSE，不得套用仓库根目录许可证。",
 "path": "packages/akari-bot-assets-brand/pyproject.toml",
 "id": 1300
 },
@@ -14820,7 +14820,7 @@
 "start": 45,
 "end": 45,
 "kind": "md-paragraph",
-"text": "本包以 AGPL-3.0 分发，许可证文件为包根的 `LICENSE`。表情制作来源见包内 `README.md`。再分发或修改素材时保留该说明。",
+"text": "本包以 AGPL-3.0 分发，许可证文件为包根目录的 `LICENSE`。表情制作来源见包内 `README.md`。再分发或修改素材时保留该说明。",
 "ctx": "许可证",
 "path": "packages/akari-bot-assets-emotes/akaribot/assets/emotes/docs/index.md",
 "id": 1328
@@ -14829,7 +14829,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-emotes 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根即包根。",
+"text": "# akari-bot-assets-emotes 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-emotes/akaribot/assets/emotes/manifest.toml",
 "id": 1329
 },
@@ -15040,7 +15040,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-fonts 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根即包根。",
+"text": "# akari-bot-assets-fonts 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-fonts/akaribot/assets/fonts/manifest.toml",
 "id": 1352
 },
@@ -15703,7 +15703,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# core 把失败原因也写进 stdout 的 JSON，故先解析再按退出码判定。无法解析时按原始输出报错。",
+"text": "# core 把失败原因也写入 stdout 的 JSON，故先解析再按退出码判定。无法解析时按原始输出报错。",
 "spans": [
 [
 39,
@@ -16323,7 +16323,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 读不成功与“读到了但没有启用项”必须分开，前者不能推出“用户没启用过模块”，此时按空清单\n# 安装会静默丢掉用户的模块，只能要求人工选择。",
+"text": "# 读取失败与“读到了但没有启用项”必须分开，前者不能推出“用户没启用过模块”，此时按空清单\n# 安装会静默丢失用户的模块，只能要求人工选择。",
 "spans": [
 [
 314,
@@ -16358,7 +16358,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 安装候选只取旧库 ``module_status.load = 1`` 的模块；``modules/`` 含全部官方模块，按目录确定\n# 安装列表会把从未启用的模块连同大型依赖一并安装到新实例，还会把“未映射”与“未启用”混成同一类诊断。",
+"text": "# 安装候选只取旧数据库 ``module_status.load = 1`` 的模块；``modules/`` 含全部官方模块，按目录确定\n# 安装列表会把从未启用的模块连同大型依赖一并安装到新实例，还会把“未映射”与“未启用”混成同一类诊断。",
 "spans": [
 [
 384,
@@ -16378,7 +16378,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# install_skipped 会写进迁移报告，属报告取值，保持原文。",
+"text": "# install_skipped 会写入迁移报告，属报告取值，保持原文。",
 "spans": [
 [
 649,
@@ -16498,7 +16498,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已装包对待装包本身的要求由 dependency_conflicts 报告，这里不重复。",
+"text": "# 已安装包对待安装包的依赖要求由 dependency_conflicts 报告，这里不重复。",
 "spans": [
 [
 174,
@@ -16668,7 +16668,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 给了名字才可能提前查重。不给名字时无从查起，只能装完再由差集认领。",
+"text": "# 给出名称才可能提前查重。未提供名称时无从查起，只能安装完成后再由差集识别。",
 "spans": [
 [
 665,
@@ -16683,7 +16683,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 基表取 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 只扫描 ``config/*.toml``，\n# 按 ``provides_modules`` 拼出的路径不在扫描范围内。适配器实例表名由基表生成，只能按前缀匹配。",
+"text": "# 基表取 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 只扫描 ``config/*.toml``，\n# 按 ``provides_modules`` 拼接的路径不在扫描范围内。适配器实例表名由基表生成，只能按前缀匹配。",
 "spans": [
 [
 708,
@@ -16935,7 +16935,7 @@
 "start": 487,
 "end": 487,
 "kind": "py-docstring",
-"text": "拼出可搜索文本。",
+"text": "拼接可搜索文本。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -17270,7 +17270,7 @@
 "start": 37,
 "end": 37,
 "kind": "py-docstring",
-"text": "后台实例控制台输出的落盘路径。",
+"text": "后台实例控制台输出的保存路径。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -17373,7 +17373,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``init`` 默认只装 core、适配器与用户选的模块，不装 ``akari-bot-testing``——它是开发期依赖。\n# 缺包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该装什么。此处给出明确的\n# 下一步提示。",
+"text": "# ``init`` 默认只安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发期依赖。\n# 缺包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该安装什么。此处给出明确的\n# 下一步提示。",
 "spans": [
 [
 25,
@@ -17988,7 +17988,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 为直接引用补全包名，安装完成后按 ``direct_url`` 反查对应的包。",
+"text": "# 为直接引用补全包名，安装完成后按 ``direct_url`` 反向查找对应的包。",
 "spans": [
 [
 176,
@@ -18065,7 +18065,7 @@
 "start": 249,
 "end": 249,
 "kind": "py-docstring",
-"text": "从实例环境卸载运行库。``--save`` 同时删掉清单里的记录。",
+"text": "从实例环境卸载运行库。``--save`` 同时删除清单里的记录。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -18080,7 +18080,7 @@
 "start": 294,
 "end": 294,
 "kind": "py-docstring",
-"text": "切换为 CLI 托管 venv，先装好并验证，最后才卸载源环境的包。",
+"text": "切换为 CLI 托管 venv，先安装并验证通过，最后才卸载源环境的包。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -18161,7 +18161,7 @@
 "start": 14,
 "end": 14,
 "kind": "md-paragraph",
-"text": "需要实例的命令接受 `--instance` / `-I`，查找顺序依次为显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根。",
+"text": "需要实例的命令接受 `--instance` / `-I`，查找顺序依次为显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上查找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根目录。",
 "ctx": "命令参考",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1559
@@ -18296,7 +18296,7 @@
 "start": 72,
 "end": 74,
 "kind": "md-list",
-"text": "- 安装控制代码是否装进本实例。\n- 加载控制它是否参与命令匹配。\n- 场景启用控制某个群或频道能否使用，需要在机器人里执行 `~module enable`。",
+"text": "- 安装控制代码是否安装到本实例。\n- 加载控制它是否参与命令匹配。\n- 场景启用控制某个群或频道能否使用，需要在机器人里执行 `~module enable`。",
 "ctx": "module",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1574
@@ -18305,7 +18305,7 @@
 "start": 76,
 "end": 83,
 "kind": "md-list",
-"text": "- `list`：列出已安装的模块与适配器。`available [--kind module|adapter]`：列出 registry 里可安装的包，并标出已安装项。`status`：列出各模块的全局加载状态。\n- `add <名> [-e <目录>] [--git <地址>] [--ref <引用>] [--subdir <目录>] [--dist <包名>]`：安装模块、适配器或本地源码包。\n  - 还支持 `--version`、`--extra`、`--kind`、`--force`、`--offline`、`--dry-run`、`--verbose`。\n  - 安装过程是：解析包 → 安装前检查 → 安装 → 补配置 → 迁移 → 热加载 → 报告。`-e` 用可编辑模式安装本地目录，可以省略包名。\n  - 安装前检查用 `uv pip install --dry-run` 生成安装计划，再检查它是否会破坏已安装的包。只调整依赖版本时给出提示并继续。会破坏已安装包或依赖无解时停止。`--force` 跳过这项检查。\n- `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：默认保留配置与数据。`--cascade` 连带卸载依赖它的包，先列清单再确认。`--purge-data` 同时删除该包的数据表与配置文件。\n- `update [名…] [--all] [--force] [--offline] [--defer-runtime] [--json]`：更新已安装包。工作区模式下等价于按本地源码重装。`--defer-runtime` 把数据库迁移留到下次启动。\n- `load <名>` / `unload <名>`：只改全局加载状态，不改安装状态和场景启用状态。",
+"text": "- `list`：列出已安装的模块与适配器。`available [--kind module|adapter]`：列出 registry 里可安装的包，并标出已安装项。`status`：列出各模块的全局加载状态。\n- `add <名> [-e <目录>] [--git <地址>] [--ref <引用>] [--subdir <目录>] [--dist <包名>]`：安装模块、适配器或本地源码包。\n  - 还支持 `--version`、`--extra`、`--kind`、`--force`、`--offline`、`--dry-run`、`--verbose`。\n  - 安装过程是：解析包 → 安装前检查 → 安装 → 补充配置 → 迁移 → 热加载 → 报告。`-e` 用可编辑模式安装本地目录，可以省略包名。\n  - 安装前检查用 `uv pip install --dry-run` 生成安装计划，再检查它是否会破坏已安装的包。只调整依赖版本时给出提示并继续。会破坏已安装包或依赖无解时停止。`--force` 跳过这项检查。\n- `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：默认保留配置与数据。`--cascade` 连带卸载依赖它的包，先列清单再确认。`--purge-data` 同时删除该包的数据表与配置文件。\n- `update [名…] [--all] [--force] [--offline] [--defer-runtime] [--json]`：更新已安装包。工作区模式下等价于按本地源码重新安装。`--defer-runtime` 把数据库迁移留到下次启动。\n- `load <名>` / `unload <名>`：只改全局加载状态，不改安装状态和场景启用状态。",
 "ctx": "module",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1575
@@ -18368,7 +18368,7 @@
 "start": 112,
 "end": 117,
 "kind": "md-list",
-"text": "- 注册表默认在 `~/.akaribot/instances.toml`，可用 `AKARIBOT_HOME` 改目录。\n- `list [--json]`：列出本机实例、运行状态与服务设置。\n- `add <目录> [--name <名>] [--locale <语言>]`：只记录位置，不创建实例、不装包。\n- `remove <名> [--yes]`：从注册表移除条目，实例目录保留。\n- `use <名>`：设为默认实例。在实例目录之外运行界面或命令时，按它选择实例。\n- `policy <名> [--autostart|--no-autostart] [--restart-on-crash|--no-restart-on-crash]`：设置服务策略。",
+"text": "- 注册表默认在 `~/.akaribot/instances.toml`，可用 `AKARIBOT_HOME` 修改目录。\n- `list [--json]`：列出本机实例、运行状态与服务设置。\n- `add <目录> [--name <名>] [--locale <语言>]`：只记录位置，不创建实例、不安装包。\n- `remove <名> [--yes]`：从注册表移除条目，实例目录保留。\n- `use <名>`：设为默认实例。在实例目录之外运行界面或命令时，按它选择实例。\n- `policy <名> [--autostart|--no-autostart] [--restart-on-crash|--no-restart-on-crash]`：设置服务策略。",
 "ctx": "instance",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1582
@@ -18413,7 +18413,7 @@
 "start": 133,
 "end": 137,
 "kind": "md-list",
-"text": "- `status`：查看当前模式、解释器路径与已安装包数量。\n- `add <依赖声明> [--no-save] [--upgrade]`：安装到实例环境，默认写入实例清单。`--no-save` 只安装不记录，重建时不会自动补充安装。\n- `remove <包名> [--no-save]`：卸载，默认同时删掉实例清单里的记录。`--no-save` 保留记录。\n- `adopt`：改为由 CLI 管理 venv，把当前环境里的包迁进实例 venv。`release`：改回由你自己管理，把实例 venv 里的包迁到当前环境。\n- `recreate`：重建实例 venv，用于升级 Python 或修复环境。新环境安装并验证通过后才替换旧目录。",
+"text": "- `status`：查看当前模式、解释器路径与已安装包数量。\n- `add <依赖声明> [--no-save] [--upgrade]`：安装到实例环境，默认写入实例清单。`--no-save` 只安装不记录，重建时不会自动补充安装。\n- `remove <包名> [--no-save]`：卸载，默认同时删除实例清单里的记录。`--no-save` 保留记录。\n- `adopt`：改为由 CLI 管理 venv，把当前环境里的包迁移到实例 venv。`release`：改回由你自己管理，把实例 venv 里的包迁移到当前环境。\n- `recreate`：重建实例 venv，用于升级 Python 或修复环境。新环境安装并验证通过后才替换旧目录。",
 "ctx": "venv",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1587
@@ -18440,7 +18440,7 @@
 "start": 151,
 "end": 151,
 "kind": "md-paragraph",
-"text": "收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根的 `docs.toml`。Node.js 与 VitePress 版本由主题清单声明。",
+"text": "收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根目录的 `docs.toml`。Node.js 与 VitePress 版本由主题清单声明。",
 "ctx": "docs",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1590
@@ -18494,7 +18494,7 @@
 "start": 183,
 "end": 183,
 "kind": "md-paragraph",
-"text": "旧项目须含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`。迁移只读取旧目录，不改动它，可以重复执行。报告写到新实例根的 `migration-report.md`。选项：`--workspace-root` / `--dev`、`--skip-install`、`--no-venv`、`--dry-run`、`--force`、`--offline`、`-v`。",
+"text": "旧项目须含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`。迁移只读取旧目录，不改动它，可以重复执行。报告写到新实例根目录的 `migration-report.md`。选项：`--workspace-root` / `--dev`、`--skip-install`、`--no-venv`、`--dry-run`、`--force`、`--offline`、`-v`。",
 "ctx": "migrate",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1596
@@ -18539,7 +18539,7 @@
 "start": 205,
 "end": 205,
 "kind": "md-paragraph",
-"text": "`add` 只负责装进实例。`load` 让它参与命令匹配。要让某个群或频道使用，还要在机器人里执行 `~module enable dice`。",
+"text": "`add` 只负责安装到实例。`load` 让它参与命令匹配。要让某个群或频道使用，还要在机器人里执行 `~module enable dice`。",
 "ctx": "安装模块",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1601
@@ -18593,7 +18593,7 @@
 "start": 230,
 "end": 236,
 "kind": "md-table",
-"text": "| 变量 | 作用 |\n| --- | --- |\n| `AKARI_INSTANCE_DIR` | 未传 `--instance` 时使用的实例根。显式参数优先。 |\n| `AKARIBOT_HOME` | 实例注册表所在目录，默认 `~/.akaribot`。 |\n| `AKARIBOT_PYTHON` | 非托管模式下启动实例子进程使用的解释器。 |\n| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。打包产物可据此指向二进制文件。 |\n| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按这个顺序选择。 |",
+"text": "| 变量 | 作用 |\n| --- | --- |\n| `AKARI_INSTANCE_DIR` | 未传 `--instance` 时使用的实例根目录。显式参数优先。 |\n| `AKARIBOT_HOME` | 实例注册表所在目录，默认 `~/.akaribot`。 |\n| `AKARIBOT_PYTHON` | 非托管模式下启动实例子进程使用的解释器。 |\n| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。打包产物可据此指向二进制文件。 |\n| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按这个顺序选择。 |",
 "ctx": "环境变量",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1607
@@ -18656,7 +18656,7 @@
 "start": 11,
 "end": 13,
 "kind": "md-list",
-"text": "- Node.js 与 `npm` 需要在 `PATH` 中。内置主题与外部主题的 Node.js 版本要求在各自的主题清单中声明。\n- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装时执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装时执行 `npm install`，VitePress 版本来自清单。\n- 首次构建需要联网安装依赖。离线模式要求 `<实例根>/cache/docs/node_modules` 已包含主题所需版本。",
+"text": "- Node.js 与 `npm` 需要在 `PATH` 中。内置主题与外部主题的 Node.js 版本要求在各自的主题清单中声明。\n- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装时执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装时执行 `npm install`，VitePress 版本来自清单。\n- 首次构建需要联网安装依赖。离线模式要求 `<实例根目录>/cache/docs/node_modules` 已包含主题所需版本。",
 "ctx": "前置条件",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1614
@@ -18809,7 +18809,7 @@
 "start": 58,
 "end": 58,
 "kind": "md-paragraph",
-"text": "站点标题、语言、基路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs/defaults.toml` 提供。实例根下的 `docs.toml` 只读不写，按表与键逐项覆盖，未覆盖的键沿用默认值。",
+"text": "站点标题、语言、基础路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs/defaults.toml` 提供。实例根目录下的 `docs.toml` 只读不写，按表与键逐项覆盖，未覆盖的键沿用默认值。",
 "ctx": "配置",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1631
@@ -18818,7 +18818,7 @@
 "start": 137,
 "end": 153,
 "kind": "md-list",
-"text": "- `site.title`：站点标题，同时用作首页标题与页面描述。留空时取 `defaults.toml` 的 `[site] title`。\n- `site.lang`：页面语言标签。留空时取 `defaults.toml` 的 `[site] lang`。\n- `site.base`：部署基路径。留空时取 `defaults.toml` 的 `[site] base`。环境变量 `AKARIBOT_DOCS_BASE` 优先于配置文件，值会被整理成以 `/` 开头、以 `/` 结尾的形式。\n- `site.command_prefix`：命令用法行使用的前缀。留空时先读 `config/global/config.global.toml` 或 `.json`，再由 `config/config.toml` 的 `[config] command_prefix` 覆盖，取最终列表的首项。核心配置缺失或为空时不加前缀。\n- `site.locales`：站点语言清单，首项为默认语言，标签形如 `zh-CN`。留空时只有 `site.lang` 一种语言。`site.lang` 与首项不一致时按配置错误终止，未写 `site.lang` 时取首项。清单中的标签要么在 `[locales.<标签>]` 下给出配置，要么已有随包默认值。\n- `locales.<标签>`：该语言的显示名称 `label`、站点标题 `title`，以及逐键覆盖界面文案的 `labels`、覆盖分组标题的 `group_titles`。未写的项沿用 `defaults.toml` 与默认语言的值。\n- `site.logo` / `site.logo_dark` / `site.avatar` / `site.character` / `site.credits` / `site.favicon`：品牌插槽与站点图标。\n  - 相对路径按实例根解析。品牌文件复制到 `public/brand-logo.<扩展名>`、`public/brand-logo-dark.<扩展名>`、`public/brand-avatar.<扩展名>`、`public/brand-character.<扩展名>` 与 `public/brand-credits.<扩展名>`，站点图标复制到 `public/site-favicon.<扩展名>`。相对路径必须位于实例根内，且指向的文件存在。\n  - HTTP(S) URL 与 `/` 开头的站点路径原样使用。品牌插槽的站点路径不带基路径，主题组件会用 `withBase()` 补上。\n  - 品牌插槽按以下顺序取值：\n    1. `docs.toml` 的 `[site]` 字段。\n    2. 第一个 `brand = true` 的文档包在 `docs/config/global/docs.global.toml` 中声明的同名字段。\n    3. 内置资源。\n  - 没有 `brand = true` 的包时，回退到第一个声明 `logo` 或 `avatar` 的包。\n  - 内置回退为 `logo.png`、`logo-night.png`、`logo.png`、`placeholder.png`。`credits` 没有内置文件时为空。品牌包缺失不会让构建失败。\n  - 站点图标取 `[assets] favicon` 指向的随包文件。\n- `themeConfig.akari.brand`：生成器输出的品牌插槽，供主题组件读取。",
+"text": "- `site.title`：站点标题，同时用作首页标题与页面描述。留空时取 `defaults.toml` 的 `[site] title`。\n- `site.lang`：页面语言标签。留空时取 `defaults.toml` 的 `[site] lang`。\n- `site.base`：部署基础路径。留空时取 `defaults.toml` 的 `[site] base`。环境变量 `AKARIBOT_DOCS_BASE` 优先于配置文件，值会被整理成以 `/` 开头、以 `/` 结尾的形式。\n- `site.command_prefix`：命令用法行使用的前缀。留空时先读取 `config/global/config.global.toml` 或 `.json`，再由 `config/config.toml` 的 `[config] command_prefix` 覆盖，取最终列表的首项。核心配置缺失或为空时不加前缀。\n- `site.locales`：站点语言清单，首项为默认语言，标签形如 `zh-CN`。留空时只有 `site.lang` 一种语言。`site.lang` 与首项不一致时按配置错误终止，未写 `site.lang` 时取首项。清单中的标签要么在 `[locales.<标签>]` 下给出配置，要么已有随包默认值。\n- `locales.<标签>`：该语言的显示名称 `label`、站点标题 `title`，以及逐键覆盖界面文案的 `labels`、覆盖分组标题的 `group_titles`。未写的项沿用 `defaults.toml` 与默认语言的值。\n- `site.logo` / `site.logo_dark` / `site.avatar` / `site.character` / `site.credits` / `site.favicon`：品牌插槽与站点图标。\n  - 相对路径按实例根目录解析。品牌文件复制到 `public/brand-logo.<扩展名>`、`public/brand-logo-dark.<扩展名>`、`public/brand-avatar.<扩展名>`、`public/brand-character.<扩展名>` 与 `public/brand-credits.<扩展名>`，站点图标复制到 `public/site-favicon.<扩展名>`。相对路径必须位于实例根目录内，且指向的文件存在。\n  - HTTP(S) URL 与 `/` 开头的站点路径原样使用。品牌插槽的站点路径不带基础路径，主题组件会用 `withBase()` 补上。\n  - 品牌插槽按以下顺序取值：\n    1. `docs.toml` 的 `[site]` 字段。\n    2. 第一个 `brand = true` 的文档包在 `docs/config/global/docs.global.toml` 中声明的同名字段。\n    3. 内置资源。\n  - 没有 `brand = true` 的包时，回退到第一个声明 `logo` 或 `avatar` 的包。\n  - 内置回退为 `logo.png`、`logo-night.png`、`logo.png`、`placeholder.png`。`credits` 没有内置文件时为空。品牌包缺失不会让构建失败。\n  - 站点图标取 `[assets] favicon` 指向的随包文件。\n- `themeConfig.akari.brand`：生成器输出的品牌插槽，供主题组件读取。",
 "ctx": "配置",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1632
@@ -18845,7 +18845,7 @@
 "start": 164,
 "end": 178,
 "kind": "md-list",
-"text": "- `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。\n  - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。\n  - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。\n  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。\n  - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。\n  - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。\n- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。\n- `group_titles`：侧栏一级分组的标题，键为包分组。\n- `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。\n- `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。\n- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。\n- `build.out_dir`：输出目录，相对路径锚定实例根。留空时取 `defaults.toml` 的 `[site] out_dir`。\n- `theme.source`：主题来源。`auto` 在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。\n- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。\n- `deploy`：部署目标配置，引擎不解释这些字段。",
+"text": "- `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。\n  - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。\n  - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。\n  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。\n  - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。\n  - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。\n- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。\n- `group_titles`：侧栏一级分组的标题，键为包分组。\n- `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。\n- `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。\n- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。\n- `build.out_dir`：输出目录，相对路径锚定实例根目录。留空时取 `defaults.toml` 的 `[site] out_dir`。\n- `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。\n- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。\n- `deploy`：部署目标配置，引擎不解释这些字段。",
 "ctx": "配置",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1635
@@ -18998,7 +18998,7 @@
 "start": 248,
 "end": 248,
 "kind": "md-paragraph",
-"text": "`docs status` 输出实际解析的主题名称、目录与摘要。更新主题后如果构建仍然复用上次结果，先用它确认 CLI 读到的主题目录。如果解析到的是内置模板，而不是预期的位置，调整 `[theme].source`，或把主题放到实例根。",
+"text": "`docs status` 输出实际解析的主题名称、目录与摘要。更新主题后如果构建仍然复用上次结果，先用它确认 CLI 读到的主题目录。如果解析到的是内置模板，而不是预期的位置，调整 `[theme].source`，或把主题放到实例根目录。",
 "ctx": "构建与缓存",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1652
@@ -19223,7 +19223,7 @@
 "start": 310,
 "end": 318,
 "kind": "md-table",
-"text": "| 字段 | 说明 |\n| --- | --- |\n| `name` / `version` | 主题标识与版本，参与构建指纹 |\n| `theme_dir` | 相对主题根的主题目录，复制为站点 `.vitepress/theme` |\n| `vitepress` | 该主题要求的 VitePress 版本 |\n| `node` | Node.js 版本要求，如 `>=x.y.z` |\n| `dependencies` | 安装到 `<实例根>/cache/docs` 的 npm 依赖 |\n| `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |\n| `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |",
+"text": "| 字段 | 说明 |\n| --- | --- |\n| `name` / `version` | 主题标识与版本，参与构建指纹 |\n| `theme_dir` | 相对主题根目录的主题目录，复制为站点 `.vitepress/theme` |\n| `vitepress` | 该主题要求的 VitePress 版本 |\n| `node` | Node.js 版本要求，如 `>=x.y.z` |\n| `dependencies` | 安装到 `<实例根目录>/cache/docs` 的 npm 依赖 |\n| `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |\n| `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |",
 "ctx": "主题",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1677
@@ -19268,7 +19268,7 @@
 "start": 328,
 "end": 328,
 "kind": "md-paragraph",
-"text": "主题依赖变化后，用 `akaribot docs install-deps` 重装 npm 依赖。",
+"text": "主题依赖变化后，用 `akaribot docs install-deps` 重新安装 npm 依赖。",
 "ctx": "主题",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1682
@@ -19304,7 +19304,7 @@
 "start": 336,
 "end": 336,
 "kind": "md-paragraph",
-"text": "生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。",
+"text": "生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根目录 `docs/package-docs.md`。",
 "ctx": "主题组件",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1686
@@ -19313,7 +19313,7 @@
 "start": 338,
 "end": 338,
 "kind": "md-paragraph",
-"text": "依赖段落用 `<PackageDependencies package=\"<包 key 或包名>\" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写进 `themeConfig.akari.dependencies`。组件按包 key 与包名取列表，文档不写版本范围。",
+"text": "依赖段落用 `<PackageDependencies package=\"<包 key 或包名>\" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名取列表，文档不写版本范围。",
 "ctx": "主题组件",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1687
@@ -19394,7 +19394,7 @@
 "start": 3,
 "end": 3,
 "kind": "md-paragraph",
-"text": "`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它装在实例的 venv 之外，可以用系统解释器安装，也可以装成独立工具。实例里的机器人、模块与适配器，由 CLI 通过子进程启动。",
+"text": "`akaribot` 是 AkariBot 的实例管理工具，提供命令行子命令与终端交互界面（TUI）。它安装在实例的 venv 之外，可以用系统解释器安装，也可以安装为独立工具。实例里的机器人、模块与适配器，由 CLI 通过子进程启动。",
 "ctx": "CLI 与 TUI",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/index.md",
 "id": 1696
@@ -19430,7 +19430,7 @@
 "start": 16,
 "end": 16,
 "kind": "md-paragraph",
-"text": "运行需要仓库 `pyproject.toml` 声明的 Python 版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 装进实例自己的 venv。",
+"text": "运行需要仓库 `pyproject.toml` 声明的 Python 版本。CLI 不依赖 `akaribot.core`。实例需要的 core、适配器与模块，由 `akaribot init` 安装到实例自己的 venv。",
 "ctx": "安装",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/index.md",
 "id": 1700
@@ -19448,7 +19448,7 @@
 "start": 20,
 "end": 20,
 "kind": "md-paragraph",
-"text": "多数子命令需要一个实例根（含 `akaribot.toml` 的目录）。解析顺序固定为：",
+"text": "多数子命令需要一个实例根目录（含 `akaribot.toml` 的目录）。解析顺序固定为：",
 "ctx": "实例解析",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/index.md",
 "id": 1702
@@ -19466,7 +19466,7 @@
 "start": 26,
 "end": 26,
 "kind": "md-paragraph",
-"text": "如果上面三种方式都找不到实例，命令会报错，并提示先初始化或指定实例根。",
+"text": "如果上面三种方式都找不到实例，命令会报错，并提示先初始化或指定实例根目录。",
 "ctx": "实例解析",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/index.md",
 "id": 1704
@@ -19493,7 +19493,7 @@
 "start": 32,
 "end": 32,
 "kind": "md-paragraph",
-"text": "实例根下的关键路径：",
+"text": "实例根目录下的关键路径：",
 "ctx": "目录结构",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/index.md",
 "id": 1707
@@ -19646,7 +19646,7 @@
 "start": 5,
 "end": 5,
 "kind": "md-paragraph",
-"text": "这份指南以终端界面（TUI）为主。安装完成后，创建实例、填配置、装适配器、启停和看日志都可以在界面里完成，不需要记命令。命令行只用于安装，以及自动化、无头服务器等场景。",
+"text": "这份指南以终端界面（TUI）为主。安装完成后，创建实例、填写配置、安装适配器、启动与停止以及查看日志都可以在界面里完成，不需要记命令。命令行只用于安装，以及自动化、无头服务器等场景。",
 "ctx": "自搭建指南",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1724
@@ -19664,7 +19664,7 @@
 "start": 9,
 "end": 13,
 "kind": "md-list",
-"text": "- **命令行工具（CLI）**：`akaribot` 命令和 TUI。它装在实例之外，负责创建、启动和检查实例。\n- **实例**：一个独立目录，保存配置、数据库、日志、缓存和实例自己的 Python 环境。\n- **core**：机器人的运行时。\n- **适配器**：连接具体平台，例如 Telegram、QQ、Discord 或 Web。\n- **模块**：提供命令和功能，例如查询、订阅、小游戏。",
+"text": "- **命令行工具（CLI）**：`akaribot` 命令和 TUI。它安装在实例之外，负责创建、启动和检查实例。\n- **实例**：一个独立目录，保存配置、数据库、日志、缓存和实例自己的 Python 环境。\n- **core**：机器人的运行时。\n- **适配器**：连接具体平台，例如 Telegram、QQ、Discord 或 Web。\n- **模块**：提供命令和功能，例如查询、订阅、小游戏。",
 "ctx": "先认识几个部分",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1726
@@ -19727,7 +19727,7 @@
 "start": 29,
 "end": 29,
 "kind": "md-paragraph",
-"text": "把 CLI 装成独立工具，不要装进实例环境。",
+"text": "把 CLI 安装为独立工具，不要安装到实例环境。",
 "ctx": "安装 CLI",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1733
@@ -19736,7 +19736,7 @@
 "start": 36,
 "end": 36,
 "kind": "md-paragraph",
-"text": "这是整份指南里唯一需要手动输入的命令。装好后，后面的操作都在 TUI 里完成。",
+"text": "这是整份指南里唯一需要手动输入的命令。安装完成后，后面的操作都在 TUI 里完成。",
 "ctx": "安装 CLI",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1734
@@ -20393,7 +20393,7 @@
 "start": 36,
 "end": 49,
 "kind": "md-table",
-"text": "| 分组 | 页面 | 用途 |\n| --- | --- | --- |\n| 概览与运行 | 概览 | 实例与服务状态、实例清单、初始化摘要 |\n| | 运行 | 前台/后台启停、按适配器启动、状态轮询 |\n| | 日志 | 日志文件筛选、暂停与增量跟踪 |\n| | 诊断 | 端口冲突、重复的登录信息、没有对应适配器的配置 |\n| 配置与平台 | 配置 | 配置表的表单与原始文本两种模式 |\n| | 适配器 | 适配器实例的启停、安装、添加与删除 |\n| | 模块 | 模块安装、卸载、更新与全局加载 |\n| 环境与数据 | 环境 | 解释器、已安装包与运行库清单 |\n| | 数据库 | 表清单、分页浏览与按主键编辑 |\n| 开发与迁移 | 开发 | 工作区包清单、运行测试、生成脚手架 |\n| | 文档 | 已安装包的文档浏览、构建、开发预览、预览与部署 |\n| | 迁移 | 旧项目迁移与试运行 |",
+"text": "| 分组 | 页面 | 用途 |\n| --- | --- | --- |\n| 概览与运行 | 概览 | 实例与服务状态、实例清单、初始化摘要 |\n| | 运行 | 前台/后台启动与停止、按适配器启动、状态轮询 |\n| | 日志 | 日志文件筛选、暂停与增量跟踪 |\n| | 诊断 | 端口冲突、重复的登录信息、没有对应适配器的配置 |\n| 配置与平台 | 配置 | 配置表的表单与原始文本两种模式 |\n| | 适配器 | 适配器实例的启动与停止、安装、添加与删除 |\n| | 模块 | 模块安装、卸载、更新与全局加载 |\n| 环境与数据 | 环境 | 解释器、已安装包与运行库清单 |\n| | 数据库 | 表清单、分页浏览与按主键编辑 |\n| 开发与迁移 | 开发 | 工作区包清单、运行测试、生成脚手架 |\n| | 文档 | 已安装包的文档浏览、构建、开发预览、预览与部署 |\n| | 迁移 | 旧项目迁移与试运行 |",
 "ctx": "页面",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1807
@@ -20456,7 +20456,7 @@
 "start": 70,
 "end": 84,
 "kind": "md-list",
-"text": "- 概览：`r` 刷新，`Enter` 切换实例，`n` 添加实例（新建或选择目录），`Ctrl+D` 从注册表移除，`m` 服务与策略（开机自启、崩溃重启、安装或卸载服务）。\n- 运行：`s` 启动，`x` 停止，`Ctrl+R` 重启，`r` 刷新，`m` 更多（按适配器启动、前台运行命令）。\n- 日志：`space` 暂停跟踪，`c` 清空显示缓冲，`/` 过滤，`m` 日志级别，`r` 刷新，`Esc` 清空过滤。\n- 诊断：`r` 刷新，`Enter` 打开冲突详情。\n- 配置：`Ctrl+S` 保存，`o` 外部编辑器，`f` 表单模式，`t` 原始文本，`r` 刷新，`Esc` 返回表清单。\n- 适配器：`r` 刷新，`i` 安装适配器，`e` 启用/停用实例，`n` 新增实例，`Ctrl+D` 移除实例。\n  - 列表只显示已安装或已启用的适配器。未安装的平台，要先按 `i` 打开安装对话框选择。\n  - 新增实例时，在对话框中选择已安装的适配器并填写实例 ID。`↑` / `↓` 改选平台，`Enter` 创建。\n  - 创建后弹出配置表单，待填写项排在最前。`Enter` 进入下一项，`Ctrl+S` 保存，`Esc` 稍后填写。\n- 模块：`r` 刷新，`/` 搜索，`i` 安装（先确认目标），`u` 卸载，`U` 更新，`e` 全局加载/卸载，`space` 选择，`Shift+↑/↓` 扩展选择，`a` 全选，`c` 清除选择，`Esc` 清空搜索。\n- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列当前模式可用的项），`Esc` 清空搜索。\n- 数据库：`r` 刷新，`Ctrl+S` 保存，`n` 新建，`Ctrl+D` 删除，`/` 搜索，`f` 添加筛选，`Ctrl+F` 清空筛选，`m` 更多（排序、清空筛选），`[` / `]` 翻页，`g` / `G` 首末页。\n- 开发：`r` 刷新，`t` 运行测试，`n` 新建包对话框，`o` 聚焦输出，`Esc` 终止运行中的操作。\n- 文档：`r` 刷新，`/` 搜索，`space` 选择，`b` 构建，`p` 启停预览，`e` 启停开发预览，`o` 打开浏览器，`m` 更多（部署、同步主题、安装依赖、任务日志），`a` 全选，`c` 清空选择。\n- 迁移：`Enter` 迁移，`p` 试运行。",
+"text": "- 概览：`r` 刷新，`Enter` 切换实例，`n` 添加实例（新建或选择目录），`Ctrl+D` 从注册表移除，`m` 服务与策略（开机自启、崩溃重启、安装或卸载服务）。\n- 运行：`s` 启动，`x` 停止，`Ctrl+R` 重启，`r` 刷新，`m` 更多（按适配器启动、前台运行命令）。\n- 日志：`space` 暂停跟踪，`c` 清空显示缓冲，`/` 过滤，`m` 日志级别，`r` 刷新，`Esc` 清空过滤。\n- 诊断：`r` 刷新，`Enter` 打开冲突详情。\n- 配置：`Ctrl+S` 保存，`o` 外部编辑器，`f` 表单模式，`t` 原始文本，`r` 刷新，`Esc` 返回表清单。\n- 适配器：`r` 刷新，`i` 安装适配器，`e` 启用/停用实例，`n` 新增实例，`Ctrl+D` 移除实例。\n  - 列表只显示已安装或已启用的适配器。未安装的平台，要先按 `i` 打开安装对话框选择。\n  - 新增实例时，在对话框中选择已安装的适配器并填写实例 ID。`↑` / `↓` 改选平台，`Enter` 创建。\n  - 创建后弹出配置表单，待填写项排在最前。`Enter` 进入下一项，`Ctrl+S` 保存，`Esc` 稍后填写。\n- 模块：`r` 刷新，`/` 搜索，`i` 安装（先确认目标），`u` 卸载，`U` 更新，`e` 全局加载/卸载，`space` 选择，`Shift+↑/↓` 扩展选择，`a` 全选，`c` 清除选择，`Esc` 清空搜索。\n- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列当前模式可用的项），`Esc` 清空搜索。\n- 数据库：`r` 刷新，`Ctrl+S` 保存，`n` 新建，`Ctrl+D` 删除，`/` 搜索，`f` 添加筛选，`Ctrl+F` 清空筛选，`m` 更多（排序、清空筛选），`[` / `]` 翻页，`g` / `G` 首末页。\n- 开发：`r` 刷新，`t` 运行测试，`n` 新建包对话框，`o` 聚焦输出，`Esc` 终止运行中的操作。\n- 文档：`r` 刷新，`/` 搜索，`space` 选择，`b` 构建，`p` 启动或停止预览，`e` 启动或停止开发预览，`o` 打开浏览器，`m` 更多（部署、同步主题、安装依赖、任务日志），`a` 全选，`c` 清空选择。\n- 迁移：`Enter` 迁移，`p` 试运行。",
 "ctx": "页面键位",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1814
@@ -20600,7 +20600,7 @@
 "start": 127,
 "end": 130,
 "kind": "md-list",
-"text": "- `space` 选择、`Shift+↑/↓` 扩展选择、`a` 全选、`c` 清空选择。普通点击单选，`Ctrl+点击` 切换。\n- `i` 安装、`u` 卸载、`U` 更新，`e` 切换全局加载。安装和卸载前会列出目标。\n- 批量卸载时逐项执行，单项失败不终止其余项。结束后汇总成功与失败。清理数据的卸载要求输入确认文字或目标数量。\n- 安装、加载、场景启用是三件事。安装把代码装进实例，加载让模块参与命令匹配，场景启用控制某个群或频道能否使用。",
+"text": "- `space` 选择、`Shift+↑/↓` 扩展选择、`a` 全选、`c` 清除选择。普通点击单选，`Ctrl+点击` 切换。\n- `i` 安装、`u` 卸载、`U` 更新，`e` 切换全局加载。安装和卸载前会列出目标。\n- 批量卸载时逐项执行，单项失败不终止其余项。结束后汇总成功与失败。清理数据的卸载要求输入确认文字或目标数量。\n- 安装、加载、场景启用是三件事。安装把代码安装到实例，加载让模块参与命令匹配，场景启用控制某个群或频道能否使用。",
 "ctx": "配置、适配器与模块",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1830
@@ -20681,7 +20681,7 @@
 "start": 153,
 "end": 155,
 "kind": "md-list",
-"text": "- `b` 构建，`p` 启停静态预览，`e` 启停开发预览，`o` 打开浏览器。\n- `m` 里放部署、同步主题、安装依赖和任务日志。\n- 静态预览与开发预览共用 `cache/docs/node_modules`，同时只能运行一个。离开页面时后台停止。",
+"text": "- `b` 构建，`p` 启动或停止静态预览，`e` 启动或停止开发预览，`o` 打开浏览器。\n- `m` 里放部署、同步主题、安装依赖和任务日志。\n- 静态预览与开发预览共用 `cache/docs/node_modules`，同时只能运行一个。离开页面时后台停止。",
 "ctx": "开发、文档与迁移",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1839
@@ -20753,7 +20753,7 @@
 "start": 171,
 "end": 175,
 "kind": "md-list",
-"text": "- 删除数据项、移除适配器实例、移除实例记录、卸载模块都先确认。批量卸载要求输入目标数量。\n- “卸载并清理数据”要求输入确认文字，框内列出将删除的配置文件与数据表。\n- 重建 venv 要求输入“重建”，并说明未写入清单的额外运行库需重装。\n- 旧项目迁移先给出试运行选项，确认框列出将传给 CLI 的参数。\n- 存在未保存更改或后台任务未结束时，退出与切换实例都会先确认。",
+"text": "- 删除数据项、移除适配器实例、移除实例记录、卸载模块都先确认。批量卸载要求输入目标数量。\n- “卸载并清理数据”要求输入确认文字，框内列出将删除的配置文件与数据表。\n- 重建 venv 要求输入“重建”，并说明未写入清单的额外运行库需重新安装。\n- 旧项目迁移先给出试运行选项，确认框列出将传给 CLI 的参数。\n- 存在未保存更改或后台任务未结束时，退出与切换实例都会先确认。",
 "ctx": "确认规则",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1847
@@ -20933,7 +20933,7 @@
 "start": 288,
 "end": 288,
 "kind": "py-docstring",
-"text": "生成器与工具链共用的缓存目录 ``<实例根>/cache/docs``。",
+"text": "生成器与工具链共用的缓存目录 ``<实例根目录>/cache/docs``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -20948,7 +20948,7 @@
 "start": 293,
 "end": 293,
 "kind": "py-docstring",
-"text": "输出目录的绝对路径。配置为相对路径时锚定实例根。",
+"text": "输出目录的绝对路径。配置为相对路径时锚定实例根目录。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -21001,7 +21001,7 @@
 "start": 59,
 "end": 61,
 "kind": "cfg-comment",
-"text": "# 站点素材的文件名相对随包的 assets/ 目录，缺失时按无素材处理。\n# 实例 docs.toml 的 [site] favicon 与 logo 优先于这里的默认值。\n# favicon.ico 与仓库根的 assets/favicon.ico 保持一致。",
+"text": "# 站点素材的文件名相对随包的 assets/ 目录，缺失时按无素材处理。\n# 实例 docs.toml 的 [site] favicon 与 logo 优先于这里的默认值。\n# favicon.ico 与仓库根目录的 assets/favicon.ico 保持一致。",
 "path": "packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml",
 "id": 1866
 },
@@ -21173,7 +21173,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: S603 - argv 由固定组件拼成",
+"text": "# noqa: S603 - argv 由固定组件拼接而成",
 "spans": [
 [
 392,
@@ -21565,7 +21565,7 @@
 "start": 39,
 "end": 39,
 "kind": "py-docstring",
-"text": "服务根 URL。未启动时抛出 ``RuntimeError``。",
+"text": "服务根目录 URL。未启动时抛出 ``RuntimeError``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -21668,7 +21668,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例根优先。从源码检出运行 CLI 时，再找仓库内 vendor/ 下的模板 submodule。",
+"text": "# 实例根目录优先。从源码克隆目录运行 CLI 时，再查找仓库内 vendor/ 下的模板 submodule。",
 "spans": [
 [
 120,
@@ -21730,7 +21730,7 @@
 "start": 46,
 "end": 46,
 "kind": "py-docstring",
-"text": "返回本 CLI 源码所在的仓库根。安装形态没有源码仓库时返回 ``None``。",
+"text": "返回本 CLI 源码所在的仓库根目录。安装形态没有源码仓库时返回 ``None``。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -22113,7 +22113,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例 ID 是 ``target_id`` 前缀的一部分，由小写字母、数字与下划线组成，建好后不可改名。",
+"text": "# 实例 ID 是 ``target_id`` 前缀的一部分，由小写字母、数字与下划线组成，创建后不可改名。",
 "spans": [
 [
 100,
@@ -22233,7 +22233,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不锚定实例根就会落到调用目录。",
+"text": "# 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不锚定实例根目录就会落到调用目录。",
 "spans": [
 [
 1102,
@@ -22248,7 +22248,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``\n# 分组，以及“分发名到对象”的映射四种形态，core 侧只需命中其一。",
+"text": "# 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``\n# 分组，以及“包名到对象”的映射四种形态，core 侧只需命中其一。",
 "spans": [
 [
 1165,
@@ -22360,7 +22360,7 @@
 "start": 129,
 "end": 129,
 "kind": "py-docstring",
-"text": "实例根不存在或其中没有 akaribot.toml。",
+"text": "实例根目录不存在或其中没有 akaribot.toml。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -22660,7 +22660,7 @@
 "start": 594,
 "end": 594,
 "kind": "py-docstring",
-"text": "本地工作区根。非空时安装取本地路径。",
+"text": "本地工作区根目录。非空时安装取本地路径。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22705,7 +22705,7 @@
 "start": 608,
 "end": 608,
 "kind": "py-docstring",
-"text": "设置记录的运行库需求串，按分发名去重后写盘。",
+"text": "设置记录的运行库需求串，按包名去重后写入磁盘。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22720,7 +22720,7 @@
 "start": 612,
 "end": 612,
 "kind": "py-docstring",
-"text": "设置本地工作区根。",
+"text": "设置本地工作区根目录。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22780,7 +22780,7 @@
 "start": 703,
 "end": 703,
 "kind": "py-docstring",
-"text": "构造不读磁盘的实例对象，供写盘前的解析与 ``--dry-run`` 使用。",
+"text": "构造不读磁盘的实例对象，供写入磁盘前的解析与 ``--dry-run`` 使用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22840,7 +22840,7 @@
 "start": 754,
 "end": 754,
 "kind": "py-docstring",
-"text": "本地工作区根。未配置时为 ``None``。",
+"text": "本地工作区根目录。未配置时为 ``None``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22990,7 +22990,7 @@
 "start": 865,
 "end": 865,
 "kind": "py-docstring",
-"text": "按分发名、短名或导入路径查找已安装包。",
+"text": "按包名、短名或导入路径查找已安装包。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -23020,7 +23020,7 @@
 "start": 1256,
 "end": 1256,
 "kind": "py-docstring",
-"text": "默认实例根。未定位到时回退到当前工作目录，供各页数据源构造子进程用。",
+"text": "默认实例根目录。未定位到时回退到当前工作目录，供各页数据源构造子进程用。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -23170,7 +23170,7 @@
 "start": 127,
 "end": 127,
 "kind": "py-docstring",
-"text": "转成写盘用的映射。",
+"text": "转换为写入磁盘用的映射。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -23230,7 +23230,7 @@
 "start": 203,
 "end": 203,
 "kind": "py-docstring",
-"text": "按实例根取记录。比较真实路径，软链接与相对写法都能命中。",
+"text": "按实例根目录取记录。比较真实路径，软链接与相对写法都能命中。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -24265,7 +24265,7 @@
 "start": 64,
 "end": 64,
 "kind": "json-value",
-"text": "实例根：${path}",
+"text": "实例根目录：${path}",
 "ctx": "cli.adapter.list.instance_root",
 "json": {
 "raw": "实例根：${path}",
@@ -24418,7 +24418,7 @@
 "start": 74,
 "end": 74,
 "kind": "json-value",
-"text": "可执行的操作：\n  akaribot init <目录>              新建实例\n  akaribot migrate legacy <目录>    迁移既有部署\n  或在实例目录内执行，或设置 AKARI_INSTANCE_DIR=<实例根>",
+"text": "可执行的操作：\n  akaribot init <目录>              新建实例\n  akaribot migrate legacy <目录>    迁移既有部署\n  或在实例目录内执行，或设置 AKARI_INSTANCE_DIR=<实例根目录>",
 "ctx": "cli.adapter.not_instance_hint",
 "json": {
 "raw": "可执行的操作：\\n  akaribot init <目录>              新建实例\\n  akaribot migrate legacy <目录>    迁移既有部署\\n  或在实例目录内执行，或设置 AKARI_INSTANCE_DIR=<实例根>",
@@ -27988,7 +27988,7 @@
 "start": 287,
 "end": 287,
 "kind": "json-value",
-"text": "实例根：${path}",
+"text": "实例根目录：${path}",
 "ctx": "cli.doctor.report.instance_root",
 "json": {
 "raw": "实例根：${path}",
@@ -28107,7 +28107,7 @@
 "start": 294,
 "end": 294,
 "kind": "json-value",
-"text": "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
+"text": "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。先运行 `akaribot init` 创建实例，或用 `--instance <实例根目录>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
 "ctx": "cli.error.not_instance",
 "json": {
 "raw": "当前目录不是 AkariBot 实例（未找到 akaribot.toml）。先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
@@ -28124,7 +28124,7 @@
 "start": 295,
 "end": 295,
 "kind": "json-value",
-"text": "先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
+"text": "先运行 `akaribot init` 创建实例，或用 `--instance <实例根目录>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
 "ctx": "cli.error.not_instance_hint",
 "json": {
 "raw": "先运行 `akaribot init` 创建实例，或用 `--instance <实例根>` / 环境变量 AKARI_INSTANCE_DIR 指定实例。",
@@ -28175,7 +28175,7 @@
 "start": 298,
 "end": 298,
 "kind": "json-value",
-"text": "要安装的适配器（逗号分隔，留空只装 core，可用 `akaribot module available --kind adapter` 查看全部）",
+"text": "要安装的适配器（逗号分隔，留空只安装 core，可用 `akaribot module available --kind adapter` 查看全部）",
 "ctx": "cli.init.ask.adapters",
 "json": {
 "raw": "要安装的适配器（逗号分隔，留空只装 core，可用 `akaribot module available --kind adapter` 查看全部）",
@@ -28617,7 +28617,7 @@
 "start": 324,
 "end": 324,
 "kind": "json-value",
-"text": "${root} 下没有 packages 目录，不像是 monorepo 工作区根。",
+"text": "${root} 下没有 packages 目录，不像是 monorepo 工作区根目录。",
 "ctx": "cli.init.not_workspace",
 "json": {
 "raw": "${root} 下没有 packages 目录，不像是 monorepo 工作区根。",
@@ -28906,7 +28906,7 @@
 "start": 342,
 "end": 342,
 "kind": "json-value",
-"text": "实例根",
+"text": "实例根目录",
 "ctx": "cli.init.plan.root",
 "json": {
 "raw": "实例根",
@@ -30011,7 +30011,7 @@
 "start": 407,
 "end": 407,
 "kind": "json-value",
-"text": "设置实例的服务策略，控制随服务启动而拉起及崩溃后自动重启",
+"text": "设置实例的服务策略，控制随服务启动而自动启动及崩溃后自动重启",
 "ctx": "cli.instance_cmd.policy.help",
 "json": {
 "raw": "设置实例的服务策略：随服务启动而拉起、崩溃后自动重启",
@@ -30045,7 +30045,7 @@
 "start": 409,
 "end": 409,
 "kind": "json-value",
-"text": "服务启动时是否拉起该实例（按上次的期望状态恢复）",
+"text": "服务启动时是否自动启动该实例（按上次的期望状态恢复）",
 "ctx": "cli.instance_cmd.policy.option_autostart",
 "json": {
 "raw": "服务启动时是否拉起该实例（按上次的期望状态恢复）",
@@ -31133,7 +31133,7 @@
 "start": 473,
 "end": 473,
 "kind": "json-value",
-"text": "registry 里没有任何 legacy_module_map，无法确定旧模块名到新包的映射。用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。",
+"text": "registry 里没有任何 legacy_module_map，无法确定旧模块名到新包的映射。用 --workspace-root 指向含 registry.json 的工作区根目录，或联网后重试。",
 "ctx": "cli.migrate.error.no_mapping",
 "json": {
 "raw": "registry 里没有任何 legacy_module_map，无法确定旧模块名到新包的映射。用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。",
@@ -31167,7 +31167,7 @@
 "start": 475,
 "end": 475,
 "kind": "json-value",
-"text": "${path} 下没有 packages 目录，不像是 monorepo 工作区根。",
+"text": "${path} 下没有 packages 目录，不像是 monorepo 工作区根目录。",
 "ctx": "cli.migrate.error.not_workspace",
 "json": {
 "raw": "${path} 下没有 packages 目录，不像是 monorepo 工作区根。",
@@ -31218,7 +31218,7 @@
 "start": 478,
 "end": 478,
 "kind": "json-value",
-"text": "无法加载 registry（${error}）。用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。",
+"text": "无法加载 registry（${error}）。用 --workspace-root 指向含 registry.json 的工作区根目录，或联网后重试。",
 "ctx": "cli.migrate.error.registry_load",
 "json": {
 "raw": "无法加载 registry（${error}）。用 --workspace-root 指向含 registry.json 的工作区根，或联网后重试。",
@@ -31269,7 +31269,7 @@
 "start": 481,
 "end": 481,
 "kind": "json-value",
-"text": "${path} 的机器人正在运行。先停机再迁移。",
+"text": "${path} 的机器人正在运行。请先停止运行再迁移。",
 "ctx": "cli.migrate.error.running",
 "json": {
 "raw": "${path} 的机器人正在运行。先停机再迁移。",
@@ -31286,7 +31286,7 @@
 "start": 482,
 "end": 482,
 "kind": "json-value",
-"text": "新实例根不能位于旧项目目录内：${path}。迁移期间旧项目只读。",
+"text": "新实例根目录不能位于旧项目目录内：${path}。迁移期间旧项目只读。",
 "ctx": "cli.migrate.error.target_inside",
 "json": {
 "raw": "新实例根不能位于旧项目目录内：${path}。迁移期间旧项目只读。",
@@ -31405,7 +31405,7 @@
 "start": 489,
 "end": 489,
 "kind": "json-value",
-"text": "把旧版项目迁移为新实例，包括搬运配置与数据、安装映射到的适配器与模块、转换数据库版本。\n\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。",
+"text": "把旧版项目迁移为新实例，包括搬运配置与数据、安装映射到的适配器与模块、转换数据库版本。\n\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根目录的 migration-report.md。",
 "ctx": "cli.migrate.legacy.help",
 "json": {
 "raw": "把旧版项目迁移为新实例：搬配置与数据、装映射到的适配器与模块、转换数据库版本。\\n\\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。",
@@ -31541,7 +31541,7 @@
 "start": 497,
 "end": 497,
 "kind": "json-value",
-"text": "monorepo 工作区根，从本地源码安装并读其中的 registry.json 做映射",
+"text": "monorepo 工作区根目录，从本地源码安装并读取其中的 registry.json 做映射",
 "ctx": "cli.migrate.legacy.option_workspace_root",
 "json": {
 "raw": "monorepo 工作区根：从本地源码安装，并读其中的 registry.json 做映射",
@@ -31677,7 +31677,7 @@
 "start": 505,
 "end": 505,
 "kind": "json-value",
-"text": "有目录但旧库未装载",
+"text": "有目录但旧数据库未加载",
 "ctx": "cli.migrate.plan.skipped",
 "json": {
 "raw": "有目录但旧库未装载",
@@ -32034,7 +32034,7 @@
 "start": 530,
 "end": 530,
 "kind": "json-value",
-"text": "旧库的 module_status 读不到，无法判断哪些模块真正装载过，因此本次没有安装任何普通模块。请核对下方目录清单后，用 `akaribot module add <模块名>` 逐个安装。",
+"text": "旧数据库的 module_status 读取失败，无法判断哪些模块真正加载过，因此本次没有安装任何普通模块。请核对下方目录清单后，用 `akaribot module add <模块名>` 逐个安装。",
 "ctx": "cli.migrate.report.manual_status_unreadable",
 "json": {
 "raw": "旧库的 module_status 读不到，无法判断哪些模块真正装载过，因此本次没有安装任何普通模块。请核对下方目录清单后，用 `akaribot module add <模块名>` 逐个安装。",
@@ -32119,7 +32119,7 @@
 "start": 535,
 "end": 535,
 "kind": "json-value",
-"text": "| 旧模块名 | 新分发名 | 名字来源 |",
+"text": "| 旧模块名 | 新包名 | 名字来源 |",
 "ctx": "cli.migrate.report.modules_header",
 "json": {
 "raw": "| 旧模块名 | 新分发名 | 名字来源 |",
@@ -32289,7 +32289,7 @@
 "start": 547,
 "end": 547,
 "kind": "json-value",
-"text": "以下模块在旧 `modules/` 里有目录，但旧库显示从未装载，故未安装（其 `data/` 仍已搬运，需要时用 `akaribot module add <模块名>` 启用）：${items}",
+"text": "以下模块在旧 `modules/` 里有目录，但旧数据库显示从未加载，故未安装（其 `data/` 仍已搬运，需要时用 `akaribot module add <模块名>` 启用）：${items}",
 "ctx": "cli.migrate.report.skipped",
 "json": {
 "raw": "以下模块在旧 `modules/` 里有目录，但旧库显示从未装载，故未安装（其 `data/` 仍已搬运，需要时用 `akaribot module add <模块名>` 启用）：${items}",
@@ -32612,7 +32612,7 @@
 "start": 566,
 "end": 566,
 "kind": "json-value",
-"text": "${dist} 已安装（${version}）。升级请用 `akaribot module update ${name}`，重装加 --force。",
+"text": "${dist} 已安装（${version}）。升级请用 `akaribot module update ${name}`，重新安装请加 --force。",
 "ctx": "cli.module.add.already_installed",
 "json": {
 "raw": "${dist} 已安装（${version}）。升级请用 `akaribot module update ${name}`，重装加 --force。",
@@ -32629,7 +32629,7 @@
 "start": 567,
 "end": 567,
 "kind": "json-value",
-"text": "模块名、适配器名或分发名。用 -e 时可省略",
+"text": "模块名、适配器名或包名。用 -e 时可省略",
 "ctx": "cli.module.add.arg_name",
 "json": {
 "raw": "模块名、适配器名或分发名。用 -e 时可省略",
@@ -32646,7 +32646,7 @@
 "start": 568,
 "end": 568,
 "kind": "json-value",
-"text": "${dist} 已安装（${version}），--force 将覆盖重装。",
+"text": "${dist} 已安装（${version}），--force 将覆盖重新安装。",
 "ctx": "cli.module.add.force_reinstall",
 "json": {
 "raw": "${dist} 已安装（${version}），--force 将覆盖重装。",
@@ -32697,7 +32697,7 @@
 "start": 571,
 "end": 571,
 "kind": "json-value",
-"text": "直接指定分发名，跳过 registry 查名",
+"text": "直接指定包名，跳过 registry 查找",
 "ctx": "cli.module.add.option_dist",
 "json": {
 "raw": "直接指定分发名，跳过 registry 查名",
@@ -32901,7 +32901,7 @@
 "start": 583,
 "end": 583,
 "kind": "json-value",
-"text": "分发名",
+"text": "包名",
 "ctx": "cli.module.available.column_dist",
 "json": {
 "raw": "分发名",
@@ -33037,7 +33037,7 @@
 "start": 591,
 "end": 591,
 "kind": "json-value",
-"text": "安装：`akaribot module add <名称>`。按分发名安装用 `akaribot module add --dist <分发名>`。",
+"text": "安装：`akaribot module add <名称>`。按包名安装用 `akaribot module add --dist <包名>`。",
 "ctx": "cli.module.available.install_hint",
 "json": {
 "raw": "安装：`akaribot module add <名称>`。按分发名安装用 `akaribot module add --dist <分发名>`。",
@@ -33122,7 +33122,7 @@
 "start": 596,
 "end": 596,
 "kind": "json-value",
-"text": "按名称、分发名、提供的模块名或简介筛选",
+"text": "按名称、包名、提供的模块名或简介筛选",
 "ctx": "cli.module.available.option_search",
 "json": {
 "raw": "按名称、分发名、提供的模块名或简介筛选",
@@ -33258,7 +33258,7 @@
 "start": 604,
 "end": 604,
 "kind": "json-value",
-"text": "装完后新增了多个分发（${names}），无法判断是哪一个。请用 `--dist <分发名>` 指明。",
+"text": "安装完成后新增了多个包（${names}），无法判断是哪一个。请用 `--dist <包名>` 指明。",
 "ctx": "cli.module.git.ambiguous",
 "json": {
 "raw": "装完后新增了多个分发（${names}），无法判断是哪一个。请用 `--dist <分发名>` 指明。",
@@ -33292,7 +33292,7 @@
 "start": 606,
 "end": 606,
 "kind": "json-value",
-"text": "git 安装后没有发现新增分发。若该包已装过，请用 `--dist <分发名>` 重试。",
+"text": "git 安装后没有发现新增包。若该包已安装过，请用 `--dist <包名>` 重试。",
 "ctx": "cli.module.git.nothing_added",
 "json": {
 "raw": "git 安装后没有发现新增分发。若该包已装过，请用 `--dist <分发名>` 重试。",
@@ -33326,7 +33326,7 @@
 "start": 608,
 "end": 608,
 "kind": "json-value",
-"text": "  解析出分发名：${dist}",
+"text": "  解析出包名：${dist}",
 "ctx": "cli.module.git.resolved",
 "json": {
 "raw": "  解析出分发名：${dist}",
@@ -33411,7 +33411,7 @@
 "start": 613,
 "end": 613,
 "kind": "json-value",
-"text": "模块安装与全局装载（list / add / remove / update / load / unload）\n\n三级“启用”语义中，add/remove 决定代码是否装在本实例，load/unload 决定模块是否参与命令匹配（等价于机器人内的 `~module load` / `~module unload`，超管）。某个群/频道能否使用是场景级开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用 enable/disable 表示全局装载。",
+"text": "模块安装与全局加载（list / add / remove / update / load / unload）\n\n三级“启用”语义中，add/remove 决定代码是否安装在本实例，load/unload 决定模块是否参与命令匹配（等价于机器人内的 `~module load` / `~module unload`，超级用户）。某个群/频道能否使用是场景级开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用 enable/disable 表示全局加载。",
 "ctx": "cli.module.help",
 "json": {
 "raw": "模块安装与全局装载：list / add / remove / update / load / unload\\n\\n三级“启用”语义：add/remove 决定代码是否装在本实例。load/unload 决定模块是否参与命令匹配（等价于机器人内的 `~module load` / `~module unload`，超管）。某个群/频道能否使用是场景级开关，由机器人内的 `~module enable` / `~module disable`（场景管理员）负责。本组命令不使用 enable/disable 表示全局装载。",
@@ -33547,7 +33547,7 @@
 "start": 621,
 "end": 621,
 "kind": "json-value",
-"text": "模块已装好，但需要 `~restart` 或重启进程后才会装载。",
+"text": "模块已安装完成，但需要 `~restart` 或重启进程后才会加载。",
 "ctx": "cli.module.install.restart_needed",
 "json": {
 "raw": "模块已装好，但需要 `~restart` 或重启进程后才会装载。",
@@ -33751,7 +33751,7 @@
 "start": 633,
 "end": 633,
 "kind": "json-value",
-"text": "分发名",
+"text": "包名",
 "ctx": "cli.module.list.column_dist",
 "json": {
 "raw": "分发名",
@@ -34346,7 +34346,7 @@
 "start": 668,
 "end": 668,
 "kind": "json-value",
-"text": "已安装的模块名、适配器名或分发名",
+"text": "已安装的模块名、适配器名或包名",
 "ctx": "cli.module.remove.arg_name",
 "json": {
 "raw": "已安装的模块名、适配器名或分发名",
@@ -34431,7 +34431,7 @@
 "start": 673,
 "end": 673,
 "kind": "json-value",
-"text": "已中止卸载：${reasons}。运行中的实例可能仍持有这些模块，删除分发会留下指向已删代码的运行态。请先停止实例（`akaribot run` 的进程）后重试。",
+"text": "已中止卸载：${reasons}。运行中的实例可能仍持有这些模块，删除包会留下指向已删除代码的运行态。请先停止实例（`akaribot run` 的进程）后重试。",
 "ctx": "cli.module.remove.detach_failed",
 "json": {
 "raw": "已中止卸载：${reasons}。运行中的实例可能仍持有这些模块，删除分发会留下指向已删代码的运行态。请先停止实例（`akaribot run` 的进程）后重试。",
@@ -34890,7 +34890,7 @@
 "start": 701,
 "end": 701,
 "kind": "json-value",
-"text": "更新已安装的包。工作区模式下等价于按本地源码重装。\n\n``--json`` 模式下 stdout 只出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /\n``failed_details`` / ``skipped_details`` / ``reload_pending`` / ``restart_required``），\n进度与警告一律走 stderr，退出码 1 表示有包未更新成功。",
+"text": "更新已安装的包。工作区模式下等价于按本地源码重新安装。\n\n``--json`` 模式下 stdout 只出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /\n``failed_details`` / ``skipped_details`` / ``reload_pending`` / ``restart_required``），\n进度与警告一律输出到 stderr，退出码 1 表示有包未更新成功。",
 "ctx": "cli.module.update.help",
 "json": {
 "raw": "更新已安装的包。工作区模式下等价于按本地源码重装。\\n\\n``--json`` 的契约：stdout 只出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /\\n``failed_details`` / ``skipped_details`` / ``reload_pending`` / ``restart_required``），\\n进度与警告一律走 stderr，退出码 1 表示有包未更新成功。",
@@ -35009,7 +35009,7 @@
 "start": 708,
 "end": 708,
 "kind": "json-value",
-"text": "已是最新版本时也重装",
+"text": "已是最新版本时也重新安装",
 "ctx": "cli.module.update.option_force",
 "json": {
 "raw": "已是最新版本时也重装",
@@ -36267,7 +36267,7 @@
 "start": 782,
 "end": 782,
 "kind": "json-value",
-"text": "已发送强杀信号并等待 ${seconds} 秒。请检查该进程是否卡在不可中断的系统调用上",
+"text": "已发送强制终止信号并等待 ${seconds} 秒。请检查该进程是否阻塞在不可中断的系统调用上",
 "ctx": "cli.run.stop_failed_detail",
 "json": {
 "raw": "已发送强杀信号并等待 ${seconds} 秒。请检查该进程是否卡在不可中断的系统调用上",
@@ -36539,7 +36539,7 @@
 "start": 798,
 "end": 798,
 "kind": "json-value",
-"text": "只打印将要执行的改动，不落盘也不调用系统工具。",
+"text": "只打印将要执行的改动，不写入磁盘也不调用系统工具。",
 "ctx": "cli.service.option_dry_run",
 "json": {
 "raw": "只打印将要执行的改动，不落盘也不调用系统工具。",
@@ -36811,7 +36811,7 @@
 "start": 814,
 "end": 814,
 "kind": "json-value",
-"text": "实例 ${name} 拉起失败：${error}",
+"text": "实例 ${name} 启动失败：${error}",
 "ctx": "cli.service.supervise.failed",
 "json": {
 "raw": "实例 ${name} 拉起失败：${error}",
@@ -36964,7 +36964,7 @@
 "start": 823,
 "end": 823,
 "kind": "json-value",
-"text": "实例 ${name} 期望运行但未在运行，已拉起（pid ${pid}）。",
+"text": "实例 ${name} 期望运行但未在运行，已启动（pid ${pid}）。",
 "ctx": "cli.service.supervise.recovered",
 "json": {
 "raw": "实例 ${name} 期望运行但未在跑，已拉起（pid ${pid}）。",
@@ -47011,7 +47011,7 @@
 "start": 1428,
 "end": 1428,
 "kind": "json-value",
-"text": "分发名：${dist}  来源：${source}  ${path}",
+"text": "包名：${dist}  来源：${source}  ${path}",
 "ctx": "cli.tui.dev.detail_first",
 "json": {
 "raw": "分发名：${dist}  来源：${source}  ${path}",
@@ -56344,7 +56344,7 @@
 "start": 1986,
 "end": 1986,
 "kind": "json-value",
-"text": "实例启停及状态",
+"text": "实例启动、停止及状态",
 "ctx": "cli.tui.nav.blurb.run",
 "json": {
 "raw": "实例启停及状态",
@@ -57449,7 +57449,7 @@
 "start": 2053,
 "end": 2053,
 "kind": "json-value",
-"text": "启停操作执行中",
+"text": "启动或停止操作执行中",
 "ctx": "cli.tui.run.notify_busy",
 "json": {
 "raw": "启停操作执行中",
@@ -58843,7 +58843,7 @@
 "start": 2144,
 "end": 2144,
 "kind": "json-value",
-"text": "已装进当前环境但未记入实例清单，环境重建后不会保留。",
+"text": "已安装到当前环境但未记入实例清单，环境重建后不会保留。",
 "ctx": "cli.venv.add.not_saved",
 "json": {
 "raw": "已装进当前环境，未记入实例清单：环境重建后不会保留。",
@@ -58911,7 +58911,7 @@
 "start": 2148,
 "end": 2148,
 "kind": "json-value",
-"text": "已装进环境，但认不出这个 git 直引用的分发名，未记入清单：${spec}",
+"text": "已安装到环境，但无法识别这个 git 直接引用的包名，未记入清单：${spec}",
 "ctx": "cli.venv.add.unnamed_git",
 "json": {
 "raw": "已装进环境，但认不出这个 git 直引用的分发名，未记入清单：${spec}",
@@ -58945,7 +58945,7 @@
 "start": 2150,
 "end": 2150,
 "kind": "json-value",
-"text": "切换为 CLI 托管 venv，先装好并验证，最后才卸载源环境的包。",
+"text": "切换为 CLI 托管 venv，先安装并验证通过，最后才卸载源环境的包。",
 "ctx": "cli.venv.adopt.help",
 "json": {
 "raw": "切换为 CLI 托管 venv：先装好并验证，最后才卸载源环境的包。",
@@ -59098,7 +59098,7 @@
 "start": 2159,
 "end": 2159,
 "kind": "json-value",
-"text": "重建实例 venv（Python 升级后修复）。新环境装好并验证通过后才与旧目录换位。",
+"text": "重建实例 venv（Python 升级后修复）。新环境安装并验证通过后才替换旧目录。",
 "ctx": "cli.venv.recreate.help",
 "json": {
 "raw": "重建实例 venv（Python 升级后修复）。新环境装好并验证通过后才与旧目录换位。",
@@ -59217,7 +59217,7 @@
 "start": 2166,
 "end": 2166,
 "kind": "json-value",
-"text": "要卸载的分发名。",
+"text": "要卸载的包名。",
 "ctx": "cli.venv.remove.arg_dist",
 "json": {
 "raw": "要卸载的分发名。",
@@ -59234,7 +59234,7 @@
 "start": 2167,
 "end": 2167,
 "kind": "json-value",
-"text": "从实例环境卸载运行库。--save 同时删掉清单里的记录。",
+"text": "从实例环境卸载运行库。--save 同时删除清单里的记录。",
 "ctx": "cli.venv.remove.help",
 "json": {
 "raw": "从实例环境卸载运行库。--save 同时删掉清单里的记录。",
@@ -59285,7 +59285,7 @@
 "start": 2170,
 "end": 2170,
 "kind": "json-value",
-"text": "同时删掉实例清单里的记录。",
+"text": "同时删除实例清单里的记录。",
 "ctx": "cli.venv.remove.option_save",
 "json": {
 "raw": "同时删掉实例清单里的记录。",
@@ -59642,7 +59642,7 @@
 "start": 2191,
 "end": 2191,
 "kind": "json-value",
-"text": "实例根",
+"text": "实例根目录",
 "ctx": "cli.venv.status.root",
 "json": {
 "raw": "实例根",
@@ -60220,7 +60220,7 @@
 "start": 2225,
 "end": 2225,
 "kind": "json-value",
-"text": "请给出包名，或用 `--dist <分发名>` / `-e <本地目录>` 指定安装对象。",
+"text": "请给出包名，或用 `--dist <包名>` / `-e <本地目录>` 指定安装对象。",
 "ctx": "cli.venv_engine.package_name_required",
 "json": {
 "raw": "请给出包名，或用 `--dist <分发名>` / `-e <本地目录>` 指定安装对象。",
@@ -60288,7 +60288,7 @@
 "start": 2229,
 "end": 2229,
 "kind": "json-value",
-"text": "dry-run：跳过验证与目录换位",
+"text": "dry-run：跳过验证与目录替换",
 "ctx": "cli.venv_engine.recreate_dry_run",
 "json": {
 "raw": "dry-run：跳过验证与目录换位",
@@ -60407,7 +60407,7 @@
 "start": 2236,
 "end": 2236,
 "kind": "json-value",
-"text": "registry 里没有名为 ${name} 的包。可用 `akaribot module available` 查看全部可安装包，或用 `--dist <分发名>` 直接指定。",
+"text": "registry 里没有名为 ${name} 的包。可用 `akaribot module available` 查看全部可安装包，或用 `--dist <包名>` 直接指定。",
 "ctx": "cli.venv_engine.registry_package_missing",
 "json": {
 "raw": "registry 里没有名为 ${name} 的包。可用 `akaribot module available` 查看全部可安装包，或用 `--dist <分发名>` 直接指定。",
@@ -60424,7 +60424,7 @@
 "start": 2238,
 "end": 2238,
 "kind": "json-value",
-"text": "无法获取 registry（${detail}）。可用 `--dist` 直接指定分发名，或用 `--workspace-root` / `akaribot init --workspace-root` 改用工作区本地源码。",
+"text": "无法获取 registry（${detail}）。可用 `--dist` 直接指定包名，或用 `--workspace-root` / `akaribot init --workspace-root` 改用工作区本地源码。",
 "ctx": "cli.venv_engine.registry_unavailable",
 "json": {
 "raw": "无法获取 registry（${detail}）。可用 `--dist` 直接指定分发名，或用 `--workspace-root` / `akaribot init --workspace-root` 改用工作区本地源码。",
@@ -60611,7 +60611,7 @@
 "start": 2249,
 "end": 2249,
 "kind": "json-value",
-"text": "环境换位或验证失败：${error}。旧环境保持可用，请检查临时环境后重试。",
+"text": "环境替换或验证失败：${error}。旧环境保持可用，请检查临时环境后重试。",
 "ctx": "cli.venv_engine.swap_failed",
 "json": {
 "raw": "环境换位或验证失败：${error}。旧环境保持可用，请检查临时环境后重试。",
@@ -60730,7 +60730,7 @@
 "start": 2256,
 "end": 2256,
 "kind": "json-value",
-"text": "换位并清理旧环境",
+"text": "替换并清理旧环境",
 "ctx": "cli.venv_engine.step_swap_and_cleanup",
 "json": {
 "raw": "换位并清理旧环境",
@@ -61257,7 +61257,7 @@
 "start": 2287,
 "end": 2287,
 "kind": "json-value",
-"text": "工作区 ${root} 里没有找到 ${name}。可用 `akaribot module available` 查看本地可安装包，或用 `--dist <分发名>` 指定分发名。",
+"text": "工作区 ${root} 里没有找到 ${name}。可用 `akaribot module available` 查看本地可安装包，或用 `--dist <包名>` 指定包名。",
 "ctx": "cli.venv_engine.workspace_package_missing",
 "json": {
 "raw": "工作区 ${root} 里没有找到 ${name}。可用 `akaribot module available` 查看本地可安装包，或用 `--dist <分发名>` 指定分发名。",
@@ -61473,7 +61473,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不用 click 的 no_args_is_help，因为 click ≥8.2 会把它当错误抛出，导致帮助文本经异常通道显示（带错误面板）。\n# 裸调用改由下方回调显式打印帮助，输出通道与退出码都可控。",
+"text": "# 不用 click 的 no_args_is_help，因为 click ≥8.2 会把它当错误抛出，导致帮助文本经异常通道显示（带错误面板）。\n# 无参数调用改由下方回调显式打印帮助，输出通道与退出码都可控。",
 "spans": [
 [
 66,
@@ -61493,7 +61493,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 裸调用在可交互终端下直接进界面。没有实例就先引导初始化。非终端（管道、CI、重定向）仍打印\n# 帮助，因为那种环境下界面起不来，把帮助塞进错误面板只会让人以为出错了。",
+"text": "# 无参数调用在可交互终端下直接进入界面。没有实例就先引导初始化。非终端（管道、CI、重定向）仍打印\n# 帮助，因为那种环境下界面无法启动，把帮助放入错误面板只会让人以为出错了。",
 "spans": [
 [
 103,
@@ -61528,7 +61528,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 初始化直接调用 ``akaribot init`` 的命令本体，不复制它建目录、装包、写元数据的流程。问答也由\n# init 自己完成，两边不会各问一套。返回实例根，用户放弃或初始化未成功时为 ``None``。",
+"text": "# 初始化直接调用 ``akaribot init`` 的命令本体，不复制它创建目录、安装包、写入元数据的流程。问答也由\n# init 自己完成，两边不会各问一套。返回实例根目录，用户放弃或初始化未成功时为 ``None``。",
 "spans": [
 [
 123,
@@ -61908,7 +61908,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仅在崩溃（非零退出）时拉起，因为正常退出说明守护循环按信号退出，不该被立刻重启。",
+"text": "# 仅在崩溃（非零退出）时重启，因为正常退出说明守护循环按信号退出，不该被立刻重启。",
 "spans": [
 [
 170,
@@ -62063,7 +62063,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 拉起失败的原因照实上报，守护循环不因此中断",
+"text": "# noqa: BLE001 - 启动失败的原因照实上报，守护循环不因此中断",
 "spans": [
 [
 706,
@@ -62155,7 +62155,7 @@
 "start": 116,
 "end": 116,
 "kind": "py-docstring",
-"text": "服务进程控制台输出的默认落盘目录。",
+"text": "服务进程控制台输出的默认保存目录。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -62215,7 +62215,7 @@
 "start": 306,
 "end": 306,
 "kind": "py-docstring",
-"text": "服务进程控制台输出的落盘目录。",
+"text": "服务进程控制台输出的保存目录。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -62533,7 +62533,7 @@
 "start": 6,
 "end": 15,
 "kind": "md-paragraph",
-"text": "===============  ==========================================\n占位符            取值\n===============  ==========================================\n``[@module_name@]``  适配器名，须匹配 ``[a-z0-9_]+``。它同时用作目录名、分发名后缀、entry\n                     point 名、``on_bot_config()`` 的平台名与 locale 键前缀\n``[@module_class@]`` 适配器名的大驼峰形式，用作 ``ContextManager`` 与配置类的类名前缀\n``[@module_desc@]``  适配器的一句话说明\n``[@author@]``       作者名\n``[@license@]``      许可证标识\n===============  ==========================================",
+"text": "===============  ==========================================\n占位符            取值\n===============  ==========================================\n``[@module_name@]``  适配器名，须匹配 ``[a-z0-9_]+``。它同时用作目录名、包名后缀、entry\n                     point 名、``on_bot_config()`` 的平台名与 locale 键前缀\n``[@module_class@]`` 适配器名的大驼峰形式，用作 ``ContextManager`` 与配置类的类名前缀\n``[@module_desc@]``  适配器的一句话说明\n``[@author@]``       作者名\n``[@license@]``      许可证标识\n===============  ==========================================",
 "ctx": "",
 "path": "packages/akari-bot-cli/akaribot/cli/templates/adapter/TEMPLATE.md",
 "id": 4346
@@ -63102,7 +63102,7 @@
 "start": 107,
 "end": 108,
 "kind": "md-paragraph",
-"text": "模块页合并已安装模块与可安装清单，按分发名去重。搜索与“仅已安装”筛选位于同一行，统计信息独立\n显示。表头与数据行共用列宽计划，窄屏优先隐藏简介列并保留名称。",
+"text": "模块页合并已安装模块与可安装清单，按包名去重。搜索与“仅已安装”筛选位于同一行，统计信息独立\n显示。表头与数据行共用列宽计划，窄屏优先隐藏简介列并保留名称。",
 "ctx": "模块与适配器",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4404
@@ -63156,7 +63156,7 @@
 "start": 118,
 "end": 118,
 "kind": "md-list",
-"text": "- 清理数据的确认框列出目标包、配置文件与数据表。单包输入分发名，批量时输入确认框中指定的确认文字。",
+"text": "- 清理数据的确认框列出目标包、配置文件与数据表。单包输入包名，批量时输入确认框中指定的确认文字。",
 "ctx": "模块与适配器",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4410
@@ -65101,7 +65101,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
+"text": "# 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
 "spans": [
 [
 623,
@@ -67008,7 +67008,7 @@
 "start": 264,
 "end": 264,
 "kind": "py-docstring",
-"text": "切到下一个页面的键位动作。",
+"text": "切换到下一个页面的键位动作。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -67023,7 +67023,7 @@
 "start": 268,
 "end": 268,
 "kind": "py-docstring",
-"text": "切到上一个页面的键位动作。",
+"text": "切换到上一个页面的键位动作。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -67351,7 +67351,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每次读取时解析实例根，确保切换实例后使用当前实例的配置。",
+"text": "# 每次读取时解析实例根目录，确保切换实例后使用当前实例的配置。",
 "spans": [
 [
 665,
@@ -68253,7 +68253,7 @@
 "start": 676,
 "end": 676,
 "kind": "py-docstring",
-"text": "返回实例根路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
+"text": "返回实例根目录路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -69273,7 +69273,7 @@
 "start": 16,
 "end": 16,
 "kind": "py-docstring",
-"text": "返回界面当前选中的实例根。未选过时为 ``None``。",
+"text": "返回界面当前选中的实例根目录。未选过时为 ``None``。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -70328,7 +70328,7 @@
 "start": 833,
 "end": 833,
 "kind": "py-docstring",
-"text": "改写替身的运行状态，模拟实例启停。",
+"text": "改写替身的运行状态，模拟实例启动与停止。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70871,7 +70871,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每次读取时解析实例根，确保切换实例后使用当前实例。",
+"text": "# 每次读取时解析实例根目录，确保切换实例后使用当前实例的配置。",
 "spans": [
 [
 493,
@@ -71291,7 +71291,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 原因与输出尾部是 CLI 给出的可变文本，按分隔符拼接而不是写进模板。",
+"text": "# 原因与输出尾部是 CLI 给出的可变文本，按分隔符拼接而不是写入模板。",
 "spans": [
 [
 1683,
@@ -71743,7 +71743,7 @@
 "start": 501,
 "end": 501,
 "kind": "py-docstring",
-"text": "返回实例根路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
+"text": "返回实例根目录路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -72731,7 +72731,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
+"text": "# 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
 "spans": [
 [
 420,
@@ -72806,7 +72806,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 测试路径与新包目录相对工作区根解析。未配置工作区时使用实例根。",
+"text": "# 测试路径与新包目录相对工作区根目录解析。未配置工作区时使用实例根目录。",
 "spans": [
 [
 560,
@@ -73976,7 +73976,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 预览按钮在启停之间切换文字，键位不变。",
+"text": "# 预览按钮在启动与停止之间切换文字，键位不变。",
 "spans": [
 [
 1444,
@@ -75626,7 +75626,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
+"text": "# 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。",
 "spans": [
 [
 374,
@@ -77608,7 +77608,7 @@
 "start": 160,
 "end": 160,
 "kind": "py-docstring",
-"text": "返回日志目录。未显式指定时按实例根拼接 ``logs``。",
+"text": "返回日志目录。未显式指定时按实例根目录拼接 ``logs``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -78631,7 +78631,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每次读取时解析实例根，确保切换实例后子进程使用当前实例。",
+"text": "# 每次读取时解析实例根目录，确保切换实例后子进程使用当前实例。",
 "spans": [
 [
 449,
@@ -78706,7 +78706,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 多选按分发名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩选的起点。",
+"text": "# 多选按包名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩选的起点。",
 "spans": [
 [
 828,
@@ -79141,7 +79141,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 子进程的 cwd 是实例根，相对路径按它解析才能与 CLI 的 -e 取到同一个目录。",
+"text": "# 子进程的 cwd 是实例根目录，相对路径按它解析才能与 CLI 的 -e 取到同一个目录。",
 "spans": [
 [
 1384,
@@ -79698,7 +79698,7 @@
 "start": 458,
 "end": 458,
 "kind": "py-docstring",
-"text": "返回实例根路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
+"text": "返回实例根目录路径，显式给定优先，其次为界面当前选中的实例，最后自动定位。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -80628,7 +80628,7 @@
 "start": 111,
 "end": 111,
 "kind": "py-docstring",
-"text": "先停后启。",
+"text": "先停止再启动。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81113,7 +81113,7 @@
 "start": 320,
 "end": 320,
 "kind": "py-docstring",
-"text": "构造 ``--dry-run`` 用的解析检查 argv，只求解依赖而不落盘。",
+"text": "构造 ``--dry-run`` 用的解析检查 argv，只求解依赖而不写入磁盘。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -81143,7 +81143,7 @@
 "start": 513,
 "end": 513,
 "kind": "py-docstring",
-"text": "重装到另一环境时使用的 uv 参数 token。",
+"text": "重新安装到另一环境时使用的 uv 参数 token。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81218,7 +81218,7 @@
 "start": 897,
 "end": 897,
 "kind": "py-docstring",
-"text": "自某目录向上查找工作区根（含 ``packages`` 目录且其中有 pyproject 的目录）。",
+"text": "自某目录向上查找工作区根目录（含 ``packages`` 目录且其中有 pyproject 的目录）。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -81368,7 +81368,7 @@
 "start": 1264,
 "end": 1264,
 "kind": "py-docstring",
-"text": "已装 akaribot 包数量。",
+"text": "已安装的 akaribot 包数量。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81398,7 +81398,7 @@
 "start": 1274,
 "end": 1274,
 "kind": "py-docstring",
-"text": "core 的版本。未装时为 ``None``。",
+"text": "core 的版本。未安装时为 ``None``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81669,7 +81669,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 片段里的新键尚未并入 locales，合成一份合并后的语言目录后，检查才能取到真实渲染结果。",
+"text": "# 片段里的新增键尚未并入 locales，合成一份合并后的语言目录后，检查才能取到真实渲染结果。",
 "spans": [
 [
 39,
@@ -81821,7 +81821,7 @@
 "start": 72,
 "end": 72,
 "kind": "py-docstring",
-"text": "记下 entrypoint 与参数，返回预设输出。",
+"text": "记录 entrypoint 与参数，返回预设输出。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81879,7 +81879,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# core 把原因写进 stdout 的 JSON，退出码 2 表示用户错误。CLI 保持该退出码。",
+"text": "# core 把原因写入 stdout 的 JSON，退出码 2 表示用户错误。CLI 保持该退出码。",
 "spans": [
 [
 139,
@@ -81896,7 +81896,7 @@
 "start": 35,
 "end": 35,
 "kind": "py-docstring",
-"text": "记下 entrypoint 与参数，返回预设输出。",
+"text": "记录 entrypoint 与参数，返回预设输出。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -82331,7 +82331,7 @@
 "start": 76,
 "end": 76,
 "kind": "py-docstring",
-"text": "实例子进程一律以实例根为 cwd，从实例外调用也不例外。",
+"text": "实例子进程一律以实例根目录为 cwd，从实例外调用也不例外。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -82344,7 +82344,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 测试框架在每个用例前重新运行 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的\n# ``Locale`` 按当前快照取键，不切回来就只会拿到键名。生产里 CLI 进程不加载 core，无此问题。",
+"text": "# 测试框架在每个用例前重新运行 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的\n# ``Locale`` 按当前快照取键，不切换回来就只会拿到键名。生产环境里 CLI 进程不加载 core，无此问题。",
 "spans": [
 [
 28,
@@ -82364,7 +82364,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只看 returncode 既给不出“远端拒绝”的状态，也丢掉了 core 给出的具体原因。",
+"text": "# 只看 returncode 既给不出“远端拒绝”的状态，也丢失了 core 给出的具体原因。",
 "spans": [
 [
 85,
@@ -82424,7 +82424,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 卸载可能持续几分钟，必须使用实时转发，否则界面上看不出正在卸载还是卡住。",
+"text": "# 卸载可能持续几分钟，必须使用实时转发，否则界面上看不出正在卸载还是无响应。",
 "spans": [
 [
 262,
@@ -82454,7 +82454,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版本未卸载成功就不必再触发热加载（必被拒），但要把“需要重启”如实写进结果。",
+"text": "# 旧版本未卸载成功就不必再触发热加载（必被拒），但要把“需要重启”如实写入结果。",
 "spans": [
 [
 367,
@@ -82499,7 +82499,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 同一个目录记录两次不该产生两条记录，也不该改掉已有策略。",
+"text": "# 同一个目录记录两次不该产生两条记录，也不该修改已有策略。",
 "spans": [
 [
 71,
@@ -82574,7 +82574,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 探测失败时返回 None 而不是抛异常，清单里一格未知不该拖垮整页。",
+"text": "# 探测失败时返回 None 而不是抛异常，清单里一格未知不应影响整页显示。",
 "spans": [
 [
 226,
@@ -82604,7 +82604,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令只读实例根的 ``logs`` 子目录，替身给一个 root 即可。",
+"text": "# 命令只读实例根目录的 ``logs`` 子目录，替身给一个 root 即可。",
 "spans": [
 [
 26,
@@ -82694,7 +82694,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 可交互终端下裸调用直接进界面，不打印帮助。",
+"text": "# 可交互终端下无参数调用直接进入界面，不打印帮助。",
 "spans": [
 [
 139,
@@ -82754,7 +82754,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填\n# （或默认值变成 typer 的 OptionInfo），裸调用入口会在运行时失败，而 ``akaribot init`` 子命令\n# 仍然正常，这条守卫专门针对这一差异。",
+"text": "# ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填\n# （或默认值变成 typer 的 OptionInfo），无参数调用入口会在运行时失败，而 ``akaribot init`` 子命令\n# 仍然正常，这条守卫专门针对这一差异。",
 "spans": [
 [
 196,
@@ -82824,7 +82824,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 在仓库根这类存放实例的目录下，唯一的下级实例就是当前要管的实例，直接记录并切换过去。",
+"text": "# 在仓库根目录这类存放实例的目录下，唯一的下级实例就是当前要管理的实例，直接记录并切换过去。",
 "spans": [
 [
 276,
@@ -82876,7 +82876,7 @@
 "start": 318,
 "end": 318,
 "kind": "py-docstring",
-"text": "CLI 根命令的版本查询、裸调用帮助、参数顺序与打包回退测试",
+"text": "CLI 根命令的版本查询、无参数调用帮助、参数顺序与打包回退测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -82989,7 +82989,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须换掉 console 本身。宽度放宽，\n# 免得表格截断长包名而让检查失真。",
+"text": "# 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须替换 console 本身。宽度放宽，\n# 免得表格截断长包名而让检查失真。",
 "spans": [
 [
 59,
@@ -83699,7 +83699,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 服务进程不继承 shell 环境，安装时必须把注册表位置写进单元，否则守护进程会去读另一份注册表。",
+"text": "# 服务进程不继承 shell 环境，安装时必须把注册表位置写入单元，否则守护进程会去读另一份注册表。",
 "spans": [
 [
 207,
@@ -84714,7 +84714,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# macOS 临时目录可能为符号链接，实例根按解析后的路径保存。",
+"text": "# macOS 临时目录可能为符号链接，实例根目录按解析后的路径保存。",
 "spans": [
 [
 367,
@@ -84759,7 +84759,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 默认实例记录与当前选择一致，切回同一实例时仍需更新。",
+"text": "# 默认实例记录与当前选择一致，切换回同一实例时仍需更新。",
 "spans": [
 [
 447,
@@ -87284,7 +87284,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例根同时作为 cwd 和 AKARI_INSTANCE_DIR，必须使用绝对路径以避免重复拼接。",
+"text": "# 实例根目录同时作为 cwd 和 AKARI_INSTANCE_DIR，必须使用绝对路径以避免重复拼接。",
 "spans": [
 [
 671,
@@ -88369,7 +88369,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 立绘不透明部分的主色与暗部，深色版据此取色。改主题时这里先失败，避免悄悄换掉品牌色。",
+"text": "# 立绘不透明部分的主色与暗部，深色版据此取色。修改主题时这里先失败，避免悄悄替换品牌色。",
 "spans": [
 [
 15,
@@ -88549,7 +88549,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令层自行构造执行器，故按构造顺序留一份引用，供用例读回实际 argv。",
+"text": "# 命令层自行构造执行器，故按构造顺序留一份引用，供用例读取实际 argv。",
 "spans": [
 [
 31,
@@ -88594,7 +88594,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 试运行由执行器自己短路，命令层仍然构造执行器并下发 argv，但不落盘也不写清单。",
+"text": "# 试运行由执行器自己短路，命令层仍然构造执行器并下发 argv，但不写入磁盘也不写入清单。",
 "spans": [
 [
 137,
@@ -88609,7 +88609,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 直接粘贴仓库地址时补 git+ 前缀，安装完成后按 direct_url 反查包名再记录。",
+"text": "# 直接粘贴仓库地址时补充 git+ 前缀，安装完成后按 direct_url 反向查找包名再记录。",
 "spans": [
 [
 142,
@@ -88639,7 +88639,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 记录还在但环境里已经没有该包时，虽然无处可卸，但仍要能删掉清单里的记录。",
+"text": "# 记录还在但环境里已经没有该包时，虽然无处可卸，但仍要能删除清单里的记录。",
 "spans": [
 [
 193,
@@ -88686,7 +88686,7 @@
 "start": 41,
 "end": 41,
 "kind": "py-docstring",
-"text": "记下 argv，不执行。",
+"text": "记录 argv，不执行。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -89125,7 +89125,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 机器人与会话，即模块函数的入参与运行环境。",
+"text": "# 机器人与会话，即模块函数的输入参数与运行环境。",
 "spans": [
 [
 270,
@@ -89395,7 +89395,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 场景组 ID 自身不是平台场景，不可交给 resolve_union，因为\n# 其自愈分支会为组 ID 建出一条以自身为平台 ID 的映射行。",
+"text": "# 场景组 ID 自身不是平台场景，不可交给 resolve_union，因为\n# 其自愈分支会为组 ID 创建一条以自身为平台 ID 的映射行。",
 "spans": [
 [
 197,
@@ -89970,7 +89970,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 以 ConfigMeta 为元类重建该类。元类无法在类创建后更换，只能另建一个同名类。",
+"text": "# 以 ConfigMeta 为元类重建该类。元类无法在类创建后更换，只能新建一个同名类。",
 "spans": [
 [
 99,
@@ -90200,7 +90200,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 逐个字段写盘，因为写入过程会触发 watch() 热重载，整批结束再保存会丢失中途重载前的改动。",
+"text": "# 逐个字段写入磁盘，因为写入过程会触发 watch() 热重载，整批结束再保存会丢失中途重载前的改动。",
 "spans": [
 [
 198,
@@ -90365,7 +90365,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 写路径一律落实例表（fallback=False），实例进程本就只读，此路径实际只有 CLI 会走，\n# 而 CLI 明确知道自己在操作哪个实例。回退会把改动写进基表，串给另一个实例。",
+"text": "# 写入路径一律写入实例表（fallback=False），实例进程本就只读，此路径实际只有 CLI 会触发，\n# 而 CLI 明确知道自己在操作哪个实例。回退会把改动写入基表，影响另一个实例。",
 "spans": [
 [
 428,
@@ -91650,7 +91650,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 将单个入参归一化为消息元素。",
+"text": "# 将单个输入参数归一化为消息元素。",
 "spans": [
 [
 511,
@@ -91750,7 +91750,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 可作为消息发送的入参类型。取联合类型而非 TypeVar，因为\n# 后者会拒绝 MessageChain | MessageNodes 这类联合。",
+"text": "# 可作为消息发送的输入参数类型。取联合类型而非 TypeVar，因为\n# 后者会拒绝 MessageChain | MessageNodes 这类联合。",
 "spans": [
 [
 768,
@@ -91770,7 +91770,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本函数的职责即是把多种入参归一化，过程中类型会逐步收敛，故以 Any 承接",
+"text": "# 本函数的职责即是把多种输入参数归一化，过程中类型会逐步收敛，故以 Any 承接",
 "spans": [
 [
 799,
@@ -92265,7 +92265,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 将指令操作的文案入参规范化为消息元素。",
+"text": "# 将指令操作的文案输入参数规范化为消息元素。",
 "spans": [
 [
 776,
@@ -93435,7 +93435,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 受保护区间专用，不允许跨标签吞掉中间文本，保证相邻 AT 码之间的正文不被豁免。",
+"text": "# 受保护区间专用，不允许跨标签覆盖中间文本，保证相邻 AT 码之间的正文不被豁免。",
 "spans": [
 [
 14,
@@ -94582,7 +94582,7 @@
 "start": 117,
 "end": 119,
 "kind": "md-list",
-"text": "- 用 `msg.finish()` / 抛 `SessionFinished` 表达业务拒绝（请用 `Stop`）\n- 在观察入口吞掉原异常或改写执行结果\n- 依赖对 SessionInfo 身份字段的写入（可写字段必须经 `SessionDraft` 提交）",
+"text": "- 用 `msg.finish()` / 抛 `SessionFinished` 表达业务拒绝（请用 `Stop`）\n- 在观察入口忽略原异常或改写执行结果\n- 依赖对 SessionInfo 身份字段的写入（可写字段必须经 `SessionDraft` 提交）",
 "ctx": "故障边界",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6523
@@ -97030,7 +97030,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台侧可能已撤销本次消息的上下文。此时不能把同 session_id 重建的\n# 入站上下文一并删掉。",
+"text": "# 平台侧可能已撤销本次消息的上下文。此时不能把同 session_id 重建的\n# 入站上下文一并删除。",
 "spans": [
 [
 128,
@@ -97500,7 +97500,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 会话一律经 assign() 建立，其中必定按场景语言赋值。此处的默认值仅用于\n# 反序列化等未赋值情形，故声明为非可选，免去各调用点无谓的判空。",
+"text": "# 会话一律经 assign() 建立，其中必定按场景语言赋值。此处的默认值仅用于\n# 反序列化等未赋值情形，故声明为非可选，免去各调用点无谓的空值检查。",
 "spans": [
 [
 214,
@@ -99110,7 +99110,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# _current_keys() 的数据库查询会让出执行权。其间同一执行域的另一协程\n# （被等待任务消费的回复会话）可能已把 token 装上。必须在判定冲突前\n# 重新确认所有权，否则根命令会等待自己持有的 lease 永久自锁。",
+"text": "# _current_keys() 的数据库查询会让出执行权。其间同一执行域的另一协程\n# （被等待任务消费的回复会话）可能已把 token 写入。必须在判定冲突前\n# 重新确认所有权，否则根命令会等待自己持有的 lease 永久自锁。",
 "spans": [
 [
 154,
@@ -99540,7 +99540,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 绑定与通道变更是低频管理操作。读取候选 bucket 时与它们共用 mutation\n# 域，避免先读旧 Union、再读新 channel 而拼出数据库中从未存在过的范围。",
+"text": "# 绑定与通道变更是低频管理操作。读取候选 bucket 时与它们共用 mutation\n# 域，避免先读旧 Union、再读新 channel 而组合出数据库中从未存在过的范围。",
 "spans": [
 [
 292,
@@ -99580,7 +99580,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先找已 ready 的精确引用目标。没有则同时等待所有 pending 任务中的任意一个。\n# 避免记录早但发送卡住的任务阻塞后续 ready 任务。",
+"text": "# 先找已 ready 的精确引用目标。没有则同时等待所有 pending 任务中的任意一个，\n# 避免记录早但发送阻塞的任务阻塞后续 ready 任务。",
 "spans": [
 [
 370,
@@ -100645,7 +100645,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 清单未声明 ``config_table`` 时按装饰器的命名规则回推，适配器为 ``bot_<名>``，\n# 模块为 ``module_<名>``。",
+"text": "# 清单未声明 ``config_table`` 时按装饰器的命名规则推导，适配器为 ``bot_<名>``，\n# 模块为 ``module_<名>``。",
 "spans": [
 [
 72,
@@ -101055,7 +101055,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写进 data。此处不创建\n# 目录，否则只读取版本号的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 创建。",
+"text": "# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写入 data。此处不创建\n# 目录，否则只读取版本号的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 创建。",
 "spans": [
 [
 37,
@@ -101485,7 +101485,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需记录 revision。",
+"text": "# 旧版本号的终点。到达该版本后旧数据库不再需要逐级升级，只需记录 revision。",
 "spans": [
 [
 26,
@@ -101500,7 +101500,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版本号到 ``(包名， revision)`` 的对照表。使用包名，与 PackageRegistry.migration_dirs()\n# 的键一致。旧库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。",
+"text": "# 旧版本号到 ``(包名， revision)`` 的对照表。使用包名，与 PackageRegistry.migration_dirs()\n# 的键一致。旧数据库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。",
 "spans": [
 [
 29,
@@ -101520,7 +101520,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# v3 中，原本以平台 ID 为主键的两张核心表改挂 union，表名与模型名一致，\n# 以免“target_info”这类旧名继续读作“平台场景信息”。",
+"text": "# v3 中，原本以平台 ID 为主键的两张核心表改为关联 union，表名与模型名一致，\n# 以免“target_info”这类旧名继续读作“平台场景信息”。",
 "spans": [
 [
 46,
@@ -101540,7 +101540,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# v3 中，原本以平台 ID 为主键的表改挂 union，旧数据的 union ID 直接沿用原 ID，因此只需重命名主键列。",
+"text": "# v3 中，原本以平台 ID 为主键的表改为关联 union，旧数据的 union ID 直接沿用原 ID，因此只需重命名主键列。",
 "spans": [
 [
 53,
@@ -101620,7 +101620,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 核心表改名。调用方已先执行过 generate_schemas()，按新模型建出的目标表此刻为空表，\n# 须先移除再改名，否则改名会与之冲突。目标表若已有数据，说明改名早已完成，跳过即可。",
+"text": "# 核心表改名。调用方已先执行过 generate_schemas()，按新模型创建的目标表此刻为空表，\n# 须先移除再改名，否则改名会与之冲突。目标表若已有数据，说明改名早已完成，跳过即可。",
 "spans": [
 [
 150,
@@ -101725,7 +101725,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版 connect 将机器人互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。\n# 该结构已改为两级字典，旧值直接清除，重新执行一次 bind auto 即可。",
+"text": "# 旧版 connect 将机器人互认记录存为扁平列表，无法反向查询某条记录属于哪个场景，解绑时也就无从删除。\n# 该结构已改为两级字典，旧值直接清除，重新执行一次 bind auto 即可。",
 "spans": [
 [
 196,
@@ -101797,7 +101797,7 @@
 "start": 145,
 "end": 149,
 "kind": "py-docstring",
-"text": "将数据库升级至 v3，使平台 ID 与数据解耦，数据改挂 union。\n\n:param conn: 数据库连接。",
+"text": "将数据库升级至 v3，使平台 ID 与数据解耦，数据改为关联 union。\n\n:param conn: 数据库连接。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -101812,7 +101812,7 @@
 "start": 301,
 "end": 309,
 "kind": "py-docstring",
-"text": "删除指向不存在列的索引。\n\n``generate_schemas(safe=True)`` 会为已存在的旧表补建按当前模型声明的索引，而旧表可能尚未改\n列名，于是出现指向不存在列的索引。SQLite 改动任何表结构时都会重新解析整个库结构，这类索引会\n让升级的第一条 ALTER 失败。删掉的索引随后由 ``generate_schemas`` 依模型重建。\n\n:param conn: 数据库连接。",
+"text": "删除指向不存在列的索引。\n\n``generate_schemas(safe=True)`` 会为已存在的旧表补建按当前模型声明的索引，而旧表可能尚未改\n列名，于是出现指向不存在列的索引。SQLite 改动任何表结构时都会重新解析整个库结构，这类索引会\n让升级的第一条 ALTER 失败。删除的索引随后由 ``generate_schemas`` 依模型重建。\n\n:param conn: 数据库连接。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -101875,7 +101875,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 路径可能照抄自 Windows 配置，``Path`` 在其他平台上判不出盘符与反斜杠开头的写法，\n# 故按字面补判，免得把绝对路径锚到实例根。",
+"text": "# 路径可能照抄自 Windows 配置，``Path`` 在其他平台上无法识别盘符与反斜杠开头的写法，\n# 故按字面补充判断，免得把绝对路径锚定到实例根目录。",
 "spans": [
 [
 17,
@@ -101895,7 +101895,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 默认链接是 ``sqlite://database/save.db`` 这样的相对路径，驱动按进程 cwd 解析它，\n# 从实例外启动的入口因此会把库建到调用目录。实例内的相对路径一律以\n# :class:`akaribot.core.paths.Paths` 记录的实例根为基准，与 ``AKARI_INSTANCE_DIR`` 一致。",
+"text": "# 默认链接是 ``sqlite://database/save.db`` 这样的相对路径，驱动按进程 cwd 解析它，\n# 从实例外启动的入口因此会把数据库创建到调用目录。实例内的相对路径一律以\n# :class:`akaribot.core.paths.Paths` 记录的实例根目录为基准，与 ``AKARI_INSTANCE_DIR`` 一致。",
 "spans": [
 [
 25,
@@ -101920,7 +101920,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 内存库没有文件可建，故不预建目录。其余后端先建好目录，驱动不会代建。",
+"text": "# 内存数据库没有文件可建，故不预先创建目录。其余后端先创建好目录，驱动不会代建。",
 "spans": [
 [
 56,
@@ -102497,7 +102497,7 @@
 "start": 522,
 "end": 530,
 "kind": "py-docstring",
-"text": "标记 revision 为已应用而不执行。\n\n供旧库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常写入记录，\n以便日后装上该包时不再重放这些历史步骤。\n\n:param package: 包名。\n:param revisions: revision 列表。",
+"text": "标记 revision 为已应用而不执行。\n\n供旧数据库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常写入记录，\n以便日后安装该包时不再重放这些历史步骤。\n\n:param package: 包名。\n:param revisions: revision 列表。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -102540,7 +102540,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧库此时仍是 target_info。若表已改名为 target_union_info，说明库已越过本步骤。",
+"text": "# 旧数据库此时仍是 target_info。若表已改名为 target_union_info，说明数据库已越过本步骤。",
 "spans": [
 [
 14,
@@ -102600,7 +102600,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧名到新名。表若已由 generate_schemas 按新模型建出，须先移除这张空表再改名。",
+"text": "# 旧名到新名。表若已由 generate_schemas 按新模型创建，须先移除这张空表再改名。",
 "spans": [
 [
 16,
@@ -102720,7 +102720,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 后续 revision 追加的列此时尚不存在，整行保存会因缺列被判为 partial。",
+"text": "# 后续 revision 追加的列此时尚不存在，整行保存会因缺列被判定为 partial。",
 "spans": [
 [
 88,
@@ -102735,7 +102735,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版 connect 把互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。\n# 该结构已改为两级字典，旧值直接清除，重新执行一次 ``bind auto`` 即可。",
+"text": "# 旧版 connect 把互认记录存为扁平列表，无法反向查询某条记录属于哪个场景，解绑时也就无从删除。\n# 该结构已改为两级字典，旧值直接清除，重新执行一次 ``bind auto`` 即可。",
 "spans": [
 [
 93,
@@ -102925,7 +102925,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# iter_union_models 已按 union_scope 过滤，此处取到的必然是同域的表，\n# 不会把场景 ID 误当作用户 ID 建行。",
+"text": "# iter_union_models 已按 union_scope 过滤，此处取到的必然是同域的表，\n# 不会把场景 ID 误当作用户 ID 创建记录。",
 "spans": [
 [
 263,
@@ -103075,7 +103075,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 创建新组、改挂映射和继承场景限制名单必须原子完成。否则最后一步失败会留下\n# 一个孤立的新 union，并使账号已经脱离原组但尚未继承全部处罚状态。",
+"text": "# 创建新组、重新关联映射和继承场景限制名单必须原子完成。否则最后一步失败会留下\n# 一个孤立的新 union，并使账号已经脱离原组但尚未继承全部处罚状态。",
 "spans": [
 [
 635,
@@ -103095,7 +103095,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先建新组再改挂映射行，全程不出现“账号没有映射行”的中间态。\n# union_id 不是主键，可通过单条 UPDATE 改挂。",
+"text": "# 先创建新组再重新关联映射行，全程不出现“账号没有映射行”的中间态。\n# union_id 不是主键，可通过单条 UPDATE 重新关联。",
 "spans": [
 [
 650,
@@ -103135,7 +103135,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先按冲突取舍将两侧模块数据合并至一处，再整体改挂到新组。新组为空，第二步不会再产生冲突。",
+"text": "# 先按冲突取舍将两侧模块数据合并至一处，再整体重新关联到新组。新组为空，第二步不会再产生冲突。",
 "spans": [
 [
 704,
@@ -103150,7 +103150,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# Union 事务统一先锁核心行、再锁映射行，反序会在 MySQL 下形成死锁环。\n# 锁定核心行后必须重读映射并验证它未改挂。",
+"text": "# Union 事务统一先锁定核心行、再锁定映射行，反序会在 MySQL 下形成死锁环。\n# 锁定核心行后必须重新读取映射并验证其未被重新关联。",
 "spans": [
 [
 845,
@@ -103220,7 +103220,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先建新组再改挂映射行，全程不出现“场景没有映射行”的中间态。\n# 新组仅含该场景，通道号复位为 1。",
+"text": "# 先创建新组再重新关联映射行，全程不出现“场景没有映射行”的中间态。\n# 新组仅含该场景，通道编号复位为 1。",
 "spans": [
 [
 989,
@@ -103280,7 +103280,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先按冲突取舍将两侧模块数据合并至一处，再整体改挂到新组。新组为空，第二步不会再产生冲突。",
+"text": "# 先按冲突取舍将两侧模块数据合并至一处，再整体重新关联到新组。新组为空，第二步不会再产生冲突。",
 "spans": [
 [
 1059,
@@ -104450,7 +104450,7 @@
 "start": 78,
 "end": 83,
 "kind": "md-list",
-"text": "- `client_init()` 注册节点时，把这些能力标志写进 `capabilities`。\n- `Module.unsupported_reason()` 根据 `read_all_messages` 和 `support_rss`，判断正则、事件、RSS 模块在当前会话中是否可用。\n- `check_bot_state()` 返回 `BotState`。\n- `can_*` 字段记录机器人能否执行对应操作，`permissions` 保存平台返回的权限。\n- 检查结果写进 `SessionInfo`。\n- `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。机器人缺少模块要求的权限时，这个模块不会启用。",
+"text": "- `client_init()` 注册节点时，把这些能力标志写入 `capabilities`。\n- `Module.unsupported_reason()` 根据 `read_all_messages` 和 `support_rss`，判断正则、事件、RSS 模块在当前会话中是否可用。\n- `check_bot_state()` 返回 `BotState`。\n- `can_*` 字段记录机器人能否执行对应操作，`permissions` 保存平台返回的权限。\n- 检查结果写入 `SessionInfo`。\n- `Module.unsupported_bot_permissions()` 读取这份结果，检查模块要求的权限。机器人缺少模块要求的权限时，这个模块不会启用。",
 "ctx": "能力声明",
 "path": "packages/akari-bot-core/akaribot/core/docs/adapter-development.md",
 "id": 7143
@@ -104666,7 +104666,7 @@
 "start": 42,
 "end": 42,
 "kind": "md-paragraph",
-"text": "`<实例根>/.bot.lock` 用来防止同一实例重复启动。同一实例第二次启动时，新进程会以退出码 1 结束。",
+"text": "`<实例根目录>/.bot.lock` 用来防止同一实例重复启动。同一实例第二次启动时，新进程会以退出码 1 结束。",
 "ctx": "进程拓扑",
 "path": "packages/akari-bot-core/akaribot/core/docs/architecture.md",
 "id": 7167
@@ -105287,7 +105287,7 @@
 "start": 18,
 "end": 18,
 "kind": "md-paragraph",
-"text": "`default` 的连接字符串由 `CoreSecretConfig.db_path` 提供。SQLite 的相对路径以实例根为基准解析，进程可以从任意目录启动。",
+"text": "`default` 的连接字符串由 `CoreSecretConfig.db_path` 提供。SQLite 的相对路径以实例根目录为基准解析，进程可以从任意目录启动。",
 "ctx": "双连接",
 "path": "packages/akari-bot-core/akaribot/core/docs/database.md",
 "id": 7236
@@ -105539,7 +105539,7 @@
 "start": 20,
 "end": 20,
 "kind": "md-paragraph",
-"text": "`uv add` 要把依赖写进 `[project]` 表，而仓库根目录的 `pyproject.toml` 没有这个表。因此新增依赖时，要按上面的命令用 `--package` 指定包。",
+"text": "`uv add` 要把依赖写入 `[project]` 表，而仓库根目录的 `pyproject.toml` 没有这个表。因此新增依赖时，要按上面的命令用 `--package` 指定包。",
 "ctx": "环境准备",
 "path": "packages/akari-bot-core/akaribot/core/docs/development-workflow.md",
 "id": 7264
@@ -105692,7 +105692,7 @@
 "start": 67,
 "end": 71,
 "kind": "md-list",
-"text": "- 新功能用 `dev/` 前缀，修复用 `fix/` 前缀，分支名使用英文。\n- 未经授权不执行 `git commit`、`git add`、`git push`、`git reset` 或 `git checkout -- <文件>`。授权只对当次请求有效。\n- 提交信息用英文书面语，正文写清实际运行输出、失败用例的对比与检查结果等证据。\n- 移动文件用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不记为 rename，按“先纯移动、再改内容”两段提交。\n- 包内有源码改动时，要提升该包的 `version`。不升版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。",
+"text": "- 新功能用 `dev/` 前缀，修复用 `fix/` 前缀，分支名使用英文。\n- 未经授权不执行 `git commit`、`git add`、`git push`、`git reset` 或 `git checkout -- <文件>`。授权只对当次请求有效。\n- 提交信息用英文书面语，正文写清实际运行输出、失败用例的对比与检查结果等证据。\n- 移动文件用 `git mv`，保留文件的修改历史。根目录保留同名兼容文件时 git 不记为 rename，按“先纯移动、再改内容”两段提交。\n- 包内有源码改动时，要提升该包的 `version`。不升级版本时，在提交信息的最后一段单独写一行 `Skip-Version: true`，跳过全部包。只想跳过部分包时，写 `Skip-Version: <包名>[, <包名>]`，列出要跳过的包。`tools/check_versions.py` 负责检查这项约定，由 CI 在 PR 阶段以目标分支为基准运行，日常检查不包含它。",
 "ctx": "分支与提交",
 "path": "packages/akari-bot-core/akaribot/core/docs/development-workflow.md",
 "id": 7281
@@ -106403,7 +106403,7 @@
 "start": 37,
 "end": 37,
 "kind": "md-paragraph",
-"text": "`send_message()` 的 `callback` 在用户引用或点击这条消息后执行，入参是回复的 `MessageSession`。",
+"text": "`send_message()` 的 `callback` 在用户引用或点击这条消息后执行，输入参数是回复的 `MessageSession`。",
 "ctx": "发送消息",
 "path": "packages/akari-bot-core/akaribot/core/docs/message-api.md",
 "id": 7360
@@ -106907,7 +106907,7 @@
 "start": 132,
 "end": 132,
 "kind": "md-paragraph",
-"text": "生成的文件留在目标目录。切到侧栏的“模块”页，先按 `c` 清除选择，再按 `i` 打开安装对话框。",
+"text": "生成的文件留在目标目录。切换到侧栏的“模块”页，先按 `c` 清除选择，再按 `i` 打开安装对话框。",
 "ctx": "安装并启用",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7416
@@ -107258,7 +107258,7 @@
 "start": 294,
 "end": 294,
 "kind": "md-paragraph",
-"text": "下面的例子在 `greet` 模块上继续添加命令。文案键要写进 `locales/zh_cn.json`。",
+"text": "下面的例子在 `greet` 模块上继续添加命令。文案键要写入 `locales/zh_cn.json`。",
 "ctx": "等待用户交互",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7455
@@ -107717,7 +107717,7 @@
 "start": 567,
 "end": 569,
 "kind": "md-list",
-"text": "- 配置在 `config.py` 中用 `@on_module_config(\"<模块>\")` 声明，表名为 `module_<模块>`。配置注释写在 `config.comments.module_<模块>.<字段名>` 下。详见[配置](config.md)。\n- 模型放在 `database/models.py`，继承 `DBModel`，表名在 `Meta.table` 声明。新增表要写进 `owned_tables`。结构变更用 `migrations/` 下的脚本完成。详见[数据库](database.md)。\n- 文案一律用 `I18NContext(\"key\", **参数)`，并且只在包内 `locales/zh_cn.json` 中创建对应条目。详见[本地化](i18n.md)。",
+"text": "- 配置在 `config.py` 中用 `@on_module_config(\"<模块>\")` 声明，表名为 `module_<模块>`。配置注释写在 `config.comments.module_<模块>.<字段名>` 下。详见[配置](config.md)。\n- 模型放在 `database/models.py`，继承 `DBModel`，表名在 `Meta.table` 声明。新增表要写入 `owned_tables`。结构变更用 `migrations/` 下的脚本完成。详见[数据库](database.md)。\n- 文案一律用 `I18NContext(\"key\", **参数)`，并且只在包内 `locales/zh_cn.json` 中创建对应条目。详见[本地化](i18n.md)。",
 "ctx": "配置、数据库与本地化",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7506
@@ -108509,7 +108509,7 @@
 "start": 27,
 "end": 27,
 "kind": "md-paragraph",
-"text": "命令处理函数的入参类型。实际对象是当前会话的 `MessageSession`。",
+"text": "命令处理函数的输入参数类型。实际对象是当前会话的 `MessageSession`。",
 "ctx": "`Bot.MessageSession`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7594
@@ -108608,7 +108608,7 @@
 "start": 67,
 "end": 67,
 "kind": "md-paragraph",
-"text": "读取机器人在当前场景的权限快照，返回 `BotState`。结果会写进 `SessionInfo.bot_state`，供 `Module.unsupported_bot_permissions()` 检查模块权限。",
+"text": "读取机器人在当前场景的权限快照，返回 `BotState`。结果会写入 `SessionInfo.bot_state`，供 `Module.unsupported_bot_permissions()` 检查模块权限。",
 "ctx": "`check_bot_state()`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7605
@@ -109544,7 +109544,7 @@
 "start": 428,
 "end": 428,
 "kind": "md-paragraph",
-"text": "声明平台能力。`client_init()` 注册节点时，把这些标志写进 `capabilities`。",
+"text": "声明平台能力。`client_init()` 注册节点时，把这些标志写入 `capabilities`。",
 "ctx": "`Features`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7709
@@ -110204,7 +110204,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）。占位判定是 schema 与\n# placeholders 共用的口径，只在这里出现一次。",
+"text": "# 键清单以配置文件为准（模板在生成期已把声明字段全部写入磁盘）。占位判定是 schema 与\n# placeholders 共用的口径，只在这里出现一次。",
 "spans": [
 [
 109,
@@ -110284,7 +110284,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不做转换会把 `enable` 之类的布尔项写成字符串 ``\"true\"``，导致文件里类型不对，读回虽是 ``true``\n# 但任何按布尔取用的代码都会拿到真值字符串。",
+"text": "# 不做转换会把 `enable` 之类的布尔项写成字符串 ``\"true\"``，导致文件里类型不对，重新读取虽是 ``true``\n# 但任何按布尔取用的代码都会拿到真值字符串。",
 "spans": [
 [
 241,
@@ -110319,7 +110319,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 配置模板在导入时写盘。当前进程启动时还没有这张表，必须重新加载后再读 schema。",
+"text": "# 配置模板在导入时写入磁盘。当前进程启动时还没有这张表，必须重新加载后再读取 schema。",
 "spans": [
 [
 408,
@@ -110519,7 +110519,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 包已安装但实例尚未创建该表时读不到条数。此时保留表并如实返回“未知”，不让一张表拖垮整份清单。",
+"text": "# 包已安装但实例尚未创建该表时读不到条数。此时保留表并如实返回“未知”，不让一张表导致整份清单异常。",
 "spans": [
 [
 246,
@@ -110549,7 +110549,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 用户错误先判完再碰库，未知列与非法取值不该先撞上一条数据库报错。",
+"text": "# 用户错误先校验完成再访问数据库，未知列与非法取值不该先触发数据库报错。",
 "spans": [
 [
 291,
@@ -110684,7 +110684,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表名只从 manifest 读取，**绝不接受调用方传入**，因为 purge 是破坏性操作，谁拥有哪张表只能由包自己\n# 声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删掉未声明的表。",
+"text": "# 表名只从 manifest 读取，**绝不接受调用方传入**，因为 purge 是破坏性操作，谁拥有哪张表只能由包自己\n# 声明。CLI 即使被改坏或被人手工调用，也无法借这个入口删除未声明的表。",
 "spans": [
 [
 31,
@@ -110739,7 +110739,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 没有迁移目录是合法状态，本仓库 39 个模块包不创建数据表。只有包根本没装才算用户错误。",
+"text": "# 没有迁移目录是合法状态，本仓库 39 个模块包不创建数据表。只有包未安装时才算用户错误。",
 "spans": [
 [
 98,
@@ -110754,7 +110754,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版本号转换与逐包 revision 一并执行，旧库升到某版本后其 revision 视为已应用。",
+"text": "# 旧版本号转换与逐包 revision 一并执行，旧数据库升到某版本后其 revision 视为已应用。",
 "spans": [
 [
 104,
@@ -110769,7 +110769,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表已不存在时按幂等成功处理，因为本命令的契约是“这些表不再存在”，重新运行或手工删除后再次运行\n# 都满足该契约，报成失败只会让卸载流程卡在一个已经达成的目标上。缺失的表名如实返回，操作者\n# 据此判断是不是清单漂移。",
+"text": "# 表已不存在时按幂等成功处理，因为本命令的契约是“这些表不再存在”，重新运行或手工删除后再次运行\n# 都满足该契约，报成失败只会让卸载流程停滞在已经达成的目标上。缺失的表名如实返回，操作者\n# 据此判断是不是清单漂移。",
 "spans": [
 [
 113,
@@ -110794,7 +110794,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# --json 时把原因也写进 stdout，因为调用方（CLI 的 db_purge）解析的是 stdout，\n# 只写 stderr 则拿不到结构化原因，只能退回“退出码 1”这种无用信息。",
+"text": "# --json 时把原因也写入 stdout，因为调用方（CLI 的 db_purge）解析的是 stdout，\n# 只写 stderr 则拿不到结构化原因，只能退回“退出码 1”这种无用信息。",
 "spans": [
 [
 204,
@@ -111024,7 +111024,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 可编辑安装的入口只在安装时写入元数据，源码 pyproject 之后新增的 akaribot.docs 声明要重装才生效。",
+"text": "# 可编辑安装的入口只在安装时写入元数据，源码 pyproject 之后新增的 akaribot.docs 声明要重新安装才生效。",
 "spans": [
 [
 695,
@@ -111654,7 +111654,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仓库根环境变量。取值须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，根目录的 tester.py 会设置它。",
+"text": "# 仓库根目录环境变量。取值须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，根目录的 tester.py 会设置它。",
 "spans": [
 [
 41,
@@ -111684,7 +111684,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本模块位于包内，按自身位置回推仓库根只会落到 site-packages，故取与\n# :mod:`akaribot.testing.runner` 相同的判据，优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``\n# 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
+"text": "# 本模块位于包内，按自身位置反推仓库根目录只会落到 site-packages，故取与\n# :mod:`akaribot.testing.runner` 相同的判据，优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``\n# 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
 "spans": [
 [
 51,
@@ -111709,7 +111709,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 判据只用目录是否存在，不依赖已安装包的 metadata，仓库根一并保留，使 ``tester`` 等根级脚本\n# 在子进程中仍可导入。仓库根不可知时返回空列表，此时 ``akaribot`` 由已安装包提供。",
+"text": "# 判据只用目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根级脚本\n# 在子进程中仍可导入。仓库根目录不可知时返回空列表，此时 ``akaribot`` 由已安装包提供。",
 "spans": [
 [
 62,
@@ -111729,7 +111729,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 显式传入实例根下的 .env，因为不给路径时 python-dotenv 从本模块所在目录向上查找，包内位置与\n# 仓库根、实例根都不对应。AKARI_INSTANCE_DIR 未设置时实例根即进程 cwd。",
+"text": "# 显式传入实例根目录下的 .env，因为不给路径时 python-dotenv 从本模块所在目录向上查找，包内位置与\n# 仓库根目录、实例根目录都不对应。AKARI_INSTANCE_DIR 未设置时实例根目录即进程 cwd。",
 "spans": [
 [
 71,
@@ -111784,7 +111784,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 结构只含 default_locale 与 config_version，这两个顶层键不属于任何模板，扫描补不出来。\n# 注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。",
+"text": "# 结构只含 default_locale 与 config_version，这两个顶层键不属于任何模板，扫描补不出来。\n# 注释先以 i18n 标记写入磁盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。",
 "spans": [
 [
 99,
@@ -111859,7 +111859,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同，\n# 宁可漏报也不误报，因为误报会让本来可用的部署起不来。",
+"text": "# 通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同，\n# 宁可漏报也不误报，因为误报会让本来可用的部署无法启动。",
 "spans": [
 [
 338,
@@ -112159,7 +112159,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# client_name 不保证跨适配器唯一（onebot 与 milky 同为 \"QQ\"），重启映射因此记录在进程\n# 对象上，不按名字反查，以免重启时认错实例。",
+"text": "# client_name 不保证跨适配器唯一（onebot 与 milky 同为 \"QQ\"），重启映射因此记录在进程\n# 对象上，不按名字反向查找，以免重启时认错实例。",
 "spans": [
 [
 710,
@@ -112424,7 +112424,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只忽略配置模块本身不存在。配置文件内部缺少依赖同样表现为\n# ModuleNotFoundError，若一概吞掉会让模块在缺少必要配置时半加载。",
+"text": "# 只忽略配置模块本身不存在。配置文件内部缺少依赖同样表现为\n# ModuleNotFoundError，若一概忽略会让模块在缺少必要配置时半加载。",
 "spans": [
 [
 68,
@@ -112759,7 +112759,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 过滤结果取决于四段判据，缓存键必须全部带上，因为只按 target_from 建键会让同一场景\n# 配上不同客户端名时取到旧结果，漏掉平台两段则会让一个实例命中另一个实例的缓存。",
+"text": "# 过滤结果取决于四段判据，缓存键必须全部带上，因为只按 target_from 构造缓存键会让同一场景\n# 配上不同客户端名时取到旧结果，漏掉平台两段则会让一个实例命中另一个实例的缓存。",
 "spans": [
 [
 706,
@@ -112834,7 +112834,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先处理完 Queue handler 中的任务，再进入 Scheduler 维护。反序会形成永久互锁——\n# 执行 load/unload 的 handler 卡在 Scheduler 锁上，而 reload 在等它收尾。\n# Scheduler 窗口仍须覆盖 importlib.reload()，旧函数的 __globals__ 指向原地更新的模块字典。",
+"text": "# 先处理完 Queue handler 中的任务，再进入 Scheduler 维护。反序会形成永久互锁——\n# 执行 load/unload 的 handler 阻塞在 Scheduler 锁上，而 reload 在等它收尾。\n# Scheduler 窗口仍须覆盖 importlib.reload()，旧函数的 __globals__ 指向原地更新的模块字典。",
 "spans": [
 [
 807,
@@ -113234,7 +113234,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 与启动期 init_modules 对缺失模块的清理同向，残留的 load=False 会误停重装后的模块。",
+"text": "# 与启动期 init_modules 对缺失模块的清理同向，残留的 load=False 会误停重新安装后的模块。",
 "spans": [
 [
 1327,
@@ -118144,7 +118144,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 判据是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根从\n# ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。\n# 打包形态下找不到这样的祖先时回退到包内目录，测试目录必然不存在，调用方的存在性判断照常生效。",
+"text": "# 判据是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根目录从\n# ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。\n# 打包形态下找不到这样的祖先时回退到包内目录，测试目录必然不存在，调用方的存在性判断照常生效。",
 "spans": [
 [
 30,
@@ -120630,7 +120630,7 @@
 "start": 508,
 "end": 508,
 "kind": "py-docstring",
-"text": "热加载刚安装好的模块包。未安装或被发现层拒绝时返回 False。",
+"text": "热加载新安装的模块包。未安装或被发现层拒绝时返回 False。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -120938,7 +120938,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 同一批包的规范化包名到原因的映射，供依赖校验把“依赖被 API 门槛拒绝的包”判为不可用。",
+"text": "# 同一批包的规范化包名到原因的映射，供依赖校验把“依赖被 API 门槛拒绝的包”判定为不可用。",
 "spans": [
 [
 260,
@@ -121013,7 +121013,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 发现阶段已闸过一遍，此时覆盖会丢掉已记录的原因（被拒的包已不在 _entries 里）",
+"text": "# 发现阶段已检查过一遍，此时覆盖会丢失已记录的原因（被拒的包已不在 _entries 里）",
 "spans": [
 [
 372,
@@ -121028,7 +121028,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 结果分两份，展示用标签到原因供 :meth:`incompatible` / :meth:`report_lines` 报出，\n# 规范化包名到原因供依赖校验把“依赖一个已被拒绝的包”判为不可用。本方法不改动\n# 类状态，由调用方确定如何记录。",
+"text": "# 结果分两份，展示用标签到原因供 :meth:`incompatible` / :meth:`report_lines` 报出，\n# 规范化包名到原因供依赖校验把“依赖一个已被拒绝的包”判定为不可用。本方法不改动\n# 类状态，由调用方确定如何记录。",
 "spans": [
 [
 384,
@@ -121053,7 +121053,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n\n# 快照接上之前写盘，新实例生成的配置注释全部退化为空。",
+"text": "# 只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n\n# 快照接上之前写入磁盘，新实例生成的配置注释全部退化为空。",
 "spans": [
 [
 443,
@@ -121223,7 +121223,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 它可能仍装在环境里，但不会完成注册。",
+"text": "# 它可能仍安装在环境里，但不会完成注册。",
 "spans": [
 [
 940,
@@ -121273,7 +121273,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 包 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属\n# 的依赖都能解析为已安装包”为已装判据。已知边界是手工装齐某个未选中 extra 的全部依赖时会被\n# 误判为已装，代价是多记一条依赖边。既有测试固化此判据。",
+"text": "# 包 metadata 不记录安装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属\n# 的依赖都能解析为已安装包”为已安装判据。已知边界是手工安装完整某个未选中 extra 的全部依赖时会被\n# 误判为已安装，代价是多记一条依赖边。既有测试固化此判据。",
 "spans": [
 [
 997,
@@ -121298,7 +121298,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# extra 未指定时 packaging 代入空字符串，带 ``extra`` 子句的标记因此先判为假，再逐个\n# 代入候选 extra 重判。只有已装 extra 的子句才算成立。标记无法求值时按成立处理，因为\n# 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。",
+"text": "# extra 未指定时 packaging 代入空字符串，带 ``extra`` 子句的标记因此先判定为假，再逐个\n# 代入候选 extra 重新判断。只有已安装 extra 的子句才算成立。标记无法求值时按成立处理，因为\n# 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。",
 "spans": [
 [
 1010,
@@ -122213,7 +122213,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧库中数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补建映射行。",
+"text": "# 旧数据库中数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补建映射行。",
 "spans": [
 [
 550,
@@ -122303,7 +122303,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# (旧路径， 新路径)，两者都相对仓库根。",
+"text": "# (旧路径， 新路径)，两者都相对仓库根目录。",
 "spans": [
 [
 22,
@@ -122335,7 +122335,7 @@
 "start": 1,
 "end": 15,
 "kind": "py-docstring",
-"text": "assets / data 布局迁移脚本。\n\n旧版把可写内容与只读资源一并放在 ``assets`` 下。新版按“只读留 assets、可写进 data”\n拆分，将运行时产物、部署者提供的内容以及模块的下载资源改放 ``data`` 目录。模块包的可写数据\n再进一步改挂实例目录，位置由 ``PackageRegistry.package_data()`` 确定。\n\n升级既有部署时，从仓库根目录执行一次：\n\n    python -m akaribot.core.scripts.migrate_assets_to_data [--dry-run]\n\n实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根，未设置时取当前目录。\n\n脚本只做移动，不覆盖目标位置已存在的文件，因而可以重复执行。已经迁移过的条目会被跳过。",
+"text": "assets / data 布局迁移脚本。\n\n旧版把可写内容与只读资源一并放在 ``assets`` 下。新版按“只读留 assets、可写入 data”\n拆分，将运行时产物、部署者提供的内容以及模块的下载资源迁移至 ``data`` 目录。模块包的可写数据\n再进一步改为挂载到实例目录，位置由 ``PackageRegistry.package_data()`` 确定。\n\n升级既有部署时，从仓库根目录执行一次：\n\n    python -m akaribot.core.scripts.migrate_assets_to_data [--dry-run]\n\n实例内迁移要求 ``AKARI_INSTANCE_DIR`` 指向实例根目录，未设置时取当前目录。\n\n脚本只做移动，不覆盖目标位置已存在的文件，因而可以重复执行。已经迁移过的条目会被跳过。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -122478,7 +122478,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 模块与核心 Job 都经统一 wrapper 注册，以便热重载、全局启停和 Server\n# 关闭时能够按稳定 ID 替换，并等待运行中的 coroutine 真正退出。",
+"text": "# 模块与核心 Job 都经统一 wrapper 注册，以便热重载、全局启动与停止和 Server\n# 关闭时能够按稳定 ID 替换，并等待运行中的 coroutine 真正退出。",
 "spans": [
 [
 64,
@@ -124233,7 +124233,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 取数值真假而非字符串真假，因为字符串 \"0\" 非空，bool() 会将其判为真",
+"text": "# 取数值真假而非字符串真假，因为字符串 \"0\" 非空，bool() 会将其判定为真",
 "spans": [
 [
 21,
@@ -124473,7 +124473,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 按消息通道而非 union 建键，因为同一 union 下通道编号不同的场景属于不同的现实场景，\n# 各自的对局互不相干，并作一处会让一边开局把另一边也带进游戏中。",
+"text": "# 按消息通道而非 union 构造键，因为同一 union 下通道编号不同的场景属于不同的现实场景，\n# 各自的对局互不相干，合并为一处会让一边开局把另一边也带进游戏中。",
 "spans": [
 [
 25,
@@ -125218,7 +125218,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已发送公告的场景记录，单键存放，避免为每个场景建行而污染存储表。",
+"text": "# 已发送公告的场景记录，单键存放，避免为每个场景创建记录行而污染存储表。",
 "spans": [
 [
 17,
@@ -125233,7 +125233,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 公告延迟推送的区间（秒）。随机取值以错峰，因为多个场景常在同一时段活跃，\n# 固定延迟会让公告集中在同一瞬间涌出，撞上平台频控。",
+"text": "# 公告延迟推送的区间（秒）。随机取值以错峰，因为多个场景常在同一时段活跃，\n# 固定延迟会让公告集中在同一瞬间涌出，触发平台频率限制。",
 "spans": [
 [
 20,
@@ -125253,7 +125253,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。\n# 仅存于进程内存，重启即清空。因已发送记录只在推送成功后落库，重启后会自然重排。",
+"text": "# 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。\n# 仅存于进程内存，重启即清空。因已发送记录只在推送成功后写入数据库，重启后会自然重排。",
 "spans": [
 [
 25,
@@ -125293,7 +125293,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 内存态是唯一来源，判断与写入均以内存为准，落库时全量覆盖。\n# 若改为逐次读库-追加-写回，两个场景并发触发时先写的记录会被覆盖，对应场景将重复收到公告。",
+"text": "# 内存态是唯一来源，判断与写入均以内存为准，写入数据库时全量覆盖。\n# 若改为逐次读取数据库、追加再写回，两个场景并发触发时先写的记录会被覆盖，对应场景将重复收到公告。",
 "spans": [
 [
 34,
@@ -125313,7 +125313,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 公告投递任务可能并发完成。每次持久化都从共享内存字典生成一份快照，若两个 save\n# 写入顺序交错时，较早生成的旧快照可能最后落库，使后完成的场景在重启后再次收到公告。",
+"text": "# 公告投递任务可能并发完成。每次持久化都从共享内存字典生成一份快照，若两个 save\n# 写入顺序交错时，较早生成的旧快照可能最后写入数据库，使后完成的场景在重启后再次收到公告。",
 "spans": [
 [
 38,
@@ -125490,7 +125490,7 @@
 "start": 52,
 "end": 64,
 "kind": "py-docstring",
-"text": "把 ``\"源 -> 目标\"`` 形式的配置解析为映射。\n\n两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类，例如 ``\"Telegram -> QQBot\"``\n只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写\n``\"Telegram-alt -> QQBot\"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。\n\n只写源时目标为 None，表示该客户端退役但不提供迁移去处。格式错误的项一律跳过并记录警告，\n不使解析失败，因为退役属于运营配置，一处笔误不应拖垮整个实例的启动。\n\n:param entries: 配置中的原始条目。\n:return: ``源客户端 → 目标客户端`` 的映射，目标可能为 None。",
+"text": "把 ``\"源 -> 目标\"`` 形式的配置解析为映射。\n\n两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类，例如 ``\"Telegram -> QQBot\"``\n只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写\n``\"Telegram-alt -> QQBot\"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。\n\n只写源时目标为 None，表示该客户端退役但不提供迁移去处。格式错误的项一律跳过并记录警告，\n不使解析失败，因为退役属于运营配置，一处笔误不应阻断整个实例的启动。\n\n:param entries: 配置中的原始条目。\n:return: ``源客户端 → 目标客户端`` 的映射，目标可能为 None。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -125668,7 +125668,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未装时只在构造处抛出。",
+"text": "# 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未安装时只在构造处抛出。",
 "spans": [
 [
 30,
@@ -125698,7 +125698,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只在异常冒泡到处理分支时求值，那时客户端已建好，botocore 必然可以导入。",
+"text": "# 只在异常冒泡到处理分支时求值，那时客户端已创建完成，botocore 必然可以导入。",
 "spans": [
 [
 49,
@@ -126678,7 +126678,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 下面几个名字没有纳入 core.api。表名工具是否成为第三方契约待 P5 复核；日志路径常量只是兼容入口，\n# 计划在阶段 4 删除，纳入门面会把待删的名字写进契约。",
+"text": "# 下面几个名字没有纳入 core.api。表名工具是否成为第三方契约待 P5 复核；日志路径常量只是兼容入口，\n# 计划在阶段 4 删除，纳入门面会把待删除的名字写入契约。",
 "spans": [
 [
 24,
@@ -126768,7 +126768,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 时间置于文件名开头，目录按名称排序即为时间顺序。微秒一并带上，同一秒内的两次合并不会撞名。\n# union ID 中的 \"|\" 须换成 \"-\"，因为 Windows 不接受该字符出现在文件名中。",
+"text": "# 时间置于文件名开头，目录按名称排序即为时间顺序。微秒一并带上，同一秒内的两次合并不会重名。\n# union ID 中的 \"|\" 须换成 \"-\"，因为 Windows 不接受该字符出现在文件名中。",
 "spans": [
 [
 164,
@@ -126788,7 +126788,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先写临时文件再原子替换，避免直接落盘在中途被强制结束时留下半截内容的日志，\n# 导致读取时才发现损坏。经此一步，该文件要么完整要么不存在。",
+"text": "# 先写临时文件再原子替换，避免直接写入磁盘在中途被强制结束时留下半截内容的日志，\n# 导致读取时才发现损坏。经此一步，该文件要么完整要么不存在。",
 "spans": [
 [
 167,
@@ -127013,7 +127013,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 品牌资产包缺失（或部署者删掉了图）时跳过配图，少一张图不该让整条 `~about` 失败。",
+"text": "# 品牌资产包缺失（或部署者删除了配图）时跳过配图，少一张图不该让整条 `~about` 失败。",
 "spans": [
 [
 76,
@@ -127093,7 +127093,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 绑定码与握手状态仅保存在 server 进程内存中，重启即失效。\n# 各平台的 bot 子进程共用同一个 server 进程，因此跨平台握手无需落库。",
+"text": "# 绑定码与握手状态仅保存在 server 进程内存中，重启即失效。\n# 各平台的 bot 子进程共用同一个 server 进程，因此跨平台握手无需写入数据库。",
 "spans": [
 [
 44,
@@ -127293,7 +127293,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 绑定码的生成与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，\n# 会把一个群的数据并进对方的私聊；群码在私聊里兑换同理。",
+"text": "# 绑定码的生成与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，\n# 会把一个群的数据合并到对方的私聊；群码在私聊里兑换同理。",
 "spans": [
 [
 328,
@@ -127613,7 +127613,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 另一轮握手已完成同样的处理，无需重复向管理员确认，也无需重复写库。",
+"text": "# 另一轮握手已完成同样的处理，无需重复向管理员确认，也无需重复写入数据库。",
 "spans": [
 [
 578,
@@ -127698,7 +127698,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表头与分隔线开头，随后各行的收尾、下一组的区隔行都并进同一个纯文本，\n# 以免相邻纯文本之间被适配器补上换行",
+"text": "# 表头与分隔线开头，随后各行的收尾、下一组的区隔行都合并到同一个纯文本，\n# 以免相邻纯文本之间被适配器补上换行",
 "spans": [
 [
 249,
@@ -127718,7 +127718,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。\n# 种类决定首列在单元格中的呈现方式，其中 command 做成指令操作，code 已是成型的行内代码，\n# text 则照常转义。",
+"text": "# 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。\n# 种类决定首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，\n# text 则照常转义。",
 "spans": [
 [
 340,
@@ -127803,7 +127803,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表格版另需成对的（正则， 说明），与拼成一行的 mdocs 并行收集",
+"text": "# 表格版另需成对的（正则， 说明），与拼接成一行的 mdocs 并行收集",
 "spans": [
 [
 472,
@@ -127945,7 +127945,7 @@
 "start": 166,
 "end": 181,
 "kind": "py-docstring",
-"text": "终止行内连排，使其后追加的元素能各自成行。\n\n可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行\n（见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。\n该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会\n把调用方随后追加的提示语粘在最后一个模块名之后。补一个纯文本片段即可断开连排。\n\n片段取一个空格而非空字符串，因为消息链会把空文本换成错误提示（见\n``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后\n仍会按元素补一次换行，两者叠加会多出一个空行。\n\n本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 把关。\n\n:param chain: 待收尾的消息链，就地修改。",
+"text": "终止行内连排，使其后追加的元素能各自成行。\n\n可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行\n（见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。\n该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会\n把调用方随后追加的提示语紧贴在最后一个模块名之后。补一个纯文本片段即可断开连排。\n\n片段取一个空格而非空字符串，因为消息链会把空文本换成错误提示（见\n``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后\n仍会按元素补一次换行，两者叠加会多出一个空行。\n\n本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 把关。\n\n:param chain: 待收尾的消息链，就地修改。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -127960,7 +127960,7 @@
 "start": 191,
 "end": 213,
 "kind": "py-docstring",
-"text": "把若干组模块名排成一张 markdown 表。\n\n各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多\n:data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，\n模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。\n\n``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。\n此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。\n\n模块名做成指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格\n中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见\n``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，\n竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**\n—— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被劈成两半。\n区隔行因此与上一组的收尾同处一个元素。\n\n:param msg: 消息会话。\n:param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。\n:param include_help_header: 是否在模块表格内加入 help 顶栏。\n:param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。\n:return: 消息元素列表。所有组皆空时返回空片段，空态文案由调用方负责。",
+"text": "把若干组模块名排成一张 markdown 表。\n\n各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多\n:data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，\n模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。\n\n``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。\n此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。\n\n模块名渲染为指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格\n中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见\n``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，\n竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**\n—— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被拆成两半。\n区隔行因此与上一组的收尾同处一个元素。\n\n:param msg: 消息会话。\n:param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。\n:param include_help_header: 是否在模块表格内加入 help 顶栏。\n:param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。\n:return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -127973,7 +127973,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 迁移码与 bind 的绑定码分开存放，两者不可互相消费，因为\n# 迁移码用于把退役实例上的数据搬到新实例，与常规的跨平台绑定不是同一件事。",
+"text": "# 迁移码与 bind 的绑定码分开存放，两者不可互相消费，因为\n# 迁移码用于把退役实例上的数据迁移到新实例，与常规的跨平台绑定不是同一件事。",
 "spans": [
 [
 32,
@@ -128073,7 +128073,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 迁移码须记下签发方的客户端与场景，前者用于兑换时校验迁移去处，\n# 后者用于迁移完成后统一两侧的消息通道编号。",
+"text": "# 迁移码须记录签发方的客户端与场景，前者用于兑换时校验迁移去处，\n# 后者用于迁移完成后统一两侧的消息通道编号。",
 "spans": [
 [
 76,
@@ -128188,7 +128188,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作命令路径会被 bind token 抢先匹配\n# （``<code>`` 吞掉 \"merge\"），源平台便不再让位。用户侧命令不变，经别名映射到这里。",
+"text": "# 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作命令路径会被 bind token 抢先匹配\n# （``<code>`` 匹配并消耗 \"merge\"），源平台便不再让位。用户侧命令不变，经别名映射到这里。",
 "spans": [
 [
 185,
@@ -128228,7 +128228,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 迁移码的签发与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，\n# 会把一段私聊的数据并进群场景；群码在私聊里兑换同理。",
+"text": "# 迁移码的签发与使用须处于同类场景。私聊码带着发起方的场景组，若在群里兑换，\n# 会把一段私聊的数据合并到群场景；群码在私聊里兑换同理。",
 "spans": [
 [
 204,
@@ -128263,7 +128263,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只做排队，不向场景发送内容，公告由延时任务在数分钟后推送。若挂在命令拦截上，退役后用户\n# 不再发命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查库。",
+"text": "# 只做排队，不向场景发送内容，公告由延时任务在数分钟后推送。若挂在命令拦截上，退役后用户\n# 不再发命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查询数据库。",
 "spans": [
 [
 255,
@@ -128313,7 +128313,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不加 available_for，因为框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，\n# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的死行。\n# 以能力标志作唯一判据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。",
+"text": "# 不加 available_for，因为框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，\n# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的无效行。\n# 以能力标志作唯一判据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。",
 "spans": [
 [
 81,
@@ -128353,7 +128353,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 入口文案取当前状态之反，已开启时能做的是关闭",
+"text": "# 入口文案与当前状态相反，已开启时能做的是关闭",
 "spans": [
 [
 169,
@@ -128485,7 +128485,7 @@
 "start": 317,
 "end": 337,
 "kind": "py-docstring",
-"text": "将设置行渲染为消息元素。\n\n每一行都在行尾挂上指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮，\n因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自\n那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，\n模块侧无须再分支。\n\n换行的写法随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把\n紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），\n换行若交由适配器按元素处理，整个面板会塌成一行，故此路径下须把换行写进文本自身。\n降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒\n会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。\n\n:param msg: 消息会话。\n:param title_key: 分组标题的多语言键。\n:param rows: 设置行列表。\n:param can_edit: 当前用户是否可以修改这一组设置。\n:param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。\n:return: 消息元素列表。",
+"text": "将设置行渲染为消息元素。\n\n每一行都在行尾挂上指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮，\n因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自\n那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，\n模块侧无须再分支。\n\n换行的写法随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把\n紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），\n换行若交由适配器按元素处理，整个面板会塌成一行，故此路径下须把换行写入文本自身。\n降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒\n会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。\n\n:param msg: 消息会话。\n:param title_key: 分组标题的多语言键。\n:param rows: 设置行列表。\n:param can_edit: 当前用户是否可以修改这一组设置。\n:param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。\n:return: 消息元素列表。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -129073,7 +129073,7 @@
 "start": 13,
 "end": 13,
 "kind": "md-paragraph",
-"text": "此命令把指定模块的超级用户权限授予目标用户。执行前需要按提示确认，授权记录中会同时记下授权者。目标模块未声明 `required_superuser` 时，此命令会被拒绝。",
+"text": "此命令把指定模块的超级用户权限授予目标用户。执行前需要按提示确认，授权记录中会同时记录授权者。目标模块未声明 `required_superuser` 时，此命令会被拒绝。",
 "ctx": "`auth add`",
 "path": "packages/akari-bot-core/akaribot/modules/core/docs/auth.md",
 "id": 9020
@@ -131332,7 +131332,7 @@
 "start": 13,
 "end": 17,
 "kind": "md-list",
-"text": "- 更新由 `akaribot module update --all --non-interactive --defer-runtime --json` 完成。\n- 更新在 CLI 子进程中执行。机器人和 Server 进程只读取配置，不直接写盘，也不迁移数据库。\n- 二进制封装模式下，命令会拒绝执行，并提示手动下载新版本替换。\n- 报告列出成功、失败和跳过的包。\n- 存在尚未热加载的包时，提示执行 `restart`。全部包都已热加载时，报告说明已全部热加载。",
+"text": "- 更新由 `akaribot module update --all --non-interactive --defer-runtime --json` 完成。\n- 更新在 CLI 子进程中执行。机器人和 Server 进程只读取配置，不直接写入磁盘，也不迁移数据库。\n- 二进制封装模式下，命令会拒绝执行，并提示手动下载新版本替换。\n- 报告列出成功、失败和跳过的包。\n- 存在尚未热加载的包时，提示执行 `restart`。全部包都已热加载时，报告说明已全部热加载。",
 "ctx": "`update`",
 "path": "packages/akari-bot-core/akaribot/modules/core/docs/update.md",
 "id": 9271
@@ -143040,7 +143040,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 认领键只由通道与内容组成，不含发起方，重发的消息会撞上自身上一条留下的认领。",
+"text": "# 认领键只由通道与内容组成，不含发起方，重发的消息会命中自身上一条留下的认领。",
 "spans": [
 [
 66,
@@ -143710,7 +143710,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 库链接在 init_db() 调用时读取模块级变量，故把两个连接都指到临时目录，确保用例绝不碰仓库实例的库。",
+"text": "# 数据库连接在 init_db() 调用时读取模块级变量，故把两个连接都指向临时目录，确保用例绝不碰仓库实例的数据库。",
 "spans": [
 [
 32,
@@ -143740,7 +143740,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 一行多列测试，一次 set 改写整行的若干列，回读后各列都已生效。",
+"text": "# 一行多列测试，一次 set 改写整行的若干列，重新读取后各列都已生效。",
 "spans": [
 [
 123,
@@ -143770,7 +143770,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 分页与筛选需要一批可控的数据，因此直接建行，绕开逐条子进程调用。",
+"text": "# 分页与筛选需要一批可控的数据，因此直接创建测试行，绕开逐条子进程调用。",
 "spans": [
 [
 207,
@@ -143942,7 +143942,7 @@
 "start": 100,
 "end": 100,
 "kind": "py-docstring",
-"text": "相对 SQLite 链接锚定实例根，绝对路径、内存库与非 SQLite 链接不受影响。",
+"text": "相对 SQLite 链接锚定实例根目录，绝对路径、内存数据库与非 SQLite 链接不受影响。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -143955,7 +143955,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 样本库随 core 包分发，与本用例同属一个包，按测试文件位置定位即可。",
+"text": "# 样本数据库随 core 包分发，与本用例同属一个包，按测试文件位置定位即可。",
 "spans": [
 [
 29,
@@ -143970,7 +143970,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 样本库与测试进程自带的库不能共用连接，因为升级会改动表结构，连接必须指向文件副本。",
+"text": "# 样本数据库与测试进程自带的数据库不能共用连接，因为升级会改动表结构，连接必须指向文件副本。",
 "spans": [
 [
 38,
@@ -144060,7 +144060,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先还原成升级前的表结构，只保留旧列，且带一行旧数据。",
+"text": "# 先还原成升级前的表结构，只保留原有列，且带一行旧数据。",
 "spans": [
 [
 171,
@@ -144075,7 +144075,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧行没有 refresh token，需由用户重新完成一次绑定。",
+"text": "# 原有记录行没有 refresh token，需由用户重新完成一次绑定。",
 "spans": [
 [
 191,
@@ -144120,7 +144120,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧行保留下来但没有 refresh token，需由用户重新完成一次绑定。",
+"text": "# 原有记录行保留下来但没有 refresh token，需由用户重新完成一次绑定。",
 "spans": [
 [
 225,
@@ -144180,7 +144180,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# optional 本身已装，但其所属的 dev extra 缺 ruff，仍视为未装",
+"text": "# optional 本身已安装，但其所属的 dev extra 缺 ruff，仍视为未安装",
 "spans": [
 [
 351,
@@ -144355,7 +144355,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 引导代码可能为整个测试进程设过配置目录，子进程必须只认本次的实例根。",
+"text": "# 引导代码可能为整个测试进程设过配置目录，子进程必须只认本次的实例根目录。",
 "spans": [
 [
 59,
@@ -144460,7 +144460,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 适配器配置模板在导入时写盘。入口必须在读取 schema 前重新加载配置。\n# 否则首次安装时表还不存在，配置补全会以“配置表不存在”失败。",
+"text": "# 适配器配置模板在导入时写入磁盘。入口必须在读取 schema 前重新加载配置。\n# 否则首次安装时表还不存在，配置补全会以“配置表不存在”失败。",
 "spans": [
 [
 169,
@@ -145215,7 +145215,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），\n# 冷文件缓存或高负载环境下会明显超过 1 秒，故等待步骤统一留出余量，\n# 避免把“慢”误判成“卡住”。",
+"text": "# 每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），\n# 冷文件缓存或高负载环境下会明显超过 1 秒，故等待步骤统一留出余量，\n# 避免把“慢”误判为“无响应”。",
 "spans": [
 [
 51,
@@ -146070,7 +146070,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# 取消被吞掉，dispatch 正常返回",
+"text": "# 取消被忽略，dispatch 正常返回",
 "spans": [
 [
 788,
@@ -146160,7 +146160,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仓库根从 core 包的位置向上推算（判据见 _repository_root），\n# 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。",
+"text": "# 仓库根目录从 core 包的位置向上推算（判据见 _repository_root），\n# 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。",
 "spans": [
 [
 14,
@@ -146180,7 +146180,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不按层数推算（源码根从 <dist>/src/akaribot 压成 <dist>/akaribot 后层数会变），也不取\n# Paths.tests。后者正是本用例要检查的取值。",
+"text": "# 不按层数推算（源码根目录从 <dist>/src/akaribot 压成 <dist>/akaribot 后层数会变），也不取\n# Paths.tests。后者正是本用例要检查的取值。",
 "spans": [
 [
 17,
@@ -146940,7 +146940,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 取会话时须由拓扑缓存反查场景所属的客户端，未注册者取不出会话。缓存非空时\n# ``Alive.determine_client(None)`` 还会直接抛错，而 ``fetch_target`` 会将其吞下，\n# 表现为无声地少了几个会话。",
+"text": "# 取会话时须由拓扑缓存反向查找场景所属的客户端，未注册者取不出会话。缓存非空时\n# ``Alive.determine_client(None)`` 还会直接抛错，而 ``fetch_target`` 会将其吞下，\n# 表现为无声地少了几个会话。",
 "spans": [
 [
 23,
@@ -147020,7 +147020,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 重启提示并非关键路径，客户端确已掉线时无限等待只会让 server 卡在初始化阶段。",
+"text": "# 重启提示并非关键路径，客户端确已掉线时无限等待只会让 server 阻塞在初始化阶段。",
 "spans": [
 [
 124,
@@ -147125,7 +147125,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 并入同一通道后，退役场景若不被滤除，便会以组内首位的身份抢到队首",
+"text": "# 并入同一通道后，退役场景若不被滤除，便会以组内首位的身份排到队首",
 "spans": [
 [
 390,
@@ -147425,7 +147425,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 以给定入参调用 send_direct_message，返回其入队任务里的 message 字段。",
+"text": "# 以给定输入参数调用 send_direct_message，返回其入队任务里的 message 字段。",
 "spans": [
 [
 28,
@@ -147440,7 +147440,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# send_direct_message 曾把未归一化的原始入参直接入队。传入 bare 元素（如\n# ``I18NContext(...)``）时，其序列化形态为 ``{\"_type\": \"I18NContextElement\", ...}``，\n# 缺少 values 字段，客户端按 MessageChain | MessageNodes 反序列化即抛 KeyError。",
+"text": "# send_direct_message 曾把未归一化的原始输入参数直接入队。传入 bare 元素（如\n# ``I18NContext(...)``）时，其序列化形态为 ``{\"_type\": \"I18NContextElement\", ...}``，\n# 缺少 values 字段，客户端按 MessageChain | MessageNodes 反序列化即抛 KeyError。",
 "spans": [
 [
 57,
@@ -147825,7 +147825,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 指令操作会使适配器把紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板\n# 会塌成一行。故此路径下的换行必须写进文本自身。",
+"text": "# 指令操作会使适配器把紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板\n# 会塌成一行。故此路径下的换行必须写入文本自身。",
 "spans": [
 [
 187,
@@ -148340,7 +148340,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 映射行改挂而非重建，确保拆出的账号在任一时刻都能解析回一个已封禁的组，\n# 不会因缺少映射行而被当作新账号另建干净组。",
+"text": "# 映射行重新关联而非重建，确保拆出的账号在任一时刻都能解析回一个已封禁的组，\n# 不会因缺少映射行而被当作新账号新建干净组。",
 "spans": [
 [
 203,
@@ -148405,7 +148405,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# union_id 为模块表主键，改挂只能通过重建行完成，各列值须原样保留。",
+"text": "# union_id 为模块表主键，重新关联只能通过重建行完成，各列值须原样保留。",
 "spans": [
 [
 314,
@@ -148510,7 +148510,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 保活表的最简形态，键为客户端名，前缀用于由场景 ID 反查客户端。",
+"text": "# 保活表的最简形态，键为客户端名，前缀用于由场景 ID 反向查找客户端。",
 "spans": [
 [
 15,
@@ -148715,7 +148715,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台能力集在导入时即依配置定型，故另建一份“markdown 与 URLManager 均已开启”\n# 的基准并打桩该开关，使检查只考察覆盖逻辑本身，不受本地配置左右",
+"text": "# 平台能力集在导入时即依配置定型，故新建一份“markdown 与 URLManager 均已开启”\n# 的基准并打桩该开关，使检查只考察覆盖逻辑本身，不受本地配置左右",
 "spans": [
 [
 308,
@@ -149061,7 +149061,7 @@
 "start": 24,
 "end": 24,
 "kind": "md-paragraph",
-"text": "运行器默认收集仓库根的 `tests/`，在源码仓库中还会收集 `packages/*/tests` 与 `packages/*/*/tests`。给出位置参数时只运行这些文件或目录，相对路径按仓库根解析。",
+"text": "运行器默认收集仓库根目录的 `tests/`，在源码仓库中还会收集 `packages/*/tests` 与 `packages/*/*/tests`。给出位置参数时只运行这些文件或目录，相对路径按仓库根目录解析。",
 "ctx": "测试范围",
 "path": "packages/akari-bot-testing/akaribot/testing/docs/index.md",
 "id": 10381
@@ -149982,7 +149982,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# text 与 json_data 对 JSON 接口而言是同一份内容的两种形态，同时落盘会让\n# 大响应的语料体积翻倍。此时只保留 json_data，读取时再还原出 text。",
+"text": "# text 与 json_data 对 JSON 接口而言是同一份内容的两种形态，同时写入磁盘会让\n# 大响应的语料体积翻倍。此时只保留 json_data，读取时再还原出 text。",
 "spans": [
 [
 78,
@@ -150817,7 +150817,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 无进展看门狗随测试时限系数放大，但封顶 5 倍，这样慢机器上子测试可以更久，\n# 真正卡死时也不能让单个用例占用整个 CI 任务太久。",
+"text": "# 无进展看门狗随测试时限系数放大，但封顶 5 倍，这样慢机器上子测试可以更久，\n# 真正无响应时也不能让单个用例占用整个 CI 任务太久。",
 "spans": [
 [
 23,
@@ -151039,7 +151039,7 @@
 "start": 177,
 "end": 177,
 "kind": "py-docstring",
-"text": "运行一个纯函数子测试，返回假值或抛异常都判为用例失败。",
+"text": "运行一个纯函数子测试，返回假值或抛异常都判定为用例失败。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -151054,7 +151054,7 @@
 "start": 196,
 "end": 196,
 "kind": "py-docstring",
-"text": "运行一条命令级子测试，明确不匹配时判为用例失败。",
+"text": "运行一条命令级子测试，明确不匹配时判定为用例失败。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -151217,7 +151217,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 注释先以 i18n 标记落盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值，因为\n# core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。\n# 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固化配置目录。",
+"text": "# 注释先以 i18n 标记写入磁盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值，因为\n# core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。\n# 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固化配置目录。",
 "spans": [
 [
 47,
@@ -151242,7 +151242,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 日志写入仍会被完整执行，产物随进程退出一并删除。需要留存时设置 ``AKARI_UNION_MERGE_LOGS_PATH``。\n# 已显式设置过的运行器（如 tests/run_one.py）直接沿用，不再另建目录。",
+"text": "# 日志写入仍会被完整执行，产物随进程退出一并删除。需要留存时设置 ``AKARI_UNION_MERGE_LOGS_PATH``。\n# 已显式设置过的运行器（如 tests/run_one.py）直接沿用，不再新建目录。",
 "spans": [
 [
 77,
@@ -151337,7 +151337,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 覆盖项走配置管理器的写入路径，使磁盘与内存副本保持一致；直接改写文件时，\n# 同一文件系统时间戳精度内的改动可能躲过 watch() 的重载判定。",
+"text": "# 覆盖项走配置管理器的写入路径，使磁盘与内存副本保持一致；直接改写文件时，\n# 同一文件系统时间戳精度内的改动可能绕过 watch() 的重载判定。",
 "spans": [
 [
 129,
@@ -151377,7 +151377,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 源码克隆形态下的仓库根由根目录兼容实现 tester.py 在导入本模块前设置，取值须与它一致。",
+"text": "# 源码克隆形态下的仓库根目录由根目录兼容实现 tester.py 在导入本模块前设置，取值须与它一致。",
 "spans": [
 [
 187,
@@ -151427,7 +151427,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不按本文件位置回推，因为本模块已在包内，回推只会指向 site-packages。优先取 ``AKARI_REPO_ROOT``。\n# 否则取 ``Paths.tests`` 的父目录——源码克隆下 ``tests/`` 位于仓库根，再以 ``packages/``\n# 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
+"text": "# 不按本文件位置反推，因为本模块已在包内，反推只会指向 site-packages。优先取 ``AKARI_REPO_ROOT``。\n# 否则取 ``Paths.tests`` 的父目录——源码克隆下 ``tests/`` 位于仓库根目录，再以 ``packages/``\n# 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
 "spans": [
 [
 247,
@@ -151452,7 +151452,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 报告落点与用例发现同源，源码克隆下固定在仓库根，安装形态下改用调用目录。",
+"text": "# 报告落点与用例发现同源，源码克隆下固定在仓库根目录，安装形态下改用调用目录。",
 "spans": [
 [
 259,
@@ -151552,7 +151552,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仓库根的 ``tests/`` 承载跨包用例与共享测试数据，各成员包自带的 ``tests/`` 随包分发。后者只在\n# 源码克隆下可见，仓库根不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。",
+"text": "# 仓库根目录的 ``tests/`` 承载跨包用例与共享测试数据，各成员包自带的 ``tests/`` 随包分发。后者只在\n# 源码克隆下可见，仓库根目录不可知时只剩 ``Paths.tests``（可由 ``AKARI_TESTS_PATH`` 指定）。",
 "spans": [
 [
 476,
@@ -151572,7 +151572,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 按仓库根相对路径生成，因为不同包里可以存在同名测试文件，仅取文件名会互相覆盖。仓库根不可知时\n# 回退到原路径，模块名的唯一性由绝对路径本身保证。",
+"text": "# 按仓库根目录相对路径生成，因为不同包里可以存在同名测试文件，仅取文件名会互相覆盖。仓库根目录不可知时\n# 回退到原路径，模块名的唯一性由绝对路径本身保证。",
 "spans": [
 [
 486,
@@ -151592,7 +151592,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 目录递归取 ``*.py``，文件按原样收集。路径按仓库根解析，相对路径因此与 ``tests/run_one.py``\n# 的写法一致。给错路径时返回空列表，由调用方报“没有匹配的测试文件”——静默运行全量会让\n# ``akaribot test <路径>`` 看起来生效、实际什么都没筛。",
+"text": "# 目录递归取 ``*.py``，文件按原样收集。路径按仓库根目录解析，相对路径因此与 ``tests/run_one.py``\n# 的写法一致。给错路径时返回空列表，由调用方报“没有匹配的测试文件”——静默运行全量会让\n# ``akaribot test <路径>`` 看起来生效、实际什么都没筛。",
 "spans": [
 [
 498,
@@ -151617,7 +151617,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 给了位置参数就只运行这些路径。否则按默认根收集，仓库根的集成用例由 _iter_integration_files\n# 单独列出，其目录内的辅助模块不参与收集。两种情形都按路径排序且去重。",
+"text": "# 给了位置参数就只运行这些路径。否则按默认根目录收集，仓库根目录的集成用例由 _iter_integration_files\n# 单独列出，其目录内的辅助模块不参与收集。两种情形都按路径排序且去重。",
 "spans": [
 [
 525,
@@ -151637,7 +151637,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 注册表用例逐条汇报，长跑时不必等全部用例结束才有输出。",
+"text": "# 注册表用例逐条汇报，长时间运行时不必等全部用例结束才有输出。",
 "spans": [
 [
 772,
@@ -151729,7 +151729,7 @@
 "start": 65,
 "end": 65,
 "kind": "py-docstring",
-"text": "本次测试运行实际使用的落盘路径。",
+"text": "本次测试运行实际使用的输出文件路径。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -151759,7 +151759,7 @@
 "start": 145,
 "end": 145,
 "kind": "py-docstring",
-"text": "返回本次测试运行的落盘路径。环境铺设已在本模块导入期完成，重复调用返回同一份路径。",
+"text": "返回本次测试运行的输出文件路径。环境铺设已在本模块导入期完成，重复调用返回同一份路径。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -151802,7 +151802,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 取消后的收尾保持有界，因为后台任务可能在自己的 CancelledError 处理里继续等待，\n# 无限等待会让卡死的用例拖住整个进程。",
+"text": "# 取消后的收尾保持有界，因为后台任务可能在自己的 CancelledError 处理里继续等待，\n# 无限等待会让无响应的用例阻塞整个进程。",
 "spans": [
 [
 11,
@@ -153415,7 +153415,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 签名由生成它的模型签发，跨模型回放会被判为无效签名。",
+"text": "# 签名由生成它的模型签发，跨模型回放会被判定为无效签名。",
 "spans": [
 [
 59,
@@ -153520,7 +153520,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 签名由生成它的模型签发，跨模型回放会被判为无效签名，此时仅保留无签名的步骤。",
+"text": "# 签名由生成它的模型签发，跨模型回放会被判定为无效签名，此时仅保留无签名的步骤。",
 "spans": [
 [
 52,
@@ -154593,7 +154593,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 图片以独立用户消息回传，避免把 base64 塞进模型可见的工具文本。",
+"text": "# 图片以独立用户消息回传，避免把 base64 放入模型可见的工具文本。",
 "spans": [
 [
 41,
@@ -156394,7 +156394,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 须判非空而非仅判键在，因为未关联版本的漏洞该字段为空列表，\n# 空列表上取首尾元素会抛 IndexError",
+"text": "# 须判断是否非空而非仅判断键是否存在，因为未关联版本的漏洞该字段为空列表，\n# 空列表上取首尾元素会抛 IndexError",
 "spans": [
 [
 90,
@@ -156717,7 +156717,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# versions 键在而值为空列表时不能取 verlist[0]，同文件的 fixVersions 一向判过非空，\n# 此处漏判会抛 IndexError。",
+"text": "# versions 键在而值为空列表时不能取 verlist[0]，同文件的 fixVersions 一向判断过非空，\n# 此处遗漏判断会抛 IndexError。",
 "spans": [
 [
 60,
@@ -156803,7 +156803,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先写成活跃失败状态，确保若解禁调用抛错、取消或进程在结果落库前退出，Union 删除和\n# 解绑逻辑仍会保留这条真实平台限制的归属，受限成员不会停留在无引用状态。",
+"text": "# 先写成活跃失败状态，确保若解禁调用抛错、取消或进程在结果写入数据库前退出，Union 删除和\n# 解绑逻辑仍会保留这条真实平台限制的归属，受限成员不会停留在无引用状态。",
 "spans": [
 [
 90,
@@ -157005,7 +157005,7 @@
 "start": 95,
 "end": 95,
 "kind": "py-docstring",
-"text": "把被拆出平台的成员仍需处理的挑战改挂到其新 Union。",
+"text": "把被拆出平台的成员仍需处理的挑战重新关联到其新 Union。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -157947,7 +157947,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，\n# 避免旧 ORM 实例把信任写给旧 Union，或用整行 save 撤销解绑 hook 的改挂。\n# Trust 与 Challenge 状态必须属于同一事务。否则后一步失败会留下“已信任但仍待验证”的半状态。",
+"text": "# 平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，\n# 避免旧 ORM 实例把信任写给旧 Union，或用整行 save 撤销解绑 hook 的重新关联。\n# Trust 与 Challenge 状态必须属于同一事务。否则后一步失败会留下“已信任但仍待验证”的半状态。",
 "spans": [
 [
 40,
@@ -165532,7 +165532,7 @@
 "start": 250,
 "end": 250,
 "kind": "md-paragraph",
-"text": "查看水鱼的全服分数排行。数据源为落雪时，机器人返回提示，并给出切回水鱼的命令。",
+"text": "查看水鱼的全服分数排行。数据源为落雪时，机器人返回提示，并给出切换回水鱼的命令。",
 "ctx": "`maimai rank`",
 "path": "packages/modules/akari-bot-module-maimai/akaribot/modules/maimai/docs/index.md",
 "id": 11736
@@ -166277,7 +166277,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 令牌端点严格比对认证方式，机密客户端少传 client_secret、公开客户端多传，得到的都是\n# `401 invalid_client`，且两种情形的响应完全相同，故只能由配置里有无 client_secret 决定。",
+"text": "# 令牌端点严格比对认证方式，机密客户端缺少 client_secret、公开客户端多余传入，得到的都是\n# `401 invalid_client`，且两种情形的响应完全相同，故只能由配置里有无 client_secret 决定。",
 "spans": [
 [
 110,
@@ -166377,7 +166377,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 令牌已获取，且同一设备码无法再次换取，须先落盘再执行其他操作。",
+"text": "# 令牌已获取，且同一设备码无法再次换取，须先写入磁盘再执行其他操作。",
 "spans": [
 [
 502,
@@ -166712,7 +166712,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 令牌里的 `sub` 仅作显示账号的备用来源，落雪侧不落库（落雪靠 refresh token 自行轮换）。",
+"text": "# 令牌里的 `sub` 仅作显示账号的备用来源，落雪侧不写入数据库（落雪靠 refresh token 自行轮换）。",
 "spans": [
 [
 327,
@@ -166727,7 +166727,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 令牌已获取，且同一授权码无法再次换取，须先落盘再执行其他操作。",
+"text": "# 令牌已获取，且同一授权码无法再次换取，须先写入磁盘再执行其他操作。",
 "spans": [
 [
 329,
@@ -167582,7 +167582,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 记录存在但没有可用的授权（如配置刚由公开客户端改为机密客户端，旧行里只有 refresh token）\n# 时同样按未绑定处理，QQ 用户可回退到 `qq` 直接查询，其他平台则只能重新绑定一次。",
+"text": "# 记录存在但没有可用的授权（如配置刚由公开客户端改为机密客户端，原有记录里只有 refresh token）\n# 时同样按未绑定处理，QQ 用户可回退到 `qq` 直接查询，其他平台则只能重新绑定一次。",
 "spans": [
 [
 21,
@@ -170819,7 +170819,7 @@
 "start": 28,
 "end": 32,
 "kind": "py-docstring",
-"text": "补上 OAuth 列并删除已废弃的旧列。\n\n:param ctx: 迁移上下文。",
+"text": "补上 OAuth 列并删除已废弃的历史列。\n\n:param ctx: 迁移上下文。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -170932,7 +170932,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "水鱼（Diving-Fish）OAuth 的纯逻辑单元测试，覆盖客户端形态判定、绑定落盘、取令牌与撤销。",
+"text": "水鱼（Diving-Fish）OAuth 的纯逻辑单元测试，覆盖客户端形态判定、绑定持久化、取令牌与撤销。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -177097,7 +177097,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仅加固 follow_redirects，这是本库能正常工作的前提——存档下载走 CDN\n# 直链，遇到 302 时若不跟随，request() 中的 raise_for_status() 会把\n# 重定向当错误抛出。timeout 不在此列，调用方显式设置的超时属于调用方",
+"text": "# 仅加固 follow_redirects，这是本库能正常工作的前提——存档下载使用 CDN\n# 直接链接，遇到 302 时若不跟随，request() 中的 raise_for_status() 会把\n# 重定向当错误抛出。timeout 不在此列，调用方显式设置的超时属于调用方",
 "spans": [
 [
 74,
@@ -177122,7 +177122,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# httpx 默认不跟随重定向，requests 默认跟随。存档下载走 CDN 直链，\n# 可能存在重定向，因此显式开启",
+"text": "# httpx 默认不跟随重定向，requests 默认跟随。存档下载使用 CDN 直接链接，\n# 可能存在重定向，因此显式开启",
 "spans": [
 [
 80,
@@ -177287,7 +177287,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# 存档直链",
+"text": "# 存档直接链接",
 "spans": [
 [
 272,
@@ -178762,7 +178762,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版本按归一化的小写 id 命名，与新键无法对应。此处按新键集合清理，旧文件自然落入待删之列。",
+"text": "# 旧版本按归一化的小写 id 命名，与新键名无法对应。此处按新键名集合清理，旧文件自然落入待删除范围。",
 "spans": [
 [
 200,
@@ -181343,7 +181343,7 @@
 "start": 53,
 "end": 53,
 "kind": "py-docstring",
-"text": "twenty_four 求解器的入参类型、解的正确性与无解判定测试",
+"text": "twenty_four 求解器的输入参数类型、解的正确性与无解判定测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -189516,7 +189516,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# TemplateData 只作补充，引言已有散文者以引言为准，指定章节时亦不越俎代庖",
+"text": "# TemplateData 只作补充，引言已有散文者以引言为准，指定章节时也不覆盖正文",
 "spans": [
 [
 186,
@@ -191243,7 +191243,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本文件位于仓库根，仓库根由调用方显式传入，runner 无须再从自身位置回推。\n# 变量名须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，取值必须早于该模块的导入。",
+"text": "# 本文件位于仓库根目录，仓库根目录由调用方显式传入，runner 无须再从自身位置反推。\n# 变量名须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，取值必须早于该模块的导入。",
 "spans": [
 [
 12,
@@ -192660,7 +192660,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "临时的单测运行脚本，仅用于开发期运行单个测试入口。",
+"text": "临时的单元测试运行脚本，仅用于开发期运行单个测试入口。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -192878,7 +192878,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 白名单会掩盖真实的漏传，故要求其对应的补参代码仍在位——issue_code() 一旦不再构造 ActionText，\n# 此处即失守。逐条报明缘由而不笼统吞异常——读不到文件若被收成检查不成立，白名单便形同虚设。",
+"text": "# 白名单会掩盖真实的遗漏传参，故要求其对应的参数补充代码仍在位——issue_code() 一旦不再构造 ActionText，\n# 此处即失守。逐条报明缘由而不笼统忽略异常——读不到文件若被收成检查不成立，白名单便形同虚设。",
 "spans": [
 [
 92,
@@ -193458,7 +193458,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 服务根取构建时解析出的绝对路径，确保工作目录变化时不会悄悄指向另一棵目录树。",
+"text": "# 服务根目录取构建时解析出的绝对路径，确保工作目录变化时不会悄悄指向另一棵目录树。",
 "spans": [
 [
 122,
@@ -193533,7 +193533,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# wheel 文件名按 PEP 427 把分发名里的非字母数字字符替换为下划线。",
+"text": "# wheel 文件名按 PEP 427 把包名里的非字母数字字符替换为下划线。",
 "spans": [
 [
 85,
@@ -193775,7 +193775,7 @@
 "start": 469,
 "end": 469,
 "kind": "py-docstring",
-"text": "结构自证，校验顶层键与 core 段键序、条目必填字段、提供的名字非空、分发名唯一。",
+"text": "结构校验，检查顶层键与 core 段键序、条目必填字段、提供的名字非空、包名唯一。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -193805,7 +193805,7 @@
 "start": 517,
 "end": 517,
 "kind": "py-docstring",
-"text": "交叉核对 registry 与已安装包视图的分发名、entry point 名与提供的模块名。",
+"text": "交叉核对 registry 与已安装包视图的包名、entry point 名与提供的模块名。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -193985,7 +193985,7 @@
 "start": 105,
 "end": 105,
 "kind": "py-docstring",
-"text": "按根 pyproject 的 members glob 展开成员，分发名取各成员自己的 [project].name。",
+"text": "按根 pyproject 的 members glob 展开成员，包名取各成员自己的 [project].name。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -194030,7 +194030,7 @@
 "start": 158,
 "end": 158,
 "kind": "py-docstring",
-"text": "取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。",
+"text": "取 `git diff --name-only base..head` 的改动路径，仓库根目录相对 POSIX 形式。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -194178,7 +194178,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不进 wheel 的目录改动不要求升版本，--strict 时该豁免失效。\n# pyproject.toml 不在豁免内，因为依赖与入口点会写进 wheel 元数据，改动同样要发新版。",
+"text": "# 不进 wheel 的目录改动不要求升级版本，--strict 时该豁免失效。\n# pyproject.toml 不在豁免内，因为依赖与入口点会写入 wheel 元数据，改动同样要发布新版本。",
 "spans": [
 [
 41,
@@ -194563,7 +194563,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 必须保持窄导入的文件不改写，因为门面导入期即展开，会把 web_render 连同 playwright 拉进\n# ``sys.modules``，而 Telegram 适配器专门保证“只导入 message_builder 不带出 web_render”。",
+"text": "# 必须保持窄导入的文件不改写，因为门面导入期即展开，会把 web_render 连同 playwright 引入\n# ``sys.modules``，而 Telegram 适配器专门保证“只导入 message_builder 不连带引入 web_render”。",
 "spans": [
 [
 34,
@@ -195183,7 +195183,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根与其余子路径都算内部实现。",
+"text": "# 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根目录与其余子路径都算内部实现。",
 "spans": [
 [
 79,
@@ -195363,7 +195363,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# git 的 pathspec 里不含斜杠的模式按全路径通配，如 `*.py` 能命中任意深度，\n# 而字面量 `pyproject.toml` 只命中仓库根，故嵌套清单用 `*pyproject.toml`。",
+"text": "# git 的 pathspec 里不含斜杠的模式按全路径通配，如 `*.py` 能命中任意深度，\n# 而字面量 `pyproject.toml` 只命中仓库根目录，故嵌套清单用 `*pyproject.toml`。",
 "spans": [
 [
 700,
@@ -195475,7 +195475,7 @@
 "start": 248,
 "end": 248,
 "kind": "py-docstring",
-"text": "按 PEP 503 规范化分发名，转小写并把 -、_、. 统一为 -。",
+"text": "按 PEP 503 规范化包名，转小写并把 -、_、. 统一为 -。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -196238,7 +196238,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 依赖字符串在 pyproject 里以字面量出现，反查行号用。跨行书写时回退到 dependencies 数组行。",
+"text": "# 依赖字符串在 pyproject 里以字面量出现，用于反向查找行号。跨行书写时回退到 dependencies 数组行。",
 "spans": [
 [
 65,
@@ -196528,7 +196528,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 默认会吞掉模板末尾的换行，产物将与本项目的 ruff format 结果不符。",
+"text": "# 默认会移除模板末尾的换行，产物将与本项目的 ruff format 结果不符。",
 "spans": [
 [
 145,
