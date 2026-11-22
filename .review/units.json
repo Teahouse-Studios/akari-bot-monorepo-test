@@ -272,7 +272,7 @@
 "start": 3,
 "end": 5,
 "kind": "cfg-comment",
-"text": "# T6.5(a) 只打包 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写）。机器人本体不进二进制，\n# CLI 通过子进程调用实例 venv 里的 `python -m akaribot.core.entrypoints.run`，因此 multiprocessing、\n# Tortoise ORM、七个平台 SDK、各模块及其依赖都不进入打包范围，打包内容只剩 CLI 自身依赖，构建因此更可靠。",
+"text": "# T6.5(a) 只打包 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写）。机器人本体不打入二进制，\n# CLI 通过子进程调用实例 venv 里的 `python -m akaribot.core.entrypoints.run`，因此 multiprocessing、\n# Tortoise ORM、七个平台 SDK、各模块及其依赖都不进入打包范围，打包内容只剩 CLI 自身依赖，构建因此更可靠。",
 "path": ".github/workflows/binary-build.yml",
 "id": 29
 },
@@ -464,7 +464,7 @@
 "start": 79,
 "end": 80,
 "kind": "cfg-comment",
-"text": "        # 版本号属于发布元数据而非行为正确性，tester 的结论应只由代码与测试决定。\n        # 违规照常打印供发布前确认，但不拦截本 job（重复版本由 PyPI 在发布时拒绝）。",
+"text": "        # 版本号属于发布元数据而非行为正确性，tester 的结论应只由代码与测试决定。\n        # 违规项正常打印供发布前确认，但不拦截本 job（重复版本由 PyPI 在发布时拒绝）。",
 "path": ".github/workflows/run-builtin-tester.yml",
 "id": 53
 },
@@ -480,7 +480,7 @@
 "start": 102,
 "end": 103,
 "kind": "cfg-comment",
-"text": "          # 静态检查覆盖整个仓库，格式化则只检查本次改动的文件；历史文件是否已格式化与这轮改动无关，\n          # 不应拦下与它无关的提交（否则任何人的推送都会因他人的旧文件而检查失败）。",
+"text": "          # 静态检查覆盖整个仓库，格式化则只检查本次改动的文件；历史文件是否已格式化与这轮改动无关，\n          # 不应拦截与它无关的提交（否则任何人的推送都会因他人的旧文件而检查失败）。",
 "path": ".github/workflows/run-builtin-tester.yml",
 "id": 55
 },
@@ -657,7 +657,7 @@
 "start": 46,
 "end": 57,
 "kind": "md-list",
-"text": "- **先搜后写。** 新增前用 `grep` 检查现有测试是否已覆盖同一行为。已覆盖则扩展原用例，不要另起一个。\n- **改动行为就替换旧测试**，不要新旧并存。**删除功能必须同时删除对应测试与 `tests/fixtures/` 中不再被引用的 fixture**。\n- **只检查可观察行为**：返回值、发出的消息、持久化结果、权限与安全判定。不要检查 mock 的调用次数、私有属性与私有函数、日志原文。\n- **不要测的东西**：构造器与默认值、常量、getter/setter、标准库或第三方库的透传、仅检查“不抛异常”的基本检查用例。\n- **一个行为一个用例。** 同一行为的输入变体用同一用例内的循环或表驱动覆盖，不要每个变体注册一个 `tester.test`。一个 bug 修复只在现有测试都覆盖不到时才补回归用例，并且放进该功能原有的测试里。\n- **不写镜像用例。** 代码路径相同的对称场景（如发送者侧与目标侧、群聊与私聊、各平台各一份“缺失媒体被跳过”）只测其一。只有代码路径确实分叉时才分别覆盖。\n- **必须保留、不得为精简而删除**：安全与权限判定、数据迁移与一致性、并发与锁、以及每个功能的主路径。\n- **每个 `_test_` 函数必须被 `tester.test` 注册**，未注册的函数永远不会运行，属于死代码。\n- **按主题组织文件。** 一个功能（模块、适配器、子系统）对应一个测试文件，在其内追加。不要新建 `test_more_*` / `test_*_more` / `test_*_fixes` 之类的增量碎片文件。包内用例放在 `packages/<包名>/tests/`，命名与根 `tests/` 保持一致。\n- **集成测试**（根 `tests/integration/`）每个命令只保留一条主路径加必要的、行为不同的错误路径。能用纯函数单元测试覆盖的逻辑不要放进集成测试，因为它们依赖录制的 HTTP fixture。\n- 用例描述（`tester.test` 的第二个参数）写被验证的行为，不写实现细节。测试中同样遵循“只描述当前状态”的注释约定。\n- 不要用固定 `sleep` 等待。需要超时时使用 `akaribot.testing.timing.TIME_SCALE`。",
+"text": "- **先搜后写。** 新增前用 `grep` 检查现有测试是否已覆盖同一行为。已覆盖则扩展原用例，不要另起一个。\n- **改动行为就替换旧测试**，不要新旧并存。**删除功能必须同时删除对应测试与 `tests/fixtures/` 中不再被引用的 fixture**。\n- **只检查可观察行为**：返回值、发出的消息、持久化结果、权限与安全判定。不要检查 mock 的调用次数、私有属性与私有函数、日志原文。\n- **不要测的东西**：构造器与默认值、常量、getter/setter、标准库或第三方库的直接转发、仅检查“不抛异常”的基本检查用例。\n- **一个行为一个用例。** 同一行为的输入变体用同一用例内的循环或表驱动覆盖，不要每个变体注册一个 `tester.test`。一个 bug 修复只在现有测试都覆盖不到时才补回归用例，并且放入该功能原有的测试里。\n- **不写镜像用例。** 代码路径相同的对称场景（如发送者侧与目标侧、群聊与私聊、各平台各一份“缺失媒体被跳过”）只测其一。只有代码路径确实分叉时才分别覆盖。\n- **必须保留、不得为精简而删除**：安全与权限判定、数据迁移与一致性、并发与锁、以及每个功能的主路径。\n- **每个 `_test_` 函数必须被 `tester.test` 注册**，未注册的函数永远不会运行，属于死代码。\n- **按主题组织文件。** 一个功能（模块、适配器、子系统）对应一个测试文件，在其内追加。不要新建 `test_more_*` / `test_*_more` / `test_*_fixes` 之类的增量碎片文件。包内用例放在 `packages/<包名>/tests/`，命名与根 `tests/` 保持一致。\n- **集成测试**（根 `tests/integration/`）每个命令只保留一条主路径加必要的、行为不同的错误路径。能用纯函数单元测试覆盖的逻辑不要放入集成测试，因为它们依赖录制的 HTTP fixture。\n- 用例描述（`tester.test` 的第二个参数）写被验证的行为，不写实现细节。测试中同样遵循“只描述当前状态”的注释约定。\n- 不要用固定 `sleep` 等待。需要超时时使用 `akaribot.testing.timing.TIME_SCALE`。",
 "ctx": "测试编写规范",
 "path": "AGENTS.md",
 "id": 76
@@ -909,7 +909,7 @@
 "start": 117,
 "end": 117,
 "kind": "md-paragraph",
-"text": "  生成器会折算为站点 URL。",
+"text": "  生成器会转换为站点 URL。",
 "ctx": "包文档与文档站点",
 "path": "AGENTS.md",
 "id": 104
@@ -1044,7 +1044,7 @@
 "start": 144,
 "end": 145,
 "kind": "md-paragraph",
-"text": "  也让人看不清将改动什么。弹窗前先经过 `_compat.PendingConfirm.accept(key)`，在防抖窗口内忽略连发，\n  避免叠出两层模态框。切页、刷新、切换选中项时调用页面的 `reset_pending()` 复位。",
+"text": "  也让人看不清将改动什么。弹窗前先经过 `_compat.PendingConfirm.accept(key)`，在防抖窗口内忽略连发，\n  避免叠出两层模态框。切换页面、刷新、切换选中项时调用页面的 `reset_pending()` 复位。",
 "ctx": "TUI 键位与交互",
 "path": "AGENTS.md",
 "id": 119
@@ -1296,7 +1296,7 @@
 "start": 190,
 "end": 190,
 "kind": "md-paragraph",
-"text": "  环境变量就位之前被固化到仓库 `data/`。公开名按需解析。",
+"text": "  环境变量就位之前被固定到仓库 `data/`。公开名按需解析。",
 "ctx": "陷阱",
 "path": "AGENTS.md",
 "id": 147
@@ -1368,7 +1368,7 @@
 "start": 198,
 "end": 198,
 "kind": "md-paragraph",
-"text": "  （`bot_telegram-alt`）由基表（`bot_telegram`）生成，查声明时要按前缀匹配。",
+"text": "  （`bot_telegram-alt`）由基础表（`bot_telegram`）生成，查声明时要按前缀匹配。",
 "ctx": "陷阱",
 "path": "AGENTS.md",
 "id": 155
@@ -1404,7 +1404,7 @@
 "start": 202,
 "end": 202,
 "kind": "md-paragraph",
-"text": "  会让容器 visual 为 `None`）。切页后要把焦点交给该页，否则页级键位不生效。隐藏页要跳过定时轮询。",
+"text": "  会让容器 visual 为 `None`）。切换页面后要把焦点交给该页，否则页级键位不生效。隐藏页要跳过定时轮询。",
 "ctx": "陷阱",
 "path": "AGENTS.md",
 "id": 159
@@ -1494,7 +1494,7 @@
 "start": 215,
 "end": 215,
 "kind": "md-list",
-"text": "- 版本守卫（`tools/check_versions.py`）要求包内有源码改动即升 `version`，或在提交信息**最后一段**",
+"text": "- 版本检查（`tools/check_versions.py`）要求包内有源码改动即升级 `version`，或在提交信息**最后一段**",
 "ctx": "提交与验证约定",
 "path": "AGENTS.md",
 "id": 169
@@ -1512,7 +1512,7 @@
 "start": 218,
 "end": 218,
 "kind": "md-list",
-"text": "- 版本守卫在 tester 里以目标分支为基准运行，**只报告不阻断**（`continue-on-error`），因为版本号是发布",
+"text": "- 版本检查在 tester 里以目标分支为基准运行，**只报告不阻断**（`continue-on-error`），因为版本号是发布",
 "ctx": "提交与验证约定",
 "path": "AGENTS.md",
 "id": 171
@@ -1953,7 +1953,7 @@
 "start": 146,
 "end": 146,
 "kind": "md-paragraph",
-"text": "其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。",
+"text": "其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束不一致。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。",
 "ctx": "依赖冲突与联合求解",
 "path": "CONTRIBUTING.md",
 "id": 220
@@ -2592,7 +2592,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 导入 tester 即完成测试环境铺设，必须早于任何 akaribot.core.* 导入（说明见本文件开头的 docstring）。",
+"text": "# 导入 tester 即完成测试环境初始化，必须早于任何 akaribot.core.* 导入（说明见本文件开头的 docstring）。",
 "spans": [
 [
 18,
@@ -2714,7 +2714,7 @@
 "start": 31,
 "end": 31,
 "kind": "md-paragraph",
-"text": "复制期间持有源 `.bot.lock`，SQLite 主库与已提交的 WAL 数据通过独立快照复制到目标。目标配置中的数据库地址指向该副本。没有 `.bot.lock` 的旧目录应先正常启动并停止一次，试运行允许该锁文件不存在。",
+"text": "复制期间持有源 `.bot.lock`，SQLite 主数据库与已提交的 WAL 数据通过独立快照复制到目标。目标配置中的数据库地址指向该副本。没有 `.bot.lock` 的旧目录应先正常启动并停止一次，试运行允许该锁文件不存在。",
 "ctx": "自动迁移",
 "path": "docs/migrating-to-packages.md",
 "id": 302
@@ -2777,7 +2777,7 @@
 "start": 49,
 "end": 49,
 "kind": "md-list",
-"text": "3. **搬运配置**：把旧仓库 `config/` 下的文件复制到 `<实例目录>/config/`。配置表名与文件名一一对应（`config.toml`、`bot_telegram.toml`、`module_wiki.toml` …）。复制后逐项核对：",
+"text": "3. **迁移配置**：把旧仓库 `config/` 下的文件复制到 `<实例目录>/config/`。配置表名与文件名一一对应（`config.toml`、`bot_telegram.toml`、`module_wiki.toml` …）。复制后逐项核对：",
 "ctx": "手工迁移步骤",
 "path": "docs/migrating-to-packages.md",
 "id": 309
@@ -2795,7 +2795,7 @@
 "start": 58,
 "end": 59,
 "kind": "md-list",
-"text": "4. **搬运数据**：把旧仓库的 `database/`、`data/`、`assets/`（若曾自建）复制到实例根目录下。数据库首次启动时会自动执行迁移，旧版本号由迁移系统转换。\n5. **安装实际使用的模块**：",
+"text": "4. **迁移数据**：把旧仓库的 `database/`、`data/`、`assets/`（若曾自建）复制到实例根目录下。数据库首次启动时会自动执行迁移，旧版本号由迁移系统转换。\n5. **安装实际使用的模块**：",
 "ctx": "手工迁移步骤",
 "path": "docs/migrating-to-packages.md",
 "id": 311
@@ -3506,7 +3506,7 @@
 "start": 213,
 "end": 219,
 "kind": "md-list",
-"text": "- **简体中文**：包内文档只写简体中文。面向用户的固定文案仍用 `I18NContext`。不得为文档创建或修改 `locales/` 下 `zh_cn.json` 以外的语言文件，翻译由 Weblate 自动提交。\n- **只写当前行为**：不写“原来如何、现在改为如何”，变更历史由 git 承担。\n- **段落不按列硬换行**：一个段落写在同一行，由渲染器换行。中文没有词间空格，源码里的软换行会在页面上留下空格。\n- **一级标题开头**：每页以 `# 标题` 开始，标题与 front matter 的 `title` 一致。\n- **篇幅**：单页 40 至 120 行，只覆盖功能概述、基本使用与接口行为。\n- **链接**：同包页面使用相对路径。跨包页面按源码目录写相对路径，生成器会折算成站点 URL，也可直接写 `/<包 key>/<页面>`。\n- **图片与附件**：放在 `docs/` 下用相对路径引用。图片、`.txt` 与 `.pdf` 都会发布到 `/<包 key>/` 路径下，组件内的相对路径同样可用。",
+"text": "- **简体中文**：包内文档只写简体中文。面向用户的固定文案仍用 `I18NContext`。不得为文档创建或修改 `locales/` 下 `zh_cn.json` 以外的语言文件，翻译由 Weblate 自动提交。\n- **只写当前行为**：不写“原来如何、现在改为如何”，变更历史由 git 承担。\n- **段落不按列硬换行**：一个段落写在同一行，由渲染器换行。中文没有词间空格，源码里的软换行会在页面上留下空格。\n- **一级标题开头**：每页以 `# 标题` 开始，标题与 front matter 的 `title` 一致。\n- **篇幅**：单页 40 至 120 行，只覆盖功能概述、基本使用与接口行为。\n- **链接**：同包页面使用相对路径。跨包页面按源码目录写相对路径，生成器会转换为站点 URL，也可直接写 `/<包 key>/<页面>`。\n- **图片与附件**：放在 `docs/` 下用相对路径引用。图片、`.txt` 与 `.pdf` 都会发布到 `/<包 key>/` 路径下，组件内的相对路径同样可用。",
 "ctx": "编写规则",
 "path": "docs/package-docs.md",
 "id": 390
@@ -5714,7 +5714,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# KOOK 客户端在导入阶段即构造 Bot，令牌占位符会被配置层解析为 None 并触发 ValueError，\n# 与既有 KOOK 用例一致，此处以 Bot 替身完成导入。",
+"text": "# KOOK 客户端在导入阶段即构造 Bot，令牌占位符会被配置层解析为 None 并触发 ValueError，\n# 与既有 KOOK 用例一致，此处以模拟 Bot 完成导入。",
 "spans": [
 [
 6,
@@ -6634,7 +6634,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。\n# 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的契约。",
+"text": "# 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。\n# 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的约定。",
 "spans": [
 [
 212,
@@ -7484,7 +7484,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。\n# 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的契约。",
+"text": "# 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。\n# 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的约定。",
 "spans": [
 [
 418,
@@ -8482,7 +8482,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 用户权限缓存，供接口未返回群聊内身份的部分场景使用。只缓存管理员，缺失时安全退化为无权限。",
+"text": "# 用户权限缓存，供接口未返回群聊内身份的部分场景使用。只缓存管理员，缺失时安全回退为无权限。",
 "spans": [
 [
 315,
@@ -8712,7 +8712,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 客户端解析也可能在初始化失败或关闭期间抛错，仍应遵守私信失败返回空 ID 的契约。",
+"text": "# 客户端解析也可能在初始化失败或关闭期间抛错，仍应遵守私信失败返回空 ID 的约定。",
 "spans": [
 [
 1195,
@@ -8897,7 +8897,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后让位一条普通任务，避免普通目标饥饿。",
+"text": "# 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后插播一条普通任务，避免普通目标饥饿。",
 "spans": [
 [
 1707,
@@ -10808,7 +10808,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 自定义元素没有统一语义，仅保留其中可读的文本，避免把标记原样透传给解析器",
+"text": "# 自定义元素没有统一语义，仅保留其中可读的文本，避免把标记原样传递给解析器",
 "spans": [
 [
 209,
@@ -11967,7 +11967,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 各进程内存占用，其中 memory 为字节，metric 说明口径（USS / RSS）。",
+"text": "# 各进程内存占用，其中 memory 为字节，metric 说明统计方式（USS / RSS）。",
 "spans": [
 [
 225,
@@ -12607,7 +12607,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 控制台不存在公开场景，私信与普通发送等价，但平台发送失败仍须\n# 遵守 ContextManager 契约，以空列表表示无法送达。",
+"text": "# 控制台不存在公开场景，私信与普通发送等价，但平台发送失败仍须\n# 遵守 ContextManager 接口约定，以空列表表示无法送达。",
 "spans": [
 [
 233,
@@ -13617,7 +13617,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 密码是否存在的变化记录在 StoredData 的单键中，避免为单个状态创建数据表。",
+"text": "# 密码是否存在的变化记录在 StoredData 的单个键中，避免为单个状态创建数据表。",
 "spans": [
 [
 10,
@@ -14172,7 +14172,7 @@
 "start": 9,
 "end": 17,
 "kind": "md-table",
-"text": "| 文件 | 用途 |\n| --- | --- |\n| `character_marked.png` | 角色立绘，用于 `~about` 等展示场景 |\n| `akaribot_logo.png` | 日间标志，用于邮件报告、界面配图与文档站点 |\n| `akaribot_logo_dark.png` | 夜间标志，用于深色模式的文档站点 |\n| `akaribot_avatar.jpg` | 机器人头像，用于文档站点的命令对话示例 |\n| `credits.txt` | 制作人员名单，含主开发者、功能协助、画师与 Logo 设计 |\n| `LICENSE` | 品牌资产许可证 |\n| `manifest.toml` | 包自述清单。本包不是模块或适配器，没有 registry 条目 |",
+"text": "| 文件 | 用途 |\n| --- | --- |\n| `character_marked.png` | 角色立绘，用于 `~about` 等展示场景 |\n| `akaribot_logo.png` | 日间标志，用于邮件报告、界面配图与文档站点 |\n| `akaribot_logo_dark.png` | 夜间标志，用于深色模式的文档站点 |\n| `akaribot_avatar.jpg` | 机器人头像，用于文档站点的命令对话示例 |\n| `credits.txt` | 制作人员名单，含主开发者、功能协助、画师与 Logo 设计 |\n| `LICENSE` | 品牌资产许可证 |\n| `manifest.toml` | 包说明清单。本包不是模块或适配器，没有 registry 条目 |",
 "ctx": "内容物",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md",
 "id": 1259
@@ -14217,7 +14217,7 @@
 "start": 37,
 "end": 37,
 "kind": "md-paragraph",
-"text": "资源包与实例 `assets/` 都没有同名文件时，`find_brand_asset()` 返回 `None`，由调用方降级处理。`~about` 少一张图不会让整条命令失败，SMTP 报告缺少标志时也照常发送。实例 `assets/` 中的同名文件会覆盖包内资产，供部署者替换标志。",
+"text": "资源包与实例 `assets/` 都没有同名文件时，`find_brand_asset()` 返回 `None`，由调用方降级处理。`~about` 少一张图不会让整条命令失败，SMTP 报告缺少标志时也正常发送。实例 `assets/` 中的同名文件会覆盖包内资产，供部署者替换标志。",
 "ctx": "安装与定位",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/docs/index.md",
 "id": 1264
@@ -14532,7 +14532,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-brand 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
+"text": "# akari-bot-assets-brand 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供包说明。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-brand/akaribot/assets/brand/manifest.toml",
 "id": 1299
 },
@@ -14829,7 +14829,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-emotes 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
+"text": "# akari-bot-assets-emotes 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供包说明。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-emotes/akaribot/assets/emotes/manifest.toml",
 "id": 1329
 },
@@ -14923,7 +14923,7 @@
 "start": 7,
 "end": 13,
 "kind": "md-table",
-"text": "| 文件 | 用途 |\n| --- | --- |\n| `Noto Sans CJK Bold.otf` | 中文与符号的粗体渲染 |\n| `Noto Sans CJK DemiLight.otf` | 中文与符号的细体渲染 |\n| `Noto Sans Symbols2 Regular.ttf` | 符号补充字形 |\n| `LICENSE` | SIL Open Font License 1.1 全文与来源说明 |\n| `manifest.toml` | 包自述清单。本包不是模块或适配器 |",
+"text": "| 文件 | 用途 |\n| --- | --- |\n| `Noto Sans CJK Bold.otf` | 中文与符号的粗体渲染 |\n| `Noto Sans CJK DemiLight.otf` | 中文与符号的细体渲染 |\n| `Noto Sans Symbols2 Regular.ttf` | 符号补充字形 |\n| `LICENSE` | SIL Open Font License 1.1 全文与来源说明 |\n| `manifest.toml` | 包说明清单。本包不是模块或适配器 |",
 "ctx": "内容物",
 "path": "packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md",
 "id": 1339
@@ -14986,7 +14986,7 @@
 "start": 39,
 "end": 39,
 "kind": "md-paragraph",
-"text": "三级均未找到时，`find_font` 抛出 `FontNotFoundError`。异常消息里给出安装资源包、把字体放进实例目录、安装系统字族三种修复方式。",
+"text": "三级均未找到时，`find_font` 抛出 `FontNotFoundError`。异常消息里给出安装资源包、把字体放入实例目录、安装系统字族三种修复方式。",
 "ctx": "查找顺序",
 "path": "packages/akari-bot-assets-fonts/akaribot/assets/fonts/docs/index.md",
 "id": 1346
@@ -15040,7 +15040,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-assets-fonts 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供本包自述。资源根目录即包根目录。",
+"text": "# akari-bot-assets-fonts 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供包说明。资源根目录即包根目录。",
 "path": "packages/akari-bot-assets-fonts/akaribot/assets/fonts/manifest.toml",
 "id": 1352
 },
@@ -15253,7 +15253,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# registry.note 同时进入 --json 的 registry_note 字段，属机器可读契约，保持原文。",
+"text": "# registry.note 同时进入 --json 的 registry_note 字段，属机器可读格式约定，保持原文。",
 "spans": [
 [
 1087,
@@ -15420,7 +15420,7 @@
 "start": 446,
 "end": 446,
 "kind": "py-docstring",
-"text": "基表表名。registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。",
+"text": "基础配置表名。registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -16020,7 +16020,7 @@
 "start": 87,
 "end": 87,
 "kind": "py-docstring",
-"text": "报告展示的本地化文案，缺键时回退到 ``message``。",
+"text": "报告展示的本地化文案，缺少对应键时回退到 ``message``。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -16308,7 +16308,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 带实例 ID 的表（bot_telegram-alt）是生成物，迁移只认基表。",
+"text": "# 带实例 ID 的表（bot_telegram-alt）是生成物，迁移只识别基础配置表。",
 "spans": [
 [
 242,
@@ -16653,7 +16653,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 工作区来源的 detail 是包路径。它放进 origin，消费方（TUI、脚本）据此定位源码。",
+"text": "# 工作区来源的 detail 是包路径，会放入 origin，供调用方（TUI、脚本）据此定位源码。",
 "spans": [
 [
 599,
@@ -16683,7 +16683,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 基表取 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 只扫描 ``config/*.toml``，\n# 按 ``provides_modules`` 拼接的路径不在扫描范围内。适配器实例表名由基表生成，只能按前缀匹配。",
+"text": "# 基础配置表取 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 只扫描 ``config/*.toml``，\n# 按 ``provides_modules`` 拼接的路径不在扫描范围内。适配器实例表名由基础配置表生成，只能按前缀匹配。",
 "spans": [
 [
 708,
@@ -16793,7 +16793,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout。\n# ``json_mode`` 只影响整体失败时报错还是回传载荷。",
+"text": "# ``--json`` 的 stdout 重定向由调用方完成，本函数正常把人类可读输出写到当前 stdout。\n# ``json_mode`` 只影响整体失败时报错还是返回数据载荷。",
 "spans": [
 [
 901,
@@ -16813,7 +16813,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 三元组的第二项是 --json 载荷里的 reason，属机器可读契约，保持原文。第三项只供打印。",
+"text": "# 三元组的第二项是 --json 载荷里的 reason，属机器可读格式约定，保持原文。第三项只供打印。",
 "spans": [
 [
 928,
@@ -16828,7 +16828,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# failed_details[].reason 是 --json 契约的一部分，保持原文。人类可读提示另行本地化。",
+"text": "# failed_details[].reason 是 --json 输出格式约定的一部分，保持原文。人类可读提示另行本地化。",
 "spans": [
 [
 965,
@@ -16898,7 +16898,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件短路。\n# 为真时仍通过子进程执行，由 core 判定 Server 是否在线。",
+"text": "# 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才返回，故先用锁文件提前返回。\n# 为真时仍通过子进程执行，由 core 判定 Server 是否在线。",
 "spans": [
 [
 1136,
@@ -17008,7 +17008,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 门面导入的书写顺序，按实际用到的组件裁剪，避免生成未使用的 import。",
+"text": "# 公开接口导入的书写顺序，按实际用到的组件裁剪，避免生成未使用的 import。",
 "spans": [
 [
 61,
@@ -17115,7 +17115,7 @@
 "start": 105,
 "end": 105,
 "kind": "py-docstring",
-"text": "命令在 locale 键与测试名中使用的短名，取自模板的第一个字面量词。",
+"text": "命令在 locale 键与测试名中使用的简称，取自模板的第一个字面量词。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -17285,7 +17285,7 @@
 "start": 60,
 "end": 60,
 "kind": "py-docstring",
-"text": "启动、停止或查看实例。未知参数原样透传给 core。",
+"text": "启动、停止或查看实例。未知参数原样传递给 core。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -17373,7 +17373,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``init`` 默认只安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发期依赖。\n# 缺包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该安装什么。此处给出明确的\n# 下一步提示。",
+"text": "# ``init`` 默认只安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发期依赖。\n# 缺少依赖包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该安装什么。此处给出明确的\n# 下一步提示。",
 "spans": [
 [
 25,
@@ -17435,7 +17435,7 @@
 "start": 45,
 "end": 45,
 "kind": "py-docstring",
-"text": "在实例环境里运行测试。未知参数原样透传给 akaribot.testing。",
+"text": "在实例环境里运行测试。未知参数原样传递给 akaribot.testing。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -17748,7 +17748,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未安装且未启用的平台不进实例列表，经安装对话框选择后安装。",
+"text": "# 未安装且未启用的平台不显示在实例列表中，经安装对话框选择后安装。",
 "spans": [
 [
 619,
@@ -18260,7 +18260,7 @@
 "start": 59,
 "end": 62,
 "kind": "md-list",
-"text": "- `path`：测试文件或目录，省略时运行全部默认根目录。\n- `--ci`：非交互模式，跳过需要人工复核的用例，同时设置 `CI=1`。CI 里不会停在 `input()` 等待输入。\n- `--coverage`：收集覆盖率。`--case`：只运行名称含该子串的用例，可重复。\n- 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺包时命令会给出安装提示。",
+"text": "- `path`：测试文件或目录，省略时运行全部默认根目录。\n- `--ci`：非交互模式，跳过需要人工复核的用例，同时设置 `CI=1`。CI 里不会停在 `input()` 等待输入。\n- `--coverage`：收集覆盖率。`--case`：只运行名称含该子串的用例，可重复。\n- 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺少该包时命令会给出安装提示。",
 "ctx": "test",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1570
@@ -18332,7 +18332,7 @@
 "start": 91,
 "end": 95,
 "kind": "md-list",
-"text": "- `list [--json]`：列出已有配置表。`schema --table <表> [--json]`：字段类型、默认值、注释与是否占位。\n- `placeholders [--json]`：统计各表待填的占位符。它只做统计，不阻止启动。\n- `get <键> --table <表>`、`set <键> <值> --table <表>`：单项读写。`set` 按模板类型转换布尔、数字与列表，密钥字段自动写入 `_secret` 表。\n- `open [--table <表>]`：用 `VISUAL` / `EDITOR` 打开配置文件。`edit`：提示三种编辑方式（表单、原始文本、外部编辑器）。\n- 表名以 `list` / `schema` 的输出为准。实例表可能带 `-<实例 ID>` 后缀，基表名不能直接当作实例表名使用。",
+"text": "- `list [--json]`：列出已有配置表。`schema --table <表> [--json]`：字段类型、默认值、注释与是否占位。\n- `placeholders [--json]`：统计各表待填的占位符。它只做统计，不阻止启动。\n- `get <键> --table <表>`、`set <键> <值> --table <表>`：单项读写。`set` 按模板类型转换布尔、数字与列表，密钥字段自动写入 `_secret` 表。\n- `open [--table <表>]`：用 `VISUAL` / `EDITOR` 打开配置文件。`edit`：提示三种编辑方式（表单、原始文本、外部编辑器）。\n- 表名以 `list` / `schema` 的输出为准。实例表可能带 `-<实例 ID>` 后缀，基础表名不能直接当作实例表名使用。",
 "ctx": "config",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1578
@@ -18593,7 +18593,7 @@
 "start": 230,
 "end": 236,
 "kind": "md-table",
-"text": "| 变量 | 作用 |\n| --- | --- |\n| `AKARI_INSTANCE_DIR` | 未传 `--instance` 时使用的实例根目录。显式参数优先。 |\n| `AKARIBOT_HOME` | 实例注册表所在目录，默认 `~/.akaribot`。 |\n| `AKARIBOT_PYTHON` | 非托管模式下启动实例子进程使用的解释器。 |\n| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。打包产物可据此指向二进制文件。 |\n| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按这个顺序选择。 |",
+"text": "| 变量 | 作用 |\n| --- | --- |\n| `AKARI_INSTANCE_DIR` | 未传入 `--instance` 时使用的实例根目录。显式参数优先。 |\n| `AKARIBOT_HOME` | 实例注册表所在目录，默认 `~/.akaribot`。 |\n| `AKARIBOT_PYTHON` | 非托管模式下启动实例子进程使用的解释器。 |\n| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。打包产物可据此指向二进制文件。 |\n| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按这个顺序选择。 |",
 "ctx": "环境变量",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/commands.md",
 "id": 1607
@@ -18638,7 +18638,7 @@
 "start": 7,
 "end": 7,
 "kind": "md-paragraph",
-"text": "引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接折算、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册进 `akaribot` 主命令表。命令见下表。",
+"text": "引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接转换、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册进 `akaribot` 主命令表。命令见下表。",
 "ctx": "当前状态",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1612
@@ -18845,7 +18845,7 @@
 "start": 164,
 "end": 178,
 "kind": "md-list",
-"text": "- `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。\n  - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。\n  - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。\n  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。\n  - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。\n  - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。\n- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。\n- `group_titles`：侧栏一级分组的标题，键为包分组。\n- `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。\n- `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。\n- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。\n- `build.out_dir`：输出目录，相对路径锚定实例根目录。留空时取 `defaults.toml` 的 `[site] out_dir`。\n- `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。\n- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。\n- `deploy`：部署目标配置，引擎不解释这些字段。",
+"text": "- `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。\n  - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。\n  - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。\n  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。\n  - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。\n  - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。\n- `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。\n- `group_titles`：侧栏一级分组的标题，键为包分组。\n- `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。\n- `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。\n- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。\n- `build.out_dir`：输出目录，相对路径以实例根目录为基准。留空时取 `defaults.toml` 的 `[site] out_dir`。\n- `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。\n- `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。\n- `deploy`：部署目标配置，引擎不解释这些字段。",
 "ctx": "配置",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1635
@@ -18953,7 +18953,7 @@
 "start": 238,
 "end": 238,
 "kind": "md-paragraph",
-"text": "链接写成 `package` + `page`、`group` 或 `url`，生成器会按站点结构折算地址。未识别的字段会被忽略，缺少必填字段或类型不符时按配置错误终止构建。",
+"text": "链接写成 `package` + `page`、`group` 或 `url`，生成器会按站点结构转换地址。未识别的字段会被忽略，缺少必填字段或类型不符时按配置错误终止构建。",
 "ctx": "首页数据",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1647
@@ -19133,7 +19133,7 @@
 "start": 283,
 "end": 288,
 "kind": "md-list",
-"text": "- 变更在 0.6 秒的静默窗口内合并为一批，间隔由 `--interval` 调整。\n- `--package` 只监听指定包，其余包仍参与生成与跨包链接折算。\n- 默认端口 5173，被占用时改用系统分配的端口。`--port 0` 直接把端口选择交给系统。\n- 启动时写入 `cache/docs/.dev.lock`。同一实例上 `dev` 与 `clean`、`install-deps` 互斥，`status` 据此报告开发模式状态。\n- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行。在 TUI 中启动其一即停止另一。\n- `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。",
+"text": "- 变更在 0.6 秒的静默窗口内合并为一批，间隔由 `--interval` 调整。\n- `--package` 只监听指定包，其余包仍参与生成与跨包链接转换。\n- 默认端口 5173，被占用时改用系统分配的端口。`--port 0` 直接把端口选择交给系统。\n- 启动时写入 `cache/docs/.dev.lock`。同一实例上 `dev` 与 `clean`、`install-deps` 互斥，`status` 据此报告开发模式状态。\n- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行。在 TUI 中启动其一即停止另一。\n- `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。",
 "ctx": "开发模式",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/docs-engine.md",
 "id": 1667
@@ -20006,7 +20006,7 @@
 "start": 119,
 "end": 119,
 "kind": "md-paragraph",
-"text": "进入“模块”页，按 `i` 安装需要的模块，选择目标后确认。安装完成只是把代码放进实例。",
+"text": "进入“模块”页，按 `i` 安装需要的模块，选择目标后确认。安装完成只是把代码放入实例。",
 "ctx": "安装模块",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1764
@@ -20033,7 +20033,7 @@
 "start": 129,
 "end": 129,
 "kind": "md-paragraph",
-"text": "安装只把代码放进实例。全局加载后，命令才会参与匹配。场景启用后，群里才能使用。",
+"text": "安装只把代码放入实例。全局加载后，命令才会参与匹配。场景启用后，群里才能使用。",
 "ctx": "安装模块",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/self-hosting.md",
 "id": 1767
@@ -20402,7 +20402,7 @@
 "start": 51,
 "end": 51,
 "kind": "md-paragraph",
-"text": "切页时焦点交给目标页，隐藏页停止轮询。页面未激活前不读取数据。",
+"text": "切换页面时焦点交给目标页，隐藏页停止轮询。页面未激活前不读取数据。",
 "ctx": "页面",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1808
@@ -20456,7 +20456,7 @@
 "start": 70,
 "end": 84,
 "kind": "md-list",
-"text": "- 概览：`r` 刷新，`Enter` 切换实例，`n` 添加实例（新建或选择目录），`Ctrl+D` 从注册表移除，`m` 服务与策略（开机自启、崩溃重启、安装或卸载服务）。\n- 运行：`s` 启动，`x` 停止，`Ctrl+R` 重启，`r` 刷新，`m` 更多（按适配器启动、前台运行命令）。\n- 日志：`space` 暂停跟踪，`c` 清空显示缓冲，`/` 过滤，`m` 日志级别，`r` 刷新，`Esc` 清空过滤。\n- 诊断：`r` 刷新，`Enter` 打开冲突详情。\n- 配置：`Ctrl+S` 保存，`o` 外部编辑器，`f` 表单模式，`t` 原始文本，`r` 刷新，`Esc` 返回表清单。\n- 适配器：`r` 刷新，`i` 安装适配器，`e` 启用/停用实例，`n` 新增实例，`Ctrl+D` 移除实例。\n  - 列表只显示已安装或已启用的适配器。未安装的平台，要先按 `i` 打开安装对话框选择。\n  - 新增实例时，在对话框中选择已安装的适配器并填写实例 ID。`↑` / `↓` 改选平台，`Enter` 创建。\n  - 创建后弹出配置表单，待填写项排在最前。`Enter` 进入下一项，`Ctrl+S` 保存，`Esc` 稍后填写。\n- 模块：`r` 刷新，`/` 搜索，`i` 安装（先确认目标），`u` 卸载，`U` 更新，`e` 全局加载/卸载，`space` 选择，`Shift+↑/↓` 扩展选择，`a` 全选，`c` 清除选择，`Esc` 清空搜索。\n- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列当前模式可用的项），`Esc` 清空搜索。\n- 数据库：`r` 刷新，`Ctrl+S` 保存，`n` 新建，`Ctrl+D` 删除，`/` 搜索，`f` 添加筛选，`Ctrl+F` 清空筛选，`m` 更多（排序、清空筛选），`[` / `]` 翻页，`g` / `G` 首末页。\n- 开发：`r` 刷新，`t` 运行测试，`n` 新建包对话框，`o` 聚焦输出，`Esc` 终止运行中的操作。\n- 文档：`r` 刷新，`/` 搜索，`space` 选择，`b` 构建，`p` 启动或停止预览，`e` 启动或停止开发预览，`o` 打开浏览器，`m` 更多（部署、同步主题、安装依赖、任务日志），`a` 全选，`c` 清空选择。\n- 迁移：`Enter` 迁移，`p` 试运行。",
+"text": "- 概览：`r` 刷新，`Enter` 切换实例，`n` 添加实例（新建或选择目录），`Ctrl+D` 从注册表移除，`m` 服务与策略（开机自启、崩溃重启、安装或卸载服务）。\n- 运行：`s` 启动，`x` 停止，`Ctrl+R` 重启，`r` 刷新，`m` 更多（按适配器启动、前台运行命令）。\n- 日志：`space` 暂停跟踪，`c` 清空显示缓冲，`/` 过滤，`m` 日志级别，`r` 刷新，`Esc` 清空过滤。\n- 诊断：`r` 刷新，`Enter` 打开冲突详情。\n- 配置：`Ctrl+S` 保存，`o` 外部编辑器，`f` 表单模式，`t` 原始文本，`r` 刷新，`Esc` 返回表清单。\n- 适配器：`r` 刷新，`i` 安装适配器，`e` 启用/停用实例，`n` 新增实例，`Ctrl+D` 移除实例。\n  - 列表只显示已安装或已启用的适配器。未安装的平台，要先按 `i` 打开安装对话框选择。\n  - 新增实例时，在对话框中选择已安装的适配器并填写实例 ID。`↑` / `↓` 切换平台，`Enter` 创建。\n  - 创建后弹出配置表单，待填写项排在最前。`Enter` 进入下一项，`Ctrl+S` 保存，`Esc` 稍后填写。\n- 模块：`r` 刷新，`/` 搜索，`i` 安装（先确认目标），`u` 卸载，`U` 更新，`e` 全局加载/卸载，`space` 选择，`Shift+↑/↓` 扩展选择，`a` 全选，`c` 清除选择，`Esc` 清空搜索。\n- 环境：`r` 刷新，`/` 搜索，`i` 安装运行库，`u` 卸载，`m` 解释器菜单（接管 venv、取消接管、重建 venv，只列当前模式可用的项），`Esc` 清空搜索。\n- 数据库：`r` 刷新，`Ctrl+S` 保存，`n` 新建，`Ctrl+D` 删除，`/` 搜索，`f` 添加筛选，`Ctrl+F` 清空筛选，`m` 更多（排序、清空筛选），`[` / `]` 翻页，`g` / `G` 跳转首页和末页。\n- 开发：`r` 刷新，`t` 运行测试，`n` 新建包对话框，`o` 聚焦输出，`Esc` 终止运行中的操作。\n- 文档：`r` 刷新，`/` 搜索，`space` 选择，`b` 构建，`p` 启动或停止预览，`e` 启动或停止开发预览，`o` 打开浏览器，`m` 更多（部署、同步主题、安装依赖、任务日志），`a` 全选，`c` 清空选择。\n- 迁移：`Enter` 迁移，`p` 试运行。",
 "ctx": "页面键位",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1814
@@ -20645,7 +20645,7 @@
 "start": 143,
 "end": 145,
 "kind": "md-list",
-"text": "- `f` 添加筛选条件，支持 `=`、`!=`、`>`、`>=`、`<`、`<=`、`~`、`!~`、`^`、`$`。多条条件按 AND 组合。\n- `m` 设置排序。`[` / `]` 翻页，`g` / `G` 到首末页。每页最多 50 条。\n- `Ctrl+S` 保存、`n` 新建、`Ctrl+D` 删除。同一行的多列修改合并成一次更新，任一列非法则不写入。",
+"text": "- `f` 添加筛选条件，支持 `=`、`!=`、`>`、`>=`、`<`、`<=`、`~`、`!~`、`^`、`$`。多条条件按 AND 组合。\n- `m` 设置排序。`[` / `]` 翻页，`g` / `G` 跳转首页和末页。每页最多 50 条。\n- `Ctrl+S` 保存、`n` 新建、`Ctrl+D` 删除。同一行的多列修改合并成一次更新，任一列非法则不写入。",
 "ctx": "环境与数据库",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1835
@@ -20762,7 +20762,7 @@
 "start": 177,
 "end": 177,
 "kind": "md-paragraph",
-"text": "确认框打开前先调用 `PendingConfirm.accept(key)` 做防抖，同一目标在防抖窗口内的连发会被忽略，避免叠出两层模态。切页、刷新、换表或换选中项时，调用页面的 `reset_pending()` 作废待确认状态。",
+"text": "确认框打开前先调用 `PendingConfirm.accept(key)` 做防抖，同一目标在防抖窗口内的连发会被忽略，避免叠出两层模态框。切换页面、刷新、更换表或更换选中项时，调用页面的 `reset_pending()` 作废待确认状态。",
 "ctx": "确认规则",
 "path": "packages/akari-bot-cli/akaribot/cli/docs/tui.md",
 "id": 1848
@@ -20948,7 +20948,7 @@
 "start": 293,
 "end": 293,
 "kind": "py-docstring",
-"text": "输出目录的绝对路径。配置为相对路径时锚定实例根目录。",
+"text": "输出目录的绝对路径。配置为相对路径时以实例根目录为基准。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -21023,7 +21023,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令层可以传整个 [deploy] 表，也可以只传对应子表。",
+"text": "# 命令层可以传入整个 [deploy] 表，也可以只传入对应子表。",
 "spans": [
 [
 125,
@@ -21353,7 +21353,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 文档在源码树里用相对路径互相引用。生成站点时包目录已重排，跨包链接须折算成 URL。",
+"text": "# 文档在源码树里用相对路径互相引用。生成站点时包目录已重新排列，跨包链接须转换为 URL。",
 "spans": [
 [
 774,
@@ -21445,7 +21445,7 @@
 "start": 135,
 "end": 135,
 "kind": "py-docstring",
-"text": "把分组名折算成文件名与 URL 片段。",
+"text": "把分组名转换为文件名与 URL 片段。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -21998,7 +21998,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 缺键时按英文、中文的顺序回退。",
+"text": "# 缺少对应键时按英文、中文的顺序回退。",
 "spans": [
 [
 20,
@@ -22233,7 +22233,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不锚定实例根目录就会落到调用目录。",
+"text": "# 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不以实例根目录为基准就会落到调用目录。",
 "spans": [
 [
 1102,
@@ -22315,7 +22315,7 @@
 "start": 89,
 "end": 89,
 "kind": "py-docstring",
-"text": "把未识别参数原样透传给 core 的单命令分组。",
+"text": "把未识别参数原样传递给 core 的单命令分组。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -22510,7 +22510,7 @@
 "start": 313,
 "end": 313,
 "kind": "py-docstring",
-"text": "列表展示用的短名，取不到短名时回退到包名。",
+"text": "列表展示用的简称，取不到简称时回退到包名。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -22990,7 +22990,7 @@
 "start": 865,
 "end": 865,
 "kind": "py-docstring",
-"text": "按包名、短名或导入路径查找已安装包。",
+"text": "按包名、简称或导入路径查找已安装包。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -23093,7 +23093,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 解析失败的原因照实上报",
+"text": "# noqa: BLE001 - 解析失败的原因如实上报",
 "spans": [
 [
 161,
@@ -28039,7 +28039,7 @@
 "start": 290,
 "end": 290,
 "kind": "json-value",
-"text": "注：core 提供 config conflicts 入口后，本命令与 daemon 前置检查将自动共用同一份判据。",
+"text": "注：core 提供 config conflicts 入口后，本命令与 daemon 前置检查将自动共用同一套判定规则。",
 "ctx": "cli.doctor.report.note",
 "json": {
 "raw": "注：core 提供 config conflicts 入口后，本命令与 daemon 前置检查将自动共用同一份判据。",
@@ -31405,7 +31405,7 @@
 "start": 489,
 "end": 489,
 "kind": "json-value",
-"text": "把旧版项目迁移为新实例，包括搬运配置与数据、安装映射到的适配器与模块、转换数据库版本。\n\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根目录的 migration-report.md。",
+"text": "把旧版项目迁移为新实例，包括迁移配置与数据、安装映射到的适配器与模块、转换数据库版本。\n\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根目录的 migration-report.md。",
 "ctx": "cli.migrate.legacy.help",
 "json": {
 "raw": "把旧版项目迁移为新实例：搬配置与数据、装映射到的适配器与模块、转换数据库版本。\\n\\n旧目录只读。迁移可重复执行，已完成的步骤不会重复施加。报告写到新实例根的 migration-report.md。",
@@ -32221,7 +32221,7 @@
 "start": 543,
 "end": 543,
 "kind": "json-value",
-"text": "旧配置里没有 `enable = true` 的适配器基表。",
+"text": "旧配置里没有 `enable = true` 的适配器基础配置表。",
 "ctx": "cli.migrate.report.no_adapters",
 "json": {
 "raw": "旧配置里没有 `enable = true` 的适配器基表。",
@@ -32289,7 +32289,7 @@
 "start": 547,
 "end": 547,
 "kind": "json-value",
-"text": "以下模块在旧 `modules/` 里有目录，但旧数据库显示从未加载，故未安装（其 `data/` 仍已搬运，需要时用 `akaribot module add <模块名>` 启用）：${items}",
+"text": "以下模块在旧 `modules/` 里有目录，但旧数据库显示从未加载，故未安装（其 `data/` 仍已迁移，需要时用 `akaribot module add <模块名>` 启用）：${items}",
 "ctx": "cli.migrate.report.skipped",
 "json": {
 "raw": "以下模块在旧 `modules/` 里有目录，但旧库显示从未装载，故未安装（其 `data/` 仍已搬运，需要时用 `akaribot module add <模块名>` 启用）：${items}",
@@ -34448,7 +34448,7 @@
 "start": 674,
 "end": 674,
 "kind": "json-value",
-"text": "--force：${packages} 将因缺依赖在 discover() 时不再注册（可恢复，不是数据损坏）。",
+"text": "--force：${packages} 将因缺少依赖在 discover() 时不再注册（可恢复，不是数据损坏）。",
 "ctx": "cli.module.remove.force_warning",
 "json": {
 "raw": "--force：${packages} 将因缺依赖在 discover() 时不再注册（可恢复，不是数据损坏）。",
@@ -34839,7 +34839,7 @@
 "start": 698,
 "end": 698,
 "kind": "json-value",
-"text": "  已热拆卸旧代际：${dist}",
+"text": "  已热卸载旧版本：${dist}",
 "ctx": "cli.module.update.detach_line",
 "json": {
 "raw": "  已热拆卸旧代际：${dist}",
@@ -61700,7 +61700,7 @@
 "start": 126,
 "end": 126,
 "kind": "py-docstring",
-"text": "进程控制原语，测试可注入替身。",
+"text": "进程控制原语，测试可注入模拟对象。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -62013,7 +62013,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 就绪时限与控制台日志路径都以 run --detach 为准，故就地取用它的实现，避免两处判据分叉。",
+"text": "# 就绪时限与控制台日志路径都以 run --detach 为准，故直接复用它的实现，避免两处判断标准分叉。",
 "spans": [
 [
 519,
@@ -62063,7 +62063,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 启动失败的原因照实上报，守护循环不因此中断",
+"text": "# noqa: BLE001 - 启动失败的原因如实上报，守护循环不因此中断",
 "spans": [
 [
 706,
@@ -62254,7 +62254,7 @@
 "start": 4,
 "end": 6,
 "kind": "md-paragraph",
-"text": "本目录是 ``akaribot new module`` 的渲染输入，由 ``generated_docs/monorepo_refactor_tasks.md``\nT5.5 的问卷驱动。生成器尚未落地，因此模板当前不被任何流程引用。本目录随仓库维护，\n供生成器实现时直接取用。",
+"text": "本目录是 ``akaribot new module`` 的渲染输入，由 ``generated_docs/monorepo_refactor_tasks.md``\nT5.5 的问卷驱动。生成器尚未实现，因此模板当前不被任何流程引用。本目录随仓库维护，\n供生成器实现时直接使用。",
 "ctx": "",
 "path": "packages/akari-bot-cli/akaribot/cli/templates/README.md",
 "id": 4315
@@ -62317,7 +62317,7 @@
 "start": 38,
 "end": 39,
 "kind": "md-paragraph",
-"text": "渲染契约\n--------",
+"text": "渲染约定\n--------",
 "ctx": "",
 "path": "packages/akari-bot-cli/akaribot/cli/templates/README.md",
 "id": 4322
@@ -62479,7 +62479,7 @@
 "start": 95,
 "end": 95,
 "kind": "md-paragraph",
-"text": "   内部路径。该门面在公共 API 契约阶段（P5）建立。",
+"text": "   内部路径。该公开接口在公共 API 约定阶段（P5）建立。",
 "ctx": "",
 "path": "packages/akari-bot-cli/akaribot/cli/templates/README.md",
 "id": 4340
@@ -62796,7 +62796,7 @@
 "start": 41,
 "end": 41,
 "kind": "md-paragraph",
-"text": "`ctrl+←/→` 按侧栏顺序循环切页，折叠组内的页面同样可达。切页后由 `focus_primary()` 将焦点移入当前页面。",
+"text": "`ctrl+←/→` 按侧栏顺序循环切换页面，折叠组内的页面同样可达。切换页面后由 `focus_primary()` 将焦点移入当前页面。",
 "ctx": "导航与交互",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4370
@@ -62832,7 +62832,7 @@
 "start": 50,
 "end": 65,
 "kind": "md-table",
-"text": "| 语义 | 键 |\n| --- | --- |\n| 刷新 | `r` |\n| 搜索 / 过滤 | `/` |\n| 返回一级：清空搜索，搜索已空时焦点回列表 | `Esc` |\n| 列表项默认动作 | `Enter` |\n| 选择 / 全选 / 清空选择（多选页） | `Space` / `a` / `c` |\n| 新建 / 新增 | `n` |\n| 安装 / 卸载 / 更新 | `i` / `u` / `U` |\n| 删除 / 移除（弹确认） | `ctrl+d` |\n| 保存 | `ctrl+s` |\n| 在外部打开 | `o` |\n| 开关切换（启用、装载） | `e` |\n| 预览 / 试运行 | `p` |\n| 本页低频操作菜单 | `m` |\n| 翻页 / 首末页 | `[` / `]`、`g` / `G` |",
+"text": "| 语义 | 键 |\n| --- | --- |\n| 刷新 | `r` |\n| 搜索 / 过滤 | `/` |\n| 返回一级：清空搜索，搜索已空时焦点回列表 | `Esc` |\n| 列表项默认动作 | `Enter` |\n| 选择 / 全选 / 清空选择（多选页） | `Space` / `a` / `c` |\n| 新建 / 新增 | `n` |\n| 安装 / 卸载 / 更新 | `i` / `u` / `U` |\n| 删除 / 移除（弹确认） | `ctrl+d` |\n| 保存 | `ctrl+s` |\n| 在外部打开 | `o` |\n| 开关切换（启用、加载） | `e` |\n| 预览 / 试运行 | `p` |\n| 本页低频操作菜单 | `m` |\n| 翻页 / 首页与末页 | `[` / `]`、`g` / `G` |",
 "ctx": "键位语法",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4374
@@ -62868,7 +62868,7 @@
 "start": 73,
 "end": 74,
 "kind": "md-list",
-"text": "- 确认框按钮按宽度换行，长说明可滚动查看。取消按钮与输入框保持可见。\n- `PendingConfirm.accept(key)` 在 0.4 秒防抖窗口内忽略同一目标的重复请求。切页、手动刷新或",
+"text": "- 确认框按钮按宽度换行，长说明可滚动查看。取消按钮与输入框保持可见。\n- `PendingConfirm.accept(key)` 在 0.4 秒防抖窗口内忽略同一目标的重复请求。切换页面、手动刷新或",
 "ctx": "键位语法",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4378
@@ -63156,7 +63156,7 @@
 "start": 118,
 "end": 118,
 "kind": "md-list",
-"text": "- 清理数据的确认框列出目标包、配置文件与数据表。单包输入包名，批量时输入确认框中指定的确认文字。",
+"text": "- 清理数据的确认框列出目标包、配置文件与数据表。单个包输入包名，批量时输入确认框中指定的确认文字。",
 "ctx": "模块与适配器",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4410
@@ -63183,7 +63183,7 @@
 "start": 122,
 "end": 124,
 "kind": "md-paragraph",
-"text": "  列表只显示已安装或已启用的适配器。未安装且未启用的平台不进列表，缺包但已启用的配置仍列出并标注未安装。\n  `i` 或安装适配器按钮打开对话框，列出全部未安装的平台，回车安装高亮项，单击只改变高亮。当前行\n  未安装时预选该平台。已安装实例提供启用与停用入口。安装完成后刷新清单。",
+"text": "  列表只显示已安装或已启用的适配器。未安装且未启用的平台不显示在列表中，缺少包但已启用的配置仍列出并标注未安装。\n  `i` 或安装适配器按钮打开对话框，列出全部未安装的平台，回车安装高亮项，单击只改变高亮。当前行\n  未安装时预选该平台。已安装实例提供启用与停用入口。安装完成后刷新清单。",
 "ctx": "模块与适配器",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4413
@@ -63201,7 +63201,7 @@
 "start": 126,
 "end": 128,
 "kind": "md-paragraph",
-"text": "  `installed_platforms`，可安装清单读取失败时仍可用），预选当前行的平台，并标出各平台已有的实例。\n  输入框获得焦点时 `↑` / `↓` 仍可改选平台。实例 ID 必填，空值、非法字符与重名在对话框内提示且不关闭。\n  确认后经 `adapter instance add` 新建，配置默认未启用。",
+"text": "  `installed_platforms`，可安装清单读取失败时仍可用），预选当前行的平台，并标出各平台已有的实例。\n  输入框获得焦点时 `↑` / `↓` 仍可切换平台。实例 ID 必填，空值、非法字符与重名在对话框内提示且不关闭。\n  确认后经 `adapter instance add` 新建，配置默认未启用。",
 "ctx": "模块与适配器",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4415
@@ -63408,7 +63408,7 @@
 "start": 165,
 "end": 166,
 "kind": "md-list",
-"text": "- `m` 菜单用于设置排序，列名表示升序，`列名:desc` 表示降序，留空使用默认主键倒序。\n- 每页最多 50 条，`[` / `]` 翻页，`g` / `G` 跳转首末页。更换表或筛选条件时重置分页。",
+"text": "- `m` 菜单用于设置排序，列名表示升序，`列名:desc` 表示降序，留空使用默认主键倒序。\n- 每页最多 50 条，`[` / `]` 翻页，`g` / `G` 跳转首页和末页。更换表或筛选条件时重置分页。",
 "ctx": "数据库",
 "path": "packages/akari-bot-cli/akaribot/cli/tui/README.md",
 "id": 4438
@@ -63931,7 +63931,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 同步聚焦可避免切页时 Textual 将焦点分配给隐藏页面。",
+"text": "# 同步聚焦可避免切换页面时 Textual 将焦点分配给隐藏页面。",
 "spans": [
 [
 536,
@@ -64126,7 +64126,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 重排保留按钮实例，避免丢失标签、禁用状态或焦点。",
+"text": "# 重新排列时保留按钮实例，避免丢失标签、禁用状态或焦点。",
 "spans": [
 [
 1231,
@@ -64848,7 +64848,7 @@
 "start": 1245,
 "end": 1245,
 "kind": "py-docstring",
-"text": "宽度变化后重算列数。",
+"text": "宽度变化后重新计算列数。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -65673,7 +65673,7 @@
 "start": 300,
 "end": 300,
 "kind": "py-docstring",
-"text": "见 :meth:`AdapterSource.stream_install`。替身直接回放固定输出。",
+"text": "见 :meth:`AdapterSource.stream_install`。模拟数据源直接回放固定输出。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -66378,7 +66378,7 @@
 "start": 1605,
 "end": 1605,
 "kind": "py-docstring",
-"text": "作废待确认的移除。切页、刷新与换选中项时调用。",
+"text": "作废待确认的移除。切换页面、刷新与更换选中项时调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -66841,7 +66841,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 切页会改变操作上下文，须清除待确认状态。",
+"text": "# 切换页面会改变操作上下文，须清除待确认状态。",
 "spans": [
 [
 460,
@@ -67621,7 +67621,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 终端挂起和编辑器启动允许注入替身，避免自动化测试启动交互进程。",
+"text": "# 终端挂起和编辑器启动允许注入模拟对象，避免自动化测试启动交互进程。",
 "spans": [
 [
 1542,
@@ -68163,7 +68163,7 @@
 "start": 630,
 "end": 630,
 "kind": "py-docstring",
-"text": "配置数据源接口。测试注入替身，实际运行通过子进程访问。",
+"text": "配置数据源接口。测试注入模拟对象，实际运行通过子进程访问。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -69138,7 +69138,7 @@
 "start": 1908,
 "end": 1908,
 "kind": "py-docstring",
-"text": "终端尺寸变化时按缓存重排配置表列表，不重新读取数据。",
+"text": "终端尺寸变化时按缓存重新排列配置表列表，不重新读取数据。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -69451,7 +69451,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 替身失败同样只降级",
+"text": "# noqa: BLE001 - 模拟对象失败同样只降级",
 "spans": [
 [
 935,
@@ -69921,7 +69921,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 取数失败只降级为逐项说明",
+"text": "# noqa: BLE001 - 读取数据失败只降级为逐项说明",
 "spans": [
 [
 1937,
@@ -70148,7 +70148,7 @@
 "start": 335,
 "end": 335,
 "kind": "py-docstring",
-"text": "替换替身记录的服务状态，模拟单元文件在界面之外出现或消失。",
+"text": "替换模拟对象记录的服务状态，模拟单元文件在界面之外出现或消失。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70178,7 +70178,7 @@
 "start": 386,
 "end": 386,
 "kind": "py-docstring",
-"text": "新建实例的执行接口。测试注入替身，生产环境经 ``akaribot init`` 子进程。",
+"text": "新建实例的执行接口。测试注入模拟对象，生产环境经 ``akaribot init`` 子进程。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -70223,7 +70223,7 @@
 "start": 542,
 "end": 542,
 "kind": "py-docstring",
-"text": "首次使用摘要的数据源接口。测试注入替身，生产环境经子进程与本机配置文件。",
+"text": "首次使用摘要的数据源接口。测试注入模拟对象，生产环境经子进程与本机配置文件。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -70253,7 +70253,7 @@
 "start": 567,
 "end": 567,
 "kind": "py-docstring",
-"text": "替换替身记录的摘要，模拟配置或诊断结论在界面之外变化。",
+"text": "替换模拟对象记录的摘要，模拟配置或诊断结论在界面之外变化。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70283,7 +70283,7 @@
 "start": 788,
 "end": 788,
 "kind": "py-docstring",
-"text": "Dashboard 数据源接口。测试注入替身，运行时通过文件系统与子进程读取。",
+"text": "Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系统与子进程读取。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -70328,7 +70328,7 @@
 "start": 833,
 "end": 833,
 "kind": "py-docstring",
-"text": "改写替身的运行状态，模拟实例启动与停止。",
+"text": "改写模拟对象的运行状态，模拟实例启动与停止。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70343,7 +70343,7 @@
 "start": 837,
 "end": 837,
 "kind": "py-docstring",
-"text": "整份替换替身快照，模拟实例重建或版本变化。",
+"text": "整份替换模拟对象快照，模拟实例重建或版本变化。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70718,7 +70718,7 @@
 "start": 2057,
 "end": 2057,
 "kind": "py-docstring",
-"text": "作废本页的待确认状态。切页、刷新与更换选中项后须重新确认。",
+"text": "作废本页的待确认状态。切换页面、刷新与更换选中项后须重新确认。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -70826,7 +70826,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 替身数据源使用与 core 一致的筛选运算符，使测试能够验证筛选后的记录。",
+"text": "# 模拟数据源使用与 core 一致的筛选运算符，使测试能够验证筛选后的记录。",
 "spans": [
 [
 235,
@@ -70961,7 +70961,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 字段单独放进滚动容器，字段多时只有它滚动，主键行保持可见。",
+"text": "# 字段单独放入滚动容器，字段多时只有它滚动，主键行保持可见。",
 "spans": [
 [
 897,
@@ -71186,7 +71186,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 首末页禁用对应的翻页操作，避免进入空白页。",
+"text": "# 在首页和末页禁用对应的翻页操作，避免进入空白页。",
 "spans": [
 [
 1323,
@@ -71578,7 +71578,7 @@
 "start": 387,
 "end": 387,
 "kind": "py-docstring",
-"text": "数据库数据源接口。测试注入替身，实际运行通过子进程访问。",
+"text": "数据库数据源接口。测试注入模拟对象，实际运行通过子进程访问。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -71608,7 +71608,7 @@
 "start": 395,
 "end": 395,
 "kind": "py-docstring",
-"text": "返回一张表的一页数据项。``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。",
+"text": "返回一张表的一页数据项。``query`` 提供筛选条件与排序，``count`` 为假时不重新计算总条数。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -72463,7 +72463,7 @@
 "start": 1519,
 "end": 1519,
 "kind": "py-docstring",
-"text": "终端尺寸变化时切换布局并按缓存重排，不重新读取数据。",
+"text": "终端尺寸变化时切换布局并按缓存重新排列，不重新读取数据。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -72613,7 +72613,7 @@
 "start": 1611,
 "end": 1611,
 "kind": "py-docstring",
-"text": "作废待确认的写入。切页、刷新、换表与换行时调用。",
+"text": "作废待确认的写入。切换页面、刷新、换表与换行时调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -72821,7 +72821,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 替身读取失败只作为错误上报",
+"text": "# noqa: BLE001 - 模拟对象读取失败只作为错误上报",
 "spans": [
 [
 567,
@@ -73198,7 +73198,7 @@
 "start": 279,
 "end": 279,
 "kind": "py-docstring",
-"text": "见 :meth:`DevSource.stream_action`。替身回放固定输出，不产生子进程。",
+"text": "见 :meth:`DevSource.stream_action`。模拟对象回放固定输出，不产生子进程。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -73213,7 +73213,7 @@
 "start": 312,
 "end": 312,
 "kind": "py-docstring",
-"text": "见 :meth:`DevSource.cancel_action`。替身记录请求并放行被挂起的动作。",
+"text": "见 :meth:`DevSource.cancel_action`。模拟对象记录请求并放行被挂起的动作。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -74323,7 +74323,7 @@
 "start": 270,
 "end": 270,
 "kind": "py-docstring",
-"text": "文档数据源接口。测试注入替身，实际运行通过子进程访问。",
+"text": "文档数据源接口。测试注入模拟对象，实际运行通过子进程访问。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -74488,7 +74488,7 @@
 "start": 361,
 "end": 361,
 "kind": "py-docstring",
-"text": "替换替身返回的视图。",
+"text": "替换模拟对象返回的视图。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -75133,7 +75133,7 @@
 "start": 1479,
 "end": 1479,
 "kind": "py-docstring",
-"text": "终端尺寸变化时按缓存重排，不重新读取数据。",
+"text": "终端尺寸变化时按缓存重新排列，不重新读取数据。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -75328,7 +75328,7 @@
 "start": 1925,
 "end": 1925,
 "kind": "py-docstring",
-"text": "作废待确认状态。切页与本页状态变化时调用。",
+"text": "作废待确认状态。切换页面与本页状态变化时调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -75611,7 +75611,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 结论默认级别与 CLI 侧判据一致，端口与登录信息出现重复时报错，孤立配置只告警。",
+"text": "# 结论默认级别与 CLI 侧判定标准一致，端口与登录信息出现重复时报错，孤立配置只告警。",
 "spans": [
 [
 42,
@@ -75806,7 +75806,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 切页后当前状态栏不可见，使用通知显示跳转结果。",
+"text": "# 切换页面后当前状态栏不可见，使用通知显示跳转结果。",
 "spans": [
 [
 853,
@@ -76888,7 +76888,7 @@
 "start": 314,
 "end": 314,
 "kind": "py-docstring",
-"text": "替换替身返回的快照。",
+"text": "替换模拟对象返回的快照。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -77188,7 +77188,7 @@
 "start": 869,
 "end": 869,
 "kind": "py-docstring",
-"text": "作废待确认的解释器动作。切页时由 :meth:`TuiApp.show_page` 调用。",
+"text": "作废待确认的解释器动作。切换页面时由 :meth:`TuiApp.show_page` 调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -77503,7 +77503,7 @@
 "start": 55,
 "end": 55,
 "kind": "py-docstring",
-"text": "日志数据源接口。测试注入替身，生产直接读文件系统。",
+"text": "日志数据源接口。测试注入模拟对象，生产环境直接读取文件系统。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -78463,7 +78463,7 @@
 "start": 254,
 "end": 254,
 "kind": "py-docstring",
-"text": "作废待确认的迁移。切页时由 :meth:`TuiApp.show_page` 调用。",
+"text": "作废待确认的迁移。切换页面时由 :meth:`TuiApp.show_page` 调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -78706,7 +78706,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 多选按包名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩选的起点。",
+"text": "# 多选按包名记录选区，刷新后只保留仍然存在的项，_anchor 是 Shift 扩展选择的起点。",
 "spans": [
 [
 828,
@@ -79306,7 +79306,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# Shift 扩选替换上次范围，避免反向移动时保留已移出范围的记录。",
+"text": "# Shift 扩展选择替换上次范围，避免反向移动时保留已移出范围的记录。",
 "spans": [
 [
 1654,
@@ -79578,7 +79578,7 @@
 "start": 236,
 "end": 236,
 "kind": "py-docstring",
-"text": "见 :meth:`ModuleSource.stream_operation`。替身直接回放固定输出。",
+"text": "见 :meth:`ModuleSource.stream_operation`。模拟数据源直接回放固定输出。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -79593,7 +79593,7 @@
 "start": 249,
 "end": 249,
 "kind": "py-docstring",
-"text": "模块数据源接口。测试注入替身，实际运行通过子进程访问。",
+"text": "模块数据源接口。测试注入模拟对象，实际运行通过子进程访问。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -80043,7 +80043,7 @@
 "start": 1222,
 "end": 1222,
 "kind": "py-docstring",
-"text": "终端尺寸变化时按缓存重排，不重新读取数据。",
+"text": "终端尺寸变化时按缓存重新排列，不重新读取数据。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -80223,7 +80223,7 @@
 "start": 1680,
 "end": 1680,
 "kind": "py-docstring",
-"text": "处理列表选择，普通点击单选，Ctrl 点击切换，Shift 点击扩选。",
+"text": "处理列表选择，普通点击单选，Ctrl 点击切换，Shift 点击扩展选择。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -80253,7 +80253,7 @@
 "start": 1839,
 "end": 1839,
 "kind": "py-docstring",
-"text": "作废待确认状态。切页与本页状态变化时调用。",
+"text": "作废待确认状态。切换页面与本页状态变化时调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -80568,7 +80568,7 @@
 "start": 99,
 "end": 99,
 "kind": "py-docstring",
-"text": "运行控制数据源接口。测试注入替身，运行时通过子进程执行。",
+"text": "运行控制数据源接口。测试注入模拟对象，运行时通过子进程执行。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -80763,7 +80763,7 @@
 "start": 574,
 "end": 574,
 "kind": "py-docstring",
-"text": "作废待确认状态。切页时由 App 调用。",
+"text": "作废待确认状态。切换页面时由 App 调用。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -80911,7 +80911,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 清单未声明 requires_core_api 时的默认区间。与 core.registry.PackageManifest 及\n# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 同口径，工作区视图与 registry 视图必须一致。",
+"text": "# 清单未声明 requires_core_api 时的默认区间。与 core.registry.PackageManifest 及\n# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 保持一致，工作区视图与 registry 视图必须一致。",
 "spans": [
 [
 62,
@@ -81203,7 +81203,7 @@
 "start": 749,
 "end": 749,
 "kind": "py-docstring",
-"text": "在工作区索引里按包名、短名或 entry point 名查找。",
+"text": "在工作区索引里按包名、简称或 entry point 名查找。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -81308,7 +81308,7 @@
 "start": 1082,
 "end": 1082,
 "kind": "py-docstring",
-"text": "按包名、短名、provides_modules 或 legacy 名查找。",
+"text": "按包名、简称、provides_modules 或 legacy 名查找。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -81579,7 +81579,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命中 core 的取数（registry / schema）全部由替身接管，本命令只走配置文件的读写。",
+"text": "# 涉及 core 的数据读取（registry / schema）全部由模拟对象接管，本命令仅读写配置文件。",
 "spans": [
 [
 40,
@@ -81594,7 +81594,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 说明段落由 locales 提供，这里只认选项表，它才是“该旗标是否存在”的判据。",
+"text": "# 说明段落由 locales 提供，这里只以选项表作为“该选项是否存在”的判断依据。",
 "spans": [
 [
 82,
@@ -81699,7 +81699,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只回答 run_core_capture 的替身，stdout 是 core 回传的文本，returncode 是它的退出码。",
+"text": "# 只响应 run_core_capture 的模拟对象，stdout 是 core 返回的文本，returncode 是它的退出码。",
 "spans": [
 [
 60,
@@ -81759,7 +81759,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例没有任何配置表时不传 --tables，由 core 按自己的配置目录判定，输出如实写没有可统计的表。",
+"text": "# 实例没有任何配置表时不传入 --tables，由 core 按自己的配置目录判定，输出如实写没有可统计的表。",
 "spans": [
 [
 141,
@@ -81789,7 +81789,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 退出码为 0 但输出不是 JSON 时按契约错误报出，不把半截文本当统计结果。",
+"text": "# 退出码为 0 但输出不是 JSON 时按格式错误报出，不把不完整的文本当统计结果。",
 "spans": [
 [
 163,
@@ -81849,7 +81849,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只回答 run_core_capture 的替身实例，payload 是 core 要回传的 JSON，returncode 是它的退出码。",
+"text": "# 只响应 run_core_capture 的模拟对象，payload 是 core 要返回的 JSON，returncode 是它的退出码。",
 "spans": [
 [
 26,
@@ -82046,7 +82046,7 @@
 "start": 278,
 "end": 278,
 "kind": "py-docstring",
-"text": "cli.docs.deploy: provider 解析、确认、结果契约与部署记录",
+"text": "cli.docs.deploy: provider 解析、确认、结果格式约定与部署记录",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -82344,7 +82344,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 测试框架在每个用例前重新运行 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的\n# ``Locale`` 按当前快照取键，不切换回来就只会拿到键名。生产环境里 CLI 进程不加载 core，无此问题。",
+"text": "# 测试框架在每个用例前重新运行 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的\n# ``Locale`` 按当前快照读取键，不切换回来就只会拿到键名。生产环境里 CLI 进程不加载 core，无此问题。",
 "spans": [
 [
 28,
@@ -82604,7 +82604,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令只读实例根目录的 ``logs`` 子目录，替身给一个 root 即可。",
+"text": "# 命令只读实例根目录的 ``logs`` 子目录，模拟对象只需提供一个 root。",
 "spans": [
 [
 26,
@@ -82709,7 +82709,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 没有实例时先询问，复用 init 本体初始化，再进界面。",
+"text": "# 没有实例时先询问，复用 init 本体初始化，再进入界面。",
 "spans": [
 [
 154,
@@ -82739,7 +82739,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 拒绝初始化时不进界面，也不调用 init。",
+"text": "# 拒绝初始化时不进入界面，也不调用 init。",
 "spans": [
 [
 180,
@@ -82754,7 +82754,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填\n# （或默认值变成 typer 的 OptionInfo），无参数调用入口会在运行时失败，而 ``akaribot init`` 子命令\n# 仍然正常，这条守卫专门针对这一差异。",
+"text": "# ``_ensure_instance`` 只传入路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填\n# （或默认值变成 typer 的 OptionInfo），无参数调用入口会在运行时失败，而 ``akaribot init`` 子命令\n# 仍然正常，这项检查专门针对这一差异。",
 "spans": [
 [
 196,
@@ -82779,7 +82779,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 在实例目录里进界面时自动补充记录，本机清单与自启策略随后才有对象可管。",
+"text": "# 在实例目录里进入界面时自动补充记录，本机清单与自启策略随后才有对象可管理。",
 "spans": [
 [
 217,
@@ -83474,7 +83474,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 切页后待确认作废，回到运行页后同一个动作重新弹出一层模态框。",
+"text": "# 切换页面后待确认作废，回到运行页后同一个动作重新弹出一层模态框。",
 "spans": [
 [
 505,
@@ -83504,7 +83504,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 轮询不作废待确认，周期刷新后同一个动作仍在防抖窗口内，不叠第二层模态框，确认照常执行。",
+"text": "# 轮询不作废待确认，周期刷新后同一个动作仍在防抖窗口内，不叠第二层模态框，确认正常执行。",
 "spans": [
 [
 554,
@@ -83564,7 +83564,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 操作行上都有按钮的动作不进页脚，80 列下才能容纳全局键位。",
+"text": "# 操作行上都有按钮的动作不显示在页脚，80 列下才能容纳全局键位。",
 "spans": [
 [
 654,
@@ -83744,7 +83744,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 对于缺少适配器包的配置，启用的仍列出以暴露问题，未启用的与未安装平台一样不进列表。",
+"text": "# 对于缺少适配器包的配置，启用的仍列出以暴露问题，未启用的与未安装平台一样不显示在列表中。",
 "spans": [
 [
 43,
@@ -83804,7 +83804,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 缺包的已启用配置按 e 进入安装对话框并预选该平台，不改动启用状态。",
+"text": "# 缺少依赖包的已启用配置按 e 进入安装对话框并预选该平台，不改动启用状态。",
 "spans": [
 [
 177,
@@ -84114,7 +84114,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 按渲染出来的行坐标分组，按钮始终挂在同一层，行由列数确定。",
+"text": "# 按渲染出来的行坐标分组，按钮始终挂载在同一层，行由列数确定。",
 "spans": [
 [
 28,
@@ -84639,7 +84639,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 摘要默认使用替身数据源，避免启动诊断子进程。",
+"text": "# 摘要默认使用模拟数据源，避免启动诊断子进程。",
 "spans": [
 [
 197,
@@ -86134,7 +86134,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 标准输出替身按行异步返回字节，与 asyncio 子进程接口一致。",
+"text": "# 模拟标准输出按行异步返回字节，与 asyncio 子进程接口一致。",
 "spans": [
 [
 471,
@@ -86304,7 +86304,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# AKARIBOT_CLI_BIN 仅接受可执行文件路径，CLI 替身须包含 shebang。",
+"text": "# AKARIBOT_CLI_BIN 仅接受可执行文件路径，模拟 CLI 脚本须包含 shebang。",
 "spans": [
 [
 117,
@@ -87119,7 +87119,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# AKARIBOT_CLI_BIN 必须为可执行文件路径，因此替身脚本包含 shebang。",
+"text": "# AKARIBOT_CLI_BIN 必须为可执行文件路径，因此模拟脚本包含 shebang。",
 "spans": [
 [
 399,
@@ -87269,7 +87269,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# CLI 替身覆盖进程启动、输出读取与退出等待，避免实际安装包。",
+"text": "# 模拟 CLI 覆盖进程启动、输出读取与退出等待，避免实际安装包。",
 "spans": [
 [
 628,
@@ -87659,7 +87659,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 使用真实数据源保留完整返回结构，避免替身结构不符导致误报。",
+"text": "# 使用真实数据源保留完整返回结构，避免模拟对象结构不符导致误报。",
 "spans": [
 [
 25,
@@ -87689,7 +87689,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 杂项页使用替身，避免启动 CLI 子进程。",
+"text": "# 杂项页使用模拟数据源，避免启动 CLI 子进程。",
 "spans": [
 [
 69,
@@ -87704,7 +87704,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 文档页同样使用替身，导航测试不应启动真实构建或预览子进程。",
+"text": "# 文档页同样使用模拟数据源，导航测试不应启动真实构建或预览子进程。",
 "spans": [
 [
 71,
@@ -87719,7 +87719,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 侧栏混排着四个分组标题，高亮下标不等于页面下标，按高亮项的 id 折算回 PAGES 顺序。",
+"text": "# 侧栏混排着四个分组标题，高亮下标不等于页面下标，按高亮项的 id 换算回 PAGES 顺序。",
 "spans": [
 [
 82,
@@ -87959,7 +87959,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 切页、刷新、换选中项会复位，复位后同一个目标立即放行。",
+"text": "# 切换页面、刷新、更换选中项会复位，复位后同一个目标立即放行。",
 "spans": [
 [
 41,
@@ -87989,7 +87989,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 进入时页面可用、抛错时已被卸下，用于模拟取数落地那一刻的卸载竞态。",
+"text": "# 进入时页面可用、抛错时已被卸下，用于模拟数据返回那一刻的卸载竞态。",
 "spans": [
 [
 36,
@@ -88004,7 +88004,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 与 mounted() 的判据一致，应用已请求退出后页面不再可用。不经 app.exit() 以免终止本次运行。",
+"text": "# 与 mounted() 的判断依据一致，应用已请求退出后页面不再可用。不经 app.exit() 以免终止本次运行。",
 "spans": [
 [
 141,
@@ -88069,7 +88069,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 切实例会重建全部页面，新页面必须带上独立的守卫与探针包装。",
+"text": "# 切换实例会重建全部页面，新页面必须带上独立的渲染保护与探针包装。",
 "spans": [
 [
 265,
@@ -88086,7 +88086,7 @@
 "start": 293,
 "end": 293,
 "kind": "py-docstring",
-"text": "cli.tui._compat: 渲染守卫的选择器错误与卸载跳过测试",
+"text": "cli.tui._compat: 渲染保护的选择器错误与卸载跳过测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -88174,7 +88174,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 复用数据源计数字典与 list 键，保持替身和生产接口一致。",
+"text": "# 复用数据源计数字典与 list 键，保持模拟对象和生产接口一致。",
 "spans": [
 [
 89,
@@ -88204,7 +88204,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 显式注入启动准备摘要替身，避免测试启动实际诊断子进程。",
+"text": "# 显式注入启动准备摘要的模拟数据源，避免测试启动实际诊断子进程。",
 "spans": [
 [
 174,
@@ -88309,7 +88309,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 基本检查入口使用同步替身，可直接在测试事件循环中执行。",
+"text": "# 基本检查入口使用同步模拟对象，可直接在测试事件循环中执行。",
 "spans": [
 [
 355,
@@ -88594,7 +88594,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 试运行由执行器自己短路，命令层仍然构造执行器并下发 argv，但不写入磁盘也不写入清单。",
+"text": "# 试运行由执行器直接跳过，命令层仍然构造执行器并下发 argv，但不写入磁盘也不写入清单。",
 "spans": [
 [
 137,
@@ -88907,7 +88907,7 @@
 "start": 34,
 "end": 40,
 "kind": "py-docstring",
-"text": "转发到实现模块，使配置缺失时未绑定的名字在首次访问时重试。\n\n    :param name: 门面名字。\n    :return: 名字对应的对象。\n    :raises AttributeError: 该名字不在门面承诺的清单内。",
+"text": "转发到实现模块，使配置缺失时未绑定的名字在首次访问时重试。\n\n    :param name: 公开接口名。\n    :return: 名字对应的对象。\n    :raises AttributeError: 该名字不在公开接口承诺的清单内。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -88950,7 +88950,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 会话契约，供适配器实现 ContextManager 并据此注册自身能力。",
+"text": "# 会话接口约定，供适配器实现 ContextManager 并据此注册自身能力。",
 "spans": [
 [
 53,
@@ -88980,7 +88980,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 队列契约，供适配器实现 PlatformAPI 以支持服务端跨进程调用平台动作。",
+"text": "# 队列接口约定，供适配器实现 PlatformAPI 以支持服务端跨进程调用平台动作。",
 "spans": [
 [
 59,
@@ -89010,7 +89010,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 对象存储依赖可选的 boto3，放在导入块末尾，缺失时只影响这两个名字。\n# S3Storage 是 core 配置构造好的单例，S3StorageAPI 供适配器自建客户端（构造缺依赖时给出安装指引）。",
+"text": "# 对象存储依赖可选的 boto3，放在导入块末尾，缺失时只影响这两个名字。\n# S3Storage 是 core 配置构造好的单例，S3StorageAPI 供适配器自建客户端（构造时缺少依赖会给出安装指引）。",
 "spans": [
 [
 82,
@@ -89095,7 +89095,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 门面对外承诺的全部名字。新增导出须同时更新 __all__ 与 LAZY_MODULES。",
+"text": "# 公开接口对外承诺的全部名字。新增导出须同时更新 __all__ 与 LAZY_MODULES。",
 "spans": [
 [
 19,
@@ -89245,7 +89245,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 配置缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。其余异常照常抛出。",
+"text": "# 配置缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。其余异常正常抛出。",
 "spans": [
 [
 438,
@@ -89302,7 +89302,7 @@
 "start": 633,
 "end": 643,
 "kind": "py-docstring",
-"text": "按来源索引导入单个门面名字。\n\n    配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出\n    ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再\n    经过本函数。\n\n    :param name: 门面名字。\n    :return: 名字对应的对象。\n    :raises AttributeError: 该名字不在门面承诺的清单内。",
+"text": "按来源索引导入单个公开接口名。\n\n    配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出\n    ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再\n    经过本函数。\n\n    :param name: 公开接口名。\n    :return: 名字对应的对象。\n    :raises AttributeError: 该名字不在公开接口承诺的清单内。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -89395,7 +89395,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 场景组 ID 自身不是平台场景，不可交给 resolve_union，因为\n# 其自愈分支会为组 ID 创建一条以自身为平台 ID 的映射行。",
+"text": "# 场景组 ID 自身不是平台场景，不可交给 resolve_union，因为\n# 其自动修复分支会为组 ID 创建一条以自身为平台 ID 的映射行。",
 "spans": [
 [
 197,
@@ -89415,7 +89415,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 退役客户端停止一切主动推送，与 get_enabled_this_module() 取同一判据",
+"text": "# 退役客户端停止一切主动推送，与 get_enabled_this_module() 使用同一判断标准",
 "spans": [
 [
 218,
@@ -89855,7 +89855,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未声明的名称照常报错，键名书写有误时立即抛出异常，而非静默返回默认值",
+"text": "# 未声明的名称正常报错，键名书写有误时立即抛出异常，而非静默返回默认值",
 "spans": [
 [
 17,
@@ -90030,7 +90030,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表名传 None，因为这类键不属于 [config]，也不属于其他表。补充路径不支持在表外新建键，\n# 故这些键由 update 的版本迁移在模板处理之前写入，装饰时键必定已存在。",
+"text": "# 表名传 None，因为这类键不属于 [config]，也不属于其他表。补充路径不支持在配置表之外新建键，\n# 故这些键由 update 的版本迁移在模板处理之前写入，装饰时键必定已存在。",
 "spans": [
 [
 162,
@@ -90067,7 +90067,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "配置读取门面。",
+"text": "配置读取公开接口。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -90345,7 +90345,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 守卫置于此处而非方法体最前，因为无默认值的读取以 value=None 进入上方分支并提前返回，\n# 不涉及写入，不应抛出异常。",
+"text": "# 只读检查置于此处而非方法体最前，因为无默认值的读取以 value=None 进入上方分支并提前返回，\n# 不涉及写入，不应抛出异常。",
 "spans": [
 [
 423,
@@ -90365,7 +90365,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 写入路径一律写入实例表（fallback=False），实例进程本就只读，此路径实际只有 CLI 会触发，\n# 而 CLI 明确知道自己在操作哪个实例。回退会把改动写入基表，影响另一个实例。",
+"text": "# 写入路径一律写入实例表（fallback=False），实例进程本就只读，此路径实际只有 CLI 会触发，\n# 而 CLI 明确知道自己在操作哪个实例。回退会把改动写入基础表，影响另一个实例。",
 "spans": [
 [
 428,
@@ -90405,7 +90405,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 与 write() 同向，删除是编辑的另一半，同样一律落实例表，避免误删基表里的键。",
+"text": "# 与 write() 同向，删除是编辑的另一半，同样一律作用于实例表，避免误删基础表里的键。",
 "spans": [
 [
 469,
@@ -90512,7 +90512,7 @@
 "start": 232,
 "end": 247,
 "kind": "py-docstring",
-"text": "获取配置文件中的配置项。\n\n:param q: 配置项键名。\n:param default: 默认值。\n:param cfg_type: 配置项类型。\n:param secret: 是否为密钥配置项。（默认为 False）\n:param table_name: 配置项表名。\n:param _global: 内部变量，是否在所有表中查找配置项。（默认为 False）\n:param _generate: 内部变量，生成配置文件时使用。（默认为 False）\n:param _fallback: 内部变量，实例表不存在时是否回退到基表。实例发现读 ``enable`` 时取 False：\n    回退会让某个实例看到另一个实例的开关。\n:param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。\n\n:return: 配置文件中对应配置项的值。",
+"text": "获取配置文件中的配置项。\n\n:param q: 配置项键名。\n:param default: 默认值。\n:param cfg_type: 配置项类型。\n:param secret: 是否为密钥配置项。（默认为 False）\n:param table_name: 配置项表名。\n:param _global: 内部变量，是否在所有表中查找配置项。（默认为 False）\n:param _generate: 内部变量，生成配置文件时使用。（默认为 False）\n:param _fallback: 内部变量，实例表不存在时是否回退到基础表。实例发现读 ``enable`` 时取 False：\n    回退会让某个实例看到另一个实例的开关。\n:param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。\n\n:return: 配置文件中对应配置项的值。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -90890,7 +90890,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人无法读取的文件放进目录。",
+"text": "# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人无法读取的文件放入目录。",
 "spans": [
 [
 13,
@@ -91295,7 +91295,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台两段只存在于会话对象上。拿不到会话时（如 server_scope 的带名称分发）退化为两段判据。",
+"text": "# 平台两段只存在于会话对象上。拿不到会话时（如 server_scope 的带名称分发）回退为两段判定条件。",
 "spans": [
 [
 123,
@@ -91372,7 +91372,7 @@
 "start": 63,
 "end": 63,
 "kind": "py-docstring",
-"text": "按四元组判据判分一组平台声明。语义与模块、命令的 ``available_for`` 一致。",
+"text": "按四元组条件匹配一组平台声明。语义与模块、命令的 ``available_for`` 一致。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -91402,7 +91402,7 @@
 "start": 113,
 "end": 113,
 "kind": "py-docstring",
-"text": "返回是否可执行与是否代际过期。",
+"text": "返回是否可执行与是否版本过期。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -91720,7 +91720,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 列表中的裸字符串一并归一化，与 assign() 的行为保持一致",
+"text": "# 列表中的纯字符串一并归一化，与 assign() 的行为保持一致",
 "spans": [
 [
 636,
@@ -91770,7 +91770,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本函数的职责即是把多种输入参数归一化，过程中类型会逐步收敛，故以 Any 承接",
+"text": "# 本函数的职责即是把多种输入参数归一化，过程中类型会逐步收窄，故先以 Any 接收",
 "spans": [
 [
 799,
@@ -94429,7 +94429,7 @@
 "start": 41,
 "end": 61,
 "kind": "md-table",
-"text": "| HookPoint | 时机 | 典型用途 |\n| --- | --- | --- |\n| `SESSION_READY` | 会话刷新后、等待任务前 | 入站过滤、补充 tmp，可写 SessionDraft |\n| `SESSION_BEFORE_WAIT` | 入站策略后、等待任务投递前 | 调整等待任务路由 |\n| `MESSAGE_NORMALIZED` | 消息文本规范化后、前缀判断前 | 自定义别名等触发文本改写 |\n| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、ToS 临封，可写 SessionDraft |\n| `COMMAND_BEFORE_PARSE` | 模块策略后、模板解析前 | ToS 计数，可写 SessionDraft |\n| `COMMAND_BEFORE_EXECUTE` | 模板解析后、命令函数调用前 | 命令权限与平台策略 |\n| `COMMAND_ROUTE` | 命令解析后、通道认领前 | 命令路由与迁移策略 |\n| `COMMAND_UNMATCHED` | 未找到模块/模板 | 纠错建议，可写 SessionDraft |\n| `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、禁止发言与运行中提醒 |\n| `REGEX_CANDIDATE` | 每个正则模块匹配前 | 模块级正则路由 |\n| `CHANNEL_CLAIM` | 候选策略通过后、通道认领前 | 通道让位策略 |\n| `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临封与权限 |\n| `REGEX_BEFORE_EXECUTE` | regex 冷却后、取锁前 | regex 计数 |\n| `EXECUTION_FINISHED` | 命令/正则函数执行结束 | 统计观察 |\n| `EXECUTION_ERROR` | 可分类异常 | AbuseWarning 处理 |\n| `FINISHED` | parser finally 清理后 | 消息级计数 |\n| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、机器人被禁止发言时拦截主动发言，可改 `ctx.outgoing.chain` |\n| `OUTGOING_SENT` | 平台返回成功 | 观察 |\n| `OUTGOING_FAILED` | 平台发送失败 | 观察 |",
+"text": "| HookPoint | 时机 | 典型用途 |\n| --- | --- | --- |\n| `SESSION_READY` | 会话刷新后、等待任务前 | 入站过滤、补充 tmp，可写 SessionDraft |\n| `SESSION_BEFORE_WAIT` | 入站策略后、等待任务投递前 | 调整等待任务路由 |\n| `MESSAGE_NORMALIZED` | 消息文本规范化后、前缀判断前 | 自定义别名等触发文本改写 |\n| `COMMAND_PREPARE` | 命令候选后、模块权限前 | 冷却、ToS 临封，可写 SessionDraft |\n| `COMMAND_BEFORE_PARSE` | 模块策略后、模板解析前 | ToS 计数，可写 SessionDraft |\n| `COMMAND_BEFORE_EXECUTE` | 模板解析后、命令函数调用前 | 命令权限与平台策略 |\n| `COMMAND_ROUTE` | 命令解析后、通道认领前 | 命令路由与迁移策略 |\n| `COMMAND_UNMATCHED` | 未找到模块/模板 | 纠错建议，可写 SessionDraft |\n| `REGEX_ROUTE` | 消息规范化后、正则候选遍历前 | 正则禁用前缀、禁止发言与运行中提醒 |\n| `REGEX_CANDIDATE` | 每个正则模块匹配前 | 模块级正则路由 |\n| `CHANNEL_CLAIM` | 候选策略通过后、通道认领前 | 通道避让策略 |\n| `REGEX_PREPARE` | 正则匹配并完成循环去重后 | regex 临封与权限 |\n| `REGEX_BEFORE_EXECUTE` | regex 冷却后、取锁前 | regex 计数 |\n| `EXECUTION_FINISHED` | 命令/正则函数执行结束 | 统计观察 |\n| `EXECUTION_ERROR` | 可分类异常 | AbuseWarning 处理 |\n| `FINISHED` | parser finally 清理后 | 消息级计数 |\n| `OUTGOING_BEFORE_SEND` | 安全检查后、平台发送前 | 消息转换、机器人被禁止发言时拦截主动发言，可改 `ctx.outgoing.chain` |\n| `OUTGOING_SENT` | 平台返回成功 | 观察 |\n| `OUTGOING_FAILED` | 平台发送失败 | 观察 |",
 "ctx": "入口一览",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6506
@@ -94456,7 +94456,7 @@
 "start": 71,
 "end": 71,
 "kind": "md-paragraph",
-"text": "非法返回值按失败隔离，不会短路后续 hook。",
+"text": "非法返回值按失败隔离，不会中断后续 hook。",
 "ctx": "结果类型",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6509
@@ -94546,7 +94546,7 @@
 "start": 102,
 "end": 102,
 "kind": "md-heading",
-"text": "## 执行契约",
+"text": "## 执行规则",
 "ctx": "执行契约",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6519
@@ -94555,7 +94555,7 @@
 "start": 104,
 "end": 111,
 "kind": "md-list",
-"text": "- 串行。优先级升序 → 模块名 → 订阅 ID\n- 单 hook 异常 / 超时 / SessionFinished 等协议异常：丢弃并继续\n- 外部 `CancelledError` / `SystemExit` / `KeyboardInterrupt` 传播\n- 模块 `_db_load` / `load` 为假时不执行\n- 订阅绑定到构建时的 module generation。热重载后旧代际回调跳过\n- `timeout` 默认 5s，可按订阅覆盖。`<=0` 不限时\n- `available_for` / `exclude_from` 语义同 command\n- 无订阅时 parser 不扫描模块",
+"text": "- 串行。优先级升序 → 模块名 → 订阅 ID\n- 单 hook 异常 / 超时 / SessionFinished 等协议异常：丢弃并继续\n- 外部 `CancelledError` / `SystemExit` / `KeyboardInterrupt` 传播\n- 模块 `_db_load` / `load` 为假时不执行\n- 订阅绑定到构建时的 module generation。热重载后旧版本回调跳过\n- `timeout` 默认 5s，可按订阅覆盖。`<=0` 不限时\n- `available_for` / `exclude_from` 语义同 command\n- 无订阅时 parser 不扫描模块",
 "ctx": "执行契约",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6520
@@ -94600,7 +94600,7 @@
 "start": 123,
 "end": 128,
 "kind": "md-list",
-"text": "- `akaribot/modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、机器人被禁止发言时拦截出站消息、默认命令反馈\n- `akaribot/modules/core/hooks/errors.py`：异常反馈与错误详情格式化\n- `akaribot/modules/core/hooks/retired.py`：退役客户端路由和通道让位\n- `akaribot/modules/core/admin_tools/alias.py`：自定义别名改写\n- `akaribot/modules/core/hooks/routing.py`：同通道消息认领\n- `akaribot/modules/core/hooks/tos.py`：临封、令牌桶、上报。四个强制检查不限时，检查故障时按消息级 `Stop` 处理，",
+"text": "- `akaribot/modules/core/hooks/policies.py`：入站、冷却、权限、正则路由、机器人被禁止发言时拦截出站消息、默认命令反馈\n- `akaribot/modules/core/hooks/errors.py`：异常反馈与错误详情格式化\n- `akaribot/modules/core/hooks/retired.py`：退役客户端路由和通道避让\n- `akaribot/modules/core/admin_tools/alias.py`：自定义别名改写\n- `akaribot/modules/core/hooks/routing.py`：同通道消息认领\n- `akaribot/modules/core/hooks/tos.py`：临封、令牌桶、上报。四个强制检查不限时，检查故障时按消息级 `Stop` 处理，",
 "ctx": "内置订阅方",
 "path": "packages/akari-bot-core/akaribot/core/builtins/parser/hooks/README.md",
 "id": 6525
@@ -94910,7 +94910,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# Locale 对象也先构造，与字段校验同属“准备”阶段。构造失败则整次提交不发布，\n# 避免其余字段已写回而 locale 静默降级造成的半提交。",
+"text": "# Locale 对象也先构造，与字段校验同属“准备”阶段。构造失败则整次提交不发布，\n# 避免其余字段已写回而 locale 静默降级造成的部分提交。",
 "spans": [
 [
 215,
@@ -95020,7 +95020,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 观察入口禁止控制结果短路",
+"text": "# 观察入口禁止控制结果中断后续执行",
 "spans": [
 [
 47,
@@ -95095,7 +95095,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 观察入口将控制结果视为失败，不短路",
+"text": "# 观察入口将控制结果视为失败，不中断后续执行",
 "spans": [
 [
 250,
@@ -95275,7 +95275,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令或正则候选通过策略后、通道认领前。通道让位策略",
+"text": "# 命令或正则候选通过策略后、通道认领前。通道避让策略",
 "spans": [
 [
 29,
@@ -95610,7 +95610,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 无订阅时短路，避免每条消息空执行 executor。",
+"text": "# 无订阅时直接跳过，避免每条消息空执行 executor。",
 "spans": [
 [
 64,
@@ -95625,7 +95625,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 有命令模板但当前客户端解析不出可用命令，视为过期建议。无模板模块允许透传",
+"text": "# 有命令模板但当前客户端解析不出可用命令，视为过期建议。无模板模块允许直接通过",
 "spans": [
 [
 118,
@@ -96957,7 +96957,7 @@
 "start": 634,
 "end": 650,
 "kind": "py-docstring",
-"text": "判断一条正则处理函数在当前平台上是否可用。\n\n判据与 :meth:`RegexMatches.get` 一致，按 target_from / client_name / platform_from /\nplatform_name 的四元组判分，使 ``available_for=\"Telegram\"`` 对全部 Telegram 实例有效。\n只校验模块级的 ``available_for`` 会让注册时写下的 ``@module.regex(available_for=...)``\n形同虚设，故正则级的平台声明同样参与判分。\n\n:param rfunc: 正则处理函数的元数据。\n:param target_from: 当前场景的前缀。\n:param client_name: 当前客户端名称。\n:param platform_from: 平台场景前缀。\n:param platform_name: 平台展示名。\n:param scope: 已取得的平台判据。调用方持有会话对象时经 :func:`scope_of` 传它，\n    以免逐字段读取会话——会话可能是只提供所需字段的替身。\n:return: 是否可用。",
+"text": "判断一条正则处理函数在当前平台上是否可用。\n\n判定规则与 :meth:`RegexMatches.get` 一致，按 target_from / client_name / platform_from /\nplatform_name 的四元组匹配，使 ``available_for=\"Telegram\"`` 对全部 Telegram 实例有效。\n只校验模块级的 ``available_for`` 会让注册时写下的 ``@module.regex(available_for=...)``\n形同虚设，故正则级的平台声明同样参与匹配。\n\n:param rfunc: 正则处理函数的元数据。\n:param target_from: 当前场景的前缀。\n:param client_name: 当前客户端名称。\n:param platform_from: 平台场景前缀。\n:param platform_name: 平台展示名。\n:param scope: 已取得的平台判定条件。调用方持有会话对象时经 :func:`scope_of` 传入，\n    以免逐字段读取会话——会话可能是只提供所需字段的模拟对象。\n:return: 是否可用。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -97425,7 +97425,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 多实例的平台两段（纯字符串以便跨进程序列化），默认实例下分别等于 client_name 与\n# target_from，四元组判据退化为两段。缺失时按同一规则补齐。",
+"text": "# 多实例的平台两段（纯字符串以便跨进程序列化），默认实例下分别等于 client_name 与\n# target_from，四元组条件回退为两段。缺失时按同一规则补齐。",
 "spans": [
 [
 167,
@@ -97605,7 +97605,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 场景与用户的 union 解析互不依赖，并发发出可省去一半的往返等待。\n# 主库在远端时这一项按每次往返的网络延迟计。",
+"text": "# 场景与用户的 union 解析互不依赖，并发发出可省去一半的往返等待。\n# 主数据库在远端时这一项按每次往返的网络延迟计。",
 "spans": [
 [
 281,
@@ -97645,7 +97645,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 跨进程反序列化的会话（含升级前入队的旧消息）可能缺少平台两段。此处按当前已知的\n# client_name / target_from 补齐，缺字段时退化为改造前的两段判据，不会误判为别的实例。",
+"text": "# 跨进程反序列化的会话（含升级前入队的旧消息）可能缺少平台两段。此处按当前已知的\n# client_name / target_from 补齐，缺少字段时回退为改造前的两段判定条件，不会误判为别的实例。",
 "spans": [
 [
 395,
@@ -100352,7 +100352,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "表外基础配置及历史导入路径兼容实现。",
+"text": "表外顶层基础配置及历史导入路径兼容实现。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -101585,7 +101585,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# v6 中，绑定表补充 OAuth 授权所需的列，水鱼、落雪两侧的取数方式都改由 OAuth 令牌确定。",
+"text": "# v6 中，绑定表补充 OAuth 授权所需的列，水鱼、落雪两侧的数据获取方式都改由 OAuth 令牌确定。",
 "spans": [
 [
 78,
@@ -101670,7 +101670,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 补建映射行。旧数据的 union ID 与原 ID 相同，直接按原值一一对应即可。\n# 账号级封禁保持关闭，原有的封禁状态已记在 union 上。",
+"text": "# 补充创建映射行。旧数据的 union ID 与原 ID 相同，直接按原值一一对应即可。\n# 账号级封禁保持关闭，原有的封禁状态已记在 union 上。",
 "spans": [
 [
 177,
@@ -101875,7 +101875,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 路径可能照抄自 Windows 配置，``Path`` 在其他平台上无法识别盘符与反斜杠开头的写法，\n# 故按字面补充判断，免得把绝对路径锚定到实例根目录。",
+"text": "# 路径可能直接复制自 Windows 配置，``Path`` 在其他平台上无法识别盘符与反斜杠开头的写法，\n# 故按字面补充判断，免得把绝对路径误判为相对实例根目录。",
 "spans": [
 [
 17,
@@ -102152,7 +102152,7 @@
 "start": 41,
 "end": 41,
 "kind": "py-docstring",
-"text": "迁移定义或执行不满足契约。",
+"text": "迁移定义或执行不符合接口约定。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -102497,7 +102497,7 @@
 "start": 522,
 "end": 530,
 "kind": "py-docstring",
-"text": "标记 revision 为已应用而不执行。\n\n供旧数据库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常写入记录，\n以便日后安装该包时不再重放这些历史步骤。\n\n:param package: 包名。\n:param revisions: revision 列表。",
+"text": "标记 revision 为已应用而不执行。\n\n供旧数据库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍正常写入记录，\n以便日后安装该包时不再重放这些历史步骤。\n\n:param package: 包名。\n:param revisions: revision 列表。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -102720,7 +102720,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 后续 revision 追加的列此时尚不存在，整行保存会因缺列被判定为 partial。",
+"text": "# 后续 revision 追加的列此时尚不存在，整行保存会因缺少列被判定为 partial。",
 "spans": [
 [
 88,
@@ -102770,7 +102770,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 为轮询与区间统计补建索引。",
+"text": "# 为轮询与区间统计补充创建索引。",
 "spans": [
 [
 115,
@@ -102885,7 +102885,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 删除与重建之间若中断，绑定数据将全部丢失，因此置于同一个事务内。\n# 模块表可能挂在 local 连接上，事务须与表所在的连接一致，不能一律使用 default。",
+"text": "# 删除与重建之间若中断，绑定数据将全部丢失，因此置于同一个事务内。\n# 模块表可能关联在 local 连接上，事务须与表所在的连接一致，不能一律使用 default。",
 "spans": [
 [
 195,
@@ -102945,7 +102945,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 子类中作为主键的平台 ID 列名，供按域泛化的查询与补建逻辑使用",
+"text": "# 子类中作为主键的平台 ID 列名，供按域泛化的查询与补充创建逻辑使用",
 "spans": [
 [
 284,
@@ -102990,7 +102990,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 由 resolve_union() 挂上的映射行，非数据库字段。\n# 未经解析直接查询（如 all() / filter()）得到的实例上为 None。",
+"text": "# 由 resolve_union() 附加的映射行，非数据库字段。\n# 未经解析直接查询（如 all() / filter()）得到的实例上为 None。",
 "spans": [
 [
 386,
@@ -103045,7 +103045,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 自愈处理，允许存在 union_id 与平台 ID 相同、但缺少映射行的历史数据。",
+"text": "# 自动兼容处理，允许存在 union_id 与平台 ID 相同、但缺少映射行的历史数据。",
 "spans": [
 [
 425,
@@ -103060,7 +103060,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 从平台 ID 字符串或会话对象解析出 union 信息，供按会话取行的入口复用。",
+"text": "# 从平台 ID 字符串或会话对象解析出 union 信息，供按会话获取记录的入口复用。",
 "spans": [
 [
 451,
@@ -103150,7 +103150,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# Union 事务统一先锁定核心行、再锁定映射行，反序会在 MySQL 下形成死锁环。\n# 锁定核心行后必须重新读取映射并验证其未被重新关联。",
+"text": "# Union 事务统一先锁定核心行、再锁定映射行，反序会在 MySQL 下形成循环死锁。\n# 锁定核心行后必须重新读取映射并验证其未被重新关联。",
 "spans": [
 [
 845,
@@ -103502,7 +103502,7 @@
 "start": 259,
 "end": 259,
 "kind": "py-docstring",
-"text": "为缺少映射行的 union 补建 ID 映射。",
+"text": "为缺少映射行的 union 补充创建 ID 映射。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -104282,7 +104282,7 @@
 "start": 1657,
 "end": 1668,
 "kind": "py-docstring",
-"text": "已应用的数据库迁移记录。\n\n每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动\n提交，无法把“执行 DDL”与“写版本记录”放进同一事务，因此判断某条 revision 是否已应用\n只看本表，迁移必须自行保证可重复执行。\n\n:param package: 包名，``core`` 或其他包名。\n:param revision: revision 标识符。\n:param applied_at: 应用时间。\n:param checksum: 迁移文件源码的 sha256，用于发现已应用的迁移被改写。",
+"text": "已应用的数据库迁移记录。\n\n每个包的每条 revision 在此各记一行，取代全局唯一的数据库版本号。MySQL 的 DDL 会自动\n提交，无法把“执行 DDL”与“写版本记录”放入同一事务，因此判断某条 revision 是否已应用\n只看本表，迁移必须自行保证可重复执行。\n\n:param package: 包名，``core`` 或其他包名。\n:param revision: revision 标识符。\n:param applied_at: 应用时间。\n:param checksum: 迁移文件源码的 sha256，用于发现已应用的迁移被改写。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -106394,7 +106394,7 @@
 "start": 30,
 "end": 35,
 "kind": "md-table",
-"text": "| 方法 | 关键参数（默认值） | 说明 |\n| --- | --- | --- |\n| `send_message()` | `message_chain`、`quote=True`、`disable_secret_check=False`、`callback=None`、`callback_id=None`、`callback_timeout=1800`、`callback_once=False` | 发送并返回 `FinishedSession` |\n| `finish()` | 参数同 `send_message()`，`message_chain` 可省略 | 发送后抛出 `SessionFinished`。不传链时只结束会话 |\n| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交后立即返回 `None`。消息 ID 由其他接口提供 |\n| `send_private_message()` | `message_chain`、`user_id=None`、`disable_secret_check=False` | 私聊发送，返回消息 ID 列表。空列表表示失败 |",
+"text": "| 方法 | 关键参数（默认值） | 说明 |\n| --- | --- | --- |\n| `send_message()` | `message_chain`、`quote=True`、`disable_secret_check=False`、`callback=None`、`callback_id=None`、`callback_timeout=1800`、`callback_once=False` | 发送并返回 `FinishedSession` |\n| `finish()` | 参数同 `send_message()`，`message_chain` 可省略 | 发送后抛出 `SessionFinished`。不传入消息链时只结束会话 |\n| `send_direct_message()` | `message_chain`、`disable_secret_check=False` | 提交后立即返回 `None`。消息 ID 由其他接口提供 |\n| `send_private_message()` | `message_chain`、`user_id=None`、`disable_secret_check=False` | 私聊发送，返回消息 ID 列表。空列表表示失败 |",
 "ctx": "发送消息",
 "path": "packages/akari-bot-core/akaribot/core/docs/message-api.md",
 "id": 7359
@@ -107537,7 +107537,7 @@
 "start": 485,
 "end": 485,
 "kind": "md-paragraph",
-"text": "Hook 挂在消息处理链的固定位置，用来观察或改变处理结果。它不替代命令，适合做统计、拦截、错误提示和平台事件响应。",
+"text": "Hook 挂载在消息处理链的固定位置，用来观察或改变处理结果。它不替代命令，适合做统计、拦截、错误提示和平台事件响应。",
 "ctx": "Hook 与事件",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7486
@@ -107564,7 +107564,7 @@
 "start": 501,
 "end": 501,
 "kind": "md-paragraph",
-"text": "`server_scope=True` 的 Hook 不受场景内模块开关限制，但全局停用状态与平台范围仍会拦下它。",
+"text": "`server_scope=True` 的 Hook 不受场景内模块开关限制，但全局停用状态与平台范围仍会拦截它。",
 "ctx": "命令执行后统计",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7489
@@ -107582,7 +107582,7 @@
 "start": 512,
 "end": 512,
 "kind": "md-paragraph",
-"text": "`OUTGOING_BEFORE_SEND` 在平台发送前执行。返回 `ctx.Stop()` 可以取消这次发送，也可以修改 `ctx.outgoing.chain` 改写内容。它同时作用于命令回复和 `Bot.post_message()` 的主动推送，适合在机器人被禁止发言的场景里拦下出站消息。",
+"text": "`OUTGOING_BEFORE_SEND` 在平台发送前执行。返回 `ctx.Stop()` 可以取消这次发送，也可以修改 `ctx.outgoing.chain` 改写内容。它同时作用于命令回复和 `Bot.post_message()` 的主动推送，适合在机器人被禁止发言的场景里拦截出站消息。",
 "ctx": "拦截出站消息",
 "path": "packages/akari-bot-core/akaribot/core/docs/module-development.md",
 "id": 7491
@@ -108869,7 +108869,7 @@
 "start": 166,
 "end": 166,
 "kind": "md-paragraph",
-"text": "把平台消息链或多语言消息链折算成当前会话可用的 `MessageChain`。",
+"text": "把平台消息链或多语言消息链转换为当前会话可用的 `MessageChain`。",
 "ctx": "`get_message_chain()`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7634
@@ -108887,7 +108887,7 @@
 "start": 174,
 "end": 174,
 "kind": "md-paragraph",
-"text": "`module(name, ...)` 声明模块，返回 `Bind.Module`。后续的命令、正则、计划任务、Hook 与事件都挂在这个对象上。",
+"text": "`module(name, ...)` 声明模块，返回 `Bind.Module`。后续的命令、正则、计划任务、Hook 与事件都挂载在这个对象上。",
 "ctx": "`module()`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7636
@@ -109202,7 +109202,7 @@
 "start": 292,
 "end": 292,
 "kind": "md-paragraph",
-"text": "`ServerAPI` 是模块与 Server 进程之间的 RPC 契约。",
+"text": "`ServerAPI` 是模块与 Server 进程之间的 RPC 接口约定。",
 "ctx": "`ServerAPI`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7671
@@ -109238,7 +109238,7 @@
 "start": 306,
 "end": 306,
 "kind": "md-paragraph",
-"text": "`PlatformAPI` 是 Server 与平台进程之间的 RPC 契约。",
+"text": "`PlatformAPI` 是 Server 与平台进程之间的 RPC 接口约定。",
 "ctx": "`PlatformAPI`",
 "path": "packages/akari-bot-core/akaribot/core/docs/public-api.md",
 "id": 7675
@@ -109769,7 +109769,7 @@
 "start": 39,
 "end": 39,
 "kind": "md-paragraph",
-"text": "共享契约声明在 `akaribot/core/queue/contracts.py`：",
+"text": "共享接口约定声明在 `akaribot/core/queue/contracts.py`：",
 "ctx": "RPC",
 "path": "packages/akari-bot-core/akaribot/core/docs/queue.md",
 "id": 7734
@@ -110154,7 +110154,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 各适配器的 enable 共用一条注释，与配置写入路径的取键规则一致。",
+"text": "# 各适配器的 enable 共用一条注释，与配置写入路径的键查找规则一致。",
 "spans": [
 [
 83,
@@ -110204,7 +110204,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 键清单以配置文件为准（模板在生成期已把声明字段全部写入磁盘）。占位判定是 schema 与\n# placeholders 共用的口径，只在这里出现一次。",
+"text": "# 键清单以配置文件为准（模板在生成期已把声明字段全部写入磁盘）。占位判定是 schema 与\n# placeholders 共用的判定标准，只在这里出现一次。",
 "spans": [
 [
 109,
@@ -110504,7 +110504,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 唯一约束、外键约束这类拒绝由数据库给出，属调用方给错了值，按用户错误上报。",
+"text": "# 唯一约束、外键约束这类拒绝由数据库给出，属调用方传入了错误的值，按用户错误上报。",
 "spans": [
 [
 236,
@@ -110769,7 +110769,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表已不存在时按幂等成功处理，因为本命令的契约是“这些表不再存在”，重新运行或手工删除后再次运行\n# 都满足该契约，报成失败只会让卸载流程停滞在已经达成的目标上。缺失的表名如实返回，操作者\n# 据此判断是不是清单漂移。",
+"text": "# 表已不存在时按幂等成功处理，因为本命令的预期目标是“这些表不再存在”，重新运行或手工删除后再次运行\n# 都满足该预期，报成失败只会让卸载流程停滞在已经达成的目标上。缺失的表名如实返回，操作者\n# 据此判断清单是否不同步。",
 "spans": [
 [
 113,
@@ -111129,7 +111129,7 @@
 },
 {
 "kind": "py-inline-comment",
-"text": "# noqa: BLE001 - 状态表不可读时降级为“无记录”，原因照实输出",
+"text": "# noqa: BLE001 - 状态表不可读时降级为“无记录”，原因如实输出",
 "spans": [
 [
 39,
@@ -111239,7 +111239,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 与 list 口径一致，下划线开头是框架内部注册，不接受用户加载。",
+"text": "# 与 list 规则一致，下划线开头是框架内部注册，不接受用户加载。",
 "spans": [
 [
 132,
@@ -111454,7 +111454,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 等 Server 确认的秒数上限。契约声明的是 7200 秒（热加载要导入依赖并重挂数据库 context），但\n# Server 掉线而租约未过期时无人认领消息，按契约等下去会让 CLI 阻塞两小时，故在此收紧。",
+"text": "# 等 Server 确认的秒数上限。接口约定为 7200 秒（热加载要导入依赖并重挂数据库 context），但\n# Server 掉线而租约未过期时无人认领消息，按约定等下去会让 CLI 阻塞两小时，故在此缩短。",
 "spans": [
 [
 21,
@@ -111489,7 +111489,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 白名单记录 remote 到固定契约的对应关系。新增包变更动作时必须在此记录，不得由调用方拼方法名。",
+"text": "# 白名单记录 remote 到固定接口的对应关系。新增包变更动作时必须在此记录，不得由调用方拼方法名。",
 "spans": [
 [
 28,
@@ -111684,7 +111684,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本模块位于包内，按自身位置反推仓库根目录只会落到 site-packages，故取与\n# :mod:`akaribot.testing.runner` 相同的判据，优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``\n# 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
+"text": "# 本模块位于包内，按自身位置反推仓库根目录只会落到 site-packages，故采用与\n# :mod:`akaribot.testing.runner` 相同的判定规则，优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``\n# 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。",
 "spans": [
 [
 51,
@@ -111709,7 +111709,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 判据只用目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根级脚本\n# 在子进程中仍可导入。仓库根目录不可知时返回空列表，此时 ``akaribot`` 由已安装包提供。",
+"text": "# 判定规则只看目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根目录脚本\n# 在子进程中仍可导入。仓库根目录不可知时返回空列表，此时 ``akaribot`` 由已安装包提供。",
 "spans": [
 [
 62,
@@ -112064,7 +112064,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 二进制封装下 argv[0] 是可执行文件自身。python bot.py 与 python -m akaribot.core.entrypoints.run\n# 两种解释器形态的 argv[0] 都是脚本文件路径，故判据不变。",
+"text": "# 二进制封装下 argv[0] 是可执行文件自身。python bot.py 与 python -m akaribot.core.entrypoints.run\n# 两种解释器形态的 argv[0] 都是脚本文件路径，故判断依据不变。",
 "spans": [
 [
 616,
@@ -112139,7 +112139,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 误配的实例必须在任何适配器进程启动之前拦下，否则两个进程抢同一端口或同一账号之后，\n# 症状是随机的消息丢失与重复，从日志无法回溯到配置。",
+"text": "# 误配的实例必须在任何适配器进程启动之前拦截，否则两个进程抢同一端口或同一账号之后，\n# 症状是随机的消息丢失与重复，从日志无法回溯到配置。",
 "spans": [
 [
 699,
@@ -112424,7 +112424,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只忽略配置模块本身不存在。配置文件内部缺少依赖同样表现为\n# ModuleNotFoundError，若一概忽略会让模块在缺少必要配置时半加载。",
+"text": "# 只忽略配置模块本身不存在。配置文件内部缺少依赖同样表现为\n# ModuleNotFoundError，若一概忽略会让模块在缺少必要配置时处于部分加载状态。",
 "spans": [
 [
 68,
@@ -112464,7 +112464,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 一次取回全部状态，避免逐模块查询退化成 N 次往返，在模块多或主库在远端时开销可观",
+"text": "# 一次取回全部状态，避免逐模块查询退化成 N 次往返，在模块多或主数据库在远端时开销可观",
 "spans": [
 [
 88,
@@ -112494,7 +112494,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 带名称的 hook 与 parser hook 统一建立订阅索引，复用共享执行基础的资格与代际机制。",
+"text": "# 带名称的 hook 与 parser hook 统一建立订阅索引，复用共享执行基础的资格与版本机制。",
 "spans": [
 [
 126,
@@ -112759,7 +112759,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 过滤结果取决于四段判据，缓存键必须全部带上，因为只按 target_from 构造缓存键会让同一场景\n# 配上不同客户端名时取到旧结果，漏掉平台两段则会让一个实例命中另一个实例的缓存。",
+"text": "# 过滤结果取决于四段判定条件，缓存键必须全部带上，因为只按 target_from 构造缓存键会让同一场景\n# 配上不同客户端名时取到旧结果，漏掉平台两段则会让一个实例命中另一个实例的缓存。",
 "spans": [
 [
 706,
@@ -112879,7 +112879,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 恢复旧代际注册后必须重建订阅索引，否则旧订阅全部失效。\n# 重建时 staging 尚未撤销，需在 abort_reload 之后再次重建。",
+"text": "# 恢复旧版本注册后必须重建订阅索引，否则旧订阅全部失效。\n# 重建时 staging 尚未撤销，需在 abort_reload 之后再次重建。",
 "spans": [
 [
 862,
@@ -112959,7 +112959,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# commit 是代际切换的不可逆边界。取消可以中断构建阶段，但不能在\n# runtime 已切换、旧代际已停止后再回滚注册表和数据库。",
+"text": "# commit 是版本切换的不可逆边界。取消可以中断构建阶段，但不能在\n# runtime 已切换、旧版本已停止后再回滚注册表和数据库。",
 "spans": [
 [
 995,
@@ -113054,7 +113054,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只读进程只认启动时列出的文件，新表必须经 load() 重新枚举才会出现。此处失败不阻断安装，\n# 导入期读取新配置项时会以只读守卫的形式报出。",
+"text": "# 只读进程只认启动时列出的文件，新表必须经 load() 重新枚举才会出现。此处失败不阻断安装，\n# 导入期读取新配置项时会触发只读检查报错。",
 "spans": [
 [
 1149,
@@ -113139,7 +113139,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 新包的配置由 CLI 在可写子进程里补充，本进程须在导入之前重读配置目录。",
+"text": "# 新包的配置由 CLI 在可写子进程里补充，本进程须在导入之前重新读取配置目录。",
 "spans": [
 [
 1245,
@@ -118144,7 +118144,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 判据是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根目录从\n# ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。\n# 打包形态下找不到这样的祖先时回退到包内目录，测试目录必然不存在，调用方的存在性判断照常生效。",
+"text": "# 判定条件是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根目录从\n# ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。\n# 打包形态下找不到这样的祖先时回退到包内目录，测试目录必然不存在，调用方的存在性判断正常生效。",
 "spans": [
 [
 30,
@@ -118237,7 +118237,7 @@
 "start": 12,
 "end": 27,
 "kind": "md-table",
-"text": "| 文件 | 职责 |\n| --- | --- |\n| `contracts.py` | 声明稳定的方法名称、调用签名、路由规则与默认超时时间 |\n| `rpc.py` | 提供保留 Python 签名的调用代理、参数绑定及处理器自动注册机制 |\n| `codec.py` | 按声明类型执行编解码，并复用消息与会话对象的转换器 |\n| `base.py` | 管理 Peer 调用、结果关联、并发分发、信号扇出及生命周期 |\n| `backend.py` | 定义完整后端协议，并依据配置装配相互一致的 Registry 与 Transport |\n| `transport.py` | 定义介质无关的消息信封、批量投递结果及 `MessageTransport` 协议 |\n| `peer.py` | 定义进程身份、目标选择、Registry 协议及信号发送结果 |\n| `database.py` | 实现数据库 Registry、任务传输、原子认领及实例失效后的任务终结 |\n| `websocket.py` | 实现基于 `httpx-ws` 的客户端、ASGI Hub、连接鉴权、实时路由及背压控制 |\n| `memory.py` | 提供不依赖 ORM 的后端契约测试基座，不作为生产配置选项 |\n| `errors.py` | 定义可跨进程识别的异常类型 |\n| `client.py` | 解析平台上下文，自动绑定平台接口，并处理推送、私信等特殊逻辑 |\n| `server.py` | 实现消息解析、事件分发、模块查询与钩子调用等服务端接口 |\n| `reporting.py` | 提交配置中指定的错误报告，并避免错误报告流程等待自身完成 |",
+"text": "| 文件 | 职责 |\n| --- | --- |\n| `contracts.py` | 声明稳定的方法名称、调用签名、路由规则与默认超时时间 |\n| `rpc.py` | 提供保留 Python 签名的调用代理、参数绑定及处理器自动注册机制 |\n| `codec.py` | 按声明类型执行编解码，并复用消息与会话对象的转换器 |\n| `base.py` | 管理 Peer 调用、结果关联、并发分发、信号扇出及生命周期 |\n| `backend.py` | 定义完整后端协议，并依据配置装配相互一致的 Registry 与 Transport |\n| `transport.py` | 定义介质无关的消息信封、批量投递结果及 `MessageTransport` 协议 |\n| `peer.py` | 定义进程身份、目标选择、Registry 协议及信号发送结果 |\n| `database.py` | 实现数据库 Registry、任务传输、原子认领及实例失效后的任务终结 |\n| `websocket.py` | 实现基于 `httpx-ws` 的客户端、ASGI Hub、连接鉴权、实时路由及背压控制 |\n| `memory.py` | 提供不依赖 ORM 的后端接口测试环境，不作为生产配置选项 |\n| `errors.py` | 定义可跨进程识别的异常类型 |\n| `client.py` | 解析平台上下文，自动绑定平台接口，并处理推送、私信等特殊逻辑 |\n| `server.py` | 实现消息解析、事件分发、模块查询与钩子调用等服务端接口 |\n| `reporting.py` | 提交配置中指定的错误报告，并避免错误报告流程等待自身完成 |",
 "ctx": "组件与职责",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8260
@@ -118255,7 +118255,7 @@
 "start": 33,
 "end": 34,
 "kind": "md-paragraph",
-"text": "新增后端必须同时实现 `JobQueueBackend`、`PeerRegistry` 与 `MessageTransport` 契约。Registry 负责注册、\n续租或连接保活、权威实例发现及路由选择。Transport 负责请求、响应、批量投递和本地放弃状态的处理。",
+"text": "新增后端必须同时实现 `JobQueueBackend`、`PeerRegistry` 与 `MessageTransport` 接口规范。Registry 负责注册、\n续租或连接保活、权威实例发现及路由选择。Transport 负责请求、响应、批量投递和本地放弃状态的处理。",
 "ctx": "组件与职责",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8262
@@ -118336,7 +118336,7 @@
 "start": 58,
 "end": 64,
 "kind": "md-table",
-"text": "| 比较项 | `database` | `websocket` |\n| --- | --- | --- |\n| 部署要求 | 复用共享数据库，无须另行部署 Hub | 需要一个独立 Hub，并维持各 Peer 的长连接 |\n| 投递特性 | 轮询数据库。尚未过期的队列记录可供稍后启动的消费者认领 | 实时在线路由。不持久化离线任务或在途结果 |\n| 资源与时延 | 轮询、写入及终态清理会增加数据库 CPU 与 I/O 负载，时延受轮询间隔影响 | 不产生数据库轮询负载，通常具有更低时延，但需承担连接、背压和 Hub 运维成本 |\n| 适用范围 | 使用 MySQL 等可并发写入的共享数据库，或明确接受写锁竞争的 SQLite 低负载部署 | 默认与推荐选项。适用于 SQLite、高频 RPC、信号广播及同类多实例并行运行 |\n| 故障边界 | 受共享数据库可用性与容量限制 | Hub 重启或连接中断会丢失内存中的拓扑及在途关联，远程部署还须配置令牌与 TLS |",
+"text": "| 比较项 | `database` | `websocket` |\n| --- | --- | --- |\n| 部署要求 | 复用共享数据库，无须另行部署 Hub | 需要一个独立 Hub，并维持各 Peer 的长连接 |\n| 投递特性 | 轮询数据库。尚未过期的队列记录可供稍后启动的消费者认领 | 实时在线路由。不持久化离线任务或处理中的结果 |\n| 资源与时延 | 轮询、写入及终态清理会增加数据库 CPU 与 I/O 负载，时延受轮询间隔影响 | 不产生数据库轮询负载，通常具有更低时延，但需承担连接、背压和 Hub 运维成本 |\n| 适用范围 | 使用 MySQL 等可并发写入的共享数据库，或明确接受写锁竞争的 SQLite 低负载部署 | 默认与推荐选项。适用于 SQLite、高频 RPC、信号广播及同类多实例并行运行 |\n| 故障边界 | 受共享数据库可用性与容量限制 | Hub 重启或连接中断会丢失内存中的拓扑及未完成的关联，远程部署还须配置令牌与 TLS |",
 "ctx": "配置与后端选择",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8271
@@ -118579,7 +118579,7 @@
 "start": 126,
 "end": 127,
 "kind": "md-paragraph",
-"text": "同一 service 表示一组能够相互替代并承接同类任务的实例。节点标签、PID、capabilities 与自定义 metadata\n均独立记录，因此后续可以在不修改 RPC 业务载荷的前提下增加权重、分片或区域等路由约束。",
+"text": "同一 service 表示一组能够相互替代并处理同类任务的实例。节点标签、PID、capabilities 与自定义 metadata\n均独立记录，因此后续可以在不修改 RPC 业务载荷的前提下增加权重、分片或区域等路由约束。",
 "ctx": "实例身份、定位与发现",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8298
@@ -118606,7 +118606,7 @@
 "start": 136,
 "end": 137,
 "kind": "md-paragraph",
-"text": "正常关闭时，实例先通过 `peer.draining`\n停止接收新任务，完成在途任务清理后再广播 `peer.stopped`。异常退出则在 45 秒租约到期后被识别。",
+"text": "正常关闭时，实例先通过 `peer.draining`\n停止接收新任务，完成执行中任务的清理后再广播 `peer.stopped`。异常退出则在 45 秒租约到期后被识别。",
 "ctx": "实例身份、定位与发现",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8301
@@ -118660,7 +118660,7 @@
 "start": 153,
 "end": 154,
 "kind": "md-paragraph",
-"text": "WebSocket 后端由一个独立 Hub 和任意数量的 Peer 连接组成。Hub 不属于业务 Server，不执行模块逻辑，\n其职责仅限于维护连接身份、权威 Peer 状态、任播选择、逐实例信号发送和在途响应关联。",
+"text": "WebSocket 后端由一个独立 Hub 和任意数量的 Peer 连接组成。Hub 不属于业务 Server，不执行模块逻辑，\n其职责仅限于维护连接身份、权威 Peer 状态、任播选择、逐实例信号发送和未完成响应的关联。",
 "ctx": "WebSocket Hub 部署",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8307
@@ -118795,7 +118795,7 @@
 "start": 215,
 "end": 216,
 "kind": "md-paragraph",
-"text": "超过请求 deadline 的关联状态会被及时释放，并向仍在线的来源返回 timeout。此清理不会撤销\n已经开始的远端副作用。Hub 自身重启会丢失全部 Peer 与在途请求，所有 Peer 必须重新连接并注册。",
+"text": "超过请求 deadline 的关联状态会被及时释放，并向仍在线的来源返回 timeout。此清理不会撤销\n已经开始的远端副作用。Hub 自身重启会丢失全部 Peer 与未完成的请求，所有 Peer 必须重新连接并注册。",
 "ctx": "WebSocket Hub 部署",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8322
@@ -118993,7 +118993,7 @@
 "start": 325,
 "end": 326,
 "kind": "md-paragraph",
-"text": "`client_init()` 与 Server 的 `main()` 会显式设置进程的默认 Peer。导入共享契约不会隐式确定进程角色，\n也不会同时导入 Server 处理器或平台 SDK。",
+"text": "`client_init()` 与 Server 的 `main()` 会显式设置进程的默认 Peer。导入共享接口定义不会隐式确定进程角色，\n也不会同时导入 Server 处理器或平台 SDK。",
 "ctx": "多实例支持范围与约束",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8344
@@ -119047,7 +119047,7 @@
 "start": 356,
 "end": 357,
 "kind": "md-paragraph",
-"text": "业务实现接收类型化参数并直接返回业务值。如果参数名称、参数种类或默认值与契约声明不一致，处理器注册将在\n启动阶段立即失败。",
+"text": "业务实现接收类型化参数并直接返回业务值。如果参数名称、参数种类或默认值与接口声明不一致，处理器注册将在\n启动阶段立即失败。",
 "ctx": "扩展接口",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8350
@@ -119281,7 +119281,7 @@
 "start": 395,
 "end": 396,
 "kind": "md-list",
-"text": "- 队列轮询与处理器并发运行。处理器等待反向调用时，不会阻塞结果接收。\n- 进入维护状态时，实例停止认领新请求，但继续接收在途结果。待处理器全部结束后，方可进入需要独占资源的",
+"text": "- 队列轮询与处理器并发运行。处理器等待反向调用时，不会阻塞结果接收。\n- 进入维护状态时，实例停止认领新请求，但继续接收处理中的结果。待处理器全部结束后，方可进入需要独占资源的",
 "ctx": "错误、超时与关闭语义",
 "path": "packages/akari-bot-core/akaribot/core/queue/README.md",
 "id": 8376
@@ -119680,7 +119680,7 @@
 "start": 59,
 "end": 59,
 "kind": "py-docstring",
-"text": "维护窗口未能在预算内处理完在途 handler。调用方应放弃本轮维护。",
+"text": "维护窗口未能在预算时间内处理完运行中的处理函数。调用方应放弃本轮维护。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -119710,7 +119710,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "平台 RPC 实现。普通 ContextManager 方法由共享契约自动绑定。",
+"text": "平台 RPC 实现。普通 ContextManager 方法由共享接口定义自动绑定。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -120210,7 +120210,7 @@
 "start": 29,
 "end": 29,
 "kind": "py-docstring",
-"text": "单个进程的内存占用。``memory`` 为字节，``metric`` 说明其口径。",
+"text": "单个进程的内存占用。``memory`` 为字节，``metric`` 说明统计方式。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -120335,7 +120335,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "用于验证 JobQueue 契约的进程内后端。",
+"text": "用于验证 JobQueue 接口约定的进程内后端。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -120458,7 +120458,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 渲染测试允许透传的字段。未列出的键一律忽略，避免任意参数进入依赖库的选项模型。",
+"text": "# 渲染测试允许直接传递的字段。未列出的键一律忽略，避免任意参数进入依赖库的选项模型。",
 "spans": [
 [
 197,
@@ -120570,7 +120570,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "服务端 RPC 实现。调用签名与编码由共享契约统一管理。",
+"text": "服务端 RPC 实现。调用签名与编码由共享接口定义统一管理。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -121133,7 +121133,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 目录形式的命名空间包仍可导入，配置照常补全，但其他按包枚举的代码\n# 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。",
+"text": "# 目录形式的命名空间包仍可导入，配置正常补全，但其他按包枚举的代码\n# 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。",
 "spans": [
 [
 667,
@@ -121273,7 +121273,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 包 metadata 不记录安装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属\n# 的依赖都能解析为已安装包”为已安装判据。已知边界是手工安装完整某个未选中 extra 的全部依赖时会被\n# 误判为已安装，代价是多记一条依赖边。既有测试固化此判据。",
+"text": "# 包 metadata 不记录安装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属\n# 的依赖都能解析为已安装包”为已安装判断依据。已知边界是手工安装完整某个未选中 extra 的全部依赖时会被\n# 误判为已安装，代价是多记一条依赖边。既有测试已验证该判断依据。",
 "spans": [
 [
 997,
@@ -121868,7 +121868,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 将旧格式的发送者信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补建。",
+"text": "# 将旧格式的发送者信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补充创建。",
 "spans": [
 [
 304,
@@ -121928,7 +121928,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 将旧格式的场景信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补建。",
+"text": "# 将旧格式的场景信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补充创建。",
 "spans": [
 [
 333,
@@ -122213,7 +122213,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧数据库中数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补建映射行。",
+"text": "# 旧数据库中数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补充创建映射行。",
 "spans": [
 [
 550,
@@ -122738,7 +122738,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先关闭新 action 入口并与已经开始认领的一轮轮询建立屏障。轮询器仍继续回收\n# 在途 RPC 的远端结果，供下面取消任务时释放平台 context。",
+"text": "# 先关闭新 action 入口并与已经开始认领的一轮轮询建立屏障。轮询器仍继续回收\n# 执行中 RPC 的远端结果，供下面取消任务时释放平台 context。",
 "spans": [
 [
 23,
@@ -122933,7 +122933,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 内嵌 Logo。品牌资产缺失时跳过，邮件正文本身照常发出。",
+"text": "# 内嵌 Logo。品牌资产缺失时跳过，邮件正文本身正常发出。",
 "spans": [
 [
 74,
@@ -124143,7 +124143,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 字体资源包与用户自备字体的目录名。资源包以 ``fonts_dir()`` 自述资源根，此处不假定其内部布局。",
+"text": "# 字体资源包与用户自备字体的目录名。资源包通过 ``fonts_dir()`` 声明资源根目录，此处不假定其内部布局。",
 "spans": [
 [
 16,
@@ -124173,7 +124173,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 符号字族候选只收同类字族，避免回退到缺汉字字形的默认字族时把中文渲染成方框。",
+"text": "# 符号字族候选只收同类字族，避免回退到缺少汉字字形的默认字族时把中文渲染成方框。",
 "spans": [
 [
 36,
@@ -124803,7 +124803,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不按客户端分桶。\n# 桶内亦按 union 而非平台账号索引，否则一个人绑几个平台就能领到数倍的每日额度。\n# 每日周期按触发场景的时区计算，记录内保存周期偏移，跨场景共用同一条记录。",
+"text": "# 花瓣余额关联在 union 上，日额度也须随之跨平台共享，因此存储不按客户端分桶。\n# 桶内亦按 union 而非平台账号索引，否则一个人绑几个平台就能领到数倍的每日额度。\n# 每日周期按触发场景的时区计算，记录内保存周期偏移，跨场景共用同一条记录。",
 "spans": [
 [
 17,
@@ -124873,7 +124873,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 签到记录同样挂在 union 上，避免多平台绑定后重复签到。",
+"text": "# 签到记录同样关联在 union 上，避免多平台绑定后重复签到。",
 "spans": [
 [
 205,
@@ -125218,7 +125218,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已发送公告的场景记录，单键存放，避免为每个场景创建记录行而污染存储表。",
+"text": "# 已发送公告的场景记录，以单个键存放，避免为每个场景创建记录行而污染存储表。",
 "spans": [
 [
 17,
@@ -125253,7 +125253,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。\n# 仅存于进程内存，重启即清空。因已发送记录只在推送成功后写入数据库，重启后会自然重排。",
+"text": "# 已排入延时队列、尚未推送的场景。防止用户在等待期间连发消息导致重复排队。\n# 仅存于进程内存，重启即清空。因已发送记录只在推送成功后写入数据库，重启后会自然重新排队。",
 "spans": [
 [
 25,
@@ -125348,7 +125348,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 退役实例上仍可执行的模块，命令路径与正则路径共用这一份判据。\n# 白名单按用户输入的首词匹配。解析出的模块名不在白名单时回退到改写前的首词。",
+"text": "# 退役实例上仍可执行的模块，命令路径与正则路径共用这一套判断规则。\n# 白名单按用户输入的首词匹配。解析出的模块名不在白名单时回退到改写前的首词。",
 "spans": [
 [
 46,
@@ -125490,7 +125490,7 @@
 "start": 52,
 "end": 64,
 "kind": "py-docstring",
-"text": "把 ``\"源 -> 目标\"`` 形式的配置解析为映射。\n\n两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类，例如 ``\"Telegram -> QQBot\"``\n只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写\n``\"Telegram-alt -> QQBot\"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。\n\n只写源时目标为 None，表示该客户端退役但不提供迁移去处。格式错误的项一律跳过并记录警告，\n不使解析失败，因为退役属于运营配置，一处笔误不应阻断整个实例的启动。\n\n:param entries: 配置中的原始条目。\n:return: ``源客户端 → 目标客户端`` 的映射，目标可能为 None。",
+"text": "把 ``\"源 -> 目标\"`` 形式的配置解析为映射。\n\n两侧均按 ``client_name`` 解释，即针对具体实例而非整个平台种类，例如 ``\"Telegram -> QQBot\"``\n只退役默认实例 ``Telegram``，多实例下的 ``Telegram-alt`` 不受影响。要退役某个实例就写\n``\"Telegram-alt -> QQBot\"``。现有单实例部署下 ``client_name`` 即平台名，行为与改造前一致。\n\n只写源时目标为 None，表示该客户端退役但不提供迁移目标。格式错误的项一律跳过并记录警告，\n不使解析失败，因为退役属于运营配置，一处笔误不应阻断整个实例的启动。\n\n:param entries: 配置中的原始条目。\n:return: ``源客户端 → 目标客户端`` 的映射，目标可能为 None。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -125818,7 +125818,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表格的高度上限。条目增多时由列数吸收，使表格高度不超过该上限。",
+"text": "# 表格的高度上限。条目增多时通过增加列数分摊，使表格高度不超过该上限。",
 "spans": [
 [
 6,
@@ -125833,7 +125833,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 表格的最少列数。条目寥寥时若仍按高度上限反算列数会得到一两列的竖长条，\n# 该下限只会让表更矮更宽，不会反过来撑高。",
+"text": "# 表格的最少列数。条目寥寥时若仍按高度上限反算列数会得到一两列的竖长条，\n# 该下限只会让表更矮更宽，不会反过来拉高。",
 "spans": [
 [
 9,
@@ -125870,7 +125870,7 @@
 "start": 15,
 "end": 20,
 "kind": "py-docstring",
-"text": "把文本整理成可以放进 markdown 表格单元格的形态。\n\n:param text: 原始文本。\n:return: 可安全放入单元格的文本。",
+"text": "把文本整理成可以放入 markdown 表格单元格的形态。\n\n:param text: 原始文本。\n:return: 可安全放入单元格的文本。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -126558,7 +126558,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 花苞与花瓣一样挂在 union 上、跨平台共享，存储桶复用花瓣的 Union 作用域。",
+"text": "# 花苞与花瓣一样关联在 union 上、跨平台共享，存储桶复用花瓣的 Union 作用域。",
 "spans": [
 [
 11,
@@ -126678,7 +126678,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 下面几个名字没有纳入 core.api。表名工具是否成为第三方契约待 P5 复核；日志路径常量只是兼容入口，\n# 计划在阶段 4 删除，纳入门面会把待删除的名字写入契约。",
+"text": "# 下面几个名字没有纳入 core.api。表名工具是否成为第三方公开接口待 P5 复核；日志路径常量只是兼容入口，\n# 计划在阶段 4 删除，纳入公开接口会把待删除的名字写入稳定接口清单。",
 "spans": [
 [
 24,
@@ -126788,7 +126788,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 先写临时文件再原子替换，避免直接写入磁盘在中途被强制结束时留下半截内容的日志，\n# 导致读取时才发现损坏。经此一步，该文件要么完整要么不存在。",
+"text": "# 先写临时文件再原子替换，避免直接写入磁盘在中途被强制结束时留下不完整的日志，\n# 导致读取时才发现损坏。经此一步，该文件要么完整要么不存在。",
 "spans": [
 [
 167,
@@ -127133,7 +127133,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 握手闭合串行执行。若让位机制未生效（如某一平台的 probe 投递延迟），\n# 两轮并发执行至“是否同组”判定时会同时读到合并前的数据，各自新建一个组，合并即告失败。",
+"text": "# 握手闭合串行执行。若避让机制未生效（如某一平台的 probe 投递延迟），\n# 两轮并发执行至“是否同组”判定时会同时读到合并前的数据，各自新建一个组，合并即告失败。",
 "spans": [
 [
 62,
@@ -127378,7 +127378,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 本轮已让位或已闭合，上下文在各自的路径中释放，此处不再重复处理。",
+"text": "# 本轮已避让或已闭合，上下文在各自的路径中释放，此处不再重复处理。",
 "spans": [
 [
 441,
@@ -127443,7 +127443,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对\n# 会使同一对场景被合并两次。此处按 probe 口令排序作确定性让位，仅保留口令最小的一轮。\n# 各方均先写入记录再发出 probe，因此收到对方 probe 时自身记录必然已存在，判定不会遗漏。",
+"text": "# 同一场景内的每个机器人都会收到同一条 ~bind auto 并各自发起一轮握手，两轮交叉配对\n# 会使同一对场景被合并两次。此处按 probe 口令排序作确定性避让，仅保留口令最小的一轮。\n# 各方均先写入记录再发出 probe，因此收到对方 probe 时自身记录必然已存在，判定不会遗漏。",
 "spans": [
 [
 468,
@@ -127498,7 +127498,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 让位过程中已交出控制权，其间该口令可能已被另一个机器人认领，认领前须再确认一次。",
+"text": "# 避让过程中已交出控制权，其间该口令可能已被另一个机器人认领，认领前须再确认一次。",
 "spans": [
 [
 490,
@@ -127548,7 +127548,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 闭合一轮握手。\n# confirm 口令同样只能消费一次，且只在发起场景中生效。响应方发出的口令必然出现在双方共处的\n# 那个场景里，出现在别处即说明它是被转贴过去的，据此可拒绝跨场景的冒认。",
+"text": "# 闭合一轮握手。\n# confirm 口令同样只能消费一次，且只在发起场景中生效。响应方发出的口令必然出现在双方共处的\n# 那个场景里，出现在别处即说明它是被转贴过去的，据此可拒绝跨场景的冒用。",
 "spans": [
 [
 526,
@@ -127718,7 +127718,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。\n# 种类决定首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，\n# text 则照常转义。",
+"text": "# 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。\n# 种类决定首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，\n# text 则正常转义。",
 "spans": [
 [
 340,
@@ -127945,7 +127945,7 @@
 "start": 166,
 "end": 181,
 "kind": "py-docstring",
-"text": "终止行内连排，使其后追加的元素能各自成行。\n\n可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行\n（见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。\n该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会\n把调用方随后追加的提示语紧贴在最后一个模块名之后。补一个纯文本片段即可断开连排。\n\n片段取一个空格而非空字符串，因为消息链会把空文本换成错误提示（见\n``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后\n仍会按元素补一次换行，两者叠加会多出一个空行。\n\n本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 把关。\n\n:param chain: 待收尾的消息链，就地修改。",
+"text": "终止行内连排，使其后追加的元素能各自成行。\n\n可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行\n（见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。\n该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会\n把调用方随后追加的提示语紧贴在最后一个模块名之后。补一个纯文本片段即可断开连排。\n\n片段取一个空格而非空字符串，因为消息链会把空文本换成错误提示（见\n``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后\n仍会按元素补一次换行，两者叠加会多出一个空行。\n\n本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 控制。\n\n:param chain: 待收尾的消息链，就地修改。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -127960,7 +127960,7 @@
 "start": 191,
 "end": 213,
 "kind": "py-docstring",
-"text": "把若干组模块名排成一张 markdown 表。\n\n各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多\n:data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，\n模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。\n\n``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。\n此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。\n\n模块名渲染为指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格\n中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见\n``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，\n竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**\n—— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被拆成两半。\n区隔行因此与上一组的收尾同处一个元素。\n\n:param msg: 消息会话。\n:param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。\n:param include_help_header: 是否在模块表格内加入 help 顶栏。\n:param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。\n:return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。",
+"text": "把若干组模块名排成一张 markdown 表。\n\n各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多\n:data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，\n模块数增多时通过增加列数分摊。末行不足处补空单元格 —— markdown 要求各行的列数一致。\n\n``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。\n此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。\n\n模块名渲染为指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格\n中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见\n``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表因此累积成一个文本块，\n竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**\n—— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被拆成两半。\n区隔行因此与上一组的收尾同处一个元素。\n\n:param msg: 消息会话。\n:param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。\n:param include_help_header: 是否在模块表格内加入 help 顶栏。\n:param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。\n:return: 消息元素列表。所有组皆空时返回空片段，空状态文案由调用方负责。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -127993,7 +127993,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# ``merge`` 是 ``bind`` 的别名，此处保留同名隐藏模块，仅承载退役公告触发器，因为\n# 退役策略的白名单按模块名放行，公告正则须挂在白名单模块上才能在退役场景继续匹配。",
+"text": "# ``merge`` 是 ``bind`` 的别名，此处保留同名隐藏模块，仅承载退役公告触发器，因为\n# 退役策略的白名单按模块名放行，公告正则须挂载在白名单模块上才能在退役场景继续匹配。",
 "spans": [
 [
 37,
@@ -128073,7 +128073,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 迁移码须记录签发方的客户端与场景，前者用于兑换时校验迁移去处，\n# 后者用于迁移完成后统一两侧的消息通道编号。",
+"text": "# 迁移码须记录签发方的客户端与场景，前者用于兑换时校验迁移目标，\n# 后者用于迁移完成后统一两侧的消息通道编号。",
 "spans": [
 [
 76,
@@ -128188,7 +128188,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作命令路径会被 bind token 抢先匹配\n# （``<code>`` 匹配并消耗 \"merge\"），源平台便不再让位。用户侧命令不变，经别名映射到这里。",
+"text": "# 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作命令路径会被 bind token 抢先匹配\n# （``<code>`` 匹配并消耗 \"merge\"），源平台便不再避让。用户侧命令不变，经别名映射到这里。",
 "spans": [
 [
 185,
@@ -128263,7 +128263,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只做排队，不向场景发送内容，公告由延时任务在数分钟后推送。若挂在命令拦截上，退役后用户\n# 不再发命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查询数据库。",
+"text": "# 只做排队，不向场景发送内容，公告由延时任务在数分钟后推送。若挂载在命令拦截上，退役后用户\n# 不再发命令，该场景便永远收不到公告。单次触发使每个场景只执行一次，避免每条消息都查询数据库。",
 "spans": [
 [
 255,
@@ -128313,7 +128313,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不加 available_for，因为框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，\n# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的无效行。\n# 以能力标志作唯一判据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。",
+"text": "# 不加 available_for，因为框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，\n# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的无效行。\n# 以能力标志作为唯一判断依据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。",
 "spans": [
 [
 81,
@@ -128403,7 +128403,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 保留行尾空格，因为指令操作无论以元素形态并入还是降级为纯文本，都不会自行补分隔符。\n# disable_joke 亦不可省，降级后的命令原文会并入本元素，被替换后就无法照抄了。",
+"text": "# 保留行尾空格，因为指令操作无论以元素形态并入还是降级为纯文本，都不会自行补分隔符。\n# disable_joke 亦不可省，降级后的命令原文会并入本元素，被替换后就无法直接复制了。",
 "spans": [
 [
 352,
@@ -128485,7 +128485,7 @@
 "start": 317,
 "end": 337,
 "kind": "py-docstring",
-"text": "将设置行渲染为消息元素。\n\n每一行都在行尾挂上指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮，\n因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自\n那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，\n模块侧无须再分支。\n\n换行的写法随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把\n紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），\n换行若交由适配器按元素处理，整个面板会塌成一行，故此路径下须把换行写入文本自身。\n降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒\n会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。\n\n:param msg: 消息会话。\n:param title_key: 分组标题的多语言键。\n:param rows: 设置行列表。\n:param can_edit: 当前用户是否可以修改这一组设置。\n:param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。\n:return: 消息元素列表。",
+"text": "将设置行渲染为消息元素。\n\n每一行都在行尾附加指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮，\n因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自\n那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，\n模块侧无须再分支。\n\n换行的写法随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把\n紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），\n换行若交由适配器按元素处理，整个面板会合并成一行，故此路径下须把换行写入文本自身。\n降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒\n会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。\n\n:param msg: 消息会话。\n:param title_key: 分组标题的多语言键。\n:param rows: 设置行列表。\n:param can_edit: 当前用户是否可以修改这一组设置。\n:param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。\n:return: 消息元素列表。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -130459,7 +130459,7 @@
 "start": 13,
 "end": 18,
 "kind": "md-list",
-"text": "- Web 平台不注册该命令，仅在子进程模式可用。\n- 重启全部子进程。\n- 默认等待在途命令结束，并请求确认。60 秒内仍有命令在执行时，机器人给出提示。\n- `--force` 跳过确认与等待。\n- 执行前把发起会话写入 `data/private/<client>/.cache_restart_author`。\n- 进程以退出码 33 结束，由守护进程重启全部子进程。重启完成后，机器人会在原场景发回提示。",
+"text": "- Web 平台不注册该命令，仅在子进程模式可用。\n- 重启全部子进程。\n- 默认等待执行中的命令结束，并请求确认。60 秒内仍有命令在执行时，机器人给出提示。\n- `--force` 跳过确认与等待。\n- 执行前把发起会话写入 `data/private/<client>/.cache_restart_author`。\n- 进程以退出码 33 结束，由守护进程重启全部子进程。重启完成后，机器人会在原场景发回提示。",
 "ctx": "`restart`",
 "path": "packages/akari-bot-core/akaribot/modules/core/docs/restart.md",
 "id": 9174
@@ -130495,7 +130495,7 @@
 "start": 14,
 "end": 14,
 "kind": "md-paragraph",
-"text": "配置格式为 `<源客户端> -> <目标客户端>`。只写源客户端时，表示该客户端已退役，但没有迁移去处。",
+"text": "配置格式为 `<源客户端> -> <目标客户端>`。只写源客户端时，表示该客户端已退役，但没有迁移目标。",
 "ctx": "retired_policy",
 "path": "packages/akari-bot-core/akaribot/modules/core/docs/retired_policy.md",
 "id": 9178
@@ -131197,7 +131197,7 @@
 "start": 8,
 "end": 8,
 "kind": "md-paragraph",
-"text": "此 Hook 挂在 `EXECUTION_FINISHED` 和 `FINISHED` 两个位置，统计命令执行与消息解析的次数。",
+"text": "此 Hook 挂载在 `EXECUTION_FINISHED` 和 `FINISHED` 两个位置，统计命令执行与消息解析的次数。",
 "ctx": "telemetry",
 "path": "packages/akari-bot-core/akaribot/modules/core/docs/telemetry.md",
 "id": 9256
@@ -131716,7 +131716,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 必须在候选模块匹配阶段拦下，因为未匹配的模块会进入纠错与默认提示，那些路径不会\n# 经过 :attr:`HookPoint.COMMAND_PREPARE`，放到模板解析前就拦不干净。",
+"text": "# 必须在候选模块匹配阶段拦截，因为未匹配的模块会进入纠错与默认提示，那些路径不会\n# 经过 :attr:`HookPoint.COMMAND_PREPARE`，放到模板解析前就拦不干净。",
 "spans": [
 [
 101,
@@ -141798,7 +141798,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只读标记与实例根目录的环境变量名。二者不在 core 门面内，故按引导代码的做法写为字面量。",
+"text": "# 只读标记与实例根目录的环境变量名。二者不在 core 公开接口内，故按引导代码的做法写为字面量。",
 "spans": [
 [
 30,
@@ -141934,7 +141934,7 @@
 "start": 61,
 "end": 63,
 "kind": "cfg-comment",
-"text": "# CLI 的默认安装集合（T3.3）包含 s3 / mysql / image 三个常规 extra 加 emotes 与 brand 两个资源包，与\n# Dockerfile 的 --all-extras 开箱依赖一致，chart 与 image 同义，不重列。`akaribot init --minimal` 仅安装最小\n# core，跳过这一整套——此时 ~about 不带配图、SMTP 报告不带标志，其余照常（见 core/utils/brand.py）。",
+"text": "# CLI 的默认安装集合（T3.3）包含 s3 / mysql / image 三个常规 extra 加 emotes 与 brand 两个资源包，与\n# Dockerfile 的 --all-extras 开箱依赖一致，chart 与 image 同义，不重列。`akaribot init --minimal` 仅安装最小\n# core，跳过这一整套——此时 ~about 不带配图、SMTP 报告不带标志，其余功能正常（见 core/utils/brand.py）。",
 "path": "packages/akari-bot-core/pyproject.toml",
 "id": 9917
 },
@@ -142277,7 +142277,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "akaribot.modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版与缺依赖降级。",
+"text": "akaribot.modules.core.su_tools.analytics 单元测试 - 折线图数值标注的排版与缺少依赖降级。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -142292,7 +142292,7 @@
 "start": 74,
 "end": 74,
 "kind": "py-docstring",
-"text": "akaribot.modules.core.su_tools.analytics: 折线图标注排版与缺依赖降级测试",
+"text": "akaribot.modules.core.su_tools.analytics: 折线图标注排版与缺少依赖降级测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -142425,7 +142425,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 两轮 probe 交叉送达。让位机制应使其中一轮退出，仅剩一轮进入 confirm。",
+"text": "# 两轮 probe 交叉送达。避让机制应使其中一轮退出，仅剩一轮进入 confirm。",
 "spans": [
 [
 76,
@@ -142455,7 +142455,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 若不让位，双方都会应答对方，产生两个 confirm，同一对场景将被合并两次。",
+"text": "# 若不避让，双方都会应答对方，产生两个 confirm，同一对场景将被合并两次。",
 "spans": [
 [
 100,
@@ -142470,7 +142470,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 绕过让位机制直接构造两轮，模拟让位未生效的最坏情况（如某一平台的 probe 投递延迟）。",
+"text": "# 绕过避让机制直接构造两轮，模拟避让未生效的最坏情况（如某一平台的 probe 投递延迟）。",
 "spans": [
 [
 116,
@@ -142565,7 +142565,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 用户照抄场景中出现的同一条命令粘贴。口令若仍被受理，此人将被记作对端机器人。",
+"text": "# 用户直接复制场景中出现的同一条命令粘贴。口令若仍被受理，此人将被记作对端机器人。",
 "spans": [
 [
 218,
@@ -142970,7 +142970,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 这一条直接复现线上报错——finish() 收到的若已是 MessageChain，get_message_chain()\n# 便原样返回、跳过 assign 的归一化，裸字符串一路传至 cattrs 才抛\n# TypeError: 'str' object is not a mapping。",
+"text": "# 这一条直接复现线上报错——finish() 收到的若已是 MessageChain，get_message_chain()\n# 便原样返回、跳过 assign 的归一化，纯字符串一路传至 cattrs 才抛\n# TypeError: 'str' object is not a mapping。",
 "spans": [
 [
 34,
@@ -143160,7 +143160,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 花瓣余额挂在 union 上，日额度若仍按平台账号记账，绑几个平台就能领几倍",
+"text": "# 花瓣余额关联在 union 上，日额度若仍按平台账号记账，绑几个平台就能领几倍",
 "spans": [
 [
 116,
@@ -143267,7 +143267,7 @@
 "start": 119,
 "end": 119,
 "kind": "py-docstring",
-"text": "akaribot.testing.mock.config: 配置项替身测试",
+"text": "akaribot.testing.mock.config: 配置项模拟对象测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -143860,7 +143860,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 尚未创建数据表时也要返回清单。条数以未知返回，清单照常返回。",
+"text": "# 尚未创建数据表时也要返回清单。条数以未知返回，清单正常返回。",
 "spans": [
 [
 321,
@@ -143942,7 +143942,7 @@
 "start": 100,
 "end": 100,
 "kind": "py-docstring",
-"text": "相对 SQLite 链接锚定实例根目录，绝对路径、内存数据库与非 SQLite 链接不受影响。",
+"text": "相对 SQLite 链接以实例根目录为基准，绝对路径、内存数据库与非 SQLite 链接不受影响。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -144165,7 +144165,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 条目顺序刻意让依赖方先出现，这样初始判定时被依赖方还没被标记为拒绝，只有级联才能拦住它。",
+"text": "# 条目顺序刻意让依赖方先出现，这样初始判定时被依赖方还没被标记为拒绝，只有级联才能拦截它。",
 "spans": [
 [
 282,
@@ -144385,7 +144385,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 标记形状按 core 的正则判定，裸标记与带后缀、带类型说明的写法都算，同一表内逐项累计。",
+"text": "# 标记形状按 core 的正则判定，无后缀标记与带后缀、带类型说明的写法都算，同一表内逐项累计。",
 "spans": [
 [
 90,
@@ -144400,7 +144400,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 单张表解析失败或不是 UTF-8 时只把该表记入 failed，其余表照常统计，命令仍以 0 退出。",
+"text": "# 单张表解析失败或不是 UTF-8 时只把该表记入 failed，其余表正常统计，命令仍以 0 退出。",
 "spans": [
 [
 98,
@@ -144415,7 +144415,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 缺文件与含路径分隔符的表名各留一条原因，因为表名只用于拼接配置目录下的文件名。",
+"text": "# 缺少文件与含路径分隔符的表名各留一条原因，因为表名只用于拼接配置目录下的文件名。",
 "spans": [
 [
 115,
@@ -144445,7 +144445,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例配置文件的注释取自 schema，缺专属注释时用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。",
+"text": "# 实例配置文件的注释取自 schema，缺少专属注释时用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。",
 "spans": [
 [
 147,
@@ -145092,7 +145092,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "JobQueue 后端装配和介质无关契约测试。",
+"text": "JobQueue 后端装配和介质无关接口约定测试。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -145142,7 +145142,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "在不访问 JobQueue ORM 表的情况下验证共享运行时契约。",
+"text": "在不访问 JobQueue ORM 表的情况下验证共享运行时接口约定。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -145870,7 +145870,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 构造代际不一致的订阅",
+"text": "# 构造版本不一致的订阅",
 "spans": [
 [
 385,
@@ -145885,7 +145885,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不传 dispatch 级 timeout，依赖订阅字段",
+"text": "# 不传入 dispatch 级 timeout，依赖订阅字段",
 "spans": [
 [
 439,
@@ -145960,7 +145960,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 初始索引中订阅绑定旧代际",
+"text": "# 初始索引中订阅绑定旧版本",
 "spans": [
 [
 685,
@@ -145975,7 +145975,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 模拟 reload 失败流程，先 prepare 出新 staging（新代际）→ restore 旧注册并重建索引\n# （此时旧函数被标成新代际）→ abort 撤销 staging → 再次重建索引",
+"text": "# 模拟 reload 失败流程，先 prepare 出新 staging（新版本）→ restore 旧注册并重建索引\n# （此时旧函数被标成新版本）→ abort 撤销 staging → 再次重建索引",
 "spans": [
 [
 691,
@@ -146160,7 +146160,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 仓库根目录从 core 包的位置向上推算（判据见 _repository_root），\n# 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。",
+"text": "# 仓库根目录从 core 包的位置向上推算（判断依据见 _repository_root），\n# 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。",
 "spans": [
 [
 14,
@@ -146180,7 +146180,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不按层数推算（源码根目录从 <dist>/src/akaribot 压成 <dist>/akaribot 后层数会变），也不取\n# Paths.tests。后者正是本用例要检查的取值。",
+"text": "# 不按层数推算（源码根目录从 <dist>/src/akaribot 扁平化为 <dist>/akaribot 后层数会变），也不取\n# Paths.tests。后者正是本用例要检查的取值。",
 "spans": [
 [
 17,
@@ -146215,7 +146215,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# config 的检查只在未设置 AKARI_CONFIG_PATH 时成立。测试基座会为该变量指向一份临时\n# 配置，此处显式清空它，避免用例结论取决于外层环境。",
+"text": "# config 的检查只在未设置 AKARI_CONFIG_PATH 时成立。测试框架会为该变量指向一份临时\n# 配置，此处显式清空它，避免用例结论取决于外层环境。",
 "spans": [
 [
 68,
@@ -146340,7 +146340,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 模拟停机跨过周期边界，标记停留在过去的周期时补结算一次。",
+"text": "# 模拟停机跨过周期边界，标记停留在过去的周期时补充结算一次。",
 "spans": [
 [
 241,
@@ -146507,7 +146507,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "各进程内存占用汇总的单元测试 - 指标口径、peer 名还原与失败可见性。",
+"text": "各进程内存占用汇总的单元测试 - 指标统计方式、peer 名还原与失败可见性。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -146522,7 +146522,7 @@
 "start": 108,
 "end": 108,
 "kind": "py-docstring",
-"text": "core.queue.diagnostics: 内存指标口径测试",
+"text": "core.queue.diagnostics: 内存指标统计方式测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -146615,7 +146615,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 同上，只记录本任务派发的处理协程，避免等待其他轮询器的在途任务。",
+"text": "# 同上，只记录本任务派发的处理协程，避免等待其他轮询器的执行中任务。",
 "spans": [
 [
 161,
@@ -147200,7 +147200,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# enqueue_notice 只负责创建后台任务，显式让出一次事件循环使替身完成。",
+"text": "# enqueue_notice 只负责创建后台任务，显式让出一次事件循环使模拟对象完成。",
 "spans": [
 [
 203,
@@ -147825,7 +147825,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 指令操作会使适配器把紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板\n# 会塌成一行。故此路径下的换行必须写入文本自身。",
+"text": "# 指令操作会使适配器把紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板\n# 会合并成一行。故此路径下的换行必须写入文本自身。",
 "spans": [
 [
 187,
@@ -148715,7 +148715,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台能力集在导入时即依配置定型，故新建一份“markdown 与 URLManager 均已开启”\n# 的基准并打桩该开关，使检查只考察覆盖逻辑本身，不受本地配置左右",
+"text": "# 平台能力集在导入时即依配置定型，故新建一份“markdown 与 URLManager 均已开启”\n# 的基准并模拟该开关，使检查只考察覆盖逻辑本身，不受本地配置左右",
 "spans": [
 [
 308,
@@ -148820,7 +148820,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 被拦下的请求不得触达依赖库",
+"text": "# 被拦截的请求不得触达依赖库",
 "spans": [
 [
 95,
@@ -148901,7 +148901,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，\n# 会把路径固化在隔离环境变量就位之前）。",
+"text": "# 子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，\n# 会把路径固定在隔离环境变量就位之前）。",
 "spans": [
 [
 40,
@@ -148923,7 +148923,7 @@
 "start": 30,
 "end": 39,
 "kind": "py-docstring",
-"text": "首次访问时解析公开名。\n\n    子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，\n    会把路径固化在隔离环境变量就位之前）。\n\n    :param name: 属性名。\n    :return: 对应的对象。\n    :raises AttributeError: 该名字不在任何子模块的公开接口内。",
+"text": "首次访问时解析公开名。\n\n    子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，\n    会把路径固定在隔离环境变量就位之前）。\n\n    :param name: 属性名。\n    :return: 对应的对象。\n    :raises AttributeError: 该名字不在任何子模块的公开接口内。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -149043,7 +149043,7 @@
 "start": 20,
 "end": 20,
 "kind": "md-paragraph",
-"text": "`akaribot test` 先确认实例环境里能导入 `akaribot.testing`，缺包时提示安装 `akari-bot-testing`。无法识别的参数原样交给运行器。",
+"text": "`akaribot test` 先确认实例环境里能导入 `akaribot.testing`，缺少该包时提示安装 `akari-bot-testing`。无法识别的参数原样交给运行器。",
 "ctx": "运行入口",
 "path": "packages/akari-bot-testing/akaribot/testing/docs/index.md",
 "id": 10379
@@ -149295,7 +149295,7 @@
 "start": 40,
 "end": 40,
 "kind": "md-paragraph",
-"text": "`@case` 把用例挂在命令定义旁，模块被导入时注册。",
+"text": "`@case` 把用例挂载在命令定义旁，模块被导入时注册。",
 "ctx": "`@case`",
 "path": "packages/akari-bot-testing/akaribot/testing/docs/writing-tests.md",
 "id": 10407
@@ -149826,7 +149826,7 @@
 "start": 1,
 "end": 2,
 "kind": "cfg-comment",
-"text": "# akari-bot-testing 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供包自述。",
+"text": "# akari-bot-testing 的包清单。\n# 本包不是模块或适配器，无 registry 条目，清单仅供包说明。",
 "path": "packages/akari-bot-testing/akaribot/testing/manifest.toml",
 "id": 10450
 },
@@ -150002,7 +150002,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 默认禁止回退到真实网络，因为未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）\n# 拖慢用例，并让结果随外部服务状态漂移。录制新语料时以环境变量放行。\n# 每次调用都重设策略，使中途停用 mock 的用例不会波及后续入口。",
+"text": "# 默认禁止回退到真实网络，因为未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）\n# 拖慢用例，并让结果随外部服务状态波动。录制新语料时以环境变量放行。\n# 每次调用都重置策略，使中途停用 mock 的用例不会波及后续入口。",
 "spans": [
 [
 106,
@@ -150202,7 +150202,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 语言包快照在同一进程内只会构建一次，因为重建要重新哈希全部语料，是每个入口固定成本的\n# 主要来源。连接仍逐次重设，用例才能从干净的翻译状态开始。",
+"text": "# 语言包快照在同一进程内只会构建一次，因为重建要重新哈希全部语料，是每个入口固定成本的\n# 主要来源。连接仍逐次重置，用例才能从干净的翻译状态开始。",
 "spans": [
 [
 13,
@@ -150237,7 +150237,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。刻意不走\n# load_order()，因为测试不校验跨包依赖声明，按包名字典序枚举即可，测试基座不必依赖依赖图机制。",
+"text": "# 测试不检查模块是否已启用，因此直接消费发现层的清单，与生产入口同源。刻意不使用\n# load_order()，因为测试不校验跨包依赖声明，按包名字典序枚举即可，测试框架不必依赖依赖图机制。",
 "spans": [
 [
 69,
@@ -150744,7 +150744,7 @@
 "start": 1,
 "end": 1,
 "kind": "py-docstring",
-"text": "WebRender Mock 工具 - 为依赖无头浏览器的模块提供替身。",
+"text": "WebRender Mock 工具 - 为依赖无头浏览器的模块提供模拟对象。",
 "doc": {
 "indent": "",
 "quote": "\"\"\"",
@@ -150759,7 +150759,7 @@
 "start": 46,
 "end": 46,
 "kind": "py-docstring",
-"text": "web_render 取数方法的替身管理器。",
+"text": "web_render 数据获取方法的模拟管理器。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -150789,7 +150789,7 @@
 "start": 89,
 "end": 89,
 "kind": "py-docstring",
-"text": "接管 web_render 的取数方法。",
+"text": "接管 web_render 的数据获取方法。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -150817,7 +150817,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 无进展看门狗随测试时限系数放大，但封顶 5 倍，这样慢机器上子测试可以更久，\n# 真正无响应时也不能让单个用例占用整个 CI 任务太久。",
+"text": "# 无进展超时监控随测试时限系数放大，但封顶 5 倍，这样慢机器上子测试可以更久，\n# 真正无响应时也不能让单个用例占用整个 CI 任务太久。",
 "spans": [
 [
 23,
@@ -151197,7 +151197,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 通用测试进程不启动守护进程所管理的 WebSocket Hub。数据库后端\n# 作为自包含测试基座。WebSocket 的真实连接行为由专项用例显式建立 Hub 验证。",
+"text": "# 通用测试进程不启动守护进程所管理的 WebSocket Hub。数据库后端\n# 作为自包含测试环境。WebSocket 的真实连接行为由专项用例显式建立 Hub 验证。",
 "spans": [
 [
 40,
@@ -151217,7 +151217,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 注释先以 i18n 标记写入磁盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值，因为\n# core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。\n# 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固化配置目录。",
+"text": "# 注释先以 i18n 标记写入磁盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号取当前值，因为\n# core/config/update.py 的迁移在导入期执行，低于目标版本会被逐级升级。\n# 本函数须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固定配置目录。",
 "spans": [
 [
 47,
@@ -151277,7 +151277,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 铺好一份测试专用配置，并令其后的导入一律指向它。\n# 配置不取自仓库内的配置快照，只写最小结构，其余键由配置模板扫描补全，\n# 因此仓库里不存在需要与代码同步维护的生成配置。",
+"text": "# 准备好一份测试专用配置，并令其后的导入一律指向它。\n# 配置不取自仓库内的配置快照，只写最小结构，其余键由配置模板扫描补全，\n# 因此仓库里不存在需要与代码同步维护的生成配置。",
 "spans": [
 [
 102,
@@ -151302,7 +151302,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 顺序约束上，AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。\n# 二者分别固化为配置目录与合并日志目录。未设置时都会指向真实的 config/ 与 data/。",
+"text": "# 顺序约束上，AKARI_CONFIG_PATH 与 AKARI_UNION_MERGE_LOGS_PATH 都须先于任何 core.* 导入生效。\n# 二者分别固定为配置目录与合并日志目录。未设置时都会指向真实的 config/ 与 data/。",
 "spans": [
 [
 107,
@@ -151337,7 +151337,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 覆盖项走配置管理器的写入路径，使磁盘与内存副本保持一致；直接改写文件时，\n# 同一文件系统时间戳精度内的改动可能绕过 watch() 的重载判定。",
+"text": "# 覆盖项通过配置管理器的写入路径处理，使磁盘与内存副本保持一致；直接改写文件时，\n# 同一文件系统时间戳精度内的改动可能绕过 watch() 的重载判定。",
 "spans": [
 [
 129,
@@ -151357,7 +151357,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 三项引导都必须早于本模块后续的 core.* 导入。合并日志目录与语言快照缓存在前，因为它们的取值只依赖\n# 环境变量，而配置引导内部会导入 core.constants 并构建语言快照，届时未设置的变量即被永久固化。",
+"text": "# 三项引导都必须早于本模块后续的 core.* 导入。合并日志目录与语言快照缓存在前，因为它们的取值只依赖\n# 环境变量，而配置引导内部会导入 core.constants 并构建语言快照，届时未设置的变量即被永久固定。",
 "spans": [
 [
 156,
@@ -151452,7 +151452,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 报告落点与用例发现同源，源码克隆下固定在仓库根目录，安装形态下改用调用目录。",
+"text": "# 报告输出位置与用例发现同源，源码克隆下固定在仓库根目录，安装形态下改用调用目录。",
 "spans": [
 [
 259,
@@ -151467,7 +151467,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 各包源码存放在 ``packages[/<类>]/<包名>``（源码根目录即包根目录，不再有 ``src`` 一层），仓库根目录本身不再有可导入的 ``akaribot``。\n# 判据只用目录是否存在，不依赖已安装包的 metadata。仓库根目录不可知时返回空列表，此时\n# ``akaribot`` 由已安装包提供，无须也不应改写 ``PYTHONPATH``。",
+"text": "# 各包源码存放在 ``packages[/<类>]/<包名>``（源码根目录即包根目录，不再有 ``src`` 一层），仓库根目录本身不再有可导入的 ``akaribot``。\n# 判断依据只看目录是否存在，不依赖已安装包的 metadata。仓库根目录不可知时返回空列表，此时\n# ``akaribot`` 由已安装包提供，无须也不应改写 ``PYTHONPATH``。",
 "spans": [
 [
 264,
@@ -151592,7 +151592,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 目录递归取 ``*.py``，文件按原样收集。路径按仓库根目录解析，相对路径因此与 ``tests/run_one.py``\n# 的写法一致。给错路径时返回空列表，由调用方报“没有匹配的测试文件”——静默运行全量会让\n# ``akaribot test <路径>`` 看起来生效、实际什么都没筛。",
+"text": "# 目录递归取 ``*.py``，文件按原样收集。路径按仓库根目录解析，相对路径因此与 ``tests/run_one.py``\n# 的写法一致。传入错误路径时返回空列表，由调用方报“没有匹配的测试文件”——静默运行全量会让\n# ``akaribot test <路径>`` 看起来生效、实际什么都没筛。",
 "spans": [
 [
 498,
@@ -151759,7 +151759,7 @@
 "start": 145,
 "end": 145,
 "kind": "py-docstring",
-"text": "返回本次测试运行的输出文件路径。环境铺设已在本模块导入期完成，重复调用返回同一份路径。",
+"text": "返回本次测试运行的输出文件路径。环境初始化已在本模块导入期完成，重复调用返回同一份路径。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -151822,7 +151822,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 无进展看门狗自身的等待任务，取消收尾时不能算作用例遗留的后台任务。",
+"text": "# 无进展超时监控自身的等待任务，取消收尾时不能算作用例遗留的后台任务。",
 "spans": [
 [
 15,
@@ -152062,7 +152062,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 快照只构建一次，但每个入口仍要重设翻译连接的状态。",
+"text": "# 快照只构建一次，但每个入口仍要重置翻译连接的状态。",
 "spans": [
 [
 484,
@@ -153370,7 +153370,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 历史消息会带有其他端点的内部键（如 _anthropic_blocks、_responses_reasoning），透传前需剔除。",
+"text": "# 历史消息会带有其他端点的内部键（如 _anthropic_blocks、_responses_reasoning），转发前需剔除。",
 "spans": [
 [
 11,
@@ -154910,7 +154910,7 @@
 "start": 99,
 "end": 99,
 "kind": "py-docstring",
-"text": "akaribot.modules.ai.hook: ai.ask 调用契约测试",
+"text": "akaribot.modules.ai.hook: ai.ask 调用约定测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -156838,7 +156838,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 解绑与事件可能并发。锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。\n# Challenge 与 Trust 必须一起删除，避免后一步异常留下无法再由退群事件清理的半状态。\n# 事务内只有一条连接，避免 EventInfo.refresh_info() 用 gather 同时占用它。",
+"text": "# 解绑与事件可能并发。锁内按平台 ID 重新解析，确保清理的是成员当前所属的 Union。\n# Challenge 与 Trust 必须一起删除，避免后一步异常留下无法再由退群事件清理的不一致状态。\n# 事务内只有一条连接，避免 EventInfo.refresh_info() 用 gather 同时占用它。",
 "spans": [
 [
 112,
@@ -156863,7 +156863,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、\n# 发消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会\n# 因等待平台响应而阻塞其他 Union 管理操作。",
+"text": "# 只把事件的 Union 重新解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、\n# 发消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会\n# 因等待平台响应而阻塞其他 Union 管理操作。",
 "spans": [
 [
 145,
@@ -157947,7 +157947,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重解析并重新读取挑战，\n# 避免旧 ORM 实例把信任写给旧 Union，或用整行 save 撤销解绑 hook 的重新关联。\n# Trust 与 Challenge 状态必须属于同一事务。否则后一步失败会留下“已信任但仍待验证”的半状态。",
+"text": "# 平台解禁等待期间账号或场景可能解绑。锁内按平台 ID 重新解析并重新读取挑战，\n# 避免旧 ORM 实例把信任写给旧 Union，或用整行 save 撤销解绑 hook 的重新关联。\n# Trust 与 Challenge 状态必须属于同一事务。否则后一步失败会留下“已信任但仍待验证”的不一致状态。",
 "spans": [
 [
 40,
@@ -166297,7 +166297,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），故传\n# `status_code=None`，使 4xx 也照常返回响应体。重发可能使第一次已签发的令牌失效。",
+"text": "# OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），故传入\n# `status_code=None`，使 4xx 也正常返回响应体。重发可能使第一次已签发的令牌失效。",
 "spans": [
 [
 118,
@@ -170855,7 +170855,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未配置开发者密钥时，给出好友码照样走开发者端点，查自己则回到用户态端点。",
+"text": "# 未配置开发者密钥时，给出好友码照样使用开发者端点，查自己则回到用户态端点。",
 "spans": [
 [
 152,
@@ -170870,7 +170870,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 配置了密钥则先用资料里的好友码，改走开发者端点。测试自带密钥开关，不受配置文件影响。",
+"text": "# 配置了密钥则先用资料里的好友码，改用开发者端点。测试自带密钥开关，不受配置文件影响。",
 "spans": [
 [
 156,
@@ -170945,7 +170945,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 未配置开发者密钥时，给出好友码照样走开发者端点，查自己则回到用户态端点。",
+"text": "# 未配置开发者密钥时，给出好友码照样使用开发者端点，查自己则回到用户态端点。",
 "spans": [
 [
 259,
@@ -170960,7 +170960,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 配置了密钥则先用资料里的好友码，改走开发者端点。测试自带密钥开关，不受配置文件影响。",
+"text": "# 配置了密钥则先用资料里的好友码，改用开发者端点。测试自带密钥开关，不受配置文件影响。",
 "spans": [
 [
 263,
@@ -176069,7 +176069,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 旧版曲目 id 与存档中的原始 id 无法对应，放行只会得出全空的成绩，故一并拦下。",
+"text": "# 旧版曲目 id 与存档中的原始 id 无法对应，放行只会得出全空的成绩，故一并拦截。",
 "spans": [
 [
 96,
@@ -176099,7 +176099,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# gameProgress 的结构版本更新只应影响 Data 值一项，其余信息照常输出。",
+"text": "# gameProgress 的结构版本更新只应影响 Data 值一项，其余信息正常输出。",
 "spans": [
 [
 275,
@@ -189441,7 +189441,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 解析 Wikitext 并取出指定章节的正文纯文本。\n# 行为开关、模板类构造与语义属性链接须在解析前以文本处理，因为行为开关不构成任何\n# 可识别的节点，模板类构造可能因内含裸花括号而不被识别，改写链接节点则会令其失效",
+"text": "# 解析 Wikitext 并取出指定章节的正文纯文本。\n# 行为开关、模板类构造与语义属性链接须在解析前以文本处理，因为行为开关不构成任何\n# 可识别的节点，模板类构造可能因内含未配对的花括号而不被识别，改写链接节点则会令其失效",
 "spans": [
 [
 143,
@@ -190028,7 +190028,7 @@
 "start": 21,
 "end": 21,
 "kind": "cfg-comment",
-"text": "    # aiocqhttp 是模块→平台 SDK 的现存违规边（T4.2 §7.6），在 core HTTP 层承接之前必须保留",
+"text": "    # aiocqhttp 是模块→平台 SDK 的现存违规依赖（T4.2 §7.6），在 core HTTP 层接管之前必须保留",
 "path": "packages/modules/akari-bot-module-wiki/pyproject.toml",
 "id": 13539
 },
@@ -191348,7 +191348,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会改用真实网络，\n# 带着重试与超时耗掉数十秒，且结果随对方服务状态漂移。此处以其真实状态码固定下来，\n# 使模块走到与线上一致的错误分支，同时把耗时降为零。",
+"text": "# 稳定失败的外部端点。录制工具只保存成功响应，这些请求在测试中会改用真实网络，\n# 带着重试与超时耗掉数十秒，且结果随对方服务状态波动。此处以其真实状态码固定下来，\n# 使模块进入与线上一致的错误分支，同时把耗时降为零。",
 "spans": [
 [
 54,
@@ -192623,7 +192623,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 导入 runner 即完成测试环境铺设（配置目录、合并日志目录、语言快照缓存），须早于任何\n# akaribot.core.* 导入。单入口运行与全量运行因此共用同一份隔离规则。",
+"text": "# 导入 runner 即完成测试环境初始化（配置目录、合并日志目录、语言快照缓存），须早于任何\n# akaribot.core.* 导入。单入口运行与全量运行因此共用同一套隔离规则。",
 "spans": [
 [
 14,
@@ -192748,7 +192748,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 版本守卫依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库测试数据。",
+"text": "# 版本检查依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库测试数据。",
 "spans": [
 [
 21,
@@ -192765,7 +192765,7 @@
 "start": 173,
 "end": 173,
 "kind": "py-docstring",
-"text": "tools.check_versions: 版本守卫豁免解析测试",
+"text": "tools.check_versions: 版本检查豁免解析测试",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -192878,7 +192878,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 白名单会掩盖真实的遗漏传参，故要求其对应的参数补充代码仍在位——issue_code() 一旦不再构造 ActionText，\n# 此处即失守。逐条报明缘由而不笼统忽略异常——读不到文件若被收成检查不成立，白名单便形同虚设。",
+"text": "# 白名单会掩盖真实的遗漏传参，故要求其对应的参数补充代码仍在位——issue_code() 一旦不再构造 ActionText，\n# 此处即失效。逐条报明缘由而不笼统忽略异常——读不到文件若被归类为检查不成立，白名单便形同虚设。",
 "spans": [
 [
 92,
@@ -193033,7 +193033,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 实例表不存在时回退基表。enable 例外，不回退",
+"text": "# 实例表不存在时回退到基础表。enable 例外，不回退",
 "spans": [
 [
 199,
@@ -193153,7 +193153,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 缺平台两段时只看前两项，平台级声明对该实例不生效，实例级声明仍然命中",
+"text": "# 缺少平台两段时只看前两项，平台级声明对该实例不生效，实例级声明仍然命中",
 "spans": [
 [
 386,
@@ -193503,7 +193503,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# manifest 未进 PackageManifest 的字段若清单里写了就照读，没写则留空。",
+"text": "# manifest 未进入 PackageManifest 的字段若清单里写了就直接读取，没写则留空。",
 "spans": [
 [
 64,
@@ -193760,7 +193760,7 @@
 "start": 452,
 "end": 452,
 "kind": "py-docstring",
-"text": "核对清单的 provides_modules 与源码里实际注册的模块名，防止清单漂移。",
+"text": "核对清单的 provides_modules 与源码里实际注册的模块名，防止清单不同步。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -193908,7 +193908,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 全局变更涵盖根配置、锁文件及整个仓库共用的工具，都会改变每个包的构建与测试前提。",
+"text": "# 全局变更涵盖根目录配置、锁文件及整个仓库共用的工具，都会改变每个包的构建与测试前提。",
 "spans": [
 [
 45,
@@ -194178,7 +194178,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 不进 wheel 的目录改动不要求升级版本，--strict 时该豁免失效。\n# pyproject.toml 不在豁免内，因为依赖与入口点会写入 wheel 元数据，改动同样要发布新版本。",
+"text": "# 不打入 wheel 的目录改动不要求升级版本，--strict 时该豁免失效。\n# pyproject.toml 不在豁免内，因为依赖与入口点会写入 wheel 元数据，改动同样要发布新版本。",
 "spans": [
 [
 41,
@@ -194333,7 +194333,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# CLI 组合名只安装 CLI wheel，安装后逐条运行基本检查命令。这条对应 P1-1（wheel 干净安装后不得缺依赖）\n# 与 P1-9（--version 可用）。tui --self-check 覆盖包内资源与样式表，冻结产物最容易在这里失败。",
+"text": "# CLI 组合名只安装 CLI wheel，安装后逐条运行基本检查命令。这条对应 P1-1（wheel 干净安装后不得缺少依赖）\n# 与 P1-9（--version 可用）。tui --self-check 覆盖包内资源与样式表，冻结产物最容易在这里失败。",
 "spans": [
 [
 41,
@@ -194548,7 +194548,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 适配器另有自己的面，其中的符号只供适配器使用，模块包导入它会被 B3 拦下。",
+"text": "# 适配器另有自己的公开接口，其中的符号只供适配器使用，模块包导入它会被 B3 拦截。",
 "spans": [
 [
 31,
@@ -194563,7 +194563,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 必须保持窄导入的文件不改写，因为门面导入期即展开，会把 web_render 连同 playwright 引入\n# ``sys.modules``，而 Telegram 适配器专门保证“只导入 message_builder 不连带引入 web_render”。",
+"text": "# 必须保持窄导入的文件不改写，因为公开接口导入期即展开，会把 web_render 连同 playwright 引入\n# ``sys.modules``，而 Telegram 适配器专门保证“只导入 message_builder 不连带引入 web_render”。",
 "spans": [
 [
 34,
@@ -194600,7 +194600,7 @@
 "start": 147,
 "end": 147,
 "kind": "py-docstring",
-"text": "该符号应改走哪个门面。两个门面都没有时返回 None。",
+"text": "该符号应改用哪个公开接口。两个公开接口都没有时返回 None。",
 "doc": {
 "indent": "        ",
 "quote": "\"\"\"",
@@ -194673,7 +194673,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 单段旧根名同时充当 JSON 键、数据库字段名与文件系统目录名，无法与模块路径区分，故不入白名单。",
+"text": "# 单段旧根包名同时充当 JSON 键、数据库字段名与文件系统目录名，无法与模块路径区分，故不入白名单。",
 "spans": [
 [
 50,
@@ -194688,7 +194688,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 裸 import 绑定旧根名，改写后绑定名变为 akaribot，引用处必须一并调整，属人工事项。",
+"text": "# 直接 import 绑定旧根包名，改写后绑定名变为 akaribot，引用处必须一并调整，属人工事项。",
 "spans": [
 [
 55,
@@ -194733,7 +194733,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# f-string 中出现的旧命名空间形态指字面量片段的根名之后紧跟标识符或插值，以排除句末的散文误报。",
+"text": "# f-string 中出现的旧命名空间形态指字面量片段的根包名之后紧跟标识符或插值，以排除句末的散文误报。",
 "spans": [
 [
 69,
@@ -195168,7 +195168,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# core 分发自身的目录。其 bundled 模块不计入“模块包是否经过门面”的观察值。",
+"text": "# core 包自身的目录。其 bundled 模块不计入“模块包是否经过公开接口”的观察值。",
 "spans": [
 [
 76,
@@ -195198,7 +195198,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# 适配器专用门面，模块导入它多半是在做本应交给适配器的事（T4.7(d)）。",
+"text": "# 适配器专用接口，模块导入它多半是在做本应交给适配器的事（T4.7(d)）。",
 "spans": [
 [
 81,
@@ -195213,7 +195213,7 @@
 },
 {
 "kind": "py-comment",
-"text": "# B8 的符号面来源于门面本体、实现模块与适配器面。",
+"text": "# B8 的导出符号来源于公开接口模块、实现模块与适配器接口。",
 "spans": [
 [
 85,
@@ -195520,7 +195520,7 @@
 "start": 358,
 "end": 358,
 "kind": "py-docstring",
-"text": "取 akaribot.core.api 承诺的符号面，AST 解析 __all__ 字面量，不导入 core。",
+"text": "获取 akaribot.core.api 承诺的导出符号集合，通过 AST 解析 __all__ 字面量，不导入 core。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
@@ -195535,7 +195535,7 @@
 "start": 384,
 "end": 384,
 "kind": "py-docstring",
-"text": "一次性建立分发索引、模块段索引与 core 门面符号面。",
+"text": "一次性建立包索引、模块段索引与 core 公开接口导出符号集合。",
 "doc": {
 "indent": "    ",
 "quote": "\"\"\"",
