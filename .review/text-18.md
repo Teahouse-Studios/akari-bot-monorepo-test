@@ -150,63 +150,63 @@
 
 ## 正文
 <<< UNIT U011215 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:5-5 | ctx=convert：安装与开发 >>>
-审阅次数：0
+审阅次数：1
 # convert：安装与开发
 <<< END U011215 >>>
 <<< UNIT U011216 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011216 >>>
 <<< UNIT U011217 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 安装后，管理员需要在会话中执行 `module enable convert` 开启模块。
 <<< END U011217 >>>
 <<< UNIT U011218 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 ## 配置项
 <<< END U011218 >>>
 <<< UNIT U011219 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:19-19 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 ## 权限与平台能力
 <<< END U011219 >>>
 <<< UNIT U011220 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 此模块没有平台限制和权限要求，也不发起网络请求。`UnitRegistry` 使用 `Decimal` 作为数值类型，避免二进制浮点运算的误差。
 <<< END U011220 >>>
 <<< UNIT U011221 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:23-23 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 模块声明支持的语言是 `en_us`。启用模块时，若会话语言不在此列，回复里会附带一条提示，说明当前语言不受支持。
 <<< END U011221 >>>
 <<< UNIT U011222 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:25-25 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 ## 数据表
 <<< END U011222 >>>
 <<< UNIT U011223 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:29-29 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 ## 依赖与外部服务
 <<< END U011223 >>>
 <<< UNIT U011224 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/development.md:31-31 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 只依赖 `pint` 与 `akari-bot-core`，不使用外部服务。
 <<< END U011224 >>>
 <<< UNIT U011225 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:3-3 | ctx=convert >>>
-审阅次数：0
+审阅次数：1
 此模块用于物理量换算，支持长度、质量、面积、体积、速度、温度等常见量纲，回复中给出原始量与换算结果。
 <<< END U011225 >>>
 <<< UNIT U011226 | md-heading | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:5-5 | ctx=命令 >>>
-审阅次数：0
+审阅次数：1
 ## 命令
 <<< END U011226 >>>
 <<< UNIT U011227 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:13-13 | ctx=`convert` >>>
-审阅次数：0
+审阅次数：1
 此命令用于把带单位的数值转换为目标单位。`<from_val>` 中数值和单位连写，`<to_unit>` 只填写单位。例如 `convert 100km m`。
 <<< END U011227 >>>
 <<< UNIT U011228 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:15-15 | ctx=`convert` >>>
-审阅次数：0
+审阅次数：1
 表达式与单位名称都按单位库的规则解析，区分大小写，`km` 与 `KM` 含义不同。表达式无法解析、量纲不匹配或单位无法识别时，统一返回转换失败提示。
 <<< END U011228 >>>
 <<< UNIT U011229 | md-paragraph | packages/modules/akari-bot-module-convert/akaribot/modules/convert/docs/index.md:18-22 | ctx=`convert` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~convert 1h min',
     '机器人：1 h = 60 min',
@@ -214,108 +214,108 @@
 />
 <<< END U011229 >>>
 <<< UNIT U011230 | json-value | packages/modules/akari-bot-module-convert/akaribot/modules/convert/locales/zh_cn.json:2-2 | ctx=convert.help >>>
-审阅次数：0
+审阅次数：1
 单位转换，大小写敏感。
 <<< END U011230 >>>
 <<< UNIT U011231 | json-value | packages/modules/akari-bot-module-convert/akaribot/modules/convert/locales/zh_cn.json:3-3 | ctx=convert.help.desc >>>
-审阅次数：0
+审阅次数：1
 全能单位转换。
 <<< END U011231 >>>
 <<< UNIT U011232 | json-value | packages/modules/akari-bot-module-convert/akaribot/modules/convert/locales/zh_cn.json:4-4 | ctx=convert.message.invalid >>>
-审阅次数：0
+审阅次数：1
 无法转换单位，请检查输入。
 <<< END U011232 >>>
 <<< UNIT U011233 | cfg-comment | packages/modules/akari-bot-module-convert/akaribot/modules/convert/manifest.toml:1-1 >>>
-审阅次数：0
+审阅次数：1
 # akari-bot-module-convert 的包清单。
 <<< END U011233 >>>
 <<< UNIT U011234 | md-paragraph | packages/modules/akari-bot-module-cytoid/README.md:3-3 | ctx=akari-bot-module-cytoid >>>
-审阅次数：0
+审阅次数：1
 查询 Cytoid 相关内容。
 <<< END U011234 >>>
 <<< UNIT U011235 | md-heading | packages/modules/akari-bot-module-cytoid/README.md:5-5 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011235 >>>
 <<< UNIT U011236 | md-paragraph | packages/modules/akari-bot-module-cytoid/README.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U011236 >>>
 <<< UNIT U011237 | md-paragraph | packages/modules/akari-bot-module-cytoid/README.md:13-13 | ctx=安装 >>>
-审阅次数：0
-模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+审阅次数：1
+模块的启用与配置参见[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U011237 >>>
 <<< UNIT U011238 | py-docstring | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/database/models.py:10-15 | ctx=CytoidBindInfo >>>
-审阅次数：0
+审阅次数：1
 Cytoid 用户绑定信息。
 
 :param union_id: 绑定的用户联合 ID。
 :param username: 绑定的用户名。
 <<< END U011238 >>>
 <<< UNIT U011239 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:5-5 | ctx=cytoid：安装与开发 >>>
-审阅次数：0
+审阅次数：1
 # cytoid：安装与开发
 <<< END U011239 >>>
 <<< UNIT U011240 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011240 >>>
 <<< UNIT U011241 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 安装后，管理员需要在会话中执行 `module enable cytoid` 开启模块。
 <<< END U011241 >>>
 <<< UNIT U011242 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 ## 配置项
 <<< END U011242 >>>
 <<< UNIT U011243 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:19-19 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 ## 权限与平台能力
 <<< END U011243 >>>
 <<< UNIT U011244 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 绑定信息按发送者的 Union ID 保存，不随平台或群聊变化。成绩图使用包内字体与难度图标渲染，曲绘按需下载到实例缓存目录，重复查询时复用已下载的文件。成绩图中的简体中文使用资源包中的 Noto Sans CJK DemiLight 字体。
 <<< END U011244 >>>
 <<< UNIT U011245 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:23-23 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 ## 数据表
 <<< END U011245 >>>
 <<< UNIT U011246 | md-table | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:27-29 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 | 表 | 内容 |
 | --- | --- |
 | `module_cytoid_bind_info` | 发送者 Union ID（主键）与绑定的 Cytoid 用户名 |
 <<< END U011246 >>>
 <<< UNIT U011247 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:31-31 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 版本迁移 `0002_union_id` 把绑定表的主键列重命名为 `union_id`，沿用原平台 ID 的值。manifest 声明了 `migrations` 目录，升级时自动执行其中的迁移。
 <<< END U011247 >>>
 <<< UNIT U011248 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:33-33 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 ## 依赖与外部服务
 <<< END U011248 >>>
 <<< UNIT U011249 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/development.md:35-35 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 依赖 `gql`（GraphQL 请求）、`akari-bot-html2text`、`Pillow`、`tortoise-orm`、`orjson`、`akari-bot-assets-fonts`、`akari-bot-core`。外部服务为 `services.cytoid.io` 的 REST 接口（资料、关卡信息）与 `/graphql`（成绩记录）。
 <<< END U011249 >>>
 <<< UNIT U011250 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:11-11 | ctx=cytoid >>>
-审阅次数：0
+审阅次数：1
 此模块用于查询 Cytoid 玩家资料，生成 B30（最佳 30 首）与 R10（最近 10 首）成绩图，并记录发送者的账号绑定。
 <<< END U011250 >>>
 <<< UNIT U011251 | md-heading | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:13-13 | ctx=命令 >>>
-审阅次数：0
+审阅次数：1
 ## 命令
 <<< END U011251 >>>
 <<< UNIT U011252 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:21-21 | ctx=`cytoid profile` >>>
-审阅次数：0
+审阅次数：1
 此命令查询用户资料，返回头像图片，以及经验、等级、Rating 和评级分布。省略用户名时，机器人查询发送者绑定的账号。
 <<< END U011252 >>>
 <<< UNIT U011253 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:23-23 | ctx=`cytoid profile` >>>
-审阅次数：0
+审阅次数：1
 没有绑定时，命令提示先执行 `cytoid bind`。用户不存在时返回未找到提示。
 <<< END U011253 >>>
 <<< UNIT U011254 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:26-30 | ctx=`cytoid profile` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~cytoid profile',
     '机器人：未绑定用户，请使用“`~cytoid bind`”绑定一个用户。',
@@ -323,15 +323,15 @@ Cytoid 用户绑定信息。
 />
 <<< END U011254 >>>
 <<< UNIT U011255 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:36-36 | ctx=`cytoid b30` >>>
-审阅次数：0
+审阅次数：1
 此命令生成 B30 成绩图。省略用户名时，机器人查询发送者绑定的账号。
 <<< END U011255 >>>
 <<< UNIT U011256 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:38-38 | ctx=`cytoid b30` >>>
-审阅次数：0
+审阅次数：1
 没有绑定时，命令提示先执行 `cytoid bind`。拉取成绩失败时，命令返回获取失败提示。
 <<< END U011256 >>>
 <<< UNIT U011257 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:41-45 | ctx=`cytoid b30` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~cytoid b30 wdljt',
     '机器人：![B30 成绩图](b30-wdljt.webp)',
@@ -339,11 +339,11 @@ Cytoid 用户绑定信息。
 />
 <<< END U011257 >>>
 <<< UNIT U011258 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:51-51 | ctx=`cytoid r10` >>>
-审阅次数：0
+审阅次数：1
 此命令生成 R10 成绩图。参数与 `cytoid b30` 相同。没有绑定时，命令同样提示先执行 `cytoid bind`。
 <<< END U011258 >>>
 <<< UNIT U011259 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:54-58 | ctx=`cytoid r10` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~cytoid r10 skisk',
     '机器人：![R10 成绩图](r10-skisk.webp)',
@@ -351,11 +351,11 @@ Cytoid 用户绑定信息。
 />
 <<< END U011259 >>>
 <<< UNIT U011260 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:64-64 | ctx=`cytoid bind` >>>
-审阅次数：0
+审阅次数：1
 此命令绑定 Cytoid 用户名。绑定按发送者保存，同一用户在任何会话中都能使用这份绑定。用户名不存在时返回绑定失败提示。
 <<< END U011260 >>>
 <<< UNIT U011261 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:67-71 | ctx=`cytoid bind` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~cytoid bind cytoid',
     '机器人：绑定成功：Cytoid Admin(cytoid)',
@@ -363,11 +363,11 @@ Cytoid 用户绑定信息。
 />
 <<< END U011261 >>>
 <<< UNIT U011262 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:77-77 | ctx=`cytoid unbind` >>>
-审阅次数：0
+审阅次数：1
 此命令解除发送者的账号绑定。解绑后，查询类命令需要重新执行 `cytoid bind`。
 <<< END U011262 >>>
 <<< UNIT U011263 | md-paragraph | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/docs/index.md:80-84 | ctx=`cytoid unbind` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~cytoid unbind',
     '机器人：解绑成功。',
@@ -375,109 +375,109 @@ Cytoid 用户绑定信息。
 />
 <<< END U011263 >>>
 <<< UNIT U011264 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:2-2 | ctx=cytoid.help.b30 >>>
-审阅次数：0
+审阅次数：1
 查询 Cytoid 用户的 B30 列表。
 <<< END U011264 >>>
 <<< UNIT U011265 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:3-3 | ctx=cytoid.help.bind >>>
-审阅次数：0
+审阅次数：1
 绑定 Cytoid 用户。
 <<< END U011265 >>>
 <<< UNIT U011266 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:4-4 | ctx=cytoid.help.desc >>>
-审阅次数：0
+审阅次数：1
 查询 Cytoid 相关内容。
 <<< END U011266 >>>
 <<< UNIT U011267 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:5-5 | ctx=cytoid.help.profile >>>
-审阅次数：0
+审阅次数：1
 查询一个用户的基本信息。
 <<< END U011267 >>>
 <<< UNIT U011268 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:6-6 | ctx=cytoid.help.r10 >>>
-审阅次数：0
+审阅次数：1
 查询 Cytoid 用户的 R10 列表。
 <<< END U011268 >>>
 <<< UNIT U011269 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:7-7 | ctx=cytoid.help.unbind >>>
-审阅次数：0
+审阅次数：1
 解绑用户。
 <<< END U011269 >>>
 <<< UNIT U011270 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:8-8 | ctx=cytoid.message.bind.failed >>>
-审阅次数：0
+审阅次数：1
 绑定失败，请检查输入。
 <<< END U011270 >>>
 <<< UNIT U011271 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:9-9 | ctx=cytoid.message.bind.success >>>
-审阅次数：0
+审阅次数：1
 绑定成功：${user}
 <<< END U011271 >>>
 <<< UNIT U011272 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:10-10 | ctx=cytoid.message.unbind.success >>>
-审阅次数：0
+审阅次数：1
 解绑成功。
 <<< END U011272 >>>
 <<< UNIT U011273 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:11-11 | ctx=cytoid.message.user_not_found >>>
-审阅次数：0
+审阅次数：1
 未找到用户。
 <<< END U011273 >>>
 <<< UNIT U011274 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:12-12 | ctx=cytoid.message.user_unbound >>>
-审阅次数：0
+审阅次数：1
 未绑定用户，请使用“${cmd}”绑定一个用户。
 <<< END U011274 >>>
 <<< UNIT U011275 | json-value | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/locales/zh_cn.json:13-13 | ctx=cytoid.message.fetch_failed >>>
-审阅次数：0
+审阅次数：1
 获取信息失败。
 <<< END U011275 >>>
 <<< UNIT U011276 | cfg-comment | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/manifest.toml:1-1 >>>
-审阅次数：0
+审阅次数：1
 # akari-bot-module-cytoid 的包清单。
 <<< END U011276 >>>
 <<< UNIT U011277 | cfg-comment | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/manifest.toml:8-8 >>>
-审阅次数：0
+审阅次数：1
 # 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
 <<< END U011277 >>>
 <<< UNIT U011278 | py-docstring | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/migrations/0002_union_id.py:16-20 | ctx=upgrade >>>
-审阅次数：0
+审阅次数：1
 把绑定表主键列重命名为 union_id。
 
 :param ctx: 迁移上下文。
 <<< END U011278 >>>
 <<< UNIT U011279 | py-docstring | packages/modules/akari-bot-module-cytoid/akaribot/modules/cytoid/migrations/__init__.py:1-1 | ctx=<module> >>>
-审阅次数：0
+审阅次数：1
 cytoid 的数据库迁移。
 <<< END U011279 >>>
 <<< UNIT U011280 | cfg-comment | packages/modules/akari-bot-module-cytoid/pyproject.toml:17-17 >>>
-审阅次数：0
+审阅次数：1
     # rating 曲绘的文字使用资源包中的 Noto Sans CJK DemiLight（T3.3），缺失会导致曲绘渲染失败。
 <<< END U011280 >>>
 <<< UNIT U011281 | md-paragraph | packages/modules/akari-bot-module-dice/README.md:3-3 | ctx=akari-bot-module-dice >>>
-审阅次数：0
+审阅次数：1
 投掷各类骰子并按 DC 判定成功失败。
 <<< END U011281 >>>
 <<< UNIT U011282 | md-heading | packages/modules/akari-bot-module-dice/README.md:5-5 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011282 >>>
 <<< UNIT U011283 | md-paragraph | packages/modules/akari-bot-module-dice/README.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U011283 >>>
 <<< UNIT U011284 | md-paragraph | packages/modules/akari-bot-module-dice/README.md:13-13 | ctx=安装 >>>
-审阅次数：0
-模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+审阅次数：1
+模块的启用与配置参见[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U011284 >>>
 <<< UNIT U011285 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:5-5 | ctx=dice：安装与开发 >>>
-审阅次数：0
+审阅次数：1
 # dice：安装与开发
 <<< END U011285 >>>
 <<< UNIT U011286 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011286 >>>
 <<< UNIT U011287 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 安装后，管理员需要在会话中执行 `module enable dice` 开启模块。
 <<< END U011287 >>>
 <<< UNIT U011288 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 ## 配置项
 <<< END U011288 >>>
 <<< UNIT U011289 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:19-27 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `dice_limit` | int | 100 | 单次投掷的骰子数量上限 |
@@ -489,63 +489,63 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `dice_detail_count` | int | 5 | 投掷总量达到该值时不显示详细信息 |
 <<< END U011289 >>>
 <<< UNIT U011290 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:29-29 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 任一项不大于 0 时，命令会返回配置错误提示。完整清单见配置模板 `akaribot/modules/dice/config.py`。
 <<< END U011290 >>>
 <<< UNIT U011291 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:31-31 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 ## 权限与平台能力
 <<< END U011291 >>>
 <<< UNIT U011292 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:33-33 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 `set` 与 `rule` 需要会话管理员权限。默认面数保存在会话数据 `dice_default_sides` 里，判定方向保存在 `dice_dc_reversed` 里。平台支持 Markdown 时，模块会把表达式里的 `*` 转义，避免它被渲染成格式标记。
 <<< END U011292 >>>
 <<< UNIT U011293 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:35-35 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 ## 数据表
 <<< END U011293 >>>
 <<< UNIT U011294 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:39-39 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 会话设置保存在 `akari-bot-core` 的 Union 数据中。
 <<< END U011294 >>>
 <<< UNIT U011295 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:41-41 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 ## 依赖与外部服务
 <<< END U011295 >>>
 <<< UNIT U011296 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/development.md:43-43 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 依赖 `numpy`（对点数排序后取最高或最低）、`simpleeval`（计算表达式）、`akari-bot-core`。不使用外部网络服务。
 <<< END U011296 >>>
 <<< UNIT U011297 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:1-1 | ctx=骰子表达式 >>>
-审阅次数：0
+审阅次数：1
 # 骰子表达式
 <<< END U011297 >>>
 <<< UNIT U011298 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:3-3 | ctx=骰子表达式 >>>
-审阅次数：0
+审阅次数：1
 本文整理了骰子表达式的语法与明细格式。
 <<< END U011298 >>>
 <<< UNIT U011299 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:5-5 | ctx=骰子表达式 >>>
-审阅次数：0
+审阅次数：1
 命令用法与 `dice set`、`dice rule` 的说明见[骰子](index.md)。
 <<< END U011299 >>>
 <<< UNIT U011300 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:7-7 | ctx=骰子表达式 >>>
-审阅次数：0
+审阅次数：1
 表达式不区分字母大小写。最终结果一律为整数，输入中的小数会先去掉小数部分再解析，求值得到的浮点数向零截断。相邻的数字、骰子项与括号之间会自动补乘号，`D6D6` 等价于 `(D6)*(D6)`。
 <<< END U011300 >>>
 <<< UNIT U011301 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:9-9 | ctx=骰子表达式 >>>
-审阅次数：0
-各节表格只摘录单项明细。展示明细时，完整回复的格式为 `表达式=(明细)=结果`，例如 `B=(D100=72, B=4=42)=42`。表达式含多个骰子项时，各项分别展开后再整体求值。
+审阅次数：1
+各节表格只摘录单项明细。展示明细时，完整回复的格式为 `表达式=(明细)=结果`，例如 `B=(D100=72, B=4=42)=42`。表达式包含多个骰子项时，各项分别展开后再整体求值。
 <<< END U011301 >>>
 <<< UNIT U011302 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:11-11 | ctx=标准骰 XdY >>>
-审阅次数：0
+审阅次数：1
 ## 标准骰 XdY
 <<< END U011302 >>>
 <<< UNIT U011303 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:13-13 | ctx=标准骰 XdY >>>
-审阅次数：0
+审阅次数：1
 投掷 X 枚 Y 面骰并求点数总和。X 省略时为 1，Y 不得小于 2。单次投掷的骰子数量上限由 `dice_limit` 控制。
 <<< END U011303 >>>
 <<< UNIT U011304 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:15-19 | ctx=标准骰 XdY >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `D6` | 1 枚 6 面骰 | `D6=4` |
@@ -553,19 +553,19 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 | `D%` | 1 枚百分骰，等价于 `D100` | `D%=42` |
 <<< END U011304 >>>
 <<< UNIT U011305 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:21-21 | ctx=标准骰 XdY >>>
-审阅次数：0
+审阅次数：1
 只填写 `D` 或 `nD` 时使用当前会话的默认面数，该值由 `dice set` 设置。未设置时这类表达式报错。解析时会填入默认面数，输出里的表达式带有面数，如 `D20=17`。
 <<< END U011305 >>>
 <<< UNIT U011306 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:23-23 | ctx=优劣势骰 XdYKn 与 XdYQn >>>
-审阅次数：0
+审阅次数：1
 ## 优劣势骰 XdYKn 与 XdYQn
 <<< END U011306 >>>
 <<< UNIT U011307 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:25-25 | ctx=优劣势骰 XdYKn 与 XdYQn >>>
-审阅次数：0
+审阅次数：1
 K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和。n 省略时为 1，且不得大于 X。被选中的点数在明细中以 `*` 标记。
 <<< END U011307 >>>
 <<< UNIT U011308 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:27-32 | ctx=优劣势骰 XdYKn 与 XdYQn >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `3D6K` | 3 枚 6 面骰取最高 1 枚 | `3D6K=[6*, 4, 2]=6` |
@@ -574,15 +574,15 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 | `4D6Q2` | 取最低 2 枚 | `4D6Q2=[4, 1*, 3, 2*]=[1+2]=3` |
 <<< END U011308 >>>
 <<< UNIT U011309 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:34-34 | ctx=奖励骰与惩罚骰 Bn 与 Pn >>>
-审阅次数：0
+审阅次数：1
 ## 奖励骰与惩罚骰 Bn 与 Pn
 <<< END U011309 >>>
 <<< UNIT U011310 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:36-36 | ctx=奖励骰与惩罚骰 Bn 与 Pn >>>
-审阅次数：0
+审阅次数：1
 先投 1 枚 D100，以其个位作为候选值的十位。再投 n 枚 D10 作为个位，共得到 n+1 个候选值。候选值 `00` 记为 100。B 取最小值，P 取最大值，n 省略时为 1。
 <<< END U011310 >>>
 <<< UNIT U011311 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:38-43 | ctx=奖励骰与惩罚骰 Bn 与 Pn >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `B` | 1 枚奖励骰，取最小候选值 | `D100=72, B=4=42` |
@@ -591,94 +591,94 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 | `P3` | 3 枚惩罚骰 | `D100=36, P3=[4, 6, 9]=96` |
 <<< END U011311 >>>
 <<< UNIT U011312 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:45-45 | ctx=奖励骰与惩罚骰 Bn 与 Pn >>>
-审阅次数：0
+审阅次数：1
 明细中的 `B=4`、`P3=[4, 6, 9]` 是额外投出的 D10 点数，最后一个等号后的数值是最终选中的候选值。
 <<< END U011312 >>>
 <<< UNIT U011313 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:47-47 | ctx=FATE 骰 F 与 nDF >>>
-审阅次数：0
+审阅次数：1
 ## FATE 骰 F 与 nDF
 <<< END U011313 >>>
 <<< UNIT U011314 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:49-49 | ctx=FATE 骰 F 与 nDF >>>
-审阅次数：0
+审阅次数：1
 每枚骰子等概率取 `-`、`0`、`+`，分别计 -1、0、1，结果为全部骰子的总和。`F` 默认 4 枚，`nDF` 指定枚数，`DF` 与 `nF` 同样接受。明细中会省略 `D`，`nDF` 显示为 `nF`。
 <<< END U011314 >>>
 <<< UNIT U011315 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:51-54 | ctx=FATE 骰 F 与 nDF >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `F` | 4 枚 FATE 骰 | `F=[+, -, 0, +]=1` |
 | `6DF` | 6 枚 FATE 骰 | `6F=[+, 0, -, +, 0, +]=2` |
 <<< END U011315 >>>
 <<< UNIT U011316 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:56-56 | ctx=无限骰点 nAvKzQwMy >>>
-审阅次数：0
+审阅次数：1
 ## 无限骰点 nAvKzQwMy
 <<< END U011316 >>>
 <<< UNIT U011317 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:58-58 | ctx=无限骰点 nAvKzQwMy >>>
-审阅次数：0
+审阅次数：1
 投掷 n 枚 y 面骰。点数不低于加骰线 v 的骰子，其个数就是下一轮要投的骰子数。重复这一过程，直到骰子数为 0。每一轮中，点数不低于 z 的骰子与不高于 w 的骰子都计为成功，最终结果为全部轮次成功数之和。
 <<< END U011317 >>>
 <<< UNIT U011318 | md-list | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:60-63 | ctx=无限骰点 nAvKzQwMy >>>
-审阅次数：0
+审阅次数：1
 - `nAv` 必填，`Kz`、`Qw`、`My` 依次可选，顺序固定。
 - y 省略时为 10，z 省略时为 8。w 省略或为 0 时不统计不高于 w 的点数。
-- v 为 0 时只投一轮，不追加骰子。v 不为 0 时，v 须在 2 到 y 之间。
+- v 为 0 时只投一轮，不追加骰子。v 不为 0 时，v 必须在 2 到 y 之间。
 - 明细中 `< >` 标记达到加骰线的点数，`*` 标记计为成功的点数，两者可同时出现。
 <<< END U011318 >>>
 <<< UNIT U011319 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:65-68 | ctx=无限骰点 nAvKzQwMy >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `4A6K8Q4M9` | 4 枚 9 面骰，加骰线 6，统计不低于 8 与不高于 4 的点数 | `4A6K8Q4M9=[{<9*>, <7>, 5, <9*>}, {3*, <9*>, 3*}, {<7>}, {3*}]=6` |
 | `4A6` | 4 枚 10 面骰，加骰线 6，统计不低于 8 的点数 | `4A6=[{<9*>, <7>, 5, <9*>}, {3, <9*>, 3}, {<7>}, {3}]=3` |
 <<< END U011319 >>>
 <<< UNIT U011320 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:70-70 | ctx=双重十字骰点 nCvMy >>>
-审阅次数：0
+审阅次数：1
 ## 双重十字骰点 nCvMy
 <<< END U011320 >>>
 <<< UNIT U011321 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:72-72 | ctx=双重十字骰点 nCvMy >>>
-审阅次数：0
+审阅次数：1
 投掷 n 枚 y 面骰。点数不低于加骰线 v 的骰子，其个数就是下一轮要投的骰子数。重复这一过程，直到骰子数为 0。最终结果为 `(投掷轮数 - 1) * y + 最后一轮的最大点数`。
 <<< END U011321 >>>
 <<< UNIT U011322 | md-list | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:74-75 | ctx=双重十字骰点 nCvMy >>>
-审阅次数：0
-- y 省略时为 10，v 须在 2 到 y 之间。
+审阅次数：1
+- y 省略时为 10，v 必须在 2 到 y 之间。
 - 明细中 `< >` 标记达到加骰线的点数。
 <<< END U011322 >>>
 <<< UNIT U011323 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:77-80 | ctx=双重十字骰点 nCvMy >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 含义 | 明细示例 |
 | --- | --- | --- |
 | `4C6` | 4 枚 10 面骰，加骰线 6 | `4C6=[{4, <9>, 2, 1}, {<8>}, {<8>}, {<9>}, {4}]=44` |
 | `4C3M7` | 4 枚 7 面骰，加骰线 3 | `4C3M7=[{<5>, <4>, <7>, <3>}, {1, 2, <4>, 2}, {2}]=16` |
 <<< END U011323 >>>
 <<< UNIT U011324 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:82-82 | ctx=多轮投掷 N# 表达式 >>>
-审阅次数：0
+审阅次数：1
 ## 多轮投掷 N# 表达式
 <<< END U011324 >>>
 <<< UNIT U011325 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:84-84 | ctx=多轮投掷 N# 表达式 >>>
-审阅次数：0
-在表达式最前面写 `N#`，把同一表达式重复投掷 N 次，每次单独输出一行结果。N 须为大于 0 的整数，上限由 `dice_roll_limit` 控制。省略 `N#` 时投掷 1 次。
+审阅次数：1
+在表达式最前面写 `N#`，把同一表达式重复投掷 N 次，每次单独输出一行结果。N 必须为大于 0 的整数，上限由 `dice_roll_limit` 控制。省略 `N#` 时投掷 1 次。
 <<< END U011325 >>>
 <<< UNIT U011326 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:90-90 | ctx=多轮投掷 N# 表达式 >>>
-审阅次数：0
+审阅次数：1
 `3#D6` 依次输出 3 行 `D6=(D6=点数)=结果`。带 DC 时每行分别判定，并在末尾汇总成功与失败次数。
 <<< END U011326 >>>
 <<< UNIT U011327 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:92-92 | ctx=数学运算与函数 >>>
-审阅次数：0
+审阅次数：1
 ## 数学运算与函数
 <<< END U011327 >>>
 <<< UNIT U011328 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:94-94 | ctx=数学运算与函数 >>>
-审阅次数：0
+审阅次数：1
 表达式支持 `+`、`-`、`*`、`/`、`//`、`%`、`**` 与括号，可用函数如下：
 <<< END U011328 >>>
 <<< UNIT U011329 | md-list | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:98-100 | ctx=数学运算与函数 >>>
-审阅次数：0
+审阅次数：1
 - 骰子项与数字、括号相邻时自动补乘号，如 `D6D6D6`、`(2+5)D6`。
 - 除法结果为浮点数，最终向零截断，如 `10/D6` 在 D6 为 3 时结果为 3。
 - 函数名不区分大小写，参数个数和含义与 Python `math` 模块中对应的函数一致。
 <<< END U011329 >>>
 <<< UNIT U011330 | md-table | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:102-106 | ctx=数学运算与函数 >>>
-审阅次数：0
+审阅次数：1
 | 表达式 | 说明 |
 | --- | --- |
 | `2*2D6**(2+1)` | 先投 2D6，再按乘方与乘法求值 |
@@ -686,41 +686,41 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 | `sqrt(9)+abs(-1)` | 使用函数求值，结果为 4 |
 <<< END U011330 >>>
 <<< UNIT U011331 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:108-108 | ctx=DC 判定 >>>
-审阅次数：0
+审阅次数：1
 ## DC 判定
 <<< END U011331 >>>
 <<< UNIT U011332 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:110-110 | ctx=DC 判定 >>>
-审阅次数：0
+审阅次数：1
 命令格式为 `dice <表达式> [<dc>]`。提供 DC 时，每行结果后追加 `/<dc>` 与判定文本：
 <<< END U011332 >>>
 <<< UNIT U011333 | md-list | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:112-114 | ctx=DC 判定 >>>
-审阅次数：0
+审阅次数：1
 - 默认规则下，结果不小于 DC 为成功。
 - 用 `dice rule` 切换后，结果不大于 DC 为成功。
 - 使用 `N#` 且 N 大于 1 时，末尾汇总成功与失败的次数。
 <<< END U011333 >>>
 <<< UNIT U011334 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:116-116 | ctx=DC 判定 >>>
-审阅次数：0
+审阅次数：1
 例如 `dice 3D6 10` 在点数和为 12 时输出 `...=12/10  成功！`。
 <<< END U011334 >>>
 <<< UNIT U011335 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/expressions.md:118-118 | ctx=DC 判定 >>>
-审阅次数：0
+审阅次数：1
 当投掷次数与骰子项数的乘积达到 `dice_detail_count`（默认 5）时，只显示每项结果，不展示投掷明细。输出长度、数据量与科学计数法阈值分别由 `dice_output_len`、`dice_output_count`、`dice_output_digit` 控制，完整配置见[骰子配置](development.md#配置项)。
 <<< END U011335 >>>
 <<< UNIT U011336 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:3-3 | ctx=dice >>>
-审阅次数：0
+审阅次数：1
 此模块用于按表达式投掷骰子，支持标准骰、奖励与惩罚骰、World of Darkness 与 Double Cross 骰池、Fudge 骰，并可按 DC 判定成功或失败。
 <<< END U011336 >>>
 <<< UNIT U011337 | md-heading | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:5-5 | ctx=命令 >>>
-审阅次数：0
+审阅次数：1
 ## 命令
 <<< END U011337 >>>
 <<< UNIT U011338 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:13-13 | ctx=`dice` >>>
-审阅次数：0
-此命令用于投掷骰子。不带参数时投掷一枚会话默认骰子，因此须先用 `dice set` 设置面数。带 `<dices>` 时按表达式投掷，`<dc>` 为可选的判定值。表达式支持以下写法：
+审阅次数：1
+此命令用于投掷骰子。不带参数时投掷一枚会话默认骰子，因此需先用 `dice set` 设置面数。带 `<dices>` 时按表达式投掷，`<dc>` 为可选的判定值。表达式支持以下写法：
 <<< END U011338 >>>
 <<< UNIT U011339 | md-list | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:15-20 | ctx=`dice` >>>
-审阅次数：0
+审阅次数：1
 - `XdY` 投 X 枚 Y 面骰，`D%` 等同 `D100`。`XdYKn` 取最高的 n 枚求和，`XdYQn` 取最低的 n 枚求和。
 - `n#表达式` 重复投掷 n 次，n 超出上限时返回范围错误。
 - `nAvKzQwMy` 为 World of Darkness 骰池，`nCvMy` 为 Double Cross 骰池。
@@ -729,15 +729,15 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 - 支持加减乘除、括号与 `abs`、`sqrt`、`floor`、`factorial` 等数学函数。
 <<< END U011339 >>>
 <<< UNIT U011340 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:22-22 | ctx=`dice` >>>
-审阅次数：0
+审阅次数：1
 完整语法、示例与输出标记见[表达式详解](expressions.md)。
 <<< END U011340 >>>
 <<< UNIT U011341 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:24-24 | ctx=`dice` >>>
-审阅次数：0
+审阅次数：1
 多次投掷且带 DC 时，末尾汇总成功与失败次数。投掷次数与骰子项数的乘积小于 `dice_detail_count` 时显示详细投掷明细，达到该值时只显示每项结果。
 <<< END U011341 >>>
 <<< UNIT U011342 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:27-32 | ctx=`dice` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~dice 2d6',
     '机器人：你掷得的结果是：',
@@ -746,11 +746,11 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 />
 <<< END U011342 >>>
 <<< UNIT U011343 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:38-38 | ctx=`dice set` >>>
-审阅次数：0
+审阅次数：1
 此命令用于设置当前会话的默认骰子面数。面数大于 1 时保存为会话默认值，`0` 表示清除默认值，其余取值返回无效提示。设置只对当前会话生效。
 <<< END U011343 >>>
 <<< UNIT U011344 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:41-45 | ctx=`dice set` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~dice set 20',
     '机器人：成功设置骰子默认面数为 20。',
@@ -758,11 +758,11 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 />
 <<< END U011344 >>>
 <<< UNIT U011345 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:51-51 | ctx=`dice rule` >>>
-审阅次数：0
+审阅次数：1
 此命令用于切换当前会话的 DC 判定方向。默认按“结果不小于 DC 为成功”判定，切换后改为“结果不大于 DC 为成功”。
 <<< END U011345 >>>
 <<< UNIT U011346 | md-paragraph | packages/modules/akari-bot-module-dice/akaribot/modules/dice/docs/index.md:54-58 | ctx=`dice rule` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~dice rule',
     '机器人：判定规则已更改为反向。',
@@ -770,243 +770,243 @@ K 取最高的 n 枚，Q 取最低的 n 枚，再求这些骰子的点数总和�
 />
 <<< END U011346 >>>
 <<< UNIT U011347 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:2-2 | ctx=config.comments.module_dice.dice_count_limit >>>
-审阅次数：0
+审阅次数：1
 dice 模块骰子表达式项数上限。
 <<< END U011347 >>>
 <<< UNIT U011348 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:3-3 | ctx=config.comments.module_dice.dice_detail_count >>>
-审阅次数：0
+审阅次数：1
 dice 模块 n 次投掷的骰子总量超过该值时，不再显示详细信息。
 <<< END U011348 >>>
 <<< UNIT U011349 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:4-4 | ctx=config.comments.module_dice.dice_limit >>>
-审阅次数：0
+审阅次数：1
 dice 模块一次投掷骰子数量上限。
 <<< END U011349 >>>
 <<< UNIT U011350 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:5-5 | ctx=config.comments.module_dice.dice_output_count >>>
-审阅次数：0
+审阅次数：1
 dice 模块输出数据量上限。
 <<< END U011350 >>>
 <<< UNIT U011351 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:6-6 | ctx=config.comments.module_dice.dice_output_digit >>>
-审阅次数：0
+审阅次数：1
 dice 模块输出数据数位上限，超过则使用 10 的指数幂形式。
 <<< END U011351 >>>
 <<< UNIT U011352 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:7-7 | ctx=config.comments.module_dice.dice_output_len >>>
-审阅次数：0
+审阅次数：1
 dice 模块输出最大长度。
 <<< END U011352 >>>
 <<< UNIT U011353 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:8-8 | ctx=config.comments.module_dice.dice_roll_limit >>>
-审阅次数：0
+审阅次数：1
 dice 模块一次命令投掷次数上限。
 <<< END U011353 >>>
 <<< UNIT U011354 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:9-9 | ctx=dice.help >>>
-审阅次数：0
+审阅次数：1
 投掷指定骰子。
 <<< END U011354 >>>
 <<< UNIT U011355 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:10-10 | ctx=dice.help.desc >>>
-审阅次数：0
+审阅次数：1
 随机骰子，可指定投骰次数与 DC 判定。
 <<< END U011355 >>>
 <<< UNIT U011356 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:11-11 | ctx=dice.help.rule >>>
-审阅次数：0
+审阅次数：1
 修改 DC 的判定规则。
 <<< END U011356 >>>
 <<< UNIT U011357 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:12-12 | ctx=dice.help.set >>>
-审阅次数：0
+审阅次数：1
 设置默认骰子面数。
 <<< END U011357 >>>
 <<< UNIT U011358 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:13-13 | ctx=dice.message.dc.check >>>
-审阅次数：0
+审阅次数：1
 ▷ 判定成功数量：${success}  判定失败数量：${failed}
 <<< END U011358 >>>
 <<< UNIT U011359 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:14-14 | ctx=dice.message.dc.fail >>>
-审阅次数：0
+审阅次数：1
 失败！
 <<< END U011359 >>>
 <<< UNIT U011360 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:15-15 | ctx=dice.message.dc.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的 DC：
 <<< END U011360 >>>
 <<< UNIT U011361 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:16-16 | ctx=dice.message.dc.success >>>
-审阅次数：0
+审阅次数：1
 成功！
 <<< END U011361 >>>
 <<< UNIT U011362 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:17-17 | ctx=dice.message.error >>>
-审阅次数：0
+审阅次数：1
 无法解析骰子表达式：
 <<< END U011362 >>>
 <<< UNIT U011363 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:18-18 | ctx=dice.message.error.invalid >>>
-审阅次数：0
+审阅次数：1
 骰子表达式中存在无法识别的字符。
 <<< END U011363 >>>
 <<< UNIT U011364 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:19-19 | ctx=dice.message.error.prompt >>>
-审阅次数：0
+审阅次数：1
 第 ${i} 项发生：
 <<< END U011364 >>>
 <<< UNIT U011365 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:20-20 | ctx=dice.message.error.syntax >>>
-审阅次数：0
+审阅次数：1
 无效的骰子表达式。
 <<< END U011365 >>>
 <<< UNIT U011366 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:21-21 | ctx=dice.message.error.value >>>
-审阅次数：0
+审阅次数：1
 输入为“${value}”，
 <<< END U011366 >>>
 <<< UNIT U011367 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:22-22 | ctx=dice.message.error.value.add_line.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的加骰线。
 <<< END U011367 >>>
 <<< UNIT U011368 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:23-23 | ctx=dice.message.error.value.add_line.out_of_range >>>
-审阅次数：0
+审阅次数：1
 加骰线不得小于 2 或大于 ${max}。
 <<< END U011368 >>>
 <<< UNIT U011369 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:24-24 | ctx=dice.message.error.value.advantage.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的优劣势。
 <<< END U011369 >>>
 <<< UNIT U011370 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:25-25 | ctx=dice.message.error.value.advantage.out_of_range >>>
-审阅次数：0
+审阅次数：1
 优劣势骰数不得大于总骰子数。
 <<< END U011370 >>>
 <<< UNIT U011371 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:26-26 | ctx=dice.message.error.value.count.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的骰子数量。
 <<< END U011371 >>>
 <<< UNIT U011372 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:27-27 | ctx=dice.message.error.value.count.out_of_range >>>
-审阅次数：0
+审阅次数：1
 骰子数量不得小于 1 或大于 ${max}。
 <<< END U011372 >>>
 <<< UNIT U011373 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:28-28 | ctx=dice.message.error.value.sides.d1 >>>
-审阅次数：0
+审阅次数：1
 1 面的骰子？
 <<< END U011373 >>>
 <<< UNIT U011374 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:29-29 | ctx=dice.message.error.value.sides.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的骰子面数。
 <<< END U011374 >>>
 <<< UNIT U011375 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:30-30 | ctx=dice.message.error.value.sides.out_of_range >>>
-审阅次数：0
+审阅次数：1
 骰子面数不得小于 2。
 <<< END U011375 >>>
 <<< UNIT U011376 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:31-31 | ctx=dice.message.error.value.success_line.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的成功线。
 <<< END U011376 >>>
 <<< UNIT U011377 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:32-32 | ctx=dice.message.error.value.times.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的投骰次数。
 <<< END U011377 >>>
 <<< UNIT U011378 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:33-33 | ctx=dice.message.error.value.times.out_of_range >>>
-审阅次数：0
+审阅次数：1
 投骰次数不得小于 1 或大于 ${max}。
 <<< END U011378 >>>
 <<< UNIT U011379 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:34-34 | ctx=dice.message.error.value.too_long >>>
-审阅次数：0
+审阅次数：1
 骰子表达式项数超过限制。
 <<< END U011379 >>>
 <<< UNIT U011380 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:35-35 | ctx=dice.message.output >>>
-审阅次数：0
+审阅次数：1
 你掷得的结果是：
 <<< END U011380 >>>
 <<< UNIT U011381 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:36-36 | ctx=dice.message.output.too_long >>>
-审阅次数：0
+审阅次数：1
 数量过大，已省略 ${length} 条数据
 <<< END U011381 >>>
 <<< UNIT U011382 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:37-37 | ctx=dice.message.rule.disable >>>
-审阅次数：0
+审阅次数：1
 判定规则已更改为正向。
 <<< END U011382 >>>
 <<< UNIT U011383 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:38-38 | ctx=dice.message.rule.enable >>>
-审阅次数：0
+审阅次数：1
 判定规则已更改为反向。
 <<< END U011383 >>>
 <<< UNIT U011384 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:39-39 | ctx=dice.message.set.clear >>>
-审阅次数：0
+审阅次数：1
 成功清除骰子默认面数。
 <<< END U011384 >>>
 <<< UNIT U011385 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:40-40 | ctx=dice.message.set.success >>>
-审阅次数：0
+审阅次数：1
 成功设置骰子默认面数为 ${sides}。
 <<< END U011385 >>>
 <<< UNIT U011386 | json-value | packages/modules/akari-bot-module-dice/akaribot/modules/dice/locales/zh_cn.json:41-41 | ctx=dice.message.too_long >>>
-审阅次数：0
+审阅次数：1
 输出过长……
 <<< END U011386 >>>
 <<< UNIT U011387 | cfg-comment | packages/modules/akari-bot-module-dice/akaribot/modules/dice/manifest.toml:1-1 >>>
-审阅次数：0
+审阅次数：1
 # akari-bot-module-dice 的包清单。
 <<< END U011387 >>>
 <<< UNIT U011388 | cfg-comment | packages/modules/akari-bot-module-dice/akaribot/modules/dice/manifest.toml:5-5 >>>
-审阅次数：0
+审阅次数：1
 # config.py 的 on_module_config("dice") 声明的表。
 <<< END U011388 >>>
 <<< UNIT U011389 | py-inline-comment | packages/modules/akari-bot-module-dice/akaribot/modules/dice/process.py:13-13 >>>
-审阅次数：0
+审阅次数：1
 # n 次投掷的骰子总量超过该值时不再显示详细信息
 <<< END U011389 >>>
 <<< UNIT U011390 | md-paragraph | packages/modules/akari-bot-module-emojimix/README.md:3-3 | ctx=akari-bot-module-emojimix >>>
-审阅次数：0
+审阅次数：1
 将两个 Emoji 合成为一张图片，留空则随机组合。
 <<< END U011390 >>>
 <<< UNIT U011391 | md-heading | packages/modules/akari-bot-module-emojimix/README.md:5-5 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011391 >>>
 <<< UNIT U011392 | md-paragraph | packages/modules/akari-bot-module-emojimix/README.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U011392 >>>
 <<< UNIT U011393 | md-paragraph | packages/modules/akari-bot-module-emojimix/README.md:13-13 | ctx=安装 >>>
-审阅次数：0
-模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+审阅次数：1
+模块的启用与配置参见[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U011393 >>>
 <<< UNIT U011394 | py-comment | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/__init__.py:134-134 >>>
-审阅次数：0
+审阅次数：1
 # 兼容性处理
 <<< END U011394 >>>
 <<< UNIT U011395 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:5-5 | ctx=emojimix：安装与开发 >>>
-审阅次数：0
+审阅次数：1
 # emojimix：安装与开发
 <<< END U011395 >>>
 <<< UNIT U011396 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011396 >>>
 <<< UNIT U011397 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 安装后，管理员需要在会话中执行 `module enable emojimix` 开启模块。
 <<< END U011397 >>>
 <<< UNIT U011398 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 ## 配置项
 <<< END U011398 >>>
 <<< UNIT U011399 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:19-19 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 ## 权限与平台能力
 <<< END U011399 >>>
 <<< UNIT U011400 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 合成图直接引用 Emoji Kitchen 的静态资源地址，不经过本地缓存。支持列表随包分发，保存在 `assets/emoji_data.json`，其中记录受支持的 Emoji、组合与对应的资源目录日期。
 <<< END U011400 >>>
 <<< UNIT U011401 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:23-23 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 ## 数据表
 <<< END U011401 >>>
 <<< UNIT U011402 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:27-27 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 ## 依赖与外部服务
 <<< END U011402 >>>
 <<< UNIT U011403 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/development.md:29-29 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 依赖 `emoji`、`orjson`、`akari-bot-core`。外部服务为 `www.gstatic.com`，提供 Emoji Kitchen 静态图片。
 <<< END U011403 >>>
 <<< UNIT U011404 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:3-3 | ctx=emojimix >>>
-审阅次数：0
+审阅次数：1
 此模块用于把两个 Emoji 合成为一张 Emoji Kitchen 图片，也支持随机选取一对 Emoji 合成，或列出某个 Emoji 的全部搭档。
 <<< END U011404 >>>
 <<< UNIT U011405 | md-heading | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:5-5 | ctx=命令 >>>
-审阅次数：0
+审阅次数：1
 ## 命令
 <<< END U011405 >>>
 <<< UNIT U011406 | md-list | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:11-15 | ctx=`emojimix` >>>
-审阅次数：0
+审阅次数：1
 - 合成两个 Emoji。
 - 省略参数时随机选取一对可合成的 Emoji。只给一个时，随机选取一个能与它合成的 Emoji。也可以写作 `emoji1+emoji2`。
 - 参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。
@@ -1014,11 +1014,11 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 - 组合存在但图片缺失时返回未找到提示。
 <<< END U011406 >>>
 <<< UNIT U011407 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:17-17 | ctx=`emojimix` >>>
-审阅次数：0
+审阅次数：1
 返回的第一行是“左 Emoji + 右 Emoji”，其下是合成图。
 <<< END U011407 >>>
 <<< UNIT U011408 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:20-25 | ctx=`emojimix` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~emojimix 😀 😍',
     '机器人：😀+😍',
@@ -1027,11 +1027,11 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 />
 <<< END U011408 >>>
 <<< UNIT U011409 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:31-31 | ctx=`emojimix list` >>>
-审阅次数：0
+审阅次数：1
 此命令列出全部支持的 Emoji，或指定 Emoji 的搭档。结果较长时，机器人在 Discord 上按每 200 个一批分条发送，其余平台合并为一条消息。
 <<< END U011409 >>>
 <<< UNIT U011410 | md-paragraph | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/docs/index.md:34-38 | ctx=`emojimix list` >>>
-审阅次数：0
+审阅次数：1
   :log="[
     '用户：~emojimix list 😀',
     '机器人：支持“😀”的 Emoji 组合：😍🤣🥰😘😎🥳……',
@@ -1039,185 +1039,185 @@ Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 />
 <<< END U011410 >>>
 <<< UNIT U011411 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:2-2 | ctx=emojimix.help >>>
-审阅次数：0
+审阅次数：1
 将两个 Emoji 合成为一张图片，留空则随机组合。
 <<< END U011411 >>>
 <<< UNIT U011412 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:3-3 | ctx=emojimix.help.list >>>
-审阅次数：0
+审阅次数：1
 列出所有支持的 Emoji。
 <<< END U011412 >>>
 <<< UNIT U011413 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:4-4 | ctx=emojimix.message.all_supported >>>
-审阅次数：0
+审阅次数：1
 所有支持的 Emoji：
 <<< END U011413 >>>
 <<< UNIT U011414 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:5-5 | ctx=emojimix.message.combine_supported >>>
-审阅次数：0
+审阅次数：1
 支持“${emoji}”的 Emoji 组合：
 <<< END U011414 >>>
 <<< UNIT U011415 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:6-6 | ctx=emojimix.message.invalid >>>
-审阅次数：0
+审阅次数：1
 无效的 Emoji。
 <<< END U011415 >>>
 <<< UNIT U011416 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:7-7 | ctx=emojimix.message.not_found >>>
-审阅次数：0
+审阅次数：1
 不支持该 Emoji 组合。
 <<< END U011416 >>>
 <<< UNIT U011417 | json-value | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/locales/zh_cn.json:8-8 | ctx=emojimix.message.unsupported >>>
-审阅次数：0
+审阅次数：1
 不支持的 Emoji：${emoji}
 <<< END U011417 >>>
 <<< UNIT U011418 | cfg-comment | packages/modules/akari-bot-module-emojimix/akaribot/modules/emojimix/manifest.toml:1-1 >>>
-审阅次数：0
+审阅次数：1
 # akari-bot-module-emojimix 的包清单。
 <<< END U011418 >>>
 <<< UNIT U011419 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/README.md:3-3 | ctx=akari-bot-module-exchange_rate >>>
-审阅次数：0
+审阅次数：1
 按实时汇率换算货币金额。
 <<< END U011419 >>>
 <<< UNIT U011420 | md-heading | packages/modules/akari-bot-module-exchange_rate/README.md:5-5 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011420 >>>
 <<< UNIT U011421 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/README.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
 <<< END U011421 >>>
 <<< UNIT U011422 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/README.md:13-13 | ctx=安装 >>>
-审阅次数：0
-模块的启用与配置参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+审阅次数：1
+模块的启用与配置参见[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U011422 >>>
 <<< UNIT U011423 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:5-5 | ctx=exchange-rate：安装与开发 >>>
-审阅次数：0
+审阅次数：1
 # exchange-rate：安装与开发
 <<< END U011423 >>>
 <<< UNIT U011424 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 ## 安装
 <<< END U011424 >>>
 <<< UNIT U011425 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：0
+审阅次数：1
 安装后，管理员需要在会话中执行 `module enable exchange-rate` 开启模块，并在配置中填写 API Key。
 <<< END U011425 >>>
 <<< UNIT U011426 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 ## 配置项
 <<< END U011426 >>>
 <<< UNIT U011427 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:19-19 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 `exchange_rate_api_key` 是此模块唯一的配置字段，声明为敏感项，写入同一配置文件中的 `module_exchange_rate_secret` 表。
 <<< END U011427 >>>
 <<< UNIT U011428 | md-table | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:21-23 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `exchange_rate_api_key` | str | 空 | ExchangeRate-API 的 API Key |
 <<< END U011428 >>>
 <<< UNIT U011429 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:25-25 | ctx=配置项 >>>
-审阅次数：0
+审阅次数：1
 未配置密钥时，命令会给出配置缺失提示。完整的字段清单见配置模板 `akaribot/modules/exchange_rate/config.py`。
 <<< END U011429 >>>
 <<< UNIT U011430 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:27-27 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 ## 权限与平台能力
 <<< END U011430 >>>
 <<< UNIT U011431 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:29-29 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 此模块没有平台限制，也没有权限要求。
 <<< END U011431 >>>
 <<< UNIT U011432 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:31-31 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 每次换算会请求两次接口。第一次请求获取支持的货币列表，用于校验货币代码。第二次请求获取换算结果。
 <<< END U011432 >>>
 <<< UNIT U011433 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:33-33 | ctx=权限与平台能力 >>>
-审阅次数：0
+审阅次数：1
 接口返回的结果不是 `success` 时，命令返回对应的错误提示。结果中的时间按会话时区格式化。
 <<< END U011433 >>>
 <<< UNIT U011434 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:35-35 | ctx=数据表 >>>
-审阅次数：0
+审阅次数：1
 ## 数据表
 <<< END U011434 >>>
 <<< UNIT U011435 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:39-39 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 ## 依赖与外部服务
 <<< END U011435 >>>
 <<< UNIT U011436 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/development.md:41-41 | ctx=依赖与外部服务 >>>
-审阅次数：0
+审阅次数：1
 运行依赖 `akari-bot-core`。外部服务为 ExchangeRate-API（`v6.exchangerate-api.com`），提供货币列表与换算两个接口。
 <<< END U011436 >>>
 <<< UNIT U011437 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:3-3 | ctx=exchange-rate >>>
-审阅次数：0
+审阅次数：1
 此模块可以按当日汇率换算货币金额，返回换算结果与换算时间。命令和正则都能触发换算。
 <<< END U011437 >>>
 <<< UNIT U011438 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:5-5 | ctx=命令 >>>
-审阅次数：0
+审阅次数：1
 ## 命令
 <<< END U011438 >>>
 <<< UNIT U011439 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:13-13 | ctx=`exchange-rate` >>>
-审阅次数：0
+审阅次数：1
 此命令用于按当日汇率换算金额。
 <<< END U011439 >>>
 <<< UNIT U011440 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:15-15 | ctx=`exchange-rate` >>>
-审阅次数：0
+审阅次数：1
 说明：
 <<< END U011440 >>>
 <<< UNIT U011441 | md-list | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:17-20 | ctx=`exchange-rate` >>>
-审阅次数：0
+审阅次数：1
 - `<base>` 为“金额 + 源货币代码”，`<target>` 为目标货币代码，例如 `100USD CNY`。
 - 金额省略时按 1 计算。货币代码取 `base` 末尾 3 位，并转为大写。
 - 金额非数字或小于等于 0 时，分别返回对应提示。
 - 源货币或目标货币不受支持时，提示中会列出这些货币代码。
 <<< END U011441 >>>
 <<< UNIT U011442 | md-heading | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:22-22 | ctx=正则触发 >>>
-审阅次数：0
+审阅次数：1
 ## 正则触发
 <<< END U011442 >>>
 <<< UNIT U011443 | md-paragraph | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/docs/index.md:24-24 | ctx=正则触发 >>>
-审阅次数：0
+审阅次数：1
 直接发送“金额 货币 兑换 货币”形式的文本即可触发换算，例如 `100 usd 兑换 cny`。金额可以省略。兑换动词支持“兑”“换”“兌”“換”。源货币与目标货币相同时不处理。
 <<< END U011443 >>>
 <<< UNIT U011444 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:2-2 | ctx=exchange_rate.help >>>
-审阅次数：0
+审阅次数：1
 根据当日汇率换算货币金额。
 <<< END U011444 >>>
 <<< UNIT U011445 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:3-3 | ctx=exchange_rate.help.desc >>>
-审阅次数：0
+审阅次数：1
 汇率转换工具。
 <<< END U011445 >>>
 <<< UNIT U011446 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:4-4 | ctx=exchange_rate.help.regex.desc >>>
-审阅次数：0
+审阅次数：1
 [<amount>] <base>(兑|换)<target> 换算货币金额。
 <<< END U011446 >>>
 <<< UNIT U011447 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:5-5 | ctx=exchange_rate.message >>>
-审阅次数：0
+审阅次数：1
 ${amount} ${base} = ${exchange_rate} ${target}
 （${time}，仅供参考）
 <<< END U011447 >>>
 <<< UNIT U011448 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:6-6 | ctx=exchange_rate.message.invalid.unit >>>
-审阅次数：0
+审阅次数：1
 无效的货币单位：${unit}
 <<< END U011448 >>>
 <<< UNIT U011449 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:7-7 | ctx=exchange_rate.message.invalid.non_digital >>>
-审阅次数：0
+审阅次数：1
 无效的金额，必须为数字。
 <<< END U011449 >>>
 <<< UNIT U011450 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:8-8 | ctx=exchange_rate.message.invalid.non_positive >>>
-审阅次数：0
+审阅次数：1
 金额必须为正数。
 <<< END U011450 >>>
 <<< UNIT U011451 | json-value | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/locales/zh_cn.json:9-9 | ctx=config.comments.module_exchange_rate_secret.exchange_rate_api_key >>>
-审阅次数：0
+审阅次数：1
 ExchangeRate-API 的 API Key。
 <<< END U011451 >>>
 <<< UNIT U011452 | cfg-comment | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/manifest.toml:1-1 >>>
-审阅次数：0
+审阅次数：1
 # akari-bot-module-exchange_rate 的包清单。
 <<< END U011452 >>>
 <<< UNIT U011453 | cfg-comment | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/manifest.toml:5-5 >>>
-审阅次数：0
+审阅次数：1
 # config.py 的 on_module_config("exchange_rate") 声明的表。
 <<< END U011453 >>>
 <<< UNIT U011454 | cfg-comment | packages/modules/akari-bot-module-exchange_rate/akaribot/modules/exchange_rate/manifest.toml:9-9 >>>
-审阅次数：0
+审阅次数：1
 # 查重用的登录信息字段，对应汇率接口密钥。
 <<< END U011454 >>>
 <<< UNIT U011455 | md-paragraph | packages/modules/akari-bot-module-github/README.md:3-3 | ctx=akari-bot-module-github >>>
