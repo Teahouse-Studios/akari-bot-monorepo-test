@@ -59,7 +59,7 @@
 
 ## 正文
 <<< UNIT U011179 | md-table | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:176-433 | ctx=Material Design 颜色 >>>
-审阅次数：9
+审阅次数：10
 | 名称 | 色值 | 预览 |
 | --- | --- | --- |
 | `red-50` | `#ffebee` | <span style="display:inline-block;width:1.2em;height:1.2em;border:1px solid #888;background:#ffebee"></span> |
@@ -320,85 +320,85 @@
 | `white` | `#ffffff` | <span style="display:inline-block;width:1.2em;height:1.2em;border:1px solid #888;background:#ffffff"></span> |
 <<< END U011179 >>>
 <<< UNIT U011180 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:435-435 | ctx=说明 >>>
-审阅次数：9
+审阅次数：10
 ## 说明
 <<< END U011180 >>>
 <<< UNIT U011181 | md-list | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/colors.md:437-439 | ctx=说明 >>>
-审阅次数：9
+审阅次数：10
 - 此命令在两张颜色名称表中分别检索，返回结果各自占用一个字段。两张表中均包含的 `black` 与 `white` 色值完全相同。
 - 表中收录的全部颜色名称均支持直接作为参数输入。若输入的颜色名称未收录于表中，此命令将按照 RGB 欧氏距离计算并匹配最接近的颜色名称。
 - 当输入的色值与表中的预定义色值完全一致时，名称字段标记为“CSS 颜色名称”或“Material Design 颜色名称”。若两者存在偏差，对应字段则标记为“最相似的 CSS 颜色名称”或“最相似的 Material Design 颜色名称”。
 <<< END U011181 >>>
 <<< UNIT U011182 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:5-5 | ctx=color：安装与开发 >>>
-审阅次数：9
+审阅次数：10
 # color：安装与开发
 <<< END U011182 >>>
 <<< UNIT U011183 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:7-7 | ctx=安装 >>>
-审阅次数：9
+审阅次数：10
 ## 安装
 <<< END U011183 >>>
 <<< UNIT U011184 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:13-13 | ctx=安装 >>>
-审阅次数：9
+审阅次数：10
 安装完成后，管理员需要在会话中执行 `module enable color` 命令以启用此模块。
 <<< END U011184 >>>
 <<< UNIT U011185 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:15-15 | ctx=配置项 >>>
-审阅次数：9
+审阅次数：10
 ## 配置项
 <<< END U011185 >>>
 <<< UNIT U011186 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:19-19 | ctx=权限与平台能力 >>>
-审阅次数：9
+审阅次数：10
 ## 权限与平台能力
 <<< END U011186 >>>
 <<< UNIT U011187 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:21-21 | ctx=权限与平台能力 >>>
-审阅次数：9
+审阅次数：10
 此模块通过 Embed 消息回复，运行平台需要具备 Embed 消息元素与图片消息的支持能力。
 <<< END U011187 >>>
 <<< UNIT U011188 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:23-23 | ctx=权限与平台能力 >>>
-审阅次数：9
+审阅次数：10
 色卡中的文本使用资源包字体 Noto Sans CJK DemiLight，文本颜色根据背景亮度在黑色与白色之间自动切换。Material Design 颜色名称表随模块安装包分发，存储于 `assets/material_colors.json`。
 <<< END U011188 >>>
 <<< UNIT U011189 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:25-25 | ctx=数据表 >>>
-审阅次数：9
+审阅次数：10
 ## 数据表
 <<< END U011189 >>>
 <<< UNIT U011190 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:29-29 | ctx=依赖与外部服务 >>>
-审阅次数：9
+审阅次数：10
 ## 依赖与外部服务
 <<< END U011190 >>>
 <<< UNIT U011191 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:31-31 | ctx=依赖与外部服务 >>>
-审阅次数：9
+审阅次数：10
 此模块依赖 `Pillow`、`numpy`、`webcolors`、`orjson`、`akari-bot-assets-fonts` 与 `akari-bot-core` 软件包。
 <<< END U011191 >>>
 <<< UNIT U011192 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/development.md:33-33 | ctx=依赖与外部服务 >>>
-审阅次数：9
+审阅次数：10
 此模块不依赖外部网络服务，所有颜色名称表均随安装包或依赖项分发。
 <<< END U011192 >>>
 <<< UNIT U011193 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:3-3 | ctx=color >>>
-审阅次数：9
+审阅次数：10
 此模块用于解析颜色代码，返回十六进制色值、RGB 与 HSL 三种色彩表示形式，以及最接近的 CSS 与 Material Design 颜色名称。输出结果同时附带一张包含完整信息的色卡图片。
 <<< END U011193 >>>
 <<< UNIT U011194 | md-heading | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:5-5 | ctx=命令 >>>
-审阅次数：9
+审阅次数：10
 ## 命令
 <<< END U011194 >>>
 <<< UNIT U011195 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:13-13 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 此命令用于解析颜色代码，返回色值、最接近的 CSS 与 Material Design 颜色名称以及色卡图片。若未提供参数，命令将随机选取一种颜色。若传入无法识别的颜色格式，则返回错误提示。
 <<< END U011195 >>>
 <<< UNIT U011196 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:15-15 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 查询结果以 Embed 卡片形式输出，包含十六进制、RGB、HSL 三种色值以及两项颜色名称字段。
 <<< END U011196 >>>
 <<< UNIT U011197 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:17-17 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 若对应的颜色名称表中存在完全一致的色值，字段名称显示为“CSS 颜色名称”或“Material Design 颜色名称”。若未找到完全匹配的色值，字段名称则显示为“最相似的 CSS 颜色名称”或“最相似的 Material Design 颜色名称”。
 <<< END U011197 >>>
 <<< UNIT U011198 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:19-19 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 此命令支持下列输入形式，完整名称清单请参阅[颜色名称表](colors.md)。
 <<< END U011198 >>>
 <<< UNIT U011199 | md-list | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:21-25 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 - 标准 CSS 颜色名称，例如 `rebeccapurple` 与 `cornflowerblue`。
 - Material Design 规范颜色名称，例如 `red-500` 与 `bluegrey-200`。
 - 3 位或 6 位十六进制色值，支持省略前缀 `#`，例如 `#f00` 与 `336699`。
@@ -406,11 +406,11 @@
 - 函数表示形式 `hsl(0, 100%, 50%)` 与包含角度单位的形式 `hsl(0deg, 100%, 50%)`。
 <<< END U011199 >>>
 <<< UNIT U011200 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:27-27 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
 CSS 颜色名称与 Material Design 颜色名称均要求精确匹配。十六进制色值中的英文字母不区分大小写。
 <<< END U011200 >>>
 <<< UNIT U011201 | md-paragraph | packages/modules/akari-bot-module-color/akaribot/modules/color/docs/index.md:30-37 | ctx=`color` >>>
-审阅次数：9
+审阅次数：10
   :log="[
     '用户：~color #ff0000',
     '机器人：HEX：`#ff0000`',
@@ -421,54 +421,54 @@ CSS 颜色名称与 Material Design 颜色名称均要求精确匹配。十六�
 />
 <<< END U011201 >>>
 <<< UNIT U011202 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:2-2 | ctx=color.help >>>
-审阅次数：9
+审阅次数：10
 查询并提供颜色信息。支持十六进制、RGB、HSL 颜色代码，以及 CSS 与 Material Design 中的颜色名称。未提供参数时将随机选取颜色。
 <<< END U011202 >>>
 <<< UNIT U011203 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:3-3 | ctx=color.help.desc >>>
-审阅次数：9
+审阅次数：10
 查询颜色详细信息。
 <<< END U011203 >>>
 <<< UNIT U011204 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:4-4 | ctx=color.message.embed.css >>>
-审阅次数：9
+审阅次数：10
 CSS 颜色名称
 <<< END U011204 >>>
 <<< UNIT U011205 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:5-5 | ctx=color.message.embed.css.approximate >>>
-审阅次数：9
+审阅次数：10
 最相似的 CSS 颜色名称
 <<< END U011205 >>>
 <<< UNIT U011206 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:6-6 | ctx=color.message.embed.md >>>
-审阅次数：9
+审阅次数：10
 Material Design 颜色名称
 <<< END U011206 >>>
 <<< UNIT U011207 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:7-7 | ctx=color.message.embed.md.approximate >>>
-审阅次数：9
+审阅次数：10
 最相似的 Material Design 颜色名称
 <<< END U011207 >>>
 <<< UNIT U011208 | json-value | packages/modules/akari-bot-module-color/akaribot/modules/color/locales/zh_cn.json:8-8 | ctx=color.message.invalid >>>
-审阅次数：9
+审阅次数：10
 无法识别的颜色格式。
 <<< END U011208 >>>
 <<< UNIT U011209 | cfg-comment | packages/modules/akari-bot-module-color/akaribot/modules/color/manifest.toml:1-1 >>>
-审阅次数：9
+审阅次数：10
 # akari-bot-module-color 模块清单。
 <<< END U011209 >>>
 <<< UNIT U011210 | cfg-comment | packages/modules/akari-bot-module-color/pyproject.toml:17-17 >>>
-审阅次数：9
+审阅次数：10
     # 色卡中的文字使用字体资源包中的 Noto Sans CJK DemiLight（T3.3），缺失该字体将导致卡片渲染失败。
 <<< END U011210 >>>
 <<< UNIT U011211 | md-paragraph | packages/modules/akari-bot-module-convert/README.md:3-3 | ctx=akari-bot-module-convert >>>
-审阅次数：9
+审阅次数：10
 此模块基于 Pint 库实现，提供物理量单位换算能力。
 <<< END U011211 >>>
 <<< UNIT U011212 | md-heading | packages/modules/akari-bot-module-convert/README.md:5-5 | ctx=安装 >>>
-审阅次数：9
+审阅次数：10
 ## 安装
 <<< END U011212 >>>
 <<< UNIT U011213 | md-paragraph | packages/modules/akari-bot-module-convert/README.md:7-7 | ctx=安装 >>>
-审阅次数：9
+审阅次数：10
 关于 Python 版本要求，请参阅软件包内 `pyproject.toml` 文件中的 `requires-python` 字段。
 <<< END U011213 >>>
 <<< UNIT U011214 | md-paragraph | packages/modules/akari-bot-module-convert/README.md:13-13 | ctx=安装 >>>
-审阅次数：9
+审阅次数：10
 关于此模块的启用与配置方法，请参阅[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
 <<< END U011214 >>>
