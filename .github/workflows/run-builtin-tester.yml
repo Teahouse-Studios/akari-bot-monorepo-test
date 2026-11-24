@@ -138,6 +138,8 @@ jobs:
         env:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
+          # 每个入口打印一行准备阶段耗时，便于定位耗时偏高的准备阶段。
+          AKARI_TEST_SETUP_TIMING: "1"
         run: |
           # runner 发现任何失败就以非 0 退出，而本仓库有 4 个用例失败（参见 tools/test_baseline.txt）。
           # 若直接由退出码判定步骤成败，本轮会立即失败，后续的“只读包目录”一轮就不会执行。

@@ -175,14 +175,14 @@ from akaribot.core.builtins.utils import confirm_command
 from akaribot.core.constants import ascii_art, cache_path, tests_path
 from akaribot.testing.decorator import CaseEntry, get_registry
 from akaribot.testing.expectations import Expectation
-from akaribot.testing.logger import TestLoggingLogger
+from akaribot.testing.logger import TEST_LOGGER
 from akaribot.testing.junit import JUnitReport, JUnitTestSuite, JUnitTestCase
 from akaribot.testing.mock.database import close_db, get_last_init_error, init_db
 from akaribot.testing.mock.loader import load_modules
 from akaribot.testing.mock.random import Random
 from akaribot.testing.process import run_case_entry, run_function_entry
 
-Logger = TestLoggingLogger("TEST")
+Logger = TEST_LOGGER
 
 # 源码克隆形态下的仓库根目录由根目录兼容实现 tester.py 在导入该模块前设置，取值必须与其一致。
 REPO_ROOT_ENV = "AKARI_REPO_ROOT"

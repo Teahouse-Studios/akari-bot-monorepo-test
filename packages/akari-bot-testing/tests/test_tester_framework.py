@@ -445,6 +445,62 @@ async def _test_function_entry_init_failure_is_error():
     return bool(result.get("error")) and not result.get("skipped")
 
 
+def _test_setup_timing_flag_reads_environment():
+    import os
+
+    from akaribot.testing.process import SETUP_TIMING_ENV, _setup_timing_enabled
+
+    samples = ((None, False), ("", False), ("0", False), ("1", True), ("true", True), ("YES", True))
+    try:
+        for value, expected in samples:
+            if value is None:
+                os.environ.pop(SETUP_TIMING_ENV, None)
+            else:
+                os.environ[SETUP_TIMING_ENV] = value
+            if _setup_timing_enabled() is not expected:
+                return False
+    finally:
+        os.environ.pop(SETUP_TIMING_ENV, None)
+    return True
+
+
+async def _test_setup_timing_logs_preparation_phases():
+    import os
+    from unittest.mock import Mock
+
+    from akaribot.testing.process import SETUP_TIMING_ENV, run_function_entry
+
+    async def noop(_tester):
+        return None
+
+    info = Mock()
+    with (
+        patch.dict(os.environ, {SETUP_TIMING_ENV: "1"}),
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.TEST_LOGGER.info", new=info),
+    ):
+        await run_function_entry(noop, is_ci=True, timeout=None)
+
+    lines = [call.args[0] for call in info.call_args_list if str(call.args[0]).startswith("[SETUP]")]
+    if len(lines) != 1 or "kind=func name=noop " not in lines[0]:
+        return False
+    if " close_db=" not in lines[0] or " init_db=" not in lines[0] or " load_modules=" not in lines[0]:
+        return False
+
+    info.reset_mock()
+    os.environ.pop(SETUP_TIMING_ENV, None)
+    with (
+        patch("akaribot.testing.process.close_db", new=AsyncMock()),
+        patch("akaribot.testing.process.init_db", new=AsyncMock(return_value=True)),
+        patch("akaribot.testing.process.load_modules", new=AsyncMock()),
+        patch("akaribot.testing.process.TEST_LOGGER.info", new=info),
+    ):
+        await run_function_entry(noop, is_ci=True, timeout=None)
+    return not [call for call in info.call_args_list if str(call.args[0]).startswith("[SETUP]")]
+
+
 def _test_union_merge_logs_stay_out_of_repo_data():
     from akaribot.core.constants.path import data_path, union_merge_logs_path
     from akaribot.core.database.models import UNION_SCOPE_SENDER
@@ -677,6 +733,11 @@ async def test_tester_framework(tester: Tester):
     await tester.test(_plugin_timeout_error_from_test_is_not_timeout, "用例自身抛出的 TimeoutError 不算测试超时")
     await tester.test(_test_function_entry_does_not_misclassify_test_timeout, "子测试超时不冒充 runner 超时测试")
     await tester.test(_test_function_entry_init_failure_is_error, "func_case 初始化错误不可跳过测试")
+    await tester.test(_test_setup_timing_flag_reads_environment, "准备耗时开关读取环境变量测试")
+    await tester.test(
+        _test_setup_timing_logs_preparation_phases,
+        "启用准备耗时日志后逐入口打印三段耗时",
+    )
     await tester.test(_test_union_merge_logs_stay_out_of_repo_data, "合并日志不落进 data/ 测试")
 
     return tester

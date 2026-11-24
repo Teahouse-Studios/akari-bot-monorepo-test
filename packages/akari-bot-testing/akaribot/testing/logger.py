@@ -48,3 +48,7 @@ class TestLoggingLogger:
             self.error(f"{message}\n{traceback.format_exc()}")
         else:
             self.error(traceback.format_exc())
+
+
+# 测试框架各模块共用该输出通道。重复构造会重复注册处理器，导致同一行日志输出两次。
+TEST_LOGGER = TestLoggingLogger("TEST")

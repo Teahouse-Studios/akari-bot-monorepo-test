@@ -37,6 +37,8 @@ CI 模式跳过人工复核，交互输入不足直接判定失败。`--ci` 还�
 
 CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 `junit.xml`。覆盖率开启时另生成 `htmlcov/index.html` 与 `coverage.xml`。
 
+设置 `AKARI_TEST_SETUP_TIMING=1` 后，每个入口在准备完成时打印一行 `[SETUP]` 日志，分别记录关闭数据库、初始化数据库与加载模块的耗时。
+
 ## 单入口运行
 
 开发阶段仅运行单个文件或单个入口。示例：

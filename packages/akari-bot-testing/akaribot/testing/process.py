@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 import traceback
 from types import FunctionType
@@ -9,6 +10,7 @@ from akaribot.core.builtins.message.elements import PlainElement
 from akaribot.core.constants.exceptions import SessionFinished
 from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
 from akaribot.core.logger import Logger
+from akaribot.testing.logger import TEST_LOGGER
 from akaribot.testing.mock.database import close_db, get_last_init_error, init_db
 from akaribot.testing.mock.loader import load_modules
 from akaribot.testing.mock.parser import parser
@@ -24,6 +26,22 @@ from .timing import TIME_SCALE
 # 真正无响应时也避免使单个用例占用整个 CI 任务过长时间。
 DEFAULT_FUNCTION_TEST_TIMEOUT = 120.0 * min(TIME_SCALE, 5.0)
 
+# 设置该变量后，每个入口打印一行准备阶段耗时，便于定位耗时偏高的准备步骤。
+SETUP_TIMING_ENV = "AKARI_TEST_SETUP_TIMING"
+
+
+def _setup_timing_enabled() -> bool:
+    return os.environ.get(SETUP_TIMING_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
+def format_setup_timing(kind: str, name: str, close_db: float, init_db: float, load_modules: float) -> str:
+    """把入口准备阶段的耗时拼接为一行日志。"""
+    return (
+        f"[SETUP] kind={kind} name={name} close_db={close_db:.3f}s "
+        f"init_db={init_db:.3f}s load_modules={load_modules:.3f}s "
+        f"setup={close_db + init_db + load_modules:.3f}s"
+    )
+
 
 class _FunctionTestNoProgress(Exception):
     pass
@@ -36,15 +54,18 @@ def _infrastructure_error(input_, expected, message: str) -> list[dict]:
 async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
     baseline_tasks = set(asyncio.all_tasks())
 
+    setup_started = time.perf_counter()
     try:
         await close_db()
     except Exception:
         Logger.exception("Error closing database before test")
+    closed = time.perf_counter()
 
     if not await init_db():
         message = f"Failed to reinitialize database for case {entry.get('func')}.\n{get_last_init_error()}"
         Logger.critical(message)
         return _infrastructure_error(entry.get("input"), entry.get("expected"), message)
+    initialized = time.perf_counter()
 
     try:
         try:
@@ -53,6 +74,13 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
             error = traceback.format_exc()
             Logger.exception("Failed to load modules for tests:")
             return _infrastructure_error(entry.get("input"), entry.get("expected"), error)
+        loaded = time.perf_counter()
+        if _setup_timing_enabled():
+            TEST_LOGGER.info(
+                format_setup_timing(
+                    "case", str(entry.get("func")), closed - setup_started, initialized - closed, loaded - initialized
+                )
+            )
 
         start = time.perf_counter()
         timeout = entry.get("timeout")
@@ -83,15 +111,18 @@ async def run_function_entry(
     # only work started by this entry is reclaimed after it finishes.
     cleanup_pending = False
     baseline_tasks = set(asyncio.all_tasks())
+    setup_started = time.perf_counter()
     try:
         await close_db()
     except Exception:
         Logger.exception("Error closing database before func test")
+    closed = time.perf_counter()
 
     if not await init_db():
         message = f"Failed to reinitialize database for func test {fn.__name__}.\n{get_last_init_error()}"
         Logger.critical(message)
         return {"error": message}
+    initialized = time.perf_counter()
 
     try:
         await load_modules(show_logs=False, monkey_patches={"Random": Random()})
@@ -99,6 +130,11 @@ async def run_function_entry(
         error = traceback.format_exc()
         Logger.exception("Failed to load modules for tests:")
         return {"error": error}
+    loaded = time.perf_counter()
+    if _setup_timing_enabled():
+        TEST_LOGGER.info(
+            format_setup_timing("func", fn.__name__, closed - setup_started, initialized - closed, loaded - initialized)
+        )
 
     tester = None
     start = time.perf_counter()
