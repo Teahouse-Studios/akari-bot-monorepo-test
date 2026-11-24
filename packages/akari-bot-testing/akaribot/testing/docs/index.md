@@ -39,6 +39,8 @@ CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 
 
 设置 `AKARI_TEST_SETUP_TIMING=1` 后，每个入口在准备完成时打印一行 `[SETUP]` 日志，分别记录关闭数据库、初始化数据库与加载模块的耗时。初始化数据库另拆分为模型模块查找、模型模块导入、建立连接与建表四段，依次对应 `db_fetch`、`db_import`、`db_init` 与 `db_schema`。字段 `db_models` 记录模型模块数。
 
+同一行还记录 `cpu`（自上一个入口以来累计的进程 CPU 时间）、`threads`、`tasks` 与 `top_threads`，用于判断准备阶段是否被后台负载拖慢。
+
 ## 单入口运行
 
 开发阶段仅运行单个文件或单个入口。示例：

@@ -1,5 +1,6 @@
 import asyncio
 import os
+import threading
 import time
 import traceback
 from types import FunctionType
@@ -34,6 +35,32 @@ def _setup_timing_enabled() -> bool:
     return os.environ.get(SETUP_TIMING_ENV, "").strip().lower() in {"1", "true", "yes"}
 
 
+_runtime_cpu_mark: float | None = None
+
+
+# 准备耗时突然变大时，需要区分是准备本身变慢，还是进程受其他负载影响，因此同时采集
+# 自上一个入口以来累计的进程 CPU 时间、活动线程数与未完成任务数。
+def _runtime_snapshot() -> dict[str, object]:
+    global _runtime_cpu_mark
+    cpu = time.process_time()
+    cpu_delta = 0.0 if _runtime_cpu_mark is None else cpu - _runtime_cpu_mark
+    _runtime_cpu_mark = cpu
+    counts: dict[str, int] = {}
+    for thread in threading.enumerate():
+        counts[thread.name] = counts.get(thread.name, 0) + 1
+    top = sorted(counts.items(), key=lambda item: -item[1])[:3]
+    try:
+        tasks = len(asyncio.all_tasks())
+    except RuntimeError:
+        tasks = -1
+    return {
+        "cpu": cpu_delta,
+        "threads": threading.active_count(),
+        "tasks": tasks,
+        "top_threads": ",".join(f"{thread_name}x{count}" for thread_name, count in top),
+    }
+
+
 def format_setup_timing(
     kind: str,
     name: str,
@@ -41,8 +68,9 @@ def format_setup_timing(
     init_db: float,
     load_modules: float,
     db_timings: dict[str, float] | None = None,
+    runtime: dict[str, object] | None = None,
 ) -> str:
-    """把入口准备阶段的耗时拼接为一行日志。"""
+    """把入口准备阶段的耗时与进程运行状态拼接为一行日志。"""
     text = (
         f"[SETUP] kind={kind} name={name} close_db={close_db:.3f}s "
         f"init_db={init_db:.3f}s load_modules={load_modules:.3f}s "
@@ -55,6 +83,13 @@ def format_setup_timing(
             f" db_import={db_timings.get('import_models', 0.0):.3f}s"
             f" db_init={db_timings.get('tortoise_init', 0.0):.3f}s"
             f" db_schema={db_timings.get('schemas', 0.0):.3f}s"
+        )
+    if runtime:
+        text += (
+            f" cpu={float(runtime.get('cpu', 0.0)):.3f}s"
+            f" threads={int(runtime.get('threads', 0))}"
+            f" tasks={int(runtime.get('tasks', 0))}"
+            f" top_threads={runtime.get('top_threads', '')}"
         )
     return text
 
@@ -100,6 +135,7 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
                     initialized - closed,
                     loaded - initialized,
                     get_last_init_timings(),
+                    _runtime_snapshot(),
                 )
             )
 
@@ -161,6 +197,7 @@ async def run_function_entry(
                 initialized - closed,
                 loaded - initialized,
                 get_last_init_timings(),
+                _runtime_snapshot(),
             )
         )
 

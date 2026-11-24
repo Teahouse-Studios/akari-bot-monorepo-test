@@ -490,6 +490,18 @@ def _test_setup_timing_reports_database_stages():
     )
 
 
+async def _test_setup_timing_reports_runtime_state():
+    from akaribot.testing.process import _runtime_snapshot, format_setup_timing
+
+    runtime = _runtime_snapshot()
+    threads = int(runtime["threads"])
+    tasks = int(runtime["tasks"])
+    if float(runtime["cpu"]) < 0.0 or threads < 1 or tasks < 1 or not runtime["top_threads"]:
+        return False
+    text = format_setup_timing("func", "noop", 0.1, 0.2, 0.05, None, runtime)
+    return " cpu=" in text and f" threads={threads}" in text and f" tasks={tasks}" in text and " top_threads=" in text
+
+
 async def _test_setup_timing_logs_preparation_phases():
     import os
     from unittest.mock import Mock
@@ -765,6 +777,7 @@ async def test_tester_framework(tester: Tester):
         _test_setup_timing_logs_preparation_phases,
         "启用准备耗时日志后逐入口打印三段耗时",
     )
+    await tester.test(_test_setup_timing_reports_runtime_state, "准备耗时日志记录 CPU、线程与任务计数测试")
     await tester.test(_test_union_merge_logs_stay_out_of_repo_data, "合并日志不落进 data/ 测试")
 
     return tester
