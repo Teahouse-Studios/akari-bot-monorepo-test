@@ -474,7 +474,7 @@ source = { editable = "packages/akari-bot-assets-fonts" }
 
 [[package]]
 name = "akari-bot-cli"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "packages/akari-bot-cli" }
 dependencies = [
     { name = "akari-bot-i18n" },
@@ -505,7 +505,7 @@ requires-dist = [
 
 [[package]]
 name = "akari-bot-core"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "packages/akari-bot-core" }
 dependencies = [
     { name = "aiofile" },
@@ -1322,7 +1322,7 @@ requires-dist = [
 
 [[package]]
 name = "akari-bot-testing"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/akari-bot-testing" }
 dependencies = [
     { name = "akari-bot-core" },
