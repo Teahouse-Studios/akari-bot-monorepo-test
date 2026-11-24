@@ -1,7 +1,7 @@
-"""按依赖顺序把一批产物串行发布到索引，并对限速做退避与限批。
+"""按依赖顺序把一批产物串行发布到索引，遇到限速时退避，并限制单次上传的包数。
 
-索引对上传有速率限制（429）。本工具把三件事固定下来：一批只传一个分发、尊重响应里的
-``Retry-After``、按“本次最多上传文件数”限批。中断后用同一批清单重跑即可续传（只补缺失文件）。
+索引对上传有速率限制（429）。本工具固定三项规则。每批仅上传一个包，按响应中的
+``Retry-After`` 等待，并按本次最多上传文件数限制单次批量。中断后用同一批清单重新运行即可续传（仅补充缺失文件）。
 
 用法：::
 
@@ -63,10 +63,10 @@ def check_tools(require_twine: bool = True) -> str | None:
 
 
 def publish_order(names: list[str]) -> list[str]:
-    """按发布依赖顺序排列分发。
+    """按发布依赖顺序排列包。
 
     :param names: 分发名列表。
-    :return: 排好序的列表：资源与 html2text 在前，core、testing 次之，模块/适配器随后，CLI 最后。
+    :return: 排好序的列表。资源与 html2text 在前，core、testing 次之，模块/适配器随后，CLI 最后。
     """
 
     def rank(name: str) -> tuple[int, str]:
@@ -84,7 +84,7 @@ def publish_order(names: list[str]) -> list[str]:
 
 
 def stage(directory: Path, entry: dict, dist_dir: Path) -> None:
-    """把单个分发的产物复制到独立目录。
+    """把单个包的产物复制到独立目录。
 
     :param directory: 暂存目录。
     :param entry: 清单中该分发的记录。
@@ -97,9 +97,9 @@ def stage(directory: Path, entry: dict, dist_dir: Path) -> None:
 
 
 def project_exists(index_url: str, name: str) -> bool:
-    """判断分发名是否已在索引上创建。
+    """判断包名是否已在索引上创建。
 
-    新项目配额只对首次创设计数。已存在的项目发新版本不占该配额。
+    新项目配额仅对首次创设计数。已存在的项目发新版本不占该配额。
 
     :param index_url: 索引根地址。
     :param name: 分发名。
@@ -169,7 +169,7 @@ def missing_files(dist: str, version: str, staged: Path, entry: dict, index_url:
 
 
 def upload(staged: Path, repository_url: str, token: str, retries: int, max_wait: int) -> None:
-    """上传一个分发的全部文件，遇到限速按 Retry-After 或指数退避重试。
+    """上传一个包的全部文件，遇到限速按 Retry-After 或指数退避重试。
 
     :param staged: 待上传目录。
     :param repository_url: 上传端点。

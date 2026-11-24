@@ -1,7 +1,7 @@
-"""把 workspace 全部分发切到同一批次版本，用于 TestPyPI 重复演练。
+"""把 workspace 的全部成员包切换到同一批次版本，用于 TestPyPI 重复演练。
 
-首次候选用各包 pyproject 里声明的版本（当前均为 ``0.1.0``）。同名文件在 TestPyPI 上不能覆盖，
-因此代码改动后重跑演练需要换批次版本：本工具把全部 workspace 分发的 ``version`` 改成给定值
+首次候选使用各包 pyproject.toml 中声明的版本。同名文件在 TestPyPI 上不能覆盖，
+因此代码改动后重新运行演练需要更换批次版本。本工具把全部 workspace 包的 ``version`` 修改为给定值
 （例如 ``0.1.0.post1``），内部依赖约束 ``>=0.1.0,<1.0`` 继续成立，无需改动依赖声明。
 
 用法：::
@@ -10,7 +10,7 @@
     python tools/set_batch_version.py 0.1.0.post1 --dry-run
     git checkout -- packages            # 本地演练结束后恢复
 
-CI 在一次性 checkout 里运行，不需要恢复。
+CI 在一次性 checkout 中运行，不需要恢复。
 """
 
 from __future__ import annotations
@@ -34,11 +34,11 @@ def workspace_pyprojects() -> list[Path]:
 
 
 def set_version(path: Path, version: str, dry_run: bool) -> str:
-    """改一个 pyproject 的 project.version。
+    """修改一个 pyproject 的 project.version。
 
     :param path: pyproject 路径。
     :param version: 目标版本。
-    :param dry_run: 只报告不写入。
+    :param dry_run: 仅报告，不写入。
     :return: 原版本。
     """
     text = path.read_text(encoding="utf-8")

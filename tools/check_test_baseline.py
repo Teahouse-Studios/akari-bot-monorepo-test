@@ -1,13 +1,13 @@
-"""测试失败的用例清单对比：只允许基准里按名称列出的失败存在。
+"""把失败的用例清单与基准对比，仅允许基准中按名称列出的失败存在。
 
-本仓库在拆分前就有 4 个用例失败（`test_parser_args`、`test_parser_recovery`、
-`test_qqbot_modern_api`、`test_tos`，其中若干还带子用例）。runner 只要发现任何失败就以非 0 退出，
-于是 CI 的第一轮步骤直接变红、后面的“只读包目录”一轮根本不会执行，而“失败的用例清单与基准按名称
-一一对应”这件事从来没有人检查过。
+本仓库当前存在既有失败用例（`test_parser_args`、`test_parser_recovery`、
+`test_qqbot_modern_api`、`test_tos`，其中若干还带子用例）。runner 发现任何失败即以非 0 退出，
+CI 的第一轮步骤随之失败，后面的“只读包目录”一轮不再执行。本工具检查失败的用例清单与基准是否按名称
+一一对应。
 
-本工具把既有失败记成可提交的小清单，不提交整份 junit.xml：新增、消失、错误文本变化都判失败，
-因此既不能用 `|| true` 掩盖，也不能以“失败数量没变”代替检查。既有失败修好后基准必须同步缩小，
-否则本工具会因为“基准里还留着已经不会失败的条目”而失败。
+本工具把既有失败记录为可提交的小清单，不提交整份 junit.xml。新增、消失与错误文本变化均判为失败，
+因此 `|| true` 与“失败数量没变”都无法作为通过依据。既有失败修好后基准必须同步缩小，
+否则基准中残留的已修复条目会使本工具判定失败。
 
 用法：
     python tools/check_test_baseline.py --junit junit.xml --baseline tools/test_baseline.txt
@@ -37,7 +37,7 @@ HEADER = "# 期望失败的测试：<用例名>\\t<failure|error>\\t<消息>，�
 class Failure:
     """一条失败记录。
 
-    :param name: junit 里的用例名（含 ``::`` 子用例后缀）。
+    :param name: junit 中的用例名（含 ``::`` 子用例后缀）。
     :param kind: ``failure`` 或 ``error``。
     :param message: junit 的 message 属性。缺失时为空串。
     """
@@ -71,10 +71,10 @@ def read_failures(path: Path) -> list[Failure]:
 
 
 def read_baseline(path: Path) -> list[Failure]:
-    """读基准清单。空行与 ``#`` 开头的行忽略。
+    """读取基准清单。空行与 ``#`` 开头的行忽略。
 
     :param path: 基准文件路径。
-    :return: 基准里的失败记录。
+    :return: 基准中的失败记录。
     :raises OSError: 文件不可读。
     :raises ValueError: 某行不是三段制。
     """
@@ -93,8 +93,8 @@ def read_baseline(path: Path) -> list[Failure]:
 def compare(baseline: list[Failure], actual: list[Failure]) -> tuple[list[str], list[str], list[str]]:
     """比较基准与实际失败的用例清单。
 
-    分三类报告：基准里有、实际没有的条目应当从基准中删掉。实际有、基准没有的是新增失败。同名但
-    类型或消息不同的是错误文本变化。同名用例只进第三类：若同时算进前两类，同一条变化会被报三次，
+    分三类报告：基准中有、实际没有的条目应当从基准中删除。实际有、基准没有的是新增失败。同名但
+    类型或消息不同的是错误文本变化。同名用例仅归入第三类。若同时归入前两类，同一条变化会被报三次，
     真正的“新增”与“消失”也会被掩盖。
 
     :param baseline: 基准记录。

@@ -1,12 +1,12 @@
-"""把模块包与适配器包里的 core 深路径 import 改走 ``akaribot.core.api`` 门面。
+"""把模块包与适配器包里的 core 深路径 import 改为从 ``akaribot.core.api`` 公开接口导入。
 
-模块/适配器包虽然已独立发包，却仍大范围绑定 core 的内部目录：core 内部一旦重构，这些包就得跟着
-改。门面 :mod:`akaribot.core.api` 已经承诺了其中绝大多数符号，剩下的多是从未回头迁移的历史写法。
+模块包与适配器包虽然已独立发包，却仍大范围绑定 core 的内部目录。core 内部一旦重构，这些包就需要同步
+修改。公开接口 :mod:`akaribot.core.api` 已经承诺了其中绝大多数符号，其余符号尚未迁移到公开接口。
 
-判定不靠人工清单，而是**逐个符号做对象同一性核对**：``akaribot.core.api.<名>`` 必须与
-``akaribot.core.<深路径>.<名>`` 是同一个对象才允许改写。名字相同但对象不同（例如两处各定义一个
-同名类）时保持原样，避免静默换掉语义。门面尚未收录的符号也保持原样，其去留属于公共 API 决策，
-不由本工具代劳。
+判定以**逐个符号的对象同一性核对**为准。``akaribot.core.api.<名>`` 必须与
+``akaribot.core.<深路径>.<名>`` 为同一对象，才允许改写。名字相同但对象不同（例如两处各定义一个
+同名类）时保持原样，避免静默替换语义。尚未收录于公开接口的符号也保持原样，其去留属于公开 API 决策，
+不由本工具处理。
 
 用法：
     python tools/codemod_core_api.py            # 只报告，不改文件
@@ -46,8 +46,8 @@ class FilePlan:
     """单个文件的改写计划。
 
     :param path: 文件路径。
-    :param moved: 迁移到门面的符号数。
-    :param kept: 因门面未收录或对象不同而保留的符号数。
+    :param moved: 迁移到公开接口的符号数。
+    :param kept: 因公开接口未收录或对象不同而保留的符号数。
     :param text: 改写后的全文。无需改写时为 ``None``。
     """
 
@@ -59,9 +59,9 @@ class FilePlan:
 
 
 def facade_names(module: str = FACADE) -> dict[str, object]:
-    """取某个门面承诺的名字与其对象。
+    """获取某个公开接口承诺的名字与其对象。
 
-    :param module: 门面模块名。
+    :param module: 公开接口模块名。
     :return: 名字到对象的映射。
     """
     facade = importlib.import_module(module)
@@ -69,22 +69,22 @@ def facade_names(module: str = FACADE) -> dict[str, object]:
 
 
 def target_facade(path: Path) -> str:
-    """该文件应当改走哪个门面。
+    """该文件应当改为通过哪个公开接口导入。
 
-    适配器优先走 ``api.adapters``：那里的符号只供适配器使用，模块包导入会被 B3 判错。
+    适配器优先使用 ``api.adapters``。那里的符号仅供适配器使用，模块包导入会被 B3 判错。
 
     :param path: 源码文件。
-    :return: 门面模块名。
+    :return: 公开接口模块名。
     """
     return ADAPTER_FACADE if "akaribot/adapters" in path.as_posix() else FACADE
 
 
 def is_same_object(module: str, symbol: str, facade: dict[str, object]) -> bool:
-    """核对深路径符号与门面符号是否同一个对象。
+    """核对深路径符号与公开接口符号是否同一个对象。
 
     :param module: 深路径模块名。
     :param symbol: 符号名。
-    :param facade: 门面名字到对象的映射。
+    :param facade: 公开接口名字到对象的映射。
     :return: 同一对象时为 ``True``。
     """
     if symbol not in facade:
@@ -124,10 +124,10 @@ def _facade_statements(tree: ast.Module) -> dict[str, ast.ImportFrom]:
 
 
 def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
-    """算出一个文件的改写方案。
+    """计算一个文件的改写方案。
 
     :param path: 源码文件。
-    :param facades: 门面模块名到“名字 → 对象”的映射。
+    :param facades: 公开接口模块名到“名字 → 对象”的映射。
     :return: 改写计划。无需改写时 ``text`` 为 ``None``。
     :raises SyntaxError: 文件无法解析。
     """

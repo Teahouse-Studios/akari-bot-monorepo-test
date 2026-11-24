@@ -1,16 +1,16 @@
-"""发布后核对 registry.json 里本次分发的版本。
+"""发布后核对 registry.json 中本次发布的包版本。
 
-publish 与 registry 是两个 job：包已上 PyPI、索引却仍是旧版本的部分成功状态最难排查——
-对发布方看起来成功，对用户却装不到。索引生成之后、push 到 gh-pages 之前，必须确认本次发布的分发在
-索引里的 ``latest`` 就是刚发布的版本，否则宁可让 job 失败，也不要推一份指向旧版本的索引。
+publish 与 registry 是两个 job：包已上 PyPI、索引却仍是旧版本的部分成功状态最难排查。
+此时发布方看到成功，用户却无法安装。索引生成之后、推送至 gh-pages 之前，必须确认本次发布的包在
+索引中的 ``latest`` 为刚发布的版本。若不一致，应使 job 失败，避免推送指向旧版本的索引。
 
-工具只读文件、不 import akaribot，未配置的实例与裸 CI 环境都能运行。
+工具仅读取文件、不导入 akaribot，未配置的实例与未安装 akaribot 的 CI 环境都能运行。
 
 用法：
     python tools/verify_registry_release.py --registry registry.json \\
         --dist akari-bot-module-wiki --version 0.2.0
 
-退出码：0 一致。2 表示索引里找不到该分发，或 latest 与本次版本不符。
+退出码：0 一致。2 表示索引中未找到该包，或 latest 与本次版本不符。
 """
 
 from __future__ import annotations
@@ -50,14 +50,14 @@ def load_registry(path: Path) -> dict[str, Any]:
 
 
 def find_entry(registry: dict[str, Any], dist: str) -> tuple[str, dict[str, Any]]:
-    """在索引里定位分发。
+    """在索引中定位包。
 
-    core 段只承载分发名、版本与 API 版本，条目段才有 ``latest`` 之外的字段，故两处分别找。
+    core 段仅包含包名、版本与 API 版本，条目段才包含 ``latest`` 之外的字段，因此两处分别查找。
 
     :param registry: 索引内容。
-    :param dist: 分发名。
+    :param dist: 包名。
     :return: 二元组——所在段名与该段内容。
-    :raises VerifyError: 索引里没有该分发。
+    :raises VerifyError: 索引中没有该包。
     """
     wanted = canonicalize_name(dist)
     core = registry.get("core")
@@ -74,10 +74,10 @@ def find_entry(registry: dict[str, Any], dist: str) -> tuple[str, dict[str, Any]
 
 
 def verify(registry: dict[str, Any], dist: str, version: str) -> str:
-    """核对索引里该分发的 ``latest`` 是否为本次发布的版本。
+    """核对索引中该包的 ``latest`` 是否为本次发布的版本。
 
     :param registry: 索引内容。
-    :param dist: 分发名。
+    :param dist: 包名。
     :param version: 本次发布的版本。
     :return: 供日志输出的一行结论。
     :raises VerifyError: 版本不一致，或条目缺少 ``latest``。

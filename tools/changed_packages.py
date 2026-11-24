@@ -1,21 +1,21 @@
 """变更检测与选择性构建矩阵。
 
 按 `git diff --name-only <base>..<head>` 的改动清单映射到 workspace 成员，输出 CI 的构建矩阵。
-规格见 generated_docs/monorepo_refactor_tasks.md 的 T6.1：
+规格参见 generated_docs/monorepo_refactor_tasks.md 的 T6.1：
 
     包内文件改动                          → 该分发名进入矩阵
-    core 包（akari-bot-core）改动         → 矩阵取全部成员（full，core 是公共面）
+    core 包（akari-bot-core）改动         → 矩阵使用全部成员（full，core 属于公开接口）
     根 pyproject.toml、uv.lock、tools/**  → 同上（全局变更）
-    其余无法归属到任何包的路径            → 同上（宁可多构建，不可漏构建）
+    其余无法归属到任何包的路径            → 同上（无法归属时按全量构建，避免遗漏）
     仅文档类路径                          → 不进矩阵（如 *.md、generated_docs/**、LICENSE）
 
-成员清单与分发名口径与 tools/lint_versions.py 一致：成员由根 pyproject.toml 的
-[tool.uv.workspace].members 展开，分发名读成员自己的 [project].name，不按目录名推断。
-`--json` 输出的 packages 在 full 为真时同样是全部成员，CI 的 matrix 消费方式无需分支。
+成员清单与包名的判定标准与 tools/lint_versions.py 一致。成员由根目录 pyproject.toml 的
+[tool.uv.workspace].members 展开，包名读取成员自己的 [project].name，不按目录名推断。
+`--json` 输出的 packages 在 full 为 true 时同样是全部成员，CI 使用 matrix 时无需区分。
 
 `--base` 未给出或无法解析时输出全部成员并置 full=true，对应 workflow_dispatch 一类手动触发。
-PR 与 push 事件传入的基准是分支尖端而非共同祖先，故先取 merge-base 再比对：直接两点对比会把
-目标分支自身的改动算成头部的改动（反向误报）。基准是头部祖先时 merge-base 即基准，结果与两点等价。
+PR 与 push 事件传入的基准是分支尖端而非共同祖先，因此先取 merge-base 再比对。直接两点对比会把
+目标分支自身的改动视为头部的改动（反向误报）。基准是头部祖先时 merge-base 即基准，结果与两点等价。
 
 用法：
     uv run python tools/changed_packages.py --base <sha> --json   # PR base / push before
@@ -46,7 +46,7 @@ PACKAGES_ROOT = "packages"
 GLOBAL_FILES = {"pyproject.toml", "uv.lock"}
 GLOBAL_PREFIXES = ("tools/",)
 
-# 文档类路径未包含于任何 wheel 中，亦不构成任何包的测试前提，因此不触发构建。
+# 文档类路径未包含于任何 wheel 中，也不构成任何包的测试前提，因此不触发构建。
 DOC_FILES = {"LICENSE", ".gitignore", ".gitattributes", ".editorconfig", ".pre-commit-config.yaml"}
 DOC_PREFIXES = ("generated_docs/",)
 DOC_SUFFIXES = (".md",)
@@ -64,7 +64,7 @@ class Member:
     """一个 workspace 成员。
 
     :param name: [project].name 书写形式的分发名，即 CI 的构建单元。
-    :param directory: 包目录相对仓库根的 POSIX 路径，无尾斜杠。
+    :param directory: 包目录相对仓库根目录的 POSIX 路径，无尾斜杠。
     """
 
     name: str
@@ -77,7 +77,7 @@ class Matrix:
 
     :param packages: 需要构建的分发名，按包目录排序。full 为真时即全部成员。
     :param full: 是否需要全量构建。
-    :param reasons: 触发全量的触发点与原因，供人类可读输出。
+    :param reasons: 触发全量的触发点与原因，供常规文本输出。
     :param member_files: 分发名到包内改动文件数的映射，仅定向构建时有意义。
     :param doc_files: 判定为无构建影响的文档类路径数。
     :param total_files: 改动路径总数。

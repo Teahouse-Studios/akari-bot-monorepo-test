@@ -1,8 +1,8 @@
-"""净室安装验证：用发布形态的 wheel 验证用户侧安装体验（T6.6）。
+"""干净环境安装验证。使用正式发布的 wheel 验证用户实际安装体验（T6.6）。
 
-workspace 的开发期覆盖会丢弃内部版本约束（`[tool.uv.sources]` 让任何约束都能装上），
-因此必须有一处走“从 wheel 装”的路径：本工具构建全部包，再在全新 venv 里按组合安装，
-最后用 ``PackageRegistry.discover()`` 检查发现结果与兼容性。发布前必跑。
+workspace 在开发阶段的覆盖会丢弃内部版本约束（`[tool.uv.sources]` 让任何约束都能装上），
+因此必须有一处按“从 wheel 安装”的路径验证。本工具构建全部包，再在全新 venv 里按组合安装，
+最后用 ``PackageRegistry.discover()`` 检查发现结果与兼容性。发布前必须运行。
 
 用法：:
 
@@ -120,7 +120,7 @@ def uv_cmd(arguments: list[str], offline: bool) -> list[str]:
     """拼一条 uv 命令。
 
     :param arguments: uv 的子命令与参数。
-    :param offline: 是否只用本地缓存，无外网时用。
+    :param offline: 是否仅使用本地缓存，无外网时用。
     :return: 完整命令行。
     """
     return ["uv", *(["--offline"] if offline else []), *arguments]
@@ -147,9 +147,9 @@ def stage_fresh_wheels(tmp: Path, source: Path | None = None) -> Path:
     """把本次构建的 wheel 复制到临时目录，作为安装时的 find-links 源。
 
     uv 对 ``--find-links`` 的本地 wheel 按来源路径缓存：同一路径上重建的同名同版本 wheel 会命中
-    旧缓存，净室检查因此可能装到上一次的产物（实测把修好的 instance.py 装成了旧内容，检查结果
-    既可能假绿也可能假红）。每次运行时换一个全新目录即可绕开缓存。不封索引，依赖仍走 UV_CACHE_DIR，
-    故离线可用。
+    旧缓存，干净环境检查因此可能安装到上一次的产物（实际运行时曾把修好的 instance.py 安装为旧内容，检查结果
+    既可能虚假通过也可能虚假失败）。每次运行时更换为全新目录即可绕开缓存。索引不封闭，依赖仍通过 UV_CACHE_DIR 获取，
+    因此离线可用。
 
     :param tmp: 本次组合的临时目录。
     :param source: wheel 来源目录。默认为本仓库的 ``dist/``，TestPyPI 演练传下载目录。
@@ -196,7 +196,7 @@ def fetch_url(url: str, attempts: int = 6) -> bytes:
 def download_release_files(index_url: str, manifest_path: Path, output: Path) -> bool:
     """从索引下载一批已发布产物，并按发行清单核验名称与 SHA256。
 
-    这是“从索引取真实文件再安装”的前半段：TestPyPI 演练必须先证明远端文件与本次构建逐字节一致，
+    这是“从索引获取真实文件再安装”的前半段。TestPyPI 演练必须先证明远端文件与本次构建完全一致，
     否则后续安装验证的可能是别的产物。
 
     :param index_url: 索引根地址，如 ``https://test.pypi.org``。
@@ -247,7 +247,7 @@ def verify_local_index(index_url: str) -> bool:
     失败点连同地址写进日志。
 
     :param index_url: 索引根地址。
-    :return: 三跳均可达时为真。
+    :return: 三跳均可达时为 True。
     """
     from urllib.error import HTTPError
 
@@ -291,7 +291,7 @@ def check_index_all_combo(index_url: str, offline: bool = False) -> bool:
     """按索引地址安装本批全部内部分发，验证索引可解析完整集合。
 
     :param index_url: 索引根地址（静态索引或 Warehouse 均可）。
-    :param offline: 是否只用本地缓存。
+    :param offline: 是否仅使用本地缓存。
     :return: 是否通过。
     """
     name = "index-all"
@@ -359,7 +359,7 @@ def check_index_combo(index_url: str, offline: bool = False) -> bool:
     """直接从索引安装典型组合，验证索引本身可用（不借助本地 wheel）。
 
     :param index_url: 索引根地址。
-    :param offline: 是否只用本地缓存。对索引安装无意义，保留以统一签名。
+    :param offline: 是否仅使用本地缓存。对索引安装无意义，保留以统一签名。
     :return: 是否通过。
     """
     name = "index"
@@ -419,7 +419,7 @@ def check_index_combo(index_url: str, offline: bool = False) -> bool:
 def build_all(offline: bool = False) -> bool:
     """构建全部包的 wheel。
 
-    :param offline: 是否只用本地缓存，无外网时用。
+    :param offline: 是否仅使用本地缓存，无外网时用。
     :return: 是否成功。
     """
     if DIST_DIR.exists():
@@ -442,8 +442,8 @@ def check_combo(
     :param name: 组合名，用于输出。
     :param packages: 要安装的包名。
     :param extras: 追加在 core 上的 extras，如 ``[s3]``。
-    :param offline: 是否只用本地缓存，无外网时用。
-    :param source: wheel 来源目录。默认取本仓库 ``dist/``。
+    :param offline: 是否仅使用本地缓存，无外网时用。
+    :param source: wheel 来源目录。默认为本仓库的 ``dist/``。
     :return: 是否通过。
     """
     with tempfile.TemporaryDirectory(prefix="akari-clean-") as tmp:
@@ -513,14 +513,14 @@ def check_combo(
 
 
 def check_cli_combo(offline: bool = False, source: Path | None = None) -> bool:
-    """只装 CLI wheel，跑命令做基本检查，并核对依赖一致性。
+    """仅安装 CLI wheel，运行命令执行基本检查，并核对依赖一致性。
 
-    这条与其它组合不同：CLI 不依赖 core，验证点是“干净环境里 CLI 自己能不能跑起来”，
+    这条与其它组合不同，验证点是“干净环境里 CLI 能否正常启动”，
     安装时缺哪个依赖都会在这里暴露（P1-1 的 click 缺失即此类）。基本检查命令都在临时实例
     目录下执行，不读运行者的真实实例配置。
 
-    :param offline: 是否只用本地缓存，无外网时用。
-    :param source: wheel 来源目录。默认取本仓库 ``dist/``。
+    :param offline: 是否仅使用本地缓存，无外网时用。
+    :param source: wheel 来源目录。默认为本仓库的 ``dist/``。
     :return: 是否通过。
     """
     name = CLI_COMBO

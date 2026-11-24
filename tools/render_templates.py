@@ -1,7 +1,7 @@
-"""渲染校验：用一组占位值渲染 templates/ 下的全部模板，并校验产物语法。
+"""使用一组占位值渲染 templates/ 下的全部模板，并校验产物语法。
 
-模板以 ``.j2`` 后缀存放，ruff 等工具默认不会读取，因此需要本脚本保证模板与渲染契约
-同步：任何一处占位符改名、括号写错或语法错误都会在此暴露。
+模板以 ``.j2`` 后缀存放，ruff 等工具默认不会读取，因此需要本脚本保证模板与接口约定
+同步：任何一处占位符名称修改、括号写错或语法错误都会在此暴露。
 
 用法：
     uv run python tools/render_templates.py
@@ -61,7 +61,7 @@ def fill_placeholders(text: str) -> str:
 
 
 def output_name(name: str) -> str:
-    """模板路径去掉 ``.j2`` 后缀，并把路径占位符替换为样例值。
+    """模板路径移除 ``.j2`` 后缀，并把路径占位符替换为样例值。
 
     :param name: 相对 templates/ 的模板路径。
     :return: 产物路径。
@@ -77,7 +77,7 @@ def template_names() -> list[str]:
 def describe_error(name: str, error: Exception) -> str:
     """把校验异常转成一行可读说明。
 
-    行号只认语法错误自带的 ``lineno``，不使用 ``getattr`` 的默认值：
+    行号仅识别语法错误自带的 ``lineno``，不使用 ``getattr`` 的默认值。
     ``AssertionError`` 等异常继承 ``str.msg``，会把整段说明当成行号打印出来。
 
     :param name: 模板路径。
@@ -92,7 +92,7 @@ def describe_error(name: str, error: Exception) -> str:
 
 
 class RenderError(Exception):
-    """渲染产物不合契约。
+    """渲染产物不符合接口约定。
 
     :param message: 说明文本。
     :param lineno: 产物中的行号，不适用时为 ``None``。
@@ -107,7 +107,7 @@ class RenderError(Exception):
 def unresolved_placeholders(rendered: str) -> list[str]:
     """列出产物中没有被替换掉的占位符。
 
-    语法校验不足以发现漏替换：一个拼错的占位符若出现在字符串里，产物仍是合法的 Python，
+    语法校验不足以发现漏替换。一个拼错的占位符若出现在字符串里，产物仍是合法的 Python，
     会静默交付给模块作者。此处单独把它们找出来。
 
     :param rendered: 渲染并还原后的文本。
@@ -119,7 +119,7 @@ def unresolved_placeholders(rendered: str) -> list[str]:
 def validate_render(name: str, rendered: str, label: str, check) -> None:
     """校验单个渲染产物。
 
-    :param name: 模板路径，用于报错定位。
+    :param name: 模板路径，用于异常定位。
     :param rendered: 渲染并还原后的文本。
     :param label: 产物类型的展示名。
     :param check: 校验函数，语法错误时抛异常。

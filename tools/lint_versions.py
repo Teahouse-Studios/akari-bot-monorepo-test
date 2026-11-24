@@ -1,4 +1,4 @@
-"""内部版本约束一致性检查。
+"""检查 workspace 内部版本约束是否一致。
 
 对 workspace 的每个成员，检查其 [project].dependencies 中指向其它成员的条目：
 
@@ -7,14 +7,14 @@
     V3 warn   指向其它成员的约束钉到了具体版本（== 或 ~=）
     V4 warn   条目无法解析或目标成员无静态版本，跳过该条校验
 
-为什么 uv lock 发现不了：workspace 内部的 [tool.uv.sources] 只在开发期生效，
-uv.lock 记的是 editable 路径，成员写的版本约束被丢弃，uv lock 与 uv sync 都不报错。
+uv lock 无法发现这类问题。workspace 内部的 [tool.uv.sources] 仅在开发阶段生效，
+uv.lock 记录的是 editable 路径，成员声明的版本约束被丢弃，uv lock 与 uv sync 都不报错。
 
 uv build 出的 wheel METADATA 仍原样带着这些约束，用户的解析器会照此拒绝安装。
-本检查补的就是这段空档：约束开发期不生效、发布期才生效，PR 阶段无人比对。
+本检查针对的正是这段未被覆盖的区间。约束在开发阶段不生效、在发布阶段才生效，PR 阶段无人比对。
 
 成员清单由根 pyproject.toml 的 [tool.uv.workspace].members 推导，不硬编码包名。
-第 3 条是关键：core 升大版本时只需一次全局替换加一次 lint 复核，不会有漏网的包。
+第 3 条是关键。core 升大版本时仅需一次全局替换加一次 lint 复核，不会遗漏包。
 
 用法：
     uv run python tools/lint_versions.py                  # 全量检查
@@ -200,7 +200,7 @@ def written_specifier(raw: str) -> str:
 def member_dependencies(member: Member) -> list[Dependency]:
     """读成员的 [project].dependencies，逐条解析为 Requirement。
 
-    解析不了或不是 PEP 508 写法的条目保留为 requirement=None，交由 V4 报告。
+    无法解析或不是 PEP 508 写法的条目保留为 requirement=None，交由 V4 报告。
     optional-dependencies 与 dependency-groups 不在约束内。
     """
     pyproject = PROJECT_ROOT / member.path

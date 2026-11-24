@@ -1,17 +1,17 @@
-"""registry.json 生成。
+"""从各包元数据生成 registry.json 索引。
 
-汇总 workspace 全部包的静态文件，产出 CLI 安装模块所需的在线清单（结构见 tasks 附录 A.3）：
+汇总 workspace 全部包的静态文件，产出 CLI 安装模块所需的在线清单（结构参见 tasks 附录 A.3）：
 
     pyproject.toml       分发名、版本、简介（[project].description）、entry point 名与导入路径
     manifest.toml        requires_core_api、locales 路径、provides_modules，以及可选的平台与分类声明
     locales/<code>.json  ``<entry point 名>.help.desc``，缺失时退回 ``<entry point 名>.help``
     core/registry.py     CORE_API_VERSION，registry 顶层 core.api_version 的取值来源
 
-成员清单与分发名的口径同 tools/lint_versions.py 保持一致：根 pyproject 的 [tool.uv.workspace].members glob
-展开，不硬编码包名。工具只读文件、不 import akaribot，未配置的实例与裸 CI 环境都能运行。
+成员清单与包名的判定标准与 tools/lint_versions.py 一致。根目录 pyproject.toml 的 [tool.uv.workspace].members glob
+展开，不硬编码包名。工具仅读取文件、不导入 akaribot，未配置的实例与未安装 akaribot 的 CI 环境都能运行。
 
 generated_at 默认取 HEAD 提交时间（SOURCE_DATE_EPOCH 与 --generated-at 可覆盖），因此输入未变时两次
-运行的输出逐字节一致，registry.json 的 diff 只反映包元数据的真实变更。
+运行的输出完全一致，registry.json 的 diff 只反映包元数据的真实变更。
 
 用法：
     uv run python tools/build_registry.py                     # 写仓库根的 registry.json
@@ -164,7 +164,7 @@ def package_root(pyproject: Path, import_path: str) -> Path:
     """由 entry point 的导入路径定位包目录。
 
     源码根优先取分发根本身，其次取分发根下的 ``src``——按固定层级拼接会在另一种布局下
-    静默落空或直接报“目录不存在”。
+    无提示地失效或直接报告“目录不存在”。
 
     :param pyproject: 该分发的 pyproject.toml。
     :param import_path: entry point 的导入路径。
@@ -180,9 +180,9 @@ def package_root(pyproject: Path, import_path: str) -> Path:
 
 
 def read_manifest(package_path: str, root: Path) -> dict[str, Any]:
-    """读包内 manifest.toml。缺文件时按运行期口径取全默认值。
+    """读包内 manifest.toml。缺文件时按运行阶段的行为使用全部默认值。
 
-    schema 不认识时直接失败：运行期会退回默认值，生成期必须报出来，否则清单字段会被静默忽略。
+    schema 不认识时直接失败，因为运行阶段会退回默认值，生成阶段必须报告，否则清单字段会被静默忽略。
     """
     manifest_path = root / MANIFEST_FILENAME
     if not manifest_path.is_file():
@@ -303,7 +303,7 @@ def legacy_module_map(package: Package) -> list[str]:
     """旧模块名映射：把提供的模块名的连字符换成下划线，未改名的模块得到同名映射。
 
     旧名按模块目录名书写（``weekly_rss``），现行模块名部分带连字符（``weekly-rss``）。
-    T7.1 的迁移需要旧名到新分发的完整映射，故同名项也保留。
+    T7.1 的迁移需要旧名到新包的完整映射，因此同名项也保留。
     """
     return [name.replace("-", "_") for name in provides(package)]
 
@@ -321,7 +321,7 @@ def manifest_sequences(package: Package) -> dict[str, list[str]]:
 
 
 def wheel_artifact(package: Package, dist_dir: Path, base_url: str | None) -> tuple[str, str]:
-    """在 --dist-dir 下定位该分发本次构建的 wheel，算 sha256 并拼出下载地址。
+    """在 --dist-dir 下定位该包本次构建的 wheel，计算 sha256 并拼接下载地址。
 
     :param package: 目标包。
     :param dist_dir: wheel 所在目录。
@@ -345,7 +345,7 @@ def wheel_artifact(package: Package, dist_dir: Path, base_url: str | None) -> tu
 
 
 def build_entry(package: Package, artifacts: dict[str, tuple[str, str]]) -> dict[str, Any]:
-    """通过包元数据构造 registry 条目，固定键顺序以便逐字节比对。"""
+    """通过包元数据构造 registry 条目，固定键顺序以便比对结果完全一致。"""
     url, sha256 = artifacts.get(canonicalize_name(package.dist), ("", ""))
     entry: dict[str, Any] = {
         "name": package.name,
@@ -429,7 +429,7 @@ def build_registry(
 def source_module_names(package: Package) -> set[str]:
     """AST 扫描包源码里 ``module()`` 注册的名字，支持位置参数与 ``module_name=`` 两种写法。
 
-    名字写成非常量表达式时扫不到，此时会报成“清单声明但源码未注册”，须改为字面量。
+    名字写成非常量表达式时无法扫描到，此时会报成“清单声明但源码未注册”，必须改为字面量。
     """
     found: set[str] = set()
     for path in sorted(package.root.rglob("*.py")):
@@ -568,7 +568,7 @@ def collect_artifacts(
 ) -> tuple[dict[str, tuple[str, str]], list[str]]:
     """按需为每个分发算 wheel 的下载地址与校验和。
 
-    core 不参与：A.3 的 core 段只承载分发名、版本与 API 版本，无处安放产物信息。
+    core 不参与，因为 A.3 的 core 段仅承载包名、版本与 API 版本，不存放产物信息。
 
     :return: 二元组——分发名到（地址， sha256）的映射，以及缺 wheel 的分发名列表。
     """

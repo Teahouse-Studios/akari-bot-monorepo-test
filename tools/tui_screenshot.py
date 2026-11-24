@@ -104,7 +104,7 @@ _DEMO_MODULES = (
     },
 )
 
-# 装载状态决定表格中的“装载”列，未提供时显示为未知，因此演示数据一并提供。
+# “装载”列按装载状态展示，未提供时显示为未知，因此演示数据一并提供。
 _DEMO_LOAD_STATES = {"wiki": True, "mcmod": True, "arcaea": True, "arcaea-rss": False, "bilibili": True}
 
 
@@ -146,7 +146,7 @@ def split_clusters(text: str) -> list[str]:
 def detect_cell_width(svg: str) -> float:
     """从仅包含窄字符的文字片段推算单元格宽度。
 
-    字符宽度由字体决定，随字体不同而变化。单元格宽度按各片段 ``textLength`` 与单元格数之比
+    字符宽度取决于字体，随字体不同而变化。单元格宽度按各片段 ``textLength`` 与单元格数之比
     的中位数推算，避免个别异常片段干扰。
 
     :param svg: Rich 导出的 SVG 文本。

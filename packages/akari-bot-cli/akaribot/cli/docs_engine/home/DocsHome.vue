@@ -90,7 +90,8 @@ function useBrandAsset(key: string, fallback: string) {
     const raw = brand && typeof brand === "object" ? (brand as Record<string, unknown>)[key] : undefined;
     const path = (typeof raw === "string" && raw.trim()) || fallback;
     if (BRAND_EXTERNAL.test(path)) return path;
-    return withBase(path.startsWith("/") ? path : `/${path}`);
+    // 基路径由模板中的 ``asset()`` 拼接，该函数返回的路径不带基路径。若在此再次拼接，项目站点的地址会叠加两层基路径。
+    return path.startsWith("/") ? path : `/${path}`;
   });
 }
 

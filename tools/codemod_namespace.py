@@ -1,7 +1,7 @@
-"""T4.1 命名空间改写：把旧顶层命名空间 core/modules/bots 改写为 akaribot.* 形式。
+"""T4.1 命名空间改写。把旧顶层命名空间 core/modules/bots 改写为 akaribot.* 形式。
 
-import 语句按前缀映射全自动改写。字符串字面量只在命中真实模块路径白名单时改写，
-i18n 文案键与目录名因此不受影响。改动逐条写入仓库根的报告，供人工逐行过目。
+import 语句按前缀映射全自动改写。字符串字面量仅在匹配真实模块路径白名单时改写，
+i18n 文案键与目录名因此不受影响。改动逐条写入仓库根目录的报告，供手动逐行检查。
 
 用法：
     PYTHONPATH=.codemod-deps .venv/bin/python tools/codemod_namespace.py [--dry-run]
@@ -55,7 +55,7 @@ BARE_ROOTS = frozenset({"core", "modules", "bots"})
 # 直接 import 绑定历史根包名，改写后绑定名称变更为 akaribot，引用处必须同步调整，属于人工处理事项。
 IMPORT_MANUAL_HINT = "裸 import 无点号，需人工改写并调整引用"
 
-# i18n 调用上下文中的点分字符串属于文案键，即使与真实模块路径同名亦不执行改写。
+# i18n 调用上下文中的点分字符串属于文案键，即使与真实模块路径同名也不执行改写。
 I18N_CALLEE_NAMES = frozenset({"I18NContext", "t", "gettext", "ngettext", "gettext_lazy"})
 I18N_CALLEE_ATTRS = frozenset({"t", "gettext", "ngettext", "I18NContext"})
 I18N_MANUAL_HINT = "i18n 调用实参且与真实模块路径同名，需确认是文案键还是模块路径"

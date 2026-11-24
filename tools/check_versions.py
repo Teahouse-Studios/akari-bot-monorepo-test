@@ -1,19 +1,19 @@
-"""版本守卫：包内有源码改动但 [project].version 未变则失败。
+"""版本检查。包内有源码改动但 [project].version 未变时，检查判定为失败。
 
 按 `git diff --name-only <base>..<head>` 取改动清单，改动位于哪个包目录内就算哪个包有改动。
 再比对两端 [project].version：有源码改动而版本一字未改即违规，退出码 1
 （规格见 generated_docs/monorepo_refactor_tasks.md 的 T6.2）。
 
-包内 tests/ 与缓存目录不进 wheel，其改动不要求升版本。--strict 把包内任何文件都算作改动。
-包内的 pyproject.toml 改动算改动：依赖与入口点会原样写进 wheel 元数据。
+包内 tests/ 与缓存目录不进入 wheel，其改动不要求升版本。--strict 把包内任何文件都视为改动。
+包内的 pyproject.toml 改动同样按改动处理。依赖与入口点会原样写入 wheel 元数据。
 
 例外：`base..head` 区间内的提交信息里写了独立的 `Skip-Version` trailer 时按声明范围豁免——
-`Skip-Version: true` 豁免全部成员，`Skip-Version: <分发名>[, <分发名>]` 只豁免列出的成员。
+`Skip-Version: true` 豁免全部成员，`Skip-Version: <分发名>[, <分发名>]` 仅豁免列出的成员。
 正文里顺带提到该 token 不算，必须是行首即 token 的独立整行。基准未给出或无法解析为提交时不比对，
 只提示并返回 0，工具自身无法运行时返回 2。
 
-成员清单与分发名的口径同 tools/lint_versions.py 保持一致：成员由根 pyproject.toml 的
-[tool.uv.workspace].members 展开，分发名与版本读成员自己的 [project].name / [project].version。
+成员清单与包名的判定标准与 tools/lint_versions.py 一致。成员由根目录 pyproject.toml 的
+[tool.uv.workspace].members 展开，包名与版本读取成员自己的 [project].name / [project].version。
 
 用法：
     uv run python tools/check_versions.py --base <sha>            # PR base / push before
@@ -47,14 +47,14 @@ MAX_FILES_SHOWN = 8
 
 
 class ConfigError(RuntimeError):
-    """根 pyproject 或成员 pyproject 不满足检查对应的结构要求。"""
+    """根目录的 pyproject.toml 或成员的 pyproject.toml 不满足检查对应的结构要求。"""
 
 
 @dataclass(frozen=True)
 class Member:
     """一个 workspace 成员。
 
-    :param name: [project].name 书写形式的分发名。
+    :param name: [project].name 书写形式的包名。
     :param version: 当前工作树的静态版本。声明为 dynamic 或缺失时为 None。
     :param directory: 包目录的仓库根相对 POSIX 路径，无尾斜杠。
     :param pyproject: 该成员 pyproject.toml 的仓库根相对 POSIX 路径。
@@ -68,14 +68,14 @@ class Member:
 
 @dataclass(frozen=True)
 class Finding:
-    """一个包的守卫结论。
+    """一个包的检查结论。
 
     :param name: 分发名。
     :param base_version: 基准侧的版本。新增包或动态版本时为 None。
     :param head_version: 当前版本。动态版本时为 None。
     :param files: 触发结论的包内改动路径。
     :param conclusion: 结论文本。
-    :param is_violation: 是否为违规（决定退出码）。
+    :param is_violation: 是否为违规（用于确定退出码）。
     """
 
     name: str
@@ -147,10 +147,10 @@ def resolve_commit(ref: str) -> str | None:
 
 
 def resolve_base(base: str, head: str) -> str:
-    """取 base 与 head 的共同祖先。取不到时退回 base 本身。
+    """获取 base 与 head 的共同祖先。无法获取时使用 base 本身。
 
-    取共同祖先是必要的：PR（Pull Request）事件传入的是目标分支尖端，直接两点比对会把目标分支自身的改动
-    算成头部的改动，从而在无关包上报出“有改动未升版本”。基准是头部祖先时结果与两点等价。
+    获取共同祖先是必要的，因为拉取请求（PR）事件传入的是目标分支尖端，直接两点比对会把目标分支自身的改动
+    视为头部的改动，从而在无关包上返回“有改动未升版本”。基准是头部祖先时结果与两点等价。
     """
     try:
         lines = [line for line in git_text(["merge-base", base, head]).splitlines() if line.strip()]
@@ -160,7 +160,7 @@ def resolve_base(base: str, head: str) -> str:
 
 
 def changed_files(base: str, head: str) -> list[str]:
-    """取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。
+    """获取 `git diff --name-only base..head` 的改动路径，形式为相对仓库根目录的 POSIX 路径。
 
     用 NUL 分隔输出，含空格或换行的路径不会被切断。
     """
@@ -171,14 +171,14 @@ def changed_files(base: str, head: str) -> list[str]:
 def skip_commits(base: str, head: str, trailer: str) -> list[tuple[str, str, tuple[str, ...]]]:
     """返回区间内声明了跳过 trailer 的提交。
 
-    只认**独立整行**的 trailer（``Token: 值`` 或 ``Token #值``，行首即 token）：正文里顺带提到
-    的字符串不算声明，否则解释功能的一句话就能关掉整段区间的检查。取值含义见
+    仅识别**独立整行**的 trailer（``Token: 值`` 或 ``Token #值``，行首即 token）。正文里顺带提到
+    的字符串不算声明，否则解释功能的一句话就能关闭整段区间的检查。取值含义参见
     :func:`parse_exemption`。
 
     :param base: 区间起点（含）。
     :param head: 区间终点（含）。
     :param trailer: trailer 的 token，如 ``Skip-Version``。
-    :return: 三元组列表——短 SHA、标题、该提交豁免的分发名元组（空元组表示豁免全部）。
+    :return: 三元组列表——短 SHA、标题、该提交豁免的包名元组（空元组表示豁免全部）。
     """
     output = git_text(["log", "--format=%h%x1f%s%x1f%B%x1e", f"{base}..{head}"])
     hits: list[tuple[str, str, tuple[str, ...]]] = []
@@ -194,7 +194,7 @@ def skip_commits(base: str, head: str, trailer: str) -> list[tuple[str, str, tup
 
 
 def trailer_block(message: str) -> list[str]:
-    """取提交信息的 trailer 段：末尾连续非空行。
+    """获取提交信息的 trailer 段，即末尾的连续非空行。
 
     与 git 的 trailer 约定一致（trailer 必须在最后一段），因此正文中间或缩进的代码块里出现
     同样的字样不会被误认为声明。整段可能为空——末尾是空行时说明该提交没有 trailer。
@@ -211,15 +211,15 @@ def trailer_block(message: str) -> list[str]:
 def parse_exemption(message: str, trailer: str) -> tuple[str, ...] | None:
     """从提交信息的 trailer 段里解析跳过声明。
 
-    ``Token: true`` 豁免全部成员。``Token: <分发名>[, <分发名>]`` 只豁免列出的成员。绑定到具体
-    分发是必要的：一个标记放行整个区间的全部成员时，豁免范围与实际未升版本的包毫无关系。
+    ``Token: true`` 豁免全部成员。``Token: <分发名>[, <分发名>]`` 仅豁免列出的成员。绑定到具体
+    包是必要的，因为一个标记会放行整个区间的全部成员，豁免范围与实际未升版本的包无关。
 
-    只认行首即 token 的独立整行（``Token: 值`` 或 ``Token #值``）：token 前有缩进、或出现在正文
-    中间时都不算，否则解释功能的一句话就能关掉整段区间的检查。
+    仅识别行首即 token 的独立整行（``Token: 值`` 或 ``Token #值``）。token 前有缩进、或出现在正文
+    中间时均不算，否则解释功能的一句话就能关闭整段区间的检查。
 
     :param message: 提交信息全文。
     :param trailer: trailer 的 token。
-    :return: 豁免的分发名元组。空元组表示全部。没有该 trailer 时返回 ``None``。
+    :return: 豁免的包名元组。空元组表示全部。没有该 trailer 时返回 ``None``。
     :raises ConfigError: 出现了 trailer 但取值无法识别——静默忽略会让豁免在毫无提示的情况下失效。
     """
     pattern = re.compile(rf"{re.escape(trailer)}\s*[:#]\s*(.*)$", re.IGNORECASE)
@@ -238,7 +238,7 @@ def parse_exemption(message: str, trailer: str) -> tuple[str, ...] | None:
 
 
 def version_at(commit: str, pyproject: str) -> tuple[bool, str | None]:
-    """读某提交下成员 pyproject 的 [project].version。
+    """读取某提交下成员 pyproject 的 [project].version。
 
     :param commit: 提交 SHA。
     :param pyproject: 成员 pyproject.toml 的仓库根相对 POSIX 路径。
@@ -260,9 +260,9 @@ def is_source_change(member: Member, path: str, strict: bool) -> bool:
     """判定包内某个改动路径是否要求升版本。
 
     :param member: 该路径所属成员。
-    :param path: 仓库根相对 POSIX 路径，须位于成员目录内。
-    :param strict: 为真时包内任何文件都要求升版本。
-    :return: 需要升版本时为真。
+    :param path: 相对仓库根目录的 POSIX 路径，必须位于成员目录内。
+    :param strict: 为 True 时包内任何文件都要求升版本。
+    :return: 需要升版本时为 True。
     """
     if strict:
         return True
@@ -284,7 +284,7 @@ def inspect_member(member: Member, files: list[str], base: str, strict: bool) ->
     :param member: 成员。
     :param files: 区间内该成员目录下的改动路径。
     :param base: 基准提交 SHA。
-    :param strict: 为真时 tests/ 等非发布目录的改动也要求升版本。
+    :param strict: 为 True 时 tests/ 等非发布目录的改动也要求升版本。
     :return: 结论。无需判定（如新增包、动态版本）时返回 None。
     """
     sources = sorted(path for path in files if is_source_change(member, path, strict))

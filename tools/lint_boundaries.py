@@ -1,11 +1,11 @@
-"""import 分层检查。
+"""检查模块包与适配器包之间的 import 分层。
 
 对 monorepo 布局（packages[/<group>]/<dist>/akaribot/{core,modules,adapters}）做 AST 静态检查，
-规格见 generated_docs/monorepo_refactor_tasks.md 的 T4.6（#n 即该节表格的条号）：
+规格参见 generated_docs/monorepo_refactor_tasks.md 的 T4.6（#n 即该节表格的条号）：
 
     B1  warn/error  模块包 import 其它模块包的非 .api 内部路径（#2，packages/modules 下的官方包为 error）
-    B2  error       模块包 import akaribot.adapters.*（#3，平台能力只能经 SessionInfo / Features 声明式获取）
-    B3  error       模块包 import akaribot.core.api.adapters（该面只供适配器使用，T4.7(d)）
+    B2  error       模块包 import akaribot.adapters.*（#3，平台能力仅能通过 SessionInfo / Features 声明式获取）
+    B3  error       模块包 import akaribot.core.api.adapters（该接口仅供适配器使用，T4.7(d)）
     B4  error       akaribot.core.* import akaribot.modules.* 或 akaribot.adapters.*（core 不依赖可能缺席的包）
     B5  error       适配器包 import akaribot.modules.*（适配器不依赖具体模块）
     B6  error       模块包 import 其它模块包，却未在自身 pyproject 的 dependencies 里声明该分发（#1）
@@ -16,15 +16,15 @@
 
 B7 与 B9 不是 import 规则：前者看文件是否存在，后者读 pyproject.toml。命中位置分别是 __init__.py 的
 第 1 行与 entry point 名的定义行，--diff 的改动行范围因此也覆盖 pyproject.toml。B1 与 B10 是两条相互
-独立的规则（#2 与 #7）：官方包的非 .api 跨模块 import 会同时命中两条，规格要求两条并存。
+独立的规则（#2 与 #7）：官方包的非 .api 跨模块 import 会同时触发两条规则，规格要求两条并存。
 
-B8 按被 import 的符号判定，不按模块路径：符号面取 api/__init__.py、api/base.py、api/adapters.py 三处
-__all__ 的字面量并集（AST 解析，不导入 core）。走门面的写法（akaribot.core.api[.*]）一律不报，深路径
-取到门面已承诺的符号也不报 —— 那只是尚未改成门面写法，属于迁移工作，不是本规则的对象。
+B8 按被 import 的符号判定，不按模块路径：导出符号集合取 api/__init__.py、api/base.py、api/adapters.py 三处
+__all__ 的字面量并集（AST 解析，不导入 core）。通过公开接口的写法（akaribot.core.api[.*]）一律不报告，深路径
+读取到公开接口已承诺的符号也不报告。那仅表示尚未改为公开接口写法，属于迁移工作，不属于本规则的范围。
 
 规则 1 与 7 并存：B6 是“用了就得声明”，对扫描到的所有模块包生效。B10 是“官方包不许互相依赖”，
-只约束 packages/modules/ 下的包。B6 把 akaribot.modules.<x> 按源码目录与 entry point 双重索引映射到
-分发名，映射不到的（第三方装进 site-packages）跳过。声明解析支持 `akari-bot-core[s3]` 这类 extra 写法
+仅约束 packages/modules/ 下的包。B6 把 akaribot.modules.<x> 按源码目录与 entry point 双重索引映射到
+分发名，映射不到的（第三方安装到 site-packages）跳过。声明解析支持 `akari-bot-core[s3]` 这类 extra 写法
 与 `>=` / `==` / 直接引用等描述符。`from x import *` 不逐个计名，动态 import（importlib / __import__）
 不产生 ast.Import 节点，均不检查。
 
@@ -262,7 +262,7 @@ def dependency_name(raw: str) -> str | None:
 def find_key_line(text: str, header: str, key: str) -> int:
     """在 TOML 文本里定位某个 section 下某个键的行号，找不到时返回 1。
 
-    tomllib 不提供位置信息，故按文本扫描。entry point 名可能含 '-'，匹配前须转义。
+    tomllib 不提供位置信息，因此按文本扫描。entry point 名可能含 '-'，匹配前必须转义。
     """
     pattern = re.compile(rf"^\s*(?:\"{re.escape(key)}\"|'{re.escape(key)}'|{re.escape(key)})\s*=")
     inside = False
@@ -342,10 +342,10 @@ def extract_all_names(tree: ast.AST) -> set[str]:
 
 
 def source_root(dist_relative: str) -> Path:
-    """分发源码根：优先 ``<dist>/akaribot``，退回 ``<dist>/src/akaribot``。
+    """包源码根目录优先使用 ``<dist>/akaribot``，缺失时回退至 ``<dist>/src/akaribot``。
 
     源码根从 ``<dist>/src/akaribot`` 压成 ``<dist>/akaribot`` 后，按固定层级拼接的路径会静默落空
-    （B8 的符号面会变空、规则不再生效），故两种布局都认。
+    （B8 的导出符号集合会变空、规则不再生效），因此两种布局都认。
 
     :param dist_relative: 分发目录的仓库根相对路径。
     :return: 源码根目录。
@@ -438,9 +438,9 @@ def resolve_relative(node: ast.ImportFrom, package: str) -> str:
 
 
 def resolve_imports(tree: ast.AST, package: str) -> list[ImportRef]:
-    """把文件内的 import 全部归一到绝对点分路径与绑定名。
+    """把文件内的 import 全部规范化为绝对点分路径与绑定名。
 
-    `from a.b import c` 记为 `a.b.c`：c 既可能是子模块也可能是属性，两种情形下“触取了
+    `from a.b import c` 记为 `a.b.c`：c 既可能是子模块也可能是属性，两种情形下“访问了
     a.b 内部”的结论一致。`from … import c as d` 的本地别名不改变被取用的名字 c。
 
     :param tree: 已解析的语法树。
@@ -499,8 +499,8 @@ def check_declared_dependency(
 def check_core_symbol(location: Location, ref: ImportRef, workspace: Workspace) -> list[Violation]:
     """规则 B8：深路径 import 的符号是否在 akaribot.core.api 的承诺面内。
 
-    按符号而非模块路径判定：深路径取到门面已承诺的名字只算尚未迁移写法，不报。符号面为空
-    （core api 缺失或被改坏）时整条规则不生效，避免把所有深路径 import 都刷成告警。
+    按符号而非模块路径判定：深路径读取到公开接口已承诺的名字视为尚未迁移的写法，不报告。导出符号集合为空
+    （core api 缺失或被改坏）时整条规则不生效，避免把所有深路径 import 都产生告警日志。
     """
     if not workspace.core_api_names or ref.symbol == "*" or ref.symbol in workspace.core_api_names:
         return []
@@ -559,7 +559,7 @@ SYS_EXECUTABLE_EXEMPT_SEGMENTS = ("/tests/",)
 def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violation]:
     """规则 B11：CLI 包内不得用 sys.executable 启动实例进程。
 
-    Nuitka onefile 冻结后 sys.executable 指向 CLI 二进制自身，用它启动实例进程会重新调起 CLI
+    Nuitka onefile 冻结后 sys.executable 指向 CLI 二进制自身，用它启动实例进程会重新启动 CLI
     而不是 Python。启动实例一律经 ``Instance.python``（实例 venv 解释器或系统 Python）。
 
     :param location: 文件位置。
@@ -620,7 +620,7 @@ def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool,
 def check_namespace_pollution(paths: list[Path], workspace: Workspace) -> list[Violation]:
     """规则 B7：akaribot 命名空间根与 modules、adapters 分层目录不得含 __init__.py。
 
-    只认分发源码根下的路径（<dist>/src/akaribot 或平铺布局的 <dist>/akaribot），
+    仅识别包源码根目录下的路径（<dist>/src/akaribot 或平铺布局的 <dist>/akaribot），
     以免把 tests/fixtures 下的同名目录误判成命名空间污染。命中位置固定为第 1 行：
     违规事实是文件存在，而不是某一行的内容。
     """

@@ -1,6 +1,6 @@
 """由本地产物目录生成 PEP 503 静态索引，用于不依赖外部仓库的全量安装验证。
 
-TestPyPI 对新项目有窗口配额，57 个分发无法在一天内建齐。本工具把 ``dist/`` 建成一个静态
+TestPyPI 对新项目设有窗口配额，当前仓库的全部包无法在一天内创建完成。本工具把 ``dist/`` 建成一个静态
 ``/simple/`` 索引，配合 ``python -m http.server`` 即可让 uv/pip 按索引地址安装，验证与真实仓库
 相同的解析、下载、元数据链路，且不消耗任何外部配额。
 
@@ -9,8 +9,8 @@ TestPyPI 对新项目有窗口配额，57 个分发无法在一天内建齐。�
     python tools/build_local_index.py --dist-dir dist --output local-index
     python tools/build_local_index.py --dist-dir dist --output local-index --serve 8123
 
-``--serve`` 用构建进程自身起 ``http.server``，服务根即刚生成的索引目录。CI 里以它作后台服务，
-不必再用 ``python -m http.server --directory`` 另起进程（相对路径会随工作目录漂移）。
+``--serve`` 由构建进程自身启动 ``http.server``，服务根目录即刚生成的索引目录。CI 里以它作后台服务，
+不必再用 ``python -m http.server --directory`` 另起进程（相对路径会随工作目录变动而指向其他目录）。
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _ensure_utf8_stdout() -> None:
 
 
 def file_identity(path: Path) -> tuple[str, str]:
-    """返回产物的规范化分发名与版本。
+    """返回产物的规范化包名与版本。
 
     :param path: wheel 或 sdist 路径。
     :return: ``(规范化名, 版本)``。

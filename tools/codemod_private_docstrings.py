@@ -1,9 +1,9 @@
 """删去非公开符号上的 docstring，并把其中的说明上提为行注释。
 
-规范要求 docstring 只出现在公开 API 上：私有函数、私有类与模块内部实现不需要 docstring，
+规范要求 docstring 仅出现在公开 API 上。非公开函数、非公开类与模块内部实现不需要 docstring，
 它们的“为什么”由行注释承担（参见 `docs/agents/conventions.md` 的“注释”一节）。
 本工具按该规范机械处理，并把 docstring 里**除首行概括与 `:param:` / `:return:` 之外**的散文
-上提为行注释——那些内容往往正是只看代码看不出来的约束，直接删掉会丢信息。
+上提为行注释，那些内容通常正是仅查看代码无法看出的约束，直接删除会丢失信息。
 
 保留不动的：模块级 docstring、`test_*` 入口的 docstring（测试框架把它作为 `DOC:` 输出）、
 以及名字不以 `_` 开头的符号。
@@ -38,7 +38,7 @@ DUNDER_PATTERN = re.compile(r"^__\w+__$")
 def is_private(name: str) -> bool:
     """该名字是否属于非公开 API。
 
-    双下划线方法（``__init__``、``__str__``、``__getattr__``）实现的是语言协议，是公开面的一部分，
+    双下划线方法（``__init__``、``__str__``、``__getattr__``）实现的是语言协议，属于公开接口的一部分，
     不算非公开 API。
 
     :param name: 符号名。
@@ -110,7 +110,7 @@ def prose_lines(text: str) -> list[str]:
 
 
 def plan_file(path: Path) -> FilePlan:
-    """算出一个文件的改写方案。
+    """计算一个文件的改写方案。
 
     :param path: 源码文件。
     :return: 改写计划。

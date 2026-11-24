@@ -1,7 +1,7 @@
-"""注释书面语检查。
+"""检查行注释是否使用书面语。
 
-按 generated_docs/monorepo_refactor_prep.md §8 的规则，对本仓库的行注释做可机械判定的检查。
-既有违规记录在 tools/comment_lint_baseline.txt 中豁免，检查只对新增与修改的行生效。
+按 generated_docs/monorepo_refactor_prep.md §8 的规则，对本仓库的行注释执行可机械判定的检查。
+既有违规记录在 tools/comment_lint_baseline.txt 中豁免，检查仅对新增与修改的行生效。
 
 用法：
     uv run python tools/lint_comments.py                    # 检查全部文件，仅报基准外违规
@@ -150,7 +150,7 @@ RULE_LEVELS = {
 class Violation:
     """一处注释违规。
 
-    :param path: 相对仓库根的 POSIX 路径。
+    :param path: 相对仓库根目录的 POSIX 路径。
     :param line: 行号，从 1 开始。
     :param rule: 规则编号。
     :param text: 违规的注释文本，已去除首尾空白。
@@ -229,9 +229,9 @@ def is_checkable(comment: str) -> bool:
 
 
 def prose_for_spacing(text: str) -> str:
-    """去掉代码记号，只留下需要按中文排版检查的散文部分。
+    """移除代码记号，仅保留需要按中文排版检查的散文部分。
 
-    行内代码、URL 与模板占位符不是句子成分：`` `config/` `` 前后不加空格是既有排版，
+    行内代码、URL 与模板占位符不是句子成分。`` `config/` `` 前后不加空格是既有排版，
     ``${name}`` 与链接同理。
 
     :param text: 注释或 docstring 正文。
@@ -244,9 +244,9 @@ def prose_for_spacing(text: str) -> str:
 
 
 def check_prose(path: str, line: int, body: str) -> list[Violation]:
-    """规则 8~10：变更叙述、半角标点与中英文间距。
+    """规则 8 至 10 涵盖变更叙述、半角标点与中英文间距。
 
-    :param path: 仓库根相对路径。
+    :param path: 仓库根目录相对路径。
     :param line: 行号。
     :param body: 注释或 docstring 的正文。
     :return: 违规列表。
@@ -292,7 +292,7 @@ def check_comment(path: str, line: int, comment: str) -> list[Violation]:
 def is_private_symbol(name: str) -> bool:
     """该符号是否属于非公开 API。
 
-    双下划线方法实现的是语言协议（``__init__``、``__str__``、``__getattr__``），属公开面，
+    双下划线方法实现的是语言协议（``__init__``、``__str__``、``__getattr__``），属于公开接口，
     与模块内部的 ``_helper`` 不同。
 
     :param name: 符号名。
@@ -305,7 +305,7 @@ def extract_docstrings(source: str) -> dict[int, tuple[str, bool]]:
     """抽取模块、类与函数的 docstring，按起始行号索引。
 
     “只描述当前状态”与中文排版同时约束 docstring——规范面向的是全部书面说明，不只是行注释。
-    同时标出该符号是否非公开（名字以 ``_`` 开头）：非公开符号不该有 docstring，其说明归行注释。
+    同时标出该符号是否非公开（名字以 ``_`` 开头）。非公开符号不应有 docstring，其说明归行注释。
 
     :param source: 文件源码。
     :return: 起始行号到 ``(正文, 是否非公开)`` 的映射。
@@ -333,7 +333,7 @@ def extract_docstrings(source: str) -> dict[int, tuple[str, bool]]:
 def check_docstring(path: str, line: int, text: str) -> list[Violation]:
     """对 docstring 逐行施加规则 1~4、8~10。
 
-    :param path: 仓库根相对路径。
+    :param path: 仓库根目录相对路径。
     :param line: docstring 起始行号。
     :param text: docstring 正文。
     :return: 违规列表。
@@ -408,7 +408,7 @@ def load_baseline() -> set[str]:
 
 
 def changed_lines(base_ref: str) -> set[tuple[str, int]]:
-    """取 `git diff <base_ref>` 中新增或修改的行号集合。
+    """获取 `git diff <base_ref>` 中新增或修改的行号集合。
 
     :param base_ref: 比较基准，如 `HEAD~1` 或提交 SHA。
     :return: (POSIX 路径， 行号) 集合。diff 失败时返回空集，调用方应回退到全量检查。
