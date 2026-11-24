@@ -27,8 +27,6 @@ ADAPTER = ModuleRecord(
     name="telegram", dist="akari-bot-adapter-telegram", version="0.1.0", summary="", state="available"
 )
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "akaribot.modules.json"
-
 
 def _use_cli_locale() -> None:
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")

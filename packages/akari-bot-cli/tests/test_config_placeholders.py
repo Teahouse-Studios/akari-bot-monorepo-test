@@ -21,7 +21,7 @@ from akaribot.cli import i18n
 from akaribot.cli.commands import config as config_command
 from akaribot.testing import Tester, func_case
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_placeholders.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "config_placeholders.json"
 _KEEP_ALIVE: list[TemporaryDirectory] = []
 
 PAYLOAD = {

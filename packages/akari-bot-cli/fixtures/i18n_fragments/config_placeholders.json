@@ -1,0 +1,9 @@
+{
+  "cli.config.placeholders.column_placeholder": "待填写",
+  "cli.config.placeholders.column_table": "配置表",
+  "cli.config.placeholders.column_total": "总项数",
+  "cli.config.placeholders.failed_line": "未统计 ${count} 张表：${detail}",
+  "cli.config.placeholders.help": "统计各表的待填写占位符（core 判定）",
+  "cli.config.placeholders.none": "无可统计的配置表",
+  "cli.config.placeholders.table_title": "待填写占位符：共 ${count} 项，${tables} 张表"
+}

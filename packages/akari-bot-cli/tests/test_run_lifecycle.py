@@ -24,7 +24,7 @@ from akaribot.cli.main import app
 from akaribot.testing import Tester, func_case
 
 # 运行页新增的文案键尚未并入包内语言文件时，用例从此处合并一份，以便检查时能比对到真实文案。
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_run.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "config_run.json"
 
 # 模拟实例进程会获取锁、写入进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
 FAKE_BOT = """#!/usr/bin/env python3

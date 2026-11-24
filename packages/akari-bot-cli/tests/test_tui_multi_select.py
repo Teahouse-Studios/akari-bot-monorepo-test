@@ -1,7 +1,6 @@
 """模块页的鼠标与键盘多选、批量操作及卸载确认测试。"""
 
 import time
-from pathlib import Path
 from unittest import mock
 
 from akaribot.cli import i18n
@@ -16,8 +15,6 @@ RECORDS = [
     ModuleRecord(name="charlie", dist="akari-bot-module-charlie", version="0.9.0", state="available"),
     ModuleRecord(name="delta", dist="akari-bot-module-delta", version="0.9.0", state="available"),
 ]
-
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "akaribot.modules.json"
 
 
 def _use_cli_locale() -> None:

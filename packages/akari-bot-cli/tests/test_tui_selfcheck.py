@@ -39,7 +39,7 @@ INJECTED_ERROR = "注入的取数异常"
 NO_PREFETCH = ("misc",)
 # 模块页首次加载发生在导航循环前，不计入导航请求顺序。
 PRELOADED = ("modules",)
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "tui_selfcheck.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "tui_selfcheck.json"
 _KEEP_ALIVE: list[tempfile.TemporaryDirectory] = []
 
 

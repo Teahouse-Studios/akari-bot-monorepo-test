@@ -1,0 +1,19 @@
+{
+  "cli.tui.app.help_nav": "↑/↓ 选择页面，Enter 打开页面或折叠分组，←/→ 折叠或展开分组，? 打开帮助，Esc 取消或返回，q 退出，Ctrl+←/→ 切换页面。",
+  "cli.tui.app.help_purpose": "本页用途：${purpose}",
+  "cli.tui.nav.blurb.adapters": "平台适配器与实例",
+  "cli.tui.nav.blurb.config": "配置表与文本",
+  "cli.tui.nav.blurb.dashboard": "实例与服务状态",
+  "cli.tui.nav.blurb.database": "数据库表与数据项",
+  "cli.tui.nav.blurb.dev": "测试与脚手架",
+  "cli.tui.nav.blurb.doctor": "端口与登录信息检查",
+  "cli.tui.nav.blurb.environment": "运行库与解释器",
+  "cli.tui.nav.blurb.logs": "日志筛选与跟踪",
+  "cli.tui.nav.blurb.misc": "旧项目迁移",
+  "cli.tui.nav.blurb.modules": "模块安装、卸载与装载",
+  "cli.tui.nav.blurb.run": "实例启动、停止及状态",
+  "cli.tui.nav.group.data": "环境与数据",
+  "cli.tui.nav.group.dev": "开发与迁移",
+  "cli.tui.nav.group.platform": "配置与平台",
+  "cli.tui.nav.group.runtime": "概览与运行"
+}

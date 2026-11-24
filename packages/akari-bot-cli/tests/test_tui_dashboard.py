@@ -50,7 +50,7 @@ SNAPSHOT = DashboardSnapshot(
 # 页底按钮按 ButtonFlow 的排列顺序列出。
 BUTTON_IDS = ("switch", "add-menu", "remove-instance", "service-menu", "refresh")
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dashboard.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "dashboard.json"
 _KEEP_ALIVE: list[TemporaryDirectory] = []
 
 
@@ -1747,7 +1747,7 @@ async def _test_setup_estimated_placeholders_are_labelled():
         rows[i18n.t(estimated_key)]
         == i18n.t("cli.tui.dashboard.setup_placeholders_value_note", count=31, reason=reason)
         and i18n.t("cli.tui.dashboard.setup_placeholders_label") not in rows
-        and "疑似待填写" in fragment[estimated_key]
+        and "待填写" in fragment[estimated_key]
         and "估算" in fragment[estimated_key]
         and "估算" in fragment["cli.tui.dashboard.setup_placeholders_estimated_reason"]
     )

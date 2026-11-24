@@ -46,7 +46,7 @@ RAW = {
     "empty_table": "",
 }
 
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_run.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "config_run.json"
 
 
 def _use_cli_locale() -> None:

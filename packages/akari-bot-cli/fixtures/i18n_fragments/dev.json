@@ -1,0 +1,7 @@
+{
+  "cli.tui.dev.action_focus_output": "查看输出",
+  "cli.tui.dev.output_empty": "暂无输出",
+  "cli.tui.dev.output_paused": "已暂停自动滚动，按 End 返回末尾",
+  "cli.tui.dev.output_title": "操作输出（${count} 行）",
+  "cli.tui.dev.status_next_step": "按 o 查看完整输出"
+}

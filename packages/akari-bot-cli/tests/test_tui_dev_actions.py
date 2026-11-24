@@ -33,7 +33,7 @@ TEST_OUTPUT = ("collected 3 items", "3 passed")
 FAILED_OUTPUT = ("collected 2 items", "1 failed", "AssertionError: boom")
 LONG_OUTPUT = tuple(f"用例行 {index:03d}" for index in range(1, 201))
 FOLLOW_OUTPUT = tuple(f"line {index:03d}" for index in range(1, 41))
-FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "dev.json"
+FRAGMENT = Path(__file__).resolve().parents[1] / "fixtures" / "i18n_fragments" / "dev.json"
 # 使用独立命名空间，避免其他测试重新发布语言快照后覆盖本用例的固定文案。
 LOCALE_NAMESPACE = "akaribot-cli-dev-actions"
 PAGE_CONTROLS = (

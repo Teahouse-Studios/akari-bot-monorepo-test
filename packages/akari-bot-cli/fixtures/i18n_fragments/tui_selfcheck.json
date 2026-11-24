@@ -1,0 +1,11 @@
+{
+  "cli.tui_cmd.self_check_blocked": "诊断未通过：${failures} 项失败，${skipped} 项未执行，${warnings} 项警告",
+  "cli.tui_cmd.headless_first_ok": "无终端检查（概览页）：80×24 下默认首屏为 ${page}，关键控件 ${widgets} 已挂载，焦点正常",
+  "cli.tui_cmd.headless_first_focus_bad": "概览页首屏缺少焦点",
+  "cli.tui_cmd.headless_first_widgets_bad": "概览页缺少关键控件：${missing}",
+  "cli.tui_cmd.headless_modules_ok": "无终端检查（模块页）：80×24 下显示 ${rows} 行模块记录，数据源 list 调用 ${calls} 次",
+  "cli.tui_cmd.headless_modules_empty": "无终端检查（模块页）：数据源 list 调用 ${calls} 次，当前实例无模块记录",
+  "cli.tui_cmd.headless_modules_uncalled": "无终端检查（模块页）：未读取数据，数据源 list 调用 ${calls} 次（-1 表示未提供计数）",
+  "cli.tui_cmd.headless_page_bad": "无终端检查：当前页面为 ${page}，期望为 ${expected}",
+  "cli.tui_cmd.headless_summary": "样式表 ${origin}，${lines} 行，sha256 ${sha256}，启动 ${startup} ms，首帧 ${first_paint} ms，总耗时 ${ms} ms"
+}
