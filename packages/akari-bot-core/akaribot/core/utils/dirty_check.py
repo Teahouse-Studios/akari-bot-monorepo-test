@@ -40,7 +40,7 @@ def hash_hmac(key, code):
 
 
 def split_text(text: str, size: int = TEXT_CHUNK_SIZE) -> list[str]:
-    """把文本按 size 切块，尽量在标点/换行处断开，避免切断关键词。"""
+    """将文本按 size 分块，优先在标点或换行处断开，避免截断关键词。"""
     if not text:
         return [""]
     if len(text) <= size:
@@ -52,7 +52,7 @@ def split_text(text: str, size: int = TEXT_CHUNK_SIZE) -> list[str]:
     while start < n:
         end = min(start + size, n)
         if end < n:
-            # 向后最多回退 50 字符找一个自然断点
+            # 向后最多回退 50 个字符以寻找自然断点。
             for back in range(0, 50):
                 cand = end - back
                 if cand <= start:
@@ -123,7 +123,7 @@ def parse_data(original_content: str, result: dict, confidence: float = 60, addi
             for match in re.finditer(re.escape(word), content):
                 start, end = match.start(), match.end()
 
-                # 命中 AT / KE / I18N 结构部分时跳过，或与已替换区间重叠时跳过
+                # 命中 AT / KE / I18N 结构部分时跳过，或与已替换区间重叠时跳过。
                 if is_protected(protected_intervals, start, end):
                     continue
                 if any(start < re_end and end > re_start for re_start, re_end in replaced_intervals):
@@ -223,7 +223,7 @@ async def _check_aliyun(texts: list[str], confidence: float = 60) -> list[dict]:
         if use_textscan_v1:
             url = "/green/text/scan"
             root = "https://green.cn-shanghai.aliyuncs.com"
-            # 单条 task 最多检测 10000 字符，超出会被接口拒绝。
+            # 单个任务最多检测 10000 个字符，超出上限会被接口拒绝。
             split_results: dict[str, list[tuple[int, dict]]] = {x: [] for x in call_api_list_}
             chunks_by_text = {x: split_text(x, TEXTSCAN_V1_CHUNK_SIZE) for x in call_api_list_}
             chunk_map: dict[str, list[tuple[str, int]]] = {}

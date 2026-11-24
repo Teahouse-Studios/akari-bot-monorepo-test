@@ -11,7 +11,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    # s3 extra 依据 plan:498 / tasks:1382。core/utils/s3.py 采用惰性导入，该 extra 因此可用（T4.2 §6）
+    # s3 extra 依据 plan:498 / tasks:1382。core/utils/s3.py 采用按需导入，该 extra 因此可用（T4.2 §6）。
     "akari-bot-core[s3]>=0.1.0,<1.0",
     "attrs>=26.1.0",
     "qq-botpy-sdk==2.3.0",

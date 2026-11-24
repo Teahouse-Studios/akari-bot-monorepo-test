@@ -37,7 +37,7 @@ async def _test_process_usage_lines_use_status_keys():
     if len(lines) != 2:
         return False
     usage_line, failure_line = lines
-    # 语言键缺失时会改用键名或提示，故一律检查不含 "core.message"。
+    # 语言键缺失时会改用键名称或提示，因此一律检查不包含 "core.message"。
     return (
         "core.message" not in usage_line
         and "12" in usage_line
@@ -57,7 +57,7 @@ async def _test_process_usage_lines_absent_without_data():
 
 @func_case
 async def test_status(tester: Tester):
-    """status: Markdown 能力选择代码块或纯文本。"""
+    """status 模块根据 Markdown 支持情况选择代码块或纯文本。"""
     await tester.test(_test_process_usage_lines_use_status_keys, "status 进程行本地化测试")
     await tester.test(_test_process_usage_lines_absent_without_data, "status 无进程数据静默测试")
     return tester

@@ -26,7 +26,7 @@ from akaribot.cli.tui.misc import MiscPage
 from akaribot.cli.tui.modules import ModuleSource, ModulesPage, SubprocessModuleSource
 from akaribot.cli.tui.run import RunPage
 
-# key 同时用于控件 id（page-<key> / nav-<key>），第二项是侧栏标题的文案键。
+# key 同时用于控件 id（page-<key> / nav-<key>），第二项为侧边栏标题的文案键。
 PAGES: tuple[tuple[str, str, type], ...] = (
     ("dashboard", "cli.tui.nav.dashboard", DashboardPage),
     ("environment", "cli.tui.nav.environment", EnvironmentPage),
@@ -42,7 +42,7 @@ PAGES: tuple[tuple[str, str, type], ...] = (
     ("misc", "cli.tui.nav.misc", MiscPage),
 )
 
-# 侧栏分组同时决定阅读顺序与键盘翻页顺序。
+# 侧边栏分组同时控制阅读顺序与键盘翻页顺序。
 NAV_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("cli.tui.nav.group.runtime", ("dashboard", "run", "logs", "doctor")),
     ("cli.tui.nav.group.platform", ("config", "adapters", "modules")),
@@ -50,7 +50,7 @@ NAV_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("cli.tui.nav.group.dev", ("dev", "docs", "misc")),
 )
 
-# 页面用途说明显示在快捷键帮助中。
+# 页面用途说明展示于快捷键帮助中。
 PAGE_BLURB: dict[str, str] = {
     "dashboard": "cli.tui.nav.blurb.dashboard",
     "environment": "cli.tui.nav.blurb.environment",
@@ -66,7 +66,7 @@ PAGE_BLURB: dict[str, str] = {
     "misc": "cli.tui.nav.blurb.misc",
 }
 
-# 分组标题参与侧栏索引，页面按 NAV_GROUPS 顺序排列。
+# 分组标题参与侧边栏索引，页面按照 NAV_GROUPS 顺序排列。
 NAV_PLAN: tuple[tuple[str, str], ...] = tuple(
     item
     for group_key, page_keys in NAV_GROUPS
@@ -75,12 +75,12 @@ NAV_PLAN: tuple[tuple[str, str], ...] = tuple(
 
 
 def _nav_position(key: str) -> int:
-    # 侧栏包含分组标题，索引需按 NAV_PLAN 计算。
+    # 侧边栏包含分组标题，索引需要按照 NAV_PLAN 计算。
     return next((position for position, entry in enumerate(NAV_PLAN) if entry == ("page", key)), 0)
 
 
 def _group_position(position: int) -> int:
-    # 返回条目所属分组标题在 NAV_PLAN 中的下标，分组标题返回自身。
+    # 返回条目所属分组标题在 NAV_PLAN 中的索引，分组标题则返回自身。
     return next(index for index in range(position, -1, -1) if NAV_PLAN[index][0] == "group")
 
 
@@ -94,19 +94,19 @@ def _group_label(group_key: str, collapsed: bool) -> str:
 
 
 class _NavList(compat.ListView):
-    # 左右键沿用树形导航习惯：在页面条目上按左键同样折叠其所属分组。
+    # 方向左右键沿用树形导航交互习惯，在页面条目上按向左键同样折叠其所属分组。
     BINDINGS = compat.bindings(
         ("left", "fold_group", i18n.t("cli.tui.app.bind_fold_group"), False),
         ("right", "unfold_group", i18n.t("cli.tui.app.bind_unfold_group"), False),
     )
 
     def action_fold_group(self) -> None:
-        """键位动作：折叠高亮条目所属的分组。"""
+        """折叠高亮条目所属分组的键位动作。"""
         if self.index is not None:
             self.app.set_nav_group(self.index, collapsed=True)
 
     def action_unfold_group(self) -> None:
-        """键位动作：展开高亮的分组标题。"""
+        """展开高亮分组标题的键位动作。"""
         if self.index is not None and NAV_PLAN[self.index][0] == "group":
             self.app.set_nav_group(self.index, collapsed=False)
 
@@ -190,18 +190,18 @@ class TuiApp(compat.App[int]):
     :param boot_note: 界面启动时显示的通知内容。
     """
 
-    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    # 文案在类定义时解析，因为 main.py 的 --lang 早于界面模块导入，更改语言后必须重启进程。
     TITLE = i18n.t("cli.tui.app.title")
     SUB_TITLE = i18n.t("cli.tui.app.subtitle")
     CSS = STYLESHEET
     ENABLE_COMMAND_PALETTE = False
-    # 页面快捷键由各页声明，防止应用级绑定触发隐藏页面的操作。
+    # 页面快捷键由各个页面独立声明，防止应用级绑定触发隐藏页面的操作。
     BINDINGS = compat.bindings(
         ("q", "quit", i18n.t("cli.tui.app.bind_quit")),
         ("ctrl+q", "quit", i18n.t("cli.tui.app.bind_quit")),
         ("question_mark", "show_help", i18n.t("cli.tui.app.bind_help")),
         ("ctrl+t", "toggle_theme", i18n.t("cli.tui.app.bind_toggle_theme"), False),
-        # 页脚空间有限，页面切换快捷键仅在帮助中显示。
+        # 页脚空间有限，页面切换快捷键仅在帮助界面中展示。
         ("ctrl+right", "next_page", i18n.t("cli.tui.app.bind_next_page"), False),
         ("ctrl+left", "previous_page", i18n.t("cli.tui.app.bind_previous_page"), False),
     )
@@ -220,7 +220,7 @@ class TuiApp(compat.App[int]):
         # 首次解析样式表前必须注册主题，以提供 $primary 等变量。
         compat.install_akari_themes(self)
         self.module_source: ModuleSource = source if source is not None else SubprocessModuleSource()
-        # 数据源支持注入，以便在无头测试中隔离子进程。
+        # 数据源支持依赖注入，以便在无界面测试中隔离子进程。
         self.sources: dict[str, Any] = dict(sources or {})
         self.cache_ttl = cache_ttl
         self.boot_note = boot_note
@@ -231,18 +231,18 @@ class TuiApp(compat.App[int]):
         self.first_paint_ms: float = 0.0
         self._quit_confirming = False
         self._quit_gate = compat.PendingConfirm()
-        # 折叠状态仅在本次会话内有效，切换实例不重建侧栏，状态随之保留。
+        # 折叠状态仅在当前会话内有效，切换实例不重建侧边栏，相关状态随之保留。
         self._collapsed_groups: set[str] = set()
         self._boot_started_at = boot_started_at if boot_started_at is not None else time.monotonic()
 
     def _instance_label(self) -> str:
-        # 名称优先采用注册表记录，未记录时使用目录名。
+        # 实例名称优先采用注册表记录，未记录时使用目录名称。
         root = self.instance_root or context.active_root()
         if root is None:
             return i18n.t("cli.tui.app.instance_unknown")
         try:
             entry = InstanceRegistry().find_by_root(Path(root))
-        except Exception:  # noqa: BLE001 - 注册表不可用时退回路径名
+        except Exception:  # noqa: BLE001 - 注册表不可用时回退至路径名称。
             entry = None
         if entry is not None and entry.name:
             return entry.name
@@ -261,11 +261,11 @@ class TuiApp(compat.App[int]):
         return names
 
     def action_next_page(self) -> None:
-        """键位动作：切到下一个页面。"""
+        """切换至下一页面的键位动作。"""
         self._step_page(1)
 
     def action_previous_page(self) -> None:
-        """键位动作：切到上一个页面。"""
+        """切换至上一页面的键位动作。"""
         self._step_page(-1)
 
     def _step_page(self, delta: int) -> None:
@@ -274,7 +274,7 @@ class TuiApp(compat.App[int]):
         self.show_page(keys[(index + delta) % len(keys)])
 
     def action_show_help(self) -> None:
-        """键位动作：列出当前页与全局键位。"""
+        """列出当前页与全局键位的键位动作。"""
         page = self.query_one(f"#page-{self.active_page}")
         rows: list[tuple[str, str]] = []
         seen: set[str] = set()
@@ -301,7 +301,7 @@ class TuiApp(compat.App[int]):
         return "cli.tui.app.title"
 
     def action_toggle_theme(self) -> None:
-        """键位动作：在品牌深色与浅色主题之间切换。"""
+        """在品牌深色与浅色主题之间切换的键位动作。"""
         chosen = compat.toggle_akari_theme(self)
         name = i18n.t("cli.tui.app.theme_dark" if chosen == compat.AKARI_THEME_DARK else "cli.tui.app.theme_light")
         compat.notify(
@@ -312,7 +312,7 @@ class TuiApp(compat.App[int]):
         )
 
     def compose(self) -> compat.ComposeResult:
-        """装配侧栏与全部页面。"""
+        """装配侧边栏与全部页面。"""
         yield compat.Header()
         with compat.Horizontal(id="shell"):
             yield _NavList(*self._nav_items(), id="nav")
@@ -322,7 +322,7 @@ class TuiApp(compat.App[int]):
         yield compat.Footer()
 
     def _nav_items(self) -> list[compat.ListItem]:
-        # 分组标题可高亮，选中时折叠或展开本组，不切换页面。
+        # 分组标题支持高亮，选中时折叠或展开对应分组，不切换页面。
         items: list[compat.ListItem] = []
         for position, (kind, value) in enumerate(NAV_PLAN):
             if kind == "group":
@@ -347,7 +347,7 @@ class TuiApp(compat.App[int]):
             module_source = source if source is not None else self.module_source
             page = page_class(module_source, cache_ttl=self.cache_ttl, id=f"page-{key}")
         elif key == "dashboard":
-            # 概览页另有实例清单与服务控制两个数据源，键为 dashboard_instances / dashboard_service。
+            # 概览页另有实例清单与服务控制双数据源，键为 dashboard_instances / dashboard_service。
             instances = self.sources.get("dashboard_instances")
             control = self.sources.get("dashboard_service")
             page = page_class(
@@ -361,7 +361,7 @@ class TuiApp(compat.App[int]):
             page = page_class(id=f"page-{key}")
         else:
             page = page_class(source, id=f"page-{key}")
-        # 各页自行声明 __init__ 签名（不接受 classes），故样式类在此追加。
+        # 各页面自行声明 __init__ 签名（不接受 classes），因此样式类在此追加。
         page.add_class("page")
         # 统一保护渲染入口，避免异步读取在页面卸载后访问控件。
         compat.guard_renders(page)
@@ -410,11 +410,11 @@ class TuiApp(compat.App[int]):
         self.show_page(self.initial_page)
         self._announce_boot_note()
         self.call_after_refresh(self._mark_first_paint)
-        # Textual 的默认聚焦发生在挂载后，页面焦点需在首帧之后设置。
+        # Textual 的默认聚焦发生在挂载后，页面焦点需要在首帧之后设置。
         self.call_after_refresh(self.focus_active_page)
 
     def _announce_boot_note(self) -> None:
-        # 启动信息通过通知显示，以支持任意初始页面。
+        # 启动信息通过应用通知展示，以支持任意初始页面。
         if not self.boot_note:
             return
         compat.notify(self, self.boot_note, title=i18n.t("cli.tui.app.boot_note_title"))
@@ -423,19 +423,19 @@ class TuiApp(compat.App[int]):
         # 待确认状态由实现 reset_pending() 的页面管理。
         try:
             page = self.query_one(f"#page-{key}")
-        except Exception:  # noqa: BLE001 - 页面尚未挂载时无需复位
+        except Exception:  # noqa: BLE001 - 页面尚未挂载时无需重置状态。
             return
         reset = getattr(page, "reset_pending", None)
         if callable(reset):
             reset()
 
-    # 页面通过 dirty_note() 提供未保存更改摘要。
+    # 页面通过 dirty_note() 提供未保存更改的文本摘要。
     def _dirty_notes(self) -> list[str]:
         notes: list[str] = []
         for key, _, _ in PAGES:
             try:
                 page = self.query_one(f"#page-{key}")
-            except Exception:  # noqa: BLE001 - 未挂载页面无编辑状态
+            except Exception:  # noqa: BLE001 - 未挂载页面无编辑状态。
                 continue
             probe = getattr(page, "dirty_note", None)
             if not callable(probe):
@@ -446,7 +446,7 @@ class TuiApp(compat.App[int]):
         return notes
 
     def focus_active_page(self) -> None:
-        """将焦点移至当前页的主控件。"""
+        """将焦点移至当前页面的主控件。"""
         focus_primary = getattr(self.query_one(f"#page-{self.active_page}"), "focus_primary", None)
         if callable(focus_primary):
             focus_primary()
@@ -457,12 +457,12 @@ class TuiApp(compat.App[int]):
         :param key: 页面键，取自 :data:`PAGES`。
         """
         target = self.query_one(f"#page-{key}")
-        # 切页会改变操作上下文，须清除待确认状态。
+        # 切换页面会改变操作上下文，必须清除待确认状态。
         self._reset_pending(self.active_page)
-        # 先显示并聚焦目标页，避免隐藏旧页时 Textual 将焦点分配给隐藏容器。
+        # 先显示并聚焦目标页面，避免隐藏旧页面时 Textual 将焦点分配给隐藏容器。
         target.display = True
         self.active_page = key
-        # 仅激活可见页面，避免隐藏页执行无关的读取与轮询。
+        # 仅激活可见页面，避免隐藏页面执行无关的读取与轮询。
         activate = getattr(target, "activate", None)
         if callable(activate):
             activate()
@@ -473,11 +473,11 @@ class TuiApp(compat.App[int]):
         self._sync_nav(key)
 
     def _sync_nav(self, key: str) -> None:
-        # 仅在索引变化时更新，避免侧栏事件重复触发页面同步。
+        # 仅在索引变化时更新，避免侧边栏事件重复触发页面同步。
         nav = self.query_one("#nav", compat.ListView)
         index = _nav_position(key)
         header = _group_position(index)
-        # 当前页所在分组已折叠时高亮分组标题，不擅自展开用户折叠的分组。
+        # 当前页面所在分组已折叠时高亮分组标题，不主动展开已被折叠的分组。
         if NAV_PLAN[header][1] in self._collapsed_groups:
             index = header
         if compat.highlighted_index(nav) != index:
@@ -498,10 +498,10 @@ class TuiApp(compat.App[int]):
         else:
             self._collapsed_groups.discard(group_key)
         nav = self.query_one("#nav", compat.ListView)
-        # 先移走高亮再禁用条目，避免高亮停留在隐藏的页面条目上。
+        # 先移除高亮焦点再禁用条目，避免高亮停留在隐藏的页面条目上。
         nav.index = header
         nav.children[header].query_one(compat.Label).update(_group_label(group_key, collapsed))
-        # 禁用的条目会被方向键跳过，隐藏不足以阻止高亮移到其上。
+        # 禁用的条目会被方向键跳过，仅隐藏不足以阻止高亮焦点移至其上。
         for member in _group_members(header):
             item = nav.children[member]
             item.display = not collapsed
@@ -518,14 +518,14 @@ class TuiApp(compat.App[int]):
             self.show_page(key)
 
     def page(self, key: str) -> compat.Widget:
-        """按 key 取页面控件，供测试与键位动作使用。"""
+        """按 key 获取页面控件，供测试与键位动作使用。"""
         return self.query_one(f"#page-{key}")
 
     def _mark_first_paint(self) -> None:
         self.first_paint_ms = (time.monotonic() - self._boot_started_at) * 1000.0
 
     def modules_page(self) -> ModulesPage:
-        """返回 Modules 页控件。"""
+        """返回模块管理页面控件。"""
         return self.query_one(ModulesPage)
 
     def action_quit(self) -> None:

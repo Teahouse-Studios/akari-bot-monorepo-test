@@ -69,7 +69,7 @@ async def _test_predicate_matcher():
 async def _test_combinators():
     result = _output("Pong!")
     matches = {True: Match("Pong!"), False: Match("Ping!")}
-    # 两种拼写均覆盖真值表，防止恒真、恒假或只检查第一个条件。
+    # 两种拼写均覆盖真值表，防止恒真、恒假或仅检查第一个条件。
     for left, right, conjunction, disjunction in (
         (True, True, True, True),
         (True, False, False, True),
@@ -89,7 +89,7 @@ async def _test_combinators():
 
 @func_case
 async def test_expectations(tester: Tester):
-    """Expectation：文本、空输出、异常、自定义检查与组合条件。"""
+    """Expectation 的文本、空输出、异常、自定义检查与组合条件测试。"""
     await tester.test(_test_text_matchers, "文本匹配器正反例与大小写敏感测试")
     await tester.test(_test_output_matchers, "输出数量、空输出和异常匹配测试")
     await tester.test(_test_predicate_matcher, "同步与异步 Predicate 正反例测试")

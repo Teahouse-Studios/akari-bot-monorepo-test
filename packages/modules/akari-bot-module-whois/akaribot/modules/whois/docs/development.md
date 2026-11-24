@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-whois
 ```
 
-安装后，管理员需要在会话中执行 `module enable whois`。
+安装后，管理员需要在会话中执行 `module enable whois` 启用模块。
 
 ## 配置项
 
@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-whois
 
 ## 权限与平台能力
 
-命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入的平台均可使用。查询结果为文本，字段数量取决于注册局实际返回的数据。
+命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入的平台均可以使用。查询结果为文本，字段数量取决于注册局实际返回的数据。
 
 ## 数据表
 
@@ -26,4 +26,4 @@ akaribot module add akari-bot-module-whois
 
 ## 依赖与外部服务
 
-依赖 `akari-bot-core` 与 `python-whois`。外部服务是各级 WHOIS 服务器，由 `python-whois` 按域名后缀连接。应答中的日期字段为列表时取第一项，按 UTC 解释后转换为会话时区。
+依赖 `akari-bot-core` 与 `python-whois`。外部服务是各级 WHOIS 服务器，通过 `python-whois` 按域名后缀连接。应答中的日期字段为列表时取第一项，按 UTC 解释后转换为会话时区。

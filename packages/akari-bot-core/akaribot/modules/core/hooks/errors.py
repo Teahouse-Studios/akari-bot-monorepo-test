@@ -62,7 +62,7 @@ async def send_common_emote(msg: "Bot.MessageSession", emotes: tuple[Path, ...])
 
 
 def format_error_detail(msg_or_session, text: str) -> MessageChain:
-    """按目标平台能力格式化错误详情。支持 Markdown 时使用 fenced code block。"""
+    """按目标平台能力格式化错误详情。支持 Markdown 时使用 Markdown 代码块。"""
     session_info = getattr(msg_or_session, "session_info", msg_or_session)
     if not session_info.support_markdown:
         return match_kecode(text)
@@ -134,8 +134,8 @@ async def process_exception(msg: "Bot.MessageSession", error: Exception) -> None
 @errors.hook(point=HookPoint.EXECUTION_ERROR, priority=100, name="default_feedback", server_scope=True, timeout=0)
 async def _execution_error(ctx: "Bot.ParserHookContext"):
     error = ctx.data.get("error")
-    # SendMessageFailed 继承 BaseException，是消息会话控制流的一部分，不能用
-    # ``Exception`` 作为入口过滤，否则发送失败会被 parser 误记为未处理异常。
+    # SendMessageFailed 继承 BaseException，是消息会话控制流的一部分，不可使用
+    # ``Exception`` 作为入口过滤，否则发送失败会被解析器误判定为未处理异常。
     if not isinstance(error, (BaseException,)):
         return None
     if isinstance(error, SendMessageFailed):

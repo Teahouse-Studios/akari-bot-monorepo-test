@@ -76,7 +76,7 @@ async def _test_space_toggles_selection():
 
 async def _test_shift_extends_and_replaces_range():
     async def body(app, page, pilot, source):
-        await pilot.press("space")  # 锚点在第 0 行
+        await pilot.press("space")  # 锚点在第 0 行。
         await pilot.pause()
         for _ in range(3):
             await pilot.press("down")
@@ -143,7 +143,7 @@ async def _test_mouse_modifiers():
         return single, added, ranged, collapsed
 
     single, added, ranged, collapsed = await _with_page(body)
-    # Shift+点击从锚点（最后一次点击的 #3）扩到 #0，故是 0..3。
+    # Shift+点击从锚点（最后一次点击的 #3）扩展到 #0，因此是 0..3。
     return single == [1] and added == [1, 3] and ranged == [0, 1, 2, 3] and collapsed == [2]
 
 
@@ -164,7 +164,7 @@ async def _test_batch_install_covers_selection():
 
 
 async def _test_update_selected_covers_selection():
-    # 更新目标由选区决定，高亮位置不影响目标集合。
+    # 更新目标由选区确定，高亮位置不影响目标集合。
     async def body(app, page, pilot, source):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 1
@@ -487,7 +487,7 @@ async def _test_rows_show_selection_marker():
 
 @func_case
 async def test_tui_multi_select(tester: Tester):
-    """cli.tui.modules: 多选与批量操作测试"""
+    """cli.tui.modules 多选与批量操作测试"""
     _use_cli_locale()
     # 关闭防抖延迟，使交互用例无需等待。防抖行为由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):

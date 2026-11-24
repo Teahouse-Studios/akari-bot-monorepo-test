@@ -80,7 +80,7 @@ async def _test_lists_everything_by_default():
 
 
 async def _test_refresh_keeps_row_highlighted():
-    # 关键回归：重建模块列表后选中行必须保持高亮——ListView 只在 index 变化时刷新高亮。
+    # 关键回归测试，重建模块列表后选中行必须保持高亮——ListView 仅在 index 变化时刷新高亮。
     async def body(app, page, pilot):
         list_view = page.query_one("#module-list", compat.ListView)
         list_view.index = 1
@@ -195,7 +195,7 @@ async def _test_install_highlighted_record_after_confirm():
 
 
 async def _test_install_search_term_prefills_dialog():
-    # 搜索词预填到安装输入框，避免重复输入。
+    # 搜索词预先填充到安装输入框，避免重复输入。
     async def body(app, page, pilot):
         page.set_query("akari-bot-module-unknown")
         await pilot.pause()
@@ -295,7 +295,7 @@ def _test_git_address_split():
 
 
 async def _uninstall_confirmed(app: TuiApp, page, pilot, choice: int = 0) -> str:
-    # 卸载需先选择处置方式。交互用例关闭防抖延迟。
+    # 卸载需要先选择处置方式。交互用例关闭防抖延迟。
     page.request_uninstall()
     await pilot.pause()
     title = str(app.screen.query_one("#choice-title", compat.Static).render())
@@ -396,7 +396,7 @@ async def _test_stream_operation_failure_becomes_result():
     return "RuntimeError" in status and "子进程炸了" in status
 
 
-# AKARIBOT_CLI_BIN 必须为可执行文件路径，因此替身脚本包含 shebang。
+# AKARIBOT_CLI_BIN 必须为可执行文件路径，因此模拟脚本包含 shebang。
 FAKE_CLI_OK = """#!/usr/bin/env python3
 import sys
 
@@ -610,7 +610,7 @@ async def _test_update_all_argv_passes_all_and_yes():
 
 
 async def _test_update_argv_passes_yes():
-    # 界面确认后通过 ``module update <分发名> --yes`` 执行，避免重复交互。
+    # 界面确认后通过 ``module update <包名> --yes`` 执行，避免重复交互。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-update-") as raw:
@@ -625,7 +625,7 @@ async def _test_update_argv_passes_yes():
 
 
 async def _test_subprocess_source_streams_and_reports():
-    # CLI 替身覆盖进程启动、输出读取与退出等待，避免实际安装包。
+    # 模拟 CLI 覆盖进程启动、输出读取与退出等待，避免实际安装包。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-tui-src-") as raw:
@@ -668,7 +668,7 @@ async def _test_subprocess_source_timeout():
 
 
 def _test_relative_root_is_resolved():
-    # 实例根同时作为 cwd 和 AKARI_INSTANCE_DIR，必须使用绝对路径以避免重复拼接。
+    # 实例根目录同时作为 cwd 和 AKARI_INSTANCE_DIR，必须使用绝对路径以避免重复拼接。
     from akaribot.cli.tui.modules import SubprocessModuleSource
 
     with TemporaryDirectory(prefix="akari-tui-root-") as raw:
@@ -783,7 +783,7 @@ def _load_source(states) -> StaticModuleSource:
 
 
 async def _test_load_cell_counts_loaded_modules():
-    # 装载状态按包声明的模块统计，与包的安装状态独立。
+    # 加载状态按包声明的模块统计，与包的安装状态独立。
     source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
 
     async def body(app, page, pilot):
@@ -848,7 +848,7 @@ async def _test_toggle_load_ignores_uninstalled():
 
 
 async def _test_columns_header_aligns_with_rows():
-    # 表头与数据行的版本列、装载列必须对齐。
+    # 表头与数据行的版本列、加载列必须对齐。
     source = _load_source({"wiki": True, "ab": True, "arcaea": True, "arcaea-rss": False})
 
     async def body(app, page, pilot):
@@ -1009,7 +1009,7 @@ async def _test_install_argv_for_git_and_editable():
 
 
 def _test_low_frequency_bindings_stay_out_of_footer():
-    # 80 列下页脚只留高频键位。其余键位仍然可用，只是不在页脚显示。
+    # 80 列下页脚仅保留高频键位。其余键位仍然可用，但不在页脚中显示。
     shown = {binding.key for binding in ModulesPage.BINDINGS if binding.show}
     hidden = {binding.key for binding in ModulesPage.BINDINGS if not binding.show}
     return shown == {"r", "slash", "i", "space"} and hidden == {
@@ -1090,7 +1090,7 @@ async def _test_reset_pending_hook_clears_gate():
 
 @func_case
 async def test_tui_modules_available(tester: Tester):
-    """cli.tui.modules: 可安装列表与安装进度测试"""
+    """cli.tui.modules 可安装列表与安装进度测试"""
     _use_cli_locale()
     # 防抖专项用例使用实际窗口，与关闭延迟的交互用例分开运行。
     await tester.test(_test_pending_confirm_gate, "确认闸门忽略连发并在窗口外放行")

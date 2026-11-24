@@ -2,7 +2,7 @@
 
 WebUI 控制台随 Web 适配器启动，通过浏览器管理实例。
 
-Web 适配器在实例内启动 FastAPI 与 uvicorn 服务，提供控制台和内置 API。控制台通过一个会话连接机器人，可以发送消息、管理配置、查看日志和统计数据。
+Web 适配器在实例内启动 FastAPI 与 uvicorn 服务，提供控制台和内置 API。控制台通过会话连接机器人，支持发送消息、管理配置、查阅日志与统计数据。
 
 适配器默认启用，使用实例内服务，不需要平台账号。
 
@@ -14,25 +14,25 @@ Web 适配器在实例内启动 FastAPI 与 uvicorn 服务，提供控制台和�
 akaribot module add akari-bot-adapter-web
 ```
 
-也可以在 `akaribot init` 时加 `--adapter web`。`bot_web.enable` 默认为 `true`，安装后随实例启动。
+亦可在 `akaribot init` 时附加 `--adapter web` 参数。`bot_web.enable` 默认为 `true`，安装后随实例启动。
 
 前端静态资源优先从实例的 `data/webui/dist` 读取，该目录不存在时使用 `akari-bot-webui` 包。
 
 ## 访问地址
 
-服务默认监听 `127.0.0.1:6485`，控制台地址为 `http://127.0.0.1:6485/webui`。服务启动时会把实际地址写入日志。`web_host` 为 `0.0.0.0` 时，服务还会列出本机网络地址。
+服务默认监听 `127.0.0.1:6485`，控制台地址为 `http://127.0.0.1:6485/webui`。服务启动时会将实际地址写入日志。`web_host` 为 `0.0.0.0` 时，服务还会列出本机网络地址。
 
-`web_port` 被占用时，服务从该端口开始，在 `127.0.0.1` 上依次尝试后面的端口，最多 100 个。没有可用端口时，服务记录 `API port is disabled.` 并结束 Web 适配器进程。
+`web_port` 被占用时，服务从该端口开始，在 `127.0.0.1` 上依次尝试后面的端口，最多 100 个。无可用端口时，服务记录 `API port is disabled.` 并结束 Web 适配器进程。
 
-`web_port = 0` 表示禁用服务。服务改用其他端口后，应以日志中的实际端口访问。
+`web_port = 0` 表示禁用服务。服务切换至其他端口后，应以日志中的实际端口访问。
 
-`enable_https = true` 只会把日志与 `/api/init` 返回的访问协议改成 `https`。TLS 由反向代理终止。
+`enable_https = true` 仅将日志与 `/api/init` 返回的访问协议设置为 `https`。TLS 由反向代理终止。
 
 ## 配置
 
-配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都位于 `config/bot_web.toml`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表均位于 `config/bot_web.toml`。
 
-服务启动时读取 `web_host`、`web_port`、`enable`、`enable_https`、`allow_origins`、`forwarded_allow_ips` 与 `login_max_attempt`。修改这些字段后需重启实例。
+服务启动时读取 `web_host`、`web_port`、`enable`、`enable_https`、`allow_origins`、`forwarded_allow_ips` 与 `login_max_attempt`。修改上述字段后需要重启实例。
 
 | 字段 | 表 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -42,8 +42,8 @@ akaribot module add akari-bot-adapter-web
 | `web_port` | `bot_web` | `6485` | 监听端口，`0` 表示禁用。 |
 | `login_max_attempt` | `bot_web` | `5` | 10 分钟内允许的登录失败次数。 |
 | `heartbeat_attempt` | `bot_web` | `3` | 心跳消息尝试次数。 |
-| `heartbeat_interval` | `bot_web` | `30` | 心跳间隔，单位秒。 |
-| `heartbeat_timeout` | `bot_web` | `5` | 心跳回应超时，单位秒。 |
+| `heartbeat_interval` | `bot_web` | `30` | 心跳间隔，单位为秒。 |
+| `heartbeat_timeout` | `bot_web` | `5` | 心跳回应超时，单位为秒。 |
 | `allow_origins` | `bot_web_secret` | `[]` | 允许的 CORS 来源列表。 |
 | `forwarded_allow_ips` | `bot_web_secret` | `["127.0.0.1"]` | 可信反向代理地址列表。 |
 | `jwt_secret` | `bot_web_secret` | `""` | 内置 API 的 JWT 签名密钥。 |
@@ -52,13 +52,13 @@ akaribot module add akari-bot-adapter-web
 
 ## 登录与密码
 
-未设置密码时，`POST /api/login` 无需口令，会直接发出令牌。首次登录后应立即在控制台设置强口令。把服务暴露到公网前必须先设置密码。
+未设置密码时，`POST /api/login` 无需口令，直接签发令牌。首次登录后应立即在控制台设置高强度密码。将服务暴露至公网前必须先设置密码。
 
-密码以 Argon2 哈希保存在 `data/private/web/.password`。删除该文件即可重置密码，两步验证和恢复代码会一并失效。之后可以再次免密登录，并设置新密码。运行中的服务每 30 秒检查一次文件，发现被删除时记录安全事件。
+密码以 Argon2 哈希保存在 `data/private/web/.password`。删除该文件即可重置密码，两步验证与恢复代码将一并失效。后续可重新执行免密登录并配置新密码。运行中的服务每 30 秒检查一次文件，发现被删除时记录安全事件。
 
 <NoticeBox type="danger">
 
-删除密码文件等同于把控制台恢复为无密码状态。删除前先停止实例或限制端口访问，设置新密码后再恢复实例与端口访问。
+删除密码文件等同于将控制台恢复为无密码状态。删除前先停止实例或限制端口访问，设置新密码后再恢复实例与端口访问。
 
 </NoticeBox>
 
@@ -66,13 +66,13 @@ akaribot module add akari-bot-adapter-web
 
 令牌有效期 24 小时。修改密码会更新密码文件的 `last_updated`，此前发出的令牌随即失效。
 
-控制台支持 TOTP（基于时间的一次性密码）两步验证，启用时会生成 8 个一次性恢复代码。开启两步验证后不能通过 API 清除密码，需要先关闭两步验证。
+控制台支持基于时间的一次性密码（TOTP）两步验证，启用时会生成 8 个一次性恢复代码。开启两步验证后不能通过 API 清除密码，需要先关闭两步验证。
 
 ## 反向代理与 HTTPS
 
-- `forwarded_allow_ips` 会传给 uvicorn。只有来自这些地址的 `X-Forwarded-For` 才会被采信，默认仅信任本机。代理不在本机时，填入代理地址。`["*"]` 信任所有来源，不建议在不可控网络中使用。
-- `allow_origins` 控制浏览器跨域访问。留空表示不向其他来源开放 CORS（跨域资源共享）。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
-- 在反向代理上终止 TLS，再把请求转发到 `127.0.0.1:6485`。同时把 `enable_https` 设为 `true`，让日志和前端拿到正确的访问协议。
+- `forwarded_allow_ips` 会传递给 uvicorn。仅来自上述地址的 `X-Forwarded-For` 会被采信，默认仅信任本机。代理不在本机时，填入代理地址。`["*"]` 信任所有来源，不建议在不可控网络中使用。
+- `allow_origins` 控制浏览器跨域访问。留空表示不向其他来源开放跨源资源共享（CORS）。前后端分离部署时，填入控制台的实际来源，`["*"]` 表示信任所有来源。
+- 在反向代理上终止 TLS，再将请求转发至 `127.0.0.1:6485`。同时将 `enable_https` 设为 `true`，使日志与前端获取正确的访问协议。
 - 直接对外监听时，需要在防火墙中放行公网端口，并先设置密码。
 
 ## 功能范围

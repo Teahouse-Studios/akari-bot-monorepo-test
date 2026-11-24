@@ -55,7 +55,7 @@ from akaribot.cli.commands.adapter import (
 
 CONFLICT_KINDS = frozenset({"port", "credential", "orphan", "config"})
 DEFAULT_LEVELS = {"port": "error", "credential": "error", "orphan": "warning", "config": "error"}
-# 登录信息比对不看这些键：它们不是账号登录信息，取值相同属于正常。
+# 登录信息比对不检查相关键，其不属于账号登录信息，取值相同属于正常。
 CREDENTIAL_EXCLUDED_KEYS = frozenset({"enable"})
 CORE_CONFLICTS_ARGS = ("config", "conflicts", "--json")
 
@@ -84,7 +84,7 @@ class Conflict:
     render_params: Mapping[str, Any] = field(default_factory=dict)
 
     def render(self) -> str:
-        """报告展示文本：本地化文案，缺键时退回 ``message``。"""
+        """报告展示的本地化文案，缺少对应键时回退至 ``message``。"""
         return i18n.t(self.render_key, **self.render_params) if self.render_key else self.message
 
     def as_dict(self) -> dict[str, Any]:
@@ -165,7 +165,7 @@ def _credential_items(
     for name in fields:
         if name in CREDENTIAL_EXCLUDED_KEYS:
             continue
-        # 登录信息字段可能位于非密钥表：qqbot 的 qq_bot_appid 就在明文表中
+        # 登录信息字段可能位于非密钥表，例如 qqbot 的 qq_bot_appid 就在明文表中。
         value = config.secrets.get(name, config.values.get(name))
         if value is None or is_placeholder(value):
             continue
@@ -365,7 +365,7 @@ def _print_report(
 ) -> None:
     console = Console()
     summary = _check_summary(scan, registry)
-    # 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），故经 escape 再进入 rich 标记解析
+    # 路径与消息里可能出现方括号（IPv6 监听地址、TOML 表名），因此先通过 escape 转义再进入 rich 标记解析。
     console.print(i18n.t("cli.doctor.report.instance_root", path=escape(str(instance.root))))
     console.print(i18n.t("cli.doctor.report.config_root", path=escape(str(config_root(instance)))))
     installed = i18n.t("cli.common.list_separator").join(summary["installed_adapters"])

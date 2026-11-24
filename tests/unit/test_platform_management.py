@@ -383,7 +383,7 @@ async def _test_kook_media_upload_closes_files():
                 quote=False,
             )
             files_closed = len(opened_files) == 2 and all(file.closed for file in opened_files)
-            # Windows 不允许 TemporaryDirectory 删除仍被占用的媒体文件。
+            # Windows 环境不允许 TemporaryDirectory 删除仍处于占用状态的媒体文件。
             # 测试完成取样检查后主动关闭，避免清理异常掩盖实际失败结果。
             for file in opened_files:
                 if not file.closed:

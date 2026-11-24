@@ -62,7 +62,7 @@ async def _test_counts_are_file_counts():
 
 
 async def _test_switched_process_stays_highlighted():
-    # 关键回归：重建列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮，
+    # 关键回归测试，重建列表后选中行必须保持高亮——ListView 仅在 index 变化时更新高亮，
     # 而切换进程会 clear() + extend() 重建条目，index 却与重建前相同。
     async def body(app, page, pilot, source):
         list_view = page.query_one("#process-list", compat.ListView)
@@ -89,7 +89,7 @@ async def _test_switched_process_stays_highlighted():
 
 
 async def _test_counts_survive_process_filter():
-    # 关键回归：切换进程过滤后，各进程的计数必须与过滤无关。
+    # 关键回归测试，切换进程过滤后，各进程的计数必须与过滤无关。
     async def body(app, page, pilot, source):
         before = _labels(page)
         for process in ("BotDaemon", "Server", None):
@@ -106,7 +106,7 @@ async def _test_counts_survive_process_filter():
 
 
 async def _test_filter_keeps_following_in_that_process():
-    # 过滤只影响可见文件与跟随目标，不影响计数。
+    # 过滤仅影响可见文件与跟随目标，不影响计数。
     async def body(app, page, pilot, source):
         page.select_process("Server")
         await pilot.pause()
@@ -205,7 +205,7 @@ async def _test_keyword_filter_limits_display_only():
 
 
 async def _test_debug_menu_switches_preference():
-    # m 打开日志级别菜单，只列当前以外的偏好。选择后生效，取消不改动。
+    # m 打开日志级别菜单，仅列出当前以外的偏好。选择后生效，取消不改动。
     async def body(app, page, pilot, source):
         page.focus_primary()
         await pilot.pause()
@@ -271,7 +271,7 @@ async def _test_action_buttons_fit_after_resize_and_label_changes():
 
 @func_case
 async def test_tui_logs(tester: Tester):
-    """cli.tui.logs: 进程计数、贴底跟随与关键词过滤测试"""
+    """cli.tui.logs 进程计数、贴底跟随与关键词过滤测试"""
     _use_cli_locale()
     await tester.test(_test_counts_are_file_counts, "计数是各进程的日志文件数")
     await tester.test(_test_switched_process_stays_highlighted, "切换日志后选中行仍然高亮")

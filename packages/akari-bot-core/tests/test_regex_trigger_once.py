@@ -1,4 +1,4 @@
-"""core.builtins.parser.message 单元测试 - 正则单次触发标记。"""
+"""core.builtins.parser.message 正则单次触发标记单元测试。"""
 
 from akaribot.core.builtins.parser.message import mark_regex_once, regex_once_cache, regex_once_triggered
 from akaribot.testing import func_case, Tester
@@ -36,7 +36,7 @@ async def _test_other_index_unaffected():
 
 @func_case
 async def test_regex_trigger_once(tester: Tester):
-    """core.builtins.parser.message: 正则单次触发标记测试"""
+    """core.builtins.parser.message 正则单次触发标记测试"""
     await tester.test(_test_triggered_after_mark, "标记后已触发测试")
     await tester.test(_test_other_target_unaffected, "场景间互不影响测试")
     await tester.test(_test_other_index_unaffected, "同模块多正则互不影响测试")

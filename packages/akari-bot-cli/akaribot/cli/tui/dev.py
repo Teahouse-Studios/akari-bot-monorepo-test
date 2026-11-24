@@ -51,7 +51,7 @@ ACTION_NEW = "new"
 TARGET_MODULE = "module"
 TARGET_ADAPTER = "adapter"
 
-# editable 列使用数据字段名，其余列标题按当前语言解析。
+# editable 列使用数据字段名称，其余列标题按当前语言解析。
 _COLUMN_KEYS: tuple[str | None, ...] = (
     "cli.tui.dev.col_package",
     "cli.tui.dev.col_kind",
@@ -174,7 +174,7 @@ class DevPackage:
 
     @property
     def key(self) -> str:
-        """选中项的稳定标识。"""
+        """选中项的固定标识。"""
         return self.dist or self.name
 
 
@@ -276,7 +276,7 @@ class StaticDevSource:
         return self._snapshot
 
     async def stream_action(self, kind: str, params: Mapping[str, Any], on_line: Callable[[str], None]) -> ActionResult:
-        """见 :meth:`DevSource.stream_action`。替身回放固定输出，不产生子进程。"""
+        """见 :meth:`DevSource.stream_action`。模拟对象回放固定输出，不产生子进程。"""
         self.calls["action"] += 1
         self.actions.append((kind, dict(params)))
         self._on_line = on_line
@@ -309,7 +309,7 @@ class StaticDevSource:
         return True
 
     def cancel_action(self, kind: str) -> bool:
-        """见 :meth:`DevSource.cancel_action`。替身记录请求并放行被挂起的动作。"""
+        """见 :meth:`DevSource.cancel_action`。模拟对象记录请求并放行被挂起的操作。"""
         self.calls["cancel"] += 1
         self.cancelled.append(kind)
         self.gate.set()
@@ -334,7 +334,7 @@ class DevSource(Protocol):
         """
 
     def cancel_action(self, kind: str) -> bool:
-        """请求终止正在执行的动作，返回是否发出了终止请求。"""
+        """请求终止正在执行的操作，返回是否已发送终止请求。"""
 
 
 def normalize_packages(payload: Any, members: Mapping[str, str] | None = None) -> tuple[DevPackage, ...]:
@@ -395,7 +395,7 @@ def normalize_packages(payload: Any, members: Mapping[str, str] | None = None) -
 
 
 class DevSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 class SubprocessDevSource:
@@ -417,7 +417,7 @@ class SubprocessDevSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         meta_reader: Callable[[], Mapping[str, Any]] | None = None,
     ) -> None:
-        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
+        # 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.action_timeout = action_timeout
@@ -514,7 +514,7 @@ class SubprocessDevSource:
         )
 
     def cancel_action(self, kind: str) -> bool:
-        """见 :meth:`DevSource.cancel_action`。向动作子进程发终止信号。"""
+        """见 :meth:`DevSource.cancel_action`。向操作子进程发送终止信号。"""
         process = self._action_process
         if process is None or process.returncode is not None:
             return False
@@ -543,11 +543,11 @@ class SubprocessDevSource:
                 target,
                 _text(params.get("name")),
                 "--non-interactive",
-                # 显式传递开关值，使 CLI 参数与表单状态一致。
+                # 明确传递开关值，使 CLI 参数与表单状态一致。
                 "--config" if _flag(params.get("config")) else "--no-config",
             ]
             if target != TARGET_ADAPTER:
-                # new adapter 仅支持 --config，不能传递模块专用参数。
+                # new adapter 仅支持 --config，不可传递模块专用参数。
                 args.append("--database" if _flag(params.get("database")) else "--no-database")
                 args.append("--tests" if _flag(params.get("tests")) else "--no-tests")
             directory = _text(params.get("directory"))
@@ -557,14 +557,14 @@ class SubprocessDevSource:
         return self.cli_argv(ACTION_TEST, *_string_tuple(params.get("args")))
 
     def _action_cwd(self, params: Mapping[str, Any]) -> str:
-        # 测试路径与新包目录相对工作区根解析。未配置工作区时使用实例根。
+        # 测试路径与新包目录相对工作区根目录解析。未配置工作区时使用实例根目录。
         return _text(params.get("cwd")) or str(self.root)
 
     def _read_meta(self) -> tuple[dict[str, Any], list[str]]:
         if self._meta_reader is not None:
             try:
                 return dict(self._meta_reader()), []
-            except Exception as error:  # noqa: BLE001 - 替身读取失败只作为错误上报
+            except Exception as error:  # noqa: BLE001 - 模拟对象读取失败仅作为错误返回。
                 return {}, [i18n.t("cli.tui.dev.meta_read_failed", kind=type(error).__name__, error=error)]
         try:
             from akaribot.cli.instance import InstanceMeta, find_instance_root
@@ -575,7 +575,7 @@ class SubprocessDevSource:
             return {}, [i18n.t("cli.tui.dev.not_instance", root=self.root)]
         try:
             meta = InstanceMeta.load(root)
-        except Exception as error:  # noqa: BLE001 - 元数据损坏不应中断页面
+        except Exception as error:  # noqa: BLE001 - 元数据损坏不应中断页面。
             return {"instance_root": str(root)}, [
                 i18n.t("cli.tui.dev.meta_parse_failed", kind=type(error).__name__, error=error)
             ]
@@ -597,7 +597,7 @@ class SubprocessDevSource:
             return {}, [i18n.t("cli.tui.dev.venv_module_missing", error=error)]
         try:
             index = workspace_index(path)
-        except Exception as error:  # noqa: BLE001 - 工作区扫描失败只降级来源判定
+        except Exception as error:  # noqa: BLE001 - 工作区扫描失败仅降级来源判定。
             return {}, [i18n.t("cli.tui.dev.scan_failed", kind=type(error).__name__, error=error)]
         return {_canonical_dist(dist): str(member.path) for dist, member in index.items()}, []
 
@@ -791,7 +791,7 @@ class NewPackageScreen(compat.Screen):
             self.dismiss(None)
 
     def on_input_submitted(self, event: compat.Input.Submitted) -> None:
-        """任一输入框回车即提交。"""
+        """任一输入框按 Enter 键即提交。"""
         self.submit()
 
     def key_escape(self) -> None:
@@ -988,7 +988,7 @@ class DevPage(compat.Vertical):
         packages = self._snapshot.packages
         if not packages:
             return None
-        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，访问控件前需要检查挂载状态。
         if not compat.mounted(self):
             return None
         list_view = self.query_one("#package-list", compat.ListView)
@@ -1018,11 +1018,11 @@ class DevPage(compat.Vertical):
         return self._detail_rendered
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的包行文本。"""
+        """返回最近一次渲染结果中的包行文本。"""
         return self._row_texts
 
     def package_cells(self) -> tuple[tuple[str, ...], ...]:
-        """返回最近一次渲染出的包行各列取值，顺序与列表一致。"""
+        """返回最近一次渲染结果中的包行各列取值，顺序与列表一致。"""
         return self._package_rows
 
     def cache_age(self) -> float:
@@ -1048,7 +1048,7 @@ class DevPage(compat.Vertical):
 
     @property
     def output_title_text(self) -> str:
-        """返回输出区标题行当前文本，含行数与跟随状态。"""
+        """返回输出区标题行当前文本，包含行数与跟随状态。"""
         return self._output_title_rendered
 
     @property
@@ -1058,7 +1058,7 @@ class DevPage(compat.Vertical):
 
     @property
     def new_hint_text(self) -> str:
-        """返回新建包对话框的提示。对话框未打开时为空串。"""
+        """返回新建包对话框的提示。对话框未打开时为空字符串。"""
         screen = self.app.screen
         return screen.hint_text if isinstance(screen, NewPackageScreen) else ""
 
@@ -1091,7 +1091,7 @@ class DevPage(compat.Vertical):
     async def _load(self) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.load_snapshot)
-        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面。
             self._snapshot = DevSnapshot()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1136,7 +1136,7 @@ class DevPage(compat.Vertical):
         self._start_action(ACTION_TEST, {"args": tokens, "cwd": self._snapshot.workspace_root})
 
     def open_new_form(self) -> None:
-        """打开新建包对话框。操作运行期间不可用。"""
+        """打开新建包对话框。该操作执行期间不可用。"""
         if self._action_kind:
             self._set_status(i18n.t("cli.tui.dev.status_action_busy", label=_action_label(self._action_kind)))
             return
@@ -1146,7 +1146,7 @@ class DevPage(compat.Vertical):
         if payload is None:
             self.focus_primary()
             return
-        # 记住上次选的类型，下次打开对话框时沿用。
+        # 记录上次选择的类型，下次打开对话框时沿用。
         self._new_kind = str(payload["target"])
         if not self._action_ready():
             return
@@ -1154,7 +1154,7 @@ class DevPage(compat.Vertical):
         self.focus_primary()
 
     def cancel_running_action(self) -> None:
-        """请求终止运行中的操作。空闲时不调用数据源。"""
+        """请求终止运行中的操作。处于空闲状态时不调用数据源。"""
         if not self._action_kind:
             return
         if self._cancel_requested:
@@ -1190,7 +1190,7 @@ class DevPage(compat.Vertical):
     async def _run_action(self, kind: str, params: Mapping[str, Any]) -> None:
         try:
             result = await self.source.stream_action(kind, params, self._on_action_line)
-        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面。
             result = ActionResult(
                 message=i18n.t("cli.tui.dev.status_action_error", error=f"{type(error).__name__}: {error}")
             )
@@ -1205,7 +1205,7 @@ class DevPage(compat.Vertical):
         self._render_action_panel()
 
     def _on_action_line(self, line: str) -> None:
-        # 追加输出后布局尚未更新，需使用追加前的视口判断是否继续滚动跟随。
+        # 追加输出后布局尚未更新，需要使用追加前的视口判断是否继续滚动跟随。
         follow = self._output_at_end()
         self._action_lines.append(line)
         self._render_action_output(pin=follow)
@@ -1231,7 +1231,7 @@ class DevPage(compat.Vertical):
     def _input_text(self, selector: str) -> str:
         try:
             return str(self.query_one(selector, compat.Input).value).strip()
-        except Exception:  # noqa: BLE001 - 控件缺失时按空输入处理
+        except Exception:  # noqa: BLE001 - 控件缺失时按空输入处理。
             return ""
 
     @staticmethod
@@ -1257,7 +1257,7 @@ class DevPage(compat.Vertical):
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 76
         return max(outer - 4, 8)
 
@@ -1348,7 +1348,7 @@ class DevPage(compat.Vertical):
     def _fit_page_width(self, text: str) -> str:
         try:
             width = compat.widget_cells(self)[0] - 2
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             width = 78
         return compat.truncate_cells(text, max(width, 8))
 
@@ -1441,12 +1441,12 @@ class DevPage(compat.Vertical):
 
     def _pin_output_to_end(self) -> None:
         self._scroll_output_end()
-        # 布局更新后重新滚动到底部，避免将过期的滚动范围误判为用户操作。
+        # 布局更新后重新滚动到底部，避免将过期的滚动范围误判定为主动操作。
         if self.is_mounted:
             self.call_after_refresh(self._scroll_output_end)
 
     def _action_widget(self, selector: str) -> compat.Widget | None:
-        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，访问控件前需要检查挂载状态。
         if not compat.mounted(self):
             return None
         return self.query_one(selector)

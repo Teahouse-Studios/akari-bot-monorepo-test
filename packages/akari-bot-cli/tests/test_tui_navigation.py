@@ -22,7 +22,7 @@ FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragme
 
 
 class _Counting:
-    # 使用真实数据源保留完整返回结构，避免替身结构不符导致误报。
+    # 使用真实数据源保留完整返回结构，避免模拟对象结构不符导致误报。
 
     def __init__(self, inner) -> None:
         self._inner = inner
@@ -66,9 +66,9 @@ def _real_sources(root) -> dict:
         "dev": _Counting(SubprocessDevSource(root=root, timeout=10.0)),
         "doctor": _Counting(SubprocessDoctorSource(root=root, timeout=10.0)),
         "environment": _Counting(SubprocessEnvironmentSource(root=root, query_timeout=10.0, action_timeout=10.0)),
-        # 杂项页使用替身，避免启动 CLI 子进程。
+        # 杂项页使用模拟数据源，避免启动 CLI 子进程。
         "misc": _Counting(StaticMiscSource()),
-        # 文档页同样使用替身：导航测试不应启动真实构建或预览子进程。
+        # 文档页同样使用模拟数据源，导航测试不应启动真实构建或预览子进程。
         "docs": _Counting(StaticDocsSource()),
     }
 
@@ -79,7 +79,7 @@ def _use_cli_locale() -> None:
 
 
 def _nav_index(app: TuiApp) -> int | None:
-    # 侧栏混排着四个分组标题，高亮下标不等于页面下标，按高亮项的 id 折算回 PAGES 顺序。
+    # 侧边栏混合排列四个分组标题，高亮下标不等于页面下标，按高亮项的 id 换算回 PAGES 顺序。
     nav = app.query_one("#nav", compat.ListView)
     position = compat.highlighted_index(nav)
     if position is None or position >= len(nav.children):
@@ -196,7 +196,7 @@ async def _test_initial_page_is_dashboard():
 
 
 async def _test_subtitle_names_the_current_instance():
-    # 标题栏持续显示实例标识，确保写操作的目标明确。
+    # 标题栏持续显示实例标识，确保写入操作的目标明确。
     with TemporaryDirectory(prefix="akari-nav-") as raw:
         root = Path(raw) / "demo-instance"
         root.mkdir()
@@ -273,7 +273,7 @@ async def _test_footer_fits_eighty_columns():
 
 
 async def _test_busy_quit_asks_first():
-    # 后台任务运行时退出需确认，避免中断未完成的操作。
+    # 后台任务运行时退出需要确认，避免中断未完成的操作。
     async def body(app, pilot):
         app.run_worker(asyncio.sleep(2.0), group="demo-task")
         await pilot.pause()
@@ -285,7 +285,7 @@ async def _test_busy_quit_asks_first():
         stayed = app.is_running
         await pilot.press("q")
         await pilot.pause()
-        # 后台任务运行期间再次退出仍需确认，应用由测试上下文关闭。
+        # 后台任务运行期间再次退出仍需要确认，应用由测试上下文关闭。
         again = type(app.screen).__name__
         return asked, stayed, again
 
@@ -294,7 +294,7 @@ async def _test_busy_quit_asks_first():
 
 
 async def _test_switching_instance_asks_when_dirty():
-    # 切换实例会重新挂载页面，有未保存更改时需确认。
+    # 切换实例会重新挂载页面，有未保存更改时需要确认。
     with TemporaryDirectory(prefix="akari-nav-") as raw:
         root = Path(raw) / "target"
         root.mkdir()
@@ -401,7 +401,7 @@ async def _test_sidebar_browse_does_not_switch():
         await pilot.press("q")
         return before, after
 
-    # 侧栏顺序由 NAV_PLAN 决定。模块页上方是同组页面，此处验证方向键仅移动高亮，不切换页面。
+    # 侧边栏顺序由 NAV_PLAN 确定。模块页上方是同组页面，此处验证方向键仅移动高亮，不切换页面。
     before, after = await _with_app(body)
     return (
         before == ("modules", _page_index("modules"))
@@ -440,7 +440,7 @@ async def _test_sidebar_selection_switches_page():
 
 
 async def _test_sidebar_groups_follow_the_plan():
-    # 侧栏按 NAV_GROUPS 分四组：分组标题带展开标记，页面条目覆盖 PAGES 的全部页面。
+    # 侧边栏按 NAV_GROUPS 分四组，分组标题带展开标记，页面条目覆盖 PAGES 的全部页面。
     async def body(app, pilot):
         nav = app.query_one("#nav", compat.ListView)
         items = [
@@ -526,7 +526,7 @@ async def _test_sidebar_items_have_single_label():
 
 
 async def _test_sidebar_fits_eighty_by_twenty_four():
-    # 单行页面条目让 80×24 下的侧栏一次显示全部页面。
+    # 单行页面条目让 80×24 下的侧边栏一次显示全部页面。
     async def body(app, pilot):
         nav = app.query_one("#nav", compat.ListView)
         app.show_page("misc")
@@ -568,7 +568,7 @@ async def _test_help_overlay_adds_navigation_hint():
 
 @func_case
 async def test_tui_navigation(tester: Tester):
-    """cli.tui.app: 页面切换、焦点与键位归属测试"""
+    """cli.tui.app 页面切换、焦点与键位所属范围测试"""
     _use_cli_locale()
     await tester.test(_test_initial_page_matches_sidebar, "启动页与侧栏高亮一致")
     await tester.test(_test_show_page_syncs_every_page, "逐页切换同步侧栏且只显示一页")

@@ -165,7 +165,7 @@ async def _test_outbound_line_breaks():
 
 @func_case
 async def test_satori_inbound(tester: Tester):
-    """akaribot.adapters.satori.utils: Satori 入站元素解析测试"""
+    """akaribot.adapters.satori.utils Satori 入站元素解析测试"""
     await tester.test(_test_parse_text_with_leading_at, "首位提及机器人")
     await tester.test(_test_parse_at_other, "首位提及他人")
     await tester.test(_test_parse_style_and_break, "样式与换行展开")
@@ -175,14 +175,14 @@ async def test_satori_inbound(tester: Tester):
 
 @func_case
 async def test_satori_ids(tester: Tester):
-    """akaribot.adapters.satori.utils: 场景与用户 ID 编解码测试"""
+    """akaribot.adapters.satori.utils 场景与用户 ID 编解码测试"""
     await tester.test(_test_target_id_roundtrip, "群聊、私聊与用户 ID 往返")
     return tester
 
 
 @func_case
 async def test_satori_outbound(tester: Tester):
-    """akaribot.adapters.satori.utils: Satori 出站元素转换测试"""
+    """akaribot.adapters.satori.utils Satori 出站元素转换测试"""
     await tester.test(_test_outbound_at_code, "文本内 AT 码转换")
     await tester.test(_test_outbound_quote_and_mention, "引用与提及元素")
     await tester.test(_test_outbound_self_mention_and_image, "跳过自身提及与图片转换")

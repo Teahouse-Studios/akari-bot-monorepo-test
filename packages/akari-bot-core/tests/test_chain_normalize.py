@@ -31,8 +31,8 @@ async def _test_append_normalizes_str():
 
 
 async def _test_appended_chain_is_serialisable():
-    # 这一条直接复现线上报错：finish() 收到的若已是 MessageChain，get_message_chain()
-    # 便原样返回、跳过 assign 的归一化，裸字符串一路传至 cattrs 才抛
+    # 此用例复现线上异常场景。finish() 若接收到 MessageChain，get_message_chain()
+    # 则直接原样返回并跳过 assign 规范化，导致字符串类型透传至 cattrs 并引发异常：
     # TypeError: 'str' object is not a mapping。
     try:
         chain = MessageChain.create()
@@ -68,7 +68,7 @@ async def _test_append_skips_empty_and_none():
 
 @func_case
 async def test_chain_normalize(tester: Tester):
-    """消息链：原地修改的归一化测试"""
+    """消息链原地修改的规范化测试"""
     await tester.test(_test_append_normalizes_str, "append 归一化字符串测试")
     await tester.test(_test_appended_chain_is_serialisable, "append 后可序列化测试")
     await tester.test(_test_iadd_list_normalizes_str, "+= 列表归一化测试")

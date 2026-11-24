@@ -32,7 +32,7 @@ class MockMessageSession(MessageSession):
         self.matched_msg = None
         self.sent = []
         self.action = []
-        # 记录随消息下发的按钮数据，供测试检查使用。不计入 action 以免影响数量类检查。
+        # 记录随消息发送的按钮数据，供测试检查使用。不计入 action 以免影响数量类检查。
         self.buttons = []
         self.parent_session = parent_session
 
@@ -180,7 +180,7 @@ class MockMessageSession(MessageSession):
         self.action.append(f"(remove reaction {emoji})")
 
     async def check_native_permission(self, user_id=None):
-        """测试环境不提供平台成员数据，指定成员一律按无权限处理。"""
+        """测试环境不提供平台成员数据，指定成员均按无权限处理。"""
         return user_id is None or user_id == "TEST|0"
 
     async def check_bot_state(self) -> BotState:
@@ -303,7 +303,7 @@ class MockMessageSession(MessageSession):
                 if delete:
                     await self.delete()
                 new_msg = MockMessageSession(parent_session=self, is_ci=self.is_ci)
-                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本
+                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本。
                 new_msg._script = self._script
                 await new_msg.async_init(result)
                 return new_msg
@@ -345,7 +345,7 @@ class MockMessageSession(MessageSession):
                 if delete:
                     await self.delete()
                 new_msg = MockMessageSession(parent_session=self, is_ci=self.is_ci)
-                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本
+                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本。
                 new_msg._script = self._script
                 await new_msg.async_init(result)
                 return new_msg
@@ -390,7 +390,7 @@ class MockMessageSession(MessageSession):
                 if delete:
                     await self.delete()
                 new_msg = MockMessageSession(parent_session=self, is_ci=self.is_ci)
-                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本
+                # 新消息共享同一个脚本列表引用，不清空原始会话的脚本。
                 new_msg._script = self._script
                 await new_msg.async_init(result)
                 return new_msg

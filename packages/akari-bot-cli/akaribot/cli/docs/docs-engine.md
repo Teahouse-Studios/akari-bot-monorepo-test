@@ -1,61 +1,61 @@
 # 文档引擎
 
-文档引擎把已安装包的 `docs/` 目录汇总成一个 VitePress 站点：读取目录、生成站点源文件、调用 VitePress 构建、提供静态预览与开发预览，并记录构建与部署状态。
+文档引擎将已安装包的 `docs/` 目录汇总为一个 VitePress 站点，负责读取目录、生成站点源码、调用 VitePress 执行构建、提供静态预览与开发预览，并记录构建与部署状态。
 
 ## 当前状态
 
-引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接折算、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册进 `akaribot` 主命令表。命令见下表。
+引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接转换、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册至 `akaribot` 主命令表中。命令见下表。
 
 ## 前置条件
 
 - Node.js 与 `npm` 需要在 `PATH` 中。内置主题与外部主题的 Node.js 版本要求在各自的主题清单中声明。
-- 内置主题的依赖固定在引擎模板的 `package-lock.json` 里，安装时执行 `npm ci`。外部主题的 `package.json` 由清单的 `dependencies` 生成，安装时执行 `npm install`，VitePress 版本来自清单。
-- 首次构建需要联网安装依赖。离线模式要求 `<实例根>/cache/docs/node_modules` 已包含主题所需版本。
+- 内置主题的依赖固定在引擎模板的 `package-lock.json` 中，安装时执行 `npm ci`。外部主题的 `package.json` 根据清单的 `dependencies` 生成，安装时执行 `npm install`，VitePress 版本来自清单声明。
+- 首次构建需要联网安装依赖。离线模式要求 `<实例根目录>/cache/docs/node_modules` 已包含主题所需版本。
 
-Node.js 缺失、版本低于主题要求或 npm 不可用时，构建以工具链错误终止，不会改用其它渲染器。
+若 Node.js 缺失、版本低于主题要求或 npm 不可用，构建将直接以工具链错误终止，不回退至其他渲染器。
 
 ## 命令
 
 | 命令 | 用途 |
 | --- | --- |
 | `akaribot docs list` | 列出参与构建的包、分组、标题与页面数，附目录降级警告 |
-| `akaribot docs build` | 生成站点源文件并构建，支持只构建指定包、强制重建与离线构建 |
-| `akaribot docs sync-theme` | 把主题模板 submodule 同步到远端最新提交，只更新工作区 |
+| `akaribot docs build` | 生成站点源码并构建，支持仅构建指定包、强制重建与离线构建 |
+| `akaribot docs sync-theme` | 将主题模板 submodule 同步至远端最新提交，仅更新工作区 |
 | `akaribot docs install-deps` | 安装主题所需的 Node 依赖，不生成站点 |
 | `akaribot docs serve` | 启动本机静态服务器预览构建产物 |
 | `akaribot docs dev` | 监听文档与主题改动，在 `cache/docs/dev` 上运行 VitePress 开发服务器 |
-| `akaribot docs deploy` | 把构建产物发布到 Vercel 或 S3 |
-| `akaribot docs status` | 显示实际主题、最近一次构建的指纹、包清单、输出目录与部署记录 |
-| `akaribot docs clean` | 清理生成目录，使下次构建从头开始 |
+| `akaribot docs deploy` | 将构建产物发布至 Vercel 或 S3 |
+| `akaribot docs status` | 显示实际主题、最近一次构建的校验信息、包清单、输出目录与部署记录 |
+| `akaribot docs clean` | 清理生成目录，使下次构建重置为空白状态 |
 
-`list` 优先经实例的 core 入口读取包清单。入口不可用时，改用注册表里的已装包清单，并在警告中说明原因。CLI 自身的文档始终合并进目录。
+`list` 优先通过实例的 core 入口读取包清单。入口不可用时，改用注册表中的已安装包清单，并在警告中说明原因。CLI 自身的文档始终合并到目录中。
 
-`build`、`serve` 与 `deploy` 都会触发构建。不加 `--json` 时，命令实时打印工具链、生成与 VitePress 三个阶段，并转发 npm 与 VitePress 的逐行输出。
+`build`、`serve` 与 `deploy` 均会触发构建。不加 `--json` 时，命令实时打印工具链、生成与 VitePress 三个阶段，并转发 npm 与 VitePress 的逐行输出。
 
-加 `--json` 时，stdout 只保留最终结果行，日志写入 stderr。
+加 `--json` 时，stdout 仅保留最终结果行，日志写入 stderr。
 
-TUI 的文档页在构建期间显示同一份日志，按 `l` 切换面板。`dev` 不加 `--json` 时打印阶段、同步结果与提示，加 `--json` 时输出逐行事件，子进程日志写入 stderr。
+TUI 的文档页在构建期间展示同一日志流，按 `l` 切换面板。`dev` 不加 `--json` 时打印阶段、同步结果与提示，加 `--json` 时输出逐行事件，子进程日志写入 stderr。
 
-模块文档在侧栏按 `docs/config/global/docs.global.toml` 的 `category` 分组，条目名称取模块名。
+模块文档在侧边栏按 `docs/config/global/docs.global.toml` 的 `category` 分组，条目名称使用模块名。
 
-包内的标题、简介、分类与品牌插槽写在 `docs/config/global/docs.global.toml`。同一包可以再放 `docs/config/docs.toml`，按同名键覆盖默认值。
+包内的标题、简介、分类与品牌插槽配置于 `docs/config/global/docs.global.toml` 中。同一个包支持另行提供 `docs/config/docs.toml`，按同名键覆盖默认值。
 
-两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退到旧的 `docs/doc.toml`，兼容尚未迁移的包。
+两个位置都接受 JSON 文件，文件名分别为 `docs.global.json` 与 `docs.json`。没有 `docs/config/` 时回退至旧的 `docs/doc.toml`，兼容尚未迁移的包。
 
 
-同一模块目录内的页面显示为页内标签：`index.md` 是“使用方法”，`development.md` 是“安装与开发”。开发页不单独出现在侧栏。其余页面按 `order` 与路径排在两者之间。
+同一模块目录内的页面显示为页内标签，其中 `index.md` 是“使用方法”，`development.md` 是“安装与开发”。开发页不单独出现在侧边栏。其余页面按 `order` 与路径排在两者之间。
 
-内置 `bundled` 主题没有标签栏，开发页仍作为普通侧栏页面列出。包声明 `overview = false` 时不生成包级概览页，包入口指向第一页，侧栏直接列出页面。页面 front matter 写 `submenu` 时，同值的页面收进该名称的二级分组，普通页面仍平铺在前面。
+内置 `bundled` 主题无标签栏，开发页仍作为普通侧边栏页面列出。包声明 `overview = false` 时不生成包级概览页，包入口直接指向首个页面，侧边栏直接列出对应页面。页面 front matter 配置 `submenu` 时，取值相同的页面归入该名称的二级分组，普通页面仍直接排列在前方。
 
-侧栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标。
+侧边栏最前固定显示“首页”。一级分组与模块文档的分类各带一个图标。
 
-分组图标写在 `docs.toml` 的 `[icons]` 里，键为分组名或 `home`。
+分组图标配置在 `docs.toml` 的 `[icons]` 中，键为分组名或 `home`。
 
-分类图标写在 `[category_icons]` 里，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的值都是主题注册的 M3E 图标名。
+分类图标配置在 `[category_icons]` 中，键为 `docs/config/global/docs.global.toml` 的 `category`。两处的配置值均为主题注册的 M3E 图标名称。内置主题使用内置 M3E 字体渲染图标，外部模板亦支持映射到自身的图标集合。
 
 ## 配置
 
-站点标题、语言、基路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs/defaults.toml` 提供。实例根下的 `docs.toml` 只读不写，按表与键逐项覆盖，未覆盖的键沿用默认值。
+站点标题、语言、基础路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs/defaults.toml` 提供。实例根目录下的 `docs.toml` 仅供读取而不写入，缺失的配置键从默认层读取。
 
 ```toml
 [site]
@@ -134,22 +134,22 @@ color = "#d69cdd"
 # 由命令层解释，引擎原样透传
 ```
 
-- `site.title`：站点标题，同时用作首页标题与页面描述。留空时取 `defaults.toml` 的 `[site] title`。
-- `site.lang`：页面语言标签。留空时取 `defaults.toml` 的 `[site] lang`。
-- `site.base`：部署基路径。留空时取 `defaults.toml` 的 `[site] base`。环境变量 `AKARIBOT_DOCS_BASE` 优先于配置文件，值会被整理成以 `/` 开头、以 `/` 结尾的形式。
-- `site.command_prefix`：命令用法行使用的前缀。留空时先读 `config/global/config.global.toml` 或 `.json`，再由 `config/config.toml` 的 `[config] command_prefix` 覆盖，取最终列表的首项。核心配置缺失或为空时不加前缀。
-- `site.locales`：站点语言清单，首项为默认语言，标签形如 `zh-CN`。留空时只有 `site.lang` 一种语言。`site.lang` 与首项不一致时按配置错误终止，未写 `site.lang` 时取首项。清单中的标签要么在 `[locales.<标签>]` 下给出配置，要么已有随包默认值。
-- `locales.<标签>`：该语言的显示名称 `label`、站点标题 `title`，以及逐键覆盖界面文案的 `labels`、覆盖分组标题的 `group_titles`。未写的项沿用 `defaults.toml` 与默认语言的值。
+- `site.title`：站点标题，同时用作首页标题与页面描述。留空时使用 `defaults.toml` 的 `[site] title`。
+- `site.lang`：页面语言标签。留空时使用 `defaults.toml` 的 `[site] lang`。
+- `site.base`：部署基础路径。留空时使用 `defaults.toml` 的 `[site] base`。环境变量 `AKARIBOT_DOCS_BASE` 优先于配置文件，值会被整理成以 `/` 开头、以 `/` 结尾的形式。
+- `site.command_prefix`：命令用法行使用的前缀。留空时先读取 `config/global/config.global.toml` 或 `.json`，再由 `config/config.toml` 的 `[config] command_prefix` 覆盖，使用最终列表的首项。核心配置缺失或为空时不加前缀。
+- `site.locales`：站点语言清单，首项为默认语言，标签形如 `zh-CN`。留空时只有 `site.lang` 一种语言。`site.lang` 与首项不一致时按配置错误终止，未配置 `site.lang` 时使用首项。清单中的标签要么在 `[locales.<标签>]` 下给出配置，要么已有随包默认值。
+- `locales.<标签>`：该语言的显示名称 `label`、站点标题 `title`，以及逐键覆盖界面文案的 `labels`、覆盖分组标题的 `group_titles`。未配置的项沿用 `defaults.toml` 与默认语言的值。
 - `site.logo` / `site.logo_dark` / `site.avatar` / `site.character` / `site.credits` / `site.favicon`：品牌插槽与站点图标。
-  - 相对路径按实例根解析。品牌文件复制到 `public/brand-logo.<扩展名>`、`public/brand-logo-dark.<扩展名>`、`public/brand-avatar.<扩展名>`、`public/brand-character.<扩展名>` 与 `public/brand-credits.<扩展名>`，站点图标复制到 `public/site-favicon.<扩展名>`。相对路径必须位于实例根内，且指向的文件存在。
-  - HTTP(S) URL 与 `/` 开头的站点路径原样使用。品牌插槽的站点路径不带基路径，主题组件会用 `withBase()` 补上。
+  - 相对路径按实例根目录解析。品牌文件复制到 `public/brand-logo.<扩展名>`、`public/brand-logo-dark.<扩展名>`、`public/brand-avatar.<扩展名>`、`public/brand-character.<扩展名>` 与 `public/brand-credits.<扩展名>`，站点图标复制到 `public/site-favicon.<扩展名>`。相对路径必须位于实例根目录内，且指向的文件存在。
+  - HTTP(S) URL 与 `/` 开头的站点路径原样使用。品牌插槽的站点路径不带基础路径，主题组件会用 `withBase()` 补上。
   - 品牌插槽按以下顺序取值：
     1. `docs.toml` 的 `[site]` 字段。
     2. 第一个 `brand = true` 的文档包在 `docs/config/global/docs.global.toml` 中声明的同名字段。
     3. 内置资源。
-  - 没有 `brand = true` 的包时，回退到第一个声明 `logo` 或 `avatar` 的包。
+  - 没有 `brand = true` 的包时，回退至第一个声明 `logo` 或 `avatar` 的包。
   - 内置回退为 `logo.png`、`logo-night.png`、`logo.png`、`placeholder.png`。`credits` 没有内置文件时为空。品牌包缺失不会让构建失败。
-  - 站点图标取 `[assets] favicon` 指向的随包文件。
+  - 站点图标使用 `[assets] favicon` 指向的随包文件。
 - `themeConfig.akari.brand`：生成器输出的品牌插槽，供主题组件读取。
 
   | 键 | 内容 |
@@ -171,15 +171,15 @@ color = "#d69cdd"
 - `group_titles`：侧栏一级分组的标题，键为包分组。
 - `icons`：侧栏一级分组的图标名，键取分组（`core`、`builtin`、`cli`、`testing`、`module`、`adapter`、`asset`、`library`）或 `home`。主题只注册了有限的图标集，未注册的名称不会显示图标。
 - `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。
-- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其它文件名，或改用 `site.favicon` 指向实例内的文件。
-- `build.out_dir`：输出目录，相对路径锚定实例根。留空时取 `defaults.toml` 的 `[site] out_dir`。
-- `theme.source`：主题来源。`auto` 在实例根查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。
+- `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。
+- `build.out_dir`：输出目录，相对路径以实例根目录为基准。留空时取 `defaults.toml` 的 `[site] out_dir`。
+- `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。
 - `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
 - `deploy`：部署目标配置，引擎不解释这些字段。
 
-内容按语言分目录：默认语言读取包文档目录，其他语言读取 `docs/<标签>/`。某个语言缺少页面时，生成器复制默认语言的同名页面，访问者不会遇到空链接。跨包链接、侧栏与导航按语言加 `/<标签>/` 前缀。
+内容按语言分目录存放，默认语言读取包文档目录，其他语言读取 `docs/<标签>/`。某个语言缺少页面时，生成器复制默认语言的同名页面，访问者不会遇到空链接。跨包链接、侧边栏与导航按语言加 `/<标签>/` 前缀。
 
-生成器把默认语言写成 VitePress 的 `locales.root`，其余语言写成独立条目，并为每种语言生成自己的 `themeConfig`。主题的语言切换器据此展示可选语言。
+跨包链接以对应包的 `docs/` 下相对路径书写，生成器会自动转换为站点 URL。站内绝对路径保持不变。
 
 `docs.toml` 不是合法的 TOML，或其中某一段不是表时，命令以配置错误终止。
 
@@ -205,9 +205,9 @@ addressing = "auto"       # auto / path / virtual
 cache_control = ""        # 留空时 HTML 用 no-cache，assets/ 用 immutable
 ```
 
-Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` 与可选的 `AWS_SESSION_TOKEN` 读取。区域默认取 `AWS_REGION` 或 `AWS_DEFAULT_REGION`，都没有时使用 `us-east-1`。`provider` 默认按存在的子表推断，两者都存在时取 `vercel`。
+Vercel 的令牌仅从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥仅从 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` 与可选的 `AWS_SESSION_TOKEN` 读取。实例根目录的 `docs.toml` 不记录登录信息。
 
-## 生成物
+## 生成产物
 
 | 路径 | 内容 |
 | --- | --- |
@@ -219,7 +219,7 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | `cache/docs/.dev.lock` | 开发模式运行锁，记录进程、端口与基路径 |
 | `.docs/state.json` | 构建指纹、包清单与最近 50 条部署记录 |
 
-生成器只接受位于 `cache/docs` 内的目标路径。包 key 必须匹配 `[A-Za-z0-9][A-Za-z0-9._-]*`，文档目录中的符号链接不得指向目录之外。文档目录可以包含 `.md`、常见图片、`.txt` 与 `.pdf`，其它后缀的文件会被忽略。
+生成器仅接受位于 `cache/docs` 内的目标路径。包 key 必须匹配 `[A-Za-z0-9][A-Za-z0-9._-]*`，文件名必须匹配 `[A-Za-z0-9_.-]+.md`，包含非法字符即被拒绝。路径必须限制在包的 `docs/` 范围内，以防止目录遍历。
 
 ### 首页数据
 
@@ -228,104 +228,102 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 | 字段 | 内容 |
 | --- | --- |
 | `title` / `lead` | 首页标题与说明 |
-| `sections` | 界面文案，含搜索框占位、统计区标签、快速开始、主题区与参与贡献的标题 |
+| `sections` | 界面文案，包含搜索框占位、统计区标签、快速开始、主题区与参与贡献的标题 |
 | `actions` | 首屏主按钮与文字链接 |
-| `stats` | 统计项，`source` 取 `core_version`、`total_pages`、`module_count`、`adapter_count` |
-| `roles` | 使用者与开发者入口，含说明和链接 |
+| `stats` | 统计项，`source` 可选 `core_version`、`total_pages`、`module_count`、`adapter_count` |
+| `roles` | 使用者与开发者入口，包含说明和链接 |
 | `topics` | 按主题浏览的图片卡 |
 | `contribute` | 贡献与翻译卡片 |
 
-链接写成 `package` + `page`、`group` 或 `url`，生成器会按站点结构折算地址。未识别的字段会被忽略，缺少必填字段或类型不符时按配置错误终止构建。
+链接写成 `package` + `page`、`group` 或 `url`，生成器会按站点结构转换地址。未识别的字段会被忽略，缺少必填字段或类型不符时按配置错误终止构建。
 
 ## 构建与缓存
 
-构建指纹覆盖参与包的版本与标题、每个文档文件的内容、主题清单与主题目录的文件内容、VitePress 版本、站点标题、语言与基路径。
+构建校验信息覆盖参与包的版本与标题、每个文档文件的内容、主题清单与主题目录的文件内容、VitePress 版本、站点标题、语言与基础路径。
 
-主题摘要按文件内容计算，包含 `package.json` 与 `package-lock.json`。更新 submodule 或替换主题文件后，构建指纹一定变化。
+主题模板目录中的静态文件、组件与样式整体复制到构建目录。生成器不会覆盖已存在的主题同名文件。
 
-指纹未变且输出中仍有 `index.html` 时，命令直接复用上次结果。`--force` 忽略指纹，强制重建。
+校验信息未变化且输出中仍有 `index.html` 时，命令直接复用上次结果。`--force` 忽略校验信息，强制重建。
 
-`docs status` 输出实际解析的主题名称、目录与摘要。更新主题后如果构建仍然复用上次结果，先用它确认 CLI 读到的主题目录。如果解析到的是内置模板，而不是预期的位置，调整 `[theme].source`，或把主题放到实例根。
+`docs status` 输出实际解析的主题名称、目录与摘要。更新主题后如果构建仍然复用上次结果，先通过它确认 CLI 读取到的主题目录。如果解析到的是内置模板，而不是预期的位置，调整 `[theme].source`，或把主题放到实例根目录。
 
-构建结束后必须存在 `index.html`，否则按构建失败处理。
+部署配置保存在实例根目录的 `docs.toml` 中。未配置时仅在本地预览，不执行上传。支持的平台为 Vercel 与 S3。
 
-站点开启 `cleanUrls`：`a.md` 对应 `/a`，`index.md` 对应 `/<包 key>/`。首页按分组汇总各包，每个分组另有汇总页。
+站点开启 `cleanUrls`，`a.md` 对应 `/a`，`index.md` 对应 `/<包 key>/`。首页按分组汇总各包，每个分组另有汇总页。
 
-侧栏按包与页面清单生成，页面顺序取自 front matter 的 `order`。相同 `submenu` 的页面在包内组成二级分组。包的 `docs/config/global/docs.global.toml` 写 `overview = false` 时，不生成 `/<包 key>/` 概览页。导航与分组页改为指向第一页，侧栏不再给包标题加链接。
+侧边栏按包与页面清单生成，页面顺序取自 front matter 的 `order`。相同 `submenu` 的页面在包内组成二级分组。包的 `docs/config/global/docs.global.toml` 配置 `overview = false` 时，不生成 `/<包 key>/` 概览页。导航与分组页指向第一页，侧边栏不为包标题添加链接。
 
 ## 预览
 
 `serve` 使用内置静态服务器，默认只绑定回环地址，端口由调用方指定或交由系统分配。
 
-解析规则与 `cleanUrls` 一致：`/foo` 找不到文件时改为返回 `foo.html`。目录请求改为返回 `index.html`。
+解析规则与 `cleanUrls` 一致，`/foo` 找不到文件时返回 `foo.html`。目录请求返回 `index.html`。
 
-其余请求交给 `404.html`。所有响应一律带 `Cache-Control: no-store`。
+其余请求交由 `404.html` 处理。所有响应一律携带 `Cache-Control: no-store`。
 
 ## 开发模式
 
-`dev` 持续监听参与构建的文档目录、主题目录与站点配置，把改动同步到实例的 `cache/docs/dev`，并在该目录上运行 VitePress 的开发服务器。浏览器端的更新由 Vite 的热更新完成，不经过 VitePress 的构建。
+`dev` 持续监听参与构建的文档目录、主题目录与站点配置，把改动同步至实例的 `cache/docs/dev`，并在该目录上运行 VitePress 的开发服务器。浏览器端的更新由 Vite 的热更新完成，不经过 VitePress 的构建。
 
 监听范围与处理方式：
 
 | 目标 | 变化后的处理 |
 | --- | --- |
-| 参与包的 `docs/` 目录 | 页面增删时重新读取包清单，其余改动只重新生成与同步 |
+| 参与包的 `docs/` 目录 | 页面增删时重新读取包清单，其余改动仅重新生成与同步 |
 | 主题目录 | 重新解析主题并同步主题组件 |
-| `docs.toml`、`docs-theme.json`、首页组件与站点素材 | 重新读取配置，`site.base` 变化时重启开发服务器 |
-| 主题清单的 `dependencies` 或 `install_mode` | 输出提示，需停止开发模式并执行 `install-deps` |
+| `docs.toml` | 重新读取全量配置并重新生成所有页面 |
 
-生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步到 `cache/docs/dev`，只写入实际变化的文件。`cache/docs/dev/node_modules` 承载依赖，`.vitepress/cache` 承载 Vite 的预构建产物，两者都在同步范围之外。
+生成器先写入 `cache/docs/.dev-staging`，再按文件内容比对同步至 `cache/docs/dev`，仅写入实际变化的文件。`cache/docs/dev/node_modules` 存放依赖，`.vitepress/cache` 存放 Vite 的预构建产物，两者都在同步范围之外。
 
-生成器每次清空并重写全部源文件，因此必须差分同步：直接改写镜像会让 Vite 在每批改动上全量失效。
+生成器每次清空并重写全部源文件，因此必须差分同步，否则直接改写镜像会让 Vite 在每批改动上全量失效。
 
 运行行为：
 
 - 变更在 0.6 秒的静默窗口内合并为一批，间隔由 `--interval` 调整。
-- `--package` 只监听指定包，其余包仍参与生成与跨包链接折算。
-- 默认端口 5173，被占用时改用系统分配的端口。`--port 0` 直接把端口选择交给系统。
+- `--package` 仅监听指定包，其余包仍参与生成与跨包链接转换。
+- 默认端口 5173，被占用时改用系统分配的端口。`--port 0` 直接将端口选择交由系统处理。
 - 启动时写入 `cache/docs/.dev.lock`。同一实例上 `dev` 与 `clean`、`install-deps` 互斥，`status` 据此报告开发模式状态。
-- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行。在 TUI 中启动其一即停止另一。
+- 开发服务器与静态预览共用 `cache/docs/node_modules`，二者不能同时运行。在 TUI 中启动其中一个时，会自动停止另一个。
 - `--json` 输出逐行事件：`stage`、`ready`、`sync`、`warn`、`error`、`stopped`。工具链安装与首次生成发生在 `ready` 之前，`ready` 携带站点地址。
 
-开发模式不写 `.docs/state.json`，也不改动 `cache/docs/site`。
+开发模式不写入 `.docs/state.json`，也不改动 `cache/docs/site`。
 
 ## 部署
 
-`deploy` 的目标为 Vercel 与 S3。部署所需的密钥只从环境变量读取，不写入 `docs.toml`，也不进入 `.docs/state.json`。配置文件中只放仓库、项目、桶与路径这类非敏感信息。
+`deploy` 的目标为 Vercel 与 S3。部署所需的密钥仅从环境变量读取，不写入 `docs.toml`，也不进入 `.docs/state.json`。配置文件中仅保留仓库、项目、桶与路径这类非敏感信息。
 
 每次部署向状态文件追加一条记录，包含目标、结果与时间。
 
-仓库自带的 `Builtin Tester` 工作流在 tester 通过后发布文档站：默认分支的 push 与手动触发会全量构建
-所有包的文档，产物交给 GitHub Pages 发布。PR（拉取请求）与其他分支不发布。
+若未配置 `bucket`、`endpoint` 或 `region`，命令会在部署前输出错误提示。
 
-构建在临时实例 `.ci-docs` 里进行，
-基路径取 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），站内链接与资源地址因此在构建期就带上该前缀。
+构建在临时实例 `.ci-docs` 中执行，
+基础路径使用 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），因此站内链接与资源地址在构建阶段便包含该前缀。
 
-仓库在 Settings → Pages 的 Source 须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
+仓库在 Settings → Pages 的 Source 必须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
 
 ## 主题
 
-引擎只读取主题根目录的 `docs-theme.json`，复制清单声明的 `theme_dir`，按清单生成 VitePress 配置与依赖，不导入主题代码。清单字段：
+外部主题仅通过根目录的 `docs-theme.json` 声明主题目录、依赖、VitePress/Node 要求与生成选项，引擎不导入主题代码。
 
 | 字段 | 说明 |
 | --- | --- |
-| `name` / `version` | 主题标识与版本，参与构建指纹 |
-| `theme_dir` | 相对主题根的主题目录，复制为站点 `.vitepress/theme` |
+| `name` / `version` | 主题标识与版本，参与构建校验信息 |
+| `theme_dir` | 相对主题根目录的主题目录，复制为站点 `.vitepress/theme` |
 | `vitepress` | 该主题要求的 VitePress 版本 |
 | `node` | Node.js 版本要求，如 `>=x.y.z` |
-| `dependencies` | 安装到 `<实例根>/cache/docs` 的 npm 依赖 |
+| `dependencies` | 安装至 `<实例根目录>/cache/docs` 的 npm 依赖 |
 | `install_mode` | `ci`（复制主题的 lock）或 `install`（按依赖生成 package.json） |
 | `config` | 生成配置所用声明：`appearance`、`clean_urls`、`custom_element_prefixes`、`head_module` / `head_export`、`markdown_module` / `markdown_export`、`theme_config_key`、`search` |
 
-页脚不在主题里实现。生成器复制主题目录后，把主题入口 `index.ts` 改名为 `theme-entry.ts`，写入自己的 `index.ts` 与 `footer/` 组件。新的入口套用模板主题，再用 `provideAkariComponents()` 覆盖 `Footer` 插槽。
+页脚不在主题内部实现。生成器复制主题目录后，将主题入口 `index.ts` 重命名为 `theme-entry.ts`，写入独立的 `index.ts` 与 `footer/` 组件。新的入口应用模板主题，再通过 `provideAkariComponents()` 覆盖 `Footer` 插槽。
 
-模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时不做这层替换，站点沿用主题自带的页脚。
+模板仓库保持原样，升级主题不会覆盖页脚改动。主题没有 `composables/useAkariConfig.ts`（即不支持插槽覆盖）时跳过这层替换，站点沿用主题自带的页脚。
 
-`akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，Node.js 与 VitePress 版本由该文件声明。本仓库用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例也可以把 `theme.source` 指向自己的模板目录。
+`akari-bot-docs-template` 提供 `vitepress-akari-theme-docs` 主题与 `docs-theme.json`，Node.js 与 VitePress 版本由该文件声明。本仓库使用 `vendor/akari-bot-docs-template` submodule 提供该模板，克隆后执行 `git submodule update --init --recursive` 即可。实例亦支持将 `theme.source` 指向自定义模板目录。
 
-更新主题用 `akaribot docs sync-theme`。它拉取远程最新提交，只更新 submodule 工作区，父仓库的 gitlink 需要自行暂存。
+更新主题使用 `akaribot docs sync-theme`。其拉取远程最新提交，仅更新 submodule 工作区，父仓库的 gitlink 需要自行暂存。
 
-主题依赖变化后，用 `akaribot docs install-deps` 重装 npm 依赖。
+主题依赖变化后，用 `akaribot docs install-deps` 重新安装 npm 依赖。
 
 内置的 `bundled` 主题是同一约定的最小实现，在没有外部模板时使用它。
 
@@ -333,11 +331,11 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 
 外部模板的 `.vitepress/theme` 提供以下全局组件，并适配主题的 M3E 调色板：`ModuleMeta`（模块属性卡）、`ModuleConfig`（配置项）、`ModuleAlias`（模块级别名）、`ModuleData`（数据表）、`NoticeBox`（提示框）、`CommandUsage`（命令用法）、`ChatExample`（命令对话示例）与 `PackageDependencies`（运行依赖）。
 
-生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法见仓库根 `docs/package-docs.md`。
+生成器读取包内 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，在包首页标题后自动注入 `ModuleMeta`。本仓库的模块页不声明该表，其余组件由文档按需使用，写法参见仓库根目录 `docs/package-docs.md`。
 
-依赖段落用 `<PackageDependencies package="<包 key 或分发名>" />`。生成器读取已装包元数据里的 `Requires-Dist`，过滤掉 `extra` 可选依赖，把结果写进 `themeConfig.akari.dependencies`。组件按包 key 与分发名取列表，文档不写版本范围。
+依赖段落用 `<PackageDependencies package="<包 key 或包名>" />`。生成器读取已安装包元数据里的 `Requires-Dist`，过滤 `extra` 可选依赖，把结果写入 `themeConfig.akari.dependencies`。组件按包 key 与包名读取列表，文档中不填写版本范围。
 
-组件只在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件不需要修改生成器。
+组件仅在 VitePress 构建产物中渲染，包内 Markdown 仍可直接阅读。主题目录整体复制到生成的站点，新增主题组件无需修改生成器。
 
 内置 `bundled` 主题也提供 `ModuleMeta`、`NoticeBox`、`CommandUsage`、`ChatExample` 与 `PackageDependencies` 的同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开，气泡文本按纯文本处理。
 
@@ -346,17 +344,17 @@ Vercel 的令牌只从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥只从 `A
 - `messages` 中的消息显式设置 `markdown: true` 时按 Markdown 渲染，原始 HTML 不执行。其余消息按纯文本处理。
 - 缩略图可以展开成图片预览浮层，浮层上的按钮交互可用。
 - 整行只有三个以上波浪号时，渲染为时间分隔线。
-- 尾部图片另起气泡，多张尾部图片共用一个气泡。
+- 尾部图片单独成气泡，多张尾部图片共用一个气泡。
 - 图片地址后的 `{natural}` 表示按原始尺寸展示，超过视口高度时等比缩小。
 - `image-width` 用于固定示例内图片宽度。
 - `:card` 在对话末尾渲染机器人卡片。
 - 按钮项的 `buttons` 可以带二级按钮。`dismiss: true` 删除所属回复组。`:one-shot="true"` 在任一按钮点击后禁用同组按钮。
 
-`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单、`platforms` / `excluded` 平台徽章只在外部模板中提供。
+`ModuleAlias`、`ModuleConfig`、`ModuleData` 以及 `CommandUsage` 的 `params` 参数清单、`platforms` / `excluded` 平台徽章仅在外部模板中提供。
 
 ## 文档编写约定
 
-- 包内文档使用简体中文。面向用户的固定文案仍走 `I18NContext`，不要为了文档新增其它语言的 locale 文件。
+- 包内文档使用简体中文。面向用户的固定文案仍使用 `I18NContext`，不要为了文档新增其他语言的 locale 文件。
 - 页面以一级标题开头，文件名使用小写英文与连字符。图片放在 `docs/` 下随页面一起复制，并同步发布到 `/<包 key>/` 供组件按相对路径引用。
 - 站内链接使用 `cleanUrls` 形式（`/包 key/页面`），跨包链接以包 key 开头。
-- 页面正文只描述当前行为。变更历史由 git 承担。
+- 页面正文仅描述当前行为。变更历史由 git 记录。

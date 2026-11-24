@@ -29,7 +29,7 @@ CONFIG_GLOB = "*.toml"
 
 _PLACEHOLDER_PATTERN = re.compile(r"<Replace me[^>]*>")
 
-# 标签须按当前语言解析，因此常量只保存文案键。
+# 标签必须按当前语言解析，因此常量仅保存文案键。
 _STATE_KEYS = {
     STATE_RUNNING: "cli.tui.dashboard.state_running",
     STATE_STOPPED: "cli.tui.dashboard.state_stopped",
@@ -48,11 +48,11 @@ def _pending_update_source() -> str:
     return i18n.t(UPDATE_SOURCE_PENDING_KEY)
 
 
-# 切换实例会重新挂载页面，操作记录保存在应用上以供新页面读取。
+# 切换实例会重新挂载页面，操作记录保存在应用实例上供新页面读取。
 _USE_REQUEST_ATTR = "_dashboard_use_requested"
 
 
-# 实例创建包含依赖解析与安装，超时须覆盖下载耗时。
+# 实例创建包含依赖解析与安装过程，超时上限必须覆盖网络下载耗时。
 INIT_TIMEOUT_SECONDS = 1800.0
 SERVICE_CLI_TIMEOUT_SECONDS = 60.0
 CLI_WRITE_TIMEOUT_SECONDS = 60.0
@@ -93,7 +93,7 @@ def _json_object(text: str | None) -> Mapping[str, Any] | None:
 
 
 def _count_of(value: Any) -> int | None:
-    # bool 是 int 的子类，计数字段须显式排除布尔值。
+    # bool 属于 int 的子类，统计字段必须明确排除布尔值。
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
@@ -106,7 +106,7 @@ def _missing_text(reason: str) -> str:
 
 
 def _count_placeholders(paths: Sequence[Path]) -> int:
-    # 配置模板的占位符包含类型说明，估算时须匹配完整标记。
+    # 配置模板占位符包含类型说明，估算时必须匹配完整标记格式。
     total = 0
     for path in paths:
         try:
@@ -227,7 +227,7 @@ class InstanceRow:
         return f"{mark} {i18n.t(key) if key else ''}".strip()
 
     def marks(self) -> str:
-        """返回策略标记：自启与崩溃重启。"""
+        """返回自启与崩溃重启策略标记。"""
         marks: list[str] = []
         if self.autostart:
             marks.append(i18n.t("cli.tui.dashboard.mark_autostart"))
@@ -256,7 +256,7 @@ class ServiceRow:
 
 @runtime_checkable
 class ServiceControl(Protocol):
-    """读取服务状态并执行预览。装卸经 :class:`CliRunner` 执行。"""
+    """读取服务状态并执行预览。安装与卸载通过 :class:`CliRunner` 执行。"""
 
     def service_status(self) -> ServiceRow:
         """返回服务单元状态。"""
@@ -332,7 +332,7 @@ class StaticServiceControl:
         return self._status
 
     def set_status(self, status: ServiceRow) -> None:
-        """替换替身记录的服务状态，模拟单元文件在界面之外出现或消失。"""
+        """替换模拟对象记录的服务状态，模拟单元文件在界面之外出现或消失。"""
         self._status = status
 
     def preview_service(self, action: str) -> OperationResult:
@@ -343,7 +343,7 @@ class StaticServiceControl:
 
 @runtime_checkable
 class CliRunner(Protocol):
-    """写操作的执行接口：一次 ``akaribot <子命令>`` 调用。"""
+    """写入操作的执行接口，对应一次 ``akaribot <子命令>`` 调用。"""
 
     def run(self, args: Sequence[str], *, label: str) -> OperationResult:
         """执行子命令并返回操作结果。
@@ -383,7 +383,7 @@ class SubprocessCliRunner:
 
 @runtime_checkable
 class InitRunner(Protocol):
-    """新建实例的执行接口。测试注入替身，生产环境经 ``akaribot init`` 子进程。"""
+    """新建实例的执行接口。测试注入模拟对象，生产环境通过 ``akaribot init`` 子进程执行。"""
 
     def create(self, root: Path, *, managed_venv: bool, locale: str) -> OperationResult:
         """创建实例并返回操作结果。
@@ -417,7 +417,7 @@ class SubprocessInitRunner:
         return _run_cli_operation(
             argv,
             label=i18n.t("cli.tui.dashboard.new_label", root=root),
-            # 目标目录由 init 创建，子进程须以父目录作为工作目录。
+            # 目标目录由 init 命令创建，子进程必须以父目录作为工作目录。
             cwd=root.parent,
             root=root,
             timeout=self.timeout,
@@ -442,7 +442,7 @@ class StaticInitRunner:
 
 @runtime_checkable
 class InstanceListSource(Protocol):
-    """本机实例清单的数据源接口。写操作经 :class:`CliRunner` 交给命令层。"""
+    """本机实例清单的数据源接口。写入操作通过 :class:`CliRunner` 转交至命令层。"""
 
     def list_instances(self) -> tuple[InstanceRow, ...]:
         """返回注册表中的实例，附带实时运行状态。"""
@@ -481,7 +481,7 @@ class RegistryInstanceListSource:
             )
         active = context.active_root()
         if active is not None and self.registry.find_by_root(active) is None:
-            # 当前实例可能尚未注册，清单须包含该实例。
+            # 当前实例可能尚未完成注册，实例清单必须包含该实例。
             rows.append(InstanceRow(name="", root=active, running=self._probe(active), registered=False))
         return tuple(rows)
 
@@ -539,7 +539,7 @@ def _placeholders_text(summary: SetupSummary) -> str:
 
 @runtime_checkable
 class SetupSummarySource(Protocol):
-    """首次使用摘要的数据源接口。测试注入替身，生产环境经子进程与本机配置文件。"""
+    """首次使用摘要的数据源接口。测试注入模拟对象，生产环境通过子进程与本机配置文件读取。"""
 
     def summary(self) -> SetupSummary:
         """返回摘要数据。"""
@@ -564,7 +564,7 @@ class StaticSetupSummarySource:
         return self._summary
 
     def set_summary(self, summary: SetupSummary) -> None:
-        """替换替身记录的摘要，模拟配置或诊断结论在界面之外变化。"""
+        """替换模拟对象记录的摘要，模拟配置或诊断结论在界面之外变化。"""
         self._summary = summary
 
 
@@ -629,7 +629,7 @@ class LocalSetupSummarySource:
         except OSError as error:
             reason = f"{type(error).__name__}: {error}"
             return None, None, None, reason, reason
-        # 诊断发现错误时返回非零退出码，但标准输出仍包含有效统计。
+        # 诊断发现错误时返回非零退出码，但标准输出中仍包含有效统计数据。
         payload = _json_object(completed.stdout)
         if payload is None:
             reason = i18n.t("cli.tui.dashboard.setup_doctor_unreadable", code=completed.returncode)
@@ -699,7 +699,7 @@ class LocalSetupSummarySource:
         return count, "", False
 
     def _estimate_placeholders(self, root: Path, detail: str) -> tuple[int | None, str, bool]:
-        # core 统计不可用时按配置标记估算，摘要须注明估算方式。
+        # core 统计数据不可用时按配置标记估算，摘要必须注明估算方式。
         try:
             paths = sorted((root / CONFIG_DIRNAME).rglob(CONFIG_GLOB))
         except OSError as error:
@@ -768,12 +768,12 @@ def lock_held(lock_path: Path) -> bool | None:
                 return True
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
             return False
-        except Exception:  # noqa: BLE001 - 探测失败按未知处理，不应中断界面
+        except Exception:  # noqa: BLE001 - 探测失败按未知状态处理，不应中断界面。
             return None
 
 
 def meta_core_version(doc: Any) -> str:
-    """从 ``akaribot.toml`` 的候选位置取 core 版本，缺失时返回空串。"""
+    """从 ``akaribot.toml`` 的候选位置获取 core 版本，缺失时返回空字符串。"""
     for section, key in (("core", "version"), ("instance", "core_version"), ("runtime", "core_version")):
         table = doc.get(section) if isinstance(doc, Mapping) else None
         if isinstance(table, Mapping):
@@ -785,13 +785,13 @@ def meta_core_version(doc: Any) -> str:
 
 @runtime_checkable
 class DashboardSource(Protocol):
-    """Dashboard 数据源接口。测试注入替身，运行时通过文件系统与子进程读取。"""
+    """Dashboard 数据源接口。测试注入模拟对象，运行时通过文件系统与子进程读取。"""
 
     def snapshot(self) -> DashboardSnapshot:
         """返回完整快照，包括版本查询结果。"""
 
     def probe_running(self) -> bool | None:
-        """只探测运行状态，代价须与读一个锁文件相当。"""
+        """仅探测运行状态，代价必须与读取一个锁文件相当。"""
 
 
 class StaticDashboardSource:
@@ -830,11 +830,11 @@ class StaticDashboardSource:
         return self._snapshot.running
 
     def set_running(self, value: bool | None) -> None:
-        """改写替身的运行状态，模拟实例启停。"""
+        """改写模拟对象的运行状态，模拟实例启动与停止。"""
         self._snapshot = replace(self._snapshot, running=value)
 
     def set_snapshot(self, snapshot: DashboardSnapshot) -> None:
-        """整份替换替身快照，模拟实例重建或版本变化。"""
+        """整份替换模拟对象快照，模拟实例重建或版本变化。"""
         self._snapshot = snapshot
 
 
@@ -914,7 +914,7 @@ class LocalDashboardSource:
         if instance is not None:
             try:
                 return bool(instance.is_running())
-            except Exception as error:  # noqa: BLE001 - 降级到本地锁探测，不中断界面
+            except Exception as error:  # noqa: BLE001 - 降级至本地锁探测，不应中断界面。
                 self.last_probe_error = i18n.t(
                     "cli.tui.dashboard.src_probe_failed", kind=type(error).__name__, error=error
                 )
@@ -932,7 +932,7 @@ class LocalDashboardSource:
         if self._instance_factory is not None:
             try:
                 return self._instance_factory(root)
-            except Exception as error:  # noqa: BLE001 - 替身失败同样只降级
+            except Exception as error:  # noqa: BLE001 - 模拟对象失败同样仅执行降级。
                 self.last_probe_error = i18n.t(
                     "cli.tui.dashboard.src_stub_failed", kind=type(error).__name__, error=error
                 )
@@ -944,7 +944,7 @@ class LocalDashboardSource:
             return None
         try:
             return Instance(root)
-        except Exception as error:  # noqa: BLE001 - 实例构造失败只作为降级原因
+        except Exception as error:  # noqa: BLE001 - 实例构造失败仅作为降级原因记录。
             self.last_probe_error = i18n.t(
                 "cli.tui.dashboard.src_instance_failed", kind=type(error).__name__, error=error
             )
@@ -957,7 +957,7 @@ class LocalDashboardSource:
             return {}, i18n.t("cli.tui.dashboard.src_instance_unavailable", error=error)
         try:
             meta = InstanceMeta.load(root)
-        except Exception as error:  # noqa: BLE001 - 元数据失败不应让整页空白
+        except Exception as error:  # noqa: BLE001 - 元数据读取失败不应导致整页空白。
             return {}, i18n.t(
                 "cli.tui.dashboard.src_meta_read_failed",
                 file=INSTANCE_META_FILENAME,
@@ -977,7 +977,7 @@ class LocalDashboardSource:
             return "", i18n.t("cli.tui.dashboard.src_modules_unavailable")
         try:
             records = source.list_modules()
-        except Exception as error:  # noqa: BLE001 - 失败只写入来源说明
+        except Exception as error:  # noqa: BLE001 - 失败仅写入来源说明。
             return "", i18n.t("cli.tui.dashboard.src_list_failed", kind=type(error).__name__, error=error)
         candidates = {name.casefold() for name in CORE_DIST_CANDIDATES}
         for record in records:
@@ -1005,7 +1005,7 @@ class LocalDashboardSource:
             return "", _pending_update_source()
         try:
             hint = str(self._update_probe() or "").strip()
-        except Exception as error:  # noqa: BLE001 - 探测失败不影响其余字段
+        except Exception as error:  # noqa: BLE001 - 探测失败不影响其余字段的展示。
             return "", i18n.t("cli.tui.dashboard.src_probe_callback_failed", kind=type(error).__name__, error=error)
         if not hint:
             return "", i18n.t(
@@ -1108,7 +1108,7 @@ class DashboardPage(compat.Vertical):
     }
     """
 
-    # 文案在类定义时解析，更改 --lang 后须重启进程。
+    # 文案在类定义时解析，更改 --lang 后必须重启进程。
     # 低频键位通过按钮和帮助提供，避免页脚超出 80 列。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.dashboard.bind_refresh")),
@@ -1188,7 +1188,7 @@ class DashboardPage(compat.Vertical):
 
     def on_mount(self) -> None:
         compat.set_text_selection(self, False)
-        # CSS 不接受值为零的 line-pad，须通过样式对象设置，确保单行按钮的标签可见。
+        # CSS 不接受值为零的 line-pad，必须通过样式对象设置，确保单行按钮的标签可见。
         for _, button_id in SETUP_BUTTONS:
             self.query_one(f"#{button_id}", compat.Button).styles.line_pad = 0
         self._adapt_height()
@@ -1221,7 +1221,7 @@ class DashboardPage(compat.Vertical):
         """
         try:
             rows = tuple(self.instances.list_instances())
-        except Exception as error:  # noqa: BLE001 - 注册表不可用仅显示错误提示
+        except Exception as error:  # noqa: BLE001 - 注册表不可用时仅展示错误提示。
             self._instance_rows = ()
             if not polling:
                 self.reset_pending()
@@ -1229,7 +1229,7 @@ class DashboardPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.dashboard.instances_failed", error=f"{type(error).__name__}: {error}"))
             return
         if not polling and rows != self._instance_rows:
-            # 清单变化可能使待确认目标失效，须重新确认。
+            # 清单变化可能使待确认目标失效，必须重新确认。
             self.reset_pending()
         self._instance_rows = rows
         self._render_instances()
@@ -1240,7 +1240,7 @@ class DashboardPage(compat.Vertical):
             return None
         try:
             list_view = self.query_one("#instance-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理。
             return None
         index = compat.highlighted_index(list_view)
         if index is None or index >= len(self._instance_rows):
@@ -1263,7 +1263,7 @@ class DashboardPage(compat.Vertical):
             rows.append(text)
         index = self._index_of_active()
         compat.rebuild_rows(list_view, rows, index)
-        # 重建列表恢复高亮时，不应使确认状态失效。
+        # 重建列表并恢复高亮时，不应使待确认状态失效。
         self._highlighted_key = self._highlight_key(self._instance_rows[index] if index is not None else None)
         self.query_one("#instances-caption", compat.Static).update(
             compat.plain_text(i18n.t("cli.tui.dashboard.instances_keys_caption_with_count", count=len(rows)))
@@ -1286,14 +1286,14 @@ class DashboardPage(compat.Vertical):
 
     @staticmethod
     def _is_active_instance(row: InstanceRow) -> bool:
-        # 统一解析真实路径，避免将同一目录的符号链接视为不同实例。
+        # 统一解析物理真实路径，避免将同一目录的符号链接判定为不同实例。
         active = context.active_root()
         if active is None:
             return False
         return Path(row.root).expanduser().resolve() == active
 
     def switch_to_selected(self) -> None:
-        """切换到高亮实例，并通过 CLI 设置默认实例。"""
+        """切换至高亮实例，并通过 CLI 设置默认实例。"""
         row = self.selected_instance()
         if row is None:
             self._set_status(i18n.t("cli.tui.dashboard.switch_no_selection"))
@@ -1321,18 +1321,18 @@ class DashboardPage(compat.Vertical):
         )
 
     def _request_default_instance(self, row: InstanceRow) -> str:
-        # CLI 读取注册表中的默认实例，切换结果须同步写入。
+        # CLI 读取注册表中的默认实例，切换结果必须同步写入注册表。
         if not row.registered or not row.name:
             return i18n.t("cli.tui.dashboard.switch_default_skipped")
         app = self.app
         name = row.name
         note = i18n.t("cli.tui.dashboard.use_calling", name=name)
         if getattr(app, _USE_REQUEST_ATTR, "") == name:
-            # 同一目标只启动一次注册表写入进程。
+            # 同一目标仅启动一次注册表写入进程。
             return note
         setattr(app, _USE_REQUEST_ATTR, name)
         label = i18n.t("cli.tui.dashboard.use_label", name=name)
-        # 任务由应用持有，避免页面重新挂载时取消注册表写入。
+        # 后台任务由应用实例持有，避免页面重新挂载时取消注册表写入。
         app.run_worker(
             self._run_action(
                 lambda: self.cli_runner.run(("instance", "use", name), label=label),
@@ -1345,12 +1345,12 @@ class DashboardPage(compat.Vertical):
         return note
 
     def _finish_default_instance(self, app: Any, name: str, label: str, result: OperationResult) -> None:
-        # 页面重新挂载会清除状态栏，因此结果通过应用通知显示。
+        # 页面重新挂载会清空状态栏，因此结果通过应用通知展示。
         if result.ok:
             compat.notify(app, i18n.t("cli.tui.dashboard.switch_default_done"), title=label)
             return
         if getattr(app, _USE_REQUEST_ATTR, "") == name:
-            # 写入失败后清除请求记录，允许重试。
+            # 写入失败后清除请求记录。
             setattr(app, _USE_REQUEST_ATTR, "")
         compat.notify(
             app,
@@ -1397,7 +1397,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def service_row(self) -> ServiceRow:
-        """返回最近一次读到的服务状态。"""
+        """返回最近一次读取到的服务状态。"""
         return self._service
 
     @property
@@ -1410,7 +1410,7 @@ class DashboardPage(compat.Vertical):
         self._pending_service.reset()
         try:
             self._service = self.service_control.service_status()
-        except Exception as error:  # noqa: BLE001 - 服务状态读取失败仅显示错误说明
+        except Exception as error:  # noqa: BLE001 - 服务状态读取失败仅显示错误说明。
             self._service = ServiceRow(detail=f"{type(error).__name__}: {error}")
         self._render_service()
 
@@ -1452,7 +1452,7 @@ class DashboardPage(compat.Vertical):
         self.query_one("#service-menu", compat.Button).disabled = self._busy or not registered
 
     def request_add_menu(self) -> None:
-        """弹出添加实例菜单：新建实例或注册已有目录。"""
+        """弹出添加实例菜单，供新建实例或注册已有目录。"""
         if not self._pending_menu.accept("add"):
             return
         compat.ask_choice(
@@ -1475,7 +1475,7 @@ class DashboardPage(compat.Vertical):
             self.request_add_instance()
 
     def request_service_menu(self) -> None:
-        """弹出服务与策略菜单，只列所选实例可用的操作。"""
+        """弹出服务与策略菜单，仅列出所选实例可用的操作。"""
         row = self.selected_instance()
         if self._busy or row is None or not row.registered:
             compat.notify(
@@ -1535,10 +1535,10 @@ class DashboardPage(compat.Vertical):
     def _service_action(self) -> tuple[str, bool]:
         if self._service.installed:
             return "uninstall", False
-        # 缓存可能过期，确认覆盖前须重新检查单元文件。
+        # 缓存可能已过期，确认覆盖前必须重新检查单元文件。
         try:
             fresh = self.service_control.service_status()
-        except Exception:  # noqa: BLE001 - 刷新失败按缓存状态处理，执行时不带 force
+        except Exception:  # noqa: BLE001 - 刷新失败按缓存状态处理，执行时未指定 force。
             return "install", False
         self._service = fresh
         self._render_service()
@@ -1622,7 +1622,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t(f"cli.tui.dashboard.{key}", path=self._service.path or "-"))
 
     def _reject_when_busy(self) -> bool:
-        # 串行执行写操作，避免多个子进程同时修改注册表。
+        # 串行执行写入操作，避免多个子进程同时修改注册表。
         if not self._busy:
             return False
         self._set_status(i18n.t("cli.tui.dashboard.busy_running"))
@@ -1650,7 +1650,7 @@ class DashboardPage(compat.Vertical):
     ) -> None:
         try:
             result = await asyncio.to_thread(call)
-        except Exception as error:  # noqa: BLE001 - 执行器异常仅显示错误说明
+        except Exception as error:  # noqa: BLE001 - 执行器异常仅显示错误说明。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1699,7 +1699,7 @@ class DashboardPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.dashboard.add_done", name=self._registered_name(root), root=root))
 
     def _registered_name(self, root: Path) -> str:
-        # 注册名由 CLI 生成。刷新后无法取得时使用目录名。
+        # 注册名由 CLI 生成。刷新后无法获取时使用目录名。
         wanted = root.expanduser().resolve()
         for row in self._instance_rows:
             if row.root.expanduser().resolve() == wanted:
@@ -1830,7 +1830,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def fields_text(self) -> str:
-        """返回信息面板当前渲染出的纯文本。"""
+        """返回信息面板当前渲染结果中的纯文本。"""
         return self._fields_rendered
 
     @property
@@ -1845,7 +1845,7 @@ class DashboardPage(compat.Vertical):
 
     @property
     def setup_text(self) -> str:
-        """返回首次使用行动区当前渲染出的纯文本。"""
+        """返回首次使用行动区当前渲染结果中的纯文本。"""
         return self._setup_rendered
 
     @property
@@ -1864,7 +1864,7 @@ class DashboardPage(compat.Vertical):
 
         :param force: 为 ``True`` 时忽略缓存。否则缓存有效期内只重绘不读取数据。
         """
-        # 手动刷新使待确认目标失效，须重新确认。
+        # 手动刷新会导致待确认目标失效，必须重新执行确认。
         self.reset_pending()
         if not force and self._loaded_at and self.cache_age() < self.cache_ttl:
             self._render_fields()
@@ -1876,7 +1876,7 @@ class DashboardPage(compat.Vertical):
     async def _load_snapshot(self) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.snapshot)
-        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面。
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._snapshot = DashboardSnapshot(error=self.last_error)
@@ -1901,7 +1901,7 @@ class DashboardPage(compat.Vertical):
         """
         try:
             value = self.source.probe_running()
-        except Exception as error:  # noqa: BLE001 - 探测失败按未知展示
+        except Exception as error:  # noqa: BLE001 - 探测失败按未知展示。
             self.last_error = f"{type(error).__name__}: {error}"
             self._set_status(i18n.t("cli.tui.dashboard.status_probe_failed", error=self.last_error))
             return None
@@ -1934,7 +1934,7 @@ class DashboardPage(compat.Vertical):
     async def _load_setup(self, source: SetupSummarySource) -> None:
         try:
             summary = await asyncio.to_thread(source.summary)
-        except Exception as error:  # noqa: BLE001 - 取数失败只降级为逐项说明
+        except Exception as error:  # noqa: BLE001 - 读取数据失败仅降级为逐项说明。
             reason = f"{type(error).__name__}: {error}"
             summary = SetupSummary(adapters_reason=reason, placeholders_reason=reason, doctor_reason=reason)
         self._setup = summary
@@ -1943,7 +1943,7 @@ class DashboardPage(compat.Vertical):
     def _render_setup(self) -> None:
         rows = self._setup_rows_for_render()
         self._setup_rows = rows
-        # 摘要限高两行，为列表与详情保留空间。原文保留完整取值，由控件按宽度截断。
+        # 摘要高度限制为两行，为列表与详情保留空间。原文保留完整取值，由控件按宽度截断。
         cells = [f"{label} {value}" for label, value in rows]
         text = "\n".join("  ".join(cells[index : index + 2]) for index in range(0, len(cells), 2))
         self._setup_rendered = text
@@ -2023,14 +2023,14 @@ class DashboardPage(compat.Vertical):
         text = "\n".join(lines)
         self._fields_rendered = text
         self.query_one("#fields", compat.Static).update(compat.plain_text(text))
-        # 运行状态和可用宽度均可能变化，须同时刷新摘要与按钮。
+        # 运行状态与可用宽度均可能发生变化，必须同时刷新摘要与按钮。
         self._render_setup()
         self._sync_actions()
 
     def _inner_width(self) -> int:
         try:
             outer = compat.widget_cells(self)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 72
         if outer < 8:
             # 首次激活时宽度可能为零，使用默认宽度并在 resize 时重新布局。
@@ -2054,7 +2054,7 @@ class DashboardPage(compat.Vertical):
             button.styles.line_pad = 0 if compact else 1
 
     def reset_pending(self) -> None:
-        """作废本页的待确认状态。切页、刷新与更换选中项后须重新确认。"""
+        """重置本页的待确认状态。切换页面、刷新或更换选中项后必须重新确认。"""
         self._pending_service.reset()
         self._pending_remove.reset()
         self._pending_menu.reset()
@@ -2066,12 +2066,12 @@ class DashboardPage(compat.Vertical):
     @compat.on(compat.ListView.Highlighted, "#instance-list")
     def _on_instance_highlighted(self, event: compat.ListView.Highlighted) -> None:
         if compat.highlighted_index(event.list_view) is None:
-            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按“不变”处理。
+            # 重建列表时 clear() 会清空高亮状态，该项非主动交互选择，按“保持不变”处理。
             return
-        # 重建列表也会触发高亮事件，须比较目标以排除显示刷新。
+        # 重建列表也会触发高亮事件，必须比较目标以排除显示刷新。
         key = self._highlight_key(self.selected_instance())
         if key == self._highlighted_key:
-            # 重建后按钮状态可能仍是按空列表算出的，须按当前高亮刷新。
+            # 重建后按钮状态可能仍是按空列表计算的，必须按当前高亮刷新。
             self._sync_actions()
             return
         self._highlighted_key = key
@@ -2103,7 +2103,7 @@ class DashboardPage(compat.Vertical):
             button = self.query_one(f"#{button_id}", compat.Button)
             button.disabled = bool(reason)
             button.label = i18n.t(label_key)
-        # 禁用状态可能改变标签宽度，须重新计算布局。
+        # 禁用状态可能改变标签宽度，必须重新计算布局。
         self.query_one("#setup-actions", compat.ButtonFlow).relayout()
 
     def _setup_button_state(self, page_key: str) -> tuple[str, str]:

@@ -1,4 +1,4 @@
-"""akaribot.modules.core.hooks.routing 单元测试 - 消息通道去重（需要数据库）。"""
+"""akaribot.modules.core.hooks.routing 消息通道去重单元测试（需要数据库）。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -10,7 +10,7 @@ from akaribot.modules.core.hooks.routing import CHANNEL_DEDUP_WINDOW, channel_cl
 
 
 async def _fake_msg(target_id: str, trigger: str):
-    # 构造一个满足通道认领 hook 所需的最小会话。
+    # 构造满足通道认领 Hook 运行所需的最小会话对象。
     target_union_info = await TargetUnionInfo.resolve_union(target_id)
     return SimpleNamespace(
         session_info=SimpleNamespace(
@@ -32,7 +32,7 @@ async def _claim(msg) -> bool:
 async def _test_alone_in_channel_never_claims():
     try:
         msg = await _fake_msg("CHANTEST|Group|alone", "help")
-        # 连续两次均不应判定为重复，否则单个场景会丢弃自身的消息。
+        # 连续两次调用均不应判定为重复，避免单一场景丢弃自身的消息。
         return not await _claim(msg) and not await _claim(msg)
 
     except Exception:
@@ -63,10 +63,10 @@ async def _test_repeat_from_same_session_not_duplicate():
         first = await _fake_msg("CHANTEST|Group|rep1", "echo")
         peer = await _fake_msg("CHANTEST|Group|rep2", "echo")
 
-        # 认领键只由通道与内容组成，不含发起方，重发的消息会撞上自身上一条留下的认领。
+        # 认领键仅由通道与内容构成，不包含发起方，重发的消息会匹配到自身上一条残留的认领记录。
         if await _claim(first) or await _claim(first):
             return False
-        # 重发之后同通道的其它场景仍应避让，否则同一条消息会被响应两次。
+        # 重发之后相同通道的其他场景仍然应当避让，避免同一条消息被重复响应两次。
         return await _claim(peer)
 
     except Exception:
@@ -85,7 +85,7 @@ async def _test_outside_window_not_duplicate():
         if await _claim(first):
             return False
 
-        # 将认领时间回拨至时间窗之外，模拟间隔较长后再次发送同样的消息。
+        # 将认领时间调整至时间窗口之外，模拟较长间隔后重新发送相同消息的场景。
         for entry in channel_claim_cache.data.values():
             if "timestamp" in entry:
                 entry["timestamp"] -= CHANNEL_DEDUP_WINDOW * 2
@@ -104,7 +104,7 @@ async def _test_channel_lookup_failure_stops_message():
 
 @func_case
 async def test_channel_dedup(tester: Tester):
-    """akaribot.modules.core.hooks.routing: 消息通道去重测试"""
+    """akaribot.modules.core.hooks.routing 消息通道去重测试"""
     await tester.test(_test_alone_in_channel_never_claims, "单场景不认领测试")
     await tester.test(_test_same_channel_claims_once, "同通道抢占测试")
     await tester.test(_test_repeat_from_same_session_not_duplicate, "同场景重发测试")

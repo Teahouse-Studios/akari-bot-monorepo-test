@@ -26,7 +26,7 @@ from akaribot.core.registry import PackageRegistry
 from akaribot.testing import Tester, func_case
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 样本库随 core 包分发，与本用例同属一个包，按测试文件位置定位即可。
+# 样本数据库随 core 包分发，与当前用例属于同一成员包，按照测试文件位置定位即可。
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "db"
 
 MAIMAI_PACKAGE = "akari-bot-module-maimai"
@@ -35,7 +35,7 @@ LXNS_TABLE = "module_maimai_lxns_prober_bind_info"
 
 
 class _isolated_db:
-    # 样本库与测试进程自带的库不能共用连接：升级会改动表结构，因此连接必须指向文件副本。
+    # 样本数据库与测试进程内置数据库不可共用连接，由于版本升级会修改表结构，连接必须指向独立的文件副本。
     def __init__(self, path: Path) -> None:
         self.path = path
         self.context = TortoiseContext()
@@ -82,7 +82,7 @@ async def _test_discovery_covers_legacy_map():
     expected = {(package, revision) for entries in LEGACY_MAP.values() for package, revision in entries}
     actual = {(package, module.revision) for package, modules in discovered.items() for module in modules}
     order = MigrationRunner._order(discovered, None)
-    # 旧版本号只记录到 LATEST_LEGACY_VERSION，其后追加的 revision 由常规升级执行，故用包含关系。
+    # 历史版本号仅记录至 LATEST_LEGACY_VERSION，后续追加的 revision 通过常规升级流程执行，因此按包含关系检查。
     return expected <= actual and order[0] == "core" and set(order) == set(discovered) and len(order) == 5
 
 

@@ -129,7 +129,7 @@ async def _test_device_login_errors():
 
 @func_case
 async def test_phigros_taptap(tester: Tester):
-    """phigros: TapTap 扫码登录"""
+    """phigros，负责 TapTap 扫码登录测试。"""
     await tester.test(_test_mac_authorization_matches_official_vector, "TapTap MAC 官方向量")
     await tester.test(_test_device_login_flow, "TapTap 设备码登录请求链路")
     await tester.test(_test_device_login_errors, "TapTap 设备码错误分类")

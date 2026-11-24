@@ -18,7 +18,7 @@ dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
     "akari-bot-html2text>=0.1.0,<1.0",
     "Pillow>=13.0.0,<13.1.0",
-    # aiocqhttp 是模块→平台 SDK 的现存违规边（T4.2 §7.6），在 core HTTP 层承接之前必须保留
+    # aiocqhttp 是模块至平台 SDK 的现存违规依赖（T4.2 §7.6），在 core HTTP 层接管之前必须保留。
     "aiocqhttp>=1.4.3,<2.0.0",
     "akari-bot-webrender==0.7.4",
     "attrs>=26.1.0",

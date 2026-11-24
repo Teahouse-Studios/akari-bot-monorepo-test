@@ -59,7 +59,7 @@ class DisambiguationBlock:
 
 
 def is_disambiguation_page(pageprops: dict | None, templates: list[str] | None) -> bool:
-    """判断 MediaWiki 是否把页面标记为消歧义页。"""
+    """判断 MediaWiki 是否将页面标记为消歧义页。"""
     return "disambiguation" in (pageprops or {}) or bool(DISAMBIGUATION_TEMPLATES.intersection(templates or []))
 
 

@@ -18,13 +18,13 @@ hero:
 
 <CommandUsage usage="phigros bind <sessiontoken> [-i]" :params="['sessiontoken=云存档 SessionToken']" permission="public" :options="[{flag: '-i', desc: '表示国际服账号。'}]" />
 
-此命令使用云存档 SessionToken 绑定账号。SessionToken 格式不合法时直接拒绝。在公开场景执行时，先发送令牌泄露警告并撤回命令消息。
+此命令使用云存档 SessionToken 绑定账号。SessionToken 格式不合法时直接拒绝执行。在公开场景执行时，会先发送令牌泄露警告并撤回命令消息。
 
 ### `phigros login`
 
 <CommandUsage usage="phigros login" permission="public" />
 
-此命令仅限私聊使用，通过 TapTap 扫码登录并绑定国服账号。执行时依次展示授权二维码或链接、轮询授权结果、换取 SessionToken 并完成绑定。二维码过期、授权取消与登录失败分别返回对应提示。
+此命令仅限私聊使用，通过 TapTap 扫码登录并绑定国服账号。执行时依次展示授权二维码或链接、轮询授权结果、获取 SessionToken 并完成绑定。二维码过期、授权取消与登录失败分别返回对应提示。
 
 ### `phigros unbind`
 
@@ -43,7 +43,7 @@ hero:
 
 <CommandUsage usage="phigros refresh" permission="public" />
 
-刷新当前账号的 SessionToken，原令牌立即失效。刷新后自动写回新令牌，不在消息中回显。使用前需要先绑定账号。
+刷新当前账号的 SessionToken，原有令牌立即失效。刷新后自动写回新令牌，不在消息中回显。使用前需要先绑定账号。
 
 ### `phigros b30`
 
@@ -79,7 +79,7 @@ hero:
 
 <CommandUsage usage="phigros song <song_name>" :params="['song_name=曲名，匹配时忽略标点与大小写']" permission="public" />
 
-查询歌曲资料与谱面信息，曲绘存在时附带曲绘。
+查询歌曲资料与谱面信息，曲绘存在时附带曲绘图片。
 
 <ChatExample
   :log="[
@@ -96,7 +96,7 @@ hero:
 
 <CommandUsage usage="phigros random" permission="public" />
 
-随机展示一首歌曲，曲绘存在时附带曲绘。
+随机展示一首歌曲，曲绘存在时附带曲绘图片。
 
 <ChatExample
   :log="[
@@ -114,7 +114,7 @@ hero:
 
 <CommandUsage usage="phigros update [--no-illus]" permission="superuser" :options="[{flag: '--no-illus', desc: '跳过曲绘下载。'}]" />
 
-更新曲目信息与曲绘。模块每小时自动检查一次资源，也可以用此命令手动更新。
+更新曲目信息与曲绘。模块每小时自动检查一次资源，也可以通过此命令手动更新。
 
 <ChatExample
   :log="[
@@ -123,4 +123,4 @@ hero:
   ]"
 />
 
-依赖曲目信息的命令在文件缺失或结构过旧时提示先执行 `phigros update`。令牌失效时提示重新绑定，云存档读取失败时返回同一条获取失败提示。
+依赖曲目信息的命令在文件缺失或结构版本过旧时提示先执行 `phigros update`。令牌失效时提示重新绑定，云存档读取失败时返回同一条获取失败提示。

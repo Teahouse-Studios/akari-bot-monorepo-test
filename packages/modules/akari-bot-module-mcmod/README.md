@@ -1,10 +1,10 @@
 # akari-bot-module-mcmod
 
-从 MC 百科获取 Minecraft Mod 信息。
+从 MC 百科获取 Minecraft Mod 详细信息。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-mcmod

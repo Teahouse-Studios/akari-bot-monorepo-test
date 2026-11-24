@@ -152,7 +152,7 @@ class WikiBotAccountList(DBModel):
         return bool(await cls.filter(api_link=api_link).delete())
 
 
-# WikiLog 的表名沿用合并前的模块前缀，既有数据库无需迁移。
+# WikiLog 的表名沿用合并前的模块前缀，既有数据库不需要迁移。
 wikilog_table_prefix = "module_wikilog_"
 
 
@@ -290,7 +290,7 @@ class WikiLogTargetSetInfo(DBModel):
 
     @classmethod
     async def return_all_data(cls):
-        """返回全部配置，键为场景 union ID（推送时需展开为该 union 下的全部平台场景 ID）。"""
+        """返回全部配置，键为场景 union ID（推送时需要展开为该 union 下的全部平台场景 ID）。"""
         all_data = await cls.all()
         data_d = {x.union_id: x.infos for x in all_data}
         return data_d

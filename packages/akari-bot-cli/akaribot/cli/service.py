@@ -36,7 +36,7 @@ LAUNCHD_UNIT_FILENAME = f"{LAUNCHD_LABEL}.plist"
 LAUNCHD_TOOL = "launchctl"
 SYSTEMD_UNIT_NAME = "akaribot.service"
 SYSTEMD_TOOL = "systemctl"
-# 单元文件里要执行的子命令。render_unit 只负责拼装，不关心它的含义。
+# 单元文件中执行的子命令。render_unit 仅负责组装命令，不涉及命令语义。
 SERVICE_COMMAND = ("service", "supervise")
 
 DEFAULT_INTERVAL = 5.0
@@ -58,7 +58,7 @@ LOG_TAIL_CHARS = 800
 
 
 class ServiceError(RuntimeError):
-    """服务托管不可用：平台不受支持、单元文件已存在或系统命令失败。"""
+    """服务托管不可用异常（因平台不受支持、单元文件已存在或系统命令执行失败触发）。"""
 
 
 def detect_backend(platform_name: str | None = None) -> str:
@@ -76,18 +76,18 @@ def detect_backend(platform_name: str | None = None) -> str:
 
 
 def current_uid() -> int:
-    """当前用户号。Windows 上没有该概念，返回 0 供展示。"""
+    """当前用户 ID。Windows 系统中无此概念，返回 0 以供展示。"""
     getter = getattr(os, "getuid", None)
     return getter() if getter is not None else 0
 
 
 def supported_backends() -> tuple[str, str]:
-    """返回本模块实现的两种后端名，供提示文案列举。"""
+    """返回本模块实现的两种后端名称，以供提示文案列举。"""
     return (BACKEND_LAUNCHD, BACKEND_SYSTEMD)
 
 
 def unsupported_detail(platform_name: str | None = None) -> str:
-    """平台不受支持时的说明，含可执行的下一步。"""
+    """平台不受支持时的说明信息，包含可执行的后续操作。"""
     head = i18n.t(
         "cli.service.unsupported",
         platform=platform_name or sys.platform,
@@ -113,7 +113,7 @@ def unit_path(backend: str, *, home: Path | None = None) -> Path:
 
 
 def default_log_dir(backend: str, *, home: Path | None = None) -> Path:
-    """服务进程控制台输出的默认落盘目录。"""
+    """服务进程控制台输出的默认保存目录路径。"""
     base = Path(home) if home is not None else Path.home()
     if backend == BACKEND_LAUNCHD:
         return base / "Library" / "Logs" / "akaribot"
@@ -121,7 +121,7 @@ def default_log_dir(backend: str, *, home: Path | None = None) -> Path:
 
 
 def default_cli_argv() -> tuple[str, ...]:
-    """调用本 CLI 的 argv 前缀，不含子命令。"""
+    """调用当前 CLI 的 argv 前缀，不包含子命令。"""
     return tuple(cli_process.cli_argv())
 
 
@@ -167,7 +167,7 @@ def _render_launchd(
     payload: dict[str, Any] = {
         "Label": LAUNCHD_LABEL,
         "ProgramArguments": list(command),
-        # 崩溃（非零退出）才拉起：正常退出说明守护循环按信号退出，不该被立刻重启。
+        # 仅在崩溃（非零退出）时重启，因为正常退出说明守护循环按信号退出，不应被立刻重启。
         "KeepAlive": {"SuccessfulExit": False},
         "RunAtLoad": True,
         "ProcessType": "Background",
@@ -206,7 +206,7 @@ def _render_systemd(
 
 
 def _systemd_env(name: str, value: str) -> str:
-    # Environment= 按空白切分赋值，值里含空白或引号时整个赋值要加引号并转义。
+    # Environment= 按空白字符切分赋值，值中包含空白或引号时整个赋值需要添加引号并转义。
     assignment = f"{name}={value}"
     if value and not any(char in assignment for char in " \t\"'\\"):
         return assignment
@@ -219,7 +219,7 @@ def _systemd_argv(command: Sequence[str]) -> str:
 
 
 def _systemd_quote(argument: str) -> str:
-    # systemd 会展开未转义的 ``$``，含空格或特殊字符的参数必须加引号并逐项转义。
+    # systemd 会展开未转义的 ``$``，包含空格或特殊字符的参数必须添加引号并逐项转义。
     if argument and not any(char in argument for char in " \t\"'\\$"):
         return argument
     escaped = argument.replace("\\", "\\\\").replace('"', '\\"').replace("$", "$$")
@@ -232,7 +232,7 @@ def system_runner(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     :param argv: 命令行参数。
     :return: 已完成的子进程。
     """
-    return subprocess.run(list(argv), capture_output=True, text=True, check=False)  # noqa: S603 - 参数由本模块拼装
+    return subprocess.run(list(argv), capture_output=True, text=True, check=False)  # noqa: S603 - 参数由本模块组装构建。
 
 
 CommandRunner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
@@ -257,7 +257,7 @@ class ServiceStatus:
     detail: str = ""
 
     def as_dict(self) -> dict[str, Any]:
-        """转为 ``--json`` 输出用的字典。"""
+        """Windows 启动服务时仅负责启动控制器进程，不等待就绪。"""
         return {
             "backend": self.backend,
             "installed": self.installed,
@@ -283,7 +283,7 @@ class ServiceBackend:
 
     kind: str = field(default_factory=detect_backend)
     home: Path = field(default_factory=Path.home)
-    # 默认工作目录取注册表目录：界面与命令行共用同一个默认值，装出来的单元才一致。
+    # 默认工作目录使用注册表目录，使界面与命令行共用同一默认值，确保安装生成的单元配置保持一致。
     workdir: Path | None = field(default_factory=registry_home)
     env: Mapping[str, str] = field(default_factory=service_env)
     runner: CommandRunner = system_runner
@@ -292,7 +292,7 @@ class ServiceBackend:
     uid: int = field(default_factory=current_uid)
 
     def tool(self) -> str:
-        """本后端要用的系统工具名。"""
+        """以非阻塞方式启动守护循环。Windows 平台不运行守护循环，返回 None。"""
         return LAUNCHD_TOOL if self.kind == BACKEND_LAUNCHD else SYSTEMD_TOOL
 
     def path(self) -> Path:
@@ -303,7 +303,7 @@ class ServiceBackend:
         return unit_path(self.kind, home=self.home)
 
     def log_dir(self) -> Path:
-        """服务进程控制台输出的落盘目录。"""
+        """服务进程控制台输出的保存目录路径。"""
         return default_log_dir(self.kind, home=self.home)
 
     def render(self) -> str:
@@ -365,7 +365,7 @@ class ServiceBackend:
         return ServiceStatus(self.kind, False, enabled, path, detail)
 
     def status(self) -> ServiceStatus:
-        """读取服务状态，只用只读命令探测是否已注册。"""
+        """读取服务状态，仅使用只读命令探测是否已注册。"""
         if self.kind == BACKEND_UNSUPPORTED:
             return ServiceStatus(BACKEND_UNSUPPORTED, False, None, None, unsupported_detail())
         path = self.path()
@@ -391,7 +391,7 @@ class ServiceBackend:
             first = self._call([LAUNCHD_TOOL, "bootstrap", domain, str(path)])
             if first is not None and first.returncode == 0:
                 return True, i18n.t("cli.service.install.registered", tool=tool)
-            # 部分 macOS 版本的 launchctl 只实现 load。bootstrap 失败时退回它，两者语义一致。
+            # 部分 macOS 版本的 launchctl 仅实现 load。bootstrap 失败时回退至 load，两者语义一致。
             second = self._call([LAUNCHD_TOOL, "load", "-w", str(path)])
             if second is not None and second.returncode == 0:
                 return True, i18n.t("cli.service.install.registered", tool=tool)
@@ -443,7 +443,7 @@ def _failure_detail(key: str, tool: str, result: subprocess.CompletedProcess[str
 
 
 def _tail(result: subprocess.CompletedProcess[str] | None) -> str:
-    # 系统工具的失败原因写在 stderr，取尾部供排障。
+    # 系统工具的失败原因输出在 stderr 中，截取尾部供排查。
     if result is None:
         return ""
     text = (result.stderr or result.stdout or "").strip()
@@ -516,7 +516,7 @@ def default_spawn(controller: Instance) -> int:
     :return: 实例进程号。
     :raises ServiceError: 进程未在就绪时限内取到锁。
     """
-    # 就绪时限与控制台日志路径都以 run --detach 为准，故就地取用它的实现，避免两处判据分叉。
+    # 就绪时限与控制台日志路径都以 run --detach 为准，因此直接复用它的实现，避免两处判断标准分叉。
     from akaribot.cli.commands.run import READY_TIMEOUT_SECONDS, console_log_path
 
     log_path = console_log_path(controller.root)
@@ -607,7 +607,7 @@ class Supervisor:
         running = bool(controller.is_running())
         if entry.desired != STATE_RUNNING:
             if running:
-                # 用户可能正在前台运行，守护循环不干预，只说明现状。
+                # 用户可能正在前台运行实例，守护循环不执行干预，仅陈述当前状态。
                 tally.skipped += 1
                 state = controller.run_state()
                 self._note(
@@ -637,8 +637,8 @@ class Supervisor:
     def _handle_down(
         self, entry: Any, watch: _Watch, controller: Any, now: float, events: list[SuperviseEvent], tally: _Tally
     ) -> None:
-        # 本次服务启动后还没见过它运行，说明是掉电或退出后的恢复：只有开了开机自启的实例才恢复，
-        # “上次在跑”本身不构成自启的理由。只有见过它运行的实例，才按崩溃处理。
+        # 本次服务启动后尚未观察到其运行状态，表明属于异常断电或退出后的恢复，仅为开启了开机自启的实例执行恢复，
+        # “上次处于运行状态”本身不构成自启条件。仅针对观察到实际运行过的实例按崩溃流程处理。
         if not watch.seen_running and not watch.recovery_done:
             watch.recovery_done = True
             if not entry.autostart:
@@ -703,7 +703,7 @@ class Supervisor:
             watch.restarts += 1
         try:
             pid = self.spawn(controller)
-        except Exception as error:  # noqa: BLE001 - 拉起失败的原因照实上报，守护循环不因此中断
+        except Exception as error:  # noqa: BLE001 - 启动失败的原因如实上报，守护循环不因此中断。
             tally.failed += 1
             watch.next_restart_at = 0.0
             label = f"{KIND_FAILED}:{watch.restarts}" if not recovered else KIND_FAILED
@@ -743,7 +743,7 @@ class Supervisor:
         )
 
     def _note(self, events: list[SuperviseEvent], watch: _Watch, name: str, label: str, message: str) -> None:
-        # 每轮只在状态变化时输出：标签不变就不再重复同一件事。
+        # 每轮仅在状态变化时输出，标签保持不变时无需重复输出提示。
         if watch.label == label:
             return
         watch.label = label

@@ -10,7 +10,7 @@ MAX_DICE_COUNT = DiceConfig.dice_limit
 MAX_ROLL_TIMES = DiceConfig.dice_roll_limit
 MAX_OUTPUT_CNT = DiceConfig.dice_output_count
 MAX_OUTPUT_LEN = DiceConfig.dice_output_len
-MAX_DETAIL_CNT = DiceConfig.dice_detail_count  # n 次投掷的骰子的总量超过该值时将不再显示详细信息
+MAX_DETAIL_CNT = DiceConfig.dice_detail_count  # n 次投掷的骰子总量超过该值时隐藏详细信息。
 MAX_ITEM_COUNT = DiceConfig.dice_count_limit
 
 dice_patterns = [

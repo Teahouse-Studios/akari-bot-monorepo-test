@@ -18,9 +18,9 @@ hero:
 
 <CommandUsage usage="cytoid profile [<username>]" :params="['username=Cytoid 用户名']" permission="public" />
 
-此命令查询用户资料，返回头像图片，以及经验、等级、Rating 和评级分布。省略用户名时，机器人查询发送者绑定的账号。
+此命令查询用户资料，返回头像图片，以及经验、等级、Rating 与评级分布。省略用户名时，机器人将查询发送者绑定的账号。
 
-没有绑定时，命令提示先执行 `cytoid bind`。用户不存在时返回未找到提示。
+若未绑定账号，命令提示需要先执行 `cytoid bind`。用户不存在时返回未找到提示。
 
 <ChatExample
   :log="[
@@ -35,7 +35,7 @@ hero:
 
 此命令生成 B30 成绩图。省略用户名时，机器人查询发送者绑定的账号。
 
-没有绑定时，命令提示先执行 `cytoid bind`。拉取成绩失败时，命令返回获取失败提示。
+此命令生成 B30 成绩图。省略用户名时，机器人将查询发送者绑定的账号。若未绑定账号，命令提示需要先执行 `cytoid bind`。
 
 <ChatExample
   :log="[
@@ -48,7 +48,7 @@ hero:
 
 <CommandUsage usage="cytoid r10 [<username>]" :params="['username=Cytoid 用户名']" permission="public" />
 
-此命令生成 R10 成绩图。参数与 `cytoid b30` 相同。没有绑定时，命令同样提示先执行 `cytoid bind`。
+此命令生成 R10 成绩图。参数与 `cytoid b30` 相同。若未绑定账号，命令同样提示需要先执行 `cytoid bind`。
 
 <ChatExample
   :log="[
@@ -61,7 +61,7 @@ hero:
 
 <CommandUsage usage="cytoid bind <username>" :params="['username=要绑定的 Cytoid 用户名']" permission="public" />
 
-此命令绑定 Cytoid 用户名。绑定按发送者保存，同一用户在任何会话中都能使用这份绑定。用户名不存在时返回绑定失败提示。
+此命令绑定 Cytoid 用户名。绑定按照发送者保存，同一用户在任何会话中均可以使用该绑定。用户名不存在时返回绑定失败提示。
 
 <ChatExample
   :log="[
@@ -74,7 +74,7 @@ hero:
 
 <CommandUsage usage="cytoid unbind" permission="public" />
 
-此命令解除发送者的账号绑定。解绑后，查询类命令需要重新执行 `cytoid bind`。
+此命令解除发送者的账号绑定。解绑完成后，查询类命令需要重新执行 `cytoid bind`。
 
 <ChatExample
   :log="[

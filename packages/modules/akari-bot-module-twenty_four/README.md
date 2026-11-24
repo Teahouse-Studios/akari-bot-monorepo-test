@@ -1,10 +1,10 @@
 # akari-bot-module-twenty_four
 
-用四个数字与四则运算凑出 24 的小游戏。
+通过四个数字与四则运算计算得出 24 的小游戏。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见软件包内 `pyproject.toml` 中的 `requires-python`。
 
 ```sh
 pip install akari-bot-module-twenty_four

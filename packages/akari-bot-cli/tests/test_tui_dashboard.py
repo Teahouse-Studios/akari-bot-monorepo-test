@@ -59,7 +59,7 @@ def _button(page, button_id: str) -> compat.Button:
 
 
 async def _open_menu(page, pilot, button_id: str, index: int) -> None:
-    # 添加实例与服务策略都先弹菜单，再进入原有流程。
+    # 添加实例与服务策略均先弹出菜单，再进入原有流程。
     _button(page, button_id).press()
     await pilot.pause()
     assert await pilot.click(f"#choice-{index}")
@@ -102,7 +102,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # CLI 首次读取文案会初始化快照，需在初始化后应用测试片段。
+    # CLI 首次读取文案会初始化快照，需要在初始化后应用测试片段。
     i18n.t("cli.tui.common.status_ready")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
@@ -125,7 +125,7 @@ async def _wait_until(predicate, timeout: float = 1.0) -> bool:
     return False
 
 
-# 记录写操作的 argv。on_run 暂停首条命令，用于验证忙碌状态。
+# 记录写入操作的 argv。on_run 暂停首条命令，用于验证忙碌状态。
 class _RecordingRunner:
     def __init__(self, result: OperationResult | None = None, on_run=None) -> None:
         self.calls: list[tuple[str, ...]] = []
@@ -194,7 +194,7 @@ async def _with_page(
     chosen = source if source is not None else StaticDashboardSource(SNAPSHOT, running=True)
     listed = instances if instances is not None else StaticInstanceListSource(_instance_rows())
     control = service if service is not None else StaticServiceControl()
-    # 摘要默认使用替身数据源，避免启动诊断子进程。
+    # 摘要默认使用模拟数据源，避免启动诊断子进程。
     brief = setup if setup is not None else StaticSetupSummarySource()
     app = TuiApp(
         sources={
@@ -237,7 +237,7 @@ async def _test_fields_show_instance_facts():
 
 
 async def _test_state_follows_probe():
-    # 运行状态由锁文件探测决定，行文本带状态标记。
+    # 运行状态由锁文件探测确定，行文本带状态标记。
     async def body(app, page, pilot, source, listed, control):
         running = _fields(page)[i18n.t("cli.tui.dashboard.field_state")]
         source.set_running(False)
@@ -265,7 +265,7 @@ async def _test_refresh_rereads_snapshot():
 
 
 async def _test_refresh_keeps_instance_highlighted():
-    # 关键回归：重建实例清单后选中行必须仍然亮着——ListView 只在 index 变化时刷新高亮。
+    # 关键回归测试，重建实例清单后选中行必须保持高亮——ListView 仅在 index 变化时刷新高亮。
     with TemporaryDirectory(prefix="akari-dashboard-highlight-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
         rows = (
@@ -320,7 +320,7 @@ async def _test_load_failure_degrades_to_status():
 
 
 async def _test_instance_list_marks_state_and_policy():
-    # 当前实例即使未记录也应显示，确保用户能够识别操作目标。
+    # 当前实例即使未记录也应显示，确保能够识别操作目标。
     async def body(app, page, pilot, source, listed, control):
         context.set_active_root("/tmp/alpha")
         page.refresh_instances()
@@ -364,7 +364,7 @@ async def _test_enter_switches_instance():
             return active, status, chosen
 
         active, status, _ = await _with_page(body, instances=listed, cli=runner)
-        # macOS 临时目录可能为符号链接，实例根按解析后的路径保存。
+        # macOS 临时目录可能为符号链接，实例根目录按解析后的路径保存。
         expected = roots["beta"].resolve()
     return active == expected and status and list(runner.calls) == [("instance", "use", "beta")]
 
@@ -444,7 +444,7 @@ async def _test_switch_does_not_wait_for_cli():
 
 
 async def _test_switch_default_rewrites_after_return():
-    # 默认实例记录与当前选择一致，切回同一实例时仍需更新。
+    # 默认实例记录与当前选择一致，切换回同一实例时仍需要更新。
     runner = _RecordingRunner()
     with TemporaryDirectory(prefix="akari-back-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
@@ -457,7 +457,7 @@ async def _test_switch_default_rewrites_after_return():
 
         async def body(app, page, pilot, source, chosen, control):
             for index in (1, 0, 1):
-                # 切换实例会重新挂载页面，因此需重新获取页面并注入执行器。
+                # 切换实例会重新挂载页面，因此需要重新获取页面并注入执行器。
                 current = app.page("dashboard")
                 current.cli_runner = runner
                 current.query_one("#instance-list", compat.ListView).index = index
@@ -598,7 +598,7 @@ async def _test_switch_refused_for_missing_directory():
 
 
 async def _test_policy_toggle_sends_cli_flags():
-    # 策略开关经 `instance policy` 下发，方向由取值翻转决定。
+    # 策略开关通过 `instance policy` 传递，方向由取值翻转确定。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -622,7 +622,7 @@ async def _test_policy_toggle_sends_cli_flags():
 
 
 async def _test_busy_rejects_second_action():
-    # 写操作执行期间拒绝新请求，避免多个进程同时修改注册表。
+    # 写入操作执行期间拒绝新请求，避免多个进程同时修改注册表。
     gate = threading.Event()
     runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
 
@@ -648,7 +648,7 @@ async def _test_busy_rejects_second_action():
 
 
 async def _test_cli_failure_is_reported():
-    # 子进程报错时状态栏给出 CLI 的结论与输出尾部。
+    # 子进程抛出异常时状态栏给出 CLI 的结论与输出尾部。
     runner = _RecordingRunner(OperationResult(False, "移出 alpha 失败（退出码 1）", "instance not found"))
 
     async def body(app, page, pilot, source, listed, control):
@@ -696,7 +696,7 @@ async def _test_register_instance_from_prompt():
 
 
 async def _test_add_prompt_prefills_active_root():
-    # 从实例目录启动界面时，目录输入框预填当前实例路径。
+    # 从实例目录启动界面时，目录输入框预先填充当前实例路径。
     with TemporaryDirectory(prefix="akari-add-") as raw:
         root = Path(raw) / "inst"
         root.mkdir()
@@ -785,7 +785,7 @@ async def _test_unregister_opens_confirm_modal():
 
 
 async def _test_remove_modal_cancel_keeps_registry():
-    # 取消后关闭确认框并更新状态，不执行子进程。
+    # 取消后关闭确认框并更新状态，不启动子进程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -950,7 +950,7 @@ async def _test_service_install_confirms_overwrite_before_force():
 
 
 async def _test_service_confirmation_offers_dry_run():
-    # 预览仅执行 --dry-run 并展示输出，用户可据此确认实际操作。
+    # 预览仅执行 --dry-run 并展示输出，用于确认实际操作。
     preview = OperationResult(True, "预演成功", "将写入 /tmp/agent.plist\nlaunchctl bootstrap gui/501")
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False), preview_result=preview)
     runner = _RecordingRunner()
@@ -1002,7 +1002,7 @@ async def _test_service_repeat_press_keeps_single_modal():
 
 
 async def _test_remove_gate_reset_on_page_reset():
-    # reset_pending() 复位后，同一目标可立即重新发起确认。
+    # reset_pending() 重置状态后，同一目标可立即重新发起确认。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1026,7 +1026,7 @@ async def _test_remove_gate_reset_on_page_reset():
 
 
 async def _test_remove_modal_resets_on_highlight_change():
-    # 高亮项切换后清除防抖状态，返回同一项时需重新确认。
+    # 高亮项切换后清除防抖状态，返回同一项时需要重新确认。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1104,7 +1104,7 @@ async def _test_service_confirm_resets_on_status_reread():
 
 
 async def _test_new_instance_runs_init():
-    # 新建实例：输入目录 → 选环境方式 → init 子进程 → 刷新清单。
+    # 新建实例流程依次为输入目录、选择环境方式、执行 init 子进程、刷新清单。
     runner = StaticInitRunner()
 
     with TemporaryDirectory(prefix="akari-new-") as raw:
@@ -1215,7 +1215,7 @@ async def _test_subprocess_init_runner_builds_argv():
 
 
 async def _test_subprocess_cli_runner_builds_argv():
-    # 写操作使用对应 CLI 子命令，环境与编码设置与其他页面一致。
+    # 写入操作使用对应 CLI 子命令，环境与编码设置与其他页面一致。
     calls: list[tuple[list[str], dict]] = []
 
     def runner(argv, **kwargs):
@@ -1246,7 +1246,7 @@ async def _test_accept_window():
 
 
 async def _test_bindings_follow_key_convention():
-    # 破坏性操作使用组合键。有副作用的策略与服务不占单字母键，收进 m 菜单。
+    # 破坏性操作使用组合键。有副作用的策略与服务不占用单字母快捷键，归入快捷键 m 菜单中。
     shown = {binding.key: binding.show for binding in DashboardPage.BINDINGS}
     return (
         "d" not in shown
@@ -1258,7 +1258,7 @@ async def _test_bindings_follow_key_convention():
 
 
 async def _test_button_switch_matches_key():
-    # 按钮与回车均切换到高亮实例，并通过 instance use 保存默认实例。
+    # 按钮与 Enter 键均切换到高亮实例，并通过 instance use 保存默认实例。
     runner = _RecordingRunner()
     with TemporaryDirectory(prefix="akari-btn-switch-") as raw:
         roots = _temp_instances(raw, "alpha", "beta")
@@ -1290,7 +1290,7 @@ async def _test_button_switch_matches_key():
 
 
 async def _test_button_new_instance_runs_init():
-    # 添加实例菜单的“新建实例”走目录输入、环境选择和 init 流程。
+    # 添加实例菜单的“新建实例”执行目录输入、环境选择和 init 流程。
     runner = StaticInitRunner()
 
     with TemporaryDirectory(prefix="akari-btn-new-") as raw:
@@ -1327,7 +1327,7 @@ async def _test_button_new_instance_runs_init():
 
 
 async def _test_button_add_instance_registers_directory():
-    # 添加实例菜单的“添加目录”走目录输入及 instance add 流程。
+    # 添加实例菜单的“添加目录”执行目录输入及 instance add 流程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1375,7 +1375,7 @@ async def _test_button_remove_instance_opens_confirm_modal():
 
 
 async def _test_button_policy_toggles_send_cli_flags():
-    # 服务与策略菜单按当前值切换，走 instance policy 流程。
+    # 服务与策略菜单按当前值切换，执行 instance policy 流程。
     runner = _RecordingRunner()
 
     async def body(app, page, pilot, source, listed, control):
@@ -1398,7 +1398,7 @@ async def _test_button_policy_toggles_send_cli_flags():
 
 
 async def _test_button_service_opens_confirm_modal():
-    # 服务与策略菜单里的服务项打开包含执行和预览选项的确认框。
+    # 服务与策略菜单中的服务项打开包含执行和预览选项的确认框。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
     runner = _RecordingRunner(
         on_run=lambda _args: control.set_status(
@@ -1446,7 +1446,7 @@ async def _test_button_refresh_rereads_snapshot():
 
 
 async def _test_action_buttons_follow_state():
-    # 按钮禁用状态与实例记录一致。服务与策略菜单按当前策略与服务状态给出操作，无记录的实例不弹菜单。
+    # 按钮禁用状态与实例记录一致。服务与策略菜单按当前策略与服务状态给出操作，无记录的实例不弹出菜单。
     control = StaticServiceControl(ServiceRow(backend="launchd", installed=False))
     listed = StaticInstanceListSource(
         (
@@ -1494,7 +1494,7 @@ async def _test_action_buttons_follow_state():
 
 
 async def _test_action_buttons_disable_while_busy():
-    # 写操作执行期间禁用按钮，避免多个子进程同时修改注册表。
+    # 写入操作执行期间禁用按钮，避免多个子进程同时修改注册表。
     gate = threading.Event()
     runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
     previous = context.active_root()
@@ -1528,7 +1528,7 @@ async def _test_action_buttons_disable_while_busy():
 async def _test_action_buttons_share_one_row_when_wide():
     # 宽终端采用单行按钮布局，减少高度占用。
     async def body(app, page, pilot, source, listed, control):
-        # 标签在首次读取后更新，需等待重新排布再测量宽度。
+        # 标签在首次读取后更新，需要等待重新排布再测量宽度。
         await pilot.pause()
         page_region = page.region
         boxes = {button_id: _button(page, button_id).region for button_id in BUTTON_IDS}
@@ -1548,7 +1548,7 @@ async def _test_action_buttons_share_one_row_when_wide():
 
 
 async def _test_action_buttons_fit_eighty_columns():
-    # 80 列下五个按钮都在页面内，文字附带各自的快捷键。
+    # 80 列宽度下五个按钮均位于页面内，文字附带各自的快捷键。
     async def body(app, page, pilot, source, listed, control):
         page.query_one("#instance-list", compat.ListView).index = 0
         await pilot.pause()
@@ -1577,7 +1577,7 @@ async def _test_action_buttons_fit_eighty_columns():
 
 
 async def _test_instances_caption_points_to_buttons():
-    # 说明行按当前条数插值，完整显示对应文案。
+    # 说明行按当前记录数插值，完整展示对应文案。
     async def body(app, page, pilot, source, listed, control):
         caption = str(page.query_one("#instances-caption", compat.Static).render())
         await pilot.press("q")
@@ -1920,7 +1920,7 @@ async def _test_compact_layout_and_resize():
 
 
 async def _test_setup_buttons_wrap_when_narrow():
-    # 窄终端下按钮折行后不得越出页面边界。
+    # 窄屏幕终端下按钮折行后不得越出页面边界。
     async def body(app, page, pilot, source, listed, control):
         page_region = page.region
         boxes = {button_id: page.query_one(f"#{button_id}", compat.Button).region for button_id in SETUP_IDS}
@@ -1984,7 +1984,7 @@ async def _test_local_setup_source_reads_doctor_and_placeholders():
 
 async def _test_local_setup_source_falls_back_to_estimate():
     # 统计命令失败时使用配置文本标记估算，并注明依据。
-    # CLI 子进程可能重建共享语言快照，需重新连接测试快照。
+    # CLI 子进程可能重建共享语言快照，需要重新连接测试快照。
     _use_cli_locale()
     doctor = {
         "registry_available": True,
@@ -2063,7 +2063,7 @@ async def _test_local_setup_source_marks_uncounted_tables():
 
 
 async def _test_local_setup_source_degrades_per_item():
-    # 子进程、输出解析或清单读取失败时分别报告原因。占位符使用注明依据的估算值。
+    # 子进程、输出解析或清单读取失败时分别返回原因。占位符使用注明依据的估算值。
     def unreachable(argv, **kwargs):
         raise OSError("no cli")
 
@@ -2107,7 +2107,7 @@ async def _test_local_setup_source_degrades_per_item():
 
 
 async def _test_setup_actions_follow_busy_state():
-    # 写操作不影响摘要展示。导航按钮按目标是否可用决定禁用状态。
+    # 写入操作不影响摘要展示。导航按钮按目标是否可用确定禁用状态。
     gate = threading.Event()
     runner = _RecordingRunner(on_run=lambda _args: gate.wait(2.0))
 
@@ -2129,7 +2129,7 @@ async def _test_setup_actions_follow_busy_state():
 
 @func_case
 async def test_tui_dashboard(tester: Tester):
-    """cli.tui.dashboard: 实例信息与运行状态测试"""
+    """cli.tui.dashboard 实例信息与运行状态测试"""
     _use_cli_locale()
     await tester.test(_test_accept_window, "一次触发的闸门挡重复触发")
     await tester.test(_test_subprocess_init_runner_builds_argv, "init 子进程按命令层开关拼装")

@@ -1,4 +1,4 @@
-"""parser 入口 hook 执行器与注册索引单元测试。"""
+"""parser 入口 Hook 执行器与注册索引单元测试。"""
 
 from types import SimpleNamespace
 
@@ -173,7 +173,7 @@ async def _test_loader_indexes_point_hooks():
             assert ModulesManager.module_hook_subscriptions[module_name][0].function is named
             subs = ModulesManager.parser_hook_subscriptions.get(HookPoint.COMMAND_PREPARE) or []
             assert any(s.subscription_id.endswith(":p") and s.module_name == module_name for s in subs)
-            # 确保 named hook 未进入 point 索引
+            # 确保带名称的 Hook 未进入 point 索引。
             assert all(s.meta.name != "reload" for s in subs)
             return True
         finally:
@@ -272,7 +272,7 @@ async def _test_timeout_discards_result():
             },
         )
         outcome = await ParserHookExecutor(mm).dispatch(HookPoint.FINISHED, _FakeMsg(), timeout=0.01)
-        # after 仍应执行，slow 的 Stop 不被采纳
+        # after 阶段仍应执行，slow 的 Stop 动作不被采纳。
         assert "after" in called
         assert isinstance(outcome.result, Continue)
         return True
@@ -382,7 +382,7 @@ async def _test_stale_generation_skipped():
             HookMeta(function=hook, point=HookPoint.FINISHED, name="stale"),
             0,
         )
-        # 构造代际不一致的订阅
+        # 构造版本不一致的订阅。
         object.__setattr__(  # frozen dataclass
             stale,
             "generation",
@@ -436,7 +436,7 @@ async def _test_per_subscription_timeout():
             modules={"a": _make_module("a"), "b": _make_module("b")},
             parser_hook_subscriptions={HookPoint.FINISHED: [sub_slow, sub_after]},
         )
-        # 不传 dispatch 级 timeout，依赖订阅字段
+        # 未传入 dispatch 级 timeout，依赖订阅配置中的字段。
         outcome = await ParserHookExecutor(mm).dispatch(HookPoint.FINISHED, _FakeMsg())
         assert "after" in called
         assert isinstance(outcome.result, Continue)
@@ -470,7 +470,7 @@ async def _test_named_hook_skips_point_and_disabled():
         ModulesManager.modules[module_name] = module
         try:
             ModulesManager.refresh_modules_hooks()
-            # 模块触发只跑具名
+            # 模块触发时仅执行带名称的 Hook。
             await Bot.Hook.trigger(module_name)
             assert called == ["named"]
 
@@ -478,7 +478,7 @@ async def _test_named_hook_skips_point_and_disabled():
             result = await Bot.Hook.trigger(f"{module_name}.cap")
             assert result == "named-ok" and called == ["named"]
 
-            # 停用后具名也不执行
+            # 停用后带名称的 Hook 不再执行。
             module._db_load = False
             called.clear()
             assert await Bot.Hook.trigger(f"{module_name}.cap") is None
@@ -591,7 +591,7 @@ async def _test_event_handler_isolation():
         try:
             ModulesManager.refresh_modules_events()
             info = EventInfo(event_name="__test_evt")
-            # available_modules 过滤：无 target_from 时用全部 modules
+            # available_modules 执行过滤时，无 target_from 则使用全部 modules。
             results = await ModulesManager.dispatch_event(info)
             assert "good" in called and "bad" in called
             assert results == [None, "ok"] or set(results) >= {"ok", None}
@@ -619,7 +619,7 @@ async def _test_recovery_target_revalidated():
         on = _make_module("recmod_on")
         on.base = True
 
-        # 非 base 且场景未启用 → 拒绝
+        # 非 base 且场景未启用时予以拒绝。
         not_enabled = _make_module("recmod_ne")
         not_enabled.base = False
         assert not await _validate_recovery_target(msg, {"recmod_ne": not_enabled}, "recmod_ne", "recmod_ne x")
@@ -682,26 +682,25 @@ async def _test_reload_failure_keeps_old_hooks():
         module.hooks_list.add(HookMeta(function=old_hook, point=str(HookPoint.FINISHED), name="h"))
         ModulesManager.modules[module_name] = module
         try:
-            # 初始索引：订阅绑定旧代际
+            # 初始索引中的订阅绑定原版本。
             ModulesManager.refresh_modules_hooks()
             subs = ModulesManager.parser_hook_subscriptions.get(HookPoint.FINISHED, [])
             our = [s for s in subs if s.module_name == module_name]
             assert our and our[0].generation == old_gen
 
-            # 模拟 reload 失败：prepare 出新 staging（新代际）→ restore 旧注册并重建索引
-            # （此时旧函数被标成新代际）→ abort 撤销 staging → 再次重建索引
+            # 模拟 reload 失败流程。先执行 prepare 生成新 staging（新版本），再执行 restore 恢复原注册记录并重建索引（此时原有函数被标记为新版本），随后通过 abort 撤销 staging 并再次重建索引。
             snapshot = ModuleRuntimeManager.prepare_reload({module_name})
             staged_gen = ModuleRuntimeManager._staging[module_name].generation
             assert staged_gen == old_gen + 1
-            ModulesManager.refresh_modules_hooks()  # restore_registrations 内的一次重建
+            ModulesManager.refresh_modules_hooks()  # restore_registrations 内部执行的单次重建。
             mid = [
                 s
                 for s in ModulesManager.parser_hook_subscriptions.get(HookPoint.FINISHED, [])
                 if s.module_name == module_name
             ]
-            assert mid and mid[0].generation == staged_gen  # 仍绑定 staging（abort 前）
+            assert mid and mid[0].generation == staged_gen  # 此时仍绑定 staging（abort 执行前）。
             await ModuleRuntimeManager.abort_reload(snapshot, {module_name})
-            ModulesManager.refresh_modules_hooks()  # abort 后的再次重建
+            ModulesManager.refresh_modules_hooks()  # abort 执行后再次重建。
             final = [
                 s
                 for s in ModulesManager.parser_hook_subscriptions.get(HookPoint.FINISHED, [])
@@ -764,7 +763,7 @@ async def _test_cleanup_cancellation_propagates():
                 await asyncio.sleep(10)
             except asyncio.CancelledError:
                 cleanup_entered.set()
-                # 收尾时间超过 50ms 收尾窗口，制造"清理中父被取消"的窗口
+                # 收尾时间超过 50 ms 收尾窗口，模拟清理期间父任务被取消的场景。
                 await asyncio.sleep(0.2)
                 raise
 
@@ -779,13 +778,13 @@ async def _test_cleanup_cancellation_propagates():
             },
         )
         dispatch_task = asyncio.ensure_future(ParserHookExecutor(mm).dispatch(HookPoint.FINISHED, _FakeMsg()))
-        # 等 hook 超时并进入异步收尾
+        # 等待 Hook 超时并进入异步收尾阶段。
         await asyncio.wait_for(cleanup_entered.wait(), timeout=2)
         await asyncio.sleep(0.02)
         dispatch_task.cancel()
         try:
             await dispatch_task
-            return False  # 取消被吞掉，dispatch 正常返回
+            return False  # 取消操作被忽略，dispatch 正常返回。
         except asyncio.CancelledError:
             return True
     except Exception:
@@ -801,7 +800,7 @@ async def _test_nested_same_session_dispatch_skipped():
         holder = {}
 
         async def parent(ctx):
-            # 父 hook 内嵌套同会话的 COMMAND_PREPARE 分发
+            # 父级 Hook 内嵌套同一会话的 COMMAND_PREPARE 事件分发。
             inner_outcome = await ParserHookExecutor(holder["mm"]).dispatch(HookPoint.COMMAND_PREPARE, ctx.msg)
             committed.append(("inner_executed", inner_outcome.executed))
             raise RuntimeError("parent fails after nested attempt")
@@ -824,7 +823,7 @@ async def _test_nested_same_session_dispatch_skipped():
         msg = _FakeMsg()
         outcome = await ParserHookExecutor(holder["mm"]).dispatch(HookPoint.SESSION_READY, msg)
         assert outcome.failed == 1
-        # 嵌套分发被跳过：child 未执行，tmp 未被提交
+        # 嵌套事件分发被跳过，子任务未执行且 tmp 未被提交。
         assert ("inner_executed", 0) in committed
         assert "child" not in msg.session_info.tmp
         return True

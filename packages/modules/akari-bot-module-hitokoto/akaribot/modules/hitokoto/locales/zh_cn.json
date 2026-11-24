@@ -1,6 +1,6 @@
 {
-    "hitokoto.help.desc": "获取一言。",
-    "hitokoto.help.type": "获取一言，留空则随机类型。",
+    "hitokoto.help.desc": "获取一言句子。",
+    "hitokoto.help.type": "获取一言句子，留空时随机选择类型。",
     "hitokoto.message.invalid": "无效的类型。",
     "hitokoto.message.type": "类型：",
     "hitokoto.message.type.a": "动画",

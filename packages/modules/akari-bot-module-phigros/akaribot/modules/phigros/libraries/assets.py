@@ -10,8 +10,8 @@ from akaribot.core.api import Logger, random_cache_path, get_url, download
 from akaribot.core.registry import PackageRegistry
 
 pgr_module_path = Path(__file__).parent.parent
-# assets 只放随包分发的静态资源，下载所得的曲目信息、版本号与曲绘写入实例 data。目录创建留到
-# 写入时进行，导入模块或仅读取路径的调用不在包内留下副作用。
+# assets 仅存放随包分发的静态资源，下载所得的曲目信息、版本号与曲绘写入实例 data。目录创建推迟至
+# 写入时执行，导入模块或仅读取路径的调用避免在包内产生副作用。
 pgr_assets_path = pgr_module_path / "assets"
 pgr_data_path = PackageRegistry.package_data("phigros")
 
@@ -41,7 +41,7 @@ def remove_punctuations(text: str) -> str:
 
 
 def _rows(text: str) -> list[list[str]]:
-    # 不使用 csv 模块：曲名中可能含有引号，会被 csv 的引用规则误解析。
+    # 不使用 csv 模块，因为曲目名称中可能包含引号，会被 csv 的引用规则误解析。
     return [line.split("\t") for line in text.splitlines() if line.strip()]
 
 
@@ -106,7 +106,7 @@ def load_song_info() -> dict[str, dict]:
 
 
 def _as_constant(value) -> float:
-    # 5.1 之前的曲目信息将定数原样保留为字符串，缺失的难度写作 "-"，直接转换会中断整表构建。
+    # 5.1 之前的曲目信息将定数原样保留为字符串，缺失难度记录为 "-"，直接转换会中断整表构建。
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -197,7 +197,7 @@ def _missing_illustrations(song_info: dict[str, dict]) -> bool:
 async def _download_illustrations(song_ids: list[str]) -> None:
     illustration_dir.mkdir(parents=True, exist_ok=True)
     known = set(song_ids)
-    # 旧版本按归一化的小写 id 命名，与新键无法对应。此处按新键集合清理，旧文件自然落入待删之列。
+    # 历史版本按规范化的小写 ID 命名，与当前键名无法对应。此处按当前键名集合清理，历史文件自然进入待删除范围。
     for path in illustration_dir.iterdir():
         if path.is_file() and path.stem not in known:
             path.unlink()
@@ -218,8 +218,8 @@ async def _update_assets_locked(update_illustration: bool, remote_version: str) 
     try:
         song_info = _load_valid_song_info()
         if remote_version == _local_version() and song_info is not None:
-            # 版本未变且元数据已就位时跳过重建，但仍执行曲绘补全，
-            # 以便修复上次中断留下的缺口。
+            # 版本未变并且元数据已就位时跳过重建，但仍执行曲绘补全，
+            # 用于修复上次中断遗留的数据缺失。
             Logger.info(f"Phigros resource already at version {remote_version}, skipping metadata rebuild.")
         else:
             info_text = await get_url(INFO_TSV_URL, 200)
@@ -229,7 +229,7 @@ async def _update_assets_locked(update_illustration: bool, remote_version: str) 
                 Logger.error("Fetched empty song info from remote resource.")
                 return False
 
-            # 曲绘目录由下载流程自行创建，元数据写入前须单独确保数据目录存在。
+            # 曲绘目录通过下载流程自行创建，元数据写入前必须单独确保数据目录存在。
             pgr_data_path.mkdir(parents=True, exist_ok=True)
             temp_path = f"{random_cache_path()}.json"
             with open(temp_path, "wb") as f:

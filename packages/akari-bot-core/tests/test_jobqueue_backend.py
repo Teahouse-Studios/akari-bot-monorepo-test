@@ -1,4 +1,4 @@
-"""JobQueue 后端装配和介质无关契约测试。"""
+"""JobQueue 后端装配和介质无关接口约定测试。"""
 
 import time
 

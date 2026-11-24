@@ -135,7 +135,7 @@ async def _test_selecting_row_fills_editor():
 
 
 async def _test_refresh_keeps_highlighted_rows():
-    # 关键回归：重建数据表清单与数据行后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归测试，重建数据表清单与数据行后选中行必须保持高亮——ListView 仅在 index 变化时更新高亮。
     async def body(app, page, pilot, source):
         table_list = page.query_one("#table-list", compat.ListView)
         await _select_table(pilot, page, "stored_data")
@@ -265,7 +265,7 @@ async def _test_save_asks_for_confirmation():
 
 
 async def _test_multi_column_save_is_one_call():
-    # 同一行的多列更改须合并为一次原子写入。
+    # 同一行的多列更改需要合并为一次原子写入。
     source = _source()
 
     async def body(app, page, pilot, source):
@@ -616,7 +616,7 @@ async def _test_broken_json_is_reported():
         source = SubprocessDatabaseSource(root=Path(raw), timeout=10.0, runner=runner)
         try:
             source.rows("module_status", limit=20, offset=0)
-        except Exception as error:  # noqa: BLE001 - 验证失败原因是否完整保留
+        except Exception as error:  # noqa: BLE001 - 验证失败原因是否完整保留。
             return "not json at all" in str(error)
     return False
 
@@ -662,7 +662,7 @@ def _big_rows(count: int = 130) -> tuple[dict[str, object], ...]:
 
 
 async def _test_paging_walks_pages():
-    # 分页只读取当前页，页数与总数以数据源返回值为准。
+    # 分页仅读取当前页，页数与总数以数据源返回值为准。
     pages = {"module_status": _big_rows()}
     source = _source(pages=pages)
 
@@ -815,7 +815,7 @@ async def _test_search_uses_text_columns():
 
 
 async def _test_search_word_with_operator_chars_stays_search():
-    # 含运算符的搜索词仍可能是普通文本，筛选条件必须同时匹配列名。
+    # 包含运算符的搜索词仍可能是普通文本，筛选条件必须同时匹配列名。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -865,7 +865,7 @@ async def _test_conditions_are_anded_and_clearable():
 
 
 async def _test_sort_dialog_sets_order():
-    # 排序由 core 执行，更改排序后须重置分页。
+    # 排序由 core 执行，更改排序后需要重置分页。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -920,7 +920,7 @@ async def _test_empty_order_falls_back_to_default():
 
 
 async def _test_switching_table_clears_filters():
-    # 筛选列名仅对当前表有效，更换表时须清除条件。
+    # 筛选列名仅对当前表有效，更换表时需要清除条件。
     source = _source(pages={"module_status": _big_rows(), "stored_data": ROWS["stored_data"]})
 
     async def body(app, page, pilot, source):
@@ -977,7 +977,7 @@ async def _test_subprocess_source_passes_query_argv():
 
 
 async def _test_offset_clamps_to_last_page():
-    # 总数减少可能使偏移越界，须调整到有效末页。
+    # 总数减少可能使偏移越界，需要调整到有效末页。
     source = _source(pages={"module_status": _big_rows(10)})
 
     async def body(app, page, pilot, source):
@@ -1002,8 +1002,8 @@ async def _test_offset_clamps_to_last_page():
     )
 
 
-# 各终端尺寸下控件可用区域的最小宽高。窄屏纵向排列，宽屏横向排列。
-# 按钮栏在页底，编辑区只含标题、主键行与字段区。
+# 各终端尺寸下控件可用区域的最小宽高。窄屏幕终端纵向排列，宽屏幕终端横向排列。
+# 按钮栏在页底，编辑区仅包含标题、主键行与字段区。
 GEOMETRY_CASES = {
     (60, 20): {"#row-list": (20, 4), "#editor-pane": (40, 7), "#editor-fields": (36, 3)},
     (80, 24): {"#row-list": (30, 6), "#editor-pane": (60, 10), "#editor-fields": (56, 5)},
@@ -1041,7 +1041,7 @@ def _geometry_case(size: tuple[int, int]):
         async def body(app, page, pilot, source):
             page.focus_primary()
             await pilot.pause()
-            # region 包含边框与内边距。须在退出前读取，卸载后该值归零。
+            # region 包含边框与内边距。需要在退出前读取，卸载后该值归零。
             regions = {selector: page.query_one(selector).region for selector in limits}
             measured = {selector: (region.width, region.height) for selector, region in regions.items()}
             status = page.query_one("#database-status", compat.Static)
@@ -1119,7 +1119,7 @@ async def _test_layout_switches_on_resize():
 
 
 async def _test_narrow_focus_order():
-    # 窄屏重排不应破坏从表清单到保存按钮的键盘焦点顺序。
+    # 窄屏幕终端下重新排列不应破坏从表清单到保存按钮的键盘焦点顺序。
     source = _source(pages={"module_status": _big_rows()})
 
     async def body(app, page, pilot, source):
@@ -1151,7 +1151,7 @@ async def _test_narrow_focus_order():
 
 @func_case
 async def test_tui_database(tester: Tester):
-    """cli.tui.database: 数据库页的表清单、数据项与写入确认测试"""
+    """cli.tui.database 数据库页的表清单、数据项与写入确认测试"""
     _use_cli_locale()
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):

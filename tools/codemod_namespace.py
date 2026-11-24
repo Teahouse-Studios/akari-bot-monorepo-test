@@ -21,7 +21,7 @@ from libcst.metadata import CodeRange, MetadataWrapper, PositionProvider
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# 扫描范围：物理移动后仍可能引用旧命名空间的 Python 源码。example/ 是脚手架样例，不在 packages/ 下。
+# 扫描范围为代码迁移后仍可能引用历史命名空间的 Python 源码。example/ 为脚手架样例，未包含在 packages/ 目录下。
 SCAN_DIRS = ("packages", "tests", "tools", "example")
 SCAN_ROOT_FILES = ("bot.py", "tester.py", "conftest.py")
 PRUNED_DIR_NAMES = frozenset(
@@ -31,7 +31,7 @@ PRUNED_DIR_NAMES = frozenset(
 STRINGS_REPORT_NAME = "codemod_strings_report.txt"
 MANUAL_LIST_NAME = "codemod_manual_list.txt"
 
-# 旧→新前缀映射，按段匹配且长前缀优先。core.tester 已移出 core 成为独立包，是 core.* 的例外。
+# 旧→新前缀映射，按照分段匹配且长前缀优先。core.tester 已移出 core 成为独立包，是 core.* 的例外。
 PREFIX_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("core", "tester"), ("akaribot", "testing")),
     (("core",), ("akaribot", "core")),
@@ -39,7 +39,7 @@ PREFIX_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("bots",), ("akaribot", "adapters")),
 )
 
-# 新→旧前缀映射，用于把 packages 下的真实模块路径反推成旧点分路径。
+# 新→旧前缀映射，用于将 packages 下的实际模块路径反推为旧版点分路径。
 REVERSE_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("akaribot", "testing"), ("core", "tester")),
     (("akaribot", "core"), ("core",)),
@@ -47,26 +47,26 @@ REVERSE_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("akaribot", "adapters"), ("bots",)),
 )
 
-# 单段旧根名同时充当 JSON 键、数据库字段名与文件系统目录名，无法与模块路径区分，故不入白名单。
+# 单段历史根包名同时作为 JSON 键、数据库字段名与文件系统目录名，无法与模块路径区分，因此不纳入豁免清单。
 MIN_KNOWN_SEGMENTS = 2
 
 BARE_ROOTS = frozenset({"core", "modules", "bots"})
 
-# 裸 import 绑定旧根名，改写后绑定名变为 akaribot，引用处必须一并调整，属人工事项。
+# 直接 import 绑定历史根包名，改写后绑定名称变更为 akaribot，引用处必须同步调整，属于人工处理事项。
 IMPORT_MANUAL_HINT = "裸 import 无点号，需人工改写并调整引用"
 
-# i18n 调用上下文中的点分字符串是文案键，即使与真实模块路径同名也不改写。
+# i18n 调用上下文中的点分字符串属于文案键，即使与真实模块路径同名亦不执行改写。
 I18N_CALLEE_NAMES = frozenset({"I18NContext", "t", "gettext", "ngettext", "gettext_lazy"})
 I18N_CALLEE_ATTRS = frozenset({"t", "gettext", "ngettext", "I18NContext"})
 I18N_MANUAL_HINT = "i18n 调用实参且与真实模块路径同名，需确认是文案键还是模块路径"
 
-# patch 调用中承载点分路径的实参形式：位置参数下标与关键字名。
+# patch 调用中指定点分路径的实参形式包含位置参数下标与关键字名称。
 PATCH_POSITIONAL_INDEXES = frozenset({0})
 PATCH_OBJECT_POSITIONAL_INDEXES = frozenset({0, 1})
 PATCH_KEYWORDS = frozenset({"target"})
 PATCH_OBJECT_KEYWORDS = frozenset({"attribute"})
 
-# f-string 中出现的旧命名空间形态：字面量片段的根名之后紧跟标识符或插值，排除句末的散文误报。
+# f-string 中出现的历史命名空间形态指字面量片段的根包名后紧跟标识符或插值，用于排除句末的散文误报。
 FSTRING_LITERAL_PATTERN = re.compile(r"(?<![0-9A-Za-z_])(?:core|modules|bots)\.(?=[A-Za-z_{])")
 FSTRING_SNIPPET_LIMIT = 80
 
@@ -99,17 +99,17 @@ def _apply_prefix(
 
 
 def remap_old_to_new(segments: Sequence[str]) -> list[str] | None:
-    """旧点分路径转新点分路径，不属于旧命名空间时返回 None。"""
+    """将历史点分路径转换为新版点分路径，若不属于历史命名空间则返回 None。"""
     return _apply_prefix(segments, PREFIX_RULES)
 
 
 def remap_new_to_old(segments: Sequence[str]) -> list[str] | None:
-    """新点分路径反推旧点分路径，不属于旧命名空间时返回 None。"""
+    """基于新版点分路径反推历史点分路径，若不属于历史命名空间则返回 None。"""
     return _apply_prefix(segments, REVERSE_RULES)
 
 
 def build_known(root: Path) -> frozenset[str]:
-    """遍历 packages/**/akaribot，反推出旧点分模块路径全集。"""
+    """遍历 packages/**/akaribot，反推历史点分模块路径全集。"""
     known: set[str] = set()
     for package_root in sorted(root.glob("packages/**/akaribot")):
         if not package_root.is_dir():
@@ -122,7 +122,7 @@ def build_known(root: Path) -> frozenset[str]:
                 parts.pop()
             else:
                 parts[-1] = parts[-1][: -len(".py")]
-            # 模块路径与逐级向上的包路径都算真实路径。
+            # 模块路径与逐级向上的包路径均视为真实路径。
             for depth in range(len(parts), 0, -1):
                 old = remap_new_to_old(parts[:depth])
                 if old is not None and len(old) >= MIN_KNOWN_SEGMENTS:
@@ -131,7 +131,7 @@ def build_known(root: Path) -> frozenset[str]:
 
 
 def longest_known_prefix(text: str, known: frozenset[str]) -> str | None:
-    """取 text 中命中白名单的最长点分前缀，无命中返回 None。"""
+    """获取 text 中匹配豁免清单的最长点分前缀，未命中时返回 None。"""
     segments = text.split(".")
     for depth in range(len(segments), 0, -1):
         candidate = ".".join(segments[:depth])
@@ -167,7 +167,7 @@ def _rewrite_literal(node: cst.SimpleString, old: str, new: str) -> str | None:
 def _fstring_snippet(node: cst.FormattedString) -> str:
     try:
         snippet = cst.Module(body=[]).code_for_node(node)
-    except Exception:  # noqa: BLE001 - 片段仅用于报告，取不到源码时退回占位文本
+    except Exception:  # noqa: BLE001，片段仅用于生成报告，无法获取源码时采用占位文本。
         return "f-string"
     snippet = " ".join(snippet.split())
     return snippet if len(snippet) <= FSTRING_SNIPPET_LIMIT else f"{snippet[:FSTRING_SNIPPET_LIMIT]}..."
@@ -175,7 +175,7 @@ def _fstring_snippet(node: cst.FormattedString) -> str:
 
 @dataclass
 class FileOutcome:
-    """单文件改写结果，字段直接进入报告与汇总。"""
+    """单个文件的改写结果，各字段直接计入报告与汇总数据。"""
 
     string_report: list[str] = field(default_factory=list)
     manual: list[str] = field(default_factory=list)
@@ -185,7 +185,7 @@ class FileOutcome:
 
 
 class NamespaceTransformer(cst.CSTTransformer):
-    """改写 import 语句，并按白名单改写字符串字面量。"""
+    """改写 import 语句，并按照豁免清单改写字符串字面量。"""
 
     def __init__(self, known: frozenset[str], positions: Mapping[cst.CSTNode, CodeRange], label: str) -> None:
         self._known = known
@@ -223,7 +223,7 @@ class NamespaceTransformer(cst.CSTTransformer):
     def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:
         names: list[cst.ImportAlias] = []
         changed = False
-        # 位置元数据以原始节点为键，遍历产出的新节点不在其中。
+        # 位置元数据以原始节点为键，遍历生成的新节点未包含在其中。
         for alias in original_node.names:
             segments = _dotted_segments(alias.name)
             if segments is None:
@@ -283,7 +283,7 @@ class NamespaceTransformer(cst.CSTTransformer):
     def leave_SimpleString(self, original_node: cst.SimpleString, updated_node: cst.SimpleString) -> cst.SimpleString:
         try:
             text = original_node.evaluated_value
-        except Exception:  # noqa: BLE001 - 无法求值的字面量不参与改写
+        except Exception:  # noqa: BLE001，无法求值的字面量不参与改写。
             return updated_node
         if not isinstance(text, str) or not text:
             return updated_node
@@ -336,7 +336,7 @@ def _write_source(path: Path, source: str) -> None:
 
 
 def iter_target_files(root: Path, self_path: Path) -> list[Path]:
-    """枚举待扫描的 Python 文件，排除缓存目录与工具自身。"""
+    """枚举待扫描的 Python 文件，排除缓存目录与该工具自身。"""
     files: set[Path] = set()
     for dir_name in SCAN_DIRS:
         base = root / dir_name
@@ -351,19 +351,19 @@ def iter_target_files(root: Path, self_path: Path) -> list[Path]:
 
 
 def process_file(path: Path, root: Path, known: frozenset[str], dry_run: bool) -> FileOutcome:
-    """改写单个文件。解析失败记入 outcome.failure 并跳过。"""
+    """改写单个文件。若解析失败则记入 outcome.failure 并跳过。"""
     label = path.relative_to(root).as_posix()
     try:
         source = _read_source(path)
         module = cst.parse_module(source)
-    except Exception as error:  # noqa: BLE001 - 单个文件异常不中断整轮改写
+    except Exception as error:  # noqa: BLE001，单个文件异常不中断整轮改写。
         return FileOutcome(failure=f"{label}: {type(error).__name__}: {error}")
     try:
         wrapper = MetadataWrapper(module, unsafe_skip_copy=True)
         positions = wrapper.resolve(PositionProvider)
         transformer = NamespaceTransformer(known, positions, label)
         updated = wrapper.visit(transformer)
-    except Exception as error:  # noqa: BLE001 - 单个文件异常不中断整轮改写
+    except Exception as error:  # noqa: BLE001，单个文件异常不中断整轮改写。
         return FileOutcome(failure=f"{label}: {type(error).__name__}: {error}")
     outcome = transformer.outcome
     if (outcome.import_count or outcome.string_count) and not dry_run:

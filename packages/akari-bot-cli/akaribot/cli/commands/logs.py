@@ -88,7 +88,7 @@ def logs(
         if chunk.truncated:
             warn(i18n.t("cli.logs.truncated", count=len(chunk.lines)))
         elif not chunk.lines:
-            # 实例空闲时当天的日志是空的：不说明一句，用户以为命令没生效。
+            # 实例空闲时当天的日志为空，不作说明易使用户误认为命令未生效。
             warn(i18n.t("cli.logs.empty_file", path=chosen.path))
     if not follow:
         return

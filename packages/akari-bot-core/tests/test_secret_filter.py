@@ -1,4 +1,4 @@
-"""发送链路敏感信息拦截测试：元素覆盖与各出站路径。"""
+"""发送链路敏感信息拦截的元素覆盖与各出站路径测试。"""
 
 from contextlib import contextmanager
 from types import SimpleNamespace
@@ -110,7 +110,7 @@ async def _test_send_message_replaces_leaking_chains():
                 if len(sent) != 1 or sent[0].to_kecode() != UNSAFE_KECODE:
                     return False
 
-            # 显式关闭检查时保持原有放行语义
+            # 显式关闭检查时保持原有放行语义。
             sent = []
 
             async def allow_platform(_session_info, message, **kwargs):

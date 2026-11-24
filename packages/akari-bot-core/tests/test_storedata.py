@@ -1,4 +1,4 @@
-"""core.utils.storedata 单元测试 - 存储工具（需要数据库）。"""
+"""core.utils.storedata 存储工具单元测试（依赖数据库）。"""
 
 from akaribot.testing import func_case, Tester
 from akaribot.core.utils.storedata import get_stored_list, update_stored_list
@@ -33,7 +33,7 @@ async def _test_update_and_get_stored_list():
 
 @func_case
 async def test_storedata(tester: Tester):
-    """core.utils.storedata: 存储工具测试"""
+    """core.utils.storedata 存储工具测试"""
     await tester.test(_test_get_stored_list_empty, "get_stored_list() 空数据测试")
     await tester.test(_test_update_and_get_stored_list, "update_stored_list() 和 get_stored_list() 测试")
 

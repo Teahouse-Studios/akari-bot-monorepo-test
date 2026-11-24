@@ -2,16 +2,16 @@
 
 本文整理了 Matrix 适配器的配置表项与填写时的注意事项。
 
-配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都写在 `config/bot_matrix.toml`。普通项写在 `[bot_matrix]`，密钥项写在 `[bot_matrix_secret]`。
+配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表均保存在 `config/bot_matrix.toml` 中，常规配置项位于 `[bot_matrix]`，密钥项位于 `[bot_matrix_secret]`。
 
 ## 配置表 `bot_matrix`
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `enable` | bool | `false` | 是否启动 Matrix 客户端。 |
-| `matrix_homeserver` | str | `https://matrix.org` | Matrix 机器人的家庭服务器。 |
-| `matrix_user` | str | `@akaribot:matrix.org` | Matrix 机器人的完全限定用户 ID。 |
-| `matrix_device_name` | str | `""` | Matrix 机器人的设备名称，可随意填写。 |
+| `matrix_homeserver` | str | `https://matrix.org` | Matrix 机器人的主服务器（Homeserver）地址。 |
+| `matrix_user` | str | `@akaribot:matrix.org` | Matrix 机器人的完整用户 ID。 |
+| `matrix_device_name` | str | `""` | Matrix 机器人的设备名称，可自定义填写。 |
 
 ## 密钥表 `bot_matrix_secret`
 
@@ -24,6 +24,6 @@
 ## 说明
 
 - `matrix_device_id` 与 `matrix_token` 必须来自同一登录会话。两者不一致时无法恢复登录。
-- `matrix_homeserver` 末尾带斜杠时可能触发 `M_UNRECOGNIZED` 错误。
+- `matrix_homeserver` 末尾包含斜杠时可能触发 `M_UNRECOGNIZED` 错误。
 - `matrix_megolm_backup_passphrase` 为空时不导出密钥备份。长度不超过 10 时，启动日志会提示该值不安全。
 - 同步状态与密钥备份保存在 `data/private/matrix/` 下。

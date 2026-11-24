@@ -65,7 +65,7 @@ def build_telegram_button_markup(
 
 
 def remove_selected_button(markup: InlineKeyboardMarkup, callback_data: str) -> InlineKeyboardMarkup | None:
-    """从键盘中只移除指定 callback_data 的按钮。"""
+    """从键盘中仅移除指定 callback_data 的按钮。"""
     rows = [[button for button in row if button.callback_data != callback_data] for row in markup.inline_keyboard]
     rows = [row for row in rows if row]
     if not rows:
@@ -74,7 +74,7 @@ def remove_selected_button(markup: InlineKeyboardMarkup, callback_data: str) -> 
 
 
 def get_telegram_context_chat_and_user(ctx) -> tuple:
-    """取得 Telegram 消息或回调中的聊天与实际操作用户。"""
+    """获取 Telegram 消息或回调中的聊天与实际操作用户。"""
     if hasattr(ctx, "message"):
         return ctx.message.chat, ctx.from_user
     return ctx.chat, ctx.from_user

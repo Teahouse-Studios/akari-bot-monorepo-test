@@ -10,7 +10,7 @@ from .auth import verify_jwt
 
 WEB_RENDER_ACTIONS = ("start", "stop", "restart")
 WEB_RENDER_MODES = ("status", "source", "screenshot")
-# 服务端在渲染前会再校验一次。此处的重复校验只为让请求参数错误返回 4xx 而不是 200。
+# 服务端在渲染前会重新校验。此处的重复校验仅用于使请求参数错误时返回 4xx 而非 200。
 WEB_RENDER_REQUEST_ERRORS = ("invalid_options", "invalid_mode", "missing_target", "web_render_disabled")
 
 

@@ -16,8 +16,8 @@ from akaribot.core.api import dev_mode, fetch_module_db, get_model_fields, get_m
 from akaribot.core.paths import Paths
 from .auth import verify_jwt
 
-# 开发模式文件浏览器的沙箱根取实例目录：从源码运行时即仓库根，独立部署下即部署者维护的实例树。
-# 按本文件深度反推仓库根，在 wheel 形态下会落到 site-packages 之外（典型 venv 下为文件系统根）。
+# 开发模式文件浏览器的沙箱根目录采用实例目录，从源码运行时即仓库根目录，独立部署下即部署者维护的实例树。
+# 按本文件深度反推仓库根目录，在 wheel 分发形态下会解析至 site-packages 之外（典型 venv 下为文件系统根目录）。
 ROOT_DIR = Paths.instance
 
 

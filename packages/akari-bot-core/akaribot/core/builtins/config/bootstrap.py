@@ -14,7 +14,7 @@ def bootstrap_config() -> None:
     if CFGManager.is_loaded():
         return
     if not CFGManager.readonly:
-        import akaribot.core.builtins.config.update  # noqa: F401  迁移在导入期执行
+        import akaribot.core.builtins.config.update  # noqa: F401  迁移在导入阶段执行。
     CFGManager.load()
 
 

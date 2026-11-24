@@ -26,8 +26,8 @@ def _peer_record(row: JobQueuePeersTable) -> PeerRecord:
 class DatabaseMessageTransport:
     """通过 ``JobQueuesTable`` 传递请求与响应。"""
 
-    # SQLite 只能同时执行一个写事务。限制单轮候选数量可避免积压时一次轮询
-    # 对全部记录连续执行认领 UPDATE，并为业务表写入留下获得写锁的机会。
+    # SQLite 仅能同时执行一个写事务。限制单轮候选数量可避免积压时一次轮询
+    # 对全部记录连续执行认领 UPDATE，并为业务表写入预留获得写锁的机会。
     CLAIM_BATCH_SIZE = 100
 
     @staticmethod
@@ -148,7 +148,7 @@ class DatabaseMessageTransport:
 
 
 class DatabasePeerRegistry(PeerRegistryBase):
-    """通过 ``JobQueuePeersTable`` 提供权威 Peer 目录。"""
+    """通过 ``JobQueuePeersTable`` 提供权威节点目录。"""
 
     LEASE_SECONDS = 45
     MAINTENANCE_LEASE_SECONDS = 600

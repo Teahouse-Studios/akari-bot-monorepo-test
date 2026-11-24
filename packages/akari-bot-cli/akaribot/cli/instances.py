@@ -27,12 +27,12 @@ STATE_RUNNING = "running"
 STATE_STOPPED = "stopped"
 STATES = (STATE_RUNNING, STATE_STOPPED)
 
-# 名称只用于展示与命令行引用，故限制在小写字母、数字、连字符与下划线。
+# 名称仅用于展示与命令行引用，因此限制在小写字母、数字、连字符与下划线。
 NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 
 
 class RegistryError(RuntimeError):
-    """注册表不可用：文件损坏、名称重复或实例不存在。"""
+    """注册表不可用（文件损坏、名称重复或实例不存在）。"""
 
 
 def registry_home() -> Path:
@@ -97,7 +97,7 @@ def register_existing(root: Path) -> InstanceEntry | None:
     locale = ""
     try:
         locale = InstanceMeta.load(resolved).locale
-    except Exception:  # noqa: BLE001 - 读不出语言不影响添加
+    except Exception:  # noqa: BLE001 - 无法读取语言不影响添加。
         locale = ""
     return registry.add(resolved, locale=locale)
 
@@ -124,7 +124,7 @@ class InstanceEntry:
     desired: str = STATE_STOPPED
 
     def to_mapping(self) -> dict[str, object]:
-        """转成写盘用的映射。"""
+        """转换为写入磁盘用的映射。"""
         return {
             "root": str(self.root),
             "locale": self.locale,
@@ -136,7 +136,7 @@ class InstanceEntry:
 
     @property
     def exists(self) -> bool:
-        """实例目录是否仍是一个实例（含 ``akaribot.toml``）。"""
+        """检查实例目录是否仍为有效实例（包含 ``akaribot.toml``）。"""
         return (self.root / INSTANCE_META_FILENAME).is_file()
 
 
@@ -158,7 +158,7 @@ class InstanceRegistry:
             return ()
         try:
             document = tomlkit.parse(self.path.read_text(encoding="utf-8"))
-        except Exception as error:  # noqa: BLE001 - 解析失败的原因照实上报
+        except Exception as error:  # noqa: BLE001 - 解析失败的原因直接呈现于错误提示。
             raise RegistryError(i18n.t("cli.instance_registry.bad_file", path=self.path, error=error)) from error
         section = document.get("instances")
         if section is None:
@@ -183,24 +183,24 @@ class InstanceRegistry:
         return tuple(sorted(entries, key=lambda entry: entry.name))
 
     def default_name(self) -> str:
-        """返回默认实例名。未设置时为空串。"""
+        """返回默认实例名称。未设置时为空字符串。"""
         if not self.path.is_file():
             return ""
         try:
             document = tomlkit.parse(self.path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001 - 读不出默认名时按未设置处理
+        except Exception:  # noqa: BLE001 - 无法读取默认名称时按未设置处理。
             return ""
         return str(document.get("default") or "")
 
     def get(self, name: str) -> InstanceEntry | None:
-        """按名称取一条记录。不存在时返回 ``None``。"""
+        """按名称获取一条记录。不存在时返回 ``None``。"""
         for entry in self.load():
             if entry.name == name:
                 return entry
         return None
 
     def find_by_root(self, root: Path) -> InstanceEntry | None:
-        """按实例根取记录。比较真实路径，软链接与相对写法都能命中。"""
+        """按实例根目录获取记录。对比真实路径，符号链接与相对路径均能匹配。"""
         wanted = _resolve(root)
         for entry in self.load():
             if _resolve(entry.root) == wanted:
@@ -325,7 +325,7 @@ def probe_running(root: Path) -> bool | None:
 
     try:
         return bool(Instance(root, python_override=system_python()).is_running())
-    except Exception:  # noqa: BLE001 - 探测失败按未知处理，不中断调用方
+    except Exception:  # noqa: BLE001 - 探测失败按未知处理，不中断调用方。
         return None
 
 

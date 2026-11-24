@@ -27,7 +27,7 @@ async def get_first_record():
 
 
 def _pyplot():
-    # matplotlib 是 core 体积最大的可选依赖（extra ``image``），默认安装不引入，绘图命令据此降级。
+    # matplotlib 是 core 体积最大的可选依赖（extra ``image``），默认安装不引入，绘图命令据此执行降级处理。
     try:
         import matplotlib.pyplot as plt
     except ImportError:
@@ -39,9 +39,9 @@ def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
     """
     在折线的各数据点上方标注数值，并按需抬高 y 轴上限。
 
-    标注按相对数据点的像素偏移放置，这类标注不参与坐标轴的自动缩放，默认 5% 的上边距
-    放不下最高点的标注，标注会顶出坐标区。故在绘制后量出标注实际向上占用的像素高度，
-    再据此反推 y 轴上限应抬到何处，这样与数据量级、图幅大小均无关。
+    标注按相对数据点的像素偏移放置，此类标注不参与坐标轴自动缩放，默认 5% 的上边距
+    无法容纳最高点的标注，标注会超出坐标区。因此在绘制后测算标注实际向上占用的像素高度，
+    随后据此推算 y 轴上限的调整目标，该计算逻辑与数据量级及图幅大小均无关。
 
     :param plt: ``matplotlib.pyplot`` 模块。
     :param data_x: 横轴刻度。
@@ -55,7 +55,7 @@ def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
     figure.canvas.draw()
 
     axes_height = ax.get_window_extent().height
-    # 标注相对其数据点向上占用的像素高度，另留 4 磅间距避免标注正好贴住顶边框
+    # 标注相对其数据点向上占用的像素高度，额外预留 4 磅间距避免标注紧贴顶部边框。
     headroom = (
         max(
             annotation.get_window_extent().y1 - ax.transData.transform((0, y))[1]
@@ -67,7 +67,7 @@ def annotate_points(plt, data_x: list[str], data_y: list[int]) -> None:
         return
 
     bottom, top = ax.get_ylim()
-    # 令最高点放在“坐标区顶端往下 headroom 像素”处。取较大者以保证只抬高、不压缩
+    # 将最高点放置于“坐标区顶端向下 headroom 像素”处。取较大者以确保仅抬高而不压缩。
     needed_top = bottom + (max(data_y) - bottom) * axes_height / (axes_height - headroom)
     ax.set_ylim(bottom, max(top, needed_top))
 
@@ -117,7 +117,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
                 first_record=first_record,
             )
         data_ = {}
-        # 零点在循环外取一次：逐次取会在跨零点时把前后两天的边界混在一起
+        # 零点在循环外部获取一次，避免逐次取值在跨越零点时将前后两天的边界混合。
         midnight = core_midnight()
         for d in range(30):
             old = midnight - timedelta(days=29 - d)
@@ -164,7 +164,7 @@ async def _(msg: Bot.MessageSession, module: str | None = None):
                 first_record=first_record,
             )
         data_ = {}
-        # 本月一日在循环外取一次：逐次取会在跨零点时把前后两个月的边界混在一起
+        # 本月一日在循环外部获取一次，避免逐次取值在跨越零点时将前后两个月的边界混合。
         first_day = core_midnight().replace(day=1)
         for m in range(12):
             old = first_day - relativedelta(months=11 - m)

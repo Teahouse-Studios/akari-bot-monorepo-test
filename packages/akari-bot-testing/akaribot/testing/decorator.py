@@ -26,7 +26,7 @@ def case(
     note: str | None = None,
     timeout: float | None = None,
 ):
-    """快捷注册一个测试案例。"""
+    """快捷注册测试用例。"""
 
     def _decorator(fn: FunctionType):
         entry: CaseEntry = {
@@ -52,7 +52,7 @@ def get_registry() -> list[CaseEntry]:
 
 
 def func_case(fn: Callable):
-    """标记函数是否为测试函数（测试时会被调用）。"""
+    """标记函数是否为测试函数（在测试期间由运行器调用）。"""
     setattr(fn, "_func_case", True)
     return fn
 

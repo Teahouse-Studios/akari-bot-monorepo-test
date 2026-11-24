@@ -10,7 +10,7 @@ description = "AkariBot 表情资源包：assets/emotes 拆出的独立分发，
 license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
-# 纯资源分发：包内只有 GIF、README 与一个定位函数，不依赖任何分发（定位见 akaribot/assets/emotes/__init__.py）。
+# 纯资源包，包内仅包含 GIF、README 与一个定位函数，不依赖任何包（定位见 akaribot/assets/emotes/__init__.py）。
 dependencies = []
 
 [project.entry-points."akaribot.docs"]

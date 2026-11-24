@@ -1,4 +1,4 @@
-"""Parser / 出站入口 hook 公共导出。"""
+"""Parser 与出站入口 Hook 的公开导出。"""
 
 from .context import OutgoingPayload, ParserHookContext, SessionInfoView
 from .dispatch import (

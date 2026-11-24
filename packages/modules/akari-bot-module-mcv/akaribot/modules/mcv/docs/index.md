@@ -1,6 +1,6 @@
 # mcv
 
-mcv 可以查询 Minecraft：Java 版启动器的最新正式版与快照，以及基岩版在 Google Play 商店与 Microsoft Store 的最新正式版。
+mcv 可以查询 Minecraft：Java 版启动器最新正式版与快照，以及基岩版在 Google Play 商店与 Microsoft Store 的最新正式版。
 
 ## 命令
 
@@ -8,7 +8,7 @@ mcv 可以查询 Minecraft：Java 版启动器的最新正式版与快照，以�
 
 <CommandUsage usage="mcv" permission="public" />
 
-此命令用于查询 Java 版最新正式版与最新快照，以及两者的发布时间。获取失败时，结果中会显示失败提示。
+此命令用于查询 Java 版最新正式版与最新快照，以及两者的发布时间。获取失败时，结果中会展示失败提示。
 
 示例：
 
@@ -25,7 +25,7 @@ mcv 可以查询 Minecraft：Java 版启动器的最新正式版与快照，以�
 
 <CommandUsage usage="mcv mcbv" permission="public" :aliases="['mcbv']" />
 
-此命令用于查询基岩版在 Google Play 与 Microsoft Store 的最新正式版。某个来源失败时，该来源显示获取失败，另一个来源的结果不受影响。
+此命令用于查询基岩版在 Google Play 与 Microsoft Store 的最新正式版。若某一数据源请求失败，该数据源展示为获取失败，另一数据源的结果不受影响。
 
 示例：
 

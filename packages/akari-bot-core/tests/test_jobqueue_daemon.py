@@ -121,8 +121,8 @@ async def _run_daemon_once(*, backend: str, mode: str, hub_ready: bool = True):
         with (
             patch.object(daemon.multiprocessing, "get_context", return_value=context),
             patch.object(PackageRegistry, "adapters", side_effect=_fake_adapters),
-            # 实例发现由 bot_* 配置表驱动，合成适配器没有配置表。本用例只验证守护进程的
-            # 编排顺序，直接给出一个已启用实例，不为它铺一份配置。
+            # 实例发现由 bot_* 配置表驱动，合成适配器没有配置表。该用例仅验证守护进程的
+            # 编排顺序，直接指定一个已启用实例，不为其准备一份配置。
             patch.object(
                 daemon,
                 "discover_adapter_instances",

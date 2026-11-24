@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.theme_sync``：主题模板 submodule 同步。"""
+"""``akaribot.cli.docs_engine.theme_sync`` 的主题模板 submodule 同步测试。"""
 
 import subprocess
 from pathlib import Path
@@ -113,7 +113,7 @@ async def _test_missing_repository_is_reported():
 
 @func_case
 async def test_docs_theme_sync(tester: Tester):
-    """cli.docs.theme_sync: submodule 同步、提交报告与失败映射"""
+    """cli.docs.theme_sync 的 submodule 同步、提交报告与失败映射测试"""
     await tester.test(_test_sync_updates_and_reports_change, "同步命令顺序、提交前后与日志")
     await tester.test(_test_sync_failure_is_reported, "同步失败映射为引擎错误")
     await tester.test(_test_missing_git_is_reported, "缺少 git 时报告安装提示")

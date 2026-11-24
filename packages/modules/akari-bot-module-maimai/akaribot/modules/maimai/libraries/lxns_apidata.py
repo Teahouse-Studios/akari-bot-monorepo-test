@@ -1,4 +1,4 @@
-"""落雪咖啡屋（LXNS）舞萌成绩的适配层。"""
+"""落雪咖啡屋（LXNS）舞萌 DX 成绩适配层。"""
 
 from typing import Any
 
@@ -24,16 +24,16 @@ from ..database.models import LxnsProberBindInfo
 LXNS_MAIMAI_BESTS_URL = f"{LXNS_API_BASE}/user/maimai/player/bests"
 LXNS_MAIMAI_SCORES_URL = f"{LXNS_API_BASE}/user/maimai/player/scores"
 
-# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按照好友码定位，支持查询任意玩家。好友码相同即为同一账号，因此查询自身与查询他人使用同一逻辑。
 LXNS_MAIMAI_PLAYER_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/maimai/player/{{friend_code}}"
 LXNS_MAIMAI_BESTS_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/maimai/player/{{friend_code}}/bests"
 
-# 落雪把标准与 DX 谱面记在同一个曲目 ID 下，水鱼则给 DX 谱面的 ID 加 10000，互换时在这个
-# 偏移量上加减即可。宴会场曲目（ID 大于等于 100000）不分谱面类型，不参与换算。
+# 落雪将标准与 DX 谱面记录在同一曲目 ID 下，水鱼则为 DX 谱面的 ID 增加 10000，相互转换时在此
+# 偏移量上执行加减计算。宴会场曲目（ID 大于或等于 100000）不区分谱面类型，不参与换算。
 MAIMAI_DX_ID_OFFSET = 10000
 MAIMAI_UTAGE_ID_MIN = 100000
 
-# 落雪的谱面类型到水鱼展示用类型的映射。宴会场曲目不分谱面类型，按标准谱面处理。
+# 落雪谱面类型至水鱼展示类型的映射表。宴会场曲目不区分谱面类型，按照标准谱面处理。
 _CHART_TYPE_DF = {"standard": "SD", "dx": "DX", "utage": "SD"}
 
 total_list = TotalList()
@@ -353,7 +353,7 @@ async def get_record_lx_oauth(msg: Bot.MessageSession, bind_info: LxnsProberBind
         except LxnsTokenRevoked:
             raise
         except Exception:
-            # 该端点未见于文档，落雪一旦调整接口就可能连带毁坏 B50，故退回全量成绩自行划分。
+            # 该端点未在文档中记载，若落雪调整接口可能导致 B50 功能异常，因此改用拉取全量成绩并自行划分。
             Logger.exception()
             resp = None
         if isinstance(resp, dict) and (resp.get("standard") or resp.get("dx")):

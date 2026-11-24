@@ -145,7 +145,7 @@ Textual 的键名以 ``slash`` 表示 ``/``；绑定时将 Unicode 名称等别�
 
 
 def textual_version() -> str:
-    """返回运行期 Textual 版本号。"""
+    """返回运行时 Textual 版本号。"""
     module = importlib.import_module("textual")
     return str(getattr(module, "__version__", "unknown"))
 
@@ -171,7 +171,7 @@ def cell_width(char: str) -> int:
 
 
 def display_width(text: str) -> int:
-    """返回字符串占用的终端列数，中文与 emoji 按 2 列计。"""
+    """返回字符串占用的终端列数，中文与 emoji 按 2 列计算。"""
     return cell_len(text)
 
 
@@ -240,7 +240,7 @@ def align_rows(rows: Sequence[tuple[str, str]], gap: int = 2, align: str = "left
 # endregion
 
 
-# region 包内资源与样式表
+# region 包内资源与样式表。
 
 # 冻结环境中的源文件路径不可用，样式表通过包内资源读取。资源缺失时使用内联样式。
 
@@ -265,7 +265,7 @@ def read_resource_text(package: str, resource: str) -> str | None:
 
 
 def resource_inventory(package: str) -> list[str]:
-    """列出包内可读资源名，供自检报告冻结产物的资源可达性。"""
+    """列出包内可读资源名称，供自检报告冻结产物的资源可达性。"""
     try:
         entries = importlib.resources.files(package).iterdir()
     except (ImportError, ModuleNotFoundError, OSError, TypeError):
@@ -310,7 +310,7 @@ def parse_stylesheet(css: str, path: str = "<tui>", app: App[Any] | None = None)
 # endregion
 
 
-# region 品牌主题
+# region 品牌主题。
 
 # 调色板取自品牌立绘 character_marked.png，并分别适配深色与浅色背景。
 AKARI_THEME_DARK = "akari-dark"
@@ -381,7 +381,7 @@ def toggle_akari_theme(app: App[Any]) -> str:
 # endregion
 
 
-# region 应用、键位与消息
+# region 应用、键位与消息。
 
 
 def bind(key: str, action: str, description: str, *, show: bool = True) -> BindingType:
@@ -397,7 +397,7 @@ def bind(key: str, action: str, description: str, *, show: bool = True) -> Bindi
 
 
 def key_display(key: str) -> str:
-    """返回快捷键的显示写法，与页脚一致（``ctrl+d`` 写作 ``^d``）。"""
+    """记录用户按键并识别连续触发，用于防止模态框重复弹出。"""
     modifiers, name = Binding(KEY_ALIASES.get(key, key), "", "").parse_key()
     name = format_key(name)
     if "ctrl" in modifiers:
@@ -407,7 +407,7 @@ def key_display(key: str) -> str:
 
 
 def key_hint(label: str, key: str) -> str:
-    """按钮文字后附快捷键，如“安装 i”。"""
+    """在按钮文本后附带快捷键提示，如“安装 i”。"""
     return f"{label} {key_display(key)}"
 
 
@@ -424,7 +424,7 @@ def bindings(*items: tuple[str, str, str] | tuple[str, str, str, bool]) -> list[
     return result
 
 
-# 双击与按键连发可能重复触发同一请求，防抖窗口用于防止确认框重复打开。
+# 双击与键盘连续触发可能重复发起同一请求，防抖窗口用于防止确认框重复打开。
 CONFIRM_DEBOUNCE_SECONDS = 0.4
 
 
@@ -516,7 +516,7 @@ async def wait_for_idle(app: App[Any], is_busy: Callable[[], bool], *, timeout: 
     :param timeout: 最长等待秒数。
     :return: 是否在超时前进入空闲状态。
     """
-    # 任务注册可能延迟，需同时检查 worker 队列与页面忙碌状态。
+    # 任务注册可能存在延迟，需要同时检查 worker 队列与页面忙碌状态。
     deadline = time.monotonic() + timeout
     while True:
         await app.workers.wait_for_complete()
@@ -533,10 +533,10 @@ def focus_now(widget: Widget) -> bool:
     :param widget: 目标控件。
     :return: 是否同步设置成功。失败时使用异步聚焦。
     """
-    # 同步聚焦可避免切页时 Textual 将焦点分配给隐藏页面。
+    # 同步聚焦能够避免切换页面时 Textual 将焦点分配给隐藏页面。
     try:
         widget.screen.set_focus(widget)
-    except Exception:  # noqa: BLE001 - 未挂载或 Textual 内部签名变动时退回常规路径
+    except Exception:  # noqa: BLE001 - 未挂载或 Textual 内部签名变动时回退至常规路径。
         widget.focus()
         return False
     return True
@@ -549,11 +549,11 @@ def focus_first(page: Widget, *selectors: str) -> bool:
     :param selectors: 按优先级排列的 CSS 选择器。
     :return: 是否聚焦候选控件。
     """
-    # 空列表不可聚焦，需保留后续候选与页面容器作为回退目标。
+    # 空列表不可聚焦，需要保留后续候选与页面容器作为回退目标。
     for selector in selectors:
         try:
             widget = page.query_one(selector)
-        except Exception:  # noqa: BLE001 - 跳过尚未装配的候选控件
+        except Exception:  # noqa: BLE001 - 跳过尚未装配的候选控件。
             continue
         if isinstance(widget, ListView) and len(widget) == 0:
             continue
@@ -579,13 +579,13 @@ def escape_markup(value: str) -> str:
 
 
 def notify(app: App[Any], message: str, *, severity: str = "information", title: str = "") -> None:
-    """显示通知。未挂载或不支持通知时返回。"""
+    """显示通知提示。未挂载或不支持通知时直接返回。"""
     notify_fn = getattr(app, "notify", None)
     if notify_fn is None:
         return
     try:
         notify_fn(message, title=title, severity=severity)
-    except Exception:  # noqa: BLE001 - 通知失败不应中断界面操作
+    except Exception:  # noqa: BLE001 - 通知失败不应中断界面操作。
         return
 
 
@@ -656,7 +656,7 @@ class TextPromptScreen(Screen[str | None]):
         self.cancel_label = cancel_label
 
     def compose(self) -> ComposeResult:
-        """装配输入框与两个按钮。"""
+        """装配输入框与确认及取消按钮。"""
         with Vertical(id="prompt-box"):
             with VerticalScroll(id="prompt-description"):
                 yield Static(plain_text(self.prompt_title), id="prompt-title", markup=False)
@@ -670,7 +670,7 @@ class TextPromptScreen(Screen[str | None]):
             )
 
     def on_mount(self) -> None:
-        """打开即聚焦输入框。"""
+        """打开时立即聚焦输入框。"""
         focus_now(self.query_one("#prompt-input", Input))
         self.call_after_refresh(_fit_dialog, self, "prompt", 3)
 
@@ -678,18 +678,18 @@ class TextPromptScreen(Screen[str | None]):
         self.call_after_refresh(_fit_dialog, self, "prompt", 3)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """回车提交。"""
+        """按 Enter 键提交。"""
         self._submit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """按钮提交或取消。"""
+        """点击按钮执行提交或取消。"""
         if event.button.id == "prompt-confirm":
             self._submit()
         elif event.button.id == "prompt-cancel":
             self.dismiss(None)
 
     def key_escape(self) -> None:
-        """Esc 取消。"""
+        """按 Esc 键取消。"""
         self.dismiss(None)
 
     def _submit(self) -> None:
@@ -774,7 +774,7 @@ class ChoiceScreen(Screen[str | None]):
         self.cancel_label = cancel_label
 
     def compose(self) -> ComposeResult:
-        """装配标题、说明与每个选项一个按钮。"""
+        """装配标题、说明及各选项对应的按钮。"""
         with Vertical(id="choice-box"):
             with VerticalScroll(id="choice-description"):
                 yield Static(plain_text(self.choice_title), id="choice-title", markup=False)
@@ -812,7 +812,7 @@ class ChoiceScreen(Screen[str | None]):
                 self.dismiss(self.options[index][0])
 
     def key_escape(self) -> None:
-        """Esc 取消。"""
+        """按 Esc 键取消。"""
         self.dismiss(None)
 
 
@@ -825,16 +825,16 @@ def ask_choice(
     callback: Callable[[str | None], None],
     hint: str = "",
 ) -> None:
-    """弹出多选一的模态框，把选中的取值交给回调。取消时为 ``None``。"""
+    """弹出多选一模态框，将所选取的取值传递给回调函数。取消时返回 ``None``。"""
     push_screen(app, ChoiceScreen(title=title, options=options, cancel_label=cancel_label, hint=hint), callback)
 
 
 class _PickList(ListView):
-    # 回车提交对话框。单击只移动高亮，避免误点直接执行。
+    # 回车提交对话框。单击仅移动高亮，避免因误点击而直接执行。
     BINDINGS = [Binding("enter", "submit_pick", show=False)]
 
     def action_submit_pick(self) -> None:
-        """键位动作：提交所在对话框。"""
+        """提交所在对话框的键位动作。"""
         screen = self.screen
         if isinstance(screen, PickTextScreen):
             screen.submit()
@@ -954,7 +954,7 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
             )
 
     def on_mount(self) -> None:
-        """限定列表高度，有输入框时聚焦输入框，否则聚焦列表。"""
+        """限制列表高度，存在输入框时聚焦输入框，否则聚焦列表。"""
         self.query_one("#pick-list", ListView).styles.height = self._list_height()
         focus_now(self._entry())
         self.call_after_refresh(self._fit)
@@ -972,14 +972,14 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
     def _fit(self) -> None:
         if not self.is_mounted:
             return
-        # 输入框占三行。错误提示在窄屏下可能折行，按实际内容计高。
+        # 输入框占三行。错误提示在窄屏下可能折行，按实际内容计算高度。
         error = self.query_one("#pick-error", Static)
         width = max(self.query_one("#pick-box").content_region.width, 1)
         error_rows = max(error.get_content_height(self.size, self.size, width), 1)
         _fit_dialog(self, "pick", self._list_height() + (3 if self.with_input else 0) + error_rows)
 
     def action_move_pick(self, delta: int) -> None:
-        """键位动作：在输入框或按钮上移动列表高亮。"""
+        """在输入框或按钮上移动列表高亮的键位动作。"""
         pick_list = self.query_one("#pick-list", ListView)
         if delta < 0:
             pick_list.action_cursor_up()
@@ -988,30 +988,30 @@ class PickTextScreen(Screen[tuple[str, str] | None]):
 
     @on(ListView.Selected, "#pick-list")
     def _on_picked(self, event: ListView.Selected) -> None:
-        # 单击选项后回到输入框继续填写。
+        # 单击选项后返回输入框继续输入。
         if self.with_input:
             focus_now(self._entry())
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """改动输入时清除上次的错误提示。"""
+        """修改输入内容时清除上一次的错误提示。"""
         error = self.query_one("#pick-error", Static)
         if str(error.content):
             error.update("")
             self.call_after_refresh(self._fit)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """回车提交。"""
+        """按 Enter 键提交。"""
         self.submit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """按钮提交或取消。"""
+        """点击按钮执行提交或取消。"""
         if event.button.id == "pick-confirm":
             self.submit()
         elif event.button.id == "pick-cancel":
             self.dismiss(None)
 
     def key_escape(self) -> None:
-        """Esc 取消。"""
+        """按 Esc 键取消。"""
         self.dismiss(None)
 
     def submit(self) -> None:
@@ -1043,7 +1043,7 @@ def ask_pick_text(
     selected: str = "",
     validate: Callable[[str, str], str] | None = None,
 ) -> None:
-    """弹出“选一项并输入文本”的模态框，把 ``(取值, 文本)`` 交给回调。取消时为 ``None``。"""
+    """弹出“选一项并输入文本”模态框，将 ``(取值, 文本)`` 传递给回调函数。取消时返回 ``None``。"""
     screen = PickTextScreen(
         title=title,
         options=options,
@@ -1068,7 +1068,7 @@ def ask_pick(
     hint: str = "",
     selected: str = "",
 ) -> None:
-    """弹出列表单选的模态框，把选中的取值交给回调。取消时为 ``None``。"""
+    """弹出列表单选模态框，将所选取的取值传递给回调函数。取消时返回 ``None``。"""
     screen = PickTextScreen(
         title=title,
         options=options,
@@ -1130,7 +1130,7 @@ class RenderGuard:
 
     @property
     def last_skipped_method(self) -> str:
-        """最近一次因页面不可用而跳过的渲染方法名，未跳过时为空串。"""
+        """最近一次因页面不可用而跳过的渲染方法名，未跳过时为空字符串。"""
         return self._last_skipped_method
 
     def _record_skip(self, method: str) -> None:
@@ -1168,7 +1168,7 @@ def _guard_mount(page: Widget) -> None:
 
 
 def _guarded(page: Widget, method: Callable[..., Any]) -> Callable[..., Any]:
-    # 实例属性不参与描述符绑定，闭包须保留页面对象与已绑定方法。
+    # 实例属性不参与描述符绑定，闭包必须保留页面对象与已绑定方法。
     name = getattr(method, "__name__", "")
 
     @functools.wraps(method)
@@ -1228,7 +1228,7 @@ class ButtonFlow(Grid):
         super().__init__(id=id)
         self._specs = specs
         self._breaks = breaks
-        # 重排保留按钮实例，避免丢失标签、禁用状态或焦点。
+        # 重新排列时保留按钮实例，避免丢失标签、禁用状态或焦点。
         self._buttons: dict[str, Button] = {}
         self._columns = 0
 
@@ -1238,11 +1238,11 @@ class ButtonFlow(Grid):
             yield self._build(spec[0])
 
     def on_mount(self) -> None:
-        """首次排布前算一次列数。"""
+        """首次排布前计算一次列数。"""
         self.relayout()
 
     def on_resize(self, event: events.Resize) -> None:
-        """宽度变化后重算列数。"""
+        """宽度变化后重新计算列数。"""
         self.relayout()
 
     def relayout(self, width: int | None = None) -> None:
@@ -1259,7 +1259,7 @@ class ButtonFlow(Grid):
         self.styles.grid_columns = " ".join(str(min(value, available)) for value in self._column_widths(columns))
 
     def _columns_for(self, width: int) -> int:
-        # 网格按列对齐，须复核每列最大宽度之和，避免长短标签混排时溢出。
+        # 网格按列对齐，必须复核每列最大宽度之和，避免长短标签混排时溢出。
         rows = self._pack(width)
         columns = max((len(row) for row in rows), default=1)
         while columns > 1 and sum(self._column_widths(columns)) > width:
@@ -1275,7 +1275,7 @@ class ButtonFlow(Grid):
         return widest
 
     def _pack(self, width: int) -> tuple[tuple[str, ...], ...]:
-        # 优先保留语义分组。单组超宽时允许在组内换行。
+        # 优先保留语义分组。单个分组超出宽度时允许在组内换行。
         rows: list[list[str]] = []
         current: list[str] = []
         used = 0
@@ -1407,24 +1407,24 @@ class HelpScreen(Screen[None]):
                 yield Button(self.close_label, id="help-close", variant="primary")
 
     def on_mount(self) -> None:
-        """打开即聚焦关闭按钮。"""
+        """打开时立即聚焦关闭按钮。"""
         focus_now(self.query_one("#help-close", Button))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """关闭按钮即关闭。"""
+        """点击关闭按钮时关闭当前窗口。"""
         if event.button.id == "help-close":
             self.dismiss(None)
 
     def key_escape(self) -> None:
-        """Esc 关闭。"""
+        """按 Esc 键关闭。"""
         self.dismiss(None)
 
     def key_q(self) -> None:
-        """q 关闭。"""
+        """按 q 键关闭。"""
         self.dismiss(None)
 
     def key_question_mark(self) -> None:
-        """再按一次 ? 关闭。"""
+        """再次按 ? 键关闭。"""
         self.dismiss(None)
 
 
@@ -1459,7 +1459,7 @@ def widget_cells(widget: Widget) -> tuple[int, int]:
 # endregion
 
 
-# region 运行、鼠标与进度
+# region 运行、鼠标与进度。
 
 
 def is_interactive_terminal() -> bool:
@@ -1502,7 +1502,7 @@ async def app_test(app: App[Any], size: tuple[int, int] = (80, 24)) -> AsyncIter
         async with app.run_test(headless=True, size=size) as pilot:
             yield pilot
     except WorkerFailed as error:
-        # 原始异常可能保存在 WorkerFailed.error 或 __cause__ 中，须检查两种来源。
+        # 原始异常可能保存在 WorkerFailed.error 或 __cause__ 中，必须检查两种来源。
         cause = getattr(error, "error", None) or error.__cause__
         if app.is_running or not isinstance(cause, NoMatches):
             raise
@@ -1519,14 +1519,14 @@ def progress_phase(bar: ProgressBar, done: float, total: float = 100.0) -> None:
 
 
 def progress_reset(bar: ProgressBar) -> None:
-    """把进度条归零。"""
+    """重置进度条。"""
     bar.update(total=100.0, progress=0.0)
 
 
 # endregion
 
 
-# region 终端能力（自检报告用）
+# 选项文本。未设置选项时显示占位提示。
 
 
 class TerminalCapability:

@@ -36,7 +36,7 @@ PAYLOAD = {
 
 
 def _merged_locale_dir() -> Path:
-    # 片段里的新键尚未并入 locales：合成一份合并后的语言目录，检查才取到真实渲染结果。
+    # 片段中的新增键尚未并入 locales，合成合并后的语言目录后，检查才能获取真实的渲染结果。
     holder = TemporaryDirectory(prefix="akari-config-placeholders-locale-")
     _KEEP_ALIVE.append(holder)
     root = Path(holder.name)
@@ -50,14 +50,14 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # CLI 首次取文案时用包内 locales 重建快照，会覆盖合并目录。先取一次完成重建，再建合并快照。
+    # CLI 首次读取文案时使用包内 locales 重建快照，会覆盖合并目录。先获取一次以完成重建，再创建合并快照。
     i18n.t("cli.common.error_label")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
 class _FakeInstance:
-    # 只回答 run_core_capture 的替身：stdout 是 core 回传的文本，returncode 是它的退出码。
+    # 仅响应 run_core_capture 的模拟对象，stdout 是 core 返回的文本，returncode 是其退出码。
     def __init__(
         self, payload: object = None, *, stdout: str | None = None, returncode: int = 0, stderr: str = ""
     ) -> None:
@@ -69,7 +69,7 @@ class _FakeInstance:
         self.meta = SimpleNamespace(root=Path("/tmp/fake-instance"))
 
     def run_core_capture(self, entrypoint: str, *args: str, timeout: float | None = 120.0, **env: str):
-        """记下 entrypoint 与参数，返回预设输出。"""
+        """记录 entrypoint 与参数，返回预设输出。"""
         self.calls.append((entrypoint, tuple(args)))
         text = self.stdout if self.stdout is not None else json.dumps(self.payload, ensure_ascii=False)
         return subprocess.CompletedProcess(list(args), self.returncode, text, self.stderr)
@@ -101,7 +101,7 @@ def _instance_with_config(*names: str) -> _FakeInstance:
 
 
 def _test_placeholders_passes_table_list():
-    # 表名清单取实例 config 目录下的全部 toml（含子目录），去重排序后一次下发给 core。
+    # 表名清单提取实例 config 目录下的全部 toml（包含子目录），去重排序后一次性传递给 core。
     instance = _instance_with_config("config", "module_ai", "adapters/bot_telegram")
     result, text = _invoke(instance, ["placeholders"])
     entrypoint, args = instance.calls[0]
@@ -115,7 +115,7 @@ def _test_placeholders_passes_table_list():
 
 
 def _test_placeholders_json_is_passthrough():
-    # --json 原样透出 core 的结构：总数、逐表明细、已扫描与失败归集都不改写。
+    # --json 原样输出 core 的结构，总数、逐表明细、已扫描与失败归集均不执行改写。
     payload = dict(PAYLOAD, failed={"broken": "解析失败：ParseError"})
     instance = _instance_with_config("config")
     instance.payload = payload
@@ -125,7 +125,7 @@ def _test_placeholders_json_is_passthrough():
 
 
 def _test_placeholders_reports_failed_tables():
-    # core 判定的结果里带失败表时，明细里逐条给出表名与原因。
+    # core 判定结果中包含失败配置表时，明细中逐条列出表名与原因。
     instance = _instance_with_config("config")
     instance.payload = dict(PAYLOAD, failed={"binary": "读取失败：UnicodeDecodeError"})
     result, text = _invoke(instance, ["placeholders"])
@@ -138,7 +138,7 @@ def _test_placeholders_reports_failed_tables():
 
 
 def _test_placeholders_empty_instance_omits_tables():
-    # 实例没有任何配置表时不传 --tables，由 core 按自己的配置目录判定，输出如实写没有可统计的表。
+    # 实例不存在配置表时不传入 --tables，由 core 按照自身的配置目录判定，输出如实记录无可用配置表。
     instance = _FakeInstance({"tables": {}, "count": 0, "scanned": [], "failed": {}})
     with TemporaryDirectory(prefix="akari-config-placeholders-empty-") as raw:
         instance.meta = SimpleNamespace(root=Path(raw))
@@ -150,7 +150,7 @@ def _test_placeholders_empty_instance_omits_tables():
 
 
 def _test_placeholders_core_failure_is_reported():
-    # core 退出码非零时透出它的最后一行原因，CLI 保持同一退出码。
+    # core 退出码非零时输出其最后一行原因，CLI 保持同一退出码。
     instance = _instance_with_config("config")
     instance.returncode = 2
     instance.stdout = ""
@@ -160,7 +160,7 @@ def _test_placeholders_core_failure_is_reported():
 
 
 def _test_placeholders_unparseable_output_is_reported():
-    # 退出码为 0 但输出不是 JSON 时按契约错误报出，不把半截文本当统计结果。
+    # 退出码为 0 但输出不是 JSON 时作为格式错误返回，不将不完整文本视为统计结果。
     instance = _instance_with_config("config")
     instance.stdout = "不是 JSON"
     result, _text = _invoke(instance, ["placeholders"])
@@ -168,7 +168,7 @@ def _test_placeholders_unparseable_output_is_reported():
 
 
 def _test_fragment_covers_command_keys():
-    # 命令引用的键必须在片段里有定义，否则界面会把键名本身当文案显示。
+    # 命令引用的键必须在片段里有定义，否则界面会将键名本身当作界面文案显示。
     source = Path(config_command.__file__).read_text(encoding="utf-8")
     used = set(re.findall(r"cli\.config\.placeholders\.[a-z_]+", source))
     fragment = json.loads(FRAGMENT.read_text(encoding="utf-8"))
@@ -177,7 +177,7 @@ def _test_fragment_covers_command_keys():
 
 @func_case
 async def test_config_placeholders(tester: Tester):
-    """cli.config.placeholders: 占位符统计命令测试"""
+    """cli.config.placeholders 占位符统计命令测试"""
     _use_cli_locale()
     await tester.test(_test_placeholders_passes_table_list, "表名清单取实例配置目录并下发给 core")
     await tester.test(_test_placeholders_json_is_passthrough, "--json 原样透出 core 结构")

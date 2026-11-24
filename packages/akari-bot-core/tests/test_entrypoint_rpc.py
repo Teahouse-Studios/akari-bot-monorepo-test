@@ -38,8 +38,8 @@ def _production_handlers() -> dict:
 
 @asynccontextmanager
 async def _stack(*, server: bool = True, handlers: dict | None = None):
-    # 入口按实例配置选择后端。测试改用共享内存后端，并让“是否需要连数据库”的分支走非 database
-    # 一侧，避免触碰测试进程已初始化的内存库。
+    # 入口按照实例配置选择后端。测试环境采用共享内存后端，并使“是否需要连接数据库”分支进入非 database
+    # 路径，避免访问测试进程已初始化的内存数据库。
     from akaribot.core.config.jobqueue import JobQueueConfig
     from akaribot.core.queue import backend as backend_module
 
@@ -95,7 +95,7 @@ async def _test_usage_rejects_unknown_remote():
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         code = rpc.main(["server.post_package_nuke", "akari-bot-module-dice"])
-    # 白名单若失效，main 会在运行中的事件循环里调用 asyncio.run 而抛错，本用例随之失败。
+    # 白名单若失效，main 会在运行中的事件循环中调用 asyncio.run 而抛出异常，当前用例随之判定为失败。
     direct = await rpc._run("server.post_package_nuke", "akari-bot-module-dice")
     return (
         code == rpc.EXIT_USAGE
@@ -172,7 +172,7 @@ async def _test_delivered_to_production_handlers():
     finally:
         ModulesManager.install_package, ModulesManager.remove_package = originals
 
-    # 检查处理器收到的是调用方传入的分发，dist 不会在中途丢失。
+    # 检查处理器接收到的是调用方传入的包对象，确保 dist 元数据不会在中途丢失。
     return (
         install.status == rpc.STATUS_DELIVERED
         and install.result is True
@@ -219,7 +219,7 @@ async def _test_timeout_is_distinct():
 
 
 def _pick_hot_install_target() -> PackageEntry | None:
-    # 优先 arcaea_rss：它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除。缺失时退回任意
+    # 优先选用 arcaea_rss，因为它声明了一个计划任务，能一并验证 Scheduler 的注册与拆除。缺失时回退至任意
     # 声明了 ``provides_modules`` 的模块包，用例对包名保持无关。
     PackageRegistry.discover(force=True)
     candidates = [
@@ -296,7 +296,7 @@ async def _test_end_to_end_hot_install_and_remove():
     entry = _pick_hot_install_target()
     source_config = Paths.instance / "config"
     if entry is None or not source_config.is_dir():
-        # 环境缺少已装模块包或仓库实例配置时无法搭建隔离实例，明确告警，不视为通过。
+        # 环境缺少已安装模块包或仓库实例配置时无法搭建隔离实例，输出明确告警，不视作测试通过。
         print("跳过端到端热装载用例：缺少已装模块包或仓库 config/ 目录。", file=sys.stderr)
         return True
 
@@ -317,7 +317,7 @@ async def _test_end_to_end_hot_install_and_remove():
         finally:
             await server.close()
 
-    # 安装后注册表、sys.modules、Scheduler 与 module_status 必须与包声明一致。拆除后必须全部复原。
+    # 安装后注册表、sys.modules、Scheduler 与 module_status 必须与包声明保持一致。卸载后必须全部复原。
     return (
         before["registered"] == []
         and before["sys_modules"] == []

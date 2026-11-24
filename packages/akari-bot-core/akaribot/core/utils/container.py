@@ -52,12 +52,12 @@ class TokenBucket:
 
 
 class ExpiringTempDict:
-    """带过期时间的字典。"""
+    """带有过期时间的字典。"""
 
     __slots__ = ("exp", "ts", "data", "_lock", "__weakref__")
 
-    # 存弱引用：记录表只为定期清理服务，若持强引用则任何已记录的容器都永远无法被回收，
-    # 冷却、绑定码这类按“场景 × 键”不断新建的容器会让它无上限增长。
+    # 此处仅保存弱引用，因为记录表仅用于定期清理。如果持有强引用，任何已记录的容器都无法被垃圾回收机制回收，
+    # 冷却、绑定码此类按“场景 × 键”不断新建的容器会导致记录表无上限增长。
     _registry: ClassVar[list] = []
     _registry_lock: ClassVar[threading.Lock] = threading.Lock()
     _clear_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
@@ -173,7 +173,7 @@ class ExpiringTempDict:
 
     @classmethod
     def from_dict(cls, d: dict) -> "ExpiringTempDict":
-        """从字典构造实例。"""
+        """从字典构建实例。"""
         obj = cls(ts=d.get("_ts", time.time()), exp=d.get("_exp", 86400))
         for k, v in d.items():
             if k in ("_ts", "_exp"):

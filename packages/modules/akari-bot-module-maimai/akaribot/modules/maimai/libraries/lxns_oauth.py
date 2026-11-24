@@ -1,4 +1,4 @@
-"""落雪咖啡屋（LXNS）OAuth 授权。"""
+"""落雪咖啡屋（LXNS）OAuth 授权模块。"""
 
 import asyncio
 import re
@@ -25,12 +25,12 @@ LXNS_CLIENT_ID = MaimaiConfig.lxns_client_id
 LXNS_CLIENT_SECRET = MaimaiSecretConfig.lxns_client_secret
 LXNS_OAUTH_ENABLED = bool(LXNS_CLIENT_ID)
 
-# 开发者密钥属于应用本身，与任何用户无关，故不随 OAuth 绑定变化。有了它才能按好友码
+# 开发者密钥属于应用本身，与特定用户无关，因此不随 OAuth 绑定变动。配置该密钥后才能按照好友码
 # 查询任意玩家的成绩。
 LXNS_DEVELOPER_TOKEN = MaimaiSecretConfig.lxns_developer_token
 LXNS_DEVELOPER_ENABLED = bool(LXNS_DEVELOPER_TOKEN)
 
-# 应用设为“无回调地址”时，授权页在自身页面里显示授权码。OAuth 规范把这种用法记作 oob。
+# 应用设置为“无回调地址”时，授权页面在自身页面中展示授权码。OAuth 规范将此类用法记作 oob。
 LXNS_OOB_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
 
 _TOKEN_EXPIRE_MARGIN = 30
@@ -48,7 +48,7 @@ class LxnsCodeInvalid(LxnsOAuthError):
 
 
 class LxnsTokenRevoked(LxnsOAuthError):
-    """refresh token 已失效：用户撤销了授权，或令牌链因并发刷新被吊销。"""
+    """refresh token 已失效，可能是用户撤销了授权，或令牌链因并发刷新被吊销。"""
 
 
 def build_authorize_url() -> str:
@@ -66,12 +66,12 @@ def build_authorize_url() -> str:
 
 
 def _extract_bind_code(text: str) -> str:
-    # 用户可能直接粘贴授权码，也可能把回调地址整串复制过来。后者要从中取出 `code` 参数。
+    # 用户可能直接粘贴授权码，也可能将完整回调地址复制提交。对于后者需要从中提取 `code` 参数。
     text = text.strip().strip("\"'“”‘’`")
     match = re.search(r"[?&#]code=([^&\s]+)", text)
     if match:
         return unquote(match.group(1)).strip()
-    # 粘过来的是一整条链接却没有 code 参数：与其把它整个丢给令牌端点，不如直接判为无效。
+    # 若粘贴内容为完整链接但缺少 code 参数，直接判定为无效输入，避免向令牌端点发起无效请求。
     if "://" in text:
         return ""
     return text
@@ -96,8 +96,8 @@ def _expires_in(resp: dict, default: float = 900.0) -> float:
 
 
 async def _token_request(payload: dict) -> dict:
-    # 令牌端点只用一次性的授权码或 refresh token，重发可能扫掉第一份已签发的令牌，故不重试。
-    # 错误以响应体中的 `error` 字段表达，因此传 `status_code=None` 以读取 4xx 的响应体。
+    # 令牌端点仅接受一次性的授权码或 refresh token，重复发送可能导致首个已签发的令牌失效，因此不执行重试。
+    # 错误信息通过响应体中的 `error` 字段体现，因此传入 `status_code=None` 以读取 4xx 响应体。
     # :raise LxnsOAuthError: 请求失败或响应格式异常。
     try:
         resp = await post_url(
@@ -195,7 +195,7 @@ async def get_access_token(bind_info: LxnsProberBindInfo) -> str:
 
     lock = _refresh_locks.setdefault(union_id, asyncio.Lock())
     async with lock:
-        # 等待期间可能已有一次刷新完成，复查缓存以免再轮换一次令牌。
+        # 等待期间可能已有刷新操作完成，复查缓存以避免重复轮换令牌。
         cached = _access_token_cache.get(union_id)
         if cached and cached[1] > time.monotonic():
             return cached[0]
@@ -243,7 +243,7 @@ async def request_player_data(
     try:
         return await _send(token)
     except Exception as e:
-        # 401：令牌无效、已过期，或 Authorization 头格式有误。刷新一次后重试。
+        # 401 表示令牌无效、已过期，或 Authorization 请求头格式有误，执行一次刷新后重试。
         if not str(e).startswith("401"):
             raise
     drop_access_token(bind_info.union_id)
@@ -324,9 +324,9 @@ async def bind_account(msg, code: str | None = None, cmd=None) -> None:
         await msg.finish(I18NContext("maimai.message.oauth.failed"))
 
     union_id = msg.session_info.sender_union_id
-    # 令牌里的 `sub` 仅作显示账号的备用来源，落雪侧不落库（落雪靠 refresh token 自行轮换）。
+    # 令牌中的 `sub` 仅作为展示账号的备用来源，落雪端不写入数据库（落雪通过 refresh token 自行轮换）。
     subject = token.get("sub")
-    # 令牌此刻已经在手，而同一授权码无法换取第二次：先落盘，再做其它事情。
+    # 令牌已成功获取，且同一授权码无法重复使用，必须先写入磁盘再执行其他操作。
     if not await LxnsProberBindInfo.set_bind_info(
         union_id=union_id,
         refresh_token=str(token["refresh_token"]),

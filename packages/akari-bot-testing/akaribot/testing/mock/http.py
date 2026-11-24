@@ -1,4 +1,4 @@
-"""HTTP Mock 工具 - 为需要网络请求的模块提供 mock 支持。"""
+"""HTTP Mock 工具，用于为网络请求提供 mock 支持。"""
 
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ class HTTPMock:
 
     @classmethod
     def clear(cls):
-        """清除所有 mock。"""
+        """清除全部 mock。"""
         cls._responses.clear()
 
     @classmethod

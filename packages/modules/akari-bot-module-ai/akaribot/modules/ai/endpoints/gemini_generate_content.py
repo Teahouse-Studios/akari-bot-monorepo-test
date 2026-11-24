@@ -56,7 +56,7 @@ def _replay_parts(message: dict, model_name: str) -> list[types.Part] | None:
     if not raw_parts:
         return None
     produced_by = message.get("_gemini_model")
-    # 签名由生成它的模型签发，跨模型回放会被判为无效签名。
+    # 签名由生成它的模型签发，跨模型回放时会被判定为无效签名。
     if produced_by and produced_by != model_name:
         return None
     return [types.Part.model_validate(part) for part in raw_parts]
@@ -79,7 +79,7 @@ def _messages_to_generate_content(
             parts = _content_to_generate_content_parts(content)
             if not parts:
                 continue
-            # generateContent 要求 user/model 交替，工具结果后的图片消息需并入同一轮。
+            # generateContent 要求 user/model 交替，工具结果后的图片消息需要并入同一轮。
             if contents and contents[-1].role == "user":
                 contents[-1].parts.extend(parts)
             else:
@@ -88,7 +88,7 @@ def _messages_to_generate_content(
             parts = _replay_parts(msg, model_name) if replay_parts else None
             if parts:
                 has_signatures = has_signatures or any(part.thought_signature for part in parts)
-                # 模型产生的 thoughtSignature 与函数调用步骤需原样回传。
+                # 模型产生的 thoughtSignature 与函数调用步骤需要原样回传。
                 contents.append(types.Content(role="model", parts=parts))
                 api_ids = msg.get("_gemini_call_api_ids") or {}
                 for tc in msg.get("tool_calls") or []:
@@ -99,7 +99,7 @@ def _messages_to_generate_content(
                 continue
             parts = _content_to_generate_content_parts(content) if content else []
             for tc in msg.get("tool_calls") or []:
-                # 没有可回传的签名时无法续接函数调用，连同其结果一并舍弃。
+                # 无可回传的签名时无法续接函数调用，连同其结果一并舍弃。
                 dropped_calls.add(tc.get("id", ""))
             if parts:
                 contents.append(types.Content(role="model", parts=parts))
@@ -223,7 +223,7 @@ class GeminiGenerateContentEndpoint:
                 raise base.gemini_error(
                     exc, base.GeminiGenerateContentError, base.GeminiGenerateContentRateLimitError
                 ) from exc
-            # 服务端判定签名失效时，改用不含签名与工具轮次的上下文重试一次。
+            # 服务端判定签名失效时，改用不包含签名与工具轮次的上下文重试一次。
             system_instruction, contents, _ = _messages_to_generate_content(
                 messages, self.model_name, replay_parts=False
             )

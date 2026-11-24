@@ -117,7 +117,7 @@ def bundled_theme(root: Path = TEMPLATE_DIR) -> ThemeSpec:
 
 
 def _auto_candidates(root: Path) -> list[Path]:
-    # 实例根优先。从源码检出运行 CLI 时，再找仓库内 vendor/ 下的模板 submodule。
+    # 实例根目录优先。从源码克隆目录运行 CLI 时，再查找仓库内 vendor/ 下的模板 submodule。
     candidates = [
         root / "akari-bot-docs-template",
         root / "vendor" / "akari-bot-docs-template",

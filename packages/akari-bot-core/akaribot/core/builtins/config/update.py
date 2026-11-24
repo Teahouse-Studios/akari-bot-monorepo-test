@@ -77,7 +77,7 @@ class ConfigReorganizer:
         table = cfg_name + "_secret" if secret else cfg_name
 
         if key not in self.config.get(c_target, {}):
-            return  # key 不存在则跳过
+            return  # key 不存在则跳过。
 
         self._init_file(cfg_name)
 

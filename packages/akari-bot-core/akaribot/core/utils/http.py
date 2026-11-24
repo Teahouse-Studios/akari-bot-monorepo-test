@@ -1,4 +1,4 @@
-"""基于 `httpx` 的互联网请求工具，用于让机器人请求外部网站。"""
+"""基于 `httpx` 的网络请求工具，供机器人向外部网站发送请求。"""
 
 import asyncio
 import ipaddress

@@ -15,18 +15,18 @@ from datetime import UTC, datetime
 
 
 async def _snapshot() -> dict:
-    # 导入本身就可能在实例配置缺失时抛错（core 的配置在导入期加载），故一并纳入降级路径。
+    # 导入本身就可能在实例配置缺失时抛出异常（core 的配置在导入阶段加载），因此一并纳入降级路径。
     try:
         from akaribot.core.database import close_db, init_db
         from akaribot.core.database.models import JobQueuePeersTable
 
         await init_db(generate_schemas=False)
-    except Exception as exc:  # noqa: BLE001 - 数据库不可用属可降级状态
+    except Exception as exc:  # noqa: BLE001 - 数据库不可用属可降级状态。
         return {"peers": [], "available": False, "note": f"数据库不可用：{exc}"}
 
     try:
         rows = await JobQueuePeersTable.all()
-    except Exception as exc:  # noqa: BLE001 - 表不存在时同样降级
+    except Exception as exc:  # noqa: BLE001 - 表不存在时同样降级。
         return {"peers": [], "available": False, "note": f"peer 表不可读：{exc}"}
     finally:
         await close_db()
@@ -35,7 +35,7 @@ async def _snapshot() -> dict:
     peers = []
     for row in rows:
         lease = row.lease_until
-        # 租约是唯一事实来源：已过期的记录仍在表里，但不算在线。
+        # 租约是唯一数据来源，已过期的记录虽仍保存在表中，但不再判定为在线。
         expired = lease is not None and lease.replace(tzinfo=lease.tzinfo or UTC) <= now
         peers.append(
             {

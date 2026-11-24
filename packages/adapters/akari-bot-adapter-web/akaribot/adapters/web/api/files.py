@@ -17,8 +17,8 @@ from akaribot.core.constants.path import assets_path, cache_path, data_path, mod
 from akaribot.core.paths import Paths
 from .auth import verify_jwt
 
-# 展示路径的基准根，取实例目录：存储根都在实例的 assets/data/cache 之下，实例根始终是其祖先。
-# 按文件深度反推仓库根在 wheel 形态下会落到 site-packages 之外。
+# 展示路径的基准根目录采用实例目录，因为存储根目录均位于实例 assets/data/cache 目录下，实例根目录始终为其祖先。
+# 按文件深度反推仓库根目录在 wheel 分发形态下会解析至 site-packages 之外。
 ROOT_DIR = Paths.instance
 
 MAX_PATH_LENGTH = 256

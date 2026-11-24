@@ -47,7 +47,7 @@ class Failure:
     message: str
 
     def line(self) -> str:
-        """基准文件里的一行。"""
+        """基准文件中的一行记录。"""
         return SEPARATOR.join((self.name, self.kind, self.message))
 
 
@@ -137,7 +137,7 @@ def write_baseline(path: Path, failures: list[Failure]) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(description="测试失败清单与基准按名称对比")
     parser.add_argument("--junit", metavar="PATH", type=Path, default=DEFAULT_JUNIT, help="junit.xml 路径")
     parser.add_argument("--baseline", metavar="PATH", type=Path, default=DEFAULT_BASELINE, help="基线清单路径")
@@ -146,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口。返回进程退出码，0 表示失败的用例清单与基准按名称一一对应。"""
+    """主入口函数，返回进程退出码，0 表示失败的用例清单与基准按名称一一对应。"""
     args = build_parser().parse_args(argv)
     try:
         actual = read_failures(args.junit)

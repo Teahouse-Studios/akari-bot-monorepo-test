@@ -11,7 +11,7 @@ from tortoise.exceptions import TransactionManagementError
 try:
     from tortoise.backends.mysql.client import MySQLClient
     from tortoise.backends.mysql.client import translate_exceptions as mysql_translate_exceptions
-except ImportError:  # pragma: no cover - 未安装 MySQL 驱动时跳过 MySQL 补丁
+except ImportError:  # pragma: no cover，未安装 MySQL 驱动时跳过 MySQL 补丁。
     MySQLClient = None
 
     def mysql_translate_exceptions(func):

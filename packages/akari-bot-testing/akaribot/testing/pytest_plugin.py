@@ -73,7 +73,7 @@ async def _shutdown_runtime() -> None:
 
 
 def resolve_timeout(item: pytest.Item) -> float:
-    """取单个测试的超时秒数：标记优先于环境变量，其次为默认值。"""
+    """获取单个测试的超时秒数，标记优先于环境变量，其次为默认值。"""
     marker = item.get_closest_marker("akari_timeout")
     if marker is not None and marker.args:
         return float(marker.args[0])
@@ -103,14 +103,14 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
 
 async def prepare_runtime() -> None:
-    """重建内存数据库与模块注册表，使每个测试项都有自己的初始状态。"""
+    """重建内存数据库与模块注册表，使每个测试项均具备独立的初始状态。"""
     from .mock.database import close_db, get_last_init_error, init_db
     from akaribot.core.loader import ModulesManager
 
     await close_db()
     if not await init_db():
         raise RuntimeError(f"测试数据库初始化失败。\n{get_last_init_error()}")
-    # 模块注册表与 hook 订阅是进程级状态，用例可能将其改写或关闭。
+    # 模块注册表与 Hook 订阅是进程级状态，用例可能将其改写或关闭。
     ModulesManager.refresh()
 
 
@@ -125,7 +125,7 @@ def pytest_runtest_teardown(item: pytest.Item, nextitem: pytest.Item | None) -> 
     baseline = item.stash.get(TASK_BASELINE, None)
     if run_in_session_loop(cancel_orphan_tasks(baseline)):
         return
-    # 未完成取消收尾的任务会带着已关闭的数据库上下文继续运行，后续用例不再可信。
+    # 未完成取消收尾的任务会携带已关闭的数据库上下文继续运行，后续用例不再可信。
     pytest.exit("用例遗留的后台任务未能完成取消收尾。", returncode=1)
 
 
@@ -155,7 +155,7 @@ async def run_with_timeout(awaitable: Awaitable[Any], timeout: float) -> None:
         async with scope:
             await awaitable
     except TimeoutError:
-        # 测试自己抛出的 TimeoutError 不是测试超时，只有本上下文到期才判定。
+        # 测试自身抛出的 TimeoutError 不属于测试超时，仅当该上下文到期时才判定。
         if scope.expired():
             raise TestTimeout(timeout) from None
         raise
@@ -171,10 +171,10 @@ def run_test_call(fn: Callable[..., Any], kwargs: dict[str, Any], timeout: float
 
 
 class PytestTester(Tester):
-    """在 pytest 下运行的 Tester：子测试失败直接成为 pytest 用例失败。"""
+    """在 pytest 下运行的 Tester，子测试失败直接成为 pytest 用例失败。"""
 
     async def test(self, func: Callable, note: str | None = None):  # type: ignore[override]
-        """运行一个纯函数子测试，返回假值或抛异常都判为用例失败。"""
+        """运行单个纯函数子测试，返回 False 或抛出异常均判定为用例失败。"""
         label = note or getattr(func, "__name__", type(func).__name__)
         try:
             result = await func() if inspect.iscoroutinefunction(func) else func()
@@ -193,7 +193,7 @@ class PytestTester(Tester):
         note: str | None = None,
         timeout: float | None = None,
     ):
-        """运行一条命令级子测试，明确不匹配时判为用例失败。"""
+        """运行一条命令级子测试，明确不匹配时判定为用例失败。"""
         result = await super().integrate(input_, expected=expected, note=note, timeout=timeout)
         if result.get("match") is False:
             raise AssertionError(f"{note or input_}: 期望 {expected}，实际 {result.get('action') or '[NO OUTPUT]'}")
@@ -201,7 +201,7 @@ class PytestTester(Tester):
 
 
 class FuncCaseItem(pytest.Item):
-    """一个 ``@func_case`` 入口在 pytest 中的节点。"""
+    """``@func_case`` 入口在 pytest 中的节点。"""
 
     def __init__(self, *, fn: FunctionType, **kwargs: Any):
         super().__init__(**kwargs)
@@ -216,7 +216,7 @@ class FuncCaseItem(pytest.Item):
 
 
 def pytest_pycollect_makeitem(collector: pytest.Collector, name: str, obj: object) -> pytest.Item | None:
-    """把 ``@func_case`` 入口接管为框架节点，其余函数交回 pytest 默认收集。"""
+    """将 ``@func_case`` 入口接管为框架节点，其余函数交回 pytest 默认收集。"""
     if not isinstance(collector, pytest.Module):
         return None
     if not isinstance(obj, FunctionType) or not getattr(obj, FUNC_CASE_ATTR, False):

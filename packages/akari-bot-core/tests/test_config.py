@@ -105,7 +105,7 @@ def _test_mock_config_rejects_unknown_field():
 
 @func_case
 async def test_config(tester: Tester):
-    """akaribot.core.config: Config 函数测试"""
+    """akaribot.core.config 的 Config 函数测试"""
     await tester.test(_test_config_passthrough, "Config 值透传测试")
     await tester.test(_test_config_get_called_with_args, "Config 参数传递测试")
     await tester.test(_test_config_get_url_branch, "Config get_url 分支测试")
@@ -116,7 +116,7 @@ async def test_config(tester: Tester):
 
 @func_case
 async def test_mock_config(tester: Tester):
-    """akaribot.testing.mock.config: 配置项替身测试"""
+    """akaribot.testing.mock.config 配置项模拟对象测试"""
     await tester.test(_test_mock_config_overrides_and_restores, "覆盖配置项并在退出后恢复原值")
     await tester.test(_test_mock_config_nested_scopes_restore_outer, "嵌套覆盖退出后恢复外层取值")
     await tester.test(_test_mock_config_separates_secret_table, "同名配置项按表与密钥标志区分")

@@ -1,4 +1,4 @@
-"""行内 AT 码模块 - AT 码的解析与渲染。"""
+"""行内 AT 码模块，负责 AT 码的解析与渲染。"""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from collections.abc import Callable, Iterator
 
 from attrs import define
 
-# AT 码格式：<AT:client|userid> / <@:client|userid>，中间可含额外字段。
-# 中间字段为惰性匹配，同行多个 AT 码会合并为一次（取最后一个 ID），此语义须保持。
+# AT 码格式为 <AT:client|userid> / <@:client|userid>，中间可包含额外字段。
+# 中间字段为惰性匹配，同行多个 AT 码会合并为一次（取最后一个 ID），此语义必须保持。
 _AT_CODE_PATTERN = re.compile(r"<(?:AT|@):([^\|]+)\|(?:.*?\|)?([^\|>]+)>")
 
-# 受保护区间专用：不允许跨标签吞掉中间文本，保证相邻 AT 码之间的正文不被豁免。
+# 受保护区间专用，不允许跨标签覆盖中间文本，保证相邻 AT 码之间的正文不被豁免。
 _at_code_SPAN_PATTERN = re.compile(r"<(?:AT|@):[^\|>]+\|(?:[^\|>]*\|)?[^\|>]+>")
 
 
@@ -24,7 +24,7 @@ class InlineMention:
     :param id: 被提及的用户 ID。
     :param raw: AT 码原文，如 `<AT:QQ|123>`。
     :param start: 在所属文本中的起始下标。
-    :param end: 在所属文本中的结束下标（不含）。
+    :param end: 在所属文本中的结束下标（不包含）。
     """
 
     client: str
@@ -94,9 +94,9 @@ def wrap_sender_id(text: str, sender_prefix: str) -> str:
     :param sender_prefix: 用户 ID 的前缀（如 `QQ`）。
     :return: 包装后的文本。
     """
-    # 转义前缀中的特殊字符（如 `|`），避免其被当作正则元字符
+    # 转义前缀中的特殊字符（如 `|`），避免其被视为正则元字符。
     sender_prefix = re.escape(sender_prefix)
-    # 负向后瞻确保不会重复包装已有的 AT 码。\g<0> 引用整个匹配的字符串
+    # 负向后瞻确保不会重复包装已有的 AT 码。\g<0> 引用整个匹配的字符串。
     return re.sub(rf"(?<!<AT:)(?<!<@:){sender_prefix}\|\w+", r"<AT:\g<0>>", text)
 
 

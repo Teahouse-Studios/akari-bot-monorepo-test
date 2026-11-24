@@ -188,7 +188,7 @@ async def _test_request_url_private_ip_opt_outs():
 
 @func_case
 async def test_http(tester: Tester):
-    """akaribot.core.utils.http: HTTP 工具纯函数测试"""
+    """akaribot.core.utils.http 模块的 HTTP 工具纯函数测试"""
     await tester.test(_test_url_pattern_match, "url_pattern 匹配 URL 测试")
     await tester.test(_test_private_ip_check_blocks_non_global, "private_ip_check 拒绝非公网 IP 测试")
     await tester.test(_test_private_ip_check_blocks_mapped_ipv6, "private_ip_check 拒绝 IPv4-mapped IPv6 测试")

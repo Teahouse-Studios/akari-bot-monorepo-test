@@ -25,8 +25,8 @@ retired = module("retired_policy", hidden=True, load=True, base=True)
 async def _(ctx: "Bot.ParserHookContext"):
     if not is_retired_client(ctx.msg.session_info.client_name):
         return None
-    # 模块别名可以把白名单命令并入其它模块（merge 解析为 bind），此时模块名不在
-    # 白名单内，回退到用户别名改写前实际输入的首词继续判定。其它首词依旧一律拦截。
+    # 模块别名可以将白名单命令并入其他模块（merge 解析为 bind），此时模块名不在
+    # 白名单内，回退至用户别名改写前实际输入的首词继续判定。其他首词依然统一予以拦截。
     original_word = getattr(ctx.msg, "command_original_word", "")
     if is_module_allowed_when_retired(ctx.module_name or ctx.command_first_word) or is_module_allowed_when_retired(
         original_word

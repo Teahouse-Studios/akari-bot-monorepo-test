@@ -96,7 +96,7 @@ def _test_verbose_echoes_the_command():
 
 
 def _test_uv_environment_uses_instance_cache():
-    # 受限环境里家目录缓存可能不可写。未显式指定 UV_CACHE_DIR 时取实例自己的缓存目录。
+    # 受限环境中用户主目录缓存可能不可写。未明确指定 UV_CACHE_DIR 时使用实例自身的缓存目录。
     with TemporaryDirectory(prefix="akari-uv-env-") as raw:
         root = Path(raw) / "instance"
         instance = engine.Instance.detached(root)
@@ -124,7 +124,7 @@ def _test_missing_executable_raises_cli_error():
 
 @func_case
 async def test_command_runner_streaming(tester: Tester):
-    """cli.venv.CommandRunner: 实时转发与失败摘要测试"""
+    """cli.venv.CommandRunner 实时转发与失败摘要测试"""
     _use_cli_locale()
     await tester.test(_test_output_is_forwarded_line_by_line, "逐行转发子进程输出")
     await tester.test(_test_tail_is_kept_for_error_summary, "保留输出供失败摘要")

@@ -36,6 +36,6 @@ async def _test_auto_is_sent_as_object():
 
 @func_case
 async def test_ai_anthropic_tool_choice(tester: Tester):
-    """akaribot.modules.ai: Anthropic 端点下发对象形式的 tool_choice"""
+    """akaribot.modules.ai 的 Anthropic 端点发送对象形式的 tool_choice"""
     await tester.test(_test_auto_is_sent_as_object, "auto 包装为对象")
     return tester

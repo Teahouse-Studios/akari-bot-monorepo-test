@@ -1,4 +1,4 @@
-"""会话信息模块 - 定义和管理消息会话的信息和上下文。"""
+"""会话信息模块，定义和管理消息会话的信息与上下文。"""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class EventInfo:
         sender_from: str | None = None,
         create: bool = True,
     ) -> Self:
-        """把上下文字段复制到当前对象。"""
+        """将上下文字段复制到当前对象。"""
         if target_id and target_from is None:
             target_from = Alive.determine_target_from(target_id)
         if target_from and not client_name:
@@ -164,12 +164,12 @@ class SessionInfo:
     target_id: str
     target_from: str
     client_name: str
-    # 多实例的平台两段（纯字符串以便跨进程序列化）：默认实例下分别等于 client_name 与
-    # target_from，四元组判据退化为两段。缺失时按同一规则补齐。
+    # 多实例的平台两段（纯字符串以便跨进程序列化），默认实例下分别等于 client_name 与
+    # target_from，四元组条件回退为两段。缺失时按同一规则补齐。
     platform_name: str = ""
     platform_from: str = ""
-    # 与平台 SDK 上下文绑定的入站会话必须回到原始 Client 实例。
-    # 主动会话留空以使用服务组 anycast。
+    # 与平台 SDK 上下文绑定的入站会话必须路由回原始 Client 实例。
+    # 主动会话保持留空，以使用服务组 anycast 路由。
     owner_peer_id: str | None = None
     sender_id: str | None = None
     sender_from: str | None = None
@@ -201,18 +201,18 @@ class SessionInfo:
     support_markdown_toggle: bool = False
     timestamp: float | None = None
     session_id: str | None = None
-    # 场景 union 由 assign() 解析，解析不出即抛错，故此后必定有值。
-    # 用户 union 则不同，没有 sender_id 的会话（如主动推送）本就没有它。
+    # 场景 union 由 assign() 解析，无法解析时即抛出异常，因此此后必定有值。
+    # 用户 union 则不同，缺少 sender_id 的会话（如主动推送场景）不存在该对象。
     target_union_info: TargetUnionInfo = field(default=None)
     sender_union_info: SenderUnionInfo | None = None
     target_union_id: str = ""
     sender_union_id: str | None = None
-    # 本场景在其场景组内的消息通道号，同组同号即现实中的同一个场景，详见 channel_key
+    # 当前场景在其场景组内的消息通道编号，同组同号即现实中的同一场景，参见 channel_key。
     target_channel_id: int = 1
     banned_users: list | None = None
     custom_admins: list | None = None
-    # 会话一律经 assign() 建立，其中必定按场景语言赋值。此处的默认值仅用于
-    # 反序列化等未赋值情形，故声明为非可选，免去各调用点无谓的判空。
+    # 会话一律通过 assign() 建立，其中必定按场景语言赋值。此处的默认值仅用于
+    # 反序列化等未赋值情形，因此声明为非可选，免去各调用点无谓的空值检查。
     locale: Locale = field(factory=lambda: Locale(default_locale))
     _tz_offset: str | None = None
     timezone_offset: timedelta | None = None
@@ -229,7 +229,7 @@ class SessionInfo:
     # 平台消息入口额外声明的前缀（如 Discord Slash、QQ 官方的 ``/``）。
     # refresh_info() 会刷新数据库中的自定义前缀，但必须保留这一组入口能力。
     platform_prefixes: list[str] = field(factory=list)
-    # 主动推送的下一跳场景 ID 列表：本跳发送失败时，由客户端回调服务端改用列表中的下一个场景重发
+    # 主动推送的备用场景 ID 列表。本次发送失败时由客户端回调服务端，改用列表中的下一场景重新发送。
     next_hops: list[str] = field(factory=list)
     ctx_slot: int | None = 0
     fetch: bool = False
@@ -242,7 +242,7 @@ class SessionInfo:
     use_url_manager: bool = False
     use_url_md_format: bool = False
     use_running_mention: bool = True
-    # 单次处理内的临时数据，assign() 必定赋值，且会被就地写入，故须逐实例新建
+    # 单次处理流程内的临时数据，assign() 必定赋值且会被就地修改，因此必须为每个实例独立创建。
     tmp: dict[str, str] = field(factory=dict)
 
     @classmethod
@@ -270,7 +270,7 @@ class SessionInfo:
         platform_from: str | None = None,
     ) -> Self:
         """
-        用于将参数传入 SessionInfo 对象中。
+        用于构建并初始化 SessionInfo 对象。
 
         :param platform_name: 平台展示名，未提供时取当前进程的 Info.platform_name（平台进程内可用）。
         :param platform_from: 平台场景前缀，未提供时由 target_from 的客户端段替换而来。
@@ -278,8 +278,8 @@ class SessionInfo:
         """
         if target_from is None:
             target_from = Alive.determine_target_from(target_id)
-        # 场景与用户的 union 解析互不依赖，并发发出可省去一半的往返等待。
-        # 主库在远端时这一项按每次往返的网络延迟计。
+        # 场景与用户的 union 解析互不依赖，并发执行可节省往返等待时间。
+        # 主数据库位于远端时，该项延迟按单次往返的网络延迟计算。
         target_union_info, sender_union_info = await asyncio.gather(
             TargetUnionInfo.get_by_target_id(target_id, create),
             SenderUnionInfo.get_by_sender_id(sender_id, create) if sender_id else _none(),
@@ -376,7 +376,7 @@ class SessionInfo:
                 routed_platform_name = get_params.get("platform_name")
                 if routed_platform_name:
                     # 主动会话在 server 进程构造，本进程的 Info.platform_name 是 "Server"。
-                    # 平台名只能取自被路由到的客户端元数据，否则平台级声明落不到这个会话上。
+                    # 平台名称仅能从被路由到的客户端元数据中获取，否则平台级声明无法作用于该会话。
                     _c.platform_name, _c.platform_from = resolve_platform_identity(
                         _c.target_from, _c.client_name, str(routed_platform_name)
                     )
@@ -392,19 +392,19 @@ class SessionInfo:
 
     async def refresh_info(self):
         """从数据库同步会影响当前消息解析的 Union 状态。"""
-        # 跨进程反序列化的会话（含升级前入队的旧消息）可能缺少平台两段。此处按当前已知的
-        # client_name / target_from 补齐，缺字段时退化为改造前的两段判据，不会误判为别的实例。
+        # 跨进程反序列化的会话（包含升级前入队的旧消息）可能缺少平台两段。此处按当前已知的
+        # client_name / target_from 补齐，缺少字段时回退为两段判定条件，不会误判定为其他实例。
         self.platform_name, self.platform_from = resolve_platform_identity(
             self.target_from, self.client_name, self.platform_name, self.platform_from
         )
         # SessionInfo 是入队时快照，其间权限、禁止发言、语言与前缀可能已被改动。
-        # 只替换 ORM（对象关系映射）对象而保留生成字段，会让 parser 按入队时的旧状态执行。
+        # 若仅替换 ORM 对象而保留生成字段，会导致 parser 按入队时的旧状态执行。
         sender_union_info, target_union_info = await asyncio.gather(
             SenderUnionInfo.get_by_sender_id(self.sender_id, create=False) if self.sender_id else _none(),
             TargetUnionInfo.get_by_target_id(self.target_id, create=False) if self.target_id else _none(),
         )
         # assign() 已在平台进程为入站消息建立两侧映射。消息排队期间若管理员删除了
-        # 对应 Union，刷新时绝不能再创建一套默认状态继续执行：那会复活已删除身份，
+        # 对应 Union，刷新时绝不能再创建一套默认状态继续执行，否则会重新创建已删除的身份，
         # 并可能绕过原 Union 上的封禁、禁止发言或模块配置。
         if self.sender_id and sender_union_info is None:
             raise ValueError(f"SenderUnionInfo not found for sender_id: {self.sender_id}")
@@ -538,11 +538,11 @@ class SessionInfo:
         return format_offset(self.display_offset)
 
     def now(self) -> datetime:
-        """取场景时区的当前时间。"""
+        """获取场景时区的当前时间。"""
         return datetime.now(self.tz)
 
     def today(self) -> date:
-        """取场景时区的当前日期。"""
+        """获取场景时区的当前日期。"""
         return self.now().date()
 
 
@@ -553,7 +553,7 @@ class FetchedSessionInfo(SessionInfo):
 
 @define
 class ModuleHookContext:
-    """模块任务上下文。主要用于传递模块任务的参数。"""
+    """模块任务上下文，主要用于传递模块任务的参数。"""
 
     args: dict
     session_info: SessionInfo | None = None

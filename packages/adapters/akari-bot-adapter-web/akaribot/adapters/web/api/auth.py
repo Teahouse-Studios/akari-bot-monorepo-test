@@ -185,7 +185,7 @@ async def auth(request: Request):
             backup_code = body.get("backup_code", "")
 
             if backup_code:
-                # 使用 backup code 替代 TOTP 通过 2FA
+                # 使用恢复代码（backup code）替代 TOTP 完成双重认证（2FA）。
                 if not _verify_backup_code(password_data, backup_code):
                     now = datetime.now(UTC)
                     login_failed_attempts[ip] = [
@@ -203,7 +203,7 @@ async def auth(request: Request):
 
                     Logger.warning(f"[WebUI] {ip} login failed: invalid backup code.")
                     raise HTTPException(status_code=403, detail="Invalid backup code")
-                # 持久化已消耗的 backup code
+                # 持久化保存已使用的恢复代码（backup code）。
                 await _write_password_data(password_data)
             else:
                 if not totp_code:
@@ -279,7 +279,7 @@ async def change_password(request: Request, response: Response):
             backup_code = body.get("backup_code", "")
 
             if backup_code:
-                # 使用 backup code 替代 TOTP 通过 2FA
+                # 使用恢复代码（backup code）替代 TOTP 完成双重认证（2FA）。
                 if not _verify_backup_code(password_data, backup_code):
                     now = datetime.now(UTC)
                     login_failed_attempts[ip] = [
@@ -297,7 +297,7 @@ async def change_password(request: Request, response: Response):
 
                     Logger.warning(f"[WebUI] {ip} login failed: invalid backup code.")
                     raise HTTPException(status_code=403, detail="Invalid backup code")
-                # 持久化已消耗的 backup code
+                # 持久化保存已使用的恢复代码（backup code）。
                 await _write_password_data(password_data)
             else:
                 if not totp_code:
@@ -311,7 +311,7 @@ async def change_password(request: Request, response: Response):
 
         await _write_password_data(password_data)
 
-        # TODO 签发的 JWT 存入数据库，改密码时删除
+        # TODO 将签发的 JWT 存入数据库，修改密码时删除。
         Logger.info(f"[WebUI] {ip} has changed password.")
         await _notify_security_event("password_changed", request, ip)
         return Response(status_code=205)
@@ -338,7 +338,7 @@ async def clear_password(request: Request):
         with open(PASSWORD_PATH, "rb") as file:
             password_data = orjson.loads(file.read())
 
-        # 2FA 启用时不允许清除密码
+        # 2FA 启用时不允许清除密码。
         if _is_2fa_enabled(password_data):
             raise HTTPException(
                 status_code=400, detail="Cannot clear password while 2FA is enabled. Please disable 2FA first."
@@ -541,7 +541,7 @@ async def disable_totp(request: Request):
                 Logger.warning(f"[WebUI] {ip} 2FA disable failed: invalid TOTP code.")
                 raise HTTPException(status_code=400, detail="Invalid TOTP code")
 
-        # 移除 2FA 数据，保留密码
+        # 移除 2FA 数据，保留密码。
         password_data.pop("totp_secret", None)
         password_data.pop("totp_enabled", None)
         password_data.pop("backup_codes", None)

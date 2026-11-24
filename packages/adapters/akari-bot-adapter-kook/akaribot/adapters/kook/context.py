@@ -67,7 +67,7 @@ async def get_channel(session_info: SessionInfo) -> PublicChannel | User | None:
 
 
 async def get_guild(session_info: SessionInfo):
-    """从 KOOK 频道会话或服务器事件会话取得 Guild。"""
+    """从 KOOK 频道会话或服务器事件会话中获取 Guild 对象。"""
     if session_info.target_from == target_guild_prefix:
         return await bot.client.fetch_guild(session_info.get_common_target_id())
     if session_info.target_from == target_group_prefix:
@@ -107,7 +107,7 @@ class KOOKContextManager(ContextManager):
                 return True
             return False
         except Exception:
-            # 被查询的成员可能已不在服务器中，平台查不到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已不在服务器中，平台无法查询到成员记录时会直接报错，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")
@@ -330,7 +330,7 @@ class KOOKContextManager(ContextManager):
         user_id: str,
         message: MessageChain | MessageNodes,
     ) -> list[str]:
-        # KOOK 的私聊场景以用户为频道，get_channel 据此取得 User 对象
+        # KOOK 的私聊场景以用户为频道，get_channel 据此获取 User 对象。
         uid = user_id.split("|")[-1]
         try:
             msg_ids = await KOOKContextManager.send_message(
@@ -338,7 +338,7 @@ class KOOKContextManager(ContextManager):
                 message,
                 quote=False,
             )
-            # 接口未返回 msg_id 时上游会填入空串，此处过滤以免将失败判定为成功
+            # 接口未返回 msg_id 时上游会填入空字符串，此处过滤以免将失败判定为成功。
             return [msg_id for msg_id in msg_ids if msg_id]
         except Exception:
             Logger.exception(f"Failed to send private message to {user_id}: ")

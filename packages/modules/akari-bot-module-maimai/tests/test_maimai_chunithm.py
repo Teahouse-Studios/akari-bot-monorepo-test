@@ -1,4 +1,4 @@
-"""CHUNITHM 接入的纯逻辑单元测试：水鱼公开端点的成绩换算、取分路由与开发者端点地址。"""
+"""CHUNITHM 接入的纯逻辑单元测试，覆盖水鱼公开端点的成绩换算、获取分数路由与开发者端点地址。"""
 
 from unittest.mock import patch
 
@@ -149,11 +149,11 @@ async def _test_lxns_record_route():
         patch.object(chunithm_apidata, "get_record_lx_dev", fake_dev),
         patch.object(chunithm_apidata, "get_record_lx_oauth", fake_oauth),
     ):
-        # 未配置开发者密钥时：给出好友码照样走开发者端点，查自己则回到用户态端点。
+        # 未配置开发者密钥时，指定好友码仍然使用开发者端点，查询自身则回到用户态端点。
         with patch.object(chunithm_apidata, "LXNS_DEVELOPER_ENABLED", False):
             explicit = await get_record_lx(empty, None, "1234567890", use_cache=False)
             fallback = await get_record_lx(empty, bind, use_cache=False)
-        # 配置了密钥则先用资料里的好友码，改走开发者端点。测试自带密钥开关，不受配置文件影响。
+        # 配置密钥后优先使用资料中的好友码，改用开发者端点。测试内置密钥开关，不受配置文件影响。
         with (
             patch.object(chunithm_apidata, "LXNS_DEVELOPER_ENABLED", True),
             patch.object(chunithm_apidata, "fetch_player_field", fake_field),

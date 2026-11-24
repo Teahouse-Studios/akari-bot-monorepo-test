@@ -39,8 +39,8 @@ async def init_web_render():
         Logger.info("WebRender is disabled in the configuration.")
         return False
 
-    # remote_only 的所有操作（包括 status）均由依赖库转发至远端。此时启动本地
-    # Playwright 不仅违背配置，还会让无浏览器环境中的可用远端服务被误判为不可用。
+    # remote_only 的所有操作（包括 status）均通过依赖库转发至远端。此时启动本地
+    # Playwright 不仅违背配置，还会导致无浏览器环境中的可用远端服务被误判定为不可用。
     if remote_only:
         return await check_web_render_status()
 

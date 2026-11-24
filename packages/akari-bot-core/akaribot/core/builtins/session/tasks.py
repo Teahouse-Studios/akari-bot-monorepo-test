@@ -1,4 +1,4 @@
-"""会话任务管理模块 - 管理等待用户回复和执行回调的任务。"""
+"""会话任务管理模块，管理等待用户回复和执行回调的任务。"""
 
 import asyncio
 import time
@@ -16,13 +16,13 @@ if TYPE_CHECKING:
 class SessionTaskManager:
     """管理等待任务与消息回调。任务以稳定的物理 ID 索引，命中时再按当前 Union 拓扑展开。回调使用独立注册 token，并在发送完成后绑定物理消息 ID。"""
 
-    # 索引只使用记录时不可变的物理场景／账号 ID：union ID 与 channel_id 会在等待期间因合并、
+    # 索引仅使用记录时不可变的物理场景或账号 ID，因为 union ID 与 channel_id 会在等待期间因合并、
     # 解绑或重新分配通道而变化，拿快照作永久索引会让原物理用户失去 waiter，甚至被旧组成员接管。
     _task_list = {}
     _task_sequence = 0
 
-    # 存储待执行回调的字典。key 用独立注册 token，不用消息 ID 别名：
-    # message_id 只在单会话内唯一，channel_key 又会合并多个平台入口。
+    # 存储待执行回调的字典。key 用独立注册 token，不用消息 ID 别名，因为
+    # message_id 仅在单会话内唯一，channel_key 又会合并多个平台入口。
     _callback_list = {}
     CALLBACK_TTL = 1800
 
@@ -55,7 +55,7 @@ class SessionTaskManager:
         :param matcher: 可选的消息匹配器。不匹配时任务继续等待
         :param allow_fallthrough: 命中后是否允许当前消息继续进入普通 parser
         """
-        # 使用物理 ID 建立稳定索引。Union／channel 都允许在等待期间变化。
+        # 使用物理 ID 建立稳定索引。Union / channel 都允许在等待期间变化。
         target = msg.session_info.target_id
         sender = msg.session_info.sender_id
         task_type = task_type or ("reply" if reply or reply_pending else "wait")
@@ -67,25 +67,25 @@ class SessionTaskManager:
         if sender not in cls._task_list[target]:
             cls._task_list[target][sender] = {}
 
-        # 使用字符串元组保存回复 ID。平台 ID 自身可能包含逗号，不能依赖分隔符拼接。
+        # 使用字符串元组保存回复 ID。平台 ID 自身可能包含逗号，不得依赖分隔符拼接。
         if isinstance(reply, list):
             reply = tuple(str(mid) for mid in reply)
         elif reply is not None:
             reply = (str(reply),)
 
-        # 存储任务信息
+        # 存储任务信息。
         cls._task_sequence += 1
         cls._task_list[target][sender][msg] = {
             "flag": flag,
             "active": True,
             "type": task_type,
             "reply": reply,
-            "reply_ready": asyncio.Event(),  # 平台发送完成后才能确定的物理消息 ID
+            "reply_ready": asyncio.Event(),  # 平台发送完成后才能确定的物理消息 ID。
             "ts": time.time(),
             "timeout": timeout,
-            "order": cls._task_sequence,  # 跨用户专属／all 索引的稳定记录顺序
-            # reply 的物理 message_id 只在发送它的客户端／平台场景中有意义。
-            # 即使两个入口属于同一现实通道，也不能跨平台用碰巧相同的 ID 命中。
+            "order": cls._task_sequence,  # 跨用户专属 / all 索引的稳定记录顺序。
+            # reply 的物理 message_id 仅在发送它的客户端或平台场景中有意义。
+            # 即使两个入口属于同一现实通道，也不能跨平台使用偶然相同的 ID 命中。
             "reply_scope": cls._callback_scope(msg) if task_type == "reply" else None,
             "matcher": matcher,
             "allow_fallthrough": allow_fallthrough,
@@ -138,8 +138,8 @@ class SessionTaskManager:
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("Callback timeout must be positive or None.")
-        # 将同一次发送的全部消息 ID／虚拟按钮 ID／fallback ID 合并为一组。元组
-        # 不会像逗号拼接字符串那样在平台 ID 自身含逗号时产生歧义。
+        # 将同一次发送的全部消息 ID、虚拟按钮 ID 与 fallback ID 合并为一组。元组
+        # 不会像逗号拼接字符串那样在平台 ID 自身包含逗号时产生歧义。
         if isinstance(message_id, list):
             primary_ids = tuple(str(mid) for mid in message_id)
         else:
@@ -150,7 +150,7 @@ class SessionTaskManager:
             fallback = (str(fallback_ids),)
         else:
             fallback = ()
-        # 存储回调信息
+        # 存储回调信息。
         callback_key = (cls._callback_scope(msg), uuid.uuid4().hex)
         cls._callback_list[callback_key] = {
             "callback": callback,
@@ -159,7 +159,7 @@ class SessionTaskManager:
             "once": once,
             "allow_all_reply_ids": frozenset(str(reply_id) for reply_id in (allow_all_reply_ids or set())),
             # 可重复 callback 必须串行执行，避免同一消息的快速连续操作并发
-            # 修改模块状态。一次性 callback 仍会在 await 用户代码前原子删除。
+            # 修改模块状态。一次性 callback 仍然会在 await 用户代码前原子删除。
             "lock": asyncio.Lock(),
             "owner_sender_id": msg.session_info.sender_id,
             "primary_ids": tuple(dict.fromkeys(primary_ids)),
@@ -173,7 +173,7 @@ class SessionTaskManager:
         callback_key: tuple[tuple[str | None, str], str],
         message_ids: list[int] | list[str] | int | str,
     ) -> tuple[tuple[str | None, str], str] | None:
-        """为尚未消费的 callback 补充发送后才取得的物理消息 ID。"""
+        """为尚未触发的 callback 补充发送后才获取的物理消息 ID。"""
         callback_info = cls._callback_list.get(callback_key)
         if callback_info is None:
             return None
@@ -212,7 +212,7 @@ class SessionTaskManager:
         获取指定任务的执行结果。
 
         :param msg: 消息会话对象
-        :return: 任务完成后的结果（通常是一个 MessageSession 对象），如果没有结果则返回 None
+        :return: 任务完成后的结果（通常是一个 MessageSession 对象），若无结果则返回 None
         """
         task_info = cls._task_list.get(msg.session_info.target_id, {}).get(msg.session_info.sender_id, {}).get(msg)
         if task_info and "result" in task_info:
@@ -244,7 +244,7 @@ class SessionTaskManager:
     @classmethod
     def get(cls):
         """
-        获取整个任务列表。
+        获取完整的任务列表。
 
         :return: 任务列表字典
         """
@@ -289,8 +289,8 @@ class SessionTaskManager:
 
         target_ids = {session.session_info.target_id}
         sender_ids = {session.session_info.sender_id} if session.session_info.sender_id else set()
-        # 绑定与通道变更是低频管理操作。读取候选 bucket 时与它们共用 mutation
-        # 域，避免先读旧 Union、再读新 channel 而拼出数据库中从未存在过的范围。
+        # 绑定与通道变更是低频管理操作。读取候选 bucket 时与对应操作共用 mutation
+        # 域，避免先读取旧 Union、再读取新 channel 而组合出数据库中从未存在过的范围。
         async with union_mutation():
             target_bind, sender_bind = await asyncio.gather(
                 TargetUnionBind.get_or_none(target_id=session.session_info.target_id),
@@ -344,8 +344,8 @@ class SessionTaskManager:
             Logger.exception("Failed to hold the context of a wait-task result.")
             return False
 
-        # hold_context 会跨进程让出执行权。其间等待命令可能已超时或被取消。
-        # 此时不能把结果发布给失效任务，也不能遗留刚取得的 context hold。
+        # hold_context 会跨进程出让执行权。在此期间等待命令可能已超时或被取消，
+        # 此时不能将结果发布给失效任务，亦不能残留新获取的 context hold 计数。
         if not task_info["active"]:
             try:
                 await session.release()
@@ -367,8 +367,8 @@ class SessionTaskManager:
         """
         handled = False
 
-        # 先找已 ready 的精确引用目标。没有则同时等待所有 pending 任务中的任意一个。
-        # 避免记录早但发送卡住的任务阻塞后续 ready 任务。
+        # 先查找处于 ready 状态的精确引用目标。若不存在，则同时等待所有 pending 任务中的任意一个，
+        # 避免记录早但发送阻塞的任务阻塞后续 ready 任务。
         while True:
             active_tasks = await cls._active_tasks(session)
             if not active_tasks:
@@ -419,17 +419,17 @@ class SessionTaskManager:
                     handled = False
             break
 
-        # 已完成的独占等待任务优先消费消息。允许 fallthrough 的 wait_next 任务除外。
+        # 已完成的独占等待任务优先取走消息。允许 fallthrough 的 wait_next 任务除外。
         if handled:
             return True
 
-        # 没有引用目标时不能命中回调。直接做 str(None) 会得到字面量 "None"，
-        # 一旦某个平台或测试注册了同名消息 ID，普通消息也会错误消费该回调。
+        # 若无引用目标，则无法命中回调。直接调用 str(None) 会得到字面量 "None"，
+        # 一旦某个平台或测试注册了同名消息 ID，普通消息也会错误取走该回调。
         if session.session_info.reply_id is None:
             return False
 
-        # 先按真实／虚拟消息 ID 精确匹配。bot_id fallback 仅在当前作用域与发送者下唯一时可用，
-        # 否则不能按注册顺序猜测用户引用的是哪一次发送。
+        # 先按真实或虚拟消息 ID 执行精确匹配。bot_id fallback 仅在当前作用域与发送者下唯一时可用，
+        # 否则无法按注册顺序推断用户引用的是哪一次发送。
         exact_matches = []
         fallback_matches = []
         for callback_key, callback_info in list(cls._callback_list.items()):
@@ -454,8 +454,8 @@ class SessionTaskManager:
             elif reply_id in callback_info.get("fallback_ids", ()):
                 fallback_matches.append(candidate)
 
-        # 真实／虚拟主 ID 比 bot_id fallback 强。但同等级有多个候选时无法
-        # 确定用户操作的是哪次发送，必须保留全部注册而不是按字典顺序猜测。
+        # 真实或虚拟主 ID 优先级高于 bot_id fallback。当同等级存在多个候选时，无法
+        # 确定用户操作针对哪一次发送，因此必须保留全部注册记录，避免按字典顺序盲目推断。
         matched = None
         if len(exact_matches) == 1:
             matched = exact_matches[0]
@@ -466,20 +466,20 @@ class SessionTaskManager:
             callback = callback_info["callback"]
             cls._attach_callback_message_id(session, callback_info)
             if callback_info.get("once", False):
-                # 一次性 callback 在 await 用户代码前原子删除，避免并发回复重复执行。
+                # 一次性 callback 在 await 用户代码前执行原子删除，避免并发回复导致重复执行。
                 cls._callback_list.pop(callback_key, None)
                 if callback:
                     try:
                         await callback(session)
                     except SessionFinished:
-                        # callback 使用 msg.finish() 正常结束当前交互，这是控制流信号，不能
-                        # 逸出到 JobQueue action 令任务停在 processing 直到两小时超时。
+                        # callback 调用 msg.finish() 正常结束当前交互属于控制流信号，不得
+                        # 逸出至 JobQueue 动作层，避免任务持续停留在 processing 状态直至超时。
                         pass
                 return True
 
             async with callback_info["lock"]:
-                # 匹配和取得执行锁之间 callback 可能已被发送失败清理、主动撤销
-                # 或过期任务删除。执行前重新确认注册身份和有效期，不能让旧引用复活。
+                # 在匹配与获取执行锁之间，callback 可能已因发送失败被清理、主动撤销
+                # 或被过期任务删除。执行前必须重新确认注册身份与有效期，防止失效引用再次生效。
                 if cls._callback_list.get(callback_key) is not callback_info:
                     return False
                 if cls._callback_expired(callback_info):

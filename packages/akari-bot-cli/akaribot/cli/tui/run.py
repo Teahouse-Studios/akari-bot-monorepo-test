@@ -23,11 +23,11 @@ STATE_UNKNOWN = "unknown"
 
 RUN_LABEL = "akaribot run"
 LOCK_FILENAME = ".bot.lock"
-# 停止超时由 CLI 处理，界面等待操作结果。
+# 停止操作超时由 CLI 处理，界面仅等待操作执行结果。
 STOP_TIMEOUT_SECONDS = 20.0
 _TAIL_CHARS = 400
 
-# 状态与表头须按当前语言解析，因此常量只保存文案键。
+# 状态与表头需要按照当前语言解析，因此常量仅保存文案键。
 _STATE_KEYS = {
     STATE_RUNNING: "cli.tui.run.state_running",
     STATE_STOPPED: "cli.tui.run.state_stopped",
@@ -96,19 +96,19 @@ class RunResult:
 
 @runtime_checkable
 class RunSource(Protocol):
-    """运行控制数据源接口。测试注入替身，运行时通过子进程执行。"""
+    """运行控制数据源接口。测试注入模拟对象，运行时通过子进程执行。"""
 
     def status(self) -> Sequence[ProcessRecord]:
         """返回状态表，至少一行。"""
 
     def start(self, *, adapter: str = "") -> RunResult:
-        """启动实例。``adapter`` 非空时只启动该平台的适配器。"""
+        """启动实例。``adapter`` 非空时仅启动该平台的适配器。"""
 
     def stop(self) -> RunResult:
         """停止当前实例。"""
 
     def restart(self) -> RunResult:
-        """先停后启。"""
+        """先停止再启动。"""
 
 
 class StaticRunSource:
@@ -216,7 +216,7 @@ class StaticRunSource:
 
 
 class RunSourceError(RuntimeError):
-    """运行数据读取失败：CLI 调用失败或输出不可解析。"""
+    """运行数据读取失败（CLI 调用失败或输出不可解析）。"""
 
 
 class SubprocessRunSource:
@@ -401,7 +401,7 @@ class SubprocessRunSource:
 
 
 def _parse_payload(stdout: str | None) -> dict[str, Any] | None:
-    # 非零退出码对应的 JSON 仍包含失败详情，须先解析输出。
+    # 非零退出码对应的 JSON 仍包含失败详情，需要先解析输出。
     text = (stdout or "").strip()
     if not text:
         return None
@@ -457,7 +457,7 @@ class RunPage(compat.Vertical):
     }
     """
 
-    # 低频操作通过按钮提供，避免页脚超出可用宽度。
+    # 低频操作通过页面按钮提供，避免页脚超出可用宽度。
     BINDINGS = compat.bindings(
         ("s", "start", i18n.t("cli.tui.run.label_start")),
         ("x", "stop", i18n.t("cli.tui.run.label_stop")),
@@ -529,7 +529,7 @@ class RunPage(compat.Vertical):
 
     @property
     def table_text(self) -> str:
-        """返回状态表当前渲染出的纯文本。"""
+        """返回状态表当前渲染结果中的纯文本。"""
         return self._table_rendered
 
     @property
@@ -545,12 +545,12 @@ class RunPage(compat.Vertical):
         self.run_worker(partial(self._refresh, manual=manual), group="run-status", exclusive=True)
 
     async def _refresh(self, *, manual: bool = False) -> None:
-        # 周期轮询不得使正在确认的操作失效。
+        # 定时周期轮询不得使正在确认的操作失效。
         if manual:
             self._pending.reset()
         try:
             records = tuple(await asyncio.to_thread(self.source.status))
-        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常都不应中断界面。
             # 状态读取失败时，待确认操作失效。
             self._pending.reset()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -571,11 +571,11 @@ class RunPage(compat.Vertical):
         self.refresh_status()
 
     def reset_pending(self) -> None:
-        """作废待确认状态。切页时由 App 调用。"""
+        """重置待确认状态。切换页面时由 App 调用。"""
         self._pending.reset()
 
     def request_start(self) -> None:
-        """请求启动当前实例。已运行时显示提示。"""
+        """请求启动当前实例。已处于运行状态时展示提示。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -587,7 +587,7 @@ class RunPage(compat.Vertical):
         self._request_start(self._adapter)
 
     def request_stop(self) -> None:
-        """请求停止当前实例。未运行时显示提示。"""
+        """请求停止当前实例。未处于运行状态时展示提示。"""
         if not self.running:
             compat.notify(
                 self.app,
@@ -604,7 +604,7 @@ class RunPage(compat.Vertical):
         )
 
     def request_restart(self) -> None:
-        """发起重启。"""
+        """发起实例重启操作。"""
         self._ask_confirm(
             "restart",
             label=i18n.t("cli.tui.run.label_restart"),
@@ -613,7 +613,7 @@ class RunPage(compat.Vertical):
         )
 
     def request_adapter_start(self) -> None:
-        """请求输入平台名，确认后启动指定适配器。"""
+        """请求输入平台名称，确认后启动指定适配器。"""
         if self.running:
             compat.notify(
                 self.app,
@@ -698,7 +698,7 @@ class RunPage(compat.Vertical):
     async def _operate(self, label: str, func: Callable[[], RunResult]) -> None:
         try:
             result = await asyncio.to_thread(func)
-        except Exception as error:  # noqa: BLE001 - 数据源异常都转成结果展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常均转换为结果展示。
             result = RunResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -789,7 +789,7 @@ class RunPage(compat.Vertical):
     def _inner_width(self) -> int:
         try:
             outer = compat.widget_cells(self)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 72
         return max(outer - 6, 12)
 
@@ -837,11 +837,11 @@ class RunPage(compat.Vertical):
         self.request_more()
 
     def request_more(self) -> None:
-        """弹出低频操作菜单：启动指定适配器与前台运行说明。"""
+        """弹出低频操作菜单，提供启动指定适配器与前台运行的说明。"""
         if not self._pending.accept("more"):
             return
         options = [("foreground", i18n.t("cli.tui.run.label_foreground"))]
-        # 实例运行时不能再启动指定适配器，菜单不列这一项。
+        # 实例运行时不能再启动指定适配器，菜单不列出这一项。
         if not self.running:
             options.insert(0, ("adapter-start", i18n.t("cli.tui.run.bind_adapter_start")))
         compat.ask_choice(
@@ -861,7 +861,7 @@ class RunPage(compat.Vertical):
             self.show_foreground_hint()
 
     def show_foreground_hint(self) -> None:
-        """前台运行会占用终端，界面内只给出命令。"""
+        """前台运行会占用终端，界面内仅给出命令。"""
         text = i18n.t("cli.tui.run.foreground_hint", command=self._foreground_command())
         compat.notify(self.app, text, severity="warning", title=i18n.t("cli.tui.run.label_foreground"))
         self._set_status(text)

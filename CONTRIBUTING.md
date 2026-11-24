@@ -2,7 +2,7 @@
 
 感谢你对小可及其衍生项目的关注。
 
-本项目接受各种形式的贡献，各类参与方式与处理流程见下方[目录](#目录)。参与前请阅读对应章节，以减少维护者的沟通成本。
+本项目接受各种形式的贡献，各类参与方式与处理流程参见下方[目录](#目录)。参与前请阅读对应章节，以减少维护者的沟通成本。
 
 > [!NOTE]
 > 不打算贡献代码时，也可以通过以下方式支持本项目：
@@ -14,7 +14,7 @@
 ## 目录
 
 - [提出问题](#提出问题)
-- [做出贡献](#做出贡献)
+- [参与贡献](#参与贡献)
   - [报告错误](#报告错误)
   - [提出建议](#提出建议)
   - [本地化](#本地化)
@@ -43,22 +43,22 @@
 - 在 Issue 中[创建新问题](https://github.com/Teahouse-Studios/akari-bot/issues/new)
 - 加入 QQ 平台的[小可公共实例测试群（738829671）](https://qm.qq.com/q/Rmuo5ORYgq)或[茶馆工作室聊天群（979982065）](https://qm.qq.com/q/sjwFNX1NVC)
 
-无论通过哪种渠道，都请**尽可能详细地描述**问题。
+无论通过何种渠道，都请**详尽描述**问题。
 
-## 做出贡献
+## 参与贡献
 
 ### 报告错误
 
 > [!WARNING]
 > **绝对不要**在 Issue 或其他任何公开渠道报告或复现包含敏感信息的安全问题或漏洞。
 > 
-> 涉及敏感内容的问题必须通过电子邮件或私聊联系开发者，详见 [`SECURITY.md`](/SECURITY.md)。
+> 涉及敏感内容的问题必须通过电子邮件或私聊联系开发者，参见 [`SECURITY.md`](/SECURITY.md)。
 >
 > 违反本条规则的内容将被删除，由此产生的后果由发布者承担。
 
 提交前请确认是否已有同类 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
 
-若没有，请使用[错误报告模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=report_bug.yaml)创建新的 Issue，并提供以下信息：
+若未查询到相关条目，请使用[错误报告模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=report_bug.yaml)创建新的 Issue，并提供以下信息：
 - 错误的简要描述
 - 复现步骤
 - 预期结果和实际结果
@@ -70,12 +70,12 @@
 
 提交前请确认是否已有同类 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues)。
 
-若没有，请使用[功能建议模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=feature_request.yaml)创建新的 Issue，并提供：
+若未查询到相关条目，请使用[功能建议模板](https://github.com/Teahouse-Studios/akari-bot/issues/new?template=feature_request.yaml)创建新的 Issue，并提供：
 - 建议的简要描述
 - 可能的实现方案（若有）
 - 建议对项目有益的理由（推荐）
 
-已经开发完成的改动，同样建议先提交 Issue 讨论，再创建 PR（拉取请求）。
+已经开发完成的改动，同样建议先提交 Issue 讨论，再创建拉取请求（PR）。
 
 ### 本地化
 
@@ -83,25 +83,25 @@
 
 除简体中文外，翻译问题请在 Weblate 讨论，不提交到 Issue。
 
-没有 Weblate 账号时可联系开发者代为提交。
+若无 Weblate 账号，可在平台注册。
 
 ## 提交代码更改
 
-本节面向准备提交代码的贡献者。本项目对代码改动的限制较少，但下列约定须遵守。
+本节面向准备提交代码的贡献者。本项目对代码改动的限制较少，但下列约定必须遵守。
 
 ### 快速开始
 
 1. Fork 本仓库
-2. 克隆 Fork 出的仓库到本地
+2. 克隆 Fork 后的仓库到本地
 3. 创建新分支
 4. 完成改动
 5. 向本项目提交 PR
 
-提交规范见视频[《🐧你为啥直接 commit 到我的 master 分支啊》](https://bilibili.com/video/BV1pwC6BxEeb)。
+提交规范参见视频[《🐧你为啥直接 commit 到我的 master 分支啊》](https://bilibili.com/video/BV1pwC6BxEeb)。
 
 ### 开发环境
 
-本项目使用 Python，最低版本要求见 [README](/README.md)。推荐使用 [PyCharm](https://www.jetbrains.com/pycharm) 或
+本项目使用 Python，最低版本要求参见 [README](/README.md)。推荐使用 [PyCharm](https://www.jetbrains.com/pycharm) 或
 [VS Code](https://code.visualstudio.com)。
 
 本项目使用 [uv](https://docs.astral.sh/uv) 管理依赖，安装依赖：
@@ -116,7 +116,7 @@ uv sync
 uv add <包名>
 ```
 
-新增依赖须放入 `pyproject.toml` 中对应的注释分组，并按字母顺序排列。
+新增依赖必须放入 `pyproject.toml` 中对应的注释分组，并按字母顺序排列。
 
 改动依赖后更新锁文件：
 
@@ -126,7 +126,7 @@ uv lock
 
 ### 依赖冲突与联合求解
 
-本项目是 uv workspace，全部官方包共用根目录下的单一 `uv.lock`。该文件对全部成员包做一次**联合求解**，因而各包声明的第三方依赖若互相排斥，`uv lock` 会立即失败，例如两个包对 `packaging` 的可接受区间没有交集：
+本项目采用 uv workspace 结构，全部官方包共用根目录下的单一 `uv.lock`。生成锁文件时会对全部成员包执行一次**联合求解**，因此若各成员包声明的第三方依赖互相排斥，`uv lock` 就会立即失败，例如两个包对 `packaging` 的可接受版本区间没有交集：
 
 ```sh
   × No solution found when resolving dependencies:
@@ -137,17 +137,17 @@ uv lock
       that your workspace's requirements are unsatisfiable.
 ```
 
-CI 在 PR 阶段执行 `uv sync --locked`（见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在解不出或 lockfile 过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不必等到用户安装时。
+CI 在 PR 阶段执行 `uv sync --locked`（参见 [`.github/workflows/run-builtin-tester.yml`](/.github/workflows/run-builtin-tester.yml)），该命令会重新求解并在依赖无解或锁文件过期时失败。因此第三方依赖互斥会在 PR 阶段直接暴露，而不必等到用户安装时。
 
-多仓库布局下没有任何一处会做这样的联合求解，这是 monorepo 布局的主要收益。
+多仓库布局下不会执行此类联合求解，这是 monorepo 的固有机制保证。
 
 这条检查有两处边界。
 
-其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束漂移。例如某包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写进发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。
+其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束不一致。例如某个包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。
 
-其二，不覆盖第三方模块。它们不在 workspace 内，依赖互斥只能靠净室验证与 `akaribot module add` 的安装前检查拦截。
+在各成员包各自独立的 workspace 内，依赖互斥仅能通过干净环境安装验证发现。
 
-`uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手工编辑 `uv.lock` 或放宽约束来通过检查，这些做法只会把冲突推迟到用户安装现场。
+`uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手动编辑 `uv.lock` 或放宽约束来通过检查，此类处理仅会将冲突推迟至用户安装时暴露。
 
 仓库已配置 pre-commit 钩子，安装方式：
 
@@ -168,11 +168,10 @@ Issue 编号。
 
 ### PR 描述
 
-PR 标题参考[提交规范](#提交规范)，正文按 PR 模板填写。描述中可用 `#<编号>` [关联
-Issue](#提出建议)。
+提交 PR 时请按模板填写。描述中可以使用 `#<编号>` 关联相关 Issue。
 
-PR 须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM（Looks Good To Me）方可合并。重大更改须提交 PR 审查，不得直接
-push 到 `master`。
+PR 必须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM（Looks Good To Me）后才能合并。重大更改必须提交 PR 审查，不得直接
+推送到 `master`。
 
 ### 代码风格
 
@@ -187,41 +186,41 @@ VS Code 用户可安装 Ruff 扩展。
 
 ### 新增模块包
 
-仓库已按包拆分，官方模块各占一个 workspace 成员（`packages/modules/akari-bot-module-<名>/`）。
-新增模块用脚手架生成后按需修改：
+仓库已按包拆分，官方模块各自占用一个 workspace 成员（`packages/modules/akari-bot-module-<名>/`）。
+新增模块可使用脚手架生成后再按需修改：
 
 ```sh
 akaribot new module <名>          # 交互问卷；也可用 --non-interactive 配合逐项参数
 akaribot module add -e .          # 在生成的包目录内执行；脚手架 --add 默认已代跑
 ```
 
-脚手架产出 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 同构：
+脚手架生成 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 目录结构一致：
 `pyproject.toml`、`manifest.toml`、`README.md`、`akaribot/modules/<名>/`（含 `config.py`、
 `database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
-`--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`。若要手工执行，先进入包目录。
+`--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`。若要手动执行，先进入包目录。
 
 `manifest.toml` 放在导入包目录内，字段与 `akaribot/core/registry.py` 的 `PackageManifest` 一一对应，
-未启用的能力整行省略：
+未启用的配置项可整行省略：
 
 | 字段 | 用途 |
 | --- | --- |
 | `schema` | 清单版本，当前为 `1` |
-| `requires_core_api` | 兼容的 core 公共 API 区间，当前写 `">=1,<2"` |
-| `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根的路径，没有的能力省略 |
+| `requires_core_api` | 兼容的 core 公开 API 区间，当前填写 `">=1,<2"` |
+| `locales` / `assets` / `migrations` / `config_migrations` | 各目录相对包根目录的路径，未使用的配置项可省略 |
 | `config_table` / `config_schema_version` | `config.py` 中 `on_module_config("<名>")` 声明的表名与配置版本 |
 | `provides_modules` | 本包 `module()` 注册的全部模块名 |
 | `owned_tables` | 本包拥有的数据库表，供 `akaribot module remove --purge-data` 使用 |
 
-清单里**不写版本号与依赖清单**：两者的来源是 distribution metadata。生成后请核对几条硬性约定：
+清单里**不写版本号与依赖清单**，两者的来源是包元数据（distribution metadata）。生成后请核对几条硬性约定：
 
-- 代码一律 `from akaribot.core.api import ...`，不要写 `akaribot.core.builtins.*` 这类深路径。
-- `locales/zh_cn.json` **只提交 zh_cn**，其余语言交给 Weblate。键名前缀须与模块名一致。
-- 对 core 的约束写 `akari-bot-core>=0.1.0,<1.0`：全部 first-party 包的这一串必须**字面一致**，
+- 代码一律使用 `from akaribot.core.api import ...`，不要引用 `akaribot.core.builtins.*` 这类内部路径。
+- `locales/zh_cn.json` **仅提交 zh_cn**，其余语言交给 Weblate。键名前缀必须与模块名一致。
+- 对 core 的约束统一填写 `akari-bot-core>=0.1.0,<1.0`，全部官方包的这一版本约束必须**完全一致**，
   `python tools/lint_versions.py` 会检查。
-- 模块之间不要互相依赖：官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
-- 若模块要创建数据表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条 revision 是否已应用只看
+- 模块之间不要互相依赖，官方模块包之间**不得存在任何依赖**（`tools/lint_boundaries.py` 的 B10）。
+- 若模块要创建数据表，迁移文件放在 `migrations/`，并保证可重复执行（判断某条迁移记录（revision）是否已应用仅查询
   `schema_migrations` 表）。
-- 包内不要出现 `akaribot/__init__.py`：`akaribot` 是命名空间包（B7）。
+- 包内不要出现 `akaribot/__init__.py`，因为 `akaribot` 是命名空间包（B7）。
 
 提交前运行全部检查：
 
@@ -254,7 +253,7 @@ uv run python tools/lint_versions.py      # 内部版本约束一致性
 补充约定：
 - 称呼用户统一使用“你”
 - 机器人自称时避免使用“我”，统一使用“机器人”
-- 尽可能避免使用第一人称描述
+- 避免使用第一人称描述
 - 机器人的第三人称统一为“它”
 
 ---

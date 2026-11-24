@@ -8,11 +8,11 @@ import asyncio
 
 from .timing import TIME_SCALE
 
-# 取消后的收尾有界：后台任务可能在自己的 CancelledError 处理里继续等待，
-# 无限等待会让卡死的用例拖住整个进程。
+# 取消后的收尾保持有界，因为后台任务可能在自身的 CancelledError 处理中继续等待，
+# 无限等待会导致无响应的用例阻塞整个进程。
 CANCEL_TIMEOUT = 1.0 * TIME_SCALE
 
-# 无进展看门狗自身的等待任务，取消收尾时不能算作用例遗留的后台任务。
+# 无进展超时监控自身的等待任务，取消收尾时不能视为用例遗留的后台任务。
 PROGRESS_TASK_PREFIX = "function-test-progress:"
 
 

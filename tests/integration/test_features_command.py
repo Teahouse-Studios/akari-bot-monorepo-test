@@ -1,4 +1,4 @@
-"""features 命令集成测试 - 当前会话与主动获取会话的特性对照。"""
+"""features 命令集成测试，验证当前会话与主动获取会话的特性对照。"""
 
 from unittest.mock import patch
 
@@ -10,7 +10,7 @@ from akaribot.core.utils.session import inject_features
 
 @func_case
 async def test_features(tester: Tester):
-    """features 命令测试"""
+    """features 命令测试。"""
     await tester.integrate(
         "~features",
         ContainsAll("特性标志", "support_image", "require_check_dirty_words"),

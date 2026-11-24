@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-nbnhhsh
 ```
 
-安装后，管理员需要在会话中执行 `module enable nbnhhsh` 开启模块。
+安装后，管理员需要在会话中执行 `module enable nbnhhsh` 启用模块。
 
 ## 配置项
 
@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-nbnhhsh
 
 ## 权限与平台能力
 
-此模块的命令对普通用户开放，不要求管理员或超级用户权限。模块声明的支持语言只有简体中文。模块没有声明平台限制，所有已接入平台都可以使用。
+此模块的命令对普通用户开放，不要求管理员或超级用户权限。模块声明支持的语言仅包含简体中文。模块没有声明平台限制，所有已接入的平台均可以使用。
 
 ## 数据表
 

@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-image
 ```
 
-模块名为 `image`，命令首词也是 `image`，没有别名。
+模块名称为 `image`，命令首词为 `image`，未设置别名。
 
 ## 配置项
 
@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-image
 
 ## 权限与平台能力
 
-模块声明 `required_superuser=True`，只有机器人的超级用户可以使用这些命令。模块没有声明平台限制，已接入的平台都能运行，但平台需要支持接收与发送图片。输入来自消息里的图片元素，输出是转换后的图片。
+模块声明 `required_superuser=True`，仅机器人的超级用户可以使用这些命令。模块未声明平台限制，所有已接入平台均支持运行，但目标平台需要支持接收与发送图片。输入参数来源于消息中的图片元素，输出为转换后的图片。
 
 ## 数据表
 

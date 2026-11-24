@@ -1,7 +1,7 @@
 """删去非公开符号上的 docstring，并把其中的说明上提为行注释。
 
 规范要求 docstring 只出现在公开 API 上：私有函数、私有类与模块内部实现不需要 docstring，
-它们的“为什么”由行注释承担（见 `AGENTS.md` 的“注释”一节）。
+它们的“为什么”由行注释承担（参见 `docs/agents/conventions.md` 的“注释”一节）。
 本工具按该规范机械处理，并把 docstring 里**除首行概括与 `:param:` / `:return:` 之外**的散文
 上提为行注释——那些内容往往正是只看代码看不出来的约束，直接删掉会丢信息。
 
@@ -29,7 +29,7 @@ SCAN_DIRS = ("packages", "tools", "tests")
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
 # 内嵌的第三方副本保持上游原样。
 EXCLUDED_DISTS = ("packages/akari-bot-html2text",)
-# docstring 里属于结构化字段而非散文的行。
+# docstring 中属于结构化字段而非散文的行。
 FIELD_PATTERN = (" :param ", " :return", " :raises", " :rtype", " :type ")
 DEF_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 DUNDER_PATTERN = re.compile(r"^__\w+__$")
@@ -65,7 +65,7 @@ class FilePlan:
 
 
 def iter_sources() -> list[Path]:
-    """枚举待处理的 Python 文件。"""
+    """枚举待处理的 Python 源文件。"""
     files: list[Path] = []
     for dir_name in SCAN_DIRS:
         base = PROJECT_ROOT / dir_name
@@ -81,7 +81,7 @@ def iter_sources() -> list[Path]:
 
 
 def docstring_node(node: ast.AST) -> ast.Expr | None:
-    """取该定义的首条语句——若它是 docstring 则返回，否则返回 ``None``。"""
+    """获取该定义的首条语句。该语句为 docstring 时返回其节点，否则返回 None。"""
     body = getattr(node, "body", None)
     if not body:
         return None
@@ -130,19 +130,19 @@ def plan_file(path: Path) -> FilePlan:
             continue
         start = doc.lineno - 1
         end = doc.end_lineno or doc.lineno
-        # 删除后紧跟的空行一并吃掉，避免函数体以空行开头。
+        # 删除内容后紧邻的空行一并移除，避免函数体以空行开头。
         if end < len(lines) and not lines[end].strip():
             end += 1
         anchor = node.decorator_list[0].lineno if node.decorator_list else node.lineno
         indent = lines[anchor - 1][: len(lines[anchor - 1]) - len(lines[anchor - 1].lstrip())]
-        # 注释放在 docstring 原来的位置（函数体内），缩进取函数体而非 def 行。
+        # 注释放在 docstring 原有位置（函数体内），缩进跟随函数体而非 def 行。
         body_indent = f"{indent}    "
         replacement = [f"{body_indent}# {line}\n" for line in prose_lines(doc.value.value)]
         plan.hoisted += len(replacement)
         plan.removals += 1
         plan.details.append(f"{node.name}@{node.lineno}")
         if len(getattr(node, "body", [])) == 1:
-            # 只剩 docstring 的定义删空后会语法错误，补 pass。缩进取函数体而非 def 行。
+            # 仅包含 docstring 的定义清空后会导致语法错误，需要补充 pass。
             replacement.append(f"{body_indent}pass\n")
         edits.append((start, end, replacement))
 
@@ -155,7 +155,7 @@ def plan_file(path: Path) -> FilePlan:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口。返回进程退出码。"""
+    """主入口函数，返回进程退出码。"""
     parser = argparse.ArgumentParser(description="删去非公开符号的 docstring")
     parser.add_argument("--write", action="store_true", help="写入磁盘。默认只报告")
     args = parser.parse_args(argv)

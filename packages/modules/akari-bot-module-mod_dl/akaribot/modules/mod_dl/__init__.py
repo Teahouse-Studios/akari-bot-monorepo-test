@@ -13,9 +13,7 @@ mod_dl = module(
 )
 
 x_api_key = ModDlConfig.curseforge_api_key
-enable_mirror = bool(
-    not x_api_key
-)  # CurseForge API Key 未配置，使用镜像 https://mcim.z0z0r4.top ...(z0z0r4 不想解析网页)
+enable_mirror = bool(not x_api_key)  # 未配置 CurseForge API Key 时，改用镜像服务 https://mcim.z0z0r4.top。
 
 
 @mod_dl.command("<mod_name> [<version>] {{I18N:mod_dl.help}}")
@@ -63,7 +61,7 @@ async def _(msg: Bot.MessageSession, mod_name: str, version: str | None = None):
         results = []
         resp = await get_url(url, 200, fmt="json", timeout=5, attempt=3, headers=headers)
         if resp:
-            if not enable_mirror:  # 没提供 pagination
+            if not enable_mirror:  # 接口未提供分页参数。
                 if resp.get("pagination", {}).get("resultCount", 0) == 0:
                     return None
             for mod in resp.get("data", []):
@@ -107,11 +105,11 @@ async def _(msg: Bot.MessageSession, mod_name: str, version: str | None = None):
     if not result[0] and not result[1]:
         await msg.finish(I18NContext("mod_dl.message.not_found"))
     else:
-        # 合并搜索结果
+        # 合并搜索结果。
         reply_chain = []
         count = 0
 
-        # 先显示 CurseForge 的结果
+        # 先显示 CurseForge 的结果。
         if not result[1]:
             reply_chain.append(I18NContext("mod_dl.message.curseforge.not_found"))
         else:

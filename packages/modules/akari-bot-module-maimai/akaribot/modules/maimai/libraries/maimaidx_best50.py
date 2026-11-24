@@ -16,7 +16,7 @@ from .maimaidx_utils import compute_rating, calc_dxstar
 
 total_list = TotalList()
 
-# 画面上标注的数据源名称。
+# 绘制画面上标注的数据源名称。
 SOURCE_NAME_DIVING_FISH = "Diving-Fish"
 SOURCE_NAME_LXNS = "Lxns"
 
@@ -124,7 +124,7 @@ class DrawBest:
         self.dx_rating = sum(compute_rating(c.ds, c.achievement) for c in dx_best)
         self.player_rating = self.sd_rating + self.dx_rating
 
-        self.img = Image.new("RGBA", (860, 1300), color=(211, 211, 211, 255))  # 创建空白图像
+        self.img = Image.new("RGBA", (860, 1300), color=(211, 211, 211, 255))  # 创建空白图像。
         self.rows_image = [140 + 110 * i for i in range(7)] + [940 + 110 * i for i in range(3)]
         self.columns_image = [30] + [30 + 160 * i for i in range(5)]
 
@@ -193,29 +193,29 @@ class DrawBest:
     @staticmethod
     def _get_rating_color(rating: int):
         if rating >= 16000:
-            color = [(255, 235, 0), (255, 56, 56), (186, 82, 255), (50, 90, 200), (69, 174, 255)]  # 彩极
+            color = [(255, 235, 0), (255, 56, 56), (186, 82, 255), (50, 90, 200), (69, 174, 255)]  # 彩极。
         elif rating >= 15000:
-            color = [(255, 56, 56), (255, 235, 0), (129, 217, 85), (69, 174, 255), (186, 82, 255)]  # 彩
+            color = [(255, 56, 56), (255, 235, 0), (129, 217, 85), (69, 174, 255), (186, 82, 255)]  # 彩。
         elif rating >= 14500:
-            color = [(248, 225, 67), (255, 250, 160), (248, 225, 67)]  # 白金
+            color = [(248, 225, 67), (255, 250, 160), (248, 225, 67)]  # 白金。
         elif rating >= 14000:
-            color = [(210, 130, 16), (248, 225, 67), (210, 130, 16)]  # 金
+            color = [(210, 130, 16), (248, 225, 67), (210, 130, 16)]  # 金。
         elif rating >= 13000:
-            color = [(136, 144, 190), (182, 201, 241), (136, 144, 190)]  # 银
+            color = [(136, 144, 190), (182, 201, 241), (136, 144, 190)]  # 银。
         elif rating >= 12000:
-            color = [(206, 100, 30), (182, 201, 241), (206, 100, 30)]  # 铜
+            color = [(206, 100, 30), (182, 201, 241), (206, 100, 30)]  # 铜。
         elif rating >= 10000:
-            color = (186, 82, 255)  # 紫
+            color = (186, 82, 255)  # 紫。
         elif rating >= 7000:
-            color = (255, 56, 56)  # 红
+            color = (255, 56, 56)  # 红。
         elif rating >= 4000:
-            color = (255, 235, 0)  # 黄
+            color = (255, 235, 0)  # 黄。
         elif rating >= 2000:
-            color = (129, 217, 85)  # 绿
+            color = (129, 217, 85)  # 绿。
         elif rating >= 1000:
-            color = (69, 174, 255)  # 蓝
+            color = (69, 174, 255)  # 蓝。
         else:
-            color = (255, 255, 255)  # 白
+            color = (255, 255, 255)  # 白。
         return color
 
     @staticmethod

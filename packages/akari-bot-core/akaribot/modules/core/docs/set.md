@@ -4,13 +4,13 @@ order: 16
 
 # set
 
-此模块可以直接改写目标场景或用户的数据。模块级权限为超级用户。参数中的 ID 须带平台前缀。目标场景不存在时，机器人会先请你确认，再创建。
+此模块可以直接修改目标场景或用户的数据。模块级权限为超级用户。参数中的 ID 必须包含平台前缀。若目标场景不存在，机器人会先请求确认，确认通过后再执行创建。
 
 ### `set target module enable`
 
 <CommandUsage usage="set target module enable <target> <modules>..." :params="['target=带平台前缀的场景完整 ID', 'modules=要启用的模块名，可给出多个']" permission="superuser" />
 
-此命令在目标场景启用模块。不在当前平台可用列表中的模块名会被忽略。如果给出的模块名全都无效，命令返回失败提示。
+此命令在目标场景启用模块。未包含在当前平台可用列表中的模块名称将被忽略。若指定的模块名称均无效，命令会返回失败提示信息。
 
 <ChatExample
   :log="[
@@ -23,7 +23,7 @@ order: 16
 
 <CommandUsage usage="set target module disable <target> <modules>..." :params="['target=带平台前缀的场景完整 ID', 'modules=要停用的模块名，可给出多个']" permission="superuser" />
 
-此命令在目标场景停用模块，只处理该场景已启用的模块。
+此命令在目标场景停用模块，仅处理该场景已启用的模块。
 
 <ChatExample
   :log="[
@@ -36,7 +36,7 @@ order: 16
 
 <CommandUsage usage="set target module list <target>" :params="['target=带平台前缀的场景完整 ID']" permission="superuser" />
 
-此命令列出目标场景已启用的模块，按名称排序。
+此命令列出目标场景已启用的模块，并按照名称排序。
 
 <ChatExample
   :log="[
@@ -50,7 +50,7 @@ order: 16
 
 <CommandUsage usage="set target data get <target> [<k>]" :params="['target=带平台前缀的场景完整 ID', 'k=场景数据键名，省略时列出全部']" permission="superuser" />
 
-此命令读取场景数据。省略键时列出全部键值，给出键时只返回该键的值。常见场景数据键包括 `command_prefix`、`cooldown_time`。
+此命令读取场景数据。省略键名称时列出全部键值对，指定键名称时仅返回对应键的值。常见的场景数据键包括 `command_prefix` 与 `cooldown_time`。
 
 <ChatExample
   :log="[
@@ -63,7 +63,7 @@ order: 16
 
 <CommandUsage usage="set target data edit <target> <k> <v>" :params="['target=带平台前缀的场景完整 ID', 'k=场景数据键名', 'v=新值，JSON、布尔值或字符串']" permission="superuser" />
 
-此命令写入场景数据。`<v>` 为 `[...]` 或 `{...}` 时按 JSON 解析。值为 `true` 或 `false` 时存为布尔值，其余按字符串写入。
+此命令写入场景数据。传入值 `<v>` 为 `[...]` 或 `{...}` 时按照 JSON 解析。若值为 `true` 或 `false` 则存储为布尔值，其余情况均作为字符串写入。
 
 <ChatExample
   :log="[
@@ -76,7 +76,7 @@ order: 16
 
 <CommandUsage usage="set target data delete <target> <k>" :params="['target=带平台前缀的场景完整 ID', 'k=场景数据键名']" permission="superuser" />
 
-此命令删除场景数据键。
+此命令删除指定的场景数据键。
 
 <ChatExample
   :log="[
@@ -89,7 +89,7 @@ order: 16
 
 <CommandUsage usage="set sender data get <user> [<k>]" :params="['user=带平台前缀的用户完整 ID', 'k=用户数据键名，省略时列出全部']" permission="superuser" />
 
-此命令读取用户数据。省略键时列出全部键值，给出键时只返回该键的值。常见用户数据键包括 `typing_prompt`、`module_auth`。
+此命令读取用户数据。省略键名称时列出全部键值对，指定键名称时仅返回对应键的值。常见的用户数据键包括 `typing_prompt` 与 `module_auth`。
 
 <ChatExample
   :log="[
@@ -102,7 +102,7 @@ order: 16
 
 <CommandUsage usage="set sender data edit <user> <k> <v>" :params="['user=带平台前缀的用户完整 ID', 'k=用户数据键名', 'v=新值，JSON、布尔值或字符串']" permission="superuser" />
 
-此命令写入用户数据，值的解析规则与 `set target data edit` 相同。
+此命令写入用户数据，值的解析规则与 `set target data edit` 保持一致。
 
 <ChatExample
   :log="[
@@ -115,7 +115,7 @@ order: 16
 
 <CommandUsage usage="set sender data delete <user> <k>" :params="['user=带平台前缀的用户完整 ID', 'k=用户数据键名']" permission="superuser" />
 
-此命令删除用户数据键。
+此命令删除指定的用户数据键。
 
 <ChatExample
   :log="[

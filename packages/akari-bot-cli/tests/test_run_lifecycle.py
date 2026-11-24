@@ -23,10 +23,10 @@ from akaribot.cli.instance import Instance, InstanceMeta
 from akaribot.cli.main import app
 from akaribot.testing import Tester, func_case
 
-# 运行页新增的文案键尚未并入包内语言文件时，用例从这里合并一份，检查才能比对到真实文案。
+# 运行页新增的文案键尚未并入包内语言文件时，用例从此处合并一份，以便检查时能比对到真实文案。
 FRAGMENT = Path(__file__).resolve().parents[3] / "generated_docs" / "i18n_fragments" / "config_run.json"
 
-# 假实例进程：取锁、写下进程记录、按参数决定是否响应 SIGTERM，然后一直等待。
+# 模拟实例进程会获取锁、写入进程记录、按参数确定是否响应 SIGTERM，然后一直等待。
 FAKE_BOT = """#!/usr/bin/env python3
 import fcntl, json, os, signal, sys, time
 
@@ -53,7 +53,7 @@ def _use_cli_locale() -> None:
 
 
 def _make_instance(root: Path, bot: Path) -> Instance:
-    # 非托管实例：解释器走 AKARIBOT_PYTHON，测试据此把假实例进程当作解释器启动。
+    # 非托管实例的解释器由 AKARIBOT_PYTHON 指定，测试据此把模拟实例进程作为解释器启动。
     root.mkdir(parents=True, exist_ok=True)
     Instance.create_dirs(root)
     InstanceMeta.create(root, venv="").save()
@@ -105,7 +105,7 @@ async def _test_status_reports_stopped_without_lock():
 
 
 async def _test_detach_records_pid_and_survives_parent():
-    # 后台启动后控制器立即返回，进程记录写在锁文件里，界面/终端退出不影响它。
+    # 后台启动后控制器立即返回，进程记录保存在锁文件中，界面/终端退出不影响它。
     with TemporaryDirectory(prefix="akari-life-") as raw:
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
@@ -128,12 +128,12 @@ async def _test_detach_records_pid_and_survives_parent():
 
 
 async def _test_stop_takes_over_foreign_process():
-    # 关键回归：由别的控制器（另一个 TUI、终端、systemd）启动的实例，新开的界面同样能停。
+    # 关键回归测试，由其他控制器（另一个 TUI、终端、systemd）启动的实例，新打开的界面同样可以停止。
     with TemporaryDirectory(prefix="akari-life-") as raw:
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
         instance = _make_instance(root, bot)
-        foreign = subprocess.Popen(  # noqa: S603 - 测试替身，参数固定
+        foreign = subprocess.Popen(  # noqa: S603 - 测试模拟对象，参数固定。
             [sys.executable, str(bot)],
             env={**os.environ, "AKARI_INSTANCE_DIR": str(root)},
             stdout=subprocess.DEVNULL,
@@ -162,7 +162,7 @@ async def _test_stop_force_kills_unresponsive_process():
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
         instance = _make_instance(root, bot)
-        foreign = subprocess.Popen(  # noqa: S603 - 测试替身，参数固定
+        foreign = subprocess.Popen(  # noqa: S603 - 测试模拟对象，参数固定。
             [sys.executable, str(bot)],
             env={**os.environ, "AKARI_INSTANCE_DIR": str(root), "FAKE_BOT_IGNORE_TERM": "1"},
             stdout=subprocess.DEVNULL,
@@ -212,7 +212,7 @@ def _test_json_stop_failure_prevents_restart():
 
 
 async def _test_stop_refuses_without_record():
-    # 锁被持有但文件里没有进程记录时不猜测进程号，如实报“无法停止”。
+    # 锁被持有但文件里没有进程记录时不猜测进程号，直接提示“无法停止”。
     with TemporaryDirectory(prefix="akari-life-") as raw:
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
@@ -241,21 +241,21 @@ async def _test_conflicting_actions_rejected():
 
 
 async def _test_stop_process_primitive_skips_own_group():
-    # 与控制器同组的实例只能按进程号发信号：对整组发信号会连同控制器一起终止。
+    # 与控制器同组的实例仅能按进程号发送信号，对整组发送信号会连同控制器一起终止。
     from akaribot.cli.process import SystemProcessControl
 
     control = SystemProcessControl()
     if os.name == "nt":
         return control.process_group(os.getpid()) is None
-    sibling = subprocess.Popen(  # noqa: S603 - 测试替身，参数固定
+    sibling = subprocess.Popen(  # noqa: S603 - 测试模拟对象，参数固定。
         [sys.executable, "-c", "import time; time.sleep(30)"]
     )
-    leader = subprocess.Popen(  # noqa: S603 - 测试替身，参数固定
+    leader = subprocess.Popen(  # noqa: S603 - 测试模拟对象，参数固定。
         [sys.executable, "-c", "import time; time.sleep(30)"],
         start_new_session=True,
     )
     try:
-        # 同组但非组长的进程只按进程号处理。自建会话的组长可以整组处理。
+        # 同组但非组长的进程仅按进程号处理。自行创建会话首领的进程可按整组处理。
         return control.process_group(sibling.pid) is None and control.process_group(leader.pid) == leader.pid
     finally:
         for process in (sibling, leader):
@@ -264,14 +264,14 @@ async def _test_stop_process_primitive_skips_own_group():
 
 
 async def _test_tui_source_takes_over_foreign_process():
-    # 界面侧的同一条链路：状态与停止都走 CLI，因此新开的界面能接管别的控制器启动的实例。
+    # 界面使用同一条链路，状态与停止均通过 CLI 执行，因此新打开的界面能接管其他控制器启动的实例。
     from akaribot.cli.tui.run import SubprocessRunSource
 
     with TemporaryDirectory(prefix="akari-life-") as raw:
         root = Path(raw) / "instance"
         bot = _fake_bot(Path(raw))
         instance = _make_instance(root, bot)
-        foreign = subprocess.Popen(  # noqa: S603 - 测试替身，参数固定
+        foreign = subprocess.Popen(  # noqa: S603 - 测试模拟对象，参数固定。
             [sys.executable, str(bot)],
             env={**os.environ, "AKARI_INSTANCE_DIR": str(root)},
             stdout=subprocess.DEVNULL,
@@ -327,7 +327,7 @@ def _choice_labels(app) -> list[str]:
 
 
 async def _wait_choice(app, timeout: float = 5.0) -> bool:
-    # 输入框提交后确认框由回调推入，等到它真的出现再检查。
+    # 输入框提交后确认框由回调弹出，等待其渲染完成后再行校验。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if app.screen.query("#choice-0"):
@@ -337,7 +337,7 @@ async def _wait_choice(app, timeout: float = 5.0) -> bool:
 
 
 async def _choose(app, pilot, index: int) -> None:
-    # 按控件 API 触发：按钮宽度随文案变化，按坐标点击在长文案下会落到控件之外。
+    # 按控件 API 触发，因为按钮宽度随文案变化，按坐标点击在长文案下会落在控件范围之外。
     from akaribot.cli.tui import _compat as compat
 
     app.screen.query_one(f"#choice-{index}", compat.Button).press()
@@ -360,7 +360,7 @@ async def _with_run_page(body, source=None, size=(110, 32)):
 
 
 def _test_pending_confirm_gate():
-    # 闸门本身：同一动作在防抖窗口内只放行一次，窗口外或换动作时立即放行，复位后立即可用。
+    # 验证防抖检查逻辑本身，同一操作在防抖时间窗口内仅放行一次，窗口外或切换操作时立即放行，重置后立即可用。
     from akaribot.cli.tui import _compat as compat
 
     gate = compat.PendingConfirm()
@@ -407,7 +407,7 @@ async def _test_run_page_renders_cli_state():
 
 
 async def _test_four_paths_confirm_through_modal():
-    # 四条路径都是“一次触发弹模态、选执行才动手”：模态展示期间数据源未被调用，取消不调用。
+    # 四条路径均遵循“一次触发弹出模态框、选择执行后才真正操作”，模态框展示期间数据源未被调用，取消时不调用。
     from akaribot.cli.tui import _compat as compat
 
     async def body(app, page, pilot, source):
@@ -479,7 +479,7 @@ async def _test_four_paths_confirm_through_modal():
 
 
 async def _test_repeat_trigger_keeps_one_modal():
-    # 同一动作连发只弹一层模态。换动作会重新弹，两个动作都不执行。
+    # 同一操作连续触发仅弹出一层模态框。切换操作会重新弹出，两个操作均不执行。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -502,7 +502,7 @@ async def _test_repeat_trigger_keeps_one_modal():
 
 
 async def _test_show_page_resets_confirmation():
-    # 切页作废待确认：回到运行页后同一个动作重新弹一层模态。
+    # 切换页面后待确认作废，回到运行页后同一个操作重新弹出一层模态框。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -527,7 +527,7 @@ async def _test_show_page_resets_confirmation():
 
 
 async def _test_refresh_invalidates_confirmation():
-    # 手动刷新后状态可能已变，待确认作废：同一个动作重新弹一层模态。
+    # 手动刷新后状态可能已变，待确认作废，同一个操作重新弹出一层模态框。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -551,7 +551,7 @@ async def _test_refresh_invalidates_confirmation():
 
 
 async def _test_poll_keeps_confirmation():
-    # 轮询不作废待确认：周期刷新后同一个动作仍在防抖窗口内，不叠第二层模态，确认照常执行。
+    # 轮询不作废待确认，周期刷新后同一个操作仍在防抖窗口内，不叠加第二层模态框，确认正常执行。
     source = _running_source()
 
     async def body(app, page, pilot, source):
@@ -574,7 +574,7 @@ async def _test_poll_keeps_confirmation():
 
 
 async def _test_adapter_start_collects_platform():
-    # “更多”菜单的启动指定适配器先弹输入框收平台，提交后再弹确认框。选“执行”才把平台交给数据源。
+    # “更多”菜单的启动指定适配器先弹出输入框接收平台名，提交后再弹出确认框。选择“执行”才把平台交给数据源。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import StaticRunSource
 
@@ -600,7 +600,7 @@ async def _test_adapter_start_collects_platform():
 
 
 async def _test_foreground_only_prints_command():
-    # `--foreground` 会占住终端，界面只给命令与说明，绝不代为执行。
+    # `--foreground` 会占用终端，界面仅给出命令与说明，绝不代为执行。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import StaticRunSource
 
@@ -633,7 +633,7 @@ async def _test_foreground_only_prints_command():
 
 
 async def _test_subprocess_start_passes_adapter():
-    # 只启动指定适配器时，argv 里必须带上 `--adapter <平台>`。
+    # 仅启动指定适配器时，argv 中必须包含 `--adapter <平台>`。
     from akaribot.cli.tui.run import SubprocessRunSource
 
     seen: list[list[str]] = []
@@ -651,7 +651,7 @@ async def _test_subprocess_start_passes_adapter():
 
 
 async def _test_low_frequency_bindings_stay_out_of_footer():
-    # 操作行上都有按钮的动作不进页脚，80 列下才能容纳全局键位。
+    # 操作行上已有按钮的功能不显示在页脚，80 列下才能容纳全局键位。
     from akaribot.cli.tui import _compat as compat
     from akaribot.cli.tui.run import RunPage
 
@@ -671,12 +671,12 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
 
 @func_case
 async def test_run_lifecycle(tester: Tester):
-    """cli.run: 实例生命周期（后台启动、状态、跨进程停止）测试"""
+    """cli.run 实例生命周期（后台启动、状态、跨进程停止）测试"""
     from akaribot.cli.tui import _compat as compat
 
     _use_cli_locale()
     if os.name == "nt":
-        # 假实例进程依赖 fcntl 取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
+        # 模拟实例进程依赖 fcntl 获取锁，Windows 上跳过。生产代码的 Windows 分支另行实机验证。
         return tester
     await tester.test(_test_status_reports_stopped_without_lock, "未运行时状态为空")
     await tester.test(_test_detach_records_pid_and_survives_parent, "后台启动写下进程记录并可被读到")
@@ -690,13 +690,13 @@ async def test_run_lifecycle(tester: Tester):
     await tester.test(_test_tui_source_takes_over_foreign_process, "界面数据源接管别的控制器启动的实例")
     await tester.test(_test_subprocess_start_passes_adapter, "只启动指定适配器时 argv 带 --adapter")
     await tester.test(_test_pending_confirm_gate, "确认闸门的防抖与复位")
-    # 放大防抖窗口，使“连发同一动作”与“刷新后重新确认”不依赖两次调用之间的真实耗时。
+    # 放大防抖窗口，使“连续触发同一操作”与“刷新后重新确认”不依赖两次调用之间的真实耗时。
     with mock.patch.object(compat.PendingConfirm, "debounce", 60.0):
         await tester.test(_test_repeat_trigger_keeps_one_modal, "连发同一动作不叠模态，换动作重新弹")
         await tester.test(_test_show_page_resets_confirmation, "切页作废待确认")
         await tester.test(_test_refresh_invalidates_confirmation, "手动刷新作废待确认")
         await tester.test(_test_poll_keeps_confirmation, "轮询不作废待确认")
-    # 用例里的两次按键几乎同时发生，压缩防抖窗口，免得每条确认都等 0.4 秒。
+    # 用例里的两次按键几乎同时发生，压缩防抖窗口，以免每条确认都等待 0.4 秒。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):
         await tester.test(_test_run_page_renders_cli_state, "运行页展示 CLI 记录并经模态确认才停止")
         await tester.test(_test_four_paths_confirm_through_modal, "四条启停路径都先弹模态确认")

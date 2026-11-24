@@ -461,7 +461,7 @@ def _test_union_merge_logs_stay_out_of_repo_data():
         Logger.error(f"Merge logs leaked into {repo_logs_dir}: {sorted(path.name for path in leaked)}")
         return False
 
-    # 写入本身仍须发生，只是放在隔离目录中。若日志改为空操作，泄漏检查会假通过。
+    # 写入本身仍必须发生，仅是放置在隔离目录中。若日志改为空操作，泄漏检查会产生虚假通过判定。
     if not list(union_merge_logs_path.glob(f"*_{new_union.replace('|', '-')}.json")):
         Logger.error(f"Expected a merge log under {union_merge_logs_path}, found none")
         return False
@@ -481,7 +481,7 @@ def _test_load_modules_reuses_locale_snapshot():
         loader._load_locale_snapshot()
         loader._load_locale_snapshot()
 
-    # 快照只建置一次，但每个入口仍要重设翻译连线的状态。
+    # 快照仅构建一次，但每个入口仍要重置翻译连接的状态。
     return len(builds) == 1 and connect_snapshot.call_count == 2
 
 
@@ -645,7 +645,7 @@ async def _plugin_timeout_error_from_test_is_not_timeout():
 
 @func_case
 async def test_tester_framework(tester: Tester):
-    """akaribot.core.tester: 测试框架自身一致性测试"""
+    """akaribot.core.tester 测试框架自身一致性测试"""
     await tester.test(_test_mock_session_signature_matches_real, "mock 会话签名与真实实现一致测试")
     await tester.test(_test_mock_response_supports_all_formats, "mock 响应支持全部 fmt 测试")
     await tester.test(_test_contains_matches_non_text_element, "文本断言命中非文本元素测试")

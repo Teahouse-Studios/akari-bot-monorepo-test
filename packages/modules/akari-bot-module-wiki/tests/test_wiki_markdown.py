@@ -1,4 +1,4 @@
-"""wiki 页面摘要 Markdown 渲染测试。"""
+"""Wiki 页面摘要 Markdown 渲染测试。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -72,7 +72,7 @@ async def _test_plain_page_desc_is_unchanged():
 
 @func_case
 async def test_wiki_markdown(tester: Tester):
-    """wiki: 页面摘要按平台 Markdown 能力渲染"""
+    """Wiki 页面摘要按照平台 Markdown 能力渲染。"""
     await tester.test(_test_markdown_page_desc_uses_blockquote, "Markdown 摘要引用块测试")
     await tester.test(_test_plain_page_desc_is_unchanged, "纯文本摘要不套引用块测试")
     return tester

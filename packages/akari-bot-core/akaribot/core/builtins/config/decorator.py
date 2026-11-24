@@ -14,7 +14,7 @@ class ConfigMeta(type):
     def __getattr__(cls, name: str):
         field = cls.__dict__.get("__config_fields__", {}).get(name)
         if field is None:
-            # 未声明的名称照常报错：键名书写有误时立即抛出异常，而非静默返回默认值
+            # 未声明的名称正常抛出异常，键名书写有误时立即抛出异常，而非静默返回默认值。
             raise AttributeError(f"{cls.__name__} has no config field {name!r}")
         return get_source().get(**field)
 
@@ -26,7 +26,7 @@ def process_config_class(
     standalone_comments: Mapping[str, tuple[str, ...]] | None = None,
 ) -> type[T]:
     cls_annotations = {k: v for k, v in inspect.get_annotations(cls).items() if not k.startswith("__")}
-    # 未写类型标注时退回类属性本身，使无标注的模板仍能生成配置项
+    # 未填写类型标注时退回类属性本身，使无标注的模板仍能生成配置项。
     if not cls_annotations:
         cls_annotations = {k: Any for k, _ in vars(cls).items() if not k.startswith("__")}
 
@@ -52,7 +52,7 @@ def process_config_class(
                 f"Standalone comments for config field {field_name!r} must be a tuple of non-empty i18n keys."
             )
 
-    # 各字段传给配置来源 get() 的完整参数，既供元类读取配置值，也供 __init__ 取默认值
+    # 各字段传给配置来源 get() 的完整参数，既供元类读取配置值，也供 __init__ 取默认值。
     config_fields: dict[str, dict[str, Any]] = {}
 
     def __init__(self, **kwargs):
@@ -61,8 +61,8 @@ def process_config_class(
         :param **kwargs: `<字段名>=<值>` 的键值对，用于初始化对象属性
         """
         for field_name, field in config_fields.items():
-            # 默认值须取自字段记录表：cls_annotations 存放类型标注而非默认值，从中取值会让
-            # 实例属性得到类型对象本身（如 <class 'int'>）而非 181
+            # 默认值需要读取自字段记录表，因为 cls_annotations 存放类型标注而非默认值，从中取值会让
+            # 实例属性得到类型对象本身（如 <class 'int'>）而非 181。
             setattr(self, field_name, kwargs.get(field_name, field["default"]))
 
     def __repr__(self):
@@ -75,18 +75,18 @@ def process_config_class(
 
     for attr_name, attr_type in cls_annotations.items():
         if not attr_name.startswith("__"):
-            # 仅有类型标注而无赋值，表示该项必填且无默认值：此处取 None 交由下游处理，
-            # 生成时将填入 <Replace me with ...> 占位符，在用户填写之前读取该项一律返回 None
+            # 仅有类型标注而无赋值，表示该项必填且无默认值，此处取 None 交由下游处理，
+            # 生成时将填入 <Replace me with ...> 占位符，在用户填写之前读取该项一律返回 None。
             __attr = getattr(cls, attr_name, None)
             __attr_type = attr_type
 
-            # 含不受支持成员的联合类型（如 str | None）一律置空，下游据此填入通用占位符
+            # 包含不受支持成员的联合类型（如 str | None）一律置空，下游据此填入通用占位符。
             if __attr_type not in ALLOWED_TYPES and (
                 isinstance(__attr_type, UnionType) and any(k not in ALLOWED_TYPES for k in get_args(__attr_type))
             ):
                 __attr_type = None
 
-            # 记录该字段传给配置来源 get() 的参数，供元类在属性访问时按此取值
+            # 记录该字段传给配置来源 get() 的参数，供元类在属性访问时按此取值。
             config_fields[attr_name] = {
                 "q": attr_name,
                 "default": __attr,
@@ -96,12 +96,12 @@ def process_config_class(
                 "standalone_comment_keys": standalone_comments.get(attr_name, ()),
             }
 
-    # 以 ConfigMeta 为元类重建该类。元类无法在类创建后更换，只能另建一个同名类。
+    # 以 ConfigMeta 为元类重建该类。元类无法在类创建后更换，仅能新建同名类。
     namespace = {
         k: v
         for k, v in vars(cls).items()
-        # 声明字段必须从类命名空间中移除：类属性会先于元类的 __getattr__ 命中，
-        # 保留下来读到的将是静态默认值而非配置文件中的当前值。
+        # 声明字段必须从类命名空间中移除，否则类属性会先于元类的 __getattr__ 命中，
+        # 保留至后续所读取的将是静态默认值而非配置文件中的当前值。
         # __dict__ 与 __weakref__ 是新建类时自动生成的描述符，一并复制将导致类创建失败。
         if k not in config_fields and k not in ("__dict__", "__weakref__")
     }
@@ -110,7 +110,7 @@ def process_config_class(
     new_cls = ConfigMeta(cls.__name__, cls.__bases__, namespace)
     new_cls.__module__ = cls.__module__
     new_cls.__qualname__ = cls.__qualname__
-    # 缺失键在声明处补充：模板导入后可能立即有业务模块读取其属性，
+    # 缺失键在声明处补充，因为模板导入后可能立即有业务模块读取其属性，
     # 若等扫描阶段再补充，先到的读取会以默认值占用该键，占位符便不再生成。
     from akaribot.core.builtins.config.generator import ensure_fields
 
@@ -159,8 +159,8 @@ def on_base_config():
     """
 
     def wrap(cls: type[T]):
-        # 表名传 None：这类键不属于 [config]，也不属于其它表。补充路径不支持在表外新建键，
-        # 故这些键由 update 的版本迁移在模板处理之前写入，装饰时键必定已存在。
+        # 表名传 None，因为这类键不属于 [config]，也不属于其他表。补充路径不支持在配置表之外新建键，
+        # 因此相关键由 update 的版本迁移在模板处理之前写入，装饰时键必定已存在。
         return process_config_class(cls, None, False)
 
     return wrap

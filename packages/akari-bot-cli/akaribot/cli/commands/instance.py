@@ -90,7 +90,7 @@ def add_instance(
     name: Annotated[str | None, typer.Option("--name", help=i18n.t("cli.instance_cmd.add.option_name"))] = None,
     locale: Annotated[str | None, typer.Option("--locale", help=i18n.t("cli.instance_cmd.add.option_locale"))] = None,
 ) -> None:
-    """添加一个已存在的实例目录。只记位置，不动实例本身。"""
+    """添加一个已存在的实例目录。仅记录位置，不修改实例本身。"""
     try:
         entry = _registry().add(path, name=name, locale=locale or "")
     except RegistryError as error:
@@ -119,7 +119,7 @@ def remove_instance(
 def use_instance(
     name: Annotated[str, typer.Argument(help=i18n.t("cli.instance_cmd.arg_name"))],
 ) -> None:
-    """把某个实例设为默认：在实例之外时，命令与界面都按它执行。"""
+    """将某个实例设为默认，在实例目录外部时命令与界面均以该实例执行。"""
     try:
         _registry().set_default(name)
     except RegistryError as error:
@@ -139,7 +139,7 @@ def set_policy(
         typer.Option("--restart-on-crash/--no-restart-on-crash", help=i18n.t("cli.instance_cmd.policy.option_crash")),
     ] = None,
 ) -> None:
-    """设置实例的服务策略：随服务启动而拉起、崩溃后自动重启。"""
+    """设置实例的服务策略，控制随服务启动而自动启动以及崩溃后自动重启。"""
     fields: dict[str, object] = {}
     if autostart is not None:
         fields["autostart"] = autostart

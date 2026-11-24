@@ -118,7 +118,7 @@ def _test_dist_resolution_reports_empty_and_ambiguous():
         try:
             module_command._dist_from_git_install(empty, before, requested="")
         except CliError as error:
-            empty_ok = "没有发现新增分发" in str(error)
+            empty_ok = "未检测到新增包" in str(error)
         else:
             return False
         many = _make_instance(root, {})
@@ -129,7 +129,7 @@ def _test_dist_resolution_reports_empty_and_ambiguous():
         try:
             module_command._dist_from_git_install(many, before, requested="")
         except CliError as error:
-            return empty_ok and "多个分发" in str(error)
+            return empty_ok and "新增了多个包" in str(error)
         return False
 
 
@@ -150,7 +150,7 @@ def _test_post_install_api_check_rolls_back():
 
         try:
             module_command._check_git_api(instance, DEMO_DIST, runner=_Runner())
-        except Exception as error:  # noqa: BLE001 - fail() 抛 typer.Exit
+        except Exception as error:  # noqa: BLE001 - fail() 抛出 typer.Exit。
             from typer import Exit
 
             if not isinstance(error, Exit):
@@ -208,7 +208,7 @@ def _test_dry_run_prints_spec_without_touching_instance():
 
 @func_case
 async def test_module_git(tester: Tester):
-    """cli.commands.module: git 直引安装测试"""
+    """cli.commands.module 的 git 直接引用安装测试"""
     _use_cli_locale()
     await tester.test(_test_spec_forms, "地址拼接的各种写法")
     await tester.test(_test_spec_keeps_userinfo_at, "userinfo 的 @ 不算 ref")

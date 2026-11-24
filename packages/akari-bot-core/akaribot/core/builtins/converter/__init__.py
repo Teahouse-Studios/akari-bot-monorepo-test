@@ -1,4 +1,4 @@
-"""类型转换模块 - 提供对象序列化和反序列化的通用机制。"""
+"""类型转换模块，提供对象序列化与反序列化的通用机制。"""
 
 from datetime import timedelta
 
@@ -44,12 +44,12 @@ converter.register_unstructure_hook(
 )
 
 
-# 将 TargetUnionInfo 对象转换为字典，由于序列化需要从数据库重新异步获取，只保留 _type 和 union_id 字段
+# 将 TargetUnionInfo 对象转换为字典，由于序列化需要从数据库重新异步获取，仅保留 _type 和 union_id 字段。
 converter.register_unstructure_hook(
     TargetUnionInfo, lambda obj: {"_type": type(obj).__name__, "union_id": obj.union_id}
 )
 
-# 将 SenderUnionInfo 对象转换为字典，由于序列化需要从数据库重新异步获取，只保留 _type 和 union_id 字段
+# 将 SenderUnionInfo 对象转换为字典，由于序列化需要从数据库重新异步获取，仅保留 _type 和 union_id 字段。
 converter.register_unstructure_hook(
     SenderUnionInfo, lambda obj: {"_type": type(obj).__name__, "union_id": obj.union_id}
 )
@@ -90,17 +90,17 @@ def kwargs_to_elements(o):
 
 converter.register_structure_hook(MessageElement, lambda o, _: kwargs_to_elements(o))
 
-# 从字典恢复为 TargetUnionInfo 对象。信息需从数据库异步获取，此处只返回类型本身占位，字段随后续流程重新填充。
+# 从字典反序列化生成 TargetUnionInfo 对象。信息需要从数据库异步获取，此处仅返回类型本身占位，字段随后续流程重新填充。
 converter.register_structure_hook(TargetUnionInfo, lambda o, _: TargetUnionInfo)
 
-# 从字典恢复为 SenderUnionInfo 对象。信息需从数据库异步获取，此处只返回类型本身占位，字段随后续流程重新填充。
+# 从字典反序列化生成 SenderUnionInfo 对象。信息需要从数据库异步获取，此处仅返回类型本身占位，字段随后续流程重新填充。
 converter.register_structure_hook(SenderUnionInfo, lambda o, _: SenderUnionInfo)
 
 converter.register_structure_hook(Locale, lambda o, _: Locale.from_state(o))
 
 converter.register_structure_hook(timedelta, lambda o, _: timedelta(seconds=o["seconds"]))
 
-# EventName 的 Literal 分支只用于类型提示。反序列化时保留任意自定义事件名。
+# EventName 的 Literal 分支仅用于类型提示。反序列化时保留任意自定义事件名。
 converter.register_structure_hook(EventName, lambda o, _: o)
 
 

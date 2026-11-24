@@ -7,7 +7,7 @@ from akaribot.core.api.adapters import client_cleanup
 
 
 async def shutdown(bot) -> None:
-    """释放核心客户端，并关闭 khl.py 未提供公开关闭入口的 HTTP Session。"""
+    """释放核心客户端，并显式关闭 khl.py 未提供公开关闭入口的 HTTP Session。"""
     try:
         await client_cleanup()
     except Exception:

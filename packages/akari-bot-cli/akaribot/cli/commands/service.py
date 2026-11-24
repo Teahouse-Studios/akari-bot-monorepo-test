@@ -95,7 +95,7 @@ def _serve(supervisor: Supervisor, interval: float) -> None:
         signal.signal(sig, _on_signal)
     while not stop.is_set():
         _report_round(supervisor.run_once(), summary=False)
-        # 等待期间收到信号也能立即结束本轮，不必等满一个间隔。
+        # 等待期间收到信号也能立即结束本轮，无需等待完整间隔结束。
         stop.wait(interval)
     name = signal.Signals(received[0]).name if received else ""
     typer.echo(i18n.t("cli.service.supervise.stopped", signal=name))
@@ -106,7 +106,7 @@ def install(
     dry_run: DryRunOption = False,
     force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.service.install.option_force"))] = False,
 ) -> None:
-    """写入系统服务单元并注册服务。``--dry-run`` 只打印将写入的内容。"""
+    """写入系统服务单元并注册服务。``--dry-run`` 仅打印将写入的内容。"""
     backend = build_backend()
     report = _guard(lambda: backend.install(dry_run=dry_run, force=force))
     if dry_run:
@@ -124,7 +124,7 @@ def install(
 
 @app.command("uninstall", help=i18n.t("cli.service.uninstall.help"))
 def uninstall(dry_run: DryRunOption = False) -> None:
-    """注销服务并删除单元文件。未安装时如实说明，不算失败。"""
+    """注销服务并删除单元文件。未安装时如实说明，不判定为失败操作。"""
     backend = build_backend()
     report = _guard(lambda: backend.uninstall(dry_run=dry_run))
     if dry_run:
@@ -167,7 +167,7 @@ def supervise(
         float, typer.Option("--backoff", help=i18n.t("cli.service.supervise.option_backoff"))
     ] = DEFAULT_BACKOFF,
 ) -> None:
-    """守护本机实例：期望运行的恢复或重启，期望停止的保持不动。"""
+    """守护本机实例，对期望运行的实例执行恢复或重启，对期望停止的实例保持停止状态。"""
     if interval <= 0:
         fail(i18n.t("cli.service.supervise.bad_interval", seconds=f"{interval:g}"))
     if max_restarts < 0 or backoff < 0:

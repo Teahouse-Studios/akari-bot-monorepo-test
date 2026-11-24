@@ -6,14 +6,14 @@ from akaribot.core.builtins.session.internal import MessageSession
 from akaribot.core.logger import Logger
 from akaribot.core.utils.container import ExpiringTempDict
 
-GAME_EXPIRED = 3600  # 游戏事件过期时间（秒）
+GAME_EXPIRED = 3600  # 游戏事件过期时间（秒）。
 
 _ps_dict = ExpiringTempDict(exp=GAME_EXPIRED)
 
 
 class PlayState:
     """
-    游戏事件构造器。
+    游戏事件构建器。
 
     :param game: 游戏事件名称。
     :param msg: 消息会话。
@@ -22,8 +22,8 @@ class PlayState:
     def __init__(self, game: str, msg: MessageSession):
         self.game = game
         self.msg = msg
-        # 按消息通道而非 union 建键：同一 union 下通道号不同的场景是不同的现实场景，
-        # 各自的对局互不相干，并作一处会让一边开局把另一边也带进游戏中。
+        # 按照消息通道而非 union 构建键，因为同一 union 下通道编号不同的场景属于不同的现实场景，
+        # 各自的对局互不相干，若合并至同一处，会导致一侧开始游戏时使另一侧同时进入游戏状态。
         self.channel_key = self.msg.session_info.channel_key
         self.sender_union_id = self.msg.session_info.sender_union_id
         self._generation = None
@@ -54,7 +54,7 @@ class PlayState:
 
     @contextmanager
     def running(self) -> Iterator["PlayState"]:
-        """在当前调用存活期间维护游戏状态，并只清理它开启的这一局。"""
+        """在当前调用执行期间维护游戏状态，并且仅清理当前调用开启的对局。"""
         self.enable()
         try:
             yield self
@@ -64,7 +64,7 @@ class PlayState:
                 self.disable()
 
     def update(self, **kwargs) -> None:
-        """更新游戏事件中需要的值。"""
+        """更新游戏事件中的指定字段值。"""
         playstate_dict = self._get_ps_dict()
         for k, v in kwargs.items():
             playstate_dict[k] = v
@@ -77,9 +77,9 @@ class PlayState:
 
     def get(self, key: str, default: Any = None) -> Any:
         """
-        获取游戏事件中需要的值。
+        获取游戏事件中的指定字段值。
 
-        :param key: 键名。
+        :param key: 键名称。
         :param default: 默认值。
         """
         playstate_dict = self._get_ps_dict()

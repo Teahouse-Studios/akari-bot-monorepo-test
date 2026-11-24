@@ -54,7 +54,7 @@ token_module = module("token", base=True, hidden=True, available_for="QQBot")
 
 
 def make_choices(answer: int) -> list[int]:
-    """生成包含答案的 20 个不重复数字。"""
+    """生成包含正确答案的 20 个不重复数字。"""
     choices = {answer}
     while len(choices) < CAPTCHA_CHOICE_COUNT:
         choices.add(SecureRandom.randint(1, 100))
@@ -64,7 +64,7 @@ def make_choices(answer: int) -> list[int]:
 
 
 def make_emote_choices(answer: int) -> list[int]:
-    """生成包含答案的 20 个不重复表情资源编号。"""
+    """生成包含正确答案的 20 个不重复表情资源编号。"""
     if len(CAPTCHA_EMOTES) < CAPTCHA_CHOICE_COUNT:
         raise ValueError(f"At least {CAPTCHA_CHOICE_COUNT} captcha emotes are required.")
     choices = {answer}
@@ -87,8 +87,8 @@ async def _release_restriction_after_delivery_failure(
     session: Bot.MessageSession,
     challenge: CaptchaChallenge,
 ) -> bool:
-    # 先写成活跃失败状态：若解禁调用抛错、取消或进程在结果落库前退出，Union 删除和
-    # 解绑逻辑仍会保留这条真实平台限制的归属，受限成员不会停留在无引用状态。
+    # 先记录为活跃失败状态，确保若解禁调用抛出异常、取消或进程在结果写入数据库前退出，Union 删除与
+    # 解绑逻辑仍会保留该条真实平台限制的所属记录，受限成员不会停留在无引用状态。
     challenge.status = "failed"
     await challenge.save(update_fields=["status"])
     try:
@@ -99,7 +99,7 @@ async def _release_restriction_after_delivery_failure(
         Logger.exception(f"Failed to release captcha restriction for {challenge.sender_id}: ")
         return False
 
-    # 只有平台明确确认解禁成功后，才把记录降为无需外部清理的普通错误。
+    # 仅当平台明确确认解禁成功后，才将记录调整为无需外部清理的常规错误。
     challenge.status = "error"
     await challenge.save(update_fields=["status"])
     return True
@@ -109,9 +109,9 @@ async def _release_restriction_after_delivery_failure(
 async def member_left(event: EventInfo):
     async with union_mutation():
         async with in_transaction("default") as connection:
-            # 解绑与事件可能并发。锁内按平台 ID 重解析，确保清理的是成员当前所属的 Union。
-            # Challenge 与 Trust 必须一起删除，避免后一步异常留下无法再由退群事件清理的半状态。
-            # 事务内只有一条连接，避免 EventInfo.refresh_info() 用 gather 同时占用它。
+            # 解绑与事件可能并发。锁内按平台 ID 重新解析，确保清理的是成员当前所属的 Union。
+            # Challenge 与 Trust 必须同时删除，避免后续步骤异常导致残留无法再通过退群事件清理的不一致状态。
+            # 事务内仅有一条连接，避免 EventInfo.refresh_info() 通过 gather 并发占用该连接。
             target = await TargetUnionInfo.resolve_union(event.target_id, create=False)
             sender = await SenderUnionInfo.resolve_union(event.sender_id, create=False)
             if not target:
@@ -142,9 +142,9 @@ async def member_left(event: EventInfo):
 
 @captcha.event("member_joined", available_for="QQBot|Group")
 async def member_joined(event: EventInfo):
-    # 只把事件的 Union 重解析和 challenge 的创建／重置放在 mutation 锁内。平台禁言、
-    # 发消息等网络操作在锁外执行。这样解绑不会插在旧 EventInfo 与新建记录之间，也不会
-    # 因等待平台响应而阻塞其它 Union 管理操作。
+    # 仅将事件的 Union 重新解析与 challenge 的创建和重置置于 mutation 锁内。平台禁言与
+    # 发送消息等网络操作在锁外执行。以此确保解绑操作不会插入到旧 EventInfo 与新建记录之间，也不会
+    # 因等待平台响应而阻塞其他 Union 管理操作。
     async with union_mutation():
         await event.refresh_info()
         challenge_id = verification_id(event.target_union_id, event.sender_union_id)
@@ -221,7 +221,7 @@ async def member_joined(event: EventInfo):
     try:
         await session.restrict_member(event.sender_id, CAPTCHA_MUTE_SECONDS, wait=True)
     except RpcError:
-        # RPC 失败（尤其超时）不能证明平台未执行禁言，保留限制的归属以便清理。
+        # RPC 调用失败（尤其是超时）不能证明平台未执行禁言，保留限制记录以便后续清理。
         challenge.status = "failed"
         await challenge.save(update_fields=["status"])
         await session.send_message(I18NContext("captcha.message.permission_error"), quote=False)
@@ -289,8 +289,8 @@ async def token(msg: Bot.MessageSession, token: str, answer: int | None = None):
         await msg.finish(I18NContext("token.message.unavailable"))
 
     if answer is not None and answer != challenge.answer:
-        # 只允许仍处于 pending 的请求写入失败状态。另一个正确请求可能已在本次查询后完成验证，
-        # 旧实例不得再把 verified 覆盖回 failed，留下“已有 Trust 但挑战仍活跃”的矛盾状态。
+        # 仅允许仍处于 pending 的请求写入失败状态。另一个正确请求可能已在本次查询后完成验证，
+        # 旧实例不得将 verified 状态覆盖为 failed，导致出现“已有 Trust 但挑战仍活跃”的矛盾状态。
         updated = await CaptchaChallenge.filter(challenge_id=challenge.challenge_id, status="pending").update(
             status="failed"
         )

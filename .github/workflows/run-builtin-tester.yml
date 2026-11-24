@@ -32,14 +32,13 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          # --locked 会重新求解，是 workspace 依赖互斥的唯一拦截点。不得改为 --frozen
-          # 或 pip install，否则 PR 阶段将静默失去冲突探测能力（见 T4.9、CONTRIBUTING.md）。
+          # --locked 会重新求解，是检查 workspace 依赖冲突的唯一位置。不得设置为 --frozen。
           uv sync --locked --all-extras --dev
 
       - name: Lint comments
         shell: bash
         run: |
-          # PR 只检查相对 base 的新增与修改行，push 与手动触发检查全部文件。
+          # PR 仅检查相对目标分支的新增与修改行，推送与手动触发则检查全部文件。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -55,7 +54,7 @@ jobs:
       - name: Lint import boundaries
         shell: bash
         run: |
-          # 分层检查沿用与注释检查相同的范围判定：PR 比对 base，push 比对 before。
+          # 分层检查沿用与注释检查相同的范围判定，PR 对比目标分支，推送对比变更前提交。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -71,19 +70,19 @@ jobs:
       - name: Lint internal version constraints
         shell: bash
         run: |
-          # workspace 覆盖会丢弃内部依赖的版本约束，而发布出的 wheel 仍带着它，
-          # uv lock 发现不了，故单列一道检查（见 T4.8）。
+          # workspace 覆盖会丢弃内部依赖的版本约束，而发布的 wheel 仍保留该约束，
+          # uv lock 无法发现，因此单独列出一项检查（参见 T4.8）。
           uv run python tools/lint_versions.py
 
       - name: Report version bumps
-        # 版本号是发布元数据，不是行为正确性：tester 的结论应只由代码与测试决定。
-        # 违规照常打印供发布前确认，但不拦截本 job（重复版本由 PyPI 在发布时拒绝）。
+        # 版本号属于发布元数据而非行为正确性，tester 的结论应仅取决于代码与测试。
+        # 违规项仍会输出供发布前确认，但不会阻断本 job（重复版本由 PyPI 在发布时拒绝）。
         continue-on-error: true
         shell: bash
         run: |
-          # 包内有源码改动但 version 未变即提示。提交信息最后一段写了独立的 Skip-Version
-          # trailer 时按声明范围豁免（true 为全部成员，逗号分隔时只豁免列出的成员）。
-          # 正文里顺带提到该 token 不算，避免解释功能的一句话关掉整段区间的检查。
+          # 包内有源码改动但未更新 version 时会发出提示。提交信息最后一段包含独立的 Skip-Version
+          # trailer 时按声明范围豁免（true 为全部成员，逗号分隔时仅豁免列出的成员）。
+          # 正文里附带提到该标记不视为声明，避免解释功能的一句话意外关闭整个提交范围的检查。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -99,8 +98,8 @@ jobs:
       - name: Lint with Ruff
         shell: bash
         run: |
-          # 静态检查覆盖整个仓库。格式化只检查本次改动的文件：历史文件是否已格式化与这轮改动无关，
-          # 不该拦下与它无关的提交（否则任何人 push 都会因为别人的旧文件变红）。
+          # 静态检查覆盖整个仓库，格式化则仅检查本次改动的文件。历史文件是否已格式化与本轮改动无关，
+          # 不应阻断无关提交（否则任何人的推送都会因他人的旧文件而检查失败）。
           BASE=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -140,9 +139,9 @@ jobs:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
         run: |
-          # runner 发现任何失败就以非 0 退出，而本仓库有 4 个用例失败（见 tools/test_baseline.txt）。
-          # 若让退出码直接决定 step 成败，这一轮会立刻变红，后面的“只读包目录”一轮就不会执行。
-          # 故此处只记录退出码，由下一步对比失败的用例清单做权威判定。不用 `|| true`，也不比数量。
+          # runner 发现任何失败就以非 0 退出，而本仓库有 4 个用例失败（参见 tools/test_baseline.txt）。
+          # 若直接由退出码判定步骤成败，本轮会立即失败，后续的“只读包目录”一轮就不会执行。
+          # 因此此处仅记录退出码，由下一步通过对比失败的用例清单得出最终判定。不使用 `|| true`，也不仅比较数量。
           set +e
           uv run python tester.py
           echo "tester_exit=$?" >> "$GITHUB_ENV"
@@ -160,11 +159,11 @@ jobs:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
         run: |
-          # 包目录在只读挂载与 wheel 安装下都不可写，此处以权限位复现该约束。
-          # 只覆盖测试触及的代码路径。未被测试执行的下载路径另由人工复核守住，
-          # 见 generated_docs/monorepo_refactor_prep.md 的 P2 记录。
-          # 检查以 packages/ 整树为扫描根。硬编码 core modules 时，包再次拆分或改名即
-          # 静默失去覆盖。单根不随包增减变化，代价是适配器目录也一并纳入只读。
+          # 包目录在只读挂载与 wheel 安装下均不可写，此处通过只读权限模拟该约束。
+          # 仅覆盖测试触及的代码路径。未被测试覆盖的下载路径需要通过人工复核确认，
+          # 参见 generated_docs/monorepo_refactor_prep.md 的 P2 记录。
+          # 检查以整个 packages/ 目录作为扫描根目录。若将 core 与 modules 的路径以固定常量写入，包再次拆分或重命名时
+          # 就会遗漏检查而不报错。使用单一根目录不受包增减影响，代价是适配器目录也会一并设为只读。
           chmod -R a-w packages
           trap 'chmod -R u+w packages' EXIT
           set +e
@@ -176,7 +175,7 @@ jobs:
       - name: Check read-only failure set against baseline
         shell: bash
         run: |
-          # 只读挂载下可能多出写盘类失败，故单独一份基准清单：两轮都按名称对比失败清单，且都能被强制缩小。
+          # 只读挂载下可能出现与写入磁盘相关的额外失败，因此单独维护一份基准清单。两轮测试均按名称对比失败清单，且两份清单均仅允许减少。
           uv run python tools/check_test_baseline.py \
             --junit junit-readonly.xml --baseline tools/test_baseline_readonly.txt
 
@@ -190,9 +189,9 @@ jobs:
           fail-on-error: 'false'
 
   docs:
-    # 文档站在 tester 通过后构建全部包的文档并发布到 GitHub Pages。只在默认分支的 push 与手动触发
-    # 时发布：PR 与其它分支的产物不是发布物，也不该拿到 Pages 权限。
-    # 仓库 Settings → Pages 的 Source 须为 GitHub Actions。Pages 尚未启用时，`enablement: true` 会自动启用它。
+    # 文档站点在 tester 通过后构建全部包的文档并发布到 GitHub Pages，仅在默认分支的推送与手动触发
+    # 时发布。PR 与其他分支的构建产物不属于发布内容，也不应获得 Pages 权限。
+    # 仓库 Settings → Pages 的 Source 必须为 GitHub Actions。Pages 尚未启用时，`enablement: true` 会自动启用它。
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
@@ -215,7 +214,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          # 主题是 submodule：构建要复制它的 theme_dir，并按它的 docs-theme.json 决定依赖与 VitePress 版本。
+          # 主题是 submodule，构建时需要复制它的 theme_dir，并依据其中的 docs-theme.json 确定依赖与 VitePress 版本。
           submodules: recursive
 
       - name: Set up Python
@@ -231,7 +230,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          # 主题清单要求 Node >= 22.12，引擎据此选 VitePress 2 与其依赖。
+          # 主题清单要求 Node >= 22.12，引擎据此选择 VitePress 2 及其依赖。
           node-version: "22"
           cache: npm
           cache-dependency-path: vendor/akari-bot-docs-template/package-lock.json
@@ -249,12 +248,12 @@ jobs:
       - name: Build documentation site
         shell: bash
         env:
-          # 项目站点的基路径由此决定，构建期写入侧栏与资源地址，构建后再改要重跑。
+          # 项目站点的基础路径由此确定，构建阶段写入侧栏与资源地址，构建后若修改需要重新构建。
           AKARIBOT_DOCS_BASE: ${{ steps.pages.outputs.base_path }}/
-          # 非托管实例用系统解释器跑 core 入口，并锁到工作区 venv，避免 runner 上另有 python3 抢先。
+          # 非托管实例使用系统解释器运行 core 入口，并固定使用工作区 venv，避免 runner 上其他 python3 被优先调用。
           AKARIBOT_PYTHON: ${{ github.workspace }}/.venv/bin/python
         run: |
-          # 引擎以“实例”为单位工作：这里只需要一个最小的实例根，产物放在它的 cache/docs/site。
+          # 引擎以“实例”为单位工作，此处仅需要一个最小的实例根目录，产物放在它的 cache/docs/site。
           mkdir -p .ci-docs
           printf 'schema = 1\n' > .ci-docs/akaribot.toml
           uv run akaribot docs build -I .ci-docs --force

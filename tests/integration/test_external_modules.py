@@ -1,4 +1,4 @@
-"""外部模块集成测试 - wiki, mcplayer, arcaea, mcmod, oba, tweet 等。"""
+"""外部模块集成测试，覆盖 wiki、mcplayer、arcaea、mcmod、oba 与 tweet。"""
 
 from akaribot.testing import (
     func_case,
@@ -9,7 +9,7 @@ from akaribot.testing import (
 
 @func_case
 async def test_wiki(tester: Tester):
-    """wiki 模块测试 - MediaWiki 查询"""
+    """wiki 模块测试，验证 MediaWiki 查询。"""
     await tester.integrate(
         "~wiki set https://zh.minecraft.wiki/api.php", Contains("成功设置默认 Wiki"), "wiki set 应提示成功"
     )
@@ -20,7 +20,7 @@ async def test_wiki(tester: Tester):
 
 @func_case
 async def test_mcplayer(tester: Tester):
-    """mcplayer 模块测试 - MC 玩家查询"""
+    """mcplayer 模块测试，验证 Minecraft 玩家查询。"""
     await tester.integrate("~mcplayer Notch", Contains("Notch"), "mcplayer 应显示玩家名")
     await tester.integrate(
         "~mcplayer 069a79f444e94726a5befca90e38aaf5", Contains("Notch"), "mcplayer 按 UUID 查询应显示玩家名"
@@ -30,27 +30,27 @@ async def test_mcplayer(tester: Tester):
 
 @func_case
 async def test_arcaea(tester: Tester):
-    """arcaea 模块测试 - Arcaea 查询"""
+    """arcaea 模块测试，验证 Arcaea 查询。"""
     await tester.integrate("~arcaea download", Contains("最新版本"), "arcaea download 应显示版本号")
     return tester
 
 
 @func_case
 async def test_mcmod(tester: Tester):
-    """mcmod 模块测试 - MCMOD 模组查询"""
+    """mcmod 模块测试，验证 MCMOD 模组查询。"""
     await tester.integrate("~mcmod 创建", Contains("Minecraft"), "mcmod 搜索应返回模组信息")
     return tester
 
 
 @func_case
 async def test_oba(tester: Tester):
-    """oba 模块测试 - OpenBMCLAPI 状态"""
+    """oba 模块测试，验证 OpenBMCLAPI 状态。"""
     await tester.integrate("~oba status", Contains("在线节点"), "oba status 应显示节点信息")
     return tester
 
 
 @func_case
 async def test_tweet_not_found(tester: Tester):
-    """tweet 模块测试 - 不存在的推文"""
+    """tweet 模块测试，验证不存在的推文处理。"""
     await tester.integrate("~tweet 1", Contains("推文"), "tweet 不存在的推文应提示")
     return tester

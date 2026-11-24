@@ -1,4 +1,4 @@
-"""运行机器人"""
+"""运行机器人实例。"""
 
 from __future__ import annotations
 
@@ -28,13 +28,13 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
-# 后台启动后等待实例取到锁的秒数。取锁前要跑完 pre-init（配置、数据库），故留出余量。
+# 后台启动后等待实例获取锁的秒数。获取锁前需要完成 pre-init（配置与数据库初始化），因此预留时间。
 READY_TIMEOUT_SECONDS = 30.0
 LOG_TAIL_CHARS = 800
 
 
 def console_log_path(root: Path) -> Path:
-    """后台实例控制台输出的落盘路径。"""
+    """后台实例控制台输出的保存路径。"""
     return root / "logs" / f"RunConsole_{datetime.now().strftime('%Y-%m-%d')}.log"
 
 
@@ -57,7 +57,7 @@ def run(
     timeout: Annotated[float, typer.Option("--timeout", help=i18n.t("cli.run.option_timeout"))] = 20.0,
     instance: InstancePathOption = None,
 ) -> None:
-    """启动、停止或查看实例。未知参数原样透传给 core。"""
+    """启动、停止或查看实例状态。未知参数原样传递给 core。"""
     target = require_instance(instance)
     chosen = [name for name, picked in (("--stop", stop), ("--restart", restart), ("--status", status)) if picked]
     if detach:
@@ -149,7 +149,7 @@ def _start_detached(target, args: list[str], *, as_json: bool) -> None:
         launched = target.spawn_detached(*args, log_path=log_path)
     except CliError as exc:
         fail(str(exc))
-    # 取到锁才算启动成功：进程可能在 pre-init 阶段就因配置或数据库问题退出。
+    # 仅在成功获取锁后才判定为启动成功，因为进程可能在 pre-init 阶段因配置或数据库异常退出。
     ready = wait_until(lambda: target.is_running() or not pid_alive(launched.pid), timeout=READY_TIMEOUT_SECONDS)
     if ready and target.is_running():
         _remember_desired(target, STATE_RUNNING)
@@ -177,8 +177,8 @@ def _log_tail(path: Path, limit: int = LOG_TAIL_CHARS) -> str:
 
 
 def _remember_desired(target, state: str) -> None:
-    # 服务守护循环按这里的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表都不该让
-    # 启动或停止失败，故静默跳过。
+    # 服务守护循环按该处的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表均不应导致
+    # 启动或停止失败，因此静默跳过。
     try:
         registry = InstanceRegistry()
         entry = registry.find_by_root(target.root)

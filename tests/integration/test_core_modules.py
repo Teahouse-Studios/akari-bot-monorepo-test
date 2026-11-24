@@ -15,7 +15,7 @@ from akaribot.modules.core.common_tools.help import regex_disable_prefixes
 
 @func_case
 async def test_version(tester: Tester):
-    """version 命令测试"""
+    """version 命令测试。"""
     await tester.integrate("~version", Contains("版本"), "version 应输出版本信息")
 
     return tester
@@ -23,7 +23,7 @@ async def test_version(tester: Tester):
 
 @func_case
 async def test_about(tester: Tester):
-    """about 命令测试"""
+    """about 命令测试。"""
     await tester.integrate("~about", Contains("AGPL-3.0"), "about 应显示关于信息")
 
     return tester
@@ -31,7 +31,7 @@ async def test_about(tester: Tester):
 
 @func_case
 async def test_help(tester: Tester):
-    """help 命令测试"""
+    """help 命令测试。"""
     await tester.integrate("~help", Contains("基础模块"), "help 应显示基础模块列表")
     await tester.integrate("~help help", Contains("--img"), "help 帮助应展示强制图片选项")
     await tester.integrate("~help version", ContainsAll("version", "版本号"), "help version 应显示版本帮助与描述")
@@ -48,12 +48,12 @@ async def test_help(tester: Tester):
     )
     await tester.integrate(
         "~help arcaea-rss",
-        Contains("此模块可能不存在"),
+        Contains("目标模块可能不存在"),
         "不支持推送能力的会话查看订阅扩展模块帮助时应提示模块不存在",
     )
     await tester.integrate(
         "~help arc-rss",
-        Contains("此模块可能不存在"),
+        Contains("目标模块可能不存在"),
         "订阅扩展模块的别名同样应按模块不存在处理",
     )
 
@@ -62,7 +62,7 @@ async def test_help(tester: Tester):
 
 @func_case
 async def test_merged_about_bind_commands(tester: Tester):
-    """并入 about 与 bind 的信息类子命令测试"""
+    """并入 about 与 bind 的信息类子命令测试。"""
     await tester.integrate(
         "~help about",
         ContainsAll("~about version", "~about ping", "~about status"),
@@ -96,7 +96,7 @@ async def test_merged_about_bind_commands(tester: Tester):
 
 @func_case
 async def test_merged_setup_commands(tester: Tester):
-    """并入 setup 的前缀、语言与别名子命令测试"""
+    """并入 setup 的前缀、语言与别名子命令测试。"""
     await tester.integrate(
         "~help setup",
         ContainsAll("~setup prefix", "~setup locale", "~setup alias"),
@@ -116,8 +116,8 @@ async def test_merged_setup_commands(tester: Tester):
         All(Contains("用户设置"), Contains("输入提示"), Not(Contains("场景设置"))),
         "setup list sender 应只列出用户设置",
     )
-    await tester.integrate("~setup dark", Contains("已开启深色模式"), "setup dark 应开启深色模式")
-    await tester.integrate("~setup dark", Contains("已关闭深色模式"), "setup dark 应关闭深色模式")
+    await tester.integrate("~setup dark", Contains("已启用深色模式"), "setup dark 应启用深色模式")
+    await tester.integrate("~setup dark", Contains("已停用深色模式"), "setup dark 应停用深色模式")
     await tester.integrate("~setup timeoffset +5:30", Contains("UTC+5:30"), "场景时区应支持半小时偏移")
     await tester.integrate("~setup timeoffset reset", Contains("默认"), "场景时区应能恢复默认")
     await tester.integrate("~setup timezone +3", Contains("UTC+3"), "用户显示时区应能单独设置")
@@ -128,18 +128,18 @@ async def test_merged_setup_commands(tester: Tester):
 
 @func_case
 async def test_module_list(tester: Tester):
-    """module list 命令测试"""
-    await tester.integrate("~module list", Contains("当前可用的模块有"), "module list 应显示模块列表")
+    """module list 命令测试。"""
+    await tester.integrate("~module list", Contains("当前可用模块列表"), "module list 应显示模块列表")
 
     return tester
 
 
 @func_case
 async def test_module_enable_disable(tester: Tester):
-    """module enable/disable 命令测试"""
-    await tester.integrate("~module disable coin", Contains("已关闭"), "module disable 应提示已关闭")
+    """module enable 与 disable 命令测试。"""
+    await tester.integrate("~module disable coin", Contains("已处于停用状态"), "module disable 应提示已停用")
     await tester.integrate("~module enable coin", Contains("成功"), "module enable 应提示成功")
-    await tester.integrate("~module enable version", Contains("已开启"), "module enable 已启用模块应提示已开启")
+    await tester.integrate("~module enable version", Contains("已处于启用状态"), "module enable 已启用模块应提示已启用")
     await tester.integrate("~module disable version", Contains("基础模块"), "module disable 基础模块应提示基础模块")
     await tester.integrate(
         "~module enable nonexistent_xyz", Contains("不存在"), "module enable 不存在的模块应提示不存在"
@@ -150,7 +150,7 @@ async def test_module_enable_disable(tester: Tester):
 
 @func_case
 async def test_alias(tester: Tester):
-    """alias 命令测试"""
+    """alias 命令测试。"""
     await tester.integrate("~alias list", Contains("别名"), "alias list 应显示别名列表")
     await tester.integrate("~alias add test_alias version", Contains("别名"), "alias add 应有提示")
     await tester.integrate("~alias remove test_alias", Contains("不存在"), "alias remove 不存在的别名应提示不存在")
@@ -161,7 +161,7 @@ async def test_alias(tester: Tester):
 
 @func_case
 async def test_prefix(tester: Tester):
-    """prefix 命令测试"""
+    """prefix 命令测试。"""
     await tester.integrate("~prefix list", Contains("前缀"), "prefix list 应显示前缀")
     await tester.integrate("~prefix add !", Contains("已添加"), "prefix add 应提示已添加")
     await tester.integrate("~prefix list", Contains("!"), "prefix list 应包含新前缀")
@@ -173,7 +173,7 @@ async def test_prefix(tester: Tester):
 
 @func_case
 async def test_unknown_command(tester: Tester):
-    """未知命令测试"""
+    """未知命令测试。"""
     await tester.integrate("~this_command_does_notexist_xyz_12345", Empty(), "未知命令应无输出")
 
     return tester
@@ -181,7 +181,7 @@ async def test_unknown_command(tester: Tester):
 
 @func_case
 async def test_ping(tester: Tester):
-    """ping 命令测试"""
+    """ping 命令测试。"""
     await tester.integrate(
         "~ping",
         All(
@@ -198,7 +198,7 @@ async def test_ping(tester: Tester):
 
 @func_case
 async def test_whoami(tester: Tester):
-    """whoami 命令测试"""
+    """whoami 命令测试。"""
     await tester.integrate(
         "~whoami",
         ContainsAll("ID", "TEST|0", "用户组", "场景组", "TEST|Console|0"),
@@ -210,7 +210,7 @@ async def test_whoami(tester: Tester):
 
 @func_case
 async def test_locale(tester: Tester):
-    """locale 命令测试"""
+    """locale 命令测试。"""
     await tester.integrate("~locale", ContainsAll("支持的语言列表", "简体中文"), "locale 应显示语言列表")
     await tester.integrate("~locale en_us", Contains("Success"), "locale 切换英文后应以英文回执")
     await tester.integrate("~locale zh_cn", Contains("成功"), "locale 恢复中文后应以中文回执")
@@ -220,7 +220,7 @@ async def test_locale(tester: Tester):
 
 @func_case
 async def test_petal(tester: Tester):
-    """petal 命令测试"""
+    """petal 命令测试。"""
     await tester.integrate("~petal", Contains("花瓣"), "petal 应显示花瓣信息")
     await tester.integrate("~petal sign", Contains("签到"), "petal sign 应提示签到结果")
 
@@ -229,7 +229,7 @@ async def test_petal(tester: Tester):
 
 @func_case
 async def test_say(tester: Tester):
-    """say 命令测试"""
+    """say 命令测试。"""
     await tester.integrate(r"~say a\b", Match(r"a\b"), "say 应原样发出单个反斜杠")
     await tester.integrate(r"~say a\\b", Match(r"a\\b"), "say 应原样发出连续的两个反斜杠")
     await tester.integrate(r"~say \d+", Match(r"\d+"), "say 应原样发出正则式反斜杠")

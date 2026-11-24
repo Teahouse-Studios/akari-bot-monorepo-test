@@ -1,4 +1,4 @@
-"""akaribot.core.utils.retired 单元测试 - 迁移关系解析、退役判定与介入点。"""
+"""akaribot.core.utils.retired 迁移关系解析、退役判定与介入点单元测试。"""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
@@ -233,7 +233,7 @@ async def _probe_wait_task(prefix: str, with_alive: bool) -> bool:
     union = await TargetUnionInfo.resolve_union(retired_target)
     holder_target = retired_target
     if with_alive:
-        # 并入同一通道号，两个平台场景自此指向同一个现实场景，等待任务随之共享
+        # 并入同一通道编号后，两个平台场景均指向同一现实场景，等待任务随之共享。
         holder_target = f"{prefix}A|Group|y"
         await union.bind_id(holder_target)
         await TargetUnionBind.filter(target_id=holder_target).update(channel_id=1)
@@ -243,10 +243,10 @@ async def _probe_wait_task(prefix: str, with_alive: bool) -> bool:
 
     SessionTaskManager._task_list.clear()
     try:
-        # all_ 任务按物理场景建稳定 bucket，check() 再按当前消息通道展开。
+        # all_ 任务按物理场景建立稳定存储桶，check() 再按当前消息通道展开。
         flag = asyncio.Event()
         SessionTaskManager.add_task(holder, flag, all_=True, timeout=60)
-        # 这里只模拟平台成功持有上下文，parser 与等待任务路由仍执行真实逻辑。
+        # 此处仅模拟平台成功持有上下文，parser 与等待任务路由仍执行真实逻辑。
         hold = AsyncMock(return_value=None)
         with patch.object(PlatformAPI, "hold_context", new=hold):
             await parser(retired)
@@ -387,7 +387,7 @@ async def _test_union_push_skips_retired():
         _use_routes(["RPUSHR -> RPUSHA"])
         union = await TargetUnionInfo.resolve_union("RPUSHR|Group|p")
         await union.bind_id("RPUSHA|Group|p")
-        # 并入同一通道：退役场景若不被滤除，便会以组内首位的身份抢到队首
+        # 并入同一通道后，退役场景若未被滤除，将以组内首位身份排至队首。
         await TargetUnionBind.filter(target_id__in=["RPUSHR|Group|p", "RPUSHA|Group|p"]).update(channel_id=1)
 
         sent = []
@@ -412,7 +412,7 @@ async def _test_union_push_skips_retired():
 
 @func_case
 async def test_retired_gate(tester: Tester):
-    """akaribot.core.utils.retired: 迁移关系、退役判定与介入点测试"""
+    """akaribot.core.utils.retired 迁移关系、退役判定与介入点测试"""
     await tester.test(_test_parse_basic_route, "关系解析基本测试")
     await tester.test(_test_parse_source_only, "只写源测试")
     await tester.test(_test_parse_ignores_malformed, "格式错误忽略测试")

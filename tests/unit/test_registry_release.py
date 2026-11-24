@@ -97,7 +97,7 @@ def _test_main_exit_codes_follow_verification():
 
 @func_case
 async def test_registry_release(tester: Tester):
-    """tools.verify_registry_release: 发布索引核对测试"""
+    """tools.verify_registry_release 发布索引核对测试。"""
     await tester.test(_test_verify_locates_every_section, "三段都能定位本次发布的分发")
     await tester.test(_test_verify_normalizes_dist_name, "分发名按 PEP 503 规范化比对")
     await tester.test(_test_verify_rejects_stale_version, "latest 与本次版本不符时抛错")

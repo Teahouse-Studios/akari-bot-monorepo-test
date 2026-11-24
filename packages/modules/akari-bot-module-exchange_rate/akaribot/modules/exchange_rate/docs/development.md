@@ -10,27 +10,27 @@ title: 安装与开发
 akaribot module add akari-bot-module-exchange_rate
 ```
 
-安装后，管理员需要在会话中执行 `module enable exchange-rate` 开启模块，并在配置中填写 API Key。
+安装完成后，管理员需要在会话中执行 `module enable exchange-rate` 启用模块，并在配置中填写 API Key。
 
 ## 配置项
 
 <ModuleConfig table="module_exchange_rate" />
 
-`exchange_rate_api_key` 是此模块唯一的配置字段，声明为敏感项，写入同一配置文件中的 `module_exchange_rate_secret` 表。
+`exchange_rate_api_key` 为此模块唯一的配置字段，声明为敏感配置项，写入配置文件中的 `module_exchange_rate_secret` 表。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `exchange_rate_api_key` | str | 空 | ExchangeRate-API 的 API Key |
 
-未配置密钥时，命令会给出配置缺失提示。完整的字段清单见配置模板 `akaribot/modules/exchange_rate/config.py`。
+未配置密钥时，命令将返回配置缺失提示。完整字段清单参见配置模板 `akaribot/modules/exchange_rate/config.py`。
 
 ## 权限与平台能力
 
-此模块没有平台限制，也没有权限要求。
+此模块无平台限制，也无特殊权限要求。
 
-每次换算会请求两次接口。第一次请求获取支持的货币列表，用于校验货币代码。第二次请求获取换算结果。
+每次换算均发起两次接口请求。首次请求获取受支持的货币列表以校验货币代码，第二次请求获取最终换算结果。
 
-接口返回的结果不是 `success` 时，命令返回对应的错误提示。结果中的时间按会话时区格式化。
+若接口返回的状态不为 `success`，命令将返回对应的错误提示。换算结果中的时间统一按照会话时区格式化展示。
 
 ## 数据表
 

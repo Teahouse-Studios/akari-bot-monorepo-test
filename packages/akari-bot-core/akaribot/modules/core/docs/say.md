@@ -4,13 +4,13 @@ order: 51
 
 # say
 
-模块级权限为超级用户。
+模块级所需权限为超级用户。
 
 ### `say`
 
 <CommandUsage usage="say <display_msg>" :params="['display_msg=要复述的消息内容']" permission="superuser" />
 
-此命令把给定内容按消息链解析后发出，不引用原消息。文本中带发送者平台前缀的用户 ID 会被包装成 AT 码，发出后渲染为对该用户的提及。
+此命令将给定内容按照消息链格式解析后发送，不引用原消息。文本中包含发送者平台前缀的用户 ID 会被转换为 AT 码，发送后渲染为对该用户的提及。
 
 <ChatExample
   :log="[
@@ -23,7 +23,7 @@ order: 51
 
 <CommandUsage usage="say md <display_msg>" :params="['display_msg=要复述的消息内容']" permission="superuser" />
 
-此命令按 Markdown 格式复述给定内容，并附带一个按钮示例。
+此命令按照 Markdown 格式复述指定内容，并附加按钮示例。
 
 <ChatExample
   :log="[

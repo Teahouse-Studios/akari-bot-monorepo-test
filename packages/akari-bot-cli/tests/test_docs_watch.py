@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.watch``：路径过滤、事件去重与批量返回。"""
+"""``akaribot.cli.docs_engine.watch`` 的路径过滤、事件去重与批量返回测试。"""
 
 import time
 from pathlib import Path
@@ -74,7 +74,7 @@ def _test_repeated_edits_collapse_into_one_change():
 
 @func_case
 async def test_docs_watch(tester: Tester):
-    """cli.docs_engine.watch: 文档目录监听与路径过滤"""
+    """cli.docs_engine.watch 文档目录监听与路径过滤测试"""
     await tester.test(_test_reports_markdown_and_ignores_noise, "只报告文档目录内的有效改动")
     await tester.test(_test_file_target_reports_only_its_own_path, "文件目标只报告自身改动")
     await tester.test(_test_repeated_edits_collapse_into_one_change, "同一文件的连续改动合并为一条")

@@ -21,7 +21,7 @@ from akaribot.core.utils.bash import run_sys_command
 from .background_tasks import hourly_background_task, start_background_task
 
 # 等待发起重启的客户端重新注册为 ready 的秒数上限。server 与各 bot 子进程一同重启，
-# 提示投递时客户端往往尚未就绪。但重启提示并非关键路径，客户端确已掉线时不应无限等待。
+# 提示投递时客户端通常尚未就绪。但重启提示并非关键路径，客户端确已离线时不应无限等待。
 RESTART_PROMPT_TIMEOUT = 60
 
 
@@ -54,15 +54,15 @@ async def init_async(start_scheduler=True, send_prompt=True) -> None:
             Logger.warning("Failed to get Git commit hash, is it a Git repository?")
     Logger.info("Initializing database...")
     if not await init_db(generate_schemas=False):
-        # pre-init 已统一创建数据表。Server 初始化只负责注册连接和全部模块模型。
+        # pre-init 已统一创建数据表。Server 初始化仅负责注册连接和全部模块模型。
         raise RuntimeError("Failed to initialize server database.")
     Logger.success("Database initialized successfully.")
 
     await load_modules()
     modules = ModulesManager.return_modules_list()
 
-    # 模块与核心 Job 都经统一 wrapper 注册，以便热重载、全局启停和 Server
-    # 关闭时能够按稳定 ID 替换，并等待运行中的 coroutine 真正退出。
+    # 模块与核心 Job 都通过统一 wrapper 注册，以便热重载、全局启动与停止和 Server
+    # 关闭时能够按稳定 ID 替换，并等待运行中的业务协程退出。
     SchedulerLifecycle.prepare()
     SchedulerLifecycle.reconcile_all_modules(modules)
     SchedulerLifecycle.register_core_job(
@@ -131,7 +131,7 @@ async def load_prompt(locale_load_error, timeout: float | None = None) -> None:
             Logger.exception("Failed to read restart prompt author cache, skipped restart prompt.")
             return
         finally:
-            # 缓存须无条件清理：内容损坏、客户端不上线或投递失败时若将其留下，
+            # 缓存必须无条件清理。内容损坏、客户端不上线或投递失败时若保留该缓存，
             # 下次启动会再次解析同一文件，严重时形成稳定的重启循环。
             author_cache.unlink(missing_ok=True)
 
@@ -141,8 +141,8 @@ async def load_prompt(locale_load_error, timeout: float | None = None) -> None:
             Logger.exception("Failed to decode restart prompt author cache, skipped restart prompt.")
             return
 
-        # 数据库中的旧 Client peer 退出后仍可能保有有效租约，须明确排除。
-        # 提示固定投递给本轮重启后实际注册的新实例。
+        # 数据库中的旧客户端节点退出后仍可能保有有效租约，需要明确排除。
+        # 提示固定投递至本轮重启后实际注册的新实例。
         previous_peer_id = author_session.owner_peer_id
 
         try:

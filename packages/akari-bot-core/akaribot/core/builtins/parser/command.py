@@ -1,4 +1,4 @@
-"""命令解析模块 - 解析和处理用户命令。"""
+"""命令解析模块，解析和处理用户命令。"""
 
 import re
 import traceback
@@ -23,7 +23,7 @@ _QUOTE_CHARS = ('"', "'")
 
 
 def _split_command(command: str) -> list[CommandToken]:
-    # 与标准 shell 不同，只有整段参数被一对匹配引号包裹时引号才作分组符号去除：``'"multi word"'``
+    # 与标准 shell 不同，仅当整段参数被一对匹配引号包裹时引号才作分组符号去除，例如 ``'"multi word"'``
     # 得到 ``['multi word']``，而 ``'a"b"c'`` 与 ``'"a b'`` 原样保留。选项的内联值例外，
     # ``'--lang="zh cn"'`` 中的引号紧跟在 ``=`` 之后，同样作为分组符号。
     split_command = []
@@ -47,7 +47,7 @@ def _split_command(command: str) -> list[CommandToken]:
                 index = end + 1
                 continue
 
-        # 例外：引号紧跟在选项内联值的 `=` 之后时作为分组符号（如 --lang="zh cn"）
+        # 例外情况是引号紧跟在选项内联值的 `=` 之后时作为分组符号（如 --lang="zh cn"）
         token = []
         end = index
         while end < length and not command[end].isspace():
@@ -72,9 +72,9 @@ def _split_command(command: str) -> list[CommandToken]:
 
 class CommandParser:
     """
-    命令解析器 - 用于解析和验证用户输入的命令。
+    命令解析器，用于解析和验证用户输入的命令。
 
-    该类根据模块定义的命令模板，对用户输入进行解析和验证，
+    该类根据模块定义的命令模板，解析并验证用户输入，
     支持多种命令格式和权限检查。
 
     属性说明：
@@ -105,7 +105,7 @@ class CommandParser:
         :param msg: 消息会话对象（用于权限检查）
         :param is_superuser: 是否为超级用户（如为 None 则从会话自动检测）
         :param is_admin: 是否为场景管理员。为 None 时不过滤管理员命令，保持命令解析行为。
-            传入布尔值则据其过滤 ``required_admin`` 命令，供帮助文档按权限展示
+            传入布尔值则按该值过滤 ``required_admin`` 命令，供帮助文档按权限展示
         :param include_restricted: 是否保留当前会话无权使用的命令。执行命令时保留，由
             ``COMMAND_BEFORE_EXECUTE`` 策略判定权限。帮助展示与可用性判断需要过滤
         """
@@ -113,7 +113,7 @@ class CommandParser:
 
         self.module_name = module_name
 
-        # 存储原始模块模板定义（只读使用，无需拷贝）
+        # 存储原始模块模板定义（仅用于读取，无需拷贝）
         self.origin_template = args
 
         self.msg: "Bot.MessageSession | None" = msg
@@ -174,7 +174,7 @@ class CommandParser:
                 seen_values.add(v)
         self.options_desc = deduped_options_desc
 
-        # 预计算过滤后的 args 列表（排除空字符串占位符），避免每次 parse 重建
+        # 预计算过滤后的 args 列表（排除空字符串占位符），避免每次 parse 重建。
         self._filtered_args = [a for a in self.args if a != ""]
 
     def return_formatted_help_doc(self, locale=None) -> str:
@@ -184,7 +184,7 @@ class CommandParser:
             return ""
 
         if locale:
-            # 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
+            # 切换语言渲染仍需要保留会话的术语作用域，因此使用生成接口而非新建 Locale。
             locale = self.lang.with_locale(locale)
         else:
             locale = self.lang
@@ -218,7 +218,7 @@ class CommandParser:
         生成流程：
         1. 获取所有命令模板字符串
         2. 提取命令和描述
-        3. 进行国际化翻译
+        3. 翻译为目标语言
         4. 构建 JSON 结构
         5. 返回格式化的字典
 
@@ -248,7 +248,7 @@ class CommandParser:
             return {}
 
         if locale:
-            # 换语言渲染仍须保留会话的术语作用域，故用生成接口而非新建 Locale。
+            # 切换语言渲染仍需要保留会话的术语作用域，因此使用生成接口而非新建 Locale。
             locale = self.lang.with_locale(locale)
         else:
             locale = self.lang
@@ -263,13 +263,13 @@ class CommandParser:
         for x in format_args:
             desc = ""
 
-            # 尝试匹配纯描述格式： "- {I18N:...}"
+            # 尝试匹配纯描述格式 "- {I18N:...}"。
             match = re.fullmatch(r"- (\{I18N:.*?\})", x)
             if match:
                 x = ""
                 desc = locale.t_str(match.group(1), locale_failed_prompt=False)
             else:
-                # 尝试匹配命令 + 描述格式： "command - {I18N:...}"
+                # 尝试匹配 "command - {I18N:...}" 命令与描述格式。
                 match = re.search(r" - (\{I18N:.*?\})$", x)
                 if match:
                     x = x[: match.start()]
@@ -297,11 +297,11 @@ class CommandParser:
         5. 返回匹配的命令元数据和参数
 
         解析流程：
-        1. 如果没有命令模板，返回 None
+        1. 若无命令模板，返回 None
         2. 规范化命令字符串（处理引号等特殊字符）
         3. 按空白符号分割命令（引号包裹整段参数时作为分组符号，其余引号原样保留）
-        4. 如果命令为空，处理默认命令
-        5. 对命令参数进行模板匹配
+        4. 若命令为空，处理默认命令
+        5. 按模板匹配命令参数
         6. 返回匹配的命令和解析的参数
 
         示例：
@@ -311,17 +311,17 @@ class CommandParser:
         :param command: 用户输入的完整命令字符串（不包括前缀）
         :return: (CommandMeta, 参数字典) 元组
                  - CommandMeta: 匹配的命令元数据
-                 - 参数字典：解析后的参数，如果无参数则为 None
-        :raises InvalidCommandFormatError: 如果命令格式不正确或无法匹配任何模板
+                 - 参数字典：包含解析后的参数，无参数时为 None
+        :raises InvalidCommandFormatError: 若命令格式不正确或无法匹配任何模板
         """
         if not self.args:
             return None
 
-        # 替换中文引号为英文引号（兼容中文输入法）
+        # 替换中文引号为英文引号（兼容中文输入法）。
         command = _CN_QUOTE_PATTERN.sub('"', command)
 
         # 按空白符号分割命令，支持引号分组，并原样保留引号、反斜杠等字面字符
-        # 例如： "search 'multi word' -t recent" -> ["search", "multi word", "-t", "recent"]
+        # 例如： "search 'multi word' -t recent" -> ["search", "multi word", "-t", "recent"]。
         split_command = _split_command(command)
 
         Logger.trace("splited command: " + str(split_command))
@@ -341,7 +341,7 @@ class CommandParser:
 
                     raise InvalidCommandFormatError
 
-                # split_command[1:] 是除去命令名之外的所有参数
+                # split_command[1:] 是除去命令名之外的所有参数。
                 base_match = parse_argv(split_command[1:], self._filtered_args)
 
                 return (

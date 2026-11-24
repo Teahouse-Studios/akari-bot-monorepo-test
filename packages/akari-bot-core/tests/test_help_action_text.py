@@ -33,7 +33,7 @@ from akaribot.modules.core.common_tools.help import (
     strip_command_arguments,
 )
 
-# 表格测试所用的表头键，此处不校验其内容，只借它走通渲染
+# 表格测试所用的表头键，此处不校验其内容，仅用于完成渲染流程。
 TABLE_TITLE_KEY = "core.message.help.table.title"
 
 
@@ -41,7 +41,7 @@ def _test_help_about_button_replaces_donate():
     msg = SimpleNamespace(session_info=SimpleNamespace(support_button=True, locale=Locale("zh_cn")))
     with patch("akaribot.modules.core.common_tools.help.help_url", "https://example.com/docs"):
         buttons = get_help_link_buttons(msg, include_modules=False)
-    return buttons == [("📃 在线文档", "https://example.com/docs"), ("ℹ️ 关于我们", "~about")]
+    return buttons == [("📃 在线文档", "https://example.com/docs"), ("ℹ️ 关于机器人", "~about")]
 
 
 def _render_lines(session_info, parts) -> list[str]:
@@ -50,7 +50,7 @@ def _render_lines(session_info, parts) -> list[str]:
         if isinstance(x, ButtonFrameElement):
             continue
         if isinstance(x, ActionTextElement):
-            # show 为选填，默认由平台取 text 展示
+            # show 为选填项，默认由平台读取 text 并展示。
             tag = f"[{x.show.text if x.show else x.text.text}]"
             if texts:
                 texts[-1] += tag
@@ -88,7 +88,7 @@ class _FakeSession:
 class _ImageHelpSession(_FakeSession):
     def __init__(self, session_info):
         super().__init__(session_info)
-        # 选项已由解析器转成函数参数注入，这里仅保持属性存在
+        # 选项已通过解析器转换为函数参数并注入，此处仅保持属性存在。
         self.parsed_msg = {}
         self.finished_message = None
 
@@ -197,7 +197,7 @@ async def _test_image_flag_overrides_markdown_table():
         with patch(
             "akaribot.modules.core.common_tools.help.help_generator", new=AsyncMock(return_value=generated)
         ) as generator:
-            # 关键字须与命令模板 [--img] 解出的参数名一致，见 core/builtins/parser/message.py
+            # 关键字必须与命令模板 [--img] 解析所得的参数名称保持一致，参见 core/builtins/parser/message.py。
             await help_overview(msg, img=True)
     except SessionFinished:
         pass
@@ -847,7 +847,7 @@ async def _test_multi_group_separation():
         if not titles[1].text.startswith("\n"):
             return False
 
-        # 渲染后应为四行：两个标题各一行、两组列表各一行
+        # 渲染结果应为四行内容，包括两个标题各占一行、两组列表各占一行。
         lines = [line for line in _render_lines(session_info, parts) if line]
         if len(lines) != 4:
             return False
@@ -876,15 +876,15 @@ async def _test_hint_not_glued_to_module_list():
     help_msg.append(I18NContext("core.message.help.all_modules", prefix=prefix, cmd=ActionText(f"{prefix}module list")))
 
     lines = [line for line in _render_lines(session_info, help_msg.values) if line.strip()]
-    # 两个标题各一行、两组列表各一行、两条提示各一行
+    # 包括两个标题各占一行、两组列表各占一行、两条提示各占一行。
     if len(lines) != 6:
         Logger.error(f"Help should render 6 lines, got {len(lines)}: {lines}")
         return False
-    # 模块列表所在行不得掺入提示语
+    # 模块列表所在行不得混入提示文案。
     if lines[3].strip() != "[wiki] | [dice]":
         Logger.error(f"The module list line should carry modules only, got {lines[3]!r}")
         return False
-    if "查看详细信息" not in lines[4] or "查看所有的可用模块" not in lines[5]:
+    if "查看详细信息" not in lines[4] or "查看全部可用模块" not in lines[5]:
         Logger.error(f"Both hints should stand on their own lines, got {lines[4]!r} and {lines[5]!r}")
         return False
     return True
@@ -894,7 +894,7 @@ async def _test_table_shape():
     session_info = await _session("help_table_shape")
     msg = _FakeSession(session_info)
     cases = {
-        # 模块数：（列数，行数）。列数取按高度上限反算的列数与最少列数中的较大者
+        # 模块数量对应（列数，行数）。列数取根据高度上限反推计算所得的列数与最少列数中的较大者。
         1: (1, 1),
         2: (2, 1),
         3: (3, 1),
@@ -915,7 +915,7 @@ async def _test_table_shape():
         lines = [
             line for line in _render_lines(session_info, build_module_table(msg, [(TABLE_TITLE_KEY, names)])) if line
         ]
-        # 首行为表头、次行为分隔行，其余为数据行
+        # 首行作为表头、次行作为分隔行，其余行均作为数据行。
         if len(lines) != rows + 2:
             Logger.error(f"{count} modules should render {rows} data rows, got {len(lines) - 2}: {lines}")
             return False
@@ -954,7 +954,7 @@ async def _test_table_is_fenced_by_blank_lines():
     session_info = await _session("help_table_fence")
     msg = _FakeSession(session_info)
     doc = {"args": [{"args": "~m c", "desc": "说明"}], "options": []}
-    # 复刻 ~help <模块> 的组装：简介、表格、作者
+    # 模拟 ~help <模块> 的组装逻辑，包含简介、表格与作者信息。
     elements = [Plain("模块简介\n", disable_joke=True)]
     elements += build_command_table(msg, doc, [])
     elements.append(Plain("模块作者：someone"))
@@ -987,17 +987,17 @@ async def _test_table_does_not_end_inline():
 
 async def _test_strip_command_arguments():
     cases = {
-        # 不带参数的原样返回，点击后可直接发出
+        # 未携带参数的条目原样返回，点击后可直接发送。
         "~setup list target": "~setup list target",
-        # 带参数的留一个尾随空格，光标即停在参数位置
+        # 携带参数的条目保留一个末尾空格，以便光标停留在参数位置。
         "~3dsdb <keywords>": "~3dsdb ",
         "~coin [<amount>]": "~coin ",
         "~ab [--legacy]": "~ab ",
         "~wordle [--hard] [--trial]": "~wordle ",
-        # 嵌套：选项自带参数
+        # 嵌套场景，选项自身携带参数。
         "~wiki <pagename> [-l <lang>]": "~wiki ",
         "~chunithm base <constant> [<constant_max>] [-p <page>]": "~chunithm base ",
-        # 变长参数同样不该留下
+        # 可变长度参数同样不应残留。
         "~image fillwhite ...": "~image fillwhite ",
         "~module enable <module> ...": "~module enable ",
     }
@@ -1068,16 +1068,16 @@ async def _test_regex_is_wrapped_in_code():
 
 def _test_format_table_code_edge_cases() -> bool:
     cases = {
-        # 竖线仍须转义：表格先按竖线切分单元格，代码块拦不住它
+        # 竖线仍然需要转义，因为表格先按竖线切分单元格，代码块无法拦截。
         "a|b": "`a\\|b`",
-        # 围栏须比内容里最长的一串反引号更长，否则会在中途被闭合
+        # 代码块围栏必须比内容中最长的连续反引号更长，避免在中途被提前闭合。
         "a`b": "``a`b``",
         "a``b": "```a``b```",
-        # 内容以反引号起止时两侧补空格，否则会被并入围栏
+        # 内容以反引号起止时两侧补充空格，否则会被并入围栏。
         "`x`": "`` `x` ``",
-        # 换行在代码块内无从表达，折成空格
+        # 换行在代码块内无法直接表达，折叠转换为空格。
         "a\nb": "`a b`",
-        # 空文本不产出空围栏
+        # 针对空文本不生成空代码块围栏。
         "": "",
     }
     for raw, expected in cases.items():
@@ -1111,7 +1111,7 @@ async def _test_empty_group_skipped():
 
 @func_case
 async def test_clickable_modules(tester: Tester):
-    """akaribot.modules.core.common_tools.help: 可点击模块列表测试"""
+    """akaribot.modules.core.common_tools.help 可点击模块列表测试"""
     await tester.test(_test_help_about_button_replaces_donate, "help 关于我们按钮测试")
     await tester.test(_test_image_help_precedes_action_text_fallback, "无表格能力时图片帮助优先测试")
     await tester.test(_test_discord_detail_help_does_not_use_markdown_table, "Discord 详细帮助禁用 Markdown 表格测试")

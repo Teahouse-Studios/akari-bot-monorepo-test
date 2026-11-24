@@ -1,4 +1,4 @@
-"""会话功能特性模块 - 定义消息会话支持的各种功能。"""
+"""会话功能特性模块，定义消息会话支持的各项功能特性。"""
 
 from attrs import define
 
@@ -27,7 +27,7 @@ class Features:
 
     support_markdown: bool = False
 
-    # Markdown 扩展支持 - 会话是否支持渲染表格、代码块、LaTeX 等
+    # Markdown 扩展支持，指示会话是否支持渲染表格、代码块与 LaTeX 等内容。
     support_markdown_extension: bool = False
 
     support_reaction: bool = False
@@ -40,7 +40,7 @@ class Features:
 
     support_wait: bool = False
 
-    # 处理消息节点支持 - 会话是否有独立处理消息节点的能力
+    # 处理消息节点支持，指示会话是否具备独立处理消息节点的能力。
     support_handle_message_nodes: bool = False
 
     support_private_msg: bool = False
@@ -65,5 +65,5 @@ class Features:
 
     @classmethod
     def override(cls, **kwargs) -> "Features":
-        """创建一个新的 Features 实例，并根据提供的关键字参数覆盖默认值。"""
+        """创建新的 Features 实例，并根据提供的关键字参数覆盖默认值。"""
         return cls(**kwargs)

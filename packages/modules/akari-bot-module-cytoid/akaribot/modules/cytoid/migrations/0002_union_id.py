@@ -14,7 +14,7 @@ BIND_TABLES = ("module_cytoid_bind_info",)
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    把绑定表主键列改名为 union_id。
+    将绑定表主键列重命名为 union_id。
 
     :param ctx: 迁移上下文。
     """

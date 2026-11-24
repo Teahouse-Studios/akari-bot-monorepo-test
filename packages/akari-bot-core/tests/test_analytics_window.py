@@ -1,4 +1,4 @@
-"""akaribot.modules.core.su_tools.analytics 单元测试 - 统计时间窗口的时区处理（需要数据库）。"""
+"""akaribot.modules.core.su_tools.analytics 统计时间窗口时区处理单元测试（需要数据库）。"""
 
 import warnings
 from datetime import timedelta
@@ -14,7 +14,7 @@ async def _test_window_emits_no_naive_warning():
             warnings.simplefilter("always")
             old = core_midnight()
             await AnalyticsData.get_count_by_times(old + timedelta(days=1), old)
-        # 不带时区的时间会被 Tortoise 当作 UTC，除了刷警告还会让窗口整体偏移一个时区差。
+        # 未携带时区信息的时间会被 Tortoise 视作 UTC，除了产生告警日志，还会导致统计窗口整体偏移一个时区差。
         return not [w for w in caught if "naive datetime" in str(w.message)]
 
     except Exception:
@@ -34,7 +34,7 @@ async def _test_window_counts_today_only():
             )
             record.timestamp = old + offset
             await record.save(update_fields=["timestamp"])
-        # 昨天与明天各一条，都不该被今日窗口计入
+        # 昨天与明天各一条，都不应被今日窗口计入。
         for offset in (timedelta(hours=-1), timedelta(days=1, hours=1)):
             record = await AnalyticsData.create(
                 module_name=marker, module_type="command", target_id="A|Group|1", command=f"~{marker}"
@@ -52,7 +52,7 @@ async def _test_window_counts_today_only():
 
 @func_case
 async def test_analytics_window(tester: Tester):
-    """akaribot.modules.core.su_tools.analytics: 统计时间窗口测试"""
+    """akaribot.modules.core.su_tools.analytics 统计时间窗口测试"""
     await tester.test(_test_window_emits_no_naive_warning, "无 naive datetime 警告测试")
     await tester.test(_test_window_counts_today_only, "今日窗口边界测试")
 

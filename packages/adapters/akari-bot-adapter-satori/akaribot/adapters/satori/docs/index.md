@@ -6,7 +6,7 @@ Satori 适配器实现 Satori 协议，连接 Satori 服务端。具体平台的
 
 适配器通过 WebSocket 连接 Satori 服务端，按事件接收消息，按接口发送消息。
 
-会话标识用 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组和私聊场景。
+会话标识使用 `Satori|Channel` 与 `Satori|Private` 两种前缀区分群组和私聊场景。
 
 ## 安装
 
@@ -20,7 +20,7 @@ akaribot module add akari-bot-adapter-satori
 
 ## 配置
 
-配置表为 `bot_satori`，密钥表为 `bot_satori_secret`。两张表都写在 `config/bot_satori.toml`。
+配置表为 `bot_satori`，密钥表为 `bot_satori_secret`。两张表均保存在 `config/bot_satori.toml`。
 
 配置项如下：
 
@@ -30,5 +30,5 @@ akaribot module add akari-bot-adapter-satori
 | `satori_port` | 服务端端口，默认 `5140` |
 | `satori_path` | 连接路径，为空时按协议默认值 |
 | `satori_secure` | 是否使用 TLS 连接 |
-| `satori_token` | 访问令牌，写入 secret 表 |
+| `satori_token` | 访问令牌，位于密钥表 |
 | `satori_admin_roles` | 视为管理员的角色名，默认 `admin`、`owner` |

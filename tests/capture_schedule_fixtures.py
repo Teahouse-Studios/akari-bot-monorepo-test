@@ -14,13 +14,13 @@ from akaribot.testing.mock.random import Random
 from akaribot.testing.mock.scheduler import get_scheduled_tasks
 from akaribot.testing.mock.webrender import save_webrender_fixture
 
-# 这些模块的定时任务无法在录制环境中产生有效语料，跳过以免徒劳等待。
+# 此类模块的定时任务无法在录制环境中产生有效语料，跳过以避免超时等待。
 SKIPPED = {
-    # 多页抓取叠加图片渲染，单次运行耗时过长，不适合纳入测试。
+    # 多页内容提取与图片渲染耗时较长，不适宜纳入测试。
     "weekly-rss": "抓取页数多且需图片渲染，耗时过长",
-    # 依赖 Google Play 抓取，且在 ip_country 未配置时直接早退。
+    # 依赖 Google Play 数据检索，且在 ip_country 未配置时直接退出。
     "mcbv-rss": "依赖 Google Play 抓取，测试环境直接早退",
-    # 需要真实 wiki 机器人账号的登录信息。
+    # 需要真实 Wiki 机器人账号的登录信息。
     "wiki-bot": "需要真实 wiki 账号登录信息",
 }
 

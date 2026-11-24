@@ -1,4 +1,4 @@
-"""按钮排布工具 - 将扁平的按钮序列整理为消息底部键盘所需的按行结构。"""
+"""按钮排布工具，负责将扁平的按钮序列整理为消息底部键盘所需的按行结构。"""
 
 import math
 import uuid
@@ -12,19 +12,19 @@ from akaribot.core.builtins.message.elements import (
 )
 from akaribot.core.logger import Logger
 
-# 平台单行按钮数量的硬上限
+# 平台单行按钮数量上限。
 MAX_BUTTONS_PER_ROW = 10
 
-# 平台按钮行数的硬上限
+# 平台按钮行数上限。
 MAX_BUTTON_ROWS = 5
 
-# 可读性上限，即默认的每行按钮数量
+# 可读性上限，即默认的每行按钮数量。
 DEFAULT_BUTTONS_PER_ROW = 3
 
-# MessageChain 自动排布单个 Button 时，每行的按钮数量
+# MessageChain 自动排布单个 Button 时，每行的按钮数量。
 AUTO_BUTTONS_PER_ROW = 10
 
-# MessageChain 自动排布单个 Button 时，允许生成的最大行数
+# MessageChain 自动排布单个 Button 时，允许生成的最大行数。
 AUTO_BUTTON_MAX_ROWS = 5
 
 
@@ -35,13 +35,13 @@ def arrange_buttons(
     small: bool = True,
 ) -> list[ButtonRows]:
     """
-    将（展示文本， 点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
+    将（展示文本，点击数据）序列整理为 ``ButtonFrame`` 所需的按钮行。
 
-    行数由 ``per_row`` 算出后即固定，再把按钮均分到各行，使各行的数量至多相差一个——
-    直接按 ``per_row`` 切片会得到 ``[3, 3, 3, 1]`` 这样参差的末行。行数超出平台上限时
-    压回上限，此时每行的数量将突破 ``per_row``，至多到 ``MAX_BUTTONS_PER_ROW``。
+    行数通过 ``per_row`` 计算后固定，再将按钮均分至各行，使各行的数量至多相差一个；
+    如果直接按照 ``per_row`` 切片，会得到类似 ``[3, 3, 3, 1]`` 此类参差不齐的末行。行数超出平台上限时
+    压缩至上限，此时每行的数量将突破 ``per_row``，至多达到 ``MAX_BUTTONS_PER_ROW``。
 
-    :param buttons: （标签， 命令）序列。标签为按钮上展示的文本，命令为点击后发出的内容。
+    :param buttons: （标签，命令）序列。标签表示按钮上展示的文本，命令表示点击后发送的内容。
     :param per_row: 每行按钮数量的可读性上限。
     :param small: 是否使用紧凑按钮样式。
     :return: 按钮行列表。输入为空时返回空列表。
@@ -63,7 +63,7 @@ def arrange_buttons(
     rows = []
     start = 0
     for index in range(rows_count):
-        # 余数均摊到靠前的几行，使各行数量至多相差一个
+        # 余数分配至靠前的若干行，使各行数量至多相差一个。
         size = base + 1 if index < extra else base
         row = buttons[start : start + size]
         start += size
@@ -72,7 +72,7 @@ def arrange_buttons(
 
 
 def build_button_rows(rows: list[dict[str, str]]) -> list[ButtonRows]:
-    """把旧式的按行映射转换为类型化按钮行。"""
+    """将旧式的按行映射转换为类型化按钮行。"""
     return [ButtonRows.assign([ButtonElement.assign(show, value) for show, value in row.items()]) for row in rows]
 
 
@@ -102,7 +102,7 @@ def bind_callback_reply_ids(message, callback_id: str | None = None) -> list[str
     reply_ids = []
     for button in _iter_buttons(message):
         payload = button.payload
-        # 将旧版内嵌编码立即归一化，之后各平台只消费语义字段。
+        # 将内嵌编码立即规范化，之后各平台仅读取语义字段。
         button.value = payload.value
         button.reply_id = payload.reply_id
         if payload.value.startswith(("http://", "https://")):
@@ -121,7 +121,7 @@ def bind_callback_reply_ids(message, callback_id: str | None = None) -> list[str
         if button.reply_id is not None and button.reply_id not in reply_ids:
             reply_ids.append(button.reply_id)
 
-    # 兼容显式 callback_id 但消息内没有按钮的既有调用。
+    # 兼容显式 callback_id 但消息内未包含按钮的既有调用。
     if generated_reply_id is not None and generated_reply_id not in reply_ids:
         reply_ids.append(generated_reply_id)
     return reply_ids

@@ -355,7 +355,7 @@ async def _test_discord_typing_end_cannot_miss_registration() -> bool:
 
 @func_case
 async def test_platform_memory(tester: Tester):
-    """平台侧长期运行内存的有界性与清理路径。"""
+    """平台端长期运行内存的有界性与清理路径测试。"""
     await tester.test(_test_onebot_typing_cache_is_bounded_and_expires, "OneBot typing 缓存有界并过期")
     await tester.test(_test_qqbot_permission_cache_is_safe_and_bounded, "QQBot 权限缓存安全且有界")
     await tester.test(_test_initiative_queue_fairness, "主动推送队列公平调度")

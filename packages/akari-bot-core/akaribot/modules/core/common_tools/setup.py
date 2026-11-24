@@ -78,9 +78,9 @@ async def _(msg: Bot.MessageSession, offset: str):
     await msg.finish(I18NContext("core.message.setup.timeoffset.success", offset="" if value == "+0" else value))
 
 
-# 不加 available_for：框架只能按平台名过滤命令，无法按会话特性过滤。若改用平台名，
-# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的死行。
-# 以能力标志作唯一判据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。
+# 不添加 available_for，因为框架仅能按平台名称过滤命令，无法按会话特性过滤。如果改用平台名称，
+# 将来其他平台声明了 support_markdown_toggle，面板会出现“有此行、命令却不可用”的无效行。
+# 以能力标志作为唯一判断依据可避免该情形，代价是其他平台的帮助列表中仍会列出这条命令。
 @setup.command("markdown {{I18N:core.help.setup.markdown}}")
 async def _(msg: Bot.MessageSession):
     if not msg.session_info.support_markdown_toggle:
@@ -144,14 +144,14 @@ class SettingRow:
     """
     面板中的一行设置。
 
-    各字段均为已翻译的字符串：模块运行于服务端进程，会话语言在此已经确定，就地翻译
-    可使渲染阶段只关心排版。取值若留作消息元素，还会在充当 :class:`I18NContext` 的
-    参数时被强制转为字符串字面量（见 ``akaribot/core/builtins/message/chain.py`` 的参数翻译一段）。
+    各字段均为已翻译的字符串。模块运行于服务端进程，会话语言在此已经确定，就地翻译
+    可使渲染阶段仅关注排版。配置取值如果作为消息元素保留，还会在充当 :class:`I18NContext` 的
+    参数时被强制转换为字符串字面量（见 ``akaribot/core/builtins/message/chain.py`` 的参数翻译一段）。
 
-    :param label: 设置名。
+    :param label: 设置名称。
     :param value: 当前取值。
     :param action: 交互入口上展示的文案。
-    :param command: 不含前缀的完整命令，尽可能带上当前取值，前缀由渲染阶段补上。
+    :param command: 不包含前缀的完整命令，尽量携带当前取值，前缀通过渲染阶段补充。
     """
 
     label: str
@@ -161,12 +161,12 @@ class SettingRow:
 
 
 def _toggle_row(locale: Locale, name_key: str, enabled: bool, command: str) -> SettingRow:
-    # 构造一个开关型设置行，其取值与入口文案按当前状态选定。
+    # 构建开关型设置行，其取值与入口文案按当前状态选定。
     name = locale.t(name_key)
     return SettingRow(
         label=name,
         value=locale.t("core.message.setup.list.value.on" if enabled else "core.message.setup.list.value.off"),
-        # 入口文案取当前状态之反：已开启时能做的是关闭
+        # 入口文案与当前状态相反，已启用时所执行操作为停用。
         action=locale.t("core.message.setup.list.action.off" if enabled else "core.message.setup.list.action.on"),
         command=command,
     )
@@ -302,8 +302,8 @@ def build_sender_rows(msg: Bot.MessageSession) -> list[SettingRow]:
 
 
 def _ends_with_inline_entry(elements: list) -> bool:
-    # 判断元素列表是否以行内入口收尾。
-    # 适配器会把紧随行内入口之后的文本并入同一行，故其后的元素须自带换行。
+    # 判断元素列表是否以行内入口结尾。
+    # 适配器会将紧随行内入口之后的文本并入同一行，因此其后的元素需要自带换行。
     return bool(elements) and isinstance(elements[-1], ActionTextElement)
 
 
@@ -317,22 +317,22 @@ def render_rows(
     """
     将设置行渲染为消息元素。
 
-    每一行都在行尾挂上指令操作，点击即把命令连同当前取值填入输入框。开关不另设底部按钮：
-    按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。把入口一律放在各自
-    那一行，整个面板的读法才是一致的。不支持指令操作的平台由消息链自动降级为纯文本，
-    模块侧无须再分支。
+    每一行都在行尾附加指令操作，点击后即可将命令连同当前取值填入输入框。开关不另设底部按钮，
+    因为按钮虽能一键切换，却与所属的设置行相隔一段距离，需要用户自行对应。将入口统一置于对应的行内，
+    整个面板的呈现逻辑才保持一致。对于不支持指令操作的平台，通过消息链自动降级为纯文本，
+    模块方不需要额外分支处理。
 
-    换行的写法随平台而分：指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会把
-    紧随其后的文本一并并入上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），
-    换行若交由适配器按元素处理，整个面板会塌成一行，故此路径下须把换行写进文本自身。
-    降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行反倒
-    会多出空行。标题同样以纯文本构造而非 :class:`I18NContext`，正是为了能在其前补上换行。
+    换行符的处理方式随平台而分。指令操作在支持它的平台上会作为独立元素留给适配器，而适配器会将
+    紧随其后的文本一并合并至上一行（见 ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），
+    换行如果转交适配器按元素处理，整个面板会合并为一行，因此此路径下需要将换行符写入文本自身。
+    降级平台上指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再次写入换行符反而
+    会产生多余的空行。标题同样以纯文本构建而非 :class:`I18NContext`，目的是在其前方补充换行符。
 
     :param msg: 消息会话。
     :param title_key: 分组标题的多语言键。
     :param rows: 设置行列表。
     :param can_edit: 当前用户是否可以修改这一组设置。
-    :param after_inline: 本组之前是否紧跟着一个行内入口，为真时标题须自带换行。
+    :param after_inline: 本组之前是否紧跟着一个行内入口，为 True 时标题需要自带换行。
     :return: 消息元素列表。
     """
     session_info = msg.session_info
@@ -347,10 +347,10 @@ def render_rows(
 
     for row in rows:
         text = locale.t("core.message.setup.list.row", name=row.label, value=row.value)
-        # 首行紧随标题，标题不是行内入口，不会被并入。其后各行才需要自带换行
+        # 首行紧随标题，标题不是行内入口，不会被并入。其后各行才需要自带换行。
         lead = "\n" if manual_newline and _ends_with_inline_entry(elements) else ""
-        # 行尾空格：指令操作无论以元素形态并入还是降级为纯文本，都不会自行补分隔符。
-        # disable_joke 亦不可省：降级后的命令原文会并入本元素，被替换后就无法照抄了。
+        # 保留行尾空格，因为指令操作无论以元素形态并入还是降级为纯文本，都不会自行补充定界符。
+        # disable_joke 也不可省略，降级后的命令原文会并入当前元素，被替换后就无法直接复制了。
         elements.append(Plain(f"{lead}{text} " if can_edit else f"{lead}{text}", disable_joke=True))
         if can_edit:
             elements.append(ActionText(f"{prefix}{row.command}", show=row.action))
@@ -384,18 +384,18 @@ def build_jump_buttons(msg: Bot.MessageSession, show_target: bool, show_sender: 
 async def _(msg: Bot.MessageSession):
     show_target = "target" in msg.parsed_msg
     show_sender = "sender" in msg.parsed_msg
-    # 不指定域时两域同列，一条命令即可看全
+    # 不指定域时两域同列，一条命令即可完整查看。
     if not show_target and not show_sender:
         show_target = show_sender = True
 
-    # 只读展示对所有人开放，能否修改才看权限
+    # 只读模式展示面向所有用户开放，是否具备修改权限通过权限规则判定。
     is_admin = await msg.check_permission()
     elements = []
 
     if show_target:
         elements += render_rows(msg, "core.message.setup.list.target", build_target_rows(msg), is_admin)
     if show_sender:
-        # 场景组末尾若留有行内入口，个人组的标题会被适配器并入那一行
+        # 场景组末尾如果包含行内入口，个人组的标题会被适配器合并至该行中。
         elements += render_rows(
             msg,
             "core.message.setup.list.sender",

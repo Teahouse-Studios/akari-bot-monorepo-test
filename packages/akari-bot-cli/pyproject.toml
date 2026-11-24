@@ -10,22 +10,22 @@ description = "AkariBot 实例管理 CLI 与 TUI"
 license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
-# 不依赖 core：全部实例操作经子进程调用 `python -m akaribot.core.entrypoints.*`，
-# 使 CLI 能在实例 venv 之外运行（系统解释器、pipx 安装）。
+# 全部实例操作通过子进程调用 `python -m akaribot.core.entrypoints.*` 执行，
+# 确保 CLI 在实例 venv 之外正常运行（系统解释器、pipx 安装）。
 dependencies = [
-    # CLI 不依赖 core，本地化直接用发布在 PyPI 的 i18n 库
+    # 本地化直接使用发布于 PyPI 的 i18n 依赖包。
     "akari-bot-i18n==0.2.2",
     "httpx>=0.28.1,<1.0.0",
-    # 脚手架渲染（T5.5）：core 也依赖它，但 CLI 不依赖 core，故自带
+    # 用于脚手架渲染（T5.5），core 也依赖该库，因此独立声明依赖。
     "jinja2>=3.1.6,<4.0.0",
     "packaging>=26.0",
     "psutil>=7.0.0,<8.0.0",
     "rich>=13.0.0,<16.0.0",
-    # 紧钉：Textual 跨大版本常有 API 变动，全部调用统一经 akaribot.cli.tui._compat 转接
+    # 固定版本，因为 Textual 跨大版本常有 API 变动，全部调用统一通过 akaribot.cli.tui._compat 兼容封装调用。
     "textual==8.2.8",
     "tomlkit>=0.14.0,<1.0.0",
     "typer>=0.21.0,<1.0.0",
-    # 文档开发模式监听各包文档目录与主题目录，watchdog 提供跨平台原生事件源
+# 文档开发模式监听各成员包文档目录与主题目录，watchdog 提供跨平台原生事件源。
     "watchdog>=7.1.0,<8.0.0",
 ]
 
@@ -38,7 +38,7 @@ cli = "akaribot.cli"
 [tool.hatch.build.targets.wheel]
 packages = ["akaribot"]
 
-# 语言文件由 packages = ["akaribot"] 一并收录，无需 force-include（重复收录会让 hatchling 报
+# 语言文件由 packages = ["akaribot"] 一并收录，无需 force-include（重复收录会导致 hatchling 提示
 # "A second file is being added to the wheel archive at the same path"）。
 
 [project.urls]

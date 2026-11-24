@@ -1,4 +1,4 @@
-"""TapTap 扫码登录与 Phigros SessionToken 换取。"""
+"""TapTap 扫码登录与 Phigros SessionToken 获取。"""
 
 from base64 import b64encode
 from dataclasses import dataclass
@@ -48,7 +48,7 @@ class TapTapSlowDown(TapTapLoginError):
 
 @dataclass(frozen=True)
 class TapTapQRCode:
-    """一次 TapTap 设备码授权所需的数据。"""
+    """单次 TapTap 设备码授权需要的数据。"""
 
     device_id: str
     device_code: str
@@ -62,7 +62,7 @@ def build_client() -> httpx.AsyncClient:
 
 
 def generate_qrcode(url: str) -> Path:
-    """把授权链接生成为缓存目录中的二维码图片。"""
+    """将授权链接生成为缓存目录中的二维码图片。"""
     path = random_cache_path("png")
     qrcode.make(url).save(path)
     return path
@@ -131,7 +131,7 @@ class TapTapLogin:
         self.client = client
 
     async def request_login_qrcode(self) -> TapTapQRCode:
-        """申请一个 TapTap 设备码及二维码地址。"""
+        """申请 TapTap 设备码与二维码地址。"""
         device_id = uuid4().hex
         response = await self.client.post(
             DEVICE_CODE_URL,

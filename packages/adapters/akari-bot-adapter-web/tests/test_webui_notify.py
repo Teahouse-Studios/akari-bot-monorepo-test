@@ -1,4 +1,4 @@
-"""akaribot.adapters.web.api 单元测试 - 敏感操作邮件通知。"""
+"""akaribot.adapters.web.api 敏感操作邮件通知单元测试。"""
 
 import importlib
 import inspect
@@ -14,7 +14,7 @@ from fastapi.responses import Response
 import akaribot.adapters.web.api.notifications as web_notify
 from akaribot.testing import Tester, func_case
 
-# 包级 __init__ 的星号导入会用同名函数覆盖 auth 子模块属性，需从模块表取回。
+# 包级 __init__ 的星号导入会使用同名函数覆盖 auth 子模块属性，需要从模块表重新获取。
 web_auth = importlib.import_module("akaribot.adapters.web.api.auth")
 
 
@@ -238,7 +238,7 @@ async def _test_totp_endpoints_notify():
 
 @func_case
 async def test_webui_notify(tester: Tester):
-    """akaribot.adapters.web.api: 敏感操作邮件通知测试"""
+    """akaribot.adapters.web.api 敏感操作邮件通知测试"""
     await tester.test(_test_smtp_notification_content, "通知邮件内容测试")
     await tester.test(_test_password_removed_notification_content, "密码移除通知邮件内容测试")
     await tester.test(_test_skips_email_without_smtp, "SMTP 不可用时跳过测试")

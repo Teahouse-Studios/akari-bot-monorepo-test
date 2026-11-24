@@ -482,8 +482,8 @@ async def finish_if_wiki_blocked(msg: Bot.MessageSession, api_link: str) -> None
 def _format_page_desc(desc: str, session: Bot.MessageSession | QueryInfo):
     if isinstance(session, MessageSession) and session.session_info.support_markdown:
         lines = desc.splitlines() or [""]
-        # Markdown 元素后再拼接其它元素时，这个尾换行会与 MessageChain
-        # 的分隔换行组成空行，避免 QQ 手机端把下一行吞进引用块。
+        # Markdown 元素后再拼接其他元素时，该末尾换行符会与 MessageChain
+        # 的分隔换行组成空行，避免 QQ 手机端将下一行误纳入引用块。
         return Markdown("\n".join(f"> {line}" if line else ">" for line in lines) + "\n")
     return Plain(desc)
 
@@ -1343,7 +1343,7 @@ async def _query_pages_impl(
             else:
                 raise
         except InvalidWikiError as e:
-            # 异常自身不是消息元素，须先取其文本再并入消息链。
+            # 异常自身不是消息元素，必须先提取其文本再并入消息链。
             error_message = MessageChain.assign([I18NContext("message.error"), Plain(str(e))])
             if isinstance(session, Bot.MessageSession):
                 await send_message(error_message)

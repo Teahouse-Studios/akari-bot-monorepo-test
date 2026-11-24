@@ -33,7 +33,7 @@ class Secret:
     def update(cls, secret: Iterable):
         """替换敏感值。"""
         if secret:
-            # union 返回新集合、并不就地修改，此处必须用 update 才能记录批量密钥
+            # union 返回新集合、并不就地修改，此处必须用 update 才能记录批量密钥。
             cls.data.update({s.upper() for s in secret})
 
 
@@ -47,7 +47,7 @@ class Info:
     :param command_parsed: 已处理命令数量。
     :param message_parsed: 已处理消息数量。
     :param platform_name: 平台展示名，如 ``Telegram``，同一平台的全部实例共用。
-    :param instance_id: 实例 ID，空串表示默认实例。
+    :param instance_id: 实例 ID，空字符串表示默认实例。
     :param client_name: 客户端名称，由平台展示名与实例 ID 生成。
     :param peer_id: 当前 JobQueue 进程实例 ID。
     :param peer_role: 当前 JobQueue 进程角色。
@@ -56,7 +56,7 @@ class Info:
     :param dirty_word_check: 是否启用文本过滤。
     :param web_render_status: WebRender 状态。
     :param use_url_manager: 是否启用 URLManager。
-    :param use_url_md_format: 是否启用 URL MarkDown 格式。
+    :param use_url_md_format: 是否启用 URL Markdown 格式。
     """
 
     version = None
@@ -65,13 +65,13 @@ class Info:
     command_parsed = 0
     message_parsed = 0
     platform_name = ""
-    # 空串表示默认实例。非空时须匹配 INSTANCE_ID_PATTERN。
+    # 空字符串表示默认实例。非空时必须匹配 INSTANCE_ID_PATTERN。
     instance_id = ""
     client_name = ""
-    # JobQueue 运行实例 ID 每次进程启动都不同。client_name 仍表示可竞争消费的服务组。
+    # JobQueue 运行实例 ID 在每次进程启动时均不相同。client_name 仍表示可竞争处理任务的服务组。
     peer_id = ""
     peer_role = ""
-    # 守护进程与内置 Hub 非 JobQueue Peer，其 PID 须由守护进程在启动时显式传入。
+    # 守护进程与内置 Hub 非 JobQueue 节点，其 PID 必须由守护进程在启动时显式传入。
     daemon_pid: int | None = None
     hub_pid: int | None = None
     dirty_word_check = False
@@ -80,7 +80,7 @@ class Info:
     use_url_md_format = False
     http_mock_enabled = False
     # 启用后，mock 未命中的请求直接失败，不改用真实网络。
-    # 改用真实网络会带上重试与超时（默认 3 次 × 20 秒），足以让单个未录制的 URL 拖慢测试逾一分钟。
+    # 使用真实网络会引入重试与超时（默认 3 次 × 20 秒），足以让单个未录制的 URL 拖慢测试逾一分钟。
     http_mock_strict = False
 
     # 实例 ID 的合法形式。限制字符集是为了让它能安全地拼进 target_id 前缀与配置文件名。

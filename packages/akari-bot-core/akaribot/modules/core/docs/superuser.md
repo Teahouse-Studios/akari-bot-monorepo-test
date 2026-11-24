@@ -6,13 +6,13 @@ order: 14
 
 <ModuleAlias names="su" />
 
-此模块用于维护超级用户名单。模块内所有命令都要求超级用户权限。
+此模块用于维护超级用户名单。模块内全部命令均需要超级用户权限。
 
 ### `superuser add`
 
 <CommandUsage usage="superuser add <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-此命令将用户设为超级用户。用户还没有 union 记录时，机器人先要求确认，再创建记录。
+此命令将用户设置为超级用户。若该用户尚未包含 union 记录，机器人会先请求确认，确认通过后再创建记录。
 
 <ChatExample
   :log="[
@@ -25,7 +25,7 @@ order: 14
 
 <CommandUsage usage="superuser remove <user>" :params="['user=带平台前缀的用户完整 ID']" permission="superuser" />
 
-此命令取消用户的超级用户身份。移除自己时，机器人会要求输入确认内容。`config.toml` 中的 `base_superuser` 是基础超级用户名单，启动时写入数据库，只能通过配置维护。
+此命令撤销用户的超级用户身份。移除当前操作者时，机器人会要求输入确认内容。`config.toml` 中的 `base_superuser` 是基础超级用户名单，启动时写入数据库，仅可通过配置文件维护。
 
 <ChatExample
   :log="[

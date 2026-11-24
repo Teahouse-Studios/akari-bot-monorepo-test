@@ -159,7 +159,7 @@ async def _test_self_mention_only_message_is_not_sent() -> bool:
 
 @func_case
 async def test_onebot_adapter(tester: Tester):
-    """OneBot 适配器对不可用的媒体元素保持静默跳过。"""
+    """OneBot 适配器跳过不可用的媒体元素。"""
     await tester.test(_test_unavailable_media_elements_are_skipped, "OneBot 不可用的媒体元素被跳过")
     await tester.test(_test_unavailable_media_keeps_remaining_text, "OneBot 媒体不可用时保留文本")
     await tester.test(_test_self_mentions_are_filtered_from_inbound_message, "OneBot 入站自身提及被过滤")

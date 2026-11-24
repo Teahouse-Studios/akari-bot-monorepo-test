@@ -8,10 +8,10 @@ from tortoise.transactions import in_transaction
 
 from akaribot.core.api import Bot, Random, SenderUnionInfo, StoredData, get_stored_list, update_stored_list
 
-# 花苞与花瓣一样挂在 union 上、跨平台共享，存储桶复用花瓣的 Union 作用域。
+# 花苞与花瓣相同，均关联在 union 上且跨平台共享，存储桶复用花瓣的 Union 作用域。
 BUD_STORE_SCOPE = "Union"
 BUD_STORE_KEY = "petalbuds"
-# 花苞有效期（秒）。过期后不可领取，未领取的花瓣退回发送者并清理。
+# 花苞有效期（秒）。过期后不可领取，未领取的花瓣退回发送者并执行清理。
 BUD_TTL_SECONDS = 24 * 60 * 60
 _bud_mutation_lock = asyncio.Lock()
 
@@ -43,7 +43,7 @@ def split_amount(total: int, count: int) -> list[int]:
 
 
 def generate_bud_id(existing_ids: set[str]) -> str:
-    """生成一个不与已有花苞冲突的短 ID。"""
+    """生成不与既有花苞冲突的短 ID。"""
     while True:
         bud_id = Random.randstr(8, "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789")
         if bud_id not in existing_ids:
@@ -106,7 +106,7 @@ async def find_bud(bud_id: str) -> dict | None:
 
 
 async def release_buds() -> int:
-    """释放所有空花苞和过期花苞，并返回释放数量。"""
+    """释放所有空花苞与过期花苞，并返回释放数量。"""
     async with _bud_mutation_lock:
         async with in_transaction("default") as connection:
             buds, stored = await _load_buds_for_update(connection)
@@ -119,7 +119,7 @@ async def release_buds() -> int:
 
 
 async def claim_bud(msg: Bot.MessageSession, code: str) -> tuple[str, dict | None, int | None]:
-    """领取花苞，返回 ``(状态, 花苞, 领取数量)``。"""
+    """认领花苞，返回 ``(状态, 花苞, 领取数量)``。"""
     sender_union_info = msg.session_info.sender_union_info
     union_id = msg.session_info.sender_union_id
     if not sender_union_info or not union_id:

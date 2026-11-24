@@ -388,7 +388,7 @@ def _test_cache_control_override():
 
 @func_case
 async def test_docs_deploy_s3(tester: Tester):
-    """cli.docs.deploy.s3: S3 兼容存储部署 provider 测试"""
+    """cli.docs.deploy.s3 的 S3 兼容存储部署 provider 测试"""
     await tester.test(_test_lists_pages_and_uploads_changes, "分页列取、跳过未变并上传变化文件")
     await tester.test(_test_delete_only_touches_prefix, "删除只触及前缀内的多余键")
     await tester.test(_test_dry_run_counts_without_writes, "试运行只统计不写入")

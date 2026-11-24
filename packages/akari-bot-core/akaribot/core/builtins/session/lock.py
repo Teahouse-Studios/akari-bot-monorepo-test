@@ -1,4 +1,4 @@
-"""执行锁模块 - 用于管理消息执行锁，防止同一用户的多个命令并发执行。"""
+"""执行锁模块，用于管理消息执行锁，防止同一用户的多个命令并发执行。"""
 
 import asyncio
 import uuid
@@ -17,22 +17,22 @@ class ExecutionState:
 
     def __init__(self) -> None:
         self.lock_token: str | None = None
-        # parser 的根 asyncio.Task 是 lease 的最终生命周期边界。
-        # 未覆盖的退出路径由任务完成回调回收遗留 lease。
+        # parser 的根 asyncio.Task 为 lease 的最终生命周期边界。
+        # 未覆盖的退出路径由任务完成回调回收残留 lease。
         self.lock_owner_task: asyncio.Task | None = None
         self.held_contexts: list[MessageSession] = []
-        # wait_anyone／wait_reply(all_=True) 的结果可能来自另一名用户，
-        # 执行锁仍须按最初发起命令的用户计算。
+        # wait_anyone / wait_reply(all_=True) 的结果可能来自其他用户，
+        # 执行锁仍需要按照最初发起命令的用户计算。
         self.lock_subject: MessageSession | None = None
-        # 输入提示按会话消息 ID 展示，恢复时须沿用最初发起提示的会话。
-        # wait_* 取得的回复会话不能用自己的 ID 重新开启。
+        # 输入提示按会话消息 ID 展示，恢复时必须沿用最初发起提示的会话。
+        # wait_* 获取的回复会话无法使用自身的 ID 重新开启。
         self.typing_owner: MessageSession | None = None
 
 
 class ExecutionLockList:
-    """执行锁列表 - 管理正在执行的消息会话。"""
+    """执行锁列表，管理正在执行的消息会话。"""
 
-    # token -> 该 lease 覆盖的 Union／物理账号键。保留 ``_list`` 名称以兼容
+    # token -> 该 lease 覆盖的 Union / 物理账号键。保留 ``_list`` 名称以兼容
     # 运行时调试和旧测试中的 clear()。
     _list: dict[str, frozenset[str]] = {}
     # 正在扩展身份域的 merge reservation。单独记录 token，才能区分“必须等待
@@ -42,7 +42,7 @@ class ExecutionLockList:
 
     @staticmethod
     def state(msg: "MessageSession") -> ExecutionState:
-        """取得会话的 server-only 执行状态，并兼容未调用父类构造器的测试替身。"""
+        """获取会话的 server-only 执行状态，并兼容未调用父类构造器的测试模拟对象。"""
         state = getattr(msg, "_execution_state", None)
         if not isinstance(state, ExecutionState):
             state = ExecutionState()
@@ -73,8 +73,8 @@ class ExecutionLockList:
         keys = {sender_id} if sender_id else set()
         union_info = getattr(msg.session_info, "sender_union_info", None)
         if union_info is not None and sender_id:
-            # SessionInfo 是入队时快照，等待期间 merge／unbind 可能使其 union 行失效，
-            # 必须按物理 ID 重新解析，以免漏掉新组成员或误锁已分离账号。
+            # SessionInfo 是入队时快照，等待期间 merge / unbind 可能使其 union 行失效，
+            # 必须按物理 ID 重新解析，以免遗漏新组成员或错误锁定已分离账号。
             current_union = await type(union_info).get_by_sender_id(sender_id, create=False)
             if current_union is not None:
                 keys.add(current_union.union_id)
@@ -107,7 +107,7 @@ class ExecutionLockList:
             return
         if state.lock_owner_task is not None and not state.lock_owner_task.done():
             # wait_* 的内部辅助 Task 可能共享根执行状态。lease 生命周期仍应由
-            # 最初取得它的 parser Task 管理，不能被短命辅助 Task 提前回收。
+            # 最初获取该对象的 parser Task 管理，不得被临时辅助 Task 提前回收。
             return
         state.lock_owner_task = task
         task.add_done_callback(
@@ -145,21 +145,21 @@ class ExecutionLockList:
         if cls._owns_active_lease(msg):
             return False
 
-        # 服务器重载或测试可能清空 lease 表却留下执行域 token。
-        # 它已不代表所有权，必须丢弃后重新获取。
+        # 服务端重载或测试运行可能清空 lease 表却残留执行域 token。
+        # 该 token 已不再代表所有权，必须丢弃后重新获取。
         cls.state(msg).lock_token = None
 
         while True:
             keys = await cls._current_keys(msg)
             # _current_keys() 的数据库查询会让出执行权。其间同一执行域的另一协程
-            # （被等待任务消费的回复会话）可能已把 token 装上。必须在判定冲突前
+            # （被等待任务取走的回复会话）可能已把 token 写入。必须在判定冲突前
             # 重新确认所有权，否则根命令会等待自己持有的 lease 永久自锁。
             if cls._owns_active_lease(msg):
                 return False
             if not keys:
                 return False
             if not cls._conflicts(keys):
-                # _conflicts() 与 _install() 之间没有 await，在同一事件循环中是原子的。
+                # _conflicts() 与 _install() 之间不存在 await 调用，在同一事件循环中具备原子性。
                 cls._install(msg, keys)
                 return True
             if not wait:
@@ -177,7 +177,7 @@ class ExecutionLockList:
 
     @classmethod
     async def reserve(cls, msg: "MessageSession", keys: set[str]) -> bool:
-        """扩展当前 lease 并等待与扩展身份域冲突的其它命令结束。"""
+        """扩展当前 lease 并等待与扩展身份域冲突的其他命令结束。"""
         if not cls._owns_active_lease(msg) and not await cls.acquire(msg, wait=True):
             return False
         state = cls.state(msg)
@@ -186,8 +186,8 @@ class ExecutionLockList:
             return False
         cls._reservations.intersection_update(cls._list)
         reservation = frozenset(set(cls._list[token]).union(keys))
-        # 两个合并命令的扩展域只要相交，后进入 reservation 的命令必须让出。
-        # 只检查“完整覆盖”挡不住 A+B 与 B+C 这类部分重叠，双方将相互等待。
+        # 若两个合并命令的扩展域相交，后进入 reservation 的命令必须避让。
+        # 仅检查“完整覆盖”无法防止 A+B 与 B+C 这类部分重叠，双方将相互等待。
         if any(
             other_token != token
             and other_token in cls._reservations
@@ -229,7 +229,7 @@ class ExecutionLockList:
 
     @classmethod
     def remove(cls, msg: "MessageSession") -> bool:
-        """只释放当前会话自己持有的 lease。"""
+        """仅释放当前会话自身持有的 lease。"""
         state = cls.state(msg)
         token = state.lock_token
         state.lock_token = None

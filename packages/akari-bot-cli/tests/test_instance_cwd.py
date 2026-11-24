@@ -73,7 +73,7 @@ def _test_run_child_writes_inside_instance_root():
 
 @func_case
 async def test_instance_process_cwd(tester: Tester):
-    """实例子进程一律以实例根为 cwd，从实例外调用也不例外。"""
+    """实例子进程一律以实例根目录为 cwd，从实例外部调用时同样如此。"""
     await tester.test(_test_call_arguments_anchor_instance_cwd, "子进程调用参数带实例根 cwd")
     await tester.test(_test_captured_child_runs_in_instance_root, "捕获式子进程的 cwd 为实例根")
     await tester.test(_test_run_child_writes_inside_instance_root, "继承标准流的子进程 cwd 为实例根")

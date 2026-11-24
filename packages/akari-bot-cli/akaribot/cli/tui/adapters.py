@@ -28,7 +28,7 @@ _ALIVE_KEYS = {True: "cli.tui.adapters.online", False: "cli.tui.adapters.offline
 _ENABLE_KEYS = {True: "cli.tui.adapters.enable_on", False: "cli.tui.adapters.enable_off"}
 _ENABLE_MISSING_KEY = "cli.tui.adapters.enable_missing"
 
-# 此值用于解析 CLI 输出。显示文本使用 default_id 文案键。
+# 此值用于解析 CLI 输出。展示文本使用 default_id 文案键。
 DEFAULT_ID_LABEL = "（默认）"
 EMPTY_CELL = "—"
 
@@ -96,12 +96,12 @@ class AdapterRecord:
 
     @property
     def key(self) -> str:
-        """选中项的稳定标识：表名优先，其次 ``client_name``。"""
+        """选中项的固定标识，配置表名优先，其次为 ``client_name``。"""
         return self.table or self.client_name or f"{self.platform}/{self.instance_id}"
 
     @property
     def display_id(self) -> str:
-        """返回实例列文本。未配置实例的平台为空。"""
+        """返回实例列文本。未配置实例的平台对应内容为空。"""
         if self.installable and not self.configured:
             return EMPTY_CELL
         return self.instance_id or i18n.t("cli.tui.adapters.default_id")
@@ -113,7 +113,7 @@ class AdapterRecord:
 
     @property
     def listed(self) -> bool:
-        """是否显示在实例列表中。未安装且未启用的平台只在安装对话框中列出。"""
+        """是否显示在实例列表中。未安装且未启用的平台仅在安装对话框中列出。"""
         return self.installed or self.enabled
 
     @property
@@ -230,7 +230,7 @@ class PeerSnapshot:
 
 
 class AdapterSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 class StaticAdapterSource:
@@ -297,7 +297,7 @@ class StaticAdapterSource:
         return self._available
 
     async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
-        """见 :meth:`AdapterSource.stream_install`。替身直接回放固定输出。"""
+        """见 :meth:`AdapterSource.stream_install`。模拟数据源直接回放预设固定输出。"""
         self.calls["install"] += 1
         self.installed.append(record.platform)
         for line in self._install_lines:
@@ -333,7 +333,7 @@ class StaticAdapterSource:
         return result
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.set_enable`。成功后替换缓存中的该条记录。"""
+        """见 :meth:`AdapterSource.set_enable`。成功后替换缓存中的对应记录。"""
         self.calls["set_enable"] += 1
         self.toggles.append((record.table or record.client_name, enabled))
         records = [
@@ -352,13 +352,13 @@ class AdapterSource(Protocol):
         """返回实例清单。"""
 
     def list_available(self) -> tuple[AdapterRecord, ...]:
-        """返回可安装的适配器包，含尚未安装的平台。"""
+        """返回可安装的适配器包，包含尚未安装的平台。"""
 
     async def stream_install(self, record: AdapterRecord, on_line: Callable[[str], None]) -> OperationResult:
         """安装适配器包，通过 ``on_line`` 逐行返回输出。"""
 
     def peer_status(self) -> PeerSnapshot:
-        """返回 peer 连接状态快照。不可用时以 ``available=False`` 上报原因，不抛异常。"""
+        """返回节点连接状态快照。不可用时以 ``available=False`` 返回原因，不抛出异常。"""
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
         """通过 CLI 设置实例的 ``enable``。"""
@@ -513,7 +513,7 @@ def _lease_expired(value: Any, now: float) -> bool | None:
 
 
 def _peer_aliases(entry: Mapping[str, Any], peer_id: str) -> tuple[str, set[str]]:
-    # 平台显示名可能与默认实例的 client_name 相同，不能用作其他实例的状态别名。
+    # 平台显示名称可能与默认实例的 client_name 相同，不能用作其他实例的状态别名。
     primary = _text(_pick(entry, "client_name")) or _text(_pick(entry, "service")) or peer_id
     aliases = {primary, _text(_pick(entry, "service")), _text(_pick(entry, "client_name"))}
     metadata = _pick(entry, "metadata", default={})
@@ -620,7 +620,7 @@ class SubprocessAdapterSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
+        # 实例根目录在每次请求时重新解析，确保子进程工作目录与 AKARI_INSTANCE_DIR 与当前实例保持一致。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {
@@ -634,7 +634,7 @@ class SubprocessAdapterSource:
         }
         self._runner = runner or subprocess.run
         self._instance_factory = instance_factory
-        # 配置读写与配置页共用一套实现，CLI 调用规则只有一份。
+        # 配置读写与配置页共用一套实现，CLI 调用规则仅有一份。
         self._config = SubprocessConfigSource(
             root=self._root_override, timeout=timeout, runner=self._runner, instance_factory=instance_factory
         )
@@ -669,7 +669,7 @@ class SubprocessAdapterSource:
         return normalize_snapshot(self._parse_json(completed.stdout, "adapter list --json"))
 
     def list_available(self) -> tuple[AdapterRecord, ...]:
-        """见 :meth:`AdapterSource.list_available`。复用 ``module available`` 的可安装集合。"""
+        """见 :meth:`AdapterSource.list_available`。复用 ``module available`` 返回的可安装集合。"""
         self.calls["available"] += 1
         argv = self.cli_argv("module", "available", "--json", "--kind", "adapter")
         completed = self._run(argv)
@@ -691,7 +691,7 @@ class SubprocessAdapterSource:
         return await installer.stream_operation("install", ModuleRecord(name=record.platform), on_line)
 
     def peer_status(self) -> PeerSnapshot:
-        """返回 peer 连接状态。入口不可用时返回原因。"""
+        """返回节点连接状态。入口不可用时返回原因。"""
         self.calls["peers"] += 1
         argv = self.peer_argv()
         try:
@@ -717,7 +717,7 @@ class SubprocessAdapterSource:
         return normalize_peer_snapshot(payload)
 
     def set_enable(self, record: AdapterRecord, enabled: bool) -> OperationResult:
-        """见 :meth:`AdapterSource.set_enable`。经 ``akaribot config set`` 写入。"""
+        """见 :meth:`AdapterSource.set_enable`。通过 ``akaribot config set`` 执行配置写入。"""
         self.calls["set_enable"] += 1
         table = record.table or f"bot_{record.platform}" + (f"-{record.instance_id}" if record.instance_id else "")
         label = i18n.t(
@@ -735,7 +735,7 @@ class SubprocessAdapterSource:
         )
 
     def add_instance(self, platform: str, instance_id: str) -> OperationResult:
-        """见 :meth:`AdapterSource.add_instance`。经 ``akaribot adapter instance add`` 新建。"""
+        """见 :meth:`AdapterSource.add_instance`。通过 ``akaribot adapter instance add`` 创建新实例。"""
         self.calls["add_instance"] += 1
         label = i18n.t("cli.tui.adapters.label_instance_add", name=self._instance_display(platform, instance_id))
         args = ["adapter", "instance", "add", platform]
@@ -751,7 +751,7 @@ class SubprocessAdapterSource:
         )
 
     def remove_instance(self, record: AdapterRecord) -> OperationResult:
-        """通过 CLI 移除适配器配置，保留实例数据。"""
+        """通过 CLI 移除适配器配置，保留已有实例数据。"""
         self.calls["remove_instance"] += 1
         label = i18n.t(
             "cli.tui.adapters.label_instance_remove",
@@ -778,7 +778,7 @@ class SubprocessAdapterSource:
         return cli_process.cli_argv(*args)
 
     def peer_argv(self) -> list[str]:
-        """构造使用实例解释器读取 peer 快照的命令参数。"""
+        """构造调用实例解释器读取节点快照的命令参数。"""
         return [str(self._instance_python()), "-m", f"akaribot.core.entrypoints.{PEER_ENTRYPOINT}", "--json"]
 
     def _instance_python(self) -> Path:
@@ -999,7 +999,7 @@ class AdaptersPage(compat.Vertical):
 
     @property
     def records(self) -> tuple[AdapterRecord, ...]:
-        """返回缓存中的全部实例，不触发子进程。"""
+        """返回缓存中的全部实例记录，不启动子进程。"""
         return self._snapshot.instances
 
     @property
@@ -1009,12 +1009,12 @@ class AdaptersPage(compat.Vertical):
 
     @property
     def peers(self) -> PeerSnapshot:
-        """返回最近一次 peer 快照。"""
+        """返回最近一次节点快照。"""
         return self._peers
 
     @property
     def peer_note(self) -> str:
-        """返回 peer 快照不可用的原因，可用时为空串。"""
+        """返回节点快照不可用的原因，可用时为空字符串。"""
         return "" if self._peers.available else self._peers.note
 
     @property
@@ -1025,7 +1025,7 @@ class AdaptersPage(compat.Vertical):
             return None
         try:
             list_view = self.query_one("#adapter-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理。
             return None
         index = compat.highlighted_index(list_view)
         if index is None:
@@ -1057,19 +1057,19 @@ class AdaptersPage(compat.Vertical):
         return self._detail_rendered
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的全部行文本，包含分组标题行。"""
+        """返回最近一次渲染结果中的全部行文本，包含分组标题行。"""
         return self._row_texts
 
     def group_titles(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的分组标题行文本。"""
+        """返回最近一次渲染结果中的分组标题行文本。"""
         return self._group_titles
 
     def instance_cells(self) -> tuple[tuple[str, ...], ...]:
-        """返回最近一次渲染出的实例行各列取值，顺序与列表一致。"""
+        """返回最近一次渲染结果中的实例行各列取值，顺序与列表一致。"""
         return self._instance_rows
 
     def cache_age(self) -> float:
-        """返回缓存自上次读取以来的秒数。从未读取时为无穷大。"""
+        """返回缓存自上次读取以来的秒数。未曾读取时为无穷大。"""
         if not self._loaded_at:
             return float("inf")
         return time.monotonic() - self._loaded_at
@@ -1104,7 +1104,7 @@ class AdaptersPage(compat.Vertical):
             self._render_all()
             self._set_status(i18n.t("cli.tui.adapters.status_load_failed", error=error))
             return False
-        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面。
             self._snapshot = AdapterSnapshot()
             self._peers = PeerSnapshot()
             self._loaded_at = time.monotonic()
@@ -1129,7 +1129,7 @@ class AdaptersPage(compat.Vertical):
         except AdapterSourceError as error:
             self._available_error = i18n.t("cli.tui.adapters.available_failed", error=error)
             return snapshot
-        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面。
             self._available_error = i18n.t(
                 "cli.tui.adapters.available_failed", error=f"{type(error).__name__}: {error}"
             )
@@ -1139,11 +1139,11 @@ class AdaptersPage(compat.Vertical):
     async def _load_peers(self) -> PeerSnapshot:
         try:
             return await asyncio.to_thread(self.source.peer_status)
-        except Exception as error:  # noqa: BLE001 - 连接状态读取失败不应中断页面
+        except Exception as error:  # noqa: BLE001 - 连接状态读取失败不应中断页面。
             return PeerSnapshot(available=False, note=f"{type(error).__name__}: {error}")
 
     def invalidate_cache(self) -> None:
-        """清除缓存有效期，使下次请求重新读取数据。"""
+        """清除缓存有效期，使下一次请求重新读取数据。"""
         self._loaded_at = 0.0
         self._snapshot = AdapterSnapshot()
 
@@ -1192,7 +1192,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     async def _rebuild_rows(self, items: Sequence[compat.ListItem], index: int) -> None:
-        # 分组标题行带禁用与样式，条目只能自建。clear() 的移除是异步的，须等移除完成再落高亮。
+        # 分组标题行带禁用与样式，条目仅能自行创建。clear() 的移除是异步的，必须等待移除完成后再恢复高亮。
         if not compat.mounted(self):
             return
         list_view = self.query_one("#adapter-list", compat.ListView)
@@ -1203,7 +1203,7 @@ class AdaptersPage(compat.Vertical):
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 76
         return max(outer - 4, 8)
 
@@ -1291,7 +1291,7 @@ class AdaptersPage(compat.Vertical):
 
     def _sync_summary(self) -> None:
         snapshot = self._snapshot
-        # 可安装平台记录不代表已配置实例，不计入实例总数。
+        # 可安装平台记录不代表已配置的实例，不计入实例总数。
         instances = tuple(record for record in snapshot.instances if not record.installable)
         enabled = sum(1 for record in instances if record.enabled)
         parts = [
@@ -1344,7 +1344,7 @@ class AdaptersPage(compat.Vertical):
     def _fit_page_width(self, text: str) -> str:
         try:
             width = compat.widget_cells(self)[0] - 2
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             width = 78
         return compat.truncate_cells(text, max(width, 8))
 
@@ -1454,7 +1454,7 @@ class AdaptersPage(compat.Vertical):
             self.refresh_instances(force=True)
 
     def request_add_instance(self) -> None:
-        """弹出新增实例对话框：选择已安装的平台并填写实例 ID。"""
+        """弹出新增实例对话框，用于选择已安装的平台并填写实例 ID。"""
         platforms = self._installed_platforms()
         if not platforms:
             compat.notify(
@@ -1500,13 +1500,13 @@ class AdaptersPage(compat.Vertical):
         return f"bot_{platform}-{instance_id}"
 
     async def _open_config_form(self, platform: str, instance_id: str) -> None:
-        # 实例此时已创建：配置项读不到只影响填写入口，不算新增失败。
+        # 实例此时已创建，无法读取配置项时仅影响填写入口，不属于新增失败。
         name = f"{platform}/{instance_id}"
         table = self._instance_table(platform, instance_id)
         self._set_status(i18n.t("cli.tui.adapters.config_form_loading", name=name))
         try:
             fields = tuple(await asyncio.to_thread(self.source.config_fields, table))
-        except Exception as error:  # noqa: BLE001 - 数据源异常只影响表单，转成状态说明
+        except Exception as error:  # noqa: BLE001 - 数据源异常仅影响表单，转换为状态说明。
             self.last_error = str(error)
             self._set_status(i18n.t("cli.tui.adapters.config_form_unavailable", name=name, error=error))
             return
@@ -1528,7 +1528,7 @@ class AdaptersPage(compat.Vertical):
 
     def on_config_form_closed(self, name: str, table: str, count: int) -> None:
 
-        # 表单打开前的重绘会用旧高亮覆盖选中键，须在关闭时再指向新实例。
+        # 表单打开前的重绘会使用旧高亮覆盖选中键，必须在关闭时再指向新实例。
         self._selected_key = table
         if count:
             message = i18n.t("cli.tui.adapters.config_form_saved", name=name, count=count)
@@ -1538,14 +1538,14 @@ class AdaptersPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.adapters.config_form_skipped", name=name))
 
     async def _reload_with_status(self, message: str) -> None:
-        # 表单可能改了 enable，列表须重新读取。
+        # 表单可能已修改 enable 配置项，列表必须重新读取。
         self.invalidate_cache()
         await self._load()
         self.last_result = message
         self._set_status(message)
 
     def _installed_platforms(self) -> tuple[str, ...]:
-        # 可安装清单依赖 registry 来源，读取失败时仍以 core 清单为准列出已安装平台。
+        # 可安装清单依赖 registry 来源，读取失败时仍以 core 清单为基准列出已安装平台。
         installed = {record.platform for record in self._snapshot.instances if record.installed}
         return tuple(sorted(installed | set(self._snapshot.installed_platforms)))
 
@@ -1567,7 +1567,7 @@ class AdaptersPage(compat.Vertical):
         )
 
     def _validate_new_instance(self, platform: str, instance_id: str) -> str:
-        # 实例 ID 参与 target_id 前缀，必须由用户指定，创建后不可更改。
+        # 实例 ID 参与构成 target_id 前缀，必须在创建时明确指定，创建后不可修改。
         if not instance_id:
             return i18n.t("cli.tui.adapters.instance_id_required")
         if not INSTANCE_ID_PATTERN.fullmatch(instance_id):
@@ -1602,7 +1602,7 @@ class AdaptersPage(compat.Vertical):
         self._start_remove(record)
 
     def reset_pending(self) -> None:
-        """作废待确认的移除。切页、刷新与换选中项时调用。"""
+        """重置待确认的移除操作。切换页面、刷新或更换选中项时调用。"""
         self._gate.reset()
 
     def _removal_target(self) -> AdapterRecord | None:
@@ -1661,7 +1661,7 @@ class AdaptersPage(compat.Vertical):
     ) -> None:
         try:
             result = await asyncio.to_thread(func)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1685,7 +1685,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def request_toggle(self) -> None:
-        """切换所选实例的启用状态。无选中项时显示提示。"""
+        """切换所选实例的启用状态。无选中项时展示提示信息。"""
         record = self.selected_record
         if record is None:
             compat.notify(
@@ -1702,7 +1702,7 @@ class AdaptersPage(compat.Vertical):
         self._start_toggle(record, not record.enabled)
 
     def request_install(self) -> None:
-        """弹出安装对话框，列出尚未安装的适配器。当前行未安装时预选该平台。"""
+        """弹出安装对话框，列出尚未安装的适配器。当前行未安装时预先选中对应平台。"""
         candidates = self._installable_records()
         if not candidates:
             compat.notify(
@@ -1736,7 +1736,7 @@ class AdaptersPage(compat.Vertical):
         self._start_install(record)
 
     def _installable_records(self) -> tuple[AdapterRecord, ...]:
-        # 每个平台取一条记录，可安装清单的记录带作者信息。
+        # 每个平台获取一条记录，可安装清单的记录包含作者信息。
         picked: dict[str, AdapterRecord] = {}
         for record in self._snapshot.instances:
             if record.installable and (record.platform not in picked or record.developers):
@@ -1773,7 +1773,7 @@ class AdaptersPage(compat.Vertical):
     async def _install(self, record: AdapterRecord, label: str) -> None:
         try:
             result = await self.source.stream_install(record, self._on_install_line)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),
@@ -1795,7 +1795,7 @@ class AdaptersPage(compat.Vertical):
         self._sync_actions()
 
     def _on_install_line(self, line: str) -> None:
-        # 安装耗时较长，通过实时输出提供进度反馈。
+        # 适配器安装耗时较长，通过实时输出提供进度反馈。
         self._stream_lines.append(line)
         self._set_status(line)
 
@@ -1821,7 +1821,7 @@ class AdaptersPage(compat.Vertical):
     async def _toggle(self, record: AdapterRecord, enabled: bool, label: str) -> None:
         try:
             result = await asyncio.to_thread(self.source.set_enable, record, enabled)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.common.failed_label", label=label),

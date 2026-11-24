@@ -49,7 +49,7 @@ def _content_to_interactions(content: str | list | None) -> list[dict]:
 def _replayable_steps(message: dict, model_name: str, replay_signatures: bool) -> list[dict]:
     raw_steps = message.get("_gemini_steps") or []
     produced_by = message.get("_gemini_model")
-    # 签名由生成它的模型签发，跨模型回放会被判为无效签名，此时仅保留无签名的步骤。
+    # 签名由生成它的模型签发，跨模型回放会被判定为无效签名，此时仅保留无签名的步骤。
     keep_signatures = replay_signatures and (not produced_by or produced_by == model_name)
     return [step for step in raw_steps if keep_signatures or step.get("type") != "thought"]
 
@@ -71,13 +71,13 @@ def _messages_to_interactions(
             if not content_parts:
                 continue
             if steps and steps[-1].get("type") == "function_result" and isinstance(steps[-1].get("result"), list):
-                # 工具产出的图片会作为用户消息追加，Interactions 支持直接并入工具结果。
+                # 工具生成的图片会作为用户消息追加，Interactions 支持直接并入工具结果。
                 steps[-1]["result"].extend(content_parts)
             else:
                 steps.append({"type": "user_input", "content": content_parts})
         elif role == "assistant":
             if msg.get("_gemini_steps"):
-                # 无状态续轮需原样回传 thought 签名与函数调用步骤。
+                # 无状态续轮需要原样回传 thought 签名与函数调用步骤。
                 replayed = _replayable_steps(msg, model_name, replay_signatures)
                 steps.extend(replayed)
                 has_signatures = has_signatures or any(step.get("type") == "thought" for step in replayed)
@@ -128,7 +128,7 @@ def _gemini_thinking_level(effort: str | None) -> str | None:
 
 
 def _step_to_dict(step) -> dict:
-    # 未识别的步骤类型需按原始载荷回传，序列化结果只有 UNKNOWN 占位。
+    # 未识别的步骤类型需要按原始载荷回传，序列化结果仅有 UNKNOWN 占位。
     if getattr(step, "is_unknown", False):
         return dict(step.raw)
     return step.model_dump(exclude_none=True) if hasattr(step, "model_dump") else dict(step)
@@ -174,7 +174,7 @@ class GeminiInteractionsEndpoint:
         except Exception as exc:
             if not has_signatures or not base._is_signature_error(exc):
                 raise base.gemini_error(exc, base.GeminiInteractionError, base.GeminiInteractionRateLimitError) from exc
-            # 服务端判定签名失效时，改用不含 thought 步骤的上下文重试一次。
+            # 服务端判定签名失效时，改用不包含 thought 步骤的上下文重新尝试一次。
             system_instruction, steps, _ = _messages_to_interactions(messages, self.model_name, replay_signatures=False)
             try:
                 interaction = await self._call(system_instruction, steps, tool_choice)
@@ -242,7 +242,7 @@ class GeminiInteractionsEndpoint:
             text=text,
             tool_calls=tool_calls,
             input_tokens=input_tokens,
-            # 思考 token 单独计入用量，按输出计费。
+            # 思考 Token 单独计入用量，按输出计费。
             output_tokens=total_output_tokens + total_thought_tokens,
             cache_read_tokens=cache_read_tokens,
             cache_write_tokens=0,

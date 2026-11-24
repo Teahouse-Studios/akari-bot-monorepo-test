@@ -23,7 +23,7 @@ from .theme import ThemeSpec, bundled_theme
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"})
 ATTACHMENT_SUFFIXES = frozenset({".txt", ".pdf"})
 ALLOWED_SUFFIXES = frozenset({".md"}) | IMAGE_SUFFIXES | ATTACHMENT_SUFFIXES
-# 文档里的 ``{{I18N:key}}`` 是机器人模板语法。Vue 会把双花括号当插值，行内代码需显式 v-pre。
+# 文档中的 ``{{I18N:key}}`` 为机器人模板语法。Vue 会将双花括号视为插值，行内代码需要显式设置 v-pre。
 V_PRE_RULE = """const render = md.renderer.rules.code_inline
 if (!render) return
 md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
@@ -132,7 +132,7 @@ def collect_files(doc_path: Path, *, exclude: Sequence[str] = ()) -> list[tuple[
 
 
 def group_slug(group: str) -> str:
-    """把分组名折算成文件名与 URL 片段。"""
+    """将分组名称转换为文件名与 URL 片段。"""
     slug = SLUG_PATTERN.sub("-", (group or "").lower()).strip("-")
     return slug or "other"
 
@@ -216,7 +216,7 @@ def _locale_meta(doc_dir: Path, tag: str) -> tuple[str, str]:
 
 
 def _package_entry(package: DocPackage) -> str:
-    # 没有概览页的包以第一页作为入口，供首页、分组页与顶栏链接复用。
+    # 未提供概览页的包以第一页作为入口，供首页、分组页与顶栏链接复用。
     if package.overview:
         return "index.md"
     return package.pages[0].path if package.pages else "index.md"
@@ -771,7 +771,7 @@ def _rewrite_links(
     *,
     prefix: str = "",
 ) -> str:
-    # 文档在源码树里用相对路径互相引用。生成站点时包目录已重排，跨包链接须折算成 URL。
+    # 文档在源码树中使用相对路径互相引用。生成站点时包目录已重新排列，跨包链接需要转换为 URL。
     lines = text.splitlines(keepends=True)
     fenced = False
     for index, line in enumerate(lines):
@@ -1125,7 +1125,7 @@ def _brand_provider(packages: Sequence[DocPackage]) -> DocPackage | None:
     for package in packages:
         if package.brand:
             return package
-    # 兼容仍用旧字段声明站点标志的包。显式 brand 提供者始终优先。
+    # 兼容仍使用旧字段声明站点标志的包。显式 brand 提供者始终优先。
     for package in packages:
         if package.logo or package.avatar:
             return package
@@ -1170,7 +1170,7 @@ def _prepare_site_assets(
     config: DocsConfig,
     packages: Sequence[DocPackage],
 ) -> tuple[str, _BrandAssets]:
-    # 品牌插槽的优先级：站点配置 > 品牌包声明 > 内置资源。
+    # 品牌插槽的优先级依次为站点配置 > 品牌包声明 > 内置资源。
     favicon = _site_asset_url(source, config, config.site.favicon, "site-favicon")
     if not favicon:
         favicon = _bundled_asset(source, config, "favicon", "site-favicon")
@@ -1671,7 +1671,7 @@ def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str)
 
 
 def _uses_parallel_tabs(package: DocPackage) -> bool:
-    # 模块统一使用平行页面。其他包只要提供 development.md 也按同一结构处理。
+    # 模块统一使用同级页面。其他包若提供 development.md 也按同一结构处理。
     if not package.overview or len(package.pages) <= 1:
         return False
     return package.group == "module" or any(Path(page.path).name == "development.md" for page in package.pages)
@@ -1693,7 +1693,7 @@ def _native_page_items(
     pages = list(package.pages)
     parallel = akari and _uses_parallel_tabs(package)
     if parallel:
-        # Akari 主题用标签切换开发页，开发页不进入侧栏。其他主题保留全部页面。
+        # Akari 主题用标签切换开发页，开发页不进入侧边栏。其他主题保留全部页面。
         pages = [page for page in pages if Path(page.path).name != "development.md"]
 
     def page_item(page: DocPage) -> dict[str, object]:

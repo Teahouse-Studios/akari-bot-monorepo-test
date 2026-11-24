@@ -1,4 +1,4 @@
-"""akaribot.core.queue.base 单元测试 - 队列任务清理与取消恢复。"""
+"""akaribot.core.queue.base 队列任务清理与取消恢复单元测试。"""
 
 import asyncio
 from dataclasses import replace
@@ -139,15 +139,15 @@ async def _test_concurrent_consumers_claim_once():
     original_get_all = JobQueuesTable.get_all
 
     async def _get_same_pending_snapshot(target_clients, limit=None):
-        # 补丁作用于进程级的 JobQueuesTable，同一事件循环中其它 Peer 的轮询器也会命中。
-        # 非本测试目标的调用须原样放行，否则外部轮询器会占用会合名额，使本测试的协程永久等待。
+        # 补丁作用于进程级的 JobQueuesTable，同一事件循环中其他节点的轮询器也会命中。
+        # 非该测试目标的调用必须原样放行，否则外部轮询器会占用会合名额，使该测试的协程永久等待。
         if "QUEUE-AUDIT-CLAIM" not in target_clients:
             return await original_get_all(target_clients, limit=limit)
         nonlocal readers
         try:
             row = await JobQueuesTable.get(task_id=task_id)
         finally:
-            # 读取失败亦须放行对端：否则异常将表现为无进展挂起，掩盖真实原因。
+            # 读取失败也必须放行对等节点，否则异常将表现为无进展挂起，掩盖真实原因。
             readers += 1
             if readers >= 2:
                 both_read.set()
@@ -158,7 +158,7 @@ async def _test_concurrent_consumers_claim_once():
 
     def _capture_task(coro, **kwargs):
         task = asyncio.get_running_loop().create_task(coro, **kwargs)
-        # 同上：只记录本任务派发的处理协程，避免等待其它轮询器的在途任务。
+        # 同上，仅记录该任务派发的处理协程，避免等待其他轮询器的执行中任务。
         if str(kwargs.get("name", "")).endswith(str(task_id)):
             scheduled.append(task)
         return task
@@ -217,7 +217,7 @@ async def _test_fire_and_forget_finish_only_deletes_claimed_task():
 
 @func_case
 async def test_queue_lifecycle(tester: Tester):
-    """akaribot.core.queue.base: 队列生命周期测试。"""
+    """akaribot.core.queue.base 队列生命周期测试。"""
     await tester.test(_test_cleanup_keeps_active_tasks, "定时清理保留活动任务测试")
     await tester.test(_test_cleanup_marks_stale_active_timeout, "超时活动任务进入 timeout 测试")
     await tester.test(_test_cancelled_fire_and_forget_task_is_deleted, "取消的免响应任务及时删除测试")

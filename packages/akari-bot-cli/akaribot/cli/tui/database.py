@@ -23,8 +23,8 @@ from akaribot.cli.tui import context
 
 # 仅加载当前页，避免一次读取大量数据。分页与总数由 core 计算。
 PAGE_LIMIT = 50
-# 三栏并排所需的最小内容宽度：表清单 26 列、数据项 32 列（四个翻页按钮的自然宽度）、编辑区 34 列。
-# 窄屏采用两行布局，为数据项和编辑区保留可读宽度。
+# 三栏并排所需的最小内容宽度为表清单 26 列、数据项 32 列（四个翻页按钮的自然宽度）与编辑区 34 列。
+# 窄屏幕终端采用两行布局，为数据项和编辑区保留可读宽度。
 SIDE_BY_SIDE_MIN_WIDTH = 92
 
 # 页面高度低于此值时按钮改为单行。
@@ -68,7 +68,7 @@ class ColumnInfo:
 
     @property
     def label(self) -> str:
-        """返回字段名标签，含类型。"""
+        """返回字段名标签，包含类型。"""
         if not self.type:
             return self.name
         return i18n.t("cli.tui.database.field_label", column=self.name, kind=self.type)
@@ -101,12 +101,12 @@ class TableInfo:
 
     @property
     def pk_name(self) -> str:
-        """返回主键列名，无法获取时返回空串。"""
+        """返回主键列名，无法获取时返回空字符串。"""
         column = self.pk
         return column.name if column is not None else ""
 
     def editable_columns(self) -> tuple[ColumnInfo, ...]:
-        """返回可编辑的列，主键仅作只读展示。"""
+        """返回可编辑的列，主键仅作为只读展示。"""
         return tuple(column for column in self.columns if not column.pk)
 
 
@@ -139,7 +139,7 @@ class RowQuery:
         return replace(self, search=keyword.strip())
 
     def summary(self) -> str:
-        """返回状态栏用的一行说明。"""
+        """返回供状态栏展示的一行说明。"""
         separator = i18n.t("cli.common.list_separator")
         parts = list(self.filters)
         if self.search:
@@ -217,7 +217,7 @@ class WritePlan:
     values: tuple[tuple[str, str], ...] = ()
 
     def summary(self) -> str:
-        """返回状态栏用的一行说明，列出将更改的列与新旧值。"""
+        """返回供状态栏展示的一行说明，列出将更改的列与新旧值。"""
         if self.kind == "delete":
             return i18n.t("cli.tui.database.confirm_delete", table=self.table, pk=self.key)
         if self.kind == "insert":
@@ -232,7 +232,7 @@ class WritePlan:
         return i18n.t("cli.tui.database.confirm_set", table=self.table, pk=self.key, changes=changes)
 
 
-# 替身数据源使用与 core 一致的筛选运算符，使测试能够验证筛选后的记录。
+# 模拟数据源使用与 core 一致的筛选运算符，确保测试有效验证筛选后的记录。
 def _matches(row: Mapping[str, Any], query: RowQuery) -> bool:
     text = _text
     for condition in query.filters:
@@ -272,7 +272,7 @@ def _matches(row: Mapping[str, Any], query: RowQuery) -> bool:
     return True
 
 
-# 拆分 ``<列><运算符><值>``。只有列名时按“非空”处理。
+# 拆分 ``<列><运算符><值>``。仅包含列名时按“非空”处理。
 def _split_filter(condition: str) -> tuple[str, str, str]:
     text = condition.strip()
     for operator in FILTER_OPERATORS:
@@ -362,7 +362,7 @@ def normalize_tables(payload: Any) -> tuple[TableInfo, ...]:
 
 
 def normalize_page(payload: Any, table: str) -> RowPage:
-    """把 ``db rows --json`` 的输出归一化为一页数据项。"""
+    """将 ``db rows --json`` 的输出规范化为一页数据项。"""
     if not isinstance(payload, Mapping):
         return RowPage(table=table)
     rows = payload.get("rows")
@@ -379,12 +379,12 @@ def normalize_page(payload: Any, table: str) -> RowPage:
 
 
 class DatabaseSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 @runtime_checkable
 class DatabaseSource(Protocol):
-    """数据库数据源接口。测试注入替身，实际运行通过子进程访问。"""
+    """数据库数据源接口。测试注入模拟对象，实际运行通过子进程访问。"""
 
     def tables(self) -> Sequence[TableInfo]:
         """返回实例数据库中已注册模型的表。"""
@@ -392,10 +392,10 @@ class DatabaseSource(Protocol):
     def rows(
         self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
     ) -> RowPage:
-        """返回一张表的一页数据项。``query`` 给筛选条件与排序，``count`` 为假时不重算总条数。"""
+        """返回一张表的一页数据项。``query`` 提供筛选条件与排序，``count`` 为 False 时不重新计算总条数。"""
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
-        """按主键更新数据项的指定列。多列更改通过一次调用提交。"""
+        """按主键更新数据项的指定列。多列更改通过单次调用提交。"""
 
     def insert_row(self, table: str, values: Mapping[str, str]) -> WriteResult:
         """新建一条数据项。"""
@@ -490,7 +490,7 @@ class SubprocessDatabaseSource:
         timeout: float = QUERY_TIMEOUT_SECONDS,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        # 每次读取时解析实例根，确保切换实例后使用当前实例。
+        # 每次读取时重新解析实例根目录，确保切换实例后使用当前实例的配置。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"tables": 0, "rows": 0, "set": 0, "insert": 0, "delete": 0}
@@ -498,7 +498,7 @@ class SubprocessDatabaseSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录路径，明确给定优先，其次为界面当前选中的实例，最后自动定位。"""
         return context.resolve_root(self._root_override)
 
     def tables(self) -> Sequence[TableInfo]:
@@ -509,7 +509,7 @@ class SubprocessDatabaseSource:
     def rows(
         self, table: str, *, limit: int, offset: int, query: RowQuery | None = None, count: bool = True
     ) -> RowPage:
-        """见 :meth:`DatabaseSource.rows`：条件、搜索与排序都交给 ``db rows``。"""
+        """见 :meth:`DatabaseSource.rows`，条件、搜索与排序均转交至 ``db rows`` 处理。"""
         self.calls["rows"] += 1
         condition = query or RowQuery()
         args = ["rows", table, "--limit", str(limit), "--offset", str(offset)]
@@ -524,7 +524,7 @@ class SubprocessDatabaseSource:
         return normalize_page(self._invoke(*args), table)
 
     def set_values(self, table: str, key: str, values: Mapping[str, str]) -> WriteResult:
-        """见 :meth:`DatabaseSource.set_values`：一行一次 CLI 调用，各列经重复的 ``--set`` 下发。"""
+        """见 :meth:`DatabaseSource.set_values`，每行执行一次 CLI 调用，各列通过重复的 ``--set`` 传递。"""
         self.calls["set"] += 1
         args = ["set", table, "--key", key]
         for column, value in values.items():
@@ -540,12 +540,12 @@ class SubprocessDatabaseSource:
         return self._write(*args)
 
     def delete_row(self, table: str, key: str) -> WriteResult:
-        """删除数据项，使用 ``--yes`` 传递界面的确认结果。"""
+        """删除指定数据项，使用 ``--yes`` 传递界面的确认结果。"""
         self.calls["delete"] += 1
         return self._write("delete", table, "--key", key, "--yes")
 
     def _write(self, *args: str) -> WriteResult:
-        # 分别报告执行失败和输出解析失败，便于定位错误。
+        # 分别返回执行失败与输出解析失败，便于定位错误。
         try:
             payload = self._invoke(*args)
         except DatabaseSourceError as error:
@@ -590,7 +590,7 @@ class SubprocessDatabaseSource:
                 )
             )
         if payload is None:
-            # 解析失败时保留原始输出，供调用方诊断。
+            # 解析失败时保留原始输出，供调用方排查诊断。
             raise DatabaseSourceError(
                 i18n.t("cli.tui.common.error_separator").join(
                     [i18n.t("cli.tui.database.err_bad_json", cmd=" ".join(args)), _tail(stdout)]
@@ -640,7 +640,7 @@ class EditorField(compat.Vertical):
         return self.query_one(compat.Input).value
 
     def set_value(self, text: str) -> None:
-        """设置输入框文本，等价于用户键入。"""
+        """设置输入框文本，等价于手动键入。"""
         self.query_one(compat.Input).value = text
 
 
@@ -810,10 +810,10 @@ class DatabasePage(compat.Vertical):
 
     can_focus = True
 
-    # 删除使用组合键。分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
+    # 删除操作使用快捷组合键。分页与筛选键位由页内控件提示，为全局键位保留页脚空间。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.database.bind_refresh")),
-        # 保存用 ctrl+s：编辑区输入框聚焦时单字母由输入框接收，组合键在编辑中同样生效。
+        # 保存操作绑定为 ctrl+s，因为编辑区输入框聚焦时单字母由输入框接收，而快捷组合键在编辑状态下同样生效。
         ("ctrl+s", "save", i18n.t("cli.tui.database.bind_save")),
         ("n", "insert", i18n.t("cli.tui.database.bind_insert"), False),
         ("ctrl+d", "delete", i18n.t("cli.tui.database.bind_delete"), False),
@@ -860,7 +860,7 @@ class DatabasePage(compat.Vertical):
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：表清单、数据项、编辑区与状态栏。"""
+        """装配页面控件树，包含表清单、数据项、编辑区与状态栏。"""
         with compat.Horizontal(id="database-body"):
             with compat.Vertical(id="tables-pane"):
                 yield compat.Input(placeholder=i18n.t("cli.tui.database.search_placeholder"), id="database-search")
@@ -894,7 +894,7 @@ class DatabasePage(compat.Vertical):
                     yield compat.Input(
                         placeholder=i18n.t("cli.tui.database.editor_pk_placeholder"), id="editor-pk-input"
                     )
-                # 字段单独放进滚动容器：字段多时只有它滚动，主键行保持可见。
+                # 字段单独放入滚动容器，字段较多时仅该容器滚动，主键行保持可见。
                 yield compat.VerticalScroll(id="editor-fields")
         yield compat.ButtonFlow(
             ("db-save", compat.key_hint(i18n.t("cli.tui.database.button_save"), "ctrl+s"), "primary"),
@@ -910,14 +910,14 @@ class DatabasePage(compat.Vertical):
         )
 
     def on_mount(self) -> None:
-        """挂载后只装配控件。读取数据推迟到首次显示。"""
+        """挂载后仅装配控件。读取数据推迟至首次显示。"""
         compat.set_text_selection(self, False)
         self._sync_layout(self.size.width)
-        # 加载前禁用不可用的分页操作，避免首帧出现无效按钮。
+        # 数据加载前禁用不可用的分页操作，避免首帧渲染无效按钮。
         self._sync_pager()
 
     def _sync_layout(self, width: int) -> None:
-        # 切换的是容器上的类，三栏的构成与控件 id 都不变。并排所需宽度见 SIDE_BY_SIDE_MIN_WIDTH。
+        # 切换的是容器上的类，三栏的构成与控件 id 均保持不变。并排所需宽度见 SIDE_BY_SIDE_MIN_WIDTH。
         if width <= 0:
             return
         body = self.query_one("#database-body", compat.Horizontal)
@@ -931,11 +931,11 @@ class DatabasePage(compat.Vertical):
         self.refresh_tables(force=True)
 
     def focus_primary(self) -> None:
-        """聚焦表清单。列表为空时聚焦页面容器，保持页面键位可用。"""
+        """聚焦数据表清单。列表为空时聚焦页面容器，确保页面键位可用。"""
         compat.focus_first(self, "#table-list")
 
     def _adopt_focus(self) -> None:
-        # 列表加载后仅在焦点仍位于页面容器时恢复列表焦点，避免中断用户输入。
+        # 列表加载后仅在焦点仍位于页面容器时恢复列表焦点，避免中断当前输入操作。
         if self.display and getattr(self.app, "focused", None) is self:
             compat.focus_first(self, "#table-list")
 
@@ -979,7 +979,7 @@ class DatabasePage(compat.Vertical):
     @property
     def row_query(self) -> RowQuery:
         """返回当前生效的筛选条件与搜索词。"""
-        # 名称需避免覆盖 Textual 的 Widget.query()。
+        # 名称需要避免覆盖 Textual 的 Widget.query()。
         return self._row_query
 
     @property
@@ -994,7 +994,7 @@ class DatabasePage(compat.Vertical):
 
     @property
     def selected_key(self) -> str:
-        """返回当前数据项的主键值文本。未选中时为空串。"""
+        """返回当前数据项的主键值文本。未选中时为空字符串。"""
         return self._row_key
 
     @property
@@ -1008,11 +1008,11 @@ class DatabasePage(compat.Vertical):
         return self._status_rendered
 
     def table_row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的表清单行文本。"""
+        """返回最近一次渲染结果中的表清单行文本。"""
         return self._table_rows
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的数据项行文本。"""
+        """返回最近一次渲染结果中的数据项行文本。"""
         return self._row_texts
 
     def editor(self) -> tuple[EditorField, ...]:
@@ -1024,14 +1024,14 @@ class DatabasePage(compat.Vertical):
         return {field.column.name: field.value for field in self.editor()}
 
     def set_editor_value(self, column: str, text: str) -> None:
-        """设置某一列的编辑文本，等价于用户键入。"""
+        """设置某一列的编辑文本，等价于手动键入。"""
         for field in self.editor():
             if field.column.name == column:
                 field.set_value(text)
                 return
 
     def set_query(self, value: str) -> None:
-        """设置表名搜索词，等价于用户键入。"""
+        """设置表名搜索词，等价于手动键入。"""
         self.query_one("#database-search", compat.Input).value = value
 
     def caption_text(self) -> str:
@@ -1056,7 +1056,7 @@ class DatabasePage(compat.Vertical):
 
     # endregion
 
-    # region 读取与渲染
+    # region 读取与渲染。
 
     def refresh_tables(self, *, force: bool = False) -> None:
         """读取表清单。
@@ -1080,7 +1080,7 @@ class DatabasePage(compat.Vertical):
         """后台读取表清单并载入当前表，返回是否成功。"""
         try:
             tables = await asyncio.to_thread(self.source.tables)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面。
             self._tables = ()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1121,7 +1121,7 @@ class DatabasePage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.database.status_no_tables"))
             return False
         if table != self._selected:
-            # 筛选列属于当前表，切换表时清空条件，避免引用不存在的列。
+            # 筛选列属于当前配置表，切换表时清空条件，避免引用不存在的列。
             self._row_query = RowQuery()
         self._selected = table
         info = self.selected_info
@@ -1146,7 +1146,7 @@ class DatabasePage(compat.Vertical):
         if self._selected is None:
             return False
         offset = 0 if reset_offset else self._offset
-        # 翻页复用记录总数，避免对大表重复执行全表统计。
+        # 翻页时复用记录总数，避免对大型数据表重复执行全表统计。
         if count is None:
             count = reset_offset or self._page.total is None
         try:
@@ -1158,7 +1158,7 @@ class DatabasePage(compat.Vertical):
                 query=self._row_query,
                 count=count,
             )
-        except Exception as error:  # noqa: BLE001 - 读取数据失败只影响本页展示
+        except Exception as error:  # noqa: BLE001 - 读取数据失败仅影响本页展示。
             self.last_error = f"{type(error).__name__}: {error}"
             await self._clear_rows(i18n.t("cli.tui.database.rows_load_failed", error=error))
             self._set_status(
@@ -1168,7 +1168,7 @@ class DatabasePage(compat.Vertical):
             )
             return False
         if page.total is None:
-            # 未重新统计时保留总数，用于页码和末页定位。
+            # 未重新统计时保留记录总数，用于页码计算和末页定位。
             page = replace(page, total=self._page.total)
         self._page = page
         # 记录减少可能使偏移超出末页，修正偏移以避免空白页。
@@ -1227,7 +1227,7 @@ class DatabasePage(compat.Vertical):
         self._sync_editor()
 
     def _sync_editor(self) -> None:
-        # 编辑区只读缓存中的数据项：渲染路径不得起子进程。
+        # 编辑区仅读取缓存中的数据项，渲染路径不得启动子进程。
         info = self.selected_info
         if info is None:
             return
@@ -1320,7 +1320,7 @@ class DatabasePage(compat.Vertical):
         return self._row_query.order_by or i18n.t("cli.tui.database.order_default", column=self._default_order_label())
 
     def _sync_pager(self) -> None:
-        # 首末页禁用对应的翻页操作，避免进入空白页。
+        # 在首页和末页禁用对应的翻页按钮，避免进入空白页面。
         page = self._page
         first = page.offset <= 0
         last = page.offset >= page.last_offset
@@ -1337,7 +1337,7 @@ class DatabasePage(compat.Vertical):
             buttons[button_id].disabled = disabled or self._selected is None
 
     def action_add_filter(self) -> None:
-        """键位动作：添加筛选条件或搜索词。"""
+        """添加筛选条件或搜索词的键位动作。"""
         if self._selected is None:
             self._set_status(i18n.t("cli.tui.database.status_no_tables"))
             return
@@ -1372,7 +1372,7 @@ class DatabasePage(compat.Vertical):
         self.refresh_rows(reset_offset=True)
 
     def action_clear_filters(self) -> None:
-        """键位动作：清空全部条件与搜索词。"""
+        """清空全部条件与搜索词的键位动作。"""
         if self._row_query.is_empty():
             self._set_status(i18n.t("cli.tui.database.filter_none"))
             return
@@ -1382,11 +1382,11 @@ class DatabasePage(compat.Vertical):
         self.refresh_rows(reset_offset=True)
 
     def action_more(self) -> None:
-        """键位动作：打开低频操作菜单。"""
+        """打开低频操作菜单的键位动作。"""
         self.request_more()
 
     def request_more(self) -> None:
-        """弹出低频操作菜单：设置排序与清空筛选条件。"""
+        """弹出低频操作菜单，提供设置排序与清空筛选条件。"""
         if not self._gate.accept("more"):
             return
         compat.ask_choice(
@@ -1409,7 +1409,7 @@ class DatabasePage(compat.Vertical):
             self.action_clear_filters()
 
     def action_set_order(self) -> None:
-        """键位动作：改排序方式。"""
+        """修改排序方式的键位动作。"""
         if self._selected is None:
             self._set_status(i18n.t("cli.tui.database.status_no_tables"))
             return
@@ -1455,19 +1455,19 @@ class DatabasePage(compat.Vertical):
         self.run_worker(self.reload_rows(reset_offset=reset_offset), group="database-rows", exclusive=True)
 
     def action_next_page(self) -> None:
-        """键位动作：下一页。"""
+        """翻至下一页的键位动作。"""
         self.goto_offset(self._page.offset + PAGE_LIMIT)
 
     def action_previous_page(self) -> None:
-        """键位动作：上一页。"""
+        """翻至上一页的键位动作。"""
         self.goto_offset(self._page.offset - PAGE_LIMIT)
 
     def action_first_page(self) -> None:
-        """键位动作：第一页。"""
+        """跳转至第一页的键位动作。"""
         self.goto_offset(0)
 
     def action_last_page(self) -> None:
-        """键位动作：最后一页。"""
+        """跳转至最后一页的键位动作。"""
         self.goto_offset(self._page.last_offset)
 
     def goto_offset(self, offset: int) -> None:
@@ -1497,7 +1497,7 @@ class DatabasePage(compat.Vertical):
     def _list_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 40
         return max(outer - 4, 8)
 
@@ -1516,7 +1516,7 @@ class DatabasePage(compat.Vertical):
         self.query_one("#database-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时切换布局并按缓存重排，不重新读取数据。"""
+        """终端尺寸变化时切换布局并按缓存重新排列，不重新读取数据。"""
         self._sync_layout(event.size.width)
         # 短屏按钮改为单行，为表格与编辑区保留高度。
         self.set_class(event.size.height < COMPACT_MAX_HEIGHT, "compact")
@@ -1527,27 +1527,27 @@ class DatabasePage(compat.Vertical):
 
     # endregion
 
-    # region 写入
+    # region 写入。
 
     def action_refresh(self) -> None:
-        """键位动作：作废缓存并重新读取表与数据项。"""
+        """使缓存失效并重新读取表与数据项的键位动作。"""
         self.reset_pending()
         self.refresh_tables(force=True)
 
     def action_save(self) -> None:
-        """键位动作：保存编辑区的更改。新建模式下等价于写入新数据项。"""
+        """保存编辑区更改的键位动作，新建模式下等价于写入新数据项。"""
         self.request_save()
 
     def action_insert(self) -> None:
-        """键位动作：进入新建模式或写入新数据项。"""
+        """进入新建模式或写入新数据项的键位动作。"""
         self.request_insert()
 
     def action_delete(self) -> None:
-        """键位动作：删除当前数据项。"""
+        """删除当前数据项的键位动作。"""
         self.request_delete()
 
     def action_cancel(self) -> None:
-        """键位动作：退出新建模式并清空待确认状态。焦点在搜索框时先清空搜索。"""
+        """退出新建模式并清空待确认状态的键位动作，焦点在搜索框时先清空搜索。"""
         search = self.query_one("#database-search", compat.Input)
         if getattr(self.app, "focused", None) is search:
             if search.value:
@@ -1558,7 +1558,7 @@ class DatabasePage(compat.Vertical):
         self.cancel_edit()
 
     def action_focus_search(self) -> None:
-        """键位动作：聚焦搜索框。"""
+        """聚焦搜索框的键位动作。"""
         self.query_one("#database-search", compat.Input).focus()
 
     def request_save(self) -> None:
@@ -1608,7 +1608,7 @@ class DatabasePage(compat.Vertical):
         self._request(WritePlan(kind="delete", table=info.name, key=self._row_key))
 
     def reset_pending(self) -> None:
-        """作废待确认的写入。切页、刷新、换表与换行时调用。"""
+        """重置待确认的写入操作。切换页面、刷新、切换数据表或数据项时调用。"""
         self._gate.reset()
         self._pending = None
 
@@ -1629,7 +1629,7 @@ class DatabasePage(compat.Vertical):
         return i18n.t("cli.tui.database.dirty_edit", count=len(changed), pk=self._row_key)
 
     def cancel_edit(self) -> None:
-        """退出新建模式、清空待确认状态并把编辑区还原为当前数据项。"""
+        """退出新建模式、清空待确认状态并将编辑区还原为当前数据项。"""
         cancelled = self._pending is not None or self._insert_mode
         self._pending = None
         self._gate.reset()
@@ -1680,7 +1680,7 @@ class DatabasePage(compat.Vertical):
             first = failures[0]
             self.last_error = first.detail or first.message
             tail = first.detail.splitlines()[-1] if first.detail else i18n.t("cli.tui.common.no_output")
-            # 原因与输出尾部是 CLI 给出的可变文本，按分隔符拼接而不是写进模板。
+            # 原因与输出尾部是 CLI 返回的可变文本，按分隔符拼接而不是写入模板。
             self._set_status(
                 i18n.t("cli.tui.common.error_separator").join(
                     [i18n.t("cli.tui.database.status_write_failed", table=plan.table), first.message, tail]
@@ -1712,11 +1712,11 @@ class DatabasePage(compat.Vertical):
                 return [result]
             result = await asyncio.to_thread(self.source.delete_row, plan.table, plan.key)
             return [result]
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成失败项展示
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常均转换为失败项展示。
             return [WriteResult(False, f"{type(error).__name__}: {error}", "")]
 
     async def reload_tables_after_write(self, plan: WritePlan) -> None:
-        """写入后重新加载数据项和记录总数。编辑与删除保留当前页，新建返回第一页。"""
+        """写入后重新加载数据项和记录总数。编辑与删除保留在当前页，新建则返回第一页。"""
         previous = self._row_key
         self._loaded_at = 0.0
         await self.reload_rows(reset_offset=plan.kind == "insert", count=True)
@@ -1730,7 +1730,7 @@ class DatabasePage(compat.Vertical):
 
     # endregion
 
-    # region 交互
+    # region 交互。
 
     @compat.on(compat.Input.Changed, "#database-search")
     def _on_search_changed(self, event: compat.Input.Changed) -> None:

@@ -17,10 +17,10 @@ from typing import Any
 
 PLACEHOLDER_PATTERN = re.compile(r"^<Replace me.*?>$")
 
-# i18n 快照是否已接上：子进程只在需要注释时接一次。
+# 标记 i18n 快照是否已关联，子进程仅在需要读取注释时初始化一次。
 _LOCALE_READY = False
 
-# 配置注释的键前缀：与配置模板写入期使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
+# 配置注释的键前缀，与配置模板写入阶段使用的 i18n 键一致（core/config/__init__.py 的注释生成路径）。
 COMMENT_KEY = "config.comments.{table}.{key}"
 
 
@@ -32,7 +32,7 @@ class ConfigInputError(ValueError):
 
 
 def _bootstrap() -> None:
-    # 入口以子进程运行，builtins 包本身不自举：读任何配置表之前先加载（含版本迁移），重复调用无副作用。
+    # 入口以子进程运行，builtins 包本身不自动初始化，读取任何配置表之前先加载（包含版本迁移），重复调用无副作用。
     from akaribot.core.builtins.config.bootstrap import bootstrap_config
 
     bootstrap_config()
@@ -80,7 +80,7 @@ def _localized_comment(table: str, key: str, secret: bool) -> str | None:
     secret_table = "secret" if table == "config" else f"{table}_secret"
     candidates = [COMMENT_KEY.format(table=secret_table if secret else table, key=key)]
     candidates.append(COMMENT_KEY.format(table=table, key=key))
-    # 各适配器的 enable 共用一条注释，与配置写入路径的取键规则一致。
+    # 各适配器的 enable 共用一条注释，与配置写入路径的键查找规则一致。
     if table.startswith("bot_") and key == "enable" and not secret:
         candidates.append(COMMENT_KEY.format(table="bot", key=key))
     for candidate in candidates:
@@ -92,8 +92,8 @@ def _localized_comment(table: str, key: str, secret: bool) -> str | None:
 
 
 def _connect_locale() -> None:
-    # 子进程没有 bot 启动期的快照，不接上时 ``Locale.t`` 一律回退为键名（注释会显示成
-    # ``{I18N:...}`` 标记）。只做一次。
+    # 子进程未持有 bot 启动阶段的快照，未关联快照时 ``Locale.t`` 一律回退为键名（注释会显示成
+    # ``{I18N:...}`` 标记）。仅执行一次。
     global _LOCALE_READY
     if _LOCALE_READY:
         return
@@ -106,8 +106,8 @@ def _connect_locale() -> None:
 
 
 def _table_values(table: str, document: Mapping[str, Any]) -> list[dict[str, Any]]:
-    # 键清单以配置文件为准（模板在生成期已把声明字段全部落盘）。占位判定是 schema 与
-    # placeholders 共用的口径，只在这里出现一次。
+    # 键清单以配置文件为准（模板在生成阶段已将声明字段全部写入磁盘）。占位判定是 schema 与
+    # placeholders 共用的判定标准，仅在此处出现一次。
     table, only_secret = _base_table(table)
     plain = {} if only_secret else document.get(table) or {}
     secret_table = "secret" if table == "config" else f"{table}_secret"
@@ -150,7 +150,7 @@ def _schema(table: str) -> list[dict]:
 
 
 def _read_table_file(table: str) -> Any:
-    # 任一文件损坏都会让 ``CFGManager.load()`` 整体失败，故按表读文件，未读到的表单独归集。
+    # 任一文件损坏都会让 ``CFGManager.load()`` 整体失败，因此按表读取文件，未能读取的表单独归集。
     from tomlkit import parse as toml_parser
 
     from akaribot.core.paths import Paths
@@ -172,7 +172,7 @@ def _placeholder_report(tables: str | None) -> dict[str, Any]:
     scanned: list[str] = []
     count = 0
     for table in dict.fromkeys(requested):
-        # 表名只用于拼接配置目录下的文件名。含分隔符的名字一律拒绝，读不到目录之外。
+        # 表名仅用于拼接配置目录下的文件名。包含路径分隔符的名称一律拒绝，避免读取目录之外的文件。
         if "/" in table or "\\" in table:
             failed[table] = "表名含路径分隔符"
             continue
@@ -181,7 +181,7 @@ def _placeholder_report(tables: str | None) -> dict[str, Any]:
         except (OSError, UnicodeDecodeError) as error:
             failed[table] = f"读取失败：{type(error).__name__}: {error}"
             continue
-        except Exception as error:  # noqa: BLE001 - 解析错误类型由 tomlkit 决定，逐表归集后继续
+        except Exception as error:  # noqa: BLE001 - 解析错误类型取决于 tomlkit，逐表归集后继续。
             failed[table] = f"解析失败：{type(error).__name__}: {error}"
             continue
         values = _table_values(table, document)
@@ -238,8 +238,8 @@ def _declared_defaults(table: str) -> dict[str, dict]:
 
 
 def _coerce(table: str, key: str, value: str) -> Any:
-    # 不做转换会把 `enable` 之类的布尔项写成字符串 ``"true"``：文件里类型不对，读回虽是 ``true``
-    # 但任何按布尔取用的代码都会拿到真值字符串。
+    # 若不执行类型转换，会将 `enable` 这类布尔项写入为字符串。
+    # 实例表名（`bot_telegram-alt`）按前缀匹配到基表（`bot_telegram`）的声明。
     meta = _declared_defaults(table).get(key, {})
     cfg_type = meta.get("type")
     if cfg_type is None:
@@ -334,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # placeholders 只按文件统计，配置加载失败时仍要能报告损坏的表。其余命令都经配置管理器。
+    # placeholders 仅按文件统计，配置加载失败时仍需要报告损坏的表。其余命令均通过配置管理器处理。
     if args.command != "placeholders":
         _bootstrap()
 
@@ -405,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
         module_name = f"{entry.import_path}.config"
         try:
             importlib.import_module(module_name)
-            # 配置模板在导入时写盘。当前进程启动时还没有这张表，必须重新加载后再读 schema。
+            # 配置模板在导入时写入磁盘。当前进程启动时尚未生成该数据表，必须重新加载后再读取 schema。
             from akaribot.core.builtins.config import CFGManager
 
             CFGManager.load()
@@ -446,7 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyError as exc:
         print(f"配置表不存在：{exc}", file=sys.stderr)
         return 2
-    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息面向调用方展示。
         print(f"配置操作失败：{exc}", file=sys.stderr)
         return 1
 

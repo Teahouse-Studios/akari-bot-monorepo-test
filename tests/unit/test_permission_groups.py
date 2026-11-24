@@ -151,7 +151,7 @@ async def _test_onebot_permission_groups():
     with patch.object(onebot_context.aiocqhttp_bot, "call_action", new=call_action):
         await OneBotContextManager.grant_permission_group(session, ["QQ|1", "QQ|2"], ["admin"])
         await OneBotContextManager.revoke_permission_group(session, "QQ|1", "admin")
-        # OneBot 没有“管理员”以外的原生权限组，此类请求应被跳过，不发出无效调用
+        # OneBot 没有“管理员”以外的原生权限组，此类请求应当跳过，避免发出无效调用。
         await OneBotContextManager.grant_permission_group(session, "QQ|1", "role|10")
 
     calls = call_action.await_args_list

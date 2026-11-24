@@ -1,4 +1,4 @@
-"""akaribot.core.utils.bud 单元测试 - 花苞（拼手气红包）系统。"""
+"""akaribot.core.utils.bud 花苞系统单元测试。"""
 
 from akaribot.core.builtins.message.chain import MessageChain
 from akaribot.core.builtins.session.info import SessionInfo
@@ -96,18 +96,18 @@ async def _test_bud_refund_on_expiry():
         if status != "success":
             return False
 
-        # 人为将花苞创建时间前移 25 小时，使其过期
+        # 将花苞创建时间前移 25 小时，使其达到过期状态。
         buds = await get_stored_list(BUD_STORE_SCOPE, BUD_STORE_KEY) or []
         for b in buds:
             if b.get("id") == bud["id"]:
                 b["created"] -= 25 * 3600
         await update_stored_list(BUD_STORE_SCOPE, BUD_STORE_KEY, buds)
 
-        # 触发清理与退款
+        # 触发清理与退款流程。
         await find_bud(bud["id"])
 
         refreshed = await SenderUnionInfo.get(union_id=sender.union_id)
-        # 发送者未接收的部分（100 - amount）应退回
+        # 发送者未领取的剩余额度（100 - amount）应当退回。
         return refreshed.petal == 100 - amount
     except Exception:
         return False
@@ -143,7 +143,7 @@ async def _test_release_buds():
 
 @func_case
 async def test_bud(tester: Tester):
-    """akaribot.core.utils.bud: 花苞系统测试"""
+    """akaribot.core.utils.bud 花苞系统测试"""
     await tester.test(_test_split_amount_conservation, "split_amount 总额守恒测试")
     await tester.test(_test_split_amount_avoids_extreme_small_shares, "split_amount 避免极端小额测试")
     await tester.test(_test_split_amount_invalid, "split_amount 非法参数测试")

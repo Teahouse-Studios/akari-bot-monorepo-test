@@ -1147,7 +1147,7 @@ async def _test_target_unbind_during_token_moves_trust_to_current_union():
 
 @func_case
 async def test_captcha(tester: Tester):
-    """captcha：验证码生成、场景前缀、事件幂等及私聊解禁。"""
+    """captcha 的验证码生成、场景前缀、事件幂等及私聊解禁测试。"""
     await tester.test(_test_captcha_indexes_fit_mysql_limit, "验证码数据库索引兼容 MySQL 长度限制")
     await tester.test(_test_emote_choices_are_valid, "表情验证码选项与资源映射")
     await tester.test(_test_captcha_event_and_private_token, "入群事件、场景前缀与私聊 token 验证")

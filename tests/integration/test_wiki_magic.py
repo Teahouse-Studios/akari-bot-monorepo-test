@@ -24,7 +24,7 @@ async def test_wiki_magic_commands(tester: Tester):
         ("~wiki magic {{#bcp47:zh-cn}}", Match("zh-Hans-CN")),
         ("~wiki magic {{PAGENAME}}", Contains("需要页面上下文")),
         ("~wiki magic {{#expr:1/0}}", Contains("求值失败")),
-        ("~wiki magic {{#invoke:Example|main}}", Contains("未支持")),
+        ("~wiki magic {{#invoke:Example|main}}", Contains("不支持的魔术字")),
     ]:
         await tester.integrate(command, expected, command)
     return tester

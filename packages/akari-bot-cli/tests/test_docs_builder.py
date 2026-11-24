@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.builder``：构建编排、指纹复用与强制重建。"""
+"""``akaribot.cli.docs_engine.builder`` 的构建编排、指纹复用与强制重建测试。"""
 
 import json
 from dataclasses import replace
@@ -219,7 +219,7 @@ async def _test_fingerprint_tracks_site_assets_and_icons():
 
 @func_case
 async def test_docs_builder(tester: Tester):
-    """cli.docs.builder: 构建编排与缓存复用"""
+    """cli.docs.builder 构建编排与缓存复用测试"""
     await tester.test(_test_build_reuses_fingerprint_and_force, "指纹复用、内容变更、force 与未知 key")
     await tester.test(_test_build_reports_missing_toolchain, "工具链不可用时报错")
     await tester.test(_test_fingerprint_tracks_site_assets_and_icons, "Logo 内容、文案、图标与包标志参与指纹")

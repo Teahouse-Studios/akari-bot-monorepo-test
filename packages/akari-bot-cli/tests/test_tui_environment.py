@@ -64,7 +64,7 @@ async def _with_page(body, source=None, size=(120, 34)):
 
 
 async def _interpreter_options(app, page, pilot) -> list[str]:
-    # m 打开解释器菜单，返回其中的操作文案。托管方式未知时不弹菜单。
+    # m 打开解释器菜单，返回其中的操作文案。托管方式未知时不弹出菜单。
     await pilot.press("m")
     await pilot.pause()
     if app.screen is page.screen:
@@ -83,7 +83,7 @@ def _select(page, dist: str) -> None:
 
 
 async def _test_lists_every_installed_package():
-    # 包列表包含 httpx 等传递依赖，并区分实例清单记录。
+    # 包列表包含 httpx 等间接依赖，并区分实例清单记录。
     async def body(app, page, pilot, source):
         rows = page.rows
         fields = str(page.query_one("#fields", compat.Static).render())
@@ -126,7 +126,7 @@ async def _test_search_and_filter_narrow_the_list():
 
 
 async def _test_list_keeps_a_highlight_after_rebuild():
-    # 关键回归：过滤会重建列表，ListView 的 clear() 是异步移除，顺序有误时所有行都不高亮。
+    # 关键回归测试，过滤会重建列表，ListView 的 clear() 是异步移除，顺序有误时所有行都不高亮。
     async def body(app, page, pilot, source):
         list_view = page.query_one("#package-list", compat.ListView)
         first = [bool(item.highlighted) for item in list_view.children]
@@ -188,7 +188,7 @@ async def _test_package_probe_failure_degrades():
 
 
 async def _test_install_choice_decides_recording():
-    # 安装前需选择是否写入实例清单，以确定环境重建时是否恢复安装。
+    # 安装前需要选择是否写入实例清单，以确定环境重建时是否恢复安装。
     async def body(app, page, pilot, source):
         page.request_install()
         await pilot.pause()
@@ -260,7 +260,7 @@ async def _test_uninstall_recorded_package_offers_modes():
 
 
 async def _test_uninstall_plain_package_opens_confirm():
-    # 没有记录在实例清单中的包仍需确认卸载。
+    # 没有记录在实例清单中的包仍需要确认卸载。
     async def body(app, page, pilot, source):
         _select(page, "certifi")
         await pilot.pause()
@@ -299,7 +299,7 @@ async def _test_uninstall_needs_selection():
 
 
 async def _test_package_change_while_running_notes_restart():
-    # 运行期间允许修改 site-packages，已导入模块需重启实例后更新。
+    # 运行期间允许修改 site-packages，已导入模块需要在重启实例后更新。
     source = _source(running=True)
 
     async def body(app, page, pilot, source):
@@ -561,7 +561,7 @@ async def _test_narrow_layout_keeps_package_list_usable():
 
 @func_case
 async def test_tui_environment(tester: Tester):
-    """cli.tui.environment: 环境清单、包装卸与环境动作测试"""
+    """cli.tui.environment 环境清单、包安装卸载与环境操作测试"""
     _use_cli_locale()
     # 交互用例关闭防抖延迟，重复触发保护由专项用例验证。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):

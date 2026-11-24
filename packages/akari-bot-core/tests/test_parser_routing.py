@@ -1,4 +1,4 @@
-"""akaribot.modules.core.admin_tools.alias 单元测试 - 自定义别名改写。"""
+"""akaribot.modules.core.admin_tools.alias 自定义别名改写单元测试。"""
 
 from types import SimpleNamespace
 

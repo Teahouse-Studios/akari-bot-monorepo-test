@@ -17,7 +17,7 @@ from akaribot.core.i18n import Locale
 
 I18N_COMMENT_PATTERN = re.compile(r"^#\s*\{I18N:(?P<key>[^}]+)}\s*$")
 
-# 已补充过缺失键的模板。同一模板在进程内只处理一次，避免重复扫描全部字段。
+# 已补充过缺失键的模板。同一模板在进程内仅处理一次，避免重复扫描全部字段。
 _ensured: set[type] = set()
 
 
@@ -53,8 +53,8 @@ def write_missing_key(
         cfg_name = "config"
         target = "secret" if secret else "config"
 
-    # 此处不可再经由来源实现获取 default_locale：配置文件一旦损坏，读取同样失败，
-    # 将再次进入本分支形成递归。改为直接读取顶层键，取不到则使用默认值。
+    # 此处不可再通过来源实现获取 default_locale，配置文件一旦损坏，读取同样失败，
+    # 将再次进入本分支形成递归。转为直接读取顶层键，获取失败则使用默认值。
     get_locale = Locale(values.get("config", {}).get("default_locale") or default_locale)
     if cfg_name not in values:
         values[cfg_name] = toml_document()
@@ -116,10 +116,10 @@ def resolve_generated_value(value: Any, cfg_type: type | tuple | None) -> Any:
         if isinstance(cfg_type, tuple):
             cfg_type_str = "(" + ", ".join(map(lambda ty: ty.__name__, cfg_type)) + ")"
         else:
-            # 联合类型等对象不具有 __name__，无法取得时退回通用占位符，避免生成注释的过程中断
+            # 联合类型等对象不具有 __name__，无法获取时退回通用占位符，避免生成注释的过程中断。
             cfg_type_str = getattr(cfg_type, "__name__", None)
-    # 生成模式下无论类型是否可用，均须写入占位符：
-    # 若保留 None，写入不会建立该配置项，随后读取其注释时将抛出 NonExistentKey
+    # 生成模式下无论类型是否可用，均需要写入占位符，因为
+    # 若保留 None，写入不会建立该配置项，随后读取其注释时将抛出 NonExistentKey。
     if cfg_type_str == "list":
         return []
     if cfg_type_str:
@@ -134,8 +134,8 @@ def repair_i18n_comments(values: dict[str, TOMLDocument]) -> int:
     :return: 被替换或清空的注释数量。
     """
     locale = Locale(values.get("config", {}).get("default_locale") or default_locale)
-    # 该方法也可能被独立脚本调用。若调用方尚未连接 i18n 快照，所有键都会表现为未翻译。
-    # 此时不得把已有标记误判为过时内容并批量清空。
+    # 该方法也可能被独立脚本调用。若调用方尚未连接 i18n 快照，所有键均会表现为未翻译。
+    # 此时不得把已有标记误判定为过时内容并批量清空。
     if localized_config_text(locale, "config.header.line.1") is None:
         return 0
     repaired = 0
@@ -178,7 +178,7 @@ def ensure_fields(cls: type) -> None:
         return
     if cls in _ensured:
         return
-    # 模板类在导入期即补充缺失键，导入方未必已自举（如单独导入某包的 config 模块）。
+    # 模板类在导入阶段即补充缺失键，导入方未必已完成初始化（如单独导入某包的 config 模块）。
     from akaribot.core.builtins.config.bootstrap import bootstrap_config
 
     bootstrap_config()
@@ -195,7 +195,7 @@ def ensure_fields(cls: type) -> None:
             _generate=True,
             standalone_comment_keys=field["standalone_comment_keys"],
         )
-        # 逐个字段写盘：写入过程会触发 watch() 热重载，整批结束再保存会丢失中途重载前的改动。
+        # 逐个字段写入磁盘，因为写入过程会触发 watch() 热重载，整批结束再保存会丢失中途重载前的改动。
         source.save()
     _ensured.add(cls)
 

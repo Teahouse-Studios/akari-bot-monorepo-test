@@ -34,11 +34,11 @@ from akaribot.cli.process import (
     stop_process,
 )
 
-# 被覆写方法的 ctx 参数类型。typer ≥0.27 把 click 内置为 ``typer._click`` 且不再声明外部 click
-# 依赖，``click.Context`` 既不是同一个类、干净安装里也 import 不到（CLI wheel 曾因此装完即崩）。
+# 被覆写方法的 ctx 参数类型。typer ≥0.27 将 click 内置为 ``typer._click`` 且不再声明外部 click
+# 依赖，此处直接尝试 typer._click.Context，降级时再退回 click.Context。
 try:
     from typer._click import Context as ClickContext
-except ImportError:  # typer <0.27 用真实 click，该版本由 typer 自己声明这条依赖
+except ImportError:  # typer <0.27 使用真实 click，该版本由 typer 声明这条依赖。
     from click import Context as ClickContext
 
 console = Console()
@@ -65,7 +65,7 @@ class FlatCommandGroup(TyperGroup):
     passthrough_extra_args = False
 
     def collect_usage_pieces(self, ctx: ClickContext) -> list[str]:
-        """usage 里不追加子命令占位符。"""
+        """usage 中不追加子命令占位符。"""
         return super(TyperGroup, self).collect_usage_pieces(ctx)
 
     def parse_args(self, ctx: ClickContext, args: list[str]) -> list[str]:
@@ -86,23 +86,23 @@ class FlatCommandGroup(TyperGroup):
 
 
 class PassthroughCommandGroup(FlatCommandGroup):
-    """把未识别参数原样透传给 core 的单命令分组。"""
+    """将未识别参数原样传递给 core 的单命令分组。"""
 
     passthrough_extra_args = True
 
 
 INSTANCE_META_FILENAME = "akaribot.toml"
-# 非托管模式要用的解释器路径。冻结产物下没有可用的 sys.executable。
+# 非托管模式所使用的解释器路径。冻结产物下无可用 sys.executable。
 PYTHON_ENV = "AKARIBOT_PYTHON"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 CORE_ENTRYPOINT_PREFIX = "akaribot.core.entrypoints"
 LOCK_FILENAME = ".bot.lock"
-# 实例 ID 的形态：它是 ``target_id`` 前缀的一部分，用小写字母、数字与下划线，建好后不可改名。
+# 实例 ID 是 ``target_id`` 前缀的一部分，由小写字母、数字与下划线组成，创建后不可重命名。
 INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 DEFAULT_VENV = ".venv"
 DEFAULT_LOCALE = "zh_cn"
 DEFAULT_REGISTRY_SOURCE = "https://akaribot.teahou.se/registry.json"
-# 实例目录结构见 monorepo_refactor_plan.md §2.3。config 的子树由 config sync 按需补齐。
+# 实例目录结构参见 monorepo_refactor_plan.md §2.3。config 的子树由 config sync 按需补齐。
 INSTANCE_DIRS = (
     "config",
     "config/core",
@@ -117,7 +117,7 @@ INSTANCE_DIRS = (
 
 
 def no_instance_hint() -> str:
-    """不在任何实例内时的可执行提示。运行期取值，不冻结语言。"""
+    """不在任何实例内时的可执行提示。运行阶段取值，不冻结语言。"""
     return i18n.t("cli.error.not_instance_hint")
 
 
@@ -126,7 +126,7 @@ class CliError(Exception):
 
 
 class InstanceNotFound(CliError):
-    """实例根不存在或其中没有 akaribot.toml。"""
+    """实例根目录不存在或其中未包含 akaribot.toml。"""
 
 
 class CoreInvocationError(CliError):
@@ -144,7 +144,7 @@ class CoreInvocationError(CliError):
 
 
 def fail(message: str, *, code: int = 1) -> NoReturn:
-    """打印错误并退出。消息须自带可执行的下一步提示。"""
+    """打印错误并退出。消息需要包含可执行的下一步提示。"""
     err_console.print(f"[bold red]{i18n.t('cli.common.error_label')}[/bold red] {message}")
     raise typer.Exit(code)
 
@@ -170,7 +170,7 @@ def now_iso() -> str:
 
 
 def split_names(values: Sequence[str] | None) -> list[str]:
-    """把可重复选项与逗号分隔写法拆成名字列表，去重并保持顺序。"""
+    """将可重复选项与逗号分隔写法拆分为名称列表，去重并保持顺序。"""
     result: list[str] = []
     for value in values or ():
         for item in str(value).replace("，", ",").split(","):
@@ -198,8 +198,8 @@ def system_python() -> Path:
             return candidate
         raise CliError(i18n.t("cli.instance.python_env_missing", env=PYTHON_ENV, path=candidate))
     # 非冻结时当前解释器就是可用的 Python，且与项目要求的版本一致。
-    # 冻结后 sys.executable 指向 CLI 二进制自身，才需要回退到系统搜索。
-    # 回退时优先带版本号的名字，避免拿到过旧的 python3。
+    # 冻结后 sys.executable 指向 CLI 二进制自身，才需要回退至系统搜索。
+    # 回退时优先采用带版本号的名称，避免获取到过旧的 python3。
     if not (getattr(sys, "frozen", False) or "__compiled__" in globals()):
         return Path(sys.executable)
     for name in ("python3.13", "python3.12", "python3", "python"):
@@ -310,7 +310,7 @@ class PackageInfo:
 
     @property
     def display_name(self) -> str:
-        """列表展示用的短名，取不到短名时退回分发名。"""
+        """列表展示用的简称，无法获取简称时回退至包名。"""
         return self.name or self.dist
 
     @classmethod
@@ -369,7 +369,7 @@ def _as_tuple(value: Any) -> tuple[str, ...]:
     return ()
 
 
-# 按分发名去重需求串，保留首次出现的写法。认不出名字的写法按整串比较。
+# 按包名去重依赖声明，保留首次出现的写法。无法识别包名的声明按完整字符串比对。
 def _dedupe_specs(values: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -561,7 +561,7 @@ class InstanceMeta:
 
     @property
     def name(self) -> str:
-        """实例名。"""
+        """实例名称。"""
         return str(self._section("instance").get("name", "default"))
 
     @property
@@ -581,17 +581,17 @@ class InstanceMeta:
 
     @property
     def venv(self) -> str:
-        """实例 venv 的相对路径。空串表示不托管、使用当前环境。"""
+        """实例 venv 的相对路径。空字符串表示不托管、使用当前环境。"""
         return str(self._section("runtime").get("venv", ""))
 
     @property
     def requirements(self) -> tuple[str, ...]:
-        """实例清单里记录的运行库需求串，按记录顺序。"""
+        """实例清单中记录的运行库依赖声明，按记录顺序排列。"""
         return _as_tuple(self._section("runtime").get("requirements", []))
 
     @property
     def workspace_root(self) -> str:
-        """本地工作区根。非空时安装取本地路径。"""
+        """本地工作区根目录。非空时从本地路径安装。"""
         return str(self._section("dev").get("workspace_root", ""))
 
     @property
@@ -601,15 +601,15 @@ class InstanceMeta:
         return _as_tuple(value)
 
     def set_venv(self, value: str) -> None:
-        """设置 venv 相对路径。空串表示释放托管。"""
+        """设置 venv 相对路径。空字符串表示释放托管。"""
         self._section("runtime")["venv"] = value
 
     def set_requirements(self, values: Sequence[str]) -> None:
-        """设置记录的运行库需求串，按分发名去重后写盘。"""
+        """设置记录的运行库依赖声明，按包名去重后写入磁盘。"""
         self._section("runtime")["requirements"] = _dedupe_specs(values)
 
     def set_workspace_root(self, value: str) -> None:
-        """设置本地工作区根。"""
+        """设置本地工作区根目录。"""
         self._section("dev")["workspace_root"] = value
 
     def set_locale(self, value: str) -> None:
@@ -621,7 +621,7 @@ class InstanceMeta:
         self._section("instance")["mode"] = value
 
     def save(self) -> None:
-        """原子写回 ``akaribot.toml``，未知键与注释一并保留。"""
+        """原子写入 ``akaribot.toml``，未知键与注释一并保留。"""
         text = tomlkit.dumps(self.doc)
         temporary = self.path.with_name(self.path.name + ".tmp")
         temporary.write_text(text, encoding="utf-8")
@@ -660,8 +660,8 @@ class NotifyResult:
 
 
 def _parse_notify_payload(stdout: str | None) -> Mapping[str, Any] | None:
-    # 入口只写一行 JSON，但 stdout 可能被警告或第三方输出污染，故自末行向前找第一段可解析且带
-    # ``status`` 的对象。找不到时返回 ``None``，由调用方退回退出码与 stderr 的解释。
+    # 入口仅输出一行 JSON，但 stdout 可能被警告或第三方输出污染，因此从末行向前查找第一段可解析且带
+    # ``status`` 的对象。未查询到时返回 ``None``，由调用方回退至退出码与 stderr 的解释。
     for line in reversed((stdout or "").splitlines()):
         text = line.strip()
         if not text:
@@ -700,7 +700,7 @@ class Instance:
         workspace_root: str = "",
         mode: str = "installed",
     ) -> Instance:
-        """构造不读磁盘的实例对象，供写盘前的解析与 ``--dry-run`` 使用。"""
+        """构造不读取磁盘的实例对象，供写入磁盘前的解析与 ``--dry-run`` 使用。"""
         resolved = Path(root).expanduser().resolve()
         meta = InstanceMeta.create(resolved, locale=locale, venv=venv, workspace_root=workspace_root, mode=mode)
         return cls(resolved, meta=meta)
@@ -751,7 +751,7 @@ class Instance:
 
     @property
     def workspace_root(self) -> Path | None:
-        """本地工作区根。未配置时为 ``None``。"""
+        """本地工作区根目录。未配置时为 ``None``。"""
         value = self.meta.workspace_root
         return Path(value).expanduser().resolve() if value else None
 
@@ -761,7 +761,7 @@ class Instance:
         return self.root / "config"
 
     def core_module(self, entrypoint: str) -> str:
-        """把入口名补成完整模块路径。已含点号者原样返回。"""
+        """将入口名补全为完整模块路径。已包含点号时原样返回。"""
         if "." in entrypoint:
             return entrypoint
         return f"{CORE_ENTRYPOINT_PREFIX}.{entrypoint}"
@@ -857,12 +857,12 @@ class Instance:
         return packages
 
     def invalidate(self) -> None:
-        """清空已装包缓存与 registry 回传缓存。"""
+        """清空已安装包缓存与 registry 回传缓存。"""
         self._installed = None
         self._registry_payload = None
 
     def find_package(self, name: str) -> PackageInfo | None:
-        """按分发名、短名或导入路径查找已装包。"""
+        """按包名、简称或导入路径查找已安装包。"""
         packages = self.installed()
         wanted = _canonical(name)
         if wanted in packages:
@@ -1091,7 +1091,7 @@ class Instance:
             if status == "error":
                 return NotifyResult(True, False, i18n.t("cli.instance.notify_not_delivered", error=detail), status)
 
-        # 回传不可解析（core 版本过旧、入口缺失、进程被信号杀死）时退回退出码与 stderr 的既有解释。
+        # 回传不可解析（core 版本过旧、入口缺失、进程被信号杀死）时回退至退出码与 stderr 的既有解释。
         detail = self._explain_failure(proc, i18n.t("cli.instance.notify_failed", remote=remote))
         return NotifyResult(True, False, detail, "error")
 
@@ -1099,7 +1099,7 @@ class Instance:
         if not self.python_exists:
             raise CliError(i18n.t("cli.instance.python_missing", python=self.python))
         try:
-            # 子进程按 cwd 解析实例内的相对路径（默认 SQLite 链接即其一），不锚定实例根就会落到调用目录。
+            # 子进程按 cwd 解析实例内的相对路径（默认 SQLite 连接即其中之一），若不以实例根目录为基准，则会解析至当前调用目录。
             completed = subprocess.run(  # noqa: S603
                 argv,
                 env=self.core_env(**env),
@@ -1163,7 +1163,7 @@ def _canonical(name: str) -> str:
 
 def _iter_package_items(payload: Any) -> list[Mapping[str, Any]]:
     # 兼容顶层数组、``packages``/``entries``/``installed`` 列表、``modules`` 与 ``adapters``
-    # 分组，以及“分发名到对象”的映射四种形态，core 侧只需命中其一。
+    # 分组，以及“包名到对象”的映射四种形态，core 仅需满足其中一项。
     if isinstance(payload, list):
         return [item for item in payload if isinstance(item, Mapping)]
     if not isinstance(payload, Mapping):
@@ -1228,7 +1228,7 @@ def registry_default_root() -> Path | None:
         registry = InstanceRegistry()
         name = registry.default_name()
         entry = registry.get(name) if name else None
-    except Exception:  # noqa: BLE001 - 注册表不可用按“没有默认实例”处理
+    except Exception:  # noqa: BLE001 - 注册表不可用时按“无默认实例”处理。
         return None
     if entry is None or not entry.exists:
         return None
@@ -1253,7 +1253,7 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
 
 
 def default_instance_root() -> Path:
-    """默认实例根。未定位到时退回当前工作目录，供各页数据源构造子进程用。"""
+    """默认实例根目录。未定位到时回退至当前工作目录，供各页面数据源构造子进程使用。"""
     return resolve_instance_root() or Path.cwd().resolve()
 
 
@@ -1290,13 +1290,13 @@ def resolve_instance(
                     "cli.instance.not_instance_env", env=INSTANCE_DIR_ENV, path=override, meta=INSTANCE_META_FILENAME
                 )
             )
-        # 这条是“既没给路径也没设环境变量”的独立场景，需要完整诊断句而不只是操作提示。
+        # 此项属于“既未指定路径也未设置环境变量”的独立场景，需要完整诊断说明而非仅提供操作提示。
         raise InstanceNotFound(i18n.t("cli.error.not_instance"))
     return Instance(root, python_override=python_override)
 
 
 def require_instance(path: Path | None = None, *, python_override: Path | None = None) -> Instance:
-    """命令层入口：解析实例，失败时打印提示并退出。"""
+    """命令层入口，解析实例并在失败时打印提示后退出。"""
     try:
         instance = resolve_instance(path, python_override=python_override)
     except InstanceNotFound as exc:
@@ -1306,7 +1306,7 @@ def require_instance(path: Path | None = None, *, python_override: Path | None =
 
 
 def relative_venv_display(instance: Instance) -> str:
-    """venv 路径的展示形式：托管模式显示相对路径，非托管模式显示当前解释器。"""
+    """venv 路径的展示形式，托管模式显示相对路径，非托管模式显示当前解释器。"""
     if instance.managed:
         return instance.meta.venv
     return i18n.t("cli.instance.unmanaged_python", python=instance.python)

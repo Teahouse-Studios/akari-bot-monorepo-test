@@ -1,4 +1,4 @@
-"""模块 hook 的共享执行基础与具名分发器。"""
+"""模块 hook 的共享执行基础与带名称的分发器。"""
 
 from .executor import (
     DEFAULT_HOOK_TIMEOUT,

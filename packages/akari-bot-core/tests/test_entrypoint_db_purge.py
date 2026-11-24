@@ -143,7 +143,7 @@ def _test_human_output_reports_missing_tables():
 
 @func_case
 async def test_entrypoint_db_purge(tester: Tester):
-    """core.entrypoints.db: 卸载清理入口测试"""
+    """core.entrypoints.db 卸载清理入口测试"""
     await tester.test(_test_declared_tables_come_from_manifest, "表名只来自 manifest")
     await tester.test(_test_unknown_distribution_is_rejected, "未安装分发被拒绝")
     await tester.test(_test_package_without_declared_tables_is_rejected, "未声明表的包被拒绝")

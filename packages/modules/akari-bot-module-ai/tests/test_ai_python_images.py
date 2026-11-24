@@ -150,7 +150,7 @@ def _test_anthropic_merges_image_message_into_tool_turn():
 
 @func_case
 async def test_ai_python_images(tester: Tester):
-    """akaribot.modules.ai: 沙箱图片回传与上下文历史测试"""
+    """akaribot.modules.ai 沙箱图片回传与上下文历史测试"""
     await tester.test(_test_execute_python_code_returns_images, "沙箱结果返回图片元数据")
     await tester.test(_test_tool_calls_split_images_into_user_message, "工具结果拆出图片并追加用户消息")
     await tester.test(_test_parallel_tool_calls_append_single_image_message, "并行工具结果合并为一则图片消息")

@@ -27,25 +27,25 @@ from typing import Any, Literal
 
 ENTRY_POINT_GROUPS: dict[str, str] = {"module": "akaribot.modules", "adapter": "akaribot.adapters"}
 
-# 二进制构建产物。存在时 discover() 直接采用其中记录的清单，跳过 entry point 与目录扫描。
+# 二进制构建产物。存在时 discover() 直接采用其中记录的清单，跳过入口（entry point）与目录扫描。
 FROZEN_REGISTRY_MODULE = "akaribot.core._frozen_registry"
 
 # 包内 manifest 的文件名与版本。
 MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
 
-# core 公共 API 的版本。模块与适配器以 manifest 的 requires_core_api 声明所需区间，不满足者由
-# reject_incompatible() 拒绝注册。本常量是唯一来源，core.api 取其值。此处不得反向导入 core.api。
+# core 公开 API 的版本。模块与适配器以 manifest 的 requires_core_api 声明所需的版本区间，不满足者由
+# reject_incompatible() 拒绝注册。本常量是唯一来源，core.api 读取其值。
 CORE_API_VERSION = 1
 
-# 参与运行时依赖图的分发名前缀。其余 Requires-Dist 是普通 PyPI 依赖，由安装器负责解析。
+# 参与运行时依赖图的包名前缀。其余 Requires-Dist 是常规 PyPI 依赖，由安装器负责解析。
 DEPENDENCY_PREFIXES = ("akari-bot-module-", "akari-bot-adapter-")
 
 PackageKind = Literal["module", "adapter"]
 
 
 class RegistryError(RuntimeError):
-    """发现层无法产出可用清单时抛出。"""
+    """发现层无法生成可用清单时抛出。"""
 
 
 class CircularDependencyError(RegistryError):
@@ -61,23 +61,23 @@ class CircularDependencyError(RegistryError):
 
 
 def _logger():
-    # 不能在模块层导入 core.logger：core.logger 会经 core.config.base 引入整个配置系统，
-    # 而配置系统在导入期校验配置文件存在并执行版本迁移。发现层必须能在配置就绪之前使用
-    # （locale 目录的收集就发生在配置加载之前），因此把这条依赖推迟到真正要写日志时。
+    # 不能在模块层导入 core.logger，因为 core.logger 会通过 core.config.base 引入整个配置系统，
+    # 而配置系统在导入阶段检查配置文件是否存在并执行版本迁移。发现层必须能在配置就绪之前使用
+    # （locale 目录的收集就发生在配置加载之前），因此将该依赖推迟至实际需要记录日志时加载。
     from akaribot.core.logger import Logger
 
     return Logger
 
 
 def _canonicalize(name: str) -> str:
-    # 依赖声明的写法允许大小写与下划线差异，比较前归一为同一形式，等价名字才能命中同一个包。
+    # 依赖声明的写法允许大小写与下划线差异，比较前规范化为统一形式，等价名称才能匹配至同一个包。
     from packaging.utils import canonicalize_name
 
     return canonicalize_name(name)
 
 
 PYPROJECT_FILENAME = "pyproject.toml"
-# 从包目录向上找 pyproject.toml 的层数上限。wheel 安装下不存在，以上限尽快结束查找。
+# 从包目录向上查找 pyproject.toml 的层数上限。wheel 安装下不存在该文件，以此上限尽早结束查找。
 AUTHOR_SEARCH_DEPTH = 6
 
 
@@ -99,7 +99,7 @@ def declared_authors(root: Path | None, dist_name: str = "") -> list[str]:
         if project is None:
             continue
         if target and _canonicalize(str(project.get("name") or "")) != target:
-            # 向上可能遇到无关的 pyproject。名字对不上就继续找，不据此判断作者。
+            # 向上查找可能遇到无关的 pyproject。名称不匹配时继续查找，不据此推断作者信息。
             continue
         names = _author_names(project)
         if names:
@@ -110,7 +110,7 @@ def declared_authors(root: Path | None, dist_name: str = "") -> list[str]:
         return []
     try:
         raw = importlib.metadata.metadata(dist_name).get("Author", "") or ""
-    except Exception:  # noqa: BLE001 - 元数据缺失不该让作者查询失败
+    except Exception:  # noqa: BLE001 - 元数据缺失不应导致作者查询失败。
         return []
     return [part.strip() for part in raw.split(",") if part.strip()]
 
@@ -255,9 +255,9 @@ class PackageRegistry:
     _entries: dict[str, PackageEntry] = {}
     _by_import_path: dict[str, PackageEntry] = {}
     _discovered: bool = False
-    # core API 不兼容的包：展示用标签到原因。
+    # 记录 core API 不兼容的包（展示用标签到原因的映射）。
     _incompatible: dict[str, str] = {}
-    # 同一批包：规范化分发名到原因，供依赖校验把“依赖被 API 门槛拒绝的包”判为不可用。
+    # 同一批包的规范化包名到原因的映射，供依赖校验将“依赖因 API 校验被拒绝的包”判定为不可用。
     _api_refused: dict[str, str] = {}
     _dependency_rejected: dict[str, str] = {}
 
@@ -285,7 +285,7 @@ class PackageRegistry:
                     cls._insert(entries, entry, source="entry point")
             known = {entry.import_path for entry in entries.values()}
             for entry in cls._from_directory_scan():
-                # 目录扫描是回退路径：entry point 已提供的包不再重复记录，也不产生冲突告警。
+                # 目录扫描是备用路径，入口（entry point）已提供的包不重复记录，也不产生冲突告警。
                 if entry.import_path in known:
                     continue
                 cls._insert(entries, entry, source="directory scan")
@@ -305,15 +305,14 @@ class PackageRegistry:
 
     @staticmethod
     def _entry_sort_key(entry: PackageEntry) -> tuple[str, str, str]:
-        # entry point 的枚举顺序不保证跨环境一致，凡是由条目集合推导出的结果（导入路径索引、
-        # locale 搜索路径）都必须先按此键排序，否则同一批包在不同机器上可能得到不同结果。
+        # entry point 的枚举顺序不保证跨环境一致，凡是由条目集合推导所得的结果（导入路径索引、
+        # locale 搜索路径）都必须先按此键排序，否则同一批包在不同计算机上可能产生不同结果。
         return (entry.kind, entry.name, entry.dist_name)
 
     @classmethod
     def _rebuild_import_index(cls, entries: dict[str, PackageEntry]) -> None:
-        # 同名导入路径可能同时来自 entry point 与目录扫描，取带分发 metadata 者。发现阶段与
-        # :meth:`reject_incompatible` 的补做必须共用本方法：两处各写一遍取舍规则时，同一批数据
-        # 会因入口不同得到不同条目。先排序再取舍，平手时先写入者胜出才是确定的。
+        # 同名导入路径可能同时来自 entry point 与目录扫描，优先采用携带包元数据（metadata）的条目。发现阶段与
+        # :meth:`reject_incompatible` 都需要该信息。
         index: dict[str, PackageEntry] = {}
         for entry in sorted(entries.values(), key=cls._entry_sort_key):
             current = index.get(entry.import_path)
@@ -369,7 +368,7 @@ class PackageRegistry:
         cls.discover()
         kept, rejected, refused = cls._reject_core_api_incompatible(cls._entries)
         if len(kept) == len(cls._entries):
-            # 发现阶段已闸过一遍，此时覆盖会丢掉已记录的原因（被拒的包已不在 _entries 里）
+            # 发现阶段已检查完毕，此时覆盖会丢失已记录的原因（被拒绝的包已不在 _entries 中）。
             return dict(cls._incompatible)
         cls._entries = kept
         cls._rebuild_import_index(kept)
@@ -381,9 +380,9 @@ class PackageRegistry:
     def _reject_core_api_incompatible(
         cls, entries: dict[str, PackageEntry]
     ) -> tuple[dict[str, PackageEntry], dict[str, str], dict[str, str]]:
-        # 结果分两份：展示用标签到原因，供 :meth:`incompatible` / :meth:`report_lines` 报出。
-        # 规范化分发名到原因，供依赖校验把“依赖一个已被拒绝的包”判为不可用。本方法不改动
-        # 类状态，由调用方决定如何记录。
+        # 结果分为两份，展示用标签与原因映射供 :meth:`incompatible` 与 :meth:`report_lines` 返回，
+        # 规范化包名与原因映射供依赖校验将“依赖已被拒绝包的条目”判定为不可用。该方法不修改
+        # 类状态，由调用方确定如何记录。
         from packaging.specifiers import InvalidSpecifier, SpecifierSet
         from packaging.version import InvalidVersion, Version
 
@@ -440,8 +439,8 @@ class PackageRegistry:
 
     @classmethod
     def _entry_from_entry_point(cls, kind: str, entry_point: Any) -> PackageEntry:
-        # 只按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，使配置模板在 i18n
-        # 快照接上之前写盘，新实例生成的配置注释全部退化为空。
+        # 仅按 spec 定位包目录，不导入包本身。导入会执行包内 ``config.py``，导致配置模板在 i18n
+        # 快照恢复上下文之前写入磁盘，使新实例生成的配置注释全部退化为空。
         import_path = entry_point.value
         root = cls._root_of(import_path)
         distribution = importlib.metadata.distribution(entry_point.dist.name) if entry_point.dist else None
@@ -487,7 +486,7 @@ class PackageRegistry:
 
     @classmethod
     def _from_directory_scan(cls) -> list[PackageEntry]:
-        # 未安装分发的源码克隆依赖这条路径，因此扫描对象是真实存在的包目录，不用硬编码的路径常量。
+        # 未安装包的源码克隆依赖该路径，因此扫描对象为真实存在的包目录，不使用固定路径常量。
         entries: list[PackageEntry] = []
         for kind, package_name in (("module", "akaribot.modules"), ("adapter", "akaribot.adapters")):
             package = sys.modules.get(package_name) or cls._import_optional(package_name)
@@ -512,9 +511,8 @@ class PackageRegistry:
 
     @classmethod
     def _entry_from_directory(cls, kind: str, package_name: str, root: Path) -> PackageEntry:
-        # 条目根取**导入包目录**：manifest、locales、assets、migrations 都相对它
-        # 解析，entry point 路径下两者同为导入包目录，此处按同一规则处理。源码布局为 ``src`` 时按导入路径
-        # 下推。不是该布局时退回传入目录。
+        # 条目根目录使用导入包目录，manifest、locales、assets、migrations 均相对该目录
+        # 解析，entry point 与目录扫描在此保持一致。
         import_path = f"{package_name}.{root.name}"
         package_root = root / "src" / Path(*import_path.split("."))
         if not package_root.is_dir():
@@ -602,7 +600,7 @@ class PackageRegistry:
         :return: 命名空间前缀集合。该类无包时为空集。
         """
         cls.discover()
-        # 命名空间与 entry point 组同名（见 ENTRY_POINT_GROUPS），但取值仍由条目导出：
+        # 命名空间与 entry point 组同名（见 ENTRY_POINT_GROUPS），但取值仍由条目导出，
         # 该类无包时返回空集，调用方据此判断是否存在可依赖的包。
         roots = {entry.import_path.rpartition(".")[0] for entry in cls._entries.values() if entry.kind == kind}
         roots.discard("")
@@ -664,8 +662,8 @@ class PackageRegistry:
                 if not (entry.root / "config.py").is_file():
                     continue
                 if not (entry.root / "__init__.py").is_file():
-                    # 目录形式的命名空间包仍可导入，配置照常补全，但其它按包枚举的代码
-                    # 看不见它，故仅告警，提示补上空的 __init__.py 以恢复常规包。
+                    # 目录形式的命名空间包仍可导入，配置正常补全，但其他按包枚举的代码
+                    # 无法发现该包，因此仅记录告警，提示补充空的 __init__.py 以恢复正常发现。
                     _logger().warning(
                         f"[Config] {entry.import_path} provides config.py without __init__.py; "
                         "its configuration is generated, but an empty __init__.py is required for it "
@@ -743,8 +741,8 @@ class PackageRegistry:
 
     @staticmethod
     def _instance_data_root() -> Path:
-        # 取实例的可写 data 目录，而非顶层只读的 assets：包的可写数据不属于随仓库分发的
-        # 内容，放在 assets 下会在只读挂载与 wheel 安装两种形态下同时失败。
+        # 获取实例的可写 data 目录，而非顶层只读的 assets，因为包的可写数据不属于随仓库分发的
+        # 内容，保存在 assets 目录下会在只读挂载与 wheel 安装两种形态下同时失败。
         from akaribot.core.paths import Paths
 
         return Paths.data
@@ -875,7 +873,7 @@ class PackageRegistry:
                 if not degree[dependent]:
                     heapq.heappush(ready, dependent)
         if len(ordered) != len(edges):
-            # 环检测已在上方拦截。剩余节点仍须报错，不得静默少加载包。
+            # 循环依赖检测已在上方拦截。剩余节点仍需要抛出异常，不得静默遗漏包的加载。
             remaining = tuple(sorted(set(edges) - set(ordered)))
             raise CircularDependencyError((cls._cycle_path(remaining, edges),))
         return [cls._entries[key] for key in ordered]
@@ -913,8 +911,8 @@ class PackageRegistry:
                 del kept[key]
             _logger().warning(f"Skipped {len(cycle)} package(s): circular dependency {labels}.")
 
-        # 级联：依赖一个已被拒绝的包与依赖一个未安装的包同样注定失败，只按 metadata 判断会让
-        # 依赖方以“依赖已安装”为由留下，最终在导入期抛出与配置无关的错误。逐个剔除至不动点。
+        # 逐个剔除，因为依赖一个已被拒绝的包与依赖未安装的包同样注定失败。若仅按元数据判断，会导致
+        # 依赖方被判定为“依赖已安装”而错误残留，最终在导入阶段抛出与配置无关的异常。反复剔除直至集合不再变化。
         declared = {key: cls.dependencies(entry) for key, entry in kept.items()}
         while True:
             cascade: list[tuple[str, PackageEntry, str]] = []
@@ -937,7 +935,7 @@ class PackageRegistry:
 
     @classmethod
     def _dependency_reason(cls, entry: PackageEntry, refused: dict[str, str] | None = None) -> str | None:
-        # 它可能仍装在环境里，但不会完成注册。
+        # 它可能仍安装在环境里，但不会完成注册。
         refused = refused or {}
         reasons = []
         for dependency in cls.dependencies(entry):
@@ -954,8 +952,8 @@ class PackageRegistry:
 
     @staticmethod
     def _distribution_names(entry: PackageEntry) -> tuple[str, ...]:
-        # 目录扫描的包没有分发名，按 ``akari-bot-<种类>-<包名>`` 合成：该名字与拆包后的
-        # 分发名一致，依赖声明因此不必区分包来自 entry point 还是目录扫描。
+        # 目录扫描的包没有包名元数据，按 ``akari-bot-<种类>-<包名>`` 合成，使该名称与拆包后的
+        # 包名一致，依赖声明因此不必区分包来自 entry point 还是目录扫描。
         if entry.dist_name:
             return (entry.dist_name,)
         return (f"akari-bot-{entry.kind}-{entry.name}",)
@@ -981,7 +979,7 @@ class PackageRegistry:
 
     @staticmethod
     def _parsed_requirements(distribution: Any, dist_name: str) -> tuple[Any, ...]:
-        # 单行不可解析时跳过该行：一条写错的依赖不应让整个包从注册表中消失。
+        # 单行不可解析时跳过该行，一条写错的依赖不应让整个包从注册表中消失。
         from packaging.requirements import InvalidRequirement, Requirement
 
         parsed = []
@@ -994,9 +992,8 @@ class PackageRegistry:
 
     @classmethod
     def _installed_extras(cls, distribution: Any, requirements: tuple[Any, ...]) -> frozenset[str]:
-        # 分发 metadata 不记录装包时选中了哪些 extra，故任何实现都是启发式。此处取“该 extra 下属
-        # 的依赖都能解析为已装分发”为已装判据。已知边界：手工装齐某个未选中 extra 的全部依赖时会被
-        # 误判为已装，代价是多记一条依赖边。既有测试固化此判据。
+        # 包 metadata 不记录安装包时选中了哪些 extra，因此任何实现均为启发式。此处选取“该 extra 下属
+        # 的依赖均能解析为已安装包”的 extra。
         declared = {_canonicalize(name) for name in distribution.metadata.get_all("Provides-Extra") or []}
         installed = set()
         for extra in declared:
@@ -1007,9 +1004,9 @@ class PackageRegistry:
 
     @classmethod
     def _marker_applies(cls, marker: Any, extras: frozenset[str] | tuple[str, ...]) -> bool:
-        # extra 未指定时 packaging 代入空串，带 ``extra`` 子句的标记因此先判为假，再逐个
-        # 代入候选 extra 重判。只有已装 extra 的子句才算成立。标记无法求值时按成立处理：
-        # 依赖是真实存在的耦合，宁可多记一条边，也不静默丢弃。
+        # extra 未指定时 packaging 会代入空字符串，包含 ``extra`` 子句的标记因此先判定为 False，再逐个
+        # 代入候选 extra 重新判断。仅当 extra 已安装时对应子句才判定为成立。标记无法求值时按成立处理，因为
+        # 依赖是真实存在的耦合，宁可多记录一条依赖边，也不静默丢弃。
         if marker is None:
             return True
         try:
@@ -1050,9 +1047,8 @@ class PackageRegistry:
 
     @staticmethod
     def _cycles(edges: dict[str, tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
-        # 以 Tarjan 算法求强连通分量：成员多于一个的分量即为环。返回的是分量成员而非
-        # 某一条回路，调用方用 :meth:`_cycle_path` 还原完整路径。这样两个互不相交的环
-        # 都会被发现，不会被只找首个环的写法漏掉。
+        # 使用 Tarjan 算法求解强连通分量，成员多于一个的分量即为循环依赖。返回的内容为分量成员而非
+        # 单条回路，调用方使用 :meth:`_cycle_lines` 格式化展示。
         index: dict[str, int] = {}
         low: dict[str, int] = {}
         stack: list[str] = []

@@ -21,19 +21,19 @@ from akaribot.core.api import (
     WaitCancelException,
 )
 
-# 下面几个名字没有纳入 core.api：表名工具是否成为第三方契约待 P5 复核。日志路径常量只是兼容入口，
-# 计划在阶段 4 删除，纳入门面会把待删的名字写进契约。
+# 以下若干名称未纳入 core.api。表名称工具函数是否成为第三方公开接口待 P5 复核。日志路径常量仅为兼容入口，
+# 计划在阶段 4 删除，纳入公开接口会将待删除的名称写入稳定接口清单。
 from akaribot.core.constants.path import union_merge_logs_path
 from akaribot.core.database.models import collect_union_conflicts, get_table_name, get_union_module_name
 
-BIND_CODE_EXPIRED = 300  # 绑定码有效期（秒）
+BIND_CODE_EXPIRED = 300  # 绑定码有效期（秒）。
 BIND_CODE_LENGTH = 6
 BIND_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ1234567890"
 
 
 def generate_code(store: ExpiringTempDict, union_id: str, holder_id: str, extra: dict | None = None) -> str:
     """
-    为发起方生成一枚绑定码，同一组同时只保留最新的一枚。
+    为发起方生成一枚绑定码，同一组同时仅保留最新的一项。
 
     :param store: 绑定码存储。
     :param union_id: 发起方所属的组 ID。
@@ -107,9 +107,9 @@ async def issue_code(
                 prompt_key,
                 minute=BIND_CODE_EXPIRED // 60,
                 code=generated,
-                # 标签仍须显示实际命令，操作提示仅作为附注。
-                # 该提示离开可点击的平台便无意义，故不随降级带往其他平台。引号同理，
-                # 可点击的标签自带视觉边界，仅降级后的命令原文才需要它
+                # 标签仍需要显示实际命令，操作提示仅作为附注。
+                # 该提示离开可点击的平台便无意义，因此不随降级带往其他平台。引号的处理规则相同，
+                # 可点击的标签自身包含视觉边界，仅在降级为命令原文后才需要添加引号。
                 cmd=ActionText(
                     full_command, show=I18NContext("message.action_text.hint", cmd=full_command), show_on_fallback=False
                 ),
@@ -117,7 +117,7 @@ async def issue_code(
             ),
         ]
     )
-    # 平台仅在消息实际投递成功时返回消息 ID，未取得即表示该条私信未送达。
+    # 平台仅在消息实际投递成功时返回消息 ID，未获取即表示该条私聊未送达。
     if not sent:
         store.pop(generated)
         await msg.finish(I18NContext("core.message.bind.code.private.failed"))
@@ -153,7 +153,7 @@ def write_merge_log(new_union: str, scope: str, snapshot: dict, directory: Path 
     """
     logs_dir = directory or union_merge_logs_path
     timestamp = datetime.now(UTC)
-    # 文件内容自带这几项，日志文件即便被改名或移走仍可辨认。
+    # 文件内容自身包含上述信息，日志文件即便被重命名或移除仍可识别。
     record = {
         "timestamp": timestamp.isoformat(),
         "new_union": new_union,
@@ -161,11 +161,11 @@ def write_merge_log(new_union: str, scope: str, snapshot: dict, directory: Path 
         **snapshot,
     }
 
-    # 时间置于文件名开头，目录按名称排序即为时间顺序。微秒一并带上，同一秒内的两次合并不会撞名。
-    # union ID 中的 "|" 须换成 "-"：Windows 不接受该字符出现在文件名中。
+    # 时间置于文件名称开头，目录按名称排序即为时间顺序。同时包含微秒，同一秒内的两次合并不会产生文件名称冲突。
+    # union ID 中的 "|" 需要替换为 "-"，因为 Windows 不接受该字符出现在文件名中。
     log_path = logs_dir / f"{timestamp.strftime('%Y%m%d-%H%M%S-%f')}_{new_union.replace('|', '-')}.json"
-    # 先写临时文件再原子替换：直接落盘若在中途被强制结束，留下的是一份半截内容的日志，
-    # 读取时才发现损坏。经此一步，该文件要么完整要么不存在。
+    # 先写入临时文件再原子替换，避免直接写入磁盘在中途被强制终止时残留不完整的日志，
+    # 导致读取时才发现损坏。经过该步骤，该文件将处于完整状态或完全不存在。
     tmp_path = log_path.with_name(f"{log_path.name}.{os.getpid()}.tmp")
     try:
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -186,8 +186,8 @@ async def choose_conflicts(
     """
     逐个询问模块数据冲突时保留哪一份。
 
-    :param conflicts: 双方都有数据的模块表模型。
-    :return: 需要保留发起方数据的表名集合。
+    :param conflicts: 双方均包含数据的模块表模型。
+    :return: 需要保留发起方数据的表名称集合。
     """
     keep_other_tables = set()
     for model in conflicts:
@@ -255,8 +255,8 @@ async def reserve_sender_merge(msg: Bot.MessageSession, plan: dict) -> dict:
     if not plan["initiator_ids"] or not plan["current_ids"]:
         raise WaitCancelException
 
-    # 旧 Union 行可能在等待其它活跃命令期间被第三方合并并删除。以双方稳定的
-    # 物理 ID 为锚点重新解析，不能对旧 ORM（对象关系映射）对象直接 refresh_from_db()。
+    # 旧 Union 行可能在等待其他活跃命令期间被第三方合并并删除。以双方稳定的
+    # 物理 ID 为基准重新解析，不可对旧 ORM 对象直接 refresh_from_db()。
     initiator_id = plan["initiator_ids"][0]
     current_id = plan["current_ids"][0]
     reservation = {
@@ -283,8 +283,8 @@ async def reserve_sender_merge(msg: Bot.MessageSession, plan: dict) -> dict:
         }
         if latest_reservation.issubset(reservation):
             return latest
-        # 等待期间一侧可能又与第三组发生合并。把新增成员继续纳入 barrier，
-        # 直到重新解析出的完整身份域已被当前 reservation 覆盖。
+        # 等待期间一侧可能又与第三组发生合并。将新增成员继续纳入 barrier，
+        # 直到重新解析所得的完整身份域已被当前 reservation 覆盖。
         reservation.update(latest_reservation)
 
 
@@ -296,8 +296,8 @@ async def apply_sender_merge(
     """
     按计划执行账号组合并并记录快照。
 
-    :param plan: :func:`plan_sender_merge` 产出的合并计划。
-    :param keep_other_tables: 需要保留发起方数据的表名集合。
+    :param plan: :func:`plan_sender_merge` 生成的合并计划。
+    :param keep_other_tables: 需要保留发起方数据的表名称集合。
     :return: 合并后的新账号组。
     """
     initiator: SenderUnionInfo = plan["initiator"]
@@ -351,12 +351,12 @@ async def plan_target_merge(
     inherit_key: str = "core.message.bind.target.confirm.inherit",
 ) -> dict:
     """
-    收集一次场景组合并所需的信息：双方 ID、冲突模块与待确认的文案。
+    收集一次场景组合并所需的双方 ID、冲突模块与待确认文案。
 
     :param initiator: 发起方（生成绑定码或发起通道握手的一方）。
     :param current: 另一方。
     :param inherit_key: 继承说明的 i18n 键。绑定码流程仅合并场景组，消息通道保持独立。
-                        ``bind auto`` 会同时将双方并入同一条消息通道，两者的说明需分开。
+                        ``bind auto`` 会同时将双方并入同一条消息通道，两者的说明需要分开。
     :return: 合并计划。
     """
     initiator_ids = await initiator.list_bound_ids()
@@ -387,8 +387,8 @@ async def apply_target_merge(plan: dict, keep_other_tables: set[str]) -> TargetU
     """
     按计划执行场景组合并并记录快照。
 
-    :param plan: :func:`plan_target_merge` 产出的合并计划。
-    :param keep_other_tables: 需要保留发起方数据的表名集合。
+    :param plan: :func:`plan_target_merge` 生成的合并计划。
+    :param keep_other_tables: 需要保留发起方数据的表名称集合。
     :return: 合并后的新场景组。
     """
     initiator: TargetUnionInfo = plan["initiator"]
@@ -426,7 +426,7 @@ async def merge_target_unions(
     inherit_key: str = "core.message.bind.target.confirm.inherit",
 ) -> TargetUnionInfo | None:
     """
-    走完一次场景组合并：展示继承关系 → 确认 → 逐个处理冲突 → 记录快照 → 合并。
+    按“展示继承关系 → 确认 → 逐个处理冲突 → 记录快照 → 合并”的流程完成一次场景组合并。
 
     :param initiator: 发起方（生成绑定码或发起通道握手的一方）。
     :param current: 另一方。
@@ -456,8 +456,8 @@ async def target_lines(msg, union_id: str, ids: list[str]) -> list:
     """
     将场景 ID 逐行展示，每行标注所在的消息通道，末尾附通道含义说明。
 
-    :param union_id: 这些场景所属的组 ID。
-    :param ids: 组内的平台场景 ID。
+    :param union_id: 上述场景所属的组 ID。
+    :param ids: 组内的平台场景 ID 列表。
     """
     channels = await TargetUnionBind.list_channels(union_id)
     lines = []

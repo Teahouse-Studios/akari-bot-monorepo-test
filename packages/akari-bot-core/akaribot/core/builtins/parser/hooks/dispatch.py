@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 _executor: ParserHookExecutor | None = None
 
-# 出站递归防护：before_send 内再 send 时跳过嵌套 before_send 改写
+# 出站递归防护，在 before_send 内再 send 时跳过嵌套 before_send 改写。
 _outgoing_dispatching: ContextVar[bool] = ContextVar("outgoing_dispatching", default=False)
-# 结果观察递归防护
+# 结果观察递归防护。
 _outgoing_observing: ContextVar[bool] = ContextVar("outgoing_observing", default=False)
 
 
@@ -60,7 +60,7 @@ def is_outgoing_dispatching() -> bool:
 
 
 async def dispatch_outgoing_before_send(msg: "Bot.MessageSession", payload: OutgoingPayload) -> Stop | None:
-    """出站改写。返回 Stop 表示取消本次发送。"""
+    """执行出站改写。返回 Stop 表示取消本次发送。"""
     if is_outgoing_dispatching() or not has_hook_subscribers(HookPoint.OUTGOING_BEFORE_SEND):
         return None
     token = _outgoing_dispatching.set(True)
@@ -103,7 +103,7 @@ async def dispatch_outgoing_result(
 
 
 def reset_parser_hook_executor() -> None:
-    """测试用：丢弃单例，便于替换 ModulesManager。"""
+    """供测试使用，丢弃单例以便替换 ModulesManager。"""
     global _executor
     _executor = None
 

@@ -17,7 +17,7 @@ from akaribot.core.logger import Logger
 from akaribot.core.config.s3 import S3Config, S3SecretConfig
 
 if TYPE_CHECKING:
-    # botocore 属可选依赖（extra ``s3``），只在类型标注中引用。
+    # botocore 属于可选依赖（extra ``s3``），仅在类型标注中引用。
     from botocore.exceptions import ClientError
 
 
@@ -27,7 +27,7 @@ endpoint_url = S3Config.s3_endpoint_url
 bucket = S3Config.s3_bucket
 region = S3Config.s3_region
 
-# 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未装时只在构造处抛出。
+# 可选依赖缺失时的修复指引。boto3 与 botocore 同属 extra ``s3``，未安装时仅在构建实例时抛出异常。
 _S3_DEPENDENCY_HINT = (
     "S3 存储需要可选依赖 boto3，当前环境未安装。请安装 akari-bot-core 的 s3 extra："
     'pip install "akari-bot-core[s3]"（或单独安装 boto3）后重试。'
@@ -35,7 +35,7 @@ _S3_DEPENDENCY_HINT = (
 
 
 def _load_sdk() -> tuple[Any, Any, type[Exception]]:
-    # 默认可不装 boto3（extra ``s3``），故导入期不引入。只有真正创建客户端时才需要。
+    # 默认不需要安装 boto3（extra ``s3``），因此导入阶段不引入。仅在实际创建客户端时才需要导入。
     try:
         import boto3
         from botocore.config import Config as botocore_config
@@ -46,12 +46,12 @@ def _load_sdk() -> tuple[Any, Any, type[Exception]]:
 
 
 def _client_error() -> type[Exception]:
-    # 只在异常冒泡到处理分支时求值：那时客户端已建好，botocore 必然可以导入。
+    # 仅在异常传递至处理分支时求值，届时客户端已创建完成，botocore 必然可以导入。
     return _load_sdk()[2]
 
 
 class S3StorageAPI:
-    """S3 兼容对象存储客户端，提供持久文件和临时文件的上传、列出、删除及预签名链接生成。"""
+    """S3 兼容对象存储客户端，提供持久化文件和临时文件的上传、列出、删除以及预签名链接生成。"""
 
     PERSIST_PREFIX = "persist"
     TEMP_PREFIX = "temp"
@@ -74,7 +74,7 @@ class S3StorageAPI:
         max_attempts: int = 2,
         max_workers: int = 4,
     ):
-        # 先解析 SDK：依赖缺失时在分配线程池之前抛出带指引的异常。
+        # 先解析 SDK，确保依赖缺失时在分配线程池之前抛出带有修复指引的异常。
         boto3, boto_config, _ = _load_sdk()
 
         self._endpoint = endpoint_url.rstrip("/")
@@ -212,7 +212,7 @@ class S3StorageAPI:
         await self._run_sync(self._write_manifest_sync, prefix, files)
 
     async def _update_manifest(self, prefix: str, updater):
-        # updater 可为同步或异步函数。返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
+        # updater 可以是同步或异步函数。返回新列表时写入新列表，返回 None 时保留原地修改后的列表。
         lock = self._manifest_locks.setdefault(prefix, asyncio.Lock())
         async with lock:
             files = await self._read_manifest(prefix)
@@ -345,7 +345,7 @@ class S3StorageAPI:
 
     @staticmethod
     def _build_key(prefix: str, file_path: str | Path, object_key: str | None, file_hash: str) -> str:
-        # 例： ("persist", "/tmp/data.txt", None, "a1b2c3") → "persist/data_a1b2c3.txt"
+        # 示例：("persist", "/tmp/data.txt", None, "a1b2c3") → "persist/data_a1b2c3.txt"
         name = (object_key or Path(file_path).name).lstrip("/")
         stem, sep, ext = name.rpartition(".")
         if sep and stem:

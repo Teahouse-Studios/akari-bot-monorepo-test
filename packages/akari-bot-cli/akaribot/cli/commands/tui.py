@@ -105,7 +105,7 @@ def register_active() -> str:
         return i18n.t("cli.tui_cmd.register_auto_failed", error=f"{type(error).__name__}: {error}")
     if adopted:
         context.set_active_root(root)
-        # register_existing 仅返回新增记录，已有实例的名称需从注册表读取。
+        # register_existing 仅返回新增记录，已有实例的名称需要从注册表读取。
         known = entry if entry is not None else InstanceRegistry().find_by_root(root)
         name = known.name if known is not None else str(root)
         return i18n.t("cli.tui_cmd.discover_done", name=name, root=root, parent=Path.cwd())
@@ -116,7 +116,7 @@ def register_active() -> str:
 
 DASHBOARD_PAGE = "dashboard"
 MODULES_PAGE = "modules"
-# 首屏必查控件缺失表示页面未完整装配。
+# 首屏必须检查的控件缺失表明页面未完成完整装配。
 FIRST_SCREEN_WIDGETS = ("#setup", "#instance-list", "#fields")
 
 
@@ -133,7 +133,7 @@ def run_headless(*, mouse: bool = False) -> int:
     started = time.monotonic()
     first_screen = TuiApp(boot_started_at=started)
     first_failure = _smoke_first_screen(first_screen)
-    # 隐藏页采用惰性加载，因此使用独立应用实例检查模块页的数据读取。
+    # 隐藏页面采用按需加载，因此使用独立应用实例检查模块页的数据读取。
     modules = TuiApp(source=SubprocessModuleSource(), initial_page=MODULES_PAGE, boot_started_at=time.monotonic())
     modules_failure, rows = _smoke_modules(modules)
     calls = _source_calls(modules)
@@ -180,7 +180,7 @@ def _smoke_first_screen(app_instance: Any) -> str:
 
     try:
         return asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 检查失败必须转为非零退出码
+    except Exception as error:  # noqa: BLE001 - 检查失败必须转为非零退出码。
         return f"{type(error).__name__}: {error}"
 
 
@@ -197,12 +197,12 @@ def _smoke_modules(app_instance: Any) -> tuple[str, int]:
 
     try:
         return asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 检查失败必须转为非零退出码
+    except Exception as error:  # noqa: BLE001 - 检查失败必须转为非零退出码。
         return f"{type(error).__name__}: {error}", 0
 
 
 async def _first_screen_failure(app_instance: Any, page: Any, pilot: Any) -> str:
-    # run_worker 在下一轮消息循环中注册任务，须等待后再读取页面状态。
+    # run_worker 在下一轮消息循环中注册任务，需要等待后再读取页面状态。
     await pilot.pause()
     failure = await _page_failure(page, pilot)
     if failure:
@@ -237,7 +237,7 @@ def _missing_widgets(app_instance: Any, selectors: tuple[str, ...]) -> list[str]
     for selector in selectors:
         try:
             app_instance.query_one(selector)
-        except Exception:  # noqa: BLE001 - 未挂载与选择器不存在均按控件缺失处理
+        except Exception:  # noqa: BLE001 - 未挂载与选择器不存在均按控件缺失处理。
             missing.append(selector)
     return missing
 
@@ -334,7 +334,7 @@ def _check_multi_select() -> CheckResult:
 
     try:
         selected, total, installed = asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_multi_select"), f"{type(error).__name__}: {error}")
     if selected != 3 or installed != ["akari-bot-module-bravo", "akari-bot-module-charlie"]:
         return CheckResult(
@@ -383,7 +383,7 @@ def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult
                     broken.append(f"{i18n.t(title_key)}：{failure}")
                 nav = app_instance.query_one("#nav", compat.ListView)
                 visible = app_instance.query_one(f"#page-{key}").display
-                # 侧栏包含分组标题，高亮下标须按应用的导航位置映射计算。
+                # 侧边栏包含分组标题，高亮下标需要按应用的导航位置映射计算。
                 if (
                     app_instance.active_page != key
                     or compat.highlighted_index(nav) != _nav_position(key)
@@ -397,7 +397,7 @@ def _check_page_navigation(sources: dict[str, Any] | None = None) -> CheckResult
 
     try:
         mismatched, unfocused, broken = asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_navigation"), f"{type(error).__name__}: {error}")
     problems: list[str] = []
     if mismatched or unfocused:
@@ -461,12 +461,12 @@ def _self_check_sources() -> dict[str, Any]:
 
 
 async def _page_failure(page: Any, pilot: Any) -> str:
-    # 已完成的 worker 会从 app.workers 移除，须提前保留句柄以读取错误状态。
+    # 已完成的 worker 会从 app.workers 移除，需要提前保留句柄以读取错误状态。
     workers = list(page.app.workers)
     failure = ""
     try:
         await page.wait_for_idle()
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         failure = f"{type(error).__name__}: {error}"
     await pilot.pause()
     if not failure:
@@ -476,12 +476,12 @@ async def _page_failure(page: Any, pilot: Any) -> str:
                 break
     if not failure:
         failure = str(getattr(page, "last_error", ""))
-    # 子进程错误可能包含多行输出，须合并以维持每项诊断一行的格式。
+    # 子进程错误可能包含多行输出，需要合并以维持每项诊断一行的格式。
     return " ".join(failure.split())
 
 
 async def _settle(pilot: Any, done: Any, timeout: float = 5.0) -> bool:
-    # 单次 pause 只推进一帧，慢速平台上 worker 尚未回写，此时按读数检查会误判为失败。
+    # 单次 pause 仅推进一帧，在低速平台上 worker 尚未回写，此时按读数检查会误判定为失败。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         await pilot.pause()
@@ -536,7 +536,7 @@ def _check_available_and_progress() -> CheckResult:
 
     try:
         before, after, lines, status = asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_available"), f"{type(error).__name__}: {error}")
     if after >= before or len(lines) < 2:
         return CheckResult(
@@ -565,7 +565,7 @@ def _check_theme() -> CheckResult:
         app_instance = compat.App()
         compat.install_akari_themes(app_instance)
         variables = app_instance.get_css_variables()
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_theme"), f"{type(error).__name__}: {error}")
     primary = str(variables.get("primary", "")).lower()
     expected = compat.AKARI_DARK_PALETTE["primary"].lower()
@@ -616,7 +616,7 @@ def _check_adapter_install() -> CheckResult:
             await pilot.pause()
             order = page._records_in_row_order()
             label = str(page.query_one("#install", compat.Button).label)
-            # 未安装且未启用的平台不进实例列表，经安装对话框选择后安装。
+            # 未安装且未启用的平台不显示在实例列表中，可通过安装对话框选择后安装。
             await pilot.press("i")
             await pilot.pause()
             await pilot.press("enter")
@@ -627,7 +627,7 @@ def _check_adapter_install() -> CheckResult:
 
     try:
         platforms, label, installed_now = asyncio.run(probe())
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_adapter_install"), f"{type(error).__name__}: {error}")
     if platforms != ["telegram"] or installed_now != ["discord"]:
         return CheckResult(
@@ -653,7 +653,7 @@ def _check_environment() -> list[CheckResult]:
     results: list[CheckResult] = []
     pinned, message = compat.check_textual_version()
     name = i18n.t("cli.tui_cmd.check_textual_version")
-    # compat 消息已包含检查项名称，须去除前缀以避免重复输出。
+    # compat 消息已包含检查项名称，需要去除前缀以避免重复输出。
     detail = message.removeprefix(f"{name}：").removeprefix(f"{name}: ")
     results.append(
         CheckResult(
@@ -691,7 +691,7 @@ def _check_stylesheet() -> list[CheckResult]:
         probe = compat.App()
         compat.install_akari_themes(probe)
         compat.parse_stylesheet(STYLESHEET, "<akaribot-tui>", app=probe)
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留解析异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留解析异常详情。
         results.append(
             CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_stylesheet_parse"), f"{type(error).__name__}: {error}")
         )
@@ -722,7 +722,7 @@ def _check_resources() -> list[CheckResult]:
             )
         )
     else:
-        # 缺少可读资源时无法完成检查，须记为未执行。冻结产物需包含包数据。
+        # 缺少可读资源时无法完成检查，需要标记为未执行。打包产物必须包含包数据。
         results.append(
             CheckResult(
                 LEVEL_SKIP,
@@ -790,7 +790,7 @@ def _check_boot() -> CheckResult:
 
     try:
         rows, detail, size, first_paint = asyncio.run(boot())
-    except Exception as error:  # noqa: BLE001 - 诊断结果需保留启动异常详情
+    except Exception as error:  # noqa: BLE001 - 诊断结果需要保留启动异常详情。
         return CheckResult(LEVEL_FAIL, i18n.t("cli.tui_cmd.check_boot"), f"{type(error).__name__}: {error}")
     return CheckResult(
         LEVEL_OK,

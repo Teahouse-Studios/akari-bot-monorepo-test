@@ -1,4 +1,4 @@
-"""配置读取门面。"""
+"""配置读取公开接口。"""
 
 from typing import Any
 

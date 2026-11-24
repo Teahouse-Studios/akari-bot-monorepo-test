@@ -231,7 +231,7 @@ async def _local_render(document, requests, locale):
         await context.route("**/*", route_request)
         page = await context.new_page()
         page.on("pageerror", lambda error: Logger.warning(f"[Wiki preview] page script error: {str(error)[:200]}"))
-        # 本地应答的虚拟 URL 为站点模块提供正确 origin，不向 Wiki 创建或请求页面。
+        # 本地响应的虚拟 URL 用于为站点模块提供正确 origin，避免向 Wiki 创建或请求页面。
         await page.goto(document_url, wait_until="networkidle", timeout=15000)
         try:
             await page.wait_for_function("window.akariPreviewReady === true", timeout=6000)
@@ -321,7 +321,7 @@ async def _inline_css(css, base, requests, depth=0):
 
 
 async def _remote_render(soup, requests, locale, *, element="body > #mw-content-text"):
-    # 远程接口不支持请求路由，所有资源须先受控下载并内联，CSP 禁止后续联网。
+    # 远程接口不支持请求路由，所有资源必须先受控下载并内联，CSP 禁止后续联网。
     Logger.warning("[Wiki preview] Using restricted rendering: external scripts are removed and resources are inlined")
     requests.warning = True
     watermark = soup.select_one("#akari-preview-watermark")
@@ -463,7 +463,7 @@ async def _local_shell_render(fragment, parsed, page_url, requests, locale):
 
         async def initialized_screenshot(**options):
             page = options["page"]
-            # 替换接口插入的 script 保持惰性。仅显式执行机器人自带的初始化代码。
+            # 替换接口插入的 script 保持惰性。仅显式执行机器人内置的初始化代码。
             await page.evaluate(_PREVIEW_SCRIPTS["watermark"])
             await page.evaluate(_PREVIEW_SCRIPTS["css"])
             config = parsed.get("jsconfigvars", {})

@@ -1,4 +1,4 @@
-"""akaribot.adapters.web.api.webrender 单元测试 - 参数校验与 RPC 转发。"""
+"""akaribot.adapters.web.api.webrender 参数校验与 RPC 转发单元测试。"""
 
 import inspect
 from contextlib import ExitStack, contextmanager
@@ -92,7 +92,7 @@ async def _test_webrender_test_validates_target():
         bad_mode == (422, "invalid_mode")
         and empty_source == (422, "missing_target")
         and empty_screenshot == (422, "missing_target")
-        # 服务端明确回报未启用时，接口同样以 422 呈现原因码
+        # 服务端明确返回未启用时，接口同样以 422 呈现原因码。
         and disabled_result == (422, "web_render_disabled")
     )
 
@@ -111,7 +111,7 @@ async def _test_webrender_test_forwards_dark_mode():
 
 @func_case
 async def test_webui_webrender(tester: Tester):
-    """akaribot.adapters.web.api.webrender: WebRender 接口测试"""
+    """akaribot.adapters.web.api.webrender WebRender 接口测试"""
     await tester.test(_test_webrender_status_merges_config_with_rpc, "WebRender 状态合并测试")
     await tester.test(_test_webrender_status_survives_missing_server, "WebRender 状态降级测试")
     await tester.test(_test_webrender_control_validates_action, "WebRender 控制参数校验测试")

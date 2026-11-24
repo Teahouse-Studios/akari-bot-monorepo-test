@@ -21,9 +21,8 @@ from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
 
 def _load_module_models() -> None:
-    # 转换逻辑要按新模型写入数据，但 core 不得静态依赖任何模块包：模块在拆包后是独立分发，
-    # 未安装时静态导入会让脚本直接导入失败。清单取自 PackageRegistry，未安装的包自然缺席，
-    # 其数据留在旧表里不动。
+    # 转换逻辑需要按新模型写入数据，但 core 不得静态依赖任何模块包。模块拆分后均为独立成员包，
+    # 未安装时静态导入会导致脚本直接导入失败。
     for path in PackageRegistry.db_model_paths():
         module = importlib.import_module(path)
         for name, value in vars(module).items():
@@ -34,7 +33,7 @@ def _load_module_models() -> None:
 _load_module_models()
 
 
-# 这些类定义旧数据库的模式，用于连接旧数据库表并完成数据迁移
+# 该部分类定义旧数据库的模型，用于连接旧数据表并完成数据迁移。
 
 
 class SenderInfoL(Model):
@@ -236,8 +235,8 @@ async def rename_old_tables():
     await Tortoise.init(db_url=get_db_link(), modules={"models": ["akaribot.core.scripts.convert_database"]})
     conn = Tortoise.get_connection("default")
 
-    # 重命名旧表以避免冲突
-    # 带"_old"前缀的表名排在列表末尾，便于管理
+    # 重命名旧数据表以避免冲突。
+    # 带有 "_old" 前缀的表名排在列表末尾，便于管理。
     try:
         await conn.execute_query("ALTER TABLE SenderUnionInfo RENAME TO _old_SenderInfo;")
         await conn.execute_query("ALTER TABLE TargetUnionInfo RENAME TO _old_TargetInfo;")
@@ -265,7 +264,7 @@ async def rename_old_tables():
         await conn.execute_query("ALTER TABLE job_queues RENAME TO _old_job_queues;")
         await conn.execute_query("ALTER TABLE DBVersion RENAME TO _old_DBVersion;")
     except Exception:
-        # 如果表不存在或其他错误，则忽略（可能已经被重命名）
+        # 若数据表不存在或发生其他错误，则予以忽略（该表可能已被重命名）。
         pass
 
     await Tortoise.close_connections()
@@ -277,17 +276,17 @@ async def convert_database():
 
     database_list = fetch_module_db()
 
-    # 第一步：重命名旧表
+    # 第一步执行重命名旧数据表。
     await rename_old_tables()
 
-    # 第二步：初始化新的数据库架构
+    # 第二步初始化新的数据库结构。
     await Tortoise.init(
         db_url=get_db_link(),
         modules={"models": ["akaribot.core.scripts.convert_database", "akaribot.core.database.models"] + database_list},
     )
     conn = Tortoise.get_connection("default")
 
-    # 生成新的数据库架构
+    # 生成新的数据库结构。
     await Tortoise.generate_schemas(safe=True)
 
     Logger.warning("Converting old database data...")
@@ -297,11 +296,11 @@ async def convert_database():
     i = 0
     for r in sender_info_records:
         i += 1
-        # 每处理 1000 条记录显示一次进度
+        # 每处理 1000 条记录输出一次进度。
         if i % 1000 == 0:
             Logger.info(f"Converting SenderUnionInfo {i}/{len(sender_info_records)}...")
         try:
-            # 将旧格式的发送者信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补建。
+            # 将旧格式的发送者信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补充创建。
             await SenderUnionInfo.create(
                 union_id=r.id,
                 blocked=r.isInBlockList,
@@ -314,15 +313,15 @@ async def convert_database():
         except Exception as e:
             Logger.error(f"Failed to convert SenderUnionInfo: {r.id}, error: {e}")
             Logger.error(f"SenderUnionInfo record: {r.__dict__}")
-    # 删除旧表
+    # 删除旧数据表。
     await conn.execute_query("DROP TABLE IF EXISTS _old_SenderInfo;")
 
     Logger.info("Converting TargetUnionInfo...")
 
-    # 获取所有场景信息和黑名单信息
+    # 获取全部场景信息与黑名单信息。
     target_info_records = await TargetInfoL.all()
     group_block_records = await GroupBlockList.all()
-    # 创建黑名单 ID 集合，便于后续查询
+    # 创建黑名单 ID 集合，便于后续查询。
     blocked_target_ids = {record.targetId for record in group_block_records}
     i = 0
     for r in target_info_records:
@@ -330,7 +329,7 @@ async def convert_database():
         if i % 1000 == 0:
             Logger.info(f"Converting TargetUnionInfo {i}/{len(target_info_records)}...")
         try:
-            # 将旧格式的场景信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补建。
+            # 将旧格式的场景信息转换为新格式。旧的平台 ID 直接作为 union ID，映射行在最后统一补充创建。
             await TargetUnionInfo.create(
                 union_id=r.targetId,
                 blocked=False,
@@ -344,7 +343,7 @@ async def convert_database():
             Logger.error(f"Failed to convert TargetUnionInfo: {r.targetId}, error: {e}")
             Logger.error(f"TargetUnionInfo record: {r.__dict__}")
 
-        # 如果场景在黑名单中，更新其 blocked 字段
+        # 若场景处于黑名单中，更新其 blocked 字段。
         if r.targetId in blocked_target_ids:
             try:
                 target_info_record = await TargetUnionInfo.get_by_target_id(r.targetId, create=False)
@@ -356,37 +355,37 @@ async def convert_database():
             except Exception as e:
                 Logger.error(f"Failed to convert TargetUnionInfo: {r.targetId}, error: {e}")
                 Logger.error(f"TargetUnionInfo record: {r.__dict__}")
-    # 删除旧表
+    # 删除旧数据表。
     await conn.execute_query("DROP TABLE IF EXISTS _old_GroupBlockList;")
 
     Logger.info("Converting StoredData...")
 
-    # 转换存储数据，处理 JSON 格式
+    # 转换持久化存储数据，处理 JSON 格式。
     stored_data_records = await StoredDataL.all()
     for r in stored_data_records:
         v = r.value.strip()
-        # 确保值是 JSON 数组格式
+        # 确保取值为 JSON 数组格式。
         if not (v.startswith("[") and v.endswith("]")):
             v = f"[{v}]"
         try:
             try:
-                # 解析 JSON 值
+                # 解析 JSON 键值。
                 v = orjson.loads(v)
             except orjson.JSONDecodeError:
-                # 如果 JSON 解析失败则跳过此项
+                # 若 JSON 解析失败则跳过该项。
                 continue
 
             await StoredData.create(stored_key=r.name, value=v)
         except Exception as e:
             Logger.error(f"Failed to convert StoredData: {r.name}, error: {e}")
             Logger.error(f"StoredData record: {r.__dict__}")
-    # 删除旧表
+    # 删除旧数据表。
     await conn.execute_query("DROP TABLE IF EXISTS _old_TargetInfo;")
     await conn.execute_query("DROP TABLE IF EXISTS _old_StoredData;")
 
     Logger.info("Converting Analytics...")
 
-    # 转换分析数据
+    # 转换统计分析数据。
     analytics_records = await Analytics.all()
     i = 0
     for r in analytics_records:
@@ -412,7 +411,7 @@ async def convert_database():
 
     Logger.info("Converting UnfriendlyActions...")
 
-    # 转换不友好行为记录
+    # 转换不良行为记录。
     unfriendly_action_record = await UnfriendlyActionsTable.all()
     for r in unfriendly_action_record:
         try:
@@ -433,7 +432,7 @@ async def convert_database():
 
     Logger.info("Converting CytoidBindInfo...")
 
-    # Cytoid 模块：绑定信息转换
+    # Cytoid 模块的绑定信息转换。
     cytoid_bind_record = await CytoidBindInfoL.all()
     for r in cytoid_bind_record:
         try:
@@ -448,7 +447,7 @@ async def convert_database():
 
     Logger.info("Converting DivingProberBindInfo...")
 
-    # Maimai 模块：绑定信息转换
+    # Maimai 模块的绑定信息转换。
     maimai_bind_record = await DivingProberBindInfoL.all()
     for r in maimai_bind_record:
         try:
@@ -463,7 +462,7 @@ async def convert_database():
 
     Logger.info("Converting PhigrosBindInfo...")
 
-    # Phigros 模块：绑定信息转换
+    # Phigros 模块的绑定信息转换。
     phigros_bind_record = await PhigrosBindInfoL.all()
     for r in phigros_bind_record:
         try:
@@ -479,7 +478,7 @@ async def convert_database():
 
     Logger.info("Converting WikiTargetInfo...")
 
-    # Wiki 模块：场景设置转换
+    # Wiki 模块的场景设置转换。
     wiki_target_info_record = await WikiTargetInfoL.all()
     for r in wiki_target_info_record:
         try:
@@ -497,7 +496,7 @@ async def convert_database():
 
     Logger.info("Converting WikiSiteInfo...")
 
-    # Wiki 网站信息转换
+    # Wiki 网站信息转换。
     wiki_site_info_record = await WikiSiteInfoL.all()
     for r in wiki_site_info_record:
         try:
@@ -509,21 +508,21 @@ async def convert_database():
 
     Logger.info("Converting WikiAllowList to the global URL allowlist...")
 
-    # 旧 Wiki API 白名单已并入全局 URL 规则文件。全部写入成功后才删除旧表。
+    # 旧 Wiki API 白名单已并入全局 URL 规则文件。全部写入成功后才删除旧数据表。
     wiki_allow_list_record = await WikiAllowListL.all()
     GlobalURLAllowlist.import_user_rules(r.apiLink for r in wiki_allow_list_record)
     await conn.execute_query("DROP TABLE IF EXISTS _old_module_wiki_WikiAllowList;")
 
     Logger.info("Converting WikiBlockList to the global URL blocklist...")
 
-    # 旧 Wiki API 黑名单同样保留为精确规则或带 regex: 前缀的正则规则。
+    # 旧 Wiki API 黑名单同样保留为精确规则或带有 regex: 前缀的正则规则。
     wiki_block_list_record = await WikiBlockListL.all()
     GlobalURLBlocklist.import_user_rules(r.apiLink for r in wiki_block_list_record)
     await conn.execute_query("DROP TABLE IF EXISTS _old_module_wiki_WikiBlockList;")
 
     Logger.info("Converting WikiBotAccountList...")
 
-    # Wiki 机器人账号转换
+    # Wiki 机器人账号转换。
     wiki_account_list_record = await WikiBotAccountListL.all()
     for r in wiki_account_list_record:
         try:
@@ -535,7 +534,7 @@ async def convert_database():
 
     Logger.info("Converting WikiLogTargetSetInfo...")
 
-    # WikiLog 场景设置转换
+    # WikiLog 场景设置转换。
     wikilog_target_set_info_record = await WikiLogTargetSetInfoL.all()
     for r in wikilog_target_set_info_record:
         try:
@@ -547,21 +546,21 @@ async def convert_database():
 
     Logger.info("Building union binds...")
 
-    # 旧库中数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补建映射行。
+    # 旧数据库中的数据与平台 ID 一一对应，转换后 union ID 即为原 ID，据此补充创建映射记录。
     await backfill_union_binds()
 
     Logger.info("Converting DBVersion...")
 
-    # 更新数据库版本信息
+    # 更新数据库版本记录。
     db_v = await DBVersion.first()
     if db_v:
         await db_v.delete()
     await DBVersion.create(version=database_version)
-    # 清理任务队列表
+    # 清理任务队列数据表。
     await conn.execute_query("DROP TABLE IF EXISTS _old_job_queues;")
     await conn.execute_query("DROP TABLE IF EXISTS _old_DBVersion;")
 
-    # 关闭数据库连接
+    # 关闭数据库连接。
     await Tortoise.close_connections()
 
 

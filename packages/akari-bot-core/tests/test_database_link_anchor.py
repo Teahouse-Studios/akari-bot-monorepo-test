@@ -97,7 +97,7 @@ def _test_entrypoint_keeps_artifacts_inside_instance():
 
 @func_case
 async def test_database_link_anchoring(tester: Tester):
-    """相对 SQLite 链接锚定实例根，绝对路径、内存库与非 SQLite 链接不受影响。"""
+    """相对 SQLite 链接以实例根目录为基准，绝对路径、内存数据库与非 SQLite 链接不受影响。"""
     await tester.test(_test_relative_sqlite_is_anchored_to_instance, "相对链接锚定实例根")
     await tester.test(_test_relative_subdirectory_is_anchored_to_instance, "相对子目录锚定实例根")
     await tester.test(_test_absolute_and_memory_links_are_untouched, "绝对路径与内存库保持原样")

@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-ai
 ```
 
-安装后，管理员需要在会话中执行 `module enable ai` 开启模块。
+安装后，管理员需要在会话中执行 `module enable ai` 启用模块。
 
 ## 配置项
 
@@ -20,13 +20,13 @@ akaribot module add akari-bot-module-ai
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `ai_default_llm` | str | 空 | 默认使用的大语言模型，须出现在模型清单中 |
+| `ai_default_llm` | str | 空 | 默认使用的大语言模型，必须出现在模型清单中 |
 | `llm_timeout` | float | 60 | 请求超时时间（秒） |
 | `llm_max_tokens` | int | 2048 | 单次回复的最大 Token 数 |
 | `llm_temperature` | float | 1.0 | 温度采样，范围 0 到 2 |
 | `llm_top_p` | float | 1.0 | 核采样，范围 0 到 1 |
 | `llm_frequency_penalty` | float | 0.0 | 频率惩罚，范围 -2 到 2 |
-| `llm_presence_penalty` | float | 0.0 | 存在惩罚，范围 -2 到 2 |
+| `llm_presence_penalty` | float | 0.0 | 存在惩罚，取值范围为 -2 到 2 |
 | `llm_max_calling_iteration` | int | 5 | 工具调用的最大迭代次数 |
 | `ai_cost_to_petal` | float | 1.0 | 花瓣与调用费用的比率 |
 | `llm_top_logprobs` | int | -1 | 候选 Token 对数概率数量，负数不传入 |
@@ -36,13 +36,13 @@ akaribot module add akari-bot-module-ai
 
 | 文件 | 内容 |
 | --- | --- |
-| `llm_api_list.yaml` | `llm_api_list` 列表，每项含 `name`、`model_name`、`api_url`、`api_key`，可选 `endpoint`（`openai`、`openai-response`、`anthropic`、`gemini`、`gemini-interaction`）、`superuser`、`price_in`、`price_out`、`price_cache_read`、`price_cache_write`、`billing` 与采样参数 |
-| `image_api.yaml` | `image_api` 段含 `model_name`、`base_url`、`api_key` 与 `costs`，缺少 `model_name` 时图像工具不注册 |
+| `llm_api_list.yaml` | `llm_api_list` 列表，每项包含 `name`、`model_name`、`api_url`、`api_key`，可选 `endpoint`（`openai`、`openai-response`、`anthropic`、`gemini`、`gemini-interaction`）、`superuser`、`price_in`、`price_out`、`price_cache_read`、`price_cache_write`、`billing` 与采样参数 |
+| `image_api.yaml` | `image_api` 段包含 `model_name`、`base_url`、`api_key` 与 `costs`，缺少 `model_name` 时图像工具不会注册 |
 | `instructions.txt`、`persona.txt` | 覆盖包内默认的系统提示与人格提示 |
 
 ## 权限与平台能力
 
-命令对平台没有限制。会话是否支持引用回复，决定对话是逐条等待还是连续发送。
+命令对运行平台无特殊限制。会话是否支持引用回复，控制着对话处理是逐条等待回复还是连续发送。
 
 网页抓取工具依赖 WebRender（`webrender.enable`），搜索工具使用 ddgs。花瓣计费仅在 core 开启花瓣系统时生效，余额不足时，调用会在发出前终止。会话级设置写入 Union 数据，包括会话默认模型 `ai_default_llm`、个人开关 `ai_enable_persona` 与 `ai_custom_instructions`。
 
@@ -58,4 +58,4 @@ akaribot module add akari-bot-module-ai
 
 外部服务包括 YAML 清单指定的模型接口、E2B 代码沙箱、ddgs 搜索与 WebRender。
 
-模块提供 Hook `ai.ask`，其他模块可以用它发起一次对话，此 Hook 没有超时限制。参数包括 `prompt`、`instructions`、`llm` 与 `use_tools`，返回 `status`、`text`、`chain`、`petal`、`llm`。
+模块提供 Hook `ai.ask`，供其他模块发起对话调用，该 Hook 未设置超时时限。输入参数包括 `prompt`、`instructions`、`llm` 与 `use_tools`，返回结果包含 `status`、`text`、`chain`、`petal` 与 `llm`。

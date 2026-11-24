@@ -81,7 +81,7 @@ def _test_uninstalled_package_is_not_an_error():
         ):
             try:
                 brand.find_brand_asset("akaribot_logo.png")
-            except Exception:  # noqa: BLE001 - 任何异常都算失败
+            except Exception:  # noqa: BLE001 - 任何异常均视作测试失败。
                 return False
     return True
 
@@ -98,7 +98,7 @@ def _test_real_install_resolves_the_shipped_assets():
 
 @func_case
 async def test_brand_lookup(tester: Tester):
-    """core.utils.brand: 品牌资产回退链测试"""
+    """core.utils.brand 品牌资产回退链测试"""
     await tester.test(_test_package_asset_wins, "资源包优先")
     await tester.test(_test_instance_asset_is_the_fallback, "实例 assets 作为回退")
     await tester.test(_test_missing_everywhere_returns_none, "两处都没有时返回 None")

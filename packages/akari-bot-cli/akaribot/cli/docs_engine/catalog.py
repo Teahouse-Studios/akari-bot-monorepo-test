@@ -58,7 +58,7 @@ def load_catalog(
 
 
 def _package_sort_key(package: DocPackage) -> tuple[int, int, str, str]:
-    # 分组顺序固定，避免首页与导航随包 key 的字母序把适配器排到模块之前。
+    # 分组顺序固定，避免首页与导航随包 key 的字母序将适配器排在模块之前。
     return (_GROUP_RANK.get(package.group, len(GROUP_ORDER)), package.order, package.title, package.key)
 
 
@@ -77,7 +77,7 @@ def _load_remote(
 def _fetch_docs(instance: Any, warnings: list[str]) -> Mapping[str, Any] | None:
     try:
         proc = instance.run_core_capture("docs", "list", "--json", timeout=60.0)
-    except Exception as exc:  # noqa: BLE001 - 子进程形态由实例实现决定，任何失败都只影响目录来源
+    except Exception as exc:  # noqa: BLE001 - 子进程形态取决于实例实现，任何失败均仅影响目录来源。
         warnings.append(f"docs 入口不可用，已回退 registry：{_reason(exc)}")
         return None
     if proc.returncode != 0:
@@ -172,7 +172,7 @@ def _fallback_registry(
 ) -> list[DocPackage]:
     try:
         proc = instance.run_core_capture("registry", "--json")
-    except Exception as exc:  # noqa: BLE001 - 回退本身失败时目录为空，由警告说明原因
+    except Exception as exc:  # noqa: BLE001 - 回退本身失败时目录为空，由警告说明原因。
         warnings.append(f"registry 入口也不可用：{_reason(exc)}")
         return []
     if proc.returncode != 0:
@@ -249,7 +249,7 @@ def _load_local_cli(labels: Mapping[str, str], tags: Sequence[str]) -> DocPackag
         return None
     try:
         version = metadata.version(CLI_DIST)
-    except Exception:  # noqa: BLE001 - 冻结产物可能没有 metadata，版本回退到包内常量
+    except Exception:  # noqa: BLE001 - 冻结产物可能缺失 metadata，版本回退至包内常量。
         version = __version__
     return DocPackage(
         key=CLI_KEY,
@@ -329,7 +329,7 @@ def _read_submenu(path: Path) -> str:
 
 
 def _page_sort_key(page: DocPage) -> tuple[int, int, str]:
-    # 首页与开发页固定首尾，其余页面按 order 与路径排序，侧栏标签顺序才稳定。
+    # 首页与开发页固定首尾，其余页面按 order 与路径排序，侧边栏标签顺序才稳定。
     name = Path(page.path).name
     role = 0 if name == "index.md" else 2 if name == "development.md" else 1
     return (role, page.order, page.path)
@@ -425,7 +425,7 @@ def _format_dependency(text: str) -> str:
 def _dist_dependencies(dist: str) -> list[str]:
     try:
         requires = metadata.requires(dist) or []
-    except Exception:  # noqa: BLE001 - 缺少元数据时按无依赖处理
+    except Exception:  # noqa: BLE001 - 缺少元数据时按无依赖处理。
         return []
     dependencies: list[str] = []
     for item in requires:

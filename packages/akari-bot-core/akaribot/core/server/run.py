@@ -1,7 +1,7 @@
 """
 服务器主运行模块。
 
-该模块是服务器的入口点，负责：
+该模块作为服务器的主入口，包含以下功能：
 - 设置信号处理器（捕获 Ctrl+C）
 - 启动服务器主循环
 - 初始化队列处理
@@ -40,12 +40,12 @@ async def main(process_stop_event=None):
         await init_async(send_prompt=False)
         queue_task = asyncio.create_task(JobQueueServer.check_job_queue(), name="server-queue-poller")
         await JobQueueServer.wait_ready()
-        # 重启提示须等发起者所在客户端完成 Peer 注册，且投递自身依赖队列结果泵，
-        # 故置于当前 Server 注册 ready 并开始轮询之后。
+        # 重启提示需要等待发起者所在客户端完成节点注册，并且投递自身依赖的队列结果泵，
+        # 因此置于当前 Server 注册就绪并开始轮询之后。
         await load_prompt(locale_loaded_err)
         while not stop_event.is_set() and not (process_stop_event and process_stop_event.is_set()):
-            # 队列轮询是 Server 的生命线。它若因数据库或代码异常退出而主循环仍继续，
-            # 进程会表现为在线却不再收发任何消息，守护进程也无法察觉并重启。
+            # 队列轮询是 Server 维持消息收发的核心机制。如果队列轮询因数据库或代码异常退出，而主循环仍在继续，
+            # 进程会表现为在线状态却无法继续收发消息，守护进程也无法感知异常并触发重启。
             done, _ = await asyncio.wait({queue_task}, timeout=1)
             if queue_task in done:
                 if queue_task.cancelled():
@@ -56,8 +56,8 @@ async def main(process_stop_event=None):
     finally:
         Logger.info("Stopping AkariBot Server...")
         await cleanup_sessions()
-        # cleanup_sessions 会在释放依赖 Queue 的后台 context 后停止 poller。初始化在
-        # poller 建立前失败时，仍需在此取消已创建的局部任务。
+        # cleanup_sessions 会在释放依赖 Queue 的后台上下文后停止轮询器。如果初始化在
+        # 轮询器创建前失败，仍需要在此取消已创建的局部任务。
         if queue_task is not None:
             if not queue_task.done():
                 queue_task.cancel()

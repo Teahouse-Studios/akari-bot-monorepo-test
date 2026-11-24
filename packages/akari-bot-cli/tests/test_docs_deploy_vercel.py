@@ -232,7 +232,7 @@ def _test_windows_wraps_batch_launchers():
 
 @func_case
 async def test_docs_deploy_vercel(tester: Tester):
-    """cli.docs.deploy.vercel: Vercel 部署 provider 测试"""
+    """cli.docs.deploy.vercel 的 Vercel 部署 provider 测试"""
     await tester.test(_test_plan_and_dry_run_start_nothing, "计划与试运行不启动子进程")
     await tester.test(_test_deploy_sends_token_only_through_env, "令牌只经环境变量传递")
     await tester.test(_test_project_is_linked_before_deploy, "仅配置项目名时先 link 再 deploy")

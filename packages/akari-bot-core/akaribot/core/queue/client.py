@@ -1,4 +1,4 @@
-"""平台 RPC 实现。普通 ContextManager 方法由共享契约自动绑定。"""
+"""平台 RPC 实现。常规 ContextManager 方法由共享接口定义自动绑定。"""
 
 import asyncio
 from typing import Any
@@ -16,7 +16,7 @@ from .reporting import report_rpc_error
 
 
 class JobQueueClient(JobQueueBase):
-    """平台进程 RPC 消费者及其生命周期。"""
+    """平台进程 RPC 调用方及其生命周期。"""
 
     @classmethod
     async def report_error(cls, method: str, details: str) -> None:
@@ -43,7 +43,7 @@ for _method in vars(PlatformAPI).values():
 async def post_message(
     session_info: SessionInfo, message: MessageChain | MessageNodes, module_name: str = ""
 ) -> list[str]:
-    """主动消息未取得消息 ID 时，将剩余下一跳交回服务端。"""
+    """主动消息未获取消息 ID 时，将剩余下一跳返回给服务端。"""
     ctx_manager = await resolve_context(session_info)
     try:
         sent = await ctx_manager.send_message(session_info, message, quote=False)
@@ -66,7 +66,7 @@ async def post_message(
 
 @PlatformAPI.send_private_msg.bind(JobQueueClient)
 async def send_private_msg(session_info: SessionInfo, user_id: str, message: MessageChain | MessageNodes) -> list[str]:
-    """保留私信发送失败返回空列表的领域约定。"""
+    """保留私聊发送失败返回空列表的领域约定。"""
     ctx_manager = await resolve_context(session_info)
     try:
         return await ctx_manager.send_private_msg(session_info, user_id, message)

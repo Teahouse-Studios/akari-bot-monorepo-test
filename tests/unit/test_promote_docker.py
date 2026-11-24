@@ -82,7 +82,7 @@ def _test_promotion_verifies_final_remote_digest():
 
 @func_case
 async def test_promote_docker(tester: Tester):
-    """稳定 Docker 镜像 promotion 版本与错误处理验证。"""
+    """稳定 Docker 镜像晋升发布（promotion）版本与错误处理验证。"""
     for function, label in (
         (_test_old_run_selects_highest_available_image, "旧运行也选择已构建的最高稳定产品镜像"),
         (_test_new_tag_without_image_keeps_highest_built_version, "尚未构建的新 tag 不覆盖可用镜像"),

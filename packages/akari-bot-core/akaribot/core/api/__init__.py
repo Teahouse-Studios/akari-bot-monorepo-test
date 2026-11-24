@@ -17,14 +17,14 @@ from akaribot.core.api import base as _base
 from akaribot.core.constants.exceptions import ConfigFileNotFound
 from akaribot.core.registry import CORE_API_VERSION
 
-# 与发现层共用同一常量：registry 的 requires_core_api 闸门据此校验包兼容性。方向必须是
-# core.api 依赖 core.registry —— registry 被 core.component 等模块在导入期引用，反向依赖会成环。
+# 与发现层共用同一常量，registry 的 requires_core_api 校验规则据此检查包兼容性。方向必须是
+# core.api 依赖 core.registry —— registry 被 core.component 等模块在导入阶段引用，反向依赖会成环。
 __api_version__ = CORE_API_VERSION
 
 __all__ = ["__api_version__", *_base.__all__]
 
 try:
-    # 复制 base 已解析的名字。配置缺失时该导入会在中途中断，其余名字留给 __getattr__。
+    # 复制 base 已解析的名称。配置缺失时该导入会在中途中断，其余名称留给 __getattr__。
     from akaribot.core.api.base import *
 except ConfigFileNotFound:
     pass
@@ -32,10 +32,10 @@ except ConfigFileNotFound:
 
 def __getattr__(name: str) -> Any:
     """
-    转发到实现模块，使配置缺失时未绑定的名字在首次访问时重试。
+    转发到实现模块，使配置缺失时未绑定的名称在首次访问时重试。
 
-        :param name: 门面名字。
-        :return: 名字对应的对象。
-        :raises AttributeError: 该名字不在门面承诺的清单内。
+        :param name: 公开接口名。
+        :return: 名称对应的对象。
+        :raises AttributeError: 该名称不在公开接口承诺的清单内。
     """
     return getattr(_base, name)

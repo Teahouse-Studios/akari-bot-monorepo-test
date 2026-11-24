@@ -130,7 +130,7 @@ def _test_malformed_baseline_line_is_an_input_error():
 
 @func_case
 async def test_check_test_baseline(tester: Tester):
-    """tools.check_test_baseline: 失败的用例清单对比测试"""
+    """tools.check_test_baseline 失败的用例清单对比测试。"""
     await tester.test(_test_identical_sets_pass, "逐名一致时通过")
     await tester.test(_test_new_failure_fails, "新增失败判失败")
     await tester.test(_test_vanished_failure_fails, "基线残留判失败")

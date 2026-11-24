@@ -1,16 +1,16 @@
 # 常见问题
 
-本文列出常见问题的排查与操作办法。命令与默认值以当前源码为准，权限模型、模块启用与部署细节分别见[权限](permissions.md)、[模块开发](module-development.md)与 [CLI 文档](../../../../akari-bot-cli/akaribot/cli/docs/index.md)。
+本文汇总常见问题的排查与解决方案。相关命令与默认配置均以当前源码实现为准。权限模型、模块启用及部署细节分别参见[权限](permissions.md)、[模块开发](module-development.md)与 [CLI 文档](../../../../akari-bot-cli/akaribot/cli/docs/index.md)。
 
 ## 查看帮助与文档
 
-在聊天中发送 `~help` 查看模块列表与入口，发送 `~help <module>` 查看指定模块的命令、参数与权限。
+在会话中发送 `~help` 可查看可用模块列表与命令入口。发送 `~help <module>` 可获取指定模块的详细命令语法、参数定义及权限要求。
 
-- `--legacy`：强制输出文字或表格版本。
-- `--img`：强制输出图片版本。
-- 平台不支持图片时，命令改用文字版本。
+- `--legacy`：显式输出纯文本或表格版本。
+- `--img`：显式输出图片渲染版本。
+- 若当前平台未声明图片支持能力，帮助命令将自动降级输出文本版本。
 
-文档站点由已安装包内的 `docs/` 汇总生成，常用命令：
+文档站点由已安装成员包内的 `docs/` 资源聚合构建生成，常用运维命令如下：
 
 ```sh
 akaribot docs list
@@ -18,11 +18,11 @@ akaribot docs build
 akaribot docs serve
 ```
 
-构建需要 Node.js 与 npm，版本以主题清单为准。生成物写在实例的 `cache/docs/`。`~help` 底部的在线文档入口来自 `config.toml` 的 `help_url` 与 `help_page_url`。
+文档构建依赖 Node.js 与 npm 环境，具体版本要求以主题清单声明为准。站点生成产物存放于实例目录 `cache/docs/`。`~help` 面板底部的在线文档链接读取自 `config.toml` 中的 `help_url` 与 `help_page_url` 配置项。
 
 ## 模块没有反应或未启用
 
-先确认模块是否安装、是否全局加载、是否在当前场景启用，这是三个独立状态：
+首先确认目标模块是否已安装、是否已全局加载以及是否在当前场景中启用。这三项状态相互独立：
 
 | 状态 | 检查方式 | 修改方式 |
 | --- | --- | --- |
@@ -30,65 +30,65 @@ akaribot docs serve
 | 全局加载 | `akaribot module status` | `akaribot module load <名>` |
 | 场景启用 | `~module list` | `~module enable <名>` |
 
-`base=True` 的基础模块始终启用。普通模块需要场景管理员执行 `~module enable` 启用。
+声明 `base=True` 的核心基础模块始终处于启用状态。普通功能模块需要由场景管理员执行 `~module enable` 手动启用。
 
 - 未启用时，机器人会提示启用命令。
-- 声明了 `required_superuser` 的模块只有超级用户能启用。`~module enable all` 会跳过这些模块。
+- 声明了 `required_superuser` 的模块仅超级用户可以启用。`~module enable all` 会跳过此类模块。
 
-模块已启用但仍不响应时，先检查平台能力与机器人权限：
+若模块处于启用状态但仍未响应指令，请排查平台能力支持与机器人权限：
 
-- `rss` 模块要求平台支持推送。
-- `regex` 与 `event` 模块要求平台可读取全部消息。
-- `required_bot_permissions` 中的权限缺失时，`~module enable` 会列出缺少项。
+- `rss` 模块要求平台具备主动推送能力（`support_rss`）。
+- `regex` 与 `event` 模块要求平台具备全部消息接收权限（`read_all_messages`）。
+- 当机器人缺失 `required_bot_permissions` 声明的必要权限时，`~module enable` 将列出缺失的权限项。
 
-机器人被禁止发言或用户被封禁时，模块不响应。
+当机器人被限制发言或发送者处于封禁状态时，各模块将静默拒绝响应。
 
 ## 提示权限不足
 
-权限分为普通用户、场景管理员、超级用户与基础超级用户，判定与授予方式见[权限](permissions.md)。常见处理：
+权限层级划分为普通用户、场景管理员、超级用户与基础超级用户，鉴权逻辑与授权机制参见[权限说明](permissions.md)。常见处理方案如下：
 
-- 场景管理命令被拒：请场景管理员执行 `~admin add <用户 ID>`，或由平台原生管理员操作。
-- 超级用户命令被拒：请现有超级用户执行 `~superuser add <用户 ID>`。
-- 只有某个模块被拒：请超级用户执行 `~auth add <用户 ID> <模块>`，该授权只对声明 `required_superuser` 的模块有效。
-- 模块开启被拒：可能是模块级权限、机器人权限或平台能力不足，按提示处理。
+- 若场景管理命令被拒绝，可由场景管理员执行 `~admin add <用户 ID>`，或由平台原生管理员操作。
+- 若超级用户命令被拒绝，可由现有超级用户执行 `~superuser add <用户 ID>`。
+- 若仅特定模块被拒绝，可由超级用户执行 `~auth add <用户 ID> <模块>`，该授权仅对声明 `required_superuser` 的模块生效。
+- 若模块开启被拒绝，通常由模块级权限门槛、机器人权限缺失或平台能力不满足导致，请根据返回的提示排查。
 
-`base_superuser` 只能通过 `config.toml` 维护。
+`base_superuser` 仅能通过 `config.toml` 维护。
 
 ## 报告问题与贡献
 
-提交 Issue 前先搜索是否已有相同问题。错误报告应包含简要描述、复现步骤、预期结果、实际结果与日志。功能建议应说明用途与可能的实现方式。仓库地址见 [CONTRIBUTING.md](https://github.com/Teahouse-Studios/akari-bot/blob/master/CONTRIBUTING.md)。Issue 模板见该文件。
+提交 Issue 前必须检索是否已存在同类问题。缺陷报告应当包含简要描述、复现步骤、预期结果、实际表现与相关日志。新功能建议应当阐明应用场景与设计思路。仓库地址与 Issue 模板参见 [CONTRIBUTING.md](https://github.com/Teahouse-Studios/akari-bot/blob/master/CONTRIBUTING.md)。
 
-贡献代码的流程是：先 Fork 仓库，再创建分支、修改并提交 PR。分支名使用英文，新功能用 `dev/`，修复用 `fix/`。提交前运行 Ruff、注释检查、边界检查与版本检查，具体命令见贡献指南。
+代码贡献流程包括 Fork 仓库后创建特性分支，完成改动后发起拉取请求（PR）。分支命名必须采用英文，新功能分支以 `dev/` 为前缀，缺陷修复分支以 `fix/` 为前缀。发起提交前必须执行 Ruff、注释检查、边界检查与版本一致性检查，对应命令参见贡献指南。
 
-翻译经 Weblate 提交。简体中文以外的翻译问题，不建议在 Issue 里讨论。
+多语言翻译统一通过 Weblate 平台提交。简体中文以外的翻译词句讨论，请勿在 GitHub Issue 中提出。
 
 <NoticeBox type="warning" title="安全问题不要公开">
 
-涉及敏感信息的安全问题不要提交到 Issue 或其他公开渠道，应按 `SECURITY.md` 的方式私下联系维护者。
+涉及安全漏洞与敏感信息的缺陷不得提交至公开 Issue 或公开讨论区，请通过 `SECURITY.md` 中列出的私密沟通渠道联系维护团队。
 
 </NoticeBox>
 
 ## 许可证
 
-core、官方模块与适配器使用 AGPL-3.0-only。字体资源使用 OFL-1.1，品牌资产使用专有许可，`akari-bot-html2text` 使用 GPL-3.0。每个包具体适用哪个许可证，以该包的 `pyproject.toml` 与包内 LICENSE 中写明的为准。
+core、官方内置模块及平台适配器采用 AGPL-3.0-only 开源许可证。字体资产采用 OFL-1.1 协议，品牌视觉资产采用专有商业授权，`akari-bot-html2text` 采用 GPL-3.0 协议。各成员包所适用的具体许可协议，以该包内 `pyproject.toml` 及 LICENSE 文件中的明确声明为准。
 
-修改并分发本项目时，要遵守对应的许可证。AGPL-3.0 还要求向网络用户提供对应的源码。
+修改并分发本项目衍生版本时，必须严格遵守对应的开源许可协议约束。AGPL-3.0 许可证额外要求通过网络向服务终端用户公开对应的完整源代码。
 
 ## 更新实例
 
-实例内的 core、模块与适配器由 CLI 更新：
+实例环境中的 core、功能模块及适配器均通过 CLI 统一更新：
 
 ```sh
 akaribot module update --all
 ```
 
-机器人执行 `~update` 时，会调用 CLI 的 `module update --defer-runtime`。安装完成后，按提示执行 `~restart`。加上 `--defer-runtime` 时，这一步只安装包并同步配置，数据库迁移与代码切换要等下一次启动才执行。
+在线执行 `~update` 时，系统将调用 CLI 的 `module update --defer-runtime` 命令。软件包安装完成后，按提示执行 `~restart`。指定 `--defer-runtime` 参数时，该阶段仅下载并安装软件包、同步配置，数据库迁移与代码生效将推迟至下一次启动时执行。
 
-直接在宿主机上更新时，迁移立即执行，新代码也立即生效。升级涉及数据结构变化时，先停止实例，再备份数据库与配置。CLI 本身按 `uv tool` 的安装方式升级。
+在宿主机环境直接执行升级时，数据库迁移与新版代码将立即生效。若升级涉及底层数据结构变更，必须首先停止实例进程，并完整备份数据库文件与配置目录。CLI 工具自身请按照 `uv tool` 的标准更新方式升级。
 
 ## 自建实例
 
-需要仓库 `pyproject.toml` 中声明的 Python 版本和 [uv](https://docs.astral.sh/uv/)。基本流程：
+运行环境需要满足仓库 `pyproject.toml` 中声明的 Python 版本及 [uv](https://docs.astral.sh/uv/) 包管理器要求。基础搭建流程如下：
 
 ```sh
 uv tool install akari-bot-cli
@@ -99,6 +99,6 @@ akaribot doctor
 akaribot run
 ```
 
-按 `config schema` 列出的字段填写适配器的登录信息，然后启动实例。用 `akaribot config set <字段> <值> --table <表名>` 写入的值，会按模板声明的类型转换。
+依据 `config schema` 输出的字段定义配置适配器的登录信息，随后启动机器人实例。使用 `akaribot config set <字段> <值> --table <表名称>` 命令写入的配置值，将依据对应配置模板所声明的类型执行自动转换。
 
-`akaribot init` 默认安装品牌资产、表情与常规可选依赖。加上 `--minimal` 时只安装核心所需的最小依赖。模块用 `akaribot module add <名>` 安装。旧部署的备份、试运行与迁移见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。
+`akaribot init` 默认安装品牌资产、表情与常规可选依赖。指定 `--minimal` 时仅安装核心所需的最小依赖。模块通过 `akaribot module add <名>` 安装。历史部署的备份、试运行与迁移参见 [命令参考中的 migrate](../../../../akari-bot-cli/akaribot/cli/docs/commands.md#migrate)。

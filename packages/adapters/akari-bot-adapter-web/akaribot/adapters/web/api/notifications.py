@@ -30,7 +30,7 @@ _device_lock = asyncio.Lock()
 
 
 def _sanitize_text(value: str, limit: int = 512) -> str:
-    # 这些值会写入邮件 HTML，需剔除可用于注入标记的字符。
+    # 相关数值会写入邮件 HTML，需要剔除可用于注入标记的字符。
     cleaned = "".join(char for char in value if char.isprintable() and char not in _UNSAFE_TEXT_CHARS).strip()
     return cleaned[:limit] or "unknown"
 
@@ -55,7 +55,7 @@ def _write_devices(devices: dict) -> None:
 
 
 def _trim_devices(devices: dict) -> dict:
-    # 未设置密码的 WebUI 可被扫描器触发记录，限制条目数避免文件无限增长。
+    # 未设置密码的 WebUI 易被扫描器触发记录，限制条目数以防止文件无节制增长。
     if len(devices) <= MAX_KNOWN_DEVICES:
         return devices
     ordered = sorted(

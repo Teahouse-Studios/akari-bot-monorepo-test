@@ -18,14 +18,14 @@ akaribot module add akari-bot-module-twenty_four
 
 ## 权限与平台能力
 
-命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入的平台都可以使用。
+命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入的平台均可以使用。
 
 ## 数据表
 
 <ModuleData />
 
-对局状态保存在进程内。
+对局状态保存在进程内存中。
 
 ## 依赖与外部服务
 
-依赖 `akari-bot-core` 与 `simpleeval`。模块不使用外部网络服务。
+依赖 `akari-bot-core` 与 `simpleeval`，不使用外部网络服务。

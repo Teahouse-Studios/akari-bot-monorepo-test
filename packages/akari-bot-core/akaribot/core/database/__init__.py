@@ -106,14 +106,14 @@ async def init_db(
 
         if generate_schemas:
             await Tortoise.generate_schemas(safe=True)
-            # 迁移只在创建数据表的写入进程中执行：读进程不创建数据表，也不该改动库结构。
+            # 迁移仅在创建数据表的写入进程中执行，读取进程不创建数据表，亦不改动数据库结构。
             await run_startup_migrations()
 
         Temp.data["modules_db_list"] = database_list
         return True
     except asyncio.CancelledError:
-        # 初始化可能在部分连接建立后被取消。清理完成后保留取消语义，
-        # 让上层生命周期控制能够正常停止。
+        # 初始化流程可能在部分连接建立后被取消。清理完成后保留取消语义，
+        # 确保上层生命周期控制逻辑能够正常停止。
         try:
             await asyncio.shield(Tortoise.close_connections())
         except Exception:
@@ -121,18 +121,18 @@ async def init_db(
         raise
     except Exception:
         Logger.exception()
-        # Tortoise.init() 可能在部分连接已经建立后才失败。若把半初始化的
-        # 全局状态留给调用方，随后重试会复用或覆盖一套不完整的连接注册表。
-        # init_db() 对外以 False 表示失败，因此也应在返回前完成自身回滚。
+        # Tortoise.init() 可能在部分连接建立后失败。若将未完成初始化的
+        # 全局状态残留给调用方，后续重试将复用或覆盖不完整的连接注册表。
+        # init_db() 对外以 False 表示失败，因此在返回前必须完成自身状态回滚。
         try:
             await Tortoise.close_connections()
         except Exception:
             Logger.exception("Failed to clean up partial database initialization.")
         return False
     finally:
-        # Tortoise.init() 在无当前 context 时会把初始化 context 写入当前任务。
-        # 该 context 会被复制给 Queue poller 等后续任务，reload 替换全局 context 后它们
-        # 仍会持有旧对象。初始化完成后恢复为“仅使用 global fallback”。
+        # Tortoise.init() 在无当前上下文时会将初始化上下文写入当前任务。
+        # 该上下文会被复制给队列轮询等后续任务，在重载替换全局上下文后，这些任务
+        # 仍会持有旧对象。初始化完成后应恢复为仅使用全局回退状态。
         if isinstance(context, TortoiseContext):
             context.__exit__(None, None, None)
 
@@ -195,12 +195,12 @@ def activate_db_reload(prepared: PreparedDatabaseReload) -> None:
         return
     from tortoise import context as tortoise_context
 
-    # Tortoise 只提供 set_global_context，但缺少可替换现有 global 的公共 API。
-    # 在切换前新 context 已完全初始化，故这里是有意的原子替换点。
+    # Tortoise 仅提供 set_global_context，但缺少可替换现有 global 的公开 API。
+    # 在切换前新 context 已完全初始化，因此这里是有意的原子替换点。
     tortoise_context._global_context = prepared.context
     if tortoise_context._current_context.get() is prepared.previous_context:
-        # 不把新 context 固定到当前任务，否则后续子任务会继续继承任务级对象，
-        # 下一次 reload 替换全局 context 时重现旧 context 泄漏。
+        # 避免将新上下文固定到当前任务，否则后续子任务会继续继承任务级对象，
+        # 在下一次重载替换全局上下文时将导致旧上下文泄漏。
         tortoise_context._current_context.set(None)
     Temp.data["modules_db_list"] = list(prepared.database_list)
     prepared.activated = True
@@ -233,8 +233,8 @@ async def reload_db(db_models: list[str] | None = None):
         from akaribot.core.queue.server import JobQueueServer
         from akaribot.core.scheduler import SchedulerLifecycle
 
-        # 先让 Queue handler 处理完队列中的任务，再停止新 Job 并取消运行中的 Job。新 context
-        # 的构建不触碰旧连接，准备完成后才激活新 context 并关闭旧 context。
+        # 先等待队列处理器处理完既有任务，再停止接收新任务并取消运行中的任务。新上下文
+        # 构建期间不访问旧连接，准备就绪后才激活新上下文并关闭旧上下文。
         async with JobQueueServer.maintenance_window(exclusive=True), SchedulerLifecycle.maintenance_window():
             prepared = await prepare_db_reload(db_models)
             if prepared is None:
@@ -258,7 +258,7 @@ async def close_db():
     except Exception:
         pass
     finally:
-        # close_connections 只关闭连接，不会移除 Tortoise 的 global fallback。
+        # close_connections 仅关闭连接，不会移除 Tortoise 的 global fallback。
         # 清理任务级与全局 context，允许后续 init_db() 真正重新初始化。
         from tortoise import context as tortoise_context
 

@@ -108,28 +108,28 @@ class DrawLevelList:
                     text_y = y_offset + (self.image_size - text_height) // 2
                     draw.text((text_x, text_y), str(sid), fill=(100, 100, 100), font=font)
 
-                # 绘制灰色长方形
+                # 绘制灰色长方形。
                 bar_top = y_offset + self.image_size
                 bar_height = 15
-                large_bar_width = self.image_size * 0.6  # 左边部分的宽度，占比大
-                small_bar_width = self.image_size * 0.4  # 右边部分的宽度，占比小
+                large_bar_width = self.image_size * 0.6  # 左侧区域宽度，占比相对较大。
+                small_bar_width = self.image_size * 0.4  # 右侧区域宽度，占比相对较小。
                 dcolor = self.diff_colors[df]
                 luminance = self._get_luminance(*dcolor)
                 text_color = (0, 0, 0) if luminance > 140 else (255, 255, 255)
 
-                # 左侧用于放置标记
+                # 左侧用于放置标记。
                 draw.rectangle(
                     [x_offset, bar_top, x_offset + large_bar_width, bar_top + bar_height],
                     fill=(0, 0, 0),
                 )
 
-                # 右侧用于放置封面 ID
+                # 右侧用于放置封面 ID。
                 draw.rectangle(
                     [x_offset + large_bar_width, bar_top, x_offset + self.image_size, bar_top + bar_height],
                     fill=dcolor,
                 )
 
-                # 绘制封面 ID
+                # 绘制封面 ID。
                 font = ImageFont.truetype(find_font("Noto Sans CJK DemiLight.otf"), 10, encoding="utf-8")
                 bbox = draw.textbbox((0, 0), str(sid), font=font)
                 text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -169,8 +169,8 @@ class DrawLevelList:
                     rank = next((c for a, b, c in self.song_played if a == sid and b == df), None)
                     rank_index = rank_list.index(rank) + 1 if rank else 0
 
-                    # 分段填充颜色
-                    mark_width = large_bar_width / len(mark_fill)  # 使用浮点数计算
+                    # 分段填充颜色。
+                    mark_width = large_bar_width / len(mark_fill)  # 使用浮点数计算。
                     for i in range(rank_index):
                         draw.rectangle(
                             [
@@ -201,12 +201,12 @@ class DrawLevelList:
                             char_sizes = [font.getbbox(c)[2] - font.getbbox(c)[0] for c in self.goal]
                             total_text_width = sum(char_sizes)
                             text_x = x_offset + (self.image_size - total_text_width) // 2
-                            text_y = y_offset + (self.image_size - font.getbbox("A")[3]) // 2  # 大致高度居中
+                            text_y = y_offset + (self.image_size - font.getbbox("A")[3]) // 2  # 计算垂直居中坐标。
 
                             for i, char in enumerate(self.goal):
                                 char_width, _ = get_text_size(char, font)
                                 draw.text((text_x, text_y), char, fill=text_color[i], font=font)
-                                text_x += char_width  # 更新 x 坐标，绘制下一个字母
+                                text_x += char_width  # 更新 x 坐标，绘制下一字符。
                         else:
                             text_x = x_offset + (self.image_size - text_width) // 2
                             text_y = y_offset + (self.image_size - text_height) // 2
@@ -256,7 +256,7 @@ async def _get_level_process(
     song_list = {}
 
     for music in (await total_list.get()).filter(level=level):
-        if int(music.id) < 100000:  # 过滤宴谱
+        if int(music.id) < 100000:  # 过滤宴会场谱面。
             indices = [i for i, lv in enumerate(music.level) if lv == level]
             for idx in indices:
                 const = str(music.ds[idx])

@@ -1,4 +1,4 @@
-"""wiki 模块高级集成测试 - search、iw、headers、prefix。"""
+"""wiki 模块高级集成测试，覆盖 search、iw、headers 与 prefix。"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -20,7 +20,7 @@ async def _init_url_manager_session(self, msg):
 
 @func_case
 async def test_wiki_set_url_policy(tester: Tester):
-    """wiki set 应以规范 API 端点的全局 URL 策略作为唯一认证来源。"""
+    """wiki set 必须以规范 API 端点的全局 URL 策略作为唯一认证来源。"""
     from akaribot.modules.wiki.database.models import WikiTargetInfo
 
     api = "https://zh.minecraft.wiki/api.php"
@@ -52,7 +52,7 @@ async def test_wiki_set_url_policy(tester: Tester):
                 GlobalURLBlocklist.remove_user_rule(api)
                 await tester.integrate(
                     START_WIKI,
-                    Contains("API 端点当前没有加入机器人的全局 URL 允许列表"),
+                    Contains("未加入机器人的全局 URL 允许列表"),
                     "wiki set 应提示 API 未加入全局 URL 允许列表",
                 )
                 untrusted_target = await WikiTargetInfo.get_by_target_id("TEST|Console|0")
@@ -92,7 +92,7 @@ async def test_wiki_set_url_policy(tester: Tester):
 
 @func_case
 async def test_wiki_search(tester: Tester):
-    """wiki search 搜索测试"""
+    """wiki search 搜索测试。"""
     await tester.integrate(START_WIKI, Contains("成功设置默认 Wiki"), "设置 Wiki")
     await tester.integrate("~wiki search Minecraft", Contains("搜索结果"), "wiki search 应返回搜索结果")
     return tester
@@ -100,14 +100,14 @@ async def test_wiki_search(tester: Tester):
 
 @func_case
 async def test_wiki_iw_manage(tester: Tester):
-    """wiki iw 管理测试"""
+    """wiki iw 管理测试。"""
     await tester.integrate("~wiki iw list", Contains("Interwiki"), "wiki iw list 应显示列表")
     return tester
 
 
 @func_case
 async def test_wiki_headers_manage(tester: Tester):
-    """wiki headers 管理测试"""
+    """wiki headers 管理测试。"""
     await tester.integrate(START_WIKI, Contains("成功设置默认 Wiki"), "设置 Wiki")
     await tester.integrate("~wiki headers show", Contains("请求标头"), "wiki headers show 应显示标头")
     return tester
@@ -115,7 +115,7 @@ async def test_wiki_headers_manage(tester: Tester):
 
 @func_case
 async def test_wiki_prefix_manage(tester: Tester):
-    """wiki prefix 管理测试"""
+    """wiki prefix 管理测试。"""
     await tester.integrate(START_WIKI, Contains("成功设置默认 Wiki"), "设置 Wiki")
     await tester.integrate("~wiki prefix set Test", Contains("前缀"), "wiki prefix set 应提示设置结果")
     await tester.integrate("~wiki prefix reset", Contains("重置"), "wiki prefix reset 应提示重置")
@@ -124,7 +124,7 @@ async def test_wiki_prefix_manage(tester: Tester):
 
 @func_case
 async def test_wiki_not_found(tester: Tester):
-    """wiki 不存在页面测试"""
+    """wiki 不存在页面测试。"""
     await tester.integrate(START_WIKI, Contains("成功设置默认 Wiki"), "设置 Wiki")
     await tester.integrate("~wiki nonexistent_page_xyz_12345", Contains("未找到"), "不存在的页面应提示未找到")
     return tester
@@ -132,7 +132,7 @@ async def test_wiki_not_found(tester: Tester):
 
 @func_case
 async def test_wiki_start_wiki_not_set(tester: Tester):
-    """未设置默认 Wiki 提示测试"""
-    await tester.integrate("~wiki Minecraft", Contains("没有设置默认 Wiki"), "wiki 查询应提示未设置")
-    await tester.integrate("~wiki search Minecraft", Contains("没有设置默认 Wiki"), "wiki search 应提示未设置")
+    """未设置默认 Wiki 提示测试。"""
+    await tester.integrate("~wiki Minecraft", Contains("尚未设置默认 Wiki"), "wiki 查询应提示未设置")
+    await tester.integrate("~wiki search Minecraft", Contains("尚未设置默认 Wiki"), "wiki search 应提示未设置")
     return tester

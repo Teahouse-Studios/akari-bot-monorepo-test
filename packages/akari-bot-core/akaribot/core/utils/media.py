@@ -181,7 +181,7 @@ async def compress_media_chain(chain: MessageChain) -> MessageChain:
             Logger.exception(f"Unable to inspect media file {source}: ")
             continue
 
-        # 小于等于阈值，无需压缩，直接保留
+        # 小于或等于阈值，不需要压缩，直接保留。
         if source_size <= threshold_bytes:
             valid_elements.append(element)
             continue

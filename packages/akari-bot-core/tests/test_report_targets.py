@@ -20,9 +20,9 @@ _CLIENT = "REPORTTEST"
 
 
 async def _register_client():
-    # 取会话时须由拓扑缓存反查场景所属的客户端，未注册者取不出会话。缓存非空时
-    # ``Alive.determine_client(None)`` 还会直接抛错，而 ``fetch_target`` 会将其吞下，
-    # 表现为无声地少了几个会话。
+    # 获取会话时需要由拓扑缓存反向查找场景所属的客户端，未注册者无法获取会话。缓存非空时
+    # ``Alive.determine_client(None)`` 还会直接抛出异常，而 ``fetch_target`` 会静默忽略该异常，
+    # 表现为静默缺少部分会话。
     metadata = {
         "target_prefix_list": [f"{_CLIENT}|Group"],
         "sender_prefix_list": [_CLIENT],
@@ -89,7 +89,7 @@ async def _test_fetch_accepts_single_value():
 
 @func_case
 async def test_report_targets(tester: Tester):
-    """core: 上报场景按场景组展开"""
+    """core 模块上报场景按场景组展开测试"""
     alive = Alive.values.copy()
     try:
         await tester.test(_test_resolves_platform_id_to_union, "平台场景 ID 归一为场景组")

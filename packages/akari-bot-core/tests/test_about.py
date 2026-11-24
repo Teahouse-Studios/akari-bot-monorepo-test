@@ -22,7 +22,7 @@ from akaribot.modules.core.common_tools.about import (
     read_credits,
 )
 
-# 立绘由 akari-bot-assets-brand 资源包分发。实例 assets/ 可覆盖，故按同一入口取期望路径。
+# 立绘通过 akari-bot-assets-brand 资源包分发。实例 assets/ 可覆盖，因此按照同一入口获取期望路径。
 CHARACTER_IMAGE_PATH = find_brand_asset("character_marked.png")
 
 
@@ -175,7 +175,7 @@ def _test_missing_artwork_degrades_instead_of_failing():
 
 @func_case
 async def test_about(tester: Tester):
-    """akaribot.modules.core.common_tools.about: ~about 菜单。"""
+    """akaribot.modules.core.common_tools.about 的 ~about 菜单测试。"""
     await tester.test(_test_missing_or_empty_credits_are_hidden, "制作人员文件缺失或为空时隐藏测试")
     await tester.test(_test_markdown_layout_without_credits, "Markdown 关于菜单布局测试")
     await tester.test(_test_credits_button_and_no_button_hidden, "制作人员按钮与无按钮隐藏测试")

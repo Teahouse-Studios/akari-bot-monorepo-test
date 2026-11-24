@@ -15,7 +15,7 @@ TARGET_TABLES = ("module_wiki_target_set_info", "module_wikilog_target_set_info"
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    把场景设置表的主键列改名为 union_id。
+    将场景设置表的主键列重命名为 union_id。
 
     :param ctx: 迁移上下文。
     """

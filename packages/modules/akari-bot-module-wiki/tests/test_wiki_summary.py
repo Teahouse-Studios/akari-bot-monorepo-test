@@ -1,4 +1,4 @@
-"""wiki 摘要离线提取单元测试 - Wikitext 解析与噪音剥离。"""
+"""Wiki 摘要离线提取单元测试，验证 Wikitext 解析与干扰内容过滤。"""
 
 from pathlib import Path
 
@@ -293,7 +293,7 @@ async def _test_ellipsis_only_becomes_empty():
 
 @func_case
 async def test_wiki_summary(tester: Tester):
-    """wiki 摘要离线提取：Wikitext 解析与噪音剥离测试"""
+    """Wiki 摘要离线提取的 Wikitext 解析与干扰内容过滤测试。"""
     await tester.test(_test_lead_skips_infobox_and_hatnote, "信息框与顶部提示剥离测试")
     await tester.test(_test_ref_content_not_inlined, "引用内容不混入测试")
     await tester.test(_test_table_before_lead_removed, "引言前表格剥离测试")

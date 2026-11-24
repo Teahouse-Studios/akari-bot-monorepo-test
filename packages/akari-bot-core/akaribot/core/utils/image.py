@@ -84,12 +84,12 @@ async def msgchain2image(
     if isinstance(message_chain, list):
         message_chain = MessageChain.assign(message_chain)
 
-    # MessageSession 本身不持有 locale，需先取出其 session_info。
-    # SessionInfo 没有该属性，原样返回
+    # MessageSession 本身不持有 locale，需要先读取其 session_info。
+    # SessionInfo 未包含该属性，原样返回。
     session = getattr(session, "session_info", session)
 
-    # 图片是纯文本载体，无从承载可点击的行内元素，故按不支持 markdown 转换：
-    # 指令操作等元素会就地降级为纯文本，否则模板认不出它们，其内容会静默丢失
+    # 图片属于纯文本载体，无法承载可点击的行内元素，因此按不支持 Markdown 处理，
+    # 命令操作等元素会就地降级为纯文本，如果不进行降级，模板将无法识别对应元素并导致内容静默丢失。
     message_list = message_chain.as_sendable(session, enable_markdown=False)
     renderable_list = []
     for m in message_list:

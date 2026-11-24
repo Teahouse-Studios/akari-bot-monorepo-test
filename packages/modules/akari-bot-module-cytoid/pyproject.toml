@@ -14,7 +14,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    # rating 曲绘的文字用资源包里的 Noto Sans CJK DemiLight（T3.3），缺它则曲绘渲染失败。
+    # rating 曲绘的文字使用资源包中的 Noto Sans CJK DemiLight（T3.3），若缺失将导致曲绘渲染失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "akari-bot-html2text>=0.1.0,<1.0",

@@ -34,7 +34,7 @@ class RpcResponse:
 
 @dataclass(frozen=True)
 class BatchSendResult:
-    """逐项描述批量投递结果，避免将部分成功误判为原子失败。"""
+    """逐项描述批量投递结果，避免将部分成功误判定为原子失败。"""
 
     accepted: frozenset[str] = frozenset()
     rejected: dict[str, str] = field(default_factory=dict)

@@ -1,10 +1,10 @@
 # akari-bot-module-github
 
-查询 GitHub 仓库、用户与组织，并按关键词搜索仓库。
+查询 GitHub 仓库、用户与组织，并按照关键词搜索仓库。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-github

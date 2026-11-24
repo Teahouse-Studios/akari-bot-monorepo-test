@@ -1,4 +1,4 @@
-"""数据库事务在进入、退出或批量写入阶段被取消时不得残留连接锁、打开的事务或池连接。"""
+"""数据库事务在进入、退出或批量写入阶段被取消时，不得产生残留连接锁、未提交事务或未释放的连接池连接。"""
 
 import asyncio
 import uuid
@@ -13,7 +13,7 @@ from akaribot.testing import Tester, func_case
 
 try:
     from tortoise.backends.mysql.client import MySQLClient
-except ImportError:  # pragma: no cover - 未安装 MySQL 驱动时跳过相关用例
+except ImportError:  # pragma: no cover - 未安装 MySQL 驱动时跳过对应测试用例。
     MySQLClient = None
 
 
@@ -244,7 +244,7 @@ async def _test_cancelled_mysql_bulk_write_rolls_back():
 
 @func_case
 async def test_database_transaction_cancel(tester: Tester):
-    """事务取消后数据库与连接池仍可用。"""
+    """事务取消后数据库与连接池仍然保持可用状态。"""
     await tester.test(_test_cancelled_transaction_entry_keeps_database_usable, "事务开始阶段取消不泄漏连接锁")
     await tester.test(_test_cancelled_bulk_write_leaves_no_open_transaction, "批量写入取消不残留打开的事务")
     await tester.test(_test_cancelled_transaction_exit_leaves_no_open_transaction, "事务结束阶段取消不残留打开的事务")

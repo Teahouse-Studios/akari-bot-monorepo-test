@@ -14,15 +14,15 @@ from pathlib import Path
 
 from akaribot.core.paths import CONFIG_PATH_ENV, INSTANCE_DIR_ENV, Paths  # noqa: F401
 
-# 配置只读模式的环境变量名：守护进程在创建子进程前设置，pre-init 进程清除。
-# 该常量须位于不依赖 core.config 的模块，以免提前触发导入期版本迁移。
+# 配置只读模式的环境变量名，由守护进程在创建子进程前设置，pre-init 进程清除。
+# 该常量必须位于不依赖 core.config 的模块，以免提前触发导入阶段版本迁移。
 CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 
 # union 合并日志目录的环境变量名，测试引导据此写入临时目录。
-# 取值发生在导入期，引导代码须以字面量重复该名称。
+# 取值发生在导入阶段，引导代码必须以字面量重复该名称。
 UNION_MERGE_LOGS_PATH_ENV = "AKARI_UNION_MERGE_LOGS_PATH"
 
-# 基本路径
+# 基本路径。
 assets_path = Paths.assets
 bots_path = Paths.instance / "bots"
 cache_path = Paths.cache
@@ -34,24 +34,24 @@ logs_path = Paths.logs
 modules_path = Paths.instance / "modules"
 tests_path = Paths.tests
 
-# assets 只放随仓库分发的只读内容，运行时与部署者产生的内容一律写进 data。此处不创建
-# 目录，否则只读取版本号的调用也会在当前目录留下副作用。使用方经 Paths.ensure() 创建。
+# assets 仅存放随仓库分发的只读内容，运行时与部署者产生的内容一律写入 data。此处不创建
+# 目录，否则仅读取版本号的调用也会在当前目录产生副作用。使用方通过 Paths.ensure() 创建。
 
-# assets 子路径（只读）
+# assets 子路径（只读）。
 fonts_path = assets_path / "fonts"
 # 模板随 core wheel 分发（akaribot/core/assets/templates）。实例的 assets/templates 存在时优先，
-# 便于部署者覆盖。打包形态下 __file__ 与包内资源都可用，故直接由包位置推导。
+# 便于部署者覆盖。打包形态下 __file__ 与包内资源都可用，因此直接由包位置推导。
 _PACKAGE_TEMPLATES_PATH = Path(__file__).resolve().parents[1] / "assets" / "templates"
 templates_path = assets_path / "templates" if (assets_path / "templates").is_dir() else _PACKAGE_TEMPLATES_PATH
 
-# data 子路径（可写）
+# data 子路径（可写）。
 filter_words_path = data_path / "filter_words"
 retired_path = data_path / "retired"
 union_merge_logs_path = Path(os.environ.get(UNION_MERGE_LOGS_PATH_ENV) or data_path / "union_merge_logs").resolve()
 url_audit_data_path = data_path / "url_audit"
 
-# 字体文件路径的三个常量已弃用：字体随 akari-bot-assets-fonts 分发，路径不再固定，取值一律改用
-# akaribot.core.api.find_font()。下面的映射只为兼容既有 import 保留，取用时才查找，找不到即抛错。
+# 字体文件路径的三个常量已弃用，字体随 akari-bot-assets-fonts 分发，路径不再固定，取值一律使用
+# akaribot.core.api.find_font()。下方映射仅为兼容既有导入保留，调用时才查找，未找到时抛出异常。
 _DEPRECATED_FONT_CONSTANTS = {
     "noto_sans_bold_path": "Noto Sans CJK Bold.otf",
     "noto_sans_demilight_path": "Noto Sans CJK DemiLight.otf",
@@ -61,16 +61,16 @@ _DEPRECATED_FONT_CONSTANTS = {
 
 def __getattr__(name: str) -> Path:
     """
-    已弃用字体常量的取用口，替代品为 ``akaribot.core.api.find_font``。
+    已弃用字体常量的兼容访问入口，替代品为 ``akaribot.core.api.find_font``。
 
-        惰性导入避免导入期多拉一层依赖：字体查找要用 importlib.resources 与 matplotlib，而本模块
+        按需导入避免导入阶段额外引入一层依赖，因为字体查找要用 importlib.resources 与 matplotlib，而本模块
         在引导阶段就被读入。
 
         :param name: 常量名。
         :return: 字体文件路径。
-        :raises AttributeError: 名字不在已弃用清单内。
+        :raises AttributeError: 名称不在已弃用清单内。
     """
-    # 惰性导入避免导入期多拉一层依赖：字体查找要用 importlib.resources 与 matplotlib，而本模块
+    # 按需导入避免导入阶段额外引入一层依赖，因为字体查找要用 importlib.resources 与 matplotlib，而本模块
     # 在引导阶段就被读入。
     font_name = _DEPRECATED_FONT_CONSTANTS.get(name)
     if font_name is None:

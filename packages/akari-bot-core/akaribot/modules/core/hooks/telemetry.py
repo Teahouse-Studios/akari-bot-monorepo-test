@@ -39,7 +39,7 @@ async def _(ctx: "Bot.ParserHookContext"):
             module_type=data.get("module_type", "normal"),
         )
     except Exception:
-        # 采集失败不得影响命令收尾与正则遍历
+        # 采集失败不得影响命令收尾与正则表达式遍历。
         Logger.exception("Telemetry hook failed to write AnalyticsData.")
 
 

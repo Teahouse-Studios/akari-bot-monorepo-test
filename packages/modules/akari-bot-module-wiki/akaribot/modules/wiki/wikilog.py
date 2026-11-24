@@ -392,7 +392,7 @@ async def _(msg: Bot.MessageSession, apilink: str, note_words: Param("...", list
         await msg.finish(I18NContext("wikilog.message.config.wiki.failed", message=status.message))
 
 
-# 保活需逐个查询订阅的 wiki，耗时远超 hook 默认执行预算。单个 wiki 的失败在循环内就地转为会话消息。
+# 保活需要逐个查询订阅的 Wiki，耗时远超 Hook 默认执行预算。单个 Wiki 的失败在循环内直接转为会话消息。
 @wikilog.hook("keepalive", timeout=0)
 async def _(ctx: Bot.ModuleHookContext):
     data_ = await WikiLogTargetSetInfo.return_all_data()
@@ -400,7 +400,7 @@ async def _(ctx: Bot.ModuleHookContext):
         for wiki in data_[union_id]:
             if not data_[union_id][wiki].get("keep_alive"):
                 continue
-            # 保活结果与目标会话无关，每个 wiki 只查一次，再交由组内推送按通道分发
+            # 保活结果与目标会话无关，每个 Wiki 仅查询一次，再交由组内推送按照消息通道分发。
             try:
                 wiki_ = WikiLib(wiki)
                 await wiki_.fixup_wiki_info()
@@ -526,9 +526,9 @@ async def _():
     for id_ in matched:
 
         async def _send_logs(session_info, id_=id_):
-            # 在承担推送的会话上算出并逐条发出该组的日志。
-            # 日志文本须按目标会话现算：敏感词检查取决于该会话所在平台是否要求，同组的不同平台
-            # 未必一致。逐条发送故在此处完成，工厂随即返回 None，不再交由外层发送。
+            # 在承担推送的会话上生成并逐条发送该组的日志。
+            # 日志文本必须按照目标会话现行计算，因为敏感词检查取决于该会话所在平台是否要求，同组的不同平台
+            # 要求可能不一致。逐条发送因此在此处完成，工厂随即返回 None，不再交由外层发送。
             session = await FetchedMessageSession.from_session_info(session_info)
             for wiki in matched[id_]:
                 try:
@@ -554,9 +554,9 @@ async def _():
                         await session.send_direct_message(f"{wiki_name}{x}" if len(matched[id_]) > 1 else x)
             return None
 
-        # 拉取按 union 去重，推送再按消息通道去重，同一个现实场景只收一份
+        # 拉取按照 union 去重，推送再按照消息通道去重，同一实际场景仅接收一份。
         try:
             await Bot.send_direct_message_to_union_target(id_, _send_logs)
         except Exception as e:
-            # 单个场景组发送失败（如平台超时）不应中断其余场景组的推送
+            # 单个场景组发送失败（如平台超时）不得中断其余场景组的推送。
             Logger.error(f"Failed to push wiki logs to {id_}: {e}")

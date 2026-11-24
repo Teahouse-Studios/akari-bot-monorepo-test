@@ -20,8 +20,8 @@ from .expectations import Expectation
 from .tasks import PROGRESS_TASK_PREFIX, cancel_orphan_tasks, cancel_task
 from .timing import TIME_SCALE
 
-# 无进展看门狗随测试时限系数放大，但封顶 5 倍：慢机器上子测试可以更久，
-# 真正卡死时也不能让单个用例占用整个 CI 任务太久。
+# 无进展超时监控随测试时限系数放大，但封顶 5 倍，这样在性能受限的计算机上子测试可以更久，
+# 真正无响应时也避免使单个用例占用整个 CI 任务过长时间。
 DEFAULT_FUNCTION_TEST_TIMEOUT = 120.0 * min(TIME_SCALE, 5.0)
 
 
@@ -68,7 +68,7 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
             pass
         return [result]
     finally:
-        # 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存库。
+        # 集成用例会启动 queue poller、waiter 或平台任务，并与后续用例共用事件循环与内存数据库。
         # 游离任务不得越过其捕获的数据库上下文存活。
         if not await cancel_orphan_tasks(baseline_tasks):
             message = "Registry test left a task that did not finish cancellation cleanup."

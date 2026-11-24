@@ -48,7 +48,7 @@ def _readonly_value(value: Any, memo: dict[int, Any] | None = None) -> Any:
     from akaribot.core.i18n import Locale
 
     if isinstance(value, (MessageChain, MessageNodes, Locale)):
-        # 这些值对象允许在独立副本上使用翻译/消息 API。复制失败必须拒绝读取，不能退回源引用。
+        # 值对象允许在独立副本上使用翻译与消息 API。复制失败时必须拒绝读取，不能回退至源引用。
         return deepcopy(value)
     return _ReadOnlyObjectView(value)
 
@@ -69,7 +69,7 @@ class _ReadOnlyObjectView:
 
 
 class SessionInfoView:
-    """SessionInfo 的只读视图：阻止就地写入身份与可变容器。"""
+    """SessionInfo 的只读视图，阻止就地写入身份与可变容器。"""
 
     __slots__ = ("_info", "_tmp", "_prefixes")
 
@@ -116,7 +116,7 @@ class OutgoingPayload:
             return chain
         if isinstance(chain, list):
             return [OutgoingPayload._clone_chain(item) for item in chain]
-        # 其他带 copy 的元素级对象按自身语义复制。失败则拒绝快照，避免共享引用
+        # 其他带 copy 的元素级对象按自身语义复制。失败则拒绝快照，避免共享引用。
         if hasattr(chain, "copy"):
             return chain.copy()
         return deepcopy(chain)
@@ -126,7 +126,7 @@ class OutgoingPayload:
         return OutgoingPayload(chain=self._clone_chain(self.chain), quote=self.quote, message_ids=ids)
 
     def apply_from(self, other: "OutgoingPayload") -> None:
-        # 提交时再断开一次引用：成功 hook 若继续持有草稿链，之后的就地修改不得污染正式结果
+        # 提交时再断开一次引用，防止成功 hook 继续持有草稿消息链后，之后的就地修改污染正式结果。
         self.chain = self._clone_chain(other.chain)
         self.quote = other.quote
         if other.message_ids is not None:
@@ -156,7 +156,7 @@ class ParserHookContext:
 
     @property
     def session_info(self) -> SessionInfoView:
-        """只读视图。可写字段请用 ``draft``。"""
+        """只读视图。写入字段请使用 ``draft``。"""
         if self._session_view is None:
             self._session_view = SessionInfoView(self.msg.session_info)
         return self._session_view
@@ -170,7 +170,7 @@ class ParserHookContext:
         parsed = getattr(self.msg, "parsed_msg", None)
         if parsed is None:
             return None
-        # 深拷贝：hook 对嵌套列表/字典的就地修改不得写回原解析结果
+        # 深拷贝解析结果，防止 hook 对嵌套列表/字典的就地修改写回原解析结果。
         return deepcopy(dict(parsed))
 
 

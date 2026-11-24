@@ -23,21 +23,21 @@ from akaribot.core.component import module
 
 upd = module("update", required_superuser=True, base=True, doc=True)
 
-# CLI 可执行文件的定位途径（T7.2）：CLI 注入的环境变量最可靠，其次是解释器同目录，最后查 PATH。
+# CLI 可执行文件的定位途径（T7.2）依次为 CLI 注入的环境变量、解释器同目录，最后查 PATH。
 CLI_PATH_ENV = "AKARIBOT_CLI_PATH"
 CLI_NAMES = ("akaribot", "akaribot.exe", "akari.exe")
 
-# 只读标记与实例根目录的环境变量名。二者不在 core 门面内，故按引导代码的做法写为字面量。
+# 只读标记与实例根目录的环境变量名。两者均不属于 core 公开接口，因此按照引导代码的方式定义为字面量。
 CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 
-# 委托参数固定，不接受用户输入拼接：--all 覆盖全部已装包，--json 让结果可解析。
+# 传递给 CLI 的参数固定且不接受用户输入拼接，其中 --all 覆盖全部已安装包，--json 确保输出结果可解析。
 UPDATE_ARGV = ("module", "update", "--all", "--non-interactive", "--defer-runtime", "--json")
 
-# 更新由子进程执行 uv 下载、补全配置与数据库迁移，等待上限按分钟计。
+# 更新流程由子进程执行 uv 下载、补全配置与数据库迁移，等待上限按分钟计。
 UPDATE_TIMEOUT_SECONDS = 1800
 
-# 回报附带的错误输出行数上限，避免把 CLI 的整段日志刷进会话。
+# 返回结果附带的错误输出行数上限，避免将 CLI 的完整日志输出至会话中。
 OUTPUT_TAIL_LINES = 6
 
 
@@ -109,7 +109,7 @@ def locate_cli() -> CliLocation:
 
 async def _run_cli(path: str, argv: list[str]) -> tuple[int, str, str, bool]:
     env = dict(os.environ)
-    # 只读标记只约束 Server 自身：更新要写配置，须让子进程按宿主机 CLI 的权限运行。
+    # 只读标记仅约束 Server 自身，由于更新过程需要写入配置，需要使子进程按照宿主机 CLI 的权限执行。
     env.pop(CONFIG_READONLY_ENV, None)
     env["PYTHONIOENCODING"] = "utf-8"
     instance_dir = env.get(INSTANCE_DIR_ENV, "").strip()
@@ -216,8 +216,8 @@ def _tail(text: str, lines: int = OUTPUT_TAIL_LINES) -> str:
 
 
 def _reload_pending(payload: dict, updated: list[str]) -> list[str]:
-    # 新版 CLI 直接回传 ``reload_pending``。旧版只回传 ``notified`` 明细，据此推导。
-    # 两者都没有时保守地把全部已更新包视为待重载。
+    # 新版 CLI 直接回传 ``reload_pending``。历史版本仅回传 ``notified`` 明细，据此推导。
+    # 两者均缺失时，保守地将全部已更新的包视为待重载。
     if isinstance(payload.get("reload_pending"), list):
         return _names(payload, "reload_pending")
     notified = payload.get("notified")
@@ -274,7 +274,7 @@ def format_update_report(outcome: UpdateOutcome) -> str:
     if skipped:
         lines.append("跳过：" + "、".join(_details(payload, "skipped_details", skipped)))
 
-    # 缺少 reload_pending 字段说明 CLI 版本较旧，此时保守地提示重启而不是假定已热装载。
+    # 缺少 reload_pending 字段说明 CLI 版本较旧，此时保守地提示重启，而非假定已完成热加载。
     pending = _reload_pending(payload, updated)
     if pending:
         lines.append("以下包尚未热装载：" + "、".join(pending) + "；请执行 `~restart` 让新版本生效。")

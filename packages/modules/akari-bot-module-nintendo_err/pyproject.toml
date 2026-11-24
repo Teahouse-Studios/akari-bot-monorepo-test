@@ -16,7 +16,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "akari-bot-core>=0.1.0,<1.0",
-    # py-cord 仍被 nintendo_err 顶层 import（T4.2 §7.5），改写落地前必须保留
+    # py-cord 仍被 nintendo_err 顶层导入（T4.2 §7.5），改写完成前必须保留。
     "py-cord>=2.7.2",
 ]
 

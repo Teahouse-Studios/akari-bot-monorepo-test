@@ -59,7 +59,7 @@ async def _auto_update_assets():
         Logger.warning("Phigros resource auto-update failed; it will be retried later.")
 
 
-# 在这些场景绑定会使会话令牌暴露给他人，须先行告警并撤回。
+# 在群聊场景绑定会导致会话令牌泄漏，必须先行告警并撤回命令消息。
 PUBLIC_TARGETS = [
     "Discord|Channel",
     "KOOK|Group",
@@ -93,7 +93,7 @@ async def _require_song_info(msg: Bot.MessageSession) -> dict:
             )
         )
     song_info = load_song_info()
-    # 旧版曲目 id 与存档中的原始 id 无法对应，放行只会得出全空的成绩，故一并拦下。
+    # 历史版本曲目 ID 与存档中的原始 ID 无法对应，放行仅会获取全空的成绩记录，因此一并拦截。
     if is_legacy_song_info(song_info):
         await msg.finish(
             I18NContext(
@@ -272,7 +272,7 @@ async def _(msg: Bot.MessageSession):
     try:
         progress = parse_part(save_data, "gameProgress")
     except Exception:
-        # gameProgress 的结构版本更新只应影响 Data 值一项，其余信息照常输出。
+        # gameProgress 的结构版本更新仅应影响 Data 字段，其余信息正常输出。
         Logger.exception()
         progress = None
     await msg.finish(

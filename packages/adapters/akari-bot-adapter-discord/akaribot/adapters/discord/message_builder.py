@@ -27,7 +27,7 @@ from akaribot.core.api.adapters import resolve_media_path
 
 @define
 class DiscordPayload:
-    """一次 Discord 发送调用所需的负载。"""
+    """单次 Discord 发送调用所需的负载数据结构。"""
 
     content: str | None = None
     files: list[discord.File] = field(factory=list)
@@ -37,7 +37,7 @@ class DiscordPayload:
 
 
 def split_discord_text(text: str, limit: int = 2000) -> list[str]:
-    """按 Discord 限制拆分文本，优先在换行处分段。"""
+    """依据 Discord 平台限制拆分文本，优先在换行符处分段。"""
     chunks = []
     remaining = text
     while remaining:
@@ -53,7 +53,7 @@ def split_discord_text(text: str, limit: int = 2000) -> list[str]:
 
 
 async def build_discord_payloads(session_info: SessionInfo, message: MessageChain) -> list[DiscordPayload]:
-    """将完整消息链聚合为受平台限制约束的 Discord 负载。"""
+    """将整条消息链聚合为符合平台限制规范的 Discord 负载结构。"""
     text_parts = []
     files = []
     embed_units = []
@@ -139,7 +139,7 @@ async def build_discord_payloads(session_info: SessionInfo, message: MessageChai
 
 
 async def execute_discord_payloads(channel, payloads: list[DiscordPayload], reference=None, view=None) -> list:
-    """依次发送 Discord 负载，引用仅首条、按钮仅末条。"""
+    """依次发送 Discord 负载，仅在首条消息附带引用、仅在末条消息附带按钮。"""
     sent_messages = []
     for index, payload in enumerate(payloads):
         try:

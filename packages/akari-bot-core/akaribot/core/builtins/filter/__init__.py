@@ -10,7 +10,7 @@ from akaribot.core.builtins.message.internal import I18NContext
 from akaribot.core.constants.path import filter_words_path
 from akaribot.core.logger import Logger
 
-# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人无法读取的文件放进目录。
+# 词库文件约束。WebUI 与命令写入前按此校验，避免把机器人无法读取的文件放入目录。
 FILTER_WORD_SUFFIX = ".txt"
 MAX_FILTER_CATEGORIES = 64
 MAX_FILTER_WORDS_PER_CATEGORY = 20000
@@ -81,12 +81,12 @@ def normalize_category(category: str) -> str:
 
 
 def category_path(category: str) -> Path:
-    """取分类对应的词库文件路径。"""
+    """获取分类对应的词库文件路径。"""
     return filter_words_path / f"{normalize_category(category)}{FILTER_WORD_SUFFIX}"
 
 
 def normalize_words(words: Iterable[str]) -> list[str]:
-    """清洗词条：去空白、丢弃空行、按首次出现顺序去重，并校验长度与数量。"""
+    """规范化清洗词条，依次去除空白字符、移除空行、按首次出现顺序去重，并校验长度与数量。"""
     normalized: list[str] = []
     seen: set[str] = set()
 
@@ -114,7 +114,7 @@ def read_filter_words(category: str) -> list[str] | None:
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    # 临时文件与目标同目录，确保 os.replace 只在同一文件系统内进行。
+    # 临时文件与目标同目录，确保 os.replace 仅在同一文件系统内执行。
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = None
     try:
@@ -216,7 +216,7 @@ def _find_badword_matches(content: str) -> list[tuple[int, int, str]]:
         for match in re.finditer(re.escape(word), content):
             start, end = match.start(), match.end()
 
-            # 命中 AT / I18N / KE 结构部分时跳过
+            # 命中 AT / I18N / KE 结构部分时跳过。
             if is_protected(protected_intervals, start, end):
                 continue
 
@@ -239,7 +239,7 @@ def filter_badwords(content: str) -> str:
     if not matches:
         return content
 
-    # 从后往前替换，避免修改前面的索引。
+    # 从后向前执行替换，避免改变前向索引位置。
     matches.sort(key=lambda item: item[0], reverse=True)
 
     for start, end, replacement in matches:

@@ -12,7 +12,7 @@ from akaribot.cli.tui.app import STYLESHEET, TuiApp
 from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 from akaribot.testing import Tester, func_case
 
-# 立绘不透明部分的主色与暗部，深色版据此取色。改主题时这里先失败，避免悄悄换掉品牌色。
+# 立绘不透明部分的主色与暗部，深色版据此选取颜色。修改主题时此处先失败，避免静默替换品牌色。
 BRAND_COLORS = ("#d69cdd", "#f6d5f3", "#fbd8ec", "#40333f", "#2b002a")
 
 
@@ -33,7 +33,7 @@ def _rgb(value: str) -> tuple[int, int, int]:
 
 
 async def _test_dark_theme_is_default():
-    # 主题要落到控件样式上，而不只是 get_css_variables() 里的一串字符串。
+    # 主题必须实际应用至控件样式上，而不仅限于 get_css_variables() 返回的字符串。
     app = _boot_app()
     async with compat.app_test(app, size=(100, 30)) as pilot:
         await pilot.pause()
@@ -65,12 +65,12 @@ async def _test_palette_stays_in_the_brand_family():
 
 
 async def _test_stylesheet_parses_under_brand_theme():
-    # 样式表里的 $变量 全部由品牌主题提供：少了任何一个都会在解析期报未定义变量。
+    # 样式表里的 $变量 全部由品牌主题提供，少了任何一个都会在解析阶段报未定义变量。
     probe = compat.App()
     compat.install_akari_themes(probe)
     try:
         compat.parse_stylesheet(STYLESHEET, "<test>", app=probe)
-    except Exception:  # noqa: BLE001 - 解析失败即用例失败
+    except Exception:  # noqa: BLE001 - 解析失败即用例失败。
         return False
     return True
 
@@ -98,7 +98,7 @@ async def _test_toggle_switches_palette():
 
 @func_case
 async def test_tui_theme(tester: Tester):
-    """cli.tui.theme: 品牌主题与切换测试"""
+    """cli.tui.theme 品牌主题与切换测试"""
     _use_cli_locale()
     await tester.test(_test_dark_theme_is_default, "默认使用品牌深色主题")
     await tester.test(_test_palette_stays_in_the_brand_family, "调色板取自立绘色系")

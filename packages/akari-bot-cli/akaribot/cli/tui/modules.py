@@ -50,9 +50,9 @@ _OPERATION_SUBCOMMANDS = {
     "load": "load",
     "unload": "unload",
 }
-# 界面确认后使用 ``--yes``，避免子进程等待重复的交互确认。
+# 界面弹窗确认后附加 ``--yes``，避免子进程等待重复的交互确认。
 _OPERATION_EXTRA_ARGS = {"update": ("--yes",), "uninstall": ("--yes",)}
-# 大批量卸载要求输入目标数量，以确认操作范围。
+# 批量卸载要求输入目标包数量，以严格确认操作影响范围。
 _UNINSTALL_COUNT_THRESHOLD = 10
 
 _UNINSTALL_MODE_ARGS = {"purge": ("--purge-data",), "cascade": ("--cascade",)}
@@ -60,9 +60,9 @@ _UNINSTALL_MODE_ARGS = {"purge": ("--purge-data",), "cascade": ("--cascade",)}
 _UPDATE_SELECTED = "selected"
 _UPDATE_ALL = "all"
 
-# 进度条按阶段推进：解析、执行、重载、完成。阶段内的细粒度进度由子进程输出行承担。
+# 进度条按解析、执行、热加载、完成分阶段推进，阶段内的细粒度进度由子进程输出行驱动。
 _PROGRESS_PHASES = 4.0
-# 实时转发时保留的末尾行数，失败时作为详情展示。
+# 实时转发时保留的末尾行数，操作失败时作为详情展示。
 _STREAM_TAIL_LINES = 40
 
 
@@ -117,7 +117,7 @@ class ModuleRecord:
         return i18n.t(key) if key else i18n.t("cli.tui.common.undeclared")
 
     def haystack(self) -> str:
-        """返回搜索用的匹配文本，已做大小写折叠。"""
+        """返回搜索用的匹配文本，已完成大小写折叠。"""
         parts = (
             self.name,
             self.dist,
@@ -157,7 +157,7 @@ class OperationResult:
 
 
 class ModuleSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 class StaticModuleSource:
@@ -233,7 +233,7 @@ class StaticModuleSource:
         extra_args: Sequence[str] = (),
         positional: bool = True,
     ) -> OperationResult:
-        """见 :meth:`ModuleSource.stream_operation`。替身直接回放固定输出。"""
+        """见 :meth:`ModuleSource.stream_operation`。模拟数据源直接回放固定输出。"""
         self.stream_calls.append((kind, record.dist or record.name, tuple(extra_args), positional))
         for line in self._stream_lines:
             on_line(line)
@@ -246,16 +246,16 @@ class StaticModuleSource:
 
 @runtime_checkable
 class ModuleSource(Protocol):
-    """模块数据源接口。测试注入替身，实际运行通过子进程访问。"""
+    """模块数据源接口。测试注入模拟对象，实际运行通过子进程访问。"""
 
     def list_modules(self) -> Sequence[ModuleRecord]:
         """返回全部模块记录。"""
 
     def list_available(self) -> Sequence[ModuleRecord]:
-        """返回可安装的模块记录，含尚未安装的项。"""
+        """返回可安装的模块记录，包含尚未安装的项。"""
 
     def load_states(self) -> Mapping[str, bool | None]:
-        """返回模块名到全局装载状态的映射。``None`` 表示尚无记录。"""
+        """返回模块名到全局加载状态的映射。``None`` 表示尚无记录。"""
 
     def install(self, record: ModuleRecord) -> OperationResult:
         """安装给定记录。"""
@@ -285,17 +285,17 @@ class ModuleSource(Protocol):
 
 
 def _operation_action(kind: str) -> str:
-    # 安装、卸载、更新的动作名，用于批量汇总与通知标题。
+    # 安装、卸载、更新的操作名称，用于批量汇总与通知标题。
     return i18n.t(f"cli.tui.modules.action_{kind}")
 
 
 def _is_git_address(text: str) -> bool:
-    # ``module add`` 只接受名字或 git 直接引用：含协议头的输入一律按仓库地址交给 CLI 的 ``--git``。
+    # ``module add`` 仅接受名称或 git 直接引用，包含协议头的输入一律按仓库地址传入 CLI 的 ``--git`` 选项。
     return text.startswith(("git+", "git@", "ssh://", "git://")) or "://" in text
 
 
 def _split_git_address(text: str) -> tuple[str, str, str]:
-    # 拆出地址中的 ref 与 subdirectory 片段，交给 CLI 的同名选项。末段中的 ``@`` 才是 ref
+    # 提取地址中的 ref 与 subdirectory 片段传递给 CLI 同名选项。末段中的 ``@`` 才是 ref，
     # ``git@host`` 中的 ``@`` 属于 userinfo，解析规则与引擎一致。
     head, _, fragment = text.partition("#")
     subdir = ""
@@ -320,7 +320,7 @@ def _git_install_args(text: str) -> tuple[str, ...]:
 
 
 def sort_key(record: ModuleRecord) -> tuple[bool, str]:
-    """列表展示顺序：已安装在前，其次按名称升序（大小写不敏感）。"""
+    """列表按照已安装优先、其次按名称升序（不区分大小写）排序。"""
     return (not record.installed, record.name.casefold())
 
 
@@ -446,7 +446,7 @@ class SubprocessModuleSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 每次读取时解析实例根，确保切换实例后子进程使用当前实例。
+        # 每次读取时重新解析实例根目录，确保切换实例后子进程使用当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "available": 0, "install": 0, "uninstall": 0}
@@ -455,7 +455,7 @@ class SubprocessModuleSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录路径，明确给定优先，其次为界面当前选中的实例，最后自动定位。"""
         return context.resolve_root(self._root_override)
 
     def list_modules(self) -> Sequence[ModuleRecord]:
@@ -507,7 +507,7 @@ class SubprocessModuleSource:
         extra_args: Sequence[str] = (),
         positional: bool = True,
     ) -> OperationResult:
-        """执行模块操作，并通过异步读取子进程输出报告进度。"""
+        """执行模块操作，异步读取子进程输出并返回进度。"""
         self.calls[kind if kind in self.calls else "install"] += 1
         name = record.dist or record.name
         subcommand = _OPERATION_SUBCOMMANDS[kind]
@@ -585,7 +585,7 @@ class SubprocessModuleSource:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_oserror", cmd=" ".join(argv), error=error)) from error
 
     def load_states(self) -> Mapping[str, bool | None]:
-        """通过 ``module status --json`` 读取装载状态。实例未运行时仍可读取已有记录。"""
+        """通过 ``module status --json`` 读取加载状态。实例未运行时仍可读取已有记录。"""
         self.calls["status"] = self.calls.get("status", 0) + 1
         argv = self.cli_argv("module", "status", "--json")
         completed = self._run(argv)
@@ -634,7 +634,7 @@ class SubprocessModuleSource:
             raise ModuleSourceError(i18n.t("cli.tui.modules.src_no_installed"))
         try:
             payload = installed()
-        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的错误
+        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转换为可展示的错误。
             raise ModuleSourceError(
                 i18n.t("cli.tui.modules.src_installed_failed", kind=type(error).__name__, error=error)
             ) from error
@@ -654,7 +654,7 @@ class SubprocessModuleSource:
             return Instance(root)
         except ModuleSourceError:
             raise
-        except Exception as error:  # noqa: BLE001 - 实例构造失败同样只作为降级原因上报
+        except Exception as error:  # noqa: BLE001 - 实例构造失败同样仅作为降级原因返回。
             raise ModuleSourceError(
                 i18n.t("cli.tui.modules.src_instance_failed", kind=type(error).__name__, error=error)
             ) from error
@@ -707,7 +707,7 @@ class ModulesPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数。安装/卸载成功后立即失效，与有效期无关。
     """
 
-    # 页面键位仅在本页生效，避免隐藏页响应操作。低频键位由详情区提示以控制页脚宽度。
+    # 页面键位仅在本页生效，避免隐藏页面响应操作。低频键位由详情区提示以控制页脚宽度。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.modules.action_refresh")),
         ("slash", "focus_search", i18n.t("cli.tui.modules.bind_search")),
@@ -825,10 +825,10 @@ class ModulesPage(compat.Vertical):
         self._selected_key: str | None = None
         self._busy: bool = False
         self._installed_only: bool = False
-        # 多选：按分发名记录选区，刷新后只保留仍然存在的项。_anchor 是 Shift 扩选的起点。
+        # 多选模式按照包名记录选区，刷新后仅保留仍然存在的项，_anchor 为 Shift 扩展选择的起点。
         self._selected: set[str] = set()
         self._anchor: str | None = None
-        # 确认框使用防抖，避免鼠标双击或键盘连发产生重复弹窗。
+        # 确认对话框执行防抖检查，避免鼠标双击或键盘连续触发产生重复弹窗。
         self._confirm = compat.PendingConfirm()
         self._available_error: str = ""
         self._load_states: dict[str, bool | None] = {}
@@ -864,7 +864,7 @@ class ModulesPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.common.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件。读取数据推迟到首次显示。"""
+        """挂载后仅装配控件。读取数据推迟至首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -896,7 +896,7 @@ class ModulesPage(compat.Vertical):
             return None
         try:
             list_view = self.query_one("#module-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理。
             return None
         index = compat.highlighted_index(list_view)
         if index is None or index >= len(records):
@@ -906,12 +906,12 @@ class ModulesPage(compat.Vertical):
     @property
     def search_query(self) -> str:
         """返回当前搜索词。"""
-        # 名称需避免覆盖 Textual 的 Widget.query()。
+        # 名称需要避免覆盖 Textual 的 Widget.query()。
         return self._query
 
     @property
     def detail_text(self) -> str:
-        """返回详情面板当前渲染出的纯文本。"""
+        """返回详情面板当前渲染结果中的纯文本。"""
         return self._detail_rendered
 
     @property
@@ -932,7 +932,7 @@ class ModulesPage(compat.Vertical):
 
     # endregion
 
-    # region 数据读取
+    # region 数据读取。
 
     def refresh_records(self, *, force: bool = False) -> None:
         """读取模块列表。
@@ -959,20 +959,20 @@ class ModulesPage(compat.Vertical):
             self._render_list()
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=error))
             return False
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面。
             self._records = ()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
             self._render_list()
             self._set_status(i18n.t("cli.tui.modules.status_load_failed", error=self.last_error))
             return False
-        # 适配器由独立页面管理。保留类型未知的记录，避免隐藏可管理的包。
+        # 适配器由独立页面管理。保留类型未知的包记录，避免隐藏可管理的包。
         records = [record for record in records if record.kind != "adapter"]
         if not self._installed_only:
             records = await self._merge_available(records)
         await self._load_module_states()
         self._records = tuple(sorted(records, key=sort_key))
-        # 清除刷新后不存在的选中项，避免批量操作包含不可见的包。
+        # 清除刷新后已不存在的选中项，避免批量操作包含不可见的依赖包。
         known = {record.dist for record in self._records}
         self._selected &= known
         if self._anchor not in known:
@@ -986,16 +986,16 @@ class ModulesPage(compat.Vertical):
             self.last_result = f"{self.last_result}{self._load_error}"
         self._render_list()
         self._set_status(self.last_result)
-        # 列表加载后恢复列表焦点，仅在焦点仍位于页面容器时执行，避免中断搜索输入。
+        # 列表加载后恢复其焦点状态，仅在焦点仍位于页面容器时执行，避免中断搜索输入。
         if self.display and self.app.focused is self:
             self.focus_primary()
         return True
 
     async def _load_module_states(self) -> None:
-        # 装载状态表可能不存在，读取失败时仍展示安装列表。
+        # 加载状态表可能不存在，读取失败时仍正常展示已安装列表。
         try:
             states = await asyncio.to_thread(self.source.load_states)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都只降级
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常均仅执行降级。
             self._load_states = {}
             self._load_error = i18n.t("cli.tui.modules.status_load_unavailable", error=error)
             return
@@ -1003,7 +1003,7 @@ class ModulesPage(compat.Vertical):
         self._load_error = ""
 
     def load_state_text(self, record: ModuleRecord) -> str:
-        """返回某条记录的装载状态文本，供列表与详情展示。"""
+        """返回某条记录的加载状态文本，供列表与详情展示。"""
         modules = [name for name in record.provides_modules if name in self._load_states]
         if not modules:
             return i18n.t("cli.tui.modules.load_cell_unknown")
@@ -1011,14 +1011,14 @@ class ModulesPage(compat.Vertical):
         return i18n.t("cli.tui.modules.load_cell", loaded=loaded, total=len(modules))
 
     async def _merge_available(self, installed: Sequence[ModuleRecord]) -> list[ModuleRecord]:
-        # 已安装记录包含本地版本与依赖信息，合并时优先保留。软件源读取失败不影响已安装列表。
+        # 已安装记录包含本地版本与依赖信息，合并时优先保留。软件源读取失败不影响展示已安装列表。
         self._available_error = ""
         try:
             available = await asyncio.to_thread(self.source.list_available)
         except ModuleSourceError as error:
             self._available_error = i18n.t("cli.tui.modules.available_failed", error=error)
             return list(installed)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面。
             self._available_error = i18n.t("cli.tui.modules.available_failed", error=f"{type(error).__name__}: {error}")
             return list(installed)
         known = {record.dist for record in installed}
@@ -1028,13 +1028,13 @@ class ModulesPage(compat.Vertical):
         return merged
 
     def invalidate_cache(self) -> None:
-        """使缓存立即失效，下一次读取必定走数据源。"""
+        """使缓存立即失效，下一次读取必定通过数据源获取。"""
         self._loaded_at = 0.0
         self._records = ()
 
     # endregion
 
-    # region 渲染（只读缓存）
+    # region 渲染（仅读取缓存）
 
     def _render_list(self) -> None:
         records = self.visible_records
@@ -1050,11 +1050,11 @@ class ModulesPage(compat.Vertical):
         self._sync_actions()
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的列表行文本，供自动化检查核对宽度。"""
+        """返回最近一次渲染结果中的列表行文本，供自动化检查核对宽度。"""
         return self._rendered_rows
 
     def column_text(self) -> str:
-        """返回最近一次渲染出的表头文本。"""
+        """返回最近一次渲染结果中的表头文本。"""
         return self._columns_rendered
 
     def _render_columns(self, layout: ModuleLayout, inner_width: int) -> None:
@@ -1075,7 +1075,7 @@ class ModulesPage(compat.Vertical):
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 36
         return max(outer - 4, 8)
 
@@ -1088,7 +1088,7 @@ class ModulesPage(compat.Vertical):
         return min(max(longest, 5), 8)
 
     def _load_column_width(self) -> int:
-        # 仅已安装且声明模块的包具有装载状态。
+        # 仅已安装且声明模块的包具有加载状态。
         texts = [self.load_state_text(record) for record in self._records if self._has_load_column(record)]
         return max((compat.display_width(text) for text in texts), default=0)
 
@@ -1101,7 +1101,7 @@ class ModulesPage(compat.Vertical):
         show_summary = inner_width - fixed - name_width - 1 >= 6
         if not show_summary:
             name_width = max(inner_width - fixed, 4)
-        # 装载列宽不足 4 时隐藏该列，避免显示无法识别的截断状态。
+        # 加载状态列宽不足 4 时隐藏该列，避免显示无法识别的截断状态。
         budget = inner_width - 6 - name_width - version_width
         if load_width and budget < load_width:
             load_width = budget if budget >= 4 else 0
@@ -1112,7 +1112,7 @@ class ModulesPage(compat.Vertical):
         return record.installed and bool(record.provides_modules)
 
     def _row_text(self, record: ModuleRecord, layout: ModuleLayout, inner_width: int) -> str:
-        # 首列是选中位：高亮条只表示光标所在，选中集合才是批量操作的操作对象。
+        # 首列是选中位，高亮条仅指示光标所在位置，选中集合才是批量操作的操作对象。
         marked = "✓" if record.dist in self._selected else " "
         marker = "●" if record.installed else "○"
         version = compat.fit_cells(record.version or "-", layout.version_width)
@@ -1209,7 +1209,7 @@ class ModulesPage(compat.Vertical):
         # 安装按钮允许输入新的目标，不受当前选中包的安装状态限制。
         self.query_one("#install", compat.Button).disabled = self._busy
         self.query_one("#uninstall", compat.Button).disabled = self._busy or uninstall_target is None
-        # 更新始终可用：全量更新不依赖光标与选区。
+        # 更新始终可用，全量更新不依赖光标与选区。
         self.query_one("#update", compat.Button).disabled = self._busy
         self.query_one("#toggle-load", compat.Button).disabled = self._busy or not self._load_targets()
 
@@ -1219,13 +1219,13 @@ class ModulesPage(compat.Vertical):
         self.query_one("#status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新读取数据。"""
+        """终端尺寸变化时按缓存重新排列，不重新读取数据。"""
         if self._records:
             self._render_list()
 
     # endregion
 
-    # region 交互
+    # region 交互。
 
     @compat.on(compat.Input.Changed, "#search")
     def _on_search_changed(self, event: compat.Input.Changed) -> None:
@@ -1266,11 +1266,11 @@ class ModulesPage(compat.Vertical):
             self.refresh_records(force=True)
 
     def set_query(self, value: str) -> None:
-        """设置搜索框内容，等价于用户键入。"""
+        """设置搜索框内容，等价于手动键入。"""
         self.query_one("#search", compat.Input).value = value
 
     def focus_search(self) -> None:
-        """把焦点移到搜索框。"""
+        """将焦点移至搜索框。"""
         self.query_one("#search", compat.Input).focus()
 
     def clear_search(self) -> None:
@@ -1282,7 +1282,7 @@ class ModulesPage(compat.Vertical):
         self.query_one("#module-list", compat.ListView).focus()
 
     def _install_target(self) -> ModuleRecord | None:
-        # 未安装的高亮项可直接作为目标。其他情况使用搜索词预填安装输入框。
+        # 未安装的高亮项可作为安装目标。其他情况使用搜索词预先填充安装输入框。
         record = self.selected_record
         if record is not None and not record.installed:
             return record
@@ -1325,7 +1325,7 @@ class ModulesPage(compat.Vertical):
         )
 
     def _confirm_install(self, targets: Sequence[ModuleRecord]) -> None:
-        # 安装会改动实例环境并补充配置，单字母键触发时须先确认目标。
+        # 安装会改动实例环境并补充配置，单字母键触发时需要先确认目标。
         if not self._confirm.accept("install:" + ",".join(record.dist for record in targets)):
             return
         compat.ask_choice(
@@ -1381,7 +1381,7 @@ class ModulesPage(compat.Vertical):
         return tuple(options)
 
     def _editable_path(self, text: str) -> Path | None:
-        # 子进程的 cwd 是实例根，相对路径按它解析才能与 CLI 的 -e 取到同一个目录。
+        # 子进程的 cwd 是实例根目录，相对路径以此基准解析才能与 CLI 的 -e 选项指向同一目录。
         path = Path(text).expanduser()
         if not path.is_absolute():
             path = context.resolve_root() / path
@@ -1410,9 +1410,9 @@ class ModulesPage(compat.Vertical):
         self._start_operation("install", [record], extra_args=extra, positional=not extra)
 
     def request_update(self) -> None:
-        """发起更新：弹出选择框决定更新选中项还是全部已安装包。"""
+        """发起更新，弹出选择框，以供选择更新选中项还是全部已安装包。"""
         targets = self._batch_targets("update")
-        # 防抖用于避免鼠标双击或键盘连发产生重复确认框。
+        # 防抖用于避免鼠标双击或键盘连续触发产生重复确认框。
         if not self._confirm.accept(f"update:{','.join(record.dist for record in targets)}"):
             return
         options: list[tuple[str, str]] = []
@@ -1437,7 +1437,7 @@ class ModulesPage(compat.Vertical):
         :param targets: 选区（没有选区时为当前项）中的已安装包。为空表示只能全量更新。
         :param mode: ``selected`` / ``all``。``None`` 表示取消。
         """
-        # 关闭确认框后清除防抖记录，允许重新发起操作。
+        # 关闭确认框后清除防抖记录，允许重新发起新的操作。
         self._confirm.reset()
         if mode == _UPDATE_SELECTED and targets:
             self._start_operation("update", targets)
@@ -1508,7 +1508,7 @@ class ModulesPage(compat.Vertical):
         self._open_uninstall_options(targets)
 
     def _open_uninstall_options(self, targets: Sequence[ModuleRecord]) -> None:
-        # 反向依赖由 CLI 回报。只有存在依赖时才提供级联卸载。
+        # 反向依赖由 CLI 返回。仅当存在依赖时才提供级联卸载。
         options = [
             ("keep", i18n.t("cli.tui.modules.uninstall_keep_data")),
             ("purge", i18n.t("cli.tui.modules.uninstall_purge_data")),
@@ -1577,7 +1577,7 @@ class ModulesPage(compat.Vertical):
         self._start_operation("uninstall", targets, extra_args=_UNINSTALL_MODE_ARGS["purge"])
 
     def request_toggle_load(self) -> None:
-        """装载选中包的模块。全部已装载时取消装载。"""
+        """加载选中包的模块。全部已加载时取消加载。"""
         targets = self._load_targets()
         if not targets:
             compat.notify(
@@ -1593,7 +1593,7 @@ class ModulesPage(compat.Vertical):
         self._start_operation(action, [ModuleRecord(name=name, dist=name) for name in modules])
 
     def _load_targets(self) -> list[ModuleRecord]:
-        # 装载仅适用于已安装且声明模块的包。
+        # 级联卸载依赖包可能影响其他模块运行，必须弹出二次确认。
         records = [record for record in self._records if record.dist in self._selected] if self._selected else []
         if not records:
             current = self.selected_record
@@ -1604,15 +1604,15 @@ class ModulesPage(compat.Vertical):
         # 批量目标按安装状态筛选，避免对同一选区执行无效操作。
         if not self._selected:
             single = self._install_target() if kind == "install" else self._uninstall_target()
-            return [single] if single is not None else []  # 更新与卸载同取已安装项
+            return [single] if single is not None else []  # 仅卸载当前选中的目标包，不处理反向依赖。
         wanted = [record for record in self._records if record.dist in self._selected]
         if kind == "install":
             return [record for record in wanted if not record.installed]
-        # 卸载与更新都只作用于已安装项。
+        # 卸载与更新均仅作用于已安装项。
         return [record for record in wanted if record.installed]
 
     def action_toggle_select(self) -> None:
-        """键位动作：切换当前项的选中状态（对应 Ctrl+点击）。"""
+        """切换当前项选中状态的键位动作（对应 Ctrl+点击）。"""
         record = self.selected_record
         if record is None:
             return
@@ -1624,7 +1624,7 @@ class ModulesPage(compat.Vertical):
         self._render_list()
 
     def action_select_all(self) -> None:
-        """键位动作：选中当前可见的全部（受搜索与筛选影响）。"""
+        """选中当前可见全部项的键位动作（受搜索与筛选影响）。"""
         visible = self.visible_records
         if not visible:
             return
@@ -1633,8 +1633,8 @@ class ModulesPage(compat.Vertical):
         self._render_list()
 
     def action_clear_selection(self) -> None:
-        """键位动作：清空选区。"""
-        # 清空选区时同步清除待确认状态。
+        """清空选区的键位动作。"""
+        # 模块安装会修改运行环境并补充配置，必须弹窗确认。
         self._confirm.reset()
         if not self._selected:
             return
@@ -1643,15 +1643,15 @@ class ModulesPage(compat.Vertical):
         self._render_list()
 
     def action_extend_up(self) -> None:
-        """键位动作：光标上移并扩展选区。"""
+        """光标上移并扩展选区的键位动作。"""
         self._move_cursor(-1, extend=True)
 
     def action_extend_down(self) -> None:
-        """键位动作：光标下移并扩展选区。"""
+        """光标下移并扩展选区的键位动作。"""
         self._move_cursor(1, extend=True)
 
     def _move_cursor(self, step: int, *, extend: bool) -> None:
-        # Shift 扩选替换上次范围，避免反向移动时保留已移出范围的记录。
+        # Shift 扩展选择替换上次范围，避免反向移动时保留已移出范围的记录。
         records = self.visible_records
         if not records:
             return
@@ -1664,7 +1664,7 @@ class ModulesPage(compat.Vertical):
         if self._anchor is None:
             self._anchor = records[current].dist
         self._select_range(self._anchor, records[target].dist, records)
-        # 重绘会按 _selected_key 恢复高亮项，需先同步当前目标。
+        # 重绘会按 _selected_key 恢复高亮项，需要先同步当前目标。
         self._selected_key = records[target].dist
         self._render_list()
 
@@ -1677,8 +1677,8 @@ class ModulesPage(compat.Vertical):
         self._selected = set(names[start : end + 1])
 
     def on_click(self, event: compat.events.Click) -> None:
-        """处理列表选择：普通点击单选，Ctrl 点击切换，Shift 点击扩选。"""
-        # 点击事件由 ListItem 冒泡，需检查来源以排除列表外的控件。
+        """处理列表选择，普通点击单选，Ctrl 点击切换，Shift 点击扩展选择。"""
+        # 点击事件由 ListItem 冒泡，需要检查事件来源以排除列表之外的控件。
         list_view = self.query_one("#module-list", compat.ListView)
         clicked = event.widget
         if clicked is None or list_view not in clicked.ancestors_with_self:
@@ -1745,7 +1745,7 @@ class ModulesPage(compat.Vertical):
     ) -> None:
         # 批量操作中单项失败不影响其余目标，失败结果在全部操作结束后汇总。
         bar = self.query_one("#progress", compat.ProgressBar)
-        # 单项操作保留数据源的结果说明，批量操作统一汇总。
+        # noqa: BLE001 - 数据源任意异常均转换为结果展示。
         succeeded: list[tuple[str, str]] = []
         failed: list[tuple[str, str]] = []
         total = len(targets)
@@ -1761,7 +1761,7 @@ class ModulesPage(compat.Vertical):
                     extra_args=extra_args,
                     positional=positional,
                 )
-            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示
+            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成结果展示。
                 result = OperationResult(
                     False,
                     i18n.t("cli.tui.common.failed_label", label=label),
@@ -1775,7 +1775,7 @@ class ModulesPage(compat.Vertical):
         await self._finish_operation(kind, targets, succeeded, failed, bar)
 
     def _on_operation_line(self, line: str) -> None:
-        # 回调由工作线程之外的异步读取循环调用，因此只写字段并直接刷新控件，不触发读取数据。
+        # 回调由工作线程之外的异步读取循环调用，因此仅写入字段并直接刷新控件，不触发读取数据。
         self._stream_line = line
         self._stream_lines.append(line)
         self._set_status(line)
@@ -1791,7 +1791,7 @@ class ModulesPage(compat.Vertical):
         compat.progress_phase(bar, 3.0, _PROGRESS_PHASES)
         self._selected_key = targets[0].dist
         if succeeded:
-            # 操作成功的目标退出选区，保留失败目标以便重试。
+            # 操作成功的目标移出当前选区，保留失败目标以便重试。
             self._selected.difference_update(name for name, _ in succeeded)
             self._set_status(i18n.t("cli.tui.modules.refreshing", message=""))
             self.invalidate_cache()
@@ -1836,35 +1836,35 @@ class ModulesPage(compat.Vertical):
         compat.focus_first(self, "#module-list")
 
     def reset_pending(self) -> None:
-        """作废待确认状态。切页与本页状态变化时调用。"""
+        """重置待确认状态。切换页面或本页状态发生变化时调用。"""
         self._confirm.reset()
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取列表。"""
+        """强制重新读取列表的键位动作。"""
         self.refresh_records(force=True)
 
     def action_focus_search(self) -> None:
-        """键位动作：聚焦搜索框。"""
+        """聚焦搜索框的键位动作。"""
         self.focus_search()
 
     def action_install(self) -> None:
-        """键位动作：安装当前目标。"""
+        """安装当前目标的键位动作。"""
         self.request_install()
 
     def action_uninstall(self) -> None:
-        """键位动作：卸载当前目标。"""
+        """卸载当前目标的键位动作。"""
         self.request_uninstall()
 
     def action_update(self) -> None:
-        """键位动作：更新选中项或全部已安装包。"""
+        """更新选中项或全部已安装包的键位动作。"""
         self.request_update()
 
     def action_toggle_load(self) -> None:
-        """键位动作：装载或卸载选中项声明的模块。"""
+        """加载或卸载选中项声明模块的键位动作。"""
         self.request_toggle_load()
 
     def action_clear_search(self) -> None:
-        """键位动作：清空搜索框。"""
+        """清空搜索框的键位动作。"""
         self.clear_search()
 
     # endregion

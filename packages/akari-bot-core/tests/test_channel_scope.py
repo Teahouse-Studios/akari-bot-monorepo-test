@@ -1,4 +1,4 @@
-"""union 与消息通道的作用域单元测试 - 内存态按通道、花瓣额度按 union（需要数据库）。"""
+"""union 与消息通道作用域单元测试（内存状态按通道、花瓣额度按 union 划分，需要数据库）。"""
 
 import asyncio
 from unittest.mock import patch
@@ -26,14 +26,14 @@ async def _session(target_id: str, client: str) -> MessageSession:
 
 
 async def _states_shared(prefix: str) -> tuple[bool, bool, bool]:
-    # 判断同一 union 下的两个平台场景是否共用冷却、游戏状态与等待任务。
+    # 判断同一 union 下的两个平台场景是否共享冷却、运行状态与等待任务。
     first = await _session(f"{prefix}1|Group|x", f"{prefix}1")
     second = await _session(f"{prefix}2|Group|y", f"{prefix}2")
 
     _cd_dict.clear()
     SessionTaskManager._task_list.clear()
 
-    # check() 只按底层字典是否有内容判断，无法用来观测归属，故直接比较冷却桶本身
+    # check() 仅根据底层字典是否包含内容判断，无法用于观测所属范围，因此直接比对冷却桶本身。
     shared_cooldown = (
         CoolDown("probe", first, delay=60, whole_target=True)._get_cd_dict()
         is CoolDown("probe", second, delay=60, whole_target=True)._get_cd_dict()
@@ -54,7 +54,7 @@ async def _test_states_isolated_across_channels():
     try:
         union = await TargetUnionInfo.resolve_union("CHA1|Group|x")
         await union.bind_id("CHA2|Group|y")
-        # 绑定后各场景默认使用独立通道，仅共享配置，不代表同一现实场景。
+        # 绑定后各场景默认采用独立通道并仅共享配置，不代表属于同一现实场景。
         return await _states_shared("CHA") == (False, False, False)
 
     except Exception:
@@ -113,7 +113,7 @@ async def _test_petal_quota_shared_across_platforms():
     try:
         with patch.object(petal_module, "CoreConfig", config):
             await gain("PETALA|1", 5)
-            # 花瓣余额挂在 union 上，日额度若仍按平台账号记账，绑几个平台就能领几倍
+            # 花瓣余额关联于 union，日额度若仍然按平台账号记账，绑定多个平台即可重复领取多倍额度。
             reached_limit = "limit" in str(await gain("PETALB|2", 5))
         return reached_limit and (await SenderUnionInfo.resolve_union("PETALA|1")).petal == 5
 
@@ -168,7 +168,7 @@ async def _test_parser_cooldown_shared_within_channel_and_user_union():
 
 @func_case
 async def test_channel_scope(tester: Tester):
-    """core: union 与消息通道的作用域测试"""
+    """core 的 union 与消息通道作用域测试"""
     await tester.test(_test_states_isolated_across_channels, "跨通道内存态隔离测试")
     await tester.test(_test_states_shared_within_channel, "同通道内存态共享测试")
     await tester.test(_test_play_state_running_lifecycle, "游戏状态异常清理与新局隔离测试")

@@ -1,4 +1,4 @@
-# 站点标题、输出位置、界面文案与侧栏导航的出厂默认值。
+# 站点标题、输出位置、界面文案与侧边栏导航的内置默认值。
 # 实例的 docs.toml 可以逐键覆盖这里的取值，未覆盖的键沿用本文件。
 
 [site]
@@ -56,21 +56,21 @@ Minecraft = "view_in_ar"
 "群组管理" = "groups"
 "开发与 AI" = "smart_toy"
 
-# 站点素材：文件名相对随包的 assets/ 目录，缺失时按无素材处理。
+# 站点素材的文件名相对随包的 assets/ 目录，缺失时按无素材处理。
 # 实例 docs.toml 的 [site] favicon 与 logo 优先于这里的默认值。
-# favicon.ico 与仓库根的 assets/favicon.ico 保持一致。
+# favicon.ico 与仓库根目录的 assets/favicon.ico 保持一致。
 [assets]
 favicon = "favicon.ico"
 
-# 语言清单：键为语言标签，值为语言选择器里的显示名称。
+# 语言清单中键为语言标签，值为语言选择器里的显示名称。
 # 默认语言由 [site] lang 指定，实例在 docs.toml 的 [site] locales 列出更多语言，
 # 并在 [locales.<标签>] 中给出各自的名称与文案覆盖。
 [locales.zh-CN]
 label = "简体中文"
 
-# 页脚关于区块：配图默认使用品牌立绘，按钮图标可用内置名 afdian、github。
-# 实例 docs.toml 写 [footer] 覆盖文字，写 [[footer.links]] 覆盖按钮。
-# text 与 links 写空数组表示不显示该部分。
+# 页脚关于区块的配图默认使用品牌立绘，按钮图标可用内置名 afdian、github。
+# 实例 docs.toml 中配置 [footer] 可覆盖文字，配置 [[footer.links]] 可覆盖按钮。
+# text 与 links 设为空数组表示不显示该部分。
 [footer]
 title = "关于小可"
 text = [

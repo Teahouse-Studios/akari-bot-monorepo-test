@@ -56,7 +56,7 @@ def _instance():
 
 def _run(root: Path, *args: str) -> tuple[int, dict]:
     env = dict(os.environ, AKARI_INSTANCE_DIR=str(root))
-    # 引导代码可能为整个测试进程设过配置目录，子进程必须只认本次的实例根。
+    # 引导代码可能为整个测试进程设置过配置目录，子进程必须仅使用本次的实例根目录。
     env.pop("AKARI_CONFIG_PATH", None)
     result = subprocess.run(
         [sys.executable, "-m", ENTRYPOINT, "placeholders", *args, "--json"],
@@ -73,7 +73,7 @@ def _run(root: Path, *args: str) -> tuple[int, dict]:
 
 
 async def _test_comment_and_string_are_not_counted():
-    # 注释里的示例文本与字符串值里嵌的同形文本都不构成占位项，只有整值等于标记才算。
+    # 注释中的示例文本与字符串值中内嵌的同形文本均不构成占位项，仅当完整值等于标记时才计入统计。
     with _instance() as root:
         (root / "config" / "config.toml").write_text(INSTANCE_CONFIG, encoding="utf-8")
         code, payload = _run(root)
@@ -87,7 +87,7 @@ async def _test_comment_and_string_are_not_counted():
 
 
 async def _test_suffixed_marker_variants_are_counted():
-    # 标记形状按 core 的正则判定：裸标记与带后缀、带类型说明的写法都算，同一表内逐项累计。
+    # 占位标记格式按照 core 的正则表达式判定，无后缀标记与带后缀、带类型说明的写法均计入统计，同一表内逐项累计。
     with _instance() as root:
         (root / "config" / "config.toml").write_text(SUFFIX_CONFIG, encoding="utf-8")
         code, payload = _run(root)
@@ -95,7 +95,7 @@ async def _test_suffixed_marker_variants_are_counted():
 
 
 async def _test_broken_table_is_reported_not_skipped():
-    # 单张表解析失败或不是 UTF-8 时只把该表记入 failed，其余表照常统计，命令仍以 0 退出。
+    # 单张表解析失败或编码非 UTF-8 时，仅将该表记入 failed，其余表正常执行统计，命令仍然以退出码 0 结束。
     with _instance() as root:
         (root / "config" / "config.toml").write_text(SUFFIX_CONFIG, encoding="utf-8")
         (root / "config" / "broken.toml").write_text("not = = toml\n", encoding="utf-8")
@@ -112,7 +112,7 @@ async def _test_broken_table_is_reported_not_skipped():
 
 
 async def _test_missing_table_and_separator_are_rejected():
-    # 缺文件与含路径分隔符的表名各留一条原因：表名只用于拼接配置目录下的文件名。
+    # 缺少文件与包含路径分隔符的表名各保留一条原因说明，由于表名称仅用于拼接配置目录下的文件名。
     with _instance() as root:
         (root / "config" / "config.toml").write_text(SUFFIX_CONFIG, encoding="utf-8")
         code, payload = _run(root, "--tables", "config,absent,../outside")
@@ -126,7 +126,7 @@ async def _test_missing_table_and_separator_are_rejected():
 
 
 async def _test_default_scan_covers_every_table():
-    # 缺 --tables 时遍历配置目录下的全部表，逐表给出占位与总项数，并汇总总数。
+    # 未传入 --tables 参数时遍历配置目录下的全部数据表，逐表输出占位项与总项数，并汇总总数量。
     with _instance() as root:
         (root / "config" / "config.toml").write_text(SUFFIX_CONFIG, encoding="utf-8")
         (root / "config" / "bot_telegram.toml").write_text(PARTNER_CONFIG, encoding="utf-8")
@@ -144,7 +144,7 @@ async def _test_default_scan_covers_every_table():
 
 
 async def _test_adapter_enable_comment_is_localized():
-    # 实例配置文件的注释取自 schema：缺专属注释时用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。
+    # 实例配置文件的注释提取自 schema，缺少专属注释时采用各适配器共用的 enable 注释，不输出 {I18N:...} 标记。
     with _instance() as root:
         (root / "config" / "config.toml").write_text('default_locale = "zh_cn"\n', encoding="utf-8")
         (root / "config" / "bot_demo-alt.toml").write_text("[bot_demo-alt]\nenable = false\n", encoding="utf-8")
@@ -166,8 +166,8 @@ async def _test_adapter_enable_comment_is_localized():
 
 
 async def _test_sync_reloads_new_adapter_table():
-    # 适配器配置模板在导入时写盘。入口必须在读取 schema 前重新加载配置。
-    # 否则首次安装时表还不存在，配置补全会以“配置表不存在”失败。
+    # 适配器配置模板在导入阶段写入磁盘。入口必须在读取 schema 前重新加载配置，
+    # 避免首次安装阶段配置表尚不存在而导致配置补全流程失败。
     with _instance() as root:
         (root / "config" / "config.toml").write_text('default_locale = "zh_cn"\n', encoding="utf-8")
         fake = root / "fake-site"
@@ -206,7 +206,7 @@ async def _test_sync_reloads_new_adapter_table():
 
 @func_case
 async def test_entrypoint_config(tester: Tester):
-    """core.entrypoints.config: 占位符统计入口测试"""
+    """core.entrypoints.config 占位符统计入口测试"""
     await tester.test(_test_comment_and_string_are_not_counted, "注释与字符串里的同形文本不计入")
     await tester.test(_test_suffixed_marker_variants_are_counted, "带后缀的标记按项计入")
     await tester.test(_test_broken_table_is_reported_not_skipped, "解析失败与乱码表进 failed")

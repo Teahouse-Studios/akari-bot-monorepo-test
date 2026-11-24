@@ -25,8 +25,8 @@ DIST = "akari-bot-module-dice"
 
 
 def _use_cli_locale() -> None:
-    # 测试框架在每个用例前重跑 ``load_modules()``，它会把当前快照连到 core 的命名空间。而 CLI 的
-    # ``Locale`` 按当前快照取键，不切回来就只会拿到键名。生产里 CLI 进程不加载 core，无此问题。
+    # 测试框架在每个用例执行前重新运行 ``load_modules()``，将当前快照关联至 core 的命名空间。而 CLI 的
+    # ``Locale`` 按照当前快照读取文案键，若不切换回原有快照则仅能获取键名。生产环境中 CLI 进程不加载 core，无此问题。
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
@@ -82,7 +82,7 @@ async def _test_rejected_surfaces_reason_and_blocks():
             },
             returncode=4,
         )
-    # 只看 returncode 既给不出“远端拒绝”的状态，也丢掉了 core 给出的具体原因。
+    # 仅检查 returncode 既无法提供“远端拒绝”的状态，也会丢失 core 给出的具体原因。
     return (
         result.attempted
         and not result.delivered
@@ -149,7 +149,7 @@ async def _test_instance_not_running_does_not_block():
         instance = _make_instance(Path(directory))
         instance.is_running = lambda: False
         result = instance.notify_package_change("remove", DIST)
-    # 实例确实没在跑时没有可拆卸的对象，卸载必须继续而不是被自己的保护条件挡住。
+    # 实例确实未运行时无待卸载的对象，卸载流程必须继续执行，避免受内部保护条件阻碍。
     return not result.attempted and not result.delivered and result.status == "" and not result.blocks_uninstall
 
 
@@ -189,7 +189,7 @@ class _RecordingRunner:
         return self.run(argv, env=env)
 
     def run_checked(self, argv: Any, *, what: str, env: Any = None, stream: bool = False) -> None:
-        # 只在这里记一次：run_streaming 是传输方式，不是调用点。
+        # 仅在此处记录一次，因为 run_streaming 属于传输方式而非调用点。
         self.streamed.append(stream)
         (self.run_streaming if stream else self.run)(argv, env=env)
 
@@ -220,7 +220,7 @@ def _remove_with_notify(notify: dict, returncode: int) -> tuple[int | None, list
         with TemporaryDirectory(prefix="akari-cli-remove-") as directory:
             root = Path(directory)
             instance = _make_instance(root)
-            # remove() 自己解析实例，故连解析器一起替换，才能把子进程结果与运行状态都固定下来。
+            # 仅由热加载读取使用，因此仅写入热加载通知。
             instance.is_running = lambda: True
             instance.run_core_capture = lambda entrypoint, *args, timeout=120.0, **env: subprocess.CompletedProcess(
                 [entrypoint, *args],
@@ -259,7 +259,7 @@ async def _test_remove_uninstalls_after_confirmed_detach():
         {"ok": True, "status": "delivered", "remote": "server.post_package_remove", "result": True, "detail": ""},
         0,
     )
-    # 卸载可能持续几分钟，必须走实时转发，否则界面上看不出“正在卸”还是“卡住了”。
+    # 已卸载的包仍记录在通知中，由热加载负责卸载运行时模块。
     return code is None and len(calls) == 1 and DIST in calls[0] and "uninstall" in calls[0] and streamed == [True]
 
 
@@ -350,7 +350,7 @@ async def _test_update_detaches_before_reloading():
         _notify_payload("delivered", "server.post_package_remove"),
         _notify_payload("delivered", "server.post_package_install"),
     )
-    # 先热拆卸旧代际再热装载，否则服务端会以“包已注册”拒绝，更新永远落不到运行态。
+    # 先执行热卸载移除旧版本再触发热加载，否则服务端会以“包已注册”为由拒绝，导致更新无法生效。
     return (
         remotes == ["server.post_package_remove", "server.post_package_install"]
         and payload["updated"] == [DIST]
@@ -364,7 +364,7 @@ async def _test_update_skips_reload_when_detach_unconfirmed():
         _notify_payload("rejected", "server.post_package_remove"),
         _notify_payload("delivered", "server.post_package_install"),
     )
-    # 旧代际没拆掉就不必再投递热装载（必被拒），但要把“需要重启”如实写进结果。
+    # 旧版本未卸载成功时无需再次触发热加载（必定被拒绝），但需要将“需要重启”如实写入结果。
     return (
         remotes == ["server.post_package_remove"]
         and payload["updated"] == [DIST]
@@ -379,7 +379,7 @@ async def _test_update_does_not_detach_adapters():
         _notify_payload("delivered", "server.post_package_install"),
         kind="adapter",
     )
-    # 适配器不支持整包热换，沿用“装好后提示重启”的既有语义，不投递拆卸。
+    # 适配器不支持整包热替换，沿用“安装后提示重启”的既有语义，不触发卸载。
     return remotes == ["server.post_package_install"] and payload["restart_required"] is False
 
 

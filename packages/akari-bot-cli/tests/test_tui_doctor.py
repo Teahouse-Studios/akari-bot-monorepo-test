@@ -98,7 +98,7 @@ async def _with_page(source, body, *, size=(150, 40), sources=None):
 
 
 def _visible_detail_rows(page) -> tuple[str, ...]:
-    # 控件区域可能超出屏幕，须取可视区交集后检查实际渲染内容。
+    # 控件区域可能超出屏幕，需要计算可视区交集后检查实际渲染内容。
     detail = page.query_one("#detail", compat.Static)
     region = detail.region
     screen = page.app.screen.region
@@ -114,7 +114,7 @@ class _SlowDoctorSource(StaticDoctorSource):
         return super().load_snapshot(strict=strict)
 
 
-# AKARIBOT_CLI_BIN 仅接受可执行文件路径，CLI 替身须包含 shebang。
+# AKARIBOT_CLI_BIN 仅接受可执行文件路径，模拟 CLI 脚本需要包含 shebang。
 FAKE_CLI_DOCTOR_EXIT_ONE = """#!/usr/bin/env python3
 import json
 import sys
@@ -216,7 +216,7 @@ async def _test_lists_conflicts_and_summarizes():
 
 
 async def _test_refresh_keeps_row_highlighted():
-    # 关键回归：重建结论列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归测试，重建结论列表后选中行必须保持高亮——ListView 仅在 index 变化时更新高亮。
     source = StaticDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
@@ -241,7 +241,7 @@ async def _test_refresh_keeps_row_highlighted():
 
 
 async def _test_exit_code_one_with_json_still_renders():
-    # 非零退出码可能表示诊断发现问题，完整 JSON 结果仍须展示。
+    # 非零退出码可能表示诊断发现问题，完整 JSON 结果仍需要展示。
     with TemporaryDirectory(prefix="akari-doctor-") as raw:
         root = Path(raw)
         fake = _fake_cli(root, "fake_doctor_exit_one", FAKE_CLI_DOCTOR_EXIT_ONE)
@@ -510,7 +510,7 @@ async def _test_enter_jumps_to_target_page():
             app.show_page("doctor")
             await pilot.pause()
             if expected != "dashboard":
-                # 自定义回车操作不应影响列表方向键导航。
+                # 自定义 Enter 键操作不应影响列表方向键导航。
                 await pilot.press("down")
                 await pilot.pause()
         await pilot.press("q")
@@ -682,7 +682,7 @@ async def _test_strict_option_reloads_with_flag():
 
 
 async def _test_strict_toggle_restarts_running_load():
-    # 请求期间更改选项会使旧结果失效，须按新选项重新诊断。
+    # 请求期间更改选项会使旧结果失效，需要按新选项重新诊断。
     source = _SlowDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
@@ -726,7 +726,7 @@ def _test_subprocess_source_adds_strict_flag():
 
 
 async def _test_click_only_moves_highlight():
-    # 单击也会触发 Selected 消息，只有回车应执行页面跳转。
+    # 单击也会触发 Selected 消息，仅 Enter 键应执行页面跳转。
     source = StaticDoctorSource(_snapshot(conflicts=(PORT_CONFLICT, CONFIG_CONFLICT)))
 
     async def body(app, page, pilot):
@@ -742,7 +742,7 @@ async def _test_click_only_moves_highlight():
 
 @func_case
 async def test_tui_doctor(tester: Tester):
-    """cli.tui.doctor: 诊断页结论、统计、重新诊断与跳转测试"""
+    """cli.tui.doctor 诊断页结论、统计、重新诊断与跳转测试"""
     _use_cli_locale()
     await tester.test(_test_lists_conflicts_and_summarizes, "列出结论行并汇总 error/warning")
     await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中结论仍然高亮")

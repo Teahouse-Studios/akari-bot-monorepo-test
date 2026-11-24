@@ -26,7 +26,7 @@ OBSOLETE_COLUMNS = (("module_maimai_lxns_prober_bind_info", "friend_code"),)
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    补上 OAuth 列并删除已废弃的旧列。
+    补充 OAuth 列并删除已废弃的列。
 
     :param ctx: 迁移上下文。
     """

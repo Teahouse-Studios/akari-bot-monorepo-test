@@ -26,12 +26,12 @@ _GLOBAL_JSON_SUFFIX = ".global.json"
 class TomlStore:
     """一个配置目录下全部配置文件的合并副本。"""
 
-    # 两次检查配置文件改动之间的最小间隔（秒）
+    # 两次检查配置文件改动之间的最小间隔（秒）。
     WATCH_INTERVAL = 1.0
-    # 等待进入临界区的上限（秒）
+    # 等待进入临界区的上限（秒）。
     LOCK_TIMEOUT = 10.0
-    # 锁文件被判定为陈旧的时长（秒）。该值须显著大于一次正常读写的耗时，
-    # 否则会回收仍处于临界区内的进程所持有的锁，导致两个进程同时改写而使配置项互相覆盖
+    # 锁文件被判定为陈旧的时长（秒）。该值必须显著大于一次正常读写的耗时，
+    # 否则会回收仍处于临界区内的进程所持有的锁，导致两个进程同时改写而使配置项互相覆盖。
     LOCK_STALE = 60.0
 
     def __init__(self, path: Path):
@@ -62,7 +62,7 @@ class TomlStore:
             try:
                 fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             except FileExistsError:
-                # 持锁进程若被强制结束会遗留锁文件，超过时限即判定为陈旧锁并予以回收。
+                # 持锁进程若被强制结束会遗留锁文件，超过时限即判定为陈旧锁并直接回收。
                 try:
                     if time.time() - lock_path.stat().st_mtime > self.LOCK_STALE:
                         lock_path.unlink(missing_ok=True)
@@ -102,7 +102,7 @@ class TomlStore:
                 continue
             cfg_name = path.name.removesuffix(".toml")
             parsed, mtime = self._read_toml(path)
-            # 空 TOML 属于合法输入，解析不会报错。若磁盘上的文件已被清空而内存中仍有内容，
+            # 空 TOML 属于合法输入，解析不会抛出异常。若磁盘上的文件已被清空而内存中仍有内容，
             # 直接覆盖会在下一次保存时将该空状态写回磁盘，配置即永久丢失。
             if not parsed and self.user_values.get(cfg_name):
                 logger.error(f"[Config] Config file {path.name} is empty, keeping the loaded values.")
@@ -153,8 +153,8 @@ class TomlStore:
                 for cfg_name, cfg in self.user_values.items():
                     file_path = self.path / (cfg_name if cfg_name.endswith(".toml") else f"{cfg_name}.toml")
                     content = toml_dumps(cfg, sort_keys=True)
-                    # 仅写入内容确有变化的文件。一次改写通常只涉及一个配置项，
-                    # 若重写全部二十余个文件，既会延长临界区，也会触发其它进程的无谓重新加载。
+                    # 仅写入内容确有变化的文件。一次改写通常仅涉及一个配置项，
+                    # 若重写全部二十余个文件，既会延长临界区，也会触发其他进程的无谓重新加载。
                     if file_path.exists() and file_path.read_text(encoding="utf-8") == content:
                         continue
                     self._atomic_write(file_path, content)
@@ -177,7 +177,7 @@ class TomlStore:
         if self._watch_lock:
             return
         # 若每次读取配置都对全部文件执行 stat，单次属性访问将产生数十次系统调用，
-        # 代价与读取一个已在内存里的值完全不成比例。配置改动晚至多 WATCH_INTERVAL 秒生效即可。
+        # 代价与读取已在内存中的值完全不成比例。配置改动晚至多 WATCH_INTERVAL 秒生效即可。
         now = time.monotonic()
         if now - self._last_watch < self.WATCH_INTERVAL:
             return
@@ -192,7 +192,7 @@ class TomlStore:
                     self.load()
                     break
         finally:
-            # 若不置于 finally 中，一旦加载抛出异常，此后 watch() 将永久空转，磁盘上的改动无法再被读取。
+            # 若不置于 finally 中，一旦加载抛出异常，此后 watch() 将永久空轮询，磁盘上的改动无法再被读取。
             self._watch_lock = False
 
     def _scan_mtimes(self) -> dict[str, float]:
@@ -221,7 +221,7 @@ class TomlStore:
         self.user_values = {}
         self._mtimes = {}
         self._watch_lock = False
-        # 切换目录后必须立刻重新检查，不能让上一份目录的节流状态把首次检查挡掉
+        # 切换目录后必须立刻重新检查，不能让上一份目录的节流状态拦截首次检查。
         self._last_watch = 0.0
         self.load()
 

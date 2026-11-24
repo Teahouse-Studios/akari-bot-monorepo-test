@@ -305,7 +305,7 @@ class WikiLib:
                 "https://mzh.moegirl.org.cn/",
                 self.url,
             )
-            # 萌娘百科强制使用移动版 API
+            # 萌娘百科强制使用移动版 API。
             api_match = re.match(r"(https?://.*?/api.php$)", self.url)
             wiki_api_link = api_match.group(1)
         except Exception:
@@ -396,8 +396,8 @@ class WikiLib:
                 message += "\n" + str(I18NContext("wiki.message.utils.wikilib.get_failed.moegirl"))
             return WikiStatus(available=False, value=False, message=message)
         get_cache_info.site_info = get_json
-        # 须带时区：不带时区的时间会被 Tortoise 当作 UTC 存入，缓存时间因此提前一个时区差，
-        # 上面的 43200 秒过期判断会多留一个时区差的缓存
+        # 必须携带时区，因为未包含时区的时间会被 Tortoise 视为 UTC 写入，缓存时间因此提前一个时区差，
+        # 上面的 43200 秒过期判断会多保留一个时区差的缓存。
         get_cache_info.timestamp = datetime.now(UTC)
         await get_cache_info.save()
         return WikiStatus(
@@ -814,16 +814,16 @@ class WikiLib:
         check_render: bool = False,
     ) -> PageInfo:
         """
-        :param title: 页面标题，如果为 None，则使用 pageid。
-        :param pageid: 页面 id。
+        :param title: 页面标题，若为 None，则使用 pageid。
+        :param pageid: 页面 ID。
         :param inline: 是否为 inline 模式。
-        :param lang: 所需的对应语言版本。
-        :param _doc: 是否为文档模式，仅用作内部递归调用判断。
-        :param _tried: 尝试 iw 跳转的次数，仅用作内部递归调用判断。
-        :param _explicit: 其中由标题显式请求的 iw 跳转次数，仅用作内部递归调用判断。
-        :param _prefix: iw 前缀，仅用作内部递归调用判断。
-        :param _iw: 是否为 iw 模式，仅用作内部递归调用判断。
-        :param _search: 是否为搜索模式，仅用作内部递归调用判断。
+        :param lang: 请求的对应语言版本。
+        :param _doc: 是否为文档模式，仅用于内部递归调用判断。
+        :param _tried: 尝试 iw 跳转的次数，仅用于内部递归调用判断。
+        :param _explicit: 其中由标题显式请求的 iw 跳转次数，仅用于内部递归调用判断。
+        :param _prefix: iw 前缀，仅用于内部递归调用判断。
+        :param _iw: 是否为 iw 模式，仅用于内部递归调用判断。
+        :param _search: 是否为搜索模式，仅用于内部递归调用判断。
         :param session: 消息会话，用于检查结果。
         :param check_render: 是否使用 MediaWiki parse API 检查 WebRender 目标。
         """
@@ -983,9 +983,9 @@ class WikiLib:
                 }
             )
         else:
-            # 摘要须由本地解析 Wikitext 得出。此处随主查询一并取回，无须额外请求。
-            # rvslots 自 MediaWiki 1.32 起提供，更低版本会忽略该参数并返回旧式结构，
-            # 故读取时要兼容两种结构。
+            # 摘要必须通过本地解析 Wikitext 生成。此处随主查询一并取回，不需要额外发起请求。
+            # rvslots 自 MediaWiki 1.32 起提供，更低版本会忽略该参数并返回旧版结构，
+            # 因此读取时需要兼容两种结构。
             query_props += ["revisions", "pageprops"]
             query_string.update(
                 {
@@ -1370,8 +1370,8 @@ class WikiLib:
                                     if raw_desc:
                                         page_desc = self.parse_text(raw_desc)
                                 else:
-                                    # 解析不出正文时不再回退至渲染 HTML：那条路径取回的是信息框、
-                                    # 导航栏一类的原始文本，充作摘要没有意义，宁可只给出链接
+                                    # 解析正文失败时不改用渲染 HTML，避免将信息框或导航栏等原始文本混入摘要，
+                                    # 此时仅保留页面链接。
                                     page_desc = self.parse_text(
                                         extract_summary(self._get_revision_content(page_raw), selected_section)
                                     )
@@ -1438,8 +1438,8 @@ class WikiLib:
                     iw_title = iw_title.group(1)
                     _iw = True
 
-                    # MediaWiki 的 iwurl 会返回已经解析过全域、本地及转发规则的完整 URL。
-                    # siteinfo.interwikimap 不一定包含扩展提供的全域前缀，因此只把缓存映射作为兼容回退。
+                    # MediaWiki 的 iwurl 会返回已经解析过全域、本地与转发规则的完整 URL。
+                    # siteinfo.interwikimap 不一定包含扩展提供的全域前缀，因此仅将缓存映射作为兼容备用方案。
                     if not (get_iw := i.get("url") or self.wiki_info.interwiki.get(i["iw"])):
                         raise InvalidWikiError(
                             str(I18NContext("wiki.message.utils.wikilib.get_failed.invalid_interwiki"))
@@ -1457,8 +1457,7 @@ class WikiLib:
                         _prefix += i["title"][: -len(normalized_iw_title)]
                     else:
                         _prefix += i["iw"] + ":"
-                    # try to query interwiki page
-                    # 章节与查询参数随标题交给目标 wiki，由其按自身章节表校验并判定渲染目标
+                    # 章节与查询参数随标题交由目标 Wiki，按照其自身章节表校验并判定渲染目标。
                     iw_query = await target_wiki.parse_page_info(
                         iw_title + urllib.parse.unquote(page_info.args or ""),
                         lang=lang,
@@ -1481,7 +1480,7 @@ class WikiLib:
                             if before_page_info.args or page_info.id == -1 or not page_info.id:  # preserve args if any
                                 page_info.before_title += urllib.parse.unquote(before_page_info.args)
                                 t += urllib.parse.unquote(before_page_info.args)
-                                # 参数已由目标 wiki 解析并拼入链接，此处不再重复拼接
+                                # 参数已由目标 Wiki 解析并拼接至链接，此处不再重复拼接。
                                 if page_info.link and not page_info.args:
                                     page_info.link += before_page_info.args
                             else:
@@ -1526,8 +1525,9 @@ class WikiLib:
 
     async def random_page(self) -> PageInfo:
         """
-        获取随机页面
-        :return: 页面信息
+        获取随机页面。
+
+        :return: 页面信息。
         """
         await self.fixup_wiki_info()
         random_url = await self.get_json(action="query", list="random", rnnamespace="0")

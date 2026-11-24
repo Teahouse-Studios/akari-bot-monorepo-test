@@ -13,7 +13,7 @@ from akaribot.cli.commands.migrate import LegacyProject, _enabled_modules, _plan
 from akaribot.cli.venv import RegistryCatalog, RegistryEntry
 from akaribot.testing import Tester, func_case
 
-# 旧版 modules/ 里的目录：42 个官方模块，用户只装载过 dice 与 wiki 家族。
+# 旧版 modules/ 目录中包含 42 个官方模块目录，此处仅加载过 dice 与 wiki 家族。
 ALL_DIRS = (
     "dice",
     "wiki",
@@ -61,8 +61,8 @@ ALL_DIRS = (
 
 
 def _catalog() -> RegistryCatalog:
-    # 未装载的模块也要在 registry 里有映射：否则“不安装”可能只是因为查不到分发，用例就分不清
-    # “按启用状态筛选”与“碰巧映射不到”。
+    # 未加载的模块也需要在 registry 中建立映射，否则“不安装”可能仅是因为无法查询到依赖包，用例便无法区分
+    # “按启用状态筛选”与“因缺少映射而未匹配”。
     entries = {}
     for name in ("dice", "wiki", "maimai", "phigros"):
         provides = ("wiki", "wikilog") if name == "wiki" else (name,)
@@ -151,7 +151,7 @@ def _test_absent_database_is_reported_unreadable():
 
 @func_case
 async def test_migrate_plan(tester: Tester):
-    """cli.commands.migrate: 迁移候选与跳过诊断测试"""
+    """cli.commands.migrate 迁移候选与跳过诊断测试"""
     await tester.test(_test_only_loaded_modules_are_installed, "只安装旧库启用过的模块")
     await tester.test(_test_wiki_family_collapses_to_one_distribution, "wiki 家族多对一去重")
     await tester.test(_test_unloaded_directories_are_reported_not_installed, "未装载目录进跳过清单")

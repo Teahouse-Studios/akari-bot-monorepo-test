@@ -95,7 +95,7 @@ class ScheduledJobSpec:
 
 
 class SchedulerLifecycle:
-    """统一管理模块计划任务、运行中实例和维护／关闭窗口。"""
+    """统一管理模块计划任务、运行中实例和维护与关闭窗口。"""
 
     MODULE_JOB_PREFIX = "module:"
     CORE_JOB_PREFIX = "core:"
@@ -121,8 +121,8 @@ class SchedulerLifecycle:
             if current is None:
                 return None
 
-            # maintenance 先关闭入口，再取得本锁作为提交屏障。已经 submit 但尚未
-            # 开始执行业务函数的 coroutine 会在此检测关闭状态并退出。
+            # maintenance 先关闭入口，再获取本锁作为提交屏障。已提交但尚未
+            # 开始执行业务函数的协程会在此检测关闭状态并退出。
             async with cls._launch_lock:
                 if not cls._accepting_jobs:
                     return None
@@ -197,7 +197,7 @@ class SchedulerLifecycle:
         snapshot: Mapping[str, Iterable[ScheduledJobSpec]],
         module_names: Iterable[str] | None = None,
     ) -> None:
-        """以快照替换指定模块的全部 Job。调用方须位于维护窗口内。"""
+        """以快照替换指定模块的全部 Job。调用方需要位于维护窗口内。"""
         names = set(module_names or snapshot)
         cls._remove_modules(names)
         for module_name in sorted(snapshot):
@@ -235,7 +235,7 @@ class SchedulerLifecycle:
 
     @classmethod
     def register_core_job(cls, job_name: str, function: Callable[..., Any], trigger: Any) -> str:
-        """注册一个同样受维护／关闭窗口追踪的核心计划任务。"""
+        """注册一个同样受维护与关闭窗口追踪的核心计划任务。"""
         job_id = f"{cls.CORE_JOB_PREFIX}{job_name}"
         old_spec = cls._job_specs.get(job_id)
         cls._remove_job(job_id)
@@ -317,7 +317,7 @@ class SchedulerLifecycle:
             try:
                 if old_state == STATE_RUNNING:
                     Scheduler.pause()
-                # 与所有已经进入／正在等待 wrapper 启动临界区的任务建立屏障。
+                # 与所有已经进入或正在等待 wrapper 启动临界区的任务建立屏障。
                 async with cls._launch_lock:
                     pass
                 await cls._cancel_active_tasks(selected_modules)
@@ -331,7 +331,7 @@ class SchedulerLifecycle:
 
     @classmethod
     async def shutdown(cls) -> None:
-        """真正停止 Scheduler，并等待所有运行中的业务 coroutine 退出。"""
+        """彻底停止全局 Scheduler，并等待所有运行中的业务协程退出。"""
         current = asyncio.current_task()
         if current in cls._active_tasks:
             raise RuntimeError("A scheduled job cannot shut down its own scheduler.")
@@ -350,8 +350,8 @@ class SchedulerLifecycle:
 
                 Scheduler.add_listener(on_shutdown, EVENT_SCHEDULER_SHUTDOWN)
                 try:
-                    # AsyncIOScheduler.shutdown() 只把真正的关闭回调排进事件循环。
-                    # 等待 shutdown event 才能保证回调已经执行，而非仅“调用过”。
+                    # AsyncIOScheduler.shutdown() 仅将实际的关闭回调排入事件循环。
+                    # 等待 shutdown event 才能确保业务协程完全退出。
                     Scheduler.shutdown(wait=False)
                     await stopped.wait()
                 finally:

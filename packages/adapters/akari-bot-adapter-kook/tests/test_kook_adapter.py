@@ -3,8 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-# KOOK 客户端在导入阶段即构造 Bot，令符占位符会被配置层解析为 None 并触发 ValueError，
-# 与既有 KOOK 用例一致，此处以 Bot 替身完成导入。
+# KOOK 客户端在导入阶段即构造 Bot，令牌占位符会被配置层解析为 None 并触发 ValueError，
+# 与既有 KOOK 用例一致，此处以模拟 Bot 完成导入。
 with patch("khl.Bot", return_value=SimpleNamespace()):
     import akaribot.adapters.kook.context as kook_context
     from akaribot.adapters.kook.context import KOOKContextManager
@@ -74,7 +74,7 @@ async def _test_unavailable_media_keeps_remaining_text() -> bool:
 
 @func_case
 async def test_kook_adapter(tester: Tester):
-    """KOOK 适配器跳过底层文件不可得的媒体元素。"""
+    """KOOK 适配器跳过底层文件不可用的媒体元素。"""
     await tester.test(_test_unavailable_media_elements_are_skipped, "KOOK 不可用的媒体元素被跳过")
     await tester.test(_test_unavailable_media_keeps_remaining_text, "KOOK 媒体不可用时保留文本")
     return tester

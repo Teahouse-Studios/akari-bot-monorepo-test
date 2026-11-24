@@ -1,6 +1,6 @@
 # Matrix 适配器
 
-Matrix 适配器以机器人账号登录 Matrix 家庭服务器，通过客户端同步协议接收房间消息。
+Matrix 适配器以机器人账号登录 Matrix 主服务器（Homeserver），通过客户端同步协议接收房间消息。
 
 ## 平台概述
 
@@ -16,30 +16,30 @@ Matrix 适配器以机器人账号登录 Matrix 家庭服务器，通过客户�
 akaribot module add akari-bot-adapter-matrix
 ```
 
-安装后由守护进程按配置启动。`bot_matrix.enable = true` 时启动。
+安装完成后由守护进程按配置启动。当 `bot_matrix.enable = true` 时启动服务。
 
 ## 配置
 
-配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表都写在 `config/bot_matrix.toml`。
+配置表为 `bot_matrix`，密钥表为 `bot_matrix_secret`。两张表均保存在 `config/bot_matrix.toml` 中。
 
-需要多个机器人账号时，用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表都写在 `config/bot_matrix-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表均保存在 `config/bot_matrix-<实例 ID>.toml` 中。
 
 主要字段如下，完整字段与默认值见 [config.md](config.md)。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `enable` | bool | `false` | 是否启动 Matrix 客户端。 |
-| `matrix_homeserver` | str | `https://matrix.org` | 家庭服务器地址。 |
-| `matrix_user` | str | `@akaribot:matrix.org` | 机器人完全限定用户 ID。 |
+| `matrix_homeserver` | str | `https://matrix.org` | 主服务器地址。 |
+| `matrix_user` | str | `@akaribot:matrix.org` | 机器人完整用户 ID。 |
 | `matrix_token` | str | `""` | 访问令牌，位于密钥表。 |
 | `matrix_device_id` | str | `""` | 设备 ID，位于密钥表。 |
 
 ## 必填信息
 
-- `matrix_homeserver`：机器人账号所属家庭服务器，末尾不要带斜杠。
-- `matrix_user`：形如 `@name:server` 的完全限定用户 ID。
+- `matrix_homeserver`：机器人账号所属主服务器地址，末尾不得包含斜杠。
+- `matrix_user`：形如 `@name:server` 的完整用户 ID。
 - `matrix_token` 与 `matrix_device_id`：同一登录会话的访问令牌与设备 ID，两者必须来自同一设备。
-- `matrix_device_name` 可以任意填写。启动时它会被设为设备的显示名。
+- `matrix_device_name` 支持自定义填写。启动时将设置为设备的显示名称。
 
 ## 平台能力
 
@@ -51,21 +51,21 @@ akaribot module add akari-bot-adapter-matrix
 | 表情回应 | 支持 | `m.reaction` 触发命令处理。 |
 | 引用回复 | 支持 | 支持富回复与线程根消息。 |
 | 输入状态 | 不支持 | — |
-| 消息撤回 | 支持 | 通过 redact 删除消息。 |
+| 消息撤回 | 支持 | 通过撤回接口（redact）删除消息。 |
 | 群组管理 | 不支持 | — |
 | 权限组 | 不支持 | — |
 | 消息节点 | 不支持 | — |
-| 私信 | 支持 | 私信通过仅含双方的房间发送。 |
+| 私信 | 支持 | 私信通过仅包含双方的房间发送。 |
 | RSS 推送 | 支持 | — |
 
 ## 私信与群聊
 
 - 所有入站消息的目标前缀都是 `Matrix|Room`，按房间场景处理。
-- 私信使用只包含双方的房间。发送私信时先查找与该用户的私聊房间，没有则创建。
-- 房间消息以机器人完全限定用户 ID 开头时，视为 @机器人。是否必须 @机器人由 core 的 `mention_required` 控制。
+- 私信使用仅包含双方的房间。发送私信时先查找与该用户的私聊房间，若不存在则创建。
+- 房间消息以机器人完整用户 ID 开头时，视为 @机器人。是否必须 @机器人由 core 的 `mention_required` 控制。
 
 ## 外部依赖
 
-- Matrix 家庭服务器。
+- Matrix 主服务器。
 - 端到端加密可选。运行环境安装 olm 后才会启用。设置 `matrix_megolm_backup_passphrase` 后，关闭客户端时会把 Megolm 密钥备份导出到 `data/private/matrix/megolm_backup/`。
 - 出站连接读取 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 设置。

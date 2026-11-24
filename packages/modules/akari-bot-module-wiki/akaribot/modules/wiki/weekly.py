@@ -26,9 +26,9 @@ async def get_weekly(with_img=False, zh_tw=False):
     html = b_result.find("div", class_="mp-section")
     el = html.find("div").find_all("div")
     content = el[1]
-    text = re.sub(r"<p>", "\n", str(content))  # 分段
-    text = re.sub(r"<(.*?)>", "", text, flags=re.DOTALL)  # 移除所有 HTML 标签
-    text = re.sub(r"\n\n\n", "\n\n", text)  # 移除不必要的空行
+    text = re.sub(r"<p>", "\n", str(content))  # 分段。
+    text = re.sub(r"<(.*?)>", "", text, flags=re.DOTALL)  # 移除所有 HTML 标签。
+    text = re.sub(r"\n\n\n", "\n\n", text)  # 移除不必要的空行。
     text = re.sub(r"\n*$", "", text)
     text = unescape(text)
     img = el[0].find("a")

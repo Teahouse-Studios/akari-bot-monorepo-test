@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.server``：预览服务器的 clean URL、目录索引与 404。"""
+"""``akaribot.cli.docs_engine.server`` 的预览服务器 clean URL、目录索引与 404 测试。"""
 
 import urllib.error
 import urllib.request
@@ -86,7 +86,7 @@ async def _test_stop_is_idempotent():
 
 @func_case
 async def test_docs_server(tester: Tester):
-    """cli.docs.server: 本机静态预览"""
+    """cli.docs.server 本机静态预览测试"""
     await tester.test(_test_serve_clean_urls_and_404, "clean URL、目录索引、404 与路径穿越")
     await tester.test(_test_missing_without_404_page, "无 404 页时返回纯文本")
     await tester.test(_test_stop_is_idempotent, "重复 stop 不报错")

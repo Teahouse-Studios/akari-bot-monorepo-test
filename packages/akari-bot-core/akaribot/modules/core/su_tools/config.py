@@ -46,7 +46,7 @@ async def _(msg: Bot.MessageSession, k: str, v: str, table_name: str | None = No
         secret = True
 
     if not CFGManager.has(k, secret=secret, table_name=table_name):
-        # 新建配置项会改变配置文件结构，与改写已有值不同，需额外确认
+        # 新建配置项会改变配置文件结构，与修改已有值不同，需要执行额外确认。
         if not await msg.wait_confirm(
             I18NContext(
                 "core.message.config.write.create.confirm",

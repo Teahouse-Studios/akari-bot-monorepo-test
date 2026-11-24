@@ -1,4 +1,4 @@
-"""TUI 自检与无头基本检查的异步等待、异常处理和退出码测试。"""
+"""TUI 自检与无界面基本检查的异步等待、异常处理和退出码测试。"""
 
 import asyncio
 import json
@@ -58,7 +58,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # 首次读取会初始化包内语言快照，须先完成初始化再注入测试快照。
+    # 首次读取会初始化包内语言快照，需要先完成初始化再注入测试快照。
     i18n.t("cli.tui.common.status_ready")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
@@ -86,7 +86,7 @@ class _Counting:
     def __init__(self, inner, delay: float = 0.05) -> None:
         self._inner = inner
         self._delay = delay
-        # 复用数据源计数字典与 list 键，保持替身和生产接口一致。
+        # 复用数据源计数字典与 list 键，保持模拟对象和生产接口一致。
         counts = getattr(inner, "calls", None)
         self.calls: dict[str, int] = counts if isinstance(counts, dict) else {}
         self.first: tuple[float, float] | None = None
@@ -155,7 +155,7 @@ class _StubApp:
 
 
 class _FakeApp:
-    # 记录构造参数，用于验证模块页基本检查显式注入数据源并指定初始页。
+    # 记录构造参数，用于验证模块页基本检查明确注入数据源并指定初始页。
     def __init__(self, *args: object, **kwargs: object) -> None:
         self.args = args
         self.kwargs = dict(kwargs)
@@ -171,7 +171,7 @@ MODULE_RECORDS = (
 
 
 def _first_screen_sources() -> dict:
-    # 显式注入启动准备摘要替身，避免测试启动实际诊断子进程。
+    # 明确注入启动准备摘要的模拟数据源，避免测试启动实际诊断子进程。
     sources = _static_sources()
     sources["dashboard_instances"] = StaticInstanceListSource()
     sources["dashboard_service"] = StaticServiceControl()
@@ -207,7 +207,7 @@ def _run_headless_with_segments(first: str, modules: tuple[str, int]) -> tuple[i
 
 
 async def _navigate(**kwargs) -> tui_cmd.CheckResult:
-    # 自检内部调用 asyncio.run()，须在无运行事件循环的线程中执行。
+    # 自检内部调用 asyncio.run()，需要在无运行事件循环的线程中执行。
     return await asyncio.to_thread(tui_cmd._check_page_navigation, **kwargs)
 
 
@@ -352,7 +352,7 @@ def _headless_exit_code_checks() -> bool:
 
 
 async def _test_headless_exit_code_covers_both_segments():
-    # 基本检查入口使用同步替身，可直接在测试事件循环中执行。
+    # 基本检查入口使用同步模拟对象，可直接在测试事件循环中执行。
     return _headless_exit_code_checks()
 
 
@@ -412,14 +412,14 @@ async def _test_settle_bounded_wait() -> bool:
 
 async def _test_available_check_passes() -> bool:
     _use_cli_locale()
-    # 该检查内部用 asyncio.run 起 App，须在无运行中事件循环的线程里调用。
+    # 该检查内部用 asyncio.run 启动 App，需要在无运行中事件循环的线程里调用。
     result = await asyncio.to_thread(tui_cmd._check_available_and_progress)
     return result.level == tui_cmd.LEVEL_OK and "2 行" in result.detail and "1 行" in result.detail
 
 
 @func_case
 async def test_tui_selfcheck(tester: Tester):
-    """cli.tui 自检: 逐页 worker 等待与异常、未执行的产品检查"""
+    """cli.tui 自检：逐页 worker 等待与异常、未执行的产品检查测试"""
     _use_cli_locale()
     await tester.test(_test_navigation_passes_with_static_sources, "逐页切换等待取数后仍通过")
     await tester.test(_test_navigation_without_instance_uses_static_sources, "无实例的默认导航自检不启动子进程")

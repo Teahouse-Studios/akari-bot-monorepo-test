@@ -8,7 +8,7 @@ table_prefix = "module_cytoid_"
 
 class CytoidBindInfo(DBModel):
     """
-    Cytoid 用户绑定信息。
+    Cytoid 用户绑定信息数据模型。
 
     :param union_id: 绑定的用户联合 ID。
     :param username: 绑定的用户名。

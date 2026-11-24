@@ -137,7 +137,7 @@ def _test_credentials_come_from_env():
 
 @func_case
 async def test_docs_sigv4(tester: Tester):
-    """cli.docs.deploy.sigv4: SigV4 签名测试"""
+    """cli.docs.deploy.sigv4 的 SigV4 签名测试"""
     await tester.test(_test_official_get_object_vector, "AWS 官方 GET Object 向量")
     await tester.test(_test_official_list_vector, "AWS 官方 GET Bucket 向量")
     await tester.test(_test_put_and_delete_vectors, "PUT 与 DELETE 向量")

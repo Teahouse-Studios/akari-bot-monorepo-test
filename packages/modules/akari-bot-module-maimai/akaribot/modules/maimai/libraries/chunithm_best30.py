@@ -96,7 +96,7 @@ class DrawBest:
         self.n20_rating = sum(c.ra for c in new_20) / len(new_20) if len(new_20) != 0 else 0.0
         self.player_rating = rating
 
-        self.img = Image.new("RGBA", (860, 1300), color=(211, 211, 211, 255))  # 创建空白图像
+        self.img = Image.new("RGBA", (860, 1300), color=(211, 211, 211, 255))  # 创建空白图像。
         self.rows_image = [140 + 110 * i for i in range(6)] + [830 + 110 * i for i in range(4)]
         self.columns_image = [30] + [30 + 160 * i for i in range(5)]
 
@@ -167,25 +167,25 @@ class DrawBest:
     @staticmethod
     def _get_rating_color(rating: float):
         if rating >= 17.00:
-            color = [(255, 235, 0), (255, 56, 56), (186, 82, 255), (50, 90, 200), (69, 174, 255)]  # 彩极
+            color = [(255, 235, 0), (255, 56, 56), (186, 82, 255), (50, 90, 200), (69, 174, 255)]  # 彩极。
         elif rating >= 16.00:
-            color = [(11, 229, 186), (60, 249, 25), (244, 222, 49), (255, 235, 238), (42, 201, 240)]  # 彩
+            color = [(11, 229, 186), (60, 249, 25), (244, 222, 49), (255, 235, 238), (42, 201, 240)]  # 彩。
         elif rating >= 15.25:
-            color = (255, 255, 224)  # 白金
+            color = (255, 255, 224)  # 白金。
         elif rating >= 14.50:
-            color = (255, 215, 0)  # 金
+            color = (255, 215, 0)  # 金。
         elif rating >= 13.25:
-            color = (202, 242, 255)  # 银
+            color = (202, 242, 255)  # 银。
         elif rating >= 12.00:
-            color = (150, 107, 231)  # 铜
+            color = (150, 107, 231)  # 铜。
         elif rating >= 10.00:
-            color = (128, 0, 128)  # 紫
+            color = (128, 0, 128)  # 紫。
         elif rating >= 7.00:
-            color = (255, 0, 0)  # 红
+            color = (255, 0, 0)  # 红。
         elif rating >= 4.00:
-            color = (255, 165, 0)  # 橙
+            color = (255, 165, 0)  # 橙。
         elif rating >= 0.00:
-            color = (0, 128, 0)  # 绿
+            color = (0, 128, 0)  # 绿。
         else:
             color = (0, 0, 0)
         return color

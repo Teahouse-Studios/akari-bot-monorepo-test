@@ -1,8 +1,8 @@
 name: CLI binary (Nuitka)
 
-# T6.5(a)：只冻结 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写）。机器人本体不进二进制：
-# CLI 经子进程调用实例 venv 里的 `python -m akaribot.core.entrypoints.run`，因此 multiprocessing、
-# Tortoise ORM、七个平台 SDK、各模块及其依赖都不进入冻结范围，冻结内容只剩 CLI 自身依赖，构建因此更可靠。
+# T6.5(a) 仅打包 CLI（参数解析、TUI、子进程调度、HTTP 与 TOML 读写），机器人本体不打包到二进制文件中。
+# 运行时由 CLI 通过子进程调用实例 venv 里的 `python -m akaribot.core.entrypoints.run`，因此 multiprocessing、
+# Tortoise ORM、各平台 SDK 与各模块依赖均无需打包，打包范围仅限 CLI 自身依赖，构建也更稳定。
 permissions:
   contents: read
 
@@ -37,14 +37,14 @@ jobs:
       - name: Install CLI dependencies
         shell: bash
         run: |
-          # 只装 CLI 自己的依赖面：不含 core、模块与平台 SDK，冻结范围因此只有 CLI 自身的依赖。
+          # 仅安装 CLI 自身的依赖，不引入 core、模块与平台 SDK，从而将打包范围限定在 CLI 自身。
           uv sync --locked --package akari-bot-cli
 
       - name: Select workspace interpreter
         shell: bash
         run: |
-          # Nuitka 在后续步骤里以 PATH 上的 python 为准。不切到工作区 venv 时它拿不到依赖，
-          # 会报 "failed to locate package 'akaribot.cli'"。
+          # Nuitka 在后续步骤中会使用 PATH 中的 python。不切换到工作区 venv 时它无法获取依赖，
+          # 会提示 "failed to locate package 'akaribot.cli'"。
           root="$(pwd -W 2>/dev/null || pwd)"
           if [ "$RUNNER_OS" = "Windows" ]; then
             venv_dir="$root/.venv/Scripts"
@@ -54,8 +54,8 @@ jobs:
             python_exe="$venv_dir/python"
           fi
           echo "$venv_dir" >> "$GITHUB_PATH"
-          # uv 创建的 venv 不带 pip，而构建动作后续以 `pip install` 安装 Nuitka 自身。补一个 pip 进
-          # venv，否则 pip 装在 PATH 更靠后的系统解释器里，`python -m nuitka` 会找不到模块。
+          # uv 创建的 venv 不带 pip，而后续步骤会用 `pip install` 安装 Nuitka。此处需要先向 venv 补充安装
+          # pip，否则命令会调用 PATH 更靠后的系统 pip 将 Nuitka 安装到系统解释器中，导致 `python -m nuitka` 无法找到模块。
           uv pip install --python "$python_exe" pip
           "$python_exe" -c "import akaribot.cli, akari_bot_i18n, textual, rich, typer, tomlkit, httpx, packaging"
           echo "解释器：$("$python_exe" -c 'import sys; print(sys.executable)')"
@@ -63,8 +63,8 @@ jobs:
       - name: Bundle uv binary
         shell: bash
         run: |
-          # 内置 uv：CLI 靠它创建与维护实例 venv，用户机器上不必预装。拷贝时直接用包内最终名，
-          # 省去 include-data-files 的改名表达式（Windows 的可执行后缀必须是 .exe）。
+          # 内置 uv，供 CLI 创建与维护实例 venv，用户环境中无需预先安装。复制时直接使用包内最终文件名，
+          # 无需使用 include-data-files 的重命名表达式（Windows 的可执行后缀必须是 .exe）。
           mkdir -p bundle
           if [ "$RUNNER_OS" = "Windows" ]; then
             cp "$(command -v uv)" bundle/uv.exe
@@ -81,15 +81,15 @@ jobs:
           script-name: packages/akari-bot-cli/akaribot/cli/main.py
           mode: onefile
           output-dir: cli-build
-          # 包内资源漏掉会让 TUI 在用户机器上崩溃（textual 的 .tcss、rich 的内置主题）。手工列举必然
-          # 会漏，唯一可靠的办法是在**不含 Python 的环境**里跑基本检查。本仓库尚无该环境，属已知缺口。
+          # 缺少包内资源会让 TUI 在用户机器上崩溃（textual 的 .tcss、rich 的内置主题）。手动列举必然
+          # 会遗漏，唯一可靠的方案是在不包含 Python 的环境中运行基本检查。本仓库尚无该环境，属于已知限制。
           include-data-dir: |
             bundle=.
             packages/akari-bot-cli/akaribot/cli/locales=akaribot/cli/locales
             packages/akari-bot-cli/akaribot/cli/templates=akaribot/cli/templates
             packages/akari-bot-cli/akaribot/cli/doc=akaribot/cli/doc
             packages/akari-bot-cli/akaribot/cli/docs/template=akaribot/cli/docs/template
-          # CLI 包自己的资源已在上面按目录显式声明，这里重复声明只会触发 "Duplicate data file" 告警。
+          # CLI 包自身的资源已在上方按目录明确声明，此处重复声明仅会触发 "Duplicate data file" 告警。
           # i18n 包的 locales 与其他第三方包的数据文件由 package-data 收集。
           include-package-data: |
             akari_bot_i18n
@@ -108,7 +108,7 @@ jobs:
       - name: Smoke test binary
         shell: bash
         run: |
-          # 冻结后 sys.executable 指向二进制自身，故此处只验证 CLI 自身可用与包内资源可加载。
+          # 打包后 sys.executable 指向二进制文件自身，因此此处仅验证 CLI 自身是否可用以及包内资源能否正常加载。
           BIN=$(find cli-build -maxdepth 1 -type f \( -name "*.bin" -o -name "*.exe" -o -perm -u+x \) | head -n 1)
           echo "产物：$BIN"
           "$BIN" --version

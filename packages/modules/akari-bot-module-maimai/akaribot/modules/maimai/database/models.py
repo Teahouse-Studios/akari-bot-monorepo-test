@@ -41,7 +41,7 @@ class DivingProberBindInfo(DBModel):
                 if not current:
                     return False
                 defaults = {"username": username}
-                # 未提供令牌时不得把已有令牌写成空值：绑定信息也会自其它路径更新。
+                # 未提供令牌时不得将已有令牌写入为空值，因为绑定信息也会通过其他路径更新。
                 if refresh_token is not None:
                     defaults["refresh_token"] = refresh_token
                 if subject is not None:
@@ -106,7 +106,7 @@ class LxnsProberBindInfo(DBModel):
                 )
                 if not current:
                     return False
-                # 未提供令牌时没有可写的字段，不得把已有令牌写成空值。
+                # 未提供令牌时无可写入字段，不得将已有令牌写入为空值。
                 if refresh_token is None:
                     return True
                 await cls.update_or_create(

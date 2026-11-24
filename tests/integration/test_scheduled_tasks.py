@@ -1,4 +1,4 @@
-"""定时任务与钩子的集成测试。"""
+"""定时任务与钩子集成测试。"""
 
 from datetime import UTC, datetime, timedelta
 
@@ -122,7 +122,7 @@ async def _test_purge_recreates_cache_dir():
     with strict_http():
         results = await force_run_schedule("purge", timeout=25)
 
-    # 目录需保留（后续写缓存依赖它存在），但其中的残留文件应被清除。
+    # 目录需要保留（后续写入缓存依赖该目录存在），但其中的残留文件应当清除。
     return _no_error(results) and cache_path.exists() and not probe.exists()
 
 
@@ -231,7 +231,7 @@ def _test_all_named_hooks_are_reachable():
 
 @func_case
 async def test_scheduled_tasks(tester: Tester):
-    """定时任务手动触发测试"""
+    """定时任务手动触发测试。"""
     alive = Alive.values.copy()
     try:
         await tester.test(_test_rss_modules_registered_as_schedule_only, "RSS 模块注册结构测试")
@@ -255,7 +255,7 @@ async def test_scheduled_tasks(tester: Tester):
 
 @func_case
 async def test_module_hooks(tester: Tester):
-    """模块钩子手动触发测试"""
+    """模块钩子手动触发测试。"""
     await tester.test(_test_all_named_hooks_are_reachable, "具名钩子可达测试")
     await tester.test(_test_wikilog_keepalive_hook_runs, "wikilog.keepalive 触发测试")
     await tester.test(_test_wikilog_keepalive_reports_failure_to_target, "wikilog.keepalive 失败转会话消息测试")

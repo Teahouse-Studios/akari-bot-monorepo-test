@@ -7,7 +7,7 @@ from akaribot.core.constants.path import data_path
 
 PASSWORD_PATH = data_path / "private" / "web" / ".password"
 
-# 密码是否存在的变化记录在 StoredData 的单键中，避免为单个状态创建数据表。
+# 密码是否存在的变化记录在 StoredData 的单个键中，避免为单个状态创建数据表。
 PASSWORD_STATE_KEY = "web|password_present"
 PASSWORD_STATE_INTERVAL = 30
 

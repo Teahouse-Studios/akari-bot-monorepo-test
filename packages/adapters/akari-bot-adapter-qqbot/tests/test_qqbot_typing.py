@@ -17,7 +17,7 @@ from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 from akaribot.testing.mock.config import mock_config
 
-# 压缩生产默认的等待秒数，使各用例得以在毫秒级跑完
+# 压缩生产默认的等待秒数，使各用例得以在毫秒级完成。
 TEST_DELAY = 0.05
 
 
@@ -60,7 +60,7 @@ class _FakeGroupMessage(GroupMessage):
 
 
 class _ProbingImage(ImageElement):
-    # 不加类型注解，避免被 attrs 当作字段处理
+    # 不添加类型注解，避免被 attrs 视为字段处理。
     observer = None
 
     async def get(self) -> str:
@@ -91,7 +91,7 @@ class _Recorder:
 
     def __enter__(self):
         cm = QQBotContextManager
-        # 取类字典中的原始描述符，避免恢复时把 classmethod 降级成普通属性
+        # 读取类字典中的原始描述符，避免恢复时将 classmethod 降级为普通属性。
         self._orig_send = cm.__dict__.get("send_message")
         self._orig_prepare = cm.__dict__.get("_prepare_message")
         self._orig_send_prepared = cm.__dict__.get("_send_prepared_message")
@@ -201,7 +201,7 @@ class _InFlightPromptRecorder:
 
             self.platform_task = asyncio.create_task(platform_send())
             # botpy 的上层调用被取消时，底层 HTTP 请求仍可能已由平台受理并继续完成。
-            # shield 用于复现消息已发送、但调用方无法取得结果的时间窗口。
+            # shield 用于复现消息已发送、但调用方无法获取结果的时间窗口。
             return await asyncio.shield(self.platform_task)
 
         async def fake_delete(session_info, message_id, reason=None):
@@ -260,7 +260,7 @@ async def _test_prompt_recalled_when_context_dropped() -> bool:
                 Logger.error("Typing prompt was not sent after the delay window")
                 return False
 
-            # 模拟 release_context / del_context 先一步执行
+            # 模拟 release_context / del_context 先一步执行。
             QQBotContextManager.context.pop(session.session_id, None)
             try:
                 await QQBotContextManager.end_typing(session)
@@ -286,7 +286,7 @@ async def _test_prompt_recalled_on_repeated_start() -> bool:
                 return False
             first_prompt = rec.prompts[0]
 
-            # 后一轮尚在进行，其自身的提示还未到撤回时机，故只针对前一轮检查
+            # 后一轮仍处于执行状态，其自身提示尚未到达撤回时机，因此仅针对前一轮检查。
             await QQBotContextManager.start_typing(session)
             await asyncio.sleep(TEST_DELAY * 3)
 
@@ -340,7 +340,7 @@ async def _test_in_flight_prompt_recalled_after_response() -> bool:
             await asyncio.wait_for(rec.prompt_started.wait(), timeout=TEST_DELAY * 10)
 
             # 正常回复先发送成功。随后 parser 会调用 end_typing。此时 typing 请求已经
-            # 被平台受理，但 SDK 还没有返回其消息 ID。
+            # 被平台受理，但 SDK 尚未返回其消息 ID。
             await QQBotContextManager.send_message(session, None)
             end_task = asyncio.create_task(QQBotContextManager.end_typing(session))
             await asyncio.sleep(TEST_DELAY)
@@ -644,7 +644,7 @@ async def _test_not_marked_while_converting_image() -> bool:
 
 @func_case
 async def test_qqbot_typing(tester: Tester):
-    """akaribot.adapters.qqbot.context: 群聊输入提示的撤回时机测试"""
+    """akaribot.adapters.qqbot.context 群聊输入提示的撤回时机测试"""
     await tester.test(_test_c2c_uses_native_typing, "C2C 原生输入状态测试")
     await tester.test(_test_prompt_recalled_when_context_dropped, "上下文销毁后撤回输入提示测试")
     await tester.test(_test_prompt_recalled_on_repeated_start, "重复开启输入状态撤回测试")

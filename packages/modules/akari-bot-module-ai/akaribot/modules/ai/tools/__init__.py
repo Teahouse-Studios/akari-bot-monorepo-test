@@ -38,7 +38,7 @@ def _split_images(result: str) -> tuple[str, list[dict]]:
 
 
 def _build_image_message(images: list[dict]) -> dict:
-    # 图片以独立用户消息回传，避免把 base64 塞进模型可见的工具文本。
+    # 图片以独立用户消息回传，避免将 base64 放入模型可见的工具文本。
     content = [
         {
             "type": "text",
@@ -131,7 +131,7 @@ async def tool_function_calls(
         )
         images.extend(tool_images)
     if images:
-        # 所有工具结果之后再追加图片，避免 user 消息夹在并行的 tool 消息之间。
+        # 全部工具结果返回之后再追加图片，避免 user 消息夹在并行的 tool 消息之间。
         messages.append(_build_image_message(images))
 
     return messages

@@ -55,7 +55,7 @@ def detect(min_major: int = MIN_NODE_MAJOR) -> ToolchainInfo:
 
 
 def parse_node_major(version: str) -> int | None:
-    """从 ``v24.21.0`` 形式的输出里取主版本号。"""
+    """从 ``v24.21.0`` 形式的输出中提取主版本号。"""
     match = _NODE_VERSION_PATTERN.search(version or "")
     return int(match.group(1)) if match else None
 
@@ -168,7 +168,7 @@ def _write_stamp(target: Path, theme: ThemeSpec) -> None:
 
 
 def _theme_from_template(template_dir: Path) -> ThemeSpec:
-    # 兼容旧调用：测试只提供 package.json 与 lock，没有主题目录，故不读取 docs-theme.json。
+    # 为兼容旧调用，测试仅提供 package.json 与 lock 且无主题目录时，不读取 docs-theme.json。
     try:
         package = json.loads((Path(template_dir) / "package.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -225,7 +225,7 @@ def run_build(
 
 
 def template_version(template_dir: Path = TEMPLATE_DIR) -> str:
-    """读取模板 ``package.json`` 的版本号，供构建指纹使用。"""
+    """读取模板 ``package.json`` 的版本号，供构建校验信息使用。"""
     try:
         payload = json.loads((Path(template_dir) / "package.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -234,7 +234,7 @@ def template_version(template_dir: Path = TEMPLATE_DIR) -> str:
 
 
 def package_argv(executable: str, *args: str, windows: bool | None = None) -> list[str]:
-    """组装包管理器命令。Windows 下 npm 是批处理脚本，须经 ``cmd /c`` 启动。"""
+    """组装包管理器命令。Windows 环境下 npm 为批处理脚本，需要通过 ``cmd /c`` 启动。"""
     if (os.name == "nt" if windows is None else windows) and executable == "npm":
         return ["cmd", "/c", executable, *args]
     return [executable, *args]
@@ -250,7 +250,7 @@ def _installed_version(docs_dir: Path) -> str:
 
 def _probe(executable: str, flag: str) -> str:
     try:
-        proc = subprocess.run(  # noqa: S603 - 参数为固定可执行文件与版本旗标
+        proc = subprocess.run(  # 补充用户覆盖配置。defaults 已经包含全部默认字段，用户层缺少配置项时不抛出异常。
             [executable, flag],
             capture_output=True,
             text=True,
@@ -277,9 +277,9 @@ def _execute(
 
 
 def _run_streaming(argv: Sequence[str], cwd: Path, log: LogSink) -> subprocess.CompletedProcess[str]:
-    # 输出同时转发给终端与 TUI，颜色转义码在非终端消费方会原样显示，因此统一关闭颜色。
+    # 输出同时转发至终端与 TUI，颜色转义码在非终端输出环境中会原样显示，因此统一关闭颜色。
     env = {**os.environ, "NO_COLOR": "1", "FORCE_COLOR": "0"}
-    process = subprocess.Popen(  # noqa: S603 - 命令由本模块组装，不含用户输入
+    process = subprocess.Popen(  # noqa: S603 - 命令由本模块组装，不包含用户输入。
         list(argv),
         cwd=str(cwd),
         stdout=subprocess.PIPE,
@@ -308,7 +308,7 @@ def _run_streaming(argv: Sequence[str], cwd: Path, log: LogSink) -> subprocess.C
 
 
 def _default_runner(argv: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603 - 命令由本模块组装，不含用户输入
+    return subprocess.run(  # noqa: S603 - 命令由本模块组装，不包含用户输入。
         list(argv),
         cwd=str(cwd),
         capture_output=True,

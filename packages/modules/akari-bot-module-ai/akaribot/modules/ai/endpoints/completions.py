@@ -8,7 +8,7 @@ from . import base
 
 
 def _strip_internal_keys(messages: list[dict]) -> list[dict]:
-    # 历史消息会带有其他端点的内部键（如 _anthropic_blocks、_responses_reasoning），透传前需剔除。
+    # 历史消息会带有其他端点的内部键（如 _anthropic_blocks、_responses_reasoning），转发前需要剔除。
     return [{k: v for k, v in msg.items() if not k.startswith("_")} for msg in messages]
 
 
@@ -40,13 +40,13 @@ class OpenAICompletionsEndpoint:
             kwargs["top_p"] = top_p_value
         top_logprobs_value = base._resolve_top_logprobs(self.generation)
         if top_logprobs_value is not None:
-            # Chat Completions 需同时开启 logprobs 才会返回对数概率。
+            # Chat Completions 需要同时开启 logprobs 才会返回对数概率。
             kwargs["logprobs"] = True
             kwargs["top_logprobs"] = top_logprobs_value
 
         is_deepseek = "deepseek" in self.model_name.lower()
         extra_body = {}
-        if is_deepseek:  # 兼容 DeepSeek
+        if is_deepseek:  # 兼容 DeepSeek。
             extra_body["thinking"] = {"type": reasoning_state}
         if base._supports_qwen_thinking(self.model_name):
             extra_body["enable_thinking"] = reasoning_state == "enabled"

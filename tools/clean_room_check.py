@@ -38,8 +38,8 @@ DIST_DIR = REPO_ROOT / "dist"
 CORE = "akari-bot-core"
 CLI = "akari-bot-cli"
 
-# CLI 组合名：只装 CLI wheel，装完逐条跑基本检查命令。这条守的是 P1-1（wheel 干净安装后不得缺依赖）
-# 与 P1-9（--version 可用）。tui --self-check 覆盖包内资源与样式表，冻结产物最容易在这里失败。
+# CLI 组合名仅安装 CLI wheel，安装后逐条运行基本检查命令。该规则对应 P1-1（wheel 干净安装后不得缺少依赖）
+# 与 P1-9（--version 可用）。tui --self-check 覆盖包内资源与样式表，冻结产物在此处出现异常的概率最高。
 CLI_COMBO = "cli"
 CLI_SMOKE_COMMANDS: tuple[tuple[str, ...], ...] = (
     ("--version",),
@@ -50,7 +50,7 @@ CLI_SMOKE_COMMANDS: tuple[tuple[str, ...], ...] = (
     ("new", "adapter", "release_probe", "--non-interactive", "--no-add"),
 )
 
-# 发现阶段要读实例配置（真实用户也先跑 akaribot init），故探针自带一份最小配置。
+# 发现阶段需要读取实例配置（正常部署同样需要先执行 akaribot init），因此探针内置最小配置模板。
 MINIMAL_CONFIG = """default_locale = "zh_cn"
 config_version = 5
 
@@ -63,13 +63,13 @@ db_path = "sqlite://database/save.db"
 
 
 def _ensure_utf8_stdout() -> None:
-    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    # Windows 控制台默认编码为 cp1252，中文输出可能抛出 UnicodeEncodeError。
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
         return
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
-# 检查脚本：在新环境里执行，输出 JSON 供本工具判定。
+# 检查脚本在新环境中执行，输出 JSON 供该工具判定。
 PROBE = """
 import json
 from akaribot.core.registry import PackageRegistry as R
@@ -216,7 +216,7 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
         url = f"{index_url.rstrip('/')}/pypi/{name}/{version}/json"
         try:
             payload = json.loads(fetch_url(url))
-        except Exception as error:  # noqa: BLE001 - 单个分发失败记入清单后统一判定
+        except Exception as error:  # noqa: BLE001，单个包安装失败记入清单后统一判定。
             failures.append(f"{name}: 查询失败 {type(error).__name__}: {error}")
             continue
         files = {item["filename"]: item["digests"]["sha256"] for item in payload.get("urls", [])}
@@ -254,7 +254,7 @@ def verify_local_index(index_url: str) -> bool:
     root = index_url.rstrip("/")
     try:
         page = fetch_url(f"{root}/simple/", attempts=1).decode("utf-8", "replace")
-    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
+    except Exception as error:  # noqa: BLE001，检查时仅输出失败点。
         print(f"[index-preflight] 索引根不可访问：{root}/simple/（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     project = re.search(r'href="([^"/]+)/"', page)
@@ -265,14 +265,14 @@ def verify_local_index(index_url: str) -> bool:
     project_url = f"{root}/simple/{name}/"
     try:
         project_page = fetch_url(project_url, attempts=1).decode("utf-8", "replace")
-    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
+    except Exception as error:  # noqa: BLE001，检查时仅输出失败点。
         print(f"[index-preflight] 项目页不可访问：{project_url}（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     link = re.search(r'href="([^"]*files/[^"]*)"', project_page)
     if link is None:
         print(f"[index-preflight] 项目页没有产物链接：{project_url}", file=sys.stderr)
         return False
-    # 链接带 #sha256 片段，取文件本身时要去掉，否则会被当成路径的一部分。
+    # 链接包含 #sha256 片段，获取文件本身时需要移除，否则将被视为路径的一部分。
     file_url = urljoin(project_url, link.group(1)).split("#")[0]
     try:
         with urlopen(file_url, timeout=60) as response:
@@ -280,7 +280,7 @@ def verify_local_index(index_url: str) -> bool:
     except HTTPError as error:
         print(f"[index-preflight] 产物不可下载：{file_url}（HTTP {error.code}）", file=sys.stderr)
         return False
-    except Exception as error:  # noqa: BLE001 - 检查只需打印失败点
+    except Exception as error:  # noqa: BLE001，检查时仅输出失败点。
         print(f"[index-preflight] 产物不可下载：{file_url}（{type(error).__name__}: {error}）", file=sys.stderr)
         return False
     print(f"[index-preflight] 索引可达：{name} 的产物 {file_url.rsplit('/', 1)[-1]}（{size} 字节）")
@@ -376,7 +376,7 @@ def check_index_combo(index_url: str, offline: bool = False) -> bool:
                     "install",
                     "--python",
                     str(venv_python(venv)),
-                    # 内部包来自被测索引，第三方依赖仍走正式 PyPI。同名冲突时按索引优先级解析。
+                    # 内部包来自被测索引，第三方依赖仍通过正式 PyPI 下载。同名冲突时按照索引优先级解析。
                     "--index-url",
                     f"{index_url.rstrip('/')}/simple/",
                     "--extra-index-url",
@@ -461,7 +461,7 @@ def check_combo(
                     "install",
                     "--python",
                     str(venv_python(venv)),
-                    # 外部依赖从索引解析，内部约束同时限定到本次 wheel，防止远端版本掩盖源码遗漏。
+                    # 外部依赖从索引解析，内部约束同时限定至当前构建的 wheel，避免远端版本掩盖源码遗漏。
                     "--find-links",
                     str(staged),
                     "--constraint",
@@ -661,7 +661,7 @@ def main(argv: list[str] | None = None) -> int:
     combos["index"] = ([CORE], "")
     index_url = args.local_index_url or args.index_url
     if args.local_index_url:
-        # 静态索引没有本地产物集，只能跑“按索引安装”的两种组合。
+        # 静态索引没有本地产物集，仅能运行“按照索引安装”的两种组合。
         selected = [args.combo] if args.combo else ["index", "index-all"]
     else:
         selected = [args.combo] if args.combo else [*combos, CLI_COMBO]
@@ -676,14 +676,14 @@ def main(argv: list[str] | None = None) -> int:
     failures: list[str] = []
     for name in selected:
         if name == CLI_COMBO:
-            # CLI 组合只装 CLI wheel，与发现阶段的探针无关，单独走一条检查路径。
+            # CLI 组合仅安装 CLI wheel，与发现阶段的探针无关，采用独立的检查路径。
             passed = check_cli_combo(offline=args.offline, source=wheel_source)
         elif name == "index":
             passed = check_index_combo(index_url, offline=args.offline)
         elif name == "index-all":
             passed = check_index_all_combo(index_url, offline=args.offline)
         else:
-            passed = check_combo(name, *combos[name], offline=args.offline, source=wheel_source)  # (包列表， extras)
+            passed = check_combo(name, *combos[name], offline=args.offline, source=wheel_source)  # (包列表, extras)
         if not passed:
             failures.append(name)
     print()

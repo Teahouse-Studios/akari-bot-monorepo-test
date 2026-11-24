@@ -28,7 +28,7 @@ from urllib.request import urlopen
 
 
 def _ensure_utf8_stdout() -> None:
-    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    # Windows 控制台默认编码为 cp1252，中文输出可能抛出 UnicodeEncodeError。
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
         return
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -41,7 +41,7 @@ RATE_LIMITED = ("429", "Too Many Requests", "rate limit")
 
 
 class RateLimited(RuntimeError):
-    """索引要求等待超过本次可接受时长，留待下一窗口续传。"""
+    """索引要求等待时间超过当前可以接受的时长，留待下一窗口继续传输。"""
 
     def __init__(self, delay: int) -> None:
         super().__init__(f"索引限速，建议 {delay}s 后重跑")
@@ -108,7 +108,7 @@ def project_exists(index_url: str, name: str) -> bool:
     url = f"{index_url.rstrip('/')}/pypi/{name}/json"
     for attempt in range(4):
         try:
-            with urlopen(url, timeout=30) as response:  # noqa: S310 - 固定 https 索引地址
+            with urlopen(url, timeout=30) as response:  # noqa: S310，使用固定 HTTPS 索引地址。
                 response.read()
                 return True
         except HTTPError as error:

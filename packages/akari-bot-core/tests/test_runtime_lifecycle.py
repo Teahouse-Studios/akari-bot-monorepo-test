@@ -356,7 +356,7 @@ async def _test_shutdown_prevents_new_queue_claims() -> bool:
 
     async def close_web_render():
         cleanup_started.set()
-        # 给轮询器多次调度机会。正确实现会因 shutdown_window 持有轮询锁而无法进入。
+        # 为轮询器提供多次调度机会。正确实现会因 shutdown_window 持有轮询锁而无法进入。
         for _ in range(5):
             await asyncio.sleep(0)
         allow_cleanup.set()
@@ -570,7 +570,7 @@ async def _test_shutdown_runs_registered_cleanup_before_queue_stop() -> bool:
 
 @func_case
 async def test_runtime_lifecycle(tester: Tester):
-    """启动、队列、后台初始化与消息任务的失败／关闭路径。"""
+    """启动、队列、后台初始化与消息任务的失败与关闭路径。"""
     await tester.test(_test_server_init_failure_still_cleans_up, "Server 初始化失败仍执行清理")
     await tester.test(_test_server_notices_dead_queue_poller, "Server 检测队列轮询异常退出")
     await tester.test(_test_server_keeps_queue_poller_alive_for_cleanup, "Server 清理期间保留队列轮询")

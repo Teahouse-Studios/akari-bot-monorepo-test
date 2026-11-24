@@ -141,7 +141,7 @@ class DocsPackageRow:
         return self.title or self.key
 
     def haystack(self) -> str:
-        """返回搜索用的匹配文本，已做大小写折叠。"""
+        """返回搜索用的匹配文本，已完成大小写折叠。"""
         parts = [self.key, self.group, self.dist, self.title, self.summary, self.version]
         parts.extend(page.title for page in self.pages)
         return " ".join(part for part in parts if part).casefold()
@@ -262,24 +262,24 @@ def normalize_view(payload: Any) -> DocsView:
 
 
 class DocsSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 @runtime_checkable
 class DocsSource(Protocol):
-    """文档数据源接口。测试注入替身，实际运行通过子进程访问。"""
+    """文档数据源接口。测试注入模拟对象，实际运行通过子进程访问。"""
 
     def load(self) -> DocsView:
         """返回文档包、工具链与最近状态。"""
 
     async def build(self, keys: Sequence[str], on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """构建指定包。``keys`` 为空时构建全部，输出行逐条交给 ``on_line``。"""
+        """构建指定包。``keys`` 为空时构建全部，输出行逐条传递至 ``on_line`` 回调。"""
 
     async def sync_theme(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """同步主题模板 submodule，git 输出行逐条交给 ``on_line``。"""
+        """同步主题模板 submodule，git 输出行逐条传递至 ``on_line`` 回调。"""
 
     async def install_dependencies(self, on_line: Callable[[str], None] | None = None) -> OperationResult:
-        """安装主题依赖，npm 输出行逐条交给 ``on_line``。"""
+        """安装主题依赖，npm 输出行逐条传递至 ``on_line`` 回调。"""
 
     async def start_server(self) -> str:
         """启动预览服务并返回站点 URL。"""
@@ -288,13 +288,13 @@ class DocsSource(Protocol):
         """停止预览服务。"""
 
     async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
-        """启动开发模式预览并返回站点 URL。就绪后的事件逐条交给 ``on_event``。"""
+        """启动开发模式预览并返回站点 URL。就绪后的事件逐条传递至 ``on_event`` 回调。"""
 
     async def stop_dev(self) -> None:
         """停止开发模式预览。"""
 
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
-        """部署站点。``dry_run`` 为真时只统计将更改的文件。"""
+        """部署站点。``dry_run`` 为 True 时仅统计即将发生更改的文件。"""
 
 
 class StaticDocsSource:
@@ -358,7 +358,7 @@ class StaticDocsSource:
         return self.serving
 
     def set_view(self, view: DocsView) -> None:
-        """替换替身返回的视图。"""
+        """替换模拟对象返回的视图。"""
         self._view = view
 
     def load(self) -> DocsView:
@@ -514,7 +514,7 @@ class SubprocessDocsSource:
         return await self._stream_action(argv, self.action_timeout, on_line)
 
     def deploy(self, provider: str | None, dry_run: bool) -> OperationResult:
-        """见 :meth:`DocsSource.deploy`。界面已确认，子进程带 ``--yes``。"""
+        """见 :meth:`DocsSource.deploy`。界面已确认，子进程指定 ``--yes``。"""
         self.calls["deploy"] += 1
         argv = ["docs", "deploy", "--json", "--yes"]
         if provider:
@@ -583,7 +583,7 @@ class SubprocessDocsSource:
         await self._terminate(process)
 
     async def start_dev(self, on_event: Callable[[Mapping[str, Any]], None] | None = None) -> str:
-        """启动 ``docs dev --json`` 并读到就绪事件。其余事件交给 ``on_event``。"""
+        """启动 ``docs dev --json`` 并读取就绪事件。其余事件传递至 ``on_event`` 回调。"""
         argv = cli_process.cli_argv("docs", "dev", "--json", "--port", "0")
         self.calls["dev"] += 1
         try:
@@ -964,7 +964,7 @@ class DocsPage(compat.Vertical):
     :param cache_ttl: 缓存有效期秒数。构建成功后立即标记站点可用。
     """
 
-    # 页脚只保留高频键。部署与打开浏览器等低频动作由按钮与详情提示承载。
+    # 页脚仅保留高频键。部署与打开浏览器等低频操作由按钮与详情提示承载。
     BINDINGS = compat.bindings(
         ("r", "refresh", i18n.t("cli.tui.docs.action_refresh")),
         ("slash", "focus_search", i18n.t("cli.tui.docs.bind_search")),
@@ -1115,7 +1115,7 @@ class DocsPage(compat.Vertical):
         yield compat.Static(i18n.t("cli.tui.docs.status_ready"), id="status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件。读取数据推迟到首次显示。"""
+        """挂载后仅装配控件。读取数据推迟至首次显示。"""
         compat.set_text_selection(self, False)
         self.query_one("#log-pane", compat.VerticalScroll).border_title = i18n.t("cli.tui.docs.log_title")
 
@@ -1158,7 +1158,7 @@ class DocsPage(compat.Vertical):
             return None
         try:
             list_view = self.query_one("#docs-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无选中处理。
             return None
         index = compat.highlighted_index(list_view)
         if index is None or index >= len(packages):
@@ -1177,7 +1177,7 @@ class DocsPage(compat.Vertical):
 
     @property
     def detail_text(self) -> str:
-        """返回详情面板当前渲染出的纯文本。"""
+        """返回详情面板当前渲染结果中的纯文本。"""
         return self._detail_rendered
 
     @property
@@ -1197,7 +1197,7 @@ class DocsPage(compat.Vertical):
 
     @property
     def preview_url(self) -> str:
-        """返回运行中的预览地址（开发模式优先）。未运行时为空串。"""
+        """返回运行中的预览地址（开发模式优先）。未运行时为空字符串。"""
         if self._dev:
             return self._dev_url
         return self._url if self._serving else ""
@@ -1218,16 +1218,16 @@ class DocsPage(compat.Vertical):
         return self._dev_synced
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的列表行文本，供自动化检查核对宽度。"""
+        """返回最近一次渲染结果中的列表行文本，供自动化检查核对宽度。"""
         return self._rendered_rows
 
     def column_text(self) -> str:
-        """返回最近一次渲染出的表头文本。"""
+        """返回最近一次渲染结果中的表头文本。"""
         return self._columns_rendered
 
     # endregion
 
-    # region 数据读取
+    # region 数据读取。
 
     def refresh_view(self, *, force: bool = False) -> None:
         """读取文档目录。
@@ -1251,7 +1251,7 @@ class DocsPage(compat.Vertical):
     async def _load(self) -> bool:
         try:
             view = await asyncio.to_thread(self.source.load)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面。
             self._view = None
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1281,12 +1281,12 @@ class DocsPage(compat.Vertical):
 
     # endregion
 
-    # region 渲染（只读缓存）
+    # region 渲染（仅读取缓存）
 
     def _list_inner_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 36
         return max(outer - 4, 8)
 
@@ -1322,7 +1322,7 @@ class DocsPage(compat.Vertical):
         packages = self.visible_packages
         try:
             list_view = self.query_one("#docs-list", compat.ListView)
-        except Exception:  # noqa: BLE001 - 未挂载时跳过渲染
+        except Exception:  # noqa: BLE001 - 未挂载时跳过渲染。
             return
         inner_width = self._list_inner_width(list_view)
         layout = self._layout(inner_width)
@@ -1335,7 +1335,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def _render_columns(self, layout: DocsLayout, inner_width: int) -> None:
-        # 表头与数据行共用列宽计划，保证窄屏隐藏分组列后仍对齐。
+        # 表头与数据行共用列宽计划，保证窄屏幕终端隐藏分组列后仍对齐。
         cells = [
             f"  {compat.fit_cells(i18n.t('cli.tui.docs.column_key'), layout.key_width)}",
             compat.fit_cells(i18n.t("cli.tui.docs.column_version"), layout.version_width),
@@ -1441,14 +1441,14 @@ class DocsPage(compat.Vertical):
         try:
             for button_id in ("build", "serve", "dev", "more", "refresh"):
                 self.query_one(f"#{button_id}", compat.Button).disabled = self._busy
-            # 预览按钮在启停之间切换文字，键位不变。
+            # 预览按钮在启动与停止之间切换文字，键位不变。
             serve_label = "cli.tui.docs.action_stop" if self._serving else "cli.tui.docs.action_serve"
             self.query_one("#serve", compat.Button).label = compat.key_hint(i18n.t(serve_label), "p")
             dev_label = "cli.tui.docs.action_dev_stop" if self._dev else "cli.tui.docs.action_dev"
             self.query_one("#dev", compat.Button).label = compat.key_hint(i18n.t(dev_label), "e")
             self.query_one("#open", compat.Button).disabled = self._busy or not (self._serving or self._dev)
             self.query_one("#actions", compat.ButtonFlow).relayout()
-        except Exception:  # noqa: BLE001 - 尚未挂载时没有按钮可更新
+        except Exception:  # noqa: BLE001 - 尚未挂载时没有按钮可更新。
             return
 
     def _set_status(self, text: str) -> None:
@@ -1476,13 +1476,13 @@ class DocsPage(compat.Vertical):
             self._render_log()
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排，不重新读取数据。"""
+        """终端尺寸变化时按缓存重新排列，不重新读取数据。"""
         if self._view is not None:
             self._render_list()
 
     # endregion
 
-    # region 交互
+    # region 交互。
 
     @compat.on(compat.Input.Changed, "#search")
     def _on_search_changed(self, event: compat.Input.Changed) -> None:
@@ -1492,7 +1492,7 @@ class DocsPage(compat.Vertical):
 
     @compat.on(compat.ListView.Highlighted)
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
-        # 待确认的部署必须与当前选择无关，换选中项时仍应复位以防误触。
+        # 待确认的部署必须与当前选择无关，切换选中项时仍应重置状态以防误触。
         self._confirm.reset()
         self._sync_detail()
 
@@ -1513,11 +1513,11 @@ class DocsPage(compat.Vertical):
             self.refresh_view(force=True)
 
     def set_query(self, value: str) -> None:
-        """设置搜索框内容，等价于用户键入。"""
+        """设置搜索框内容，等价于手动键入。"""
         self.query_one("#search", compat.Input).value = value
 
     def focus_search(self) -> None:
-        """把焦点移到搜索框。"""
+        """将焦点移至搜索框。"""
         self.query_one("#search", compat.Input).focus()
 
     def clear_search(self) -> None:
@@ -1592,7 +1592,7 @@ class DocsPage(compat.Vertical):
     async def _build(self, keys: tuple[str, ...]) -> None:
         try:
             result = await self.source.build(keys, self._on_log_line)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.docs.build_failed", detail=f"{type(error).__name__}: {error}"),
@@ -1617,7 +1617,7 @@ class DocsPage(compat.Vertical):
     async def _run_theme_sync(self) -> None:
         try:
             result = await self.source.sync_theme(self._on_log_line)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.docs.theme_sync_failed", detail=f"{type(error).__name__}: {error}"),
@@ -1640,7 +1640,7 @@ class DocsPage(compat.Vertical):
     async def _run_dependency_install(self) -> None:
         try:
             result = await self.source.install_dependencies(self._on_log_line)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.docs.deps_failed", detail=f"{type(error).__name__}: {error}"),
@@ -1682,7 +1682,7 @@ class DocsPage(compat.Vertical):
                 self._dev = False
                 self._dev_url = ""
             url = await self.source.start_server()
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             self._serving = False
             self._url = ""
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1692,7 +1692,7 @@ class DocsPage(compat.Vertical):
         else:
             self._serving = True
             self._url = url
-            # 启动期间页面可能已切走，此时立即停止，避免留下无人管理的服务。
+            # 启动期间页面可能已切换至其他页面，此时立即停止，避免残留无人管理的服务进程。
             if not self.display:
                 await self._quiet_stop()
                 self._serving = False
@@ -1706,7 +1706,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def stop_preview(self) -> None:
-        """停止预览服务。未运行时只更新状态。"""
+        """停止预览服务。未运行时仅更新状态。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1721,7 +1721,7 @@ class DocsPage(compat.Vertical):
     async def _stop_server(self) -> None:
         try:
             await self.source.stop_server()
-        except Exception as error:  # noqa: BLE001 - 停止失败仍需复位界面状态
+        except Exception as error:  # noqa: BLE001 - 停止失败仍需要重置界面状态。
             self.last_error = f"{type(error).__name__}: {error}"
         self._serving = False
         self._url = ""
@@ -1738,7 +1738,7 @@ class DocsPage(compat.Vertical):
             return
         try:
             opened = webbrowser.open(url)
-        except Exception as error:  # noqa: BLE001 - 浏览器调用失败只作为状态展示
+        except Exception as error:  # noqa: BLE001 - 浏览器调用失败仅作为状态展示。
             opened = False
             self.last_error = f"{type(error).__name__}: {error}"
         if opened:
@@ -1768,7 +1768,7 @@ class DocsPage(compat.Vertical):
                 self._serving = False
                 self._url = ""
             url = await self.source.start_dev(self._on_dev_event)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为状态展示
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为状态展示。
             self._dev = False
             self._dev_url = ""
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1778,7 +1778,7 @@ class DocsPage(compat.Vertical):
         else:
             self._dev = True
             self._dev_url = url
-            # 启动期间页面可能已切走，此时立即停止，避免留下无人管理的服务。
+            # 启动期间页面可能已切换至其他页面，此时立即停止，避免残留无人管理的服务进程。
             if not self.display:
                 await self._quiet_stop_dev()
                 self._dev = False
@@ -1830,7 +1830,7 @@ class DocsPage(compat.Vertical):
             self._on_log_line(str(line))
 
     def stop_dev(self) -> None:
-        """停止开发模式预览。未运行时只更新状态。"""
+        """停止开发模式预览。未运行时仅更新状态。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1845,7 +1845,7 @@ class DocsPage(compat.Vertical):
     async def _stop_dev(self) -> None:
         try:
             await self.source.stop_dev()
-        except Exception as error:  # noqa: BLE001 - 停止失败仍需复位界面状态
+        except Exception as error:  # noqa: BLE001 - 停止失败仍需要重置界面状态。
             self.last_error = f"{type(error).__name__}: {error}"
         self._dev = False
         self._dev_url = ""
@@ -1857,11 +1857,11 @@ class DocsPage(compat.Vertical):
     async def _quiet_stop_dev(self) -> None:
         try:
             await self.source.stop_dev()
-        except Exception:  # noqa: BLE001 - 退出路径上不再报告停止失败
+        except Exception:  # noqa: BLE001 - 退出路径上忽略停止失败。
             return
 
     def request_deploy(self) -> None:
-        """弹出部署方式选择框。默认聚焦只读的试运行。"""
+        """弹出部署方式选择框。默认聚焦仅用于试运行的只读选项。"""
         if self._busy:
             self._notify_busy()
             return
@@ -1904,7 +1904,7 @@ class DocsPage(compat.Vertical):
         label = i18n.t("cli.tui.docs.deploy_dry_run" if dry_run else "cli.tui.docs.deploy_real")
         try:
             result = await asyncio.to_thread(self.source.deploy, None, dry_run)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False,
                 i18n.t("cli.tui.docs.deploy_failed", detail=f"{type(error).__name__}: {error}"),
@@ -1922,7 +1922,7 @@ class DocsPage(compat.Vertical):
         self._sync_actions()
 
     def reset_pending(self) -> None:
-        """作废待确认状态。切页与本页状态变化时调用。"""
+        """重置待确认状态。切换页面或本页状态发生变化时调用。"""
         self._confirm.reset()
 
     def dirty_note(self) -> str:
@@ -1957,19 +1957,19 @@ class DocsPage(compat.Vertical):
     async def _quiet_stop(self) -> None:
         try:
             await self.source.stop_server()
-        except Exception:  # noqa: BLE001 - 退出路径上不再报告停止失败
+        except Exception:  # noqa: BLE001 - 退出路径上忽略停止失败。
             return
 
     def action_refresh(self) -> None:
-        """键位动作：强制重新读取文档目录。"""
+        """强制重新读取文档目录的键位动作。"""
         self.refresh_view(force=True)
 
     def action_focus_search(self) -> None:
-        """键位动作：聚焦搜索框。"""
+        """聚焦搜索框的键位动作。"""
         self.focus_search()
 
     def action_toggle_select(self) -> None:
-        """键位动作：切换当前项的选中状态。"""
+        """切换当前项选中状态的键位动作。"""
         package = self.selected_package
         if package is None:
             return
@@ -1981,7 +1981,7 @@ class DocsPage(compat.Vertical):
         self._render_list()
 
     def action_select_all(self) -> None:
-        """键位动作：选中当前可见的全部文档包。"""
+        """选中当前可见全部文档包的键位动作。"""
         visible = self.visible_packages
         if not visible:
             return
@@ -1990,7 +1990,7 @@ class DocsPage(compat.Vertical):
         self._render_list()
 
     def action_clear_selection(self) -> None:
-        """键位动作：清空选区。"""
+        """重置待确认的部署操作。切换页面、刷新或更换选中项时调用。"""
         self._confirm.reset()
         if not self._selected:
             return
@@ -1998,15 +1998,15 @@ class DocsPage(compat.Vertical):
         self._render_list()
 
     def action_build(self) -> None:
-        """键位动作：构建选中包或全部包。"""
+        """构建选中包或全部包的键位动作。"""
         self.request_build()
 
     def action_more(self) -> None:
-        """键位动作：打开低频操作菜单。"""
+        """打开低频操作菜单的键位动作。"""
         self.request_more()
 
     def request_more(self) -> None:
-        """弹出低频操作菜单：部署、同步主题、安装依赖与任务日志。"""
+        """弹出低频操作菜单，提供部署、同步主题、安装依赖与任务日志。"""
         if self._busy:
             self._notify_busy()
             return
@@ -2039,25 +2039,25 @@ class DocsPage(compat.Vertical):
             self.toggle_log()
 
     def toggle_log(self) -> None:
-        """显示或隐藏任务日志面板。"""
+        """重置待确认的清理操作。切换页面、刷新或更换选中项时调用。"""
         self._set_log_visible(not self._log_visible)
         if self._log_visible:
             self._render_log()
 
     def action_dev(self) -> None:
-        """键位动作：启动或停止开发模式预览。"""
+        """启动或停止开发模式预览的键位动作。"""
         self.toggle_dev()
 
     def action_serve(self) -> None:
-        """键位动作：启动或停止预览服务。"""
+        """启动或停止预览服务的键位动作。"""
         self.toggle_serve()
 
     def action_open(self) -> None:
-        """键位动作：在浏览器中打开预览地址。"""
+        """在浏览器中打开预览地址的键位动作。"""
         self.open_preview()
 
     def action_clear_search(self) -> None:
-        """键位动作：清空搜索框。"""
+        """清空搜索框的键位动作。"""
         self.clear_search()
 
     # endregion

@@ -38,19 +38,19 @@ from akaribot.core.paths import Paths  # skipcq
 from akaribot.core.registry import PackageRegistry  # skipcq
 
 
-# 仓库根环境变量。取值须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，根目录的 tester.py 会设置它。
+# 仓库根目录环境变量。取值必须与 akaribot.testing.runner.REPO_ROOT_ENV 一致，仓库根目录下的 tester.py 会设置它。
 REPO_ROOT_ENV = "AKARI_REPO_ROOT"
 
-# 实例级锁文件名。须与 akaribot.cli.instance.LOCK_FILENAME 一致：CLI 的 is_running() 据此探测。
+# 实例级锁文件名。必须与 akaribot.cli.instance.LOCK_FILENAME 一致，CLI 的 is_running() 据此探测。
 LOCK_FILENAME = Paths.lock.name
 
 AKARI_BOT_I18N_CACHE_DIR = str(Paths.data / "i18n_cache")
 
 
 def _repository_root() -> Path | None:
-    # 本模块位于包内，按自身位置回推仓库根只会落到 site-packages，故取与
-    # :mod:`akaribot.testing.runner` 相同的判据：优先 ``AKARI_REPO_ROOT``，否则取 ``Paths.tests``
-    # 的父目录，并以 ``packages/`` 是否存在复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判。
+    # 本模块位于包内，按自身位置反推仓库根目录仅会解析至 site-packages，因此采用与
+    # :mod:`akaribot.testing.runner` 相同的判定规则，优先使用 ``AKARI_REPO_ROOT``，否则获取 ``Paths.tests``
+    # 的父目录，并通过检查 ``packages/`` 是否存在执行复核，避免 ``AKARI_TESTS_PATH`` 指向别处时误判定。
     explicit = os.environ.get(REPO_ROOT_ENV)
     if explicit:
         return Path(explicit).expanduser().resolve()
@@ -59,8 +59,8 @@ def _repository_root() -> Path | None:
 
 
 def _source_import_roots() -> list[Path]:
-    # 判据只用目录是否存在，不依赖已安装分发的 metadata，仓库根一并保留，使 ``tester`` 等根级脚本
-    # 在子进程中仍可导入。仓库根不可知时返回空列表：此时 ``akaribot`` 由已安装分发提供。
+    # 判定规则仅检查目录是否存在，不依赖已安装包的 metadata，仓库根目录一并保留，使 ``tester`` 等根目录脚本
+    # 在子进程中仍可导入。仓库根目录无法确定时返回空列表，此时 ``akaribot`` 由已安装包提供。
     root = _repository_root()
     if root is None:
         return []
@@ -68,19 +68,19 @@ def _source_import_roots() -> list[Path]:
     return [path for path in candidates if path.is_dir()]
 
 
-# 显式传入实例根下的 .env：不给路径时 python-dotenv 从本模块所在目录向上查找，包内位置与
-# 仓库根、实例根都不对应。AKARI_INSTANCE_DIR 未设置时实例根即进程 cwd。
+# 明确传入实例根目录下的 .env，因为未指定路径时 python-dotenv 会从本模块所在目录向上查找，包内位置与
+# 仓库根目录、实例根目录均不对应。AKARI_INSTANCE_DIR 未设置时实例根目录即为进程当前工作目录（cwd）。
 load_dotenv(Paths.instance / ".env")
 os.environ.setdefault("PYTHONIOENCODING", "UTF-8")
-# 空列表时不设置：空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
+# 空列表时不设置，因为空字符串会引入一条指向当前目录的搜索路径，与安装形态的预期相反。
 if source_import_roots := _source_import_roots():
     os.environ.setdefault("PYTHONPATH", os.pathsep.join(str(path) for path in source_import_roots))
 os.environ.setdefault("AKARI_BOT_I18N_CACHE_DIR", AKARI_BOT_I18N_CACHE_DIR)
 
 
 def _choose_first_run_locale() -> str:
-    # 完整交互式初始化并入 CLI（阶段 5），此处仅保留语言选择。无终端时（容器、CI）
-    # 直接采用默认语言，不阻塞在 input() 上。
+    # 完整的交互式初始化由 CLI 负责，此处仅保留语言选择。若无交互式终端（如容器或 CI 环境），
+    # 直接采用默认语言，避免阻塞在 input() 调用上。
     from akaribot.core.constants import default_locale, lang_list
 
     if not sys.stdin.isatty():
@@ -96,8 +96,8 @@ def _choose_first_run_locale() -> str:
 
 
 def _init_first_run_config() -> None:
-    # 结构只含 default_locale 与 config_version：这两个顶层键不属于任何模板，扫描补不出来。
-    # 注释先以 i18n 标记落盘，待 pre_init() 接上 i18n 快照后由扫描按所选语言翻译。
+    # 结构仅包含 default_locale 与 config_version，这两个顶层键不属于任何模板，配置扫描无法自动补充。
+    # 注释先以 i18n 标记写入磁盘，待 pre_init() 恢复 i18n 快照上下文后由扫描程序按所选语言翻译。
     from akaribot.core.constants import config_version
 
     locale = _choose_first_run_locale()
@@ -178,7 +178,7 @@ disabled_bots = []
 processes: list[multiprocessing.Process] = []
 server_stop_event = None
 jobqueue_hub_stop_event = None
-# 实例级锁文件句柄。锁随文件对象关闭而释放，句柄须在进程存活期间一直被引用。
+# 实例级锁文件句柄。锁随文件对象关闭而释放，句柄必须在进程存活期间一直被引用。
 _lock_file = None
 
 
@@ -298,12 +298,12 @@ def discover_adapter_instances() -> list[AdapterInstance]:
     return enabled
 
 
-# 监听地址字段。web 的 web_port 与 onebot / milky 的 qq_host 最终都占用一个 TCP 端口，
-# 故统一解析出 (主机， 端口) 后比对：web 与 onebot 撞同一个端口同样是致命的。
+# 监听地址字段。web 的 web_port 与 onebot / milky 的 qq_host 最终均占用一个 TCP 端口，
+# 因此统一解析出 (主机, 端口) 后比对，web 与 onebot 冲突占用同一端口同样会导致严重错误。
 INSTANCE_LISTEN_FIELDS = ("web_port", "qq_host")
 
 # web_host 未指定时的绑定地址，与 WebConfig 声明的默认值一致。守护进程不能向 CFGManager.get
-# 传默认值：那会触发写入，而守护进程是只读的。
+# 传递默认值，否则会触发写入操作，而守护进程处于只读模式。
 DEFAULT_WEB_HOST = "127.0.0.1"
 
 
@@ -335,8 +335,8 @@ def _split_host_port(value: object) -> tuple[str, int] | None:
 
 
 def _hosts_conflict(left: str, right: str) -> bool:
-    # 通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同：
-    # 宁可漏报也不误报，误报会让本来可用的部署起不来。
+    # 通配地址与任意主机冲突，其余要求主机相同。``localhost`` 与 ``127.0.0.1`` 视为不同，
+    # 宁可遗漏报告也不产生误报，因为误报会导致本可正常运行的部署无法启动。
     wildcard = {"", "*", "0.0.0.0", "::", "[::]"}
     return left in wildcard or right in wildcard or left == right
 
@@ -364,8 +364,8 @@ def _listen_resources(instance: AdapterInstance) -> list[tuple[str, int, str]]:
 
 
 def _read_credential(instance: AdapterInstance, field: str) -> object:
-    # 登录信息多数放在密钥表，也有放在普通表的（如 ``qq_bot_appid``），两处都试一次。
-    # 未填写的占位符由 ``CFGManager.get`` 归一为 None，不会被误判为重复。
+    # 登录信息多数保存在密钥表，也有保存在常规配置表的（如 ``qq_bot_appid``），两处均尝试读取一次。
+    # 未填写的占位符由 ``CFGManager.get`` 规范化为 None，不会被误判定为重复项。
     from akaribot.core.builtins.config import CFGManager
 
     for secret in (True, False):
@@ -427,8 +427,8 @@ def check_instance_conflicts(instances: list[AdapterInstance]) -> None:
     for instance in instances:
         other = seen_client_names.setdefault(instance.client_name, instance)
         if other is not instance:
-            # onebot 与 milky 都叫 "QQ"。这不是本功能引入的，但两者的 JobQueue 服务名与启动
-            # 失败计数会因此合并，必须留下痕迹。
+            # onebot 与 milky 的平台名称均为 "QQ"。两者的 JobQueue 服务名与启动
+            # 失败计数会因此合并，必须记录明确日志。
             Logger.warning(
                 f"Instances {other.table} and {instance.table} share client_name {instance.client_name!r}; "
                 "their JobQueue services and start-failure counters cannot be told apart."
@@ -445,7 +445,7 @@ def pre_init():
     from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
     from akaribot.core.paths import Paths
 
-    # 目录创建集中在此：导入 core.constants 不再产生副作用。
+    # 目录创建集中在此，导入 core.constants 不产生副作用。
     Paths.ensure("data", "cache", "logs", "database")
     PrivateData.ensure()
     if cache_path.exists():
@@ -460,7 +460,7 @@ def pre_init():
 
     Logger.info("Generating config...")
 
-    # CoreConfig 的导入须留在函数内：multiprocessing 以 spawn / forkserver 启动子进程时
+    # CoreConfig 的导入必须留在函数内，因为 multiprocessing 以 spawn / forkserver 启动子进程时
     # 会以 __mp_main__ 重新导入主模块，置于顶层将使每个子进程再次触发配置模板的生成。
     from akaribot.core.config.core import CoreConfig
     from akaribot.core.config.jobqueue import bootstrap_jobqueue_config, JobQueueConfig
@@ -470,8 +470,8 @@ def pre_init():
     from akaribot.core.database.link import db_type
     from akaribot.core.database.models import SenderUnionInfo, DBVersion
 
-    # 配置的生成集中在此完成：子进程一律只读，此处遗漏的键将在子进程读取时抛出异常，
-    # 因此任何模板加载失败均须中止启动，而非延至运行期才暴露。
+    # 配置的生成集中在此处完成，子进程一律为只读模式，此处遗漏的键将在子进程读取时抛出异常，
+    # 因此任何模板加载失败都必须中止启动，不得延迟至运行阶段才暴露。
     failed_templates = scan_config_templates()
     if failed_templates:
         Logger.critical(f"Failed to load config templates: {failed_templates}. Aborting.")
@@ -534,7 +534,7 @@ def pre_init():
 
 def multiprocess_run_until_complete(func):
     mp = multiprocessing.get_context("spawn" if sys.platform in ["win32", "darwin"] else "forkserver")
-    # pre_init 是唯一被允许写入配置的进程，须清除 RestartBot 重启循环中残留的只读标记
+    # pre_init 是唯一被允许写入配置的进程，必须清除 RestartBot 重启循环中残留的只读标记。
     os.environ.pop(CONFIG_READONLY_ENV, None)
     p = mp.Process(target=func, daemon=True)
     p.start()
@@ -569,7 +569,7 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     from akaribot.core.constants import Info
     from akaribot.core.logger import Logger
 
-    # instance_id 必须在导入适配器之前设置：akaribot.adapters.<x>.info 在导入期依它生成 client_name。
+    # instance_id 必须在导入适配器之前设置，因为 akaribot.adapters.<x>.info 在导入阶段依据该标识生成 client_name。
     Info.instance_id = instance_id
     Info.subprocess = subprocess
     Info.binary_mode = binary_mode
@@ -578,7 +578,7 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     if not platform_name:
         Logger.critical(f"[{bot_name}] ???, adapter info not found.")
         sys.exit(1)
-    # 平台展示名供会话构造使用：多实例下 client_name 带实例后缀，平台名不带。
+    # 平台展示名称供会话构造使用，多实例下 client_name 包含实例后缀，平台名称不包含。
     Info.platform_name = platform_name
     client_name = Info.resolve_client_name(platform_name)
     Logger.info(f"[{client_name}] Here we go!")
@@ -586,7 +586,7 @@ def go(bot_name: str, subprocess: bool = False, binary_mode: bool = False, insta
     try:
         importlib.import_module(f"akaribot.adapters.{bot_name}.bot")
     except ModuleNotFoundError:
-        # 退出码 78（EX_CONFIG）表示无需重启：入口缺失是部署问题，重试无济于事。
+        # 退出码 78（EX_CONFIG）表示无需重启，因为入口缺失是部署问题，重试无济于事。
         Logger.error(f"[{client_name}] ???, entry not found.")
         sys.exit(78)
 
@@ -599,7 +599,7 @@ def server_go(
     hub_pid: int | None = None,
 ):
     bootstrap_readonly_child()
-    # Server 依赖树（尤其 WebRender）只应由 Server 子进程加载，守护进程不需要保留一份。
+    # Server 依赖树（尤其 WebRender）仅应由 Server 子进程加载，守护进程不需要保留副本。
     from akaribot.core.server.run import run_async
 
     run_async(subprocess, binary_mode, stop_event, daemon_pid, hub_pid)
@@ -613,25 +613,25 @@ def jobqueue_hub_go(stop_event, ready_event):
     run_websocket_hub_process(stop_event, ready_event)
 
 
-# 二进制封装下 argv[0] 是可执行文件自身。python bot.py 与 python -m akaribot.core.entrypoints.run
-# 两种解释器形态的 argv[0] 都是脚本文件路径，故判据不变。
+# 二进制封装下 argv[0] 为可执行文件本身。python bot.py 与 python -m akaribot.core.entrypoints.run
+# 两种解释器形态的 argv[0] 均为脚本文件路径，因此判断依据保持不变。
 binary_mode = not sys.argv[0].endswith(".py")
 
 
 async def run_bot():
     global server_stop_event, jobqueue_hub_stop_event
 
-    # 自此起 spawn 出的子进程一律只读：配置的生成已在 pre_init 中完成。
-    # 须在任何 mp.Process 之前设置，spawn 会继承环境。restart_bot_process() 后续重启子进程时同样适用。
+    # 从此处起通过 spawn 启动的子进程一律为只读模式，配置的生成已在 pre_init 中完成。
+    # 必须在任何 mp.Process 之前设置，子进程会继承环境变量。restart_bot_process() 后续重启子进程时同样适用。
     os.environ[CONFIG_READONLY_ENV] = "1"
     os.environ["AKARI_BOT_I18N_CACHE_DIR"] = AKARI_BOT_I18N_CACHE_DIR
 
-    # CONFIG_READONLY_ENV 必须先于 core.config 的首次导入设置。后者会在导入期执行配置版本迁移。
+    # CONFIG_READONLY_ENV 必须先于 core.config 的首次导入设置。后者会在导入阶段执行配置版本迁移。
     from akaribot.core.config.jobqueue import JobQueueConfig
 
     mp = multiprocessing.get_context("spawn" if sys.platform in ["win32", "darwin"] else "forkserver")
-    # 守护进程与 Hub 不是 JobQueue Peer，Server 无从 Registry 获知其 PID。此处随 Process
-    # 参数传递而非环境变量：forkserver 于首个子进程启动时快照环境，后续改动不再生效。
+    # 守护进程与 Hub 不是 JobQueue 节点，Server 无法从节点注册表获知其 PID。此处随 Process
+    # 参数传递而非通过环境变量，因为 forkserver 在首个子进程启动时保存环境快照，后续改动不再生效。
     hub_pid = None
 
     if JobQueueConfig.jobqueue_backend.strip().lower() == "websocket":
@@ -696,8 +696,8 @@ async def run_bot():
 
     disabled_bots.clear()
     instances = discover_adapter_instances()
-    # 误配的实例必须在任何适配器进程启动之前拦下：两个进程抢同一端口或同一账号之后，
-    # 症状是随机的消息丢失与重复，从日志无法回溯到配置。
+    # 配置错误的实例必须在任何适配器进程启动之前拦截，否则两个进程争用同一端口或同一账号时，
+    # 表现为随机的消息丢失与重复，且无法通过日志回溯配置问题。
     check_instance_conflicts(instances)
 
     for instance in instances:
@@ -708,7 +708,7 @@ async def run_bot():
             daemon=True,
         )
         # client_name 不保证跨适配器唯一（onebot 与 milky 同为 "QQ"），重启映射因此记录在进程
-        # 对象上，不按名字反查，以免重启时认错实例。
+        # 对象上，不按名称反向查找，以免重启时认错实例。
         p.akari_instance = instance
         p.start()
         processes.append(p)
@@ -748,13 +748,13 @@ async def run_bot():
             if p.exitcode == 33:
                 Logger.warning(f"Process {p.pid} ({p.name}) exited with code {p.exitcode}, restart all bots.")
                 raise RestartBot
-            if p.exitcode == 78:  # 已明确没有必要重启的进程异常退出码
+            if p.exitcode == 78:  # 已明确没有必要重启的进程异常退出码。
                 processes.remove(p)
                 terminate_process(p)
                 break
             Logger.critical(f"Process {p.pid} ({p.name}) exited with code {p.exitcode}, please check the log.")
             processes.remove(p)
-            # terminate_process() 会 close() 该进程对象，close 之后读取属性会抛错，故先取出实例记录。
+            # terminate_process() 会执行该进程对象的 close()，关闭之后读取属性会抛出异常，因此先获取实例记录。
             instance = getattr(p, "akari_instance", None)
             terminate_process(p)
             if instance is None:
@@ -789,7 +789,7 @@ def terminate_process(
 
 def cleanup_processes():
     global server_stop_event, jobqueue_hub_stop_event
-    # 先停止平台入口，再停止 Server。WebSocket Hub 最后退出，以便其它进程完成关闭信号与响应。
+    # 先停止平台入口，再停止 Server。WebSocket Hub 最后退出，以便其他进程完成关闭信号与响应。
     shutdown_order = {"server": 1, "jobqueue-hub": 2}
     ordered_processes = sorted(processes, key=lambda ps: shutdown_order.get(ps.name, 0))
     for ps in ordered_processes:
@@ -825,7 +825,7 @@ async def main_async():
 
 
 def _write_lock_record(handle) -> None:
-    # 记录含进程号与启动时间，供控制器（CLI）定位并停止本进程。取锁失败的进程不会走到这里，
+    # 记录包含进程号与启动时间，供控制器（CLI）定位并停止本进程。获取锁失败的进程不会执行到这里，
     # 因此文件内容始终属于当前持锁者。
     record = {"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat(), "argv": sys.argv[1:]}
     serialized = json.dumps(record, ensure_ascii=False)
@@ -849,7 +849,7 @@ def _write_lock_record(handle) -> None:
 
 
 def _raise_keyboard_interrupt(signum, frame):
-    # 信号处理器在主线程的两个字节码之间执行，异常经 asyncio.run() 向外传播，与 Ctrl+C 走同一条路径。
+    # 信号处理器在主线程的两个字节码之间执行，异常通过 asyncio.run() 向外传播，与 Ctrl+C 使用同一条路径。
     raise KeyboardInterrupt
 
 
@@ -866,8 +866,8 @@ def main():
     init_daemon_logger()
     # Detect if the program is already running
     lock_file_path = Paths.lock
-    # 不截断打开：取锁失败的第二个进程不得抹掉持有者写下的进程记录。锁的语义仍由 flock / msvcrt
-    # 决定，文件内容只用于让控制器定位进程。
+    # 不截断打开，确保获取锁失败的第二个进程不得覆盖持有者写入的进程记录。锁的语义仍由 flock / msvcrt
+    # 确定，文件内容仅供控制器定位进程。
     _lock_file = os.fdopen(os.open(lock_file_path, os.O_RDWR | os.O_CREAT, 0o644), "r+", encoding="utf-8")  # skipcq
     if sys.platform == "win32":
         import msvcrt
@@ -885,8 +885,8 @@ def main():
         except BlockingIOError:
             Logger.critical("Another instance is already running. Aborting.")
             sys.exit(1)
-    # SIGTERM 默认直接终止进程，适配器与 Server 会变成孤儿进程。转成 KeyboardInterrupt 走
-    # 与 Ctrl+C 相同的收拢路径。
+    # SIGTERM 默认直接终止进程，适配器与 Server 会变成孤儿进程。转换为 KeyboardInterrupt，
+    # 使用与 Ctrl+C 相同的合并退出路径。
     if sys.platform != "win32":
         signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
 
@@ -912,7 +912,7 @@ def main():
                 clear_import_cache()
                 continue
             except SystemExit as exit_signal:
-                # 配置冲突等守护进程错误须保留退出码，供管理器判断启动结果。
+                # 配置冲突等守护进程错误必须保留退出码，供管理器判断启动结果。
                 raise exit_signal
             except KeyboardInterrupt:
                 break

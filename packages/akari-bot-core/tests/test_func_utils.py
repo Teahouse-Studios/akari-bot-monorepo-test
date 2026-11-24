@@ -161,7 +161,7 @@ def _test_generate_progress_bar():
 
 @func_case
 async def test_func_utils(tester: Tester):
-    """core.utils.func: 所有工具函数测试"""
+    """core.utils.func 所有工具函数测试"""
     await tester.test(_test_convert_list, "convert_list 测试")
     await tester.test(_test_is_iterable, "is_iterable 测试")
     await tester.test(_test_is_json_serializable, "is_json_serializable 测试")

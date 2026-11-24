@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.config``：站点品牌、分组与分类图标、资源路径。"""
+"""``akaribot.cli.docs_engine.config`` 的站点品牌、分组与分类图标、资源路径测试。"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -373,7 +373,7 @@ async def _test_footer_rejects_bad_values():
 
 @func_case
 async def test_docs_config(tester: Tester):
-    """cli.docs.config: 站点品牌、分组与分类图标、资源路径"""
+    """cli.docs.config 站点品牌、分组与分类图标、资源路径测试"""
     await tester.test(_test_loads_branding_and_icons, "读取 Logo、favicon、一级图标与分类图标")
     await tester.test(_test_theme_color_must_be_hex, "主题色必须是 #rrggbb")
     await tester.test(_test_icons_must_be_non_empty_strings, "图标值必须是非空字符串，错误指出所在表")

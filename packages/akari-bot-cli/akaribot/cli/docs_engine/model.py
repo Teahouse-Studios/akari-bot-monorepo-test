@@ -33,7 +33,7 @@ def doc_meta_paths(doc_path: Path) -> tuple[Path, ...]:
 
 
 def doc_meta_path(doc_path: Path) -> Path:
-    """返回用于文件指纹与提示的元数据文件。没有文件时返回全局默认路径。"""
+    """返回用于文件指纹与提示的元数据文件。文件不存在时返回全局默认路径。"""
     paths = doc_meta_paths(doc_path)
     if paths:
         return paths[-1]
@@ -248,5 +248,5 @@ def page_url(key: str, path: str) -> str:
 
 
 def as_mapping(value: Any) -> Mapping[str, Any]:
-    """把任意 JSON 值收窄成映射，非映射返回空字典。"""
+    """将任意 JSON 值转换为映射，非映射类型返回空字典。"""
     return value if isinstance(value, Mapping) else {}

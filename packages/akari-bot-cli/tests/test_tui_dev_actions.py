@@ -46,7 +46,7 @@ PAGE_CONTROLS = (
     "action-output",
     "action-output-text",
 )
-# 新建包的输入都在 n 打开的对话框里。
+# 新建包的输入项均位于快捷键 n 打开的对话框中。
 DIALOG_CONTROLS = (
     "new-name",
     "new-kind",
@@ -75,7 +75,7 @@ def _merged_locale_dir() -> Path:
 
 
 def _use_cli_locale() -> None:
-    # 首次读取会初始化包内语言快照，须先完成初始化再注入测试快照。
+    # 首次读取会初始化包内语言快照，需要先完成初始化再注入测试快照。
     i18n.t("cli.tui.common.status_ready")
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [str(_merged_locale_dir())], LOCALE_NAMESPACE)
     i18n.connect_locale_snapshot(LOCALE_NAMESPACE)
@@ -152,7 +152,7 @@ async def _test_keys_and_controls_are_present():
 
 
 async def _test_refresh_keeps_row_highlighted():
-    # 关键回归：重建包清单后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归测试，重建包清单后选中行必须保持高亮——ListView 仅在 index 变化时更新高亮。
     packages = (
         DevPackage(dist="akari-bot-core", name="core", kind="core", version="0.1.0"),
         DevPackage(dist="akari-bot-module-wiki", name="wiki", kind="module", version="0.2.0"),
@@ -420,7 +420,7 @@ async def _test_follow_pauses_on_scroll_back_and_resumes():
     started, pinned, pinned_tail, entered, detached, held_offset = values[:6]
     announced, following, resumed_title, finished_title = values[6:]
     counted = i18n.t("cli.tui.dev.output_title", count=len(FOLLOW_OUTPUT) + 2)
-    # 用户上滚后须暂停自动滚动，按 End 后恢复。
+    # 向上滚动后需要暂停自动滚动，按 End 后恢复。
     return (
         started
         and pinned
@@ -468,7 +468,7 @@ async def _test_empty_output_hint():
 
 
 class _FakeStdout:
-    # 标准输出替身按行异步返回字节，与 asyncio 子进程接口一致。
+    # 模拟标准输出按行异步返回字节，与 asyncio 子进程接口一致。
     def __init__(self, lines: tuple[str, ...]) -> None:
         self._lines = lines
 
@@ -567,7 +567,7 @@ async def _test_new_form_submits_adapter():
         app.screen.query_one("#new-kind", compat.Button).press()
         await pilot.pause()
         adapter_label = str(app.screen.query_one("#new-kind", compat.Button).label)
-        # 切换类型后焦点仍在按钮上，须聚焦名称输入框后再按回车提交。
+        # 切换类型后焦点仍在按钮上，需要聚焦名称输入框后再按 Enter 键提交。
         compat.focus_now(app.screen.query_one("#new-name", compat.Input))
         await pilot.press("enter")
         await page.wait_for_idle()
@@ -651,8 +651,8 @@ def _test_production_source_builds_argv():
         source._action_argv(ACTION_TEST, {"args": (TEST_TARGET, "--ci")})
         == cli_process.cli_argv("test", TEST_TARGET, "--ci")
         and source._action_argv(ACTION_TEST, {"args": ()}) == cli_process.cli_argv("test")
-        # 子进程与界面共用终端，须用 --non-interactive 防止交互提示占用输入与输出。
-        # 三个开关须显式传值，未勾选时用 --no-* 覆盖 CLI 默认值。
+        # 子进程与界面共用终端，需要使用 --non-interactive 防止交互提示占用输入与输出。
+        # 三个开关需要明确传值，未勾选时用 --no-* 覆盖 CLI 默认值。
         and source._action_argv(ACTION_NEW, module_params)
         == cli_process.cli_argv(
             "new",
@@ -755,7 +755,7 @@ async def _test_escape_on_idle_page_leaves_source_alone():
 
 @func_case
 async def test_tui_dev_actions(tester: Tester):
-    """cli.tui.dev: 运行测试与生成脚手架的动作测试"""
+    """cli.tui.dev 运行测试与生成脚手架的操作测试"""
     _use_cli_locale()
     await tester.test(_test_keys_and_controls_are_present, "键位与按钮齐备且在页脚生效")
     await tester.test(_test_refresh_keeps_row_highlighted, "刷新后选中包仍然高亮")

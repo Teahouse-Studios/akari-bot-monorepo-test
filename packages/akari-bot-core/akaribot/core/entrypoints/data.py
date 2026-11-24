@@ -22,10 +22,10 @@ MAX_LIMIT = 200
 _INT_FIELDS = frozenset({"IntField", "BigIntField", "SmallIntField"})
 _TRUE_WORDS = frozenset({"true", "1", "yes", "y", "on"})
 _FALSE_WORDS = frozenset({"false", "0", "no", "n", "off"})
-# 文本列才能做包含与前后缀匹配。其余类型只支持等值与大小比较。
+# 仅文本列支持执行包含与前后缀匹配。其余类型仅支持等值与大小比较。
 _TEXT_FIELDS = frozenset({"CharField", "TextField"})
 _NULL_WORDS = frozenset({"null", "none"})
-# 运算符按“先长后短”排列：双字符运算符先命中，否则不等号与取反包含符会被当成单字符运算符拆开，
+# 运算符按“先长后短”排列，确保双字符运算符先命中，否则不等号与取反包含符会被视为单字符运算符拆开，
 # 导致列名与取值错位。
 _CONDITION_OPERATORS = ("!=", ">=", "<=", "!~", "~", "^", "$", "=", ">", "<")
 _COMPARISON_LOOKUPS = {"=": "exact", "!=": "exact", ">": "gt", ">=": "gte", "<": "lt", "<=": "lte"}
@@ -33,7 +33,7 @@ _TEXT_LOOKUPS = {"~": "icontains", "!~": "icontains", "^": "istartswith", "$": "
 
 
 class DataError(RuntimeError):
-    """用户错误：未知表或列、缺必填字段、主键不存在、值无法按列类型转换。"""
+    """用户错误（未知表或列、缺少必填字段、主键不存在、值无法按列类型转换）。"""
 
 
 def _registered_tables() -> list[tuple[str, Any]]:
@@ -76,7 +76,7 @@ def _table_owners() -> dict[str, str]:
     try:
         PackageRegistry.discover()
         entries = list(PackageRegistry.modules().values()) + list(PackageRegistry.adapters().values())
-    except Exception:  # noqa: BLE001 - 清单读取失败只让 package 一栏留空，不应阻断浏览
+    except Exception:  # noqa: BLE001 - 清单读取失败仅使 package 一栏留空，不应阻断浏览。
         return {}
     owners: dict[str, str] = {}
     for entry in entries:
@@ -105,7 +105,7 @@ def _json_safe(value: Any) -> Any:
 
 
 def _default_text(value: Any) -> Any:
-    # 可调用默认值（uuid4、list 等）的结果要到运行期才能确定，用 null 表示“由模型自行决定”。
+    # 可调用默认值（uuid4、list 等）的生成结果必须在运行时确定，此处使用 null 表示由模型自行生成。
     return None if callable(value) else _json_safe(value)
 
 
@@ -160,7 +160,7 @@ def _parse_assignment(raw: str, *, table: str) -> tuple[str, str]:
     return column, value
 
 
-# 把 ``<列><运算符><值>`` 拆成三段。运算符与值都可以省略（省略时按等值处理）。
+# 将 ``<列><运算符><值>`` 拆分为三段。运算符与值都可以省略（省略时按等值处理）。
 def _split_condition(raw: str, *, table: str) -> tuple[str, str, str]:
     text = raw.strip()
     if not text:
@@ -172,7 +172,7 @@ def _split_condition(raw: str, *, table: str) -> tuple[str, str, str]:
             if not column:
                 raise DataError(f"表 {table} 的筛选条件 {raw!r} 缺少列名。")
             return column, operator, value
-    # 只有列名：按“该列非空”理解，比默默当成等值空串更符合预期。
+    # 仅提供列名时按“该列非空”解析，比默认视为等值空字符串更符合预期。
     return text, "!=", "null"
 
 
@@ -195,7 +195,7 @@ def _condition_query(fields: Mapping[str, Any], table: str, raw: str) -> Any:
     return ~condition if operator.startswith("!") else condition
 
 
-# 在所有文本列上做不区分大小写的包含匹配。表里没有文本列时拒绝。
+# 在所有文本列上执行不区分大小写的包含匹配。表中未包含文本列时拒绝。
 def _search_query(fields: Mapping[str, Any], table: str, keyword: str) -> Any:
     from tortoise.expressions import Q
 
@@ -224,7 +224,7 @@ def _order_terms(fields: Mapping[str, Any], table: str, pk_name: str, order_by: 
         term = f"-{column}"
     else:
         raise DataError(f"排序方向 {direction!r} 不是 asc 或 desc。")
-    # 主键作次级排序键：分页时同值行之间才有稳定顺序，翻页不会重复或漏行。
+    # 主键作次级排序键，确保分页时同值行之间有稳定顺序，翻页不会重复或漏行。
     return [term] if column == pk_name else [term, f"-{pk_name}"]
 
 
@@ -233,7 +233,7 @@ def _row_payload(fields: Mapping[str, Any], row: Mapping[str, Any]) -> dict[str,
 
 
 async def _write(coro: Any, table: str) -> Any:
-    # 唯一约束、外键约束这类拒绝由数据库给出，属调用方给错了值，按用户错误上报。
+    # 唯一约束、外键约束这类拒绝由数据库给出，属调用方传入了错误的值，按用户错误上报。
     from tortoise.exceptions import IntegrityError
 
     try:
@@ -243,10 +243,10 @@ async def _write(coro: Any, table: str) -> Any:
 
 
 async def _table_rows(model: Any) -> int | None:
-    # 包已装但实例尚未建出该表时读不到条数。此时保留表并如实回报“未知”，不让一张表拖垮整份清单。
+    # 包已安装但实例尚未创建该表时无法读取条数。此时保留表并如实返回“未知”，不让一张表导致整份清单异常。
     try:
         return await model.all().count()
-    except Exception:  # noqa: BLE001 - 不同后端的缺表报错类型不同，统一按未知处理
+    except Exception:  # noqa: BLE001 - 不同后端缺少数据表的异常类型不同，统一按未知处理。
         return None
 
 
@@ -288,20 +288,20 @@ async def _rows(
 ) -> dict[str, Any]:
     table, model = _table_or_fail(table_name)
     fields = _fields(model)
-    # 用户错误先判完再碰库：未知列与非法取值不该先撞上一条数据库报错。
+    # 用户错误先校验完成再访问数据库，未知列与非法取值不应先触发数据库异常。
     terms = _order_terms(fields, table, _pk_name(model), order_by)
     conditions = [_condition_query(fields, table, raw) for raw in filters]
     if search.strip():
         conditions.append(_search_query(fields, table, search))
     query = model.filter(*conditions)
-    # 大表上 COUNT 是一次全表扫描，故翻页可以只取本页。不数时 total 回 null，由调用方沿用上次的值。
+    # 大表执行 COUNT 为全表扫描，因此分页时可仅获取当前页数据。不统计总数时 total 返回 null，由调用方沿用上次的值。
     total = await query.count() if count else None
     rows = await query.order_by(*terms).limit(limit).offset(offset).values(*fields)
     return {
         "table": table,
         "total": total,
         "rows": [_row_payload(fields, row) for row in rows],
-        # 回显分页与筛选状态：调用方据此显示“第几页 / 共几条 / 当前条件”，不必自己记。
+        # 回显分页与筛选状态，方便调用方据此显示“第几页 / 共几条 / 当前条件”，无需自行记录。
         "limit": limit,
         "offset": offset,
         "order_by": order_by or f"-{_pk_name(model)}",
@@ -312,7 +312,7 @@ async def _rows(
 
 
 async def _set(table_name: str, *, key: str, assignments: Sequence[str]) -> dict[str, Any]:
-    # 一行多列：所有取值先转换完再下发，且在同一次 UPDATE 里写入，不会出现“改了一半”的行。
+    # 一行多列更新时，所有取值先转换完再提交，且在同一次 UPDATE 中写入，不会出现处于部分修改状态的记录行。
     table, model = _table_or_fail(table_name)
     fields = _fields(model)
     pk_name = _pk_name(model)
@@ -330,7 +330,7 @@ async def _set(table_name: str, *, key: str, assignments: Sequence[str]) -> dict
     converted_key = _coerce(_column_or_fail(fields, table, pk_name), key, table=table, column=pk_name)
     from tortoise.transactions import in_transaction
 
-    # 连接名必须显式给出：实例同时挂着 default 与 local 两个库，省略会被 Tortoise 拒绝。
+    # 连接名必须显式指定。实例同时挂载 default 与 local 两个数据库，省略连接名将被 Tortoise 拒绝。
     async with in_transaction("default"):
         updated = await _write(model.filter(**{pk_name: converted_key}).update(**values), table)
     if not updated:
@@ -400,7 +400,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="python -m akaribot.core.entrypoints.data",
         description="浏览实例数据库的表与数据项，并按主键写入。",
     )
-    # 输出恒为 JSON，``--json`` 只为与其它入口的命令行形态保持一致。
+    # 输出恒为 JSON，``--json`` 仅为与其他入口的命令行形态保持一致。
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--json", action="store_true", help="兼容开关，输出恒为 JSON")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -456,7 +456,7 @@ def _emit(payload: Any) -> None:
 
 
 def _fail(message: str, code: int) -> int:
-    # 失败原因同时进 stdout 的 JSON：调用方（CLI 与界面）只解析 stdout，只写 stderr 则拿不到结构化原因。
+    # 失败原因同时写入 stdout 的 JSON，因为调用方（CLI 与界面）仅解析 stdout，若仅写入 stderr 则无法获取结构化原因。
     _emit({"error": message})
     print(f"数据操作失败：{message}", file=sys.stderr)
     return code
@@ -474,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = asyncio.run(_dispatch(args))
     except DataError as exc:
         return _fail(str(exc), 2)
-    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层捕获全部异常，错误信息面向调用方展示。
         return _fail(f"{type(exc).__name__}: {exc}", 1)
     _emit(payload)
     return 0

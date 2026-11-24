@@ -224,7 +224,7 @@ async def _test_server_event_dispatch():
 
 @func_case
 async def test_event(tester: Tester):
-    """模块事件：注册、EventInfo、队列转换与服务器分发测试。"""
+    """模块事件的注册、EventInfo、队列转换与服务器分发测试。"""
     await tester.test(_test_event_binding, "模块事件绑定测试")
     await tester.test(_test_event_info_roundtrip, "EventInfo 序列化与场景前缀测试")
     await tester.test(_test_event_dispatch, "模块事件分发与加载状态测试")

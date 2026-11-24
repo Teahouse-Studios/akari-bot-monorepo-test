@@ -6,5 +6,5 @@ locales = "locales"
 config_table = "module_mod_dl"
 config_schema_version = 1
 provides_modules = ["mod-dl"]
-# 查重用的登录信息字段：CurseForge API 密钥。
+# 用于检查重复的登录信息字段，对应 CurseForge API 密钥。
 credential_fields = ["curseforge_api_key"]

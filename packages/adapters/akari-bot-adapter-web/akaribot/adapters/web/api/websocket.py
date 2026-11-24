@@ -64,7 +64,7 @@ async def websocket_logs(websocket: WebSocket):
                         if log_file not in last_file_pos:
                             if initial_connect and current_size > INIT_READ_BYTES:
                                 f.seek(current_size - INIT_READ_BYTES)
-                                f.readline()  # 舍弃第一行（大概率是不完整的半行日志）
+                                f.readline()  # 舍弃首行，因其通常为残缺的日志行。
                             else:
                                 f.seek(0)
                         else:

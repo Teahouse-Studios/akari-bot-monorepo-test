@@ -28,13 +28,13 @@ async def _(msg: Bot.MessageSession):
         else:
             differs = False
             fetched_text = unknown
-        # 差异项加星号标出，聊天窗口里没有颜色可用
+        # 差异项附加星号标记，聊天窗口中不支持颜色显示。
         lines.append(f"{'*' if differs else ''}{field.name}: {yes if current else no} / {fetched_text}")
 
     result = [I18NContext("core.message.features.prompt", target=msg.session_info.target_from, disable_joke=True)]
     if not fetched:
         result.append(I18NContext("core.message.features.fetch.failed"))
-    # 特性名是代码标识符，不能参与文本替换
+    # 特性名是代码标识符，不能参与文本替换。
     result.append(Plain("\n".join(lines), disable_joke=True))
     if diff_count:
         result.append(I18NContext("core.message.features.diff", count=diff_count))

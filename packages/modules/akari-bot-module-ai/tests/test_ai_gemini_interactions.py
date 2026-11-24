@@ -300,7 +300,7 @@ async def _test_failed_status_is_raised():
 
 @func_case
 async def test_ai_gemini_interactions(tester: Tester):
-    """akaribot.modules.ai: Gemini Interactions API 端点请求与响应转换"""
+    """akaribot.modules.ai 的 Gemini Interactions API 端点请求与响应转换测试"""
     await tester.test(_test_messages_are_converted_to_steps, "消息转换为 Interactions 步骤")
     await tester.test(_test_remote_image_url_is_preserved, "远程图片以 uri 保留")
     await tester.test(_test_gemini_steps_are_replayed_verbatim, "原始模型步骤原样回放")

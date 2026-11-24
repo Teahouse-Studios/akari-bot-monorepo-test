@@ -48,9 +48,9 @@ RENAMED_MODULES = {
 }
 
 
-# 每次热重载都会重建依赖图（遍历并解析全部模块源码，实测 0.6~0.9 秒），
-# 冷文件缓存或高负载环境下会明显超过 1 秒，故等待步骤统一留出余量，
-# 避免把“慢”误判成“卡住”。
+# 每次热重载均会重建依赖图（遍历并解析全部模块源码，实测 0.6 到 0.9 秒），
+# 冷文件缓存或高负载环境下会明显超过 1 秒，因此等待步骤统一预留容限时间，
+# 避免将响应缓慢误判定为无响应。
 RELOAD_WAIT_TIMEOUT = 10
 
 
@@ -254,8 +254,8 @@ async def _cancel_reload_task(task: asyncio.Task | None):
     await asyncio.gather(task, return_exceptions=True)
 
 
-# 用例以 `akaribot.modules.__test_loader_*` 构造独立重载场景。包身份解析改为查注册表后，
-# 这些名字解析不到包，故在用例入口统一给出合成条目。真实包名仍交回注册表本身解析。
+# 用例以 `akaribot.modules.__test_loader_*` 构造独立重载场景。因为注册表无法直接解析这些测试名称，
+# 用例在入口统一注入合成条目。真实包名称交由注册表本身解析。
 SYNTHETIC_PACKAGE_PREFIX = "akaribot.modules.__test"
 SYNTHETIC_PACKAGE_PATTERN = re.compile(rf"^{re.escape(SYNTHETIC_PACKAGE_PREFIX)}[._]")
 _real_by_import_path = PackageRegistry.by_import_path
@@ -274,7 +274,7 @@ def _synthetic_package_entry(package: str) -> PackageEntry:
 
 
 def _fake_package_lookup(path: str):
-    # 合成包不会出现在注册表中，故直接匹配前缀即可。
+    # 合成包不会出现在注册表中，因此直接匹配前缀即可。
     if SYNTHETIC_PACKAGE_PATTERN.match(path):
         return _synthetic_package_entry(".".join(path.split(".")[:3]))
     return _real_by_import_path(path)
@@ -705,9 +705,9 @@ def _test_reload_defers_cross_module_bindings():
 
 
 def _test_all_registered_modules_resolve_to_a_package():
-    # ``return_py_module()`` 返回 ``None`` 会让热重载、locale 指纹、依赖图与模块卸载
-    # 四处静默失效且不报错。这条检查是“包装成 wheel 后功能未损坏”的哨兵，
-    # 必须常驻。
+    # ``return_py_module()`` 返回 ``None`` 会导致热重载、locale 指纹、依赖图与模块卸载
+    # 四处静默失效且不报告错误。该项检查是“打包成 wheel 后功能未损坏”的关键防线，
+    # 必须始终保留。
     missing = [name for name in ModulesManager.modules if ModulesManager.return_py_module(name) is None]
     if missing:
         raise AssertionError(f"以下模块无法解析所属包：{missing}")
@@ -1273,7 +1273,7 @@ async def _test_unload_drains_queue_before_stopping_runtime():
 
 @func_case
 async def test_loader(tester: Tester):
-    """core.loader: 模块加载器测试"""
+    """core.loader 模块加载器测试"""
     with patch.object(PackageRegistry, "by_import_path", side_effect=_fake_package_lookup):
         return await _run_loader_cases(tester)
 

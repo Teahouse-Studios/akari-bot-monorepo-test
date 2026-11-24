@@ -1,4 +1,4 @@
-"""core.builtins.parser.message 单元测试 - base 模块的 regex 启用判定。"""
+"""core.builtins.parser.message 基础模块正则启用判定单元测试。"""
 
 from types import SimpleNamespace
 
@@ -40,7 +40,7 @@ async def _test_none_enabled_modules_is_safe():
 
 @func_case
 async def test_regex_base_module(tester: Tester):
-    """core.builtins.parser.message: base 模块 regex 启用判定测试"""
+    """core.builtins.parser.message 基础模块正则启用判定测试"""
     await tester.test(_test_base_module_enabled_without_enabling, "base 模块免启用测试")
     await tester.test(_test_normal_module_requires_enabling, "普通模块需启用测试")
     await tester.test(_test_none_enabled_modules_is_safe, "enabled_modules 为 None 测试")

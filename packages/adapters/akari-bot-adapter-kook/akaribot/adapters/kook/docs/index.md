@@ -16,13 +16,13 @@ KOOK 适配器以机器人身份连接 KOOK 开放平台，接入服务器频道
 akaribot module add akari-bot-adapter-kook
 ```
 
-安装后，守护进程按配置启动适配器。`bot_kook.enable = true` 时启动。
+安装完成后，守护进程按配置启动适配器。当 `bot_kook.enable = true` 时启动服务。
 
 ## 配置
 
-配置表为 `bot_kook`，密钥表为 `bot_kook_secret`。两张表都写在 `config/bot_kook.toml`。
+配置表为 `bot_kook`，密钥表为 `bot_kook_secret`。两张表均保存在 `config/bot_kook.toml` 中。
 
-需要多个机器人账号时，用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`。两张表都写在 `config/bot_kook-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add kook <实例 ID>` 新增实例。实例表名为 `bot_kook-<实例 ID>`，密钥表名为 `bot_kook-<实例 ID>_secret`。两张表均保存在 `config/bot_kook-<实例 ID>.toml` 中。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ akaribot config set kook_token <令牌> --table bot_kook_secret
 ## 必填信息
 
 - `kook_token`：在 KOOK 开发者平台的机器人页面获取。
-- 先把机器人邀请到目标服务器。机器人需要读取消息、发送消息和撤回消息的权限。
+- 首先将机器人邀请至目标服务器。机器人需要读取消息、发送消息以及撤回消息的权限。
 
 ## 平台能力
 
@@ -71,7 +71,7 @@ akaribot config set kook_token <令牌> --table bot_kook_secret
 - 私聊的目标前缀是 `KOOK|Person`。
 - 服务器事件的目标前缀是 `KOOK|Guild`。
 - 私聊不需要 @机器人。频道消息是否必须 @机器人由 core 的 `config.mention_required` 控制。
-- 频道消息只处理文本和图片。
+- 频道消息仅处理文本和图片。
 
 ## 外部依赖
 

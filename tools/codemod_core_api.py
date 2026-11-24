@@ -28,11 +28,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_GLOBS = ("packages/modules/*/akaribot/modules", "packages/adapters/*/akaribot/adapters")
 CORE_ROOT = "akaribot.core"
 FACADE = "akaribot.core.api"
-# 适配器另有自己的面：其中的符号只供适配器使用，模块包导入它会被 B3 拦下。
+# 适配器具有独立的公开接口，其中的符号仅供适配器使用，模块包导入该接口将被规则 B3 拦截。
 ADAPTER_FACADE = "akaribot.core.api.adapters"
 
-# 必须保持窄 import 的文件，不改写：门面导入期即展开，会把 web_render 连同 playwright 拉进
-# ``sys.modules``，而 Telegram 适配器专门守住“只导入 message_builder 不带出 web_render”。
+# 必须保持最小范围导入的文件不改写，因为公开接口在导入阶段即展开，会将 web_render 连同 playwright 引入
+# ``sys.modules``，而 Telegram 适配器专门保证“仅导入 message_builder 而不连带引入 web_render”。
 KEEP_DEEP_IMPORTS = frozenset(
     {
         "packages/adapters/akari-bot-adapter-telegram/akaribot/adapters/telegram/info.py",
@@ -91,7 +91,7 @@ def is_same_object(module: str, symbol: str, facade: dict[str, object]) -> bool:
         return False
     try:
         deep = importlib.import_module(module)
-    except Exception:  # noqa: BLE001 - 导入不了的模块一律不改写
+    except Exception:  # noqa: BLE001，无法导入的模块统一不执行改写。
         return False
     if not hasattr(deep, symbol):
         return False
@@ -144,7 +144,7 @@ def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
     replacements: list[tuple[int, int, str]] = []
 
     def destination(module: str, symbol: str) -> str | None:
-        """该符号应改走哪个门面。两个门面都没有时返回 None。"""
+        """获取该符号应当改用的公开接口。若两个公开接口均未提供，则返回 None。"""
         for candidate in (primary, FACADE):
             if is_same_object(module, symbol, facades[candidate]):
                 return candidate
@@ -202,7 +202,7 @@ def plan_file(path: Path, facades: dict[str, dict[str, object]]) -> FilePlan:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口。返回进程退出码。"""
+    """主入口函数，返回进程退出码。"""
     parser = argparse.ArgumentParser(description="把 core 深路径 import 改走 akaribot.core.api 门面")
     parser.add_argument("--write", action="store_true", help="写入磁盘。默认只报告")
     args = parser.parse_args(argv)

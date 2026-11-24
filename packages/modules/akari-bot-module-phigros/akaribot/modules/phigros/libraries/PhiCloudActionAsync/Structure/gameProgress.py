@@ -1,11 +1,11 @@
-# ----------------------- 导入 -----------------------
+# 依赖导入。
 from .DataType import Bit, String, VarInt, ShortInt, Money, Bits
 
-# ---------------------- 定义 ----------------------
+# 类型与常量定义。
 
 
 class gameProgress04:
-    """版本号 ≥ 3.8.1"""
+    """版本号 ≥ 3.8.1。"""
 
     file_head = b"\x04"
 
@@ -68,7 +68,7 @@ class gameProgress04:
 
 
 class gameProgress03:
-    """版本号 < 3.8.1"""
+    """版本号 < 3.8.1。"""
 
     file_head = b"\x03"
 

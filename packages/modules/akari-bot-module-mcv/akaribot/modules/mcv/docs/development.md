@@ -12,17 +12,17 @@ title: 安装与开发
 akaribot module add akari-bot-module-mcv
 ```
 
-安装完成后，请让管理员在会话中执行 `module enable mcv` 开启模块。
+安装完成后，管理员可以在会话中执行 `module enable mcv` 启用模块。
 
 ## 配置项
 
 <ModuleConfig />
 
-是否查询 Google Play 取决于 core 探测到的出口 IP 所在国家，此项不属于模块配置。国家为 `China` 时跳过 Google Play，尚未探测到国家时仍会尝试。
+是否查询 Google Play 取决于 core 探测到的出口 IP 所在国家，该项不属于模块配置。国家代码为 `China` 时跳过 Google Play，尚未探测到国家时仍会尝试。
 
 ## 权限与平台能力
 
-`mcv` 与 `mcv mcbv` 两条命令都未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 取默认值 `*`。执行查询时需要能访问 Mojang、Google Play 与 `store.rg-adguard.net`。
+`mcv` 与 `mcv mcbv` 两条命令都未声明管理员或超级用户限制，普通用户可以直接执行。模块没有声明平台限制，`available_for` 使用默认值 `*`。执行查询时需要能够访问 Mojang、Google Play 与 `store.rg-adguard.net`。
 
 ## 数据表
 

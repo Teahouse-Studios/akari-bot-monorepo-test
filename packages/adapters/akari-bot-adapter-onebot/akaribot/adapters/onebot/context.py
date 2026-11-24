@@ -189,7 +189,7 @@ class OneBotContextManager(ContextManager):
         try:
             return await _check()
         except Exception:
-            # 被查询的成员可能已退群，平台查不到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接报错，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")
@@ -297,7 +297,7 @@ class OneBotContextManager(ContextManager):
                         parts = re.split(r"(\[CQ:[^\]]+\])", x.text)
                         parts = [part for part in parts if part]
                         previous_was_cq = False
-                        # CQ 码消息段相连会导致自动转义，故使用零宽字符`\u200B`隔开
+                        # CQ 码消息段相连会导致自动转义，因此使用零宽字符 `\u200B` 分隔。
                         for i, part in enumerate(parts):
                             if re.match(r"\[CQ:[^\]]+\]", part):
                                 try:
@@ -371,7 +371,7 @@ class OneBotContextManager(ContextManager):
                     count += 1
 
             if count == 0:
-                # 元素均因底层媒体不可得被跳过时不发送空消息
+                # 元素均因底层媒体不可用被跳过时不发送空消息。
                 return []
 
             if session_info.target_from == target_group_prefix:
@@ -416,13 +416,13 @@ class OneBotContextManager(ContextManager):
 
         try:
             # 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。
-            # 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的契约。
+            # 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的约定。
             private_list = await get_available_private_list()
             if private_list and int(uid) not in private_list:
                 Logger.warning(f"User {uid} not found in private list, skipping private message send.")
                 return []
 
-            # 显式指定基类：主动消息所用的子类会将发送放入冷却队列并返回 None，无法取得消息 ID
+            # 显式指定基类，因为主动消息所用的子类会将发送放入冷却队列并返回 None，无法获取消息 ID。
             return await OneBotContextManager.send_message(
                 cls.derive_private_session(session_info, f"{target_private_prefix}|{uid}", target_private_prefix),
                 message,
@@ -802,7 +802,7 @@ class OneBotFetchedContextManager(OneBotContextManager):
         message: MessageChain | MessageNodes,
         quote: bool = True,
     ) -> list[str]:
-        # 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本跳是否送达，
+        # 主动消息必须按冷却排队发出，但调用方需要获取真实的消息 ID 才能判断本次发送是否送达，
         # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
@@ -874,7 +874,7 @@ class OneBotFetchedContextManager(OneBotContextManager):
 
     @classmethod
     async def stop_task_processor(cls) -> None:
-        """停止主动消息 worker，并让尚未处理的调用方收到发送失败。"""
+        """停止主动消息工作任务，使尚未完成处理的调用方接收发送失败通知。"""
         task = cls._processor_task
         cls._processor_task = None
         if task is not None:

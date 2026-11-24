@@ -70,7 +70,7 @@ async def collect_bind_prefixes(bind_model) -> list[str]:
 
 
 async def load_platform_prefixes() -> dict[str, list[str]]:
-    """读取会话页可用的平台前缀，并做短时缓存以避免频繁扫描整张绑定表。"""
+    """读取会话页可用的平台前缀，并短时缓存以避免频繁扫描整张绑定表。"""
     global _platform_prefix_cache
     now = time.monotonic()
     if _platform_prefix_cache is not None and now - _platform_prefix_cache[0] < PLATFORM_PREFIX_CACHE_TTL:
@@ -197,7 +197,7 @@ async def server_info(request: Request):
     try:
         runtime_stats = await ServerAPI.get_runtime_stats()
     except Exception:
-        # 服务端不可用时仍交付本机信息，只让该项目为空，前端据此显示“不可用”。
+        # 服务端不可用时仍返回本机信息，仅将该项置为空值，前端据此显示“不可用”。
         Logger.exception("Failed to read runtime stats for WebUI.")
         runtime_stats = {"jobqueue_backend": None, "command_parsed": None, "message_parsed": None}
     try:
@@ -222,7 +222,7 @@ async def server_info(request: Request):
             "command_parsed": runtime_stats.get("command_parsed"),
             "message_parsed": runtime_stats.get("message_parsed"),
         },
-        # 各进程内存占用：memory 为字节，metric 说明口径（USS / RSS）。
+        # 各进程内存占用，其中 memory 为字节，metric 说明统计方式（USS / RSS）。
         "processes": processes,
         "cpu": {"cpu_brand": get_cpu_info()["brand_raw"], "cpu_percent": psutil.cpu_percent(interval=1)},
         "memory": {
@@ -243,9 +243,9 @@ async def server_info(request: Request):
 async def get_analytics(request: Request, days: int = Query(1)):
     verify_jwt(request)
     try:
-        # 时间窗口须以带时区的 datetime 传入：AnalyticsData.timestamp 是 DatetimeField，
-        # 传 Unix 时间戳会被原样绑定成数字与日期时间比较，任何记录都落不进区间。
-        # 传不带时区的本地时间则会被当作 UTC 处理，窗口整体偏移一个时区差。
+        # 时间窗口必须以带时区的 datetime 传入，因为 AnalyticsData.timestamp 是 DatetimeField，
+        # 传入 Unix 时间戳会被原样绑定为数字并与日期时间比对，任何记录均无法落入该区间。
+        # 传入不带时区的本地时间则会被视为 UTC 处理，窗口整体偏移一个时区差。
         now = datetime.now(UTC)
         past = now - timedelta(days=days)
         data = await AnalyticsData.get_values_by_times(now, past)
@@ -273,7 +273,7 @@ async def get_analytics_modules(
     """按模块汇总调用次数，供统计页的“模块调用数量”图表使用。"""
     verify_jwt(request)
     try:
-        # 与 /api/analytics 相同：窗口必须以带时区的 datetime 传入，且 days 为整数天。
+        # 与 /api/analytics 相同，窗口必须以带时区的 datetime 传入，且 days 为整数天。
         now = datetime.now(UTC)
         past = now - timedelta(days=days)
         counts = await AnalyticsData.get_modules_count_by_times(now, past)
@@ -308,8 +308,8 @@ async def get_analytics_modules(
         raise HTTPException(status_code=400, detail="Bad request")
 
 
-# 主配置承载 db_path 等不可重建的项：删除后下次启动会以模板占位值重建，
-# 可能连到错误的数据库，故接口层直接拒绝删除。
+# 主配置保存 db_path 等不可重建的项，删除后下次启动会以模板占位值重建，
+# 可能连接到错误的数据库，因此接口层直接拒绝删除。
 PROTECTED_CONFIG_FILES = (config_filename,)
 
 
@@ -408,7 +408,7 @@ async def delete_config_file(request: Request, cfg_filename: str):
             Logger.warning(f'[WebUI] {ip} failed to delete the protected config file: "{cfg_filename}"')
             raise HTTPException(status_code=403, detail="protected_config")
 
-        # 文件本就不存在时同样返回成功，方便前端幂等地重试删除。
+        # 文件本身不存在时同样返回成功，便于前端执行幂等的重试删除。
         changed = cfg_file_path.is_file()
         if changed:
             cfg_file_path.unlink()
@@ -554,7 +554,7 @@ async def edit_target_info(request: Request, target_id: str):
             target_union_info.locale = locale
         if modules is not None:
             target_union_info.modules = modules
-        # 权限名单使用 union ID，控制台输入的平台账号 ID 需统一解析。
+        # 权限名单使用 union ID，控制台输入的平台账号 ID 需要统一解析。
         if custom_admins is not None:
             target_union_info.custom_admins = await resolve_sender_unions(custom_admins)
         if banned_users is not None:

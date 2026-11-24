@@ -1,4 +1,4 @@
-"""会话术语作用域的构造。"""
+"""构造会话术语作用域。"""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import re
 
 from akaribot.core.i18n import derive_term_candidates
 
-# 场景前缀来自各适配器，形状由平台侧决定。不能进入键名或占位符语法的字符一律剔除。
+# 场景前缀来自各适配器，格式由平台方确定。无法作为键名或占位符语法的字符一律剔除。
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^0-9a-z_]+")
 
 
@@ -29,5 +29,5 @@ def build_term_candidates(target_from: str | None, is_private: bool) -> tuple[st
     try:
         return derive_term_candidates(tokens, shared=("private",) if is_private else ())
     except ValueError:
-        # 前缀由平台侧声明，仓库外的适配器可能给出不合规的形状。此时退回基础术语而非中断消息处理。
+        # 前缀由平台方声明，外部适配器可能提供不合规的格式。此时回退至基础术语，而不中断消息处理流程。
         return ()

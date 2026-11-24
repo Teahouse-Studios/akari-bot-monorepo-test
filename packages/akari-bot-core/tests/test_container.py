@@ -1,4 +1,4 @@
-"""core.utils.container 纯函数单元测试 - TokenBucket / ExpiringTempDict。"""
+"""core.utils.container 的 TokenBucket 与 ExpiringTempDict 纯函数单元测试。"""
 
 import time
 from unittest.mock import patch
@@ -151,14 +151,14 @@ def _test_expiring_dict_serialization():
 
 @func_case
 async def test_container(tester: Tester):
-    """core.utils.container: TokenBucket 和 ExpiringTempDict 测试"""
-    # TokenBucket 测试
+    """core.utils.container 的 TokenBucket 与 ExpiringTempDict 测试"""
+    # TokenBucket 测试。
     await tester.test(_test_token_bucket_basic, "TokenBucket 基本测试")
     await tester.test(_test_token_bucket_refill, "TokenBucket 补充测试")
     await tester.test(_test_token_bucket_wait_time, "TokenBucket 等待时间测试")
     await tester.test(_test_token_bucket_bool, "TokenBucket bool 测试")
 
-    # ExpiringTempDict 测试
+    # ExpiringTempDict 测试。
     await tester.test(_test_expiring_dict_basic, "ExpiringTempDict 基本 CRUD 测试")
     await tester.test(_test_expiring_dict_expiry, "ExpiringTempDict 过期测试")
     await tester.test(_test_expiring_dict_nested, "ExpiringTempDict 嵌套测试")

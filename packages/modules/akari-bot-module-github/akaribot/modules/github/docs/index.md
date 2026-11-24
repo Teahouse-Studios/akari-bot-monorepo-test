@@ -1,6 +1,6 @@
 # github
 
-此模块用于查询 GitHub 仓库、用户或组织的信息，也支持按关键词搜索仓库。仓库结果包含 Star 数、Fork 数、语言与许可证。用户结果包含关注数、公开仓库数与最近活跃时间。
+此模块用于查询 GitHub 仓库、用户或组织的信息，也支持按照关键词搜索仓库。仓库结果包含 Star 数、Fork 数、语言与许可证。用户结果包含关注数、公开仓库数与最近活跃时间。
 
 ## 命令
 
@@ -10,7 +10,7 @@
 
 <CommandUsage usage="github <name>" :params="['name=仓库全名或用户名']" permission="public" />
 
-按名称自动识别对象类型。名称含 `/` 时查询仓库，否则查询用户或组织。
+此命令按照名称自动识别对象类型。名称包含 `/` 时查询仓库，否则查询用户或组织。
 
 <ChatExample
   :log="[
@@ -56,7 +56,7 @@
 
 <CommandUsage usage="github search <keyword>" :params="['keyword=仓库搜索关键词']" permission="public" />
 
-按关键词搜索仓库，最多列出 5 条结果。无匹配时返回未找到提示。
+按照关键词搜索仓库，最多列出 5 条结果。未检索到匹配项时返回未找到提示。
 
 <ChatExample
   :log="[

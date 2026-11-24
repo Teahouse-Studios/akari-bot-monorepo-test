@@ -14,7 +14,7 @@ from akaribot.core.utils.brand import find_brand_asset
 from akaribot.core.utils.timezone import core_now
 
 locale = Locale(BaseConfig.default_locale)
-# 品牌资产包优先，实例 assets/ 可覆盖。两处都没有时为 None，此时不内嵌标志。
+# 品牌资产包优先，实例 assets/ 可覆盖。两处均未提供时为 None，此时不内嵌标志。
 LOGO_PATH = find_brand_asset("akaribot_logo.png")
 
 
@@ -65,13 +65,13 @@ def send_email(subject: str, body: str, timeout: float | None = None) -> None:
     if issue_url:
         emailmsg["List-Unsubscribe"] = f"<{issue_url}>"
 
-    # 纯文本版本
+    # 纯文本版本。
     emailmsg.set_content(f"{body}\n\n{_report_footer(issue_url)}")
 
-    # HTML 版本
+    # HTML 版本。
     emailmsg.add_alternative(_build_email_html(body, _report_footer_html(issue_url)), subtype="html")
 
-    # 内嵌 Logo。品牌资产缺失时跳过，邮件正文本身照常发出。
+    # 内嵌 Logo。品牌资产缺失时跳过，邮件正文本身正常发送。
     if LOGO_PATH is not None and LOGO_PATH.is_file():
         with LOGO_PATH.open("rb") as fp:
             logo_data = fp.read()
@@ -104,7 +104,7 @@ async def send_report(
     direct_sender: DirectSender | None = None,
     targets: list | None = None,
 ) -> None:
-    """将上报发送到 SMTP 邮件或配置的上报场景。"""
+    """将上报发送至 SMTP 邮件或配置的上报场景。"""
     if email_report_enabled():
         subject = f"[AkariBot] {locale.t_str(subject)}"
         if body is None:

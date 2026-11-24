@@ -1,4 +1,4 @@
-"""计划任务系统单元测试 - 验证模块定时任务注册和执行。"""
+"""计划任务系统单元测试（验证模块定时任务注册与执行）。"""
 
 import asyncio
 from datetime import timedelta
@@ -24,7 +24,7 @@ def _test_get_scheduled_tasks_has_structure():
     try:
         tasks = get_scheduled_tasks()
         if not tasks:
-            return True  # 没有计划任务也算通过
+            return True  # 未配置计划任务时也判定为通过。
         t = tasks[0]
         return (
             "module_name" in t and "function" in t and "function_name" in t and "trigger" in t and "trigger_type" in t
@@ -189,7 +189,7 @@ async def _test_scheduler_maintenance_cancels_and_waits_running_job():
         await asyncio.wait_for(started.wait(), timeout=1)
         async with SchedulerLifecycle.maintenance_window():
             waited_before_yield = stopped.is_set() and task.done()
-            # 同一 Task 重入必须直接进入，不能在维护锁上自锁。
+            # 同一 Task 重入必须直接进入，不得在维护锁上自锁。
             async with SchedulerLifecycle.maintenance_window():
                 nested = True
         return waited_before_yield and nested and SchedulerLifecycle._accepting_jobs

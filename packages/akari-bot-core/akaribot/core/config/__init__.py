@@ -20,7 +20,7 @@ from akaribot.core.builtins.config.bootstrap import bootstrap_config
 from akaribot.core.exports import add_export
 from akaribot.core.utils.func import format_url
 
-# 模板在类创建时注册字段并补充缺失键，因此加载与迁移须先于此处的模板导入完成。
+# 模板在类创建时注册字段并补充缺失键，因此加载与迁移必须先于此处的模板导入完成。
 bootstrap_config()
 
 from akaribot.core.config.base import (  # noqa: E402

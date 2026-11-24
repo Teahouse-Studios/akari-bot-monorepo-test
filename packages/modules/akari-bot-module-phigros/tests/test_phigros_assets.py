@@ -118,7 +118,7 @@ async def _test_concurrent_checks_are_serialized():
 
 @func_case
 async def test_phigros_assets(tester: Tester):
-    """phigros：资源版本检查与更新。"""
+    """phigros 的资源版本检查与更新。"""
     await tester.test(_test_remote_update_writes_version_and_song_info, "远端版本更新并写入资源")
     await tester.test(_test_same_version_skips_update, "版本一致时跳过更新")
     await tester.test(_test_failed_update_preserves_version, "更新失败保留本地版本")

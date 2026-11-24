@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-wordle
 ```
 
-安装后，管理员需要在会话中执行 `module enable wordle` 开启模块。
+安装后，管理员需要在会话中执行 `module enable wordle` 启用模块。
 
 ## 配置项
 
@@ -20,13 +20,13 @@ akaribot module add akari-bot-module-wordle
 | --- | --- | --- | --- |
 | `wordle_disable_image` | bool | false | 是否禁用图片并使用文本棋盘 |
 
-开启 `wordle_disable_image` 后，开局与每次提交都发送文本棋盘，不发送棋盘与键盘的图片。
+启用 `wordle_disable_image` 后，对局开始与每次提交时均发送文本棋盘，不再发送棋盘与键盘图片。
 
 ## 权限与平台能力
 
-命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入的平台都可以使用。
+命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入平台均可以使用。
 
-图片模式依赖 `akari-bot-assets-fonts` 提供的字体。花瓣奖励仅在实例开启花瓣系统时生效。
+图片模式依赖 `akari-bot-assets-fonts` 提供的字体。花瓣奖励仅在实例启用花瓣系统时生效。
 
 ## 数据表
 

@@ -52,7 +52,7 @@ def _messages_to_anthropic(messages: list[dict]) -> tuple[str, list[dict]]:
             system.append(base._content_to_text(content))
         elif role == "user":
             blocks = _content_to_anthropic_blocks(content)
-            # Anthropic 要求 user/assistant 交替。工具结果之后的图片等补充消息需并入同一轮。
+            # Anthropic 要求 user/assistant 交替。工具结果之后的图片等补充消息需要并入同一轮。
             if anthropic_messages and anthropic_messages[-1]["role"] == "user":
                 anthropic_messages[-1]["content"].extend(blocks)
             else:
@@ -60,7 +60,7 @@ def _messages_to_anthropic(messages: list[dict]) -> tuple[str, list[dict]]:
             last_is_tool_result = False
         elif role == "assistant":
             blocks = []
-            # 启用思考时 Anthropic 要求原样回传上一轮的 thinking 块，否则工具续轮报错。
+            # 启用思考时 Anthropic 要求原样回传上一轮的 thinking 块，否则工具续轮时会报告错误。
             for raw in msg.get("_anthropic_blocks") or []:
                 if raw.get("type") in ("thinking", "redacted_thinking"):
                     blocks.append(raw)
@@ -79,7 +79,7 @@ def _messages_to_anthropic(messages: list[dict]) -> tuple[str, list[dict]]:
             last_is_tool_result = False
         elif role == "tool":
             block = {"type": "tool_result", "tool_use_id": msg["tool_call_id"], "content": content}
-            # anthropic 要求 user/assistant 交替，多个并行 tool_result 需合并到同一个 user 消息。
+            # anthropic 要求 user/assistant 交替，多个并行 tool_result 需要合并至同一个 user 消息。
             if last_is_tool_result:
                 anthropic_messages[-1]["content"].append(block)
             else:
@@ -93,7 +93,7 @@ def _anthropic_thinking(effort: str) -> dict | None:
 
 
 def _anthropic_effort(effort: str) -> str | None:
-    # Anthropic 仅接受 low/medium/high/xhigh/max，OpenAI 的 none/minimal 需剔除。
+    # Anthropic 仅接受 low/medium/high/xhigh/max，OpenAI 的 none/minimal 需要剔除。
     effort = effort.lower()
     return effort if effort in ("low", "medium", "high", "xhigh", "max") else None
 
@@ -107,7 +107,7 @@ class AnthropicEndpoint:
 
     async def create(self, messages: list[dict], tool_choice: str) -> base.ParsedResult:
         system, anthropic_messages = _messages_to_anthropic(messages)
-        # anthropic 的 tool_choice 需为 {"type": "auto"/"none"/"any"/"tool"} 结构，而非字符串。
+        # anthropic 的 tool_choice 需要为 {"type": "auto"/"none"/"any"/"tool"} 结构，而不是字符串。
         kwargs = {
             "model": self.model_name,
             "max_tokens": base.max_tokens,

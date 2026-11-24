@@ -94,7 +94,7 @@ async def ask_llm(
     if extra_instructions:
         system_messages.append({"role": "system", "content": extra_instructions})
 
-    # 延续上下文时，历史对话（不含 system 消息）会被拼接到本次请求之前。
+    # 延续上下文时，历史对话（不包含 system 消息）会被拼接到本次请求之前。
     conversation = list(history) if history else []
     conversation.append(
         {
@@ -102,7 +102,7 @@ async def ask_llm(
             "content": await _build_user_content(prompt),
         }
     )
-    # 动态上下文放最后，省 Token 费用
+    # 动态上下文置于末尾，以节省 Token 费用。
     dynamic_ctx = {"role": "system", "content": f"Current datetime: {fmt_now}"}
     messages = [*system_messages, *conversation, dynamic_ctx]
 
@@ -201,8 +201,8 @@ async def ask_llm(
         else:
             chain = [Plain(resm)]
 
-    # 仅保留对话部分（去掉每次动态重建的 system 消息与工具迭代警告）作为新的上下文历史。
-    # 所有消息现均为 dict（OpenAI Chat Completions 格式）。
+    # 仅保留对话部分（移除每次动态重建的 system 消息与工具迭代警告）作为新的上下文历史。
+    # 全部消息格式均为 dict（OpenAI Chat Completions 格式）。
     new_history = [m for m in messages[len(system_messages) :] if m.get("role") != "system"]
     return (
         chain,

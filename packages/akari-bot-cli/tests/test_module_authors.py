@@ -117,9 +117,9 @@ def _test_tui_record_and_detail_use_authors():
 
 
 def _test_defined_module_resolves_its_own_package():
-    # ``module()`` 从调用帧取模块名再交给发现层。多退一层会取到 ``importlib._bootstrap``，
-    # ``_py_module_name`` 与作者一起变成空串，热重载、locale 指纹与依赖图同样失去依据。
-    import akaribot.modules.coin  # noqa: F401 - 导入即执行 module() 注册
+    # ``module()`` 从调用帧提取模块名再传递给发现层。多回溯一层会获取 ``importlib._bootstrap``，
+    # ``_py_module_name`` 与作者一同变为空字符串，热加载、locale 校验信息与依赖图同样失去依据。
+    import akaribot.modules.coin  # noqa: F401 - 导入即执行 module() 注册。
     from akaribot.core.loader import ModulesManager
 
     registered = ModulesManager.modules.get("coin")
@@ -130,7 +130,7 @@ def _test_defined_module_resolves_its_own_package():
 
 @func_case
 async def test_module_authors(tester: Tester):
-    """模块作者：pyproject 声明与读取链路测试"""
+    """模块作者的 pyproject 声明与读取链路测试"""
     _use_cli_locale()
     await tester.test(_test_definition_layer_no_longer_accepts_developers, "module() 不再接 developers")
     await tester.test(_test_definition_layer_has_no_hand_written_authors, "定义层无手写作者")

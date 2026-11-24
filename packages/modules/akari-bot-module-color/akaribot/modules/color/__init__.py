@@ -54,7 +54,7 @@ async def _(msg: Bot.MessageSession, color: str | None = None):
         parsed = webcolors.HTML5SimpleColor(*(int(x.strip()) for x in parts))
     elif re.match(r"^rgb\(\d{1,3}%,\s?\d{1,3}%,\s?\d{1,3}%\)$", color):
         parts = color[4:-1].split(",")
-        # 百分比换算结果须取整，色值保持整数才能供后续的十六进制格式化使用
+        # 百分比换算结果需要取整，色值保持整数才能供后续的十六进制格式化使用。
         parsed = webcolors.HTML5SimpleColor(*(int(int(x.strip()[:-1]) * 255 / 100) for x in parts))
     elif re.match(r"^hsl\(\d{1,3},\s?\d{1,3}%,\s?\d{1,3}%\)$", color):
         parts = color[4:-1].split(",")
@@ -166,7 +166,7 @@ def get_color_name(color: webcolors.HTML5SimpleColor, name_dict) -> tuple[str, b
     hex_name = webcolors.rgb_to_hex(color)
     if hex_name in name_dict:
         return name_dict[hex_name], True
-    # 颜色名表正常情况下非空。数据异常时取空串。
+    # 颜色名称表在正常情况下非空。数据异常时使用空字符串。
     color_name = ""
     min_dist = 1000000
     for name, value in name_dict.items():

@@ -55,7 +55,7 @@ class _ClientScope:
 async def _test_error_signal_skips_when_context_dropped() -> bool:
     session = _make_session("error-signal-context-dropped")
     QQBotContextManager.context.pop(session.session_id, None)
-    # 响应时上下文已被 del_context 回收，此处不应再抛异常，否则会中断 RPC 管道。
+    # 响应时上下文已被 del_context 回收，此处不应再抛出异常，否则会中断 RPC 管道。
     with _ClientScope(None):
         try:
             await QQBotContextManager.error_signal(session)
@@ -103,12 +103,12 @@ async def _test_error_signal_ignores_non_guild_targets() -> bool:
 
 
 async def _test_hold_survives_inbound_processing() -> bool:
-    # 平台先撤销上下文时，处理记录期间的 hold 仍须可用。
+    # 平台先撤销上下文时，处理记录期间的 hold 仍必须可用。
     session = _make_session("hold-during-inbound-processing")
     QQBotContextManager.add_context(session, object())
     QQBotContextManager.activate_context(session)
     try:
-        # 平台侧发送路径可能先撤销上下文，处理记录尚未结束。
+        # 平台端发送路径可能先撤销上下文，处理记录尚未结束。
         QQBotContextManager.del_context(session)
         QQBotContextManager.hold_context(session)
         held = QQBotContextManager.context_marks_hold.get(session.session_id) == 1
@@ -121,7 +121,7 @@ async def _test_hold_survives_inbound_processing() -> bool:
 
 
 async def _test_hold_rejects_dropped_context_after_processing() -> bool:
-    # 记录结束并回收后，hold 须报告上下文不可用。
+    # 记录结束并回收后，hold 必须报告上下文不可用。
     session = _make_session("hold-after-inbound-processing")
     QQBotContextManager.add_context(session, object())
     QQBotContextManager.activate_context(session)
@@ -140,7 +140,7 @@ async def _test_hold_rejects_dropped_context_after_processing() -> bool:
 
 async def _test_del_context_keeps_background_hold() -> bool:
     # 后台任务与入站处理的生命周期不同步，它在处理记录结束后仍可能发起新的 hold。
-    # 此时回收上下文会让后续 hold 报告会话不可用。
+    # 此时回收上下文会导致后续 hold 报告会话不可用。
     session = _make_session("del-context-keeps-background-hold")
     ctx = object()
     QQBotContextManager.add_context(session, ctx)
@@ -175,7 +175,7 @@ async def _test_release_keeps_rebuilt_context() -> bool:
 
 @func_case
 async def test_qqbot_context_lifecycle_tolerance(tester: Tester):
-    """akaribot.adapters.qqbot.context: 会话上下文回收后的 reaction 与错误信号容错"""
+    """akaribot.adapters.qqbot.context 会话上下文回收后的 reaction 与错误信号容错"""
     await tester.test(_test_error_signal_skips_when_context_dropped, "错误信号在上下文缺失时静默返回")
     await tester.test(_test_error_signal_swallows_api_failure, "错误信号吞掉平台接口异常")
     await tester.test(_test_add_reaction_skips_when_context_dropped, "添加表情在上下文缺失时静默返回")

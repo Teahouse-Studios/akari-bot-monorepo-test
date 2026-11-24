@@ -16,8 +16,8 @@ from akaribot.core.api import Info, Logger, ServerAPI
 from akaribot.core.paths import Paths
 from .auth import verify_jwt
 
-# 更新流程的工作目录，取实例目录：源码克隆形态下即仓库根，独立部署下即部署者维护的实例树。
-# 按文件深度反推仓库根时，wheel 形态下会落到 site-packages 之外。
+# 更新流程的工作目录采用实例目录，源码克隆形态下即仓库根目录，独立部署下即部署者维护的实例树。
+# 按文件深度反推仓库根目录时，在 wheel 分发形态下会解析至 site-packages 之外。
 ROOT_DIR = Paths.instance
 
 GIT_TIMEOUT = 120
@@ -228,7 +228,7 @@ async def _wait_for_active_sessions() -> None:
         try:
             active = await ServerAPI.get_active_session_count()
         except Exception:
-            # 服务端不可用时无法判断会话状态，继续重启比把进程留在等待状态更可靠。
+            # 服务端不可用时无法判断会话状态，继续重启比将进程保留在等待状态更为可靠。
             Logger.exception("Failed to read active session count before restart; restarting anyway.")
             _set_restart_status(state="restarting", active_sessions=0)
             return
@@ -264,7 +264,7 @@ async def restart(force: bool = False) -> None:
     try:
         await client_cleanup()
     except BaseException:
-        # 重启请求已经被接受，清理失败不能把进程留在半关闭状态。记录后仍交给守护进程重启。
+        # 重启请求已被接受，清理失败不能使进程处于不完整的关闭状态。记录后仍交由守护进程重启。
         Logger.exception("Failed to clean up Web client before restart: ")
     os._exit(33)
 

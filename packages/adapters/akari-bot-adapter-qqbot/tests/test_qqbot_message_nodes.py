@@ -44,7 +44,7 @@ def _test_table_shape() -> bool:
     session_info = _make_session()
     for count in (1, 3, 10, 99):
         lines = nodes_to_table(session_info, _make_nodes(count)).split("\n")
-        # 首行为表头、次行为分隔行，其余成对出现
+        # 首行为表头、次行为分隔行，其余成对出现。
         pairs = (len(lines) - 2) // 2
         if pairs > MESSAGE_NODES_MAX_ROWS:
             Logger.error(f"{count} nodes produced {pairs} row pairs, over the limit of {MESSAGE_NODES_MAX_ROWS}")
@@ -76,7 +76,7 @@ def _test_index_sits_above_content() -> bool:
         contents = [cell.strip() for cell in data[start + 1].strip("|").split("|")]
         for number, content in zip(numbers, contents):
             if not number:
-                # 末对的空单元格，其下方亦须为空
+                # 末组不足时的空单元格，其下方也必须为空。
                 if content:
                     Logger.error(f"A padded index cell should sit above an empty content cell, got {content!r}")
                     return False
@@ -97,7 +97,7 @@ def _test_multiline_content_uses_br() -> bool:
     if "第一行  <br>  第二行" not in table:
         Logger.error(f"Newlines inside a cell should become <br>, got {table!r}")
         return False
-    # 表头、分隔行、编号行、内容行共四行
+    # 表头、分隔行、编号行、内容行共四行。
     if len(table.split("\n")) != 4:
         Logger.error(f"A single multi-line node should still render one index/content pair, got {table!r}")
         return False
@@ -191,7 +191,7 @@ async def _test_markdown_element_selects_markdown_path() -> bool:
 
 @func_case
 async def test_qqbot_message_nodes(tester: Tester):
-    """akaribot.adapters.qqbot.context: 消息节点表格化测试"""
+    """akaribot.adapters.qqbot.context 消息节点表格化测试"""
     await tester.test(_test_table_shape, "表格行列数测试")
     await tester.test(_test_rows_are_uniform, "表格列数齐平测试")
     await tester.test(_test_index_sits_above_content, "编号在上内容在下测试")

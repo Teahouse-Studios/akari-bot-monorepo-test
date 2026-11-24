@@ -17,7 +17,7 @@ class ImageTable:
     """
     图片表格。
 
-    :param data: 表格内容，每行的列数需与表头数量相符。
+    :param data: 表格内容，每行的列数需要与表头数量一致。
     :param headers: 表格表头。
     """
 
@@ -60,7 +60,7 @@ async def image_table_render(
     """
     使用 WebRender 渲染图片表格。
 
-    :param table: 要渲染的表格。
+    :param table: 待渲染的表格。
     :param save_source: 是否保存源文件。
     :param dark_mode: 是否使用深色模式渲染。
     :return: 图片的 PIL 对象。

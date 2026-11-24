@@ -32,7 +32,7 @@ from akaribot.cli import i18n
 
 app = typer.Typer(help="脚手架")
 
-# 模板目录的定位顺序：显式参数、环境变量、当前目录向上的 templates/module、CLI 源码目录。
+# 模板目录依次按显式参数、环境变量、当前目录向上的 templates/module、CLI 源码目录定位。
 TEMPLATE_DIR_ENV = "AKARIBOT_TEMPLATE_DIR"
 TEMPLATE_RELATIVE = ("templates", "module")
 TEMPLATE_MARKER = "pyproject.toml.j2"
@@ -47,7 +47,7 @@ DEFAULT_COMMAND_DOC = "执行 {name} 的默认命令。"
 DEFAULT_MESSAGE = "Hello World!"
 MODULE_ADD_TIMEOUT = 120.0
 
-# 问卷选项控制的模板文件：未启用时该文件不渲染，其独占目录也不会创建。
+# 由问卷选项控制的模板文件，未启用时不渲染，其独占目录也不会创建。
 OPTIONAL_TEMPLATES: dict[str, str] = {
     "akaribot/modules/[@module_name@]/config.py.j2": "has_config",
     "akaribot/modules/[@module_name@]/database/__init__.py.j2": "has_database",
@@ -58,16 +58,16 @@ OPTIONAL_TEMPLATES: dict[str, str] = {
     "tests/test_[@module_name@].py.j2": "with_tests",
 }
 
-# 门面导入的书写顺序，按实际用到的组件裁剪，避免生成未使用的 import。
+# 公开接口导入的书写顺序，按实际使用的组件裁剪，避免生成未使用的 import。
 API_IMPORT_ORDER = ("Bot", "EventInfo", "HookPoint", "I18NContext", "IntervalTrigger", "module")
 
-# 适配器模板的定位顺序与模块一致，只是相对目录与 README 里的取值含义不同。
+# 适配器模板的定位顺序与模块一致，但相对目录与 README 中的取值含义不同。
 ADAPTER_TEMPLATE_RELATIVE = ("templates", "adapter")
 ADAPTER_TEMPLATE_MARKER = "pyproject.toml.j2"
-# 模板维护说明与自检脚本留在仓库内，不随生成物分发。
+# 模板维护说明与自检脚本留在仓库内，不随生成产物分发。
 ADAPTER_TEMPLATE_SKIP = frozenset({"TEMPLATE.md", "selfcheck.py"})
 
-# 问卷选项控制的适配器模板文件：未启用时该文件不渲染。
+# 由问卷选项控制的适配器模板文件，未启用时不渲染。
 ADAPTER_OPTIONAL_TEMPLATES: dict[str, str] = {
     "akaribot/adapters/[@module_name@]/config.py.j2": "has_config",
 }
@@ -76,7 +76,7 @@ PLATFORM_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,47}$")
 FEATURE_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?:=(true|false))?$")
 FIELD_PATTERN = re.compile(r"^([a-z][a-z0-9_]*)(?::([a-z]+))?(?:=(.*))?$", re.DOTALL)
 FIELD_TYPES = ("str", "bool", "int", "float", "list")
-# 默认能力集是聊天平台的常见能力。未实现的由作者在 features.py 中改回 False。
+# 默认能力集是聊天平台的常见能力。未实现的由作者在 features.py 中重置为 False。
 ADAPTER_DEFAULT_FEATURES = ("support_image", "support_mention", "support_quote", "support_delete")
 CREDENTIAL_DEFAULT_SUFFIX = "_token"
 TRUTHY_VALUES = ("true", "1", "yes")
@@ -102,7 +102,7 @@ class CommandEntry:
 
     @property
     def token(self) -> str:
-        """命令在 locale 键与测试名中使用的短名，取自模板的第一个字面量词。"""
+        """命令在 locale 键与测试名称中使用的简称，取自模板的首个字面量词。"""
         for word in self.template.split():
             if word.startswith(("-", "<", "[")):
                 continue
@@ -560,7 +560,7 @@ def collect_plan(
 
 
 def detect_author() -> str:
-    """取默认作者名：优先本机 git 配置，取不到时改用固定值。"""
+    """获取默认作者名称，优先读取本机 git 配置，无法获取时改用固定值。"""
     try:
         result = subprocess.run(
             ["git", "config", "--get", "user.name"],
@@ -808,7 +808,7 @@ def write_package(plan: ModulePlan, root: Path, target: Path, force: bool) -> li
 
 
 def cli_command() -> list[str]:
-    """定位 CLI 入口：优先 PATH 上的 akaribot，否则用当前解释器执行模块入口。"""
+    """定位 CLI 入口，优先使用 PATH 上的 akaribot，否则使用当前解释器执行模块入口。"""
     found = shutil.which("akaribot")
     return [found] if found else [sys.executable, "-m", "akaribot.cli.main"]
 
@@ -847,7 +847,7 @@ def run_module_add(target: Path, failure_message: str | None = None) -> bool:
 
 
 def adapter_class_name(platform_name: str) -> str:
-    """取类名前缀：已是大写开头的标识符原样保留，其余按 ``_`` 分段转大驼峰。"""
+    """获取类名前缀，已是大写开头的标识符原样保留，其余按 ``_`` 分段转大驼峰。"""
     if platform_name[:1].isupper() and platform_name.isidentifier():
         return platform_name
     return camel_case(platform_name)
@@ -1029,7 +1029,7 @@ def collect_adapter_plan(
         list(ADAPTER_DEFAULT_FEATURES),
         non_interactive,
     )
-    # 给出字段即隐含启用配置，避免 --field / --credential-field 被静默丢弃。
+    # 指定字段即隐含启用配置，避免 --field / --credential-field 被静默丢弃。
     with_fields = bool(fields or credential_fields)
     has_config = prompt_flag(has_config, i18n.t("cli.new.adapter.prompt_config"), with_fields, non_interactive)
     if with_fields and not has_config:
@@ -1184,7 +1184,7 @@ def new_adapter(
     for path in written:
         typer.echo(f"  {path.relative_to(target)}")
     if add:
-        # 失败提示（含手动命令）由 run_module_add 打印，此处不再补一行命令。
+        # 失败提示（包含手动命令）由 run_module_add 输出，此处无需重复输出命令。
         run_module_add(target, i18n.t("cli.new.adapter.add_failed", target=target))
     typer.echo(i18n.t("cli.new.adapter.next_steps"))
 

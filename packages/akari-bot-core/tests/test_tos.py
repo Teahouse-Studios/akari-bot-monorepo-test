@@ -189,7 +189,7 @@ async def _test_rate_bucket_shared_by_sender_union():
 
 @func_case
 async def test_tos(tester: Tester):
-    """akaribot.modules.core.hooks.tos: TOS 管理系统测试"""
+    """akaribot.modules.core.hooks.tos 模块 TOS 管理系统测试"""
     await tester.test(_test_check_temp_ban_with_nested_dict, "check_temp_ban 封禁中测试")
     await tester.test(_test_check_temp_ban_expired, "check_temp_ban 过期封禁测试")
     await tester.test(_test_remove_temp_ban, "remove_temp_ban 测试")

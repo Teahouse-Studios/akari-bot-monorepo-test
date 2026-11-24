@@ -68,7 +68,7 @@ def _test_delete_falls_back_to_global_value():
 
 @func_case
 async def test_config_global(tester: Tester):
-    """core.config: 全局默认配置与用户覆盖测试"""
+    """core.config 全局默认配置与用户覆盖测试"""
     await tester.test(_test_user_values_override_global_values, "用户配置覆盖全局默认值")
     await tester.test(_test_json_global_table_is_readable, "JSON 全局配置可读取")
     await tester.test(_test_write_only_persists_user_file, "写回只落用户文件")

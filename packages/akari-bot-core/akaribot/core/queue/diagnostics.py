@@ -10,7 +10,7 @@ import psutil
 
 from akaribot.core.logger import Logger
 
-# 非 Peer 进程以固定标签标识，本地化由展示层处理。
+# 非节点进程以固定标签标识，本地化由展示层处理。
 DAEMON_LABEL = "daemon"
 HUB_LABEL = "jobqueue-hub"
 # 扇出整体失败时的占位标签，避免与进程不存在相混淆。
@@ -26,7 +26,7 @@ REASON_MAX_LENGTH = 120
 
 @dataclass(frozen=True)
 class ProcessUsage:
-    """单个进程的内存占用。``memory`` 为字节，``metric`` 说明其口径。"""
+    """单个进程的内存占用。``memory`` 为字节，``metric`` 说明统计方式。"""
 
     name: str
     pid: int | None
@@ -37,14 +37,14 @@ class ProcessUsage:
 
 @dataclass(frozen=True)
 class ProcessUnavailable:
-    """未能取得内存占用的进程及其原因。"""
+    """未能获取内存占用的进程及其原因。"""
 
     name: str
     reason: str
 
 
 def collect_self_usage() -> dict[str, int]:
-    """采集当前进程的内存指标。``uss`` 不可得时不写该键，由调用方改用 ``rss``。"""
+    """采集当前进程的内存指标。``uss`` 不可得时不写入该键，由调用方改用 ``rss``。"""
     process = psutil.Process()
     usage = {
         "pid": process.pid,
@@ -54,7 +54,7 @@ def collect_self_usage() -> dict[str, int]:
     try:
         usage["uss"] = process.memory_full_info().uss
     except (psutil.Error, OSError):
-        # 容器内 smaps 缺失等场景下自测亦可能失败，改用 ``rss`` 而不报错。
+        # 容器内 smaps 缺失等场景下自测也可能失败，改用 ``rss`` 而不抛出异常。
         pass
     return usage
 
@@ -122,7 +122,7 @@ def summarize_process_usage(
             if usage is not None:
                 break
         if usage is None:
-            # 载荷无效者仍须列出，否则该进程将从输出中消失。
+            # 载荷无效者仍需要列出，否则该进程将从输出中消失。
             failures.append(ProcessUnavailable(name, "invalid"))
             continue
         usages.append(usage)
@@ -137,7 +137,7 @@ def usage_payload(
     usages: list[ProcessUsage],
     failures: list[ProcessUnavailable],
 ) -> dict[str, list[dict]]:
-    """把内存占用汇总转为可经 RPC 与 JSON 传递的纯字典。"""
+    """将内存占用汇总转换为可通过 RPC 与 JSON 传递的纯字典。"""
     return {
         "items": [
             {
@@ -192,7 +192,7 @@ async def gather_process_usage(
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            # 扇出整体失败时仍交付非 Peer 进程数据，并以一行说明 Peer 数据整体缺失。
+            # 扇出整体失败时仍返回非节点进程数据，并以一行说明节点数据整体缺失。
             Logger.exception("Failed to gather per-process resource usage.")
             failures = [ProcessUnavailable(PEERS_LABEL, type(exc).__name__)]
         else:

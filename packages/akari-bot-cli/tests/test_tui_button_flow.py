@@ -8,7 +8,7 @@ from akaribot.testing import Tester, func_case
 
 RECORD = ModuleRecord(name="coin", dist="akari-bot-module-coin", version="0.1.0", state="installed")
 
-# 每个标签四个汉字（八格）加两格内边距，故每个按钮十格。八个按钮一行需要 80 格。
+# 每个标签四个汉字（八格）加两格内边距，因此每个按钮十格。八个按钮一行需要 80 格。
 SPECS = tuple((f"b{index}", "切换实例") for index in range(8))
 MIXED_SPECS = (
     ("b0", "安装"),
@@ -25,14 +25,14 @@ def _use_cli_locale() -> None:
 
 
 def _rows(flow: compat.ButtonFlow) -> list[list[str]]:
-    # 按渲染出来的行坐标分组：按钮始终挂在同一层，行由列数决定。
+    # 按渲染生成的行坐标分组，按钮始终挂载在同一层，行由列数确定。
     rows: dict[int, list[str]] = {}
     for button in flow.query(compat.Button):
         rows.setdefault(button.region.y, []).append(str(button.id))
     return [rows[key] for key in sorted(rows)]
 
 
-# 只放一个按钮区的测试页面。
+# 仅包含一个按钮区域的测试页面。
 class _FlowPage(compat.Vertical):
     def __init__(self, *, specs=SPECS, breaks=("b3",), id=None):
         super().__init__(id=id)
@@ -70,7 +70,7 @@ async def _test_wide_screen_keeps_one_row():
 
 
 async def _test_narrow_screen_breaks_at_group():
-    # 窄屏按 breaks 指定的分组折行，每行四个按钮。
+    # 窄屏幕终端按 breaks 指定的分组折行，每行四个按钮。
     async def body(app, page, pilot):
         flow = page.query_one("#flow", compat.ButtonFlow)
         rows = _rows(flow)
@@ -100,7 +100,7 @@ async def _test_buttons_exist_before_first_layout():
 
 
 async def _test_longer_label_repacks():
-    # 标签宽度变化后需重新排布，避免后续按钮越界。
+    # 标签宽度变化后需要重新排布，避免后续按钮越界。
     async def body(app, page, pilot):
         flow = page.query_one("#flow", compat.ButtonFlow)
         before = _rows(flow)
@@ -203,7 +203,7 @@ async def _test_navigation_still_reports_all_pages():
 
 @func_case
 async def test_tui_button_flow(tester: Tester):
-    """cli.tui._compat: 按钮区按宽度折行测试"""
+    """cli.tui._compat 按钮区按宽度折行测试"""
     _use_cli_locale()
     await tester.test(_test_wide_screen_keeps_one_row, "宽终端下一行放完")
     await tester.test(_test_narrow_screen_breaks_at_group, "窄终端在语义分组处折行")

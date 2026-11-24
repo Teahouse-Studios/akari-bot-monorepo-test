@@ -17,7 +17,7 @@ from akaribot.core.api.adapters import ContextManager, Features, BotState
 
 @dataclass(slots=True)
 class DiscordReactionContext:
-    """Raw reaction 事件恢复出的最小平台上下文。"""
+    """Raw reaction 事件恢复生成的最小平台上下文。"""
 
     channel: discord.abc.Messageable
     user: discord.User | discord.Member
@@ -26,7 +26,7 @@ class DiscordReactionContext:
 
 
 def resolve_discord_reference(ctx, quote: bool):
-    """取得 Discord 普通消息或交互所引用的平台消息。"""
+    """获取 Discord 普通消息或交互所引用的平台消息。"""
     if not quote or ctx is None:
         return None
     if isinstance(ctx, Message):
@@ -58,7 +58,7 @@ class DiscordContextManager(ContextManager):
 
         Logger.debug(f"Checking permissions for session: {session_info.session_id}")
 
-        # 私聊不存在服务器成员与频道权限对象，不能先访问 channel.guild 或 permissions_for。
+        # 私聊场景中不存在服务器成员与频道权限对象，不可预先访问 channel.guild 或 permissions_for。
         if user_id is None and session_info.target_from == target_dm_channel_prefix:
             return True
 
@@ -79,7 +79,7 @@ class DiscordContextManager(ContextManager):
                     and not isinstance(author, discord.Member)
                     and getattr(channel, "guild", None) is not None
                 ):
-                    # Raw Reaction 在成员缓存缺失时只能先取得 User。频道权限计算需要完整 Member。
+                    # Raw Reaction 在成员缓存缺失时仅能先获取 User。频道权限计算需要完整 Member。
                     author = await channel.guild.fetch_member(author.id)
             if isinstance(channel, discord.DMChannel) or channel.permissions_for(author).administrator:
                 return True
@@ -220,9 +220,9 @@ class DiscordContextManager(ContextManager):
 
         try:
             user = await discord_bot.fetch_user(int(uid))
-            # 私信频道须先建立才具有 ID，对方关闭私信时 create_dm 会抛出 Forbidden
+            # 私信频道必须先创建才会生成 ID，对方关闭私信时 create_dm 会抛出 Forbidden。
             dm_channel = user.dm_channel or await user.create_dm()
-            # 显式指定基类：Slash 子类只能回应交互，无法向任意频道发送消息
+            # 显式指定基类，因为 Slash 子类仅能回应交互，无法向任意频道发送消息。
             return await DiscordContextManager.send_message(
                 cls.derive_private_session(
                     session_info, f"{target_dm_channel_prefix}|{dm_channel.id}", target_dm_channel_prefix

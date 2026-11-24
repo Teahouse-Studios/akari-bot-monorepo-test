@@ -67,7 +67,7 @@ async def _(msg: Bot.MessageSession):
     if not aliases:
         aliases = {}
     if "add" in msg.parsed_msg:
-        # 处理下划线与空格的情况
+        # 处理下划线与空格的情况。
         alias = re.sub(r"_", " ", alias)
         alias = re.sub(r"\\ ", "_", alias)
 

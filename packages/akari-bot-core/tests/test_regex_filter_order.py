@@ -1,4 +1,4 @@
-"""core.builtins.parser.message 单元测试 - 正则平台筛选与执行锁。"""
+"""core.builtins.parser.message 正则平台筛选与执行锁单元测试。"""
 
 import re
 from copy import copy
@@ -207,7 +207,7 @@ async def _test_unloaded_is_unavailable():
 
 @func_case
 async def test_regex_filter_order(tester: Tester):
-    """core.builtins.parser.message: 正则平台筛选与执行锁测试"""
+    """core.builtins.parser.message 正则平台筛选与执行锁测试"""
     await tester.test(_test_lock_acquired_once, "执行锁互斥测试")
     await tester.test(_test_lock_released_can_reacquire, "执行锁释放后重取测试")
     await tester.test(_test_available_for_restricts_platform, "平台限定测试")

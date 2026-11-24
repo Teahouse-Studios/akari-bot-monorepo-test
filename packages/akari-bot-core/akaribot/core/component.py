@@ -48,7 +48,7 @@ class Bind:
             - ``[flag]``：标志选项，对应同名函数参数，标注为 ``bool`` 时直接得到选项是否传入。
             - ``[-b]`` / ``[--foo <bar>]``：以连字符开头的选项，对应同名函数参数，参数名中的
               下划线按连字符匹配（如参数 ``no_cover`` 对应 ``--no-cover``）。
-              带子参数且仅有一个子参数时，直接将该子参数的值传入。
+              带子参数且仅包含单个子参数时，将该子参数的值直接传入。
             - 也可直接使用选项的子参数名，如 ``[-p <page>]`` 对应函数参数 ``page``。
             - ``-i``、``<address:port>`` 等无法作为函数参数名的模板元素，可用 ``Param``
               标注指定对应的模板元素，如 ``data: Param("-i", bool) = False``。
@@ -129,7 +129,7 @@ class Bind:
                     RegexMeta(
                         function=function,
                         pattern=pattern,
-                        # 注册期归一化，匹配时不必对每条正则再 upper() 一次
+                        # 注册阶段规范化，匹配时不必对每条正则再转成大写。
                         mode=mode.upper(),
                         flags=flags,
                         desc=desc,
@@ -394,7 +394,7 @@ def module(
     support_languages: str | list | tuple | None = None,
 ):
     """
-    绑定一个模块。
+    绑定模块。
 
     :param module_name: 绑定的命令前缀。
     :param alias: 此命令的别名。
@@ -419,12 +419,12 @@ def module(
     :param support_languages: 此命令支持的语言列表。
     """
 
-    # 调用方就是定义模块本身：再往外一层是 importlib，取到的是 "importlib._bootstrap"。
+    # 调用方即定义模块本身，外层为 importlib，获取到的值为 "importlib._bootstrap"。
     frame = inspect.currentframe().f_back
     caller_module = frame.f_globals["__name__"]
 
-    # 包名由发现层解析：按调用方文件路径推导时，目录布局变化
-    # 会静默得到空串，连带使热重载、locale 指纹、依赖图与模块卸载失去依据。
+    # 包名由发现层解析，因为按调用方文件路径推导时，目录布局变化
+    # 会静默得到空字符串，连带使热重载、locale 指纹、依赖图与模块卸载失去依据。
     entry = PackageRegistry.by_import_path(caller_module)
     py_module_name = entry.stem if entry and entry.kind == "module" else ""
 

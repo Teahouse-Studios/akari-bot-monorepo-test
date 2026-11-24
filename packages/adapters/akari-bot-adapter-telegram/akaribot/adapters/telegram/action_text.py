@@ -14,12 +14,12 @@ def is_own_inline_message(message: types.Message, bot_id: int) -> bool:
 
 
 def can_use_inline_action_text(target_from: str, supports_inline_queries: bool) -> bool:
-    """频道不支持在当前聊天打开 Inline Query，须改用复制按钮。"""
+    """频道不支持在当前聊天打开 Inline Query，必须改用复制按钮。"""
     return supports_inline_queries and not target_from.endswith("|Channel")
 
 
 def build_action_text_inline_results(query: str) -> list[InlineQueryResultArticle]:
-    """为用户编辑后的命令构造唯一一个“发送”结果。"""
+    """为用户编辑后的命令构造唯一的“发送”结果。"""
     if not query:
         return []
     result_id = hashlib.sha256(query.encode("utf-8")).hexdigest()[:32]

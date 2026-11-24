@@ -141,7 +141,7 @@ class Random:
     @classmethod
     def random(cls) -> float:
         """
-        返回 0 到 1 之间的随机浮点数。
+        返回取值范围为 0 到 1 的随机浮点数。
 
         :return: 随机浮点数。
         """
@@ -150,7 +150,7 @@ class Random:
     @classmethod
     def randint(cls, a: int, b: int) -> int:
         """
-        返回[a, b]范围内的随机整数。
+        返回 [a, b] 区间内的随机整数。
 
         :param a: 下界。
         :param b: 上界。
@@ -161,7 +161,7 @@ class Random:
     @classmethod
     def uniform(cls, a: float, b: float) -> float:
         """
-        返回[a, b]范围内的随机浮点数。
+        返回 [a, b] 区间内的随机浮点数。
 
         :param a: 下界。
         :param b: 上界。
@@ -172,10 +172,10 @@ class Random:
     @classmethod
     def randrange(cls, start: int, stop: int | None = None, step: int = 1) -> int:
         """
-        返回范围内的随机整数，类似于`range`。
+        返回指定范围内的随机整数，行为类似于 `range`。
 
-        :param start: 开始值。
-        :param stop: 结束值，不包含在范围内。
+        :param start: 起始数值。
+        :param stop: 终止数值，不包含在区间内。
         :param step: 步长。
         :return: 符合条件的随机整数。
         """
@@ -184,7 +184,7 @@ class Random:
     @classmethod
     def randbits(cls, k: int) -> int:
         """
-        返回 k 字节长度的随机整数。
+        返回长度为 k 个字节的随机整数。
 
         :param k: 字节长度。
         :return: 符合条件的随机整数。
@@ -236,10 +236,10 @@ class Random:
     @classmethod
     def shuffle(cls, seq: MutableSequence[T]) -> MutableSequence[T]:
         """
-        随机打乱序列。
+        随机重排序列。
 
         :param seq: 给定序列。
-        :return: 重新打乱后的序列。
+        :return: 重新随机排序后的序列。
         """
         return cls._backend.shuffle(seq)
 

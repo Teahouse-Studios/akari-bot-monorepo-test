@@ -24,28 +24,28 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = PROJECT_ROOT / "tools" / "comment_lint_baseline.txt"
 
-# 收录范围：本仓库自有 Python 源码，即 packages/ 下的分发源码与 tests/、templates/、tools/。
+# 收录仓库自有 Python 源码，即 packages/ 下的成员包源码与 tests/、templates/、tools/。
 # 第三方内嵌库与迁移产物不在约束内。
 SCAN_DIRS = ("packages", "tests", "templates", "tools")
 SCAN_ROOT_FILES = ("bot.py", "tester.py", "conftest.py")
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
-# 内嵌的第三方副本保持上游原样，不按本仓库的书写规范改写。
+# 内嵌的第三方副本保持上游原样，不按照仓库书写规范改写。
 EXCLUDED_DISTS = ("packages/akari-bot-html2text",)
 
-# 工具指令注释不构成文档，不予检查。
+# 工具指令注释不构成文档内容，不执行检查。
 TOOL_DIRECTIVE_PATTERN = re.compile(
     r"^#\s*(noqa|type:|skipcq|ruff:|fmt:|pragma:|mypy:|pyright:|pylint:|isort:|coverage:|nosec)\b"
 )
 SHEBANG_PATTERN = re.compile(r"^#!")
 CODING_PATTERN = re.compile(r"^#.*coding[:=]")
 
-# 规则 5：装饰性分隔注释。同一分隔字符在首尾各出现三次以上，中间允许夹带标题。
-# 纯字符行与“### 标题”式 Markdown 标题不在此列。
+# 规则 5 检查装饰性分隔注释。同一分隔字符在首尾各出现三次以上，中间允许夹带标题。
+# 纯字符行与“### 标题”格式的 Markdown 标题不在此列。
 _DECORATION_CHARS = "=-*~_+"
 DECORATIVE_SEPARATOR_PATTERN = re.compile(rf"^#\s*([{re.escape(_DECORATION_CHARS)}])\1{{2,}}.*?\1{{3,}}\s*$")
 MARKDOWN_HEADING_PATTERN = re.compile(r"^#+\s")
 
-# 规则 4：口语词。只收录在本仓库语境下无歧义的搭配，避免伤及正常用词（如“处理”“弄清”）。
+# 规则 4 检查口语词。仅收录在仓库语境下无歧义的搭配，避免伤及正常用词（如“处理”“弄清”）。
 COLLOQUIAL_PATTERN = re.compile(
     r"("
     r"踩坑|踩过坑|填坑|大坑"
@@ -59,13 +59,13 @@ COLLOQUIAL_PATTERN = re.compile(
     r")"
 )
 
-# 规则 2：第一/第二人称。只收录原文明确点名的词，避免“我”在其他语境下的误判。
-# “关于我们”是帮助菜单里的入口名，不是叙述人称。
+# 规则 2 检查第一/第二人称。仅收录原文明确点名的词，避免“我”在其他语境下的误判。
+# “关于我们”是帮助菜单中的入口名称，不是叙述人称。
 PERSON_PATTERN = re.compile(r"(我们|咱们|你们|您)")
 PERSON_EXEMPT_PATTERN = re.compile(r"关于我们")
 
-# 规则 3：语气词与情绪标点。省略号只认中文双省略号、四个以上英文点与行尾三点，
-# 以免把代码占位符（`<...>`、`[...]`）与引用文本里的标点算作情绪标点。
+# 规则 3 检查语气词与情绪标点。省略号仅识别中文双省略号、四个以上英文点与行尾三点，
+# 避免将代码占位符（`<...>`、`[...]`）与引用文本中的标点误判为情绪标点。
 TONE_PATTERN = re.compile(
     r"("
     r"吧[。！!，,、；;）)]?$|呢[。！!，,、；;）)]?$|嘛|呗|啦|咯|喽"
@@ -74,50 +74,50 @@ TONE_PATTERN = re.compile(
     r"|……|\.{4,}|\.{3}$"
     r")"
 )
-# 条件连词之后的省略号属于“等等”义，不视为情绪标点。
+# 条件连词后的省略号表示省略含义，不视为情绪标点。
 ELLIPSIS_EXEMPT_PATTERN = re.compile(r"(如果|若|否则|比如|例如|如|诸如|等)[^。]{0,20}(…|\.{3,})")
 # 引号内是面向用户的原文（如“正在输入……”），其中的省略号属于该文案本身。
 QUOTED_ELLIPSIS_PATTERN = re.compile(r"[“「][^”」]*(?:…|\.{3,})[^”」]*[”」]")
-# 省略号被用作占位符标记（整行只有它，或它单独占一段）时不算情绪标点。列举后的“……”
-# 是“等等”义（`fc`、`fs`……），同样不算。
+# 省略号作为占位符标记（整行仅包含省略号，或它单独占一段）时不判定为情绪标点。列举后的“……”
+# 为“等等”义（`fc`、`fs`……），同样不判定为情绪标点。
 ELLIPSIS_MARKER_PATTERN = re.compile(r"^\s*\.{3,}\s*$|^\s*\.{3,}\s|\.{3,}\s*$|、[^、。]{0,20}(?:…|\.{3,})")
 
-# 规则 8：时间性表述。
+# 规则 8 检查时间性表述。
 TEMPORAL_PATTERN = re.compile(r"(暂时|先这样|以后再改|回头再|待补|先放着|后面再说|临时性|暂定)")
 
-# 规则 8：变更叙述。只收录无歧义地指向“已经不存在的那种写法”的词。
-# “旧版本号”“旧库”“旧数据”指迁移历史数据，属规范明确保留的兼容说明，不在其中。
+# 规则 8 检查变更叙述。仅收录无歧义地指向“已经不存在的那种写法”的词。
+# “旧版本号”“旧库”“旧数据”指迁移历史数据，属于规范明确保留的兼容说明，未包含在检查规则中。
 NARRATION_PATTERN = re.compile(
     r"(旧实现|旧写法|旧布局|旧行为|旧方案|从前|原先|曾经|此前(?!缀)|迁移前|上一版|之前是(?!否)|以前是|一度是|已迁移|迁移到了)"
 )
 
-# 规则 9：中文里的半角标点。反引号包裹的代码片段与 Sphinx 字段（`:param x:`）先剔除。
+# 规则 9 检查中文文本中的半角标点。反引号包裹的代码片段与 Sphinx 字段（`:param x:`）预先排除。
 HALFWIDTH_PUNCT_PATTERN = re.compile(r"[\u4e00-\u9fff][,;!?]|[,;!?][\u4e00-\u9fff]")
 BACKTICK_SPAN_PATTERN = re.compile(r"`[^`]*`")
-# 形如 `种类:包名`、`(用例名, 类型, 消息)` 的取值格式说明属代码记号，不是中文句子里的标点。
+# 形如 `种类:包名`、`(用例名, 类型, 消息)` 的取值格式说明属于代码记号，不属于中文句子中的标点。
 CODE_SHAPE_PATTERN = re.compile(r"\([^()]*[,:][^()]*\)")
-# docstring 里的示例代码整行都不是散文，不按中文排版检查。
+# docstring 中的示例代码整行均不属于散文，不按照中文排版规则检查。
 CODE_LINE_PATTERN = re.compile(r"[(){}\[\]=\"]|^\s*>|^\s*\.\.\.")
 
-# 规则 10：中英文之间缺空格。数字与拉丁字母都算“西文”，但行内代码、URL、占位符先剔除。
+# 规则 10 检查中英文之间缺少空格。数字与拉丁字母均视为“西文”，但行内代码、URL、占位符预先排除。
 CJK_LATIN_PATTERN = re.compile(r"[\u4e00-\u9fff][A-Za-z0-9]|[A-Za-z0-9][\u4e00-\u9fff]")
-# 整行不含中文时属外部引用文本（英文规范原文、英文 docstring），中文排版与长度规则都不适用。
+# 整行不包含中文时属于外部引用文本（英文规范原文、英文 docstring），中文排版与长度规则均不适用。
 CJK_PATTERN = re.compile(r"[\u4e00-\u9fff]")
-# 双下划线方法属语言协议，不是非公开 API。
+# 双下划线方法属于语言协议，不属于非公开 API。
 DUNDER_PATTERN = re.compile(r"^__\w+__$")
 URL_PATTERN = re.compile(r"https?://\S+")
 PLACEHOLDER_PATTERN = re.compile(r"\$\{[^}]*\}")
 
-# 规则 7：连续行注释块。规范允许单条说明写到三行，四行起视为应当抽函数或补文档。
+# 规则 7 检查连续行注释块。规范允许单条说明写到三行，四行起视为应当抽取为独立函数或补充文档。
 COMMENT_BLOCK_MIN_LINES = 4
 
-# 行注释长度上限，与 Ruff 的 line-length 一致。
+# 行注释长度上限，与 Ruff 的 line-length 配置保持一致。
 MAX_COMMENT_LENGTH = 120
 
 LEVEL_ERROR = "error"
 LEVEL_WARN = "warn"
 
-# 规则编号与说明，输出与基准文件共用。
+# 规则编号与说明文本，供输出与基准文件共同使用。
 RULE_DESCRIPTIONS = {
     "R1": "行注释超过 120 字符",
     "R2": "注释含第一/第二人称",
@@ -162,7 +162,7 @@ class Violation:
     text: str
 
     def key(self) -> str:
-        """基准文件的稳定键。不含行号，代码移动后仍能命中豁免。"""
+        """基准文件的稳定键。不包含行号，代码位置变动后仍能匹配豁免项。"""
         return f"{self.path}\t{self.rule}\t{self.text}"
 
     def __str__(self) -> str:
@@ -170,7 +170,7 @@ class Violation:
 
 
 def iter_source_files() -> list[Path]:
-    """枚举需要检查的 Python 文件，按路径排序。"""
+    """枚举需要检查的 Python 文件，按照路径排序。"""
     files: list[Path] = []
     for dir_name in SCAN_DIRS:
         base = PROJECT_ROOT / dir_name
@@ -222,7 +222,7 @@ def extract_comments(source: str) -> tuple[dict[int, str], set[int]]:
 
 
 def is_checkable(comment: str) -> bool:
-    """工具指令、shebang 与编码声明不参与检查。"""
+    """工具指令、shebang 以及编码声明不参与检查。"""
     if SHEBANG_PATTERN.match(comment) or CODING_PATTERN.match(comment):
         return False
     return not TOOL_DIRECTIVE_PATTERN.match(comment)
@@ -263,7 +263,7 @@ def check_prose(path: str, line: int, body: str) -> list[Violation]:
 
 
 def check_comment(path: str, line: int, comment: str) -> list[Violation]:
-    """对单条行注释施加规则 1~5、8~10。"""
+    """对单条行注释应用规则 1 至 5 与规则 8 至 10。"""
     body = comment.lstrip("#").strip()
     if not body:
         return []
@@ -344,7 +344,7 @@ def check_docstring(path: str, line: int, text: str) -> list[Violation]:
         if not body:
             continue
         current = line + offset
-        # docstring 里的示例代码整行按代码看。不含中文的整行是外部引用文本，都不施加散文规则。
+        # docstring 中的示例代码整行按代码块处理。不包含中文的整行属于外部引用文本，均不适用散文规则。
         if CODE_LINE_PATTERN.search(body) or not CJK_PATTERN.search(body):
             continue
         if len(body) > MAX_COMMENT_LENGTH:
@@ -364,7 +364,7 @@ def check_docstring(path: str, line: int, text: str) -> list[Violation]:
 
 
 def check_comment_blocks(path: str, comments: dict[int, str], code_lines: set[int]) -> list[Violation]:
-    """规则 7：连续 3 行以上、且各行均无代码的行注释块。"""
+    """规则 7，检查连续 3 行以上且各行均无代码的行注释块。"""
     found: list[Violation] = []
     standalone = sorted(line for line in comments if line not in code_lines)
     block: list[int] = []
@@ -379,7 +379,7 @@ def check_comment_blocks(path: str, comments: dict[int, str], code_lines: set[in
 
 
 def check_file(path: Path) -> list[Violation]:
-    """检查单个文件。"""
+    """执行单文件检查。"""
     relative = path.relative_to(PROJECT_ROOT).as_posix()
     source = path.read_text(encoding="utf-8")
     comments, code_lines = extract_comments(source)
@@ -396,7 +396,7 @@ def check_file(path: Path) -> list[Violation]:
 
 
 def load_baseline() -> set[str]:
-    """读取基准豁免键。"""
+    """读取基准豁免键集合。"""
     if not BASELINE_PATH.is_file():
         return set()
     keys: set[str] = set()
@@ -443,7 +443,7 @@ def changed_lines(base_ref: str) -> set[tuple[str, int]]:
 
 
 def generate_baseline(violations: list[Violation]) -> None:
-    """把当前全部违规写入基准文件。"""
+    """将当前全部违规项写入基准文件。"""
     keys = sorted({v.key() for v in violations})
     header = [
         "# 注释书面语检查的基线豁免清单。",
@@ -457,7 +457,7 @@ def generate_baseline(violations: list[Violation]) -> None:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示无基准外违规。"""
+    """主入口函数，返回进程退出码，0 表示不存在基准外违规项。"""
     parser = argparse.ArgumentParser(description="注释书面语检查")
     parser.add_argument("--diff", metavar="BASE_REF", help="只检查该基准之后新增或修改的行")
     parser.add_argument("--generate-baseline", action="store_true", help="重建基线豁免文件")

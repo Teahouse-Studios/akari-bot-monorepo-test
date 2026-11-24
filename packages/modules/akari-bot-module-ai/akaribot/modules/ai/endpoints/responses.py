@@ -47,7 +47,7 @@ def _messages_to_responses(messages: list[dict]) -> tuple[str, list[dict]]:
         elif role == "user":
             items.append({"type": "message", "role": "user", "content": _content_to_responses_input(content)})
         elif role == "assistant":
-            # 手动管理上下文时，Responses API 要求回传上一轮的 reasoning 条目，否则续轮丢失思维链。
+            # 手动管理上下文时，Responses API 要求回传上一轮的 reasoning 条目，否则续轮时会丢失思维链。
             items.extend(msg.get("_responses_reasoning") or [])
             if content:
                 items.append({"type": "message", "role": "assistant", "content": content})
@@ -92,7 +92,7 @@ class OpenAIResponsesEndpoint:
             kwargs["top_p"] = top_p_value
         top_logprobs_value = base._resolve_top_logprobs(self.generation)
         if top_logprobs_value is not None:
-            # Responses 需通过 include 声明才会返回对数概率。
+            # Responses 需要通过 include 声明才会返回对数概率。
             kwargs["top_logprobs"] = top_logprobs_value
             kwargs["include"] = ["message.output_text.logprobs"]
         effort = base._openai_effort(base._resolve_reasoning_effort(self.generation))
@@ -146,7 +146,7 @@ class OpenAIResponsesEndpoint:
             raw_tool_calls,
             reasoning_content="".join(reasoning_parts) or None,
         )
-        # Responses API 无状态续轮依赖原样回传 reasoning 条目（含 encrypted_content）。
+        # Responses API 无状态续轮依赖原样回传 reasoning 条目（包含 encrypted_content）。
         if reasoning_items:
             assistant_message["_responses_reasoning"] = reasoning_items
 

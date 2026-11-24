@@ -72,7 +72,7 @@ def _test_module_bot_permission_requirements():
 
 @func_case
 async def test_component(tester: Tester):
-    """akaribot.core.component: 组件注册系统测试"""
+    """akaribot.core.component 组件注册系统测试"""
     await tester.test(_test_module_assign_basic, "Module.assign 基本创建测试")
     await tester.test(_test_module_assign_alias_str, "Module.assign 字符串别名测试")
     await tester.test(_test_module_assign_alias_list, "Module.assign 列表别名测试")

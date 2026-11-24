@@ -2,7 +2,7 @@
 
 本文整理了 OneBot 适配器的配置表项与填写时的注意事项。
 
-配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表都写在 `config/bot_onebot.toml`。普通项写在 `[bot_onebot]`，密钥项写在 `[bot_onebot_secret]`。
+配置表为 `bot_onebot`，密钥表为 `bot_onebot_secret`。两张表均保存在 `config/bot_onebot.toml` 中，常规配置项位于 `[bot_onebot]`，密钥项位于 `[bot_onebot_secret]`。
 
 ## 配置表 `bot_onebot`
 
@@ -14,8 +14,8 @@
 | `qq_enable_temp_session` | bool | `true` | 是否开启临时会话。 |
 | `qq_allow_approve_friend` | bool | `false` | 是否自动同意好友请求。 |
 | `qq_allow_approve_group_invite` | bool | `false` | 是否自动同意群邀请。 |
-| `qq_typing_emoji` | int | `181` | 正在处理消息时挂载的回应表情 ID，需协议端支持。 |
-| `qq_limited_emoji` | int | `10060` | 消息处理失败时挂载的回应表情 ID，需协议端支持。 |
+| `qq_typing_emoji` | int | `181` | 正在处理消息时添加的回应表情 ID，需协议端支持。 |
+| `qq_limited_emoji` | int | `10060` | 消息处理失败时添加的回应表情 ID，需协议端支持。 |
 | `qq_initiative_msg_cooldown` | int | `10` | 主动消息发送的冷却时间，单位为秒。 |
 
 ## 密钥表 `bot_onebot_secret`

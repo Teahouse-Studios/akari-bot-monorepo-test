@@ -17,13 +17,13 @@ def _searchable_texts(result: dict) -> tuple[str, ...]:
 
 
 class Expectation:
-    """所有期望匹配器的基类。"""
+    """全部期望匹配器的基类。"""
 
     async def match(self, result: dict) -> bool:
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        # 失败日志与 JUnit 报告直接展示期望对象，缺少 __repr__ 时只能看到内存地址。
+        # 失败日志与 JUnit 报告直接展示期望对象，缺少 __repr__ 时仅能看到内存地址。
         return self.__str__()
 
     def __and__(self, other: "Expectation") -> "Expectation":
@@ -38,7 +38,7 @@ class Expectation:
 
 class All(Expectation):
     """
-    满足所有期望匹配器。
+    满足全部期望匹配器。
 
     :param expects: 期望匹配器
     """
@@ -58,7 +58,7 @@ class All(Expectation):
 
 class Any(Expectation):
     """
-    满足任意期望匹配器。
+    满足任一期望匹配器。
 
     :param expects: 期望匹配器
     """
@@ -78,7 +78,7 @@ class Any(Expectation):
 
 class Not(Expectation):
     """
-    不允许满足某一期望匹配器。
+    不允许满足指定期望匹配器。
 
     :param expect: 期望匹配器
     """
@@ -505,7 +505,7 @@ class AnyOutput(Expectation):
         if not output:
             return False
 
-        # 检查是否包含错误信息
+        # 检查是否包含错误信息。
         output_str = MessageChain.assign(output).to_str()
         for keyword in self.ERROR_KEYWORDS:
             if keyword in output_str:
@@ -548,7 +548,7 @@ class OutputCount(Expectation):
 
 class ContainsAll(Expectation):
     """
-    输出中包含所有指定文本。
+    输出中包含全部指定文本。
 
     :param texts: 需要全部包含的文本列表
     :param case_sensitive: 是否大小写敏感，默认 False
@@ -600,15 +600,15 @@ class NoException(Expectation):
     ERROR_KEYWORDS = ["执行命令时发生错误"]
 
     async def match(self, result):
-        # 检查是否有异常
+        # 检查是否引发异常。
         if "exception" in result:
             return False
 
-        # 检查是否有 traceback
+        # 检查是否包含回溯信息。
         if "traceback" in result:
             return False
 
-        # 检查输出是否包含错误信息
+        # 检查输出是否包含错误信息。
         output = result.get("output")
         if output:
             output_str = MessageChain.assign(output).to_str()

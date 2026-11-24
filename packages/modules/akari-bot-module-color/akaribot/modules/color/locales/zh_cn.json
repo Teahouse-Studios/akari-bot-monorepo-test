@@ -1,6 +1,6 @@
 {
-    "color.help": "提供颜色信息。支持十六进制、RGB、HSL 颜色代码或 CSS 和 Material Design 中的颜色名称，留空则随机颜色。",
-    "color.help.desc": "获取颜色信息。",
+    "color.help": "查询并提供颜色信息。支持十六进制、RGB、HSL 颜色代码，以及 CSS 与 Material Design 中的颜色名称。未提供参数时将随机选取颜色。",
+    "color.help.desc": "查询颜色详细信息。",
     "color.message.embed.css": "CSS 颜色名称",
     "color.message.embed.css.approximate": "最相似的 CSS 颜色名称",
     "color.message.embed.md": "Material Design 颜色名称",

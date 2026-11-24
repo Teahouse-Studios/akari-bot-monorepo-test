@@ -2,7 +2,7 @@
 
 from akaribot.core.config.core import CoreConfig, CoreSecretConfig
 
-# 各 SDK 的代理参数均以 None 表示直连，配置未填写时取到的是空字符串
+# 各 SDK 的代理参数均以 None 表示直接连接，配置未填写时获取到的值为空字符串。
 proxy = CoreSecretConfig.proxy or None
 ssl_verify = not CoreConfig.proxy_disable_ssl
 

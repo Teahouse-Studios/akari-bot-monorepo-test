@@ -152,7 +152,7 @@ def _test_missing_everywhere_raises_with_hint():
 
 @func_case
 async def test_frozen_uv(tester: Tester):
-    """cli.venv: 冻结产物内置 uv 解析测试"""
+    """cli.venv 打包产物内置 uv 解析测试"""
     _use_cli_locale()
     await tester.test(_test_windows_prefers_exe_name, "Windows 先试 uv.exe")
     await tester.test(_test_executable_requires_a_real_file, "目录与非文件不算可执行")

@@ -31,12 +31,12 @@ JsonOption = Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json
 YesOption = Annotated[bool, typer.Option("--yes", "-y", help=i18n.t("cli.common.yes_option"))]
 TableArgument = Annotated[str, typer.Argument(metavar="TABLE", help=i18n.t("cli.db.table_argument"))]
 
-# 与 core 入口的默认值保持一致。上限由 core 侧收窄，这里只做展示。
+# 与 core 入口的默认值保持一致。上限由 core 端限制，此处仅负责展示。
 DEFAULT_LIMIT = 20
 
 
 def _call(instance: Instance, *args: str) -> Any:
-    # core 把失败原因也写进 stdout 的 JSON，故先解析再按退出码判定。解析不了就按原始输出报错。
+    # core 将失败原因亦写入 stdout 的 JSON，因此先解析再按退出码判定。无法解析时按原始输出报错。
     completed = instance.run_core_capture("data", *args, "--json")
     payload = _parse(completed.stdout)
     if completed.returncode == 0:
@@ -68,7 +68,7 @@ def _tail(text: str | None, limit: int = 400) -> str:
 
 
 def _guard(action) -> Any:
-    # 用户错误在 core 侧是退出码 2，CLI 保持同一个码，脚本才能区分“用错”与“运行失败”。
+    # 用户错误在 core 中是退出码 2，CLI 保持相同的退出码，脚本才能区分“用法错误”与“运行失败”。
     try:
         return action()
     except CliError as exc:
@@ -76,7 +76,7 @@ def _guard(action) -> Any:
 
 
 def _emit_json(payload: Any) -> None:
-    # 界面按行解析 stdout，故 JSON 必须是单行且不被终端宽度折行。
+    # 界面按行解析 stdout，因此 JSON 必须是单行且不被终端宽度折行。
     print(json.dumps(payload, ensure_ascii=False))
 
 
@@ -147,7 +147,7 @@ def list_rows(
         return
     rows = payload.get("rows") or []
     columns = list(rows[0]) if rows else []
-    # 总条数是筛选后的条数，页码据此算。offset 可能超出末页，仍按它算当前页。
+    # 总条数是筛选后的条数，页码据此计算。offset 可能超出末页，仍按它计算当前页。
     counted = payload.get("total")
     total = int(counted or 0)
     offset_now = int(payload.get("offset") or 0)
@@ -191,7 +191,7 @@ def set_values(
     as_json: JsonOption = False,
     instance_path: InstancePathOption = None,
 ) -> None:
-    """按主键改写一行的若干列。各列在同一次 UPDATE 里下发，主键列不可修改。"""
+    """按主键改写一行的若干列。各列在同一次 UPDATE 中提交，主键列不可修改。"""
     instance = require_instance(instance_path)
     args = ["set", table_name, "--key", key]
     for assignment in assignments:
@@ -218,7 +218,7 @@ def insert_row(
     as_json: JsonOption = False,
     instance_path: InstancePathOption = None,
 ) -> None:
-    """新建一条数据项。必填字段由 core 侧的模型声明判定。"""
+    """新建一条数据项。必填字段由 core 的模型声明判定。"""
     instance = require_instance(instance_path)
     args = ["insert", table_name]
     for item in assignment or []:

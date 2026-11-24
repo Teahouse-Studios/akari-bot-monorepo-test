@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-emojimix
 ```
 
-安装后，管理员需要在会话中执行 `module enable emojimix` 开启模块。
+安装完成后，管理员需要在会话中执行 `module enable emojimix` 启用模块。
 
 ## 配置项
 
@@ -18,7 +18,7 @@ akaribot module add akari-bot-module-emojimix
 
 ## 权限与平台能力
 
-合成图直接引用 Emoji Kitchen 的静态资源地址，不经过本地缓存。支持列表随包分发，保存在 `assets/emoji_data.json`，其中记录受支持的 Emoji、组合与对应的资源目录日期。
+合成图直接引用 Emoji Kitchen 的静态资源地址，不经过本地缓存。支持列表随模块安装包分发，保存在 `assets/emoji_data.json`，其中记录受支持的 Emoji、组合与对应的资源目录日期。
 
 ## 数据表
 

@@ -18,7 +18,7 @@ from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 跳板服务的域名，用以检查某条路径确实未走跳板
+# 跳板服务的域名，用于验证特定路径未通过跳板服务。
 _MM_HOST = "mm.teahouse.team"
 _URL = "https://example.com/wiki/Page"
 
@@ -57,8 +57,8 @@ async def _test_markdown_session_gets_code_block():
 
 
 async def _test_explicit_untrusted_is_guarded():
-    # wikilib 在内容审查未通过时即以 trusted=False 传入，该场景须无视会话设置。
-    # 此路径下 url 字段已被替换成跳板地址，须取 original_url 方能拿回原链接。
+    # wikilib 在内容审查未通过时即以 trusted=False 传入，该场景必须忽略会话设置。
+    # 此路径下 url 字段已被替换为跳板地址，需要读取 original_url 才能获取原链接。
     try:
         session_info = _session(use_url_manager=False, support_markdown=True)
         out = _render(session_info, trusted=False)
@@ -302,11 +302,10 @@ async def _test_global_blocklist_fails_closed_on_regex_budget_exhaustion():
 
 
 async def _test_markdown_toggle_keeps_url_manager():
-    # 关闭 markdown 只应令呈现退回跳板。若连 use_url_manager 一并关闭，未认证链接便
+    # 关闭 markdown 仅应使呈现回退至跳板。若连 use_url_manager 一并关闭，未认证链接便
     # 完全不再被标记，等同于取消保护。
     try:
-        # 平台能力集在导入时即依配置定型，故另建一份“markdown 与 URLManager 均已开启”
-        # 的基准并打桩该开关，使检查只考察覆盖逻辑本身，不受本地配置左右
+        # 平台能力集在导入时即依配置定型，因此新建一份“markdown 与 URLManager 均已开启”的基准并模拟该开关，使检查仅考察覆盖逻辑本身，不受本地配置左右。
         session_info = _session(
             sender_union_info=SenderUnionInfo(union_id="USID|1", sender_data={"use_markdown": False})
         )
@@ -326,8 +325,8 @@ async def _test_markdown_toggle_keeps_url_manager():
 
 
 async def _test_trusted_survives_kecode_roundtrip():
-    # I18N 参数中的 MessageChain 会被转成 KE 码再解析回来（chain.py:340）。标记若在
-    # 这一趟丢失，已认证的链接会退化为未表态，进而被会话的 URLManager 套上跳板。
+    # I18N 参数中的 MessageChain 会被转换为 KE 码再解析还原（chain.py:340）。标记若在
+    # 往返转换过程中丢失，已认证的链接会退化为未表态，进而由会话的 URLManager 包装为跳板链接。
     try:
         session_info = _session(use_url_manager=True, support_markdown=False)
         code = MessageChain.assign([Url(_URL, trusted=True)]).to_kecode()
@@ -342,8 +341,8 @@ async def _test_trusted_survives_kecode_roundtrip():
 
 
 async def _test_untrusted_not_double_wrapped_by_kecode():
-    # trusted 为 False 时 url 字段已是跳板地址，故 kecode 须编码 original_url。
-    # 若照搬 url，还原时会在跳板地址之上再套一层跳板。
+    # trusted 为 False 时 url 字段已是跳板地址，因此 kecode 必须编码 original_url。
+    # 若直接使用 url，还原时会在跳板地址之上再次嵌套跳板。
     try:
         session_info = _session(use_url_manager=True, support_markdown=False)
         code = MessageChain.assign([Url(_URL, trusted=False)]).to_kecode()
@@ -371,7 +370,7 @@ async def _test_unmarked_url_still_follows_session_after_roundtrip():
 
 @func_case
 async def test_url_guard(tester: Tester):
-    """未认证链接：代码块呈现与回退测试"""
+    """未认证链接的代码块呈现与回退测试"""
     await tester.test(_test_markdown_session_gets_code_block, "支持 markdown 时给出代码块测试")
     await tester.test(_test_explicit_untrusted_is_guarded, "显式不可信者走代码块测试")
     await tester.test(_test_trusted_url_is_never_guarded, "已认证链接不受保护测试")

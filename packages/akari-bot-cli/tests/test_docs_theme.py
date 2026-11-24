@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.theme``：主题清单解析、外部模板与内置回退。"""
+"""``akaribot.cli.docs_engine.theme`` 的主题清单解析、外部模板与内置回退测试。"""
 
 import json
 import os
@@ -146,7 +146,7 @@ async def _test_unsupported_source_is_reported():
 
 @func_case
 async def test_docs_theme(tester: Tester):
-    """cli.docs.theme: 内置回退、外部模板与来源校验"""
+    """cli.docs.theme 内置回退、外部模板与来源校验测试"""
     await tester.test(_test_bundled_theme, "内置主题清单")
     await tester.test(_test_theme_digest_tracks_content_changes, "主题摘要按内容变化，不受 mtime 与尺寸影响")
     await tester.test(_test_file_theme, "file 来源读取外部模板")

@@ -145,8 +145,8 @@ def match_regex_rules(url: str, patterns: list[str] | tuple[str, ...]) -> bool:
 
 
 class _GlobalURLRuleList:
-    # 主仓规则 global.txt 随仓库分发，位于 data/url_audit/<名单>。
-    # 部署者规则 user.txt 与之同目录但被 Git 忽略。测试可整体替换这几个路径。
+    # 仓库全局规则 global.txt 随仓库分发，位于 data/url_audit/<名单>。
+    # 部署者规则 user.txt 与其位于同一目录中，但被 Git 忽略。测试中可以整体替换上述路径。
     directory: Path
     builtin_path: Path
     user_path: Path
@@ -246,7 +246,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def contains(cls, url: str, *, fail_closed: bool = False) -> bool:
-        """检查 URL 是否命中当前名单。"""
+        """检查 URL 是否匹配当前名单。"""
         try:
             normalized = normalize_url(url)
         except URLRuleError:
@@ -286,7 +286,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def replace_user_rules(cls, serialized_rules: Iterable[str]) -> list[str]:
-        """用给定规则整体替换本地用户规则。"""
+        """使用给定规则整体替换本地用户规则。"""
         parsed: list[URLRule] = []
         seen: set[str] = set()
         for serialized in serialized_rules:
@@ -317,7 +317,7 @@ class _GlobalURLRuleList:
 
     @classmethod
     def _atomic_write(cls, content: str) -> None:
-        # 临时文件与目标同目录，确保 os.replace 只在同一文件系统内进行。
+        # 临时文件与目标位于同一目录中，确保 os.replace 仅在同一文件系统内执行。
         target_dir = cls.user_path.parent
         target_dir.mkdir(parents=True, exist_ok=True)
         temp_path = None

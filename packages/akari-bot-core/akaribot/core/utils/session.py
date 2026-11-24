@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from akaribot.core.builtins.session.info import SessionInfo
     from akaribot.core.builtins.session.features import Features
 
-# 就地注入后返回原对象，故须保留调用方传入的具体子类型（如 FetchedSessionInfo）
+# 就地注入后返回原对象，因此需要保留调用方传入的具体子类型（例如 FetchedSessionInfo）。
 _SessionT = TypeVar("_SessionT", bound="SessionInfo")
 
 

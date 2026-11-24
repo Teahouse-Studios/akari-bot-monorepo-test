@@ -70,7 +70,7 @@ def _test_custom_per_row() -> bool:
 
 @func_case
 async def test_button_arrange(tester: Tester):
-    """core.utils.button: 按钮排布工具测试"""
+    """core.utils.button 按钮排布工具测试"""
     await tester.test(_test_row_sizes, "分行结果测试")
     await tester.test(_test_platform_limits_hold, "平台上限测试")
     await tester.test(_test_order_and_content_preserved, "顺序与内容守恒测试")

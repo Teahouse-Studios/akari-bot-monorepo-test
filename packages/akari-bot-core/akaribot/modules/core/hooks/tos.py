@@ -64,7 +64,7 @@ def _enforce_tos(function):
     return enforced
 
 
-# 同版本 reload 保留限流与临时封禁状态。版本变化时重建
+# 同版本 reload 保留限流与临时封禁状态。版本变化时重建。
 _buckets_same = tos.state(
     "buckets_same",
     default_factory=ExpiringTempDict,
@@ -77,7 +77,7 @@ _buckets_all = tos.state(
     preserve=True,
     version=1,
 )
-# 临时封禁计数：同版本热重载时保留，版本变化时重建。
+# 临时限制计数在同版本热重载时予以保留，版本发生变化时重新构建。
 temp_ban_counter = tos.state(
     "temp_ban_counter",
     default_factory=lambda: ExpiringTempDict(exp=_temp_ban_time()),
@@ -115,7 +115,7 @@ async def tos_report(sender: str, target: str, reason: str, banned: bool = False
         action = str(I18NContext("tos.message.action.warning", disable_joke=True))
     warn_template.append(I18NContext("tos.message.action", action=action, disable_joke=True))
 
-    # 上报场景按场景组配置，展开后同一现实场景的多个平台入口只应由其中一个收到回传
+    # 上报场景按场景组配置，展开后同一现实场景的多个平台入口仅应由其中一个入口接收回传消息。
     await send_report(
         warn_template,
         subject=str(I18NContext("smtp.report.subject.tos", sender=sender)),
@@ -127,7 +127,7 @@ async def abuse_warn_target(msg, reason: str):
 
     issue_url = CoreConfig.issue_url
     warning_counts = _warning_counts()
-    # 没有用户 union 的会话（如主动推送）不存在可警告的对象，直接跳过
+    # 没有用户 union 的会话（如主动推送）不存在可警告的对象，直接跳过。
     sender_union_info = msg.session_info.sender_union_info
     sender_id = msg.session_info.sender_id
     if warning_counts >= 1 and not msg.check_super_user() and sender_union_info and sender_id:
@@ -194,7 +194,7 @@ async def _temp_ban_check(msg):
             message=MessageChain.assign(I18NContext("tos.message.tempbanned.warning", ban_time=remaining)),
             scope=StopScope.MESSAGE,
         )
-    # 升级处罚：拒绝决定已经形成，通知失败不得把它丢成"放行"
+    # 升级限制时拒绝决定已经生成，通知失败不得将其误判定为“放行”。
     await _apply_abuse_safely(msg, "{I18N:tos.message.reason.ignore}")
     return Stop(scope=StopScope.MESSAGE, data={"handled": True, "penalty": True})
 
@@ -224,8 +224,8 @@ async def _msg_counter(msg, command: str, *, candidate_scope: bool = False):
     if reason is None:
         return None
 
-    # 超限是已确定的业务拒绝：先固定 Stop，再尽力完成处罚通知，
-    # 上报/提示发送失败不得把已确认超限的命令放行。
+    # 超限属于已确定的业务拒绝，需要先固定 Stop 再尽力完成通知流程，
+    # 上报与提示发送失败不得将已确认超限的命令予以放行。
     await _apply_abuse_safely(msg, reason)
     return Stop(scope=scope, data={"reason": reason, "handled": True})
 
@@ -242,12 +242,12 @@ async def _send_generic_abuse_error(msg, reason: str):
 
 
 async def _apply_abuse_safely(msg, reason: str):
-    # 与“检查本身失败时降级”不同：业务拒绝已经形成，丢失通知不能连带丢失拒绝决定。
+    # 与“检查本身失败时降级”不同，此处业务拒绝已经形成，丢失通知不能连带丢失拒绝决定。
     try:
         await _apply_abuse(msg, reason)
     except (Exception, SendMessageFailed, SessionFinished, WaitCancelException):
-        # 发送失败等框架控制流继承 BaseException。拒绝已形成，不能让 executor
-        # 把通知失败视为检查失败后放行。外部取消与进程退出仍必须传播。
+        # 发送失败等框架控制流继承 BaseException。拒绝决定已经生成，不可由 executor
+        # 将通知失败视作检查失败后予以放行。外部取消与进程退出仍然必须向外传播。
         Logger.exception("Failed to deliver ToS penalty notification; rejection still applies.")
 
 
@@ -262,7 +262,7 @@ async def _apply_abuse(msg, reason: str):
     await _send_generic_abuse_error(msg, reason)
 
 
-# 强制检查不设超时（``timeout=0``）。外部取消仍传播，不能因 hook 超时降级放行。
+# 强制检查不设置超时（``timeout=0``）。外部取消仍然向外传播，不可因 Hook 超时而降级放行。
 @tos.hook(point=HookPoint.COMMAND_PREPARE, priority=10, name="temp_ban", server_scope=True, timeout=0)
 @_enforce_tos
 async def _(ctx: "Bot.ParserHookContext"):
@@ -311,7 +311,7 @@ async def _(ctx: "Bot.ParserHookContext"):
     return Handled(data={"reason": str(error)})
 
 
-# ---- 具名能力：管理命令 / Client RPC（OneBot 等）使用 ----
+# 供管理命令与 Client RPC（OneBot 等）使用的命名功能。
 
 
 @tos.hook("check_temp_ban")
@@ -332,7 +332,7 @@ async def _(ctx: "Bot.ModuleHookContext"):
 
 @tos.hook("report")
 async def _(ctx: "Bot.ModuleHookContext"):
-    # Client 侧经 ``ServerAPI.trigger_hook("tos.report", ...)`` 调用，
+    # 客户端通过 ``ServerAPI.trigger_hook("tos.report", ...)`` 调用，
     # 上报（SMTP 邮件或上报场景）与场景组展开在 Server 进程完成。
     await tos_report(
         ctx.args.get("sender"),

@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.catalog``：清单解析、去重、CLI 本地合并与 registry 回退。"""
+"""``akaribot.cli.docs_engine.catalog`` 的清单解析、去重、CLI 本地合并与 registry 回退测试。"""
 
 import json
 from importlib import metadata
@@ -85,7 +85,7 @@ def _local_doc_dir(base: Path) -> Path:
 def _local_version() -> str:
     try:
         return metadata.version(docs_catalog.CLI_DIST)
-    except Exception:  # noqa: BLE001 - 与实现一致，冻结环境下没有 metadata
+    except Exception:  # noqa: BLE001 - 与实现一致，打包环境下不存在 metadata。
         return cli_version
 
 
@@ -263,7 +263,7 @@ async def _test_locale_pages_are_excluded_from_default_catalog():
 
 @func_case
 async def test_docs_catalog(tester: Tester):
-    """cli.docs.catalog: 文档目录解析与回退"""
+    """cli.docs.catalog 文档目录解析与回退测试"""
     await tester.test(_test_parse_docs_payload, "解析 docs list 清单与告警并按 order 排序")
     await tester.test(_test_locale_pages_are_excluded_from_default_catalog, "语言目录不进入默认页面清单")
     await tester.test(_test_select_filters_and_rejects_unknown, "select 过滤并拒绝未知 key")

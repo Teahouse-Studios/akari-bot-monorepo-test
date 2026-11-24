@@ -192,13 +192,13 @@ async def convert_chain_to_segments(
     if quote and session_info.messages and str(session_info.message_id or "").isdigit():
         segments.append(OutgoingReplySegment(data=ReplySegmentData(message_seq=int(session_info.message_id))))
 
-    # 标记是否已写入过元素内容：首个元素直接落段，其后元素均先补齐换行
+    # 标记是否已写入元素内容，首个元素直接写入，后续元素均先补充换行符。
     has_content = False
     bot_ids = _bot_ids(session_info)
 
     for element in message.as_sendable(session_info):
         if isinstance(element, PlainElement):
-            # AT 码与前后文本同属一条文本，需在文本流内按出现顺序转换为提及段
+            # AT 码与前后文本同属一条文本，需要在文本流内按出现顺序转换为提及段。
             parts = iter_at_code(element.text) if element.allow_parse else (element.text,)
             started = False
             for part in parts:
@@ -226,7 +226,7 @@ async def convert_chain_to_segments(
                 continue
             if has_content:
                 _ensure_line_break(segments)
-            # `sub_type` 为协议必填字段，缺失会被 SDK 校验拒绝
+            # `sub_type` 为协议必填字段，缺失会被 SDK 校验拒绝。
             segments.append(
                 OutgoingImageSegment(
                     data=OutgoingImageSegmentData(uri=f"base64://{image_b64}", sub_type=ImageSubType.NORMAL)
@@ -257,7 +257,7 @@ async def convert_chain_to_segments(
                 _append_mention(segments, element.id)
                 Logger.info(f"[Bot] -> [{session_info.target_id}]: Mention: {element.client}|{str(element.id)}")
             else:
-                # 无法在当前场景提及该用户，以空格占位保持文本可读性
+                # 无法在当前场景提及该用户，以空格占位保持文本可读性。
                 _append_text(segments, " ")
             has_content = True
     return segments

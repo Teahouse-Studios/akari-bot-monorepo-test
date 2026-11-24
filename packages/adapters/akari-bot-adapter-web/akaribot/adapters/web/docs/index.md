@@ -6,7 +6,7 @@ Web 控制台适配器在实例内启动 Web 服务，提供 WebUI 控制台和�
 
 服务基于 FastAPI 与 uvicorn。前端静态资源来自 `akari-bot-webui` 包，或实例的 `data/webui/dist` 目录。
 
-控制台通过一个会话连接机器人，可以发送消息、管理会话和文件，也可以查看配置、日志和统计数据。
+控制台通过会话连接机器人，支持发送消息、管理会话与文件，亦可查阅配置、日志与统计数据。
 
 适配器默认启用，使用实例内服务，不需要平台账号。访问、认证和反向代理的完整说明见 [WebUI 控制台](webui.md)。
 
@@ -22,11 +22,11 @@ akaribot module add akari-bot-adapter-web
 
 ## 配置
 
-配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都写在 `config/bot_web.toml`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表均保存在 `config/bot_web.toml`。
 
-需要多个 Web 服务实例时，用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`。两张表都写在 `config/bot_web-<实例 ID>.toml`。
+需要多个 Web 服务实例时，可使用 `akaribot adapter instance add web <实例 ID>` 新增实例。实例表名为 `bot_web-<实例 ID>`，密钥表名为 `bot_web-<实例 ID>_secret`。两张表均保存在 `config/bot_web-<实例 ID>.toml`。
 
-主要字段如下，完整字段与默认值见 [config.md](config.md)。
+主要字段如下，完整字段与默认值参见 [config.md](config.md)。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -39,13 +39,13 @@ akaribot module add akari-bot-adapter-web
 ## 监听地址与端口
 
 - 默认监听 `127.0.0.1:6485`，WebUI 地址为 `http://127.0.0.1:6485/webui`。
-- 端口被占用时，从 `web_port` 开始向后逐个尝试，最多 100 个端口。没有可用端口时进程退出。
+- 端口被占用时，从 `web_port` 开始向后逐个尝试，最多 100 个端口。无可用端口时进程退出。
 - `web_port = 0` 时直接禁用服务。
-- `enable_https = true` 只改变日志与 `/api/init` 返回的访问协议。TLS 由反向代理终止。
+- `enable_https = true` 仅改变日志与 `/api/init` 返回的访问协议。TLS 由反向代理终止。
 
 ## 认证
 
-- 未设置密码时，登录接口会直接返回令牌。请在首次访问后设置密码。
+- 未设置密码时，登录接口直接返回令牌。初次访问后应当立即设置密码。
 - 支持 Argon2 密码哈希、TOTP 两步验证与恢复代码。
 - 令牌有效期 24 小时。修改密码后旧令牌失效。
 - `login_max_attempt` 控制 10 分钟内的登录失败上限。超过上限后，封禁来源 IP 1 小时。
@@ -66,12 +66,12 @@ akaribot module add akari-bot-adapter-web
 | 群组管理 | 不支持 | — |
 | 权限组 | 不支持 | — |
 | 消息节点 | 支持 | — |
-| 私信 | 支持 | 控制台会话为私密会话。 |
+| 私聊 | 支持 | 控制台会话为私密会话。 |
 | RSS 推送 | 不支持 | — |
 
 控制台始终可用，`require_enable_modules` 为 `false`。
 
-## 私信与群聊
+## 私聊与群聊
 
 - 目标固定为 `Web|Console|0`，发送者固定为 `Web|0`，会话按私密处理。
 - `Web|0` 在服务启动时自动获得超级管理员身份。

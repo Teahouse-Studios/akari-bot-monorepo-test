@@ -90,7 +90,7 @@ async def init_background_task():
     async def _init_petal_reset():
         await reset_petals_if_due()
 
-    # 各项初始化并行执行，并保持结构化并发语义：任一任务意外失败时，TaskGroup
+    # 各项初始化并行执行，并保持结构化并发语义。任一任务意外失败时，TaskGroup
     # 会取消并等待其余任务，避免父任务结束后浏览器初始化仍在后台继续。
     async with asyncio.TaskGroup() as group:
         group.create_task(fetch_ip_info(), name="server-ip-info-init")
@@ -117,7 +117,7 @@ def start_background_task() -> asyncio.Task[None]:
 
 
 async def stop_background_task() -> None:
-    """取消并等待后台初始化，保证 WebRender 关闭不会与浏览器启动并发。"""
+    """取消并等待后台初始化，确保 WebRender 关闭不会与浏览器启动并发执行。"""
     global _background_task
     task = _background_task
     _background_task = None

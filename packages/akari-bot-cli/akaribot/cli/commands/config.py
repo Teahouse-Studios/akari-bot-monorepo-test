@@ -35,7 +35,7 @@ app = typer.Typer(help=i18n.t("cli.config.help"))
 TableOption = Annotated[str, typer.Option("--table", "-t", help=i18n.t("cli.common.table_option"))]
 JsonOption = Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))]
 
-# 表名与配置文件一一对应（扁平布局）：config -> config.toml，secret -> secret.toml，其余为 <表名>.toml。
+# 表名与配置文件一一对应（扁平布局），其中 config -> config.toml，secret -> secret.toml，其余为 <表名>.toml。
 FILE_BY_TABLE = {"config": "config.toml", "secret": "secret.toml"}
 
 
@@ -114,7 +114,7 @@ def show_placeholders(
     args = ["placeholders", "--tables", ",".join(tables)] if tables else ["placeholders"]
     payload = _entrypoint_json(instance, *args)
     if json_out:
-        # 界面按行解析 stdout，故 JSON 保持单行原样，不做二次排版。
+        # 界面按行解析 stdout，因此 JSON 保持单行原样，不执行二次排版。
         print(json.dumps(payload, ensure_ascii=False))
         return
     assert isinstance(payload, dict)
@@ -160,7 +160,7 @@ def set_value(
     table: TableOption,
     instance_path: InstancePathOption = None,
 ) -> None:
-    """写入单个配置项（经 core 的原子写入路径）。"""
+    """写入单个配置项（通过 core 的原子写入路径）。"""
     instance = require_instance(instance_path)
     code = instance.run_core("config", "set", key, value, "--table", table)
     if code != 0:
@@ -173,7 +173,7 @@ def open_in_editor(
     table: TableOption = "config",
     instance_path: InstancePathOption = None,
 ) -> None:
-    """用外部编辑器打开配置文件（第三种编辑模式）。"""
+    """使用外部编辑器打开配置文件（第三种编辑模式）。"""
     instance = require_instance(instance_path)
     target = _config_file(instance, table)
     if not target.is_file():

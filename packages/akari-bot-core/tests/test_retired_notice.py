@@ -1,4 +1,4 @@
-"""akaribot.core.utils.retired 单元测试 - 公告文案读取、已发记录与排队。"""
+"""akaribot.core.utils.retired 公告文案读取、已发送记录与排队单元测试。"""
 
 import asyncio
 import tempfile
@@ -69,7 +69,7 @@ async def _test_mark_persists_to_storage():
         stored = await StoredData.get_or_none(stored_key=NOTIFIED_STORED_KEY)
         persisted = bool(stored) and any(r.get("target_id") == "QQ|Group|notify3" for r in stored.value)
 
-        # 清空内存后重新加载，验证 list 与 dict 的互转无损。
+        # 清空内存后重新加载，验证 list 与 dict 的相互转换完全一致。
         reset_notified_cache()
         return persisted and await has_notified("QQ|Group|notify3")
 
@@ -136,7 +136,7 @@ async def _test_concurrent_marks_do_not_persist_stale_snapshot():
     async def get_or_create(**_kwargs):
         nonlocal created
         created += 1
-        # 未串行化时，第一笔保存会在第二笔之后完成，并以只含第一个场景的旧快照覆盖数据库。
+        # 未串行化时，第一笔保存会在第二笔之后完成，并以仅包含首个场景的原有快照覆盖数据库。
         return FakeStored(0.02 if created == 1 else 0), created == 1
 
     retired_module._notified = {}
@@ -200,7 +200,7 @@ async def _test_enqueue_concurrent_same_target_once():
             retired_module.enqueue_notice(session_info),
             retired_module.enqueue_notice(session_info),
         )
-        # enqueue_notice 只负责创建后台任务，显式让出一次事件循环使替身完成。
+        # enqueue_notice 仅负责创建后台任务，显式出让一次事件循环调度以使模拟对象完成。
         await asyncio.sleep(0)
         return results.count(True) == 1 and delivered == [(target_id, 0)]
     finally:
@@ -231,7 +231,7 @@ async def _test_notice_cleanup_cancels_retained_delivery():
 
 @func_case
 async def test_retired_notice(tester: Tester):
-    """akaribot.core.utils.retired: 公告读取、已发记录与排队测试"""
+    """akaribot.core.utils.retired 公告读取、已发送记录与排队测试"""
     await tester.test(_test_notice_exact_locale, "命中当前语言测试")
     await tester.test(_test_notice_falls_back_to_zh_cn, "回退 zh_cn 测试")
     await tester.test(_test_notice_missing_returns_none, "文案缺失兜底测试")

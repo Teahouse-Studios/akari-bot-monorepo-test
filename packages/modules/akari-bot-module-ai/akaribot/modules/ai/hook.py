@@ -1,4 +1,4 @@
-"""ai.ask 具名 hook - 供其他模块调用 AI 对话能力。"""
+"""ai.ask 带名称的 Hook，供其他模块调用 AI 对话能力。"""
 
 from attrs import define, field
 
@@ -90,7 +90,7 @@ async def ask_ai(ctx: Bot.ModuleHookContext) -> AiHookResult:
     # OpenAI、Matplotlib、网页提取等依赖体积较大，仅在实际调用 AI 时加载。
     from .llm import ask_llm
 
-    # hook 上下文只带 SessionInfo，而模型调用与出站格式化都需要消息会话。
+    # Hook 上下文仅携带 SessionInfo，而模型调用与出站格式化均需要消息会话。
     session = Bot.MessageSession(session_info)
     chain, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, _history, image_cost = await ask_llm(
         session,

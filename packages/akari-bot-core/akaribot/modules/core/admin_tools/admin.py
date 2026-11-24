@@ -30,7 +30,7 @@ async def _display_union_list(msg: Bot.MessageSession, union_ids: list[str]) -> 
 
 
 async def _resolve_union_id(user: str, create: bool = True) -> str:
-    # 将平台账号 ID 解析为写入权限列表的 union ID，未绑定任何 union 时退回原 ID。
+    # 将平台账号 ID 解析为写入权限列表的 union ID，未绑定任何 union 时回退至原 ID。
     sender_union_info = await SenderUnionInfo.resolve_union(user, create)
     return sender_union_info.union_id if sender_union_info else user
 

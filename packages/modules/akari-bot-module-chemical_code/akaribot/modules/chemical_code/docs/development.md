@@ -10,7 +10,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-chemical_code
 ```
 
-安装后，管理员需要在会话中执行 `module enable chemical-code`。
+安装后，管理员需要在会话中执行 `module enable chemical-code` 以启用模块。
 
 ## 配置项
 
@@ -18,9 +18,9 @@ akaribot module add akari-bot-module-chemical_code
 
 ## 权限与平台能力
 
-出题区间为 1 至 200000000。每次从区间内随机取一个 CID，再向 PubChem 请求该化合物的 SMILES 属性。
+题目抽取区间为 1 至 200000000。每次从区间内随机选取一个 CID，再向 PubChem 请求该化合物的 SMILES 属性。
 
-结构图由 rdkit 绘制，颜色表随代码分发。图片写入临时缓存目录后，作为图片消息发送。对局状态保存在 `PlayState`（键 `chemical_code`），按会话隔离。
+结构图由 rdkit 绘制，颜色配置随代码一同分发。图片写入临时缓存目录后，以图片消息形式发送。对局状态保存在 `PlayState`（键为 `chemical_code`）中，按会话隔离。
 
 ## 数据表
 
@@ -28,6 +28,6 @@ akaribot module add akari-bot-module-chemical_code
 
 ## 依赖与外部服务
 
-依赖 `rdkit`（结构解析与绘制）、`Pillow`、`tenacity`（请求重试）、`akari-bot-core`。外部服务为 PubChem PUG REST（`pubchem.ncbi.nlm.nih.gov/rest/pug`）。
+依赖 `rdkit`（结构解析与绘制）、`Pillow`、`tenacity`（请求重试）与 `akari-bot-core`。外部服务为 PubChem PUG REST（`pubchem.ncbi.nlm.nih.gov/rest/pug`）。
 
-`rdkit` 与 `Pillow` 在首次出题时导入，未使用该模块时不加载。
+`rdkit` 与 `Pillow` 在首次出题时导入，未启用该模块时不会加载。

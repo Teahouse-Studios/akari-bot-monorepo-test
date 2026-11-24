@@ -346,7 +346,7 @@ def _test_build_command_kwargs():
 
 @func_case
 async def test_parser_args(tester: Tester):
-    """akaribot.core.builtins.parser.args: 参数解析测试"""
+    """akaribot.core.builtins.parser.args 参数解析测试"""
     await tester.test(_test_split_multi_arguments, "split_multi_arguments 测试")
     await tester.test(_test_parse_template_optional, "parse_template 可选参数测试")
     await tester.test(_test_parse_template_rejects_multi_character_short_option, "parse_template 拒绝多字符短选项")

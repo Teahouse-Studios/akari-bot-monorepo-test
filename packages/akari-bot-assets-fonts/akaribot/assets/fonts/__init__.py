@@ -12,5 +12,5 @@ __all__ = ["fonts_dir"]
 
 
 def fonts_dir() -> Path:
-    """取字体目录（Noto Sans CJK 与 Noto Sans Symbols2 在其下）。"""
+    """获取字体资源根目录（Noto Sans CJK 与 Noto Sans Symbols2 均在其下）。"""
     return Path(str(files(__package__)))

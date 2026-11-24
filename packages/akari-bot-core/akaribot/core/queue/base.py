@@ -56,7 +56,7 @@ _RPC_CALLER_TRACEBACK_MARKER = "caller traceback (originating process):"
 
 
 class QueueDrainTimeout(TimeoutError):
-    """维护窗口未能在预算内处理完在途 handler。调用方应放弃本轮维护。"""
+    """维护窗口未能在预算时间内处理完运行中的处理函数。调用方应放弃本轮维护。"""
 
     def __init__(self, peer_name: str, pending: list[asyncio.Task]):
         blocked = ", ".join(task.get_name() for task in pending)
@@ -140,7 +140,7 @@ class JobQueueBase:
 
     @classmethod
     def configure_backend(cls, backend: JobQueueBackend) -> None:
-        """在 Peer 启动前装配一套内部一致的控制面和数据面后端。"""
+        """在节点启动前装配一套内部一致的控制面和数据面后端。"""
         if cls.is_running:
             raise RuntimeError("Cannot reconfigure a running JobQueue backend")
         if cls._registered:
@@ -202,7 +202,7 @@ class JobQueueBase:
             node_id = JobQueueConfig.jobqueue_node_id
             if isinstance(node_id, str):
                 node_id = node_id.strip() or None
-        # 正常启动会在 pre_init 中持久化缺失值。此回退仅供绕过守护进程的独立入口和测试使用。
+        # 正常启动会在 pre_init 中持久化缺失值。该默认值仅供绕过守护进程的独立入口和测试使用。
         resolved_node_id = str(uuid4()) if node_id is None else node_id
         if not isinstance(resolved_node_id, str) or not resolved_node_id or len(resolved_node_id) > 128:
             raise ValueError("Peer node ID must be a nonempty string no longer than 128 characters")
@@ -214,7 +214,7 @@ class JobQueueBase:
             capabilities=tuple(capabilities),
             metadata=peer_metadata,
         )
-        # 所有可能失败的验证完成后再切换类级生命周期状态，避免半配置污染。
+        # 所有可能失败的验证完成后再切换类级生命周期状态，避免不完整配置污染。
         cls.name = peer_id
         cls.identity = identity
         cls._ready_event.clear()
@@ -455,7 +455,7 @@ class JobQueueBase:
             caller_traceback = request.caller_traceback
         caller_traceback = caller_traceback if isinstance(caller_traceback, str) else ""
         if remote_traceback and cls._has_request_context(request, remote_traceback):
-            # 当前接收方发送完整诊断，须用本地捕获的调用栈重建，
+            # 当前接收方发送完整诊断，需要使用本地捕获的调用栈重建，
             # 以免中间环节以截断副本覆盖权威来源。
             remote_part = cls._remote_traceback_part(request, remote_traceback)
             if caller_traceback:
@@ -599,8 +599,7 @@ class JobQueueBase:
             if future is not None and not future.done():
                 future.cancel()
             # send() 可能在 INSERT 已提交后才因取消或连接异常返回。只要已建立
-            # 本地 waiter，就按“投递结果未知”处理并尝试删除该任务。删除不存在的 ID
-            # 是安全的，且不会取消已经开始的远端处理器。
+            # 本地等待对象，就按“投递结果未知”处理并尝试删除该任务。删除不存在的任务属于良性无操作。
             if future is not None and not response_received:
                 try:
                     await cls._abandon_with_timeout([task_id])
@@ -1397,7 +1396,7 @@ class JobQueueBase:
             await cls.registry.register(cls.identity, "starting")
         except (Exception, asyncio.CancelledError):
             # register() 也可能在事务已提交后才因取消或连接状态异常返回。
-            # 以唯一 peer_id 尝试回滚，不让半注册实例保留到租约自然过期。
+            # 以唯一 peer_id 尝试回滚，避免将未完成注册的实例保留至权威注册表。
             try:
                 await asyncio.shield(cls.registry.unregister(cls.name))
             except Exception:
@@ -1499,7 +1498,7 @@ class JobQueueBase:
         deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         while True:
             current = asyncio.current_task()
-            # 等维护锁的任务只有在本窗口释放后才会继续，等它们必然互锁。它们在此
+            # 等待维护锁的任务仅在本窗口释放后才会继续执行，等待其完成会导致死锁。相关任务在此
             # 之前也不会执行模块代码，因此不纳入本轮等待范围。
             tasks = [
                 task
@@ -1515,7 +1514,7 @@ class JobQueueBase:
                 if remaining <= 0:
                     return tasks
                 wait_timeout = min(remaining, cls.MAINTENANCE_DRAIN_POLL_SECONDS)
-            # 分片等待：在途 handler 随时可能转为等待维护锁，须重新筛选。
+            # 分片等待，因为运行中的处理函数随时可能转为等待维护锁，需要重新筛选。
             await asyncio.wait(tasks, timeout=wait_timeout)
 
     @classmethod

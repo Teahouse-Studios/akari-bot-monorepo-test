@@ -62,7 +62,7 @@ class DeployResult:
 
 
 class DeployProvider(Protocol):
-    """部署 provider 的接口。"""
+    """部署提供方接口。"""
 
     name: str
 
@@ -122,6 +122,6 @@ def get_provider(
 
 
 def _provider_table(config: Mapping[str, Any], provider: str) -> Mapping[str, Any]:
-    # 命令层可以传整个 [deploy] 表，也可以只传对应子表。
+    # 命令层可以传入整个 [deploy] 表，也可以仅传入对应子表。
     nested = config.get(provider)
     return nested if isinstance(nested, Mapping) else config

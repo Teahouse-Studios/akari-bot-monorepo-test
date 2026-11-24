@@ -1,4 +1,4 @@
-"""机器人内置模块 - 提供核心的机器人功能接口和会话管理。"""
+"""机器人内置模块，提供核心机器人功能接口与会话管理。"""
 
 import asyncio
 from typing import Any, Awaitable, Callable
@@ -61,7 +61,7 @@ class Bot:
     fetched_session_ctx_slot = 0
 
     # 平台 SDK 的消息回调不可被 Server 的处理耗时阻塞，因此消息以后台任务投递。
-    # 显式持有任务既避免异常无人取回，也便于平台关闭时统一取消。
+    # 明确持有任务既避免异常无人取回，也便于平台关闭时统一取消。
     _message_tasks: set[asyncio.Task[None]] = set()
 
     base_superuser_list = CoreConfig.base_superuser
@@ -89,7 +89,7 @@ class Bot:
         async def _process_msg():
             # 添加上下文到管理器（存储 session_id 和对应的上下文对象）
             ctx_manager.add_context(session_info, ctx)
-            # 处理期间设置存活标记，Server 侧的 hold／send 因此不会与删除竞速。
+            # 处理期间设置存活标记，Server 端的 hold / send 因此不会与删除竞速。
             ctx_manager.activate_context(session_info)
             try:
                 await ServerAPI.receive_message(session_info)
@@ -173,7 +173,7 @@ class Bot:
         批量获取多个场景的会话信息。
 
         :param target_list: 场景 ID 列表
-        :param create: 如果场景不存在是否创建
+        :param create: 若场景不存在是否创建
         :return: 成功获取的会话列表
         """
         fetched = []
@@ -194,8 +194,8 @@ class Bot:
         union_ids = []
         for value in target_list:
             if value.startswith(f"{UNION_ID_PREFIXES[UNION_SCOPE_TARGET]}|"):
-                # 场景组 ID 自身不是平台场景，不可交给 resolve_union：
-                # 其自愈分支会为组 ID 建出一条以自身为平台 ID 的映射行。
+                # 场景组 ID 自身不是平台场景，不可交给 resolve_union，因为
+                # 其自动修复分支会为组 ID 创建一条以自身为平台 ID 的映射行。
                 union_id = value
             else:
                 union_info = await TargetUnionInfo.resolve_union(value, create=False)
@@ -215,7 +215,7 @@ class Bot:
         :return: 成功获取的会话列表
         """
         union_ids = await cls.resolve_union_targets(convert_list(target_list))
-        # 退役客户端停止一切主动推送，与 get_enabled_this_module() 取同一判据
+        # 退役客户端停止一切主动推送，与 get_enabled_this_module() 使用同一判断标准。
         target_ids = filter_retired_targets(await TargetUnionBind.list_ids(union_ids))
         return await cls.fetch_target_list(target_ids, create=create)
 
@@ -239,11 +239,11 @@ class Bot:
                 channel_maps[union_id] = {target_id: channel_id for target_id, channel_id, _ in rows}
                 order_maps[union_id] = {target_id: index for index, (target_id, _, _) in enumerate(rows)}
             channel_id = channel_maps.get(union_id, {}).get(session_.target_id) if union_id else None
-            # 查不到通道号即表示该场景没有绑定行，按独立场景处理，不与其它场景归为一组。
+            # 无法查询到消息通道编号即表示该场景不存在绑定行，按独立场景处理，不与其他场景归为一组。
             key = (union_id, channel_id) if union_id and channel_id else ("", session_.target_id)
             groups.setdefault(key, []).append(session_)
 
-        # 分组顺序沿用 session_list，组内顺序决定队首与回退顺序，须与绑定行的排列一致。
+        # 分组顺序沿用 session_list，组内顺序确定队首与回退顺序，需要与绑定行的排列一致。
         for (union_id, _), hops in groups.items():
             order = order_maps.get(union_id, {})
             hops.sort(key=lambda hop: order.get(hop.target_id, 0))
@@ -259,7 +259,7 @@ class Bot:
         """
         heads = []
         for hops in await cls.group_sessions_by_channel(session_list):
-            # 掉线客户端的任务无人认领，换跳无从触发，整条通道将不再有消息送达，因此预先将其剔出跳表
+            # 离线客户端的任务无人认领，切换节点无从触发，整条通道将不再有消息送达，因此预先将其移出跳转列表。
             hops = [hop for hop in hops if Alive.is_alive(hop.client_name)]
             if not hops:
                 Logger.warning("Every client of this channel is offline, skipped sending message.")
@@ -291,7 +291,7 @@ class Bot:
         if session_list is None:
             session_list = await Bot.get_enabled_this_module(module_name)
 
-        # 同一条消息通道仅推送一次，其余会话作为发送失败时的后备
+        # 同一条消息通道仅推送一次，其余会话作为发送失败时的后备。
         for session_ in await cls.pick_channel_heads(session_list):
             chain = get_message_chain(session_, message)
 
@@ -303,8 +303,8 @@ class Bot:
             else:
                 post_message = chain
 
-            # 主动推送也要经过与常规发送一致的出站规范化：过滤关键词并拦截敏感信息，
-            # 不能依赖客户端在渲染阶段补检，内容此时已越过服务端唯一能看到的检查点。
+            # 主动推送也要经过与常规发送一致的出站规范化，以过滤关键词并拦截敏感信息，
+            # 不能依赖客户端在渲染阶段补充检查，内容此时已越过服务端唯一能看到的检查点。
             post_message = await normalize_outgoing_chain(session_, post_message, False)
             if post_message is None:
                 continue
@@ -316,7 +316,7 @@ class Bot:
             )
             if isinstance(stop_send, Stop):
                 continue
-            # 改写后的最终消息须重新过一遍完整的发送规范化，语义同 MessageSession.send_message。
+            # 改写后的最终消息需要重新经过完整的发送规范化，语义同 MessageSession.send_message。
             post_message = await normalize_outgoing_chain(session_, outgoing_payload.chain, False)
             if post_message is None:
                 continue
@@ -324,11 +324,11 @@ class Bot:
             try:
                 await PlatformAPI.post_message.submit(session_, post_message, module_name)
             except RpcUnavailableError:
-                # 选择队首之后可能刚好掉线，仍让剩余场景获得投递机会。
+                # 选择队首之后可能恰好离线，仍让剩余场景获得投递机会。
                 await ServerAPI.post_next_hop.submit(session_.next_hops, post_message, module_name)
                 continue
 
-            # 如果启用分析功能，记录统计数据。一条消息通道计为一次推送，因此每组仅记录一条
+            # 若启用分析功能，则记录统计数据。一条消息通道计为一次推送，因此每组仅记录一条。
             if enable_analytics and module_name:
                 await AnalyticsData.create(
                     target_id=session_.target_id,
@@ -349,7 +349,7 @@ class Bot:
         在指定会话中显示“正在输入……”状态。
 
         :param session_info: 会话信息
-        :raises TypeError: 如果 session_info 不是 SessionInfo 类型
+        :raises TypeError: 若 session_info 不是 SessionInfo 类型
         """
         if not isinstance(session_info, SessionInfo):
             raise TypeError("session_info must be a SessionInfo")
@@ -361,7 +361,7 @@ class Bot:
         结束“正在输入……”状态。
 
         :param session_info: 会话信息
-        :raises TypeError: 如果 session_info 不是 SessionInfo 类型
+        :raises TypeError: 若 session_info 不是 SessionInfo 类型
         """
         if not isinstance(session_info, SessionInfo):
             raise TypeError("session_info must be a SessionInfo")
@@ -373,7 +373,7 @@ class Bot:
         注册一个上下文管理器（通常是某个通讯平台的实现）。
 
         :param ctx_manager: 上下文管理器实例（应继承 ContextManager）
-        :param fetch_session: 是否将此管理器用于抓取会话
+        :param fetch_session: 是否将此管理器用于获取会话
         :return: 该管理器在 ContextSlots 中的索引
         """
         cls.ContextSlots.append(ctx_manager)
@@ -445,9 +445,9 @@ class Bot:
         :param message: 消息内容，或接受队首会话、返回消息内容的异步工厂，工厂返回 None 表示不发送。
         :param disable_secret_check: 是否禁用敏感内容检查。
         """
-        # 退役客户端停止一切主动推送：滤除动作与场景组展开一并由 fetch_union_target_list 承担
+        # 退役客户端停止一切主动推送，滤除操作与场景组展开一并由 fetch_union_target_list 承担。
         for session in await cls.pick_channel_heads(await cls.fetch_union_target_list(union_id)):
-            # 消息链类型均无 __call__，可据此与消息工厂相区分
+            # 消息链类型均无 __call__，可据此与消息工厂相区分。
             chain = await message(session) if callable(message) else message
             if chain is None:
                 continue
@@ -479,12 +479,12 @@ class Bot:
         if not user_id:
             return []
 
-        # 平台不支持私信时无需经过队列，直接判定失败
+        # 平台不支持私信时无需经过队列，直接判定失败。
         if not session_info.support_private_msg:
             Logger.warning(f"Client {session_info.client_name} does not support private message.")
             return []
 
-        # 复用 MessageSession 的发送链路，确保关键词过滤与敏感信息检查同样生效
+        # 复用 MessageSession 的发送链路，确保关键词过滤与敏感信息检查同样生效。
         session = FetchedMessageSession(session_info=session_info)
         return await session.send_private_message(message, user_id=user_id)
 
@@ -496,7 +496,7 @@ class Bot:
         :param module: 模块名称
         :return: 开启了该模块的会话列表
         """
-        # 从数据库获取开启此模块的所有场景 ID（一个 union 下绑定的全部平台场景都要展开）
+        # 从数据库获取开启此模块的所有场景 ID（同一 union 下绑定的所有平台场景均需要展开）。
         lst = await TargetUnionInfo.get_target_id_list_by_module(module)
         # 退役客户端停止一切主动推送。
         lst = filter_retired_targets(lst)
@@ -509,7 +509,7 @@ class Bot:
         return fetched
 
     class Hook:
-        """钩子系统 - 用于在特定事件触发时执行模块代码。"""
+        """钩子系统，用于在特定事件触发时执行模块代码。"""
 
         @staticmethod
         async def trigger(

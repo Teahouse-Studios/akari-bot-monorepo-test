@@ -101,7 +101,7 @@ async def _test_no_content_reports_message():
 
 @func_case
 async def test_ai_fetch_webpage(tester: Tester):
-    """akaribot.modules.ai.tools.fetch_webpage: 轻量优先、WebRender 回退与正文清洗测试"""
+    """akaribot.modules.ai.tools.fetch_webpage 轻量优先、WebRender 回退与正文清洗测试"""
     await tester.test(_test_lightweight_path_is_preferred, "优先使用内置 HTTP 请求")
     await tester.test(_test_webrender_fallback_after_lightweight_failure, "轻量请求失败后回退 WebRender")
     await tester.test(_test_webrender_fallback_when_content_empty, "轻量请求无正文时回退 WebRender")

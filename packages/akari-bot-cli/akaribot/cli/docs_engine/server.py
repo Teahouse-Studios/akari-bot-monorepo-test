@@ -36,7 +36,7 @@ class StaticServer:
 
     @property
     def url(self) -> str:
-        """服务根 URL。未启动时抛出 ``RuntimeError``。"""
+        """服务根目录 URL。未启动时抛出 ``RuntimeError``。"""
         if self._httpd is None:
             raise RuntimeError("server is not started")
         address = self._httpd.server_address
@@ -92,10 +92,10 @@ class _DocsRequestHandler(BaseHTTPRequestHandler):
         self.directory = Path(directory)
         super().__init__(*args, **kwargs)
 
-    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler 的协议方法名
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler 的协议方法名。
         self._serve(head=False)
 
-    def do_HEAD(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler 的协议方法名
+    def do_HEAD(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler 的协议方法名。
         self._serve(head=True)
 
     def log_message(self, format: str, *args: Any) -> None:

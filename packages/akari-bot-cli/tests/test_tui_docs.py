@@ -94,7 +94,7 @@ async def _wait_until(predicate, timeout: float = 1.5) -> bool:
 
 
 async def _more(app, pilot, index: int) -> None:
-    # 部署、同步主题、安装依赖与任务日志都收在 m 菜单里，按菜单顺序选择。
+    # 部署、同步主题、安装依赖与任务日志均收纳于快捷键 m 菜单中，按菜单顺序选择。
     await pilot.press("m")
     await pilot.pause()
     app.screen.query_one(f"#choice-{index}", compat.Button).press()
@@ -784,7 +784,7 @@ async def _test_subprocess_dev_streams_events():
 
 @func_case
 async def test_tui_docs(tester: Tester):
-    """cli.tui.docs: 文档包的列表、构建、预览与部署测试"""
+    """cli.tui.docs 文档包的列表、构建、预览与部署测试"""
     _use_cli_locale()
     await tester.test(_test_page_registered_in_navigation, "文档页注册进侧栏与页面清单")
     await tester.test(_test_list_and_detail_show_package_fields, "列表与详情展示包字段")

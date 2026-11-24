@@ -15,7 +15,7 @@ from akaribot.core.i18n import Locale, audit_terms
 from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 
-# 该键的文案为“查看当前{TERM:target}的消息通道与主动推送优先级。”
+# 该键的文案为“查看当前{TERM:target}的消息通道编号与主动推送优先级。”
 TERM_DOC_KEY = "core.help.bind.channel"
 
 EXPECTED_CANDIDATES = (
@@ -52,7 +52,7 @@ EXPECTED_WORDING = (
     ("TEST|Console", False, "场景"),
 )
 
-# 无会话上下文的 Locale 构造点：这些出口渲染的不是会话文案，或另有语言来源。
+# 无会话上下文的 Locale 构造点，该类出口渲染的并非会话文案，或另有语言来源。
 NON_SESSION_LOCALE_FILES = {
     "core/config/__init__.py": "配置模板注释",
     "core/config/update.py": "配置注释补写",
@@ -66,7 +66,7 @@ NON_SESSION_LOCALE_FILES = {
     "modules/wiki/utils/wikilib.py": "wiki 内容语言",
 }
 
-# 会话缺席时的默认构造：此时本就没有作用域可言。
+# 会话缺失时的默认构造，此时并不存在作用域。
 FALLBACK_LOCALE_SNIPPETS = {
     "core/builtins/message/chain.py": ("Locale(default_locale)",),
     "core/builtins/parser/command.py": ("Locale(default_locale)",),
@@ -87,7 +87,7 @@ def _test_candidate_chain_building():
     for target_from, is_private, expected in EXPECTED_CANDIDATES:
         if build_term_candidates(target_from, is_private) != expected:
             return False
-    # 前缀形状由平台侧决定：非法字符被剔除。剔除后为空的整条链改用基础术语，流程不中断。
+    # 前缀格式由平台方确定，非法字符会被剔除。剔除后为空的整条消息链改用基础术语，流程不中断。
     if build_term_candidates("Bad.Prefix|X", False) != ("badprefix.x", "badprefix"):
         return False
     if build_term_candidates("QQ||Group", False) != ():
@@ -97,7 +97,7 @@ def _test_candidate_chain_building():
 
 def _test_platform_wording():
     for target_from, is_private, expected in EXPECTED_WORDING:
-        if _wording(target_from, is_private) != f"查看当前{expected}的消息通道与主动推送优先级。":
+        if _wording(target_from, is_private) != f"查看当前{expected}的消息通道编号与主动推送优先级。":
             return False
     return True
 
@@ -107,7 +107,7 @@ def _test_unscoped_locale_falls_back():
     return (
         unscoped.term_scoped is False
         and unscoped.term_candidates is None
-        and unscoped.t(TERM_DOC_KEY) == "查看当前场景的消息通道与主动推送优先级。"
+        and unscoped.t(TERM_DOC_KEY) == "查看当前场景的消息通道编号与主动推送优先级。"
     )
 
 
@@ -117,7 +117,7 @@ def _test_term_resolves_in_raw_text():
         scoped.t_str("{TERM:target}") == "群聊"
         and scoped.t_str("{I18N:core.message.setup.list.target}") == "【群聊设置】"
         and scoped.t_str("{TERM:target} / {I18N:i18n.unit.1}") == "群聊 / 万"
-        # 术语缺失时原样保留占位符，不抛错
+        # 术语缺失时原样保留占位符，不抛出异常。
         and scoped.t_str("{TERM:no_such_term}") == "{TERM:no_such_term}"
     )
 
@@ -138,7 +138,7 @@ async def _test_scope_survives_serialization():
     return (
         raw["locale"]["term_candidates"] == ["qq.group", "qq"]
         and restored_locale.term_scoped is True
-        and restored_locale.t(TERM_DOC_KEY) == "查看当前群聊的消息通道与主动推送优先级。"
+        and restored_locale.t(TERM_DOC_KEY) == "查看当前群聊的消息通道编号与主动推送优先级。"
     )
 
 
@@ -159,7 +159,7 @@ async def _test_derive_private_session_refreshes_terms():
     return (
         private_session.is_private is True
         and private_session.locale.term_candidates == ("qq.private", "private", "qq")
-        and private_session.locale.t(TERM_DOC_KEY) == "查看当前私聊的消息通道与主动推送优先级。"
+        and private_session.locale.t(TERM_DOC_KEY) == "查看当前私聊的消息通道编号与主动推送优先级。"
     )
 
 
@@ -171,7 +171,7 @@ def _test_locale_files_pass_term_audit():
 
 
 def _test_term_keys_live_in_terms_directory():
-    # 术语词条只应出现在 `locales/terms/` 下。顶层残留副本会被术语目录覆盖并报审计条目。
+    # 术语词条仅应出现在 `locales/terms/` 下。顶层残留副本会被术语目录覆盖并报告审计条目。
     offenders = []
     for base, prefix in _locale_package_roots(include_adapters=True):
         for path in sorted((base / "locales").glob("*.json")):
@@ -208,7 +208,7 @@ def _scan_unscoped_locale_sites() -> list[str]:
             source = path.read_text(encoding="utf-8")
             lines = source.splitlines()
             snippets = FALLBACK_LOCALE_SNIPPETS.get(relative, ())
-            # 按语法树而非物理行判定，避免多行调用与注释里的字样造成误报。
+            # 按语法树而不是物理行判定，避免多行调用与注释中的字样造成误报。
             for node in ast.walk(ast.parse(source)):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id != "Locale":
                     continue
@@ -232,7 +232,7 @@ def _test_no_unscoped_locale_sites():
 
 @func_case
 async def test_term_locale(tester: Tester):
-    """akaribot.core.i18n: 术语占位符与会话作用域测试"""
+    """akaribot.core.i18n 术语占位符与会话作用域测试"""
     await tester.test(_test_candidate_chain_building, "候选链构造测试")
     await tester.test(_test_platform_wording, "各平台术语文案测试")
     await tester.test(_test_unscoped_locale_falls_back, "未绑定作用域回落测试")

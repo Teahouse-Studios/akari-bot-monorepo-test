@@ -1,4 +1,4 @@
-"""计划任务 Mock 工具 - 用于测试模块的定时任务注册和执行。"""
+"""计划任务 Mock 工具，用于测试模块的定时任务注册与执行。"""
 
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ async def run_all_schedules_for_module(module_name: str, timeout: float = 30) ->
 
 
 class strict_http:
-    """在上下文内让未录制的 HTTP 请求立即失败。"""
+    """在上下文内使未录制的 HTTP 请求立即失败。"""
 
     def __init__(self, enabled: bool = True):
         self.enabled = enabled

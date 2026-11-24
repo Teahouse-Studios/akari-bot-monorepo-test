@@ -1,4 +1,4 @@
-"""akaribot.adapters.web.api.files 单元测试 - assets 与 data 文件管理接口。"""
+"""akaribot.adapters.web.api.files assets 与 data 文件管理接口单元测试。"""
 
 import inspect
 import zipfile
@@ -335,7 +335,7 @@ async def _upload_case():
                 ) == (413, "file_too_large")
 
             file_response = download(FakeRequest(), root="core:data", path="uploads/hello.txt")
-            # 根目录按真实路径解析，临时目录在部分平台上本身是符号链接，比较前需归一化。
+            # 根目录按真实路径解析，临时目录在部分平台上本身为符号链接，比对前需要执行规范化。
             assert Path(file_response.path).resolve() == (data / "uploads" / "hello.txt").resolve()
             inline_response = download(FakeRequest(), root="core:data", path="uploads/hello.txt", inline=True)
             assert inline_response.headers["content-disposition"].startswith("inline")
@@ -355,7 +355,7 @@ async def _upload_case():
 
 @func_case
 async def test_webui_storage(tester: Tester):
-    """akaribot.adapters.web.api.files: assets 与 data 文件管理接口测试"""
+    """akaribot.adapters.web.api.files assets 与 data 文件管理接口测试"""
     await tester.test(_roots_case, "资源根目录枚举与存在状态")
     await tester.test(_list_case, "目录列举、排序与路径穿越拦截")
     await tester.test(_content_case, "文本读取、写入、版本冲突与大小限制")

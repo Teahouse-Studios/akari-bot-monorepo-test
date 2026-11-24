@@ -45,7 +45,7 @@ from akaribot.cli.instance import (
 
 app = typer.Typer(help=i18n.t("cli.migrate.help"), no_args_is_help=True)
 
-# 旧项目的判定条件：四者同时存在（monorepo_refactor_plan.md §3.5）。
+# 旧项目的判定条件为四者同时存在（monorepo_refactor_plan.md §3.5）。
 REQUIRED_ENTRIES = ("bot.py", "core", "modules")
 OLD_CONFIG_FILE = "config/config.toml"
 OLD_CONFIG_DIR = "config"
@@ -118,7 +118,7 @@ class MigrationPlan:
 
     @property
     def module_dists(self) -> list[str]:
-        """去重后的模块分发名，保持首次出现顺序。"""
+        """去重后的模块包名，保持首次出现顺序。"""
         return list(dict.fromkeys(dist for _, dist, _ in self.modules))
 
 
@@ -152,7 +152,7 @@ class MigrationLog:
     credential_files: list[str] = field(default_factory=list)
     database_note: str = ""
     db_result: str = ""
-    # 数据库转换状态：none / done / failed / skipped。报告的人工清单按状态判断，不看文案。
+    # 数据库转换状态取 none / done / failed / skipped，报告的人工清单按状态判断，不依赖文案。
     db_status: str = "none"
 
 
@@ -239,7 +239,7 @@ def _read_config_facts(root: Path) -> _ConfigFacts:
         if not table.startswith("bot_"):
             continue
         platform = table[len("bot_") :]
-        # 带实例 ID 的表（bot_telegram-alt）是生成物，迁移只认基表。
+        # 带实例 ID 的表（bot_telegram-alt）是生成产物，迁移仅识别基础配置表。
         if platform and "-" not in platform and value.get("enable") is True:
             adapters.append(platform)
     return _ConfigFacts(
@@ -311,8 +311,8 @@ def _module_dirs(modules_root: Path) -> tuple[str, ...]:
 
 
 def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...], bool]:
-    # 读不成功与“读到了但没有启用项”必须分开：前者不能推出“用户没启用过模块”，此时按空清单
-    # 安装会静默丢掉用户的模块，只能要求人工选择。
+    # 读取失败与“读取成功但无启用项”必须区分，前者不能推断“用户未启用过模块”，此时按空清单
+    # 安装会导致静默丢失用户的模块，仅可要求人工选择。
     names: list[str] = []
     readable = False
     for path in database_files:
@@ -328,7 +328,7 @@ def _enabled_modules(database_files: tuple[Path, ...]) -> tuple[tuple[str, ...],
 
 @contextmanager
 def _read_database_copy(path: Path):
-    # SQLite 的只读 WAL 连接仍可改写共享内存文件，故读取使用停机源库的临时副本。
+    # SQLite 的只读 WAL 连接仍可改写共享内存文件，因此读取操作使用已停止源数据库的临时副本。
     with TemporaryDirectory(prefix="akari-legacy-db-") as temporary:
         copied = Path(temporary) / path.name
         shutil.copy2(path, copied)
@@ -381,8 +381,8 @@ def _legacy_index(catalog: engine.RegistryCatalog) -> dict[str, str]:
 
 
 def _plan_migration(legacy: LegacyProject, index: dict[str, str], catalog: engine.RegistryCatalog) -> MigrationPlan:
-    # 安装候选只取旧库 ``module_status.load = 1`` 的模块：``modules/`` 含全部官方模块，按目录决定
-    # 安装会把从未启用的模块连同重依赖一并装进新实例，还会把“未映射”与“未启用”混成同一类诊断。
+    # 安装候选仅选取旧数据库 ``module_status.load = 1`` 的模块。``modules/`` 包含全部官方模块，按目录确定
+    # 安装列表会将从未启用的模块连同大型依赖一并安装至新实例，亦会将“未映射”与“未启用”混为同类诊断。
     known_adapters = {engine.canonical(entry.dist) for entry in catalog.entries.values() if entry.kind == "adapter"}
     plan = MigrationPlan(status_readable=legacy.module_status_readable)
     for platform in legacy.adapters:
@@ -646,7 +646,7 @@ def _install_packages(
             continue
         try:
             if not force and instance.find_package(target.dist) is not None:
-                # install_skipped 会写进迁移报告，属报告取值，保持原文。
+                # install_skipped 会写入迁移报告，属报告取值，保持原文。
                 log.install_skipped.append(f"{target.dist}（已安装）")
                 ok(i18n.t("cli.migrate.already_installed", dist=target.dist))
                 continue
@@ -656,7 +656,7 @@ def _install_packages(
             install_package(instance, target, force=force, dry_run=dry_run, verbose=verbose)
             log.installed.append(target.dist)
         except typer.Exit as exc:
-            # 安装流水线失败时自行回滚并以退出码结束。迁移继续，失败项交报告提示人工重试。
+            # 安装流水线失败时自行回滚并以退出码结束。迁移继续，失败项交由报告提示人工重试。
             log.install_failed.append((target.dist, f"安装流水线以退出码 {exc.exit_code} 结束"))
             warn(i18n.t("cli.migrate.install_failed", dist=target.dist))
 
@@ -769,7 +769,7 @@ def _render_report(
     ]
     manual: list[str] = []
     if not plan.status_readable:
-        # 库读不到时“没启用任何模块”不可信：不能替用户决定装什么，只能把目录清单交给他核对。
+        # 数据库无法读取时“没启用任何模块”并不可信，不能替用户选择安装哪些模块，仅能将目录清单交由其核对。
         manual.append(i18n.t("cli.migrate.report.manual_status_unreadable"))
     if plan.unmapped:
         items = i18n.t("cli.common.list_separator").join(f"`{name}`" for name in plan.unmapped)

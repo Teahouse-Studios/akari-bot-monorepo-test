@@ -43,7 +43,7 @@ fetch_webpage_desc = {
 
 
 def _to_plain_text(html: str) -> str:
-    # 优先抽取正文，正文识别失败时转为无标记的纯文本，保证模型拿不到 HTML 标记。
+    # 优先提取正文，正文识别失败时转为无标记的纯文本，确保模型无法获取 HTML 标记。
     try:
         text = trafilatura.extract(html, include_comments=False) or ""
     except Exception as e:
@@ -69,7 +69,7 @@ async def _fetch_lightweight(url: str) -> str | None:
 
 
 async def _fetch_rendered(url: str) -> str | None:
-    # WebRender 由机器人自身发起请求，需补做内网校验，否则会绕过 get_url 的地址限制。
+    # WebRender 由机器人自身发起请求，需要补充内网校验，否则会绕过 get_url 的地址限制。
     try:
         await private_ip_check(url)
     except ValueError as e:

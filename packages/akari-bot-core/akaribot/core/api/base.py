@@ -16,7 +16,7 @@ from typing import Any
 
 from akaribot.core.constants.exceptions import ConfigFileNotFound
 
-# 门面对外承诺的全部名字。新增导出须同时更新 __all__ 与 LAZY_MODULES。
+# 公开接口对外承诺的全部名称。新增导出需要同时更新 __all__ 与 LAZY_MODULES。
 __all__ = [
     "AbuseWarning",
     "ActionText",
@@ -233,7 +233,7 @@ __all__ = [
 ]
 
 try:
-    # 不依赖配置系统的名字：CLI 与发现层在配置就绪之前即可使用。
+    # 不依赖配置系统的符号，CLI 与发现层在配置就绪之前即可使用。
     from akaribot.core.builtins.message.mention import InlineMention, iter_at_code, render_at_code, wrap_sender_id
     from akaribot.core.builtins.parser.args import ArgumentPattern, Template, templates_to_str
     from akaribot.core.constants import config_filename, dev_mode
@@ -267,7 +267,7 @@ try:
     from akaribot.core.utils.func import chunk_list, is_float, is_int, truncate_text
     from akaribot.core.utils.table import escape_table_cell, format_table_code, resolve_table_columns
 
-    # 机器人与会话：模块函数的入参与运行环境。
+    # 机器人与会话，即模块函数的输入参数与运行环境。
     from akaribot.core.alive import Alive
     from akaribot.core.builtins.bot import Bot
     from akaribot.core.builtins.session.features import Features
@@ -281,7 +281,7 @@ try:
     from akaribot.core.builtins.session.lock import ExecutionLockList
     from akaribot.core.builtins.utils import command_prefix, confirm_command
 
-    # 消息元素与消息链：模块回给用户的内容构造块。
+    # 消息元素与消息链，即模块回复给用户的内容构造块。
     from akaribot.core.builtins.message.chain import (
         Chainable,
         I18NMessageChain,
@@ -335,7 +335,7 @@ try:
         Video,
     )
 
-    # 模块注册与解析：声明模块、命令模板与解析钩子。
+    # 模块注册与解析，用于声明模块、命令模板与解析钩子。
     from akaribot.core.builtins.parser.command import CommandParser
     from akaribot.core.builtins.parser.hooks import Handled, HookPoint, RecoveryProposal, Stop, StopScope
     from akaribot.core.component import Bind, module
@@ -344,14 +344,14 @@ try:
     from akaribot.core.types import Module, Param
     from akaribot.core.types.module.component_meta import CommandMeta
 
-    # 配置：读取核心配置、声明模块自身配置项。
+    # 配置相关接口，用于读取核心配置、声明模块自身配置项。
     from akaribot.core.builtins.converter import converter
     from akaribot.core.config import CFGManager
     from akaribot.core.config.base import BaseConfig, CoreConfig, CoreSecretConfig
     from akaribot.core.config.decorator import on_bot_config, on_module_config
     from akaribot.core.config.network import proxy, ssl_verify
 
-    # 数据库：定义模块模型、声明包内迁移、使用核心数据表。
+    # 数据库相关接口，用于定义模块模型、声明包内迁移、使用核心数据表。
     from akaribot.core.database import fetch_module_db, get_model_fields, get_model_names
     from akaribot.core.database.base import DBModel
     from akaribot.core.database.migration import MigrationContext
@@ -372,16 +372,16 @@ try:
         union_mutation,
     )
 
-    # 日志与调度：记录运行信息、注册定时任务。
+    # 日志与调度接口，用于记录运行信息、注册定时任务。
     from akaribot.core.logger import Logger
     from akaribot.core.scheduler import AndTrigger, CronTrigger, DateTrigger, IntervalTrigger, OrTrigger
 
-    # 进程与队列：跨进程调用服务端动作、上报错误、重启进程。
+    # 进程与队列接口，用于跨进程调用服务端操作、上报错误、重启进程。
     from akaribot.core.queue.contracts import ServerAPI
     from akaribot.core.server.terminate import restart
     from akaribot.core.smtp import email_report_enabled, send_email, send_report
 
-    # 工具：网络、随机、缓存、图像、表格、按钮、游戏、经济与 URL 审计。
+    # 工具集合，涵盖网络、随机、缓存、图像、表格、按钮、游戏、经济与 URL 审计。
     from akaribot.core.utils.brand import find_brand_asset
     from akaribot.core.utils.button import arrange_buttons, build_button_rows
     from akaribot.core.utils.cooldown import CoolDown
@@ -435,7 +435,7 @@ try:
         web_render,
     )
 except ConfigFileNotFound:
-    # 配置缺失时保留未导入的名字，由 __getattr__ 在首次访问时重试。其余异常照常抛出。
+    # 配置缺失时保留未导入的名称，由 __getattr__ 在首次访问时重试。其余异常正常抛出。
     pass
 
 # 名称到来源模块的映射。仅在配置缺失导致上面的导入中断时使用。
@@ -631,17 +631,17 @@ _LAZY_INDEX: dict[str, str] = {name: path for path, names in LAZY_MODULES.items(
 
 def __getattr__(name: str) -> Any:
     """
-    按来源索引导入单个门面名字。
+    按来源索引导入单个公开接口名。
 
-        配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出
+        配置在导入阶段不可用时模块层的导入整体中断，未绑定的名称在此重试。重试仍失败则原样抛出
         ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
         经过本函数。
 
-        :param name: 门面名字。
-        :return: 名字对应的对象。
-        :raises AttributeError: 该名字不在门面承诺的清单内。
+        :param name: 公开接口名。
+        :return: 名称对应的对象。
+        :raises AttributeError: 该名称不在公开接口承诺的清单内。
     """
-    # 配置在导入期不可用时模块层的导入整体中断，未绑定的名字在此重试。重试仍失败则原样抛出
+    # 配置在导入阶段不可用时模块层的导入整体中断，未绑定的名称在此重试。重试仍失败则原样抛出
     # ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
     # 经过本函数。
     module_path = _LAZY_INDEX.get(name)

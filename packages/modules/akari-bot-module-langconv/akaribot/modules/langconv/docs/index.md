@@ -1,6 +1,6 @@
 # langconv
 
-此模块用于在简体中文、繁体（香港）与繁体（台湾）之间转换文本。
+此模块用于在简体中文、繁体中文（香港）与繁体中文（台湾）之间转换文本。
 
 ## 命令
 
@@ -10,9 +10,9 @@
 
 <CommandUsage usage="langconv <language> <content>" :params="['language=目标语言，如 zh-tw', 'content=待转换文本']" permission="public" />
 
-此命令把文本转换为指定的目标语言。`<language>` 接受 `zh-cn`、`zh-hk` 与 `zh-tw`。省略 `zh` 前缀时，按 `cn`、`hk`、`tw` 处理，下划线与大小写都不影响解析。
+此命令将文本转换为指定的目标语言。`<language>` 接受 `zh-cn`、`zh-hk` 与 `zh-tw`。省略 `zh` 前缀时，按照 `cn`、`hk`、`tw` 处理，下划线与大小写均不影响解析。
 
-目标语言不在支持范围内时，机器人返回不支持提示。`<content>` 为待转换的文本，转换结果直接作为消息正文返回。
+若目标语言超出支持范围，机器人将返回不受支持的提示。`<content>` 为待转换的文本，转换结果直接作为消息正文返回。
 
 <ChatExample
   :log="[

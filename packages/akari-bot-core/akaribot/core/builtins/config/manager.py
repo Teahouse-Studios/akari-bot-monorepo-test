@@ -18,7 +18,7 @@ from akaribot.core.builtins.config.store import TomlStore
 from akaribot.core.constants.exceptions import ConfigNotInitializedError, ConfigOperationError
 from akaribot.core.constants.path import CONFIG_READONLY_ENV, config_path as default_config_path
 
-# 守护进程在 spawn 子进程之前设置，spawn 会继承环境。
+# 守护进程在启动（spawn）子进程之前设置，子进程会继承环境变量。
 CONFIG_READONLY = bool(os.environ.get(CONFIG_READONLY_ENV))
 
 
@@ -43,10 +43,10 @@ class ConfigManager:
     """配置项的读取与写入入口。"""
 
     _store = TomlStore(default_config_path)
-    # 与 _store.path 同步，只在 switch_config_path() 中写入。
+    # 与 _store.path 同步，仅在 switch_config_path() 中写入。
     config_path = default_config_path
 
-    # 运行期只读状态统一取自该类属性，便于测试覆盖。
+    # 运行时只读状态统一读取自该类属性，便于测试覆盖。
     readonly: bool = CONFIG_READONLY
     _allow_write_depth = 0
 
@@ -70,7 +70,7 @@ class ConfigManager:
     @classmethod
     def _resolve_table(cls, table_name: str | None, *, fallback: bool = True) -> str | None:
         # ``Info.instance_id`` 为空时原样返回。多实例下 ``bot_telegram`` 解析为 ``bot_telegram-alt``，
-        # 复用同一份模板。读取时取 True，写入与删除一律取 False，否则一个实例的改动会串到另一个实例。
+        # 复用同一份模板。读取时取 True，写入与删除一律取 False，否则一个实例的改动会导致实例间相互干扰。
         from akaribot.core.constants.info import Info
 
         if not table_name or not Info.instance_id or not table_name.startswith("bot_"):
@@ -239,8 +239,7 @@ class ConfigManager:
         :param table_name: 配置项表名。
         :param _global: 内部变量，是否在所有表中查找配置项。（默认为 False）
         :param _generate: 内部变量，生成配置文件时使用。（默认为 False）
-        :param _fallback: 内部变量，实例表不存在时是否回退到基表。实例发现读 ``enable`` 时取 False：
-            回退会让某个实例看到另一个实例的开关。
+        :param _fallback: 内部变量，实例表不存在时是否回退到基础表。实例发现读取 ``enable`` 时使用 False，避免回退导致某个实例看到另一个实例的开关。
         :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。
 
         :return: 配置文件中对应配置项的值。
@@ -288,7 +287,7 @@ class ConfigManager:
         else:
             table_name, secret = normalize_table(table_name, secret)
 
-            # 实例作用域解析须在归一化之后、拼接 _secret 之前：实例表名为 bot_telegram-alt，
+            # 实例作用域解析需要在规范化之后、拼接 _secret 之前，例如实例表名为 bot_telegram-alt，
             # 其密钥表为 bot_telegram-alt_secret。
             table_name = cls._resolve_table(table_name, fallback=_fallback)
 
@@ -420,17 +419,17 @@ class ConfigManager:
                 logger.debug(f"[Config] Config {q} has no default value, skipped to auto fill.")
                 return
 
-        # 守卫置于此处而非方法体最前：无默认值的读取以 value=None 进入上方分支并提前返回，
+        # 只读检查置于此处而非方法体最前，因为无默认值的读取以 value=None 进入上方分支并提前返回，
         # 不涉及写入，不应抛出异常。
         cls._ensure_writable(q, table_name, secret)
         if table_name:
             table_name, secret = normalize_table(table_name, secret)
-            # 写路径一律落实例表（fallback=False）：实例进程本就只读，此路径实际只有 CLI 会走，
-            # 而 CLI 明确知道自己在操作哪个实例。回退会把改动写进基表，串给另一个实例。
+            # 写入路径一律写入实例表（fallback=False），实例进程本就只读，此路径实际仅有 CLI 会触发，
+            # 而 CLI 明确知道自己在操作哪个实例。回退会将改动写入基础表，影响其他实例。
             table_name = cls._resolve_table(table_name, fallback=False)
 
-        # “重新加载 → 修改 → 保存”须在同一个临界区内完整完成。
-        # 否则本进程会以过时的内存副本整体覆盖磁盘，致使其它进程期间写入的配置项丢失。
+        # “重新加载 → 修改 → 保存”必须在同一个临界区内完整完成。
+        # 否则本进程会以过时的内存副本整体覆盖磁盘，致使其他进程期间写入的配置项丢失。
         with cls._store.exclusive():
             if not _generate:
                 cls._store.load()
@@ -466,7 +465,7 @@ class ConfigManager:
         cls._ensure_writable(q, table_name)
         found = False
         table_name = "config" if not table_name else table_name.lower()
-        # 与 write() 同向：删除是编辑的另一半，同样一律落实例表，避免误删基表里的键。
+        # 与 write() 同向，删除是编辑的另一半，同样一律作用于实例表，避免误删基础表中的键。
         table_name = cls._resolve_table(table_name, fallback=False)
         try:
             for t in cls._store.user_values[table_name].keys():

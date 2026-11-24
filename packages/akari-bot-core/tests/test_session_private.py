@@ -1,4 +1,4 @@
-"""core.builtins.session 单元测试 - 私聊场景标识（需要数据库）。"""
+"""core.builtins.session 私聊场景标识单元测试（依赖数据库）。"""
 
 from akaribot.core.builtins.converter import converter
 from akaribot.core.builtins.session.info import SessionInfo
@@ -7,7 +7,7 @@ from akaribot.testing import func_case, Tester
 
 async def _test_is_private_survives_serialization():
     try:
-        # 会话由 bot 进程构造、经队列送至 server 进程，标识不随序列化丢失才有意义
+        # 会话由 bot 进程构造并通过队列投递至 server 进程，标识在序列化前后需要保持完整。
         session_info = await SessionInfo.assign(
             target_id="PRIV|Private|1",
             target_from="PRIV|Private",
@@ -24,7 +24,7 @@ async def _test_is_private_survives_serialization():
 
 @func_case
 async def test_session_private(tester: Tester):
-    """core.builtins.session.info: 私聊标识测试"""
+    """core.builtins.session.info 私聊标识测试"""
     await tester.test(_test_is_private_survives_serialization, "跨进程传递测试")
 
     return tester

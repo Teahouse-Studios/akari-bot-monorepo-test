@@ -1,14 +1,14 @@
-在使用本模块前，请确保在实例目录下的 `data/module/ai/` 目录中创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。实例目录由环境变量 `AKARI_INSTANCE_DIR` 指定，未设置时取进程的当前工作目录。如需启用图片生成与编辑，再创建 `image_api.yaml`。
+在使用该模块前，请确保在实例目录下的 `data/module/ai/` 目录中创建 `llm_api_list.yaml` 配置文件，否则模块将无法正常运行。实例目录由环境变量 `AKARI_INSTANCE_DIR` 指定，未设置时使用进程的当前工作目录。若需要启用图片生成与编辑功能，请在同一目录下创建 `image_api.yaml` 文件。
 
 ---
 
 ## `llm_api_list.yaml` 文件结构
 
-该 YAML 文件应包含一个 `llm_api_list` 数组，每个元素表示一个大语言模型 API 配置。
+该 YAML 文件包含 `llm_api_list` 列表，每个元素表示一项大语言模型 API 配置。
 
 ### 基础配置示例
 
-仅按 Token 数量计费的模型，价格字段直接写在模型配置的顶层。
+仅按 Token 数量计费的模型，价格字段直接配置在模型配置的顶层。
 
 ```yaml
 llm_api_list:
@@ -26,7 +26,7 @@ llm_api_list:
 
 ### 计费配置示例
 
-按次计费、混合计费、阶梯计费或峰谷计费的模型，价格字段写在 `billing` 中。
+按次计费、混合计费、阶梯计费或峰谷计费的模型，价格字段配置在 `billing` 中。
 
 ```yaml
 llm_api_list:
@@ -83,13 +83,13 @@ llm_api_list:
 
 * `name`：向用户展示的名称。
 
-  * 如果留空，默认与 `model_name` 相同。
-  * 若多个配置的 `name` 相同，则这些配置都不会被载入。
+* 若留空，默认与 `model_name` 相同。
+* 若多个配置项的 `name` 重复，则相关配置均不会被加载。
 
 * `superuser`：是否仅限超级用户使用。
 
   * `true`：仅限超级用户使用。
-  * `false` 或 `null`：无须权限。
+  * `false` 或 `null`：无需权限。
 
 ### 生成参数
 
@@ -97,10 +97,10 @@ llm_api_list:
 
 * `temperature`：模型的温度采样。
 * `top_p`：模型的核采样。
-* `top_logprobs`：模型返回对数概率的候选 Token 数量，范围 0 到 20。
+* `top_logprobs`：模型返回对数概率的候选 Token 数量，取值范围为 0 到 20。
 * `reasoning_effort`：模型的思考强度，若为 `none` 则不启用思维链。
 
-`temperature`、`top_p` 与 `top_logprobs` 可显式设为 `null`，表示不向模型传入该参数，适用于不支持相应参数的模型。
+`temperature`、`top_p` 与 `top_logprobs` 可显式设置为 `null`，表示不向模型传递该参数，适用于不支持相应参数的模型。
 
 ```yaml
 llm_api_list:
@@ -132,7 +132,7 @@ billing:
   type: token
 ```
 
-`type` 支持以下三种值：
+`type` 支持以下三种取值：
 
 | 类型         | 说明              |
 | ---------- | --------------- |
@@ -153,7 +153,7 @@ billing:
   price_out: 50
 ```
 
-该模式按照输入 Token、缓存命中 Token 和输出 Token 分别计算费用。
+该模式按照输入 Token、缓存命中 Token 与输出 Token 分别计算费用。
 
 ### `per_call`
 
@@ -169,7 +169,7 @@ billing:
 
 ### `hybrid`
 
-`hybrid` 同时启用按次计费和 Token 计费。
+`hybrid` 同时启用按次计费与 Token 计费。
 
 ```yaml
 billing:
@@ -181,7 +181,7 @@ billing:
   price_cache_write: 40
 ```
 
-每次 API 调用的最终费用由固定调用费用和 Token 使用费用共同组成。
+每次 API 调用的最终费用由固定调用费用与 Token 使用费用共同组成。
 
 ---
 
@@ -194,9 +194,9 @@ billing:
 * `price_cache_write`：百万输入缓存写入 Token 所需的花瓣数量。
 * `price_out`：百万输出 Token 所需的花瓣数量。
 
-`price_cache` 是 `price_cache_read` 的别名。缓存写入价格只在模型 API 返回缓存写入 Token 数量时生效。
+`price_cache` 是 `price_cache_read` 的别名。缓存写入价格仅在模型 API 返回缓存写入 Token 数量时生效。
 
-如果未设置，默认值为 `0`。
+若未设置，默认值为 `0`。
 
 ---
 
@@ -259,7 +259,7 @@ context_threshold: 131072
 
 分别覆盖该阶梯对应的输入、缓存输入和输出 Token 单价。
 
-如果某个价格未设置，则使用基础价格。
+若某项价格未设置，则使用基础价格。
 
 ---
 
@@ -287,7 +287,7 @@ time_rules:
 time_range: "00:00-08:30"
 ```
 
-表示服务器时间 00:00 至 08:30 期间使用该价格。
+表示在 UTC 时间 00:00 至 08:30 期间使用该价格。
 
 ### `week`
 
@@ -311,17 +311,17 @@ week: [1, 2, 3, 4, 5, 6, 7]
 
 ## 阶梯计费与峰谷计费的冲突规则
 
-`tiers` 和 `time_rules` **不能同时生效**。
+`tiers` 与 `time_rules` **不能同时生效**。
 
-如果同一个模型同时配置了 `tiers` 和 `time_rules`，则 `tiers` 和 `time_rules` **均不生效**，不按优先级择一，也不叠加价格。
+若同一个模型同时配置了 `tiers` 与 `time_rules`，则二者**均不生效**，系统不会按优先级择一处理，也不会叠加价格。
 
-因此，如果需要使用阶梯计费，请不要同时配置 `time_rules`。如果需要使用峰谷计费，请不要同时配置 `tiers`。
+因此，若需要使用阶梯计费，请勿同时配置 `time_rules`；若需要使用峰谷计费，请勿同时配置 `tiers`。
 
 ---
 
 ## 顶层价格字段
 
-价格字段也可直接写在模型配置的顶层：
+价格字段也可直接配置在模型配置的顶层：
 
 ```yaml
 price_in: 50
@@ -390,7 +390,7 @@ billing:
 
 ## 图片生成与编辑
 
-`image_api.yaml` 与 `llm_api_list.yaml` 一样放在实例目录下的 `data/module/ai/` 目录中。当配置存在且 `model_name` 非空时，模型会获得 `generate_image` 与 `edit_image` 工具。
+`image_api.yaml` 同样放置在实例目录下的 `data/module/ai/` 目录中。当配置存在且 `model_name` 非空时，模型会获得 `generate_image` 与 `edit_image` 工具。
 
 ```yaml
 image_api:
@@ -406,8 +406,8 @@ image_api:
 ```
 
 * `base_url`、`api_key` 留空时沿用当前对话模型的地址与密钥。
-* `costs` 以调用费用为单位，取固定数值或按参数查找的对照表。查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
-* 修改配置后需重启机器人或重载 `ai` 模块。
+* `costs` 以调用费用为单位，使用固定数值或按参数查找的对照表。查找顺序为 `尺寸:品质` → 品质 → 尺寸 → `default` → `auto` → 第一个数值。
+* 修改配置后需要重启机器人或重新加载 `ai` 模块。
 
 ---
 

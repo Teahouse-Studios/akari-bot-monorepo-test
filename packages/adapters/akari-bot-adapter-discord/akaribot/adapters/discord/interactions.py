@@ -1,4 +1,4 @@
-"""Discord 按钮点击回流。"""
+"""Discord 按钮点击回调处理。"""
 
 import discord
 from attrs import define

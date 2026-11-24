@@ -28,7 +28,7 @@ SECTIONS = ("modules", "adapters")
 
 
 class VerifyError(RuntimeError):
-    """索引内容与本次发布不符。"""
+    """索引内容与当前发布产物不符。"""
 
 
 def load_registry(path: Path) -> dict[str, Any]:
@@ -92,7 +92,7 @@ def verify(registry: dict[str, Any], dist: str, version: str) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(description="核对 registry.json 里本次发布分发的版本")
     parser.add_argument("--registry", metavar="PATH", type=Path, default=Path("registry.json"), help="索引文件路径")
     parser.add_argument("--dist", metavar="NAME", required=True, help="本次发布的分发名")
@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口。返回进程退出码，0 表示索引与本次发布一致。"""
+    """主入口函数，返回进程退出码，0 表示索引与当前发布产物完全一致。"""
     args = build_parser().parse_args(argv)
     try:
         print(verify(load_registry(args.registry), args.dist, args.version))

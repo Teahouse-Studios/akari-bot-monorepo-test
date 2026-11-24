@@ -22,7 +22,7 @@ URL_RULE_TABLES = (
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    迁移旧名单并删除旧表。
+    迁移历史名单并删除历史数据表。
 
     :param ctx: 迁移上下文。
     """

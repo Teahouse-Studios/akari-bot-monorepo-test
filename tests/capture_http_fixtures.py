@@ -1,4 +1,4 @@
-"""HTTP Fixture 捕获工具 - 运行集成测试并将真实响应录制到本地文件。"""
+"""HTTP Fixture 捕获工具，运行集成测试并将真实响应录制至本地文件。"""
 
 import asyncio
 import json
@@ -15,7 +15,7 @@ from akaribot.testing.mock.http import digest_request_body
 
 INTEGRATION_DIR = Path(__file__).parent / "integration"
 
-# 以 (URL, method, 请求体摘要) 为键去重：同一 URL 上请求体不同的调用需各自成为一份 fixture。
+# 以 (URL, method, 请求体摘要) 为键去重，因为同一 URL 上请求体不同的调用需要各自成为一份 fixture。
 _captured: dict[tuple, dict] = {}
 _failures: list[tuple[str, str]] = []
 
@@ -64,7 +64,7 @@ async def main():
     print("=" * 60)
 
     await init_db()
-    # 录制阶段必须关闭 fixture 回放，否则会把上一轮的 mock 结果再录一遍。
+    # 录制阶段必须关闭 fixture 回放，否则会将上一轮的 mock 结果重复录制。
     await load_modules(show_logs=False, monkey_patches={"Random": Random()}, load_fixtures=False)
 
     import akaribot.core.utils.http as http_module

@@ -30,7 +30,7 @@ from akaribot.testing import Tester, func_case
 from akaribot.core.types import Module
 from akaribot.core.types.module.component_meta import CommandMeta, EventMeta
 
-# 目录名 → 平台展示名。onebot 与 milky 都为 "QQ"：二者是同一批账号与场景数据的两种协议接入。
+# 目录名映射为平台展示名称。onebot 与 milky 都为 "QQ"，因为二者是同一批账号与场景数据的两种协议接入。
 PLATFORM_NAMES = {
     "discord": "Discord",
     "kook": "KOOK",
@@ -137,7 +137,7 @@ def _test_default_instance_names_are_byte_identical():
                 return False
             if not expected.startswith(info.target_prefix_list[0].split("|")[0]):
                 return False
-        # 显式传参生成实例名，不得改动类属性
+        # 显式传入参数生成实例名，不得改动类属性。
         if Info.resolve_client_name("Telegram", "alt") != "Telegram-alt":
             return False
         if Info.resolve_client_name("QQBot", "alt") != "QQBot-alt":
@@ -160,16 +160,16 @@ def _test_platform_identity_derivation():
             return False
         if resolve_platform_identity("Telegram|Group", "Telegram") != ("Telegram", "Telegram|Group"):
             return False
-        # 前缀只差一个字符时不误替换客户端段
+        # 前缀仅相差一个字符时，不误替换客户端段。
         if resolve_platform_identity("Telegram2|Group", "Telegram") != ("Telegram", "Telegram2|Group"):
             return False
-        # 显式给出的两段优先于推导
+        # 显式指定的两段优先于推导结果。
         if resolve_platform_identity("Telegram-alt|Group", "Telegram-alt", "Telegram", "Telegram|Group") != (
             "Telegram",
             "Telegram|Group",
         ):
             return False
-        # 平台进程取不到平台名（server、测试桩）时退回 client_name
+        # 平台进程无法获取平台名称（server、测试桩）时改用 client_name。
         Info.platform_name = ""
         return resolve_platform_identity("Telegram-alt|Group", "Telegram-alt") == (
             "Telegram-alt",
@@ -196,7 +196,7 @@ def _test_instance_config_scope():
         if not CFGManager.has("telegram_token", secret=True, table_name="bot_telegram"):
             return False
 
-        # 实例表不存在时回退基表。enable 例外，不回退
+        # 实例表不存在时改用基础表。enable 除外，不改用基础表。
         if CFGManager.get("kook_token", secret=True, table_name="bot_kook") != "kook-token":
             return False
         if CFGManager.get("enable", table_name="bot_kook", _fallback=False) is not None:
@@ -204,16 +204,16 @@ def _test_instance_config_scope():
         if CFGManager.get("enable", table_name="bot_kook") is not True:
             return False
 
-        # 模块配置与全局配置不参与实例作用域
+        # 模块配置与全局配置不参与实例作用域。
         if CFGManager._resolve_table("module_dice") != "module_dice":
             return False
         if CFGManager._resolve_table("config") != "config":
             return False
-        # 已指名实例表时不再二次拼接
+        # 已指名实例表时不再二次拼接。
         if CFGManager._resolve_table("bot_telegram-alt") != "bot_telegram-alt":
             return False
 
-        # 写入与删除都只作用于实例表
+        # 写入与删除均仅作用于实例表。
         CFGManager.write("telegram_api_url", "https://written.example", str, False, "bot_telegram")
         Info.instance_id = ""
         if CFGManager.get("telegram_api_url", table_name="bot_telegram") != "https://base.example":
@@ -290,12 +290,12 @@ def _test_instance_conflict_checks():
         if "Web" not in message or "Web-alt" not in message or "6485" not in message:
             return False
 
-        # 通配地址与具体地址争用同一端口
+        # 通配地址与具体地址争用同一端口。
         terminal, _ = _run_conflict_check([_instance("onebot", platform_name="QQ"), _instance("onebot", "alt", "QQ")])
         if not isinstance(terminal, SystemExit) or terminal.code != 1:
             return False
 
-        # milky 的 qq_host 是远端服务地址：同端口不同主机不构成冲突
+        # milky 的 qq_host 为远端服务地址，同端口不同主机不构成冲突。
         terminal, _ = _run_conflict_check(
             [_instance("onebot", platform_name="QQ"), _instance("milky", platform_name="QQ")]
         )
@@ -357,13 +357,13 @@ def _test_adapter_manifests_match_config_templates():
     if not adapters:
         return False
     for name, entry in adapters.items():
-        # 适配器名含 `-` 会让 bot_<平台>-<实例> 的拆分产生歧义
+        # 适配器名称包含 `-` 会导致 bot_<平台>-<实例> 的拆分产生歧义。
         if "-" in name:
             return False
         config_source = (entry.root / "config.py").read_text(encoding="utf-8")
         if _declared_bot_tables(config_source) != {entry.manifest.config_table}:
             return False
-        # 登录信息字段必须存在于某个配置模板类上，否则重复检查会静默失效
+        # 登录信息字段必须声明于对应配置模板类中，否则重复检查将静默失效。
         if not set(entry.manifest.credential_fields) <= _declared_field_names(config_source):
             return False
     return True
@@ -383,12 +383,12 @@ def _test_four_way_scope_matches():
 
         if "__test_mi_platform" not in base or "__test_mi_platform" not in alt_scoped:
             return False
-        # 缺平台两段时只看前两项：平台级声明对该实例不生效，实例级声明仍然命中
+        # 缺少平台两段时仅检查前两项，平台级声明对该实例不生效，实例级声明仍然命中。
         if "__test_mi_platform" in alt_legacy or "__test_mi_instance" not in alt_legacy:
             return False
         if "__test_mi_instance" in base or "__test_mi_instance" not in alt_scoped:
             return False
-        # exclude_from 的平台级声明同样覆盖实例
+        # exclude_from 的平台级声明同样覆盖实例。
         if "__test_mi_excluded" in base or "__test_mi_excluded" in alt_scoped:
             return False
 
@@ -431,7 +431,7 @@ async def _test_session_info_platform_fields():
         )
         if (session.platform_name, session.platform_from) != ("Telegram", "Telegram|Group"):
             return False
-        # 升级前入队的旧会话没有平台两段，且 server 进程没有平台身份
+        # 升级前入队的历史会话未包含平台两段，且 server 进程未具备平台身份。
         session.platform_name = ""
         session.platform_from = ""
         Info.platform_name = ""
@@ -462,7 +462,7 @@ def _test_alive_prefix_disambiguation():
 
 @func_case
 async def test_multi_instance(tester: Tester):
-    """阶段 1B: 多实例身份模型"""
+    """阶段 1B：多实例身份模型。"""
     await tester.test(_test_default_instance_names_are_byte_identical, "默认实例 client_name 逐字节不变")
     await tester.test(_test_platform_identity_derivation, "平台两段的推导与退化")
     await tester.test(_test_instance_config_scope, "配置的实例作用域与 enable 不回退")

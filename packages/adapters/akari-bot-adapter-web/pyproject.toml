@@ -24,7 +24,7 @@ dependencies = [
     "slowapi>=0.1.9,<1.0.0",
     "tortoise-orm>=1.1.2,<1.2.0",
     "uvicorn[standard]>=0.38.0,<1.0.0",
-    # 整个仓库不导入 python-multipart，但 FastAPI Form/File 在路由定义期强制要求（T4.2 §6）
+    # 整个仓库不导入 python-multipart，但 FastAPI Form/File 在路由定义阶段强制要求（T4.2 §6）。
     "python-multipart>=0.0.22,<1.0.0",
 ]
 

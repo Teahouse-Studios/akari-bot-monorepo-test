@@ -34,7 +34,7 @@ class TelegramContextManager(ContextManager):
             chat_id = ctx.chat_id
             chat_type = ctx.chat_type
             sender_id = ctx.user_id
-        # 私聊没有场景成员，指定成员时一律按无权限处理。
+        # 私聊不存在场景成员，指定成员时一律按无权限处理。
         if chat_type == "private":
             return user_id is None
         member_id = int(str(user_id).split("|")[-1]) if user_id else sender_id
@@ -42,7 +42,7 @@ class TelegramContextManager(ContextManager):
             admins = [member.user.id for member in await aiogram_bot.get_chat_administrators(chat_id)]
             return member_id in admins
         except Exception:
-            # 被查询的成员可能已退群，平台查不到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已退群，平台无法检索到成员记录时会抛出异常，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")
@@ -202,7 +202,7 @@ class TelegramContextManager(ContextManager):
         user_id: str,
         message: MessageChain | MessageNodes,
     ) -> list[str]:
-        # Telegram 中用户的私聊 chat_id 即其用户 ID，可直接作为私聊场景发送
+        # Telegram 中用户的私聊 chat_id 即其用户 ID，可直接作为私聊场景发送。
         uid = user_id.split("|")[-1]
         try:
             msg_ids = await TelegramContextManager.send_message(
@@ -212,7 +212,7 @@ class TelegramContextManager(ContextManager):
             )
             return [str(msg_id) for msg_id in msg_ids]
         except Exception:
-            # 对方未曾主动私聊机器人时 aiogram 会抛出异常，此处一律视为发送失败
+            # 对方未曾主动私聊机器人时 aiogram 会抛出异常，此处一律视为发送失败。
             Logger.exception(f"Failed to send private message to {user_id}: ")
             return []
 

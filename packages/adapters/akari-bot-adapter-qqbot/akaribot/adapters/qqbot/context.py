@@ -61,14 +61,14 @@ qq_typing_emoji = str(QQBotConfig.qq_typing_emoji)
 qq_limited_emoji = str(QQBotConfig.qq_limited_emoji)
 qq_use_markdown = QQBotConfig.qq_use_markdown
 
-# 平台对指令操作标签内文本的字符数上限，按 urlencode 前的原文计算
+# 平台对指令操作标签内文本的字符数上限，按 urlencode 前的原文计算。
 ACTION_TEXT_MAX_LENGTH = 100
 # QQ Bot inline keyboards accept at most five rows with ten buttons per row.
 # Core button layout is shared across platforms with different limits; normalize it
 # at this adapter boundary before handing the payload to botpy.
 QQBOT_MAX_KEYBOARD_ROWS = 5
 QQBOT_MAX_KEYBOARD_COLUMNS = 10
-# 平台拒绝在当前场景投递：机器人被禁言、非群成员或没有主动消息权限。
+# 平台拒绝在当前场景投递，通常因为机器人被禁言、非群成员或没有主动消息权限。
 SILENT_SEND_ABORT_ERROR_CODES = frozenset({"304046", "40034101", "40034102", "40034105", "40054002", "40054003"})
 PERMISSION_CACHE_TTL = 3600
 PERMISSION_CACHE_MAX_SIZE = 4096
@@ -100,7 +100,7 @@ def _load_s3_storage():
 def _is_delivery_refused(error: ApiError) -> bool:
     if str(error.code) in SILENT_SEND_ABORT_ERROR_CODES:
         return True
-    # 平台未提供错误码时只能按文案识别同一种拒绝。
+    # 平台未提供错误码时仅能按文案识别同一种拒绝。
     message = str(error.message)
     return "主动消息失败" in message and "无权限" in message
 
@@ -108,7 +108,7 @@ def _is_delivery_refused(error: ApiError) -> bool:
 async def _upload_media(
     client: botpy.Client, target: ReplyTarget, file_type: MediaFileType, *, local_path: str
 ) -> dict[str, str]:
-    # 只上传资源，不随上传发送消息，发送时机由适配器统一控制。
+    # 仅上传资源，不随上传发送消息，发送时机由适配器统一控制。
     upload = await client.upload_media(target, file_type, local_path=local_path, srv_send_msg=False)
     file_info = upload.get("file_info") if isinstance(upload, Mapping) else None
     if not file_info:
@@ -305,14 +305,14 @@ def nodes_to_table(session_info: SessionInfo, nodes: MessageNodes) -> str:
     ]
     for start in range(0, len(cells), columns):
         chunk = cells[start : start + columns]
-        # 末对补空单元格，markdown 要求各行的列数一致
+        # 末行不足时补充空单元格，因为 markdown 要求各行的列数一致。
         padding = [""] * (columns - len(chunk))
         lines.append("| " + " | ".join([str(start + offset + 1) for offset in range(len(chunk))] + padding) + " |")
         lines.append("| " + " | ".join(chunk + padding) + " |")
     return "\n".join(lines)
 
 
-# 用户权限缓存，供接口未返回群聊内身份的部分场景使用。只缓存管理员，缺失时安全退化为无权限。
+# 用户权限缓存，供接口未返回群聊内身份的部分场景使用。仅缓存管理员，缺失时安全回退为无权限。
 permission_cache: OrderedDict[str, float] = OrderedDict()
 message_id_cache: OrderedDict[str, str] = OrderedDict()
 
@@ -408,7 +408,7 @@ def _message_ids(result) -> list[str]:
         return [str(application_id)]
     if api_id:
         api_id = str(api_id)
-        # 真实平台的 ROBOT ID 只能用于接口调用，不能作为 wait_reply 等应用层标识。
+        # 真实平台的 ROBOT ID 仅可用于接口调用，不能作为 wait_reply 等应用层标识。
         if api_id.startswith("ROBOT"):
             Logger.warning("QQBot send response has a ROBOT message ID but no ext_info message index.")
             return []
@@ -478,7 +478,7 @@ class QQBotContextManager(ContextManager):
     client: botpy.Client | None = None
     _shutting_down = False
 
-    # 机器人沉默满此秒数后，才在群聊中补发输入提示
+    # 机器人无响应满此秒数后，才在群聊中补发输入提示。
     TYPING_PROMPT_DELAY = 5
     # 输入提示的最长存活时间，用于在结束信号丢失时强制撤回。
     TYPING_PROMPT_MAX_LIFETIME = 60
@@ -511,11 +511,11 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def shutdown(cls) -> None:
-        """停止适配器自有任务，并释放所有等待发送结果的调用方。"""
+        """停止适配器自有任务，并释放所有等待发送结果的调用方等待句柄。"""
         cls._shutting_down = True
 
-        # 不直接取消 Typing 任务：平台可能已经接受提示消息，但 SDK 尚未返回其消息 ID。
-        # 先发结束信号并等待正常收尾，使任务有机会在 finally 中撤回提示。
+        # 不直接取消 Typing 任务，因为平台可能已经接受提示消息但 SDK 尚未返回其消息 ID。
+        # 先行发送结束信号并等待其正常退出，使任务得以在 finally 中撤回提示。
         for state in list(cls.typing_states.values()):
             state.finished.set()
         typing_tasks = list(dict.fromkeys(cls.typing_tasks.values()))
@@ -532,7 +532,7 @@ class QQBotContextManager(ContextManager):
         cls.typing_states.clear()
         cls.typing_tasks.clear()
 
-        # Typing 已尽量完成撤回后，再停止实际发送队列。worker 的取消分支会把当前的
+        # Typing 尽量完成撤回后，再停止实际发送队列。worker 的取消分支会将当前
         # 与尚未开始的 Future 解析为 []，维持 ContextManager 的发送失败约定。
         queues = list(dict.fromkeys(cls.message_send_queues.values()))
         workers = [queue.worker for queue in queues if queue.worker is not None]
@@ -551,7 +551,7 @@ class QQBotContextManager(ContextManager):
     @classmethod
     async def check_native_permission(cls, session_info: SessionInfo, user_id: str | None = None) -> bool:
         if user_id is not None:
-            # 平台只在消息事件中给出成员身份，其他成员的管理身份只能取消息处理时写入的缓存。
+            # 平台仅在消息事件中给出成员身份，其他成员的管理身份仅能读取消息处理时写入的缓存。
             return get_cached_permission(f"{session_info.target_id}|{user_id}")
         ctx: BaseMessage | None = cls.context.get(session_info.session_id)
 
@@ -679,7 +679,7 @@ class QQBotContextManager(ContextManager):
             except ApiError as error:
                 if not _is_delivery_refused(error):
                     raise
-                # 平台限制属于运行期常态，静默放弃本条消息的剩余部分，不升级为模块错误。
+                # 平台限制属于运行阶段常态，直接放弃本条消息的剩余部分，不升级为模块错误。
                 send_aborted = True
                 Logger.warning(f"QQBot refused to deliver to {target.scope}|{target.target_id}: {error}")
                 return None
@@ -739,7 +739,7 @@ class QQBotContextManager(ContextManager):
         async def prepare_separate_media(elements: list[AudioElement | VideoElement]):
             media = []
             for element in elements:
-                # 底层文件不可得（文件缺失或为空）时跳过该元素
+                # 底层文件不可用（文件缺失或为空）时跳过该元素。
                 media_path = await resolve_media_path(element)
                 if media_path is None:
                     continue
@@ -791,7 +791,7 @@ class QQBotContextManager(ContextManager):
                         )
                     plains.append(x)
                 elif isinstance(x, ImageElement):
-                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素
+                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素。
                     image_path = await _resolve_qqbot_image(x)
                     if image_path is not None:
                         images.append((x, image_path))
@@ -932,7 +932,7 @@ class QQBotContextManager(ContextManager):
                 Logger.debug("MessageElements do not require markdown, sending as plain message instead of markdown.")
                 return await prepare_plain_message()
 
-            # 指令操作是行内元素：它自身与紧随其后的文本都须并入上一项，
+            # 指令操作是行内元素，它自身与紧随其后的文本均必须并入上一项，
             # 否则 "\n".join(texts) 会将同一句话的末尾文本移至下一行。
             inline_pending = False
             markdown_images: list[tuple[ImageElement, str, int, int]] = []
@@ -953,7 +953,7 @@ class QQBotContextManager(ContextManager):
                         texts.append(x.text)
                     inline_pending = False
                 elif isinstance(x, ImageElement):
-                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素
+                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素。
                     image_path = await _resolve_qqbot_image(x)
                     if image_path is not None:
                         try:
@@ -1062,7 +1062,7 @@ class QQBotContextManager(ContextManager):
             return _PreparedMessage(target, send_markdown_message, has_payload=bool(texts or prepared_media or cards))
 
         # 会话的 support_markdown 由 resolve_features() 按用户偏好确定，用户关闭 markdown 后
-        # 走纯文本路径。全局配置关闭时同样如此。
+        # 使用纯文本路径。全局配置关闭时同样如此。
         if _force_plain or not qq_use_markdown or not session_info.support_markdown:
             return await prepare_plain_message()
         return await prepare_markdown_message()
@@ -1168,7 +1168,7 @@ class QQBotContextManager(ContextManager):
         _typing_prompt: bool = False,
         _force_plain: bool = False,
     ) -> list[str]:
-        """保持原有公开行为：准备资源并等待实际发送完成后返回消息 ID。"""
+        """保持原有公开行为，准备资源并等待实际发送完成后返回消息 ID。"""
         prepared = await cls._prepare_message(
             session_info,
             message,
@@ -1192,13 +1192,13 @@ class QQBotContextManager(ContextManager):
         uid = user_id.split("|")[-1]
 
         try:
-            # 客户端解析也可能在初始化失败或关闭期间抛错，仍应遵守私信失败返回空 ID 的契约。
+            # 客户端解析也可能在初始化失败或关闭期间抛出异常，仍应遵守私信失败返回空 ID 的约定。
             client = _get_client()
             if session_info.target_from == target_direct_prefix and user_id == session_info.sender_id:
-                # 当前已处于私信场景中，无需另行创建
+                # 当前处于私信场景中，无需另行创建。
                 target_id, target_from = session_info.target_id, target_direct_prefix
             elif user_id.startswith(sender_tiny_prefix):
-                # 频道用户的私信须先以来源频道创建私信场景，取得专用的 guild_id 后方可发送
+                # 频道用户的私信必须先以来源频道创建私信场景，获取专用的 guild_id 后才能发送。
                 target_parts = session_info.target_id.split("|")
                 if session_info.target_from != target_guild_prefix or len(target_parts) < 3:
                     Logger.warning(
@@ -1211,11 +1211,11 @@ class QQBotContextManager(ContextManager):
                 target_id = f"{target_direct_prefix}|{dms['guild_id']}"
                 target_from = target_direct_prefix
             else:
-                # 群成员与单聊用户共用同一个 openid，直接经由单聊通道发送
+                # 群成员与单聊用户共用同一 openid，直接通过单聊通道发送。
                 target_id = f"{target_c2c_prefix}|{uid}"
                 target_from = target_c2c_prefix
 
-            # 显式指定基类：主动消息所用的子类会将发送放入冷却队列并返回 None，无法取得消息 ID
+            # 显式指定基类，因为主动消息所用的子类会将发送放入冷却队列并返回 None，无法获取消息 ID。
             return await QQBotContextManager.send_message(
                 cls.derive_private_session(session_info, target_id, target_from),
                 message,
@@ -1467,7 +1467,7 @@ class QQBotContextManager(ContextManager):
         except TimeoutError:
             Logger.debug(f"Typing state expired in session: {session_info.session_id}")
         finally:
-            # 结束信号若始终未至，状态不应长期滞留。仅回收本轮，避免误删后来者
+            # 结束信号若始终未至，状态不应长期滞留。仅回收本轮，避免误删后续状态。
             if cls.typing_states.get(session_info.session_id) is state:
                 del cls.typing_states[session_info.session_id]
             current_task = asyncio.current_task()
@@ -1500,13 +1500,13 @@ class QQBotContextManager(ContextManager):
 
     @classmethod
     async def end_typing(cls, session_info: SessionInfo) -> None:
-        # 结束输入状态属于清理动作，须幂等且容错：此时上下文可能已被回收。
+        # 结束输入状态属于清理操作，必须确保幂等性与容错能力，此时上下文可能已被回收。
         state = cls.typing_states.pop(session_info.session_id, None)
         if state:
             state.finished.set()
         task = cls.typing_tasks.pop(session_info.session_id, None)
         if task:
-            # 让正在发送的提示取得消息 ID 后自行进入 finally 撤回。
+            # 让正在发送的提示获取消息 ID 后自行进入 finally 撤回。
             await asyncio.shield(asyncio.gather(task, return_exceptions=True))
         Logger.debug(f"End typing in session: {session_info.session_id}")
 
@@ -1649,7 +1649,7 @@ _tasks = deque()
 
 
 class QQBotFetchedContextManager(QQBotContextManager):
-    """主动消息上下文管理器：按 in_post_whitelist 排序发送，发送节奏由 SDK 整流器控制。"""
+    """主动消息上下文管理器，按 in_post_whitelist 排序发送，发送速率由 SDK 限流器控制。"""
 
     _processor_task: asyncio.Task[None] | None = None
     _high_priority_count = 0
@@ -1663,8 +1663,8 @@ class QQBotFetchedContextManager(QQBotContextManager):
         _typing_prompt: bool = False,
         _force_plain: bool = False,
     ) -> list[str]:
-        # 调用方需要取得真实的消息 ID 才能判断本跳是否送达，因此入队的是“任务 + future”，
-        # 待实际发送完成后再回传结果。
+        # 调用方需要获取真实的消息 ID 以确认本次发送是否送达，入队内容为“任务 + future”，
+        # 待实际发送完成后再回传执行结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
         append_tsk = _tasks_high_priority if high_priority else _tasks
@@ -1704,7 +1704,7 @@ class QQBotFetchedContextManager(QQBotContextManager):
 
     @classmethod
     def _take_next_task(cls) -> tuple | None:
-        # 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后让位一条普通任务，避免普通目标饥饿。
+        # 高优先级任务连续发送 HIGH_PRIORITY_BURST 条后穿插一条普通任务，避免普通目标长期无法获得发送机会。
         if _tasks_high_priority and (not _tasks or cls._high_priority_count < HIGH_PRIORITY_BURST):
             cls._high_priority_count += 1
             return _tasks_high_priority.popleft()
@@ -1723,7 +1723,7 @@ class QQBotFetchedContextManager(QQBotContextManager):
 
     @classmethod
     async def stop_task_processor(cls) -> None:
-        """停止主动消息 worker，并让尚未处理的调用方收到发送失败。"""
+        """停止主动消息工作任务，使尚未完成处理的调用方接收发送失败通知。"""
         task = cls._processor_task
         cls._processor_task = None
         if task is not None:

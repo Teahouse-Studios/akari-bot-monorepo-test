@@ -157,7 +157,7 @@ def _test_file_removal_failure_is_reported():
         def failing_unlink(self, *args: Any, **kwargs: Any):
             raise OSError("read-only")
 
-        # 表这一步固定成功：本用例只针对“文件删不掉”，让结果不被真实子进程的成败左右。
+        # 配置表处理步骤固定成功，本用例仅针对“文件无法删除”场景，确保结果不受真实子进程执行成败干扰。
         engine.db_purge = lambda inst, dist: True
         Path.unlink = failing_unlink
         try:
@@ -192,7 +192,7 @@ def _test_dry_run_writes_nothing():
 
 @func_case
 async def test_cli_module_purge(tester: Tester):
-    """cli.commands.module: 卸载清理的配置定位与顺序测试"""
+    """cli.commands.module 卸载清理的配置定位与顺序测试"""
     _use_cli_locale()
     await tester.test(_test_flat_config_path_is_resolved_by_config_table, "按 config_table 定位扁平配置")
     await tester.test(_test_adapter_instance_tables_are_matched_by_prefix, "适配器实例表按前缀匹配")

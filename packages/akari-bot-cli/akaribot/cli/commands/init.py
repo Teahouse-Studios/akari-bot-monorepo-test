@@ -35,8 +35,8 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
-# 与 bot.py 的首次运行结构一致：顶层键不属于任何模板，扫描补不出来，只能显式写入。
-# 花括号在 str.format 里需写成双写。写入后的单写 {I18N:...} 由 core 按所选语言翻译。
+# 与 bot.py 的首次运行结构一致，顶层键不属于任何模板，扫描无法补全，仅能显式写入。
+# 花括号在 str.format 里需要写成双写。写入后的单写 {I18N:...} 由 core 按所选语言翻译。
 CONFIG_HEADER = (
     "# {{I18N:config.header.line.1}}\n"
     "# {{I18N:config.header.line.2}}\n"
@@ -46,7 +46,7 @@ CONFIG_HEADER = (
     "config_version = {version} # {{I18N:config.comments.config_version}}\n"
 )
 
-# 默认安装的 core extra：full 含 emotes 表情资源包，--minimal 装裸 core 时跳过。
+# 默认安装的 core extra 为 full（包含 emotes 表情资源包），--minimal 仅安装最小 core 时跳过。
 DEFAULT_CORE_EXTRA = "full"
 
 
@@ -167,7 +167,7 @@ def init(
     force: Annotated[bool, typer.Option("--force", help=i18n.t("cli.init.option_force"))] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.init.option_verbose"))] = False,
 ) -> None:
-    """创建实例目录、写元数据、安装 core 与适配器，并生成最小配置。"""
+    """创建实例目录、写入元数据、安装 core 与适配器，并生成最小配置。"""
     root = path.expanduser().resolve()
     if (root / INSTANCE_META_FILENAME).exists() and not force:
         fail(i18n.t("cli.init.already_instance", root=root, meta=INSTANCE_META_FILENAME))
@@ -266,7 +266,7 @@ def init(
             warn(i18n.t("cli.init.unmanaged_warning"))
 
     try:
-        # 同上：what 由 venv.py 拼接“完成/失败”，保持原文。
+        # 同上，what 由 venv.py 拼接“完成/失败”，保持原文。
         what = i18n.t("cli.init.what_install")
         runner.run_checked(
             engine.install_argv(instance.python, _install_specs(targets)),
@@ -309,10 +309,10 @@ def init(
     ok(i18n.t("cli.init.import_ok", version=reported))
 
     instance.invalidate()
-    # 记录进本机注册表：界面与 `instance` 子命令据此列出这台机器上的实例。注册表不可用不影响初始化。
+    # 写入本机注册表，供界面与 `instance` 子命令列出当前计算机上的实例。注册表不可用不影响初始化。
     try:
         entry = InstanceRegistry().add(root, locale=locale)
-    except Exception as exc:  # noqa: BLE001 - 注册失败只是少一条记录，不该让初始化失败
+    except Exception as exc:  # noqa: BLE001 - 注册失败仅缺少一条记录，不应导致初始化失败。
         warn(i18n.t("cli.init.registry_failed", error=exc))
     else:
         ok(i18n.t("cli.init.registry_ok", name=entry.name))

@@ -4,7 +4,7 @@
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见软件包内 `pyproject.toml` 中的 `requires-python`。
 
 ```sh
 pip install akari-bot-module-oba

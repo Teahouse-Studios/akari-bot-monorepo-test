@@ -1,4 +1,4 @@
-"""phigros 旧版曲目信息兼容性单元测试。"""
+"""phigros 历史版本曲目信息兼容性单元测试。"""
 
 from unittest.mock import patch
 
@@ -14,7 +14,7 @@ from akaribot.modules.phigros.libraries.assets import (
     to_difficulty_table,
 )
 
-# 旧版 update.py 的产出：曲目 id 归一化为小写、字段名为 composer、定数为字符串。
+# 历史版本 update.py 生成的曲目 ID 规范化为小写，字段名为 composer，定数为字符串。
 LEGACY_SONG_INFO = {
     "glaciaxion.sunsetray": {
         "name": "Glaciaxion",
@@ -28,7 +28,7 @@ LEGACY_SONG_INFO = {
     },
 }
 
-# 现行 assets.py 的产出：曲目 id 保留原始大小写与标点、定数为浮点数。
+# 当前 assets.py 生成的曲目 ID 保留原始大小写与标点，定数为浮点数。
 CURRENT_SONG_INFO = {
     "Glaciaxion.SunsetRay": {
         "name": "Glaciaxion",
@@ -95,7 +95,7 @@ async def _test_require_song_info_accepts_current():
 
 @func_case
 async def test_phigros_legacy_assets(tester: Tester):
-    """phigros: 旧版曲目信息的容错与识别"""
+    """phigros，负责历史版本曲目信息的容错与识别。"""
     await tester.test(_test_to_difficulty_table_tolerates_legacy_values, "旧版字符串定数容错")
     await tester.test(_test_is_legacy_song_info, "旧版结构识别")
     await tester.test(_test_parse_difficulty_tsv_skips_non_numeric, "TSV 占位符跳过")

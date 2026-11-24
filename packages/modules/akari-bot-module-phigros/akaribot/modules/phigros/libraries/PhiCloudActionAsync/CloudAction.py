@@ -1,4 +1,4 @@
-# ----------------------- 导入 -----------------------
+# 依赖导入。
 from base64 import b64decode, b64encode
 from datetime import datetime, timezone
 from hashlib import md5
@@ -13,7 +13,7 @@ from .Structure import Reader, Writer, summary
 from .logger import logger
 
 
-# ---------------------- 定义 ----------------------
+# 类型与常量定义。
 
 
 def getSaveModifiedAt(record: dict) -> datetime:
@@ -36,7 +36,7 @@ def getSaveModifiedAt(record: dict) -> datetime:
 
     if isinstance(iso, str):
         try:
-            # LeanCloud 返回的是以 Z 结尾的 UTC 时间
+            # LeanCloud 返回的是以 Z 结尾的 UTC 时间。
             return datetime.fromisoformat(iso.replace("Z", "+00:00"))
 
         except ValueError:
@@ -66,19 +66,19 @@ class PigeonRequest:
             }
 
             # httpx 不接受值为 None 的请求头，而 requests 会自动跳过，
-            # 因此仅在 sessionToken 存在时才写入该头
+            # 因此仅在 sessionToken 存在时才写入该头。
             if sessionToken is not None:
                 self.headers["X-LC-Session"] = sessionToken
 
         if client:
-            # 仅加固 follow_redirects：这是本库能正常工作的前提——存档下载走 CDN
-            # 直链，遇到 302 时若不跟随，request() 中的 raise_for_status() 会把
-            # 重定向当错误抛出。timeout 不在此列，调用方显式设置的超时属于调用方
+            # 仅加固 follow_redirects，这是当前库正常运行的前提。存档下载使用 CDN
+            # 直接链接，遇到 302 时若不跟随重定向，request() 中的 raise_for_status() 会将
+            # 重定向作为异常抛出。timeout 不在此列，调用方显式指定的超时参数交由调用方管理。
             client.follow_redirects = True
             self.client = client
         else:
-            # httpx 默认不跟随重定向，requests 默认跟随。存档下载走 CDN 直链，
-            # 可能存在重定向，因此显式开启
+            # httpx 默认不跟随重定向，requests 默认跟随。存档下载使用 CDN 直接链接，
+            # 可能存在重定向，因此显式启用。
             self.client = AsyncClient(
                 follow_redirects=True,
                 timeout=DEFAULT_TIMEOUT,
@@ -152,15 +152,13 @@ class PhigrosCloud:
         isInternational: bool = False,
         client: Optional[AsyncClient] = None,
     ):
-        # 校验失败时 checkSessionToken 会直接抛出异常，因此无需再用条件分支包裹。
-        # 原实现将后续赋值全部放在 if 内，一旦校验返回假值，实例将缺失全部属性
+        # 校验失败时 checkSessionToken 会直接抛出异常，因此不需要通过条件分支包裹，确保实例属性完整初始化。
         checkSessionToken(sessionToken)
 
-        # 仅当客户端由本类创建时才负责关闭，外部传入的客户端由调用方管理
+        # 仅当客户端由当前类创建时才负责关闭，外部传入的客户端交由调用方管理。
         self.create_client = client is None
         self.request = PigeonRequest(sessionToken, isInternational, client)
-        # 客户端只保留一个来源。原实现中本类与 PigeonRequest 各自创建了一个 Session，
-        # 本类持有的那个从未被使用，而 PigeonRequest 持有的那个从未被关闭
+        # 客户端仅保留一个来源。由当前类统一管理 HTTP 会话生命周期，避免重复创建会话或残留未关闭的连接。
         self.client = self.request.client
 
         if isInternational:
@@ -210,7 +208,7 @@ class PhigrosCloud:
 
         userObjectId = (await self.request.get(self.baseUrl + "users/me")).json()["objectId"]
 
-        # where 条件必须存在，这是本函数正确性的前提
+        # where 条件必须存在，这是该函数正常执行的前提。
         query = urlencode(
             {
                 "skip": "0",
@@ -230,7 +228,7 @@ class PhigrosCloud:
 
         results = (await self.request.get(self.baseUrl + f"classes/_GameSave?{query}")).json()["results"]
 
-        # 不含 gameFile 的记录没有存档文件，无法使用
+        # 不包含 gameFile 的记录没有存档文件，无法使用。
         saves = [record for record in results if record.get("gameFile")]
 
         if not saves:
@@ -244,7 +242,7 @@ class PhigrosCloud:
 
         return_data = saves[0]
 
-        # 二次校验。即使 where 条件因故失效，也不允许把他人的存档交给调用方
+        # 二次校验。即使 where 条件失效，也不允许将其他用户的存档返回给调用方。
         owner = (return_data.get("user") or {}).get("objectId")
         if owner != userObjectId:
             logger.error(f"服务端返回的存档不属于当前账号，归属：{owner}")
@@ -267,18 +265,18 @@ class PhigrosCloud:
         summary_dict = Reader(summary_data).parseStructure(summary)
 
         return_data = {
-            "checksum": result["gameFile"]["metaData"]["_checksum"],  # 存档的 md5 校验值
-            "updateAt": result["updatedAt"],  # 存档更新时间
-            "url": result["gameFile"]["url"],  # 存档直链
-            "saveVersion": summary_dict["saveVersion"],  # 存档版本
-            "challenge": summary_dict["challenge"],  # 课题分
+            "checksum": result["gameFile"]["metaData"]["_checksum"],  # 存档的 MD5 校验值。
+            "updateAt": result["updatedAt"],  # 存档更新时间。
+            "url": result["gameFile"]["url"],  # 存档直接链接。
+            "saveVersion": summary_dict["saveVersion"],  # 存档版本。
+            "challenge": summary_dict["challenge"],  # 课题分。
             "rks": summary_dict["rks"],
-            "gameVersion": summary_dict["gameVersion"],  # 游戏版本
-            "avatar": summary_dict["avatar"],  # 头像
-            "EZ": summary_dict["EZ"],  # EZ 难度的评级情况
-            "HD": summary_dict["HD"],  # HD 难度的评级情况
-            "IN": summary_dict["IN"],  # IN 难度的评级情况
-            "AT": summary_dict["AT"],  # AT 难度的评级情况
+            "gameVersion": summary_dict["gameVersion"],  # 游戏版本。
+            "avatar": summary_dict["avatar"],  # 头像。
+            "EZ": summary_dict["EZ"],  # EZ 难度的评级情况。
+            "HD": summary_dict["HD"],  # HD 难度的评级情况。
+            "IN": summary_dict["IN"],  # IN 难度的评级情况。
+            "AT": summary_dict["AT"],  # AT 难度的评级情况。
         }
 
         logger.debug(f'函数 "getSummary()" 返回：{return_data}')
@@ -296,7 +294,7 @@ class PhigrosCloud:
         """
         logger.debug("调用函数：getSave()")
 
-        # 局部变量不使用 summary 作为名称，避免遮蔽模块级导入的同名结构类
+        # 局部变量不使用 summary 作为名称，避免遮蔽模块级导入的同名结构类。
         if url is None:
             summary_info = await self.getSummary()
             url = summary_info["url"]
@@ -381,7 +379,7 @@ class PhigrosCloud:
         """
         logger.debug("调用函数：uploadSummary()")
 
-        # 序列化逻辑与 getSummary() 的反序列化保持一致
+        # 序列化逻辑与 getSummary() 的反序列化保持一致。
         _summary: str = b64encode(Writer().buildStructure(summary, summary_dict)).decode()
 
         save_info = await self.getSaveInfo()

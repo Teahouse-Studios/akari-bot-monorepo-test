@@ -224,7 +224,7 @@ async def _test_error_reporting_deduplicates_delivery_failures():
         for call, target in zip(send.await_args_list, [session, markdown_session]):
             assert call.args[0] is target
             assert call.kwargs == {"disable_secret_check": True}
-            # 验证真实上报路径在 RPC 编解码和发送预处理之后仍保留诊断文本。
+            # 验证真实上报路径在 RPC 编解码与发送预处理之后仍保留诊断文本。
             payload = ServerAPI.direct_message.encode_arguments(*call.args, **call.kwargs)
             restored = ServerAPI.direct_message.decode_arguments(_wire(payload)).arguments
             rendered = restored["message"].as_sendable(restored["session_info"])

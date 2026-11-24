@@ -1,4 +1,4 @@
-"""禁止发言策略：命令入口拦截与解除禁止发言的确认。"""
+"""禁止发言策略的命令入口拦截与解除禁止发言确认测试。"""
 
 from unittest.mock import AsyncMock, patch
 

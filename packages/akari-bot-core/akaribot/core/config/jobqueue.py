@@ -44,7 +44,7 @@ def bootstrap_jobqueue_config() -> tuple[str, ...]:
         generated.append("jobqueue_node_id")
 
     if _is_empty_config_value(JobQueueSecretConfig.jobqueue_websocket_token):
-        # 延迟导入以避免配置模板初始化期间经 core.config.base 形成循环导入。
+        # 按需导入，避免配置模板初始化期间通过 core.config.base 形成循环导入。
         from akaribot.core.utils.random import SecureRandom
 
         CFGManager.edit_write(

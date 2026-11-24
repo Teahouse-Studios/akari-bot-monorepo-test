@@ -1,4 +1,4 @@
-"""介质无关的 JobQueue Peer 身份、筛选条件及注册表协议。"""
+"""介质无关的 JobQueue 节点身份、筛选条件及注册表协议。"""
 
 from __future__ import annotations
 

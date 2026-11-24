@@ -18,7 +18,7 @@ hero:
 
 <CommandUsage usage="arcaea download" permission="public" />
 
-此命令用于查询游戏 APK 的最新版本号与下载地址。查询失败时返回错误提示。
+此命令用于查询游戏 APK 的最新版本编号与下载地址。查询失败时返回错误提示。
 
 <ChatExample
   :log="[
@@ -32,7 +32,7 @@ hero:
 
 <CommandUsage usage="arcaea random" permission="public" />
 
-此命令用于从官方曲目列表中随机抽取一首曲目，并附上曲绘。曲绘缺失时只发送曲名。
+此命令用于从官方曲目列表中随机抽取一首曲目，并附上曲绘。曲绘缺失时仅发送歌曲名称。
 
 <ChatExample
   :log="[
@@ -45,7 +45,7 @@ hero:
 
 <CommandUsage usage="arcaea rank free" permission="public" />
 
-此命令用于查看当前免费歌曲的游玩排行，输出名次、曲名与状态。
+此命令用于查看当前免费歌曲的游玩排行，输出名次、歌曲名称与状态。
 
 <ChatExample
   :log="[
@@ -60,7 +60,7 @@ hero:
 
 <CommandUsage usage="arcaea rank paid" permission="public" />
 
-此命令用于查看当前付费歌曲的游玩排行，输出名次、曲名与状态。
+此命令用于查看当前付费歌曲的游玩排行，输出名次、歌曲名称与状态。
 
 <ChatExample
   :log="[
@@ -78,10 +78,10 @@ hero:
 此命令用于按分数与谱面定数计算单曲潜力值。
 
 - 分数不低于 10000000 时，按定数加 2 计算。
-- 分数不低于 9800000 时，按定数加 1 计算，再加上 `(分数 - 9800000) / 200000`。
+- 分数不低于 9800000 时，按定数加 1 计算，并加上 `(分数 - 9800000) / 200000`。
 - 分数低于 9800000 时，按定数加 `(分数 - 9500000) / 300000` 计算。
 
-结果保留两位小数，低于 0 时按 0 输出。
+结果保留两位小数，若低于 0 则按 0 输出。
 
 <ChatExample
   :log="[

@@ -26,7 +26,7 @@ from packaging.utils import canonicalize_name, parse_sdist_filename, parse_wheel
 
 
 def _ensure_utf8_stdout() -> None:
-    # Windows 控制台默认 cp1252，中文输出会抛 UnicodeEncodeError。
+    # Windows 控制台默认编码为 cp1252，中文输出可能抛出 UnicodeEncodeError。
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
         return
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -116,10 +116,10 @@ def main(argv: list[str] | None = None) -> int:
         from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
         class QuietHandler(SimpleHTTPRequestHandler):
-            def log_message(self, format, *args) -> None:  # noqa: A002 - 覆盖父类签名
+            def log_message(self, format, *args) -> None:  # noqa: A002，覆盖父类签名。
                 pass
 
-        # 服务根取构建时解析出的绝对路径：工作目录变化时不会悄悄指向另一棵目录树。
+        # 服务根目录采用构建时解析出的绝对路径，确保工作目录变动时不会隐式指向另一目录树。
         handler = lambda *a, **kw: QuietHandler(*a, directory=str(output), **kw)  # noqa: E731
         with ThreadingHTTPServer(("127.0.0.1", args.serve), handler) as server:
             print(f"正在提供静态索引：http://127.0.0.1:{args.serve}/simple/（Ctrl+C 结束）")

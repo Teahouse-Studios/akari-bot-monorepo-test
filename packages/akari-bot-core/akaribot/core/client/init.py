@@ -18,7 +18,7 @@ QUEUE_RESTART_DELAY = 0.1
 
 
 async def check_queue() -> None:
-    """监督客户端队列轮询。瞬时异常后退避并重新启动。"""
+    """监控客户端队列轮询。瞬时异常后退避并重新启动。"""
     while True:
         try:
             await JobQueueClient.check_job_queue()
@@ -72,8 +72,8 @@ async def _client_init_once(
                 "sender_prefix_list": sender_prefix_list or [],
                 "ctx_slot_index": Bot.fetched_session_ctx_slot,
                 "features": feature_data,
-                # 多实例下 client_name 带实例后缀，平台展示名只能由客户端在此声明：
-                # server 侧构造主动会话时本进程没有平台身份，须经被路由到的 peer 元数据取回。
+                # 多实例下 client_name 带实例后缀，平台展示名仅能由客户端在此声明，因为
+                # server 端构造主动会话时本进程没有平台身份，必须通过被路由到的节点元数据获取。
                 "platform_name": Info.platform_name,
             },
         )
@@ -85,8 +85,8 @@ async def _client_init_once(
         connect_locale_snapshot("akari-bot")
         Logger.info(f"Hello, {Info.client_name}!")
     except BaseException:
-        # 初始化应当具备事务性：后半段失败时撤销本轮刚启动的任务并关闭连接，
-        # 使下一次重试从干净状态开始，而不是叠加一组半初始化资源。
+        # 初始化应当具备事务性，后半段失败时撤销本轮刚启动的任务并关闭连接，
+        # 使下一次重试从干净状态开始，而不是叠加一组未完成初始化的资源。
         for _, task in started_tasks:
             if not task.done():
                 task.cancel()

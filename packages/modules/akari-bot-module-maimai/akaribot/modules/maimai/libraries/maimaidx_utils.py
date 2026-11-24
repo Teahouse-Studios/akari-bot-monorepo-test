@@ -18,8 +18,8 @@ async def get_diving_prober_bind_info(msg: Bot.MessageSession, **kwargs):
     if pick_source(msg, GAME_MAIMAI) == SOURCE_LXNS:
         return dict(kwargs)
     bind_info = await DivingProberBindInfo.get_by_sender_id(msg, create=False)
-    # 记录存在但没有可用的授权（如配置刚由公开客户端改为机密客户端，旧行里只有 refresh token）
-    # 时同样按未绑定处理：QQ 用户能退回 `qq` 直接查，其它平台则只能重新绑定一次。
+    # 记录存在但无可用的授权信息时（例如配置由公开客户端调整为机密客户端，原有记录中仅包含 refresh token），
+    # 同样按照未绑定状态处理。QQ 用户可以改用 `qq` 直接查询，其他平台则仅支持重新绑定。
     if not diving_fish_bind_usable(bind_info):
         if msg.session_info.sender_from == "QQ":
             return {"qq": msg.session_info.get_common_sender_id()} | kwargs
@@ -125,7 +125,7 @@ async def get_rank(msg: Bot.MessageSession, payload: dict, use_cache: bool = Tru
 
     url = "https://www.diving-fish.com/api/maimaidxprober/rating_ranking"
     rank_data = await get_url(url, 200, fmt="json")
-    rank_data = sorted(rank_data, key=lambda x: x.get("ra", 0), reverse=True)  # 根据 rating 排名并倒序
+    rank_data = sorted(rank_data, key=lambda x: x.get("ra", 0), reverse=True)  # 按照 rating 降序排列。
 
     player_data: dict = await get_record(msg, payload, use_cache=use_cache)
     username = player_data.get("username", "")
@@ -135,7 +135,7 @@ async def get_rank(msg: Bot.MessageSession, payload: dict, use_cache: bool = Tru
     total_rating = 0
     total_rank = len(rank_data)
 
-    # 记录上一个 ra 的值和排名
+    # 记录上一项 ra 的数值与排名。
     previous_ra = None
     previous_rank = None
 
@@ -177,7 +177,7 @@ async def get_player_score(
     msg: Bot.MessageSession, payload: dict, input_id: str, use_cache: bool = True
 ) -> MessageChain:
     music = (await total_list.get()).by_id(input_id)
-    level_scores = {level: [] for level in range(len(music["level"]))}  # 获取歌曲难度列表
+    level_scores = {level: [] for level in range(len(music["level"]))}  # 获取歌曲各难度列表。
 
     try:
         res: dict = await get_song_record(msg, input_id, use_cache)
@@ -190,15 +190,15 @@ async def get_player_score(
                     level_index = entry["level_index"]
                     try:
                         score_rank = next(
-                            # 根据成绩获得等级
+                            # 根据成绩获取评级。
                             rank
                             for interval, rank in score_to_rate.items()
                             if interval[0] <= achievements < interval[1]
                         )
                     except StopIteration:
                         continue
-                    combo_rank = combo_mapping.get(fc, "")  # Combo 字典转换
-                    sync_rank = sync_mapping.get(fs, "")  # Sync 字典转换
+                    combo_rank = combo_mapping.get(fc, "")  # Combo 字典映射转换。
+                    sync_rank = sync_mapping.get(fs, "")  # Sync 字典映射转换。
                     dxscore = entry.get("dxScore", 0)
                     dxscore_max = sum(music["charts"][level_index]["notes"]) * 3
                     level_scores[level_index].append(
@@ -216,15 +216,15 @@ async def get_player_score(
                 level_index = entry["level_index"]
                 try:
                     score_rank = next(
-                        # 根据成绩获得等级
+                        # 根据成绩获取评级。
                         rank
                         for interval, rank in score_to_rate.items()
                         if interval[0] <= achievements < interval[1]
                     )
                 except StopIteration:
                     continue
-                combo_rank = combo_mapping.get(fc, "")  # Combo 字典转换
-                sync_rank = sync_mapping.get(fs, "")  # Sync 字典转换
+                combo_rank = combo_mapping.get(fc, "")  # Combo 字典映射转换。
+                sync_rank = sync_mapping.get(fs, "")  # Sync 字典映射转换。
                 level_scores[level_index].append((diffs[level_index], achievements, score_rank, combo_rank, sync_rank))
 
     msg_chain = MessageChain.assign()
@@ -232,8 +232,8 @@ async def get_player_score(
         if len(level_scores.items()) > 1:
             await msg.finish(I18NContext("maimai.message.score.utage"))
         else:
-            for level, scores in level_scores.items():  # 使用循环输出格式化文本
-                msg_chain.append(Plain(f"U·TA·GE {music['level'][level]}"))  # 难度字典转换
+            for level, scores in level_scores.items():  # 遍历生成格式化文本。
+                msg_chain.append(Plain(f"U·TA·GE {music['level'][level]}"))  # 难度字典映射转换。
                 if scores:
                     for score in scores:
                         level, achievements, score_rank, combo_rank, sync_rank, *dx = score
@@ -248,9 +248,9 @@ async def get_player_score(
                 else:
                     msg_chain.append(I18NContext("maimai.message.score.no_record"))
     else:
-        for level, scores in level_scores.items():  # 使用循环输出格式化文本
+        for level, scores in level_scores.items():  # 遍历生成格式化文本。
             msg_chain.append(Plain(f"{diffs[level]} {music['level'][level]}"))
-            if scores:  # 难度字典转换
+            if scores:  # 难度字典映射转换。
                 for score in scores:
                     level, achievements, score_rank, combo_rank, sync_rank, *dx = score
                     entry_output = f"{achievements:.4f} {score_rank}"
@@ -277,12 +277,12 @@ async def get_score_list(
     song_list = []
     for song in records:
         if song["level"] == level:
-            song_list.append(song)  # 将符合难度的成绩加入列表
+            song_list.append(song)  # 将符合难度的成绩追加至列表。
 
     output_line = []
     total_pages = (len(song_list) + SONGS_PER_PAGE - 1) // SONGS_PER_PAGE
     page = max(min(int(page), total_pages), 1)
-    for i, s in enumerate(sorted(song_list, key=lambda i: i["achievements"], reverse=True)):  # 根据成绩排序
+    for i, s in enumerate(sorted(song_list, key=lambda i: i["achievements"], reverse=True)):  # 按照成绩排序。
         if (page - 1) * SONGS_PER_PAGE <= i < page * SONGS_PER_PAGE:
             music = (await total_list.get()).by_id(str(s["song_id"]))
 
@@ -319,40 +319,40 @@ async def get_level_process(
     res: dict = await get_total_record(msg, use_cache=use_cache)
     verlist = res["records"]
 
-    goal = goal.upper()  # 输入强制转换为大写以适配字典
+    goal = goal.upper()  # 将输入转换为大写以匹配字典键。
     if goal in rate_list:
-        achievement = achievement_list[rate_list.index(goal) - 1]  # 根据列表将输入评级转换为成绩分界线
+        achievement = achievement_list[rate_list.index(goal) - 1]  # 根据列表将输入评级转换为成绩分界阈值。
         for song in verlist:
-            if song["level"] == level and song["achievements"] < achievement:  # 达成难度条件但未达成目标条件
-                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 和难度加入目标列表
-            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 和难度加入列表
+            if song["level"] == level and song["achievements"] < achievement:  # 满足难度条件但未达到目标评级条件。
+                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 与难度追加至目标列表。
+            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 与难度追加至列表。
     elif goal in combo_list:
-        combo_index = combo_list.index(goal)  # 根据 API 结果字典转换
+        combo_index = combo_list.index(goal)  # 根据 API 响应执行字典映射转换。
         for song in verlist:
             if song["level"] == level and (
                 (song["fc"] and combo_list_raw.index(song["fc"]) < combo_index) or not song["fc"]
-            ):  # 达成难度条件但未达成目标条件
-                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 和难度加入目标列表
-            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 和难度加入列表
+            ):  # 满足难度条件但未达到目标评级条件。
+                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 与难度追加至目标列表。
+            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 与难度追加至列表。
     elif goal in sync_list:
-        sync_index = sync_list.index(goal)  # 根据 API 结果字典转换
+        sync_index = sync_list.index(goal)  # 满足难度条件但未达到目标评级条件。
         for song in verlist:
             if song["level"] == level and (
                 (song["fs"] and sync_list_raw.index(song["fs"]) < sync_index) or not song["fs"]
-            ):  # 达成难度条件但未达成目标条件
-                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 和难度加入目标列表
-            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 和难度加入列表
+            ):  # 满足难度条件但未达到目标评级条件。
+                song_remain.append((str(song["song_id"]), song["level_index"]))  # 将剩余歌曲 ID 与难度追加至目标列表。
+            song_played.append((str(song["song_id"]), song["level_index"]))  # 将已游玩歌曲 ID 与难度追加至列表。
 
-    for music in (await total_list.get()).filter(level=level):  # 遍历歌曲列表
+    for music in (await total_list.get()).filter(level=level):  # 满足难度条件但未达到目标评级条件。
         for i in enumerate(music.level):
             if i[1] == level and int(music.id) < 100000 and (music.id, i[0]) not in song_played:
-                song_remain.append((music.id, i[0]))  # 将未游玩歌曲 ID 和难度加入目标列表
+                song_remain.append((music.id, i[0]))  # 将未游玩歌曲 ID 与难度追加至目标列表。
 
-    song_remain = sorted(song_remain, key=lambda i: int(i[1]))  # 根据难度排序结果
-    song_remain = sorted(song_remain, key=lambda i: int(i[0]))  # 根据 ID 排序结果
+    song_remain = sorted(song_remain, key=lambda i: int(i[1]))  # 按照难度排序检索结果。
+    song_remain = sorted(song_remain, key=lambda i: int(i[0]))  # 按照歌曲 ID 排序检索结果。
 
     song_detail = []
-    for song in song_remain:  # 循环查询歌曲信息
+    for song in song_remain:  # 遍历查询对应歌曲信息。
         music = (await total_list.get()).by_id(song[0])
         song_detail.append((music.id, music.title, diffs[song[1]], music.ds[song[1]], song[1], music.type))
 
@@ -361,7 +361,7 @@ async def get_level_process(
     if len(song_remain) > 0:
         song_record = [(str(s["song_id"]), s["level_index"]) for s in verlist]
         msg_chain.append(I18NContext("maimai.message.process.last", level=level, goal=goal))
-        for i, s in enumerate(sorted(song_detail, key=lambda i: i[3], reverse=True)):  # 显示剩余歌曲信息
+        for i, s in enumerate(sorted(song_detail, key=lambda i: i[3], reverse=True)):  # 展示剩余歌曲信息。
             self_record = ""
             if (s[0], s[-2]) in song_record:
                 record_index = song_record.index((s[0], s[-2]))
@@ -409,11 +409,11 @@ async def get_plate_process(
         goal = plate_goal_ts_mapping[goal]
     plate = version + goal
 
-    if version == "真":  # 真代为无印版本
+    if version == "真":  # 真代为无印版本。
         payload["version"] = ["maimai", "maimai PLUS"]
-    elif version in ["覇", "舞"]:  # 霸者和舞牌需要全版本
+    elif version in ["覇", "舞"]:  # 霸者与舞牌需要全部版本。
         payload["version"] = list(set(sd_plate_mapping.values()))
-    elif version in plate_mapping and version != "初":  # “初”不是版本名称
+    elif version in plate_mapping and version != "初":  # “初”不属于版本名称。
         payload["version"] = [plate_mapping[version]]
     else:
         await msg.finish(I18NContext("maimai.message.plate.plate_not_found"))
@@ -422,7 +422,7 @@ async def get_plate_process(
     verlist = res["verlist"]
 
     if goal in ["将", "者"]:
-        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 与难度追加至目标列表。
             if song["level_index"] == 0 and song["achievements"] < (100.0 if goal == "将" else 80.0):
                 song_remain_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["achievements"] < (100.0 if goal == "将" else 80.0):
@@ -437,10 +437,10 @@ async def get_plate_process(
                 and song["level_index"] == 4
                 and song["achievements"] < (100.0 if goal == "将" else 80.0)
             ):
-                song_remain_remaster.append((str(song["id"]), song["level_index"]))  # 霸者和舞牌需要 Re:MASTER 难度
+                song_remain_remaster.append((str(song["id"]), song["level_index"]))  # 霸者与舞牌需要 Re:MASTER 难度。
             song_played.append((str(song["id"]), song["level_index"]))
     elif goal == "極":
-        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 与难度追加至目标列表。
             if song["level_index"] == 0 and not song["fc"]:
                 song_remain_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and not song["fc"]:
@@ -458,7 +458,7 @@ async def get_plate_process(
                 song_remain_remaster.append((str(song["id"]), song["level_index"]))
             song_played.append((str(song["id"]), song["level_index"]))
     elif goal == "舞舞":
-        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 与难度追加至目标列表。
             if song["level_index"] == 0 and song["fs"] not in ["fsd", "fsdp"]:
                 song_remain_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["fs"] not in ["fsd", "fsdp"]:
@@ -476,7 +476,7 @@ async def get_plate_process(
                 song_remain_remaster.append((str(song["id"]), song["level_index"]))
             song_played.append((str(song["id"]), song["level_index"]))
     elif goal == "神":
-        for song in verlist:  # 将剩余歌曲 ID 和难度加入目标列表
+        for song in verlist:  # 将剩余歌曲 ID 与难度追加至目标列表。
             if song["level_index"] == 0 and song["fc"] not in ["ap", "app"]:
                 song_remain_basic.append((str(song["id"]), song["level_index"]))
             if song["level_index"] == 1 and song["fc"] not in ["ap", "app"]:
@@ -496,8 +496,8 @@ async def get_plate_process(
     else:
         await msg.finish(I18NContext("maimai.message.plate.plate_not_found"))
 
-    for music in await total_list.get():  # 将未游玩歌曲 ID 加入目标列表
-        if music["basic_info"]["from"] in payload["version"] and int(music.id) < 100000:  # 过滤宴谱
+    for music in await total_list.get():  # 将未游玩歌曲 ID 追加至目标列表。
+        if music["basic_info"]["from"] in payload["version"] and int(music.id) < 100000:  # 过滤宴会场谱面。
             if (music.id, 0) not in song_played:
                 song_remain_basic.append((music.id, 0))
             if (music.id, 1) not in song_played:
@@ -513,16 +513,16 @@ async def get_plate_process(
                 and (music.id, 4) not in song_played
             ):
                 song_remain_remaster.append((music.id, 4))
-    song_remain_basic = sorted(song_remain_basic, key=lambda i: int(i[0]))  # 根据 ID 排序结果
+    song_remain_basic = sorted(song_remain_basic, key=lambda i: int(i[0]))  # 按照歌曲 ID 排序检索结果。
     song_remain_advanced = sorted(song_remain_advanced, key=lambda i: int(i[0]))
     song_remain_expert = sorted(song_remain_expert, key=lambda i: int(i[0]))
     song_remain_master = sorted(song_remain_master, key=lambda i: int(i[0]))
     song_remain_remaster = sorted(song_remain_remaster, key=lambda i: int(i[0]))
     for song in (
         song_remain_basic + song_remain_advanced + song_remain_expert + song_remain_master + song_remain_remaster
-    ):  # 循环查询歌曲信息
+    ):  # 遍历查询对应歌曲信息。
         music = (await total_list.get()).by_id(song[0])
-        if music.ds[song[1]] > 13.6:  # 将难度为 13+以上的谱面加入列表
+        if music.ds[song[1]] > 13.6:  # 将难度达到 13+ 的谱面追加至列表。
             song_remain_difficult.append(
                 (music.id, music.title, diffs[song[1]], music.ds[song[1]], song[1], music.type)
             )
@@ -548,7 +548,7 @@ async def get_plate_process(
         prompt.append(I18NContext("maimai.message.plate.expert", song_remain=len(song_remain_expert)))
     if song_remain_master:
         prompt.append(I18NContext("maimai.message.plate.master", song_remain=len(song_remain_master)))
-    if version in ["舞", "覇"] and song_remain_remaster:  # 霸者和舞牌需要 Re:MASTER 难度
+    if version in ["舞", "覇"] and song_remain_remaster:  # 霸者与舞牌需要 Re:MASTER 难度。
         prompt.append(I18NContext("maimai.message.plate.remaster", song_remain=len(song_remain_remaster)))
 
     if song_remain:
@@ -560,9 +560,9 @@ async def get_plate_process(
     if len(song_remain_difficult) > 0:
         if len(song_remain_difficult) < SONGS_PER_PAGE:
             msg_chain.append(I18NContext("maimai.message.plate.difficult.last"))
-            for i, s in enumerate(sorted(song_remain_difficult, key=lambda i: i[3])):  # 根据定数排序结果
+            for i, s in enumerate(sorted(song_remain_difficult, key=lambda i: i[3])):  # 按照定数排序检索结果。
                 self_record = ""
-                if (s[0], s[-2]) in song_record:  # 显示剩余 13+以上歌曲信息
+                if (s[0], s[-2]) in song_record:  # 展示剩余难度达到 13+ 的歌曲信息。
                     record_index = song_record.index((s[0], s[-2]))
                     if goal in ["將", "者"]:
                         self_record = f"{verlist[record_index]['achievements']:.4f}%"
@@ -585,10 +585,10 @@ async def get_plate_process(
             song_remain[i] = (s[0], s[1], m.ds[s[1]])
         if len(song_remain) < SONGS_PER_PAGE:
             msg_chain.append(I18NContext("maimai.message.plate.last"))
-            for i, s in enumerate(sorted(song_remain, key=lambda i: i[2])):  # 根据难度排序结果
+            for i, s in enumerate(sorted(song_remain, key=lambda i: i[2])):  # 按照难度排序检索结果。
                 m = (await total_list.get()).by_id(s[0])
                 self_record = ""
-                if [int(s[0]), s[-2]] in song_record:  # 显示剩余歌曲信息
+                if [int(s[0]), s[-2]] in song_record:  # 展示剩余歌曲信息。
                     record_index = song_record.index((s[0], s[-2]))
                     if goal in ["將", "者"]:
                         self_record = f"{verlist[record_index]['achievements']:.4f}%"
@@ -627,7 +627,7 @@ async def get_grade_info(msg: Bot.MessageSession, grade: str):
             return value, new_key
         return None, input_key
 
-    grade = grade.upper()  # 输入强制转换为大写以适配字典
+    grade = grade.upper()  # 将输入转换为大写以匹配字典键。
     grade_key, grade = key_process(grade, grade_mapping)
 
     if not grade_key:

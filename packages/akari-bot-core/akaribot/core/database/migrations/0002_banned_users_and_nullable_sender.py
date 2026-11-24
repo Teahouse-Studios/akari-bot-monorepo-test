@@ -11,7 +11,7 @@ from akaribot.core.database.migration import MigrationContext
 REVISION = "0002_banned_users_and_nullable_sender"
 DEPENDS_ON = "0001_initial"
 
-# 旧库此时仍是 target_info。若表已改名为 target_union_info，说明库已越过本步骤。
+# 旧数据库当前表名仍为 target_info。若表已重命名为 target_union_info，说明已执行过该步骤。
 LEGACY_TARGET_TABLE = "target_info"
 
 SQLITE_TARGET_REBUILD = """

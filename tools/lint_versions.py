@@ -42,7 +42,7 @@ from packaging.version import InvalidVersion, Version
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT_PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
-# 第 3 条只约束对 core 的写法。名字用规范化形式比较，大小写与下划线差异不参与判断。
+# 第 3 条仅约束对 core 的写法。名称以规范化形式比较，大小写与下划线差异不参与判断。
 CORE_DISTRIBUTION = "akari-bot-core"
 CORE_NAME = canonicalize_name(CORE_DISTRIBUTION)
 
@@ -62,15 +62,15 @@ RULE_LEVELS = {
     "V4": LEVEL_WARN,
 }
 
-# 依赖字符串在 pyproject 里以字面量出现，反查行号用。跨行书写时回退到 dependencies 数组行。
+# 依赖字符串在 pyproject 中以字面量形式出现，用于反向查找行号。跨行书写时定位至 dependencies 数组所在行。
 QUOTED_PATTERN = re.compile(r'"([^"]*)"|\'([^\']*)\'')
 DEPENDENCIES_ARRAY_PATTERN = re.compile(r"^dependencies\s*=\s*\[")
-# 报告用书写形式：SpecifierSet 的 str 会按字典序重排（如 >=0.1.0,<1.0 变成 <1.0,>=0.1.0）。
+# 报告保留原始书写形式，因为 SpecifierSet 的 str 会按照字典序重新排列（如 >=0.1.0,<1.0 变成 <1.0,>=0.1.0）。
 NAME_EXTRAS_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\s*(?:\[[^\]]*\])?\s*")
 
 
 class ConfigError(RuntimeError):
-    """根 pyproject 或成员 pyproject 不满足检查所需的结构。"""
+    """根 pyproject 或成员 pyproject 不满足检查对应的结构要求。"""
 
 
 @dataclass(frozen=True)
@@ -105,7 +105,7 @@ class Dependency:
     written: str
 
     def display(self) -> str:
-        """报告用约束文本。"""
+        """生成报告所使用的约束文本。"""
         return self.written or "无版本约束"
 
 
@@ -133,13 +133,13 @@ class Violation:
 
 
 def load_toml(path: Path) -> dict:
-    """读取 TOML 文件。"""
+    """读取并解析 TOML 文件。"""
     with path.open("rb") as handle:
         return tomllib.load(handle)
 
 
 def member_pyprojects() -> list[Path]:
-    """按根 pyproject 的 members glob 展开成员清单，排除 exclude。"""
+    """按照根目录 pyproject 的 members glob 展开成员清单，排除 exclude 项。"""
     workspace = load_toml(ROOT_PYPROJECT).get("tool", {}).get("uv", {}).get("workspace", {})
     excluded = {path for pattern in workspace.get("exclude", []) for path in PROJECT_ROOT.glob(pattern)}
     found: set[Path] = set()
@@ -156,7 +156,7 @@ def member_pyprojects() -> list[Path]:
 
 
 def discover_members() -> dict[str, Member]:
-    """读全部成员的 [project] 名字与版本，返回规范化名到成员的映射。"""
+    """读取全部成员的 [project] 名称与版本，返回规范化名称至成员对象的映射。"""
     members: dict[str, Member] = {}
     for pyproject in member_pyprojects():
         project = load_toml(pyproject).get("project", {})
@@ -192,7 +192,7 @@ def dependency_lines(pyproject: Path) -> tuple[dict[str, int], int]:
 
 
 def written_specifier(raw: str) -> str:
-    """取条目里约束部分的书写形式，环境标记与 direct reference 不算约束。"""
+    """获取条目中约束部分的书写形式，环境标记与 direct reference 不计入约束。"""
     tail = NAME_EXTRAS_PATTERN.sub("", raw).split(";")[0].strip()
     return tail if tail[:1] in ("=", "<", ">", "!", "~") else ""
 
@@ -219,7 +219,7 @@ def member_dependencies(member: Member) -> list[Dependency]:
 
 
 def suggest_constraint(version: Version) -> str:
-    """给出与成员实际版本相容的区间写法：下界取实际版本，上界取下一个主版本。"""
+    """提供与成员实际版本相兼容的区间写法，下界为实际版本，上界为下一个主版本。"""
     return f">={version},<{version.major + 1}.0"
 
 
@@ -360,7 +360,7 @@ def changed_pyprojects(base_ref: str) -> set[str] | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(
         description="内部版本约束一致性检查",
         epilog=(
@@ -383,7 +383,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示无 error。"""
+    """主入口函数，返回进程退出码，0 表示无错误项。"""
     args = build_parser().parse_args()
 
     try:

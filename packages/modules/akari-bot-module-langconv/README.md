@@ -1,10 +1,10 @@
 # akari-bot-module-langconv
 
-在简体中文、繁体（香港）与繁体（台湾）之间转换文本。
+在简体中文、繁体中文（香港）与繁体中文（台湾）之间转换文本。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-langconv

@@ -676,7 +676,7 @@ async def _test_quote_self_does_not_mention_self_markdown() -> bool:
 
 @func_case
 async def test_qqbot_modern_api(tester: Tester):
-    """akaribot.adapters.qqbot.context: botpy 接口接入测试"""
+    """akaribot.adapters.qqbot.context botpy 接口接入测试"""
     await tester.test(_test_reply_target_scopes, "统一回复目标映射测试")
     await tester.test(_test_message_id_collection, "高层发送结果消息 ID 提取测试")
     await tester.test(_test_delete_translates_application_message_id, "应用层消息 ID 撤回映射测试")

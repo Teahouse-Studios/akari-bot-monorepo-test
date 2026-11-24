@@ -11,14 +11,14 @@ from akaribot.core.logger import Logger
 from akaribot.core.utils.platform_scope import platform_fields
 from akaribot.modules.core.common_tools.help import check_context_admin, modules_list_help
 
-# 模块受限成因到提示文案的映射，键取自 Module.unsupported_reason() 的返回值。
+# 模块受限成因与提示文案的映射关系，键来源于 Module.unsupported_reason() 的返回值。
 UNSUPPORTED_PROMPTS = {
     "rss": "core.message.module.enable.unsupported_rss",
     "regex": "core.message.module.enable.unsupported_regex",
     "event": "core.message.module.enable.unsupported_event",
 }
 
-# 机器人平台权限到中文名称的映射。未记录的权限直接回退为字段名，避免误报为其他能力。
+# 机器人平台权限与中文名称的映射。未记录的权限直接回退为字段名称，避免误报为其他能力。
 BOT_PERMISSION_PROMPTS = {
     "can_read_all_messages": "core.message.module.bot_permission.read_all_messages",
     "can_send_messages": "core.message.module.bot_permission.send_messages",
@@ -118,8 +118,8 @@ async def config_modules(msg: Bot.MessageSession):
                 try:
                     bot_state = await msg.check_bot_state()
                 except Exception:
-                    # RPC 与网络故障不能当成机器人无权限。
-                    # 只有平台明确返回 False 才阻止开启，查询失败按能力声明处理。
+                    # RPC 与网络故障不可视为机器人无权限。
+                    # 仅当平台明确返回 False 时才阻止开启，查询失败时按能力声明处理。
                     Logger.exception(
                         f"Failed to check bot state before enabling modules in {msg.session_info.target_id}: "
                     )

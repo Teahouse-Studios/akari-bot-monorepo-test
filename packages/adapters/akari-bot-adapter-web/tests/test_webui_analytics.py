@@ -1,4 +1,4 @@
-"""adapters.web.api 单元测试 - 统计接口的时间窗口筛选（需要数据库）。"""
+"""adapters.web.api 统计接口的时间窗口筛选单元测试（需要数据库）。"""
 
 import inspect
 from datetime import datetime, timedelta, UTC
@@ -28,13 +28,13 @@ async def _test_analytics_counts_records_in_window():
     # inspect.unwrap 可兼容装饰器层数变化，不依赖固定数量的 __wrapped__ 属性。
     endpoint = inspect.unwrap(web_api.get_analytics)
     try:
-        # 接口按整库统计，同批测试可能已写入其他记录，故以增量为准。
+        # 接口按整个数据库统计，同批测试可能已写入其他记录，因此以增量为准。
         with patch.object(web_api, "verify_jwt", lambda request: None):
             before = await endpoint(None, days=1)
 
             await _add_record(hours_ago=1)
             await _add_record(hours_ago=20)
-            # 超出一天窗口，不应被计入。
+            # 超出一天的统计窗口，不应计入。
             await _add_record(hours_ago=30)
 
             after = await endpoint(None, days=1)
@@ -51,7 +51,7 @@ async def _test_analytics_counts_records_in_window():
 
 @func_case
 async def test_webui_analytics_modules(tester: Tester):
-    """akaribot.adapters.web.api: 模块调用数量统计接口测试"""
+    """akaribot.adapters.web.api 模块调用数量统计接口测试"""
     await tester.test(_test_analytics_modules_counts_in_window, "模块统计时间窗口测试")
     await tester.test(_test_analytics_modules_ranks_by_count, "模块统计排序与占比测试")
 
@@ -65,7 +65,7 @@ async def _test_analytics_modules_counts_in_window():
             before = await endpoint(None, days=1)
 
             await _add_record(hours_ago=1)
-            # 超出一天窗口，不应被计入。
+            # 超出一天的统计窗口，不应计入。
             await _add_record(hours_ago=30)
 
             after = await endpoint(None, days=1)
@@ -109,7 +109,7 @@ async def _test_analytics_modules_ranks_by_count():
 
 @func_case
 async def test_webui_analytics(tester: Tester):
-    """akaribot.adapters.web.api: 统计接口测试"""
+    """akaribot.adapters.web.api 统计接口测试"""
     await tester.test(_test_analytics_counts_records_in_window, "统计接口时间窗口测试")
 
     return tester

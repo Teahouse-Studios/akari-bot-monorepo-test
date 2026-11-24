@@ -15,8 +15,8 @@ import sys
 
 from akaribot.core.entrypoints import run as _run
 
-# 兼容面：既有用例经 ``import bot as daemon`` 使用的名字在此集中核对，缺失时导入期即报错，
-# 而不是等到用例里出现 AttributeError。
+# 既有用例通过 ``import bot as daemon`` 使用的兼容接口在此集中核对，缺失时在导入阶段即报错，
+# 避免后续在用例执行中产生 AttributeError。
 _COMPAT_NAMES = (
     "CONFIG_READONLY_ENV",
     "Logger",

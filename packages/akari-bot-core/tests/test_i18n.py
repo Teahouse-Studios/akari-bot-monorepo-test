@@ -44,7 +44,7 @@ def _test_locale_t_str_i18n_key():
 
 @func_case
 async def test_i18n(tester: Tester):
-    """akaribot.core.i18n: 国际化系统测试"""
+    """akaribot.core.i18n 国际化系统测试"""
     await tester.test(_test_locale_t_existing_key, "Locale.t 已存在键测试")
     await tester.test(_test_locale_t_missing_key, "Locale.t 不存在键测试")
     await tester.test(_test_locale_t_kwargs_substitution, "Locale.t 参数替换测试")

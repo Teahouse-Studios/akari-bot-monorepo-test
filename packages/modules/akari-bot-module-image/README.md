@@ -1,10 +1,10 @@
 # akari-bot-module-image
 
-把透明背景的图片填充为白色背景。
+将包含透明背景的图片填充为白色背景。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-image

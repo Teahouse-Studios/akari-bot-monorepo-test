@@ -1,4 +1,4 @@
-"""消息元素模块 - 定义各种类型的消息元素。"""
+"""消息元素模块，定义各种类型的消息元素。"""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ class BaseElement:
 
 @define
 class PlainElement(BaseElement):
-    """纯文本元素 - 用于表示消息中的纯文本内容。"""
+    """纯文本元素，用于表示消息中的纯文本内容。"""
 
     text: str
     disable_joke: bool = False
@@ -202,7 +202,7 @@ class MarkdownElement(PlainElement):
 
 @define
 class URLElement(BaseElement):
-    """URL 链接元素 - 用于在消息中包含链接。"""
+    """URL 链接元素，用于在消息中包含链接。"""
 
     original_url: str
     url: str
@@ -225,9 +225,9 @@ class URLElement(BaseElement):
         :return: URLElement 实例
         """
         original_url = url
-        # 须判 is False：None 意为未表态，交由会话决定，不可在此就套上跳板
+        # 必须判断 is False，因为 None 意为未表态，交由会话确定，不可在此处包装为跳板链接。
         if trusted is False:
-            # 使用 mm.teahouse.team 的跳板服务，用于隐藏原始链接
+            # 使用 mm.teahouse.team 的跳板服务，用于隐藏原始链接。
             mm_url = "https://mm.teahouse.team/index.html?source=akaribot&rot13=%s"
             rot13 = str.maketrans(
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -267,7 +267,7 @@ class URLElement(BaseElement):
 
 @define
 class FormattedTimeElement(BaseElement):
-    """格式化时间元素 - 用于在消息中包含格式化的时间信息。"""
+    """格式化时间元素，用于在消息中包含格式化的时间信息。"""
 
     timestamp: float
     date: bool = True
@@ -419,7 +419,7 @@ class I18NContextElement(BaseElement):
         """
         返回多语言标记表示。
 
-                :return:多语言标记格式的字符串表示
+                :return: 多语言标记格式的字符串表示
         """
         # 返回多语言标记表示。
         if self.kwargs:
@@ -515,10 +515,10 @@ class ImageElement(BaseElement):
         """
         if self.need_get:
             return str(await self.get_image())
-        # 本地路径须确认文件存在，否则调用方应跳过该元素
+        # 本地路径需要确认文件存在，否则调用方应跳过该元素。
         if not Path(self.path).is_file():
             raise FileNotFoundError(f"Image file not found: {self.path}")
-        # 返回本地路径
+        # 返回本地路径。
         return self.path
 
     @retry(stop=stop_after_attempt(3))
@@ -533,7 +533,7 @@ class ImageElement(BaseElement):
             resp = await client.get(url, timeout=20.0, headers=self.headers)
             resp.raise_for_status()
             raw = resp.content
-            # 自动识别图片格式，识别失败的响应体（如 JS、HTML）不应写入缓存
+            # 自动识别图片格式，识别失败的响应体（如 JS、HTML）不应写入缓存。
             kind = filetype.match(raw)
             if not kind:
                 raise ValueError(f"Content fetched from {url} is not a recognized image file.")
@@ -656,9 +656,9 @@ class VideoElement(BaseElement):
     @classmethod
     def assign(cls, path: str | Path):
         """
-        创建语音元素的工厂方法。
+        创建视频元素的工厂方法。
 
-        :param path: 语音文件的本地路径（str 或 Path 对象）
+        :param path: 视频文件的本地路径（str 或 Path 对象）
         :return: VideoElement 实例
         """
         return deepcopy(cls(str(path)))
@@ -676,7 +676,7 @@ class VideoElement(BaseElement):
 
 @define
 class MentionElement(BaseElement):
-    """提及元素 - 用于在消息中提及（@）其他用户。"""
+    """提及元素，用于在消息中提及（@）其他用户。"""
 
     client: str
     id: str
@@ -773,7 +773,7 @@ class CardElement(BaseElement):
 
 
 def _as_inner_element(value: str | PlainElement | I18NContextElement) -> PlainElement | I18NContextElement:
-    # 将指令操作的文案入参规范化为消息元素。
+    # 将指令操作的文案输入参数规范化为消息元素。
     if isinstance(value, str):
         return PlainElement.assign(value)
     return value
@@ -806,7 +806,7 @@ def _resolve_inner_text(
 
 @define
 class ActionTextElement(BaseElement):
-    """指令操作元素 - 用于在消息中嵌入可点击的命令入口。"""
+    """指令操作元素，用于在消息中嵌入可点击的命令入口。"""
 
     text: PlainElement | I18NContextElement
     show: PlainElement | I18NContextElement | None = None
@@ -829,7 +829,7 @@ class ActionTextElement(BaseElement):
         :param text: 点击后插入输入框的文本
         :param show: 消息内展示的文本（默认为 None，由平台取 text）
         :param reference: 插入输入框时是否携带引用回复（默认为 False）
-        :param show_on_fallback: 降级为纯文本时是否带上 show（默认为 True）
+        :param show_on_fallback: 降级为纯文本时是否包含 show（默认为 True）
         :param quote_on_fallback: 降级为纯文本时是否为文案加上引号（默认为 False）
         :return: ActionTextElement 实例
         """
@@ -884,7 +884,7 @@ class ActionTextElement(BaseElement):
         if resolved.show is not None:
             params.append(f"show={parse.quote(resolved.show.text, safe='')}")
         params.append(f"reference={1 if self.reference else 0}")
-        # 仅在非默认时写出，避免既有 KE 码平白变长
+        # 仅在非默认时写出，避免既有 KE 码平白变长。
         if not self.show_on_fallback:
             params.append("show_on_fallback=0")
         if self.quote_on_fallback:
@@ -912,7 +912,7 @@ class ButtonPermission(str, Enum):
 
     @classmethod
     def normalize(cls, value: "ButtonPermission | str | bool | None") -> "ButtonPermission":
-        """把公开 API 接受的权限写法归一化为枚举值。"""
+        """把公开 API 接受的权限写法规范化为枚举值。"""
         if isinstance(value, cls):
             return value
         if value is True:
@@ -928,7 +928,7 @@ class ButtonPermission(str, Enum):
 
 
 def normalize_button_click_limit(value: int | None) -> int | None:
-    """归一化按钮点击次数，``None`` / ``0`` 表示不限次数。"""
+    """规范化按钮点击次数，``None`` / ``0`` 表示不限次数。"""
     if value is None or value == 0:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
@@ -975,7 +975,7 @@ class ButtonPayload:
         )
 
     def to_data(self) -> str:
-        """编码为只支持单个字符串字段的平台按钮数据。"""
+        """编码为仅支持单个字符串字段的平台按钮数据。"""
         public_marker = _BUTTON_PUBLIC_MARKER if self.permission is ButtonPermission.ALL else ""
         reply_marker = "" if self.reply_id is None else f"<q:{self.reply_id}>"
         limit_marker = "" if self.click_limit == 1 else f"<l:{self.click_limit or 0}>"
@@ -1018,7 +1018,7 @@ class ButtonElement(BaseElement):
 
     @property
     def payload(self) -> ButtonPayload:
-        """返回按钮点击数据，同时兼容反序列化得到的旧版内嵌编码。"""
+        """返回按钮点击数据，同时兼容反序列化生成的旧版内嵌编码。"""
         return ButtonPayload.parse(self.value, self.reply_id, self.permission, self.click_limit)
 
     def kecode(self):
@@ -1109,7 +1109,7 @@ class ButtonFrameElement(BaseElement):
 
 @define
 class EmbedFieldElement(BaseElement):
-    """Embed 字段元素 - 用于构建嵌入式消息的字段。"""
+    """Embed 字段元素，用于构建嵌入式消息的字段。"""
 
     name: str
     value: str
@@ -1140,7 +1140,7 @@ class EmbedFieldElement(BaseElement):
 
 @define
 class EmbedElement(BaseElement):
-    """Embed 消息元素 - 用于创建富文本嵌入式消息。"""
+    """Embed 消息元素，用于创建富文本嵌入式消息。"""
 
     title: str | None = None
     description: str | None = None
@@ -1257,7 +1257,7 @@ class EmbedElement(BaseElement):
 
 @define
 class RawElement(BaseElement):
-    """原始元素 - 用于包含未处理的原始数据。"""
+    """原始元素，用于包含未处理的原始数据。"""
 
     value: str
 

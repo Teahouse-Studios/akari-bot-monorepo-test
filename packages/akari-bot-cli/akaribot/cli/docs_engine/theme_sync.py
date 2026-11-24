@@ -43,7 +43,7 @@ class ThemeSyncResult:
 
 
 def source_repository() -> Path | None:
-    """返回本 CLI 源码所在的仓库根。安装形态没有源码仓库时返回 ``None``。"""
+    """返回本 CLI 源码所在的仓库根目录。安装形态下无源码仓库时返回 ``None``。"""
     for parent in Path(__file__).resolve().parents:
         if (parent / "packages" / "akari-bot-cli" / "pyproject.toml").is_file():
             return parent
@@ -163,7 +163,7 @@ def _execute(argv: Sequence[str], cwd: Path, runner: Runner | None) -> subproces
     if runner is not None:
         return runner(argv, cwd)
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_PAGER": "cat"}
-    process = subprocess.Popen(  # noqa: S603 - 命令由本模块组装，参数固定
+    process = subprocess.Popen(  # noqa: S603 - 命令由本模块组装，参数固定。
         list(argv),
         cwd=str(cwd),
         stdout=subprocess.PIPE,
@@ -192,7 +192,7 @@ def _run(argv: Sequence[str], cwd: Path, runner: Runner | None) -> subprocess.Co
     if runner is not None:
         return runner(argv, cwd)
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_PAGER": "cat"}
-    return subprocess.run(  # noqa: S603 - 命令由本模块组装，参数固定
+    return subprocess.run(  # noqa: S603 - 命令由本模块组装，参数固定。
         list(argv),
         cwd=str(cwd),
         capture_output=True,

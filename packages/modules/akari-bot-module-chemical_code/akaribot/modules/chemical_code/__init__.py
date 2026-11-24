@@ -20,7 +20,7 @@ from akaribot.core.api import (
 )
 from .coloring import element_colors
 
-ID_RANGE_MAX = 200000000  # 数据库增长速度很快，可手动在此修改 ID 区间
+ID_RANGE_MAX = 200000000  # 数据库增长速度较快，可以手动在此修改 ID 区间。
 
 pubchem_link = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
@@ -143,7 +143,7 @@ element_lists = [
     "U",
     "Y",
     "W",
-]  # 元素列表，用于解析化学式（请不要手动修改当前的排序）
+]  # 元素列表，用于解析化学式，请勿手动修改当前排序。
 
 
 def parse_elements(formula: str) -> dict:
@@ -245,7 +245,7 @@ async def _(msg: Bot.MessageSession):
 async def _(msg: Bot.MessageSession, pcid: int):
     if int(pcid) < 0:
         await msg.finish(I18NContext("chemical_code.message.pcid.invalid"))
-    elif int(pcid) == 0:  # 若 id 为 0，则随机
+    elif int(pcid) == 0:  # 若 id 为 0，则随机选取化合物。
         await chemical_code(msg)
     else:
         await chemical_code(msg, pcid, random_mode=False)
@@ -266,7 +266,7 @@ async def chemical_code(msg: Bot.MessageSession, id: int | None = None, random_m
             Logger.exception()
             play_state.disable()
             await msg.finish(I18NContext("chemical_code.message.error"))
-        play_state.update(**csr)  # 储存并获取不同用户所需的信息
+        play_state.update(**csr)  # 存储并获取不同用户所需的信息。
         Logger.info(f"Answer: {play_state.get('answer')}")
 
         mol = Chem.MolFromSmiles(play_state.get("smiles"))
@@ -300,7 +300,7 @@ async def chemical_code(msg: Bot.MessageSession, id: int | None = None, random_m
                 if (wait_text := wait.as_display(text_only=True)) != play_state.get("answer"):
                     if re.match(r"^[A-Za-z0-9]+$", wait_text):
                         try:
-                            parse_ = parse_elements(wait_text)  # 解析消息中的化学元素
+                            parse_ = parse_elements(wait_text)  # 解析消息中的化学元素。
                             value = 0
                             for _, v in parse_.items():
                                 value += v
@@ -361,7 +361,7 @@ async def chemical_code(msg: Bot.MessageSession, id: int | None = None, random_m
                     play_state.disable()
                     await msg.finish(I18NContext("chemical_code.message.timeup", answer=play_state.get("answer")))
                 else:
-                    await msg.sleep(1)  # 防冲突
+                    await msg.sleep(1)  # 防止发送冲突。
                     await timer(start)
 
         if not captcha_mode:

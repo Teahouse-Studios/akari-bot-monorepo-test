@@ -50,7 +50,7 @@ ADAPTER_GROUP = "akaribot.adapters"
 CORE_DISTRIBUTION = "akari-bot-core"
 CORE_NAME = canonicalize_name(CORE_DISTRIBUTION)
 
-# manifest 的 schema 与分发默认值，与 core.registry 的 PackageManifest、MANIFEST_SCHEMA 一致。
+# manifest 结构与包默认值，与 core.registry 的 PackageManifest、MANIFEST_SCHEMA 保持一致。
 MANIFEST_FILENAME = "manifest.toml"
 MANIFEST_SCHEMA = 1
 DEFAULT_REQUIRES_CORE_API = ">=1,<2"
@@ -58,13 +58,13 @@ DEFAULT_LOCALES_DIR = "locales"
 
 REGISTRY_SCHEMA = 1
 DEFAULT_LOCALE = "zh_cn"
-# 模块简介的 locale 键，按序取首个命中：desc 是 module() 的 desc= 所指向的键，help 是模块级帮助首行。
+# 模块简介的 locale 键按照顺序选取首个命中项，其中 desc 为 module() 的 desc= 所指向的键，help 为模块级帮助首行。
 SUMMARY_KEY_TEMPLATES = ("{name}.help.desc", "{name}.help")
 
-# manifest 未进 PackageManifest 的字段：清单里写了就照读，没写则留空。
+# manifest 中未收录于 PackageManifest 的字段，若清单已声明则直接读取，未声明则保留为空。
 OPTIONAL_MANIFEST_SEQUENCE_FIELDS = ("available_for", "exclude_from", "categories")
 
-# A.3 未列出的两个键，承载本工具新增的构建产物定位信息。
+# A.3 未列出的两个键，承载该工具新增的构建产物定位信息。
 ARTIFACT_FIELDS = ("url", "sha256")
 ENTRY_REQUIRED_FIELDS = (
     "name",
@@ -82,7 +82,7 @@ ENTRY_REQUIRED_FIELDS = (
 )
 TOP_LEVEL_FIELDS = ("schema", "generated_at", "core", "modules", "adapters")
 
-# wheel 文件名按 PEP 427 把分发名里的非字母数字字符替换为下划线。
+# wheel 文件名按照 PEP 427 将包名中的非字母数字字符替换为下划线。
 WHEEL_NAME_ESCAPE_PATTERN = re.compile(r"[^\w\d.]+")
 CORE_API_VERSION_PATTERN = re.compile(r"^CORE_API_VERSION\s*=\s*(\d+)\s*$", re.MULTILINE)
 GIT_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -91,7 +91,7 @@ PackageKind = Literal["module", "adapter"]
 
 
 class ConfigError(RuntimeError):
-    """workspace 或包元数据不满足生成 registry 所需的结构。"""
+    """workspace 或包元数据不满足生成 registry 对应的结构要求。"""
 
 
 @dataclass(frozen=True)
@@ -127,7 +127,7 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 
 def workspace_pyprojects() -> list[Path]:
-    """按根 pyproject 的 members glob 展开成员清单，排除 exclude。"""
+    """按照根目录 pyproject 的 members glob 展开成员清单，排除 exclude 项。"""
     workspace = load_toml(ROOT_PYPROJECT).get("tool", {}).get("uv", {}).get("workspace", {})
     excluded = {path for pattern in workspace.get("exclude", []) for path in PROJECT_ROOT.glob(pattern)}
     found: set[Path] = set()
@@ -237,7 +237,7 @@ def discover_packages() -> tuple[list[Package], list[str]]:
 
 
 def provides(package: Package) -> list[str]:
-    """条目声明的可安装单元：模块包取清单的 provides_modules，适配器取自身名字。"""
+    """条目声明的可安装单元，模块包取清单中的 provides_modules，适配器取自身名称。"""
     if package.kind == "adapter":
         return [package.name]
     declared = package.manifest.get("provides_modules", [])
@@ -273,7 +273,7 @@ def locale_summaries(package: Package) -> dict[str, str]:
 
 
 def order_summaries(summaries: dict[str, str]) -> dict[str, str]:
-    """简介按语言代码排序，默认 locale 置首，保证同一输入产出同一字节序列。"""
+    """简介按照语言代码排序，默认 locale 放置于首位，确保同一输入生成完全一致的字节序列。"""
     ordered = {key: summaries[key] for key in sorted(summaries)}
     if DEFAULT_LOCALE in ordered:
         ordered = {DEFAULT_LOCALE: ordered[DEFAULT_LOCALE], **ordered}
@@ -309,14 +309,14 @@ def legacy_module_map(package: Package) -> list[str]:
 
 
 def as_str_list(value: Any) -> list[str]:
-    """把清单里的序列字段规整为字符串列表，单值按一元列表处理。"""
+    """将清单中的序列字段规整为字符串列表，单值按照一元列表处理。"""
     if isinstance(value, str):
         return [value]
     return [str(item) for item in value] if isinstance(value, list) else []
 
 
 def manifest_sequences(package: Package) -> dict[str, list[str]]:
-    """读清单里可选的序列字段，缺项为空列表。"""
+    """读取清单中可选的序列字段，缺失时为空列表。"""
     return {field: as_str_list(package.manifest.get(field, [])) for field in OPTIONAL_MANIFEST_SEQUENCE_FIELDS}
 
 
@@ -345,7 +345,7 @@ def wheel_artifact(package: Package, dist_dir: Path, base_url: str | None) -> tu
 
 
 def build_entry(package: Package, artifacts: dict[str, tuple[str, str]]) -> dict[str, Any]:
-    """由包元数据构造一个 registry 条目，键序固定以便逐字节比较。"""
+    """通过包元数据构造 registry 条目，固定键顺序以便逐字节比对。"""
     url, sha256 = artifacts.get(canonicalize_name(package.dist), ("", ""))
     entry: dict[str, Any] = {
         "name": package.name,
@@ -371,11 +371,11 @@ def build_entry(package: Package, artifacts: dict[str, tuple[str, str]]) -> dict
 
 
 def core_api_version(packages: list[Package]) -> int:
-    """从 core 源码静态取 CORE_API_VERSION，作为 ``api_version`` 的唯一来源。"""
+    """从 core 源码静态读取 CORE_API_VERSION，作为 ``api_version`` 的唯一来源。"""
     core = next((item for item in packages if canonicalize_name(item.dist) == CORE_NAME), None)
     if core is None:
         raise ConfigError(f"workspace 里没有 {CORE_DISTRIBUTION}，registry 的 core 段无来源")
-    # import_path 末段是包名，其上各级依次是 modules 与 akaribot 命名空间根。
+    # import_path 末段为包名称，其上各级依次为 modules 与 akaribot 命名空间根目录。
     namespace_root = core.root.parents[len(core.import_path.split(".")) - 2]
     source = namespace_root / "core" / "registry.py"
     if not source.is_file():
@@ -387,7 +387,7 @@ def core_api_version(packages: list[Package]) -> int:
 
 
 def resolve_generated_at(explicit: str | None) -> str:
-    """取内容时间戳：显式参数、SOURCE_DATE_EPOCH、HEAD 提交时间依次回退。"""
+    """按照显式参数、SOURCE_DATE_EPOCH 与 HEAD 提交时间依次获取内容时间戳。"""
     if explicit:
         return explicit
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
@@ -412,7 +412,7 @@ def build_registry(
     artifacts: dict[str, tuple[str, str]],
     generated_at: str,
 ) -> dict[str, Any]:
-    """组装完整 registry 结构。"""
+    """组装完整的 registry 索引结构。"""
     core = next((item for item in packages if canonicalize_name(item.dist) == CORE_NAME), None)
     if core is None:
         raise ConfigError(f"workspace 里没有 {CORE_DISTRIBUTION}")
@@ -449,7 +449,7 @@ def source_module_names(package: Package) -> set[str]:
 
 
 def check_manifest_sources(packages: list[Package]) -> list[str]:
-    """核对清单的 provides_modules 与源码里实际注册的模块名，防止清单漂移。"""
+    """核对清单中的 provides_modules 与源码中实际注册的模块名，防止清单未同步。"""
     problems: list[str] = []
     for package in packages:
         if package.kind != "module" or canonicalize_name(package.dist) == CORE_NAME:
@@ -466,7 +466,7 @@ def check_manifest_sources(packages: list[Package]) -> list[str]:
 
 
 def self_check(registry: dict[str, Any]) -> list[str]:
-    """结构自证：顶层键与 core 段键序、条目必填字段、提供的名字非空、分发名唯一。"""
+    """结构校验，检查顶层键与 core 段键序、条目必填字段、提供名称非空以及包名唯一性。"""
     problems: list[str] = []
     if tuple(registry) != TOP_LEVEL_FIELDS:
         problems.append(f"顶层键序与 A.3 不符：{tuple(registry)}")
@@ -486,7 +486,7 @@ def self_check(registry: dict[str, Any]) -> list[str]:
                 problems.append(f"{label} 的 {provides_field} 为空")
             if not entry.get("summary"):
                 problems.append(f"{label} 没有一句话简介")
-            # name 取 entry point 名，与注册名可以无关（threedsdb 包注册的是 3dsdb）。
+            # name 取自 entry point 名称，与注册名允许不一致（threedsdb 包注册的名称为 3dsdb）。
             if not entry.get("name"):
                 problems.append(f"{label} 的 name 为空")
             if len(set(provided)) != len(provided):
@@ -503,7 +503,7 @@ def self_check(registry: dict[str, Any]) -> list[str]:
 
 
 def installed_registry(python: str) -> dict[str, Any]:
-    """在目标解释器里运行 core 的清单入口，取已装包视图用于交叉核对。"""
+    """在目标解释器中运行 core 的清单入口，获取已安装包视图用于交叉核对。"""
     command = [python, "-m", "akaribot.core.entrypoints.registry", "--json"]
     try:
         result = subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)
@@ -514,7 +514,7 @@ def installed_registry(python: str) -> dict[str, Any]:
 
 
 def check_against_installed(registry: dict[str, Any], installed: dict[str, Any]) -> list[str]:
-    """交叉核对 registry 与已装包视图的分发名、entry point 名与提供的模块名。"""
+    """交叉核对 registry 与已安装包视图的包名称、entry point 名称与提供的模块名称。"""
     problems: list[str] = []
     views: dict[str, dict[str, dict[str, Any]]] = {}
     for item in installed.get("packages", []):
@@ -532,7 +532,7 @@ def check_against_installed(registry: dict[str, Any], installed: dict[str, Any])
             entry, view = built[key], found[key]
             if entry["name"] != view.get("name"):
                 problems.append(f"{entry['dist']} 的 entry point 名不一致：{entry['name']} / {view.get('name')}")
-            # 已装视图的 modules 字段对适配器为命名空间名，故适配器只比 entry point 名。
+            # 已安装视图的 modules 字段对适配器为命名空间名，因此适配器仅比对 entry point 名。
             if section == "adapters":
                 continue
             declared = [str(item) for item in entry.get(provides_field, [])]
@@ -543,12 +543,12 @@ def check_against_installed(registry: dict[str, Any], installed: dict[str, Any])
 
 
 def dumps(registry: dict[str, Any]) -> str:
-    """序列化为稳定文本：固定缩进、不转义非 ASCII、末尾换行。"""
+    """序列化为稳定文本，固定缩进、不转义非 ASCII 字符，并在末尾添加换行符。"""
     return json.dumps(registry, ensure_ascii=False, indent=2) + "\n"
 
 
 def write_output(path: Path, text: str) -> None:
-    """原子写文件，避免 CI 中途失败留下半份 registry.json。"""
+    """原子写入文件，避免 CI 流程异常退出时残留不完整的 registry.json。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False)
     try:
@@ -591,7 +591,7 @@ def collect_artifacts(
 
 
 def describe(registry: dict[str, Any], skipped: list[str]) -> str:
-    """生成一行运行摘要，供 stderr 使用。"""
+    """生成单行运行摘要信息，供 stderr 输出使用。"""
     entries = registry["modules"] + registry["adapters"]
     counts = f"core 1、模块 {len(registry['modules'])}、适配器 {len(registry['adapters'])}"
     filled = sum(1 for entry in entries if entry["sha256"])
@@ -601,7 +601,7 @@ def describe(registry: dict[str, Any], skipped: list[str]) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(
         description="由 workspace 各包的 pyproject、manifest 与 locales 生成 registry.json",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -626,7 +626,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口。返回进程退出码，0 表示生成的 registry 通过全部自检。"""
+    """主入口函数，返回进程退出码，0 表示生成的 registry 通过全部自检。"""
     args = build_parser().parse_args(argv)
     try:
         packages, skipped = discover_packages()

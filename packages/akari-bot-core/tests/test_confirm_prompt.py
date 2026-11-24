@@ -71,7 +71,7 @@ async def _test_qq_instance_uses_face_ids():
 
 @func_case
 async def test_confirm_prompt(tester: Tester):
-    """core: 确认提示文案的选择"""
+    """core 确认提示文案选择逻辑测试。"""
     await tester.test(_test_button_wins_over_reaction, "按钮优先于表情反应")
     await tester.test(_test_qq_gets_poke_prompt, "QQ 提示含戳一戳")
     await tester.test(_test_other_reaction_client, "其余平台用表情反应提示")

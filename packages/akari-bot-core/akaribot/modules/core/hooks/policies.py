@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 policies = module("parser_policies", hidden=True, load=True, base=True)
 
-# 场景冷却属于策略状态。由模块 runtime 管理，热重载同版本时保留。
+# 场景冷却属于策略状态。通过模块 runtime 管理，在同版本热重载时予以保留。
 target_cooldown_counter = policies.state(
     "target_cooldown_counter",
     default_factory=ExpiringTempDict,
@@ -98,8 +98,8 @@ async def _regex_cooldown(ctx: "Bot.ParserHookContext"):
 
 @policies.hook(point=HookPoint.COMMAND_ROUTE, priority=20, name="muted", server_scope=True)
 async def _command_muted(ctx: "Bot.ParserHookContext"):
-    # 必须在候选模块匹配阶段拦下：未匹配的模块会走纠错与默认提示，那些路径不会
-    # 经过 :attr:`HookPoint.COMMAND_PREPARE`，放到模板解析前就拦不干净。
+    # 必须在候选模块匹配阶段拦截，因为未匹配的模块会进入纠错与默认提示流程，相关路径不会
+    # 经过 :attr:`HookPoint.COMMAND_PREPARE`，若置于模板解析之前则无法实现完整拦截。
     if ctx.msg.session_info.muted and ctx.command_first_word != "mute":
         return ctx.Stop()
     return None
@@ -107,8 +107,8 @@ async def _command_muted(ctx: "Bot.ParserHookContext"):
 
 @policies.hook(point=HookPoint.OUTGOING_BEFORE_SEND, priority=10, name="muted_outgoing", server_scope=True)
 async def _outgoing_muted(ctx: "Bot.ParserHookContext"):
-    # 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，这里只拦
-    # 主动获取的会话（``fetch``）。否则 `mute` 命令本身的确认也会被一并取消。
+    # 被动回复已由 :func:`_command_muted` / :func:`_regex_route` 控制，此处仅拦截
+    # 主动获取的会话（``fetch``），避免将 `mute` 命令本身的确认流程一并取消。
     info = ctx.session_info
     if info.fetch and info.muted:
         Logger.debug(f"Suppressed proactive message to muted target: {info.target_id}")

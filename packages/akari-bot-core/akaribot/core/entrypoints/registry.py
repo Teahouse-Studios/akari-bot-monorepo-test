@@ -20,7 +20,7 @@ def _summary(dist: str) -> str:
         from importlib.metadata import metadata
 
         return metadata(dist).get("Summary", "") or ""
-    except Exception:  # noqa: BLE001 - 元数据缺失不该让清单输出失败
+    except Exception:  # noqa: BLE001 - 元数据缺失不应让清单输出失败。
         return ""
 
 
@@ -43,10 +43,10 @@ def collect() -> dict:
                     "import_path": entry.import_path,
                     "root": str(entry.root),
                     "modules": list(entry.manifest.provides_modules),
-                    # 兼容性诊断要用：缺了它，消费方只能显示“未声明”，与 manifest 实际内容不符。
+                    # 供兼容性诊断使用，缺少该项时调用方仅能显示“未声明”，与 manifest 实际内容不符。
                     "requires_core_api": entry.manifest.requires_core_api,
-                    # 卸载清理要用：表名决定删哪些表，config_table 决定删哪个扁平配置文件。
-                    # 缺这两项时 CLI 只能靠 provides_modules 猜文件名，而现行布局是扁平路径。
+                    # 供卸载清理使用，表名确定要删除的表，config_table 确定要删除的扁平配置文件。
+                    # 缺少这两项时 CLI 仅能依据 provides_modules 推断文件名，而现行布局是扁平路径。
                     "owned_tables": list(entry.manifest.owned_tables),
                     "config_table": entry.manifest.config_table or "",
                     "summary": _summary(entry.dist_name),

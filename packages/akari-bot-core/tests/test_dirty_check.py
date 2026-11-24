@@ -24,8 +24,8 @@ def _test_parse_data_protects_at_code():
         from akaribot.core.utils.dirty_check import parse_data
 
         dirty = {"RiskLevel": "high", "Result": [{"Confidence": 100, "RiskWords": "BADWORD", "Label": "mock"}]}
-        # AT 码的合法形式是 <AT:client|id>（见 core/builtins/message/mention.py），
-        # 中间的额外字段为展示名，与 client、id 一并豁免。
+        # AT 码的合法形式是 <AT:client|id>（参见 core/builtins/message/mention.py），
+        # 中间的额外字段为展示名，与 client、id 一并予以豁免。
         code = "<AT:TEST|123|BADWORD>"
 
         inside_only = parse_data(f"hello {code} world", dirty)
@@ -34,7 +34,7 @@ def _test_parse_data_protects_at_code():
         return (
             inside_only["status"] is True
             and inside_only["content"] == f"hello {code} world"
-            # 豁免不得扩大成整条消息不过滤：AT 码之外的同一个词仍应被替换
+            # 豁免不得扩大成整条消息不过滤，AT 码之外的同一个词仍应被替换。
             and outside_too["status"] is False
             and code in outside_too["content"]
             and outside_too["content"].count("BADWORD") == 1
@@ -280,7 +280,7 @@ def _test_aliyun_cache_namespace_isolated():
 
 @func_case
 async def test_dirty_check(tester: Tester):
-    """akaribot.core.utils.dirty_check: 内容审核系统测试"""
+    """akaribot.core.utils.dirty_check 内容审核系统测试"""
     await tester.test(_test_parse_data_clean, "parse_data 正常文本测试")
     await tester.test(_test_parse_data_protects_at_code, "parse_data AT 码豁免测试")
     await tester.test(_test_parse_data_protects_ke_i18n_structure, "parse_data KE/I18N 结构与 value 过滤测试")

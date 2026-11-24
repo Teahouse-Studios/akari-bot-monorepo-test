@@ -1,4 +1,4 @@
-"""实例 venv 托管"""
+"""实例 venv 托管。"""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ app = typer.Typer(help=i18n.t("cli.venv.help"))
 
 DryRunOption = Annotated[bool, typer.Option("--dry-run", help=i18n.t("cli.venv.option_dry_run"))]
 
-# 裸仓库地址按这些主机名与 .git 后缀判定为 git 直引用。其余 http(s) 地址按普通直引用交给 uv。
+# 纯仓库地址根据对应的主机名与 .git 后缀判定为 git 直接引用。其余 http(s) 地址作为普通直接引用交由 uv 处理。
 GIT_HOSTS = ("github.com", "gitlab.com", "bitbucket.org", "codeberg.org", "gitee.com", "git.sr.ht")
 
 
@@ -50,7 +50,7 @@ def status(
     instance: InstancePathOption = None,
     as_json: Annotated[bool, typer.Option("--json", help=i18n.t("cli.common.json_option"))] = False,
 ) -> None:
-    """显示当前模式、解释器路径、环境里的包与清单里记录的运行库。"""
+    """显示当前模式、解释器路径、环境中的包与清单中记录的运行库。"""
     target = require_instance(instance)
     state = engine.venv_status(target)
     if as_json:
@@ -66,7 +66,7 @@ def status(
                     "exists": state.exists,
                     "package_count": state.package_count if state.packages is not None else None,
                     "installed_count": state.installed_count,
-                    # 界面按这份清单管理环境：装了什么、哪些是 AkariBot 的、哪些记在实例清单里。
+                    # 界面根据该清单管理运行环境，包括已安装的包、属于 AkariBot 的包以及记录在实例清单中的项。
                     "installed": (
                         [
                             {
@@ -117,12 +117,12 @@ def status(
 
 
 def _recorded_name(spec: str) -> str:
-    # 记录串都能解析出分发名。解析不出时返回空串，调用方据此保留它。
+    # 依赖记录均可解析出对应包名。无法解析时返回空字符串，调用方据此保留该记录。
     names = engine.requirement_names([spec])
     return next(iter(names), "")
 
 
-# 改写清单里记录的运行库，返回改写后的列表。
+# 改写清单中记录的运行库，返回改写后的列表。
 def _record(instance, specs: Sequence[str], *, drop: bool = False) -> tuple[str, ...]:
     current = list(instance.meta.requirements)
     if drop:
@@ -135,7 +135,7 @@ def _record(instance, specs: Sequence[str], *, drop: bool = False) -> tuple[str,
     return instance.meta.requirements
 
 
-# 补全直接引用：仓库地址加 ``git+`` 前缀，其它地址与需求串原样沿用。
+# 补全直接引用，为仓库地址添加 ``git+`` 前缀，其他地址与依赖声明原样沿用。
 def _resolve_spec(spec: str) -> str:
     text = spec.strip()
     if text.startswith(("git+", "ssh://", "git@")) or "://" not in text:
@@ -146,7 +146,7 @@ def _resolve_spec(spec: str) -> str:
     return text
 
 
-# 把没有版本约束的需求串补成 ``名字==装到的版本``，让清单里的记录可复现。
+# 将无版本约束的依赖声明补全为 ``名称==已安装版本``，确保清单中的记录具备可复现性。
 def _pin_spec(python: Path, spec: str) -> str:
     try:
         requirement = Requirement(spec)
@@ -165,7 +165,7 @@ def _pin_spec(python: Path, spec: str) -> str:
     return f"{requirement.name}{extras}=={info.version}"
 
 
-# 把直接引用规范成可与 ``direct_url`` 比对的形式：去掉 git+ 前缀、片段与末尾斜杠。
+# 将直接引用规范化为可与 ``direct_url`` 比对的形式，移除 git+ 前缀、片段与末尾斜杠。
 def _direct_reference(spec: str) -> str:
     text = spec.strip()
     if not text.startswith("git+") and Path(text).expanduser().exists():
@@ -173,7 +173,7 @@ def _direct_reference(spec: str) -> str:
     return text.removeprefix("git+").split("#", 1)[0].rstrip("/")
 
 
-# 给直接引用补上分发名：装完后按 ``direct_url`` 反查对应的分发。
+# 为直接引用补全包名，安装完成后按 ``direct_url`` 反向查找对应的包。
 def _named_direct_spec(python: Path, spec: str) -> str:
     address = _direct_reference(spec)
     target = spec if spec.startswith("git+") else address
@@ -192,7 +192,7 @@ def _is_direct_reference(spec: str) -> bool:
     return spec.startswith("git+") or "://" in spec or Path(spec).expanduser().exists()
 
 
-# 把装好的需求串规范成清单里的记录：能定名就定名，能定版就定版。
+# 将已安装的依赖声明规范化为清单中的记录，尽可能确定包名与版本号。
 def _recorded_spec(python: Path, spec: str) -> str:
     if _is_direct_reference(spec):
         return _named_direct_spec(python, spec)
@@ -208,7 +208,7 @@ def add(
     dry_run: DryRunOption = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """把运行库装进实例环境。``--save`` 同时记进实例清单，环境重建时按它补装。"""
+    """将运行库安装至实例环境。``--save`` 会同时写入实例清单，环境重建时根据清单补充安装。"""
     target = require_instance(instance)
     text = _resolve_spec(spec)
     if not text:
@@ -246,7 +246,7 @@ def remove(
     dry_run: DryRunOption = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """从实例环境卸载运行库。``--save`` 同时删掉清单里的记录。"""
+    """从实例环境卸载运行库。``--save`` 同时删除清单中的记录。"""
     target = require_instance(instance)
     name = engine.canonical(dist)
     recorded = engine.requirement_names(target.meta.requirements)
@@ -291,7 +291,7 @@ def adopt(
     python: Annotated[str | None, typer.Option("--python", help=i18n.t("cli.venv.adopt.option_python"))] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """切换为 CLI 托管 venv：先装好并验证，最后才卸载源环境的包。"""
+    """切换为 CLI 托管 venv，先执行安装与验证流程，验证通过后再卸载源环境中的包。"""
     target = require_instance(instance)
     if not dry_run and not yes:
         typer.confirm(i18n.t("cli.venv.adopt.confirm", venv=target.venv_dir), abort=True)
@@ -318,7 +318,7 @@ def release(
     ] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """放弃托管：把实例 venv 的包迁回当前环境。"""
+    """放弃托管，将实例 venv 中的包迁移回当前环境。"""
     target = require_instance(instance)
     if not dry_run and not yes:
         typer.confirm(i18n.t("cli.venv.release.confirm"), abort=True)
@@ -342,7 +342,7 @@ def recreate(
     python: Annotated[str | None, typer.Option("--python", help=i18n.t("cli.venv.recreate.option_python"))] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help=i18n.t("cli.venv.option_verbose"))] = False,
 ) -> None:
-    """重建实例 venv（Python 升级后修复）。新环境装好并验证通过后才与旧目录换位。"""
+    """重建实例 venv（Python 升级后修复）。在新环境安装并验证通过后再替换旧目录。"""
     target = require_instance(instance)
     if not dry_run and not yes:
         typer.confirm(i18n.t("cli.venv.recreate.confirm"), abort=True)

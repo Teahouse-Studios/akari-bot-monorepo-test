@@ -94,7 +94,7 @@ async def _test_atcode_converts_to_mention_segments() -> bool:
     element_segments = await convert_chain_to_segments(
         session, MessageChain.assign([MentionElement.assign("QQ|10002")]), quote=False
     )
-    # 相邻文本段会合并，故前后文本各自成段
+    # 相邻文本段会合并，所以前后文本要各自成段。
     return (
         _segment_types(mention_segments) == ["text", "mention", "text"]
         and mention_segments[1].data.user_id == 10001

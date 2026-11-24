@@ -24,7 +24,7 @@ class _FakeLocale:
     lang = "zh_cn"
 
     def with_locale(self, lang):
-        # 与 Locale.with_locale 一致：换语言渲染时保留其余状态，返回新对象。
+        # 与 Locale.with_locale 一致，切换语言渲染时保留其余状态并返回新对象。
         clone = _FakeLocale()
         clone.lang = lang
         clone.locale = lang
@@ -292,7 +292,7 @@ def _test_draft_locale_requires_nonempty_string():
     draft.commit()
     assert msg.session_info.locale.locale == "en_us"
 
-    # 默认语言仍可读取为 None，修改其它字段不要求补充语言。
+    # 默认语言仍可读取为 None，修改其他字段不要求补充语言。
     msg.session_info.locale = None
     untouched_locale = SessionDraft(msg.session_info)
     assert untouched_locale.locale_lang is None
@@ -324,7 +324,7 @@ async def _test_outgoing_message_nodes_isolated():
         original = OutgoingPayload(chain=MessageNodes.assign([MessageChain.assign("original safe")]))
         outcome = await ParserHookExecutor(mm).dispatch(HookPoint.OUTGOING_BEFORE_SEND, _FakeMsg(), outgoing=original)
         assert outcome.failed == 1
-        # 正式 payload 的节点文本未被失败 hook 改写
+        # 正式 payload 的节点文本未被失败 Hook 改写。
         assert original.chain.values[0].values[0].text == "original safe"
         return True
     except Exception:
@@ -346,7 +346,7 @@ async def _test_apply_from_detaches_draft_reference():
             return Continue()
 
         async def h2(ctx):
-            # h2 修改 h1 保留的草稿链，然后失败
+            # h2 修改 h1 保留的草稿消息链，随后失败。
             held["draft"].values[0].text = "late mutation of prior draft"
             raise RuntimeError("boom")
 
@@ -362,7 +362,7 @@ async def _test_apply_from_detaches_draft_reference():
         payload = OutgoingPayload(chain=MessageChain.assign("original"))
         outcome = await ParserHookExecutor(mm).dispatch(HookPoint.OUTGOING_BEFORE_SEND, _FakeMsg(), outgoing=payload)
         assert outcome.failed == 1
-        # h1 的改写已提交，但 h2 对保留草稿的污染没有进入正式结果
+        # h1 的改写已提交，但 h2 对保留草稿的修改未进入正式结果。
         assert payload.chain.values[0].text == "h1 rewrite"
         return True
     except Exception:
@@ -382,7 +382,7 @@ def _test_draft_messages_type_validated():
         except SessionDraftError:
             pass
         assert msg.session_info.messages is None
-        # MessageChain 可以正常提交
+        # MessageChain 可以正常提交。
         from akaribot.core.builtins.message.chain import MessageChain
 
         draft2 = SessionDraft(msg.session_info)

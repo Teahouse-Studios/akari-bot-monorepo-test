@@ -16,9 +16,9 @@ from akaribot.testing import func_case, Tester
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_PATH = REPO_ROOT / "tools" / "check_versions.py"
 TOKEN = "Skip-Version"
-# 整段区间被放行的提交：正文里两次提到旧标记，但从未写过独立 trailer。
+# 整段区间被放行的提交中，正文中两次提及历史标记，但从未写过独立 trailer。
 POISONED_COMMIT = "b337364d3"
-# 版本守卫依赖真实历史时会被区间内的豁免声明左右，故用例自建仓库测试数据。
+# 版本检查依赖真实历史时易受区间内的豁免声明影响，因此用例自建仓库测试数据。
 FIXTURE_ROOT_PYPROJECT = '[tool.uv.workspace]\nmembers = ["packages/*"]\n'
 FIXTURE_MEMBER_PYPROJECT = '[project]\nname = "example"\nversion = "0.1.0"\ndependencies = []\n'
 
@@ -170,7 +170,7 @@ def _test_downgrade_is_a_violation():
 
 @func_case
 async def test_check_versions(tester: Tester):
-    """tools.check_versions: 版本守卫豁免解析测试"""
+    """tools.check_versions 版本检查豁免解析测试。"""
     await tester.test(_test_prose_mention_is_not_an_exemption, "正文提到 token 不算声明")
     await tester.test(_test_real_guard_commit_is_not_an_exemption, "真实事故提交不再放行区间")
     await tester.test(_test_only_last_paragraph_counts, "只认最后一段的 trailer")

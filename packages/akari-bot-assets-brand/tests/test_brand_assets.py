@@ -10,10 +10,10 @@ from pathlib import Path
 from akaribot.assets.brand import brand_dir
 from akaribot.testing import Tester, func_case
 
-# 原件规格：2000×2000 全彩 RGBA。降采样或转调色板都会让画面明显变糊。
+# 原件规格为 2000×2000 全彩 RGBA，降采样或转调色板均会导致画面明显模糊。
 CHARACTER_SIZE = (2000, 2000)
 CHARACTER_MODE = "RGBA"
-# 体积下限取原件的约七成：正常的重新导出会高于这个值，有损压缩则远低于它。
+# 体积下限取原件的约七成，正常的重新导出会高于该值，有损压缩则远低于该值。
 CHARACTER_MIN_BYTES = 2 * 1024 * 1024
 
 REQUIRED_FILES = (
@@ -73,14 +73,14 @@ def _test_license_is_bundled_with_the_artwork():
 
 def _test_no_stray_build_artifacts_beside_the_assets():
     directory = Path(brand_dir())
-    # `.DS_Store` 由访达写入，不属于打包产物，其存在不应让用例失败。
+    # `.DS_Store` 由访达写入，不属于打包产物，其存在不应导致测试用例失败。
     allowed = {*REQUIRED_FILES, "__init__.py", "manifest.toml", "__pycache__", "docs", ".DS_Store"}
     return all(child.name in allowed for child in directory.iterdir())
 
 
 @func_case
 async def test_brand_assets(tester: Tester):
-    """akaribot.assets.brand: 品牌资产内容与保真度测试"""
+    """akaribot.assets.brand 品牌资产内容与保真度测试"""
     await tester.test(_test_brand_dir_holds_every_asset, "资产与许可证齐全")
     await tester.test(_test_character_artwork_keeps_original_fidelity, "立绘保持原件规格")
     await tester.test(_test_logo_is_a_readable_png, "日间标志可解码且非空")

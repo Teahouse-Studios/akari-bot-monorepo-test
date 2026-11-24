@@ -11,7 +11,7 @@ def _verification_id(target_union_id: str, sender_union_id: str) -> str:
 
 
 class CaptchaTrust(DBModel):
-    """按场景与用户 union 隔离的入群验证信任记录。"""
+    """按场景与用户 Union 隔离的入群验证信任记录。"""
 
     trust_id = fields.CharField(max_length=64, primary_key=True)
     target_union_id = fields.CharField(max_length=512, db_index=True)
@@ -80,8 +80,8 @@ class CaptchaChallenge(DBModel):
     async def migrate_union_reference(cls, scope: str, from_union: str, to_union: str) -> None:
         field = "sender_union_id" if scope == UNION_SCOPE_SENDER else "target_union_id"
         if scope in {UNION_SCOPE_SENDER, UNION_SCOPE_TARGET}:
-            # challenge_id 只作为稳定记录 ID 使用。迁移后可能有多条历史挑战落到同一组合，
-            # 保留原主键可避免碰撞。新事件按两个 Union 字段查询，不假定主键等于组合哈希。
+            # challenge_id 仅作为固定记录 ID 使用。迁移后可能有多条历史挑战分配至同一组合，
+            # 保留原主键可以避免冲突。新事件按两个 Union 字段查询，不得假定主键等于组合哈希。
             await cls.filter(**{field: from_union}).update(**{field: to_union})
 
     @classmethod
@@ -92,7 +92,7 @@ class CaptchaChallenge(DBModel):
         from_union: str,
         to_union: str,
     ) -> None:
-        """把被拆出平台的成员仍需处理的挑战改挂到其新 Union。"""
+        """将被拆出平台的成员仍需要处理的挑战重新关联至其新 Union。"""
         if scope == UNION_SCOPE_SENDER:
             await cls.filter(
                 sender_union_id=from_union,

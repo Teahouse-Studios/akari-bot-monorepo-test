@@ -1,10 +1,10 @@
 # akari-bot-module-maimai
 
-查询 Maimai 相关内容。
+查询舞萌 DX 与 CHUNITHM 相关曲目、谱面与成绩内容。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-maimai

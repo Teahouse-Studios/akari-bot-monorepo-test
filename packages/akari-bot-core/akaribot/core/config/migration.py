@@ -55,7 +55,7 @@ class ConfigRevision:
 
 
 def _config_root() -> Path:
-    # 配置管理器已加载时以它为准：测试与脚本可能已切换过配置路径。
+    # 配置管理器已加载时以它为准，因为测试与脚本可能已切换过配置路径。
     module = sys.modules.get("akaribot.core.config")
     if module is not None:
         return module.CFGManager.config_path
@@ -63,13 +63,12 @@ def _config_root() -> Path:
 
 
 def _config_file(table: str) -> Path:
-    # 现行扁平布局下非核心表一名一文件。ConfigLayout 落地后改由
-    # ConfigLayout.file_for() 提供同一映射。
+    # 扁平布局下非核心表采用单表单文件存储。由 ConfigLayout.file_for() 提供统一映射。
     return _config_root() / f"{table}.toml"
 
 
 def _config_table(entry: "PackageEntry") -> str:
-    # 清单未声明 ``config_table`` 时按装饰器的命名规则回推：适配器为 ``bot_<名>``，
+    # 清单未声明 ``config_table`` 时按装饰器的命名规则推导，适配器为 ``bot_<名>``，
     # 模块为 ``module_<名>``。
     if entry.manifest.config_table:
         return entry.manifest.config_table
@@ -151,8 +150,7 @@ def _document_version(document: "TOMLDocument") -> int | None:
 
 
 def _baseline_version(entry: "PackageEntry", revisions: list[ConfigRevision]) -> int:
-    # 这类文件生成于本机制落地之前，其内容等价于该包首个迁移之前的状态。包尚无迁移脚本时，
-    # 直接取清单声明的表结构版本。
+    # 当包尚未包含迁移脚本时，直接采用清单中声明的表结构版本。
     if revisions:
         return revisions[0].number - 1
     return entry.manifest.config_schema_version
@@ -164,8 +162,8 @@ def _file_version(path: Path, entry: "PackageEntry", revisions: list[ConfigRevis
 
 
 def _load_revision_hook(revision: ConfigRevision):
-    # 不经 ``importlib.import_module`` 加载：以号段开头的模块名不是合法标识符，且重复加载会在
-    # ``sys.modules`` 留下同名残留。脚本声明的 ``REVISION`` 与文件名不一致时立即报错。
+    # 不通过 ``importlib.import_module`` 加载，因为以迁移编号开头的模块名不是合法标识符，且重复加载会在
+    # ``sys.modules`` 残留同名模块。脚本声明的 ``REVISION`` 与文件名不一致时立即报错。
     spec = importlib.util.spec_from_file_location(f"akari_config_migration_{revision.revision}", revision.path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load config migration {revision.path}")
@@ -182,8 +180,8 @@ def _load_revision_hook(revision: ConfigRevision):
 
 
 def _run_awaitable(awaitable) -> None:
-    # 调用方可能是同步的启动流程，也可能处在事件循环内。后者不能再执行 ``asyncio.run``，
-    # 故另起线程驱动。
+    # 调用方可能为同步启动流程，亦可能处于事件循环内。处于事件循环内时无法直接执行 ``asyncio.run``，
+    # 因此创建独立线程执行。
     async def _drive():
         return await awaitable
 

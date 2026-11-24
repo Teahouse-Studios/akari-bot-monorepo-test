@@ -28,7 +28,7 @@ def _use_cli_locale() -> None:
 
 # 记录 uv 调用，不实际执行。dry_run 与 verbose 与真实执行器同名，命令层会原样传进来。
 class _FakeRunner:
-    # 命令层自行构造执行器，故按构造顺序留一份引用，供用例读回实际 argv。
+    # 命令层自行构造执行器，因此按构造顺序留一份引用，供用例读取实际 argv。
     created: list["_FakeRunner"] = []
 
     def __init__(self, *, dry_run: bool = False, verbose: bool = False) -> None:
@@ -38,7 +38,7 @@ class _FakeRunner:
         _FakeRunner.created.append(self)
 
     def run_checked(self, argv, *, what, env=None, stream=False) -> None:
-        """记下 argv，不执行。"""
+        """记录 argv，不执行。"""
         self.calls.append([str(item) for item in argv])
 
 
@@ -49,7 +49,7 @@ def _instance(tmp: Path, *, requirements: tuple[str, ...] = ()):
     if requirements:
         instance.meta.set_requirements(list(requirements))
     instance.meta.save()
-    # 解释器存在与否只影响状态探测，写个占位文件即可。
+    # 解释器存在与否仅影响状态探测，写入占位文件即可。
     engine.venv_python_path(root / ".venv").write_text("", encoding="utf-8")
     return instance
 
@@ -77,7 +77,7 @@ def _requirements(instance) -> tuple[str, ...]:
 
 
 def _test_status_json_lists_every_distribution():
-    # 界面据此管理环境：装了什么、哪些是 AkariBot 的、哪些记在清单里，一次取齐。
+    # 界面据此管理环境，一次获取所有已安装的包、属于 AkariBot 的包以及记录在清单中的项。
     with TemporaryDirectory(prefix="akari-venv-") as raw:
         instance = _instance(Path(raw), requirements=("httpx>=0.27",))
         found = _installed(
@@ -134,12 +134,12 @@ def _test_add_dry_run_changes_nothing():
         instance = _instance(Path(raw))
         result, runner, _text = _invoke(instance, ["add", "httpx", "--dry-run"])
         recorded = _requirements(instance)
-    # 试运行由执行器自己短路：命令层仍然构造执行器并下发 argv，但不落盘也不写清单。
+    # 试运行由执行器直接跳过，命令层仍然构造执行器并传递 argv，但不写入磁盘也不写入清单。
     return result.exit_code == 0 and recorded == () and runner.dry_run is True and runner.calls != []
 
 
 def _test_add_repository_url_records_named_spec():
-    # 直接粘贴仓库地址：补 git+ 前缀，装完按 direct_url 反查分发名再记录。
+    # 直接粘贴仓库地址时补充 git+ 前缀，安装完成后按 direct_url 反向查找包名再记录。
     with TemporaryDirectory(prefix="akari-venv-") as raw:
         instance = _instance(Path(raw))
         found = _installed(engine.InstalledDist("requests", "2.32.3", url="git+https://github.com/psf/requests"))
@@ -159,7 +159,7 @@ def _test_add_unresolvable_reference_warns_and_skips_record():
         with patch.object(engine, "probe_environment", return_value=_installed()):
             result, _runner, _text = _invoke(instance, ["add", "git+https://example.invalid/repo"])
         recorded = _requirements(instance)
-    # 警告经 stderr 输出，CliRunner 把两路合在 output 里。
+    # 警告通过 stderr 输出，CliRunner 把两路合在 output 里。
     return result.exit_code == 0 and recorded == () and "git+https://example.invalid/repo" in result.output
 
 
@@ -190,7 +190,7 @@ def _test_remove_without_save_keeps_record():
 
 
 def _test_remove_record_without_install_only_drops_record():
-    # 记录还在、环境里已经没有了：卸载无处可卸，但仍要能删掉清单里的记录。
+    # 记录尚存但环境中已不存在该包时，虽然无包可卸载，但仍需要能够删除清单中的记录。
     with TemporaryDirectory(prefix="akari-venv-") as raw:
         instance = _instance(Path(raw), requirements=("httpx>=0.27",))
         with patch.object(engine, "probe_environment", return_value=_installed()):
@@ -208,7 +208,7 @@ def _test_remove_absent_fails():
 
 
 def _test_recreate_reinstalls_recorded_requirements():
-    # 清单里记录的运行库随环境重建一并补装。没有记录时不额外调用 uv。
+    # 清单中记录的运行库随环境重建一并补充安装。未记录时不额外调用 uv。
     with TemporaryDirectory(prefix="akari-venv-") as raw:
         root = Path(raw)
         instance = _instance(root, requirements=("httpx>=0.27", "git+https://github.com/psf/requests"))
@@ -228,14 +228,14 @@ def _test_recreate_reinstalls_recorded_requirements():
 
 
 def _test_probe_sees_distributions_without_entry_points():
-    # 探针按分发名前缀判定 AkariBot 包：资源包这类没有入口点的分发也必须被枚举到。
+    # 探针按包名前缀判定 AkariBot 包，资源包这类不带入口点的包也必须被枚举到。
     found = engine.probe_environment(engine.system_python())
     return "akari-bot-core" in found and "akari-bot-html2text" in found
 
 
 @func_case
 async def test_venv_packages(tester: Tester):
-    """cli.venv: 环境包清单与运行库装卸测试"""
+    """cli.venv 环境包清单与运行库安装卸载测试"""
     _use_cli_locale()
     await tester.test(_test_status_json_lists_every_distribution, "status --json 列出全部分发与记录标记")
     await tester.test(_test_add_saves_pinned_spec, "add 记录补版本的需求串")

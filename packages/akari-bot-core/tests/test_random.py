@@ -1,4 +1,4 @@
-"""core.utils.random 纯函数单元测试 - Random 类。"""
+"""core.utils.random 模块 Random 类纯函数单元测试。"""
 
 from akaribot.testing import func_case, Tester
 from akaribot.core.utils.random import Random, SecureRandom
@@ -69,7 +69,7 @@ def _test_random_token_urlsafe():
 
 @func_case
 async def test_random(tester: Tester):
-    """core.utils.random: Random 类全部方法测试"""
+    """core.utils.random 模块 Random 类全量方法测试"""
     await tester.test(_test_random_randint, "Random.randint() 测试")
     await tester.test(_test_random_randrange, "Random.randrange() 测试")
     await tester.test(_test_random_sample, "Random.sample() 测试")

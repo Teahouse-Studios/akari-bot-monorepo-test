@@ -24,7 +24,7 @@ async def _capture_event(module, callback, *args, **kwargs):
 
 
 def _event_matches(actual, expected) -> bool:
-    # 只校验声明过的字段，平台后续追加事件字段时不会误报。
+    # 仅校验声明过的字段，平台后续追加事件字段时不会误报。
     if isinstance(expected, dict):
         return isinstance(actual, dict) and all(
             key in actual and _event_matches(actual[key], value) for key, value in expected.items()

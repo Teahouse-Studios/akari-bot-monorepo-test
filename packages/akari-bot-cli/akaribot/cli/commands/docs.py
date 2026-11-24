@@ -294,7 +294,7 @@ def _build_site(
 
 
 def _confirm(text: str, *, as_json: bool) -> None:
-    # click 会把读入的答案回显到 stdout。JSON 模式下整段改道 stderr，保证结果行不被污染。
+    # click 会将读入的答案回显至 stdout。JSON 模式下整段重定向至 stderr，以确保结果行不被污染。
     if as_json:
         with contextlib.redirect_stdout(sys.stderr):
             typer.confirm(text, abort=True)
@@ -350,7 +350,7 @@ def list_docs(
     as_json: JsonOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """列出参与构建的包与页面。``--json`` 同时给出配置、工具链与最近状态。"""
+    """列出参与构建的包与页面。``--json`` 同时提供配置、工具链与最新状态。"""
     target = require_instance(instance)
     try:
         config = load_config(target)
@@ -417,7 +417,7 @@ def sync_theme_docs(
     as_json: JsonOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """把主题模板 submodule 同步到远端最新提交。"""
+    """将主题模板 submodule 同步至远端最新提交。"""
     target = require_instance(instance)
     try:
         result = sync_theme_submodule(
@@ -594,7 +594,7 @@ def deploy_docs(
     as_json: JsonOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """把构建产物部署到 Vercel 或 S3。"""
+    """将构建产物部署至 Vercel 或 S3。"""
     target = require_instance(instance)
     try:
         config = load_config(target)

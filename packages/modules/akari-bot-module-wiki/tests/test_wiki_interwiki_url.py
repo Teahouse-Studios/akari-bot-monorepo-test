@@ -1,4 +1,4 @@
-"""Wiki 全域及多级 Interwiki URL 解析回归测试。"""
+"""Wiki 全域与多级 Interwiki URL 解析回归测试。"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -156,7 +156,7 @@ async def _test_multilevel_interwiki_resolves_target_title():
 
 @func_case
 async def test_wiki_interwiki_url(tester: Tester):
-    """wiki: 使用 API 解析全域及多级 Interwiki"""
+    """Wiki 使用 API 解析全域与多级 Interwiki。"""
     await tester.test(_test_global_interwiki_uses_api_url, "全域 Interwiki 使用 iwurl 返回的目标地址")
     await tester.test(_test_multilevel_interwiki_resolves_target_title, "多级 Interwiki 发现目标 API 并还原标题")
     return tester

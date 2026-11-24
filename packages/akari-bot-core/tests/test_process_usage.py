@@ -1,4 +1,4 @@
-"""各进程内存占用汇总的单元测试 - 指标口径、peer 名还原与失败可见性。"""
+"""各进程内存占用汇总单元测试（指标统计方式、节点名称还原与失败可见性）。"""
 
 import os
 
@@ -105,7 +105,7 @@ def _test_collect_external_usage_omits_uss():
 
 @func_case
 async def test_process_usage_metrics(tester: Tester):
-    """core.queue.diagnostics: 内存指标口径测试"""
+    """core.queue.diagnostics 内存指标统计方式测试"""
     await tester.test(_test_build_usage_prefers_uss, "优先取 uss 测试")
     await tester.test(_test_build_usage_falls_back_to_rss, "回落 rss 测试")
     await tester.test(_test_build_usage_rejects_empty_payload, "空载荷无效测试")
@@ -115,7 +115,7 @@ async def test_process_usage_metrics(tester: Tester):
 
 @func_case
 async def test_process_usage_summary(tester: Tester):
-    """core.queue.diagnostics: 逐实例结果汇总测试"""
+    """core.queue.diagnostics 逐实例结果汇总测试"""
     await tester.test(_test_summarize_resolves_service_names, "服务名还原与排序测试")
     await tester.test(_test_summarize_falls_back_to_peer_id, "快照缺失回退 peer_id 测试")
     await tester.test(_test_summarize_reports_errors, "未响应实例可见测试")
@@ -137,7 +137,7 @@ def _test_usage_payload_is_plain_dict():
 
 @func_case
 async def test_process_usage_payload(tester: Tester):
-    """core.queue.diagnostics: 进程占用的可序列化载荷测试"""
+    """core.queue.diagnostics 进程占用的可序列化载荷测试"""
     await tester.test(_test_usage_payload_is_plain_dict, "内存占用转纯字典测试")
 
     return tester
@@ -145,7 +145,7 @@ async def test_process_usage_payload(tester: Tester):
 
 @func_case
 async def test_process_usage_collection(tester: Tester):
-    """core.queue.diagnostics: 进程指标采集测试"""
+    """core.queue.diagnostics 进程指标采集测试"""
     await tester.test(_test_collect_self_usage_reports_own_pid, "自测本进程指标测试")
     await tester.test(_test_collect_external_usage_handles_missing_pid, "缺失进程降级测试")
     await tester.test(_test_collect_external_usage_omits_uss, "跨进程不取 uss 测试")

@@ -135,7 +135,7 @@ def _test_keyboard_reflows_and_caps_qq_limits():
 
 @func_case
 async def test_qqbot_action_text(tester: Tester):
-    """akaribot.adapters.qqbot.context: 指令操作标签渲染测试"""
+    """akaribot.adapters.qqbot.context 指令操作标签渲染测试"""
     await tester.test(_test_render_full_attributes, "标签属性完整性测试")
     await tester.test(_test_render_escapes_quotes, "属性值编码测试")
     await tester.test(_test_render_truncates_text, "text 截断测试")

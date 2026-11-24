@@ -15,7 +15,7 @@ BIND_TABLES = ("module_maimai_diving_prober_bind_info", "module_maimai_lxns_prob
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    把两张查分绑定表的主键列改名为 union_id。
+    将两张查分绑定表的主键列重命名为 union_id。
 
     :param ctx: 迁移上下文。
     """

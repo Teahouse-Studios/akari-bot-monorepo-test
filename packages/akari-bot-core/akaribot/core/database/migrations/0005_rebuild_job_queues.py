@@ -15,7 +15,7 @@ DEPENDS_ON = "0003_union_core"
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    丢弃旧任务队列表并重建。
+    删除旧任务队列表并重新创建。
 
     ``DROP TABLE IF EXISTS`` 与以 safe 模式创建数据表都可重复执行，无需额外探测。
 

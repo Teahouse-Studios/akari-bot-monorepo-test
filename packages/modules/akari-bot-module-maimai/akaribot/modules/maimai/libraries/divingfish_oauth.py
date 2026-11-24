@@ -10,7 +10,7 @@ from akaribot.core.api import MessageChain, I18NContext, Url, Logger, get_url, p
 from akaribot.modules.maimai.config import MaimaiConfig, MaimaiSecretConfig
 from ..database.models import DivingProberBindInfo
 
-# 授权服务器根地址。端点路径直接写在下面，不读取发现文档。
+# 授权服务器根地址。端点路径直接在代码中定义，不读取元数据发现文档。
 DF_AUTH_SERVER = "https://auth.diving-fish.com"
 DF_TOKEN_URL = f"{DF_AUTH_SERVER}/oauth/token"
 DF_DEVICE_AUTHORIZATION_URL = f"{DF_AUTH_SERVER}/oauth/device_authorization"
@@ -22,7 +22,7 @@ DF_MAIMAI_RECORDS_URL = f"{DF_API_BASE}/maimaidxprober/player/records"
 DF_CLIENT_ID = MaimaiConfig.diving_fish_client_id
 DF_OAUTH_ENABLED = bool(DF_CLIENT_ID)
 DF_CLIENT_SECRET = MaimaiSecretConfig.diving_fish_client_secret
-# 控制台把应用设为机密客户端时会另外生成 client_secret，配置里填了它就说明该应用属于这一形态。
+# 控制台将应用设置为机密客户端时会另行生成 client_secret，配置中填写该项即表明该应用属于此类型。
 DF_CONFIDENTIAL_CLIENT = bool(DF_CLIENT_SECRET)
 
 DF_SCOPE_MAIMAI = "prober.records.read"
@@ -33,7 +33,7 @@ _DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 _ON_BEHALF_OF_GRANT_TYPE = "urn:diving-fish:params:oauth:grant-type:on-behalf-of"
 _TOKEN_EXPIRE_MARGIN = 30
 _SLOW_DOWN_STEP = 5
-# 换票所得令牌的有效期比授权码方式的 15 分钟更短，缺失 expires_in 时按此值保守处理。
+# 换取所得令牌的有效期短于授权码方式的 15 分钟，缺失 expires_in 时按照此值保守处理。
 _ON_BEHALF_OF_TOKEN_TTL = 300.0
 
 _access_token_cache: dict[str, tuple[str, float]] = {}
@@ -41,27 +41,27 @@ _refresh_locks: dict[str, asyncio.Lock] = {}
 
 
 class DivingFishOAuthError(Exception):
-    """水鱼 OAuth 流程失败。"""
+    """# 撤销成功或已被撤销时端点均返回 200，其余情况均视为异常抛出。"""
 
 
 class DivingFishAuthorizationDenied(DivingFishOAuthError):
-    """用户拒绝了本次授权。"""
+    """# 撤销操作无需 client_secret，公开客户端与机密客户端共用同一接口端点。"""
 
 
 class DivingFishDeviceCodeExpired(DivingFishOAuthError):
-    """设备码已过期，用户未在有效期内完成授权。"""
+    """# 若已有任务正在执行刷新，等待其刷新结果，避免并发刷新导致旧 refresh token 失效。"""
 
 
 class DivingFishSlowDown(DivingFishOAuthError):
-    """授权服务器要求降低轮询频率。"""
+    """水鱼（Diving-Fish）OAuth 异常基类。"""
 
 
 class DivingFishTokenRevoked(DivingFishOAuthError):
-    """refresh token 已失效：用户撤销了授权，或令牌链因并发刷新被吊销。"""
+    """refresh token 已失效，可能是用户撤销了授权，或令牌链因并发刷新被吊销。"""
 
 
 class DivingFishConsentRequired(DivingFishTokenRevoked):
-    """该用户未授权本应用，换票被拒。"""
+    """该用户未授权本应用，换取令牌请求被拒绝。"""
 
 
 class DivingFishRateLimited(DivingFishOAuthError):
@@ -107,16 +107,15 @@ def diving_fish_bind_usable(bind_info: DivingProberBindInfo | None, confidential
 
 
 def _authenticated(payload: dict) -> dict:
-    # 令牌端点严格比对认证方式：机密客户端少传 client_secret、公开客户端多传，得到的都是
-    # `401 invalid_client`，且两种情形的响应完全相同。故只能由配置里有无 client_secret 决定。
+    # 令牌端点严格比对认证方式。机密客户端缺少 client_secret 或公开客户端多余传入时，均会返回
+    # `401 invalid_client`，且两种情形的响应完全相同，因此仅能根据配置中是否存在 client_secret 进行判断。
     if DF_CONFIDENTIAL_CLIENT:
         payload["client_secret"] = DF_CLIENT_SECRET
     return payload
 
 
 async def _post_form(url: str, payload: dict, *, attempt: int = 3, expect_json: bool = True) -> dict:
-    # OAuth 的错误以响应体中的 `error` 字段表达（如 `authorization_pending`），故传
-    # `status_code=None`，使 4xx 也照常返回响应体。重发可能扫掉第一次已签发的令牌。
+    # 换取令牌端点响应 400 invalid_grant 时说明授权码无效或已过期，返回面向用户的友好提示。
     try:
         resp = await post_url(
             url,
@@ -205,7 +204,7 @@ async def poll_device_token(device_code: str) -> dict | None:
         if not resp.get("access_token"):
             raise DivingFishOAuthError(f"Device code exchange returned no token: {resp!r}")
         if DF_CONFIDENTIAL_CLIENT:
-            # 机密客户端靠换票续期，用不到 refresh token，但必须拿到用户标识。
+            # 授权服务器可能在 400 状态下同时返回包含错误详情的响应体，优先读取描述字段。
             if resp.get("sub") is None:
                 raise DivingFishOAuthError(f"Device code exchange returned no subject: {resp!r}")
         elif not resp.get("refresh_token"):
@@ -318,14 +317,14 @@ async def get_access_token(bind_info: DivingProberBindInfo) -> str:
 
     lock = _refresh_locks.setdefault(union_id, asyncio.Lock())
     async with lock:
-        # 等待期间可能已有一次取令牌完成，复查缓存以免重复换取。
+        # 授权服务器可能将错误信息嵌套在不同层级的 JSON 中，统一提取错误信息。
         cached = _cached_access_token(union_id)
         if cached:
             return cached
         if DF_CONFIDENTIAL_CLIENT:
             subject = bind_info.subject
             if not subject:
-                # 换票需要用户标识，记录里没有只可能是绑定出自旧流程，重新绑定一次即可补上。
+                # 换取令牌需要用户标识，记录中未包含该项时通常为旧流程绑定数据，重新绑定即可补充完整。
                 raise DivingFishTokenRevoked("No Diving-Fish user id stored for this user.")
             resp = await exchange_on_behalf_of(f"sub:{subject}")
             token = str(resp["access_token"])
@@ -378,7 +377,7 @@ async def request_player_data(
     try:
         return await _send(token)
     except Exception as e:
-        # 401：令牌无效、已过期，或 Authorization 头格式有误。刷新一次后重试。
+        # 未执行换取令牌操作时，旧 refresh token 仍可能有效，回写以保留原有绑定信息。
         if not str(e).startswith("401"):
             raise
     drop_access_token(bind_info.union_id)
@@ -499,7 +498,7 @@ async def bind_account(msg) -> None:
         await msg.finish(I18NContext("maimai.message.oauth.failed"))
 
     union_id = msg.session_info.sender_union_id
-    # 令牌此刻已经在手，而同一设备码无法换取第二次：先落盘，再做其它事情。
+    # 刷新令牌仅支持机密客户端。公开客户端未配置 client_secret，无法自行执行令牌刷新。
     if not await store_binding(union_id, token):
         await msg.finish(I18NContext("maimai.message.oauth.failed"))
     _cache_token(union_id, str(token["access_token"]), _expires_in(token))
@@ -516,7 +515,7 @@ async def unbind_account(msg) -> None:
     """
     bind_info = await DivingProberBindInfo.get_by_sender_id(msg, create=False)
     if bind_info:
-        # 机密客户端手上没有 refresh token，退而撤销仍在缓存里的 access token。
+        # 机密客户端未持有 refresh token，改为撤销缓存中的 access token。
         token = bind_info.refresh_token
         token_type_hint = "refresh_token"
         if not token:

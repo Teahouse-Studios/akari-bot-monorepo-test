@@ -71,13 +71,13 @@ allow_origins = WebSecretConfig.allow_origins
 # ProxyHeadersMiddleware 依 forwarded_allow_ips 判定来源可信后，从 X-Forwarded-For 解析并回填。
 forwarded_allow_ips = WebSecretConfig.forwarded_allow_ips
 
-# 无法判定来源的请求统一归入该标识。不回退为 127.0.0.1，以免被误当作本机的受信任访问。
+# 无法判定来源的请求统一归入该标识。不回退为 127.0.0.1，以防被误视为本机的受信任访问。
 UNKNOWN_CLIENT_IP = "unknown"
 
 
 def get_client_ip(request: Request) -> str:
     """
-    取请求方地址，用于限流、封禁与访问记录。
+    获取请求方地址，用于限流、封禁与访问记录。
 
     :param request: 当前请求。
     :return: 请求方地址。ASGI 传输未提供来源信息时返回 ``unknown``。
@@ -89,7 +89,7 @@ def get_client_ip(request: Request) -> str:
 
 jwt_secret = WebSecretConfig.jwt_secret
 if not jwt_secret:
-    # jwt_secret 须在 web 子进程首次启动时随机生成并持久化，属只读进程中的合法写入
+    # jwt_secret 必须在 web 子进程首次启动时随机生成并持久化，属只读进程中的合法写入。
     CFGManager.edit_write("jwt_secret", SecureRandom.randbytes(32).hex(), secret=True, table_name="bot_web")
     jwt_secret = WebSecretConfig.jwt_secret
 

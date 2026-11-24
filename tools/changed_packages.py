@@ -38,25 +38,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT_PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
-# core 是公共面：它的改动影响全部包，矩阵随即转为全量。
+# core 为公开接口层，其改动将影响全部包，矩阵随即转为全量执行。
 CORE_DISTRIBUTION = "akari-bot-core"
 PACKAGES_ROOT = "packages"
 
-# 全局变更：根配置与锁文件、整个仓库共用的工具都会改变每个包的构建与测试前提。
+# 全局变更涵盖根目录配置、锁文件与全仓库通用的工具，均会改变每个包的构建与测试前提。
 GLOBAL_FILES = {"pyproject.toml", "uv.lock"}
 GLOBAL_PREFIXES = ("tools/",)
 
-# 文档类路径不进入任何 wheel，也不构成任何包的测试前提，故不触发构建。
+# 文档类路径未包含于任何 wheel 中，亦不构成任何包的测试前提，因此不触发构建。
 DOC_FILES = {"LICENSE", ".gitignore", ".gitattributes", ".editorconfig", ".pre-commit-config.yaml"}
 DOC_PREFIXES = ("generated_docs/",)
 DOC_SUFFIXES = (".md",)
 
-# 人类可读输出里触发点的显示上限，避免一次大范围改动刷屏。
+# 常规文本输出中触发点的显示上限，避免一次大范围修改导致输出过多。
 MAX_REASONS = 20
 
 
 class ConfigError(RuntimeError):
-    """根 pyproject 或成员 pyproject 不满足检查所需的结构。"""
+    """根 pyproject 或成员 pyproject 不满足检查对应的结构要求。"""
 
 
 @dataclass(frozen=True)
@@ -96,13 +96,13 @@ class Matrix:
 
 
 def load_toml(path: Path) -> dict:
-    """读取 TOML 文件。"""
+    """读取并解析 TOML 文件。"""
     with path.open("rb") as handle:
         return tomllib.load(handle)
 
 
 def discover_members() -> list[Member]:
-    """按根 pyproject 的 members glob 展开成员，分发名取各成员自己的 [project].name。"""
+    """按照根目录 pyproject 的 members glob 展开成员，包名取自各成员自己的 [project].name。"""
     workspace = load_toml(ROOT_PYPROJECT).get("tool", {}).get("uv", {}).get("workspace", {})
     excluded = {path for pattern in workspace.get("exclude", []) for path in PROJECT_ROOT.glob(pattern)}
     found: dict[str, Member] = {}
@@ -137,7 +137,7 @@ def git_output(arguments: list[str], *, nul: bool = False) -> list[str]:
 
 
 def resolve_commit(ref: str) -> str | None:
-    """把引用解析为提交 SHA。解析不了返回 None。"""
+    """将引用解析为提交 SHA。若无法解析则返回 None。"""
     try:
         lines = git_output(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"])
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -146,7 +146,7 @@ def resolve_commit(ref: str) -> str | None:
 
 
 def resolve_base(base: str, head: str) -> str:
-    """取 base 与 head 的共同祖先。取不到时退回 base 本身。"""
+    """获取 base 与 head 的共同祖先。若无法获取则使用 base 本身。"""
     try:
         lines = git_output(["merge-base", base, head])
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -155,12 +155,12 @@ def resolve_base(base: str, head: str) -> str:
 
 
 def changed_files(base: str, head: str) -> list[str]:
-    """取 `git diff --name-only base..head` 的改动路径，仓库根相对 POSIX 形式。"""
+    """获取 `git diff --name-only base..head` 的修改路径，采用相对于仓库根目录的 POSIX 格式。"""
     return git_output(["diff", "--name-only", "-z", "--no-color", f"{base}..{head}"], nul=True)
 
 
 def package_directory(path: str) -> str | None:
-    """从 packages/ 下的路径推断包目录，用于已不在 workspace 的包（删除、改名）。"""
+    """从 packages/ 下的路径推断包目录，用于未包含在 workspace 中的包（已删除或已重命名）。"""
     parts = path.split("/")
     if len(parts) >= 2 and parts[0] == PACKAGES_ROOT and parts[1].startswith("akari-bot-"):
         return "/".join(parts[:2])
@@ -241,7 +241,7 @@ def build_matrix(paths: list[str], members: list[Member], note: str | None, base
 
 
 def print_matrix(matrix: Matrix) -> None:
-    """人类可读输出。"""
+    """输出常规文本格式结果。"""
     scope = f"{matrix.base}..{matrix.head}" if matrix.base else "无基准"
     print(f"比较范围：{scope}，改动路径 {matrix.total_files} 个，其中文档类 {matrix.doc_files} 个。")
     if matrix.full:
@@ -260,7 +260,7 @@ def print_matrix(matrix: Matrix) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(
         description="变更检测与选择性构建矩阵",
         epilog=(
@@ -276,7 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示检测完成。"""
+    """主入口函数，返回进程退出码，0 表示检测完成。"""
     args = build_parser().parse_args()
 
     try:

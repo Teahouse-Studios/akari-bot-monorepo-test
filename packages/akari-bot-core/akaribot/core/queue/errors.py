@@ -21,8 +21,8 @@ class RpcError(Exception):
         self.target = target
         self.task_id = task_id
         self.remote_type = remote_type
-        # 异常对象以 JSON 跨 RPC，故合并诊断文本与原始进程栈分别保留。
-        # ``remote_traceback`` 为可选：旧响应信封只带一个 traceback 字段。
+        # 异常对象以 JSON 跨 RPC，因此合并诊断文本与原始进程栈分别保留。
+        # ``remote_traceback`` 为可选，旧响应信封仅包含单个 traceback，回放时以此字段对齐。
         self.traceback = traceback
         self.remote_traceback = traceback if remote_traceback is None else remote_traceback
         self.caller_traceback = caller_traceback

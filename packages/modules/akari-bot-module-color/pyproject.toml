@@ -14,7 +14,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    # 取色卡的文字用资源包里的 Noto Sans CJK DemiLight（T3.3），缺它则卡片渲染失败。
+    # 色卡中的文字使用字体资源包中的 Noto Sans CJK DemiLight（T3.3），缺失该字体将导致卡片渲染失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "Pillow>=13.0.0,<13.1.0",

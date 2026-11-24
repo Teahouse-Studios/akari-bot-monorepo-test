@@ -166,7 +166,7 @@ async def get_alias(msg: Bot.MessageSession, sid: str) -> list:
     result = []
     for song in data:
         if str(song["song_id"]) == sid:
-            result = sorted(song["alias"])  # 此处列出的是歌曲别名
+            result = sorted(song["alias"])  # 此处列出歌曲别名。
             break
 
     return result
@@ -197,7 +197,7 @@ async def search_by_alias(input_: str) -> list:
     for song in data:
         aliases = [alias.lower() for alias in song["alias"]]
         if input_.lower() in aliases or convinput.lower() in aliases:
-            result.append(str(song["song_id"]))  # 此处列出的是歌曲 ID
+            result.append(str(song["song_id"]))  # 此处列出的是歌曲 ID。
 
     return list(set(result))
 
@@ -330,7 +330,9 @@ async def get_total_record(
                 with open(cache_dir, "wb") as f:
                     f.write(orjson.dumps(data))
             if not utage:
-                data = {"records": [d for d in data.get("records", []) if int(d.get("id", 0)) < 100000]}  # 过滤宴谱
+                data = {
+                    "records": [d for d in data.get("records", []) if int(d.get("id", 0)) < 100000]
+                }  # 过滤宴会场谱面。
             return data
         except Exception as e:
             if isinstance(e, DivingFishTokenRevoked):
@@ -349,7 +351,9 @@ async def get_total_record(
                         data = orjson.loads(f.read())
                     await msg.send_message(I18NContext("maimai.message.use_cache"))
                     if not utage:
-                        data = {"records": [d for d in data.get("records", []) if d.get("id", 0) < 100000]}  # 过滤宴谱
+                        data = {
+                            "records": [d for d in data.get("records", []) if d.get("id", 0) < 100000]
+                        }  # 过滤宴会场谱面。
                     return data
                 except Exception:
                     raise e
@@ -362,10 +366,10 @@ async def get_total_record(
 async def get_plate(msg: Bot.MessageSession, payload: dict, version: str, use_cache: bool = True) -> dict | None:
     if pick_source(msg, GAME_MAIMAI) == SOURCE_LXNS:
         return await get_plate_lx(msg, payload, version, use_cache)
-    # OAuth 下查询对象由令牌决定，此处的载荷只用于携带版本列表。
+    # OAuth 模式下查询对象通过令牌确定，此处的载荷仅用于携带版本列表。
     if DF_OAUTH_ENABLED:
         bind_info = await get_bind_info(msg)
-        version = "舞" if version == "覇" else version  # “覇者”属于舞代
+        version = "舞" if version == "覇" else version  # “覇者”属于舞代。
         mai_cache_path = cache_path / "maimai-record"
         mai_cache_path.mkdir(parents=True, exist_ok=True)
         cache_dir = mai_cache_path / f"{msg.session_info.sender_id.replace('|', '_')}_maimaidx_plate_{version}.json"
@@ -374,7 +378,7 @@ async def get_plate(msg: Bot.MessageSession, payload: dict, version: str, use_ca
             data = await request_player_data(
                 bind_info, url, method="POST", data={"version": payload.get("version", [])}
             )
-            data = {"verlist": [d for d in data.get("verlist", []) if int(d.get("id", 0)) < 100000]}  # 过滤宴谱
+            data = {"verlist": [d for d in data.get("verlist", []) if int(d.get("id", 0)) < 100000]}  # 过滤宴会场谱面。
             if use_cache and data:
                 with open(cache_dir, "wb") as f:
                     f.write(orjson.dumps(data))

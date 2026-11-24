@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.dev``：镜像同步、变更归类与运行锁。"""
+"""``akaribot.cli.docs_engine.dev`` 的镜像同步、变更归类与运行锁测试。"""
 
 import json
 import os
@@ -94,7 +94,7 @@ def _test_lock_roundtrip_and_pid_check():
 
 @func_case
 async def test_docs_dev(tester: Tester):
-    """cli.docs_engine.dev: 镜像同步、变更归类与运行锁"""
+    """cli.docs_engine.dev 镜像同步、变更归类与运行锁测试"""
     await tester.test(_test_sync_tree_mirrors_changes_and_keeps_node_modules, "差分同步只写变化并保留运行时目录")
     await tester.test(_test_classify_orders_manifest_config_theme_structure, "变更归类按清单、配置、主题、结构排序")
     await tester.test(_test_lock_roundtrip_and_pid_check, "运行锁读写与进程存活判断")

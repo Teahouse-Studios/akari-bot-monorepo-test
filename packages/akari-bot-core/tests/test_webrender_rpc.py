@@ -1,4 +1,4 @@
-"""core.queue.server 新增 WebUI 相关处理器的单元测试。"""
+"""core.queue.server 的 WebUI 相关处理器单元测试。"""
 
 import json
 from unittest.mock import AsyncMock, patch
@@ -19,7 +19,7 @@ RAW_STATUS = {
     "export_logs": True,
     "logs_path": None,
     "name": "AkariBot WebRender™",
-    # 真实返回值以 BrowserContext 对象为键，任何序列化途径都无法处理。
+    # 真实返回值以 BrowserContext 对象为键，任何序列化途径均无法处理。
     "contexts_open_sorted": {object(): ["https://example.test/"]},
     "contexts_total": 1,
     "leaked": False,
@@ -92,7 +92,7 @@ async def _test_test_web_render_validates_before_rendering():
         and invalid_mode["error"] == "invalid_mode"
         and missing_source["error"] == "missing_target"
         and missing_screenshot["error"] == "missing_target"
-        # 被拦下的请求不得触达依赖库
+        # 被拦截的请求不得触达依赖库。
         and screenshot.await_count == 0
         and source.await_count == 0
     )
@@ -149,7 +149,7 @@ async def _test_test_web_render_truncates_source():
 
 @func_case
 async def test_webrender_rpc(tester: Tester):
-    """core.queue.server: 状态净化与渲染测试参数校验测试"""
+    """core.queue.server 状态净化与渲染测试参数校验测试"""
     await tester.test(_test_status_payload_is_serializable, "WebRender 状态净化测试")
     await tester.test(_test_process_usage_reports_failures_as_data, "进程占用失败回报测试")
     await tester.test(_test_active_session_count_reports_running_and_waiting, "活跃会话计数测试")

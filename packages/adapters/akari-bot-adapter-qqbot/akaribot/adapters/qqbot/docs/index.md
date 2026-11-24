@@ -4,9 +4,9 @@ QQ 机器人（官方）适配器通过 QQ 开放平台的官方机器人接口�
 
 ## 平台概述
 
-适配器使用 AppID 与 AppSecret 登录 QQ 开放平台。默认经 WebSocket Gateway 接收事件，也可以改用 Webhook，由平台发起回调。
+适配器使用 AppID 与 AppSecret 登录 QQ 开放平台。默认通过 WebSocket Gateway 接收事件，亦可改用 Webhook 由平台发起回调。
 
-会话分为群聊、C2C 私信、服务器频道和频道私信。适配器启动时会同步全局菜单与指令面板。
+会话分为群聊、C2C 私信、服务器频道与频道私信。适配器启动时会同步全局菜单与指令面板。
 
 ## 安装
 
@@ -20,11 +20,11 @@ akaribot module add akari-bot-adapter-qqbot
 
 ## 配置
 
-配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都写在 `config/bot_qqbot.toml`。
+配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表均保存在 `config/bot_qqbot.toml`。
 
-需要多个机器人账号时，用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`。两张表都写在 `config/bot_qqbot-<实例 ID>.toml`。
+需要多个机器人账号时，可使用 `akaribot adapter instance add qqbot <实例 ID>` 新增实例。实例表名为 `bot_qqbot-<实例 ID>`，密钥表名为 `bot_qqbot-<实例 ID>_secret`。两张表均保存在 `config/bot_qqbot-<实例 ID>.toml`。
 
-主要字段如下，完整字段与默认值见 [config.md](config.md)。
+主要字段如下，完整字段与默认值参见 [config.md](config.md)。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ akaribot module add akari-bot-adapter-qqbot
 ## 必填信息
 
 - `qq_bot_appid` 与 `qq_bot_secret`：在 QQ 开放平台的机器人管理页获取。两项共同确定一个机器人账号。
-- `qq_bot_openid`：选填。机器人自身的 OpenID，群聊中识别 @机器人时使用。
+- `qq_bot_openid`：选填。机器人自身的 OpenID，用于在群聊中识别 @机器人。
 - `qq_bot_certified`：选填。机器人是否已通过企业或个人认证。未认证时主动消息配额更低。
 - `qq_bot_uid` 与 `qq_bot_qqnum`：选填。会话数据中携带的机器人 UID 和 QQ 号，按平台提供的信息填写。
 
@@ -61,7 +61,7 @@ Webhook 模式下，平台回调驱动事件。适配器提供 HTTP 服务，公
 | 按钮与动作文本 | 视配置 | 仅在启用 Markdown 时可用。 |
 | 表情回应 | 不支持 | — |
 | 引用回复 | 支持 | — |
-| 输入状态 | 支持 | 通过挂载回应表情表示正在处理。 |
+| 输入状态 | 支持 | 通过添加回应表情表示正在处理。 |
 | 消息撤回 | 支持 | — |
 | 群组管理 | 不支持 | — |
 | 权限组 | 部分支持 | 服务器频道支持，群聊与私信不支持。 |
@@ -73,15 +73,15 @@ Webhook 模式下，平台回调驱动事件。适配器提供 HTTP 服务，公
 
 - 群聊的目标前缀是 `QQBot|Group`，C2C 私信是 `QQBot|C2C`，服务器频道是 `QQBot|Guild`，频道私信是 `QQBot|Direct`。
 - 群聊中 @机器人 的消息始终会处理。
-- 没有“读取全部消息”权限时，平台不推送其他群消息。获得该权限后，普通群消息也会处理。
-- 群聊 @ 消息使用受限的能力集，其中 RSS 和全量消息读取关闭。
-- 开启 Markdown 后，用户仍可在会话中关闭渲染。关闭时，按钮、动作文本和消息节点一并停用。
+- 未获得“读取全部消息”权限时，平台不推送其他群消息。获得该权限后，普通群消息亦会处理。
+- 群聊 @ 消息使用受限的能力集，其中 RSS 与全量消息读取关闭。
+- 开启 Markdown 后，用户仍可在会话中关闭渲染。关闭时，按钮、动作文本与消息节点一并停用。
 - `qq_private_bot = true` 时按私域机器人订阅服务器全量消息事件。
-- 同一回调重复投递的消息会按消息 ID 去重。
+- 同一回调重复投递的消息按消息 ID 执行去重。
 
 ## 外部依赖
 
 - QQ 开放平台 API 与事件推送。
-- 可选 S3 兼容对象存储。Markdown 图片上传失败时，改用对象存储的外链。
+- 可选 S3 兼容对象存储。Markdown 图片上传失败时，改用对象存储的外链地址。
 - Webhook 模式需要公网可达的 HTTPS 反向代理。
 - 出站连接遵循 core 的 `secret.proxy` 与 `config.proxy_disable_ssl` 设置。

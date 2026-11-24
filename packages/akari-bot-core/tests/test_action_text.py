@@ -1,4 +1,4 @@
-"""ActionText 消息元素单元测试 - 构造、内层解析与纯文本降级。"""
+"""ActionText 消息元素构造、内层解析与纯文本降级单元测试。"""
 
 from urllib.parse import quote
 
@@ -67,7 +67,7 @@ def _test_to_plain_with_show():
         plain = elem.to_plain(None)
         if not isinstance(plain, PlainElement):
             return False
-        # 无会话时退回半角括号
+        # 无会话时回退到半角括号。
         if plain.text != "沙盒 (~wiki 沙盒)":
             return False
         return True
@@ -130,7 +130,7 @@ async def _test_kept_when_supported():
             return False
         if not isinstance(sendable.values[1], ActionTextElement):
             return False
-        # 内层已解析为纯文本元素
+        # 内层已解析为纯文本元素。
         if not isinstance(sendable.values[1].text, PlainElement):
             return False
         return True
@@ -199,12 +199,12 @@ async def _test_i18n_inner_resolved():
 async def _test_inline_in_i18n_kwargs_supported():
     try:
         session_info = await _session("at_inline_keep", True)
-        # message.brackets 的值为“（${msg}）”，借它构造一个前后都有文本的现成句子
+        # message.brackets 的值为“（${msg}）”，借此构造一个前后均包含文本的测试语句。
         chain = MessageChain.assign([I18NContext("message.brackets", msg=ActionText("~wiki 沙盒", show="沙盒"))])
         sendable = chain.as_sendable(session_info)
         if not any(isinstance(v, ActionTextElement) for v in sendable.values):
             return False
-        # 元素前后的括号应作为纯文本保留
+        # 元素前后的括号应作为纯文本保留。
         if not any(isinstance(v, PlainElement) for v in sendable.values):
             return False
         return True
@@ -340,7 +340,7 @@ def _test_kecode_roundtrip_show_on_fallback():
             return False
         if restored.to_plain(None).text != "~bind token ABC":
             return False
-        # 默认值不写入 KE 码，还原后仍为 True
+        # 默认值不写入 KE 码，还原后仍然为 True。
         plain_elem = ActionTextElement.assign("~wiki 沙盒", show="沙盒")
         if "show_on_fallback" in plain_elem.kecode():
             return False
@@ -381,10 +381,10 @@ def _test_kecode_roundtrip_quote_on_fallback():
         restored = match_kecode(code).values[0]
         if restored.quote_on_fallback is not True:
             return False
-        # 无会话时退回半角引号
+        # 无会话时回退到半角引号。
         if restored.to_plain(None).text != '"~bind token ABC"':
             return False
-        # 默认值不写入 KE 码
+        # 默认值不写入 KE 码。
         if "quote_on_fallback" in ActionTextElement.assign("~wiki 沙盒").kecode():
             return False
         return True
@@ -411,7 +411,7 @@ async def _test_degraded_adds_quotes():
         if text != expected:
             return False
 
-        # 支持的平台上元素得以保留，引号不参与其中
+        # 支持的平台上元素得以保留，引号不参与其中。
         kept = MessageChain.assign([ActionText("~bind token ABC", quote_on_fallback=True)]).as_sendable(
             await _session("at_quote_keep", True)
         )
@@ -426,7 +426,7 @@ async def _test_degraded_adds_quotes():
 
 @func_case
 async def test_action_text_element(tester: Tester):
-    """akaribot.core.builtins.message.elements: ActionTextElement 构造与降级测试"""
+    """akaribot.core.builtins.message.elements 的 ActionTextElement 构造与降级测试"""
     await tester.test(_test_assign_from_string, "字符串入参包装测试")
     await tester.test(_test_assign_from_elements, "元素入参保留测试")
     await tester.test(_test_to_plain_with_show, "带 show 降级文案测试")
@@ -436,7 +436,7 @@ async def test_action_text_element(tester: Tester):
 
 @func_case
 async def test_action_text_kecode(tester: Tester):
-    """akaribot.core.builtins.message: ActionTextElement KE 码往返测试"""
+    """akaribot.core.builtins.message 的 ActionTextElement KE 码往返测试"""
     await tester.test(_test_kecode_format, "KE 码格式测试")
     await tester.test(_test_kecode_roundtrip_special_chars, "含分隔符文本往返测试")
     await tester.test(_test_kecode_inline_with_text, "与文本混排切分测试")
@@ -448,7 +448,7 @@ async def test_action_text_kecode(tester: Tester):
 
 @func_case
 async def test_action_text_fallback(tester: Tester):
-    """akaribot.core.builtins.message.chain: ActionTextElement 降级与保留测试"""
+    """akaribot.core.builtins.message.chain 的 ActionTextElement 降级与保留测试"""
     await tester.test(_test_kept_when_supported, "支持平台保留元素测试")
     await tester.test(_test_degraded_when_unsupported, "不支持平台降级并入测试")
     await tester.test(_test_degraded_when_markdown_disabled, "enable_markdown 降级测试")
@@ -462,7 +462,7 @@ async def test_action_text_fallback(tester: Tester):
 
 @func_case
 async def test_action_text_inline(tester: Tester):
-    """akaribot.core.builtins.message.chain: ActionTextElement 行内嵌入测试"""
+    """akaribot.core.builtins.message.chain 的 ActionTextElement 行内嵌入测试"""
     await tester.test(_test_inline_in_i18n_kwargs_supported, "句中保留为独立元素测试")
     await tester.test(_test_inline_degraded_merges_into_one_element, "句中降级合并测试")
     await tester.test(_test_plain_kecode_roundtrip_not_merged, "普通 KE 码往返不合并测试")
@@ -473,7 +473,7 @@ async def test_action_text_inline(tester: Tester):
 
 @func_case
 async def test_action_text_serialize(tester: Tester):
-    """akaribot.core.builtins.converter: ActionTextElement 跨进程序列化测试"""
+    """akaribot.core.builtins.converter 的 ActionTextElement 跨进程序列化测试"""
     await tester.test(_test_serialize_roundtrip_plain_inner, "纯文本内层往返测试")
     await tester.test(_test_serialize_roundtrip_i18n_inner, "多语言内层往返测试")
     await tester.test(_test_serialize_in_message_chain, "消息链整体往返测试")

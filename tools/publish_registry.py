@@ -1,4 +1,4 @@
-"""由 PyPI 已发布产物维护发布账本和稳定、预发布索引。"""
+"""通过 PyPI 已发布产物维护发布账本以及稳定、预发布索引。"""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class ReleaseError(RuntimeError):
 
 
 def _api_url(index_url: str, name: str, version: str | None = None) -> str:
-    # 索引根地址 + 分发名 + 可选版本。省略版本时取该分发的最新版本。
+    # 索引根地址、包名与可选版本。省略版本时使用该包的最新版本。
     base = f"{index_url.rstrip('/')}/pypi/{canonicalize_name(name)}"
     return f"{base}/{Version(version)}/json" if version else f"{base}/json"
 
@@ -86,7 +86,7 @@ RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
 
 
 def _retry_delay(error: HTTPError, attempt: int) -> float:
-    # 优先取响应头 Retry-After，缺失时用指数退避（30s 起，上限 300s）。
+    # 优先读取响应头 Retry-After，缺失时采用指数退避机制（起始 30 秒，上限 300 秒）。
     header = error.headers.get("Retry-After") if error.headers else None
     if header:
         try:
@@ -144,7 +144,7 @@ def _prepare_upload(directory: Path, expected: dict, output: Path, index_url: st
 
 
 def _batch_manifest(dist_dir: Path, git_sha: str, batch_id: str) -> dict:
-    # 一次构建的全部产物 → 发行清单。后续上传、下载核验与安装都对照它。
+    # 将单次构建的全部产物整理为发行清单。后续上传、下载核验与安装均与该清单核对。
     dists: dict[str, dict] = {}
     for pyproject in sorted(Path("packages").glob("**/pyproject.toml")):
         project = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {})

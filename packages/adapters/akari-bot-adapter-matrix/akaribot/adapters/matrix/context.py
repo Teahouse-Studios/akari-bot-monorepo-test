@@ -225,7 +225,7 @@ class MatrixContextManager(ContextManager):
                 reply_to = None
                 reply_to_user = None
                 if quote and not msg_ids:
-                    # Reaction 自身的 event_id 仍须保留为当前消息 ID，供删除 Reaction 等操作使用。
+                    # Reaction 自身的 event_id 仍必须保留为当前消息 ID，供删除 Reaction 等操作使用。
                     # 但回复应引用被反应的原消息，即 Reaction 入口写入的 reply_id。
                     reply_to = (
                         session_info.reply_id if reaction_event and session_info.reply_id else session_info.message_id
@@ -404,7 +404,7 @@ class MatrixContextManager(ContextManager):
                     continue
                 filename = Path(path).name
                 filesize = Path(path).stat().st_size
-                # 默认 mimetype 可以回退至 "video/mp4"
+                # 默认 mimetype 可以回退至 "video/mp4"。
                 mimetype = mimetypes.guess_type(path)[0] or "video/mp4"
 
                 encrypted = session_info.get_common_target_id() in matrix_bot.encrypted_rooms
@@ -434,7 +434,7 @@ class MatrixContextManager(ContextManager):
                 if hasattr(x, "height") and x.height:
                     video_info["h"] = x.height
                 if hasattr(x, "duration") and x.duration:
-                    video_info["duration"] = int(x.duration * 1000)  # 规范单位通常为毫秒 (ms)
+                    video_info["duration"] = int(x.duration * 1000)  # 规范单位通常为毫秒（ms）。
 
                 if not encrypted:
                     content = {
@@ -490,7 +490,7 @@ class MatrixContextManager(ContextManager):
                 room_id = resp.room_id
                 Logger.info(f"Created private messaging room for {target_id}: {room_id}")
                 # room_create 的响应不会立刻写入 AsyncClient.rooms。新房间要到下一次 sync
-                # 才会出现。首次私信只需要 room_id，先构造轻量 MatrixRoom 即可立即发送。
+                # 才会出现。首次私信仅需要 room_id，先构造轻量 MatrixRoom 即可立即发送。
                 return matrix_bot.rooms.get(room_id) or nio.MatrixRoom(room_id, matrix_bot.user_id)
             except Exception as e:
                 Logger.error(f"Failed to create room for {target_id}: {e}")
@@ -503,7 +503,7 @@ class MatrixContextManager(ContextManager):
         user_id: str,
         message: MessageChain | MessageNodes,
     ) -> list[str]:
-        # Matrix 没有独立的私聊通道，私信实为仅含双方的房间，此处先查找该房间，不存在则创建
+        # Matrix 没有独立的私聊通道，私信实际为仅包含双方的房间，此处先查找该房间，不存在则创建。
         mxid = user_id.split("|")[-1]
         if not mxid.startswith("@"):
             mxid = f"@{mxid}"
@@ -702,7 +702,7 @@ class MatrixContextManager(ContextManager):
 class MatrixFetchedContextManager(MatrixContextManager):
     """
     用于获取会话信息的上下文管理器。
-    该管理器在处理消息时会自动获取会话信息。
+    该管理器在处理消息时自动获取会话信息。
     """
 
     @classmethod

@@ -1,4 +1,4 @@
-"""akaribot.core.utils.petal 单元测试 - 花瓣系统（需要数据库/配置）。"""
+"""akaribot.core.utils.petal 花瓣系统单元测试（依赖数据库与配置）。"""
 
 import time
 from datetime import datetime, timedelta
@@ -91,10 +91,10 @@ async def _test_sign_petal_once_per_day():
         with mock_config(CoreConfig, enable_petal=True, petal_sign_min=5, petal_sign_max=5, petal_sign_rate=1.0):
             first = await sign_get_petal(msg)
             second = await sign_get_petal(msg)
-            # 今日已签到返回 0，余额不再增加
+            # 若今日已签到则返回 0，余额不再增加。
             if first != 5 or second != 0:
                 return False
-            # 模拟跨过每日边界：把签到记录的过期时间改为过去
+            # 将签到记录的过期时间调整为过去，模拟跨越每日边界。
             stored = await StoredData.get(stored_key=store_key)
             quota = dict(stored.value[0])
             quota[msg.session_info.sender_union_id]["expired"] = 0
@@ -121,7 +121,7 @@ async def _test_sign_is_shared_across_scenes():
             first = await sign_get_petal(msg)
             other = await _other_target_session(msg, "TEST|Console|petal_target_b", "+14")
             second = await sign_get_petal(other)
-        # 同一用户在不同场景共用签到记录，不能因场景时区不同重复签到。
+        # 同一用户在不同场景共用签到记录，不能因为场景时区不同而重复签到。
         return first == 5 and second == 0
     finally:
         await _delete_store("Union|signedpetal")
@@ -238,7 +238,7 @@ async def _test_petal_reset_runs_once_per_cycle():
         with mock_config(CoreConfig, enable_petal=True, petal_keep_rate=0.2, petal_reset_crontab="0 0 1 * *"):
             first = await reset_petals_if_due()
             second = await reset_petals_if_due()
-            # 模拟停机跨过周期边界：标记停留在过去的周期时补结算一次。
+            # 模拟停机跨过周期边界，当标记停留在历史周期时补充结算一次。
             stored = await StoredData.get(stored_key=PETAL_CYCLE_STORE_KEY)
             stored.value = [(core_now() - timedelta(days=1)).isoformat()]
             await stored.save(update_fields=["value"])
@@ -252,7 +252,7 @@ async def _test_petal_reset_runs_once_per_cycle():
 
 @func_case
 async def test_petal(tester: Tester):
-    """akaribot.core.utils.petal: 花瓣系统测试"""
+    """akaribot.core.utils.petal 花瓣系统测试"""
     await tester.test(_test_cost_petal_insufficient_with_mock, "cost_petal 花瓣不足 Mock 测试")
     await tester.test(_test_petal_session_balance_stays_in_sync, "花瓣变更后会话余额同步测试")
     await tester.test(_test_sign_petal_once_per_day, "签到每日仅一次且跨日重置测试")

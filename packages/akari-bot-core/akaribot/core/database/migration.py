@@ -31,19 +31,19 @@ CORE_PACKAGE = "core"
 # 包内迁移目录的约定名。包若在 manifest 中声明了 migrations，则以声明为准。
 MIGRATIONS_DIRNAME = "migrations"
 
-# 支持事务性 DDL 的方言。其余方言只按先探测再执行的方式保证可重跑。
+# 支持事务性 DDL 的方言。其余方言仅按先探测再执行的方式保证可重复执行。
 TRANSACTIONAL_DIALECTS = ("sqlite",)
 
 _LOADED: dict[tuple[str, str], "MigrationModule"] = {}
 
 
 class MigrationError(RuntimeError):
-    """迁移定义或执行不满足契约。"""
+    """迁移定义或执行不符合接口约定。"""
 
 
 def _dialect(conn) -> str:
-    # 取连接的方言名。
-    # 以连接自身的能力为准，而不是模块级配置：测试与转换脚本会在同一进程内使用与配置不同的
+    # 获取连接的方言名。
+    # 以连接自身的能力为准而不是模块级配置，因为测试与转换脚本会在同一进程内使用与配置不同的
     # 连接，按配置判断会生成错误的 DDL。
     dialect = getattr(getattr(conn, "capabilities", None), "dialect", None)
     return dialect if isinstance(dialect, str) else configured_db_type
@@ -53,7 +53,7 @@ class MigrationContext:
     """
     单条 revision 的执行上下文。
 
-    探测与 DDL 均按当前方言生成，revision 只描述要达成什么，不必自行分支 SQLite 与 MySQL。
+    探测与 DDL 均按当前方言生成，revision 仅描述预期目标，不必自行分支 SQLite 与 MySQL。
 
     :param conn: 数据库连接。
     :param db_type: 方言名，省略时由连接推断。
@@ -92,7 +92,7 @@ class MigrationContext:
         if self.db_type != "sqlite":
             await self.conn.execute_script(script)
             return
-        # SQLite executescript 会隐式提交。完整语句逐条执行以保留 revision 的事务边界。
+        # SQLite executescript 会产生隐式提交。改为逐条执行完整语句，以保持 revision 的事务边界。
         statement = ""
         for fragment in script.split(";"):
             statement += fragment + ";"
@@ -154,7 +154,7 @@ class MigrationContext:
         """
         判断列是否可为空。
 
-        用于“收紧或放宽约束”这类无法靠列名判断是否已完成的步骤。
+        用于“收紧或放宽约束”等无法通过列名判断是否已完成的步骤。
 
         :param table: 表名。
         :param column: 列名。
@@ -175,10 +175,10 @@ class MigrationContext:
 
     async def has_index(self, table: str, column: str) -> bool:
         """
-        判断指定列上是否已有索引：该列是任一索引的首列即算。
+        判断指定列上是否已有索引，该列为任一索引的首列即视为存在。
 
-        按列而非按索引名判断：新建的库由 ``generate_schemas`` 依模型声明建索引，索引名由 ORM
-        生成，与迁移里显式指定的名字不同。按名字判断会为已有索引的库重复建一份。
+        按列而非按索引名判断，因为新建的数据库由 ``generate_schemas`` 依模型声明创建索引，索引名由 ORM
+        生成，与迁移里显式指定的名称不同。按名称判断会为已有索引的数据库重复创建一份。
 
         :param table: 表名。
         :param column: 列名。
@@ -202,13 +202,13 @@ class MigrationContext:
         self, table: str, column: str, ddl_type: str, *, null: bool = True, default: str | None = None
     ) -> None:
         """
-        增列。
+        新增列。
 
         :param table: 表名。
         :param column: 列名。
         :param ddl_type: 列类型，如 ``VARCHAR(1024)``。
         :param null: 是否允许为空。
-        :param default: 默认值表达式，省略时不写 ``DEFAULT``。
+        :param default: 默认值表达式，省略时不生成 ``DEFAULT``。
         """
         statement = f"ALTER TABLE {self.quote(table)} ADD COLUMN {self.quote(column)} {ddl_type}"
         statement += " NULL" if null else " NOT NULL"
@@ -218,7 +218,7 @@ class MigrationContext:
 
     async def drop_column(self, table: str, column: str) -> None:
         """
-        删列。
+        删除列。
 
         :param table: 表名。
         :param column: 列名。
@@ -227,9 +227,9 @@ class MigrationContext:
 
     async def rename_column(self, table: str, old: str, new: str, ddl_type: str) -> None:
         """
-        改列名。
+        修改列名。
 
-        MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以下版本，故统一走它。
+        MySQL 的 ``CHANGE COLUMN`` 必须重复列类型，且向下兼容到 8.0 以下版本，因此统一使用它。
 
         :param table: 表名。
         :param old: 旧列名。
@@ -245,7 +245,7 @@ class MigrationContext:
 
     async def rename_table(self, old: str, new: str) -> None:
         """
-        改表名。
+        修改表名。
 
         :param old: 旧表名。
         :param new: 新表名。
@@ -254,9 +254,9 @@ class MigrationContext:
 
     async def create_index(self, table: str, columns: list[str], name: str) -> None:
         """
-        建索引。
+        创建索引。
 
-        调用方须先以 :meth:`has_index` 探测：MySQL 不支持 ``CREATE INDEX IF NOT EXISTS``。
+        调用方必须先以 :meth:`has_index` 探测，因为 MySQL 不支持 ``CREATE INDEX IF NOT EXISTS``。
 
         :param table: 表名。
         :param columns: 参与索引的列。
@@ -284,7 +284,7 @@ class MigrationModule:
     :param revision: revision 标识符。
     :param path: 迁移文件路径。
     :param checksum: 文件源码的 sha256。
-    :param depends_on: 同包内须先执行的 revision。
+    :param depends_on: 同包内必须先执行的 revision。
     :param upgrade: 升级函数。
     :param downgrade: 回退函数，未声明时为 ``None``。
     """
@@ -306,7 +306,7 @@ def load_migration(package: str, path: Path) -> MigrationModule:
     """
     加载一个迁移文件。
 
-    按文件路径加载而非按包名导入：包名与目录布局在拆包前后不同，路径是唯一稳定的标识。
+    按文件路径加载而非按包名导入，因为包名与目录布局在拆包前后不同，路径是唯一稳定的标识。
 
     :param package: 所属包名。
     :param path: 迁移文件路径。
@@ -374,7 +374,7 @@ def order_migrations(package: str, modules: list[MigrationModule]) -> list[Migra
             raise MigrationError(f"Circular dependency on revision {revision!r} in package {package!r}.")
         module = by_revision.get(revision)
         if module is None:
-            # 跨包依赖无法表达，Runner 已固定 core 先于各包执行。
+            # 跨包依赖无法显式声明，执行器固定优先执行 core 的迁移。
             raise MigrationError(
                 f"Revision {revision!r} in package {package!r} depends on an unknown revision; "
                 "cross-package dependencies are not supported."
@@ -397,7 +397,7 @@ class MigrationRunner:
         """
         发现 core 与各模块包的迁移。
 
-        模块包不存在时其迁移目录不存在，对应的 revision 不会被发现，其表也不会被触碰。
+        模块包不存在时其迁移目录不存在，对应的 revision 不会被发现，其数据表也不会被读取或修改。
 
         :return: 包名到有序迁移列表的映射。
         """
@@ -419,14 +419,14 @@ class MigrationRunner:
 
     @classmethod
     async def _applied(cls) -> dict[tuple[str, str], str | None]:
-        # 取已记录的 revision。
+        # 获取已记录的 revision。
         rows = await SchemaMigration.all()
         return {(row.package, row.revision): row.checksum for row in rows}
 
     @classmethod
     async def pending(cls) -> dict[str, list[str]]:
         """
-        取尚未应用的 revision。
+        获取尚未应用的 revision。
 
         :return: 包名到待应用 revision 的映射，无待应用项时为空字典。
         """
@@ -442,8 +442,8 @@ class MigrationRunner:
     @classmethod
     def _warn_checksum_drift(cls, discovered: dict[str, list[MigrationModule]], applied: dict) -> None:
         # 提示已应用的迁移文件被改写。
-        # 只警告不阻断：开发期改动迁移文件是常态，阻断会制造无谓摩擦，但生产环境的静默改动
-        # 值得一条告警。
+        # 仅发出警告而不阻断执行，因为开发阶段改动迁移文件属于常态，阻断会带来不必要的干扰；生产环境的静默改动
+        # 仍会记录一条告警。
         for package, modules in discovered.items():
             for module in modules:
                 recorded = applied.get((package, module.revision))
@@ -455,9 +455,9 @@ class MigrationRunner:
 
     @classmethod
     def _order(cls, discovered: dict[str, list[MigrationModule]], package: str | None) -> list[str]:
-        # 取包的执行顺序。
-        # core 的全部 revision 先跑完，再按包名依次执行各模块包：模块侧的绑定回填以 core 的
-        # 改名与回填已完成为前提，且各包的 revision 无法互相声明依赖。
+        # 获取包的执行顺序。
+        # core 的全部 revision 优先执行完毕，再按包名依次执行各模块包。模块包的绑定回填以 core 的
+        # 重命名与数据回填完成为前置条件，且各包的 revision 无法相互声明依赖。
         if package is not None:
             if package not in discovered:
                 Logger.warning(f"No migrations discovered for package {package!r}.")
@@ -470,8 +470,8 @@ class MigrationRunner:
         """
         执行待应用的 revision。
 
-        :param package: 只执行该包，省略时执行全部包。
-        :return: 已应用的 ``(包名， revision)`` 列表。
+        :param package: 仅执行该包，省略时执行全部包。
+        :return: 已应用的 ``(包名, revision)`` 列表。
         """
         discovered = await cls.discover()
         applied = await cls._applied()
@@ -493,7 +493,7 @@ class MigrationRunner:
 
         :param package: 包名。
         :param to: 回退到该 revision 为止（保留它），省略时全部回退。
-        :return: 已回退的 ``(包名， revision)`` 列表。
+        :return: 已回退的 ``(包名, revision)`` 列表。
         :raises MigrationError: revision 未声明 ``downgrade``，或 ``to`` 不存在。
         """
         discovered = await cls.discover()
@@ -522,8 +522,8 @@ class MigrationRunner:
         """
         标记 revision 为已应用而不执行。
 
-        供旧库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍照常写入记录，
-        以便日后装上该包时不再重放这些历史步骤。
+        供旧数据库版本号转换与显式跳过使用。包不存在时其 revision 不会被发现，此处仍正常写入记录，
+        以便后续安装该包时不再重复执行历史步骤。
 
         :param package: 包名。
         :param revisions: revision 列表。
@@ -558,7 +558,7 @@ class MigrationRunner:
             await entry(MigrationContext(conn))
             await cls._record(migration, reverting=reverting)
             return
-        # 事务内取到的连接由事务上下文持有，模型查询与裸 SQL 都会走同一连接。
+        # 事务内获取的连接由事务上下文持有，模型查询与原始 SQL 均使用同一连接。
         async with in_transaction("default") as transaction:
             await entry(MigrationContext(transaction))
             await cls._record(migration, reverting=reverting)
@@ -576,7 +576,7 @@ class MigrationRunner:
 
 
 async def run_startup_migrations() -> None:
-    """启动期迁移入口：先转换旧版本号，再执行各包的待应用 revision。"""
+    """启动阶段迁移入口，先转换旧版本号，再执行各包的待应用 revision。"""
     from akaribot.core.database.legacy import convert_legacy_version
 
     await convert_legacy_version()

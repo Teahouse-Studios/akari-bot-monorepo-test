@@ -17,7 +17,7 @@ def _test_qwen_thinking_support_detection():
     assert endpoints._supports_qwen_thinking("Qwen-Plus-latest")
     assert endpoints._supports_qwen_thinking("qwen/qwen3.8-flash")
     assert endpoints._supports_qwen_thinking("qwen-flash-2025-07-28")
-    # 仅思考模式或非混合思考模式的千问模型不接受 enable_thinking
+    # 仅思考模式或非混合思考模式的千问模型不接受 enable_thinking。
     assert not endpoints._supports_qwen_thinking("qwen-max")
     assert not endpoints._supports_qwen_thinking("qwen2.5-72b-instruct")
     assert not endpoints._supports_qwen_thinking("qwq-32b")
@@ -33,7 +33,7 @@ def _test_generation_extracts_overrides():
         "reasoning_effort": "high",
     }
     assert setting.get_llm_generation({"name": "x"}) == {}
-    # 显式 null 保留为空值，用于指示该参数不下发
+    # 显式 null 保留为空值，用于指示该参数不发送。
     assert setting.get_llm_generation({"temperature": None, "name": "x"}) == {"temperature": None}
     return True
 
@@ -82,7 +82,7 @@ async def _test_completions_uses_module_defaults_when_absent():
     assert captured["temperature"] == 0.5
     assert captured["top_p"] == 0.6
     assert captured["reasoning_effort"] == "low"
-    # 模块默认的 top_logprobs 为负数，表示不请求对数概率
+    # 模块默认的 top_logprobs 为负数，表示不请求对数概率。
     assert "logprobs" not in captured
     assert "top_logprobs" not in captured
     return True
@@ -291,7 +291,7 @@ async def _test_completions_keeps_deepseek_thinking():
 
 def _test_anthropic_thinking_adaptive_when_enabled():
     assert endpoints._anthropic_thinking("high") == {"type": "adaptive"}
-    # minimal 不映射到 output_config，但仍开启思考
+    # minimal 不映射到 output_config，但仍启用思考。
     assert endpoints._anthropic_thinking("minimal") == {"type": "adaptive"}
     return True
 
@@ -338,7 +338,7 @@ async def _test_anthropic_omits_thinking_when_none():
 
 @func_case
 async def test_ai_reasoning_effort(tester: Tester):
-    """akaribot.modules.ai: 采样、思考强度与对数概率支持按模型覆盖或空值省略"""
+    """akaribot.modules.ai 采样、思考强度与对数概率模型级覆盖测试"""
     await tester.test(_test_qwen_thinking_support_detection, "仅混合思考模式的千问模型支持 enable_thinking")
     await tester.test(_test_generation_extracts_overrides, "仅提取已配置的覆盖项")
     await tester.test(_test_completions_uses_generation_overrides, "模型覆盖项透传给端点")

@@ -21,9 +21,9 @@ from akaribot.testing import func_case, Tester
 
 SWITCH_KEY = "use_markdown"
 
-# 平台能力集在导入时即依配置定型，在 qq_use_markdown 为假的部署上，markdown 相关能力全为假，
-# 因此无法验证覆盖逻辑。各用例另建一份启用 Markdown 的基准并替换该开关，
-# 使检查只考察覆盖逻辑本身，不受本地配置左右。
+# 平台能力集在导入时即依据配置固定，在 qq_use_markdown 为 False 的部署上，markdown 相关能力全部为 False，
+# 因此无法验证覆盖逻辑。各用例新建一份启用 Markdown 的基准并替换该开关，
+# 使检查仅考察覆盖逻辑本身，不受本地配置影响。
 MARKDOWN_ON_BASE = evolve(
     qqbot_features,
     support_markdown=True,
@@ -75,7 +75,7 @@ def _test_resolve_disables_markdown_features() -> bool:
         if getattr(resolved, name) is not False:
             Logger.error(f"{name} should be off for a user who disabled markdown")
             return False
-    # 与 markdown 无关的能力不应受牵连
+    # 与 markdown 无关的能力不应受牵连。
     if resolved.support_image is not True:
         Logger.error("Disabling markdown must not touch unrelated capabilities")
         return False
@@ -174,7 +174,7 @@ async def _test_send_path_follows_session() -> bool:
 
 @func_case
 async def test_markdown_toggle(tester: Tester):
-    """akaribot.adapters.qqbot.features: 用户级 markdown 开关测试"""
+    """akaribot.adapters.qqbot.features 用户级 markdown 开关测试"""
     await tester.test(_test_resolve_keeps_base_when_enabled, "开启时保持默认能力测试")
     await tester.test(_test_resolve_disables_markdown_features, "关闭时禁用相关能力测试")
     await tester.test(_test_resolve_keeps_toggle_available, "关闭后仍可开回测试")

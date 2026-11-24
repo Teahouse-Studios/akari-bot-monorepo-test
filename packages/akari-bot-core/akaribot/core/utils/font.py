@@ -13,11 +13,11 @@ from pathlib import Path
 
 from akaribot.core.paths import Paths
 
-# 字体资源包与用户自备字体的目录名。资源包以 ``fonts_dir()`` 自述资源根，此处不假定其内部布局。
+# 字体资源包与用户自定义字体的目录名称。资源包通过 ``fonts_dir()`` 声明资源根目录，此处不假定其内部布局。
 ASSETS_PACKAGE = "akaribot.assets.fonts"
 FONTS_DIR_NAME = "fonts"
 
-# CJK 字族候选，按序取首个命中：Docker 镜像装的 fonts-noto-cjk 在最前，其后是各平台自带字面。
+# CJK 字族候选按顺序选取首个匹配项，Docker 镜像安装的 fonts-noto-cjk 位于最前，其后是各平台内置的字体族。
 _CJK_FAMILIES = (
     "Noto Sans CJK JP",
     "Noto Sans CJK SC",
@@ -33,10 +33,10 @@ _CJK_FAMILIES = (
     "Arial Unicode MS",
 )
 
-# 符号字族候选。候选只收同类字族：回退到缺汉字字形的默认字族会把中文渲染成方框。
+# 符号字族候选仅收录同类字族，避免回退至缺少汉字字形的默认字族时将中文渲染为方框。
 _SYMBOL_FAMILIES = ("Noto Sans Symbols 2", "Noto Sans Symbols2", "Apple Symbols", "Segoe UI Symbol")
 
-# 已知字体名到系统字族候选的映射。未收录的名字只在资源包与实例 data 两级查找。
+# 已知字体名称至系统字族候选的映射。未收录的名称仅在资源包与实例 data 两级目录中查找。
 SYSTEM_FAMILIES: dict[str, tuple[str, ...]] = {
     "Noto Sans CJK Bold.otf": _CJK_FAMILIES,
     "Noto Sans CJK DemiLight.otf": _CJK_FAMILIES,
@@ -53,7 +53,7 @@ class FontNotFoundError(FileNotFoundError):
 
 
 def _from_assets_package(name: str) -> Path | None:
-    # 资源包是可选依赖，故按名字惰性导入：ImportError 即该级不可用，core 的依赖清单不变。
+    # 资源包属于可选依赖，因此按名称按需导入，出现 ImportError 即判定该级不可用，core 的依赖清单不变。
     try:
         from akaribot.assets.fonts import fonts_dir
     except ImportError:
@@ -77,7 +77,7 @@ def _from_system_fonts(name: str) -> Path | None:
         return None
     for family in families:
         try:
-            # fallback_to_default=False 让未命中抛 ValueError，而不是静默回退到 DejaVu Sans。
+            # fallback_to_default=False 用于在未匹配时抛出 ValueError，避免静默回退至 DejaVu Sans。
             found = font_manager.findfont(font_manager.FontProperties(family=family), fallback_to_default=False)
         except ValueError:
             continue

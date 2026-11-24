@@ -226,7 +226,7 @@ async def generate_screenshot_v2(
     elements_ = infobox_elements.copy()
     if element and isinstance(element, list):
         elements_ += element
-    # content 仅用于本地装配的 API HTML，属于渲染回退，需在图片上标注。
+    # content 仅用于本地装配的 API HTML，属于渲染备用方案，需要在图片上标注。
     custom_watermark_info = " " + Locale(locale).t("wiki.message.render.fallback") if content else ""
     if not section:
         if allow_special_page and content_mode:

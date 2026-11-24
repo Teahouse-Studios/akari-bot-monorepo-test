@@ -32,7 +32,7 @@ def should_dispatch_member_left(
     sender_id: str,
     ignored_sender: list[str],
 ) -> bool:
-    """只处理真实成员从 join 状态离开或被移出房间的变化。"""
+    """仅处理真实成员从 join 状态离开或被移出房间的变化。"""
     return (
         initial_sync_complete
         and membership in {"leave", "ban"}

@@ -31,19 +31,19 @@ failures: list[str] = []
 
 
 def report(label: str, ok: bool, detail: str = "") -> None:
-    """打印一条检查结果并记录失败项。"""
+    """输出单条检查结果并记录失败项。"""
     print(f"{'PASS' if ok else 'FAIL'}  {label}{'：' + detail if detail else ''}")
     if not ok:
         failures.append(label)
 
 
 def ruff_binary() -> str:
-    """取 ruff 可执行文件，优先仓库虚拟环境内的那份。"""
+    """获取 ruff 可执行文件，优先使用仓库虚拟环境中的版本。"""
     return str(REPO_RUFF) if REPO_RUFF.is_file() else "ruff"
 
 
 def ruff(arguments: list[str], files: list[Path]) -> tuple[bool, str]:
-    """对一组文件跑 ruff，返回是否通过与合并后的输出。"""
+    """对指定文件集合运行 ruff，返回验证结果与合并后的输出。"""
     result = subprocess.run(
         [ruff_binary(), *arguments, *map(str, files)],
         capture_output=True,
@@ -54,7 +54,7 @@ def ruff(arguments: list[str], files: list[Path]) -> tuple[bool, str]:
 
 
 def core_imports(tree: ast.AST) -> list[str]:
-    """列出源码里出现的 akaribot.core 导入路径。"""
+    """列出源码中出现的 akaribot.core 导入路径。"""
     found: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -70,7 +70,7 @@ def core_imports(tree: ast.AST) -> list[str]:
 
 
 def check_layout(package: Path) -> Path:
-    """检查结构文件齐全，返回导入包目录。"""
+    """检查结构文件是否齐全，返回导入包目录路径。"""
     stem = package.name.removeprefix("akari-bot-adapter-")
     source = package / "akaribot/adapters" / stem
     missing = [name for name in SKELETON_FILES if not (source / name).is_file()]
@@ -97,7 +97,7 @@ def check_metadata(package: Path) -> None:
 
 
 def check_package(package: Path) -> None:
-    """检查一个生成的适配器包。"""
+    """检查生成的单个适配器包结构。"""
     print(f"\n=== {package.name} ===")
     python_files = sorted(package.rglob("*.py"))
     for label, arguments in (
@@ -124,7 +124,7 @@ def check_package(package: Path) -> None:
 
 
 def main() -> int:
-    """入口：逐个检查命令行给出的生成目录。返回进程退出码。"""
+    """主入口函数，逐个检查命令行指定的生成目录并返回进程退出码。"""
     targets = [Path(argument).resolve() for argument in sys.argv[1:]]
     if not targets:
         print(__doc__.strip().splitlines()[-1], file=sys.stderr)

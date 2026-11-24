@@ -17,7 +17,7 @@ def _test_first_trigger_is_accepted():
 
 
 def _test_double_trigger_is_ignored():
-    # 鼠标双击与键盘连发：两次请求挨得极近，第二次不开第二层确认框。
+    # 模拟鼠标双击与键盘连续触发，两次请求间隔极短时，第二次不再打开第二层确认框。
     gate = compat.PendingConfirm()
     gate.accept("recreate", now=100.0)
     burst = [gate.accept("recreate", now=100.0 + offset) for offset in (0.01, 0.1, DEBOUNCE / 2)]
@@ -31,14 +31,14 @@ def _test_trigger_after_the_window_is_accepted():
 
 
 def _test_other_target_is_accepted():
-    # 换目标就是另一次动作：立即放行，不受上一个目标的防抖窗口影响。
+    # 换目标就是另一次操作，立即放行，不受上一个目标的防抖窗口影响。
     gate = compat.PendingConfirm()
     gate.accept("recreate", now=100.0)
     return gate.accept("release", now=100.01) is True
 
 
 def _test_reset_accepts_immediately():
-    # 切页、刷新、换选中项会复位：复位后同一个目标立即放行。
+    # 切换页面、刷新、更换选中项会重置状态，重置后同一个目标立即放行。
     gate = compat.PendingConfirm()
     gate.accept("recreate", now=100.0)
     gate.reset()
@@ -47,7 +47,7 @@ def _test_reset_accepts_immediately():
 
 @func_case
 async def test_tui_pending(tester: Tester):
-    """cli.tui._compat: 确认框连发闸门测试"""
+    """cli.tui._compat 确认框防连续触发检查测试"""
     await tester.test(_test_first_trigger_is_accepted, "首次触发放行")
     await tester.test(_test_double_trigger_is_ignored, "双击与连发被忽略")
     await tester.test(_test_trigger_after_the_window_is_accepted, "越过防抖窗口后放行")

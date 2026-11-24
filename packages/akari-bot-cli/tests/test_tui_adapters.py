@@ -1,4 +1,4 @@
-"""适配器页的安装入口、实例移除确认及 peer 状态测试。"""
+"""适配器页的安装入口、实例移除确认及节点状态测试。"""
 
 import json
 import subprocess
@@ -40,7 +40,7 @@ ALTERNATE = AdapterRecord(
     enabled=True,
     installed=True,
 )
-# 缺少适配器包的配置：启用的仍列出以暴露问题，未启用的与未安装平台一样不进列表。
+# 对于缺少适配器包的配置，启用的仍列出以暴露问题，未启用的与未安装平台一样不显示在列表中。
 MISSING_ENABLED = AdapterRecord(
     platform="kook", client_name="Kook", table="bot_kook", enable=True, enabled=True, installed=False
 )
@@ -146,14 +146,14 @@ async def _test_button_follows_state():
         return not_installed, installed
 
     not_installed, installed = await _with_page(body, _missing_source())
-    # 按钮文字随所选行切换，并带上切换键 e。
+    # 按钮文字随所选行切换，并附带切换键 e。
     return not_installed == compat.key_hint(i18n.t("cli.tui.adapters.action_install"), "e") and installed == (
         compat.key_hint(i18n.t("cli.tui.adapters.action_disable"), "e")
     )
 
 
 async def _test_install_action_streams_output():
-    # 按 i 打开安装对话框，只列未安装的平台。回车安装高亮项并显示进度。
+    # 按 i 打开安装对话框，仅列出未安装的平台。按 Enter 键安装高亮项并显示进度。
     async def body(app, page, pilot, source):
         await pilot.press("i")
         await pilot.pause()
@@ -174,7 +174,7 @@ async def _test_install_action_streams_output():
 
 
 async def _test_toggle_on_uninstalled_installs():
-    # 缺包的已启用配置按 e 走安装对话框并预选该平台，不改动启用状态。
+    # 缺少依赖包的已启用配置按 e 进入安装对话框并预先选中该平台，不改动启用状态。
     async def body(app, page, pilot, source):
         await _select(page, "kook")
         await pilot.pause()
@@ -257,7 +257,7 @@ async def _test_modules_page_excludes_adapters():
 
 
 async def _test_refresh_keeps_row_highlighted():
-    # 关键回归：重建列表后选中行必须仍然亮着——ListView 只在 index 变化时打高亮。
+    # 关键回归测试，重建列表后选中行必须保持高亮——ListView 仅在 index 变化时更新高亮。
     source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE), instance_root="/tmp/inst"))
 
     async def body(app, page, pilot, chosen):
@@ -319,7 +319,7 @@ def _peer_source(payload) -> tuple[SubprocessAdapterSource, list[tuple[str, ...]
 
 def _test_peer_status_reads_core_snapshot():
     # 数据结构与 ``python -m akaribot.core.entrypoints.peers --json`` 保持一致。
-    # 顶层包含 available/note。peer 记录同时包含页面未使用的 role/online。
+    # 顶层包含 available/note。节点记录同时包含页面未使用的 role/online。
     payload = {
         "peers": [
             {
@@ -440,7 +440,7 @@ async def _test_peer_unavailable_page_shows_note():
 
 
 async def _test_add_instance_dialog_creates_on_chosen_platform():
-    # 对话框列出已安装的平台（含仅见于 installed_platforms、尚无实例的平台），预选当前行的平台，
+    # 对话框列出已安装的平台（包含仅见于 installed_platforms、尚无实例的平台），预先选中当前行的平台，
     # 确认后按所选平台与输入的实例 ID 新建。
     installed = normalize_snapshot({"installed_platforms": ["kook"]}).installed_platforms
     source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE), installed_platforms=installed))
@@ -464,7 +464,7 @@ async def _test_add_instance_dialog_creates_on_chosen_platform():
 
 
 async def _test_add_instance_rejects_invalid_ids():
-    # 空、非法与重名的实例 ID 都在对话框内提示且不关闭。取消后不执行。
+    # 空、非法与重名的实例 ID 均在对话框内提示且不关闭。取消后不执行任何操作。
     source = _source(snapshot=AdapterSnapshot(instances=(INSTALLED, ALTERNATE)))
 
     async def body(app, page, pilot, chosen):
@@ -606,7 +606,7 @@ async def _test_add_instance_form_stops_at_failure_and_resumes():
 
 
 async def _test_add_instance_form_can_be_skipped():
-    # 有未保存内容时，关闭前先确认，取消后内容保留。读不到配置项时实例仍算创建成功，不弹表单。
+    # 存在未保存内容时，关闭前先确认，取消后内容保留。无法读取配置项时实例仍判定为创建成功，不弹出表单。
     class _Broken(StaticAdapterSource):
         def config_fields(self, table):
             raise AdapterSourceError("schema 不可用")
@@ -655,7 +655,7 @@ async def _test_add_instance_form_can_be_skipped():
 
 
 def _test_subprocess_instance_ops_call_cli():
-    # 新增与移除经 adapter instance 子命令执行，成败取决于退出码。
+    # 新增与移除通过 adapter instance 子命令执行，成败取决于退出码。
     calls: list[tuple[str, ...]] = []
 
     def runner(argv, **kwargs):
@@ -762,7 +762,7 @@ async def _test_remove_requires_control_key():
     return await _with_page(body, source)
 
 
-# 复位后同一目标应立即允许重新触发。
+# 重置状态后同一目标应立即允许重新触发。
 async def _test_remove_confirm_resets_on_refresh():
     source = _source()
 
@@ -859,12 +859,12 @@ async def _test_remove_message_states_data_kept():
 
     result, status = await _with_page(body, source)
     expected = i18n.t("cli.tui.adapters.remove_kept", name=i18n.t("cli.tui.adapters.default_id"))
-    # 数据源仅报告配置更改，数据保留说明由页面补充。
+    # 数据源仅返回配置更改，数据保留说明由页面补充。
     return result == expected and expected in status and i18n.t("cli.tui.adapters.stub_instance_ok") not in result
 
 
 def _test_pending_confirm_gate_debounce_and_reset():
-    # 防抖窗口内忽略重复请求。窗口结束或复位后允许重新触发。
+    # 防抖窗口内忽略重复请求。窗口结束或重置状态后允许重新触发。
     gate = compat.PendingConfirm()
     accepted = gate.accept("x", now=100.0)
     burst = gate.accept("x", now=100.1)
@@ -935,7 +935,7 @@ async def _test_narrow_layout_keeps_controls_visible():
 
 @func_case
 async def test_tui_adapters(tester: Tester):
-    """cli.tui.adapters: 未安装平台与安装入口测试"""
+    """cli.tui.adapters 未安装平台与安装入口测试"""
     _use_cli_locale()
     await tester.test(_test_pending_confirm_gate_debounce_and_reset, "确认闸门防抖与复位")
     # 放大防抖窗口，避免执行速度影响重复请求的判断。

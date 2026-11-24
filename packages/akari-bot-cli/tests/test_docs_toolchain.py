@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.toolchain``：版本探测、依赖安装与构建命令。"""
+"""``akaribot.cli.docs_engine.toolchain`` 的版本探测、依赖安装与构建命令测试。"""
 
 import json
 import subprocess
@@ -264,7 +264,7 @@ async def _test_external_theme_installs_dependencies():
 
 @func_case
 async def test_docs_toolchain(tester: Tester):
-    """cli.docs.toolchain: Node 工具链探测与命令组装"""
+    """cli.docs.toolchain 的 Node 工具链探测与命令组装测试"""
     await tester.test(_test_node_version_parsing, "解析 node 主版本号")
     await tester.test(_test_detect_requires_node_eighteen, "node 主版本低于 18 时不可用")
     await tester.test(_test_detect_reports_missing_node, "缺少 node 时报告原因")

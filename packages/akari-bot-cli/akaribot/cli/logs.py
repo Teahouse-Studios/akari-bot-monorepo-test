@@ -278,7 +278,7 @@ def read_last_lines(
             break
     lines, consumed = _split_complete_lines(raw, max_bytes)
     if start > 0 and lines:
-        # 没有读到文件开头时首行可能被截断，丢弃后才能保证每一行都是完整的。
+        # 未读取到文件开头时首行可能被截断，丢弃后才能保证各行均完整。
         lines = lines[1:]
     return LogChunk(
         lines=lines[-count:],

@@ -1,4 +1,4 @@
-"""core.i18n 单元测试 - 语言快照的发布与重载。"""
+"""core.i18n 语言快照发布与重载单元测试。"""
 
 import os
 import tempfile
@@ -35,14 +35,14 @@ def _test_locale_snapshot_reload():
             if locale.t("snapshot.value", fallback=False, locale_failed_prompt=False) != "before":
                 return False
 
-            # 内容长度和 mtime 都保持不变，确保重载依赖内容签名而非文件元数据。
+            # 内容长度和 mtime 均保持不变，确保重载依赖内容签名而不是文件元数据。
             stat = locale_file.stat()
             _write_locale(locale_file, "after!")
             os.utime(locale_file, ns=(stat.st_atime_ns, stat.st_mtime_ns))
 
             if build_locale_snapshot(["zh_cn"], [directory], namespace):
                 return False
-            # Reader 会定期检查共享 manifest，无需恢复旧的队列广播或显式重连。
+            # Reader 会定期检查共享 manifest，无需队列广播或显式重连。
             clock.monotonic.return_value += 1.1
             if locale.t("snapshot.value", fallback=False, locale_failed_prompt=False) != "after!":
                 return False
@@ -50,7 +50,7 @@ def _test_locale_snapshot_reload():
             if first_generation == second_generation:
                 return False
 
-            # 临时写坏语言文件时应报告错误，但不能替换已经发布的健康快照。
+            # 临时损坏语言文件时应报告错误，但不能替换已经发布的健康快照。
             locale_file.write_text("{", encoding="utf-8")
             with redirect_stderr(StringIO()):
                 errors = build_locale_snapshot(["zh_cn"], [directory], namespace)
@@ -69,6 +69,6 @@ def _test_locale_snapshot_reload():
 
 @func_case
 async def test_locale_reload(tester: Tester):
-    """core.i18n: 语言快照重载测试。"""
+    """core.i18n 语言快照重载测试。"""
     await tester.test(_test_locale_snapshot_reload, "语言快照发布与回退测试")
     return tester

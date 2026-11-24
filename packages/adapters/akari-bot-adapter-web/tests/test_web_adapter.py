@@ -1,4 +1,4 @@
-"""Web 平台会话 Socket 绑定与私信失败语义测试。"""
+"""Web 平台会话 Socket 绑定与私聊失败语义测试。"""
 
 import asyncio
 import importlib

@@ -41,10 +41,10 @@ if TYPE_CHECKING:
 _CONTROL_RESULTS = (Stop, RecoveryProposal, Handled)
 _PROTOCOL_EXCEPTIONS = (SessionFinished, WaitCancelException, SendMessageFailed)
 
-# 同一会话的嵌套分发：父 hook 仍在执行时，子 dispatch 直接跳过，避免子事务提交后父失败无法撤销
+# 同一会话发生嵌套分发且父 hook 仍在执行时，子分发直接跳过，避免子事务提交后父级失败无法撤销。
 _active_dispatch: ContextVar[tuple[int, HookPoint] | None] = ContextVar("parser_hook_active_dispatch", default=None)
 
-# 观察入口：禁止控制结果短路
+# 观察入口禁止控制结果中断后续执行。
 _OBSERVER_POINTS = frozenset(
     {
         HookPoint.EXECUTION_FINISHED,
@@ -54,7 +54,7 @@ _OBSERVER_POINTS = frozenset(
     }
 )
 
-# 每入口允许的结果类型。未列出的入口允许全部
+# 每个入口允许的结果类型。未列出的入口允许全部。
 _ALLOWED_RESULTS: dict[HookPoint, tuple[type, ...]] = {
     HookPoint.SESSION_READY: (Continue, Stop),
     HookPoint.SESSION_BEFORE_WAIT: (Continue, Stop),
@@ -161,7 +161,7 @@ class ParserHookExecutor(HookExecutor):
         outgoing: OutgoingPayload | None = None,
     ) -> HookDispatchOutcome:
         session_info = msg.session_info
-        # 父 hook 尚未结束时拒绝同会话的嵌套分发：子事务的提交无法随父失败撤销。
+        # 父 hook 尚未结束时拒绝同会话的嵌套分发，因为子事务的提交无法随父失败撤销。
         active = _active_dispatch.get()
         if active is not None and active[0] == id(session_info):
             Logger.warning(f"Nested parser hook dispatch for the same session skipped at {point} (active={active[1]}).")
@@ -187,7 +187,7 @@ class ParserHookExecutor(HookExecutor):
                 outcome.skipped_stale += int(is_stale)
                 if not eligible:
                     continue
-                # 快照构建也在 hook 边界内：克隆失败按当前 hook 失败处理，不得中断后续 hook
+                # 快照构建也在 hook 边界内，克隆失败按当前 hook 失败处理，不得中断后续 hook。
                 try:
                     draft: SessionDraft | None = build_session_draft(session_info) if use_draft else None
                     outgoing_draft: OutgoingPayload | None = outgoing.snapshot() if outgoing is not None else None
@@ -247,7 +247,7 @@ class ParserHookExecutor(HookExecutor):
                 if budget is not None and budget > 0 and elapsed > budget:
                     Logger.warning(f"Parser hook {sub.subscription_id} ({point}) took {elapsed:.3f}s.")
 
-                # 观察入口：控制结果视为失败，不短路
+                # 观察入口将控制结果视为失败，不中断后续执行。
                 if is_observer and isinstance(result, _CONTROL_RESULTS):
                     if draft is not None:
                         draft.revoke()

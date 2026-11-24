@@ -38,16 +38,16 @@ ROOT_PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
 DEFAULT_SKIP_TRAILER = "Skip-Version"
 
-# 不进 wheel 的目录：其改动不要求升版本，--strict 时该豁免失效。
-# pyproject.toml 不在豁免内：依赖与入口点会写进 wheel 元数据，改动同样要发新版。
+# 未打包进 wheel 的目录修改不要求递增版本号，附带 --strict 选项时该豁免失效。
+# pyproject.toml 未包含在豁免范围内，因为依赖与入口点会写入 wheel 元数据，修改同样需要发布新版本。
 NON_SHIPPED_SEGMENTS = {"tests", "__pycache__", ".pytest_cache"}
 
-# 报告里每个包的改动文件显示上限，超出只计数量。
+# 报告中每个包的改动文件显示上限，超出部分仅统计数量。
 MAX_FILES_SHOWN = 8
 
 
 class ConfigError(RuntimeError):
-    """根 pyproject 或成员 pyproject 不满足检查所需的结构。"""
+    """根 pyproject 或成员 pyproject 不满足检查对应的结构要求。"""
 
 
 @dataclass(frozen=True)
@@ -87,13 +87,13 @@ class Finding:
 
 
 def load_toml(path: Path) -> dict:
-    """读取 TOML 文件。"""
+    """读取并解析 TOML 文件。"""
     with path.open("rb") as handle:
         return tomllib.load(handle)
 
 
 def discover_members() -> list[Member]:
-    """按根 pyproject 的 members glob 展开成员，读各成员自己的 [project] 名字与版本。"""
+    """按照根目录 pyproject 的 members glob 展开成员，读取各成员自己的 [project] 名称与版本。"""
     workspace = load_toml(ROOT_PYPROJECT).get("tool", {}).get("uv", {}).get("workspace", {})
     excluded = {path for pattern in workspace.get("exclude", []) for path in PROJECT_ROOT.glob(pattern)}
     found: dict[str, Member] = {}
@@ -134,7 +134,7 @@ def git_text(arguments: list[str]) -> str:
 
 
 def resolve_commit(ref: str) -> str | None:
-    """把引用解析为提交 SHA。解析不了返回 None。"""
+    """将引用解析为提交 SHA。若无法解析则返回 None。"""
     try:
         lines = [
             line
@@ -271,7 +271,7 @@ def is_source_change(member: Member, path: str, strict: bool) -> bool:
 
 
 def compare_versions(base_version: str | None, head_version: str | None) -> int | None:
-    """比较两侧版本。任一侧无法解析时返回 None。"""
+    """比较两侧版本号。若任一侧无法解析则返回 None。"""
     try:
         return (Version(head_version) > Version(base_version)) - (Version(head_version) < Version(base_version))
     except (InvalidVersion, TypeError):
@@ -336,7 +336,7 @@ def inspect_member(member: Member, files: list[str], base: str, strict: bool) ->
 
 
 def print_finding(finding: Finding) -> None:
-    """打印一个包的结论及其改动文件。"""
+    """输出指定包的检查结论及其修改文件列表。"""
     level = "违规" if finding.is_violation else "通过"
     if finding.base_version is None:
         versions = f"{finding.head_version or '无版本'}"
@@ -354,7 +354,7 @@ def print_finding(finding: Finding) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """命令行入口参数。"""
+    """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(
         description="版本守卫：包内有源码改动但 version 未变则失败",
         epilog=(
@@ -377,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    """入口。返回进程退出码，1 表示有违规，0 表示通过或仅提示。"""
+    """主入口函数，返回进程退出码，1 表示存在违规项，0 表示检查通过或仅提示。"""
     args = build_parser().parse_args()
 
     try:

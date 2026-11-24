@@ -29,18 +29,18 @@ from akaribot.modules.core.common_tools._union_merge import (
 )
 from akaribot.modules.core.common_tools.bind import b
 
-# 迁移码与 bind 的绑定码分开存放，两者不可互相消费：
-# 迁移码用于把退役实例上的数据搬到新实例，与常规的跨平台绑定不是同一件事。
+# 迁移码与 bind 的绑定码分开存储，两者不可混用，因为
+# 迁移码用于将退役实例上的数据迁移至新实例，与常规跨平台绑定在语义上属于不同操作。
 _sender_merge_codes = ExpiringTempDict(exp=BIND_CODE_EXPIRED)
 _target_merge_codes = ExpiringTempDict(exp=BIND_CODE_EXPIRED)
 
-# ``merge`` 是 ``bind`` 的别名，此处保留同名隐藏模块，仅承载退役公告触发器：
-# 退役策略的白名单按模块名放行，公告正则须挂在白名单模块上才能在退役场景继续匹配。
+# ``merge`` 是 ``bind`` 的别名，此处保留同名隐藏模块，仅承载退役公告触发器，因为
+# 退役策略的白名单按模块名称放行，公告正则需要挂载在白名单模块上方可在退役场景中继续匹配。
 m = module("merge", base=True, hidden=True, load=bool(CoreConfig.retired_clients))
 
 
 def _take_merge_code(code: str) -> tuple[str, dict] | None:
-    # 取出并消费一枚由 ``merge`` 签发的迁移码。
+    # 读取并核销一项通过 ``merge`` 签发的迁移码。
     return take_code(
         code,
         ((UNION_SCOPE_SENDER, _sender_merge_codes), (UNION_SCOPE_TARGET, _target_merge_codes)),
@@ -48,9 +48,9 @@ def _take_merge_code(code: str) -> tuple[str, dict] | None:
 
 
 async def _unify_channel(initiator_target_id: str, current_target_id: str) -> int:
-    # 两个场景并入同一条通道，使命令执行与消息推送只由其中一方承担。若两个机器人回到共作状态，
-    # 不同通道会让两个机器人各自通过通道认领的快路径，同一条命令被响应两次，统一通道是这类回退场景的保险。
-    # 通道号取发起方的现有编号。两个场景原本所在的完整通道都保留等价关系，避免拆开第三个入口。
+    # 两个场景并入同一条通道，使命令执行与消息推送仅转交其中一方承担。如果两个机器人回到共作状态，
+    # 不同通道会导致两个机器人各自通过通道认领的快速路径，同一条命令被响应两次，统一通道能够为此类回退场景提供保障。
+    # 通道编号使用发起方的现有编号。两个场景所属的完整通道均保留等价关系，避免拆分第三个入口。
     channel_id = await TargetUnionInfo.unify_channels(initiator_target_id, current_target_id)
     if channel_id is not None:
         return channel_id
@@ -60,8 +60,8 @@ async def _unify_channel(initiator_target_id: str, current_target_id: str) -> in
     initiator_bind = by_id.get(initiator_target_id)
     current_bind = by_id.get(current_target_id)
     if initiator_bind and current_bind:
-        # 两行都存在却无法统一，说明迁移后的 Target Union 拓扑与调用约定不符。
-        # 此时不能把其中一侧静默移到其它通道，避免掩盖未完成的 Union 合并。
+        # 两行均存在却无法统一，说明迁移后的 Target Union 拓扑与调用约定不符。
+        # 此时不可将其中一侧静默移动至其他通道，避免掩盖未完成的 Union 合并。
         raise RuntimeError("Unable to unify migrated target channels.")
 
     fallback_channel = initiator_bind.channel_id if initiator_bind else 1
@@ -73,13 +73,13 @@ async def _unify_channel(initiator_target_id: str, current_target_id: str) -> in
 @b.command("merge {{I18N:core.help.bind.merge}}", available_for=RETIRED_SOURCES)
 async def _(msg: Bot.MessageSession):
     session_info = msg.session_info
-    # 迁移码须记下签发方的客户端与场景：前者用于兑换时校验迁移去处，
-    # 后者用于迁移完成后统一两侧的消息通道号。
+    # 迁移码需要记录签发方的客户端与场景，前者用于核销时校验迁移目标，
+    # 后者用于迁移完成后统一两侧的消息通道编号。
     origin = {"source_client": session_info.client_name, "holder_target_id": session_info.target_id}
 
     if session_info.is_private:
-        # 私聊中的用户身份与私聊场景属于同一数据边界，应一并迁移，
-        # 否则用户的个人数据仍留在退役实例上。
+        # 私聊中的用户身份与私聊场景属于同一数据边界，应当一并迁移，
+        # 否则用户的个人数据仍残留在退役实例中。
         await issue_code(
             msg,
             _sender_merge_codes,
@@ -94,7 +94,7 @@ async def _(msg: Bot.MessageSession):
             code_key="core.message.bind.merge.code",
             command="merge token",
         )
-    # 场景迁移会改动整个场景的数据，需要管理员权限。私聊没有这个顾虑，校验放在此处执行。
+    # 场景迁移会改动整个场景的数据，需要管理员权限。私聊场景无此限制，校验在此处执行。
     if not await msg.check_permission():
         await msg.finish(I18NContext("parser.admin.permission.denied.command"))
     await issue_code(
@@ -110,9 +110,9 @@ async def _(msg: Bot.MessageSession):
 
 
 async def _merge_private(msg: Bot.MessageSession, entry: dict) -> None:
-    # 完成一次私聊迁移：账号数据与私聊场景数据一并合并。
-    # 私聊里“这个账号”与“这段私聊”指的是同一件事。只合并其一会让另一半的数据留在退役实例上。
-    # 两者共用一次确认后一起执行，避免用户在第二次确认时取消而停在只迁移一半的状态。
+    # 完成一次私聊迁移，将账号数据与私聊场景数据一并合并。
+    # 私聊中“该账号”与“该私聊场景”在表现上一致。仅合并其中一项会导致另一部分数据残留在退役实例中。
+    # 两者共用一次确认后统一执行，避免用户在第二次确认时取消而处于仅部分迁移的不一致状态。
     session_info = msg.session_info
     sender_current = session_info.sender_union_info
     target_current = session_info.target_union_info
@@ -149,8 +149,8 @@ async def _merge_private(msg: Bot.MessageSession, entry: dict) -> None:
     if not await msg.wait_confirm(lines):
         await msg.finish()
 
-    # 场景侧选择须在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
-    # lease。sender barrier 建立后，其冲突选择则保持 lease，直到合并写入结束。
+    # 场景选择需要在建立 sender barrier 前完成。普通 wait_confirm 会释放执行
+    # lease。sender barrier 建立后，其冲突选择保持 lease，直到合并写入结束。
     target_keep = await choose_conflicts(msg, target_plan["conflicts"]) if target_plan else set()
     if sender_plan:
         sender_plan = await reserve_sender_merge(msg, sender_plan)
@@ -182,8 +182,8 @@ async def _merge_private(msg: Bot.MessageSession, entry: dict) -> None:
     )
 
 
-# 命令字面量按“位置无关的标志”匹配：沿用 merge token 作命令路径会被 bind token 抢先匹配
-# （``<code>`` 吞掉 "merge"），源平台便不再让位。用户侧命令不变，经别名映射到这里。
+# 命令字面量按“位置无关的标志”匹配，因为沿用 merge token 作为命令路径会被 bind token 抢先匹配
+# （``<code>`` 匹配并解析占用 "merge"），源平台便无法避让。用户端命令不变，通过别名映射至此处。
 @b.command("merge-token <code> {{I18N:core.help.bind.merge.token}}", available_for=RETIRED_TARGETS)
 async def _(msg: Bot.MessageSession, code: str):
     taken = _take_merge_code(code)
@@ -196,20 +196,20 @@ async def _(msg: Bot.MessageSession, code: str):
         )
     scope, entry = taken
 
-    # 迁移码只能在其所属迁移关系的目标平台兑换。命令级 available_for 只能表明本平台是
-    # 某条关系的目标，配置多条关系时挡不住用甲关系的码在乙关系的目标上兑换。
+    # 迁移码仅可在其所属迁移关系的目标平台核销。命令级 available_for 仅能表明当前平台为
+    # 某条关系的目标，配置多条关系时无法防止使用第一种关系的迁移码在第二种关系的目标平台中核销。
     if not is_merge_route_allowed(entry.get("source_client"), msg.session_info.client_name):
         await msg.finish(I18NContext("core.message.bind.merge.route.mismatch"))
 
-    # 迁移码的签发与使用须处于同类场景：私聊码带着发起方的场景组，若在群里兑换，
-    # 会把一段私聊的数据并进群场景。群码在私聊里兑换同理。
+    # 迁移码的签发与使用需要处于同类场景。私聊绑定码绑定发起方的场景组，如果在群聊中核销，
+    # 会将私聊场景的数据合并至群聊场景中，群聊迁移码在私聊中核销的规则亦相同。
     if entry["is_private"] != msg.session_info.is_private:
         await msg.finish(I18NContext("core.message.bind.merge.context.mismatch"))
 
     if scope == UNION_SCOPE_SENDER:
         await _merge_private(msg, entry)
 
-    # 场景迁移会改动整个场景的数据，与签发迁移码时一样需要管理员权限。
+    # 场景迁移会修改整个场景的数据，与签发迁移码时相同，均需要管理员权限。
     if not await msg.check_permission():
         await msg.finish(I18NContext("parser.admin.permission.denied.command"))
 
@@ -252,6 +252,6 @@ async def _(msg: Bot.MessageSession, code: str):
     available_for=RETIRED_SOURCES,
 )
 async def _(msg: Bot.MessageSession):
-    # 只做排队，不向场景发送内容：公告由延时任务在数分钟后推送。若挂在命令拦截上，退役后用户
-    # 不再发命令，该场景便永远收不到公告。单次触发使每个场景只跑一次，避免每条消息都查库。
+    # 仅负责排队，不向场景发送内容，公告通过延时任务在数分钟后推送。如果挂载在命令拦截上，退役后用户
+    # 一旦停止发送命令，该场景便永远收不到公告。单次触发使每个场景仅执行一次，避免对每条消息都查询数据库。
     await enqueue_notice(msg.session_info)

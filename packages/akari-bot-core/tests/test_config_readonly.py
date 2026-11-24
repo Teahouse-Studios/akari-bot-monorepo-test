@@ -9,7 +9,7 @@ from akaribot.core.builtins.config import CFGManager
 from akaribot.core.constants.exceptions import ConfigOperationError
 from akaribot.testing import func_case, Tester
 
-# 最小可用的配置文件内容，含表外顶层键、普通表与密钥表各一
+# 最小可用的配置文件内容，包含配置表之外的顶层键，以及常规配置表与密钥表各一项。
 MINIMAL_CONFIG = """default_locale = "zh_cn"
 config_version = 3
 
@@ -136,7 +136,7 @@ def _test_readonly_template_registers_without_writing():
 
 @func_case
 async def test_config_readonly(tester: Tester):
-    """core.config: 配置只读语义测试"""
+    """core.config 配置只读语义测试"""
     await tester.test(_test_readonly_write_raises, "只读时 write 抛出异常测试")
     await tester.test(_test_readonly_delete_raises, "只读时 delete 抛出异常测试")
     await tester.test(_test_readonly_save_raises, "只读时 save 抛出异常测试")

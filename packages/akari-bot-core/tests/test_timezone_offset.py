@@ -10,7 +10,7 @@ from akaribot.core.logger import Logger
 from akaribot.testing import func_case, Tester
 from akaribot.testing.mock.config import mock_config
 
-# 场景与用户数据中承载时区偏移的键，写入方为 modules/core/common_tools/setup.py
+# 场景与用户数据中承载时区偏移的键，写入方为 modules/core/common_tools/setup.py。
 OFFSET_KEY = "timezone_offset"
 
 
@@ -128,7 +128,7 @@ def _test_session_info_serialization_preserves_offsets() -> bool:
 
 @func_case
 async def test_timezone_offset(tester: Tester):
-    """akaribot.core.builtins.session.info: 时区偏移取值来源测试"""
+    """akaribot.core.builtins.session.info 时区偏移取值来源测试"""
     await tester.test(_test_offset_follows_target_data, "偏移量跟随场景设置测试")
     await tester.test(_test_core_default_used_when_target_unset, "场景未设置时跟随核心默认时区")
     await tester.test(_test_user_offset_only_affects_display, "用户时区仅影响展示")

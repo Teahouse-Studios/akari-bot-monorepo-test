@@ -58,7 +58,7 @@ def _precheck(target: engine.InstallTarget, installed, plan: str, *, returncode:
 
 
 def _test_adjustable_dependency_passes_with_notice():
-    # 已装包对 numpy 的要求在新版本下仍满足。只在请求 extra 时生效的依赖不参与判断。
+    # 已安装包对 numpy 的要求在新版本下仍满足。仅在请求 extra 时生效的依赖不参与判断。
     installed = _environment(
         _dist("numpy", "2.5.3"),
         _dist("matplotlib", "3.10.0", "numpy>=1.25"),
@@ -77,7 +77,7 @@ def _test_adjustable_dependency_passes_with_notice():
 
 
 def _test_editable_packages_are_judged_by_source():
-    # 可编辑安装的元数据停在安装那一刻。源码已放宽的约束不应再拦截依赖升级。
+    # 可编辑安装的元数据固定于安装时的状态。源码已放宽的约束不应再拦截依赖升级。
     with TemporaryDirectory(prefix="akari-precheck-") as raw:
         source = Path(raw)
         (source / "pyproject.toml").write_text(
@@ -96,7 +96,7 @@ def _test_editable_packages_are_judged_by_source():
 
 
 def _test_plan_that_breaks_installed_packages_is_blocked():
-    # 直接依赖与传递依赖的调整都要核对。uv 无解时同样拦截并给出原因。
+    # 直接依赖与间接依赖的调整均需要核对。uv 无法求解时同样予以拦截并记录原因。
     cases = [
         (
             DICE,
@@ -140,13 +140,13 @@ def _test_plan_that_breaks_installed_packages_is_blocked():
 
 
 def _test_api_version_probe_reads_core_constant():
-    # 兼容性检查据此判断 requires_core_api。读错位置时恒为 None，检查会被静默跳过。
+    # 兼容性检查据此判断 requires_core_api。读取位置错误时恒为 None，检查将被静默跳过。
     return isinstance(engine.probe_api_version(Path(sys.executable)), int)
 
 
 @func_case
 async def test_module_precheck(tester: Tester):
-    """cli.commands.module: 安装前兼容性检查测试"""
+    """cli.commands.module 安装前兼容性检查测试"""
     _use_cli_locale()
     await tester.test(_test_adjustable_dependency_passes_with_notice, "可调整的依赖版本放行并提示")
     await tester.test(_test_editable_packages_are_judged_by_source, "可编辑安装按源码声明的依赖核对")

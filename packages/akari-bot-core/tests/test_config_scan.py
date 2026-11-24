@@ -129,7 +129,7 @@ def _test_fresh_process_generates_all_grouped_core_templates():
         with (tmp / "webrender.toml").open("rb") as webrender_file:
             webrender_values = tomllib.load(webrender_file)
         jobqueue_text = (tmp / "jobqueue.toml").read_text(encoding="utf-8")
-        # core 自带的语言文件以包位置定位：本用例随包发布，按测试文件上溯会在包布局下失准。
+        # core 内置的语言文件按照包位置定位；由于当前用例随包发布，按测试文件上溯会在安装布局下失准。
         locale_path = Path(akaribot.core.__file__).resolve().parent / "locales" / "zh_cn.json"
         locale = json.loads(locale_path.read_text(encoding="utf-8"))
         comment_keys = JobQueueConfig.__config_fields__["jobqueue_backend"]["standalone_comment_keys"]
@@ -166,12 +166,12 @@ def _test_scan_covers_all_directories_with_config_templates():
     listed = set(iter_config_template_modules())
     expected = set()
     for package in (akaribot.adapters, akaribot.modules):
-        # 命名空间包横跨多个 distribution，__path__ 的每一项都要遍历，只看首项会漏包
+        # 命名空间包横跨多个 distribution，__path__ 的每一项均需遍历，若仅检查首项会导致遗漏成员包。
         for root in package.__path__:
             for entry in Path(root).iterdir():
                 if entry.is_dir() and not entry.name.startswith((".", "_")) and (entry / "config.py").is_file():
                     expected.add(f"{package.__name__}.{entry.name}.config")
-    # 按包枚举的代码依赖 __init__.py：缺该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）
+    # 按包枚举的代码依赖 __init__.py，缺少该文件的包会被跳过，其配置随之缺失（如 akaribot.adapters.milky）。
     return bool(expected) and expected <= listed and "akaribot.adapters.milky.config" in listed
 
 
@@ -196,7 +196,7 @@ def _test_fresh_process_generates_bot_adapter_config():
                     "bootstrap_config(); "
                     "from akaribot.core.builtins.config.scan import scan_config_templates; "
                     "failed = scan_config_templates(); "
-                    # 与守护进程 spawn 出的平台进程一致：模板导入完毕后一律只读
+                    # 与守护进程启动的平台进程一致，模板导入完成后一律设置为只读状态。
                     "from akaribot.core.builtins.config import CFGManager; "
                     "CFGManager.readonly = True; "
                     "from akaribot.adapters.milky.config import MilkyConfig, MilkySecretConfig; "
@@ -260,7 +260,7 @@ def _test_jobqueue_bootstrap_persists_missing_values_once():
 def _test_scan_writes_template_fields():
     from akaribot.core.builtins.config.decorator import on_config
 
-    # 已被 tester 导入的模板不会再次执行 process_config_class，故以此处声明的模板验证补充行为
+    # 已由 tester 导入的配置模板不会再次执行 process_config_class，因此通过此处声明的模板验证补充行为。
     with _temp_config() as tmp:
 
         @on_config("config")
@@ -425,7 +425,7 @@ def _test_legacy_allow_reload_base_is_removed():
 
 @func_case
 async def test_config_scan(tester: Tester):
-    """akaribot.core.config.scan: 配置模板扫描测试"""
+    """akaribot.core.config.scan 配置模板扫描测试"""
     await tester.test(_test_core_templates_are_grouped_into_domain_files, "核心配置模板独立文件与兼容导入测试")
     await tester.test(_test_fresh_process_generates_all_grouped_core_templates, "全新进程生成领域模板测试")
     await tester.test(_test_scan_covers_all_directories_with_config_templates, "平台与模块模板枚举一致性测试")

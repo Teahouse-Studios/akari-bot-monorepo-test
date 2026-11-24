@@ -77,14 +77,14 @@ akaribot run
 填写适配器登录信息后再启用实例。`akaribot config set <字段> <值> --table <表名>` 按模板类型写入。
 
 CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安装包含品牌、表情和常规可选依赖，
-`init --minimal` 选择核心最小依赖。
+使用 `init --minimal` 则仅安装核心最小依赖。
 
-源码开发与发行包安装的工作区约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，
-旧部署的备份、试运行和迁移见 [迁移指南](docs/migrating-to-packages.md)。
+源码开发与发行包安装的工作区约定参见 [CONTRIBUTING.md](CONTRIBUTING.md)，
+历史部署的备份、试运行和迁移参见 [迁移指南](docs/migrating-to-packages.md)。
 
-完整的搭建步骤见[自搭建指南](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）。
+完整的搭建步骤参见[自搭建指南](https://bot.teahouse.team/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA)（[镜像](https://github.com/Teahouse-Studios/akari-bot/wiki/%E8%87%AA%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97)）。
 
-问题反馈见 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues/new)。
+问题反馈参见 [Issue](https://github.com/Teahouse-Studios/akari-bot/issues/new)。
 
 ### 本地化
 
@@ -92,7 +92,7 @@ CLI 独立安装，机器人与模块安装在实例环境内。默认 core 安�
 
 ### 贡献
 
-贡献流程与提交约定见 [CONTRIBUTING.md](/CONTRIBUTING.md)。
+贡献流程与提交约定参见 [CONTRIBUTING.md](/CONTRIBUTING.md)。
 
 ## 相关项目
 

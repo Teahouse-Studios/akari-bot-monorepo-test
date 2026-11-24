@@ -1,10 +1,10 @@
 # akari-bot-module-mcplayer
 
-从 Mojang API 获取 Minecraft：Java 版的玩家信息。
+从 Mojang API 获取 Minecraft：Java 版玩家的个人资料与皮肤信息。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-mcplayer

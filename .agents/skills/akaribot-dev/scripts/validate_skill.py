@@ -17,23 +17,23 @@ from pathlib import Path
 
 MAX_ROOT_LINES = 500
 
-DOC_LINK_PATTERN = re.compile(r"`(packages/[^`]+?/doc/[^`]+?\.md)`")
+DOC_LINK_PATTERN = re.compile(r"`(packages/[^`]+?/docs/[^`]+?\.md)`")
 
 REQUIRED_DOCS = [
-    "packages/akari-bot-core/akaribot/core/doc/architecture.md",
-    "packages/akari-bot-core/akaribot/core/doc/config.md",
-    "packages/akari-bot-core/akaribot/core/doc/database.md",
-    "packages/akari-bot-core/akaribot/core/doc/queue.md",
-    "packages/akari-bot-core/akaribot/core/doc/module-development.md",
-    "packages/akari-bot-core/akaribot/core/doc/message-api.md",
-    "packages/akari-bot-core/akaribot/core/doc/permissions.md",
-    "packages/akari-bot-core/akaribot/core/doc/adapter-development.md",
-    "packages/akari-bot-core/akaribot/core/doc/public-api.md",
-    "packages/akari-bot-core/akaribot/core/doc/i18n.md",
-    "packages/akari-bot-core/akaribot/core/doc/placeholders.md",
-    "packages/akari-bot-core/akaribot/core/doc/development-workflow.md",
-    "packages/akari-bot-testing/akaribot/testing/doc/index.md",
-    "packages/akari-bot-testing/akaribot/testing/doc/writing-tests.md",
+    "packages/akari-bot-core/akaribot/core/docs/architecture.md",
+    "packages/akari-bot-core/akaribot/core/docs/config.md",
+    "packages/akari-bot-core/akaribot/core/docs/database.md",
+    "packages/akari-bot-core/akaribot/core/docs/queue.md",
+    "packages/akari-bot-core/akaribot/core/docs/module-development.md",
+    "packages/akari-bot-core/akaribot/core/docs/message-api.md",
+    "packages/akari-bot-core/akaribot/core/docs/permissions.md",
+    "packages/akari-bot-core/akaribot/core/docs/adapter-development.md",
+    "packages/akari-bot-core/akaribot/core/docs/public-api.md",
+    "packages/akari-bot-core/akaribot/core/docs/i18n.md",
+    "packages/akari-bot-core/akaribot/core/docs/placeholders.md",
+    "packages/akari-bot-core/akaribot/core/docs/development-workflow.md",
+    "packages/akari-bot-testing/akaribot/testing/docs/index.md",
+    "packages/akari-bot-testing/akaribot/testing/docs/writing-tests.md",
 ]
 
 STALE_PATTERNS = [

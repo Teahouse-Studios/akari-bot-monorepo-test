@@ -39,7 +39,7 @@ KIND_OTHER = "other"
 MODE_FORM = "form"
 MODE_RAW = "raw"
 
-# 类型标签保存文案键，按当前语言解析。
+# 类型标签保存文案键，按照当前语言动态解析。
 _KIND_KEYS = {
     KIND_BOOL: "cli.tui.config.kind_bool",
     KIND_INT: "cli.tui.config.kind_int",
@@ -48,7 +48,7 @@ _KIND_KEYS = {
     KIND_LIST: "cli.tui.config.kind_list",
     KIND_OTHER: "cli.tui.config.kind_other",
 }
-# 类型名归一化：schema 的 type 取自运行期值的 __name__，会随模板写法变化，故按子串匹配。
+# 类型名称规范化时，由于 schema 的 type 源自运行时值的 __name__ 且会随模板写法变化，因此按子串匹配。
 _KIND_MARKERS = (
     ("bool", KIND_BOOL),
     ("int", KIND_INT),
@@ -65,12 +65,12 @@ _NUMBER_PATTERN = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
 _LIST_SPLIT_PATTERN = re.compile(r"[,，]")
 _ERROR_TAIL_PATTERN = re.compile(r"\s*at line \d+ col \d+\s*$")
 
-# 表名与配置文件一一对应：config.toml 同时承载 config 与 secret 两段。
+# 配置表名与配置文件一一对应，config.toml 同时承载 config 与 secret 两段。
 _FILE_BY_TABLE = {"config": "config.toml", "secret": "config.toml"}
 _CONFIG_SUBDIRS = ("", "modules", "adapters", "core")
 
 
-# region 外部编辑器
+# region 外部编辑器。
 
 
 def editor_setting(env: Mapping[str, str] | None = None) -> str:
@@ -104,14 +104,14 @@ def editor_argv(env: Mapping[str, str] | None = None) -> list[str] | None:
 
 
 def _stdin_isatty() -> bool:
-    # 标准输入必须连接终端，否则外部编辑器无法交互。
+    # 标准输入必须连接终端设备，否则外部编辑器无法交互。
     return bool(sys.stdin.isatty())
 
 
 # endregion
 
 
-# region 字段模型与值文本
+# region 字段模型与值文本。
 
 
 def kind_of_type(type_name: str) -> str:
@@ -130,7 +130,7 @@ def kind_of_type(type_name: str) -> str:
 
 
 def kind_of_value(value: Any) -> str:
-    """按运行期值的 Python 类型推断归一化类型。"""
+    """按运行时值的 Python 类型推断规范化类型。"""
     if isinstance(value, bool):
         return KIND_BOOL
     if isinstance(value, int):
@@ -185,7 +185,7 @@ def write_text(value: Any, kind: str = "") -> str:
 
 
 def edit_text(value: Any, kind: str = "") -> str:
-    """把值渲染为输入框中的文本：列表按中英文逗号分隔，其余同 :func:`write_text`。"""
+    """将值渲染为输入框中的文本，列表按中英文逗号分隔，其余规则同 :func:`write_text`。"""
     if value is None:
         return ""
     if (kind or kind_of_value(value)) == KIND_LIST:
@@ -242,7 +242,7 @@ class ConfigField:
 
     @property
     def section(self) -> str:
-        """返回 ``config set --table`` 用的表引用：密钥段带 ``_secret`` 后缀。"""
+        """返回 ``config set --table`` 用的表引用，密钥段带 ``_secret`` 后缀。"""
         if not self.secret:
             return self.table
         return "secret" if self.table == "config" else f"{self.table}_secret"
@@ -254,7 +254,7 @@ class ConfigField:
 
     @property
     def write_value(self) -> str:
-        """返回当前值对应的写入文本，也用于判断字段是否被更改。"""
+        """返回当前值对应的写入文本，也用于判断字段是否发生更改。"""
         return write_text(self.value, self.kind)
 
     @property
@@ -267,7 +267,7 @@ class ConfigField:
 
     @property
     def marks(self) -> str:
-        """返回表头中的本地化徽标：密钥与待填写。"""
+        """返回表头中的本地化徽标（密钥与待填写）。"""
         marks = []
         if self.secret:
             marks.append(i18n.t("cli.tui.config.mark_secret"))
@@ -392,7 +392,7 @@ def _text(value: Any) -> str:
 # endregion
 
 
-# region 原始文本的解析与摊平
+# region 原始文本的解析与摊平。
 
 
 @dataclass(frozen=True)
@@ -435,7 +435,7 @@ def _error_reason(error: ParseError) -> str:
 
 
 def _error_position(error: ParseError, text: str) -> tuple[int | None, int | None]:
-    # tomlkit 对文件尾部的未闭合结构会报回第 1 行第 0 列，此处校正到最后一行。
+    # tomlkit 对文件尾部的未闭合结构会定位回第 1 行第 0 列，此处校正至最后一行。
     line = getattr(error, "line", None)
     column = getattr(error, "col", None)
     if line is None:
@@ -473,7 +473,7 @@ def parse_toml_text(text: str) -> RawParseResult:
             i18n.t("cli.tui.config.error_toml", where=where, reason=_error_reason(error), snippet=snippet),
             line,
         )
-    except Exception as error:  # noqa: BLE001 - 解析器的其他异常同样只用于展示，不应中断界面
+    except Exception as error:  # noqa: BLE001 - 解析器的其他异常同样仅用于展示，不应中断界面。
         return RawParseResult(
             False, None, i18n.t("cli.tui.config.error_toml_generic", kind=type(error).__name__, error=error)
         )
@@ -551,11 +551,11 @@ def diff_document(
 # endregion
 
 
-# region 数据源
+# region 数据源。
 
 
 class ConfigSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、退出码非零或输出不是 JSON。"""
+    """数据源不可用（子进程缺失、退出码非零或输出不是 JSON）。"""
 
 
 @dataclass(frozen=True)
@@ -627,7 +627,7 @@ class StaticConfigSource:
 
 @runtime_checkable
 class ConfigSource(Protocol):
-    """配置数据源接口。测试注入替身，实际运行通过子进程访问。"""
+    """配置数据源接口。测试注入模拟对象，实际运行通过子进程访问。"""
 
     def list_tables(self) -> Sequence[str]:
         """返回实例内的全部配置表名。"""
@@ -636,13 +636,13 @@ class ConfigSource(Protocol):
         """返回一张表的全部字段。"""
 
     def read_raw(self, table: str) -> str:
-        """返回一张表的原始 TOML 文本，只供展示与编辑。"""
+        """返回一张表的原始 TOML 文本，仅供展示与编辑。"""
 
     def set_value(self, section: str, key: str, value: str) -> SetResult:
         """写入一项。``section`` 为 ``config set --table`` 的表引用。"""
 
     def config_file(self, table: str) -> Path | None:
-        """返回一张表对应的配置文件路径。定位不到实例时返回 ``None``。"""
+        """返回一张表对应的配置文件路径。未定位到实例时返回 ``None``。"""
 
 
 class SubprocessConfigSource:
@@ -662,7 +662,7 @@ class SubprocessConfigSource:
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         instance_factory: Callable[[], Any] | None = None,
     ) -> None:
-        # 每次读取时解析实例根，确保切换实例后使用当前实例的配置。
+        # 每次读取时重新解析实例根目录，确保切换实例后使用当前实例的配置。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"list": 0, "schema": 0, "raw": 0, "set": 0}
@@ -673,7 +673,7 @@ class SubprocessConfigSource:
 
     @property
     def root(self) -> Path:
-        """实例根：显式给定优先，其次界面当前选中的实例，最后自动定位。"""
+        """返回实例根目录路径，明确给定优先，其次为界面当前选中的实例，最后自动定位。"""
         return context.resolve_root(self._root_override)
 
     def list_tables(self) -> Sequence[str]:
@@ -711,7 +711,7 @@ class SubprocessConfigSource:
         self.calls["set"] += 1
         try:
             completed = self._run(self.cli_argv("config", "set", key, value, "--table", section))
-        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的结果
+        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转换为可展示的结果。
             raise ConfigSourceError(
                 i18n.t(
                     "cli.tui.config.err_core_write",
@@ -781,7 +781,7 @@ class SubprocessConfigSource:
         instance = self._instance()
         try:
             completed = instance.run_core_capture("config", *args, "--json")
-        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转成可展示的错误
+        except Exception as error:  # noqa: BLE001 - 对端实现未知，统一转换为可展示的错误。
             raise ConfigSourceError(
                 i18n.t("cli.tui.config.err_core_call", label=label, kind=type(error).__name__, error=error)
             ) from error
@@ -803,7 +803,7 @@ class SubprocessConfigSource:
             return None
         try:
             return find_instance_root(self.root)
-        except Exception:  # noqa: BLE001 - 定位失败按“没有实例”处理，由调用方给出提示
+        except Exception:  # noqa: BLE001 - 定位失败按“无可用实例”处理，由调用方给出提示。
             return None
 
     def _instance(self) -> Any:
@@ -821,7 +821,7 @@ class SubprocessConfigSource:
             raise ConfigSourceError(i18n.t("cli.tui.config.err_no_instance_hint", root=self.root))
         try:
             self._instance_cache = Instance(root)
-        except Exception as error:  # noqa: BLE001 - 实例构造失败同样只作为降级原因上报
+        except Exception as error:  # noqa: BLE001 - 实例构造失败同样仅作为降级原因报告。
             raise ConfigSourceError(
                 i18n.t("cli.tui.config.err_instance_failed", kind=type(error).__name__, error=error)
             ) from error
@@ -920,11 +920,11 @@ def _toml_literal(value: Any, kind: str) -> str:
 # endregion
 
 
-# region 控件
+# region 控件。
 
 
 def _optional_widget(name: str) -> Any | None:
-    # 原生控件是否可用由兼容实现决定，页面通过属性检测选择实现。
+    # 原生控件是否可用取决于兼容实现，页面通过属性检测选择适配实现。
     return getattr(compat, name, None)
 
 
@@ -960,7 +960,7 @@ class BoolToggle(compat.Horizontal):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.config.bool_hint")), markup=False)
 
     def on_button_pressed(self, event: compat.Button.Pressed) -> None:
-        """切换开关。事件不再上传，避免被所在页面当作动作按钮处理。"""
+        """切换开关。事件不向上传递，避免被所在页面作为操作按钮处理。"""
         event.stop()
         self.toggle()
 
@@ -989,7 +989,7 @@ class BoolToggle(compat.Horizontal):
     def _button(self) -> compat.Button | None:
         try:
             return self.query_one(compat.Button)
-        except Exception:  # noqa: BLE001 - 未挂载时按无按钮处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无按钮处理。
             return None
 
 
@@ -1039,7 +1039,7 @@ class FieldRow(compat.Vertical):
         self.error_text = ""
 
     def compose(self) -> compat.ComposeResult:
-        """按字段类型装配控件。密钥用密码框，占位符另起一行高亮提示。"""
+        """按字段类型装配控件。密钥使用密码框，占位符单独成行高亮提示。"""
         yield compat.Static(compat.plain_text(self.header), classes="field-header", markup=False)
         if self.help_text:
             yield compat.Static(compat.plain_text(self.help_text), classes="field-help", markup=False)
@@ -1081,7 +1081,7 @@ class FieldRow(compat.Vertical):
         return "true" if getattr(control, "value", False) else "false"
 
     def set_text(self, text: str) -> None:
-        """设置控件文本，等价于用户键入。"""
+        """设置控件文本，等价于手动键入。"""
         control = self.control()
         if isinstance(control, BoolToggle):
             control.set_value(text.strip().casefold() in _TRUE_WORDS)
@@ -1122,7 +1122,7 @@ def plan_form_rows(rows: Sequence[FieldRow]) -> tuple[list[RawEntry], list[str]]
     :param rows: 表单行。
     :return: 写入项与错误说明。
     """
-    # 未更改的字段保留原值，避免将表单不支持的嵌套结构提交给 ``config set``。
+    # 未更改的字段保留原始值，避免将表单不支持的嵌套结构提交给 ``config set``。
     plan: list[RawEntry] = []
     errors: list[str] = []
     for row in rows:
@@ -1224,7 +1224,7 @@ class ConfigFormScreen(compat.Screen):
 
     @staticmethod
     def _editable(field: ConfigField) -> ConfigField:
-        # 占位符不进输入框：留空即未填写，不必先删除模板文字，也不会把占位符写回配置。
+        # 占位符不进入输入框，留空即表示未填写，既无需先删除模板文字，也不会将占位符写回配置。
         if not field.is_placeholder:
             return field
         return replace(field, value=bool(field.default) if field.kind == KIND_BOOL else "", is_placeholder=False)
@@ -1248,7 +1248,7 @@ class ConfigFormScreen(compat.Screen):
         self.query_one("#form-status", compat.Static).update(compat.plain_text(text))
 
     def on_input_submitted(self, event: compat.Input.Submitted) -> None:
-        """回车移到下一项。保存须明确触发，避免填到一半就写入。"""
+        """按 Enter 键移至下一项。保存必须明确触发，避免在未完成填写时触发写入。"""
         self.focus_next()
 
     def on_button_pressed(self, event: compat.Button.Pressed) -> None:
@@ -1263,7 +1263,7 @@ class ConfigFormScreen(compat.Screen):
         self.request_close()
 
     def action_save(self) -> None:
-        """校验并写入被更改的项。全部成功后关闭。"""
+        """校验并写入已修改的配置项。全部成功后关闭。"""
         if self._saving:
             return
         plan, errors = plan_form_rows(self.rows())
@@ -1284,12 +1284,12 @@ class ConfigFormScreen(compat.Screen):
         for entry in plan:
             try:
                 result = await asyncio.to_thread(self.apply, entry.section, entry.key, entry.text)
-            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成行内错误
+            except Exception as error:  # noqa: BLE001 - 数据源任意异常均转换为行内错误。
                 result = SetResult(False, i18n.t("cli.tui.config.form_write_failed", name=entry.key), str(error))
             if result.ok:
                 self._written[entry.key] = entry.text
                 continue
-            # 密钥项只给概括说明：命令输出可能回显写入的值。
+            # 密钥项仅提供概括说明，避免命令输出回显写入的值。
             detail = result.message if entry.key in secret_keys else (result.detail or result.message)
             self._show_failure(entry.key, detail)
             return
@@ -1305,7 +1305,7 @@ class ConfigFormScreen(compat.Screen):
         row.scroll_visible(animate=False)
 
     def request_close(self) -> None:
-        """关闭对话框。有未写入的内容时先确认放弃。"""
+        """关闭对话框。存在未写入的内容时需要先确认放弃。"""
         if self._saving:
             return
         unsaved = any(
@@ -1348,7 +1348,7 @@ class RawTextEditor(compat.VerticalScroll):
         return self._textarea_cls is None
 
     def compose(self) -> compat.ComposeResult:
-        """装配编辑区：原生 ``TextArea`` 或“操作按钮 + 逐行输入框”。"""
+        """装配编辑区，使用原生 ``TextArea`` 或“操作按钮 + 逐行输入框”。"""
         if self._textarea_cls is not None:
             yield self._textarea_cls("\n".join(self._lines), language="toml", id="raw-textarea")
             return
@@ -1390,7 +1390,7 @@ class RawTextEditor(compat.VerticalScroll):
         await self._remount_lines()
 
     async def remove_last_line(self) -> None:
-        """删除末尾一行。只剩一行时清空该行。"""
+        """删除末尾一行。仅剩一行时清空该行。"""
         textarea = self._textarea()
         if textarea is not None:
             lines = str(textarea.text).split("\n")
@@ -1405,7 +1405,7 @@ class RawTextEditor(compat.VerticalScroll):
             return None
         try:
             return self.query_one("#raw-textarea")
-        except Exception:  # noqa: BLE001 - 未挂载时按无 TextArea 处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无 TextArea 处理。
             return None
 
     async def _remount_lines(self) -> None:
@@ -1418,7 +1418,7 @@ class RawTextEditor(compat.VerticalScroll):
 # endregion
 
 
-# region 页面
+# region 页面。
 
 
 class ConfigPage(compat.Vertical):
@@ -1428,7 +1428,7 @@ class ConfigPage(compat.Vertical):
     :param cache_ttl: 配置表列表缓存有效期秒数。保存与重新加载会立即失效。
     """
 
-    # 限制按钮最小宽度，确保 80 列终端能够显示全部操作。
+    # 限制按钮最小宽度，确保在 80 列终端下完整显示全部操作按钮。
     DEFAULT_CSS = """
     ConfigPage {
         layout: vertical;
@@ -1498,12 +1498,12 @@ class ConfigPage(compat.Vertical):
     }
     """
 
-    # 文案在类创建时取值：main.py 的 --lang 早于界面模块导入，改语言需重启进程。
+    # 文案在类定义时解析，因为 main.py 的 --lang 早于界面模块导入，更改语言后必须重启进程。
     can_focus = True
 
-    # 低频操作由底部按钮栏提供入口，页脚为全局键位保留空间。
+    # 低频操作由底部按钮栏提供入口，页脚区域为全局键位保留空间。
     BINDINGS = compat.bindings(
-        # 保存用 ctrl+s：表单输入框聚焦时单字母由输入框接收，组合键在编辑中同样生效。
+        # 保存操作绑定为 ctrl+s，因为表单输入框聚焦时单字母由输入框接收，而快捷组合键在编辑状态下同样生效。
         ("ctrl+s", "save", i18n.t("cli.tui.config.action_save")),
         ("o", "open_editor", i18n.t("cli.tui.config.action_open_editor"), False),
         ("f", "mode_form", i18n.t("cli.tui.config.action_mode_form"), False),
@@ -1539,14 +1539,14 @@ class ConfigPage(compat.Vertical):
         self._rendered_tables: tuple[str, ...] = ()
         self._caption_rendered: str = ""
         self._status_rendered: str = i18n.t("cli.tui.common.status_ready")
-        # 终端挂起和编辑器启动允许注入替身，避免自动化测试启动交互进程。
+        # 终端挂起和编辑器启动支持依赖注入模拟对象，避免自动化测试启动交互式子进程。
         self._editor_runner: Callable[..., Any] = subprocess.run
         self._suspend: Callable[[], Any] | None = None
         self._stdin_isatty: Callable[[], bool] = _stdin_isatty
 
     def compose(self) -> compat.ComposeResult:
-        """装配页面控件树：工具条、配置表列表、表单区、文本区、状态栏。"""
-        # 顶部只放视图切换与表概况，动作统一在底部按钮栏。
+        """装配页面控件树，包含工具条、配置表列表、表单区、文本区与状态栏。"""
+        # 顶部仅展示视图切换与配置表概况，操作统一位于底部按钮栏。
         with compat.Horizontal(id="config-toolbar"):
             yield compat.Button(
                 compat.key_hint(i18n.t("cli.tui.config.action_mode_form"), "f"), id="mode-form", variant="primary"
@@ -1572,7 +1572,7 @@ class ConfigPage(compat.Vertical):
         yield compat.Static(compat.plain_text(i18n.t("cli.tui.common.status_ready")), id="config-status", markup=False)
 
     def on_mount(self) -> None:
-        """挂载后只装配控件。读取数据推迟到首次显示。"""
+        """挂载后仅装配控件。读取数据推迟至首次显示。"""
         compat.set_text_selection(self, False)
 
     def activate(self) -> None:
@@ -1601,7 +1601,7 @@ class ConfigPage(compat.Vertical):
 
     @property
     def mode(self) -> str:
-        """返回当前模式：``form`` 或 ``raw``。"""
+        """返回当前模式（``form`` 或 ``raw``）。"""
         return self._mode
 
     @property
@@ -1635,21 +1635,21 @@ class ConfigPage(compat.Vertical):
         return tuple(self.query(FieldRow))
 
     def row_for(self, key: str) -> FieldRow | None:
-        """按键名取字段行，未找到时返回 ``None``。"""
+        """按键名获取字段行，未找到时返回 ``None``。"""
         for row in self.field_rows():
             if row.field.key == key:
                 return row
         return None
 
     def is_dirty(self) -> bool:
-        """是否存在未保存的编辑：表单行与原始文本任一与载入值不同即为真。"""
+        """判断是否存在未保存的编辑，表单行与原始文本任一与载入值不同即返回 True。"""
         for row in self.field_rows():
             if self._row_text(row) != row.field.edit_value:
                 return True
         return self._raw_table is not None and self.raw_editor().text != self._raw_original
 
     def dirty_note(self) -> str:
-        """返回未保存更改的说明。没有更改时为空串。"""
+        """返回未保存更改的说明。没有更改时为空字符串。"""
         if not self.is_dirty():
             return ""
         return i18n.t("cli.tui.config.dirty_note", table=self._selected or i18n.t("cli.tui.common.none"))
@@ -1658,7 +1658,7 @@ class ConfigPage(compat.Vertical):
         # 重新挂载期间输入控件可能尚未创建，此时使用载入值。
         try:
             return row.text
-        except Exception:  # noqa: BLE001 - 未装配完成的行不构成脏值
+        except Exception:  # noqa: BLE001 - 未装配完成的行不构成脏值。
             return row.field.edit_value
 
     def raw_editor(self) -> RawTextEditor:
@@ -1666,7 +1666,7 @@ class ConfigPage(compat.Vertical):
         return self.query_one("#raw-editor", RawTextEditor)
 
     def table_row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的配置表列表行文本，供自动化检查核对宽度。"""
+        """返回最近一次渲染结果中的配置表列表行文本，供自动化检查核对宽度。"""
         return self._rendered_tables
 
     def header_texts(self) -> tuple[str, ...]:
@@ -1678,18 +1678,18 @@ class ConfigPage(compat.Vertical):
         return tuple(row.help_text for row in self.field_rows())
 
     def form_hint(self) -> str:
-        """返回表单区当前显示的提示文本。正在显示字段时为空串。"""
+        """返回表单区当前显示的提示文本。正在显示字段时为空字符串。"""
         try:
             hint = self.query_one("#form-hint", compat.Static)
-        except Exception:  # noqa: BLE001 - 没有提示控件时按空串处理
+        except Exception:  # noqa: BLE001 - 没有提示控件时按空字符串处理。
             return ""
-        # ``Static.content`` 是 update() 传进来的原对象：文本控件收到的是 rich 的 Text。
+        # ``Static.content`` 是 update() 传入的原对象，文本控件接收到的则是 rich 的 Text。
         content = hint.content
         return str(getattr(content, "plain", content))
 
     # endregion
 
-    # region 读取与渲染
+    # region 读取与渲染。
 
     def refresh_tables(self, *, force: bool = False) -> None:
         """读取配置表列表。
@@ -1715,7 +1715,7 @@ class ConfigPage(compat.Vertical):
             return False
         try:
             tables = await asyncio.to_thread(self.source.list_tables)
-        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源任意异常都不应中断界面。
             self._tables = ()
             self._loaded_at = time.monotonic()
             self.last_error = f"{type(error).__name__}: {error}"
@@ -1759,7 +1759,7 @@ class ConfigPage(compat.Vertical):
         self._selected = table
         try:
             self._fields = await self._load_fields(table, force=force)
-        except Exception as error:  # noqa: BLE001 - 读取数据失败只影响本页展示
+        except Exception as error:  # noqa: BLE001 - 读取数据失败仅影响本页展示。
             self._fields = ()
             self.last_error = f"{type(error).__name__}: {error}"
             self._sync_caption()
@@ -1788,7 +1788,7 @@ class ConfigPage(compat.Vertical):
             return True
         try:
             text = await asyncio.to_thread(self.source.read_raw, table)
-        except Exception as error:  # noqa: BLE001 - 读文件失败同样只影响展示
+        except Exception as error:  # noqa: BLE001 - 读取文件失败同样仅影响展示。
             self.last_error = f"{type(error).__name__}: {error}"
             self._set_status(i18n.t("cli.tui.config.status_raw_failed", table=table, error=error))
             return False
@@ -1835,7 +1835,7 @@ class ConfigPage(compat.Vertical):
         self._raw_table = None
 
     async def reload(self, *, force: bool = True) -> bool:
-        """作废缓存并重新读取配置表列表与当前表。"""
+        """使缓存失效并重新读取配置表列表与当前表。"""
         self.invalidate_cache()
         self._raw_table = None
         self._raw_original = ""
@@ -1872,7 +1872,7 @@ class ConfigPage(compat.Vertical):
     def _table_inner_width(self, list_view: compat.ListView) -> int:
         try:
             outer = compat.widget_cells(list_view)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 22
         return max(outer - 4, 8)
 
@@ -1905,13 +1905,13 @@ class ConfigPage(compat.Vertical):
         self.query_one("#config-status", compat.Static).update(compat.plain_text(text))
 
     def on_resize(self, event: compat.events.Resize) -> None:
-        """终端尺寸变化时按缓存重排配置表列表，不重新读取数据。"""
+        """终端尺寸变化时按缓存重新排列配置表列表，不重新读取数据。"""
         if self._tables:
             self._render_tables()
 
     # endregion
 
-    # region 保存
+    # region 保存。
 
     async def save(self) -> bool:
         """保存当前表，返回是否全部写入成功。
@@ -1983,7 +1983,7 @@ class ConfigPage(compat.Vertical):
         for entry in plan:
             try:
                 result = await asyncio.to_thread(self.source.set_value, entry.section, entry.key, entry.text)
-            except Exception as error:  # noqa: BLE001 - 数据源任意异常都转成失败项展示
+            except Exception as error:  # noqa: BLE001 - 数据源任意异常均转换为失败项展示。
                 result = SetResult(
                     False,
                     i18n.t("cli.tui.config.err_write_failed", label=entry.label),
@@ -2033,7 +2033,7 @@ class ConfigPage(compat.Vertical):
 
     # endregion
 
-    # region 交互
+    # region 交互。
 
     @compat.on(compat.ListView.Highlighted, "#table-list")
     def _on_table_highlighted(self, event: compat.ListView.Highlighted) -> None:
@@ -2123,7 +2123,7 @@ class ConfigPage(compat.Vertical):
             try:
                 row.clear_error()
                 row.set_text(row.field.edit_value)
-            except Exception:  # noqa: BLE001 - 行未装配完成时没有可回退的控件
+            except Exception:  # noqa: BLE001 - 行未装配完成时没有可回退的控件。
                 continue
         if self._raw_table is not None:
             await self.raw_editor().load_text(self._raw_original)
@@ -2134,19 +2134,19 @@ class ConfigPage(compat.Vertical):
         compat.highlight_row(list_view, self._index_for(self._selected))
 
     def action_save(self) -> None:
-        """键位动作：保存当前表。"""
+        """保存当前表的键位动作。"""
         self.run_worker(self.save(), group="config-save", exclusive=True)
 
     def action_reload(self) -> None:
-        """键位动作：作废缓存并重新加载。"""
+        """使缓存失效并重新加载的键位动作。"""
         self._confirm_discard(self.reload)
 
     def action_mode_form(self) -> None:
-        """键位动作：切换到表单模式。"""
+        """切换至表单模式的键位动作。"""
         self.request_mode(MODE_FORM)
 
     def action_mode_raw(self) -> None:
-        """键位动作：切换到原始文本模式。"""
+        """切换至原始文本模式的键位动作。"""
         self.request_mode(MODE_RAW)
 
     def config_path(self, table: str | None = None) -> Path | None:
@@ -2160,7 +2160,7 @@ class ConfigPage(compat.Vertical):
             return None
         try:
             path = self.source.config_file(name)
-        except Exception:  # noqa: BLE001 - 文件定位失败由调用方显示错误
+        except Exception:  # noqa: BLE001 - 文件定位失败由调用方显示错误。
             return None
         return None if path is None else Path(path)
 
@@ -2210,7 +2210,7 @@ class ConfigPage(compat.Vertical):
         return True
 
     def action_open_editor(self) -> None:
-        """键位动作：用外部编辑器打开当前表的配置文件。"""
+        """使用外部编辑器打开当前配置表文件的键位动作。"""
         self._confirm_discard(self.open_in_editor)
 
     def focus_primary(self) -> None:
@@ -2218,7 +2218,7 @@ class ConfigPage(compat.Vertical):
         compat.focus_first(self, "#table-list")
 
     def action_focus_tables(self) -> None:
-        """键位动作：聚焦配置表列表。"""
+        """聚焦配置表列表的键位动作。"""
         self.query_one("#table-list", compat.ListView).focus()
 
     async def wait_for_idle(self) -> None:

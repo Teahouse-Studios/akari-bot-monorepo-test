@@ -1,12 +1,12 @@
-# monorepo 根：虚拟工作区，不发布自身。依赖按包归位于各成员的 pyproject.toml，
-# 本文件只声明成员、workspace 内的版本来源，以及整个仓库的工具配置。
+# monorepo 根为虚拟工作区，不发布自身。依赖按照成员包归位于各成员的 pyproject.toml，
+# 该文件仅声明成员、workspace 内的版本来源，以及整个仓库的工具配置。
 
-# packages/* 会匹配到 adapters/ 与 modules/ 两个容器目录（它们不是包），故按前缀收窄范围。
+# packages/* 会匹配到 adapters/ 与 modules/ 两个容器目录（它们不是包），因此按照前缀限制范围。
 [tool.uv.workspace]
 members = ["packages/akari-bot-*", "packages/adapters/*", "packages/modules/*"]
 
 [tool.uv.sources]
-# 资源包不在索引上：成员对它的依赖须显式指向工作区成员，uv 才会认这条依赖。
+# 资源包不在索引上，成员对它的依赖必须显式指向工作区成员，uv 才会正确识别该依赖关系。
 akari-bot-assets-brand = { workspace = true }
 akari-bot-assets-emotes = { workspace = true }
 akari-bot-assets-fonts = { workspace = true }
@@ -22,14 +22,14 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-# 单元测试走 pytest。包内测试与集成用例仍由 tester.py 运行。
+# 单元测试使用 pytest，包内测试与集成用例仍由 tester.py 运行。
 testpaths = ["tests/unit"]
 markers = ["akari_timeout: 覆盖单个测试的超时秒数"]
 filterwarnings = ["ignore:cannot collect test class:pytest.PytestCollectionWarning"]
 
 [tool.ruff]
 line-length = 120
-# 根 pyproject 无 [project]，target-version 无法由 requires-python 推出，须显式声明。
+# 根 pyproject 无 [project]，target-version 无法通过 requires-python 推导，必须显式声明。
 target-version = "py312"
 
 [tool.ruff.lint]

@@ -1,4 +1,4 @@
-"""SessionInfo 会话草稿：允许入口 hook 修改有限字段，成功才提交。"""
+"""SessionInfo 会话草稿，允许入口 hook 修改有限字段，仅在执行成功后提交。"""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ class SessionDraft:
         self._bot_name = getattr(session_info, "bot_name", None)
         self._muted = getattr(session_info, "muted", None)
         locale = getattr(session_info, "locale", None)
-        # Locale 实际字段是 locale（不是 lang）
+        # Locale 实际字段为 locale（而非 lang）。
         self._locale_lang = getattr(locale, "locale", None) or getattr(locale, "lang", None)
         self._dirty: set[str] = set()
         self._committed = False
@@ -61,7 +61,7 @@ class SessionDraft:
 
     @property
     def session_info(self):
-        """只读视图。正式对象请勿经此写入。"""
+        """只读视图。请勿通过该视图写入正式对象。"""
         from .context import SessionInfoView
 
         return SessionInfoView(self._source)
@@ -84,7 +84,7 @@ class SessionDraft:
         if self._revoked:
             raise SessionDraftError("Draft revoked.")
 
-    # ---- 可写容器：就地修改在 commit 时统一快照 ----
+    # 可写容器，就地修改在提交时统一执行快照。
 
     @property
     def tmp(self) -> dict[str, Any]:
@@ -213,10 +213,10 @@ class SessionDraft:
         prepared = self._prepare_commit()
         target = self._source
         # Locale 对象也先构造，与字段校验同属“准备”阶段。构造失败则整次提交不发布，
-        # 避免其余字段已写回而 locale 静默降级造成的半提交。
+        # 避免其余字段已写回而 locale 静默降级造成的部分提交。
         new_locale = None
         if "locale_lang" in self._dirty:
-            # 走生成接口以保留术语作用域。新建 Locale 会让本会话之后的渲染退回基础术语。
+            # 通过生成接口以保留术语作用域。新建 Locale 会让本会话之后的渲染回退到基础术语。
             new_locale = target.locale.with_locale(prepared["locale_lang"])
         if "tmp" in self._dirty:
             if not hasattr(target, "tmp") or target.tmp is None:

@@ -4,25 +4,25 @@ order: 63
 
 # webrender
 
-此模块用于控制网页渲染服务。模块内命令要求超级用户权限。
+此模块用于控制网页渲染服务。模块内全部命令均需要超级用户权限。
 
 ### `webrender status`
 
 <CommandUsage usage="webrender status" permission="superuser" />
 
-输出渲染服务的当前状态。
+输出网页渲染服务的当前状态。
 
 ### `webrender start`
 
 <CommandUsage usage="webrender start" permission="superuser" />
 
-启动本地渲染服务。成功后重新检查渲染状态，结果写入运行时记录。
+启动本地渲染服务。启动成功后重新检查渲染状态，并将结果写入运行时记录。
 
 ### `webrender stop`
 
 <CommandUsage usage="webrender stop" permission="superuser" />
 
-停止渲染服务，然后重新检查渲染状态，结果写入运行时记录。
+停止渲染服务，随后重新检查渲染状态，并将结果写入运行时记录。
 
 <ChatExample
   :log="[
@@ -35,6 +35,6 @@ order: 63
 
 <CommandUsage usage="webrender reload" permission="superuser" />
 
-先关闭再启动渲染服务，用于加载新的配置。
+先停止再启动渲染服务，用于重新加载配置。
 
-服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 和 `remote_web_render_url`。渲染不可用时，依赖截图的命令自行处理失败结果，例如退回文字，或直接结束、不发图。
+服务参数位于 `config/webrender.toml`，包括 `enable`、`browser_type`、`browser_executable_path`、`headless`、`remote_only` 与 `remote_web_render_url`。当渲染服务不可用时，依赖截图的命令会自行处理失败结果，例如回退为文字，或直接终止且不发送图片。

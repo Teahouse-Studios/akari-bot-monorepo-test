@@ -60,19 +60,19 @@ MANIFEST_FILENAME = "manifest.toml"
 # 判定目录是否为 venv 的标志文件。
 VENV_MARKER_FILENAME = "pyvenv.cfg"
 # 清单未声明 requires_core_api 时的默认区间。与 core.registry.PackageManifest 及
-# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 同口径，工作区视图与 registry 视图必须一致。
+# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 保持一致，工作区视图与 registry 视图必须一致。
 DEFAULT_REQUIRES_CORE_API = ">=1"
-# 内置 uv 的文件名：Windows 上必须是带 .exe 的完整名，CreateProcess 不接受无扩展名的可执行文件。
+# 内置 uv 在 Windows 上必须是带 .exe 的完整文件名，因为 CreateProcess 不接受无扩展名的可执行文件。
 UV_BUNDLED_NAME = "uv"
 UV_BUNDLED_WINDOWS_NAME = "uv.exe"
 UV_WINDOWS_SUFFIXES = (".exe", ".com", ".bat", ".cmd")
-# 冻结后本文件位于解包目录内的包层级里，资源根只在上面若干级。
-# 设上限以免把无关祖先目录当成资源根。
+# 打包后本文件位于解包目录内的包层级中，资源根目录仅在上方若干级。
+# 设置上限，以免将无关祖先目录误判定为资源根目录。
 FROZEN_ROOT_MAX_DEPTH = 6
 
 
 def canonical(name: str) -> str:
-    """分发名规范化：小写并把下划线、点号归一为连字符。"""
+    """将包名规范化为小写，并将下划线与点号统一为连字符。"""
     return name.strip().lower().replace("_", "-").replace(".", "-")
 
 
@@ -170,8 +170,8 @@ def frozen_resource_root() -> Path | None:
 
 
 def _override_uv(value: str) -> Path | None:
-    # 取值既可以是路径，也可以是 PATH 上的命令名（与 shell 用法一致）。不可用时返回 ``None``，
-    # 由调用方回退到内置资源或 PATH。
+    # 该值既可为路径，也可为 PATH 环境变量中的命令名称（与 shell 规则一致）。不可用时返回 ``None``，
+    # 由调用方回退至内置资源或 PATH。
     candidate = Path(value).expanduser()
     if is_executable(candidate):
         return candidate
@@ -296,7 +296,7 @@ def git_spec(url: str, *, ref: str = "", subdir: str = "", dist: str = "") -> st
     base = address if address.startswith(GIT_PREFIX) else GIT_PREFIX + address
     head, _, fragment = base.partition("#")
     existing = dict(part.split("=", 1) for part in fragment.split("&") if "=" in part)
-    # ref 只能跟在路径之后：路径末段里的 @ 才是 ref，userinfo 的 @（git@host）出现在更前面。
+    # ref 仅能跟在路径之后，路径末段中的 @ 才是 ref，userinfo 的 @（git@host）出现在更前面。
     if ref:
         if "@" in head.rpartition("/")[2]:
             raise CliError(i18n.t("cli.module.git.ref_conflict"))
@@ -317,7 +317,7 @@ def uninstall_argv(python: Path, dists: Sequence[str]) -> list[str]:
 
 
 def dry_run_confirm_argv(python: Path, specs: Sequence[str]) -> list[str]:
-    """``--dry-run`` 用的解析检查 argv：只求解依赖，不落盘。"""
+    """构造 ``--dry-run`` 用的解析检查 argv，仅求解依赖而不写入磁盘。"""
     return [uv_binary(), "pip", "install", "--dry-run", "--python", str(python), *specs]
 
 
@@ -510,7 +510,7 @@ class InstalledDist:
     url: str = ""
 
     def requirement(self) -> str:
-        """重装到另一环境时使用的 uv 参数 token。"""
+        """重新安装至另一环境时使用的 uv 参数 token。"""
         if self.path is not None and self.path.exists():
             if self.editable:
                 return f"--editable={self.path}"
@@ -533,7 +533,7 @@ def _probe_env(names: Sequence[str], *, all_distributions: bool = False) -> dict
 
 
 def is_akari_dist(info: InstalledDist) -> bool:
-    """判断一个已装分发是否属于 AkariBot：名字带前缀，或提供了模块／适配器入口点。"""
+    """判断已安装包是否属于 AkariBot（名称携带特定前缀，或提供了模块或适配器入口点）。"""
     if canonical(info.dist).startswith(AKARIBOT_PREFIX):
         return True
     return any(key.split("|", 1)[0] in AKARIBOT_ENTRY_POINT_GROUPS for key in info.entry_points)
@@ -592,7 +592,7 @@ def probe_environment(
 
 
 def entry_point_map(dists: Mapping[str, InstalledDist]) -> dict[str, str]:
-    """把多个分发的 entry points 摊平成 ``"<dist>|group|name" -> value``。"""
+    """将多个包的 entry points 转换为 ``"<dist>|group|name" -> value`` 映射。"""
     result: dict[str, str] = {}
     for dist, info in dists.items():
         for key, value in info.entry_points.items():
@@ -620,7 +620,7 @@ def compare_entry_points(source: Mapping[str, InstalledDist], target: Mapping[st
 
 
 def probe_api_version(python: Path) -> int | None:
-    """在目标解释器里读取 core 的公共 API 版本。"""
+    """在目标解释器中读取 core 的公开 API 版本。"""
     if not Path(python).is_file():
         return None
     code = "from akaribot.core.registry import CORE_API_VERSION as v; print(v)"
@@ -746,7 +746,7 @@ def workspace_index(workspace_root: Path) -> dict[str, WorkspacePackage]:
 def workspace_lookup(
     index: Mapping[str, WorkspacePackage], name: str, *, kind: str | None = None
 ) -> WorkspacePackage | None:
-    """在工作区索引里按分发名、短名或 entry point 名查找。"""
+    """在工作区索引中按照包名、简称或 entry point 名称查找。"""
     wanted = canonical(name)
     if wanted in index:
         return index[wanted]
@@ -894,7 +894,7 @@ def path_target(
 
 
 def find_workspace_root(path: Path) -> Path | None:
-    """自某目录向上查找工作区根：含 ``packages`` 目录且其中有 pyproject 的目录。"""
+    """从指定目录向上查找工作区根目录（包含 ``packages`` 目录且其中存在 pyproject 的目录）。"""
     for candidate in (path, *path.parents):
         packages = candidate / "packages"
         if packages.is_dir() and any(packages.glob("*/pyproject.toml")):
@@ -938,7 +938,7 @@ def workspace_target(
 
 @dataclass(frozen=True)
 class RegistryEntry:
-    """registry.json 里的一条包记录（结构见 tasks 附录 A.3）。"""
+    """registry.json 中的包条目记录（结构见 tasks 附录 A.3）。"""
 
     name: str
     dist: str
@@ -952,7 +952,7 @@ class RegistryEntry:
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any], *, kind: str = "module") -> RegistryEntry:
-        """由一条 JSON 记录构造。"""
+        """通过 JSON 记录构造。"""
         summary = data.get("summary")
         return cls(
             name=str(data.get("name") or ""),
@@ -992,7 +992,7 @@ class RegistryCatalog:
                 entry = RegistryEntry.from_mapping(item, kind=kind)
                 if entry.dist:
                     catalog.entries[canonical(entry.dist)] = entry
-        # 兼容另一种写法：单个 packages 列表，逐项用 kind 字段分类。
+        # 兼容单个 packages 列表并逐项用 kind 字段分类的另一种写法。
         for item in payload.get("packages") or ():
             if not isinstance(item, Mapping):
                 continue
@@ -1079,7 +1079,7 @@ class RegistryCatalog:
         return self
 
     def find(self, name: str) -> RegistryEntry | None:
-        """按分发名、短名、provides_modules 或 legacy 名查找。"""
+        """按照包名、简称、provides_modules 或 legacy 名称查找。"""
         wanted = canonical(name)
         if wanted in self.entries:
             return self.entries[wanted]
@@ -1091,13 +1091,13 @@ class RegistryCatalog:
         return None
 
     def latest(self, dist: str) -> str | None:
-        """某分发在 registry 里的最新版本。"""
+        """指定包在 registry 中的最新版本。"""
         entry = self.entries.get(canonical(dist))
         return entry.latest if entry and entry.latest else None
 
 
 def default_cache_dir() -> Path:
-    """registry 缓存目录：``$AKARIBOT_CACHE_DIR`` 优先，否则 ``~/.cache/akaribot``。"""
+    """返回 registry 缓存目录，优先使用 ``$AKARIBOT_CACHE_DIR``，默认回退至 ``~/.cache/akaribot``。"""
     override = os.environ.get(CACHE_DIR_ENV)
     if override:
         return Path(override).expanduser()
@@ -1119,7 +1119,7 @@ def registry_target(
     kind: str | None = None,
     extra: Sequence[str] = (),
 ) -> InstallTarget | None:
-    """在 registry 里解析包名，得到分发名与版本约束。"""
+    """在 registry 中解析包名，获取完整包名与版本约束。"""
     entry = catalog.find(name)
     if entry is None:
         return None
@@ -1261,17 +1261,17 @@ class VenvStatus:
 
     @property
     def package_count(self) -> int:
-        """已装 akaribot 包数量。"""
+        """已安装的 akaribot 包数量。"""
         return len(self.packages or {})
 
     @property
     def installed_count(self) -> int:
-        """环境里的全部已装分发数量。未探测时为 ``-1``。"""
+        """当前环境中已安装包的总数。未探测时为 ``-1``。"""
         return -1 if self.installed is None else len(self.installed)
 
     @property
     def core_version(self) -> str | None:
-        """core 的版本。未装时为 ``None``。"""
+        """core 的版本号。未安装时为 ``None``。"""
         info = (self.packages or {}).get(CORE_DIST)
         return info.version if info else None
 
@@ -1385,8 +1385,8 @@ def environment_root(python: Path) -> Path:
 
 
 def _check_distinct(source: Path, target: Path) -> None:
-    # 比的是环境而不是解释器文件：uv 建的 venv 都把 bin/python 指向同一个基础解释器，
-    # 按 resolve() 后的文件比较会把两个不同的 venv 判成同一个环境，操作全被拒。
+    # 此处比较的是虚拟环境本身而非解释器文件。uv 创建的 venv 均将 bin/python 指向同一基础解释器，
+    # 按照 resolve() 解析后的文件比较会将两个不同的 venv 判定为同一环境，导致操作全部被拒绝。
     if environment_root(source) == environment_root(target):
         raise CliError(i18n.t("cli.venv_engine.same_interpreter", python=source))
 
@@ -1864,7 +1864,7 @@ def requirements_broken_by(changes: Mapping[str, str], installed: Mapping[str, I
 
 
 def installed_api_requirements(candidate: InstallTarget, installed: Mapping[str, InstalledDist]) -> list[str]:
-    """列出已装包中要求“待装分发”的那些依赖串，供冲突说明引用。"""
+    """列出已安装包对待安装包的依赖声明，供冲突说明引用。"""
     candidate_key = canonical(candidate.dist)
     result: list[str] = []
     for info in installed.values():
@@ -1909,7 +1909,7 @@ class ConfigSnapshot:
 
     @classmethod
     def take(cls, instance: Instance) -> ConfigSnapshot:
-        """抓取当前配置目录的快照。"""
+        """获取当前配置目录的快照。"""
         files: dict[str, bytes] = {}
         config_dir = instance.config_dir
         if config_dir.is_dir():
@@ -1919,7 +1919,7 @@ class ConfigSnapshot:
         return cls(files=files)
 
     def changed_paths(self, instance: Instance) -> tuple[Path, ...]:
-        """列出快照之后新增或内容有变的配置文件。"""
+        """列出快照创建之后新增或内容发生变化的配置文件。"""
         changed: list[Path] = []
         for relative, content in self.files.items():
             path = instance.root / relative
@@ -1933,7 +1933,7 @@ class ConfigSnapshot:
         return tuple(changed)
 
     def restore(self, instance: Instance) -> tuple[Path, ...]:
-        """把配置目录恢复到快照状态，返回被动过的文件。"""
+        """将配置目录恢复至快照状态，返回被修改的文件列表。"""
         touched: list[Path] = []
         for relative, content in self.files.items():
             path = instance.root / relative
@@ -1957,7 +1957,7 @@ PLACEHOLDER_MARKER = "<Replace me>"
 
 
 def count_placeholders(paths: Sequence[Path]) -> int:
-    """统计给定配置文件里 ``<Replace me>`` 占位符的个数。"""
+    """统计指定配置文件中 ``<Replace me>`` 占位符的数量。"""
     total = 0
     for path in paths:
         try:
@@ -1980,7 +1980,7 @@ def config_sync(instance: Instance, dist: str) -> None:
 
 
 def db_upgrade(instance: Instance, dist: str) -> None:
-    """第 5 步：应用该包自己的数据库迁移。"""
+    """执行第 5 步，应用该包自身的数据库迁移。"""
     run_core_checked(
         instance, "db", "upgrade", "--package", dist, what=i18n.t("cli.venv_engine.what_db_upgrade", dist=dist)
     )

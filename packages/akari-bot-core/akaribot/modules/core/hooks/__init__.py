@@ -1,4 +1,4 @@
-"""Parser 生命周期策略与观察 hook。"""
+"""Parser 生命周期策略与观察 Hook。"""
 
 from .policies import *
 from .errors import *

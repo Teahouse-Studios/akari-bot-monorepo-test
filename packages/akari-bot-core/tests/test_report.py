@@ -109,7 +109,7 @@ async def _test_external_smtp_client_uses_starttls_and_login():
 
 @func_case
 async def test_report(tester: Tester):
-    """akaribot.core.smtp: SMTP 与场景上报路由测试"""
+    """akaribot.core.smtp 模块 SMTP 与场景上报路由测试"""
     await tester.test(_test_email_takes_priority_over_targets, "SMTP 优先于场景上报测试")
     await tester.test(_test_email_subject_and_body_are_localized, "邮件标题与正文本地化测试")
     await tester.test(_test_targets_are_used_without_email, "未启用 SMTP 时场景上报测试")

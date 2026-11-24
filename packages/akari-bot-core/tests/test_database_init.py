@@ -446,8 +446,8 @@ async def _test_cancelled_reload_does_not_publish_partial_context():
 
 
 def _test_module_database_discovery_follows_file_existence():
-    # 清单为空只表示该包没有数据库模型。包内缺少依赖的失败由 ``init_db()`` 在真正导入
-    # 模型时抛出（见下一条用例），发现阶段不处理。
+    # 清单为空仅表示该包未声明数据库模型。包内缺失依赖导致的失败通过 ``init_db()`` 在实际导入
+    # 模型时抛出（参见下一条用例），发现阶段不作处理。
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         with_models = root / "with_models"

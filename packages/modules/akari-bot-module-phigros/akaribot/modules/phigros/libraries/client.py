@@ -6,7 +6,7 @@ from akaribot.core.api import proxy
 from .PhiCloudActionAsync.ActionLib import DEFAULT_TIMEOUT, checkSessionToken
 from .PhiCloudActionAsync.CloudAction import PhigrosCloud
 
-# 令牌失效时 LeanCloud 以此二者应答。
+# 令牌失效时 LeanCloud 返回上述两项错误标识。
 _TOKEN_INVALID_STATUS = (401, 403)
 
 

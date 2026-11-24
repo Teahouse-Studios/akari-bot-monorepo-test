@@ -125,7 +125,7 @@ async def _enable_prompt(
 
 
 async def _test_enable_regex_module_is_rejected():
-    expected = "失败：此场景不支持正则模块，请检查是否开启对应的权限。"
+    expected = "失败：此场景不支持正则表达式模块，请检查是否已开启对应权限。"
     actual = await _enable_prompt("wiki-inline")
     if actual != expected:
         Logger.error(f"Expected regex rejection prompt {expected!r}, got {actual!r}")
@@ -134,7 +134,7 @@ async def _test_enable_regex_module_is_rejected():
 
 
 async def _test_enable_rss_module_is_rejected():
-    expected = "失败：此场景不支持推送模块，请检查是否开启对应的权限。"
+    expected = "失败：此场景不支持主动推送模块，请检查是否已开启对应权限。"
     actual = await _enable_prompt("minecraft-news")
     if actual != expected:
         Logger.error(f"Expected RSS rejection prompt {expected!r}, got {actual!r}")
@@ -148,7 +148,7 @@ async def _test_enable_plain_module_still_works():
 
 async def _test_enable_event_module_is_rejected():
     # 该用例刻意使用 QQ 官方群会话，术语随之显示为“群聊”。
-    expected = "失败：此群聊无法读取全部消息，不能开启事件模块，请先授予机器人对应权限。"
+    expected = "失败：此群聊无法读取全部消息，不能启用事件模块，请先授予机器人对应权限。"
     actual = await _enable_prompt("captcha", target_from="QQBot|Group", client_name="QQBot")
     if actual != expected:
         Logger.error(f"Expected event rejection prompt {expected!r}, got {actual!r}")
@@ -163,7 +163,7 @@ async def _test_enable_event_module_warns_permissions():
         target_from="QQBot|Group",
         client_name="QQBot",
     )
-    return "成功：开启模块“captcha”" in actual and "事件模块依赖平台事件订阅" in actual
+    return "成功：已启用模块“captcha”" in actual and "事件模块依赖平台事件订阅" in actual
 
 
 async def _test_enable_captcha_is_rejected_when_bot_permissions_are_missing():
@@ -183,11 +183,11 @@ async def _test_enable_captcha_is_rejected_when_bot_permissions_are_missing():
         target_suffix="_missing_bot_permissions",
     )
     return (
-        "缺少开启模块所需的平台权限" in actual
+        "缺少启用模块所需的平台权限" in actual
         and "主动发送消息" in actual
         and "管理成员" in actual
         and "限制成员" in actual
-        and "成功：开启模块“captcha”" not in actual
+        and "成功：已启用模块“captcha”" not in actual
         and "captcha" not in (session_info.target_union_info.modules or [])
     )
 
@@ -201,7 +201,7 @@ async def _test_enable_captcha_allows_unknown_bot_permissions():
         bot_state=BotState(can_read_all_messages=True),
         target_suffix="_unknown_bot_permissions",
     )
-    return "成功：开启模块“captcha”" in actual
+    return "成功：已启用模块“captcha”" in actual
 
 
 async def _test_enable_all_skips_modules_with_missing_bot_permissions():
@@ -243,7 +243,7 @@ async def _test_enable_all_skips_modules_with_missing_bot_permissions():
 
 @func_case
 async def test_read_all_messages(tester: Tester):
-    """core: read_all_messages 特性与正则模块管控"""
+    """core 模块 read_all_messages 特性与正则模块管控测试"""
     await tester.test(_test_unsupported_reason_rss, "推送模块受限判定")
     await tester.test(_test_unsupported_reason_regex, "正则模块受限判定")
     await tester.test(_test_event_module_markdown_strikethrough, "事件模块菜单删除线")

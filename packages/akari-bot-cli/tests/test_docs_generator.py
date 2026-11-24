@@ -1,4 +1,4 @@
-"""``akaribot.cli.docs_engine.generator``：站点源文件、侧栏与路径约束。"""
+"""``akaribot.cli.docs_engine.generator`` 的站点源码、侧边栏与路径约束测试。"""
 
 import json
 import os
@@ -1083,7 +1083,7 @@ async def _test_api_links_are_inserted_at_build_time():
 
 @func_case
 async def test_docs_generator(tester: Tester):
-    """cli.docs.generator: 站点生成与路径约束"""
+    """cli.docs.generator 站点生成与路径约束测试"""
     await tester.test(_test_generate_site_layout, "生成索引、分组、侧栏与页面副本")
     await tester.test(_test_base_env_override, "环境变量覆盖 base")
     await tester.test(_test_generate_rejects_source_outside_cache, "拒绝 cache/docs 之外的源目录")

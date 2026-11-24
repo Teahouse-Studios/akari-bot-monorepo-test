@@ -7,7 +7,7 @@ SONGS_NEED_IMG = 10
 
 mai_module_path = Path(__file__).parent.parent
 mai_assets_path = mai_module_path / "assets"
-# 下载所得索引与封面写入实例 data 目录：包目录在只读部署与 wheel 安装下均不可写，静态资料仍随包分发。
+# 下载所得索引与封面写入实例 data 目录。包目录在只读部署与 wheel 安装下均不可写，静态资料仍随模块安装包分发。
 mai_data_path = PackageRegistry.package_data("maimai")
 mai_cover_path = mai_data_path / "static" / "mai" / "cover"
 mai_alias_path = mai_data_path / "mai_song_alias.json"

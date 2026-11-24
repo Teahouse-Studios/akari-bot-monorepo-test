@@ -11,7 +11,7 @@ def get_protected_intervals(content: str) -> list[tuple[int, int]]:
 
     protected.extend(spans_at_code(content))
 
-    # KE 码：只豁免结构和 key，value 参与过滤
+    # KE 码仅豁免结构和 key，value 参与过滤。
     for match in KE_CODE_PATTERN.finditer(content):
         start = match.start()
         end = match.end()
@@ -59,7 +59,7 @@ def get_protected_intervals(content: str) -> list[tuple[int, int]]:
 
         protected.append((end - 1, end))
 
-    # I18N 占位符
+    # I18N 占位符。
     for match in I18N_PLACEHOLDER_PATTERN.finditer(content):
         start = match.start()
         end = match.end()
@@ -70,7 +70,7 @@ def get_protected_intervals(content: str) -> list[tuple[int, int]]:
         body_start = prefix_end
         body_end = end - 1
 
-        # 第一个字段 message.example 属于占位符主体，豁免
+        # 第一个字段 message.example 属于占位符主体，豁免。
         first_comma = content.find(",", body_start, body_end)
 
         if first_comma == -1:
@@ -99,7 +99,7 @@ def get_protected_intervals(content: str) -> list[tuple[int, int]]:
                     protected.append((equal, equal + 1))
 
                 else:
-                    # 没有 "=" 的部分作为结构处理
+                    # 没有 "=" 的部分作为结构处理。
                     protected.append((cursor, field_end))
 
                 if comma == -1:

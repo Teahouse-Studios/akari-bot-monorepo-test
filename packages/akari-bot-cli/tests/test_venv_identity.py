@@ -12,7 +12,7 @@ from akaribot.testing import Tester, func_case
 
 
 def _make_venv(root: Path, name: str = ".venv", *, python: str = "python") -> Path:
-    # 造一个带 pyvenv.cfg 的假 venv，返回其中的解释器路径。
+    # 创建一个带 pyvenv.cfg 的模拟 venv，返回其中的解释器路径。
     bin_dir = root / name / ("Scripts" if python.endswith(".exe") else "bin")
     bin_dir.mkdir(parents=True)
     (root / name / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
@@ -26,7 +26,7 @@ async def _test_two_venvs_are_distinct():
         base = Path(raw)
         first = _make_venv(base / "one")
         second = _make_venv(base / "two")
-        # resolve()：macOS 的临时目录本身是软链接，环境根按真实路径返回。
+        # 使用 resolve() 处理，因为 macOS 临时目录本身为符号链接，环境根目录按真实路径返回。
         one = (base / "one" / ".venv").resolve()
         two = (base / "two" / ".venv").resolve()
         return (
@@ -44,7 +44,7 @@ async def _test_same_venv_is_identical():
 
 
 async def _test_bare_interpreter_is_not_a_venv():
-    # 没有 pyvenv.cfg 时不是环境，按解释器自身位置归组，免得把系统 python 当成某个 venv。
+    # 不存在 pyvenv.cfg 时不属于虚拟环境，按解释器自身位置归类，以免将系统 Python 误识别为虚拟环境。
     with TemporaryDirectory() as raw:
         base = Path(raw)
         bare = base / "bin" / "python3"
@@ -55,7 +55,7 @@ async def _test_bare_interpreter_is_not_a_venv():
 
 @func_case
 async def test_venv_identity(tester: Tester):
-    """cli.venv: 环境归属判定测试"""
+    """cli.venv 环境所属范围判定测试"""
     await tester.test(_test_two_venvs_are_distinct, "两个 venv 判为不同环境")
     await tester.test(_test_same_venv_is_identical, "同一 venv 的不同解释器名判为同一环境")
     await tester.test(_test_bare_interpreter_is_not_a_venv, "裸解释器不算 venv")

@@ -1,4 +1,4 @@
-# ----------------------- 导入 -----------------------
+# 依赖导入。
 from typing import Any, Dict
 from .DataType import *
 
@@ -8,12 +8,12 @@ from .settings import *
 from .user import *
 from .summary import *
 
-# ---------------------- 定义 ----------------------
+# 类型与常量定义。
 
 
 def headGetStructure(file_head: Dict[str, bytes]) -> Dict[str, Any]:
     """
-    根据文件头获取对应结构类
+    根据文件头获取对应结构类。
 
     参数：
         file_head (dict[str, bytes]): 每个文件的文件头
@@ -81,7 +81,7 @@ def headGetStructure(file_head: Dict[str, bytes]) -> Dict[str, Any]:
 
 def getFileHead(save_dict: Dict[str, dict]) -> Dict[str, bytes]:
     """
-    根据存档反序列化数据获取最高支持的文件头
+    根据存档反序列化数据获取最高支持的文件头。
 
     参数：
         save_dict (dict[str, dict]): 存档反序列化数据

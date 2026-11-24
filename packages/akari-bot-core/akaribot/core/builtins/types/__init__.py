@@ -21,10 +21,10 @@ from akaribot.core.builtins.message.elements import (
 
 from typing import Union
 
-# 多媒体元素类型联合体 - 包含纯文本、图片、语音、原始格式消息
+# 多媒体元素类型联合体，包含纯文本、图片、语音与原始格式消息。
 MultimediaElement = Union[PlainElement, MarkdownElement, ImageElement, AudioElement, VideoElement, RawElement]
 
-# 完整的消息元素类型联合体 - 包含所有支持的消息元素类型
+# 完整的消息元素类型联合体，包含所有受支持的消息元素类型。
 MessageElement = Union[
     MultimediaElement,
     URLElement,

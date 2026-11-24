@@ -2,7 +2,7 @@
 schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
-# config.py 的 on_module_config("coin") 声明的表。
+# 通过 config.py 的 on_module_config("coin") 声明的配置表。
 config_table = "module_coin"
 config_schema_version = 1
 provides_modules = ["coin"]

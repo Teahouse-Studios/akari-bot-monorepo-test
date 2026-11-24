@@ -62,7 +62,7 @@ def _test_emote_switch_respects_target_setting() -> bool:
 
 @func_case
 async def test_typing_prompt(tester: Tester):
-    """core.builtins.session.info: 输入提示开关的取值来源测试"""
+    """core.builtins.session.info 输入提示开关的取值来源测试"""
     await tester.test(_test_switch_defaults_to_enabled, "开关默认开启测试")
     await tester.test(_test_switch_respects_user_setting, "开关跟随用户设置测试")
     await tester.test(_test_switch_ignores_target_data, "开关不受场景数据影响测试")

@@ -33,7 +33,7 @@ def _render_guard_probe(self: ModulesPage) -> None:
 
 
 def _render_guard_race_probe(self: ModulesPage) -> None:
-    # 进入时页面可用、抛错时已被卸下：模拟取数落地那一刻的卸载竞态。
+    # 进入时页面可用、抛出异常时已被卸载，用于模拟数据返回那一刻的卸载竞态。
     self._tui_mounted_once = True
     self._is_mounted = False
     self.query_one(MISSING_SELECTOR, compat.Static)
@@ -138,7 +138,7 @@ async def _test_guard_wraps_only_render_entry_prefixes():
 async def _test_exited_app_skips_and_counts():
     async def body(app, pilot):
         page = app.page("modules")
-        # 与 mounted() 的判据一致：应用已请求退出后页面不再可用。不经 app.exit() 以免终止本次运行。
+        # 与 mounted() 的判断依据一致，应用已请求退出后页面不再可用。不通过 app.exit() 退出以免终止本次运行。
         app._exit = True
         values = (
             page._render_guard_probe(),
@@ -159,7 +159,7 @@ async def _test_exited_app_skips_and_counts():
 async def _test_detached_page_skips_and_counts():
     async def body(app, pilot):
         page = app.page("modules")
-        # 卸载竞态：Textual 的消息处理器按类的 MRO 查找，实例级 on_mount 不会被派发，故直接置成
+        # 模拟卸载竞态，Textual 的消息处理器按类的 MRO 查找，实例级 on_mount 不会被派发，因此直接置成
         # 页面挂载过又被卸下的状态，事后恢复以免影响本次运行的收尾。
         page._tui_mounted_once = True
         page._is_mounted = False
@@ -179,7 +179,7 @@ async def _test_detached_page_skips_and_counts():
 async def _test_removing_or_stopped_page_skips_and_counts():
     async def body(app, pilot):
         page = app.page("modules")
-        # 界面仍在运行时切实例重挂载：旧页进入移除流程，子控件正在被卸下。
+        # 模拟界面仍在运行时切换实例重新挂载，旧页进入移除流程，子控件正在被卸下。
         page._pruning = True
         while_removing = compat.mounted(page)
         value = page._sync_guard_probe()
@@ -262,7 +262,7 @@ def _test_diagnostics_are_read_only():
 
 
 async def _test_remounted_pages_keep_the_guard():
-    # 切实例会重建全部页面，新页面必须带上独立的守卫与探针包装。
+    # 切换实例会重建全部页面，新页面必须包含独立的渲染保护与探针包装。
     async def body(app, pilot):
         before = app.page("modules").render_guard
         with TemporaryDirectory(prefix="akari-guard-") as raw:
@@ -290,7 +290,7 @@ async def _test_remounted_pages_keep_the_guard():
 
 @func_case
 async def test_tui_render_guard(tester: Tester):
-    """cli.tui._compat: 渲染守卫的选择器错误与卸载跳过测试"""
+    """cli.tui._compat 渲染保护的选择器错误与卸载跳过测试"""
     _use_cli_locale()
     for name, method in PROBE_METHODS.items():
         setattr(ModulesPage, name, method)

@@ -431,7 +431,7 @@ async def _test_blocked_prompt_is_raised():
 
 @func_case
 async def test_ai_gemini_generate_content(tester: Tester):
-    """akaribot.modules.ai: Gemini GenerateContent API 端点请求与响应转换"""
+    """akaribot.modules.ai 的 Gemini GenerateContent API 端点请求与响应转换测试"""
     await tester.test(_test_build_endpoint, "build_endpoint 返回 GenerateContent 端点")
     await tester.test(_test_messages_are_converted_to_contents, "消息转换为 GenerateContent contents")
     await tester.test(_test_raw_parts_are_replayed, "原始模型 parts 原样回放")

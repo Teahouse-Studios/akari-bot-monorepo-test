@@ -140,7 +140,7 @@ def _test_confirmation_payloads_are_normalized():
 
 @func_case
 async def test_button_runtime(tester: Tester):
-    """core.utils.button_runtime: 按钮运行时。"""
+    """core.utils.button_runtime 按钮运行时测试。"""
     await tester.test(_test_token_is_short_and_namespaced, "按钮 token 长度与命名空间")
     await tester.test(_test_callback_id_is_restored, "callback ID 拆分与恢复")
     await tester.test(_test_callback_reply_id_is_bound_semantically, "callback 虚拟回复 ID 语义绑定")

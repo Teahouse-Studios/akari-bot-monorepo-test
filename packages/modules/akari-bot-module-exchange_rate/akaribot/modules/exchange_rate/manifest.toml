@@ -6,5 +6,5 @@ locales = "locales"
 config_table = "module_exchange_rate"
 config_schema_version = 1
 provides_modules = ["exchange-rate"]
-# 查重用的登录信息字段：汇率接口密钥。
+# 用于去重校验的登录信息字段，对应汇率接口密钥。
 credential_fields = ["exchange_rate_api_key"]

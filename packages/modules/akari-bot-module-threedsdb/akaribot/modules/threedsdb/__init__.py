@@ -4,7 +4,7 @@ import orjson
 
 from akaribot.core.api import Bot, I18NContext, Plain, module
 
-# 3DS 型号数据随仓库分发、运行时只读，位于 assets/data。
+# 3DS 型号数据随仓库分发，运行时只读，位于 assets/data。
 data_path = Path(__file__).parent / "assets" / "data"
 
 

@@ -11,11 +11,10 @@ from akaribot.core.paths import INSTANCE_DIR_ENV, Paths
 from akaribot.testing import Tester, func_case
 
 
-# 仓库根从 core 包的位置向上推算（判据见 _repository_root），
-# 既不依赖测试文件所处位置，也不取自 Paths.tests。后者正是本用例要检查的取值。
+# 仓库根目录从 core 包的位置向上推算（判断依据见 _repository_root），
+# 既不依赖测试文件所处位置，也不读取 Paths.tests。后者正是该用例要检查的取值。
 def _repository_root() -> Path:
-    # 不按层数推算（源码根从 <dist>/src/akaribot 压成 <dist>/akaribot 后层数会变），也不取
-    # Paths.tests。后者正是本用例要检查的取值。
+    # 不按目录层数推算，也不使用 Paths.tests。后者为该用例检查的目标取值。
     for candidate in Path(akaribot.core.__file__).resolve().parents:
         if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():
             return candidate
@@ -24,7 +23,7 @@ def _repository_root() -> Path:
 
 PROJECT_ROOT = _repository_root()
 
-# 子进程脚本：取出实例目录相关取值并打印，用于验证环境变量在导入期生效。
+# 子进程脚本，读取实例目录相关取值并打印，用于验证环境变量在导入阶段生效。
 PROBE = (
     "from akaribot.core.paths import Paths; "
     "print('INSTANCE', Paths.instance); "
@@ -65,7 +64,7 @@ def _test_defaults_to_process_cwd():
 
 
 def _test_instance_dir_env_selects_instance():
-    # config 的检查只在未设置 AKARI_CONFIG_PATH 时成立：测试基座会为该变量指向一份临时
+    # config 的检查仅在未设置 AKARI_CONFIG_PATH 时成立。测试框架会为该变量指向一份临时
     # 配置，此处显式清空它，避免用例结论取决于外层环境。
     with tempfile.TemporaryDirectory() as tmp:
         instance = Path(tmp) / "inst"
@@ -148,7 +147,7 @@ def _test_private_data_is_lazy():
         original = PrivateData.path
         try:
             PrivateData.path = root / "private" / "default"
-            # 判定须在临时目录销毁之前完成，否则退出 with 后 is_dir() 必然为假。
+            # 判定必须在临时目录销毁之前完成，否则退出 with 后 is_dir() 必然为 False。
             before = PrivateData.path.exists()
             created = PrivateData.ensure()
             after = created.is_dir()
@@ -160,7 +159,7 @@ def _test_private_data_is_lazy():
 
 
 def _test_private_data_lives_under_data():
-    # 末级目录名取决于当前客户端（default 或 client_name 的小写）。其取值不在此检查。
+    # 末级目录名称取决于当前客户端（default 或 client_name 的小写形式）。
     path = PrivateData.path
     if not isinstance(path, Path) or Paths.data / "private" not in path.parents:
         raise AssertionError(f"PrivateData.path={path!r} type={type(path).__name__}")
@@ -169,7 +168,7 @@ def _test_private_data_lives_under_data():
 
 @func_case
 async def test_paths(tester: Tester):
-    """core.paths: 实例目录测试"""
+    """core.paths 实例目录测试"""
     await tester.test(_test_defaults_to_process_cwd, "默认实例目录为进程 cwd")
     await tester.test(_test_instance_dir_env_selects_instance, "AKARI_INSTANCE_DIR 指定实例目录")
     await tester.test(_test_config_path_env_wins_over_instance, "AKARI_CONFIG_PATH 优先于实例目录")

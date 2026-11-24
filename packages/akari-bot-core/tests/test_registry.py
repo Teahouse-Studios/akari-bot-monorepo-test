@@ -91,8 +91,8 @@ def _test_modules_and_adapters_are_separated():
 
 
 def _test_directory_scan_finds_repository_packages():
-    # 已安装分发的 entry point 会先于目录回退收录，故须显式屏蔽该路径。本用例检查的是
-    # 目录回退本身，结论不应取决于当前环境装没装包。
+    # 已安装包的 entry point 会先于目录回退收录，因此必须显式屏蔽该路径。该用例检查的是
+    # 目录回退本身，结论不应取决于当前环境是否已安装该包。
     try:
         with patch.object(PackageRegistry, "_from_entry_points", return_value=[]):
             PackageRegistry.discover(force=True)
@@ -328,8 +328,8 @@ def _test_import_index_is_order_independent():
                 PackageRegistry._rebuild_import_index(ordered)
                 winners.append(PackageRegistry._by_import_path["akaribot.modules.sample"])
         finally:
-            # 重建写的是全局索引，不还原会让同进程后续用例（如 test_rpc_contracts 依赖的
-            # by_import_path("…wiki")）拿到残缺注册表，报出与本次改动无关的失败。
+            # 重建写入的是全局索引，不还原会导致同进程后续用例（如 test_rpc_contracts 依赖的
+            # by_import_path("…wiki")）获取到残缺注册表，返回与本次改动无关的失败。
             PackageRegistry._by_import_path = original_index
     return winners == [installed, installed]
 
@@ -380,7 +380,7 @@ def _test_locales_paths_are_order_independent():
 
 @func_case
 async def test_registry(tester: Tester):
-    """core.registry: 发现层测试"""
+    """core.registry 发现层测试"""
     await tester.test(_test_by_import_path_uses_longest_prefix, "前缀匹配取最长者")
     await tester.test(_test_by_import_path_handles_nested_and_unknown_paths, "嵌套路径与未知路径解析")
     await tester.test(_test_modules_and_adapters_are_separated, "同名模块与适配器按种类区分")

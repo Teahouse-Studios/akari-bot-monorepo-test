@@ -16,7 +16,7 @@ _client_init_task: asyncio.Task[None] | None = None
 
 class AkariDiscordBot(discord.Bot):
     async def login(self, token: str) -> None:
-        # 关闭证书校验只能通过连接器实现，而连接器必须在事件循环内创建，因此推迟到登录前。
+        # 关闭证书校验仅能通过连接器实现，而连接器必须在事件循环内创建，因此推迟到登录前。
         if not ssl_verify and self.http.connector is None:
             self.http.connector = aiohttp.TCPConnector(ssl=False)
         await super().login(token)
@@ -46,7 +46,7 @@ class AkariDiscordBot(discord.Bot):
             await super().close()
 
 
-# 所有消息相关操作都使用事件上下文、raw event 或显式 fetch，不需要 Pycord 默认缓存的 1000 条消息。
+# 所有消息相关操作均使用事件上下文、raw event 或显式 fetch，不需要 Pycord 默认缓存的 1000 条消息。
 discord_bot = AkariDiscordBot(intents=intents, proxy=proxy, max_messages=None)
 
 

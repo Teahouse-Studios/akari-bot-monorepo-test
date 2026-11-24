@@ -1,19 +1,19 @@
-"""Markdown 表格工具 - 单元格转义与“高度封顶、宽度按需”的列数求解。"""
+"""Markdown 表格工具，提供单元格转义与“高度封顶、宽度按需”的列数计算。"""
 
 import math
 import re
 
-# 表格的高度上限。条目增多时由列数吸收，使表格高度不超过该上限。
+# 表格的高度上限。条目增多时通过增加列数分摊，使表格高度不超过该上限。
 TABLE_MAX_ROWS = 10
 
-# 表格的最少列数。条目寥寥时若仍按高度上限反算列数会得到一两列的竖长条，
-# 该下限只会让表更矮更宽，不会反过来撑高。
+# 表格的最少列数。条目较少时如果仍然按照高度上限倒推计算列数，会导致生成极窄的长条表格，
+# 该下限仅会使表格更宽，不会反向增加高度。
 TABLE_MIN_COLUMNS = 3
 
 
 def escape_table_cell(text: str) -> str:
     """
-    把文本整理成可以放进 markdown 表格单元格的形态。
+    将文本转换为可置入 Markdown 表格单元格的格式。
 
     :param text: 原始文本。
     :return: 可安全放入单元格的文本。
@@ -23,10 +23,10 @@ def escape_table_cell(text: str) -> str:
 
 def format_table_code(text: str) -> str:
     """
-    把文本包成 markdown 行内代码，使其中的格式标记不被解析。
+    将文本包装为 Markdown 行内代码，避免其中的格式标记被解析。
 
     :param text: 原始文本。
-    :return: 可安全放入单元格的行内代码。文本为空时返回空串。
+    :return: 可安全放入单元格的行内代码。文本为空时返回空字符串。
     """
     if not text:
         return ""

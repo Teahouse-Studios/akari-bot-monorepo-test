@@ -1,10 +1,10 @@
 # akari-bot-module-hitokoto
 
-从一言 API 获取随机句子，支持指定类型与繁体转换。
+从一言 API 获取随机句子，支持指定类型与繁体中文转换。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-hitokoto

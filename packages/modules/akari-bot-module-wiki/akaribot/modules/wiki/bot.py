@@ -69,5 +69,5 @@ async def _():
         await ServerAPI.trigger_hook.submit("wikilog.keepalive")
         Logger.success("Successfully login wiki bot account.")
     except Exception as e:
-        # 登录失败不应中断后续周期任务，等下一轮重试即可
+        # 登录失败不应中断后续周期任务，等待下一周期重试。
         Logger.error(f"Failed to login wiki bot account: {e}")

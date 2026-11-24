@@ -56,8 +56,8 @@ def _instance(tmp: Path, workspace_root: Path, *, installed: tuple[str, ...] = (
 
 
 def _run(instance, **kwargs) -> str:
-    # 命令经 ``rich.console.Console`` 输出，不是 stdout，故必须换掉 console 本身。宽度放宽，
-    # 免得表格截断长分发名而让检查失真。
+    # 命令通过 ``rich.console.Console`` 输出，而非 stdout，因此必须替换 console 本身。调宽显示宽度，
+    # 避免表格截断长包名导致检查失真。
     buffer = io.StringIO()
     console = Console(file=buffer, width=200, force_terminal=False)
     with (
@@ -69,7 +69,7 @@ def _run(instance, **kwargs) -> str:
 
 
 def _dists(instance, **kwargs) -> list[str]:
-    # 表格会按终端宽度截断长名字，检查分发名只能走 JSON。
+    # 表格会按终端宽度截断长名称，检查包名仅能通过 JSON。
     payload = json.loads(_run(instance, as_json=True, **kwargs))
     return sorted(item["dist"] for item in payload)
 
@@ -165,7 +165,7 @@ def _test_registry_mode_uses_catalog():
 
 @func_case
 async def test_module_available(tester: Tester):
-    """cli.commands.module: 可安装包列举测试"""
+    """cli.commands.module 可安装包列举测试"""
     _use_cli_locale()
     await tester.test(_test_workspace_mode_lists_local_members, "工作区模式列本地成员")
     await tester.test(_test_core_is_not_offered, "core 不作为可安装候选")

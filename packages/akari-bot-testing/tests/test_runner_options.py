@@ -125,7 +125,7 @@ def _reload_runner():
 
 @func_case
 async def test_testing_options(tester: Tester):
-    """akaribot.testing.runner: 命令行选项与筛选测试"""
+    """akaribot.testing.runner 命令行选项与筛选测试"""
     await tester.test(_test_parse_paths_and_cases, "位置参数与 --case 收集")
     await tester.test(_test_parse_mode_flags, "--ci 与 --coverage 各自独立")
     await tester.test(_test_prescan_ignores_unrelated_arguments, "预扫描忽略无关参数")

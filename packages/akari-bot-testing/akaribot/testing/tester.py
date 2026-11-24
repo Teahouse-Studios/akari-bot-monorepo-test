@@ -46,7 +46,7 @@ class Tester:
         :param note: 额外说明。
         :returns: 测试结果字典。
         """
-        # Predicate 等可调用对象没有 __name__，回退到其类名
+        # Predicate 等可调用对象缺少 __name__ 属性，回退至其类名称。
         Logger.trace(f"[{self.name}] test: {note or getattr(func, '__name__', type(func).__name__)}")
 
         frame = inspect.stack()[1]
@@ -111,7 +111,7 @@ class Tester:
         注册一个交互测试案例。
 
         :param input_: 预期输入。
-        :param expected: 预期输出，传入期望匹配器，若为 None 则手动复核。
+        :param expected: 预期输出，传入期望匹配器；若为 None 则需要手动复核。
         :param note: 额外说明。
         :param timeout: 超时时间（秒），若为 None 则无超时限制。
         """

@@ -81,7 +81,7 @@ jobs:
 
           TAG_ARGS=(-t "$IMAGE_NAME:$TAG")
 
-          # 稳定版只推不可变版本名，避免旧 tag 重跑或并发完成顺序回退 latest。
+          # 稳定版仅推送不可变版本标签，避免旧 tag 重新运行或并发完成顺序导致 latest 回退。
           if [[ "$CHANNEL" == "nightly" ]]; then
             TAG_ARGS+=(-t "$IMAGE_NAME:nightly")
           fi

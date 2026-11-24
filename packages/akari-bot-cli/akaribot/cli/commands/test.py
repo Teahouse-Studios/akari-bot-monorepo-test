@@ -1,4 +1,4 @@
-"""运行测试"""
+"""运行测试。"""
 
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ TESTING_DIST = "akari-bot-testing"
 
 
 def _ensure_testing_installed(target) -> None:
-    # ``init`` 默认只装 core、适配器与用户选的模块，不装 ``akari-bot-testing``——它是开发期依赖。
-    # 缺包时若直接把子进程的 ``No module named`` 抛给用户，用户无从知道该装什么。此处给出明确的
+    # ``init`` 默认仅安装 core、适配器与用户选择的模块，不安装 ``akari-bot-testing``——它是开发阶段依赖。
+    # 缺少依赖包时若直接将子进程抛出的 ``No module named`` 返回给用户，用户无法明确所需安装的依赖。此处给出明确的
     # 下一步提示。
     try:
         proc = target.run_python_capture("-c", f"import {TESTING_MODULE}", timeout=60.0)
@@ -42,7 +42,7 @@ def test(
     case: Annotated[list[str] | None, typer.Option("--case", help=i18n.t("cli.test.option_case"))] = None,
     instance: InstancePathOption = None,
 ) -> None:
-    """在实例环境里运行测试。未知参数原样透传给 akaribot.testing。"""
+    """在实例环境中运行测试。未知参数原样传递给 akaribot.testing。"""
     target = require_instance(instance)
     try:
         _ensure_testing_installed(target)
@@ -54,8 +54,8 @@ def test(
     for name in case or []:
         args += ["--case", name]
     args += list(ctx.args)
-    # 模式必须经环境变量传：runner 在导入期读 CI / COVERAGE，argv 里的开关到得太晚（这正是
-    # “--ci 仍是非 CI 模式”的原因）。argv 里也留一份，让两条入口语义一致。
+    # 模式必须通过环境变量传递，因为 runner 在导入阶段读取 CI / COVERAGE，argv 中的开关生效过晚（这正是
+    # “--ci 仍是非 CI 模式”的原因）。argv 中亦保留一份记录，确保两个入口的语义完全一致。
     env: dict[str, str] = {}
     if ci:
         args.append("--ci")

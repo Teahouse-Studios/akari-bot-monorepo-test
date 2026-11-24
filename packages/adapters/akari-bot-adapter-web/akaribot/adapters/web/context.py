@@ -230,8 +230,8 @@ class WebContextManager(ContextManager):
         user_id: str,
         message: MessageChain | MessageNodes,
     ) -> list[str]:
-        # 控制台不存在公开场景，私信与普通发送等价，但平台发送失败仍须
-        # 遵守 ContextManager 契约，以空列表表示无法送达。
+        # 控制台不存在公开场景，私聊与普通发送等价，但平台发送失败仍必须
+        # 遵守 ContextManager 接口约定，以空列表表示无法送达。
         try:
             return await cls.send_message(
                 session_info,

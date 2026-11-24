@@ -217,7 +217,7 @@ async def collect_telegram_content(
                 try:
                     split = await image_split(element)
                 except Exception:
-                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素
+                    # 图片不可读（本地文件缺失或下载失败）时跳过该元素。
                     Logger.exception(f"Unable to split image {element.path}, skipping this element: ")
                     split = []
             for image in split:
@@ -226,7 +226,7 @@ async def collect_telegram_content(
                     images.append(FSInputFile(image_path))
             inline_pending = False
         elif isinstance(element, (AudioElement, VideoElement)):
-            # 底层文件不可得时跳过该元素
+            # 底层文件不可用时跳过该元素。
             media_path = await resolve_media_path(element)
             if media_path is not None:
                 audio.append(FSInputFile(media_path))
@@ -275,7 +275,7 @@ def _split_telegram_html_head(text: str, limit: int) -> tuple[str | None, str]:
 
 
 def build_telegram_operations(content: TelegramContent, reply_markup=None) -> list:
-    """按平台限制把聚合内容转换成 Telegram 发送操作。"""
+    """按平台限制将聚合内容转换为 Telegram 发送操作。"""
     has_media = bool(content.images or content.audio)
     if has_media and content.text:
         caption, remainder = _split_telegram_html_head(content.text, 1024)

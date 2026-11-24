@@ -35,12 +35,12 @@ quick_confirm = CoreConfig.quick_confirm
 
 # 本平台退役后不再追究针对机器人自身的不友好行为。退役实例已停止服务，将机器人禁言或移出群聊
 # 是管理员的正常处置，不应据此追责。两侧的账号与场景同属一个 union，在此处封禁会连带波及
-# 用户在新平台上的身份，把一次合理的清退变成误封。
+# 用户在新平台上的身份，将合理的清退处置误判定为违规封禁。
 client_retired = is_retired_client(client_name)
 
 enable_temp_session = MilkyConfig.qq_enable_temp_session
 enable_listening_self_message = MilkyConfig.qq_enable_listening_self_message
-# 事件流断开后的重连间隔，避免协议端未就绪时形成空转
+# 事件流断开后的重连时间间隔，避免协议端未就绪时产生频繁空轮询。
 EVENT_RECONNECT_DELAY = 5
 milky_account: int | None = None
 
@@ -178,7 +178,7 @@ async def message_handler(event: dict) -> None:
     if segments and segments[0].get("type") == "mention":
         mentioned = (segments[0].get("data") or {}).get("user_id")
         if not _is_self(mentioned):
-            # 消息以 @ 他人开头时视为与机器人无关
+            # 消息以 @ 他人开头时视为与机器人无关。
             return
         at_message = True
         segments = segments[1:]
@@ -245,7 +245,7 @@ async def group_invitation_handler(event: dict) -> None:
         await milky_bot.accept_group_invitation(group_id=group_id, invitation_seq=invitation_seq)
         return
     if not MilkyConfig.qq_allow_approve_group_invite:
-        # 未开启自动同意时保持请求待处理，交由管理员处理
+        # 未开启自动同意时保持请求待处理，交由管理员处理。
         return
     target_id = f"{target_group_prefix}|{group_id}"
     target_union_info = await TargetUnionInfo.get_by_target_id(target_id)
@@ -289,7 +289,7 @@ async def group_mute_handler(event: dict) -> None:
         return
     duration = int(message_field(message, "duration", 0) or 0)
     if duration <= 0:
-        # 解除禁言不是不友好行为
+        # 解除禁言不是不友好行为。
         return
     group_id = message_field(message, "group_id")
     sender_id = f"{sender_prefix}|{message_field(message, 'operator_id')}"
@@ -316,7 +316,7 @@ async def group_mute_handler(event: dict) -> None:
         await target_union_info.edit_attr("blocked", True)
         await milky_bot.quit_group(group_id=int(group_id))
         await sender_union_info.switch_identity(trust=False)
-        # Milky SDK 未提供删除好友接口，无法像 OneBot 一样同时解除好友关系
+        # Milky SDK 未提供删除好友接口，无法像 OneBot 一样同时解除好友关系。
 
 
 async def group_member_decrease_handler(event: dict) -> None:
@@ -327,7 +327,7 @@ async def group_member_decrease_handler(event: dict) -> None:
         return
     operator_id = message_field(message, "operator_id")
     if not operator_id:
-        # 自主退群或协议端未提供操作者时无法归因，不视为不友好行为
+        # 自主退群或协议端未提供操作者时无法确定责任人，不视为不友好行为。
         return
     group_id = message_field(message, "group_id")
     sender_id = f"{sender_prefix}|{operator_id}"
@@ -403,14 +403,14 @@ async def event_loop() -> None:
 
 
 async def startup() -> None:
-    """初始化客户端队列、主动消息 worker 与机器人自身信息。"""
+    """初始化客户端队列、主动消息工作任务与机器人自身信息。"""
     await client_init(target_prefix_list, sender_prefix_list)
     MilkyFetchedContextManager.start_task_processor()
     await refresh_login_info()
 
 
 async def shutdown() -> None:
-    """依次停止主动消息 worker、输入状态任务、HTTP 客户端与客户端队列。"""
+    """依次停止主动消息工作任务、输入状态任务、HTTP 客户端与客户端队列。"""
     try:
         await MilkyFetchedContextManager.stop_task_processor()
     finally:

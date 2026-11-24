@@ -53,36 +53,36 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = PROJECT_ROOT / "tools" / "boundary_lint_baseline.txt"
 
-# 收录范围：packages/ 下的全部分发源码。tests/ 与 tools/ 依赖全部层，不在约束内。
+# 收录范围为 packages/ 下的全部成员包源码。tests/ 与 tools/ 依赖全部架构层，未包含在约束范围内。
 SCAN_DIRS = ("packages",)
 EXCLUDED_DIR_NAMES = {"__pycache__", ".venv", ".git"}
-# 分发清单：packages/<dist>/ 与 packages/<group>/<dist>/ 两层。容器目录（adapters、modules）无 pyproject。
+# 成员包清单涵盖 packages/<dist>/ 与 packages/<group>/<dist>/ 两层。容器目录（adapters 与 modules）不包含 pyproject。
 DIST_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pyproject.toml")
 
-# 命名空间根标志：源码位于 <dist>/akaribot/<layer>/…，据此定位分层与包路径。
+# 命名空间根目录标识对应位于 <dist>/akaribot/<layer>/… 的源码，据此定位架构分层与包路径。
 NAMESPACE_ROOT = "akaribot"
-# 分层取命名空间根之后的第一段目录名。akaribot.testing 不在受约束的三层内，规则不适用。
+# 架构分层取自命名空间根目录后的首段目录名。akaribot.testing 未包含在受约束的三层内，该规则不适用。
 LAYER_CORE = "core"
 LAYER_MODULES = "modules"
 LAYER_ADAPTERS = "adapters"
-# 命名空间根与两个共享分层目录出现 __init__.py 会把命名空间包截断，故按“akaribot 之后的目录后缀”禁。
+# 命名空间根目录与两个共享分层目录出现 __init__.py 会导致命名空间包截断，因此按照“akaribot 后的目录后缀”执行禁止检查。
 NAMESPACE_FORBIDDEN_INIT = {(), ("modules",), ("adapters",)}
-# 官方模块包的判定前缀：T4.6 #2 的 error 升级与 #7 都只看这一层目录。
+# 官方模块包的判定前缀，T4.6 #2 的 error 升级与 #7 均仅检查这一层目录。
 OFFICIAL_MODULES_PREFIX = ("packages", "modules")
 
 MODULES_ROOT = "akaribot.modules"
 ADAPTERS_ROOT = "akaribot.adapters"
 CORE_ROOT = "akaribot.core"
-# core 分发自身的目录。其 bundled 模块不计入“模块包是否经过门面”的观察值。
+# core 包自身的目录。其内置模块不计入“模块包是否经过公开接口”的统计指标。
 CORE_DIST_RELATIVE = "packages/akari-bot-core"
 CORE_API_ROOT = "akaribot.core.api"
-# 模块包对外承诺的路径只有 akaribot.modules.<x>.api，包根与其余子路径都算内部实现。
+# 模块包对外承诺的路径仅包含 akaribot.modules.<x>.api，包根目录与其余子路径均视为内部实现。
 MODULE_PUBLIC_SEGMENT = "api"
-# 适配器专用门面：模块 import 它，多半是在做本应交给适配器的事（T4.7(d)）。
+# 适配器专用接口，模块导入该接口通常表明其正在执行应当归属于适配器的逻辑（T4.7(d)）。
 ADAPTERS_FACADE = "akaribot.core.api.adapters"
 MODULE_ENTRY_POINT_GROUP = "akaribot.modules"
 ADAPTER_ENTRY_POINT_GROUP = "akaribot.adapters"
-# B8 的符号面来源：门面本体、实现模块与适配器面。
+# 规则 B8 的导出符号来源于公开接口模块、实现模块与适配器接口。
 CORE_API_ALL_SOURCES = ("__init__.py", "base.py", "adapters.py")
 
 LEVEL_ERROR = "error"
@@ -102,8 +102,8 @@ RULE_DESCRIPTIONS = {
     "B11": "CLI 包内用 sys.executable 启动实例进程（T6.5：冻结后它指向二进制自身）",
 }
 
-# B1 的基础级别为 warn：第三方包跨模块取内部路径可能确有需要。包归属为官方（OFFICIAL_MODULES_PREFIX）
-# 时该条升级为 error，级别随命中一起记录在 Violation 上，故本表只存静态基础级别。
+# B1 的基础级别为 warn，因为第三方包跨模块取内部路径可能确有需要。包所属为官方（OFFICIAL_MODULES_PREFIX）
+# 时该条升级为 error，级别随命中一起记录在 Violation 上，因此该表仅存储静态基础级别。
 RULE_LEVELS = {
     "B1": LEVEL_WARN,
     "B2": LEVEL_ERROR,
@@ -177,7 +177,7 @@ class Violation:
     detail: str = ""
 
     def key(self) -> str:
-        """基准文件的稳定键。不含行号，代码移动后仍能命中豁免。"""
+        """基准文件的稳定键。不包含行号，代码位置变动后仍能匹配豁免项。"""
         return f"{self.path}\t{self.rule}\t{self.target}"
 
     def __str__(self) -> str:
@@ -207,14 +207,14 @@ class Dist:
 
 @dataclass(frozen=True)
 class Workspace:
-    """一次检查共用的整个仓库索引。"""
+    """单次检查通用的全仓库索引结构。"""
 
     dists: tuple[Dist, ...]
     owner_to_dists: dict[str, tuple[Dist, ...]]
     core_api_names: frozenset[str]
 
     def dist_for(self, relative: str) -> Dist | None:
-        """取包含该文件的分发。嵌套时取最长匹配的分发目录。"""
+        """获取包含该文件的成员包。发生嵌套时选取最长匹配的包目录。"""
         best: Dist | None = None
         for dist in self.dists:
             if relative.startswith(f"{dist.relative}/") and (best is None or len(dist.relative) > len(best.relative)):
@@ -223,7 +223,7 @@ class Workspace:
 
 
 def iter_source_files() -> list[Path]:
-    """枚举需要检查的 Python 文件，按路径排序。"""
+    """枚举需要检查的 Python 文件，按照路径排序。"""
     files: list[Path] = []
     for dir_name in SCAN_DIRS:
         base = PROJECT_ROOT / dir_name
@@ -237,7 +237,7 @@ def iter_source_files() -> list[Path]:
 
 
 def iter_pyproject_files() -> list[Path]:
-    """枚举 packages/ 下各分发的 pyproject.toml，按路径排序。"""
+    """枚举 packages/ 下各成员包的 pyproject.toml，按照路径排序。"""
     found: set[Path] = set()
     for pattern in DIST_PYPROJECT_PATTERNS:
         found.update(PROJECT_ROOT.glob(pattern))
@@ -245,7 +245,7 @@ def iter_pyproject_files() -> list[Path]:
 
 
 def normalize_dist_name(name: str) -> str:
-    """PEP 503 规范化分发名：转小写，并把 -、_、. 统一为 -。"""
+    """按照 PEP 503 规范化包名，转换为小写并将 -、_、. 统一替换为 -。"""
     return re.sub(r"[-_.]+", "-", name).strip().lower()
 
 
@@ -281,7 +281,7 @@ def find_key_line(text: str, header: str, key: str) -> int:
 
 
 def load_distributions() -> tuple[Dist, ...]:
-    """读取各分发的元数据：名字、依赖、提供的模块段、适配器 entry point。"""
+    """读取各成员包的名称、依赖、提供的模块段与适配器 entry point 等元数据。"""
     dists: list[Dist] = []
     for path in iter_pyproject_files():
         relative = path.parent.relative_to(PROJECT_ROOT).as_posix()
@@ -328,7 +328,7 @@ def load_distributions() -> tuple[Dist, ...]:
 
 
 def extract_all_names(tree: ast.AST) -> set[str]:
-    """取模块级 `__all__ = [...]` 中的字符串字面量。`*_base.__all__` 这类星号元素由调用方并入。"""
+    """获取模块级 `__all__ = [...]` 中的字符串字面量。星号元素通过调用方并入。"""
     names: set[str] = set()
     for node in tree.body:
         if not isinstance(node, ast.Assign) or not isinstance(node.value, (ast.List, ast.Tuple)):
@@ -355,7 +355,7 @@ def source_root(dist_relative: str) -> Path:
 
 
 def load_core_api_names(dists: tuple[Dist, ...]) -> frozenset[str]:
-    """取 akaribot.core.api 承诺的符号面，AST 解析 __all__ 字面量，不导入 core。"""
+    """获取 akaribot.core.api 声明的导出符号集合，通过 AST 解析 __all__ 字面量，不导入 core 模块。"""
     api_dir = next(
         (candidate for dist in dists if (candidate := source_root(dist.relative) / LAYER_CORE / "api").is_dir()),
         None,
@@ -381,7 +381,7 @@ def load_core_api_names(dists: tuple[Dist, ...]) -> frozenset[str]:
 
 
 def load_workspace() -> Workspace:
-    """一次性建立分发索引、模块段索引与 core 门面符号面。"""
+    """集中建立包索引、模块段索引与 core 公开接口导出符号集合。"""
     dists = load_distributions()
     owners: dict[str, list[Dist]] = collections.defaultdict(list)
     for dist in dists:
@@ -463,26 +463,26 @@ def resolve_imports(tree: ast.AST, package: str) -> list[ImportRef]:
 
 
 def under(path: str, prefix: str) -> bool:
-    """点分路径是否等于 prefix 或位于其下。"""
+    """判断点分路径是否等于 prefix 或位于其子路径下。"""
     return path == prefix or path.startswith(f"{prefix}.")
 
 
 def module_owner(target: str) -> str | None:
-    """取 akaribot.modules.<x> 中的 <x>。不在该前缀下时返回 None。"""
+    """获取 akaribot.modules.<x> 中的 <x>。若不处于该前缀下则返回 None。"""
     if not target.startswith(f"{MODULES_ROOT}."):
         return None
     return target[len(MODULES_ROOT) + 1 :].split(".")[0] or None
 
 
 def b1_level(location: Location) -> str:
-    """B1 的级别：官方模块包升级为 error，其它（第三方在自己的仓库里复用本工具）保留 warn。"""
+    """B1 的级别对官方模块包升级为 error，其他（第三方在自己仓库中复用该工具）保留 warn。"""
     return LEVEL_ERROR if location.official else LEVEL_WARN
 
 
 def check_declared_dependency(
     location: Location, line: int, target: str, owner: str, workspace: Workspace
 ) -> list[Violation]:
-    """规则 B6：跨模块 import 须在自身 pyproject 的 dependencies 里声明目标分发。"""
+    """规则 B6，要求跨模块导入必须在自身 pyproject 的 dependencies 列表中声明目标包。"""
     target_dists = workspace.owner_to_dists.get(owner)
     if not target_dists:
         return []
@@ -510,7 +510,7 @@ def check_core_symbol(location: Location, ref: ImportRef, workspace: Workspace) 
 
 
 def check_module_import(location: Location, ref: ImportRef, workspace: Workspace) -> list[Violation]:
-    """规则 B1、B2、B3、B6、B8、B10：模块包侧的 import 限制。"""
+    """规则 B1、B2、B3、B6、B8、B10，定义模块包的导入限制。"""
     found: list[Violation] = []
     target, line = ref.target, ref.line
     if under(target, ADAPTERS_ROOT):
@@ -524,7 +524,7 @@ def check_module_import(location: Location, ref: ImportRef, workspace: Workspace
         public = len(tail) > 1 and tail[1] == MODULE_PUBLIC_SEGMENT
         if not public:
             found.append(Violation(location.relative, line, "B1", target, b1_level(location)))
-        # B10 与 B1 独立：官方包连对方的 .api 也不许依赖（T4.6 #7）。
+        # B10 与 B1 相互独立，官方包不得依赖其他模块包的 .api 接口（T4.6 #7）。
         if location.official:
             found.append(Violation(location.relative, line, "B10", target, LEVEL_ERROR))
         found.extend(check_declared_dependency(location, line, target, owner, workspace))
@@ -535,7 +535,7 @@ def check_module_import(location: Location, ref: ImportRef, workspace: Workspace
 
 
 def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> list[Violation]:
-    """对单个 import 施加全部规则。"""
+    """对单个导入语句应用全部校验规则。"""
     if location.layer == LAYER_MODULES:
         return check_module_import(location, ref, workspace)
     if location.layer == LAYER_CORE and (under(ref.target, MODULES_ROOT) or under(ref.target, ADAPTERS_ROOT)):
@@ -545,14 +545,14 @@ def check_import(location: Location, ref: ImportRef, workspace: Workspace) -> li
     return []
 
 
-# 允许的位置是**冻结感知的 CLI 自调用**（冻结时它是二进制、非冻结时是解释器加 -m 模块名）。
-# 反之把它当解释器启动实例进程，冻结后会重新调起 CLI，必须经 system_python()。
+# 允许的位置是冻结感知的 CLI 自调用（冻结时它是二进制、非冻结时是解释器加 -m 模块名）。
+# 反之若将其作为解释器启动实例进程，冻结后会重新启动 CLI，必须通过 system_python() 调用。
 SYS_EXECUTABLE_ALLOWED = (
-    "akaribot/cli/tui/",  # 各页的 cli_argv 构造
+    "akaribot/cli/tui/",  # 各页的 cli_argv 构造。
     "akaribot/cli/commands/new.py",  # 脚手架末尾自调用 CLI
-    "akaribot/cli/instance.py",  # system_python()：非冻结时它就是可用解释器，冻结时才改搜索
+    "akaribot/cli/instance.py",  # system_python() 在未冻结状态下即为可用解释器，冻结后则执行解释器检索。
 )
-# CLI 的 tests/ 不在 wheel 内（hatchling 只收 akaribot/），永远不会被冻结，本规则不适用。
+# CLI 的 tests/ 不在 wheel 内（hatchling 仅收录 akaribot/），永远不会被冻结，该规则不适用。
 SYS_EXECUTABLE_EXEMPT_SEGMENTS = ("/tests/",)
 
 
@@ -608,8 +608,8 @@ def check_file(path: Path, workspace: Workspace) -> tuple[list[Violation], bool,
     deep_core = 0
     for ref in resolve_imports(tree, location.package):
         found.extend(check_import(location, ref, workspace))
-        # core 自带的 bundled 模块在路径上也属模块层，但它们随 core 同版本发布、与 core 内部同步
-        # 重构，不属于“模块包绑定 core 内部目录”。算进来会让观察值长期停在几百。
+        # core 内置的模块在路径上也属于模块层，但其随 core 同版本发布并与 core 内部同步
+        # 重构，不属于“模块包绑定 core 内部目录”。计入后会导致观察值持续偏高。
         if location.layer != LAYER_MODULES or location.dist_relative == CORE_DIST_RELATIVE:
             continue
         if under(ref.target, CORE_ROOT) and not under(ref.target, CORE_API_ROOT):
@@ -645,7 +645,7 @@ def check_namespace_pollution(paths: list[Path], workspace: Workspace) -> list[V
 
 
 def check_adapter_entry_points(workspace: Workspace) -> list[Violation]:
-    """规则 B9：适配器 entry point 名含 '-'，会与多实例名分隔符冲突（T1B.1）。"""
+    """规则 B9，检查适配器 entry point 名称是否包含 '-' 而与多实例名称分隔符产生冲突（T1B.1）。"""
     found: list[Violation] = []
     for dist in workspace.dists:
         for point, line in dist.adapter_entry_points:
@@ -697,8 +697,8 @@ def diff_scope(base_ref: str) -> set[tuple[str, int]] | None:
     """
     try:
         result = subprocess.run(
-            # git 的 pathspec 里不含斜杠的模式按全路径通配：`*.py` 能命中任意深度，
-            # 而字面量 `pyproject.toml` 只命中仓库根，故嵌套清单用 `*pyproject.toml`。
+            # git 的 pathspec 中不包含斜杠的模式按照全路径通配，如 `*.py` 能命中任意深度，
+            # 而字面量 `pyproject.toml` 仅匹配仓库根目录，因此嵌套清单使用 `*pyproject.toml`。
             ["git", "diff", "--unified=0", "--no-color", base_ref, "--", "*.py", "*pyproject.toml"],
             cwd=PROJECT_ROOT,
             capture_output=True,
@@ -729,7 +729,7 @@ def diff_scope(base_ref: str) -> set[tuple[str, int]] | None:
 
 
 def untracked_scope() -> set[tuple[str, int]]:
-    """未跟踪的新文件整文件计入检查范围。"""
+    """未跟踪的新增文件整文件纳入检查范围。"""
     try:
         result = subprocess.run(
             ["git", "ls-files", "--others", "--exclude-standard", "--", *SCAN_DIRS],
@@ -753,20 +753,20 @@ def untracked_scope() -> set[tuple[str, int]]:
             line_count = len((PROJECT_ROOT / relative).read_text(encoding="utf-8").splitlines())
         except (OSError, UnicodeDecodeError):
             continue
-        # 空文件（新建的 __init__.py 就是这种）也要给出第 1 行，否则 B7 在 --diff 下会漏。
+        # 空文件（例如新建的 __init__.py）同样需要提供第 1 行，避免 B7 规则在 --diff 模式下遗漏检查。
         for line in range(1, max(line_count, 1) + 1):
             scope.add((relative, line))
     return scope
 
 
 def level_label(rule: str, violations: list[Violation]) -> str:
-    """规则的级别标签：取静态级别，或该规则命中里实际出现过的级别（B1 两种都可能）。"""
+    """获取规则的级别标签，为静态级别或该规则命中结果中实际出现的级别（B1 可能包含两种级别）。"""
     levels = sorted({violation.level for violation in violations if violation.rule == rule})
     return "/".join(levels) if levels else RULE_LEVELS[rule]
 
 
 def generate_baseline(violations: list[Violation]) -> None:
-    """把当前全部违规写入基准文件。"""
+    """将当前全部违规项写入基准文件。"""
     keys = sorted({v.key() for v in violations})
     counts = collections.Counter(key.split("\t")[1] for key in keys)
     header = [
@@ -785,7 +785,7 @@ def generate_baseline(violations: list[Violation]) -> None:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示无基准外的违规。"""
+    """主入口函数，返回进程退出码，0 表示不存在基准外的违规项。"""
     parser = argparse.ArgumentParser(description="import 分层检查")
     parser.add_argument("--diff", metavar="BASE_REF", help="只检查该基准之后新增或修改的行")
     parser.add_argument("--generate-baseline", action="store_true", help="重建基线豁免文件")

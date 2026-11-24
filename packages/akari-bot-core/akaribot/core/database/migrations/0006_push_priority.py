@@ -19,7 +19,7 @@ async def upgrade(ctx: MigrationContext) -> None:
     """
     补充推送优先级列。
 
-    ``ALTER TABLE ... ADD COLUMN`` 在不同方言下均不支持 ``IF NOT EXISTS``，故先探测再执行。
+    ``ALTER TABLE ... ADD COLUMN`` 在不同方言下均不支持 ``IF NOT EXISTS``，因此先探测再执行。
 
     :param ctx: 迁移上下文。
     """

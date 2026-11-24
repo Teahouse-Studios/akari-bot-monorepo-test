@@ -2,7 +2,7 @@ import uuid
 
 from akaribot.core.api import ExpiringTempDict
 
-CONTEXT_EXPIRY = 900  # 上下文窗口有效期（秒）
+CONTEXT_EXPIRY = 900  # 上下文窗口有效期（单位为 s）。
 
 _context_windows = ExpiringTempDict(exp=CONTEXT_EXPIRY)
 
@@ -35,7 +35,7 @@ def create_context(messages: list[dict], context_key: str, llm: str | None = Non
 
 
 def get_context(session_id: str | None, context_key: str) -> list[dict] | None:
-    """获取同一场景的上下文历史。不存在、跨场景或已过期返回 None。"""
+    """获取同一场景的上下文历史。若不存在、跨场景或已过期，则返回 None。"""
     window = _get_window(session_id, context_key)
     if window is None:
         return None
@@ -44,7 +44,7 @@ def get_context(session_id: str | None, context_key: str) -> list[dict] | None:
 
 
 def get_context_llm(session_id: str | None, context_key: str) -> str | None:
-    """获取上下文快照使用的模型名称。不存在、跨场景或已过期返回 None。"""
+    """获取上下文快照使用的模型名称。若不存在、跨场景或已过期，则返回 None。"""
     window = _get_window(session_id, context_key)
     if window is None:
         return None

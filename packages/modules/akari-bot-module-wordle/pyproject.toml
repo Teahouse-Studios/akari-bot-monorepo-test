@@ -15,7 +15,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    # 棋盘与键盘渲染用资源包里的 Noto Sans CJK Bold（T3.3），缺它则出图失败。
+    # 棋盘与键盘渲染使用资源包中的 Noto Sans CJK Bold（T3.3），缺失将导致图片生成失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "Pillow>=13.0.0,<13.1.0",

@@ -58,8 +58,8 @@ def _make_package(root: Path, *, schema_version: int = 0) -> PackageEntry:
 
 
 def _patches(entry: PackageEntry, config_root: Path):
-    # ``PackageRegistry.modules()`` 的键是**包名**（不是 ``种类：包名``）：迁移运行器按 ``entry.name``
-    # 取回自己的 revision，键写错会让整条链路静默查不到迁移。
+    # ``PackageRegistry.modules()`` 的键为包名称（非 ``种类:包名``），由于迁移运行器按照 ``entry.name``
+    # 获取对应的 revision，键名错误会导致整条链路静默且无法查询到迁移记录。
     return (
         patch.object(PackageRegistry, "modules", lambda: {PACKAGE: entry}),
         patch.object(PackageRegistry, "adapters", lambda: {}),
@@ -174,7 +174,7 @@ def _test_failed_revision_leaves_file_untouched():
 
 @func_case
 async def test_config_migration(tester: Tester):
-    """core.config.migration: 配置迁移端到端测试"""
+    """core.config.migration 配置迁移端到端测试"""
     await tester.test(_test_revisions_are_discovered_in_order, "迁移脚本按号段发现")
     await tester.test(_test_upgrade_applies_and_bumps_version, "应用迁移并推进版本号")
     await tester.test(_test_second_run_is_noop, "二次执行 no-op")

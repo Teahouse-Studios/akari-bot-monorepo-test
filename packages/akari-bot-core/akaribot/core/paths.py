@@ -9,13 +9,13 @@
 import os
 from pathlib import Path
 
-# 实例目录。未设置时取进程 cwd，与历史行为一致。
+# 实例目录。未设置时使用进程当前工作目录（cwd）。
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 
 # 配置目录。优先级高于实例目录下的 config。
 CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"
 
-# 测试用例目录。该目录属于源码仓库而非实例，故单独指定。
+# 测试用例目录。该目录属于源码仓库而非实例，因此单独指定。
 TESTS_PATH_ENV = "AKARI_TESTS_PATH"
 
 
@@ -27,9 +27,9 @@ def _env_path(name: str) -> Path | None:
 
 
 def _repository_root() -> Path:
-    # 判据是“含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先”，不按层数推算——源码根从
-    # ``packages/<dist>/akaribot`` 变成 ``<dist>/akaribot`` 后层数不同，数层数会静默指到仓库之外。
-    # 打包形态下找不到这样的祖先，回退到包内目录：测试目录必然缺席，调用方的存在性判断照常生效。
+    # 判定条件为“包含 ``packages/`` 与 ``pyproject.toml`` 的最近祖先目录”，不依赖固定层数推算，
+    # 避免因目录层级差异而错误定位至仓库外部。打包发布后若未找到该祖先目录，
+    # 则改用包内目录，此时测试目录不存在，调用方的存在性检查正常生效。
     current = Path(__file__).resolve()
     for candidate in current.parents:
         if (candidate / "packages").is_dir() and (candidate / "pyproject.toml").is_file():
@@ -40,7 +40,7 @@ def _repository_root() -> Path:
 class Paths:
     """实例目录及其子目录。"""
 
-    # as_dict() 面向“实例目录”清单。锁是文件，故显式排除。
+    # as_dict() 面向“实例目录”清单。锁为文件，因此明确排除。
     _FILES = ("lock",)
 
     instance: Path = _env_path(INSTANCE_DIR_ENV) or Path(".").resolve()

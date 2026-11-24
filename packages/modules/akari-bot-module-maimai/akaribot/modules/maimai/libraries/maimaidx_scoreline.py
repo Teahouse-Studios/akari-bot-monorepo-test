@@ -178,7 +178,7 @@ def draw_scoreline_table(tap: int = 0, hold: int = 0, slide: int = 0, touch: int
                         if row <= 3:  # TAP, HOLD, SLIDE, TOUCH
                             max_base = [base_fixup, 2 * base_fixup, 3 * base_fixup, base_fixup][row]
                             value -= max_base
-                        elif row in [4, 5, 6]:  # BREAK 系列
+                        elif row in [4, 5, 6]:  # BREAK 评价系列。
                             max_base = 5 * base_fixup
                             base_part = value - bonus_fixup if bonus_fixup else value
                             value = (base_part - max_base) + (bonus_fixup if bonus_fixup else 0)

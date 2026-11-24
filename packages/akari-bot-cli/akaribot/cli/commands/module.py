@@ -83,7 +83,7 @@ def _report_placeholders(instance: Instance, snapshot: engine.ConfigSnapshot) ->
 
 
 def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, runner: engine.CommandRunner) -> None:
-    # 第 5 步的数据库迁移不回滚：迁移是幂等且向前的，回滚风险大于收益，报告里如实告知用户表已建。
+    # 第 5 步的数据库迁移不回滚，因为迁移是幂等且向前的，回滚风险大于好处，报告里如实告知用户数据表已创建。
     warn(i18n.t("cli.module.install.rollback_start"))
     restored = snapshot.restore(instance)
     if restored:
@@ -104,7 +104,7 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
 
 
 def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) -> None:
-    # 冲突说明写成“谁要求什么、实际是什么”，不把 uv 解析器的原始报错抛给用户。
+    # 冲突说明采用“谁要求什么、实际是什么”的格式，不将 uv 解析器的原始报错呈现给用户。
     extra_names: list[str] = []
     for text in target.dependencies:
         try:
@@ -159,7 +159,7 @@ def _plan_conflicts(
     target: engine.InstallTarget,
     unmet: Sequence[tuple[Requirement, engine.InstalledDist]],
 ) -> list[str]:
-    # 安装会连带升降依赖（含传递依赖），而 uv 求解不看其他已装包的依赖，故按其安装计划逐条核对。
+    # 安装会连带升降依赖（包含间接依赖），而 uv 求解不考虑其他已安装包的依赖，因此按其安装计划逐条核对。
     try:
         completed = engine.CommandRunner().run(
             engine.dry_run_confirm_argv(instance.python, target.specs),
@@ -171,7 +171,7 @@ def _plan_conflicts(
         reason = engine.summarize_uv_error(completed.stderr or completed.stdout or "")
         return [*(_unmet_text(target, requirement, info) for requirement, info in unmet), reason]
     changes = engine.planned_versions(f"{completed.stdout or ''}\n{completed.stderr or ''}")
-    # 已装包对待装包本身的要求由 dependency_conflicts 报告，这里不重复。
+    # 已安装包对待安装包的依赖要求由 dependency_conflicts 报告，此处无需重复。
     changes.pop(engine.canonical(target.dist), None)
     try:
         everything = engine.probe_environment(instance.python, all_distributions=True)
@@ -217,7 +217,7 @@ def _resolve_git(
     ref: str | None,
     subdir: str | None,
 ) -> engine.InstallTarget:
-    # git 来源在装完之前拿不到 manifest，因此除名字以外的字段留空，由 :func:`_install` 在安装后补齐。
+    # git 来源在安装完成前无法获取 manifest，因此除包名以外的字段留空，由 :func:`_install` 在安装后补齐。
     if editable is not None:
         raise CliError(i18n.t("cli.module.git.editable_conflict"))
     if version:
@@ -268,7 +268,7 @@ def _refuse_if_installed(instance: Instance, dist: str, *, force: bool) -> None:
 
 
 def _installed_dists(instance: Instance) -> set[str]:
-    # git 直引用不预先知道分发名，只能靠安装前后的差集认领新装的那个，故安装前先记一份。
+    # git 直接引用无法预先获知包名，仅能通过对比安装前后的包列表识别新安装的包，因此安装前先记录一份。
     try:
         return {engine.canonical(dist) for dist in instance.installed(refresh=True)}
     except CliError as exc:
@@ -293,7 +293,7 @@ def _dist_from_git_install(instance: Instance, before: set[str], *, requested: s
 
 
 def _check_git_api(instance: Instance, dist: str, *, runner: engine.CommandRunner) -> None:
-    # 检查阶段拿不到 manifest。省掉这一步，不兼容的包会直接装进实例，运行时才报错。
+    # 检查阶段无法获取 manifest。若省略该步骤，不兼容的包会直接安装到实例，运行时才报错。
     package = instance.find_package(dist)
     if package is None or not package.requires_core_api:
         return
@@ -336,7 +336,7 @@ def _install(
     upgrade: bool = False,
 ) -> int:
     runner = engine.CommandRunner(dry_run=dry_run, verbose=verbose)
-    # git 直引用可能没有名字，此时用 spec 自身作为展示对象，免得出现“解析 （来源：git）”。
+    # git 直接引用可能缺少包名，此时使用 spec 自身作为展示对象，避免出现“解析 （来源：git）”。
     step(1, 7, i18n.t("cli.module.install.step_resolve", dist=target.dist or target.specs[0], source=target.source))
     console.print(i18n.t("cli.module.install.specs_line", specs=" ".join(target.specs)))
     from_git = target.source == "git"
@@ -344,7 +344,7 @@ def _install(
     if dry_run:
         console.print(i18n.t("cli.module.dry_run_precheck"))
     elif from_git:
-        # git 直引用要装完才解析出分发名与 manifest，此时无从检查，改为装完后校验 core API。
+        # git 直接引用需要安装完成后才能解析出包名与 manifest，此时无从检查，调整为安装后校验 core API。
         console.print(i18n.t("cli.module.install.precheck_git"))
     else:
         _precheck(instance, target, force=force)
@@ -352,7 +352,7 @@ def _install(
     step(3, 7, i18n.t("cli.module.install.step_install", python=instance.python))
     before = _installed_dists(instance) if from_git and not dry_run else None
     try:
-        # 同上：what 由 venv.py 拼接“完成/失败”，保持原文。
+        # 同上，what 由 venv.py 拼接“完成/失败”，保持原文。
         runner.run_checked(
             engine.install_argv(instance.python, target.specs, upgrade=upgrade),
             what=i18n.t("cli.venv_engine.what_install_dist", dist=target.dist or target.specs[0]),
@@ -430,7 +430,7 @@ def list_packages(
                 "summary": info.summary,
                 "developers": list(info.developers),
                 "provides_modules": list(info.provides_modules),
-                # manifest 的其余字段：TUI 详情与 --purge-data 都要看，缺了只能显示“未声明”。
+                # TUI 详情与 --purge-data 均需读取 manifest 的其余字段，缺失时仅能显示“未声明”。
                 "owned_tables": list(info.owned_tables),
                 "config_table": info.config_table,
                 "dependencies": [
@@ -484,7 +484,7 @@ class AvailablePackage:
     developers: tuple[str, ...] = ()
 
     def search_text(self) -> str:
-        """拼出可搜索文本。"""
+        """拼接可搜索文本。"""
         return " ".join((self.name, self.dist, self.detail, *self.provides)).casefold()
 
 
@@ -496,7 +496,7 @@ def _relative_path(path: Path, root: Path) -> str:
 
 
 def _workspace_available(root: Path) -> list[AvailablePackage]:
-    # 工作区模式下安装一律取本地源码（``resolve_target`` 的优先级如此），此时“能装什么”的答案
+    # 工作区模式下安装一律使用本地源码（``resolve_target`` 的优先级如此），此时“可安装的包”的答案
     # 来自本地成员清单，而不是 registry。
     index = engine.workspace_index(root)
     found: list[AvailablePackage] = []
@@ -590,13 +590,13 @@ def available(
                 "dist": item.dist,
                 "name": item.name,
                 "kind": item.kind,
-                # 键名与 `module list --json` 对齐：TUI 的 normalize_records 按 version 取值。
+                # 键名与 `module list --json` 保持一致，因为 TUI 的 normalize_records 按 version 取值。
                 "version": item.version,
                 "installed": engine.canonical(item.dist) in installed,
                 "provides_modules": list(item.provides),
                 "developers": list(item.developers),
                 "summary": "" if workspace_mode else item.detail,
-                # 工作区来源的 detail 是包路径。它放进 origin，消费方（TUI、脚本）据此定位源码。
+                # 工作区来源的 detail 是包路径，会放入 origin，供调用方（TUI、脚本）据此定位源码。
                 "origin": item.detail if workspace_mode else "",
             }
             for item in selected
@@ -655,14 +655,14 @@ def add(
     verbose: VerboseOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """安装模块或适配器：解析 → 检查 → 安装 → 补配置 → 迁移 → 热装载 → 报告。"""
+    """安装模块或适配器，依次执行解析、检查、安装、补充配置、迁移、热加载与报告。"""
     target_instance = require_instance(instance)
     if git is not None:
         try:
             target = _resolve_git(name, dist=dist, version=version, editable=editable, git=git, ref=ref, subdir=subdir)
         except CliError as exc:
             fail(str(exc))
-        # 给了名字才可能提前查重。不给名字时无从查起，只能装完再由差集认领。
+        # 声明名称方可提前查重。未提供名称时无从查验，仅能在安装完成后通过对比安装前后的包列表予以识别。
         if target.dist:
             _refuse_if_installed(target_instance, target.dist, force=force)
         _install(target_instance, target, force=force, dry_run=dry_run, verbose=verbose)
@@ -705,8 +705,8 @@ def _cascade_order(instance: Instance, root: PackageInfo) -> list[PackageInfo]:
 
 
 def _config_files(instance: Instance, package: PackageInfo) -> tuple[list[Path], list[Path]]:
-    # 基表取 ``manifest.config_table`` 的扁平路径：``CFGManager.load()`` 只扫描 ``config/*.toml``，
-    # 按 ``provides_modules`` 拼出的路径不在扫描范围内。适配器实例表名由基表生成，只能按前缀匹配。
+    # 基础配置表使用 ``manifest.config_table`` 的扁平路径，因为 ``CFGManager.load()`` 仅扫描 ``config/*.toml``，
+    # 按 ``provides_modules`` 拼接的路径不在扫描范围内。适配器实例表名由基础配置表生成，仅能按前缀匹配。
     if not package.config_table:
         return [], []
     base = instance.config_dir / f"{package.config_table}.toml"
@@ -728,9 +728,9 @@ def _purge(
     dry_run: bool,
     purge_instances: bool,
 ) -> bool:
-    # 必须在 uv uninstall **之前**调用：清单随分发一起被删，卸载后再也解析不出 ``owned_tables``
-    # 与 ``config_table``，那时连该删什么都不知道。任一步失败即返回 ``False``，由命令层决定中止
-    # 卸载还是按 ``--force`` 接受残留——静默返回成功会让用户以为数据已清干净。
+    # 必须在执行 uv uninstall **前**调用，否则清单随包一起被删除，卸载后将无法再解析出 ``owned_tables``
+    # 与 ``config_table``，届时将无法确定需要删除的对象。任一步失败即返回 ``False``，由命令层控制是否中止
+    # 卸载还是按 ``--force`` 接受残留——静默返回成功会导致用户误认为数据已清理完毕。
     tables = sorted({table for package in packages for table in package.owned_tables})
     base_files: list[Path] = []
     instance_files: list[Path] = []
@@ -794,7 +794,7 @@ def remove(
     verbose: VerboseOption = False,
     instance: InstancePathOption = None,
 ) -> None:
-    """卸载模块或适配器。默认保留配置与数据，并做反向依赖检查。"""
+    """卸载模块或适配器。默认保留配置与数据，并执行反向依赖检查。"""
     target = require_instance(instance)
     try:
         package = target.find_package(name)
@@ -826,13 +826,13 @@ def remove(
             continue
         notify = target.notify_package_change("remove", item.dist)
         console.print(i18n.t("cli.module.remove.notify_line", dist=item.dist, detail=notify.detail))
-        # 先拆后卸：确认热拆卸失败时必须停手，否则运行中的实例会继续持有已删分发的模块与库 context。
+        # 先热卸载再删除包，确认热卸载失败时必须中止，否则运行中的实例会继续持有已删除包的模块与数据库上下文。
         if notify.blocks_uninstall:
             blocked.append(i18n.t("cli.module.remove.detach_blocked", dist=item.dist, detail=notify.detail))
     if blocked:
         fail(i18n.t("cli.module.remove.detach_failed", reasons=_join_list(blocked)))
     if purge_data:
-        # 先清理再卸载：清单随分发一起消失，卸载后再也解析不出 owned_tables 与 config_table。
+        # 先清理再卸载，否则清单随包一起消失，卸载后将无法再解析出 owned_tables 与 config_table。
         purge_instances = yes or dry_run
         if not purge_instances:
             instances = sum(len(_config_files(target, item)[1]) for item in order)
@@ -843,7 +843,7 @@ def remove(
                 fail(i18n.t("cli.module.remove.purge_failed"))
             warn(i18n.t("cli.module.remove.purge_failed_forced"))
     try:
-        # 同上：what 由 venv.py 拼接“完成/失败”，保持原文。
+        # 同上，what 由 venv.py 拼接“完成/失败”，保持原文。
         what = i18n.t("cli.venv_engine.what_uninstall_packages")
         runner.run_checked(
             engine.uninstall_argv(target.python, [item.dist for item in order]),
@@ -867,8 +867,8 @@ def _update_payload(
     notified: Sequence[tuple[str, str, bool]],
     dry_run: bool,
 ) -> dict:
-    # ``updated`` / ``failed`` / ``skipped`` 保持纯名字列表以兼容既有消费者，明细另置 ``*_details``。
-    # ``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update`` 判断要不要提示 ``~restart``。
+    # ``updated`` / ``failed`` / ``skipped`` 保持纯名称列表以兼容既有使用方，明细另置 ``*_details``。
+    # ``reload_pending`` 与 ``restart_required`` 供机器人内的 ``~update`` 判断是否提示 ``~restart``。
     delivered = {dist: ok_ for dist, _, ok_ in notified}
     reload_pending = [dist for dist in updated if not delivered.get(dist, False)]
     return {
@@ -898,8 +898,8 @@ def _perform_update(
     json_mode: bool,
     defer_runtime: bool = False,
 ) -> tuple[int, dict]:
-    # ``--json`` 的 stdout 改道由调用方完成，本函数照常把人类可读输出写到当前 stdout。
-    # ``json_mode`` 只影响整体失败时报错还是回传载荷。
+    # ``--json`` 的 stdout 重定向由调用方完成，本函数正常将常规文本输出写入当前 stdout。
+    # ``json_mode`` 仅影响整体失败时报错还是返回数据载荷。
     target_instance = require_instance(instance_path)
     try:
         installed = target_instance.installed()
@@ -925,7 +925,7 @@ def _perform_update(
         if workspace_root is not None:
             resolved = engine.workspace_target(workspace_root, info.dist)
             if resolved is None:
-                # 三元组的第二项是 --json 载荷里的 reason，属机器可读契约，保持原文。第三项只供打印。
+                # 三元组的第二项是 --json 载荷里的 reason，属机器可读格式约定，保持原文。第三项仅供输出展示。
                 skipped.append((info.dist, "工作区里没有该包", i18n.t("cli.module.update.skip_no_workspace")))
                 continue
             plans.append(resolved)
@@ -962,7 +962,7 @@ def _perform_update(
     completed = engine.CommandRunner(verbose=verbose).run(argv, env=engine.uv_environment(target_instance))
     if completed.returncode != 0:
         summary = engine.summarize_uv_error(completed.stderr or completed.stdout or "")
-        # failed_details[].reason 是 --json 契约的一部分，保持原文。人类可读提示另行本地化。
+        # failed_details[].reason 是 --json 输出格式约定的一部分，保持原文。面向用户的提示另行本地化。
         failures = [(plan.dist, f"更新包失败：{summary}") for plan in plans]
         payload = _update_payload(updated=[], plans=plans, failed=failures, skipped=skipped, notified=[], dry_run=False)
         message = i18n.t("cli.module.update.failed", detail=summary)
@@ -988,8 +988,8 @@ def _perform_update(
         if defer_runtime:
             continue
         if kinds.get(engine.canonical(plan.dist)) == "module":
-            # 代码已在磁盘上换新，但运行中的实例仍注册着旧代际，直接热装载会被判“已注册”。
-            # 先热拆卸再热装载才能换到新代码。适配器不支持整包热换，沿用重启提示。
+            # 代码已在磁盘上更新，但运行中的实例仍注册着旧版本，直接热加载会被判定为“已注册”。
+            # 先热卸载再热加载才能切换到新代码。适配器不支持整包热替换，沿用重启提示。
             detach = target_instance.notify_package_change("remove", plan.dist)
             if detach.blocks_uninstall:
                 warn(i18n.t("cli.module.update.detach_failed", dist=plan.dist, detail=detach.detail))
@@ -1043,7 +1043,7 @@ def update(
     if as_json:
         if verbose:
             err_console.print(i18n.t("cli.module.update.verbose_ignored"))
-        # 结果 JSON 之外的一切输出先改道 stderr，改道块结束后才写出唯一的那一行。
+        # 结果 JSON 之外的一切输出先重定向至 stderr，重定向块结束后才写出唯一的那一行。
         stream = sys.stdout
         with contextlib.redirect_stdout(sys.stderr):
             code, payload = _perform_update(
@@ -1120,8 +1120,8 @@ def _load_state_label(loaded: Any) -> str:
     return i18n.t("cli.module.status.state_loaded") if loaded else i18n.t("cli.module.status.state_unloaded")
 
 
-# 三级“启用”语义（附录 B）：安装看 venv、全局装载看 ModuleStatus.load、场景启用看
-# target_union_info.modules。本命令只管第二级，故用 load/unload 而非场景级的 enable/disable。
+# 按三级“启用”语义（附录 B），安装取决于 venv、全局加载取决于 ModuleStatus.load、场景启用取决于
+# target_union_info.modules。本命令仅控制第二级，因此使用 load/unload 而非场景级的 enable/disable。
 @app.command("load", help=i18n.t("cli.module.load.help"))
 def load_module(
     name: str,
@@ -1133,8 +1133,8 @@ def load_module(
     “实例 ID 一旦使用请勿更改”这条约束**不适用于本命令**：它只改全局装载状态，不触碰任何配置。
     """
     instance = require_instance(instance_path)
-    # 实例未运行时 core 侧要等 websocket 连接超时（实测 15.6 秒）才回报，故先用锁文件短路。
-    # 为真时仍走子进程，由 core 判定 Server 是否在线。
+    # 实例未运行时 core 端需要等待 websocket 连接超时（实测 15.6 秒）才返回，因此先使用锁文件提前返回。
+    # 为 True 时仍通过子进程执行，由 core 判定 Server 是否在线。
     if not instance.is_running():
         fail(i18n.t("cli.warn.instance_not_running_load"))
     code = instance.run_core("modules", "load", name)

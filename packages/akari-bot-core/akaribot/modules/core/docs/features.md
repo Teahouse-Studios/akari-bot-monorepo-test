@@ -10,7 +10,7 @@ order: 60
 
 <CommandUsage usage="features" permission="superuser" />
 
-此命令逐项列出当前会话的能力标志，并主动获取同一场景的会话作为对照，有差异的项用 `*` 标出。主动获取失败时，主动会话一列显示未知。字段来自 `Features`，见[适配器开发](../../../core/docs/adapter-development.md)。
+此命令逐项列出当前会话的能力标志，并主动获取同一场景的会话作为对照，有差异的项通过 `*` 标记。主动获取失败时，主动会话列展示为未知。字段来自 `Features`，参见[适配器开发](../../../core/docs/adapter-development.md)。
 
 <ChatExample
   :log="[

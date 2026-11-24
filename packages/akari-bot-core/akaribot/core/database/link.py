@@ -6,25 +6,25 @@ from akaribot.core.constants import database_path
 from akaribot.core.paths import Paths
 
 SQLITE_CONNECTION_DEFAULTS = {
-    # Tortoise 按参数顺序执行 PRAGMA。先延长锁等待时间，再尝试切换 WAL，
-    # 避免多个进程并发启动时 journal_mode 尚未受到 30 秒等待策略保护。
+    # Tortoise 按照参数顺序执行 PRAGMA。先延长锁等待时间，再尝试切换至 WAL 模式，
+    # 避免多个进程并发启动时 journal_mode 尚未获得 30 秒等待策略的保护。
     "busy_timeout": "30000",
     "journal_mode": "WAL",
 }
 
 
 def _is_absolute_target(target: str) -> bool:
-    # 路径可能照抄自 Windows 配置，``Path`` 在其它平台上判不出盘符与反斜杠开头的写法，
-    # 故按字面补判，免得把绝对路径锚到实例根。
+    # 路径可能直接复制自 Windows 配置，``Path`` 在其他平台上无法识别盘符与反斜杠开头的写法，
+    # 因此按字面补充判断，以免把绝对路径误判定为相对实例根目录。
     if Path(target).is_absolute() or target.startswith(("/", "\\")):
         return True
     return len(target) > 1 and target[1] == ":"
 
 
 def _resolve_sqlite_path(link: str) -> Path | None:
-    # 默认链接是 ``sqlite://database/save.db`` 这样的相对路径，驱动按进程 cwd 解析它，
-    # 从实例外启动的入口因此会把库建到调用目录。实例内的相对路径一律以
-    # :class:`akaribot.core.paths.Paths` 记录的实例根为基准，与 ``AKARI_INSTANCE_DIR`` 一致。
+    # 默认连接为 ``sqlite://database/save.db`` 等相对路径，驱动默认按进程工作目录解析，
+    # 导致从实例外部启动时将数据库创建至调用目录。实例内的相对路径统一以
+    # :class:`akaribot.core.paths.Paths` 记录的实例根目录为基准，与 ``AKARI_INSTANCE_DIR`` 保持一致。
     parts = link.split("://", 1)
     if len(parts) < 2 or parts[0].split("+")[0] != "sqlite":
         return None
@@ -53,7 +53,7 @@ db_path = database_path
 _sqlite_file = _resolve_sqlite_path(db_link)
 if _sqlite_file is not None:
     db_path = _sqlite_file.parent
-# 内存库没有文件可建，故不预建目录。其余后端先建好目录，驱动不会代建。
+# 内存数据库无需创建文件，因此不预先创建目录。其他后端预先创建目录，驱动本身不负责自动创建。
 if _sqlite_file is not None or db_type != "sqlite":
     db_path.mkdir(parents=True, exist_ok=True)
 
@@ -70,8 +70,8 @@ def prepare_db_link(link: str) -> str:
     query = parse_qsl(parsed.query, keep_blank_values=True)
     existing_fields = {key.lower() for key, _ in query}
     query.extend((key, value) for key, value in SQLITE_CONNECTION_DEFAULTS.items() if key not in existing_fields)
-    # busy_timeout 必须在可能取得写锁的 PRAGMA（尤其 journal_mode）之前生效。
-    # 即使调用方显式提供了参数并采用其它排列，也统一提前执行等待策略。
+    # busy_timeout 必须在可能获取写锁的 PRAGMA（尤其是 journal_mode）生效前执行。
+    # 即使调用方显式提供了参数并采用其他顺序，亦统一优先执行等待策略。
     query.sort(key=lambda item: item[0].lower() != "busy_timeout")
     return urlunsplit(parsed._replace(query=urlencode(query)))
 

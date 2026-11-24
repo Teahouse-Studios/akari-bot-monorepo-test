@@ -16,7 +16,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    # best30 等成绩图的文字与符号用资源包里的 Noto Sans CJK 与 Symbols2（T3.3），缺它则出图失败。
+    # best30 等成绩图的文字与符号使用资源包中的 Noto Sans CJK 与 Symbols2（T3.3），若缺失将导致图片渲染失败。
     "akari-bot-assets-fonts>=0.1.0,<1.0",
     "akari-bot-core>=0.1.0,<1.0",
     "Pillow>=13.0.0,<13.1.0",

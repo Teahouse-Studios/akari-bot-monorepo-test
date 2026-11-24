@@ -1,4 +1,4 @@
-"""消息链模块 - 实现消息链的核心数据结构和处理逻辑。"""
+"""消息链模块，实现消息链的核心数据结构与处理逻辑。"""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ default_locale = BaseConfig.default_locale
 @define
 class MessageChain:
     """
-    消息链类 - 表示由多个消息元素组成的完整消息。
+    消息链类，表示由多个消息元素组成的完整消息。
 
     消息链是本系统中消息的基本数据结构，由一系列消息元素组成。
     支持多种构建方式、格式转换、安全检查等功能。
@@ -68,7 +68,7 @@ class MessageChain:
         values: 消息元素列表，包含此消息链的所有元素
     """
 
-    # 消息元素列表
+    # 消息元素列表。
     values: list[MessageElement]
 
     @classmethod
@@ -98,7 +98,7 @@ class MessageChain:
         if isinstance(elements, BaseElement):
             elements = [elements]
 
-        # 单个字典即 to_list() 产出的一个元素（含 _type 判别键），整体还原为消息元素
+        # 单个字典即 to_list() 生成的一个元素（包含 _type 判别键），整体还原为消息元素。
         if isinstance(elements, dict):
             elements = [converter.structure(elements, MessageElement)]
 
@@ -140,7 +140,7 @@ class MessageChain:
         - ButtonElement / ButtonFrameElement: 检查按钮展示文本
         - RawElement: 检查原始内容
 
-        :return: 如果消息链不包含敏感信息返回 True，否则返回 False
+        :return: 若消息链不包含敏感信息则返回 True，否则返回 False
         """
 
         def unsafeprompt(name, secret, text):
@@ -158,7 +158,7 @@ class MessageChain:
             if isinstance(value, (MessageChain, MessageNodes)):
                 return value.is_safe
             if isinstance(value, BaseElement):
-                # 复用元素所在链的检查逻辑，避免为每种嵌套元素重复实现分支
+                # 复用元素所在链的检查逻辑，避免为每种嵌套元素重复实现分支。
                 return MessageChain.assign(value).is_safe
             return check_text(name, value)
 
@@ -195,7 +195,7 @@ class MessageChain:
                     return False
                 if not check_text("Card.pic_url", v.pic_url):
                     return False
-            # 参数会在客户端发送阶段才代入文案，服务端的链检查必须提前覆盖
+            # 参数会在客户端发送阶段才代入文案，服务端的链检查必须提前覆盖。
             elif isinstance(v, I18NContextElement):
                 for key, value in v.kwargs.items():
                     if not check_value(f"I18NContext.{key}", value):
@@ -238,7 +238,7 @@ class MessageChain:
 
         if session_info:
             # 传入 MessageSession 时取出其 session_info。SessionInfo 自身没有该属性，原样返回。
-            # 不经 exports 判类型，以免受注册时机影响。
+            # 不通过 exports 判断类型，以免受注册时机影响。
             session_info = getattr(session_info, "session_info", session_info)
 
             support_embed = session_info.support_embed
@@ -254,8 +254,7 @@ class MessageChain:
                 )
                 is_action_text = isinstance(elem, ActionTextElement)
                 for el in elem_:
-                    # 该赋值原本假定 elem 是纯文本元素，指令操作降级后
-                    # elem_ 中也会出现纯文本，不加判定会把元素改写为字符串
+                    # elem 与 elem_ 均可能包含纯文本，若不加以判定会将元素误改写为字符串。
                     if isinstance(el, PlainElement) and isinstance(elem, PlainElement) and session_info:
                         elem.text = session_info.locale.t_str(el.text)
                 for el in elem_:
@@ -341,8 +340,8 @@ class MessageChain:
                         if parse_message and x.allow_parse:
                             x.text = session_info.locale.t_str(x.text)
                             element_chain = match_kecode(x.text, x.disable_joke)
-                            # 指令操作是行内元素：其产物与紧随的纯文本都须并入上一行，否则出自同一个字符串的一句话
-                            # 会被平台的换行拼接拆成数行。其余元素各自追加，以保住 KE 码往返的元素数约定。
+                            # 指令操作是行内元素，其生成内容与紧随的纯文本均必须并入上一行，否则出自同一个字符串的一句话
+                            # 会被平台的换行拼接拆分为多行。其余元素各自追加，以保留 KE 码往返的元素数约定。
                             append_parsed_elements(element_chain)
                             continue
                     else:
@@ -370,7 +369,7 @@ class MessageChain:
                     if isinstance(v, str):
                         x.kwargs[k] = locale.t_str(v)
                     if isinstance(v, MessageChain):
-                        # Template.safe_substitute 会把参数强制转成字符串，因此先将消息链
+                        # Template.safe_substitute 会将参数强制转换为字符串，因此先将消息链
                         # 结构化并编码成可嵌入模板的内部标记，翻译后再还原。
                         x.kwargs[k] = _serialize_i18n_message(v)
                     if isinstance(v, ActionTextElement):
@@ -390,7 +389,7 @@ class MessageChain:
                 globally_trusted = bool(
                     session_info and session_info.use_url_manager and x.trusted is None and url_policy.allowed
                 )
-                # 链接须按未认证处理的有两种来源：模块显式标记为不可信，或未表态而会话启用了 URLManager
+                # 链接需要按未认证处理有两种来源，一是模块明确标记为不可信，二是未表态而会话启用了 URLManager。
                 needs_guard = bool(
                     session_info
                     and not globally_trusted
@@ -410,7 +409,7 @@ class MessageChain:
                 value.append(PlainElement.assign(x.url, disable_joke=True))
 
             elif isinstance(x, ActionTextElement):
-                # 内层的多语言元素只有在此处才能确定会话语言，故转换阶段一次性解析
+                # 内层的多语言元素仅在此处才能确定会话语言，因此转换阶段一次性解析。
                 x = x.resolve(session_info)
                 if session_info and session_info.support_action_text and enable_markdown and x.text.text:
                     value.append(x)
@@ -501,14 +500,14 @@ class MessageChain:
         :param lst: 消息元素的字典列表
         :return: 新的消息链实例
         """
-        # 列表中每一项都是一个完整的元素字典，须整体交给 converter 还原，
-        # 逐键遍历只会把键名当作元素传入
+        # 列表中每一项都是一个完整的元素字典，需要整体交由 converter 还原，
+        # 逐键遍历仅会将键名作为元素传入。
         converted = [converter.structure(x, MessageElement) for x in lst]
         return deepcopy(cls(converted))
 
     @staticmethod
     def _normalize(element):
-        # 将单个入参归一化为消息元素。
+        # 将单个输入参数规范化为消息元素。
         if element is None:
             return None
         if isinstance(element, str):
@@ -556,7 +555,7 @@ class MessageChain:
         return any(isinstance(x, types) for x in self.values)
 
     def only(self, types: type[MessageElement] | tuple[MessageElement]) -> bool:
-        """只保留指定类型的元素。"""
+        """仅保留指定类型的元素。"""
         return all(isinstance(x, types) for x in self.values)
 
     def extend(self, other: MessageChain):
@@ -589,7 +588,7 @@ class MessageChain:
 
                 :param other: 另一个消息链或元素列表
                 :return: 新的消息链
-                :raises TypeError: 如果操作数类型不支持
+                :raises TypeError: 若操作数类型不支持
         """
         # 消息链的加法操作。
         # 支持与另一个消息链或列表相加。
@@ -607,7 +606,7 @@ class MessageChain:
 
                 :param other: 另一个消息链或元素列表
                 :return: 新的消息链
-                :raises TypeError: 如果操作数类型不支持
+                :raises TypeError: 若操作数类型不支持
         """
         # 消息链的右加法操作（当左操作数不支持加法时调用）。
         if isinstance(other, MessageChain):
@@ -626,14 +625,14 @@ class MessageChain:
 
                 :param other: 另一个消息链或元素列表
                 :return: 修改后的消息链自身
-                :raises TypeError: 如果操作数类型不支持
+                :raises TypeError: 若操作数类型不支持
         """
         # 消息链的原地加法操作（+=）。
         # 直接修改当前消息链，添加新元素。
         if isinstance(other, MessageChain):
             self.values += other.values
         elif isinstance(other, list):
-            # 列表中的裸字符串一并归一化，与 assign() 的行为保持一致
+            # 列表中的纯字符串一并规范化，与 assign() 的行为保持一致。
             self.values += [e for e in (self._normalize(x) for x in other) if e is not None]
         elif isinstance(other, MessageElement):
             self.values += [other]
@@ -650,7 +649,7 @@ class MessageChain:
 
 @define
 class I18NMessageChain:
-    """多语言消息链 - 用于处理不同语言环境下的消息。"""
+    """多语言消息链，用于处理不同语言环境下的消息。"""
 
     values: dict[str, MessageChain]
 
@@ -674,7 +673,7 @@ class I18NMessageChain:
 @define
 class PlatformMessageChain:
     """
-    平台消息链 - 用于处理不同平台的消息。
+    平台消息链，用于处理不同平台的消息。
 
     该类允许为不同的平台（如 QQ、Discord、Telegram 等）定义不同的
     消息链，系统会根据消息发送的平台自动选择合适的消息。
@@ -682,7 +681,7 @@ class PlatformMessageChain:
     优先级说明：
     PlatformMessageChain > I18NMessageChain > MessageChain
 
-    使用时须保证嵌套关系正确：
+    使用时需要保证嵌套关系正确：
     - PlatformMessageChain 可以包含 I18NMessageChain 或 MessageChain
     - 值可以是普通的 MessageChain 或 I18NMessageChain
 
@@ -728,7 +727,7 @@ class PlatformMessageChain:
 
 @define
 class MessageNodes:
-    """消息节点列表 - 用于表示转发消息。"""
+    """消息节点列表，用于表示转发消息。"""
 
     values: list[MessageChain]
     name: str = ""
@@ -751,7 +750,7 @@ class MessageNodes:
         ```
         """
         if not name:
-            # 生成随机名称：Message + 5 个随机小写字母
+            # 生成格式为 Message + 5 个随机小写字母的随机名称。
             name = "Message " + "".join(random.sample("abcdefghijklmnopqrstuvwxyz", 5))
 
         return cls(values=values, name=name)
@@ -765,7 +764,7 @@ class MessageNodes:
         return all(chain.is_safe for chain in self.values)
 
 
-# 可作为消息发送的入参类型。取联合类型而非 TypeVar：
+# 可作为消息发送的输入参数类型。取联合类型而非 TypeVar，因为
 # 后者会拒绝 MessageChain | MessageNodes 这类联合。
 Chainable = (
     MessageChain
@@ -796,7 +795,7 @@ def get_message_chain(session: SessionInfo, chain: Chainable) -> MessageChain | 
         > result = get_message_chain(session, platform_chain)
     ```
     """
-    # 本函数的职责即是把多种入参归一化，过程中类型会逐步收敛，故以 Any 承接
+    # 该函数负责将多种输入参数规范化，过程中类型逐步明确，因此先以 Any 类型接收。
     resolved: Any = chain
 
     if isinstance(resolved, PlatformMessageChain):
@@ -850,8 +849,8 @@ def _extract_kecode_blocks(text):
 
 
 def _append_inline(value: list, element: PlainElement) -> None:
-    # 平台适配器多以换行拼接消息链中的各个元素，不合并会把一句话中的行内元素拆到下一行。
-    # 需要换行时，在前一个纯文本元素末尾显式写入换行符即可。
+    # 平台适配器多以换行拼接消息链中的各个元素，不合并会将同一行内的元素拆分至下一行。
+    # 需要换行时，在前一个纯文本元素末尾明确写入换行符即可。
     if value and isinstance(value[-1], PlainElement):
         value[-1].text += element.text
     else:
@@ -943,8 +942,8 @@ def match_kecode(text: str, disable_joke: bool = False) -> MessageChain:
                     parsed_params[key] = value
 
             if element_type == "plain":
-                # 写入侧已 urlencode，此处解码还原。手写的 KE 码不含百分号转义时，
-                # 解码为恒等变换，故不影响既有的手写用法
+                # 写入方已 urlencode，此处解码还原。手写的 KE 码不包含百分号转义时，
+                # 解码为恒等变换，因此不影响既有的手写用法。
                 text_value = unquote(parsed_params.get("text", ""))
 
                 local_disable_joke = convert_bool(parsed_params.get("disable_joke"), disable_joke)
@@ -1048,7 +1047,7 @@ def match_kecode(text: str, disable_joke: bool = False) -> MessageChain:
                 if userid:
                     elements.append(MentionElement.assign(userid))
             elif element_type == "url":
-                # 不复用形参 text：覆写会污染其后各块的解析
+                # 不复用形参 text，避免覆写污染其后各块的解析。
                 url_value = parsed_params.get("text")
 
                 if url_value:

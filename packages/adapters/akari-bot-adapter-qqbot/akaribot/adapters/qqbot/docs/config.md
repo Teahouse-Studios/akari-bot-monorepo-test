@@ -2,7 +2,7 @@
 
 本文整理了 QQ 机器人（官方）适配器的配置项与填写时的注意事项。
 
-配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表都写在 `config/bot_qqbot.toml`。普通项写在 `[bot_qqbot]`，密钥项写在 `[bot_qqbot_secret]`。
+配置表为 `bot_qqbot`，密钥表为 `bot_qqbot_secret`。两张表均保存在 `config/bot_qqbot.toml` 中，常规配置项位于 `[bot_qqbot]`，密钥项位于 `[bot_qqbot_secret]`。
 
 ## 配置表 `bot_qqbot`
 
@@ -11,10 +11,10 @@
 | `enable` | bool | `false` | 是否启动 QQ 机器人客户端。 |
 | `qq_bot_appid` | str \| int | `""` | 机器人 AppID。 |
 | `qq_bot_openid` | str | `""` | 机器人自身 OpenID。 |
-| `qq_bot_enable_send_url` | bool | `false` | 在服务器频道与频道私信中发送纯文本时是否保留链接，关闭时含链接的行会被丢弃。 |
+| `qq_bot_enable_send_url` | bool | `false` | 在服务器频道与频道私信中发送纯文本时是否保留链接，关闭时包含链接的行会被丢弃。 |
 | `qq_private_bot` | bool | `false` | 是否为私域机器人。 |
-| `qq_typing_emoji` | int | `181` | 正在处理消息时挂载的回应表情 ID。 |
-| `qq_limited_emoji` | int | `10060` | 消息处理失败时挂载的回应表情 ID。 |
+| `qq_typing_emoji` | int | `181` | 正在处理消息时添加的回应表情 ID。 |
+| `qq_limited_emoji` | int | `10060` | 消息处理失败时添加的回应表情 ID。 |
 | `qq_use_markdown` | bool | `false` | 是否使用 Markdown 格式消息。 |
 | `qq_bot_certified` | bool | `true` | 机器人是否已通过企业或个人认证，未认证时主动消息配额更低。 |
 | `qq_navigation_sync_strict` | bool | `false` | 全局菜单与指令面板同步失败时是否阻止启动。 |
@@ -24,7 +24,7 @@
 | `qq_webhook_path` | str | `/` | Webhook 回调路径，需要与开放平台配置一致。 |
 | `qq_bot_uid` | str | `""` | 机器人 UID。 |
 | `qq_bot_qqnum` | str | `""` | 机器人 QQ 号。 |
-| `qq_api_url` | str | `""` | 自定义 API 基地址，留空使用官方地址。 |
+| `qq_api_url` | str | `""` | 自定义 API 基础地址，留空时使用官方地址。 |
 
 ## 密钥表 `bot_qqbot_secret`
 
@@ -34,7 +34,7 @@
 
 ## 说明
 
-- 两个实例的 `qq_bot_appid` 与 `qq_bot_secret` 都相同时，视为同一个机器人账号。守护进程据此检查是否有多个实例使用同一个账号。
+- 两个实例的 `qq_bot_appid` 与 `qq_bot_secret` 均相同时，视为同一个机器人账号。守护进程据此检查是否有多个实例使用同一个账号。
 - `qq_use_markdown` 同时控制按钮、动作文本和消息节点能力。服务器频道不受该配置影响。
 - 回应表情 ID 参见 [QQ 开放平台表情文档](https://bot.q.qq.com/wiki/develop/api-v2/openapi/emoji/model.html#Emoji)。
 - Webhook 模式提供 HTTP 监听。需要 HTTPS 时，由反向代理处理 TLS。

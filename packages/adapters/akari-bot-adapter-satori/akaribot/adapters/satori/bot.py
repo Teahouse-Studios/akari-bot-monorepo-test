@@ -52,7 +52,7 @@ ignored_sender = CoreConfig.ignored_sender
 enable_tos = CoreConfig.enable_tos
 mention_required = CoreConfig.mention_required
 
-# 退役实例已停止服务，对机器人自身的不友好行为不作追究。迁移期间两侧身份同属一个 union，
+# 退役实例已停止服务，对机器人自身的不友好行为不予追究。迁移期间双方身份同属一个 union，
 # 在此处封禁会连带波及用户在新平台上的身份。
 client_retired = is_retired_client(client_name)
 
@@ -161,7 +161,7 @@ async def message_handler(account: Account, event: Event) -> None:
 
     inbound = parse_inbound(message.content, bot_id)
     if not is_private:
-        # 以 @ 他人开头的消息视为与机器人无关
+        # 以 @ 他人开头的消息视为与机器人无关。
         if inbound.addressed_other and not inbound.at_bot:
             return
         if mention_required and not inbound.at_bot:
@@ -207,7 +207,7 @@ async def guild_member_removed_handler(account: Account, event: Event) -> None:
         return
     operator = event.operator
     if operator is None:
-        # 自主退群或协议端未提供操作者时无法归因，不视为不友好行为
+        # 自主退群或协议端未提供操作者时无法确定责任人，不视为不友好行为。
         return
 
     platform = event.platform or account.platform or "satori"
@@ -264,7 +264,7 @@ async def on_lifecycle(account: Account, state: LoginStatus) -> None:
         Logger.info(f"Satori account {account.self_id} ({account.platform}) is {state.name.lower()}.")
         return
     if state == LoginStatus.OFFLINE and not _shutting_down:
-        # SDK 在鉴权失败、服务端下线或重连次数耗尽后不再重连，交由守护进程重启本进程
+        # SDK 在鉴权失败、服务端下线或重连次数耗尽后停止重连，交由守护进程重启本进程。
         Logger.error(f"Satori account {account.self_id} went offline and will not reconnect, exiting.")
         _fatal.set()
         return
@@ -274,7 +274,7 @@ async def on_lifecycle(account: Account, state: LoginStatus) -> None:
 async def startup() -> None:
     global app_task
     await client_init(target_prefix_list, sender_prefix_list)
-    # run_async 会向 manager 注入 aiohttp 客户端服务与 App 自身
+    # run_async 会向 manager 注入 aiohttp 客户端服务与 App 自身。
     app_task = asyncio.create_task(
         satori_app.run_async(manager=manager, stop_signal=()),
         name="satori-client",
@@ -295,8 +295,8 @@ async def shutdown() -> None:
         Logger.exception("Failed to stop Satori typing tasks: ")
 
     for connection in getattr(satori_app, "connections", []):
-        # SDK 把网络层作为 sideload 组件注入，它持有的是局部的 manager 状态，
-        # 只有同时设置该状态并关闭连接，重连循环才会退出而不是再次连接。
+        # SDK 将网络层作为 sideload 组件注入，其持有局部的 manager 状态，
+        # 仅当同时设置该状态并关闭连接时，重连循环才会退出以避免再次发起连接。
         local_manager = getattr(connection, "manager", None)
         if local_manager is not None:
             local_manager.status.exiting = True

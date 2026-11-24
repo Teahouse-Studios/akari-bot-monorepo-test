@@ -32,7 +32,7 @@ async def member_joined(
 
 
 async def handle_new_chat_members(message, bot_id: str | int, ignored_sender: list[str]):
-    """逐个分发一条 Telegram 服务消息中包含的新成员。"""
+    """逐个分派一条 Telegram 服务消息中包含的新成员。"""
     if message.chat.type not in {"group", "supergroup"}:
         return
 
@@ -77,7 +77,7 @@ async def member_left(
 
 
 async def handle_left_chat_member(message, bot_id: str | int, ignored_sender: list[str]):
-    """分发 Telegram 群组成员离开服务消息。"""
+    """处理 Telegram 群组成员离开服务消息。"""
     if message.chat.type not in {"group", "supergroup"} or message.left_chat_member is None:
         return
 

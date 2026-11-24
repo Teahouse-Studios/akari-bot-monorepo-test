@@ -5,5 +5,5 @@ locales = "locales"
 assets = "assets"
 migrations = "migrations"
 provides_modules = ["cytoid"]
-# 供 --purge-data 使用。取自 database/models.py 的 Meta.table。
+# 供 --purge-data 使用。来源于 database/models.py 中的 Meta.table。
 owned_tables = ["module_cytoid_bind_info"]

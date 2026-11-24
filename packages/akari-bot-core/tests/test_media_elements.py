@@ -76,7 +76,7 @@ async def _test_image_element_get_image_rejects_non_image() -> bool:
         try:
             await ImageElement.assign("https://example.com/blocked.png").get()
         except Exception as error:
-            # get_image 带重试装饰器，最内层异常为格式校验失败
+            # get_image 包含重试装饰器，最内层异常为格式校验失败。
             return isinstance(_inner_exception(error), ValueError)
     return False
 

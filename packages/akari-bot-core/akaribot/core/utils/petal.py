@@ -14,9 +14,9 @@ from akaribot.core.logger import Logger
 from akaribot.core.utils.random import Random
 from akaribot.core.utils.timezone import core_now, core_tz
 
-# 花瓣余额挂在 union 上，日额度也须随之跨平台共享，因此存储不按客户端分桶。
-# 桶内亦按 union 而非平台账号索引，否则一个人绑几个平台就能领到数倍的每日额度。
-# 每日周期按触发场景的时区计算，记录内保存周期偏移，跨场景共用同一条记录。
+# 花瓣余额关联在 union 上，日额度也需要随之跨平台共享，因此存储不按客户端分桶。
+# 桶内亦按 union 而非平台账号索引，否则同一用户绑定多个平台账号即可获取数倍的每日额度。
+# 每日周期按触发场景的时区计算，记录中保存周期偏移量，跨场景共用同一条记录。
 PETAL_STORE_SCOPE = "Union"
 PETAL_CYCLE_STORE_KEY = f"{PETAL_STORE_SCOPE}|petalcycle"
 _petal_mutation_lock = asyncio.Lock()
@@ -31,7 +31,7 @@ def _cycle_record(quota: dict, union_id: str, now: datetime, offset_label: str) 
     if isinstance(record, dict) and now.timestamp() < record.get("expired", 0):
         return record
     previous_offset = record.get("offset") if isinstance(record, dict) else offset_label
-    # 场景时区变更后的首个周期按 24 小时滚动，避免改时区提前刷新。
+    # 场景时区变更后的首个周期按 24 小时滚动，避免修改时区导致提前刷新。
     expired = now + timedelta(days=1) if previous_offset != offset_label else _next_local_midnight(now)
     record = {
         "time": now.timestamp(),
@@ -53,7 +53,7 @@ async def gained_petal(msg: Bot.MessageSession, amount: int) -> I18NContextEleme
     if CoreConfig.enable_petal and CoreConfig.enable_get_petal:
         limit = CoreConfig.petal_gained_limit
         amount = limit if amount > limit > 0 else amount
-        # 无用户 union 的会话不持有花瓣，且 union_id 为空会污染存储桶的键
+        # 无用户 union 的会话不持有花瓣，并且 union_id 为空会污染存储桶的键。
         sender_union_info = msg.session_info.sender_union_info
         union_id = msg.session_info.sender_union_id
         if not sender_union_info or not union_id:
@@ -107,7 +107,7 @@ async def lost_petal(msg: Bot.MessageSession, amount: int) -> I18NContextElement
     if CoreConfig.enable_petal and CoreConfig.enable_get_petal:
         limit = CoreConfig.petal_lost_limit
         amount = limit if amount > limit > 0 else amount
-        # 同 gained_petal：缺少用户 union 时无从记账
+        # 理由与 gained_petal 相同，缺少用户 union 时无法记录花瓣变动。
         sender_union_info = msg.session_info.sender_union_info
         union_id = msg.session_info.sender_union_id
         if not sender_union_info or not union_id:
@@ -202,7 +202,7 @@ async def sign_get_petal(msg: Bot.MessageSession) -> int | None:
                 )
                 if not current:
                     return None
-                # 签到记录同样挂在 union 上，避免多平台绑定后重复签到。
+                # 签到记录同样关联在 union 上，避免多平台绑定后重复签到。
                 stored = await (
                     StoredData.filter(stored_key=f"{PETAL_STORE_SCOPE}|signedpetal")
                     .using_db(connection)
@@ -212,7 +212,7 @@ async def sign_get_petal(msg: Bot.MessageSession) -> int | None:
                 quota = dict((stored.value if stored else [{}])[0])
                 record = _cycle_record(quota, union_id, msg.session_info.now(), msg.session_info.tz_label)
                 if record["amount"]:
-                    # 今日已签到，返回 0 由上层提示“明日再试”。
+                    # 今日已签到，返回 0 转交上层逻辑提示“明日再试”。
                     return 0
                 record["amount"] = 1
                 if stored:
@@ -235,7 +235,7 @@ async def _reset_rows(connection, keep_rate: float) -> int:
         return 0
     for row in rows:
         row.petal = max(0, int(row.petal * keep_rate))
-    # 分批写入，避免用户量大时单条 UPDATE 超出数据库的语句长度上限。
+    # 分批写入，避免用户量较大时单条 UPDATE 语句超出数据库的长度上限。
     await SenderUnionInfo.bulk_update(rows, fields=["petal"], batch_size=500, using_db=connection)
     return len(rows)
 
@@ -261,7 +261,7 @@ async def reset_petals_if_due() -> int:
         Logger.exception(f"Invalid petal_reset_crontab {CoreConfig.petal_reset_crontab!r}, skipped reset.")
         return 0
     now = core_now(trigger.timezone)
-    # 取严格晚于当前时刻的下一次触发时间：当前时刻恰好等于触发点时也不会重复结算。
+    # 获取严格晚于当前时刻的下一次触发时间，确保当前时刻恰好等于触发点时也不会重复结算。
     following = trigger.get_next_fire_time(now, now)
     if following is None:
         Logger.warning("Petal reset crontab has no future fire time, skipped reset.")
@@ -287,7 +287,7 @@ async def reset_petals_if_due() -> int:
                     stored.value = [following.isoformat()]
                     await stored.save(using_db=connection, update_fields=["value"])
     except Exception:
-        # 周期结算属于后台维护，失败只记录并在下个检查点重试，不中断同批次的其它维护工作。
+        # 周期结算属于后台维护，失败时仅记录异常并在下一个检查点重试，不中断同批次的其他维护工作。
         Logger.exception("Failed to reset petals, will retry on the next check.")
         return 0
     Logger.info(f"Petal reset finished: {reset_users} user(s) reseted, next reset period at {following.isoformat()}.")

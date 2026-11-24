@@ -14,7 +14,7 @@ _MISSING = object()
 
 _original_get = CFGManager.get
 _overrides: dict[tuple[str | None, bool, str], Any] = {}
-# patch 由最外层上下文持有，嵌套进入时不再重复替换，也就不会被内层退出提前还原
+# patch 由最外层上下文持有，嵌套进入时不再重复替换，避免被内层退出提前还原。
 _patcher: Any = None
 _depth = 0
 
@@ -23,7 +23,7 @@ def _normalize_table(table_name: str | None, secret: bool) -> tuple[str | None, 
     if not table_name:
         return table_name, secret
     table_name = table_name.lower()
-    # 与 CFGManager 的表名归一化保持一致：secret 与 *_secret 都指向 config 文件的密钥表
+    # 与 CFGManager 的表名称规范化保持一致，secret 与 *_secret 均指向 config 文件的密钥表。
     if table_name == "secret":
         return "config", True
     if table_name.endswith("_secret"):
@@ -47,7 +47,7 @@ def _lookup(q: str, table_name: str | None, secret: bool, global_: bool) -> Any:
     if value is not _MISSING:
         return value
     if table_name is None:
-        # 未限定表名的读取要么只在 config.toml 内查找，要么按 _global 遍历全部表
+        # 未限定表名称的读取仅在 config.toml 内查找，或按 _global 遍历全部配置表。
         candidates = [
             value
             for (candidate_table, candidate_secret, candidate_q), value in _overrides.items()
@@ -68,7 +68,7 @@ def _mock_get(
     _generate: bool = False,
     standalone_comment_keys: tuple[str, ...] = (),
 ) -> Any:
-    # 生成模式写入的是模板默认值，不能被测试覆盖值污染
+    # 生成模式写入的是模板默认值，不能被测试覆盖值污染。
     if not _generate:
         value = _lookup(q, table_name, secret, _global)
         if value is not _MISSING:
@@ -104,7 +104,7 @@ class mock_config(AbstractContextManager[None]):
     def __init__(self, config_cls: type, /, **values: Any):
         if not values:
             raise ValueError("mock_config requires at least one config field.")
-        # 先解析全部字段，避免字段名有误时已写入的覆盖残留
+        # 先解析全部字段，避免字段名称有误时已写入的覆盖值残留。
         self._entries = [(_field_key(config_cls, name), value) for name, value in values.items()]
         self._saved: list[list[tuple[tuple[str | None, bool, str], Any]]] = []
 

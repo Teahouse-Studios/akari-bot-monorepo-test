@@ -1,4 +1,4 @@
-"""Bot.send_direct_message_to_union_target 单元测试 - 按消息通道去重的组内推送。"""
+"""Bot.send_direct_message_to_union_target 按消息通道去重的组内推送单元测试。"""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
@@ -9,10 +9,10 @@ from akaribot.core.builtins.message.internal import Plain
 from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo
 from akaribot.testing import func_case, Tester
 
-# 各用例使用的客户端名。保活表由测试自行提供，故不必是真实存在的平台。
+# 各用例使用的客户端名称。保活表由测试自行提供，因此无需为真实存在的平台。
 _CLIENTS = ("UPUSHA", "UPUSHB", "UPUSHC")
 
-# 保活表的最简形态：键为客户端名，前缀用于由场景 ID 反查客户端。
+# 保活表的最简形态，键为客户端名称，前缀用于由场景 ID 反向查找客户端。
 _ALIVE = {c: {"target_prefix_list": [c]} for c in _CLIENTS}
 
 
@@ -48,7 +48,7 @@ async def _test_dedups_within_channel():
         calls = await _push(union_id, Plain("x"))
         if len(calls) != 1:
             return False
-        # 队首承担推送，同通道的其余会话降为发送失败时的下一跳
+        # 队首承担推送，同通道的其余会话降为发送失败时的下一跳。
         session = calls[0][0]
         return session.target_id == "UPUSHA|Group|dedup" and session.next_hops == ["UPUSHB|Group|dedup"]
 
@@ -69,9 +69,9 @@ async def _test_higher_priority_wins():
 
 async def _test_equal_priority_keeps_binding_order():
     try:
-        # 先绑定的 UPUSHB 场景 ID 在字典序上更大，同分时仍应先发送。
+        # 先绑定的 UPUSHB 场景 ID 在字典序上更大，同分时仍应优先发送。
         union_id = await _bind("priority-tie", ("UPUSHB", 1), ("UPUSHA", 1))
-        # 绑定时间由时钟写入，粗粒度时钟上两次绑定会处于同一微秒。按绑定顺序显式赋值。
+        # 绑定时间由时钟写入，粗粒度时钟上两次绑定可能处于同一微秒。按绑定顺序显式赋值。
         base = datetime(2024, 1, 1, tzinfo=UTC)
         for index, target in enumerate(("UPUSHB|Group|priority-tie", "UPUSHA|Group|priority-tie")):
             await TargetUnionBind.filter(target_id=target).update(bound_at=base + timedelta(seconds=index))
@@ -116,7 +116,7 @@ async def _test_three_hops_follow_priority():
 async def _test_skips_offline_channel():
     try:
         union_id = await _bind("offline", ("UPUSHA", 1), ("UPUSHB", 2))
-        # 仅 UPUSHB 在线，UPUSHA 所在通道无人可送
+        # 仅 UPUSHB 在线，UPUSHA 所在通道无可用发送目标。
         alive = {"UPUSHB": {"target_prefix_list": ["UPUSHB"]}}
         calls = await _push(union_id, Plain("x"), alive=alive)
         return len(calls) == 1 and calls[0][0].target_id == "UPUSHB|Group|offline"
@@ -153,7 +153,7 @@ async def _test_message_factory_may_skip():
 
         async def _build(session):
             seen.append(session.target_id)
-            # 仅其中一条通道有内容可发
+            # 仅其中一条通道存在待发送内容。
             return Plain("x") if session.target_id.startswith("UPUSHA") else None
 
         calls = await _push(union_id, _build)
@@ -166,7 +166,7 @@ async def _test_message_factory_may_skip():
 async def _test_report_targets_dedup():
     try:
         await _bind("report", ("UPUSHA", 1), ("UPUSHB", 1))
-        # 上报场景按平台场景 ID 配置，同一个现实场景的两个平台都被填了进来
+        # 上报场景按平台场景 ID 配置，同一现实场景的两个平台均已配置。
         targets = ["UPUSHA|Group|report", "UPUSHB|Group|report"]
         sent = []
 
@@ -190,7 +190,7 @@ async def _test_report_targets_dedup():
 
 @func_case
 async def test_union_push(tester: Tester):
-    """akaribot.core.builtins.bot: 按消息通道去重的组内推送测试"""
+    """akaribot.core.builtins.bot 按消息通道去重的组内推送测试"""
     await tester.test(_test_dedups_within_channel, "同通道去重测试")
     await tester.test(_test_higher_priority_wins, "高优先级抢占队首测试")
     await tester.test(_test_equal_priority_keeps_binding_order, "同优先级按绑定顺序选队首测试")

@@ -22,7 +22,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_ROOT = PROJECT_ROOT / "templates"
 
-# 占位值。模块名取纯小写与下划线，与模板 README 所述的限制一致。
+# 占位值。模块名称采用纯小写与下划线格式，与模板 README 所述的约束保持一致。
 SAMPLE_CONTEXT = {
     "module_name": "sample",
     "module_class": "Sample",
@@ -31,11 +31,11 @@ SAMPLE_CONTEXT = {
     "license": "AGPL-3.0",
 }
 
-# 占位符形态：[@name@]。两处替换都要做——路径占位符在复制目录时替换，
+# 占位符形式为 [@name@]，两处替换均必须执行。路径占位符在复制目录时替换，
 # 文本占位符在渲染内容时替换。
 PLACEHOLDER_PATTERN = re.compile(r"\[@([a-z_]+)@\]")
 
-# 未替换占位符的识别比替换宽松：任何 [@ ... @] 都算残留，包括名字不合规的拼写错误。
+# 未替换占位符的识别规则宽于替换规则，任何 [@ ... @] 均视为残留，包括名称不合规的拼写错误。
 UNRESOLVED_PATTERN = re.compile(r"\[@[^\]]*@\]")
 
 VALIDATORS = {
@@ -70,7 +70,7 @@ def output_name(name: str) -> str:
 
 
 def template_names() -> list[str]:
-    """列出 templates/ 下的全部模板，返回相对 templates/ 的 POSIX 路径。"""
+    """列出 templates/ 目录下的全部模板，返回相对于 templates/ 的 POSIX 路径。"""
     return sorted(path.relative_to(TEMPLATE_ROOT).as_posix() for path in TEMPLATE_ROOT.rglob("*.j2"))
 
 
@@ -134,7 +134,7 @@ def validate_render(name: str, rendered: str, label: str, check) -> None:
 
 
 def main() -> int:
-    """入口。返回进程退出码，0 表示全部模板的渲染产物语法正确。"""
+    """主入口函数，返回进程退出码，0 表示全部模板的渲染产物语法均正确。"""
     if not TEMPLATE_ROOT.is_dir():
         print(f"未找到模板目录：{TEMPLATE_ROOT}", file=sys.stderr)
         return 1
@@ -142,7 +142,7 @@ def main() -> int:
     environment = Environment(
         loader=FileSystemLoader(str(TEMPLATE_ROOT)),
         undefined=StrictUndefined,
-        # 默认会吞掉模板末尾的换行，产物将与本项目的 ruff format 结果不符。
+        # 默认会移除模板末尾的换行符，产物将与该项目的 ruff format 结果不符。
         keep_trailing_newline=True,
     )
 

@@ -39,7 +39,7 @@ _IMPLEMENTATION_KEYS = {
     IMPLEMENTATION_UNKNOWN: "cli.tui.doctor.impl_unknown",
 }
 _ORPHAN_KEYS = {ORPHAN_RAN: "cli.tui.doctor.orphan_ran", ORPHAN_SKIPPED: "cli.tui.doctor.orphan_skipped"}
-# 结论默认级别与 CLI 侧判据一致：端口与登录信息出现重复时报错，孤立配置只告警。
+# 结论默认级别与 CLI 判定标准一致，端口与登录信息出现重复时抛出异常，孤立配置仅产生告警。
 _DEFAULT_LEVELS = {"port": LEVEL_ERROR, "credential": LEVEL_ERROR, "orphan": LEVEL_WARNING, "config": LEVEL_ERROR}
 
 PAGE_DASHBOARD = "dashboard"
@@ -158,7 +158,7 @@ class DoctorConflict:
 
     @property
     def mark(self) -> str:
-        """级别标记。未知级别用问号。"""
+        """级别标记。未知级别展示为问号。"""
         return _LEVEL_MARKS.get(self.level, "?")
 
     @property
@@ -323,7 +323,7 @@ def _checks(payload: Any) -> DoctorChecks:
 
 
 class DoctorSourceError(RuntimeError):
-    """数据源不可用：子进程缺失、输出不是 JSON 或结构不符。"""
+    """数据源不可用（子进程缺失、输出不是 JSON 或结构不符）。"""
 
 
 @runtime_checkable
@@ -371,7 +371,7 @@ class SubprocessDoctorSource:
         timeout: float = 120.0,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
-        # 实例根在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
+        # 实例根目录在每次请求时解析，使子进程目录与 AKARI_INSTANCE_DIR 跟随当前实例。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"load": 0}
@@ -394,7 +394,7 @@ class SubprocessDoctorSource:
             completed = self._run(argv)
         except DoctorSourceError as error:
             return DoctorSnapshot(errors=(str(error),))
-        # 非零退出码可能表示诊断发现问题，完整的 JSON 结果仍须展示。
+        # 非零退出码可能表示诊断发现问题，完整的 JSON 结果仍需要展示。
         try:
             payload = self._parse_json(completed.stdout, label)
         except DoctorSourceError as error:
@@ -448,7 +448,7 @@ class SubprocessDoctorSource:
 
 
 class _ConflictListView(compat.ListView):
-    # 回车与单击均产生 Selected 消息，需单独绑定回车，才能保留单击查看详情的行为。
+    # Enter 键与单击均产生 Selected 消息，需要单独绑定 Enter 键，才能保留单击查看详情的行为。
     BINDINGS = [compat.bind("enter", "open_conflict", i18n.t("cli.tui.doctor.bind_open"))]
 
     def action_open_conflict(self) -> None:
@@ -589,7 +589,7 @@ class DoctorPage(compat.Vertical):
         conflicts = self._snapshot.conflicts
         if not conflicts:
             return None
-        # 后台请求可能在页面卸载后完成，访问控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，访问控件前需要检查挂载状态。
         if not compat.mounted(self):
             return None
         list_view = self.query_one("#conflict-list", compat.ListView)
@@ -600,17 +600,17 @@ class DoctorPage(compat.Vertical):
 
     @property
     def summary_text(self) -> str:
-        """返回统计面板当前渲染出的文本。"""
+        """返回统计面板当前渲染结果中的文本。"""
         return self._summary_rendered
 
     @property
     def verdict_text(self) -> str:
-        """返回结论行当前渲染出的文本。"""
+        """返回结论行当前渲染结果中的文本。"""
         return self._verdict_rendered
 
     @property
     def detail_text(self) -> str:
-        """返回详情区当前渲染出的文本。"""
+        """返回详情区当前渲染结果中的文本。"""
         return self._detail_rendered
 
     @property
@@ -629,7 +629,7 @@ class DoctorPage(compat.Vertical):
         return self._strict
 
     def row_texts(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的冲突行文本。"""
+        """返回最近一次渲染结果中的冲突行文本。"""
         return self._row_texts
 
     def row_cells(self) -> tuple[tuple[str, str, str], ...]:
@@ -650,7 +650,7 @@ class DoctorPage(compat.Vertical):
     async def _load(self, strict: bool) -> bool:
         try:
             snapshot = await asyncio.to_thread(self.source.load_snapshot, strict=strict)
-        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面
+        except Exception as error:  # noqa: BLE001 - 数据源异常不应中断界面。
             self._snapshot = DoctorSnapshot(errors=(f"{type(error).__name__}: {error}",))
             self._loaded_at = time.monotonic()
             self.last_error = self._snapshot.errors[0]
@@ -687,7 +687,7 @@ class DoctorPage(compat.Vertical):
         self._render_detail()
 
     def _render_summary(self) -> None:
-        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，更新控件前需要检查挂载状态。
         if not compat.mounted(self):
             return
         snapshot = self._snapshot
@@ -721,7 +721,7 @@ class DoctorPage(compat.Vertical):
         self.query_one("#summary", compat.Static).update(compat.plain_text(text))
 
     def _render_verdict(self) -> None:
-        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，更新控件前需要检查挂载状态。
         if not compat.mounted(self):
             return
         text = self._verdict_line()
@@ -757,7 +757,7 @@ class DoctorPage(compat.Vertical):
         return 0
 
     def _render_detail(self) -> None:
-        # 后台请求可能在页面卸载后完成，更新控件前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，更新控件前需要检查挂载状态。
         if not compat.mounted(self):
             return
         text = "\n".join(self._fit_page_width(line) for line in self._detail_lines())
@@ -795,12 +795,12 @@ class DoctorPage(compat.Vertical):
     def _fit_page_width(self, text: str) -> str:
         try:
             width = compat.widget_cells(self)[0] - 2
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             width = 78
         return compat.truncate_cells(text, max(width, 8))
 
     def _set_status(self, key: str, **params: Any) -> None:
-        # 后台请求可能在页面卸载后完成，更新状态栏前需检查挂载状态。
+        # 后台请求可能在页面卸载后完成，更新状态栏前需要检查挂载状态。
         if not compat.mounted(self):
             return
         self._status_key = key
@@ -824,7 +824,7 @@ class DoctorPage(compat.Vertical):
         self._strict = bool(event.value)
         if self._loaded_at:
             self._render_summary()
-        # 选项变化后，旧请求的结果无效，需取消旧请求并重新诊断。
+        # 选项变化后，旧请求的结果无效，需要取消旧请求并重新执行诊断。
         self._start_load()
 
     @compat.on(compat.Button.Pressed)
@@ -850,7 +850,7 @@ class DoctorPage(compat.Vertical):
             return
         self.app.show_page(conflict.target_page)
         self._set_status("cli.tui.doctor.status_jumped", page=conflict.target_page_label)
-        # 切页后当前状态栏不可见，使用通知显示跳转结果。
+        # 切换页面后当前状态栏不可见，使用通知显示跳转结果。
         compat.notify(self.app, self._status_rendered, title=i18n.t("cli.tui.doctor.bind_open"))
 
     async def wait_for_idle(self) -> None:

@@ -69,13 +69,13 @@ class RecoveryProposal(HookResult):
 
 @define
 class Handled(HookResult):
-    """错误/恢复入口专用：该 hook 已处理，不再走默认错误提示。"""
+    """错误/恢复入口专用结果，表示该 hook 已处理，不再使用默认错误提示。"""
 
     data: dict = field(factory=dict)
 
 
 def normalize_result(raw: object) -> HookResult:
-    """把 hook 返回值归一化为类型化结果，``None`` 视为 Continue。"""
+    """将 Hook 返回值规范化为类型化结果，``None`` 视为 Continue。"""
     if raw is None:
         return Continue()
     if isinstance(raw, HookResult):

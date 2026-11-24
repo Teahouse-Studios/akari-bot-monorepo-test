@@ -18,7 +18,7 @@ async def _build_process_usage_lines(msg: Bot.MessageSession) -> list[str]:
     if not usages and not failures:
         return []
     locale = msg.session_info.locale
-    # 平台名与 jobqueue-hub 为专有名词，仅占位标签需本地化。
+    # 平台名称与 jobqueue-hub 为专有名词，仅占位标签需要本地化。
     labels = {
         DAEMON_LABEL: "core.message.about.status.process.daemon",
         PEERS_LABEL: "core.message.about.status.process.peers",

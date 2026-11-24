@@ -48,7 +48,7 @@ class _UnreadableMetadata:
 
 
 def _use_cli_locale() -> None:
-    # 框架连的是 core 的 akari-bot 命名空间，取 CLI 文案前要接上本包的快照。
+    # 框架连接的是 core 的 akari-bot 命名空间，获取 CLI 文案前需要关联本包的快照。
     i18n.build_locale_snapshot(list(i18n.SUPPORTED_LOCALES), [i18n.locales_dir()], "akaribot-cli")
     i18n.connect_locale_snapshot("akaribot-cli")
 
@@ -136,7 +136,7 @@ async def _test_subcommand_still_dispatches():
 
 
 async def _test_bare_invocation_enters_tui_on_terminal():
-    # 可交互终端下裸调用直接进界面，不打印帮助。
+    # 可交互终端下无参数调用时默认进入界面，不打印帮助信息。
     calls: list[str] = []
     try:
         with (
@@ -151,13 +151,13 @@ async def _test_bare_invocation_enters_tui_on_terminal():
 
 
 async def _test_bare_invocation_guides_init_without_instance():
-    # 没有实例时先询问，复用 init 本体初始化，再进界面。
+    # 若无实例则先询问，复用 init 逻辑完成初始化，再进入界面。
     calls: list[tuple] = []
     found = {"count": 0}
 
     def _find(*args, **kwargs):
         found["count"] += 1
-        # 第一次找不到实例（触发引导），初始化后能找到。
+        # 首次未检索到实例（触发引导流程），初始化后可成功检索。
         return None if found["count"] == 1 else Path("/tmp/inst")
 
     def _init(path, **kwargs):
@@ -177,7 +177,7 @@ async def _test_bare_invocation_guides_init_without_instance():
 
 
 async def _test_bare_invocation_aborts_when_init_declined():
-    # 拒绝初始化时不进界面，也不调用 init。
+    # 拒绝初始化时不进入界面，也不调用 init。
     calls: list[str] = []
     try:
         with (
@@ -193,9 +193,9 @@ async def _test_bare_invocation_aborts_when_init_declined():
 
 
 async def _test_init_is_callable_with_defaults():
-    # ``_ensure_instance`` 只传路径与语言，故 init 的其余参数必须都有真实默认值。参数一旦改成必填
-    # （或默认值变成 typer 的 OptionInfo），裸调用入口会在运行时失败，而 ``akaribot init`` 子命令
-    # 仍然正常，这条守卫专门针对这一差异。
+    # ``_ensure_instance`` 仅传入路径与语言，因此 init 的其余参数必须均具备有效默认值。参数一旦变更为必填项
+    # （或默认值变为 typer 的 OptionInfo），无参数调用入口会在运行时失败，而 ``akaribot init`` 子命令
+    # 仍可正常执行，本测试专门验证这一差异。
     try:
         signature = inspect.signature(init_command)
         required = [
@@ -214,7 +214,7 @@ async def _test_init_is_callable_with_defaults():
 
 
 async def _test_tui_entry_registers_active_instance():
-    # 在实例目录里进界面时自动补充记录：本机清单与自启策略随后才有对象可管。
+    # 在实例目录中进入界面时自动补充记录，本机清单与自启策略随后才有对象可供管理。
     from akaribot.cli.commands import tui as tui_cmd
     from akaribot.cli.instances import InstanceRegistry
 
@@ -243,7 +243,7 @@ async def _test_tui_entry_registers_active_instance():
 
 
 async def _test_tui_entry_hands_the_note_to_the_ui():
-    # 自动记录的结论由界面提示，否则用户看不到注册表已被改动。
+    # 自动记录的结论由界面提示，否则无法获知注册表已被修改。
     from akaribot.cli.commands import tui as tui_cmd
 
     seen: list[str] = []
@@ -265,7 +265,7 @@ async def _test_tui_entry_hands_the_note_to_the_ui():
     ):
         try:
             tui_cmd.run_interactive()
-        except Exception as error:  # typer.Exit 是正常收尾
+        except Exception as error:  # typer.Exit 属于正常退出。
             code = getattr(error, "exit_code", None)
             if code not in (0, None):
                 return False
@@ -273,7 +273,7 @@ async def _test_tui_entry_hands_the_note_to_the_ui():
 
 
 async def _test_tui_entry_adopts_the_only_child_instance():
-    # 在仓库根这类存放实例的目录下，唯一的下级实例就是当前要管的实例：记录并切换过去。
+    # 在仓库根目录这类存放实例的目录下，唯一的下级实例即为当前目标实例，自动记录并切换至该实例。
     from akaribot.cli.commands import tui as tui_cmd
     from akaribot.cli.tui import context
 
@@ -292,7 +292,7 @@ async def _test_tui_entry_adopts_the_only_child_instance():
                 with mock.patch("akaribot.cli.instance.Path.cwd", return_value=project):
                     single = tui_cmd.register_active()
                     switched = context.active_root()
-                # 再放一个实例进去，并换一份空注册表：下级有两个实例时不作选择，只报候选。
+                # 再次放入一个实例并更换为空注册表，下级存在两个实例时不执行选择，仅返回候选列表。
                 second = project / "second"
                 second.mkdir()
                 (second / "akaribot.toml").write_text("[instance]\n", encoding="utf-8")
@@ -315,10 +315,9 @@ async def _test_tui_entry_adopts_the_only_child_instance():
 
 @func_case
 async def test_cli_main(tester: Tester):
-    """CLI 根命令：版本查询、裸调用帮助、参数顺序与冻结回退"""
+    """CLI 根命令的版本查询、无参数调用帮助、参数顺序与打包回退测试"""
     _use_cli_locale()
-    # 实例解析会改用注册表里的默认实例，故整轮都指向一份空注册表：否则这几条用例的结果取决于
-    # 运行测试的机器上记录过什么。
+    # 实例解析使用注册表中的默认实例，因此整轮测试均指向空注册表，避免用例结果受运行环境既有记录影响。
     with TemporaryDirectory(prefix="akari-main-") as raw:
         with mock.patch.dict(os.environ, {"AKARIBOT_HOME": str(Path(raw) / "home"), "AKARI_INSTANCE_DIR": ""}):
             await _run_cli_main_cases(tester)

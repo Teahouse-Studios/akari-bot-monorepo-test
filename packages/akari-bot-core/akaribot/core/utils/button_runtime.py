@@ -1,4 +1,4 @@
-"""跨平台按钮 token 的注册与消费。"""
+"""跨平台按钮 token 的注册与核销。"""
 
 import time
 from enum import Enum, auto
@@ -35,7 +35,7 @@ class RegisteredButton:
 
 
 class ButtonConsumeStatus(Enum):
-    """按钮消费结果。"""
+    """按钮回调处理结果。"""
 
     SUCCESS = auto()
     INVALID = auto()
@@ -46,7 +46,7 @@ class ButtonConsumeStatus(Enum):
 
 @define(frozen=True)
 class ButtonConsumeResult:
-    """按钮回调的消费结果。"""
+    """按钮回调的处理结果。"""
 
     status: ButtonConsumeStatus
     payload: str | None = None
@@ -94,7 +94,7 @@ def register_button_rows(button_rows: list[ButtonRows], allowed_sender_id: str) 
 
 
 def consume_button(token: str, sender_id: str, now: float | None = None) -> ButtonConsumeResult:
-    """校验并消费一个按钮 token。"""
+    """校验并核销一个按钮 token。"""
     state = _button_registry.get(token)
     if state is None or not token.startswith(BUTTON_TOKEN_PREFIX):
         return ButtonConsumeResult(ButtonConsumeStatus.INVALID)

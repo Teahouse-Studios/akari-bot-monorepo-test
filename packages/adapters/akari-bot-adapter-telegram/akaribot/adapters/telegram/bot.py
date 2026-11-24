@@ -93,7 +93,7 @@ async def member_left_handler(message: types.Message):
 @dp.message()
 async def msg_handler(message: types.Message):
     # Telegram 允许消息仅带 sender_chat（例如匿名管理员或代表频道发言），此时
-    # from_user 为 None。核心权限与用户数据按用户 Union 解析，不能把场景 ID 冒充用户 ID。
+    # from_user 为 None。核心权限与用户数据按用户 Union 解析，不能将场景 ID 冒充为用户 ID。
     if message.from_user is None:
         return
     target_from = f"{target_prefix}|{message.chat.type.title()}"

@@ -62,7 +62,7 @@ _inbound_message_cache: OrderedDict[tuple[str, ...], float] = OrderedDict()
 _ignored_msg_startswith = [
     re.compile(r"^\[.*?聊天记录]\n.*"),
     re.compile(r"^\[卡片消息].*"),
-]  # 这些消息没有实际用途，暂不解析
+]  # 此类消息无实际用途，不予解析。
 
 
 def _inbound_message_key(message) -> tuple[str, ...] | None:
@@ -96,7 +96,7 @@ def _deduplicate_message(handler):
         if key in _inbound_message_cache:
             Logger.info(f"Skipped duplicate QQBot message: callback={handler.__name__} identity={key}")
             return
-        # 去重须在首个 await 前认领，且普通消息与提及回调共用同一消息身份。
+        # 去重必须在首个 await 前认领，且普通消息与提及回调共用同一消息身份。
         _inbound_message_cache[key] = now
         while len(_inbound_message_cache) > INBOUND_MESSAGE_CACHE_MAX_SIZE:
             _inbound_message_cache.popitem(last=False)
@@ -508,8 +508,8 @@ class MyClient(botpy.Client):
             return
         if sender_id in ignored_sender:
             return
-        # QQBot 的交互事件不会可靠返回按钮所属消息的 ID。发送阶段把框架生成的虚拟
-        # reply_id 编进 button data，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
+        # QQBot 交互事件不会可靠返回按钮所属消息的 ID。发送阶段将框架生成的虚拟
+        # reply_id 编码至 button data 中，此处恢复后即可复用 SessionTaskManager 的 callback 匹配。
         if send_msg.startswith(BUTTON_TOKEN_PREFIX):
             result = consume_button(send_msg, sender_id)
             if result.status is not ButtonConsumeStatus.SUCCESS:
@@ -550,7 +550,7 @@ def _build_client() -> MyClient:
     if QQBotConfig.qq_private_bot:
         intents.guild_messages = True
 
-    # Webhook 模式由平台回调驱动，须在本机监听。SDK 只提供 HTTP，公网 HTTPS 交由反向代理终止。
+    # Webhook 模式由平台回调驱动，必须在本机监听。SDK 仅提供 HTTP，公网 HTTPS 交由反向代理终止。
     transport_options: dict[str, object] = {"transport": "websocket"}
     if QQBotConfig.qq_use_webhook:
         transport_options = {

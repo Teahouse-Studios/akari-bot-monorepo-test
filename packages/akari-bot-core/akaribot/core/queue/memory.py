@@ -1,4 +1,4 @@
-"""用于验证 JobQueue 契约的进程内后端。"""
+"""用于验证 JobQueue 接口约定的进程内后端。"""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta

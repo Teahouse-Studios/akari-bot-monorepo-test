@@ -338,7 +338,7 @@ async def _test_ask_llm_returns_accumulated_image_cost():
 
 @func_case
 async def test_ai_image_generation(tester: Tester):
-    """akaribot.modules.ai: 图片生成与编辑工具、提示工程与成本折算测试"""
+    """akaribot.modules.ai 图片生成与编辑工具、提示工程与成本折算测试"""
     await tester.test(_test_image_cost_lookup, "按尺寸与品质查找图片成本")
     await tester.test(_test_generate_image_uses_enhanced_prompt_and_charges, "生图使用增强提示并记录成本")
     await tester.test(_test_edit_image_uses_latest_image_and_charges, "编辑默认使用最近一张图片")

@@ -1,4 +1,4 @@
-"""akaribot.adapters.web: WebUI 密码文件状态监控测试。"""
+"""akaribot.adapters.web WebUI 密码文件状态监控测试。"""
 
 import asyncio
 from contextlib import suppress
@@ -93,7 +93,7 @@ async def _test_watcher_notifies_removal():
 
 @func_case
 async def test_webui_password_state(tester: Tester):
-    """akaribot.adapters.web: WebUI 密码文件状态监控测试"""
+    """akaribot.adapters.web WebUI 密码文件状态监控测试"""
     try:
         await tester.test(_test_initialize_state, "初始化密码状态测试")
         await tester.test(_test_detects_removal, "检测密码文件删除测试")

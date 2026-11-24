@@ -1,4 +1,4 @@
-"""会话上下文管理模块 - 管理消息会话的生命周期和通信接口。"""
+"""会话上下文管理模块，管理消息会话的生命周期与通信接口。"""
 
 import asyncio
 import uuid
@@ -29,7 +29,7 @@ class ContextManager(ABC):
         context_marks_hold: 记录上下文被保持的次数（支持嵌套保持）
     """
 
-    # 会话上下文存储 - 键为 session_id，值为上下文对象（如对应平台框架下的消息实例）
+    # 会话上下文存储，键为 session_id，值为上下文对象（如对应平台框架下的消息实例）。
     context: dict[str, Any] = {}
 
     features: Features = Features()
@@ -38,9 +38,9 @@ class ContextManager(ABC):
 
     context_marks_hold: dict[str, int] = {}
 
-    # 入站消息处理期间不得删除上下文。平台侧在消息处理结束后才撤销记录，而
-    # Server 侧的 hold／send 是跨进程调用，抵达顺序无法由固定等待秒数保证。
-    # 这里以内联计数记录“仍在处理中的入站消息”的存活区间，避免删除早于调用。
+    # 入站消息处理期间不得删除上下文。平台端在消息处理结束后才撤销记录，而
+    # Server 端的 hold / send 属于跨进程调用，抵达顺序无法通过固定等待秒数保证。
+    # 此处以内联计数记录“仍在处理中的入站消息”存活区间，避免删除操作早于调用。
     context_marks_active: dict[str, int] = {}
 
     @classmethod
@@ -122,11 +122,11 @@ class ContextManager(ABC):
         cls.context_marks_hold[session_id] -= 1
         if cls.context_marks_hold[session_id]:
             return
-        # 平台关闭流程可能已先清空上下文字典。release 仍须移除 hold 计数，
-        # 不能因重复清理抛 KeyError 而让后台任务以未取回异常结束。
+        # 平台关闭流程可能已预先清空上下文字典。release 仍需要移除 hold 计数，
+        # 不能因重复清理抛出 KeyError 而导致后台任务以未捕获异常终止。
         del cls.context_marks_hold[session_id]
-        # 平台侧可能已撤销本次消息的上下文。此时不能把同 session_id 重建的
-        # 入站上下文一并删掉。
+        # 平台方可能已撤销本次消息的上下文。此时不能把同 session_id 重建的
+        # 入站上下文一并删除。
         if session_id not in cls.context_marks_active:
             cls.context.pop(session_id, None)
         Logger.trace(f"Context for session {session_id} is released.")
@@ -139,7 +139,7 @@ class ContextManager(ABC):
 
         :param session_info: 会话信息
         :param user_id: 指定成员的平台 ID，留空则检查发送者本人
-        :return: 是否具备权限，指定成员时，不含场景成员的上下文一律返回 False
+        :return: 是否具备权限，指定成员时，不包含场景成员的上下文一律返回 False
         """
         if session_info.session_id not in cls.context:
             raise ValueError("Session not found in context")

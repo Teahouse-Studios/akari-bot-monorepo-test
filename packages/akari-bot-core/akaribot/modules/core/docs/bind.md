@@ -4,13 +4,13 @@ order: 40
 
 # bind
 
-此模块把不同平台上的同一用户、同一现实场景归入同一个 union（用户组或场景组）。别名 `whoami`、`merge`、`merge token` 指向对应子命令。
+此模块将不同平台上的同一用户、同一现实场景归入同一 union（用户组或场景组）。别名 `whoami`、`merge`、`merge token` 指向对应子命令。
 
 ### `bind`
 
 <CommandUsage usage="bind" permission="public" />
 
-此命令查看当前用户与当前场景各自所属的 union，以及其中已绑定的平台账号。
+此命令用于查看当前用户与当前场景各自所属的 union，以及其中已绑定的平台账号。
 
 <ChatExample
   :log="[
@@ -55,7 +55,7 @@ order: 40
 
 <CommandUsage usage="bind start" permission="public" />
 
-此命令生成绑定码。在群内执行需要场景管理员权限。私聊中生成的绑定码同时包含发送者与私聊场景，使用后两者一起绑定。在群内生成的绑定码只合并场景组。
+此命令用于生成绑定码。在群聊中执行需要场景管理员权限。私聊中生成的绑定码同时包含发送者与私聊场景，核销后两者一并绑定。在群聊中生成的绑定码仅合并场景组。
 
 <ChatExample
   :log="[
@@ -68,7 +68,7 @@ order: 40
 
 <CommandUsage usage="bind token <code>" :params="['code=另一处生成的绑定码']" permission="public" />
 
-此命令用绑定码完成绑定。在群内执行需要场景管理员权限。绑定码只能在同类场景中使用，跨类型使用会被拒绝。绑定码失效时会返回提示。
+此命令使用绑定码完成绑定。在群聊中执行需要场景管理员权限。绑定码仅可在同类场景中使用，跨类型使用会被拒绝。绑定码失效时会返回提示。
 
 <ChatExample
   :log="[
@@ -83,7 +83,7 @@ order: 40
 
 <CommandUsage usage="bind self remove <user>" :params="['user=带平台前缀的用户完整 ID']" permission="public" />
 
-此命令解绑当前用户的某个账号，执行前须确认。最后一个账号不可解绑。
+此命令解绑当前用户的指定账号，执行前需要确认。最后一个账号不可解绑。
 
 <ChatExample
   :log="[
@@ -98,7 +98,7 @@ order: 40
 
 <CommandUsage usage="bind target" permission="admin" />
 
-此命令查看当前场景绑定的平台入口。
+此命令用于查看当前场景绑定的平台入口。
 
 <ChatExample
   :log="[
@@ -113,7 +113,7 @@ order: 40
 
 <CommandUsage usage="bind target remove <target>" :params="['target=带平台前缀的场景完整 ID']" permission="admin" />
 
-此命令解绑当前场景的某个平台入口，执行前须确认。最后一个入口不可解绑。
+此命令解绑当前场景的指定平台入口，执行前需要确认。最后一个入口不可解绑。
 
 <ChatExample
   :log="[
@@ -128,7 +128,7 @@ order: 40
 
 <CommandUsage usage="bind channel" permission="admin" />
 
-此命令查看当前场景的消息通道号，以及共用该通道的其它场景的数量与编号。
+此命令用于查看当前场景的消息通道编号，以及共用该通道的其他场景的数量与编号。
 
 <ChatExample
   :log="[
@@ -143,12 +143,12 @@ order: 40
 
 <CommandUsage usage="bind channel set <channel>" :params="['channel=消息通道号']" permission="admin" />
 
-此命令设置当前场景的消息通道号。通道号相同的场景在命令执行与消息推送时会去重。
+此命令用于设置当前场景的消息通道编号。通道编号相同的场景在命令执行与消息推送时去重。
 
 <ChatExample
   :log="[
     '用户：~bind channel set 2',
-    '机器人：已将当前群聊的消息通道设为 2 号。同一号的群聊会被视为现实中的同一个群聊（例如一个群聊里同时有两个机器人），命令只由其中一个机器人执行，推送只发送一次。',
+    '机器人：已将当前群聊的消息通道设为 2 号。同一号的群聊会被视为现实中的同一个群聊（例如一个群聊里同时有两个机器人），命令只由其中一个机器人执行，推送仅发送一次。',
   ]"
 />
 
@@ -156,7 +156,7 @@ order: 40
 
 <CommandUsage usage="bind channel reset" permission="admin" />
 
-此命令把当前场景的消息通道号重置为默认值。
+此命令将当前场景的消息通道编号重置为默认值。
 
 <ChatExample
   :log="[
@@ -169,18 +169,18 @@ order: 40
 
 <CommandUsage usage="bind auto" permission="admin" />
 
-仅当 `enable_bind_auto` 开启时才注册此命令。此命令与同一场景内的其它机器人实例自动配对。配对完成后，两个实例合并场景组、统一消息通道号，并互相记录对方的账号，用来屏蔽对方的消息。
+仅当 `enable_bind_auto` 开启时才注册此命令。此命令与同一场景内的其他机器人实例自动配对。配对完成后，两个实例合并场景组、统一消息通道编号，并相互记录对方的账号，用于屏蔽对方发送的消息。
 
 ### `bind channel probe`
 
 <CommandUsage usage="bind channel probe <token>" :params="['token=一次性握手口令']" permission="public" />
 
-这是内部命令，不需要手动执行。它由 `bind auto` 自动发出，用于响应握手请求。口令只能使用一次，使用后失效。
+这是内部命令，不需要手动执行。它通过 `bind auto` 自动发送，用于响应握手请求。口令仅可使用一次，使用后失效。
 
 ### `bind channel confirm`
 
 <CommandUsage usage="bind channel confirm <token>" :params="['token=一次性握手口令']" permission="public" />
 
-这是内部命令，不需要手动执行。它由 `bind auto` 自动发出，用于结束握手。双方确认处于同一场景后，机器人把两个场景合并到同一条消息通道。
+这是内部命令，不需要手动执行。它通过 `bind auto` 自动发送，用于结束握手。双方确认处于同一场景后，机器人将两个场景合并至同一条消息通道。
 
-绑定码为 6 位大写字母与数字，有效期 300 秒，只保存在 Server 进程的内存中，重启即失效。场景数据中的 `command_prefix` 与 `command_alias` 随场景 union 一起迁移，绑定后以合并结果为准。
+绑定码为 6 位大写字母与数字，有效期 300 秒，仅保存在 Server 进程的内存中，进程重启后立即失效。场景数据中的 `command_prefix` 与 `command_alias` 随场景 union 一起迁移，绑定后以合并结果为准。

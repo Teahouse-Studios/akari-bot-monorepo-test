@@ -81,7 +81,7 @@ def _as_category(value: Any, label: str, warnings: list[str]) -> str:
 def _dist_from_path(import_path: str) -> str:
     parts = import_path.split(".")
     if parts[:2] == ["akaribot", "modules"] and len(parts) >= 3:
-        # 内置模块与核心运行时同属一个分发，不按模块分发命名。
+        # 内置模块与核心运行时属于同一成员包，不按模块成员包命名规则命名。
         return "akari-bot-core" if parts[2] == "core" else f"akari-bot-module-{parts[2]}"
     if parts[:2] == ["akaribot", "adapters"] and len(parts) >= 3:
         return f"akari-bot-adapter-{parts[2]}"
@@ -103,7 +103,7 @@ def _dist_name(dist: Any, import_path: str) -> str:
     if dist is not None:
         try:
             name = str(dist.name or "")
-        except Exception:  # noqa: BLE001 - 元数据残缺时按导入路径推导
+        except Exception:  # noqa: BLE001 - 元数据残缺时按导入路径推导。
             name = ""
         if name:
             return name
@@ -115,7 +115,7 @@ def _dist_version(dist: Any) -> str:
         return DEFAULT_VERSION
     try:
         return str(dist.version)
-    except Exception:  # noqa: BLE001 - 元数据残缺时按源码克隆处理
+    except Exception:  # noqa: BLE001 - 元数据残缺时按源码克隆方式处理。
         return DEFAULT_VERSION
 
 
@@ -123,14 +123,14 @@ def _dist_summary(dist: Any) -> str:
     try:
         metadata = getattr(dist, "metadata", None)
         return str(metadata.get("Summary", "") or "") if metadata is not None else ""
-    except Exception:  # noqa: BLE001 - Summary 缺失不影响清单
+    except Exception:  # noqa: BLE001 - Summary 缺失不影响清单。
         return ""
 
 
 _SPECIFIER_ORDER = {"===": 0, "==": 1, "~=": 2, ">=": 3, ">": 4, "<=": 5, "<": 6, "!=": 7}
 
 
-# 按项目声明顺序显示依赖，跳过 extra 的可选依赖。
+# 按项目声明顺序显示依赖，忽略 extra 声明的可选依赖。
 def _format_dependency(text: str) -> str:
     ""
     try:
@@ -156,12 +156,12 @@ def _format_dependency(text: str) -> str:
     return base
 
 
-# 读取运行依赖，跳过 extra 的可选依赖。
+# 读取运行依赖，忽略 extra 声明的可选依赖。
 def _dist_dependencies(dist: Any) -> list[str]:
     ""
     try:
         requires = getattr(dist, "requires", None) or []
-    except Exception:  # noqa: BLE001 - 元数据残缺时按无依赖处理
+    except Exception:  # noqa: BLE001 - 元数据残缺时按无依赖处理。
         return []
     dependencies: list[str] = []
     for item in requires:
@@ -184,7 +184,7 @@ def _is_editable(dist: Any) -> bool:
         return True
     try:
         raw = dist.read_text("direct_url.json")
-    except Exception:  # noqa: BLE001 - 无法读取安装记录时按普通安装处理
+    except Exception:  # noqa: BLE001 - 无法读取安装记录时按普通安装处理。
         return False
     if not raw:
         return False
@@ -487,7 +487,7 @@ def _class_payload(name: str, cls: type) -> dict[str, Any]:
     nested: list[dict[str, Any]] = []
     try:
         members = inspect.getmembers(cls)
-    except Exception:  # noqa: BLE001 - 单个类不可内省时仍保留类说明
+    except Exception:  # noqa: BLE001 - 单个类不可内省时仍保留类说明。
         members = []
     for member_name, member in members:
         if member_name.startswith("_"):
@@ -541,7 +541,7 @@ def _api_catalog() -> dict[str, Any]:
     groups: list[dict[str, Any]] = []
     for title, module in (("akaribot.core.api", api), ("akaribot.core.api.adapters", adapters)):
         entries: list[dict[str, Any]] = []
-        for name in getattr(module, "__all__", ()):  # noqa: B007 - 只遍历公开承诺
+        for name in getattr(module, "__all__", ()):  # noqa: B007 - 仅遍历公开承诺接口。
             try:
                 obj = getattr(module, name)
             except Exception:
@@ -683,7 +683,7 @@ def _docs_entry_points() -> Iterable[Any]:
 def _editable_source(dist: Any) -> Path | None:
     try:
         payload = json.loads(dist.read_text("direct_url.json") or "{}")
-    except Exception:  # noqa: BLE001 - 安装记录缺失或损坏时视为非可编辑安装
+    except Exception:  # noqa: BLE001 - 安装记录缺失或损坏时视为非可编辑安装。
         return None
     if not payload.get("dir_info", {}).get("editable"):
         return None
@@ -692,12 +692,12 @@ def _editable_source(dist: Any) -> Path | None:
 
 
 def _stale_docs_entries() -> Iterable[Any]:
-    # 可编辑安装的入口只在安装时写入元数据，源码 pyproject 之后新增的 akaribot.docs 声明要重装才生效。
+    # 可编辑安装的入口仅在安装时写入元数据，源码 pyproject 之后新增的 akaribot.docs 声明需要重新安装才能生效。
     for dist in importlib.metadata.distributions():
         try:
             if any(entry.group == DOCS_GROUP for entry in dist.entry_points):
                 continue
-        except Exception:  # noqa: BLE001 - 元数据残缺的分发不参与补入
+        except Exception:  # noqa: BLE001 - 元数据残缺的包不参与补入。
             continue
         source = _editable_source(dist)
         if source is None:
@@ -736,7 +736,7 @@ def collect(
     warnings: list[str] = []
     try:
         discovered = sorted(load(), key=lambda item: str(getattr(item, "name", "")))
-    except Exception as exc:  # noqa: BLE001 - 元数据损坏时退回目录扫描，仍给出可用结果
+    except Exception as exc:  # noqa: BLE001 - 元数据损坏时改用目录扫描，仍返回可用结果。
         warnings.append(f"读取 {DOCS_GROUP} entry point 失败（{exc}），改用目录扫描。")
         discovered = []
     packages: list[dict[str, Any]] = []

@@ -86,7 +86,7 @@ async def _test_base_module_reload_keeps_related_confirmation():
     output, confirms, reload_mock = await _run_reload("unit_base", base=True, related=["unit_related"])
     return (
         reload_mock.await_count == 1
-        and "该操作将额外重载以下模块" in confirms
+        and "此操作将额外重载以下模块" in confirms
         and "unit_related" in confirms
         and "成功重载模块" in output
     )
@@ -94,12 +94,12 @@ async def _test_base_module_reload_keeps_related_confirmation():
 
 async def _test_rejected_related_confirmation_skips_reload():
     output, confirms, reload_mock = await _run_reload("unit_base", base=True, related=["unit_related"], confirm=False)
-    return reload_mock.await_count == 0 and not output and "该操作将额外重载以下模块" in confirms
+    return reload_mock.await_count == 0 and not output and "此操作将额外重载以下模块" in confirms
 
 
 @func_case
 async def test_module_reload(tester: Tester):
-    """akaribot.modules.core.admin_tools.modules: module reload 基础模块处理测试"""
+    """akaribot.modules.core.admin_tools.modules 基础模块 module reload 处理测试"""
     await tester.test(_test_base_module_reload_is_not_blocked, "基础模块重载不再被拦截测试")
     await tester.test(_test_base_module_reload_keeps_related_confirmation, "基础模块重载保留联动模块确认测试")
     await tester.test(_test_rejected_related_confirmation_skips_reload, "拒绝联动确认时不执行重载测试")

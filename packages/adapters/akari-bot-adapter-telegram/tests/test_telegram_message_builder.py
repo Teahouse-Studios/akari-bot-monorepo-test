@@ -125,7 +125,7 @@ async def _test_button_only_message_gets_placeholder():
 
 
 async def _test_collects_text_mentions_and_media():
-    # 音频元素要求底层文件真实存在，此处使用临时文件
+    # 音频元素要求底层文件真实存在，此处使用临时文件。
     with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as audio_file:
         audio_file.write(b"audio fixture")
         audio_path = audio_file.name

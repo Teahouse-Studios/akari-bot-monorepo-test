@@ -1,4 +1,4 @@
-"""core.database.models 单元测试 - union 绑定（需要数据库）。"""
+"""core.database.models 的 union 绑定单元测试（依赖数据库）。"""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
@@ -167,7 +167,7 @@ async def _test_block_applies_to_whole_union():
         await union.bind_id("UNIONTEST|blocked|2")
         await union.edit_attr("blocked", True)
 
-        # 组内任一账号解析出的都是同一行，换账号绕不过封禁。
+        # 组内任一账号解析结果均为同一行，切换账号无法绕过封禁。
         first = await SenderUnionInfo.resolve_union("UNIONTEST|blocked|1")
         second = await SenderUnionInfo.resolve_union("UNIONTEST|blocked|2")
         return first.blocked and second.blocked
@@ -182,7 +182,7 @@ async def _test_merge_keeps_block():
         await blocked.edit_attr("blocked", True)
         clean = await SenderUnionInfo.resolve_union("UNIONTEST|mergeban|2")
 
-        # 合并只会把封禁传染给对方，不存在借合并洗白的方向。
+        # 合并仅会将封禁传递至对方，不存在借合并规避封禁的途径。
         merged = await clean.merge_union(blocked)
         both = [await SenderUnionInfo.resolve_union(f"UNIONTEST|mergeban|{i}") for i in (1, 2)]
         return merged.blocked and all(u.blocked for u in both)
@@ -200,8 +200,8 @@ async def _test_unbind_keeps_block_and_binding():
         fresh = await SenderUnionInfo.resolve_union("UNIONTEST|unbindban|1")
         split = await fresh.unbind_id("UNIONTEST|unbindban|2")
 
-        # 映射行改挂而非重建：拆出的账号在任一时刻都能解析回一个已封禁的组，
-        # 不会因缺少映射行而被当作新账号另建干净组。
+        # 映射行重新关联而不是重建，确保分拆出的账号在任一时刻均能解析回一个已封禁的组，
+        # 不会因为缺少映射行而被视为新账号新建空白组。
         bind = await SenderUnionBind.get_or_none(sender_id="UNIONTEST|unbindban|2")
         again = await SenderUnionInfo.resolve_union("UNIONTEST|unbindban|2")
         return split.blocked and again.blocked and bind.union_id == split.union_id
@@ -235,7 +235,7 @@ async def _test_merge_union_creates_new_union():
         merged = await first.merge_union(second)
         if not merged:
             return False
-        # 不沿用任何一方的组 ID，合并方向才不存在歧义。
+        # 不沿用任何一方的组 ID，以避免合并方向产生歧义。
         if merged.union_id in (first.union_id, second.union_id):
             return False
         if await SenderUnionInfo.exists(union_id=first.union_id) or await SenderUnionInfo.exists(
@@ -268,7 +268,7 @@ async def _test_merge_union_merges_data():
 
         if merged.petal != 15 or merged.warns != 3 or not merged.superuser:
             return False
-        # 键冲突保留发起方，不冲突的键则一并带过来。
+        # 键冲突保留发起方，不冲突的键则一并合并引入。
         if merged.sender_data != {"shared": "keep", "only_keep": 1, "only_drop": 2}:
             return False
         if await SenderUnionInfo.exists(union_id=drop.union_id):
@@ -293,7 +293,7 @@ async def _test_merge_union_rewrites_permission_refs():
 
         merged = await keep.merge_union(drop)
 
-        # 两侧的旧 ID 均须改写至新组，遗漏任何一侧都会导致管理员身份丢失。
+        # 两侧的原 ID 均需要改写至新组，遗漏任何一侧均会导致管理员身份丢失。
         after = await TargetUnionInfo.resolve_union("UNIONTEST|Group|refs")
         return after.custom_admins == [merged.union_id] and after.banned_users == [merged.union_id]
 
@@ -311,7 +311,7 @@ async def _test_merge_union_moves_module_rows():
 
         merged = await keep.merge_union(drop)
 
-        # union_id 为模块表主键，改挂只能通过重建行完成，各列值须原样保留。
+        # union_id 为模块表主键，重新关联仅能通过重新创建记录完成，各列值必须原样保留。
         moved = await PhigrosBindInfo.get_or_none(union_id=merged.union_id)
         if not moved or moved.username != "mover" or moved.session_token != "tok":
             return False
@@ -378,7 +378,7 @@ async def _test_merge_target_union_moves_module_rows():
         moved = await WikiTargetInfo.get_or_none(union_id=merged.union_id)
         if not moved or moved.api_link != "https://example.org/api.php":
             return False
-        # JSON 列在重建时可能被写为字符串，此处确认取回后仍为字典。
+        # JSON 列在重建时可能被写入为字符串，此处确认读取后仍为字典。
         if moved.interwikis != {"foo": "https://foo.example/"}:
             return False
         return not await WikiTargetInfo.exists(union_id=drop.union_id)
@@ -707,7 +707,7 @@ async def _test_merge_union_renumbers_channels():
         merged = await first.merge_union(second)
         channels = await TargetUnionBind.list_channels(merged.union_id)
 
-        # 两侧均自 1 起编号，直接合表会使四个互不相关的场景被归为两条通道。
+        # 两侧均从 1 起编号，直接合并数据表会使四个互不相关的场景被归为两条通道。
         if sorted(channels.values()) != [1, 2, 3, 4]:
             return False
         return channels["UNIONTEST|Group|mix1"] != channels["UNIONTEST|Group|mix3"]
@@ -1320,7 +1320,7 @@ async def _test_wikilog_mutations_use_fresh_nested_data():
 
 @func_case
 async def test_union(tester: Tester):
-    """core.database.models: union 绑定测试"""
+    """core.database.models 的 union 绑定测试"""
     await tester.test(_test_resolve_union_creates_bind, "resolve_union 建出 union 与映射测试")
     await tester.test(_test_resolve_union_concurrent_same_id, "resolve_union 同 ID 并发解析测试")
     await tester.test(_test_bind_id_shares_data, "bind_id 数据共享测试")

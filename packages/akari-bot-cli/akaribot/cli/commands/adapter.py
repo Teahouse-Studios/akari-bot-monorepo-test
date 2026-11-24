@@ -56,7 +56,7 @@ SECRET_TABLE_SUFFIX = "_secret"
 
 EXIT_FAILURE = 1
 
-# 适配器包在 registry --json 中的 kind 取值。缺 kind 时按 import_path 判定。
+# 适配器包在 registry --json 中的 kind 取值。缺少 kind 时按 import_path 判定。
 ADAPTER_KINDS = frozenset({"adapter", "adapters", "bot", "bot_adapter"})
 MODULE_KINDS = frozenset({"module", "modules"})
 
@@ -129,7 +129,7 @@ class LocalInstance:
 
     @property
     def python(self) -> Path:
-        """实例 venv 的解释器。``runtime.venv`` 为空或解释器缺失时回退到当前解释器。"""
+        """实例 venv 的解释器。``runtime.venv`` 为空或解释器缺失时，回退至当前解释器。"""
         venv_setting = meta_get(meta_get(self.meta, "runtime"), "venv")
         venv_dir = DEFAULT_VENV_DIR if venv_setting is None else str(venv_setting).strip()
         if not venv_dir:
@@ -271,7 +271,7 @@ def _colleague_instance(root: Path) -> InstanceLike | None:
         except TypeError:
             continue
         except Exception:
-            # 同事实现的入口可能以自身异常类型报错。此处只做定位，失败时退回本地实例对象
+            # 外部模块实现的入口可能抛出自身异常类型。此处仅负责定位，失败时回退至本地实例对象。
             break
         if candidate is not None:
             return candidate
@@ -443,7 +443,7 @@ class InstalledAdapter:
 
     @property
     def base_table(self) -> str:
-        """基表表名。registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。"""
+        """基础配置表名。registry 未提供 ``config_table`` 时按 ``bot_<平台>`` 约定推导。"""
         return self.config_table or f"{BOT_TABLE_PREFIX}{self.name}"
 
     @property
@@ -453,7 +453,7 @@ class InstalledAdapter:
 
     @property
     def display_name(self) -> str:
-        """平台展示名。registry 未提供时按平台名首字母大写推断。"""
+        """平台展示名。registry 未提供时按平台名称首字母大写推断。"""
         return self.platform_name or self.name.capitalize()
 
 
@@ -481,7 +481,7 @@ def _unwrap_mapping(value: Any) -> dict[str, Any]:
 
 
 def _iter_package_entries(payload: Any) -> list[tuple[Mapping[str, Any], str]]:
-    # 兼容三种包装：条目列表、``{"packages"|"adapters"|...: [...]}``、``{名称： 条目}``。
+    # 兼容条目列表、``{"packages"|"adapters"|...: [...]}``、``{名称: 条目}`` 三种包装格式。
     if isinstance(payload, Mapping):
         for key in ("packages", "adapters", "installed", "entries", "items", "registry"):
             value = payload.get(key)
@@ -506,7 +506,7 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
 
 
 def _parse_installed_adapter(entry: Mapping[str, Any], hint: str = "") -> InstalledAdapter | None:
-    # 条目可以是扁平结构，也可以把 manifest 字段嵌在 ``manifest`` 下，两种形状都接受。
+    # 条目可采用扁平结构，亦可将 manifest 字段嵌套于 ``manifest`` 下，两种结构均受支持。
     manifest = entry.get("manifest")
     manifest = manifest if isinstance(manifest, Mapping) else {}
     name = str(entry.get("name") or entry.get("stem") or "").strip()
@@ -662,7 +662,7 @@ def _read_adapter_config(path: Path, *, legacy_layout: bool) -> tuple[list[Adapt
         else:
             plain[name] = _unwrap_mapping(value)
     instances: list[AdapterInstanceConfig] = []
-    # 密钥表可能单独成表：先按非密钥表建实例，再补上仅有密钥表的条目
+    # 密钥表可能单独成表，因此先按非密钥表创建实例，再补充仅有密钥表的条目。
     for table in list(plain) + [table for table in secrets if table not in plain]:
         parsed = parse_bot_table(table)
         if parsed is None:
@@ -787,8 +787,8 @@ def _endpoint_from_value(value: Any) -> ListenEndpoint:
 
 
 def _guess_listen_fields(values: Mapping[str, Any]) -> tuple[str, ...]:
-    # 现有 8 个适配器的 manifest 均未声明 ``listen_fields``（附录 A 已预留该字段），故端口检查依赖
-    # 本推断：``web_host`` / ``web_port`` / ``qq_host`` 这类名字命中，其余平台不受影响。
+    # 现有 8 个适配器的 manifest 均未声明 ``listen_fields``（附录 A 已预留该字段），因此端口检查依赖
+    # 此处推断，匹配 ``web_host`` / ``web_port`` / ``qq_host`` 等字段名，其余平台不受影响。
     names: list[str] = []
     for key in values:
         lowered = str(key).lower()
@@ -984,7 +984,7 @@ def render_instance_config(
     secret_fields = [item for item in fields if item.secret]
     document = tomlkit.document()
     plain = tomlkit.table()
-    # enable 写在非密钥表首位：core 的模板声明顺序本就如此，模板缺失该项时补一个显式的 false
+    # enable 放在非密钥表首位，与 core 的模板声明顺序一致，模板缺失该项时补充显式的 false。
     plain["enable"] = False
     enable_comment = next((item.comment for item in fields if item.key == "enable"), "")
     if enable_comment:
@@ -1084,7 +1084,7 @@ def _print_registry_note(registry: AdapterRegistry) -> None:
         warn(i18n.t("cli.adapter.registry_unavailable", note=registry.note))
         warn(i18n.t("cli.adapter.registry_inferred"))
     elif registry.note:
-        # registry.note 同时进入 --json 的 registry_note 字段，属机器可读契约，保持原文。
+        # registry.note 同时进入 --json 的 registry_note 字段，属机器可读格式约定，保持原文。
         warn(registry.note)
 
 
@@ -1162,7 +1162,7 @@ def list_instances(
         return
 
     console = Console()
-    # 路径、平台名与注释里可能出现方括号（IPv6 地址、TOML 表名），故先 escape 再进入 rich 标记解析
+    # 路径、平台名称与注释里可能出现方括号（IPv6 地址、TOML 表名），因此先 escape 再进入 rich 标记解析。
     console.print(i18n.t("cli.adapter.list.instance_root", path=escape(str(instance.root))))
     for error in scan.errors:
         console.print(f"[red]{escape(error)}[/red]")
@@ -1175,14 +1175,14 @@ def list_instances(
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[row["platform"]].append(row)
-    # 只有“平台已安装但清单未给出展示名”才值得提示。孤立配置的展示名本就无从取得
+    # 仅当“平台已安装但清单未声明展示名”时方予提示。孤立配置的展示名原本无从获取。
     inferred_any = any(row["installed"] and row["client_name_inferred"] for row in rows)
     for platform in sorted(grouped):
         adapter = registry.adapters.get(platform)
         if adapter is not None:
             suffix = i18n.t("cli.adapter.list.platform_suffix", name=adapter.display_name)
         else:
-            # 清单不可用时无从判断平台是否已安装，不能标成“未安装”
+            # 清单不可用时无从判断平台是否已安装，不能标记为“未安装”。
             suffix = (
                 i18n.t("cli.adapter.list.not_installed")
                 if registry.available

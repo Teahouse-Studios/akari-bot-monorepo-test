@@ -73,7 +73,7 @@ def parse_diff_target(value: str, wiki_info) -> dict | None:
         if oldid:
             target = {"fromrev": revision(oldid), "torelative": relative}
         elif relative == "cur":
-            # 未指定旧版本时取相对修订 prev：网页比较当前修订与它前一个修订。
+            # 未指定历史版本时使用相对修订 prev，通过网页比较当前修订与前一修订。
             target = {"torelative": "prev"}
             if pageid := query.get("curid", [None])[0]:
                 target["fromid"] = revision(pageid)

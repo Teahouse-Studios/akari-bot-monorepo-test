@@ -6,5 +6,5 @@ locales = "locales"
 config_table = "module_github"
 config_schema_version = 1
 provides_modules = ["github"]
-# 查重用的登录信息字段：GitHub 个人访问令牌。
+# 用于去重校验的登录信息字段，对应 GitHub 个人访问令牌。
 credential_fields = ["github_pat"]

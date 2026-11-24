@@ -784,7 +784,7 @@ async def _test_status_and_clean_respect_dev_lock():
 
 @func_case
 async def test_docs_cli(tester: Tester):
-    """cli.docs: 目录、构建、预览、状态与清理"""
+    """cli.docs 目录、构建、预览、状态与清理测试"""
     _use_cli_locale()
     await tester.test(_test_list_json_contract, "list --json 输出稳定契约")
     await tester.test(_test_list_filters_and_human_output, "list 支持 query 与 kind 过滤")

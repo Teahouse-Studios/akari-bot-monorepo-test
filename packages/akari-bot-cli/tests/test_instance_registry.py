@@ -68,7 +68,7 @@ async def _test_add_list_remove():
 
 
 async def _test_duplicate_root_keeps_existing_entry():
-    # 同一个目录记录两次不该产生两条记录，也不该改掉已有策略。
+    # 同一个目录记录两次不应产生两条记录，也不应修改已有策略。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         target = _make_instance(base / "one")
@@ -96,7 +96,7 @@ async def _test_add_rejects_non_instance():
 
 
 async def _test_add_parent_lists_child_instances():
-    # 常被指向“装着实例的项目目录”，报错要直接给出可添加的子目录。
+    # 常出现误指定包含实例的上级目录的情况，抛出异常时应当给出可添加的子目录建议。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         project = base / "project"
@@ -119,7 +119,7 @@ async def _test_add_parent_lists_child_instances():
 
 
 async def _test_register_existing_is_idempotent():
-    # 界面在实例目录里启动时自动记录：重复调用与指向非实例都要原样返回 None，不重复写。
+    # 界面在实例目录中启动时自动记录，重复调用或指向非实例目录时均原样返回 None，不重复写入。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         home = base / "home"
@@ -171,7 +171,7 @@ async def _test_policy_and_default():
 
 
 async def _test_resolution_falls_back_to_default():
-    # 在任何实例之外时，默认实例就是“要管哪一个”的答案。
+    # 在所有实例目录之外执行时，默认实例即为当前管理目标。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         base = Path(raw)
         home = base / "home"
@@ -181,7 +181,7 @@ async def _test_resolution_falls_back_to_default():
         with patch.dict(os.environ, {"AKARIBOT_HOME": str(home), "AKARI_INSTANCE_DIR": ""}):
             registry = InstanceRegistry()
             entry = registry.add(target)
-            # add() 会把第一个实例设为默认，这里直接核对解析结果。
+            # add() 会将首个实例设为默认实例，此处核对解析结果。
             found = resolve_instance_root(elsewhere)
             registry.remove(entry.name)
             empty = resolve_instance_root(elsewhere)
@@ -223,7 +223,7 @@ async def _test_policy_requires_a_flag():
 
 
 async def _test_probe_running_reports_unknown_when_unreadable():
-    # 探测失败返回 None 而不是抛异常：清单里一格未知不该拖垮整页。
+    # 探测失败时返回 None 而非抛出异常，清单中单个条目未知不应影响整页展示。
     with TemporaryDirectory(prefix="akari-reg-") as raw:
         root = Path(raw) / "broken"
         root.mkdir()
@@ -234,7 +234,7 @@ async def _test_probe_running_reports_unknown_when_unreadable():
 
 @func_case
 async def test_instance_registry(tester: Tester):
-    """cli.instances: 注册表与 instance 子命令测试"""
+    """cli.instances 注册表与 instance 子命令测试"""
     _use_cli_locale()
     await tester.test(_test_add_list_remove, "添加、列出与移除")
     await tester.test(_test_duplicate_root_keeps_existing_entry, "同目录重复添加不产生第二条")

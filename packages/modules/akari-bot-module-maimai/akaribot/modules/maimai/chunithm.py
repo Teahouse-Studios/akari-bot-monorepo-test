@@ -326,14 +326,14 @@ async def _(msg: Bot.MessageSession, user: str | None = None):
     username = ""
     friend_code = ""
     if pick_source(msg, GAME_CHUNITHM) == SOURCE_LXNS:
-        # 落雪的查询对象是好友码。不填参数时由令牌认出账号。
+        # 落雪查询对象为好友码。未提供参数时通过令牌识别账号。
         if user and not is_int(user):
             await msg.finish(I18NContext("maimai.message.friend_code_invalid"))
         token = None if user else await get_lxns_prober_bind_info(msg)
         friend_code = user or ""
         source = "Lxns"
     else:
-        # 填了用户名便查这个玩家，无需绑定。
+        # 填写用户名即可查询对应玩家，无需绑定。
         token = None if user else await get_diving_prober_bind_info(msg)
         username = user or ""
         source = "Diving-Fish"

@@ -14,7 +14,7 @@ ai_data_path = PackageRegistry.package_data("ai")
 
 
 class _InstructionsTemplate(Template):
-    # 指令文本含 LaTeX 的 $$，标准 Template 会把它折叠成 $。该模式只识别 ${name}，其余 $ 原样保留。
+    # 指令文本包含 LaTeX 的 $$，标准 Template 会将其折叠为 $。该模式仅识别 ${name}，其余 $ 原样保留。
     pattern = r"\$\{(?P<braced>[_a-z][_a-z0-9]*)\}|(?P<named>(?!))|(?P<escaped>(?!))|(?P<invalid>(?!))"
 
 
@@ -185,7 +185,7 @@ def get_llm_generation(llm: dict) -> dict:
 llm_list = [llm["name"].lower() for llm in llm_api_list if not llm.get("superuser", False)]
 llm_su_list = [llm["name"].lower() for llm in llm_api_list if llm.get("superuser", False)]
 
-# 配置的默认模型可能已从 llm_api_list 中移除，只有仍可用时才作为默认值。
+# 配置的默认模型可能已从 llm_api_list 中移除，仅当其仍处于可用状态时才作为默认值。
 default_llm = AiConfig.ai_default_llm if AiConfig.ai_default_llm in llm_list else None
 
 

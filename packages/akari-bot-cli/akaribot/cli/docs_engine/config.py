@@ -285,23 +285,23 @@ class DocsConfig:
 
     @property
     def cache_docs_dir(self) -> Path:
-        """生成器与工具链共用的缓存目录 ``<实例根>/cache/docs``。"""
+        """生成器与工具链共用的缓存目录 ``<实例根目录>/cache/docs``。"""
         return self.root / "cache" / "docs"
 
     @property
     def out_dir(self) -> Path:
-        """输出目录的绝对路径。配置为相对路径时锚定实例根。"""
+        """输出目录的绝对路径。配置为相对路径时以实例根目录为基准。"""
         configured = Path(self.build.out_dir).expanduser()
         return configured if configured.is_absolute() else self.root / configured
 
     @property
     def base(self) -> str:
-        """当前生效的基路径，环境变量优先于配置文件。"""
+        """当前生效的基础路径，环境变量优先于配置文件。"""
         return normalize_base(os.environ.get(BASE_ENV) or self.site.base)
 
 
 def normalize_base(value: str) -> str:
-    """把基路径规范成以 ``/`` 开头并结尾的形式。"""
+    """将基础路径规范为以 ``/`` 开头并结尾的形式。"""
     text = (value or "").strip()
     if not text or text == "/":
         return "/"
@@ -426,7 +426,7 @@ def _footer_config(data: Mapping[str, Any], path: Path) -> DocsFooterConfig:
 
 
 def _merge_footer(configured: DocsFooterConfig, defaults: DocsFooterConfig) -> DocsFooterConfig:
-    # 正文与按钮区分“未配置”和“配置为空”：空元组表示有意不显示该类内容。
+    # 正文与按钮区分“未配置”和“配置为空”，空元组表示有意不显示该类内容。
     return DocsFooterConfig(
         enabled=configured.enabled,
         title=configured.title or defaults.title,

@@ -13,13 +13,13 @@ from akaribot.core.database.models import TargetUnionBind, TargetUnionInfo, back
 REVISION = "0003_union_core"
 DEPENDS_ON = "0002_banned_users_and_nullable_sender"
 
-# 旧名到新名。表若已由 generate_schemas 按新模型建出，须先移除这张空表再改名。
+# 旧名到新名映射。若表已由 generate_schemas 按新模型创建，必须先移除该空表再重命名。
 CORE_RENAME_TABLES = {
     "sender_info": "sender_union_info",
     "target_info": "target_union_info",
 }
 
-# 主键列改为 union_id。旧数据的 union ID 沿用原平台 ID，故只需改名。
+# 主键列改为 union_id。历史数据的 union ID 沿用原平台 ID，因此仅需要重命名。
 CORE_RENAME_COLUMNS = {
     "sender_id": ["sender_union_info"],
     "target_id": ["target_union_info"],
@@ -28,8 +28,8 @@ CORE_RENAME_COLUMNS = {
 # 统计与审计表保留原始 ID，另增 union 列用于聚合。
 UNION_RECORD_TABLES = ["analytics_data", "unfriendly_actions"]
 
-# 轮询与区间统计所需的索引：job_queues 每 100 毫秒被轮询，analytics_data 要按区间反复聚合，
-# 两者都会随行数增长退化为全表扫描。v5 已重建 job_queues，故建索引前须确认目标列仍在。
+# 轮询与区间统计所需的索引。由于 job_queues 每 100 毫秒被轮询一次，且 analytics_data 必须按区间反复聚合，
+# 两者均会随数据量增长退化为全表扫描。v5 重建了 job_queues，因此创建索引前必须确认目标列依然存在。
 CORE_INDEXES = (
     ("job_queues", ("target_client", "status"), "idx_job_queues_client_status"),
     ("analytics_data", ("timestamp",), "idx_analytics_data_timestamp"),
@@ -40,7 +40,7 @@ async def upgrade(ctx: MigrationContext) -> None:
     """
     执行 v3 的核心变更。
 
-    模块表的列改名由各模块包自己的 revision 完成，core 不记录模块表名。
+    模块表的列重命名由各模块包自己的 revision 完成，core 不记录模块表名。
 
     :param ctx: 迁移上下文。
     """
@@ -67,7 +67,7 @@ async def _rename_tables(ctx: MigrationContext) -> None:
 
 
 async def _rename_columns(ctx: MigrationContext) -> None:
-    # 把核心表的主键列改名为 union_id。
+    # 将核心表的主键列重命名为 union_id。
     for old_column, tables in CORE_RENAME_COLUMNS.items():
         for table in tables:
             if not await ctx.has_column(table, old_column):
@@ -76,8 +76,8 @@ async def _rename_columns(ctx: MigrationContext) -> None:
 
 
 async def _ensure_channel_ids(ctx: MigrationContext) -> None:
-    # 为绑定行补上消息通道号并按组顺延。
-    # 通道号须在组内逐个顺延：若一律保留默认值，同一 union 下的全部场景会被判定为同一条消息
+    # 为绑定行补充消息通道编号并按组顺延。
+    # 通道编号必须在组内逐个顺延，若一律保留默认值，同一 union 下的全部场景会被判定为同一条消息
     # 通道，命令与推送将相互去重，导致场景不再有消息送达。
     if not await ctx.has_column("target_union_bind", "channel_id"):
         await ctx.add_column("target_union_bind", "channel_id", "INT", null=False, default="1")
@@ -85,13 +85,13 @@ async def _ensure_channel_ids(ctx: MigrationContext) -> None:
         binds = await TargetUnionBind.filter(union_id=union_id).order_by("bound_at")
         for channel_id, bind in enumerate(binds, start=1):
             bind.channel_id = channel_id
-            # 后续 revision 追加的列此时尚不存在，整行保存会因缺列被判为 partial。
+            # 后续 revision 追加的列当前尚不存在，执行整行保存会因缺少列被判定为部分修改状态。
             await bind.save(update_fields=["channel_id"])
 
 
 async def _drop_legacy_bots_id() -> None:
-    # 旧版 connect 把互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。
-    # 该结构已改为两级字典，旧值直接清除，重新执行一次 ``bind auto`` 即可。
+    # 旧版 connect 将互认记录保存为扁平列表，无法反向查询某条记录属于哪个场景，解绑时无法定位删除。
+    # 该结构已调整为两级字典，清除旧值后重新执行一次 ``bind auto`` 即可。
     for target in await TargetUnionInfo.all():
         if isinstance(target.target_data.get("bots_id"), list):
             target.target_data.pop("bots_id")
@@ -112,7 +112,7 @@ async def _add_union_record_columns(ctx: MigrationContext) -> None:
 
 
 async def _create_indexes(ctx: MigrationContext) -> None:
-    # 为轮询与区间统计补建索引。
+    # 为轮询与区间统计补充创建索引。
     for table, columns, index_name in CORE_INDEXES:
         if not await ctx.has_column(table, columns[0]):
             continue

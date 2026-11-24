@@ -12,5 +12,5 @@ __all__ = ["emotes_dir"]
 
 
 def emotes_dir() -> Path:
-    """取 emotes 根目录（``common`` / ``captcha_held`` / ``typing`` 在其下）。"""
+    """获取 emotes 资源根目录（``common`` / ``captcha_held`` / ``typing`` 均在其下）。"""
     return Path(str(files(__package__)))

@@ -1,4 +1,4 @@
-"""模块 hook 共用的订阅、资格过滤、runtime 调用与具名分发。"""
+"""模块 hook 共用的订阅、资格过滤、runtime 调用与带名称的分发。"""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class HookSubscription:
 
 @dataclass(slots=True)
 class ModuleHookDispatchOutcome:
-    """具名 hook 批量分发的执行摘要。"""
+    """带名称的 hook 批量分发的执行摘要。"""
 
     result: Any = None
     executed: int = 0
@@ -60,7 +60,7 @@ def platform_allows(
     platform_from: str | None = None,
     platform_name: str | None = None,
 ) -> bool:
-    """按四元组判据判分一组平台声明。语义与模块、命令的 ``available_for`` 一致。"""
+    """按四元组条件匹配一组平台声明。语义与模块、命令的 ``available_for`` 一致。"""
     if not target_from:
         return True
     return scope_allows(
@@ -85,7 +85,7 @@ def _module_context_enabled(module: "Module", module_name: str, session_info) ->
 
 
 class HookExecutor:
-    """共享订阅资格判断。具体 hook 系统只实现自身的结果协议。"""
+    """共享订阅资格判断。具体 hook 系统仅实现自身的结果协议。"""
 
     def __init__(self, modules_manager: Any):
         self._modules_manager = modules_manager
@@ -110,7 +110,7 @@ class HookExecutor:
         *,
         check_context: bool = True,
     ) -> tuple[bool, bool]:
-        """返回是否可执行与是否代际过期。"""
+        """返回是否可执行与是否版本过期。"""
         if not sub.load:
             return False, False
         module = self._modules_manager.modules.get(sub.module_name)
@@ -120,7 +120,7 @@ class HookExecutor:
             return False, True
         if session_info is None and ("*" not in tuple(module.available_for) or "*" not in tuple(sub.available_for)):
             return False, False
-        # 平台两段只存在于会话对象上。拿不到会话时（如 server_scope 的具名分发）退化为两段判据。
+        # 平台两段仅存在于会话对象上。无法获取会话时（如 server_scope 的带名称分发）回退为两段判定条件。
         platform_from = getattr(session_info, "platform_from", None) if session_info is not None else None
         platform_name = getattr(session_info, "platform_name", None) if session_info is not None else None
         if not platform_allows(
@@ -185,12 +185,12 @@ async def invoke_subscription(
 
 
 class ModuleHookExecutor(HookExecutor):
-    """具名 module hook 分发器。"""
+    """带名称的 module hook 分发器。"""
 
     def _eligible(self, sub: HookSubscription, session_info: Any) -> tuple[bool, bool]:
         target_from = getattr(session_info, "target_from", None) if session_info is not None else None
         client_name = getattr(session_info, "client_name", None) if session_info is not None else None
-        # 具名能力由显式名称调用，不要求目标场景启用该模块。
+        # 带名称的能力由显式名称调用，不要求目标场景启用该模块。
         return self.subscription_eligible(sub, target_from, client_name, check_context=False)
 
     def _subscriptions(self, hook_name: str, module_trigger: bool) -> list[HookSubscription]:
@@ -227,7 +227,7 @@ class ModuleHookExecutor(HookExecutor):
             if not eligible:
                 continue
 
-            # 每个回调拿到独立参数字典，广播 hook 的就地修改不会污染后续回调。
+            # 每个回调获取独立参数字典，广播 hook 的就地修改不会污染后续回调。
             context = ModuleHookContext(dict(hook_args), session_info=session_info)
             budget = sub.timeout if timeout is None else timeout
             try:

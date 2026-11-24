@@ -1,4 +1,4 @@
-"""机器人内置的基于`loguru`的日志工具。"""
+"""机器人内置基于 `loguru` 的日志工具。"""
 
 import re
 import sys
@@ -52,7 +52,7 @@ class LoggingLogger:
         try:
             logger.remove(0)
         except ValueError:
-            # 如果没有默认的日志处理器，则忽略此错误
+            # 如果没有默认的日志处理器，则忽略此错误。
             pass
         self.log = logger.bind(name=name)
         self.log.add(

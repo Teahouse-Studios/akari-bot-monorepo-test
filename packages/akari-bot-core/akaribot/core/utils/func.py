@@ -7,7 +7,7 @@ import orjson
 
 
 def convert_bool(v: Any, default: bool = False) -> bool:
-    """将常见真值/假值转为布尔值，无法识别时返回默认值。"""
+    """将常见真值或假值转换为布尔值，无法识别时返回默认值。"""
     TRUTHY = {"true", "yes", "y", "on", "t"}
     FALSEY = {"false", "no", "n", "off", "f"}
     if v is None:
@@ -18,7 +18,7 @@ def convert_bool(v: Any, default: bool = False) -> bool:
         return bool(v)
     text = str(v).strip().lower()
     if is_float(text):
-        # 取数值真假而非字符串真假：字符串 "0" 非空，bool() 会将其判为真
+        # 读取数值布尔状态而非字符串布尔状态，因为字符串 "0" 非空，bool() 会将其判定为 True。
         return bool(float(text))
     if text in TRUTHY:
         return True
@@ -28,7 +28,7 @@ def convert_bool(v: Any, default: bool = False) -> bool:
 
 
 def convert_list(v: Any) -> list:
-    """将其他类型转为列表。"""
+    """将其他类型转换为列表。"""
     if v is None:
         return []
     if isinstance(v, list):
@@ -39,12 +39,12 @@ def convert_list(v: Any) -> list:
 
 
 def is_iterable(obj: Any) -> bool:
-    """判断对象是否是字符串以外的可迭代对象。"""
+    """判断对象是否为除字符串以外的可迭代对象。"""
     return isinstance(obj, IterableABC) and not isinstance(obj, (str, bytes))
 
 
 def is_json_serializable(obj: Any) -> bool:
-    """检查对象是否可以被 JSON 序列化。"""
+    """检查对象能否序列化为 JSON。"""
     try:
         orjson.dumps(obj)
         return True
@@ -73,7 +73,7 @@ def chunk_list(iterable: Iterable[Any], chunk_size: int, reverse: bool = False) 
 
 
 def unique_list(iterable: Iterable[Any], reverse: bool = False) -> list[Any]:
-    """在不破坏顺序下去重可迭代对象。"""
+    """在保持原有顺序的前提下对可迭代对象去重。"""
     if isinstance(iterable, (str, bytes)):
         raise TypeError("Type str is not supported")
 
@@ -150,7 +150,7 @@ def is_int(obj: Any) -> bool:
 
 
 def camel_to_snake(text: str, abbr_map: dict[str, str] | None = None) -> str:
-    """驼峰命名转蛇形命名。"""
+    """将驼峰命名转换为蛇形命名。"""
     if abbr_map:
         for k, v in abbr_map.items():
             text = text.replace(k, v)

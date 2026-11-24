@@ -64,7 +64,7 @@ class _FakeRunner:
 
 
 class _FakeInstance:
-    # 守护循环的假控制器：只回答运行状态与进程信息，拉起由外部函数记账。
+    # 守护循环的模拟控制器仅返回运行状态与进程信息，启动由外部函数记账。
     def __init__(self, root: Path):
         self.root = root
         self.running = False
@@ -78,7 +78,7 @@ class _FakeInstance:
 
 
 class _Rig:
-    # 一轮守护所需的假注册表、假控制器、假时钟与拉起记账。
+    # 一轮守护所需要的模拟注册表、模拟控制器、模拟时钟与启动记录。
     def __init__(self, config: Path):
         self.config = config
         self.instances: dict[str, _FakeInstance] = {}
@@ -96,7 +96,7 @@ class _Rig:
         desired: str = STATE_RUNNING,
         autostart: bool = True,
     ) -> Path:
-        # 恢复用例默认开自启：自启关掉的实例不该被服务拉起。
+        # 恢复用例默认开启自动启动，已关闭自动启动的实例不应由服务启动。
         root = self.config / name
         root.mkdir(parents=True, exist_ok=True)
         InstanceMeta.create(root, venv="").save()
@@ -204,7 +204,7 @@ async def _test_systemd_render_and_path():
 
 
 async def _test_service_env_follows_registry_home():
-    # 服务进程不继承 shell 环境，安装时必须把注册表位置写进单元，否则守护进程会去读另一份注册表。
+    # 服务进程不继承 shell 环境，安装时必须把注册表位置写入单元，否则守护进程会读取另一份注册表。
     with TemporaryDirectory() as raw:
         home = Path(raw)
         registry = home / "akaribot home"
@@ -435,7 +435,7 @@ async def _test_supervise_keeps_crashed_instance_without_policy():
 
 
 async def _test_supervise_does_not_restore_without_autostart():
-    # 自启是逐实例的开关：上次在跑不等于这次要拉起，关掉自启就不该被服务恢复。
+    # 自动启动为逐实例配置项，上次在运行不等于本次要启动，关闭自动启动后不应由服务恢复。
     with TemporaryDirectory() as raw:
         rig = _Rig(Path(raw))
         rig.add("alpha", autostart=False)
@@ -603,7 +603,7 @@ async def _test_run_without_registry_entry_skips_silently():
 
 @func_case
 async def test_service(tester: Tester):
-    """cli.service: 服务单元渲染、安装卸载、状态与守护循环测试"""
+    """cli.service 服务单元渲染、安装卸载、状态与守护循环测试"""
     await tester.test(_test_launchd_render_and_path, "launchd 单元含 Label、ProgramArguments、RunAtLoad 与 KeepAlive")
     await tester.test(_test_systemd_render_and_path, "systemd 单元含 ExecStart、Restart、RestartSec 与 WantedBy")
     await tester.test(_test_service_env_follows_registry_home, "单元带上注册表位置，服务读到同一份注册表")

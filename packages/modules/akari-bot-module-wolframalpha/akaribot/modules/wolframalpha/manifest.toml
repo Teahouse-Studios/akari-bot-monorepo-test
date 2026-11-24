@@ -6,5 +6,5 @@ locales = "locales"
 config_table = "module_wolframalpha"
 config_schema_version = 1
 provides_modules = ["wolframalpha"]
-# 查重用的登录信息字段：WolframAlpha 应用 ID。
+# 用于检查重复的登录信息字段，对应 WolframAlpha 应用 ID。
 credential_fields = ["wolfram_alpha_appid"]

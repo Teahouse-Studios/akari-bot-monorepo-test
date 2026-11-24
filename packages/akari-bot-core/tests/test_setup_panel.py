@@ -1,4 +1,4 @@
-"""设置面板单元测试 - 设置行的构造与渲染。"""
+"""设置面板单元测试（设置行的构造与渲染）。"""
 
 from unittest.mock import patch
 
@@ -28,8 +28,8 @@ def _make_msg(
     support_button: bool = False,
     support_markdown_toggle: bool = False,
 ) -> MessageSession:
-    # 直接构造 SessionInfo 而非经 assign()，以免用例之间共用 union 数据。tz_offset 须显式给出：
-    # 该字段的解析发生在 assign() 中，直接构造时取默认值 None。
+    # 直接构造 SessionInfo 而不是通过 assign()，以免用例之间共用 union 数据。tz_offset 必须显式指定，因为
+    # 该字段的解析发生在 assign() 中，直接构造时使用默认值 None。
     session_info = SessionInfo(
         target_id="TEST|Group|setup_panel",
         sender_id="TEST|1",
@@ -62,7 +62,7 @@ def _test_sender_rows_default_to_enabled() -> bool:
         Logger.error(f"Sender panel should list exactly four settings, got {len(rows)}")
         return False
     toggles = {"输入提示", "拼写检查"}
-    if any(row.value != "已开启" for row in rows if row.label in toggles):
+    if any(row.value != "已启用" for row in rows if row.label in toggles):
         Logger.error(f"Sender toggles should default to enabled, got {[r.value for r in rows]}")
         return False
     timezone_row = _row_by_label(rows, "显示时区")
@@ -96,11 +96,11 @@ def _test_target_prefix_and_cooldown_defaults() -> bool:
 def _test_mute_row_wording() -> bool:
     unmuted = _row_by_label(build_target_rows(_make_msg()), "禁止发言")
     muted = _row_by_label(build_target_rows(_make_msg(muted=True)), "禁止发言")
-    if not unmuted or unmuted.value != "已关闭" or unmuted.action != "开启":
-        Logger.error(f"An unmuted target should read 已关闭 and offer 开启, got {unmuted}")
+    if not unmuted or unmuted.value != "已停用" or unmuted.action != "启用":
+        Logger.error(f"An unmuted target should read 已停用 and offer 启用, got {unmuted}")
         return False
-    if not muted or muted.value != "已开启" or muted.action != "关闭":
-        Logger.error(f"A muted target should read 已开启 and offer 关闭, got {muted}")
+    if not muted or muted.value != "已启用" or muted.action != "停用":
+        Logger.error(f"A muted target should read 已启用 and offer 停用, got {muted}")
         return False
     return True
 
@@ -126,7 +126,7 @@ def _test_commands_carry_current_value() -> bool:
         if not row or row.command != command:
             Logger.error(f"{label} should prefill its command as {command!r}, got {row and row.command!r}")
             return False
-    # 自定义前缀做的是追加而非替换，没有可预填的单值
+    # 自定义前缀执行追加操作而不是替换，不存在可预先填充的单一取值。
     prefix_row = _row_by_label(rows, "自定义前缀")
     if not prefix_row or prefix_row.command != "setup prefix add ":
         Logger.error(f"The prefix entry appends rather than replaces, got {prefix_row and prefix_row.command!r}")
@@ -144,8 +144,7 @@ def _test_rows_carry_no_prefix() -> bool:
 
 
 def _test_every_row_gets_an_inline_entry() -> bool:
-    # 入口若只出现在底部键盘，用户得自行把按钮与上方的设置行对应起来。全是开关的个人设置区
-    # 更会整段读成纯状态文字。
+    # 入口若仅展示在底部键盘，需要用户自行对应按钮与上方的设置行。包含大量开关的个人设置区也会被整体识别为纯状态文本。
     for support_button in (True, False):
         msg = _make_msg(support_button=support_button)
         for builder, name in ((build_target_rows, "target"), (build_sender_rows, "sender")):
@@ -162,8 +161,8 @@ def _test_every_row_gets_an_inline_entry() -> bool:
 
 
 def _qqbot_lines(msg: MessageSession, elements: list) -> list[str]:
-    # 复刻 send_msg_markdown() 的组装：指令操作与其后紧随的文本都并入上一项，再以换行连接。该函数
-    # 绑在平台 SDK 上无法直接调用，而通用的 to_str() 不复现这条规则，故按同样规则建模。
+    # 复刻 send_msg_markdown() 的组装，将指令操作与其后紧随的文本均并入上一项，再以换行连接。该函数
+    # 绑定于平台 SDK 上无法直接调用，而通用的 to_str() 不复现该条规则，因此按同样规则建模。
     texts = []
     inline_pending = False
     for x in MessageChain.assign(elements).as_sendable(msg.session_info):
@@ -184,8 +183,8 @@ def _qqbot_lines(msg: MessageSession, elements: list) -> list[str]:
 
 
 def _test_one_line_per_setting_on_qqbot() -> bool:
-    # 指令操作会使适配器把紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板
-    # 会塌成一行。故此路径下的换行必须写进文本自身。
+    # 指令操作会使适配器将紧随其后的文本并入同一行，换行若交由适配器按元素处理，整个面板
+    # 会合并为一行。因此该路径下的换行必须写入文本自身。
     msg = _make_msg(support_button=True)
     target_rows = build_target_rows(msg)
     sender_rows = build_sender_rows(msg)
@@ -195,7 +194,7 @@ def _test_one_line_per_setting_on_qqbot() -> bool:
     )
 
     lines = _qqbot_lines(msg, elements)
-    # 两个标题各一行，其余每项设置一行
+    # 两个标题各占一行，其余每项设置占一行。
     expected = 2 + len(target_rows) + len(sender_rows)
     if len(lines) != expected:
         Logger.error(f"Panel should render {expected} lines on QQBot, got {len(lines)}: {lines}")
@@ -207,8 +206,8 @@ def _test_one_line_per_setting_on_qqbot() -> bool:
 
 
 def _test_no_manual_newline_on_plain_platforms() -> bool:
-    # 该路径下指令操作已在消息链阶段并入前一个文本元素，各行本就是独立元素，再写换行
-    # 只会多出空行。
+    # 该路径下指令操作已在消息链阶段并入前一个文本元素，各行本身即为独立元素，再次写入换行
+    # 仅会多出空行。
     msg = _make_msg(support_button=False)
     msg.session_info.support_action_text = False
     elements = render_rows(msg, "core.message.setup.list.target", build_target_rows(msg), True)
@@ -234,7 +233,7 @@ def _test_markdown_row_follows_capability() -> bool:
     if row.command != "setup markdown":
         Logger.error(f"The markdown row should point at setup markdown, got {row.command!r}")
         return False
-    if row.value != "已开启" or row.action != "关闭":
+    if row.value != "已启用" or row.action != "停用":
         Logger.error(f"An unset preference means markdown is on, got {row.value} / {row.action}")
         return False
     return True
@@ -242,11 +241,11 @@ def _test_markdown_row_follows_capability() -> bool:
 
 def _test_theme_row_follows_setting() -> bool:
     row = _row_by_label(build_sender_rows(_make_msg()), "深色模式")
-    if not row or row.value != "已关闭" or row.action != "开启" or row.command != "setup dark":
-        Logger.error(f"An unset dark mode switch should read 已关闭 and offer 开启, got {row}")
+    if not row or row.value != "已停用" or row.action != "启用" or row.command != "setup dark":
+        Logger.error(f"An unset dark mode switch should read 已停用 and offer 启用, got {row}")
         return False
     row = _row_by_label(build_sender_rows(_make_msg(sender_data={"dark_mode": True})), "深色模式")
-    if not row or row.value != "已开启" or row.action != "关闭":
+    if not row or row.value != "已启用" or row.action != "停用":
         Logger.error(f"An enabled dark mode switch should offer to turn it off, got {row}")
         return False
     return True
@@ -257,12 +256,12 @@ def _test_invalid_prompt_row() -> bool:
     if not on or on.command != "setup invalid-module-prompt":
         Logger.error(f"The target panel should carry the invalid-module switch, got {on}")
         return False
-    if on.value != "已开启":
+    if on.value != "已启用":
         Logger.error(f"An unset switch means the prompt is on, got {on.value}")
         return False
     off = _row_by_label(build_target_rows(_make_msg(target_data={"invalid_module_prompt": False})), "“模块不存在”提示")
-    if not off or off.value != "已关闭":
-        Logger.error(f"A disabled switch should read 已关闭, got {off and off.value}")
+    if not off or off.value != "已停用":
+        Logger.error(f"A disabled switch should read 已停用, got {off and off.value}")
         return False
     return True
 
@@ -271,10 +270,10 @@ def _test_emote_row_follows_setting() -> bool:
     with patch.object(CoreConfig, "use_emote", True):
         enabled = _row_by_label(build_target_rows(_make_msg()), "使用表情")
         disabled = _row_by_label(build_target_rows(_make_msg(target_data={"use_emote": False})), "使用表情")
-    if not enabled or enabled.value != "已开启" or enabled.command != "setup emote":
+    if not enabled or enabled.value != "已启用" or enabled.command != "setup emote":
         Logger.error(f"An unset emote switch should be enabled, got {enabled}")
         return False
-    if not disabled or disabled.value != "已关闭" or disabled.action != "开启":
+    if not disabled or disabled.value != "已停用" or disabled.action != "启用":
         Logger.error(f"A disabled emote switch should offer to enable, got {disabled}")
         return False
     return True
@@ -303,9 +302,7 @@ def _test_inline_commands_use_session_prefix() -> bool:
 
 
 def _test_rows_are_joke_proof_and_spaced() -> bool:
-    # 指令操作降级为纯文本后会并入前一个文本元素，合并时既不补分隔符，也会连同命令原文
-    # 一起参与玩笑替换，两者缺一都会使降级平台上的命令无法复制。
-    # 首个纯文本元素是分组标题，它不带入口，无须留空格
+    # 首个纯文本元素为分组标题，不包含入口，无需保留空格。
     rows = [x for x in _render() if isinstance(x, PlainElement)][1:]
     if not rows:
         Logger.error("The panel should render one plain element per setting")
@@ -343,7 +340,7 @@ def _test_help_buttons_present() -> bool:
     if commands != expected:
         Logger.error(f"Help should offer both panel entries as {expected}, got {commands}")
         return False
-    # 文案须取自按钮专设的键：面板标题带有分隔用的方括号，套进按钮里并不合适
+    # 文案需要读取自按钮专用的键，因为面板标题带有分隔用的方括号，不适合直接作为按钮文本。
     labels = [button.show for row in rows for button in row.buttons]
     if labels != ["👥 场景设置", "💬 用户设置"]:
         Logger.error(f"Help button labels should carry no bracket decoration, got {labels}")
@@ -353,7 +350,7 @@ def _test_help_buttons_present() -> bool:
 
 @func_case
 async def test_setup_panel(tester: Tester):
-    """akaribot.modules.core.common_tools.setup: 设置面板构造测试"""
+    """akaribot.modules.core.common_tools.setup 设置面板构造测试"""
     await tester.test(_test_sender_rows_default_to_enabled, "个人设置默认开启测试")
     await tester.test(_test_sender_timezone_row_carries_current_value, "显示时区预填当前值测试")
     await tester.test(_test_target_prefix_and_cooldown_defaults, "场景设置默认值测试")

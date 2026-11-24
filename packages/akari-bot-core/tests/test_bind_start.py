@@ -1,4 +1,4 @@
-"""akaribot.modules.core.common_tools.bind 单元测试 - bind start 的私聊与群组分支（需要数据库）。"""
+"""akaribot.modules.core.common_tools.bind 的 bind start 私聊与群聊分支单元测试（需要数据库）。"""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
@@ -26,7 +26,7 @@ async def _session(prefix: str, is_private: bool) -> MessageSession:
 
 
 def _issue_private_code(msg: MessageSession) -> dict:
-    # 以私聊身份生成一枚绑定码并立即取出，返回绑定码携带的信息。
+    # 以私聊身份生成一枚绑定码并立即提取，返回绑定码所携带的会话信息。
     code = generate_code(
         bind._sender_bind_codes,
         msg.session_info.sender_union_info.union_id,
@@ -37,7 +37,7 @@ def _issue_private_code(msg: MessageSession) -> dict:
 
 
 def _answer_confirm(result: bool):
-    # 把 wait_confirm 固定成给定答复，绕开交互。
+    # 将 wait_confirm 固定为指定答复，避免触发交互流程。
     return patch.object(MessageSession, "wait_confirm", new=lambda self, *a, **k: asyncio.sleep(0, result=result))
 
 
@@ -47,13 +47,13 @@ async def _test_private_binds_both_unions():
         entry = _issue_private_code(initiator)
         send = AsyncMock(return_value=["bind-success"])
         try:
-            # 本用例验证真实数据库合并。模拟平台接收最终成功提示。
+            # 当前用例验证真实数据库合并逻辑。模拟平台接收最终的成功提示信息。
             with _answer_confirm(True), patch.object(PlatformAPI, "send_message", new=send):
                 await bind._bind_private(await _session("BINDB", True), entry)
         except SessionFinished:
             pass
 
-        # 私聊中的用户身份与私聊场景应同时合并，否则部分数据仍会保留在原组。
+        # 私聊中的用户身份与私聊场景应当同时合并，否则部分数据仍然会残留在原有分组中。
         senders = [(await SenderUnionInfo.resolve_union(f"{p}|1")).union_id for p in ("BINDA", "BINDB")]
         targets = [(await TargetUnionInfo.resolve_union(f"{p}|X|1")).union_id for p in ("BINDA", "BINDB")]
         send.assert_awaited_once()
@@ -85,7 +85,7 @@ async def _test_cancel_leaves_nothing_bound():
         except SessionFinished:
             pass
 
-        # 两次合并共用一次确认，取消后不该停在只绑一半的状态
+        # 两次合并共用一次确认，取消后不应处于仅完成部分绑定的中间状态。
         after = (
             (await SenderUnionInfo.resolve_union("BINDC|1")).union_id,
             (await TargetUnionInfo.resolve_union("BINDC|X|1")).union_id,
@@ -100,7 +100,7 @@ async def _test_cancel_leaves_nothing_bound():
 
 @func_case
 async def test_bind_start(tester: Tester):
-    """akaribot.modules.core.common_tools.bind: bind start 测试"""
+    """akaribot.modules.core.common_tools.bind 的 bind start 测试"""
     await tester.test(_test_private_binds_both_unions, "私聊同时绑定两组测试")
     await tester.test(_test_cancel_leaves_nothing_bound, "取消不留半绑状态测试")
 

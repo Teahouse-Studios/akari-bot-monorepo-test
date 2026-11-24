@@ -279,7 +279,7 @@ def _test_disjoint_cycles_are_all_rejected():
 
 
 def _test_dependency_on_api_rejected_package_cascades():
-    # 条目顺序刻意让依赖方先出现：初始判定时被依赖方还没被标记为拒绝，只有级联才能拦住它。
+    # 条目顺序特意使依赖方先行出现，使初始判定时被依赖方尚未被标记为拒绝，仅能通过级联机制实现拦截。
     alpha = _entry("module", "alpha", "akari-bot-module-alpha")
     beta = PackageEntry(
         kind="module",
@@ -348,7 +348,7 @@ def _test_extra_marked_dependencies_follow_installed_extras():
             ("dev", "test"),
         ),
         "akari-bot-module-plain": _FakeDistribution("akari-bot-module-plain", "1.0.0"),
-        # optional 本身已装，但其所属的 dev extra 缺 ruff，仍视为未装
+        # optional 本身已完成安装，但其所属的 dev extra 缺失 ruff，仍然视作未安装状态。
         "akari-bot-module-optional": _FakeDistribution("akari-bot-module-optional", "1.0.0"),
         "akari-bot-module-extra-dep": _FakeDistribution("akari-bot-module-extra-dep", "1.0.0"),
         "pytest": _FakeDistribution("pytest", "8.0.0"),
@@ -386,7 +386,7 @@ def _test_undeclared_ast_dependency_warns_and_stays_in_closure():
 
 @func_case
 async def test_dependency_graph(tester: Tester):
-    """core.registry: 模块依赖图测试"""
+    """core.registry 模块依赖图测试"""
     await tester.test(_test_load_order_is_dependency_first, "拓扑序被依赖者在前")
     await tester.test(_test_directory_scanned_package_has_no_dependencies, "目录扫描包无声明依赖")
     await tester.test(_test_missing_dependency_is_rejected, "缺依赖的包被拒绝注册")

@@ -23,7 +23,7 @@ def _use_cli_locale() -> None:
     i18n.connect_locale_snapshot("akaribot-cli")
 
 
-# 只回答 run_core_capture 的替身实例：payload 是 core 要回传的 JSON，returncode 是它的退出码。
+# 仅响应 run_core_capture 的模拟对象，payload 是 core 要返回的 JSON，returncode 是其退出码。
 class _FakeInstance:
     def __init__(self, payload: object, *, returncode: int = 0) -> None:
         self.payload = payload
@@ -32,7 +32,7 @@ class _FakeInstance:
         self.root = Path("/tmp/fake-instance")
 
     def run_core_capture(self, entrypoint: str, *args: str, timeout: float | None = 120.0, **env: str):
-        """记下 entrypoint 与参数，返回预设输出。"""
+        """记录 entrypoint 与参数，返回预设输出。"""
         self.calls.append((entrypoint, tuple(args)))
         text = json.dumps(self.payload, ensure_ascii=False)
         return subprocess.CompletedProcess(list(args), self.returncode, text, "")
@@ -123,7 +123,7 @@ def _test_rows_json_is_single_line():
 
 
 def _test_rows_without_conditions():
-    # 不给条件时不下发 --filter / --search / --order-by，命令行保持最短。
+    # 未指定条件时不传递 --filter / --search / --order-by，使命令行保持最短。
     instance = _FakeInstance(_page(filters=[], search="", offset=0))
     _result, text = _invoke(instance, ["rows", "module_status"])
     _entrypoint, args = instance.calls[0]
@@ -136,7 +136,7 @@ def _test_rows_without_conditions():
 
 
 def _test_rows_core_error_is_reported():
-    # core 把原因写进 stdout 的 JSON，退出码 2 表示用户错误。CLI 保持该退出码。
+    # core 将原因写入 stdout 的 JSON，退出码 2 表示用户错误。CLI 保持该退出码。
     instance = _FakeInstance({"error": "表 module_status 没有列 'nosuch'。"}, returncode=2)
     result, _text = _invoke(instance, ["rows", "module_status", "--filter", "nosuch=1"])
     return result.exit_code == 2 and "nosuch" in result.output
@@ -144,7 +144,7 @@ def _test_rows_core_error_is_reported():
 
 @func_case
 async def test_db_rows(tester: Tester):
-    """cli.db.rows: 筛选、搜索、排序与分页展示测试"""
+    """cli.db.rows 筛选、搜索、排序与分页展示测试"""
     _use_cli_locale()
     await tester.test(_test_rows_passes_query_to_core, "条件、搜索与排序透传给 core")
     await tester.test(_test_rows_shows_page_numbers, "标题给出总条数与页码")

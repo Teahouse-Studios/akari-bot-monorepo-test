@@ -8,7 +8,7 @@ table_prefix = "module_phigros_"
 
 class PhigrosBindInfo(DBModel):
     """
-    Phigros 用户绑定信息表
+    Phigros 用户绑定信息表。
 
     :param union_id: 用户联合 ID
     :param session_token: 会话令牌

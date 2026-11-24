@@ -1,4 +1,4 @@
-"""具名 module hook 的全局分发入口。"""
+"""带名称的 module hook 的全局分发入口。"""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ async def dispatch_module_hook_outcome(
     args: dict[str, Any] | None = None,
     timeout: float | None = None,
 ):
-    """返回具名 hook 的执行摘要，供诊断和测试使用。"""
+    """返回带名称的 hook 的执行摘要，供诊断和测试使用。"""
     return await get_module_hook_executor().dispatch_outcome(
         hook_name,
         session_info=session_info,

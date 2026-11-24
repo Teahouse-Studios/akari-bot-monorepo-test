@@ -15,7 +15,7 @@ BIND_TABLE = "module_phigros_bind_info"
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    改主键列名并补上国际服标记。
+    修改主键列名并补充国际服标记。
 
     :param ctx: 迁移上下文。
     """

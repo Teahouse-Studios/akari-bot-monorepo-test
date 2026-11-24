@@ -151,13 +151,13 @@ class ServerAPI:
     @staticmethod
     @remote("server.test_web_render", timeout=120)
     async def test_web_render(options: dict) -> dict:
-        """按 WebUI 提交的参数执行一次渲染测试，失败以 error 字段回报。"""
+        """按 WebUI 提交的参数执行一次渲染测试，失败以 error 字段返回。"""
         ...
 
     @staticmethod
     @remote("server.reload_filter_words", timeout=30)
     async def reload_filter_words() -> bool:
-        """让持有词库的进程重新读取 data/filter_words，使外部写入立即生效。"""
+        """使持有词库的进程重新读取 data/filter_words，确保外部写入立即生效。"""
         ...
 
     @staticmethod
@@ -183,13 +183,13 @@ class ServerAPI:
     @staticmethod
     @remote("server.post_package_install", timeout=7200)
     async def post_package_install(dist: str) -> bool:
-        """把刚安装的模块包热装载进运行中的服务端。"""
+        """将新安装的模块包热加载至运行中的服务端。"""
         ...
 
     @staticmethod
     @remote("server.post_package_remove", timeout=7200)
     async def post_package_remove(dist: str) -> bool:
-        """在卸载分发之前，把该模块包从运行中的服务端拆下来。"""
+        """在卸载包之前，将该模块包从运行中的服务端执行热卸载。"""
         ...
 
     @staticmethod

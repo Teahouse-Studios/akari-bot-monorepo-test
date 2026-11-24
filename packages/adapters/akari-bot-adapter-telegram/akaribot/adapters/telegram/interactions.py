@@ -1,4 +1,4 @@
-"""Telegram 按钮点击回流。"""
+"""Telegram 按钮点击回调处理。"""
 
 from aiogram import types
 

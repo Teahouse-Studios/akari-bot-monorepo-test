@@ -19,7 +19,7 @@ DISCORD_SELECT_LABEL_MAX_LENGTH = 100
 
 
 class DiscordButton(discord.ui.Button):
-    """将点击委托给适配器入口的按钮。"""
+    """用于将点击事件交由适配器入口处理的按钮。"""
 
     async def callback(self, interaction: discord.Interaction):
         if _click_handler:
@@ -75,7 +75,7 @@ class DiscordActionTextModal(discord.ui.Modal):
 
 
 class DiscordActionTextButton(discord.ui.Button):
-    """点击后打开预填命令 Modal 的 ActionText 按钮。"""
+    """用于在点击后打开预填命令 Modal 的 ActionText 按钮。"""
 
     def __init__(
         self,
@@ -106,7 +106,7 @@ class DiscordActionTextButton(discord.ui.Button):
 
 
 class DiscordActionTextSelect(discord.ui.Select):
-    """ActionText 较多时使用下拉菜单节省组件行。"""
+    """ActionText 数量较多时使用下拉菜单以节省组件展示行数。"""
 
     def __init__(
         self,
@@ -164,7 +164,7 @@ def build_discord_button_view(
     input_label: str = "Command",
     select_placeholder: str = "Select a command",
 ) -> DiscordButtonView | None:
-    """将普通按钮和 ActionText 转换为同一个 Discord View。"""
+    """将普通按钮与 ActionText 整合转换为单一 Discord View。"""
     buttons = [button for row in button_rows for button in row.buttons]
     truncated = len(buttons) > 25
     if len(button_rows) > 5 or any(len(row.buttons) > 5 for row in button_rows):
@@ -214,7 +214,7 @@ def build_discord_button_view(
 
 
 def disable_selected_button(view: discord.ui.View, custom_id: str) -> bool:
-    """只停用指定 custom_id 的按钮。"""
+    """仅停用指定 custom_id 的按钮。"""
     for item in view.children:
         if isinstance(item, discord.ui.Button) and item.custom_id == custom_id:
             item.disabled = True

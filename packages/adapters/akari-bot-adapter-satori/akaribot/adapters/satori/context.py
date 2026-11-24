@@ -27,7 +27,7 @@ from akaribot.core.builtins.session.info import SessionInfo
 from akaribot.core.logger import Logger
 from akaribot.core.utils.media import resolve_media_base64, resolve_media_path
 
-# 私聊频道由平台分配，主动发送前先换取频道 ID 并缓存，避免每次发信都创建频道。
+# 私聊频道由平台分配，主动发送前先获取频道 ID 并缓存，避免每次发送私信时重复创建频道。
 _private_channels: dict[str, str] = {}
 
 typing_emoji = str(SatoriConfig.satori_typing_emoji or "")
@@ -37,7 +37,7 @@ TYPING_SHUTDOWN_TIMEOUT = 1.0
 
 
 def select_account(platform: str | None, bot_id: str | None = None) -> Account | None:
-    """按平台与机器人账号选择 Satori 账号。无法精确匹配时退回该平台的首个账号。"""
+    """按平台与机器人账号选择 Satori 账号。无法精确匹配时，回退至该平台的首个账号。"""
     accounts = list(satori_app.accounts.values())
     if bot_id:
         for account in accounts:
@@ -56,7 +56,7 @@ def _guess_mime(path: str) -> str:
 
 
 async def _upload_media(account: Account, element: ImageElement | AudioElement | VideoElement) -> str | None:
-    # 已可直链的地址原样使用，本地文件优先上传。
+    # 可直接访问的地址按原样使用，本地文件优先上传。
     if element.path.startswith(("http://", "https://", "data:")):
         return element.path
 

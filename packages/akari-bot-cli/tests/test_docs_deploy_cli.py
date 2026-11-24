@@ -275,7 +275,7 @@ async def _test_deploy_no_build_requires_site():
 
 @func_case
 async def test_docs_deploy_cli(tester: Tester):
-    """cli.docs.deploy: provider 解析、确认、结果契约与部署记录"""
+    """cli.docs.deploy 的 provider 解析、确认、结果格式约定与部署记录测试"""
     _use_cli_locale()
     await tester.test(_test_deploy_confirms_and_records, "确认后部署并记录目标")
     await tester.test(_test_deploy_yes_dry_run_delete_skips_record, "--yes 跳过确认，试运行不写记录")

@@ -58,7 +58,7 @@ class MilkyContextManager(ContextManager):
 
     @classmethod
     async def check_native_permission(cls, session_info: SessionInfo, user_id: str | None = None) -> bool:
-        """检查指定成员（默认发话者）是否具备群管理权限。"""
+        """检查指定成员（默认发送者）是否具备群管理权限。"""
 
         @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
         async def _check() -> bool:
@@ -77,7 +77,7 @@ class MilkyContextManager(ContextManager):
         try:
             return await _check()
         except Exception:
-            # 被查询的成员可能已退群，平台查不到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接报错，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")
@@ -145,7 +145,7 @@ class MilkyContextManager(ContextManager):
         quote: bool = True,
     ) -> list[str]:
         if session_info.sender_id is None:
-            # 主动消息：目标可能已退群或删除好友，先查询列表以避免无效请求
+            # 发送主动消息前先查询列表，避免目标已退群或删除好友导致无效请求。
             if session_info.target_from == target_group_prefix:
                 group_list = await get_available_group_list()
                 if group_list and int(session_info.get_common_target_id()) not in group_list:
@@ -166,7 +166,7 @@ class MilkyContextManager(ContextManager):
             segments = await convert_chain_to_segments(session_info, message, quote=quote)
 
         if not segments:
-            # 元素因底层媒体不可用而被跳过时不发送空消息
+            # 元素因底层媒体不可用而被跳过时不发送空消息。
             return []
 
         try:
@@ -181,7 +181,7 @@ class MilkyContextManager(ContextManager):
         except (MilkyError, MilkyHttpError):
             Logger.exception(f"Failed to send message to {session_info.target_id}: ")
             try:
-                # 协议端拒绝消息内容时回退为提示文本，保证调用方仍能感知本跳失败
+                # 协议端拒绝消息内容时回退为提示文本，确保调用方仍能明确感知本次发送失败。
                 fallback = OutgoingTextSegment(
                     data=TextSegmentData(text=session_info.locale.t("error.message.limited"))
                 )
@@ -210,13 +210,13 @@ class MilkyContextManager(ContextManager):
 
         try:
             # 未添加机器人为好友时私聊必然无法送达，先查询好友列表以避免无效请求。
-            # 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的契约。
+            # 查询本身同样属于平台调用，网络错误等异常必须遵守私信失败返回空 ID 的约定。
             private_list = await get_available_private_list()
             if private_list and int(uid) not in private_list:
                 Logger.warning(f"User {uid} not found in private list, skipping private message send.")
                 return []
 
-            # 显式指定基类：主动消息所用的子类会将发送放入冷却队列并返回空结果，取不到消息 ID
+            # 显式指定基类，因为主动消息所用的子类会将发送放入冷却队列并返回空结果，无法获取消息 ID。
             return await MilkyContextManager.send_message(
                 cls.derive_private_session(session_info, f"{target_private_prefix}|{uid}", target_private_prefix),
                 message,
@@ -391,7 +391,7 @@ class MilkyContextManager(ContextManager):
 
         if session_info.target_from != target_group_prefix:
             return
-        # Milky 只暴露“管理员”这一原生权限组，其它权限组在本平台没有对应实现
+        # Milky 仅暴露“管理员”这一原生权限组，其他权限组在本平台中无对应实现。
         if "admin" not in {str(x).lower() for x in permission_group_id}:
             Logger.warning(f"Milky does not support permission group(s) {permission_group_id}, skipping.")
             return
@@ -418,7 +418,7 @@ class MilkyContextManager(ContextManager):
 
         if not message_id:
             return
-        # Milky 仅支持群聊消息表情回应，且 SDK 固定以 `face` 类型发送回应
+        # Milky 仅支持群聊消息表情回应，且 SDK 固定以 `face` 类型发送回应。
         if session_info.target_from != target_group_prefix:
             Logger.debug("Milky only supports message reactions in group chats, skipping.")
             return
@@ -451,7 +451,7 @@ class MilkyContextManager(ContextManager):
 
         if not message_id:
             return
-        # Milky 仅支持群聊消息表情回应，且 SDK 固定以 `face` 类型发送回应
+        # Milky 仅支持群聊消息表情回应，且 SDK 固定以 `face` 类型发送回应。
         if session_info.target_from != target_group_prefix:
             Logger.debug("Milky only supports message reactions in group chats, skipping.")
             return
@@ -534,7 +534,7 @@ _tasks = deque()
 
 
 class MilkyFetchedContextManager(MilkyContextManager):
-    """主动消息上下文管理器：协议端主动消息按冷却排队发送。"""
+    """主动消息上下文管理器，用于按冷却排队发送协议端主动消息。"""
 
     _processor_task: asyncio.Task[None] | None = None
     _high_priority_count = 0
@@ -546,7 +546,7 @@ class MilkyFetchedContextManager(MilkyContextManager):
         message: MessageChain | MessageNodes,
         quote: bool = True,
     ) -> list[str]:
-        # 主动消息须按冷却排队发出，但调用方需要取得真实的消息 ID 才能判断本跳是否送达，
+        # 主动消息必须按冷却排队发出，但调用方需要获取真实的消息 ID 才能判断本次发送是否送达，
         # 因此入队的是“任务 + future”，待实际发送完成后再回传结果。
         future = asyncio.get_running_loop().create_future()
         high_priority = session_info.target_union_info.target_data.get("in_post_whitelist", False)
@@ -615,7 +615,7 @@ class MilkyFetchedContextManager(MilkyContextManager):
 
     @classmethod
     async def stop_task_processor(cls) -> None:
-        """停止主动消息 worker，并让尚未处理的调用方收到发送失败。"""
+        """停止主动消息工作任务，使尚未完成处理的调用方接收发送失败通知。"""
         task = cls._processor_task
         cls._processor_task = None
         if task is not None:

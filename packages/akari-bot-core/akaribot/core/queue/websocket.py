@@ -401,7 +401,7 @@ def _fit_error_response(response: RpcResponse, max_bytes: int) -> RpcResponse:
     diagnostic = error.get("traceback")
     if isinstance(diagnostic, str) and _response_frame_fits(compact_response, max_bytes):
         # 保留帧能容纳的尽量多远端栈，用二分查找避免长消息反复超帧。
-        # 裁剪前先去掉接收侧已含的请求上下文后缀，以便调用方重建本地上下文。
+        # 裁剪前先移除接收方已包含的请求上下文后缀，以便调用方重建本地上下文。
         if _RPC_CONTEXT_MARKER in diagnostic:
             diagnostic = diagnostic.split(_RPC_CONTEXT_MARKER, 1)[0].rstrip()
         low, high = 0, len(diagnostic.encode("utf-8"))
@@ -419,8 +419,8 @@ def _fit_error_response(response: RpcResponse, max_bytes: int) -> RpcResponse:
     if _response_frame_fits(compact_response, max_bytes):
         return compact_response
 
-    # 极小上限可能容不下原始消息。
-    # 先以短回退保持协议形状合法，再交由调用方处理不可能满足的帧上限。
+    # 极小上限可能无法容纳原始消息。
+    # 先以短消息返回，保持协议结构合法，再交由调用方处理无法满足的帧上限。
     minimal_error = {
         "code": error.get("code", "rpc_error"),
         "type": error.get("type", "RpcError"),
@@ -500,7 +500,7 @@ class _HubConnection:
 
 
 class WebSocketHub:
-    """维护连接、Peer 拓扑以及非持久化投递状态的独立 Hub。"""
+    """维护连接、节点拓扑以及非持久化投递状态的独立 Hub。"""
 
     LEASE_SECONDS = 45
     MAINTENANCE_LEASE_SECONDS = 600

@@ -37,7 +37,7 @@ def _test_webhook_transport_uses_configured_endpoint() -> bool:
 
 
 def _test_webhook_endpoint_values_are_coerced() -> bool:
-    # 配置文件类型写错时只告警不报错，传给 SDK 前须转换。
+    # 配置文件类型填写错误时仅告警而不报错，传递至 SDK 前必须执行类型转换。
     with (
         patch.object(QQBotConfig, "qq_use_webhook", True),
         patch.object(QQBotConfig, "qq_webhook_host", "0.0.0.0"),
@@ -50,7 +50,7 @@ def _test_webhook_endpoint_values_are_coerced() -> bool:
 
 @func_case
 async def test_qqbot_transport(tester: Tester):
-    """akaribot.adapters.qqbot.bot: 客户端构造配置测试"""
+    """akaribot.adapters.qqbot.bot 客户端构造配置测试"""
     await tester.test(_test_certification_selects_proactive_rate_limit, "主动消息认证档位映射测试")
     await tester.test(_test_webhook_transport_uses_configured_endpoint, "Webhook 传输使用配置端点测试")
     await tester.test(_test_webhook_endpoint_values_are_coerced, "Webhook 端点配置类型转换测试")

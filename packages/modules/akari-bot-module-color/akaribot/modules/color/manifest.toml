@@ -1,4 +1,4 @@
-# akari-bot-module-color 的包清单。
+# akari-bot-module-color 模块清单。
 schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"

@@ -57,7 +57,7 @@ def read_credits(path: Path | None = None) -> str | None:
 
 
 def build_credits_message(msg: Bot.MessageSession) -> MessageChain:
-    """构造制作人员名单消息。"""
+    """构建制作人员名单消息。"""
     result = MessageChain.create()
     if not (credits := read_credits()):
         result.append(I18NContext("core.message.about.credits.unavailable"))
@@ -69,11 +69,11 @@ def build_credits_message(msg: Bot.MessageSession) -> MessageChain:
 
 
 def build_about_message(msg: Bot.MessageSession) -> MessageChain:
-    """根据平台能力构造 `~about` 菜单。"""
+    """根据平台能力构建 `~about` 菜单。"""
     locale = msg.session_info.locale
     support_markdown = msg.session_info.support_markdown
     result = MessageChain.create()
-    # 品牌资产包缺失（或部署者删掉了图）时跳过配图：少一张图不该让整条 `~about` 失败。
+    # 品牌资产包缺失（或部署者删除了配图）时跳过配图，缺失单张图片不应导致整条 `~about` 命令执行失败。
     character = find_brand_asset("character_marked.png")
     if character is not None:
         result.append(Image(character, max_h=CHARACTER_IMAGE_MAX_WIDTH))

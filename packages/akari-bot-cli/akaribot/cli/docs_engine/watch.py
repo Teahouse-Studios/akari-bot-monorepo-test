@@ -50,7 +50,7 @@ class WatchTarget:
 
 @dataclass(frozen=True)
 class Change:
-    """一次文件改动。"""
+    """单次文件变更。"""
 
     path: Path
     action: str
@@ -130,7 +130,7 @@ class PathWatcher:
             self._ready.set()
 
     def poll(self, timeout: float = 0.5) -> tuple[Change, ...]:
-        """等待一批改动。超时返回空元组。"""
+        """等待批量变更。超时返回空元组。"""
         if not self._ready.wait(max(0.0, float(timeout))):
             return ()
         deadline = time.monotonic() + MAX_BATCH_SECONDS

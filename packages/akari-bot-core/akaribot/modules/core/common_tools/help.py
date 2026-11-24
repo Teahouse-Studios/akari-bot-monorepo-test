@@ -166,16 +166,16 @@ def end_inline_run(chain: MessageChain) -> None:
     """
     终止行内连排，使其后追加的元素能各自成行。
 
-    可点击的模块列表以指令操作收尾，而适配器会把紧随指令操作之后的文本并入同一行
+    可点击的模块列表以指令操作收尾，而适配器会将紧随指令操作之后的文本合并至同一行
     （见 ``akaribot/adapters/qqbot/context.py`` 中 send_msg_markdown() 的 ``inline_pending``）。
     该规则本是为“文字 + 标签 + 收尾文字”这类同出一句话的场合而设，跨消息元素时却会
-    把调用方随后追加的提示语粘在最后一个模块名之后。补一个纯文本片段即可断开连排。
+    将调用方随后追加的提示语紧贴在最后一个模块名称之后。补充一个纯文本片段即可断开行内连排。
 
-    片段取一个空格而非空串：消息链会把空文本换成错误提示（见
-    ``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取——适配器随后
-    仍会按元素补一次换行，两者叠加会多出一个空行。
+    片段使用单个空格而非空字符串，因为消息链会将空文本替换为错误提示（见
+    ``akaribot/core/builtins/message/chain.py`` 对空文本的处理）。换行同样不可取，适配器随后
+    仍会按元素补充一次换行，两者叠加会产生多余的空行。
 
-    本函数只在具备指令操作能力的平台上有意义，调用点均已由 ``use_clickable`` 把关。
+    该函数仅在具备指令操作能力的平台上生效，调用点均已通过 ``use_clickable`` 控制。
 
     :param chain: 待收尾的消息链，就地修改。
     """
@@ -189,27 +189,27 @@ def build_module_table(
     permission: str = "user",
 ) -> list:
     """
-    把若干组模块名排成一张 markdown 表。
+    将若干组模块名称排列为 Markdown 表格。
 
-    各组同处一张表，组与组之间以一行只填组名的区隔行分开。首组的组名即表头。表格至多
+    各组同处于单个表格中，组与组之间以一行仅包含组名称的分隔行分开。首组的组名称即为表头。表格至多
     :data:`~akaribot.core.utils.table.TABLE_MAX_ROWS` 行、至少 :data:`~akaribot.core.utils.table.TABLE_MIN_COLUMNS` 列，
-    模块数的增长由列数吸收。末行不足处补空单元格 —— markdown 要求各行的列数一致。
+    模块数增多时通过增加列数分摊。末行不足处补充空单元格，因为 Markdown 要求各行的列数保持一致。
 
-    ``include_help_header`` 开启时，机器人名、当前语言、版本与用户权限会成为同一张表的首行。
+    ``include_help_header`` 开启时，机器人名称、当前语言、版本与用户权限将成为整个表格的首行。
     此时表格至少使用四列，列数更多时在首行末尾补空单元格，所有行始终保持相同列数。
 
-    模块名做成指令操作，点击即把 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格
-    中间，靠的正是适配器把指令操作及其后的文本一并并入上一项的行为（见
-    ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``）：整张表因此累积成一个文本块，
-    竖线与换行均由此处显式写出。也正因如此，本函数产出的元素中**不得出现相邻的两个纯文本**
-    —— 适配器只在指令操作之后才做合并，两个纯文本之间会被补上换行，表格随即被劈成两半。
+    模块名称渲染为指令操作，点击后即可将 ``<前缀>help <模块名>`` 填入输入框。标签之所以能置于单元格
+    中间，依赖的正是适配器将指令操作及其后续文本一并合并至上一项的行为（见
+    ``akaribot/adapters/qqbot/context.py`` 的 ``inline_pending``），整张表格因此累积为一个文本块，
+    竖线与换行均通过当前函数显式输出。也正因如此，本函数生成的元素中**不得出现相邻的两个纯文本**，
+    因为适配器仅在指令操作之后才会执行合并，两个纯文本之间会被补充换行符，表格将随之被拆分为两部分。
     区隔行因此与上一组的收尾同处一个元素。
 
     :param msg: 消息会话。
-    :param groups: (组名多语言键， 模块名列表) 的序列，模块名为空的组会被跳过。
+    :param groups: (组名称多语言键, 模块名称列表) 的序列，模块名称为空的组会被跳过。
     :param include_help_header: 是否在模块表格内加入 help 顶栏。
     :param permission: 顶栏权限类型，可选 ``user``、``admin`` 或 ``superuser``。
-    :return: 消息元素列表。所有组皆空时返回空片段，空态文案由调用方负责。
+    :return: 消息元素列表。所有组都为空时返回空片段，空状态文案转交调用方提供。
     """
     locale = msg.session_info.locale
     prefix = msg.session_info.prefixes[0]
@@ -246,8 +246,8 @@ def build_module_table(
         return "|" + "".join(f" {cell} |" if cell else " |" for cell in cells) + "\n"
 
     parts = []
-    # 表头与分隔线开头，随后各行的收尾、下一组的区隔行都并进同一个纯文本，
-    # 以免相邻纯文本之间被适配器补上换行
+    # 表头与分隔线开头，随后各行的收尾、下一组的区隔行都合并至同一纯文本元素中，
+    # 以免相邻纯文本之间被适配器补充换行。
     if include_help_header:
         bot_name = escape_table_cell(msg.session_info.bot_name or locale.t("bot_name"))
         language = escape_table_cell(locale.t("language"))
@@ -337,9 +337,9 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
     args = help_doc.get("args") or []
     options = help_doc.get("options") or []
 
-    # 每节为 (区隔行文案， [(种类， 首列， 次列), ...])。命令一节不带区隔行。
-    # 种类决定首列如何落到单元格里：command 做成指令操作，code 已是成型的行内代码，
-    # text 则照常转义。
+    # 每节由区隔行文案与若干列定义组成，列定义是种类、首列、次列的三元组。命令分组不包含区隔行。
+    # 种类控制首列在单元格中的呈现方式，其中 command 渲染为指令操作，code 已是成型的行内代码，
+    # text 则正常转义。
     sections = []
     if args:
         sections.append((None, [("command", item["args"], item.get("desc") or "") for item in args]))
@@ -347,7 +347,7 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
         rows = [("text", flag, desc) for option in options for flag, desc in option.items()]
         sections.append((locale.t("core.message.help.table.options"), rows))
     if regex_rows:
-        # 正则包含大量格式标记字符，使用行内代码原样呈现，不再逐字符转义。
+        # 正则包含大量格式标记字符，使用行内代码原样呈现，不需要逐字符转义。
         rows = [("code", format_table_code(pattern), desc) for pattern, desc in regex_rows]
         sections.append((locale.t("core.message.help.table.regex"), rows))
     if not sections:
@@ -367,7 +367,7 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
         if title:
             pending += f"| {escape_table_cell(title)} |{blanks}\n"
         for start in range(0, len(rows), pairs):
-            # 末行补空的成对单元格，markdown 要求各行的列数一致
+            # 末行用于补齐空白的成对单元格，Markdown 要求各行的列数保持一致。
             chunk = rows[start : start + pairs]
             chunk += [("text", "", "")] * (pairs - len(chunk))
             pending += "| "
@@ -377,11 +377,11 @@ def build_command_table(msg: Bot.MessageSession, help_doc: dict, regex_rows: lis
                     parts.append(ActionText(strip_command_arguments(first), show=escape_table_cell(first)))
                     pending = f" | {escape_table_cell(second)} | "
                 else:
-                    # code 已由 format_table_code() 处理妥当，再转义会把围栏内的反斜杠显示出来
+                    # code 已通过 format_table_code() 处理完成，如果再次转义会将代码内的反斜杠直接展示。
                     cell = first if kind == "code" else escape_table_cell(first)
                     pending += f"{cell} | {escape_table_cell(second)} | "
             pending = pending.rstrip() + "\n"
-    # 末尾保留换行，理由同 build_module_table()：表格靠空行终结
+    # 末尾保留换行，理由与 build_module_table() 相同，表格依靠空行结束。
     parts.append(Markdown(pending, disable_joke=True))
     return parts
 
@@ -469,7 +469,7 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
     if msg.parsed_msg:
         mdocs = []
         malias = []
-        # 表格版另需成对的（正则， 说明），与拼成一行的 mdocs 并行收集
+        # 表格版另外需要成对的（正则，说明），与拼接成一行的 mdocs 并行收集。
         regex_rows = []
 
         help_name = alias[module].split()[0] if module in alias else module.split()[0]
@@ -478,10 +478,10 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
 
             if not module_._db_load:
                 await msg.finish(I18NContext("parser.module.unloaded", module=help_name))
-            # 会话缺少推送能力时订阅扩展模块无法启用，展示其帮助会误导用户
+            # 会话缺少推送能力时订阅扩展模块无法启用，展示其帮助会误导用户。
             if module_.unsupported_reason(msg.session_info) == "rss":
                 await msg.finish(I18NContext("core.message.help.not_found"))
-            # 仅在模块确实含有管理员条目时才查询平台权限，普通模块的帮助不额外付出一次接口调用
+            # 仅在模块确实含有管理员条目时才查询平台权限，普通模块的帮助不额外付出一次接口调用。
             is_admin = is_superuser or (module_has_admin_entries(module_) and await check_context_admin(msg))
             if (
                 (module_.required_superuser and not is_superuser)
@@ -529,8 +529,8 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
                         elif isinstance(regex.pattern, re.Pattern):
                             pattern = regex.pattern.pattern
                         if pattern:
-                            # 表格版把正则包进行内代码，不需要也不能要这层反斜杠转义，
-                            # 故在转义前先留一份原样的
+                            # 表格版将正则包装为行内代码，不需要包含该层反斜杠转义，
+                            # 因此在转义前先保留一份原始文本。
                             raw_pattern = pattern
                             if msg.session_info.support_markdown:
                                 pattern = re.sub(r"([\\`*_{}\[\]()#+\-.!>~|])", r"\\\1", pattern)
@@ -572,7 +572,7 @@ async def _(msg: Bot.MessageSession, module: str, img: bool = False, legacy: boo
             else:
                 wiki_msg = ""
 
-            # 表格版优先于图片版：命令可点击填入，且与模块列表的排法一致
+            # 表格版优先于图片版，因为命令可点击填入，且与模块列表的排列方式一致。
             if should_use_markdown_table(msg, force_image, force_legacy):
                 table = build_command_table(msg, help_.return_json_help_doc(), regex_rows)
                 if table:
@@ -739,7 +739,7 @@ async def help_overview(msg: Bot.MessageSession, img: bool = False, legacy: bool
             ]
 
         if use_table:
-            # 各类模块同处一张表，以一行区隔行分开。表格以纯文本收尾，无须 end_inline_run()
+            # 各类模块同处同一表格，以一行区隔行分开。表格以纯文本收尾，不需要调用 end_inline_run()。
             help_msg = MessageChain.assign(
                 build_module_table(
                     msg,
@@ -818,7 +818,7 @@ async def help_overview(msg: Bot.MessageSession, img: bool = False, legacy: bool
 
 
 async def modules_list_help(msg: Bot.MessageSession, legacy, force_image=False):
-    # 与 ~help 同理：表格不可用时优先保留图片，图片生成失败后再降级到文字版
+    # 理由与 ~help 相同，表格不可用时优先保留图片，图片生成失败后再降级至文字版。
     use_table = should_use_markdown_table(msg, force_image, legacy)
     use_clickable = not use_table and not legacy and msg.session_info.support_action_text
     is_admin = await check_context_admin(msg)
@@ -876,7 +876,7 @@ async def modules_list_help(msg: Bot.MessageSession, legacy, force_image=False):
         if not module_ and not subscription:
             help_msg = MessageChain.assign(I18NContext("core.message.help.legacy.availables.none"))
         elif use_table:
-            # 与 ~help 同款表格，收尾同样是纯文本
+            # 采用与 ~help 样式相同的表格，收尾同样是纯文本。
             help_msg = MessageChain.assign(
                 build_module_table(
                     msg,

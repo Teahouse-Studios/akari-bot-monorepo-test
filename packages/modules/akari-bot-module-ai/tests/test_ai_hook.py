@@ -1,4 +1,4 @@
-"""akaribot.modules.ai.hook ai.ask 具名 hook 单元测试。"""
+"""akaribot.modules.ai.hook 中 ai.ask 带名称的 Hook 单元测试。"""
 
 from contextlib import ExitStack
 from decimal import Decimal
@@ -39,11 +39,11 @@ async def _test_ask_ai_without_session():
 def _test_resolve_llm_priority():
     models = [{"name": "alpha"}, {"name": "beta"}]
     with _patch_llm(models, "alpha"):
-        # 调用方指定 > 场景默认 > 模块默认
+        # 优先级由高至低依次为调用方指定、场景默认与模块默认。
         assert hook.resolve_llm("ALPHA", _session_info("beta"))["name"] == "alpha"
         assert hook.resolve_llm(None, _session_info("beta"))["name"] == "beta"
         assert hook.resolve_llm(None, _session_info())["name"] == "alpha"
-        # 显式指定的模型不可用时不替换，场景默认模型离线时改用模块默认
+        # 显式指定的模型不可用时不予替换，场景默认模型离线时改用模块默认配置。
         assert hook.resolve_llm("gamma", _session_info("beta")) is None
         assert hook.resolve_llm(None, _session_info("gamma"))["name"] == "alpha"
     return True
@@ -96,7 +96,7 @@ async def _test_ask_ai_dispatch():
 
 @func_case
 async def test_ai_hook(tester: Tester):
-    """akaribot.modules.ai.hook: ai.ask 调用契约测试"""
+    """akaribot.modules.ai.hook 中 ai.ask 调用约定测试"""
     await tester.test(_test_ask_ai_without_session, "缺少会话信息时不可用")
     await tester.test(_test_resolve_llm_priority, "模型选择优先级")
     await tester.test(_test_ask_ai_not_enough_petal, "花瓣不足时返回对应状态")

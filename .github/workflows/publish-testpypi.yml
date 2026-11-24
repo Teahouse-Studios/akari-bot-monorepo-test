@@ -1,7 +1,7 @@
 name: TestPyPI rehearsal
 
-# 首发候选演练：一次构建全部 workspace 分发，串行上传 TestPyPI，再从 TestPyPI 下载真实文件
-# 并在 Linux/Windows/macOS 上做净室安装验证。只写 TestPyPI，不碰 PyPI、gh-pages 与 Release。
+# 首次发布候选版本的演练流程会一次构建全部 workspace 包，按顺序上传至 TestPyPI，再从 TestPyPI 下载真实的包文件，
+# 并在 Linux/Windows/macOS 上执行干净环境安装验证。仅写入 TestPyPI，不涉及 PyPI、gh-pages 与 Release。
 on:
   workflow_dispatch:
     inputs:
@@ -97,8 +97,8 @@ jobs:
           retention-days: 30
 
   publish:
-    # 单 job 串行上传：Token 模式下按依赖顺序逐个 twine 上传，避免 57 个 matrix job 逐个触发
-    # environment 审批。Trusted Publishing 走下面的独立 matrix job（OIDC 需要 action 逐次签发）。
+    # Token 模式下在单个 job 中按依赖顺序使用 twine 逐个上传，避免 57 个 matrix job 逐一触发
+    # environment 审批。Trusted Publishing 使用下方的独立 matrix job（OIDC 需要由 action 逐次签发）。
     needs: build
     if: inputs.confirm == 'publish' && inputs.auth == 'token'
     runs-on: ubuntu-latest
@@ -124,7 +124,7 @@ jobs:
           path: .
 
       - name: Install release tools
-        # 发布脚本由 runner 的 python 直接执行，需把 packaging 与 twine 装进同一环境。
+        # 发布脚本由 runner 的 python 直接执行，需要将 packaging 与 twine 安装到同一环境。
         run: python -m pip install --disable-pip-version-check packaging twine
 
       - name: Publish in dependency order
@@ -160,7 +160,7 @@ jobs:
           retention-days: 30
 
   publish-trusted:
-    # 官方仓库正式演练用：为 57 个项目配 pending publisher 后，由 action 逐次签发 OIDC 令牌。
+    # 供官方仓库正式演练使用，为 57 个项目配置 pending publisher 后，由 action 逐次签发 OIDC 令牌。
     needs: build
     if: inputs.confirm == 'publish' && inputs.auth == 'trusted-publishing'
     runs-on: ubuntu-latest
@@ -222,7 +222,7 @@ jobs:
           packages-dir: upload-dist/
 
   verify-local-index:
-    # 不经过任何外部仓库：把本批产物建成 PEP 503 静态索引，按索引地址装全量，验证解析/元数据/entry points。
+    # 不通过任何外部仓库，直接将本批产物构建为 PEP 503 静态索引并按索引地址完整安装，以验证依赖解析、元数据与 entry points。
     needs: build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -248,7 +248,7 @@ jobs:
       - name: Build static index and install all distributions
         shell: bash
         run: |
-          # 服务由构建进程自己起，服务根就是刚生成的索引目录，不依赖相对路径的解析。
+          # 服务由构建进程自行启动，服务根目录即新生成的索引目录，不依赖相对路径解析。
           uv run --no-project --with packaging python tools/build_local_index.py \
             --dist-dir dist --output local-index --serve 8123 &
           ready=0
@@ -261,7 +261,7 @@ jobs:
             ls -la local-index 2>&1 | head -5
             exit 1
           fi
-          # 自证一次产物下载：索引可达而文件取不到时，后续安装只会给出难以定位的 404。
+          # 验证一次产物下载，避免索引可访问但文件无法下载时，后续安装仅会返回难以定位的 404 错误。
           probe=$(grep -m1 -ho 'files/[^"#]*\.whl' local-index/simple/*/index.html | head -1 | cut -d/ -f2-)
           if [ -z "$probe" ] || ! curl -fsS --max-time 30 -o /dev/null "http://127.0.0.1:8123/files/$probe"; then
             echo "索引自证失败：files/$probe"
@@ -323,7 +323,7 @@ jobs:
               return found
 
 
-          # 同一次运行刚建的项目在索引 JSON 上有 CDN 延迟，等它追平再定“哪些还没传”。
+          # 同一次运行刚创建的项目在索引 JSON 上存在 CDN 延迟，需要等待同步后再判断哪些包尚未上传。
           deadline = time.time() + 300
           present = probe()
           while len(present) < expected and time.time() < deadline:
@@ -342,7 +342,7 @@ jobs:
           COMPLETE: ${{ steps.present.outputs.complete }}
         shell: bash
         run: |
-          # 部分上传阶段只跑不依赖缺失分发的组合。全量就绪后跑完整矩阵。
+          # 部分上传阶段仅运行不依赖缺失包的组合。全部就绪后再运行完整矩阵。
           if [ "$COMPLETE" = "true" ]; then
             SELECTED="$COMBO"
           else

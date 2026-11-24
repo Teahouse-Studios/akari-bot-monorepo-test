@@ -48,7 +48,7 @@ async def get_b30(msg: Bot.MessageSession, bind_info) -> str:
     save_data, summary = await get_save(msg, bind_info)
     records = get_records(save_data, song_info)
 
-    # Legacy 谱面不计入 rks，卡片的难度标签与配色也只有四档，故在挑选前滤除。
+    # Legacy 谱面不计入 rks，卡片的难度标签与配色也仅有四档，因此在挑选前过滤。
     filtered = {
         song_id: {level: record for level, record in levels.items() if level in LEVEL_INDEX}
         for song_id, levels in records.items()

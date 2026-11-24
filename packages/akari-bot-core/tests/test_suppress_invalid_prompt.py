@@ -1,4 +1,4 @@
-"""core.types.module 单元测试 - 模块级命令语法错误提示开关。"""
+"""core.types.module 模块级命令语法错误提示开关单元测试。"""
 
 from akaribot.testing import func_case, Tester
 from akaribot.core.types.module import Module
@@ -25,7 +25,7 @@ async def _test_included_in_to_dict():
 
 @func_case
 async def test_suppress_invalid_prompt(tester: Tester):
-    """core.types.module: 命令语法错误提示开关测试"""
+    """core.types.module 命令语法错误提示开关测试"""
     await tester.test(_test_included_in_to_dict, "序列化包含测试")
 
     return tester

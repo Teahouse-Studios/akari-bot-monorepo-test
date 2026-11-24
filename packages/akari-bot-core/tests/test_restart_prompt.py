@@ -1,4 +1,4 @@
-"""core.server.init 单元测试 - 重启提示的送达（需要数据库）。"""
+"""core.server.init 重启提示送达单元测试（依赖数据库）。"""
 
 import asyncio
 from datetime import UTC, datetime, timedelta
@@ -28,7 +28,7 @@ async def _write_restart_cache(client: str) -> None:
     )
     author_cache = PrivateData.path / ".cache_restart_author"
     author_cache.write_bytes(orjson.dumps(converter.unstructure(session_info)))
-    # load_prompt 会一并读取模块加载结果，该文件由 load_modules 写出，此处补齐以隔离依赖
+    # load_prompt 会一并读取模块加载结果，该文件由 load_modules 写入，此处补齐以隔离依赖。
     loader_cache = PrivateData.path / ".cache_loader"
     if not loader_cache.exists():
         loader_cache.write_text("")
@@ -98,8 +98,8 @@ async def _test_ignores_previous_client_lease():
 
 async def _test_waits_for_client_to_come_online():
     # server 与各 bot 子进程一同重启，`load_prompt` 执行时本地拓扑缓存必然为空。
-    # 客户端须先在 Peer Registry 注册带有效租约的 ready 实例。若不等待即发送，
-    # RPC 的掉线检查会拒绝提示请求。
+    # 客户端需要先在节点注册表注册带有效租约的 ready 实例。若不等待即发送，
+    # RPC 的离线检查会拒绝提示请求。
     client = "RESTARTA"
     alive = Alive.values.copy()
     try:
@@ -121,14 +121,14 @@ async def _test_waits_for_client_to_come_online():
 
 
 async def _test_gives_up_when_client_never_online():
-    # 重启提示并非关键路径，客户端确已掉线时无限等待只会让 server 卡在初始化阶段。
+    # 重启提示并非关键路径，客户端确已离线时无限等待会导致 server 阻塞于初始化阶段。
     client = "RESTARTB"
     alive = Alive.values.copy()
     try:
         await _reset(client)
 
         await asyncio.wait_for(load_prompt(None, timeout=0.05), timeout=10)
-        # 超时放弃后不应残留缓存，否则下次启动会重复投递
+        # 超时放弃后不应残留缓存，否则下一次启动时会重复投递。
         return not await _prompt_sent() and not (PrivateData.path / ".cache_restart_author").exists()
 
     except (Exception, asyncio.TimeoutError):
@@ -152,7 +152,7 @@ async def _test_corrupt_author_cache_is_discarded():
 
 @func_case
 async def test_restart_prompt(tester: Tester):
-    """core.server.init: 重启提示送达测试"""
+    """core.server.init 重启提示送达测试"""
     try:
         await tester.test(_test_waits_for_client_to_come_online, "等待客户端上线后投递测试")
         await tester.test(_test_ignores_previous_client_lease, "忽略重启前客户端残留租约测试")

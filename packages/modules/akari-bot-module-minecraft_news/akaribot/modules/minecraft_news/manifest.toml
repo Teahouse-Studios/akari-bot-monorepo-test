@@ -2,5 +2,5 @@
 schema = 1
 requires_core_api = ">=1,<2"
 locales = "locales"
-# 本包 module() 注册的全部模块名。
+# 当前包 module() 注册的全部模块名称。
 provides_modules = ["feedback-news", "minecraft-news"]

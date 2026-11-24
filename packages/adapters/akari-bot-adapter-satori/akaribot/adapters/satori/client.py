@@ -28,5 +28,5 @@ class SatoriApp(App):
         await super().post(event, conn)
 
 
-# SDK 的 App 在每个进程内只允许存在一个实例，连接参数由 bot_satori 配置决定。
+# SDK 的 App 在每个进程内仅允许存在一个实例，连接参数由 bot_satori 配置确定。
 satori_app = SatoriApp(websockets_info)

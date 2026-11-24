@@ -73,8 +73,8 @@ class DiscordSlashContextManager(DiscordContextManager):
                 "view": view if index == len(payloads) - 1 else None,
             }
             send_ = await ctx.respond(**kwargs) if index == 0 else await ctx.send(**kwargs)
-            # py-cord 的首次 Interaction 响应返回 Interaction 本身，其 id 是交互 ID，
-            # 不能用于撤回、Callback 或后续消息操作。后续响应则直接返回 WebhookMessage。
+            # py-cord 的首次 Interaction 响应返回 Interaction 本身，其 id 为交互 ID，
+            # 无法用于撤回、Callback 或后续消息操作。后续响应则直接返回 WebhookMessage。
             if isinstance(send_, discord.Interaction):
                 send_ = await send_.original_response()
             if send_:

@@ -49,7 +49,7 @@ LOG_TAIL_LINES = 40
 STRUCTURE = "structure"
 CONTENT = "content"
 STRUCTURE_NAMES = frozenset({"docs.toml", "docs.json", "docs.global.toml", "docs.global.json", "doc.toml", "doc.json"})
-# VitePress dev 在镜像里写依赖预构建与输出缓存，同步时既不同步也不清理。
+# VitePress dev 在镜像中写入依赖预构建与输出缓存，同步时既不同步也不清理。
 SKIPPED_SYNC_PATHS = frozenset({"node_modules", ".vitepress/cache", ".vitepress/dist"})
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 _LAST_SYNC_PATH = ".vitepress/config.mts"
@@ -389,7 +389,7 @@ class DevSession:
             options: dict[str, Any] = {}
             if os.name != "nt":
                 options["start_new_session"] = True
-            process = subprocess.Popen(  # noqa: S603 - argv 由固定组件拼成
+            process = subprocess.Popen(  # noqa: S603 - argv 由固定组件拼接而成。
                 argv,
                 cwd=str(docs_dir),
                 stdin=subprocess.DEVNULL,

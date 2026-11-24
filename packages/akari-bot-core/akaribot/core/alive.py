@@ -30,7 +30,7 @@ class Alive:
         lease_until: datetime | None = None,
         force: bool = False,
     ) -> None:
-        """刷新指定对端的状态。"""
+        """刷新指定节点的状态。"""
         current = cls.values.get(peer_id)
         if (
             not force
@@ -61,7 +61,7 @@ class Alive:
 
     @classmethod
     def replace_peers(cls, peers: list[PeerRecord]) -> None:
-        """替换全部对端记录。"""
+        """替换全部节点记录。"""
         previous = cls.values
         values = {}
         for peer in peers:
@@ -117,7 +117,7 @@ class Alive:
 
     @classmethod
     def peer_ids(cls, service: str | None = None, role: str | None = None) -> list[str]:
-        """返回对端 ID 列表。"""
+        """返回节点 ID 列表。"""
         return sorted(
             peer_id
             for peer_id, data in cls.get_alive().items()

@@ -23,11 +23,11 @@ from akaribot.core.database.models import (
 from akaribot.core.logger import Logger
 from akaribot.core.utils.url_audit import GlobalURLAllowlist, GlobalURLBlocklist
 
-# 旧版本号的终点。到达该版本后旧库不再需要逐级升级，只需记录 revision。
+# 旧版本号的终点。到达该版本后旧数据库不再需要逐级升级，仅需记录 revision。
 LATEST_LEGACY_VERSION = 6
 
-# 旧版本号到 ``(包名， revision)`` 的对照表。包名取分发名，与 PackageRegistry.migration_dirs()
-# 的键一致。旧库升到某版本后，该版本及其之前的全部 revision 都视为已应用，不再重放。
+# 旧版本号到 ``(包名, revision)`` 的对照表。使用包名以与 PackageRegistry.migration_dirs()
+# 的键保持一致。旧数据库升级至指定版本后，该版本及之前的所有 revision 均视为已应用，不再重复执行。
 LEGACY_MAP: dict[int, list[tuple[str, str]]] = {
     1: [("core", "0001_initial")],
     2: [("core", "0002_banned_users_and_nullable_sender")],
@@ -43,14 +43,14 @@ LEGACY_MAP: dict[int, list[tuple[str, str]]] = {
     6: [("akari-bot-module-maimai", "0003_oauth_columns")],
 }
 
-# v3：原本以平台 ID 为主键的两张核心表改挂 union，表名与模型名一致，
-# 以免“target_info”这类旧名继续读作“平台场景信息”。
+# 升级至 v3 时，以平台 ID 为主键的两张核心表调整为关联 union，表名与模型名保持一致，
+# 以免“target_info”等历史名称引起混淆。
 UNION_RENAME_CORE_TABLES = {
     "sender_info": "sender_union_info",
     "target_info": "target_union_info",
 }
 
-# v3：原本以平台 ID 为主键的表改挂 union，旧数据的 union ID 直接沿用原 ID，因此只需重命名主键列。
+# 升级至 v3 时，以平台 ID 为主键的表调整为关联 union。历史数据的 union ID 直接沿用原 ID，因此仅需要重命名主键列。
 UNION_RENAME_TABLES = {
     "sender_id": [
         "sender_union_info",
@@ -66,24 +66,24 @@ UNION_RENAME_TABLES = {
     ],
 }
 
-# v3：统计与审计表保留原始 ID，另增 union 列用于聚合。
+# v3 中，统计与审计表保留原始 ID，另增 union 列用于聚合。
 UNION_RECORD_TABLES = ["analytics_data", "unfriendly_actions"]
 
-# v4：Wiki API 独立名单并入全局 URL 规则文件，迁移成功后移除旧表。
+# v4 中，Wiki API 独立名单并入全局 URL 规则文件，迁移成功后移除旧表。
 WIKI_URL_RULE_TABLES = (
     ("module_wiki_allow_list", GlobalURLAllowlist),
     ("module_wiki_block_list", GlobalURLBlocklist),
 )
 
-# v6：绑定表补充 OAuth 授权所需的列，水鱼、落雪两侧的取数方式都改由 OAuth 令牌决定。
+# v6 中，绑定表补充 OAuth 授权所需的列，水鱼、落雪两侧的数据获取方式都改由 OAuth 令牌确定。
 OAUTH_BIND_COLUMNS = (
     ("module_maimai_diving_prober_bind_info", "refresh_token", "VARCHAR(1024)"),
     ("module_maimai_diving_prober_bind_info", "subject", "VARCHAR(512)"),
     ("module_maimai_lxns_prober_bind_info", "refresh_token", "VARCHAR(1024)"),
 )
 
-# v6：绑定方式换代后不再读写的历史列。落雪好友码曾用于免授权的查分接口，现已改为上传 OAuth 令牌，
-# 模型也不再声明该列。留着它只会让库结构与模型长期不一致（旧列带 NOT NULL 且无默认值，新写入会直接失败）。
+# v6 中不再读写的历史列。落雪绑定采用上传 OAuth 令牌方式，模型不再声明好友码列。
+# 保留该列会导致数据库结构与模型长期不一致（旧列带 NOT NULL 且无默认值，新写入会直接失败）。
 OBSOLETE_BIND_COLUMNS = (("module_maimai_lxns_prober_bind_info", "friend_code"),)
 
 
@@ -143,12 +143,12 @@ async def migrate_wiki_url_rules(conn) -> None:
 
 async def update_database_to_v3(conn):
     """
-    将数据库升级至 v3：平台 ID 与数据解耦，数据改挂 union。
+    将数据库升级至 v3，使平台 ID 与数据解耦，数据改为关联 union。
 
     :param conn: 数据库连接。
     """
-    # 核心表改名。调用方已先跑过 generate_schemas()，按新模型建出的目标表此刻为空表，
-    # 须先移除再改名，否则改名会与之冲突。目标表若已有数据，说明改名早已完成，跳过即可。
+    # 核心表重命名操作。调用方已预先执行 generate_schemas()，按新模型创建的目标表当前为空表，
+    # 必须先移除再执行重命名，否则重命名操作将产生冲突。目标表若已包含数据，说明重命名已完成，直接跳过即可。
     for old_table, new_table in UNION_RENAME_CORE_TABLES.items():
         if not await has_table(conn, old_table):
             continue
@@ -159,7 +159,7 @@ async def update_database_to_v3(conn):
             await conn.execute_query(f"DROP TABLE {quote_ident(new_table)};")
         await conn.execute_query(f"ALTER TABLE {quote_ident(old_table)} RENAME TO {quote_ident(new_table)};")
 
-    # 主键列改名。表由 generate_schemas() 新建时已是 union_id，此时旧列不存在，跳过即可。
+    # 主键列重命名操作。表由 generate_schemas() 新建时已使用 union_id，此时旧列不存在，直接跳过即可。
     for old_column, tables in UNION_RENAME_TABLES.items():
         for table in tables:
             if not await has_column(conn, table, old_column):
@@ -174,18 +174,18 @@ async def update_database_to_v3(conn):
                     f"ALTER TABLE {quote_ident(table)} CHANGE COLUMN {quote_ident(old_column)} {quote_ident('union_id')} VARCHAR(512) NOT NULL;"
                 )
 
-    # 补建映射行。旧数据的 union ID 与原 ID 相同，直接按原值一一对应即可。
-    # 账号级封禁保持关闭，原有的封禁状态已记在 union 上。
+    # 补充创建映射记录。历史数据的 union ID 与原始 ID 一致，按原值对应写入即可。
+    # 账号级封禁保持关闭状态，原封禁状态已记录于 union 中。
     await backfill_union_binds()
 
-    # 消息通道号。target_union_bind 由 generate_schemas() 新建时已包含该列，正常升级路径不会执行此段。
+    # 消息通道编号维护。target_union_bind 由 generate_schemas() 新建时已包含该列，标准升级流程不执行该逻辑。
     if not await has_column(conn, "target_union_bind", "channel_id"):
         if db_type == "sqlite":
             await conn.execute_query('ALTER TABLE "target_union_bind" ADD COLUMN "channel_id" INT NOT NULL DEFAULT 1;')
         else:
             await conn.execute_query("ALTER TABLE `target_union_bind` ADD COLUMN `channel_id` INT NOT NULL DEFAULT 1;")
 
-    # 通道号须在组内逐个顺延。若一律保留默认值 1，同一组下的全部场景会被判定为同一条消息通道，
+    # 通道号必须在组内逐个顺延。若一律保留默认值 1，同一组下的全部场景会被判定为同一条消息通道，
     # 命令与推送将相互去重，导致场景不再有消息送达。
     for union_id in set(await TargetUnionBind.all().values_list("union_id", flat=True)):
         binds = await TargetUnionBind.filter(union_id=union_id).order_by("bound_at")
@@ -193,14 +193,14 @@ async def update_database_to_v3(conn):
             bind.channel_id = channel_id
             await bind.save()
 
-    # 旧版 connect 将机器人互认记录存为扁平列表，无法反查某条记录属于哪个场景，解绑时也就无从删除。
-    # 该结构已改为两级字典，旧值直接清除，重新执行一次 bind auto 即可。
+    # 旧版 connect 将机器人互认记录存为扁平列表，无法反向查询某条记录属于哪个场景，解绑时无法删除。
+    # 该结构已调整为两级字典，清除旧值后重新执行一次 bind auto 即可。
     for target in await TargetUnionInfo.all():
         if isinstance(target.target_data.get("bots_id"), list):
             target.target_data.pop("bots_id")
             await target.save()
 
-    # 统计与审计表增列并回填，历史记录的原始 ID 保持不动。
+    # 统计与审计表新增列并回填，历史记录的原始 ID 保持不动。
     for table in UNION_RECORD_TABLES:
         for column, source in (("target_union_id", "target_id"), ("sender_union_id", "sender_id")):
             if await has_column(conn, table, column):
@@ -217,8 +217,8 @@ async def update_database_to_v3(conn):
                 f"UPDATE {quote_ident(table)} SET {quote_ident(column)} = {quote_ident(source)} WHERE {quote_ident(column)} IS NULL;"
             )
 
-    # 轮询与区间统计所需的索引：job_queues 每 100 毫秒被轮询，analytics_data 要按区间反复聚合，
-    # 两者都随行数增长退化为全表扫描。开发期已升到 v3 的库需把版本号退回 2 重跑以补上索引。
+    # 轮询与区间统计所需的索引，因为 job_queues 每 100 毫秒被轮询，analytics_data 要按区间反复聚合，
+    # 两者都随行数增长退化为全表扫描。开发阶段已升到 v3 的数据库需要将版本号退回 2 重新执行以补充创建索引。
     for table, column, index_name in (
         ("job_queues", "target_client", "idx_job_queues_client_status"),
         ("analytics_data", "timestamp", "idx_analytics_data_timestamp"),
@@ -282,7 +282,7 @@ async def update_database_to_v6(conn):
     """
     for table, column, column_type in OAUTH_BIND_COLUMNS:
         if not await has_table(conn, table):
-            # 未启用该模块时这张表可能根本不存在，此时无需迁移。
+            # 未启用该模块时该表可能不存在，此时无需迁移。
             continue
         if await has_column(conn, table, column):
             continue
@@ -301,9 +301,9 @@ async def drop_indexes_on_missing_columns(conn) -> None:
     """
     删除指向不存在列的索引。
 
-    ``generate_schemas(safe=True)`` 会为已存在的旧表补建按当前模型声明的索引，而旧表可能尚未改
-    列名，于是出现指向不存在列的索引。SQLite 改动任何表结构时都会重新解析整个库结构，这类索引会
-    让升级的第一条 ALTER 失败。删掉的索引随后由 ``generate_schemas`` 依模型重建。
+    ``generate_schemas(safe=True)`` 会为已存在的旧表补充创建按当前模型声明的索引，而旧表可能尚未修改
+    列名，于是出现指向不存在列的索引。SQLite 改动任何表结构时都会重新解析整个数据库结构，这类索引会
+    让升级的第一条 ALTER 失败。删除的索引随后由 ``generate_schemas`` 依模型重建。
 
     :param conn: 数据库连接。
     """
@@ -334,10 +334,10 @@ async def legacy_upgrade_to_v6(conn=None) -> int | None:
     """
     按旧版本号把既有库逐级升级到 v6，返回升级前的版本号。
 
-    调用方须已完成数据库初始化。本函数不建连也不关连接，以便在 ``init_db()`` 的连接上直接
-    执行。每一步都先探测再执行，中途失败后重跑不会重复施加变更。
+    调用方必须已完成数据库初始化。本函数不建立也不关闭连接，以便在 ``init_db()`` 的连接上直接
+    执行。每一步都先探测再执行，中途失败后重新执行不会重复施加变更。
 
-    :param conn: 数据库连接，省略时取默认连接。
+    :param conn: 数据库连接，省略时使用默认连接。
     :return: 升级前的版本号，无版本记录时为 ``None``。
     """
     conn = conn if conn is not None else Tortoise.get_connection("default")
@@ -459,7 +459,7 @@ async def convert_legacy_version() -> int | None:
     """
     把旧版本号转换为 ``schema_migrations`` 记录。
 
-    只在 ``schema_migrations`` 为空且 ``database_version`` 有记录时执行一次：前者为空说明该
+    仅在 ``schema_migrations`` 为空且 ``database_version`` 有记录时执行一次，前者为空说明该
     库尚未记录过 revision，后者有记录说明库来自旧版本。版本低于 v6 时先按旧逻辑升级到 v6，
     再把不超过该版本的 revision 全部记录为已应用，避免重放已验证的升级步骤。
 

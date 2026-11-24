@@ -32,7 +32,7 @@ def _test_network_settings_follow_config():
             patch.object(CoreConfig, "proxy_disable_ssl", False),
         ):
             network = _reload_network_module()
-            # 未填写代理时取到空字符串，各 SDK 需要 None 才表示直连
+            # 未填写代理时获取到空字符串，各 SDK 需要 None 才表示直连。
             unset = network.proxy is None and network.ssl_verify is True
         return configured and unset
     finally:
@@ -109,7 +109,7 @@ async def _test_discord_client_uses_network_settings():
 
 @func_case
 async def test_network_proxy(tester: Tester):
-    """core.config.network: 代理与 TLS 校验设置测试"""
+    """core.config.network 代理与 TLS 校验设置测试"""
     await tester.test(_test_network_settings_follow_config, "代理与 TLS 校验取值跟随配置测试")
     await tester.test(_test_request_url_uses_network_settings, "框架 HTTP 请求携带代理与校验设置测试")
     await tester.test(_test_qqbot_client_uses_network_settings, "QQBot 客户端携带代理与校验设置测试")

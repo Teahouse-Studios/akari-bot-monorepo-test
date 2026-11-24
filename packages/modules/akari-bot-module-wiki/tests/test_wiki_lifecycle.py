@@ -110,7 +110,7 @@ async def _test_section_callback_uses_click_session_and_frozen_page():
     )
     callback = _build_section_callback(page)
 
-    # 模拟 query_pages 的下一轮循环覆写当前页对象。未冻结页面时闭包会读到这些新值。
+    # 模拟 query_pages 的下一轮循环覆写当前页对象。未冻结页面时闭包会读到对应的新值。
     page.title = "Last page"
     page.sections[0] = "Last section"
     page.info.api = "https://last.example/api.php"

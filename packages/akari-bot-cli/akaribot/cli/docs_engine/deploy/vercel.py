@@ -160,7 +160,7 @@ def _default_runner(
     cwd: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603 - 命令由本模块组装，登录信息只经环境变量传递
+    return subprocess.run(  # noqa: S603 - 命令由本模块组装，登录信息仅通过环境变量传递。
         list(argv),
         cwd=str(cwd),
         env=dict(environment),

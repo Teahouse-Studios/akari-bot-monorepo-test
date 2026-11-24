@@ -14,10 +14,10 @@ from typing import Any
 
 from akari_bot_i18n.i18n import Locale, build_locale_snapshot, connect_locale_snapshot
 
-# 与 core 的 lang_list 同集合。新增语言时两边一起加。
+# 与 core 的 lang_list 保持一致。新增语言时两边一起添加。
 SUPPORTED_LOCALES = ("zh_cn", "zh_tw", "en_us", "ja_jp", "ko_kr")
 DEFAULT_LOCALE = "zh_cn"
-# 缺键时按英文、中文的顺序回退。
+# 缺少对应键时按英文、中文的顺序回退。
 FALLBACK_LOCALES = ("en_us", "zh_cn")
 
 LOCALE_ENV = "AKARIBOT_LANG"
@@ -52,7 +52,7 @@ def normalize(value: str | None) -> str:
     for code in SUPPORTED_LOCALES:
         if lowered == code or lowered.startswith(f"{code.split('_')[0]}_"):
             return code
-    # 只给了主语言时取该语言的第一个变体（en → en_us，zh → zh_cn）。
+    # 仅指定主语言时获取该语言的第一个变体（en → en_us，zh → zh_cn）。
     for code in SUPPORTED_LOCALES:
         if lowered == code.split("_")[0]:
             return code
@@ -123,8 +123,8 @@ def current_locale() -> str:
 
 
 def _argv_locale() -> str | None:
-    # typer 的 ``help=`` 在**导入期**求值，而根回调要等参数解析完才执行，故只靠 ``set_locale()``
-    # 无法本地化 ``--help``。这里提前读一次 argv，使导入期取到的就是用户要的语言。
+    # typer 的 ``help=`` 在导入阶段求值，而根回调需要等待参数解析完成才执行，因此仅通过 ``set_locale()``
+    # 无法本地化 ``--help``。这里提前读取一次 argv，使导入阶段获取到用户指定的语言。
     argv = sys.argv[1:]
     for index, item in enumerate(argv):
         if item == "--lang" and index + 1 < len(argv):

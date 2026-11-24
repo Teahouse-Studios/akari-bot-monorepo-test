@@ -10,7 +10,7 @@ order: 55
 
 <CommandUsage usage="jobqueue clear" permission="superuser" />
 
-此命令清空计划任务队列，正在执行的任务也一并删除。
+此命令用于清空计划任务队列，正在执行的任务一并予以删除。
 
 <ChatExample
   :log="[

@@ -64,6 +64,6 @@ async def _test_command_query_reports_detail():
 
 @func_case
 async def test_wiki_invalid_interwiki(tester: Tester):
-    """wiki: 站点 interwiki 无效时的提示"""
+    """Wiki 站点 InterWiki 无效时的提示。"""
     await tester.test(_test_command_query_reports_detail, "命令查询发出异常详情")
     return tester

@@ -53,7 +53,7 @@ class TargetAddress:
 
 @define
 class InboundMessage:
-    """由 Satori 消息内容解析出的入站结果。"""
+    """由 Satori 消息内容解析生成的入站结果。"""
 
     messages: MessageChain
     at_bot: bool
@@ -95,7 +95,7 @@ def parse_target_id(target_id: str | None) -> TargetAddress | None:
 
 
 def parse_sender_id(sender_id: str | None) -> tuple[str, str] | None:
-    """解析用户 ID，返回平台名与底层用户 ID。"""
+    """解析用户 ID，返回平台名称与底层用户 ID。"""
     if not sender_id:
         return None
     parts = sender_id.split("|")
@@ -105,7 +105,7 @@ def parse_sender_id(sender_id: str | None) -> tuple[str, str] | None:
 
 
 def common_id(value: str) -> str:
-    """取带前缀 ID 的最后一段，即平台侧原始 ID。"""
+    """提取带前缀 ID 的最后一段，即平台端原始 ID。"""
     return value.split("|")[-1]
 
 
@@ -132,7 +132,7 @@ def _plain_text(elements: Iterable[sat.Element]) -> str:
 
 
 def parse_inbound(content: str | None, bot_id: str | None) -> InboundMessage:
-    """把 Satori 消息内容解析为消息链，并判定首位提及与引用。"""
+    """将 Satori 消息内容解析为消息链，并判定首位提及与引用。"""
     elements = sat.transform(parse(content or ""))
     first = _first_meaningful_element(elements)
     at_bot = isinstance(first, sat.At) and bot_id is not None and first.id == bot_id
@@ -206,7 +206,7 @@ def parse_inbound(content: str | None, bot_id: str | None) -> InboundMessage:
             for child in element.children:
                 append_element(child)
             return
-        # 自定义元素没有统一语义，仅保留其中可读的文本，避免把标记原样透传给解析器
+        # 自定义元素无统一语义，仅保留其中可读的文本，避免将标记原样传递至解析器。
         for child in element.children:
             append_element(child)
 
@@ -223,7 +223,7 @@ def parse_inbound(content: str | None, bot_id: str | None) -> InboundMessage:
 
 
 def resolve_at_code(element: PlainElement) -> list[sat.Element]:
-    """把纯文本中的 AT 码转换为 `<at>` 元素。"""
+    """将纯文本中的 AT 码转换为 `<at>` 元素。"""
     result: list[sat.Element] = []
     parts = iter_at_code(element.text) if element.allow_parse else (element.text,)
     for part in parts:
@@ -240,7 +240,7 @@ def resolve_at_code(element: PlainElement) -> list[sat.Element]:
 def _append_text(elements: list[sat.Element], text: str) -> None:
     if not text:
         return
-    # Satori 会把标签边界处含换行的空白当作排版空白丢弃，行内换行改用 <br> 表达。
+    # Satori 会将标签边界处包含换行的空白视为排版空白丢弃，行内换行改用 <br> 表达。
     for index, part in enumerate(text.replace("\r\n", "\n").replace("\r", "\n").split("\n")):
         if index:
             elements.append(sat.Br())
@@ -275,7 +275,7 @@ async def convert_chain_to_elements(
     upload: Uploader,
     quote: bool = True,
 ) -> list[sat.Element]:
-    """把消息链转换为 Satori 消息元素。"""
+    """将消息链转换为 Satori 消息元素。"""
     elements: list[sat.Element] = []
     if quote and session_info.message_id:
         elements.append(sat.Quote(id=session_info.message_id))

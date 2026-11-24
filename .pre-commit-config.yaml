@@ -14,7 +14,7 @@ repos:
 
     - repo: local
       hooks:
-          # 只检查暂存区新增与修改的行，规则见 generated_docs/monorepo_refactor_prep.md §8。
+          # 仅检查暂存区新增与修改的行，规则参见 generated_docs/monorepo_refactor_prep.md §8。
           - id: comment-lint
             name: Lint comments
             entry: uv run python tools/lint_comments.py --diff HEAD
@@ -22,8 +22,8 @@ repos:
             files: '\.py$'
             pass_filenames: false
 
-          # 分层检查：模块不得 import 平台适配器，core 不得 import 模块或适配器。
-          # 与 comment-lint 同理只查改动行，避免既有 B1 命中阻塞提交。
+          # 分层检查要求模块不得导入平台适配器，core 不得导入模块或适配器。
+          # 与 comment-lint 同理，仅检查改动行，避免既有 B1 违规项阻塞提交。
           - id: boundary-lint
             name: Lint import boundaries
             entry: uv run python tools/lint_boundaries.py --diff HEAD

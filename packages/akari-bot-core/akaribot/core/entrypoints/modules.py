@@ -13,13 +13,13 @@ import asyncio
 import json
 import sys
 
-# 等 Server 确认的秒数上限。热装载要处理完队列任务并让出调度器窗口，故高于普通查询。
+# 等 Server 确认的秒数上限。热加载要处理完队列任务并让出调度器窗口，因此高于普通查询。
 RPC_TIMEOUT_SECONDS = 60
 
-# peer 注册与就绪的秒数上限。超时说明实例的 JobQueue 不可达。
+# 节点注册与就绪的秒数上限。超时说明实例的 JobQueue 不可达。
 PEER_READY_TIMEOUT_SECONDS = 15
 
-# 实例未运行时的统一提示，与 CLI 侧同文案，避免两处说法不一致。
+# 实例未运行时的统一提示，与 CLI 侧文案保持一致，避免两处表述不统一。
 INSTANCE_STOPPED_HINT = "实例未运行，无法热装载；下次启动会自动装载。"
 
 
@@ -28,7 +28,7 @@ class InstanceUnreachable(RuntimeError):
 
 
 async def _status() -> dict[str, bool]:
-    # 表缺席表示实例尚未完成过一次启动，与状态为空对操作者是同一件事，故一并返回空映射。
+    # 表不存在表示实例尚未完成首次启动，在外部表现上与状态为空一致，因此一并返回空映射。
     from akaribot.core.database import close_db, init_db
     from akaribot.core.database.models import ModuleStatus
 
@@ -36,7 +36,7 @@ async def _status() -> dict[str, bool]:
     try:
         try:
             return dict(await ModuleStatus.all().values_list("module_name", "load"))
-        except Exception as exc:  # noqa: BLE001 - 状态表不可读时降级为“无记录”，原因照实输出
+        except Exception as exc:  # noqa: BLE001 - 状态表不可读时降级为“无记录”，原因如实输出。
             print(f"模块状态表不可读（{exc}），只列出发现层声明的模块。", file=sys.stderr)
             return {}
     finally:
@@ -44,8 +44,8 @@ async def _status() -> dict[str, bool]:
 
 
 def _declared() -> dict[str, str]:
-    # 清单里的 ``provides_modules`` 覆盖内置模块与已装模块包。它声明为空的包只有运行期才
-    # 知道注册名，这类包不产生条目，其模块名由状态表补上，分发名留空。
+    # 清单里的 ``provides_modules`` 覆盖内置模块与已安装模块包。其声明为空的包仅在运行时方能
+    # 确定注册名称，此类包不生成条目，其模块名由状态表补充，包名留空。
     from akaribot.core.registry import PackageRegistry
 
     PackageRegistry.discover()
@@ -67,7 +67,7 @@ def collect() -> tuple[list[dict], str]:
     """
     declared = _declared()
     status = asyncio.run(_status())
-    # 下划线开头的是框架内部注册（解析器策略、错误处理等），不是用户可装载的模块，列出只会成为噪声。
+    # 下划线开头的是框架内部注册（解析器策略、错误处理等），不是用户可加载的模块，列出仅会引入冗余噪声。
     names = sorted(name for name in set(declared) | set(status) if not name.startswith("_"))
     items = [{"name": name, "loaded": status.get(name), "installed_dist": declared.get(name, "")} for name in names]
     note = "" if status else "状态表暂无记录：实例尚未完成过一次启动，下次启动按默认装载。"
@@ -86,30 +86,30 @@ async def _connect_database_if_needed() -> bool:
 
 
 async def _notify_server(module: str, action: str) -> bool:
-    # 本进程只做一次 RPC：注册为临时 peer 以便收结果，不改任何模块索引，也不写状态表。
+    # 本进程仅执行一次 RPC 调用，注册为临时节点以便接收结果，不修改任何模块索引，也不写入状态表。
     from akaribot.core.queue.backend import create_jobqueue_backend
     from akaribot.core.queue.base import JobQueueBase
     from akaribot.core.queue.contracts import ServerAPI
     from akaribot.core.queue.peer import PeerSelector
 
     class CliPeer(JobQueueBase):
-        """一次性 RPC 调用方。只发一次请求，不绑定任何远端处理器。"""
+        """一次性 RPC 调用方。仅发送一次请求，不绑定任何远端处理器。"""
 
     poller = None
     database_connected = False
     try:
         try:
-            # 后端与 peer 的装配失败与“连不上”对操作者是同一件事：实例的 JobQueue 用不了。
+            # 后端与节点的装配失败与“连接失败”在表现上一致，均意味着实例的 JobQueue 不可用。
             database_connected = await _connect_database_if_needed()
             CliPeer.configure_backend(create_jobqueue_backend())
             CliPeer.configure_peer(role="cli", service="CLI", capabilities=["rpc"])
-        except Exception as exc:  # noqa: BLE001 - 配置未生成或后端不可用，实例同样不可达
+        except Exception as exc:  # noqa: BLE001 - 配置未生成或后端不可用，实例同样不可达。
             raise InstanceUnreachable(f"JobQueue 后端不可用：{exc}") from exc
         poller = asyncio.create_task(CliPeer.check_job_queue())
         try:
             await CliPeer.wait_ready(timeout=PEER_READY_TIMEOUT_SECONDS)
             servers = await CliPeer.registry.resolve(PeerSelector.service("Server"))
-        except Exception as exc:  # noqa: BLE001 - 连不上 JobQueue 与实例未运行对操作者是同一件事
+        except Exception as exc:  # noqa: BLE001 - 无法连接 JobQueue 与实例未运行在表现上一致。
             raise InstanceUnreachable(str(exc) or exc.__class__.__name__) from exc
         if not servers:
             raise InstanceUnreachable("JobQueue 注册表里没有在线的 Server 实例")
@@ -129,11 +129,11 @@ async def _notify_server(module: str, action: str) -> bool:
 
 
 def _known_modules() -> tuple[set[str], bool]:
-    # 与 list 口径一致：下划线开头是框架内部注册，不接受用户装载。
+    # 与 list 规则一致，下划线开头是框架内部注册，不接受用户加载。
     declared = {name for name in _declared() if not name.startswith("_")}
     try:
         status = asyncio.run(_status())
-    except Exception as exc:  # noqa: BLE001 - 校验只是提前拦截笔误，读不到状态表不应阻断操作
+    except Exception as exc:  # noqa: BLE001 - 校验仅用于提前拦截输入笔误，无法读取状态表时不应阻断操作。
         print(f"无法读取模块状态表（{exc}），跳过模块名校验。", file=sys.stderr)
         return declared, False
     return declared | set(status), bool(status)
@@ -163,7 +163,7 @@ def _load_or_unload(module: str, action: str) -> int:
     except RpcError as exc:
         print(f"热装载通知失败：{exc}", file=sys.stderr)
         return 1
-    except Exception as exc:  # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
+    except Exception as exc:  # noqa: BLE001 - 入口层统一捕获异常，错误信息面向调用方展示。
         print(f"热装载通知失败：{exc}", file=sys.stderr)
         return 1
 
@@ -201,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list":
         try:
             items, note = collect()
-        except Exception as exc:  # noqa: BLE001 - 入口层统一捕获，错误信息给操作者看
+        except Exception as exc:  # noqa: BLE001 - 入口层统一捕获异常，错误信息面向调用方展示。
             print(f"读取模块状态失败：{exc}", file=sys.stderr)
             return 1
         if note:

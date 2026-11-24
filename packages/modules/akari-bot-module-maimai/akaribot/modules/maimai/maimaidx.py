@@ -58,7 +58,7 @@ async def _(msg: Bot.MessageSession, constant: float, constant_max: float | None
 
     for music in sorted(data, key=lambda i: int(i.get("id", 0))):
         for i in music.diff:
-            if int(music.get("id", 0)) < 100000:  # 过滤宴谱
+            if int(music.get("id", 0)) < 100000:  # 过滤宴会场谱面。
                 result_set.append(
                     (
                         music.get("id", ""),
@@ -101,7 +101,7 @@ async def _(msg: Bot.MessageSession, level: str, page: str | None = None):
     data = (await total_list.get()).filter(level=level)
     for music in sorted(data, key=lambda i: int(i.get("id", 0))):
         for i in music.diff:
-            if int(music.get("id", 0)) < 100000:  # 过滤宴谱
+            if int(music.get("id", 0)) < 100000:  # 过滤宴会场谱面。
                 result_set.append(
                     (
                         music.get("id", ""),
@@ -514,12 +514,12 @@ async def _(msg: Bot.MessageSession, id_or_alias: str, diff: str):
         touch = int(chart["notes"][3]) if len(chart["notes"]) == 5 else 0
         brk = int(chart["notes"][-1])
 
-        total_score = tap * 500 + slide * 1500 + hold * 1000 + touch * 500 + brk * 2500  # 基础分
-        bonus_score = total_score * 0.01 / brk  # 奖励分
-        break_2550_reduce = bonus_score * 0.25  # 一个 BREAK 2550 减少 25% 奖励分
-        break_2000_reduce = bonus_score * 0.6 + 500  # 一个 BREAK 2000 减少 500 基础分和 60% 奖励分
-        b2t_2550_great = f"{(break_2550_reduce / 100):.3f}"  # 一个 TAP GREAT 减少 100 分
-        b2t_2000_great = f"{(break_2000_reduce / 100):.3f}"  # 一个 TAP GREAT 减少 100 分
+        total_score = tap * 500 + slide * 1500 + hold * 1000 + touch * 500 + brk * 2500  # 基础分计算。
+        bonus_score = total_score * 0.01 / brk  # 奖励分计算。
+        break_2550_reduce = bonus_score * 0.25  # 单个 BREAK 2550 减少 25% 奖励分。
+        break_2000_reduce = bonus_score * 0.6 + 500  # 单个 BREAK 2000 减少 500 基础分与 60% 奖励分。
+        b2t_2550_great = f"{(break_2550_reduce / 100):.3f}"  # 单个 TAP GREAT 减少 100 分。
+        b2t_2000_great = f"{(break_2000_reduce / 100):.3f}"  # 单个 TAP GREAT 减少 100 分。
 
         msg_chain = MessageChain.assign(
             [
@@ -577,7 +577,7 @@ async def _(msg: Bot.MessageSession):
 async def _(msg: Bot.MessageSession, user: str | None = None):
     friend_code = ""
     if pick_source(msg, GAME_MAIMAI) == SOURCE_LXNS:
-        # 落雪的查询对象是好友码。不填参数时由令牌认出账号，无需绑定信息以外的输入。
+        # 落雪查询对象为好友码。未提供参数时通过令牌识别账号，无需绑定信息之外的输入。
         if user and not is_int(user):
             await msg.finish(I18NContext("maimai.message.friend_code_invalid"))
         token = None if user else await get_bind_info(msg)
@@ -586,7 +586,7 @@ async def _(msg: Bot.MessageSession, user: str | None = None):
         source = SOURCE_NAME_LXNS
     else:
         token = None
-        # 填了用户名便查这个玩家，无需绑定。否则查绑定账号（或按 QQ 查）。
+        # 填写用户名即可查询对应玩家，无需绑定。未填写时查询绑定账号（或按照 QQ 号查询）。
         payload = {"username": user, "b50": True} if user else await get_diving_prober_bind_info(msg, b50=True)
         source = SOURCE_NAME_DIVING_FISH
     img = await generate_b50(msg, payload, token, source, friend_code, use_cache=not user)
@@ -697,7 +697,7 @@ async def query_process(msg, level, goal, get_list=False):
 @mai.command("rank {{I18N:maimai.help.rank}}")
 async def _(msg: Bot.MessageSession):
     if pick_source(msg, GAME_MAIMAI) == SOURCE_LXNS:
-        # 落雪没有全服分数排行，只有水鱼提供。
+        # 落雪不提供全服分数排行，仅水鱼查分器支持该功能。
         await msg.finish(
             I18NContext("maimai.message.rank.df_only", cmd=ActionText(f"{msg.session_info.prefixes[0]}maimai switch"))
         )

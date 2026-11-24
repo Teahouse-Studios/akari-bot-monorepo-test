@@ -1,4 +1,4 @@
-"""akaribot.modules.core.common_tools.merge 单元测试 - 迁移码的签发与消费。"""
+"""akaribot.modules.core.common_tools.merge 迁移码签发与核销单元测试。"""
 
 from akaribot.core.database.models import UNION_SCOPE_SENDER, UNION_SCOPE_TARGET, TargetUnionBind, TargetUnionInfo
 from akaribot.testing import func_case, Tester
@@ -69,7 +69,7 @@ async def _test_bind_code_not_consumable():
 
         code = generate_code(bind._sender_bind_codes, "USID|DDD", "QQ|1", {"is_private": True})
         taken = merge._take_merge_code(code)
-        bind._take_code(code)  # 归还，避免影响其他用例
+        bind._take_code(code)  # 归还资源，避免影响其他用例。
         return taken is None
 
     except Exception:
@@ -107,7 +107,7 @@ async def _test_unify_channel_missing_initiator_reassigns_current():
 
 @func_case
 async def test_merge_code(tester: Tester):
-    """akaribot.modules.core.common_tools.merge: 迁移码签发与消费测试"""
+    """akaribot.modules.core.common_tools.merge 迁移码签发与核销测试"""
     await tester.test(_test_target_code_roundtrip, "场景码往返测试")
     await tester.test(_test_sender_code_roundtrip, "账号码往返测试")
     await tester.test(_test_code_consumed_once, "一次性消费测试")

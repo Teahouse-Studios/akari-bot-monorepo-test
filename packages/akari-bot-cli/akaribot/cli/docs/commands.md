@@ -2,20 +2,20 @@
 
 本文整理了各子命令的用途与选项。
 
-全局选项写在子命令前。例如：
+全局选项置于子命令之前。例如：
 
 ```sh
 akaribot --lang en_us init ./bot
 akaribot --version
 ```
 
-`--lang zh_cn|en_us` 只影响本次调用的界面文案，不改变实例默认语言。把它写在子命令后会被当成未知选项。
+``--lang zh_cn|en_us`` 仅影响本次调用的界面文案，不改变实例默认语言。若置于子命令之后，会被视为未知选项。
 
-需要实例的命令接受 `--instance` / `-I`。查找顺序是：显式路径、`AKARI_INSTANCE_DIR`、从当前目录向上找 `akaribot.toml`。找不到实例时命令报错，并提示先初始化或指定实例根。
+需要实例的命令接受 `--instance` / `-I` 参数。定位顺序依次为显式路径、`AKARI_INSTANCE_DIR` 与向上逐级查找 `akaribot.toml`。未找到实例时命令输出错误提示，并引导先执行初始化或明确指定实例根目录。
 
-`--json` 让脚本读取结果。多数命令输出一行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 只放结果或事件，进度与警告走 stderr。
+``--json`` 供脚本读取结果。多数命令输出单行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 仅输出结果或事件，进度与警告一律输出至 stderr。
 
-会删除内容的写操作还接受 `--yes` / `-y`，用来跳过确认。只打印操作计划的命令使用 `--dry-run`，不会写文件，也不会调用安装器。
+会删除内容的写入操作支持传入 `--yes` / `-y` 用于跳过交互确认。仅输出操作计划的命令使用 `--dry-run`，不会写入文件，亦不调用安装器。
 
 ## init
 
@@ -25,154 +25,166 @@ akaribot --version
 akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 ```
 
-- `path`：实例目录，默认为当前目录。`--adapter` / `--module` 可重复，默认适配器为 `telegram`。
-- `--minimal`：不装 core extras 与表情资源包。`--extra` 追加 extra，两者互斥。
+- `path`：实例目录，默认为当前目录。`--adapter` / `--module` 可多次指定，默认适配器为 `telegram`。
+- `--minimal`：不安装 core extras 与表情资源包。`--extra` 追加 extra，两者互斥。
 - `--no-venv`：不由 CLI 管理 venv。`--workspace-root` / `--dev`：从本地源码安装。`--python`：创建 venv 时使用的解释器。
-- `--skip-config-sync`：跳过安装后的配置同步。core 的配置模块还没就绪时使用。
-- `--non-interactive` 不提问。还支持 `--offline`、`--dry-run`、`--force`、`--verbose` / `-v`。
+- `--skip-config-sync`：跳过安装后的配置同步。core 的配置模块尚未就绪时使用。
+- `--non-interactive`：跳过交互式提问。还支持 `--offline`、`--dry-run`、`--force`、`--verbose` / `-v`。
 
 ## run
 
-启动、停止、重启或查看实例状态。未知参数原样传给 core 的 `run` 命令。
+启动、停止、重启或查看实例状态。未知参数原样传递给 core 的 `run` 命令。
 
-- `-a` / `--adapter`：只启动指定适配器，可重复。
-- 默认在前台运行。`-d` / `--detach` 后台启动，等实例取得 `.bot.lock` 后才报告成功。
-- `--stop`、`--restart`、`--status` 互斥。`--restart` 等价于停止后后台启动，`--timeout` 为停止时等待退出的秒数，默认 20。
+- `-a` / `--adapter`：仅启动指定适配器，可多次指定。
+- 默认在前台运行。`-d` / `--detach` 在后台启动，等待实例获取 `.bot.lock` 后才判定为启动成功并报告。
+- `--stop`、`--restart`、`--status` 互斥。`--restart` 等价于停止后在后台启动，`--timeout` 为停止时等待退出的秒数，默认值为 20。
 - `--no-auto-migrate`：启动时跳过数据库结构升级。`--foreground` 显式保持前台，与 `--detach` 互斥。
-- 后台控制台输出写入 `logs/RunConsole_<日期>.log`，进程号记在 `.bot.lock`。`--status --json` 输出运行状态、锁文件和控制台日志路径。
+- 后台控制台输出写入 `logs/RunConsole_<日期>.log`，进程号记录在 `.bot.lock` 中。`--status --json` 输出运行状态、锁文件和控制台日志路径。
 
 ## service
 
-把 CLI 装成系统常驻服务，由服务按注册表里的自启与崩溃重启设置守护实例。
+将 CLI 安装为系统常驻服务，由服务根据注册表中的自启与崩溃重启设置守护实例。
 
-- `install [--dry-run] [--force]`：写入并注册服务单元。macOS 写 launchd 单元，Linux 写 systemd 用户单元。Windows 没有受支持的后端。
+- `install [--dry-run] [--force]`：写入并注册服务单元。macOS 写入 launchd 单元，Linux 写入 systemd 用户单元。Windows 没有受支持的后端。
 - `uninstall`：注销服务并删除单元文件。
 - `status [--json]`：查看是否安装、是否已注册。
-- `supervise [--once] [--interval 5] [--max-restarts 5] [--backoff 2]`：守护循环本身，由服务单元调用。默认每 5 秒检查一次，单个实例最多连续重启 5 次，重启间隔从 2 秒起逐次翻倍。`--once` 只跑一轮。
+- `supervise [--once] [--interval 5] [--max-restarts 5] [--backoff 2]`：守护循环本身，由服务单元调用。默认每 5 秒检查一次，单个实例最多连续重启 5 次，重启间隔从 2 秒起逐次翻倍。`--once` 仅运行一轮。
 
-服务恢复实例时同时检查注册表里的自启策略和上次运行状态。只开崩溃重启、没开自启的实例不会在开机时被拉起。
+服务恢复实例时同时检查注册表中的自启策略和上次运行状态。仅开启崩溃重启、未开启自启的实例不会在开机时被自动启动。
 
 ## test
 
-在实例环境里运行 `akaribot.testing`，缺测试包时提示安装 `akari-bot-testing`。
+在实例环境中运行 `akaribot.testing`，缺少测试包时提示安装 `akari-bot-testing`。
 
-- `path`：测试文件或目录，省略时跑全部默认根目录。
-- `--ci`：非交互模式，跳过需要人工复核的用例，同时设置 `CI=1`。CI 里不会停在 `input()` 等待输入。
-- `--coverage`：收集覆盖率。`--case`：只跑名字含该子串的用例，可重复。
-- 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺包时命令会给出安装提示。
+- `path`：测试文件或目录，省略时运行全部默认根目录。
+- `--ci`：非交互模式，跳过需要人工复核的用例，同时设置 `CI=1`。CI 环境中不会停在 `input()` 等待输入。
+- `--coverage`：收集覆盖率。`--case`：仅运行名称包含该子串的用例，可多次指定。
+- 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺少该包时命令会给出明确安装提示。
 
-测试由 `tester.py` 启动，和实例里的模块共用配置与临时数据目录。跑单个文件时传包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
+测试由 `tester.py` 启动，与实例中的模块共用配置与临时数据目录。运行单个文件时传入包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
 
 ## module
 
 模块与适配器的安装、卸载、更新与全局加载。
 
-启用分三级，含义各不相同：
+启用状态分为三个层级，各自具有独立的控制范围：
 
-- 安装控制代码是否装进本实例。
-- 加载控制它是否参与命令匹配。
-- 场景启用控制某个群或频道能否使用，需要在机器人里执行 `~module enable`。
+- 安装控制代码是否安装至本实例。
+- 加载控制模块是否参与命令匹配。
+- 场景启用控制特定群聊或频道能否使用，需要在机器人会话中执行 `~module enable`。
 
-- `list`：列出已安装的模块与适配器。`available [--kind module|adapter]`：列出 registry 里可安装的包，并标出已安装项。`status`：列出各模块的全局加载状态。
-- `add <名> [-e <目录>] [--git <地址>] [--ref <引用>] [--subdir <目录>] [--dist <分发>]`：安装模块、适配器或本地源码包。
-  - 还支持 `--version`、`--extra`、`--kind`、`--force`、`--offline`、`--dry-run`、`--verbose`。
-  - 安装过程是：解析包 → 安装前检查 → 安装 → 补配置 → 迁移 → 热加载 → 报告。`-e` 用可编辑模式安装本地目录，可以省略包名。
-  - 安装前检查用 `uv pip install --dry-run` 生成安装计划，再检查它是否会破坏已安装的包。只调整依赖版本时给出提示并继续。会破坏已装包或解不出依赖时停止。`--force` 跳过这项检查。
-- `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：默认保留配置与数据。`--cascade` 连带卸载依赖它的包，先列清单再确认。`--purge-data` 同时删除该包的数据表与配置文件。
-- `update [名…] [--all] [--force] [--offline] [--defer-runtime] [--json]`：更新已装包。工作区模式下等价于按本地源码重装。`--defer-runtime` 把数据库迁移留到下次启动。
-- `load <名>` / `unload <名>`：只改全局加载状态，不改安装状态和场景启用状态。
+- `add <包名或路径>… [--save] [--no-load]`：安装模块或适配器。`--save` 写入实例清单，环境重建时自动补充安装。`--no-load` 安装后不写入加载列表。
+- `remove <名>… [--save] [--purge] [--yes]`：卸载。`--save` 同时从实例清单删除。`--purge` 一并清理该模块的配置与数据，执行前弹出模态确认框或要求传入 `--yes`。
+- `update [名…] [--dry-run]`：更新已安装的包。省略名称时更新全部已安装包。
+- `load <名>…`：开启全局加载。
+- `unload <名>…`：关闭全局加载，配置保留。
 
-`--json` 的 `update` 只在 stdout 输出一行结果，进度与警告走 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
+`--json` 的 `update` 仅在 stdout 输出单行结果，进度与警告输出至 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
 
 ## config
 
-读取、写入与编辑配置。写入由 core 以原子方式完成，值按模板声明的类型转换。
+- `list [--json]`：显示全部配置表、字段名、类型、默认值与当前值。
+- `get <表> [字段]`：输出配置内容。省略字段时输出整张表。`--json` 输出 JSON。
+- `set <表> <字段> <值> [--type str|int|float|bool|json]`：修改字段。类型按模板自动转换，未收录进模板的键需要指定 `--type`。
+- `unset <表> <字段>`：删除字段，恢复默认值。
+- `schema [表] [--json]`：导出模板声明的字段定义，供表单生成使用。
+- `open [--editor <名>]`：用外部编辑器打开实例配置文件。编辑器从 `$VISUAL`、`$EDITOR` 或常用编辑器中选择。保存后若配置发生变化，命令会提示重启实例。
 
 - `list [--json]`：列出已有配置表。`schema --table <表> [--json]`：字段类型、默认值、注释与是否占位。
-- `placeholders [--json]`：统计各表待填的占位符。它只做统计，不阻止启动。
+- `placeholders [--json]`：统计各表待填的占位符。其仅负责统计，不阻止启动。
 - `get <键> --table <表>`、`set <键> <值> --table <表>`：单项读写。`set` 按模板类型转换布尔、数字与列表，密钥字段自动写入 `_secret` 表。
-- `open [--table <表>]`：用 `VISUAL` / `EDITOR` 打开配置文件。`edit`：提示三种编辑方式（表单、原始文本、外部编辑器）。
-- 表名以 `list` / `schema` 的输出为准。实例表可能带 `-<实例 ID>` 后缀，基表名不能直接当作实例表名使用。
+- `open [--table <表>]`：使用 `VISUAL` / `EDITOR` 打开配置文件。`edit`：提示三种编辑方式（表单、原始文本、外部编辑器）。
+- 表名以 `list` / `schema` 的输出为准。实例表可能带 `-<实例 ID>` 后缀，基础表名不能直接当作实例表名使用。
 
 ## db
 
-浏览实例数据库并按主键写入。表名取自 `db tables` 的 `table` 列。
+- `list [--json]`：显示已配置的适配器实例及其启用状态。
+- `add <平台> [实例名] [--dry-run]`：添加适配器实例配置。省略实例名时使用默认名称 `bot_<平台>`，指定时使用 `bot_<平台>-<实例名>`。
+- `remove <表名> [--purge] [--yes]`：移除适配器实例配置。`--purge` 同时清理相关数据。
+- `enable <表名>` / `disable <表名>`：开启或停用适配器实例。停用后不随机器人启动，配置保留。
 
 - `tables [--json]`：列出数据表。
-- `rows <表> [--limit 20] [--offset 0] [-f <条件>] [-q <搜索>][--order-by <列[:asc|desc]>] [--no-count]`：分页读取。每页最多 200 条。筛选可以重复，多个条件之间是 AND 关系。`-q` 在所有文本列上做包含匹配，不区分大小写。
+- `rows <表> [--limit 20] [--offset 0] [-f <条件>] [-q <搜索>][--order-by <列[:asc|desc]>] [--no-count]`：分页读取。每页最多 200 条。筛选可以重复，多个条件之间是 AND 关系。`-q` 在所有文本列中按包含方式匹配，不区分大小写。
 - `-f` 的条件形如 `<列><运算符><值>`，支持 `=`、`!=`、`>`、`>=`、`<`、`<=`、`~`（包含）、`!~`（不包含）、`^`（前缀）、`$`（后缀）。`null` 表示空值。
-- `--no-count` 不统计总条数，翻页时省掉全表扫描。输出里不带总数。
+- `--no-count` 不统计总条数，翻页时避免全表扫描。输出里不带总数。
 - `set <表> --key <主键> --set <列>=<值>…`：在一次 UPDATE 中写入多列。
 - `insert <表> --set <列>=<值>…`、`delete <表> --key <主键> [--yes]`。
 
 ## instance
 
-管理本机注册表，不移动实例目录。
+- `list [--json]`：显示注册表中的实例名称、路径、状态与自启策略。
+- `default [实例]`：查看或设置默认实例。未设置默认实例时，非指定实例的命令会按目录解析。
+- `register [路径] [--name <名>]`：将现有实例写入注册表。省略路径时使用当前目录。
+- `unregister [名]`：从注册表移除，不删除磁盘上的实例目录。
+- `policy <名> [--autostart on|off] [--restart on|off]`：设置开机自启与崩溃重启策略。
 
-- 注册表默认在 `~/.akaribot/instances.toml`，可用 `AKARIBOT_HOME` 改目录。
+- 注册表默认在 `~/.akaribot/instances.toml`，可用 `AKARIBOT_HOME` 修改目录。
 - `list [--json]`：列出本机实例、运行状态与服务设置。
-- `add <目录> [--name <名>] [--locale <语言>]`：只记录位置，不创建实例、不装包。
+- `add <目录> [--name <名>] [--locale <语言>]`：仅记录位置，不创建实例、不安装包。
 - `remove <名> [--yes]`：从注册表移除条目，实例目录保留。
-- `use <名>`：设为默认实例。站在实例目录之外运行界面或命令时，按它选择实例。
+- `use <名>`：设为默认实例。在实例目录之外运行界面或命令时，依此选择目标实例。
 - `policy <名> [--autostart|--no-autostart] [--restart-on-crash|--no-restart-on-crash]`：设置服务策略。
 
 ## adapter
 
-查看、添加和删除适配器实例。
+- `tables [--json]`：列出 core 注册的数据库表。
+- `schema <表> [--json]`：查看列名、类型与主键。
+- `select <表> [--where 列=值] [--order 列 [asc|desc]] [--limit N] [--offset N] [--json]`：查询记录。多条件按 AND 组合。`--json` 输出对象数组。
+- `count <表> [--where 列=值]`：统计行数。
+- `upsert <表> --pk 键=值 [列=值…]`：按主键插入或更新一行。
 
-- `list [--json]`：按平台分组列出适配器实例。JSON 里的 `installed_platforms` 还会列出 core 清单中全部已安装的平台，包括还没有实例配置的平台。
-- `instance add <平台> [实例 ID]`：生成 `config/bot_<平台>[-<实例 ID>].toml`，`enable` 显式写 `false`，填完平台要求的账号信息后再开启。
-- `instance remove <平台> [实例 ID] [--dry-run]`：只删配置文件，场景与用户数据保留。
+- `list [--json]`：按平台分组列出适配器实例。JSON 中的 `installed_platforms` 亦会列出 core 清单中全部已安装的平台，包含尚未配置实例的平台。
+- `instance add <平台> [实例 ID]`：生成 `config/bot_<平台>[-<实例 ID>].toml`，`enable` 明确设为 `false`，填写完平台要求的账号信息后再开启。
+- `instance remove <平台> [实例 ID] [--dry-run]`：仅删除配置文件，保留场景与用户数据。
 
-实例 ID 只能使用小写字母、数字和下划线，长度为 1–24 个字符。省略表示默认实例。它是 `target_id` 前缀的一部分，一旦使用不可更改。命令不提供改名。改名要迁移多张表和消息前缀。
+实例 ID 仅可使用小写字母、数字和下划线，长度为 1–24 个字符。省略表示默认实例。它是 `target_id` 前缀的一部分，一旦使用不可更改。命令不提供重命名功能，因为修改名称需要迁移多张表和消息前缀。
 
 ## venv
 
-管理实例 venv：改为由 CLI 管理、改回你自己管理，或重建。
+管理实例 venv，支持切换为 CLI 托管、恢复为自行管理或重新构建。
 
-- `status`：查看当前模式、解释器路径与已装包数量。
-- `add <需求串> [--no-save] [--upgrade]`：装入实例环境，默认记进实例清单。`--no-save` 只装不记录，重建时不会自动补装。
-- `remove <分发名> [--no-save]`：卸载，默认同时删掉实例清单里的记录。`--no-save` 保留记录。
-- `adopt`：改为由 CLI 管理 venv，把当前环境里的包迁进实例 venv。`release`：改回由你自己管理，把实例 venv 里的包迁到当前环境。
-- `recreate`：重建实例 venv，用于升级 Python 或修复环境。新环境安装并验证通过后才替换旧目录。
+- `status [--json]`：查看解释器路径、托管模式、已安装包与清单中记录的运行库。
+- `add <spec>… [--save]`：安装运行库。`--save` 写入实例清单。
+- `remove <包名>… [--save]`：卸载运行库。`--save` 从清单中移除。
+- `adopt [--python <路径>] [--yes]`：切换为 CLI 托管 venv。会先复制现有环境的包并安装缺失项，验证通过后才移除旧环境中的包。
+- `release [--yes]`：放弃托管，将实例 venv 中的包迁移到目标环境。
+- `recreate [--python <路径>] [--yes]`：根据实例清单重建 venv。Python 次版本升级后用于修复损坏的环境。
 
 ## doctor
 
-检查多个实例之间的端口冲突、重复的登录信息，以及没有对应适配器的配置。`--json` 供 CI 读取，`--strict` 把告警按失败处理。这个命令只覆盖这三项。网络、依赖版本和文档工具链分别由运行、安装和文档命令检查。
+检查多个实例之间的端口冲突、重复登录信息，以及缺少对应适配器的配置。`--json` 供 CI 读取，`--strict` 将告警判定为失败。该命令仅覆盖上述三项检查。网络、依赖版本和文档工具链分别由运行、安装和文档命令检查。
 
 ## new
 
-- `new module <名>`：生成模块包，支持 `--dir`、`--alias`、`--desc`、`--author`、`--license`、`--platform`、`--component`、`--command`、`--config`、`--database`、`--assets`、`--data-dir`、`--tests`、`--non-interactive`、`--add`、`--force`。
-- `new adapter <名>`：生成适配器包，支持 `--platform-name`、`--feature`、`--field`、`--credential-field` 等同类选项。生成后默认执行 `akaribot module add -e .`。
-- 生成目录下的包名带 `akari-bot-module-` / `akari-bot-adapter-` 前缀。`--add` 默认开启。只想生成文件时传 `--no-add`。
+- `module|adapter <名> [--dest <目录>] [--no-add]`：生成包模板结构并创建 git 仓库。默认直接安装至当前实例并开启全局加载与开机自启。仅需生成文件时传入 `--no-add`。
 
 ## docs
 
-收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置写在实例根的 `docs.toml`。Node.js 与 VitePress 版本由主题清单声明。
+收集实例中已安装包的 `docs/`，生成并构建 VitePress 站点。站点配置保存在实例根目录的 `docs.toml` 中。Node.js 与 VitePress 版本由主题清单声明。
 
 - `list [--query <词>] [--kind <分组>] [--json]`：列出参与构建的包、分类、页面与目录警告。
-- `build [--package <key>…] [--all] [--force] [--offline] [--json]`：生成站点并调用 VitePress。不加 `--json` 时，命令实时打印各阶段进度与子进程输出。加 `--json` 时，stdout 只保留结果行，日志写入 stderr。`--package` 可重复或逗号分隔。
-- `sync-theme [--repo <路径>] [--json]`：把主题模板 submodule 同步到远端最新提交。只更新工作区，不暂存父仓库 gitlink。
+- `build [--package <key>…] [--all] [--force] [--offline] [--json]`：生成站点并调用 VitePress。不加 `--json` 时，命令实时打印各阶段进度与子进程输出。加 `--json` 时，stdout 仅保留结果行，日志写入 stderr。`--package` 可重复或逗号分隔。
+- `sync-theme [--repo <路径>] [--json]`：将主题模板 submodule 同步至远端最新提交。仅更新工作区，不暂存父仓库 gitlink。
 - `install-deps [--json]`：安装主题所需的 Node 依赖，不生成站点。
 - `serve [--host 127.0.0.1] [--port 4173] [--open] [--no-build] [--json]`：构建并启动本机静态预览，直到 Ctrl+C。`--json` 先输出 ready 事件行。
-- `dev [--host 127.0.0.1] [--port 5173] [--open] [--offline] [--interval 0.6] [--package <key>…] [--json]`：监听文档与主题改动，同步到 `cache/docs/dev` 并运行 VitePress 开发服务器，直到 Ctrl+C。`--json` 输出逐行事件。
-- `deploy [--provider vercel|s3] [--dry-run] [--delete] [--yes] [--json]`：把构建产物部署到远端。部署用的密钥只从环境变量读取，`--delete` 只在 S3 下删除目标前缀内多余的对象。
+- `dev [--host 127.0.0.1] [--port 5173] [--open] [--offline] [--interval 0.6] [--package <key>…] [--json]`：监听文档与主题改动，同步至 `cache/docs/dev` 并运行 VitePress 开发服务器，直到 Ctrl+C。`--json` 输出逐行事件。
+- `deploy [--provider vercel|s3] [--dry-run] [--delete] [--yes] [--json]`：将构建产物部署至远端。部署使用的密钥仅从环境变量读取，`--delete` 仅在 S3 下删除目标前缀内多余的对象。
 - `status [--json]`：查看工具链、配置、包数与最近一次构建或部署。`clean [--yes]`：删除 `cache/docs`。
 
-生成结果位于实例根目录的 `cache/docs`，开发模式使用其中的 `cache/docs/dev`，构建与部署记录在 `.docs/state.json`。主题由 `docs.toml` 的 `[theme].source` 选择，外部模板需在根目录提供 `docs-theme.json`。配置与部署字段见 [文档引擎](docs-engine.md)。
+生成结果位于实例根目录的 `cache/docs`，开发模式使用其中的 `cache/docs/dev`，构建与部署记录在 `.docs/state.json`。主题由 `docs.toml` 的 `[theme].source` 选择，外部模板需要在根目录提供 `docs-theme.json`。配置与部署字段参见 [文档引擎](docs-engine.md)。
 
 ## tui
 
-启动终端界面。`--self-check` 在无终端环境下检查资源、样式与页面交互，`--headless` 启动后完成基础读取即退出，`--no-mouse` 关闭鼠标追踪。页面与键位见 [终端界面](tui.md)。
+启动终端界面。`--self-check` 在无终端环境下检查资源、样式与页面交互，`--headless` 启动后完成基础读取即退出，`--no-mouse` 关闭鼠标追踪。页面与键位参见 [终端界面](tui.md)。
 
 ## logs
 
-读取实例 `logs/` 下最新的日志文件。
+读取实例 `logs/` 目录下最新的日志文件。
 
 - 日志文件在实例 `logs/` 下，文件名形如 `<进程>[_debug]_<日期>.log`。
 - `--process <进程>`：限定进程前缀。`--info` / `--debug`：限定日志级别文件。
 - `--lines <N>`：首次输出的末尾行数，默认 50。`--follow`：持续输出新增行，直到 Ctrl+C。
-- `--path`：只打印文件路径，便于脚本自行处理。`--json`：输出单行 JSON。
+- `--path`：仅输出文件路径，便于脚本自行处理。`--json`：输出单行 JSON。
 
 ## migrate
 
@@ -180,7 +192,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 akaribot migrate legacy <旧项目> -I <新实例目录> --dry-run
 ```
 
-旧项目须含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`。迁移只读取旧目录，不改动它，可以重复执行。报告写到新实例根的 `migration-report.md`。选项：`--workspace-root` / `--dev`、`--skip-install`、`--no-venv`、`--dry-run`、`--force`、`--offline`、`-v`。
+旧项目必须包含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`。迁移仅读取旧目录，不修改原有内容，可重复执行。报告写入新实例根目录的 `migration-report.md`。选项：`--workspace-root` / `--dev`、`--skip-install`、`--no-venv`、`--dry-run`、`--force`、`--offline`、`-v`。
 
 ## 常见操作组合
 
@@ -192,7 +204,7 @@ akaribot run --status -I /srv/akaribot
 akaribot run -d -I /srv/akaribot
 ```
 
-`init` 结束时会把实例写入注册表。之后站在实例目录外，也可以直接用注册名或 `-I` 指定实例。
+`init` 执行完成时会将实例写入注册表。之后在实例目录之外，亦可直接使用注册名称或 `-I` 指定实例。
 
 ### 安装模块
 
@@ -202,7 +214,7 @@ akaribot module add dice -I /srv/akaribot
 akaribot module load dice -I /srv/akaribot
 ```
 
-`add` 只负责装进实例。`load` 让它参与命令匹配。要让某个群或频道使用，还要在机器人里执行 `~module enable dice`。
+`add` 仅负责安装至实例。`load` 使其参与命令匹配。若需要特定群聊或频道使用，还需要在机器人中执行 `~module enable dice`。
 
 ### 配置与检查
 
@@ -213,7 +225,7 @@ akaribot config set enable true --table bot_telegram -I /srv/akaribot
 akaribot doctor --strict
 ```
 
-`config set` 写入后是否立即生效取决于 core。需要重启的项会在命令输出里说明。`doctor` 只看端口、重复登录信息和孤立配置，不替代完整运行检查。
+`config set` 写入后是否立即生效取决于 core。需要重启的项会在命令输出中说明。`doctor` 仅检查端口、重复登录信息和孤立配置，不替代完整运行检查。
 
 ### 文档站点
 
@@ -223,16 +235,16 @@ akaribot docs build --force -I /srv/akaribot
 akaribot docs serve -I /srv/akaribot
 ```
 
-`serve` 会先构建再启动本机预览。只改文档时用 `docs dev`，它监听文件变化并在另一个端口启动开发服务器。
+`serve` 会先构建再启动本机预览。仅修改文档时可使用 `docs dev`，其监听文件变化并在另一个端口启动开发服务器。
 
 ## 环境变量
 
 | 变量 | 作用 |
 | --- | --- |
-| `AKARI_INSTANCE_DIR` | 未传 `--instance` 时使用的实例根。显式参数优先。 |
+| `AKARI_INSTANCE_DIR` | 未传入 `--instance` 时使用的实例根目录。显式参数优先。 |
 | `AKARIBOT_HOME` | 实例注册表所在目录，默认 `~/.akaribot`。 |
 | `AKARIBOT_PYTHON` | 非托管模式下启动实例子进程使用的解释器。 |
-| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。冻结产物可据此指向二进制。 |
-| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按这个顺序选择。 |
+| `AKARIBOT_CLI_BIN` | 终端界面调用 CLI 时使用的命令。打包产物可据此指向二进制文件。 |
+| `VISUAL` / `EDITOR` | `config open` 调用的外部编辑器，按此顺序依序选择。 |
 
 `AKARI_CONFIG_PATH` 由 CLI 在启动 core 子进程时注入，一般不需要手动设置。

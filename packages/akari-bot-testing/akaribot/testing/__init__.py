@@ -28,17 +28,17 @@ def _load() -> None:
 
 def __getattr__(name: str) -> _Any:
     """
-    首次访问时解析公开名。
+    首次访问时解析公开名称。
 
-        子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，
-        会把路径固化在隔离环境变量就位之前）。
+        子模块名称直接返回子模块本身，避免为获取 ``runner`` 而先加载 ``tester``（后者依赖 core，
+        会把路径固定在隔离环境变量就位之前）。
 
-        :param name: 属性名。
+        :param name: 属性名称。
         :return: 对应的对象。
-        :raises AttributeError: 该名字不在任何子模块的公开面内。
+        :raises AttributeError: 该名称不在任何子模块的公开接口内。
     """
-    # 子模块名直接返回子模块本身，避免为取 ``runner`` 而先加载 ``tester``（后者依赖 core，
-    # 会把路径固化在隔离环境变量就位之前）。
+    # 子模块名称直接返回子模块本身，避免为获取 ``runner`` 而先加载 ``tester``（后者依赖 core，
+    # 会将路径固定在隔离环境变量就位之前）。
     if not name.startswith("_") and _find_spec(f"{__name__}.{name}") is not None:
         return _import_module(f"{__name__}.{name}")
     _load()
@@ -50,7 +50,7 @@ def __getattr__(name: str) -> _Any:
 
 def __dir__() -> list[str]:
     """
-    列出公开名，供交互式补全与文档工具使用。
+    列出公开名称，供交互式补全与文档工具使用。
     """
     _load()
     return sorted(key for key in globals() if not key.startswith("_"))

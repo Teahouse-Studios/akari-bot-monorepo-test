@@ -1,4 +1,4 @@
-"""wiki 推荐绑定列表单元测试 - 按钮数据构造与发出门槛。"""
+"""Wiki 推荐绑定列表单元测试，验证按钮数据构造与发送门槛。"""
 
 from unittest.mock import patch
 
@@ -67,7 +67,7 @@ async def _test_button_rows_are_split():
         wikis = [(f"Wiki {i}", f"https://example{i}.invalid/api.php") for i in range(count)]
         with patch("akaribot.modules.wiki.utils.recommend.RECOMMENDED_WIKIS", wikis):
             rows = get_recommend_button_data()
-        # 7 个按钮在上限 3 之下分作三行，余数均摊到首行
+        # 7 个按钮在上限 3 的约束下划分为三行，余数分配至首行。
         return [len(row.buttons) for row in rows] == [3, 2, 2]
 
     except Exception:
@@ -76,8 +76,8 @@ async def _test_button_rows_are_split():
 
 async def _test_button_prefix_reachable_from_interaction():
     try:
-        # 与 bots/qqbot/bot.py 的 on_interaction_create 一致：不指定前缀，
-        # 故会话取到的是全局配置的前缀，而非常规消息入口所用的斜杠前缀。
+        # 与 bots/qqbot/bot.py 的 on_interaction_create 一致，不指定前缀，
+        # 因此会话获取到的是全局配置的前缀，而非普通消息入口所使用的斜杠前缀。
         session_info = await SessionInfo.assign(
             target_id="QQBot|Group|recommend_interaction",
             target_from="QQBot|Group",
@@ -132,7 +132,7 @@ async def _test_button_unsupported_gets_no_buttons():
 
 @func_case
 async def test_wiki_recommend(tester: Tester):
-    """wiki 推荐绑定列表：按钮数据与发出门槛测试"""
+    """Wiki 推荐绑定列表的按钮数据与发送门槛测试。"""
     await tester.test(_test_button_data_shape, "按钮数据结构测试")
     await tester.test(_test_button_rows_are_split, "按钮分行测试")
     await tester.test(_test_button_prefix_reachable_from_interaction, "按钮前缀可识别测试")

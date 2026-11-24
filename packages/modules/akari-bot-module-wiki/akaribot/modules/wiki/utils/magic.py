@@ -38,7 +38,7 @@ _TITLE_VARIABLES = {
     "subjectpagename",
     "subjectpagenamee",
 }
-# siteinfo 不提供 SFH_NO_HASH 标志，这些核心函数的无井号语法由 MediaWiki 定义。
+# siteinfo 不提供 SFH_NO_HASH 标志，对应核心函数的无井号语法由 MediaWiki 定义。
 _COLON_FUNCTIONS = {
     "urlencode",
     "anchorencode",
@@ -72,7 +72,7 @@ _COLON_FUNCTIONS = {
     "displaytitle",
 }
 _URL_FUNCTIONS = {"fullurl", "canonicalurl", "localurl", "fullurle", "canonicalurle", "localurle", "filepath"}
-# 扩展注册信息只有名称与别名。仅启用已确认不写入 Wiki 的解析函数。
+# 扩展注册信息仅包含名称与别名。仅启用已确认不写入 Wiki 的解析函数。
 _QUERY_FUNCTIONS = (
     _TITLE_VARIABLES
     | _URL_FUNCTIONS

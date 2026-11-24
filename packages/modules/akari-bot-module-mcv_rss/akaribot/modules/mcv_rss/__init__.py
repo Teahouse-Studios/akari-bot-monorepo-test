@@ -190,7 +190,7 @@ async def _():
 async def _():
     global startup_mute
     if Secret.ip_country == "China" or not Secret.ip_country:
-        return  # 中国大陆无法访问 Google Play 商店
+        return  # 中国大陆无法访问 Google Play 商店。
     try:
         verlist = await get_stored_list(Bot.Info.client_name, "mcbv_rss")
         version = google_play_scraper("com.mojang.minecraftpe")["version"]

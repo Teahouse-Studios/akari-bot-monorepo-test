@@ -1,4 +1,4 @@
-"""HTTP Fixture 工具 - 从本地文件加载 mock 响应数据。"""
+"""HTTP Fixture 工具，用于从本地文件加载 mock 响应数据。"""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any
 from akaribot.core.paths import Paths
 from akaribot.testing.mock.http import HTTPMock, MockHTTPResponse, digest_request_body
 
-# 语料目录属源码仓库，与 Paths.tests 同源。按本文件深度推算会在包布局调整后失准。
+# 语料目录属源码仓库，与 Paths.tests 同源。按该文件深度推算会在包布局调整后失准。
 FIXTURE_DIR = Paths.tests / "fixtures" / "http"
 
 
@@ -23,7 +23,7 @@ def _url_to_filename(url: str, method: str | None = None, body_digest: str | Non
     if body_digest:
         key = f"{key}#{body_digest}"
     url_hash = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
-    # 提取域名作为可读前缀
+    # 提取域名作为可读前缀。
     try:
         from urllib.parse import urlparse
 
@@ -75,8 +75,8 @@ def save_fixture(
     if json_data is not None:
         data["json_data"] = json_data
 
-    # text 与 json_data 对 JSON 接口而言是同一份内容的两种形态，同时落盘会让
-    # 大响应的语料体积翻倍。此时只保留 json_data，读取时再还原出 text。
+    # text 与 json_data 对 JSON 接口而言是同一份内容的两种形态，同时写入磁盘会导致
+    # 大响应的语料体积翻倍。此时仅保留 json_data，读取时再还原生成 text。
     if json_data is None or text != json.dumps(json_data, ensure_ascii=False):
         data["text"] = text
 
@@ -103,13 +103,13 @@ def load_http_fixtures(fixture_dir: Path | None = None) -> int:
     if not fixture_dir.exists():
         return 0
 
-    # 默认禁止回退到真实网络：未录制的 URL 会带着重试与超时（默认 3 次 × 20 秒）
-    # 拖慢用例，并让结果随外部服务状态漂移。录制新语料时以环境变量放行。
-    # 每次调用都重设策略，使中途停用 mock 的用例不会波及后续入口。
+    # 默认禁止回退至真实网络，因为未录制的 URL 会触发重试与超时（默认 3 次 × 20 秒）
+    # 拖慢用例执行，并导致结果随外部服务状态波动。录制新语料时以环境变量放行。
+    # 每次调用均重置策略，使中途停用 mock 的用例不会波及后续入口。
     HTTPMock.enable(strict=os.environ.get("AKARI_TEST_ALLOW_LIVE_HTTP") != "1")
 
     resolved_dir = fixture_dir.resolve()
-    # 语料在同一进程内不变。重复注册只会让比对清单随入口数量膨胀。
+    # 语料在同一进程内不变。重复注册会导致比对清单随入口数量持续膨胀。
     if resolved_dir in _registered_dirs:
         return _registered_dirs[resolved_dir]
 
@@ -130,7 +130,7 @@ def load_http_fixtures(fixture_dir: Path | None = None) -> int:
             text = data.get("text")
             if text is None and "json_data" in data:
                 # 保存时省略了与 json_data 重复的 text，此处还原，
-                # 以便直接读取响应正文的调用方仍能取到内容。
+                # 以便直接读取响应正文的调用方仍能获取内容。
                 text = json.dumps(data["json_data"], ensure_ascii=False)
 
             response = MockHTTPResponse(
@@ -140,14 +140,14 @@ def load_http_fixtures(fixture_dir: Path | None = None) -> int:
                 content=content_bytes,
             )
 
-            # 填充 json_data 以便 fmt="json" 的请求能正确返回
+            # 填充 json_data 以确保 fmt="json" 的请求能够正确返回。
             if "json_data" in data:
                 response._json = data["json_data"]
             elif data.get("text"):
                 try:
                     response._json = json.loads(data["text"])
                 except (json.JSONDecodeError, TypeError):
-                    # text 不是合法 JSON（或类型不匹配）时，保持 _json 未设置。
+                    # text 不为有效 JSON（或类型不匹配）时，保持 _json 未设置。
                     # 调用方仍可通过 text/content 使用响应内容。
                     pass
 

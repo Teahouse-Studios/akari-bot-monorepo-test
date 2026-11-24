@@ -1,6 +1,6 @@
 # emojimix
 
-此模块用于把两个 Emoji 合成为一张 Emoji Kitchen 图片，也支持随机取一对 Emoji 合成，或列出某个 Emoji 的全部搭档。
+此模块用于将两个 Emoji 合成为一张 Emoji Kitchen 图片，也支持随机选取一对 Emoji 合成，或列出特定 Emoji 的全部组合搭档。
 
 ## 命令
 
@@ -9,12 +9,12 @@
 <CommandUsage :usage="['emojimix', 'emojimix <emoji1> [<emoji2>]']" :params="['emoji1=参与合成的第一个 Emoji', 'emoji2=可省略，参与合成的另一个 Emoji']" permission="public" />
 
 - 合成两个 Emoji。
-- 省略参数时随机取一对可合成的 Emoji。只给一个时，随机取一个能与它合成的 Emoji。也可以写作 `emoji1+emoji2`。
-- 参数为单个 Emoji 或多个码位组成的序列（如带肤色修饰的 Emoji）。
-- 参数中只要有一个不是 Emoji，或有一个不在支持列表中，就返回不支持提示，并列出这些 Emoji。
+- 省略参数时随机选取一对能够合成的 Emoji。仅提供一个参数时，随机选取能够与其合成的 Emoji。也可以写作 `emoji1+emoji2`。
+- 参数为单个 Emoji 或多个码位组成的序列（例如带有肤色修饰的 Emoji）。
+- 若参数中存在非 Emoji 字符，或包含未收录在支持列表中的 Emoji，机器人将返回不受支持的提示，并列出对应 Emoji。
 - 组合存在但图片缺失时返回未找到提示。
 
-返回的第一行是“左 Emoji + 右 Emoji”，其下是合成图。
+返回结果的第一行为“左 Emoji + 右 Emoji”，下方为合成生成的图片。
 
 <ChatExample
   :log="[
@@ -28,7 +28,7 @@
 
 <CommandUsage usage="emojimix list [<emoji>]" :params="['emoji=要查询搭档的 Emoji']" permission="public" />
 
-此命令列出全部支持的 Emoji，或指定 Emoji 的搭档。结果较长时，机器人在 Discord 上按每 200 个一批分条发送，其余平台合并为一条消息。
+此命令列出全部支持的 Emoji，或指定 Emoji 的组合搭档。当结果较长时，机器人在 Discord 平台上按照每 200 个一组分批发送，在其余平台则合并为一条消息发送。
 
 <ChatExample
   :log="[

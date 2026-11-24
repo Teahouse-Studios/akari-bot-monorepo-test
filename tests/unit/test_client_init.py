@@ -229,7 +229,7 @@ async def _test_slash_session_waits_for_initialization():
 
 @func_case
 async def test_client_init(tester: Tester):
-    """客户端初始化只执行一次，并阻止 Discord 事件抢跑。"""
+    """客户端初始化仅执行一次，并阻止 Discord 事件提前触发。"""
     await tester.test(_test_concurrent_discord_events_share_initialization, "并发事件共享初始化任务")
     await tester.test(_test_failed_discord_initialization_can_retry, "初始化失败后允许重试")
     await tester.test(_test_database_failure_cleanup_allows_retry, "数据库失败清理后允许重试")

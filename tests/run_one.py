@@ -1,4 +1,4 @@
-"""临时的单测运行脚本，仅用于开发期跑单个测试入口。"""
+"""临时单元测试运行脚本，仅用于开发阶段运行单个测试入口。"""
 
 import asyncio
 import importlib.util
@@ -7,12 +7,12 @@ import sys
 import traceback
 from pathlib import Path
 
-# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根，须先补上项目根。akaribot 本身
-# 由已安装分发解析，此处仅为与 tester.py 保持一致的导入环境。
+# 以文件路径直接启动时，sys.path 首位是 tests/ 而非项目根目录，必须先补齐项目根目录。akaribot 本身
+# 通过已安装包解析，此处仅为与 tester.py 保持一致的导入环境。
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# 导入 runner 即完成测试环境铺设（配置目录、合并日志目录、语言快照缓存），须早于任何
-# akaribot.core.* 导入。单入口运行与全量运行因此共用同一份隔离规则。
+# 导入 runner 即完成测试环境初始化（配置目录、合并日志目录、语言快照缓存），必须早于任何
+# akaribot.core.* 导入。单入口运行与全量运行因此共用同一套隔离规则。
 from akaribot.testing.runner import cleanup_test_environment  # noqa: E402
 
 from akaribot.testing.mock.database import close_db, init_db  # noqa: E402
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         code = 1
-    # 框架加载的模块会留下未完成的后台任务，正常返回会挂起，故强制退出
+    # 框架加载的模块会残留未完成的后台任务，正常返回会导致进程阻塞，因此强制退出。
     cleanup_test_environment()
     sys.stdout.flush()
     sys.stderr.flush()

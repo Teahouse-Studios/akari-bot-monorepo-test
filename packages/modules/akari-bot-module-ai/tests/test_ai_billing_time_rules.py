@@ -18,7 +18,7 @@ def _test_time_rules_use_core_offset():
             "price_cache_read": 20,
             "price_cache_write": 21,
             "price_out": 30,
-            # 23:30 UTC 在核心默认时区 +8 下是周二 07:30，命中该时段。直接按 UTC 判定则不命中。
+            # 23:30 UTC 在核心默认时区 +8 下为周二 07:30，命中该时段。直接按 UTC 判定则不命中。
             "time_rules": [
                 {"time_range": "00:00-08:30", "week": [2], "price_in": 99},
             ],
@@ -37,6 +37,6 @@ def _test_time_rules_use_core_offset():
 
 @func_case
 async def test_ai_billing_time_rules(tester: Tester):
-    """akaribot.modules.ai.setting: LLM 计费时间段规则测试"""
+    """akaribot.modules.ai.setting 的大语言模型计费时间段规则测试"""
     await tester.test(_test_time_rules_use_core_offset, "计费时间段按核心默认时区匹配测试")
     return tester

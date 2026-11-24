@@ -88,7 +88,7 @@ async def _chat_loop(
             generation=get_llm_generation(llm_info),
         )
 
-        # 每轮建立新的快照，保留旧 ID 以支持从任意一轮分叉。
+        # 每轮建立新的快照，保留原有 ID 以支持从任一轮次分叉。
         turn_id = create_context(history, context_key, llm_info["name"].lower())
 
         Logger.info(
@@ -178,7 +178,7 @@ async def _(
     available_llms = llm_list + (llm_su_list if is_superuser else [])
 
     if not selected_llm:
-        # 续接上下文时沿用其原本使用的模型。该模型当前不可用时改用默认模型。
+        # 续接上下文时沿用其所使用的模型。若该模型当前不可用，则改用默认模型。
         context_llm = get_context_llm(turn_id, context_key) if turn_id else None
         context_llm = context_llm.lower() if context_llm else None
         if context_llm in available_llms:
@@ -193,7 +193,7 @@ async def _(
     if not llm_info:
         await msg.finish(I18NContext("ai.message.llm.invalid"))
 
-    # 多轮对话会跨越多次平台消息处理，保持根会话上下文直到整段对话结束。
+    # 多轮对话会跨越多次平台消息处理，保持根会话上下文直至整段对话结束。
     await msg.hold()
     try:
         await _chat_loop(

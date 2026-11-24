@@ -22,7 +22,7 @@ import psutil
 
 from akaribot.cli import i18n
 
-# 等待主进程退出的默认秒数，以及主进程退出后清收子进程的宽限秒数。
+# 等待主进程退出的默认秒数，以及主进程退出后清理子进程的宽限秒数。
 DEFAULT_STOP_TIMEOUT = 20.0
 DEFAULT_REAP_GRACE = 3.0
 POLL_INTERVAL = 0.1
@@ -48,7 +48,7 @@ class LockRecord:
 
     @classmethod
     def parse(cls, text: str) -> LockRecord | None:
-        """解析锁文件内容。内容缺失或不是本模块写下的记录时返回 ``None``。"""
+        """解析锁文件内容。内容缺失或非本模块写入的记录时返回 ``None``。"""
         raw = text.strip()
         if not raw:
             return None
@@ -94,10 +94,10 @@ def pid_alive(pid: int) -> bool:
 
 
 def read_lock_record(path: Path) -> LockRecord | None:
-    """读取锁文件里的进程记录。文件不存在或不可读时返回 ``None``。"""
+    """读取锁文件中的进程记录。文件不存在或不可读取时返回 ``None``。"""
     try:
         with path.open("rb", buffering=0) as handle:
-            # Windows 的首字节被排他锁保护，记录读取须避开锁区。
+            # Windows 的首字节被排他锁保护，读取记录必须避开锁区。
             if is_windows():
                 handle.seek(1)
             return LockRecord.parse(handle.read().decode("utf-8"))
@@ -123,26 +123,26 @@ class StopOutcome:
 
 @runtime_checkable
 class ProcessControl(Protocol):
-    """进程控制原语，测试可注入替身。"""
+    """进程控制原语，测试时支持注入模拟对象。"""
 
     def process_group(self, pid: int) -> int | None:
-        """仅当该进程是组长时返回其所在进程组，否则返回 ``None``。"""
+        """仅当该进程为组长时返回其所在进程组，否则返回 ``None``。"""
         ...
 
     def group_alive(self, pgid: int) -> bool:
-        """进程组内是否仍有进程。"""
+        """判断进程组内是否仍包含存活进程。"""
         ...
 
     def terminate(self, pid: int, *, force: bool) -> bool:
-        """向单个进程发终止信号。"""
+        """向单个进程发送终止信号。"""
         ...
 
     def terminate_group(self, pgid: int, *, force: bool) -> bool:
-        """向整个进程组发终止信号。"""
+        """向整个进程组发送终止信号。"""
         ...
 
     def sleep(self, seconds: float) -> None:
-        """等待若干秒。"""
+        """暂停指定秒数。"""
         ...
 
 
@@ -169,7 +169,7 @@ class SystemProcessControl:
             return None
         if pgid == pid:
             return pgid
-        # 与控制器同组的实例只能按进程号处理：对整组发信号会连控制器一起终止。
+        # 与控制器同组的实例仅能按进程号处理，对整组发送信号会连同控制器一起终止。
         try:
             if pgid == os.getpgid(0):
                 return None
@@ -187,7 +187,7 @@ class SystemProcessControl:
         except ProcessLookupError:
             return False
         except PermissionError:
-            # macOS 对已退出但尚未回收的组长可返回 EPERM，须继续核对可运行成员。
+            # macOS 对已退出但尚未回收的组长可能会返回 EPERM，必须继续核对可运行成员。
             pass
         except OSError:
             return False
@@ -363,7 +363,7 @@ def stop_process(
 
 
 def _reap_group(pgid: int, *, grace: float, control: ProcessControl) -> tuple[bool, bool]:
-    # 主进程已按自身顺序处理过子进程，这里只处理残留：先按正常终止，宽限期内未退出再强制终止。
+    # 主进程已按自身顺序处理过子进程，此处仅处理残留进程，先按正常终止，宽限期内未退出再强制终止。
     if not control.group_alive(pgid):
         return True, False
     control.terminate_group(pgid, force=False)

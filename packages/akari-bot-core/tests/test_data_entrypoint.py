@@ -22,14 +22,14 @@ from akaribot.core.entrypoints import data
 from akaribot.testing import Tester, func_case
 
 TABLE = "module_status"
-# 多列改写的用例需要一张有两个以上普通列的表。
+# 多列修改的测试用例需要包含两列以上常规数据列的数据表。
 WIDE_TABLE = "module_wiki_bot_account_list"
 PROBE_KEY = "probe-entry"
 
 
 @contextmanager
 def _temp_instance():
-    # 库链接在 init_db() 调用时读取模块级变量，故把两个连接都指到临时目录：用例绝不碰仓库实例的库。
+    # 数据库连接在 init_db() 调用时读取模块级变量，因此将两个连接均指向临时目录，确保用例绝不访问仓库实例的数据库。
     with TemporaryDirectory(prefix="akari-data-") as raw:
         root = Path(raw)
         (root / "database").mkdir(parents=True, exist_ok=True)
@@ -49,7 +49,7 @@ def _run(args: list[str]) -> tuple[int, object]:
 
 
 async def _call(*args: str) -> tuple[int, object]:
-    # 入口内部用 asyncio.run()，而用例运行在事件循环里，故放回无循环的线程执行。
+    # 入口内部使用 asyncio.run()，而用例运行在事件循环中，因此交由无事件循环的线程执行。
     return await asyncio.to_thread(_run, list(args))
 
 
@@ -120,7 +120,7 @@ async def _test_missing_key_is_rejected():
 
 
 async def _test_multi_column_set_is_one_update():
-    # 一行多列：一次 set 改写整行的若干列，回读后各列都已生效。
+    # 一行多列测试，单次 set 操作修改整行的若干列，重新读取后各列均已生效。
     with _temp_instance():
         await _create_schema()
         await _call(
@@ -147,7 +147,7 @@ async def _test_multi_column_set_is_one_update():
 
 
 async def _test_multi_column_set_rejects_before_writing():
-    # 多列里有一处取值非法时整行不动：转换全部通过才下发 UPDATE，不会留下改了一半的行。
+    # 多列中若存在非法取值则整行保持不变，仅当类型转换全部通过后才提交 UPDATE，避免残留处于部分修改状态的记录行。
     with _temp_instance():
         await _create_schema()
         await _call(
@@ -204,7 +204,7 @@ async def _test_sqlite_round_trip():
 
 
 async def _seed_rows(names: list[str]) -> None:
-    # 分页与筛选需要一批可控的数据：直接建行，绕开逐条子进程调用。
+    # 分页与筛选功能需要可控的测试数据，因此直接创建测试数据行，避免逐次发起子进程调用。
     await init_db(generate_schemas=False)
     from akaribot.core.database.models import ModuleStatus
 
@@ -214,7 +214,7 @@ async def _seed_rows(names: list[str]) -> None:
 
 
 async def _test_filters_narrow_and_page():
-    # 条件与分页都在 core 侧收口：界面只报条件，条数按筛选后计算，offset 只影响本页。
+    # 条件与分页均在 core 中统一处理，界面仅传递条件，条数按筛选后计算，offset 仅影响当前页。
     with _temp_instance():
         await _create_schema()
         await _seed_rows([f"mod-{index:03d}" for index in range(120)])
@@ -240,7 +240,7 @@ async def _test_filters_narrow_and_page():
 
 
 async def _test_no_count_skips_total():
-    # 大表上 COUNT 是全表扫描：翻页可以只取本页，total 回 null，由调用方沿用上次的条数。
+    # 大表上 COUNT 会触发全表扫描，因此翻页可以仅获取当前页，total 返回 null，通过调用方沿用上一次的条数。
     with _temp_instance():
         await _create_schema()
         await _seed_rows([f"mod-{index:03d}" for index in range(30)])
@@ -277,7 +277,7 @@ async def _test_condition_operators():
         and negated["total"] == 0
         and empty["total"] == 0
         and not_empty["total"] == 20
-        # 造数据时 load 等于“名字以 0 结尾”，故 load=true 且名字含 mod-01 的只有 mod-010。
+        # 构造测试数据时 load 等于“名称以 0 结尾”，因此 load=true 且名称包含 mod-01 的仅包含 mod-010。
         and combined["total"] == 1
     )
 
@@ -290,7 +290,7 @@ async def _test_search_scans_text_columns():
         _, case_insensitive = await _call("rows", TABLE, "--search", "DICE")
         _, mixed = await _call("rows", TABLE, "--search", "wiki", "--filter", "load=false")
     names = sorted(row["module_name"] for row in found["rows"])
-    # 被搜索的三行 load 都是 false，故与 load=false 取交集的条数不变。
+    # 被搜索的三行 load 均为 false，因此与 load=false 取交集的条数保持不变。
     return (
         found["total"] == 2 and names == ["wiki", "wikilog"] and case_insensitive["total"] == 1 and mixed["total"] == 2
     )
@@ -302,7 +302,7 @@ async def _test_bad_conditions_are_rejected():
         unknown_code, unknown = await _call("rows", TABLE, "--filter", "no_such=1")
         text_code, text_op = await _call("rows", TABLE, "--filter", "load~true")
         empty_code, empty = await _call("rows", TABLE, "--filter", "   ")
-        # 空白搜索词按“没给”处理：界面清空搜索框后不必再区分空串与默认值。
+        # 空白搜索词按照“未提供”处理，界面清空搜索框后无需区分空字符串与默认值。
         blank_code, blank = await _call("rows", TABLE, "--search", "   ")
     return (
         unknown_code == 2
@@ -318,7 +318,7 @@ async def _test_bad_conditions_are_rejected():
 
 async def _test_tables_payload_shape():
     with _temp_instance():
-        # 尚未创建数据表时也要返回清单。条数以未知回报，清单照常返回。
+        # 尚未创建数据表时同样返回清单。条数返回未知状态，清单则正常返回。
         empty_code, empty_payload = await _call("tables", "--json")
         await _create_schema()
         code, payload = await _call("tables", "--json")
@@ -378,7 +378,7 @@ async def _test_plain_output_is_json():
 
 @func_case
 async def test_data_entrypoint(tester: Tester):
-    """core.entrypoints.data: 数据浏览与写入入口测试"""
+    """core.entrypoints.data 数据浏览与写入入口测试"""
     await tester.test(_test_unknown_table_is_rejected, "未知表名被拒")
     await tester.test(_test_unknown_column_is_rejected, "未知列名被拒")
     await tester.test(_test_missing_required_field_is_rejected, "缺必填字段被拒")

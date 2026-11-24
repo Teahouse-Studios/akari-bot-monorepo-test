@@ -2,7 +2,7 @@
 
 本文整理了 Web 控制台的配置字段与默认值。
 
-配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表都写在 `config/bot_web.toml`。普通项写在 `[bot_web]`，密钥项写在 `[bot_web_secret]`。
+配置表为 `bot_web`，密钥表为 `bot_web_secret`。两张表均保存在 `config/bot_web.toml`，常规项配置在 `[bot_web]`，密钥项配置在 `[bot_web_secret]`。
 
 ## 配置表 `bot_web`
 

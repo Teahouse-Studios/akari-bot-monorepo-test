@@ -1,4 +1,4 @@
-"""wiki 结果消息的交互与样式设置测试。"""
+"""Wiki 结果消息的交互与样式设置测试。"""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -37,7 +37,7 @@ def _is_button_only(message_chain) -> bool:
 
 
 async def _session_info(tag: str) -> SessionInfo:
-    # 未找到分支会读取 target_union_info.target_data，故走 assign 以贴近真实会话。
+    # 未找到分支会读取 target_union_info.target_data，因此使用 assign 以贴近真实会话。
     return await SessionInfo.assign(
         target_id=f"TEST|Group|{tag}",
         target_from="TEST|Group",
@@ -57,7 +57,7 @@ async def _run_query(
     render_preview: AsyncMock | None = None,
     title: str | list[str] = "示例条目",
 ) -> tuple[list, list]:
-    # 跑一遍 query_pages，捕获主流程发出的消息与等待链路的提示。
+    # 执行一次 query_pages，捕获主流程发出的消息与等待链路的提示。
     sent = []
     waits = []
     pages = page if isinstance(page, list) else [page]
@@ -73,7 +73,7 @@ async def _run_query(
 
     async def _wait_next_message(self, message_chain=None, **kwargs):
         waits.append((message_chain, kwargs))
-        # 用户回复了无法识别的文本，等待链路按取消处理，不再发起新查询。
+        # 用户回复了无法识别的文本，等待链路按照取消操作处理，不再发起新查询。
         return SimpleNamespace(as_display=lambda text_only=False: "取消")
 
     async def _run_background(_session, awaitable_factory, **_kwargs):
@@ -126,7 +126,7 @@ async def _test_not_found_sends_no_button_only_message():
         if isinstance(frame, ButtonFrameElement)
         for row in frame.rows
     ]
-    # 候选项末行的关闭按钮复用渲染按钮的删除文案，按会话语言取。
+    # 候选项末行的关闭按钮复用渲染按钮的删除文案，按照会话语言获取。
     close_label = session.t("wiki.message.render.action.delete")
     return (
         keys == ["wiki.message.not_found.autofix.choice"]
@@ -317,7 +317,7 @@ async def _test_style_command_visibility_matches_card_support():
 
 @func_case
 async def test_wiki_message_buttons(tester: Tester):
-    """wiki 结果消息交互与样式设置测试"""
+    """Wiki 结果消息交互与样式设置测试。"""
     await tester.test(_test_not_found_sends_no_button_only_message, "多个候选时不发出空按钮消息")
     await tester.test(_test_single_suggestion_sends_no_button_only_message, "单个候选时不发出空按钮消息")
     await tester.test(_test_multiple_redirects_build_choice_rows, "多个重定向候选时构造按钮行")

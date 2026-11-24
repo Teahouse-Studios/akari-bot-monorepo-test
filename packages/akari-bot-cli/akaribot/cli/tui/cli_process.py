@@ -10,7 +10,7 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-# 显式指定 CLI 入口，供自检与冻结产物使用。
+# 明确指定 CLI 入口，供自检与冻结产物使用。
 CLI_BIN_ENV = "AKARIBOT_CLI_BIN"
 INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
 
@@ -41,7 +41,7 @@ def cli_env(root: Path | str, *, extra: Mapping[str, str] | None = None) -> dict
     env[INSTANCE_DIR_ENV] = str(root)
     env["AKARI_CONFIG_PATH"] = str(Path(root).expanduser().resolve() / "config")
     env.pop("AKARI_CONFIG_READONLY", None)
-    # 子进程输出含中文与 JSON，Windows 控制台默认代码页可能是 GBK，两侧编码不一致会得到乱码或解析失败。
+    # 子进程输出包含中文与 JSON，Windows 控制台默认代码页可能是 GBK，两端编码不一致会导致输出乱码或解析失败。
     env["PYTHONIOENCODING"] = "utf-8"
     if extra:
         env.update(extra)

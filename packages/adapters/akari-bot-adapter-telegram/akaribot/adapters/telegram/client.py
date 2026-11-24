@@ -16,7 +16,7 @@ if proxy:
     session_kwargs["proxy"] = proxy
 session = AiohttpSession(**session_kwargs)
 if not ssl_verify:
-    # aiogram 未提供关闭证书校验的参数，只能改写它在建连时使用的连接器配置。
+    # aiogram 未提供关闭证书校验的参数，仅能改写其建立连接时所用的连接器配置。
     session._connector_init["ssl"] = False
 
 aiogram_bot = Bot(token=token, session=session)

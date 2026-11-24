@@ -251,7 +251,7 @@ def _test_formatted_time_kecode_roundtrip():
         restored = match_kecode(elem.kecode()).values[0]
         if restored.text != expected:
             return False
-        # 逗号后的部分不应丢失
+        # 逗号后的内容不应丢失。
         if "," in expected and restored.text == expected.split(",")[0]:
             return False
         return True
@@ -284,7 +284,7 @@ def _test_url_kecode_missing_text():
 
 @func_case
 async def test_message_chain(tester: Tester):
-    """akaribot.core.builtins.message.chain: MessageChain 测试"""
+    """akaribot.core.builtins.message.chain 模块 MessageChain 测试"""
     await tester.test(_test_assign_from_string, "从字符串创建消息链")
     await tester.test(_test_assign_from_none, "从 None 创建空消息链")
     await tester.test(_test_assign_from_element, "从单个元素创建消息链")
@@ -298,7 +298,7 @@ async def test_message_chain(tester: Tester):
 
 @func_case
 async def test_message_elements(tester: Tester):
-    """akaribot.core.builtins.message.elements: 消息元素测试"""
+    """akaribot.core.builtins.message.elements 消息元素测试"""
     await tester.test(_test_plain_element_multiple_args, "PlainElement.assign() 多参数")
     await tester.test(_test_markdown_element_and_plain_conversion, "MarkdownElement 普通文本转换")
     await tester.test(_test_markdown_sendable_respects_session_capability, "MarkdownElement 平台能力降级")
@@ -308,7 +308,7 @@ async def test_message_elements(tester: Tester):
 
 @func_case
 async def test_kecode_roundtrip(tester: Tester):
-    """akaribot.core.builtins.message: KE 码转义往返测试"""
+    """akaribot.core.builtins.message 模块 KE 码转义往返测试"""
     await tester.test(_test_plain_kecode_roundtrip_separators, "纯文本含分隔符往返测试")
     await tester.test(_test_plain_kecode_roundtrip_disable_joke, "含分隔符时 disable_joke 往返测试")
     await tester.test(_test_plain_allow_parse_roundtrip_and_behavior, "PlainElement.allow_parse 往返与解析控制")
@@ -582,7 +582,7 @@ def _test_standalone_buttons_are_auto_arranged():
 
 @func_case
 async def test_message_chain_operations(tester: Tester):
-    """MessageChain: 运算符和高级操作测试"""
+    """MessageChain 运算符与高级操作测试"""
     await tester.test(_test_chain_add, "MessageChain + 运算符")
     await tester.test(_test_chain_radd, "list + MessageChain 运算符")
     await tester.test(_test_chain_copy, "MessageChain copy 方法")
@@ -591,7 +591,7 @@ async def test_message_chain_operations(tester: Tester):
 
 @func_case
 async def test_message_elements_extended(tester: Tester):
-    """消息元素扩展测试: Image/Audio/Mention/Embed"""
+    """Image、Audio、Mention 和 Embed 消息元素扩展测试"""
     await tester.test(_test_image_element_url, "ImageElement.assign URL")
     await tester.test(_test_image_element_max_h_roundtrip, "ImageElement.max_h 序列化往返")
     await tester.test(_test_image_element_allow_split_roundtrip, "ImageElement.allow_split 序列化往返")

@@ -37,7 +37,7 @@ def _make_instance(root: Path):
 
 
 def _run_remove(instance, **kwargs) -> str:
-    # 命中 core 的取数（registry / schema）全部由替身接管，本命令只走配置文件的读写。
+    # 涉及 core 的数据读取（registry / schema）全部由模拟对象接管，本命令仅读写配置文件。
     buffer = io.StringIO()
     console = Console(file=buffer, width=400, force_terminal=False)
     with (
@@ -79,7 +79,7 @@ def _test_purge_data_is_not_an_option():
     runner = CliRunner()
     helped = runner.invoke(adapter_command.app, ["instance", "remove", "--help"])
     rejected = runner.invoke(adapter_command.app, ["instance", "remove", "telegram", "--purge-data"])
-    # 说明段落由 locales 提供，这里只认选项表：它才是“该旗标是否存在”的判据。
+    # 说明段落由 locales 提供，此处仅以选项表作为“该选项是否存在”的判断依据。
     options_block = helped.stdout.split("Options", 1)[-1]
     return (
         helped.exit_code == 0
@@ -91,7 +91,7 @@ def _test_purge_data_is_not_an_option():
 
 
 def _test_list_json_reports_installed_platforms():
-    # 界面新增实例时只能从 JSON 得知尚无实例配置的已安装平台。
+    # 界面新增实例时仅能从 JSON 得知尚无实例配置的已安装平台。
     registry = adapter_command.AdapterRegistry(
         adapters={name: adapter_command.InstalledAdapter(name=name) for name in ("telegram", "kook")},
         available=True,
@@ -114,7 +114,7 @@ def _test_list_json_reports_installed_platforms():
 
 @func_case
 async def test_adapter_instance_remove(tester: Tester):
-    """cli.commands.adapter: 实例移除只删配置测试"""
+    """cli.commands.adapter 实例移除仅删除配置测试"""
     _use_cli_locale()
     await tester.test(_test_remove_deletes_config_and_keeps_data, "默认只删除配置文件")
     await tester.test(_test_dry_run_keeps_config, "--dry-run 不改动文件")

@@ -1,10 +1,10 @@
 # akari-bot-module-ip
 
-查询 IP 信息。
+查询 IP 地址归属地与网络属性信息。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求参见包内 `pyproject.toml` 中的 `requires-python` 字段。
 
 ```sh
 pip install akari-bot-module-ip

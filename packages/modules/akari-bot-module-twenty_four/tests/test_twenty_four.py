@@ -1,11 +1,11 @@
-"""twenty_four 求解器单元测试 - 表达式枚举与结果校验。"""
+"""twenty_four 求解器单元测试，覆盖表达式枚举与结果校验。"""
 
 from akaribot.testing import func_case, Tester
 from akaribot.modules.twenty_four import calc, check_valid, contains_all_numbers, find_solution
 
-# 需借助除法与括号才能凑成 24 的经典组合，用于检验求解器不止会做整数四则运算。
+# 需要借助除法与括号才能组合为 24 的典型数值，用于检验求解器不仅支持整数四则运算。
 TRICKY_NUMBERS = (3, 3, 8, 8)
-# 四个 1 至多凑出 4，必定无解。
+# 四个 1 最多计算得出 4，必定无解。
 NO_SOLUTION_NUMBERS = (1, 1, 1, 1)
 
 
@@ -50,7 +50,7 @@ async def _test_no_solution_returns_none():
 
 @func_case
 async def test_twenty_four_solver(tester: Tester):
-    """twenty_four 求解器：入参类型、解的正确性与无解判定测试"""
+    """twenty_four 求解器的输入参数类型、解的正确性与无解判定测试。"""
     await tester.test(_test_accepts_tuple, "元组入参测试")
     await tester.test(_test_solves_with_division, "含除法组合求解测试")
     await tester.test(_test_no_solution_returns_none, "无解返回 None 测试")

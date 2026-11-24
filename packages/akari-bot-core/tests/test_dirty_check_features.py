@@ -1,4 +1,4 @@
-"""akaribot/adapters/*/features 单元测试 - 平台能力开关的传递（需要数据库）。"""
+"""akaribot/adapters/*/features 平台能力开关传递单元测试（需要数据库）。"""
 
 from datetime import UTC, datetime, timedelta
 
@@ -17,8 +17,8 @@ async def _test_flag_reaches_fetched_session():
     alive = Alive.values.copy()
     try:
         Alive.values.clear()
-        # 主动推送的会话没有触发消息，能力标志只能从进程注册元数据里带过来，
-        # wikilog 等模块的 check() 正是据此判断要不要过滤。
+        # 主动推送的会话没有触发消息，能力标志仅能从进程注册元数据中传入，
+        # wikilog 等模块的 check() 正是据此判断是否过滤。
         for client, flag in (("DIRTYON", True), ("DIRTYOFF", False)):
             features = Features(**{FLAG: flag})
             feature_data = converter.unstructure(features, Features)
@@ -88,7 +88,7 @@ async def _test_wiki_content_check_respects_dirty_word_feature():
 
 @func_case
 async def test_dirty_check_features(tester: Tester):
-    """akaribot.adapters.features: 平台能力开关测试"""
+    """akaribot.adapters.features 平台能力开关测试"""
     await tester.test(_test_flag_reaches_fetched_session, "开关传递到主动推送会话测试")
     await tester.test(_test_wiki_content_check_respects_dirty_word_feature, "Wiki 内容检查开关测试")
 

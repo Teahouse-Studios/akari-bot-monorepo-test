@@ -23,7 +23,7 @@ DEBUG_NAME = "BotDaemon_debug_2026-09-25.log"
 
 
 class _FakeInstance:
-    # 命令只读实例根的 ``logs`` 子目录，替身给一个 root 即可。
+    # 命令仅读取实例根目录的 ``logs`` 子目录，模拟对象仅需提供一个 root。
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
 
@@ -204,7 +204,7 @@ async def _test_command_selects_level_and_emits_json():
 
 
 def _flat(text: str) -> str:
-    # 临时目录路径很长，rich 会在终端宽度处折行。比对时去掉全部空白，避免检查依赖路径长度。
+    # 临时目录路径很长，rich 会在终端宽度处折行。比对时移除全部空白，避免检查依赖路径长度。
     return "".join(text.split())
 
 
@@ -243,7 +243,7 @@ async def _test_command_rejects_bad_requests():
 
 
 async def _test_empty_file_is_reported():
-    # 实例空闲时当天的日志是空的：要说明一句，否则用户以为命令没生效。
+    # 实例处于空闲状态时当天日志为空，需要输出提示文本，避免误认为命令未生效。
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         _write_log(root / "logs", FILE_NAME, "", mtime=10.0)
@@ -266,7 +266,7 @@ async def _test_follow_file_emits_new_lines():
                 path.write_text("first\nsecond\nthird\n", encoding="utf-8")
 
         def stop() -> bool:
-            # 上限同时覆盖“跟随不再前进”的回归：那种情况下循环不会自己退出。
+            # 上限同时覆盖“跟随未继续前进”的回归，此时循环不会自行退出。
             rounds["count"] += 1
             return len(batches) >= 2 or rounds["count"] > 10
 
@@ -296,7 +296,7 @@ async def _test_follow_batch_payload_is_structured():
 
 @func_case
 async def test_logs_cli(tester: Tester):
-    """cli.logs: 日志解析、增量读取与命令输出测试"""
+    """cli.logs 日志解析、增量读取与命令输出测试"""
     _use_cli_locale()
     await tester.test(_test_parse_log_name_rules, "文件名解析出进程、debug 与日期")
     await tester.test(_test_tui_page_shares_parse_rule, "界面日志页共用同一份解析规则")

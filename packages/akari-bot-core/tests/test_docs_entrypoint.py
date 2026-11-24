@@ -517,7 +517,7 @@ def _test_directory_scan_fallback():
 
 
 def _test_stale_editable_metadata_is_supplemented():
-    # 可编辑安装的元数据缺少源码里的 akaribot.docs 声明时按源码补入并告警。普通安装不按源码补入。
+    # 可编辑安装模式的元数据若缺失源码中的 akaribot.docs 声明，则按源码补充并发出告警；常规安装不按源码补充。
     with TemporaryDirectory(prefix="akari-docs-") as raw:
         root = Path(raw)
         core_spec = _make_package(root / "src", "akaribot.core", {"docs/index.md": "# Core\n"})
@@ -621,7 +621,7 @@ def _test_api_catalog_covers_public_exports():
 
 @func_case
 async def test_docs_entrypoint(tester: Tester):
-    """core.entrypoints.docs: 包文档清单入口测试"""
+    """core.entrypoints.docs 包文档清单入口测试"""
     await tester.test(_test_metadata_and_sorting, "元数据字段与分组排序")
     await tester.test(_test_front_matter_overrides_titles, "front matter 覆盖标题与页面排序")
     await tester.test(_test_doc_meta_defaults_and_corruption, "元数据默认、全局/用户覆盖与损坏告警")

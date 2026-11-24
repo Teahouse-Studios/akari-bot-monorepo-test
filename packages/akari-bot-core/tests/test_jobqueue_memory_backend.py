@@ -1,4 +1,4 @@
-"""在不访问 JobQueue ORM 表的情况下验证共享运行时契约。"""
+"""无需访问 JobQueue ORM 表即可验证共享运行时接口约定。"""
 
 import asyncio
 from contextlib import asynccontextmanager

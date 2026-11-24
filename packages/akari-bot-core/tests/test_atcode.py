@@ -60,7 +60,7 @@ def _test_broadcast_detection():
 
 
 def _test_adjacent_at_codes_follow_legacy_pattern():
-    # 该行为在本重构前就由各适配器共用的正则决定，此处固定下来以免无意改变线上输出。
+    # 此行为由各适配器共用的正则表达式确定，通过测试约束以确保输出格式保持稳定。
     try:
         parts = list(iter_at_code("<AT:QQ|1><AT:QQ|2>"))
         return (
@@ -171,7 +171,7 @@ def _test_wrap_then_render():
 
 @func_case
 async def test_atcode(tester: Tester):
-    """行内 AT 码：解析、渲染与用户 ID 包装测试"""
+    """行内 AT 码的解析、渲染与用户 ID 包装测试"""
     await tester.test(_test_iter_splits_surrounding_text, "AT 码与文本交替切分")
     await tester.test(_test_iter_supports_alternate_marker, "`<@:` 标记形式")
     await tester.test(_test_iter_supports_extra_fields, "冗余中间字段形式")

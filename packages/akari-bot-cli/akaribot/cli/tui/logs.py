@@ -32,7 +32,7 @@ DEFAULT_RESCAN_SECONDS = 15.0
 """重新枚举日志目录的周期（秒），用于跨日轮转时切换文件。"""
 
 DEBUG_MODES = ("auto", "info", "debug")
-# 日志模式须按当前语言显示，因此常量只保存文案键。
+# 日志模式需要按照当前语言显示，因此常量仅保存文案键。
 _DEBUG_MODE_KEYS = {
     "auto": "cli.tui.logs.debug_auto",
     "info": "cli.tui.logs.debug_info",
@@ -47,24 +47,24 @@ def _filter_name(process: str | None) -> str:
 
 
 class LogSourceError(RuntimeError):
-    """数据源不可用：日志目录缺失、文件不可读或读取失败。"""
+    """数据源不可用（日志目录缺失、文件不可读或读取失败）。"""
 
 
 @runtime_checkable
 class LogSource(Protocol):
-    """日志数据源接口。测试注入替身，生产直接读文件系统。"""
+    """日志数据源接口。测试注入模拟对象，生产环境直接读取文件系统。"""
 
     def list_processes(self) -> Sequence[str]:
         """返回日志目录中出现过的进程名。"""
 
     def list_files(self, process: str | None = None) -> Sequence[LogFileInfo]:
-        """按进程过滤返回日志文件，最新的排在前面。"""
+        """按进程过滤并按时间倒序返回日志文件列表。"""
 
     def read_since(self, path: Path, offset: int, *, max_bytes: int = READ_CHUNK_BYTES) -> LogChunk:
-        """从 ``offset`` 起增量读取，只返回新增的完整行。"""
+        """从 ``offset`` 起增量读取，仅返回新增的完整行。"""
 
     def read_tail(self, path: Path, *, max_bytes: int = TAIL_CHUNK_BYTES) -> LogChunk:
-        """读取文件尾部的若干行，并把 offset 对齐到已读位置。"""
+        """读取文件尾部的若干行，并将 offset 调整至已读取位置。"""
 
 
 class StaticLogSource:
@@ -91,7 +91,7 @@ class StaticLogSource:
         self._lines.setdefault(name, []).extend(lines)
 
     def truncate(self, name: str, lines: Sequence[str]) -> None:
-        """用新的行列表替换文件内容，模拟轮转或截断。"""
+        """使用新的行列表替换文件内容，模拟轮转或截断。"""
         self._lines[name] = list(lines)
 
     def list_processes(self) -> Sequence[str]:
@@ -157,7 +157,7 @@ class FileLogSource:
         self.logs_dir = Path(logs_dir) if logs_dir is not None else None
 
     def logs_path(self) -> Path:
-        """返回日志目录。未显式指定时按实例根拼接 ``logs``。"""
+        """返回日志目录。未明确指定时按实例根目录拼接 ``logs``。"""
         if self.logs_dir is not None:
             return self.logs_dir
         found = context.active_root()
@@ -349,12 +349,12 @@ class LogsPage(compat.Vertical):
             self.set_interval(self.follow_interval, self._tick)
 
     def focus_primary(self) -> None:
-        """聚焦进程列表，供上层在页面切换时调用。"""
+        """聚焦进程列表，供页面切换时调用。"""
         compat.focus_first(self, "#process-list")
 
     @property
     def processes(self) -> tuple[str, ...]:
-        """返回可选的进程名，不含“全部进程”。"""
+        """返回可选的进程名，不包含“全部进程”。"""
         return self._processes
 
     @property
@@ -364,14 +364,14 @@ class LogsPage(compat.Vertical):
 
     @property
     def visible_files(self) -> tuple[LogFileInfo, ...]:
-        """返回当前过滤条件下的文件，保留完整清单用于统计。"""
+        """返回当前过滤条件下的日志文件，保留完整清单用于统计。"""
         if self._selected is None:
             return self._files
         return tuple(info for info in self._files if info.process == self._selected)
 
     @property
     def selected_process(self) -> str | None:
-        """返回当前过滤的进程。``None`` 表示不过滤。"""
+        """返回当前过滤的进程。``None`` 表示不执行过滤。"""
         return self._selected
 
     @property
@@ -380,13 +380,13 @@ class LogsPage(compat.Vertical):
         return self._followed
 
     def process_labels(self) -> tuple[str, ...]:
-        """返回最近一次渲染出的进程行文本，供自动化检查核对计数。"""
+        """返回最近一次渲染结果中的进程行文本，供自动化检查核对计数。"""
         return self._process_labels
 
     @property
     def read_offset(self) -> int:
         """返回当前读取偏移。文件数据源以字节为单位。"""
-        # Widget.offset 表示控件位置，不能用于日志游标。
+        # Widget.offset 表示控件屏幕位置，不可用作日志读取游标。
         return self._offset
 
     @property
@@ -396,7 +396,7 @@ class LogsPage(compat.Vertical):
 
     @property
     def debug_preference(self) -> str:
-        """返回 debug 偏好：``auto`` / ``info`` / ``debug``。"""
+        """返回 debug 偏好（``auto`` / ``info`` / ``debug``）。"""
         return self._prefer_debug
 
     @property
@@ -422,17 +422,17 @@ class LogsPage(compat.Vertical):
 
     @property
     def filter_keyword(self) -> str:
-        """返回关键词过滤。空串表示不过滤。"""
+        """返回关键词过滤条件。空字符串表示不执行过滤。"""
         return self._filter
 
     @property
     def filter_hits(self) -> int:
-        """返回关键词在当前缓冲中的命中行数。未启用过滤时为 0。"""
+        """返回关键词在当前显示缓冲中的匹配行数。未启用过滤时为 0。"""
         return len(self._matched_lines()) if self._filter else 0
 
     @property
     def visible_text(self) -> str:
-        """返回日志面板当前渲染出的纯文本。"""
+        """返回日志面板当前渲染结果中的纯文本。"""
         return self._rendered
 
     @property
@@ -448,7 +448,7 @@ class LogsPage(compat.Vertical):
             if self._selected is not None and self._selected not in processes:
                 self._selected = None
             files = tuple(self.source.list_files(None))
-        except Exception as error:  # noqa: BLE001 - 枚举失败只更新状态栏
+        except Exception as error:  # noqa: BLE001 - 枚举失败仅更新状态栏。
             self._processes = ()
             self._files = ()
             self._followed = None
@@ -495,7 +495,7 @@ class LogsPage(compat.Vertical):
     def _switch_to(self, info: LogFileInfo) -> None:
         try:
             chunk = self.source.read_tail(info.path, max_bytes=TAIL_CHUNK_BYTES)
-        except Exception as error:  # noqa: BLE001 - 读取失败只更新状态栏
+        except Exception as error:  # noqa: BLE001 - 读取失败仅更新状态栏。
             self._followed = info
             self._offset = 0
             self.last_error = f"{type(error).__name__}: {error}"
@@ -530,7 +530,7 @@ class LogsPage(compat.Vertical):
             return None
         try:
             chunk = self.source.read_since(followed.path, self._offset, max_bytes=self.chunk_bytes)
-        except Exception as error:  # noqa: BLE001 - 读取失败只更新状态栏
+        except Exception as error:  # noqa: BLE001 - 读取失败仅更新状态栏。
             self.last_error = f"{type(error).__name__}: {error}"
             self._set_status(i18n.t("cli.tui.logs.status_follow_failed", error=self.last_error))
             return None
@@ -557,7 +557,7 @@ class LogsPage(compat.Vertical):
         self.follow_once()
 
     def _pause_on_scroll_back(self) -> bool:
-        # 用户向上滚动时暂停跟随，保留当前阅读位置。
+        # 向上滚动时暂停日志跟随，保留当前阅读视口位置。
         if self._paused:
             return False
         pane = self._log_pane()
@@ -573,7 +573,7 @@ class LogsPage(compat.Vertical):
         self._set_status(self._status_line())
 
     def resume(self) -> None:
-        """恢复跟随，补读暂停期间新增的行并返回缓冲末尾。"""
+        """恢复跟随，补充读取暂停期间新增的行并返回缓冲末尾。"""
         self._paused = False
         self._sync_actions()
         self.follow_once()
@@ -595,7 +595,7 @@ class LogsPage(compat.Vertical):
         self._set_status(i18n.t("cli.tui.logs.status_cleared", offset=self._offset))
 
     def set_filter(self, value: str) -> None:
-        """设置关键词过滤框内容，等价于用户键入。"""
+        """设置关键词过滤框内容，等价于手动键入。"""
         self.query_one("#filter", compat.Input).value = value
 
     def focus_filter(self) -> None:
@@ -635,7 +635,7 @@ class LogsPage(compat.Vertical):
     def _on_highlighted(self, event: compat.ListView.Highlighted) -> None:
         index = compat.highlighted_index(event.list_view)
         if index is None:
-            # 重建列表时 clear() 会把高亮清空，这条不是用户选择，按“不变”处理。
+            # 重建列表时 clear() 会清空高亮状态，该项非主动交互选择，按“保持不变”处理。
             return
         process = self._process_at(index)
         if process != self._selected:
@@ -688,7 +688,7 @@ class LogsPage(compat.Vertical):
         labels.extend(self._process_label(name) for name in self._processes)
         self._process_labels = tuple(labels)
         index = 0 if self._selected is None else (self._processes.index(self._selected) + 1)
-        # 重建与落高亮交给 _compat.rebuild_rows：clear() 的移除是异步的，顺序错了高亮会打在旧条目上。
+        # 重建与高亮恢复委托给 _compat.rebuild_rows 处理，因 clear() 移除为异步操作，顺序错乱会导致高亮停留在旧条目上。
         compat.rebuild_rows(list_view, labels, min(index, max(len(labels) - 1, 0)))
 
     def _process_label(self, process: str | None) -> str:
@@ -734,7 +734,7 @@ class LogsPage(compat.Vertical):
     def _log_pane(self) -> compat.VerticalScroll | None:
         try:
             return self.query_one("#log-pane", compat.VerticalScroll)
-        except Exception:  # noqa: BLE001 - 未挂载时没有滚动容器
+        except Exception:  # noqa: BLE001 - 未挂载时没有滚动容器。
             return None
 
     def _at_end(self) -> bool:
@@ -755,7 +755,7 @@ class LogsPage(compat.Vertical):
 
     def _pin_to_end(self) -> None:
         self._scroll_to_end()
-        # 新增内容的滚动范围在布局后更新，须再次定位末尾，避免误判为用户向上滚动。
+        # 新增内容的滚动范围在布局后更新，需要再次定位末尾，避免误判定为向上滚动操作。
         if self.is_mounted:
             self.call_after_refresh(self._scroll_to_end)
 
@@ -790,7 +790,7 @@ class LogsPage(compat.Vertical):
     def _inner_width(self) -> int:
         try:
             outer = compat.widget_cells(self)[0]
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             return 78
         return max(outer - 2, 16)
 
@@ -807,7 +807,7 @@ class LogsPage(compat.Vertical):
     def on_resize(self, event: compat.events.Resize) -> None:
         self._render_target()
         self._render_log()
-        # 视口高度改变后，跟随状态须重新定位末尾。暂停时保留阅读位置。
+        # 视口高度改变后，跟随状态需要重新定位末尾。暂停时保留阅读位置。
         if not self._paused:
             self._pin_to_end()
         self._set_status(self._status_line())

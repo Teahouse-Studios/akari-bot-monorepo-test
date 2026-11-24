@@ -111,7 +111,7 @@ async def _with_page(body, source=None, size=(110, 32)):
 
 
 async def _test_worker_marks_stop_after_unmount():
-    # 页面卸载后 worker 仍可能完成，异步渲染入口须在访问控件前检查挂载状态。
+    # 页面卸载后 worker 仍可能完成，异步渲染入口需要在访问控件前检查挂载状态。
     async def body(app, page, pilot, source):
         content = app.query_one("#content", compat.Vertical)
         await content.remove_children()
@@ -125,7 +125,7 @@ async def _test_worker_marks_stop_after_unmount():
         ):
             try:
                 outcomes.append(await call())
-            except Exception as error:  # noqa: BLE001 - 验证异常是否向外传播
+            except Exception as error:  # noqa: BLE001 - 验证异常是否向外传播。
                 outcomes.append(f"{type(error).__name__}: {error}")
         return outcomes
 
@@ -134,7 +134,7 @@ async def _test_worker_marks_stop_after_unmount():
 
 
 async def _test_refresh_keeps_table_highlighted():
-    # 关键回归：重建数据表清单后选中行必须仍然高亮——ListView 只在 index 变化时更新高亮。
+    # 关键回归测试，重建数据表清单后选中行必须仍然高亮——ListView 仅在 index 变化时更新高亮。
     async def body(app, page, pilot, source):
         table_list = page.query_one("#table-list", compat.ListView)
         table_list.index = 1
@@ -221,7 +221,7 @@ async def _test_table_switch_discards_edits():
 
 
 async def _test_reload_asks_before_rereading():
-    # 取消重新加载时须保留编辑内容，且不得调用数据源。
+    # 取消重新加载时必须保留编辑内容，且不得调用数据源。
     async def body(app, page, pilot, source):
         page.row_for("count").set_text("9")
         await pilot.pause()
@@ -320,7 +320,7 @@ async def _test_form_hint_reads_widget_text():
 
 
 async def _test_bool_field_toggles_and_saves():
-    # 适配器配置表都带 enable：布尔行须能切换、读取并写入，且切换不触发页面动作。
+    # 适配器配置表均包含 enable，布尔值行需要支持切换、读取和写入，且切换操作不触发页面其他动作。
     table = "bot_demo"
     source = StaticConfigSource(
         (table,),
@@ -344,7 +344,7 @@ async def _test_bool_field_toggles_and_saves():
 
 
 async def _test_low_frequency_bindings_stay_out_of_footer():
-    # 工具栏操作不进页脚，为 80 列终端保留全局快捷键空间。
+    # 工具栏操作不显示在页脚，为 80 列终端保留全局快捷键空间。
     async def body(app, page, pilot, source):
         footer = app.query_one(compat.Footer)
         actions = {"save", "mode_form", "mode_raw", "open_editor", "reload", "focus_tables"}
@@ -367,7 +367,7 @@ async def _test_low_frequency_bindings_stay_out_of_footer():
 
 
 def _test_editor_command_resolution():
-    # 编辑器解析须与 config open 一致：VISUAL 优先于 EDITOR，命令按 shell 规则拆分。
+    # 编辑器解析需要与 config open 一致，VISUAL 优先于 EDITOR，命令按 shell 规则拆分。
     default = "notepad" if sys.platform.startswith("win") else ("open" if sys.platform == "darwin" else "xdg-open")
     with mock.patch("akaribot.cli.tui.config.shutil.which", return_value="/usr/bin/editor"):
         visual = editor_argv({"VISUAL": "code -w", "EDITOR": "vi"})
@@ -437,7 +437,7 @@ async def _test_editor_button_reports_command_outside_terminal():
 
 
 async def _test_editor_action_suspends_and_rereads():
-    # 交互编辑须先挂起界面，编辑器退出后再重新加载配置。
+    # 交互编辑需要先挂起界面，编辑器退出后再重新加载配置。
     with TemporaryDirectory(prefix="akari-editor-") as raw:
         target = _config_file(Path(raw).resolve(), "config", RAW["config"])
         source = _source(files={"config": target})
@@ -587,7 +587,7 @@ async def _test_editor_action_asks_before_discarding_edits():
 
 @func_case
 async def test_tui_config(tester: Tester):
-    """cli.tui.config: 未保存更改的拦截与外部编辑器动作"""
+    """cli.tui.config 未保存更改的拦截与外部编辑器操作"""
     _use_cli_locale()
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):

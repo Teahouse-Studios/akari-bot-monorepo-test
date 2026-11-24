@@ -17,7 +17,7 @@ WEBLATE_LANGUAGES_CACHE = cache_path / "weblate_languages.json"
 
 
 def build_locale_list(msg: Bot.MessageSession) -> list:
-    """构造逐行显示的可用语言列表。"""
+    """构建逐行显示的可用语言列表。"""
     locales = [(lang, Locale(lang).t("language")) for lang in get_available_locales()]
     if not msg.session_info.support_action_text:
         return [I18NContext("core.message.setup.locale.langlist", langlist="\n".join(name for _, name in locales))]
@@ -31,7 +31,7 @@ def build_locale_list(msg: Bot.MessageSession) -> list:
 
 
 def build_locale_overview(msg: Bot.MessageSession, locale_url: str | None) -> list:
-    """构造语言命令的概览消息。"""
+    """构建语言命令的概览消息。"""
     res = [
         I18NContext("core.message.setup.locale.prompt", lang="{I18N:language}"),
         I18NContext(
@@ -58,7 +58,7 @@ async def get_weblate_languages() -> list | None:
             languages = None
         if isinstance(languages, list):
             return languages
-        # 缓存损坏时移除，避免后续反复命中坏文件。
+        # 缓存损坏时执行移除，避免后续反复访问损坏的文件。
         try:
             WEBLATE_LANGUAGES_CACHE.unlink(missing_ok=True)
         except OSError:

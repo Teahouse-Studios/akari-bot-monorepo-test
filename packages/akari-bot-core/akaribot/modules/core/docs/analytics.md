@@ -12,7 +12,7 @@ order: 61
 
 <CommandUsage usage="analytics" permission="superuser" />
 
-此命令输出命令总数、今日命令数与首条记录的时间。
+此命令输出命令总调用次数、今日调用次数与首条记录的时间。
 
 <ChatExample
   :log="[
@@ -26,7 +26,7 @@ order: 61
 
 <CommandUsage usage="analytics days [<module>]" :params="['module=按模块名筛选，省略则不筛选']" permission="superuser" />
 
-此命令输出近 30 天的命令数折线图，可按模块过滤。
+此命令输出近 30 天的命令调用次数折线图，可按模块进行筛选。
 
 <ChatExample
   :log="[
@@ -39,7 +39,7 @@ order: 61
 
 <CommandUsage usage="analytics year [<module>]" :params="['module=按模块名筛选，省略则不筛选']" permission="superuser" />
 
-此命令输出近 12 个月的命令数折线图，可按模块过滤。
+此命令输出近 12 个月的命令调用次数折线图，可按模块进行筛选。
 
 <ChatExample
   :log="[
@@ -52,7 +52,7 @@ order: 61
 
 <CommandUsage usage="analytics modules [<rank>]" :params="['rank=列出的模块数，默认为 30']" permission="superuser" />
 
-此命令以横向条形图输出模块命令调用排行。`<rank>` 默认为 30。
+此命令以横向条形图展示模块命令调用排行，`<rank>` 默认为 30。
 
 <ChatExample
   :log="[
@@ -61,4 +61,4 @@ order: 61
   ]"
 />
 
-统计功能关闭时，机器人提示该功能已停用。缺少 `matplotlib` 时，机器人提示安装 `image` extra，不生成图表。统计数据由 `telemetry` 写入，见[telemetry](telemetry.md)。
+统计功能关闭时，机器人提示该功能已停用。缺少 `matplotlib` 时，机器人提示安装 `image` extra，不生成图表。统计数据通过 `telemetry` 写入，参见 [telemetry](telemetry.md)。

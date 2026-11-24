@@ -8,11 +8,11 @@ version = "0.1.0"
 readme = "README.md"
 description = "AkariBot 品牌资源包：角色立绘、标志、制作人员名单"
 requires-python = ">=3.12,<4.0"
-# 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时须原样携带
-# LICENSE，不得套用仓库根许可证。
+# 立绘与标志由第三方画师提供并保留全部权利，与仓库主体的 AGPL-3.0 不同，分发时必须原样携带
+# LICENSE，不得套用仓库根目录许可证。
 license = "LicenseRef-Proprietary"
 license-files = ["akaribot/assets/brand/LICENSE"]
-# 纯资源分发：包内只有图片、名单、许可证与一个定位函数，不依赖任何分发。
+# 纯资源包，包内仅包含图片、名单、许可证与一个定位函数，不依赖任何包。
 dependencies = []
 
 [project.entry-points."akaribot.docs"]

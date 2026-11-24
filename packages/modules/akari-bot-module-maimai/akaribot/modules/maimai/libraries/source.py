@@ -1,4 +1,4 @@
-"""成绩数据源选择。"""
+"""成绩数据源选择模块。"""
 
 from akaribot.core.api import Bot, ActionText, I18NContext
 from .divingfish_oauth import diving_fish_bind_usable
@@ -11,16 +11,16 @@ SOURCE_LXNS = "lxns"
 GAME_MAIMAI = "maimai"
 GAME_CHUNITHM = "chunithm"
 
-# 舞萌以水鱼为准，中二以落雪为准。两者都允许用户自行切换。
+# 舞萌以水鱼为准，中二以落雪为准。两者均允许用户自行切换。
 SOURCE_DEFAULT = {
     GAME_MAIMAI: SOURCE_DIVING_FISH,
     GAME_CHUNITHM: SOURCE_LXNS,
 }
 
-# 落雪 OAuth 应用未配置时，落雪一侧无从取到数据。
+# 未配置落雪 OAuth 应用时，无法从落雪数据源获取数据。
 _LXNS_AVAILABLE = bool(MaimaiConfig.lxns_client_id)
 
-# 中二的历史键名把 chunithm 写成了 chunithum，旧值须继续可读。写回时改用正确拼写。
+# 中二的历史键名曾将 chunithm 写入为 chunithum，旧配置值必须继续保持可读。写回时使用正确拼写。
 SOURCE_KEYS = {
     GAME_MAIMAI: ("maimaidx_record_source",),
     GAME_CHUNITHM: ("chunithm_record_source", "chunithum_record_source"),

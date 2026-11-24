@@ -30,7 +30,7 @@ PROJECT = "/tmp/old-project"
 
 
 async def _wait_until(predicate, timeout: float = 1.0) -> bool:
-    # 模态关闭与后台任务完成时间独立，须等待检查条件成立。
+    # 模态关闭与后台任务完成时间独立，需要等待检查条件成立。
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
@@ -393,7 +393,7 @@ async def _test_switches_ride_along_with_dispatch():
 
 @func_case
 async def test_tui_misc(tester: Tester):
-    """cli.tui.misc: 迁移项目的按钮、确认与预览测试"""
+    """cli.tui.misc 迁移项目的按钮、确认与预览测试"""
     _use_cli_locale()
     # 缩短防抖窗口，避免功能测试依赖实际按键间隔。
     with mock.patch.object(compat.PendingConfirm, "debounce", 0.0):

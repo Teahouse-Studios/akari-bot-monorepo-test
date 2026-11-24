@@ -1,4 +1,4 @@
-"""wiki-audit 向全局 URL 允许列表添加规范 Wiki API URL。"""
+"""wiki-audit 向全局 URL 允许列表添加规范 Wiki API URL 测试。"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory

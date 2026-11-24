@@ -1,4 +1,4 @@
-"""在本机验证后台实例停止协议和进程树清理。"""
+"""在当前计算机验证后台实例停止协议和进程树清理。"""
 
 from __future__ import annotations
 
@@ -108,7 +108,7 @@ def _case(root: Path, *, forced: bool, foreign: bool = False) -> None:
 
 
 def main() -> int:
-    """验证正常停止、强制停止和接管外部启动的实例。"""
+    """验证正常停止、强制停止以及接管外部启动的实例。"""
     with tempfile.TemporaryDirectory(prefix="akari-process-lifecycle-") as tmp:
         root = Path(tmp)
         _case(root / "normal", forced=False)

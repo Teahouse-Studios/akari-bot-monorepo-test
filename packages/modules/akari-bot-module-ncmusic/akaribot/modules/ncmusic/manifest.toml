@@ -6,5 +6,5 @@ locales = "locales"
 config_table = "module_ncmusic"
 config_schema_version = 1
 provides_modules = ["ncmusic"]
-# 查重用的登录信息字段：网易云音乐接口地址中的密钥。
+# 用于检查重复的登录信息字段，对应网易云音乐接口地址中的密钥。
 credential_fields = ["ncmusic_api"]

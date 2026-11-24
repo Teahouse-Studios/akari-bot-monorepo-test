@@ -13,7 +13,7 @@ from akaribot.cli.tui import context
 from akaribot.cli.tui.modules import OperationResult
 
 MIGRATE_TIMEOUT_SECONDS = 1800.0
-# 迁移计划通常较长，预览输出使用独立的截断上限。
+# 迁移计划输出通常较长，预览输出使用独立的截断上限。
 DRY_RUN_OUTPUT_LIMIT = 4000
 OUTPUT_LINES = 6
 
@@ -40,7 +40,7 @@ class MiscSource(Protocol):
     """项目迁移数据源接口。"""
 
     def migrate_legacy(self, project: str, *, dry_run: bool = False, flags: Sequence[str] = ()) -> OperationResult:
-        """迁移旧版项目到当前实例。``dry_run`` 为真时仅预览，``flags`` 为附加的 CLI 参数。"""
+        """将旧版项目迁移至当前实例。``dry_run`` 为 True 时仅预览，``flags`` 为附加的 CLI 参数。"""
 
 
 class StaticMiscSource:
@@ -76,7 +76,7 @@ class SubprocessMiscSource:
         timeout: float = MIGRATE_TIMEOUT_SECONDS,
         runner: Callable[..., Any] | None = None,
     ) -> None:
-        # 每次请求均解析当前实例，避免切换实例后继续访问旧路径。
+        # 每次请求均重新解析当前实例，避免切换实例后继续访问过期的旧路径。
         self._root_override = Path(root).expanduser().resolve() if root is not None else None
         self.timeout = timeout
         self.calls = {"migrate": 0}
@@ -91,7 +91,7 @@ class SubprocessMiscSource:
         """见 :meth:`MiscSource.migrate_legacy`。"""
         self.calls["migrate"] += 1
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
-        # 必须显式指定 --instance，确保迁移目标为界面当前实例。
+        # 必须明确指定 --instance，确保迁移目标为界面当前实例。
         argv = cli_process.cli_argv("migrate", "legacy", project, "--instance", str(self.root))
         if dry_run:
             argv.append("--dry-run")
@@ -219,7 +219,7 @@ class MiscPage(compat.Vertical):
         self._sync_actions()
 
     def activate(self) -> None:
-        """本页没有需要预取的数据。"""
+        """本页面无需预取数据。"""
 
     def focus_primary(self) -> None:
         """聚焦按钮。"""
@@ -251,7 +251,7 @@ class MiscPage(compat.Vertical):
         return tuple(chosen)
 
     def reset_pending(self) -> None:
-        """作废待确认的迁移。切页时由 :meth:`TuiApp.show_page` 调用。"""
+        """重置待确认的迁移操作。切换页面时由 :meth:`TuiApp.show_page` 调用。"""
         self._confirm.reset()
         self._pending_project = ""
         self._sync_actions()
@@ -299,7 +299,7 @@ class MiscPage(compat.Vertical):
             return
         self._pending_project = project
         self._sync_actions()
-        # 输入框与确认框均响应回车，记录提交时刻以防止连续按键误确认。
+        # 输入框与确认框均响应 Enter 键，记录提交时间戳以防止连续按键误触发确认。
         self._confirm.reset()
         self._confirm.accept(project)
         self._open_choice(project)
@@ -315,7 +315,7 @@ class MiscPage(compat.Vertical):
                 i18n.t("cli.tui.misc.choice_options", options=options),
             )
         )
-        # 默认聚焦只读预览选项，避免连续回车直接执行迁移。
+        # 默认聚焦仅用于预览的只读选项，避免连续按 Enter 键误触迁移执行。
         compat.ask_choice(
             self.app,
             title=i18n.t("cli.tui.misc.dialog_title"),
@@ -336,10 +336,10 @@ class MiscPage(compat.Vertical):
             self._set_status(i18n.t("cli.tui.misc.cancelled"))
             return
         if choice == CHOICE_DRY_RUN:
-            # 预览不写入数据，无需执行确认防抖检查。
+            # 迁移预览不写入数据，无需执行确认防抖检查。
             self._start_migration(project, dry_run=True)
             return
-        # 防抖检查避免提交路径后的连续回车直接确认迁移。
+        # 防抖检查用于避免提交路径后因连续按 Enter 键误触确认执行迁移。
         if not self._confirm.accept(project):
             self._set_status(i18n.t("cli.tui.misc.confirm_migrate_again", project=project))
             return
@@ -359,7 +359,7 @@ class MiscPage(compat.Vertical):
         label = i18n.t("cli.tui.misc.label_dry_run" if dry_run else "cli.tui.misc.label_migrate")
         key = "cli.tui.misc.calling_dry_run" if dry_run else "cli.tui.misc.calling"
         self._set_status(i18n.t(key, project=project))
-        # 在操作开始时固定参数，避免后台任务执行期间读取变化中的表单状态。
+        # 在操作开始时保存固定参数，避免后台任务执行期间读取变动中的表单状态。
         flags = self.selected_flags
         self.run_worker(
             self._migrate(project, label, dry_run=dry_run, flags=flags), group="misc-migrate", exclusive=True
@@ -368,7 +368,7 @@ class MiscPage(compat.Vertical):
     async def _migrate(self, project: str, label: str, *, dry_run: bool, flags: tuple[str, ...]) -> None:
         try:
             result = await asyncio.to_thread(self.source.migrate_legacy, project, dry_run=dry_run, flags=flags)
-        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果
+        except Exception as error:  # noqa: BLE001 - 数据源异常转换为操作结果。
             result = OperationResult(
                 False, i18n.t("cli.tui.common.failed_label", label=label), f"{type(error).__name__}: {error}"
             )
@@ -379,7 +379,7 @@ class MiscPage(compat.Vertical):
             self._set_status(f"{result.message}｜{detail}" if detail else result.message)
             compat.notify(self.app, result.message, severity="information", title=label)
             if not dry_run:
-                # 迁移成功后清除路径，避免后续操作复用已完成的目标。
+                # 迁移成功后清除路径输入，避免后续操作复用已完成的目标。
                 self.reset_pending()
         else:
             self.last_error = result.detail or result.message
@@ -391,7 +391,7 @@ class MiscPage(compat.Vertical):
 
     def _sync_actions(self) -> None:
         self.query_one("#migrate", compat.Button).disabled = self._busy
-        # 试运行沿用最近一次预览或迁移的源目录。没有可用源目录时禁用。
+        # 试运行沿用最近一次预览或迁移的源目录。若无可用源目录则禁用。
         self.query_one("#dry-run", compat.Button).disabled = self._busy or not self._pending_project
 
     def _sync_output(self) -> None:
@@ -411,14 +411,14 @@ class MiscPage(compat.Vertical):
     def _fit_page_width(self, text: str) -> str:
         try:
             width = compat.widget_cells(self)[0] - 2
-        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版
+        except Exception:  # noqa: BLE001 - 未挂载时按保守宽度排版。
             width = 78
         return compat.truncate_cells(text, max(width, 8))
 
     def _action_widget(self, selector: str) -> compat.Widget | None:
         try:
             return self.query_one(selector)
-        except Exception:  # noqa: BLE001 - 未挂载时按无控件处理
+        except Exception:  # noqa: BLE001 - 未挂载时按无控件处理。
             return None
 
     def _set_status(self, text: str) -> None:

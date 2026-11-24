@@ -2985,7 +2985,7 @@ async def _test_mock_strict_confirm_rejects_other_reply():
 
 @func_case
 async def test_features(tester: Tester):
-    """akaribot.core.builtins.session.features: Features 测试"""
+    """akaribot.core.builtins.session.features 模块 Features 测试"""
     await tester.test(_test_features_inject_action_text, "support_action_text 注入测试")
     await tester.test(_test_check_bot_state_records_session_info, "BotState 写入 SessionInfo 测试")
     await tester.test(_test_release_context_tolerates_prior_platform_cleanup, "平台先清理后的上下文释放测试")
@@ -2998,7 +2998,7 @@ async def test_features(tester: Tester):
 
 @func_case
 async def test_execution_lock(tester: Tester):
-    """akaribot.core.builtins.session.lock: ExecutionLockList 测试"""
+    """akaribot.core.builtins.session.lock 模块 ExecutionLockList 测试"""
     await tester.test(_test_lock_add_remove, "ExecutionLockList 添加和移除测试")
     await tester.test(_test_lock_shared_by_bound_identities, "ExecutionLockList 绑定身份共享测试")
     await tester.test(_test_lock_non_owner_cannot_release, "ExecutionLockList 非所有者不能释放测试")
@@ -3021,7 +3021,7 @@ async def test_execution_lock(tester: Tester):
 
 @func_case
 async def test_session_task(tester: Tester):
-    """akaribot.core.builtins.session.tasks: SessionTaskManager 测试"""
+    """akaribot.core.builtins.session.tasks 模块 SessionTaskManager 测试"""
     await tester.test(_test_send_message_binds_button_callback_reply_id, "按钮 callback 虚拟回复 ID 绑定测试")
     await tester.test(_test_button_callback_registered_before_send_returns, "按钮 callback 发送前注册测试")
     await tester.test(_test_send_failure_does_not_leave_callback, "callback 发送失败清理测试")
@@ -3080,7 +3080,7 @@ async def test_session_task(tester: Tester):
 
 @func_case
 async def test_message_session_lifecycle(tester: Tester):
-    """akaribot.core.builtins.session.internal: 消息发送与等待生命周期测试。"""
+    """akaribot.core.builtins.session.internal 消息发送与等待生命周期测试。"""
     await tester.test(_test_wait_next_message_registers_before_fast_reply, "快速回复不丢失测试")
     await tester.test(_test_wait_next_message_preserves_choice_rows, "等待选项保留显式按钮行测试")
     await tester.test(_test_wait_confirm_any_message_retracts_prompt, "确认否定或任意消息撤回提示测试")
@@ -3107,7 +3107,7 @@ async def test_message_session_lifecycle(tester: Tester):
 
 @func_case
 async def test_strict_confirmation(tester: Tester):
-    """akaribot.core.builtins.session.internal: 严格确认测试"""
+    """akaribot.core.builtins.session.internal 严格确认测试"""
     await tester.test(_test_normalize_confirm_token, "严格确认口令归一与 I18N 占位符解析")
     await tester.test(_test_wait_confirm_strict_accepts_exact_reply, "完全回复口令通过严格确认")
     await tester.test(_test_wait_confirm_strict_rejects_confirm_word, "确认词不能通过严格确认")

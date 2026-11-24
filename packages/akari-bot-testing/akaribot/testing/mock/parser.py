@@ -37,39 +37,39 @@ async def parser(msg: "Bot.MessageSession"):
     if in_prefix_list or disable_prefix:
         command_first_word = await _process_command(msg, modules, disable_prefix, in_prefix_list)
 
-        if command_first_word in modules:  # 检查触发命令是否在模块列表中
+        if command_first_word in modules:  # 检查触发命令是否在模块列表中。
             await _execute_module(msg, modules, command_first_word)
             return msg
-        # 如果使用了前缀但未命中任何模块命令，则视为不匹配（适用于单元测试）
+        # 若使用了前缀但未命中任何模块命令，则判定为不匹配（适用于单元测试）。
         return None
 
-    # 检查正则
+    # 检查正则表达式匹配。
     if _should_skip_regex(msg.trigger_msg):
         return None
     if not await _confirm_long_regex_message(msg, modules):
         return msg
-    # 若任何正则命中则会在 _execute_regex 中调用对应函数并抛出 SessionFinished
+    # 若命中任一正则表达式，则在 _execute_regex 中调用对应函数并抛出 SessionFinished。
     await _execute_regex(msg, modules)
-    # 若未命中任何正则，视为不匹配（适用于单元测试）
+    # 若未命中任何正则表达式，判定为不匹配（适用于单元测试）。
     return None
 
 
 def _get_prefixes(msg: "Bot.MessageSession"):
     disable_prefix = False
-    if msg.session_info.prefixes:  # 如果上游指定了命令前缀，则使用指定的命令前缀
+    if msg.session_info.prefixes:  # 若上游指定了命令前缀，则使用指定的命令前缀。
         if "" in msg.session_info.prefixes:
             disable_prefix = True
     display_prefix = ""
     in_prefix_list = False
-    for cp in msg.session_info.prefixes:  # 判断是否在命令前缀列表中
+    for cp in msg.session_info.prefixes:  # 判断是否在命令前缀列表中。
         if msg.trigger_msg.startswith(cp):
             display_prefix = cp
             in_prefix_list = True
             break
-    if in_prefix_list or disable_prefix:  # 检查消息前缀
-        if len(msg.trigger_msg) <= 1 or msg.trigger_msg[:2] == "~~":  # 排除 ~~xxx~~ 的情况
+    if in_prefix_list or disable_prefix:  # 检查消息前缀。
+        if len(msg.trigger_msg) <= 1 or msg.trigger_msg[:2] == "~~":  # 排除 ~~xxx~~ 的情况。
             return False, False
-        if in_prefix_list:  # 如果在命令前缀列表中，则将此命令前缀移动到列表首位
+        if in_prefix_list:  # 若在命令前缀列表中，则将此命令前缀移动至列表首位。
             msg.session_info.prefixes.remove(display_prefix)
             msg.session_info.prefixes.insert(0, display_prefix)
 
@@ -97,7 +97,7 @@ async def _process_command(msg: "Bot.MessageSession", modules, disable_prefix, i
     not_alias = False
     cm = ""
     for module_name in modules:
-        if command_split[0] == module_name:  # 判断此命令是否匹配一个实际的模块
+        if command_split[0] == module_name:  # 判断此命令是否匹配实际的模块。
             not_alias = True
             cm = module_name
             break
@@ -127,7 +127,7 @@ async def _process_command(msg: "Bot.MessageSession", modules, disable_prefix, i
 
 async def _execute_module(msg: "Bot.MessageSession", modules, command_first_word):
     module: Module = modules[command_first_word]
-    if not module.command_list.set:  # 如果没有可用的命令，则展示模块简介
+    if not module.command_list.set:  # 若无可用命令，则展示模块简介。
         if module.unsupported_reason(msg.session_info):
             return
         if module.desc:
@@ -145,15 +145,15 @@ async def _execute_module(msg: "Bot.MessageSession", modules, command_first_word
             await msg.send_message(I18NContext("error.module.unbound", module=command_first_word))
         return
 
-    none_templates = True  # 检查模块绑定的命令是否有模板
+    none_templates = True  # 检查模块绑定的命令是否存在模板。
     for func in module.command_list.get(msg.session_info.target_from):
         if func.command_template:
             none_templates = False
-    if not none_templates:  # 如果有，送入命令解析
+    if not none_templates:  # 若存在模板，则提交至命令解析。
         executed = await _execute_module_command(msg, module, command_first_word)
         if executed:
             raise SessionFinished  # if not using msg.finish
-    # 如果没有，直接传入下游模块
+    # 若不存在模板，则直接传递至下游模块。
     msg.parsed_msg = None
     for func in module.command_list.set:
         if not func.command_template:
@@ -162,16 +162,16 @@ async def _execute_module(msg: "Bot.MessageSession", modules, command_first_word
             if msg.session_info.typing_prompt_enabled:
                 await msg.start_typing()
             async with ModuleRuntimeManager.use(module.module_name):
-                await func.function(msg)  # 将 msg 传入下游模块
+                await func.function(msg)  # 将消息传递至下游模块。
             raise SessionFinished  # if not using msg.finish
 
 
 async def _execute_regex(msg: "Bot.MessageSession", modules):
-    for m in modules:  # 遍历模块
+    for m in modules:  # 遍历模块列表。
         if modules[m].regex_list.set:
             regex_module: Module = modules[m]
 
-            for rfunc in regex_module.regex_list.set:  # 遍历正则模块的表达式
+            for rfunc in regex_module.regex_list.set:  # 遍历正则模块的表达式列表。
                 matched = False
                 trigger_msg = msg.as_display(text_only=rfunc.text_only, element_filter=rfunc.element_filter)
                 if rfunc.mode.upper() in ["M", "MATCH"]:
@@ -183,11 +183,11 @@ async def _execute_regex(msg: "Bot.MessageSession", modules):
                     if msg.matched_msg:
                         matched = True
 
-                if matched:  # 如果匹配成功
+                if matched:  # 若匹配成功。
                     if hasattr(msg, "_casetest_target") and rfunc.function is not msg._casetest_target:
                         continue
                     async with ModuleRuntimeManager.use(regex_module.module_name):
-                        await rfunc.function(msg)  # 将 msg 传入下游模块
+                        await rfunc.function(msg)  # 将消息传递至下游模块。
                     raise SessionFinished  # if not using msg.finish
 
 
@@ -196,9 +196,9 @@ async def _execute_module_command(msg: "Bot.MessageSession", module, command_fir
     command_parser = CommandParser(
         module, msg=msg, module_name=command_first_word, command_prefixes=msg.session_info.prefixes
     )
-    parsed_msg = command_parser.parse(msg.trigger_msg)  # 解析模块的子功能命令
+    parsed_msg = command_parser.parse(msg.trigger_msg)  # 解析模块的子功能命令。
     command: CommandMeta = parsed_msg[0]
-    msg.parsed_msg = parsed_msg[1]  # 使用命令模板解析后的消息
+    msg.parsed_msg = parsed_msg[1]  # 使用命令模板解析后的消息。
     Logger.trace("Parsed message: " + str(msg.parsed_msg))
 
     if hasattr(msg, "_casetest_target") and command.function is not msg._casetest_target:
@@ -207,7 +207,7 @@ async def _execute_module_command(msg: "Bot.MessageSession", module, command_fir
     kwargs = _build_command_kwargs(command, msg, bot)
 
     async with ModuleRuntimeManager.use(module.module_name):
-        await parsed_msg[0].function(**kwargs)  # 将 msg 传入下游模块
+        await parsed_msg[0].function(**kwargs)  # 将消息传递至下游模块。
     return True
 
 

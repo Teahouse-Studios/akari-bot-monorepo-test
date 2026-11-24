@@ -1,4 +1,4 @@
-"""core.builtins.bot 单元测试 - 主动推送的通道合并与掉线避让（需要数据库）。"""
+"""core.builtins.bot 主动推送通道合并与离线避让单元测试（依赖数据库）。"""
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -55,7 +55,7 @@ async def _register_client(client: str) -> None:
 
 
 async def _take_posted() -> list[tuple[str, list[str]]]:
-    # 取出并清空已入队的主动推送任务，返回 ``(目标会话， 下一跳列表)``。
+    # 获取并清空已入队的主动推送任务，返回 ``(目标会话, 下一跳列表)``。
     rows = await JobQueuesTable.filter(action=PlatformAPI.post_message.name)
     await JobQueuesTable.filter(action=PlatformAPI.post_message.name).delete()
     return [
@@ -74,7 +74,7 @@ async def _test_channel_posts_once_with_next_hops():
         await Bot.post_message("", MessageChain.assign("hello"), sessions)
         posted = await _take_posted()
 
-        # 同一条通道对应同一个现实场景，推送两次即发出两条重复消息。
+        # 同一条通道对应同一现实场景，推送两次即发出两条重复消息。
         return posted == [("POSTA1|Group|a", ["POSTA2|Group|b"])]
 
     except Exception:
@@ -89,7 +89,7 @@ async def _test_offline_client_skipped():
     try:
         sessions = await _build_channel("POSTB")
         Alive.values.clear()
-        # 仅第二个平台在线时，队首应换为该平台，且不再保留下一跳。
+        # 仅第二个平台在线时，队首应替换为该平台，且不再保留下一跳。
         await _register_client("POSTB2")
 
         await Bot.post_message("", MessageChain.assign("hello"), sessions)
@@ -122,7 +122,7 @@ async def _test_rpc_rejects_offline_client():
     alive = Alive.values.copy()
     try:
         Alive.values.clear()
-        # 离线目的地须当场抛出错误，不创建无人消费的请求或结果等待者。
+        # 离线目的地必须当场抛出错误，不创建无人处理的请求或结果等待者。
         try:
             await JobQueueServer.call("POSTD", PlatformAPI.send_message.name, {})
         except RpcUnavailableError:
@@ -198,7 +198,7 @@ async def _test_private_exception_returns_empty():
 
 @func_case
 async def test_post_message(tester: Tester):
-    """core.builtins.bot: 主动推送测试"""
+    """core.builtins.bot 主动推送测试"""
     try:
         await tester.test(_test_channel_posts_once_with_next_hops, "同通道只推一次测试")
         await tester.test(_test_offline_client_skipped, "掉线客户端避让测试")

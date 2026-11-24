@@ -72,7 +72,7 @@ def _test_report_email_html_localizes_non_ascii_format() -> bool:
 
 @func_case
 async def test_localized_time_format(tester: Tester):
-    """本地化时间的非 ASCII 格式串测试"""
+    """本地化时间的非 ASCII 格式字符串测试"""
     await tester.test(_test_session_format_time_localizes_non_ascii_format, "会话 format_time 本地化时间")
     await tester.test(_test_formatted_time_element_localizes_non_ascii_format, "FormattedTimeElement 本地化时间")
     await tester.test(_test_report_email_html_localizes_non_ascii_format, "上报邮件 HTML 本地化时间")

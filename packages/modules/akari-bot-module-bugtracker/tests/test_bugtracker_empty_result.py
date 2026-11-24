@@ -12,11 +12,11 @@ from akaribot.modules.bugtracker.bugtracker import bugtracker_get
 EMPTY_RESULT = '{"issues": []}'
 FOUND_RESULT = """{"issues": [{"key": "MC-1", "fields": {"summary": "Test issue",
     "issuetype": {"name": "Bug"}, "status": {"name": "Open"}, "project": {"name": "Minecraft"}}}]}"""
-# 未关联任何版本的漏洞：versions 键在而值为空列表。MC-310702 即属此形
+# 未关联任何版本的漏洞中 versions 键存在但值为空列表，MC-310702 即属于此类情况。
 EMPTY_VERSIONS_RESULT = """{"issues": [{"key": "MC-310702", "fields": {"summary": "No version issue",
     "issuetype": {"name": "Bug"}, "status": {"name": "Open"}, "project": {"name": "Minecraft"},
     "versions": [], "fixVersions": []}}]}"""
-# 单一版本与跨版本区间，用以守住两种文案分支
+# 单一版本与跨版本区间，用以覆盖两种文案分支。
 ONE_VERSION_RESULT = """{"issues": [{"key": "MC-2", "fields": {"summary": "One version",
     "issuetype": {"name": "Bug"}, "status": {"name": "Open"}, "project": {"name": "Minecraft"},
     "versions": [{"name": "1.21"}]}}]}"""
@@ -57,8 +57,8 @@ async def _test_found_result_still_parsed():
 
 
 async def _test_empty_versions_does_not_raise():
-    # versions 键在而值为空列表时不能取 verlist[0]：同文件的 fixVersions 一向判过非空，
-    # 此处漏判会抛 IndexError。
+    # versions 键存在但值为空列表时不能直接读取 verlist[0]，同文件的 fixVersions 始终执行非空判断，
+    # 此处遗漏判断会抛出 IndexError。
     result, link = await _query(EMPTY_VERSIONS_RESULT, "MC-310702")
     text = str(result)
     return "MC-310702" in text and "Version" not in text
@@ -76,7 +76,7 @@ async def _test_version_range_rendered():
 
 @func_case
 async def test_bugtracker_empty_result(tester: Tester):
-    """bugtracker: 查询结果为空时的处理"""
+    """bugtracker 查询结果为空时的处理"""
     await tester.test(_test_empty_result_returns_prompt, "空结果转为提示文案")
     await tester.test(_test_found_result_still_parsed, "有结果时解析不受影响")
     await tester.test(_test_empty_versions_does_not_raise, "空版本列表不抛异常")

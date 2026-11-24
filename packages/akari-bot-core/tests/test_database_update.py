@@ -168,7 +168,7 @@ async def _test_jobqueue_v5_migration_recreates_current_sqlite_schema():
 async def _test_diving_fish_v6_migration_adds_oauth_columns():
     conn = database_update.Tortoise.get_connection("default")
     table = "module_maimai_diving_prober_bind_info"
-    # 先还原成升级前的表结构：只有旧列，且带一行旧数据。
+    # 先还原为升级前的表结构，仅保留原有列，且携带一行历史数据。
     await conn.execute_query(f'DROP TABLE IF EXISTS "{table}";')
     await conn.execute_query(f"""
         CREATE TABLE "{table}" (
@@ -188,7 +188,7 @@ async def _test_diving_fish_v6_migration_adds_oauth_columns():
         return (
             {"union_id", "username", "refresh_token", "subject"} <= columns
             and len(rows) == 1
-            # 旧行没有 refresh token，需由用户重新完成一次绑定。
+            # 原有记录行不包含 refresh token，需要由用户重新完成一次绑定。
             and rows[0]["refresh_token"] is None
         )
     finally:
@@ -197,10 +197,10 @@ async def _test_diving_fish_v6_migration_adds_oauth_columns():
 
 
 async def _test_lxns_v6_migration_replaces_friend_code_with_oauth_columns():
-    # 落雪侧的令牌不需要额外保存用户标识，故这里只补 refresh token 一列，不涉及 `subject`。
+    # 落雪的令牌不需要额外保存用户标识，因此此处仅补齐 refresh token 单列，不涉及 `subject`。
     conn = database_update.Tortoise.get_connection("default")
     table = "module_maimai_lxns_prober_bind_info"
-    # 先还原成升级前的表结构：只有旧好友码列，且带一行旧数据。
+    # 先还原为升级前的表结构，仅保留历史好友码列，且携带一行历史数据。
     await conn.execute_query(f'DROP TABLE IF EXISTS "{table}";')
     await conn.execute_query(f"""
         CREATE TABLE "{table}" (
@@ -222,7 +222,7 @@ async def _test_lxns_v6_migration_replaces_friend_code_with_oauth_columns():
         return (
             {"union_id", "refresh_token"} <= columns
             and len(rows) == 1
-            # 旧行保留下来但没有 refresh token，需由用户重新完成一次绑定。
+            # 原有记录行虽然保留但缺少 refresh token，需要由用户重新完成一次绑定。
             and rows[0]["refresh_token"] is None
         )
     finally:
@@ -233,7 +233,7 @@ async def _test_lxns_v6_migration_replaces_friend_code_with_oauth_columns():
 async def _test_push_priority_v7_migration_adds_column():
     conn = database_update.Tortoise.get_connection("default")
     table = "target_union_bind"
-    # 先还原成升级前的表结构：没有推送优先级列，且带一行旧数据。
+    # 先还原为升级前的表结构，不包含推送优先级列，且携带一行历史数据。
     await conn.execute_query(f'DROP TABLE IF EXISTS "{table}";')
     await conn.execute_query(f"""
         CREATE TABLE "{table}" (

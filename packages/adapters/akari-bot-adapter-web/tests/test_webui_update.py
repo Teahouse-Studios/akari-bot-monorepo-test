@@ -1,4 +1,4 @@
-"""akaribot.adapters.web.api.update 单元测试 - 更新机器人接口的流式事件。"""
+"""akaribot.adapters.web.api.update 更新机器人接口流式事件单元测试。"""
 
 import asyncio
 import inspect
@@ -369,7 +369,7 @@ async def _test_schedule_restart_force_upgrades_pending_wait():
 
 @func_case
 async def test_webui_update(tester: Tester):
-    """akaribot.adapters.web.api: 更新机器人接口测试"""
+    """akaribot.adapters.web.api 更新机器人接口测试"""
     await tester.test(_test_stream_command_splits_lines, "命令输出分行测试")
     await tester.test(_test_update_runs_git_and_dependencies, "更新流程与流式输出测试")
     await tester.test(_test_update_force_resets_first, "强制更新重置测试")

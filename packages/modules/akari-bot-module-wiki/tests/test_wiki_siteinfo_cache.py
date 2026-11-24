@@ -155,7 +155,7 @@ async def _test_bound_wiki_is_rechecked_before_content_request():
 
 @func_case
 async def test_wiki_siteinfo_cache(tester: Tester):
-    """wiki: 无效站点信息缓存与 API 响应处理"""
+    """Wiki 无效站点信息缓存与 API 响应处理。"""
     await tester.test(_test_page_url_resolves_edituri_api, "Wiki 页面地址应通过 EditURI 解析 API URL")
     await tester.test(_test_invalid_cache_is_refetched, "无效缓存会失效并重新请求")
     await tester.test(_test_invalid_response_is_not_cached, "无效 API 响应不会写入缓存")

@@ -1,4 +1,4 @@
-"""akaribot.modules.core.common_tools.bind 单元测试 - bind auto 握手的并发正确性与口令防重放（需要数据库）。"""
+"""akaribot.modules.core.common_tools.bind 的 bind auto 握手并发正确性与口令防重放单元测试（需要数据库）。"""
 
 import asyncio
 import re
@@ -40,7 +40,7 @@ async def _session(target_id: str, text: str = "", sender: str = "admin") -> Moc
     msg.session_info.superuser = True
 
     async def _yes(message_chain=None, **kwargs):
-        # 实际的确认需等待用户回复，中间必然让出控制权。此处同样让出一次，以便并发用例能够真正交错。
+        # 实际确认需要等待用户回复，过程中必然释放控制权。此处同样释放一次控制权，以便并发用例交错执行。
         await asyncio.sleep(0)
         return True
 
@@ -73,12 +73,12 @@ async def _handshake(prefix: str) -> tuple[str, str]:
     token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
     token_b = _tokens(await _run(b, _start_handshake), "probe")[0]
 
-    # 两轮 probe 交叉送达。让位机制应使其中一轮退出，仅剩一轮进入 confirm。
+    # 两轮 probe 交叉送达。避让机制应使其中一轮退出，仅剩一轮进入 confirm。
     confirms = [(b, t) for t in _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")]
     confirms += [(a, t) for t in _tokens(await _run(a, _respond_probe, token_b, sender="peer_bot"), "confirm")]
 
     for responder, confirm_token in confirms:
-        # confirm 由发起方一侧接收，另一侧即为其发出方。
+        # confirm 由发起方一侧接收，另一侧为其发出方。
         initiator = a if responder == b else b
         await _run(initiator, _close_handshake, confirm_token, sender="peer_bot")
     return a, b
@@ -97,7 +97,7 @@ async def _test_only_one_round_survives():
         token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
         token_b = _tokens(await _run(b, _start_handshake), "probe")[0]
 
-        # 若不让位，双方都会应答对方，产生两个 confirm，同一对场景将被合并两次。
+        # 若不避让，双方都会应答对方，产生两个 confirm，同一对场景将被合并两次。
         confirms = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")
         confirms += _tokens(await _run(a, _respond_probe, token_b, sender="peer_bot"), "confirm")
         return len(confirms) == 1
@@ -113,7 +113,7 @@ async def _test_concurrent_completion_merges_once():
         await TargetUnionInfo.resolve_union(b)
         before = await _orphan_unions()
 
-        # 绕过让位机制直接构造两轮，模拟让位未生效的最坏情况（如某一平台的 probe 投递延迟）。
+        # 绕过避让机制直接构造两轮交互，模拟避让未生效的最坏情况（例如某一平台的 probe 投递延迟）。
         rounds = []
         for initiator_id, responder_id in ((a, b), (b, a)):
             rounds.append(
@@ -130,10 +130,10 @@ async def _test_concurrent_completion_merges_once():
         target_b = await TargetUnionInfo.resolve_union(b)
         if target_a.union_id != target_b.union_id:
             return False
-        # 若各建一个新组，后建的那个组不会有任何场景指向它。
+        # 若各自新建一个新组，后创建的分组不会包含任何指向它的场景记录。
         if await _orphan_unions() != before:
             return False
-        # 互认记录须写入实际生效的那个组，写入孤儿组等同于未写入。
+        # 互认记录必须写入实际生效的场景组，写入未引用的孤儿组等同于未写入。
         return sorted(target_a.list_peer_bots(a) + target_a.list_peer_bots(b)) == ["RACE1|peer_bot", "RACE2|peer_bot"]
 
     except Exception:
@@ -149,8 +149,8 @@ async def _test_unbind_forgets_peer_bots():
 
         await target.unbind_id(b)
 
-        # 解析器即依据这份名单屏蔽对端机器人。保留的一侧若仍记录着对方，
-        # 重新配对所用的 probe / confirm 会被直接丢弃，握手无法闭合，双方也就无法重新建立关联。
+        # 解析器即依据此名单屏蔽对端机器人。保留的一侧若仍然记录对方，
+        # 重新配对所用的 probe / confirm 会被直接丢弃，握手流程无法闭合，双方因而无法重新建立关联。
         stayed = await TargetUnionInfo.resolve_union(a)
         left = await TargetUnionInfo.resolve_union(b)
         return not stayed.list_peer_bots(a) and not left.list_peer_bots(b)
@@ -185,7 +185,7 @@ async def _test_peer_bots_scoped_per_target():
         a, b = await _handshake("SCOPE")
         target = await TargetUnionInfo.resolve_union(a)
 
-        # 账号按观察方所在平台的命名空间记录，若混在一个扁平列表中将无法区分归属。
+        # 账号按照观察方所在平台的命名空间记录，若混合在扁平列表中将无法区分所属平台。
         return target.list_peer_bots(a) == ["SCOPEA|peer_bot"] and target.list_peer_bots(b) == ["SCOPEB|peer_bot"]
 
     except Exception:
@@ -213,9 +213,9 @@ async def _test_probe_token_single_use():
         a, b = "REPLAY1|Group|1", "REPLAY2|Group|1"
         token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
 
-        # 对端机器人正常认领，返回一枚 confirm 口令。
+        # 对端机器人正常认领，返回一枚 confirm 确认口令。
         claimed = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")
-        # 用户照抄场景中出现的同一条命令粘贴。口令若仍被受理，此人将被记作对端机器人。
+        # 用户直接复制场景中出现的同一条命令并发送。口令若仍然被受理，该用户将被误记录为对端机器人。
         replayed = _tokens(await _run(b, _respond_probe, token_a, sender="human"), "confirm")
         return len(claimed) == 1 and not replayed
 
@@ -229,12 +229,12 @@ async def _test_confirm_rejects_other_session():
         token_a = _tokens(await _run(a, _start_handshake), "probe")[0]
         confirm_token = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")[0]
 
-        # 口令被转贴到另一个场景。响应方发出的口令只会出现在双方共处的那个场景里，出现在别处即不生效。
+        # 口令被转发至另一场景。响应方发送的口令仅会出现在双方共存的场景中，出现在其他位置均不生效。
         await _run(outsider, _close_handshake, confirm_token, sender="human")
         if (await TargetUnionInfo.resolve_union(a)).union_id == (await TargetUnionInfo.resolve_union(b)).union_id:
             return False
 
-        # 同一枚口令由发起场景收到时仍应正常闭合。
+        # 同一枚口令由发起场景接收时仍然应当正常闭合握手。
         await _run(a, _close_handshake, confirm_token, sender="peer_bot")
         return (await TargetUnionInfo.resolve_union(a)).union_id == (await TargetUnionInfo.resolve_union(b)).union_id
 
@@ -249,11 +249,11 @@ async def _test_replayed_token_not_recorded_as_bot():
         confirm_token = _tokens(await _run(b, _respond_probe, token_a, sender="peer_bot"), "confirm")[0]
         await _run(a, _close_handshake, confirm_token, sender="peer_bot")
 
-        # 两条口令命令都以明文出现在场景中，用户原样复制粘贴。
+        # 两条口令命令均以明文形式出现在场景中，用户直接原样复制并发送。
         await _run(b, _respond_probe, token_a, sender="human")
         await _run(a, _close_handshake, confirm_token, sender="human")
 
-        # 互认名单即解析器的屏蔽依据，粘贴口令的用户一旦混入，其发言将被整个忽略。
+        # 互认名单属于解析器的屏蔽依据，发送口令的用户一旦混入，其后续发言将被全部忽略。
         target = await TargetUnionInfo.resolve_union(a)
         recorded = target.list_peer_bots(a) + target.list_peer_bots(b)
         return sorted(recorded) == ["IMPOST1|peer_bot", "IMPOST2|peer_bot"]
@@ -359,7 +359,7 @@ async def _test_handshake_cleanup_cancels_expiry_and_releases():
 
 @func_case
 async def test_bind_auto(tester: Tester):
-    """akaribot.modules.core.common_tools.bind: bind auto 握手测试"""
+    """akaribot.modules.core.common_tools.bind 的 bind auto 握手测试"""
     await tester.test(_test_only_one_round_survives, "握手让位测试")
     await tester.test(_test_concurrent_completion_merges_once, "并发闭合只合并一次测试")
     await tester.test(_test_peer_bots_scoped_per_target, "互认记录按场景分开测试")

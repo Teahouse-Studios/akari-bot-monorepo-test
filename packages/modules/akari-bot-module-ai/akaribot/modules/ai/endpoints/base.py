@@ -64,7 +64,7 @@ def _is_signature_error(exc: Exception) -> bool:
 
 
 def gemini_error(exc: Exception, error_cls: type[Exception], rate_limit_cls: type[Exception]) -> Exception:
-    # 超时沿用 httpx 异常，以便落入 RETRYABLE_EXCEPTIONS。
+    # 超时沿用 httpx 异常，以便归入 RETRYABLE_EXCEPTIONS。
     if _is_timeout_error(exc):
         return httpx.TimeoutException(str(exc))
     if _api_error_code(exc) == 429:
@@ -105,7 +105,7 @@ _QWEN_THINKING_PREFIXES = ("qwen3", "qwen-plus", "qwen-flash")
 
 
 def _supports_qwen_thinking(model_name: str) -> bool:
-    # 只有混合思考模式的千问模型接受 enable_thinking，其他千问模型传入该参数会报错。
+    # 仅混合思考模式的千问模型接受 enable_thinking，其他千问模型传入该参数会抛出异常。
     name = model_name.lower().rsplit("/", 1)[-1]
     return name.startswith(_QWEN_THINKING_PREFIXES)
 
@@ -126,7 +126,7 @@ class GeminiGenerateContentRateLimitError(GeminiGenerateContentError):
     pass
 
 
-# 超时 / 限流等可重试异常，统一在 llm.py 中转为 ExternalException。
+# 超时 / 限流等可重试异常，统一在 llm.py 中转换为 ExternalException。
 RETRYABLE_EXCEPTIONS = (
     APITimeoutError,
     RateLimitError,
@@ -176,7 +176,7 @@ def _build_assistant_message(
 
     if reasoning_content is not None:
         message["reasoning_content"] = reasoning_content
-    # DeepSeek 思考模式下，工具调用轮次必须保留 reasoning_content，缺失时补空串。
+    # DeepSeek 思考模式下，工具调用轮次必须保留 reasoning_content，缺失时补充空字符串。
     elif deepseek_compat and raw_tool_calls and reasoning_enabled:
         message["reasoning_content"] = ""
 

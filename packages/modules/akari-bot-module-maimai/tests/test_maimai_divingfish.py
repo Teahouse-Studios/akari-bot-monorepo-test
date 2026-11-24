@@ -1,4 +1,4 @@
-"""水鱼（Diving-Fish）OAuth 的纯逻辑单元测试：客户端形态判定、绑定落盘、取令牌与撤销。"""
+"""水鱼（Diving-Fish）OAuth 的纯逻辑单元测试，覆盖客户端形态判定、绑定持久化、获取令牌与撤销。"""
 
 from unittest.mock import patch
 
@@ -141,7 +141,7 @@ async def _test_device_poll_follows_client_form():
         and confidential_payload["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
         and confidential_payload["client_secret"] == "app-secret"
         and "client_secret" not in public_calls[0][1]
-        # 设备码只能换取一次，重发可能把第一次已签发的令牌作废，故不重试。
+        # 设备码仅支持换取一次，重复发送可能导致首次已签发的令牌作废，因此不执行重试。
         and attempt == 1
     )
 
@@ -344,7 +344,7 @@ async def _test_unbind_revokes_available_token():
         stranger_msg = _MessageSession("stranger")
         await unbind_account(stranger_msg)
 
-        # 撤销失败也要删除本地记录，否则用户会处于“已解绑却仍显示已绑定”的状态。
+        # 即使撤销失败也必须删除本地记录，避免用户处于“已解绑却仍显示已绑定”的异常状态。
         holder["bind"] = DivingProberBindInfo(union_id="failing-union", refresh_token="rt", subject=None)
         with patch.object(divingfish_oauth, "revoke_token", failing_revoke):
             failing_msg = _MessageSession("failing-union")

@@ -18,5 +18,5 @@ __all__ = ["brand_dir"]
 
 
 def brand_dir() -> Path:
-    """取 brand 资源根目录（立绘、标志、名单都在其下）。"""
+    """获取 brand 资源根目录（立绘、标志、名单均在其下）。"""
     return Path(str(files(__package__)))

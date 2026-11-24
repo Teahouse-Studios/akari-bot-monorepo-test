@@ -130,7 +130,7 @@ def _test_document():
     assert soup.select_one(".comment").text == data["fromcomment"]
     assert soup.select_one(".meta").text == " · A & B"
     assert "default-src 'none'" in document
-    assert "没有内容差异" in diff_document({**data, "body": ""}, "Wiki", Locale("zh_cn"))
+    assert "不存在内容差异" in diff_document({**data, "body": ""}, "Wiki", Locale("zh_cn"))
     return True
 
 

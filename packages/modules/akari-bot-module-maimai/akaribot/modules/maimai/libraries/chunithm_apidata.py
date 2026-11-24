@@ -44,11 +44,11 @@ DF_CHUNITHM_QUERY_URL = "https://www.diving-fish.com/api/chunithmprober/query/pl
 DF_CHUNITHM_LATEST_VERSION_URL = "https://www.diving-fish.com/api/chunithmprober/latest_version"
 LXNS_CHUNITHM_BESTS_URL = f"{LXNS_API_BASE}/user/chunithm/player/bests"
 
-# 开发者端点按好友码定位，能查询任意玩家。好友码相同即同一账号，故查询自己与他人走同一条路。
+# 开发者端点按照好友码定位，支持查询任意玩家。好友码相同即为同一账号，因此查询自身与查询他人使用同一逻辑。
 LXNS_CHUNITHM_PLAYER_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/chunithm/player/{{friend_code}}"
 LXNS_CHUNITHM_BESTS_BY_FRIEND_CODE_URL = f"{LXNS_API_BASE}/chunithm/player/{{friend_code}}/bests"
 
-# 水鱼的成绩只给难度标级，而绘图按难度序号取色，故按标级补一个序号。标级无法识别时记 0。
+# 水鱼查分器返回的成绩仅提供难度标级，而绘图按照难度序号选取颜色，因此根据标级补充序号。标级无法识别时记为 0。
 _DF_LEVEL_INDEX = {label.lower(): index for index, label in enumerate(diff_list)}
 
 # 新曲版本标识的缓存时长（秒）。
@@ -181,7 +181,7 @@ async def get_record_df_by_username(username: str) -> dict:
     )
     records = data.get("records") or {}
     return {
-        # 该端点把玩家名记在 `username` 下，与 OAuth 端点的 `nickname` 不同。
+        # 该端点将玩家名记录在 `username` 字段中，与 OAuth 端点的 `nickname` 存在差异。
         "nickname": data.get("nickname") or data.get("username", ""),
         "rating": data.get("rating", 0),
         "records": {
@@ -207,10 +207,10 @@ async def get_record_df(
     """
     cache_dir = _cache_file(msg, "chunithm_record_df")
     if username:
-        # 按用户名查到的成绩属于他人，与这位用户自己写在缓存里的成绩并非同一份，故不读写缓存。
+        # 按照用户名查询所得成绩属于他人，与该用户保存在缓存中的成绩并非同一记录，因此不读写缓存。
         use_cache = False
     elif not DF_OAUTH_ENABLED:
-        # 查询绑定账号必须要有 OAuth 应用。按用户名查询走的是公开端点，不需要授权。
+        # 查询绑定账号必须配置 OAuth 应用。按用户名查询使用公开端点，无需额外授权。
         raise ConfigValueError("{I18N:error.config.secret.not_found}")
 
     async def fetch():
@@ -236,7 +236,7 @@ async def get_record_df(
         elif str(e).startswith("400"):
             await msg.finish(I18NContext("maimai.message.user_not_found.df"))
         elif str(e).startswith("403"):
-            # 查他人时 403 只会是对方的隐私设置，只有查自己才牵扯到用户协议。
+            # 查询他人时 403 仅代表对方的隐私设置，仅当查询自身时才涉及用户协议。
             await msg.finish(I18NContext("maimai.message.forbidden" if username else "maimai.message.forbidden.eula"))
         elif str(e).startswith("429"):
             await msg.send_message(I18NContext("maimai.message.oauth.rate_limit"))

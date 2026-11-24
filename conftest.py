@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# 导入 tester 即完成测试环境铺设，必须早于任何 akaribot.core.* 导入（说明见本文件开头的 docstring）。
+# 导入 tester 即完成测试环境初始化，必须早于任何 akaribot.core.* 导入（说明参见本文件开头的 docstring）。
 from tester import prepare_test_environment  # noqa: E402
 
 prepare_test_environment()
@@ -29,5 +29,5 @@ pytest_plugins = ["akaribot.testing.pytest_plugin"]
 
 @pytest.fixture
 def tester():
-    """纯 pytest 风格用例的运行器：子测试失败直接判为用例失败。"""
+    """纯 pytest 风格用例的运行器，子测试失败直接判定为用例失败。"""
     yield PytestTester("pytest")

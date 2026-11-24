@@ -1,4 +1,4 @@
-"""WebRender Mock 工具 - 为依赖无头浏览器的模块提供替身。"""
+"""WebRender Mock 工具，用于为依赖无界面浏览器的模块提供模拟对象。"""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from akaribot.core.paths import Paths
 # 语料目录属源码仓库，与 Paths.tests 同源。按本文件深度推算会在包布局调整后失准。
 FIXTURE_DIR = Paths.tests / "fixtures" / "webrender"
 
-# 1x1 透明 PNG 的 base64 文本。截图类方法返回的是 base64 字符串而非二进制，
-# 调用方（如 cb64imglst）会直接对其解码，故占位值必须保持同一形态。
+# 1x1 透明 PNG 的 base64 文本。截图类方法返回的是 base64 字符串而不是二进制，
+# 调用方（如 cb64imglst）会直接对其解码，因此占位值必须保持同一形态。
 PLACEHOLDER_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 
@@ -43,7 +43,7 @@ def save_webrender_fixture(url: str, text: str) -> Path:
 
 
 class WebRenderMock:
-    """web_render 取数方法的替身管理器。"""
+    """web_render 数据获取方法的模拟管理器。"""
 
     SCREENSHOT_METHODS = (
         "element_screenshot",
@@ -86,7 +86,7 @@ class WebRenderMock:
 
     @classmethod
     def enable(cls):
-        """接管 web_render 的取数方法。"""
+        """接管 web_render 的数据获取方法。"""
         if cls._enabled:
             return
         from akaribot.core.utils.web_render import web_render
