@@ -37,7 +37,7 @@ CI 模式跳过人工复核，交互输入不足直接判定失败。`--ci` 还�
 
 CI 模式另设 `AKARI_TEST_TIME_SCALE=10` 放宽超时。完整运行会生成 `junit.xml`。覆盖率开启时另生成 `htmlcov/index.html` 与 `coverage.xml`。
 
-设置 `AKARI_TEST_SETUP_TIMING=1` 后，每个入口在准备完成时打印一行 `[SETUP]` 日志，分别记录关闭数据库、初始化数据库与加载模块的耗时。
+设置 `AKARI_TEST_SETUP_TIMING=1` 后，每个入口在准备完成时打印一行 `[SETUP]` 日志，分别记录关闭数据库、初始化数据库与加载模块的耗时。初始化数据库另拆分为模型模块查找、模型模块导入、建立连接与建表四段，依次对应 `db_fetch`、`db_import`、`db_init` 与 `db_schema`。字段 `db_models` 记录模型模块数。
 
 ## 单入口运行
 

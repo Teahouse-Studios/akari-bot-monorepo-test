@@ -464,6 +464,32 @@ def _test_setup_timing_flag_reads_environment():
     return True
 
 
+def _test_setup_timing_reports_database_stages():
+    from akaribot.testing.process import format_setup_timing
+
+    plain = format_setup_timing("func", "noop", 0.1, 0.2, 0.05)
+    if " db_models=" in plain:
+        return False
+
+    detailed = format_setup_timing(
+        "func",
+        "noop",
+        0.1,
+        0.2,
+        0.05,
+        {"models": 5.0, "fetch_db": 0.002, "import_models": 0.011, "tortoise_init": 3.8, "schemas": 0.007},
+    )
+    if not detailed.startswith("[SETUP] kind=func name=noop close_db=0.100s"):
+        return False
+    return (
+        " db_models=5" in detailed
+        and " db_fetch=0.002s" in detailed
+        and " db_import=0.011s" in detailed
+        and " db_init=3.800s" in detailed
+        and " db_schema=0.007s" in detailed
+    )
+
+
 async def _test_setup_timing_logs_preparation_phases():
     import os
     from unittest.mock import Mock
@@ -734,6 +760,7 @@ async def test_tester_framework(tester: Tester):
     await tester.test(_test_function_entry_does_not_misclassify_test_timeout, "子测试超时不冒充 runner 超时测试")
     await tester.test(_test_function_entry_init_failure_is_error, "func_case 初始化错误不可跳过测试")
     await tester.test(_test_setup_timing_flag_reads_environment, "准备耗时开关读取环境变量测试")
+    await tester.test(_test_setup_timing_reports_database_stages, "准备耗时日志记录数据库初始化各阶段耗时")
     await tester.test(
         _test_setup_timing_logs_preparation_phases,
         "启用准备耗时日志后逐入口打印三段耗时",

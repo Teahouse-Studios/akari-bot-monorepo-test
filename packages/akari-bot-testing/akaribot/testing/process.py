@@ -11,7 +11,7 @@ from akaribot.core.constants.exceptions import SessionFinished
 from akaribot.core.database.models import SenderUnionInfo, TargetUnionInfo
 from akaribot.core.logger import Logger
 from akaribot.testing.logger import TEST_LOGGER
-from akaribot.testing.mock.database import close_db, get_last_init_error, init_db
+from akaribot.testing.mock.database import close_db, get_last_init_error, get_last_init_timings, init_db
 from akaribot.testing.mock.loader import load_modules
 from akaribot.testing.mock.parser import parser
 from akaribot.testing.mock.random import Random
@@ -34,13 +34,29 @@ def _setup_timing_enabled() -> bool:
     return os.environ.get(SETUP_TIMING_ENV, "").strip().lower() in {"1", "true", "yes"}
 
 
-def format_setup_timing(kind: str, name: str, close_db: float, init_db: float, load_modules: float) -> str:
+def format_setup_timing(
+    kind: str,
+    name: str,
+    close_db: float,
+    init_db: float,
+    load_modules: float,
+    db_timings: dict[str, float] | None = None,
+) -> str:
     """把入口准备阶段的耗时拼接为一行日志。"""
-    return (
+    text = (
         f"[SETUP] kind={kind} name={name} close_db={close_db:.3f}s "
         f"init_db={init_db:.3f}s load_modules={load_modules:.3f}s "
         f"setup={close_db + init_db + load_modules:.3f}s"
     )
+    if db_timings:
+        text += (
+            f" db_models={int(db_timings.get('models', 0))}"
+            f" db_fetch={db_timings.get('fetch_db', 0.0):.3f}s"
+            f" db_import={db_timings.get('import_models', 0.0):.3f}s"
+            f" db_init={db_timings.get('tortoise_init', 0.0):.3f}s"
+            f" db_schema={db_timings.get('schemas', 0.0):.3f}s"
+        )
+    return text
 
 
 class _FunctionTestNoProgress(Exception):
@@ -78,7 +94,12 @@ async def run_case_entry(entry: CaseEntry, is_ci: bool = False) -> list[dict]:
         if _setup_timing_enabled():
             TEST_LOGGER.info(
                 format_setup_timing(
-                    "case", str(entry.get("func")), closed - setup_started, initialized - closed, loaded - initialized
+                    "case",
+                    str(entry.get("func")),
+                    closed - setup_started,
+                    initialized - closed,
+                    loaded - initialized,
+                    get_last_init_timings(),
                 )
             )
 
@@ -133,7 +154,14 @@ async def run_function_entry(
     loaded = time.perf_counter()
     if _setup_timing_enabled():
         TEST_LOGGER.info(
-            format_setup_timing("func", fn.__name__, closed - setup_started, initialized - closed, loaded - initialized)
+            format_setup_timing(
+                "func",
+                fn.__name__,
+                closed - setup_started,
+                initialized - closed,
+                loaded - initialized,
+                get_last_init_timings(),
+            )
         )
 
     tester = None
