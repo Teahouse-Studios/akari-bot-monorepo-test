@@ -103,7 +103,6 @@ CI=1 MPLCONFIGDIR=/tmp/mplconfig PYTHONIOENCODING=UTF-8 .venv/bin/python -m akar
 | 文风卡压缩版（注入用） | `docs/style-cards/xiaoke-stylecard.compact.md` |
 | 文风卡原版 | `docs/style-cards/xiaoke-stylecard.md` |
 | 页面结构卡 | `docs/style-cards/xiaoke-structure.md` |
-| 整个仓库改写执行说明 | `docs/style-cards/full-rewrite-brief.md` |
 | 包文档规范 | `docs/package-docs.md` |
 | 从旧版迁移 | `docs/migrating-to-packages.md` |
 | 各包领域手册 | `packages/*/akaribot/**/docs/` |
