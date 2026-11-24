@@ -368,17 +368,17 @@ function asset(value: string): string {
 
 @media (max-width: 600px) {
   .akari-home__hero-layer {
-    width: calc(100% + 24px);
-    margin: -12px -12px 0;
+    width: calc(100% + 8px);
+    margin: -12px -4px 0;
   }
 
   .akari-home__content {
-    width: calc(100% + 24px);
-    margin-inline: -12px;
+    width: calc(100% + 8px);
+    margin-inline: -4px;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 960px) {
   .akari-home__hero-layer {
     width: calc(100% + 80px);
     margin: -24px -56px 0 -24px;
@@ -839,7 +839,7 @@ html.dark .akari-home__contribute-logo-frame {
   }
 
   .akari-home__title {
-    font-size: clamp(2.2rem, 9vw, 3rem);
+    font-size: clamp(1.45rem, 7.2vw, 2.2rem);
   }
 
   .akari-home__start-brand img {

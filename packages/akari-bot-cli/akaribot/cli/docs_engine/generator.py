@@ -1419,7 +1419,7 @@ def _locale_theme(
         if dependencies:
             akari["dependencies"] = dependencies
         if languages:
-            akari["languages"] = languages
+            akari["supportedLanguages"] = languages
         if api_catalog:
             akari["apiCatalog"] = api_catalog
         if color:

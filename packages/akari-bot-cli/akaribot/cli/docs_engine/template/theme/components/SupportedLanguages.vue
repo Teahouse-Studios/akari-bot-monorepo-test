@@ -8,7 +8,7 @@ const languages = computed(() => {
   const config = (site.value.themeConfig ?? {}) as {
     akari?: { languages?: Record<string, string> };
   };
-  return Object.values(config.akari?.languages ?? {});
+  return Object.values(config.akari?.supportedLanguages ?? {});
 });
 
 function separator(index: number): string {
