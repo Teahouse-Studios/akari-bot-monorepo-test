@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tortoise.backends.base.client import TransactionContextPooled
+from tortoise.backends.base.client import ConnectionWrapper, TransactionContextPooled
 from tortoise.backends.sqlite.client import SqliteClient, SqliteTransactionContext
 from tortoise.backends.sqlite.client import translate_exceptions as sqlite_translate_exceptions
 from tortoise.connection import get_connections
@@ -27,6 +27,17 @@ async def _rollback_quietly(connection) -> None:
             await connection.rollback()
     except BaseException:
         pass
+
+
+async def _cancellation_safe_connection_aenter(self):
+    await self._lock.acquire()
+    try:
+        await self.ensure_connection()
+    except BaseException:
+        # 建立连接期间被取消时必须还回连接锁，否则后续查询会一直阻塞在等锁上。
+        self._lock.release()
+        raise
+    return self.connection
 
 
 async def _cancellation_safe_sqlite_aenter(self):
@@ -144,10 +155,11 @@ async def _cancellation_safe_mysql_execute_many(self, query: str, values: list[l
 
 
 def install_tortoise_transaction_compat() -> None:
-    """安装各后端事务与批量写入的取消安全补丁，可重复调用。"""
+    """安装各后端连接获取、事务与批量写入的取消安全补丁，可重复调用。"""
     global _installed
     if _installed:
         return
+    ConnectionWrapper.__aenter__ = _cancellation_safe_connection_aenter
     SqliteTransactionContext.__aenter__ = _cancellation_safe_sqlite_aenter
     SqliteTransactionContext.__aexit__ = _cancellation_safe_sqlite_aexit
     SqliteClient.execute_many = _cancellation_safe_sqlite_execute_many

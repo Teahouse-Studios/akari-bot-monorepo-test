@@ -23,7 +23,8 @@ from akaribot.testing.timing import TIME_SCALE
 
 
 RPC_TEST_TIMEOUT = 10 * TIME_SCALE
-SIGNAL_TIMEOUT = 5 * TIME_SCALE
+# 信号过期时间仅需覆盖投递开始阶段，延长该时间不会改变测试结论。
+SIGNAL_TIMEOUT = max(1.0, TIME_SCALE)
 
 
 class RegistryAuditPeer(JobQueueBase):

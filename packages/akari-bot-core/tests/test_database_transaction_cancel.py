@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from types import SimpleNamespace
 
-from tortoise.backends.base.client import TransactionContextPooled
+from tortoise.backends.base.client import ConnectionWrapper, TransactionContextPooled
 from tortoise.connection import get_connections
 from tortoise.transactions import in_transaction
 
@@ -124,6 +124,39 @@ async def _test_cancelled_transaction_exit_leaves_no_open_transaction():
         async with asyncio.timeout(5):
             await JobQueuesTable.bulk_create([_queue_row()])
     except Exception:
+        return False
+    return True
+
+
+async def _test_cancelled_connection_acquisition_releases_lock():
+    client = get_connections().get("default")
+    original_ensure_connection = ConnectionWrapper.ensure_connection
+
+    async def slow_ensure_connection(connection_wrapper):
+        await asyncio.sleep(5)
+        await original_ensure_connection(connection_wrapper)
+
+    async def query():
+        await client.execute_query("SELECT 1")
+
+    ConnectionWrapper.ensure_connection = slow_ensure_connection
+    task = asyncio.create_task(query())
+    try:
+        await asyncio.sleep(0.1)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    finally:
+        ConnectionWrapper.ensure_connection = original_ensure_connection
+
+    if client._lock.locked():
+        return False
+    try:
+        async with asyncio.timeout(5):
+            await client.execute_query("SELECT 1")
+    except TimeoutError:
         return False
     return True
 
@@ -248,6 +281,7 @@ async def test_database_transaction_cancel(tester: Tester):
     await tester.test(_test_cancelled_transaction_entry_keeps_database_usable, "事务开始阶段取消不泄漏连接锁")
     await tester.test(_test_cancelled_bulk_write_leaves_no_open_transaction, "批量写入取消不残留打开的事务")
     await tester.test(_test_cancelled_transaction_exit_leaves_no_open_transaction, "事务结束阶段取消不残留打开的事务")
+    await tester.test(_test_cancelled_connection_acquisition_releases_lock, "连接获取阶段取消不泄漏连接锁")
     await tester.test(_test_cancelled_pooled_transaction_entry_returns_connection, "池化事务进入阶段取消归还连接")
     await tester.test(_test_cancelled_mysql_bulk_write_rolls_back, "MySQL 批量写入取消回滚事务")
     return tester
