@@ -230,8 +230,8 @@ async def _test_handler_deadline_allows_cleanup_rpc():
                 # Cleanup has its own deadline even when the outer request expired.
                 await receiver.call(caller.name, "cleanup", None, timeout=RPC_TEST_TIMEOUT)
 
-        # 截止时间包含队列投递，负载高的 runner 上投递可能超过 1 秒。
-        # 因此按 TIME_SCALE 放大，使 handler 在执行中被取消，而不是尚未领取就过期。
+        # 截止时间包含队列投递耗时，负载高的 runner 上投递可能超过 1 秒。
+        # 因此按 TIME_SCALE 放大，使 handler 在执行中被取消，避免请求尚未认领就已过期。
         request = caller._request(receiver.name, "deadline", None, timeout=1 * TIME_SCALE)
         await caller.transport.send(request)
         await asyncio.wait_for(handler_started.wait(), RPC_TEST_TIMEOUT)

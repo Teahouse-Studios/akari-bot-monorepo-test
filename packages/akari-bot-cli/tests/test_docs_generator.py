@@ -416,7 +416,7 @@ async def _test_module_categories_and_parallel_tabs():
         and gaming["icon"] == "music_note"
         and tools["icon"] == "casino"
         and "tabs" not in core_group["items"][0]
-        and [item["text"] for item in core_group["items"][0]["items"]] == ["概览", "指南"]
+        and [item["text"] for item in core_group["items"]] == ["概览", "指南"]
         and tools["items"][0]["text"] == "gamma"
     )
 
@@ -1035,7 +1035,7 @@ async def _test_pages_with_submenu_are_nested_in_sidebar():
         "link" not in native
         and items[0] == {"text": "admin", "link": "/demo/admin"}
         and items[1]["text"] == "钩子"
-        and items[1]["collapsed"] is False
+        and items[1]["collapsed"] is True
         and [item["text"] for item in items[1]["items"]] == ["parser_policies", "typo"]
         and [item["link"] for item in items[1]["items"]] == ["/demo/parser_policies", "/demo/typo"]
     )

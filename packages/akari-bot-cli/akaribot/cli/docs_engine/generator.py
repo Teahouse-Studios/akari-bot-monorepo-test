@@ -1577,6 +1577,14 @@ def _akari_sidebar(
 def _sidebar_children(
     packages: Sequence[DocPackage], config: DocsConfig, locale: DocsLocaleConfig, prefix: str
 ) -> list[dict[str, object]]:
+    if len(packages) == 1 and packages[0].key in {"core", "cli"}:
+        entry = _sidebar_package(packages[0], locale, prefix)
+        items = entry.get("items")
+        if isinstance(items, list):
+            link = entry.get("link")
+            if isinstance(link, str) and not any(item.get("link") == link for item in items):
+                return [{"text": entry["text"], "link": link}, *items]
+            return list(items)
     if len(packages) == 1 and not packages[0].overview and not packages[0].category:
         return list(_sidebar_package(packages[0], locale, prefix).get("items", []))
     categorized: dict[str, list[DocPackage]] = {}
@@ -1590,7 +1598,7 @@ def _sidebar_children(
     for category, items in sorted(categorized.items(), key=_category_sort_key):
         child: dict[str, object] = {
             "text": category,
-            "collapsed": False,
+            "collapsed": True,
             "items": [_sidebar_package(package, locale, prefix) for package in items],
         }
         icon = config.category_icons.get(category, "")
@@ -1638,11 +1646,11 @@ def _page_menu_items(
         if isinstance(children, dict):
             for child in children.values():
                 assert isinstance(child, dict)
-                result.append({"text": child["text"], "collapsed": False, "items": render(child)})
+                result.append({"text": child["text"], "collapsed": True, "items": render(child)})
         return result
 
     for root in roots.values():
-        direct.append({"text": root["text"], "collapsed": False, "items": render(root)})
+        direct.append({"text": root["text"], "collapsed": True, "items": render(root)})
     return direct
 
 
@@ -1653,7 +1661,7 @@ def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str)
     if not package.overview:
         return {
             "text": package.title,
-            "collapsed": False,
+            "collapsed": True,
             "items": _page_menu_items(package.pages, page_item),
         }
     if _uses_parallel_tabs(package):
@@ -1665,7 +1673,7 @@ def _sidebar_package(package: DocPackage, locale: DocsLocaleConfig, prefix: str)
     return {
         "text": package.title,
         "link": _site_link(prefix, package.key, "index.md"),
-        "collapsed": False,
+        "collapsed": True,
         "items": items,
     }
 

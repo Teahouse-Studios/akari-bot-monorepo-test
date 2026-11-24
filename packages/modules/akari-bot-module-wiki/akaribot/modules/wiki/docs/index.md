@@ -216,9 +216,9 @@ hero:
 
 ### `wiki style`
 
-<CommandUsage usage="wiki style <mode>" :params="['mode=消息样式 text 或 card']" permission="admin" />
+<CommandUsage usage="wiki style <mode>" :params="['mode=消息样式 text 或 card']" permission="admin" platforms="QQ（官方）机器人" />
 
-- 此命令用于切换 Wiki 消息样式，默认设置为 `text`，仅在 QQ 群与 QQ 私聊中注册。
+- 此命令用于切换 Wiki 消息样式。默认样式为 `text`。
 - `card` 将页面回复渲染为图文卡片。标题取页面标题，摘要取页面描述，配图取页面代表图的 100 像素缩略图。
 - 若页面未设置代表图，卡片将不附带配图。若查询目标包含修订号，或查询内容为差异对比，卡片同样不附带配图。
 - 卡片消息不支持按钮，`button` 预览模式因此自动转为 `auto`。

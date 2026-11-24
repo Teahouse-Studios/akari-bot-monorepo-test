@@ -27,6 +27,14 @@ akaribot module add akari-bot-module-mcv_rss
 
 `mcv-rss` 若需要获取更新日志页面，需要在 core 配置中开启 `webrender.enable`。推送更新日志还要求目标会话启用 `minecraft-news` 模块。`mcbv-rss` 在出口 IP 所属国家为 `China`，或尚未探测到国家时，本轮不执行推送。
 
+## 首轮轮询
+
+启用后的首轮轮询不会补发已经发布的版本。
+
+`mcv-rss` 首轮仅记录当前版本并缓存更新日志标题，不推送消息。
+
+`mcbv-rss` 首轮既不记录版本，也不推送消息。下一轮仍检测到未记录的版本时才会发送。
+
 ## 数据表
 
 <ModuleData />
