@@ -33,6 +33,7 @@ class Bind:
             required_admin: bool = False,
             required_superuser: bool = False,
             required_base_superuser: bool = False,
+            available_without_enable: bool = False,
             available_for: str | list | tuple = "*",
             exclude_from: str | list | tuple = "",
             load: bool = True,
@@ -65,6 +66,7 @@ class Bind:
             :param required_admin: 此命令是否需要场景管理员权限。
             :param required_superuser: 此命令是否仅超级用户可执行。
             :param required_base_superuser: 此命令是否仅基础超级用户可执行。
+            :param available_without_enable: 场景未启用所属模块时此命令仍可执行。
             :param available_for: 此命令支持的平台列表。
             :param exclude_from: 此命令排除的平台列表。
             :param load: 是否加载此命令。
@@ -94,6 +96,7 @@ class Bind:
                         required_admin=required_admin,
                         required_superuser=required_superuser,
                         required_base_superuser=required_base_superuser,
+                        available_without_enable=available_without_enable,
                         available_for=available_for,
                         exclude_from=exclude_from,
                         load=load,

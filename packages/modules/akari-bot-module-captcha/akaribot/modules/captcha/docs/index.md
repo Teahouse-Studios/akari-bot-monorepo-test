@@ -4,13 +4,13 @@
 
 ## 命令
 
-### `token`
+### `captcha token`
 
-<CommandUsage usage="token <token> [<answer>]" :params="['token=入群验证的令牌', 'answer=所选答案，点击按钮时自动附带']" permission="public" platforms="QQBot" />
+<CommandUsage usage="captcha token <token> [<answer>]" :params="['token=入群验证的令牌', 'answer=所选答案，点击按钮时自动附带']" permission="public" platforms="QQBot" />
 
 此命令用于提交入群验证的令牌。点击入群消息的按钮时，所选答案会随命令一并提交。
 
-- `token` 属于隐藏命令，不在帮助列表中显示，也不能被禁用。
+- 此命令是 `captcha` 的免启用命令，场景未启用 `captcha` 模块时也能直接执行。
 - 验证码仅限被禁言的成员本人使用。
 - 若令牌不存在、已被使用或不属于发送者，机器人会返回对应提示。
 
@@ -31,7 +31,7 @@
   :log="[
     '机器人：@Akaribot: NextsTep 欢迎加入，正在验证你是否为人类！本群启用了入群验证，机器人已暂时禁言你 30 天。请点击下方按钮中的数字“64”完成验证。',
     '如果无法点击按钮（QQ 电脑端），请先添加机器人，然后私聊发送以下命令来完成验证：',
-    '`~token ds6C9qzHsTvQnZ2NF_I9t3KX`',
+    '`~captcha token ds6C9qzHsTvQnZ2NF_I9t3KX`',
     '私聊验证码与按钮验证二选一使用，且仅限本人使用。',
   ]"
   :buttons="[
@@ -52,7 +52,7 @@
     '机器人：![小可手持麦克风](microphone.gif){natural}',
     '机器人：@Akaribot: NextsTep 欢迎加入，正在验证你是否为人类！本群启用了入群验证，机器人已暂时禁言你 30 天。请选择小可发送的表情手中拿着的物品。',
     '如果无法点击按钮（QQ 电脑端），请先添加机器人，然后私聊发送以下命令来完成验证：',
-    '`~token 49yqgZw-4xWRhfPHh9Q-N8UI`',
+    '`~captcha token 49yqgZw-4xWRhfPHh9Q-N8UI`',
     '私聊验证码与按钮验证二选一使用，且仅限本人使用。',
   ]"
   :buttons="[

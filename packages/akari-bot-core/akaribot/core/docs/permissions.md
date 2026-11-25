@@ -63,7 +63,7 @@ demo = module("demo", required_admin=True)
 | `required_superuser` | `False` | 要求超级用户权限，或持有该模块 `~auth` 授权的用户 |
 | `required_base_superuser` | `False` | 要求发送者包含在 `base_superuser` 名单中 |
 
-框架按 `required_base_superuser`、`required_superuser`、`required_admin` 的顺序执行检查，任一项未通过即拒绝执行。命令级权限仅能比模块级更严格。非基础模块仍需要在场景内启用，声明了 `required_superuser` 的模块仅允许超级用户启用。
+框架按 `required_base_superuser`、`required_superuser`、`required_admin` 的顺序执行检查，任一项未通过即拒绝执行。命令级权限仅能比模块级更严格。非基础模块仍需要在场景内启用，声明了 `required_superuser` 的模块仅允许超级用户启用。声明 `available_without_enable=True` 的命令不受场景启用状态限制。
 
 ## 命令级权限
 

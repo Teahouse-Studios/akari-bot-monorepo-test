@@ -441,9 +441,12 @@ def pre_init():
     Logger.info("Akaribot is launching...")
     from tortoise import run_async
 
-    from akaribot.core.constants import PrivateData, cache_path, lang_list
+    from akaribot.core.constants import PrivateData, cache_path, dev_mode, lang_list
     from akaribot.core.i18n import build_locale_snapshot, collect_locale_paths, connect_locale_snapshot
     from akaribot.core.paths import Paths
+
+    if dev_mode:
+        Logger.warning("Developer mode is enabled. Some features may pose a risk to your server.")
 
     # 目录创建集中在此，导入 core.constants 不产生副作用。
     Paths.ensure("data", "cache", "logs", "database")

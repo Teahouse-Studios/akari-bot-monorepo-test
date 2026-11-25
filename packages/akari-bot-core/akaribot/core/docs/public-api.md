@@ -72,7 +72,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 ### `wait_next_message()`
 
-等待当前会话的下一条消息，返回新的 `MessageSession`。命中的消息仍会进入常规 parser。
+等待当前会话的下一条消息，返回新的 `MessageSession`。命中的消息仍会进入常规 parser。命令消息不会完成等待，等待保持挂起，直到收到非命令消息或超时。
 
 ### `wait_reply()`
 
