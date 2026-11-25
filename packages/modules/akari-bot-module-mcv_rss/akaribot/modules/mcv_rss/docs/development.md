@@ -4,6 +4,8 @@ title: 安装与开发
 
 # mcv-rss：安装与开发
 
+<!-- @include: @/_snippets/developer-notice.md -->
+
 ## 安装
 
 ```bash

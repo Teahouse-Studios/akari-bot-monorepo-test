@@ -4,6 +4,8 @@ title: 安装与开发
 
 # nintendo-err：安装与开发
 
+<!-- @include: @/_snippets/developer-notice.md -->
+
 ## 安装
 
 ```bash

@@ -253,7 +253,7 @@ hero:
 
 <CommandUsage usage="maimai bind df" permission="public" />
 
-绑定 Diving-Fish（水鱼）查分器账号，使用设备码流程。机器人发送授权链接后，等待你在浏览器中完成授权。水鱼与落雪共用同一份绑定记录。
+绑定 Diving-Fish（水鱼）查分器账号，使用设备码流程。机器人发送授权链接后，等待你在浏览器中完成授权。该绑定同时适用于 CHUNITHM。
 
 ### `maimai unbind df`
 

@@ -4,6 +4,8 @@ title: 安装与开发
 
 # mcv：安装与开发
 
+<!-- @include: @/_snippets/developer-notice.md -->
+
 本页说明 mcv 的安装、配置、数据表与运行依赖。
 
 ## 安装

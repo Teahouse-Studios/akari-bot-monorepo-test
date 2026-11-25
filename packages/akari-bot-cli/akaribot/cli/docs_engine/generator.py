@@ -48,6 +48,7 @@ FENCE_PATTERN = re.compile(r"^\s*(?:```|~~~)")
 HOME_DIR = Path(__file__).resolve().parent / "home"
 HOME_CONFIG = HOME_DIR / "home.json"
 FOOTER_DIR = Path(__file__).resolve().parent / "footer"
+SNIPPETS_DIR = Path(__file__).resolve().parent / "snippets"
 
 
 def generate(
@@ -1277,6 +1278,11 @@ def _write_vitepress_config(
 ) -> None:
     directory = source / ".vitepress"
     directory.mkdir(parents=True, exist_ok=True)
+    snippets = source / "_snippets"
+    snippets.mkdir(parents=True, exist_ok=True)
+    for item in SNIPPETS_DIR.iterdir():
+        if item.is_file():
+            shutil.copy2(item, snippets / item.name)
     favicon, brand = assets
     color = config.theme.color
     theme_key = str(theme.config.get("theme_config_key") or "")
