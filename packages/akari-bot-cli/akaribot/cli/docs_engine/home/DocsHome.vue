@@ -228,7 +228,7 @@ function asset(value: string): string {
       <div class="akari-home__stats" :aria-label="home.sections.statsLabel">
         <div v-for="stat in home.stats" :key="stat.label" class="akari-home__stat">
           <span class="akari-home__stat-icon" aria-hidden="true">
-            <m3e-icon :name="stat.icon || 'description'"></m3e-icon>
+            <m3e-icon :name.attr="stat.icon || 'description'"></m3e-icon>
           </span>
           <strong>{{ stat.value }}</strong>
           <span>{{ stat.label }}</span>
@@ -308,14 +308,14 @@ function asset(value: string): string {
             />
           </span>
           <span v-else class="akari-home__contribute-icon">
-            <m3e-icon :name="card.icon || 'code'" aria-hidden="true"></m3e-icon>
+            <m3e-icon :name.attr="card.icon || 'code'" aria-hidden="true"></m3e-icon>
           </span>
           <h2>{{ card.title }}</h2>
         </div>
         <p>{{ card.description }}</p>
         <div class="akari-home__contribute-links">
           <a v-for="link in card.links" :key="link.label" :href="href(link.href)">
-            <m3e-icon v-if="link.icon" :name="link.icon" aria-hidden="true"></m3e-icon>
+            <m3e-icon v-if="link.icon" :name.attr="link.icon" aria-hidden="true"></m3e-icon>
             {{ link.label }}
             <m3e-icon name="open_in_new" aria-hidden="true"></m3e-icon>
           </a>
