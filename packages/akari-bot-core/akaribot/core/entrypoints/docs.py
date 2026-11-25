@@ -1,18 +1,24 @@
 """包文档清单入口。
 
 CLI 以子进程调用本模块列出各包 ``docs/`` 目录与页面。包发现只按 entry point 的导入路径定位包目录，
-不导入目标包：导入会执行包内配置模板与其它导入期副作用。
+不导入目标包：导入会执行包内配置模板与其它导入期副作用。API 目录是例外，因为获取类与函数的签名需要
+导入 ``akaribot.core.api``。实例尚未写入配置文件时使用一次性沙箱目录，导入产生的配置与日志都写入
+沙箱。
 """
 
 from __future__ import annotations
 
 import argparse
+import atexit
 import importlib.metadata
 import importlib.util
 import inspect
 import json
+import os
 import re
+import shutil
 import sys
+import tempfile
 import tomllib
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
@@ -23,7 +29,42 @@ from packaging.requirements import InvalidRequirement, Requirement
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
-from akaribot.core.constants.default import lang_list
+# API 目录的类与函数来自 ``akaribot.core.api`` 的按需加载成员。这些成员在导入阶段读取配置与实例目录，
+# 实例尚未写入配置文件时导入整体失败，API 目录仅保留模块层直接导入的名称。配置目录与实例目录都必须在
+# 任何 core 导入之前确定，因为 ``akaribot.core.constants`` 在导入阶段就固定路径，之后修改环境变量不会生效。
+_CONFIG_FILENAME = "config.toml"
+_INSTANCE_DIR_ENV = "AKARI_INSTANCE_DIR"
+_CONFIG_PATH_ENV = "AKARI_CONFIG_PATH"
+_CONFIG_READONLY_ENV = "AKARI_CONFIG_READONLY"
+
+
+def _instance_config_file() -> Path:
+    # 取值规则与 akaribot.core.paths 一致，环境变量优先，其次是实例目录下的 config。这里直接读取环境变量，
+    # 因为导入该模块会让路径在导入阶段就固定，之后无法修改。
+    instance = Path(os.environ.get(_INSTANCE_DIR_ENV) or ".").expanduser().resolve()
+    directory = os.environ.get(_CONFIG_PATH_ENV)
+    config = Path(directory).expanduser().resolve() if directory else instance / "config"
+    return config / _CONFIG_FILENAME
+
+
+def _prepare_catalog_sandbox() -> None:
+    # 实例缺少配置文件时使用一次性沙箱目录。空配置文件即可，配置管理器读取缺失的键时按默认值补齐并写回，
+    # 无需预先生成全部键。
+    if _instance_config_file().is_file():
+        return
+    # 实例目录一并指向沙箱。导入按需加载成员会创建实例的日志与数据库目录，这两类产物同样写入沙箱。
+    # 一次性目录需要写入默认值，因此同时移除只读标记，该标记仅约束实例配置。
+    directory = Path(tempfile.mkdtemp(prefix="akaribot-docs-sandbox-"))
+    (directory / _CONFIG_FILENAME).write_text("", encoding="utf-8")
+    os.environ[_CONFIG_PATH_ENV] = str(directory)
+    os.environ[_INSTANCE_DIR_ENV] = str(directory)
+    os.environ.pop(_CONFIG_READONLY_ENV, None)
+    atexit.register(shutil.rmtree, directory, True)
+
+
+_prepare_catalog_sandbox()
+
+from akaribot.core.constants.default import lang_list  # noqa: E402 - 必须在确定配置目录之后导入。
 
 
 DOCS_GROUP = "akaribot.docs"
@@ -532,19 +573,22 @@ def _class_payload(name: str, cls: type) -> dict[str, Any]:
     }
 
 
-def _api_catalog() -> dict[str, Any]:
+def _api_catalog(warnings: list[str]) -> dict[str, Any]:
     try:
         from akaribot.core import api
         from akaribot.core.api import adapters
-    except Exception:
+    except Exception as error:
+        warnings.append(f"core: 无法导入公开接口模块（{error}），API 目录为空。")
         return {}
     groups: list[dict[str, Any]] = []
     for title, module in (("akaribot.core.api", api), ("akaribot.core.api.adapters", adapters)):
         entries: list[dict[str, Any]] = []
+        missing: list[str] = []
         for name in getattr(module, "__all__", ()):  # noqa: B007 - 仅遍历公开承诺接口。
             try:
                 obj = getattr(module, name)
             except Exception:
+                missing.append(name)
                 continue
             if inspect.isclass(obj):
                 entries.append(_class_payload(name, obj))
@@ -562,6 +606,9 @@ def _api_catalog() -> dict[str, Any]:
                         "parameters": [],
                     }
                 )
+        if missing:
+            sample = "、".join(missing[:5]) + ("等" if len(missing) > 5 else "")
+            warnings.append(f"core: {title} 有 {len(missing)} 个公开导出无法导入（{sample}），API 目录不完整。")
         groups.append({"name": title, "entries": entries})
     return {"groups": groups}
 
@@ -603,7 +650,7 @@ def _build_package(
         "version": version,
         "dependencies": list(dependencies),
         "languages": dict(lang_list) if key == "core" else {},
-        "api_catalog": _api_catalog() if key == "core" else {},
+        "api_catalog": _api_catalog(warnings) if key == "core" else {},
         "title": _as_text(meta.get("title")) or name,
         "summary": _as_text(meta.get("summary")) or summary,
         "order": _as_order(meta.get("order", DEFAULT_ORDER), key, warnings),

@@ -6,6 +6,8 @@ front matter、隐藏页、无文档告警、符号链接逃逸、目录扫描�
 
 import io
 import json
+import subprocess
+import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -602,8 +604,10 @@ def _test_api_catalog_covers_public_exports():
     from akaribot.core.api import adapters
     from akaribot.core.entrypoints.docs import _api_catalog
 
-    catalog = _api_catalog()
+    warnings: list[str] = []
+    catalog = _api_catalog(warnings)
     groups = {group["name"]: group for group in catalog.get("groups", [])}
+    assert not warnings
     assert set(groups) == {"akaribot.core.api", "akaribot.core.api.adapters"}
     for name, module in (("akaribot.core.api", api), ("akaribot.core.api.adapters", adapters)):
         entries = {entry["name"]: entry for entry in groups[name]["entries"]}
@@ -617,6 +621,41 @@ def _test_api_catalog_covers_public_exports():
             if method.get("source") == "core"
         )
     return True
+
+
+def _test_api_catalog_without_instance_config():
+    # 在线构建的文档站点使用缺少配置文件的实例，此时 API 目录的按需加载成员仍应全部可获取。用例必须在
+    # 子进程中运行，配置目录与实例目录在 core 导入阶段就固定，进程内无法更换。
+    from akaribot.core import api
+    from akaribot.core.api import adapters
+
+    expected = len(api.__all__) + len(adapters.__all__)
+    code = (
+        "import json, os, tempfile\n"
+        "from pathlib import Path\n"
+        'root = Path(tempfile.mkdtemp(prefix="akari_docs_bare_"))\n'
+        'os.environ["AKARI_INSTANCE_DIR"] = str(root)\n'
+        'os.environ["AKARI_CONFIG_PATH"] = str(root / "config")\n'
+        'os.environ.pop("AKARI_CONFIG_READONLY", None)\n'
+        "from akaribot.core.entrypoints import docs\n"
+        "data = docs.collect()\n"
+        'core = next(item for item in data["packages"] if item["key"] == "core")\n'
+        "print(json.dumps({\n"
+        '    "entries": sum(len(group["entries"]) for group in core["api_catalog"]["groups"]),\n'
+        '    "warnings": data["warnings"],\n'
+        '    "written": sorted(path.name for path in root.iterdir()),\n'
+        "}))\n"
+    )
+    try:
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300, check=False)
+        payload = json.loads(result.stdout)
+    except Exception:
+        return False
+    return (
+        payload["entries"] == expected
+        and payload["written"] == []
+        and not any("API 目录" in warning for warning in payload["warnings"])
+    )
 
 
 @func_case
@@ -635,4 +674,5 @@ async def test_docs_entrypoint(tester: Tester):
     await tester.test(_test_stale_editable_metadata_is_supplemented, "可编辑安装元数据过期时按源码声明补入并告警")
     await tester.test(_test_main_output_contract, "命令行 JSON、人类可读输出与参数错误")
     await tester.test(_test_api_catalog_covers_public_exports, "自动 API 目录覆盖全部公开导出")
+    await tester.test(_test_api_catalog_without_instance_config, "实例缺少配置文件时 API 目录仍完整，且不写入实例")
     return tester
