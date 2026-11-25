@@ -1541,7 +1541,7 @@ def _api_sidebar_group(
     normalized = [replace(page, submenu="") if page.path == API_CATALOG_INDEX else page for page in pages]
     item: dict[str, object] = {
         "text": "API",
-        "collapsed": False,
+        "collapsed": True,
         "items": _page_menu_items(normalized, page_item),
     }
     icon = config.icons.get("api", "")
@@ -1566,7 +1566,7 @@ def _akari_sidebar(
             ]
         item: dict[str, object] = {
             "text": _group_title(group, locale.group_titles),
-            "collapsed": False,
+            "collapsed": True,
             "items": _sidebar_children(visible, config, locale, prefix),
         }
         icon = config.icons.get(group) or config.icons.get(group.lower(), "")
