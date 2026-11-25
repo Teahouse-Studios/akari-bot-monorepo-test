@@ -381,7 +381,8 @@ function asset(value: string): string {
 @media (min-width: 960px) {
   .akari-home__hero-layer {
     width: calc(100% + 80px);
-    margin: -24px -56px 0 -24px;
+    margin-block: -24px 0;
+    margin-inline: -24px -56px;
   }
 
   .akari-home__content {
@@ -476,8 +477,8 @@ function asset(value: string): string {
 
 .akari-home__stat-icon {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
   color: var(--md-sys-color-on-surface-variant);
   opacity: 0.8;
   font-size: 1.15rem;
