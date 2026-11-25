@@ -16,19 +16,13 @@ akaribot module add akari-bot-module-wordle
 
 ## 配置项
 
-<ModuleConfig table="module_wordle" />
-
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `wordle_disable_image` | bool | false | 是否禁用图片并使用文本棋盘 |
-
-启用 `wordle_disable_image` 后，对局开始与每次提交时均发送文本棋盘，不再发送棋盘与键盘图片。
+<ModuleConfig />
 
 ## 权限与平台能力
 
 命令对普通用户开放，不要求管理员或超级用户权限。模块未声明平台限制，所有已接入平台均可以使用。
 
-图片模式依赖 `akari-bot-assets-fonts` 提供的字体。花瓣奖励仅在实例启用花瓣系统时生效。
+图片模式依赖 `akari-bot-assets-fonts` 提供的字体。会话不支持图片时，每次提交与对局结束都以文本棋盘回复。花瓣奖励仅在实例启用花瓣系统时生效。
 
 ## 数据表
 

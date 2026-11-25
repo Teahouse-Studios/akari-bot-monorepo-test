@@ -106,7 +106,7 @@ async def upgrade(ctx):
 - 执行顺序固定为首先应用 core 的全部待执行 revision，随后按成员包名称字典序依次执行各成员包的迁移。
 - 已应用的迁移记录保存于 `schema_migrations`（包含 `package`、`revision`、`applied_at`、`checksum` 字段），以 `(package, revision)` 复合键保持唯一。迁移文件内容发生变动时 checksum 随之变化，系统据此检测已应用迁移文件的异常篡改。
 - 每条 revision 必须保持幂等与可重复执行。鉴于 MySQL 的 DDL 操作会自动提交事务，无法与版本记录纳入同一原子事务，因而每个执行步骤均遵循“先探测后执行”原则。SQLite 支持事务性 DDL，Runner 会将单条 revision 与对应版本记录纳入同一原子事务。
-- `MigrationContext` 提供 `execute()`、`execute_script()`、`fetch_all()`、`has_table()`、`has_column()`、`rename_table()`、`rename_column()`，按方言生成 SQL。
+- `MigrationContext` 提供 `quote()`、`execute()`、`execute_script()`、`fetch_all()`、`has_table()`、`has_column()`、`column_is_nullable()`、`has_index()`、`add_column()`、`drop_column()`、`rename_table()`、`rename_column()`、`create_index()` 与 `generate_schemas()`，按方言生成 SQL。
 
 数据库迁移仅在具备写入权限的初始化进程中执行。pre-init 以 `generate_schemas=True` 参数调用 `init_db()`，随后触发 `run_startup_migrations()`。平台进程与 Server 仅对既有数据执行读写，数据表及表结构的创建与变更均由独立初始化进程完成。
 

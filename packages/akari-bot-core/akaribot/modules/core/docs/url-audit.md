@@ -4,7 +4,7 @@ order: 62
 
 # url-audit
 
-此模块用于维护全局 URL 允许规则与阻止规则。模块内命令要求超级用户权限。规则存储在实例的 `data/url_audit/` 目录中，是否启用通过 `enable_urlmanager` 配置项控制。
+此模块用于维护全局 URL 允许规则与阻止规则。模块内命令要求超级用户权限。规则存储在实例的 `data/url_audit/` 目录中，机器人发送消息前按这些规则检查消息中的 URL。
 
 ### `url-audit allowlist add`
 

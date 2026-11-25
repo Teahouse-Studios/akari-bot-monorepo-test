@@ -2,7 +2,7 @@
 
 本文说明 KE 码、I18N 标记与 AT 码的语法格式及转义规则。
 
-`[KE:...]`、`{I18N:...}` 与 `<AT:...>` 分别在构造消息链、本地化与平台发送阶段解析。模块开发应优先使用消息元素类构造内容；仅当文本中需要触发特定元素或内容需要跨进程传递时，才应使用占位符。
+`[KE:...]`、`{I18N:...}` 与 `<AT:...>` 分别在构造消息链、本地化与平台发送阶段解析。模块开发应优先使用消息元素类构造内容。仅当文本中需要触发特定元素或内容需要跨进程传递时，才应使用占位符。
 
 <NoticeBox type="warning" title="解析顺序与嵌套">
 
@@ -20,7 +20,7 @@ KE 码用于在文本中插入图片、语音与按钮等消息元素。语法�
 
 元素类型不区分大小写，参数之间用逗号分隔。
 
-`plain`、`markdown`、`url`、`action_text` 与按钮的文本参数将执行 URL 解码。所有参数值在解析前均会执行 HTML 实体反转义。
+`plain`、`markdown`、`card`、`url`、`action_text` 与按钮的文本参数将执行 URL 解码。所有参数值在解析前均会执行 HTML 实体反转义。
 
 KE 元素会作为独立的消息元素插入，通常与相邻文本分行。
 
@@ -33,6 +33,7 @@ KE 元素会作为独立的消息元素插入，通常与相邻文本分行。
 | `image` | `path` 必填，支持 URL、`file://` 路径、`base64://` 与 data URI。可选 `headers`（Base64 编码的 JSON）、`max_h`、`allow_split=0` |
 | `audio` | `path` 必填，本地文件路径 |
 | `video` | `path` 必填，本地文件路径 |
+| `card` | `title`、`description`、`url`、`pic_url` 均可选，渲染为图文卡片 |
 | `i18n` | `i18nkey` 必填。其余键作为翻译参数。可选 `fallback=0`、`locale_failed_prompt=0`、`disable_joke=1` |
 | `mention` | `userid` 必填，格式为 `客户端\|用户 ID` |
 | `url` | `text` 必填。可选 `trusted=1` 或 `trusted=0` |

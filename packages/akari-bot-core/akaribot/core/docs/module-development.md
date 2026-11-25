@@ -135,7 +135,7 @@ async def test_greet_default(tester: Tester):
 
 可编辑安装直接引用本地源码目录。安装完成后，模块页面刷新列表并展示 `greet`。
 
-若实例正在运行，新模块将直接加载；若实例未运行，新模块在下次启动时自动加载。
+若实例正在运行，新模块将直接加载。若实例未运行，新模块在下次启动时自动加载。
 
 安装仅负责使实例能够加载该模块。普通模块仍需要在场景内启用。场景管理员在会话中执行：
 
@@ -216,7 +216,8 @@ provides_modules = ["dice"]
 | --- | --- |
 | `schema` | 清单结构版本，当前为 `1` |
 | `requires_core_api` | 核心 API 兼容区间，默认 `>=1,<2` |
-| `locales`、`assets` | 语言文件与资源目录，默认 `locales`，相对导入包目录解析 |
+| `locales` | 语言文件目录，默认 `locales`，相对导入包目录解析 |
+| `assets` | 只读静态资源目录，相对导入包目录解析，未设置时取导入包根目录 |
 | `migrations`、`config_migrations` | 数据库迁移与配置迁移目录 |
 | `config_table`、`config_schema_version` | 配置表名，新生成配置写入的结构版本，默认 `1` |
 | `provides_modules` | 包提供的模块名 |
@@ -340,7 +341,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.rename.done", name=name))
 ```
 
-`wait_next_message()` 等待触发当前命令的用户发送下一条消息。该消息仍会进入常规命令解析流程；若用户发送命令，该命令也会正常执行。设置 `delete=True` 时，将在等待结束后删除机器人发出的提示消息。
+`wait_next_message()` 等待触发当前命令的用户发送下一条消息。该消息仍会进入常规命令解析流程。若用户发送命令，该命令也会正常执行。设置 `delete=True` 时，将在等待结束后删除机器人发出的提示消息。
 
 ### 等待引用回复
 
@@ -359,7 +360,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.apply.done", note=note))
 ```
 
-`wait_reply()` 等待用户引用机器人发出的提示消息回复。若平台不支持引用回复功能，将自动转为等待下一条消息；传入 `all_=True` 时等待场景内任意成员回复。
+`wait_reply()` 等待用户引用机器人发出的提示消息回复。若平台不支持引用回复功能，将自动转为等待下一条消息。传入 `all_=True` 时等待场景内任意成员回复。
 
 ### 等待任何人回答
 

@@ -187,11 +187,14 @@ module-my-module = "akaribot.modules.my_module"
 
 ## 命令与生成物
 
-`akaribot docs` 提供 `list`、`build`、`serve`、`deploy`、`status`、`clean`：
+`akaribot docs` 提供 `list`、`build`、`sync-theme`、`install-deps`、`serve`、`dev`、`deploy`、`status`、`clean`：
 
 - `list`：通过实例的 core 入口读取已安装包目录，入口无法使用时改用注册表清单。
 - `build`：生成站点并调用 VitePress。
+- `sync-theme`：将主题模板 submodule 同步至远端最新提交，仅更新工作区。
+- `install-deps`：安装主题所需的 Node 依赖。
 - `serve`：在本机预览产物。
+- `dev`：监听文档与主题改动，运行 VitePress 开发服务器。
 - `deploy`：发布到 Vercel 或 S3。
 - `status`：读取构建与部署状态。
 - `clean`：清理生成目录。

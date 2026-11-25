@@ -4,7 +4,7 @@
 
 WebRender 将 HTML、网页或页面元素渲染为图片，用于帮助菜单、Wiki Infobox、图片表格与其他截图功能。
 
-`core` 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，或将请求转发至远程渲染服务。渲染不可用时，相关命令改用其他输出方式，例如帮助菜单展示为文字或表格形式。
+`core` 通过 `akari-bot-webrender` 客户端调用本地 Playwright 浏览器，或将请求转发至远程渲染服务。渲染不可用时，相关命令以其他形式输出，例如帮助菜单展示为文字或表格形式。
 
 ## 配置
 
@@ -25,7 +25,7 @@ akaribot config set enable true --table webrender
 akaribot config set browser_type firefox --table webrender
 ```
 
-修改配置后需要重启实例才能生效。`~webrender reload` 仅重启浏览器实例，不会重新读取配置文件。
+修改配置后需要重启实例才能生效。`~webrender reload` 仅重启浏览器实例。
 
 ## 运行模式
 
@@ -66,7 +66,7 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后将 `check_
 
 <NoticeBox type="info" title="远程回退">
 
-配置 `remote_web_render_url` 后，本地渲染失败时将自动改用远程服务；本地浏览器未初始化、渲染结果为空及发生异常均判定为失败。远程服务也执行失败时，客户端返回空结果。设置 `remote_only=true` 时仅使用远程服务，此时远程地址必须有效且可达。
+配置 `remote_web_render_url` 后，本地渲染失败时将自动改用远程服务。本地浏览器未初始化、渲染结果为空及发生异常均判定为失败。远程服务也执行失败时，客户端返回空结果。设置 `remote_only=true` 时仅使用远程服务，此时远程地址必须有效且可达。
 
 </NoticeBox>
 

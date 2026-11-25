@@ -38,7 +38,7 @@ MySQL 等外部数据库不支持自动复制迁移，需要先导出到独立�
 
 以下命令中的 `<实例目录>` 建议新建（例如 `/opt/akaribot`），**不要**在旧仓库里就地升级。
 
-1. **确认 Python 与 uv**：需要仓库 `pyproject.toml` 声明的 Python 版本与 [uv](https://docs.astral.sh/uv/)。
+1. **确认 Python 与 uv**：需要 Python 3.12 或更高版本与 [uv](https://docs.astral.sh/uv/)。
 2. **创建新实例**：
 
 ```sh
@@ -64,7 +64,7 @@ MySQL 等外部数据库不支持自动复制迁移，需要先导出到独立�
    akaribot module list                # 核对已装清单
    ```
 
-   模块按需安装，不随仓库内置；旧配置中出现的模块若未安装，其命令不会被注册。自建模块可以直接从 git 仓库安装：
+   模块按需安装，不随仓库内置。旧配置中出现的模块若未安装，其命令不会被注册。自建模块可以直接从 git 仓库安装：
 
 ```sh
    akaribot module add --git https://github.com/<你>/<仓库>.git

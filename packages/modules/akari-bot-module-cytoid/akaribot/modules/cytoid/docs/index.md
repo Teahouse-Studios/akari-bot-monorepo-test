@@ -33,8 +33,6 @@ hero:
 
 <CommandUsage usage="cytoid b30 [<username>]" :params="['username=Cytoid 用户名']" permission="public" />
 
-此命令生成 B30 成绩图。省略用户名时，机器人查询发送者绑定的账号。
-
 此命令生成 B30 成绩图。省略用户名时，机器人将查询发送者绑定的账号。若未绑定账号，命令提示需要先执行 `cytoid bind`。
 
 <ChatExample

@@ -30,7 +30,7 @@
 
 进程生命周期状态依次为 `starting`、`ready`、`maintenance`、`draining` 与 `stopped`。`check_job_queue()` 注册实例并将状态切换为 `ready`。
 
-节点每 15 秒更新一次注册信息，每 10 秒与注册表核对一次。若超过 45 秒未更新，节点将被判定为离线。关闭流程中，节点先广播 `draining` 状态；处理完毕正在执行的任务后，节点广播 `stopped`。
+节点每 15 秒更新一次注册信息，每 10 秒与注册表核对一次。若超过 45 秒未更新，节点将被判定为离线。关闭流程中，节点先广播 `draining` 状态。处理完毕正在执行的任务后，节点广播 `stopped`。
 
 `core.alive.Alive` 为进程内的同步路由缓存，仅复用已由注册表确认的记录。若需要将同一业务键固定路由至同一实例，可以使用 `ServiceRoute` 声明 service、角色与路由键。运行时按 Rendezvous Hash 算法从 `ready` 实例中选取目标节点。
 

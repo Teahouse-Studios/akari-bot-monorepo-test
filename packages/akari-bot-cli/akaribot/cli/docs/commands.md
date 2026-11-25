@@ -1,7 +1,5 @@
 # 命令参考
 
-本文整理了各子命令的用途与选项。
-
 全局选项置于子命令之前。例如：
 
 ```sh
@@ -13,7 +11,7 @@ akaribot --version
 
 需要实例的命令接受 `--instance` / `-I` 参数。定位顺序依次为显式路径、`AKARI_INSTANCE_DIR` 与向上逐级查找 `akaribot.toml`。未找到实例时命令输出错误提示，并引导先执行初始化或明确指定实例根目录。
 
-``--json`` 供脚本读取结果。多数命令输出单行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 仅输出结果或事件，进度与警告一律输出至 stderr。
+``--json`` 供脚本读取结果，多数命令输出单行 JSON。`docs dev`、`docs serve` 这类长期运行的命令输出事件行。stdout 仅输出结果或事件，进度与警告一律输出至 stderr。
 
 会删除内容的写入操作支持传入 `--yes` / `-y` 用于跳过交互确认。仅输出操作计划的命令使用 `--dry-run`，不会写入文件，亦不调用安装器。
 
@@ -73,22 +71,18 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - 加载控制模块是否参与命令匹配。
 - 场景启用控制特定群聊或频道能否使用，需要在机器人会话中执行 `~module enable`。
 
+- `list [--kind <分组>] [--json]`：列出已安装的模块与适配器。
+- `available [--kind <分组>] [--search <词>] [--refresh] [--offline] [--json]`：列出可安装的模块与适配器，并标出已装项。
 - `add <包名或路径>… [--save] [--no-load]`：安装模块或适配器。`--save` 写入实例清单，环境重建时自动补充安装。`--no-load` 安装后不写入加载列表。
 - `remove <名>… [--save] [--purge] [--yes]`：卸载。`--save` 同时从实例清单删除。`--purge` 一并清理该模块的配置与数据，执行前弹出模态确认框或要求传入 `--yes`。
 - `update [名…] [--dry-run]`：更新已安装的包。省略名称时更新全部已安装包。
+- `status [--json]`：列出各模块的全局加载状态。
 - `load <名>…`：开启全局加载。
 - `unload <名>…`：关闭全局加载，配置保留。
 
 `--json` 的 `update` 仅在 stdout 输出单行结果，进度与警告输出至 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
 
 ## config
-
-- `list [--json]`：显示全部配置表、字段名、类型、默认值与当前值。
-- `get <表> [字段]`：输出配置内容。省略字段时输出整张表。`--json` 输出 JSON。
-- `set <表> <字段> <值> [--type str|int|float|bool|json]`：修改字段。类型按模板自动转换，未收录进模板的键需要指定 `--type`。
-- `unset <表> <字段>`：删除字段，恢复默认值。
-- `schema [表] [--json]`：导出模板声明的字段定义，供表单生成使用。
-- `open [--editor <名>]`：用外部编辑器打开实例配置文件。编辑器从 `$VISUAL`、`$EDITOR` 或常用编辑器中选择。保存后若配置发生变化，命令会提示重启实例。
 
 - `list [--json]`：列出已有配置表。`schema --table <表> [--json]`：字段类型、默认值、注释与是否占位。
 - `placeholders [--json]`：统计各表待填的占位符。其仅负责统计，不阻止启动。
@@ -97,11 +91,6 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - 表名以 `list` / `schema` 的输出为准。实例表可能带 `-<实例 ID>` 后缀，基础表名不能直接当作实例表名使用。
 
 ## db
-
-- `list [--json]`：显示已配置的适配器实例及其启用状态。
-- `add <平台> [实例名] [--dry-run]`：添加适配器实例配置。省略实例名时使用默认名称 `bot_<平台>`，指定时使用 `bot_<平台>-<实例名>`。
-- `remove <表名> [--purge] [--yes]`：移除适配器实例配置。`--purge` 同时清理相关数据。
-- `enable <表名>` / `disable <表名>`：开启或停用适配器实例。停用后不随机器人启动，配置保留。
 
 - `tables [--json]`：列出数据表。
 - `rows <表> [--limit 20] [--offset 0] [-f <条件>] [-q <搜索>][--order-by <列[:asc|desc]>] [--no-count]`：分页读取。每页最多 200 条。筛选可以重复，多个条件之间是 AND 关系。`-q` 在所有文本列中按包含方式匹配，不区分大小写。
@@ -112,12 +101,6 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 ## instance
 
-- `list [--json]`：显示注册表中的实例名称、路径、状态与自启策略。
-- `default [实例]`：查看或设置默认实例。未设置默认实例时，非指定实例的命令会按目录解析。
-- `register [路径] [--name <名>]`：将现有实例写入注册表。省略路径时使用当前目录。
-- `unregister [名]`：从注册表移除，不删除磁盘上的实例目录。
-- `policy <名> [--autostart on|off] [--restart on|off]`：设置开机自启与崩溃重启策略。
-
 - 注册表默认在 `~/.akaribot/instances.toml`，可用 `AKARIBOT_HOME` 修改目录。
 - `list [--json]`：列出本机实例、运行状态与服务设置。
 - `add <目录> [--name <名>] [--locale <语言>]`：仅记录位置，不创建实例、不安装包。
@@ -126,12 +109,6 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - `policy <名> [--autostart|--no-autostart] [--restart-on-crash|--no-restart-on-crash]`：设置服务策略。
 
 ## adapter
-
-- `tables [--json]`：列出 core 注册的数据库表。
-- `schema <表> [--json]`：查看列名、类型与主键。
-- `select <表> [--where 列=值] [--order 列 [asc|desc]] [--limit N] [--offset N] [--json]`：查询记录。多条件按 AND 组合。`--json` 输出对象数组。
-- `count <表> [--where 列=值]`：统计行数。
-- `upsert <表> --pk 键=值 [列=值…]`：按主键插入或更新一行。
 
 - `list [--json]`：按平台分组列出适配器实例。JSON 中的 `installed_platforms` 亦会列出 core 清单中全部已安装的平台，包含尚未配置实例的平台。
 - `instance add <平台> [实例 ID]`：生成 `config/bot_<平台>[-<实例 ID>].toml`，`enable` 明确设为 `false`，填写完平台要求的账号信息后再开启。

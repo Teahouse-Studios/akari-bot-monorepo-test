@@ -24,7 +24,7 @@ packages/
 补充说明：
 
 - `akaribot`、`akaribot.modules`、`akaribot.adapters`、`akaribot.assets` 是 PEP 420 命名空间目录，不带 `__init__.py`。查找包时以 `pyproject.toml` 中声明的入口为准，仅在入口缺失时才扫描目录。
-- 执行 `akaribot <子命令>` 时，命令行工具（CLI）通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
+- 执行 `akaribot <子命令>` 时，命令行工具（CLI）通过子进程调用 `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc,data,docs}`。
 - 仓库根目录保留兼容导入入口。`bot.py`、`tester.py` 通过 `sys.modules` 把原有模块名称映射至新实现。`core/database/update.py` 仅负责将历史版本遗留的升级操作交给当前实现处理。
 
 ## 进程拓扑

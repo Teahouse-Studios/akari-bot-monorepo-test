@@ -74,4 +74,4 @@ Ruff 行宽 120、双引号、目标版本 `py312`，忽略 `E402`、`F405`、`F
 
 每个成员包的导入包根目录下均包含 `docs/` 目录，通过 `docs/config/global/docs.global.toml` 声明文档标题、简介及排序权重。在 `pyproject.toml` 的 `[project.entry-points."akaribot.docs"]` 中声明文档导入路径，文档构建引擎据此收录该包的文档页面。
 
-文档站点管理命令涵盖 `akaribot docs list|build|serve|deploy|status|clean`。站点配置定义于实例根目录的 `docs.toml`，构建产物输出至 `cache/docs/` 目录。包文档所需的元数据字段及目录结构规范参见 `docs/package-docs.md`。
+文档站点管理命令涵盖 `akaribot docs list|build|serve|dev|deploy|status|clean`。站点配置定义于实例根目录的 `docs.toml`，构建产物输出至 `cache/docs/` 目录。包文档所需的元数据字段及目录结构规范参见 `docs/package-docs.md`。

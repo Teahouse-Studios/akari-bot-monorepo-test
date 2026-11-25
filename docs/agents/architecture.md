@@ -25,7 +25,7 @@ packages/
 - 模块仅导入 `akaribot.core.api` 的公开接口，适配器额外导入 `akaribot.core.api.adapters`。
   core 内部出现循环依赖时改用 `akaribot.core.exports` 注册，需要时按名称取回。
 - CLI 与 core 之间仅通过子进程通信，入口为
-  `python -m akaribot.core.entrypoints.{run,registry,config,db,peers,modules,rpc}`。
+  `python -m akaribot.core.entrypoints.{run,registry,config,data,db,peers,modules,docs,rpc}`。
 - 内部依赖约束必须与各包 `pyproject.toml` 中的声明完全一致。官方模块包之间不得互相依赖。
 
 ## CLI 子命令

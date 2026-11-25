@@ -127,7 +127,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 ### `assign()`
 
-`MessageChain.assign(elements)` 从字符串、元素、元素列表或另一条消息链创建消息链，并执行深拷贝。
+`MessageChain.assign(elements)` 从字符串、元素、元素列表或另一条消息链创建消息链。传入另一条消息链时直接返回该实例，其他输入执行深拷贝。
 
 ### `is_safe`
 
@@ -141,7 +141,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 
 按语言选择消息链。`I18NMessageChain.assign(values)` 的 `values` 以语言代码为键，必须包含 `default`。
 
-发送时按当前会话语言选取对应消息链；无匹配语言时使用 `default`。
+发送时按当前会话语言选取对应消息链。无匹配语言时使用 `default`。
 
 ## `PlatformMessageChain`
 
@@ -217,7 +217,7 @@ from akaribot.core.api import Bot, I18NContext, MessageChain, Plain
 - `ModuleRuntime.get()`：读取模块实例。
 - `ModuleRuntime.get_state()`：读取运行状态。
 
-`ModuleStatus` 是模块加载状态的枚举。
+`ModuleStatus` 是记录模块加载状态的数据模型。
 
 ## `HookPoint` 与返回值
 
@@ -393,7 +393,6 @@ HTTP：
 
 - `chunk_list()`：按长度切分列表。
 - `truncate_text()`：截断文本。
-- `parse_time_string()`：解析时间字符串。
 - `converter`：结构化数据转换。
 
 ## URL 审计

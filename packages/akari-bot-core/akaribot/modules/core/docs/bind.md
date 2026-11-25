@@ -165,6 +165,34 @@ order: 40
   ]"
 />
 
+### `bind channel priority set`
+
+<CommandUsage usage="bind channel priority set <priority>" :params="['priority=主动推送优先级，取值范围 0 到 100 的整数']" permission="admin" />
+
+此命令用于设置当前场景的主动推送优先级。取值范围为 0 到 100 的整数，数值越大越优先。取值越界时返回提示。
+
+同一条消息通道内的多个场景按优先级从高到低排列。主动推送消息由排在首位的场景发送，该场景的客户端离线时由下一个场景发送。
+
+<ChatExample
+  :log="[
+    '用户：~bind channel priority set 30',
+    '机器人：已将当前群聊的推送优先级设为 30。',
+  ]"
+/>
+
+### `bind channel priority reset`
+
+<CommandUsage usage="bind channel priority reset" permission="admin" />
+
+此命令将当前场景的主动推送优先级重置为 0。
+
+<ChatExample
+  :log="[
+    '用户：~bind channel priority reset',
+    '机器人：已将当前群聊的推送优先级重置为 0。',
+  ]"
+/>
+
 ### `bind auto`
 
 <CommandUsage usage="bind auto" permission="admin" />

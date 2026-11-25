@@ -137,6 +137,6 @@ order: 42
   ]"
 />
 
-配置项包括 `enable_get_petal`、`petal_gained_limit`、`petal_lost_limit`、`petal_sign_min`、`petal_sign_max`、`petal_sign_rate`、`petal_rebate_rate`、`petal_reset_crontab`。
+配置项包括 `enable_get_petal`、`petal_gained_limit`、`petal_lost_limit`、`petal_sign_min`、`petal_sign_max`、`petal_sign_rate`、`petal_reset_crontab`。
 
 定时任务按 `petal_reset_crontab` 结算花瓣，默认值为每月 1 日的 `0 0 1 * *`。转账与红包要求目标用户属于同一平台，避免跨平台非正常获取。

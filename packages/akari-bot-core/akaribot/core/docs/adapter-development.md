@@ -70,10 +70,10 @@ features = Features(support_image=True, support_delete=True, support_private_msg
 
 | 分组 | 字段 |
 | --- | --- |
-| 媒体与格式 | `support_image`、`support_audio`、`support_video`、`support_markdown`、`support_markdown_extension`、`support_embed` |
+| 媒体与格式 | `support_image`、`support_audio`、`support_video`、`support_markdown`、`support_markdown_extension`、`support_markdown_toggle`、`support_embed`、`support_card` |
 | 交互 | `support_mention`、`support_reaction`、`support_quote`、`support_typing`、`support_wait`、`support_action_text`、`support_button` |
 | 管理 | `support_delete`、`support_manage`、`support_permission_group` |
-| 消息范围与开关 | `read_all_messages`、`support_rss`、`support_handle_message_nodes`、`require_enable_modules`、`require_check_dirty_words` |
+| 消息范围与开关 | `read_all_messages`、`support_rss`、`support_private_msg`、`support_handle_message_nodes`、`require_enable_modules`、`require_check_dirty_words`、`use_url_md_format`、`use_url_manager`、`use_running_mention` |
 
 - `client_init()` 注册节点时，将上述能力标志写入 `capabilities`。
 - `Module.unsupported_reason()` 依据 `read_all_messages` 和 `support_rss` 标志，判断正则、事件与 RSS 模块在当前会话中是否可用。

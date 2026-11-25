@@ -26,9 +26,14 @@ akaribot module add akari-bot-adapter-satori
 
 | 字段 | 说明 |
 | --- | --- |
+| `enable` | 是否启动 Satori 客户端，默认 `false` |
 | `satori_host` | 服务端地址，默认 `127.0.0.1` |
 | `satori_port` | 服务端端口，默认 `5140` |
 | `satori_path` | 连接路径，为空时按协议默认值 |
 | `satori_secure` | 是否使用 TLS 连接 |
+| `satori_timeout` | API 请求超时时间，单位为 s，默认 `30` |
+| `satori_enable_listening_self_message` | 是否监听机器人自身消息，默认 `false` |
 | `satori_token` | 访问令牌，位于密钥表 |
 | `satori_admin_roles` | 视为管理员的角色名，默认 `admin`、`owner` |
+| `satori_typing_emoji` | 处理消息时添加的反应表情，默认 `⌛` |
+| `satori_limited_emoji` | 处理出错时添加的反应表情，默认 `❌` |

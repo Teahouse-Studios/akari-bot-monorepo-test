@@ -105,6 +105,11 @@ demo = module("demo", required_bot_permissions=["can_manage_messages"])
 
 字段名对应 `BotState` 的属性名：
 
+- `available`
+- `joined`
+- `is_owner`
+- `is_admin`
+- `can_read_messages`
 - `can_read_all_messages`
 - `can_send_messages`
 - `can_send_proactive_messages`
@@ -112,6 +117,7 @@ demo = module("demo", required_bot_permissions=["can_manage_messages"])
 - `can_manage_members`
 - `can_restrict_members`
 - `can_react`
+- `can_send_private_messages`
 
 平台自定义权限写入为 `permissions.<名称>`。
 

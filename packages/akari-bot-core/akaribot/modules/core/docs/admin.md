@@ -90,7 +90,7 @@ order: 10
 
 <CommandUsage usage="admin leave" permission="admin" platforms="QQ 群聊" />
 
-此命令仅在 QQ 群聊场景中可用，用于使机器人退出当前群聊，执行前需要你确认。该命令仅注册于 `QQ|Group` 场景。
+此命令仅在 QQ 群聊场景中可用，用于使机器人退出当前群聊，执行前需要你确认。
 
 <ChatExample
   :log="[

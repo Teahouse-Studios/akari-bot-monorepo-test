@@ -62,7 +62,7 @@ QQ 公共实例反馈群：[738829671](https://qm.qq.com/q/Rmuo5ORYgq)
 ### 自搭建
 
 机器人使用独立实例目录，命令行工具（CLI）管理实例虚拟环境、适配器、模块、配置和运行状态。
-需要仓库 `pyproject.toml` 声明的 Python 版本及 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
+需要 Python 3.12 或更高版本与 [uv](https://docs.astral.sh/uv/)。发行包的基本安装与初始化命令为：
 
 ```sh
 uv tool install akari-bot-cli

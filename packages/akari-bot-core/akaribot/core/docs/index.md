@@ -1,6 +1,6 @@
 # 核心运行时
 
-本文阐明核心运行时的架构定位、运行时依赖与多进程拓扑模型，并提供相关文档导航。
+本页说明核心运行时的架构定位、依赖关系与进程拓扑。
 
 `akaribot.core` 为 AkariBot 的核心运行时框架，负责提供公共 API 与底层基础设施，由 `akari-bot-core` 包提供。该包同时包含内置功能模块 `akaribot.modules.core`，相关说明参见[内置模块](../../modules/core/docs/index.md)。
 

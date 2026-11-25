@@ -1,6 +1,6 @@
 # 文档引擎
 
-文档引擎将已安装包的 `docs/` 目录汇总为一个 VitePress 站点，负责读取目录、生成站点源码、调用 VitePress 执行构建、提供静态预览与开发预览，并记录构建与部署状态。
+文档引擎将已安装包的 `docs/` 目录汇总为一个 VitePress 站点。它负责读取目录、生成站点源码、调用 VitePress 执行构建、提供静态预览与开发预览，并记录构建与部署状态。
 
 ## 当前状态
 
@@ -55,7 +55,7 @@ TUI 的文档页在构建期间展示同一日志流，按 `l` 切换面板。`d
 
 ## 配置
 
-站点标题、语言、基础路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs/defaults.toml` 提供。实例根目录下的 `docs.toml` 仅供读取而不写入，缺失的配置键从默认层读取。
+站点标题、语言、基础路径、输出目录、界面文案、分组标题与图标名由随包分发的 `akaribot/cli/docs_engine/defaults.toml` 提供。实例根目录下的 `docs.toml` 仅供读取而不写入，缺失的配置键从默认层读取。
 
 ```toml
 [site]
@@ -164,7 +164,7 @@ color = "#d69cdd"
 - `footer`：页脚关于区块。`title` 是标题，`text` 是说明段落（字符串或字符串数组），`image` 是配图，`links` 是按钮。
   - 未写 `image` 时使用角色立绘。配图复制到 `public/footer-image.<扩展名>`。
   - `links[].icon` 写 `afdian` 或 `github` 时使用主题内置的品牌图形，其他值按品牌插槽的规则解析为图片并复制到 `public/footer-icon-<序号>.<扩展名>`。
-  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚只保留落款。
+  - `text` 与 `links` 写空数组表示不显示该部分。`enabled = false` 时页脚仅保留落款。
   - 生成器把区块写入 `themeConfig.akari.footer.about`，随 CLI 分发的页脚组件据此渲染配图、标题、段落与按钮。
   - 页脚按两栏排版：左侧配图，右侧文案与按钮，两栏在文档宽度内居中靠拢，落款居中。视口窄于 840 像素时改为单栏，配图放大且文字居中。
 - `labels`：界面文案。`home` 是侧栏首页条目，`overview` 是无页面时的占位标题，`usage` 与 `development` 是平行标签页的名称。`index_intro`、`footer` 与 `generated_header` 是生成内容里的固定语句。
@@ -223,7 +223,7 @@ Vercel 的令牌仅从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥仅从 `A
 
 ### 首页数据
 
-首页的文案、按钮、统计项、角色入口、主题卡与贡献卡来自 `packages/akari-bot-cli/akaribot/cli/docs/home/home.json`。`schema` 当前为 `1`，字段如下：
+首页的文案、按钮、统计项、角色入口、主题卡与贡献卡来自 `packages/akari-bot-cli/akaribot/cli/docs_engine/home/home.json`。`schema` 当前为 `1`，字段如下：
 
 | 字段 | 内容 |
 | --- | --- |

@@ -31,7 +31,7 @@
   `docs/config/docs.toml` 可覆盖默认值，Markdown 页面仅记录当前行为。在 pyproject 的
   `[project.entry-points."akaribot.docs"]` 声明 `<key> = "<import path>"`。第三方包以同一种方式接入，
   目录仅包含已安装的包。
-- `akaribot docs list|build|serve|deploy|status|clean`。工具链要求由主题清单确定，内置主题与
+- `akaribot docs list|build|sync-theme|install-deps|serve|dev|deploy|status|clean`。工具链要求由主题清单确定，内置主题与
   `akari-bot-docs-template` 各自在 `docs-theme.json` 中声明 Node.js 与 VitePress 版本范围。
   生成产物在实例 `cache/docs/`，构建与部署记录在 `.docs/state.json`。
 - 站点配置保存在实例根目录的 `docs.toml` 中。主题使用 `[theme].source` 选择，外部主题仅通过根目录的

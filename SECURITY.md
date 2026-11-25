@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We actively provide security updates for the following versions. Unlike traditional software, our SaaS envionment is continuously updated. We focus our security efforts on the live production envionment.
+We actively provide security updates for the following versions. Unlike traditional software, our SaaS environment is continuously updated. We focus our security efforts on the live production environment.
 
 | Version | Supported |
 | ----------------- | ------------------ |
@@ -26,7 +26,7 @@ We are primarily interested in vulnerabilities that pose a direct threat to the 
 - Access Control Breaches: Failures in authentication or authorization mechanisms that grant elevated privileges.
 - Infrastructure Exposure: Flaws leading to the leakage of backend server IP addresses, internal network configurations, or environment variables.
 - Remote Code Execution (RCE): Any vulnerability that allows an attacker to execute arbitrary commands on the server host.
-- Service Abuse: Logic flaws that allow unauthorized resource consumptionor bypassing of usage quotas/rate limits.
+- Service Abuse: Logic flaws that allow unauthorized resource consumption or bypassing of usage quotas/rate limits.
 
 ### Out of Scope
 
