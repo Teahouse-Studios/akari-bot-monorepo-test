@@ -12,7 +12,7 @@ title: 安装与开发
 akaribot module add akari-bot-module-captcha
 ```
 
-安装后，管理员需要在群聊中执行 `module enable captcha` 以启用模块。`token` 为基础模块，安装后始终启用。
+安装后，管理员需要在群聊中执行 `module enable captcha` 以启用模块。验证命令 `captcha token` 声明为免启用命令，场景未启用模块时也能直接执行。
 
 ## 配置项
 

@@ -272,6 +272,14 @@ async def _(msg: Bot.MessageSession, dices: str, dc: int | None = None):
 
 `int`、`float`、`bool` 参数按类型标注执行转换。单个命令可注册多个模板，匹配任意一个即可生效。`priority` 数值越大，匹配优先级越高。
 
+非基础模块的命令默认需要在场景内启用该模块后才可执行。声明 `available_without_enable=True` 后，该命令不受场景启用状态限制，未启用模块时也能直接执行：
+
+```python
+@dice.command("verify <token> {{I18N:dice.help.verify}}", available_without_enable=True)
+async def _(msg: Bot.MessageSession, token: str):
+    ...
+```
+
 解析结果写入 `parsed_msg`，位置参数以模板中的参数名为键。
 
 以连字符开头的选项以选项名作为键。`-l` 与 `--l` 按同一选项处理，选项名中的下划线映射为连字符。
@@ -341,7 +349,7 @@ async def _(msg: Bot.MessageSession):
     await msg.finish(I18NContext("greet.message.rename.done", name=name))
 ```
 
-`wait_next_message()` 等待触发当前命令的用户发送下一条消息。该消息仍会进入常规命令解析流程。若用户发送命令，该命令也会正常执行。设置 `delete=True` 时，将在等待结束后删除机器人发出的提示消息。
+`wait_next_message()` 等待触发当前命令的用户发送下一条消息。该消息仍会进入常规命令解析流程。若用户发送命令，命令会正常执行，这次等待继续，直到收到非命令消息或超时。设置 `delete=True` 时，将在等待结束后删除机器人发出的提示消息。
 
 ### 等待引用回复
 
@@ -569,7 +577,7 @@ async def _(event: Bot.EventInfo):
 
 - `CoolDown(key, msg, delay, whole_target=False)`：按用户或整个场景记录冷却时间，`check()` 返回剩余秒数。
 - `gained_petal()`、`lost_petal()`、`cost_petal()`、`sign_get_petal()`、`reset_petals_if_due()`：查询与变更花瓣余额，并在回复消息中提示。
-- `PlayState(game, msg)`：按会话保存小游戏状态。默认在 3600 秒（`GAME_EXPIRED`）后过期。`running()` 作为上下文管理器标记运行中状态。
+- `PlayState(game, msg)`：按会话保存小游戏状态。默认在 3600 秒（`GAME_EXPIRED`）后过期。`running()` 作为上下文管理器标记运行中状态。`disable()` 会取消开启该局命令仍挂起的等待任务，等待方随即以 `WaitCancelException` 结束。`_status`、`_generation` 与 `_session` 是保留键，不要用 `update()` 覆盖。
 
 ## 运行时资源
 

@@ -78,7 +78,7 @@ async def show(msg: Bot.MessageSession):
 - `consume_any_message=True` 时，任意消息都会结束等待，返回值仍按是否为确认词判断。
 - 全局 `no_confirm` 开启时，直接返回 `no_confirm_action`。
 - 平台不支持引用回复时，`wait_reply()` 改用 `wait_next_message()` 或 `wait_anyone()`，并以 `quote=False` 发送提示。`all_=True` 时接受任意成员的回复。
-- `wait_next_message()` 与 `wait_anyone()` 匹配到的消息仍交给常规解析器（parser）处理。`wait_confirm()` 与 `wait_reply()` 会取走匹配到的消息，该消息不会交给常规解析器（parser）处理。
+- `wait_next_message()` 与 `wait_anyone()` 匹配到的消息仍交给常规解析器（parser）处理。形如 `~模块 ...` 的命令消息不会完成这类等待，命令照常执行。等待保持挂起。`wait_confirm()` 与 `wait_reply()` 会取走匹配到的消息，该消息不会交给常规解析器（parser）处理。
 
 ```python
 from akaribot.core.api import Bot, WaitCancelException
