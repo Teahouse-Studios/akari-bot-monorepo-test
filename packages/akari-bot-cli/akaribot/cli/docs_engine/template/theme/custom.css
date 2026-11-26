@@ -74,6 +74,42 @@
   font-size: 11px;
 }
 
+/* 别名单独成行：名称多或很长时靠换行收缩，不把徽章顶出正文列 */
+.module-alias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+  margin: 4px 0 12px;
+  color: var(--vp-c-text-2);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.module-alias__label {
+  margin-inline-end: 2px;
+}
+
+.module-alias code {
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--vp-c-default-soft);
+  color: var(--vp-c-text-1);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.command-usage > .module-alias {
+  margin-block: 0 8px;
+}
+
+.module-meta__item > .module-meta__alias {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .meta-badge--command {
   border-color: rgba(68, 138, 255, 0.35);
   background: rgba(68, 138, 255, 0.12);

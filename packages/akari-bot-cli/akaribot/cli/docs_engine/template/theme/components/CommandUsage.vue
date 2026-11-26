@@ -46,11 +46,11 @@ const typeLabels: Record<string, string> = {
       <span v-if="props.type" class="meta-badge" :class="`meta-badge--${props.type}`">
         {{ typeLabels[props.type] || props.type }}
       </span>
-      <span v-if="props.aliases.length" class="meta-badge meta-badge--alias">
-        别名
-        <code v-for="alias in props.aliases" :key="alias">{{ alias }}</code>
-      </span>
     </div>
+    <p v-if="props.aliases.length" class="module-alias">
+      <span class="module-alias__label">别名</span>
+      <code v-for="alias in props.aliases" :key="alias">{{ alias }}</code>
+    </p>
     <table v-if="props.options.length" class="command-usage__options">
       <thead>
         <tr>

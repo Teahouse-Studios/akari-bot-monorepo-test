@@ -52,10 +52,6 @@ function labelFor(value: string, labels: Record<string, string>): string {
         <code>{{ item.name }}</code>
       </div>
       <div class="module-meta__badges">
-        <span v-if="item.aliases?.length" class="meta-badge meta-badge--alias">
-          别名
-          <code v-for="alias in item.aliases" :key="alias">{{ alias }}</code>
-        </span>
         <span
           v-for="kind in item.type"
           :key="kind"
@@ -77,6 +73,10 @@ function labelFor(value: string, labels: Record<string, string>): string {
         </span>
         <span v-if="item.note" class="module-meta__note">{{ item.note }}</span>
       </div>
+      <p v-if="item.aliases?.length" class="module-alias module-meta__alias">
+        <span class="module-alias__label">别名</span>
+        <code v-for="alias in item.aliases" :key="alias">{{ alias }}</code>
+      </p>
     </div>
   </section>
 </template>
