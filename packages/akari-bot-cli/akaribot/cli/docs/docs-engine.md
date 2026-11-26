@@ -125,6 +125,8 @@ favicon = "favicon.ico"
 
 [build]
 out_dir = "cache/docs/site"  # 留空时取 defaults.toml 的 [site] out_dir
+webp = true  # 留空时取 defaults.toml 的 [build] webp
+webp_keep_original = true  # 留空时取 defaults.toml 的 [build] webp_keep_original
 
 [theme]
 source = "auto"
@@ -173,6 +175,8 @@ color = "#d69cdd"
 - `category_icons`：侧栏分类的图标名，键取 `docs/config/global/docs.global.toml` 的 `category`。不在表内的分类不显示图标。分类图标与一级分组的图标一样，需要在主题里注册。
 - `assets`：随包素材的文件名，目前只有 `favicon`，相对 `akaribot/cli/docs/assets/`。实例可以换成同目录内的其他文件名，或改用 `site.favicon` 指向实例内的文件。
 - `build.out_dir`：输出目录，相对路径以实例根目录为基准。留空时取 `defaults.toml` 的 `[site] out_dir`。
+- `build.webp`：构建时把页面引用的位图转成 WebP，默认开启。默认值由 `defaults.toml` 的 `[build] webp` 提供。
+- `build.webp_keep_original`：转换后保留原图，默认开启。默认值由 `defaults.toml` 的 `[build] webp_keep_original` 提供。保留原图时，脚本文本里写死的原图路径仍然可用。
 - `theme.source`：主题来源。`auto` 在实例根目录查找 `akari-bot-docs-template`、`vendor/akari-bot-docs-template` 或 `docs-theme`。从仓库源码运行 CLI 时还会查找仓库内的 `vendor/akari-bot-docs-template` submodule。找不到时使用 `bundled`。也可写 `bundled`、`file:<路径>` 或实例内的相对路径。环境变量 `AKARIBOT_DOCS_THEME` 优先于配置。
 - `theme.color`：主题种子色，格式为 `#rrggbb`，留空使用主题默认值。Akari 主题把它写入 `settings.defaults.color`，访问者仍可在设置面板覆盖。内置 `bundled` 主题注入 `--vp-c-brand-*` 变量。
 - `deploy`：部署目标配置，引擎不解释这些字段。

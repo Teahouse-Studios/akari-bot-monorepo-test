@@ -109,7 +109,7 @@ function isExternal(link: string): boolean {
       <div class="akari-docs-footer__inner">
         <section v-if="hasAbout" class="akari-docs-footer__band">
           <figure v-if="image" class="akari-docs-footer__art">
-            <img class="akari-docs-footer__art-image" :src="image" :alt="imageAlt" decoding="async" />
+            <img class="akari-docs-footer__art-image" :src="image" :alt="imageAlt" loading="lazy" decoding="async" />
           </figure>
           <div class="akari-docs-footer__body">
             <h2 v-if="title" class="akari-docs-footer__heading">{{ title }}</h2>
@@ -133,7 +133,7 @@ function isExternal(link: string): boolean {
 
         <section v-else class="akari-docs-footer__brand-block">
           <p class="akari-docs-footer__brand">
-            <img v-if="logo" class="akari-docs-footer__logo" :src="logo" alt="" decoding="async" />
+            <img v-if="logo" class="akari-docs-footer__logo" :src="logo" alt="" loading="lazy" decoding="async" />
             <span class="akari-docs-footer__title">{{ brandTitle }}</span>
           </p>
           <p v-if="message" class="akari-docs-footer__message">{{ message }}</p>

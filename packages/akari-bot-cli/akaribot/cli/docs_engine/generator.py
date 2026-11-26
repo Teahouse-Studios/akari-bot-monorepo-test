@@ -1321,6 +1321,15 @@ def _write_vitepress_config(
     imports = ['import { defineConfig } from "vitepress"']
     head_export = _theme_module(theme, "head", imports)
     markdown_export = _theme_module(theme, "markdown", imports)
+    vite_export = _theme_module(theme, "vite", imports)
+    hooks_module = str(theme.config.get("hooks_module") or "").strip()
+    boot_export = str(theme.config.get("boot_export") or "").strip()
+    build_export = str(theme.config.get("build_export") or "").strip()
+    postcss_export = str(theme.config.get("postcss_export") or "").strip()
+    if hooks_module:
+        for name in (boot_export, build_export, postcss_export):
+            if name:
+                imports.append(f'import {{ {name} }} from "./theme/{hooks_module}"')
     parts = [
         config.labels["generated_header"],
         *imports,
@@ -1334,10 +1343,24 @@ def _write_vitepress_config(
         parts.append(f"  head: {head_export}(),")
     elif head_tags:
         parts.append(f"  head: [...{json.dumps(head_tags, ensure_ascii=False)}],")
+    if boot_export:
+        parts.append(f"  transformHtml: {boot_export},")
     if markdown_export:
         parts.append(_markdown_block(markdown_export))
     else:
         parts.append(MARKDOWN_CONFIG)
+    if vite_export or postcss_export:
+        parts.append(
+            _vite_block(
+                vite_export,
+                postcss_export=postcss_export,
+                seed=color,
+            )
+        )
+    if build_export:
+        webp = "true" if config.build.webp else "false"
+        keep = "true" if config.build.webp_keep_original else "false"
+        parts.append(f"  buildEnd: {build_export}({{ webp: {webp}, keepOriginal: {keep} }}),")
     prefixes = theme.config.get("custom_element_prefixes")
     if isinstance(prefixes, list) and prefixes:
         prefix_json = json.dumps([str(prefix) for prefix in prefixes], ensure_ascii=False)
@@ -1519,6 +1542,21 @@ def _markdown_block(export: str) -> str:
         "    },\n"
         "  },"
     )
+
+
+def _vite_block(export: str, *, postcss_export: str = "", seed: str = "") -> str:
+    lines = ["  vite: {"]
+    if export:
+        lines.append(f"    plugins: [...{export}()],")
+    if postcss_export:
+        argument = json.dumps(seed, ensure_ascii=False) if seed else ""
+        lines.append("    css: {")
+        lines.append("      postcss: {")
+        lines.append(f"        plugins: [...{postcss_export}({argument})],")
+        lines.append("      },")
+        lines.append("    },")
+    lines.append("  },")
+    return "\n".join(lines)
 
 
 def _is_api_page(page: DocPage) -> bool:

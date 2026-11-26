@@ -42,6 +42,7 @@ const isBuiltin = computed(() => BUILTIN.has(mark.value));
     :src="mark"
     alt=""
     aria-hidden="true"
+    loading="lazy"
     decoding="async"
   />
 </template>

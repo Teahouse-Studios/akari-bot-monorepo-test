@@ -1,4 +1,4 @@
-# 站点标题、输出位置、界面文案与侧边栏导航的内置默认值。
+# 站点标题、输出位置、构建开关、界面文案与侧边栏导航的内置默认值。
 # 实例的 docs.toml 可以逐键覆盖这里的取值，未覆盖的键沿用本文件。
 
 [site]
@@ -6,6 +6,11 @@ title = "小可 · 文档"
 lang = "zh-CN"
 base = "/"
 out_dir = "cache/docs/site"
+
+[build]
+# 构建时把页面引用的位图转成 WebP，并保留原图，供脚本文本里写死的路径继续使用。
+webp = true
+webp_keep_original = true
 
 [labels]
 home = "首页"

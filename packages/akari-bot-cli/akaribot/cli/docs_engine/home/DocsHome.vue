@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useData, withBase } from "vitepress";
+import imageColors from "virtual:akari-image-colors";
+import { lookupImageMeta } from "../../heroColorCache";
 import { useAkariColorScheme } from "../../composables/useColorScheme";
 
 const BRAND_EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
@@ -75,7 +77,7 @@ type HomeData = {
   };
 };
 
-const { frontmatter } = useData();
+const { frontmatter, page, site } = useData();
 const { resolved } = useAkariColorScheme();
 const isDark = computed(() => resolved.value === "dark");
 const logo = useBrandAsset("logo", "/home/logo.png");
@@ -168,10 +170,68 @@ function href(value: string): string {
 function asset(value: string): string {
   return withBase(value);
 }
+
+/**
+ * 分类图加载动画的底色。
+ *
+ * 主色在构建站点时已经采样过一次（主题的 ``media-colors`` 插件），懒加载时直接
+ * 从同一份颜色表里取，骨架不必等到图片解码完才摆脱主题色。
+ */
+function mediaStyle(value: string): Record<string, string> | undefined {
+  const meta = lookupImageMeta(imageColors, asset(value), page.value.filePath, site.value.base);
+  return meta?.color ? { "--akari-media-color": meta.color } : undefined;
+}
+
+const homeRoot = ref<HTMLElement | null>(null);
+let lazyObserver: IntersectionObserver | undefined;
+
+/**
+ * 首页的分类图与贡献卡 logo 在图集进入视口前不下载。
+ *
+ * 浏览器原生的 ``loading="lazy"`` 只在图片距视口 3000px 以内才下载，首页这些图
+ * 正好落在这个预取范围内，仍会挤进首屏的请求队列，所以这里用 IntersectionObserver
+ * 接管：先只写 ``data-akari-src``，靠近视口时再赋给 ``src``。
+ */
+function observeLazyImages(): void {
+  const images = homeRoot.value?.querySelectorAll<HTMLImageElement>("img[data-akari-src]");
+  if (!images?.length) return;
+  if (!("IntersectionObserver" in window)) {
+    for (const image of images) adoptLazyImage(image);
+    return;
+  }
+  lazyObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        adoptLazyImage(entry.target as HTMLImageElement);
+        lazyObserver?.unobserve(entry.target);
+      }
+    },
+    { rootMargin: "240px 0px" },
+  );
+  for (const image of images) lazyObserver.observe(image);
+}
+
+function adoptLazyImage(image: HTMLImageElement): void {
+  const source = image.dataset.akariSrc;
+  if (!source) return;
+  delete image.dataset.akariSrc;
+  image.closest<HTMLElement>(".akari-lazy-media")?.setAttribute("data-state", "loading");
+  image.src = source;
+}
+
+/** 图片到达（或失败）后收起加载动画。 */
+function settleTopicImage(event: Event): void {
+  const image = event.currentTarget as HTMLImageElement | null;
+  image?.closest<HTMLElement>(".akari-lazy-media")?.setAttribute("data-state", "loaded");
+}
+
+onMounted(observeLazyImages);
+onBeforeUnmount(() => lazyObserver?.disconnect());
 </script>
 
 <template>
-  <div v-if="home" class="akari-home">
+  <div v-if="home" ref="homeRoot" class="akari-home">
     <div class="akari-home__hero-layer">
       <section class="akari-home__hero" aria-labelledby="akari-home-title">
       <AkariFluidWall
@@ -242,7 +302,7 @@ function asset(value: string): string {
 
     <section class="akari-home__start" aria-labelledby="akari-home-start">
       <div class="akari-home__start-brand">
-        <img :src="asset(isDark ? logoDark : logo)" alt="AkariBot" />
+        <img :src="asset(isDark ? logoDark : logo)" alt="AkariBot" loading="lazy" decoding="async" />
       </div>
 
       <div class="akari-home__start-panel">
@@ -287,7 +347,24 @@ function asset(value: string): string {
       </header>
       <div class="akari-home__topic-grid">
         <a v-for="topic in home.topics" :key="topic.title" class="akari-home__topic" :href="href(topic.href)">
-          <img class="akari-home__topic-image" :src="asset(topic.image)" alt="" loading="lazy" />
+          <span
+            class="akari-lazy-media akari-home__topic-media"
+            data-state="idle"
+            :style="mediaStyle(topic.image)"
+          >
+            <img
+              class="akari-home__topic-image"
+              :data-akari-src="asset(topic.image)"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              @load="settleTopicImage"
+              @error="settleTopicImage"
+            />
+            <span class="akari-lazy-media__overlay" aria-hidden="true">
+              <m3e-loading-indicator></m3e-loading-indicator>
+            </span>
+          </span>
           <span class="akari-home__topic-copy">
             <span class="akari-home__topic-tag">{{ topic.tag }}</span>
             <strong>{{ topic.title }}</strong>
@@ -303,8 +380,10 @@ function asset(value: string): string {
           <span v-if="card.logo" class="akari-home__contribute-logo-frame">
             <img
               class="akari-home__contribute-logo"
-              :src="asset(card.logo)"
+              :data-akari-src="asset(card.logo)"
               :alt="card.title"
+              loading="lazy"
+              decoding="async"
             />
           </span>
           <span v-else class="akari-home__contribute-icon">
@@ -765,6 +844,12 @@ html.dark .akari-home__contribute-logo-frame {
 
 .akari-home__topic:hover {
   background-color: var(--md-sys-color-surface-container);
+}
+
+.akari-home__topic-media {
+  display: block;
+  width: 100%;
+  margin: 0;
 }
 
 .akari-home__topic-image {

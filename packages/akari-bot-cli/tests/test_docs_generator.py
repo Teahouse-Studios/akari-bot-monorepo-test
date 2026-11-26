@@ -3,6 +3,7 @@
 import json
 import os
 from dataclasses import replace
+from types import SimpleNamespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from akaribot.cli.docs_engine.config import (
     DocsLocaleConfig,
     DocsSiteConfig,
     DocsThemeConfig,
+    load_config,
 )
 from akaribot.cli.docs_engine.generator import _link_api_references, generate
 from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
@@ -566,6 +568,36 @@ async def _test_external_theme_config():
     )
 
 
+async def _test_webp_conversion_defaults_and_override():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        theme_dir = root / "theme"
+        theme_dir.mkdir()
+        (theme_dir / "vite.ts").write_text("export function akariBuildEnd() {}\n", encoding="utf-8")
+        theme = ThemeSpec(
+            name="akari-docs",
+            version="1.2.3",
+            source="file:template",
+            root=root,
+            theme_dir=theme_dir,
+            package_dir=root,
+            vitepress_version="2.0.0-alpha.21",
+            node_major=22,
+            config={"hooks_module": "vite.ts", "build_export": "akariBuildEnd"},
+        )
+        package = _package(root, {"index.md": "# Demo\n"}, pages=(DocPage("index.md", "概览", 0),))
+        source = root / "cache" / "docs" / "src"
+        generate(DocCatalog(packages=(package,)), source, _docs(root), theme=theme)
+        defaults = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        (root / "docs.toml").write_text("[build]\nwebp = false\nwebp_keep_original = false\n", encoding="utf-8")
+        generate(DocCatalog(packages=(package,)), source, load_config(SimpleNamespace(root=root)), theme=theme)
+        overridden = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+    return (
+        "buildEnd: akariBuildEnd({ webp: true, keepOriginal: true })" in defaults
+        and "buildEnd: akariBuildEnd({ webp: false, keepOriginal: false })" in overridden
+    )
+
+
 async def _test_site_favicon_and_logo_defaults():
     with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
         root = Path(raw)
@@ -1098,6 +1130,7 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_site_branding_home_and_group_icons, "站点 Logo、favicon、首页与一级图标")
     await tester.test(_test_bundled_theme_color_injects_css, "内置主题注入主题色变量")
     await tester.test(_test_external_theme_config, "外部主题生成 head、markdown 与侧栏配置")
+    await tester.test(_test_webp_conversion_defaults_and_override, "WebP 转换默认开启，实例配置可关闭")
     await tester.test(_test_labels_come_from_config, "侧栏与导航文案取自配置")
     await tester.test(_test_command_prefix_reaches_theme_config, "命令前缀写入主题配置，缺失时不写")
     await tester.test(_test_site_favicon_and_logo_defaults, "站点图标取随包素材，品牌标志与内置回退")

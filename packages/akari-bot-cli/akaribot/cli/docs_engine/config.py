@@ -72,6 +72,7 @@ class DocsDefaults:
     :param category_icons: 分类图标名，键为 ``docs.toml`` 的 ``category``。
     :param assets: 随包站点素材，键为用途，值为 ``assets/`` 下的文件名。
     :param site: 站点展示默认值，目前只有 ``title``。
+    :param build: 构建开关的默认值，目前有 ``webp`` 与 ``webp_keep_original``。
     :param locales: 默认语言清单，键为语言标签，值为显示名称。
     """
 
@@ -81,6 +82,7 @@ class DocsDefaults:
     category_icons: Mapping[str, str] = field(default_factory=dict)
     assets: Mapping[str, str] = field(default_factory=dict)
     site: Mapping[str, str] = field(default_factory=dict)
+    build: Mapping[str, bool] = field(default_factory=dict)
     locales: Mapping[str, str] = field(default_factory=dict)
     footer: DocsFooterConfig = field(default_factory=DocsFooterConfig)
 
@@ -104,6 +106,7 @@ def load_defaults() -> DocsDefaults:
         category_icons=_string_map(data, path, "category_icons"),
         assets=_string_map(data, path, "assets"),
         site=_string_map(data, path, "site"),
+        build=_bool_map(data, path, "build"),
         locales=_locale_labels(data, path),
         footer=_footer_config(data, path),
     )
@@ -177,9 +180,13 @@ class DocsBuildConfig:
     """构建输出设置。
 
     :param out_dir: 输出目录，相对实例根或绝对路径。留空时取 ``defaults.toml`` 的 ``[site] out_dir``。
+    :param webp: 构建时把页面引用的位图转成 WebP。``None`` 时取 ``defaults.toml`` 的 ``[build] webp``。
+    :param webp_keep_original: 转换后保留原图。``None`` 时取 ``defaults.toml`` 的 ``[build] webp_keep_original``。
     """
 
     out_dir: str = ""
+    webp: bool | None = None
+    webp_keep_original: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -225,8 +232,15 @@ class DocsConfig:
         }
         if missing:
             object.__setattr__(self, "site", replace(self.site, **missing))
-        if not self.build.out_dir and "out_dir" in defaults.site:
-            object.__setattr__(self, "build", replace(self.build, out_dir=defaults.site["out_dir"]))
+        build = self.build
+        if not build.out_dir and "out_dir" in defaults.site:
+            build = replace(build, out_dir=defaults.site["out_dir"])
+        if build.webp is None:
+            build = replace(build, webp=defaults.build.get("webp", True))
+        if build.webp_keep_original is None:
+            build = replace(build, webp_keep_original=defaults.build.get("webp_keep_original", True))
+        if build != self.build:
+            object.__setattr__(self, "build", build)
         object.__setattr__(self, "locales", self._resolved_locales(defaults, explicit_lang))
         object.__setattr__(self, "footer", _merge_footer(self.footer, defaults.footer))
         for name, source in (
@@ -347,7 +361,11 @@ def load_config(instance: Any) -> DocsConfig:
             favicon=_text(site, "favicon", ""),
             command_prefix=_text(site, "command_prefix", "").strip() or read_command_prefix(root),
         ),
-        build=DocsBuildConfig(out_dir=_text(build, "out_dir", "")),
+        build=DocsBuildConfig(
+            out_dir=_text(build, "out_dir", ""),
+            webp=_build_flag(build, "webp", path),
+            webp_keep_original=_build_flag(build, "webp_keep_original", path),
+        ),
         theme=DocsThemeConfig(
             source=_text(theme, "source", DEFAULT_THEME_SOURCE),
             color=_theme_color(theme, path),
@@ -584,6 +602,25 @@ def _string_map(data: Mapping[str, Any], path: Path, table: str) -> dict[str, st
             )
         icons[str(key)] = value.strip()
     return icons
+
+
+def _bool_map(data: Mapping[str, Any], path: Path, table: str) -> dict[str, bool]:
+    section = _table(data, table, path)
+    flags: dict[str, bool] = {}
+    for key, value in section.items():
+        if not isinstance(value, bool):
+            raise DocsError("cli.docs.error.bad_config", path=str(path), reason=f"{table}.{key} is not a boolean")
+        flags[str(key)] = value
+    return flags
+
+
+def _build_flag(data: Mapping[str, Any], name: str, path: Path) -> bool | None:
+    value = data.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise DocsError("cli.docs.error.bad_config", path=str(path), reason=f"[build] {name} must be a boolean")
+    return value
 
 
 def site_asset_path(root: Path, value: str) -> Path | None:
