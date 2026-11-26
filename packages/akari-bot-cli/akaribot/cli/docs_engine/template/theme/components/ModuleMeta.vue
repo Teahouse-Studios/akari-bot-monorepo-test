@@ -74,7 +74,7 @@ function labelFor(value: string, labels: Record<string, string>): string {
         <span v-if="item.note" class="module-meta__note">{{ item.note }}</span>
       </div>
       <p v-if="item.aliases?.length" class="module-alias module-meta__alias">
-        <span class="module-alias__label">别名</span>
+        <span class="module-alias__label">别名：</span>
         <code v-for="alias in item.aliases" :key="alias">{{ alias }}</code>
       </p>
     </div>

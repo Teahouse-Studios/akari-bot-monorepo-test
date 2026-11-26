@@ -48,7 +48,7 @@ const typeLabels: Record<string, string> = {
       </span>
     </div>
     <p v-if="props.aliases.length" class="module-alias">
-      <span class="module-alias__label">别名</span>
+      <span class="module-alias__label">别名：</span>
       <code v-for="alias in props.aliases" :key="alias">{{ alias }}</code>
     </p>
     <table v-if="props.options.length" class="command-usage__options">
