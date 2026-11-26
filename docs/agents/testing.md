@@ -15,6 +15,8 @@
   SKIP 并输出 `junit.xml`。
 - 全量测试的失败清单必须与基准按名称一一对应，基准是 `tools/test_baseline.txt`，
   通过 `tools/check_test_baseline.py` 对比。只读测试另用 `tools/test_baseline_readonly.txt`。
+- CI 按文件在收集顺序中的序号把用例拆到多个分片并行执行，分片规则见 `.github/scripts/test_shard.py`。
+  各分片的 junit 合并后与同一份基准对比，基准因此不随分片数变化。
 - 不要使用固定 `sleep` 等待，需要超时等待时使用 `akaribot.testing.timing.TIME_SCALE`。
 
 ## 编写

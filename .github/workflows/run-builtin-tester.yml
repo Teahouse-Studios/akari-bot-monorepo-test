@@ -9,9 +9,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 全量用例一轮约 36 分钟，只读包目录那一轮还要再跑一次。两轮都拆分为多个分片并行执行，实际耗时降至
+# 单个分片的时长。某个分片失败时其余分片继续运行，失败清单因此始终完整。
 jobs:
-  test:
+  lint:
+    name: Lint and unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -133,30 +137,111 @@ jobs:
         run: |
           uv run python -m pytest tests/unit -q --junitxml=junit-unit.xml
 
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-unit
+          path: junit-unit.xml
+          if-no-files-found: warn
+
+  test:
+    name: Integration tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # 某个分片失败时其余分片继续运行至完成，失败清单才完整。
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          uv sync --locked --all-extras --dev
+
       - name: Run integration tests
-        timeout-minutes: 60
+        timeout-minutes: 25
         env:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
           # 每个入口打印一行准备阶段耗时，便于定位耗时偏高的准备阶段。
           AKARI_TEST_SETUP_TIMING: "1"
         run: |
-          # runner 发现任何失败就以非 0 退出，而本仓库有 4 个用例失败（参见 tools/test_baseline.txt）。
-          # 若直接由退出码判定步骤成败，本轮会立即失败，后续的“只读包目录”一轮就不会执行。
-          # 因此此处仅记录退出码，由下一步通过对比失败的用例清单得出最终判定。不使用 `|| true`，也不仅比较数量。
+          # 分片按文件在收集顺序中的序号取模，新增用例文件自动落入某个分片，不需要维护分片清单。
+          FILES=()
+          while IFS= read -r path; do
+            FILES+=("$path")
+          done < <(python3 .github/scripts/test_shard.py \
+            --shard ${{ matrix.shard }} --total ${{ strategy.job-total }})
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "本分片没有选中任何测试文件。" >&2
+            exit 1
+          fi
+          # runner 发现任何失败就以非 0 退出，其中包含基线中记录的既有失败。因此本步骤仅记录退出码，
+          # 最终判定由 report job 按名称对比失败清单得出。
           set +e
-          uv run python tester.py
+          uv run python tester.py "${FILES[@]}"
           echo "tester_exit=$?" >> "$GITHUB_ENV"
           set -e
-          cp junit.xml junit-normal.xml
+          cp junit.xml "junit-normal-${{ matrix.shard }}.xml"
 
-      - name: Check failure set against baseline
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-normal-${{ matrix.shard }}
+          path: junit-normal-${{ matrix.shard }}.xml
+          if-no-files-found: warn
+
+  readonly:
+    name: Read-only tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
         shell: bash
         run: |
-          uv run python tools/check_test_baseline.py --junit junit-normal.xml --baseline tools/test_baseline.txt
+          uv sync --locked --all-extras --dev
 
       - name: Run tests with read-only package directories
-        timeout-minutes: 60
+        timeout-minutes: 25
         env:
           CI: "1"
           AKARI_TEST_TIME_SCALE: "10"
@@ -167,25 +252,68 @@ jobs:
           # 检查以整个 packages/ 目录作为扫描根目录。若将 core 与 modules 的路径以固定常量写入，包再次拆分或重命名时
           # 就会遗漏检查而不报错。使用单一根目录不受包增减影响，代价是适配器目录也会一并设为只读。
           chmod -R a-w packages
-          trap 'chmod -R u+w packages' EXIT
+          FILES=()
+          while IFS= read -r path; do
+            FILES+=("$path")
+          done < <(python3 .github/scripts/test_shard.py \
+            --shard ${{ matrix.shard }} --total ${{ strategy.job-total }})
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "本分片没有选中任何测试文件。" >&2
+            exit 1
+          fi
           set +e
-          uv run python tester.py
+          uv run python tester.py "${FILES[@]}"
           echo "readonly_tester_exit=$?" >> "$GITHUB_ENV"
           set -e
-          cp junit.xml junit-readonly.xml
+          cp junit.xml "junit-readonly-${{ matrix.shard }}.xml"
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-readonly-${{ matrix.shard }}
+          path: junit-readonly-${{ matrix.shard }}.xml
+          if-no-files-found: warn
+
+  report:
+    name: Report
+    # 任一分片失败也要汇总，否则失败清单不完整，判定也就失去意义。
+    if: always()
+    needs: [lint, test, readonly]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: reports
+          merge-multiple: true
+
+      - name: Check failure set against baseline
+        shell: bash
+        run: |
+          # 各分片分别产出一份 junit，合并后与唯一的一份基准对比，基准因此不随分片数变化。
+          python3 tools/check_test_baseline.py \
+            --junit reports/junit-normal-*.xml --baseline tools/test_baseline.txt
 
       - name: Check read-only failure set against baseline
         shell: bash
         run: |
-          # 只读挂载下可能出现与写入磁盘相关的额外失败，因此单独维护一份基准清单。两轮测试均按名称对比失败清单，且两份清单均仅允许减少。
-          uv run python tools/check_test_baseline.py \
-            --junit junit-readonly.xml --baseline tools/test_baseline_readonly.txt
+          # 只读挂载下可能出现与写入磁盘相关的额外失败，因此单独维护一份基准清单。两轮测试均按名称对比
+          # 失败清单，且两份清单均仅允许减少。
+          python3 tools/check_test_baseline.py \
+            --junit reports/junit-readonly-*.xml --baseline tools/test_baseline_readonly.txt
 
       - name: Generate test report
         uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Test report
-          path: junit*.xml
+          path: reports/junit*.xml
           reporter: java-junit
           fail-on-error: 'false'

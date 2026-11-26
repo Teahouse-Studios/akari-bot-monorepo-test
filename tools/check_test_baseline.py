@@ -1,16 +1,16 @@
 """把失败的用例清单与基准对比，仅允许基准中按名称列出的失败存在。
 
-本仓库当前存在既有失败用例（`test_parser_args`、`test_parser_recovery`、
-`test_qqbot_modern_api`、`test_tos`，其中若干还带子用例）。runner 发现任何失败即以非 0 退出，
-CI 的第一轮步骤随之失败，后面的“只读包目录”一轮不再执行。本工具检查失败的用例清单与基准是否按名称
-一一对应。
+基准把既有失败记录为一份可提交的小清单，因此能单独识别出新增失败。runner 发现任何失败即以非 0 退出，
+CI 因此仅记录退出码，最终判定由本工具按名称对比得出。本工具不提交整份 junit.xml。新增、消失与错误
+文本变化均判为失败，所以 ``|| true`` 与“失败数量没变”都无法作为通过依据。既有失败修复后基准必须
+同步缩小，否则基准中残留的已修复条目会使本工具判定失败。
 
-本工具把既有失败记录为可提交的小清单，不提交整份 junit.xml。新增、消失与错误文本变化均判为失败，
-因此 `|| true` 与“失败数量没变”都无法作为通过依据。既有失败修好后基准必须同步缩小，
-否则基准中残留的已修复条目会使本工具判定失败。
+CI 把用例拆到多个分片并行执行，每个分片各产出一份 junit。本工具先把多份 junit 合并再对比，基准因此
+始终只有一份，不随分片数变化。
 
 用法：
     python tools/check_test_baseline.py --junit junit.xml --baseline tools/test_baseline.txt
+    python tools/check_test_baseline.py --junit junit-1.xml --junit junit-2.xml --baseline tools/test_baseline.txt
     python tools/check_test_baseline.py --junit junit.xml --baseline tools/test_baseline.txt --update
 
 退出码：0 表示一致，1 表示集合不一致，2 表示输入不可读。
@@ -139,7 +139,14 @@ def write_baseline(path: Path, failures: list[Failure]) -> None:
 def build_parser() -> argparse.ArgumentParser:
     """配置命令行入口参数。"""
     parser = argparse.ArgumentParser(description="测试失败清单与基准按名称对比")
-    parser.add_argument("--junit", metavar="PATH", type=Path, default=DEFAULT_JUNIT, help="junit.xml 路径")
+    parser.add_argument(
+        "--junit",
+        metavar="PATH",
+        type=Path,
+        nargs="+",
+        action="extend",
+        help="junit.xml 路径，省略时读取 junit.xml，可给出多份并在对比前合并",
+    )
     parser.add_argument("--baseline", metavar="PATH", type=Path, default=DEFAULT_BASELINE, help="基线清单路径")
     parser.add_argument("--update", action="store_true", help="用本次实际失败集合重写基线，不判定成败")
     return parser
@@ -148,11 +155,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """主入口函数，返回进程退出码，0 表示失败的用例清单与基准按名称一一对应。"""
     args = build_parser().parse_args(argv)
-    try:
-        actual = read_failures(args.junit)
-    except (OSError, ET.ParseError) as error:
-        print(f"无法读取 {args.junit}：{error}", file=sys.stderr)
-        return 2
+    junit_paths = args.junit or [DEFAULT_JUNIT]
+    actual: list[Failure] = []
+    for path in junit_paths:
+        try:
+            actual.extend(read_failures(path))
+        except (OSError, ET.ParseError) as error:
+            print(f"无法读取 {path}：{error}", file=sys.stderr)
+            return 2
+    actual.sort(key=lambda item: (item.name, item.kind, item.message))
 
     if args.update:
         try:
@@ -170,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     vanished, added, changed = compare(baseline, actual)
-    print(f"基线 {len(baseline)} 条，实际 {len(actual)} 条。")
+    print(f"基线 {len(baseline)} 条，实际 {len(actual)} 条（{len(junit_paths)} 份 junit）。")
     if not (vanished or added or changed):
         print("失败集合与基线逐名一致。")
         return 0

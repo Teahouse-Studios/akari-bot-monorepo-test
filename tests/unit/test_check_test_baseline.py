@@ -32,14 +32,14 @@ def _tool():
     return module
 
 
-def _write(tmp: Path, failures: list[tuple[str, str, str]]) -> Path:
+def _write(tmp: Path, failures: list[tuple[str, str, str]], name: str = "junit.xml") -> Path:
     body = "".join(
-        f'    <testcase name="{name}" classname="FunctionTest.{index}" time="0.1">\n'
+        f'    <testcase name="{name_}" classname="FunctionTest.{index}" time="0.1">\n'
         f'      <{kind} message="{message}">trace</{kind}>\n'
         f"    </testcase>\n"
-        for index, (name, kind, message) in enumerate(failures, start=2)
+        for index, (name_, kind, message) in enumerate(failures, start=2)
     )
-    path = tmp / "junit.xml"
+    path = tmp / name
     path.write_text(JUNIT_TEMPLATE.format(failures=len(failures), body=body), encoding="utf-8")
     return path
 
@@ -112,6 +112,24 @@ def _test_update_rewrites_baseline():
     return updated == 0 and checked == 0
 
 
+def _test_multiple_junit_files_are_unioned():
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        first = ("test_one", "failure", "Function test failed")
+        second = ("test_two", "error", "Subtest raised TimeoutError")
+        code = _tool().main(
+            [
+                "--junit",
+                str(_write(tmp, [first], "junit-1.xml")),
+                "--junit",
+                str(_write(tmp, [second], "junit-2.xml")),
+                "--baseline",
+                str(_write_baseline(tmp, [first, second])),
+            ]
+        )
+    return code == 0
+
+
 def _test_missing_junit_is_an_input_error():
     with tempfile.TemporaryDirectory() as raw:
         tmp = Path(raw)
@@ -137,6 +155,7 @@ async def test_check_test_baseline(tester: Tester):
     await tester.test(_test_changed_message_fails_even_when_count_matches, "数量不变但文本变化判失败")
     await tester.test(_test_kind_change_is_reported_as_changed, "failure 变 error 属文本变化")
     await tester.test(_test_update_rewrites_baseline, "--update 重写基线后可通过对拍")
+    await tester.test(_test_multiple_junit_files_are_unioned, "多份 junit 合并后对比")
     await tester.test(_test_missing_junit_is_an_input_error, "缺 junit 报输入错误")
     await tester.test(_test_malformed_baseline_line_is_an_input_error, "基线格式错误报输入错误")
     return tester
