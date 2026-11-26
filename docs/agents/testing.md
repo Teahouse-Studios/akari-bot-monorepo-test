@@ -9,10 +9,12 @@
 
 ## 运行
 
-- 本地仅运行与改动相关的入口（`.venv/bin/python tests/run_one.py <包内用例路径> [入口名]`），
-  全量测试留给 CI 执行。
-- 必须设置 `CI=1`，否则无 `Expectation` 的用例会调用 `input()` 等待人工复核。设置 `CI=1` 时会转为
-  SKIP 并输出 `junit.xml`。
+- 单元测试由 pytest 收集，使用 `.venv/bin/python -m pytest tests/unit` 运行。集成与包内用例由
+  `akaribot.testing` 运行，根目录 `tester.py` 是其兼容入口。本地仅运行与改动相关的入口
+  （`.venv/bin/python tests/run_one.py <包内用例路径> [入口名]`），全量测试留给 CI 执行。
+- 必须设置 `CI=1`，否则运行器中无 `Expectation` 的用例会调用 `input()` 等待人工复核。设置 `CI=1` 时
+  这些用例转为 SKIP，完整运行输出 `junit.xml`。
+- pytest 前端的单个用例超时通过 `@pytest.mark.akari_timeout` 或 `AKARI_TEST_TIMEOUT` 调整。
 - 全量测试的失败清单必须与基准按名称一一对应，基准是 `tools/test_baseline.txt`，
   通过 `tools/check_test_baseline.py` 对比。只读测试另用 `tools/test_baseline_readonly.txt`。
 - CI 按文件在收集顺序中的序号把用例拆到多个分片并行执行，分片规则见 `.github/scripts/test_shard.py`。

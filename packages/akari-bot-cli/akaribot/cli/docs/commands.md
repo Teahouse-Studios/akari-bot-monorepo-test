@@ -59,7 +59,7 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 - `--coverage`：收集覆盖率。`--case`：仅运行名称包含该子串的用例，可多次指定。
 - 测试框架不在实例默认依赖中，需要先安装 `akari-bot-testing`。缺少该包时命令会给出明确安装提示。
 
-测试由 `tester.py` 启动，与实例中的模块共用配置与临时数据目录。运行单个文件时传入包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
+测试由 `akaribot.testing` 运行，加载实例环境中的模块。配置来自临时目录，数据库使用内存 SQLite。根目录的 `tester.py` 是同一运行器的兼容入口。运行单个文件时传入包内路径，例如 `packages/akari-bot-core/tests/test_registry.py`。
 
 ## module
 

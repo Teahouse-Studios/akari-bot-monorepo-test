@@ -1,20 +1,23 @@
 # 编写用例
 
+`@func_case` 入口由自研运行器与 pytest 插件收集，两者的差异参见[测试框架](index.md)。
+
 ## 文件位置
 
 | 目录 | 内容 |
 | --- | --- |
-| `tests/unit/` | 纯函数与类型测试 |
+| `tests/unit/` | 纯函数与类型测试，由 pytest 收集 |
 | `tests/integration/` | 覆盖完整命令链路的集成测试 |
 | `tests/fixtures/http/` | 录制的 HTTP 响应 |
-| `tests/helpers/` | RPC worker 等辅助进程 |
+| `tests/fixtures/webrender/` | 录制的 WebRender 源码 |
+| `tests/helpers/` | RPC 节点等辅助进程 |
 | `packages/*/tests/` | 包自带的测试 |
 
 文件名称以 `test_` 开头。不同包可以存在同名文件，运行器按仓库相对路径生成模块名称。
 
 ## `@func_case`
 
-由 `@func_case` 标记的 async 函数为一个测试用例，其参数为 `Tester`。用例通常在末尾返回 `return tester`，框架也会从传入对象中收集测试结果。
+由 `@func_case` 标记的 async 函数为一个测试用例，其参数为 `Tester`。用例通常在末尾返回 `return tester`，框架也会从传入对象中收集测试结果。在 pytest 前端下，入口内任一子测试失败，该 pytest 用例即判定为失败。
 
 示例：
 
@@ -28,12 +31,14 @@ async def test_version(tester: Tester):
     return tester
 ```
 
-`Tester` 仅提供两个检查方法：
+`Tester` 提供两个检查方法：
 
 - `await tester.integrate(input_, expected=None, note=None, timeout=None)`：发送一条命令并校验输出。`input_` 为字符串列表时表示连续多条消息，用于交互式命令。
 - `await tester.test(func, note=None)`：调用纯函数或谓词，返回 True 即通过，支持同步与异步。框架不提供 `tester.expect()`。
 
-`expected` 参数传入 `Expectation` 实例。传入 `None` 表示人工复核，仅可在交互式全量运行中使用。
+`Tester` 另提供 `mock_config(ConfigCls, 字段=值)`，返回上下文管理器，用于在进程内覆盖配置项。
+
+`expected` 参数传入 `Expectation` 实例。自研运行器中传入 `None` 表示人工复核，CI 模式下转为 SKIP。pytest 前端把 `expected=None` 的子测试直接判定为通过。
 
 ## `@case`
 
@@ -54,7 +59,7 @@ async def _(msg: Bot.MessageSession, word: str):
 说明：
 
 - 第一个参数为输入内容，第二个参数为期望值，此外可指定 `note` 与 `timeout`。
-- `@case` 用例的并发上限为 1。
+- 由 `@case` 注册的用例按注册顺序串行执行。
 
 ## 匹配器
 
@@ -82,7 +87,7 @@ async def _(msg: Bot.MessageSession, word: str):
 
 1. 不按平台过滤模块。
 2. 命令分发不检查模块是否处于启用状态，无需先 `~module enable`。
-3. 发送者被设为 superuser，多数权限检查直接通过。
+3. 发送者被设为超级用户，多数权限检查直接通过。
 
 因此测试通过并不代表命令在真实平台上可达。涉及平台过滤、模块开关与权限判定的修改需要另行验证。
 
@@ -90,21 +95,30 @@ async def _(msg: Bot.MessageSession, word: str):
 
 - `mock/database.py`：内存 SQLite，运行用例前重新构建。
 - `mock/loader.py`：加载全部已发现模块，可注入 monkey patch。
+- `mock/config.py`：`mock_config()` 在进程内覆盖配置项。
 - `mock/random.py`：固定种子，随机输出可复现。
+- `mock/scheduler.py`：计划任务的列表查询与手动执行。
 - `mock/http.py` 与 `mock/fixtures.py`：按 URL、方法、请求体摘要回放 HTTP 响应。
+- `mock/webrender.py`：按 URL 回放 WebRender 源码与截图占位。
 - `mock/session.py`：记录 `sent`、`action` 与按钮数据。
 
 需要替换 `Config` 等全局对象时，请使用 `unittest.mock.patch`。
 
 ## Fixture
 
-load_modules() 会自动加载 tests/fixtures/http/ 目录下的全部 JSON 文件。新增网络模块用例时，请先使用 tests/capture_http_fixtures.py 录制真实响应，再在测试中离线回放；手工构造测试数据时可以使用 save_fixture()。
+`load_modules()` 默认加载 `tests/fixtures/http/` 与 `tests/fixtures/webrender/` 下的录制数据，未录制的请求不会访问真实网络。
 
-文件名称为 URL、方法与请求体摘要的哈希，同一 URL 上不同请求体各自独立成文件。
+新增网络模块用例时，先用 `tests/capture_http_fixtures.py` 录制真实响应，渲染类录制数据用 `tests/capture_webrender_fixtures.py` 录制。手动构造 HTTP 录制数据时可以使用 `save_fixture()`。
+
+设置 `AKARI_TEST_ALLOW_LIVE_HTTP=1` 时放行未录制的请求。
+
+HTTP 录制数据的文件名称为 URL、方法与请求体摘要的哈希，同一 URL 上不同请求体各自独立成文件。
 
 ## 常见陷阱
 
 - 自动化运行必须设置 `CI=1`。否则人工复核与交互输入会挂起。
+- `tests/unit/` 的 `@func_case` 入口由 pytest 收集，入口内的子测试失败直接判定为该 pytest 用例失败。
+- pytest 前端的单个用例超时通过 `@pytest.mark.akari_timeout` 或 `AKARI_TEST_TIMEOUT` 调整。
 - `tests/run_one.py` 强制 CI 模式，不适用于需要人工复核的用例。结束时调用的 `os._exit` 会跳过常规清理。
 - 仅检查对外行为，不要检查私有属性、调用次数、日志条数或提示文案的完整措辞。
 - 比较结构化返回值时优先声明必需字段，避免因新增字段导致既有用例失败。
