@@ -87,8 +87,14 @@ jobs:
             bundle=.
             packages/akari-bot-cli/akaribot/cli/locales=akaribot/cli/locales
             packages/akari-bot-cli/akaribot/cli/templates=akaribot/cli/templates
-            packages/akari-bot-cli/akaribot/cli/doc=akaribot/cli/doc
-            packages/akari-bot-cli/akaribot/cli/docs/template=akaribot/cli/docs/template
+            packages/akari-bot-cli/akaribot/cli/docs=akaribot/cli/docs
+            packages/akari-bot-cli/akaribot/cli/docs_engine/template=akaribot/cli/docs_engine/template
+            packages/akari-bot-cli/akaribot/cli/docs_engine/home=akaribot/cli/docs_engine/home
+            packages/akari-bot-cli/akaribot/cli/docs_engine/footer=akaribot/cli/docs_engine/footer
+            packages/akari-bot-cli/akaribot/cli/docs_engine/snippets=akaribot/cli/docs_engine/snippets
+            packages/akari-bot-cli/akaribot/cli/docs_engine/assets=akaribot/cli/docs_engine/assets
+          include-data-files: |
+            packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml=akaribot/cli/docs_engine/defaults.toml
           # CLI 包自身的资源已在上方按目录明确声明，此处重复声明仅会触发 "Duplicate data file" 告警。
           # i18n 包的 locales 与其他第三方包的数据文件由 package-data 收集。
           include-package-data: |
