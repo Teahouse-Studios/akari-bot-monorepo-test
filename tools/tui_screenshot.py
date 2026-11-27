@@ -124,6 +124,15 @@ def parse_size(value: str) -> tuple[int, int]:
     return size
 
 
+def parse_keys(value: str) -> tuple[str, ...]:
+    """把 ``n,enter`` 形式的按键序列拆分为按键名。
+
+    :param value: 逗号分隔的按键名。
+    :return: 按键序列。
+    """
+    return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
 def split_clusters(text: str) -> list[str]:
     """把一段文字拆分为不可再分的字素簇。
 
@@ -213,13 +222,21 @@ def reflow_text(svg: str) -> str:
     return fixed.replace(_MATRIX_FONT, _CJK_FONT_STACK)
 
 
-async def capture(page_key: str, *, size: tuple[int, int], theme: str, live: bool) -> str:
+async def capture(
+    page_key: str,
+    *,
+    size: tuple[int, int],
+    theme: str,
+    live: bool,
+    keys: tuple[str, ...] = (),
+) -> str:
     """无界面运行 TUI 并导出指定页面的 SVG。
 
     :param page_key: 页面键，取值参见 :data:`akaribot.cli.tui.app.PAGES`。
     :param size: 虚拟终端尺寸。
     :param theme: ``dark`` 或 ``light``。
     :param live: 为 True 时读取当前实例的真实数据，否则使用自检快照。
+    :param keys: 页面就绪后依次按下的按键，用于截取弹窗与二级界面。
     :return: SVG 文本。
     """
     from akaribot.cli import i18n
@@ -253,6 +270,13 @@ async def capture(page_key: str, *, size: tuple[int, int], theme: str, live: boo
         await pilot.pause()
         if theme == "light":
             app.theme = compat.AKARI_THEME_LIGHT
+            await pilot.pause()
+        for key in keys:
+            await pilot.press(key)
+            await pilot.pause()
+        if keys:
+            # 弹窗与二级界面在按键处理返回后才完成装配，此处等待装配结束。
+            await asyncio.sleep(0.3)
             await pilot.pause()
         return reflow_text(app.export_screenshot(title=f"{TuiApp.TITLE} — {i18n.t(title_key)}"))
 
@@ -380,13 +404,16 @@ async def _run(args: argparse.Namespace) -> int:
         raise SystemExit(f"未知页面 {args.page}，可选：{', '.join(page_keys)}")
     if args.lang not in SUPPORTED_LOCALES:
         raise SystemExit(f"未知语言 {args.lang}，可选：{', '.join(SUPPORTED_LOCALES)}")
+    # 按键可能触发新建、删除这类改动，批量截图时不允许按下。
+    if args.all and args.keys:
+        raise SystemExit("--keys 仅用于单页截图，不能与 --all 同时使用")
     set_locale(args.lang)
 
     selected = page_keys if args.all else [args.page]
     output = Path(args.out).expanduser() if args.out else None
     single = len(selected) == 1
     for page_key in selected:
-        svg = await capture(page_key, size=args.size, theme=args.theme, live=args.live)
+        svg = await capture(page_key, size=args.size, theme=args.theme, live=args.live, keys=args.keys)
         targets = _output_paths(output, page_key, args.format, single)
         if "svg" in targets:
             source = targets["svg"]
@@ -411,6 +438,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--theme", choices=("dark", "light"), default="dark", help="主题，默认 dark")
     parser.add_argument("--lang", default="zh_cn", help="界面语言，默认 zh_cn")
     parser.add_argument("--live", action="store_true", help="读取当前实例的真实数据，默认使用自检快照")
+    parser.add_argument("--keys", type=parse_keys, default=(), help="页面就绪后依次按下的按键，以逗号分隔")
     parser.add_argument("--format", choices=("svg", "png", "both"), default="both", help="输出格式，默认 both")
     parser.add_argument("--scale", type=int, default=2, help="位图像素倍数，默认 2")
     parser.add_argument("-o", "--out", default=None, help="输出文件或目录，文件后缀决定格式，默认 tui-<页面>")

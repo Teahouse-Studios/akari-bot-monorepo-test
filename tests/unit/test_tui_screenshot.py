@@ -132,6 +132,17 @@ def _test_viewbox_size_is_ceiled():
     return tool._svg_size('<svg viewBox="0 0 1360 782.5">') == (1360, 783)
 
 
+def _test_parse_keys_splits_and_trims():
+    tool = _tool()
+    return tool.parse_keys(" n, enter ,f ") == ("n", "enter", "f")
+
+
+def _test_parse_keys_drops_empty_segments():
+    # 逗号结尾或连续逗号常见于手动输入的命令，空片段传给 pilot 会抛出异常。
+    tool = _tool()
+    return tool.parse_keys("f,,  ,") == ("f",) and tool.parse_keys("") == ()
+
+
 @func_case
 async def test_tui_screenshot(tester: Tester):
     """tools.tui_screenshot 的 SVG 文字重排与输出路径测试。"""
@@ -147,4 +158,6 @@ async def test_tui_screenshot(tester: Tester):
     await tester.test(_test_output_paths_honour_explicit_suffix, "指定文件名时补同名兄弟文件")
     await tester.test(_test_output_paths_use_directory_for_batches, "批量输出按页面名命名")
     await tester.test(_test_viewbox_size_is_ceiled, "画布尺寸向上取整")
+    await tester.test(_test_parse_keys_splits_and_trims, "按键序列按逗号拆分")
+    await tester.test(_test_parse_keys_drops_empty_segments, "按键序列忽略空片段")
     return tester
