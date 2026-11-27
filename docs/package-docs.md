@@ -110,6 +110,9 @@ source = "auto"   # auto | bundled | file:<模板路径>
 | `<ModuleData tables="module_a,module_b" />` | 模块数据表列表 |
 | `<ModuleData tables="module_a,module_b" :list="false" />` | 同上，正文随后用表格列出表结构时仅显示数量 |
 | `<PackageDependencies package="akari-bot-module-my" />` | 运行依赖列表。构建时读取包元数据的 `Requires-Dist`，跳过 `extra` 可选依赖，按包 key 与分发名索引 |
+| `<ModuleConfigFields table="module_my" />` | 配置字段表。构建时解析包内 `config.py` 与 `locales/zh_cn.json` 的 `config.comments`，渲染字段、类型、默认值与说明，正文不写字段副本。表名不存在时显示提示 |
+| `<AdapterCapabilities adapter="satori" />` | 适配器能力表，省略 `adapter` 时渲染全部适配器的矩阵。数据来自包内 `features.py` |
+| `<CliCommandOptions command="module add" />` | CLI 子命令的用法行与选项表，数据由命令树在构建期自省得到 |
 | `<CommandUsage usage="wiki set <wikiurl>" :params="['wikiurl=站点地址，会解析为 API 地址']" permission="admin" :aliases="['wiki_start_site']" :options="[{flag: '-l', desc: '只列未完成项'}]" />` | 命令的权限、别名、用法与选项说明。`params` 逐项解释用法里的参数，渲染为支持悬浮提示的字段与参数清单，组件会自动根据括号类型判定参数是否必填（尖括号表示必填，方括号表示可选）。用法行的前缀取自实例核心配置的 `command_prefix` 首项，`prefix` 可覆盖。`type` 仅在正则、订阅等非前缀触发方式上声明。`platforms` / `excluded` 标注命令仅可用的平台与排除的平台，值可为平台键（如 `QQBot`、`QQ|Group`、`Web`）或直接填写展示文案，`excluded` 渲染为“Web 不可用” |
 | `<ChatExample :log="['用户：~wiki 词条', '机器人：查询结果…']" />` | 对话示例。`log` 每行以「用户：」或「机器人：」开头，不带前缀的行续接上一条气泡，`〰〰〰` 一类分隔行渲染为分隔线 |
 | `<ChatExample :messages="[{ role: 'bot', text: '**成功**', markdown: true }]" />` | 需要显式指定角色时使用，优先于 `log`。`markdown` 为真时气泡内按 Markdown 渲染 |
@@ -117,7 +120,7 @@ source = "auto"   # auto | bundled | file:<模板路径>
 | `<ChatExample :buttons="[{ label: '查看详情', reply: '用户：~wiki 词条' }]" />` | 消息下方的操作按钮，点击后把 `reply` 或 `messages` 追加到对话末尾。`oneShot` 为真时点击后禁用同组其余按钮 |
 | `<ChatExample :card="{ title: '歌曲名', description: '歌手', url: 'https://example.com' }" />` | 机器人回复末尾的卡片消息 |
 
-内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage`、`ChatExample` 与 `PackageDependencies` 提供同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开。气泡文本按纯文本处理，不包含头像与主题色。`ModuleAlias`、`ModuleConfig`、`ModuleData` 仅在外部模板中渲染。
+内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage`、`ChatExample`、`PackageDependencies`、`ModuleConfigFields`、`AdapterCapabilities` 与 `CliCommandOptions` 提供同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开。气泡文本按纯文本处理，不包含头像与主题色。`ModuleAlias`、`ModuleConfig`、`ModuleData` 仅在外部模板中渲染。
 
 `CommandUsage` 的 `params` 参数清单、悬浮提示与 `platforms` / `excluded` 平台徽章同样由外部模板渲染。内置主题的命令用法组件显示用法行、权限与类型徽章、别名与选项表，补充说明由 `note` 属性提供。
 

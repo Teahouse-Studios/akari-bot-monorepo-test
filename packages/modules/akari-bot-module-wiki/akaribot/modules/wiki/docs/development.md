@@ -22,9 +22,7 @@ akaribot module add akari-bot-module-wiki
 
 <ModuleConfig table="module_wiki" />
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `wiki_allowlist_url` | str | 项目 Issue 模板地址 | Wiki API 加入全局 URL 允许列表的申请网址 |
+<ModuleConfigFields table="module_wiki" />
 
 默认值为项目 Issue 模板地址 `https://github.com/Teahouse-Studios/akari-bot/issues/new?template=request_wiki_whitelist.yaml`。设置未列入全局允许列表且未被阻止的 Wiki 时，成功提示后会附带该申请地址。已列入阻止列表的 Wiki 拒绝设置。
 

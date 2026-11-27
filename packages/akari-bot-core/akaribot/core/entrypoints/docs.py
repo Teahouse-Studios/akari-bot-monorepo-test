@@ -65,6 +65,7 @@ def _prepare_catalog_sandbox() -> None:
 _prepare_catalog_sandbox()
 
 from akaribot.core.constants.default import lang_list  # noqa: E402 - 必须在确定配置目录之后导入。
+from akaribot.core.entrypoints.doc_facts import collect_package_facts  # noqa: E402 - 同上。
 
 
 DOCS_GROUP = "akaribot.docs"
@@ -662,6 +663,7 @@ def _build_package(
         "editable": editable,
         "overview": meta.get("overview", True) is not False,
         "pages": pages,
+        "facts": collect_package_facts(doc_dir.parent, warnings),
     }
 
 

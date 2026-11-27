@@ -32,6 +32,7 @@ description: AkariBot 开发指南。用于修改核心框架、消息与会话�
 | i18n 与占位符 | `packages/akari-bot-core/akaribot/core/docs/i18n.md`、`packages/akari-bot-core/akaribot/core/docs/placeholders.md` |
 | 测试框架与用例写法 | `packages/akari-bot-testing/akaribot/testing/docs/index.md`、`packages/akari-bot-testing/akaribot/testing/docs/writing-tests.md` |
 | 环境、检查、基准、分支与提交、文档工具链 | `packages/akari-bot-core/akaribot/core/docs/development-workflow.md` |
+| 文档内容的构建期生成与组件 | `docs/agents/generated-content.md` |
 
 ## 强制规则
 

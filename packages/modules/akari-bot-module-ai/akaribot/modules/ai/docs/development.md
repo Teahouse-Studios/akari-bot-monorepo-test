@@ -18,23 +18,15 @@ akaribot module add akari-bot-module-ai
 
 <ModuleConfig table="module_ai" />
 
-`e2b_api_key` 声明为敏感项，写入同一配置文件中的 `module_ai_secret` 表。
+<ModuleConfigFields table="module_ai" />
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `ai_default_llm` | str | 空 | 默认使用的大语言模型，必须出现在模型清单中 |
-| `llm_timeout` | float | 60 | 请求超时时间（秒） |
-| `llm_max_tokens` | int | 2048 | 单次回复的最大 Token 数 |
-| `llm_temperature` | float | 1.0 | 温度采样，范围 0 到 2 |
-| `llm_top_p` | float | 1.0 | 核采样，范围 0 到 1 |
-| `llm_frequency_penalty` | float | 0.0 | 频率惩罚，范围 -2 到 2 |
-| `llm_presence_penalty` | float | 0.0 | 存在惩罚，取值范围为 -2 到 2 |
-| `llm_max_calling_iteration` | int | 5 | 工具调用的最大迭代次数 |
-| `ai_cost_to_petal` | float | 1.0 | 花瓣与调用费用的比率 |
-| `llm_top_logprobs` | int | -1 | 候选 Token 对数概率数量，负数不传入 |
-| `e2b_api_key`（`module_ai_secret`） | str | 空 | E2B 沙箱密钥，未填写时代码执行工具不注册 |
+`ai_default_llm` 的取值必须出现在模型清单中。
 
-完整清单见配置模板 `akaribot/modules/ai/config.py`。模型清单放在实例数据目录 `data/module/ai/` 下：
+`e2b_api_key` 声明为敏感项，写入同一配置文件中的 `module_ai_secret` 表。未填写时，代码执行工具不注册。
+
+<ModuleConfigFields table="module_ai_secret" />
+
+模型清单放在实例数据目录 `data/module/ai/` 下：
 
 | 文件 | 内容 |
 | --- | --- |

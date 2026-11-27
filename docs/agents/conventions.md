@@ -43,6 +43,8 @@
 - 模块页的属性卡来自 `docs/config/global/docs.global.toml` 的 `[[meta.modules]]`，由生成器自动注入。
   `ModuleMeta`、`NoticeBox`、`CommandUsage` 组件的正式位置是 `akari-bot-docs-template`，
   内置主题保留同名回退实现。正文仍以 Markdown 为主。
+- 能被源码唯一确定的内容由构建期组件渲染，例如命令选项、配置字段与适配器能力。正文仅保留解释与适用条件，
+  可计算内容由组件渲染。判定标准、数据通道与组件清单参见 `docs/agents/generated-content.md`。
 
 ## i18n 与本地化
 

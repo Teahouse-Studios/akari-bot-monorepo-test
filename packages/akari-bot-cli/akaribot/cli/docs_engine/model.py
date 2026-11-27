@@ -119,6 +119,7 @@ class DocPackage:
     :param title: 展示标题。
     :param summary: 一句话简介。
     :param doc_path: 包内文档目录。
+    :param facts: 该包在构建期采集的结构化数据，供文档组件按需渲染。
     :param logo: 该包声明供文档站点使用的日间标志文件，未声明时为空串。
     :param logo_dark: 该包声明供文档站点使用的夜间标志文件，未声明时为空串。
     :param avatar: 该包声明供对话示例使用的机器人头像，未声明时为空串。
@@ -145,6 +146,7 @@ class DocPackage:
     dependencies: tuple[str, ...] = ()
     languages: tuple[tuple[str, str], ...] = ()
     api_catalog: Mapping[str, Any] = field(default_factory=dict)
+    facts: dict[str, Any] = field(default_factory=dict)
     logo: str = ""
     logo_dark: str = ""
     avatar: str = ""

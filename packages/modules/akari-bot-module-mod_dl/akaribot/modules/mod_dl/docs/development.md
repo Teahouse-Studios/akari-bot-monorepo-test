@@ -20,9 +20,7 @@ akaribot module add akari-bot-module-mod_dl
 
 该模块唯一的配置字段 `curseforge_api_key` 声明为敏感配置项，取值写入同一配置文件中的 `module_mod_dl_secret` 配置表。
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `curseforge_api_key` | str | 空 | CurseForge API 密钥 |
+<ModuleConfigFields table="module_mod_dl_secret" />
 
 未填写密钥时，CurseForge 请求改用 `https://mcim.z0z0r4.top` 镜像。填写密钥后，请求直连官方接口并携带 `x-api-key`。`manifest.toml` 将该字段列入 `credential_fields`，启动时据此检查密钥是否重复。
 

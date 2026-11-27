@@ -145,6 +145,7 @@ CI=1 MPLCONFIGDIR=/tmp/mplconfig PYTHONIOENCODING=UTF-8 .venv/bin/python -m akar
 | 领域路由表与强制规则 | `.agents/skills/akaribot-dev/SKILL.md` |
 | 包布局、导入边界、CLI 子命令 | `docs/agents/architecture.md` |
 | 文档、注释、i18n、TUI、CLI 分工 | `docs/agents/conventions.md` |
+| 可自动生成的文档内容与组件 | `docs/agents/generated-content.md` |
 | 用例编写与运行 | `docs/agents/testing.md` |
 | 已知陷阱 | `docs/agents/pitfalls.md` |
 | 提交授权、版本尾注、重命名 | `docs/agents/release.md` |

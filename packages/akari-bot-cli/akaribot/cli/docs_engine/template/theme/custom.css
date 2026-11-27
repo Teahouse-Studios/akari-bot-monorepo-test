@@ -255,6 +255,57 @@
   font-size: 13px;
 }
 
+.generated-hint {
+  margin: 16px 0;
+  color: var(--vp-c-text-2);
+  font-size: 14px;
+}
+
+.generated-table {
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.generated-table table {
+  margin: 0;
+}
+
+.config-fields__flag {
+  margin-inline-start: 6px;
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+}
+
+.cli-options {
+  margin: 16px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+}
+
+.cli-options__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.cli-options__usage {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cli-options__arguments {
+  margin: 8px 0 0;
+  color: var(--vp-c-text-2);
+  font-size: 14px;
+}
+
+.cli-options .generated-table {
+  margin-block: 10px 0;
+}
+
 .dark .meta-badge--command,
 .dark .meta-badge--rss,
 .dark .meta-badge--regex,

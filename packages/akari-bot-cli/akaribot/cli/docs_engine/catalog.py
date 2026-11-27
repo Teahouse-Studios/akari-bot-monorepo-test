@@ -120,6 +120,7 @@ def _parse_packages(
                 dependencies=_string_tuple(item.get("dependencies")),
                 languages=_language_pairs(item.get("languages")),
                 api_catalog=item.get("api_catalog") if isinstance(item.get("api_catalog"), Mapping) else {},
+                facts=dict(item.get("facts")) if isinstance(item.get("facts"), Mapping) else {},
                 logo=_text(item, "logo"),
                 logo_dark=_text(item, "logo_dark"),
                 avatar=_text(item, "avatar"),

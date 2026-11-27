@@ -18,12 +18,11 @@ akaribot module add akari-bot-module-ncmusic
 
 <ModuleConfig table="module_ncmusic" />
 
+<ModuleConfigFields table="module_ncmusic" />
+
 `ncmusic_api` 声明为敏感项，实际写入同一文件的 `module_ncmusic_secret` 表。
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `ncmusic_enable_card` | bool | false | 是否在 QQ 客户端发送音乐卡片 |
-| `ncmusic_api`（`module_ncmusic_secret`） | str | 空 | 网易云音乐 API 服务地址 |
+<ModuleConfigFields table="module_ncmusic_secret" />
 
 `ncmusic_api` 为空时，所有需要访问接口的命令都会返回配置缺失错误。搜索请求访问 `<ncmusic_api>/search?keywords=<keyword>`，详情请求访问 `<ncmusic_api>/song/detail?ids=<sid>`。`manifest.toml` 将 `ncmusic_api` 列为重复登录信息检查字段。
 

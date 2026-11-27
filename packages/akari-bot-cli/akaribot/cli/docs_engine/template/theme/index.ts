@@ -6,6 +6,9 @@ import NoticeBox from "./components/NoticeBox.vue"
 import ApiCatalog from "./components/ApiCatalog.vue"
 import PackageDependencies from "./components/PackageDependencies.vue"
 import SupportedLanguages from "./components/SupportedLanguages.vue"
+import ModuleConfigFields from "./components/ModuleConfigFields.vue"
+import AdapterCapabilities from "./components/AdapterCapabilities.vue"
+import CliCommandOptions from "./components/CliCommandOptions.vue"
 import "./custom.css"
 
 export default {
@@ -18,5 +21,8 @@ export default {
     app.component("SupportedLanguages", SupportedLanguages)
     app.component("CommandUsage", CommandUsage)
     app.component("ChatExample", ChatExample)
+    app.component("ModuleConfigFields", ModuleConfigFields)
+    app.component("AdapterCapabilities", AdapterCapabilities)
+    app.component("CliCommandOptions", CliCommandOptions)
   },
 }

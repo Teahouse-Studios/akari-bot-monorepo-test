@@ -20,11 +20,9 @@ akaribot module add akari-bot-module-exchange_rate
 
 该模块唯一的配置字段 `exchange_rate_api_key` 声明为敏感配置项，取值写入同一配置文件中的 `module_exchange_rate_secret` 配置表。
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `exchange_rate_api_key` | str | 空 | ExchangeRate-API 的 API Key |
+<ModuleConfigFields table="module_exchange_rate_secret" />
 
-未配置密钥时，命令将返回配置缺失提示。完整字段清单参见配置模板 `akaribot/modules/exchange_rate/config.py`。
+未配置密钥时，命令将返回配置缺失提示。
 
 ## 权限与平台能力
 

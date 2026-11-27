@@ -18,17 +18,9 @@ akaribot module add akari-bot-module-dice
 
 <ModuleConfig table="module_dice" />
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `dice_limit` | int | 100 | 单次投掷的骰子数量上限 |
-| `dice_roll_limit` | int | 10 | 一次命令的投掷次数上限 |
-| `dice_count_limit` | int | 10 | 表达式中骰子项数上限 |
-| `dice_output_count` | int | 50 | 单次输出的数据量上限 |
-| `dice_output_len` | int | 200 | 输出最大长度 |
-| `dice_output_digit` | int | 9 | 输出数位上限，超过时使用科学计数法 |
-| `dice_detail_count` | int | 5 | 投掷总量达到该值时不显示详细信息 |
+<ModuleConfigFields table="module_dice" />
 
-上表中 `dice_output_digit` 不参与校验，其余字段小于或等于 0 时返回配置错误提示。完整清单参见配置模板 `akaribot/modules/dice/config.py`。
+`dice_output_digit` 不参与校验，其余字段小于或等于 0 时返回配置错误提示。
 
 ## 权限与平台能力
 

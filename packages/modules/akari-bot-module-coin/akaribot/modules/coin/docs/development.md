@@ -18,14 +18,7 @@ akaribot module add akari-bot-module-coin
 
 <ModuleConfig table="module_coin" />
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `coin_limit` | int | 10000 | 单次可以抛掷硬币的数量上限 |
-| `coin_faceup_weight` | int | 4997 | 正面的权重 |
-| `coin_facedown_weight` | int | 4997 | 反面的权重 |
-| `coin_stand_weight` | int | 6 | 立起的权重 |
-
-完整配置字段参见配置模板 `akaribot/modules/coin/config.py`。
+<ModuleConfigFields table="module_coin" />
 
 `coin_limit` 为单次抛掷硬币的数量上限，默认值为 10000。该值必须大于 0，三项权重均不能小于 0。配置值超出范围时，命令会返回配置错误提示。
 

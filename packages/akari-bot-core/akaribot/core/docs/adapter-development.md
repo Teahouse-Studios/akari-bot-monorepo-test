@@ -75,6 +75,10 @@ features = Features(support_image=True, support_delete=True, support_private_msg
 | 管理 | `support_delete`、`support_manage`、`support_permission_group` |
 | 消息范围与开关 | `read_all_messages`、`support_rss`、`support_private_msg`、`support_handle_message_nodes`、`require_enable_modules`、`require_check_dirty_words`、`use_url_md_format`、`use_url_manager`、`use_running_mention` |
 
+各适配器当前声明的能力如下，新增适配器后可对照同平台的实现：
+
+<AdapterCapabilities />
+
 - `client_init()` 注册节点时，将上述能力标志写入 `capabilities`。
 - `Module.unsupported_reason()` 依据 `read_all_messages` 和 `support_rss` 标志，判断正则、事件与 RSS 模块在当前会话中是否可用。
 - `check_bot_state()` 返回 `BotState`。

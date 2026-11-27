@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import DEFAULT_ASSETS_DIR, DocsConfig, DocsLocaleConfig, site_asset_path
+from .facts import collect_cli_commands
 from .model import DocCatalog, DocPackage, DocPage, DocsError, page_url, read_doc_meta
 from .theme import ThemeSpec, bundled_theme
 
@@ -1278,6 +1279,25 @@ def _publish_asset(
     return f"{config.base}{name}" if prefix else f"/{name}"
 
 
+def _generated_facts(packages: Sequence[DocPackage]) -> dict[str, object]:
+    package_facts = {package.key: {"facts": dict(package.facts)} for package in packages if package.facts}
+    commands = collect_cli_commands()
+    if not package_facts and not commands:
+        return {}
+    return {"packages": package_facts, "cli": commands}
+
+
+def _attach_generated(theme_config: dict[str, object], generated: dict[str, object], theme_key: str) -> None:
+    if not generated:
+        return
+    name = theme_key or "akari"
+    section = theme_config.get(name)
+    if not isinstance(section, dict):
+        section = {}
+        theme_config[name] = section
+    section["generated"] = generated
+
+
 def _write_vitepress_config(
     source: Path,
     views: Sequence[_LocaleView],
@@ -1299,7 +1319,10 @@ def _write_vitepress_config(
     if not isinstance(search, Mapping):
         search = {"provider": "local"}
     default_view = views[0]
+    # 命令表在构建期仅采集一次，默认语言与其余语言复用同一份数据。
+    generated = _generated_facts(default_view.packages)
     theme_config = _locale_theme(default_view, config, theme_key, brand, color, dict(search), source)
+    _attach_generated(theme_config, generated, theme_key)
     head_tags: list[list[object]] = []
     if favicon:
         head_tags.append(["link", {"rel": "icon", "href": favicon}])
@@ -1307,11 +1330,13 @@ def _write_vitepress_config(
         head_tags.append(["style", {}, _brand_css(color)])
     locales: dict[str, object] = {"root": {"label": default_view.locale.label, "lang": default_view.locale.tag}}
     for view in views[1:]:
+        locale_theme = _locale_theme(view, config, theme_key, brand, color, dict(search), source)
+        _attach_generated(locale_theme, generated, theme_key)
         locales[view.locale.tag] = {
             "label": view.locale.label,
             "lang": view.locale.tag,
             "link": f"/{view.locale.tag}/",
-            "themeConfig": _locale_theme(view, config, theme_key, brand, color, dict(search), source),
+            "themeConfig": locale_theme,
         }
     payload: dict[str, object] = {
         "title": default_view.locale.title or config.site.title,

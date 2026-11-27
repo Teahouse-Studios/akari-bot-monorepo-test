@@ -17,7 +17,7 @@ from akaribot.cli.docs_engine.config import (
     DocsThemeConfig,
     load_config,
 )
-from akaribot.cli.docs_engine.generator import _link_api_references, generate
+from akaribot.cli.docs_engine.generator import _attach_generated, _generated_facts, _link_api_references, generate
 from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
 from akaribot.cli.docs_engine.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
@@ -1138,6 +1138,44 @@ async def _test_api_links_are_inserted_at_build_time():
     )
 
 
+async def _test_generated_facts_reach_theme_config():
+    facts = {
+        "config": [
+            {
+                "table": "module_demo",
+                "file": "config/module_demo.toml",
+                "secret": False,
+                "fields": [
+                    {
+                        "name": "demo_limit",
+                        "type": "int",
+                        "default": 3,
+                        "secret": False,
+                        "comment": "数量上限。",
+                        "required": False,
+                    }
+                ],
+            }
+        ],
+        "features": {"support_image": True},
+    }
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(root, {"index.md": "# demo\n"}, pages=(DocPage("index.md", "概览", 0)))
+        package = replace(package, facts=facts)
+        generated = _generated_facts((package,))
+        theme_config: dict[str, object] = {}
+        _attach_generated(theme_config, generated, "")
+    section = theme_config.get("akari") or {}
+    inner = section.get("generated") or {}
+    packages = inner.get("packages") or {}
+    return (
+        packages.get("demo") == {"facts": facts}
+        and "module add" in (inner.get("cli") or {})
+        and section.get("generated") is inner
+    )
+
+
 @func_case
 async def test_docs_generator(tester: Tester):
     """cli.docs.generator 站点生成与路径约束测试"""
@@ -1171,4 +1209,5 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_package_without_overview_uses_first_page_as_entry, "无概览页的包以第一页作为入口")
     await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")
     await tester.test(_test_api_links_are_inserted_at_build_time, "正文 API 名称在构建时自动链到导出清单")
+    await tester.test(_test_generated_facts_reach_theme_config, "生成的事实数据按包包裹后写入主题配置")
     return tester

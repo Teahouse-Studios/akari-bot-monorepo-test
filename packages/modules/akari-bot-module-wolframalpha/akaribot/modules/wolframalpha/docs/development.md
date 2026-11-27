@@ -20,9 +20,7 @@ akaribot module add akari-bot-module-wolframalpha
 
 该模块唯一的配置字段 `wolfram_alpha_appid` 声明为敏感配置项，取值写入同一配置文件中的 `module_wolframalpha_secret` 配置表。
 
-| 字段 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `wolfram_alpha_appid` | str | 空 | WolframAlpha 的 AppID |
+<ModuleConfigFields table="module_wolframalpha_secret" />
 
 `manifest.toml` 将该字段列为需要检查重复的登录信息字段。未填写时，两条命令均会提示配置缺失错误。
 
