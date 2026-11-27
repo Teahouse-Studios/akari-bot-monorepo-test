@@ -2,10 +2,11 @@
 
 import json
 import os
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from akaribot.cli.docs_engine.config import DocsConfig, DocsThemeConfig
+from akaribot.cli.docs_engine.config import DocsConfig, DocsThemeConfig, default_labels
 from akaribot.cli.docs_engine.model import DocsError
 from akaribot.cli.docs_engine.theme import (
     BUNDLED_SOURCE,
@@ -144,6 +145,23 @@ async def _test_unsupported_source_is_reported():
     return error == ("cli.docs.error.theme_unsupported", "npm:other-theme")
 
 
+async def _test_bundled_generated_components_take_text_from_labels():
+    components = TEMPLATE_DIR / "theme" / "components"
+    defaults = default_labels()
+    keys: set[str] = set()
+    offenders: list[str] = []
+    for name in ("ModuleConfigFields.vue", "AdapterCapabilities.vue", "CliCommandOptions.vue"):
+        text = (components / name).read_text(encoding="utf-8")
+        if "<template>" not in text:
+            offenders.append(name)
+            continue
+        template = text.split("<template>", 1)[1].split("</template>", 1)[0]
+        if any("\u4e00" <= char <= "\u9fff" for char in template):
+            offenders.append(name)
+        keys.update(re.findall(r'label\("(gen_[a-z_]+)"', text))
+    return not offenders and bool(keys) and keys <= set(defaults)
+
+
 @func_case
 async def test_docs_theme(tester: Tester):
     """cli.docs.theme 内置回退、外部模板与来源校验测试"""
@@ -154,4 +172,5 @@ async def test_docs_theme(tester: Tester):
     await tester.test(_test_environment_overrides_source, "环境变量覆盖主题来源")
     await tester.test(_test_missing_theme_is_reported, "缺失主题报错")
     await tester.test(_test_unsupported_source_is_reported, "不支持的主题来源报错")
+    await tester.test(_test_bundled_generated_components_take_text_from_labels, "生成组件文案取自 labels")
     return tester

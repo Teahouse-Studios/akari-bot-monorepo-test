@@ -2,39 +2,21 @@
 import { computed } from "vue";
 import { useData } from "vitepress";
 
-interface CliArgument {
-  name: string;
-  required?: boolean;
-}
-
-interface CliOption {
-  names: string[];
-  metavar?: string;
-  help?: string;
-  isFlag?: boolean;
-  required?: boolean;
-  default?: unknown;
-}
-
-interface CliCommand {
-  usage?: string | string[];
-  summary?: string;
-  arguments?: CliArgument[];
-  options?: CliOption[];
-}
+import { useGeneratedLabels, type BundledCliCommand } from "./generated";
 
 interface AkariThemeConfig {
   akari?: {
     generated?: {
-      cli?: Record<string, CliCommand>;
+      cli?: Record<string, BundledCliCommand>;
     };
   };
 }
 
 const props = defineProps<{ command: string }>();
 const { site } = useData();
+const { label } = useGeneratedLabels();
 
-const command = computed<CliCommand | undefined>(() => {
+const command = computed<BundledCliCommand | undefined>(() => {
   const config = (site.value.themeConfig ?? {}) as AkariThemeConfig;
   return config.akari?.generated?.cli?.[props.command];
 });
@@ -52,41 +34,49 @@ const options = computed(() => command.value?.options ?? []);
 
 const argumentsLine = computed(() =>
   argumentsList.value
-    .map((argument) => (argument.required ? `${argument.name}（必填）` : `${argument.name}（可选）`))
-    .join("、"),
+    .map((argument) =>
+      [
+        argument.name,
+        label(argument.required ? "gen_argument_required" : "gen_argument_optional"),
+      ].join(" "),
+    )
+    .join(label("gen_argument_separator")),
 );
 </script>
 
 <template>
-  <section class="cli-options" aria-label="命令选项">
+  <section class="cli-options" :aria-label="label('gen_aria_command_options')">
     <p v-if="!command" class="generated-hint">
-      未找到命令 <code>{{ props.command }}</code> 的生成数据。
+      {{ label("gen_missing_command", { command: props.command }) }}
     </p>
     <template v-else>
       <div v-if="usages.length" class="cli-options__head">
         <code v-for="line in usages" :key="line" class="cli-options__usage">{{ line }}</code>
       </div>
-      <p v-if="argumentsList.length" class="cli-options__arguments">参数：{{ argumentsLine }}</p>
+      <p v-if="argumentsList.length" class="cli-options__arguments">
+        {{ label("gen_arguments") }}{{ argumentsLine }}
+      </p>
       <div v-if="options.length" class="generated-table">
         <table>
           <thead>
             <tr>
-              <th>选项</th>
-              <th>取值</th>
-              <th>说明</th>
+              <th>{{ label("gen_option") }}</th>
+              <th>{{ label("gen_value") }}</th>
+              <th>{{ label("gen_comment") }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="option in options" :key="option.names.join(' ')">
+            <tr v-for="option in options" :key="(option.names ?? []).join(' ')">
               <td>
-                <template v-for="(name, index) in option.names" :key="name">
-                  <code>{{ name }}</code><span v-if="index < option.names.length - 1">、</span>
+                <template v-for="(name, index) in option.names ?? []" :key="name">
+                  <code>{{ name }}</code
+                  ><span v-if="index < (option.names ?? []).length - 1">{{ label("gen_argument_separator") }}</span>
                 </template>
               </td>
               <td>
-                <span v-if="option.isFlag">开关</span>
+                <span v-if="option.isFlag">{{ label("gen_flag") }}</span>
                 <code v-else-if="option.metavar">{{ option.metavar }}</code>
-                <span v-else>—</span>
+                <span v-else>{{ label("gen_placeholder") }}</span>
               </td>
               <td>{{ option.help || "" }}</td>
             </tr>

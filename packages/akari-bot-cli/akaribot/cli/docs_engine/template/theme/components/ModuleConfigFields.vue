@@ -2,34 +2,25 @@
 import { computed } from "vue";
 import { useData } from "vitepress";
 
-interface ConfigField {
-  name: string;
-  type: string;
-  default?: unknown;
-  secret?: boolean;
-  comment?: string;
-  required?: boolean;
-}
-
-interface ConfigTable {
-  table: string;
-  file?: string;
-  secret?: boolean;
-  fields?: ConfigField[];
-}
+import {
+  useGeneratedLabels,
+  type BundledConfigField,
+  type BundledConfigTable,
+} from "./generated";
 
 interface AkariThemeConfig {
   akari?: {
     generated?: {
-      packages?: Record<string, { facts?: { config?: ConfigTable[] } }>;
+      packages?: Record<string, { facts?: { config?: BundledConfigTable[] } }>;
     };
   };
 }
 
 const props = defineProps<{ table: string }>();
 const { site } = useData();
+const { label } = useGeneratedLabels();
 
-const table = computed<ConfigTable | undefined>(() => {
+const table = computed<BundledConfigTable | undefined>(() => {
   const config = (site.value.themeConfig ?? {}) as AkariThemeConfig;
   const packages = config.akari?.generated?.packages ?? {};
   for (const pkg of Object.values(packages)) {
@@ -43,23 +34,26 @@ const table = computed<ConfigTable | undefined>(() => {
 
 const fields = computed(() => table.value?.fields ?? []);
 
-function fieldMarkers(field: ConfigField): string {
+function fieldMarkers(field: BundledConfigField): string {
   const markers: string[] = [];
   if (field.required) {
-    markers.push("必填");
+    markers.push(label("gen_required"));
   }
   if (field.secret) {
-    markers.push("（敏感）");
+    markers.push(label("gen_secret"));
   }
   return markers.join("");
 }
 
-function hasDefault(field: ConfigField): boolean {
+function hasDefault(field: BundledConfigField): boolean {
   return field.default !== undefined && field.default !== null;
 }
 
-function formatDefault(field: ConfigField): string {
+function formatDefault(field: BundledConfigField): string {
   const value = field.default;
+  if (typeof value === "boolean") {
+    return label(value ? "gen_true" : "gen_false");
+  }
   if (typeof value === "string") {
     return value === "" ? '""' : value;
   }
@@ -71,19 +65,19 @@ function formatDefault(field: ConfigField): string {
 </script>
 
 <template>
-  <section class="config-fields" aria-label="配置字段">
+  <section class="config-fields" :aria-label="label('gen_aria_config_fields')">
     <p v-if="!table" class="generated-hint">
-      未找到配置表 <code>{{ props.table }}</code> 的生成数据。
+      {{ label("gen_missing_config", { table: props.table }) }}
     </p>
-    <p v-else-if="!fields.length" class="generated-hint">该表没有配置字段。</p>
+    <p v-else-if="!fields.length" class="generated-hint">{{ label("gen_empty_config") }}</p>
     <div v-else class="generated-table">
       <table>
         <thead>
           <tr>
-            <th>字段</th>
-            <th>类型</th>
-            <th>默认值</th>
-            <th>说明</th>
+            <th>{{ label("gen_field") }}</th>
+            <th>{{ label("gen_type") }}</th>
+            <th>{{ label("gen_default") }}</th>
+            <th>{{ label("gen_comment") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +89,7 @@ function formatDefault(field: ConfigField): string {
             <td><code>{{ field.type }}</code></td>
             <td>
               <code v-if="hasDefault(field)">{{ formatDefault(field) }}</code>
-              <span v-else>—</span>
+              <span v-else>{{ label("gen_placeholder") }}</span>
             </td>
             <td>{{ field.comment || "" }}</td>
           </tr>

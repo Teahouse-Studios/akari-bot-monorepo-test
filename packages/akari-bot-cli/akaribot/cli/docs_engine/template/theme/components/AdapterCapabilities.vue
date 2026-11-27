@@ -2,6 +2,13 @@
 import { computed } from "vue";
 import { useData } from "vitepress";
 
+import {
+  featureLabelKey,
+  featureName,
+  useGeneratedLabels,
+  type BundledPackageEntry,
+} from "./generated";
+
 interface AdapterColumn {
   key: string;
   features: Record<string, boolean>;
@@ -10,36 +17,14 @@ interface AdapterColumn {
 interface AkariThemeConfig {
   akari?: {
     generated?: {
-      packages?: Record<string, { facts?: { features?: Record<string, boolean> } }>;
+      packages?: Record<string, BundledPackageEntry>;
     };
   };
 }
 
 const props = withDefaults(defineProps<{ adapter?: string }>(), { adapter: "" });
 const { site } = useData();
-
-const capabilityLabels: Record<string, string> = {
-  image: "图片",
-  audio: "音频",
-  video: "视频",
-  mention: "提及",
-  reaction: "表情回应",
-  quote: "引用回复",
-  typing: "输入状态",
-  delete: "消息撤回",
-  manage: "群组管理",
-  permission_group: "权限组",
-  private_msg: "私信",
-  rss: "RSS 推送",
-};
-
-function stripPrefix(key: string): string {
-  return key.startsWith("support_") ? key.slice("support_".length) : key;
-}
-
-function capabilityLabel(name: string): string {
-  return capabilityLabels[name] ?? name;
-}
+const { labels, label } = useGeneratedLabels();
 
 function matchesAdapter(key: string, name: string): boolean {
   return (
@@ -50,17 +35,6 @@ function matchesAdapter(key: string, name: string): boolean {
   );
 }
 
-function normalizeFeatures(features: Record<string, boolean>): Record<string, boolean> {
-  const normalized: Record<string, boolean> = {};
-  for (const [key, value] of Object.entries(features)) {
-    const name = stripPrefix(key);
-    if (!(name in normalized)) {
-      normalized[name] = value === true;
-    }
-  }
-  return normalized;
-}
-
 const columns = computed<AdapterColumn[]>(() => {
   const config = (site.value.themeConfig ?? {}) as AkariThemeConfig;
   const packages = config.akari?.generated?.packages ?? {};
@@ -68,7 +42,7 @@ const columns = computed<AdapterColumn[]>(() => {
   for (const [key, pkg] of Object.entries(packages)) {
     const features = pkg.facts?.features ?? {};
     if (Object.keys(features).length) {
-      available.push({ key, features: normalizeFeatures(features) });
+      available.push({ key, features });
     }
   }
   if (!props.adapter) {
@@ -78,36 +52,61 @@ const columns = computed<AdapterColumn[]>(() => {
   return match ? [match] : [];
 });
 
-const capabilityNames = computed<string[]>(() => {
-  const names: string[] = [];
-  for (const column of columns.value) {
-    for (const name of Object.keys(column.features)) {
-      if (!names.includes(name)) {
-        names.push(name);
-      }
-    }
+/** 文案给出的顺序在前，其余按键名排在后面。 */
+const labelOrder = computed<string[]>(() => {
+  const order: string[] = [];
+  for (const key of Object.keys(labels.value)) {
+    if (!key.startsWith("gen_feature_")) continue;
+    order.push(key);
   }
-  return names;
+  return order;
 });
+
+function rank(feature: string): number {
+  const index = labelOrder.value.indexOf(featureLabelKey(feature));
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+const capabilityNames = computed<string[]>(() => {
+  const names = new Set<string>();
+  for (const column of columns.value) {
+    for (const name of Object.keys(column.features)) names.add(name);
+  }
+  return [...names].sort((a, b) => {
+    const left = rank(a);
+    const right = rank(b);
+    return left === right ? a.localeCompare(b) : left - right;
+  });
+});
+
+function capabilityLabel(feature: string): string {
+  return label(featureLabelKey(feature)) || featureName(feature);
+}
+
+function status(features: Record<string, boolean>, feature: string): string {
+  return features[feature] === true
+    ? label("gen_supported")
+    : label("gen_placeholder");
+}
 
 const empty = computed(() => !columns.value.length || !capabilityNames.value.length);
 </script>
 
 <template>
-  <section class="adapter-capabilities" aria-label="适配器能力">
-    <p v-if="empty" class="generated-hint">未找到适配器能力数据。</p>
+  <section class="adapter-capabilities" :aria-label="label('gen_aria_capabilities')">
+    <p v-if="empty" class="generated-hint">{{ label("gen_missing_features") }}</p>
     <div v-else-if="props.adapter" class="generated-table">
       <table>
         <thead>
           <tr>
-            <th>能力</th>
-            <th>状态</th>
+            <th>{{ label("gen_capability") }}</th>
+            <th>{{ label("gen_status") }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="name in capabilityNames" :key="name">
             <td>{{ capabilityLabel(name) }}</td>
-            <td>{{ columns[0].features[name] === true ? "支持" : "—" }}</td>
+            <td>{{ status(columns[0]?.features ?? {}, name) }}</td>
           </tr>
         </tbody>
       </table>
@@ -116,7 +115,7 @@ const empty = computed(() => !columns.value.length || !capabilityNames.value.len
       <table>
         <thead>
           <tr>
-            <th>能力</th>
+            <th>{{ label("gen_capability") }}</th>
             <th v-for="column in columns" :key="column.key">
               <code>{{ column.key }}</code>
             </th>
@@ -126,7 +125,7 @@ const empty = computed(() => !columns.value.length || !capabilityNames.value.len
           <tr v-for="name in capabilityNames" :key="name">
             <td>{{ capabilityLabel(name) }}</td>
             <td v-for="column in columns" :key="column.key">
-              {{ column.features[name] === true ? "支持" : "—" }}
+              {{ status(column.features, name) }}
             </td>
           </tr>
         </tbody>

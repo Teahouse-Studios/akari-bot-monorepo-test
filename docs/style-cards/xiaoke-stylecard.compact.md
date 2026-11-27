@@ -96,7 +96,7 @@
 范围⇒当前仓库中的模块/每个内置模块/相关页面·禁「有多少个模块」「有多少个页面」
 行为限制可保留但须写清是代码上限而非仓库统计(如 最多处理 5 个页面)·示例输出里的版本号与数量仅示例值·不当规格·能占位就占位
 依赖约束禁手写版本范围·正文用 `PackageDependencies` 组件(构建时读包元数据生成)·配置模板与接口文档里无法组件化的契约值按源码原样保留
-可计算事实用生成组件·禁正文另写副本:命令选项 `<CliCommandOptions command="module add" />`·配置字段 `<ModuleConfigFields table="module_ai" />`·适配器能力 `<AdapterCapabilities />`
+可计算事实用生成组件·禁正文另写副本:命令选项 `<CliCommandOptions command="module add" />`·配置字段 `<ModuleConfigFields table="module_ai" />`·适配器能力 `<AdapterCapabilities />`·组件文字取 `defaults.toml` 的 `gen_` 文案·禁在组件里写死
 组件读不到数据显示提示·先查构建 warning 定位·禁改正文绕开
 包文档目录统一 `docs/`·禁旧路径 `doc/`(仅兼容说明例外)
 包文档元数据 默认层 `docs/config/global/docs.global.toml`·用户覆盖层 `docs/config/docs.toml`·JSON 用同名 `.json`

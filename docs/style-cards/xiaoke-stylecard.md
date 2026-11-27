@@ -143,6 +143,7 @@
 - 示例输出里的版本号和数量只是示例值，不要当成规格。能改用占位符的就用占位符。
 - 依赖约束不要手写版本范围。正文用 `PackageDependencies` 组件，数据由构建时读取包元数据生成。
 - 能被源码唯一确定的事实交给构建期组件，不要在正文另写副本。命令选项用 `<CliCommandOptions>`，配置字段用 `<ModuleConfigFields>`，适配器能力用 `<AdapterCapabilities>`。
+- 组件不写死显示文字。文案写在 `packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml` 的 `[labels]`，键以 `gen_` 开头，实例可用 `docs.toml` 的 `[labels]` 覆盖。
 - 组件读不到数据时显示提示。先查构建 warning 定位原因，不要改写正文绕开组件。
 - 配置模板、接口文档里无法组件化的契约值，按源码原样保留，不要为了去掉数字改动语义。
 

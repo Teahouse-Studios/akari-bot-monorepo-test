@@ -51,6 +51,8 @@ HOME_DIR = Path(__file__).resolve().parent / "home"
 HOME_CONFIG = HOME_DIR / "home.json"
 FOOTER_DIR = Path(__file__).resolve().parent / "footer"
 SNIPPETS_DIR = Path(__file__).resolve().parent / "snippets"
+# 生成组件的文案键统一用该前缀标记，构建期从 ``[labels]`` 抄入主题配置。
+GENERATED_LABEL_PREFIX = "gen_"
 
 
 def generate(
@@ -1287,6 +1289,14 @@ def _generated_facts(packages: Sequence[DocPackage]) -> dict[str, object]:
     return {"packages": package_facts, "cli": commands}
 
 
+def _generated_payload(facts: dict[str, object], labels: Mapping[str, str]) -> dict[str, object]:
+    # 文案按语言视图各取一份，事实在视图之间共用，避免重复采集。
+    resolved = {key: value for key, value in labels.items() if key.startswith(GENERATED_LABEL_PREFIX)}
+    if not resolved:
+        return facts
+    return {**facts, "labels": resolved}
+
+
 def _attach_generated(theme_config: dict[str, object], generated: dict[str, object], theme_key: str) -> None:
     if not generated:
         return
@@ -1319,10 +1329,10 @@ def _write_vitepress_config(
     if not isinstance(search, Mapping):
         search = {"provider": "local"}
     default_view = views[0]
-    # 命令表在构建期仅采集一次，默认语言与其余语言复用同一份数据。
+    # 事实在构建期仅采集一次，默认语言与其余语言复用同一份数据；文案按语言各自取。
     generated = _generated_facts(default_view.packages)
     theme_config = _locale_theme(default_view, config, theme_key, brand, color, dict(search), source)
-    _attach_generated(theme_config, generated, theme_key)
+    _attach_generated(theme_config, _generated_payload(generated, default_view.locale.labels), theme_key)
     head_tags: list[list[object]] = []
     if favicon:
         head_tags.append(["link", {"rel": "icon", "href": favicon}])
@@ -1331,7 +1341,7 @@ def _write_vitepress_config(
     locales: dict[str, object] = {"root": {"label": default_view.locale.label, "lang": default_view.locale.tag}}
     for view in views[1:]:
         locale_theme = _locale_theme(view, config, theme_key, brand, color, dict(search), source)
-        _attach_generated(locale_theme, generated, theme_key)
+        _attach_generated(locale_theme, _generated_payload(generated, view.locale.labels), theme_key)
         locales[view.locale.tag] = {
             "label": view.locale.label,
             "lang": view.locale.tag,

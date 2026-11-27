@@ -17,7 +17,13 @@ from akaribot.cli.docs_engine.config import (
     DocsThemeConfig,
     load_config,
 )
-from akaribot.cli.docs_engine.generator import _attach_generated, _generated_facts, _link_api_references, generate
+from akaribot.cli.docs_engine.generator import (
+    _attach_generated,
+    _generated_facts,
+    _generated_payload,
+    _link_api_references,
+    generate,
+)
 from akaribot.cli.docs_engine.model import DocCatalog, DocPackage, DocPage, DocsError
 from akaribot.cli.docs_engine.theme import ThemeSpec
 from akaribot.testing import Tester, func_case
@@ -1161,7 +1167,7 @@ async def _test_generated_facts_reach_theme_config():
     }
     with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
         root = Path(raw)
-        package = _package(root, {"index.md": "# demo\n"}, pages=(DocPage("index.md", "概览", 0)))
+        package = _package(root, {"index.md": "# demo\n"}, pages=(DocPage("index.md", "概览", 0),))
         package = replace(package, facts=facts)
         generated = _generated_facts((package,))
         theme_config: dict[str, object] = {}
@@ -1173,6 +1179,65 @@ async def _test_generated_facts_reach_theme_config():
         packages.get("demo") == {"facts": facts}
         and "module add" in (inner.get("cli") or {})
         and section.get("generated") is inner
+    )
+
+
+async def _test_generated_labels_are_copied_without_sidebar_text():
+    facts = {"packages": {"demo": {"facts": {}}}}
+    payload = _generated_payload(facts, {"gen_field": "字段名", "home": "首页标题"})
+    only_labels = _generated_payload({}, {"gen_empty_config": "该表没有配置字段。"})
+    return (
+        payload["labels"] == {"gen_field": "字段名"}
+        and payload["packages"] == {"demo": {"facts": {}}}
+        and only_labels == {"labels": {"gen_empty_config": "该表没有配置字段。"}}
+    )
+
+
+async def _test_generated_labels_reach_theme_config():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(root, {"index.md": "# demo\n"}, pages=(DocPage("index.md", "概览", 0),))
+        source = root / "cache" / "docs" / "src"
+        config = DocsConfig(root=root, labels={"gen_field": "字段名", "home": "首页标题"})
+        generate(DocCatalog(packages=(package,)), source, config)
+        raw_config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        anchor = raw_config.rindex('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(raw_config[raw_config.index("{", anchor) :])
+    generated = theme_config["akari"]["generated"]
+    labels = generated["labels"]
+    return (
+        labels["gen_field"] == "字段名"
+        and labels["gen_missing_config"] == "未找到配置表 {table} 的生成数据。"
+        and "home" not in labels
+        and "module add" in generated["cli"]
+    )
+
+
+async def _test_generated_labels_follow_locale():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(root, {"index.md": "# demo\n"}, pages=(DocPage("index.md", "概览", 0),))
+        source = root / "cache" / "docs" / "src"
+        config = DocsConfig(
+            root=root,
+            labels={"gen_field": "字段"},
+            locales=(
+                DocsLocaleConfig(tag="zh-CN"),
+                DocsLocaleConfig(tag="en", labels={"gen_field": "Field"}),
+            ),
+        )
+        generate(DocCatalog(packages=(package,)), source, config)
+        raw_config = (source / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+        theme_anchor = raw_config.rindex('"themeConfig": {')
+        theme_config, _ = json.JSONDecoder().raw_decode(raw_config[raw_config.index("{", theme_anchor) :])
+        locale_anchor = raw_config.index('"locales": {')
+        locales, _ = json.JSONDecoder().raw_decode(raw_config[raw_config.index("{", locale_anchor) :])
+    default_labels = theme_config["akari"]["generated"]["labels"]
+    english = locales["en"]["themeConfig"]["akari"]["generated"]["labels"]
+    return (
+        default_labels["gen_field"] == "字段"
+        and english["gen_field"] == "Field"
+        and english["gen_missing_config"] == default_labels["gen_missing_config"]
     )
 
 
@@ -1210,4 +1275,7 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_pages_with_submenu_are_nested_in_sidebar, "页面按 submenu 收进侧栏子菜单")
     await tester.test(_test_api_links_are_inserted_at_build_time, "正文 API 名称在构建时自动链到导出清单")
     await tester.test(_test_generated_facts_reach_theme_config, "生成的事实数据按包包裹后写入主题配置")
+    await tester.test(_test_generated_labels_are_copied_without_sidebar_text, "组件文案按前缀并入生成数据")
+    await tester.test(_test_generated_labels_reach_theme_config, "组件文案写入主题配置，界面文案不混入")
+    await tester.test(_test_generated_labels_follow_locale, "组件文案按语言各自覆盖")
     return tester

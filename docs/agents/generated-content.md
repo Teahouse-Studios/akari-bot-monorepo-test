@@ -30,6 +30,7 @@ CLI 命令自省 ──────┘
 - `packages[key].facts.features`：适配器能力，键为 `Features` 的字段名，值为布尔。
 - `packages[key].facts.features_dynamic`：取值来自运行时配置的能力键，仅在存在时出现，不参与矩阵渲染。
 - `cli[commandPath]`：命令的 `usage`、`summary`、`arguments` 与 `options`。
+- `labels`：组件内的文字，键以 `gen_` 开头。
 
 采集失败时跳过对应数据，并记入构建 warning，站点照常构建。组件在数据缺失时显示提示。
 
@@ -46,7 +47,11 @@ CLI 命令自省 ──────┘
 
 配置表与字段来自 AST 解析，不导入包，因此构建不触发配置读取与网络访问。字段说明取 `locales/zh_cn.json` 的 `config.comments.<表>.<字段>`。注释缺失时该列为空，不在文档里补写。
 
-组件有两份实现，修改一处时同步另一处：外部模板在 `vendor/akari-bot-docs-template/docs/.vitepress/theme/components/content/`，内置回退主题在 `packages/akari-bot-cli/akaribot/cli/docs_engine/template/theme/components/`。前者读 `useAkariConfig()`，后者直接读 `useData().site.value.themeConfig.akari`。
+组件不写死任何显示文字。界面文案放在 `packages/akari-bot-cli/akaribot/cli/docs_engine/defaults.toml` 的 `[labels]`，键以 `gen_` 开头，构建期按当前语言抄进 `generated.labels`。组件用 `label("gen_missing_config", { table })` 取值，`{name}` 按参数替换。实例可在 `docs.toml` 的 `[labels]` 覆盖同名键，译文随语言视图各写一份。
+
+文案缺失时组件渲染空串，不用兜底文字掩盖构建问题。改文案只改 `defaults.toml`，两处组件实现共用同一份键。
+
+组件有两份实现，修改一处时同步另一处：外部模板在 `vendor/akari-bot-docs-template/docs/.vitepress/theme/components/content/`，内置回退主题在 `packages/akari-bot-cli/akaribot/cli/docs_engine/template/theme/components/`。前者读 `useAkariConfig()`，后者直接读 `useData().site.value.themeConfig.akari`。文字都经各自的 `generated.ts` 中的 `useGeneratedLabels()` 读取。
 
 采集端在 `packages/akari-bot-core/akaribot/core/entrypoints/doc_facts.py` 与 `packages/akari-bot-cli/akaribot/cli/docs_engine/facts.py`，写入点在 `generator.py` 的 `_generated_facts` 与 `_attach_generated`。用例在 `packages/akari-bot-core/tests/test_doc_facts.py`、`packages/akari-bot-cli/tests/test_docs_facts.py` 与 `packages/akari-bot-cli/tests/test_docs_generator.py`。
 
@@ -56,7 +61,8 @@ CLI 命令自省 ──────┘
 2. 定义最小结构，字段名与源码一致，不做展示层加工。
 3. 采集端加用例，覆盖正常结构与解析失败。
 4. 组件缺数据时给出可执行的提示，例如运行 `akaribot docs build`。
-5. 删去文档里的手写副本。两处并存会分叉。
+5. 在 `defaults.toml` 的 `[labels]` 加 `gen_` 开头的文案键，组件只用键取值。
+6. 删去文档里的手写副本。两处并存会分叉。
 
 ## 不适合自动生成
 

@@ -112,7 +112,7 @@ source = "auto"   # auto | bundled | file:<模板路径>
 | `<PackageDependencies package="akari-bot-module-my" />` | 运行依赖列表。构建时读取包元数据的 `Requires-Dist`，跳过 `extra` 可选依赖，按包 key 与分发名索引 |
 | `<ModuleConfigFields table="module_my" />` | 配置字段表。构建时解析包内 `config.py` 与 `locales/zh_cn.json` 的 `config.comments`，渲染字段、类型、默认值与说明，正文不写字段副本。表名不存在时显示提示 |
 | `<AdapterCapabilities adapter="satori" />` | 适配器能力表，省略 `adapter` 时渲染全部适配器的矩阵。数据来自包内 `features.py` |
-| `<CliCommandOptions command="module add" />` | CLI 子命令的用法行与选项表，数据由命令树在构建期自省得到 |
+| `<CliCommandOptions command="module add" />` | CLI 子命令的用法行与选项表，数据由命令树在构建期自省得到。组件文字取 `generated.labels` |
 | `<CommandUsage usage="wiki set <wikiurl>" :params="['wikiurl=站点地址，会解析为 API 地址']" permission="admin" :aliases="['wiki_start_site']" :options="[{flag: '-l', desc: '只列未完成项'}]" />` | 命令的权限、别名、用法与选项说明。`params` 逐项解释用法里的参数，渲染为支持悬浮提示的字段与参数清单，组件会自动根据括号类型判定参数是否必填（尖括号表示必填，方括号表示可选）。用法行的前缀取自实例核心配置的 `command_prefix` 首项，`prefix` 可覆盖。`type` 仅在正则、订阅等非前缀触发方式上声明。`platforms` / `excluded` 标注命令仅可用的平台与排除的平台，值可为平台键（如 `QQBot`、`QQ|Group`、`Web`）或直接填写展示文案，`excluded` 渲染为“Web 不可用” |
 | `<ChatExample :log="['用户：~wiki 词条', '机器人：查询结果…']" />` | 对话示例。`log` 每行以「用户：」或「机器人：」开头，不带前缀的行续接上一条气泡，`〰〰〰` 一类分隔行渲染为分隔线 |
 | `<ChatExample :messages="[{ role: 'bot', text: '**成功**', markdown: true }]" />` | 需要显式指定角色时使用，优先于 `log`。`markdown` 为真时气泡内按 Markdown 渲染 |
