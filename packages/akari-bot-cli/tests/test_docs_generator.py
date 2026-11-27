@@ -162,6 +162,31 @@ async def _test_base_env_override():
     return '"base": "/sub/"' in config
 
 
+async def _test_rebuild_clears_read_only_directories():
+    with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
+        root = Path(raw)
+        package = _package(root, {"index.md": "# Demo\n"}, pages=(DocPage("index.md", "概览", 0),))
+        source = root / "cache" / "docs" / "src"
+        catalog = DocCatalog(packages=(package,))
+        config = _docs(root)
+        generate(catalog, source, config)
+        # 从只读安装目录复制的模板在构建目录中仍为只读，重建时必须先补充权限才能清空。
+        for directory in _directories(source):
+            os.chmod(directory, 0o500)
+        try:
+            generate(catalog, source, config)
+            rebuilt = (source / "index.md").is_file()
+        finally:
+            if source.exists():
+                for directory in _directories(source):
+                    directory.chmod(0o700)
+    return rebuilt
+
+
+def _directories(root: Path) -> list[Path]:
+    return [root, *(path for path in root.rglob("*") if path.is_dir())]
+
+
 async def _test_generate_rejects_source_outside_cache():
     with TemporaryDirectory(prefix="akari-docs-gen-") as raw:
         root = Path(raw)
@@ -1119,6 +1144,7 @@ async def test_docs_generator(tester: Tester):
     await tester.test(_test_generate_site_layout, "生成索引、分组、侧栏与页面副本")
     await tester.test(_test_base_env_override, "环境变量覆盖 base")
     await tester.test(_test_generate_rejects_source_outside_cache, "拒绝 cache/docs 之外的源目录")
+    await tester.test(_test_rebuild_clears_read_only_directories, "重建时清空只读的原有构建目录")
     await tester.test(_test_generate_rejects_symlink_escape, "拒绝符号链接逃逸")
     await tester.test(_test_package_without_pages_gets_placeholder, "无页面时生成占位首页")
     await tester.test(_test_unsafe_package_key_is_rejected, "拒绝含路径片段的包 key")

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import textwrap
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -72,7 +73,7 @@ def generate(
     spec = theme or bundled_theme()
     source = _checked_source_dir(src_dir, config)
     if source.exists():
-        shutil.rmtree(source)
+        _remove_tree(source)
     source.mkdir(parents=True)
 
     roots = {Path(package.doc_path).resolve(): package for package in (link_packages or catalog.packages)}
@@ -144,6 +145,14 @@ def _checked_source_dir(src_dir: Path, config: DocsConfig) -> Path:
     if source == allowed or not source.is_relative_to(allowed):
         raise DocsError("cli.docs.error.unsafe_path", path=str(src_dir))
     return source
+
+
+def _remove_tree(path: Path) -> None:
+    # 从只读安装目录复制来的目录会继承只读权限，导致构建时无法删除其中的条目。
+    # 因此先为每个目录补充属主写权限，再整体删除。
+    for root, _dirs, _files in os.walk(path):
+        os.chmod(root, stat.S_IRWXU)
+    shutil.rmtree(path)
 
 
 def _checked_key(key: str) -> str:

@@ -93,7 +93,8 @@ def _merged_locale_dir() -> Path:
     _KEEP_ALIVE.append(holder)
     root = Path(holder.name)
     for path in Path(i18n.locales_dir()).glob("*.json"):
-        shutil.copy(path, root / path.name)
+        # 仅复制文件内容，避免把只读权限一并复制到临时目录。
+        shutil.copyfile(path, root / path.name)
     target = root / "zh_cn.json"
     document = json.loads(target.read_text(encoding="utf-8"))
     document.update(json.loads(FRAGMENT.read_text(encoding="utf-8")))

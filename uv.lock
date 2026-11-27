@@ -474,7 +474,7 @@ source = { editable = "packages/akari-bot-assets-fonts" }
 
 [[package]]
 name = "akari-bot-cli"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "packages/akari-bot-cli" }
 dependencies = [
     { name = "akari-bot-i18n" },
