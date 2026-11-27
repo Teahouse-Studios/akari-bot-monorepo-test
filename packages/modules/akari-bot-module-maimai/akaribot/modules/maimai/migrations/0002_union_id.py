@@ -1,7 +1,7 @@
-"""maimai 绑定表改挂 union。
+"""maimai 绑定表改为关联 union。
 
-水鱼与落雪两侧的绑定原本以平台 ID 为主键，平台换号即失去绑定。union ID 沿用原平台 ID，
-因此只需改列名。
+水鱼与落雪两侧的绑定以平台 ID 为主键，平台换号后失去绑定。union ID 沿用原平台 ID，
+因此仅需改列名。
 """
 
 from __future__ import annotations

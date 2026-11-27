@@ -2,7 +2,7 @@
 
 按 `git diff --name-only <base>..<head>` 取改动清单，改动位于哪个包目录内就算哪个包有改动。
 再比对两端 [project].version：有源码改动而版本一字未改即违规，退出码 1
-（规格见 generated_docs/monorepo_refactor_tasks.md 的 T6.2）。
+（规格参见 generated_docs/monorepo_refactor_tasks.md 的 T6.2）。
 
 包内 tests/ 与缓存目录不进入 wheel，其改动不要求升版本。--strict 把包内任何文件都视为改动。
 包内的 pyproject.toml 改动同样按改动处理。依赖与入口点会原样写入 wheel 元数据。
@@ -10,7 +10,7 @@
 例外：`base..head` 区间内的提交信息里写了独立的 `Skip-Version` trailer 时按声明范围豁免——
 `Skip-Version: true` 豁免全部成员，`Skip-Version: <分发名>[, <分发名>]` 仅豁免列出的成员。
 正文里顺带提到该 token 不算，必须是行首即 token 的独立整行。基准未给出或无法解析为提交时不比对，
-只提示并返回 0，工具自身无法运行时返回 2。
+仅提示并返回 0，工具自身无法运行时返回 2。
 
 成员清单与包名的判定标准与 tools/lint_versions.py 一致。成员由根目录 pyproject.toml 的
 [tool.uv.workspace].members 展开，包名与版本读取成员自己的 [project].name / [project].version。
@@ -18,7 +18,7 @@
 用法：
     uv run python tools/check_versions.py --base <sha>            # PR base / push before
     uv run python tools/check_versions.py --base <sha> --strict   # tests/ 改动也要求升版本
-    uv run python tools/check_versions.py                         # 无基准：只提示，退出码 0
+    uv run python tools/check_versions.py                         # 无基准：仅提示，退出码 0
 """
 
 from __future__ import annotations
@@ -56,8 +56,8 @@ class Member:
 
     :param name: [project].name 书写形式的包名。
     :param version: 当前工作树的静态版本。声明为 dynamic 或缺失时为 None。
-    :param directory: 包目录的仓库根相对 POSIX 路径，无尾斜杠。
-    :param pyproject: 该成员 pyproject.toml 的仓库根相对 POSIX 路径。
+    :param directory: 包目录相对仓库根目录的 POSIX 路径，末尾不带斜杠。
+    :param pyproject: 该成员 pyproject.toml 相对仓库根目录的 POSIX 路径。
     """
 
     name: str
@@ -241,7 +241,7 @@ def version_at(commit: str, pyproject: str) -> tuple[bool, str | None]:
     """读取某提交下成员 pyproject 的 [project].version。
 
     :param commit: 提交 SHA。
-    :param pyproject: 成员 pyproject.toml 的仓库根相对 POSIX 路径。
+    :param pyproject: 成员 pyproject.toml 相对仓库根目录的 POSIX 路径。
     :return: 二元组——该文件在提交中是否存在，以及静态版本字符串（缺失、动态或无法解析时为 None）。
     """
     try:

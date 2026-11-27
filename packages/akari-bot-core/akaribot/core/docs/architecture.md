@@ -60,7 +60,7 @@ packages/
 
 `~restart` 首先将发起重启的会话记录保存至 `data/private/<client>/.cache_restart_author`，随后调用 `core.server.terminate.restart()`。该函数负责释放全部运行时资源，并以退出码 33 终止进程（`os._exit(33)`）。
 
-新启动的 Server 进程将等待目标平台进程以新的 `peer_id` 注册为 `ready` 状态（超时上限为 60 秒），随后发送重启完成提示。模块加载失败的详细信息记录于 `.cache_loader` 中。
+新启动的 Server 进程等待目标平台进程以新的 `peer_id` 注册为 `ready` 状态，最多等待 60 秒。注册完成后，新启动的 Server 进程发送重启完成提示。模块加载失败的详细信息记录在 `.cache_loader` 中。
 
 ## Server 初始化
 

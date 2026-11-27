@@ -58,15 +58,7 @@ default_locale = BaseConfig.default_locale
 
 @define
 class MessageChain:
-    """
-    消息链类，表示由多个消息元素组成的完整消息。
-
-    消息链是本系统中消息的基本数据结构，由一系列消息元素组成。
-    支持多种构建方式、格式转换、安全检查等功能。
-
-    属性说明：
-        values: 消息元素列表，包含此消息链的所有元素
-    """
+    """消息链是发送前统一使用的容器，负责格式转换与内容检查。"""
 
     # 消息元素列表。
     values: list[MessageElement]
@@ -85,7 +77,7 @@ class MessageChain:
         """创建消息链的工厂方法。
 
         :param elements: 消息元素或其集合
-        :return: 消息链实例（会进行深拷贝）
+        :return: 消息链实例（会执行深拷贝）
         """
         if isinstance(elements, MessageChain):
             return elements
@@ -126,21 +118,9 @@ class MessageChain:
     @property
     def is_safe(self) -> bool:
         """
-        检查消息链是否包含安全内容。
+        检查消息链是否包含密钥、私密数据等敏感信息，供发送前调用。
 
-        遍历消息链中的所有元素，检查是否包含敏感信息（如密钥、API 密钥、
-        私密数据等）。这是一个重要的安全机制，用于防止敏感信息泄露。
-
-        检查范围：
-        - PlainElement / MarkdownElement: 检查文本内容
-        - URLElement: 检查原始链接
-        - EmbedElement: 检查标题、描述、页脚、作者、URL、字段名称和值
-        - I18NContextElement: 检查模板参数（发送阶段才会代入文案，此处若不检查会漏过）
-        - ActionTextElement: 检查可点击文本与展示文本
-        - ButtonElement / ButtonFrameElement: 检查按钮展示文本
-        - RawElement: 检查原始内容
-
-        :return: 若消息链不包含敏感信息则返回 True，否则返回 False
+        :return: 不包含敏感信息时返回 True，否则返回 False
         """
 
         def unsafeprompt(name, secret, text):
@@ -759,7 +739,7 @@ class MessageNodes:
     def is_safe(self) -> bool:
         """检查消息节点列表是否安全。
 
-        :return: 如果所有节点都安全返回 True，否则返回 False
+        :return: 所有节点都安全时返回 True，否则返回 False
         """
         return all(chain.is_safe for chain in self.values)
 

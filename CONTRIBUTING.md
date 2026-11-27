@@ -143,9 +143,9 @@ CI 在 PR 阶段执行 `uv sync --locked`（参见 [`.github/workflows/run-built
 
 这条检查有两处边界。
 
-其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束不一致。例如某个包声明 `akari-bot-core>=2.0,<3.0`，而 core 实际为 `0.1.0`，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。
+其一，仅覆盖 workspace 内成员包之间的**第三方**依赖互斥，不覆盖**内部**版本约束不一致。例如某个包声明 `akari-bot-core>=2.0,<3.0`，而 core 的当前版本不在该区间内，此时 `uv lock` 仍然通过，约束却会原样写入发布的 wheel。内部版本约束由 `uv run python tools/lint_versions.py` 检查。
 
-在各成员包各自独立的 workspace 内，依赖互斥仅能通过干净环境安装验证发现。
+其二，各成员包分别使用独立 workspace，依赖关系不会联合求解，互斥只能靠干净环境安装验证发现。
 
 `uv lock` 失败时应调整 `pyproject.toml` 中的约束，使冲突双方的区间重新相容并说明原因。不得以 `--no-verify` 绕过检查、手动编辑 `uv.lock` 或放宽约束来通过检查，此类处理仅会将冲突推迟至用户安装时暴露。
 
@@ -170,7 +170,7 @@ Issue 编号。
 
 提交 PR 时请按模板填写。描述中可以使用 `#<编号>` 关联相关 Issue。
 
-PR 必须通过全部 CI 检查，并获得至少 1 名开发者的 LGTM（Looks Good To Me）后才能合并。重大更改必须提交 PR 审查，不得直接
+PR 必须通过全部 CI 检查，并获得至少 1 名开发者的同意（Looks Good To Me，LGTM）后才能合并。重大更改必须提交 PR 审查，不得直接
 推送到 `master`。
 
 ### 代码风格
@@ -194,9 +194,7 @@ akaribot new module <名>          # 交互问卷；也可用 --non-interactive 
 akaribot module add -e .          # 在生成的包目录内执行；脚手架 --add 默认已代跑
 ```
 
-脚手架生成 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 目录结构一致：
-`pyproject.toml`、`manifest.toml`、`README.md`、`akaribot/modules/<名>/`（含 `config.py`、
-`database/models.py`、`migrations/`、`locales/zh_cn.json`、`assets/`）与 `tests/test_<名>.py`。
+脚手架生成 `<--dir>/akari-bot-module-<名>/`，与 `packages/modules/akari-bot-module-<名>/` 目录结构一致。基础文件为 `pyproject.toml`、`manifest.toml`、`README.md` 与 `akaribot/modules/<名>/`。`config.py` 由 `--config` 控制，`database/models.py` 与 `migrations/` 由 `--database` 控制，`assets/` 由 `--assets` 控制，`tests/test_<名>.py` 由 `--tests` 控制。`--config`、`--database`、`--assets` 默认关闭，`--tests` 默认开启，未勾选 `command` 组件时不生成测试文件。
 `--add` 默认开启，生成后会在该目录内执行 `akaribot module add -e .`。若要手动执行，先进入包目录。
 
 `manifest.toml` 放在导入包目录内，字段与 `akaribot/core/registry.py` 的 `PackageManifest` 一一对应，

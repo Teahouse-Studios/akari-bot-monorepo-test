@@ -1,13 +1,13 @@
 """适配器生成物自检。
 
-对 `akaribot new adapter` 的生成目录做机器可判定的检查：ruff check / ruff format（仓库配置与
-ruff 默认配置各跑一遍）、tomllib 解析 pyproject.toml 与 manifest.toml、entry point 名不含
-连字符、core 约束字面一致，以及导入面只用 `akaribot.core.api` 门面。
+对 `akaribot new adapter` 的生成目录执行可机器判定的检查：ruff check / ruff format（仓库配置与
+ruff 默认配置各执行一遍）、tomllib 解析 pyproject.toml 与 manifest.toml、entry point 名不含
+连字符、core 约束字面一致，以及导入面仅使用 `akaribot.core.api` 公开接口。
 
 本文件是模板维护工具，由生成器跳过，不随生成物分发。
 
 用法：
-    .venv/bin/python templates/adapter/selfcheck.py <生成目录> [...]
+    .venv/bin/python packages/akari-bot-cli/akaribot/cli/templates/adapter/selfcheck.py <生成目录> [...]
 """
 
 from __future__ import annotations
@@ -19,7 +19,8 @@ import sys
 import tomllib
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# 该文件位于 <仓库根>/packages/akari-bot-cli/akaribot/cli/templates/adapter/，向上 6 层即仓库根。
+PROJECT_ROOT = Path(__file__).resolve().parents[6]
 REPO_RUFF = PROJECT_ROOT / ".venv/bin/ruff"
 EXPECTED_CORE = "akari-bot-core>=0.1.0,<1.0"
 ALLOWED_IMPORT_PREFIX = "akaribot.core.api"

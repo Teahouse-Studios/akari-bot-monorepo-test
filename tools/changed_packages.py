@@ -64,7 +64,7 @@ class Member:
     """一个 workspace 成员。
 
     :param name: [project].name 书写形式的分发名，即 CI 的构建单元。
-    :param directory: 包目录相对仓库根目录的 POSIX 路径，无尾斜杠。
+    :param directory: 包目录相对仓库根目录的 POSIX 路径，末尾不带斜杠。
     """
 
     name: str
@@ -172,7 +172,7 @@ def package_directory(path: str) -> str | None:
 def classify(path: str, members: list[Member]) -> tuple[str, str]:
     """把一个改动路径归类。
 
-    :param path: 仓库根相对 POSIX 路径。
+    :param path: 相对仓库根目录的 POSIX 路径。
     :param members: workspace 成员清单。
     :return: 二元组——类别（member/core/global/doc/unknown）与人类可读的原因。
     """

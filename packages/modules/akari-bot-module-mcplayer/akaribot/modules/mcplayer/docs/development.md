@@ -30,6 +30,6 @@ akaribot module add akari-bot-module-mcplayer
 
 ## 依赖与外部服务
 
-运行依赖 `akari-bot-core`、`Pillow>=13.0.0,<13.1.0` 与 `orjson>=3.10.9,<4.0.0`。外部服务为 `api.mojang.com` 与 `crafatar.com`。`api.mojang.com` 用于 UUID 查询（`user/profile`）与玩家名查询（`users/profiles/minecraft`），`crafatar.com` 提供渲染图、皮肤与披风资源。
+运行依赖 <PackageDependencies package="akari-bot-module-mcplayer" />。外部服务为 `api.mojang.com` 与 `crafatar.com`。`api.mojang.com` 用于 UUID 查询（`user/profile`）与玩家名查询（`users/profiles/minecraft`），`crafatar.com` 提供渲染图、皮肤与披风资源。
 
 结果中的 NameMC 链接指向 `namemc.com`，模块仅输出链接，不向该站点发送网络请求。

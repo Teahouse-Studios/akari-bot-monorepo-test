@@ -7,8 +7,8 @@ workspace 在开发阶段的覆盖会丢弃内部版本约束（`[tool.uv.source
 用法：:
 
     python tools/clean_room_check.py                    # 全部组合
-    python tools/clean_room_check.py --combo core       # 只跑最小组合
-    python tools/clean_room_check.py --combo cli        # 只跑 CLI 组合（P1-1 / P1-9 回归）
+    python tools/clean_room_check.py --combo core       # 仅运行最小组合
+    python tools/clean_room_check.py --combo cli        # 仅运行 CLI 组合（P1-1 / P1-9 回归）
     python tools/clean_room_check.py --keep-dist        # 复用已有 dist/
     python tools/clean_room_check.py --offline          # 只用 UV_CACHE_DIR 里的缓存，无外网时用
 """
@@ -63,7 +63,7 @@ db_path = "sqlite://database/save.db"
 
 
 def _ensure_utf8_stdout() -> None:
-    # Windows 控制台默认编码为 cp1252，中文输出可能抛出 UnicodeEncodeError。
+    # Windows 控制台编码随系统区域设置，中文输出可能抛出 UnicodeEncodeError。
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
         return
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -243,7 +243,7 @@ def download_release_files(index_url: str, manifest_path: Path, output: Path) ->
 def verify_local_index(index_url: str) -> bool:
     """逐跳确认静态索引可用：根页列出项目、项目页给出产物、产物可下载。
 
-    安装阶段的 404 只表现为“Failed to fetch”，看不出是索引根、项目页还是文件缺失。这一步检查把
+    安装阶段的 404 仅表现为“Failed to fetch”，看不出是索引根、项目页还是文件缺失。这一步检查把
     失败点连同地址写进日志。
 
     :param index_url: 索引根地址。

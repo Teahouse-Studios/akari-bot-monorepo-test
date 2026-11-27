@@ -1,7 +1,7 @@
 """文档站点命令：列目录、构建、预览、部署与清理。
 
-业务实现都在 :mod:`akaribot.cli.docs_engine`。本模块只负责参数解析、确认、输出与退出码。
-``--json`` 模式下 stdout 只承载结果 JSON，提示与警告一律走 stderr。
+业务实现都在 :mod:`akaribot.cli.docs_engine`。该模块仅负责参数解析、确认、输出与退出码。
+``--json`` 模式下 stdout 仅承载结果 JSON，提示与警告一律走 stderr。
 """
 
 from __future__ import annotations
@@ -392,7 +392,7 @@ def build_docs(
 ) -> None:
     """生成站点源文件并调用 VitePress 构建。
 
-    默认构建全部包。``--package`` 可重复或逗号分隔，指定后只构建列出的包。人类可读模式实时打印阶段与
+    默认构建全部包。``--package`` 可重复或逗号分隔，指定后仅构建列出的包。人类可读模式实时打印阶段与
     子进程输出。``--json`` 的 stdout 只输出一行结果，构建日志放在 ``log`` 字段并同步写入 stderr。
     """
     target = require_instance(instance)
@@ -546,7 +546,7 @@ def dev_docs(
 ) -> None:
     """监听文档与主题改动，在临时目录里运行 VitePress dev，直到 Ctrl+C。
 
-    ``--package`` 只监听列出的包。``--port`` 被占用时自动改用系统分配的端口。``--json`` 输出
+    ``--package`` 仅监听列出的包。``--port`` 被占用时自动改用系统分配的端口。``--json`` 输出
     逐行事件（``stage`` / ``sync`` / ``ready`` / ``warn`` / ``error`` / ``stopped``），子进程日志
     写入 stderr。
     """

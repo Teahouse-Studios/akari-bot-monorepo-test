@@ -266,7 +266,7 @@ async def _bind_private(msg: Bot.MessageSession, entry: dict) -> None:
     if not sender_initiator or not target_initiator:
         await msg.finish(I18NContext("core.message.bind.code.invalid"))
 
-    # 一侧已同组时仅合并另一侧。两侧均已同组说明该绑定码来自当前方，不需要进行绑定。
+    # 一侧已同组时仅合并另一侧。两侧均已同组说明该绑定码来自当前方，不需要绑定。
     sender_plan = (
         await plan_sender_merge(sender_initiator, sender_current)
         if sender_initiator.union_id != sender_current.union_id

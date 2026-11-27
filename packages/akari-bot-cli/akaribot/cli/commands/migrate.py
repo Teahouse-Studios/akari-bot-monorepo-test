@@ -1,6 +1,6 @@
 """旧项目迁移：把旧版 AkariBot 项目搬进实例目录。
 
-CLI 进程不 import core：旧配置用 ``tomllib`` 读、旧库用 ``sqlite3`` 以只读方式直读，数据库
+CLI 进程不 import core，旧配置用 ``tomllib`` 读取，旧库用 ``sqlite3`` 以只读方式直接读取，数据库
 版本号转换交给既有的 ``akaribot.core.entrypoints.db`` 子进程。旧项目目录全程只读。
 """
 
@@ -45,7 +45,7 @@ from akaribot.cli.instance import (
 
 app = typer.Typer(help=i18n.t("cli.migrate.help"), no_args_is_help=True)
 
-# 旧项目的判定条件为四者同时存在（monorepo_refactor_plan.md §3.5）。
+# 旧项目的判定条件为四者同时存在。
 REQUIRED_ENTRIES = ("bot.py", "core", "modules")
 OLD_CONFIG_FILE = "config/config.toml"
 OLD_CONFIG_DIR = "config"
@@ -54,7 +54,7 @@ OLD_MODULES_DIR = "modules"
 CORE_MODULE_DIR = "core"
 ADAPTER_DIST_PREFIX = "akari-bot-adapter-"
 
-# 旧 assets 布局到新实例 data 布局的对照，与 core/scripts/migrate_assets_to_data.py 的 MOVES 一致。
+# 旧 assets 布局到新实例 data 布局的对照，与 ``core/scripts/migrate_assets_to_data.py`` 的 MOVES 一致。
 ASSET_MOVES = (
     ("assets/i18n_cache", "data/i18n_cache"),
     ("assets/private", "data/private"),

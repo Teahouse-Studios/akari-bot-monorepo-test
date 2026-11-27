@@ -2,7 +2,7 @@ from typing import NoReturn
 
 from akaribot.core.api import Bot, ActionText, ButtonFrame, I18NContext, ButtonRows, command_prefix, arrange_buttons
 
-# 未设置默认 Wiki 时向用户推荐的 Wiki，元素为（显示名称，API 端点地址）。
+# 未设置默认 Wiki 时向用户推荐的 Wiki，每个元素为 `(显示名称, API 端点地址)` 元组。
 RECOMMENDED_WIKIS: list[tuple[str, str]] = [
     ("Minecraft Wiki", "https://zh.minecraft.wiki/api.php"),
 ]

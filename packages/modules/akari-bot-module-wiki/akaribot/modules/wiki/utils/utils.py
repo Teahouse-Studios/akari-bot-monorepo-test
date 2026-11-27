@@ -11,5 +11,5 @@ def check_svg(file_path):
 
 
 def strptime2ts(date_string):
-    """Convert a date string to a timestamp."""
+    """把日期字符串转换为时间戳。"""
     return datetime.fromisoformat(date_string).timestamp()

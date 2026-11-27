@@ -1,4 +1,4 @@
-"""``cli.docs.deploy.s3``：S3 兼容存储部署 provider。
+"""``cli.docs.deploy.s3`` 的 S3 兼容存储部署 provider 测试。
 
 用例用 ``httpx.MockTransport`` 模拟 ListObjectsV2、PUT 与 DELETE，覆盖分页、跳过未变、
 上传、删除、试运行、前缀隔离、定位方式、区域回退与错误汇总。全程不访问网络。

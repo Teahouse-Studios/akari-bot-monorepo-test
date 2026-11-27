@@ -4,7 +4,7 @@
 
 ## 输入与输出
 
-输入是 HTML 字符串，输出是 Markdown 风格的纯文本。此库只依赖标准库，不访问网络。
+输入是 HTML 字符串，输出是 Markdown 风格的纯文本。此库仅依赖标准库，不访问网络。
 
 ```python
 from html2text import HTML2Text, html2text
@@ -31,7 +31,7 @@ python -m html2text --ignore-links --body-width 0 page.html
 
 ## 与上游的差异
 
-以下行为与上游 2020.1.16 不同，使用时须按下面的说明处理：
+以下行为与上游 2020.1.16 不同，使用时必须按下面的说明处理：
 
 - **链接 title 被丢弃**：`link_url()` 不输出 `](url "标题")` 中的 title。开启链接输出时仅能得到 URL 本身，不要依赖 title 生成引用或脚注。
 - **`</script>` 处理**：本包把结束标签的转义写法改成了真正的 `</script>`，随后又替换成 `</ignore>`。`HTMLParser` 因此无法退出 script 的 CDATA 模式，第一个 `<script>` 之后的正文会丢失。含脚本的 HTML 应先移除 `<script>` 块，再交给此库。
@@ -43,7 +43,7 @@ python -m html2text --ignore-links --body-width 0 page.html
 
 ## 使用边界
 
-- 此库只负责把网页正文转成便于阅读的 Markdown，不做 HTML 清洗。输入不可信时，请先做白名单过滤。
+- 此库仅负责把网页正文转成便于阅读的 Markdown，不做 HTML 清洗。输入不可信时，请先做白名单过滤。
 - 页面含 `<script>`，或依赖链接 title 时，需要先预处理，或改用其他渲染器。
 - 需要改写 URL 时传入 `url_formatter`，不要修改库内部方法。默认行为与上游一致。
 - 测试的期望值应以实际输出文本为准，不要假定上游文档中的示例逐字成立。

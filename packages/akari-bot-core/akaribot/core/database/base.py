@@ -51,7 +51,8 @@ class DBModel(Model):
 
         :param target_id: The target_id to search for.
         :param create: Whether to create a new model if it doesn't exist.
-        :return: The model instance. If create is True and the model doesn't exist, a new instance will be created, otherwise None.
+        :return: The model instance, or None. If create is True and the model doesn't exist, a new
+            instance is created.
         """
         from .models import TargetUnionInfo, union_mutation
 
@@ -102,7 +103,8 @@ class DBModel(Model):
 
         :param sender_id: The sender_id to search for.
         :param create: Whether to create a new model if it doesn't exist.
-        :return: The model instance. If create is True and the model doesn't exist, a new instance will be created, otherwise None.
+        :return: The model instance, or None. If create is True and the model doesn't exist, a new
+            instance is created.
         """
         from .models import SenderUnionInfo, union_mutation
 

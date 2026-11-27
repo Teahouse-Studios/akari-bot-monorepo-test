@@ -417,7 +417,7 @@ HTTP：
 
 ### `PlatformAPI`
 
-适配器端的 RPC 接口。`context_method()` 将 `ContextManager` 的方法绑定为支持远程调用的操作。
+适配器端的 RPC 接口。`ContextManager` 的对应方法由它包装为跨进程调用，Server 侧依据 `SessionInfo` 选择目标平台进程。
 
 ### `Features`
 

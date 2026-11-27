@@ -179,8 +179,8 @@ class DevSession:
     :param port: 首选端口，``0`` 表示每轮都由系统分配。
     :param open_browser: 就绪后打开浏览器。
     :param offline: 为真时禁止安装 Node 依赖。
-    :param keys: 只监听这些包，``None`` 表示全部。
-    :param debounce: 改动静默多久后开始同步。
+    :param keys: 仅监听这些包，``None`` 表示全部。
+    :param debounce: 改动后无变化多久开始同步。
     :param emit: 结构化事件回调。
     :param log: 子进程输出行回调。
     :param ready_timeout: 等待 dev 服务器可用的秒数。

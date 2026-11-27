@@ -20,7 +20,7 @@ from akaribot.core.api import (
 )
 from .coloring import element_colors
 
-ID_RANGE_MAX = 200000000  # 数据库增长速度较快，可以手动在此修改 ID 区间。
+ID_RANGE_MAX = 200000000  # PubChem CID 随机取值的上界。
 
 pubchem_link = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
@@ -143,7 +143,7 @@ element_lists = [
     "U",
     "Y",
     "W",
-]  # 元素列表，用于解析化学式，请勿手动修改当前排序。
+]  # 该顺序使双字母元素符号优先匹配，调整顺序会导致解析失配。
 
 
 def parse_elements(formula: str) -> dict:

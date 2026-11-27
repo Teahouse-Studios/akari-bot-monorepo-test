@@ -256,7 +256,7 @@ def _build_qqbot_keyboard(rows: list[ButtonRows], session_info: SessionInfo, tar
     return Keyboard(content=KeyboardContent(rows=keyboard_rows))
 
 
-# 节点表格的高度上限，每多一对，列数减半、单行长度随之减半。
+# 节点表格的行数上限。节点增多时列数随之增加，单格文字随之变短。
 MESSAGE_NODES_MAX_ROWS = 2
 MARKDOWN_IMAGE_MAX_WIDTH = 128
 MARKDOWN_IMAGE_LIST_MAX_TOTAL_HEIGHT = 768

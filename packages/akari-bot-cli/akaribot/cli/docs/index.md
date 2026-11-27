@@ -13,7 +13,7 @@ uv tool install akari-bot-cli
 akaribot --version
 ```
 
-运行环境必须满足仓库 `pyproject.toml` 声明的 Python 版本。CLI 不依赖 `akaribot.core`。实例所需的 core、适配器与模块，由 `akaribot init` 安装至实例独立的 venv 中。
+运行环境必须满足 CLI 包声明的 `requires-python`。仓库内各包使用同一区间。CLI 不依赖 `akaribot.core`。实例所需的 core、适配器与模块，由 `akaribot init` 安装至实例独立的 venv 中。
 
 ## 实例解析
 

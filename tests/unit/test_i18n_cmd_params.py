@@ -124,7 +124,7 @@ def _test_no_stale_cmd_placeholder():
 
 @func_case
 async def test_i18n_cmd_params(tester: Tester):
-    """i18n：${cmd} 参数传递一致性测试。"""
+    """i18n 参数传递一致性测试。"""
     await tester.test(_test_every_call_passes_cmd, "每处调用均传 cmd 测试")
     await tester.test(_test_indirect_keys_have_provider, "间接传参键的补参代码在位测试")
     await tester.test(_test_no_stale_cmd_placeholder, "无孤儿 cmd 键测试")

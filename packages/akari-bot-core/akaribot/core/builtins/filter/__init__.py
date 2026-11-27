@@ -86,7 +86,7 @@ def category_path(category: str) -> Path:
 
 
 def normalize_words(words: Iterable[str]) -> list[str]:
-    """规范化清洗词条，依次去除空白字符、移除空行、按首次出现顺序去重，并校验长度与数量。"""
+    """规范化清洗词条，去除空白字符与空行，按首次出现顺序去重，再校验长度与数量。"""
     normalized: list[str] = []
     seen: set[str] = set()
 

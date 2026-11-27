@@ -28,7 +28,7 @@ class CQCodeHandler:
         """
         过滤 CQ 码，返回支持的 CQ 码。
 
-        :param s: 正则匹配对象，包含 CQ 码的字符串消息。
+        :param s: 含 CQ 码的字符串消息。
         :return: 如果 CQ 类型在支持列表中，返回原 CQ 码。否则返回空字符串。
         """
         return CQCodeHandler.pattern.sub(lambda m: m.group(0) if m.group(1) in CQCodeHandler.get_supported else "", s)

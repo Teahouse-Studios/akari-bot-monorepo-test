@@ -173,7 +173,7 @@ def on_bot_config(
 ):
     """平台配置装饰器工厂函数。
 
-    :param bot_name: 平台名称，须与 `bots/` 下的目录名一致：守护进程以 ``bot_<目录名>``
+    :param bot_name: 平台名称，必须与 `bots/` 下的目录名一致：守护进程以 ``bot_<目录名>``
                  的表名查找该平台的 `enable` 配置。最终的表名为 "bot_平台名"
     :param secret: 是否将此配置中的所有值视为敏感信息并加密存储（默认 False）
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
@@ -190,7 +190,7 @@ def on_module_config(
 ):
     """模块配置装饰器工厂函数。
 
-    :param module_name: 模块名称，须与 `module()` 声明的名称一致。最终的表名为 "module_模块名"
+    :param module_name: 模块名称，必须与 `module()` 声明的名称一致。最终的表名为 "module_模块名"
     :param secret: 是否将此配置中的所有值视为敏感信息并加密存储（默认 False）
     :param standalone_comments: 配置字段名前的独立注释块。键为字段名，值为 i18n 键元组
 

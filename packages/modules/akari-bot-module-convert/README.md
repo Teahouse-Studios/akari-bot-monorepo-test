@@ -1,10 +1,10 @@
 # akari-bot-module-convert
 
-此模块基于 Pint 库实现，提供物理量单位换算能力。
+此模块可以换算物理量单位，支持长度、质量、温度、时间等常见量纲。
 
 ## 安装
 
-关于 Python 版本要求，请参阅软件包内 `pyproject.toml` 文件中的 `requires-python` 字段。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-module-convert

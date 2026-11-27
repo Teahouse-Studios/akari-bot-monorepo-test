@@ -5,7 +5,7 @@
 
 用法：
     uv run python tools/lint_comments.py                    # 检查全部文件，仅报基准外违规
-    uv run python tools/lint_comments.py --diff HEAD~1      # 只检查该提交之后新增/修改的行
+    uv run python tools/lint_comments.py --diff HEAD~1      # 仅检查该提交之后新增/修改的行
     uv run python tools/lint_comments.py --generate-baseline  # 重建基准文件
 """
 
@@ -246,7 +246,7 @@ def prose_for_spacing(text: str) -> str:
 def check_prose(path: str, line: int, body: str) -> list[Violation]:
     """规则 8 至 10 涵盖变更叙述、半角标点与中英文间距。
 
-    :param path: 仓库根目录相对路径。
+    :param path: 相对仓库根目录的路径。
     :param line: 行号。
     :param body: 注释或 docstring 的正文。
     :return: 违规列表。
@@ -333,7 +333,7 @@ def extract_docstrings(source: str) -> dict[int, tuple[str, bool]]:
 def check_docstring(path: str, line: int, text: str) -> list[Violation]:
     """对 docstring 逐行施加规则 1~4、8~10。
 
-    :param path: 仓库根目录相对路径。
+    :param path: 相对仓库根目录的路径。
     :param line: docstring 起始行号。
     :param text: docstring 正文。
     :return: 违规列表。

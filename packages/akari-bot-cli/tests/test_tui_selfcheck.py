@@ -420,7 +420,7 @@ async def _test_available_check_passes() -> bool:
 
 @func_case
 async def test_tui_selfcheck(tester: Tester):
-    """cli.tui 自检：逐页 worker 等待与异常、未执行的产品检查测试"""
+    """cli.tui 自检覆盖逐页 worker 等待与异常、未执行的产品检查。"""
     _use_cli_locale()
     await tester.test(_test_navigation_passes_with_static_sources, "逐页切换等待取数后仍通过")
     await tester.test(_test_navigation_without_instance_uses_static_sources, "无实例的默认导航自检不启动子进程")

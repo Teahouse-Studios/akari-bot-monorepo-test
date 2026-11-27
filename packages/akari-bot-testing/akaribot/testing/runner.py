@@ -1,7 +1,7 @@
 """自研测试框架的运行器，根目录兼容实现 ``tester.py`` 的主体。
 
-入口有两个：``python -m akaribot.testing`` 与根目录的兼容实现 ``tester.py``。测试配置的铺设
-发生在本模块导入期，且必须早于任何 ``akaribot.core`` 导入，故本模块的导入顺序不可调整。
+入口有两个：``python -m akaribot.testing`` 与根目录的兼容实现 ``tester.py``。测试配置的初始化
+发生在该模块导入期，且必须早于任何 ``akaribot.core`` 导入，因此该模块的导入顺序不可调整。
 仓库根由 ``AKARI_REPO_ROOT`` 或 :func:`_resolve_repo_root` 确定，不按本文件位置回推。
 """
 
@@ -45,7 +45,7 @@ TEST_CONFIG_OVERRIDES: list[tuple[str, str, object]] = [
 
 def _write_minimal_config(path: Path, locale: str, version: int) -> None:
     # 注释先以 i18n 标记写入磁盘，待 i18n 快照就绪后由配置模板扫描统一翻译。版本号读取当前值，因为
-    # core/config/update.py 的迁移在导入阶段执行，低于目标版本会被逐级升级。
+    # core/builtins/config/update.py 的迁移在导入阶段执行，低于目标版本会被逐级升级。
     # 该函数必须在 ``AKARI_CONFIG_PATH`` 设置之后调用，其内的 core.constants 导入会固定配置目录。
     from akaribot.core.constants import config_filename
 
@@ -192,8 +192,8 @@ REPO_ROOT_ENV = "AKARI_REPO_ROOT"
 class RunOptions:
     """本次运行的选择项。
 
-    :param paths: 只跑这些测试文件或目录。空元组表示按默认根收集。
-    :param cases: 只跑名字里含这些子串的 ``func_case``。空元组表示全部。
+    :param paths: 仅运行这些测试文件或目录。空元组表示按默认根收集。
+    :param cases: 仅运行名字里含这些子串的 ``func_case``。空元组表示全部。
     :param ci: 是否按 CI 模式运行（无 Expectation 的用例跳过而不是等待人工输入）。
     :param coverage: 是否启用覆盖率收集。
     """
@@ -483,7 +483,7 @@ def _test_roots() -> list[Path]:
 
 
 def _test_module_key(path: str) -> str:
-    # 按仓库根目录相对路径生成，因为不同包中可以存在同名测试文件，仅读取文件名称会互相覆盖。仓库根目录不可知时
+    # 按相对仓库根目录的路径生成，因为不同包中可以存在同名测试文件，仅读取文件名称会互相覆盖。仓库根目录不可知时
     # 回退至原路径，模块名称的唯一性由绝对路径本身保证。
     relative = Path(path)
     if REPO_ROOT is not None:

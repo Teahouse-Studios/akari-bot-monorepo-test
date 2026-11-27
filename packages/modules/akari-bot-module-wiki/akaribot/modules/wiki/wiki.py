@@ -307,7 +307,7 @@ def _build_render_preview_callback(
             if rendered:
                 await tracker.add(await session.send_message(rendered, quote=False))
         except Exception:
-            # A browser/WAF failure is expected to be possible even after the API pre-check.
+            # API 预检通过后仍可能遇到浏览器启动或 WAF 拦截失败。
             Logger.exception("Wiki WebRender preview failed: ")
 
     return _callback
@@ -346,8 +346,7 @@ async def _start_background_with_release(
             suppress_errors=(SessionContextUnavailable, SessionFinished, WaitCancelException),
         )
     except BaseException:
-        # create_task() may fail before taking ownership of either coroutine. Close both explicitly
-        # to avoid coroutine-leak warnings, then undo the already successful hold.
+        # 任务创建可能在接管协程前失败，需显式关闭两个协程并释放已持有的平台上下文。
         if runner is not None:
             runner.close()
         if awaitable is not None and hasattr(awaitable, "close"):
@@ -356,9 +355,8 @@ async def _start_background_with_release(
         raise
 
     try:
-        # Let the runner enter its try/finally before handing it to detached lifecycle code.
-        # Cancelling a never-started coroutine skips its finally block and would leak both the
-        # inner awaitable and the held platform context.
+        # 先让运行器进入 try/finally 再交给后台生命周期。未启动的协程被取消时会跳过 finally，
+        # 从而泄漏内层协程与已持有的平台上下文。
         await asyncio.sleep(0)
     except BaseException:
         task.cancel()

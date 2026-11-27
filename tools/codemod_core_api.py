@@ -9,8 +9,8 @@
 不由本工具处理。
 
 用法：
-    python tools/codemod_core_api.py            # 只报告，不改文件
-    python tools/codemod_core_api.py --write    # 落盘
+    python tools/codemod_core_api.py            # 仅报告，不改文件
+    python tools/codemod_core_api.py --write    # 写入磁盘
 
 退出码：0 正常，2 表示有文件无法解析。
 """

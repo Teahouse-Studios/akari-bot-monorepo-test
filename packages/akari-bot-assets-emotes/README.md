@@ -1,10 +1,10 @@
 # akari-bot-assets-emotes
 
-提供 AkariBot 表情资源包，内容位于 assets/emotes 目录，随 akari-bot-core[full] 默认安装。
+提供 AkariBot 表情资源包，内容位于 `assets/emotes` 目录，随 `akari-bot-core[full]` 安装。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-assets-emotes

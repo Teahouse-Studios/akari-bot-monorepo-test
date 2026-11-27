@@ -28,7 +28,7 @@ akaribot module add akari-bot-module-dice
 | `dice_output_digit` | int | 9 | 输出数位上限，超过时使用科学计数法 |
 | `dice_detail_count` | int | 5 | 投掷总量达到该值时不显示详细信息 |
 
-若任一项小于或等于 0，命令将返回配置错误提示。完整清单参见配置模板 `akaribot/modules/dice/config.py`。
+上表中 `dice_output_digit` 不参与校验，其余字段小于或等于 0 时返回配置错误提示。完整清单参见配置模板 `akaribot/modules/dice/config.py`。
 
 ## 权限与平台能力
 

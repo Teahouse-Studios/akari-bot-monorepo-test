@@ -1,4 +1,4 @@
-"""Track Arcaea version updates and push notifications."""
+"""跟踪 Arcaea 版本更新并推送通知。"""
 
 import orjson
 

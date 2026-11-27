@@ -1,7 +1,7 @@
 """数据库浏览与按主键写入。
 
-数据与写入一律经子进程调用 ``python -m akaribot.core.entrypoints.data``：CLI 进程不 import core，
-表名与列名只由 core 侧已注册的模型判定。删除在终端里问一次（``--yes`` 跳过），界面自行确认后用
+数据与写入一律通过子进程调用 ``python -m akaribot.core.entrypoints.data``，CLI 进程不 import core，
+表名与列名仅由 core 侧已注册的模型判定。删除在终端里问一次（``--yes`` 跳过），界面自行确认后用
 ``--yes`` 调用同一条路径。
 """
 
@@ -36,7 +36,7 @@ DEFAULT_LIMIT = 20
 
 
 def _call(instance: Instance, *args: str) -> Any:
-    # core 将失败原因亦写入 stdout 的 JSON，因此先解析再按退出码判定。无法解析时按原始输出报错。
+    # core 将失败原因亦写入 stdout 的 JSON，因此先解析再按退出码判定。无法解析时把原始输出作为错误信息。
     completed = instance.run_core_capture("data", *args, "--json")
     payload = _parse(completed.stdout)
     if completed.returncode == 0:

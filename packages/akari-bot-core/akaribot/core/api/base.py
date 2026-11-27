@@ -1,11 +1,11 @@
 """模块面公共 API 的实现模块。
 
-门面把“模块可以依赖什么”与实现位置解耦：模块包只 import ``akaribot.core.api``，core 内部
-模块的移动与改名不影响模块。全部具体 import 集中在本模块，``akaribot/core/api/__init__.py`` 只做转发。
+门面把“模块可以依赖什么”与实现位置解耦。模块包仅导入 ``akaribot.core.api``，core 内部
+模块的移动与改名不影响模块。全部具体 import 集中在本模块，``akaribot/core/api/__init__.py`` 仅做转发。
 
 导入分两层。不依赖配置系统的名字在模块层直接导入。其余名字记录在 ``LAZY_MODULES`` 中，由
 ``__getattr__`` 在首次访问时导入。原因是 ``akaribot.core.config`` 会在导入期校验配置文件是否存在并执行版本
-迁移，而门面必须能在配置就绪之前导入：CLI 读取 API 版本、发现层收集 locale 目录都发生在配置
+迁移，而门面必须能在配置就绪之前导入。CLI 读取 API 版本、发现层收集 locale 目录都发生在配置
 加载之前。``__all__`` 是门面承诺的完整清单，与 ``LAZY_MODULES`` 收录的名字一致。
 """
 
@@ -635,7 +635,7 @@ def __getattr__(name: str) -> Any:
 
         配置在导入阶段不可用时模块层的导入整体中断，未绑定的名称在此重试。重试仍失败则原样抛出
         ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
-        经过本函数。
+        经过该函数。
 
         :param name: 公开接口名。
         :return: 名称对应的对象。
@@ -643,7 +643,7 @@ def __getattr__(name: str) -> Any:
     """
     # 配置在导入阶段不可用时模块层的导入整体中断，未绑定的名称在此重试。重试仍失败则原样抛出
     # ``ConfigFileNotFound``，让调用方看到真实原因。解析结果写回模块命名空间，后续访问不再
-    # 经过本函数。
+    # 经过该函数。
     module_path = _LAZY_INDEX.get(name)
     if module_path is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

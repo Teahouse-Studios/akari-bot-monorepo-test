@@ -239,7 +239,7 @@ class MessageSession:
         :param disable_secret_check: 是否禁用消息安全检查（默认为 False）
         :param callback: 回调函数，在消息发送完成后执行（可选）
         :param callback_id: 按钮交互使用的虚拟回复 ID，通常由框架自动生成（可选）
-        :param callback_timeout: callback 有效秒数，默认为 30 分钟，None 表示不自动过期
+        :param callback_timeout: callback 有效秒数，默认为 1800 秒（30 分钟），None 表示不自动过期
         :param callback_once: 是否在首次触发后立即失效，默认为 False
         :return: FinishedSession 对象，包含消息 ID，可用于后续操作
 
@@ -373,7 +373,7 @@ class MessageSession:
         :param disable_secret_check: 是否禁用消息安全检查（默认为 False）
         :param callback: 回调函数，在消息发送完成后执行（可选）
         :param callback_id: 按钮交互使用的虚拟回复 ID，通常由框架自动生成（可选）
-        :param callback_timeout: callback 有效秒数，默认为 30 分钟，None 表示不自动过期
+        :param callback_timeout: callback 有效秒数，默认为 1800 秒（30 分钟），None 表示不自动过期
         :param callback_once: 是否在首次触发后立即失效，默认为 False
         :raises SessionFinished: 总是抛出此异常来终止会话处理
         """
@@ -630,10 +630,10 @@ class MessageSession:
         return await PlatformAPI.remove_reaction(self.session_info, self.session_info.message_id, emoji)
 
     async def check_native_permission(self, user_id: str | None = None) -> bool:
-        """用于检查消息用户原本在聊天平台中是否具有管理员权限。
+        """用于检查消息用户在聊天平台中是否具有管理员权限。
 
         :param user_id: 指定成员的平台 ID，留空则检查发话者本人
-        :return: 如果用户是平台管理员返回 True，否则返回 False
+        :return: 用户是平台管理员时返回 True，否则返回 False
         """
         return await PlatformAPI.check_native_permission(self.session_info, user_id=user_id)
 
@@ -718,8 +718,8 @@ class MessageSession:
         :param append_instruction: 是否在发送的消息中附加提示（默认为 True）
         :param no_confirm_action: 在 `no_confirm` 配置项启用后的默认行为（默认为 True）
         :param release_execution_lock: 等待期间是否释放执行锁。Union 合并在双方建立
-                                       barrier 后须保持锁，避免冲突选择期间重新并发。
-        :param consume_any_message: 是否将下一条任意消息作为否定结果消费，而不是仅消费确认词。
+                                       barrier 后必须保持锁，避免冲突选择期间重新并发。
+        :param consume_any_message: 是否将下一条任意消息作为否定结果取走，而不是仅取走确认词。
         :param confirm_token: 要求完整回复的口令，不为 None 时启用严格确认模式。
         :return: 若对象发送确认指令返回 True，反之返回 False
 

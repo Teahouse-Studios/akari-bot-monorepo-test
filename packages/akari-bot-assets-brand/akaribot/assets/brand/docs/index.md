@@ -32,9 +32,7 @@ from akaribot.assets.brand import brand_dir
 path = brand_dir() / "character_marked.png"
 ```
 
-`brand_dir()` 返回本包资源的根目录。core 的 `find_brand_asset(name)` 按“资源包 → 实例 `assets/`”的顺序查找。
-
-资源包与实例 `assets/` 均无同名文件时，`find_brand_asset()` 返回 `None`，由调用方降级处理。`~about` 缺失图片不会导致整条命令失败，SMTP 报告缺少标志时也正常发送。实例 `assets/` 中的同名文件会覆盖包内资产，便于部署者自定义立绘与标志。
+`brand_dir()` 返回本包资源的根目录。core 的 `find_brand_asset(name)` 按“资源包 → 实例 `assets/`”的顺序查找。资源包缺少该文件时改用实例 `assets/` 中的同名文件，两者都没有时返回 `None`，由调用方降级处理。`~about` 缺失图片不会导致整条命令失败，SMTP 报告缺少标志时也正常发送。
 
 ## 文档站点的品牌插槽
 

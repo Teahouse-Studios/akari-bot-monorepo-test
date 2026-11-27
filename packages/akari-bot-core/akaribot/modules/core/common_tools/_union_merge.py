@@ -57,7 +57,7 @@ def generate_code(store: ExpiringTempDict, union_id: str, holder_id: str, extra:
 
 
 def take_code(code: str, stores: tuple[tuple[str, ExpiringTempDict], ...]) -> tuple[str, dict] | None:
-    """取出并消费一枚绑定码，同时判断它属于哪一个 union 域。
+    """取出并核销一枚绑定码，同时判断它属于哪一个 union 域。
 
     :param code: 用户输入的绑定码。
     :param stores: ``(union 域， 存储)`` 的序列，按顺序查找。

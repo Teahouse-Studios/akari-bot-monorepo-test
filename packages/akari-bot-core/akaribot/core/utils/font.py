@@ -1,10 +1,10 @@
 """字体查找：资源包、实例 data、系统字体三级回退。
 
-模块包经 :func:`find_font` 取字体路径，不依赖 ``assets/fonts`` 这类相对仓库布局的常量：字体由
+模块包通过 :func:`find_font` 获取字体路径，不依赖 ``assets/fonts`` 这类相对仓库布局的常量：字体由
 ``akari-bot-assets-fonts`` 分发，源码克隆与 wheel 安装两种形态下的位置不同。
 
 三级顺序固定为资源包、``Paths.data/fonts``（部署者自备）、系统字体。三级都取不到时抛
-:class:`FontNotFoundError`，其消息给出三条修复路径，而不是让 ``ImageFont.truetype`` 抛出未包装的 ``OSError``。
+:class:`FontNotFoundError`，其消息给出三条修复路径，并保留底层 ``OSError``。
 """
 
 from __future__ import annotations

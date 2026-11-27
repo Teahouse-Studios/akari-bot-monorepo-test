@@ -1,11 +1,10 @@
 """maimai 绑定表的 OAuth 列变更。
 
-水鱼分发给用户各自部署的应用属于公开客户端，换票接口对它不可用，只能为每位用户各自保存一把
-refresh token，落雪侧则保存用户的授权令牌。Developer-Token 时代不需要保存任何用户登录信息，
-旧表因而没有这些列。旧行没有 refresh token，在用户重新完成一次绑定之前不可用。
+水鱼分发给用户各自部署的应用属于公开客户端，换取令牌接口对它不可用，仅能为每位用户各自保存一个
+refresh token，落雪侧则保存用户的授权令牌。旧行没有 refresh token，用户重新完成一次绑定时才写入。
 
-同一批变更还要删掉落雪的旧好友码列：该字段已彻底退出模型，旧表上却是 NOT NULL 且无默认值，
-不删除会让新绑定写入直接失败。
+同一批变更同时删除落雪的旧好友码列。该列不在模型中，旧表上为 NOT NULL 且无默认值，不删除会让
+新绑定写入直接失败。
 """
 
 from __future__ import annotations
@@ -26,7 +25,7 @@ OBSOLETE_COLUMNS = (("module_maimai_lxns_prober_bind_info", "friend_code"),)
 
 async def upgrade(ctx: MigrationContext) -> None:
     """
-    补充 OAuth 列并删除已废弃的列。
+    补充 OAuth 列并删除落雪的旧好友码列。
 
     :param ctx: 迁移上下文。
     """

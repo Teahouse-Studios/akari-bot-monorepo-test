@@ -1,4 +1,4 @@
-"""使用一组占位值渲染 templates/ 下的全部模板，并校验产物语法。
+"""使用一组占位值渲染 CLI 包内 templates/ 目录的全部模板，并校验产物语法。
 
 模板以 ``.j2`` 后缀存放，ruff 等工具默认不会读取，因此需要本脚本保证模板与接口约定
 同步：任何一处占位符名称修改、括号写错或语法错误都会在此暴露。
@@ -20,7 +20,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TEMPLATE_ROOT = PROJECT_ROOT / "templates"
+TEMPLATE_ROOT = PROJECT_ROOT / "packages" / "akari-bot-cli" / "akaribot" / "cli" / "templates"
 
 # 占位值。模块名称采用纯小写与下划线格式，与模板 README 所述的约束保持一致。
 SAMPLE_CONTEXT = {
@@ -63,14 +63,14 @@ def fill_placeholders(text: str) -> str:
 def output_name(name: str) -> str:
     """模板路径移除 ``.j2`` 后缀，并把路径占位符替换为样例值。
 
-    :param name: 相对 templates/ 的模板路径。
+    :param name: 相对模板目录的模板路径。
     :return: 产物路径。
     """
     return fill_placeholders(name[: -len(".j2")])
 
 
 def template_names() -> list[str]:
-    """列出 templates/ 目录下的全部模板，返回相对于 templates/ 的 POSIX 路径。"""
+    """列出模板目录下的全部模板，返回相对于该目录的 POSIX 路径。"""
     return sorted(path.relative_to(TEMPLATE_ROOT).as_posix() for path in TEMPLATE_ROOT.rglob("*.j2"))
 
 

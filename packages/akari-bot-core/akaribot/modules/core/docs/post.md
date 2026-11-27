@@ -4,13 +4,13 @@ order: 53
 
 # post
 
-模块级所需权限为超级用户。
+此模块用于向指定场景推送主动消息，执行前需要确认。模块级权限为超级用户。
 
 ### `post`
 
-<CommandUsage usage="post <target> <post_msg>" :params="['target=目标场景 ID，须带平台前缀', 'post_msg=推送内容，支持 KE 码']" permission="superuser" />
+<CommandUsage usage="post <target> <post_msg>" :params="['target=目标场景 ID，必须带平台前缀', 'post_msg=推送内容，支持 KE 码']" permission="superuser" />
 
-此命令向指定场景推送主动消息，执行前需要确认。目标场景 ID 必须包含平台前缀。若缺少前缀，机器人会提示当前场景所使用的前缀。`post_msg` 支持 KE 码。
+此命令要求目标场景 ID 包含平台前缀。若缺少前缀，机器人会提示当前场景所使用的前缀。`post_msg` 支持 KE 码。
 
 <ChatExample
   :log="[

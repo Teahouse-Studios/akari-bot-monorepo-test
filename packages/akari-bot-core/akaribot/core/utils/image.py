@@ -89,7 +89,7 @@ async def msgchain2image(
     session = getattr(session, "session_info", session)
 
     # 图片属于纯文本载体，无法承载可点击的行内元素，因此按不支持 Markdown 处理，
-    # 命令操作等元素会就地降级为纯文本，如果不进行降级，模板将无法识别对应元素并导致内容静默丢失。
+    # 命令操作等元素会就地降级为纯文本，如果不降级，模板将无法识别对应元素并导致内容静默丢失。
     message_list = message_chain.as_sendable(session, enable_markdown=False)
     renderable_list = []
     for m in message_list:

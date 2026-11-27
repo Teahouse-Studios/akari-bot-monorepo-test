@@ -71,7 +71,7 @@ slash_load_dir = (Path(__file__).parent / "slash").resolve()
 
 def load_slashcommands():
     for subm in pkgutil.iter_modules(slash_modules.__path__):
-        if subm.name in ["context", "parser"]:  # dunno why these appear in the list in some environments
+        if subm.name in ["context", "parser"]:  # 部分环境的子模块列表会混入这两个名字。
             continue
         module_py_name = f"{slash_modules.__name__}.{subm.name}"
         try:

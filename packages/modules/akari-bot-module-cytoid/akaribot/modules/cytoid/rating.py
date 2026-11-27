@@ -163,7 +163,6 @@ async def get_rating(msg: Bot.MessageSession, uid, query_type):
             avg_rating = sum(x["rating"] for x in best_records) / len(best_records)
         else:
             avg_rating = 0.0
-        # b30card
         img_height = 1600 if query_type == "bestRecords" else 640
         b30img = Image.new("RGBA", (1955, img_height), "#1e2129")
         avatar_path = await download_avatar_thumb(avatar_img, profile_id)
@@ -261,7 +260,6 @@ async def get_rating(msg: Bot.MessageSession, uid, query_type):
         else:
             savefilename = f"{random_cache_path()}.png"
             b30img.convert("RGB").save(savefilename)
-            # shutil.rmtree(workdir)
             return {"status": True, "path": savefilename}
     except Exception as e:
         if str(e).startswith("404"):

@@ -154,8 +154,8 @@ class Bot:
         :param sender_id: 用户 ID（可选）
         :param create: 如果场景不存在是否创建
         :param is_private: 该场景是否为私聊。主动获取的会话没有平台事件可依据，
-                           核心也不掌握各平台如何表示私聊前缀，故须由调用方指明，默认按非私聊处理
-        :return: 抓取的会话信息，或 None（获取失败）
+                           核心也不掌握各平台如何表示私聊前缀，因此必须由调用方指明，默认按非私聊处理
+        :return: 获取的会话信息，或 None（获取失败）
         """
         try:
             Logger.trace(f"Fetching target {target_id}")
@@ -439,7 +439,7 @@ class Bot:
         message: Chainable | Callable[[FetchedSessionInfo], Awaitable[Chainable | None]],
         disable_secret_check: bool = False,
     ) -> None:
-        """向一个场景组绑定的会话发送消息，同一条消息通道只发一次。
+        """向一个场景组绑定的会话发送消息，同一条消息通道仅发一次。
 
         :param union_id: 场景组的 union ID，可一次传入多个。
         :param message: 消息内容，或接受队首会话、返回消息内容的异步工厂，工厂返回 None 表示不发送。

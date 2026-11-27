@@ -41,19 +41,19 @@ _refresh_locks: dict[str, asyncio.Lock] = {}
 
 
 class DivingFishOAuthError(Exception):
-    """# 撤销成功或已被撤销时端点均返回 200，其余情况均视为异常抛出。"""
+    """水鱼（Diving-Fish）OAuth 异常基类。"""
 
 
 class DivingFishAuthorizationDenied(DivingFishOAuthError):
-    """# 撤销操作无需 client_secret，公开客户端与机密客户端共用同一接口端点。"""
+    """用户在授权页拒绝了设备码授权，需要重新发起绑定。"""
 
 
 class DivingFishDeviceCodeExpired(DivingFishOAuthError):
-    """# 若已有任务正在执行刷新，等待其刷新结果，避免并发刷新导致旧 refresh token 失效。"""
+    """设备码已过期，或在有效期内未完成授权。"""
 
 
 class DivingFishSlowDown(DivingFishOAuthError):
-    """水鱼（Diving-Fish）OAuth 异常基类。"""
+    """授权服务器要求放慢轮询，调用方应延长轮询间隔。"""
 
 
 class DivingFishTokenRevoked(DivingFishOAuthError):
@@ -251,13 +251,13 @@ async def refresh_access_token(refresh_token: str) -> dict:
 
 
 async def exchange_on_behalf_of(subject: str) -> dict:
-    """换票：用应用的登录信息换取一张代表指定用户的短期令牌。
+    """用应用的登录信息换取一张代表指定用户的短期令牌。
 
     :param subject: 用户标识，写法为 `sub:<水鱼用户 ID>`。
     :return: 令牌响应，含 `access_token` 与 `expires_in`，不含 refresh token。
     :raise DivingFishConsentRequired: 该用户未授权本应用，需引导其重新绑定。
-    :raise DivingFishRateLimited: 换票过于频繁。
-    :raise DivingFishOAuthError: 其它换票错误，如客户端登录信息有误。
+    :raise DivingFishRateLimited: 换取令牌过于频繁。
+    :raise DivingFishOAuthError: 其它换取令牌错误，如客户端登录信息有误。
     """
     resp = await _post_form(
         DF_TOKEN_URL,
@@ -308,13 +308,14 @@ async def get_access_token(bind_info: DivingProberBindInfo) -> str:
     :param bind_info: 该用户的绑定记录。
     :return: access token。
     :raise DivingFishTokenRevoked: 登录信息已失效或用户不再授权，用户需要重新绑定。
-    :raise DivingFishOAuthError: 其它刷新或换票错误。
+    :raise DivingFishOAuthError: 其它刷新或换取令牌错误。
     """
     union_id = bind_info.union_id
     cached = _cached_access_token(union_id)
     if cached:
         return cached
 
+    # 并发刷新会使旧的 refresh token 失效，同一用户的刷新串行执行。
     lock = _refresh_locks.setdefault(union_id, asyncio.Lock())
     async with lock:
         # 授权服务器可能将错误信息嵌套在不同层级的 JSON 中，统一提取错误信息。
@@ -386,6 +387,8 @@ async def request_player_data(
 
 
 async def revoke_token(token: str, token_type_hint: str = "refresh_token") -> None:
+    # 撤销成功或已被撤销时端点均返回 200，其余情况抛出异常。
+    # 撤销无需 client_secret，公开客户端与机密客户端共用同一端点。
     await _post_form(
         DF_REVOKE_URL,
         _authenticated(
@@ -424,7 +427,7 @@ async def fill_bind_username(bind_info: DivingProberBindInfo) -> str:
 
 
 async def store_binding(union_id: str, token: dict) -> bool:
-    """把一次成功的设备码绑定落盘。
+    """把一次成功的设备码绑定写入数据库。
 
     :param union_id: 用户联合 ID。
     :param token: 设备码兑换所得的令牌响应。

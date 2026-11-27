@@ -1,10 +1,9 @@
 """模块作者的公共 API 门面。
 
-模块包依赖本模块，而不是 ``core.builtins.bot`` 这类内部路径：core 内部模块在拆包与后续重构中
-可以自由移动，模块侧的 import 保持不变。平台适配器另有 :mod:`core.api.adapters` 收录只有适配器
-会用的设施。
+模块包仅依赖本模块。core 内部模块在拆包与后续重构中可以自由移动，模块侧的 import 保持不变。
+平台适配器另有 :mod:`core.api.adapters` 收录只有适配器会用的设施。
 
-具体导入集中在 :mod:`core.api.base`，本模块只做转发。导入期不依赖实例配置：``core.api.base``
+具体导入集中在 :mod:`core.api.base`，本模块仅做转发。导入期不依赖实例配置：``core.api.base``
 的导入块在配置缺失时会整体中断，未绑定的名字由本模块的 ``__getattr__`` 在首次访问时重试，因此
 CLI 与发现层可以在配置就绪之前安全地 import 本模块并读取 ``__api_version__``。
 """

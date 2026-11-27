@@ -1,8 +1,8 @@
 """包变更 RPC 入口（``entrypoints/rpc.py``）的白名单、真实投递与失败分类。
 
-热装载与热拆卸本身由 core 既有的 ``post_package_install`` / ``post_package_remove`` 实现，本文件
+热加载与热拆卸本身由 core 既有的 ``post_package_install`` / ``post_package_remove`` 实现，本文件
 验证 CLI 经该入口把请求投递到运行中的 Server 并得到可区分的结果：白名单在导入 core 之前生效，
-投递走真实契约与真实处理器，端到端用例另起一个真实 Server 进程在隔离实例里做完整热装载与热拆卸。
+投递走真实接口与真实处理器，端到端用例另起一个真实 Server 进程在隔离实例里做完整热加载与热拆卸。
 
 未覆盖：``ModulesManager.install_package`` 自身失败与取消时的回滚路径。
 """

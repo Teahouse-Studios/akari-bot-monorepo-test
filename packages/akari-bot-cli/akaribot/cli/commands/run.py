@@ -178,7 +178,7 @@ def _log_tail(path: Path, limit: int = LOG_TAIL_CHARS) -> str:
 
 def _remember_desired(target, state: str) -> None:
     # 服务守护循环按该处的 desired 恢复上次的运行状态。无记录的实例与不可用的注册表均不应导致
-    # 启动或停止失败，因此静默跳过。
+    # 启动或停止失败，因此跳过时不作提示。
     try:
         registry = InstanceRegistry()
         entry = registry.find_by_root(target.root)

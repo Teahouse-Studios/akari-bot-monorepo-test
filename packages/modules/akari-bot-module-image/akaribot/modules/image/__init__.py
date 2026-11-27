@@ -3,10 +3,10 @@ from PIL import Image as PILImage
 from akaribot.core.api import Bot, MessageChain, ImageElement, Image, Plain, I18NContext, module
 
 image = module("image", required_superuser=True)
-# only superusers now due to indeterminate safety
+# 该命令仅超级用户可用。
 
 
-@image.command("fillwhite ...")  # convert picture with transparent background to white background image
+@image.command("fillwhite ...")
 async def fillwhite(msg: Bot.MessageSession):
     imgs = [e for e in msg.session_info.messages.values if isinstance(e, ImageElement)]
     if not imgs:

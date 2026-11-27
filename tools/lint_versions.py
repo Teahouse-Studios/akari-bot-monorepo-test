@@ -8,7 +8,7 @@
     V4 warn   条目无法解析或目标成员无静态版本，跳过该条校验
 
 uv lock 无法发现这类问题。workspace 内部的 [tool.uv.sources] 仅在开发阶段生效，
-uv.lock 记录的是 editable 路径，成员声明的版本约束被丢弃，uv lock 与 uv sync 都不报错。
+uv.lock 记录的是 editable 路径，成员声明的版本约束被丢弃，uv lock 与 uv sync 都不会失败。
 
 uv build 出的 wheel METADATA 仍原样带着这些约束，用户的解析器会照此拒绝安装。
 本检查针对的正是这段未被覆盖的区间。约束在开发阶段不生效、在发布阶段才生效，PR 阶段无人比对。
@@ -18,7 +18,7 @@ uv build 出的 wheel METADATA 仍原样带着这些约束，用户的解析器�
 
 用法：
     uv run python tools/lint_versions.py                  # 全量检查
-    uv run python tools/lint_versions.py --diff HEAD~1    # 只报告该基准之后改动所触发或所在的违规
+    uv run python tools/lint_versions.py --diff HEAD~1    # 仅报告该基准之后改动所触发或所在的违规
 
 退出码：error 为 0 时返回 0（warn 不影响），否则返回 1，工具自身无法运行返回 2。
 """
@@ -312,8 +312,8 @@ def check_core_consistency(core_specs: dict[str, list[tuple[Member, Dependency]]
 
     比较取 packaging 归一化后的 specifier 字符串（书写顺序与空白差异不算不一致），
     取出现次数最多的写法为基准（并列时取字符串序最小者），其余写法逐个报 error。
-    报告打印各包的实际书写形式，extra 部分不参与比较。基准写法由全体包共同决定，
-    故 scope 取全部涉事文件，任一包的改动导致基准翻转时都能被 --diff 报出。
+    报告打印各包的实际书写形式，extra 部分不参与比较。基准写法由全体包共同确定，
+    因此 scope 取全部涉事文件，任一包的改动导致基准翻转时都能被 --diff 报出。
     """
     if len(core_specs) < 2:
         return []
@@ -342,7 +342,7 @@ def changed_pyprojects(base_ref: str) -> set[str] | None:
     """取 `git diff <base_ref>` 与未跟踪文件中改动过的 pyproject.toml。
 
     :param base_ref: 比较基准，如 `HEAD~1` 或提交 SHA。
-    :return: 仓库根相对 POSIX 路径集合。git 调用失败时返回 None，调用方回退为全量检查。
+    :return: 相对仓库根目录的 POSIX 路径集合。git 调用失败时返回 None，调用方回退为全量检查。
     """
     commands = (
         ["git", "diff", "--name-only", "--no-color", base_ref, "--", "*pyproject.toml"],

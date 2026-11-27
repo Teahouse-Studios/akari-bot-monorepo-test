@@ -1,4 +1,4 @@
-"""Wiki callback ownership and held-context lifecycle regression tests."""
+"""wiki 回调归属与持有上下文生命周期的回归测试。"""
 
 import asyncio
 from types import SimpleNamespace

@@ -4,7 +4,7 @@
 user unit）常驻拉起，每轮读实例注册表，按记录里的 ``desired`` 与 ``restart_on_crash`` 恢复、重启
 或跳过各个实例。注册表只存策略，运行期观测留在守护进程内存里。
 
-单元文件的渲染是纯函数，系统命令经可注入的 runner 与 which 发出：没有对应系统工具的机器上也能
+单元文件的渲染是纯函数，系统命令通过可注入的 runner 与 which 发出：没有对应系统工具的机器上也能
 核对生成结果，测试不会真的调用 ``launchctl`` 或 ``systemctl``。
 """
 
@@ -318,7 +318,7 @@ class ServiceBackend:
     def install(self, *, dry_run: bool = False, force: bool = False) -> ServiceStatus:
         """写入单元文件并注册服务。
 
-        :param dry_run: 只生成内容，不落盘也不调用系统工具。
+        :param dry_run: 仅生成内容，不写入磁盘也不调用系统工具。
         :param force: 单元文件已存在时覆盖它。
         :return: 安装后的状态，``enabled`` 为 ``None`` 表示系统工具不可用、尚未注册。
         :raises ServiceError: 平台不受支持，或单元文件已存在而未指定 ``force``。
@@ -475,7 +475,7 @@ class SuperviseRound:
     :param restarted: 自动重启的实例数。
     :param failed: 拉起失败的实例数。
     :param abandoned: 放弃守护的实例数（达到重启上限，或策略禁止重启）。
-    :param skipped: 跳过的实例数（目录不存在，或期望停止却在跑）。
+    :param skipped: 跳过的实例数（目录不存在，或期望停止却仍在运行）。
     """
 
     events: tuple[SuperviseEvent, ...] = ()
@@ -573,7 +573,7 @@ class Supervisor:
         self._registry_error = ""
 
     def run_once(self) -> SuperviseRound:
-        """跑一轮守护并返回本轮结论。
+        """执行一轮守护并返回本轮结论。
 
         观测表只存在于进程内：注册表存策略，重启计数与“见过它在跑”都是本次服务运行期的判断依据。
         """

@@ -88,7 +88,7 @@ async def _(msg, target: str): ...
 | `~auth remove <user> <module>` | 撤销当前发送者授予的权限 |
 | `~auth list <user>` | 列出该用户持有的模块授权 |
 
-授权记录保存在 `SenderUnionInfo.sender_data["module_auth"]` 中，每项包含模块名与授权者 ID。授权仅对声明了 `required_superuser` 的模块生效，`auth add` 将拒绝为其他模块授权。执行授权时可以使用模块别名代替模块名。
+授权记录保存在 `SenderUnionInfo.sender_data["module_auth"]` 中，每项包含模块名与授权者 ID。授权仅对声明了 `required_superuser` 的模块生效，`auth add` 将拒绝为其他模块授权。`auth` 命令中的 `<module>` 按模块名匹配，模块别名不参与匹配。
 
 授权者不再是超级用户时，其授予的权限自动失效。
 
@@ -127,4 +127,4 @@ demo = module("demo", required_bot_permissions=["can_manage_messages"])
 
 ## 相关文档
 
-模块声明与命令模板参见[模块开发](module-development.md)。平台权限查询与能力声明参见[适配器开发](adapter-development.md)。内置管理模块参见[内置模块](../../modules/core/docs/index.md)。
+模块声明与命令模板参见[模块开发](module-development.md)。平台权限查询与能力声明参见[适配器开发](adapter-development.md)。内置管理模块参见[内置模块](../../modules/core/docs/module.md)。

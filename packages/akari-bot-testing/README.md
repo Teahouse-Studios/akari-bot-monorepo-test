@@ -4,10 +4,10 @@
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-testing
 ```
 
-运行、配置与模块管理参见[项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。
+安装与使用参见 [项目文档](https://github.com/Teahouse-Studios/akari-bot/blob/master/README.md)。

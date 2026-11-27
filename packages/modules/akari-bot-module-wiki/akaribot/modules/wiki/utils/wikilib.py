@@ -155,7 +155,7 @@ class PageInfo:
     is_forum: bool = False
     is_forum_topic: bool = False
     forum_data: dict = field(factory=dict)
-    # MediaWiki parse API pre-check result used by the deferred WebRender button.
+    # MediaWiki parse API 的预检结果，决定 WebRender 按钮是否可用。
     renderable: bool = False
     diff_data: dict | None = None
     revision_id: int | None = None
@@ -214,7 +214,7 @@ class WikiLib:
                 response = orjson.loads(req)
 
         except Exception as e:
-            # Exception handling for moegirl.org.cn
+            # 萌娘百科接口出错时改用单独的提示文案。
             if api.find("moegirl.org.cn") != -1:
                 raise InvalidWikiError(str(I18NContext("wiki.message.utils.wikilib.get_failed.moegirl")))
             raise NoReportException(str(e))
@@ -331,7 +331,6 @@ class WikiLib:
                     api_match = m[0]
                     if api_match.startswith("//"):
                         api_match = self.url.split("//")[0] + api_match
-                    # Logger.info(api_match)
                     wiki_api_link = api_match
                 except IndexError:
                     Logger.trace(get_page)
@@ -411,7 +410,7 @@ class WikiLib:
         )
 
     async def check_wiki_info_from_database_cache(self):
-        """check wiki_info from database cache, the result maybe incorrect since some wiki that distinguish languages by url path"""
+        """从数据库缓存读取 wiki 信息。按 URL 路径区分语言的站点，缓存结果可能不准确。"""
         parse_url = urllib.parse.urlparse(self.url)
         get = await WikiSiteInfo.get_like_this(parse_url.scheme + "://" + parse_url.netloc)
         if get:
@@ -525,10 +524,10 @@ class WikiLib:
         if len(t) > 65535:
             return str(I18NContext("wiki.message.utils.wikilib.error.text_too_long"))
         if section:
-            for i in range(1, 7):  # H1 to H6
-                s = re.split(r"(.*" + "#" * i + r"[^#].*\[.*?])", t, re.M | re.S)  # e.g. ### Section [..]
+            for i in range(1, 7):  # 标题层级 H1 至 H6。
+                s = re.split(r"(.*" + "#" * i + r"[^#].*\[.*?])", t, re.M | re.S)  # 形如「### 章节 [锚点]」的一行。
                 ls = len(s)
-                if ls > 1:  # found section
+                if ls > 1:  # 命中标题行时截取该章节。
                     ii = 0
                     for x in s:
                         ii += 1
@@ -877,11 +876,11 @@ class WikiLib:
         selected_section = None
         query_props = ["info", "imageinfo", "langlinks", "templates"]
 
-        # special handling for moegirl.org.cn
+        # 萌娘百科不提供 imageinfo。
         if self.wiki_info.api.find("moegirl.org.cn") != -1:
             query_props.remove("imageinfo")
 
-        if title:  # parse title, generate args
+        if title:  # 按标题解析章节与查询参数。
             if inline and not revision_query:
                 split_name = re.split(r"(#)", title)
             else:
@@ -893,7 +892,7 @@ class WikiLib:
             has_section = False
             section_code = False
 
-            # handling section and query args in title
+            # 拆分标题中的章节与查询参数。
             for a in split_name[1:]:
                 if len(a) > 0:
                     if a[0] == "#":
@@ -917,19 +916,19 @@ class WikiLib:
             if len(section_list) > 1:
                 selected_section = "".join(section_list)[1:].replace(" ", "_")
 
-            # generate base PageInfo
+            # 生成基础 PageInfo。
             page_info = PageInfo(
                 info=self.wiki_info,
                 title=title,
                 args="".join(arg_list),
                 interwiki_prefix=_prefix,
             )
-            # if selected section is None, but used # in title, mark invalid_section
+            # 标题含 # 但未解析出章节时标记为无效章节。
             page_info.selected_section = selected_section
             if not selected_section and has_section:
                 page_info.invalid_section = True
 
-            # generate final query string
+            # 生成最终查询参数。
             query_string = {
                 "action": "query",
                 "prop": "|".join(query_props),
@@ -942,10 +941,10 @@ class WikiLib:
                 "titles": title,
             }
 
-        elif pageid:  # parse pageid
-            # generate base PageInfo
+        elif pageid:  # 按页面 ID 查询。
+            # 生成基础 PageInfo。
             page_info = PageInfo(info=self.wiki_info, title=title, args="", interwiki_prefix=_prefix)
-            # generate final query string
+            # 生成最终查询参数。
             query_string = {
                 "action": "query",
                 "prop": "|".join(query_props),
@@ -957,7 +956,7 @@ class WikiLib:
                 "pageids": pageid,
             }
         else:
-            # neither title nor pageid is given, return empty PageInfo with base article link for wiki
+            # 未给出标题与页面 ID 时返回带站点首页链接的空 PageInfo。
             return PageInfo(
                 title="",
                 link=self.wiki_info.articlepath.replace("$1", ""),
@@ -966,7 +965,7 @@ class WikiLib:
                 templates=[],
             )
 
-        # if TextExtracts extension is available and no selected section, add extracts to query
+        # 扩展提供 TextExtracts 且未定位章节时改用 extracts 取摘要。
         use_textextracts = "TextExtracts" in self.wiki_info.extensions
 
         is_template_doc = _doc or (title and title.endswith("/doc"))
@@ -996,17 +995,17 @@ class WikiLib:
                 }
             )
 
-        # get page info from api
+        # 请求页面信息。
         query_string["tltemplates"] = "|".join(sorted(DISAMBIGUATION_TEMPLATES | {"Template:Documentation"}))
         query_string["tllimit"] = "max"
         if lang:
             query_string["lllang"] = lang
         get_page = await self.get_json(**query_string)
 
-        # parse the result
+        # 解析返回结果。
         query = get_page.get("query")
 
-        # if no query returned, return error PageInfo
+        # 返回中没有 query 时给出错误提示。
         if not query:
             return PageInfo(
                 title=title,
@@ -1018,7 +1017,7 @@ class WikiLib:
                 revision_info.interwiki_prefix = _prefix
                 return revision_info
 
-        # handle redirects, normalized titles, converted titles
+        # 处理重定向、标题规范化与繁简转换。
         explicit_section = bool(selected_section) or page_info.invalid_section
         followed_redirect = False
         for mapping in ("normalized", "converted", "redirects"):
@@ -1039,11 +1038,11 @@ class WikiLib:
                         # 引言 extracts 不能作为重定向目标章节的摘要。
                         use_extracts = False
 
-        # get page data
+        # 读取页面数据。
         pages: dict[str, dict] = query.get("pages")
         if pages:
             for page_id in pages:
-                # set default values
+                # 先填写默认值。
                 page_info.status = False
                 page_info.id = int(page_id)
                 page_raw = pages[page_id]
@@ -1065,10 +1064,10 @@ class WikiLib:
                         rs = str(I18NContext("wiki.message.utils.wikilib.invalid.empty_title"))
                     page_info.desc = rs
                 elif "missing" in page_raw:
-                    # if page is missing... try to research
+                    # 页面缺失时转为搜索。
                     if "title" in page_raw:
                         if "known" in page_raw:
-                            # if page is known to be missing... return link without desc
+                            # 已确认缺失时仅拼接链接，不取摘要。
                             full_url = (
                                 re.sub(
                                     r"\$1",
@@ -1084,7 +1083,7 @@ class WikiLib:
                             page_info.file = file
                             page_info.status = True
                         else:
-                            # try to reparse the title
+                            # 尝试改写标题重新解析。
                             split_title = title.split(":")
                             reparse = False
                             if (
@@ -1092,7 +1091,7 @@ class WikiLib:
                                 and split_title[0] in self.wiki_info.namespaces_local
                                 and self.wiki_info.namespaces_local[split_title[0]] == "Template"
                             ):
-                                # if Template namespace, reparse title without Template namespace
+                                # 模板命名空间下去掉前缀重新解析。
                                 rstitle = ":".join(split_title[1:]) + page_info.args
                                 reparse = await self.parse_page_info(rstitle)
                                 page_info.before_page_property = "template"
@@ -1101,14 +1100,14 @@ class WikiLib:
                                 and split_title[0].lower() in self.wiki_info.namespacealiases
                                 and not _search
                             ):
-                                # reparse title with canonical namespace... e.g. "MCW" -> "Minecraft Wiki"
+                                # 命名空间别名换成规范名称后重新解析，如 MCW 换成 Minecraft Wiki。
                                 rstitle = (
                                     f"{self.wiki_info.namespacealiases[split_title[0].lower()]}:"
                                     + ":".join(split_title[1:])
                                     + page_info.args
                                 )
                                 reparse = await self.parse_page_info(rstitle, _search=True)
-                            if reparse:  # if reparsed successfully, use the reparsed result
+                            if reparse:  # 改写解析成功时采用该结果。
                                 page_info.before_title = page_info.title
                                 page_info.info = reparse.info
                                 page_info.id = reparse.id
@@ -1124,12 +1123,12 @@ class WikiLib:
                                 page_info.invalid_namespace = reparse.invalid_namespace
                                 page_info.possible_research_title = reparse.possible_research_title
                             else:
-                                # otherwise, try to research the page
+                                # 改写未成功时改为搜索页面。
                                 namespace = "*"
                                 if len(split_title) > 1 and split_title[0] in self.wiki_info.namespaces:
-                                    # if namespace exists, use it
+                                    # 搜索限定在标题所属命名空间。
                                     namespace = self.wiki_info.namespaces[split_title[0]]
-                                # search by text, title, nearmatch
+                                # 依次按正文、标题与近似匹配搜索。
                                 srwhats = ["text", "title", "nearmatch"]
                                 preferred = None
                                 invalid_namespace = False
@@ -1158,24 +1157,24 @@ class WikiLib:
                                 searched_result = []
                                 for srwhat in srwhats:
                                     searches.append(search_something(srwhat))
-                                # request concurrently
+                                # 三种搜索并发请求。
                                 gather_search = await asyncio.gather(*searches)
                                 searched_result = _merge_research_suggestions(gather_search)
 
                                 if not preferred and searched_result:
                                     preferred = searched_result[0]
 
-                                # if found possible research result, set possible_research_title
+                                # 记录搜索结果作为候选标题。
 
                                 page_info.before_title = page_info.title
                                 page_info.title = preferred
                                 page_info.invalid_namespace = invalid_namespace
                                 page_info.possible_research_title = searched_result
                 else:
-                    # otherwise, assume page exists
+                    # 其余情况按页面存在处理。
                     page_info.status = True
 
-                    # handling special talk pages and forums
+                    # 判定讨论页与论坛页。
                     try:
                         page_info.body_class = await self.get_page_body_class(
                             page_info.title, include_text=check_render
@@ -1202,12 +1201,12 @@ class WikiLib:
                     except Exception:
                         Logger.exception()
 
-                    # handling templates
+                    # 收集模板并判定消歧义页。
 
                     templates = page_info.templates = [t["title"] for t in page_raw.get("templates", [])]
                     page_info.is_disambiguation = is_disambiguation_page(page_raw.get("pageprops"), templates)
 
-                    # handling special talk page
+                    # 校验讨论页与请求的章节。
                     if selected_section or page_info.invalid_section or page_info.is_talk_page:
                         parse_section = {"parse": await self._get_parsed_page(page_info.title, ["sections"])}
                         section_list = []
@@ -1233,7 +1232,7 @@ class WikiLib:
                                 except Exception:
                                     Logger.exception("Failed to check Wiki manual section anchor: ")
 
-                    # handling special pages
+                    # 特殊页面直接用标题拼接链接。
                     if "special" in page_raw:
                         full_url = (
                             re.sub(
@@ -1248,9 +1247,9 @@ class WikiLib:
                         page_info.invalid_section = False
                         page_info.selected_section = None
                     else:
-                        # handling normal pages
+                        # 普通页面按语言版本与摘要处理。
                         query_langlinks = False
-                        if lang:  # e.g. get page with another language version parameter given
+                        if lang:  # 指定语言时先查该语言的对应页面。
                             langlinks_ = {}
                             for x in page_raw.get("langlinks", []):
                                 langlinks_[x["lang"]] = x["url"]
@@ -1332,12 +1331,12 @@ class WikiLib:
                                 if query_langlinks_.status:
                                     query_langlinks = query_langlinks_
 
-                        if not query_langlinks:  # normal handling
+                        if not query_langlinks:  # 未取到其它语言版本时按当前站处理。
                             title = page_raw["title"]
                             page_desc = ""
                             split_title = title.split(":")
                             get_desc = True
-                            # handling documentation subpage for templates
+                            # 模板页面优先取文档子页的摘要。
                             if (
                                 not _doc
                                 and len(split_title) > 1
@@ -1363,7 +1362,7 @@ class WikiLib:
                                     if page_desc:
                                         page_info.has_template_doc = True
                                     page_info.before_page_property = page_info.page_property = "template"
-                            # get description
+                            # 生成页面摘要。
                             if get_desc and not page_info.is_manual_anchor:
                                 if use_extracts:
                                     raw_desc = page_raw.get("extract")
@@ -1414,7 +1413,7 @@ class WikiLib:
                                     )
                                 )
                         else:
-                            # handling langlinks query result, skip normal processing
+                            # 沿用其它语言版本的解析结果，不再重复处理。
                             page_info.info = query_langlinks.info
                             page_info.id = query_langlinks.id
                             page_info.title = query_langlinks.title
@@ -1431,7 +1430,7 @@ class WikiLib:
                             page_info.renderable = query_langlinks.renderable
         interwiki_: list[dict[str, str]] = query.get("interwiki")
         if interwiki_:
-            # handling interwiki pages
+            # 处理跨站链接。
             for i in interwiki_:
                 if i["title"] == page_info.title:
                     iw_title = re.match(r"^" + i["iw"] + ":(.*)", i["title"])
@@ -1473,27 +1472,27 @@ class WikiLib:
                     if not iw_query.title:
                         page_info.title = ""
                     else:
-                        # redirect to new result
+                        # 改用目标站点的解析结果。
                         page_info.before_title = before_page_info.title
                         t = page_info.title
                         if t:
-                            if before_page_info.args or page_info.id == -1 or not page_info.id:  # preserve args if any
+                            if (
+                                before_page_info.args or page_info.id == -1 or not page_info.id
+                            ):  # 有查询参数时并入标题与链接。
                                 page_info.before_title += urllib.parse.unquote(before_page_info.args)
                                 t += urllib.parse.unquote(before_page_info.args)
                                 # 参数已由目标 Wiki 解析并拼接至链接，此处不再重复拼接。
                                 if page_info.link and not page_info.args:
                                     page_info.link += before_page_info.args
                             else:
-                                # else rebuild link by curid
+                                # 其余情况按页面 ID 重建链接。
                                 page_info.link = page_info.info.script + f"?curid={page_info.id}"
-                            if _tried == 0:  # handle when first level iw redirect, for final title setting
-                                if (
-                                    lang and page_info.status
-                                ):  # if lang specified and page exists, set before_title directly
+                            if _tried == 0:  # 仅首层跨站重定向需要修正最终标题。
+                                if lang and page_info.status:  # 指定语言且页面存在时直接沿用标题。
                                     page_info.before_title = page_info.title
                                 else:
                                     page_info.title = page_info.interwiki_prefix + t
-                                    # set possible research titles with interwiki prefix
+                                    # 候选标题补上前缀。
                                     if page_info.possible_research_title:
                                         page_info.possible_research_title = [
                                             page_info.interwiki_prefix + possible_title
@@ -1514,7 +1513,7 @@ class WikiLib:
             for x in chk:
                 if not x["status"]:
                     ban = True
-        if ban:  # if content check failed, mark as banned
+        if ban:  # 内容检查未通过时清空页面信息。
             page_info.title = page_info.before_title = ""
             page_info.id = -1
             page_info.desc = ""

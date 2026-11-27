@@ -1,7 +1,7 @@
-"""实例模型：定位实例根、读写 ``akaribot.toml``，并经子进程与 core 交互。
+"""实例模型：定位实例根目录、读写 ``akaribot.toml``，并通过子进程与 core 交互。
 
-CLI 进程不 import ``akaribot.core``：实例操作一律经实例 venv 的解释器执行
-``python -m akaribot.core.entrypoints.<x>``，本模块只拼装命令、注入环境变量并解析 JSON 回传。
+CLI 进程不 import ``akaribot.core``，实例操作一律通过实例 venv 的解释器执行
+``python -m akaribot.core.entrypoints.<x>``，该模块仅拼装命令、注入环境变量并解析 JSON 回传。
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ class FlatCommandGroup(TyperGroup):
     """单命令子应用的分组：位置参数之后仍解析选项，usage 里不出现 COMMAND。
 
     Typer 的子应用默认是多命令分组，`akaribot init` 会退化成 `akaribot init init`。
-    本类让唯一命令直接在分组层生效。多余 token 默认报错，子类可改为透传。
+    本类让唯一命令直接在分组层生效。多余 token 默认视为错误，子类可改为透传。
     """
 
     allow_interspersed_args = True
@@ -102,7 +102,7 @@ INSTANCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,24}$")
 DEFAULT_VENV = ".venv"
 DEFAULT_LOCALE = "zh_cn"
 DEFAULT_REGISTRY_SOURCE = "https://akaribot.teahou.se/registry.json"
-# 实例目录结构参见 monorepo_refactor_plan.md §2.3。config 的子树由 config sync 按需补齐。
+# config 的子树由 config sync 按需补齐。
 INSTANCE_DIRS = (
     "config",
     "config/core",
@@ -244,7 +244,7 @@ class DetachedRun:
     """一次后台启动的结果。
 
     :param pid: 进程号。
-    :param log_path: 控制台输出的落盘路径。
+    :param log_path: 控制台输出的写入路径。
     :param argv: 实际执行的参数。
     """
 
@@ -255,7 +255,7 @@ class DetachedRun:
 
 @dataclass(frozen=True)
 class DependencyInfo:
-    """一个分发在 metadata 里声明的依赖项。
+    """一个包在 metadata 里声明的依赖项。
 
     :param dist: 依赖的分发名，已规范化。
     :param specifier: 版本描述符，如 ``>=1.0,<2.0``，未限定时为空串。
@@ -527,7 +527,7 @@ class InstanceMeta:
         registry_sources: Sequence[str] = (DEFAULT_REGISTRY_SOURCE,),
         created_at: str | None = None,
     ) -> InstanceMeta:
-        """构造一份带注释的默认元数据，字段集见 tasks 附录 A.2。
+        """构造一份带注释的默认元数据。
 
         :param root: 实例根目录。
         :return: 尚未写盘的元数据视图。
@@ -679,7 +679,7 @@ class Instance:
     """一个 AkariBot 实例。根目录下必须有 ``akaribot.toml``。
 
     :param root: 实例根目录。
-    :param python_override: 指定解释器，用于测试替身，默认按托管模式解析。
+    :param python_override: 指定解释器，供测试注入模拟对象，默认按托管模式解析。
     :param meta: 元数据视图，默认自磁盘读取。写盘前的规划用 :meth:`detached` 传入。
     """
 
@@ -829,7 +829,7 @@ class Instance:
         return self._capture(self.python_argv(*args), timeout=timeout, **env)
 
     def installed(self, *, refresh: bool = False) -> dict[str, PackageInfo]:
-        """经 ``registry --json`` 取得已装包清单，按规范化分发名索引。
+        """通过 ``registry --json`` 取得已装包清单，按规范化分发名索引。
 
         子进程开销可观，结果缓存在实例对象上。安装或卸载后调用 :meth:`invalidate` 失效。
 
@@ -1053,10 +1053,10 @@ class Instance:
     def notify_package_change(self, action: str, dist: str) -> NotifyResult:
         """把安装或卸载事件通知运行中的机器人，触发热装载或热拆卸。
 
-        经固定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 调用 T5.3 的 RPC 契约
+        通过固定入口 ``python -m akaribot.core.entrypoints.rpc <remote> <dist>`` 调用 RPC 方法
         ``server.post_package_install`` / ``server.post_package_remove``，并解析其回传 JSON 区分
         “未运行”“投递失败”“远端拒绝”“超时”。未运行时跳过。入口缺失或投递失败只告警，安装
-        结果不回滚，卸载方须先看 :attr:`NotifyResult.blocks_uninstall`。
+        结果不回滚，卸载方必须先看 :attr:`NotifyResult.blocks_uninstall`。
 
         :param action: ``install`` 或 ``remove``。
         :param dist: 分发名。
@@ -1138,7 +1138,7 @@ def explain_process_failure(proc: subprocess.CompletedProcess[str], prefix: str)
     """把 core 子进程的失败翻译成可执行的提示，必要时附 stderr 尾部。
 
     :param proc: 已完成的子进程。
-    :param prefix: 面向用户的前缀，说明刚才在做什么。
+    :param prefix: 面向用户的前缀，说明刚才执行的操作。
     :return: 完整的一句话说明。
     """
     stderr = (proc.stderr or "").strip()
@@ -1240,7 +1240,7 @@ def resolve_instance_root(start: Path | None = None) -> Path | None:
 
     各页数据源都经此解析：子进程以实例根为 cwd 又把它写进 ``AKARI_INSTANCE_DIR``，相对值会在
     子进程里二次拼接而失效。只认 ``Path.cwd()`` 则会忽略 ``AKARI_INSTANCE_DIR``，在仓库根运行
-    TUI 时静默读到另一个实例的配置与日志。在任何实例之外时改用注册表里的默认实例，那正是
+    TUI 时会误读另一个实例的配置与日志。在任何实例之外时改用注册表里的默认实例，那正是
     “这台机器上要管哪一个”的答案。
 
     :param start: 查找起点，默认为当前工作目录。
@@ -1264,7 +1264,7 @@ def resolve_instance(
 
     :param path: 显式实例根，省略时按环境变量与向上查找定位。
     :param required: 为假时未找到返回 ``None``，为真时抛出带提示的错误。
-    :param python_override: 解释器替身，供测试使用。
+    :param python_override: 解释器模拟对象，供测试使用。
     :return: 实例对象。
     :raises InstanceNotFound: 实例不存在而 ``required`` 为真。
     """

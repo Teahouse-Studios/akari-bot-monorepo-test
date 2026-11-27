@@ -56,11 +56,11 @@ Server 启动时在后台任务中调用 `init_web_render()`，随后将 `check_
 | `~webrender stop` | 关闭本地浏览器。开启 `remote_only` 时仅更新状态标志 |
 | `~webrender reload` | 先关闭再重新初始化 |
 
-命令清单与权限参见[内置工具](../../modules/core/docs/tools.md)。
+命令清单与权限参见[内置工具](../../modules/core/docs/webrender.md)。
 
 ## 降级
 
-`check_web_render_status()` 返回 `False` 时，调用方无需继续请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态不可用时展示为文字或表格形式。
+`await check_web_render_status()` 返回 `False` 时，调用方无需请求截图。帮助菜单在生成图片前检查 `Bot.Info.web_render_status`，状态不可用时展示为文字或表格形式。
 
 其他模块通常预先检查该状态。未预先检查的模块在调用失败后转为纯文本形式。异常由渲染服务内部捕获处理，本地与远程均执行失败时返回 `None`。
 
@@ -81,7 +81,7 @@ from akaribot.core.api import (
     web_render,
 )
 
-if check_web_render_status():
+if await check_web_render_status():
     images = await web_render.element_screenshot(
         ElementScreenshotOptions(content=html, element=[".card"])
     )

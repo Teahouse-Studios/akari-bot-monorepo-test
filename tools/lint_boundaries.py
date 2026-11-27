@@ -33,7 +33,7 @@ __all__ 的字面量并集（AST 解析，不导入 core）。通过公开接口
 
 用法：
     uv run python tools/lint_boundaries.py                      # 全量，仅报基准外违规
-    uv run python tools/lint_boundaries.py --diff HEAD~1        # 只查该基准之后的新增/修改行
+    uv run python tools/lint_boundaries.py --diff HEAD~1        # 仅查该基准之后的新增/修改行
     uv run python tools/lint_boundaries.py --generate-baseline  # 重建基准
     uv run python tools/lint_boundaries.py --show-baseline      # 同时打印基准内违规
 """
@@ -123,12 +123,12 @@ RULE_LEVELS = {
 class Location:
     """文件在分层中的归属。
 
-    :param relative: 仓库根相对 POSIX 路径。路径一律相对仓库根计算，绝对路径中的
+    :param relative: 相对仓库根目录的 POSIX 路径。路径一律相对仓库根目录计算，绝对路径中的
         `.worktrees/` 等目录名不参与判断。
     :param layer: 分层名，取 LAYER_CORE / LAYER_MODULES / LAYER_ADAPTERS。不在命名空间内为空串。
     :param owner: akaribot.modules.<x> 或 akaribot.adapters.<x> 的 <x>。不属这两层时为 None。
     :param package: 文件所属的点分包路径，用于解析相对 import。
-    :param dist_relative: 文件所属分发的目录（仓库根相对）。不在任何分发内时为 None。
+    :param dist_relative: 文件所属分发的目录（相对仓库根目录）。不在任何分发内时为 None。
     :param official: 文件所属分发是否官方模块包（packages/modules/<dist>）。
     """
 
@@ -161,7 +161,7 @@ class ImportRef:
 class Violation:
     """一处分层违规。
 
-    :param path: 仓库根相对 POSIX 路径。
+    :param path: 相对仓库根目录的 POSIX 路径。
     :param line: 行号，从 1 开始。B7 固定在文件第 1 行。
     :param rule: 规则编号。
     :param target: 被 import 的绝对点分路径、entry point 名或命名空间路径。
@@ -189,7 +189,7 @@ class Violation:
 class Dist:
     """packages/ 下的一个分发（pyproject.toml 所在目录）。
 
-    :param relative: 分发目录，仓库根相对 POSIX 路径。
+    :param relative: 分发目录，相对仓库根目录的 POSIX 路径。
     :param name: `[project].name`，已按 PEP 503 规范化。
     :param dependencies: `[project].dependencies` 里的分发名，同样规范化。
     :param module_owners: 该分发提供的 akaribot.modules.<x> 的 <x> 集合。
@@ -347,7 +347,7 @@ def source_root(dist_relative: str) -> Path:
     源码根从 ``<dist>/src/akaribot`` 压成 ``<dist>/akaribot`` 后，按固定层级拼接的路径会静默落空
     （B8 的导出符号集合会变空、规则不再生效），因此两种布局都认。
 
-    :param dist_relative: 分发目录的仓库根相对路径。
+    :param dist_relative: 分发目录，路径相对仓库根目录。
     :return: 源码根目录。
     """
     flat = PROJECT_ROOT / dist_relative / NAMESPACE_ROOT
@@ -560,7 +560,7 @@ def check_cli_sys_executable(location: Location, tree: ast.AST) -> list[Violatio
     """规则 B11：CLI 包内不得用 sys.executable 启动实例进程。
 
     Nuitka onefile 冻结后 sys.executable 指向 CLI 二进制自身，用它启动实例进程会重新启动 CLI
-    而不是 Python。启动实例一律经 ``Instance.python``（实例 venv 解释器或系统 Python）。
+    而不是 Python。启动实例一律通过 ``Instance.python``（实例 venv 解释器或系统 Python）。
 
     :param location: 文件位置。
     :param tree: 已解析的语法树。
@@ -692,7 +692,7 @@ def diff_scope(base_ref: str) -> set[tuple[str, int]] | None:
     B9 的违规位置在 entry point 定义行上。
 
     :param base_ref: 比较基准，如 `HEAD~1` 或提交 SHA。
-    :return: (仓库根相对 POSIX 路径， 行号) 集合。git 调用失败时返回 None，调用方回退为
+    :return: (相对仓库根目录的 POSIX 路径，行号) 集合。git 调用失败时返回 None，调用方回退为
         全量检查。返回空集表示基准之后确实没有任何改动。
     """
     try:

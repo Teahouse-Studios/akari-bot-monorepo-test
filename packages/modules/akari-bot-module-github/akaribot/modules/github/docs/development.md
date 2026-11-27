@@ -16,7 +16,7 @@ akaribot module add akari-bot-module-github
 
 ## 配置项
 
-<ModuleConfig table="module_github" />
+<ModuleConfig table="module_github_secret" file="config/module_github.toml" />
 
 | 表 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |

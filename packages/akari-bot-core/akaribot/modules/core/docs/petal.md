@@ -37,7 +37,7 @@ order: 42
 
 <CommandUsage usage="petal give <petal> <user>" :params="['petal=转账的花瓣数量', 'user=带平台前缀的用户完整 ID']" permission="public" />
 
-此命令用于向同一平台的用户转账花瓣，执行前要求确认。目标必须为带有平台前缀的完整 ID，并且不可为发送者自身。花瓣数量小于或等于 0 时返回提示。
+此命令用于向同一实例内的用户转账花瓣，执行前要求确认。目标必须为带前缀的完整 ID，前缀与当前会话的 `client_name` 一致。目标不可为发送者自身。花瓣数量小于或等于 0 时返回提示。
 
 <ChatExample
   :log="[

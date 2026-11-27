@@ -1,6 +1,6 @@
 # minecraft-news
 
-minecraft-news 包内包含两个推送模块，分别推送 Minecraft 官网新闻与 Minecraft Feedback 更新记录。
+本包提供两个推送模块，分别推送 Minecraft 官网新闻与 Minecraft Feedback 更新记录。
 
 ## 推送
 

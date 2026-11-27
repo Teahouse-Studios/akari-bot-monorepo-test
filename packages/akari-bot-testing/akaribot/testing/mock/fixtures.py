@@ -92,7 +92,7 @@ _registered_dirs: dict[Path, int] = {}
 def load_http_fixtures(fixture_dir: Path | None = None) -> int:
     """从 fixture 目录加载所有 mock 响应到 HTTPMock。
 
-    同一目录只注册一次，重复调用只重设回放策略。
+    同一目录仅注册一次，重复调用仅重设回放策略。
 
     :param fixture_dir: fixture 目录路径，默认为 tests/fixtures/http/
     :returns: 加载的 fixture 数量

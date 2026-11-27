@@ -2,7 +2,7 @@
 
 本文介绍适配器的包结构、能力声明与平台入口。
 
-适配器负责连接第三方平台与 core。它接收平台消息，将其转换为 core 的会话对象后提交 Server 处理，同时将 core 发出的消息和操作交由平台 SDK 执行。
+适配器负责连接第三方平台与 core。它接收平台消息，转换为 core 的会话对象后提交 Server。core 发出的消息与平台操作由它转交平台 SDK 执行。
 
 适配器在 `pyproject.toml` 的 `akaribot.adapters` 入口点中声明平台键与包路径的对应关系，目录名称采用平台键命名。
 
@@ -118,12 +118,14 @@ async def on_shutdown():
 | 方法 | 用途 |
 | --- | --- |
 | `check_native_permission()`、`check_bot_state()` | 平台原生管理员与机器人权限快照 |
-| `send_message()`、`send_private_msg()`、`derive_private_session()` | 发送、私聊与创建私聊会话 |
+| `send_message()`、`send_private_msg()` | 发送频道消息与私聊消息 |
 | `delete_message()`、`restrict_member()`、`unrestrict_member()`、`kick_member()` | 删除、禁言、解除与移除 |
 | `ban_member()`、`unban_member()`、`grant_permission_group()`、`revoke_permission_group()` | 封禁与权限组 |
 | `add_reaction()`、`remove_reaction()`、`error_signal()`、`start_typing()`、`end_typing()` | 表情、错误提示与输入状态 |
 
-上述方法由 `PlatformAPI` 的 `context_method()` 自动绑定。Server 执行跨进程调用时，依据 `SessionInfo` 选择对应的上下文管理器。平台扩展接口由 `PlatformAPI` 声明，并由具体适配器绑定实现。
+`derive_private_session()` 是基类的具体方法，依据 `target_id` 与 `target_from` 生成私聊会话副本，`send_private_msg()` 的实现可以直接调用它。
+
+需要跨进程调用的方法由 `PlatformAPI` 包装为对应接口。Server 执行跨进程调用时依据 `SessionInfo` 选择上下文管理器。平台扩展接口由 `PlatformAPI` 声明，并由具体适配器绑定实现。
 
 ## 配置与本地化
 

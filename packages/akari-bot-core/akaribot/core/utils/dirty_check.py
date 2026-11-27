@@ -388,7 +388,7 @@ async def check(
     additional_text: str | None = None,
     force=False,
 ) -> list[dict]:
-    """检查字符串。使用阿里云内容安全对文本进行审核。
+    """检查字符串。用阿里云内容安全审核文本。
 
     :param text: 字符串（List/Union）。
     :param session: 消息会话，若指定则会在返回的消息中附加会话信息。

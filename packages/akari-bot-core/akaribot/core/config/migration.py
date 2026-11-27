@@ -8,8 +8,8 @@ core 只维护 ``config.toml`` 的版本（见 akaribot/core/builtins/config/upd
 哪些改动，号段一旦记在数据库，文件与记录脱节便无法对齐。
 
 号段约定：``config_version = N`` 表示已应用至第 N 号迁移。新生成的配置由
-:func:`stamp_config_versions` 写入 ``manifest.config_schema_version``，因此首个迁移脚本须从
-``config_schema_version + 1`` 起编号。号段一经发布不得复用、重排或跳号。
+:func:`stamp_config_versions` 写入 ``manifest.config_schema_version``，因此首个迁移脚本必须从
+``config_schema_version + 1`` 起编号。号段发布后不得复用、重排或跳号。
 """
 
 import asyncio
@@ -163,7 +163,7 @@ def _file_version(path: Path, entry: "PackageEntry", revisions: list[ConfigRevis
 
 def _load_revision_hook(revision: ConfigRevision):
     # 不通过 ``importlib.import_module`` 加载，因为以迁移编号开头的模块名不是合法标识符，且重复加载会在
-    # ``sys.modules`` 残留同名模块。脚本声明的 ``REVISION`` 与文件名不一致时立即报错。
+    # ``sys.modules`` 残留同名模块。脚本声明的 ``REVISION`` 与文件名不一致时立即抛出异常。
     spec = importlib.util.spec_from_file_location(f"akari_config_migration_{revision.revision}", revision.path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load config migration {revision.path}")

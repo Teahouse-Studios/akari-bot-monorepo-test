@@ -1,6 +1,6 @@
-"""Wiki 与 WikiLog 场景设置表改挂 union。
+"""Wiki 与 WikiLog 场景设置表改为关联 union。
 
-两张表原本以平台场景 ID 为主键，场景换号即失去设置。union ID 沿用原平台 ID，因此只需改列名。
+两张表以平台场景 ID 为主键，场景换号后失去设置。union ID 沿用原平台 ID，因此仅需改列名。
 WikiLog 与 Wiki 同属一个包，其表结构随 Wiki 一并维护。
 """
 

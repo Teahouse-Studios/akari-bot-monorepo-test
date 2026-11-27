@@ -1,7 +1,7 @@
 """CLI 入口：注册全部子命令。
 
-命令实现分散在 :mod:`akaribot.cli.commands` 下，各自导出一个 Typer 子应用。本模块只做装配，
-不承载业务逻辑。实例操作一律经 :class:`akaribot.cli.instance.Instance`，CLI 进程内不导入 core。
+命令实现分散在 :mod:`akaribot.cli.commands` 下，各自导出一个 Typer 子应用。该模块仅负责装配，
+不承载业务逻辑。实例操作一律通过 :class:`akaribot.cli.instance.Instance`，CLI 进程内不导入 core。
 """
 
 from importlib import metadata

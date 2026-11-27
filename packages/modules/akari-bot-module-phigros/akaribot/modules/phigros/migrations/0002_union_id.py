@@ -1,7 +1,7 @@
-"""Phigros 绑定表改挂 union。
+"""Phigros 绑定表改为关联 union。
 
-绑定以平台 ID 为主键，平台换号即失去绑定。union ID 沿用原平台 ID，因此本版只改列名。同一版
-还加上国际服标记，旧行一律按国服处理。
+绑定以平台 ID 为主键，平台换号即失去绑定。union ID 沿用原平台 ID，因此仅改列名。同一版
+增加国际服标记，旧行按国服处理。
 """
 
 from __future__ import annotations

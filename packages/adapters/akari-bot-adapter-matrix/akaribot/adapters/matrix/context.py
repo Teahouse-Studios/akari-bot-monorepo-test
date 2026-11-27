@@ -71,9 +71,8 @@ class MatrixContextManager(ContextManager):
                 if member_mxid in creators:
                     return True
         else:
-            # When the room does not follow MSC4291, ignore it silently
-            # IO and other server-side errors are also ignored
-            # because I am too lazy to write a detailed check
+            # 房间不遵循 MSC4291 或读取创建事件失败时忽略该分支，改按权限等级判断。
+            # MSC4291 的细节未逐项校验，异常与不受支持的情况一律忽略。
             pass
 
         # https://spec.matrix.org/v1.9/client-server-api/#permissions

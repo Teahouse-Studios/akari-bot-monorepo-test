@@ -38,6 +38,6 @@
 ## 资产与依赖
 
 - 品牌资产（立绘、标志、制作人员名单）是画师提供的原件，不得为压缩体积重新编码。它们随
-  `akari-bot-assets-brand` 分发，属 core 的 `full` extra，缺失时由使用方降级处理，不报错。
+  `akari-bot-assets-brand` 安装，该包属于 core 的 `full` extra。缺失时由使用方降级处理，不抛出异常。
 - `uv.lock` 是唯一来源。workspace 覆盖会忽略内部版本约束，仅在从 wheel 安装时才会通过真实的依赖
   解析器（由 `tools/clean_room_check.py` 负责）。

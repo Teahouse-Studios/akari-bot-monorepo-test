@@ -194,7 +194,7 @@ billing:
 * `price_cache_write`：百万输入缓存写入 Token 所需的花瓣数量。
 * `price_out`：百万输出 Token 所需的花瓣数量。
 
-`price_cache` 是 `price_cache_read` 的别名。缓存写入价格仅在模型 API 返回缓存写入 Token 数量时生效。
+计费仅读取 `price_cache_read` 与 `price_cache_write`，`price_cache` 不是有效字段。缓存写入价格仅在模型 API 返回缓存写入 Token 数量时生效。
 
 若未设置，默认值为 `0`。
 
@@ -254,10 +254,11 @@ context_threshold: 131072
 阶梯规则中的：
 
 * `price_in`
-* `price_cache`
+* `price_cache_read`
+* `price_cache_write`
 * `price_out`
 
-分别覆盖该阶梯对应的输入、缓存输入和输出 Token 单价。
+分别覆盖该阶梯对应的输入、缓存命中、缓存写入和输出 Token 单价。
 
 若某项价格未设置，则使用基础价格。
 
@@ -265,7 +266,7 @@ context_threshold: 131072
 
 ## 峰谷/时段计费
 
-`time_rules` 按 UTC 时间与星期设置不同的 Token 单价。
+`time_rules` 按实例时区的时间与星期设置不同的 Token 单价。
 
 ```yaml
 time_rules:

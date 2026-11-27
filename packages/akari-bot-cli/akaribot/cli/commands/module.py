@@ -1,6 +1,6 @@
 """模块安装与全局装载。
 
-安装流水线的七步顺序有硬约束（tasks T5.2）：解析 → 兼容性检查 → uv 安装 →
+安装流水线的七步顺序有硬约束：解析 → 兼容性检查 → uv 安装 →
 config sync → db upgrade → 热装载 RPC → 报告占位符。第 4 步必须由 CLI 子进程完成，
 因为机器人与 server 一律以只读配置运行，写配置会被 ``CFGManager._ensure_writable()`` 拒绝。
 
@@ -104,7 +104,7 @@ def _rollback(instance: Instance, dist: str, snapshot: engine.ConfigSnapshot, ru
 
 
 def _precheck(instance: Instance, target: engine.InstallTarget, *, force: bool) -> None:
-    # 冲突说明采用“谁要求什么、实际是什么”的格式，不将 uv 解析器的原始报错呈现给用户。
+    # 冲突说明采用“谁要求什么、实际是什么”的格式，不将 uv 解析器的原始错误信息呈现给用户。
     extra_names: list[str] = []
     for text in target.dependencies:
         try:
@@ -468,7 +468,7 @@ class AvailablePackage:
 
     :param kind: ``module`` 或 ``adapter``。
     :param name: 短名，工作区来源取 entry point 名。
-    :param dist: 分发名。
+    :param dist: 包名。
     :param version: 可安装的版本。
     :param detail: 补充信息：registry 来源是一句话简介，工作区来源是包路径。
     :param provides: 提供的模块名（适配器为 entry point 名）。
@@ -728,9 +728,9 @@ def _purge(
     dry_run: bool,
     purge_instances: bool,
 ) -> bool:
-    # 必须在执行 uv uninstall **前**调用，否则清单随包一起被删除，卸载后将无法再解析出 ``owned_tables``
-    # 与 ``config_table``，届时将无法确定需要删除的对象。任一步失败即返回 ``False``，由命令层控制是否中止
-    # 卸载还是按 ``--force`` 接受残留——静默返回成功会导致用户误认为数据已清理完毕。
+    # 必须在执行 uv uninstall **前**调用，否则清单随包一起删除，卸载后无法再解析出 ``owned_tables``
+    # 与 ``config_table``，也就无法确定需要删除的对象。任一步失败即返回 ``False``，由命令层决定
+    # 中止卸载还是按 ``--force`` 接受残留。静默返回成功会让调用方以为数据已清理完毕。
     tables = sorted({table for package in packages for table in package.owned_tables})
     base_files: list[Path] = []
     instance_files: list[Path] = []
@@ -898,7 +898,7 @@ def _perform_update(
     json_mode: bool,
     defer_runtime: bool = False,
 ) -> tuple[int, dict]:
-    # ``--json`` 的 stdout 重定向由调用方完成，本函数正常将常规文本输出写入当前 stdout。
+    # ``--json`` 的 stdout 重定向由调用方完成，该函数正常将常规文本输出写入当前 stdout。
     # ``json_mode`` 仅影响整体失败时报错还是返回数据载荷。
     target_instance = require_instance(instance_path)
     try:
@@ -1036,7 +1036,7 @@ def update(
 ) -> None:
     """更新已安装的包。工作区模式下等价于按本地源码重装。
 
-    ``--json`` 的契约：stdout 只出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /
+    ``--json`` 的接口约定：stdout 仅出现一行结果 JSON（``updated`` / ``failed`` / ``skipped`` /
     ``failed_details`` / ``skipped_details`` / ``reload_pending`` / ``restart_required``），
     进度与警告一律走 stderr，退出码 1 表示有包未更新成功。
     """
@@ -1120,7 +1120,7 @@ def _load_state_label(loaded: Any) -> str:
     return i18n.t("cli.module.status.state_loaded") if loaded else i18n.t("cli.module.status.state_unloaded")
 
 
-# 按三级“启用”语义（附录 B），安装取决于 venv、全局加载取决于 ModuleStatus.load、场景启用取决于
+# 按三级“启用”语义，安装取决于 venv、全局加载取决于 ModuleStatus.load、场景启用取决于
 # target_union_info.modules。本命令仅控制第二级，因此使用 load/unload 而非场景级的 enable/disable。
 @app.command("load", help=i18n.t("cli.module.load.help"))
 def load_module(

@@ -32,7 +32,7 @@ akaribot module add akari-bot-module-wiki
 
 `wiki` 的查询、搜索、随机页面、魔术字、InterWiki 查看与请求头查看对普通用户开放。
 
-`set`、`iw add`、`iw remove`、`headers add`、`headers remove`、`headers reset`、`prefix set`、`prefix reset`、`redlink` 与 `render` 需要会话管理员权限。
+`set`、`iw add`、`iw remove`、`headers add`、`headers remove`、`headers reset`、`prefix set`、`prefix reset`、`redlink`、`render` 与 `style` 需要会话管理员权限。其中 `style` 仅在 QQ 群聊与 QQ 私聊可用。
 
 `wiki-audit`、`wiki-bot` 与 `wikilog` 需要超级用户权限。`wikilog` 同时声明管理员权限，超级用户可以直接使用。
 
@@ -65,4 +65,4 @@ URL 允许列表与阻止列表通过 core 的全局规则管理。未通过检�
 
 依赖 `akari-bot-core`、`akari-bot-html2text`、`Pillow`、`aiocqhttp`、`akari-bot-webrender`、`attrs`、`beautifulsoup4`、`feedparser`、`filetype`、`httpx`、`jinja2`、`orjson`、`tortoise-orm` 与 `wikitextparser`。
 
-页面查询使用目标 Wiki 的 `api.php`，站点信息缓存在 `module_wiki_site_info` 表中。每周页面来自 `https://zh.minecraft.wiki`，茶馆周报来自 `https://lakeus.xyz/api.php?action=featuredfeed&feed=teahouse-weekly`。截图与 Infobox 预览依赖 WebRender。
+页面查询使用目标 Wiki 的 `api.php`，站点信息缓存在 `module_wiki_site_info` 表中。每周页面来自 `https://zh.minecraft.wiki`，茶馆周报来自 `https://lakeus.xyz/api.php?action=featuredfeed&feed=teahouse-weekly&feedformat=atom`。截图与 Infobox 预览依赖 WebRender。

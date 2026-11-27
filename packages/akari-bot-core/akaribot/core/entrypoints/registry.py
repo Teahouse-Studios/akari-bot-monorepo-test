@@ -1,6 +1,6 @@
 """已装包清单入口。
 
-CLI 进程不 import core，一切经本入口的子进程输出获取。故 stdout 只允许出现结果本身，
+CLI 进程不 import core，一切通过本入口的子进程获取输出。因此 stdout 仅允许出现结果本身，
 日志与进度一律走 stderr。``modules`` 取自包清单的 ``provides_modules``，不为此加载模块。
 """
 

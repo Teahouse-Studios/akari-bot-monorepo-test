@@ -93,7 +93,7 @@ def read_baseline(path: Path) -> list[Failure]:
 def compare(baseline: list[Failure], actual: list[Failure]) -> tuple[list[str], list[str], list[str]]:
     """比较基准与实际失败的用例清单。
 
-    分三类报告：基准中有、实际没有的条目应当从基准中删除。实际有、基准没有的是新增失败。同名但
+    分三类报告。基准中有、实际没有的条目应当从基准中删除。实际有、基准没有的是新增失败。同名但
     类型或消息不同的是错误文本变化。同名用例仅归入第三类。若同时归入前两类，同一条变化会被报三次，
     真正的“新增”与“消失”也会被掩盖。
 

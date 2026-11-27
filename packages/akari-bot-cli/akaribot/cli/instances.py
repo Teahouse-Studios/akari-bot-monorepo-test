@@ -64,7 +64,7 @@ def suggested_name(root: Path) -> str:
 def child_instances(root: Path, *, limit: int | None = 4) -> tuple[Path, ...]:
     """列出目录下第一层的实例目录。
 
-    添加实例时，指定的路径常常是“装着实例的项目目录”，而不是实例本身。报错时列出这些候选，比只提示缺文件更有用。
+    添加实例时，指定的路径常常是“装着实例的项目目录”，而不是实例本身。错误提示里列出这些候选，比仅指出缺文件更有用。
 
     :param root: 要检查的目录。
     :param limit: 最多列出几个候选，``None`` 表示不限。
@@ -218,7 +218,7 @@ class InstanceRegistry:
     ) -> InstanceEntry:
         """添加一个实例。同一目录已有记录时原样返回既有记录。
 
-        :param root: 实例根目录，须含 ``akaribot.toml``。
+        :param root: 实例根目录，必须含 ``akaribot.toml``。
         :param name: 注册名。默认为按目录名推一个不冲突的名字。
         :param locale: 实例默认语言。
         :param autostart: 是否随服务启动而拉起。

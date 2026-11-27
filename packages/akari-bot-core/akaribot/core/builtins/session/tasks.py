@@ -47,9 +47,9 @@ class SessionTaskManager:
 
         :param msg: 消息会话对象
         :param flag: 用于同步的 asyncio.Event 对象，任务完成时将被触发
-        :param all_: 如果为 True，任务对所有用户生效。否则只对当前用户生效
+        :param all_: 为 True 时任务对该会话内任意发送者生效，否则仅对触发者生效
         :param reply: 期望的回复消息 ID（可以是整数、字符串或列表）
-                     如果为 None，表示等待任何回复。否则只等待特定 ID 的回复
+                     为 None 时等待任何回复，否则仅等待特定 ID 的回复
         :param timeout: 任务超时时间（秒），默认 120 秒
         :param task_type: 覆盖自动推断的任务类型（如 ``wait_next``）
         :param matcher: 可选的消息匹配器。不匹配时任务继续等待

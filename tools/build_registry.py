@@ -11,7 +11,7 @@
 展开，不硬编码包名。工具仅读取文件、不导入 akaribot，未配置的实例与未安装 akaribot 的 CI 环境都能运行。
 
 generated_at 默认取 HEAD 提交时间（SOURCE_DATE_EPOCH 与 --generated-at 可覆盖），因此输入未变时两次
-运行的输出完全一致，registry.json 的 diff 只反映包元数据的真实变更。
+运行的输出完全一致，registry.json 的 diff 仅反映包元数据的真实变更。
 
 用法：
     uv run python tools/build_registry.py                     # 写仓库根的 registry.json
@@ -98,13 +98,13 @@ class ConfigError(RuntimeError):
 class Package:
     """一个 workspace 成员包。
 
-    :param kind: ``module`` 或 ``adapter``，由 entry point 所在分组决定。
+    :param kind: ``module`` 或 ``adapter``，取决于 entry point 所在分组。
     :param name: entry point 名，也是 registry 条目的 ``name``。
     :param dist: pyproject 书写的分发名。
     :param version: 静态版本。
     :param description: ``[project].description``，简介的最后回退来源。
     :param import_path: entry point 指向的导入路径。
-    :param path: 该包 pyproject.toml 的仓库根相对 POSIX 路径，报告用。
+    :param path: 该包 pyproject.toml 相对仓库根目录的 POSIX 路径，用于报告。
     :param root: import_path 对应的包目录。
     :param manifest: manifest.toml 的原始内容。文件缺失时为空字典。
     """

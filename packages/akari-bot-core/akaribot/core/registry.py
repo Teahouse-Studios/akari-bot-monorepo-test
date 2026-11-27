@@ -2,7 +2,7 @@
 
 “系统里有哪些模块与适配器”的唯一答案来源，按下列顺序合成：
 
-1. 存在 ``akaribot/core/_frozen_registry.py`` 时直接采用（二进制构建产物，尚未生成）。
+1. 存在 ``akaribot/core/_frozen_registry.py`` 时直接采用（二进制构建产物，由发布流程生成）。
 2. 枚举已安装分发的 entry point。
 3. 回退扫描命名空间包 ``akaribot.modules`` 与 ``akaribot.adapters``，合成 ``dist_name`` 为空的条目。
 4. 按条目名去重，entry point 胜出，冲突时记录警告。
@@ -266,9 +266,9 @@ class PackageRegistry:
         """建立发现结果。
 
         收尾依次校验 core API 兼容性与声明依赖（缺失、版本不满足、成环、依赖了被 API 门槛拒绝的
-        包），两道都通过的包才注册。顺序不可颠倒：依赖校验须知道哪些包已被 API 门槛拒绝，否则
-        依赖它们的包会以“发行版已安装”为由留下，直到导入期才失败。原因经 :meth:`incompatible`
-        与 :meth:`report_lines` 报出。
+        包），两道都通过的包才注册。顺序不可颠倒：依赖校验必须知道哪些包已被 API 门槛拒绝，否则
+        依赖它们的包会以“发行版已安装”为由留下，直到导入期才失败。具体原因由 :meth:`incompatible`
+        与 :meth:`report_lines` 给出。
 
         :param force: 为真时忽略缓存并重新发现。
         """
@@ -360,7 +360,7 @@ class PackageRegistry:
         """``requires_core_api`` 与当前 core API 版本不兼容的包及其原因。
 
         该检查已是 :meth:`discover` 的一环：依赖校验必须知道哪些包被它拒绝，才能级联剔除
-        依赖它们的包。本方法保留为公开入口，对直接注入注册表的条目（测试与工具）补做一次，
+        依赖它们的包。该方法保留为公开入口，对直接注入注册表的条目（测试与工具）补做一次，
         并返回同源的结果。
 
         :return: 包标识到原因的映射。
@@ -646,7 +646,7 @@ class PackageRegistry:
         """全部配置模板的模块名，核心配置排在最前。
 
         按包名排序以固定生成顺序，避免同一批配置项反复改写配置文件。以文件是否存在判断模板有无，
-        不导入包：捕获 ``ModuleNotFoundError`` 无法区分“未提供 config.py”与“模板自身缺依赖”，
+        不导入包，因为仅捕获 ``ModuleNotFoundError`` 无法区分“未提供 config.py”与“模板自身缺依赖”，
         后者会被静默跳过形成漏键。``find_spec()`` 为取 ``__path__`` 会导入父包，失去叶子模块的优势。
 
         :return: 配置模板的模块名列表。
@@ -714,8 +714,8 @@ class PackageRegistry:
     def package_data(cls, name_or_entry: str | PackageEntry) -> Path:
         """包在实例内的可写数据目录。
 
-        运行时下载、索引与用户配置写在此处，不写入包目录：包目录在只读挂载与 wheel
-        安装两种形态下都不可写。目录须由调用方经 :meth:`Paths.ensure` 创建。
+        运行时下载、索引与用户配置写在此处，不写入包目录。包目录在只读挂载与 wheel
+        安装两种形态下都不可写。目录必须由调用方通过 :meth:`Paths.ensure` 创建。
 
         :param name_or_entry: 包名或条目。
         :return: 数据目录路径。
@@ -849,7 +849,7 @@ class PackageRegistry:
 
         :return: 条目列表。
         :raises CircularDependencyError: 声明依赖存在环。成环的包在 :meth:`discover`
-            阶段已被拒绝注册，此异常只在直接调用本方法时出现。
+            阶段已被拒绝注册，此异常仅在直接调用该方法时出现。
         """
         cls.discover()
         edges = cls._dependency_edges()

@@ -3,7 +3,7 @@ import locale
 
 
 async def run_sys_command(command: list[str], timeout: float = 10) -> tuple[int, str, str]:
-    """执行系统命令并返回执行结果。此函数仅在安全环境中调用，调用方须清楚命令的作用。
+    """执行系统命令并返回执行结果。
 
     :param command: 需要执行的命令（List），禁止直接使用用户输入。
     :param timeout: 命令的最大执行时间（默认为 10）。

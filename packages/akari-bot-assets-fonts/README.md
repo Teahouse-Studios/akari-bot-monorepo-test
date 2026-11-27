@@ -1,10 +1,10 @@
 # akari-bot-assets-fonts
 
-提供 AkariBot 字体资源包，包含 Noto Sans CJK 与 Noto Sans Symbols2，随默认安装分发。
+提供 AkariBot 字体资源包，包含 Noto Sans CJK 与 Noto Sans Symbols2，供需要绘制图片的模块声明依赖后安装。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-assets-fonts

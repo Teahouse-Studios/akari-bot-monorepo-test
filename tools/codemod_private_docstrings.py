@@ -9,8 +9,8 @@
 以及名字不以 `_` 开头的符号。
 
 用法：
-    python tools/codemod_private_docstrings.py            # 只报告
-    python tools/codemod_private_docstrings.py --write    # 落盘
+    python tools/codemod_private_docstrings.py            # 仅报告
+    python tools/codemod_private_docstrings.py --write    # 写入磁盘
 
 退出码：0 正常，2 表示有文件无法解析。
 """

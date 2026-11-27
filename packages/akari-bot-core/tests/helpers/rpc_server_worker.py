@@ -1,9 +1,9 @@
-"""端到端热装载用例的 Server 侧进程：真实 ``JobQueueServer`` 与真实包变更处理器。
+"""端到端热加载用例的 Server 侧进程：真实 ``JobQueueServer`` 与真实包变更处理器。
 
-父用例经 stdin 逐行下达 ``snapshot`` / ``quit``。每条 ``snapshot`` 输出一行 ``STATE`` JSON。实例根
+父用例通过 stdin 逐行下达 ``snapshot`` / ``quit``。每条 ``snapshot`` 输出一行 ``STATE`` JSON。实例根
 由父用例注入 ``AKARI_INSTANCE_DIR``，数据库因此位于临时实例内，不触碰仓库或调用方的实例。
 
-本文件会被测试运行器当作测试文件导入，故模块级不得读 ``sys.argv``（与 ``tests/helpers`` 下的
+本文件会被测试运行器当作测试文件导入，因此模块级不得读 ``sys.argv``（与 ``tests/helpers`` 下的
 worker 同一约定），全部逻辑收在 ``main()`` 里。
 """
 

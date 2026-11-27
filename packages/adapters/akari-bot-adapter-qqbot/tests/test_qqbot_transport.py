@@ -37,7 +37,7 @@ def _test_webhook_transport_uses_configured_endpoint() -> bool:
 
 
 def _test_webhook_endpoint_values_are_coerced() -> bool:
-    # 配置文件类型填写错误时仅告警而不报错，传递至 SDK 前必须执行类型转换。
+    # 配置文件类型填写错误时仅告警而不抛出异常，传递至 SDK 前必须执行类型转换。
     with (
         patch.object(QQBotConfig, "qq_use_webhook", True),
         patch.object(QQBotConfig, "qq_webhook_host", "0.0.0.0"),

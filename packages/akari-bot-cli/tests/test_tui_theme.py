@@ -12,7 +12,7 @@ from akaribot.cli.tui.app import STYLESHEET, TuiApp
 from akaribot.cli.tui.modules import ModuleRecord, StaticModuleSource
 from akaribot.testing import Tester, func_case
 
-# 立绘不透明部分的主色与暗部，深色版据此选取颜色。修改主题时此处先失败，避免静默替换品牌色。
+# 立绘不透明部分的主色与暗部，深色版据此选取颜色。修改主题时此处先失败，避免品牌色被隐式替换。
 BRAND_COLORS = ("#d69cdd", "#f6d5f3", "#fbd8ec", "#40333f", "#2b002a")
 
 

@@ -216,7 +216,7 @@ class URLElement(BaseElement):
 
         :param url: URL 地址
         :param trusted: 链接是否已在代码中认证
-                       None 表示未表态，由会话的 URLManager 设置决定（默认）
+                       None 表示未表态，由会话的 URLManager 设置确定（默认）
                        True 表示已认证，一律不作未认证处理
                        False 表示显式不可信，强制作未认证处理
         :param md_format: 是否使用 Markdown 格式（默认为 False）
@@ -375,8 +375,8 @@ class I18NContextElement(BaseElement):
         创建多语言消息元素的工厂方法。
 
         :param key: 多语言的键名（如 "message.list" -> "消息列表"）
-        :param fallback: 是否启用 fallback。（默认为 True）
-        :param locale_failed_prompt: 是否添加本地化失败提示。（默认为 True）
+        :param fallback: 是否启用 fallback（默认为 True）
+        :param locale_failed_prompt: 是否添加本地化失败提示（默认为 True）
         :param disable_joke: 是否禁用玩笑功能（默认为 False）
         :param kwargs: 多语言字符串中的变量（如 name="Alice", count=5）
         :return: I18NContextElement 实例

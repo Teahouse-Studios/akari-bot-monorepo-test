@@ -1,10 +1,10 @@
 # akari-bot-adapter-kook
 
-提供 Kook 平台适配器。
+提供 KOOK 平台适配器。
 
 ## 安装
 
-Python 版本要求见包内 `pyproject.toml` 的 `requires-python`。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-adapter-kook

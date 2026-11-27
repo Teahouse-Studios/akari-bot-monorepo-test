@@ -1,6 +1,6 @@
 """测试期配置项替身。
 
-配置模板的属性访问每次都经 ``CFGManager.get()`` 取值，因此替换该入口即可覆盖配置项，
+配置模板的属性访问每次都通过 ``CFGManager.get()`` 取值，因此替换该入口即可覆盖配置项，
 既不读取也不改写任何配置文件。退出上下文后原值自动恢复。
 """
 
@@ -95,7 +95,7 @@ def _uninstall() -> None:
 class mock_config(AbstractContextManager[None]):
     """在上下文内临时覆盖配置项。
 
-    覆盖只作用于进程内的配置读取，不读写配置文件。退出后恢复原取值。
+    覆盖仅作用于进程内的配置读取，不读写配置文件。退出后恢复原取值。
 
     :param config_cls: 配置模板类，例如 ``CoreConfig``。
     :param values: 字段名与临时取值，形如 ``use_emote=True``。

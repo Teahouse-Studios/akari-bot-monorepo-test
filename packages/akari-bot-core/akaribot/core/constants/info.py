@@ -96,7 +96,7 @@ class Info:
 
         :param platform_name: 平台展示名，如 ``Telegram``。
         :param instance_id: 实例 ID，省略时取 ``cls.instance_id``。守护进程枚举各实例身份时
-            须显式传入：它自己不是任何实例，其 ``cls.instance_id`` 恒为空。
+            必须显式传入，该对象本身不是任何实例，其 ``cls.instance_id`` 恒为空。
         :return: 默认实例返回平台展示名本身，否则返回 ``<平台>-<实例 ID>``。
         """
         resolved = cls.instance_id if instance_id is None else instance_id

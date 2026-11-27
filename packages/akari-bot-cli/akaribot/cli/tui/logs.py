@@ -68,9 +68,9 @@ class LogSource(Protocol):
 
 
 class StaticLogSource:
-    """替身数据源：按“文件名 → 行列表”记录内容，``offset`` 即行号游标。
+    """模拟数据源：按“文件名 → 行列表”记录内容，``offset`` 即行号游标。
 
-    :param files: 文件名到初始行列表的映射，文件名须符合 ``<进程>[_debug]_<日期>.log``。
+    :param files: 文件名到初始行列表的映射，文件名必须符合 ``<进程>[_debug]_<日期>.log``。
     :param mtimes: 文件名到最后修改时间的映射，默认按记录顺序递增，用于检查“取最新文件”。
     """
 

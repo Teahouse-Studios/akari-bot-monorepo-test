@@ -395,7 +395,7 @@ class InitRunner(Protocol):
 
 
 class SubprocessInitRunner:
-    """默认实现：经 ``akaribot init`` 子进程创建实例。
+    """默认实现：通过 ``akaribot init`` 子进程创建实例。
 
     :param timeout: 子进程超时秒数。包含 core 与适配器的安装时间。
     :param runner: 子进程执行函数，签名同 :func:`subprocess.run`，测试可注入。
@@ -510,7 +510,7 @@ class SetupSummary:
     :param doctor_errors: 最近一次诊断的错误级结论数。``None`` 表示未获取。
     :param doctor_warnings: 最近一次诊断的告警级结论数。``None`` 表示未获取。
     :param adapters_reason: 适配器数量未获取的原因。获取成功时为空串。
-    :param placeholders_reason: 占位符数量的口径说明。core 返回完整统计时为空串。
+    :param placeholders_reason: 占位符数量的统计方式说明。core 返回完整统计时为空串。
     :param doctor_reason: 诊断结论未获取的原因。获取成功时为空串。
     :param placeholders_estimated: 占位符数量是否来自配置文本标记的估算。
     """

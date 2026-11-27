@@ -27,7 +27,7 @@ RETIRED_NOTIFY_DELAY_MAX = 86400
 pending_notices: set[str] = set()
 _notice_tasks: set[asyncio.Task] = globals().get("_notice_tasks", set())
 
-# ``enqueue_notice`` 的判断与 set 占位之间包含 await，需要通过互斥锁进行保护。
+# ``enqueue_notice`` 的判断与 set 占位之间包含 await，需要通过互斥锁保护。
 # 锁仅覆盖判断与占位操作，实际的延时投递不在临界区内。
 _notice_enqueue_lock = asyncio.Lock()
 

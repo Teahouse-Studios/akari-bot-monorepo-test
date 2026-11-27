@@ -2,9 +2,9 @@
 
 ``python -m akaribot.core.entrypoints.run`` 与 ``python bot.py`` 等价：配置 BotDaemon
 日志、取实例级锁、以 ``pre_init`` 子进程完成配置与数据库准备，再按配置启动各适配器进程与 Server
-进程。仓库根的 ``bot.py`` 只是转发到本模块的兼容实现。
+进程。仓库根目录的 ``bot.py`` 是仅转发到本模块的兼容实现。
 
-实例根由 ``AKARI_INSTANCE_DIR`` 决定，未设置时取进程 cwd（:class:`akaribot.core.paths.Paths`
+实例根取决于 ``AKARI_INSTANCE_DIR``，未设置时取进程 cwd（:class:`akaribot.core.paths.Paths`
 的定义）。锁文件、i18n 缓存与 ``.env`` 因此都随实例走，进程可从任意目录启动。CLI 以子进程方式
 调用本模块，见 ``akaribot.cli.instance.Instance.run_core``。
 """
@@ -379,7 +379,7 @@ def check_instance_conflicts(instances: list[AdapterInstance]) -> None:
     """spawn 之前拦截多实例误配。
 
     端口冲突与同平台登录信息重复的症状都是“两个进程抢同一份资源”：前者抢套接字，后者抢账号。
-    这类故障从日志几乎诊断不出来，故一律以 ``sys.exit(1)`` 中止启动，并指明是哪两个实例。
+    这类故障从日志几乎诊断不出来，因此一律以 ``sys.exit(1)`` 中止启动，并指明是哪两个实例。
 
     :param instances: 已启用的实例。
     """

@@ -43,7 +43,7 @@ async def _(msg: Bot.MessageSession, color: str | None = None):
     elif material_colors_names_to_hex.get(color):
         parsed = webcolors.html5_parse_simple_color(material_colors_names_to_hex[color])
     elif re.match(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", color):
-        # add hash if missing
+        # 补全缺失的 # 前缀。
         if color[0] != "#":
             color = "#" + color
         if len(color) == 4:
@@ -162,7 +162,7 @@ def get_luminance(color: webcolors.HTML5SimpleColor):
 
 
 def get_color_name(color: webcolors.HTML5SimpleColor, name_dict) -> tuple[str, bool]:
-    # check exact match
+    # 名称表中存在精确匹配时直接返回。
     hex_name = webcolors.rgb_to_hex(color)
     if hex_name in name_dict:
         return name_dict[hex_name], True

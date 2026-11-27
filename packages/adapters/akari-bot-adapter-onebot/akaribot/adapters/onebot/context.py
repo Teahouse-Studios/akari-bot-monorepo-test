@@ -189,7 +189,7 @@ class OneBotContextManager(ContextManager):
         try:
             return await _check()
         except Exception:
-            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接抛出异常，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")
@@ -689,7 +689,7 @@ class OneBotContextManager(ContextManager):
                 async with asyncio.timeout(TYPING_MAX_LIFETIME):
                     Logger.debug(f"Start typing in session: {session_info.session_id}")
 
-                    if session_info.target_from == target_group_prefix:  # wtf onebot 11
+                    if session_info.target_from == target_group_prefix:  # onebot 11 以 target_from 前缀区分群聊会话。
                         obi = Temp.data.get("onebot_impl")
                         if obi in ["llonebot", "napcat"]:
                             await aiocqhttp_bot.call_action(

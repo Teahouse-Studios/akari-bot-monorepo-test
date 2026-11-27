@@ -4,13 +4,13 @@ order: 57
 
 # raise
 
-模块级所需权限为超级用户。
+此模块用于抛出 `TestException`，验证错误上报链路。模块级权限为超级用户。
 
 ### `raise`
 
 <CommandUsage usage="raise [<args>]" :params="['args=异常信息，省略时用内置文案']" permission="superuser" />
 
-此命令抛出 `TestException` 异常，用于验证错误上报链路。传入的参数作为异常信息，省略参数时使用内置文案。
+此命令将传入的参数作为异常信息抛出，省略参数时使用内置文案。
 
 <ChatExample
   :log="[

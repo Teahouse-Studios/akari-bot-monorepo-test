@@ -16,9 +16,9 @@ akaribot module add akari-bot-module-wolframalpha
 
 ## 配置项
 
-<ModuleConfig table="module_wolframalpha" />
+<ModuleConfig table="module_wolframalpha_secret" file="config/module_wolframalpha.toml" />
 
-唯一的配置字段为敏感项，写入同一文件的 `module_wolframalpha_secret` 表。
+该模块唯一的配置字段 `wolfram_alpha_appid` 声明为敏感配置项，取值写入同一配置文件中的 `module_wolframalpha_secret` 配置表。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |

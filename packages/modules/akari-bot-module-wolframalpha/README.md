@@ -4,7 +4,7 @@
 
 ## 安装
 
-Python 版本要求参见软件包内 `pyproject.toml` 的 `requires-python` 声明。
+Python 版本要求以包内 `pyproject.toml` 的 `requires-python` 为准。
 
 ```sh
 pip install akari-bot-module-wolframalpha

@@ -1,8 +1,8 @@
-"""模块全局装载入口。
+"""模块全局加载入口。
 
-供 CLI 与 TUI 以子进程调用。``list`` 读 ``module_status``。``load`` / ``unload`` 经 JobQueue RPC
+供 CLI 与 TUI 以子进程调用。``list`` 读 ``module_status``。``load`` / ``unload`` 通过 JobQueue RPC
 交给运行中的 Server 执行 ``ModulesManager.load_module()`` / ``unload_module()``。这两个函数要在
-队列与调度器的维护窗口内改本进程的模块索引，独立进程里索引为空，直接调用只会返回 False。
+队列与调度器的维护窗口内改本进程的模块索引，独立进程里索引为空，直接调用仅会返回 False。
 stdout 只放结果，提示与日志走 stderr。退出码 0 成功、1 运行期失败、2 用户错误。
 """
 
@@ -58,10 +58,10 @@ def _declared() -> dict[str, str]:
 
 
 def collect() -> tuple[list[dict], str]:
-    """汇总各注册模块的全局装载状态。
+    """汇总各注册模块的全局加载状态。
 
     模块名取“发现层声明”与“状态表已有记录”的并集：前者覆盖已装模块包，后者覆盖内置
-    模块。``loaded`` 只在状态表有记录时才是布尔值，无记录用 ``null`` 表示尚未初始化。
+    模块。``loaded`` 仅在状态表有记录时才是布尔值，无记录用 ``null`` 表示尚未初始化。
 
     :return: 二元组：按名字排序的 ``{name, loaded, installed_dist}`` 列表，以及需要提示给操作者的说明。
     """

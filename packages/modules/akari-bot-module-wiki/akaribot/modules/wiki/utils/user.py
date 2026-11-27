@@ -79,7 +79,6 @@ async def get_user_info(msg: Bot.MessageSession, username, wikiurl, headers=None
         data["gender"] = "{I18N:wiki.message.user.gender.male}"
     else:
         data["gender"] = "{I18N:message.unknown}"
-    # if one day LGBTers...
 
     if "blockedby" in base_user_info:
         data["blocked_by"] = base_user_info.get("blockedby")

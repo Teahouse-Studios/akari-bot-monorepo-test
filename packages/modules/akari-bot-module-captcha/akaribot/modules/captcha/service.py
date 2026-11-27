@@ -44,7 +44,7 @@ async def trust_challenge(challenge: CaptchaChallenge) -> bool:
                 fresh = await CaptchaChallenge.get_or_none(challenge_id=challenge.challenge_id)
                 if not fresh or fresh.status != "pending":
                     return False
-                # 事务内复用的是同一数据库连接，查询必须串行执行，不得通过 gather 并发占用连接。
+                # 事务内复用同一数据库连接，因此查询逐个 await 执行。
                 target = await TargetUnionInfo.resolve_union(fresh.target_id, create=False)
                 sender = await SenderUnionInfo.resolve_union(fresh.sender_id, create=False)
                 if not target or not sender:

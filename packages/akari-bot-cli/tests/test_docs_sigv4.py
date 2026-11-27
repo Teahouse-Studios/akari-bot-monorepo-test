@@ -1,7 +1,7 @@
-"""``cli.docs.deploy.sigv4``：AWS Signature Version 4 签名。
+"""``cli.docs.deploy.sigv4`` 的 AWS Signature Version 4 签名测试。
 
 覆盖 S3 需要的 GET(ListObjectsV2)、PUT 与 DELETE。前两个期望值取自 AWS 文档的
-GET Object 与 GET Bucket 示例，其余由 botocore 交叉核对后固化，用例全程离线。
+GET Object 与 GET Bucket 示例，其余由 botocore 交叉核对后固定为期望值，用例全程离线。
 """
 
 from datetime import UTC, datetime

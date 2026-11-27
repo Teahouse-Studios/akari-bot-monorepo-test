@@ -1,11 +1,11 @@
-"""pytest 的根级 conftest：铺设测试环境并注册 akari 的 pytest 插件。
+"""pytest 的根级 conftest，负责初始化测试环境并注册 akari 的 pytest 插件。
 
 测试基座要求 ``AKARI_CONFIG_PATH``、``AKARI_UNION_MERGE_LOGS_PATH`` 与语言快照缓存目录在任何
-``akaribot.core.*`` 导入之前生效（见 akaribot/testing/runner.py 的引导函数）：``akaribot.core.constants``
+``akaribot.core.*`` 导入之前生效（参见 akaribot/testing/runner.py 的引导函数）：``akaribot.core.constants``
 导入期即由 akaribot.core.paths 固化配置目录与合并日志目录，``akaribot.core.config`` 导入期还会执行
 配置版本迁移。引导也不能放进 pytest 插件模块，因为 ``-p``/entry-point 插件会先于 conftest 导入。
 
-用例的收集与执行见 akaribot/testing/pytest_plugin.py，pytest 只是这套框架的第二个前端。
+用例的收集与执行参见 akaribot/testing/pytest_plugin.py，pytest 只是这套框架的第二个前端。
 """
 
 import sys

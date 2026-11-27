@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接转换、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册至 `akaribot` 主命令表中。命令见下表。
+引擎实现在 `akaribot/cli/docs_engine/`，包含目录收集、源文件生成、跨包链接转换、构建缓存、静态预览、开发预览与状态持久化。`akaribot docs` 已注册至 `akaribot` 主命令表。
 
 ## 前置条件
 
@@ -300,8 +300,7 @@ Vercel 的令牌仅从环境变量 `VERCEL_TOKEN` 读取。S3 的密钥仅从 `A
 
 若未配置 `bucket`、`endpoint` 或 `region`，命令会在部署前输出错误提示。
 
-构建在临时实例 `.ci-docs` 中执行，
-基础路径使用 Pages 的项目路径（`AKARIBOT_DOCS_BASE`），因此站内链接与资源地址在构建阶段便包含该前缀。
+仓库的 Pages 工作流在临时实例 `.ci-docs` 中执行构建，基础路径取自 Pages 的项目路径（`AKARIBOT_DOCS_BASE`）。站内链接与资源地址因此在构建阶段便包含该前缀。
 
 仓库在 Settings → Pages 的 Source 必须为 GitHub Actions。工作流在 Pages 尚未启用时会自动打开它。
 

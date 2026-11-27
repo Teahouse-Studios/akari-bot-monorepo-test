@@ -1,6 +1,6 @@
 """uv 安装命令的拼装、安装源解析与实例 venv 托管。
 
-本模块只经子进程调用 uv（``uv pip install --python <解释器>``），CLI 进程不 import core、不 import pip。
+该模块仅通过子进程调用 uv（``uv pip install --python <解释器>``），CLI 进程不 import core、不 import pip。
 adopt / release 的步骤顺序不可颠倒，理由见 :func:`adopt` 与 :func:`release` 的文档串。
 """
 
@@ -59,8 +59,8 @@ WORKSPACE_PYPROJECT_PATTERNS = ("packages/*/pyproject.toml", "packages/*/*/pypro
 MANIFEST_FILENAME = "manifest.toml"
 # 判定目录是否为 venv 的标志文件。
 VENV_MARKER_FILENAME = "pyvenv.cfg"
-# 清单未声明 requires_core_api 时的默认区间。与 core.registry.PackageManifest 及
-# tools/build_registry.py 的 DEFAULT_REQUIRES_CORE_API 保持一致，工作区视图与 registry 视图必须一致。
+# 清单未声明 requires_core_api 时的默认区间。core.registry.PackageManifest 与
+# tools/build_registry.py 的默认值为 >=1,<2，此处取值与之不同，改区间时三处一起核对。
 DEFAULT_REQUIRES_CORE_API = ">=1"
 # 内置 uv 在 Windows 上必须是带 .exe 的完整文件名，因为 CreateProcess 不接受无扩展名的可执行文件。
 UV_BUNDLED_NAME = "uv"
@@ -322,7 +322,7 @@ def dry_run_confirm_argv(python: Path, specs: Sequence[str]) -> list[str]:
 
 
 def summarize_uv_error(stderr: str, *, limit: int = 3) -> str:
-    """把 uv 解析器的原始报错压缩成可读说明。
+    """把 uv 解析器的原始错误信息压缩成可读说明。
 
     uv 的冲突说明以 ``Because ...`` 起句，逐条列出约束来源。取前若干条即可说明矛盾，
     完整输出留给 ``--verbose``。
@@ -377,7 +377,7 @@ class CommandRunner:
     ) -> subprocess.CompletedProcess[str]:
         """执行命令并实时转发输出。
 
-        安装与卸载可能跑上几分钟（解析依赖、下载 wheel、写 venv）。若沿用 ``capture_output``，
+        安装与卸载可能运行数分钟（解析依赖、下载 wheel、写 venv）。若沿用 ``capture_output``，
         这段时间界面上没有任何变化，操作者无法区分“正在装”与“卡住了”。故逐行转发：uv 即使
         输出被重定向也会打印 ``Resolved … / Installed …`` 这类进度行，转发即可见。
 
@@ -492,7 +492,7 @@ print(json.dumps({"python": sys.executable, "distributions": distributions}, sor
 class InstalledDist:
     """目标环境里的一个已装分发。
 
-    :param dist: 规范化分发名。
+    :param dist: 规范化包名。
     :param version: 版本。
     :param path: 可编辑或本地安装的源目录。
     :param editable: 是否为可编辑安装。
@@ -674,8 +674,8 @@ def _read_toml(path: Path) -> dict[str, Any]:
 def package_root_from_entry_point(pyproject: Path, import_path: str) -> Path | None:
     """由 entry point 的导入路径定位导入包目录。
 
-    源码根优先取分发根，其次取分发根下的 ``src``：与 ``tools/build_registry.py`` 的
-    ``package_root()`` 同一口径。CLI 既不能 import core 内部，也不该在运行时依赖仓库工具，
+    源码根目录优先取包根目录，其次取包根目录下的 ``src``：与 ``tools/build_registry.py`` 的
+    ``package_root()`` 遵循同一规则。CLI 既不能 import core 内部，也不该在运行时依赖仓库工具，
     故按同一规则实现，并由用例与工具对比，避免分化出第三套规则。
 
     :param pyproject: 该分发的 pyproject.toml。
@@ -938,7 +938,7 @@ def workspace_target(
 
 @dataclass(frozen=True)
 class RegistryEntry:
-    """registry.json 中的包条目记录（结构见 tasks 附录 A.3）。"""
+    """registry.json 中的包条目记录。"""
 
     name: str
     dist: str
@@ -1745,7 +1745,7 @@ def dependency_conflicts(
 ) -> list[str]:
     """检查已装包对待装包本身的版本要求。
 
-    发现的矛盾以“谁要求什么、实际是什么”的可读形式返回，不把 uv 解析器原始报错抛给用户。
+    发现的矛盾以“谁要求什么、实际是什么”的可读形式返回，不把 uv 解析器的原始错误信息直接呈现给用户。
     待装包自身依赖的版本调整见 :func:`unmet_dependencies`。
 
     :param candidate: 待装目标，``version`` 仅在本地模式可读。
@@ -1971,7 +1971,7 @@ def config_sync(instance: Instance, dist: str) -> None:
     """第 4 步：写入该包的配置。
 
     写入必须发生在 CLI 子进程：机器人与 server 一律以只读配置运行，
-    ``CFGManager._ensure_writable()`` 会拒绝它们写入（tasks T5.2 的硬约束）。
+    ``CFGManager._ensure_writable()`` 会拒绝它们写入。
     调用方应在调用前抓取 :class:`ConfigSnapshot`，以便失败时回滚本次写入。
     """
     run_core_checked(

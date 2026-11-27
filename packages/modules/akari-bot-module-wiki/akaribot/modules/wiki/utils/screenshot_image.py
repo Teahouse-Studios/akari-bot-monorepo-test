@@ -126,7 +126,7 @@ async def generate_screenshot(
             locale=locale,
         )
 
-    # Start the fallback early so a primary-render timeout does not add another full request latency.
+    # 提前启动回退渲染，避免主渲染超时后再叠加一次完整请求耗时。
     styled_task = asyncio.create_task(
         _generate_styled_api_screenshot(
             page_link,

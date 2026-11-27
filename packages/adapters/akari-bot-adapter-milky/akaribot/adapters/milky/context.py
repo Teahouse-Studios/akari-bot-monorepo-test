@@ -77,7 +77,7 @@ class MilkyContextManager(ContextManager):
         try:
             return await _check()
         except Exception:
-            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接报错，按无权限处理。
+            # 被查询的成员可能已退群，平台无法查询到成员记录时会直接抛出异常，按无权限处理。
             if user_id is None:
                 raise
             Logger.exception(f"Failed to check native permission for {user_id} in {session_info.target_id}: ")

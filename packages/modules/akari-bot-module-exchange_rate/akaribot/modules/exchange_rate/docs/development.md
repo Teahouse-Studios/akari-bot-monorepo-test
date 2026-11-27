@@ -16,9 +16,9 @@ akaribot module add akari-bot-module-exchange_rate
 
 ## 配置项
 
-<ModuleConfig table="module_exchange_rate" />
+<ModuleConfig table="module_exchange_rate_secret" file="config/module_exchange_rate.toml" />
 
-`exchange_rate_api_key` 为此模块唯一的配置字段，声明为敏感配置项，写入配置文件中的 `module_exchange_rate_secret` 表。
+该模块唯一的配置字段 `exchange_rate_api_key` 声明为敏感配置项，取值写入同一配置文件中的 `module_exchange_rate_secret` 配置表。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |

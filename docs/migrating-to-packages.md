@@ -20,7 +20,7 @@
 akaribot migrate legacy <旧项目路径> --workspace-root <仓库路径>
 ```
 
-迁移会校验旧项目布局（须包含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`）。旧模块名按多对一映射到新的包名，例如 `wikilog`/`weekly`/`weekly_rss` 都归入 `akari-bot-module-wiki`。
+迁移会校验旧项目布局（必须包含 `bot.py`、`core/`、`modules/` 与 `config/config.toml`）。旧模块名按多对一映射到新的包名，例如 `wikilog`/`weekly`/`weekly_rss` 都归入 `akari-bot-module-wiki`。
 
 随后创建新实例、迁移配置与数据、安装映射后的包、转换数据库版本号，最后在新实例根目录写入 `migration-report.md`。**一律生成默认实例**（实例 ID 为空、`client_name` 与旧项目相同），因此 `target_id` 前缀不变、场景数据无需改写。
 
@@ -74,7 +74,12 @@ MySQL 等外部数据库不支持自动复制迁移，需要先导出到独立�
 
    仓库里包的 `pyproject.toml` 必须声明 `akaribot.modules` 或 `akaribot.adapters` entry point。
 
-   自建包升级了数据库结构时，需要运行：
+   自建包升级数据库结构后重启实例，启动阶段会按包的迁移记录升级数据库：
+
+```sh
+   akaribot run --stop
+   akaribot run --detach
+   ```
 
 6. **校验**：
 
@@ -113,7 +118,7 @@ MySQL 等外部数据库不支持自动复制迁移，需要先导出到独立�
 
 ```sh
 akaribot adapter list                          # 按平台列出全部实例
-akaribot adapter instance add telegram work    # 新实例：写 config/bot_telegram.toml 的 [bot_telegram-work]
+akaribot adapter instance add telegram work    # 新实例：写 config/bot_telegram-work.toml 的 [bot_telegram-work]
 akaribot doctor                                # 检测监听端口冲突与两个实例配了同一账号
 ```
 
@@ -123,7 +128,7 @@ akaribot doctor                                # 检测监听端口冲突与两�
 
 ## 机器人内更新
 
-机器人内的 `~update` 会交由 CLI 执行 `module update --defer-runtime`，安装包并同步配置后返回结果。数据库迁移和运行代码切换会在下一次启动时完成，因此更新后需要按提示执行 `~restart`。若使用 `~update&restart`，则会在更新完成后自动执行重启。宿主机上也可直接执行：
+机器人内的 `~update` 会交由 CLI 执行 `module update --all --defer-runtime`，安装包并同步配置后返回结果。数据库迁移和运行代码切换会在下一次启动时完成，因此更新后需要按提示执行 `~restart`。若使用 `~update&restart`，则会在更新完成后自动执行重启。宿主机上也可直接执行：
 
 ```sh
 akaribot module update --all

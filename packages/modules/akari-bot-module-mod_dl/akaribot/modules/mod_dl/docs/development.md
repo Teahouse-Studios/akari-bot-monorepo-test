@@ -16,9 +16,9 @@ akaribot module add akari-bot-module-mod_dl
 
 ## 配置项
 
-<ModuleConfig table="module_mod_dl" />
+<ModuleConfig table="module_mod_dl_secret" file="config/module_mod_dl.toml" />
 
-此表仅包含一个字段。该字段声明为敏感项，其数值实际写入同一配置文件中的 `module_mod_dl_secret` 数据表。
+该模块唯一的配置字段 `curseforge_api_key` 声明为敏感配置项，取值写入同一配置文件中的 `module_mod_dl_secret` 配置表。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |

@@ -112,7 +112,7 @@ class RunSource(Protocol):
 
 
 class StaticRunSource:
-    """替身数据源：不产生任何子进程，启停只累加调用次数并更新状态。
+    """模拟数据源：不产生任何子进程，启停只累加调用次数并更新状态。
 
     :param records: 初始状态表。默认生成一行“已停止”。
     :param running_pid: 启动成功后上报的 PID。

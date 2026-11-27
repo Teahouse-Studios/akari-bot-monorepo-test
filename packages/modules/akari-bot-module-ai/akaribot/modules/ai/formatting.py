@@ -8,10 +8,9 @@ from akaribot.core.api import Bot, random_cache_path, post_url, ImageTable, imag
 
 
 def parse_markdown(md: str) -> list[dict[str, str]]:
-    code_block_pattern = r"```(\w*)\n([\s\S]*?)\n```"  # 解析代码块。
-    latex_pattern = r"\$\$([\s\S]*?)\$\$"  # 解析块级 LaTeX。
-    table_pattern = r"(?:\|.*\|\n)+\|(?:[-:| ]+)\|\n(?:\|.*\|\n)+"  # 解析 Markdown 表格。
-    # 先行对内容分块。
+    code_block_pattern = r"```(\w*)\n([\s\S]*?)\n```"
+    latex_pattern = r"\$\$([\s\S]*?)\$\$"
+    table_pattern = r"(?:\|.*\|\n)+\|(?:[-:| ]+)\|\n(?:\|.*\|\n)+"
     text_split_pattern = r"(```[\s\S]*?```|\$\$[\s\S]*?\$\$|(?:\|.*\|\n)+\|(?:[-:| ]+)\|\n(?:\|.*\|\n)+)"
 
     blocks = []

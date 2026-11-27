@@ -4,8 +4,8 @@
 本模块保留模块级常量名，是为了让既有的 ``from core.constants.path import ...`` 无需改动。
 新增代码应直接使用 :class:`core.paths.Paths`。
 
-取值在**导入期**完成，故 ``AKARI_INSTANCE_DIR``、``AKARI_CONFIG_PATH``、
-``AKARI_UNION_MERGE_LOGS_PATH`` 须在任何 ``core.*`` 导入之前设置，否则被固化为默认值且不报错。
+取值在**导入期**完成，因此 ``AKARI_INSTANCE_DIR``、``AKARI_CONFIG_PATH``、
+``AKARI_UNION_MERGE_LOGS_PATH`` 必须在任何 ``core.*`` 导入之前设置，否则取值会固化为默认值，且不会有任何提示。
 引导代码只能以字面量重复这些名称，``tester.py`` / ``tests/run_one.py`` / ``conftest.py`` 即如此。
 """
 
@@ -83,7 +83,7 @@ def __getattr__(name: str) -> Path:
 class PrivateData:
     """客户端私有资源目录，存放需要跨重启保留的运行时文件。
 
-    ``path`` 是普通类属性，首次使用前须调用 :meth:`ensure`。不设访问器属性是为了让
+    ``path`` 是普通类属性，首次使用前必须调用 :meth:`ensure`。不设访问器属性是为了让
     检测工具能从 ``path`` 的赋值处看到它是目录。使用方包括 ``bot.py`` 的
     ``pre_init()``（启动时创建）与 :meth:`set`。
     """
@@ -106,10 +106,10 @@ class PrivateData:
 def module_data_path(module_dir: str | Path) -> Path:
     """取模块的可写数据目录，不创建它。
 
-    已弃用：模块包的可写数据一律经 :meth:`core.registry.PackageRegistry.package_data` 取实例的
-    ``data`` 目录。包内 ``data`` 在只读部署与 wheel 安装下均不可写。本函数仅为兼容既有调用保留。
+    已弃用：模块包的可写数据一律通过 :meth:`core.registry.PackageRegistry.package_data` 获取实例的
+    ``data`` 目录。包内 ``data`` 在只读部署与 wheel 安装下均不可写。该函数仅为兼容既有调用保留。
 
-    不在此处建目录：调用方常在导入期取路径，而导入期建目录会让只读安装（``chmod a-w`` 或
+    不在此处建目录。调用方常在导入期取路径，而导入期建目录会让只读安装（``chmod a-w`` 或
     wheel）下的 ``import`` 本身抛 ``PermissionError``。目录由写入方在使用时创建。
 
     :param module_dir: 模块根目录，例如 ``Path(__file__).parent``。

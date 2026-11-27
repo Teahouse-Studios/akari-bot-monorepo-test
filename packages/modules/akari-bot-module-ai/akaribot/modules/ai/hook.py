@@ -33,7 +33,7 @@ class AiHookResult:
 def resolve_llm(name: str | None, session_info) -> dict | None:
     """按调用方指定、场景默认、模块默认的顺序确定模型。
 
-    调用方显式指定模型时不做替换。场景默认模型已下线时改用模块默认模型。
+    调用方显式指定模型时按该名称返回。场景默认模型已下线时改用模块默认模型。
 
     :param name: 调用方指定的模型名称。
     :param session_info: 调用方所在会话。

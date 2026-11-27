@@ -44,7 +44,7 @@ def _is_global_unicast(address: str) -> bool:
 
 
 async def private_ip_check(url: str):
-    """检查 URL 是否只会解析到公网单播 IP 地址。
+    """检查 URL 是否仅会解析到公网单播 IP 地址。
 
     :param url: 需要检查的 URL。
     :raise ValueError: URL 无有效主机名，或解析到了非公网单播 IP 地址。

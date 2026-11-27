@@ -52,7 +52,7 @@
 
 <CommandUsage usage="ai llm persona" permission="public" />
 
-此命令用于设置是否开启人格化，效果因模型而异。
+此命令用于设置是否开启人格化，效果因模型而异。仅当人格文件存在时才注册该命令。
 
 <ChatExample
   :log="[

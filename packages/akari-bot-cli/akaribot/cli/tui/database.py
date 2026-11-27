@@ -115,7 +115,7 @@ class RowQuery:
     """数据项查询的筛选条件与排序。
 
     :param filters: 筛选条件，形如 ``<列><运算符><值>``。多条之间是 AND。
-    :param search: 全表搜索词，在所有文本列上做包含匹配。
+    :param search: 全表搜索词，在所有文本列上执行包含匹配。
     :param order_by: 排序列，可带 ``:asc`` / ``:desc``。空串表示用 core 的默认顺序。
     """
 
@@ -476,7 +476,7 @@ class StaticDatabaseSource:
 
 
 class SubprocessDatabaseSource:
-    """默认数据源：一律经 ``akaribot db`` 子进程，CLI 进程内不 import core。
+    """默认数据源：一律通过 ``akaribot db`` 子进程，CLI 进程内不 import core。
 
     :param root: 实例根。默认按 ``AKARI_INSTANCE_DIR`` 与向上查找定位。
     :param timeout: 单个子进程的超时秒数。

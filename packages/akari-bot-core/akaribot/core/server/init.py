@@ -30,8 +30,8 @@ async def init_async(start_scheduler=True, send_prompt=True) -> None:
 
     Args:
         start_scheduler: 是否启动定时任务（默认 True）
-        send_prompt: 是否发送重启提示（默认 True）。提示须等目标客户端重新注册为 ready 方能投递，
-                     故由调用方在数据库和队列启动后自行调用 `load_prompt`
+        send_prompt: 是否发送重启提示（默认 True）。提示必须等目标客户端重新注册为 ready 才能投递，
+                     因此由调用方在数据库和队列启动后自行调用 `load_prompt`
     """
     Info.client_name = "Server"
     JobQueueServer.configure_backend(create_jobqueue_backend())

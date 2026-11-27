@@ -30,4 +30,4 @@ akaribot module add akari-bot-module-mcmod
 
 ## 依赖与外部服务
 
-运行依赖 `akari-bot-core` 与 `beautifulsoup4>=4.11.1,<5.0.0`。外部服务为 `search.mcmod.cn`。名称搜索使用 `https://search.mcmod.cn/s?key=`，内容搜索使用 `https://search.mcmod.cn/s?filter=3&key=`。页面通过 WebRender 获取后使用 BeautifulSoup 执行解析。
+运行依赖 <PackageDependencies package="akari-bot-module-mcmod" />。外部服务为 `search.mcmod.cn`。名称搜索使用 `https://search.mcmod.cn/s?key=`，内容搜索使用 `https://search.mcmod.cn/s?filter=3&key=`。页面通过 WebRender 获取后交给 BeautifulSoup 解析。

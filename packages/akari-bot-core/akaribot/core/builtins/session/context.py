@@ -64,7 +64,7 @@ class ContextManager(ABC):
 
     @classmethod
     def deactivate_context(cls, session_info: SessionInfo):
-        """结束会话的入站处理记录。记录归零后由调用方决定是否删除上下文。
+        """结束会话的入站处理记录。记录归零后由调用方确定是否删除上下文。
 
         :param session_info: 会话信息对象
         """

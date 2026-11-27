@@ -40,10 +40,10 @@ def write_missing_key(
     """将缺失的配置项写入内存中的文档，并附带文件头、表头与键注释。
 
     :param values: 配置文件名到文档的映射。
-    :param q: 配置项键名，须已转小写。
+    :param q: 配置项键名，必须已转小写。
     :param value: 写入值。
     :param secret: 是否写入密钥表。
-    :param table_name: 配置项表名，须已归一化。
+    :param table_name: 配置项表名，必须已归一化。
     :param standalone_comment_keys: 生成字段前独立注释块所使用的 i18n 键。
     """
     if table_name and table_name != "config":

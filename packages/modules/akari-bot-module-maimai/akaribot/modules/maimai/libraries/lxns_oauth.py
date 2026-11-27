@@ -98,7 +98,6 @@ def _expires_in(resp: dict, default: float = 900.0) -> float:
 async def _token_request(payload: dict) -> dict:
     # 令牌端点仅接受一次性的授权码或 refresh token，重复发送可能导致首个已签发的令牌失效，因此不执行重试。
     # 错误信息通过响应体中的 `error` 字段体现，因此传入 `status_code=None` 以读取 4xx 响应体。
-    # :raise LxnsOAuthError: 请求失败或响应格式异常。
     try:
         resp = await post_url(
             LXNS_TOKEN_URL,
@@ -298,7 +297,7 @@ async def bind_account(msg, code: str | None = None, cmd=None) -> None:
     """以授权码流程完成一次落雪账号绑定。
 
     :param msg: 消息会话。
-    :param code: 用户发来的授权码，或含授权码的回调地址。为空时只给出授权链接。
+    :param code: 用户发来的授权码，或含授权码的回调地址。为空时仅给出授权链接。
     :param cmd: 发回授权码所用的命令（`ActionText`），用于提示用户。
     """
     if not LXNS_OAUTH_ENABLED:

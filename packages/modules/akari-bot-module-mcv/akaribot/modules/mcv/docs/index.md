@@ -1,6 +1,6 @@
 # mcv
 
-mcv 可以查询 Minecraft：Java 版启动器最新正式版与快照，以及基岩版在 Google Play 商店与 Microsoft Store 的最新正式版。
+此模块可以查询 Minecraft：Java 版启动器最新正式版与快照。基岩版则取 Google Play 商店与 Microsoft Store 的最新正式版。
 
 ## 命令
 

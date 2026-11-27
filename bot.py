@@ -1,6 +1,6 @@
 """根目录兼容实现：``bot`` 转发到 :mod:`akaribot.core.entrypoints.run`。
 
-机器人入口在 core 包内，本文件只保留两个兼容用法：
+机器人入口在 core 包内，本文件仅保留两个兼容用法。
 
 - ``import bot``：把 ``sys.modules["bot"]`` 换成 run 模块本身，旧模块的全部名字（含私有名）
   因此原样可见。不做逐个再导出：``packages/akari-bot-core/tests/test_jobqueue_daemon.py`` 与
@@ -15,7 +15,7 @@ import sys
 
 from akaribot.core.entrypoints import run as _run
 
-# 既有用例通过 ``import bot as daemon`` 使用的兼容接口在此集中核对，缺失时在导入阶段即报错，
+# 既有用例通过 ``import bot as daemon`` 使用的兼容接口在此集中核对，缺失时在导入阶段即抛出异常，
 # 避免后续在用例执行中产生 AttributeError。
 _COMPAT_NAMES = (
     "CONFIG_READONLY_ENV",

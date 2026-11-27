@@ -1,10 +1,10 @@
 """wiki 站点异常提示单元测试。
 
-InvalidWikiError 的回退分支须把异常对象转成消息元素：消息链只接受消息元素，直接并入会在
-该分支二次抛错——站点的 interwiki 配置有误时，本应友好的提示就成了未捕获异常。
+InvalidWikiError 的回退分支必须把异常对象转成消息元素。消息链仅接受消息元素，直接并入会在
+该分支二次抛出异常，站点的 interwiki 配置有误时，本应友好的提示就成了未捕获异常。
 
 query_pages 另有一条 QueryInfo 入口，但现无调用方，且其在取 locale 时即已失配，
-故此处只覆盖会话入口这条实际可达的路径。
+此处仅覆盖会话入口这条实际可达的路径。
 """
 
 from types import SimpleNamespace

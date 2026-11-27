@@ -304,7 +304,7 @@ def template_root(
     :param override: 命令行给出的模板目录，未给出时为 ``None``。
     :param relative: 相对仓库根的模板目录，模块与适配器各一套。
     :param marker: 用于判定候选目录是否为目标模板目录的文件名。
-    :param missing_message: 全部候选位置都不存在时的报错文本。
+    :param missing_message: 全部候选位置都不存在时的错误文本。
     :return: 模板目录的绝对路径。
     :raises typer.BadParameter: 全部候选位置都没有模板。
     """
@@ -505,7 +505,7 @@ def collect_plan(
     with_tests: bool | None,
     non_interactive: bool,
 ) -> ModulePlan:
-    """按 §3.4.4 的问卷顺序收集答案，交互模式逐项提问，非交互模式取选项与默认值。
+    """按固定问卷顺序收集答案，交互模式逐项提问，非交互模式取选项与默认值。
 
     :return: 问卷答案。
     """
@@ -757,7 +757,7 @@ def render_tree(
     :param enabled: 相对路径到“是否生成”的判定，``None`` 表示全部生成。
     :param skip: 只留在模板仓库内、不随生成物分发的相对路径。
     :param force: 目标目录非空时是否覆盖。
-    :param conflict_message: 目标目录非空且未加 ``--force`` 时的报错文本，空串表示用默认文本。
+    :param conflict_message: 目标目录非空且未加 ``--force`` 时的错误文本，空串表示用默认文本。
     :return: 写出的文件列表。
     :raises typer.BadParameter: 目标目录非空且未加 ``--force``。
     """

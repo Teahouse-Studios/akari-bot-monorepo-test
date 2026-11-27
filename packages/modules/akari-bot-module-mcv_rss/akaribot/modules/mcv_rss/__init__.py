@@ -32,7 +32,7 @@ CHANGELOG_URL_PREFIX = "https://www.minecraft.net/en-us/article/minecraft"
 
 
 def get_changelog_url(version: str) -> str | None:
-    """Generate changelog url of the given minecraft version id"""
+    """生成给定 Minecraft 版本的更新日志地址。"""
     if m := re.match(SNAPSHOT_PATTERN, version):
         return f"{CHANGELOG_URL_PREFIX}-{m.group('major').replace('.', '-')}-snapshot-{m.group('patch')}"
     if m := re.match(PRERELEASE_PATTERN, version):
@@ -69,7 +69,6 @@ startup_mute = [True, True]
 
 mcv_rss = module(
     "mcv-rss",
-    # recommend_modules=["mcv_jira_rss"],
     desc="{I18N:mcv_rss.help.mcv-rss.desc}",
     alias=["mcv_rss", "mcvrss"],
     doc=True,
@@ -84,7 +83,7 @@ mcbv_rss = module(
     rss=True,
 )
 
-# for future use
+# 每分钟比对一次版本清单，发现新的正式版或快照即推送。
 
 
 @mcv_rss.schedule(IntervalTrigger(seconds=60))

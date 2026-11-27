@@ -10,7 +10,7 @@
 
 <CommandUsage usage="langconv <language> <content>" :params="['language=目标语言，如 zh-tw', 'content=待转换文本']" permission="public" />
 
-此命令将文本转换为指定的目标语言。`<language>` 接受 `zh-cn`、`zh-hk` 与 `zh-tw`。省略 `zh` 前缀时，按照 `cn`、`hk`、`tw` 处理，下划线与大小写均不影响解析。
+此命令将文本转换为指定的目标语言。`<language>` 接受 `zh-cn`、`zh-hk` 与 `zh-tw`。省略 `zh` 前缀时按 `cn`、`hk`、`tw` 处理。前缀区分大小写，`ZH-TW` 会返回不受支持的提示。后缀的大小写与下划线不影响解析。
 
 若目标语言超出支持范围，机器人将返回不受支持的提示。`<content>` 为待转换的文本，转换结果直接作为消息正文返回。
 

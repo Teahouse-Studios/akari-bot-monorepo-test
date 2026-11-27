@@ -1,6 +1,6 @@
 """配置初始化入口。
 
-配置的加载与迁移只在明确调用时执行。
+配置的加载与迁移仅在明确调用时执行。
 """
 
 from akaribot.core.builtins.config.manager import CFGManager
@@ -9,7 +9,7 @@ from akaribot.core.builtins.config.manager import CFGManager
 def bootstrap_config() -> None:
     """加载配置文件。非只读进程先执行版本迁移。
 
-    须在导入任何配置模板之前调用，重复调用无副作用。
+    必须在导入任何配置模板之前调用，重复调用无副作用。
     """
     if CFGManager.is_loaded():
         return

@@ -1,24 +1,13 @@
 """自检。
 
-``akaribot doctor`` 的多实例三查：端口冲突、登录信息重复、孤立配置（T5.7、上位文档 §3.6）。
+``akaribot doctor`` 的多实例三查：端口冲突、登录信息重复、孤立配置。
 
-与 T1B.4 的守护进程前置检查共用同一份实现：优先调用 core 的 ``config conflicts`` 入口，该入口应由
-``bot.py`` 的启动前检查与 CLI 同时调用，判据只有一份。入口不可用时回退到本模块的本地实现，并在输出
-中标注实际使用的实现，避免两处判据悄悄分叉。推荐的 core 侧接口：
+该模块实现本地三查，core 的启动前检查另有一份（``entrypoints/run.py`` 的 ``check_instance_conflicts``）。
+端口冲突与登录信息重复比较全部已配置实例，相关实例未全部启用时降为警告。登录信息仅比较同平台、由
+manifest 的 ``credential_fields`` 声明的字段，并跳过空值与 ``<Replace me>`` 占位符。孤立配置仅告警，
+不视为错误。已装包清单不可用时跳过孤立配置检查，此时登录信息检查覆盖全部密钥字段。
 
-    python -m akaribot.core.entrypoints.config conflicts --json
-    → {"conflicts": [{"kind": "port" | "credential" | "orphan" | "config",
-                      "level": "error" | "warning",
-                      "platform": "telegram",
-                      "instances": ["bot_telegram", "bot_telegram-alt"],
-                      "message": "…",
-                      "detail": {…}}]}
-
-本地判据与 core 一致：只比较已启用实例。登录信息比较限定同平台、由 manifest 的 ``credential_fields``
-声明，并豁免空值与 ``<Replace me>`` 占位符。孤立配置只告警不报错。已装包清单不可用时，孤立配置检查
-跳过，登录信息检查保守地覆盖全部密钥字段。
-
-环境诊断的其余项（Python 版本、venv、缺失配置、迁移未应用、字体）不在本任务范围内。
+环境诊断的其余项（Python 版本、venv、缺失配置、迁移未应用、字体）不在诊断范围内。
 """
 
 from __future__ import annotations
@@ -299,8 +288,8 @@ def run_checks(
 ) -> None:
     """检查多实例部署的三类冲突：端口冲突、登录信息重复、孤立配置。
 
-    判据优先来自 core 的 ``config conflicts`` 入口（与守护进程启动前检查共用同一份实现）。入口不可用时
-    使用 CLI 本地实现，输出中会标注实际使用的实现。存在 error 级结论时以非零码退出。
+    三查先请求 core 的 ``config conflicts`` 入口，入口不可用时改用该模块的本地实现，输出中标注实际
+    使用的实现。存在 error 级结论时以非零码退出。
     """
     instance = open_instance()
     scan = scan_adapter_instances(instance)

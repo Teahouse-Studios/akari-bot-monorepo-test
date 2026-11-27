@@ -1,7 +1,7 @@
 """配置读写。
 
-数据与写入一律经子进程调用 ``python -m akaribot.core.entrypoints.config``：CLI 进程不 import
-core，且写入必须走 ``CFGManager.edit_write()`` 的原子路径，命令行与 TUI 都不直接改文件。
+数据与写入一律通过子进程调用 ``python -m akaribot.core.entrypoints.config``，CLI 进程不 import core。
+写入必须走 ``CFGManager.edit_write()`` 的原子路径，命令行与 TUI 都不直接改文件。
 表单模式与原始文本模式在 TUI 的 Config 页。命令行提供 list / schema / placeholders / get / set
 与外部编辑器。
 """

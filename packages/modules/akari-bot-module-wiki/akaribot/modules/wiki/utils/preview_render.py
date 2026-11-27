@@ -321,7 +321,7 @@ async def _inline_css(css, base, requests, depth=0):
 
 
 async def _remote_render(soup, requests, locale, *, element="body > #mw-content-text"):
-    # 远程接口不支持请求路由，所有资源必须先受控下载并内联，CSP 禁止后续联网。
+    # 远程渲染需先受控下载并内联全部资源，CSP 阻止后续外联请求。
     Logger.warning("[Wiki preview] Using restricted rendering: external scripts are removed and resources are inlined")
     requests.warning = True
     watermark = soup.select_one("#akari-preview-watermark")
@@ -440,8 +440,7 @@ async def _local_shell_render(fragment, parsed, page_url, requests, locale):
             try:
                 data, content_type, _ = await requests.fetch(request.url, kind)
                 if kind == "document":
-                    # The shell document is fetched during browser navigation, so discover its
-                    # declared image origins before Chromium starts requesting those images.
+                    # 外壳文档由浏览器导航时抓取，需先发现其声明的图片来源。
                     _document_resources(data, requests, include_images=True, include_scripts=False)
                 await route.fulfill(body=data, content_type=content_type)
             except Exception as error:

@@ -76,7 +76,7 @@ class ModuleRecord:
     :param summary: 简介。
     :param state: ``installed`` / ``available`` / ``unknown``。
     :param requires_core_api: 声明的核心 API 版本约束。
-    :param dependents: 依赖本模块的发行包名。
+    :param dependents: 依赖该模块的包名。
     :param origin: 记录来源说明，供详情面板展示。
     :param kind: ``module`` / ``adapter`` / ``core`` / ``testing``，未知时为空串。
     :param developers: 模块作者，取自包的 ``pyproject.toml``。

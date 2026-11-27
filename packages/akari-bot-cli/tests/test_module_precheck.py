@@ -140,7 +140,7 @@ def _test_plan_that_breaks_installed_packages_is_blocked():
 
 
 def _test_api_version_probe_reads_core_constant():
-    # 兼容性检查据此判断 requires_core_api。读取位置错误时恒为 None，检查将被静默跳过。
+    # 兼容性检查据此判断 requires_core_api。读取位置错误时恒为 None，检查将被隐式跳过。
     return isinstance(engine.probe_api_version(Path(sys.executable)), int)
 
 

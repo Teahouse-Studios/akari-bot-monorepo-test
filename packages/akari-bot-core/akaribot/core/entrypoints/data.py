@@ -1,7 +1,7 @@
 """实例数据浏览与按主键写入入口。
 
-供 CLI 的 ``db`` 子命令与 TUI 的数据库页以子进程调用。读 ``AKARI_INSTANCE_DIR`` 决定实例。
-表与列只认 Tortoise 已注册模型声明过的标识：不接受原始 SQL，也不接受调用方给出的任意表名。
+供 CLI 的 ``db`` 子命令与 TUI 的数据库页以子进程调用。读 ``AKARI_INSTANCE_DIR`` 确定实例。
+表与列仅认 Tortoise 已注册模型声明过的标识，不接受原始 SQL，也不接受调用方给出的任意表名。
 """
 
 from __future__ import annotations

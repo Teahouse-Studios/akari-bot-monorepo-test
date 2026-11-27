@@ -5,7 +5,7 @@ from akaribot.core.api import Url, get_url
 
 
 async def get_rss():
-    """Get RSS feed from lakeus.xyz"""
+    """获取 lakeus.xyz 的 RSS 源。"""
     url = await get_url(
         "https://lakeus.xyz/api.php?action=featuredfeed&feed=teahouse-weekly&feedformat=atom",
         status_code=200,

@@ -17,7 +17,7 @@ PROGRESS_TASK_PREFIX = "function-test-progress:"
 
 
 def consume_task_result(task: asyncio.Task) -> None:
-    """取走任务的异常，避免未回收的异常在解释器退出时报错。"""
+    """取走任务的异常，避免未回收的异常在解释器退出时抛出。"""
     if task.cancelled():
         return
     try:

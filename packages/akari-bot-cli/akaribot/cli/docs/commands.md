@@ -73,12 +73,12 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 
 - `list [--kind <分组>] [--json]`：列出已安装的模块与适配器。
 - `available [--kind <分组>] [--search <词>] [--refresh] [--offline] [--json]`：列出可安装的模块与适配器，并标出已装项。
-- `add <包名或路径>… [--save] [--no-load]`：安装模块或适配器。`--save` 写入实例清单，环境重建时自动补充安装。`--no-load` 安装后不写入加载列表。
-- `remove <名>… [--save] [--purge] [--yes]`：卸载。`--save` 同时从实例清单删除。`--purge` 一并清理该模块的配置与数据，执行前弹出模态确认框或要求传入 `--yes`。
-- `update [名…] [--dry-run]`：更新已安装的包。省略名称时更新全部已安装包。
+- `add [包名] [--dist <发行名>] [--version <版本>] [-e <路径>] [--git <URL>] [--ref <引用>] [--subdir <子目录>] [--extra <组>] [--kind <分组>] [--force] [--offline] [--dry-run]`：安装模块或适配器，过程中依次完成解析、检查、安装、补充配置与迁移。
+- `remove <名> [--cascade] [--force] [--purge-data] [--yes]`：卸载。默认保留配置与数据，`--cascade` 或 `--force` 越过反向依赖检查，`--purge-data` 一并清理配置与数据，`--yes` 跳过确认。
+- `update [名…] [--all] [--force] [--yes] [--non-interactive] [--defer-runtime] [--dry-run] [--json]`：更新已安装的包。名称与 `--all` 至少给出一个，两者都未给出时命令失败。
 - `status [--json]`：列出各模块的全局加载状态。
-- `load <名>…`：开启全局加载。
-- `unload <名>…`：关闭全局加载，配置保留。
+- `load <名> [--json]`：开启全局加载。仅当实例正在运行时可用。
+- `unload <名> [--json]`：关闭全局加载，代码与配置保留。同样仅当实例正在运行时可用。
 
 `--json` 的 `update` 仅在 stdout 输出单行结果，进度与警告输出至 stderr。字段包括 `updated`、`failed`、`skipped`、`reload_pending` 与 `restart_required`。
 
@@ -121,10 +121,10 @@ akaribot init ./bot --locale zh_cn --adapter telegram --adapter discord
 管理实例 venv，支持切换为 CLI 托管、恢复为自行管理或重新构建。
 
 - `status [--json]`：查看解释器路径、托管模式、已安装包与清单中记录的运行库。
-- `add <spec>… [--save]`：安装运行库。`--save` 写入实例清单。
-- `remove <包名>… [--save]`：卸载运行库。`--save` 从清单中移除。
-- `adopt [--python <路径>] [--yes]`：切换为 CLI 托管 venv。会先复制现有环境的包并安装缺失项，验证通过后才移除旧环境中的包。
-- `release [--yes]`：放弃托管，将实例 venv 中的包迁移到目标环境。
+- `add <spec> [--upgrade] [--no-save] [--dry-run]`：安装运行库。默认写入实例清单，环境重建时按清单补充安装。指定 `--no-save` 时仅安装，不写入清单。
+- `remove <包名> [--no-save] [--dry-run]`：卸载运行库。默认从清单中删除对应记录。
+- `adopt [--python <路径>] [--keep-source] [--force] [--yes]`：切换为 CLI 托管 venv。会先复制现有环境的包并安装缺失项，验证通过后才移除旧环境中的包。
+- `release [--keep-source] [--yes]`：放弃托管，将实例 venv 中的包迁移到目标环境。
 - `recreate [--python <路径>] [--yes]`：根据实例清单重建 venv。Python 次版本升级后用于修复损坏的环境。
 
 ## doctor

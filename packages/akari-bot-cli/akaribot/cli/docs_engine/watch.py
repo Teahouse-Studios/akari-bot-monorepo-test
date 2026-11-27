@@ -70,7 +70,7 @@ class PathWatcher:
     """按目标路径收集文件改动并按批次交付。
 
     :param targets: 监听目标。
-    :param debounce: 最后一次改动之后静默多久算一轮结束。
+    :param debounce: 最后一次改动之后无变化多久算一轮结束。
     """
 
     def __init__(self, targets: Iterable[WatchTarget], *, debounce: float = DEFAULT_DEBOUNCE_SECONDS) -> None:

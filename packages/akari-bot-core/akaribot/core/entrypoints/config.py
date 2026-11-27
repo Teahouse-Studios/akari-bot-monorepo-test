@@ -1,7 +1,7 @@
 """配置读写入口。
 
 供 CLI 以子进程调用：CLI 不导入 core，配置的读取、写入与安装后的补全都在这里完成。
-JSON 走 stdout，日志与进度走 stderr。写入一律经 ``CFGManager.edit_write()`` 的原子路径。
+JSON 走 stdout，日志与进度走 stderr。写入一律通过 ``CFGManager.edit_write()`` 的原子路径。
 """
 
 from __future__ import annotations

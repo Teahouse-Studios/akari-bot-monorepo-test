@@ -1,7 +1,7 @@
 """适配器与实例管理。
 
-``akaribot adapter list`` 与 ``akaribot adapter instance add|remove`` 的实现。本模块不导入 core：
-一切实例数据来自实例目录下的配置文件与 core 入口的子进程输出。
+``akaribot adapter list`` 与 ``akaribot adapter instance add|remove`` 的实现。该模块不导入 core，
+实例数据来自实例目录下的配置文件与 core 入口的子进程输出。
 
 数据来源：
 
@@ -13,9 +13,9 @@
 不提供 ``instance rename``：实例 ID 是 ``target_id`` 前缀的一部分（如 ``Telegram-alt|Group|12345``），
 改名要迁移 ``target_union_info``、``target_union_bind``、``sender_union_info``、
 ``analytics_data``、``unfriendly_actions`` 这 5 张核心表与各模块表中的 ``target_id`` /
-``sender_id`` 前缀，收益与风险严重不成比例。**实例 ID 一旦使用请勿更改**。确需更换时按“新建实例 + 迁移数据”处理。
+``sender_id`` 前缀，收益与风险严重不成比例。**实例 ID 一旦分配即不得更改**。确需更换时按“新建实例 + 迁移数据”处理。
 
-实例定位见 :func:`load_instance`。命令只依赖最小的 ``Instance`` 协议（``root`` / ``meta`` / ``python``）。
+实例定位见 :func:`load_instance`。命令仅依赖最小的 ``Instance`` 协议（``root`` / ``meta`` / ``python``）。
 :class:`LocalInstance` 是该协议在 :mod:`akaribot.cli.instance` 中的实现，本节的公共件同时供
 :mod:`akaribot.cli.commands.doctor` 复用。
 """
@@ -379,7 +379,7 @@ def spawn_core(instance: InstanceLike, *args: str, timeout: float = CORE_TIMEOUT
     :param instance: 目标实例。
     :param args: 入口模块名与其命令行参数。
     :param timeout: 超时秒数，超时按调用失败处理。
-    :raises CoreCallError: 解释器无法启动、调用超时或实例对象报错。
+    :raises CoreCallError: 解释器无法启动、调用超时或实例对象返回错误。
     :return: 调用结果。
     """
     entrypoint, *rest = args
@@ -423,7 +423,7 @@ class InstalledAdapter:
     """一个已安装的适配器包。
 
     :param name: entry point 名，即命令中的平台名，如 ``telegram``。
-    :param dist: 分发名。
+    :param dist: 包名。
     :param version: 已安装版本。
     :param import_path: 导入路径。
     :param config_table: 基表表名，如 ``bot_telegram``，registry 未提供时为空。
@@ -590,7 +590,7 @@ class AdapterInstanceConfig:
 
     @property
     def enable(self) -> bool | None:
-        """实例的 ``enable``。键缺失时返回 ``None``（按 T1B.3 不回退，视为未启用）。"""
+        """实例的 ``enable``。键缺失时返回 ``None``，不回退到默认值，视为未启用。"""
         value = self.values.get("enable")
         return None if value is None else bool(value)
 
@@ -622,7 +622,7 @@ class AdapterScan:
 def parse_bot_table(table: str) -> tuple[str, str] | None:
     """由表名拆出平台名与实例 ID。
 
-    平台名不含 ``-``（T1B.1 的 CI 约束），故首个 ``-`` 之后即实例 ID。
+    平台名不含 ``-``（由 CI 检查），故首个 ``-`` 之后即实例 ID。
 
     :param table: 表名，如 ``bot_telegram`` / ``bot_telegram-alt``。
     :return: 二元组（平台名，实例 ID），不是 ``bot_`` 表时返回 ``None``。
@@ -709,7 +709,7 @@ def scan_adapter_instances(instance: InstanceLike) -> AdapterScan:
 
 
 def resolve_client_name(platform_display: str, instance_id: str) -> str:
-    """按 T1B.1 的规则拼接 ``client_name``。
+    """按平台名与实例 ID 拼接 ``client_name``。
 
     :param platform_display: 平台展示名，如 ``Telegram``。
     :param instance_id: 实例 ID，默认实例为空串。
@@ -787,7 +787,7 @@ def _endpoint_from_value(value: Any) -> ListenEndpoint:
 
 
 def _guess_listen_fields(values: Mapping[str, Any]) -> tuple[str, ...]:
-    # 现有 8 个适配器的 manifest 均未声明 ``listen_fields``（附录 A 已预留该字段），因此端口检查依赖
+    # 现有 8 个适配器的 manifest 均未声明 ``listen_fields``，因此端口检查依赖
     # 此处推断，匹配 ``web_host`` / ``web_port`` / ``qq_host`` 等字段名，其余平台不受影响。
     names: list[str] = []
     for key in values:
@@ -1024,9 +1024,9 @@ def _read_header_lines(path: Path) -> list[str]:
 def base_config_path(instance: InstanceLike, base_table: str) -> Path:
     """基表配置文件的路径。
 
-    与其它配置表一致的一名一文件扁平布局：core 的 ``CFGManager.load()`` 只扫描
-    ``config/*.toml``，写到 ``config/adapters/`` 的表对 core 不可见，`config set` 会另写一份
-    扁平文件。分层布局待 P4.4 的 ``ConfigLayout`` 落地后再迁移（读取侧已同时兼容两种布局）。
+    与其它配置表一致的一名一文件扁平布局：core 的 ``CFGManager.load()`` 仅扫描
+    ``config/*.toml``，写到 ``config/adapters/`` 的表对 core 不可见。写入一律落在扁平位置，
+    ``config set`` 因此会另写一份扁平文件。读取同时兼容扁平与分层两种布局。
 
     :param instance: 目标实例。
     :param base_table: 基表表名，如 ``bot_telegram``。
@@ -1175,7 +1175,7 @@ def list_instances(
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[row["platform"]].append(row)
-    # 仅当“平台已安装但清单未声明展示名”时方予提示。孤立配置的展示名原本无从获取。
+    # 仅当“平台已安装但清单未声明展示名”时方予提示。孤立配置没有可用的展示名。
     inferred_any = any(row["installed"] and row["client_name_inferred"] for row in rows)
     for platform in sorted(grouped):
         adapter = registry.adapters.get(platform)
@@ -1227,7 +1227,7 @@ def instance_add(
 ) -> None:
     """新建适配器实例配置。
 
-    实例 ID 一旦使用请勿更改：它是 ``target_id`` 前缀的一部分，改名要迁移核心表与模块表中的数据。
+    实例 ID 一旦分配即不得更改，它是 ``target_id`` 前缀的一部分，改名要迁移核心表与模块表中的数据。
     生成的配置文件里 ``enable`` 显式写 ``false``，填完登录信息后自行开启。
     """
     instance = open_instance()
@@ -1362,7 +1362,7 @@ def instance_remove(
 ) -> None:
     """移除适配器实例配置。
 
-    只删除该实例的配置文件，场景与用户数据保留。实例 ID 一旦使用请勿更改，本命令不提供改名。
+    仅删除该实例的配置文件，场景与用户数据保留。实例 ID 一旦分配即不得更改，本命令不提供改名。
     """
     instance = open_instance()
     platform = platform.strip().lower()

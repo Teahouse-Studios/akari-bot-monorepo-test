@@ -1,4 +1,4 @@
-"""临时单元测试运行脚本，仅用于开发阶段运行单个测试入口。"""
+"""单元测试运行脚本，用于开发阶段运行单个测试入口。"""
 
 import asyncio
 import importlib.util
@@ -22,7 +22,7 @@ from akaribot.testing.process import run_function_entry  # noqa: E402
 
 
 async def main(path: str, entry: str) -> int:
-    """跑单个测试入口并打印每条用例的结果。
+    """运行单个测试入口并打印每条用例的结果。
 
     :param path: 测试文件路径。
     :param entry: 入口函数名。

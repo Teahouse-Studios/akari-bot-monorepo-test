@@ -1,6 +1,6 @@
 """消息链原地修改的归一化单元测试。
 
-values 的声明类型是 list[MessageElement]。append 一类原地修改的方法直接写入入参，故裸字符串
+values 的声明类型是 list[MessageElement]。append 一类原地修改的方法直接写入入参，因此裸字符串
 能一路进到 JobQueue 的序列化阶段，直到 cattrs 内部才以“'str' object is not a mapping”暴露，
 调用栈已难以追溯来源。
 

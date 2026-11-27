@@ -523,7 +523,7 @@ async def _execute_module(
                 # ``None`` 表示命令已被入口策略处理（例如权限拒绝或参数错误），
                 # 不应伪装成成功执行。正常命令会在 helper 内抛出 SessionFinished。
                 return
-            # 仅模板匹配失败进入恢复。参数转换或已开始执行的命令报错不能重试。
+            # 仅模板匹配失败才进入恢复。参数转换失败或命令已开始执行时不能重试。
             if module.suppress_invalid_prompt:
                 return
         else:

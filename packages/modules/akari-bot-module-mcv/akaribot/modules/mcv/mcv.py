@@ -29,7 +29,7 @@ async def mcjv(msg: Bot.MessageSession):
                 snapshot_time=msg.format_time(time_snapshot),
             )
         )
-    except Exception:  # Probably...
+    except Exception:
         message1 = str(I18NContext("mcv.message.mcv.launcher.failed"))
     return I18NContext("mcv.message.mcv", launcher_ver=message1)
 
@@ -37,7 +37,7 @@ async def mcjv(msg: Bot.MessageSession):
 async def mcbv(msg: Bot.MessageSession):
     play_store_version = None
     if Secret.ip_country != "China":
-        try:  # play store
+        try:
             play_store_version = google_play_scraper("com.mojang.minecraftpe")["version"]
         except Exception:
             pass

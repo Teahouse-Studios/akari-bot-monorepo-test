@@ -42,7 +42,7 @@ order: 20
 
 删除配置项，使该项恢复为默认值。省略表名称时从主表删除。
 
-表名称格式为 `bot_<平台>`、`module_<模块>`。配置处于只读状态时，进程不可直接修改配置文件，写入操作转为调用 `CFGManager.edit_write()`，删除操作转为调用 `edit_delete()`。字段布局、只读限制与版本机制参见[配置](../../../core/docs/config.md)。
+配置表名称格式为 `bot_<平台>` 与 `module_<模块>`。配置处于只读状态时，直接写入会被 `CFGManager` 拒绝。写入与删除分别调用 `edit_write()` 与 `edit_delete()`，这两个方法在内部进入 `_writable()` 的可写作用域。字段布局、只读限制与版本机制参见[配置](../../../core/docs/config.md)。
 
 <ChatExample
   :log="[

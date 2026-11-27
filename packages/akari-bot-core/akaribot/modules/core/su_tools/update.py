@@ -1,7 +1,7 @@
 """自更新：委托 CLI 执行，本进程只读。
 
 机器人与 Server 一律以只读配置运行（``AKARI_CONFIG_READONLY``），而更新要写配置（新版本可能带来
-新配置项）与数据库（迁移），故更新动作必须交给 CLI 子进程（tasks T7.2 / D7）。本模块只负责定位
+新配置项）与数据库（迁移），因此更新动作必须交给 CLI 子进程。本模块只负责定位
 CLI、以子进程执行 ``akaribot module update --all --non-interactive --defer-runtime --json`` 并转述其结果。
 """
 

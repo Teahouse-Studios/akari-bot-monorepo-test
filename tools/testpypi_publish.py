@@ -28,7 +28,7 @@ from urllib.request import urlopen
 
 
 def _ensure_utf8_stdout() -> None:
-    # Windows 控制台默认编码为 cp1252，中文输出可能抛出 UnicodeEncodeError。
+    # Windows 控制台编码随系统区域设置，中文输出可能抛出 UnicodeEncodeError。
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") in ("utf8", "utf_8"):
         return
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

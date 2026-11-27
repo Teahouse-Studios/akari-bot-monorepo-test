@@ -93,7 +93,7 @@ class Module:
 
         返回成因标识而非文案键，以免此处依赖 ``akaribot.modules.core`` 的本地化键名。
 
-        :param session_info: 会话信息，须具备 support_rss 与 read_all_messages 两项标志。
+        :param session_info: 会话信息，必须具备 support_rss 与 read_all_messages 两项标志。
         :return: 受限时返回成因（``rss``、``regex`` 或 ``event``），不受限时返回 None。
         """
         if self.rss and not session_info.support_rss:

@@ -2,10 +2,10 @@
 
 覆盖阶段 1B：
 
-- 身份生成（T1B.1 / T1B.2）：默认实例的 client_name 逐字节不变，实例名带 ``-<实例 ID>``。
-- 配置的实例作用域（T1B.3）：实例表存在时接管读取、``enable`` 不回退、写入只落到实例表。
-- 守护进程的实例发现与前置冲突检查（T1B.4）：孤立配置只告警，端口与登录信息冲突中止启动。
-- 四元组平台判据（T1B.5）：``available_for="Telegram"`` 覆盖全部 Telegram 实例，
+- 身份生成（T1B.1 / T1B.2）。默认实例的 client_name 逐字节不变，实例名带 ``-<实例 ID>``。
+- 配置的实例作用域（T1B.3）。实例表存在时接管读取、``enable`` 不回退、写入仅落到实例表。
+- 守护进程的实例发现与前置冲突检查（T1B.4）。孤立配置仅告警，端口与登录信息冲突中止启动。
+- 四元组平台判据（T1B.5）。``available_for="Telegram"`` 覆盖全部 Telegram 实例，
   ``_return_cache`` 不把两个实例的结果混在一起。
 
 守护进程与配置表的用例一律使用临时配置目录，退出时完整还原 CFGManager 与 Info 的类属性。
@@ -462,7 +462,7 @@ def _test_alive_prefix_disambiguation():
 
 @func_case
 async def test_multi_instance(tester: Tester):
-    """阶段 1B：多实例身份模型。"""
+    """多实例身份模型。"""
     await tester.test(_test_default_instance_names_are_byte_identical, "默认实例 client_name 逐字节不变")
     await tester.test(_test_platform_identity_derivation, "平台两段的推导与退化")
     await tester.test(_test_instance_config_scope, "配置的实例作用域与 enable 不回退")

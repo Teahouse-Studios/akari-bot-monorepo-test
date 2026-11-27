@@ -95,36 +95,31 @@ source = "auto"   # auto | bundled | file:<模板路径>
 
 外部模板在根目录提供 `docs-theme.json`，声明主题目录、VitePress 版本、Node 要求、npm 依赖与生成配置选项。引擎仅复制主题目录，不导入主题代码。`akari-bot-docs-template` 的具体要求由其自身的 `docs-theme.json` 声明。
 
-主题代码随源码托管在 `vendor/akari-bot-docs-template` submodule。更新主题后，在实例根目录运行 `akaribot docs sync-theme` 将 submodule 复制至实例 `cache/docs/theme`，并刷新主题依赖。实例可以使用 `[theme].source` 指向自定义的主题目录。
+主题代码作为 submodule 放在 `vendor/akari-bot-docs-template`。更新主题后，在实例根目录运行 `akaribot docs sync-theme`，把该 submodule 更新至远端最新提交。该命令仅更新源码工作区。主题在构建阶段由生成器复制到实例 `cache/docs/src/.vitepress/theme`，依赖由 `akaribot docs install-deps` 单独安装。实例可以使用 `[theme].source` 指向自定义的主题目录。
 
 `akari-bot-docs-template` 的主题内置以下组件，所有包文档都可直接使用：
 
-| 属性 | 说明 |
+| 用法 | 说明 |
 | --- | --- |
-| `<ModuleMeta :extra="true" />` | 声明了 `[[meta.modules]]` 时生成属性卡。`extra` 控制是否包含作者与额外字段 |
-| `<NoticeBox type="tip">提示内容</NoticeBox>` | 提示框，`type` 可选 `info`、`tip`、`warning`、`danger` |
-| `<ModuleAlias alias="wiki_start_site,wks" />` | 模块级指令别名列表。单指令别名在 `CommandUsage` 上声明，不在此处重复 |
-| `<ModuleConfig table="module_my" />` | 数据表字段说明。`table` 为表名 |
-| `<ModuleConfig />` | 模块无配置项时使用 |
+| `<ModuleMeta :modules="[{ name: 'my' }]" />` | 模块属性卡。声明了 `[[meta.modules]]` 时由生成器自动注入，无需在 Markdown 中手写 |
+| `<NoticeBox type="tip">提示内容</NoticeBox>` | 提示框，`type` 可选 `info`、`tip`、`warning`、`danger`、`example`、`help`、`deprecated` |
+| `<ModuleAlias names="wiki_start_site,wks" />` | 模块级指令别名列表。`names` 接受逗号分隔的字符串或数组。单指令别名在 `CommandUsage` 上声明，不在此处重复 |
+| `<ModuleConfig table="module_my" />` | 配置表说明。`table` 为表名，组件据此渲染配置表与 `config/<表名>.toml` 路径 |
+| `<ModuleConfig table="module_my_secret" file="config/module_my.toml" />` | 模块只有密钥表时使用。`file` 覆盖配置文件路径，默认按 `config/<表名>.toml` 生成 |
+| `<ModuleConfig />` | 渲染「模块没有配置项」，仅用于确实没有配置表的模块 |
 | `<ModuleData tables="module_a,module_b" />` | 模块数据表列表 |
 | `<ModuleData tables="module_a,module_b" :list="false" />` | 同上，正文随后用表格列出表结构时仅显示数量 |
+| `<PackageDependencies package="akari-bot-module-my" />` | 运行依赖列表。构建时读取包元数据的 `Requires-Dist`，跳过 `extra` 可选依赖，按包 key 与分发名索引 |
 | `<CommandUsage usage="wiki set <wikiurl>" :params="['wikiurl=站点地址，会解析为 API 地址']" permission="admin" :aliases="['wiki_start_site']" :options="[{flag: '-l', desc: '只列未完成项'}]" />` | 命令的权限、别名、用法与选项说明。`params` 逐项解释用法里的参数，渲染为支持悬浮提示的字段与参数清单，组件会自动根据括号类型判定参数是否必填（尖括号表示必填，方括号表示可选）。用法行的前缀取自实例核心配置的 `command_prefix` 首项，`prefix` 可覆盖。`type` 仅在正则、订阅等非前缀触发方式上声明。`platforms` / `excluded` 标注命令仅可用的平台与排除的平台，值可为平台键（如 `QQBot`、`QQ|Group`、`Web`）或直接填写展示文案，`excluded` 渲染为“Web 不可用” |
-| `<ChatExample avatar="akari" user="茶友" bot="小可" align="left">` | 对话示例外层容器。`avatar` 支持预置名称与相对路径图片，`user` / `bot` 设置对话两侧显示的名称，`align` 设定机器人气泡的对齐方向（默认为左对齐） |
-| `<ChatExample.User>~wiki 词条</ChatExample.User>` | 用户发送的消息内容 |
-| `<ChatExample.Bot>查询结果...</ChatExample.Bot>` | 机器人回复的消息内容。在多轮交互中可穿插多个用户和机器人气泡，支持通过嵌套 Markdown 语法渲染粗体、行内代码与超链接 |
-| `<ChatExample.Image src="./preview.png" alt="预览图" />` | 消息气泡内的图片元素。相对路径相对于当前文档所在目录解析，渲染为带缩略预览与放大功能的图片容器 |
-| `<ChatExample.Button label="查看详情" style="primary" />` | 交互式按钮组件。`label` 为按钮文字，`style` 可指定为 `primary`、`secondary` 或 `danger`。在静态文档中作为只读展示 |
-| `<ChatExample.Reaction emoji="👍" count="3" />` | 消息下方的快捷回应表情。`emoji` 指定回应表情字符，`count` 标注已添加该回应的计数数值 |
+| `<ChatExample :log="['用户：~wiki 词条', '机器人：查询结果…']" />` | 对话示例。`log` 每行以「用户：」或「机器人：」开头，不带前缀的行续接上一条气泡，`〰〰〰` 一类分隔行渲染为分隔线 |
+| `<ChatExample :messages="[{ role: 'bot', text: '**成功**', markdown: true }]" />` | 需要显式指定角色时使用，优先于 `log`。`markdown` 为真时气泡内按 Markdown 渲染 |
+| `<ChatExample caption="群聊示例" bot-avatar="./avatar.png" :image-width="240" />` | 气泡上方的说明、机器人头像与示例内图片宽度。头像留空时使用站点配置的头像 |
+| `<ChatExample :buttons="[{ label: '查看详情', reply: '用户：~wiki 词条' }]" />` | 消息下方的操作按钮，点击后把 `reply` 或 `messages` 追加到对话末尾。`oneShot` 为真时点击后禁用同组其余按钮 |
+| `<ChatExample :card="{ title: '歌曲名', description: '歌手', url: 'https://example.com' }" />` | 机器人回复末尾的卡片消息 |
 
-- 用户发送长文本或 Markdown 气泡时，使用 `messages` 列表逐段传入：
+内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage`、`ChatExample` 与 `PackageDependencies` 提供同名组件。它的 `ChatExample` 把图片渲染为缩略图，点击后在新标签页打开。气泡文本按纯文本处理，不包含头像与主题色。`ModuleAlias`、`ModuleConfig`、`ModuleData` 仅在外部模板中渲染。
 
-```html
-<ChatExample :messages="[{ role: 'bot', text: '**成功**', markdown: true }]" />
-```
-
-内置的 `bundled` 主题为 `ModuleMeta`、`NoticeBox`、`CommandUsage` 与 `ChatExample` 保留同名组件（`ChatExample` 将图片渲染为缩略图、点击在新标签页打开，不包含头像与主题色，气泡文本按纯文本渲染）。`ModuleAlias`、`ModuleConfig`、`ModuleData` 仅在外部模板中渲染。
-
-`CommandUsage` 的 `params` 参数清单、悬浮提示与 `platforms` / `excluded` 平台徽章同样由外部模板渲染，内置主题仅显示用法行。
+`CommandUsage` 的 `params` 参数清单、悬浮提示与 `platforms` / `excluded` 平台徽章同样由外部模板渲染。内置主题的命令用法组件显示用法行、权限与类型徽章、别名与选项表，补充说明由 `note` 属性提供。
 
 外部模板的组件使用 M3E 配色变量，外观会随读者的主题色、明暗模式与对比度设置自动变化。组件仅在构建后的站点中渲染，直接在 Markdown 阅读器里会显示为标签。
 
@@ -144,7 +139,7 @@ source = "auto"   # auto | bundled | file:<模板路径>
 
 生成器会将同一模块目录下的页面视为同级页面。使用 `akari-bot-docs-template` 时，侧栏仅显示一个模块条目，条目名称使用模块名。
 
-有概览页时默认打开使用方法，无概览页时默认打开第一页。`development.md` 的标签固定为“安装与开发”，不单独出现在侧栏。
+有概览页时默认打开使用方法，无概览页时默认打开第一页。`development.md` 的标签默认是「安装与开发」，可由实例 `docs.toml` 的 `[labels]` 覆盖，该页不单独出现在侧栏。
 
 内置回退主题不提供标签栏，开发页仍作为普通页面直接列出。
 
@@ -163,7 +158,7 @@ submenu: 钩子
 # 命令
 ```
 
-仅识别 `title`、`order`、`description`、`submenu` 四个单行键值对，不支持列表或嵌套结构。标题默认提取正文中的第一个一级标题（跳过代码块），无一级标题时使用文件名。
+引擎解析 `title`、`order`、`description` 与 `submenu` 四个单行键值对，分别用于标题、排序、简介与侧栏分组，不支持列表或嵌套结构。其余键原样保留，由主题读取，例如首页的 `hero`。标题默认提取正文中的第一个一级标题（跳过代码块），无一级标题时使用文件名。
 
 包有概览页时 `index.md` 始终排在最前。无概览页的包按 `order`、路径排序。`submenu` 将同一包内取值相同的页面归入一个无链接的二级分组，分组名即字段值。未设置该字段的页面仍直接列在包下，分组排在未分组页面之后。
 
@@ -199,7 +194,7 @@ module-my-module = "akaribot.modules.my_module"
 - `status`：读取构建与部署状态。
 - `clean`：清理生成目录。
 
-构建需要 Node.js 与 `npm`，版本要求由主题清单确定。依赖由 `npm ci` 安装。生成产物位于实例根目录的 `cache/docs/src`（站点源码）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）。构建校验信息与部署记录保存在 `.docs/state.json`。
+构建需要 Node.js 与 `npm`，版本要求由主题清单确定。依赖安装方式同样由主题清单的 `install_mode` 决定：`ci` 执行 `npm ci`，`install` 执行 `npm install`。内置主题使用 `ci`，`akari-bot-docs-template` 使用 `install`。生成产物位于实例根目录的 `cache/docs/src`（站点源码）、`cache/docs`（Node 工具链与 `node_modules`）与 `cache/docs/site`（默认输出，可由 `build.out_dir` 改写）。构建校验信息与部署记录保存在 `.docs/state.json`。
 
 部署目标配置在实例根目录 `docs.toml` 的 `[deploy]` 段。登录信息仅从环境变量读取，不写入配置文件与状态文件。基础路径默认为 `/`，环境变量 `AKARIBOT_DOCS_BASE` 优先。
 

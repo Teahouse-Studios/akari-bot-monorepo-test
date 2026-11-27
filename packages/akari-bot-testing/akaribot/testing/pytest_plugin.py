@@ -1,4 +1,4 @@
-"""tests/unit 的 pytest 插件：收集 ``@func_case`` 入口、引导运行时并施加超时。
+"""tests/unit 的 pytest 插件，负责收集 ``@func_case`` 入口、引导运行时并施加超时。
 
 根级 conftest.py 通过 ``pytest_plugins`` 注册本模块。用例在会话事件循环中执行，全程只有一个
 循环，与生产环境里数据库连接、HTTP 客户端和队列 peer 的绑定方式一致。``@func_case`` 入口内的
@@ -133,7 +133,7 @@ def pytest_runtest_teardown(item: pytest.Item, nextitem: pytest.Item | None) -> 
 def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
     """在会话事件循环中执行测试，并施加超时。
 
-    同步测试同样在循环内执行：被测代码取事件循环时才能拿到运行中的那一个。
+    同步测试同样在循环内执行，否则被测代码取到的事件循环不是运行中的那一个。
     """
     kwargs = {name: pyfuncitem.funcargs[name] for name in pyfuncitem._fixtureinfo.argnames}
     run_test_call(pyfuncitem.obj, kwargs, resolve_timeout(pyfuncitem))

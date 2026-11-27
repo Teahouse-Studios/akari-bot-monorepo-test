@@ -1165,11 +1165,11 @@ class ModulesManager:
 
     @classmethod
     async def install_package(cls, entry: PackageEntry) -> bool:
-        """把已装好但尚未接入的模块包热装载进当前进程。
+        """把已安装但尚未接入的模块包热加载进当前进程。
 
         与 reload_module 的区别：reload_module 替换已注册模块的代码（importlib.reload 加代际切换，
-        因此需要回滚快照）。本方法只做首次接入，是纯新增，没有旧代际可回滚，但必须替换数据库
-        context 才能纳入新包的模型。两者共用维护窗口与索引刷新，回滚路径完全不同，故不合并。
+        因此需要回滚快照）。该方法仅做首次接入，没有可回滚的旧代际，但必须替换数据库
+        context 才能纳入新包的模型。两者共用维护窗口与索引刷新，回滚路径完全不同，因此不合并。
 
         :param entry: 发现层给出的模块包条目。
         :return: 是否接入成功。包已注册、正在重载或被发现层拒绝时返回 ``False``。
@@ -1286,9 +1286,9 @@ class ModulesManager:
     async def remove_package(cls, entry: PackageEntry) -> bool:
         """把一个模块包从运行中的进程里拆下来，供 CLI 随后真正卸载分发。
 
-        与 reload_module 的区别：reload_module 替换已注册模块的代码并可回滚到旧代际。本方法处理
+        与 reload_module 的区别：reload_module 替换已注册模块的代码并可回滚到旧代际。该方法处理
         整包退出，先停用全部注册名，再从索引移除、重挂不含该包模型的数据库 context，最后清掉
-        sys.modules。两者共用维护窗口与索引刷新，回滚路径完全不同，故不合并。
+        sys.modules。两者共用维护窗口与索引刷新，回滚路径完全不同，因此不合并。
 
         :param entry: 发现层给出的模块包条目。
         :return: 数据库 context 是否重挂成功。拆除本身按单向操作走完，失败只如实回报。

@@ -6,11 +6,11 @@
 
 | 目录 | 用途 |
 | --- | --- |
-| `common/` | 对发送速率不敏感的场景，可保持较大体积 |
+| `common/` | 普通表情发送 |
 | `captcha_held/` | 按钮验证码的表情模式，手持物作为答案依据 |
 | `typing/` | QQBot 群聊输入状态提示 |
 
-表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 下的素材为加快发送速度缩小了尺寸并减少了帧数，单图上限约 500 KB。`common/` 无该限制。
+表情素材由 [EmoteLab](https://emotelab.app/) 制作。`typing/` 供输入状态使用，`common/` 用于普通表情发送。
 
 ## 安装与定位
 
@@ -42,4 +42,4 @@ captcha = emotes_dir() / "captcha_held"
 
 ## 许可证
 
-本包以 AGPL-3.0 分发，许可证文件为包根目录的 `LICENSE`。表情制作来源见包内 `README.md`。再分发或修改素材时保留该说明。
+本包以 AGPL-3.0 分发，许可证文件为包根目录的 `LICENSE`。表情制作来源参见包内 `README.md`。再分发或修改素材时保留该说明。

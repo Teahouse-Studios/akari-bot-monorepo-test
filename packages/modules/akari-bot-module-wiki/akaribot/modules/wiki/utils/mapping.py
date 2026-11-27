@@ -1,4 +1,4 @@
-request_by_web_render_list = [  # re.compile(r".*minecraft\.wiki"),  # sigh
+request_by_web_render_list = [
     # re.compile(r".*runescape\.wiki"),
 ]
 
@@ -23,7 +23,7 @@ generate_screenshot_v2_blocklist = [
 
 redirect_list = {
     "https://zh.moegirl.org.cn/api.php": "https://mzh.moegirl.org.cn/api.php",  # 萌娘百科强制使用移动版 API。
-    "https://minecraft.fandom.com/api.php": "https://minecraft.wiki/api.php",  # no more Fandom then
+    "https://minecraft.fandom.com/api.php": "https://minecraft.wiki/api.php",  # 旧 Fandom 域名重定向到 minecraft.wiki。
     "https://minecraft.fandom.com/zh/api.php": "https://zh.minecraft.wiki/api.php",
 }
 

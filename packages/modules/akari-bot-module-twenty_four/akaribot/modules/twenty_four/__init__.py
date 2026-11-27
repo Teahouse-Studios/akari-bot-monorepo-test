@@ -73,7 +73,7 @@ def check_valid(expr):
             prev_char = char
             i += 1
             continue
-        if char == "\\":  # expr may have additional escape chars
+        if char == "\\":  # 表达式允许出现额外的转义字符。
             i += 1
             continue
         return False

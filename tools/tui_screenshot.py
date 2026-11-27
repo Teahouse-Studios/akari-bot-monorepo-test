@@ -37,7 +37,7 @@ from rich.cells import get_character_cell_size
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# 默认终端尺寸取常见终端的大小，为 110 列 30 行。侧边栏占 20 列后正文仍有足够宽度，各页面无需滚动。
+# 默认终端尺寸取常见终端的大小，为 110 列 30 行。侧边栏占 18 列后正文仍有足够宽度，各页面无需滚动。
 DEFAULT_SIZE = (110, 30)
 
 _TEXT_PATTERN = re.compile(r"<text\b([^>]*)>(.*?)</text>", re.S)

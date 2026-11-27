@@ -1,6 +1,6 @@
 """数据库迁移入口。
 
-供 CLI 在安装/升级/卸载包后以子进程调用。读 ``AKARI_INSTANCE_DIR`` 决定实例，不依赖仓库根作为 cwd。
+供 CLI 在安装/升级/卸载包后以子进程调用。读 ``AKARI_INSTANCE_DIR`` 确定实例，不依赖仓库根目录作为当前工作目录。
 """
 
 from __future__ import annotations

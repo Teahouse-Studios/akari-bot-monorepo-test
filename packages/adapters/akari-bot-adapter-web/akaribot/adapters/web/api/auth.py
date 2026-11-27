@@ -311,7 +311,7 @@ async def change_password(request: Request, response: Response):
 
         await _write_password_data(password_data)
 
-        # TODO 将签发的 JWT 存入数据库，修改密码时删除。
+        # 当前签发的 JWT 不入库，修改密码不会使其失效。
         Logger.info(f"[WebUI] {ip} has changed password.")
         await _notify_security_event("password_changed", request, ip)
         return Response(status_code=205)

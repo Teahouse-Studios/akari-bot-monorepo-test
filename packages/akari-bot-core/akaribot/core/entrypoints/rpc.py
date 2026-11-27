@@ -1,11 +1,11 @@
-"""模块包热装载与热拆卸的 RPC 入口。
+"""模块包热加载与热拆卸的 RPC 入口。
 
 供 CLI 以子进程调用：``python -m akaribot.core.entrypoints.rpc <remote> <dist>``。``remote`` 只接受
 ``server.post_package_install`` 与 ``server.post_package_remove``，即 ``ServerAPI`` 上已有的两个固定
 契约。方法名由本模块的白名单给出，不接受调用方拼接任意 RPC 名。
 
-热装载与热拆卸都必须在运行中的 Server 内执行（独立进程里没有模块索引、调度器与数据库 context），
-故本进程只做一次 RPC 并等待确认。stdout 只放一行结果 JSON，说明与日志走 stderr。
+热加载与热拆卸都必须在运行中的 Server 内执行（独立进程里没有模块索引、调度器与数据库 context），
+因此本进程仅做一次 RPC 并等待确认。stdout 只放一行结果 JSON，说明与日志走 stderr。
 
 退出码：0 成功、1 投递或后端失败、2 用法错误、3 实例未运行、4 远端拒绝、5 超时。
 """
@@ -61,7 +61,7 @@ class InstanceUnreachable(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
-    """一次包变更 RPC 的结果，同时决定 JSON 载荷与退出码。
+    """一次包变更 RPC 的结果，同时确定 JSON 载荷与退出码。
 
     :param remote: 契约名。
     :param dist: 分发名。

@@ -131,7 +131,7 @@ async def _(msg: Bot.MessageSession, emoji1: str, emoji2: str | None = None):
     import emoji as emoji_lib
 
     mixer = get_mixer()
-    # 历史兼容性处理。
+    # 拆分旧格式中以 + 连接的 emoji 组合。
     if "+" in emoji1:
         emojis = emoji1.split("+", 1)
         emoji1 = emojis[0]

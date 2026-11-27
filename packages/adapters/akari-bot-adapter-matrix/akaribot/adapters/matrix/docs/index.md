@@ -24,7 +24,7 @@ akaribot module add akari-bot-adapter-matrix
 
 需要多个机器人账号时，可使用 `akaribot adapter instance add matrix <实例 ID>` 新增实例。实例表名为 `bot_matrix-<实例 ID>`，密钥表名为 `bot_matrix-<实例 ID>_secret`。两张表均保存在 `config/bot_matrix-<实例 ID>.toml` 中。
 
-主要字段如下，完整字段与默认值见 [config.md](config.md)。
+主要字段如下，完整字段与默认值参见 [config.md](config.md)。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
