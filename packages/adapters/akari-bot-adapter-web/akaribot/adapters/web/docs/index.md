@@ -52,6 +52,15 @@ akaribot module add akari-bot-adapter-web
 - `jwt_secret` 为空时，适配器首次启动会自动生成并写回配置。
 - `allow_origins` 控制 CORS 来源。`forwarded_allow_ips` 指定可信反向代理。
 
+## 包与适配器管理
+
+内置 API 提供模块包、适配器包与适配器实例的管理接口，覆盖 `akaribot module`、`akaribot adapter` 与 `akaribot config set` 的主要功能。接口范围参见 [WebUI 控制台](webui.md)。
+
+- 读取接口返回 `akaribot` 命令的 `--json` 输出。
+- 写入接口交由 `akaribot` 子进程执行。
+- 安装、卸载与更新以事件流返回进度。
+- 适配器的 `enable` 与配置项修改后，需要重启实例才能生效。
+
 ## 平台能力
 
 | 能力 | 状态 | 说明 |

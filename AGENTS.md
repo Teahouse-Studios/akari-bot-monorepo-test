@@ -45,7 +45,7 @@
 ```text
 任务：审核本次改动的中文文风，只报告，不修改文件。
 
-先读 docs/style-cards/xiaoke-stylecard.compact.md，按其中的 S1 至 S18 与词表逐句核对。
+先读 docs/style-cards/akaribot-stylecard.compact.md，按其中的 S1 至 S18 与词表逐句核对。
 
 审核范围：
 - git diff --name-only 列出的已跟踪文件；
@@ -83,7 +83,7 @@
 ## 注释书写提示词
 
 写行注释、docstring 与配置注释时，默认按下面的提示词约束草稿。提示词按
-`docs/style-cards/xiaoke-stylecard.compact.md` 的 S2、S3、S8、S8.1、S9、S11、S13、S17 与词表整理。
+`docs/style-cards/akaribot-stylecard.compact.md` 的 S2、S3、S8、S8.1、S9、S11、S13、S17 与词表整理。
 细节以该文件为准，其余注释约定参见 `docs/agents/conventions.md`。
 
 ```text
@@ -149,9 +149,9 @@ CI=1 MPLCONFIGDIR=/tmp/mplconfig PYTHONIOENCODING=UTF-8 .venv/bin/python -m akar
 | 用例编写与运行 | `docs/agents/testing.md` |
 | 已知陷阱 | `docs/agents/pitfalls.md` |
 | 提交授权、版本尾注、重命名 | `docs/agents/release.md` |
-| 文风卡压缩版（注入用） | `docs/style-cards/xiaoke-stylecard.compact.md` |
-| 文风卡原版 | `docs/style-cards/xiaoke-stylecard.md` |
-| 页面结构卡 | `docs/style-cards/xiaoke-structure.md` |
+| 文风卡压缩版（注入用） | `docs/style-cards/akaribot-stylecard.compact.md` |
+| 文风卡原版 | `docs/style-cards/akaribot-stylecard.md` |
+| 页面结构卡 | `docs/style-cards/akaribot-structure.md` |
 | 包文档规范 | `docs/package-docs.md` |
 | 从旧版迁移 | `docs/migrating-to-packages.md` |
 | 各包领域手册 | `packages/*/akaribot/**/docs/` |
