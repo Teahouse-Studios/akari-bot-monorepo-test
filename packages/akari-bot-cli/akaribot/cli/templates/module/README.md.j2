@@ -19,7 +19,7 @@ akaribot module add -e .
 ## 命令
 
 {% for command in commands | default([]) -%}
-- `~[@module_name@]{% if command.suffix %} {{ command.suffix }}{% endif %}`：{{ command.doc }}
+- `~[@module_name@]{% if command.suffix %} {{ command.suffix }}{% endif %}`：{{ command.docs }}
 {% endfor %}
 帮助文本与回复文案都在 `akaribot/modules/[@module_name@]/locales/zh_cn.json`。本文件只写
 `zh_cn`，其余语言由 Weblate 在包发布后收集，不要手工添加其它语言的键。

@@ -9,7 +9,7 @@ from akaribot.testing import Contains, Tester, func_case
 
 @func_case
 async def test_[@module_name@]_{{ case.token }}(tester: Tester):
-    """{{ case.doc }}"""
+    """{{ case.docs }}"""
     await tester.integrate(
         {{ case.input_literal }},
         Contains({{ case.expected_literal }}),

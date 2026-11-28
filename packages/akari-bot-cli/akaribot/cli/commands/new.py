@@ -639,7 +639,8 @@ def prepare_test_cases(plan: ModulePlan, commands: list[dict[str, object]]) -> l
     cases: list[dict[str, str]] = []
     for command in commands:
         token = str(command["token"])
-        example = command_example(str(command["suffix"])) or token
+        # 默认命令没有模板，直接以模块名调用。附加 ``default`` 会作为多余参数被忽略。
+        example = command_example(str(command["suffix"])) or ("" if token == "default" else token)
         message_text = str(command["message_text"])
         note = f"{plan.name} 的 {token} 命令应返回预期文案"
         cases.append(

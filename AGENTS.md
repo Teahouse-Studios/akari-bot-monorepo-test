@@ -78,6 +78,7 @@
 - 全量用例的失败清单与 `tools/test_baseline.txt` 按名称一一对应。
 - 包内有源码改动即升级该包 `version`，或在提交信息最后一段写 `Skip-Version: true`、
   `Skip-Version: <包名>[, <包名>]`。
+- 修改 `pyproject.toml` 中的 `version` 后必须执行 `uv lock`，让 `uv.lock` 记录的成员版本同步。
 - 不擅自提交，改动保留在工作区，等用户检视（参见 `docs/agents/release.md`）。
 
 ## 注释书写提示词
