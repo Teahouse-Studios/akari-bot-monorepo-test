@@ -84,6 +84,9 @@ akaribot module add akari-bot-adapter-web
 - 聊天：通过 `/ws/chat` 发送文本与图片、添加表情回应，并处理按钮回调与心跳。
 - 会话与用户：查询和修改场景、用户数据，调整屏蔽、禁止发言、信任、超级管理员与模块启用状态。
 - 模块：模块列表、说明文档、关联模块，以及重载、加载与卸载。
+- 包管理：列出已安装与可安装的模块包和适配器包，查看模块的全局加载状态。支持安装、卸载与更新包（`/api/packages/*`）。写入操作交由 `akaribot module` 命令执行，进度以事件流返回。卸载支持保留数据、清理数据与级联卸载三种方式。
+- 适配器：列出适配器实例，新增与移除实例，切换 `enable` 并写入单项配置（`/api/adapters/*`）。写入操作交由 `akaribot adapter` 与 `akaribot config` 命令执行，修改后需要重启实例。
+- 命令定位：执行命令时按 `AKARIBOT_CLI_PATH`、当前 Python 解释器所在目录、`PATH` 的顺序查找 `akaribot`，均未找到时接口返回 503。同一时刻仅允许执行一条写入操作，并发请求返回 409。
 - 文件：浏览与编辑实例的 `assets/`、`data/`、`cache/` 及模块的 `assets/` 与 `data/`，支持上传、新建、重命名、下载与删除。媒体文件通过 `/api/media/{token}` 读取。
 - WebRender：查看状态，启动或停止服务，并执行测试渲染。
 - 更新与重启：`/api/update` 与 `/api/restart`。
