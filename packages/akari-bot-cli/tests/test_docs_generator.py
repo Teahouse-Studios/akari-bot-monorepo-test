@@ -149,7 +149,7 @@ async def _test_generate_site_layout():
         and '"/demo/guide/setup"' in config
         and '"/demo/development"' in config
         and '"text": "Demo"' in config
-        and "# 小可 · 文档" in index
+        and "# 小可（AkariBot） · 文档" in index
         and "[Demo](/demo/)" in index
         and "示例包" in group
         and "DefaultTheme" in theme

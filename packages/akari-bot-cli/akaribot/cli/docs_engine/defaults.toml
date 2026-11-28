@@ -2,7 +2,7 @@
 # 实例的 docs.toml 可以逐键覆盖这里的取值，未覆盖的键沿用本文件。
 
 [site]
-title = "小可 · 文档"
+title = "小可（AkariBot） · 文档"
 lang = "zh-CN"
 base = "/"
 out_dir = "cache/docs/site"

@@ -125,7 +125,7 @@ async def _test_site_asset_path_resolves_and_rejects_unsafe_files():
         and config.labels["overview"] == "概览"
         and config.site.logo == ""
         and config.site.favicon == ""
-        and config.site.title == "小可 · 文档"
+        and config.site.title == "小可（AkariBot） · 文档"
     )
 
 
@@ -207,7 +207,7 @@ async def _test_site_title_defaults_and_override():
         default = DocsConfig(root=root)
         (root / "docs.toml").write_text('[site]\ntitle = "实例文档"\n', encoding="utf-8")
         overridden = load_config(_Instance(root))
-    return default.site.title == "小可 · 文档" and overridden.site.title == "实例文档"
+    return default.site.title == "小可（AkariBot） · 文档" and overridden.site.title == "实例文档"
 
 
 async def _test_site_defaults_cover_lang_base_and_out_dir():

@@ -59,7 +59,7 @@ TUI 的文档页在构建期间展示同一日志流，按 `l` 切换面板。`d
 
 ```toml
 [site]
-title = "小可 · 文档"
+title = "小可（AkariBot） · 文档"
 lang = "zh-CN"
 base = "/"
 logo = ""
