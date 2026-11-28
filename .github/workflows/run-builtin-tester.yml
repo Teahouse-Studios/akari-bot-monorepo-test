@@ -301,7 +301,9 @@ jobs:
           python3 tools/check_test_baseline.py \
             --junit reports/junit-normal-*.xml --baseline tools/test_baseline.txt
 
+      # 普通轮有新增失败时仍要对比只读轮，否则失败清单不完整。
       - name: Check read-only failure set against baseline
+        if: always()
         shell: bash
         run: |
           # 只读挂载下可能出现与写入磁盘相关的额外失败，因此单独维护一份基准清单。两轮测试均按名称对比

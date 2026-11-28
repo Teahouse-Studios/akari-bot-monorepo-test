@@ -1,8 +1,10 @@
 """诊断页的结论、统计、读取失败与处理页面跳转测试。"""
 
+import asyncio
 import json
 import os
 import subprocess
+import threading
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -107,10 +109,28 @@ def _visible_detail_rows(page) -> tuple[str, ...]:
     return tuple(detail.render_line(y).text.rstrip() for y in range(first, last))
 
 
-class _SlowDoctorSource(StaticDoctorSource):
-    # 延迟数据返回，以验证请求期间的状态与按钮可用性。
-    def load_snapshot(self, *, strict: bool = False):
-        time.sleep(0.4)
+class _GatedDoctorSource(StaticDoctorSource):
+    # 取数会停在放行前，使请求未完成时的界面状态与请求次数不受运行速度影响。
+    def __init__(self, snapshot: DoctorSnapshot | None = None) -> None:
+        super().__init__(snapshot)
+        self.entered = threading.Semaphore(0)
+        self._released = threading.Event()
+        self._holding = False
+
+    def hold(self) -> None:
+        # 阻塞后续取数，已经在执行的取数要等放行之后才返回。
+        self.entered = threading.Semaphore(0)
+        self._released = threading.Event()
+        self._holding = True
+
+    def release(self) -> None:
+        self._holding = False
+        self._released.set()
+
+    def load_snapshot(self, *, strict: bool = False) -> DoctorSnapshot:
+        self.entered.release()
+        if self._holding and not self._released.wait(timeout=5.0):
+            raise DoctorSourceError("诊断取数未在 5 秒内放行。")
         return super().load_snapshot(strict=strict)
 
 
@@ -403,13 +423,15 @@ async def _test_refresh_key_reloads():
 
 
 async def _test_busy_disables_refresh_button():
-    source = _SlowDoctorSource(_snapshot())
+    source = _GatedDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
         button = page.query_one("#refresh", compat.Button)
+        source.hold()
         await pilot.press("r")
-        await pilot.pause()
+        await asyncio.to_thread(source.entered.acquire, True, 5.0)
         during = (page.status_key, button.disabled)
+        source.release()
         await page.wait_for_idle()
         await pilot.pause()
         after = (page.status_key, button.disabled, source.calls["load"])
@@ -683,15 +705,21 @@ async def _test_strict_option_reloads_with_flag():
 
 async def _test_strict_toggle_restarts_running_load():
     # 请求期间更改选项会使旧结果失效，需要按新选项重新诊断。
-    source = _SlowDoctorSource(_snapshot())
+    source = _GatedDoctorSource(_snapshot())
 
     async def body(app, page, pilot):
         refresh = page.query_one("#refresh", compat.Button)
+        source.hold()
         await pilot.press("r")
-        await pilot.pause()
+        await asyncio.to_thread(source.entered.acquire, True, 5.0)
         during = (page.status_key, refresh.disabled)
         page.query_one("#strict", compat.Checkbox).value = True
         await pilot.pause()
+        await asyncio.to_thread(source.entered.acquire, True, 5.0)
+        source.release()
+        deadline = time.monotonic() + 5.0
+        while source.calls["load"] < 3 and time.monotonic() < deadline:
+            await asyncio.sleep(0.02)
         await page.wait_for_idle()
         await pilot.pause()
         after = (page.status_key, refresh.disabled, source.calls["load"], source.calls["strict"])
